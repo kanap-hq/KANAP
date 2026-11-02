@@ -1,4 +1,5 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { moduleRightRequired } from '../auth/module-right-required';
 import { BUDGET_LINE_TABLE, BUDGET_NATURES, linkedLineOf, naturesAnd } from '../spend/budget-nature';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, DeepPartial, EntityManager, In, Repository, Raw, SelectQueryBuilder } from 'typeorm';
@@ -53,6 +54,7 @@ import {
   type ContractRelationsAccess,
   type ContractTabKind,
 } from './contract-relations';
+import { contractBudgetLineConsistency } from './contract-line-match';
 import {
   contractBudgetCurrentYear,
   contractBudgetRowsParams,
@@ -107,6 +109,7 @@ import { assertLinesEditable, isLimitedTransaction } from '../data-access/line-w
 import { applicationParticipantCondition, type ParticipationAccessScope } from '../auth/business-contributor-scope';
 import { amountCell, dayCell, ListExportCell, ListExportFile, numberCell, writeListExport } from '../common/csv/list-export';
 import type { ExportFileFormat } from '../common/xlsx/format';
+import { CONTRACT_CSV_COLUMNS, CONTRACT_CSV_HEADERS } from './contract-csv-headers';
 
 /**
  * The session tenant as a find condition: `app_current_tenant()`, the tenant RLS checks too,
@@ -146,6 +149,21 @@ function importRowUnchanged(stored: Contract, next: Partial<Record<keyof Contrac
   if (rowStatus && rowStatus !== status) return false;
   if (stored.status !== status) return false;
   return sameStoredValues(stored as unknown as Record<string, unknown>, next);
+}
+
+/** The `duration_months` and `notice_period_months` columns are 32-bit integers. */
+const MONTH_COUNT_MAX = 2147483647;
+
+/**
+ * A whole number of months. A blank cell keeps `fallback` (12 and 1, the column defaults).
+ * Any other text is invalid: the fallback stands in so the row's other checks still run.
+ */
+function wholeMonthCount(raw: string, fallback: number): { value: number; invalid: boolean } {
+  if (raw === '') return { value: fallback, invalid: false };
+  if (!/^\d+$/.test(raw)) return { value: fallback, invalid: true };
+  const value = Number(raw);
+  if (!Number.isSafeInteger(value) || value > MONTH_COUNT_MAX) return { value: fallback, invalid: true };
+  return { value, invalid: false };
 }
 
 type ListItem = Contract & ContractTermFields & {
@@ -1284,9 +1302,7 @@ export class ContractsService {
 
   // CSV
   private csvHeaders(): string[] {
-    return [
-      'name','company_name','supplier_name','cost_center','start_date','duration_months','auto_renewal','notice_period_months','yearly_amount_at_signature','currency','billing_frequency','status','owner_email','notes'
-    ];
+    return [...CONTRACT_CSV_COLUMNS];
   }
   /**
    * The contracts file in the screen's language (`common/csv-sheet`): its separator, the start
@@ -1299,7 +1315,7 @@ export class ContractsService {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(Contract);
     const language = opts?.language ?? 'en';
-    const headers = this.csvHeaders();
+    const headers = CONTRACT_CSV_COLUMNS.map((column) => CONTRACT_CSV_HEADERS[column][language]);
     const rows: ListExportCell[][] = [];
     const isoDate = (value: unknown): string => {
       if (value == null || value === '') return '';
@@ -1390,6 +1406,7 @@ export class ContractsService {
     const read = await readMasterDataFile({
       file: buf as Buffer,
       fields: this.csvHeaders(),
+      fieldLabels: CONTRACT_CSV_HEADERS,
       dateFields: ['start_date'],
       // Older files have no place column: a row without it keeps the stored place.
       optional: ['cost_center'],
@@ -1430,23 +1447,30 @@ export class ContractsService {
       // A day in the file's own form (31/12/2027, 2027-12-31); a timestamp gives its UTC day.
       const parsedStart = r.dates['start_date'];
       const start_date = parsedStart?.kind === 'date' ? parsedStart.isoDate : parsedStart?.kind === 'instant' ? parsedStart.iso.slice(0, 10) : '';
-      const duration_months = parseInt(cellOf(r, 'duration_months') || '12', 10) || 12;
+      // A bad number or yes/no is reported, then the row's other checks still run. The fallback
+      // is never written: any error returns before the load.
+      const durationRaw = cellOf(r, 'duration_months');
+      const duration = wholeMonthCount(durationRaw, 12);
+      if (duration.invalid) errors.push(rowError(line, 'duration_months', 'CSV_NUMBER_INVALID', `Invalid number '${durationRaw}'.`, { value: durationRaw }));
+      const duration_months = duration.value;
       // Yes or no in any language, or the true/false and 1/0 of older files; blank is no, as before.
       const autoCell = parseCsvBoolean(cellOf(r, 'auto_renewal'));
       if (autoCell === undefined) {
         // The shared coded error (`errors:CSV_BOOLEAN_INVALID`): the dialog words it in the interface language.
         const value = cellOf(r, 'auto_renewal');
         errors.push(rowError(line, 'auto_renewal', 'CSV_BOOLEAN_INVALID', `Invalid value '${value}'. Use yes or no.`, { value }));
-        continue;
       }
       const auto_renewal = autoCell ?? false;
-      const notice_period_months = parseInt(cellOf(r, 'notice_period_months') || '1', 10) || 1;
-      // Blank is 0, as before; the decimal mark is the file's (`fieldAmounts`).
+      const noticeRaw = cellOf(r, 'notice_period_months');
+      const notice = wholeMonthCount(noticeRaw, 1);
+      if (notice.invalid) errors.push(rowError(line, 'notice_period_months', 'CSV_NUMBER_INVALID', `Invalid number '${noticeRaw}'.`, { value: noticeRaw }));
+      const notice_period_months = notice.value;
+      // Blank is 0, as before; the decimal mark is the file's (`fieldAmounts`). An unreadable
+      // amount is 0 for the same reason as a bad yes/no: the row's other checks still run.
       const amount = amounts.amountOf(r);
       if (amount.kind === 'invalid' || amount.kind === 'clear') {
         const value = cellOf(r, 'yearly_amount_at_signature');
         errors.push(rowError(line, 'yearly_amount_at_signature', 'CSV_NUMBER_INVALID', `Invalid amount '${value}'.`, { value }));
-        continue;
       }
       const yearly_amount_at_signature = amount.kind === 'value' ? Number(amount.decimal.toString()) : 0;
       const currency = (cellOf(r, 'currency') || 'EUR').toUpperCase();
@@ -1728,6 +1752,16 @@ export class ContractsService {
   }
 
   /**
+   * The budget-line picker: mismatches a candidate would have once linked. Without the budget
+   * right the answer is empty and no line is read. A line outside data access is left out.
+   */
+  async budgetLineConsistency(contractId: string, rawIds: unknown, opts?: { manager?: EntityManager; budgetAccess?: boolean }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    const contract = await this.findContract(contractId, mg);
+    return contractBudgetLineConsistency(mg, contract, rawIds, opts?.budgetAccess === true);
+  }
+
+  /**
    * The Budget tab's figures for a year and column (`year`, `column`): the amount of each linked
    * budget line in that year and column, as the budget list shows it, and for each year the
    * selector offers, the commitment, the linked lines' sum, the gap and the state
@@ -1738,7 +1772,7 @@ export class ContractsService {
    */
   async budgetCoverage(contractId: string, query: any, opts?: ListReadOptions) {
     const mg = opts?.manager ?? this.repo.manager;
-    if (!opts?.budgetAccess) throw new ForbiddenException('Reading the budget figures of a contract needs access to the budget.');
+    if (!opts?.budgetAccess) throw moduleRightRequired('budget', 'reader', 'Reading the budget figures of a contract needs access to the budget.');
     const contract = await this.findContract(contractId, mg);
     const currentYear = contractBudgetCurrentYear();
     const selection = parseContractBudgetSelection(query, currentYear, { year: 'year', column: 'column' });

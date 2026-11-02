@@ -302,6 +302,9 @@
         "fallback": "Unbenanntes Projekt",
         "new": "Neues Projekt"
       },
+      "creation": {
+        "record": "Das Projekt"
+      },
       "summary": {
         "cards": {
           "deliverySnapshot": "Lieferübersicht",
@@ -372,7 +375,6 @@
         "phase": "Phase",
         "plannedEnd": "Geplantes Ende",
         "plannedStart": "Geplanter Start",
-        "projectName": "Projektname",
         "source": "Quelle",
         "status": "Status",
         "stream": "Stream"
@@ -632,6 +634,9 @@
         "fallback": "Unbenannte Anfrage",
         "new": "Neue Anfrage"
       },
+      "creation": {
+        "record": "Die Anfrage"
+      },
       "summary": {
         "cards": {
           "analysisSnapshot": "Analyseübersicht",
@@ -677,7 +682,6 @@
         "itContributors": "IT-Mitwirkende",
         "itLead": "IT-Leiter",
         "itSponsor": "IT-Sponsor",
-        "requestName": "Anfragenname",
         "requestor": "Antragsteller",
         "source": "Quelle",
         "status": "Status",
@@ -929,6 +933,10 @@
           "emptyNotes": "-",
           "unknownPerson": "Unbekannt"
         }
+      },
+      "tabs": {
+        "overview": "Übersicht",
+        "history": "Verlauf"
       }
     }
   },
@@ -2047,6 +2055,7 @@
     "activity": "Aktivität",
     "analysis": "Analyse",
     "description": "Beschreibung",
+    "history": "Verlauf",
     "knowledge": "Wissen",
     "progress": "Aufwand",
     "relations": "Beziehungen",
@@ -2060,7 +2069,6 @@
     "authorUnknown": "Unbekannt",
     "tabs": {
       "comments": "Kommentare",
-      "history": "Verlauf",
       "workLog": "Zeiterfassung"
     },
     "labels": {
@@ -2118,25 +2126,6 @@
       }
     },
     "history": {
-      "actions": {
-        "addedComment": "Hat einen Kommentar hinzugefügt",
-        "addedField": "{{field}} hinzugefügt: {{value}}",
-        "changedField": "{{field}}: {{from}} → {{to}}",
-        "decisionWithOutcome": "Entscheidung: {{outcome}}",
-        "recorded": "Aktivität erfasst",
-        "removedField": "{{field}} entfernt: {{value}}",
-        "updatedDocument": "{{document}} aktualisiert",
-        "updatedMultiple": "Aktualisiert: {{changes}}"
-      },
-      "feasibilityDimensions": {
-        "changeManagement": "Änderungsmanagement",
-        "deliveryConstraints": "Lieferbeschränkungen",
-        "infrastructureNeeds": "Infrastrukturbedarf",
-        "integrationCompatibility": "Integration & Kompatibilität",
-        "resourceSkills": "Ressourcen & Kompetenzen",
-        "securityCompliance": "Sicherheit & Compliance",
-        "technicalFeasibility": "Technische Machbarkeit"
-      },
       "fields": {
         "actualEffortBusiness": "Tatsächlicher Fachbereichs-Aufwand",
         "actualEffortIt": "Tatsächlicher IT-Aufwand",

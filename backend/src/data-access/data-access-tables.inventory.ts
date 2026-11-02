@@ -163,6 +163,10 @@ export const DATA_ACCESS_FUNCTIONS: Array<{ name: string; cls: DataAccessFunctio
   ].map((name) => ({ name: `search_index_sync_${name}`, cls: 'definer' as const, reason: 'search index family: trigger' })),
   { name: 'search_index_sync_link_incident_assets', cls: 'definer', reason: 'search index family: statement trigger, the incidents of a link change refreshed by batch of ids' },
   { name: 'search_index_sync_incident_assets_on_asset', cls: 'definer', reason: 'search index family: trigger, the incidents linked to a renamed asset refreshed by batch of ids' },
+  { name: 'search_index_sync_link_incident_applications', cls: 'definer', reason: 'search index family: statement trigger, the incidents of an application link change refreshed by batch of ids' },
+  { name: 'search_index_sync_link_incident_technologies', cls: 'definer', reason: 'search index family: statement trigger, the incidents of a technology link change refreshed by batch of ids' },
+  { name: 'search_index_sync_incident_applications_on_application', cls: 'definer', reason: 'search index family: trigger, the incidents linked to a renamed application refreshed by batch of ids' },
+  { name: 'search_index_sync_incident_technologies_on_technology', cls: 'definer', reason: 'search index family: trigger, the incidents linked to a renamed technology refreshed by batch of ids' },
 
   // Access functions (lots 1 and 2).
   { name: 'data_access_expected_policies', cls: 'access', reason: 'the expected policies (names the scoped tables)' },
@@ -179,6 +183,7 @@ export const DATA_ACCESS_FUNCTIONS: Array<{ name: string; cls: DataAccessFunctio
   { name: 'data_access_searchable_task_ids', cls: 'access', reason: 'SECURITY DEFINER set function (spec §5.4, §6.4): the tasks whose object is readable, once per statement, for the search index policy' },
   { name: 'data_access_tasks_placement', cls: 'access', reason: 'placement trigger of the tasks (SECURITY INVOKER): a new line or contract object must be modifiable in mode limited' },
   { name: 'data_access_hidden_count', cls: 'access', reason: 'SECURITY DEFINER disclosure (spec §6.6): lines linked to a visible object that the person cannot read, the closed documents of a contract opened through a line (contract_document), and the contracts of an application, an asset or a technology that the person cannot read (application_contract, asset_contract, technology_contract)' },
+  { name: 'data_access_hidden_category_count', cls: 'access', reason: 'SECURITY DEFINER disclosure (spec §6.6): lines the person cannot read on one dimension value, counted per value for the analytics report; a value answers only when a line the reader may read holds it in the same tenant, dimension and window, and only values of the requested axis in the current tenant answer' },
   { name: 'data_access_reference', cls: 'access', reason: 'SECURITY DEFINER disclosure (spec §6.6): the reference of the line a visible task names, or of a visible line\'s predecessor and successor' },
   { name: 'data_access_can_read', cls: 'access', reason: 'SECURITY DEFINER disclosure (spec §5.6, §6.6): whether another person could read a line, a task or a contract, for the notifications and the warning of "Send the link"' },
 

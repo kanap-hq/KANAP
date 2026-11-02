@@ -1,0 +1,163 @@
+import { AiEntityFilterRegistry } from '../ai-filter.types';
+import { AI_AXIS_BOOLEANS, AI_AXIS_NATURES, AI_AXIS_STATUSES } from '../ai-analytics-axes.query';
+
+/**
+ * Master data › Analytics dimensions, read through the screen's service
+ * (`query/ai-analytics-axes.query.ts`): one row per dimension, `ref` its code. Its values are the
+ * family analytics_categories, filtered on axis_code. Listed, filtered, grouped, sorted and paged
+ * in memory; the `aggregate` block is descriptive and never reads its empty base table. Read with
+ * the right on analytics dimensions, as the screen.
+ */
+export const analyticsAxesRegistry: AiEntityFilterRegistry = {
+  entityType: 'analytics_axes',
+  fields: {
+    code: {
+      ai: 'code',
+      grid: 'code',
+      type: 'text',
+      description: 'Code of the dimension, unique in the workspace (its `ref`; `default` for the default dimension unless renamed). A part of it matches. The values of a dimension are analytics_categories filtered on axis_code.',
+      sortable: true,
+      groupable: false,
+    },
+    name: {
+      ai: 'name',
+      grid: 'name',
+      type: 'text',
+      description: 'Name of the dimension. The default dimension without a name shows the screen\'s label ("Analytics dimension" in English). A part of it matches.',
+      sortable: true,
+      groupable: false,
+    },
+    description: {
+      ai: 'description',
+      grid: 'description',
+      type: 'text',
+      description: 'Description of the dimension. A part of it matches.',
+      sortable: false,
+      groupable: false,
+    },
+    is_default: {
+      ai: 'is_default',
+      grid: 'is_default',
+      type: 'set',
+      description: 'Whether it is the default dimension of the workspace (one per workspace), the budget_lines field analytics_category.',
+      values: [...AI_AXIS_BOOLEANS],
+      discoverable: true,
+      sortable: false,
+      groupable: true,
+    },
+    applies_to: {
+      ai: 'applies_to',
+      grid: 'applies_to',
+      type: 'set',
+      description: 'The budget lines the dimension applies to: opex or capex only; null for both natures.',
+      values: [...AI_AXIS_NATURES, null],
+      discoverable: true,
+      sortable: false,
+      groupable: true,
+    },
+    required: {
+      ai: 'required',
+      grid: 'required',
+      type: 'set',
+      description: 'The "required" setting: a line must hold a value on the dimension. It applies only while the dimension is enabled, to the natures it applies to: `required_for` says where it applies (a disabled dimension keeps its setting, ignored).',
+      values: [...AI_AXIS_BOOLEANS],
+      discoverable: true,
+      sortable: false,
+      groupable: true,
+    },
+    required_for: {
+      ai: 'required_for',
+      grid: 'required_for',
+      type: 'set',
+      description: 'The natures whose lines must hold a value on the dimension now: opex, capex, or null for a dimension required nowhere (not required, or disabled). A question about the mandatory dimensions filters it, not `required`.',
+      values: [...AI_AXIS_NATURES, null],
+      discoverable: true,
+      sortable: false,
+      groupable: true,
+    },
+    open_values: {
+      ai: 'open_values',
+      grid: 'open_values',
+      type: 'set',
+      description: 'Open values: anyone who may modify a line can add a value to the dimension from the line or the budget file.',
+      values: [...AI_AXIS_BOOLEANS],
+      discoverable: true,
+      sortable: false,
+      groupable: true,
+    },
+    status: {
+      ai: 'status',
+      grid: 'status',
+      type: 'set',
+      description: 'enabled or disabled (past its end of validity). Every dimension is listed whatever its status.',
+      values: [...AI_AXIS_STATUSES],
+      discoverable: true,
+      sortable: true,
+      groupable: true,
+    },
+    disabled_at: {
+      ai: 'disabled_at',
+      grid: 'disabled_at',
+      type: 'date',
+      description: 'End of validity of the dimension.',
+      sortable: false,
+      groupable: false,
+    },
+    sort_order: {
+      ai: 'sort_order',
+      grid: 'sort_order',
+      type: 'number',
+      description: 'Position of the dimension, the order of the screen and of the budget columns.',
+      sortable: true,
+      groupable: false,
+    },
+    field: {
+      ai: 'field',
+      grid: 'field',
+      type: 'text',
+      description: 'The budget_lines field that holds a line\'s value on the dimension: analytics_category for the default dimension, analytics:<code> for another one; null for a disabled dimension, which budget_lines does not offer. Filter or group budget_lines on it.',
+      sortable: false,
+      groupable: false,
+    },
+    created_at: {
+      ai: 'created_at',
+      grid: 'created_at',
+      type: 'date',
+      description: 'When the dimension was created.',
+      sortable: true,
+      groupable: false,
+    },
+    updated_at: {
+      ai: 'updated_at',
+      grid: 'updated_at',
+      type: 'date',
+      description: 'When the dimension was last changed.',
+      sortable: true,
+      groupable: false,
+    },
+  },
+  sortFields: {
+    code: 'code',
+    name: 'name',
+    sort_order: 'sort_order',
+    status: 'status',
+    created_at: 'created_at',
+    updated_at: 'updated_at',
+  },
+  defaultSort: {
+    field: 'sort_order',
+    direction: 'asc',
+  },
+  aggregate: {
+    baseTable: '',
+    alias: 'aax',
+    groupFields: {
+      is_default: { expression: 'is_default' },
+      applies_to: { expression: 'applies_to' },
+      required: { expression: 'required' },
+      required_for: { expression: 'required_for' },
+      open_values: { expression: 'open_values' },
+      status: { expression: 'status' },
+    },
+  },
+};

@@ -14,6 +14,8 @@ const content: TrialContent = {
       'Alternative d\'auto-hébergement possible à tout moment',
     ],
     form: {
+      firstNameLabel: 'Prénom',
+      lastNameLabel: 'Nom',
       orgLabel: 'Nom de l\'organisation',
       orgHelp: 'Le nom affiché que votre équipe verra en haut de l\'application.',
       countryLabel: 'Pays',

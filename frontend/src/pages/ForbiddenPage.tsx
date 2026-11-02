@@ -36,12 +36,23 @@ export default function ForbiddenPage({ resource, level }: ForbiddenPageProps) {
       ? t('forbidden.aiChatRight')
       : t('forbidden.message');
 
+  // The app scroller is a flex column. Growing, without shrinking, fills it when the
+  // message is short, and leaves a taller message scrollable. The same root covers the
+  // /403 route and every page that returns this component directly.
   return (
-    <Box sx={{ maxWidth: 560 }}>
-      <Stack spacing={1.5}>
+    <Box
+      sx={{
+        flexGrow: 1,
+        flexShrink: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <Stack spacing={1.5} sx={{ maxWidth: 560, width: '100%', textAlign: 'center' }}>
         <Typography variant="h5">{t('forbidden.title')}</Typography>
         <Typography variant="body2" sx={{ color: 'text.secondary' }}>{sentence}</Typography>
-        <Stack direction="row" spacing={1} sx={{ pt: 1 }}>
+        <Stack direction="row" spacing={1} sx={{ pt: 1, justifyContent: 'center' }}>
           {canGoBack() && (
             <Button variant="outlined" onClick={() => navigate(-1)}>{t('buttons.back')}</Button>
           )}

@@ -4,6 +4,7 @@ import { EntityManager, Repository } from 'typeorm';
 import { Role } from './role.entity';
 import { RolePermission } from '../permissions/role-permission.entity';
 import { RESOURCES } from '../permissions/permissions.service';
+import { userAssignedRolesSql } from '../users/user-access-sql';
 
 @Injectable()
 export class RolesService {
@@ -17,6 +18,27 @@ export class RolesService {
   async list(opts?: { manager?: EntityManager }) {
     const repo = (opts?.manager ?? this.repo.manager).getRepository(Role);
     return repo.find({ order: { role_name: 'ASC' } });
+  }
+
+  /**
+   * The number of people each role is given to, as the Roles screen counts them (`GET /roles`)
+   * and as the people list filtered on that role counts them: the primary role (`users.role_id`)
+   * and the additional roles (`user_roles`), each person once. One grouped count on the caller's
+   * connection: pg refuses a query sent while another one runs (deprecated since pg 8, an error in
+   * pg 9).
+   */
+  async userCounts(roleIds: string[], opts?: { manager?: EntityManager }): Promise<Map<string, number>> {
+    if (roleIds.length === 0) return new Map();
+    const rows: Array<{ role_id: string; user_count: number | string }> = await (opts?.manager ?? this.repo.manager).query(
+      `SELECT assigned.role_id, COUNT(DISTINCT u.id)::int AS user_count
+         FROM users u
+         CROSS JOIN LATERAL ${userAssignedRolesSql('u')} assigned
+        WHERE u.tenant_id = app_current_tenant()
+          AND assigned.role_id = ANY($1::uuid[])
+        GROUP BY assigned.role_id`,
+      [roleIds],
+    );
+    return new Map(rows.map((row) => [row.role_id, Number(row.user_count)]));
   }
 
   async findByName(role_name: string, opts?: { manager?: EntityManager }) {

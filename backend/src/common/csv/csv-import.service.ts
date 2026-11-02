@@ -31,6 +31,20 @@ import { uploadedBytes } from '../upload';
 /**
  * Import options
  */
+/**
+ * The column a header names: a field's technical name or its title in any language (`headerLabels`),
+ * whatever the case, the spaces and the underscores; any other header as it came. For code that
+ * reads a file's rows again after the import (`importable` aside, as the import reads them).
+ */
+export function csvColumnOfHeader(config: CsvEntityConfig, header: string): string {
+  const key = looseKey(header).normalize('NFC');
+  for (const field of config.fields) {
+    const names = [field.csvColumn, ...Object.values(config.headerLabels?.[field.csvColumn] ?? {})];
+    if (names.some((name) => name && looseKey(name).normalize('NFC') === key)) return field.csvColumn;
+  }
+  return header;
+}
+
 export interface CsvImportOptions {
   /** TypeORM EntityManager */
   manager: EntityManager;
@@ -339,6 +353,12 @@ export class CsvImportService {
 
     const readHeader = (header: string | null | undefined) => {
       if (header == null) return header;
+      // A whole title is read first: a translated one may end in parentheses ("Progression (%)").
+      const titled = headerAliases.get(headerKey(header));
+      if (titled) {
+        if (zonedColumns.has(titled)) zoneless.push(titled);
+        return titled;
+      }
       const named = readTimeZoneHeader(header);
       const column = headerAliases.get(headerKey(named ? named.column : header));
       if (!column) {

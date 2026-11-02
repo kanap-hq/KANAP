@@ -34,34 +34,36 @@ Diferentes equipos pueden usar categorías para centrarse en su área de respons
 
 ---
 
-## Primeros pasos
+## Primeros pasos { #getting-started }
 
-Navegue a **Panorama IT > Aplicaciones** para ver su lista. Haga clic en **Nueva App / Servicio** para crear su primera entrada.
+Navegue a **Panorama IT > Aplicaciones** para ver su lista. Para crear una aplicación:
 
-**Campos obligatorios**:
-- **Nombre**: Un nombre reconocible para la aplicación o servicio, de 200 caracteres como máximo. Consulte [Nombres únicos](#unique-names)
-- **Categoría**: El propósito principal de esta aplicación (ver categorías arriba)
-- **Ciclo de vida**: Estado actual (Activo, Propuesto, Obsoleto, Retirado, o cualquier código personalizado definido en Configuración)
+1. Haga clic en **Nueva aplicación**. La página de la aplicación se abre con un título vacío en el encabezado. El resto de la página aparece atenuado.
+2. Escriba el nombre de la aplicación o servicio, de 200 caracteres como máximo. Consulte [Nombres únicos](#unique-names).
+3. Pulse Intro o haga clic fuera del título. KANAP crea la aplicación de inmediato. Su referencia (`APP-12`) aparece y se abren todas las pestañas.
 
-**Muy recomendados**:
-- **Proveedor**: El proveedor que proporciona el software (vinculado a sus datos maestros de Proveedores)
-- **Editor**: El editor del software (p. ej., Microsoft, SAP, Oracle)
-- **Descripción**: Qué hace esta aplicación
+La nueva aplicación está **Activa**, en la categoría por defecto. Cámbielas en el encabezado y el panel de propiedades, y complete el resto:
 
-Los campos de clasificación son opcionales al crear una aplicación. La **Criticidad de negocio**, la criticidad cibernética, la confidencialidad de los datos y la ola de recuperación se eligen entre los niveles que su organización definió en **Panorama IT > Configuración**; cada opción muestra la definición del nivel. Los valores permanecen sin definir hasta que usted los seleccione.
+- **Categoría**: el propósito principal de esta aplicación (ver categorías arriba)
+- **Ciclo de vida**: Activo, Propuesto, Obsoleto, Retirado, o cualquier código personalizado definido en Configuración
+- **Proveedor**: el proveedor que proporciona el software (vinculado a sus datos maestros de Proveedores)
+- **Editor**: el editor del software (p. ej., Microsoft, SAP, Oracle)
+- **Descripción**: qué hace esta aplicación
+- **Clasificación**: la **Criticidad de negocio**, la criticidad cibernética, la confidencialidad de los datos y la ola de recuperación se eligen entre los niveles que su organización definió en **Panorama IT > Configuración**. Cada opción muestra la definición del nivel. Permanecen sin definir hasta que usted los seleccione
+- **Versión**, **Puesta en marcha**, **Fin de soporte**, **Fecha de retiro**: la versión actual y sus fechas. El **Fin de soporte** y la **Fecha de retiro** no pueden ser anteriores a la **Puesta en marcha**
+- **Licencia** y **Notas**: términos de licencia y notas internas de texto libre
+- **Puede tener apps hijas**: usar esta aplicación como una "suite" que agrupa otras aplicaciones
 
-**Opcionales pero útiles**:
-- **Versión**: Identificador de versión actual (texto libre, p. ej., "4.2.1", "2023", "T1 2024")
-- **Fecha de puesta en marcha**: Cuándo esta versión entró o entrará en producción
-- **Fin de soporte**: Cuándo finaliza el soporte del proveedor para esta versión
-- **Fecha de retiro**: Cuándo esta versión fue efectivamente decomisionada
-- **Licencia**: Términos y notas de licencia
-- **Notas**: Notas internas de texto libre
-- **Puede tener apps hijas**: Active esto para usar esta aplicación como una "suite" que agrupa otras aplicaciones
+Pulse Escape en el título vacío para salir sin crear nada. Un nombre que ya usa otra aplicación se rechaza, con un mensaje bajo el título.
 
-El **Fin de soporte** y la **Fecha de retiro** no pueden ser anteriores a la **Puesta en marcha**.
+### Crear o cancelar { #cancelling-a-creation }
 
-Una vez que guarde, el espacio de trabajo desbloquea todas las pestañas para documentación detallada.
+Mientras la aplicación se está creando, su encabezado muestra **Crear** y **Cancelar**. Permanecen hasta que salga de la aplicación.
+
+- **Crear** conserva la aplicación y la cierra. Vuelve al punto de partida: la lista o la pantalla anterior. Con el título vacío, no se cierra nada y el título pide uno
+- **Cancelar** cierra sin conservar nada. En una aplicación ya creada, la elimina. Si introdujo algo más que el nombre, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar aplicaciones
+
+Si sale de la aplicación de otra forma, esta se conserva. Elimínela como cualquier otra aplicación. La referencia de una aplicación cancelada no se reutiliza.
 
 ### Nombres únicos { #unique-names }
 
@@ -126,7 +128,7 @@ Una celda sin valor muestra un guion.
 - **Vulnerabilidades por revisar** filtra por **Con vulnerabilidades graves**, **Con vulnerabilidades** o **Sin**, y ordena por las vulnerabilidades críticas o altas y luego por el total. Las aplicaciones desactivadas van al final y no entran en ningún valor del filtro.
 
 **Acciones**:
-- **Nueva App / Servicio**: Crear una nueva entrada (`applications:member`)
+- **Nueva aplicación**: Crear una nueva entrada (`applications:member`). Consulte [Primeros pasos](#getting-started)
 - **Importar**: Importación masiva desde un archivo CSV o un libro de Excel (`applications:admin`)
 - **Exportar**: Exportar las aplicaciones que muestra la lista a un archivo CSV o un libro de Excel (`applications:admin`). Consulte [Opciones de exportación](#export-options).
 - **Copiar elemento**: Duplicar una aplicación seleccionada con todas sus relaciones principales (`applications:member`). Consulte [Copiar aplicaciones](#copiar-aplicaciones) para saber qué se copia y qué no.
@@ -137,6 +139,8 @@ Una celda sin valor muestra un guion.
 ## El espacio de trabajo de Aplicaciones
 
 Haga clic en cualquier fila para abrir el espacio de trabajo. El espacio de trabajo tiene un **encabezado** con metadatos rápidos, un **panel de propiedades** a la derecha (la tarjeta de identidad de la aplicación, siempre visible) y un **área de contenido** en el centro que cambia con cada pestaña.
+
+Las pestañas son **Vista general**, **Despliegues**, **Interfaces**, **Operaciones**, **Conformidad**, **Relaciones** e **Historial** (los cambios de la aplicación, vea [Historial de los registros](record-history.md)).
 
 ### Encabezado
 
@@ -151,6 +155,7 @@ El encabezado muestra:
 - **Compartir**: copiar un enlace compartible a este espacio de trabajo
 - **Nueva versión**: lanzar el asistente de migración de versión (consulte [Gestión de versiones](#gestion-de-versiones))
 - **Convertir en tecnología** (`applications:admin` e `infrastructure:member`): consulte [Convertir una aplicación en tecnología](#convertir-una-aplicacion-en-tecnologia)
+- **Crear** y **Cancelar**: visibles mientras la aplicación se está creando, en lugar del botón de cierre. Consulte [Crear o cancelar](#cancelling-a-creation)
 - **Eliminar**, un icono de papelera con su nombre en una información emergente (`applications:admin`): una aplicación con interfaces recibe el rechazo y el motivo, solo con Cerrar. Si no, la confirmación nombra la aplicación y cuenta los despliegues eliminados con ella, junto con sus vínculos con otros elementos
 - **Anterior / Siguiente**: recorrer la lista filtrada sin volver a la cuadrícula
 
@@ -368,7 +373,7 @@ Haga clic en **Vincular** para añadir la sugerencia a su sección. La sección 
 
 - **Añadir enlace** abre un diálogo para una URL y un nombre opcional; el enlace se guarda al instante. Para cambiar un enlace, pase el cursor sobre su fila y haga clic en el lápiz.
 - **Adjuntar archivo** abre el selector de archivos. También puede soltar archivos sobre la sección: se resalta mientras arrastra.
-- Para quitar un enlace o un archivo, pase el cursor sobre la fila y haga clic en la cruz. Eliminar un archivo pide una confirmación antes.
+- Para quitar un enlace o un archivo, pase el cursor sobre la fila y haga clic en la cruz. Quitar un enlace muestra un mensaje y ofrece **Deshacer**, que vuelve a crear el enlace. Eliminar un archivo pide una confirmación antes.
 
 ---
 
@@ -396,14 +401,14 @@ KANAP ofrece **dos formas de gestionar versiones de aplicaciones**, dependiendo 
 
 | Enfoque | Ideal para | Qué sucede |
 |---------|------------|------------|
-| **Simple** | La mayoría de aplicaciones | Actualice los campos de versión en el panel de propiedades o en el formulario de creación: mismo registro, nuevo número de versión |
+| **Simple** | La mayoría de aplicaciones | Actualice los campos de versión en el panel de propiedades: mismo registro, nuevo número de versión |
 | **Sofisticado** | Migraciones mayores | Use **Nueva versión** para crear un nuevo registro de aplicación con seguimiento de linaje. Ejecute las versiones antigua y nueva en paralelo |
 
 ### Seguimiento simple de versiones (actualizaciones in situ)
 
-Para la mayoría de aplicaciones (donde actualiza y la versión anterior simplemente desaparece), actualice los campos **Versión**, **Puesta en marcha**, **Fin de soporte** y **Fecha de retiro** en el formulario de creación o en el panel de propiedades. El chip de versión del encabezado y los metadatos de **Puesta en marcha** reflejan lo que defina.
+Para la mayoría de aplicaciones (donde actualiza y la versión anterior simplemente desaparece), actualice los campos **Versión**, **Puesta en marcha**, **Fin de soporte** y **Fecha de retiro** en el panel de propiedades. El chip de versión del encabezado y los metadatos de **Puesta en marcha** reflejan lo que defina.
 
-Este enfoque mantiene todo en un solo registro. Cuando actualiza, modifique los campos de versión y listo. El historial se rastrea en el registro de auditoría.
+Este enfoque mantiene todo en un solo registro. Cuando actualiza, modifique los campos de versión y listo. La pestaña **Historial** conserva los valores anteriores.
 
 **Use esto cuando**: las actualizaciones ocurren in situ sin solapamiento: una versión reemplaza a otra.
 
@@ -531,6 +536,7 @@ Desde la lista de Aplicaciones:
 - **Exportar**: Descargar aplicaciones a un archivo CSV o un libro de Excel
 - **Importar**: Subir un archivo CSV o un libro de Excel para crear o actualizar aplicaciones
 - **Descargar plantilla** (desde dentro del diálogo de importación): Obtener un CSV en blanco con los encabezados correctos
+- **Descargar un ejemplo** (desde dentro del diálogo de importación): un libro de Excel con aplicaciones de ejemplo y lo que admite cada columna. Consulte [Archivos de ejemplo](csv-files.md#example-files)
 
 **Permisos requeridos**: `applications:admin` para operaciones de importación/exportación.
 
@@ -540,7 +546,7 @@ Desde la lista de Aplicaciones:
 
 **Formato**: **CSV** o **Excel (.xlsx)**, elegido en el diálogo y recordado por su navegador. El libro contiene las mismas columnas que el CSV en una hoja, con los números y las fechas como valores que Excel puede ordenar y filtrar. La importación lee los dos; en un libro, lee la primera hoja. Consulte [Archivos CSV y Excel](csv-files.md).
 
-**Columnas**: el archivo empieza por `id` y `reference` (`APP-12`), y después las columnas siguen el espacio de trabajo, pestaña por pestaña. La importación ignora `reference`.
+**Columnas**: el archivo empieza por `id` y la referencia (`APP-12`), y después las columnas siguen el espacio de trabajo, pestaña por pestaña. Sus títulos están en el idioma de su pantalla, y la importación los lee en cualquier idioma. La importación ignora la referencia.
 
 **Idioma de los valores**: los valores de catálogo (categoría, ciclo de vida, criticidad, criticidad cibernética, ola de recuperación, clase de datos, métodos de acceso) y el estado se escriben como los muestra la pantalla, en el idioma de su pantalla: `Active` en inglés, `Activo` en español. Un nombre que su organización dio a un valor en **Panorama IT > Configuración** se mantiene tal cual.
 

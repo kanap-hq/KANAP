@@ -40,19 +40,27 @@ translation.value = (ns?: string | string[]) => {
   return translators.get(key);
 };
 
+const auth = vi.hoisted(() => ({ level: 'admin' as 'admin' | 'reader' }));
+const scope = vi.hoisted(() => ({ value: 'all' as 'all' | 'my' | 'team', set: vi.fn() }));
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
-vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => true, profile: { id: 'user-1' } }) }));
+vi.mock('../../auth/AuthContext', () => ({
+  useAuth: () => ({
+    hasLevel: (_area: string, level: string) => auth.level === 'admin' || level === 'reader',
+    profile: { id: 'user-1' },
+  }),
+}));
 vi.mock('../../i18n/useLocale', () => ({ useLocale: () => 'fr' }));
-vi.mock('../../hooks/useGridScopePreference', () => ({ useGridScopePreference: () => ['all', vi.fn()] }));
+vi.mock('../../hooks/useGridScopePreference', () => ({ useGridScopePreference: () => [scope.value, scope.set] }));
 vi.mock('./components/FolderTreePanel', () => ({ default: () => null, ROOT_FOLDER_DROP_TARGET: '__root__' }));
 vi.mock('./components/KnowledgeMoveDialog', () => ({ default: () => null }));
 vi.mock('./components/KnowledgeFolderMoveDialog', () => ({ default: () => null }));
 vi.mock('./components/KnowledgeTypesManager', () => ({ default: () => null }));
 vi.mock('../../components/DeleteSelectedButton', () => ({ default: () => null }));
-const grid = vi.hoisted(() => ({ columns: [] as any[] }));
+const grid = vi.hoisted(() => ({ columns: [] as any[], props: null as null | Record<string, any> }));
 vi.mock('../../components/ServerDataGrid', () => ({
   default: (props: any) => {
     grid.columns = props.columns;
+    grid.props = props;
     return null;
   },
 }));
@@ -89,6 +97,9 @@ const filterOptions = (field: string) => column(field).filterParams.getValues({ 
 describe('KnowledgePage library and folder names', () => {
   beforeEach(() => {
     grid.columns = [];
+    grid.props = null;
+    auth.level = 'admin';
+    scope.value = 'all';
     get.mockReset();
     vi.stubGlobal('localStorage', { getItem: () => null, setItem: () => undefined, removeItem: () => undefined });
     get.mockImplementation(async (url: string, config?: any) => {
@@ -172,5 +183,55 @@ describe('KnowledgePage library and folder names', () => {
     expect(within(dialog).getByRole('button', { name: frCommon.buttons.close })).toBeInTheDocument();
     expect(within(dialog).queryByRole('button', { name: frKnowledge.dialogs.deleteLibrary.actions.confirm })).not.toBeInTheDocument();
     expect(screen.queryByText(frKnowledge.confirmations.deleteLibrary)).not.toBeInTheDocument();
+  });
+
+  async function showEmpty(url: string) {
+    renderPage(url);
+    await screen.findByTestId('knowledge-context');
+    const emptyState = grid.props?.emptyState as React.ReactElement;
+    render(<ThemeProvider theme={createAppTheme('light')}>{emptyState}</ThemeProvider>);
+    return screen.getByTestId('knowledge-empty');
+  }
+
+  it('says this library is empty, with the creation for someone who may write it', async () => {
+    const empty = await showEmpty('/knowledge?library=documents');
+    expect(empty.textContent).toContain(frKnowledge.empty.library);
+    expect(empty.querySelector('button')?.textContent).toBe(frKnowledge.actions.newDocument);
+    expect(grid.props?.extraNarrows).toBe(false);
+  });
+
+  it('says this folder is empty when a folder is open', async () => {
+    const empty = await showEmpty('/knowledge?library=documents&folder_id=fld-1');
+    expect(empty.textContent).toContain(frKnowledge.empty.folder);
+    expect(empty.querySelector('button')?.textContent).toBe(frKnowledge.actions.newDocument);
+  });
+
+  it('says there are no documents when every library is in the list', async () => {
+    const empty = await showEmpty('/knowledge?library=documents&allLibraries=1');
+    expect(empty.textContent).toContain(frKnowledge.empty.all);
+  });
+
+  it('keeps My documents on the filtered empty line', async () => {
+    scope.value = 'my';
+    renderPage('/knowledge?library=documents');
+    await screen.findByTestId('knowledge-context');
+    expect(grid.props?.extraNarrows).toBe(true);
+  });
+
+  it('leaves the creation out for a reader', async () => {
+    auth.level = 'reader';
+    const empty = await showEmpty('/knowledge?library=documents');
+    expect(empty.textContent).toBe(frKnowledge.empty.library);
+    expect(empty.querySelector('button')).toBeNull();
+  });
+
+  it('leaves the creation out of a library the person cannot write', async () => {
+    get.mockImplementation(async (url: string) => {
+      if (url === '/knowledge-libraries') return { data: LIBRARIES.map((lib) => ({ ...lib, can_write: false })) } as any;
+      return { data: {} } as any;
+    });
+    const empty = await showEmpty('/knowledge?library=documents');
+    expect(empty.textContent).toBe(frKnowledge.empty.library);
+    expect(empty.querySelector('button')).toBeNull();
   });
 });

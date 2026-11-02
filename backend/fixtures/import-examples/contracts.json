@@ -1,0 +1,56 @@
+{
+  "essential": [
+    "name", "company_name", "supplier_name", "cost_center", "start_date", "duration_months", "auto_renewal", "notice_period_months",
+    "yearly_amount_at_signature", "currency", "billing_frequency", "status", "owner_email", "notes"
+  ],
+  "advanced": [],
+  "rows": [
+    {
+      "name": {
+        "en": "Datadog monitoring subscription",
+        "fr": "Abonnement de supervision Datadog",
+        "de": "Datadog-Monitoring-Abonnement",
+        "es": "Suscripción de monitorización Datadog"
+      },
+      "company_name": "Fromage & Co SA",
+      "supplier_name": "Datadog",
+      "cost_center": "Infrastructure and cloud",
+      "start_date": "{Y}-01-01",
+      "duration_months": 36,
+      "auto_renewal": true,
+      "notice_period_months": 3,
+      "yearly_amount_at_signature": 48000,
+      "currency": "EUR",
+      "billing_frequency": "annual",
+      "status": "enabled",
+      "owner_email": "thomas.berger@fromage-co.example",
+      "notes": {
+        "en": "120 hosts, logs kept 15 days.",
+        "fr": "120 hôtes, journaux conservés 15 jours.",
+        "de": "120 Hosts, Protokolle 15 Tage aufbewahrt.",
+        "es": "120 hosts, registros conservados 15 días."
+      }
+    },
+    {
+      "name": {
+        "en": "Veeam backup licences, Benelux",
+        "fr": "Licences de sauvegarde Veeam, Benelux",
+        "de": "Veeam-Backup-Lizenzen, Benelux",
+        "es": "Licencias de copia de seguridad Veeam, Benelux"
+      },
+      "company_name": "Kaasmeester BV",
+      "supplier_name": "Veeam",
+      "cost_center": "",
+      "start_date": "{Y-1}-07-01",
+      "duration_months": 12,
+      "auto_renewal": true,
+      "notice_period_months": 2,
+      "yearly_amount_at_signature": 9600.5,
+      "currency": "EUR",
+      "billing_frequency": "quarterly",
+      "status": "enabled",
+      "owner_email": "",
+      "notes": ""
+    }
+  ]
+}

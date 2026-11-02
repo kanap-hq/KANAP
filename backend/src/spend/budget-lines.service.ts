@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
 import { BulkDeleteResult } from '../common/delete.types';
@@ -16,9 +16,27 @@ import {
   setBudgetLineRelation,
   type BudgetLineRelationsContext,
 } from './budget-line-relations';
+import { budgetLineContractConsistency } from '../contracts/contract-line-match';
 import { CapexItemsService, SpendItemsService } from './spend-items.service';
+import { hiddenCategoryLineCounts } from '../data-access/hidden-links';
+import { withCreatorCancelAccess } from '../data-access/creator-cancel-access';
+import { countChangesSinceCreation, withChildCount, type CreationChanges } from '../common/creation/creation-changes';
+import { assertCreatorAloneSinceCreation } from '../common/creation/creation-changes';
+import { creationCancelExpired } from '../common/creation/creation-token';
+import {
+  assertBudgetLineCreationToken,
+  budgetLineIncomplete,
+  creationBody,
+  hasSuccessorLine,
+  missingCreationFields,
+} from './budget-line-creation';
+import { lockBudgetLine } from './budget-locks';
 
 type ReadOptions = { manager: EntityManager; access?: BudgetListAccess };
+
+/** The most values one hidden-count request names. */
+const MAX_HIDDEN_VALUES = 500;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** The neutral list routes use the same SQL engine with its explicit all-natures scope. */
 @Injectable()
@@ -64,6 +82,76 @@ export class BudgetLinesService {
     return this.get(created.id, opts);
   }
 
+  /**
+   * A line created at its title on the screen (`budget-line-creation.ts`): the title, the type, the
+   * currency, the start date and, when given, its place; no paying company or required dimension
+   * yet. The data-access placement rule still applies (a limited person gives a place).
+   */
+  async createAtTitle(body: unknown, userId: string | undefined, opts: { manager: EntityManager }) {
+    const nature = (body as any)?.nature;
+    if (nature !== 'opex' && nature !== 'capex') throw new BadRequestException('nature must be opex or capex.');
+    const input = creationBody(body);
+    const created = await this.items(nature).create(input, userId, { ...opts, fields: 'columns', native: true, creation: true });
+    return this.get(created.id, opts);
+  }
+
+  /**
+   * What was written on the line and its children since its creation, before "Cancel" (nothing is
+   * written); 403 `CREATION_CANCEL_EXPIRED` when "Cancel" would be refused: another person wrote on
+   * it, or a line continues it.
+   */
+  async creationChanges(id: string, userId: string, opts: { manager: EntityManager }): Promise<{ changes: CreationChanges }> {
+    const tenantId = await summaryTenantId(opts.manager);
+    const found = await opts.manager.query(
+      `SELECT 1 FROM spend_items WHERE tenant_id = $1 AND id = $2 AND nature IN ('opex', 'capex')`,
+      [tenantId, id],
+    );
+    if (!found.length) throw new NotFoundException('Budget line not found');
+    await assertCreatorAloneSinceCreation(opts.manager, tenantId, 'spend_items', id, userId);
+    if (await hasSuccessorLine(opts.manager, tenantId, id)) throw creationCancelExpired();
+    const changes = await countChangesSinceCreation(opts.manager, tenantId, 'spend_items', id);
+    const [{ total }] = await opts.manager.query(
+      'SELECT count(*)::int AS total FROM spend_attachments WHERE tenant_id = $1 AND spend_item_id = $2',
+      [tenantId, id],
+    );
+    return { changes: withChildCount(changes, 'attachment', total) };
+  }
+
+  /** The screen's "Create": 400 `BUDGET_LINE_INCOMPLETE` while the line lacks a field it needs. */
+  async completeCreation(id: string, opts: { manager: EntityManager }): Promise<{ complete: true }> {
+    const tenantId = await summaryTenantId(opts.manager);
+    const missing = await missingCreationFields(opts.manager, tenantId, id);
+    if (!missing) throw new NotFoundException('Budget line not found');
+    if (missing.fields.length > 0) throw budgetLineIncomplete(missing.fields, missing.names);
+    return { complete: true };
+  }
+
+  /**
+   * The screen's "Cancel" of a line being created: its creator deletes it, through the delete of its
+   * nature (refusals such as `BUDGET_LINE_FROZEN`, children, audit entry). Called by its route only
+   * (`data-access-inventory.spec.ts`).
+   * - The creation token is checked here, against the transaction's tenant and `userId`: no caller
+   *   reaches the delete window without it (403 `CREATION_CANCEL_EXPIRED`).
+   * - The line is locked FOR UPDATE under the person's access: a line hidden from them is 404, one
+   *   they may no longer modify 403. Under that lock, a line another person wrote on, or that a line
+   *   continues, is refused with `CREATION_CANCEL_EXPIRED`.
+   * - A limited person's delete then runs in `withCreatorCancelAccess`, for this line only; its
+   *   attachment files go once the window is closed and the person's access is back.
+   */
+  async cancelCreation(id: string, token: unknown, userId: string, opts: { manager: EntityManager }): Promise<void> {
+    const tenantId = await summaryTenantId(opts.manager);
+    assertBudgetLineCreationToken(id, token, { tenantId, userId });
+    const line = await resolveBudgetLine(id, opts.manager);
+    if (!(await lockBudgetLine(opts.manager, line.nature, tenantId, line.id, 'update'))) {
+      throw new NotFoundException('Budget line not found');
+    }
+    await assertCreatorAloneSinceCreation(opts.manager, tenantId, 'spend_items', line.id, userId);
+    if (await hasSuccessorLine(opts.manager, tenantId, line.id)) throw creationCancelExpired();
+    const deleter = line.nature === 'capex' ? this.capexDelete : this.opexDelete;
+    const paths = await withCreatorCancelAccess(opts.manager, userId, (manager) => deleter.deleteRowsOf(line.id, { manager, userId }));
+    await deleter.deleteFiles(paths);
+  }
+
   async update(ref: string, body: unknown, userId: string | undefined, opts: { manager: EntityManager }) {
     const line = await resolveBudgetLine(ref, opts.manager);
     const input = this.nativeBody(body, line.nature, true);
@@ -99,6 +187,48 @@ export class BudgetLinesService {
 
   summaryAggregateRequest(body: unknown, opts: ReadOptions) {
     return budgetList.budgetListAggregateRequest(SUMMARY_SCOPES.all, this.deps(opts.access), body, opts.manager);
+  }
+
+  /**
+   * Data-scoped access (spec §6.6): the lines of each dimension value that the person cannot read,
+   * for the analytics report. Body `{ axis, values, year?, scope }`: the dimension, its values (500
+   * at most), the report's first year and its tab (`all`, `opex` or `capex`). The window is the
+   * engine's `windowScope`, computed here in UTC: 1 January of `year`, or of the server's current
+   * year - 1 when none is given. An unscoped person gets an empty answer without a counting query
+   * (`hiddenCategoryLineCounts`).
+   */
+  async hiddenCategoryCounts(body: unknown, opts: { manager: EntityManager }) {
+    if (!body || typeof body !== 'object' || Array.isArray(body)) throw new BadRequestException('A body is required.');
+    const input = body as Record<string, unknown>;
+    const axis = input.axis;
+    if (typeof axis !== 'string' || !UUID.test(axis)) throw new BadRequestException('axis must be a dimension id.');
+    if (!Array.isArray(input.values)) throw new BadRequestException('values must be a list of value ids.');
+    if (input.values.length === 0) throw new BadRequestException('values must name at least one value id.');
+    if (input.values.length > MAX_HIDDEN_VALUES) throw new BadRequestException(`values holds ${MAX_HIDDEN_VALUES} values at most.`);
+    const values: string[] = [];
+    for (const value of input.values) {
+      if (typeof value !== 'string' || !UUID.test(value)) throw new BadRequestException('values must be value ids.');
+      values.push(value.toLowerCase());
+    }
+    const scope = input.scope;
+    if (scope !== 'all' && scope !== 'opex' && scope !== 'capex') throw new BadRequestException('scope must be all, opex or capex.');
+    const currentYear = new Date().getFullYear();
+    let year: number;
+    if (input.year == null) {
+      year = currentYear - 1;
+    } else {
+      if (typeof input.year !== 'number' || !Number.isInteger(input.year)) throw new BadRequestException('year must be a whole year.');
+      year = input.year;
+    }
+    budgetList.assertBudgetYearsWithinBounds([year], currentYear);
+    const counts = await hiddenCategoryLineCounts(
+      opts.manager,
+      axis.toLowerCase(),
+      Array.from(new Set(values)),
+      `${year}-01-01`,
+      scope === 'all' ? null : scope,
+    );
+    return { counts: Object.fromEntries(counts) };
   }
 
   /** The lines of `ids` as the unified list draws them (the AI detail, which names its line by id). */
@@ -173,6 +303,14 @@ export class BudgetLinesService {
   /** The Relations tab in one round trip (`budget-line-relations.ts`). */
   relations(ref: string, ctx: BudgetLineRelationsContext) {
     return readBudgetLineRelations(ctx.manager, ref, ctx);
+  }
+
+  /**
+   * The contract picker: mismatches a candidate would have once linked. Without the contracts
+   * right the answer is empty and no contract is read. A missing line, or one outside data access, is 404.
+   */
+  contractConsistency(ref: string, rawIds: unknown, opts: { manager: EntityManager; contractsAccess: boolean }) {
+    return budgetLineContractConsistency(opts.manager, ref, rawIds, opts.contractsAccess);
   }
 
   /** Link or unlink one row of the tab. The line is locked; one audit row when the set changes. */

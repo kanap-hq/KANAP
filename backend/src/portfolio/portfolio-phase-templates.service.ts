@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository, EntityManager } from 'typeorm';
 import { PortfolioPhaseTemplate, DEFAULT_PHASE_TEMPLATES } from './portfolio-phase-template.entity';
 import { PortfolioPhaseTemplateItem } from './portfolio-phase-template-item.entity';
+import { tenantSeedLanguage } from '../analytics/recommended-dimensions.seed';
 import { AuditService } from '../audit/audit.service';
 
 @Injectable()
@@ -285,6 +286,9 @@ export class PortfolioPhaseTemplatesService {
       return { ok: true, message: 'Templates already exist', created: 0 };
     }
 
+    // Named in the workspace seed language (`metadata.language`), English when absent.
+    const [tenant] = await mg.query(`SELECT metadata FROM tenants WHERE id = $1`, [tenantId]);
+    const language = tenantSeedLanguage(tenant?.metadata);
     let created = 0;
     for (let seq = 0; seq < DEFAULT_PHASE_TEMPLATES.length; seq++) {
       const def = DEFAULT_PHASE_TEMPLATES[seq];
@@ -292,7 +296,7 @@ export class PortfolioPhaseTemplatesService {
       const template = await templateRepo.save(
         templateRepo.create({
           tenant_id: tenantId,
-          name: def.name,
+          name: def.name[language],
           is_system: true,
           sequence: seq,
         }),
@@ -304,10 +308,10 @@ export class PortfolioPhaseTemplatesService {
           itemRepo.create({
             tenant_id: tenantId,
             template_id: template.id,
-            name: item.name,
+            name: item.name[language],
             sequence: i,
             has_milestone: item.has_milestone,
-            milestone_name: item.milestone_name,
+            milestone_name: item.milestone_name[language],
           }),
         );
       }

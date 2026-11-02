@@ -80,6 +80,11 @@
       "title": "Vorlage auswählen"
     }
   },
+  "empty": {
+    "all": "Noch keine Dokumente in diesen Bibliotheken.",
+    "folder": "Noch keine Dokumente in diesem Ordner.",
+    "library": "Noch keine Dokumente in dieser Bibliothek."
+  },
   "folderMoveDialog": {
     "actions": {
       "move": "Verschieben"

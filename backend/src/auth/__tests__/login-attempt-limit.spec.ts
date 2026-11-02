@@ -16,6 +16,8 @@ import { LoginAttemptLimit, loginAttemptKey, normalizeLoginIdentifier } from '..
 // - the same account from another client address, and another account from the same client
 //   address, sign in;
 // - a successful sign-in clears the count of its pair;
+// - a completed password reset clears the counts of its account from every client address, and
+//   only those: the new password works at once;
 // - an error other than a refusal does not count, and the earlier refusals stay counted;
 // - an identifier no account has gets the same answers, events and refusal as a known one;
 // - the identifier typed counts in lower case and without spaces, per tenant;
@@ -45,6 +47,8 @@ function tenantDataSource() {
 function setup(now: () => number = Date.now) {
   const checks: string[] = [];
   const events: any[] = [];
+  /** Passwords set by a reset, per account. */
+  const passwords: Record<string, string> = {};
   const auth = {
     // The service's answers: the same 401 for a wrong password and an unknown address.
     validateUser: async (email: string, password: string) => {
@@ -53,8 +57,13 @@ function setup(now: () => number = Date.now) {
       if (password === SERVER_ERROR) throw new Error('database unavailable');
       const id = ACCOUNTS[email.trim().toLowerCase()];
       if (!id) throw new AuthRefusedException(INVALID_CREDENTIALS, 'unknown_user');
-      if (password !== PASSWORD) throw new AuthRefusedException(INVALID_CREDENTIALS, 'bad_password', id);
+      if (password !== (passwords[id] ?? PASSWORD)) throw new AuthRefusedException(INVALID_CREDENTIALS, 'bad_password', id);
       return { id, email, role: 'member', tenant_id: 'tenant-1' };
+    },
+    // The reset link names the account: the token here is its e-mail.
+    resetPasswordWithToken: async (token: string, nextPassword: string) => {
+      passwords[ACCOUNTS[token]] = nextPassword;
+      return { id: ACCOUNTS[token], email: token };
     },
     signTokens: async () => ({ access_token: 'access-token', refresh_token: 'refresh-token', expires_in: 900, refresh_expires_in: 14_400 }),
   };
@@ -140,6 +149,35 @@ async function testSuccessClearsTheCount() {
   assert.equal((await signIn(controller, 'ada@example.com', PASSWORD, '198.51.100.3')).status, 429, 'five new refusals after the success');
 }
 
+async function testPasswordResetClearsTheAccount() {
+  const { controller, events } = setup();
+  await refuseFiveTimes(controller, 'Ada@example.com', '198.51.100.11');
+  await refuseFiveTimes(controller, 'ada@example.com', '198.51.100.12');
+  await refuseFiveTimes(controller, 'bob@example.com', '198.51.100.11');
+  assert.equal((await signIn(controller, 'ada@example.com', PASSWORD, '198.51.100.11')).status, 429, 'blocked before the reset');
+
+  const req = { tenant: { id: 'tenant-1' }, ip: '203.0.113.1', headers: { 'user-agent': 'Spec' } };
+  assert.deepEqual(await controller.completePasswordReset({ token: 'ada@example.com', password: 'New-pass-2026' } as any, req), { ok: true });
+  assert.deepEqual(events.at(-1), { action: 'password_reset_completed', userId: 'user-ada' });
+
+  assert.equal((await signIn(controller, 'ada@example.com', 'New-pass-2026', '198.51.100.11')).status, 201, 'the new password works at once');
+  assert.equal((await signIn(controller, 'ada@example.com', 'New-pass-2026', '198.51.100.12')).status, 201, 'from every client address');
+  assert.equal((await signIn(controller, 'bob@example.com', PASSWORD, '198.51.100.11')).status, 429, 'another account stays blocked');
+  await refuseFiveTimes(controller, 'ada@example.com', '198.51.100.11');
+  assert.equal((await signIn(controller, 'ada@example.com', 'New-pass-2026', '198.51.100.11')).status, 429, 'five new refusals block again');
+}
+
+/** `clearPrefix` forgets the keys that start with the prefix, and only those. */
+async function testClearPrefix() {
+  const counter = new MemoryHitCounter();
+  const rule = { limit: 5, ttl: 15 * 60_000, blockDuration: 15 * 60_000 };
+  for (const key of ['a.1', 'a.2', 'ab.1']) for (let i = 0; i < 3; i += 1) await counter.hit(key, rule);
+  await counter.clearPrefix('a.');
+  assert.equal((await counter.hit('a.1', rule)).hits, 1);
+  assert.equal((await counter.hit('a.2', rule)).hits, 1);
+  assert.equal((await counter.hit('ab.1', rule)).hits, 4, 'another prefix keeps its count');
+}
+
 async function testUnknownAccountGetsTheSameAnswers() {
   const { controller, checks, events } = setup();
   const reasons = (from: number) => events.slice(from).map((e) => `${e.action}/${e.reason}`);
@@ -200,7 +238,12 @@ async function testIdentifierTypedIsNormalizedPerTenant() {
   assert.equal(normalizeLoginIdentifier('  Ada@Example.COM \t'), 'ada@example.com');
   assert.equal(loginAttemptKey('t', '198.51.100.5', ' ADA@example.com'), loginAttemptKey('t', '198.51.100.5', 'ada@example.com'));
   assert.notEqual(loginAttemptKey('t', '198.51.100.5', 'ada@example.com'), loginAttemptKey('u', '198.51.100.5', 'ada@example.com'));
-  assert.match(loginAttemptKey('t', '198.51.100.5', 'ada@example.com'), /^[0-9a-f]{64}$/, 'a hash: neither identifier nor client address in clear');
+  assert.match(loginAttemptKey('t', '198.51.100.5', 'ada@example.com'), /^[0-9a-f]{64}\.[0-9a-f]{64}$/, 'hashes: neither identifier nor client address in clear');
+  assert.equal(
+    loginAttemptKey('t', '198.51.100.5', 'ada@example.com').split('.')[0],
+    loginAttemptKey('t', '198.51.100.6', 'ada@example.com').split('.')[0],
+    'one account part for every client address',
+  );
 
   const { controller } = setup();
   await refuseFiveTimes(controller, 'Ada@Example.com', '198.51.100.5');
@@ -263,6 +306,8 @@ async function run() {
   for (const [label, test] of [
     ['testFiveRefusalsBlockThePair', testFiveRefusalsBlockThePair],
     ['testSuccessClearsTheCount', testSuccessClearsTheCount],
+    ['testPasswordResetClearsTheAccount', testPasswordResetClearsTheAccount],
+    ['testClearPrefix', testClearPrefix],
     ['testUnknownAccountGetsTheSameAnswers', testUnknownAccountGetsTheSameAnswers],
     ['testErrorOtherThanRefusalDoesNotCount', testErrorOtherThanRefusalDoesNotCount],
     ['testReleaseKeepsTheOtherHits', testReleaseKeepsTheOtherHits],

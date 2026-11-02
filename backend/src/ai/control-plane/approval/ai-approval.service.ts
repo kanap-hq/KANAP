@@ -9,6 +9,7 @@ import { AiApproval } from '../entities/ai-approval.entity';
 import { AiApprovalPolicyResolverService } from '../policy/ai-approval-policy-resolver.service';
 import { PolicyDecisionRecord } from '../policy/policy-decision.types';
 import { isRecord } from '../../../common/object-guards';
+import { codedForbidden } from '../../../auth/module-right-required';
 
 const DEFAULT_APPROVAL_TTL_MS = 10 * 60 * 1000;
 const DEFAULT_APPROVED_ACTION_EXECUTION_TTL_MS = 30 * 60 * 1000;
@@ -72,10 +73,10 @@ export class AiApprovalService {
       order: { decided_at: 'DESC', created_at: 'DESC' },
     });
     if (!approval) {
-      throw new ForbiddenException('A valid durable approval is required before execution.');
+      throw codedForbidden('AGENT_ACTION_APPROVAL_REQUIRED', 'A valid durable approval is required before execution.');
     }
     if (approval.action_request_id !== action.id || approval.input_hash !== action.input_hash) {
-      throw new ForbiddenException('Approval does not match the action request scope.');
+      throw codedForbidden('AGENT_ACTION_CHANGED', 'Approval does not match the action request scope.');
     }
     return approval;
   }
@@ -180,23 +181,23 @@ export class AiApprovalService {
   ): Promise<{ action: AiActionRequest; approval: AiApproval }> {
     const action = await this.actions.findProviderActionForExecution(context, actionRequestId);
     if (action.status === 'executed') {
-      throw new ForbiddenException('Executed action requests cannot be approved again.');
+      throw codedForbidden('AGENT_ACTION_ALREADY_EXECUTED', 'Executed action requests cannot be approved again.');
     }
     if (action.status === 'failed') {
-      throw new ForbiddenException('Failed action requests require a new approval cycle.');
+      throw codedForbidden('AGENT_ACTION_FAILED', 'Failed action requests require a new approval cycle.');
     }
     if (action.status === 'rejected') {
-      throw new ForbiddenException('Rejected action requests cannot be approved.');
+      throw codedForbidden('AGENT_ACTION_REJECTED', 'Rejected action requests cannot be approved.');
     }
     if (action.status === 'dismissed') {
-      throw new ForbiddenException('Dismissed action requests cannot be approved.');
+      throw codedForbidden('AGENT_ACTION_DISMISSED', 'Dismissed action requests cannot be approved.');
     }
     if (action.status === 'expired') {
-      throw new ForbiddenException('Expired action requests cannot be approved.');
+      throw codedForbidden('AGENT_ACTION_EXPIRED', 'Expired action requests cannot be approved.');
     }
     if (action.expires_at && action.expires_at <= new Date()) {
       await this.actions.markExpired(context, action);
-      throw new ForbiddenException('Expired action requests cannot be approved.');
+      throw codedForbidden('AGENT_ACTION_EXPIRED', 'Expired action requests cannot be approved.');
     }
     const expiresAt = approvalExpiryForAction(action);
     const approval = await this.repo(context).save(this.repo(context).create({
@@ -229,11 +230,11 @@ export class AiApprovalService {
   ): Promise<{ action: AiActionRequest; approval: AiApproval }> {
     const action = await this.actions.findProviderActionForExecution(context, actionRequestId);
     if (action.status !== 'pending' && action.status !== 'approved') {
-      throw new ForbiddenException('Only pending or approved action requests can be rejected.');
+      throw codedForbidden('AGENT_ACTION_NOT_PENDING', 'Only pending or approved action requests can be rejected.');
     }
     if (action.expires_at && action.expires_at <= new Date()) {
       await this.actions.markExpired(context, action);
-      throw new ForbiddenException('Expired action requests cannot be rejected.');
+      throw codedForbidden('AGENT_ACTION_EXPIRED', 'Expired action requests cannot be rejected.');
     }
     const approval = await this.repo(context).save(this.repo(context).create({
       tenant_id: context.tenantId,
@@ -265,11 +266,11 @@ export class AiApprovalService {
   ): Promise<{ action: AiActionRequest; approval: AiApproval }> {
     const action = await this.actions.findProviderActionForExecution(context, actionRequestId);
     if (action.status !== 'pending' && action.status !== 'approved') {
-      throw new ForbiddenException('Only pending or approved action requests can be dismissed.');
+      throw codedForbidden('AGENT_ACTION_NOT_PENDING', 'Only pending or approved action requests can be dismissed.');
     }
     if (action.expires_at && action.expires_at <= new Date()) {
       await this.actions.markExpired(context, action);
-      throw new ForbiddenException('Expired action requests cannot be dismissed.');
+      throw codedForbidden('AGENT_ACTION_EXPIRED', 'Expired action requests cannot be dismissed.');
     }
     const approval = await this.repo(context).save(this.repo(context).create({
       tenant_id: context.tenantId,
@@ -299,26 +300,26 @@ export class AiApprovalService {
     action: AiActionRequest,
   ): Promise<AiApproval> {
     if (action.tenant_id !== context.tenantId) {
-      throw new ForbiddenException('Approval does not belong to this tenant.');
+      throw codedForbidden('AGENT_ACTION_NOT_FOUND', 'Approval does not belong to this tenant.');
     }
     if (action.status === 'rejected') {
-      throw new ForbiddenException('Rejected action requests cannot be executed.');
+      throw codedForbidden('AGENT_ACTION_REJECTED', 'Rejected action requests cannot be executed.');
     }
     if (action.status === 'dismissed') {
-      throw new ForbiddenException('Dismissed action requests cannot be executed.');
+      throw codedForbidden('AGENT_ACTION_DISMISSED', 'Dismissed action requests cannot be executed.');
     }
     if (action.status === 'executed') {
-      throw new ForbiddenException('Action request has already been executed.');
+      throw codedForbidden('AGENT_ACTION_ALREADY_EXECUTED', 'Action request has already been executed.');
     }
     if (action.status === 'failed') {
-      throw new ForbiddenException('Failed action requests require a new approval cycle.');
+      throw codedForbidden('AGENT_ACTION_FAILED', 'Failed action requests require a new approval cycle.');
     }
     if (action.expires_at && action.expires_at <= new Date()) {
       await this.actions.markExpired(context, action);
-      throw new ForbiddenException('Action request approval has expired.');
+      throw codedForbidden('AGENT_ACTION_EXPIRED', 'Action request approval has expired.');
     }
     if (action.status !== 'approved') {
-      throw new ForbiddenException('Action request must be approved before execution.');
+      throw codedForbidden('AGENT_ACTION_APPROVAL_REQUIRED', 'Action request must be approved before execution.');
     }
     return this.findDurableApproval(context, action);
   }
@@ -377,6 +378,7 @@ export class AiApprovalService {
     await this.actions.recordPolicyDecision(context, action, decision);
     if (decision.outcome !== 'policy_approved' || !decision.approved) {
       throw new ForbiddenException({
+        code: decision.outcome === 'human_required' ? 'AGENT_ACTION_APPROVAL_REQUIRED' : 'AGENT_ACTION_POLICY_DENIED',
         message: decision.outcome === 'human_required'
           ? 'Human approval is required before execution.'
           : 'Policy approval denied.',

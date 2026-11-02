@@ -1,6 +1,6 @@
 # Personnalisation
 
-Utilisez la page Personnalisation pour appliquer l'identité de votre entreprise dans KANAP. Vous y définissez le logo et les couleurs principales, et le changement est visible pour chaque utilisateur de votre tenant lors du prochain rechargement de la page.
+Utilisez la page Personnalisation pour appliquer l'identité de votre entreprise dans KANAP. Vous y définissez le nom de l'organisation, le logo et les couleurs principales, et le changement est visible pour chaque utilisateur de votre tenant lors du prochain rechargement de la page.
 
 ## Où la trouver
 
@@ -13,8 +13,12 @@ Les modifications s'appliquent uniquement à votre tenant courant.
 
 ## Ce que vous pouvez personnaliser
 
-La page comporte deux cartes : **Logo** et **Couleurs principales**. Les deux sont optionnelles. Sans rien défini, KANAP affiche son en-tête texte-et-icône par défaut et les couleurs de thème par défaut.
+La page comporte trois cartes : **Nom de l'organisation**, **Logo** et **Couleurs principales**. Le logo et les couleurs sont optionnels. Sans rien défini, KANAP affiche son en-tête texte-et-icône par défaut et les couleurs de thème par défaut.
 
+- **Nom de l'organisation**
+  - Le nom affiché avec le logo, dans la fenêtre À propos, sur la page de consentement et pour l'assistant
+  - De 1 à 120 caractères
+  - L'adresse de l'espace de travail reste la même
 - **Logo**
   - Apparaît dans la barre supérieure de l'application (lorsque connecté)
   - Apparaît dans l'en-tête de la page de connexion
@@ -22,6 +26,13 @@ La page comporte deux cartes : **Logo** et **Couleurs principales**. Les deux so
   - Une couleur principale pour le **mode clair**
   - Une couleur principale pour le **mode sombre**
   - Utilisée par la barre d'application, les boutons principaux et les liens
+
+## Nom de l'organisation
+
+1. Saisissez le nom.
+2. Cliquez sur **Enregistrer les modifications**.
+
+**Réinitialiser par défaut** laisse le nom tel quel. Cette action retire le logo et les couleurs personnalisées.
 
 ## Configuration du logo
 
@@ -73,9 +84,9 @@ L'avertissement est informatif (vous pouvez quand même enregistrer), mais un fa
 
 Trois actions au bas de la page contrôlent la persistance :
 
-- **Enregistrer les modifications** : valide le téléversement du logo sélectionné et les valeurs de couleur. Désactivé tant qu'il n'y a pas de modifications en attente ou qu'une saisie hexadécimale est invalide.
+- **Enregistrer les modifications** : enregistre le nom de l'organisation, le téléversement du logo sélectionné et les valeurs de couleur. Désactivé tant qu'il n'y a pas de modifications en attente, que le nom est vide ou dépasse 120 caractères, ou qu'une saisie hexadécimale est invalide.
 - **Annuler** : annule toute modification non enregistrée sur la page (n'affecte pas ce qui est déjà enregistré).
-- **Réinitialiser par défaut** : supprime le logo enregistré et efface toutes les couleurs personnalisées. Demande confirmation avant exécution.
+- **Réinitialiser par défaut** : supprime le logo enregistré et efface toutes les couleurs personnalisées. Le nom de l'organisation reste. Demande confirmation avant exécution.
 
 Une petite légende sous les actions affiche le compteur de **version du logo**, qui s'incrémente à chaque téléversement du logo. C'est principalement une indication que les caches du navigateur seront rafraîchis.
 

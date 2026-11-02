@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import api from '../api';
 import DeleteSelectedButton from './DeleteSelectedButton';
 import { createAppTheme } from '../config/ThemeContext';
+import { NotifyProvider } from './notify/NotifyProvider';
 
 vi.mock('../api', () => ({
   default: { delete: vi.fn() },
@@ -89,12 +90,11 @@ describe('DeleteSelectedButton', () => {
     await waitFor(() => expect(api.delete).toHaveBeenCalledWith('/spend-items/bulk', { data: { ids: ['a', 'b'] } }));
   });
 
-  it('is a disabled neutral pill with no selection', () => {
+  it('stays a danger pill, disabled, with no selection', () => {
     renderIdle([]);
     const button = screen.getByRole('button', { name: 'buttons.deleteSelected (0)' });
     expect(button).toBeDisabled();
-    expect(button).toHaveClass('MuiButton-action');
-    expect(button).not.toHaveClass('MuiButton-action-danger');
+    expect(button).toHaveClass('MuiButton-action-danger');
   });
 
   it('turns into the danger pill once rows are selected', () => {
@@ -102,6 +102,52 @@ describe('DeleteSelectedButton', () => {
     const button = screen.getByRole('button', { name: 'buttons.deleteSelected (2)' });
     expect(button).toBeEnabled();
     expect(button).toHaveClass('MuiButton-action-danger');
+  });
+
+  it('shows the selected count as a badge on the icon for 0, 1 and 12 rows', async () => {
+    const twelve = Array.from({ length: 12 }, (_, i) => ({ id: String(i), name: `Row ${i}` }));
+    const { rerender } = renderIdle([]);
+    const none = screen.getByRole('button', { name: 'buttons.deleteSelected (0)' });
+    expect(none.querySelector('.MuiBadge-badge')).toHaveTextContent('0');
+    expect(none.textContent?.replace(/\s/g, '')).toBe('0');
+    expect(none.querySelector('svg')).not.toBeNull();
+    expect(none).not.toHaveTextContent('buttons.deleteSelected');
+    fireEvent.mouseOver(none.parentElement as HTMLElement);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('buttons.deleteSelected (0)');
+
+    rerender(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <DeleteSelectedButton<Row>
+          selectedRows={[rows[0]]}
+          endpoint="/spend-items/bulk"
+          getItemId={(row) => row.id}
+          getItemName={(row) => row.name}
+          onDeleteSuccess={vi.fn()}
+        />
+      </ThemeProvider>,
+    );
+    const one = screen.getByRole('button', { name: 'buttons.deleteSelected (1)' });
+    expect(one.querySelector('.MuiBadge-badge')).toHaveTextContent('1');
+    expect(one.textContent?.replace(/\s/g, '')).toBe('1');
+
+    rerender(
+      <ThemeProvider theme={createAppTheme('dark')}>
+        <DeleteSelectedButton<Row>
+          selectedRows={twelve}
+          endpoint="/spend-items/bulk"
+          getItemId={(row) => row.id}
+          getItemName={(row) => row.name}
+          onDeleteSuccess={vi.fn()}
+        />
+      </ThemeProvider>,
+    );
+    const many = screen.getByRole('button', { name: 'buttons.deleteSelected (12)' });
+    const badge = many.querySelector('.MuiBadge-badge') as HTMLElement;
+    expect(badge).toHaveTextContent('12');
+    expect(many.textContent?.replace(/\s/g, '')).toBe('12');
+    expect(badge).toHaveStyle({ backgroundColor: 'rgb(248, 113, 113)', color: 'rgb(15, 17, 23)' });
+    fireEvent.mouseOver(many);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('buttons.deleteSelected (12)');
   });
 
   it('shows the reason of each failed item when the others are deleted', async () => {
@@ -172,14 +218,16 @@ describe('DeleteSelectedButton', () => {
     vi.mocked(api.delete).mockResolvedValue({ data: { deleted: many.map((row) => row.id), failed: [] } } as any);
     render(
       <ThemeProvider theme={createAppTheme('light')}>
-        <DeleteSelectedButton<Row>
-          selectedRows={many}
-          endpoint="/contracts/bulk"
-          getItemId={(row) => row.id}
-          getItemName={(row) => row.name}
-          onDeleteSuccess={vi.fn()}
-          itemLabels={{ toDelete: (n) => `to delete:${n}`, kept: (n) => `kept:${n}`, deleted: (n) => `contracts deleted:${n}` }}
-        />
+        <NotifyProvider>
+          <DeleteSelectedButton<Row>
+            selectedRows={many}
+            endpoint="/contracts/bulk"
+            getItemId={(row) => row.id}
+            getItemName={(row) => row.name}
+            onDeleteSuccess={vi.fn()}
+            itemLabels={{ toDelete: (n) => `to delete:${n}`, kept: (n) => `kept:${n}`, deleted: (n) => `contracts deleted:${n}` }}
+          />
+        </NotifyProvider>
       </ThemeProvider>,
     );
     fireEvent.click(screen.getByRole('button', { name: /buttons.deleteSelected/ }));
@@ -232,15 +280,17 @@ describe('DeleteSelectedButton', () => {
       const checkDelete = vi.fn(check);
       render(
         <ThemeProvider theme={createAppTheme('light')}>
-          <DeleteSelectedButton<Row>
-            selectedRows={selected}
-            endpoint="/contracts/bulk"
-            getItemId={(row) => row.id}
-            getItemName={(row) => row.name}
-            onDeleteSuccess={vi.fn()}
-            checkDelete={checkDelete}
-            itemLabels={labels as typeof itemLabels}
-          />
+          <NotifyProvider>
+            <DeleteSelectedButton<Row>
+              selectedRows={selected}
+              endpoint="/contracts/bulk"
+              getItemId={(row) => row.id}
+              getItemName={(row) => row.name}
+              onDeleteSuccess={vi.fn()}
+              checkDelete={checkDelete}
+              itemLabels={labels as typeof itemLabels}
+            />
+          </NotifyProvider>
         </ThemeProvider>,
       );
       fireEvent.click(screen.getByRole('button', { name: /buttons.deleteSelected/ }));

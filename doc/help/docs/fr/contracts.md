@@ -49,7 +49,7 @@ Chaque ligne ouvre le contrat. Votre recherche, vos filtres et votre tri sont co
 **Colonnes par défaut** :
 
 - **Contrat**, **Fournisseur**, **Société**
-- **Prochaine échéance** : la prochaine date limite de résiliation d'un contrat à reconduction tacite, ou la fin de tout autre contrat. La date est suivie de « dans n jours ». Un contrat échu affiche le jour de sa fin, en grisé
+- **Prochaine échéance** : « Résiliation possible jusqu'au {date} » lorsque cette date est la date limite de résiliation et qu'elle précède la fin du terme, ou « Fin le {date} » lorsque la date est la fin du contrat. La ligne se termine par « dans n j ». Un contrat échu affiche le jour de sa fin, en grisé
 - **État** : voir plus bas
 - **Montant annuel** : le montant à la signature, suivi de sa devise
 - **Engagé**, **Budget** et **Écart** pour l'année budgétaire choisie. Voir [Colonnes budgétaires](#colonnes-budgetaires)
@@ -136,7 +136,7 @@ Il faut `contracts:member` pour modifier. Les lecteurs voient la même page, tou
 
 **Partager**, dans l'en-tête, envoie par e-mail un lien vers le contrat à des collègues de votre espace de travail.
 
-La fiche a quatre onglets : **Vue d'ensemble**, **Budget**, **Conformité** et **Relations**. Les adresses des anciens onglets **Détails** et **Tâches** ouvrent la vue d'ensemble.
+La fiche a cinq onglets : **Vue d'ensemble**, **Budget**, **Conformité**, **Relations** et **Historique** (les modifications du contrat, voir [Historique des fiches](record-history.md)). Les adresses des anciens onglets **Détails** et **Tâches** ouvrent la vue d'ensemble.
 
 ### Vue d'ensemble
 
@@ -158,7 +158,7 @@ La fiche recalcule ces dates pendant que vous modifiez le début, la durée, le 
 
 ### Budget
 
-L'onglet liste les lignes budgétaires liées, OPEX et CAPEX ensemble, avec leur référence (`BL-12`), leur nom, leur type et leur société. Utilisez le sélecteur sous le tableau pour lier ou retirer des lignes.
+L'onglet liste les lignes budgétaires liées, OPEX et CAPEX ensemble, avec leur référence (`BL-12`), leur nom, leur type et leur société. Utilisez le sélecteur sous le tableau pour lier ou retirer des lignes. Une ligne dont la société payeuse, le centre de coûts, le fournisseur ou la devise diffère du contrat affiche une petite marque orange. Survolez la marque pour voir chaque écart, avec la valeur sur la ligne et la valeur sur le contrat. Le sélecteur montre la même marque sur une ligne avant de la lier. Le lien reste possible. La marque apparaît pour une ligne que vous pouvez lire.
 
 Avec l'accès en lecture aux lignes budgétaires (`budget:reader`), l'onglet affiche aussi des chiffres :
 
@@ -246,7 +246,7 @@ La section est absente quand il n'y a rien à suggérer.
 
 - **Ajouter un lien** ouvre une boîte de dialogue pour une URL et un nom optionnel ; le lien est enregistré aussitôt. Pour modifier un lien, survolez sa ligne et cliquez sur le crayon.
 - **Joindre un fichier** ouvre le sélecteur de fichiers. Vous pouvez aussi déposer des fichiers sur la section.
-- Pour retirer un lien ou un fichier, survolez la ligne et cliquez sur la croix. La suppression d'un fichier demande d'abord une confirmation.
+- Pour retirer un lien ou un fichier, survolez la ligne et cliquez sur la croix. Retirer un lien affiche un message et propose **Annuler**, qui recrée le lien. La suppression d'un fichier demande d'abord une confirmation.
 
 ### Supprimer un contrat
 
@@ -321,11 +321,12 @@ L'export écrit un fichier CSV ou un classeur Excel (`.xlsx`) : choisissez sous 
 
 Gardez votre liste de contrats synchronisée avec d'autres outils grâce aux fichiers CSV ou aux classeurs Excel (`contracts:admin`).
 
-**Export** : télécharge les contrats que la liste affiche (ou, sur demande dans la fenêtre, tous les contrats) avec ces colonnes : `name`, `company_name`, `supplier_name`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. Les dates calculées (fin du terme, dates limites, état) ne sont pas exportées.
+**Export** : télécharge les contrats que la liste affiche (ou, sur demande dans la fenêtre, tous les contrats). Les colonnes sont titrées dans la langue de votre écran ; leurs noms techniques, que l'import lit aussi, sont `name`, `company_name`, `supplier_name`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. Les dates calculées (fin du terme, dates limites, état) ne sont pas exportées.
 
 **Import** :
 
 - Utilisez le **Contrôle préalable** pour vérifier le fichier avant de l'appliquer
+- **Télécharger un exemple**, dans la fenêtre d'import, donne deux contrats d'exemple et ce que chaque colonne accepte. Voir [Fichiers d'exemple](csv-files.md#example-files)
 - Une ligne correspond à un contrat par son nom et son fournisseur
 - Création et mises à jour sont prises en charge
 - Le fichier n'a pas de colonne de fin de validité. Lors d'une mise à jour, un `status` vide, ou égal au statut actuel du contrat, conserve sa fin de validité. Un statut différent l'applique : `enabled` efface la fin de validité, et `disabled` termine le contrat aujourd'hui, sauf si sa fin de validité est déjà passée

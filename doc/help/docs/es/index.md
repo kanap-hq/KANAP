@@ -19,7 +19,7 @@ Si desea el camino más corto hacia la productividad, comience con las guías de
 
 ### Panel de control
 
-- [Panel de control](my-dashboard.md): Vista general personal con mosaicos configurables (haga clic en el logotipo de KANAP)
+- [Panel de control](my-dashboard.md): Vista general personal con mosaicos configurables y la sección Gestión presupuestaria (haga clic en el logotipo de KANAP)
 
 ### Gestión de portafolio
 
@@ -124,7 +124,6 @@ Si desea el camino más corto hacia la productividad, comience con las guías de
 - [Uso y costes](ai-usage.md): Uso de la IA y costes reales en chat y agentes, por agente y por modelo
 - [Integraciones](integrations.md): Conexión de GLPI para importar tickets y para los agentes
 - [Tareas programadas](scheduled-tasks.md): Revisión y gestión de trabajos recurrentes en segundo plano
-- [Vista general de la gestión presupuestaria](operations-dashboard.md): Resúmenes de OPEX y CAPEX, plazos y acciones rápidas
 
 ### Despliegue y operaciones
 

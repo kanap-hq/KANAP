@@ -64,6 +64,8 @@ La cuadrícula de Interfaces muestra su registro de integraciones de un vistazo.
 
 Haga clic en cualquier fila para abrir el espacio de trabajo. El espacio de trabajo tiene un panel lateral con las propiedades de la interfaz a la izquierda y seis pestañas a la derecha. La última, **Historial**, lista los cambios hechos en la interfaz (vea [Historial de los registros](record-history.md)).
 
+La cabecera lleva **Eliminar**, un icono de papelera con su nombre en una información emergente (`applications:admin`). La confirmación usa la misma comprobación que **Eliminar seleccionadas**. Indica que esta acción no se puede deshacer. Cuando la interfaz tiene enlaces, los explica y ofrece **Eliminar también los enlaces relacionados**: la eliminación está disponible una vez marcada esa opción, los enlaces se van con la interfaz y las conexiones se conservan. La lista se abre de nuevo después.
+
 ### Propiedades de la interfaz (panel lateral)
 
 El panel lateral permanece visible en cada pestaña y agrupa los campos más editados en tres secciones plegables:
@@ -207,7 +209,7 @@ Una dependencia va en un solo sentido. Si añade la interfaz B como anterior a l
 
 - **Añadir enlace** abre un diálogo para una URL y un nombre opcional; el enlace se guarda al instante. Para cambiar un enlace, pase el cursor sobre su fila y haga clic en el lápiz.
 - **Adjuntar archivo** abre el selector de archivos. También puede soltar archivos en la sección.
-- Para quitar un enlace o un archivo, pase el cursor sobre la fila y haga clic en la cruz. Eliminar un archivo pide confirmación antes.
+- Para quitar un enlace o un archivo, pase el cursor sobre la fila y haga clic en la cruz. Quitar un enlace muestra un mensaje y ofrece **Deshacer**, que vuelve a crear el enlace. Eliminar un archivo pide confirmación antes.
 
 **Consejo**: Adjunte la especificación y los documentos de mapeo a la interfaz, para que las personas que la operan los encuentren en un solo lugar.
 

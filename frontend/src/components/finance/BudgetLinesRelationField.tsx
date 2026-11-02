@@ -4,6 +4,7 @@ import type { SxProps, Theme } from '@mui/material/styles';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
+import ContractLineMismatchMark, { type ContractLineMismatch } from './ContractLineMismatchMark';
 import { budgetTypeChipSx } from '../../pages/budget/budgetTypeChipSx';
 import { drawerAutocompleteListboxSx, drawerFieldValueSx } from '../../theme/formSx';
 import { budgetLineLabel } from './budgetLineLabel';
@@ -16,6 +17,8 @@ export type LinkedBudgetLine = {
   nature: BudgetLineNature;
   item_number?: number | null;
   product_name: string;
+  /** Set when the line would disagree with the contract the picker belongs to. */
+  mismatches?: ContractLineMismatch[];
 };
 
 type LinkedRow = { id: string; item_number?: number | null; product_name?: string | null; description?: string | null };
@@ -58,6 +61,8 @@ type Props = {
   onChange: (next: LinkedBudgetLine[]) => void;
   disabled?: boolean;
   sx?: SxProps<Theme>;
+  /** The contract these lines would be linked to. Candidates then show a mismatch mark. */
+  contractId?: string;
 };
 
 /**
@@ -65,7 +70,7 @@ type Props = {
  * the server searches title and reference (`BL-n`), each option carries its
  * type as a neutral badge.
  */
-export default function BudgetLinesRelationField({ value, onChange, disabled = false, sx }: Props) {
+export default function BudgetLinesRelationField({ value, onChange, disabled = false, sx, contractId }: Props) {
   const { t } = useTranslation(['common', 'ops']);
   const [open, setOpen] = React.useState(false);
   const [input, setInput] = React.useState('');
@@ -77,18 +82,28 @@ export default function BudgetLinesRelationField({ value, onChange, disabled = f
   }, [input]);
 
   const { data: options = [], isFetching } = useQuery({
-    queryKey: ['budget-lines-relation-options', search],
+    queryKey: ['budget-lines-relation-options', search, contractId ?? null],
     queryFn: async ({ signal }) => {
       const res = await api.get<{ items: Array<LinkedRow & { nature: BudgetLineNature }> }>('/budget-lines/summary', {
         params: { page: 1, limit: 50, status: 'enabled', sort: 'product_name:ASC', q: search || undefined },
         signal,
       });
-      return (res.data?.items || []).map((row): LinkedBudgetLine => ({
+      const lines = (res.data?.items || []).map((row): LinkedBudgetLine => ({
         id: row.id,
         nature: row.nature,
         item_number: row.item_number ?? null,
         product_name: row.product_name ?? '',
       }));
+      if (!contractId || lines.length === 0) return lines;
+      const consistency = await api.get<{ items: Array<{ id: string; mismatches: ContractLineMismatch[] }> }>(
+        `/contracts/${encodeURIComponent(contractId)}/budget-line-consistency`,
+        { params: { ids: lines.map((line) => line.id).join(',') }, signal },
+      );
+      const byId = new Map((consistency.data?.items ?? []).map((item) => [item.id, item.mismatches]));
+      return lines.map((line) => {
+        const mismatches = byId.get(line.id);
+        return mismatches && mismatches.length > 0 ? { ...line, mismatches } : line;
+      });
     },
     enabled: open && !disabled,
     staleTime: 30_000,
@@ -119,7 +134,10 @@ export default function BudgetLinesRelationField({ value, onChange, disabled = f
         return (
           <li key={key} {...optionProps}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
-              <Box component="span" sx={{ flex: 1, minWidth: 0 }}>{labelOf(option)}</Box>
+              <Box component="span" sx={{ flex: 1, minWidth: 0 }}>
+                {labelOf(option)}
+                {option.mismatches && option.mismatches.length > 0 ? <ContractLineMismatchMark mismatches={option.mismatches} /> : null}
+              </Box>
               <Chip size="small" label={t(`ops:budget.${option.nature}`)} sx={budgetTypeChipSx} />
             </Box>
           </li>

@@ -1,4 +1,5 @@
-import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { codedForbidden } from '../auth/module-right-required';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, EntityManager } from 'typeorm';
 import { PortfolioActivity, ActivityType } from '../portfolio/portfolio-activity.entity';
@@ -372,7 +373,12 @@ export class TaskActivitiesService {
           type: 'comment',
           content: normalizedContent,
           context: null,
-          changed_fields: null,
+          // A status changed with the comment rides on it, as on a project's comment
+          // (`portfolio-status.service.ts`): the feed shows it beside the text. The `change` entry
+          // above stays, for the dashboard tiles.
+          changed_fields: hasStatusChange && oldStatus !== undefined && newStatus !== undefined
+            ? { status: [oldStatus, newStatus] }
+            : null,
         }),
       );
       await this.logActivityAuditIfNeeded(commentActivity, userId, opts, mg);
@@ -464,7 +470,7 @@ export class TaskActivitiesService {
 
     // Only allow the author to edit
     if (activity.author_id !== userId) {
-      throw new ForbiddenException('You can only edit your own comments');
+      throw codedForbidden('OWN_COMMENTS_ONLY', 'You can only edit your own comments');
     }
 
     activity.content = await normalizeMarkdownRichText(content, { fieldName: 'content' });

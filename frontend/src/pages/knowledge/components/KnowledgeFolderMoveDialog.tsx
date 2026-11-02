@@ -59,6 +59,7 @@ interface KnowledgeFolderMoveDialogProps {
   canChangeLibrary: boolean;
   initialTargetLibraryId?: string | null;
   templateLibraryId?: string | null;
+  error?: string | null;
 }
 
 function flattenFolders(nodes: FolderNode[], depth = 0): FlatFolder[] {
@@ -98,6 +99,7 @@ export default function KnowledgeFolderMoveDialog({
   canChangeLibrary,
   initialTargetLibraryId = null,
   templateLibraryId = null,
+  error = null,
 }: KnowledgeFolderMoveDialogProps) {
   const { t } = useTranslation(['knowledge', 'common']);
   const sourceLibraryId = folder?.library_id || '';
@@ -167,6 +169,7 @@ export default function KnowledgeFolderMoveDialog({
       saveLoading={pending}
     >
         <Stack spacing={2}>
+          {error && <Alert severity="error">{error}</Alert>}
           <Typography variant="body2" color="text.secondary">
             {t('folderMoveDialog.folder', { name: folder?.name || '' })}
           </Typography>

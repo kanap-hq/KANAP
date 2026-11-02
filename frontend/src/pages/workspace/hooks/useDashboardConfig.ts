@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../api';
+import type { SectionState } from '../sections';
 
 export interface DashboardTileConfig {
   id: string;
@@ -10,6 +11,10 @@ export interface DashboardTileConfig {
 
 export interface DashboardConfig {
   tiles: DashboardTileConfig[];
+  /** Leave out the tiles with nothing to show; on unless the person turned it off. */
+  hideEmptyTiles?: boolean;
+  /** The sections in the person's order; null until they order them. */
+  sections?: SectionState[] | null;
 }
 
 export function useDashboardConfig() {

@@ -1,26 +1,4 @@
 {
-  "home": {
-    "title": "Master data",
-    "subtitle": "Manage organizational structure, suppliers, accounts, and analytics dimensions.",
-    "cards": {
-      "companiesTitle": "Companies",
-      "companiesDescription": "Manage company entities and their metrics",
-      "departmentsTitle": "Departments",
-      "departmentsDescription": "Manage departments across companies",
-      "costCentersTitle": "Cost centers",
-      "costCentersDescription": "Organize who owns each budget line, across legal entities",
-      "suppliersTitle": "Suppliers",
-      "suppliersDescription": "Manage supplier information",
-      "coaTitle": "Charts of accounts",
-      "coaDescription": "Manage charts of accounts and accounts",
-      "workingDayCalendarsTitle": "Working-day calendars",
-      "workingDayCalendarsDescription": "Set the working days of each month for lines priced per day",
-      "businessProcessesTitle": "Business processes",
-      "businessProcessesDescription": "Manage core ISO 9001-style business processes",
-      "analyticsDimensionsTitle": "Analytics dimensions",
-      "analyticsDimensionsDescription": "Configure analytics dimensions"
-    }
-  },
   "shared": {
     "columns": {
       "name": "Name",
@@ -55,8 +33,7 @@
       "prev": "Prev",
       "next": "Next",
       "enabled": "Enabled",
-      "access": "Access",
-      "history": "History"
+      "access": "Access"
     },
     "workspace": {
       "itemCountOf": "{{entity}} {{current}} of {{total}}"
@@ -430,6 +407,7 @@
   "suppliers": {
     "title": "Suppliers",
     "newSupplier": "New supplier",
+    "empty": "No suppliers yet.",
     "supplierFallback": "Supplier",
     "contactsTabHint": "The contacts tab becomes available after you create the supplier.",
     "loadError": "Failed to load supplier.",
@@ -437,6 +415,9 @@
       "erpSupplierId": "ERP supplier ID"
     },
     "noSuppliersFound": "No suppliers found",
+    "noSupplierAskAdmin": "No supplier found. Ask an administrator of your workspace to create it.",
+    "createOption": "+ Create supplier \"{{name}}\"",
+    "selectExisting": "Select the existing supplier",
     "export": "Export suppliers",
     "import": "Import suppliers",
     "importHint": "Accepted status values: enabled or disabled. disabled_at holds the end of validity, or stays empty. The contact columns take the e-mail of a contact that already exists in Contacts.",

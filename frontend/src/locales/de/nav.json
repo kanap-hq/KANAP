@@ -19,20 +19,29 @@
     "themeLabel": "Design: {{mode}}",
     "account": "Konto"
   },
+  "devBuild": {
+    "main": "main vom {{date}}, {{time}}",
+    "branches_one": "{{count}} Branch",
+    "branches_other": "{{count}} Branches",
+    "builtAt": "Erstellt am {{date}} um {{time}}",
+    "pr": "PR #{{number}}",
+    "prOpen": "PR #{{number}} offen",
+    "prMerged": "PR #{{number}} gemergt",
+    "prClosed": "PR #{{number}} geschlossen",
+    "conflict": "Im Konflikt, nicht in dev übernommen"
+  },
   "userMenu": {
     "myProfile": "Mein Profil",
     "logout": "Abmelden"
   },
   "sidebar": {
     "ops": {
-      "overview": "Übersicht",
       "contracts": "Verträge",
       "reporting": "Berichte",
       "administration": "Administration",
       "budgetLines": "Budgetzeilen"
     },
     "masterData": {
-      "home": "Stammdaten-Startseite",
       "sections": {
         "organization": "Organisation",
         "externalParties": "Externe Parteien",

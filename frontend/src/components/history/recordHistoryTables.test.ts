@@ -4,7 +4,7 @@ import { RECORD_HISTORY_TABLES } from './recordHistoryTables';
 // The record tables whose page has a history: the budget line in lot 1C, the account and cost
 // center in lot 2, the Knowledge document in lot 2 family E, the first masters of family A, the
 // asset and the technology of family D, the supplier and the contact of family B, the site, the
-// connection and the interface of family C.
+// connection and the interface of family C, the application of the linked records lot.
 describe('record history tables', () => {
   it('declares the budget line and the record pages of the families, unique and readable', () => {
     expect(RECORD_HISTORY_TABLES).toEqual([
@@ -12,17 +12,23 @@ describe('record history tables', () => {
       'accounts',
       'analytics_axes',
       'analytics_categories',
+      'applications',
       'assets',
       'business_processes',
       'companies',
       'connections',
       'contacts',
+      'contracts',
       'cost_centers',
       'departments',
       'documents',
+      'incidents',
       'interfaces',
       'locations',
+      'portfolio_projects',
+      'portfolio_requests',
       'suppliers',
+      'tasks',
       'technologies',
       'working_day_profiles',
     ]);

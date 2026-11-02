@@ -39,8 +39,9 @@ const LANGUAGE_NAMES = ['en', 'fr', 'de', 'es'] as const;
 const ID = '11111111-2222-4333-8444-555555555555';
 const EVENT_KINDS = ['link', 'attachment', 'contact', 'application', 'technology', 'asset', 'contract', 'project', 'request', 'task', 'line', 'value', 'supplier',
   'budget_line', 'relation_contains', 'relation_depends_on', 'member', 'owner_it', 'owner_business', 'operating_system',
-  'sub_item', 'person', 'owner', 'company', 'dependency', 'country', 'key_identifier', 'interface_leg', 'mapping_set',
-  'middleware'];
+  'sub_item', 'person', 'owner', 'company', 'dependency', 'country', 'key_identifier', 'interface_leg', 'mapping_set', 'mapping_group', 'mapping_rule',
+  'middleware', 'renewal_task', 'instance', 'assignment', 'department', 'suite', 'business_process', 'task_owner', 'task_viewer',
+  'phase', 'milestone', 'time_entry', 'it_team', 'business_team'];
 const ACTORS = ['assistant', 'assistantFor', 'unknown'];
 const ACTIONS = ['create', 'update', 'delete'];
 
@@ -193,10 +194,11 @@ describe('record history locales', () => {
         expect(text).not.toContain('{{');
         expect(text).not.toContain('auditLogs.');
       }
-      const subject = historySubjectText({ kind: 'version', label: 'Y2026' }, ctx.t);
+      const subject = historySubjectText({ kind: 'version', label: '2026' }, ctx.t);
       expect(subject).toBeTruthy();
       expect(subject).not.toContain('{{');
       expect(subject).not.toContain('auditLogs.');
+      expect(subject).not.toContain('Y2026');
     }
   });
 
@@ -308,6 +310,27 @@ describe('record history locales', () => {
     expect(lineText(frLines[3], docFr)).toBe('Statut\u00a0: Publié');
   });
 
+  it('names a budget year and a month range in each language', () => {
+    const expected = {
+      en: { subject: 'Budget 2027', created: 'Budget 2027 added', deleted: 'Budget 2027 deleted', months: 'months March to May 2027' },
+      fr: { subject: 'Budget 2027', created: 'Budget 2027 ajouté', deleted: 'Budget 2027 supprimé', months: 'mois de mars à mai 2027' },
+      de: { subject: 'Budget 2027', created: 'Budget 2027 hinzugefügt', deleted: 'Budget 2027 gelöscht', months: 'Monate März bis Mai 2027' },
+      es: { subject: 'Presupuesto 2027', created: 'Presupuesto 2027 añadido', deleted: 'Presupuesto 2027 eliminado', months: 'meses de marzo a mayo de 2027' },
+    };
+    for (const language of LANGUAGE_NAMES) {
+      const ctx = context(language);
+      const created = item({ subject: { kind: 'version', label: '2027' }, action: 'create' });
+      expect(historySubjectText({ kind: 'version', label: '2027' }, ctx.t)).toBe(expected[language].subject);
+      expect(historyChildTitle(created, ctx.t)).toBe(expected[language].created);
+      expect(historyChildTitle({ ...created, action: 'delete' }, ctx.t)).toBe(expected[language].deleted);
+      const lines = historyLines(item({
+        subject: { kind: 'amounts' },
+        changes: [{ field: 'planned', before: '1.00', after: '2.00', year: 2027, column: 'planned', months: ['2027-03', '2027-04', '2027-05'] }],
+      }), ctx);
+      expect(lines[0].suffix).toEqual([expected[language].months]);
+    }
+  });
+
   it('reads the brief examples in French and English', () => {
     const frCtx = context('fr');
     const frAmount = historyLines(item({
@@ -320,6 +343,23 @@ describe('record history locales', () => {
       changes: [{ field: 'dimension', dimension: 'Référence budget', before: 'REF-12', after: 'REF-13' }],
     }), frCtx);
     expect(lineText(frDimension[0], frCtx)).toBe('Dimension Référence budget\u00a0: REF-12 → REF-13');
+
+    const frCreatedDimension = historyLines(item({
+      changes: [{ field: 'dimension', dimension: 'Cost pool', after: 'Cloud' }],
+    }), frCtx);
+    expect(lineText(frCreatedDimension[0], frCtx)).toBe('Dimension Cost pool\u00a0: Cloud');
+
+    const frYear = Array.from({ length: 12 }, (_, index) => `2027-${String(index + 1).padStart(2, '0')}`);
+    const frMonths = historyLines(item({
+      subject: { kind: 'amounts' },
+      changes: [{ field: 'planned', before: '100.00', after: '150.00', year: 2027, column: 'planned', months: frYear }],
+    }), frCtx);
+    expect(frMonths[0].suffix).toEqual(['mois de janvier à décembre 2027']);
+    const frSpring = historyLines(item({
+      subject: { kind: 'amounts' },
+      changes: [{ field: 'planned', before: '100.00', after: '150.00', year: 2027, column: 'planned', months: ['2027-04', '2027-05', '2027-06'] }],
+    }), frCtx);
+    expect(frSpring[0].suffix).toEqual(["mois d'avril à juin 2027"]);
 
     expect(historyLines(item({
       subject: { kind: 'link', label: 'Spec link' },

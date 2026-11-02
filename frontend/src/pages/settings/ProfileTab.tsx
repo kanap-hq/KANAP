@@ -153,14 +153,14 @@ export default function ProfileTab() {
                 value={businessPhone}
                 onChange={(e) => setBusinessPhone(e.target.value)}
                 fullWidth
-                placeholder="+1 (555) 123-4567"
+                placeholder={t('settings:profile.placeholders.businessPhone')}
               />
               <TextField
                 label={t('settings:profile.fields.mobilePhone')}
                 value={mobilePhone}
                 onChange={(e) => setMobilePhone(e.target.value)}
                 fullWidth
-                placeholder="+1 (555) 987-6543"
+                placeholder={t('settings:profile.placeholders.mobilePhone')}
               />
             </Stack>
 

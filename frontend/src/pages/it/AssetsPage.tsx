@@ -618,6 +618,7 @@ export default function AssetsPage() {
         open={importOpen}
         onClose={() => setImportOpen(false)}
         endpoint="/assets"
+        example="assets"
         title={t('pages.assets.importTitle')}
         onImported={() => setRefreshKey((k) => k + 1)}
       />

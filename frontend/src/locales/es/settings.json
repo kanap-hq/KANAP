@@ -20,6 +20,10 @@
       "mobilePhone": "Teléfono móvil",
       "language": "Idioma"
     },
+    "placeholders": {
+      "businessPhone": "p. ej., +34 912 345 678",
+      "mobilePhone": "p. ej., +34 612 345 678"
+    },
     "locale": {
       "autoDetect": "Detección automática (navegador)"
     },

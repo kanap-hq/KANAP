@@ -206,7 +206,7 @@ MinIO veröffentlicht keine neuen Downloads oder Images mehr, daher verwendet ei
 
 Der Speicher lauscht nur auf der Docker-Bridge-Adresse `172.17.0.1` und ist daher aus dem Netzwerk nicht erreichbar. Die Konsole ist abgeschaltet.
 
-**RustFS und sein Kommandozeilenwerkzeug installieren.** Die Versionsnummern stehen in den ersten beiden Zeilen: Verwenden Sie die neueste Version, die auf der [Release-Seite von RustFS](https://github.com/rustfs/rustfs/releases) und auf der [Release-Seite der RustFS CLI](https://github.com/rustfs/cli/releases) aufgeführt ist. Wenn Sie eine Version ändern, prüfen Sie die Dateinamen auf ihrer Release-Seite. Jeder Download wird gegen die Datei `SHA256SUMS` seines Releases geprüft; schlägt die Prüfung fehl, bricht der Befehl ab.
+**RustFS und sein Kommandozeilenwerkzeug installieren.** Die Versionsnummern stehen in den ersten beiden Zeilen. Diese Anleitung wurde mit RustFS 1.0.1 getestet. Ein späteres 1.0.x-Release, aufgeführt auf der [Release-Seite von RustFS](https://github.com/rustfs/rustfs/releases), funktioniert genauso. Die [Release-Seite der RustFS CLI](https://github.com/rustfs/cli/releases) führt die Versionen des Kommandozeilenwerkzeugs auf. Wenn Sie eine Version ändern, prüfen Sie die Dateinamen auf ihrer Release-Seite. Jeder Download wird gegen die Datei `SHA256SUMS` seines Releases geprüft; schlägt die Prüfung fehl, bricht der Befehl ab.
 
 ```bash
 RUSTFS_VERSION=1.0.1
@@ -371,7 +371,7 @@ Der Smoke-Test in Schritt 9 liest es aus `.env`, ohne es anzuzeigen. Schritt 10 
 Hinweise zur Datei:
 
 - Das Administratorkonto wird beim ersten Start aus `ADMIN_EMAIL` und `ADMIN_PASSWORD` angelegt. Spätere Änderungen bewirken nichts, solange ein aktiver Administrator existiert.
-- `DEFAULT_TENANT_NAME` ist der Name Ihrer Organisation aus Schritt 0. KANAP liest ihn nur beim ersten Start, und die Anwendung hat keine Seite, um ihn zu ändern.
+- `DEFAULT_TENANT_NAME` ist der Name Ihrer Organisation aus Schritt 0. KANAP liest ihn nur beim ersten Start. Ein Administrator ändert ihn später unter **Administration → Branding**. Die Adresse des Arbeitsbereichs bleibt unverändert.
 - Das Passwort in `DATABASE_URL` und `JWT_SECRET` wurden in Schritt 0 erzeugt. Verwenden Sie keine Beispielwerte.
 - Mit `sslmode=disable` bleibt die Verbindung zu PostgreSQL auf dem Server. Für einen anderen PostgreSQL-Server siehe [`sslmode`](configuration.md#erforderlich-datenbank).
 - Erreichen Sie KANAP über eine IP-Adresse statt über einen Namen, setzen Sie `APP_BASE_URL` und `CORS_ORIGINS` auf `https://<ip address>`.
@@ -382,7 +382,7 @@ Hinweise zur Datei:
 
 ## 7. Herunterladen und starten
 
-Laden Sie die Images der ausgecheckten Version herunter und starten Sie die Container. `pull` lädt beim ersten Mal etwa 1,5 GB herunter. `--wait` kehrt zurück, wenn beide Container `healthy` melden; der erste Start führt die Datenbankmigrationen aus und dauert einige Sekunden bis eine Minute.
+Laden Sie die Images der ausgecheckten Version herunter und starten Sie die Container. `pull` lädt beim ersten Mal etwa 300 MB herunter, und die Images belegen etwa 1,4 GB auf der Festplatte. `--wait` kehrt zurück, wenn beide Container `healthy` melden; der erste Start führt die Datenbankmigrationen aus und dauert einige Sekunden bis eine Minute.
 
 ```bash
 cd /opt/kanap
@@ -399,7 +399,8 @@ Erreicht `pull` `ghcr.io` nicht, öffnen Sie den ausgehenden Zugang der [Firewal
 ```
 [entrypoint] Initializing DB (attempt 1/30) ...
 [entrypoint] DB initialized. Running migrations...
-[entrypoint] Migrations complete (330 executed).
+[entrypoint] Migrations complete (394 executed).
+[VERSION] KANAP 26.10.8
 [ENV] run mode: production
 [SECRETS] token families: password-reset=derived-key provisioning=jwt-secret entra-state=derived-key (...)
 [SECRETS] Access tokens must carry purpose="access" (legacy untyped access tokens: refused)
@@ -411,14 +412,15 @@ Erreicht `pull` `ghcr.io` nicht, öffnen Sie den ausgehenden Zugang der [Firewal
 [on-prem] Created administrator account admin@example.internal: the workspace had no active administrator
 [on-prem] Created default subscription (On-Prem)
 [DATA-ACCESS] data-scoped access not installed (no kanap_data_limited role): nobody can be limited
+[markdown] Text processing workers ready
 ... WARN [EmailService] No outbound email transport configured; email sending is disabled.
 ... Nest application successfully started
 [DB] pool budget: 1 process × 20 connections = 20 of 87 usable (...)
 ```
 
-Die Zahl der Migrationen hängt von der Version ab, die Pool-Werte von Ihrem PostgreSQL.
+Die Zahl der Migrationen und die Zeile `[VERSION]` hängen von der Version ab, die Pool-Werte von Ihrem PostgreSQL.
 
-Der Block lässt die Migrationszeilen weg: Auf `Running migrations...` folgen etwa 40 Zeilen, die mit `[Migration]` oder `[migration:` beginnen. Sie dienen der Information. Auf einer neuen Datenbank melden einige davon Änderungen an mitgelieferten Referenzdaten oder nennen eine Mandanten-ID, die nicht Ihre ist: KANAP führt einen Systemmandanten für Plattformfunktionen. Sie erfordern keine Maßnahme. `...` steht für das Präfix `[Nest]` mit Prozess-ID und Uhrzeit sowie für die Quelle in Klammern (zum Beispiel `LOG [NestApplication]`). Einige dieser Zeilen enden mit einer Dauer wie `+0ms`. Die letzte Zeile der gefilterten Ausgabe ist `[DB] pool budget ...`. Eine in eine Datei gespeicherte Protokollausgabe kann Farbcodes wie `[33m` enthalten.
+Der Block lässt die Migrationszeilen weg: Auf einer neuen Installation folgen auf `Running migrations...` einige hundert Zeilen, die mit `[Migration]` oder `[migration:` beginnen. Einige wenige beginnen stattdessen mit der Nummer ihrer Migration, zum Beispiel `[1854170000000] ...` oder `[migration 1854350000000] ...`. Sie dienen der Information. Auf einer neuen Datenbank melden einige davon Änderungen an mitgelieferten Referenzdaten oder nennen eine Mandanten-ID, die nicht Ihre ist: KANAP führt einen Systemmandanten für Plattformfunktionen. Sie erfordern keine Maßnahme. `...` steht für das Präfix `[Nest]` mit Prozess-ID und Uhrzeit sowie für die Quelle in Klammern (zum Beispiel `LOG [NestApplication]`). Einige dieser Zeilen enden mit einer Dauer wie `+0ms`. Die letzte Zeile der gefilterten Ausgabe ist `[DB] pool budget ...`. Eine in eine Datei gespeicherte Protokollausgabe kann Farbcodes wie `[33m` enthalten.
 
 Bis Sie E-Mail konfigurieren, ist die `EmailService`-Warnung erwartet und erfordert keine Maßnahme. Auch die Zeile `[DATA-ACCESS]` ist erwartet: Schritt 10 erklärt sie. Eine Warnung `[SECURITY]`, `[CONFIG]`, `[CORS]` oder `[ENV] APP_ENV is not set` bedeutet, dass eine Einstellung Aufmerksamkeit braucht: Die [Konfiguration](configuration.md#was-das-api-protokoll-beim-start-zeigt) erklärt jede Zeile.
 
@@ -600,12 +602,12 @@ Prüfen Sie den Zustand der API und des Frontends über nginx. `-S` lässt `curl
 ```bash
 . ~/kanap-install.env
 curl -sSk -w '\n' "https://${KANAP_HOST}/api/health"
-# Erwartet: {"status":"ok"}
+# Erwartet: {"status":"ok","text_processing":"ready"}
 curl -sSk -o /dev/null -w "%{http_code}\n" "https://${KANAP_HOST}/"
 # Erwartet: 200
 ```
 
-Führen Sie dann den Smoke-Test aus. Er prüft die Datenbank, den Speicher, die Anmeldung und die Exporte über die öffentliche API, so wie die Web-App es tut. Der Server hat kein Node.js, daher läuft der Test in einem Container. Die Zeile, die mit `KANAP_PASSWORD=` beginnt, liest das Administratorpasswort aus `.env` in die Umgebung des Tests, ohne es anzuzeigen. Der erste Lauf lädt das Image `node:24-alpine` von Docker Hub (etwa 240 MB) und behält es für spätere Läufe. `KANAP_WRITE=1` legt außerdem eine temporäre Aufgabe mit einem Anhang an, was den Speicher prüft, und löscht sie wieder. Verwenden Sie es nur direkt nach der Installation: Es schreibt in die Daten. Die temporäre Aufgabe verbraucht eine Aufgabenreferenz (`T-1` bei einer neuen Installation), Ihre erste Aufgabe ist also `T-2`. `KANAP_INSECURE_TLS=1` akzeptiert ein Zertifikat, dem der Container nicht vertraut: Behalten Sie es bei einem selbstsignierten Zertifikat. Bei einem Zertifikat Ihrer internen Zertifizierungsstelle können Sie es behalten oder den Container das Zertifikat prüfen lassen: Legen Sie die Datei der Zertifizierungsstelle in `/opt/kanap/infra/certs/` ab (siehe [Zertifikate einer internen Zertifizierungsstelle](configuration.md#optional-zertifikate-einer-internen-zertifizierungsstelle)) und ersetzen Sie `-e KANAP_INSECURE_TLS=1` durch `-v /opt/kanap/infra/certs:/certs:ro -e NODE_EXTRA_CA_CERTS=/certs/company-ca.pem`. Bei Let's Encrypt entfernen Sie `-e KANAP_INSECURE_TLS=1`.
+Führen Sie dann den Smoke-Test aus. Er prüft die Datenbank, den Speicher, die Anmeldung und die Exporte über die öffentliche API, so wie die Web-App es tut. Der Server hat kein Node.js, daher läuft der Test in einem Container. Die Zeile, die mit `KANAP_PASSWORD=` beginnt, liest das Administratorpasswort aus `.env` in die Umgebung des Tests, ohne es anzuzeigen. Der erste Lauf lädt das Image `node:24-alpine` von Docker Hub (etwa 65 MB, etwa 240 MB auf der Festplatte) und behält es für spätere Läufe. `KANAP_WRITE=1` legt außerdem eine temporäre Aufgabe mit einem Anhang an, was den Speicher prüft, und löscht sie wieder. Verwenden Sie es nur direkt nach der Installation: Es schreibt in die Daten. Die temporäre Aufgabe verbraucht eine Aufgabenreferenz (`T-1` bei einer neuen Installation), Ihre erste Aufgabe ist also `T-2`. `KANAP_INSECURE_TLS=1` akzeptiert ein Zertifikat, dem der Container nicht vertraut: Behalten Sie es bei einem selbstsignierten Zertifikat. Bei einem Zertifikat Ihrer internen Zertifizierungsstelle können Sie es behalten oder den Container das Zertifikat prüfen lassen: Legen Sie die Datei der Zertifizierungsstelle in `/opt/kanap/infra/certs/` ab (siehe [Zertifikate einer internen Zertifizierungsstelle](configuration.md#optional-zertifikate-einer-internen-zertifizierungsstelle)) und ersetzen Sie `-e KANAP_INSECURE_TLS=1` durch `-v /opt/kanap/infra/certs:/certs:ro -e NODE_EXTRA_CA_CERTS=/certs/company-ca.pem`. Bei Let's Encrypt entfernen Sie `-e KANAP_INSECURE_TLS=1`.
 
 ```bash
 . ~/kanap-install.env

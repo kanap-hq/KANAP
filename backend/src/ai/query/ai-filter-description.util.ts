@@ -89,6 +89,7 @@ export function describeAiEntityFilters(
     fields,
     ...(families.size ? { field_families: [...families.values()] } : {}),
     ...(registry.metricFamilies?.length ? { metric_families: registry.metricFamilies } : {}),
+    ...(registry.withheldFields?.length ? { fields_withheld: registry.withheldFields } : {}),
     // The keys of a family are listed in it, not here.
     sort_fields: Object.keys(registry.sortFields).filter((key) => !registry.fields[key]?.family),
     default_sort: registry.defaultSort,
@@ -130,6 +131,20 @@ export function buildFilterRepairSuggestions(
       return {
         field: ignored,
         reason: `${list(invalid.rejected)} is not a value of ${ignored} on ${registry.entityType}. Accepted values: ${list(invalid.accepted)}. Nothing was searched: query again with an accepted value.`,
+      };
+    }
+    // A field the person may not read: the reason, never a field "to inspect".
+    const withheld = registry.withheldFields?.find((entry) => entry.field === ignored);
+    if (withheld) return { field: ignored, reason: withheld.reason };
+    // A field of the family given a value it does not take: the form it takes, never "unsupported".
+    const known = registry.fields[ignored];
+    if (known) {
+      const form = known.type === 'number'
+        ? 'a number alone (2026 means {"op":"eq","value":2026}) or a comparison'
+        : inferAcceptedValueKind(ignored, known).replace(/_/g, ' ');
+      return {
+        field: ignored,
+        reason: `${ignored} is a ${known.type} field of ${registry.entityType}, and the value given is not one it takes. It takes ${form}, for example ${inferExamples(ignored, known).join(' or ')}. Nothing was searched: query again with that form.`,
       };
     }
     const aliasMatch = Object.values(registry.fields).find((field) => (field.aliases ?? []).includes(ignored));

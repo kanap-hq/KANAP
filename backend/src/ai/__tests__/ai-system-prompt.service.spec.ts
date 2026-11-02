@@ -1,5 +1,6 @@
 import * as assert from 'node:assert/strict';
 import { AiSystemPromptService } from '../ai-system-prompt.service';
+import type { AiToolListItemDto } from '../ai.types';
 import { selectAiContextProfile } from '../ai-context-profile';
 import { AiChatOrchestratorService } from '../ai-chat-orchestrator.service';
 import { analyticsDimensionsAiContext } from '../ai-analytics-dimensions-context';
@@ -83,6 +84,9 @@ async function testStructuredReadGuidancePrefersQueryLayerTools() {
   assert.match(prompt, /headcount_year/);
   assert.match(prompt, /pass `year` on query_entities or get_entity_detail/i);
   assert.match(prompt, /Budget-line reads and aggregations are summary-backed/i);
+  // Plaid L8: the report figures come from aggregate_entities, never recomputed (one sentence).
+  assert.match(prompt, /A change between two columns, FTE by month, a table crossing two fields or several columns, and the chargeback by company or department \(families `chargeback` and `chargeback_lines`\) come from aggregate_entities: their totals, changes and averages are those of KANAP's reports, quoted as given and never recomputed\./);
+  assert.equal(prompt.match(/never recomputed/g)?.length, 1, 'said once');
   assert.match(prompt, /Prefer completeness over speed/i);
   assert.match(prompt, /`q` on query_entities and aggregate_entities is literal text quick-search only/i);
   assert.match(prompt, /Treat `filters_ignored` and `sort_ignored` from query_entities or aggregate_entities, and `fields_ignored` from get_filter_values, as blocking validation failures/i);
@@ -95,6 +99,9 @@ async function testStructuredReadGuidancePrefersQueryLayerTools() {
   assert.match(prompt, /last_dr_test is the last recovery test date/);
   assert.match(prompt, /count \[null\] plus before the day after that date; they never overlap/);
   assert.match(prompt, /top business rank with recovery_wave \[null\]; top data class rank with the lowest cyber rank/);
+  assert.match(prompt, /An application's environments are the environments of its deployments/);
+  assert.match(prompt, /An application with no deployment has none/);
+  assert.match(prompt, /The legacy column environment defaults to prod and is absent from application reads/);
 }
 
 const baseParams = {
@@ -169,7 +176,7 @@ async function testPromptIncludesTodaysDate() {
   const today = new Date().toISOString().slice(0, 10);
   assert.match(prompt, new RegExp(today));
   assert.match(prompt, /"time_zone": "UTC"/);
-  assert.match(prompt, /"local_time": "\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?\+00:00"/);
+  assert.match(prompt, /"local_time": "\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:00\+00:00"/, 'the clock is given to the minute');
   assert.doesNotMatch(prompt, /Tool result categories and the `complete` field/i);
 }
 
@@ -195,7 +202,7 @@ async function testPromptCarriesTheUserTimeZoneAndLocalTime() {
   );
   assert.match(prompt, new RegExp(`"today": "${parts.year}-${parts.month}-${parts.day}"`));
   assert.match(prompt, /"time_zone": "Europe\/Paris"/);
-  assert.match(prompt, /"local_time": "\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?\+0[12]:00"/);
+  assert.match(prompt, /"local_time": "\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:00\+0[12]:00"/);
   assert.match(prompt, /Date-time values in tool results are written in `time_zone` with an explicit UTC offset/);
   assert.match(prompt, /quote them as given/);
   assert.match(prompt, /If a value carries another offset \(including `Z`\), convert it to `time_zone` before quoting/);
@@ -515,7 +522,8 @@ async function testPromptRefusesUnsupportedWritesWithoutSubstitutePreview() {
   assert.doesNotMatch(prompt, /reopening, cancelling and lifting/);
   assert.doesNotMatch(prompt, /the journal entry, the links to assets, applications and technologies, the follow-up task/);
   assert.doesNotMatch(prompt, /creating or changing a technology's record or its versions/);
-  assert.match(prompt, /changing the state of a vulnerability; deleting one of a technology's versions/);
+  assert.doesNotMatch(prompt, /changing the state of a vulnerability/);
+  assert.match(prompt, /deleting one of a technology's versions \(its Overview tab has the version's delete\); re-running the vulnerability matching: the technology's Vulnerabilities tab has Refresh\./);
   assert.doesNotMatch(prompt, /including the technologies of an application/);
   assert.match(prompt, /deleting one of a technology's versions \(its Overview tab has the version's delete\)/);
   assert.match(prompt, /A technology's attachments are added from its Relations tab, not by Plaid/);
@@ -614,7 +622,119 @@ async function testAdminWriteBusinessPromptNamesTheIncidentAdministratorTools() 
   );
 }
 
+/**
+ * Plaid L7, lot D: the access writes stay on their screens, the history is the History tab only,
+ * the person's own access is not read here, and the families of the administrators of users are
+ * listed as unread for the others only, with what they lack.
+ */
+async function testPromptSaysWhatItDoesWithAccessAndHistory() {
+  const service = new AiSystemPromptService();
+  const readTool = { name: 'query_entities' as const, category: 'authoritative' as const, description: 'Query.', input_summary: {}, read_only: true, surfaces: ['chat' as const] };
+  const writeTool = {
+    name: 'create_task' as const, category: 'mutation' as const, description: 'Create a task preview.', input_summary: {}, read_only: false,
+    surfaces: ['chat' as const], write_preview: { entity_type: 'tasks', fields: ['title'], reversible: false, prompt_hint: 'Use create_task.' },
+  };
+  const build = (options: { tools: any[]; readable: string[]; language?: 'fr' | null; gap?: 'right' | 'all_data' | null }) => service.build({
+    tenantName: 'Test Tenant',
+    availableTools: options.tools,
+    readableEntityTypes: options.readable,
+    currentUser: { displayName: 'Admin', email: null, roleNames: [], teamName: null, screenLanguage: options.language ?? null },
+    adminFamiliesGap: options.gap,
+  });
+
+  // A person who prepares changes: the access writes are refused, with their screens in French.
+  const writer = build({ tools: [writeTool, readTool], readable: ['tasks', 'users', 'roles', 'role_permissions', 'data_access'], language: 'fr', gap: null });
+  assert.match(writer, /A person's data access \(Administration › Accès aux données\), their roles and the rights of a role \(Administration › Rôles\), and creating or deactivating a person \(Administration › Utilisateurs\) are changed on those screens only: Plaid prepares none of them, whatever the person's rights\./);
+  // A person who only reads gets the same sentence, not a missing right.
+  const reader = build({ tools: [readTool], readable: ['projects'], gap: 'right' });
+  assert.match(reader, /You can ONLY read data for this person\.[^\n]*A person's data access \(en: Admin › Data access; fr: Administration › Accès aux données;/);
+
+  // The history and the person's own access.
+  assert.match(reader, /The change history of a record is its History tab, which get_record_history reads\. A record whose page has no History tab has no history in KANAP: say so, and never rebuild a history from other data, the audit log included\./);
+  assert.match(writer, /A question about the person's own access \("what can I see\?"\): their roles are the `roles` of the current user context; which data they see is not read here, and an administrator of users shows it in the person's Data access tab \(Administration › Utilisateurs\)\./);
+
+  // The full administrator of users reads both families: neither is listed as unread, and the
+  // screen's words come with them.
+  assert.doesNotMatch(writer, /data access \(which companies or cost centers a person is limited to\) \(/);
+  assert.doesNotMatch(writer, /roles and their rights \(/);
+  assert.match(writer, /Roles and data access: say who sees what with the words of the Data access screen in the user's language \("All data", "Limited to", "Read", "Edit"\)/);
+  assert.match(writer, /counted on users with the `roles` filter \(every role\), not `primary_role`/);
+  // Without the right, and in limited access: listed, with what is missing.
+  assert.match(reader, /data access \(which companies or cost centers a person is limited to\) \(en: Admin › Data access;[^)]*\): The tools read it for a person with the right to administer users, which this person's role does not give\./);
+  assert.doesNotMatch(reader, /Roles and data access: say who sees what/);
+  const limited = build({ tools: [readTool], readable: ['users'], language: 'fr', gap: 'all_data' });
+  assert.match(limited, /roles and their rights \(Administration › Rôles\): The tools read it for a person with the right to administer users and access to all data; this person's access is limited to part of the data\./);
+
+  // The chargeback reports (Plaid L8): unread for a person without the Reporting right, with the
+  // right; read, so not listed, with it; the right named when the readable families are not known.
+  assert.match(limited, /chargeback by beneficiary company \(Gestion budgétaire › Rapports › Refacturation globale\): The tools read it \(the families chargeback and chargeback_lines\) for a person with the Reporting right, which this person's role does not give\./);
+  const reporter = build({ tools: [readTool], readable: ['budget_lines', 'chargeback', 'chargeback_lines'], language: 'fr', gap: 'right' });
+  assert.doesNotMatch(reporter, /chargeback by beneficiary company \(/);
+  const unknown = build({ tools: [readTool], readable: [], language: 'fr', gap: 'right' });
+  assert.match(unknown, /chargeback by beneficiary company \(Gestion budgétaire › Rapports › Refacturation globale\): The tools read it \(the families chargeback and chargeback_lines\) for a person with the Reporting right only\./);
+
+  // The reference data (Plaid L9): read with the right of their page, so not listed as unread for
+  // a reader; listed with the right for the others; their figures come from the server.
+  const referenceReader = build({ tools: [readTool], readable: ['budget_lines', 'cost_centers', 'working_day_calendars', 'analytics_axes', 'exchange_rates'], language: 'fr', gap: 'right' });
+  assert.doesNotMatch(referenceReader, /(cost centers|working-day calendars|analytics dimensions|exchange rates) \(/);
+  assert.match(limited, /cost centers \(Données de référence › Centres de coûts\): The tools read it \(the family cost_centers\) for a person with the Cost centers right, which this person's role does not give\./);
+  assert.match(limited, /exchange rates \(Gestion budgétaire › Administration › Devises\): The tools read it \(the family exchange_rates\) for a person with the Budget right, which this person's role does not give\./);
+  assert.match(referenceReader, /An empty budget holder of a cost center means none is set, not an unknown person; "\(person without a name\)" is a budget holder whose profile has no name\. An exchange rate, a number of working days or a count comes from the server: quote it as given, never recompute it and never divide one figure by another \(the inverse and cross rates come with the rate\)\./);
+
+  // Readable families not known (the web profile: web_search only, Plaid L9 lot F, m6): the
+  // reference data are not listed among what the tools do not read.
+  assert.doesNotMatch(unknown, /(cost centers|working-day calendars|analytics dimensions|exchange rates) \(/);
+  const web = build({ tools: [{ name: 'web_search', category: 'discovery', description: 'Web search.', input_summary: {}, read_only: true, surfaces: ['chat'] }], readable: [], language: 'fr', gap: 'right' });
+  assert.match(web, /Limits of what you read/);
+  assert.doesNotMatch(web, /(cost centers|working-day calendars|analytics dimensions|exchange rates) \(/);
+  assert.doesNotMatch(web, /for a person with the (Cost centers|Working-day calendars|Analytics|Budget) right only/);
+}
+
+// The prompt caches (Anthropic's breakpoint, the automatic prefix cache of the OpenAI-compatible
+// providers) reuse the fixed sections only when nothing that moves comes before them: the person
+// and the clock close the prompt, after the cacheable prefix.
+async function testPersonAndClockCloseThePromptAfterTheCacheablePrefix() {
+  const service = new AiSystemPromptService();
+  const tools: AiToolListItemDto[] = [
+    {
+      name: 'query_entities',
+      category: 'authoritative',
+      description: 'Query structured entity data.',
+      input_summary: {},
+      read_only: true,
+      surfaces: ['chat'],
+    },
+  ];
+
+  for (const contextProfile of [selectAiContextProfile('liste les projets'), selectAiContextProfile('bonjour')]) {
+    const built = service.buildWithMetadata({ ...baseParams, availableTools: tools, contextProfile, timeZone: 'Europe/Paris' });
+    assert.ok(built.text.startsWith(`${built.cacheablePrefix}\n\n`), `${contextProfile.name}: the prefix starts the prompt`);
+    const context = built.text.slice(built.cacheablePrefix.length + 2);
+    assert.match(context, /^Tenant and current user context/);
+    assert.match(context, /"local_time"/);
+    assert.match(context, /Alex Operator/);
+    assert.equal(built.sections.at(-1)!.key, 'current_user', `${contextProfile.name}: the context is the last section`);
+    assert.doesNotMatch(built.cacheablePrefix, /local_time|"today"|Alex Operator|alex@example\.com|Test Tenant/);
+    assert.equal(built.sections.filter((section) => section.key === 'current_user').length, 1);
+  }
+
+  // Another person with the same rights, at another time: the same prefix.
+  const profile = selectAiContextProfile('liste les projets');
+  const first = service.buildWithMetadata({ ...baseParams, availableTools: tools, contextProfile: profile, timeZone: 'Europe/Paris' });
+  const second = service.buildWithMetadata({
+    ...baseParams,
+    tenantName: 'Other Tenant',
+    currentUser: { displayName: 'Sam Reader', email: 'sam@example.com', roleNames: ['Administrator'], teamName: null },
+    availableTools: tools,
+    contextProfile: profile,
+    timeZone: 'America/New_York',
+  });
+  assert.equal(second.cacheablePrefix, first.cacheablePrefix);
+  assert.notEqual(second.text, first.text);
+}
+
 async function run() {
+  await testPromptSaysWhatItDoesWithAccessAndHistory();
   await testPromptKeepsTheUserLanguageBetweenToolCalls();
   await testPromptSaysItsLimitsAndRights();
   await testPromptRefusesUnsupportedWritesWithoutSubstitutePreview();
@@ -625,6 +745,7 @@ async function run() {
   await testToolResultContentIsDataNotInstructions();
   await testPromptIncludesTodaysDate();
   await testPromptCarriesTheUserTimeZoneAndLocalTime();
+  await testPersonAndClockCloseThePromptAfterTheCacheablePrefix();
   await testPromptRendersUserControlledFieldsAsJson();
   await testMinimalProfileSkipsToolsAndLongGuidance();
   await testPromptBuildsWriteGuidanceFromToolMetadata();

@@ -4,6 +4,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import KanapDialog from '../design/KanapDialog';
 import { formatShortDateTime } from '../../lib/dateFormat';
+import { formatAmount } from '../../i18n/formatters';
+import { useBudgetColumns, type BudgetColumns } from '../../hooks/useBudgetColumns';
 import { forgetAllAllocations } from './allocationsCache';
 import {
   AmountReading,
@@ -23,6 +25,7 @@ import {
 } from './budgetFile';
 import { failureText, serverSentence } from './budgetFileText';
 import { useImportFiles } from '../csv/importFiles';
+import ImportExampleButton from '../csv/ImportExampleButton';
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
@@ -252,6 +255,14 @@ export default function BudgetFileImportDialog({
             <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', mt: 0.25 }}>{t(`${K}dropFileHint`)}</Typography>
           </Box>
         )}
+        {!file && (
+          <Box>
+            <ImportExampleButton
+              example="budget-lines"
+              onError={(text) => setFailure(text ? { text, action: 'check', kind: 'final' } : null)}
+            />
+          </Box>
+        )}
 
         {canCreateSuppliers && !loaded && (
           <Box component="label" sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.75, cursor: 'pointer' }}>
@@ -350,6 +361,7 @@ function ReportView({
   nothingToLoad: boolean;
 }) {
   const { t } = useTranslation('ops');
+  const columns = useBudgetColumns();
   const more = (count: number, shown: number) => (count > shown ? t(`${K}andMore`, { count: count - shown }) : null);
   const blocking = !report.ok;
   const supplierCount = missingSupplierCount(report.supplierMessage);
@@ -357,8 +369,11 @@ function ReportView({
     || report.missing.length > 0 || report.deletedCount > 0 || !!report.supplierMessage;
   const ignoredCells = report.warnings.ignoredCells ?? [];
   const costCenterCompanies = report.warnings.costCenterCompanies ?? [];
+  const calculationLines = report.warnings.calculationLines ?? [];
+  const calculationLinesCount = report.warnings.calculationLinesCount ?? calculationLines.length;
   const hasWarnings = report.warnings.duplicates.length > 0 || report.warnings.ignoredColumns.length > 0
     || report.warnings.supplierNames.length > 0 || ignoredCells.length > 0 || costCenterCompanies.length > 0
+    || calculationLines.length > 0
     || report.firstSheetOnly !== undefined;
   // A limited person's check names the unknown values of a closed list it refuses (their rows are among the errors).
   const refusedValues = report.creates.refusedDimensionValues ?? [];
@@ -456,6 +471,10 @@ function ReportView({
               })}
             />
           ))}
+          {calculationLines.map((warning) => (
+            <Line key={`cl-${warning.line}-${warning.column}-${warning.year}`} text={calculationLinesText(warning, columns, t)} />
+          ))}
+          {more(calculationLinesCount, calculationLines.length) && <Line text={more(calculationLinesCount, calculationLines.length)!} />}
           {ignoredCells.map((warning) => (
             <Line key={`c-${warning.line}-${warning.column}`} text={t(`${K}rowColumn`, { line: warning.line, column: warning.column, message: warning.message })} />
           ))}
@@ -498,6 +517,24 @@ function missingText(item: BudgetFileReport['missing'][number], t: Translate): s
     ? `${item.examples.join(', ')} ${t(`${K}andMoreInline`, { count: extra })}`
     : item.examples.join(', ');
   return t(`${K}missing.${item.type}`, { count: item.count, examples });
+}
+
+/** `BL-83 · Revision 2026: 3 calculation lines (281 280) will no longer drive these amounts.` */
+function calculationLinesText(
+  warning: NonNullable<BudgetFileReport['warnings']['calculationLines']>[number],
+  columns: BudgetColumns,
+  t: Translate,
+): string {
+  const column = columns.all.find((entry) => entry.freezeKey === warning.column || entry.key === warning.column)?.label ?? warning.column;
+  const total = formatAmount(Number(warning.total));
+  return t(`${K}calculationLines`, {
+    item: warning.item,
+    column,
+    year: warning.year,
+    count: warning.count,
+    total,
+    defaultValue: warning.message,
+  });
 }
 
 function changedText(line: BudgetFileReport['changedSinceExport'][number], locale: string, t: Translate): string {

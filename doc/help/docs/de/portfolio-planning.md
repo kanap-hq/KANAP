@@ -9,7 +9,7 @@ Navigieren Sie zu **Portfolio > Planung**.
 **Berechtigungen**:
 - Sie benötigen `portfolio_projects:reader`, um auf die Planungsseite und Zeitplandaten zuzugreifen.
 - Sie benötigen `portfolio_reports:reader`, um Roadmap-Szenarien zu generieren.
-- Sie benötigen `portfolio_projects:contributor`, um generierte Termine auf Projekte anzuwenden.
+- Sie benötigen `portfolio_projects:contributor`, um Projektbalken zu ziehen, den Planungsmodus eines Projekts zu ändern und generierte Termine anzuwenden.
 
 Wenn Sie Planung nicht im Menü sehen, bitten Sie Ihren Administrator, den erforderlichen Zugriff zu gewähren.
 
@@ -32,7 +32,7 @@ Verwenden Sie den Zeitplan-Modus für direkte Planungsbearbeitungen.
 - Nach Kategorie und Status filtern
 - Zeitfenster wählen: 1 Monat, 3 Monate, 6 Monate oder 1 Jahr
 - Zeitlich vor-/zurücknavigieren oder auf **Heute** zurücksetzen
-- Projektbalken ziehen, um geplante Start-/Endtermine zu aktualisieren
+- Projektbalken ziehen, um geplante Start- und Endtermine zu aktualisieren. Dafür ist `portfolio_projects:contributor` erforderlich. Mit `portfolio_projects:reader` bleiben die Balken an ihrem Platz und ein Doppelklick öffnet das Projekt.
 
 ### Anzeigeverhalten
 - Das Diagramm zentriert sich um heute mit etwa **25 % Vergangenheit / 75 % Zukunft**, wenn es auf den aktuellen Zeitraum zurückgesetzt wird.
@@ -60,7 +60,7 @@ Der Roadmap-Generator berechnet vorgeschlagene Projekttermine aus dem ausgewähl
 
 Nach der Generierung zeigt der Reiter Zeitplan die vorgeschlagenen Projekttermine.
 
-- Projekttitel sind klickbar und öffnen den Reiter **Fortschritt** des Projekts.
+- Projekttitel sind klickbar und öffnen den Reiter **Aufwand** des Projekts.
 - Kontrollkästchen definieren den Szenarioumfang.
 - Ein Filter **Kategorie (Vorschau)** ermöglicht es, die Roadmap-Gantt-Anzeige zu filtern, ohne den generierten Zeitplan selbst zu ändern.
 - Das Abwählen eines Projekts generiert das Szenario sofort neu:

@@ -39,6 +39,9 @@ vi.mock('../../hooks/useContractNav', () => ({
   useContractNav: () => ({ ids: ['c-1', 'c-2'], index: 0, total: 2, hasPrev: false, hasNext: true, prevId: null, nextId: 'c-2' }),
 }));
 vi.mock('../workspace/hooks/useRecentlyViewed', () => ({ useRecentlyViewed: () => ({ addToRecent: vi.fn() }) }));
+vi.mock('../../components/history/RecordHistoryTab', () => ({
+  default: (props: { table: string; recordId: string }) => <div data-testid="record-history">{`${props.table}:${props.recordId}`}</div>,
+}));
 vi.mock('../../components/MarkdownEditor', () => ({
   default: ({ value, onChange, disabled }: { value: string; onChange: (next: string) => void; disabled?: boolean }) => (
     <textarea aria-label="markdown-editor" value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)} />
@@ -212,6 +215,20 @@ describe('ContractWorkspacePage', () => {
     // The parties from the detail, in the header.
     expect(screen.getAllByText('SAP').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Fromage & Co SA').length).toBeGreaterThan(0);
+  });
+
+  it('renders the contract history on its last tab, History', async () => {
+    renderAt('/ops/contracts/c-1/history');
+    expect(await screen.findByTestId('record-history')).toHaveTextContent('contracts:c-1');
+    const tabs = screen.getAllByRole('tab');
+    expect(tabs[tabs.length - 1]).toHaveAccessibleName('contracts.tabs.history');
+  });
+
+  it('shows the History tab disabled, with no history, while the contract is created', async () => {
+    renderAt('/ops/contracts/new/overview');
+    const tab = await screen.findByRole('tab', { name: 'contracts.tabs.history' });
+    expect(tab).toBeDisabled();
+    expect(screen.queryByTestId('record-history')).toBeNull();
   });
 
   it('shows the deadline state, the timeline and the open tasks on the overview', async () => {

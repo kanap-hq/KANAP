@@ -84,6 +84,7 @@ import {
   PortfolioRoadmapService,
 } from './services';
 import { UserTimeAggregateService } from './services/user-time-aggregate.service';
+import { PortfolioProjectCreationService } from './services/portfolio-project-creation.service';
 
 // Controllers
 import { PortfolioRequestsController } from './portfolio-requests.controller';
@@ -211,6 +212,7 @@ const entities = [
     PortfolioStatusService,
     PortfolioRoadmapService,
     UserTimeAggregateService,
+    PortfolioProjectCreationService,
     // Main facade service
     PortfolioProjectsService,
     PortfolioRelationsService,

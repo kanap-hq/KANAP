@@ -75,7 +75,7 @@ The reach through another asset stays visible, without being counted: in the sid
 
 The list uses the standard grid: one row per technology, version and vulnerability. Actively exploited vulnerabilities come first, then the most severe. A vulnerability that concerns three versions of SQL Server gives three rows, each with its own state. It opens on the rows **To review** that are in the alerts: clear the filter of the **State** column to see the other states.
 
-A line above the grid says when KANAP last read each source: **Data read**, then the NVD and the publishers (CVE.org), each with the day and time of its last read. A source that is off is left out. A warning follows on the same line when the last read of a source failed, or when a source has not been read for more than 3 days. The data of that source may then be out of date.
+A line above the grid says when KANAP last read each source: **Data read**, then the NVD, the publishers (CVE.org) and the exploitation catalogues (CISA KEV, EU KEV, EPSS and EUVD). The NVD, the publishers, CISA KEV, EU KEV and EUVD show the day and time of the last read. EPSS shows the day of its scores. A source that is off is left out. A warning follows on the same line when the last read of a source failed, or when a source has not been read for more than 3 days. The data of that source may then be out of date.
 
 **Alerts**, **Published** and **Exploited only** sit above the grid. **Alerts** chooses the rows by their alerts setting: **Included** (the default), **Excluded** or **All**. Under **All**, the rows out of the alerts are greyed. When no row is in the alerts and some are excluded, the empty list offers **Show the excluded ones**. **Published** keeps the vulnerabilities by their publication date: **All** (the default), **Less than 7 days**, **Less than 30 days**, **Less than 90 days**, **Less than a year** or **More than a year**. The period counts back from today, so a saved or shared link keeps showing the latest ones. **Exploited only** keeps the vulnerabilities listed as actively exploited. The address carries `exploited=1`. **Reset filters** brings the page back to how it opens: the rows **To review**, actively exploited vulnerabilities first, **Alerts** on **Included**, **Published** on every date and **Exploited only** off. The export and a change of state in bulk follow these three.
 
@@ -147,7 +147,7 @@ Set the state of each version:
 | **Handled** | The version is patched, or a workaround is in place |
 | **Not affected** | The vulnerability does not apply to your installation |
 
-The note records how, for example "patched on 12 March, change CHG-123". It saves when you leave the field. The audit log keeps who changed a state, and when.
+The note records how, for example "patched on 12 March, change CHG-123". It saves when you leave the field. The audit log keeps who changed a state, and when. You can also ask [Plaid](#ask-the-assistant) to change a state.
 
 KANAP never changes a state you chose. When a version no longer matches (you upgraded it, the technology was retired, a source changed its data), a row still **To review** goes away. A row you reviewed stays, greyed out, with its state; it comes back as it was if the version matches again.
 
@@ -185,7 +185,23 @@ The recipients are the IT owners of the technology whose account is enabled and 
 - **Assets and applications lists**: the **Vulnerabilities to review** column. See [Assets](assets.md#working-with-the-list) and [Applications](applications.md#working-with-the-list).
 - **Asset and application records**: the **Vulnerabilities** section and the badge of severe vulnerabilities in the header. See [Assets](assets.md#operations) and [Applications](applications.md#operations).
 - **Dashboard**: the **Vulnerabilities in your estate** tile. See [My dashboard](my-dashboard.md#vulnerabilities).
-- **Plaid**: the assistant answers questions about vulnerabilities. See [Plaid](ai-assistant.md#tool-calls).
+- **Plaid**: the assistant answers questions about vulnerabilities and changes their state. See [Ask the assistant](#ask-the-assistant).
+
+## Ask the assistant
+
+[Plaid](ai-assistant.md) reads the vulnerabilities with the same rights as this page. It counts rows and distinct CVE, as the page does, keeps the technologies in use in the estate when you ask, and says when KANAP last read each source. Ask, for example: "How many critical vulnerabilities are to review on PostgreSQL, by version?" or "Which exploited CVE reach APP-4?"
+
+With `infrastructure:member`, Plaid also changes the state of rows, and every change comes as a preview that you approve:
+
+- Name a CVE to change all its rows, or add a technology, or a technology and a version.
+- Or describe the rows with the filters of the page, for example the critical rows of one technology.
+- Give a note to write it on every row. Without a note, each row keeps its own.
+
+One change covers 5,000 rows at most, as **Change state**. The preview says how many rows and CVE change, and how many are out of the alerts. When rows that no longer match go back to **To review**, it counts them: they go away at the next matching. **Accepted** is not a state: Plaid offers **Handled** with a note such as "risk accepted", or **Not affected**, and waits for your choice. Ask Plaid to undo a change it made in the conversation. It refuses when a row changed since.
+
+Ask, for example: "Mark CVE-2024-3094 as not affected on TEC-3 version 5.6, the package is not installed" or "Set the critical rows of PostgreSQL 14 to handled with the note 'patched in March'".
+
+Running the matching again (**Refresh**) stays in the **Vulnerabilities** section of the technology. See [Technologies](technologies.md#vulnerabilities).
 
 ## Tips
 

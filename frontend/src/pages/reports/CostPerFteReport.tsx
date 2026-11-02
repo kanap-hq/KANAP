@@ -173,12 +173,14 @@ export default function CostPerFteReport() {
   const grouping = useReportGroup(reportFilters.analyticsAxes);
   const { kind, group, header: groupHeader, inSentence: groupInSentence, labels } = grouping;
 
-  // One request per pair: per group, the staff cost and FTE (or the day cost and days); on the total row, the notices.
+  // One request per pair, once the tenant's default column is known: per group, the staff cost and FTE
+  // (or the day cost and days); on the total row, the notices. Before the setting loads, the hook holds
+  // the product default and the pairs would be asked twice.
   const requests = useMemo(() => {
-    if (reportFilters.queryFilters == null || group == null) return null;
+    if (!budgetColumns.ready || reportFilters.queryFilters == null || group == null) return null;
     const params = { scope, columns, group, filters: reportFilters.queryFilters };
     return view === 'rate' ? dailyRateRequests(params) : costPerFteRequests(params);
-  }, [reportFilters.queryFilters, scope, columns, group, view]);
+  }, [budgetColumns.ready, reportFilters.queryFilters, scope, columns, group, view]);
   const report = useBudgetAggregates(scope, requests, { keepPrevious: true });
   // A group name opens its item, or the list of the lines the row counts (the group, the bar, the
   // report's window, the lines that declare FTE), in a new tab.

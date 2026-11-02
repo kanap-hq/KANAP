@@ -8,31 +8,79 @@ export interface PhaseTemplateItemData {
   milestone_name: string | null;
 }
 
-export const DEFAULT_PHASE_TEMPLATES = [
+/** A shipped name in the four seed languages. */
+export type PhaseTemplateText = Record<'en' | 'fr' | 'de' | 'es', string>;
+
+const GO_LIVE: PhaseTemplateText = { en: 'Go-live', fr: 'Mise en production', de: 'Go-live', es: 'Puesta en producción' };
+const PROJECT_COMPLETE: PhaseTemplateText = { en: 'Project Complete', fr: 'Projet terminé', de: 'Projekt abgeschlossen', es: 'Proyecto completado' };
+const DEPLOYMENT_SUCCESSFUL: PhaseTemplateText = { en: 'Deployment Successful', fr: 'Déploiement réussi', de: 'Rollout erfolgreich', es: 'Despliegue exitoso' };
+const DOCUMENTATION: PhaseTemplateText = {
+  en: 'Documentation & Competence Transfer',
+  fr: 'Documentation et transfert de compétences',
+  de: 'Dokumentation und Wissenstransfer',
+  es: 'Documentación y transferencia de conocimiento',
+};
+
+/**
+ * The phase templates a workspace starts with (seeded on the first read of the list,
+ * `PortfolioPhaseTemplatesService.seedDefaults`), named in the workspace seed language.
+ */
+export const DEFAULT_PHASE_TEMPLATES: ReadonlyArray<{
+  name: PhaseTemplateText;
+  items: ReadonlyArray<{ name: PhaseTemplateText; has_milestone: boolean; milestone_name: PhaseTemplateText }>;
+}> = [
   {
-    name: 'Mini Project',
+    name: { en: 'Mini Project', fr: 'Mini-projet', de: 'Kleinprojekt', es: 'Miniproyecto' },
     items: [
-      { name: 'Realization', has_milestone: true, milestone_name: 'Go-live' },
-      { name: 'Documentation & Competence Transfer', has_milestone: true, milestone_name: 'Project Complete' },
+      { name: { en: 'Realization', fr: 'Réalisation', de: 'Umsetzung', es: 'Realización' }, has_milestone: true, milestone_name: GO_LIVE },
+      { name: DOCUMENTATION, has_milestone: true, milestone_name: PROJECT_COMPLETE },
     ],
   },
   {
-    name: 'Business Apps',
+    name: { en: 'Business Apps', fr: 'Applications métier', de: 'Geschäftsanwendungen', es: 'Aplicaciones de negocio' },
     items: [
-      { name: 'Requirement Analysis & Specifications', has_milestone: true, milestone_name: 'Specs Ready' },
-      { name: 'Realization / Development / Unit Testing', has_milestone: true, milestone_name: 'Ready for UAT' },
-      { name: 'User Acceptance Testing', has_milestone: true, milestone_name: 'Ready for Deployment' },
-      { name: 'Go-live & Hypercare', has_milestone: true, milestone_name: 'Deployment Successful' },
-      { name: 'Documentation & Competence Transfer', has_milestone: true, milestone_name: 'Project Complete' },
+      {
+        name: { en: 'Requirement Analysis & Specifications', fr: 'Analyse des besoins et spécifications', de: 'Anforderungsanalyse und Spezifikation', es: 'Análisis de requisitos y especificaciones' },
+        has_milestone: true,
+        milestone_name: { en: 'Specs Ready', fr: 'Spécifications prêtes', de: 'Spezifikation fertig', es: 'Especificaciones listas' },
+      },
+      {
+        name: { en: 'Realization / Development / Unit Testing', fr: 'Réalisation / développement / tests unitaires', de: 'Umsetzung / Entwicklung / Modultests', es: 'Realización / desarrollo / pruebas unitarias' },
+        has_milestone: true,
+        milestone_name: { en: 'Ready for UAT', fr: 'Prêt pour la recette', de: 'Bereit für den Abnahmetest', es: 'Listo para las pruebas de aceptación' },
+      },
+      {
+        name: { en: 'User Acceptance Testing', fr: 'Recette utilisateur', de: 'Abnahmetest', es: 'Pruebas de aceptación de usuario' },
+        has_milestone: true,
+        milestone_name: { en: 'Ready for Deployment', fr: 'Prêt pour le déploiement', de: 'Bereit für den Rollout', es: 'Listo para el despliegue' },
+      },
+      {
+        name: { en: 'Go-live & Hypercare', fr: 'Mise en production et hypercare', de: 'Go-live und Hypercare', es: 'Puesta en producción e hypercare' },
+        has_milestone: true,
+        milestone_name: DEPLOYMENT_SUCCESSFUL,
+      },
+      { name: DOCUMENTATION, has_milestone: true, milestone_name: PROJECT_COMPLETE },
     ],
   },
   {
-    name: 'IT Project',
+    name: { en: 'IT Project', fr: 'Projet informatique', de: 'IT-Projekt', es: 'Proyecto de TI' },
     items: [
-      { name: 'Requirements Analysis & Solution Selection', has_milestone: true, milestone_name: 'Ready for Implementation' },
-      { name: 'Implementation', has_milestone: true, milestone_name: 'Ready for Production' },
-      { name: 'Deployment & Hypercare', has_milestone: true, milestone_name: 'Deployment Successful' },
-      { name: 'Documentation & Competence Transfer', has_milestone: true, milestone_name: 'Project Complete' },
+      {
+        name: { en: 'Requirements Analysis & Solution Selection', fr: 'Analyse des besoins et choix de la solution', de: 'Anforderungsanalyse und Lösungsauswahl', es: 'Análisis de requisitos y selección de la solución' },
+        has_milestone: true,
+        milestone_name: { en: 'Ready for Implementation', fr: 'Prêt pour la mise en œuvre', de: 'Bereit für die Implementierung', es: 'Listo para la implementación' },
+      },
+      {
+        name: { en: 'Implementation', fr: 'Mise en œuvre', de: 'Implementierung', es: 'Implementación' },
+        has_milestone: true,
+        milestone_name: { en: 'Ready for Production', fr: 'Prêt pour la production', de: 'Bereit für die Produktion', es: 'Listo para producción' },
+      },
+      {
+        name: { en: 'Deployment & Hypercare', fr: 'Déploiement et hypercare', de: 'Rollout und Hypercare', es: 'Despliegue e hypercare' },
+        has_milestone: true,
+        milestone_name: DEPLOYMENT_SUCCESSFUL,
+      },
+      { name: DOCUMENTATION, has_milestone: true, milestone_name: PROJECT_COMPLETE },
     ],
   },
 ];

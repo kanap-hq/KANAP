@@ -245,6 +245,10 @@ Anyone who can read budget lines (Budget) can pick a calendar in the budget tab 
 
 ---
 
+## Ask the assistant
+
+[Plaid](ai-assistant.md#tool-calls) reads the calendars for anyone with read access to them and quotes the working days of a year as KANAP computes them. Ask, for example: "How many working days are there in France in 2026?"
+
 ## Tips
 
 - **Start from the standard calendars**: one per country covers most budgets. Add a region only when its public holidays differ, for example Moselle in France or Bavaria in Germany.

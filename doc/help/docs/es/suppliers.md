@@ -13,7 +13,7 @@ Navegue a **Datos maestros > Proveedores** para abrir el directorio de proveedor
 - **ID de proveedor ERP**: ID de referencia de su sistema ERP o de compras
 - **Notas**: Notas de texto libre sobre la relación con el proveedor
 
-**Consejo**: Cree proveedores antes de añadir aplicaciones o contratos. Así podrá vincularlos durante la creación.
+**Consejo**: En un contrato, una aplicación o una línea presupuestaria, escriba el nombre del proveedor y elija **+ Crear el proveedor** cuando todavía no exista. **Nuevo** en esta página crea un proveedor por separado.
 
 ---
 
@@ -113,9 +113,9 @@ Haga clic en **Nuevo** en la lista. Rellene el nombre (obligatorio), el ID de pr
 
 La exportación escribe un archivo CSV o un libro de Excel (`.xlsx`): elija en **Formato** en el diálogo. La importación lee los dos. Consulte [Archivos CSV y Excel](csv-files.md).
 
-**Exportar** descarga los proveedores que muestra la lista, con su búsqueda, sus filtros y su orden. Elija **Todo el registro** en el diálogo para descargar todos los proveedores, activados y desactivados. El diálogo se cierra una vez descargado el archivo. **Importar** vuelve a leer un archivo. El diálogo de importación incluye también **Descargar plantilla**: un archivo solo con los encabezados. Indica los valores aceptados.
+**Exportar** descarga los proveedores que muestra la lista, con su búsqueda, sus filtros y su orden. Elija **Todo el registro** en el diálogo para descargar todos los proveedores, activados y desactivados. El diálogo se cierra una vez descargado el archivo. **Importar** vuelve a leer un archivo. El diálogo de importación incluye también **Descargar plantilla**, un archivo solo con los encabezados, y **Descargar un ejemplo** (consulte [Archivos de ejemplo](csv-files.md#example-files)). Indica los valores aceptados.
 
-Las columnas:
+El archivo titula las columnas en el idioma de su pantalla. La tabla da sus nombres técnicos, que la importación también lee:
 
 | Columna | Contenido |
 |---|---|

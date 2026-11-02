@@ -1,6 +1,6 @@
 # Branding
 
-Verwenden Sie die Branding-Seite, um Ihre Unternehmensidentität in KANAP anzuwenden. Sie legen hier das Logo und die Primärfarben fest, und die Änderung ist für jeden Benutzer auf Ihrem Mandanten beim nächsten Neuladen der Seite sichtbar.
+Verwenden Sie die Branding-Seite, um Ihre Unternehmensidentität in KANAP anzuwenden. Sie legen hier den Namen der Organisation, das Logo und die Primärfarben fest, und die Änderung ist für jeden Benutzer auf Ihrem Mandanten beim nächsten Neuladen der Seite sichtbar.
 
 ## Wo Sie es finden
 
@@ -13,8 +13,12 @@ Verwenden Sie die Branding-Seite, um Ihre Unternehmensidentität in KANAP anzuwe
 
 ## Was Sie anpassen können
 
-Die Seite hat zwei Karten: **Logo** und **Primärfarben**. Beide sind optional. Ohne Festlegung zeigt KANAP seine Standard-Text-und-Symbol-Kopfzeile und die Standard-Themenfarben.
+Die Seite hat drei Karten: **Name der Organisation**, **Logo** und **Primärfarben**. Logo und Farben sind optional. Ohne Festlegung zeigt KANAP seine Standard-Text-und-Symbol-Kopfzeile und die Standard-Themenfarben.
 
+- **Name der Organisation**
+  - Der Name beim Logo, im Fenster Info, auf der Einwilligungsseite und für den Assistenten
+  - 1 bis 120 Zeichen
+  - Die Adresse des Arbeitsbereichs bleibt unverändert
 - **Logo**
   - Erscheint in der oberen App-Leiste (wenn angemeldet)
   - Erscheint in der Kopfzeile der Anmeldeseite
@@ -22,6 +26,13 @@ Die Seite hat zwei Karten: **Logo** und **Primärfarben**. Beide sind optional. 
   - Eine Primärfarbe für den **Light-Modus**
   - Eine Primärfarbe für den **Dark-Modus**
   - Wird von der App-Leiste, primären Schaltflächen und Links verwendet
+
+## Name der Organisation
+
+1. Geben Sie den Namen ein.
+2. Klicken Sie auf **Änderungen speichern**.
+
+**Auf Standard zurücksetzen** lässt den Namen unverändert. Die Aktion entfernt das Logo und die benutzerdefinierten Farben.
 
 ## Logo-Einrichtung
 
@@ -73,9 +84,9 @@ Die Warnung ist informativ (Sie können trotzdem speichern), aber niedriger Kont
 
 Drei Aktionen am unteren Rand der Seite steuern die Persistenz:
 
-- **Änderungen speichern**: Speichert den ausgewählten Logo-Upload und die Farbwerte. Deaktiviert, wenn keine ausstehenden Änderungen vorliegen oder eine Hex-Eingabe ungültig ist.
+- **Änderungen speichern**: Speichert den Namen der Organisation, den ausgewählten Logo-Upload und die Farbwerte. Deaktiviert, wenn keine ausstehenden Änderungen vorliegen, der Name leer ist oder länger als 120 Zeichen ist, oder eine Hex-Eingabe ungültig ist.
 - **Verwerfen**: Setzt nicht gespeicherte Bearbeitungen auf der Seite zurück (betrifft nicht das, was bereits gespeichert ist).
-- **Auf Standard zurücksetzen**: Entfernt das gespeicherte Logo und löscht alle benutzerdefinierten Farben. Fragt vor der Ausführung um Bestätigung.
+- **Auf Standard zurücksetzen**: Entfernt das gespeicherte Logo und löscht alle benutzerdefinierten Farben. Der Name der Organisation bleibt. Fragt vor der Ausführung um Bestätigung.
 
 Eine kleine Beschriftung unter den Aktionen zeigt den Zähler **Logo-Version** an, der bei jedem Hochladen des Logos erhöht wird. Dies ist hauptsächlich ein Hinweis darauf, dass Browser-Caches aktualisiert werden.
 

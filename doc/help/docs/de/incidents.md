@@ -20,24 +20,33 @@ Erfassen Sie keine Routinearbeit: Passwortzurücksetzungen, Probleme einzelner B
 
 ---
 
-## Erste Schritte
+## Erste Schritte { #getting-started }
 
-Gehen Sie zu **IT-Landschaft > Vorfälle**, um das Register zu sehen. Klicken Sie auf **Neuer Vorfall**, um einen zu erfassen.
+Gehen Sie zu **IT-Landschaft > Vorfälle**, um das Register zu sehen. So erfassen Sie einen Vorfall:
 
-**Pflichtfelder**:
+1. Klicken Sie auf **Neuer Vorfall**. Die Seite des Vorfalls öffnet sich mit einem leeren Titel in der Kopfzeile. Der Rest der Seite ist abgeblendet.
+2. Geben Sie eine kurze, sachliche Zusammenfassung ein, z. B. „Mail-Dienst am Standort Lyon nicht verfügbar".
+3. Drücken Sie die Eingabetaste oder klicken Sie außerhalb des Titels. KANAP erfasst den Vorfall sofort. Seine Referenz (`INC-14`) erscheint und alle Reiter öffnen sich.
 
-- **Titel**: eine kurze, sachliche Zusammenfassung, z. B. „Mail-Dienst am Standort Lyon nicht verfügbar"
-- **Schweregrad**: Kritisch, Schwerwiegend, Geringfügig oder Niedrig
-- **Erkannt**: wann der Vorfall bemerkt wurde (standardmäßig jetzt)
+Der neue Vorfall ist **Offen**, mit dem Schweregrad **Mittel**, jetzt erkannt, und Sie sind der Melder. Füllen Sie dann den Rest aus wie bei jedem Vorfall:
 
-**Auf demselben Bildschirm empfohlen**:
-
+- **Schweregrad**: Kritisch, Hoch, Mittel oder Niedrig
+- **Erkannt**: wann der Vorfall bemerkt wurde
+- **Begonnen**: wann der Vorfall tatsächlich begann, falls das vom Zeitpunkt der Entdeckung abweicht
 - **Beschreibung**: was passiert ist, wie beobachtet
 - **Kategorie**: Infrastruktur, Sicherheit, Anwendung, Daten, Lieferant, Sonstiges (konfigurierbar, siehe [Kategorien](#kategorien))
-- **Begonnen**: wann der Vorfall tatsächlich begann, falls das vom Zeitpunkt der Entdeckung abweicht
 - **Verantwortlicher**: wer die Bearbeitung übernimmt
 
-Der **Melder** sind standardmäßig Sie. Beide Daten akzeptieren Werte in der Vergangenheit: Ein am Montagmorgen entdeckter Vorfall kann als am Samstagabend begonnen erfasst werden.
+Beide Daten akzeptieren Werte in der Vergangenheit: Ein am Montagmorgen entdeckter Vorfall kann als am Samstagabend begonnen erfasst werden. Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erfassen.
+
+### Erstellen oder abbrechen { #cancelling-a-creation }
+
+Solange der Vorfall erstellt wird, zeigt seine Kopfzeile **Erstellen** und **Abbrechen**. Beide bleiben, bis Sie den Vorfall verlassen.
+
+- **Erstellen** behält den Vorfall und schließt ihn. Sie kehren dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm. Bei leerem Titel schließt sich nichts, und der Titel verlangt einen
+- **Abbrechen** schließt, ohne etwas zu behalten. Ein bereits erstellter Vorfall wird gelöscht. Wenn Sie mehr als den Titel eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Vorfällen abbrechen
+
+**Vorfall abbrechen** ist ausgeblendet, solange der Vorfall erstellt wird. Das Abbrechen der Erstellung wird abgelehnt, sobald der Vorfall geschlossen oder abgebrochen ist oder Daten zur behördlichen Meldung enthält (siehe [Einen Vorfall löschen](#einen-vorfall-loschen)). Verlassen Sie den Vorfall auf andere Weise, bleibt er im Register. Die Referenz einer abgebrochenen Erstellung wird nicht wiederverwendet.
 
 **Berechtigungen**:
 
@@ -64,7 +73,7 @@ Die Liste ist das Register selbst: alle Vorfälle, die zuletzt erkannten zuerst.
 | **Ref** | Vorfallsreferenz (z. B. `INC-14`), in Monospace |
 | **Titel** | Kurze Zusammenfassung (zum Öffnen des Vorfalls anklicken) |
 | **Kategorie** | Klassifizierung aus den Einstellungen der IT-Landschaft |
-| **Schweregrad** | Kritisch, Schwerwiegend, Geringfügig, Niedrig, mit einem farbigen Punkt |
+| **Schweregrad** | Kritisch, Hoch, Mittel, Niedrig, mit einem farbigen Punkt |
 | **Status** | Offen, In Bearbeitung, Behoben, Geschlossen, Abgebrochen, mit einem farbigen Punkt |
 | **Erkannt** | Wann der Vorfall bemerkt wurde |
 | **Behoben** | Wann der Dienst wiederhergestellt war |
@@ -76,9 +85,9 @@ Die Liste ist das Register selbst: alle Vorfälle, die zuletzt erkannten zuerst.
 
 **Zusätzliche Spalten** (standardmäßig ausgeblendet, über die Spaltenauswahl verfügbar): **Geschlossen**, **Anwendungen**, **Erstellt**, **Personenbezogene Daten**, **Meldung erforderlich** und **Gemeldet am**. **Personenbezogene Daten** und **Meldung erforderlich** bieten einen Ja/Nein-Filter.
 
-**Filtern**: Kategorie, Schweregrad, Status und Verantwortlicher bieten Kontrollkästchenfilter, deren Optionen aus den aktuell angezeigten Vorfällen berechnet werden, Sie sehen also nur Werte, die in der Ergebnismenge vorkommen. Datumsspalten bieten Datumsfilter, auch als Bereich: Filtern Sie **Erkannt** zwischen zwei Daten, um einen Quartals- oder Jahresauszug zu erzeugen. Die Suche erfasst Titel, Beschreibung, Referenz (`INC-14`) sowie Namen und Referenzen verknüpfter Assets und Anwendungen: Eine Suche nach einem Hostnamen wie `PAR-ESX-01` listet die Vorfälle zu diesem Asset. Wörter, die nur in der Vorfallanalyse vorkommen, findet die globale Suche oder der Assistent, nicht dieses Feld. Die globale Suche, die `@`-Auswahl in Plaid und der MCP-Server finden einen Vorfall auch über den Namen, die Referenz `AST-N`, den Hostnamen oder den FQDN seiner verknüpften Assets.
+**Filtern**: Kategorie, Schweregrad, Status und Verantwortlicher bieten Kontrollkästchenfilter, deren Optionen aus den aktuell angezeigten Vorfällen berechnet werden, Sie sehen also nur Werte, die in der Ergebnismenge vorkommen. Datumsspalten bieten Datumsfilter, auch als Bereich: Filtern Sie **Erkannt** zwischen zwei Daten, um einen Quartals- oder Jahresauszug zu erzeugen. Die Suche erfasst Titel, Beschreibung, Referenz (`INC-14`) sowie Namen und Referenzen verknüpfter Assets, Anwendungen und Technologien: Eine Suche nach einem Hostnamen wie `PAR-ESX-01` listet die Vorfälle zu diesem Asset. Wörter, die nur in der Vorfallanalyse vorkommen, findet die globale Suche oder der Assistent, nicht dieses Feld. Die globale Suche, die `@`-Auswahl in Plaid und der MCP-Server finden einen Vorfall auch über den Namen und die Referenz eines verknüpften Assets (`AST-N`, Hostname oder FQDN), einer verknüpften Anwendung (`APP-N`) oder einer verknüpften Technologie (`TEC-N`). Ein Treffer ist der Vorfall, mit seinem Titel und seiner Referenz (`INC-N`).
 
-**Tipp**: Kombinieren Sie Schweregrad = Kritisch, Schwerwiegend mit einem Bereich für **Erkannt**, um die Auswahlliste zu erstellen, die die meisten Steuerungsgremien und Prüfungen verlangen.
+**Tipp**: Kombinieren Sie Schweregrad = Kritisch, Hoch mit einem Bereich für **Erkannt**, um die Auswahlliste zu erstellen, die die meisten Steuerungsgremien und Prüfungen verlangen.
 
 Was Sie filtern, wird in den geöffneten Vorfall übernommen: **Zurück / Weiter** im Arbeitsbereich durchläuft genau diese Auswahlliste.
 
@@ -87,6 +96,8 @@ Was Sie filtern, wird in den geöffneten Vorfall übernommen: **Zurück / Weiter
 ## Der Vorfalls-Arbeitsbereich
 
 Klicken Sie auf eine beliebige Zeile, um den Vorfall zu öffnen. Der Arbeitsbereich hat einen **Kopfbereich** mit der Referenz und kurzen Metadaten, eine **Eigenschaftenleiste** rechts und einen **Inhaltsbereich** in der Mitte, der mit jedem Tab wechselt.
+
+Die Tabs sind **Übersicht**, **Journal**, **Beziehungen**, **Dokumente** und **Verlauf** (die Änderungen am Vorfall, siehe [Verlauf der Datensätze](record-history.md)).
 
 ### Kopfbereich und Metadaten
 
@@ -101,7 +112,7 @@ Die Leiste bleibt auf jedem Tab sichtbar und speichert während der Bearbeitung.
 **Klassifizierung**:
 
 - **Kategorie**: aus der in den Einstellungen der IT-Landschaft konfigurierten Liste
-- **Schweregrad**: Kritisch, Schwerwiegend, Geringfügig, Niedrig. Wählen Sie die Stufe, die die geschäftliche Auswirkung zum jeweiligen Zeitpunkt widerspiegelt; jede Änderung wird im Journal festgehalten, ein späteres Anheben oder Absenken ist also normal und nachvollziehbar
+- **Schweregrad**: Kritisch, Hoch, Mittel, Niedrig. Wählen Sie die Stufe, die die geschäftliche Auswirkung zum jeweiligen Zeitpunkt widerspiegelt; jede Änderung wird im Journal festgehalten, ein späteres Anheben oder Absenken ist also normal und nachvollziehbar
 - **Status**: Offen, In Bearbeitung, Behoben, Geschlossen. Der Status bewegt sich nur vorwärts. Der Weg zurück führt über **Wieder öffnen**, damit das Register nicht unbemerkt zurückgedreht werden kann
 - **Auf Registeradministratoren beschränken**: den Vorfall vor anderen Lesern und Mitwirkenden verbergen. Melder und Verantwortlicher sehen ihn weiter. Nur ein Administrator kann die Einschränkung aufheben, auch nach dem Schließen. Wenn sie aktiv ist, zeigt die Metadatenzeile **Eingeschränkt**
 
@@ -172,9 +183,9 @@ Jede Zeile zeigt den Autor, die Zeit, auf die sie sich bezieht (für „vor 3 Ta
 
 Ein Eintrag **Verknüpfungen aktualisiert** erscheint nur für Personen, die das genannte Modul lesen dürfen: Assets und Technologien erfordern die Infrastruktur, Anwendungen die Anwendungen. Notizen behalten ihren Text, unabhängig davon, was sie erwähnen.
 
-Das Eingabefeld verschwindet, sobald der Vorfall geschlossen oder abgebrochen ist. Feldänderungen außerhalb des Journals, etwa die Korrektur der Beschreibung, werden im Audit-Protokoll der Plattform festgehalten, nicht im Journal.
+Das Eingabefeld verschwindet, sobald der Vorfall geschlossen oder abgebrochen ist. Feldänderungen außerhalb des Journals, etwa die Korrektur der Beschreibung, erscheinen im Tab **Verlauf**.
 
-Die Vorfallanalyse führt ihre eigene Historie. Jedes Speichern, das sie verändert, erzeugt eine Version, und die Versionen bleiben dauerhaft erhalten. Gewöhnliches Bearbeiten erzeugt keine Journaleinträge: Das Schreiben der Analyse ist kein Ereignis des Vorfalls, und das Audit-Protokoll hält fest, wer was geändert hat. Schließen, Abbrechen und Importe schreiben dagegen einen Journaleintrag, und dieser Eintrag nennt die Version der Analyse, auf die er sich bezieht, dargestellt als „Vorfallanalyse, Version 4 (DOC-12)".
+Die Vorfallanalyse führt ihren eigenen Verlauf. Jedes Speichern, das sie verändert, erzeugt eine Version, und die Versionen bleiben dauerhaft erhalten. Gewöhnliches Bearbeiten erzeugt keine Journaleinträge: Das Schreiben der Analyse ist kein Ereignis des Vorfalls, und das Audit-Protokoll hält fest, wer was geändert hat. Schließen, Abbrechen und Importe schreiben dagegen einen Journaleintrag, und dieser Eintrag nennt die Version der Analyse, auf die er sich bezieht, dargestellt als „Vorfallanalyse, Version 4 (DOC-12)".
 
 Das Wiederöffnen eines Vorfalls ändert daran nichts. Die Versionen bleiben, der Eintrag zum Schließen verweist weiterhin auf die Version, die beim Schließen des Datensatzes aktuell war, und dieser Text lässt sich später weiterhin mit den enthaltenen Bildern lesen, unter den Zugriffsregeln, die für den Vorfall dann gelten.
 

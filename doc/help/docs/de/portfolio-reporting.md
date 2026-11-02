@@ -164,7 +164,7 @@ Klicken Sie auf **Nicht zugewiesene Arbeit**, um Details aufzuklappen.
 ### Detailansicht
 Klicken Sie auf eine Mitwirkenden-Zeile, um eine Projektaufschlüsselung zu öffnen:
 - Jede Zeile zeigt verbleibenden Aufwand, Zuordnung % und Ihre Tage.
-- Projektnamen sind klickbar und öffnen den Reiter **Fortschritt** des Projekts.
+- Projektnamen sind klickbar und öffnen den Reiter **Aufwand** des Projekts.
 
 ### Exporte
 - **Tabelle exportieren**: CSV oder Excel. Die Datei enthält die Tabelle der angezeigten Gruppierung, Mitwirkende oder Teams, mit dem angezeigten Kapazitätsmodus, den Teams und den Status. Tage behalten ihre Nachkommastellen. Die Excel-Datei fügt ein Blatt **Parameter** hinzu. Siehe [Berichte](reports.md#export-options)

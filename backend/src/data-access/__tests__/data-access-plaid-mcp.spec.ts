@@ -14,6 +14,7 @@ import { TENANT_PURGE_TABLES } from '../../admin/tenants/tenant-purge.inventory'
 import { withTenantExecution } from '../../common/tenant-runner';
 import { DATA_ACCESS_READ_ONLY_LINE_MESSAGE } from '../line-write-checks';
 import { DATA_ACCESS_RESERVED_MESSAGE } from '../reserved-operations';
+import { DATA_ACCESS_CHARGEBACK_COMPANY_MESSAGE } from '../../spend/chargeback-report.service';
 import { APP_URL, LIMITED_ROLE, PgClient, connect, roleExists } from './data-access-test-helpers';
 import { Label, Seed, seed } from './data-access-line-seed';
 
@@ -51,6 +52,10 @@ process.env.AWS_SECRET_ACCESS_KEY ||= 'test';
  *   of each person): `query_entities`, `aggregate_entities`, `search_all`, `get_entity_detail` give
  *   what Plaid gives the same person.
  * - Tasks export: Rita's file has her task of L5 without the line's id or name; Ulla's has them.
+ * - The chargeback reports (Plaid L8, lot D), through Plaid and MCP: the lines are in the default
+ *   method, recomputed by the year's rule (no metrics: half FR, half ES), never their stored 100 % FR
+ *   split. Rita's global report adds up L1 to L4 without the group total; a company report is refused
+ *   to her in the report's words (her nodes are cost centers, which cover no company); Ulla reads both.
  *
  * Needs the role kanap_data_limited (CI installs it); skipped without it, failed in CI.
  */
@@ -117,6 +122,10 @@ async function seedPlaid(): Promise<void> {
     for (const resource of ['ai_chat', 'ai_mcp', 'budget', 'tasks', 'applications', 'portfolio_projects', 'contracts', 'infrastructure']) {
       await q(`INSERT INTO role_permissions (tenant_id, role_id, resource, level) VALUES ($1, $2, $3, 'member')`, [s.tenantId, roleId, resource]);
     }
+    // The chargeback reports (Plaid L8, lot D), read with the reporting right as their routes.
+    await q(`INSERT INTO role_permissions (tenant_id, role_id, resource, level) VALUES ($1, $2, 'reporting', 'reader')`, [s.tenantId, roleId]);
+    // The users administration (Plaid L7): the roles are read by Ulla, refused to Rita in limited access.
+    await q(`INSERT INTO role_permissions (tenant_id, role_id, resource, level) VALUES ($1, $2, 'users', 'admin')`, [s.tenantId, roleId]);
     for (const row of await q(`SELECT id, item_number FROM spend_items WHERE tenant_id = $1`, [s.tenantId])) {
       const label = (Object.keys(s.lines) as Label[]).find((l) => s.lines[l] === row.id);
       if (label) itemNumbers[label] = Number(row.item_number);
@@ -470,7 +479,55 @@ async function testPlaidReads(): Promise<void> {
   assert.equal(await asPerson(rita, (ctx) => technologyContractCount(ctx.manager, s.tenantId, technologyId)), 1, 'technology contract count: Rita reads one');
   assert.equal(await asPerson(ulla, (ctx) => technologyContractCount(ctx.manager, s.tenantId, technologyId)), 2, 'technology contract count: Ulla reads two');
 
+  // Admin › Data access (Plaid L7 lot B): Rita holds users at admin level, as Ulla, in limited
+  // access. The database does not guard the nodes: the family, the users fields and the access
+  // blocks are closed to her by the code, in her own transaction.
+  for (const [name, input] of [
+    ['query_entities', { entity_type: 'data_access' }],
+    ['aggregate_entities', { entity_type: 'data_access', group_by: 'node_type' }],
+  ] as Array<[string, Record<string, unknown>]>) {
+    const refused = await rejection(() => tool(rita, name, input));
+    assert.equal(refused?.message, DATA_ACCESS_RESERVED_MESSAGE, `${name} data_access: refused to Rita (limited)`);
+  }
+  const ullaAccess = await tool(ulla, 'query_entities', { entity_type: 'data_access', limit: 50 });
+  assert.ok(ullaAccess.items.some((item: any) => item.id === rita), 'Ulla (all) reads Rita among the limited persons');
+  const ritaUsers = await tool(rita, 'query_entities', { entity_type: 'users', limit: 50 });
+  assert.ok(!ritaUsers.items.some((item: any) => 'roles' in item.metadata || 'data_access' in item.metadata), 'users: no roles nor mode to Rita');
+  assert.deepEqual((await tool(rita, 'query_entities', { entity_type: 'users', filters: { data_access: ['limited'] } })).filters_ignored, ['data_access'], 'users: the mode filter is closed to Rita');
+  const ullaUsers = await tool(ulla, 'query_entities', { entity_type: 'users', filters: { data_access: ['limited'] }, limit: 50 });
+  assert.ok(ullaUsers.items.some((item: any) => item.id === rita && item.metadata.data_access === 'limited'), 'users: Ulla reads Rita as limited');
+  assert.equal('data_access' in (await tool(rita, 'get_entity_detail', { entity_type: 'users', entity_id: rita })).data, false, 'users detail: no access block to Rita');
+  assert.equal((await tool(ulla, 'get_entity_detail', { entity_type: 'users', entity_id: rita })).data.data_access.mode, 'limited', 'users detail: Ulla reads Rita\'s access');
+
+  // The chargeback reports (Plaid L8, lot D): each line of 100 spread half FR, half ES.
+  const byCompany = (result: any) => result.items.map((item: any) => [item.label, item.metadata.amount]).sort();
+  const companyRows = { entity_type: 'chargeback', filters: { year: { op: 'eq', value: 2026 }, level: ['company'] } };
+  const ritaCharge = await tool(rita, 'query_entities', companyRows);
+  assert.deepEqual(byCompany(ritaCharge), [[`Alpha Espagne ${tag}`, 200], [`Alpha France ${tag}`, 200]], `chargeback: Rita adds up L1 to L4 (${JSON.stringify(ritaCharge)})`);
+  assert.equal(ritaCharge.chargeback.report_total, null, 'chargeback: no group total for Rita');
+  assert.equal(ritaCharge.data_access, 'limited', 'chargeback: within her access');
+  assertNoTrace(await tool(rita, 'query_entities', { entity_type: 'chargeback', filters: { year: { op: 'eq', value: 2026 } } }), 'query_entities chargeback (Rita)');
+  const ullaCharge = await tool(ulla, 'query_entities', companyRows);
+  assert.deepEqual(byCompany(ullaCharge), [[`Alpha Espagne ${tag}`, 350], [`Alpha France ${tag}`, 350]], 'chargeback: Ulla adds up the seven lines');
+  assert.equal(ullaCharge.chargeback.report_total, 700, 'chargeback: the group total for Ulla');
+  assert.equal(ullaCharge.items[0].page_url, '/ops/reports/chargeback/global', 'chargeback: the row opens the global report');
+  const ritaGrouped = await tool(rita, 'aggregate_entities', { entity_type: 'chargeback', group_by: 'company', metric: 'amount', function: 'sum', filters: { year: { op: 'eq', value: 2026 } } });
+  assert.deepEqual(ritaGrouped.groups.map((group: any) => [group.key, group.value]).sort(), [[`Alpha Espagne ${tag}`, 200], [`Alpha France ${tag}`, 200]], 'aggregate_entities chargeback: Rita');
+  const companyLines = { entity_type: 'chargeback_lines', filters: { year: { op: 'eq', value: 2026 }, company: `Alpha France ${tag}` } };
+  for (const [name, input] of [
+    ['query_entities', companyLines],
+    ['aggregate_entities', { ...companyLines, group_by: 'allocation_method' }],
+  ] as Array<[string, Record<string, unknown>]>) {
+    const refused = await rejection(() => tool(rita, name, input));
+    assert.equal(refused?.message, DATA_ACCESS_CHARGEBACK_COMPANY_MESSAGE, `${name} chargeback_lines: refused to Rita in words`);
+  }
+  const ullaChargeLines = await tool(ulla, 'query_entities', { ...companyLines, limit: 50 });
+  assert.deepEqual(linesIn(ullaChargeLines), [...VISIBLE, ...HIDDEN].sort(), 'chargeback_lines: Ulla reads the seven lines charged to FR');
+  assert.ok(ullaChargeLines.items.every((item: any) => item.metadata.readable === true && item.page_url === '/ops/reports/chargeback/company'), 'chargeback_lines: read, each opening the company report');
+
   console.log('  Plaid reads: query, search, aggregate, detail and context show L1 to L4 only, no trace of L5 to L7; contracts and their tasks follow: OK');
+  console.log('  Plaid reads: the global chargeback adds up L1 to L4 for Rita without the group total, the company chargeback is refused to her in words: OK');
+  console.log('  Plaid reads: Admin › Data access and the users access fields are refused to a users administrator in limited access, read with access to all data: OK');
 }
 
 /** The mention picker (`GET /ai/search/entities`) and the search index under the person's access. */
@@ -824,6 +881,8 @@ async function testMcp(): Promise<void> {
     ['search_all', { query: 'DA 4D contract', limit: 100 }],
     ['get_entity_detail', { entity_type: 'contracts', entity_id: contractVisible }],
     ['get_entity_detail', { entity_type: 'tasks', entity_id: contractTaskId }],
+    ['query_entities', { entity_type: 'chargeback', filters: { year: { op: 'eq', value: 2026 } } }],
+    ['aggregate_entities', { entity_type: 'chargeback', group_by: 'company', metric: 'amount', function: 'sum', filters: { year: { op: 'eq', value: 2026 } } }],
   ];
   await withMcpServer(async (url) => {
     for (const [name, args] of calls) {
@@ -852,8 +911,42 @@ async function testMcp(): Promise<void> {
     assert.ok(!String(hiddenContract.error).includes(contractHidden), 'MCP get_entity_detail of CH: no id');
     assert.deepEqual(contractsIn((await mcpCall(url, keys[rita], 'query_entities', { entity_type: 'contracts', q: 'DA 4D contract' })).result), ['visible'], 'MCP query_entities contracts: CF alone (Rita)');
     assert.deepEqual(contractsIn((await mcpCall(url, keys[ulla], 'query_entities', { entity_type: 'contracts', q: 'DA 4D contract' })).result), ['visible', 'hidden'], 'MCP query_entities contracts: both (Ulla)');
+
+    // The roles and their rights (Plaid L7 lot A): Admin › Roles is closed to a person in limited
+    // access whatever their role. Rita holds users at admin level, as Ulla: her key reads nothing.
+    const roleName = (await inTenant(async () => (await client.query(
+      `SELECT r.role_name FROM users u JOIN roles r ON r.id = u.role_id WHERE u.id = $1`, [rita],
+    )).rows[0].role_name)) as string;
+    for (const [name, args] of [
+      ['query_entities', { entity_type: 'roles' }],
+      ['query_entities', { entity_type: 'role_permissions', filters: { resource: ['users'] } }],
+      ['aggregate_entities', { entity_type: 'role_permissions', group_by: 'level' }],
+      ['get_entity_detail', { entity_type: 'roles', entity_id: roleName }],
+      // Admin › Data access (Plaid L7 lot B), closed the same way.
+      ['query_entities', { entity_type: 'data_access' }],
+      ['aggregate_entities', { entity_type: 'data_access', group_by: 'node' }],
+    ] as Array<[string, Record<string, unknown>]>) {
+      const what = `MCP ${name} ${JSON.stringify(args)}`;
+      assert.equal((await mcpCall(url, keys[rita], name, args)).error, DATA_ACCESS_RESERVED_MESSAGE, `${what}: refused to Rita (limited)`);
+      assert.equal((await mcpCall(url, keys[ulla], name, args)).error, null, `${what}: read by Ulla (all)`);
+    }
+    // The company chargeback: refused to Rita in the report's words, read by Ulla.
+    const companyLines = { entity_type: 'chargeback_lines', filters: { year: { op: 'eq', value: 2026 }, company: `Alpha France ${tag}` } };
+    assert.equal((await mcpCall(url, keys[rita], 'query_entities', companyLines)).error, DATA_ACCESS_CHARGEBACK_COMPANY_MESSAGE, 'MCP chargeback_lines: refused to Rita');
+    const ullaChargeLines = await mcpCall(url, keys[ulla], 'query_entities', { ...companyLines, limit: 50 });
+    assert.deepEqual(linesIn(ullaChargeLines.result), [...VISIBLE, ...HIDDEN].sort(), 'MCP chargeback_lines: Ulla reads the seven lines');
+    const ritaGlobal = (await mcpCall(url, keys[rita], 'query_entities', { entity_type: 'chargeback', filters: { year: { op: 'eq', value: 2026 }, level: ['company'] } })).result;
+    assert.deepEqual([ritaGlobal.items.map((item: any) => item.metadata.amount), ritaGlobal.chargeback.report_total], [[200, 200], null], 'MCP chargeback: Rita\'s lines, no group total');
+    const ullaRights = (await mcpCall(url, keys[ulla], 'get_entity_detail', { entity_type: 'roles', entity_id: roleName })).result;
+    assert.equal(ullaRights.data.permissions.users, 'admin', 'MCP get_entity_detail roles: the role gives users at admin level');
+    const ritaUsers = (await mcpCall(url, keys[rita], 'query_entities', { entity_type: 'users', filters: { roles: [roleName] } })).result;
+    assert.deepEqual(ritaUsers.filters_ignored, ['roles'], 'MCP query_entities users: the roles filter is closed to Rita');
+    const ullaUsers = (await mcpCall(url, keys[ulla], 'query_entities', { entity_type: 'users', filters: { roles: [roleName] } })).result;
+    assert.ok(ullaUsers.items.some((item: any) => item.id === rita && String(item.metadata.roles).includes(roleName)), 'MCP query_entities users: Ulla finds Rita by her role');
   });
   console.log('  MCP: query_entities, aggregate_entities, search_all and get_entity_detail through the key guard give what Plaid gives: OK');
+  console.log('  MCP: the roles and Admin › Data access are refused to a users administrator in limited access, read with access to all data: OK');
+  console.log('  MCP: the chargeback reports give what Plaid gives, the company report refused to Rita in words: OK');
 }
 
 // ---------------------------------------------------------------------------------------------

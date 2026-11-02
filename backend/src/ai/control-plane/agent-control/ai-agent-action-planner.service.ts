@@ -10,7 +10,7 @@ import {
   RUNTIME_SAFETY_FLOOR_ACTION_PLANNER,
   VerbatimCandidate,
 } from './ai-agent-prompt-compiler.service';
-import { AiAgentLlmClient } from './ai-agent-llm-client';
+import { AiAgentLlmClient, agentCallCostEur } from './ai-agent-llm-client';
 import type { TicketImageEvidence } from './ai-ticket-need-representation.types';
 import { isRecord } from '../../../common/object-guards';
 import { estimateJsonTokens } from './json-token-estimate';
@@ -304,7 +304,10 @@ export class AiAgentActionPlannerService {
     const terminalStatusTransitionKeys = allowedStatusTransitions
       .filter((transition) => transition.terminal)
       .map((transition) => transition.key);
-    const routingTargets = input.owned_action_types.includes('assignment_update')
+    const routingTargets = (
+      input.owned_action_types.includes('assignment_update')
+      || input.owned_action_types.includes('participant_update')
+    )
       ? routingTargetSummaries(input.contexts.routing)
       : [];
     return {
@@ -320,6 +323,8 @@ export class AiAgentActionPlannerService {
           transition_key: 'optional provider transition key when supported',
           proposed: 'optional for classification_update: {type?, priority?, urgency?, category?}; copy keys from classification_options (category key or exact label)',
           target: 'optional for assignment_update: one entry of routing_targets copied exactly {kind, key, label}',
+          operation: 'for participant_update: add_observer',
+          participants: 'for participant_update: exactly one entry of routing_targets copied exactly {kind, key, label}',
         }],
         rationale: 'one short summary sentence',
         confidence: '0..1',
@@ -421,7 +426,7 @@ export class AiAgentActionPlannerService {
         model: `${response.runtime.providerId}:${response.runtime.model}`,
         usage: response.usage,
         estimated_tokens: actualTokens,
-        estimated_cost_eur: llmCostEur(actualInputTokens, actualOutputTokens, response.runtime),
+        estimated_cost_eur: agentCallCostEur(actualInputTokens, actualOutputTokens, response.runtime, response.usage),
         latency_ms: response.latencyMs,
       };
     } catch (error) {

@@ -5,7 +5,7 @@ import { RequireLevel } from '../auth/require-level.decorator';
 import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
 import { DashboardService } from './dashboard.service';
 import { DashboardDataService } from './dashboard-data.service';
-import { UpdateDashboardConfigDto } from './dto/update-dashboard-config.dto';
+import { UpdateDashboardConfigDto, UpdateHomeDashboardConfigDto } from './dto/update-dashboard-config.dto';
 import { resolveBusinessContributorScopeForUser } from '../auth/business-contributor-scope';
 import { existingRecentItems, type RecentItemRef } from './recent-items';
 import { incidentViewerFromContext } from '../incidents/incident-visibility';
@@ -52,7 +52,7 @@ export class DashboardController {
   @Put('config')
   async saveConfig(
     @Tenant() ctx: TenantRequest,
-    @Body() dto: UpdateDashboardConfigDto,
+    @Body() dto: UpdateHomeDashboardConfigDto,
   ) {
     return this.svc.saveConfig(ctx.userId!, dto, { manager: ctx.manager });
   }

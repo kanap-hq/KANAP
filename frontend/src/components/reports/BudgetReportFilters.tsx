@@ -393,6 +393,9 @@ export function BudgetReportFilters({ filters }: { filters: BudgetReportFilterSt
             label={t('reports.filters.costCenter')}
             hideLabel
             placeholder={t('reports.filters.allCostCenters')}
+            // No cost center is the filter's "all" choice: written as the other menus write theirs,
+            // not in the pale placeholder colour, which reads as a disabled field.
+            textFieldSx={{ '& .MuiInputBase-input::placeholder': { color: 'text.primary' } }}
           />
         </ReportFilter>
       )}

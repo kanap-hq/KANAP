@@ -5,9 +5,9 @@ import { formatShortDate } from '../../../lib/dateFormat';
  * Human labels for the columns the weekly report reports as changed.
  *
  * The wording is the one the item history already uses, so a change reads the same
- * in the report and in the item's own history feed: request and project columns come
- * from `activity.history.fields.*` (the map in PortfolioHistory), task columns from
- * `workspace.task.history.fields.*` (the map in TaskHistory).
+ * in the report and in the item's former history feed: request and project columns come
+ * from `activity.history.fields.*` (the labels the feed used before the History tab), task columns
+ * from `workspace.task.history.fields.*` (the labels the task feed used before the History button).
  */
 const PORTFOLIO_FIELD_KEYS: Record<string, string> = {
   name: 'name',

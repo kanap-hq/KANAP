@@ -88,6 +88,8 @@ function buildController() {
   const baseline = {
     provisionDefaultGlobalCoa: async () => { writes.push('chart of accounts'); },
     createStartingCompany: async () => { writes.push('company'); },
+    adoptStartingTechnologies: async () => { writes.push('technologies'); },
+    seedStartingClassification: async () => { writes.push('classification'); },
   };
   const runnerManager = {
     query: async () => [],
@@ -127,6 +129,7 @@ function buildController() {
     turnstile as any,
     {} as any,
     {} as any,
+    { provisionTrialSampleData: async () => undefined } as any,
   );
   return { controller, writes, sent };
 }

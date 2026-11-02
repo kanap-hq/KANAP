@@ -26,6 +26,8 @@ import { KnowledgeService } from '../knowledge/knowledge.service';
 import { HISTORY_FIELDS, historyFields } from './record-history/fields';
 import type { HistoryFieldRule, HistoryFields } from './record-history/field-rules';
 import { auditPageQuery, type AuditCursor } from './record-history/query';
+import { taskRelatedFamily } from './record-history/records/tasks';
+import { requestAuditPayload } from './record-history/records/portfolio_requests';
 import {
   linkReference,
   presentItem,
@@ -41,6 +43,7 @@ import {
   type RecordHistorySubject,
 } from './record-history/presenters';
 import { contactIds, isPlainObject, isUuid, linkSetIds } from './record-history/values';
+import { contractClosedLabels, contractsRecord } from './record-history/records/contracts';
 
 /**
  * The history of one record, as its page shows it (lot 1B, extended by lot 2).
@@ -153,8 +156,9 @@ async function readAuditPage(
   id: string,
   cursor: Cursor | null,
   fetch: number,
+  closedLabels: readonly string[],
 ): Promise<AuditRow[]> {
-  const query = auditPageQuery(entry, tenantId, id, cursor, fetch);
+  const query = auditPageQuery(entry, tenantId, id, cursor, fetch, closedLabels);
   return manager.query(query.sql, query.params);
 }
 
@@ -190,11 +194,15 @@ function stateId(state: string): string | null {
 function collectSetIds(ctx: { ids: Map<FamilyKey, Set<string>> }, label: string, row: AuditRow) {
   const family: FamilyKey | null = label === 'interface_owners'
     ? 'user'
-    : label === 'interface_companies'
+    : label === 'interface_companies' || label === 'application_companies'
       ? 'company'
       : label === 'interface_dependencies'
         ? 'interface'
-        : null;
+        : label === 'application_departments'
+          ? 'department'
+          : label === 'application_suites'
+            ? 'application'
+            : null;
   if (!family) return;
   for (const payload of [row.before_json, row.after_json]) {
     for (const state of stateStrings(payload)) addFamilyId(ctx, family, stateId(state));
@@ -207,13 +215,18 @@ function collectPageIds(rows: AuditRow[], entry: RecordHistoryRecord, recordId: 
   const versions = new Set<string>();
   const axes = new Set<string>();
   const categories = new Set<string>();
+  const instances = new Set<string>();
+  const criteria = new Set<string>();
+  const criterionOptions = new Set<string>();
 
   const collect = (label: string, kind: RecordHistoryChildKind | null, row: AuditRow) => {
     if (row.user_id) addFamilyId({ ids }, 'user', row.user_id);
     for (const payload of payloads(row)) {
       if (isPlainObject(payload)) {
+        // A request's task-origin cleanup names the task under its own key (`requestAuditPayload`).
+        const fieldsPayload = label === 'portfolio_requests' ? requestAuditPayload(payload) as Record<string, unknown> : payload;
         for (const [field, rule] of Object.entries(historyFields(label))) {
-          if (rule.family) addFamilyId({ ids }, rule.family, payload[field]);
+          if (rule.family) addFamilyId({ ids }, rule.family, fieldsPayload[field]);
         }
         // A link names its other record by a payload key of its kind (a contact's supplier,
         // contract or budget line), not by one of the record's own fields.
@@ -223,11 +236,36 @@ function collectPageIds(rows: AuditRow[], entry: RecordHistoryRecord, recordId: 
       if (kind === 'contact' && !isPlainObject(payload)) {
         for (const contactId of contactIds(payload)) addFamilyId({ ids }, 'contact', contactId);
       }
+      // A project's contacts are a set of ids.
+      if (kind === 'contact' && isPlainObject(payload) && Array.isArray(payload.ids)) {
+        for (const contactId of contactIds(payload.ids)) addFamilyId({ ids }, 'contact', contactId);
+      }
+      // A team names its people (`{ role, ids }`), an effort allocation each person's share.
+      if (kind === 'team' && isPlainObject(payload)) {
+        for (const userId of linkSetIds(payload)) addFamilyId({ ids }, 'user', userId);
+        if (Array.isArray(payload.allocations)) {
+          for (const allocation of payload.allocations) {
+            if (isPlainObject(allocation)) addFamilyId({ ids }, 'user', allocation.user_id);
+          }
+        }
+      }
+      // A dependency set names projects (`ids`) and, from a request, requests (`request_ids`).
+      if (kind === 'dependency' && isPlainObject(payload)) {
+        for (const value of linkSetIds(payload)) addFamilyId({ ids }, 'project', value);
+        for (const value of linkSetIds(payload.request_ids)) addFamilyId({ ids }, 'request', value);
+      }
+      // The project's scoring names its criteria and options by id.
+      if (entry.auditLabels.includes(label) && isPlainObject(payload) && isPlainObject(payload.criteria_values)) {
+        for (const [criterionId, optionId] of Object.entries(payload.criteria_values)) {
+          if (isUuid(criterionId)) criteria.add(criterionId.toLowerCase());
+          if (isUuid(optionId)) criterionOptions.add(optionId.toLowerCase());
+        }
+      }
       const addList = (family: FamilyKey, list: unknown) => {
         if (Array.isArray(list)) for (const value of list) addFamilyId({ ids }, family, value);
       };
       if (kind === 'application') {
-        if (Array.isArray(payload)) addList('application', payload);
+        if (Array.isArray(payload)) addList('application', linkSetIds(payload));
         else if (isPlainObject(payload)) {
           addList('application', payload.added);
           addList('application', payload.removed);
@@ -236,15 +274,18 @@ function collectPageIds(rows: AuditRow[], entry: RecordHistoryRecord, recordId: 
         }
       }
       if (kind === 'technology') {
-        if (Array.isArray(payload)) addList('technology', payload);
+        if (Array.isArray(payload)) addList('technology', linkSetIds(payload));
         else if (isPlainObject(payload)) {
           addList('technology', payload.added);
           addList('technology', payload.removed);
           addList('technology', payload.ids);
           addFamilyId({ ids }, 'technology', payload.technology_id);
         }
-        // An installed technology names the technology in `record_id` from the asset's side.
-        if (entry.table === 'assets' && isUuid(row.record_id)) addFamilyId({ ids }, 'technology', row.record_id);
+        // An installed or declared technology names the technology in `record_id` from the asset's
+        // or the application's side.
+        if ((entry.table === 'assets' || entry.table === 'applications') && isUuid(row.record_id)) {
+          addFamilyId({ ids }, 'technology', row.record_id);
+        }
       }
       if (kind === 'asset') {
         // On a budget line, the link payload holds line ids and `record_id` is the asset; on a
@@ -252,7 +293,7 @@ function collectPageIds(rows: AuditRow[], entry: RecordHistoryRecord, recordId: 
         if (entry.table === 'spend_items') {
           if (isUuid(row.record_id)) addFamilyId({ ids }, 'asset', row.record_id);
         } else if (Array.isArray(payload)) {
-          addList('asset', payload);
+          addList('asset', linkSetIds(payload));
         } else if (isPlainObject(payload)) {
           addList('asset', payload.ids);
           addList('asset', payload.added);
@@ -287,6 +328,23 @@ function collectPageIds(rows: AuditRow[], entry: RecordHistoryRecord, recordId: 
           if (isUuid(categoryId)) categories.add(categoryId.toLowerCase());
         }
       }
+      if (entry.table === 'tasks' && label === 'tasks' && isPlainObject(payload)) {
+        // A task names the record it belongs to by its type and id, the request it was converted
+        // into, and its owners and viewers as id lists.
+        const family = taskRelatedFamily(payload.related_object_type);
+        if (family) addFamilyId({ ids }, family, payload.related_object_id);
+        addFamilyId({ ids }, 'request', payload.converted_to_request_id);
+        addList('user', payload.owner_ids);
+        addList('user', payload.viewer_ids);
+      }
+      if (entry.table === 'portfolio_requests' && label === 'portfolio_requests' && isPlainObject(payload)) {
+        // A request names the project it was converted into.
+        addFamilyId({ ids }, 'project', payload.converted_to_project_id);
+      }
+      if (entry.auditLabels.includes(label) && isPlainObject(payload) && isPlainObject(payload.renewal_task)) {
+        // A contract's renewal marker names the decision task it created.
+        addFamilyId({ ids }, 'task', payload.renewal_task.task_id);
+      }
       if (entry.auditLabels.includes(label) && isPlainObject(payload) && Array.isArray(payload.middleware_application_ids)) {
         // An older interface writer kept the middleware applications as an id list in the payload.
         for (const applicationId of payload.middleware_application_ids) addFamilyId({ ids }, 'application', applicationId);
@@ -305,13 +363,29 @@ function collectPageIds(rows: AuditRow[], entry: RecordHistoryRecord, recordId: 
       addFamilyId({ ids }, kind, row.record_id);
     }
     if (kind === 'task' && row.record_id) addFamilyId({ ids }, 'task', row.record_id);
+    // A process link is written from the process: `record_id` is the process. From a request,
+    // `record_id` is the request and the payload the set of process ids.
+    if (kind === 'business_process' && row.record_id) {
+      if (String(row.record_id).toLowerCase() === recordId.toLowerCase()) {
+        for (const payload of payloads(row)) {
+          for (const value of linkSetIds(payload)) addFamilyId({ ids }, 'business_process', value);
+        }
+      } else {
+        addFamilyId({ ids }, 'business_process', row.record_id);
+      }
+    }
+    if (kind === 'assignment') {
+      for (const payload of payloads(row)) {
+        if (isPlainObject(payload) && isUuid(payload.app_instance_id)) instances.add(payload.app_instance_id.toLowerCase());
+      }
+    }
   };
 
   for (const row of rows) {
     const isRecord = entry.auditLabels.includes(row.table_name);
     collect(row.table_name, isRecord ? null : recordHistoryChildKind(entry, row.table_name), row);
   }
-  return { ids, versions, axes, categories };
+  return { ids, versions, axes, categories, instances, criteria, criterionOptions };
 }
 
 async function loadPageContext(
@@ -382,7 +456,40 @@ async function loadPageContext(
     }
   }
 
-  return { entry, recordId: id, users, versions, references, deleted, readable, dimensions, categories, entityLabels };
+  // An assignment names its deployment; the entry is titled by the deployment's environment. Only
+  // the record's own deployments are read: they are part of the application the person reads.
+  const instances = new Map<string, string | null>();
+  if (entry.table === 'applications' && collected.instances.size > 0) {
+    const rows: Array<{ id: string; environment: string | null }> = await reader.manager.query(
+      `SELECT id::text AS id, environment
+         FROM app_instances
+        WHERE tenant_id = $1 AND application_id = $2 AND id = ANY($3::uuid[])`,
+      [tenantId, id, Array.from(collected.instances)],
+    );
+    for (const row of rows) instances.set(row.id.toLowerCase(), row.environment ?? null);
+  }
+
+  // The scoring of a project or a request: the criteria and options its rows name, as the scoring
+  // tab names them. They are the tenant's portfolio settings, read by whoever reads the record.
+  const criteria = new Map<string, string>();
+  const criterionOptions = new Map<string, string>();
+  if (collected.criteria.size > 0 || collected.criterionOptions.size > 0) {
+    const criterionRows: Array<{ id: string; name: string | null }> = await reader.manager.query(
+      `SELECT id::text AS id, name FROM portfolio_criteria WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+      [tenantId, Array.from(collected.criteria)],
+    );
+    for (const row of criterionRows) if (row.name) criteria.set(row.id.toLowerCase(), row.name);
+    const optionRows: Array<{ id: string; label: string | null }> = await reader.manager.query(
+      `SELECT id::text AS id, label FROM portfolio_criterion_values WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+      [tenantId, Array.from(collected.criterionOptions)],
+    );
+    for (const row of optionRows) criterionOptions.set(row.id.toLowerCase(), row.label ?? '');
+  }
+
+  return {
+    entry, recordId: id, users, versions, references, deleted, readable, dimensions, categories, entityLabels, instances,
+    criteria, criterionOptions,
+  };
 }
 
 @Injectable()
@@ -453,7 +560,11 @@ export class RecordHistoryService {
 
     const limit = parseLimit(options.limit);
     const cursor = decodeCursor(options.cursor);
-    const rows = await readAuditPage(manager, ctx.tenantId, entry, recordId, cursor, limit + 1);
+    // A contract read through one of its lines: its documents stay closed, as on its page.
+    const closedLabels = entry.table === contractsRecord.table
+      ? await contractClosedLabels(manager, ctx.tenantId, recordId)
+      : [];
+    const rows = await readAuditPage(manager, ctx.tenantId, entry, recordId, cursor, limit + 1, closedLabels);
     const page = rows.slice(0, limit);
     const pageContext = await loadPageContext(ctx, entry, recordId, page, reader);
     const items = page.map((row) => presentItem(row, entry, pageContext))

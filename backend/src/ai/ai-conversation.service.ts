@@ -1,8 +1,9 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, IsNull, Repository } from 'typeorm';
+import { EntityManager, IsNull, Not, Repository } from 'typeorm';
 import { AiConversation } from './ai-conversation.entity';
 import { AiMessage } from './ai-message.entity';
+import { USAGE_ONLY_MESSAGE_ROLE } from './ai-message-usage.util';
 import { AiTokenUsage } from './ai.types';
 
 export type CreateAiConversationInput = {
@@ -198,7 +199,7 @@ export class AiConversationService {
     opts?: { manager?: EntityManager },
   ) {
     return this.getMessageRepo(opts?.manager).find({
-      where: { conversation_id: conversationId, tenant_id: tenantId },
+      where: { conversation_id: conversationId, tenant_id: tenantId, role: Not(USAGE_ONLY_MESSAGE_ROLE) },
       order: { created_at: 'ASC' },
     });
   }

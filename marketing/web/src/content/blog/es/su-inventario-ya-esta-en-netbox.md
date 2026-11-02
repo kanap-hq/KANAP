@@ -2,7 +2,7 @@
 title: "Su inventario de hardware ya existe, y está en Netbox"
 description: "El equipo de infraestructura mantiene Netbox al día. KANAP lo lee, mantiene sus fichas de activos alineadas sin volver a teclear y añade lo que Netbox no sabe: aplicaciones, contratos, costes."
 date: 2026-09-23
-topic: product
+topic: mapping
 author: Friedrich
 authorRole: Fundador, CIO
 draft: false

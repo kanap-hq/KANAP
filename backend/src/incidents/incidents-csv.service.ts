@@ -1,7 +1,7 @@
 import type { CsvLanguage } from '../common/csv-sheet';
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
-import { exportCatalogLabels } from '../it-ops-settings/catalog-resolve';
+import { exportCatalogLabelsIn } from '../it-ops-settings/catalog-resolve';
 import { randomUUID } from 'node:crypto';
 import { EntityManager } from 'typeorm';
 import {
@@ -128,9 +128,14 @@ export class IncidentsCsvService {
       await this.hydrateReviews(rows, manager, tenantId);
     }
     if (rows.length > 0) {
-      // Users never see codes: the category is exported as its name (import accepts either).
+      // The name the screen shows in the file's language. A name the tenant typed stays as stored.
+      // The import accepts a shipped label in any language, so the file round-trips.
       const settings = await this.itOpsSettings.getSettings(tenantId, { manager });
-      for (const row of rows) exportCatalogLabels(row, { category: settings.incidentCategories });
+      for (const row of rows) {
+        exportCatalogLabelsIn(row, {
+          category: { list: 'incidentCategories', options: settings.incidentCategories },
+        }, opts.language);
+      }
     }
 
     return this.exportSvc.export(incidentCsvConfig, rows, {

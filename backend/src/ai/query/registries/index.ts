@@ -7,7 +7,7 @@ import {
   isAxisActive,
   loadAnalyticsAxes,
 } from '../../../analytics/analytics-axes.util';
-import { AiEntityFilterRegistry, AiFilterFieldDef, AiQueryEntityType } from '../ai-filter.types';
+import { AiEntityFilterRegistry, AiFilterFieldDef, AiQueryEntityType, AiWithheldField } from '../ai-filter.types';
 import { accountsRegistry } from './accounts.registry';
 import { analyticsCategoriesRegistry } from './analytics-categories.registry';
 import { applicationsRegistry } from './applications.registry';
@@ -27,6 +27,9 @@ import { interfacesRegistry } from './interfaces.registry';
 import { locationsRegistry } from './locations.registry';
 import { projectsRegistry } from './projects.registry';
 import { requestsRegistry } from './requests.registry';
+import { dataAccessRegistry } from './data-access.registry';
+import { rolePermissionsRegistry } from './role-permissions.registry';
+import { rolesRegistry } from './roles.registry';
 import { suppliersRegistry } from './suppliers.registry';
 import { supportDeadlinesRegistry } from './support-deadlines.registry';
 import { supportGapsRegistry } from './support-gaps.registry';
@@ -35,6 +38,12 @@ import { technologiesRegistry } from './technologies.registry';
 import { technologyVersionsRegistry } from './technology-versions.registry';
 import { usersRegistry } from './users.registry';
 import { vulnerabilitiesRegistry } from './vulnerabilities.registry';
+import { chargebackRegistry } from './chargeback.registry';
+import { chargebackLinesRegistry } from './chargeback-lines.registry';
+import { costCentersRegistry } from './cost-centers.registry';
+import { workingDayCalendarsRegistry } from './working-day-calendars.registry';
+import { analyticsAxesRegistry } from './analytics-axes.registry';
+import { exchangeRatesRegistry } from './exchange-rates.registry';
 
 export const aiEntityRegistries: Record<AiQueryEntityType, AiEntityFilterRegistry> = {
   accounts: accountsRegistry,
@@ -48,6 +57,7 @@ export const aiEntityRegistries: Record<AiQueryEntityType, AiEntityFilterRegistr
   connections: connectionsRegistry,
   contacts: contactsRegistry,
   contracts: contractsRegistry,
+  data_access: dataAccessRegistry,
   departments: departmentsRegistry,
   documents: documentsRegistry,
   incidents: incidentsRegistry,
@@ -55,6 +65,8 @@ export const aiEntityRegistries: Record<AiQueryEntityType, AiEntityFilterRegistr
   locations: locationsRegistry,
   projects: projectsRegistry,
   requests: requestsRegistry,
+  role_permissions: rolePermissionsRegistry,
+  roles: rolesRegistry,
   suppliers: suppliersRegistry,
   support_deadlines: supportDeadlinesRegistry,
   support_gaps: supportGapsRegistry,
@@ -63,6 +75,12 @@ export const aiEntityRegistries: Record<AiQueryEntityType, AiEntityFilterRegistr
   technology_versions: technologyVersionsRegistry,
   users: usersRegistry,
   vulnerabilities: vulnerabilitiesRegistry,
+  chargeback: chargebackRegistry,
+  chargeback_lines: chargebackLinesRegistry,
+  cost_centers: costCentersRegistry,
+  working_day_calendars: workingDayCalendarsRegistry,
+  analytics_axes: analyticsAxesRegistry,
+  exchange_rates: exchangeRatesRegistry,
 };
 
 export function getAiEntityRegistry(entityType: AiQueryEntityType): AiEntityFilterRegistry {
@@ -135,11 +153,8 @@ export function withAnalyticsAxisFields(registry: AiEntityFilterRegistry, axes: 
   return { ...registry, fields, sortFields };
 }
 
-/**
- * Whether the caller reads a family (`AiPolicyService.canReadEntityType`), or holds `level` on it
- * when given (`admin`: the users administration).
- */
-export type AiReadProbe = (entityType: AiQueryEntityType, level?: 'reader' | 'admin') => Promise<boolean>;
+/** Whether the caller reads a family (`AiPolicyService.canReadEntityType`). */
+export type AiReadProbe = (entityType: AiQueryEntityType) => Promise<boolean>;
 
 /**
  * Fields that count or name another module's records, with that module: listed, filtered, sorted
@@ -161,14 +176,36 @@ const LINKED_COUNT_FIELDS: Partial<Record<AiQueryEntityType, Record<string, AiQu
 };
 
 /**
- * The fields of a family that its own list shows only to an administrator of it. A reader of users
- * sees what the users list shows them: name, email and status.
+ * The administration fields of a family: listed, filtered, sorted and grouped only for an
+ * administrator of it whose own access is not limited, the read of Admin › Data access
+ * (`data_access`: users at admin level, access not limited). A reader of users sees what the users
+ * list shows them: name, email and status; an administrator of users in limited access no more,
+ * the screen closing the administration of users to them (`frontend/src/auth/dataAccess.ts`). One
+ * rule for every administration field of a person, the quick search included
+ * (`UsersService.listForAi`, `accessView`).
  */
-const ADMIN_ONLY_FIELDS: Partial<Record<AiQueryEntityType, string[]>> = {
+const UNSCOPED_ADMIN_FIELDS: Partial<Record<AiQueryEntityType, string[]>> = {
   users: [
     'job_title', 'company', 'department', 'primary_role', 'locale', 'team',
-    'contributor_profile', 'project_availability', 'areas_of_expertise',
+    'contributor_profile', 'project_availability', 'areas_of_expertise', 'roles', 'data_access',
   ],
+};
+
+/**
+ * Fields that read another module's data with that module's right, as their screen: absent
+ * (lists, filters, sorts, groups, filter values) for a person without it, and named with the
+ * reason in `withheldFields`. The consolidation account of a budget line is read with the right on
+ * accounts, as the Consolidation accounts report: without it the list engine reads every line as
+ * "unassigned", a figure the tools never give.
+ */
+const RIGHT_GATED_FIELDS: Partial<Record<AiQueryEntityType, Record<string, { family: AiQueryEntityType; reason: string }>>> = {
+  budget_lines: {
+    consolidation_account: {
+      family: 'accounts',
+      reason: 'The consolidation accounts are read with the right on accounts (Accounts, reader level), as the Consolidation accounts report, and this person does not have it. '
+        + 'Tell them the consolidation accounts are not available to them, and do not report their lines as without a consolidation account.',
+    },
+  },
 };
 
 /** The registry without the linked counts, filters and groups of the modules the caller does not read. */
@@ -177,19 +214,27 @@ export async function withoutUnreadableLinkedCounts(
   canRead: AiReadProbe,
 ): Promise<AiEntityFilterRegistry> {
   const gated = LINKED_COUNT_FIELDS[registry.entityType];
-  const adminOnly = ADMIN_ONLY_FIELDS[registry.entityType];
-  if (!gated && !adminOnly) return registry;
+  const unscopedAdminOnly = UNSCOPED_ADMIN_FIELDS[registry.entityType];
+  const rightGated = RIGHT_GATED_FIELDS[registry.entityType];
+  if (!gated && !unscopedAdminOnly && !rightGated) return registry;
   const hidden = new Set<string>();
   for (const [field, entityType] of Object.entries(gated ?? {})) {
     if (!(await canRead(entityType))) hidden.add(field);
   }
-  if (adminOnly && !(await canRead(registry.entityType, 'admin'))) {
-    for (const field of adminOnly) hidden.add(field);
+  if (unscopedAdminOnly && !(await canRead('data_access'))) {
+    for (const field of unscopedAdminOnly) hidden.add(field);
+  }
+  const withheld: AiWithheldField[] = [];
+  for (const [field, { family, reason }] of Object.entries(rightGated ?? {})) {
+    if (!registry.fields[field] || (await canRead(family))) continue;
+    hidden.add(field);
+    withheld.push({ field, reason });
   }
   if (!hidden.size) return registry;
   const kept = <T>(record: Record<string, T>) => Object.fromEntries(Object.entries(record).filter(([key]) => !hidden.has(key)));
   return {
     ...registry,
+    ...(withheld.length ? { withheldFields: [...(registry.withheldFields ?? []), ...withheld] } : {}),
     fields: kept(registry.fields),
     sortFields: kept(registry.sortFields),
     aggregate: {

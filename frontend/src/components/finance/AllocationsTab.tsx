@@ -111,6 +111,8 @@ export type AllocationsTabHandle = {
    * the year's amounts: the user's allocation stays, and meets the conflict check when it is saved.
    */
   reloadFromServer: () => Promise<void>;
+  /** Drops pending saves without sending them: the line was deleted. */
+  discard: () => void;
 };
 
 type Props = {
@@ -477,12 +479,21 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
     && rowsRef.current.some((r) => !r.company_id || (methodRef.current === 'manual_department' && !r.department_id));
   const hasPending = () => autosave.isBusy() || !!conflictRef.current || !!restoreRef.current || hasIncompleteRow();
   const hasPendingRef = React.useRef(hasPending); hasPendingRef.current = hasPending;
+  // Set when the line is deleted: the unmount must not send the pending save, nor keep a choice.
+  const droppedRef = React.useRef(false);
   useImperativeHandle(ref, () => ({
     flush: (options) => autosave.flush(options),
     isDirty: () => autosave.isBusy(),
     hasWaitingChoice: () => !!conflictRef.current || !!restoreRef.current,
     isSaving: () => autosave.isSaving(),
     hasPending: () => hasPendingRef.current(),
+    discard: () => {
+      droppedRef.current = true;
+      autosave.discard();
+      conflictRef.current = null;
+      restoreRef.current = null;
+      if (held) held.current = null;
+    },
     reloadFromServer: async () => {
       const loaded = await fetchAllocationsSnapshot(config, id, year);
       // The cache follows; the object it keeps (shared with the one before where equal) is marked as
@@ -498,12 +509,16 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
       // The user's allocation stays as it is; the amounts it splits are the year's as stored now.
       setYearTotals(loaded.totals);
     },
-  }), [autosave, config, id, year, queryClient, snapshotKey, applySnapshot]);
+  }), [autosave, config, id, year, queryClient, snapshotKey, applySnapshot, held]);
 
   // Leaving the tab with a choice waiting (another tab of the line): the item page keeps it for the line.
   React.useEffect(() => {
     if (held?.current?.lineId === id) held.current = null;
     return () => {
+      if (droppedRef.current) {
+        if (held) held.current = null;
+        return;
+      }
       const waiting = conflictRef.current;
       if (!held) return;
       // Left before the allocation was on screen again: the choice stays as it was kept.

@@ -17,15 +17,17 @@
     "untitled": "Ohne Titel"
   },
   "errors": {
+    "attachmentRefused": "{{name}}: {{reason}}",
     "generic": "Ein Fehler ist aufgetreten.",
     "noResponseBody": "Kein Antwortinhalt.",
     "sendFailed": "Nachricht konnte nicht gesendet werden.",
     "streamBufferExceeded": "Der Stream-Puffer hat die maximal zulässige Größe überschritten.",
-    "streamRequestFailed": "Die Stream-Anfrage ist fehlgeschlagen."
+    "streamRequestFailed": "Die Stream-Anfrage ist fehlgeschlagen.",
+    "uploadFailed": "Die Datei konnte nicht gesendet werden."
   },
   "input": {
-    "attach": "Bild anhängen",
-    "dropHint": "Bild zum Anhängen ablegen",
+    "attach": "Datei anhängen",
+    "dropHint": "Datei zum Anhängen hier ablegen",
     "hintEnter": "Eingabe zum Senden",
     "hintShiftEnter": "Umschalt+Eingabe für neue Zeile",
     "placeholder": "Fragen Sie Plaid zu Ihren KANAP-Daten…",
@@ -270,6 +272,7 @@
       "typical_data": "Typische Daten",
       "users_year": "Benutzerjahr",
       "version_name": "Versionsname",
+      "vulnerability_state": "Status der Schwachstelle",
       "zone": "Zone"
     },
     "none": "Keine",
@@ -364,10 +367,13 @@
       "get_entity_context": "Entitätskontext abrufen",
       "get_entity_detail": "Entitätsdetails abrufen",
       "get_filter_values": "Filterwerte abrufen",
+      "get_record_history": "Verlauf abrufen",
       "import_ticket": "Ticket importieren",
       "import_glpi_ticket": "GLPI-Ticket importieren",
+      "list_help_topics": "Benutzerhandbuch durchsuchen",
       "prepare_mutation_plan": "Änderungsplan vorbereiten",
       "query_entities": "Entitäten abfragen",
+      "read_help_section": "Benutzerhandbuch lesen",
       "search_all": "Alles durchsuchen",
       "search_knowledge": "Wissensdatenbank durchsuchen",
       "web_search": "Web durchsuchen"
@@ -379,17 +385,17 @@
     "aliases": "Aliasse: {{aliases}}"
   },
   "tokenUsage": {
-    "total": "Tokens",
-    "input": "Eingabe",
-    "output": "Ausgabe",
-    "lastInput": "Letzte Eingabe"
+    "total": "Verarbeitetes Volumen",
+    "input": "Eingabe-Tokens",
+    "output": "Ausgabe-Tokens",
+    "lastInput": "Kontext der letzten Anfrage"
   },
   "usageIndicator": {
-    "limitReached": "Monthly limit reached. Resets {{resetDate}}.",
-    "limitReachedCta": "Monthly limit reached.",
-    "openSettings": "Configure your own provider",
-    "remaining_one": "{{count}} message remaining this month",
-    "remaining_other": "{{count}} messages remaining this month"
+    "limitReached": "Monatliches Limit erreicht. Wird am {{resetDate}} zurückgesetzt.",
+    "limitReachedCta": "Monatliches Limit erreicht.",
+    "openSettings": "Eigenen Anbieter konfigurieren",
+    "remaining_one": "Noch {{count}} Nachricht in diesem Monat",
+    "remaining_other": "Noch {{count}} Nachrichten in diesem Monat"
   },
   "workspace": {
     "empty": {
@@ -398,20 +404,30 @@
       "title": "Plaid ist bereit"
     },
     "messages": {
-      "disabled": "Der KI-Chat ist für diesen Arbeitsbereich deaktiviert.",
-      "builtinNotAccepted": "Ein Administrator muss den KI-Anbieter unter Administration > Plaid bestätigen."
+      "disabled": "Plaid ist für diesen Arbeitsbereich ausgeschaltet.",
+      "tenantDisabledAdminLink": "Schalten Sie ihn unter Administration › Plaid ein",
+      "tenantDisabledAskAdmin": "Bitten Sie einen Administrator, ihn einzuschalten.",
+      "builtinNotAccepted": "Plaid wartet darauf, dass eine Administratorin oder ein Administrator es aktiviert."
     },
     "suggestions": {
-      "applicationMention": "Zusammenfassung für @APP-",
+      "applicationMention": "Fassen Sie eine Anwendung zusammen: Geben Sie @ ein, um eine auszuwählen.",
+      "budgetLines": "Was sind meine fünf größten Budgetzeilen in diesem Jahr?",
       "knowledgeSearch": "Finde Dokumente zu Backups",
       "myProjects": "An welchen Projekten arbeite ich?",
-      "overdueTasks": "Zeige mir meine überfälligen Aufgaben"
+      "overdueTasks": "Zeige mir meine überfälligen Aufgaben",
+      "noOwner": "Welche Budgetzeilen haben keine verantwortliche Person?",
+      "endOfSupport": "Welche Technologien erreichen in den nächsten sechs Monaten ihr Supportende?",
+      "noRecovery": "Welche kritischen Anwendungen haben keinen Wiederanlaufplan?",
+      "overBudget": "Welche Projekte überschreiten ihr Budget?",
+      "awaitingDecision": "Welche Anfragen warten auf eine Entscheidung?",
+      "savings": "Wo liegen die größten Einsparpotenziale bei den IT-OPEX?"
     },
     "title": "Plaid"
   },
-  "enablePlaid": {
-    "text": "Plaid, der KANAP-Assistent, ist ausgeschaltet.",
-    "action": "Einschalten",
-    "dismiss": "Ausblenden"
+  "consent": {
+    "accept": "Ich bin einverstanden, dass {{name}} ({{place}}) meine Fragen und die Daten, die sie betreffen, für die Antworten von Plaid verarbeitet. Sie werden nicht zum Training seiner Modelle verwendet.",
+    "otherModel": "Anderes Modell oder Deaktivierung:",
+    "otherModelLink": "Administration › Plaid",
+    "loading": "Anbieter wird geladen"
   }
 }

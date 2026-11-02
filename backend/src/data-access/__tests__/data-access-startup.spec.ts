@@ -4,6 +4,7 @@ import * as assert from 'node:assert/strict';
 import { DataSource, QueryRunner } from 'typeorm';
 import { DataAccessFoundations1854400000000 } from '../../migrations/1854400000000-data-access-foundations';
 import { DataAccessContractPolicies1855400000000 } from '../../migrations/1855400000000-data-access-contract-policies';
+import { Onboarding1856010000000 } from '../../migrations/1856010000000-onboarding';
 import {
   DataAccessSession,
   checkDataAccessAvailability,
@@ -19,6 +20,7 @@ import {
   adminUrlForAppDatabase,
   appRoleName,
   connect,
+  lockOwnTables,
   roleExists,
 } from './data-access-test-helpers';
 
@@ -211,6 +213,8 @@ async function testForeignRelations(admin: PgClient): Promise<void> {
     await admin.query(`CREATE SEQUENCE data_access_spec_foreign_seq`);
     await admin.query(`REVOKE ALL ON SEQUENCE data_access_spec_foreign_seq FROM PUBLIC`);
     await admin.query(`SET LOCAL ROLE "${APP_ROLE}"`);
+    // The down() and up() below replay the migrations: before the first sync grants anything.
+    await lockOwnTables((sql) => admin.query(sql));
     await admin.query(`SELECT data_access_sync_policies()`);
     assert.deepEqual(
       await checkDataAccessAvailability(savepointSession(admin)),
@@ -222,9 +226,12 @@ async function testForeignRelations(admin: PgClient): Promise<void> {
       query: async (sql: string, params?: unknown[]) => (await admin.query(sql, params)).rows,
     } as unknown as QueryRunner;
     const migration = new DataAccessFoundations1854400000000();
-    // Lot 5 policies and triggers depend on contracts.cost_center_id: the lot is reverted first,
-    // as a real down chain would, then migrated again after lot 1.
+    // Lot 5 policies and triggers depend on contracts.cost_center_id, and the onboarding tables'
+    // keys on users (tenant_id, id): both are reverted first, as a real down chain would, then
+    // migrated again after lot 1.
     const lotFive = new DataAccessContractPolicies1855400000000();
+    const onboarding = new Onboarding1856010000000();
+    await onboarding.down(queryRunner);
     await lotFive.down(queryRunner);
     await migration.down(queryRunner);
     const { rows: down } = await admin.query(
@@ -235,6 +242,7 @@ async function testForeignRelations(admin: PgClient): Promise<void> {
     assert.equal(down[0].n, 0, 'down() revoked the grants of the limited role');
     await migration.up(queryRunner);
     await lotFive.up(queryRunner);
+    await onboarding.up(queryRunner);
     assert.equal(await granted(admin, 'companies'), true, 'up() granted again');
     assert.deepEqual(await checkDataAccessAvailability(savepointSession(admin)), { available: true, missing: [] });
     const { rows } = await admin.query(

@@ -42,6 +42,9 @@ export type Seed = {
   versions: Record<Label, string>;
   roundInputs: Record<Label, string>;
   contact2: string;
+  /** The first dimension and its one value: every line carries it. */
+  axis1: string;
+  category1: string;
   axis2: string;
   category2: string;
   persons: Record<'marta' | 'paul' | 'rita' | 'claire' | 'rob' | 'nina' | 'admin' | 'ulla', string>;
@@ -152,6 +155,7 @@ export async function seed(client: PgClient): Promise<Seed> {
 
   return {
     tenantId, fr, es, inf, infFr, infEs, lines, versions, roundInputs, contact2,
+    axis1: axis1.axisId, category1: axis1.categoryId,
     axis2: axis2.axisId, category2: axis2.categoryId, persons,
   };
 }

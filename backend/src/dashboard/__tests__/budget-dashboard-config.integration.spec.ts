@@ -9,6 +9,7 @@ import { DashboardService } from '../dashboard.service';
 import { DashboardDataService } from '../dashboard-data.service';
 import { UserDashboardConfig, DEFAULT_DASHBOARD_CONFIG, DEFAULT_BUDGET_DASHBOARD_CONFIG } from '../user-dashboard-config.entity';
 import { BudgetDashboardConfig1854030000000 } from '../../migrations/1854030000000-budget-dashboard-config';
+import { DashboardLayout1856130000000 } from '../../migrations/1856130000000-dashboard-layout';
 import { DataSource } from 'typeorm';
 import { UsersService } from '../../users/users.service';
 import { PermissionsService } from '../../permissions/permissions.service';
@@ -35,8 +36,22 @@ runSpecs('budget-dashboard-config.integration.spec', [
       assert.equal((await runner.query(`SELECT column_name FROM information_schema.columns WHERE table_name = 'user_dashboard_config' AND column_name = 'budget_tiles'`)).length, 0);
     });
   }],
+  ['layout migration: empty by default, rerun and rollback', async () => {
+    await inRolledBackTransaction(async (runner) => {
+      const migration = new DashboardLayout1856130000000();
+      await migration.down(runner);
+      await migration.up(runner);
+      await migration.up(runner);
+      const [column] = await runner.query(`SELECT is_nullable, column_default FROM information_schema.columns WHERE table_name = 'user_dashboard_config' AND column_name = 'layout'`);
+      assert.deepEqual(column, { is_nullable: 'NO', column_default: "'{}'::jsonb" });
+      await migration.down(runner);
+      assert.equal((await runner.query(`SELECT column_name FROM information_schema.columns WHERE table_name = 'user_dashboard_config' AND column_name = 'layout'`)).length, 0);
+    });
+  }],
   ['HTTP defaults, persistence, independent writes/resets, validation, user and tenant isolation', async () => {
     await inRolledBackTransaction(async (runner) => {
+      // Already applied on a migrated database; rolled back with the rest otherwise.
+      await new DashboardLayout1856130000000().up(runner);
       const tenantA = await seedTenant(runner, 'dashboard-a');
       const seedUser = async (tenant: string) => {
         await setTenant(runner, tenant);
@@ -80,15 +95,35 @@ runSpecs('budget-dashboard-config.integration.spec', [
         const put = await request('budget-config', 'PUT', saved);
         assert.equal(put.status, 200);
         assert.deepEqual((await request()).body, put.body);
-        assert.equal(put.body.tiles[0].id, 'recent-updates');
+        assert.equal(put.body.tiles[0].id, DEFAULT_BUDGET_DASHBOARD_CONFIG[DEFAULT_BUDGET_DASHBOARD_CONFIG.length - 1].id);
         assert.equal(put.body.tiles.find((tile: any) => tile.id === 'hygiene').enabled, false);
-        assert.deepEqual((await request('config')).body.tiles, DEFAULT_DASHBOARD_CONFIG);
+        assert.deepEqual((await request('config')).body, { tiles: DEFAULT_DASHBOARD_CONFIG, hideEmptyTiles: true, sections: null });
         const main = { tiles: [{ id: 'my-tasks', enabled: true, order: 1, config: { limit: 8 } }] };
         assert.equal((await request('config', 'PUT', main)).status, 200);
         const mainRead = (await request('config')).body;
         assert.deepEqual((await request()).body, put.body);
         assert.equal((await request('budget-config', 'PUT', saved)).status, 200);
         assert.deepEqual((await request('config')).body, mainRead);
+        // The option: kept when a save leaves it out, refused on the budget tiles, back on at reset.
+        assert.equal(mainRead.hideEmptyTiles, true);
+        assert.equal((await request('config', 'PUT', { ...main, hideEmptyTiles: false })).body.hideEmptyTiles, false);
+        assert.equal((await request('config', 'PUT', main)).body.hideEmptyTiles, false);
+        assert.equal((await request('config', 'GET', undefined, bob)).body.hideEmptyTiles, true);
+        assert.equal((await request('config', 'PUT', { ...main, hideEmptyTiles: 'no' })).status, 400);
+        assert.equal((await request('budget-config', 'PUT', { ...saved, hideEmptyTiles: false })).status, 400);
+        assert.equal((await request('config/reset', 'POST')).body.hideEmptyTiles, true);
+        assert.equal((await request('config')).body.hideEmptyTiles, true);
+        // The sections: kept when a save leaves them out, each named once, back to none at reset.
+        const sections = [{ id: 'budget', hidden: false }, { id: 'work', hidden: false }, { id: 'landscape', hidden: true }, { id: 'portfolio', hidden: false }];
+        assert.deepEqual((await request('config', 'PUT', { ...main, sections })).body.sections, sections);
+        assert.deepEqual((await request('config', 'PUT', { ...main, hideEmptyTiles: false })).body, { ...(await request('config')).body, sections, hideEmptyTiles: false });
+        assert.deepEqual((await request('config')).body.sections, sections);
+        assert.equal((await request('config', 'PUT', { ...main, sections: sections.slice(1) })).status, 400);
+        assert.equal((await request('config', 'PUT', { ...main, sections: [...sections.slice(1), sections[1]] })).status, 400);
+        assert.equal((await request('config', 'PUT', { ...main, sections: [...sections.slice(1), { id: 'other', hidden: false }] })).status, 400);
+        assert.equal((await request('config/reset', 'POST')).body.sections, null);
+        assert.equal((await request('config')).body.sections, null);
+        assert.equal((await request('config', 'PUT', main)).status, 200);
         // DTO-supplied user and tenant ids cannot select another person's settings.
         assert.equal((await request('budget-config', 'PUT', { ...saved, user_id: bob })).status, 400);
         assert.deepEqual((await request('budget-config', 'GET', undefined, bob)).body.tiles, DEFAULT_BUDGET_DASHBOARD_CONFIG);
@@ -116,7 +151,7 @@ runSpecs('budget-dashboard-config.integration.spec', [
         assert.deepEqual((await request()).body, put.body);
         // Partial saves keep future/newly introduced tiles enabled.
         const partial = await request('budget-config', 'PUT', { tiles: [{ id: 'budget', enabled: false, order: 1, config: {} }] });
-        assert.equal(partial.body.tiles.filter((tile: any) => tile.enabled).length, 8);
+        assert.equal(partial.body.tiles.filter((tile: any) => tile.enabled).length, DEFAULT_BUDGET_DASHBOARD_CONFIG.filter((tile) => tile.enabled).length - 1);
         assert.equal((await request('budget-config/reset', 'POST', undefined, bob)).status, 201);
         assert.deepEqual((await request('budget-config', 'GET', undefined, bob)).body.tiles, DEFAULT_BUDGET_DASHBOARD_CONFIG);
       } finally {

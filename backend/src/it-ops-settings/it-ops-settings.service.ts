@@ -201,6 +201,20 @@ type ItOpsMetadataShape = {
   admin_zones?: AdminZoneOption[];
 };
 
+/**
+ * Active catalog entries as `code (label)`, the list a refusal names (`allowed`).
+ * A retired entry is left out: the screen no longer offers it to a new record.
+ */
+export function formatApplicationCategoryOptions(options: Array<{ code: string; label?: string | null; deprecated?: boolean }>): string {
+  return options
+    .filter((option) => !option.deprecated)
+    .map((option) => {
+      const label = String(option.label || '').trim();
+      return label && label !== option.code ? `${option.code} (${label})` : option.code;
+    })
+    .join(', ');
+}
+
 @Injectable()
 export class ItOpsSettingsService {
   private readonly lockedLifecycleStates: ItOpsEnumOption[] = [
@@ -528,15 +542,6 @@ export class ItOpsSettingsService {
       .toLowerCase()
       .replace(/[_-]+/g, ' ')
       .replace(/\s+/g, ' ');
-  }
-
-  private formatApplicationCategoryOptions(options: ItOpsEnumOption[]): string {
-    return options
-      .map((option) => {
-        const label = String(option.label || '').trim();
-        return label && label !== option.code ? `${option.code} (${label})` : option.code;
-      })
-      .join(', ');
   }
 
   private effectiveApplicationCategories(settings: ItOpsSettings): ItOpsEnumOption[] {
@@ -1113,7 +1118,7 @@ export class ItOpsSettingsService {
     if (byLabel) return byLabel;
 
     throw new BadRequestException(
-      `Invalid application category "${text}". Valid application categories for this tenant: ${this.formatApplicationCategoryOptions(options)}.`,
+      `Invalid application category "${text}". Valid application categories for this tenant: ${formatApplicationCategoryOptions(options)}.`,
     );
   }
 

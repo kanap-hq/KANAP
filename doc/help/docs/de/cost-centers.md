@@ -160,7 +160,7 @@ Die Schaltfläche **Löschen** (Papierkorbsymbol) in der Kopfzeile löscht das E
 
 ## Kostenstellen auf Budgetzeilen
 
-- **OPEX und CAPEX**: Das Feld **Kostenstelle** im Bereich **Eigenschaften** zeigt den Baum. Gruppen werden zur Orientierung angezeigt und können nicht gewählt werden. Wenn Sie eine Zeile erstellen und das zahlende Unternehmen leer ist, füllt die Wahl einer Kostenstelle es mit dem Unternehmen der Kostenstelle, und das Unternehmen folgt der Kostenstelle, bis Sie selbst ein Unternehmen oder ein Konto wählen. Wenn sich die beiden Unternehmen unterscheiden, bleiben beide erhalten und ein Hinweis weist darauf hin. Siehe [Budgetzeilen](budget-lines.md).
+- **OPEX und CAPEX**: Das Feld **Kostenstelle** im Bereich **Eigenschaften** zeigt den Baum. Gruppen werden zur Orientierung angezeigt und können nicht gewählt werden. Wenn das zahlende Unternehmen leer ist, füllt die Wahl einer Kostenstelle es mit dem Unternehmen der Kostenstelle. Wenn sich die beiden Unternehmen unterscheiden, bleiben beide erhalten und ein Hinweis weist darauf hin. Siehe [Budgetzeilen](budget-lines.md).
 - **Liste**: die Spalten und Filter **Kostenstelle** und **Run oder Build** der Liste der Budgetzeilen.
 - **Berichte**: Die Budgetberichte können auf eine Kostenstelle oder eine Gruppe gefiltert werden. Siehe [Filter nach Kostenstelle, Run oder Build und Analysedimensionen](reports.md#filter-nach-kostenstelle-run-oder-build-und-analysedimensionen).
 
@@ -230,6 +230,10 @@ Laden oder aktualisieren Sie den gesamten Baum aus einer Datei.
 Jede Rolle beginnt mit der Stufe, die sie für Abteilungen hat, mit Ausnahme der integrierten Rolle Budget-Administrator, die admin erhält. Budget-Administrator und Stammdaten-Administrator sind also Administratoren, Budget-Mitglied und Stammdaten-Mitglied sind Mitglieder, und die Leserollen können lesen. Wer Budgetzeilen (Budget) oder Berichte lesen kann, kann eine Kostenstelle auf einer Zeile oder in einem Berichtsfilter wählen, ohne Zugriff auf diese Seite zu haben.
 
 ---
+
+## Den Assistenten fragen
+
+[Plaid](ai-assistant.md#tool-calls) liest die Kostenstellen für alle, die sie lesen dürfen: den Baum, die Budgetverantwortlichen und die Zeilen, die jeden Knoten verwenden. Fragen Sie zum Beispiel: „Welche Kostenstellen liegen unter Group IT?“
 
 ## Tipps
 

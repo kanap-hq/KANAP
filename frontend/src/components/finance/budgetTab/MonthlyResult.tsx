@@ -66,13 +66,14 @@ export function differenceText(locale: string, total: number, reference: number)
  * The year month by month for every shown column, with quarter and year totals, then the difference
  * of each column with the one picked above the table. Read only, except the active column while it
  * is typed by month. A click in a month of another column that is not frozen makes it the active
- * column and offers to type it by month. Folded into a sentence while every column is an amount
- * spread flat over the whole year (or empty); « Show / Hide the detail » for the visit.
+ * column and offers to type it by month. Folded by default, « Show / Hide the detail » for the visit;
+ * folded, a sentence says when the detail would add nothing (every column empty or an amount spread
+ * flat over the whole year).
  */
 export default function MonthlyResult({ tab, i18nPrefix, currency }: { tab: BudgetTabState; i18nPrefix: string; currency?: string }) {
   const {
     t, locale, year, loading, loaded, shown, months, totals, activeCol, activeMode, isFrozen, readOnly, waitingSet, cellWaits,
-    modeSwitch, stableMonthChange, registerCell, onCellClick, labelFor, gridOpen, gridForced, toggleGrid, allEmpty, diffCol, setDiffCol,
+    modeSwitch, stableMonthChange, registerCell, onCellClick, labelFor, gridOpen, gridForced, toggleGrid, allEmpty, allPlain, diffCol, setDiffCol,
   } = tab;
   const compared = shown.length > 1;
   // The active column is typed in the table while it is built month by month (and not about to change).
@@ -112,7 +113,7 @@ export default function MonthlyResult({ tab, i18nPrefix, currency }: { tab: Budg
           )}
         </Box>
       </Box>
-      {!gridOpen ? (
+      {!gridOpen ? (allPlain || allEmpty) && (
         <Box
           data-testid="result-folded"
           sx={{ border: '1px solid', borderColor: 'kanap.border.default', borderRadius: '8px', bgcolor: 'kanap.bg.primary', px: 1.5, py: 1.25 }}

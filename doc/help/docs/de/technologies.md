@@ -31,7 +31,7 @@ Eine Technologie umfasst ein Produkt als Ganzes. „SQL Server" steht für alle 
 
 Navigieren Sie zu **IT-Landschaft > Technologien** und klicken Sie auf **Neue Technologie**.
 
-Das Fenster öffnet sich auf dem **Katalog**: einer Liste gängiger Produkte mit einer kurzen Beschreibung, Hersteller, Familie und Hosting-Typ. Suchen Sie nach dem Namen und klicken Sie auf einen Eintrag. KANAP legt die Technologie sofort mit Hersteller, Familie, Hosting-Typ, CPE-Produktkennungen, CVE.org-Namen, ihren Versionen samt Supportende-Daten und der kurzen Beschreibung in Ihrer Sprache an und öffnet sie. Ein Eintrag bleibt angeboten, wenn eine Technologie desselben Namens von Hand erfasst wurde. Das Hinzufügen ergänzt diese Technologie, und der Eintrag weist darauf hin (Ergänzt TEC-10).
+Das Fenster öffnet sich auf dem **Katalog**: einer Liste gängiger Produkte mit einer kurzen Beschreibung, Hersteller, Familie und Hosting-Typ. Suchen Sie nach dem Namen und klicken Sie auf einen Eintrag. KANAP legt die Technologie sofort mit Hersteller, Familie, Hosting-Typ, CPE-Produktkennungen, CVE.org-Namen, ihren Versionen samt Supportende-Daten und der kurzen Beschreibung in Ihrer Sprache an und öffnet sie. Ein Eintrag bleibt angeboten, wenn eine Technologie desselben Namens von Hand erfasst wurde. Das Hinzufügen ergänzt diese Technologie, und der Eintrag weist darauf hin (Ergänzt TEC-10). Eine Suche, die einen bereits übernommenen Katalogeintrag trifft, listet ihn unter **Bereits in Ihren Technologien** mit der Referenz Ihrer Technologie auf, und ein Klick öffnet diese Technologie; solange die Suche leer ist, bleibt dieser Abschnitt ausgeblendet.
 
 Eine aus dem Katalog übernommene Technologie bleibt aktuell: Wenn der Hersteller eine neue Version veröffentlicht oder ein Datum ändert, fügt KANAP die Version hinzu und verschiebt das Datum (siehe [Versionen aus dem Katalog](#versionen-aus-dem-katalog)).
 
@@ -165,7 +165,7 @@ Neue Technologien sind in den Warnungen, mit zwei Ausnahmen:
 - **Betriebssysteme**: siehe [Betriebssysteme](#betriebssysteme).
 - **Von einem Anbieter betriebene Cloud-Dienste**: eine Technologie, deren [Hosting-Typ](#hosting-typ) in der Cloud liegt, etwa **Public Cloud** oder **SaaS**, und ein Katalogeintrag, den der Anbieter betreibt, etwa Entra ID. Der Anbieter patcht einen Online-Dienst, daher verlangen seine Schwachstellen keine Maßnahme von Ihnen. Eine Technologie in einer **Private Cloud** bleibt in den Warnungen.
 
-Eine spätere Änderung der Familie oder des Hosting-Typs lässt die Einstellung unverändert. Die Schalter erfordern `infrastructure:member`.
+Eine spätere Änderung der Familie oder des Hosting-Typs lässt die Einstellung unverändert. Die Schalter erfordern die Stufe Mitglied für die Infrastruktur.
 
 #### Versionen aus dem Katalog
 
@@ -186,7 +186,7 @@ Die Prüfung fügt die neuen Versionen, CPE-Produktkennungen und CVE.org-Namen d
 Die Gruppe **Schwachstellenkennungen** unter den Versionen fasst die CPE-Produktkennungen und die CVE.org-Namen zusammen. Über sie findet KANAP die Schwachstellen einer Technologie.
 
 - **Eingeklappt**: Hat die Technologie mindestens eine Kennung, ist die Gruppe eingeklappt, mit einer Zusammenfassung in ihrer Titelzeile, zum Beispiel `2 CPE-Kennungen · 3 CVE.org-Namen`. Klicken Sie auf den Titel, um sie zu öffnen.
-- **Geöffnet**: Hat die Technologie keine, ist die Gruppe geöffnet, mit einem Warnhinweis: Für diese Technologie wird nach keiner Schwachstelle gesucht. Der Abschnitt **Versionen** weist ebenfalls darauf hin. Mit `infrastructure:member` öffnet **Kennung hinzufügen** neben diesem Hinweis die Gruppe.
+- **Geöffnet**: Hat die Technologie keine, ist die Gruppe geöffnet, mit einem Warnhinweis: Für diese Technologie wird nach keiner Schwachstelle gesucht. Der Abschnitt **Versionen** weist ebenfalls darauf hin. Mit der Stufe Mitglied für die Infrastruktur öffnet **Kennung hinzufügen** neben diesem Hinweis die Gruppe.
 
 Der Abgleich erfolgt auf Ebene der Technologie. Jede Version der Technologie wird mit den Schwachstellen ihrer Kennungen verglichen, und eine Version, die Sie hinzufügen, wird sofort abgeglichen. Ohne Kennung sucht KANAP für keine Version nach Schwachstellen.
 
@@ -200,7 +200,7 @@ Der Abgleich erfolgt auf Ebene der Technologie. Jede Version der Technologie wir
 - **Version**: Eine Version beschränkt den Namen auf die Versionen der Technologie, deren Bezeichnung mit ihr beginnt, zum Beispiel `2019` für `Windows Server 2019`. Beginnt eine Bezeichnung mit mehreren davon, zählt nur die längste: `2012 R2` erhält den Namen von `2012 R2` und nicht den von `2012`.
 - **Aus dem Katalog**: Viele Katalogeinträge bringen ihre Namen mit (Microsoft, Apache, Datenbanken und andere). Die Katalogprüfung hält sie wie die CPE-Kennungen aktuell, und ein Name, den Sie entfernt haben, kommt nicht zurück.
 
-Wo Sie diesen Wert finden: Öffnen Sie auf [cve.org](https://www.cve.org) den Eintrag einer Schwachstelle des Produkts. Der Name muss der aus seinem Abschnitt **Product status** sein. Zum Ändern der Namen brauchen Sie `infrastructure:member`, wie für die CPE-Kennungen.
+Wo Sie diesen Wert finden: Öffnen Sie auf [cve.org](https://www.cve.org) den Eintrag einer Schwachstelle des Produkts. Der Name muss der aus seinem Abschnitt **Product status** sein. Zum Ändern der Namen brauchen Sie die Stufe Mitglied für die Infrastruktur, wie für die CPE-Kennungen.
 
 ### Server
 
@@ -244,7 +244,7 @@ Eine Anwendung erscheint auf zwei Wegen:
 - **Gehostet**: Eine ihrer Bereitstellungen läuft auf einem Server, der die Technologie trägt. KANAP leitet die Zeile aus den Servern ab; ändern Sie den Server oder die Bereitstellung, um sie zu ändern.
 - **Deklariert**: Die Anwendung hängt von der Technologie ab, ohne neben ihr zu laufen, zum Beispiel eine Anwendung, deren Benutzer sich über Entra ID anmelden. Ändern Sie die Version direkt oder entfernen Sie die Deklaration. Das Entfernen zieht alle deklarierten Versionen dieser Anwendung zurück.
 
-**Hinzufügen** (`infrastructure:member`) öffnet eine Suche, in der Sie mehrere Anwendungen ankreuzen und in einem Schritt hinzufügen können. Sie werden mit unbekannter Version deklariert: Tragen Sie sie danach in jeder Zeile ein. Deaktivierte Anwendungen und Bereitstellungen zählen nicht.
+**Hinzufügen** (`infrastructure:member`) öffnet eine Suche, in der Sie mehrere Anwendungen ankreuzen können, und fragt dann nach ihrer Version: Wählen Sie eine aus, geben Sie eine neue ein oder wählen Sie **Version unbekannt**. Alle werden mit dieser Version deklariert. Klicken Sie auf die Version einer deklarierten Zeile, um sie zu ändern. Deaktivierte Anwendungen und Bereitstellungen zählen nicht.
 
 **Exportieren** lädt die Zeilen als CSV- oder Excel-Datei herunter, in der Sprache Ihres Bildschirms.
 
@@ -283,7 +283,7 @@ Eine Zusammenfassung der Schwachstellen, eine Zeile pro installierter Version de
 
 Versionen, die kein Server und keine Anwendung nutzt, erhalten keine Zeile. Sie werden unter der Tabelle zusammen genannt, zum Beispiel „Nicht installiert: 2016, 2017“. KANAP sucht nur nach Schwachstellen von Versionen, die auf einem Server installiert oder von einer Anwendung deklariert sind.
 
-Sind die Technologie oder einige ihrer Versionen außerhalb der Warnungen, sagt es eine Zeile oben im Abschnitt: **Von den Warnungen ausgeschlossen**, **Von den Warnungen ausgeschlossen, außer 2 Versionen** oder **3 Versionen von den Warnungen ausgeschlossen**. Mit `infrastructure:member` öffnet **Ändern** daneben die Versionstabelle im Reiter Übersicht, wo die Schalter sind. Siehe [Warnungen zu Schwachstellen](#warnungen-zu-schwachstellen).
+Sind die Technologie oder einige ihrer Versionen außerhalb der Warnungen, sagt es eine Zeile oben im Abschnitt: **Von den Warnungen ausgeschlossen**, **Von den Warnungen ausgeschlossen, außer 2 Versionen** oder **3 Versionen von den Warnungen ausgeschlossen**. Mit der Stufe Mitglied für die Infrastruktur öffnet **Ändern** daneben die Versionstabelle im Reiter Übersicht, wo die Schalter sind. Siehe [Warnungen zu Schwachstellen](#warnungen-zu-schwachstellen).
 
 KANAP gleicht die Technologie erneut ab, sobald sich ihre Kennungen, CVE.org-Namen, Versionen, Server oder Anwendungen ändern. Nach einer neuen CPE-Produktkennung zeigt der Abschnitt „Suche nach Schwachstellen läuft…“, während KANAP dieses Produkt aus der NVD liest. Wenn dieses Lesen nicht abgeschlossen werden kann, sagt der Abschnitt das. **Aktualisieren** (`infrastructure:member`) startet den Vergleich von Hand.
 
@@ -295,7 +295,7 @@ Die mit der Technologie verknüpften Datensätze, ein Abschnitt pro Art:
 - **Verträge**: Lieferant, Enddatum und Jahresbetrag, mit einer Summe pro Währung.
 - **Projekte**: Status und geplantes Ende.
 - **Vorfälle**: Schweregrad, Status und Erkennungsdatum. Das Verknüpfen eines Vorfalls erfordert `incidents:contributor`. Ein geschlossener oder abgebrochener Vorfall kann weder verknüpft noch gelöst werden.
-- **Links und Dateien**: die Weblinks der Technologie und ihre Dateien, je eine Zeile mit Name, der Domain des Links oder der Größe der Datei und dem Datum, an dem sie hinzugefügt wurden. Klicken Sie auf einen Link, um ihn in einem neuen Tab zu öffnen, oder auf eine Datei, um sie herunterzuladen. Mit `infrastructure:member` fügen **Link hinzufügen** und **Datei anhängen** eine Zeile hinzu, und Dateien können auch auf den Abschnitt gezogen werden. Fahren Sie über eine Zeile, um einen Link zu bearbeiten oder eine Zeile zu entfernen. Das Löschen einer Datei fragt nach einer Bestätigung. Eine Adresse ohne `http://` oder `https://` erhält `https://`. Jedes andere Schema wird abgelehnt.
+- **Links und Dateien**: die Weblinks der Technologie und ihre Dateien, je eine Zeile mit Name, der Domain des Links oder der Größe der Datei und dem Datum, an dem sie hinzugefügt wurden. Klicken Sie auf einen Link, um ihn in einem neuen Tab zu öffnen, oder auf eine Datei, um sie herunterzuladen. Mit der Stufe Mitglied für die Infrastruktur fügen **Link hinzufügen** und **Datei anhängen** eine Zeile hinzu, und Dateien können auch auf den Abschnitt gezogen werden. Fahren Sie über eine Zeile, um einen Link zu bearbeiten oder eine Zeile zu entfernen. Das Entfernen eines Links zeigt eine Meldung und bietet **Rückgängig** an, womit der Link wieder angelegt wird. Das Löschen einer Datei fragt nach einer Bestätigung. Eine Adresse ohne `http://` oder `https://` erhält `https://`. Jedes andere Schema wird abgelehnt.
 
 Ein Abschnitt erscheint nur, wenn Sie sein Modul lesen dürfen. **Hinzufügen** (`infrastructure:member`) öffnet eine Suche an Ort und Stelle; das Kreuz am Ende einer Zeile entfernt die Verknüpfung.
 

@@ -5,10 +5,6 @@ import {
   Box,
   Button,
   CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   IconButton,
   MenuItem,
   Select,
@@ -27,7 +23,6 @@ import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CloseIcon from '@mui/icons-material/Close';
-import { useNavigate } from 'react-router-dom';
 import api from '../../../api';
 import { KanapDialog, PropertyRow, StatusDot } from '../../../components/design';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
@@ -46,8 +41,6 @@ import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { environmentLabel } from '../../../utils/applicationEnvironments';
 import { interfaceRouteIntro, legTypeLabel } from '../../../utils/interfaceLegType';
 const ENVIRONMENTS = ['prod', 'pre_prod', 'qa', 'test', 'dev', 'sandbox'] as const;
-// Set to false to restore the previous per-environment tables while evaluating the matrix workflow.
-const USE_RUNTIME_MATRIX_EXPERIMENT = true;
 
 type InterfaceLeg = {
   id: string;
@@ -131,7 +124,6 @@ type BindingConnection = {
 type Props = {
   interfaceId: string;
   canManage: boolean;
-  canCreateConnection: boolean;
   interfaceName?: string | null;
   sourceApplicationId: string;
   targetApplicationId: string;
@@ -178,10 +170,6 @@ type BindingAutosavePatch = Partial<
     | 'integration_tool_application_id'
   >
 >;
-
-type ManageConnectionsState = {
-  binding: BindingRow;
-} | null;
 
 function getRoleLabel(t: TFunction, role: string, sourceName?: string | null, targetName?: string | null): string {
   const r = String(role || '').toLowerCase();
@@ -235,17 +223,6 @@ function connectionOptionFromLink(link: BindingConnection): ConnectionOption {
   };
 }
 
-const dialogGridSx = {
-  display: 'grid',
-  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
-  columnGap: 2,
-  rowGap: 0.5,
-} as const;
-
-const dialogFullWidthSx = {
-  gridColumn: { xs: 'auto', sm: '1 / -1' },
-} as const;
-
 const panelFormGridSx = {
   display: 'grid',
   gridTemplateColumns: '1fr',
@@ -255,7 +232,6 @@ const panelFormGridSx = {
 export default function InterfaceBindingsMatrix({
   interfaceId,
   canManage,
-  canCreateConnection,
   interfaceName,
   sourceApplicationId,
   targetApplicationId,
@@ -277,27 +253,17 @@ export default function InterfaceBindingsMatrix({
       label: item.deprecated ? t('it:common.deprecatedOption', { label: item.label }) : item.label,
     }));
   }, [byField.lifecycleStatus, t]);
-  const navigate = useNavigate();
   const [bindings, setBindings] = React.useState<BindingRow[]>([]);
   const [instancesByAppId, setInstancesByAppId] = React.useState<Record<string, AppInstanceOption[]>>({});
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [linksByBindingId, setLinksByBindingId] = React.useState<Record<string, BindingConnection[]>>({});
   const [linksLoadingBindingId, setLinksLoadingBindingId] = React.useState<string | null>(null);
-  const [linksError, setLinksError] = React.useState<string | null>(null);
-  const [manageConnections, setManageConnections] = React.useState<ManageConnectionsState>(null);
-  const [connectionSearch, setConnectionSearch] = React.useState('');
-  const [connectionOptions, setConnectionOptions] = React.useState<ConnectionOption[]>([]);
-  const [connectionLoading, setConnectionLoading] = React.useState(false);
-  const [selectedConnection, setSelectedConnection] = React.useState<ConnectionOption | null>(null);
   const [bindingConnectionSearch, setBindingConnectionSearch] = React.useState('');
   const [bindingConnectionOptions, setBindingConnectionOptions] = React.useState<ConnectionOption[]>([]);
   const [bindingConnectionLoading, setBindingConnectionLoading] = React.useState(false);
   const [selectedBindingConnection, setSelectedBindingConnection] = React.useState<ConnectionOption | null>(null);
   const [bindingConnectionDirty, setBindingConnectionDirty] = React.useState(false);
-  const [linkSaving, setLinkSaving] = React.useState(false);
-  const [unlinkingLinkId, setUnlinkingLinkId] = React.useState<string | null>(null);
-  const [dialogOpen, setDialogOpen] = React.useState(false);
   const [bindingPanelOpen, setBindingPanelOpen] = React.useState(false);
   const [dialogState, setDialogState] = React.useState<BindingDialogState | null>(null);
   const [bindingSaving, setBindingSaving] = React.useState(false);
@@ -355,16 +321,15 @@ export default function InterfaceBindingsMatrix({
   const loadLinksForBinding = React.useCallback(
     async (bindingId: string) => {
       setLinksLoadingBindingId(bindingId);
-      setLinksError(null);
       try {
         await fetchLinksForBinding(bindingId);
-      } catch (e: any) {
-        setLinksError(getApiErrorMessage(e, t, t('messages.loadConnectionsFailed')));
+      } catch {
+        // The matrix leaves the connection summary empty when the links fail to load.
       } finally {
         setLinksLoadingBindingId((prev) => (prev === bindingId ? null : prev));
       }
     },
-    [fetchLinksForBinding, t],
+    [fetchLinksForBinding],
   );
 
   const usedEnvs = React.useMemo(() => {
@@ -455,63 +420,6 @@ export default function InterfaceBindingsMatrix({
     }
     return map;
   }, [bindings]);
-
-  React.useEffect(() => {
-    if (!manageConnections) return;
-    let cancelled = false;
-    const load = async () => {
-      setConnectionLoading(true);
-      try {
-        const res = await api.get<{ items: any[] }>('/connections', {
-          params: { q: connectionSearch || undefined, limit: 20 },
-        });
-        if (!cancelled) {
-          const items =
-            (res.data?.items || []).map((item: any) => ({
-              id: item.id,
-              name: item.name,
-              connection_reference: item.connection_reference,
-            })) || [];
-          setConnectionOptions(items);
-        }
-      } catch {
-        if (!cancelled) setConnectionOptions([]);
-      } finally {
-        if (!cancelled) setConnectionLoading(false);
-      }
-    };
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, [connectionSearch, manageConnections]);
-
-  React.useEffect(() => {
-    const bindingId = manageConnections?.binding.id;
-    if (bindingId && linksByBindingId[bindingId] === undefined) {
-      void loadLinksForBinding(bindingId);
-    }
-  }, [manageConnections, linksByBindingId, loadLinksForBinding]);
-
-  // Legacy table mode prefetches links; the matrix loads them only when a cell/panel is opened.
-  React.useEffect(() => {
-    if (USE_RUNTIME_MATRIX_EXPERIMENT) return;
-    const ids = bindings.map((b) => b.id);
-    ids.forEach((id) => {
-      if (linksByBindingId[id] === undefined) {
-        void loadLinksForBinding(id);
-      }
-    });
-  }, [bindings, linksByBindingId, loadLinksForBinding]);
-
-  React.useEffect(() => {
-    if (!manageConnections) {
-      setSelectedConnection(null);
-      setConnectionSearch('');
-      setConnectionOptions([]);
-      setLinksError(null);
-    }
-  }, [manageConnections]);
 
   React.useEffect(() => {
     if (!dialogState) return;
@@ -637,11 +545,7 @@ export default function InterfaceBindingsMatrix({
         ? (integrationToolOptions[0]?.id || defaultIntegrationToolId)
         : null,
     });
-    if (USE_RUNTIME_MATRIX_EXPERIMENT) {
-      setBindingPanelOpen(true);
-    } else {
-      setDialogOpen(true);
-    }
+    setBindingPanelOpen(true);
     setError(null);
   };
 
@@ -673,16 +577,11 @@ export default function InterfaceBindingsMatrix({
       env_notes: binding.env_notes || '',
       integration_tool_application_id: binding.integration_tool_application_id || null,
     });
-    if (USE_RUNTIME_MATRIX_EXPERIMENT) {
-      setBindingPanelOpen(true);
-    } else {
-      setDialogOpen(true);
-    }
+    setBindingPanelOpen(true);
     setError(null);
   };
 
   const closeDialog = () => {
-    setDialogOpen(false);
     setBindingPanelOpen(false);
     setDialogState(null);
     setSelectedBindingConnection(null);
@@ -856,40 +755,6 @@ export default function InterfaceBindingsMatrix({
     }
   };
 
-  const handleLinkConnection = React.useCallback(async () => {
-    if (!canManage || !manageConnections || !selectedConnection) return;
-    setLinkSaving(true);
-    setLinksError(null);
-    try {
-      await api.post(`/interface-bindings/${manageConnections.binding.id}/connection-links`, {
-        connection_id: selectedConnection.id,
-      });
-      await loadLinksForBinding(manageConnections.binding.id);
-      setSelectedConnection(null);
-    } catch (e: any) {
-      setLinksError(getApiErrorMessage(e, t, t('messages.linkConnectionFailed')));
-    } finally {
-      setLinkSaving(false);
-    }
-  }, [canManage, manageConnections, selectedConnection, loadLinksForBinding]);
-
-  const handleUnlinkConnection = React.useCallback(
-    async (linkId: string, bindingId: string) => {
-      if (!canManage) return;
-      setUnlinkingLinkId(linkId);
-      setLinksError(null);
-      try {
-        await api.delete(`/interface-bindings/${bindingId}/connection-links/${linkId}`);
-        await loadLinksForBinding(bindingId);
-      } catch (e: any) {
-        setLinksError(getApiErrorMessage(e, t, t('messages.unlinkConnectionFailed')));
-      } finally {
-        setUnlinkingLinkId((prev) => (prev === linkId ? null : prev));
-      }
-    },
-    [canManage, loadLinksForBinding],
-  );
-
   const authOptions = React.useMemo(() => {
     const current = dialogState?.authentication_mode || '';
     const source: Array<{ code: string; label: string; deprecated?: boolean }> = (byField.interfaceAuthMode || []).length > 0
@@ -950,7 +815,6 @@ export default function InterfaceBindingsMatrix({
   const bindingSaveDisabled = bindingSaving || !dialogState?.source_instance_id || !dialogState?.target_instance_id;
   const autosaveEditEnabled = Boolean(
     canManage
-    && USE_RUNTIME_MATRIX_EXPERIMENT
     && bindingPanelOpen
     && dialogState?.mode === 'edit'
     && dialogState.bindingId,
@@ -1043,10 +907,9 @@ export default function InterfaceBindingsMatrix({
       : '',
   ].filter(Boolean).join(' · ');
 
-  const renderBindingFormContent = (surface: 'dialog' | 'panel') => {
+  const renderBindingFormContent = () => {
     if (!dialogState) return null;
-    const gridSx = surface === 'panel' ? panelFormGridSx : dialogGridSx;
-    const fullWidthSx = surface === 'panel' ? undefined : dialogFullWidthSx;
+    const gridSx = panelFormGridSx;
     const selectFieldSx = drawerSelectSx;
     const textFieldSx = drawerFieldValueSx;
     const linkedConnections = dialogState.bindingId ? linksByBindingId[dialogState.bindingId] : undefined;
@@ -1094,7 +957,7 @@ export default function InterfaceBindingsMatrix({
             </PropertyRow>
           )}
           {showIntegrationToolSelect && (
-            <PropertyRow label={t('it:workspace.interface.bindings.integrationTool')} required sx={fullWidthSx}>
+            <PropertyRow label={t('it:workspace.interface.bindings.integrationTool')} required>
               <Select
                 value={dialogState.integration_tool_application_id || ''}
                 onChange={(event) => updateDialogField('integration_tool_application_id', event.target.value || null)}
@@ -1154,7 +1017,7 @@ export default function InterfaceBindingsMatrix({
               ))}
             </Select>
           </PropertyRow>
-          <PropertyRow label={t('it:workspace.interface.bindings.infraConnection')} sx={fullWidthSx}>
+          <PropertyRow label={t('it:workspace.interface.bindings.infraConnection')}>
             <Autocomplete
               options={bindingConnectionOptions}
               loading={bindingConnectionLoading || (Boolean(dialogState.bindingId) && linksLoadingBindingId === dialogState.bindingId)}
@@ -1222,7 +1085,7 @@ export default function InterfaceBindingsMatrix({
         </Box>
 
         <Box sx={gridSx}>
-          <PropertyRow label={t('it:workspace.interface.bindings.sourceEndpoint')} sx={fullWidthSx}>
+          <PropertyRow label={t('it:workspace.interface.bindings.sourceEndpoint')}>
             <TextField
               value={dialogState.source_endpoint}
               onChange={(event) => updateDialogField('source_endpoint', event.target.value)}
@@ -1234,7 +1097,7 @@ export default function InterfaceBindingsMatrix({
               placeholder={t('it:workspace.interface.bindings.endpointPlaceholder')}
             />
           </PropertyRow>
-          <PropertyRow label={t('it:workspace.interface.bindings.targetEndpoint')} sx={fullWidthSx}>
+          <PropertyRow label={t('it:workspace.interface.bindings.targetEndpoint')}>
             <TextField
               value={dialogState.target_endpoint}
               onChange={(event) => updateDialogField('target_endpoint', event.target.value)}
@@ -1246,7 +1109,7 @@ export default function InterfaceBindingsMatrix({
               placeholder={t('it:workspace.interface.bindings.endpointPlaceholder')}
             />
           </PropertyRow>
-          <PropertyRow label={t('it:workspace.interface.bindings.triggerDetails')} sx={fullWidthSx}>
+          <PropertyRow label={t('it:workspace.interface.bindings.triggerDetails')}>
             <TextField
               value={dialogState.trigger_details}
               onChange={(event) => updateDialogField('trigger_details', event.target.value)}
@@ -1255,7 +1118,7 @@ export default function InterfaceBindingsMatrix({
               disabled={!canManage}
               fullWidth
               multiline
-              minRows={surface === 'panel' ? 3 : 2}
+              minRows={3}
               sx={textFieldSx}
               placeholder={t('it:workspace.interface.bindings.triggerDetailsPlaceholder')}
             />
@@ -1284,7 +1147,7 @@ export default function InterfaceBindingsMatrix({
               placeholder="https://..."
             />
           </PropertyRow>
-          <PropertyRow label={t('it:workspace.interface.bindings.notes')} sx={fullWidthSx}>
+          <PropertyRow label={t('it:workspace.interface.bindings.notes')}>
             <TextField
               value={dialogState.env_notes}
               onChange={(event) => updateDialogField('env_notes', event.target.value)}
@@ -1642,7 +1505,7 @@ export default function InterfaceBindingsMatrix({
           </IconButton>
         </Stack>
         <Box sx={{ px: 1.5, py: 1.25 }}>
-          {renderBindingFormContent('panel')}
+          {renderBindingFormContent()}
         </Box>
         {dialogState.mode === 'create' && (
           <Stack
@@ -1670,171 +1533,6 @@ export default function InterfaceBindingsMatrix({
           </Stack>
         )}
       </Box>
-    );
-  };
-
-  const renderLegRow = (env: string, leg: InterfaceLeg, binding: BindingRow | undefined) => {
-    const hasBinding = !!binding;
-    const links = binding ? linksByBindingId[binding.id] : undefined;
-    return (
-      <TableRow key={`env-${env}-${leg.id}`}>
-        <TableCell sx={{ fontWeight: 500 }}>
-          {legTypeLabel(t, leg.leg_type)}
-        </TableCell>
-        <TableCell>
-          <Stack spacing={0.25}>
-            <Typography variant="body2">
-              {t('it:workspace.interface.bindings.triggerLine', { value: labelFor('interfaceTriggerType', leg.trigger_type) || leg.trigger_type })}
-            </Typography>
-            <Typography variant="body2">
-              {t('it:workspace.interface.bindings.patternLine', { value: labelFor('interfacePattern', leg.integration_pattern) || leg.integration_pattern })}
-            </Typography>
-            <Typography variant="body2">
-              {t('it:workspace.interface.bindings.formatLine', { value: labelFor('interfaceFormat', leg.data_format) || leg.data_format })}
-            </Typography>
-            <Typography variant="body2">
-              {t('it:workspace.interface.bindings.jobNameLine', { value: leg.job_name || '—' })}
-            </Typography>
-          </Stack>
-        </TableCell>
-        <TableCell>
-          {hasBinding ? (
-            <Stack spacing={0.5}>
-              <Typography variant="body2">
-                {t('it:workspace.interface.bindings.sourceInstanceLabel')}{' '}
-                <strong>{formatInstance(binding.source_instance_id)}</strong>
-              </Typography>
-              <Typography variant="body2">
-                {t('it:workspace.interface.bindings.targetInstanceLabel')}{' '}
-                <strong>{formatInstance(binding.target_instance_id)}</strong>
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {t('it:workspace.interface.bindings.statusLine', { value: labelFor('lifecycleStatus', binding.status) || binding.status || '—' })}
-                {binding.authentication_mode
-                  ? ` · ${t('it:workspace.interface.bindings.authLine', { value: labelFor('interfaceAuthMode', binding.authentication_mode) || binding.authentication_mode })}`
-                  : ''}
-              </Typography>
-              {binding.source_endpoint && (
-                <Typography variant="body2" color="text.secondary">
-                  {t('it:workspace.interface.bindings.sourceEndpointLine', { value: binding.source_endpoint })}
-                </Typography>
-              )}
-              {binding.target_endpoint && (
-                <Typography variant="body2" color="text.secondary">
-                  {t('it:workspace.interface.bindings.targetEndpointLine', { value: binding.target_endpoint })}
-                </Typography>
-              )}
-              {binding.monitoring_url && (
-                <Typography variant="body2" color="text.secondary">
-                  {t('it:workspace.interface.bindings.monitoringLine', { value: binding.monitoring_url })}
-                </Typography>
-              )}
-              {binding.env_notes && (
-                <Typography variant="body2" color="text.secondary">
-                  {t('it:workspace.interface.bindings.notesLine', { value: binding.env_notes })}
-                </Typography>
-              )}
-            </Stack>
-          ) : (
-            <Typography variant="body2" color="text.secondary">
-              {t('it:workspace.interface.bindings.noBindingForLeg', { env: environmentLabel(t, env) })}
-            </Typography>
-          )}
-          {binding && (
-            <Box sx={{ mt: 0.5 }}>
-            </Box>
-          )}
-        </TableCell>
-        <TableCell sx={{ minWidth: 200 }}>
-          {binding && (
-            <Box sx={{ mt: 0.5 }}>
-              {linksLoadingBindingId === binding.id && (
-                <Typography variant="caption" color="text.secondary">
-                  {t('it:workspace.interface.bindings.loadingConnections')}
-                </Typography>
-              )}
-              {linksError && (
-                <Typography variant="caption" color="error">
-                  {linksError}
-                </Typography>
-              )}
-              {links && links.length > 0 && (
-                <Stack direction="row" spacing={0.5} flexWrap="wrap">
-                  {links.map((link) => (
-                    <Typography key={link.id} variant="body2" color="text.secondary" sx={{ mr: 0.5, mb: 0.5 }}>
-                      <Typography component="span" sx={{ fontFamily: "'JetBrains Mono Variable', monospace", fontSize: '0.75rem', mr: 0.5 }}>
-                        {link.connection.connection_reference}
-                      </Typography>
-                      · {link.connection.name}
-                    </Typography>
-                  ))}
-                </Stack>
-              )}
-              {links && links.length === 0 && (
-                <Typography variant="caption" color="text.secondary">
-                  {t('it:workspace.interface.bindings.noInfraConnections')}
-                </Typography>
-              )}
-              {links && links.length === 0 && binding.status === 'active' && (
-                <Typography variant="caption" color="warning.main" sx={{ mt: 0.5, display: 'block' }}>
-                  {t('it:workspace.interface.bindings.activeWithoutConnection')}
-                </Typography>
-              )}
-            </Box>
-          )}
-          {!binding && (
-            <Typography variant="caption" color="text.secondary">
-              —
-            </Typography>
-          )}
-          {hasBinding && canManage && (
-            <Tooltip title={t('it:workspace.interface.bindings.manageConnections')}>
-              <span>
-                <Button
-                  size="small"
-                  onClick={() => {
-                    setManageConnections({ binding: binding! });
-                    if (linksByBindingId[binding!.id] === undefined) {
-                      void loadLinksForBinding(binding!.id);
-                    }
-                  }}
-                  sx={{ mt: 1 }}
-                >
-                  {t('it:workspace.interface.bindings.manageConnectionButton')}
-                </Button>
-              </span>
-            </Tooltip>
-          )}
-        </TableCell>
-        <TableCell align="right">
-          {canManage && (
-            <Stack direction="row" spacing={1} justifyContent="flex-end" alignItems="center">
-              <Tooltip title={hasBinding ? t('it:workspace.interface.bindings.editBinding') : t('it:workspace.interface.bindings.addBinding')}>
-                <span>
-                  <IconButton
-                    size="small"
-                    onClick={() => {
-                      if (hasBinding && binding) openEdit(env, leg, binding);
-                      else openCreate(env, leg);
-                    }}
-                  >
-                    {hasBinding ? <EditIcon fontSize="small" /> : <AddIcon fontSize="small" />}
-                  </IconButton>
-                </span>
-              </Tooltip>
-              {hasBinding && (
-                <Tooltip title={t('it:workspace.interface.bindings.deleteBinding')}>
-                  <span>
-                    <IconButton size="small" onClick={() => void handleDeleteBinding(binding!)}>
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </span>
-                </Tooltip>
-              )}
-            </Stack>
-          )}
-        </TableCell>
-      </TableRow>
     );
   };
 
@@ -1891,260 +1589,25 @@ export default function InterfaceBindingsMatrix({
         </Alert>
       )}
       {allEnvs.length > 0 && (
-        USE_RUNTIME_MATRIX_EXPERIMENT ? (
-          <>
-            {renderEnvironmentSummary()}
-            <Box
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: {
-                  xs: 'minmax(0, 1fr)',
-                  lg: bindingPanelOpen ? 'minmax(0, 1fr) minmax(340px, 380px)' : 'minmax(0, 1fr)',
-                },
-                gap: 1.5,
-                alignItems: 'start',
-              }}
-            >
-              {renderRuntimeMatrix()}
-              {renderBindingSidePanel()}
-            </Box>
-          </>
-        ) : (
-          <>
-            {allEnvs.map((env) => (
-              <Box key={env} sx={{ mb: 3 }}>
-                <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-                  <Typography variant="subtitle1">
-                    {t('it:workspace.interface.bindings.environmentLine', { env: environmentLabel(t, env) })}
-                  </Typography>
-                  {canManage && (
-                    <Button
-                      size="small"
-                      color="error"
-                      onClick={() => {
-                        const envBindings = bindings.filter((b) => b.environment === env);
-                        if (envBindings.length > 0) {
-                          setPendingDeleteEnvironment(env);
-                        } else {
-                          setManualEnvs((prev) => prev.filter((e) => e !== env));
-                        }
-                      }}
-                    >
-                      {t('it:workspace.interface.bindings.deleteEnvironment')}
-                    </Button>
-                  )}
-                </Stack>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>{t('it:workspace.interface.flow.leg')}</TableCell>
-                      <TableCell>{t('it:workspace.interface.bindings.technicalTemplate')}</TableCell>
-                      <TableCell>{t('it:workspace.interface.bindings.bindingIn', { env: environmentLabel(t, env) })}</TableCell>
-                      <TableCell>{t('it:workspace.interface.bindings.connections')}</TableCell>
-                      <TableCell align="right">{t('it:common.actions')}</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {legs.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={5}>
-                          <Typography variant="body2" color="text.secondary">
-                            {t('it:workspace.interface.bindings.noLegs')}
-                          </Typography>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                    {legs.map((leg) => {
-                      const byEnv = bindingsByLegEnv[leg.id] || {};
-                      const binding = byEnv[env];
-                      return renderLegRow(env, leg, binding);
-                    })}
-                  </TableBody>
-                </Table>
-              </Box>
-            ))}
-          </>
-        )
+        <>
+          {renderEnvironmentSummary()}
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: {
+                xs: 'minmax(0, 1fr)',
+                lg: bindingPanelOpen ? 'minmax(0, 1fr) minmax(340px, 380px)' : 'minmax(0, 1fr)',
+              },
+              gap: 1.5,
+              alignItems: 'start',
+            }}
+          >
+            {renderRuntimeMatrix()}
+            {renderBindingSidePanel()}
+          </Box>
+        </>
       )}
 
-      <Dialog open={!!manageConnections} onClose={() => setManageConnections(null)} maxWidth="md" fullWidth>
-        <DialogTitle>{t('it:workspace.interface.bindings.manageConnections')}</DialogTitle>
-        <DialogContent dividers>
-          {linksError && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {linksError}
-            </Alert>
-          )}
-          {manageConnections && (
-            <Stack spacing={2}>
-              <Typography variant="subtitle2" color="text.secondary">
-                {t('it:workspace.interface.bindings.envLegLine', { env: environmentLabel(t, manageConnections.binding.environment), leg: legTypeLabel(t, manageConnections.binding.leg_type) })}
-              </Typography>
-              {linksLoadingBindingId === manageConnections.binding.id && (
-                <Typography variant="body2" color="text.secondary">
-                  {t('it:workspace.interface.bindings.loadingConnections')}
-                </Typography>
-              )}
-              {linksByBindingId[manageConnections.binding.id] && (
-                <Stack spacing={1}>
-                  {linksByBindingId[manageConnections.binding.id].length === 0 && (
-                    <Typography variant="body2" color="text.secondary">
-                      {t('it:workspace.interface.bindings.noInfraConnectionsYet')}
-                    </Typography>
-                  )}
-                  {linksByBindingId[manageConnections.binding.id].map((link) => (
-                    <Box
-                      key={link.id}
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        border: '1px solid',
-                        borderColor: 'divider',
-                        borderRadius: 1,
-                        p: 1,
-                      }}
-                    >
-                      <Box sx={{ pr: 1, flex: 1 }}>
-                        <Typography variant="body2" fontWeight={600}>
-                          <Typography component="span" sx={{ fontFamily: "'JetBrains Mono Variable', monospace", fontSize: '0.75rem', color: 'text.secondary', mr: 0.5 }}>
-                            {link.connection.connection_reference}
-                          </Typography>
-                          · {link.connection.name}
-                        </Typography>
-                        <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 0.5 }}>
-                          <Typography variant="body2" color="text.secondary">
-                            {link.connection.topology === 'multi_server' ? t('it:enums.topology.multiServer') : t('it:enums.topology.serverToServer')}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {t('it:workspace.interface.bindings.lifecycleLine', { value: labelFor('lifecycleStatus', link.connection.lifecycle) || link.connection.lifecycle })}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {t('it:workspace.interface.bindings.criticalityLine', { value: classificationCatalog?.businessCriticalityLevels.find((item) => item.code === link.connection.criticality)?.label || link.connection.criticality || t('common:selects.notSet') })}
-                          </Typography>
-                          <Typography variant="body2" color={link.connection.contains_pii ? 'warning.main' : 'text.secondary'}>
-                            {link.connection.contains_pii ? t('it:workspace.connection.compliance.containsPii') : t('it:workspace.interface.bindings.noPii')}
-                          </Typography>
-                        </Stack>
-                        {link.notes && (
-                          <Typography variant="caption" color="text.secondary">
-                            {t('it:workspace.interface.bindings.notesLine', { value: link.notes })}
-                          </Typography>
-                        )}
-                      </Box>
-                      <Stack direction="row" spacing={1}>
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          onClick={() => navigate(`/it/connections/${link.connection.connection_reference || link.connection.id}/overview`)}
-                        >
-                          {t('it:workspace.interface.bindings.openConnection')}
-                        </Button>
-                        {canManage && (
-                          <Button
-                            size="small"
-                            color="error"
-                            onClick={() => void handleUnlinkConnection(link.id, manageConnections.binding.id)}
-                            disabled={unlinkingLinkId === link.id}
-                          >
-                            {unlinkingLinkId === link.id ? t('it:workspace.interface.bindings.unlinking') : t('it:workspace.connection.overview.unlink')}
-                          </Button>
-                        )}
-                      </Stack>
-                    </Box>
-                  ))}
-                </Stack>
-              )}
-
-              {canManage && (
-                <Box>
-                  <Typography variant="subtitle2" gutterBottom>
-                    {t('it:workspace.interface.bindings.linkExisting')}
-                  </Typography>
-                  <Stack
-                    direction={{ xs: 'column', sm: 'row' }}
-                    spacing={1}
-                    alignItems={{ xs: 'stretch', sm: 'center' }}
-                  >
-                    <Autocomplete
-                      options={connectionOptions}
-                      loading={connectionLoading}
-                      value={selectedConnection}
-                      inputValue={connectionSearch}
-                      onInputChange={(_, v) => setConnectionSearch(v)}
-                      onChange={(_, val) => setSelectedConnection(val)}
-                      getOptionLabel={(opt) => (opt?.name ? `${opt.connection_reference} · ${opt.name}` : opt?.connection_reference || '')}
-                      isOptionEqualToValue={(opt, val) => opt.id === val.id}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          label={t('it:workspace.interface.bindings.searchConnections')}
-                          placeholder={t('it:workspace.interface.bindings.nameOrId')}
-                          InputLabelProps={{ shrink: true }}
-                          InputProps={{
-                            ...params.InputProps,
-                            endAdornment: (
-                              <>
-                                {connectionLoading ? <CircularProgress size={16} /> : null}
-                                {params.InputProps.endAdornment}
-                              </>
-                            ),
-                          }}
-                        />
-                      )}
-                      sx={{ minWidth: 280, flex: 1 }}
-                    />
-                    <Button
-                      variant="contained"
-                      onClick={() => void handleLinkConnection()}
-                      disabled={!selectedConnection || linkSaving}
-                    >
-                      {linkSaving ? t('it:workspace.interface.bindings.linking') : t('common:buttons.link')}
-                    </Button>
-                  </Stack>
-                </Box>
-              )}
-
-              {canManage && canCreateConnection && (
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-                  <Button
-                    variant="outlined"
-                    onClick={() => {
-                      const b = manageConnections.binding;
-                      const params = new URLSearchParams({
-                        interfaceId,
-                        bindingId: b.id,
-                        environment: b.environment,
-                        legType: b.leg_type,
-                      });
-                      setManageConnections(null);
-                      navigate(`/it/connections/new/overview?${params.toString()}`);
-                    }}
-                  >
-                    {t('it:workspace.interface.bindings.createConnection')}
-                  </Button>
-                </Stack>
-              )}
-            </Stack>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button variant="action" onClick={() => setManageConnections(null)}>{t('common:buttons.close')}</Button>
-        </DialogActions>
-      </Dialog>
-
-      <KanapDialog
-        open={dialogOpen}
-        title={dialogState?.mode === 'edit' ? t('it:workspace.interface.bindings.editBinding') : t('it:workspace.interface.bindings.addBinding')}
-        onClose={closeDialog}
-        onSave={handleSaveDialog}
-        saveLabel={dialogState?.mode === 'create' ? t('it:workspace.interface.bindings.addBinding') : t('common:buttons.save')}
-        saveDisabled={bindingSaveDisabled}
-        saveLoading={bindingSaving}
-        sx={{ maxWidth: 680 }}
-      >
-        {renderBindingFormContent('dialog')}
-      </KanapDialog>
       <KanapDialog
         open={envDialogOpen}
         title={t('it:workspace.interface.bindings.addEnvironment')}

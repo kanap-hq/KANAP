@@ -73,7 +73,19 @@ type Props = {
   references?: Partial<ItemReferences>;
   /** The chosen value's label per dimension id, from the detail. */
   analyticsOptions?: Record<string, { id: string; name: string }>;
+  /**
+   * The rows drawn: all of them; only the place of the line (cost center and paying company, the
+   * fields a person with limited access fills before the title of a new line); or all but those.
+   */
+  section?: 'all' | 'placement' | 'rest';
+  /** Fields the line still needs, marked on their row (`paying_company`, `account`, `cost_center`, `dimension:<id>`). */
+  missingFields?: ReadonlySet<string>;
 };
+
+/** Marks a field's row of the panel (paying company, account, cost center), for the focus on a missing field. */
+export const LINE_FIELD_ATTR = 'data-line-field';
+
+const MISSING_LABEL_SX = { color: 'error.main' } as const;
 
 // Hides the internal MUI label of complex field components so they render
 // label-above-value inside PropertyRow per the design charter.
@@ -106,6 +118,8 @@ export default function BudgetPropertiesDrawer({
   disabled = false,
   references,
   analyticsOptions,
+  section = 'all',
+  missingFields,
   onSupplierChange,
   onPayingCompanyChange,
   onAccountChange,
@@ -159,6 +173,38 @@ export default function BudgetPropertiesDrawer({
   const newValueFor = mode === 'create'
     ? { payingCompanyId: payingCompanyId || null, costCenterId: costCenterId || null }
     : lineId ? { lineId } : null;
+  const showPlacement = section !== 'rest';
+  const showRest = section !== 'placement';
+  const missing = (field: string) => (missingFields?.has(field) ? MISSING_LABEL_SX : undefined);
+
+  const placementRows = showPlacement ? (
+    <>
+      <PropertyRow label={t('opex.fields.costCenter')} helperText={costCenterHint} required={costCenterRequired} labelSx={missing('cost_center')}>
+        <Box sx={hideInnerLabelSx} {...{ [LINE_FIELD_ATTR]: 'cost_center' }}>
+          <CostCenterSelect
+            hideLabel
+            label={t('opex.fields.costCenter')}
+            selectable="cost_centers"
+            companyId={companyFollowsCostCenter ? null : payingCompanyId || null}
+            value={costCenterId || null}
+            selectedOption={matching(references?.cost_center, costCenterId)}
+            onChange={(v, node) => onCostCenterChange(v ?? '', node)}
+            isAllowed={placement?.isCostCenterAllowed}
+            required={costCenterRequired}
+            disableClearable={costCenterRequired}
+            disabled={disabled}
+          />
+        </Box>
+      </PropertyRow>
+      <PropertyRow label={t('opex.fields.payingCompany')} required labelSx={missing('paying_company')}>
+        <Box sx={hideInnerLabelSx} {...{ [LINE_FIELD_ATTR]: 'paying_company' }}>
+          <CompanySelect hideLabel label={t('opex.fields.payingCompany')} value={payingCompanyId || null} onChange={(v) => onPayingCompanyChange(v ?? '')} allowedCompanyIds={placement?.companyIds} disabled={disabled} required disableClearable={mode === 'edit'} selectedOption={matching(references?.paying_company, payingCompanyId)} />
+        </Box>
+      </PropertyRow>
+    </>
+  ) : null;
+
+  if (!showRest) return <PropertyGroup>{placementRows}</PropertyGroup>;
 
   return (
     <>
@@ -193,30 +239,9 @@ export default function BudgetPropertiesDrawer({
             <SupplierSelect hideLabel label={t('opex.fields.supplier')} value={supplierId} onChange={(v) => onSupplierChange(v ?? '')} disabled={disabled} selectedOption={matching(references?.supplier, supplierId)} />
           </Box>
         </PropertyRow>
-        <PropertyRow label={t('opex.fields.costCenter')} helperText={costCenterHint} required={costCenterRequired}>
-          <Box sx={hideInnerLabelSx}>
-            <CostCenterSelect
-              hideLabel
-              label={t('opex.fields.costCenter')}
-              selectable="cost_centers"
-              companyId={companyFollowsCostCenter ? null : payingCompanyId || null}
-              value={costCenterId || null}
-              selectedOption={matching(references?.cost_center, costCenterId)}
-              onChange={(v, node) => onCostCenterChange(v ?? '', node)}
-              isAllowed={placement?.isCostCenterAllowed}
-              required={costCenterRequired}
-              disableClearable={costCenterRequired}
-              disabled={disabled}
-            />
-          </Box>
-        </PropertyRow>
-        <PropertyRow label={t('opex.fields.payingCompany')} required>
-          <Box sx={hideInnerLabelSx}>
-            <CompanySelect hideLabel label={t('opex.fields.payingCompany')} value={payingCompanyId || null} onChange={(v) => onPayingCompanyChange(v ?? '')} allowedCompanyIds={placement?.companyIds} disabled={disabled} required disableClearable={mode === 'edit'} selectedOption={matching(references?.paying_company, payingCompanyId)} />
-          </Box>
-        </PropertyRow>
-        <PropertyRow label={t('opex.fields.account')} required>
-          <Box sx={hideInnerLabelSx}>
+        {placementRows}
+        <PropertyRow label={t('opex.fields.account')} required labelSx={missing('account')}>
+          <Box sx={hideInnerLabelSx} {...{ [LINE_FIELD_ATTR]: 'account' }}>
             <AccountSelect hideLabel label={t('opex.fields.account')} nature={nature} value={accountId} onChange={(v) => onAccountChange(v ?? '')} companyId={payingCompanyId || undefined} disabled={disabled || !payingCompanyId} required disableClearable={mode === 'edit'} selectedOption={matching(references?.account, accountId)} />
           </Box>
         </PropertyRow>
@@ -240,7 +265,7 @@ export default function BudgetPropertiesDrawer({
             {t('shared.dimensionsLoadFailed')}
           </Typography>
         ) : analyticsAxes.enabled.map((axis) => (
-          <PropertyRow key={axis.id} label={analyticsAxes.label(axis)} required={axisRequiredFor(axis, nature)}>
+          <PropertyRow key={axis.id} label={analyticsAxes.label(axis)} required={axisRequiredFor(axis, nature)} labelSx={missing(`dimension:${axis.id}`)}>
             {/* Found by the question asked before leaving a line lacking a required value. */}
             <Box sx={hideInnerLabelSx} data-analytics-axis={axis.id}>
               <AnalyticsCategorySelect

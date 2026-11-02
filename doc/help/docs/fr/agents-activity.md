@@ -32,7 +32,7 @@ La recherche par ticket et les puces de type se combinent, ce qui vous permet de
 Chaque entrée correspond à un événement, et elle contient suffisamment de contexte pour être comprise d'un coup d'œil :
 
 - Une **puce de type** : à laquelle des sept catégories ci-dessus l'événement appartient.
-- Une **puce de type d'action** (lorsque l'événement porte sur un type de travail précis sur le ticket) : **Note interne**, **Réponse demandeur**, **Mise à jour classification**, **Mise à jour statut**, **Affectation** ou **Participants**.
+- Une **puce de type d'action** (lorsque l'événement porte sur un type de travail précis sur le ticket) : **Note interne**, **Réponse demandeur**, **Mise à jour classification**, **Mise à jour statut**, **Affectation** ou **Observateurs**.
 - Une **pastille de statut** avec un libellé en langage clair (par exemple « En attente de validation », « Terminé », « Rejeté », « Écarté », « Attention requise ») décrivant où en est cet élément.
 - Le **nom de l'agent** et le **ticket** concerné (affiché sous la forme `#N`).
 - Un **titre d'événement**, par exemple « Proposition créée » ou « Vérification des tickets : 3 nouveaux tickets ».
@@ -74,7 +74,7 @@ Une entrée de vérification vous dit dans son titre ce que l'agent a trouvé, s
 
 - Le **décompte de la vérification** décrit ci-dessus.
 - Le **Message proposé** complet : le texte intégral rédigé par l'agent, pas seulement l'aperçu sur une ligne.
-- Les **modifications de champ**, écrites sous la forme « Champ : ancien → nouveau » (par exemple « Statut : Assigné → En attente »), de sorte qu'une modification de classification, de statut, d'affectation ou de participant est lisible sans ouvrir le ticket.
+- Les **modifications de champ**, écrites sous la forme « Champ : ancien → nouveau » (par exemple « Statut : Assigné → En attente »), de sorte qu'une modification de classification, de statut, d'affectation ou d'observateur est lisible sans ouvrir le ticket.
 - Le **Motif** : la courte justification de la proposition par l'agent.
 - La **Note du relecteur** : la note saisie au moment où la proposition a été tranchée.
 - Une ligne **« {n} sources citées »** : combien de résultats de votre [bibliothèque de connaissances](knowledge.md) ont étayé la réponse rédigée. C'est le signal honnête indiquant si la réponse s'appuie sur vos propres sources ; une réponse avec des sources citées est une réponse que l'agent peut assumer. Son absence sur une réponse administrative ou procédurale est normale et ne signifie pas qu'un problème est survenu. Pour savoir comment cela se traduit lors de l'examen, voir les [Approbations](agents-approvals.md).

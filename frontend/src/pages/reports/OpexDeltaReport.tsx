@@ -74,7 +74,11 @@ export default function OpexDeltaReport() {
   }, [scope]);
 
   // The years a line of the window holds (filters aside): Y-1 to Y+1, and Y-2 or Y+2 when a line has a version then.
-  const yearsQuery = useBudgetAggregate(scope, useMemo(() => deltaYearsRequest(currentYear), [currentYear]));
+  // The year list and the comparison wait for the column setting, so the default column is asked once.
+  const yearsQuery = useBudgetAggregate(scope, useMemo(
+    () => (budgetColumns.ready ? deltaYearsRequest(currentYear) : null),
+    [budgetColumns.ready, currentYear],
+  ));
   const yearOptions = useMemo<number[]>(() => readDeltaYears(yearsQuery.data, currentYear), [yearsQuery.data, currentYear]);
 
   // Both pickers offer the shown budget columns (no currency or rate keys of the slots) and
@@ -119,7 +123,8 @@ export default function OpexDeltaReport() {
   // totals of every line of the state (net, gross increase, gross decrease).
   const requests = useMemo(() => {
     if (
-      reportFilters.queryFilters == null
+      !budgetColumns.ready
+      || reportFilters.queryFilters == null
       || sourceYear == null
       || !sourceMetric
       || destinationYear == null
@@ -140,6 +145,7 @@ export default function OpexDeltaReport() {
       measure,
     });
   }, [
+    budgetColumns.ready,
     measure,
     reportFilters.queryFilters,
     scope,
@@ -155,8 +161,8 @@ export default function OpexDeltaReport() {
   ]);
   // No previous answer kept while a new one loads: a direction switch would label the old lines with the new one.
   const report = useBudgetAggregates(scope, requests);
-  // Loading (the years or the lines), or the filter bar still reading its address.
-  const busy = reportFilters.queryFilters == null || yearsQuery.isLoading || report.isLoading || report.isPlaceholderData;
+  // Loading (the column setting, the years or the lines), or the filter bar still reading its address.
+  const busy = !budgetColumns.ready || reportFilters.queryFilters == null || yearsQuery.isLoading || report.isLoading || report.isPlaceholderData;
   // FTE: a side without a declared FTE is blank (the change counts it as 0), and so is a total nobody declares.
   const { processed, allTotals } = useMemo(
     () => (requests && report.data

@@ -263,7 +263,7 @@ Two safeguards apply. Nothing is reported as missing when the call to Netbox fai
 
 ## The home dashboard tile
 
-A **Netbox synchronisation** tile is available on your personal dashboard. It is off by default. Turn it on from the dashboard settings, the gear icon on **Dashboard**, and tick **Netbox synchronisation**. The tile needs `infrastructure:admin`, like the rest of the integration.
+A **Netbox synchronisation** tile is available on your personal dashboard. It is off by default. To turn it on, click **Customize the home page**, then **Add a tile** in the **IT landscape** section, and choose **Netbox synchronisation**. See [Customizing your dashboard](my-dashboard.md#customizing-the-budget-section). The tile needs `infrastructure:admin`, like the rest of the integration.
 
 The tile stays out of the way when there is nothing to do: one line saying the synchronisation is up to date, with the time of the last run. When something needs attention, it lists only what does, objects to decide, assets missing from Netbox, errors, or a failed run, and each line opens the matching filtered list.
 

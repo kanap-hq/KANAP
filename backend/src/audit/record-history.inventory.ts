@@ -3,18 +3,24 @@ import type { FamilyKey } from './record-history/families';
 import { accountsRecord } from './record-history/records/accounts';
 import { analyticsAxesRecord } from './record-history/records/analytics_axes';
 import { analyticsCategoriesRecord } from './record-history/records/analytics_categories';
+import { applicationsRecord } from './record-history/records/applications';
 import { assetsRecord } from './record-history/records/assets';
 import { businessProcessesRecord } from './record-history/records/business_processes';
 import { companiesRecord } from './record-history/records/companies';
 import { connectionsRecord } from './record-history/records/connections';
 import { contactsRecord } from './record-history/records/contacts';
+import { contractsRecord } from './record-history/records/contracts';
 import { costCentersRecord } from './record-history/records/cost_centers';
 import { departmentsRecord } from './record-history/records/departments';
 import { documentsRecord } from './record-history/records/documents';
+import { incidentsRecord } from './record-history/records/incidents';
 import { interfacesRecord } from './record-history/records/interfaces';
 import { locationsRecord } from './record-history/records/locations';
+import { portfolioProjectsRecord } from './record-history/records/portfolio_projects';
+import { portfolioRequestsRecord } from './record-history/records/portfolio_requests';
 import { spendItemsRecord } from './record-history/records/spend_items';
 import { suppliersRecord } from './record-history/records/suppliers';
+import { tasksRecord } from './record-history/records/tasks';
 import { technologiesRecord } from './record-history/records/technologies';
 import { workingDayProfilesRecord } from './record-history/records/working_day_profiles';
 
@@ -34,8 +40,9 @@ import { workingDayProfilesRecord } from './record-history/records/working_day_p
  *   (an asset link holds the ids of every line linked to the asset). A label read by `childReads`
  *   is not read through the parent columns, so it needs no parent rule of its own (`supplier_contacts`
  *   still has one for the supplier's page);
- * - every table of the data-access families `follows_line` and `link_to_line`
- *   (`data-access/data-access-tables.inventory.ts`) is a child here or an exclusion with its reason.
+ * - every table of the data-access families `follows_line`, `link_to_line`, `follows_contract` and
+ *   `link_to_contract` (`data-access/data-access-tables.inventory.ts`) is a child here or an
+ *   exclusion with its reason.
  *   `__tests__/record-history-inventory.spec.ts` checks both ways, beside the catalog spec.
  *
  * A child label is normally read by its parent columns (`parent_table` / `parent_id`). `childReads`
@@ -86,7 +93,17 @@ export type RecordHistoryChildKind =
   | 'leg'
   | 'set'
   | 'binding'
-  | 'person';
+  | 'person'
+  | 'compliance_item'
+  | 'instance'
+  | 'assignment'
+  | 'business_process'
+  | 'phase'
+  | 'milestone'
+  | 'time_entry'
+  | 'team'
+  | 'dependency'
+  | 'document';
 
 export type RecordHistoryExclusion = {
   /** The physical table of the data-access inventory. */
@@ -142,18 +159,24 @@ const RECORD_HISTORY_DEFINITION = [
   accountsRecord,
   analyticsAxesRecord,
   analyticsCategoriesRecord,
+  applicationsRecord,
   assetsRecord,
   businessProcessesRecord,
   companiesRecord,
   connectionsRecord,
   contactsRecord,
+  contractsRecord,
   costCentersRecord,
   departmentsRecord,
   documentsRecord,
+  incidentsRecord,
   interfacesRecord,
   locationsRecord,
+  portfolioProjectsRecord,
+  portfolioRequestsRecord,
   spendItemsRecord,
   suppliersRecord,
+  tasksRecord,
   technologiesRecord,
   workingDayProfilesRecord,
 ] as const satisfies readonly RecordHistoryRecord[];

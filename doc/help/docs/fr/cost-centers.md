@@ -160,7 +160,7 @@ Le bouton **Supprimer** (icône corbeille) de l'en-tête supprime l'élément ap
 
 ## Les centres de coûts sur les lignes budgétaires
 
-- **OPEX et CAPEX** : le champ **Centre de coûts** du panneau **Propriétés** présente l'arbre. Les groupes s'affichent pour vous aider à vous repérer et ne peuvent pas être choisis. Lorsque vous créez une ligne et que la société payeuse est vide, choisir un centre de coûts la remplit avec la société du centre de coûts, et la société suit le centre de coûts jusqu'à ce que vous choisissiez vous-même une société ou un compte. Lorsque les deux sociétés diffèrent, les deux sont conservées et une indication le signale. Voir [Lignes budgétaires](budget-lines.md).
+- **OPEX et CAPEX** : le champ **Centre de coûts** du panneau **Propriétés** présente l'arbre. Les groupes s'affichent pour vous aider à vous repérer et ne peuvent pas être choisis. Lorsque la société payeuse est vide, choisir un centre de coûts la remplit avec la société du centre de coûts. Lorsque les deux sociétés diffèrent, les deux sont conservées et une indication le signale. Voir [Lignes budgétaires](budget-lines.md).
 - **Liste** : les colonnes et filtres **Centre de coûts** et **Run ou build** de la liste des lignes budgétaires.
 - **Rapports** : les rapports budgétaires peuvent être filtrés sur un centre de coûts ou un groupe. Voir [Filtres par centre de coûts, run ou build et dimensions analytiques](reports.md#filtres-par-centre-de-couts-run-ou-build-et-dimensions-analytiques).
 
@@ -230,6 +230,10 @@ Chargez ou mettez à jour l'arbre entier depuis un fichier.
 Chaque rôle reçoit le niveau qu'il a sur les départements, sauf le rôle intégré Administrateur budget, qui reçoit admin. Ainsi, Administrateur budget et Administrateur données de référence sont admins, Membre budget et Membre données de référence sont membres, et les rôles lecteurs peuvent consulter. Toute personne qui peut consulter les lignes budgétaires (Budget) ou les rapports peut choisir un centre de coûts sur une ligne ou dans un filtre de rapport sans accès à cette page.
 
 ---
+
+## Demander à l'assistant
+
+[Plaid](ai-assistant.md#tool-calls) lit les centres de coûts pour toute personne qui a le droit de les lire : l'arbre, les responsables budgétaires et les lignes qui utilisent chaque nœud. Demandez par exemple : « Quels centres de coûts dépendent de Group IT ? »
 
 ## Astuces
 

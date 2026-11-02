@@ -1,6 +1,6 @@
 # Branding
 
-Use the Branding page to apply your company identity across KANAP. You set the logo and the primary colors here, and the change is visible to every user on your tenant the next time they reload the page.
+Use the Branding page to apply your company identity across KANAP. You set the organization name, the logo and the primary colors here, and the change is visible to every user on your tenant the next time they reload the page.
 
 ## Where to find it
 
@@ -13,8 +13,12 @@ Changes apply to your current tenant only.
 
 ## What you can customize
 
-The page has two cards: **Logo** and **Primary colors**. Both are optional. With nothing set, KANAP shows its default text-and-icon header and the default theme colors.
+The page has three cards: **Organization name**, **Logo** and **Primary colors**. The logo and the colors are optional. With nothing set, KANAP shows its default text-and-icon header and the default theme colors.
 
+- **Organization name**
+  - The name shown with the logo, in the About window, on the consent page, and to the assistant
+  - From 1 to 120 characters
+  - The workspace address stays as it is
 - **Logo**
   - Appears in the top app bar (when logged in)
   - Appears on the login page header
@@ -22,6 +26,13 @@ The page has two cards: **Logo** and **Primary colors**. Both are optional. With
   - One primary color for **light mode**
   - One primary color for **dark mode**
   - Used by the app bar, primary buttons, and links
+
+## Organization name
+
+1. Type the name.
+2. Click **Save Changes**.
+
+**Reset to Default** leaves the name as it is. It removes the logo and the custom colors only.
 
 ## Logo setup
 
@@ -73,9 +84,9 @@ The warning is informational (you can still save), but low contrast usually mean
 
 Three actions at the bottom of the page control persistence:
 
-- **Save Changes**: commits the selected logo upload and color values. Disabled while there are no pending changes or while a hex input is invalid.
+- **Save Changes**: commits the organization name, the selected logo upload and the color values. Disabled while there are no pending changes, while the name is empty or longer than 120 characters, or while a hex input is invalid.
 - **Discard**: rolls back any unsaved edits on the page (does not affect what is already saved).
-- **Reset to Default**: removes the saved logo and clears all custom colors. Asks for confirmation before running.
+- **Reset to Default**: removes the saved logo and clears all custom colors. The organization name stays. Asks for confirmation before running.
 
 A small caption below the actions shows the **logo version** counter, which increments each time the logo is uploaded. This is mainly a hint that browser caches will refresh.
 

@@ -37,7 +37,7 @@ Une confirmation couvre ce que ces fonctions envoient au fournisseur : les quest
 
 - **Confirmer** enregistre votre confirmation. Cela n'active pas Plaid.
 - **Activer le chat** demande la confirmation lorsqu'elle manque encore. Activez-le et enregistrez : une fenêtre affiche le fournisseur et le lieu de traitement. **Confirmer et activer** enregistre vos modifications et la confirmation ensemble. Si vous fermez la fenêtre, rien n'est enregistré. La fenêtre renvoie aussi vers la page [Modèles IA](ai-models.md), si vous préférez utiliser votre propre modèle.
-- Pendant un essai sur le cloud, la page d'accueil propose aussi d'activer Plaid, avec la même fenêtre de confirmation. Voir [Mon tableau de bord](my-dashboard.md).
+- Tant que la confirmation manque, la page de Plaid affiche une case à la place du champ de message. La cocher, en tant qu'administrateur des paramètres de Plaid, enregistre la confirmation et active Plaid. Voir [Plaid](ai-assistant.md#included-model-acceptance).
 - **Retirer** supprime la confirmation, après une seconde confirmation. Les fonctions d'IA qui utilisent le modèle inclus s'arrêtent jusqu'à ce qu'un administrateur confirme à nouveau. Plaid reste activé et affiche un avis à ses utilisateurs.
 - Une nouvelle confirmation est demandée lorsque le fournisseur, son adresse de connexion, le nom affiché ou le lieu de traitement change. Un nouveau modèle du même fournisseur n'en demande pas. Si le fournisseur change pendant que votre fenêtre est ouverte, elle affiche le nouveau et vous demande de le vérifier.
 - Plaid et les agents qui s'exécutent sur un modèle que vous avez ajouté n'ont besoin d'aucune confirmation. Les assistants externes connectés via MCP n'en dépendent pas non plus, car MCP n'envoie rien au modèle inclus.
@@ -225,7 +225,7 @@ claude mcp add --transport http kanap https://acme.kanap.net/api/ai/mcp --header
 
 ### Outils disponibles
 
-Le serveur MCP est en lecture seule. Un client peut rechercher et lire vos données, sans rien pouvoir modifier. Une clé ou une connexion dispose des onze outils ci-dessous, et de douze lorsque la recherche web est activée pour votre organisation. Une personne ne voit que les outils des données que son rôle lui permet de lire.
+Le serveur MCP est en lecture seule. Un client peut rechercher et lire vos données, sans rien pouvoir modifier. Une clé ou une connexion dispose des quatorze outils ci-dessous, et de quinze lorsque la recherche web est activée pour votre organisation. Une personne ne voit que les outils des données que son rôle lui permet de lire.
 
 | Outil | Ce qu'il fait |
 |---|---|
@@ -238,11 +238,14 @@ Le serveur MCP est en lecture seule. Un client peut rechercher et lire vos donn�
 | `get_entity_detail` | Lit un enregistrement en entier |
 | `get_entity_context` | Lit les enregistrements liés à un enregistrement |
 | `get_entity_comments` | Lit les commentaires d'un projet ou d'une tâche |
+| `get_record_history` | Lit l'historique d'une fiche, tel que le montre son onglet Historique |
 | `search_knowledge` | Recherche dans la base de connaissances |
 | `get_document` | Lit un document de la base de connaissances |
+| `list_help_topics` | Liste les pages et les sections du manuel utilisateur |
+| `read_help_section` | Lit une page ou une section du manuel utilisateur, avec son lien |
 | `web_search` | Recherche sur le web, lorsque la recherche web est activée pour votre organisation |
 
-Lorsqu'un client se connecte, le serveur lui indique quel espace de travail il lit, qu'il ne fait que lire, qu'il lit avec les droits de la personne derrière la clé ou la connexion, comment rechercher, et quelles données il ne lit pas (centres de coûts, calendriers, taux de change, paramètres d'accès aux données, journal d'audit et agents IA).
+Lorsqu'un client se connecte, le serveur lui indique quel espace de travail il lit, qu'il ne fait que lire, qu'il lit avec les droits de la personne derrière la clé ou la connexion, comment rechercher (centres de coûts, calendriers et dimensions compris), où lire les taux de change, et quelles données il ne lit pas (journal d'audit et agents IA). Il ne lit les rôles et les paramètres d'accès aux données que pour une personne qui administre les utilisateurs et accède à toutes les données. Il lui indique aussi de répondre aux questions sur l'utilisation de KANAP à partir du manuel utilisateur.
 
 Un appel refusé par le serveur revient avec sa cause, pour que l'assistant puisse l'expliquer : un outil inconnu, un outil qui modifierait des données, un outil que la clé n'autorise pas, ou des données que la personne ne peut pas lire.
 
@@ -268,7 +271,7 @@ Le journal enregistre aussi les appels faits avec une clé révoquée ou expiré
 ## Conseils
 
 - **Laissez Plaid sur le modèle par défaut, sauf raison contraire.** Épingler le chat à un modèle précis signifie qu'il cesse de suivre le modèle par défaut de l'organisation. C'est utile lorsque le chat et les agents ont réellement besoin de modèles différents, gênant sinon.
-- **Le volume de chat est facile à sous-estimer.** La page [Utilisation & coûts](ai-usage.md) valorise le chat aux tarifs du modèle assigné ; un assistant très sollicité sur un modèle coûteux s'y voit bien avant d'apparaître sur une facture.
+- **Le volume de chat est facile à sous-estimer.** La page [Utilisation & coûts](ai-usage.md) valorise chaque message de chat aux tarifs enregistrés avec lui ; un assistant très sollicité sur un modèle coûteux s'y voit bien avant d'apparaître sur une facture.
 - **Un modèle vision est un besoin des agents, pas du chat.** Si vos agents de tri doivent lire les captures d'écran des tickets, cela relève de *leur* modèle : voir **Comprend les images** sur la page [Modèles IA](ai-models.md).
 - **Préférez les connexions pour Claude.** Chaque personne se connecte avec son propre compte et lit avec ses propres accès, donc personne ne partage de clé. Gardez les clés pour les clients qui en ont besoin, renouvelez-les, et utilisez **Durée de vie maximale de la clé (jours)** pour imposer un plafond qu'aucune requête ne peut dépasser.
 - **Définissez une fenêtre de conservation.** Conserver les conversations indéfiniment est pratique jusqu'à ce que la base de données devienne volumineuse ou qu'une revue de conformité demande combien de temps le contenu du chat est conservé : 90 ou 180 jours constituent un point de départ courant.

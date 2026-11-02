@@ -6,6 +6,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../i18n';
 import { createAppTheme } from '../../config/ThemeContext';
+import { NotifyProvider } from '../../components/notify/NotifyProvider';
 import ConnectionWorkspacePage from './ConnectionWorkspacePage';
 
 const apiGet = vi.hoisted(() => vi.fn());
@@ -46,6 +47,7 @@ vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
       <nav>{props.tabs.map((tab: any) => <span key={tab.key}>{tab.label}</span>)}</nav>
       <h1>{props.title || props.titleFallback}</h1>
       <header>{props.actions}</header>
+      <div data-testid="workspace-notices">{props.notices}</div>
       <main>{props.children}</main>
     </div>
   ),
@@ -91,6 +93,7 @@ const CONNECTION = {
 function renderPage(route = '/it/connections/c-1/overview') {
   return render(
     <ThemeProvider theme={createAppTheme('light')}>
+      <NotifyProvider>
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
         <MemoryRouter initialEntries={[route]}>
           <Routes>
@@ -98,6 +101,7 @@ function renderPage(route = '/it/connections/c-1/overview') {
           </Routes>
         </MemoryRouter>
       </QueryClientProvider>
+      </NotifyProvider>
     </ThemeProvider>,
   );
 }
@@ -144,7 +148,8 @@ describe('ConnectionWorkspacePage: connection refusals and absorbed members', ()
 
     const alert = await screen.findByRole('alert');
     expect(alert.textContent).toContain('The source and the destination are the same asset.');
-    // The page alert sits above the workspace, not at the bottom of the form.
+    // The refusal is in the shell's notice slot, under the title, and stays out of the form.
+    expect(screen.getByTestId('workspace-notices')).toContainElement(alert);
     expect(alert.closest('main')).toBeNull();
   });
 

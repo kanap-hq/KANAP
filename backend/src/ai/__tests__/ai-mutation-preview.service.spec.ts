@@ -652,8 +652,9 @@ function createService(options?: {
     updateBusinessRecordOperation as any,
     updateEntityRelationsOperation as any,
     updateIncidentLinksOperation as any,
-    // The technology links, versions, people, web links and alerts are not under test here; the
-    // registry only needs them registered.
+    // The technology links, versions, people, web links and alerts, and the vulnerability state,
+    // are not under test here; the registry only needs them registered.
+    {} as any,
     {} as any,
     {} as any,
     {} as any,
@@ -2819,7 +2820,7 @@ async function testPreviewActionsStayScopedToConversation() {
     });
     await assert.rejects(
       () => service.executePreview(context, 'preview-1'),
-      (error: any) => error instanceof ForbiddenException,
+      (error: any) => error instanceof ForbiddenException && (error.getResponse() as { code?: string }).code === 'AI_PREVIEW_NOT_IN_CONVERSATION',
     );
   }
 
@@ -2829,7 +2830,7 @@ async function testPreviewActionsStayScopedToConversation() {
     });
     await assert.rejects(
       () => service.rejectPreview(context, 'preview-1'),
-      (error: any) => error instanceof ForbiddenException,
+      (error: any) => error instanceof ForbiddenException && (error.getResponse() as { code?: string }).code === 'AI_PREVIEW_NOT_IN_CONVERSATION',
     );
   }
 
@@ -2839,7 +2840,7 @@ async function testPreviewActionsStayScopedToConversation() {
     });
     await assert.rejects(
       () => service.createReversePreview(context, 'preview-1'),
-      (error: any) => error instanceof ForbiddenException,
+      (error: any) => error instanceof ForbiddenException && (error.getResponse() as { code?: string }).code === 'AI_PREVIEW_NOT_IN_CONVERSATION',
     );
   }
 }

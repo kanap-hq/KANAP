@@ -1,13 +1,50 @@
 import { BadRequestException, Injectable, Logger, Optional } from '@nestjs/common';
+import { codedForbidden } from '../../auth/module-right-required';
 import { AiPolicyService } from '../ai-policy.service';
 import { FxRateService } from '../../currency/fx-rate.service';
 import { convertTurnovers, turnoverMissingItems, TurnoverFxMissingItem, yearRateSetId } from '../../spend/allocation-distribution';
 import { listAiTechnologies, listAiTechnologyVersions, resolveAiApplicationsReach } from './ai-technologies.query';
-import { listAiVulnerabilities } from './ai-vulnerabilities.query';
+import { listAiVulnerabilities, readAiVulnerabilityFeeds } from './ai-vulnerabilities.query';
 import { aggregateSupportRows, APPLICATIONS_UNREAD_NOTE, listAiSupportDeadlines, listAiSupportGaps } from './ai-support.query';
 import { EndOfSupportService } from '../../technologies/reports/end-of-support.service';
+import { PermissionsService, type PermissionLevel, type Resource } from '../../permissions/permissions.service';
+import { RolesService } from '../../roles/roles.service';
+import { aggregateRolesRows, listAiRolePermissions, listAiRoles } from './ai-roles.query';
+import { aiPermissionLevelLabel, aiResourceLabel } from '../ai-role-labels';
+import { readAiScreenLanguage } from '../ai-unread-families';
+import { DataAccessAdminService } from '../../data-access/data-access-admin.service';
+import { DataAccessReservedException } from '../../data-access/reserved-operations';
+import {
+  aggregateDataAccessRows,
+  AI_DATA_ACCESS_COVERAGE_NOTE,
+  AI_DATA_ACCESS_UNAVAILABLE_NOTE,
+  listAiDataAccess,
+} from './ai-data-access.query';
 import { aiAmountsCurrency, aiCompanyTurnoverCurrency, isBudgetLineEntity } from './ai-amounts-currency.util';
+import { ChargebackReportService } from '../../spend/chargeback-report.service';
+import {
+  aggregateChargebackRows,
+  chargebackAggregateRows,
+  chargebackGroupValue,
+  chargebackLineGroupValue,
+  listAiChargebackLines,
+} from './ai-chargeback.query';
+import { CurrencySettingsService } from '../../currency/currency-settings.service';
+import { ManualRatesService } from '../../currency/manual-rates.service';
+import { aggregateExchangeRateRows, readAiExchangeRates } from './ai-exchange-rates.query';
 import { aiDataAccessNote } from './ai-data-access-note.util';
+import { CostCentersService } from '../../cost-centers/cost-centers.service';
+import { aggregateCostCenterRows, filterAiCostCenters } from './ai-cost-centers.query';
+import { WorkingDayProfilesService } from '../../working-day-profiles/working-day-profiles.service';
+import { AnalyticsAxesService } from '../../analytics/analytics-axes.service';
+import {
+  AI_CALENDAR_NO_YEAR_NOTE,
+  AI_CALENDAR_YEAR_NOTE,
+  aggregateWorkingDayCalendarRows,
+  listAiWorkingDayCalendars,
+} from './ai-working-day-calendars.query';
+import { AI_AXIS_VALUES_NOTE, aggregateAnalyticsAxisRows, listAiAnalyticsAxes } from './ai-analytics-axes.query';
+import { aiBudgetListAccess } from './ai-budget-list-access.util';
 import { normalizeAgFilterModel, assertSetFilterModes } from '../../common/ag-grid-filtering';
 import { applicationParticipantCondition } from '../../auth/business-contributor-scope';
 import { bilingualDocumentTsQuerySql } from '../../common/document-search-tsquery';
@@ -56,18 +93,38 @@ import {
   AiAggregateMetricDef,
   AiAggregateMetricType,
   AiAggregateResult,
+  AiBudgetMetricsRow,
   AiBudgetStaffFigures,
   AiDateFilterValue,
   AiEntityFilterRegistry,
+  AiFilterFieldDef,
   AiFilterValue,
 } from './ai-filter.types';
 import { assertPlainTextQuickSearch } from './ai-quick-search-validation.util';
 import { resolveAiEntityRegistry } from './registries';
 import { COMPANY_AGGREGATE_METRIC_YEAR_SQL } from './registries/companies.registry';
 import { isMoneyVariant, resolveFteField, resolveFteVariantField } from '../../spend/spend-summary.builder';
-import { BudgetRatioMetric, isBudgetMoneyKey, resolveBudgetRatioMetric } from './registries/budget-amount-fields';
+import {
+  BudgetDeltaMetric,
+  BudgetMonthlyFteMetric,
+  BudgetRatioMetric,
+  isBudgetMoneyKey,
+  resolveBudgetDeltaMetric,
+  resolveBudgetMonthlyFteMetric,
+  resolveBudgetRatioMetric,
+} from './registries/budget-amount-fields';
+import {
+  deltaRequests,
+  readDelta,
+  readStaffing,
+  staffingGroupKeys,
+  staffingRequest,
+  type AggregateResult as ReportAggregateResult,
+  type DeltaMode,
+} from '../../spend/reports/shared/reportAggregates';
 import type { AggregateSpec } from '../../common/list-engine/list-aggregate';
 import type { FxMissingPair } from '../../spend/budget-list/budget-list.service';
+import { parseItemNumber } from '../../common/parse-item-number';
 import { trailingDigits } from '../../common/text-scan';
 
 /** Connection fields grouped on their effective values (see aggregateConnectionsByEffectiveRisk). */
@@ -206,8 +263,8 @@ function parseDocumentItemNumberQuery(input: string): number | null {
   if (!value) return null;
   const digits = trailingDigits(value);
   if (!digits) return null;
-  const itemNumber = Number(digits);
-  return Number.isFinite(itemNumber) && itemNumber > 0 ? itemNumber : null;
+  const itemNumber = parseItemNumber(digits);
+  return itemNumber != null && itemNumber > 0 ? itemNumber : null;
 }
 
 function getDocumentSearchState(input?: string): DocumentSearchState | null {
@@ -472,9 +529,91 @@ function buildMetricAggregateExpression(fn: AiAggregateFunction, expression: str
   return round != null && fn !== 'sum' && fn !== 'count' ? `ROUND(${aggregate}, ${round})` : aggregate;
 }
 
-type BudgetValueGroup = { key: string | null; value: number | null; unknown?: number };
+type BudgetValueGroup = { key: string | null; title?: string | null; then_key?: string | null; value: number | null; unknown?: number };
+type BudgetCountGroup = { key: string | null; title?: string | null; then_key?: string | null; count: number };
+type BudgetMetricsGroup = AiBudgetMetricsRow & { key: string | null; title?: string | null; then_key?: string | null };
 type BudgetOverall = NonNullable<AiAggregateResult['overall']>;
-type BudgetRatioGroup = { key: string | null; count: number; value: number | null } & AiBudgetStaffFigures;
+type BudgetOthers = NonNullable<AiAggregateResult['others']>;
+
+/**
+ * The groups an aggregate of budget lines returns with `then_by` (by default) or `limit`, the rest
+ * in `others`. 50 is a page of query_entities; at most 100, as the top N of lines: a group is a few
+ * figures (100 groups of 8 values stay near 25 KB), and past that the answer is no longer a table a
+ * person reads, while `others` and `overall` keep the totals whole.
+ */
+export const AI_BUDGET_GROUP_LIMIT = { default: 50, max: 100 } as const;
+
+/**
+ * The budget fields that group a line linked to several records under the combination (the streams
+ * and categories of the linked projects; their names do not group): crossed with another field,
+ * those combinations pile up into groups nobody reads, so a crossing refuses them.
+ */
+const BUDGET_MULTI_VALUED_GROUPS: Record<string, string> = {
+  project_stream: 'streams',
+  project_category: 'categories',
+};
+
+/** The lines a change between two columns keeps by default, as the report's top (`OpexDeltaReport`); at most AI_BUDGET_GROUP_LIMIT.max. */
+export const AI_BUDGET_DELTA_DEFAULT_LIMIT = 10;
+
+/**
+ * A budget metric with its own computation, which `metrics` and `then_by` do not take: the cost
+ * per FTE and the day rate (nor `limit`), the change between two columns and the FTE by month
+ * (which take `limit`). The refusal, with what to ask instead; null for any other key.
+ */
+function budgetOwnPathRefusal(key: string, input: 'metrics' | 'then_by' | 'limit'): string | null {
+  if (resolveBudgetRatioMetric(key)) {
+    return `${key} is a ratio the server computes on its own and does not take ${input}. `
+      + `Ask it as metric alone: each group then returns staff_fte, staff_cost, days, day_cost and day_rate. `
+      + 'For two fields, filter on one value of the first and group by the second; for several years or columns, one call per metric.';
+  }
+  if (input === 'limit') return null;
+  if (resolveBudgetDeltaMetric(key)) {
+    return `${key} is a change between two columns the server computes on its own and does not take ${input}. `
+      + 'Ask it as metric alone, with group_by, direction and limit: each group then returns previous, current, delta and pct_increase. '
+      + 'For two fields, filter on one value of the first and group by the second; for another pair of columns, one call per change.';
+  }
+  if (resolveBudgetMonthlyFteMetric(key)) {
+    return `${key} is the FTE month by month the server computes on its own and does not take ${input}. `
+      + 'Ask it as metric alone, with group_by: each group then returns its months, average and peak. '
+      + 'For two fields, filter on one value of the first and group by the second; for another year or column, one call each.';
+  }
+  return null;
+}
+
+/** The engine keys of a line, as the reports group it: its id, its title and its number (`BL-n`). */
+const BUDGET_LINE_GROUP_KEYS = staffingGroupKeys('all', { kind: 'item' });
+
+/** The engine keys of a budget group field: a line is grouped on its id, title and number, any other field on its column. */
+function budgetGroupKeys(field: AiFilterFieldDef): string[] {
+  return field.ai === 'line' ? BUDGET_LINE_GROUP_KEYS : [field.grid];
+}
+
+/** A budget group's key, read on its engine keys: a line is named by its reference (BL-12) and its title, never by its id. */
+function budgetGroupKey(field: AiFilterFieldDef, keys: Array<string | null>): { key: string | null; title?: string | null } {
+  if (field.ai !== 'line') return { key: keys[0] ?? null };
+  return { key: keys[2] != null ? `BL-${keys[2]}` : null, title: keys[1] ?? null };
+}
+
+const BUDGET_MONTHLY_FTE_NOTE = 'Computed by the server, as the "Staffing by month" report: each month sums the FTE the quantity × price lines of the column give that month '
+  + '(people and days lines; pieces lines count nothing); a null month is one no line of the group details, which is not 0. '
+  + 'average is the sum of the twelve months ÷ 12 (the full-year average, not the average of the months covered) and peak the highest month; '
+  + 'the groups without any month are left out. Quote these figures: never average the months again. '
+  + 'fte_without_monthly_detail is FTE declared on columns without monthly detail (spread or copied), in no month; '
+  + 'fte_amount_not_following_lines is FTE in the months of columns whose amount no longer follows their lines (spread, copied or edited): '
+  + 'their months come from the lines, not from the column amount. Say so when present.';
+
+/** The engine's refusal of a spec beyond its limits, in words a person reads (400). */
+function engineLimitRefusal(error: unknown): never {
+  if (error instanceof BadRequestException && /^Aggregate: /.test(error.message)) {
+    throw new BadRequestException(`The server cannot compute this aggregate in one call: ${error.message.replace(/^Aggregate: /, '')} `
+      + 'Ask fewer metrics, or split the question into several calls.');
+  }
+  throw error;
+}
+type BudgetDeltaGroup = { key: string | null; title?: string | null; count: number; previous: number | null; current: number | null; delta: number; pct_increase: number | null };
+type BudgetMonthlyFteGroup = { key: string | null; title?: string | null; months: Array<number | null>; average: number | null; peak: number | null };
+type BudgetRatioGroup = { key: string | null; title?: string | null; count: number; value: number | null } & AiBudgetStaffFigures;
 
 const round2 = (value: number) => Math.round(value * 100) / 100;
 
@@ -548,6 +687,22 @@ export class AiAggregateExecutor {
     @Optional() private readonly fxRates?: FxRateService,
     /** The End of support report of the screen, which the two report families group. */
     @Optional() private readonly endOfSupport?: EndOfSupportService,
+    /** The services of Admin › Roles, which `roles` and `role_permissions` group. */
+    @Optional() private readonly roles?: RolesService,
+    @Optional() private readonly permissions?: PermissionsService,
+    /** Admin › Data access, which `data_access` groups. */
+    @Optional() private readonly dataAccess?: DataAccessAdminService,
+    /** The chargeback reports of the screens, which `chargeback` and `chargeback_lines` group. */
+    @Optional() private readonly chargeback?: ChargebackReportService,
+    /** Master data › Cost centers, which `cost_centers` groups. */
+    @Optional() private readonly costCenters?: CostCentersService,
+    /** Master data › Working-day calendars and Analytics dimensions: `working_day_calendars`, `analytics_axes`. */
+    @Optional() private readonly workingDayProfiles?: WorkingDayProfilesService,
+    @Optional() private readonly analyticsAxes?: AnalyticsAxesService,
+    /** The rate matrix of the Currency settings screen, which `exchange_rates` groups. */
+    @Optional() private readonly manualRates?: ManualRatesService,
+    /** The currency settings, in every `exchange_rates` response. */
+    @Optional() private readonly currencySettings?: CurrencySettingsService,
   ) {
     // Absent, a technology filter on application_count matches nothing: say so once, at start.
     if (!policy) new Logger(AiAggregateExecutor.name).warn('AiPolicyService is not injected: technology aggregates see no application.');
@@ -604,7 +759,7 @@ export class AiAggregateExecutor {
     q: string | undefined,
     adaptedFilters: Record<string, any>,
     scope?: AiQueryScope,
-  ): Promise<{ ids: string[]; total: number; scope: ResolvedAiScope | null }> {
+  ): Promise<{ ids: string[]; total: number; scope: ResolvedAiScope | null; distinct_total?: number }> {
     if (entityType === 'tasks') {
       const accessScope = await resolveAiParticipationAccessScope(context, entityType);
       const scoped = await applyScopeToAiQuery(
@@ -966,7 +1121,8 @@ export class AiAggregateExecutor {
         applications,
         { idsOnly: true },
       );
-      return { ids: result.ids, total: result.total, scope: null };
+      // The distinct CVE of every row the filters keep, beyond the ids cap.
+      return { ids: result.ids, total: result.total, scope: null, distinct_total: result.distinct_total };
     }
 
     if (entityType === 'interfaces') {
@@ -1012,6 +1168,8 @@ export class AiAggregateExecutor {
         {
           manager: context.manager,
           tenantId: context.tenantId,
+          // The quick search looks in the administration fields for their readers only.
+          accessView: (await this.policy?.canReadEntityType(context, 'data_access', context.manager)) === true,
         },
       );
       const ids = result.ids || [];
@@ -1055,6 +1213,65 @@ export class AiAggregateExecutor {
     }
 
     throw new BadRequestException('Unsupported entity type.');
+  }
+
+  /**
+   * Budget lines: `metrics` (2 to 8 metrics with one function, instead of `metric`), `then_by` (a
+   * second group field) and `limit` (the groups kept, 50 by default with `then_by`, the rest in
+   * `others`), checked and refused in words. The other families take none of them.
+   */
+  private resolveBudgetShape(
+    registry: AiEntityFilterRegistry,
+    input: { entity_type: AiQueryEntityType; group_by: string; metric?: string; metrics?: string[]; then_by?: string; limit?: number },
+    fn: AiAggregateFunction,
+  ): { metrics?: string[]; thenBy?: string; limit?: number } {
+    const metrics = input.metrics?.map((key) => key.trim()).filter(Boolean);
+    const thenBy = input.then_by?.trim() || undefined;
+    const asked = !!metrics?.length || !!thenBy || input.limit != null;
+    if (!asked) return {};
+    if (input.entity_type !== 'budget_lines') {
+      throw new BadRequestException('metrics, then_by and limit apply to budget lines only: on this family, group by one field with one metric.');
+    }
+    const metric = input.metric?.trim();
+    if (metric && metrics?.length) throw new BadRequestException('Give metric (one metric) or metrics (several), not both.');
+    // Ratios have their own computation: what to ask instead.
+    const ownPath = metric
+      ? budgetOwnPathRefusal(metric, thenBy ? 'then_by' : 'limit')
+      : (metrics ?? []).map((key) => budgetOwnPathRefusal(key, 'metrics')).find((refusal) => refusal);
+    if (ownPath) throw new BadRequestException(ownPath);
+    if (metrics?.length) {
+      if (metrics.length < 2 || metrics.length > 8) throw new BadRequestException('metrics takes 2 to 8 metrics; for one, use metric.');
+      if (new Set(metrics).size !== metrics.length) throw new BadRequestException('metrics names a metric twice.');
+      if (fn === 'count') throw new BadRequestException('metrics takes the function sum, avg, min or max (one for every metric); a count needs no metric.');
+      for (const key of metrics) {
+        const field = registry.fields[key];
+        if (!field || field.aggregable !== true || field.type !== 'number') {
+          throw new BadRequestException(`metrics: ${key} is not a metric of budget lines (an amount, an FTE or a line total, such as y_budget, y_budget_fte or y_budget_staff_cost).`);
+        }
+      }
+    }
+    if (thenBy) {
+      const withheld = registry.withheldFields?.find((entry) => entry.field === thenBy);
+      if (withheld) throw codedForbidden('AI_FIELD_WITHHELD', `then_by ${withheld.field} is not available: ${withheld.reason}`);
+      const field = registry.fields[thenBy];
+      if (!field || field.groupable !== true) throw new BadRequestException('Unsupported then_by field: a group-by field describe_entity_filters lists.');
+      if (thenBy === input.group_by) throw new BadRequestException('then_by names the group_by field again: give a second field, or leave then_by out.');
+      if (thenBy === 'line' || input.group_by === 'line') {
+        throw new BadRequestException('A line has one value of every other field, so a second field does not cross it: group by line alone (query_entities gives its fields), or cross two other fields.');
+      }
+      for (const key of [input.group_by, thenBy]) {
+        const linked = BUDGET_MULTI_VALUED_GROUPS[key];
+        if (linked) {
+          throw new BadRequestException(`${key} groups a line linked to several ${linked} under the combination, which a second field cannot cross. `
+            + `Group by ${key} alone, or filter on one of its values and group by the other field.`);
+        }
+      }
+    }
+    const limit = input.limit ?? (thenBy ? AI_BUDGET_GROUP_LIMIT.default : undefined);
+    if (limit != null && !(Number.isInteger(limit) && limit >= 1 && limit <= AI_BUDGET_GROUP_LIMIT.max)) {
+      throw new BadRequestException(`limit is a whole number from 1 to ${AI_BUDGET_GROUP_LIMIT.max}.`);
+    }
+    return { ...(metrics?.length ? { metrics } : {}), ...(thenBy ? { thenBy } : {}), ...(limit != null ? { limit } : {}) };
   }
 
   private resolveMetric(
@@ -1214,7 +1431,7 @@ export class AiAggregateExecutor {
     ids: string[],
     fn: AiAggregateFunction,
     metric: { key: string; def: AiAggregateMetricDef } | null,
-  ): Promise<Array<{ key: string | null; count: number } | { key: string | null; value: number | string | null }>> {
+  ): Promise<Array<{ key: string | null; count: number; distinct_count?: number } | { key: string | null; value: number | string | null }>> {
     const groupField = registry.aggregate.groupFields[groupBy];
     if (!groupField) {
       throw new BadRequestException('Unsupported group_by field.');
@@ -1246,8 +1463,11 @@ export class AiAggregateExecutor {
       const countExpression = groupField.countDistinct
         ? `COUNT(DISTINCT ${alias}.${idColumn})::int`
         : 'COUNT(*)::int';
+      // A family with several rows per record (`distinctRecord`) counts the records beside the rows.
+      const distinct = registry.aggregate.distinctRecord;
+      const distinctColumn = distinct ? `, COUNT(DISTINCT ${distinct.expression})::int AS distinct_count` : '';
       const rows = await context.manager.query(
-        `SELECT ${groupField.expression} AS key, ${countExpression} AS count
+        `SELECT ${groupField.expression} AS key, ${countExpression} AS count${distinctColumn}
          FROM ${registry.aggregate.baseTable} ${alias}
          ${joins}
          WHERE ${alias}.tenant_id = $1${baseWhere}
@@ -1260,6 +1480,7 @@ export class AiAggregateExecutor {
       return (rows || []).map((row: any) => ({
         key: row.key == null ? null : String(row.key),
         count: Number(row.count) || 0,
+        ...(distinct ? { distinct_count: Number(row.distinct_count) || 0 } : {}),
       }));
     }
 
@@ -1444,15 +1665,37 @@ export class AiAggregateExecutor {
     filters: Record<string, any>,
     fn: AiAggregateFunction,
     metric: { key: string; def: AiAggregateMetricDef } | null,
-  ): Promise<{ groups: Array<{ key: string | null; count: number } | BudgetValueGroup>; total: number; fxMissing: FxMissingPair[] | null; overall: BudgetOverall | null }> {
+    // `metrics`: several metrics with one function (each group's `values`); `thenBy`: a second
+    // group field (`then_key`); `limit`: the groups kept, the rest in `others`.
+    more: { metrics?: string[]; thenBy?: string; limit?: number } = {},
+  ): Promise<{
+    groups: Array<BudgetCountGroup | BudgetValueGroup | BudgetMetricsGroup>;
+    total: number;
+    fxMissing: FxMissingPair[] | null;
+    overall: BudgetOverall | null;
+    others: BudgetOthers | null;
+    groupCount: number;
+  }> {
     const groupField = registry.fields[groupBy];
     if (!groupField) {
       throw new BadRequestException('Unsupported group_by field.');
     }
+    const thenField = more.thenBy ? registry.fields[more.thenBy] : null;
+    const groupKeys = budgetGroupKeys(groupField);
+    const keys = [...groupKeys, ...(thenField ? [thenField.grid] : [])];
+    const limit = more.limit != null ? { limit: more.limit, others: true } : {};
     let spec: AggregateSpec;
     let fte = false;
-    if (fn === 'count' || !metric) {
-      spec = { groupBy: [groupField.grid], measures: [], order: [{ by: 'count', dir: 'DESC' }] };
+    if (more.metrics?.length) {
+      // One measure per metric, ordered by the first.
+      spec = {
+        groupBy: keys,
+        measures: more.metrics.map((key, i) => ({ id: `m${i}`, fn: fn as 'sum' | 'avg' | 'min' | 'max', field: registry.fields[key].grid })),
+        order: [{ by: 'measure', id: 'm0', dir: getMetricOrderDirection(fn), nulls: 'LAST' }],
+        ...limit,
+      };
+    } else if (fn === 'count' || !metric) {
+      spec = { groupBy: keys, measures: [], order: [{ by: 'count', dir: 'DESC' }], ...limit };
     } else {
       const metricField = registry.fields[metric.key];
       if (!metricField) {
@@ -1462,24 +1705,59 @@ export class AiAggregateExecutor {
       const variant = resolveFteVariantField(metricField.grid);
       fte = resolveFteField(metricField.grid) != null || (variant != null && !isMoneyVariant(variant));
       spec = {
-        groupBy: [groupField.grid],
+        groupBy: keys,
         measures: [{ id: 'value', fn, field: metricField.grid }],
         order: [{ by: 'measure', id: 'value', dir: getMetricOrderDirection(fn), nulls: 'LAST' }],
+        ...limit,
       };
     }
 
-    const result = await this.budgetLines.summaryAggregate({ q, filters, includeDisabled: true }, spec, { manager: context.manager });
+    // The person's access, as the screen passes it: the consolidation fields read only for a reader of accounts.
+    const access = await aiBudgetListAccess(this.policy, context);
+    const result = await this.budgetLines.summaryAggregate({ q, filters, includeDisabled: true }, spec, { manager: context.manager, access })
+      .catch(engineLimitRefusal);
+    // `values` and `unknown` by metric name (the engine's measure ids are m0, m1...); `unknown` only for the FTE metrics.
+    const metricsRow = (row: { count: number; values: Record<string, number | null>; unknown: Record<string, number> }): AiBudgetMetricsRow => {
+      const names = more.metrics!;
+      const unknown = Object.fromEntries(names.flatMap((name, i) => (`m${i}` in row.unknown ? [[name, row.unknown[`m${i}`]]] : [])));
+      return {
+        count: row.count,
+        values: Object.fromEntries(names.map((name, i) => [name, row.values[`m${i}`] ?? null])),
+        ...(Object.keys(unknown).length ? { unknown } : {}),
+      };
+    };
     const groups = result.groups.map((group) => {
-      const key = group.keys[0] ?? null;
-      if (!spec.measures.length) return { key, count: group.count };
-      return fte ? { key, value: group.values.value, unknown: group.unknown.value } : { key, value: group.values.value };
+      const key = budgetGroupKey(groupField, group.keys);
+      // A null `then_key` is a real group: the lines without a value of the second field.
+      const then = thenField ? { then_key: group.keys[groupKeys.length] ?? null } : {};
+      if (more.metrics?.length) return { ...key, ...then, ...metricsRow(group) };
+      if (!spec.measures.length) return { ...key, ...then, count: group.count };
+      return fte ? { ...key, ...then, value: group.values.value, unknown: group.unknown.value } : { ...key, ...then, value: group.values.value };
     });
     // The same measure over every line (all groups together): a total the answer quotes, never adds up.
-    const overall: BudgetOverall | null = spec.measures.length
-      ? { count: result.total.count, value: result.total.values.value ?? null, ...(fte ? { unknown: result.total.unknown.value ?? 0 } : {}) }
-      : null;
+    let overall: BudgetOverall | null = null;
+    if (more.metrics?.length) overall = metricsRow(result.total);
+    else if (spec.measures.length) {
+      overall = { count: result.total.count, value: result.total.values.value ?? null, ...(fte ? { unknown: result.total.unknown.value ?? 0 } : {}) };
+    }
+    // The groups past the limit, as one row, with the number of groups it holds.
+    const othersGroups = result.groupCount - groups.length;
+    let others: BudgetOthers | null = null;
+    if (result.others && othersGroups > 0) {
+      const row = result.others;
+      if (more.metrics?.length) others = { ...metricsRow(row), groups: othersGroups };
+      else if (!spec.measures.length) others = { count: row.count, groups: othersGroups };
+      else others = { count: row.count, value: row.values.value ?? null, ...(fte ? { unknown: row.unknown.value ?? 0 } : {}), groups: othersGroups };
+    }
     // The amounts left out of the values for lack of a rate (`[]` when none); null without a measure.
-    return { groups, total: result.total.count, fxMissing: spec.measures.length ? result.fxMissing ?? [] : null, overall };
+    return {
+      groups,
+      total: result.total.count,
+      fxMissing: spec.measures.length ? result.fxMissing ?? [] : null,
+      overall,
+      others,
+      groupCount: result.groupCount,
+    };
   }
 
   /**
@@ -1503,7 +1781,7 @@ export class AiAggregateExecutor {
     }
     const governing = ratio.kind === 'cost_per_fte' ? 'staff_fte' : 'days';
     const spec: AggregateSpec = {
-      groupBy: [groupField.grid],
+      groupBy: budgetGroupKeys(groupField),
       measures: [
         { id: 'staff_cost', fn: 'sum', field: ratio.staffCost },
         { id: 'staff_fte', fn: 'sum', field: ratio.staffFte },
@@ -1514,13 +1792,14 @@ export class AiAggregateExecutor {
       ],
       order: [{ by: 'measure', id: governing, dir: 'DESC', nulls: 'LAST' }],
     };
-    const result = await this.budgetLines.summaryAggregate({ q, filters, includeDisabled: true }, spec, { manager: context.manager });
+    const access = await aiBudgetListAccess(this.policy, context);
+    const result = await this.budgetLines.summaryAggregate({ q, filters, includeDisabled: true }, spec, { manager: context.manager, access });
     const valueOf = (figures: AiBudgetStaffFigures) => (ratio.kind === 'cost_per_fte' ? figures.cost_per_fte : figures.day_rate);
     const groups = result.groups
       .filter((group) => group.values[governing] != null)
       .map((group): BudgetRatioGroup => {
         const figures = budgetStaffFigures(group.values);
-        return { key: group.keys[0] ?? null, count: group.count, value: valueOf(figures), ...figures };
+        return { ...budgetGroupKey(groupField, group.keys), count: group.count, value: valueOf(figures), ...figures };
       });
     const total = result.total.values;
     const figures = budgetStaffFigures(total);
@@ -1544,12 +1823,118 @@ export class AiAggregateExecutor {
     return { groups, total: result.total.count, fxMissing: result.fxMissing ?? [], overall };
   }
 
+  /**
+   * A change between two columns (`y_review_minus_y_budget`, or in FTE): the "Top increase /
+   * decrease" report's own request (`deltaRequests`: the source, the destination, their change and
+   * its rises and falls; the groups that rise, or fall, largest change first, `limit` of them) grouped
+   * by Plaid's field, on Plaid's lines, read by the report's own reader (`readDelta`). `overall`
+   * holds the sources, destinations and changes of every line the filters keep.
+   */
+  private async aggregateBudgetDelta(
+    context: AiExecutionContextWithManager,
+    registry: AiEntityFilterRegistry,
+    groupBy: string,
+    q: string | undefined,
+    filters: Record<string, any>,
+    delta: BudgetDeltaMetric,
+    direction: DeltaMode,
+    limit: number,
+  ): Promise<{ groups: BudgetDeltaGroup[]; total: number; groupCount: number; fxMissing: FxMissingPair[]; overall: BudgetOverall }> {
+    const groupField = registry.fields[groupBy];
+    if (!groupField) throw new BadRequestException('Unsupported group_by field.');
+    const [request] = deltaRequests({
+      scope: 'all',
+      source: delta.source,
+      destination: delta.destination,
+      modes: [direction],
+      topCount: limit,
+      excludedIds: [],
+      excludedAccounts: [],
+      filters: {},
+      measure: delta.measure,
+    });
+    const spec = { ...request.spec, groupBy: budgetGroupKeys(groupField) } as AggregateSpec;
+    const access = await aiBudgetListAccess(this.policy, context);
+    const result = await this.budgetLines.summaryAggregate({ q, filters, includeDisabled: true }, spec, { manager: context.manager, access });
+    // One direction: the reader's rows are the groups, in their order.
+    const { processed, allTotals } = readDelta([direction], [result as unknown as ReportAggregateResult], delta.measure);
+    const groups = result.groups.map((group, i): BudgetDeltaGroup => {
+      const row = processed[i];
+      return {
+        ...budgetGroupKey(groupField, group.keys),
+        count: group.count,
+        previous: row.previous,
+        current: row.current,
+        delta: row.delta,
+        pct_increase: row.pct_increase == null ? null : round2(row.pct_increase),
+      };
+    });
+    // As the reader: an amount nobody holds is 0, an FTE nobody declares is null.
+    const side = (id: 'prev' | 'curr') => result.total.values[id] ?? (delta.measure === 'fte' ? null : 0);
+    const overall: BudgetOverall = {
+      count: result.total.count,
+      previous: side('prev'),
+      current: side('curr'),
+      net: allTotals.net,
+      gross_increase: allTotals.grossIncrease,
+      gross_decrease: allTotals.grossDecrease,
+    };
+    return { groups, total: result.total.count, groupCount: result.groupCount, fxMissing: result.fxMissing ?? [], overall };
+  }
+
+  /**
+   * The FTE of each month of one year and column (`y_budget_fte_by_month`): the "Staffing by month"
+   * report's own request (`staffingRequest`: twelve monthly sums, the FTE whose amount no longer
+   * follows its lines and the FTE without monthly detail) grouped by Plaid's field, on Plaid's lines,
+   * read by the report's own reader (`readStaffing`: the groups with a month, largest average first,
+   * the total row and its two notices). `limit` keeps the first groups; `overall` holds every line.
+   */
+  private async aggregateBudgetMonthlyFte(
+    context: AiExecutionContextWithManager,
+    registry: AiEntityFilterRegistry,
+    groupBy: string,
+    q: string | undefined,
+    filters: Record<string, any>,
+    monthly: BudgetMonthlyFteMetric,
+    limit: number | undefined,
+  ): Promise<{ groups: BudgetMonthlyFteGroup[]; total: number; groupCount: number; overall: BudgetOverall }> {
+    const groupField = registry.fields[groupBy];
+    if (!groupField) throw new BadRequestException('Unsupported group_by field.');
+    const request = staffingRequest({ scope: 'all', year: monthly.year, metric: monthly.metric, group: { kind: 'item' }, filters: {} });
+    const spec = { ...request.spec, groupBy: budgetGroupKeys(groupField) } as AggregateSpec;
+    const access = await aiBudgetListAccess(this.policy, context);
+    const result = await this.budgetLines.summaryAggregate({ q, filters, includeDisabled: true }, spec, { manager: context.manager, access });
+    const staffing = readStaffing(result as unknown as ReportAggregateResult, { none: '', unnamed: '' }, (a, b) => a.localeCompare(b));
+    const line = groupField.ai === 'line';
+    const figures = (row: { months: Array<number | null>; average: number | null; peak: number | null }) => ({
+      months: row.months.map((value) => (value == null ? null : round2(value))),
+      average: row.average == null ? null : round2(row.average),
+      peak: row.peak == null ? null : round2(row.peak),
+    });
+    // The reader keys a line by its reference and any other group by its value (`name` null: the lines without one).
+    const rows = staffing.rows.map((row): BudgetMonthlyFteGroup => (line
+      ? { key: row.key.startsWith('BL-') ? row.key : null, title: row.name, ...figures(row) }
+      : { key: row.name == null ? null : row.key, ...figures(row) }));
+    const groups = limit != null ? rows.slice(0, limit) : rows;
+    const overall: BudgetOverall = {
+      count: result.total.count,
+      ...figures(staffing.total),
+      ...(staffing.noDetail ? { fte_without_monthly_detail: staffing.noDetail.fte } : {}),
+      ...(staffing.detached ? { fte_amount_not_following_lines: staffing.detached.fte } : {}),
+    };
+    return { groups, total: result.total.count, groupCount: rows.length, overall };
+  }
+
   async execute(
     context: AiExecutionContextWithManager,
     input: {
       entity_type: AiQueryEntityType;
       group_by: string;
       metric?: string;
+      metrics?: string[];
+      then_by?: string;
+      limit?: number;
+      direction?: DeltaMode;
       function?: AiAggregateFunction;
       filters?: Record<string, AiFilterValue>;
       q?: string;
@@ -1565,11 +1950,32 @@ export class AiAggregateExecutor {
     }
     // A sum or an average of amounts names their currency; a count or an FTE has none.
     const metric = input.metric?.trim() ?? '';
-    const isAmount = metric !== '' && (
-      isBudgetLineEntity(input.entity_type) ? isBudgetMoneyKey(metric) : metric.startsWith('yearly_amount')
-    );
+    // With `metrics` (budget lines), one amount among them is enough: the note names their currency.
+    const isAmount = isBudgetLineEntity(input.entity_type) && result.metrics?.length
+      ? result.metrics.some(isBudgetMoneyKey)
+      : metric !== '' && (isBudgetLineEntity(input.entity_type) ? isBudgetMoneyKey(metric) : metric.startsWith('yearly_amount'));
     const amounts = isAmount ? await aiAmountsCurrency(context, input.entity_type, 'list', result.amounts_fx_missing) : null;
     return amounts ? { ...result, ...amounts } : result;
+  }
+
+  /**
+   * A family with several rows per record (`distinctRecord`, vulnerabilities: one row per technology
+   * version of a CVE): the distinct records among every row the filters keep, as its id list counts
+   * them over the whole set (beyond the ids cap; a record in two groups counts once), named by
+   * `distinct_label`. Nothing for the other families, nor for a list that does not count them.
+   */
+  private distinctRecordTotal(
+    registry: AiEntityFilterRegistry,
+    scoped: { distinct_total?: number },
+  ): Pick<AiAggregateResult, 'distinct_total' | 'distinct_label'> {
+    const distinct = registry.aggregate.distinctRecord;
+    if (!distinct || typeof scoped.distinct_total !== 'number') return {};
+    return { distinct_total: scoped.distinct_total, distinct_label: distinct.name };
+  }
+
+  /** Vulnerabilities: how fresh the feeds are, as the page's feed line. Nothing for the other families. */
+  private async familyFeeds(context: AiExecutionContextWithManager, entityType: AiQueryEntityType): Promise<Pick<AiAggregateResult, 'feeds'>> {
+    return entityType === 'vulnerabilities' ? { feeds: await readAiVulnerabilityFeeds(context.manager) } : {};
   }
 
   private async executeAggregate(
@@ -1578,6 +1984,10 @@ export class AiAggregateExecutor {
       entity_type: AiQueryEntityType;
       group_by: string;
       metric?: string;
+      metrics?: string[];
+      then_by?: string;
+      limit?: number;
+      direction?: DeltaMode;
       function?: AiAggregateFunction;
       filters?: Record<string, AiFilterValue>;
       q?: string;
@@ -1585,18 +1995,32 @@ export class AiAggregateExecutor {
     },
   ): Promise<AiAggregateResult> {
     // The policy decides which linked counts the caller may group, filter and aggregate.
-    const registry = await resolveAiEntityRegistry(context, input.entity_type, async (entityType, level) =>
-      !!(await this.policy?.canReadEntityType(context, entityType, context.manager, level)));
+    const registry = await resolveAiEntityRegistry(context, input.entity_type, async (entityType) =>
+      !!(await this.policy?.canReadEntityType(context, entityType, context.manager)));
     const field = registry.fields[input.group_by];
+    // A field the person may not read is refused with the reason (the right), never grouped as one blank group.
+    const withheld = registry.withheldFields?.find((entry) => entry.field === input.group_by);
+    if (withheld) throw codedForbidden('AI_FIELD_WITHHELD', `group_by ${withheld.field} is not available: ${withheld.reason}`);
     if (!field || field.groupable !== true) {
       throw new BadRequestException('Unsupported group_by field.');
     }
     assertPlainTextQuickSearch(input.entity_type, input.q, registry);
 
-    // A budget ratio (cost per FTE, day rate) is no field: the server computes it whatever the function.
-    const ratio = isBudgetLineEntity(input.entity_type) ? resolveBudgetRatioMetric(input.metric?.trim()) : null;
+    // A budget ratio (cost per FTE, day rate), a change between two columns and the FTE by month are
+    // no fields: the server computes them whatever the function.
+    const budgetLines = isBudgetLineEntity(input.entity_type);
+    const ratio = budgetLines ? resolveBudgetRatioMetric(input.metric?.trim()) : null;
+    const delta = budgetLines ? resolveBudgetDeltaMetric(input.metric?.trim()) : null;
+    const monthly = budgetLines ? resolveBudgetMonthlyFteMetric(input.metric?.trim()) : null;
     const fn = normalizeAggregateFunction(input.function);
-    const metric = ratio ? null : this.resolveMetric(registry, input.metric?.trim(), fn);
+    const budget = this.resolveBudgetShape(registry, input, fn);
+    if (input.direction != null) {
+      if (!delta) throw new BadRequestException('direction applies to a change between two columns, a metric such as y_review_minus_y_budget.');
+      if (input.direction !== 'increase' && input.direction !== 'decrease') throw new BadRequestException('direction is increase or decrease.');
+    }
+    const ownMetric = ratio ?? delta ?? monthly;
+    const ownFunction = ratio ? 'ratio' : delta ? 'delta' : monthly ? 'by_month' : null;
+    const metric = ownMetric || budget.metrics ? null : this.resolveMetric(registry, input.metric?.trim(), fn);
     const normalizedFilters = await this.normalizePersonFilters(context, input.entity_type, input.filters);
     const adapted = adaptFilters(registry, normalizedFilters);
     if (adapted.ignored.length > 0) {
@@ -1604,8 +2028,10 @@ export class AiAggregateExecutor {
       return {
         status: refusal.status,
         group_by: input.group_by,
-        metric: metric || ratio ? input.metric?.trim() ?? null : null,
-        function: ratio ? 'ratio' : fn,
+        ...(budget.thenBy ? { then_by: budget.thenBy } : {}),
+        metric: metric || ownMetric ? input.metric?.trim() ?? null : null,
+        ...(budget.metrics ? { metrics: budget.metrics } : {}),
+        function: ownFunction ?? fn,
         groups: [],
         total: 0,
         returned: 0,
@@ -1662,6 +2088,324 @@ export class AiAggregateExecutor {
         function: fn,
         groups,
         total,
+        returned: groups.length,
+        truncated: false,
+        complete: isCompleteAggregateResult(scoped.scope),
+        filters_applied: adapted.applied,
+        filters_ignored: adapted.ignored,
+        scope: scoped.scope,
+      };
+    }
+    if (input.entity_type === 'roles' || input.entity_type === 'role_permissions') {
+      // The tool already checked the family; checked again here, as the data access branch, in the
+      // policy's words (the right and the screen, or the reserved message).
+      if (!this.policy) throw codedForbidden('AI_ROLES_UNAVAILABLE', 'The roles are not available.');
+      await this.policy.assertEntityTypeReadRight(context, input.entity_type, context.manager);
+      if (!this.roles || !this.permissions) throw new BadRequestException('The roles are not available.');
+      const services = { roles: this.roles, permissions: this.permissions };
+      // The roles are not participation-scoped: `scope` is applied as on query_entities.
+      const scoped = await applyScopeToAiQuery(
+        context,
+        input.entity_type,
+        { q: input.q?.trim(), filters: adapted.filters },
+        input.scope,
+      );
+      if (scoped.scope && scoped.scope.resolved === false) {
+        return {
+          group_by: input.group_by,
+          metric: metric?.key ?? null,
+          function: fn,
+          groups: [],
+          total: 0,
+          returned: 0,
+          truncated: false,
+          complete: false,
+          filters_applied: adapted.applied,
+          filters_ignored: adapted.ignored,
+          scope: scoped.scope,
+        };
+      }
+      const result = input.entity_type === 'roles'
+        ? await listAiRoles(services, context.manager, scoped.query, true)
+        : await listAiRolePermissions(services, context.manager, scoped.query, true);
+      const counted = aggregateRolesRows(result.items, input.group_by);
+      // A right or a level is named with the Roles screen's words, in the person's language.
+      const labelOf = input.entity_type === 'role_permissions' && (input.group_by === 'resource' || input.group_by === 'level')
+        ? { language: await readAiScreenLanguage(context.manager, context.tenantId, context.userId), field: input.group_by }
+        : null;
+      const groups = labelOf
+        ? counted.map((group) => ({
+          ...group,
+          label: group.key == null
+            ? null
+            : labelOf.field === 'resource'
+              ? aiResourceLabel(group.key as Resource, labelOf.language)
+              : aiPermissionLevelLabel(group.key as PermissionLevel, labelOf.language),
+        }))
+        : counted;
+      return {
+        group_by: input.group_by,
+        metric: null,
+        function: 'count',
+        groups,
+        total: result.items.length,
+        returned: groups.length,
+        truncated: false,
+        complete: isCompleteAggregateResult(scoped.scope),
+        filters_applied: adapted.applied,
+        filters_ignored: adapted.ignored,
+        scope: scoped.scope,
+      };
+    }
+    if (input.entity_type === 'data_access') {
+      // The tool already checked the family; checked again here, the database not guarding the nodes.
+      if (!this.dataAccess || (await this.policy?.canReadEntityType(context, 'data_access', context.manager)) !== true) {
+        throw new DataAccessReservedException();
+      }
+      const scoped = await applyScopeToAiQuery(
+        context,
+        input.entity_type,
+        { q: input.q?.trim(), filters: adapted.filters },
+        input.scope,
+      );
+      if (scoped.scope && scoped.scope.resolved === false) {
+        return {
+          group_by: input.group_by,
+          metric: metric?.key ?? null,
+          function: fn,
+          groups: [],
+          total: 0,
+          returned: 0,
+          truncated: false,
+          complete: false,
+          filters_applied: adapted.applied,
+          filters_ignored: adapted.ignored,
+          scope: scoped.scope,
+        };
+      }
+      const result = await listAiDataAccess({ dataAccess: this.dataAccess }, context.manager, scoped.query, true);
+      const groups = aggregateDataAccessRows(result.items, input.group_by);
+      return {
+        available: result.available,
+        missing: result.missing,
+        ...(result.available ? {} : { unavailable_note: AI_DATA_ACCESS_UNAVAILABLE_NOTE }),
+        counters: result.counters,
+        coverage_note: AI_DATA_ACCESS_COVERAGE_NOTE,
+        group_by: input.group_by,
+        metric: null,
+        function: 'count',
+        groups,
+        // `total` counts rows (a person per node); `distinct_total` the persons.
+        total: result.items.length,
+        distinct_total: result.distinct_total,
+        distinct_label: 'person',
+        returned: groups.length,
+        truncated: false,
+        complete: isCompleteAggregateResult(scoped.scope),
+        filters_applied: adapted.applied,
+        filters_ignored: adapted.ignored,
+        scope: scoped.scope,
+      };
+    }
+    if (input.entity_type === 'working_day_calendars' || input.entity_type === 'analytics_axes') {
+      // Read with the right of their page, as the screen: checked again here, the database not guarding it.
+      if (!this.policy) throw new BadRequestException('The master data is not available.');
+      await this.policy.assertEntityTypeReadRight(context, input.entity_type, context.manager);
+      const scoped = await applyScopeToAiQuery(
+        context,
+        input.entity_type,
+        { q: input.q?.trim(), filters: adapted.filters },
+        input.scope,
+      );
+      if (scoped.scope && scoped.scope.resolved === false) {
+        return {
+          group_by: input.group_by,
+          metric: null,
+          function: 'count',
+          groups: [],
+          total: 0,
+          returned: 0,
+          truncated: false,
+          complete: false,
+          filters_applied: adapted.applied,
+          filters_ignored: adapted.ignored,
+          scope: scoped.scope,
+        };
+      }
+      const language = await readAiScreenLanguage(context.manager, context.tenantId, context.userId);
+      const base = { manager: context.manager, tenantId: context.tenantId, userId: context.userId };
+      const shared = {
+        group_by: input.group_by,
+        metric: null,
+        function: 'count' as const,
+        truncated: false,
+        complete: isCompleteAggregateResult(scoped.scope),
+        filters_applied: adapted.applied,
+        filters_ignored: adapted.ignored,
+        scope: scoped.scope,
+      };
+      if (input.entity_type === 'working_day_calendars') {
+        if (!this.workingDayProfiles) throw new BadRequestException('The working-day calendars are not available.');
+        const result = await listAiWorkingDayCalendars({ calendars: this.workingDayProfiles }, scoped.query, { ...base, lang: language ?? 'en' }, true);
+        const groups = aggregateWorkingDayCalendarRows(result.items, input.group_by);
+        return {
+          calendar_year: result.year,
+          calendar_note: result.year != null ? AI_CALENDAR_YEAR_NOTE : AI_CALENDAR_NO_YEAR_NOTE,
+          ...shared,
+          groups,
+          total: result.items.length,
+          returned: groups.length,
+        };
+      }
+      if (!this.analyticsAxes) throw new BadRequestException('The analytics dimensions are not available.');
+      const result = await listAiAnalyticsAxes({ axes: this.analyticsAxes }, scoped.query, { ...base, language }, true);
+      const groups = aggregateAnalyticsAxisRows(result.items, input.group_by);
+      return {
+        values_note: AI_AXIS_VALUES_NOTE,
+        ...shared,
+        groups,
+        // A dimension required for both natures counts in each group of required_for.
+        total: result.items.length,
+        returned: groups.length,
+      };
+    }
+    if (input.entity_type === 'chargeback' || input.entity_type === 'chargeback_lines') {
+      // Read with the reporting right, as the routes: checked again here, the database not guarding it.
+      if (!this.policy || !this.chargeback) throw new BadRequestException('The chargeback reports are not available.');
+      await this.policy.assertEntityTypeReadRight(context, input.entity_type, context.manager);
+      const scoped = await applyScopeToAiQuery(
+        context,
+        input.entity_type,
+        { q: input.q?.trim(), filters: adapted.filters },
+        input.scope,
+      );
+      if (scoped.scope && scoped.scope.resolved === false) {
+        return {
+          group_by: input.group_by,
+          metric: metric?.key ?? null,
+          function: fn,
+          groups: [],
+          total: 0,
+          returned: 0,
+          truncated: false,
+          complete: false,
+          filters_applied: adapted.applied,
+          filters_ignored: adapted.ignored,
+          scope: scoped.scope,
+        };
+      }
+      const services = { chargeback: this.chargeback };
+      const opts = { manager: context.manager, tenantId: context.tenantId };
+      const read = input.entity_type === 'chargeback'
+        ? await chargebackAggregateRows(services, scoped.query, opts, input.group_by)
+        : await listAiChargebackLines(services, scoped.query, opts, true).then((list) => ({ rows: list.items, report: list.report }));
+      const groups = input.entity_type === 'chargeback'
+        ? aggregateChargebackRows(read.rows as any[], (row) => chargebackGroupValue(row, input.group_by), fn, metric?.key ?? null)
+        : aggregateChargebackRows(read.rows as any[], (row) => chargebackLineGroupValue(row, input.group_by), fn, metric?.key ?? null);
+      // An amount names its currency; a count, a share, a headcount or a percentage has none.
+      const money = new Set(['amount', 'paid', 'net', 'turnover', 'cost_per_user', 'cost_per_it_user']);
+      const amounts = metric && money.has(metric.key) ? await aiAmountsCurrency(context, input.entity_type) : null;
+      return {
+        chargeback: read.report,
+        ...(amounts ?? {}),
+        group_by: input.group_by,
+        metric: metric?.key ?? null,
+        function: fn,
+        groups,
+        // The rows of the report table the groups add up (`level`): a count counts them, not budget lines.
+        total: read.rows.length,
+        returned: groups.length,
+        truncated: false,
+        complete: isCompleteAggregateResult(scoped.scope),
+        filters_applied: adapted.applied,
+        filters_ignored: adapted.ignored,
+        scope: scoped.scope,
+      };
+    }
+    if (input.entity_type === 'cost_centers') {
+      // Read with the right of the page, as its route: checked again here, the database not guarding it.
+      if (!this.policy || !this.costCenters) throw new BadRequestException('The cost centers are not available.');
+      await this.policy.assertEntityTypeReadRight(context, input.entity_type, context.manager);
+      const scoped = await applyScopeToAiQuery(
+        context,
+        input.entity_type,
+        { q: input.q?.trim(), filters: adapted.filters },
+        input.scope,
+      );
+      if (scoped.scope && scoped.scope.resolved === false) {
+        return {
+          group_by: input.group_by,
+          metric: null,
+          function: 'count',
+          groups: [],
+          total: 0,
+          returned: 0,
+          truncated: false,
+          complete: false,
+          filters_applied: adapted.applied,
+          filters_ignored: adapted.ignored,
+          scope: scoped.scope,
+        };
+      }
+      const { rows, unmatched_note } = await filterAiCostCenters(
+        { costCenters: this.costCenters },
+        { manager: context.manager, tenantId: context.tenantId },
+        scoped.query,
+      );
+      const groups = aggregateCostCenterRows(rows, input.group_by);
+      return {
+        ...(unmatched_note ? { unmatched_note } : {}),
+        group_by: input.group_by,
+        metric: null,
+        function: 'count',
+        groups,
+        // The nodes of the tree the filters keep, groups and cost centers alike unless `kind` says.
+        total: rows.length,
+        returned: groups.length,
+        truncated: false,
+        complete: isCompleteAggregateResult(scoped.scope),
+        filters_applied: adapted.applied,
+        filters_ignored: adapted.ignored,
+        scope: scoped.scope,
+      };
+    }
+    if (input.entity_type === 'exchange_rates') {
+      const scoped = await applyScopeToAiQuery(
+        context,
+        input.entity_type,
+        { q: input.q?.trim(), filters: adapted.filters },
+        input.scope,
+      );
+      if (scoped.scope && scoped.scope.resolved === false) {
+        return {
+          group_by: input.group_by,
+          metric: null,
+          function: 'count',
+          groups: [],
+          total: 0,
+          returned: 0,
+          truncated: false,
+          complete: false,
+          filters_applied: adapted.applied,
+          filters_ignored: adapted.ignored,
+          scope: scoped.scope,
+        };
+      }
+      const result = await readAiExchangeRates(
+        { policy: this.policy, rates: this.manualRates, settings: this.currencySettings },
+        context,
+        scoped.query,
+        true,
+      );
+      const groups = aggregateExchangeRateRows(result.items, input.group_by);
+      return {
+        exchange_rates: result.block,
+        group_by: input.group_by,
+        metric: null,
+        function: 'count',
+        groups,
+        // `total` counts the rows of the matrix the filters keep: a currency in one year each.
+        total: result.items.length,
         returned: groups.length,
         truncated: false,
         complete: isCompleteAggregateResult(scoped.scope),
@@ -1789,8 +2533,69 @@ export class AiAggregateExecutor {
       };
     }
 
+    if (input.entity_type === 'budget_lines' && delta) {
+      const direction = input.direction ?? 'increase';
+      const limit = budget.limit ?? AI_BUDGET_DELTA_DEFAULT_LIMIT;
+      const { groups, total, groupCount, fxMissing, overall } = await this.aggregateBudgetDelta(
+        context,
+        registry,
+        input.group_by,
+        input.q?.trim(),
+        adapted.filters,
+        delta,
+        direction,
+        limit,
+      );
+      return {
+        group_by: input.group_by,
+        metric: delta.key,
+        function: 'delta',
+        direction,
+        groups,
+        overall,
+        limit,
+        group_count: groupCount,
+        total,
+        returned: groups.length,
+        truncated: groupCount > groups.length,
+        complete: isCompleteAggregateResult(null),
+        filters_applied: adapted.applied,
+        filters_ignored: adapted.ignored,
+        scope: null,
+        ...(delta.measure === 'amount' ? { amounts_fx_missing: fxMissing } : {}),
+      };
+    }
+
+    if (input.entity_type === 'budget_lines' && monthly) {
+      const { groups, total, groupCount, overall } = await this.aggregateBudgetMonthlyFte(
+        context,
+        registry,
+        input.group_by,
+        input.q?.trim(),
+        adapted.filters,
+        monthly,
+        budget.limit,
+      );
+      return {
+        group_by: input.group_by,
+        metric: monthly.key,
+        function: 'by_month',
+        groups,
+        overall,
+        monthly_fte_note: BUDGET_MONTHLY_FTE_NOTE,
+        ...(budget.limit != null ? { limit: budget.limit, group_count: groupCount } : {}),
+        total,
+        returned: groups.length,
+        truncated: groupCount > groups.length,
+        complete: isCompleteAggregateResult(null),
+        filters_applied: adapted.applied,
+        filters_ignored: adapted.ignored,
+        scope: null,
+      };
+    }
+
     if (input.entity_type === 'budget_lines') {
-      const { groups, total, fxMissing, overall } = await this.aggregateBudgetSummary(
+      const { groups, total, fxMissing, overall, others, groupCount } = await this.aggregateBudgetSummary(
         context,
         registry,
         input.group_by,
@@ -1798,16 +2603,22 @@ export class AiAggregateExecutor {
         adapted.filters,
         fn,
         metric,
+        { metrics: budget.metrics, thenBy: budget.thenBy, limit: budget.limit },
       );
       return {
         group_by: input.group_by,
+        ...(budget.thenBy ? { then_by: budget.thenBy } : {}),
         metric: metric?.key ?? null,
+        ...(budget.metrics ? { metrics: budget.metrics } : {}),
         function: fn,
         groups,
         ...(overall ? { overall } : {}),
+        ...(others ? { others } : {}),
+        ...(budget.limit != null ? { limit: budget.limit, group_count: groupCount } : {}),
         total,
         returned: groups.length,
-        truncated: false,
+        // With a limit, the groups past it are in `others`: the figures stay whole (`complete`).
+        truncated: groupCount > groups.length,
         complete: isCompleteAggregateResult(null),
         filters_applied: adapted.applied,
         filters_ignored: adapted.ignored,
@@ -1832,6 +2643,8 @@ export class AiAggregateExecutor {
         function: fn,
         groups: [],
         total: scoped.total,
+        ...this.distinctRecordTotal(registry, scoped),
+        ...(await this.familyFeeds(context, input.entity_type)),
         returned: 0,
         truncated,
         complete: !truncated && isCompleteAggregateResult(scoped.scope),
@@ -1868,6 +2681,8 @@ export class AiAggregateExecutor {
       function: fn,
       groups,
       total: scoped.total,
+      ...this.distinctRecordTotal(registry, scoped),
+      ...(await this.familyFeeds(context, input.entity_type)),
       returned: groups.length,
       truncated,
       complete: !truncated && isCompleteAggregateResult(scoped.scope),

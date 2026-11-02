@@ -14,6 +14,8 @@ const content: TrialContent = {
       'Self-hosting alternative available at any time',
     ],
     form: {
+      firstNameLabel: 'First name',
+      lastNameLabel: 'Last name',
       orgLabel: 'Organisation name',
       orgHelp: 'The display name your team will see at the top of the app.',
       countryLabel: 'Country',

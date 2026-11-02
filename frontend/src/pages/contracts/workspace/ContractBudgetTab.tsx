@@ -7,6 +7,7 @@ import api from '../../../api';
 import { useAuth } from '../../../auth/AuthContext';
 import { MONO_FONT_FAMILY } from '../../../config/ThemeContext';
 import BudgetLinesRelationField, { type LinkedBudgetLine } from '../../../components/finance/BudgetLinesRelationField';
+import ContractLineMismatchMark, { type ContractLineMismatch } from '../../../components/finance/ContractLineMismatchMark';
 import type { AmountMeasure } from '../../../components/finance/roundPeriod';
 import { denseTableFrameSx, denseTableSx } from '../../../components/EntityTasksSection';
 import YearTabs from '../../../components/navigation/YearTabs';
@@ -29,7 +30,11 @@ import {
 } from '../contractBudget';
 import ContractBudgetStateLabel from '../ContractBudgetStateLabel';
 
-export type ContractBudgetLine = LinkedBudgetLine & { company_id: string | null; company_name: string | null };
+export type ContractBudgetLine = LinkedBudgetLine & {
+  company_id: string | null;
+  company_name: string | null;
+  mismatches?: ContractLineMismatch[];
+};
 
 export const contractBudgetLinesKey = (contractId: string) => ['contract-budget-lines', contractId] as const;
 
@@ -224,7 +229,10 @@ export default function ContractBudgetTab({ contractId, readOnly, onChanged, ter
                   return (
                     <tr key={line.id} className="clickable" tabIndex={0} onClick={open} onKeyDown={(event) => { if (event.key === 'Enter') open(); }}>
                       <Box component="td" sx={{ fontFamily: MONO_FONT_FAMILY, fontSize: '12px !important', color: 'kanap.text.tertiary !important' }}>{reference}</Box>
-                      <Box component="td" sx={{ maxWidth: 420, overflow: 'hidden', textOverflow: 'ellipsis' }} title={line.product_name}>{line.product_name}</Box>
+                      <Box component="td" sx={{ maxWidth: 420, overflow: 'hidden', textOverflow: 'ellipsis' }} title={line.product_name}>
+                        {line.product_name}
+                        {line.mismatches && line.mismatches.length > 0 ? <ContractLineMismatchMark mismatches={line.mismatches} /> : null}
+                      </Box>
                       <td><Chip size="small" label={t(`budget.${line.nature}`)} sx={budgetTypeChipSx} /></td>
                       <td>{line.company_name ?? ''}</td>
                       {showAmounts && <Box component="td" sx={amountCellSx}><LineAmount line={amountOf?.get(line.id)} year={choice.year} /></Box>}
@@ -255,6 +263,7 @@ export default function ContractBudgetTab({ contractId, readOnly, onChanged, ter
               value={shown}
               onChange={(next) => save(next)}
               disabled={readOnly || !query.isFetched}
+              contractId={contractId}
             />
           </Box>
         </Stack>

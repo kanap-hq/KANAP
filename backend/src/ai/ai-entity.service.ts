@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { effectiveAssignmentsSql } from '../app-asset-assignments/effective-assignments';
 import { bilingualDocumentTsQuerySql } from '../common/document-search-tsquery';
+import { parseItemNumber } from '../common/parse-item-number';
 import { resolveToUuid } from '../common/resolve-item-id';
 import { idsInScope } from '../portfolio/portfolio-linked-reads';
 import { KnowledgeService } from '../knowledge/knowledge.service';
@@ -10,6 +11,9 @@ import {
 } from '../knowledge/document-entity-visibility';
 import {
   AI_SEARCH_ENTITY_TYPES,
+  AI_SEARCH_REFERENCE_ENTITY_TYPES,
+  type AiSearchAllEntityType,
+  type AiSearchReferenceEntityType,
   aiSearchEntityTypeOfIndexRow,
   searchIndexEntityTypesFor,
   AiEntityCommentDto,
@@ -30,6 +34,7 @@ import { contractTermFields } from '../contracts/contract-terms';
 import { readDecisionWindowDays } from '../contracts/contract-settings.service';
 import { readRenewalDecisions, renewalDecisionOf } from '../contracts/contract-renewal.service';
 import { listContractBudgetLines } from '../contracts/contract-relations';
+import { contractMismatchNote } from '../contracts/contract-line-match';
 import { deriveStatusFromDisabledAt } from '../common/status';
 import { utcDateYmd } from '../notifications/expiry-reminder-schedule';
 import { loadContractCoverage, type ContractCoveredFamily } from './query/ai-contract-coverage';
@@ -49,11 +54,17 @@ import {
 import { resolveAiApplicationsReach } from './query/ai-technologies.query';
 import { classificationLabels } from '../applications/services/application-classification';
 import { readClassificationCatalog } from './ai-classification-catalog.util';
+import { AiQueryExecutor } from './query/ai-query.executor';
 import {
   asksForUnreadFamily,
+  notSearchedFamiliesAskedBy,
   readAiScreenLanguage,
   unreadFamiliesAskedBy,
+  unreadFamiliesReachOf,
+  unmatchedReferenceFamilyNote,
   unreadFamilyLines,
+  type AiAdminFamiliesGap,
+  type AiUnreadFamiliesReach,
   type AiScreenLanguage,
 } from './ai-unread-families';
 
@@ -101,6 +112,37 @@ type RankedSearchResult = {
   items: Array<AiEntitySummaryDto & { _score: number }>;
   total: number;
 };
+
+/**
+ * The reference data `search_all` found (`AI_SEARCH_REFERENCE_ENTITY_TYPES`), scored on the scale
+ * of the index: an exact code or name at the rank of a reference (4), a part of one at the rank of
+ * a label (3). `types` the families searched, `failed` those that could not be, `unmatched` those
+ * the search names in words without matching any of their records. `language`, the person's, when
+ * a family needed it.
+ */
+type ReferenceSearchHits = RankedSearchResult & {
+  types: AiSearchReferenceEntityType[];
+  failed: Array<{ type: AiSearchReferenceEntityType; message: string }>;
+  unmatched: AiSearchReferenceEntityType[];
+  language?: AiScreenLanguage | null;
+};
+
+/** At most this many reference data rows per family in one search. */
+const REFERENCE_SEARCH_LIMIT_PER_FAMILY = 5;
+
+const REFERENCE_FAMILY_WORDS: Record<AiSearchReferenceEntityType, string> = {
+  cost_centers: 'cost centers',
+  working_day_calendars: 'working-day calendars',
+  analytics_axes: 'analytics dimensions',
+};
+
+/** The rows of one page, the index's and the reference data's, by score; the index first on a tie. */
+function mergeByScore<T extends { _score: number }>(indexed: T[], reference: T[]): T[] {
+  return [...indexed, ...reference]
+    .map((item, index) => ({ item, index }))
+    .sort((left, right) => (right.item._score - left.item._score) || (left.index - right.index))
+    .map((entry) => entry.item);
+}
 
 type ContextActivityRow = {
   type: string | null;
@@ -484,22 +526,37 @@ const SEARCH_INDEX_METADATA_KEYS: Partial<Record<AiSearchEntityType, string[]>> 
 };
 
 /**
- * A search says what it could not look in: the unread families its words ask for (cost centers,
- * chargeback...), and every unread family when nothing matched, so that no match never reads as
- * "does not exist". Their screens are named in the person's language (`language`, null: all four).
+ * A search says what it could not look in: the unread families its words ask for (chargeback, a
+ * family the person lacks the right of...), the families read elsewhere that it does not search
+ * (`not_searched_here`: the exchange rates, and the reference data families it names without a
+ * match, `unmatched`), and every unread family when nothing matched, so that no match never reads
+ * as "does not exist". Their screens are named in the person's language (`language`, null: all four).
  */
-function withUnreadFamilies<T extends { items: unknown[] }>(result: T, query: string, language: AiScreenLanguage | null): T & {
+function withUnreadFamilies<T extends { items: unknown[] }>(
+  result: T,
+  query: string,
+  language: AiScreenLanguage | null,
+  gap: AiAdminFamiliesGap | undefined,
+  reach: AiUnreadFamiliesReach | undefined,
+  unmatched: readonly AiSearchReferenceEntityType[] = [],
+): T & {
   not_read_here?: ReturnType<typeof unreadFamiliesAskedBy>;
+  not_searched_here?: ReturnType<typeof notSearchedFamiliesAskedBy>;
   families_not_read?: string[];
   no_match_note?: string;
 } {
-  const asked = unreadFamiliesAskedBy(query, language);
+  const asked = unreadFamiliesAskedBy(query, language, gap, reach);
+  const notSearched = [
+    ...notSearchedFamiliesAskedBy(query, language, reach),
+    ...unmatched.flatMap((type) => unmatchedReferenceFamilyNote(type, language) ?? []),
+  ];
   return {
     ...result,
     ...(asked.length ? { not_read_here: asked } : {}),
+    ...(notSearched.length ? { not_searched_here: notSearched } : {}),
     ...(result.items.length === 0
       ? {
-        families_not_read: unreadFamilyLines(language),
+        families_not_read: unreadFamilyLines(language, gap, reach),
         no_match_note: 'No match among the families searched. The families_not_read are not searched: a record of theirs may exist. Say what you could not read and name its screen.',
       }
       : {}),
@@ -547,6 +604,8 @@ export class AiEntityService {
     /** The technology sections of the contexts (lot C2b); absent, they are left out. */
     @Optional() private readonly technologyLinks?: TechnologyLinksService,
     @Optional() private readonly technologyReach?: TechnologyReachService,
+    /** The reads of the reference data `search_all` searches without an index; absent, they are not searched. */
+    @Optional() private readonly queryExecutor?: AiQueryExecutor,
   ) {
     // Absent, the technology sections are left out: say so once, at start.
     if (!technologyLinks) this.logger.warn('TechnologyLinksService is not injected: the asset and application contexts carry no technology section.');
@@ -554,10 +613,7 @@ export class AiEntityService {
   }
 
   private parseNumericRef(query: string): number | null {
-    const numericPrefix = this.parseNumericPrefix(query);
-    if (!numericPrefix) return null;
-    const value = Number(numericPrefix);
-    return Number.isSafeInteger(value) ? value : null;
+    return parseItemNumber(this.parseNumericPrefix(query));
   }
 
   private parseNumericPrefix(query: string): string | null {
@@ -1383,6 +1439,19 @@ export class AiEntityService {
       SELECT string_agg(DISTINCT area.value, ', ' ORDER BY area.value)
       FROM jsonb_array_elements_text(COALESCE(tmc.areas_of_expertise, '[]'::jsonb)) area(value)
     ), '')`;
+    // The administration fields find a person for their readers only; the others search the name
+    // and the email, as the users list.
+    const matches = [`${displayNameSql} ILIKE $2`, 'u.email ILIKE $2'];
+    if (await this.usersAdminView(context)) {
+      matches.push(
+        `COALESCE(u.job_title, '') ILIKE $2`,
+        `COALESCE(r.role_name, '') ILIKE $2`,
+        `COALESCE(c.name, '') ILIKE $2`,
+        `COALESCE(d.name, '') ILIKE $2`,
+        `COALESCE(pt.name, '') ILIKE $2`,
+        `${expertiseSql} ILIKE $2`,
+      );
+    }
     const summarySql = `NULLIF(CONCAT_WS(' | ',
       CASE WHEN ${displayNameSql} <> u.email THEN u.email ELSE NULL END,
       NULLIF(u.job_title, ''),
@@ -1420,16 +1489,7 @@ export class AiEntityService {
        LEFT JOIN portfolio_team_member_configs tmc ON tmc.user_id = u.id AND tmc.tenant_id = u.tenant_id
        LEFT JOIN portfolio_teams pt ON pt.id = tmc.team_id AND pt.tenant_id = u.tenant_id
        WHERE u.tenant_id = $3
-         AND (
-           ${displayNameSql} ILIKE $2
-           OR u.email ILIKE $2
-           OR COALESCE(u.job_title, '') ILIKE $2
-           OR COALESCE(r.role_name, '') ILIKE $2
-           OR COALESCE(c.name, '') ILIKE $2
-           OR COALESCE(d.name, '') ILIKE $2
-           OR COALESCE(pt.name, '') ILIKE $2
-           OR ${expertiseSql} ILIKE $2
-         )
+         AND (${matches.join(' OR ')})
        ORDER BY score DESC, u.last_name ASC NULLS LAST, u.first_name ASC NULLS LAST, u.email ASC
        LIMIT $4`,
       [exact, like, context.tenantId, limit],
@@ -1506,6 +1566,37 @@ export class AiEntityService {
            OR COALESCE(i.severity, '') ILIKE $3
            OR COALESCE(i.status, '') ILIKE $3
            OR COALESCE(i.category, '') ILIKE $3
+           -- Names and references of linked assets, applications and technologies,
+           -- the same text the search index stores at weight C. The row is the incident.
+           OR EXISTS (
+             SELECT 1 FROM incident_assets ia
+             JOIN assets a ON a.id = ia.asset_id AND a.tenant_id = ia.tenant_id
+             WHERE ia.incident_id = i.id AND ia.tenant_id = i.tenant_id
+               AND (
+                 a.name ILIKE $3
+                 OR COALESCE(a.asset_reference, '') ILIKE $3
+                 OR COALESCE(a.hostname, '') ILIKE $3
+                 OR COALESCE(a.fqdn, '') ILIKE $3
+               )
+           )
+           OR EXISTS (
+             SELECT 1 FROM incident_applications iap
+             JOIN applications app ON app.id = iap.application_id AND app.tenant_id = iap.tenant_id
+             WHERE iap.incident_id = i.id AND iap.tenant_id = i.tenant_id
+               AND (
+                 app.name ILIKE $3
+                 OR COALESCE(app.sequential_id, '') ILIKE $3
+               )
+           )
+           OR EXISTS (
+             SELECT 1 FROM incident_technologies it
+             JOIN technologies tec ON tec.id = it.technology_id AND tec.tenant_id = it.tenant_id
+             WHERE it.incident_id = i.id AND it.tenant_id = i.tenant_id
+               AND (
+                 tec.name ILIKE $3
+                 OR ('TEC-' || tec.item_number::text) ILIKE $3
+               )
+           )
          )
        ORDER BY score DESC,
                 CASE WHEN $2::text IS NOT NULL AND i.item_number::text LIKE $2 || '%' THEN i.item_number ELSE NULL END ASC NULLS LAST,
@@ -2073,19 +2164,86 @@ export class AiEntityService {
     context: AiExecutionContextWithManager,
     input: {
       query: string;
-      entity_types?: AiSearchEntityType[];
+      entity_types?: AiSearchAllEntityType[];
       limit?: number;
       offset?: number;
     },
   ) {
+    // The indexed families and the reference data the request names; every one by default.
+    const named = input.entity_types && input.entity_types.length > 0 ? input.entity_types : null;
+    const isReference = (type: string): type is AiSearchReferenceEntityType =>
+      (AI_SEARCH_REFERENCE_ENTITY_TYPES as readonly string[]).includes(type);
+    const indexed = named
+      ? named.filter((type): type is AiSearchEntityType => !isReference(type))
+      : [...AI_SEARCH_ENTITY_TYPES] as AiSearchEntityType[];
+    const reference = (named ?? AI_SEARCH_REFERENCE_ENTITY_TYPES).filter(isReference);
+    const hits = await this.searchReferenceFamilies(context, reference, input.query);
     const result = aiSearchIndexEnabled()
-      ? await this.searchAllIndexed(context, input)
-      : await this.searchAllLegacy(context, input);
-    // The profile's language is read only when the answer names a screen.
-    const language = result.items.length === 0 || asksForUnreadFamily(input.query)
-      ? await readAiScreenLanguage(context.manager, context.tenantId, context.userId)
-      : null;
-    return withUnreadFamilies(result, input.query, language);
+      ? await this.searchAllIndexed(context, input, indexed, hits)
+      : await this.searchAllLegacy(context, input, indexed, hits);
+    // The profile's language, and whether the person reads the families of the administrators of
+    // users, the chargeback reports and the reference data, are read only when the answer names an
+    // unread family.
+    const namesUnread = result.items.length === 0 || asksForUnreadFamily(input.query) || hits.unmatched.length > 0;
+    const language = !namesUnread ? null
+      : hits.language !== undefined ? hits.language : await readAiScreenLanguage(context.manager, context.tenantId, context.userId);
+    const gap = namesUnread ? await this.policy.adminFamiliesGap(context, context.manager) : undefined;
+    const reach = namesUnread ? await unreadFamiliesReachOf(this.policy, context, context.manager) : undefined;
+    return withUnreadFamilies(result, input.query, language, gap, reach, hits.unmatched);
+  }
+
+  /**
+   * The cost centers, working-day calendars and analytics dimensions among `types` the person reads
+   * whose code or name holds the words of the query, through the reads of their families
+   * (`AiQueryExecutor.searchReferenceData`), at most `REFERENCE_SEARCH_LIMIT_PER_FAMILY` each. The
+   * right is checked and the language read once for every family. Each family runs in its own
+   * savepoint: one that fails is named in `failed` and the others still answer. A family the query
+   * names in words without a match is named in `unmatched`.
+   */
+  private async searchReferenceFamilies(
+    context: AiExecutionContextWithManager,
+    types: AiSearchReferenceEntityType[],
+    query: string,
+  ): Promise<ReferenceSearchHits> {
+    const hits: ReferenceSearchHits = { items: [], total: 0, types: [], failed: [], unmatched: [] };
+    if (!this.queryExecutor || types.length === 0 || !String(query ?? '').trim()) return hits;
+    const readable = await this.policy.listReadableEntityTypes(context, types, context.manager) as AiSearchReferenceEntityType[];
+    if (readable.length === 0) return hits;
+    hits.language = await readAiScreenLanguage(context.manager, context.tenantId, context.userId);
+    const checked = { language: hits.language };
+    let counter = 0;
+    for (const type of readable) {
+      // A fixed prefix and a counter: an SQL identifier never takes a value from the request.
+      const savepoint = `reference_search_sp_${++counter}`;
+      // Outside a transaction a savepoint is refused, and a failed read poisons nothing.
+      const isolated = await context.manager.query(`SAVEPOINT ${savepoint}`).then(() => true, () => false);
+      try {
+        const found = await this.queryExecutor.searchReferenceData(context, type, query, REFERENCE_SEARCH_LIMIT_PER_FAMILY, checked);
+        if (isolated) await context.manager.query(`RELEASE SAVEPOINT ${savepoint}`);
+        hits.types.push(type);
+        hits.total += found.total;
+        if (found.named && found.total === 0) hits.unmatched.push(type);
+        hits.items.push(...found.items.map(({ item, exact }) => ({ ...item, _score: exact ? 4 : 3 })));
+      } catch (error) {
+        if (isolated) {
+          await context.manager.query(`ROLLBACK TO SAVEPOINT ${savepoint}`)
+            .then(() => context.manager.query(`RELEASE SAVEPOINT ${savepoint}`))
+            .catch(() => undefined);
+        }
+        const message = error instanceof Error ? error.message : String(error);
+        hits.failed.push({ type, message });
+        this.logger.warn(`searchAll: ${type} failed for query "${query}": ${message}`);
+      }
+    }
+    return hits;
+  }
+
+  /** What a search says of the reference data it could not search, in words. */
+  private referenceSearchWarnings(hits: ReferenceSearchHits): Array<{ entity_type: AiSearchAllEntityType; message: string }> {
+    return hits.failed.map((entry) => ({
+      entity_type: entry.type,
+      message: `The ${REFERENCE_FAMILY_WORDS[entry.type]} could not be searched (${entry.message}): a match may exist, and query_entities on ${entry.type} with q lists them.`,
+    }));
   }
 
   /**
@@ -2099,27 +2257,30 @@ export class AiEntityService {
     context: AiExecutionContextWithManager,
     input: {
       query: string;
-      entity_types?: AiSearchEntityType[];
       limit?: number;
       offset?: number;
     },
+    requested: AiSearchEntityType[],
+    hits: ReferenceSearchHits,
   ) {
-    const requested = input.entity_types && input.entity_types.length > 0
-      ? input.entity_types
-      : [...AI_SEARCH_ENTITY_TYPES] as AiSearchEntityType[];
-    const allowed = await this.policy.listReadableEntityTypes(context, requested, context.manager) as AiSearchEntityType[];
-    if (allowed.length === 0) {
-      return { items: [], total: 0, complete: false, entity_types: [] as AiSearchEntityType[] };
+    const allowed = requested.length > 0
+      ? await this.policy.listReadableEntityTypes(context, requested, context.manager) as AiSearchEntityType[]
+      : [];
+    if (allowed.length === 0 && hits.types.length === 0 && hits.failed.length === 0) {
+      return { items: [], total: 0, complete: false, entity_types: [] as AiSearchAllEntityType[] };
     }
 
     const limit = Math.min(Math.max(Number(input.limit) || 100, 1), 100);
     const offset = Math.min(Math.max(Number(input.offset) || 0, 0), 5000);
 
-    const { rows, total } = await this.runSearchIndexQuery(context, allowed, input.query, limit, offset);
-    const items = await this.withUserLookupOnly(context, rows.map((row) => {
-      const { _score, ...item } = this.searchIndexRowToSummary(row);
-      return item;
-    }));
+    const { rows, total: indexTotal } = allowed.length > 0
+      ? await this.runSearchIndexQuery(context, allowed, input.query, limit, offset)
+      : { rows: [] as any[], total: 0 };
+    const scored = rows.map((row) => this.searchIndexRowToSummary(row));
+    // The reference data joins the first page, at its rank among the index's rows.
+    const page = offset === 0 ? mergeByScore(scored, hits.items).slice(0, limit) : scored;
+    const items = await this.withUserLookupOnly(context, page.map(({ _score, ...item }) => item));
+    const total = indexTotal + hits.total;
     const truncated = offset + items.length < total;
 
     return {
@@ -2129,10 +2290,10 @@ export class AiEntityService {
       limit,
       returned: items.length,
       truncated,
-      complete: !truncated,
-      entity_types: allowed,
-      failed_entity_types: [] as AiSearchEntityType[],
-      warnings: [] as Array<{ entity_type: AiSearchEntityType; message: string }>,
+      complete: !truncated && hits.failed.length === 0,
+      entity_types: [...allowed, ...hits.types] as AiSearchAllEntityType[],
+      failed_entity_types: hits.failed.map((entry) => entry.type) as AiSearchAllEntityType[],
+      warnings: this.referenceSearchWarnings(hits),
     };
   }
 
@@ -2153,7 +2314,7 @@ export class AiEntityService {
     const legacyPrefix = prefixed && ['OPX', 'CPX', 'SI'].includes(prefixed[1].toUpperCase());
     const legacyRef = legacyPrefix ? `${prefixed![1].toUpperCase() === 'SI' ? 'OPX' : prefixed![1].toUpperCase()}-${Number(digits)}` : null;
     const numericPrefix = !legacyPrefix && digits && Number.isSafeInteger(Number(digits)) ? digits : null;
-    const ref = numericPrefix != null ? Number(numericPrefix) : null;
+    const ref = legacyPrefix || digits == null ? null : parseItemNumber(digits);
     const queryPrefix = prefixed ? prefixed[1].toUpperCase() : null;
     const refPrefix = queryPrefix
       ? (QUERY_PREFIX_TO_INDEX_REF_PREFIX[queryPrefix] ?? queryPrefix)
@@ -2278,6 +2439,19 @@ export class AiEntityService {
       }
     }
 
+    // A person is found by a word of an administration field (job, role, company, team...) only by
+    // the readers of those fields (`usersAdminView`); the others find them by the name and the
+    // email, as the users list: the label, the email and the A-weighted part of the users vector
+    // (`search_index_tsv('A', name, email)`, migration 1853000000000).
+    if (indexEntityTypes.includes('users') && !(await this.usersAdminView(context))) {
+      scopeClauses.push(`AND (search_index.entity_type <> 'users'
+            OR label ILIKE ${likeRef}
+            OR similarity(label, ${qRef}) > 0.35
+            OR COALESCE(extra_json->>'email', '') ILIKE ${likeRef}
+            OR ts_filter(search_vector, '{a}') @@ ${tsq}
+            OR (${prefixRef}::text IS NOT NULL AND ts_filter(search_vector, '{a}') @@ ${prefixTsq}))`);
+    }
+
     const limitRef = push(limit);
     const offsetRef = push(offset);
 
@@ -2325,17 +2499,27 @@ export class AiEntityService {
   }
 
   /**
-   * People as the users list shows them to the caller: every column to an administrator of users,
-   * the name and the email to a reader (`toUserLookup`), never the job, role, team or company.
+   * People as the users list shows them to the caller: every column to an administrator of users
+   * whose own access is not limited (`usersAdminView`), the name and the email to anyone else
+   * (`toUserLookup`), never the job, role, team or company.
    */
   private async withUserLookupOnly<T extends AiEntitySummaryDto>(context: AiExecutionContextWithManager, items: T[]): Promise<T[]> {
     if (!items.some((item) => item.type === 'users')) return items;
-    if (await this.policy.canReadEntityType(context, 'users', context.manager, 'admin')) return items;
+    if (await this.usersAdminView(context)) return items;
     return items.map((item) => {
       if (item.type !== 'users') return item;
       const email = typeof item.metadata?.email === 'string' ? item.metadata.email : null;
       return { ...item, summary: email && email !== item.label ? email : null, match_context: null, metadata: { email } };
     });
+  }
+
+  /**
+   * Whether the caller reads the administration fields of a person, and finds people by them:
+   * users at admin level and access not limited, the rule of the users registry
+   * (`UNSCOPED_ADMIN_FIELDS`).
+   */
+  private async usersAdminView(context: AiExecutionContextWithManager): Promise<boolean> {
+    return this.policy.canReadEntityType(context, 'data_access', context.manager);
   }
 
   private searchIndexRowToSummary(row: any): AiEntitySummaryDto & { _score: number } {
@@ -2382,17 +2566,17 @@ export class AiEntityService {
     context: AiExecutionContextWithManager,
     input: {
       query: string;
-      entity_types?: AiSearchEntityType[];
       limit?: number;
       offset?: number;
     },
+    requested: AiSearchEntityType[],
+    hits: ReferenceSearchHits,
   ) {
-    const requested = input.entity_types && input.entity_types.length > 0
-      ? input.entity_types
-      : [...AI_SEARCH_ENTITY_TYPES] as AiSearchEntityType[];
-    const allowed = await this.policy.listReadableEntityTypes(context, requested, context.manager) as AiSearchEntityType[];
-    if (allowed.length === 0) {
-      return { items: [], total: 0, complete: false, entity_types: [] as AiSearchEntityType[] };
+    const allowed = requested.length > 0
+      ? await this.policy.listReadableEntityTypes(context, requested, context.manager) as AiSearchEntityType[]
+      : [];
+    if (allowed.length === 0 && hits.types.length === 0 && hits.failed.length === 0) {
+      return { items: [], total: 0, complete: false, entity_types: [] as AiSearchAllEntityType[] };
     }
 
     const limit = Math.min(Math.max(Number(input.limit) || 100, 1), 100);
@@ -2458,6 +2642,8 @@ export class AiEntityService {
       results.push(r);
     }
 
+    // The reference data, ranked with the others.
+    results.push({ items: hits.items, total: hits.total });
     const total = results.reduce((sum, result) => sum + (result.total || 0), 0);
     const items = results
       .flatMap((result) => result.items)
@@ -2482,13 +2668,16 @@ export class AiEntityService {
       limit,
       returned: items.length,
       truncated,
-      complete: !truncated && failedEntityTypes.length === 0,
-      entity_types: allowed,
-      failed_entity_types: failedTypeNames,
-      warnings: failedEntityTypes.map((entry) => ({
-        entity_type: entry.type,
-        message: `Search failed for ${entry.type}: ${entry.message}`,
-      })),
+      complete: !truncated && failedEntityTypes.length === 0 && hits.failed.length === 0,
+      entity_types: [...allowed, ...hits.types] as AiSearchAllEntityType[],
+      failed_entity_types: [...failedTypeNames, ...hits.failed.map((entry) => entry.type)] as AiSearchAllEntityType[],
+      warnings: [
+        ...failedEntityTypes.map((entry) => ({
+          entity_type: entry.type as AiSearchAllEntityType,
+          message: `Search failed for ${entry.type}: ${entry.message}`,
+        })),
+        ...this.referenceSearchWarnings(hits),
+      ],
     };
   }
 
@@ -2830,7 +3019,7 @@ export class AiEntityService {
     const applicationRootParams: unknown[] = [applicationId, tenantId];
     const applicationRootScopeSql = appendParticipationScopeSql('applications', 'a', applicationRootParams, applicationAccessScope);
     const applications = await manager.query<any[]>(
-      `SELECT a.id, a.sequential_id, a.name, a.description, a.status, a.updated_at, a.lifecycle, a.environment, a.editor, a.criticality, a.hosting_model, a.data_class, a.version,
+      `SELECT a.id, a.sequential_id, a.name, a.description, a.status, a.updated_at, a.lifecycle, a.editor, a.criticality, a.hosting_model, a.data_class, a.version,
               a.cyber_criticality, a.recovery_wave, a.rto_minutes, a.rpo_minutes,
               -- Calendar days, as text: a date never shifts with the time zone.
               a.last_dr_test::text AS last_dr_test, a.go_live_date::text AS go_live_date, a.end_of_support_date::text AS end_of_support_date, a.retired_date::text AS retired_date
@@ -2855,7 +3044,7 @@ export class AiEntityService {
     const relatedApplicationParams: unknown[] = [applicationId, tenantId];
     const relatedApplicationScopeSql = appendParticipationScopeSql('applications', 'a', relatedApplicationParams, applicationAccessScope);
 
-    const [requestRows, projectRows, relatedApplicationRows, assetRows, ownerRows] = await Promise.all([
+    const [requestRows, projectRows, relatedApplicationRows, assetRows, ownerRows, instanceRows] = await Promise.all([
       manager.query<SearchRow[]>(
         `SELECT r.id, r.item_number, r.name AS label, ${requestSummarySql} AS summary, r.status, r.updated_at
          FROM portfolio_request_applications l
@@ -2913,6 +3102,15 @@ export class AiEntityService {
          ORDER BY ao.owner_type ASC, u.last_name ASC NULLS LAST, u.first_name ASC NULLS LAST, u.email ASC NULLS LAST`,
         [applicationId, tenantId],
       ),
+      // The environments of the deployments. The legacy applications.environment column is not read.
+      manager.query<Array<{ environment: string | null }>>(
+        `SELECT ai.environment
+         FROM app_instances ai
+         WHERE ai.application_id = $1
+           AND ai.tenant_id = $2
+         ORDER BY ai.environment ASC`,
+        [applicationId, tenantId],
+      ),
     ]);
 
     const businessOwners = ownerRows.filter((row) => row.owner_type === 'business').map((row) => toPersonMetadata(row));
@@ -2930,7 +3128,7 @@ export class AiEntityService {
         }),
         metadata: {
           lifecycle: application.lifecycle,
-          environment: application.environment,
+          environments: joinedDistinct(instanceRows.map((row) => row.environment)),
           editor: application.editor,
           criticality: application.criticality,
           cyber_criticality: application.cyber_criticality,
@@ -3881,7 +4079,7 @@ export class AiEntityService {
       summary: line.company_name,
       status: null,
       updated_at: null,
-      metadata: { nature: line.nature },
+      metadata: { nature: line.nature, contract_mismatches: contractMismatchNote(line.mismatches) },
     }));
 
     return {

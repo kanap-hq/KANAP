@@ -1,14 +1,14 @@
 import { languageOf } from '../common/csv-sheet';
 import {
-  Body, Controller, Delete, ForbiddenException, Get, Param, ParseUUIDPipe, Patch, Post, Query, Req, Res,
+  Body, Controller, Delete, Get, NotFoundException, Param, ParseUUIDPipe, Patch, Post, Query, Req, Res,
   UploadedFile, UseGuards, UseInterceptors,
 } from '@nestjs/common';
+import { moduleRightRequired, requestContextMissing } from '../auth/module-right-required';
 import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
 import { DataSource, EntityManager } from 'typeorm';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { moduleRightRequired } from '../auth/module-right-required';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireLevel } from '../auth/require-level.decorator';
 import { Public } from '../auth/public.decorator';
@@ -42,6 +42,15 @@ import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-ti
 import { buildRelationsAccess, hasLevel } from '../common/relations/relations-access';
 import { linkedReadsFromContext } from '../common/relations/linked-reads';
 import { assertApplicationsInScope, idsInScope, PortfolioLinkedReads } from './portfolio-linked-reads';
+import { creationCancelExpired, issueCreationToken, verifyCreationToken } from '../common/creation/creation-token';
+import {
+  assertCreatorAloneSinceCreation,
+  countChangesSinceCreation,
+  countEditedManagedDocuments,
+  withChildCount,
+  type CreationChanges,
+} from '../common/creation/creation-changes';
+import { PortfolioProjectCreationService } from './services/portfolio-project-creation.service';
 import {
   PortfolioRelationsService,
   PROJECT_RELATION_READS,
@@ -60,7 +69,9 @@ function assertContributorProjectFields(ctx: TenantRequest, body: Record<string,
   if (hasLevel(ctx, 'portfolio_projects', 'member')) return;
   const refused = Object.keys(body ?? {}).filter((key) => !CONTRIBUTOR_PROJECT_FIELDS.has(key));
   if (refused.length > 0) {
-    throw new ForbiddenException(
+    throw moduleRightRequired(
+      'portfolio_projects',
+      'member',
       `Changing ${refused.join(', ')} needs the member level on projects. A contributor can change the purpose, the planned dates and the scheduling mode.`,
     );
   }
@@ -82,6 +93,7 @@ export class PortfolioProjectsController {
     private readonly integratedDocuments: IntegratedDocumentsService,
     private readonly dataSource: DataSource,
     private readonly relations: PortfolioRelationsService,
+    private readonly creationSvc: PortfolioProjectCreationService,
   ) {}
 
   /**
@@ -90,7 +102,7 @@ export class PortfolioProjectsController {
    */
   private requireManager(ctx: TenantRequest): EntityManager {
     if (!ctx.manager) {
-      throw new ForbiddenException('Tenant context is not available');
+      throw requestContextMissing('Tenant context is not available');
     }
     return ctx.manager;
   }
@@ -571,16 +583,78 @@ export class PortfolioProjectsController {
     );
   }
 
+  /**
+   * Creates the project and hands its creator a creation token (`common/creation`), which opens
+   * "Cancel creation" (`DELETE :id/creation`) for this record and this person only.
+   */
   @UseGuards(PermissionGuard)
   @RequireLevel('portfolio_projects', 'member')
   @Post()
-  create(
+  async create(
     @Body() body: CreateProjectInput,
     @Tenant() ctx: TenantRequest,
   ) {
-    return this.svc.create(body as Record<string, unknown>, ctx.tenantId, ctx.userId || null, {
+    const created = await this.svc.create(body as Record<string, unknown>, ctx.tenantId, ctx.userId || null, {
       manager: ctx.manager,
     });
+    const creation_token = issueCreationToken({ tenantId: ctx.tenantId, family: 'projects', recordId: created.id, userId: ctx.userId });
+    return Object.assign(created, { creation_token });
+  }
+
+  /** The token of `POST /portfolio/projects` for this record, tenant and person, still valid; a 403 otherwise. */
+  private assertCreationToken(id: string, token: unknown, ctx: TenantRequest): void {
+    if (!verifyCreationToken(token, { tenantId: ctx.tenantId, family: 'projects', recordId: String(id ?? ''), userId: ctx.userId })) {
+      throw creationCancelExpired();
+    }
+  }
+
+  /**
+   * Before "Cancel creation": what was written on the project and its children since its creation
+   * (its history's audit rows), with its purpose document counted when its content changed, and
+   * its attachments and time entries as they stand. Nothing is written.
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('portfolio_projects', 'member')
+  @Get(':id/creation')
+  async creationChanges(
+    @Param('id') id: string,
+    @Query('token') token: string,
+    @Tenant() ctx: TenantRequest,
+  ): Promise<{ changes: CreationChanges }> {
+    this.assertCreationToken(id, token, ctx);
+    const manager = this.requireManager(ctx);
+    const [counts]: Array<{ found: number; attachments: number; time_entries: number }> = await manager.query(
+      `SELECT (SELECT count(*)::int FROM portfolio_projects WHERE tenant_id = $1 AND id = $2) AS found,
+              (SELECT count(*)::int FROM portfolio_project_attachments WHERE tenant_id = $1 AND project_id = $2) AS attachments,
+              (SELECT count(*)::int FROM portfolio_project_time_entries WHERE tenant_id = $1 AND project_id = $2) AS time_entries`,
+      [ctx.tenantId, id],
+    );
+    if (!counts?.found) throw new NotFoundException('Project not found');
+    await assertCreatorAloneSinceCreation(manager, ctx.tenantId, 'portfolio_projects', id, ctx.userId);
+    let changes = await countChangesSinceCreation(manager, ctx.tenantId, 'portfolio_projects', id);
+    changes = withChildCount(changes, 'document', await countEditedManagedDocuments(manager, ctx.tenantId, 'projects', id));
+    changes = withChildCount(changes, 'attachment', counts.attachments);
+    return { changes: withChildCount(changes, 'time_entry', counts.time_entries) };
+  }
+
+  /**
+   * "Cancel creation": the creator deletes the project they just created, with its token. Projects
+   * have no other delete: this route is the only one (`PortfolioProjectCreationService`). Once
+   * someone else has written on it, the cancel is over (403 `CREATION_CANCEL_EXPIRED`, checked
+   * under its lock).
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('portfolio_projects', 'member')
+  @Delete(':id/creation')
+  async cancelCreation(
+    @Param('id') id: string,
+    @Body() body: { token?: string },
+    @Tenant() ctx: TenantRequest,
+  ): Promise<void> {
+    this.assertCreationToken(id, body?.token, ctx);
+    const manager = this.requireManager(ctx);
+    await assertCreatorAloneSinceCreation(manager, ctx.tenantId, 'portfolio_projects', id, ctx.userId, { lock: true });
+    await this.creationSvc.deleteCreated(id, ctx.tenantId, ctx.userId || null, manager);
   }
 
   @UseGuards(PermissionGuard)
@@ -705,6 +779,7 @@ export class PortfolioProjectsController {
     const { id } = await this.resolveForAccess(idOrRef, ctx, 'member');
     return this.svc.setEffortAllocations(id, effortType, body?.allocations ?? [], {
       manager: ctx.manager,
+      userId: ctx.userId,
     });
   }
 
@@ -719,6 +794,7 @@ export class PortfolioProjectsController {
     const { id } = await this.resolveForAccess(idOrRef, ctx, 'member');
     return this.svc.resetEffortAllocations(id, effortType, {
       manager: ctx.manager,
+      userId: ctx.userId,
     });
   }
 
@@ -735,6 +811,7 @@ export class PortfolioProjectsController {
     const { id } = await this.resolveForAccess(idOrRef, ctx, 'member');
     return this.svc.bulkReplaceContacts(id, body?.contact_ids ?? [], {
       manager: ctx.manager,
+      userId: ctx.userId,
     });
   }
 
@@ -943,6 +1020,7 @@ export class PortfolioProjectsController {
     const { id } = await this.resolveForAccess(idOrRef, ctx, 'contributor');
     return this.svc.replaceUrls(id, body?.urls ?? [], {
       manager: ctx.manager,
+      userId: ctx.userId,
     });
   }
 

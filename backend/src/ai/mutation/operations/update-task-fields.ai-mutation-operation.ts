@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { z } from 'zod';
 import { validate as isUuid } from 'uuid';
+import { parseItemNumber } from '../../../common/parse-item-number';
 import { taskIncidentVisibilitySql } from '../../../incidents/incident-visibility';
 import { Task, TASK_STATUSES, TaskStatus } from '../../../tasks/task.entity';
 import { RelatedType, TasksUnifiedService } from '../../../tasks/tasks-unified.service';
@@ -500,7 +501,8 @@ export class UpdateTaskFieldsAiMutationOperation implements AiMutationOperation<
   private async resolveTask(context: AiExecutionContextWithManager, ref: string): Promise<TaskSnapshot> {
     const normalized = String(ref || '').trim();
     const match = normalized.match(/^T-(\d+)$/i);
-    const params: unknown[] = [context.tenantId, isUuid(normalized) ? normalized : match ? Number(match[1]) : -1];
+    const itemNumber = match ? parseItemNumber(match[1]) : null;
+    const params: unknown[] = [context.tenantId, isUuid(normalized) ? normalized : itemNumber ?? -1];
     // A task of an incident the caller cannot see reads as missing, mutations included.
     const incidentSql = taskIncidentVisibilitySql('t', await resolveAiIncidentViewer(context), params);
     const rows = await context.manager.query(

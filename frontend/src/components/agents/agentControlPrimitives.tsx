@@ -328,7 +328,7 @@ export function capabilityLabelFromName(name: string | null | undefined): string
     case 'classification_update': return agentText('actions.classification', 'Classification');
     case 'status_update': return agentText('actions.status', 'Status');
     case 'assignment_update': return agentText('actions.assignment', 'Assignment');
-    case 'participant_update': return agentText('actions.participants', 'Participants');
+    case 'participant_update': return agentText('actions.participants', 'Observers');
     default: {
       const fallback = humanize(segments.slice(-2).join(' '));
       return fallback.charAt(0).toUpperCase() + fallback.slice(1);
@@ -425,14 +425,26 @@ export function actionUpdateSummary(action: AiAgentControlActionRequest): string
     return [agentText('actions.assignmentUpdate', 'Assignment update'), `- ${agentText('actions.assignee', 'Assignee')}: ${currentAssignee} -> ${targetLabel}`, reason ? `${agentText('actions.reason', 'Reason')}: ${reason}` : null].filter(Boolean).join('\n');
   }
   if (action.capability_name === PARTICIPANT_UPDATE_CAPABILITY) {
-    const participants = Array.isArray(payload.participants)
+    const added = Array.isArray(payload.participants)
       ? payload.participants
           .filter(isRecord)
           .map((entry) => (typeof entry.label === 'string' ? entry.label : null))
           .filter((label): label is string => !!label)
-          .join(', ')
-      : null;
-    return [agentText('actions.participantUpdate', 'Participant update'), participants ? `- ${agentText('actions.participants', 'Participants')}: ${participants}` : null, reason ? `${agentText('actions.reason', 'Reason')}: ${reason}` : null].filter(Boolean).join('\n');
+      : [];
+    const currentObservers = Array.isArray(current?.observerTargets)
+      ? current.observerTargets.filter(isRecord).map((entry) => String(entry.label ?? entry.key ?? '')).filter(Boolean)
+      : Array.isArray(current?.observers)
+        ? current.observers.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+        : [];
+    const currentLine = currentObservers.length > 0
+      ? currentObservers.join(', ')
+      : agentText('actions.noObservers', 'No observers');
+    return [
+      agentText('actions.participantUpdate', 'Observer update'),
+      added.length > 0 ? `- ${agentText('actions.addObserver', 'Add observer')}: ${added.join(', ')}` : null,
+      `- ${agentText('actions.currentObservers', 'Current observers')}: ${currentLine}`,
+      reason ? `${agentText('actions.reason', 'Reason')}: ${reason}` : null,
+    ].filter(Boolean).join('\n');
   }
   return null;
 }

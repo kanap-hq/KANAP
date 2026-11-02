@@ -212,8 +212,8 @@ export default function TechnologyWorkspacePage() {
 
   return (
     <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-      {!!error && <Alert severity="error" sx={{ mx: 2, mt: 1 }}>{error}</Alert>}
       <PortfolioDetailWorkspaceShell
+        notices={error ? <Alert severity="error">{error}</Alert> : undefined}
         activeTab={routeTab}
         tabs={tabs}
         onTabChange={(next) => navigate(`/it/technologies/${technology.reference}/${next}${listSearch ? `?${listSearch}` : ''}`)}

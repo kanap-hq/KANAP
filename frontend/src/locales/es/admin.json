@@ -402,6 +402,15 @@
       "skillsMatrix": "Matriz de competencias",
       "workingDayCalendars": "Calendarios laborales"
     },
+    "exportParams": {
+      "filters": "Filtros",
+      "includeDisabled": "Incluir líneas finalizadas",
+      "q": "Búsqueda",
+      "scope": "Ámbito",
+      "sort": "Orden",
+      "table": "Tabla",
+      "tz": "Zona horaria"
+    },
     "fields": {
       "access_methods": "Modos de acceso",
       "account_id": "Cuenta",
@@ -706,7 +715,67 @@
       "authentication_mode": "Autenticación",
       "monitoring_url": "URL de supervisión",
       "env_notes": "Notas del entorno",
-      "integration_tool_application_id": "Herramienta de integración"
+      "rule_key": "Clave de regla",
+      "operation_kind": "Operación",
+      "environment_scope": "Entornos",
+      "implementation_status": "Estado de implementación",
+      "test_status": "Estado de prueba",
+      "integration_tool_application_id": "Herramienta de integración",
+      "duration_months": "Duración (meses)",
+      "auto_renewal": "Renovación tácita",
+      "notice_period_months": "Preaviso (meses)",
+      "yearly_amount_at_signature": "Importe anual",
+      "billing_frequency": "Facturación",
+      "compliance_state": "Estado",
+      "compliance_reference": "Referencia",
+      "source_ref": "Referencia externa",
+      "authority_notification_required": "Requiere notificación a la autoridad",
+      "authority_notified_at": "Notificado el",
+      "notified_parties": "Partes informadas",
+      "base_url": "URL base",
+      "capex_item_id": "Línea CAPEX",
+      "department_id": "Departamento",
+      "server_role": "Rol del servidor",
+      "since_date": "Desde",
+      "suite_id": "Suite",
+      "priority_level": "Prioridad",
+      "labels": "Etiquetas",
+      "hours": "Tiempo",
+      "logged_at": "Fecha",
+      "related_object": "Relacionado con",
+      "converted_to_request": "Convertida en solicitud",
+      "converted_to_project": "Convertida en proyecto",
+      "actual_effort_business": "Esfuerzo de negocio real",
+      "actual_effort_it": "Esfuerzo IT real",
+      "actual_start": "Inicio real",
+      "actual_end": "Fin real",
+      "baseline_effort_business": "Esfuerzo de negocio de referencia",
+      "baseline_effort_it": "Esfuerzo IT de referencia",
+      "baseline_start_date": "Inicio de referencia",
+      "baseline_end_date": "Fin de referencia",
+      "business_effort_allocation_mode": "Modo de asignación de esfuerzo de negocio",
+      "it_effort_allocation_mode": "Modo de asignación de esfuerzo IT",
+      "business_sponsor_id": "Patrocinador de negocio",
+      "it_sponsor_id": "Patrocinador IT",
+      "category_id": "Categoría",
+      "source_id": "Origen",
+      "stream_id": "Línea",
+      "estimated_effort_business": "Esfuerzo de negocio",
+      "estimated_effort_it": "Esfuerzo IT",
+      "execution_progress": "Avance",
+      "override_justification": "Justificación de la sobrescritura",
+      "override_value": "Valor de sobrescritura",
+      "priority_override": "Sobrescritura de prioridad",
+      "priority_score": "Puntuación de prioridad",
+      "scheduling_mode": "Modo de planificación",
+      "source_request_id": "Creado a partir de solicitud",
+      "requestor_id": "Solicitante",
+      "target_delivery_date": "Fecha de entrega objetivo",
+      "converted_date": "Convertido el",
+      "origin_task_id": "Creada a partir de la tarea",
+      "target_date": "Fecha objetivo",
+      "phase_status": "Estado",
+      "milestone_status": "Estado"
     },
     "history": {
       "empty": "Todavía no hay historial",
@@ -724,6 +793,9 @@
       "amountYear": "Importe {{year}}, {{column}}",
       "amountMonthly": "{{label}}: distribución mensual modificada",
       "amountMonths": "meses {{months}}",
+      "monthRange": "de {{from}} a {{to}} de {{year}}",
+      "monthRange_vowel": "de {{from}} a {{to}} de {{year}}",
+      "monthRangeAcrossYears": "de {{from}} de {{fromYear}} a {{to}} de {{toYear}}",
       "amountWholeYear": "año completo",
       "allocations": "Asignaciones",
       "allocationsYear": "Asignaciones {{year}}",
@@ -736,13 +808,40 @@
       "allocationNoName": "Asignación",
       "childCreated": "{{title}} añadida",
       "childDeleted": "{{title}} eliminada",
-      "version": "Versión {{name}}",
+      "version": "Presupuesto {{year}}",
+      "versionCreated": "Presupuesto {{year}} añadido",
+      "versionDeleted": "Presupuesto {{year}} eliminado",
+      "technologyVersion": "Versión {{name}}",
       "versionNoName": "Versión",
       "versionNumber": "Versión {{number}}",
       "versionChanged": "Versión {{before}} → {{after}}",
       "texts": {
         "contentChanged": "Contenido modificado",
-        "workingDaysChanged": "Días laborables modificados"
+        "workingDaysChanged": "Días laborables modificados",
+        "notesChanged": "Notas modificadas",
+        "emailChanged": "Correo modificado",
+        "phoneChanged": "Teléfono modificado",
+        "mobileChanged": "Móvil modificado",
+        "conditionChanged": "Condición modificada",
+        "businessRuleChanged": "Regla de negocio modificada",
+        "middlewareRuleChanged": "Regla de middleware modificada",
+        "remarksChanged": "Observaciones modificadas",
+        "exampleInputChanged": "Ejemplo de entrada modificado",
+        "exampleOutputChanged": "Ejemplo de salida modificado",
+        "sourceBindingsChanged": "Campos de origen modificados",
+        "targetBindingsChanged": "Campos de destino modificados",
+        "renewalStopped": "Renovación detenida",
+        "renewalResumed": "Renovación reanudada",
+        "descriptionChanged": "Descripción modificada",
+        "supportNotesChanged": "Notas de soporte modificadas",
+        "classificationReviewed": "Clasificación revisada",
+        "taskTypeChanged": "Tipo de tarea modificado",
+        "phaseChanged": "Fase modificada",
+        "purposeChanged": "Objetivo modificado",
+        "risksChanged": "Riesgos modificados",
+        "currentSituationChanged": "Situación actual modificada",
+        "expectedBenefitsChanged": "Beneficios esperados modificados",
+        "feasibilityReviewChanged": "Revisión de viabilidad modificada"
       },
       "actors": {
         "assistant": "Plaid",
@@ -866,9 +965,69 @@
           "added": "Conjunto de mapeo añadido: {{label}}",
           "removed": "Conjunto de mapeo eliminado: {{label}}"
         },
+        "mapping_group": {
+          "added": "Grupo de mapeo añadido: {{label}}",
+          "removed": "Grupo de mapeo eliminado: {{label}}"
+        },
+        "mapping_rule": {
+          "added": "Regla de mapeo añadida: {{label}}",
+          "removed": "Regla de mapeo eliminada: {{label}}"
+        },
         "middleware": {
           "added": "Middleware añadido: {{label}}",
           "removed": "Middleware eliminado: {{label}}"
+        },
+        "renewal_task": {
+          "added": "Tarea de renovación creada: {{label}}",
+          "removed": "Tarea de renovación retirada: {{label}}"
+        },
+        "instance": {
+          "added": "Entorno añadido: {{label}}",
+          "removed": "Entorno eliminado: {{label}}"
+        },
+        "assignment": {
+          "added": "Servidor añadido: {{label}}",
+          "removed": "Servidor eliminado: {{label}}"
+        },
+        "department": {
+          "added": "Departamento añadido: {{label}}",
+          "removed": "Departamento eliminado: {{label}}"
+        },
+        "suite": {
+          "added": "Suite añadida: {{label}}",
+          "removed": "Suite eliminada: {{label}}"
+        },
+        "business_process": {
+          "added": "Proceso de negocio añadido: {{label}}",
+          "removed": "Proceso de negocio eliminado: {{label}}"
+        },
+        "task_owner": {
+          "added": "Responsable añadido: {{label}}",
+          "removed": "Responsable retirado: {{label}}"
+        },
+        "task_viewer": {
+          "added": "Observador añadido: {{label}}",
+          "removed": "Observador retirado: {{label}}"
+        },
+        "phase": {
+          "added": "Fase añadida: {{label}}",
+          "removed": "Fase eliminada: {{label}}"
+        },
+        "milestone": {
+          "added": "Hito añadido: {{label}}",
+          "removed": "Hito eliminado: {{label}}"
+        },
+        "time_entry": {
+          "added": "Registro de tiempo añadido: {{label}}",
+          "removed": "Registro de tiempo eliminado: {{label}}"
+        },
+        "it_team": {
+          "added": "Miembro del equipo IT añadido: {{label}}",
+          "removed": "Miembro del equipo IT eliminado: {{label}}"
+        },
+        "business_team": {
+          "added": "Miembro del equipo de negocio añadido: {{label}}",
+          "removed": "Miembro del equipo de negocio eliminado: {{label}}"
         }
       },
       "unnamed": {
@@ -921,7 +1080,18 @@
         "leg": "un segmento",
         "set": "un conjunto",
         "binding": "un enlace",
-        "person": "una persona"
+        "person": "una persona",
+        "instance": "un entorno",
+        "assignment": "un servidor",
+        "phase": "una fase",
+        "milestone": "un hito",
+        "time_entry": "un registro de tiempo",
+        "team": "un equipo",
+        "dependency": "una dependencia",
+        "criterion_value": "una opción",
+        "portfolio_source": "un origen",
+        "portfolio_category": "una categoría",
+        "portfolio_stream": "una línea"
       },
       "deleted": {
         "record": "un registro eliminado",
@@ -973,7 +1143,15 @@
         "leg": "un segmento eliminado",
         "set": "un conjunto eliminado",
         "binding": "un enlace eliminado",
-        "person": "una persona eliminada"
+        "person": "una persona eliminada",
+        "instance": "un entorno eliminado",
+        "assignment": "un servidor eliminado",
+        "phase": "una fase eliminada",
+        "milestone": "un hito eliminado",
+        "time_entry": "un registro de tiempo eliminado",
+        "team": "un equipo eliminado",
+        "dependency": "una dependencia eliminada",
+        "criterion_value": "una opción eliminada"
       },
       "title": "Historial",
       "metricsYear": "Indicadores {{year}}",
@@ -996,7 +1174,29 @@
       "legCreated": "Segmento {{index}} añadido",
       "legDeleted": "Segmento {{index}} eliminado",
       "bindingCreated": "Enlace {{environment}} añadido",
-      "bindingDeleted": "Enlace {{environment}} eliminado"
+      "bindingDeleted": "Enlace {{environment}} eliminado",
+      "renewalDecided": "Renovación decidida: {{decision}}",
+      "renewalUndone": "Decisión de renovación anulada",
+      "outsideAccess": {
+        "and_one": "y {{count}} línea fuera de su acceso",
+        "and_other": "y {{count}} líneas fuera de su acceso",
+        "added_one": "{{count}} línea presupuestaria fuera de su acceso añadida",
+        "added_other": "{{count}} líneas presupuestarias fuera de su acceso añadidas",
+        "removed_one": "{{count}} línea presupuestaria fuera de su acceso retirada",
+        "removed_other": "{{count}} líneas presupuestarias fuera de su acceso retiradas"
+      },
+      "instance": "Entorno {{environment}}",
+      "timeEntry": "Tiempo registrado",
+      "timeEntryCreated": "Tiempo registrado",
+      "timeEntryDeleted": "Tiempo registrado eliminado",
+      "criterion": "Criterio {{name}}",
+      "criterionNoName": "Un criterio",
+      "linkChanged": "Enlace {{name}} modificado",
+      "linkChangedNoName": "Enlace modificado",
+      "effortAllocationIt": "Parte del esfuerzo IT, {{name}}",
+      "effortAllocationBusiness": "Parte del esfuerzo de negocio, {{name}}",
+      "documentUpdated": "Documento modificado: {{label}}",
+      "documentUpdatedNoName": "Documento modificado"
     },
     "messages": {
       "loadDetailsFailed": "No se pudieron cargar los detalles de la entrada de auditoría."
@@ -1149,6 +1349,7 @@
       "location_user_contacts": "Contactos internos de ubicación",
       "locations": "Ubicaciones",
       "notification_preferences": "Preferencias de notificación",
+      "onboarding": "Primeros pasos",
       "platform_ai_config": "Configuración de IA de la plataforma",
       "platform_ai_plan_limits": "Mensajes de IA incluidos",
       "portfolio_activities": "Actividad del portafolio",
@@ -1157,19 +1358,28 @@
       "portfolio_phase_templates": "Plantillas de fase",
       "portfolio_project_attachments": "Adjuntos de proyecto",
       "portfolio_project_capex": "Líneas CAPEX de proyecto",
+      "portfolio_project_contacts": "Contactos de proyecto",
+      "portfolio_project_dependencies": "Dependencias de proyecto",
+      "portfolio_project_documents": "Documentos de proyecto",
+      "portfolio_project_effort_allocations": "Reparto del esfuerzo de proyecto",
       "portfolio_project_milestones": "Hitos de proyecto",
       "portfolio_project_opex": "Líneas OPEX de proyecto",
       "portfolio_project_phases": "Fases de proyecto",
       "portfolio_project_team": "Equipos de proyecto",
       "portfolio_project_time_entries": "Registros de tiempo de proyecto",
+      "portfolio_project_urls": "Enlaces web de proyecto",
       "portfolio_projects": "Proyectos",
       "portfolio_request_applications": "Aplicaciones de solicitud",
       "portfolio_request_assets": "Activos de solicitud",
       "portfolio_request_attachments": "Adjuntos de solicitud",
       "portfolio_request_business_processes": "Procesos de negocio de solicitud",
       "portfolio_request_capex": "Líneas CAPEX de solicitud",
+      "portfolio_request_contacts": "Contactos de solicitud",
+      "portfolio_request_dependencies": "Dependencias de solicitud",
+      "portfolio_request_documents": "Documentos de solicitud",
       "portfolio_request_opex": "Líneas OPEX de solicitud",
       "portfolio_request_team": "Equipos de solicitud",
+      "portfolio_request_urls": "Enlaces web de solicitud",
       "portfolio_requests": "Solicitudes",
       "portfolio_skills": "Competencias",
       "portfolio_sources": "Orígenes del portafolio",
@@ -1350,6 +1560,19 @@
       "ownerType": {
         "business": "Negocio",
         "it": "IT"
+      },
+      "usersMode": {
+        "itUsers": "Derivado",
+        "headcount": "Derivado",
+        "manual": "Manual"
+      },
+      "allocationMode": {
+        "auto": "Automático",
+        "manual": "Manual"
+      },
+      "effortType": {
+        "it": "IT",
+        "business": "Negocio"
       }
     },
     "dataAccess": {
@@ -1534,6 +1757,9 @@
       "reset": "¿Restablecer la personalización a la configuración predeterminada de KANAP? Se eliminarán el logo y los colores personalizados."
     },
     "fields": {
+      "organizationName": "Nombre de la organización",
+      "organizationNameHelper": "Se muestra con el logotipo, en Acerca de, en la página de consentimiento y para el asistente. La dirección del espacio de trabajo sigue igual.",
+      "organizationNamePlaceholder": "p. ej., Northwind",
       "showLogoInDark": "Mostrar logo en modo oscuro"
     },
     "logo": {
@@ -1560,7 +1786,8 @@
     },
     "title": "Personalización",
     "validation": {
-      "hexColorFormat": "Use el formato #RRGGBB (ejemplo: #1F3A5F)"
+      "hexColorFormat": "Use el formato #RRGGBB (ejemplo: #1F3A5F)",
+      "organizationNameLength": "Use de 1 a 120 caracteres."
     }
   },
   "coaTemplates": {
@@ -2419,14 +2646,33 @@
       "priceOutput": "Coste de salida",
       "priceInputPlaceholder": "p. ej., 3,00",
       "priceOutputPlaceholder": "p. ej., 15,00",
+      "priceCacheRead": "Coste de lectura en caché",
+      "priceCacheReadPlaceholder": "p. ej., 0,30",
+      "cacheReadHint": "Precio por millón de tokens leídos desde la caché del proveedor (a menudo «cached input» en su página de precios). Vacío: se aplica el coste de entrada, o una décima parte de este para Anthropic.",
       "advanced": "Configuración avanzada",
       "timeout": "Tiempo de espera",
       "timeoutPlaceholder": "p. ej., 120",
       "timeoutHint": "Cuántos segundos esperar a este modelo antes de desistir. Déjelo vacío para usar el límite estándar. Los modelos locales suelen necesitar más tiempo.",
+      "reasoningEffort": "Esfuerzo de razonamiento",
+      "reasoningEffortDefault": "Predeterminado del proveedor",
+      "reasoningEffortHint": "Cuánto piensa el modelo antes de responder. Más esfuerzo: respuestas más cuidadas, más lentas y más caras. Los niveles ofrecidos dependen del proveedor y del modelo. «Probar conexión» muestra el esfuerzo enviado.",
+      "reasoningEffortValues": {
+        "low": "Bajo",
+        "medium": "Medio",
+        "high": "Alto",
+        "xhigh": "Muy alto",
+        "max": "Máximo"
+      },
+      "reasoningEffortUnavailable": "Este modelo no admite esfuerzo de razonamiento.",
+      "reasoningEffortMayBeIgnored": "Este servidor puede ignorar el esfuerzo de razonamiento. «Probar conexión» muestra si el modelo razonó.",
       "defaultLabel": "Usar como modelo predeterminado",
       "test": "Probar conexión",
       "testing": "Probando…",
-      "testOk": "Conexión correcta ({{latency}} ms)."
+      "testOk": "Conexión correcta ({{latency}} ms).",
+      "testEffortSent": "Esfuerzo enviado: {{effort}}.",
+      "testEffortNotSent": "No se envió ningún esfuerzo.",
+      "testReasoningTokens_one": "{{count}} token de razonamiento.",
+      "testReasoningTokens_other": "{{count}} tokens de razonamiento."
     }
   },
   "aiUsage": {
@@ -2437,7 +2683,7 @@
       "totalMonth": "Total este mes",
       "agentsMonth": "Agentes este mes",
       "chatMonth": "Plaid este mes",
-      "chatEstimatedNote": "Estimado con las tarifas del modelo asignado actualmente",
+      "chatEstimatedNote": "Estimado en parte con las tarifas del modelo asignado actualmente",
       "chatFreeNote": "El modelo asignado no tiene coste",
       "byAgent": "Coste por agente",
       "byModel": "Coste por modelo",

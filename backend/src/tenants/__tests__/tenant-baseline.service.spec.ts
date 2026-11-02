@@ -23,7 +23,7 @@ function service(opts: { template: boolean; failOn?: string }) {
   const manager = {
     query: async () => (opts.template ? [{ id: 'tpl-1', template_code: 'IFRS', template_name: 'IFRS' }] : []),
   };
-  return { svc: new TenantBaselineService({} as any, coas as any, {} as any), manager: manager as any, calls };
+  return { svc: new TenantBaselineService({} as any, coas as any, {} as any, {} as any), manager: manager as any, calls };
 }
 
 async function testOutcomes() {
@@ -72,7 +72,7 @@ async function testStartingCompanyCurrency() {
       return { id: 'co-1' };
     },
   };
-  const svc = new TenantBaselineService({} as never, {} as never, companies as never);
+  const svc = new TenantBaselineService({} as never, {} as never, companies as never, {} as never);
   const manager = {} as never;
   await svc.createStartingCompany(manager, { companyName: 'Acme', countryIso: 'FR', actorId: 'user-1' });
   await svc.createStartingCompany(manager, { companyName: 'Acme US', countryIso: 'US', actorId: null });

@@ -1,5 +1,6 @@
 import { languageOf } from '../common/csv-sheet';
-import { Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { requestContextMissing, businessContributorNoAccess, businessContributorScope } from '../auth/module-right-required';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireAnyLevel, RequireLevel } from '../auth/require-level.decorator';
@@ -51,6 +52,9 @@ import { ApplicationLink } from './application-link.entity';
 import { ApplicationAttachment } from './application-attachment.entity';
 import { ApplicationDataResidency } from './application-data-residency.entity';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
+import { NotFoundException } from '@nestjs/common';
+import { creationCancelExpired, issueCreationToken, verifyCreationToken } from '../common/creation/creation-token';
+import { assertCreatorAloneSinceCreation, countChangesSinceCreation, type CreationChanges } from '../common/creation/creation-changes';
 
 @UseGuards(JwtAuthGuard)
 @Controller('applications')
@@ -73,7 +77,7 @@ export class ApplicationsController {
    */
   private requireManager(ctx: TenantRequest): EntityManager {
     if (!ctx.manager) {
-      throw new ForbiddenException('Tenant context is not available');
+      throw requestContextMissing('Tenant context is not available');
     }
     return ctx.manager;
   }
@@ -83,7 +87,7 @@ export class ApplicationsController {
     resource: string,
   ): Promise<ParticipationAccessScope | undefined> {
     if (!ctx.manager) {
-      throw new ForbiddenException('Access scope could not be resolved');
+      throw requestContextMissing('Access scope could not be resolved');
     }
     return resolveBusinessContributorScopeForUser({
       manager: ctx.manager,
@@ -308,7 +312,7 @@ export class ApplicationsController {
   @Get(':id/recovery-dependencies')
   async recoveryDependencies(@Param('id') id: string, @Tenant() ctx: TenantRequest) {
     const opts = await this.readApplicationOpts(ctx);
-    if (opts.accessScope) throw new ForbiddenException('Business Contributor cannot access interfaces');
+    if (opts.accessScope) throw businessContributorNoAccess('interfaces', 'Business Contributor cannot access interfaces');
     return this.svc.listRecoveryDependencies(id, opts);
   }
 
@@ -334,7 +338,7 @@ export class ApplicationsController {
   ) {
     const opts = await this.readApplicationOpts(ctx);
     if (opts.accessScope) {
-      throw new ForbiddenException('Business Contributor can only read assigned applications');
+      throw businessContributorScope('applications', 'Business Contributor can only read assigned applications');
     }
     return this.svc.shareApplication(id, body, ctx.tenantId, ctx.userId || '', {
       manager: ctx.manager,
@@ -601,15 +605,75 @@ export class ApplicationsController {
     );
   }
 
+  /**
+   * Creates the application and hands its creator a creation token (`common/creation`), which
+   * opens "Cancel creation" (`DELETE :id/creation`) for this record and this person only.
+   */
   @UseGuards(PermissionGuard)
   @RequireLevel('applications', 'member')
   @Post()
-  create(
+  async create(
     @Body() body: CreateApplicationInput,
     @Tenant() ctx: TenantRequest,
-  ): Promise<Application> {
+  ): Promise<Application & { creation_token: string }> {
     // The service handles date conversion from strings
-    return this.svc.create(body as Record<string, unknown>, ctx.userId || null, { manager: ctx.manager });
+    const created = await this.svc.create(body as Record<string, unknown>, ctx.userId || null, { manager: ctx.manager });
+    const creation_token = issueCreationToken({ tenantId: ctx.tenantId, family: 'applications', recordId: created.id, userId: ctx.userId });
+    return Object.assign(created, { creation_token });
+  }
+
+  /** The token of `POST /applications` for this record, tenant and person, still valid; a 403 otherwise. */
+  private assertCreationToken(id: string, token: unknown, ctx: TenantRequest): void {
+    if (!verifyCreationToken(token, { tenantId: ctx.tenantId, family: 'applications', recordId: String(id ?? ''), userId: ctx.userId })) {
+      throw creationCancelExpired();
+    }
+  }
+
+  /**
+   * Before "Cancel creation": what was written on the application and its children since its
+   * creation (its history's audit rows), plus its written description and managed documents, which
+   * their own audit labels record. Nothing is written.
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('applications', 'member')
+  @Get(':id/creation')
+  async creationChanges(
+    @Param('id') id: string,
+    @Query('token') token: string,
+    @Tenant() ctx: TenantRequest,
+  ): Promise<{ changes: CreationChanges }> {
+    this.assertCreationToken(id, token, ctx);
+    const manager = this.requireManager(ctx);
+    const found = await manager.query('SELECT 1 FROM applications WHERE id = $1 AND tenant_id = $2', [id, ctx.tenantId]);
+    if (!found.length) throw new NotFoundException('Application not found');
+    await assertCreatorAloneSinceCreation(manager, ctx.tenantId, 'applications', id, ctx.userId);
+    const changes = await countChangesSinceCreation(manager, ctx.tenantId, 'applications', id);
+    const { removes } = await this.deleteSvc.deleteCheck([id], { manager });
+    for (const removed of removes) {
+      const kind = removed.type === 'descriptions' ? 'description' : removed.type === 'documents' ? 'document' : null;
+      if (kind && removed.total > 0) changes.children[kind] = (changes.children[kind] ?? 0) + removed.total;
+    }
+    return { changes };
+  }
+
+  /**
+   * "Cancel creation": the creator deletes the application they just created, with its token,
+   * even without the delete right, while nobody else has written on it (403
+   * `CREATION_CANCEL_EXPIRED` otherwise, checked under its lock). Same delete as `DELETE :id`
+   * (cascades, refusals, audit entry).
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('applications', 'member')
+  @Delete(':id/creation')
+  async cancelCreation(
+    @Param('id') id: string,
+    @Body() body: { token?: string },
+    @Tenant() ctx: TenantRequest,
+  ): Promise<void> {
+    this.assertCreationToken(id, body?.token, ctx);
+    const manager = this.requireManager(ctx);
+    await assertCreatorAloneSinceCreation(manager, ctx.tenantId, 'applications', id, ctx.userId, { lock: true });
+    await this.deleteSvc.delete(id, { manager, userId: ctx.userId || null });
   }
 
   @UseGuards(PermissionGuard)

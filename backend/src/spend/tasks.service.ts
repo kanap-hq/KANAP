@@ -11,6 +11,7 @@ import {
 import { idsInScope } from '../portfolio/portfolio-linked-reads';
 import { IncidentViewer, incidentRelatedLabelSql, taskIncidentVisibilitySql } from '../incidents/incident-visibility';
 import { textSortKey } from '../common/list-sort';
+import { parseItemNumber } from '../common/parse-item-number';
 import { resolveRecordCreators } from '../audit/record-creator.util';
 import type { LinkedModule, LinkedReads } from '../common/relations/linked-reads';
 import { assertSetFilterModes, bindPositional, compileAgFilterCondition, compileReferenceFilter, createParamNameGenerator, type CompiledCondition } from '../common/ag-grid-filtering';
@@ -383,7 +384,8 @@ function buildWhereConditions(
     params.push(`%${filters.related_object_name.filter}%`);
     const p = `$${params.length}`;
     const clauses = [
-      readsModule('budget') && `(t.related_object_type = 'spend_item' AND si.product_name ILIKE ${p})`,
+      // Both natures: the line join is `si` for an OPEX line and `ci` for a CAPEX line.
+      readsModule('budget') && `(t.related_object_type IN ('spend_item', 'capex_item') AND COALESCE(si.product_name, ci.product_name) ILIKE ${p})`,
       readsModule('contracts') && `(t.related_object_type = 'contract' AND c.name ILIKE ${p})`,
       readsModule('projects') && `(t.related_object_type = 'project' AND ${projectField('pp.name')} ILIKE ${p})`,
       readsModule('incidents') && `(t.related_object_type = 'incident' AND ${incidentRelatedLabelSql('inc')} ILIKE ${p})`,
@@ -598,14 +600,15 @@ function buildWhereConditions(
     // Resolved before the search's own parameters: the project's condition may add one.
     const searchedProjectName = readsModule('projects') ? projectField('pp.name') : null;
     const linkedNameSearch = (p: string) => [
-      readsModule('budget') && `si.product_name ILIKE ${p} OR`,
+      readsModule('budget') && `COALESCE(si.product_name, ci.product_name) ILIKE ${p} OR`,
       readsModule('contracts') && `c.name ILIKE ${p} OR`,
       searchedProjectName && `${searchedProjectName} ILIKE ${p} OR`,
     ].filter(Boolean).join(' ');
     // Check if query matches item ref pattern (T-123 or plain number)
     const refMatch = q.match(/^(?:T-)?(\d+)$/i);
-    if (refMatch) {
-      params.push(parseInt(refMatch[1], 10));
+    const itemNumber = refMatch ? parseItemNumber(refMatch[1]) : null;
+    if (itemNumber != null) {
+      params.push(itemNumber);
       params.push(`%${q}%`);
       whereConditions += ` AND (
         t.item_number = $${params.length - 1} OR
@@ -775,6 +778,9 @@ export const TASK_HIDDEN_CONTRACT_SQL = `CASE
  * queries share (an output alias cannot take a collation). `priority_score` is the computed
  * column both queries project.
  */
+/** Both stored budget line types are one family, so a sort on the context column groups them. */
+const TASK_RELATED_FAMILY_SQL = `CASE WHEN t.related_object_type IN ('spend_item', 'capex_item') THEN 'budget_line' ELSE t.related_object_type END`;
+
 const TASK_SORT_EXPRESSIONS: Record<string, string> = {
   title: 't.title',
   description: 't.description',
@@ -795,9 +801,9 @@ const TASK_SORT_EXPRESSIONS: Record<string, string> = {
       WHEN t.related_object_type = 'project' THEN pp.name
       ELSE ''
     END)`,
-  related_object_type: 't.related_object_type',
-  // The family the assistant shows and groups by: both stored budget line values read `budget_line`.
-  related_family: `CASE WHEN t.related_object_type IN ('spend_item', 'capex_item') THEN 'budget_line' ELSE t.related_object_type END`,
+  related_object_type: TASK_RELATED_FAMILY_SQL,
+  // The family the assistant shows and groups by: the same key as the context column.
+  related_family: TASK_RELATED_FAMILY_SQL,
   task_type_name: 'tt.name',
   phase_name: 'phase.name',
   priority_level: 't.priority_level',

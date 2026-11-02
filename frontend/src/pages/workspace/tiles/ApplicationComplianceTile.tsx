@@ -71,6 +71,7 @@ export default function ApplicationComplianceTile() {
     <DashboardTile
       title={t('dashboard.tiles.compliance')}
       icon="VerifiedUser"
+      isEmpty={!data || data.total === 0}
       isLoading={isLoading}
       isError={isError}
       onRetry={() => { void refetch(); }}

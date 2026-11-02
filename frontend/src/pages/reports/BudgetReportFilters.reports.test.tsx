@@ -11,7 +11,13 @@ import type { CostCenterNode } from '../../services/costCenters';
 import type { AnalyticsAxis } from '../../services/analytics';
 
 vi.mock('react-i18next', () => {
-  const t = (key: string, options?: Record<string, unknown>) => (options ? `${key} ${JSON.stringify(options)}` : key);
+  const t = (key: string, options?: Record<string, unknown>) => {
+    if (key === 'reports.analyticsCategory.hidden' && options) {
+      const count = Number(options.count);
+      return `and ${count} ${count === 1 ? 'line' : 'lines'} outside your access`;
+    }
+    return options ? `${key} ${JSON.stringify(options)}` : key;
+  };
   const translation = { t, i18n: { language: 'en', resolvedLanguage: 'en' } };
   return { useTranslation: () => translation };
 });
@@ -51,17 +57,20 @@ vi.mock('../../components/reports/ReportLayout', async (importOriginal) => ({
     </div>
   ),
 }));
-const chart = vi.hoisted(() => ({ options: null as any }));
+const access = vi.hoisted(() => ({ limited: false, counts: {} as Record<string, number> }));
+const chart = vi.hoisted(() => ({ options: null as any, height: null as number | null }));
 vi.mock('../../components/reports/ChartCard', () => ({
-  default: React.forwardRef(({ options }: { options: unknown }, _ref) => {
+  default: React.forwardRef(({ options, height }: { options: unknown; height?: number }, _ref) => {
     chart.options = options;
+    chart.height = height ?? null;
     return null;
   }),
 }));
-const grid = vi.hoisted(() => ({ columns: [] as Array<{ headerName?: string }> }));
+const grid = vi.hoisted(() => ({ columns: [] as Array<{ headerName?: string }>, defaultColDef: null as any }));
 vi.mock('../../components/reports/ReportGrid', () => ({
-  default: ({ rowData, columnDefs }: { rowData?: unknown[]; columnDefs?: Array<{ headerName?: string }> }) => {
+  default: ({ rowData, columnDefs, defaultColDef }: { rowData?: unknown[]; columnDefs?: Array<{ headerName?: string }>; defaultColDef?: unknown }) => {
     grid.columns = columnDefs ?? [];
+    grid.defaultColDef = defaultColDef ?? null;
     return <pre data-testid="grid">{JSON.stringify(rowData ?? [])}</pre>;
   },
 }));
@@ -75,6 +84,7 @@ import ComparisonReport from './ComparisonReport';
 import BudgetColumnsCompareReport from './BudgetColumnsCompareReport';
 import ConsolidationReport from './ConsolidationReport';
 import AnalyticsCategoryReport from './AnalyticsCategoryReport';
+import { horizontalBarChartHeight } from './reportMetrics';
 
 const get = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
 const post = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;
@@ -166,6 +176,8 @@ beforeEach(() => {
   tree.ready = true;
   axesState.list = [DEFAULT_AXIS, NATURE];
   chart.options = null;
+  access.limited = false;
+  access.counts = {};
   get.mockReset();
   get.mockImplementation(async (url: string, config?: { params?: Record<string, string> }) => {
     if (url.endsWith('/summary/filter-values')) return { data: fakeFilterValues(serverRows, String(config?.params?.fields ?? '').split(',')) };
@@ -174,7 +186,8 @@ beforeEach(() => {
   // The server's aggregates, computed from the same lines.
   post.mockReset();
   post.mockImplementation(async (url: string, body: any) => {
-    if (url.endsWith('/summary/aggregate')) return { data: fakeAggregate(serverRows, body) };
+    if (url === '/budget-lines/summary/hidden-by-value') return { data: { counts: access.counts } };
+    if (url.endsWith('/summary/aggregate')) return { data: { ...fakeAggregate(serverRows, body), ...(access.limited ? { dataAccessLimited: true } : {}) } };
     throw new Error(`unexpected POST ${url}`);
   });
 });
@@ -427,6 +440,150 @@ describe('Analytics report dimensions', () => {
       ['Software', 3],
     ]));
     expect(screen.getByRole('combobox', { name: 'reports.filters.dimension' }).textContent).toBe('Nature');
+  });
+
+  it('lists the lines of each value, with reference, nature and share, when the address asks for the detail', async () => {
+    serverRows = ROWS.map((row, index) => ({ ...row, item_number: index + 1, nature: index === 4 ? 'capex' : 'opex' })) as typeof ROWS;
+    renderReport(<AnalyticsCategoryReport />, '/report?axis=ax-nat&detail=lines');
+    await waitFor(() => expect(gridRows().length).toBeGreaterThan(5));
+    const rows = gridRows();
+    const valueRows = rows.filter((row) => row.level === 0);
+    const lineRows = rows.filter((row) => row.level === 1);
+    expect(valueRows.map((row) => [row.group, row.count])).toEqual([
+      ['reports.analyticsCategory.unassigned', 2],
+      ['Hardware', 2],
+      ['Software', 1],
+    ]);
+    expect(lineRows.map((row) => [row.group, row.reference, row.nature])).toEqual([
+      ['Line e', 'BL-5', 'operations.scope.capex'],
+      ['Line b', 'BL-2', 'operations.scope.opex'],
+      ['Line d', 'BL-4', 'operations.scope.opex'],
+      ['Line a', 'BL-1', 'operations.scope.opex'],
+      ['Line c', 'BL-3', 'operations.scope.opex'],
+    ]);
+    expect(grid.columns.map((column) => column.headerName)).toEqual([
+      'Nature',
+      'reports.analyticsCategory.lines',
+      'reports.analyticsCategory.level',
+      'opex.columns.reference',
+      'reports.analyticsCategory.nature',
+      String(Y),
+      'reports.columns.shareOfTotal ' + Y,
+    ]);
+    expect(valueRows.map((row) => row.levelLabel)).toEqual(['reports.analyticsCategory.levelValue', 'reports.analyticsCategory.levelValue', 'reports.analyticsCategory.levelValue']);
+    expect(lineRows.map((row) => row.levelLabel)).toEqual(Array(5).fill('reports.analyticsCategory.levelLine'));
+    const reference = grid.columns.find((column) => column.headerName === 'opex.columns.reference') as any;
+    expect(reference.cellRendererParams.getHref({ id: 'd', itemNumber: 4 })).toBe('/ops/budget/BL-4');
+    const share = grid.columns.find((column) => String(column.headerName).startsWith('reports.columns.shareOfTotal')) as any;
+    expect(share.valueFormatter({ value: 1000 / 1100 })).toBe('90.9%');
+    expect(rows.find((row) => row.group === 'Line a')!.share_2026).toBeCloseTo(100 / 1100, 10);
+    expect(grid.defaultColDef?.sortable).toBe(false);
+  });
+
+  it('draws the lines in the chart with the detail, and fits the bars to their count', async () => {
+    serverRows = ROWS.map((row, index) => ({ ...row, item_number: index + 1, nature: index === 4 ? 'capex' : 'opex' })) as typeof ROWS;
+    renderReport(<AnalyticsCategoryReport />, '/report?axis=ax-nat&detail=lines');
+    await waitFor(() => expect(chart.options.data).toHaveLength(5));
+    expect(chart.options.data.map((datum: { label: string }) => datum.label)).toEqual([
+      'BL-5 · Line e', 'BL-2 · Line b', 'BL-4 · Line d', 'BL-1 · Line a', 'BL-3 · Line c',
+    ]);
+    // The pie keeps its height; bars take one row each.
+    expect(chart.height).toBe(520);
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'reports.filters.chartType' }));
+    fireEvent.click(within(await screen.findByRole('listbox')).getByRole('option', { name: 'reports.filters.horizontalBarChart' }));
+    await waitFor(() => expect(chart.height).toBe(horizontalBarChartHeight(5)));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'reports.analyticsCategory.detail' }));
+    await waitFor(() => expect(chart.options.data).toHaveLength(3));
+    expect(chart.height).toBe(horizontalBarChartHeight(3));
+  });
+
+  it('adds the OPEX and CAPEX shares to the table and stacks them in the chart with the split', async () => {
+    serverRows = ROWS.map((row, index) => ({ ...row, item_number: index + 1, nature: index === 4 ? 'capex' : 'opex' })) as typeof ROWS;
+    renderReport(<AnalyticsCategoryReport />, '/report?axis=ax-nat&split=nature');
+    await waitFor(() => expect(grid.columns.map((column) => column.headerName)).toContain(`reports.analyticsCategory.opexShare ${Y}`));
+    expect(grid.columns.map((column) => column.headerName).slice(-2)).toEqual([
+      `reports.analyticsCategory.opexShare ${Y}`,
+      `reports.analyticsCategory.capexShare ${Y}`,
+    ]);
+    const nature = post.mock.calls.find(([, body]) => (body as any).spec.groupBy.includes('nature'));
+    expect((nature![1] as any).spec.groupBy).toEqual(['analytics_id_ax-nat', 'nature']);
+    await waitFor(() => expect(chart.options.series).toHaveLength(2));
+    expect(chart.options.series.map((series: any) => [series.yKey, series.stacked, series.normalizedTo])).toEqual([['opex', true, 100], ['capex', true, 100]]);
+    // The total first, then the values that carry an amount this year.
+    expect(chart.options.data[0].label).toBe('reports.columns.total');
+    expect(chart.options.data.length).toBeGreaterThan(2);
+    expect(chart.height).toBe(horizontalBarChartHeight(chart.options.data.length) + 48);
+    expect(screen.getByRole('checkbox', { name: 'reports.analyticsCategory.split' })).toBeChecked();
+    expect(screen.getByRole('combobox', { name: 'reports.filters.chartType' })).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  it('offers no split on OPEX lines alone', async () => {
+    renderReport(<AnalyticsCategoryReport />, '/report?scope=opex&axis=ax-nat&split=nature');
+    await waitFor(() => expect(gridRows()).toHaveLength(3));
+    expect(screen.getByRole('checkbox', { name: 'reports.analyticsCategory.split' })).toBeDisabled();
+    expect(grid.columns.map((column) => column.headerName)).not.toContain(`reports.analyticsCategory.opexShare ${Y}`);
+    expect(post.mock.calls.filter(([, body]) => (body as any).spec.groupBy.includes('nature'))).toEqual([]);
+  });
+
+  it('adds the hidden lines under each value for a limited person, singular and plural', async () => {
+    access.limited = true;
+    access.counts = { 'cat-e': 2, 'cat-a': 1 };
+    renderReport(<AnalyticsCategoryReport />, '/report');
+    await waitFor(() => expect(gridRows().some((row) => row.hiddenRow)).toBe(true));
+    expect(gridRows().filter((row) => row.hiddenRow).map((row) => row.group)).toEqual([
+      'and 2 lines outside your access',
+      'and 1 line outside your access',
+    ]);
+    const [call] = post.mock.calls.filter(([url]) => url === '/budget-lines/summary/hidden-by-value');
+    expect(call[1]).toEqual({ axis: 'ax-def', values: ['cat-e', 'cat-d', 'cat-a', 'cat-b', 'cat-c'], year: Y - 1, scope: 'all' });
+  });
+
+  it('keeps the hidden mention under a value, never under unassigned, after its lines, and leaves it off paper', async () => {
+    access.limited = true;
+    access.counts = { 'n-hw': 1 };
+    const { setReportPrinting } = await import('../../components/reports/reportPrint');
+    renderReport(<AnalyticsCategoryReport />, '/report?axis=ax-nat&detail=lines');
+    await waitFor(() => expect(gridRows().filter((row) => row.hiddenRow).map((row) => row.group)).toEqual([
+      'and 1 line outside your access',
+    ]));
+    const rows = gridRows();
+    const unassigned = rows.find((row) => row.group === 'reports.analyticsCategory.unassigned');
+    expect(unassigned?.hiddenRow).toBeUndefined();
+    expect(rows.filter((row) => row.hiddenRow)).toHaveLength(1);
+    const mention = rows.findIndex((row) => row.hiddenRow);
+    const hardware = rows.findIndex((row) => row.group === 'Hardware' && row.level === 0);
+    const software = rows.findIndex((row) => row.group === 'Software' && row.level === 0);
+    expect(hardware).toBeGreaterThan(-1);
+    expect(mention).toBeGreaterThan(hardware);
+    expect(mention).toBeLessThan(software);
+    expect(grid.defaultColDef?.sortable).toBe(false);
+    const amountColumn = grid.columns.find((column) => column.headerName === String(Y)) as any;
+    const shareColumn = grid.columns.find((column) => String(column.headerName).startsWith('reports.columns.shareOfTotal')) as any;
+    expect(amountColumn.valueFormatter({ data: { hiddenRow: 'yes' }, value: undefined })).toBe('');
+    expect(shareColumn.valueFormatter({ data: { hiddenRow: 'yes' }, value: undefined })).toBe('');
+    expect(shareColumn.valueFormatter({ data: {}, value: null })).toBe('—');
+    setReportPrinting(true);
+    await waitFor(() => expect(gridRows().some((row) => row.hiddenRow)).toBe(false));
+    setReportPrinting(false);
+  });
+
+  it('asks no hidden count outside limited mode', async () => {
+    renderReport(<AnalyticsCategoryReport />, '/report');
+    await waitFor(() => expect(gridRows()).toHaveLength(5));
+    expect(post.mock.calls.filter(([url]) => url === '/budget-lines/summary/hidden-by-value')).toEqual([]);
+  });
+
+  it('does not ask for the lines while the detail is off, the setting default', async () => {
+    renderReport(<AnalyticsCategoryReport />, '/report?axis=ax-nat');
+    await waitFor(() => expect(gridRows()).toHaveLength(3));
+    expect(gridRows().every((row) => row.level === 0)).toBe(true);
+    expect(grid.columns.map((column) => column.headerName).slice(0, 2)).toEqual(['Nature', 'reports.analyticsCategory.lines']);
+    expect(gridRows().map((row) => row.count)).toEqual([2, 2, 1]);
+    expect(post.mock.calls.filter(([, body]) => (body as any).spec.groupBy.length > 2)).toEqual([]);
+    expect(screen.getByRole('checkbox', { name: 'reports.analyticsCategory.detail' })).not.toBeChecked();
+    expect(grid.defaultColDef?.sortable).toBe(true);
+    const countColumn = grid.columns.find((column) => column.headerName === 'reports.analyticsCategory.lines') as any;
+    expect(countColumn.valueFormatter({ data: {}, value: 12345 })).toBe('12,345');
   });
 
   it('drops the value exclusions when the dimension or the item type changes', async () => {

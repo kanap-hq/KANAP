@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { In, Not } from 'typeorm';
 import { AiExecutionContextWithManager } from '../../ai.types';
 import { AiSettings } from '../../ai-settings.entity';
@@ -46,6 +46,7 @@ import {
 } from './agent-definition-defaults';
 import { isRecord } from '../../../common/object-guards';
 import { actionClassForCapabilityName } from './ai-agent-autonomy';
+import { codedForbidden } from '../../../auth/module-right-required';
 
 export {
   HELP_DESK_ALLOWED_CAPABILITIES,
@@ -897,107 +898,107 @@ export class AiAgentWorkQueueService {
 
   assertHelpdeskTicketingDefinitionRunnable(definition: AiAgentDefinition, trigger?: AiAgentTrigger | null): void {
     if (definition.status !== 'enabled') {
-      throw new ForbiddenException('This agent is turned off. Set its run mode to Manual or Watching first.');
+      throw codedForbidden('AGENT_TURNED_OFF', 'This agent is turned off. Set its run mode to Manual or Watching first.');
     }
     if (definition.agent_type !== 'helpdesk') {
-      throw new ForbiddenException('Helpdesk ticket triage agent definition has an invalid type.');
+      throw codedForbidden('AGENT_SETTINGS_INVALID', 'Helpdesk ticket triage agent definition has an invalid type.');
     }
     if (!['sandbox', 'lab', 'mock', 'staging'].includes(definition.environment)) {
-      throw new ForbiddenException('Helpdesk ticket triage is limited to non-production environments in Phase 11.');
+      throw codedForbidden('AGENT_NOT_AVAILABLE_YET', 'Helpdesk ticket triage is limited to non-production environments in Phase 11.');
     }
     if (definition.max_autonomy_level !== 'A2' && definition.max_autonomy_level !== 'A3') {
-      throw new ForbiddenException('Helpdesk ticket triage cannot widen autonomy beyond A3 in Phase 11.');
+      throw codedForbidden('AGENT_NOT_AVAILABLE_YET', 'Helpdesk ticket triage cannot widen autonomy beyond A3 in Phase 11.');
     }
 
     const binding = resolveTicketingBinding(definition);
     if (!binding) {
-      throw new ForbiddenException('Helpdesk ticket triage requires a ticketing provider binding.');
+      throw codedForbidden('AGENT_PROVIDER_REQUIRED', 'Helpdesk ticket triage requires a ticketing provider binding.');
     }
 
     const triggerPolicy = policyObject(definition.trigger_policy_json);
     const scopePolicy = policyObject(definition.scope_policy_json);
     const queuePolicy = policyObject(definition.queue_policy_json);
     if (queuePolicy.enabled === false) {
-      throw new ForbiddenException('Helpdesk ticket triage queue policy is disabled.');
+      throw codedForbidden('AGENT_SETTINGS_INVALID', 'Helpdesk ticket triage queue policy is disabled.');
     }
     if (!hasEnabledFlag(triggerPolicy, 'manual_safe_target')) {
-      throw new ForbiddenException('Helpdesk ticket triage requires the manual safe-target trigger.');
+      throw codedForbidden('AGENT_SETTINGS_INVALID', 'Helpdesk ticket triage requires the manual safe-target trigger.');
     }
     if (hasEnabledFlag(triggerPolicy, 'provider_webhook') || hasEnabledFlag(triggerPolicy, 'ticket_update')) {
-      throw new ForbiddenException('Provider webhook and ticket-update triggers are not enabled in Phase 11.');
+      throw codedForbidden('AGENT_NOT_AVAILABLE_YET', 'Provider webhook and ticket-update triggers are not enabled in Phase 11.');
     }
     if (triggerPolicy.automatic_writes_enabled === true) {
-      throw new ForbiddenException('Automatic writes are out of scope for Phase 11.');
+      throw codedForbidden('AGENT_AUTOMATIC_WRITES_NOT_ALLOWED', 'Automatic writes are out of scope for Phase 11.');
     }
     if (hasEnabledFlag(scopePolicy, 'all_matching') || scopePolicy.freeform_live_object_ids === true) {
-      throw new ForbiddenException('Broad or free-form live object scopes are not allowed in Phase 11.');
+      throw codedForbidden('AGENT_NOT_AVAILABLE_YET', 'Broad or free-form live object scopes are not allowed in Phase 11.');
     }
     if (scopePolicy.mode !== 'manual_safe_target' && !jsonArray(scopePolicy.allowed_modes).includes('manual_safe_target')) {
-      throw new ForbiddenException('Helpdesk ticket triage scope must allow manual safe targets.');
+      throw codedForbidden('AGENT_SETTINGS_INVALID', 'Helpdesk ticket triage scope must allow manual safe targets.');
     }
     if (scopePolicy.provider_kind !== binding.providerKind || scopePolicy.provider_key !== binding.providerKey || scopePolicy.target_kind !== 'ticket') {
-      throw new ForbiddenException('Helpdesk ticket triage scope must target the bound ticketing provider.');
+      throw codedForbidden('AGENT_SETTINGS_INVALID', 'Helpdesk ticket triage scope must target the bound ticketing provider.');
     }
     if (hasEnabledFlag(triggerPolicy, 'scheduled_poll')) {
       this.resolveScopeIngestionConfig(definition);
     } else if (triggerPolicy.production_polling_enabled === true) {
-      throw new ForbiddenException('Production polling requires a bounded scheduled-poll scope.');
+      throw codedForbidden('AGENT_SETTINGS_INVALID', 'Production polling requires a bounded scheduled-poll scope.');
     }
 
     const allowed = capabilityNames(definition.allowed_capabilities_json);
     const forbidden = capabilityNames(definition.forbidden_capabilities_json);
     for (const required of REQUIRED_HELPDESK_TRIAGE_CAPABILITIES) {
       if (!allowed.has(required)) {
-        throw new ForbiddenException(`Helpdesk ticket triage definition does not allow required capability ${required}.`);
+        throw codedForbidden('AGENT_CAPABILITY_NOT_ALLOWED', `Helpdesk ticket triage definition does not allow required capability ${required}.`);
       }
       if (forbidden.has(required) || forbidden.has('*')) {
-        throw new ForbiddenException(`Helpdesk ticket triage definition forbids required capability ${required}.`);
+        throw codedForbidden('AGENT_CAPABILITY_NOT_ALLOWED', `Helpdesk ticket triage definition forbids required capability ${required}.`);
       }
     }
 
     if (trigger) {
       if (trigger.trigger_kind !== 'manual' || trigger.enabled !== true || trigger.status !== 'enabled') {
-        throw new ForbiddenException('Helpdesk ticket triage manual trigger is not enabled.');
+        throw codedForbidden('AGENT_SETTINGS_INVALID', 'Helpdesk ticket triage manual trigger is not enabled.');
       }
       const triggerScope = policyObject(trigger.scope_policy_json);
       if (triggerScope.provider_kind !== binding.providerKind || triggerScope.provider_key !== binding.providerKey || triggerScope.target_kind !== 'ticket') {
-        throw new ForbiddenException('Helpdesk ticket triage manual trigger scope is invalid.');
+        throw codedForbidden('AGENT_SETTINGS_INVALID', 'Helpdesk ticket triage manual trigger scope is invalid.');
       }
     }
   }
 
   assertSreMonitoringDefinitionRunnable(definition: AiAgentDefinition): void {
     if (definition.status !== 'enabled') {
-      throw new ForbiddenException('This agent is turned off. Set its run mode to Manual or Watching first.');
+      throw codedForbidden('AGENT_TURNED_OFF', 'This agent is turned off. Set its run mode to Manual or Watching first.');
     }
     if (definition.agent_type !== 'sre') {
-      throw new ForbiddenException('SRE monitoring diagnosis agent definition has an invalid type.');
+      throw codedForbidden('AGENT_SETTINGS_INVALID', 'SRE monitoring diagnosis agent definition has an invalid type.');
     }
     if (!['sandbox', 'lab', 'mock', 'staging'].includes(definition.environment)) {
-      throw new ForbiddenException('SRE monitoring diagnosis is limited to non-production environments in Phase 15.A.');
+      throw codedForbidden('AGENT_NOT_AVAILABLE_YET', 'SRE monitoring diagnosis is limited to non-production environments in Phase 15.A.');
     }
     if (!['A1', 'A2', 'A3'].includes(definition.max_autonomy_level)) {
-      throw new ForbiddenException('SRE monitoring diagnosis requires an autonomy ceiling between A1 and A3.');
+      throw codedForbidden('AGENT_SETTINGS_INVALID', 'SRE monitoring diagnosis requires an autonomy ceiling between A1 and A3.');
     }
     if (!resolveMonitoringBinding(definition)) {
-      throw new ForbiddenException('SRE monitoring diagnosis requires a monitoring provider binding.');
+      throw codedForbidden('AGENT_PROVIDER_REQUIRED', 'SRE monitoring diagnosis requires a monitoring provider binding.');
     }
     const queuePolicy = policyObject(definition.queue_policy_json);
     if (queuePolicy.enabled === false) {
-      throw new ForbiddenException('SRE monitoring diagnosis queue policy is disabled.');
+      throw codedForbidden('AGENT_SETTINGS_INVALID', 'SRE monitoring diagnosis queue policy is disabled.');
     }
     const triggerPolicy = policyObject(definition.trigger_policy_json);
     if (triggerPolicy.automatic_writes_enabled === true) {
-      throw new ForbiddenException('Automatic writes are out of scope for SRE monitoring diagnosis in Phase 15.A.');
+      throw codedForbidden('AGENT_AUTOMATIC_WRITES_NOT_ALLOWED', 'Automatic writes are out of scope for SRE monitoring diagnosis in Phase 15.A.');
     }
     const allowed = capabilityNames(definition.allowed_capabilities_json);
     const forbidden = capabilityNames(definition.forbidden_capabilities_json);
     for (const required of REQUIRED_SRE_DIAGNOSIS_CAPABILITIES) {
       if (!allowed.has(required)) {
-        throw new ForbiddenException(`SRE monitoring diagnosis definition does not allow required capability ${required}.`);
+        throw codedForbidden('AGENT_CAPABILITY_NOT_ALLOWED', `SRE monitoring diagnosis definition does not allow required capability ${required}.`);
       }
       if (forbidden.has(required) || forbidden.has('*')) {
-        throw new ForbiddenException(`SRE monitoring diagnosis definition forbids required capability ${required}.`);
+        throw codedForbidden('AGENT_CAPABILITY_NOT_ALLOWED', `SRE monitoring diagnosis definition forbids required capability ${required}.`);
       }
     }
   }
@@ -1018,13 +1019,13 @@ export class AiAgentWorkQueueService {
     // asking for one cycle right now. Off is still blocked upstream, by the
     // status filter in the poller's loadDefinitions and by the runnable assert.
     if (opts.trigger !== 'manual' && !hasEnabledFlag(triggerPolicy, 'scheduled_poll')) {
-      throw new ForbiddenException('Automatic alert watching is turned off. Enable it in the agent settings.');
+      throw codedForbidden('AGENT_WATCHING_OFF', 'Automatic alert watching is turned off. Enable it in the agent settings.');
     }
     if (triggerPolicy.automatic_writes_enabled === true) {
-      throw new ForbiddenException('Monitoring alert ingestion cannot run with automatic writes enabled.');
+      throw codedForbidden('AGENT_AUTOMATIC_WRITES_NOT_ALLOWED', 'Monitoring alert ingestion cannot run with automatic writes enabled.');
     }
     if (!runGuardrailsFromDefinition(definition) || !dailyGuardrailCapsFromDefinition(definition)) {
-      throw new ForbiddenException('Monitoring alert ingestion requires configured economic guardrails.');
+      throw codedForbidden('AGENT_GUARDRAILS_MISSING', 'Monitoring alert ingestion requires configured economic guardrails.');
     }
     // Fail-closed predicate validation: a bad predicate rejects the whole cycle.
     const targeting = normalizeMonitoringTargeting(scopePolicy);
@@ -1043,7 +1044,7 @@ export class AiAgentWorkQueueService {
   resolveNewTicketsIngestionConfig(definition: AiAgentDefinition): HelpdeskNewTicketsIngestionConfig {
     const config = this.resolveScopeIngestionConfig(definition);
     if (config.mode !== 'new_tickets_only') {
-      throw new ForbiddenException('Helpdesk ticket new-ticket ingestion requires a created-at targeting predicate.');
+      throw codedForbidden('AGENT_SETTINGS_INVALID', 'Helpdesk ticket new-ticket ingestion requires a created-at targeting predicate.');
     }
     return config;
   }
@@ -1069,13 +1070,13 @@ export class AiAgentWorkQueueService {
     // mode (definition enabled, scheduled poll off) and blocked when the agent
     // is Off by assertHelpdeskTicketingDefinitionRunnable's status check.
     if (opts.trigger !== 'manual' && !hasEnabledFlag(triggerPolicy, 'scheduled_poll')) {
-      throw new ForbiddenException('Automatic ticket watching is turned off. Enable it in the agent settings.');
+      throw codedForbidden('AGENT_WATCHING_OFF', 'Automatic ticket watching is turned off. Enable it in the agent settings.');
     }
     if (triggerPolicy.automatic_writes_enabled === true) {
-      throw new ForbiddenException('Helpdesk ticket ingestion cannot run with automatic writes enabled.');
+      throw codedForbidden('AGENT_AUTOMATIC_WRITES_NOT_ALLOWED', 'Helpdesk ticket ingestion cannot run with automatic writes enabled.');
     }
     if (hasEnabledFlag(scopePolicy, 'all_matching') || scopePolicy.freeform_live_object_ids === true) {
-      throw new ForbiddenException('Helpdesk ticket ingestion requires a bounded scope.');
+      throw codedForbidden('AGENT_SETTINGS_INVALID', 'Helpdesk ticket ingestion requires a bounded scope.');
     }
 
     const mode = derivedScope.mode;
@@ -1099,7 +1100,7 @@ export class AiAgentWorkQueueService {
         || !numberPolicyOrNull(explicitActiveBlock.max_provider_requests_per_cycle, 1, 100)
       )
     ) {
-      throw new ForbiddenException('This ticket-selection mode requires explicit per-cycle ticket and provider-request limits.');
+      throw codedForbidden('AGENT_GUARDRAILS_MISSING', 'This ticket-selection mode requires explicit per-cycle ticket and provider-request limits.');
     }
     const enabledAt = isoFromPolicy(configBlock.enabled_at)
       ?? isoFromPolicy(newTicketsOnly.enabled_at)
@@ -1111,7 +1112,7 @@ export class AiAgentWorkQueueService {
     const maxProviderRequestsPerCycle = numberPolicyOrNull(configBlock.max_provider_requests_per_cycle, 1, 100)
       ?? DEFAULT_NEW_TICKET_RATE_LIMIT_PER_CYCLE;
     if (!runGuardrailsFromDefinition(definition) || !dailyGuardrailCapsFromDefinition(definition)) {
-      throw new ForbiddenException('Helpdesk ticket ingestion requires configured economic guardrails.');
+      throw codedForbidden('AGENT_GUARDRAILS_MISSING', 'Helpdesk ticket ingestion requires configured economic guardrails.');
     }
 
     const horizonHours = derivedScope.createdAfterRelativeHours
@@ -1169,7 +1170,7 @@ export class AiAgentWorkQueueService {
   runGuardrails(definition: AiAgentDefinition): HelpdeskRunGuardrailSummary {
     const guardrails = runGuardrailsFromDefinition(definition);
     if (!guardrails) {
-      throw new ForbiddenException('Helpdesk ticket triage run guardrails are not configured.');
+      throw codedForbidden('AGENT_GUARDRAILS_MISSING', 'Helpdesk ticket triage run guardrails are not configured.');
     }
     return guardrails;
   }
@@ -1403,7 +1404,7 @@ export class AiAgentWorkQueueService {
     const providerKind = input.providerKind ?? binding.providerKind;
     const providerKey = input.providerKey ?? binding.providerKey;
     if (providerKind !== binding.providerKind || providerKey !== binding.providerKey) {
-      throw new ForbiddenException('Ticketing work item source must match the bound ticketing provider.');
+      throw codedForbidden('AGENT_SETTINGS_INVALID', 'Ticketing work item source must match the bound ticketing provider.');
     }
     const targetRef = normalizedTargetRef(input.ticket.id);
     const dedupKey = this.workItemDedupKey({
@@ -1567,7 +1568,7 @@ export class AiAgentWorkQueueService {
     const providerKind = input.providerKind ?? binding.providerKind;
     const providerKey = input.providerKey ?? binding.providerKey;
     if (providerKind !== binding.providerKind || providerKey !== binding.providerKey) {
-      throw new ForbiddenException('Monitoring work item source must match the bound monitoring provider.');
+      throw codedForbidden('AGENT_SETTINGS_INVALID', 'Monitoring work item source must match the bound monitoring provider.');
     }
     const targetRef = normalizedTargetRef(input.alert.id);
     const dedupKey = typeof input.dedupKey === 'string' ? input.dedupKey.trim() : '';
@@ -1768,20 +1769,20 @@ export class AiAgentWorkQueueService {
       throw new NotFoundException('Agent work item not found.');
     }
     if (TERMINAL_WORK_ITEM_STATUSES.has(workItem.status) || workItem.status === 'waiting_approval') {
-      throw new ForbiddenException('Agent work item is not runnable.');
+      throw codedForbidden('AGENT_WORK_ITEM_NOT_RUNNABLE', 'Agent work item is not runnable.');
     }
     if (!RETRYABLE_WORK_ITEM_STATUSES.has(workItem.status)) {
-      throw new ForbiddenException('Agent work item is not in a leaseable state.');
+      throw codedForbidden('AGENT_WORK_ITEM_NOT_RUNNABLE', 'Agent work item is not in a leaseable state.');
     }
 
     const now = options.now ?? new Date();
     const leaseExpiry = dateFromUnknown(workItem.leased_until);
     if ((workItem.status === 'leased' || workItem.status === 'running') && leaseExpiry && leaseExpiry.getTime() > now.getTime()) {
-      throw new ForbiddenException('Agent work item is already leased.');
+      throw codedForbidden('AGENT_WORK_ITEM_BUSY', 'Agent work item is already leased.');
     }
     const nextAttempt = dateFromUnknown(workItem.next_attempt_at);
     if (nextAttempt && nextAttempt.getTime() > now.getTime()) {
-      throw new ForbiddenException('Agent work item is cooling down before retry.');
+      throw codedForbidden('AGENT_WORK_ITEM_BUSY', 'Agent work item is cooling down before retry.');
     }
     if (workItem.attempt_count >= workItem.max_attempts) {
       this.applyWorkItemTransition(workItem, 'dead_letter', now);
@@ -1802,7 +1803,7 @@ export class AiAgentWorkQueueService {
           source_object_ref: workItem.source_object_ref,
         },
       });
-      throw new ForbiddenException('Agent work item exceeded its maximum attempts.');
+      throw codedForbidden('AGENT_WORK_ITEM_NOT_RUNNABLE', 'Agent work item exceeded its maximum attempts.');
     }
 
     const definition = await this.definitionRepo(context).findOne({
@@ -1812,7 +1813,7 @@ export class AiAgentWorkQueueService {
       },
     });
     if (!definition) {
-      throw new ForbiddenException('Agent work item has no tenant-scoped definition.');
+      throw codedForbidden('AGENT_WORK_ITEM_NOT_RUNNABLE', 'Agent work item has no tenant-scoped definition.');
     }
     // Whole-target claim integration: ticketing tickets and monitoring sensors
     // share the same claim key machinery (tenant + provider kind/key + target
@@ -1845,7 +1846,7 @@ export class AiAgentWorkQueueService {
         workItem.next_attempt_at = (claim.claimExpiresAt ? dateFromUnknown(claim.claimExpiresAt) : null)
           ?? new Date(now.getTime() + DEFAULT_COOLDOWN_SECONDS * 1000);
         await repo.save(workItem);
-        throw new ForbiddenException('Agent work item target is currently claimed by another agent.');
+        throw codedForbidden('AGENT_WORK_ITEM_BUSY', 'Agent work item target is currently claimed by another agent.');
       }
     }
 
@@ -2899,7 +2900,7 @@ export class AiAgentWorkQueueService {
   ): Promise<HelpdeskDailyUsageSummary> {
     const caps = dailyGuardrailCapsFromDefinition(definition);
     if (!caps) {
-      throw new ForbiddenException('Helpdesk ticket daily guardrails are not configured.');
+      throw codedForbidden('AGENT_GUARDRAILS_MISSING', 'Helpdesk ticket daily guardrails are not configured.');
     }
     const windowStart = midnightUtc(now);
     const windowEnd = new Date(windowStart.getTime() + 24 * 60 * 60 * 1000);
@@ -2995,7 +2996,7 @@ export class AiAgentWorkQueueService {
       } else {
         await this.updateHelpdeskIngestionState(context, definition, pauseState);
       }
-      throw new ForbiddenException('Agent ingestion is paused because the tenant daily cap has been reached.');
+      throw codedForbidden('AGENT_DAILY_CAP_REACHED', 'Agent ingestion is paused because the tenant daily cap has been reached.');
     }
     return summary;
   }

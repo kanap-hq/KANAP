@@ -1,4 +1,5 @@
 import { IsBoolean, IsIn, IsInt, IsNumber, IsString, IsUrl, MaxLength, Min, ValidateIf } from 'class-validator';
+import { AI_REASONING_EFFORTS, AiReasoningEffort } from '../providers/ai-provider.types';
 
 export class CreateAiModelConfigDto {
   @IsString()
@@ -36,6 +37,15 @@ export class CreateAiModelConfigDto {
   @IsNumber()
   @Min(0)
   price_output_eur_per_mtok?: number | null;
+
+  @ValidateIf((_, value) => value !== undefined && value !== null)
+  @IsNumber()
+  @Min(0)
+  price_cache_read_eur_per_mtok?: number | null;
+
+  @ValidateIf((_, value) => value !== undefined && value !== null)
+  @IsIn(AI_REASONING_EFFORTS)
+  reasoning_effort?: AiReasoningEffort | null;
 
   @ValidateIf((_, value) => value !== undefined && value !== null)
   @IsInt()
@@ -86,6 +96,15 @@ export class UpdateAiModelConfigDto {
   @IsNumber()
   @Min(0)
   price_output_eur_per_mtok?: number | null;
+
+  @ValidateIf((_, value) => value !== undefined && value !== null)
+  @IsNumber()
+  @Min(0)
+  price_cache_read_eur_per_mtok?: number | null;
+
+  @ValidateIf((_, value) => value !== undefined && value !== null)
+  @IsIn(AI_REASONING_EFFORTS)
+  reasoning_effort?: AiReasoningEffort | null;
 
   @ValidateIf((_, value) => value !== undefined && value !== null)
   @IsInt()

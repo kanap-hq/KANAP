@@ -14,8 +14,10 @@ import { PortfolioClassificationService } from '../../portfolio/portfolio-classi
 import { PortfolioEmploymentTypesService } from '../../portfolio/portfolio-employment-types.service';
 import { PortfolioRequestsService } from '../../portfolio/portfolio-requests.service';
 import { PortfolioTeamsService } from '../../portfolio/portfolio-teams.service';
+import { RolePermission } from '../../permissions/role-permission.entity';
 import { Role } from '../../roles/role.entity';
 import { RolesController } from '../../roles/roles.controller';
+import { RolesService } from '../../roles/roles.service';
 import { Task } from '../../tasks/task.entity';
 import { TasksDeleteService } from '../../tasks/tasks-delete.service';
 import { UserRole } from '../../users/user-role.entity';
@@ -174,7 +176,14 @@ async function testTeamsAndContractTypes() {
 async function testRolesAndProcessCategories() {
   await withRollback(async (runner, t) => {
     const m = runner.manager;
-    const roles = new RolesController(null as any, null as any, m.getRepository(Role), null as any, m.getRepository(UserRole), noAudit);
+    const roles = new RolesController(
+      new RolesService(m.getRepository(Role), m.getRepository(RolePermission)),
+      null as any,
+      m.getRepository(Role),
+      null as any,
+      m.getRepository(UserRole),
+      noAudit,
+    );
     const req = { queryRunner: runner, user: { sub: randomUUID() } };
     const builtIn = await one(runner, `INSERT INTO roles (tenant_id, role_name, is_built_in) VALUES ($1, 'Reader', true) RETURNING id`, [t]);
     const role = await one(runner, `INSERT INTO roles (tenant_id, role_name) VALUES ($1, 'Buyers') RETURNING id`, [t]);

@@ -7,9 +7,9 @@ Owner: Eng
 
 ## Two layers
 
-- **Shared sheet layer** (`backend/src/common/csv-sheet/`): reading and writing for the budget file and the master-data files. Decoding, separator detection, header normalization, date and amount conventions, physical line numbers, the row cap. Callers: `spend/budget-file/`, `companies`, `departments`, `users`, `suppliers`, `accounts`, `cost-centers`, `analytics` (values), `working-day-profiles`.
+- **Shared sheet layer** (`backend/src/common/csv-sheet/`): reading and writing for the budget file and the master-data files. Decoding, separator detection, header normalization, date and amount conventions, physical line numbers, the row cap. Callers: `spend/budget-file/`, `companies`, `departments`, `users`, `suppliers`, `accounts`, `cost-centers`, `analytics` (values), `working-day-profiles`, `contacts`, `contracts`, `business-processes`. Contacts, contracts and business processes keep the import in their own service and call this layer to read and write the file.
 - **V2 engine** (`backend/src/common/csv/`): applications, assets, incidents, portfolio projects, portfolio requests, tasks. Its own configs, resolver and import workflow.
-- **Their own code**: contracts, contacts, business processes and the CoA templates. They use neither layer.
+- **Their own code**: the CoA templates (`admin/coa-templates`). The file keeps a fixed semicolon. Decoding of an upload goes through `readImportText`.
 
 The rest of this page describes the shared sheet layer first, then the budget file, then one line per entity.
 
@@ -52,7 +52,7 @@ The rest of this page describes the shared sheet layer first, then the budget fi
 
 - Master data (companies, departments, cost centers, analytics values, calendars): `disabled_at` is the end of validity, a date or a full timestamp. `status` is derived from it at save time. A row whose status contradicts its date is refused.
 - Budget files have no status column: `end_of_validity` is the line's only end date. A past date means the line is disabled, and the hourly lifecycle sync writes the status.
-- Contracts, contacts and the V2 entities keep their own lifecycle columns.
+- Contracts, contacts and the V2 entities keep their own lifecycle columns. The contracts file has no end-of-validity column (see [Contracts](#contracts)).
 
 ## Workflow
 
@@ -99,6 +99,27 @@ Every importer reads through `readMasterDataFile` (`common/csv-sheet/master-data
 - **Technology links** (`technologies/technology-links-csv.service.ts`), an example of a file of links where one row is one link: `asset_reference, asset_name, technology_reference, technology_name, version, operating_system, notes, source` (servers) and `application_reference, application_name, technology_reference, technology_name, version, notes, source` (applications). No upsert key of its own: a row matches its subjects by reference or name, adds or updates a link through the services of the single links, and never deletes one. An existing link keeps its provenance. `source` is optional and ignored on import.
   A large file takes time: the import writes link by link, through those services, in one transaction (about 15 seconds for 20,000 new links on a local database, more on a server). Until it commits, it holds the lock of every technology of the file and of every server it marks, so a link edit on those technologies waits and may time out. Prefer several smaller files for a very large load.
 
+## Contracts
+
+Imported and exported by `backend/src/contracts/contracts.service.ts` (`importCsv`, `exportCsv`), with its own matching and validation. The file itself is the shared sheet layer: `readMasterDataFile` on import, `writeCsv` on export (`writeListExport` in `common/csv/list-export`). UTF-8 with BOM on export. UTF-8 with or without BOM, or Windows-1252, on import. The export separator is `,` in English and `;` in French, German and Spanish. The import detects `,`, `;` or a tab on the header line. Dates and amounts follow the shared rules above, with the `dateOrder` and `decimalMark` switches and their notices. An `.xlsx` workbook uses the same columns (the first sheet). Routes: `GET /contracts/export` (`scope` `template` or `data`, `language`, `format` `csv` or `xlsx`) and `POST /contracts/import` (`dryRun`, default true, `language`, `dateOrder`, `decimalMark`). The contracts list uses the shared import and export dialogs. A file that has a row error writes nothing.
+
+- **Headers**: `name, company_name, supplier_name, cost_center, start_date, duration_months, auto_renewal, notice_period_months, yearly_amount_at_signature, currency, billing_frequency, status, owner_email, notes`. Same header rules as the other master-data files. `cost_center` is optional: a file without that column keeps each contract's stored cost center. Any other missing column, and any unknown column, refuses the file with a `row: 0` header mismatch.
+- **Match**: `name` + `supplier_name`. The supplier is resolved by exact name, then the contract by that supplier and the exact name. A repeated pair keeps the first row and drops the later ones. `Foo` and `foo` with the same supplier count as one pair for that drop. The stored name stays the exact text of the row that is kept.
+- **References**:
+  - `company_name` → companies by exact `name` (required)
+  - `supplier_name` → suppliers by exact `name` (required)
+  - `cost_center` → an enabled cost center or group, by exact `name`. A filled cell sets it. A blank cell on an update clears a stored one, and a new contract stays without one. An unknown name is a row error (`CSV_REFERENCE_NOT_FOUND`).
+  - `owner_email` → users by `email`, ignoring case (optional). A blank cell clears the owner.
+- **`start_date`** (required): `YYYY-MM-DD`, an ISO timestamp (the UTC day is stored), or a local form (`31/12/2027`, `31.12.2027`, `31-12-2027`, `12/31/2027`), with the shared day-or-month order. The export writes the screen language's form: `2027-12-31` in English, `31/12/2027` in French and Spanish, `31.12.2027` in German. A blank cell and `-` are refused (`CSV_VALUE_REQUIRED`). An unreadable date is a row error (`CSV_DATE_INVALID`).
+- **`auto_renewal`**: yes or no in the four languages (`yes`/`no`, `oui`/`non`, `ja`/`nein`, `sí`/`no`). The same reader also accepts `true`/`false`, `1`/`0`, the adjective forms (`vrai`/`faux`, `wahr`/`falsch`, `verdadero`/`falso`, Spanish without the accent) and the short forms `y`/`n`, `on`/`off`, `t`/`f`, in any case. A blank cell is no. Anything else is a row error (`CSV_BOOLEAN_INVALID`). The export writes the screen language's yes or no.
+- **`yearly_amount_at_signature`**: the shared amount rules. A comma or a dot is the decimal mark. Spaces and non-breaking spaces group thousands. When both marks appear, the last one is the decimal mark and the other must group by three. A single mark followed by exactly three digits (`12,280`, `12.280`) is settled by another amount cell, then by `decimalMark`, then by the screen language. Both conventions in the column are a file error. A blank cell is 0. `-` and an unreadable amount are row errors (`CSV_NUMBER_INVALID`). The reader accepts up to 20 digits after the decimal mark. The column is `numeric(18, 2)`: the database stores the value on two decimals. The export writes the amount with the screen language's decimal mark.
+- **Months, currency, billing, status**: a blank `duration_months` is 12 and a blank `notice_period_months` is 1. Any other cell must be a whole number from 0 to 2147483647, or it is a row error (`CSV_NUMBER_INVALID`). A blank `currency` is `EUR`. The value is uppercased and must be three letters (`CSV_CURRENCY_INVALID` otherwise). `billing_frequency` is `monthly`, `quarterly`, `annual` or `other`, matched as written (a blank cell is `annual`). `status` is `enabled` or `disabled`, in any case. Any other text is read as `enabled`. A blank `status` means `enabled` on a new contract and leaves the stored status on an update.
+- **End of validity**: absent from the file. The export writes `status` from the stored end of validity, so a date that has passed exports as `disabled` while the stored status column can still say `enabled`. On an update, a blank `status`, or one equal to the status read from that end, keeps the stored end. `enabled` clears it. `disabled` sets the end to now, and keeps an end that has already passed. A new contract is enabled unless the row says `disabled`.
+- **Tacit renewal**: a row that turns `auto_renewal` off on a contract already renewed, while that contract has no end of validity, is refused, dry run included. The contract page sets the end in the same action.
+- **Left out of the file**: links to budget lines, and attachments. Both stay on the contract page.
+
+A row identical to the stored contract counts as unchanged and is not written: company, cost center when the column is present, owner, start date, duration, renewal, notice, amount, currency, billing, notes, and a status that leaves the end of validity as it is.
+
 ## V2 engine entities
 
 ### Applications (Apps & Services)
@@ -132,26 +153,10 @@ Every importer reads through `readMasterDataFile` (`common/csv-sheet/master-data
 
 Assets, incidents, portfolio projects, portfolio requests and tasks follow the same engine and document their own headers in their pages.
 
-### Contracts
-- Headers: `name;company_name;supplier_name;start_date;duration_months;auto_renewal;notice_period_months;yearly_amount_at_signature;currency;billing_frequency;status;owner_email;notes`
-- Unique key: composite `name + supplier_name`
-- References:
-  - `company_name` → Companies by `name` (required)
-  - `supplier_name` → Suppliers by `name` (required)
-  - `owner_email` → Users by `email` (optional)
-- Validation:
-  - `currency`: 3-letter code
-  - `billing_frequency`: `monthly|quarterly|annual|other`
-  - `start_date`: ISO `YYYY-MM-DD`
-- Notes:
-  - This file keeps its own code (semicolon, UTF-8 with BOM) and is outside the shared sheet layer
-  - OPEX links are not part of CSV v1; manage links in the UI
-  - Attachments are not part of CSV; upload via UI
-
 ## UI usage
 
 - The budget lists (OPEX, CAPEX) have **Import CSV** and **Export CSV** in the toolbar, opening the budget file dialogs. Choosing a file runs the check at once; **Load** sends the checked snapshot.
-- The master-data pages and the CoA page use the shared dialogs: **Export CSV** opens a dialog with **Export data**; **Import CSV** opens a dialog with **Download template**, **Preflight check** and **Load**, and shows the date and amount notices with their switch.
+- The master-data pages, the contracts page and the CoA page use the shared dialogs: **Export CSV** opens a dialog with **Export data**; **Import CSV** opens a dialog with **Download template**, **Preflight check** and **Load**, and shows the date and amount notices with their switch.
 - The V2 entities keep their own dialogs (presets, field selection, import modes).
 
 ## Samples
@@ -162,6 +167,6 @@ Assets, incidents, portfolio projects, portfolio requests and tasks follow the s
 
 - Relationship lookups are case-sensitive by exact name (normalized by service where applicable); ensure consistent spelling.
 - Department resolution requires company context to avoid ambiguity.
-- Status values outside the entity's own list are rejected.
+- Status values outside the entity's own list are rejected. On the contracts file, `disabled` disables the contract and every other text is read as `enabled`.
 - Master-data files upsert on their unique keys and **refuse unknown columns**; the budget file ignores them with a warning and updates by `item_number`.
 - Master-data files carry no record of the language they were exported in, so an all-ambiguous French file read on an English screen needs the date switch. The budget file records its language in `kanap_token` and never stops on a question after its own export.

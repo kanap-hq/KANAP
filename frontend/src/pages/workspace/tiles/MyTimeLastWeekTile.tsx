@@ -63,6 +63,7 @@ export default function MyTimeLastWeekTile({ config }: MyTimeLastWeekTileProps) 
     <DashboardTile
       title={t('dashboard.tiles.myTime', { days })}
       icon="AccessTime"
+      isEmpty={summary.totalHours === 0}
       isLoading={isLoading}
       isError={isError}
       onRetry={() => { void refetch(); }}

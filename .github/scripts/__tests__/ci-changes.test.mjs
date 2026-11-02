@@ -35,7 +35,7 @@ const all = { backend: 'full', frontend: 'true', builds: 'true', images: 'true' 
 
 test('docs, marketing, release scripts and root files need no suite', (t) => {
   assert.deepEqual(needs(t, ['doc/architecture.md', 'marketing/web/src/content/blog/en/a.md',
-    'scripts/release/release.mjs', 'translation-state/docs-source-hashes.json', 'AGENTS.md', 'CHANGELOG.md']),
+    'scripts/release/release.mjs', 'scripts/docs/translation-status.mjs', 'AGENTS.md', 'CHANGELOG.md']),
   { backend: 'none', frontend: 'false', builds: 'false', images: 'false' });
 });
 
@@ -61,6 +61,8 @@ test('files read across the two trees bring the other suite', (t) => {
     'frontend/src/pages/contracts/contractTerms.ts',
     'frontend/src/pages/reports/reportAggregates.ts', 'frontend/src/pages/reports/reportTables.ts',
     'frontend/src/pages/operations/copyBudgetRows.ts', 'frontend/src/pages/admin/master-data/masterDataCopyRows.ts',
+    // The rights of the Roles screen, which Plaid reads (`backend/src/ai/ai-role-labels.ts`).
+    'frontend/src/pages/admin/rolePermissionGroups.ts',
     'frontend/src/pages/portfolio/contributorsOrdering.ts', 'frontend/src/pages/portfolio/skillsMatrix.ts',
     'frontend/src/pages/portfolio/roadmapOccupation.ts',
     // The label tables of the report exports are checked against these locale files.

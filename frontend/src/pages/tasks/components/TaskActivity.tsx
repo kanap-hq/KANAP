@@ -6,21 +6,16 @@ import {
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import TaskComments from './TaskComments';
-import TaskHistory from './TaskHistory';
 import TaskWorkLog from './TaskWorkLog';
 import type { TaskStatus } from '../task.constants';
 import { taskDetailTokens } from '../theme/taskDetailTokens';
 import { textTabSx, textTabsSx } from '../../../theme/formSx';
 
-type ActivityTab = 'comments' | 'history' | 'worklog';
+type ActivityTab = 'comments' | 'worklog';
 
 interface TaskActivityProps {
   taskId: string;
   projectId?: string;
-  /** Creation timestamp of the task, forwarded to the History tab. */
-  createdAt?: string | null;
-  /** Creation author (name, or email when the account has no name). */
-  createdByName?: string | null;
   readOnly?: boolean;
   relatedObjectType?: string;
   currentStatus: TaskStatus;
@@ -35,8 +30,6 @@ const TIME_LOGGING_EXCLUDED_TYPES = ['contract', 'spend_item', 'capex_item'];
 export default function TaskActivity({
   taskId,
   projectId,
-  createdAt,
-  createdByName,
   readOnly = false,
   relatedObjectType,
   currentStatus,
@@ -53,9 +46,25 @@ export default function TaskActivity({
     setActiveTab('comments');
   }, [commentFocusNonce]);
 
+  const comments = (
+    <TaskComments
+      taskId={taskId}
+      projectId={projectId}
+      readOnly={readOnly}
+      relatedObjectType={relatedObjectType}
+      currentStatus={currentStatus}
+      totalTimeHours={totalTimeHours}
+      initialStatus={initialStatus}
+      commentFocusNonce={commentFocusNonce}
+    />
+  );
+
+  // A task type without time logging has the comments only: no tab row for a single view.
+  if (!supportsTimeLogging) return <Box sx={{ minHeight: 200 }}>{comments}</Box>;
+
   return (
     <Box>
-      {/* Activity tabs (no label — tabs serve as section title) */}
+      {/* Comments and work log; the changes are in the History panel of the header. */}
       <Box sx={{ mb: taskDetailTokens.activityHead.mb }}>
         <Tabs
           value={activeTab}
@@ -68,42 +77,16 @@ export default function TaskActivity({
             sx={textTabSx(activeTab === 'comments')}
           />
           <Tab
-            label={t('activity.tabs.history')}
-            value="history"
-            sx={textTabSx(activeTab === 'history')}
+            label={t('activity.tabs.workLog')}
+            value="worklog"
+            sx={[textTabSx(activeTab === 'worklog'), { mr: 0 }]}
           />
-          {supportsTimeLogging && (
-            <Tab
-              label={t('activity.tabs.workLog')}
-              value="worklog"
-              sx={[textTabSx(activeTab === 'worklog'), { mr: 0 }]}
-            />
-          )}
         </Tabs>
       </Box>
 
       <Box sx={{ minHeight: 200 }}>
-        {activeTab === 'comments' && (
-          <TaskComments
-            taskId={taskId}
-            projectId={projectId}
-            readOnly={readOnly}
-            relatedObjectType={relatedObjectType}
-            currentStatus={currentStatus}
-            totalTimeHours={totalTimeHours}
-            initialStatus={initialStatus}
-            commentFocusNonce={commentFocusNonce}
-          />
-        )}
-        {activeTab === 'history' && (
-          <TaskHistory
-            taskId={taskId}
-            projectId={projectId}
-            createdAt={createdAt}
-            createdByName={createdByName}
-          />
-        )}
-        {activeTab === 'worklog' && supportsTimeLogging && (
+        {activeTab === 'comments' && comments}
+        {activeTab === 'worklog' && (
           <TaskWorkLog taskId={taskId} projectId={projectId} readOnly={readOnly} relatedObjectType={relatedObjectType} />
         )}
       </Box>

@@ -13,7 +13,7 @@ Navigate to **Master Data > Suppliers** to open the supplier directory. Click **
 - **ERP supplier ID**: Reference ID from your ERP or procurement system
 - **Notes**: Free-form notes about the vendor relationship
 
-**Tip**: Create suppliers before adding applications or contracts: you will be able to link them during creation.
+**Tip**: On a contract, an application or a budget line, type the supplier's name and choose **+ Create supplier** when it does not exist yet. **New** on this page creates a supplier on its own.
 
 ---
 
@@ -113,9 +113,9 @@ Click **New** in the list. Fill in the name (required), the ERP supplier ID and 
 
 The export writes a CSV file or an Excel workbook (`.xlsx`): choose under **Format** in the dialog. The import reads either. See [CSV and Excel files](csv-files.md).
 
-**Export** downloads the suppliers the list shows, with its search, filters and sort. Choose **The whole register** in the dialog to download every supplier, enabled and disabled. The dialog closes once the file is downloaded. **Import** reads a file back. The import dialog also carries **Download template**: a file with the headers only. The dialog lists the accepted values.
+**Export** downloads the suppliers the list shows, with its search, filters and sort. Choose **The whole register** in the dialog to download every supplier, enabled and disabled. The dialog closes once the file is downloaded. **Import** reads a file back. The import dialog also carries **Download template**, a file with the headers only, and **Download an example** (see [Example files](csv-files.md#example-files)). The dialog lists the accepted values.
 
-The columns:
+The file titles the columns in the language of your screen. The table gives their technical names, which the import also reads:
 
 | Column | Content |
 |---|---|

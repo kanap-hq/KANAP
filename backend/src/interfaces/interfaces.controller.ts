@@ -2,7 +2,6 @@ import {
   Body,
   Controller,
   Delete,
-  ForbiddenException,
   Get,
   Param,
   Patch,
@@ -14,6 +13,7 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { requestContextMissing, businessContributorNoAccess } from '../auth/module-right-required';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireLevel } from '../auth/require-level.decorator';
@@ -54,7 +54,7 @@ export class InterfacesController {
 
   private async assertUnrestrictedApplicationReader(ctx: TenantRequest) {
     if (!ctx.manager) {
-      throw new ForbiddenException('Access scope could not be resolved');
+      throw requestContextMissing('Access scope could not be resolved');
     }
     const accessScope = await resolveBusinessContributorScopeForUser({
       manager: ctx.manager,
@@ -62,7 +62,7 @@ export class InterfacesController {
       tenantId: ctx.tenantId,
     }, 'applications', 'reader');
     if (accessScope) {
-      throw new ForbiddenException('Business Contributor cannot access interfaces');
+      throw businessContributorNoAccess('interfaces', 'Business Contributor cannot access interfaces');
     }
   }
 

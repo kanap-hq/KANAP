@@ -1,8 +1,11 @@
 /**
- * Plain-language texts for the two vulnerability feeds: why a row exists (the NVD criteria and the
+ * Plain-language texts for the vulnerability feeds: why a row exists (the NVD criteria and the
  * publisher's CVE.org blocks of `GET /vulnerabilities/:cveId`), the NVD status of a CVE, and how
- * fresh each feed is (`GET /vulnerabilities/sources`). Pure functions: the texts come from `t`.
+ * fresh each feed and exploitation catalogue is (`GET /vulnerabilities/sources`). Pure functions:
+ * the texts come from `t`.
  */
+
+import { formatShortDate } from '../../../lib/dateFormat';
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
@@ -210,13 +213,31 @@ export function nvdState(status: string | null | undefined): NvdState {
   }
 }
 
-/** One feed of `GET /vulnerabilities/sources`. */
+/** NVD, CVE.org, or one exploitation catalogue of `GET /vulnerabilities/sources`. */
+export type FeedSourceName = MatchSource | 'cisa_kev' | 'eu_kev' | 'epss' | 'euvd';
+
+const FEED_SOURCES = new Set<string>(['nvd', 'cve_org', 'cisa_kev', 'eu_kev', 'epss', 'euvd']);
+const SCORE_DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+/** The locale suffix of a feed's warning (`failingNvd`, `staleCisaKev`). */
+const AGE_SUFFIX: Record<FeedSourceName, string> = {
+  nvd: 'Nvd',
+  cve_org: 'CveOrg',
+  cisa_kev: 'CisaKev',
+  eu_kev: 'EuKev',
+  epss: 'Epss',
+  euvd: 'Euvd',
+};
+
+/** One feed or catalogue of `GET /vulnerabilities/sources`. */
 export type FeedSourceStatus = {
-  source: MatchSource;
+  source: FeedSourceName;
   last_success_at: string | null;
   last_attempt_at: string | null;
   failing: boolean;
   enabled: boolean;
+  /** EPSS: the day of the scores (YYYY-MM-DD). */
+  score_date?: string | null;
 };
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -224,17 +245,24 @@ const DAY = 24 * 60 * 60 * 1000;
 export const STALE_AFTER_DAYS = 3;
 
 export type FeedAge = {
-  source: MatchSource;
+  source: FeedSourceName;
   /** The last success, or null when the feed was never read. */
   readAt: Date | null;
-  /** The warning of this feed, if any. */
+  /** EPSS: the day the scores were published, when the file named one. */
+  scoreDate: string | null;
+  /** The warning of this feed, if any. A failure wins over a stale reading. */
   warning: null | { kind: 'failing' } | { kind: 'stale'; days: number };
 };
 
-/** The feeds that are on, with the age of their data and their warning. */
+function scoreDateOf(item: FeedSourceStatus): string | null {
+  if (item.source !== 'epss') return null;
+  return typeof item.score_date === 'string' && SCORE_DAY.test(item.score_date) ? item.score_date : null;
+}
+
+/** The feeds and catalogues that are on, with the age of their data and their warning. */
 export function feedAges(items: FeedSourceStatus[] | null | undefined, now: Date = new Date()): FeedAge[] {
   return (items ?? [])
-    .filter((item) => item && item.enabled && (item.source === 'nvd' || item.source === 'cve_org'))
+    .filter((item) => item && item.enabled && FEED_SOURCES.has(item.source))
     .map((item) => {
       const parsed = item.last_success_at ? new Date(item.last_success_at) : null;
       const readAt = parsed && !Number.isNaN(parsed.getTime()) ? parsed : null;
@@ -243,6 +271,34 @@ export function feedAges(items: FeedSourceStatus[] | null | undefined, now: Date
       else if (readAt && now.getTime() - readAt.getTime() > STALE_AFTER_DAYS * DAY) {
         warning = { kind: 'stale', days: Math.floor((now.getTime() - readAt.getTime()) / DAY) };
       }
-      return { source: item.source, readAt, warning };
+      return { source: item.source, readAt, scoreDate: scoreDateOf(item), warning };
     });
+}
+
+/** The age line and its warnings, in the reader's language. Null when every source is off. */
+export function describeFeedAges(
+  items: FeedSourceStatus[] | null | undefined,
+  t: Translate,
+  locale: string,
+  now: Date = new Date(),
+): { text: string; warnings: string[] } | null {
+  const ages = feedAges(items, now);
+  if (ages.length === 0) return null;
+  const read = ages.map((age) => {
+    const source = t(`${K}.age.${age.source}`);
+    if (age.source === 'epss' && age.scoreDate) {
+      return t(`${K}.age.scores`, { source, date: formatShortDate(age.scoreDate, locale) });
+    }
+    if (!age.readAt) return t(`${K}.age.never`, { source });
+    const time = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' }).format(age.readAt);
+    return t(`${K}.age.item`, { source, date: formatShortDate(age.readAt, locale), time });
+  });
+  const warnings = ages.flatMap((age) => {
+    if (!age.warning) return [];
+    const suffix = AGE_SUFFIX[age.source];
+    return [age.warning.kind === 'failing'
+      ? t(`${K}.age.failing${suffix}`)
+      : t(`${K}.age.stale${suffix}`, { count: age.warning.days })];
+  });
+  return { text: t(`${K}.age.line`, { list: read.join(' · ') }), warnings };
 }

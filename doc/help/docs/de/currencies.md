@@ -214,12 +214,16 @@ Der Kurs des aktuellen Jahres wird als Forward-Schätzung wiederverwendet. Dies 
 ### Eingefrorene Jahre
 Das Einfrieren der Standard-Budgetspalte eines Jahres schreibt die Kurse dieses Jahres für den eingefrorenen Typ (OPEX oder CAPEX) fest: KANAP aktualisiert die Kurse des Jahres und behält diesen Satz dann für alle Beträge des Jahres, auch wenn neuere Kurse eintreffen. Wechselt die Berichtswährung später, behalten diese Beträge die eingefrorenen Kurse und werden dann zum Kurs der früheren Berichtswährung im selben Jahr in die neue umgerechnet. Fehlt dieser Kurs, sind sie in keiner Summe enthalten und werden wie jeder fehlende Kurs genannt: Die frühere Berichtswährung erscheint dann für dieses Jahr im Block der fehlenden Kurse, und ein manueller Kurs schließt die Lücke. Das Auftauen der Standardspalte gibt sie wieder frei. Siehe [Das Einfrieren der Standardspalte schreibt die Wechselkurse fest](budget-operations.md#das-einfrieren-der-standardspalte-schreibt-die-wechselkurse-fest).
 
-**Fehlender Kurs**: Hat ein Jahr keinen Kurs für eine verwendete Währung, sind die Beträge der Budgetzeilen in dieser Währung für dieses Jahr in keiner Summe in der Berichtswährung enthalten. Das betrifft die Liste der Budgetzeilen, die Übersicht der Budgetverwaltung, die Budget- und Leistungsverrechnungsberichte, die Verträge und die Reiter Beziehungen der Anwendungen und Technologien. Der Bildschirm weist dort darauf hin, wo es zählt:
+**Fehlender Kurs**: Hat ein Jahr keinen Kurs für eine verwendete Währung, sind die Beträge der Budgetzeilen in dieser Währung für dieses Jahr in keiner Summe in der Berichtswährung enthalten. Das betrifft die Liste der Budgetzeilen, den Bereich Budgetverwaltung der Startseite, die Budget- und Leistungsverrechnungsberichte, die Verträge und die Reiter Beziehungen der Anwendungen und Technologien. Der Bildschirm weist dort darauf hin, wo es zählt:
 
 - Ein einzeiliger Hinweis nennt, was ausgeschlossen ist, zum Beispiel „3 Zeilen ohne Wechselkurs ausgeschlossen: USD 2026.“ Er erscheint unter den Summen der Liste der Budgetzeilen, auf den Kacheln der Übersicht, oben in jedem Budget- und Leistungsverrechnungsbericht und unter den Budgetzahlen von Verträgen, Anwendungen und Technologien. Benutzer der Budgetadministration auf Administratorebene sehen außerdem **Kurs eingeben**, das diese Seite beim fehlenden Kurs öffnet.
 - In der Zeile selbst erscheint der Betrag in seiner eigenen Währung mit einer kleinen orangefarbenen Markierung. Fahren Sie mit der Maus über die Markierung, um zum Beispiel „Kein Wechselkurs für USD im Jahr 2026: nicht in den Summen enthalten.“ zu lesen.
 
 KANAP ruft die Kurse dieses Jahres im Hintergrund ab (höchstens einmal alle sechs Stunden je Jahr), sodass die nächste Anzeige den neuen Kurs verwendet, sobald die Quelle ihn veröffentlicht. Um fehlende Kurse zu erkennen, prüfen Sie den Block der fehlenden Kurse über der FX-Kurs-Snapshot-Tabelle und führen Sie **Wechselkurssynchronisierung erzwingen** aus, um die Kurse sofort abzurufen. Ein [manueller Kurs](#manuelle-kurse) behebt das Problem umgehend.
+
+## Den Assistenten fragen
+
+[Plaid](ai-assistant.md#tool-calls) liest die Währungen und Kurse dieser Seite für alle mit Leserecht auf das Budget. Fragen Sie zum Beispiel: „Wie hoch ist der USD-Kurs für 2026?“
 
 ## Tipps
 

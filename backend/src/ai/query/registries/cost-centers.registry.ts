@@ -1,0 +1,141 @@
+import { AiEntityFilterRegistry } from '../ai-filter.types';
+import { AI_COST_CENTER_KINDS, AI_COST_CENTER_STATUSES } from '../ai-cost-centers.query';
+
+/**
+ * Master data › Cost centers, read through the screen's service (`query/ai-cost-centers.query.ts`):
+ * one row per node of the tree, a group or a cost center, in the tree's order. Every node is read,
+ * the disabled ones included, `status` on every row. A node's `ref` is its code. Listed, filtered,
+ * grouped, sorted and paged in memory; the `aggregate` block is descriptive and never reads its
+ * empty base table. Read with the cost centers right, as the screen; a person in limited access
+ * reads the whole tree.
+ */
+export const costCentersRegistry: AiEntityFilterRegistry = {
+  entityType: 'cost_centers',
+  fields: {
+    code: {
+      ai: 'code',
+      grid: 'code',
+      type: 'text',
+      description: 'Code of the node, unique in the workspace, its reference (`ref`). A part of the code matches. get_entity_detail takes the code as is.',
+      sortable: true,
+      groupable: false,
+    },
+    name: {
+      ai: 'name',
+      grid: 'name',
+      type: 'text',
+      description: 'Name of the node. A part of the name matches. Two nodes under two groups may share a name: the code tells them apart, the path shows where each sits.',
+      sortable: true,
+      groupable: false,
+    },
+    kind: {
+      ai: 'kind',
+      grid: 'kind',
+      type: 'set',
+      description: 'group (a group of cost centers: it has no company, holds other nodes and receives no budget line) or cost_center (a cost center: it belongs to a company and receives the budget lines).',
+      values: [...AI_COST_CENTER_KINDS],
+      discoverable: true,
+      sortable: true,
+      groupable: true,
+    },
+    under: {
+      ai: 'under',
+      grid: 'under',
+      type: 'text',
+      description: 'Code or name of a group, compared exactly without case: every node below it, at every level (its sub-groups and their cost centers), the group itself left out. Answers "which cost centers sit under Group IT". A value naming no node keeps nothing and the result says so (`unmatched_note`).',
+      sortable: false,
+      groupable: false,
+    },
+    parent: {
+      ai: 'parent',
+      grid: 'parent',
+      type: 'text',
+      description: 'Code or name of a group, compared exactly without case: the nodes directly under it only (`under` gives every level). Each row carries its parent\'s name (`parent`) and code (`parent_code`), null at the top of the tree. Grouping names each parent as `CODE · name`.',
+      sortable: true,
+      groupable: true,
+    },
+    company: {
+      ai: 'company',
+      grid: 'company',
+      type: 'set',
+      description: 'Name of the company of a cost center, exactly. null is a node without a company: every group, and a cost center whose company is not set.',
+      dynamic: true,
+      discoverable: true,
+      sortable: true,
+      groupable: true,
+    },
+    budget_holder: {
+      ai: 'budget_holder',
+      grid: 'budget_holder',
+      type: 'set',
+      description: 'Name of the budget holder of the node, exactly, the person the screen names in its Budget holder column. null is a node without a budget holder (groups usually have none), never an unknown one; "(person without a name)" is a budget holder whose profile has no name.',
+      dynamic: true,
+      discoverable: true,
+      sortable: true,
+      groupable: true,
+      aliases: ['owner', 'responsable', 'responsible'],
+    },
+    status: {
+      ai: 'status',
+      grid: 'status',
+      type: 'set',
+      description: 'enabled or disabled (its end of validity has passed). Every node is listed whatever its status; the screen opens on the enabled ones only.',
+      values: [...AI_COST_CENTER_STATUSES],
+      discoverable: true,
+      sortable: true,
+      groupable: true,
+    },
+    depth: {
+      ai: 'depth',
+      grid: 'depth',
+      type: 'number',
+      description: 'Level of the node in the tree: 0 at the top, 1 directly under a top group, and so on.',
+      sortable: true,
+      groupable: false,
+    },
+    path: {
+      ai: 'path',
+      grid: 'path',
+      type: 'text',
+      description: 'Names of the groups above the node and its own, from the top down, joined with " › ". A part of it matches. The default order is the tree\'s, as the screen.',
+      sortable: true,
+      groupable: false,
+    },
+    disabled_at: {
+      ai: 'disabled_at',
+      grid: 'disabled_at',
+      type: 'date',
+      description: 'End of validity of the node, when it has one.',
+      blankable: true,
+      sortable: true,
+      groupable: false,
+    },
+  },
+  sortFields: {
+    code: 'code',
+    name: 'name',
+    kind: 'kind',
+    parent: 'parent',
+    company: 'company',
+    budget_holder: 'budget_holder',
+    status: 'status',
+    depth: 'depth',
+    path: 'path',
+    disabled_at: 'disabled_at',
+  },
+  defaultSort: {
+    field: 'path',
+    direction: 'asc',
+  },
+  aggregate: {
+    baseTable: '',
+    alias: 'cc',
+    groupFields: {
+      kind: { expression: 'kind' },
+      company: { expression: 'company' },
+      parent: { expression: 'parent' },
+      status: { expression: 'status' },
+      budget_holder: { expression: 'budget_holder' },
+    },
+  },
+};

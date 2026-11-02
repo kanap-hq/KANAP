@@ -46,6 +46,11 @@ vi.mock('../auth/AuthContext', () => ({
 }));
 vi.mock('../api', () => ({ default: { get, post, put: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
 vi.mock('../i18n/useLocale', () => ({ useLocale: () => 'en' }));
+function paintCell(column: { cellRenderer?: (params: any) => React.ReactNode; cellRendererParams?: object } | undefined, params: Record<string, unknown>) {
+  if (!column?.cellRenderer) return null;
+  return column.cellRenderer({ ...params, ...(column.cellRendererParams ?? {}) });
+}
+
 vi.mock('../components/ServerDataGrid', () => ({
   default: (props: Record<string, any>) => {
     grid.props = props;
@@ -53,8 +58,8 @@ vi.mock('../components/ServerDataGrid', () => ({
     const name = props.columns.find((column: any) => column.field === 'first_name');
     return (
       <div>
-        {actions ? actions.cellRenderer({ data: grid.row }) : null}
-        {name?.cellRenderer ? name.cellRenderer({ data: grid.row, value: grid.row.first_name }) : null}
+        {paintCell(actions, { data: grid.row })}
+        {paintCell(name, { data: grid.row, value: grid.row.first_name })}
       </div>
     );
   },

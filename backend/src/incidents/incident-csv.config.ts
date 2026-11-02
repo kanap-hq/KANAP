@@ -6,6 +6,7 @@ import {
 } from '../common/csv';
 import { formatCsvDateTime, instantInTimeZone, type CsvLanguage } from '../common/csv-sheet';
 import { allocateItemNumbers } from '../common/item-number.service';
+import { parseItemNumber } from '../common/parse-item-number';
 import { normalizeMarkdownRichText } from '../common/markdown-worker';
 import { findCatalogOption, requireImportCatalogs } from '../it-ops-settings/catalog-resolve';
 import { sameAsStoredWithDocuments } from '../knowledge/integrated-document-bodies';
@@ -180,7 +181,13 @@ function parseRef(value: string): number | null {
       `Invalid reference "${value}". Use the incident reference (INC-12), or leave the column empty to create a new incident.`,
     );
   }
-  return Number(match[1]);
+  const number = parseItemNumber(match[1]);
+  if (number == null) {
+    throw new Error(
+      `Invalid reference "${value}". Use the incident reference (INC-12), or leave the column empty to create a new incident.`,
+    );
+  }
+  return number;
 }
 
 /**
@@ -464,8 +471,17 @@ export const incidentCsvConfig: CsvEntityConfig = {
       if (typeof value !== 'string') continue;
       const match = REF_INPUT_RE.exec(value.trim());
       if (match) {
+        const number = parseItemNumber(match[1]);
+        if (number == null) {
+          row.errors.push({
+            row: row.rowNumber,
+            column: 'ref',
+            message: `Invalid reference "${value}". Use the incident reference (INC-12), or leave the column empty to create a new incident.`,
+          });
+          continue;
+        }
         row.raw.ref = match[1];
-        itemNumbers.push(Number(match[1]));
+        itemNumbers.push(number);
       }
     }
     if (itemNumbers.length === 0 || !context.manager?.query) return;

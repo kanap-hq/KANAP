@@ -1,4 +1,5 @@
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { codedForbidden } from '../../auth/module-right-required';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { textSortKey, type TextSortKey } from '../../common/list-sort';
@@ -160,6 +161,7 @@ const USER_FIELDS = ['reporter_user_id', 'owner_user_id'] as const;
 const BOOLEAN_FIELDS = ['personal_data_affected', 'authority_notification_required'] as const;
 
 const CONFIDENTIAL_LIFT_MESSAGE = 'Only a register administrator can lift this restriction.';
+const confidentialLift = () => codedForbidden('INCIDENT_CONFIDENTIAL_LIFT', CONFIDENTIAL_LIFT_MESSAGE);
 
 /** Change note stored on the review version kept by a closure or a cancellation. */
 const CLOSURE_CHANGE_NOTES: Record<string, string> = {
@@ -197,7 +199,8 @@ type IncidentWhere = {
   viewer?: IncidentViewer;
   /**
    * False when the reader does not read the infrastructure, or applications: the search and the
-   * filters then never match the linked assets, or applications (`ServiceOpts`).
+   * filters then never match the linked assets and technologies, or the linked applications
+   * (`ServiceOpts`).
    */
   technologies?: boolean;
   applications?: boolean;
@@ -504,6 +507,15 @@ export class IncidentsService extends IncidentsBaseService {
               OR COALESCE(a.asset_reference, '') ILIKE $${idx}
               OR COALESCE(a.hostname, '') ILIKE $${idx}
               OR COALESCE(a.fqdn, '') ILIKE $${idx}
+            )
+        )
+        OR EXISTS (
+          SELECT 1 FROM incident_technologies it
+          JOIN technologies tec ON tec.id = it.technology_id AND tec.tenant_id = it.tenant_id
+          WHERE it.incident_id = i.id AND it.tenant_id = i.tenant_id
+            AND (
+              tec.name ILIKE $${idx}
+              OR ('TEC-' || tec.item_number::text) ILIKE $${idx}
             )
         )`}
         ${input.applications === false ? '' : `OR EXISTS (
@@ -1022,7 +1034,7 @@ export class IncidentsService extends IncidentsBaseService {
       return this.get(incident.id, this.viewed(opts, opts?.viewer ?? { userId, isAdmin: true }));
     }
     if (incident.confidential && !confidential && !opts?.viewer?.isAdmin) {
-      throw new ForbiddenException(CONFIDENTIAL_LIFT_MESSAGE);
+      throw confidentialLift();
     }
 
     const before = { ...incident };
@@ -1113,7 +1125,7 @@ export class IncidentsService extends IncidentsBaseService {
   ): void {
     if (next === undefined || next === incident.confidential) return;
     if (incident.confidential && !next && !viewer?.isAdmin) {
-      throw new ForbiddenException(CONFIDENTIAL_LIFT_MESSAGE);
+      throw confidentialLift();
     }
     incident.confidential = next;
   }

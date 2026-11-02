@@ -245,6 +245,10 @@ Toute personne qui peut consulter les lignes budgétaires (Budget) peut choisir 
 
 ---
 
+## Demander à l'assistant
+
+[Plaid](ai-assistant.md#tool-calls) lit les calendriers pour toute personne qui a le droit de les lire, et cite les jours ouvrés d'une année tels que KANAP les calcule. Demandez par exemple : « Combien de jours ouvrés en France en 2026 ? »
+
 ## Astuces
 
 - **Partez des calendriers standard** : un par pays couvre la plupart des budgets. N'ajoutez une région que lorsque ses jours fériés diffèrent, par exemple la Moselle en France ou la Bavière en Allemagne.

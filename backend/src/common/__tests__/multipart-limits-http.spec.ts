@@ -8,6 +8,7 @@ import { MulterError } from 'multer';
 import { ReleaseTenantRunnerFilter } from '../filters/release-tenant-runner.filter';
 import { mapMultipartError } from '../filters/multipart-error.mapping';
 import {
+  aiAttachmentMulterOptions,
   ATTACHMENT_MAX_BYTES,
   attachmentMulterOptions,
   CSV_IMPORT_MAX_BYTES,
@@ -28,6 +29,7 @@ function testOptionObjects() {
   const expected: Array<[string, any, number]> = [
     ['attachment', attachmentMulterOptions, ATTACHMENT_MAX_BYTES],
     ['inline image', inlineImageMulterOptions, ATTACHMENT_MAX_BYTES],
+    ['Plaid attachment', aiAttachmentMulterOptions, ATTACHMENT_MAX_BYTES],
     ['document import', documentImportMulterOptions, ATTACHMENT_MAX_BYTES],
     ['CSV import', csvImportMulterOptions, CSV_IMPORT_MAX_BYTES],
   ];

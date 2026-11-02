@@ -37,7 +37,7 @@ Una confirmación cubre lo que estas funciones envían al proveedor: las pregunt
 
 - **Confirmar** registra su confirmación. No activa Plaid.
 - **Habilitar chat** pide la confirmación cuando todavía falta. Actívelo y guarde: una ventana muestra el proveedor y el lugar de tratamiento. **Confirmar y activar** guarda sus cambios y la confirmación a la vez. Si cierra la ventana, no se guarda nada. La ventana también enlaza con la página [Modelos IA](ai-models.md), por si prefiere usar su propio modelo.
-- Durante una prueba en la nube, la página de inicio también propone activar Plaid, con la misma ventana de confirmación. Véase [Mi panel de control](my-dashboard.md).
+- Mientras falta la confirmación, la página de Plaid muestra una casilla en lugar del campo de mensaje. Marcarla, como administrador de la configuración de Plaid, registra la confirmación y activa Plaid. Véase [Plaid](ai-assistant.md#included-model-acceptance).
 - **Retirar** elimina la confirmación, tras una segunda confirmación. Las funciones de IA que usan el modelo incluido se detienen hasta que un administrador vuelva a confirmar. Plaid sigue activado y muestra un aviso a sus usuarios.
 - Se vuelve a pedir confirmación cuando cambia el proveedor, su dirección de conexión, el nombre mostrado o el lugar de tratamiento. Un modelo nuevo del mismo proveedor no la pide. Si el proveedor cambia mientras su ventana está abierta, la ventana muestra el nuevo y le pide que lo revise.
 - Plaid y los agentes que funcionan con un modelo que usted añadió no necesitan confirmación. Los asistentes externos conectados por MCP tampoco dependen de ella, porque MCP no envía nada al modelo incluido.
@@ -225,7 +225,7 @@ claude mcp add --transport http kanap https://acme.kanap.net/api/ai/mcp --header
 
 ### Herramientas disponibles
 
-El servidor MCP es de solo lectura. Un cliente puede buscar y leer sus datos, sin poder cambiar nada. Una clave o una conexión obtiene las once herramientas siguientes, y doce cuando la búsqueda web está activada para su organización. Una persona solo ve las herramientas de los datos que su rol le permite leer.
+El servidor MCP es de solo lectura. Un cliente puede buscar y leer sus datos, sin poder cambiar nada. Una clave o una conexión obtiene las catorce herramientas siguientes, y quince cuando la búsqueda web está activada para su organización. Una persona solo ve las herramientas de los datos que su rol le permite leer.
 
 | Herramienta | Qué hace |
 |---|---|
@@ -238,11 +238,14 @@ El servidor MCP es de solo lectura. Un cliente puede buscar y leer sus datos, si
 | `get_entity_detail` | Lee un registro completo |
 | `get_entity_context` | Lee los registros vinculados a un registro |
 | `get_entity_comments` | Lee los comentarios de un proyecto o una tarea |
+| `get_record_history` | Lee el historial de un registro, tal como lo muestra su pestaña Historial |
 | `search_knowledge` | Busca en la base de conocimiento |
 | `get_document` | Lee un documento de la base de conocimiento |
+| `list_help_topics` | Lista las páginas y las secciones del manual de usuario |
+| `read_help_section` | Lee una página o una sección del manual de usuario, con su enlace |
 | `web_search` | Busca en la web, cuando la búsqueda web está activada para su organización |
 
-Cuando un cliente se conecta, el servidor le indica qué espacio de trabajo lee, que solo lee, que lee con los derechos de la persona detrás de la clave o de la conexión, cómo buscar y qué datos no lee (centros de coste, calendarios, tipos de cambio, configuración de acceso a los datos, el registro de auditoría y los agentes de IA).
+Cuando un cliente se conecta, el servidor le indica qué espacio de trabajo lee, que solo lee, que lee con los derechos de la persona detrás de la clave o de la conexión, cómo buscar (centros de coste, calendarios y dimensiones incluidos), dónde leer los tipos de cambio y qué datos no lee (el registro de auditoría y los agentes de IA). Solo lee los roles y la configuración de acceso a los datos para una persona que administra los usuarios y tiene acceso a todos los datos. También le indica que responda a las preguntas sobre el uso de KANAP a partir del manual de usuario.
 
 Una llamada que el servidor rechaza vuelve con su causa, para que el asistente pueda explicarla: una herramienta desconocida, una herramienta que cambiaría datos, una herramienta que la clave no permite o datos que la persona no puede leer.
 
@@ -268,7 +271,7 @@ El registro también guarda las llamadas hechas con una clave revocada o caducad
 ## Consejos
 
 - **Deje Plaid en el modelo predeterminado salvo que tenga un motivo para no hacerlo.** Fijar el chat a un modelo concreto significa que deja de seguir al predeterminado de la organización: útil cuando el chat y los agentes necesitan realmente modelos distintos, y una molestia el resto del tiempo.
-- **Es fácil subestimar el volumen del chat.** La página [Uso y costes](ai-usage.md) valora el chat a las tarifas del modelo asignado; un asistente muy usado con un modelo caro aparece allí mucho antes de aparecer en una factura.
+- **Es fácil subestimar el volumen del chat.** La página [Uso y costes](ai-usage.md) valora cada mensaje de chat a las tarifas registradas con él; un asistente muy usado con un modelo caro aparece allí mucho antes de aparecer en una factura.
 - **Un modelo con visión es un requisito de los agentes, no del chat.** Si sus agentes de triaje necesitan leer capturas de pantalla de los tickets, eso corresponde al modelo de *ellos*: consulte **Comprende imágenes** en la página [Modelos IA](ai-models.md).
 - **Prefiera las conexiones para Claude.** Cada persona inicia sesión con su propia cuenta y lee con su propio acceso, así que nadie comparte una clave. Reserve las claves para los clientes que las necesitan, rótelas y use **Vida útil máxima de la clave (días)** para imponer un tope que ninguna petición pueda superar.
 - **Establezca una ventana de retención.** Conservar las conversaciones para siempre es conveniente hasta que la base de datos crece demasiado o una revisión de conformidad pregunta cuánto tiempo se conserva el contenido del chat: 90 o 180 días es un punto de partida habitual.

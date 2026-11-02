@@ -24,6 +24,7 @@ import TodayIcon from '@mui/icons-material/Today';
 import PageHeader from '../../components/PageHeader';
 import LightModeIsland from '../../components/LightModeIsland';
 import api from '../../api';
+import { useAuth } from '../../auth/AuthContext';
 import { PortfolioGantt } from './components/PortfolioGantt';
 import RoadmapGenerator from './components/RoadmapGenerator';
 import { useTranslation } from 'react-i18next';
@@ -80,6 +81,8 @@ const formatViewPeriod = (monthOffset: number, months: number, locale: string): 
 
 export default function PlanningPage() {
   const { t } = useTranslation(['portfolio', 'errors']);
+  const { hasLevel } = useAuth();
+  const canEditProjectDates = hasLevel('portfolio_projects', 'contributor');
   const locale = useLocale();
   const [planningView, setPlanningView] = useState<'timeline' | 'roadmap'>('timeline');
   const [months, setMonths] = useState(3);
@@ -289,6 +292,7 @@ export default function PlanningPage() {
                   onUpdate={handleRefetch}
                   months={months}
                   monthOffset={monthOffset}
+                  readOnly={!canEditProjectDates}
                 />
               </LightModeIsland>
             )}

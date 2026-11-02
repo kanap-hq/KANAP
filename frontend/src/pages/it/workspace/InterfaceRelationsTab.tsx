@@ -7,6 +7,7 @@ import { useAuth } from '../../../auth/AuthContext';
 import EntityKnowledgePanel from '../../../components/EntityKnowledgePanel';
 import { useKanapDialogs } from '../../../components/design';
 import LinksAndFilesSection, { type LinkDraft, type LinksAndFilesFile, type LinksAndFilesLink } from '../../../components/workspace/LinksAndFilesSection';
+import { removeWebLinkWithUndo, webLinkDraft, webLinkLabel } from '../../../components/workspace/removeWebLink';
 import {
   RelationSections,
   interfacesSection,
@@ -16,6 +17,7 @@ import {
 } from '../../../components/workspace/relations';
 import { useRelationLabels } from '../../../components/workspace/relations/labels';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
+import { EnsureApplicationFeedback, useApplicationFeedback } from '../applicationFeedback';
 
 type InterfaceRelationsData = {
   upstream: InterfaceRelationRow[];
@@ -30,7 +32,7 @@ type AttachmentRow = { id: string; original_filename: string; size: number | nul
  * one round trip (`GET /interfaces/:id/relations`), then links and files. A row opens its interface.
  * A member adds from a server search and unlinks on hover, each saved at once.
  */
-export default function InterfaceRelationsTab({
+function InterfaceRelationsTabView({
   interfaceId,
   onCountChange,
 }: {
@@ -40,6 +42,7 @@ export default function InterfaceRelationsTab({
   onCountChange?: (count: number) => void;
 }) {
   const { t } = useTranslation(['it', 'common', 'ops']);
+  const feedback = useApplicationFeedback();
   const { hasLevel } = useAuth();
   const dialogs = useKanapDialogs();
   const queryClient = useQueryClient();
@@ -97,16 +100,17 @@ export default function InterfaceRelationsTab({
 
   const removeLink = async (linkRow: LinksAndFilesLink) => {
     setError(null);
-    const previous = queryClient.getQueryData<WebLinkRow[]>(linksKey);
-    queryClient.setQueryData<WebLinkRow[]>(linksKey, (rows) => (rows ? rows.filter((row) => row.id !== linkRow.id) : rows));
-    try {
-      await api.delete(`${base}/links/${linkRow.id}`);
-    } catch (e) {
-      if (previous) queryClient.setQueryData(linksKey, previous);
-      failed(e);
-      return;
-    }
-    await queryClient.invalidateQueries({ queryKey: linksKey });
+    await removeWebLinkWithUndo<WebLinkRow[]>({
+      queryClient,
+      queryKey: linksKey,
+      without: (rows) => rows.filter((row) => row.id !== linkRow.id),
+      commit: () => api.delete(`${base}/links/${linkRow.id}`),
+      refresh: () => queryClient.invalidateQueries({ queryKey: linksKey }),
+      restore: () => saveLink(null, webLinkDraft(linkRow)),
+      message: t('common:linksAndFiles.removed', { name: webLinkLabel(linkRow) }),
+      feedback,
+      onError: failed,
+    });
   };
 
   const uploadFiles = async (chosen: File[]) => {
@@ -203,5 +207,14 @@ export default function InterfaceRelationsTab({
         onRemoveFile={(file) => { void removeFile(file); }}
       />
     </Stack>
+  );
+}
+
+/** The tab, with the undo message when the page does not already show one. */
+export default function InterfaceRelationsTab(props: React.ComponentProps<typeof InterfaceRelationsTabView>) {
+  return (
+    <EnsureApplicationFeedback>
+      <InterfaceRelationsTabView {...props} />
+    </EnsureApplicationFeedback>
   );
 }

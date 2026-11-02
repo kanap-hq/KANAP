@@ -49,7 +49,7 @@ Each row opens the contract. Your search, filters and sort are kept when you com
 **Default columns**:
 
 - **Contract**, **Supplier**, **Company**
-- **Next due date**: the next cancellation deadline of a contract that renews tacitly, or the end of any other contract. The date is followed by "in n days". An ended contract shows the day it ended, greyed out
+- **Next due date**: "Cancellation possible until {date}" when that date is the cancellation deadline and it comes before the end of the term, or "Ends on {date}" when the date is the end of the contract. The line ends with "in n days". An ended contract shows the day it ended, greyed out
 - **State**: see below
 - **Yearly amount**: the amount at signature, followed by its currency
 - **Committed**, **Budget** and **Gap** for the chosen budget year. See [Budget columns](#budget-columns)
@@ -136,7 +136,7 @@ You need `contracts:member` to edit. Readers see the same page with every field 
 
 **Share** in the header emails a link to the contract to colleagues of your workspace.
 
-The page has four tabs: **Overview**, **Budget**, **Compliance** and **Relations**. The addresses of the former **Details** and **Tasks** tabs open the overview.
+The page has five tabs: **Overview**, **Budget**, **Compliance**, **Relations** and **History** (the changes made to the contract, see [Record history](record-history.md)). The addresses of the former **Details** and **Tasks** tabs open the overview.
 
 ### Overview
 
@@ -158,7 +158,7 @@ The page recomputes these dates while you edit the start, duration, notice or re
 
 ### Budget
 
-The tab lists the linked budget lines, OPEX and CAPEX together, with their reference (`BL-12`), name, type and company. Use the picker under the table to link or remove lines.
+The tab lists the linked budget lines, OPEX and CAPEX together, with their reference (`BL-12`), name, type and company. Use the picker under the table to link or remove lines. A line whose paying company, cost center, supplier or currency differs from the contract shows a small orange mark. Hover the mark to see each difference, with the value on the line and the value on the contract. The picker shows the same mark on a line before you link it. Linking stays possible. The mark appears for a line you can read.
 
 With read access to budget lines (`budget:reader`), the tab also shows figures:
 
@@ -246,7 +246,7 @@ The section is absent when there is nothing to suggest.
 
 - **Add link** opens a dialog for a URL and an optional name; the link is saved at once. To change a link, hover its row and click the pencil.
 - **Attach file** opens the file chooser. You can also drop files on the section.
-- To remove a link or a file, hover the row and click the cross. Deleting a file asks for confirmation first.
+- To remove a link or a file, hover the row and click the cross. Removing a link shows a message and offers **Undo**, which creates the link again. Deleting a file asks for confirmation first.
 
 ### Deleting a contract
 
@@ -321,11 +321,12 @@ The export writes a CSV file or an Excel workbook (`.xlsx`): choose under **Form
 
 Keep your contract list in sync with other tools using CSV files or Excel workbooks (`contracts:admin`).
 
-**Export**: downloads the contracts the list shows (or, on request in the dialog, every contract) with these columns: `name`, `company_name`, `supplier_name`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. The computed dates (term end, deadlines, state) are not exported.
+**Export**: downloads the contracts the list shows (or, on request in the dialog, every contract). The columns are titled in the language of your screen; their technical names, which the import also reads, are `name`, `company_name`, `supplier_name`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. The computed dates (term end, deadlines, state) are not exported.
 
 **Import**:
 
 - Use **Preflight** to check the file before applying it
+- **Download an example** in the import dialog gives two sample contracts and what each column takes. See [Example files](csv-files.md#example-files)
 - A row is matched to a contract by contract name and supplier
 - Supports creation and updates
 - The file has no end of validity column. On an update, a blank `status`, or one equal to the contract's current status, keeps its end of validity. A different status applies it: `enabled` clears the end of validity, and `disabled` ends the contract today unless its end of validity has already passed

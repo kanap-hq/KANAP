@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { DataSource, EntityManager, In } from 'typeorm';
 import { ScheduledTasksService } from '../../../admin/scheduled-tasks/scheduled-tasks.service';
 import { AiExecutionContextWithManager } from '../../ai.types';
@@ -31,6 +31,7 @@ import {
   scheduledCheckDue,
 } from './ai-agent-check-interval';
 import { isRecord } from '../../../common/object-guards';
+import { codedForbidden } from '../../../auth/module-right-required';
 
 export type MonitoringAlertIngestionPollSummary = {
   tenantId: string;
@@ -487,7 +488,7 @@ export class AiAgentMonitoringAlertIngestionService implements OnModuleInit {
     try {
       const applicability = await this.providers.getApplicability(context, binding.providerKind, binding.providerKey);
       if (!applicability.available) {
-        throw new ForbiddenException(`Monitoring provider is unavailable: ${applicability.message ?? applicability.reasonCode ?? 'not ready'}.`);
+        throw codedForbidden('AGENT_PROVIDER_UNAVAILABLE', `Monitoring provider is unavailable: ${applicability.message ?? applicability.reasonCode ?? 'not ready'}.`, { detail: applicability.message ?? applicability.reasonCode ?? 'not ready' });
       }
       const provider = await this.providers.monitoring(context, binding.providerKey);
       const maxResults = Math.min(config.maxAlertsPerCycle, config.maxProviderRequestsPerCycle);

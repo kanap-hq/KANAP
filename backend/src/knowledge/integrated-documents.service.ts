@@ -1,12 +1,12 @@
+import { writeAuditLog } from '../audit/audit.service';
 import {
   BadRequestException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { requestContextMissing, moduleRightRequired } from '../auth/module-right-required';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
-import { moduleRightRequired } from '../auth/module-right-required';
 import { DocumentImportService } from '../common/document-import.service';
 import { extractInlineImageUrls } from '../common/content-image-urls';
 import { ImportExecutionOptions, readUploadedFileBuffer } from '../common/import-connection';
@@ -276,7 +276,7 @@ export class IntegratedDocumentsService {
   private normalizeUserId(userId: string | null | undefined): string {
     const normalized = String(userId || '').trim();
     if (!normalized) {
-      throw new ForbiddenException('Authenticated user is required');
+      throw requestContextMissing('Authenticated user is required');
     }
     return normalized;
   }
@@ -1513,6 +1513,18 @@ export class IntegratedDocumentsService {
       // feed can label the change in the reader's language.
       changed_fields: { document_updated: [null, slotKey] },
     }));
+    // The project's or the request's history reads the edit as "Document modified: Purpose", from
+    // the slot alone.
+    if (sourceEntityType === 'projects' || sourceEntityType === 'requests') {
+      await writeAuditLog(manager, {
+        table: sourceEntityType === 'projects' ? 'portfolio_project_documents' : 'portfolio_request_documents',
+        recordId: sourceEntityId,
+        action: 'update',
+        before: null,
+        after: { slot: slotKey },
+        userId: userId || null,
+      });
+    }
   }
 
   private extractKnowledgeInlineAttachmentIds(content: string): string[] {
@@ -2027,7 +2039,7 @@ export class IntegratedDocumentsService {
     const requiredLevel = accessMode === 'edit' ? config.editLevel : config.readLevel;
     const outcome = await this.sourcePermissionOutcome(sourceEntityType, accessMode, userId, manager);
     if (outcome === 'unknown-user') {
-      throw new ForbiddenException('User not found');
+      throw requestContextMissing('User not found');
     }
     if (outcome === 'denied') {
       throw moduleRightRequired(config.permissionResource, requiredLevel, `${config.permissionResource}:${requiredLevel} permission is required`);

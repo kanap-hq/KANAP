@@ -6,16 +6,28 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../config/ThemeContext';
 
 vi.mock('react-i18next', () => {
-  const translation = { t: (key: string) => key, i18n: { language: 'en', resolvedLanguage: 'en' } };
+  const translation = {
+    t: (key: string, options?: { name?: string }) => (options?.name ? `${key} ${options.name}` : key),
+    i18n: { language: 'en', resolvedLanguage: 'en' },
+  };
   return { useTranslation: () => translation };
 });
-vi.mock('../api', () => ({ default: { get: vi.fn() } }));
+vi.mock('../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
+const auth = vi.hoisted(() => ({ canCreateSupplier: false }));
+vi.mock('../auth/AuthContext', () => ({
+  useAuth: () => ({
+    hasLevel: (resource: string, level: string) => (
+      auth.canCreateSupplier && resource === 'suppliers' && (level === 'member' || level === 'manager')
+    ),
+  }),
+}));
 
 import api from '../api';
 import SupplierSelect from '../components/fields/SupplierSelect';
 import { fetchLookupByIds } from './useLookupPicker';
 
 const apiGet = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
+const apiPost = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;
 
 /** 1,500 suppliers, as on the perf tenant: the old picker only ever saw the first 1,000. */
 const SUPPLIERS = Array.from({ length: 1500 }, (_, i) => ({
@@ -69,7 +81,9 @@ const searches = () => calls.filter((c) => c.url === '/suppliers/lookup' && !c.p
 describe('useLookupPicker (through SupplierSelect)', () => {
   beforeEach(() => {
     calls = [];
+    auth.canCreateSupplier = false;
     apiGet.mockReset();
+    apiPost.mockReset();
     serveLookup();
   });
   afterEach(() => {
@@ -261,6 +275,220 @@ describe('useLookupPicker (through SupplierSelect)', () => {
     await waitFor(() => expect(screen.getByRole('combobox')).toHaveValue('selects.valueUnavailable'), { timeout: 4000 });
     // The first read and one retry.
     expect(calls.filter((c) => c.params.ids)).toHaveLength(2);
+  });
+});
+
+describe('creating a supplier from the picker', () => {
+  beforeEach(() => {
+    calls = [];
+    auth.canCreateSupplier = true;
+    apiGet.mockReset();
+    apiPost.mockReset();
+    serveLookup();
+  });
+
+  const createLabel = (name: string) => `master-data:suppliers.createOption ${name}`;
+
+  function renderField(onChange = vi.fn()) {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const invalidate = vi.spyOn(client, 'invalidateQueries');
+    function Harness() {
+      const [supplier, setSupplier] = React.useState<string | null>(null);
+      const [contractName, setContractName] = React.useState('My contract');
+      const [left, setLeft] = React.useState(false);
+      React.useEffect(() => {
+        let overlayOpen = false;
+        const mark = (event: KeyboardEvent) => {
+          if (event.key !== 'Escape') return;
+          overlayOpen = !!document.querySelector('.MuiModal-root:not(.MuiModal-hidden), [role="dialog"]');
+        };
+        // The same rule as the record shell: Escape leaves the record only when no dialog is open.
+        const onKey = (event: KeyboardEvent) => {
+          if (event.key !== 'Escape') return;
+          const target = event.target;
+          const typing = target instanceof HTMLElement && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA');
+          if (typing || overlayOpen) return;
+          setLeft(true);
+        };
+        window.addEventListener('keydown', mark, true);
+        window.addEventListener('keydown', onKey);
+        return () => {
+          window.removeEventListener('keydown', mark, true);
+          window.removeEventListener('keydown', onKey);
+        };
+      }, []);
+      return (
+        <>
+          <input aria-label="contract name" value={contractName} onChange={(event) => setContractName(event.target.value)} />
+          {left ? <div>left the record</div> : null}
+          <SupplierSelect
+            label=""
+            value={supplier}
+            onChange={(id) => {
+              onChange(id);
+              setSupplier(id);
+            }}
+          />
+        </>
+      );
+    }
+    render(
+      <QueryClientProvider client={client}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <Harness />
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+    return { onChange, invalidate };
+  }
+
+  async function openAndType(text: string) {
+    const input = screen.getByRole('combobox');
+    openList(input);
+    fireEvent.change(input, { target: { value: text } });
+    return input;
+  }
+
+  it('offers the trimmed name once the search finds no exact match, and not while it loads', async () => {
+    renderField();
+    const input = screen.getByRole('combobox');
+    openList(input);
+    await waitFor(() => expect(screen.getAllByRole('option')).toHaveLength(30));
+    // Nothing typed: the first page is not an offer to create.
+    expect(screen.queryByRole('option', { name: /createOption/ })).toBeNull();
+
+    const served = apiGet.getMockImplementation()! as (...args: any[]) => any;
+    let answer: () => void = () => undefined;
+    apiGet.mockImplementation(async (url: string, config?: { params?: Record<string, unknown>; signal?: AbortSignal }) => {
+      if (!config?.params?.ids) await new Promise<void>((resolve) => { answer = resolve; });
+      return served(url, config);
+    });
+    fireEvent.change(input, { target: { value: '  Acme  ' } });
+    await waitFor(() => expect(apiGet.mock.calls.some(([, config]) => config?.params?.q === 'Acme')).toBe(true));
+    expect(screen.queryByRole('option', { name: createLabel('Acme') })).toBeNull();
+    answer();
+    expect(await screen.findByRole('option', { name: createLabel('Acme') })).toBeInTheDocument();
+  });
+
+  it('keeps the create option last when other suppliers only contain the text', async () => {
+    renderField();
+    await openAndType('supplier 14');
+    await waitFor(() => expect(screen.getAllByRole('option').length).toBeGreaterThan(1));
+    const options = screen.getAllByRole('option');
+    expect(options[options.length - 1]).toHaveAccessibleName(createLabel('supplier 14'));
+    expect(options[0]).not.toHaveAccessibleName(createLabel('supplier 14'));
+  });
+
+  it('hides the option when a supplier already has that name, whatever the case', async () => {
+    renderField();
+    await openAndType('SUPPLIER 0001');
+    expect(await screen.findByRole('option', { name: 'Supplier 0001' })).toBeInTheDocument();
+    expect(screen.getAllByRole('option')).toHaveLength(1);
+    expect(screen.queryByRole('option', { name: /createOption/ })).toBeNull();
+  });
+
+  it('asks an administrator when the person cannot create suppliers', async () => {
+    auth.canCreateSupplier = false;
+    renderField();
+    await openAndType('Acme');
+    expect(await screen.findByText('master-data:suppliers.noSupplierAskAdmin')).toBeInTheDocument();
+    expect(screen.queryByRole('option')).toBeNull();
+    expect(screen.queryByRole('option', { name: /createOption/ })).toBeNull();
+  });
+
+  it('creates the supplier, selects its id once, and leaves the record behind untouched', async () => {
+    apiPost.mockResolvedValue({
+      data: { id: 'sup-new', name: 'Acme', erp_supplier_id: 'SUP-9', status: 'enabled' },
+    });
+    const { onChange, invalidate } = renderField();
+    await openAndType('Acme');
+    fireEvent.click(await screen.findByRole('option', { name: createLabel('Acme') }));
+
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('master-data:suppliers.newSupplier');
+    const name = screen.getByRole('textbox', { name: 'master-data:suppliers.fields.name' });
+    expect(name).toHaveValue('Acme');
+    fireEvent.change(name, { target: { value: '   ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    expect(await screen.findByText('master-data:suppliers.messages.nameRequired')).toBeInTheDocument();
+    expect(apiPost).not.toHaveBeenCalled();
+
+    fireEvent.change(name, { target: { value: 'Acme' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'master-data:suppliers.fields.erpSupplierId' }), {
+      target: { value: ' SUP-9 ' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+
+    await waitFor(() => expect(onChange).toHaveBeenCalledTimes(1));
+    expect(onChange).toHaveBeenCalledWith('sup-new');
+    expect(apiPost).toHaveBeenCalledWith('/suppliers', {
+      name: 'Acme',
+      erp_supplier_id: 'SUP-9',
+      notes: null,
+      status: 'enabled',
+      disabled_at: null,
+    });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['lookup', '/suppliers/lookup'] });
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(screen.getByRole('combobox')).toHaveValue('Acme');
+    expect(screen.getByLabelText('contract name')).toHaveValue('My contract');
+    expect(dialog).not.toBeInTheDocument();
+  });
+
+  it('offers the existing supplier when the name is already taken', async () => {
+    let lookups = 0;
+    apiGet.mockImplementation(async (url: string, config?: { params?: Record<string, unknown> }) => {
+      calls.push({ url, params: config?.params ?? {} });
+      const q = String(config?.params?.q ?? '');
+      if (!q) return { data: { items: [], has_more: false } };
+      lookups += 1;
+      if (lookups === 1) return { data: { items: [], has_more: false } };
+      return {
+        data: {
+          items: [{ id: 'sup-acme', name: 'ACME', erp_supplier_id: 'E-1', status: 'enabled' }],
+          has_more: false,
+        },
+      };
+    });
+    apiPost.mockRejectedValue({
+      response: { status: 409, data: { code: 'duplicate', message: 'Another supplier already has this name.' } },
+    });
+    const { onChange } = renderField();
+    await openAndType('Acme');
+    fireEvent.click(await screen.findByRole('option', { name: createLabel('Acme') }));
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.create' }));
+
+    expect(await screen.findByText('master-data:suppliers.messages.nameTaken')).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole('button', { name: 'master-data:suppliers.selectExisting' }));
+    await waitFor(() => expect(onChange).toHaveBeenCalledTimes(1));
+    expect(onChange).toHaveBeenCalledWith('sup-acme');
+    expect(apiPost).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(screen.getByRole('combobox')).toHaveValue('ACME');
+    expect(screen.getByLabelText('contract name')).toHaveValue('My contract');
+  });
+
+  it('closes the dialog on Escape and on Cancel, and leaves the record open', async () => {
+    const { onChange } = renderField();
+    await openAndType('Acme');
+    fireEvent.click(await screen.findByRole('option', { name: createLabel('Acme') }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.keyDown(screen.getByRole('button', { name: 'buttons.cancel' }), { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(screen.queryByText('left the record')).toBeNull();
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('contract name')).toHaveValue('My contract');
+
+    const input = screen.getByRole('combobox');
+    openList(input);
+    fireEvent.change(input, { target: { value: 'Acme' } });
+    fireEvent.click(await screen.findByRole('option', { name: createLabel('Acme') }));
+    await screen.findByRole('dialog');
+    fireEvent.click(screen.getByRole('button', { name: 'buttons.cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(screen.queryByText('left the record')).toBeNull();
+    expect(onChange).not.toHaveBeenCalled();
+    expect(dialog).not.toBeInTheDocument();
   });
 });
 

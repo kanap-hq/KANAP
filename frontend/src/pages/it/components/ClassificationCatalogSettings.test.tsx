@@ -124,4 +124,27 @@ describe('ClassificationCatalogSettings', () => {
     fireEvent.click(screen.getByRole('button', { name: 'No longer offered' }));
     await waitFor(() => expect(screen.getAllByRole('checkbox', { name: 'No longer offered Critical' })[0]).toBeChecked());
   });
+
+  it('shows the levels as text and hides editing when read-only', () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+    render(
+      <MemoryRouter>
+        <QueryClientProvider client={client}>
+          <ThemeProvider theme={createAppTheme('light')}>
+            <ClassificationCatalogSettings settings={settings} readOnly />
+          </ThemeProvider>
+        </QueryClientProvider>
+      </MemoryRouter>,
+    );
+    expect(screen.queryByRole('button', { name: 'Edit catalog' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add level' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Remove' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Move up' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
+    expect(screen.getByText('Business criticality')).toBeInTheDocument();
+    expect(screen.getByText('Critical, High, Low')).toBeInTheDocument();
+    expect(screen.getByText('V1 — Vital activities')).toBeInTheDocument();
+  });
 });

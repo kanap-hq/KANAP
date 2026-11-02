@@ -402,6 +402,15 @@
       "skillsMatrix": "Matrice de compétences",
       "workingDayCalendars": "Calendriers de jours ouvrés"
     },
+    "exportParams": {
+      "filters": "Filtres",
+      "includeDisabled": "Inclure les lignes terminées",
+      "q": "Recherche",
+      "scope": "Périmètre",
+      "sort": "Tri",
+      "table": "Table",
+      "tz": "Fuseau horaire"
+    },
     "fields": {
       "access_methods": "Modes d’accès",
       "account_id": "Compte",
@@ -706,7 +715,67 @@
       "authentication_mode": "Authentification",
       "monitoring_url": "URL de supervision",
       "env_notes": "Notes d'environnement",
-      "integration_tool_application_id": "Outil d'intégration"
+      "rule_key": "Clé de règle",
+      "operation_kind": "Opération",
+      "environment_scope": "Environnements",
+      "implementation_status": "Statut d'implémentation",
+      "test_status": "Statut de test",
+      "integration_tool_application_id": "Outil d'intégration",
+      "duration_months": "Durée (mois)",
+      "auto_renewal": "Reconduction tacite",
+      "notice_period_months": "Préavis (mois)",
+      "yearly_amount_at_signature": "Montant annuel",
+      "billing_frequency": "Facturation",
+      "compliance_state": "État",
+      "compliance_reference": "Référence",
+      "source_ref": "Référence externe",
+      "authority_notification_required": "Notification aux autorités requise",
+      "authority_notified_at": "Notifié le",
+      "notified_parties": "Parties informées",
+      "base_url": "URL de base",
+      "capex_item_id": "Ligne CAPEX",
+      "department_id": "Direction",
+      "server_role": "Rôle du serveur",
+      "since_date": "Depuis",
+      "suite_id": "Suite",
+      "priority_level": "Priorité",
+      "labels": "Étiquettes",
+      "hours": "Temps",
+      "logged_at": "Date",
+      "related_object": "Lié à",
+      "converted_to_request": "Convertie en demande",
+      "converted_to_project": "Convertie en projet",
+      "actual_effort_business": "Charge métier réelle",
+      "actual_effort_it": "Charge IT réelle",
+      "actual_start": "Début réel",
+      "actual_end": "Fin réelle",
+      "baseline_effort_business": "Charge métier de référence",
+      "baseline_effort_it": "Charge IT de référence",
+      "baseline_start_date": "Début de référence",
+      "baseline_end_date": "Fin de référence",
+      "business_effort_allocation_mode": "Mode de ventilation de la charge métier",
+      "it_effort_allocation_mode": "Mode de ventilation de la charge IT",
+      "business_sponsor_id": "Sponsor métier",
+      "it_sponsor_id": "Sponsor IT",
+      "category_id": "Catégorie",
+      "source_id": "Source",
+      "stream_id": "Filière",
+      "estimated_effort_business": "Charge métier",
+      "estimated_effort_it": "Charge IT",
+      "execution_progress": "Avancement",
+      "override_justification": "Justification de la surcharge",
+      "override_value": "Valeur de surcharge",
+      "priority_override": "Surcharge de priorité",
+      "priority_score": "Score de priorité",
+      "scheduling_mode": "Mode de planification",
+      "source_request_id": "Créé à partir de la demande",
+      "requestor_id": "Demandeur",
+      "target_delivery_date": "Date de livraison cible",
+      "converted_date": "Convertie le",
+      "origin_task_id": "Créée depuis la tâche",
+      "target_date": "Date cible",
+      "phase_status": "Statut",
+      "milestone_status": "Statut"
     },
     "history": {
       "empty": "Aucun historique",
@@ -724,6 +793,9 @@
       "amountYear": "Montant {{year}}, {{column}}",
       "amountMonthly": "{{label}} : répartition mensuelle modifiée",
       "amountMonths": "mois {{months}}",
+      "monthRange": "de {{from}} à {{to}} {{year}}",
+      "monthRange_vowel": "d'{{from}} à {{to}} {{year}}",
+      "monthRangeAcrossYears": "{{from}} {{fromYear}} à {{to}} {{toYear}}",
       "amountWholeYear": "année entière",
       "allocations": "Ventilations",
       "allocationsYear": "Ventilations {{year}}",
@@ -736,13 +808,40 @@
       "allocationNoName": "Ventilation",
       "childCreated": "{{title}} ajoutée",
       "childDeleted": "{{title}} supprimée",
-      "version": "Version {{name}}",
+      "version": "Budget {{year}}",
+      "versionCreated": "Budget {{year}} ajouté",
+      "versionDeleted": "Budget {{year}} supprimé",
+      "technologyVersion": "Version {{name}}",
       "versionNoName": "Version",
       "versionNumber": "Version {{number}}",
       "versionChanged": "Version {{before}} → {{after}}",
       "texts": {
         "contentChanged": "Contenu modifié",
-        "workingDaysChanged": "Jours ouvrés modifiés"
+        "workingDaysChanged": "Jours ouvrés modifiés",
+        "notesChanged": "Notes modifiées",
+        "emailChanged": "E-mail modifié",
+        "phoneChanged": "Téléphone modifié",
+        "mobileChanged": "Mobile modifié",
+        "conditionChanged": "Condition modifiée",
+        "businessRuleChanged": "Règle métier modifiée",
+        "middlewareRuleChanged": "Règle de middleware modifiée",
+        "remarksChanged": "Remarques modifiées",
+        "exampleInputChanged": "Exemple d'entrée modifié",
+        "exampleOutputChanged": "Exemple de sortie modifié",
+        "sourceBindingsChanged": "Champs source modifiés",
+        "targetBindingsChanged": "Champs cible modifiés",
+        "renewalStopped": "Renouvellement arrêté",
+        "renewalResumed": "Renouvellement repris",
+        "descriptionChanged": "Description modifiée",
+        "supportNotesChanged": "Notes de support modifiées",
+        "classificationReviewed": "Classification revue",
+        "taskTypeChanged": "Type de tâche modifié",
+        "phaseChanged": "Phase modifiée",
+        "purposeChanged": "Objectif modifié",
+        "risksChanged": "Risques modifiés",
+        "currentSituationChanged": "Situation actuelle modifiée",
+        "expectedBenefitsChanged": "Bénéfices attendus modifiés",
+        "feasibilityReviewChanged": "Revue de faisabilité modifiée"
       },
       "actors": {
         "assistant": "Plaid",
@@ -866,9 +965,69 @@
           "added": "Jeu de mappage ajouté : {{label}}",
           "removed": "Jeu de mappage retiré : {{label}}"
         },
+        "mapping_group": {
+          "added": "Groupe de mappage ajouté : {{label}}",
+          "removed": "Groupe de mappage retiré : {{label}}"
+        },
+        "mapping_rule": {
+          "added": "Règle de mappage ajoutée : {{label}}",
+          "removed": "Règle de mappage retirée : {{label}}"
+        },
         "middleware": {
           "added": "Middleware ajouté : {{label}}",
           "removed": "Middleware retiré : {{label}}"
+        },
+        "renewal_task": {
+          "added": "Tâche de renouvellement créée : {{label}}",
+          "removed": "Tâche de renouvellement retirée : {{label}}"
+        },
+        "instance": {
+          "added": "Environnement ajouté : {{label}}",
+          "removed": "Environnement retiré : {{label}}"
+        },
+        "assignment": {
+          "added": "Serveur ajouté : {{label}}",
+          "removed": "Serveur retiré : {{label}}"
+        },
+        "department": {
+          "added": "Direction ajoutée : {{label}}",
+          "removed": "Direction retirée : {{label}}"
+        },
+        "suite": {
+          "added": "Suite ajoutée : {{label}}",
+          "removed": "Suite retirée : {{label}}"
+        },
+        "business_process": {
+          "added": "Processus métier ajouté : {{label}}",
+          "removed": "Processus métier retiré : {{label}}"
+        },
+        "task_owner": {
+          "added": "Responsable ajouté : {{label}}",
+          "removed": "Responsable retiré : {{label}}"
+        },
+        "task_viewer": {
+          "added": "Observateur ajouté : {{label}}",
+          "removed": "Observateur retiré : {{label}}"
+        },
+        "phase": {
+          "added": "Phase ajoutée : {{label}}",
+          "removed": "Phase retirée : {{label}}"
+        },
+        "milestone": {
+          "added": "Jalon ajouté : {{label}}",
+          "removed": "Jalon retiré : {{label}}"
+        },
+        "time_entry": {
+          "added": "Temps saisi ajouté : {{label}}",
+          "removed": "Temps saisi retiré : {{label}}"
+        },
+        "it_team": {
+          "added": "Membre de l'équipe IT ajouté : {{label}}",
+          "removed": "Membre de l'équipe IT retiré : {{label}}"
+        },
+        "business_team": {
+          "added": "Membre de l'équipe métier ajouté : {{label}}",
+          "removed": "Membre de l'équipe métier retiré : {{label}}"
         }
       },
       "unnamed": {
@@ -921,7 +1080,18 @@
         "leg": "un segment",
         "set": "un ensemble",
         "binding": "une liaison",
-        "person": "une personne"
+        "person": "une personne",
+        "instance": "un environnement",
+        "assignment": "un serveur",
+        "phase": "une phase",
+        "milestone": "un jalon",
+        "time_entry": "un temps saisi",
+        "team": "une équipe",
+        "dependency": "une dépendance",
+        "criterion_value": "une option",
+        "portfolio_source": "une source",
+        "portfolio_category": "une catégorie",
+        "portfolio_stream": "une filière"
       },
       "deleted": {
         "record": "un enregistrement supprimé",
@@ -973,7 +1143,15 @@
         "leg": "un segment supprimé",
         "set": "un ensemble supprimé",
         "binding": "une liaison supprimée",
-        "person": "une personne supprimée"
+        "person": "une personne supprimée",
+        "instance": "un environnement supprimé",
+        "assignment": "un serveur supprimé",
+        "phase": "une phase supprimée",
+        "milestone": "un jalon supprimé",
+        "time_entry": "un temps saisi supprimé",
+        "team": "une équipe supprimée",
+        "dependency": "une dépendance supprimée",
+        "criterion_value": "une option supprimée"
       },
       "title": "Historique",
       "metricsYear": "Indicateurs {{year}}",
@@ -996,7 +1174,29 @@
       "legCreated": "Segment {{index}} ajouté",
       "legDeleted": "Segment {{index}} retiré",
       "bindingCreated": "Liaison {{environment}} ajoutée",
-      "bindingDeleted": "Liaison {{environment}} retirée"
+      "bindingDeleted": "Liaison {{environment}} retirée",
+      "renewalDecided": "Renouvellement décidé : {{decision}}",
+      "renewalUndone": "Décision de renouvellement annulée",
+      "outsideAccess": {
+        "and_one": "et {{count}} ligne hors de votre accès",
+        "and_other": "et {{count}} lignes hors de votre accès",
+        "added_one": "{{count}} ligne budgétaire hors de votre accès ajoutée",
+        "added_other": "{{count}} lignes budgétaires hors de votre accès ajoutées",
+        "removed_one": "{{count}} ligne budgétaire hors de votre accès retirée",
+        "removed_other": "{{count}} lignes budgétaires hors de votre accès retirées"
+      },
+      "instance": "Environnement {{environment}}",
+      "timeEntry": "Temps enregistré",
+      "timeEntryCreated": "Temps enregistré",
+      "timeEntryDeleted": "Temps enregistré supprimé",
+      "criterion": "Critère {{name}}",
+      "criterionNoName": "Un critère",
+      "linkChanged": "Lien {{name}} modifié",
+      "linkChangedNoName": "Lien modifié",
+      "effortAllocationIt": "Part de la charge IT, {{name}}",
+      "effortAllocationBusiness": "Part de la charge métier, {{name}}",
+      "documentUpdated": "Document modifié : {{label}}",
+      "documentUpdatedNoName": "Document modifié"
     },
     "messages": {
       "loadDetailsFailed": "Impossible de charger les détails de l'entrée d'audit."
@@ -1073,7 +1273,7 @@
       "asset_spend_items": "Lignes OPEX d'actif",
       "asset_support_contacts": "Contacts de support d'actif",
       "asset_support_info": "Informations de support d'actif",
-      "asset_technologies": "Technologies des assets",
+      "asset_technologies": "Technologies des actifs",
       "assets": "Actifs",
       "auth": "Connexion et session",
       "business_process_categories": "Catégories de processus métier",
@@ -1149,6 +1349,7 @@
       "location_user_contacts": "Contacts internes de site",
       "locations": "Sites",
       "notification_preferences": "Préférences de notification",
+      "onboarding": "Premiers pas",
       "platform_ai_config": "Paramètres IA de la plateforme",
       "platform_ai_plan_limits": "Messages IA inclus",
       "portfolio_activities": "Activité du portefeuille",
@@ -1157,19 +1358,28 @@
       "portfolio_phase_templates": "Modèles de phase",
       "portfolio_project_attachments": "Pièces jointes de projet",
       "portfolio_project_capex": "Lignes CAPEX de projet",
+      "portfolio_project_contacts": "Contacts de projet",
+      "portfolio_project_dependencies": "Dépendances de projet",
+      "portfolio_project_documents": "Documents de projet",
+      "portfolio_project_effort_allocations": "Répartitions de la charge de projet",
       "portfolio_project_milestones": "Jalons de projet",
       "portfolio_project_opex": "Lignes OPEX de projet",
       "portfolio_project_phases": "Phases de projet",
       "portfolio_project_team": "Équipes de projet",
       "portfolio_project_time_entries": "Temps saisis sur les projets",
+      "portfolio_project_urls": "Liens web de projet",
       "portfolio_projects": "Projets",
       "portfolio_request_applications": "Applications de demande",
       "portfolio_request_assets": "Actifs de demande",
       "portfolio_request_attachments": "Pièces jointes de demande",
       "portfolio_request_business_processes": "Processus métier de demande",
       "portfolio_request_capex": "Lignes CAPEX de demande",
+      "portfolio_request_contacts": "Contacts de demande",
+      "portfolio_request_dependencies": "Dépendances de demande",
+      "portfolio_request_documents": "Documents de demande",
       "portfolio_request_opex": "Lignes OPEX de demande",
       "portfolio_request_team": "Équipes de demande",
+      "portfolio_request_urls": "Liens web de demande",
       "portfolio_requests": "Demandes",
       "portfolio_skills": "Compétences",
       "portfolio_sources": "Sources du portefeuille",
@@ -1350,6 +1560,19 @@
       "ownerType": {
         "business": "Métier",
         "it": "IT"
+      },
+      "usersMode": {
+        "itUsers": "Dérivé",
+        "headcount": "Dérivé",
+        "manual": "Manuel"
+      },
+      "allocationMode": {
+        "auto": "Automatique",
+        "manual": "Manuel"
+      },
+      "effortType": {
+        "it": "IT",
+        "business": "Métier"
       }
     },
     "dataAccess": {
@@ -1534,6 +1757,9 @@
       "reset": "Réinitialiser la personnalisation aux paramètres par défaut de KANAP ? Le logo et les couleurs personnalisées seront supprimés."
     },
     "fields": {
+      "organizationName": "Nom de l'organisation",
+      "organizationNameHelper": "Affiché avec le logo, dans À propos, sur la page de consentement et pour l'assistant. L'adresse de l'espace de travail reste la même.",
+      "organizationNamePlaceholder": "p. ex. Northwind",
       "showLogoInDark": "Afficher le logo en mode sombre"
     },
     "logo": {
@@ -1560,7 +1786,8 @@
     },
     "title": "Personnalisation",
     "validation": {
-      "hexColorFormat": "Utilisez le format #RRGGBB (exemple : #1F3A5F)"
+      "hexColorFormat": "Utilisez le format #RRGGBB (exemple : #1F3A5F)",
+      "organizationNameLength": "Utilisez de 1 à 120 caractères."
     }
   },
   "coaTemplates": {
@@ -2419,14 +2646,33 @@
       "priceOutput": "Coût de sortie",
       "priceInputPlaceholder": "ex. 3,00",
       "priceOutputPlaceholder": "ex. 15,00",
+      "priceCacheRead": "Coût de lecture en cache",
+      "priceCacheReadPlaceholder": "ex. 0,30",
+      "cacheReadHint": "Prix par million de tokens relus depuis le cache du fournisseur (souvent « cached input » sur sa page tarifs). Vide : le coût d’entrée s’applique, ou un dixième de celui-ci pour Anthropic.",
       "advanced": "Paramètres avancés",
       "timeout": "Délai d'attente",
       "timeoutPlaceholder": "ex. 120",
       "timeoutHint": "Durée d'attente, en secondes, avant d'abandonner l'appel. Laissez vide pour la limite standard. Les modèles locaux ont souvent besoin de plus de temps.",
+      "reasoningEffort": "Effort de raisonnement",
+      "reasoningEffortDefault": "Par défaut du fournisseur",
+      "reasoningEffortHint": "Combien le modèle réfléchit avant de répondre. Plus d’effort : réponses plus soignées, plus lentes et plus chères. Les niveaux proposés dépendent du fournisseur et du modèle. « Tester la connexion » indique l’effort envoyé.",
+      "reasoningEffortValues": {
+        "low": "Faible",
+        "medium": "Moyen",
+        "high": "Élevé",
+        "xhigh": "Très élevé",
+        "max": "Maximal"
+      },
+      "reasoningEffortUnavailable": "Ce modèle ne prend pas d’effort de raisonnement.",
+      "reasoningEffortMayBeIgnored": "Ce serveur peut ignorer l’effort de raisonnement. « Tester la connexion » indique si le modèle a raisonné.",
       "defaultLabel": "Utiliser comme modèle par défaut",
       "test": "Tester la connexion",
       "testing": "Test en cours…",
-      "testOk": "Connexion réussie ({{latency}} ms)."
+      "testOk": "Connexion réussie ({{latency}} ms).",
+      "testEffortSent": "Effort envoyé : {{effort}}.",
+      "testEffortNotSent": "Aucun effort envoyé.",
+      "testReasoningTokens_one": "{{count}} token de raisonnement.",
+      "testReasoningTokens_other": "{{count}} tokens de raisonnement."
     }
   },
   "aiUsage": {
@@ -2437,7 +2683,7 @@
       "totalMonth": "Total ce mois-ci",
       "agentsMonth": "Agents ce mois-ci",
       "chatMonth": "Plaid ce mois-ci",
-      "chatEstimatedNote": "Estimé aux tarifs du modèle actuellement assigné",
+      "chatEstimatedNote": "En partie estimé aux tarifs du modèle actuellement assigné",
       "chatFreeNote": "Le modèle assigné est sans coût",
       "byAgent": "Coût par agent",
       "byModel": "Coût par modèle",

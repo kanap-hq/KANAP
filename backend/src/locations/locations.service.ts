@@ -12,7 +12,6 @@ import { compileAgFilterCondition, createParamNameGenerator, assertSetFilterMode
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
 import { ItOpsSettings, ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
 import { Company } from '../companies/company.entity';
-import { Asset } from '../assets/asset.entity';
 import { User } from '../users/user.entity';
 import { ExternalContact } from '../contacts/external-contact.entity';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -22,6 +21,7 @@ import { displayName } from '../common/display-name';
 import { sortedFindQuery } from '../common/list-sort';
 import { assertWebLinkUrl } from '../common/web-link-url';
 import { duplicateNameException } from '../common/duplicate-name';
+import { englishList, RecordInUseException } from '../common/record-in-use';
 import {
   readLocationRelationCounts,
   readLocationRelations,
@@ -357,6 +357,12 @@ export class LocationsService {
       (opts?.include ?? []).map((v) => String(v || '').trim()).filter((v) => !!v),
     );
     const result: any = { ...location };
+    // The assets here: a location that holds any refuses its delete, and the page says so before asking.
+    const [usage] = await (opts?.manager ?? repo.manager).query(
+      `SELECT count(*)::int AS total FROM assets WHERE tenant_id = $1 AND location_id = $2`,
+      [location.tenant_id, location.id],
+    );
+    result.usage_count = Number(usage?.total ?? 0);
     if (includeSet.has('internal_contacts')) {
       result.internal_contacts = await this.fetchInternalContacts(resolvedId, opts?.manager);
     }
@@ -555,18 +561,33 @@ export class LocationsService {
     return { ok: true };
   }
 
+  /**
+   * The refusal of a location's delete (`LOCATION_IN_USE`, with its assets counted), or null when
+   * no asset is there. Every asset has a location: the assets move to another location first.
+   */
+  async deleteRefusal(location: Pick<Location, 'id' | 'name' | 'tenant_id'>, manager: EntityManager): Promise<RecordInUseException | null> {
+    const [row] = await manager.query(
+      `SELECT count(*)::int AS total FROM assets WHERE tenant_id = $1 AND location_id = $2`,
+      [location.tenant_id, location.id],
+    );
+    const total = Number(row?.total ?? 0);
+    if (total === 0) return null;
+    return new RecordInUseException(
+      'LOCATION_IN_USE',
+      'location',
+      location.name,
+      [{ type: 'assets', total }],
+      `Cannot delete location "${location.name}": it still holds ${englishList([{ type: 'assets', total }])}. Move ${total === 1 ? 'it' : 'them'} to another location first.`,
+    );
+  }
+
   async delete(id: string, userId: string | null, opts?: { manager?: EntityManager; audit?: AuditSourceOptions }) {
     const repo = this.getRepo(opts?.manager);
     const mg = opts?.manager ?? repo.manager;
     const existing = await repo.findOne({ where: { id } });
     if (!existing) throw new NotFoundException('Location not found');
-    await mg
-      .getRepository(Asset)
-      .createQueryBuilder()
-      .update(Asset)
-      .set({ location_id: null, updated_at: () => 'now()' })
-      .where('location_id = :id', { id })
-      .execute();
+    const refusal = await this.deleteRefusal(existing, mg);
+    if (refusal) throw refusal;
     await repo.delete({ id } as any);
     await this.audit.log(
       {

@@ -12,7 +12,7 @@ import type { ExportFormat } from '../../../components/csv/exportFormat';
 import { RelationRef, RelationsEmpty, RelationsSection, RelationsTable, type RelationsColumn } from '../../../components/workspace/RelationsTable';
 import RelationAddPicker, { type RelationOption } from '../../../components/workspace/RelationAddPicker';
 import { invalidateTechnologyLinks } from '../components/technologyLinkQueries';
-import TechnologyVersionPicker, { type VersionOption } from '../components/TechnologyVersionPicker';
+import TechnologyVersionPicker, { type VersionChoice, type VersionOption } from '../components/TechnologyVersionPicker';
 
 /** One row of `GET /technologies/:id/applications` (doc/api-reference.md, "Applications"). */
 export type TechnologyApplicationRow = {
@@ -45,6 +45,11 @@ const PAGE = 30;
 
 const camel = (value: string) => value.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
 
+/** What an add holds so far: the applications ticked, then their version. */
+type Adding =
+  | { step: 'applications'; anchor: HTMLElement }
+  | { step: 'version'; anchor: HTMLElement; applications: RelationOption[] };
+
 type Props = {
   technologyId: string;
   technologyReference: string;
@@ -55,15 +60,16 @@ type Props = {
 /**
  * The applications of a technology (lot T1b): hosted on a server that carries it (deduced, per
  * environment and server, not removable) and declared by the application (removable, with a
- * version to change in place). Managers declare several applications at once; the rows export to
- * CSV. Without the right to read applications, one line says so.
+ * version to change in place). Managers declare several applications at once, then their version,
+ * as the Servers tab adds a server then its version; the rows export to CSV. Without the right to
+ * read applications, one line says so.
  */
 export default function TechnologyApplicationsTab({ technologyId, technologyReference, versions, canManage }: Props) {
   const { t, i18n } = useTranslation(['it', 'common']);
   const queryClient = useQueryClient();
   const { data: catalog } = useApplicationClassificationCatalog();
   const key = technologyApplicationsKey(technologyId);
-  const [anchor, setAnchor] = React.useState<HTMLElement | null>(null);
+  const [adding, setAdding] = React.useState<Adding | null>(null);
   const [editingVersion, setEditingVersion] = React.useState<{ anchor: HTMLElement; row: TechnologyApplicationRow } | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -78,17 +84,14 @@ export default function TechnologyApplicationsTab({ technologyId, technologyRefe
 
   const failed = (e: unknown) => setError(getApiErrorMessage(e, t, t('workspace.technology.applications.saveFailed')));
 
-  // The picker stays open until the server answers: on a refusal it shows why, the rows still ticked.
-  const addMany = async (options: RelationOption[]): Promise<string | null> => {
+  const addMany = async (applications: RelationOption[], choice: VersionChoice) => {
     setError(null);
     try {
-      await api.post(`/technologies/${technologyId}/applications`, { application_ids: options.map((option) => option.id) });
+      await api.post(`/technologies/${technologyId}/applications`, { application_ids: applications.map((option) => option.id), ...choice });
     } catch (e) {
-      return getApiErrorMessage(e, t, t('workspace.technology.applications.saveFailed'));
+      failed(e);
     }
-    setAnchor(null);
     await refresh();
-    return null;
   };
 
   const changeVersion = async (row: TechnologyApplicationRow, choice: object) => {
@@ -188,7 +191,8 @@ export default function TechnologyApplicationsTab({ technologyId, technologyRefe
           aria-label={t('workspace.technology.applications.changeVersion', { name: row.application_name ?? '' })}
           onClick={(event: React.MouseEvent<HTMLButtonElement>) => { event.stopPropagation(); setEditingVersion({ anchor: event.currentTarget, row }); }}
           onKeyDown={(event: React.KeyboardEvent) => event.stopPropagation()}
-          sx={{ all: 'unset', cursor: 'pointer', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', '&:hover': { textDecoration: 'underline' }, '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main' } }}
+          // The whole cell opens the picker, as in the Servers tab: a click beside the label would open the application.
+          sx={{ all: 'unset', display: 'block', width: '100%', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', '&:hover': { textDecoration: 'underline' }, '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main' } }}
         >
           {versionText(row)}
         </Box>
@@ -214,24 +218,35 @@ export default function TechnologyApplicationsTab({ technologyId, technologyRefe
         actions={rows.length > 0 ? (
           <ExportFormatButton size="small" label={t('common:export.button')} onExport={exportFile} />
         ) : undefined}
-        onAdd={canManage && data ? setAnchor : undefined}
-        adding={!!anchor}
+        onAdd={canManage && data ? (anchor) => setAdding({ step: 'applications', anchor }) : undefined}
+        adding={!!adding}
         addLabel={t('workspace.technology.applications.add')}
       >
-        {anchor && (
+        {adding?.step === 'applications' && (
           <RelationAddPicker
-            anchorEl={anchor}
+            anchorEl={adding.anchor}
             searchKey={`technology-applications-${technologyId}`}
             search={search}
             excludeIds={declaredApps}
             placeholder={searchLabel}
             ariaLabel={searchLabel}
             onPick={() => undefined}
-            onClose={() => setAnchor(null)}
+            onClose={() => setAdding(null)}
             multiple={{
               label: (count) => t('workspace.technology.applications.addCount', { count }),
-              onConfirm: addMany,
+              onConfirm: async (applications) => {
+                setAdding({ step: 'version', anchor: adding.anchor, applications });
+                return null;
+              },
             }}
+          />
+        )}
+        {adding?.step === 'version' && (
+          <TechnologyVersionPicker
+            anchorEl={adding.anchor}
+            versions={versions}
+            onPick={(choice) => { const { applications } = adding; setAdding(null); void addMany(applications, choice); }}
+            onClose={() => setAdding(null)}
           />
         )}
         {editingVersion && (

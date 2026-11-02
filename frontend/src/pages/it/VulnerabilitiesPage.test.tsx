@@ -1404,12 +1404,22 @@ describe('VulnerabilitiesPage', () => {
           return { data: { items: [
             { source: 'nvd', last_success_at: new Date().toISOString(), last_attempt_at: null, failing: false, enabled: true },
             { source: 'cve_org', last_success_at: null, last_attempt_at: null, failing: false, enabled: true },
+          ], signals: [
+            { source: 'cisa_kev', last_success_at: '2026-10-21T02:22:00.000Z', last_attempt_at: null, failing: false, enabled: true, score_date: null },
+            { source: 'eu_kev', last_success_at: '2026-10-21T02:22:00.000Z', last_attempt_at: null, failing: false, enabled: false, score_date: null },
+            { source: 'epss', last_success_at: '2026-10-21T03:00:00.000Z', last_attempt_at: null, failing: false, enabled: true, score_date: '2026-10-19' },
+            { source: 'euvd', last_success_at: null, last_attempt_at: null, failing: false, enabled: true, score_date: null },
           ] } } as any;
         }
         throw new Error(`unexpected ${url}`);
       });
       renderPage();
-      expect((await screen.findByTestId('vulnerability-feed-age')).textContent).toContain('Publishers (CVE.org) not read yet');
+      const age = (await screen.findByTestId('vulnerability-feed-age')).textContent ?? '';
+      expect(age).toContain('Publishers (CVE.org) not read yet');
+      expect(age).toContain('CISA KEV on');
+      expect(age).toContain('EPSS scores of');
+      expect(age).toContain('EUVD not read yet');
+      expect(age).not.toContain('EU KEV');
       cleanup();
       getMock.mockRejectedValue(new Error('down'));
       renderPage();

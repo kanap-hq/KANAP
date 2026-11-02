@@ -1,5 +1,6 @@
 import { NotFoundException } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
+import { parseItemNumber } from '../common/parse-item-number';
 
 /** Any uuid shape (not only v1-v5). */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -72,7 +73,7 @@ export async function resolveAiEntityReference(
   if (isUuid(value)) return value;
   const lookup = REFERENCE_LOOKUPS[entityType];
   const number = lookup ? value.match(lookup.pattern)?.[1] : undefined;
-  if (!lookup || !number || !Number.isSafeInteger(Number(number)) || Number(number) > 2147483647) return null;
+  if (!lookup || number == null || parseItemNumber(number) == null) return null;
   const rows: Array<{ id: string }> = await manager.query(lookup.sql, [tenantId, lookup.value(number)]);
   if (rows.length === 0) throw entityNotFound(entityType, value);
   return String(rows[0].id);

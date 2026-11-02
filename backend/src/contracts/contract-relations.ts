@@ -1,9 +1,9 @@
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { outsideParticipation, moduleRightRequired } from '../auth/module-right-required';
 import { EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
 import { singleChangedId } from '../audit/audit-parent-rules';
 import { applicationParticipantCondition, resolveBusinessContributorScope, type ParticipationAccessScope } from '../auth/business-contributor-scope';
-import { moduleRightRequired } from '../auth/module-right-required';
 import { LINKED_MODULE_RESOURCES } from '../common/relations/linked-reads';
 import { setOwnedLink, type OwnedLinkAudit } from '../common/relations/owned-link';
 import { binder } from '../common/relations/related-objects';
@@ -13,6 +13,7 @@ import { BUDGET_NATURES, naturesAnd } from '../spend/budget-nature';
 import { assertLinesEditable, isLimitedTransaction } from '../data-access/line-write-checks';
 import { assertContractsEditable } from '../data-access/contract-write-checks';
 import { auditedLinkSet } from '../data-access/hidden-links';
+import { lineMismatchesAgainstContract, type ContractLineMismatch } from './contract-line-match';
 
 /**
  * What a contract is linked to, from the contract's side: its budget lines of both natures
@@ -86,6 +87,8 @@ export type ContractBudgetLine = {
   product_name: string;
   company_id: string | null;
   company_name: string | null;
+  /** Empty when the line agrees with the contract. Absent from a response that does not list lines. */
+  mismatches: ContractLineMismatch[];
 };
 
 /**
@@ -112,7 +115,14 @@ export async function listContractBudgetLines(
       ORDER BY i.item_number ASC NULLS LAST, i.id ASC`,
     [contract.tenant_id, contract.id],
   );
-  return { items: rows.map((row) => ({ ...row, item_number: row.item_number == null ? null : Number(row.item_number) })), hidden };
+  const items = rows.map((row) => ({ ...row, item_number: row.item_number == null ? null : Number(row.item_number) }));
+  const mismatches = items.length === 0
+    ? null
+    : await lineMismatchesAgainstContract(manager, contract.tenant_id, contract.id, items.map((row) => row.id));
+  return {
+    items: items.map((row) => ({ ...row, mismatches: mismatches?.get(row.id) ?? [] })),
+    hidden,
+  };
 }
 
 /** The contract's links to lines a limited person cannot read; 0 for an unscoped person, without a query. */
@@ -231,7 +241,7 @@ export async function replaceContractRelations(
     if (set === 'budget_lines') await assertLinesEditable(manager, added);
     if (scope && added.length) {
       const inScope = await idsInScope(manager, 'applications', added, scope);
-      if (added.some((id) => !inScope.has(id))) throw new ForbiddenException(OUTSIDE_PARTICIPATION);
+      if (added.some((id) => !inScope.has(id))) throw outsideParticipation('applications', OUTSIDE_PARTICIPATION);
     }
   }
 

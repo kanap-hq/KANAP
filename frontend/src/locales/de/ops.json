@@ -47,22 +47,15 @@
       "history": "Verlauf"
     },
     "editor": {
-      "productNameRequired": "Produktname ist erforderlich",
-      "currencyMust3": "Die Währung muss aus 3 Buchstaben bestehen",
-      "payingCompanyRequired": "Zahlendes Unternehmen ist erforderlich",
-      "accountRequired": "Konto ist erforderlich",
-      "dimensionRequired": "{{name}} ist erforderlich",
       "requiredLeaveTitle_one": "Pflichtwert fehlt",
       "requiredLeaveTitle_other": "Pflichtwerte fehlen",
       "requiredLeaveMessage_one": "{{names}} ist erforderlich. Wählen Sie einen Wert, bevor Sie die Seite verlassen.",
       "requiredLeaveMessage_other": "{{names}} sind erforderlich. Wählen Sie Werte, bevor Sie die Seite verlassen.",
       "requiredLeaveStay": "Bleiben",
       "requiredLeaveConfirm": "Trotzdem verlassen",
-      "effectiveStartRequired": "Gültigkeitsbeginn ist erforderlich",
       "failedToCreate": "Zeile konnte nicht erstellt werden",
       "failedToSave": "Speichern fehlgeschlagen",
-      "failedToLoad": "Zeile konnte nicht geladen werden",
-      "obsoleteAccount": "Veraltetes Konto erkannt. Das ausgewählte Konto gehört nicht zum Kontenplan des Unternehmens. Bitte aktualisieren Sie das Konto."
+      "failedToLoad": "Zeile konnte nicht geladen werden"
     },
     "budget": {
       "title": "Budget",
@@ -370,6 +363,7 @@
       "deleted_other": "{{count}} Verträge gelöscht"
     },
     "title": "Verträge",
+    "empty": "Noch keine Verträge.",
     "newButton": "Neu",
     "importCsv": "CSV importieren",
     "exportTitle": "Verträge exportieren",
@@ -437,7 +431,8 @@
       "overview": "Übersicht",
       "budget": "Budget",
       "compliance": "Konformität",
-      "relations": "Verknüpfungen"
+      "relations": "Verknüpfungen",
+      "history": "Verlauf"
     },
     "sections": {
       "parties": "Parteien",
@@ -544,6 +539,16 @@
       "title": "Verknüpfte Budgetzeilen",
       "empty": "Keine Budgetzeile verknüpft.",
       "pickerLabel": "Budgetzeilen verknüpfen oder entfernen",
+      "mismatch": {
+        "notSet": "Nicht festgelegt",
+        "line": "{{field}}: {{line}} auf der Zeile, {{contract}} auf dem Vertrag",
+        "fields": {
+          "paying_company": "Zahlendes Unternehmen",
+          "cost_center": "Kostenstelle",
+          "supplier": "Lieferant",
+          "currency": "Währung"
+        }
+      },
       "columns": {
         "ref": "Ref.",
         "line": "Budgetzeile",
@@ -1088,6 +1093,8 @@
       "warningsTitle": "Warnungen",
       "ignoredColumns": "Ignorierte Spalten: {{columns}}.",
       "firstSheetOnly": "Nur das erste Blatt, {{name}}, wurde gelesen.",
+      "calculationLines": "{{item}} · {{column}} {{year}}: {{count}} Berechnungszeilen ({{total}}) steuern diese Beträge nicht mehr.",
+      "calculationLines_one": "{{item}} · {{column}} {{year}}: 1 Berechnungszeile ({{total}}) steuert diese Beträge nicht mehr.",
       "ignoredColumns_one": "Ignorierte Spalte: {{columns}}.",
       "createsTitle": "Beim Laden angelegt",
       "createSuppliersList": "Lieferanten: {{names}}",
@@ -1499,6 +1506,8 @@
       "totalMetric": "{{metric}}, gesamt",
       "ofFilteredMetric": "{{pct}} % der gefilterten Summe",
       "shareSubtitle": "Anteil an der Jahressumme ({{metric}})",
+      "pieShareSubtitle": "Anteil am Top {{count}} ({{metric}})",
+      "shareOfAllLines": "Anteil an allen Zeilen",
       "chartTitle": "Top {{count}} {{type}} · {{metric}} {{year}}",
       "chartTitle_all": "Top {{count}} Zeilen · {{metric}} {{year}}"
     },
@@ -1587,6 +1596,18 @@
       "totalMetric": "Gesamt {{metric}}",
       "unassigned": "Nicht zugeordnet",
       "unnamed": "Unbenannter Wert",
+      "lines": "Zeilen",
+      "nature": "Art",
+      "detail": "Detail pro Zeile",
+      "split": "OPEX/CAPEX-Aufteilung",
+      "opexShare": "OPEX-Anteil",
+      "capexShare": "CAPEX-Anteil",
+      "splitChartTitle": "OPEX- und CAPEX-Aufteilung nach {{dimension}} · {{year}}",
+      "level": "Ebene",
+      "levelValue": "Wert",
+      "levelLine": "Zeile",
+      "hidden_one": "und {{count}} Zeile außerhalb Ihres Zugriffs",
+      "hidden_other": "und {{count}} Zeilen außerhalb Ihres Zugriffs",
       "defaultDimensionInSentence": "Analysedimension"
     },
     "staffing": {
@@ -1875,6 +1896,7 @@
     "titleWithCurrency": "Budgetzeilen ({{currency}})",
     "type": "Typ",
     "newLine": "Neue Zeile",
+    "empty": "Noch keine Budgetzeilen.",
     "opexLine": "OPEX-Zeile",
     "capexLine": "CAPEX-Zeile",
     "exportTitle": "Budgetdatei exportieren",
@@ -1893,8 +1915,19 @@
       "kept_one": "{{count}} Budgetzeile kann nicht gelöscht werden und bleibt erhalten:",
       "kept_other": "{{count}} Budgetzeilen können nicht gelöscht werden und bleiben erhalten:",
       "deleted_one": "{{count}} Budgetzeile gelöscht",
-      "deleted_other": "{{count}} Budgetzeilen gelöscht"
+      "deleted_other": "{{count}} Budgetzeilen gelöscht",
+      "failed": "Die Budgetzeile konnte nicht gelöscht werden."
     },
-    "readOnlyInYourAccess": "Schreibgeschützt in Ihrem Zugriff"
+    "readOnlyInYourAccess": "Schreibgeschützt in Ihrem Zugriff",
+    "creation": {
+      "record": "Die Budgetzeile",
+      "missing": "Fehlt: {{fields}}",
+      "placeFirst": "Wählen Sie zuerst das zahlende Unternehmen oder die Kostenstelle.",
+      "leaveTitle": "Diese Zeile ist unvollständig",
+      "leaveComplete": "Vervollständigen",
+      "leaveDelete": "Löschen",
+      "leaveAnyway": "Trotzdem verlassen",
+      "completeFailed": "Die Zeile konnte nicht geprüft werden."
+    }
   }
 }

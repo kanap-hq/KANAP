@@ -11,6 +11,7 @@ import {
 type ActorCall = { ticketId: number; usersId: number; type: number };
 type GroupCall = { ticketId: number; groupsId: number };
 type TechnicianCall = { ticketId: number; usersId: number };
+type ObserverCall = { ticketId: number; id: number };
 
 const ASSIGNABLE_GROUPS = [
   { id: 7, name: 'Tech-desk', completename: 'Tech-desk' },
@@ -27,10 +28,16 @@ function createProvider(options?: { technicianCatalogueFails?: boolean; technici
   actorCalls: ActorCall[];
   groupCalls: GroupCall[];
   technicianCalls: TechnicianCall[];
+  observerGroupCalls: ObserverCall[];
+  observerUserCalls: ObserverCall[];
 } {
   const actorCalls: ActorCall[] = [];
   const groupCalls: GroupCall[] = [];
   const technicianCalls: TechnicianCall[] = [];
+  const observerGroupCalls: ObserverCall[] = [];
+  const observerUserCalls: ObserverCall[] = [];
+  const observerGroups = new Set<string>(['17:12']);
+  const observerUsers = new Set<string>(['17:404']);
   const glpi = {
     listAssignableGroups: async () => ASSIGNABLE_GROUPS,
     listTechnicians: async () => {
@@ -50,10 +57,32 @@ function createProvider(options?: { technicianCatalogueFails?: boolean; technici
       { id: 1, user_id: 202, user_label: 'Bob Requester', role: 'requester' },
       { id: 2, user_id: 303, user_label: 'atech', role: 'assigned' },
       { id: 3, user_id: 909, user_label: 'ext.consultant', role: 'assigned' },
+      { id: 4, user_id: 404, user_label: 'mdupont', role: 'observer' },
     ],
     getTicketGroups: async (_session: unknown, ticketId: number) => (ticketId === 17
-      ? [{ id: 5, group_id: 7, group_label: null, role: 'assigned' }]
+      ? [
+        { id: 5, group_id: 7, group_label: null, role: 'assigned' },
+        { id: 6, group_id: 12, group_label: null, role: 'observer' },
+      ]
       : []),
+    addTicketGroupObserver: async (_session: unknown, ticketId: number, groupsId: number) => {
+      observerGroupCalls.push({ ticketId, id: groupsId });
+      const group = ASSIGNABLE_GROUPS.find((candidate) => candidate.id === groupsId);
+      if (!group) throw new Error('not assignable');
+      const key = `${ticketId}:${groupsId}`;
+      if (observerGroups.has(key)) return { added: false, alreadyPresent: true, group };
+      observerGroups.add(key);
+      return { added: true, alreadyPresent: false, group };
+    },
+    addTicketTechnicianObserver: async (_session: unknown, ticketId: number, usersId: number) => {
+      observerUserCalls.push({ ticketId, id: usersId });
+      const technician = TECHNICIANS.find((candidate) => candidate.id === usersId);
+      if (!technician) throw new Error('not a technician');
+      const key = `${ticketId}:${usersId}`;
+      if (observerUsers.has(key)) return { added: false, alreadyPresent: true, technician };
+      observerUsers.add(key);
+      return { added: true, alreadyPresent: false, technician };
+    },
     addTicketGroup: async (_session: unknown, ticketId: number, groupsId: number) => {
       groupCalls.push({ ticketId, groupsId });
       const group = ASSIGNABLE_GROUPS.find((candidate) => candidate.id === groupsId);
@@ -74,7 +103,7 @@ function createProvider(options?: { technicianCatalogueFails?: boolean; technici
     },
   };
   const provider = new GlpiTicketingProvider({} as any, glpi as any);
-  return { provider, actorCalls, groupCalls, technicianCalls };
+  return { provider, actorCalls, groupCalls, technicianCalls, observerGroupCalls, observerUserCalls };
 }
 
 function context(): ProviderContext {
@@ -293,6 +322,154 @@ async function testUpdateAssignmentWritesGroupTicket() {
   assert.match(result.data.summary, /assigned to Support > SAP-team/);
 }
 
+async function testParticipantContextListsCurrentObservers() {
+  const { provider } = createProvider();
+  const result = await provider.getTicketParticipantContext(context(), { ticketId: '17' });
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.equal(result.data.participantUpdatesSupported, true);
+  assert.equal(result.data.requester, 'Bob Requester');
+  assert.deepEqual(result.data.observers, ['Support > SAP-team', 'Dupont Marie']);
+  assert.deepEqual(result.data.observerTargets, [
+    { kind: 'group', key: '12', label: 'Support > SAP-team' },
+    { kind: 'user', key: '404', label: 'Dupont Marie' },
+  ]);
+  assert.deepEqual(result.data.watchers, []);
+  assert.equal((result.data.warnings ?? []).includes('glpi_watchers_viewers_not_available_in_current_adapter'), true);
+  const notes = provider.actionPlannerProfile?.validation_notes ?? [];
+  assert.equal(notes.some((note) => note.includes('add_observer') && note.includes('The requester is not changed.')), true);
+}
+
+async function testPrepareObserverAcceptsCatalogueTargetsOnly() {
+  const { provider } = createProvider();
+  const group = await provider.prepareTicketParticipantUpdate(context(), {
+    ticketId: '17',
+    operation: 'add_observer',
+    participants: [{ kind: 'group', key: '7', label: 'whatever the model wrote' }],
+    reason: 'Keep Tech-desk informed about the SAP outage.',
+  });
+  assert.equal(group.ok, true);
+  if (!group.ok) return;
+  assert.deepEqual(group.data.actionPayload.participants, [{ kind: 'group', key: '7', label: 'Tech-desk' }]);
+  assert.deepEqual(group.data.actionPayload.providerFields, { groups_id: 7, type: 3, operation: 'add' });
+
+  const user = await provider.prepareTicketParticipantUpdate(context(), {
+    ticketId: '17',
+    operation: 'add_observer',
+    participants: [{ kind: 'user', key: '303', label: 'alice' }],
+    reason: 'Alice follows badge tickets.',
+  });
+  assert.equal(user.ok, true);
+  if (!user.ok) return;
+  assert.deepEqual(user.data.actionPayload.participants, [{ kind: 'user', key: '303', label: 'Alice Technician' }]);
+  assert.deepEqual(user.data.actionPayload.providerFields, { users_id: 303, type: 3, operation: 'add' });
+
+  const unknown = await provider.prepareTicketParticipantUpdate(context(), {
+    ticketId: '17',
+    operation: 'add_observer',
+    participants: [{ kind: 'group', key: '99', label: 'Ghost-team' }],
+    reason: 'Invented.',
+  });
+  assert.equal(unknown.ok, false);
+  assert.match(unknown.ok ? '' : unknown.message, /not in the routing catalogue/);
+
+  const alreadyGroup = await provider.prepareTicketParticipantUpdate(context(), {
+    ticketId: '17',
+    operation: 'add_observer',
+    participants: [{ kind: 'group', key: '12', label: 'Support > SAP-team' }],
+    reason: 'Already watching.',
+  });
+  assert.equal(alreadyGroup.ok, false);
+  assert.match(alreadyGroup.ok ? '' : alreadyGroup.message, /already has Support > SAP-team as an observer/);
+
+  const alreadyUser = await provider.prepareTicketParticipantUpdate(context(), {
+    ticketId: '17',
+    operation: 'add_observer',
+    participants: [{ kind: 'user', key: '404', label: 'Dupont Marie' }],
+    reason: 'Already watching.',
+  });
+  assert.equal(alreadyUser.ok, false);
+  assert.match(alreadyUser.ok ? '' : alreadyUser.message, /already has Dupont Marie as an observer/);
+
+  const remove = await provider.prepareTicketParticipantUpdate(context(), {
+    ticketId: '17',
+    operation: 'remove_observer',
+    participants: [{ kind: 'user', key: '404', label: 'Dupont Marie' }],
+    reason: 'Drop the observer.',
+  });
+  assert.equal(remove.ok, false);
+  assert.match(remove.ok ? '' : remove.message, /Removing an observer is not supported/);
+  assert.match(remove.ok ? '' : remove.message, /The requester is not changed/);
+
+  const replace = await provider.prepareTicketParticipantUpdate(context(), {
+    ticketId: '17',
+    operation: 'set_observers',
+    participants: [{ kind: 'group', key: '7', label: 'Tech-desk' }],
+    reason: 'Replace the list.',
+  });
+  assert.equal(replace.ok, false);
+  assert.match(replace.ok ? '' : replace.message, /Replacing the observer list is not supported/);
+}
+
+async function testUpdateObserverWritesAndSecondCallIsAlreadyApplied() {
+  const { provider, observerGroupCalls, observerUserCalls, groupCalls, technicianCalls } = createProvider();
+  const groupPayload = {
+    ticketId: '17',
+    action: 'participant_update' as const,
+    operation: 'add_observer' as const,
+    current: { ticketId: '17', observers: [], watchers: [], viewers: [], participantUpdatesSupported: true, supported: true },
+    participants: [{ kind: 'group' as const, key: '7', label: 'Tech-desk' }],
+    reason: 'Keep Tech-desk informed.',
+  };
+  const firstGroup = await provider.updateTicketParticipants(context(), {
+    actionPayload: groupPayload,
+    idempotencyKey: 'obs-group-1',
+  });
+  assert.equal(firstGroup.ok, true);
+  if (!firstGroup.ok) return;
+  assert.deepEqual(firstGroup.data.updatedFields, ['participants']);
+  assert.equal(firstGroup.data.alreadyApplied, false);
+  assert.match(firstGroup.data.summary, /observer added: Tech-desk/);
+
+  const secondGroup = await provider.updateTicketParticipants(context(), {
+    actionPayload: groupPayload,
+    idempotencyKey: 'obs-group-2',
+  });
+  assert.equal(secondGroup.ok, true);
+  if (!secondGroup.ok) return;
+  assert.equal(secondGroup.data.alreadyApplied, true);
+  assert.deepEqual(secondGroup.data.updatedFields, []);
+  assert.match(secondGroup.data.summary, /already had Tech-desk as an observer/);
+  assert.deepEqual(observerGroupCalls, [{ ticketId: 17, id: 7 }, { ticketId: 17, id: 7 }]);
+
+  const userPayload = {
+    ...groupPayload,
+    participants: [{ kind: 'user' as const, key: '303', label: 'Alice Technician' }],
+    reason: 'Alice follows this ticket.',
+  };
+  const firstUser = await provider.updateTicketParticipants(context(), {
+    actionPayload: userPayload,
+    idempotencyKey: 'obs-user-1',
+  });
+  assert.equal(firstUser.ok, true);
+  if (!firstUser.ok) return;
+  assert.deepEqual(firstUser.data.updatedFields, ['participants']);
+  assert.equal(firstUser.data.alreadyApplied, false);
+
+  const secondUser = await provider.updateTicketParticipants(context(), {
+    actionPayload: userPayload,
+    idempotencyKey: 'obs-user-2',
+  });
+  assert.equal(secondUser.ok, true);
+  if (!secondUser.ok) return;
+  assert.equal(secondUser.data.alreadyApplied, true);
+  assert.deepEqual(secondUser.data.updatedFields, []);
+  assert.deepEqual(observerUserCalls, [{ ticketId: 17, id: 303 }, { ticketId: 17, id: 303 }]);
+  // Observer writes do not go through the assignment helpers.
+  assert.deepEqual(groupCalls, []);
+  assert.deepEqual(technicianCalls, []);
+}
+
 function testActorRoleParsingFallsBackToDefault() {
   assert.equal(DEFAULT_TICKET_ACTOR_ROLE, 'assignee');
   assert.equal(ticketActorRoleFromResponsePolicy(null), 'assignee');
@@ -383,6 +560,9 @@ async function run() {
   await testPrepareAssignmentAcceptsCatalogueTechnicians();
   await testUpdateAssignmentWritesGroupTicket();
   await testUpdateAssignmentWritesTicketUserForTechnician();
+  await testParticipantContextListsCurrentObservers();
+  await testPrepareObserverAcceptsCatalogueTargetsOnly();
+  await testUpdateObserverWritesAndSecondCallIsAlreadyApplied();
   testActorRoleParsingFallsBackToDefault();
   console.log('glpi-ticketing.provider.spec: ok');
 }

@@ -50,6 +50,16 @@ function MetricCard(props: { label: string; value: string; caption?: string }) {
   );
 }
 
+// A note only when the chat cost is not exact: partly estimated, or 0 because the model is free.
+function chatCostCaption(
+  costs: { current_month: { chat_eur: number }; chat_priced: boolean; chat_estimated: boolean },
+  t: (key: string) => string,
+): string | undefined {
+  if (costs.chat_estimated) return t('aiUsage.costs.chatEstimatedNote');
+  if (costs.current_month.chat_eur === 0 && !costs.chat_priced) return t('aiUsage.costs.chatFreeNote');
+  return undefined;
+}
+
 // Cross-cutting usage view: today the admin token totals and per-agent message
 // counts; real per-model cost reporting lands with the cost engine (registry PR 2).
 export default function AdminAiUsagePage() {
@@ -97,9 +107,7 @@ export default function AdminAiUsagePage() {
               <MetricCard
                 label={t('aiUsage.costs.chatMonth')}
                 value={formatCostEur(overviewQuery.data.costs.current_month.chat_eur, locale)}
-                caption={overviewQuery.data.costs.chat_priced
-                  ? t('aiUsage.costs.chatEstimatedNote')
-                  : t('aiUsage.costs.chatFreeNote')}
+                caption={chatCostCaption(overviewQuery.data.costs, t)}
               />
             </Box>
             {(overviewQuery.data.costs.by_agent.length > 0 || overviewQuery.data.costs.by_model.length > 0) && (

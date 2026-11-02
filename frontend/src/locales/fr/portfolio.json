@@ -302,6 +302,9 @@
         "fallback": "Projet sans titre",
         "new": "Nouveau projet"
       },
+      "creation": {
+        "record": "Le projet"
+      },
       "summary": {
         "cards": {
           "deliverySnapshot": "Aperçu de la livraison",
@@ -372,7 +375,6 @@
         "phase": "Phase",
         "plannedEnd": "Fin prévue",
         "plannedStart": "Début prévu",
-        "projectName": "Nom du projet",
         "source": "Source",
         "status": "Statut",
         "stream": "Filière"
@@ -632,6 +634,9 @@
         "fallback": "Demande sans titre",
         "new": "Nouvelle demande"
       },
+      "creation": {
+        "record": "La demande"
+      },
       "summary": {
         "cards": {
           "analysisSnapshot": "Aperçu de l'analyse",
@@ -677,7 +682,6 @@
         "itContributors": "Contributeurs IT",
         "itLead": "Responsable IT",
         "itSponsor": "Sponsor IT",
-        "requestName": "Nom de la demande",
         "requestor": "Demandeur",
         "source": "Source",
         "status": "Statut",
@@ -929,6 +933,10 @@
           "emptyNotes": "-",
           "unknownPerson": "Inconnu"
         }
+      },
+      "tabs": {
+        "overview": "Vue d'ensemble",
+        "history": "Historique"
       }
     }
   },
@@ -2047,6 +2055,7 @@
     "activity": "Activité",
     "analysis": "Analyse",
     "description": "Description",
+    "history": "Historique",
     "knowledge": "Connaissances",
     "progress": "Charge",
     "relations": "Relations",
@@ -2060,7 +2069,6 @@
     "authorUnknown": "Inconnu",
     "tabs": {
       "comments": "Commentaires",
-      "history": "Historique",
       "workLog": "Journal de temps"
     },
     "labels": {
@@ -2118,25 +2126,6 @@
       }
     },
     "history": {
-      "actions": {
-        "addedComment": "A ajouté un commentaire",
-        "addedField": "{{field}} ajouté : {{value}}",
-        "changedField": "{{field}} : {{from}} → {{to}}",
-        "decisionWithOutcome": "Décision : {{outcome}}",
-        "recorded": "Activité enregistrée",
-        "removedField": "{{field}} supprimé : {{value}}",
-        "updatedDocument": "{{document}} mis à jour",
-        "updatedMultiple": "Mis à jour : {{changes}}"
-      },
-      "feasibilityDimensions": {
-        "changeManagement": "Gestion du changement",
-        "deliveryConstraints": "Contraintes de livraison",
-        "infrastructureNeeds": "Besoins en infrastructure",
-        "integrationCompatibility": "Intégration et compatibilité",
-        "resourceSkills": "Ressources et compétences",
-        "securityCompliance": "Sécurité et conformité",
-        "technicalFeasibility": "Faisabilité technique"
-      },
       "fields": {
         "actualEffortBusiness": "Charge métier réelle",
         "actualEffortIt": "Charge IT réelle",

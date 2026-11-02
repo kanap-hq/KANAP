@@ -140,16 +140,19 @@ function LocationProbe() {
 
 function renderReport(path = '/report') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const tree = (entry = path) => (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={createAppTheme('light')}>
-        <MemoryRouter initialEntries={[path]}>
+        <MemoryRouter initialEntries={[entry]}>
           <CostPerFteReport />
           <LocationProbe />
         </MemoryRouter>
       </ThemeProvider>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  const view = render(tree());
+  // The mocked column setting is not a subscription: a later setting asks the report to render again.
+  return { ...view, rerenderReport: () => view.rerender(tree()) };
 }
 
 const gridRows = () => JSON.parse(screen.getByTestId('grid').textContent || '[]') as Array<Record<string, any>>;
@@ -357,6 +360,28 @@ describe('Cost per FTE', () => {
     expect(detached.endsWith('reports.costPerFte.detachedNote')).toBe(true);
     expect(noDetail).toContain('reports.costPerFte.noDetail');
     expect(noDetail).toContain('\\"fte\\":\\"3.00\\"');
+  });
+
+  it('asks each pair once, after the column setting, on the tenant default', async () => {
+    const tenant = {
+      enabled: { planned: true, committed: true, forecast: true, actual: true, expected_landing: true },
+      default_column: 'forecast' as const,
+    };
+    // Not loaded yet: the hook holds the product default (Budget) and the patch is ignored.
+    setBudgetColumns(tenant, false);
+    const { rerenderReport } = renderReport();
+    await waitFor(() => expect(post.mock.calls.some(([, body]) => body.spec.groupBy?.[0] === 'run_build')).toBe(true));
+    expect(reportCalls()).toEqual([]);
+
+    setBudgetColumns(tenant);
+    rerenderReport();
+    await waitFor(() => expect(reportCalls()).toHaveLength(2));
+    expect(reportCalls().map((body) => body.spec.measures[0].field).sort()).toEqual([
+      `staff_cost_y${Y - 1}Forecast`,
+      `staff_cost_y${Y}Forecast`,
+    ]);
+    await waitFor(() => expect(gridRows().length).toBeGreaterThan(0));
+    expect(reportCalls()).toHaveLength(2);
   });
 
   it('shows no notice when every staff FTE follows its lines with detail', async () => {

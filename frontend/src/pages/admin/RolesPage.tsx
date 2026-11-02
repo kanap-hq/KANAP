@@ -1,6 +1,6 @@
 import React from 'react';
 import PageHeader from '../../components/PageHeader';
-import { Alert, Box, Button, Card, CardContent, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, Grid, InputLabel, List, ListItemButton, ListItemText, MenuItem, Select, Snackbar, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Card, CardContent, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, Grid, InputLabel, List, ListItemButton, ListItemText, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
@@ -8,23 +8,14 @@ import { useAuth } from '../../auth/AuthContext';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { refusalCounts } from '../../utils/deleteRefusal';
 import { RESOURCE_LABELS } from '../../utils/permissionLabels';
+import { PERMISSION_GROUPS } from './rolePermissionGroups';
 import { roleDescription, roleLabel } from '../../utils/roleLabel';
+import DeleteIconButton from '../../components/workspace/DeleteIconButton';
 
 type Role = { id: string; role_name: string; role_description: string; is_system?: boolean; is_built_in?: boolean; user_count?: number };
 type PermissionLevel = 'reader'|'contributor'|'member'|'admin'|null;
 type ConcretePermissionLevel = Exclude<PermissionLevel, null>;
 
-// Permission groups for organized display
-const PERMISSION_GROUPS = {
-  'AI': ['ai_chat', 'ai_mcp', 'ai_agents', 'ai_settings'],
-  'Budget & Finance': ['budget', 'budget_ops', 'contracts', 'analytics', 'reporting'],
-  'Portfolio Management': ['portfolio_requests', 'portfolio_projects', 'portfolio_planning', 'portfolio_reports', 'portfolio_settings'],
-  'IT Landscape': ['applications', 'infrastructure', 'locations', 'incidents', 'settings'],
-  'Master Data': ['companies', 'departments', 'cost_centers', 'working_day_profiles', 'suppliers', 'contacts', 'accounts', 'business_processes'],
-  'Tasks': ['tasks'],
-  'Knowledge': ['knowledge'],
-  'Administration': ['users', 'billing'],
-} as const;
 
 // Flat list of all resources for API compatibility
 const RESOURCES = Object.values(PERMISSION_GROUPS).flat();
@@ -90,8 +81,6 @@ export default function RolesPage() {
   // When fetched, apply role permissions to draft
   React.useEffect(() => { setDraft((perms || {}) as any); }, [perms]);
 
-  const [snackOpen, setSnackOpen] = React.useState(false);
-  const [snackMessage, setSnackMessage] = React.useState(t('roles.messages.permissionsSaved'));
   const { mutateAsync: savePerms, isPending } = useMutation({
     mutationFn: async () => {
       if (!selected) return;
@@ -103,8 +92,7 @@ export default function RolesPage() {
         qc.setQueryData(['role-perms', selected.id], { ...(draft as any) });
         await qc.invalidateQueries({ queryKey: ['role-perms', selected.id] });
       }
-      setSnackMessage(t('roles.messages.permissionsSaved'));
-      setSnackOpen(true);
+      // The checkboxes stay as saved: the page already shows the result.
     },
   });
 
@@ -134,9 +122,8 @@ export default function RolesPage() {
     },
     onSuccess: async (created: Role | null) => {
       await qc.invalidateQueries({ queryKey: ['roles'] });
+      // The copy is selected, so its name and permissions are what the page shows.
       if (created?.id) setSelectedId(created.id);
-      setSnackMessage(t('roles.messages.duplicated'));
-      setSnackOpen(true);
     },
   });
 
@@ -255,7 +242,7 @@ export default function RolesPage() {
                   <Stack direction="row" spacing={1} alignItems="center">
                     {typeof selected.user_count === 'number' && <Typography variant="body2" color="text.secondary">{t('roles.userCount', { count: selected.user_count })}</Typography>}
                     {canEdit && !locked && (
-                      <Button size="small" color="error" onClick={openDelete}>{t('common:buttons.delete')}</Button>
+                      <DeleteIconButton onClick={openDelete} />
                     )}
                   </Stack>
                 </Stack>
@@ -361,15 +348,6 @@ export default function RolesPage() {
           )}
         </DialogActions>
       </Dialog>
-
-      {/* Saved Snackbar */}
-      <Snackbar
-        open={snackOpen}
-        onClose={() => setSnackOpen(false)}
-        autoHideDuration={1200}
-        message={snackMessage}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-      />
     </>
   );
 }

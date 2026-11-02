@@ -6,6 +6,7 @@ import api from '../../../api';
 import { useAuth } from '../../../auth/AuthContext';
 import { useKanapDialogs } from '../../../components/design';
 import LinksAndFilesSection, { type LinkDraft, type LinksAndFilesFile, type LinksAndFilesLink } from '../../../components/workspace/LinksAndFilesSection';
+import { removeWebLinkWithUndo, webLinkDraft, webLinkLabel } from '../../../components/workspace/removeWebLink';
 import {
   DASH,
   RelationSections,
@@ -108,17 +109,20 @@ export default function AssetRelationsTab({ assetId }: { assetId: string }) {
 
   const removeLink = async (linkRow: LinksAndFilesLink) => {
     setError(null);
-    const previous = queryClient.getQueryData<WebLinkRow[]>(linksKey);
-    queryClient.setQueryData<WebLinkRow[]>(linksKey, (rows) => (rows ? rows.filter((row) => row.id !== linkRow.id) : rows));
-    try {
-      await api.delete(`/assets/${assetId}/links/${linkRow.id}`);
-    } catch (e) {
-      if (previous) queryClient.setQueryData(linksKey, previous);
-      failed(e);
-      return;
-    }
-    await queryClient.invalidateQueries({ queryKey: linksKey });
-    changed();
+    await removeWebLinkWithUndo<WebLinkRow[]>({
+      queryClient,
+      queryKey: linksKey,
+      without: (rows) => rows.filter((row) => row.id !== linkRow.id),
+      commit: () => api.delete(`/assets/${assetId}/links/${linkRow.id}`),
+      refresh: async () => {
+        await queryClient.invalidateQueries({ queryKey: linksKey });
+        changed();
+      },
+      restore: () => saveLink(null, webLinkDraft(linkRow)),
+      message: t('common:linksAndFiles.removed', { name: webLinkLabel(linkRow) }),
+      feedback,
+      onError: failed,
+    });
   };
 
   const uploadFiles = async (chosen: File[]) => {
@@ -229,7 +233,7 @@ export default function AssetRelationsTab({ assetId }: { assetId: string }) {
     const row = (section?.rows as Array<{ id: string }> | null | undefined)?.find((item) => item.id === targetId);
     return section && row ? section.label(row) : '';
   };
-  // Unlinking stays immediate. The message offers to put the link back. Web links and files stay as they are.
+  // Unlinking stays immediate. The message offers to put the row back. A removed web link does the same.
   const handleUnlink = async (kind: string, targetId: string) => {
     const name = nameOf(kind, targetId);
     if (await unlink(kind, targetId)) {

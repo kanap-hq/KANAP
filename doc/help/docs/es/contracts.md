@@ -49,7 +49,7 @@ Cada fila abre el contrato. Su búsqueda, sus filtros y su orden se conservan al
 **Columnas por defecto**:
 
 - **Contrato**, **Proveedor**, **Empresa**
-- **Próximo vencimiento**: la próxima fecha límite de rescisión de un contrato con renovación tácita, o el fin de cualquier otro contrato. La fecha va seguida de «dentro de n días». Un contrato vencido muestra en gris el día en que terminó
+- **Próximo vencimiento**: «Rescisión posible hasta el {date}» cuando esa fecha es la fecha límite de rescisión y es anterior al fin del periodo, o «Termina el {date}» cuando la fecha es el fin del contrato. La línea termina con «en n días». Un contrato vencido muestra en gris el día en que terminó
 - **Situación**: vea más abajo
 - **Importe anual**: el importe en la firma, seguido de su moneda
 - **Comprometido**, **Presupuesto** y **Diferencia** del año presupuestario elegido. Vea [Columnas de presupuesto](#columnas-de-presupuesto)
@@ -136,7 +136,7 @@ Necesita `contracts:member` para editar. Los lectores ven la misma página con t
 
 **Compartir**, en el encabezado, envía por correo un enlace al contrato a colegas de su espacio de trabajo.
 
-La ficha tiene cuatro pestañas: **Vista general**, **Presupuesto**, **Conformidad** y **Relaciones**. Las direcciones de las antiguas pestañas **Detalles** y **Tareas** abren la vista general.
+La ficha tiene cinco pestañas: **Vista general**, **Presupuesto**, **Conformidad**, **Relaciones** e **Historial** (los cambios del contrato, vea [Historial de los registros](record-history.md)). Las direcciones de las antiguas pestañas **Detalles** y **Tareas** abren la vista general.
 
 ### Vista general
 
@@ -158,7 +158,7 @@ La ficha recalcula estas fechas mientras edita el inicio, la duración, el preav
 
 ### Presupuesto
 
-La pestaña enumera las líneas presupuestarias vinculadas, OPEX y CAPEX juntas, con su referencia (`BL-12`), nombre, tipo y empresa. Use el selector bajo la tabla para vincular o quitar líneas.
+La pestaña enumera las líneas presupuestarias vinculadas, OPEX y CAPEX juntas, con su referencia (`BL-12`), nombre, tipo y empresa. Use el selector bajo la tabla para vincular o quitar líneas. Una línea cuya empresa pagadora, centro de coste, proveedor o moneda difiere del contrato muestra una marca naranja pequeña. Pase el cursor sobre la marca para ver cada diferencia, con el valor en la línea y el valor en el contrato. El selector muestra la misma marca en una línea antes de vincularla. El vínculo sigue siendo posible. La marca aparece para una línea que usted puede leer.
 
 Con acceso de lectura a las líneas presupuestarias (`budget:reader`), la pestaña muestra también cifras:
 
@@ -246,7 +246,7 @@ La sección no aparece cuando no hay nada que sugerir.
 
 - **Añadir enlace** abre un diálogo para una URL y un nombre opcional; el enlace se guarda al instante. Para cambiar un enlace, pase el cursor sobre su fila y haga clic en el lápiz.
 - **Adjuntar archivo** abre el selector de archivos. También puede soltar archivos sobre la sección.
-- Para quitar un enlace o un archivo, pase el cursor sobre la fila y haga clic en la cruz. Eliminar un archivo pide una confirmación antes.
+- Para quitar un enlace o un archivo, pase el cursor sobre la fila y haga clic en la cruz. Quitar un enlace muestra un mensaje y ofrece **Deshacer**, que vuelve a crear el enlace. Eliminar un archivo pide una confirmación antes.
 
 ### Eliminar un contrato
 
@@ -321,11 +321,12 @@ La exportación escribe un archivo CSV o un libro de Excel (`.xlsx`): elija en *
 
 Mantenga su lista de contratos sincronizada con otras herramientas mediante archivos CSV o libros de Excel (`contracts:admin`).
 
-**Exportar**: descarga los contratos que muestra la lista (o, a petición en el diálogo, todos los contratos) con estas columnas: `name`, `company_name`, `supplier_name`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. Las fechas calculadas (fin del periodo, fechas límite, situación) no se exportan.
+**Exportar**: descarga los contratos que muestra la lista (o, a petición en el diálogo, todos los contratos). Las columnas llevan títulos en el idioma de su pantalla; sus nombres técnicos, que la importación también lee, son `name`, `company_name`, `supplier_name`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. Las fechas calculadas (fin del periodo, fechas límite, situación) no se exportan.
 
 **Importar**:
 
 - Utilice **Verificación previa** para comprobar el archivo antes de aplicarlo
+- **Descargar un ejemplo**, en el diálogo de importación, ofrece dos contratos de ejemplo y lo que admite cada columna. Consulte [Archivos de ejemplo](csv-files.md#example-files)
 - Una fila corresponde a un contrato por su nombre y su proveedor
 - Admite creación y actualizaciones
 - El archivo no tiene columna de fin de validez. En una actualización, un `status` vacío, o igual al estado actual del contrato, conserva su fin de validez. Un estado distinto se aplica: `enabled` borra el fin de validez, y `disabled` termina el contrato hoy, salvo que su fin de validez ya haya pasado

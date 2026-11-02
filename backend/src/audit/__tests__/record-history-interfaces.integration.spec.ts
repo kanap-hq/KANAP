@@ -222,6 +222,52 @@ async function seedInterfaceAudits(runner: QueryRunner, data: HistorySeed): Prom
     table: 'interface_bindings', recordId: binding, action: 'delete', userId: data.owner, before: bindingRow, after: null,
   });
 
+  // A mapping group and a mapping rule: their own id in record_id, the interface in the payload.
+  const mappingGroup = await one(
+    runner,
+    `INSERT INTO interface_mapping_groups (tenant_id, interface_id, mapping_set_id, title, description, order_index)
+     VALUES ($1, $2, $3, 'Header', 'The document header', 1) RETURNING id`,
+    [data.tenantId, data.interfaceRecord, mappingSet],
+  );
+  const mappingGroupRow = await stored(runner, 'interface_mapping_groups', mappingGroup);
+  await audit(runner, {
+    table: 'interface_mapping_groups', recordId: mappingGroup, action: 'create', userId: data.owner, after: mappingGroupRow,
+  });
+  await audit(runner, {
+    table: 'interface_mapping_groups', recordId: mappingGroup, action: 'update', userId: data.owner,
+    before: mappingGroupRow,
+    after: { ...mappingGroupRow, title: 'Header 2', description: 'Header and footer' },
+  });
+  await audit(runner, {
+    table: 'interface_mapping_groups', recordId: mappingGroup, action: 'delete', userId: data.owner, before: mappingGroupRow, after: null,
+  });
+  const mappingRule = await one(
+    runner,
+    `INSERT INTO interface_mapping_rules (tenant_id, interface_id, mapping_set_id, group_id, title, rule_key,
+                                          order_index, operation_kind, lifecycle, environment_scope, condition_text, source_bindings)
+     VALUES ($1, $2, $3, $4, 'Customer id', 'customer-id', 1, 'direct', 'active', ARRAY['prod'], 'Must match', '[{"path":"customer.id"}]'::jsonb)
+     RETURNING id`,
+    [data.tenantId, data.interfaceRecord, mappingSet, mappingGroup],
+  );
+  const mappingRuleRow = await stored(runner, 'interface_mapping_rules', mappingRule);
+  await audit(runner, {
+    table: 'interface_mapping_rules', recordId: mappingRule, action: 'create', userId: data.owner, after: mappingRuleRow,
+  });
+  await audit(runner, {
+    table: 'interface_mapping_rules', recordId: mappingRule, action: 'update', userId: data.owner,
+    before: mappingRuleRow,
+    after: {
+      ...mappingRuleRow,
+      title: 'Customer identifier',
+      lifecycle: 'proposed',
+      condition_text: 'Must match the sold-to party',
+      source_bindings: [{ path: 'sold_to.id' }],
+    },
+  });
+  await audit(runner, {
+    table: 'interface_mapping_rules', recordId: mappingRule, action: 'delete', userId: data.owner, before: mappingRuleRow, after: null,
+  });
+
   // A mapping set and an attachment.
   const mappingSetRow = await stored(runner, 'interface_mapping_sets', mappingSet);
   await audit(runner, {
@@ -413,6 +459,36 @@ async function testBindingsMappingAndAttachments(seeded: Seeded) {
     && item.changes.some((change) => change.field === 'mapping_set' && change.event === 'removed'));
   assert.ok(mappingDelete, 'the mapping set deletion');
 
+  const groupCreate = page.items.find((item) => item.changes.some((change) => change.field === 'mapping_group' && change.event === 'added'));
+  assert.ok(groupCreate, 'the mapping group creation');
+  assert.equal(findChange(groupCreate, 'mapping_group').after, 'Header');
+  const groupUpdate = page.items.find((item) => item.subject.kind === 'set'
+    && item.changes.some((change) => change.field === 'title' && change.after === 'Header 2'));
+  assert.ok(groupUpdate, 'the mapping group update');
+  assert.equal(findChange(groupUpdate, 'title').before, 'Header');
+  assert.equal(findChange(groupUpdate, 'title').after, 'Header 2');
+  assert.equal(findChange(groupUpdate, 'description').after, 'Header and footer');
+  const groupDelete = page.items.find((item) => item.changes.some((change) => change.field === 'mapping_group' && change.event === 'removed'));
+  assert.ok(groupDelete, 'the mapping group deletion');
+  assert.equal(findChange(groupDelete, 'mapping_group').before, 'Header');
+
+  const ruleCreate = page.items.find((item) => item.changes.some((change) => change.field === 'mapping_rule' && change.event === 'added'));
+  assert.ok(ruleCreate, 'the mapping rule creation');
+  assert.equal(findChange(ruleCreate, 'mapping_rule').after, 'Customer id');
+  const ruleUpdate = page.items.find((item) => item.subject.kind === 'set'
+    && item.changes.some((change) => change.field === 'lifecycle'));
+  assert.ok(ruleUpdate, 'the mapping rule update');
+  assert.equal(findChange(ruleUpdate, 'title').after, 'Customer identifier');
+  assert.equal(findChange(ruleUpdate, 'lifecycle').before, 'active');
+  assert.equal(findChange(ruleUpdate, 'lifecycle').after, 'proposed');
+  assert.deepEqual(findChange(ruleUpdate, 'condition_text'), { field: 'condition_text', text: 'conditionChanged' });
+  assert.deepEqual(findChange(ruleUpdate, 'source_bindings'), { field: 'source_bindings', text: 'sourceBindingsChanged' });
+  const ruleDelete = page.items.find((item) => item.changes.some((change) => change.field === 'mapping_rule' && change.event === 'removed'));
+  assert.ok(ruleDelete, 'the mapping rule deletion');
+  assert.ok(!JSON.stringify(page).includes('Must match'), 'a rule condition never comes out');
+  assert.ok(!JSON.stringify(page).includes('customer.id'), 'a source binding never comes out');
+  assert.ok(!JSON.stringify(page).includes('sold_to'), 'a changed source binding never comes out');
+
   const attachment = findChild(page, 'attachment', 'create');
   assert.equal(attachment.subject.label, 'spec.pdf');
   assert.equal(findChange(attachment, 'attachment').event, 'added');
@@ -422,7 +498,7 @@ async function testBindingsMappingAndAttachments(seeded: Seeded) {
     'target_instance_id', 'revision_number']) {
     assertNoField(page, field);
   }
-  console.log('  bindings, mapping sets and attachments created, changed and removed in words: OK');
+  console.log('  bindings, mapping sets, groups, rules and attachments created, changed and removed in words: OK');
 }
 
 async function run() {

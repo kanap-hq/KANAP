@@ -22,7 +22,9 @@ assert.equal(canManageMasterDataScope({}, 'companies'), false, 'no rights at all
 assert.throws(
   () => assertCanManageMasterDataScope({ permissions: { companies: 'member' } }, 'companies', 'copy company metrics'),
   (err: unknown) => err instanceof ForbiddenException
-    && err.message === 'You need Companies admin permissions to copy company metrics',
+    && err.message === 'You need Companies admin permissions to copy company metrics'
+    && (err.getResponse() as { code?: string }).code === 'MODULE_RIGHT_REQUIRED'
+    && JSON.stringify((err.getResponse() as { params?: unknown }).params) === JSON.stringify({ resource: 'companies', level: 'admin' }),
 );
 assert.doesNotThrow(() => assertCanManageMasterDataScope(masterDataAdmin, 'companies', 'copy company metrics'));
 

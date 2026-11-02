@@ -58,7 +58,7 @@ export default function BusinessProcessCategoryManagerDialog({ open, onClose, on
       setCategories(items);
       setOriginalCategories(items);
     } catch (e: any) {
-      const msg = e?.response?.data?.message || e?.message || t('businessProcesses.categoryManager.failedToLoad');
+      const msg = getApiErrorMessage(e, t, t('businessProcesses.categoryManager.failedToLoad'));
       setError(msg);
       setCategories([]);
     } finally {
@@ -110,7 +110,7 @@ export default function BusinessProcessCategoryManagerDialog({ open, onClose, on
       // Mark as deleted locally; deletion will be applied on Save
       setCategories((prev) => prev.filter((cat) => cat.id !== id));
     } catch (e: any) {
-      const msg = e?.response?.data?.message || e?.message || t('businessProcesses.categoryManager.failedToDelete');
+      const msg = getApiErrorMessage(e, t, t('businessProcesses.categoryManager.failedToDelete'));
       setError(msg);
     }
   };
@@ -172,7 +172,7 @@ export default function BusinessProcessCategoryManagerDialog({ open, onClose, on
               is_active: cat.is_active,
             });
           } catch (e: any) {
-            const msg = e?.response?.data?.message || e?.message || t('businessProcesses.categoryManager.failedToCreate');
+            const msg = getApiErrorMessage(e, t, t('businessProcesses.categoryManager.failedToCreate'));
             setError(msg);
             setSaving(false);
             return;
@@ -187,7 +187,7 @@ export default function BusinessProcessCategoryManagerDialog({ open, onClose, on
                 is_active: cat.is_active,
               });
             } catch (e: any) {
-              const msg = e?.response?.data?.message || e?.message || t('businessProcesses.categoryManager.failedToUpdate');
+              const msg = getApiErrorMessage(e, t, t('businessProcesses.categoryManager.failedToUpdate'));
               setError(msg);
               setSaving(false);
               return;

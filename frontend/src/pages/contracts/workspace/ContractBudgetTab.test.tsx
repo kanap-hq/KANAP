@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { MemoryRouter } from 'react-router-dom';
@@ -9,7 +9,13 @@ import api from '../../../api';
 import ContractBudgetTab from './ContractBudgetTab';
 
 const translation = {
-  t: (key: string, opts?: Record<string, unknown>) => (opts?.count != null ? `${key}(count=${opts.count})` : key),
+  t: (key: string, opts?: Record<string, unknown>) => {
+    if (!opts) return key;
+    const names = Object.keys(opts).filter((name) => name !== 'defaultValue');
+    if (names.length === 1 && names[0] === 'count') return `${key}(count=${opts.count})`;
+    const args = names.map((name) => `${name}=${opts[name]}`).join(',');
+    return args ? `${key}(${args})` : key;
+  },
   i18n: { language: 'en' },
 };
 vi.mock('react-i18next', () => ({ useTranslation: () => translation, initReactI18next: { type: '3rdParty', init: () => {} } }));
@@ -77,5 +83,34 @@ describe('ContractBudgetTab, data access', () => {
   it('keeps the empty line when nothing is linked', async () => {
     renderTab({ items: [], hidden: 0 });
     expect(await screen.findByText('contracts.budget.empty')).toBeTruthy();
+  });
+
+  it('marks a linked line that differs, and leaves a matching line unmarked', async () => {
+    const mismatch = [
+      { field: 'paying_company', line_value: 'Fromage SA', contract_value: 'Fromage Italia' },
+      { field: 'currency', line_value: 'USD', contract_value: 'EUR' },
+    ];
+    renderTab({
+      items: [
+        { ...LINE, id: 'l-ok', product_name: 'Support', mismatches: [] },
+        { ...LINE, id: 'l-bad', product_name: 'Licences', mismatches: mismatch },
+      ],
+      hidden: 0,
+    });
+    const table = await screen.findByRole('table');
+    const support = within(table).getByText('Support').closest('tr')!;
+    const licences = within(table).getByText('Licences').closest('tr')!;
+    expect(within(support).queryByTestId('contract-line-mismatch')).toBeNull();
+    const mark = within(licences).getByTestId('contract-line-mismatch');
+    expect(mark.getAttribute('aria-label')).toContain('line=Fromage SA');
+    expect(mark.getAttribute('aria-label')).toContain('contract=Fromage Italia');
+    expect(mark.getAttribute('aria-label')).toContain('line=USD');
+    expect(mark.getAttribute('aria-label')).toContain('contract=EUR');
+    fireEvent.mouseOver(mark);
+    const tip = await screen.findByRole('tooltip');
+    expect(tip).toHaveTextContent('Fromage SA');
+    expect(tip).toHaveTextContent('Fromage Italia');
+    expect(tip).toHaveTextContent('USD');
+    expect(tip).toHaveTextContent('EUR');
   });
 });

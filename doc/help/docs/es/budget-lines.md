@@ -11,7 +11,16 @@ Ambos tipos están en una sola lista y se abren en el mismo espacio de trabajo, 
 
 Navegue a **Gestión presupuestaria > Líneas presupuestarias** para ver la lista. Haga clic en **Nueva línea** para crear una línea.
 
-El espacio de trabajo se abre en modo de creación, con el título **Nueva línea OPEX** o **Nueva línea CAPEX** y el panel **Propiedades** abierto a la derecha. Su primera fila es **Tipo**: elija **OPEX** o **CAPEX**. Parte del tipo por el que está filtrada la lista en su columna **Tipo** y, si no, de **OPEX**. Escriba el nombre de la línea en el título de arriba, complete las propiedades y haga clic en **Crear**.
+El espacio de trabajo se abre en una línea nueva, con el título **Nueva línea OPEX** o **Nueva línea CAPEX**. Su tipo es aquel por el que está filtrada la lista en su columna **Tipo** y, si no, **OPEX**. No se puede cambiar mientras la línea se está creando. Escriba el nombre de la línea en el título de arriba y pulse Intro. La línea existe de inmediato, con la moneda de su espacio de trabajo y la fecha de hoy como inicio de vigencia, y todas las pestañas se abren, **Presupuesto** incluida. Complete el panel **Propiedades**: cada cambio se guarda al instante.
+
+Si su acceso a los datos se limita a una empresa, la empresa pagadora se completa con ella. Si debe elegir, elija la empresa pagadora o el centro de coste antes de escribir el título.
+
+Mientras la línea se está creando, su encabezado muestra **Crear** y **Cancelar** en lugar del botón de cierre:
+
+- **Crear** comprueba los campos obligatorios indicados abajo. Si falta alguno, un mensaje los enumera, se marcan en el panel **Propiedades** y el cursor va al primero. Si no, la línea se cierra y vuelve al punto de partida: la pantalla anterior o, si no, la lista
+- **Cancelar** elimina la línea y todo lo que se introdujo en ella, importes incluidos. Si introdujo algo más que el título, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar líneas. Una línea con importes en una columna congelada no se puede cancelar
+
+Si sale de la línea de otra forma mientras falta un campo obligatorio, se le pregunta si desea completarla o eliminarla. Una línea que se dejó sin empresa pagadora muestra una advertencia con los campos que faltan y vuelve a preguntar cada vez que sale de ella. Pulse Escape en el título vacío para salir sin crear nada.
 
 **Campos obligatorios**:
 
@@ -19,8 +28,9 @@ El espacio de trabajo se abre en modo de creación, con el título **Nueva líne
 - **Empresa pagadora**: Qué empresa paga (obligatorio para contabilidad)
 - **Cuenta**: La cuenta contable. Solo aparecen las cuentas del plan de cuentas de la empresa pagadora, y solo las que corresponden al tipo de la línea en [Planes de cuentas y gestión de cuentas](chart-of-accounts.md#cuentas-opex-o-capex): **OPEX y CAPEX**, o bien **Solo OPEX** para una línea OPEX y **Solo CAPEX** para una línea CAPEX. Una línea que ya tiene una cuenta del otro tipo la conserva y sigue siendo editable. Elegir una cuenta así en una línea nueva, o al cambiar la cuenta, se rechaza
 - **Moneda**: Código ISO (p. ej., USD, EUR). Por defecto la moneda de su espacio de trabajo; puede cambiarla por línea
-- **Inicio de vigencia**: Cuándo comienza este gasto (DD/MM/AAAA)
+- **Inicio de vigencia**: Cuándo comienza este gasto (DD/MM/AAAA). Por defecto, el día en que crea la línea
 - **Dimensiones obligatorias**: un campo por cada dimensión obligatoria para el tipo de la línea. Un espacio de trabajo nuevo no tiene ninguna dimensión obligatoria. Consulte [Dimensiones recomendadas](#dimensiones-recomendadas)
+- **Centro de coste**, cuando su acceso a los datos exige uno
 
 **Opcional pero útil**:
 
@@ -35,8 +45,6 @@ El espacio de trabajo se abre en modo de creación, con el título **Nueva líne
 Una vez definidas, **Empresa pagadora** y **Cuenta** se pueden cambiar, pero no vaciar. **Proveedor** se puede borrar en cualquier momento.
 
 Cuando cambia la empresa pagadora de una línea que tiene una cuenta y la nueva empresa usa otro plan de cuentas, la cuenta se borra en el mismo guardado. **Cuenta** aparece entonces como obligatoria, con la lista en el plan de la nueva empresa. Elija la nueva cuenta para terminar.
-
-Una vez creada la línea, el espacio de trabajo desbloquea las cuatro pestañas: **Vista general**, **Presupuesto**, **Asignaciones** y **Relaciones**.
 
 **Consejo**: Puede crear líneas rápidamente y completar presupuestos y asignaciones más tarde. Empiece por lo esencial y vaya iterando.
 
@@ -94,15 +102,15 @@ La lista (en **Gestión presupuestaria > Líneas presupuestarias**) reúne las l
 - **Nombre del producto**: El título de la línea (enlaza a la pestaña **Vista general**)
 - **Proveedor**: El nombre del proveedor
 - **Empresa pagadora**: Qué empresa paga esta línea
-- **Contrato**: El nombre del último contrato vinculado (enlaza al espacio de trabajo del Contrato)
 - **Cuenta**: El número y nombre de cuenta contable
-- **Asignación**: La etiqueta del método de asignación del año actual (enlaza a la pestaña **Asignaciones**)
 - **Presupuesto A** y **Aterrizaje previsto A**: Los importes del año actual de la columna por defecto y de la última columna visible (enlazan a la pestaña **Presupuesto** de este año). Con la configuración estándar son Presupuesto y Aterrizaje previsto. Cuando la columna por defecto es también la última visible, aparece una sola columna de importe. Consulte [Columnas presupuestarias](budget-operations.md#columnas-presupuestarias)
 - **Dimensiones obligatorias**: Una columna por dimensión activada que es obligatoria para alguno de los dos tipos, con el nombre de la dimensión. Un espacio de trabajo nuevo no tiene ninguna
-- **Tarea**: El título de la última tarea (enlaza a la pestaña **Vista general**, donde está el panel de tareas)
 
 **Columnas adicionales** (ocultas por defecto, habilítelas mediante el selector de columnas):
 
+- **Contrato**: El nombre del último contrato vinculado (enlaza al espacio de trabajo del Contrato)
+- **Asignación**: La etiqueta del método de asignación del año actual (enlaza a la pestaña **Asignaciones**)
+- **Tarea**: El título de la última tarea (enlaza a la pestaña **Vista general**, donde está el panel de tareas)
 - **Columnas de importes**: Cada columna presupuestaria visible para A-1, A, A+1 y A+2, con los nombres que eligió su organización. El encabezado indica la columna, el año respecto a hoy y el año natural, por ejemplo **Revisión A+1 (2027)**. Las columnas ocultas no se ofrecen
 - **Columnas de ETC**: El ETC de cada columna presupuestaria visible para A-1, A, A+1 y A+2, con los nombres que eligió su organización, justo después de las columnas de importes en el selector de columnas. El encabezado indica la columna y el año natural, por ejemplo **ETC Presupuesto (2026)**. El ETC de una línea es la suma del ETC de sus líneas de cantidad y precio en esa columna. Consulte [ETC](#etc). La celda queda vacía cuando la columna no tiene líneas
 - **ETC declarados**: **Sí** cuando la línea declara ETC en al menos una columna presupuestaria de cualquier año; si no, vacía. Son las líneas que conserva el filtro **Líneas con ETC** de los informes
@@ -177,7 +185,7 @@ Una disposición de columnas que haya guardado conserva su propia elección de c
 - **Nueva línea**: Crear una línea (requiere `budget:member`)
 - **Importar**: Carga masiva de líneas desde un archivo de presupuesto (requiere `budget:admin`)
 - **Exportar**: Exportar las líneas a un archivo de presupuesto (requiere `budget:admin`)
-- **Eliminar seleccionadas**: Eliminación masiva de líneas seleccionadas (requiere `budget:admin`; seleccione filas mediante casillas de verificación). Una línea con importes en una columna congelada no se puede eliminar. Antes de eliminar nada, la confirmación enumera las líneas que se conservan, con la columna congelada. Las demás se eliminan
+- **Eliminar seleccionadas**: Eliminación masiva de líneas seleccionadas (requiere `budget:admin`; seleccione filas mediante casillas de verificación). Una línea con importes en una columna congelada no se puede eliminar. Antes de eliminar nada, la confirmación enumera las líneas que se conservan, con la columna congelada. Las demás se eliminan. La misma eliminación está en la línea: **Eliminar** (icono de papelera) en su cabecera, para una persona con `budget:admin` cuyo acceso cubre todos los datos. La comprobación es la misma. Una línea con importes en una columna congelada muestra el rechazo y su motivo. Cuando la línea se puede eliminar, confirme: la línea se elimina y se abre de nuevo la lista
 
 **Navegación Anterior/Siguiente**:
 
@@ -194,10 +202,10 @@ Una disposición de columnas que haya guardado conserva su propia elección de c
 
 Haga clic en cualquier fila de la lista para abrir el espacio de trabajo. Su dirección nombra la línea por su referencia, por ejemplo `/ops/budget/BL-12/overview`. Tiene cuatro partes:
 
-- **Cabecera**: la referencia de la línea (p. ej., `BL-12`) con un botón para copiarla, el título de la línea (haga clic en él para cambiar el nombre de la línea), **Ant.** / **Sig.**, **Compartir** y el botón de cierre
+- **Cabecera**: la referencia de la línea (p. ej., `BL-12`) con un botón para copiarla, el título de la línea (haga clic en él para cambiar el nombre de la línea), **Ant.** / **Sig.**, **Compartir**, **Eliminar** (icono de papelera, `budget:admin`, acceso a todos los datos) y el botón de cierre. Mientras la línea se está creando, **Crear** y **Cancelar** sustituyen a **Eliminar** y al botón de cierre
 - **Barra de metadatos** bajo el título: **Estado**, **Responsable de TI** y **Responsable de negocio**, editables en el sitio. Cuando el centro de coste de la línea tiene un responsable del presupuesto, **Responsable del presupuesto** aparece a continuación. Es de solo lectura y se deriva del centro de coste, no se almacena en la línea: pase el cursor por encima para ver de qué centro de coste procede, y cámbielo en el centro de coste (consulte [Centros de coste](cost-centers.md#responsable-del-presupuesto-en-las-lineas-de-presupuesto))
 - **Cinco pestañas**: **Vista general**, **Presupuesto**, **Asignaciones**, **Relaciones** (la pestaña Relaciones muestra cuántos vínculos tiene la línea) e **Historial**
-- **Panel Propiedades** a la derecha: los campos principales de la línea, empezando por **Tipo** (con **Cambiar el tipo…** junto a él en una línea existente, consulte [Cambiar el tipo](#cambiar-el-tipo)). Ábralo o ciérrelo con el botón de propiedades; el espacio de trabajo recuerda su elección
+- **Panel Propiedades** a la derecha: los campos principales de la línea, empezando por **Tipo** (con **Cambiar el tipo…** junto a él en cuanto la línea deja de estar en creación, consulte [Cambiar el tipo](#cambiar-el-tipo)). Ábralo o ciérrelo con el botón de propiedades; el espacio de trabajo recuerda su elección
 
 **Elección de responsables**:
 
@@ -245,7 +253,7 @@ Cuando la línea sustituye a otra, o fue sustituida a partir de un año posterio
 
 **Panel Propiedades**:
 
-- **Tipo**: **OPEX** o **CAPEX**. En una línea existente, **Cambiar el tipo…** junto a él abre el diálogo descrito en [Cambiar el tipo](#cambiar-el-tipo)
+- **Tipo**: **OPEX** o **CAPEX**. En cuanto la línea deja de estar en creación, **Cambiar el tipo…** junto a él abre el diálogo descrito en [Cambiar el tipo](#cambiar-el-tipo)
 - **Proveedor**, **Centro de coste**, **Empresa pagadora**, **Cuenta** (filtrada por el plan de cuentas de la empresa pagadora y el tipo de la línea), **Moneda** (solo las monedas permitidas en su espacio de trabajo), un campo por dimensión analítica usada para el tipo de la línea, **Run o build** e **Inicio de vigencia**
 - **Ciclo de vida**: el interruptor de estado, cuya etiqueta muestra el estado actual (**Activado** o **Desactivado**), y la fecha de **Fin de validez**. Consulte [Estado y ciclo de vida](#estado-y-ciclo-de-vida)
 - Fechas **Creado** y **Actualizado** (solo lectura)
@@ -256,7 +264,7 @@ Cuando la línea sustituye a otra, o fue sustituida a partir de un año posterio
 - La lista muestra el árbol de centros de coste. Los grupos se muestran para ayudarle a orientarse y no se pueden elegir. Busque por código, nombre o nombre de grupo
 - Cuando la empresa pagadora está elegida, la lista muestra solo los centros de coste de esa empresa, con los grupos por encima de ellos. Una línea que ya tiene un centro de coste de otra empresa lo conserva en la lista. Cuando la empresa no tiene ningún centro de coste, la lista lo indica
 - Un centro de coste desactivado aparece marcado como **Desactivado**. Se mantiene en las líneas que ya lo tienen y no se puede elegir para otra línea
-- Cuando crea una línea y la empresa pagadora está vacía, la lista muestra todos los centros de coste. Elegir uno completa la empresa pagadora con la empresa del centro de coste, de modo que la lista **Cuenta** se abre en el plan de cuentas de esa empresa. Hasta que usted elija una empresa o una cuenta, la lista conserva todos los centros de coste y elegir otro también actualiza la empresa
+- Mientras la empresa pagadora está vacía, la lista muestra todos los centros de coste. Elegir uno completa la empresa pagadora con la empresa del centro de coste, de modo que la lista **Cuenta** se abre en el plan de cuentas de esa empresa
 - Cuando cambia la empresa pagadora, un centro de coste de otra empresa se borra en el mismo guardado. **Centro de coste** muestra entonces los centros de coste de la nueva empresa
 - Una línea cuyo centro de coste pertenece a otra empresa, desde un archivo o la API, conserva ambas. Una indicación bajo el campo dice "Este centro de coste pertenece a" seguido del nombre de la empresa
 - Una línea guardada mediante la API con un centro de coste y sin empresa pagadora toma la empresa del centro de coste. Para los archivos importados, consulte [Importación/exportación CSV](#importacionexportacion-csv)
@@ -269,10 +277,10 @@ Cuando la línea sustituye a otra, o fue sustituida a partir de un año posterio
 - Cada campo lista los valores activados de su dimensión. Un valor desactivado se mantiene en las líneas que ya lo tienen y no se puede elegir para otra línea
 - Un valor usado solo para el otro tipo no se ofrece, y elegirlo como valor nuevo se rechaza. Una línea que ya lo tiene lo conserva y sigue siendo editable. Consulte [Valores OPEX o CAPEX](analytics.md#valores-opex-o-capex)
 - El campo no puede crear un valor: créelo en [Dimensiones analíticas](analytics.md) o deje que lo cree una importación
-- Una dimensión obligatoria está marcada con un asterisco. Una línea nueva necesita un valor en ella: **Crear** se detiene con "El campo Tipo de coste es obligatorio" hasta que elija uno. En una línea que tiene un valor, el campo no se puede vaciar, solo cambiar. Una línea sin valor sigue siendo editable. Si modifica una línea así, al salir se le pregunta primero: "El campo Tipo de coste es obligatorio. Elija un valor antes de salir." **Quedarse** coloca el cursor en el campo que falta. **Salir de todos modos** sale de la línea. Consulte [Dimensiones obligatorias](analytics.md#dimensiones-obligatorias)
+- Una dimensión obligatoria está marcada con un asterisco. Una línea que se está creando necesita un valor en ella: **Crear** la indica como faltante hasta que elija uno. En una línea que tiene un valor, el campo no se puede vaciar, solo cambiar. Una línea sin valor sigue siendo editable. Si modifica una línea así, al salir se le pregunta primero: "El campo Tipo de coste es obligatorio. Elija un valor antes de salir." **Quedarse** coloca el cursor en el campo que falta. **Salir de todos modos** sale de la línea. Consulte [Dimensiones obligatorias](analytics.md#dimensiones-obligatorias)
 - Si las dimensiones no se pueden cargar, una línea sustituye a estos campos: "No se pudieron cargar las dimensiones."
 
-**Consejo**: Al crear una línea, una advertencia de "Cuenta obsoleta" significa que la cuenta seleccionada no pertenece al plan de cuentas de la empresa pagadora. Elija otra cuenta para resolver la advertencia. Una línea existente cuya cuenta está fuera del plan de su empresa se puede seguir editando: el plan solo se comprueba cuando cambia la empresa o la cuenta.
+**Consejo**: Una cuenta fuera del plan de cuentas de la empresa pagadora se rechaza al elegirla. Una línea existente cuya cuenta está fuera del plan de su empresa se puede seguir editando: el plan solo se comprueba cuando cambia la empresa o la cuenta, y cuando hace clic en **Crear** en una línea que se está creando.
 
 ---
 
@@ -366,8 +374,9 @@ En una columna vacía, un clic en una pestaña cambia de inmediato. En una colum
 
 - Bajo el editor, **Resultado por mes** muestra el año mes a mes para cada columna visible, en la moneda de la línea, con un subtotal por trimestre (**T1** a **T4**) y una fila **Total**. La columna activa aparece resaltada
 - Con dos columnas o más, una última fila da la diferencia de cada columna con una de ellas, por ejemplo «+12.000 (+1,8 %)». Elija esa columna en **Diferencia con** encima de la tabla. Parte de la columna por defecto
-- Mientras cada columna esté vacía, o sea un importe repartido de forma uniforme en todo el año, una frase sustituye la tabla, por ejemplo «Todas las columnas se reparten de forma lineal en todo el año: el detalle mensual no aporta nada más.» **Mostrar el detalle** abre la tabla y **Ocultar el detalle** la vuelve a plegar. Su elección se mantiene mientras siga en la línea
-- La tabla sigue abierta mientras la columna activa se introduce por mes o una columna está pendiente de su elección
+- La tabla está plegada por defecto. **Mostrar el detalle** la abre y **Ocultar el detalle** la vuelve a plegar. Su elección se mantiene mientras siga en la línea
+- Plegada, la sección muestra su título y **Mostrar el detalle**. Mientras cada columna esté vacía, o sea un importe repartido de forma uniforme en todo el año, una frase indica el motivo, por ejemplo «Todas las columnas se reparten de forma lineal en todo el año: el detalle mensual no aporta nada más.»
+- La tabla se abre sola mientras la columna activa se introduce por mes o una columna está pendiente de su elección
 
 **Volver a los valores de apertura**:
 
@@ -575,11 +584,11 @@ La pestaña Relaciones muestra lo que paga esta línea: sus proyectos, aplicacio
 | **Contratos** | Nombre, proveedor, fin del periodo en curso, importe anual en la moneda del contrato, renovación (tácita o manual) |
 | **Activos** | Referencia (`AST-12`), nombre, tipo, entorno, estado |
 
-Solo ve las secciones de los módulos que puede leer. Las tecnologías y los activos requieren poder leer la infraestructura. Un Colaborador de negocio solo ve los proyectos y las aplicaciones en los que participa. Los nombres de los proyectos también aparecen en la columna **Proyecto** de la lista, donde la búsqueda rápida los encuentra. Los nombres de los contratos aparecen en su columna **Contrato**.
+Solo ve las secciones de los módulos que puede leer. Las tecnologías y los activos requieren poder leer la infraestructura. Un Colaborador de negocio solo ve los proyectos y las aplicaciones en los que participa. Los nombres de los proyectos también aparecen en la columna **Proyecto** de la lista, donde la búsqueda rápida los encuentra. Los nombres de los contratos aparecen en su columna **Contrato**. Un contrato que difiere de la línea en la empresa pagadora, el centro de coste, el proveedor o la moneda muestra una marca naranja pequeña junto a su nombre. Pase el cursor sobre la marca para ver cada diferencia, con el valor en la línea y el valor en el contrato. El selector muestra la misma marca en un contrato antes de vincularlo. El vínculo sigue siendo posible. La marca aparece para un contrato que usted puede leer.
 
 Una fecha de fin en naranja señala un contrato cuya decisión de renovación cae dentro de su ventana de decisión de contratos. Un contrato desactivado, o un activo retirado o desactivado, sigue en la lista con el nombre atenuado. A partir de dos filas, los contratos terminan con un total por moneda, sin los contratos desactivados.
 
-**Añadir y quitar vínculos** (`budget:member`): **Añadir**, a la derecha de una sección, abre una búsqueda. Escriba un nombre o una referencia y elija un resultado: el vínculo se guarda al instante. Vincular requiere también poder leer el módulo de destino: **Añadir** no aparece en una sección que no puede leer. Para quitar un vínculo, pase el cursor sobre la fila y haga clic en la cruz al final. Quitar un vínculo no elimina nada más. Los lectores ven las tablas en solo lectura.
+**Añadir y quitar vínculos** (`budget:member`): **Añadir**, a la derecha de una sección, abre una búsqueda. Escriba un nombre o una referencia y elija un resultado: el vínculo se guarda al instante. Vincular requiere también poder leer el módulo de destino: **Añadir** no aparece en una sección que no puede leer. Para quitar un vínculo, pase el cursor sobre la fila y haga clic en la cruz al final. Un mensaje lo confirma y ofrece **Deshacer**. Quitar un vínculo no elimina nada más. Los lectores ven las tablas en solo lectura.
 
 **Relacionados**: las aplicaciones y los contratos del proveedor de la línea que aún no están vinculados, con el motivo «mismo proveedor». Haga clic en **Vincular** para añadir la sugerencia a su sección. Las sugerencias muestran:
 
@@ -595,7 +604,7 @@ La sección no aparece cuando la línea no tiene proveedor o no hay nada que sug
 
 - **Añadir enlace** abre un diálogo para una URL y un nombre opcional; el enlace se guarda al instante. Para cambiar un enlace, pase el cursor sobre su fila y haga clic en el lápiz.
 - **Adjuntar archivo** abre el selector de archivos. También puede soltar archivos sobre la sección.
-- Para quitar un enlace o un archivo, pase el cursor sobre la fila y haga clic en la cruz. Eliminar un archivo pide una confirmación antes.
+- Para quitar un enlace o un archivo, pase el cursor sobre la fila y haga clic en la cruz. Quitar un enlace muestra un mensaje y ofrece **Deshacer**, que vuelve a crear el enlace. Eliminar un archivo pide una confirmación antes.
 
 **Consejo**: Vincule los contratos para seguir las renovaciones en varias líneas. Adjunte presupuestos y facturas para tener todos los documentos de una línea en un solo lugar.
 
@@ -636,7 +645,7 @@ Cada línea tiene un **estado** (Habilitado o Deshabilitado) y un **Fin de valid
 
 **Establecer estado**:
 
-- Al crear la línea, puede establecer su **Fin de validez** en el panel **Propiedades**
+- Mientras la línea se está creando, puede establecer su **Fin de validez** en el panel **Propiedades**
 - Más adelante, cambie el **Estado** en la barra de metadatos, o use el campo **Ciclo de vida** del panel **Propiedades** (interruptor de estado y **Fin de validez**). Pasar a **Desactivado** fija el fin de validez en este momento: la desactivación es inmediata. Mientras haya una fecha futura, el interruptor muestra **Activo hasta el** y esa fecha
 - Puede programar un fin de validez futuro, por ejemplo el fin de un contrato, una baja planificada o el final de la vida útil de un activo
 
@@ -650,7 +659,7 @@ Cada línea tiene un **estado** (Habilitado o Deshabilitado) y un **Fin de valid
 
 - **Prefiera desactivar**: Mantiene el historial intacto, asegura que los informes permanezcan consistentes y soporta registros de auditoría
 - **Elimine solo si**: La línea se creó por error
-- Una línea con importes en una columna congelada no se puede eliminar. Primero descongele la columna, o fije en su lugar una fecha de fin de validez
+- Una línea con importes en una columna congelada no se puede eliminar. Primero descongele la columna, o fije en su lugar una fecha de fin de validez. Elimine una línea desde la lista (**Eliminar seleccionadas**) o desde su cabecera (**Eliminar**, icono de papelera)
 - Eliminar una línea también elimina sus presupuestos, asignaciones, tareas, sitios web relevantes, adjuntos (con sus archivos) y sus vínculos con contratos. Si una de sus tareas se convirtió en una solicitud, la solicitud se conserva: tiene su propia copia del título, la descripción y los adjuntos, y solo se pierde su vínculo con la tarea
 
 **Consejo**: Utilice el Fin de validez para retirar líneas cuando los contratos terminen, los servicios se detengan, los activos se den de baja o los proyectos concluyan. Elimine solo una línea creada por error.
@@ -716,7 +725,7 @@ El acceso a las líneas presupuestarias se controla con el recurso Presupuesto, 
 
 - `budget:reader`: Ver la lista, abrir líneas, ver presupuestos y asignaciones (solo lectura), descargar adjuntos
 - `budget:member`: Crear y editar líneas, cambiar su tipo, actualizar presupuestos y asignaciones, subir y eliminar adjuntos, gestionar relaciones, enlaces y contactos
-- `budget:admin`: Todos los derechos de miembro más importación y exportación, operaciones presupuestarias (copiar columnas presupuestarias, con sus importes y asignaciones, y restablecer columna presupuestaria) y eliminación masiva
+- `budget:admin`: Todos los derechos de miembro más importación y exportación, operaciones presupuestarias (copiar columnas presupuestarias, con sus importes y asignaciones, y restablecer columna presupuestaria) y la eliminación de líneas desde la lista o desde la línea
 
 Congelar columnas presupuestarias requiere la administración presupuestaria (`budget_ops:admin`).
 

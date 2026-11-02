@@ -32,7 +32,7 @@ The ticket search and the type chips combine, so you can look at, say, only the 
 Each entry is one thing that happened, and it carries enough context to understand it at a glance:
 
 - A **type chip**: which of the seven categories above the event belongs to.
-- An **action-type chip** (when the event is about a specific kind of ticket work): **Internal note**, **Requester reply**, **Classification update**, **Status update**, **Assignment**, or **Participants**.
+- An **action-type chip** (when the event is about a specific kind of ticket work): **Internal note**, **Requester reply**, **Classification update**, **Status update**, **Assignment**, or **Observers**.
 - A **status dot** with a plain-language label (for example "Waiting for approval", "Done", "Rejected", "Dismissed", "Needs attention") describing where that item stands.
 - The **agent name** and the **ticket** it concerns (shown as `#N`).
 - An **event title**, for example "Proposal created", or "Ticket check: 3 new tickets".
@@ -74,7 +74,7 @@ A check entry tells you what the agent found, in its title, without you having t
 
 - The **check breakdown** described above.
 - The complete **Proposed message**: the full text the agent drafted, not just the one-line preview.
-- **Field changes**, written as "Field: from → to" (for example "Status: Assigned → Pending"), so a classification, status, assignment, or participant change is legible without opening the ticket.
+- **Field changes**, written as "Field: from → to" (for example "Status: Assigned → Pending"), so a classification, status, assignment, or observer change is legible without opening the ticket.
 - The **Reason**: the agent's short justification for the proposal.
 - The **Reviewer note**: the note captured when the proposal was decided.
 - A **"{n} sources cited"** line: how many of your [Knowledge library](knowledge.md) results backed the drafted reply. This is the honest signal of whether the reply is grounded in your own sources; a reply with cited sources is one the agent could stand behind. Its absence on an administrative or procedural reply is normal and does not mean something failed. For how that plays out during review, see [Approvals](agents-approvals.md).

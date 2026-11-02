@@ -1,11 +1,10 @@
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
-  HttpException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { codedForbidden } from '../auth/module-right-required';
 import { EntityManager } from 'typeorm';
 import { normalizeMarkdownRichText } from '../common/markdown-worker';
 import {
@@ -62,7 +61,7 @@ export class KnowledgeWorkflowService {
       } as any,
     });
     if (!participant) {
-      throw new HttpException('You are not assigned to the active workflow stage', 403);
+      throw codedForbidden('WORKFLOW_STAGE_NOT_ASSIGNED', 'You are not assigned to the active workflow stage');
     }
     if (participant.decision !== 'pending') {
       throw new BadRequestException('You have already acted on this workflow stage');
@@ -118,7 +117,7 @@ export class KnowledgeWorkflowService {
       return;
     }
 
-    throw new ForbiddenException('You are not allowed to cancel this review workflow');
+    throw codedForbidden('WORKFLOW_CANCEL_NOT_ALLOWED', 'You are not allowed to cancel this review workflow');
   }
 
   private async finalizeWorkflowApproved(

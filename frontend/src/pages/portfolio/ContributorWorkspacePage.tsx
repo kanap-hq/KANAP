@@ -627,10 +627,8 @@ export default function ContributorWorkspacePage() {
 
   return (
     <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-      {error && (
-        <Alert severity="error" sx={{ mx: 2, mt: 1 }} onClose={() => setError(null)}>{error}</Alert>
-      )}
       <PortfolioDetailWorkspaceShell
+        notices={error ? <Alert severity="error" onClose={() => setError(null)}>{error}</Alert> : undefined}
         activeTab={activeTab}
         tabs={tabs}
         onTabChange={(next) => { void handleTabChange(next); }}

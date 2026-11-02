@@ -21,6 +21,7 @@ import { AuditModule } from '../audit/audit.module';
   ],
   controllers: [CurrencyController],
   providers: [CurrencySettingsService, FxRateService, WorldBankClient, FxIngestionService, ManualRatesService],
-  exports: [CurrencySettingsService, FxRateService, FxIngestionService],
+  // ManualRatesService: Plaid and the MCP read the rate matrix and the missing rates through it.
+  exports: [CurrencySettingsService, FxRateService, FxIngestionService, ManualRatesService],
 })
 export class CurrencyModule {}

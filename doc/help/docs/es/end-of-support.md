@@ -64,7 +64,7 @@ Las filas sobre aplicaciones requieren el derecho de leer las aplicaciones.
 
 ## Preguntar al asistente
 
-[Plaid](ai-assistant.md) lee las dos vistas, **Vencimientos** y **Datos que faltan**, con los mismos derechos que el informe. Nombra cada elemento por su referencia (`APP-4`, `AST-12`, `TEC-3`) y lee un horizonte a la vez: 6, 12, 24 o 36 meses. Cuando usted no puede leer las aplicaciones, Plaid dice que dejó fuera las filas de las aplicaciones.
+[Plaid](ai-assistant.md) lee las dos vistas, **Vencimientos** y **Datos que faltan**, con los mismos derechos que el informe. Nombra cada elemento por su referencia (`APP-4`, `AST-12`, `TEC-3`) y lee un horizonte a la vez: 6, 12, 24 o 36 meses. Plaid lista los vencimientos 30 a la vez y puede leer las páginas siguientes; sus recuentos y totales cubren todos los vencimientos. Cuando usted no puede leer las aplicaciones, Plaid dice que dejó fuera las filas de las aplicaciones.
 
 Plaid también puede añadir versiones de tecnología y corregir sus fechas de soporte, con su aprobación. El fin de soporte de una aplicación es un campo de la aplicación: Plaid lo cambia como cambia la aplicación, con los derechos de la página [Aplicaciones](applications.md).
 

@@ -7,8 +7,22 @@ import {
   DEFAULT_DASHBOARD_CONFIG,
   DEFAULT_BUDGET_DASHBOARD_CONFIG,
   BUDGET_AMOUNT_COLUMN_KEYS,
+  DASHBOARD_SECTION_IDS,
+  type DashboardLayout,
 } from './user-dashboard-config.entity';
-import { UpdateDashboardConfigDto } from './dto/update-dashboard-config.dto';
+import { UpdateDashboardConfigDto, UpdateHomeDashboardConfigDto } from './dto/update-dashboard-config.dto';
+
+type HomeDashboardConfig = {
+  tiles: DashboardTileConfig[];
+  hideEmptyTiles: boolean;
+  /** Null until the person orders the sections. */
+  sections: NonNullable<DashboardLayout['sections']> | null;
+};
+
+/** The configuration a person sees in their layout, the defaults filling what they never chose. */
+function withLayout(tiles: DashboardTileConfig[], layout: DashboardLayout | null | undefined): HomeDashboardConfig {
+  return { tiles, hideEmptyTiles: layout?.hideEmptyTiles !== false, sections: layout?.sections ?? null };
+}
 
 interface ServiceOptions {
   manager?: EntityManager;
@@ -58,44 +72,55 @@ export class DashboardService {
   async getConfig(
     userId: string,
     opts?: ServiceOptions,
-  ): Promise<{ tiles: DashboardTileConfig[] }> {
+  ): Promise<HomeDashboardConfig> {
     const repo = this.getRepo(opts?.manager);
     const config = await repo.findOne({
       where: { user_id: userId, tenant_id: Raw((alias) => `${alias} = app_current_tenant()`) },
     });
 
     if (config) {
-      return { tiles: this.mergeWithDefaults(config.tiles) };
+      return withLayout(this.mergeWithDefaults(config.tiles), config.layout);
     }
 
     // Return default configuration
-    return {
-      tiles: DEFAULT_DASHBOARD_CONFIG.map((tile) => ({
-        ...tile,
-        config: { ...tile.config },
-      })),
-    };
+    return withLayout(DEFAULT_DASHBOARD_CONFIG.map((tile) => ({ ...tile, config: { ...tile.config } })), null);
   }
 
   /**
-   * Save user's dashboard configuration (upsert)
+   * Save user's dashboard configuration (upsert). The option and the sections keep their saved value
+   * when the client leaves them out; the sections, when sent, name each section once.
    */
   async saveConfig(
     userId: string,
-    dto: UpdateDashboardConfigDto,
+    dto: UpdateHomeDashboardConfigDto,
     opts?: ServiceOptions,
-  ): Promise<{ tiles: DashboardTileConfig[] }> {
+  ): Promise<HomeDashboardConfig> {
     const repo = this.getRepo(opts?.manager);
+    if (dto.sections) {
+      const ids = new Set(dto.sections.map((section) => section.id));
+      if (ids.size !== dto.sections.length || ids.size !== DASHBOARD_SECTION_IDS.length) {
+        throw new BadRequestException('Name every section once');
+      }
+    }
 
     const tiles = this.mergeWithDefaults(dto.tiles, true);
-    await this.writeTiles(repo, userId, 'tiles', tiles);
-    return { tiles };
+    const saved = await repo.findOne({
+      where: { user_id: userId, tenant_id: Raw((alias) => `${alias} = app_current_tenant()`) },
+    });
+    const layout: DashboardLayout = {
+      ...(saved?.layout ?? {}),
+      ...(dto.hideEmptyTiles === undefined ? {} : { hideEmptyTiles: dto.hideEmptyTiles }),
+      ...(dto.sections === undefined ? {} : { sections: dto.sections.map(({ id, hidden }) => ({ id, hidden })) }),
+    };
+    await this.writeTiles(repo, userId, 'tiles', tiles, layout);
+    return withLayout(tiles, layout);
   }
 
   /** Update only the selected dashboard, including when two first saves race. */
-  private async writeTiles(repo: Repository<UserDashboardConfig>, userId: string, column: 'tiles' | 'budget_tiles', tiles: DashboardTileConfig[]) {
-    await repo.createQueryBuilder().insert().values({ user_id: userId, [column]: tiles, updated_at: new Date() })
-      .orUpdate([column, 'updated_at'], ['tenant_id', 'user_id']).execute();
+  private async writeTiles(repo: Repository<UserDashboardConfig>, userId: string, column: 'tiles' | 'budget_tiles', tiles: DashboardTileConfig[], layout?: DashboardLayout) {
+    const extra = layout === undefined ? {} : { layout };
+    await repo.createQueryBuilder().insert().values({ user_id: userId, [column]: tiles, ...extra, updated_at: new Date() })
+      .orUpdate([column, ...Object.keys(extra), 'updated_at'], ['tenant_id', 'user_id']).execute();
   }
 
   /**
@@ -104,19 +129,14 @@ export class DashboardService {
   async resetConfig(
     userId: string,
     opts?: ServiceOptions,
-  ): Promise<{ tiles: DashboardTileConfig[] }> {
+  ): Promise<HomeDashboardConfig> {
     const repo = this.getRepo(opts?.manager);
 
-    // Preserve the budget dashboard when resetting the main dashboard.
-    await this.writeTiles(repo, userId, 'tiles', []);
+    // Preserve the budget dashboard when resetting the main dashboard; the layout goes back to the defaults.
+    await this.writeTiles(repo, userId, 'tiles', [], {});
 
     // Return default configuration
-    return {
-      tiles: DEFAULT_DASHBOARD_CONFIG.map((tile) => ({
-        ...tile,
-        config: { ...tile.config },
-      })),
-    };
+    return withLayout(DEFAULT_DASHBOARD_CONFIG.map((tile) => ({ ...tile, config: { ...tile.config } })), null);
   }
 
   private mergeBudgetDefaults(tiles: DashboardTileConfig[]): DashboardTileConfig[] {

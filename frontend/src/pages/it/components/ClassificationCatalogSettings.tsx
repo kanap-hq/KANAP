@@ -16,7 +16,7 @@ import { catalogListIssues } from '../../../components/settings/catalogValidatio
 import { classificationDefaults } from '../../../utils/applicationClassification';
 import { localizeCatalogItem, toCatalogLocale } from '../../../utils/catalogLocalization';
 
-type Props = { settings: ItOpsSettings };
+type Props = { settings: ItOpsSettings; readOnly?: boolean };
 type Kind = 'business' | 'level' | 'wave';
 
 function stripCatalog(settings: ItOpsSettings): ApplicationClassificationCatalog {
@@ -83,7 +83,7 @@ function LevelRows<T extends ClassificationLevel | BusinessCriticalityLevel | Re
   </Stack>;
 }
 
-export default function ClassificationCatalogSettings({ settings }: Props) {
+export default function ClassificationCatalogSettings({ settings, readOnly = false }: Props) {
   const { t } = useTranslation('it');
   const queryClient = useQueryClient();
   const [open, setOpen] = React.useState(false);
@@ -112,9 +112,22 @@ export default function ClassificationCatalogSettings({ settings }: Props) {
         <Typography sx={(theme) => ({ fontSize: 16, fontWeight: 500, color: theme.palette.kanap.text.primary })}>{classificationText('Classifications and continuity')}</Typography>
         <Typography sx={(theme) => ({ fontSize: 13, color: theme.palette.kanap.text.secondary })}>{classificationText('Levels used to classify applications. Business levels also rate the operational criticality of interfaces and connections.')}</Typography>
       </Box>
-      <Button variant="action" onClick={() => setOpen(true)}>{classificationText('Edit catalog')}</Button>
+      {!readOnly && <Button variant="action" onClick={() => setOpen(true)}>{classificationText('Edit catalog')}</Button>}
     </Stack>
-    <KanapDialog open={open} title={classificationText('Edit classifications and continuity')} onClose={() => setOpen(false)} onSave={() => saveMutation.mutate()} saveLabel={classificationText('Save')} saveDisabled={invalid} saveLoading={saveMutation.isPending} sx={{ maxWidth: 1050 }}>
+    {readOnly && (
+      <Stack spacing={1.25} sx={{ mt: 2 }}>
+        {sections.map((section) => {
+          const labels = (draft[section.key] as Array<{ label?: string }>).map((row) => row.label).filter((label): label is string => !!label);
+          return (
+            <Box key={section.key}>
+              <Typography sx={{ fontSize: 13, fontWeight: 500, color: 'kanap.text.primary' }}>{section.title}</Typography>
+              {labels.length > 0 && <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{labels.join(', ')}</Typography>}
+            </Box>
+          );
+        })}
+      </Stack>
+    )}
+    {!readOnly && <KanapDialog open={open} title={classificationText('Edit classifications and continuity')} onClose={() => setOpen(false)} onSave={() => saveMutation.mutate()} saveLabel={classificationText('Save')} saveDisabled={invalid} saveLoading={saveMutation.isPending} sx={{ maxWidth: 1050 }}>
       <Stack spacing={2.5} sx={{ maxHeight: '70vh', overflowY: 'auto' }}>
         {saveMutation.error && <Alert severity="error">{getApiErrorMessage(saveMutation.error, t, classificationText('The catalog could not be saved. Reload settings and try again.'))}</Alert>}
         <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>{classificationText('Renaming, reordering or retiring a level never changes the applications that use it.')}</Typography>
@@ -123,6 +136,6 @@ export default function ClassificationCatalogSettings({ settings }: Props) {
           <LevelRows rows={draft[section.key] as any[]} kind={section.kind} help={section.help} nameExample={section.nameExample} usageList={section.key} onChange={(rows) => setDraft({ ...draft, [section.key]: rows })} />
         </Box>)}
       </Stack>
-    </KanapDialog>
+    </KanapDialog>}
   </Box>;
 }

@@ -445,9 +445,15 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
     controller: 'BudgetLinesController',
     reserved: ['bulkDelete', 'clearBudgetColumn', 'copyBudget', 'deleteCheck'],
     allowed: {
+      cancelCreation: 'cancel of a line being created, by its creator with its creation token (that line only): the service checks the token itself, locks the line under the policies, refuses a line another person wrote on or a line continues, then a limited person\'s delete runs in withCreatorCancelAccess, for the person whose access applies only', // DELETE :id/creation
+      completeCreation: 'the check of a line being created (read), with its creation token', // POST :id/creation/complete
+      contractConsistency: READ, // GET :id/contract-consistency
       create: LINE_WRITE, // POST (root)
+      createAtTitle: `${LINE_WRITE}; created at its title, the placement rule applies (a limited person gives a place)`, // POST creation
+      creationChanges: 'the preflight of the cancel of a line being created (read), with its creation token', // GET :id/creation
       exportBudgetFile: BUDGET_FILE, // GET budget-file/export
       get: READ, // GET :ref
+      hiddenByValue: READ, // GET summary/hidden-by-value
       linkRelation: LINE_WRITE, // POST :id/relations/:kind
       ownerSuggestions: LOOKUP, // GET owner-suggestions (a limited person creates lines too)
       relations: READ, // GET :id/relations
@@ -476,6 +482,7 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
     allowed: {
       attachContact: CONTRACT_WRITE, // POST :id/contacts
       budgetCoverage: READ, // GET :id/budget
+      budgetLineConsistency: READ, // GET :id/budget-line-consistency
       bulkReplace: CONTRACT_WRITE, // POST :id/spend-items/bulk-replace
       bulkReplaceApplications: CONTRACT_WRITE, // POST :id/applications/bulk-replace
       bulkReplaceAssets: CONTRACT_WRITE, // POST :id/assets/bulk-replace
@@ -584,7 +591,7 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
         'listActivity', 'listAgentMonitoringAlertDiagnoses', 'listAgents', 'listGlpiReadTargets', 'listRuns',
         'listSharedContextProfiles', 'listTicketingReadTargets', 'pollHelpdeskGlpiIngestion',
         'pollHelpdeskTicketingIngestion', 'pollSreMonitoringIngestion', 'previewAgentTargeting', 'rejectAction',
-        'revokeEmergencyPause', 'revokeHelpdeskEmergencyPause', 'runGlpiRead', 'runMockTriage',
+        'restoreSharedContextProfile', 'revokeEmergencyPause', 'revokeHelpdeskEmergencyPause', 'runGlpiRead', 'runMockTriage',
         'runTicketingRead', 'runTicketingTriage', 'setAgentAutonomy', 'testAgentMonitoringDiagnosis',
         'updateAgent', 'updateAgentStatus', 'updateSharedContextProfile',
     ],
@@ -596,6 +603,7 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
     reserved: ['archive', 'clearDefault', 'create', 'restore', 'setDefault', 'test', 'update'],
     allowed: {
       list: MODEL_CONFIGS_LIST, // GET (root)
+      reasoningEfforts: 'the reasoning efforts a provider and model accept: fixed rules, no tenant data', // GET reasoning-efforts
     },
   },
   {

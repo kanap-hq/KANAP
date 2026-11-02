@@ -8,6 +8,7 @@ import StatusSwitch from '../../../components/fields/StatusSwitch';
 import { STATUS_ENABLED, STATUS_DISABLED, StatusValue, deriveStatusFromDisabledAt, normalizeStatus } from '../../../constants/status';
 import BusinessProcessCategoryMultiSelect from '../../../components/fields/BusinessProcessCategoryMultiSelect';
 import UserSelect from '../../../components/fields/UserSelect';
+import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 
 export type BusinessProcessCreateEditorHandle = {
   isDirty: () => boolean;
@@ -79,7 +80,7 @@ export default forwardRef<BusinessProcessCreateEditorHandle, Props>(function Bus
         // A name another business process has: the reason shows under the name.
         form.setError('name', { type: 'server', message: t('businessProcesses.fields.nameTaken') });
       } else {
-        const msg = e?.response?.data?.message || e?.message || t('shared.messages.failedToCreate', { entity: t('businessProcesses.entity') });
+        const msg = getApiErrorMessage(e, t, t('shared.messages.failedToCreate', { entity: t('businessProcesses.entity') }));
         setServerError(msg);
       }
       throw e;

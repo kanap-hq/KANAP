@@ -11,7 +11,16 @@ Both types live in one list and open in the same workspace, with year-by-year bu
 
 Navigate to **Budget management > Budget lines** to see the list. Click **New line** to create a line.
 
-The workspace opens in creation mode, titled **New OPEX line** or **New CAPEX line**, with the **Properties** panel open on the right. Its first row is **Type**: pick **OPEX** or **CAPEX**. It starts on the type the list is filtered on in its **Type** column, else on **OPEX**. Type the line's name in the title at the top, fill in the properties, then click **Create**.
+The workspace opens on a new line, titled **New OPEX line** or **New CAPEX line**. Its type is the one the list is filtered on in its **Type** column, else **OPEX**. It cannot be changed while the line is being created. Type the line's name in the title at the top and press Enter. The line exists at once, with your workspace currency and today as its effective start, and every tab opens, **Budget** included. Fill in the **Properties** panel: each change saves at once.
+
+If your data access is limited to one company, the paying company is filled with it. If you must choose, pick the paying company or the cost center before you type the title.
+
+While the line is being created, its header shows **Create** and **Cancel** in place of the close button:
+
+- **Create** checks the required fields below. When one is missing, a message lists them, they are marked in the **Properties** panel, and the cursor goes to the first one. Otherwise the line closes and you go back to where you started: the previous screen, else the list
+- **Cancel** deletes the line and everything entered on it, amounts included. If you entered more than the title, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete lines. A line with amounts in a frozen column cannot be cancelled
+
+Leaving the line another way while a required field is missing asks you to complete it or delete it. A line left without a paying company shows a warning that lists the missing fields, and asks again each time you leave it. Press Escape on the empty title to leave without creating anything.
 
 **Required fields**:
 
@@ -19,8 +28,9 @@ The workspace opens in creation mode, titled **New OPEX line** or **New CAPEX li
 - **Paying company**: Which company pays (required for accounting)
 - **Account**: The general ledger account. Only accounts from the paying company's chart of accounts appear, and only those that suit the line's type in [Chart of Accounts](chart-of-accounts.md#opex-or-capex-accounts): **OPEX and CAPEX**, or **OPEX only** for an OPEX line and **CAPEX only** for a CAPEX line. A line that already has an account for the other type keeps it and stays editable. Choosing such an account on a new line or when you change the account is refused
 - **Currency**: ISO code (e.g., USD, EUR). Defaults to your workspace currency; you can override it per line
-- **Effective start**: When this spend begins (DD/MM/YYYY)
+- **Effective start**: When this spend begins (DD/MM/YYYY). Defaults to the day you create the line
 - **Required dimensions**: one field per dimension that is required for the line's type. A new workspace has no required dimension. See [Recommended dimensions](#recommended-dimensions)
+- **Cost center**, when your data access requires one
 
 **Optional but useful**:
 
@@ -35,8 +45,6 @@ The workspace opens in creation mode, titled **New OPEX line** or **New CAPEX li
 Once set, **Paying company** and **Account** can be changed but not emptied. **Supplier** can be cleared at any time.
 
 When you change the paying company of a line that has an account, and the new company uses another chart of accounts, the account is cleared in the same save. **Account** then shows as required, with the list on the new company's chart. Pick the new account to finish.
-
-Once the line is created, the workspace unlocks all four tabs: **Overview**, **Budget**, **Allocations**, and **Relations**.
 
 **Tip**: You can create lines quickly and fill in budgets and allocations later. Start with the essentials and iterate.
 
@@ -94,15 +102,15 @@ The list (at **Budget management > Budget lines**) holds the OPEX and CAPEX line
 - **Product name**: The line's title (links to the **Overview** tab)
 - **Supplier**: The supplier name
 - **Paying company**: Which company pays for this line
-- **Contract**: The latest linked contract name (links to the Contract workspace)
 - **Account**: The GL account number and name
-- **Allocation**: The allocation method label for the current year (links to the **Allocations** tab)
 - **Budget Y** and **Expected landing Y**: The current-year amounts of the default column and of the last shown column (links to the **Budget** tab for this year). With the standard settings these are Budget and Expected landing. When the default column is also the last shown one, a single amount column appears. See [Budget columns](budget-operations.md#budget-columns)
 - **Required dimensions**: One column per enabled dimension that is required for either type, named after it. A new workspace has none
-- **Task**: The latest task title (links to the **Overview** tab, where the Tasks panel sits)
 
 **Additional columns** (hidden by default, toggle via the column chooser):
 
+- **Contract**: The latest linked contract name (links to the Contract workspace)
+- **Allocation**: The allocation method label for the current year (links to the **Allocations** tab)
+- **Task**: The latest task title (links to the **Overview** tab, where the Tasks panel sits)
 - **Amount columns**: Every shown budget column for Y-1, Y, Y+1 and Y+2, under the names your organisation chose. The header gives the column, the year relative to today and the calendar year, for example **Revision Y+1 (2027)**. Hidden columns are not offered
 - **FTE columns**: The FTE of every shown budget column for Y-1, Y, Y+1 and Y+2, under the names your organisation chose, right after the amount columns in the column chooser. The header gives the column and the calendar year, for example **Budget FTE (2026)**. A line's FTE is the sum of the FTE of its quantity and price lines in that column. See [FTE](#fte). The cell is empty when the column has no lines
 - **FTE declared**: **Yes** when the line declares FTE in at least one budget column of any year, otherwise empty. These are the lines the **Lines with FTE** filter of the reports keeps
@@ -177,7 +185,7 @@ A column layout you saved keeps its own choice of columns. The layout you had sa
 - **New line**: Create a line (requires `budget:member`)
 - **Import**: Bulk-load lines from a budget file (requires `budget:admin`)
 - **Export**: Export the lines to a budget file (requires `budget:admin`)
-- **Delete selected**: Bulk-delete selected lines (requires `budget:admin`; select rows via checkboxes). A line with amounts in a frozen column cannot be deleted. Before anything is deleted, the confirmation lists the lines kept, with the frozen column. The others are deleted
+- **Delete selected**: Bulk-delete selected lines (requires `budget:admin`; select rows via checkboxes). A line with amounts in a frozen column cannot be deleted. Before anything is deleted, the confirmation lists the lines kept, with the frozen column. The others are deleted. The same delete is on the line: **Delete** (trash icon) in its header, for someone with `budget:admin` whose access covers all data. The check is the same. A line with amounts in a frozen column shows the refusal and its reason. When the line can be deleted, you confirm, the line is deleted, and the list opens again
 
 **Prev/Next navigation**:
 
@@ -194,10 +202,10 @@ A column layout you saved keeps its own choice of columns. The layout you had sa
 
 Click any row in the list to open the workspace. Its address names the line by its reference, for example `/ops/budget/BL-12/overview`. It has four parts:
 
-- **Header**: the line reference (e.g., `BL-12`) with a copy button, the line's title (click it to rename the line), **Prev** / **Next**, **Share**, and the close button
+- **Header**: the line reference (e.g., `BL-12`) with a copy button, the line's title (click it to rename the line), **Prev** / **Next**, **Share**, **Delete** (trash icon, `budget:admin`, access to all data), and the close button. While the line is being created, **Create** and **Cancel** replace **Delete** and the close button
 - **Metadata bar** under the title: **Status**, **IT owner**, and **Business owner**, each editable in place. When the line's cost center has a budget holder, **Budget holder** follows them. It is read only and derived from the cost center, not stored on the line: hover it to see which cost center it comes from, and change it on the cost center (see [Cost centers](cost-centers.md#budget-holder-on-budget-lines))
 - **Five tabs**: **Overview**, **Budget**, **Allocations**, **Relations** (the Relations tab shows how many links the line has), and **History**
-- **Properties panel** on the right: the line's main fields, starting with **Type** (with **Change type...** next to it on an existing line, see [Changing the type](#changing-the-type)). Open or close it with the properties button; the workspace remembers your choice
+- **Properties panel** on the right: the line's main fields, starting with **Type** (with **Change type...** next to it once the line is no longer being created, see [Changing the type](#changing-the-type)). Open or close it with the properties button; the workspace remembers your choice
 
 **Owner pickers**:
 
@@ -245,7 +253,7 @@ When the line replaces another one, or was replaced from a later year after a ty
 
 **Properties panel**:
 
-- **Type**: **OPEX** or **CAPEX**. On an existing line, **Change type...** next to it opens the dialog described in [Changing the type](#changing-the-type)
+- **Type**: **OPEX** or **CAPEX**. Once the line is no longer being created, **Change type...** next to it opens the dialog described in [Changing the type](#changing-the-type)
 - **Supplier**, **Cost center**, **Paying company**, **Account** (filtered by the paying company's chart of accounts and the line's type), **Currency** (only the currencies allowed in your workspace), one field per analytics dimension used for the line's type, **Run or build**, and **Effective start**
 - **Lifecycle**: the status switch, labelled with the current state (**Enabled** or **Disabled**), and the **End of validity** date. See [Status and lifecycle](#status-and-lifecycle)
 - **Created** and **Updated** dates (read only)
@@ -256,7 +264,7 @@ When the line replaces another one, or was replaced from a later year after a ty
 - The list shows the cost center tree. Groups are shown to help you find your way and cannot be picked. Search by code, name or group name
 - When the paying company is chosen, the list shows only that company's cost centers, with the groups above them. A line that already has a cost center of another company keeps it in the list. When the company has no cost center, the list says so
 - A disabled cost center is marked **Disabled**. It stays on the lines that already have it, and cannot be picked for another line
-- When you create a line and the paying company is empty, the list shows every cost center. Picking one fills the paying company with the cost center's company, so the **Account** list opens on that company's chart of accounts. Until you pick a company or an account yourself, the list keeps every cost center and choosing another one updates the company too
+- While the paying company is empty, the list shows every cost center. Picking one fills the paying company with the cost center's company, so the **Account** list opens on that company's chart of accounts
 - When you change the paying company, a cost center of another company is cleared in the same save. **Cost center** then lists the new company's cost centers
 - A line whose cost center belongs to another company, from a file or the API, keeps both. A hint under the field says "This cost center belongs to" followed by the company name
 - A line saved through the API with a cost center and no paying company takes the cost center's company. For imported files, see [CSV import/export](#csv-importexport)
@@ -269,10 +277,10 @@ When the line replaces another one, or was replaced from a later year after a ty
 - Each field lists the enabled values of its dimension. A disabled value stays on the lines that already have it, and cannot be picked for another line
 - A value used for the other type only is not offered, and is refused as a new choice. A line that already has it keeps it and stays editable. See [OPEX or CAPEX values](analytics.md#opex-or-capex-values)
 - The field cannot create a value: create it in [Analytics dimensions](analytics.md), or let an import create it
-- A required dimension is marked with an asterisk. A new line needs a value on it: **Create** stops with "Cost pool is required" until you pick one. On a line that holds a value, the field cannot be cleared, only changed. A line without a value stays editable. If you change such a line, leaving it asks first: "Cost pool is required. Choose a value before leaving." **Stay** puts the cursor in the missing field. **Leave anyway** leaves. See [Required dimensions](analytics.md#required-dimensions)
+- A required dimension is marked with an asterisk. A line being created needs a value on it: **Create** lists it as missing until you pick one. On a line that holds a value, the field cannot be cleared, only changed. A line without a value stays editable. If you change such a line, leaving it asks first: "Cost pool is required. Choose a value before leaving." **Stay** puts the cursor in the missing field. **Leave anyway** leaves. See [Required dimensions](analytics.md#required-dimensions)
 - If the dimensions cannot be loaded, one line replaces these fields: "Dimensions could not be loaded."
 
-**Tip**: When you create a line, an "Obsolete account" warning means the selected account does not belong to the paying company's chart of accounts. Choose a different account to resolve the warning. An existing line whose account is outside its company's chart can still be edited: the chart is checked only when the company or the account changes.
+**Tip**: An account outside the paying company's chart of accounts is refused when you choose it. An existing line whose account is outside its company's chart can still be edited: the chart is checked only when the company or the account changes, and when you click **Create** on a line being created.
 
 ---
 
@@ -366,8 +374,9 @@ On an empty column, a click on a tab switches at once. On a column with amounts,
 
 - Under the editor, **Monthly result** shows the year month by month for every shown column, in the line's currency, with a subtotal per quarter (**Q1** to **Q4**) and a **Total** row. The active column is highlighted
 - With two columns or more, a last row gives the difference of each column with one of them, for example "+12,000 (+1.8%)". Pick that column in **Difference with** above the table. It starts on the default column
-- While every column is empty, or an amount spread flat over the whole year, a sentence replaces the table, for example "All columns are spread flat over the whole year: the monthly detail adds nothing." **Show the detail** opens the table and **Hide the detail** folds it again. Your choice holds while you stay on the line
-- The table stays open while the active column is typed by month or a column waits for your choice
+- The table is folded by default. **Show the detail** opens it and **Hide the detail** folds it again. Your choice holds while you stay on the line
+- Folded, the section shows its title and **Show the detail**. While every column is empty, or an amount spread flat over the whole year, a sentence adds why, for example "All columns are spread flat over the whole year: the monthly detail adds nothing."
+- The table opens by itself while the active column is typed by month or a column waits for your choice
 
 **Back to the opening values**:
 
@@ -575,11 +584,11 @@ The Relations tab shows what this line pays for: its projects, applications, tec
 | **Contracts** | Name, supplier, end of the current term, yearly amount in the contract currency, renewal (tacit or manual) |
 | **Assets** | Reference (`AST-12`), name, type, environment, status |
 
-You only see the sections of the modules you can read. Technologies and assets need a read of the infrastructure. A Business Contributor only sees the projects and applications they take part in. The project names also appear in the list's **Project** column, where the quick search finds them. The contract names appear in its **Contract** column.
+You only see the sections of the modules you can read. Technologies and assets need a read of the infrastructure. A Business Contributor only sees the projects and applications they take part in. The project names also appear in the list's **Project** column, where the quick search finds them. The contract names appear in its **Contract** column. A contract that differs from the line on paying company, cost center, supplier or currency shows a small orange mark next to its name. Hover the mark to see each difference, with the value on the line and the value on the contract. The picker shows the same mark on a contract before you link it. Linking stays possible. The mark appears for a contract you can read.
 
 An end date in orange is a contract whose renewal decision is due within your contract decision window. A disabled contract, or a retired or disabled asset, stays listed with its name greyed out. From two rows on, the contracts end with one total per currency, without the disabled ones.
 
-**Adding and removing links** (`budget:member`): **Add** at the right of a section opens a search. Type a name or a reference and pick a result: the link is saved at once. Linking also needs a read of the target module, so **Add** is absent from a section you cannot read. To remove a link, hover the row and click the cross at its end. Removing a link deletes nothing else. Readers see the tables read-only.
+**Adding and removing links** (`budget:member`): **Add** at the right of a section opens a search. Type a name or a reference and pick a result: the link is saved at once. Linking also needs a read of the target module, so **Add** is absent from a section you cannot read. To remove a link, hover the row and click the cross at its end. A message confirms it and offers **Undo**. Removing a link deletes nothing else. Readers see the tables read-only.
 
 **Related**: applications and contracts of the line's supplier that are not linked yet, with the reason "same supplier". Click **Link** to add the suggestion to its section. The suggestions show:
 
@@ -595,7 +604,7 @@ The section is absent when the line has no supplier or there is nothing to sugge
 
 - **Add link** opens a dialog for a URL and an optional name; the link is saved at once. To change a link, hover its row and click the pencil.
 - **Attach file** opens the file chooser. You can also drop files on the section.
-- To remove a link or a file, hover the row and click the cross. Deleting a file asks for confirmation first.
+- To remove a link or a file, hover the row and click the cross. Removing a link shows a message and offers **Undo**, which creates the link again. Deleting a file asks for confirmation first.
 
 **Tip**: Link contracts to track renewals across several lines. Attach quotes and invoices to keep all the documents of a line in one place.
 
@@ -636,7 +645,7 @@ Every line has a **status** (Enabled or Disabled) and an optional **End of valid
 
 **Setting status**:
 
-- When you create the line, you can set its **End of validity** in the **Properties** panel
+- While the line is being created, you can set its **End of validity** in the **Properties** panel
 - Later, change the **Status** in the metadata bar, or use the **Lifecycle** field in the **Properties** panel (the status switch and **End of validity**). Switching a line to **Disabled** ends its validity now: it is disabled at once. While a future date is set, the switch reads **Active until** and that date
 - You can schedule a future end of validity, for example the end of a contract, a planned disposal or the end of an asset's useful life
 
@@ -650,7 +659,7 @@ Every line has a **status** (Enabled or Disabled) and an optional **End of valid
 
 - **Prefer disabling**: Keeps history intact, ensures reports remain consistent, and supports audit trails
 - **Delete only if**: The line was created by mistake
-- A line with amounts in a frozen column cannot be deleted. Unfreeze the column first, or set an end of validity date instead
+- A line with amounts in a frozen column cannot be deleted. Unfreeze the column first, or set an end of validity date instead. You delete a line from the list (**Delete selected**) or from its header (**Delete**, trash icon)
 - Deleting a line also removes its budgets, allocations, tasks, relevant websites, attachments (with their files), and its links to contracts. If one of its tasks was turned into a request, the request is kept: it has its own copy of the title, description, and attachments, and only its link to the task goes
 
 **Tip**: Use the End of validity to retire lines when contracts end, services stop, assets are disposed of or projects complete. Delete only a line created by mistake.
@@ -716,7 +725,7 @@ Access to budget lines is controlled by the Budget resource, which covers OPEX a
 
 - `budget:reader`: View the list, open lines, see budgets and allocations (read-only), download attachments
 - `budget:member`: Create and edit lines, change their type, update budgets and allocations, upload and delete attachments, manage relations, links and contacts
-- `budget:admin`: All member rights plus import and export, budget operations (copy budget columns, with their amounts and allocations, and reset budget column), and bulk delete
+- `budget:admin`: All member rights plus import and export, budget operations (copy budget columns, with their amounts and allocations, and reset budget column), and deleting lines from the list or from the line
 
 Freezing budget columns needs Budget administration (`budget_ops:admin`).
 

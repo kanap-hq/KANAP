@@ -46,7 +46,7 @@ La cuadrícula estándar resalta los campos que importan durante la recepción y
 | **Estado** | Estado actual de recepción |
 | **Origen** | Clasificación de origen del portafolio |
 | **Categoría** | Categoría del portafolio |
-| **Flujo** | Flujo del portafolio |
+| **Línea** | Línea del portafolio |
 | **Empresa** | Clasificación de empresa |
 | **Solicitante** | Persona que planteó la solicitud |
 | **Fecha objetivo** | Fecha de entrega objetivo solicitada |
@@ -71,7 +71,7 @@ La cuadrícula estándar resalta los campos que importan durante la recepción y
 
 El espacio de trabajo utiliza un modelo dividido:
 
-- El área principal contiene las pestañas operativas: **Resumen**, **Análisis**, **Evaluación**, **Relaciones** y **Conocimiento**.
+- El área principal contiene las pestañas operativas: **Resumen**, **Análisis**, **Evaluación**, **Relaciones**, **Conocimiento** e **Historial** (los cambios de la solicitud, vea [Historial de los registros](record-history.md)).
 - Un panel persistente de **Propiedades** en el borde derecho contiene los metadatos estables de la solicitud, la asignación de equipo y los proyectos resultantes. Ábralo o ciérrelo usando la pestaña vertical en el borde derecho.
 
 Esto importa porque no todo se guarda de la misma manera:
@@ -80,16 +80,32 @@ Esto importa porque no todo se guarda de la misma manera:
 - Los cambios en **Resumen**, **Análisis** y **Evaluación** son ediciones del espacio de trabajo y usan **Guardar** / **Restablecer**.
 - Los documentos gestionados **Propósito** y **Riesgos y mitigaciones** también usan el flujo de guardado del espacio de trabajo.
 
-Si crea una nueva solicitud, KANAP comienza en **Resumen**. Las otras pestañas se vuelven útiles después de que la solicitud existe como un registro real en lugar de una idea muy sincera.
-
 El encabezado del espacio de trabajo le da contexto operativo sin salir de la página:
 
 - una referencia de solicitud copiable como `REQ-42`
 - una franja de metadatos con **Estado**, **Puntuación**, **Solicitante**, **Responsable IT**, **Fecha de entrega objetivo** y (cuando aplica) la **Tarea de origen** desde la que se creó la solicitud
 - **Compartir** para enviar un enlace a la solicitud
 - **Convertir en proyecto** cuando la solicitud está **Aprobada** o **Convertida**
+- **Crear** y **Cancelar**, mientras la solicitud se está creando. Consulte [Crear o cancelar](#cancelling-a-creation)
 - **Eliminar**, un icono de papelera, para administradores (cuando la solicitud aún no se ha convertido). Una solicitud convertida sigue siendo el origen de su proyecto y no se puede eliminar
 - navegación anterior/siguiente basada en el contexto exacto de la lista del que vino
+
+### Crear una solicitud { #creating-a-request }
+
+1. Haga clic en **Nueva solicitud**. La página de la solicitud se abre en **Resumen** con un título vacío en el encabezado. El resto de la página aparece atenuado.
+2. Escriba el nombre de la solicitud.
+3. Pulse Intro o haga clic fuera del título. KANAP crea la solicitud de inmediato, con el estado **Pendiente de revisión** y con usted como solicitante. Su referencia (`REQ-42`) aparece y se abren todas las pestañas.
+
+Complete después el panel de Propiedades y el **Propósito**. El nombre solo se edita en el encabezado. Pulse Escape en el título vacío para salir sin crear nada.
+
+### Crear o cancelar { #cancelling-a-creation }
+
+Mientras la solicitud se está creando, su encabezado muestra **Crear** y **Cancelar**. Permanecen hasta que salga de la solicitud.
+
+- **Crear** conserva la solicitud y la cierra. Vuelve al punto de partida: la lista o la pantalla anterior. Con el título vacío, no se cierra nada y el título pide uno
+- **Cancelar** cierra sin conservar nada. En una solicitud ya creada, la elimina. Si introdujo algo más que el nombre, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar solicitudes
+
+Si sale de la solicitud de otra forma, esta permanece. Un administrador puede entonces eliminarla con **Eliminar**. La referencia de una solicitud cancelada no se reutiliza.
 
 ### Panel de Propiedades
 
@@ -97,9 +113,8 @@ Trate el panel como la columna vertebral estructural de la solicitud. Contiene t
 
 #### Propiedades principales
 
-- Nombre de la solicitud
 - Estado
-- Origen, Categoría, Flujo
+- Origen, Categoría, Línea
 - Solicitante
 - Empresa, Departamento
 - Fecha de entrega objetivo
@@ -107,7 +122,7 @@ Trate el panel como la columna vertebral estructural de la solicitud. Contiene t
 Estos campos dan forma a cómo se enruta, filtra y revisa la solicitud en otras partes del espacio de trabajo. Por ejemplo:
 
 - cambiar **Estado** afecta a qué decisiones pueden seguir y si la conversión está disponible
-- cambiar **Categoría** o **Flujo** cambia el contexto analítico para la viabilidad y la evaluación
+- cambiar **Categoría** o **Línea** cambia el contexto analítico para la viabilidad y la evaluación
 - cambiar **Empresa** o **Solicitante** cambia los informes y la visibilidad de propiedad en todo el portafolio
 
 #### Equipo
@@ -146,10 +161,7 @@ La sección **Propósito** es un documento markdown gestionado embebido directam
 
 ### Actividad
 
-Debajo de Propósito, la pestaña Resumen incluye el flujo de actividad de la solicitud:
-
-- **Comentarios** para discusión, notas contextuales y decisiones formales
-- **Historial** para la pista de auditoría de cambios de campo y estado
+Debajo de Propósito, la pestaña Resumen incluye el flujo de actividad de la solicitud: los comentarios para discusión, notas contextuales y decisiones formales. Los cambios de la solicitud están en la pestaña **Historial**.
 
 Esto coloca la actividad más reciente directamente delante de los revisores sin requerir que naveguen a una pestaña separada.
 
@@ -168,7 +180,7 @@ Los comentarios admiten markdown e imágenes en línea, lo cual es útil para no
 
 #### Historial
 
-El historial es la vista de auditoría. Úselo cuando necesite responder preguntas como:
+La pestaña **Historial** lista los cambios de la solicitud. Úsela cuando necesite responder preguntas como:
 
 - quién cambió el estado
 - cuándo cambiaron las asignaciones de equipo
@@ -176,7 +188,7 @@ El historial es la vista de auditoría. Úselo cuando necesite responder pregunt
 
 La lista termina con la entrada de creación (quién creó la solicitud y cuándo), bajo los cambios registrados, que incluyen las ediciones de los documentos Objetivo y Riesgos.
 
-Si necesita narrativa, use Comentarios. Si necesita prueba, use Historial.
+Si necesita narrativa, use los comentarios. Si necesita prueba, use la pestaña **Historial**.
 
 ## Análisis
 
@@ -277,7 +289,7 @@ Una sección no aparece si usted no puede leer su módulo: las líneas presupues
 
 **Añadir y quitar vínculos** (`portfolio_requests:contributor`): **Añadir**, a la derecha de una sección, abre una búsqueda bajo el botón. Escriba un nombre o una referencia y elija un resultado: el vínculo se guarda al instante. Para quitar un vínculo, pase el cursor sobre la fila y haga clic en la cruz al final. No hay confirmación, y quitar un vínculo no elimina nada más. Vincular un proceso de negocio requiere también `business_processes:member`. Los lectores ven las tablas en solo lectura.
 
-Los vínculos con líneas presupuestarias, aplicaciones y activos quedan registrados en el **Historial** de la solicitud.
+Los vínculos con líneas presupuestarias, aplicaciones y activos quedan registrados en la pestaña **Historial** de la solicitud.
 
 ### Enlaces y archivos
 
@@ -285,7 +297,7 @@ Los vínculos con líneas presupuestarias, aplicaciones y activos quedan registr
 
 - **Añadir enlace** abre un diálogo para una URL y un nombre opcional; el enlace se guarda al instante. Para cambiar un enlace, pase el cursor sobre su fila y haga clic en el lápiz.
 - **Adjuntar archivo** abre el selector de archivos. También puede soltar archivos sobre la sección.
-- Para quitar un enlace o un archivo, pase el cursor sobre la fila y haga clic en la cruz. Eliminar un archivo pide una confirmación antes.
+- Para quitar un enlace o un archivo, pase el cursor sobre la fila y haga clic en la cruz. Quitar un enlace muestra un mensaje y ofrece **Deshacer**, que vuelve a crear el enlace. Eliminar un archivo pide una confirmación antes.
 
 ## Conocimiento
 

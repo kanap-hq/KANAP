@@ -1,4 +1,6 @@
+import { ForbiddenException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
+import { codedForbidden } from '../auth/module-right-required';
 
 /**
  * Who is looking at the incident register. `isAdmin` means incidents:admin
@@ -29,6 +31,11 @@ export const INCIDENT_FROZEN_STATUSES: ReadonlySet<string> = new Set(['closed', 
 
 /** The single refusal message for every write blocked by the closure freeze. */
 export const INCIDENT_LOCKED_MESSAGE = 'This incident is closed. Reopen it to make changes.';
+
+/** 403 `INCIDENT_LOCKED`: a closed or cancelled incident refuses every write until reopened. */
+export function incidentLocked(): ForbiddenException {
+  return codedForbidden('INCIDENT_LOCKED', INCIDENT_LOCKED_MESSAGE);
+}
 
 export function isFrozenIncidentStatus(status: string | null | undefined): boolean {
   return INCIDENT_FROZEN_STATUSES.has(String(status ?? ''));
@@ -226,7 +233,8 @@ export async function hasHiddenIncidents(
  * three link tables store the incident id in `record_id` (the relations service
  * audits a link change under the incident), an entry or an attachment is joined
  * through its `incident_id`, the review through its integrated binding, and a
- * task through its `related_object_id`. The incident is read on its current
+ * task through its `related_object_id` (its application and asset link rows
+ * store the task id in `record_id`). The incident is read on its current
  * row, so a line about a deleted incident stays visible, as today.
  *
  * Every branch is an uncorrelated `record_id IN (subquery)` keyed by the
@@ -325,7 +333,7 @@ export function auditLogIncidentVisibilitySql(
       OR (${auditAlias}.table_name = 'incident_entries' AND ${recordId} IN (${entryIds}))
       OR (${auditAlias}.table_name = 'incident_attachments' AND ${recordId} IN (${attachmentIds}))
       OR (${auditAlias}.table_name = 'documents' AND ${recordId} IN (${reviewDocumentIds}))
-      OR (${auditAlias}.table_name = 'tasks' AND ${recordId} IN (${taskIds}))
+      OR (${auditAlias}.table_name IN ('tasks', 'task_applications', 'task_assets') AND ${recordId} IN (${taskIds}))
       OR (${auditAlias}.table_name = 'task_attachments' AND ${recordId} IN (${taskChildIds('task_attachments')}))
       OR (${auditAlias}.table_name = 'task_time_entries' AND ${recordId} IN (${taskChildIds('task_time_entries')}))
       OR (${auditAlias}.table_name = 'document_attachments' AND ${recordId} IN (${documentAttachmentIds}))

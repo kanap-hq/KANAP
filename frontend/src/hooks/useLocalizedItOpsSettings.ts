@@ -40,8 +40,8 @@ export function catalogDefaults(key: (typeof CATALOG_LISTS)[number]): CatalogDef
  * (tenant translation, then shipped translation for untouched defaults, then base text). The raw query
  * data is left untouched for the settings editors.
  */
-export function useLocalizedItOpsSettings() {
-  const query = useItOpsSettings();
+export function useLocalizedItOpsSettings(options: { enabled?: boolean } = {}) {
+  const query = useItOpsSettings(options);
   const { i18n } = useTranslation();
   const locale = toCatalogLocale(i18n.resolvedLanguage || i18n.language);
   const data = useMemo<ItOpsSettings | undefined>(() => {

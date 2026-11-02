@@ -10,7 +10,7 @@ import { useFeatures } from '../../config/FeaturesContext';
 import { useChat, MAX_PENDING_ATTACHMENTS } from '../../ai/useChat';
 import { useStickToBottom } from '../../ai/useStickToBottom';
 import { aiConversationsApi } from '../../ai/aiApi';
-import { chatAwaitsIncludedModelConfirmation } from '../../ai/includedModel';
+import { chatAwaitsIncludedModelConfirmation, chatTurnedOffByAdmin } from '../../ai/includedModel';
 import { useAiCapabilities } from '../../ai/useAiCapabilities';
 import { AiMutationPreview, ChatConversation, ChatMessage } from '../../ai/aiTypes';
 import ArtifactPanel from '../../ai/components/ArtifactPanel';
@@ -20,6 +20,7 @@ import ChatInput, { ChatInputHandle } from '../../ai/components/ChatInput';
 import ChatConversationList from '../../ai/components/ChatConversationList';
 import ChatEmptyState from '../../ai/components/ChatEmptyState';
 import TokenUsageBar from '../../ai/components/TokenUsageBar';
+import PlaidConsent from '../../components/onboarding/PlaidConsent';
 
 const SIDEBAR_WIDTH = 260;
 const CONTENT_MAX_WIDTH = 760;
@@ -115,6 +116,8 @@ export default function AiWorkspacePage() {
   const inputRef = useRef<ChatInputHandle>(null);
   const builtinLimitReached = (chat.builtinUsage?.limit ?? 0) > 0
     && (chat.builtinUsage?.count ?? 0) >= (chat.builtinUsage?.limit ?? 0);
+  // Same right as Admin > Plaid. The counters are for people who configure the assistant.
+  const showTokenUsage = aiCapabilities.data?.surfaces.settings.available === true;
 
   const isEmpty = chat.messages.length === 0;
   const userMessageCount = chat.messages.filter((message) => message.role === 'user').length;
@@ -226,7 +229,9 @@ export default function AiWorkspacePage() {
 
   const handleSend = useCallback(
     async (text: string) => {
-      await chat.sendMessage(text);
+      const sent = await chat.sendMessage(text);
+      // A refused attachment: the typed text goes back to the composer with the attachments.
+      if (!sent) inputRef.current?.setText(text);
       queryClient.invalidateQueries({ queryKey: ['ai-conversations'] });
     },
     [chat.sendMessage, queryClient],
@@ -289,12 +294,30 @@ export default function AiWorkspacePage() {
     void chat.regenerate(messageId);
   }, [chat.regenerate]);
 
-  if (!config.features.aiChat || chatAwaitsIncludedModelConfirmation(aiCapabilities.data)) {
+  // The included model waits for its acceptance (a new trial, Plaid off too): the page opens as
+  // usual, the acceptance box in place of the composer; ticking it also turns Plaid on. Turned off
+  // by an administrator once the model is accepted: the page says so.
+  const awaitsConsent = chatAwaitsIncludedModelConfirmation(aiCapabilities.data);
+  const chatOff = !awaitsConsent && chatTurnedOffByAdmin(aiCapabilities.data);
+  if (!config.features.aiChat || chatOff) {
+    const administersAssistant = aiCapabilities.data?.surfaces.settings.available === true;
     return (
       <>
         <PageHeader title={t('workspace.title')} />
         <Alert severity="warning" sx={{ maxWidth: 600 }}>
-          {config.features.aiChat ? t('workspace.messages.builtinNotAccepted') : t('workspace.messages.disabled')}
+          {t('workspace.messages.disabled')}
+          {chatOff ? (
+            <>
+              {' '}
+              {administersAssistant ? (
+                <Link component={RouterLink} to="/admin/ai" underline="hover">
+                  {t('workspace.messages.tenantDisabledAdminLink')}
+                </Link>
+              ) : (
+                t('workspace.messages.tenantDisabledAskAdmin')
+              )}
+            </>
+          ) : null}
         </Alert>
       </>
     );
@@ -311,7 +334,13 @@ export default function AiWorkspacePage() {
     </Typography>
   ) : null;
 
-  const composer = (
+  const errorAlert = chat.error ? (
+    <Alert severity="error" sx={{ mb: 1 }} onClose={() => {}}>
+      {chat.error}
+    </Alert>
+  ) : null;
+
+  const composer = awaitsConsent ? <PlaidConsent /> : (
     <ChatInput
       ref={inputRef}
       onSend={handleSend}
@@ -382,10 +411,11 @@ export default function AiWorkspacePage() {
               <Stack spacing={4}>
                 <ChatEmptyState
                   onSuggestion={handleSuggestion}
-                  disabled={chat.isStreaming || builtinLimitReached}
+                  disabled={chat.isStreaming || builtinLimitReached || awaitsConsent}
                 />
                 <Stack spacing={1}>
                   <BuiltinUsageIndicator usage={chat.builtinUsage} />
+                  {errorAlert}
                   {composer}
                 </Stack>
               </Stack>
@@ -424,11 +454,9 @@ export default function AiWorkspacePage() {
               </Box>
             </Box>
 
-            {chat.error && (
+            {errorAlert && (
               <Box sx={{ width: '100%', maxWidth: CONTENT_MAX_WIDTH, mx: 'auto', px: 3, flexShrink: 0 }}>
-                <Alert severity="error" sx={{ mb: 1 }} onClose={() => {}}>
-                  {chat.error}
-                </Alert>
+                {errorAlert}
               </Box>
             )}
 
@@ -445,7 +473,7 @@ export default function AiWorkspacePage() {
                     <BuiltinUsageIndicator usage={chat.builtinUsage} />
                   </Stack>
                   {composer}
-                  {chat.conversationUsage && (
+                  {showTokenUsage && chat.conversationUsage && (
                     <Box sx={{ pt: 0.25 }}>
                       <TokenUsageBar usage={chat.conversationUsage} lastRequestUsage={chat.lastRequestUsage} />
                     </Box>

@@ -198,6 +198,8 @@ async function testSavepointNamesUseFixedPrefixAndCounter() {
       const statements: Statement[] = [];
       const service = createEntityService({
         listReadableEntityTypes: async (_context: unknown, requested: string[]) => requested,
+        adminFamiliesGap: async () => 'right',
+        canReadEntityType: async () => false,
       });
       const context = {
         tenantId: randomUUID(),

@@ -20,24 +20,33 @@ Do not log routine work: password resets, single-user problems, standard change 
 
 ---
 
-## Getting started
+## Getting started { #getting-started }
 
-Navigate to **IT Landscape > Incidents** to see the register. Click **New incident** to log one.
+Navigate to **IT Landscape > Incidents** to see the register. To log an incident:
 
-**Required fields**:
+1. Click **New incident**. The incident page opens with an empty title in the header. The rest of the page is dimmed.
+2. Type a short factual summary, e.g. "Mail service unavailable at the Lyon office".
+3. Press Enter, or click outside the title. KANAP logs the incident at once. Its reference (`INC-14`) shows and all tabs open.
 
-- **Title**: a short factual summary, e.g. "Mail service unavailable at the Lyon office"
+The new incident is **Open**, with severity **Minor**, detected now, and you as the reporter. Then fill in the rest like on any incident:
+
 - **Severity**: Critical, Major, Minor or Low
-- **Detected**: when the incident was noticed (defaults to now)
-
-**Recommended on the same screen**:
-
+- **Detected**: when the incident was noticed
+- **Started**: when the incident actually began, if it differs from when you noticed it
 - **Description**: what happened, as observed
 - **Category**: infrastructure, security, application, data, supplier, other (configurable, see [Categories](#categories))
-- **Started**: when the incident actually began, if it differs from when you noticed it
 - **Owner**: who is responsible for handling it
 
-**Reporter** defaults to you. Both dates accept past values, so an incident discovered on Monday morning can be recorded as having started on Saturday night.
+Both dates accept past values, so an incident discovered on Monday morning can be recorded as having started on Saturday night. Press Escape on the empty title to leave without logging anything.
+
+### Creating or cancelling { #cancelling-a-creation }
+
+While the incident is being created, its header shows **Create** and **Cancel**. They stay until you leave the incident.
+
+- **Create** keeps the incident and closes it. You go back to where you started: the list or the previous screen. With an empty title, nothing closes and the title asks for one
+- **Cancel** closes without keeping anything. On an incident already created, it deletes it. If you entered more than the title, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete incidents
+
+**Cancel incident** is hidden while the incident is being created. Cancelling a creation is refused once the incident is closed or cancelled, or holds regulatory reporting data (see [Deleting an incident](#deleting-an-incident)). Leaving the incident any other way keeps it in the register. The reference of a cancelled creation is not used again.
 
 **Permissions**:
 
@@ -76,7 +85,7 @@ The list is the register itself: every incident, newest detection first.
 
 **Additional columns** (hidden by default, available via the column chooser): **Closed**, **Applications**, **Created**, **Personal data**, **Notification required** and **Notified on**. **Personal data** and **Notification required** offer a yes/no filter.
 
-**Filtering**: Category, Severity, Status and Owner offer checkbox filters whose options are computed from the incidents currently in view, so you only see values that exist in the result set. Date columns offer date filters, including a range: filter **Detected** between two dates to produce a quarterly or yearly extract. The search box matches the title, the description, the reference (`INC-14`), and the names and references of linked assets and applications, so a search for a hostname such as `PAR-ESX-01` lists the incidents on that asset. Words that only appear in the incident review are found by the global search and by the assistant rather than by this box. The global search, the `@` picker in Plaid and the MCP server also find an incident by the name, the `AST-N` reference, the hostname or the FQDN of its linked assets.
+**Filtering**: Category, Severity, Status and Owner offer checkbox filters whose options are computed from the incidents currently in view, so you only see values that exist in the result set. Date columns offer date filters, including a range: filter **Detected** between two dates to produce a quarterly or yearly extract. The search box matches the title, the description, the reference (`INC-14`), and the names and references of linked assets, applications and technologies, so a search for a hostname such as `PAR-ESX-01` lists the incidents on that asset. Words that only appear in the incident review are found by the global search and by the assistant rather than by this box. The global search, the `@` picker in Plaid and the MCP server also find an incident by the name and reference of a linked asset (`AST-N`, hostname or FQDN), application (`APP-N`) or technology (`TEC-N`). A match is the incident, under its title and reference (`INC-N`).
 
 **Tip**: combine Severity = Critical, Major with a **Detected** range to build the shortlist most steering committees and audits ask for.
 
@@ -87,6 +96,8 @@ Whatever you filter carries over into the incident you open, so **Previous / Nex
 ## The incident workspace
 
 Click any row to open the incident. The workspace has a **header** with the reference and quick metadata, a **properties drawer** on the right, and a **content area** in the centre that switches with each tab.
+
+The tabs are **Overview**, **Journal**, **Relations**, **Documents** and **History** (the changes made to the incident, see [Record history](record-history.md)).
 
 ### Header and metadata
 
@@ -172,7 +183,7 @@ Each row shows the author, the time it refers to (hover for "3 days ago"), and t
 
 A **Links updated** entry shows only to people who can read the module it names: assets and technologies need the infrastructure, applications the applications. Notes keep their text, whatever they mention.
 
-The composer disappears once the incident is closed or cancelled. Field edits made outside the journal, such as correcting the description, are recorded in the platform audit trail rather than in the journal.
+The composer disappears once the incident is closed or cancelled. Field edits made outside the journal, such as correcting the description, show in the **History** tab.
 
 The incident review keeps its own history. Every save that changes it produces a version, and versions are kept for good. Ordinary editing does not add journal entries: writing the review is not an event of the incident, and the audit trail records who changed what. Closing, cancelling and imports do write a journal entry, and that entry names the version of the review it applies to, shown as "Incident review version 4 (DOC-12)".
 

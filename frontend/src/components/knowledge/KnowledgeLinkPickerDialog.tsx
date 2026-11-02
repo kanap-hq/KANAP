@@ -17,6 +17,7 @@ import { fieldResetSx } from '../../theme/formSx';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
+import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 
 export type KnowledgeLinkOption = {
   id: string;
@@ -120,7 +121,7 @@ export default function KnowledgeLinkPickerDialog({
     } catch (err: any) {
       if (err?.code === 'ERR_CANCELED' || err?.name === 'CanceledError') return;
       if (requestId !== requestIdRef.current) return;
-      setError(err?.response?.data?.message || err?.message || t('knowledgePanel.failedToUpdateLinks'));
+      setError(getApiErrorMessage(err, t, t('knowledgePanel.failedToUpdateLinks')));
     } finally {
       if (requestId !== requestIdRef.current) return;
       if (mode === 'replace') {

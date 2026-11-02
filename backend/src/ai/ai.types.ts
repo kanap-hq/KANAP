@@ -19,6 +19,7 @@ export type AiMutationWriteToolName =
   | 'update_technology_people'
   | 'update_technology_web_links'
   | 'set_technology_vulnerability_alerts'
+  | 'change_vulnerability_state'
   | 'update_entity_relations'
   | 'update_document_content'
   | 'update_document_metadata'
@@ -42,8 +43,11 @@ export type AiToolName =
   | 'get_entity_detail'
   | 'get_entity_context'
   | 'get_entity_comments'
+  | 'get_record_history'
   | 'search_knowledge'
   | 'get_document'
+  | 'list_help_topics'
+  | 'read_help_section'
   | 'web_search'
   | AiMutationWriteToolName
   | 'update_task_assignees'
@@ -82,9 +86,26 @@ export const AI_SEARCH_ENTITY_TYPES = [
  * `query/ai-vulnerabilities.query.ts`) is listed only: `search_all` does not search it.
  * `technology_versions` (the versions of the technologies, `query/ai-technologies.query.ts`),
  * `support_gaps` and `support_deadlines` (the End of support report, `query/ai-support.query.ts`)
- * are listed only too: they have no record detail of their own.
+ * are listed only too: they have no record detail of their own. `roles` and `role_permissions`
+ * (Admin › Roles, `query/ai-roles.query.ts`) are not searched either; a role has a detail (its
+ * rights), a row of `role_permissions` none. `data_access` (Admin › Data access,
+ * `query/ai-data-access.query.ts`) is listed only: a row names a person, whose access is in their
+ * users detail. `chargeback` and `chargeback_lines` (Reporting › Global and Company chargeback,
+ * `query/ai-chargeback.query.ts`) are listed only: their rows are computed by the report.
+ * `cost_centers` (Master data › Cost centers, `query/ai-cost-centers.query.ts`),
+ * `working_day_calendars` and `analytics_axes` have no search index: `search_all` searches them by
+ * code and by name through their reads (`AI_SEARCH_REFERENCE_ENTITY_TYPES`); each has a detail.
+ * `exchange_rates` (the rate matrix and the currency settings, `query/ai-exchange-rates.query.ts`)
+ * is listed only: a rate is a cell of a year's set, not a record.
  */
-export const AI_QUERY_ENTITY_TYPES = [...AI_SEARCH_ENTITY_TYPES, 'vulnerabilities', 'technology_versions', 'support_gaps', 'support_deadlines'] as const;
+export const AI_QUERY_ENTITY_TYPES = [
+  ...AI_SEARCH_ENTITY_TYPES, 'vulnerabilities', 'technology_versions', 'support_gaps', 'support_deadlines', 'roles', 'role_permissions',
+  'data_access',
+  'chargeback', 'chargeback_lines',
+  'cost_centers',
+  'working_day_calendars', 'analytics_axes',
+  'exchange_rates',
+] as const;
 
 /**
  * The families get_entity_detail reads: every queried family but the ones with no record detail.
@@ -92,10 +113,13 @@ export const AI_QUERY_ENTITY_TYPES = [...AI_SEARCH_ENTITY_TYPES, 'vulnerabilitie
  * no page of their own.
  */
 export const AI_DETAIL_ENTITY_TYPES = AI_QUERY_ENTITY_TYPES.filter(
-  (type) => type !== 'technology_versions' && type !== 'support_gaps' && type !== 'support_deadlines',
+  (type) => type !== 'technology_versions' && type !== 'support_gaps' && type !== 'support_deadlines' && type !== 'role_permissions'
+    && type !== 'data_access'
+    && type !== 'chargeback' && type !== 'chargeback_lines'
+    && type !== 'exchange_rates',
 ) as [
-  Exclude<(typeof AI_QUERY_ENTITY_TYPES)[number], 'technology_versions' | 'support_gaps' | 'support_deadlines'>,
-  ...Array<Exclude<(typeof AI_QUERY_ENTITY_TYPES)[number], 'technology_versions' | 'support_gaps' | 'support_deadlines'>>,
+  Exclude<(typeof AI_QUERY_ENTITY_TYPES)[number], 'technology_versions' | 'support_gaps' | 'support_deadlines' | 'role_permissions' | 'data_access' | 'chargeback' | 'chargeback_lines' | 'exchange_rates'>,
+  ...Array<Exclude<(typeof AI_QUERY_ENTITY_TYPES)[number], 'technology_versions' | 'support_gaps' | 'support_deadlines' | 'role_permissions' | 'data_access' | 'chargeback' | 'chargeback_lines' | 'exchange_rates'>>,
 ];
 
 export const AI_CONTEXT_ENTITY_TYPES = [
@@ -132,6 +156,19 @@ export function aiSearchEntityTypeOfIndexRow(indexEntityType: string): AiSearchE
 }
 
 export const AiSearchEntityTypeSchema = z.enum(AI_SEARCH_ENTITY_TYPES);
+
+/**
+ * The reference data `search_all` searches without an index, by code and by name, through the
+ * reads of their families (`AiQueryExecutor.searchReferenceData`): lists of a few dozen rows.
+ * The exchange rates are cells of a year's set, not records: they are not searched.
+ */
+export const AI_SEARCH_REFERENCE_ENTITY_TYPES = ['cost_centers', 'working_day_calendars', 'analytics_axes'] as const;
+export type AiSearchReferenceEntityType = (typeof AI_SEARCH_REFERENCE_ENTITY_TYPES)[number];
+
+/** The families `search_all` takes in `entity_types`: the indexed ones and the reference data. */
+export const AI_SEARCH_ALL_ENTITY_TYPES = [...AI_SEARCH_ENTITY_TYPES, ...AI_SEARCH_REFERENCE_ENTITY_TYPES] as const;
+export const AiSearchAllEntityTypeSchema = z.enum(AI_SEARCH_ALL_ENTITY_TYPES);
+export type AiSearchAllEntityType = z.infer<typeof AiSearchAllEntityTypeSchema>;
 
 export const AiQueryEntityTypeSchema = z.enum(AI_QUERY_ENTITY_TYPES);
 export const AiDetailEntityTypeSchema = z.enum(AI_DETAIL_ENTITY_TYPES);
@@ -276,6 +313,9 @@ export type AiEntityDetailDto = {
   /** The currency of the amounts, on the families that carry some (`ai-amounts-currency.util.ts`). */
   amounts_currency?: string | null;
   amounts_currency_note?: string;
+  /** The line counts of the detail are narrowed by the person's data access (`aiDataAccessCountsNote`). */
+  data_access?: 'limited';
+  data_access_note?: string;
   total: number;
   returned: number;
   truncated: boolean;
@@ -501,6 +541,10 @@ export type AiMutationPlanPrepareResultDto = {
 export type AiTokenUsage = {
   input_tokens: number;
   output_tokens: number;
+  /** Part of input_tokens read from the provider's cache, when reported. */
+  cache_read_input_tokens?: number;
+  /** Part of input_tokens written to the provider's cache, when reported. */
+  cache_write_input_tokens?: number;
 };
 
 export type AiBuiltinUsageDto = {

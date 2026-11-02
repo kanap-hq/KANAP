@@ -10,6 +10,7 @@ import { DepartmentsModule } from './departments/departments.module';
 import { CostCentersModule } from './cost-centers/cost-centers.module';
 import { WorkingDayProfilesModule } from './working-day-profiles/working-day-profiles.module';
 import { SuppliersModule } from './suppliers/suppliers.module';
+import { ImportExamplesModule } from './import-examples/import-examples.module';
 import { AccountsModule } from './accounts/accounts.module';
 import { AuditModule } from './audit/audit.module';
 import { RecordHistoryModule } from './audit/record-history.module';
@@ -53,6 +54,8 @@ import { ConnectionsModule } from './connections/connections.module';
 import { PortfolioModule } from './portfolio/portfolio.module';
 import { TasksModule } from './tasks/tasks.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { OnboardingModule } from './onboarding/onboarding.module';
+import { DiscoveryCallModule } from './discovery-call/discovery-call.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { RateLimitGuard } from './common/rate-limit.guard';
@@ -139,6 +142,7 @@ import { readPoolMax } from './common/db-pool-budget';
     CostCentersModule,
     WorkingDayProfilesModule,
     SuppliersModule,
+    ImportExamplesModule,
     AccountsModule,
     SpendModule,
     AnalyticsModule,
@@ -177,6 +181,8 @@ import { readPoolMax } from './common/db-pool-budget';
     PortfolioModule,
     TasksModule,
     DashboardModule,
+    OnboardingModule,
+    DiscoveryCallModule,
     NotificationsModule,
     KnowledgeModule,
     DocumentExportModule,

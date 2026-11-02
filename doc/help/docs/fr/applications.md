@@ -34,34 +34,36 @@ Les différentes équipes peuvent utiliser les catégories pour se concentrer su
 
 ---
 
-## Premiers pas
+## Premiers pas { #getting-started }
 
-Rendez-vous dans **Cartographie SI > Applications** pour voir votre liste. Cliquez sur **Nouvelle app / Service** pour créer votre première entrée.
+Rendez-vous dans **Cartographie SI > Applications** pour voir votre liste. Pour créer une application :
 
-**Champs obligatoires** :
-- **Nom** : Un nom reconnaissable pour l'application ou le service, de 200 caractères au plus. Voir [Noms uniques](#unique-names)
-- **Catégorie** : L'objectif principal de cette application (voir les catégories ci-dessus)
-- **Cycle de vie** : Statut actuel (Actif, Proposé, Obsolète, Retiré, ou tout code personnalisé défini dans les Paramètres)
+1. Cliquez sur **Nouvelle application**. La page de l'application s'ouvre avec un titre vide dans l'en-tête. Le reste de la page est grisé.
+2. Saisissez le nom de l'application ou du service, de 200 caractères au plus. Voir [Noms uniques](#unique-names).
+3. Appuyez sur Entrée, ou cliquez hors du titre. KANAP crée l'application aussitôt. Sa référence (`APP-12`) s'affiche et tous les onglets s'ouvrent.
 
-**Fortement recommandé** :
-- **Fournisseur** : Le fournisseur du logiciel (lié à vos données de référence Fournisseurs)
-- **Éditeur** : L'éditeur du logiciel (ex. : Microsoft, SAP, Oracle)
-- **Description** : Ce que fait cette application
+La nouvelle application est **Active**, dans la catégorie par défaut. Modifiez-les dans l'en-tête et le tiroir des propriétés, puis complétez le reste :
 
-Les champs de classification sont facultatifs à la création. La **Criticité business**, la criticité cyber, la confidentialité des données et la vague de reprise se choisissent parmi les niveaux définis par votre organisation dans **Cartographie SI > Paramètres** ; chaque option affiche la définition du niveau. Les valeurs restent non définies tant que vous ne les choisissez pas.
+- **Catégorie** : l'objectif principal de cette application (voir les catégories ci-dessus)
+- **Cycle de vie** : Actif, Proposé, Obsolète, Retiré, ou tout code personnalisé défini dans les Paramètres
+- **Fournisseur** : le fournisseur du logiciel (lié à vos données de référence Fournisseurs)
+- **Éditeur** : l'éditeur du logiciel (ex. : Microsoft, SAP, Oracle)
+- **Description** : ce que fait cette application
+- **Classification** : la **Criticité business**, la criticité cyber, la confidentialité des données et la vague de reprise se choisissent parmi les niveaux définis par votre organisation dans **Cartographie SI > Paramètres**. Chaque option affiche la définition du niveau. Elles restent non définies tant que vous ne les choisissez pas
+- **Version**, **Mise en production**, **Fin de support**, **Date de retrait** : la version actuelle et ses dates. La **Fin de support** et la **Date de retrait** ne peuvent pas précéder la **Mise en production**
+- **Licences** et **Notes** : conditions de licence et notes internes libres
+- **Peut avoir des apps enfants** : utiliser cette application comme une « suite » regroupant d'autres applications
 
-**Optionnel mais utile** :
-- **Version** : Numéro de version actuel (texte libre, ex. : « 4.2.1 », « 2023 », « Q1 2024 »)
-- **Mise en production** : Quand cette version a été ou sera mise en service
-- **Fin de support** : Quand le support éditeur prend fin pour cette version
-- **Date de retrait** : Quand cette version a été effectivement mise hors service
-- **Licences** : Conditions de licence et notes
-- **Notes** : Notes internes libres
-- **Peut avoir des apps enfants** : Activez cette option pour utiliser cette application comme une « suite » regroupant d'autres applications
+Appuyez sur Échap dans le titre vide pour partir sans rien créer. Un nom déjà utilisé par une autre application est refusé, avec un message sous le titre.
 
-La **Fin de support** et la **Date de retrait** ne peuvent pas précéder la **Mise en production**.
+### Créer ou annuler { #cancelling-a-creation }
 
-Une fois enregistré, l'espace de travail déverrouille tous les onglets pour une documentation détaillée.
+Tant que l'application est en cours de création, son en-tête affiche **Créer** et **Annuler**. Ils restent jusqu'à ce que vous quittiez l'application.
+
+- **Créer** conserve l'application et la ferme. Vous revenez à votre point de départ : la liste ou l'écran précédent. Avec un titre vide, rien ne se ferme et le titre en demande un
+- **Annuler** ferme sans rien conserver. Sur une application déjà créée, il la supprime. Si vous avez saisi plus que le nom, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des applications
+
+Si vous quittez l'application autrement, elle est conservée. Supprimez-la comme toute autre application. La référence d'une application annulée n'est pas réutilisée.
 
 ### Noms uniques { #unique-names }
 
@@ -126,7 +128,7 @@ Une cellule sans valeur affiche un tiret.
 - **Vulnérabilités à traiter** filtre sur **Avec des vulnérabilités graves**, **Avec des vulnérabilités** ou **Sans**, et trie par les vulnérabilités critiques ou élevées, puis par le total. Les applications désactivées viennent en dernier et n'entrent dans aucune valeur du filtre.
 
 **Actions** :
-- **Nouvelle app / Service** : Créer une nouvelle entrée (`applications:member`)
+- **Nouvelle application** : Créer une nouvelle entrée (`applications:member`). Voir [Premiers pas](#getting-started)
 - **Importer** : Import en masse depuis un fichier CSV ou un classeur Excel (`applications:admin`)
 - **Exporter** : Exporter les applications que la liste affiche dans un fichier CSV ou un classeur Excel (`applications:admin`). Voir [Options d'export](#export-options).
 - **Copier l'élément** : Dupliquer une application sélectionnée avec toutes ses relations principales (`applications:member`). Voir [Copier des applications](#copier-des-applications) pour ce qui est et n'est pas copié.
@@ -137,6 +139,8 @@ Une cellule sans valeur affiche un tiret.
 ## L'espace de travail des applications
 
 Cliquez sur n'importe quelle ligne pour ouvrir l'espace de travail. L'espace de travail comporte un **en-tête** avec des métadonnées rapides, un **tiroir des propriétés** sur la droite (la carte d'identité de l'application, toujours visible) et une **zone de contenu** au centre qui change selon l'onglet.
+
+Les onglets sont **Vue d'ensemble**, **Déploiements**, **Interfaces**, **Exploitation**, **Conformité**, **Relations** et **Historique** (les modifications de l'application, voir [Historique des fiches](record-history.md)).
 
 ### En-tête
 
@@ -151,6 +155,7 @@ L'en-tête affiche :
 - **Partager** : copier un lien partageable vers cet espace de travail
 - **Nouvelle version** : lancer l'assistant de migration de version (voir [Gestion des versions](#gestion-des-versions))
 - **Convertir en technologie** (`applications:admin` et `infrastructure:member`) : voir [Convertir une application en technologie](#convertir-une-application-en-technologie)
+- **Créer** et **Annuler** : affichés tant que l'application est en cours de création, à la place du bouton de fermeture. Voir [Créer ou annuler](#cancelling-a-creation)
 - **Supprimer**, une icône corbeille avec son nom en infobulle (`applications:admin`) : une application qui a des interfaces reçoit le refus et sa raison, avec seulement Fermer. Sinon, la confirmation nomme l’application et compte les déploiements supprimés avec elle, ainsi que ses liens vers d’autres éléments
 - **Précédent / Suivant** : parcourir la liste filtrée sans revenir à la grille
 
@@ -368,7 +373,7 @@ Cliquez sur **Lier** pour ajouter la suggestion à sa section. La section est ab
 
 - **Ajouter un lien** ouvre une boîte de dialogue pour une URL et un nom optionnel ; le lien est enregistré aussitôt. Pour modifier un lien, survolez sa ligne et cliquez sur le crayon.
 - **Joindre un fichier** ouvre le sélecteur de fichiers. Vous pouvez aussi déposer des fichiers sur la section : elle est surlignée pendant le glisser.
-- Pour retirer un lien ou un fichier, survolez la ligne et cliquez sur la croix. La suppression d'un fichier demande d'abord une confirmation.
+- Pour retirer un lien ou un fichier, survolez la ligne et cliquez sur la croix. Retirer un lien affiche un message et propose **Annuler**, qui recrée le lien. La suppression d'un fichier demande d'abord une confirmation.
 
 ---
 
@@ -396,14 +401,14 @@ KANAP propose **deux approches pour gérer les versions d'applications**, selon 
 
 | Approche | Idéale pour | Ce qui se passe |
 |----------|-------------|-----------------|
-| **Simple** | La plupart des applications | Mettez à jour les champs de version dans le tiroir des propriétés ou le formulaire de création : même enregistrement, nouveau numéro de version |
+| **Simple** | La plupart des applications | Mettez à jour les champs de version dans le tiroir des propriétés : même enregistrement, nouveau numéro de version |
 | **Avancée** | Migrations majeures | Utilisez **Nouvelle version** pour créer un nouvel enregistrement d'application avec suivi de lignée : exécutez ancienne et nouvelle versions côte à côte |
 
 ### Suivi de version simple (mise à jour en place)
 
-Pour la plupart des applications (où vous mettez à niveau et l'ancienne version disparaît simplement), mettez à jour **Version**, **Mise en production**, **Fin de support** et **Date de retrait** dans le formulaire de création ou le tiroir des propriétés. La pastille de version dans l'en-tête et les métadonnées **Mise en production** reflètent ce que vous avez défini.
+Pour la plupart des applications (où vous mettez à niveau et l'ancienne version disparaît simplement), mettez à jour **Version**, **Mise en production**, **Fin de support** et **Date de retrait** dans le tiroir des propriétés. La pastille de version dans l'en-tête et les métadonnées **Mise en production** reflètent ce que vous avez défini.
 
-Cette approche garde tout dans un seul enregistrement. Lors d'une mise à niveau, mettez à jour les champs de version et c'est fait. L'historique est suivi dans le journal d'audit.
+Cette approche garde tout dans un seul enregistrement. Lors d'une mise à niveau, mettez à jour les champs de version et c'est fait. L'onglet **Historique** garde les valeurs précédentes.
 
 **À utiliser quand** : les mises à niveau se font en place sans chevauchement : une version remplace l'autre.
 
@@ -531,6 +536,7 @@ Depuis la liste des Applications :
 - **Exporter** : Télécharger les applications dans un fichier CSV ou un classeur Excel
 - **Importer** : Téléverser un fichier CSV ou un classeur Excel pour créer ou mettre à jour des applications
 - **Télécharger le modèle** (depuis la boîte de dialogue d'import) : Obtenir un CSV vierge avec les en-têtes corrects
+- **Télécharger un exemple** (depuis la boîte de dialogue d'import) : un classeur Excel d'applications d'exemple, avec ce que chaque colonne accepte. Voir [Fichiers d'exemple](csv-files.md#example-files)
 
 **Autorisations requises** : `applications:admin` pour les opérations d'import/export.
 
@@ -540,7 +546,7 @@ Depuis la liste des Applications :
 
 **Format** : **CSV** ou **Excel (.xlsx)**, choisi dans la fenêtre et mémorisé par votre navigateur. Le classeur contient les mêmes colonnes que le CSV sur une feuille, avec les nombres et les dates en valeurs qu'Excel sait trier et filtrer. L'import lit l'un ou l'autre ; dans un classeur, il lit la première feuille. Voir [Fichiers CSV et Excel](csv-files.md).
 
-**Colonnes** : le fichier commence par `id` et `reference` (`APP-12`), puis les colonnes suivent l'espace de travail, onglet par onglet. L'import ignore `reference`.
+**Colonnes** : le fichier commence par `id` et la référence (`APP-12`), puis les colonnes suivent l'espace de travail, onglet par onglet. Leurs titres sont dans la langue de votre écran, et l'import les lit dans toutes les langues. L'import ignore la référence.
 
 **Langue des valeurs** : les valeurs de catalogue (catégorie, cycle de vie, criticité, criticité cyber, vague de reprise, classification des données, méthodes d'accès) et le statut sont écrits comme l'écran les affiche, dans la langue de votre écran : `Active` en anglais, `Actif` en français. Un nom que votre organisation a donné à une valeur dans **Cartographie SI > Paramètres** reste tel quel.
 

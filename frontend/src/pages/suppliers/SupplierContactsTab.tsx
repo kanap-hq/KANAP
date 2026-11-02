@@ -2,10 +2,11 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, Button, IconButton, Snackbar, Typography } from '@mui/material';
+import { Alert, Box, IconButton, Typography } from '@mui/material';
 import type { Theme } from '@mui/material/styles';
 import DeleteIcon from '@mui/icons-material/Delete';
 import api from '../../api';
+import { useNotify } from '../../components/notify/NotifyProvider';
 import ContactSelect from '../../components/fields/ContactSelect';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { contactName, type ContactRole } from '../contacts/contactModel';
@@ -43,13 +44,12 @@ const nameLinkSx = (theme: Theme) => ({
 /** The supplier's contacts by contact type: names that open the contact, add an existing one or create one. */
 export default function SupplierContactsTab({ supplierId, canManage }: { supplierId: string; canManage: boolean }) {
   const { t } = useTranslation(['master-data', 'common']);
+  const notify = useNotify();
   const queryClient = useQueryClient();
   const roleOptions = useContactRoleOptions();
   const { data: links, error: loadError } = useSupplierContacts(supplierId);
   const [adding, setAdding] = React.useState<ContactRole | null>(null);
   const [error, setError] = React.useState<string | null>(null);
-  // The link just removed, until the message that offers to put it back closes.
-  const [removed, setRemoved] = React.useState<SupplierContactLink | null>(null);
   const addInputRef = React.useRef<HTMLInputElement>(null);
 
   // The search field opened by "Add existing" takes the focus.
@@ -75,14 +75,16 @@ export default function SupplierContactsTab({ supplierId, canManage }: { supplie
   const detach = async (removedLink: SupplierContactLink) => {
     if (!canManage) return;
     setError(null);
-    setRemoved(null);
     queryClient.setQueryData<SupplierContactLink[]>(
       supplierContactsKey(supplierId),
       (prev) => prev?.filter((link) => link.id !== removedLink.id),
     );
     try {
       await api.delete(`/suppliers/${supplierId}/contacts/${removedLink.id}`);
-      setRemoved(removedLink);
+      notify({
+        message: t('suppliers.contacts.linkRemoved'),
+        undo: () => undoDetach(removedLink),
+      });
     } catch (e) {
       setError(getApiErrorMessage(e, t, t('suppliers.contacts.saveFailed')));
     } finally {
@@ -91,10 +93,8 @@ export default function SupplierContactsTab({ supplierId, canManage }: { supplie
   };
 
   /** Puts the removed link back, with its contact type and primary flag. */
-  const undoDetach = async () => {
-    const link = removed;
-    setRemoved(null);
-    if (!link || !canManage) return;
+  const undoDetach = async (link: SupplierContactLink) => {
+    if (!canManage) return;
     setError(null);
     try {
       await api.post(`/suppliers/${supplierId}/contacts`, { contactId: link.contact_id, role: link.role, isPrimary: link.is_primary });
@@ -192,17 +192,6 @@ export default function SupplierContactsTab({ supplierId, canManage }: { supplie
           </Box>
         );
       })}
-      <Snackbar
-        open={!!removed}
-        autoHideDuration={8000}
-        onClose={(_event, reason) => { if (reason !== 'clickaway') setRemoved(null); }}
-        message={t('suppliers.contacts.linkRemoved')}
-        action={(
-          <Button size="small" variant="text" onClick={() => { void undoDetach(); }}>
-            {t('suppliers.contacts.undo')}
-          </Button>
-        )}
-      />
     </Box>
   );
 }

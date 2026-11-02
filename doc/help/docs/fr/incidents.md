@@ -20,24 +20,33 @@ N'enregistrez pas le travail courant : réinitialisations de mot de passe, probl
 
 ---
 
-## Premiers pas
+## Premiers pas { #getting-started }
 
-Rendez-vous dans **Cartographie SI > Incidents** pour voir le registre. Cliquez sur **Nouvel incident** pour en enregistrer un.
+Rendez-vous dans **Cartographie SI > Incidents** pour voir le registre. Pour enregistrer un incident :
 
-**Champs obligatoires** :
+1. Cliquez sur **Nouvel incident**. La page de l'incident s'ouvre avec un titre vide dans l'en-tête. Le reste de la page est grisé.
+2. Saisissez un résumé court et factuel, ex. : « Messagerie indisponible sur le site de Lyon ».
+3. Appuyez sur Entrée, ou cliquez hors du titre. KANAP enregistre l'incident aussitôt. Sa référence (`INC-14`) apparaît et tous les onglets s'ouvrent.
 
-- **Titre** : un résumé court et factuel, ex. : « Messagerie indisponible sur le site de Lyon »
+Le nouvel incident est **Ouvert**, de gravité **Mineure**, détecté maintenant, avec vous comme déclarant. Complétez ensuite le reste comme sur tout incident :
+
 - **Gravité** : Critique, Majeur, Mineur ou Faible
-- **Détecté** : quand l'incident a été remarqué (par défaut maintenant)
-
-**Recommandés sur le même écran** :
-
+- **Détecté** : quand l'incident a été remarqué
+- **Début** : quand l'incident a réellement commencé, si c'est différent du moment où vous l'avez remarqué
 - **Description** : ce qui s'est passé, tel qu'observé
 - **Catégorie** : infrastructure, sécurité, application, données, fournisseur, autre (configurable, voir [Catégories](#categories))
-- **Début** : quand l'incident a réellement commencé, si c'est différent du moment où vous l'avez remarqué
 - **Responsable** : qui prend l'incident en charge
 
-Le **Déclarant** est vous par défaut. Les deux dates acceptent des valeurs passées : un incident découvert le lundi matin peut être enregistré comme ayant commencé le samedi soir.
+Les deux dates acceptent des valeurs passées : un incident découvert le lundi matin peut être enregistré comme ayant commencé le samedi soir. Appuyez sur Échap dans le titre vide pour partir sans rien enregistrer.
+
+### Créer ou annuler { #cancelling-a-creation }
+
+Tant que l'incident est en cours de création, son en-tête affiche **Créer** et **Annuler**. Ils restent jusqu'à ce que vous quittiez l'incident.
+
+- **Créer** conserve l'incident et le ferme. Vous revenez à votre point de départ : la liste ou l'écran précédent. Avec un titre vide, rien ne se ferme et le titre en demande un
+- **Annuler** ferme sans rien conserver. Sur un incident déjà créé, il le supprime. Si vous avez saisi plus que le titre, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des incidents
+
+**Annuler l'incident** est masqué tant que l'incident est en cours de création. L'annulation de la création est refusée dès que l'incident est clôturé ou annulé, ou contient des données de déclaration réglementaire (voir [Supprimer un incident](#supprimer-un-incident)). Si vous quittez l'incident autrement, il reste dans le registre. La référence d'une création annulée n'est pas réutilisée.
 
 **Autorisations** :
 
@@ -76,7 +85,7 @@ La liste, c'est le registre lui-même : tous les incidents, détection la plus r
 
 **Colonnes supplémentaires** (masquées par défaut, disponibles via le sélecteur de colonnes) : **Clôturé**, **Applications**, **Créé**, **Données personnelles**, **Notification requise** et **Notifié le**. **Données personnelles** et **Notification requise** proposent un filtre oui/non.
 
-**Filtrage** : Catégorie, Gravité, Statut et Responsable proposent des filtres à cases à cocher dont les options sont calculées à partir des incidents affichés, vous ne voyez donc que les valeurs présentes dans le jeu de résultats. Les colonnes de dates proposent des filtres de date, y compris par plage : filtrez **Détecté** entre deux dates pour produire un extrait trimestriel ou annuel. La recherche porte sur le titre, la description, la référence (`INC-14`), ainsi que sur les noms et références des actifs et applications liés : une recherche sur un nom d'hôte tel que `PAR-ESX-01` liste les incidents de cet actif. Les mots qui n'apparaissent que dans la revue d'incident se retrouvent par la recherche globale et par l'assistant, pas par ce champ. La recherche globale, le sélecteur `@` de Plaid et le serveur MCP retrouvent aussi un incident par le nom, la référence `AST-N`, le nom d'hôte ou le FQDN de ses actifs liés.
+**Filtrage** : Catégorie, Gravité, Statut et Responsable proposent des filtres à cases à cocher dont les options sont calculées à partir des incidents affichés, vous ne voyez donc que les valeurs présentes dans le jeu de résultats. Les colonnes de dates proposent des filtres de date, y compris par plage : filtrez **Détecté** entre deux dates pour produire un extrait trimestriel ou annuel. La recherche porte sur le titre, la description, la référence (`INC-14`), ainsi que sur les noms et références des actifs, applications et technologies liés : une recherche sur un nom d'hôte tel que `PAR-ESX-01` liste les incidents de cet actif. Les mots qui n'apparaissent que dans la revue d'incident se retrouvent par la recherche globale et par l'assistant, pas par ce champ. La recherche globale, le sélecteur `@` de Plaid et le serveur MCP retrouvent aussi un incident par le nom et la référence d'un actif lié (`AST-N`, nom d'hôte ou FQDN), d'une application liée (`APP-N`) ou d'une technologie liée (`TEC-N`). Le résultat est l'incident, avec son titre et sa référence (`INC-N`).
 
 **Conseil** : combinez Gravité = Critique, Majeur avec une plage **Détecté** pour construire la liste courte que réclament la plupart des comités de pilotage et des audits.
 
@@ -87,6 +96,8 @@ Les filtres appliqués sont conservés dans l'incident que vous ouvrez : **Préc
 ## L'espace de travail de l'incident
 
 Cliquez sur n'importe quelle ligne pour ouvrir l'incident. L'espace de travail comporte un **en-tête** avec la référence et des métadonnées rapides, un **tiroir des propriétés** sur la droite et une **zone de contenu** au centre qui change selon l'onglet.
+
+Les onglets sont **Vue d'ensemble**, **Journal**, **Relations**, **Documents** et **Historique** (les modifications de l'incident, voir [Historique des fiches](record-history.md)).
 
 ### En-tête et métadonnées
 
@@ -172,7 +183,7 @@ Chaque ligne affiche l'auteur, l'heure à laquelle elle se rapporte (survolez po
 
 Une entrée **Liens mis à jour** n'apparaît qu'aux personnes qui peuvent lire le module qu'elle nomme : les actifs et les technologies demandent l'infrastructure, les applications les applications. Les notes gardent leur texte, quoi qu'elles mentionnent.
 
-Le composeur disparaît dès que l'incident est clôturé ou annulé. Les modifications de champs faites hors du journal, comme la correction de la description, sont consignées dans le journal d'audit de la plateforme plutôt que dans le journal de l'incident.
+Le composeur disparaît dès que l'incident est clôturé ou annulé. Les modifications de champs faites hors du journal, comme la correction de la description, apparaissent dans l'onglet **Historique**.
 
 La revue d'incident conserve son propre historique. Chaque enregistrement qui la modifie produit une version, et les versions sont conservées définitivement. La rédaction courante ne crée pas d'entrée de journal : écrire la revue n'est pas un événement de l'incident, et le journal d'audit garde la trace de qui a modifié quoi. En revanche, la clôture, l'annulation et les imports écrivent une entrée de journal, et cette entrée nomme la version de la revue à laquelle elle se rapporte, affichée « Version 4 de la revue d'incident (DOC-12) ».
 

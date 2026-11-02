@@ -9,6 +9,7 @@ import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
 import { lookupUsersByIds, requiredUuid } from '../common/lookup/reference-lookups';
 import { peopleWithCostCenterAccess, OWNER_SUGGESTIONS_MAX } from '../data-access/data-access-people';
 import { resolveBudgetLine } from '../common/resolve-item-id';
+import { canReadResource } from '../common/record-usages';
 import { buildRelationsAccess } from '../common/relations/relations-access';
 import {
   BUDGET_LINE_RELATION_READS,
@@ -27,6 +28,8 @@ import { SpendBudgetOperationsService } from './spend-budget-operations.service'
 import type { BudgetOperationScope, CopyBudgetOperation } from './budget-copy';
 import type { BudgetColumn } from './amounts-write.util';
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
+import { issueCreationToken } from '../common/creation/creation-token';
+import { assertBudgetLineCreationToken, BUDGET_LINE_CREATION_FAMILY } from './budget-line-creation';
 
 @UseGuards(JwtAuthGuard)
 @Controller('budget-lines')
@@ -86,6 +89,24 @@ export class BudgetLinesController {
     @Tenant() ctx: TenantRequest,
   ) {
     return this.svc.summaryTotals(query, { manager: ctx.manager as EntityManager, access: budgetListAccess(ctx) });
+  }
+
+  /**
+   * Data-scoped access (spec §6.6): the lines of each dimension value that a limited person cannot
+   * read, for the analytics report. Body `{ axis, values, year, scope }`: 500 values at most, the
+   * report's first year, its tab. A read, so a frozen tenant keeps it; an unscoped person gets
+   * `{ counts: {} }` without a counting query.
+   */
+  @ReadOnlyRoute()
+  @UseGuards(PermissionGuard)
+  @RequireLevel('budget', 'reader')
+  @Post('summary/hidden-by-value')
+  @HttpCode(200)
+  hiddenByValue(
+    @Body() body: unknown,
+    @Tenant() ctx: TenantRequest,
+  ) {
+    return this.svc.hiddenCategoryCounts(body, { manager: ctx.manager as EntityManager });
   }
 
   /**
@@ -233,6 +254,61 @@ export class BudgetLinesController {
     return this.svc.create(body, ctx.userId || undefined, { manager: ctx.manager as EntityManager });
   }
 
+  /**
+   * The screen creates a line at its title (`budget-line-creation.ts`): the title, `nature`,
+   * `currency`, `effective_start` and, when given, `paying_company_id` and `cost_center_id`; no
+   * paying company or required dimension yet. Hands the creator a creation token (`common/creation`)
+   * for "Create" (`POST :id/creation/complete`) and "Cancel" (`DELETE :id/creation`), on this line
+   * and for this person only. `POST /budget-lines` keeps the full rules.
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('budget', 'member')
+  @Post('creation')
+  async createAtTitle(@Body() body: unknown, @Tenant() ctx: TenantRequest) {
+    const created = await this.svc.createAtTitle(body, ctx.userId || undefined, { manager: ctx.manager as EntityManager });
+    const creation_token = issueCreationToken({
+      tenantId: ctx.tenantId, family: BUDGET_LINE_CREATION_FAMILY, recordId: String(created.id), userId: ctx.userId || '',
+    });
+    return Object.assign(created, { creation_token });
+  }
+
+  /** The token of `POST creation` for this line (its uuid), tenant and person, still valid; a 403 otherwise. */
+  private assertCreationToken(id: string, token: unknown, ctx: TenantRequest): void {
+    assertBudgetLineCreationToken(id, token, { tenantId: ctx.tenantId, userId: ctx.userId || '' });
+  }
+
+  /** Before "Cancel": what was written on the line and its children since its creation. Nothing is written. */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('budget', 'member')
+  @Get(':id/creation')
+  async creationChanges(@Param('id') id: string, @Query('token') token: string, @Tenant() ctx: TenantRequest) {
+    this.assertCreationToken(id, token, ctx);
+    return this.svc.creationChanges(id, ctx.userId || '', { manager: ctx.manager as EntityManager });
+  }
+
+  /** "Create" of a line being created: 400 `BUDGET_LINE_INCOMPLETE` (`params.fields`) while it lacks a field it needs. */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('budget', 'member')
+  @Post(':id/creation/complete')
+  @HttpCode(200)
+  async completeCreation(@Param('id') id: string, @Body() body: { token?: string }, @Tenant() ctx: TenantRequest) {
+    this.assertCreationToken(id, body?.token, ctx);
+    return this.svc.completeCreation(id, { manager: ctx.manager as EntityManager });
+  }
+
+  /**
+   * "Cancel" of a line being created: its creator deletes it with its token, even without the delete
+   * right (budget admin, unscoped access); a limited person too, for this line only
+   * (`withCreatorCancelAccess`). Same delete as the bulk delete of one line (refusals, children, audit).
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('budget', 'member')
+  @Delete(':id/creation')
+  async cancelCreation(@Param('id') id: string, @Body() body: { token?: string }, @Tenant() ctx: TenantRequest): Promise<void> {
+    // The service checks the token itself, before its delete window.
+    await this.svc.cancelCreation(id, body?.token, ctx.userId || '', { manager: ctx.manager as EntityManager });
+  }
+
   @UseGuards(PermissionGuard)
   @RequireLevel('budget', 'member')
   @Patch(':id')
@@ -302,6 +378,21 @@ export class BudgetLinesController {
       applicationScope,
       projectScope,
     };
+  }
+
+  /**
+   * The contract picker: each candidate the caller can read, with the fields that would differ
+   * once linked. Without the contracts right the answer is empty and no contract is read.
+   * `:id` is a uuid or a line reference. Declared before the generic detail route.
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('budget', 'reader')
+  @Get(':id/contract-consistency')
+  contractConsistency(@Param('id') id: string, @Query('ids') ids: string | undefined, @Tenant() ctx: TenantRequest) {
+    return this.svc.contractConsistency(id, ids, {
+      manager: ctx.manager as EntityManager,
+      contractsAccess: canReadResource(ctx, 'contracts'),
+    });
   }
 
   // Keep the generic detail route after every static GET path.

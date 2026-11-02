@@ -8,6 +8,7 @@ import {
   knownTimeZone,
   readTimeZoneHeader,
 } from '../../common/csv-sheet';
+import { parseItemNumber } from '../../common/parse-item-number';
 import { DemoDataService } from '../../demo-data/demo-data.service';
 import { INCIDENT_SEVERITIES, INCIDENT_STATUSES } from '../incident.entity';
 
@@ -340,7 +341,11 @@ export class IncidentJournalImportService {
     if (!match) {
       throw new BadRequestException(`Row ${rowNumber}: invalid incident_ref "${value}". Use INC-4.`);
     }
-    return Number(match[1]);
+    const number = parseItemNumber(match[1]);
+    if (number == null) {
+      throw new BadRequestException(`Row ${rowNumber}: invalid incident_ref "${value}". Use INC-4.`);
+    }
+    return number;
   }
 
   private parseOccurredAt(value: string, timeZone: string, rowNumber: number): Date {

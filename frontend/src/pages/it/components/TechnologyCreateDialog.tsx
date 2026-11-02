@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import api from '../../../api';
 import { screenLanguage } from '../../../components/csv/readings';
 import { KanapDialog, PropertyRow } from '../../../components/design';
+import { MONO_FONT_FAMILY } from '../../../config/ThemeContext';
 import { OPTION_HINT_DELAY_MS } from '../../../components/fields/OptionWithHint';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import { drawerAutocompleteListboxSx, drawerMenuItemSx } from '../../../theme/formSx';
@@ -24,6 +25,17 @@ type CatalogEntry = {
   description?: string | null;
   /** Reference (`TEC-n`) of the technology typed by hand under this name, or null. */
   completes: string | null;
+};
+
+/** A catalog entry the tenant already adopted. The reference is that technology. */
+type AdoptedCatalogEntry = {
+  key: string;
+  name: string;
+  editor: string | null;
+  family: string | null;
+  family_label: string;
+  reference: string;
+  id: string;
 };
 
 type Props = {
@@ -73,17 +85,21 @@ const catalogRowSx = (busy: boolean) => (theme: Theme) => ({
  * One catalog product. The hosting type is chosen at adoption and stays off this line.
  * The description is the delayed tooltip (and the accessible description), never a third line.
  * A reference this entry would complete shares the editor's line.
+ * An entry the tenant already adopted shows that technology's reference there instead, and opens it.
  */
-function CatalogRow({ entry, familyLabel, busy, onAdopt }: {
+function CatalogRow({ entry, familyLabel, busy, onAdopt, adoptedReference, onOpen }: {
   entry: CatalogEntry;
   familyLabel: string;
   busy: boolean;
-  onAdopt: (entry: CatalogEntry) => void;
+  onAdopt?: (entry: CatalogEntry) => void;
+  /** Set when the tenant already has this entry: shown in place of adopting it. */
+  adoptedReference?: string;
+  onOpen?: (reference: string) => void;
 }) {
   const { t } = useTranslation('it');
   const hintId = React.useId();
   const description = entry.description?.trim() || '';
-  const completesLabel = entry.completes
+  const completesLabel = !adoptedReference && entry.completes
     ? t('pages.technologies.create.completes', { reference: entry.completes })
     : '';
   const row = (
@@ -92,7 +108,10 @@ function CatalogRow({ entry, familyLabel, busy, onAdopt }: {
       component="button"
       type="button"
       disabled={busy}
-      onClick={() => onAdopt(entry)}
+      onClick={() => {
+        if (adoptedReference) onOpen?.(adoptedReference);
+        else onAdopt?.(entry);
+      }}
       // Tooltip with `describeChild` sets a native title while closed: keep only the delayed tooltip.
       title={undefined}
       aria-describedby={description ? hintId : undefined}
@@ -109,8 +128,30 @@ function CatalogRow({ entry, familyLabel, busy, onAdopt }: {
         ) : null}
       </Box>
       {/* Always present, so a product without an editor stays the same height as the others.
-          The completion mention stays on this line, after the editor. */}
-      {completesLabel ? (
+          The completion mention, or the reference of an entry already adopted, stays on this line. */}
+      {adoptedReference ? (
+        <Box
+          component="span"
+          className="kanap-autocomplete-option-secondary"
+          sx={{ display: 'flex', alignItems: 'baseline', gap: 1, width: '100%', minWidth: 0 }}
+        >
+          <Box component="span" sx={{ ...optionLineSx, flex: '1 1 auto' }}>
+            {entry.editor || '\u00a0'}
+          </Box>
+          <Box
+            component="span"
+            sx={{
+              flex: '0 0 auto',
+              whiteSpace: 'nowrap',
+              fontFamily: MONO_FONT_FAMILY,
+              fontVariantNumeric: 'tabular-nums',
+              color: 'kanap.text.tertiary',
+            }}
+          >
+            {adoptedReference}
+          </Box>
+        </Box>
+      ) : completesLabel ? (
         <Box
           component="span"
           className="kanap-autocomplete-option-secondary"
@@ -187,8 +228,9 @@ export function EditorField({ value, onChange, disabled, placeholder, onBlur }: 
 
 /**
  * Creation of a technology: the catalog first (entries the tenant has not adopted; one click adopts
- * it with its versions, or completes the technology already typed under that name), then a free
- * entry for a product the catalog does not know.
+ * it with its versions, or completes the technology already typed under that name). A search that
+ * matches an entry already adopted lists it underneath, and a click opens that technology. Then a
+ * free entry for a product the catalog does not know.
  */
 export default function TechnologyCreateDialog({ open, onClose, onCreated }: Props) {
   const { t, i18n } = useTranslation(['it', 'common']);
@@ -203,6 +245,7 @@ export default function TechnologyCreateDialog({ open, onClose, onCreated }: Pro
   const [error, setError] = React.useState<string | null>(null);
   const [nameTaken, setNameTaken] = React.useState(false);
   const debouncedSearch = useDebounced(search.trim(), SEARCH_DEBOUNCE_MS);
+  const adoptedHeadingId = React.useId();
   // Types in use; on premises by default, as the server does (`backend/src/technologies/hosting-type.ts`).
   const hostingTypes = (byField.hostingType || []).filter((option) => !option.deprecated);
   const defaultHostingType = (hostingTypes.find((option) => option.code === 'on_prem')
@@ -221,7 +264,12 @@ export default function TechnologyCreateDialog({ open, onClose, onCreated }: Pro
 
   const catalogQuery = useQuery({
     queryKey: ['technology-catalog', debouncedSearch, language],
-    queryFn: async () => (await api.get<{ items: CatalogEntry[] }>('/technologies/catalog', { params: { q: debouncedSearch || undefined, language } })).data.items || [],
+    queryFn: async () => {
+      const data = (await api.get<{ items?: CatalogEntry[]; adopted?: AdoptedCatalogEntry[] }>('/technologies/catalog', {
+        params: { q: debouncedSearch || undefined, language },
+      })).data;
+      return { items: data.items || [], adopted: data.adopted || [] };
+    },
     enabled: open && !manual,
     placeholderData: (previous) => previous,
   });
@@ -275,7 +323,10 @@ export default function TechnologyCreateDialog({ open, onClose, onCreated }: Pro
     cursor: 'pointer',
   });
 
-  const entries = catalogQuery.data || [];
+  const entries = catalogQuery.data?.items || [];
+  // Hidden while the box is empty, including before the debounced request returns that fact.
+  const adopted = search.trim() ? (catalogQuery.data?.adopted || []) : [];
+  const showNoMatch = !catalogQuery.isFetching && entries.length === 0 && adopted.length === 0;
 
   return (
     <KanapDialog
@@ -302,8 +353,6 @@ export default function TechnologyCreateDialog({ open, onClose, onCreated }: Pro
               inputProps={{ 'aria-label': t('pages.technologies.create.searchLabel') }}
             />
             <Box
-              role="list"
-              aria-label={t('pages.technologies.create.catalog')}
               sx={[
                 drawerAutocompleteListboxSx,
                 {
@@ -329,23 +378,67 @@ export default function TechnologyCreateDialog({ open, onClose, onCreated }: Pro
                 }),
               ]}
             >
-              {catalogQuery.isFetching && entries.length === 0 && (
-                <Box sx={{ py: 1.5, display: 'flex', justifyContent: 'center' }}><CircularProgress size={16} /></Box>
+              {(entries.length > 0 || showNoMatch || (catalogQuery.isFetching && entries.length === 0)) && (
+                <Box role="list" aria-label={t('pages.technologies.create.catalog')}>
+                  {catalogQuery.isFetching && entries.length === 0 && (
+                    <Box sx={{ py: 1.5, display: 'flex', justifyContent: 'center' }}><CircularProgress size={16} /></Box>
+                  )}
+                  {showNoMatch && (
+                    <Typography sx={(theme) => ({ py: 1, fontSize: 13, color: theme.palette.kanap.text.tertiary })}>
+                      {t('pages.technologies.create.noMatch')}
+                    </Typography>
+                  )}
+                  {entries.map((entry) => (
+                    <CatalogRow
+                      key={entry.key}
+                      entry={entry}
+                      familyLabel={labelFor('technologyFamily', entry.family)}
+                      busy={busy}
+                      onAdopt={(item) => { void adopt(item); }}
+                    />
+                  ))}
+                </Box>
               )}
-              {!catalogQuery.isFetching && entries.length === 0 && (
-                <Typography sx={(theme) => ({ py: 1, fontSize: 13, color: theme.palette.kanap.text.tertiary })}>
-                  {t('pages.technologies.create.noMatch')}
-                </Typography>
+              {adopted.length > 0 && (
+                <>
+                  <Box
+                    component="div"
+                    id={adoptedHeadingId}
+                    sx={(theme) => ({
+                      px: 0.5,
+                      pt: entries.length > 0 ? 1.25 : 0.75,
+                      pb: 0.25,
+                      fontSize: 11,
+                      fontWeight: 500,
+                      lineHeight: 1.5,
+                      color: theme.palette.kanap.text.tertiary,
+                    })}
+                  >
+                    {t('pages.technologies.create.alreadyHeading')}
+                  </Box>
+                  <Box role="list" aria-labelledby={adoptedHeadingId}>
+                    {adopted.map((entry) => (
+                      <CatalogRow
+                        key={entry.key}
+                        entry={{
+                          key: entry.key,
+                          name: entry.name,
+                          editor: entry.editor,
+                          family: entry.family,
+                          hosting_type: null,
+                          versions: 0,
+                          latest_version: null,
+                          completes: null,
+                        }}
+                        familyLabel={labelFor('technologyFamily', entry.family) || entry.family_label}
+                        busy={busy}
+                        adoptedReference={entry.reference}
+                        onOpen={(reference) => { void finish(reference); }}
+                      />
+                    ))}
+                  </Box>
+                </>
               )}
-              {entries.map((entry) => (
-                <CatalogRow
-                  key={entry.key}
-                  entry={entry}
-                  familyLabel={labelFor('technologyFamily', entry.family)}
-                  busy={busy}
-                  onAdopt={(item) => { void adopt(item); }}
-                />
-              ))}
             </Box>
             <Box
               component="button"

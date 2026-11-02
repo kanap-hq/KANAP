@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { NotFoundException } from '@nestjs/common';
 import { AiEntityService } from '../ai-entity.service';
 import { AiQueryExecutor } from '../query/ai-query.executor';
+import { applicationsRegistry } from '../query/registries/applications.registry';
 
 type SearchItem = { id: string; label: string; ref?: string | null };
 
@@ -10,8 +11,10 @@ function createExecutor(options: {
   searchItems?: SearchItem[];
   contracts?: Record<string, unknown>;
   knowledge?: Record<string, unknown>;
+  applications?: Record<string, unknown>;
 } = {}) {
   const services: any[] = Array.from({ length: 23 }, () => ({}));
+  if (options.applications) services[4] = options.applications;
   services[6] = options.contracts ?? {};
   services[10] = options.knowledge ?? {};
   const executor = new (AiQueryExecutor as any)(...services) as AiQueryExecutor;
@@ -198,6 +201,149 @@ async function testEntityContextAcceptsReferences() {
   assert.equal(built.length, 2, 'the builders never receive a value that is not a uuid');
 }
 
+/** The shape `ApplicationsService.get` returns: the legacy column next to the deployments. */
+function applicationDetailRow(row: Record<string, unknown>) {
+  return {
+    get: async () => ({ ...row }),
+    relationCounts: async () => null,
+    listSuites: async () => ({ items: [] }),
+    listComponents: async () => ({ items: [] }),
+  };
+}
+
+async function testApplicationReadsOmitLegacyEnvironment() {
+  const { executor } = createExecutor();
+  const map = executor as any;
+
+  const bare = map.mapApplication({
+    id: 'bare',
+    name: 'Bare',
+    sequential_id: 'APP-1',
+    environment: 'prod',
+    instances: [],
+  });
+  assert.equal(bare.metadata.environment, undefined, 'a query row without a deployment carries no environment');
+  assert.equal(bare.metadata.environments, null);
+
+  const deployed = map.mapApplication({
+    id: 'deployed',
+    name: 'Deployed',
+    sequential_id: 'APP-2',
+    environment: 'prod',
+    instances: [{ environment: 'qa' }, { environment: 'dev' }, { environment: '' }],
+  });
+  assert.equal(deployed.metadata.environment, undefined);
+  assert.equal(deployed.metadata.environments, 'qa, dev', 'the deployments keep their environments');
+
+  const detailContext = createContext(async (sql) => (sql.includes('FROM tenants') ? [{ metadata: {} }] : []));
+  const bareId = randomUUID();
+  const bareDetail = await createExecutor({
+    applications: applicationDetailRow({
+      id: bareId,
+      name: 'Bare',
+      sequential_id: 'APP-9',
+      status: 'enabled',
+      environment: 'prod',
+      instances: [],
+      deployments: [],
+    }),
+  }).executor.executeDetail(detailContext, { entity_type: 'applications', entity_id: bareId });
+  assert.equal(bareDetail.entity.metadata?.environment, undefined);
+  assert.equal(bareDetail.entity.metadata?.environments, null);
+  assert.equal(bareDetail.data.environment, undefined, 'the raw detail drops the legacy column');
+  assert.deepEqual(bareDetail.data.instances, []);
+
+  const deployedId = randomUUID();
+  const deployedDetail = await createExecutor({
+    applications: applicationDetailRow({
+      id: deployedId,
+      name: 'Deployed',
+      sequential_id: 'APP-10',
+      status: 'enabled',
+      environment: 'prod',
+      instances: [{ id: 'i1', environment: 'qa' }],
+      deployments: [{ id: 'i1', environment: 'qa' }],
+    }),
+  }).executor.executeDetail(detailContext, { entity_type: 'applications', entity_id: deployedId });
+  assert.equal(deployedDetail.entity.metadata?.environment, undefined);
+  assert.equal(deployedDetail.entity.metadata?.environments, 'qa');
+  assert.equal(deployedDetail.data.environment, undefined);
+  assert.equal((deployedDetail.data.instances as Array<{ environment: string }>)[0].environment, 'qa');
+  assert.equal((deployedDetail.data.deployments as Array<{ environment: string }>)[0].environment, 'qa');
+
+  assert.match(applicationsRegistry.fields.environment.description, /defaults to prod/);
+  assert.match(applicationsRegistry.fields.environment.description, /legacy column/);
+  assert.equal(applicationsRegistry.fields.environment.discoverable, true, 'a query that names the legacy column still filters');
+  assert.equal(applicationsRegistry.sortFields.environment, 'environment');
+  assert.equal(applicationsRegistry.aggregate?.groupFields.environment.expression, 'a.environment');
+  assert.match(applicationsRegistry.fields.environments.description, /no deployment/);
+}
+
+async function testApplicationContextOmitsLegacyEnvironment() {
+  const applicationId = randomUUID();
+  const service = Object.create(AiEntityService.prototype) as AiEntityService;
+  (service as any).policy = {
+    assertEntityTypeReadAccess: async () => undefined,
+    canReadEntityType: async () => false,
+  };
+  (service as any).knowledge = {
+    getKnowledgeContextForEntity: async () => ({ access: 'none', total: 0, groups: [] }),
+  };
+
+  const run = async (instances: Array<{ environment: string }>) => {
+    const sqlSeen: string[] = [];
+    const context = createContext(async (sql, params) => {
+      sqlSeen.push(sql);
+      if (/FROM applications a/.test(sql) && /LIMIT 1/.test(sql)) {
+        assert.doesNotMatch(sql, /\ba\.environment\b/);
+        assert.equal(params?.[0], applicationId);
+        assert.equal(params?.[1], context.tenantId);
+        return [{
+          id: applicationId,
+          sequential_id: 'APP-4',
+          name: 'Bare app',
+          description: null,
+          status: 'enabled',
+          updated_at: null,
+          lifecycle: 'active',
+          editor: null,
+          criticality: null,
+          hosting_model: null,
+          data_class: null,
+          version: '1',
+          cyber_criticality: null,
+          recovery_wave: null,
+          rto_minutes: null,
+          rpo_minutes: null,
+          last_dr_test: null,
+          go_live_date: null,
+          end_of_support_date: null,
+          retired_date: null,
+        }];
+      }
+      if (/SELECT ai\.environment/.test(sql)) {
+        assert.match(sql, /ai\.tenant_id = \$2/);
+        assert.equal(params?.[0], applicationId);
+        assert.equal(params?.[1], context.tenantId);
+        return instances;
+      }
+      if (/FROM tenants/.test(sql)) return [{ metadata: {} }];
+      return [];
+    });
+    const result = await service.getEntityContext(context, { entity_type: 'applications', entity_id: applicationId });
+    assert.ok(sqlSeen.some((sql) => /SELECT ai\.environment/.test(sql)), 'the context reads the deployments');
+    return result;
+  };
+
+  const bare = await run([]);
+  assert.equal(bare.entity.metadata?.environment, undefined);
+  assert.equal(bare.entity.metadata?.environments, null);
+
+  const deployed = await run([{ environment: 'dev' }, { environment: 'prod' }]);
+  assert.equal(deployed.entity.metadata?.environment, undefined);
+  assert.equal(deployed.entity.metadata?.environments, 'dev, prod');
+}
+
 async function testNativeBudgetReferences() {
   const { executor } = createExecutor();
   const map = executor as any;
@@ -220,6 +366,8 @@ async function run() {
   await testFamilyReferencesResolveWithoutSearch();
   await testApplicationAndAssetRefsAreTopLevel();
   await testEntityContextAcceptsReferences();
+  await testApplicationReadsOmitLegacyEnvironment();
+  await testApplicationContextOmitsLegacyEnvironment();
   await testNativeBudgetReferences();
   console.log('ai-query-detail-entity-id spec passed');
 }

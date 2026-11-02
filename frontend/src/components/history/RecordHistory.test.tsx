@@ -106,12 +106,12 @@ describe('RecordHistory', () => {
         }),
         item({
           id: 'system', action: 'update', actor: { kind: 'system', name: null },
-          subject: { kind: 'version', label: 'Y2026' },
+          subject: { kind: 'version', label: '2026' },
           changes: [{ field: 'budget_year', before: 2026, after: 2027 }],
         }),
         item({
           id: 'version-create', action: 'create',
-          subject: { kind: 'version', label: 'Y2027' },
+          subject: { kind: 'version', label: '2027' },
           changes: [],
         }),
         item({
@@ -136,8 +136,8 @@ describe('RecordHistory', () => {
     expect(screen.getByText('Link added: Spec link')).toBeInTheDocument();
     expect(screen.getByText('Attachment removed: note.txt')).toBeInTheDocument();
     expect(screen.getByText('Contact added: Cora Contact')).toBeInTheDocument();
-    expect(screen.getByText('Version Y2026')).toBeInTheDocument();
-    expect(screen.getByText('Version Y2027 added')).toBeInTheDocument();
+    expect(screen.getByText('Budget 2026')).toBeInTheDocument();
+    expect(screen.getByText('Budget 2027 added')).toBeInTheDocument();
     expect(screen.getByText('System')).toBeInTheDocument();
     expect(screen.getByText('Import')).toBeInTheDocument();
     expect(bodyText()).toContain('Amount 2026, Budget: 10 000 → 12 000');
@@ -258,11 +258,59 @@ describe('RecordHistory', () => {
     await waitFor(() => expect(mocked.get).toHaveBeenCalledTimes(2));
   });
 
+  it('names an application\'s catalog codes with the tenant\'s labels of the IT settings', async () => {
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/it-ops/settings') {
+        return { data: { applicationCategories: [{ code: 'custom_cat', label: 'Shop floor' }], accessMethods: [], serverRoles: [] } } as never;
+      }
+      return { data: page([item({ changes: [
+        { field: 'category', before: 'custom_cat', after: 'line_of_business' },
+        { field: 'users_mode', before: 'it_users', after: 'manual' },
+      ] })]) } as never;
+    });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <RecordHistory table="applications" recordId={ID} />
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText('Shop floor')).toBeInTheDocument();
+    expect(screen.getByText('Line of business')).toBeInTheDocument();
+    expect(screen.getByText('Derived')).toBeInTheDocument();
+    expect(screen.getByText('Manual')).toBeInTheDocument();
+    expect(bodyText()).not.toContain('custom_cat');
+    expect(bodyText()).not.toContain('it_users');
+  });
+
+  it('does not read the IT settings for a record without catalog codes', async () => {
+    mocked.get.mockResolvedValue({ data: page([item({ changes: [{ field: 'currency', before: 'EUR', after: 'USD' }] })]) } as never);
+    renderHistory();
+    await screen.findByText('Currency');
+    expect(mocked.get.mock.calls.some(([url]) => url === '/it-ops/settings')).toBe(false);
+  });
+
   it('says in one line that there is no write yet', async () => {
     mocked.get.mockResolvedValue({ data: page([]) } as never);
     renderHistory();
     expect(await screen.findByText('No history yet')).toBeInTheDocument();
     expect(document.querySelector('ol')).toBeNull();
+  });
+
+  it('says "Verlauf" in German on an incident, as on every record (its Journal tab is the "Journal")', async () => {
+    mocked.get.mockResolvedValue({ data: page([]) } as never);
+    await i18n.changeLanguage('de');
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <RecordHistory table="incidents" recordId={ID} />
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText('Noch kein Verlauf')).toBeInTheDocument();
+    expect(bodyText()).not.toContain('Historie');
   });
 
   it('offers a retry when the history could not be read', async () => {

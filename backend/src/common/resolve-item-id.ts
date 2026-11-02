@@ -1,5 +1,6 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
+import { parseItemNumber } from './parse-item-number';
 
 export type EntityType = 'task' | 'request' | 'project' | 'document' | 'spend' | 'capex' | 'incident' | 'contributor' | 'technology';
 
@@ -35,6 +36,18 @@ export type ParsedItemRef =
   /** `prefix`: the reference's prefix in capitals; absent for a plain number. */
   | { type: 'item_number'; value: number; prefix?: string };
 
+/**
+ * A reference whose digits do not fit `item_number` names no row. Answer 404
+ * before the query: an integer cast of that value is a 500.
+ */
+function itemNumberOf(digits: string, expectedType: EntityType): number {
+  const number = parseItemNumber(digits);
+  if (number == null) {
+    throw expectedType === 'incident' ? incidentNotFound() : new NotFoundException('Item not found');
+  }
+  return number;
+}
+
 export function parseItemRef(raw: string, expectedType: EntityType): ParsedItemRef {
   if (UUID_RE.test(raw)) return { type: 'uuid', value: raw };
 
@@ -46,16 +59,16 @@ export function parseItemRef(raw: string, expectedType: EntityType): ParsedItemR
         `Invalid reference for ${expectedType}: expected ${EXPECTED_PREFIX[expectedType]}-N, got ${raw}`,
       );
     }
-    return { type: 'item_number', value: parseInt(m[2], 10), prefix };
+    return { type: 'item_number', value: itemNumberOf(m[2], expectedType), prefix };
   }
   const other = raw.match(OTHER_REF_RE);
   if (other && ALSO_ACCEPTED_PREFIXES[expectedType]?.includes(other[1].toUpperCase())) {
-    return { type: 'item_number', value: parseInt(other[2], 10), prefix: other[1].toUpperCase() };
+    return { type: 'item_number', value: itemNumberOf(other[2], expectedType), prefix: other[1].toUpperCase() };
   }
 
   // Also accept plain numbers
   if (/^\d+$/.test(raw)) {
-    return { type: 'item_number', value: parseInt(raw, 10) };
+    return { type: 'item_number', value: itemNumberOf(raw, expectedType) };
   }
 
   throw new BadRequestException(`Invalid item reference: ${raw}`);
@@ -164,37 +177,59 @@ export type BudgetLineReferenceNumbers = {
 };
 
 /**
- * The numbers a budget line reference names, the one rule the read resolver (`resolveBudgetLine`)
- * and the write resolvers share: `BL-n` and a bare number read `item_number`; `OPX-n` and `CPX-n`
- * read only `legacy_number` of their nature. A name, or a malformed reference, names neither.
+ * The numbers a budget line reference names for a write: `BL-n` and a bare number are
+ * `item_number`; `OPX-n` and `CPX-n` are only `legacy_number`. A name, or a malformed reference,
+ * names neither. A read (`resolveBudgetLine`) takes the line number of an `OPX-n` or a `CPX-n`
+ * first, and this legacy number when no line carries that number.
  */
 export function budgetLineReferenceNumbers(raw: string): BudgetLineReferenceNumbers {
   const match = String(raw ?? '').match(/^(?:(BL|OPX|CPX)-)?(\d+)$/i);
   if (!match) return { itemNumber: null, legacyNumber: null };
-  const number = Number(match[2]);
-  if (!Number.isSafeInteger(number) || number > 2147483647) return { itemNumber: null, legacyNumber: null };
+  const number = parseItemNumber(match[2]);
+  if (number == null) return { itemNumber: null, legacyNumber: null };
   const prefix = match[1]?.toUpperCase();
   return prefix && prefix !== 'BL'
     ? { itemNumber: null, legacyNumber: `${prefix}-${number}` }
     : { itemNumber: number, legacyNumber: null };
 }
 
-/** Resolve a native budget reference across explicitly named natures in the request's tenant. */
+/** The line number written in an `OPX-n` or a `CPX-n`, the digits of the legacy form. */
+function lineNumberOfLegacy(legacyNumber: string): number | null {
+  return parseItemNumber(legacyNumber.slice(legacyNumber.indexOf('-') + 1));
+}
+
+/**
+ * The line a budget reference names, of either nature, in the request's tenant. `BL-n` and a bare
+ * number are the line's own number. `OPX-n` and `CPX-n` are that number among the lines of its nature
+ * first, then the legacy number (`spend_items.legacy_number`), so the detail and the history name the same line.
+ */
 export async function resolveBudgetLine(raw: string, manager: EntityManager): Promise<{ id: string; nature: 'opex' | 'capex'; reference: string }> {
   let predicate: string;
-  let value: string | number;
+  let params: unknown[];
+  let order = '';
   if (UUID_RE.test(raw)) {
     predicate = 'id = $1';
-    value = raw;
+    params = [raw];
   } else {
     const numbers = budgetLineReferenceNumbers(raw);
     if (numbers.itemNumber == null && numbers.legacyNumber == null) throw new BadRequestException('Malformed budget line reference');
-    predicate = numbers.legacyNumber ? 'legacy_number = $1' : 'item_number = $1';
-    value = numbers.legacyNumber ?? numbers.itemNumber!;
+    if (numbers.legacyNumber) {
+      const itemNumber = lineNumberOfLegacy(numbers.legacyNumber);
+      if (itemNumber == null) throw new BadRequestException('Malformed budget line reference');
+      predicate = '((item_number = $1 AND nature = $3) OR legacy_number = $2)';
+      params = [itemNumber, numbers.legacyNumber, numbers.legacyNumber.startsWith('CPX-') ? 'capex' : 'opex'];
+      order = 'ORDER BY (item_number = $1) DESC';
+    } else {
+      predicate = 'item_number = $1';
+      params = [numbers.itemNumber];
+    }
   }
   const [line] = await manager.query(
     `SELECT id, nature, item_number FROM spend_items
-     WHERE tenant_id = app_current_tenant() AND nature IN ('opex', 'capex') AND ${predicate} LIMIT 1`, [value],
+     WHERE tenant_id = app_current_tenant() AND nature IN ('opex', 'capex') AND ${predicate}
+     ${order}
+     LIMIT 1`,
+    params,
   );
   if (!line) throw new NotFoundException('Budget line not found');
   return { id: line.id, nature: line.nature, reference: `BL-${line.item_number}` };

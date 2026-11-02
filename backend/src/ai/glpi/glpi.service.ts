@@ -432,6 +432,39 @@ export class GlpiService {
     return { added: true, alreadyPresent: false, group };
   }
 
+  // Adds a technician group as OBSERVER on a ticket (Group_Ticket type 3). Additive:
+  // existing technicians, groups and observers are never removed. Same catalogue and
+  // idempotency rules as addTicketGroup, on the (ticket, group, observer) triple.
+  async addTicketGroupObserver(
+    session: GlpiSession,
+    ticketId: number,
+    groupsId: number,
+  ): Promise<{ added: boolean; alreadyPresent: boolean; group: GlpiAssignableGroup }> {
+    if (!Number.isInteger(ticketId) || ticketId <= 0) {
+      throw new BadRequestException('GLPI ticket id must be a positive integer.');
+    }
+    if (!Number.isInteger(groupsId) || groupsId <= 0) {
+      throw new BadRequestException('GLPI ticket group id must be a positive integer.');
+    }
+    const group = (await this.listAssignableGroups(session)).find((candidate) => candidate.id === groupsId);
+    if (!group) {
+      throw new BadRequestException('GLPI ticket group writes are restricted to assignable groups.');
+    }
+    const existing = await this.getTicketGroups(session, ticketId);
+    if (existing.some((association) => association.group_id === groupsId && association.role === 'observer')) {
+      return { added: false, alreadyPresent: true, group };
+    }
+    await this.requestJson(
+      this.buildUrl(session.baseUrl, 'apirest.php/Group_Ticket'),
+      {
+        method: 'POST',
+        headers: this.buildSessionHeaders(session),
+        body: JSON.stringify({ input: { tickets_id: ticketId, groups_id: groupsId, type: 3 } }),
+      },
+    );
+    return { added: true, alreadyPresent: false, group };
+  }
+
   // Groups a ticket can be assigned to (Group.is_assign = 1), sorted by full name and
   // bounded to GLPI_ASSIGNABLE_GROUPS_MAX. Cached per GLPI instance + acting account.
   async listAssignableGroups(session: GlpiSession): Promise<GlpiAssignableGroup[]> {
@@ -518,6 +551,41 @@ export class GlpiService {
         method: 'POST',
         headers: this.buildSessionHeaders(session),
         body: JSON.stringify({ input: { tickets_id: ticketId, users_id: usersId, type: 2 } }),
+      },
+    );
+    return { added: true, alreadyPresent: false, technician };
+  }
+
+  // Adds a named technician as OBSERVER on a ticket (Ticket_User type 3). Additive:
+  // existing technicians, groups and observers are never removed. Same catalogue and
+  // idempotency rules as addTicketTechnician, on the (ticket, user, observer) triple.
+  // An assignee is not already an observer: the two roles are separate GLPI rows.
+  async addTicketTechnicianObserver(
+    session: GlpiSession,
+    ticketId: number,
+    usersId: number,
+  ): Promise<{ added: boolean; alreadyPresent: boolean; technician: GlpiTechnician }> {
+    if (!Number.isInteger(ticketId) || ticketId <= 0) {
+      throw new BadRequestException('GLPI ticket id must be a positive integer.');
+    }
+    if (!Number.isInteger(usersId) || usersId <= 0) {
+      throw new BadRequestException('GLPI ticket technician id must be a positive integer.');
+    }
+    const catalogue = await this.listTechnicians(session);
+    const technician = catalogue.technicians.find((candidate) => candidate.id === usersId);
+    if (!technician) {
+      throw new BadRequestException('GLPI ticket technician writes are restricted to technicians of an assignable group.');
+    }
+    const existing = await this.getTicketUsers(session, ticketId);
+    if (existing.some((association) => association.user_id === usersId && association.role === 'observer')) {
+      return { added: false, alreadyPresent: true, technician };
+    }
+    await this.requestJson(
+      this.buildUrl(session.baseUrl, 'apirest.php/Ticket_User'),
+      {
+        method: 'POST',
+        headers: this.buildSessionHeaders(session),
+        body: JSON.stringify({ input: { tickets_id: ticketId, users_id: usersId, type: 3 } }),
       },
     );
     return { added: true, alreadyPresent: false, technician };

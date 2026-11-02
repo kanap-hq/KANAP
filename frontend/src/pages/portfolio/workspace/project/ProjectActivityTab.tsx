@@ -4,8 +4,6 @@ import PortfolioActivity from '../../components/PortfolioActivity';
 type ProjectActivityTabProps = {
   activities: any[];
   allowedTransitions: string[];
-  createdAt?: string | null;
-  createdByName?: string | null;
   currentStatus: string;
   currentUserId?: string | null;
   entityId: string;
@@ -26,8 +24,6 @@ type ProjectActivityTabProps = {
 export default function ProjectActivityTab({
   activities,
   allowedTransitions,
-  createdAt,
-  createdByName,
   currentStatus,
   currentUserId,
   entityId,
@@ -43,8 +39,6 @@ export default function ProjectActivityTab({
       entityType="project"
       entityId={entityId}
       activities={activities}
-      createdAt={createdAt}
-      createdByName={createdByName}
       currentStatus={currentStatus}
       allowedTransitions={allowedTransitions}
       statusOptions={statusOptions}

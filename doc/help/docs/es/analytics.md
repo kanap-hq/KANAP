@@ -207,7 +207,7 @@ Los dos ajustes deben ser coherentes. Una dimensión no puede limitarse a un tip
 
 Active **Obligatoria** cuando cada línea de presupuesto deba estar clasificada en una dimensión. KANAP comprueba entonces las líneas de los tipos para los que se usa la dimensión:
 
-- **Una línea nueva necesita un valor en la dimensión.** Esto vale para todas las formas de crear una línea: las pantallas OPEX y CAPEX, un archivo de presupuesto, Plaid y la API. Sin valor, la línea no se crea, con el mensaje "The Tipo de coste dimension is required. Choose a value."
+- **Una línea nueva necesita un valor en la dimensión.** Un archivo de presupuesto, Plaid y la API no crean una línea sin valor, con el mensaje "The Tipo de coste dimension is required. Choose a value." En la pantalla de líneas presupuestarias, una línea existe desde su título, y **Crear** indica la dimensión como faltante hasta que tenga un valor.
 - **Una línea que tiene un valor no puede perderlo.** Puede elegir otro valor. El campo no se puede vaciar.
 - **Una línea creada antes de activar el ajuste sigue funcionando.** Si no tiene valor en la dimensión, sigue siendo editable y puede guardar otros cambios en ella. Su campo está marcado como obligatorio. En las pantallas OPEX y CAPEX, al salir de una línea así después de modificarla se le pide primero que elija un valor, con **Quedarse** y **Salir de todos modos**. Abrirla sin cambiar nada nunca pregunta.
 
@@ -332,7 +332,7 @@ La dimensión por defecto no se puede desactivar.
 En el panel **Propiedades** de una línea OPEX o CAPEX, y al crear una, cada dimensión activada que se usa para ese tipo de línea tiene su propio campo, con el nombre de la dimensión, en el orden de las dimensiones. La dimensión por defecto se muestra como **Dimensión analítica** hasta que le dé un nombre.
 
 - Elija un valor, o vacíe el campo para dejar la línea sin valor en esa dimensión. El cambio se guarda de inmediato.
-- El campo de una dimensión obligatoria está marcado con un asterisco. No se puede crear una línea nueva sin valor en ella, con el mensaje "El campo Tipo de coste es obligatorio". En una línea que tiene un valor, el campo no tiene botón para vaciarlo: solo puede elegir otro valor. Consulte [Dimensiones obligatorias](#dimensiones-obligatorias).
+- El campo de una dimensión obligatoria está marcado con un asterisco. En una línea que se está creando, **Crear** la indica como faltante hasta que tenga un valor. En una línea que tiene un valor, el campo no tiene botón para vaciarlo: solo puede elegir otro valor. Consulte [Dimensiones obligatorias](#dimensiones-obligatorias).
 - El campo lista los valores activados de su dimensión que se usan para este tipo de línea. Un valor desactivado, o un valor solo para el otro tipo de línea, sigue mostrándose en las líneas que lo tienen. Consulte [Valores OPEX o CAPEX](#valores-opex-o-capex).
 - En una dimensión con [valores abiertos](#open-values), el campo ofrece **Añadir «…»** para un nombre que no existe. En las demás dimensiones, el campo no puede crear un valor: cree los valores en la página Dimensiones analíticas, o deje que los cree el archivo de presupuesto.
 - Un valor se aplica a toda la línea, en todos los años.
@@ -366,6 +366,7 @@ Los siete informes presupuestarios también se pueden limitar a un valor de una 
 - Cuando Plaid crea una línea, necesita un valor en cada dimensión obligatoria del tipo de la línea. En un espacio de trabajo creado antes de las dimensiones recomendadas, una línea CAPEX necesita **PP&E type**, **Investment type** y **Priority**.
 - Plaid sabe qué dimensiones son obligatorias. Una línea nueva necesita un valor en cada una de ellas, y Plaid no puede borrar el valor de una dimensión obligatoria. Plaid rechaza una petición que no cumple la regla e indica el motivo, por ejemplo "Tipo de coste is required for spend item creation."
 - Plaid también puede crear un valor en la dimensión que usted indique. Sin dimensión, el valor se crea en la dimensión por defecto.
+- Con derecho de lectura sobre la analítica, Plaid también lee los ajustes de cada dimensión, su número de valores y las líneas que la usan. Pregunte, por ejemplo: «¿Qué dimensiones son obligatorias?»
 
 ---
 

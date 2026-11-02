@@ -64,14 +64,14 @@ The standard grid highlights the fields that matter during intake and review:
 
 ### List actions
 
-- **New Request** is available with `portfolio_requests:member`.
+- **New request** is available with `portfolio_requests:member`.
 - **Import** and **Export** are available to request administrators.
 
 ## The Request workspace
 
 The workspace uses a split model:
 
-- The main area holds the operational tabs: **Summary**, **Analysis**, **Scoring**, **Relations**, and **Knowledge**.
+- The main area holds the operational tabs: **Summary**, **Analysis**, **Scoring**, **Relations**, **Knowledge**, and **History** (the changes made to the request, see [Record history](record-history.md)).
 - A persistent **Properties** drawer on the right edge holds stable request metadata, team assignment, and resulting projects. Open or close it using the vertical tab on the right edge.
 
 This matters because not everything is saved the same way:
@@ -80,16 +80,32 @@ This matters because not everything is saved the same way:
 - Changes in **Summary**, **Analysis**, and **Scoring** are workspace edits and use **Save** / **Reset**.
 - The managed documents **Purpose** and **Risks & Mitigations** also use the workspace save flow.
 
-If you create a new request, KANAP starts on **Summary**. The other tabs become useful after the request exists as a real record rather than a very sincere idea.
-
 The workspace header gives you operational context without leaving the page:
 
 - a copyable request reference such as `REQ-42`
 - a metadata strip with **Status**, **Score**, **Requestor**, **IT owner**, **Target Delivery Date**, and (when applicable) the **Source Task** the request was created from
 - **Share** to send a link to the request
 - **Convert to Project** when the request is **Approved** or **Converted**
+- **Create** and **Cancel**, while the request is being created. See [Creating or cancelling](#cancelling-a-creation)
 - **Delete**, a trash icon, for administrators (when the request is not yet converted). A converted request stays as the origin of its project and cannot be deleted
 - previous/next navigation based on the exact list context you came from
+
+### Creating a request { #creating-a-request }
+
+1. Click **New request**. The request page opens on **Summary** with an empty title in the header. The rest of the page is dimmed.
+2. Type the name of the request.
+3. Press Enter, or click outside the title. KANAP creates the request at once, with status **Pending Review** and you as the requestor. Its reference (`REQ-42`) shows and all tabs open.
+
+Then fill in the Properties drawer and the **Purpose**. The name is edited in the header only. Press Escape on the empty title to leave without creating anything.
+
+### Creating or cancelling { #cancelling-a-creation }
+
+While the request is being created, its header shows **Create** and **Cancel**. They stay until you leave the request.
+
+- **Create** keeps the request and closes it. You go back to where you started: the list or the previous screen. With an empty title, nothing closes and the title asks for one
+- **Cancel** closes without keeping anything. On a request already created, it deletes it. If you entered more than the name, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete requests
+
+Leaving the request any other way keeps it. An administrator can then delete it with **Delete**. The reference of a cancelled request is not used again.
 
 ### Properties drawer
 
@@ -97,7 +113,6 @@ Treat the drawer as the request's structural backbone. It contains three groups.
 
 #### Core properties
 
-- Request Name
 - Status
 - Source, Category, Stream
 - Requestor
@@ -146,10 +161,7 @@ The **Purpose** section is a managed markdown document embedded directly in the 
 
 ### Activity
 
-Below Purpose, the Summary tab includes the request activity stream:
-
-- **Comments** for discussion, contextual notes, and formal decisions
-- **History** for the audit trail of field and status changes
+Below Purpose, the Summary tab includes the request activity stream: comments for discussion, contextual notes, and formal decisions. The changes made to the request are in the **History** tab.
 
 This places the latest activity directly in front of reviewers without requiring them to navigate to a separate tab.
 
@@ -168,7 +180,7 @@ Comments support markdown and inline images, which is useful for design notes, e
 
 #### History
 
-History is the audit view. Use it when you need to answer questions such as:
+The **History** tab lists the changes made to the request. Use it when you need to answer questions such as:
 
 - who changed the status
 - when team assignments changed
@@ -176,7 +188,7 @@ History is the audit view. Use it when you need to answer questions such as:
 
 The list closes with the creation entry (who created the request and when) below the recorded changes, which include edits to the Purpose and Risks documents.
 
-If you need narrative, use Comments. If you need proof, use History.
+If you need narrative, use the comments. If you need proof, use the **History** tab.
 
 ## Analysis
 
@@ -277,7 +289,7 @@ A section is absent when you cannot read its module: budget lines need the budge
 
 **Adding and removing links** (`portfolio_requests:contributor`): **Add** at the right of a section opens a search below the button. Type a name or a reference and pick a result: the link is saved at once. To remove a link, hover the row and click the cross at its end. There is no confirmation, and removing a link deletes nothing else. Linking a business process also needs `business_processes:member`. Readers see the tables read-only.
 
-Links to budget lines, applications and assets are recorded in the request's **History**.
+Links to budget lines, applications and assets are recorded in the request's **History** tab.
 
 ### Links and files
 
@@ -285,7 +297,7 @@ Links to budget lines, applications and assets are recorded in the request's **H
 
 - **Add link** opens a dialog for a URL and an optional name; the link is saved at once. To change a link, hover its row and click the pencil.
 - **Attach file** opens the file chooser. You can also drop files on the section.
-- To remove a link or a file, hover the row and click the cross. Deleting a file asks for confirmation first.
+- To remove a link or a file, hover the row and click the cross. Removing a link shows a message and offers **Undo**, which creates the link again. Deleting a file asks for confirmation first.
 
 ## Knowledge
 

@@ -66,13 +66,11 @@ const BINDING = {
 
 type RenderOptions = {
   canManage?: boolean;
-  canCreateConnection?: boolean;
   bindings?: typeof BINDING[];
 };
 
 function renderMatrix({
   canManage = true,
-  canCreateConnection = true,
   bindings = [],
 }: RenderOptions = {}) {
   get.mockImplementation(async (url: string) => {
@@ -93,7 +91,6 @@ function renderMatrix({
           <InterfaceBindingsMatrix
             interfaceId="iface-1"
             canManage={canManage}
-            canCreateConnection={canCreateConnection}
             interfaceName="Commandes"
             sourceApplicationId="app-src"
             targetApplicationId="app-tgt"
@@ -158,7 +155,7 @@ describe('InterfaceBindingsMatrix connection picker', () => {
   });
 
   it('shows no modification action to a reader and opens a binding read-only', async () => {
-    renderMatrix({ canManage: false, canCreateConnection: false, bindings: [BINDING] });
+    renderMatrix({ canManage: false, bindings: [BINDING] });
 
     await openBindingPanel();
 
@@ -178,7 +175,7 @@ describe('InterfaceBindingsMatrix connection picker', () => {
   });
 
   it('shows the management actions to an Applications member', async () => {
-    renderMatrix({ canManage: true, canCreateConnection: false, bindings: [BINDING] });
+    renderMatrix({ canManage: true, bindings: [BINDING] });
 
     await openBindingPanel();
 

@@ -9,7 +9,7 @@ Navegue a **Portafolio > Planificación**.
 **Permisos**:
 - Necesita `portfolio_projects:reader` para acceder a la página de Planificación y datos del cronograma.
 - Necesita `portfolio_reports:reader` para generar escenarios de hoja de ruta.
-- Necesita `portfolio_projects:contributor` para aplicar fechas generadas a los proyectos.
+- Necesita `portfolio_projects:contributor` para arrastrar las fechas de los proyectos, cambiar el modo de planificación de un proyecto y aplicar las fechas generadas.
 
 Si no ve Planificación en el menú, solicite a su administrador que le otorgue el acceso requerido.
 
@@ -32,7 +32,7 @@ Use el modo Cronograma para ediciones directas de planificación.
 - Filtrar por categoría y estado
 - Elegir ventana de tiempo: 1 mes, 3 meses, 6 meses o 1 año
 - Moverse hacia atrás/adelante en el tiempo o restablecer a **Hoy**
-- Arrastrar barras de proyecto para actualizar fechas planificadas de inicio/fin
+- Arrastrar barras de proyecto para actualizar las fechas planificadas de inicio y fin. Esto requiere `portfolio_projects:contributor`. Con `portfolio_projects:reader`, las barras permanecen en su sitio y un doble clic abre el proyecto.
 
 ### Comportamiento de visualización
 - El gráfico se centra alrededor de hoy con aproximadamente **25% pasado / 75% futuro** al restablecer al período actual.
@@ -60,7 +60,7 @@ El Generador de hoja de ruta calcula las fechas propuestas del proyecto a partir
 
 Después de la generación, la pestaña Programación muestra las fechas propuestas del proyecto.
 
-- Los títulos de proyecto son clicables y abren la pestaña **Progreso** del proyecto.
+- Los títulos de proyecto son clicables y abren la pestaña **Esfuerzo** del proyecto.
 - Las casillas de verificación definen el alcance del escenario.
 - Un filtro de **Categoría (Vista previa)** permite filtrar la visualización Gantt de la hoja de ruta sin cambiar la programación generada.
 - Deseleccionar un proyecto regenera inmediatamente el escenario:

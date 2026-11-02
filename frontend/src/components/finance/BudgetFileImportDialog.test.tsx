@@ -12,7 +12,13 @@ vi.mock('react-i18next', () => {
   return { useTranslation: () => ({ t, i18n: { language: 'fr', resolvedLanguage: 'fr' } }) };
 });
 
-vi.mock('../../api', () => ({ default: { post: vi.fn() } }));
+vi.mock('../../api', () => ({
+  default: {
+    post: vi.fn(),
+    // The tenant's column names: the product defaults.
+    get: vi.fn(async () => ({ data: (await import('../../services/budgetColumns')).DEFAULT_BUDGET_COLUMNS })),
+  },
+}));
 const features = vi.hoisted(() => ({ importXlsx: true }));
 vi.mock('../../config/FeaturesContext', () => ({ useFeatures: () => ({ config: { features }, isLoading: false }) }));
 
@@ -311,6 +317,37 @@ describe('BudgetFileImportDialog', () => {
     expect(await screen.findByText('operations.budgetFile.warningsTitle')).toBeInTheDocument();
     expect(screen.getByText(new RegExp(`^operations\\.budgetFile\\.rowColumn:.*"line":4,"column":"company_name".*errors:BUDGET_FILE_COST_CENTER_OTHER_COMPANY`))).toBeInTheDocument();
     expect(screen.getByText('operations.budgetFile.ready')).toBeInTheDocument();
+  });
+
+  it.each([
+    [1, '70000.00', '70 000'],
+    [3, '281280.00', '281 280'],
+  ])('warns that %i calculation line(s) will no longer drive a changed column, with their total', async (count, total, shown) => {
+    const warning = {
+      line: 2, item: 'BL-83', column: 'revision', year: 2026, count, total,
+      message: `BL-83 · Revision 2026: ${count} calculation lines (${total}) will no longer drive these amounts.`,
+    };
+    post.mockResolvedValueOnce({ data: report({ warnings: { duplicates: [], ignoredColumns: [], supplierNames: [], ignoredCells: [], calculationLines: [warning] } }) });
+    renderDialog();
+    expect(await screen.findByText('operations.budgetFile.warningsTitle')).toBeInTheDocument();
+    const options = { item: 'BL-83', column: 'ops:operations.budgetColumns.revision', year: 2026, count, total: shown, defaultValue: warning.message };
+    const text = screen.getByText(/^operations\.budgetFile\.calculationLines:/).textContent ?? '';
+    expect(JSON.parse(text.slice('operations.budgetFile.calculationLines:'.length))).toEqual(options);
+    expect(screen.getByText('operations.budgetFile.ready')).toBeInTheDocument();
+  });
+
+  it('says how many calculation lines warnings the list leaves out', async () => {
+    const calculationLines = Array.from({ length: 20 }, (_, index) => ({
+      line: index + 2, item: `BL-${index + 1}`, column: 'budget', year: 2026, count: 2, total: '100.00',
+      message: `BL-${index + 1} · Budget 2026: 2 calculation lines (100) will no longer drive these amounts.`,
+    }));
+    post.mockResolvedValueOnce({ data: report({
+      warnings: { duplicates: [], ignoredColumns: [], supplierNames: [], ignoredCells: [], calculationLines, calculationLinesCount: 23 },
+    }) });
+    renderDialog();
+    expect(await screen.findByText('operations.budgetFile.warningsTitle')).toBeInTheDocument();
+    expect(screen.getAllByText(/^operations\.budgetFile\.calculationLines:/)).toHaveLength(20);
+    expect(screen.getByText('operations.budgetFile.andMore:{"count":3}')).toBeInTheDocument();
   });
 
   it('turns a stale check into a plain sentence with a way to check again', async () => {

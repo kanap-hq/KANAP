@@ -8,6 +8,8 @@ import { useFeatures } from '../../config/FeaturesContext';
 import { useLocale } from '../../i18n/useLocale';
 import { useTenant } from '../../tenant/TenantContext';
 import { getDocHomeUrl, getDocPageUrl } from '../../utils/docUrls';
+import AboutOnboardingLine from '../onboarding/AboutOnboardingLine';
+import BookDiscoveryCallButton, { useDiscoveryCall } from '../BookDiscoveryCallButton';
 import {
   buildSupportInfo,
   buildSupportMailto,
@@ -51,6 +53,7 @@ export default function AboutContent({ onNavigate }: { onNavigate?: () => void }
   const { subscription, claims } = useAuth();
   const { tenantName, tenantSlug } = useTenant();
   const locale = useLocale();
+  const discoveryCall = useDiscoveryCall();
   const [copied, setCopied] = React.useState(false);
   const copiedTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   React.useEffect(() => () => {
@@ -117,8 +120,15 @@ export default function AboutContent({ onNavigate }: { onNavigate?: () => void }
                 </Link>
               </>
             )}
+            {discoveryCall && (
+              <>
+                {' · '}
+                <BookDiscoveryCallButton placement="about" asLink />
+              </>
+            )}
           </Typography>
         )}
+        <AboutOnboardingLine />
         <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: 2, pt: 0.5 }}>
           <ExternalLink href={releaseNotesUrl(config.version)}>{t('about.releaseNotes')}</ExternalLink>
           <ExternalLink href={getDocHomeUrl(locale)}>{t('about.docs')}</ExternalLink>

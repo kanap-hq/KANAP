@@ -3,27 +3,17 @@ import {
   Alert,
   Box,
   Button,
-  IconButton,
   MenuItem,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
   TextField,
-  Tooltip,
-  Typography,
 } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
 import ContactSelect from '../fields/ContactSelect';
-import DeleteIcon from '@mui/icons-material/Delete';
-import { useNavigate } from 'react-router-dom';
 import { drawerFieldValueSx, drawerSelectSx, drawerMenuItemSx, inlineControlSx } from '../../theme/formSx';
-import RelationsSectionTitle from '../../pages/portfolio/components/RelationsSectionTitle';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
+import { RelationsEmpty, RelationsSection, RelationsTable, type RelationsColumn } from '../workspace/RelationsTable';
 
 type SupplierContactRole = 'commercial' | 'technical' | 'support' | 'other';
 type ContactOrigin = 'supplier' | 'manual';
@@ -55,9 +45,18 @@ type Props = {
 
 const ROLES = ['commercial', 'technical', 'support', 'other'] as const;
 
+function roleLabelKey(role: SupplierContactRole): string {
+  return `contacts.role${role.charAt(0).toUpperCase()}${role.slice(1)}`;
+}
+
+const textButtonSx = { fontSize: 12, minWidth: 0, px: 1 } as const;
+
+/**
+ * Contacts of a contract or a budget line, as a Relations section: it shares the width of the
+ * sibling sections. Add opens the contact picker, then the role; choosing the role saves.
+ */
 export default function ItemContactsSection({ itemType, itemId, canManage, syncFromSupplier = false, onChanged }: Props) {
   const { t } = useTranslation('common');
-  const navigate = useNavigate();
   const qc = useQueryClient();
   // A refused add or removal (a line read only in the person's access) says why; nothing changed.
   const [error, setError] = React.useState<string | null>(null);
@@ -88,7 +87,8 @@ export default function ItemContactsSection({ itemType, itemId, canManage, syncF
     },
   });
 
-  // Inline add flow: pick a contact → the role select appears → picking the role saves.
+  // Add opens the picker. A contact, then its role: choosing the role saves and the picker stays for the next one.
+  const [adding, setAdding] = React.useState(false);
   const [selectedContact, setSelectedContact] = React.useState<string | null>(null);
 
   const { mutateAsync: attach, isPending: attaching } = useMutation({
@@ -112,91 +112,99 @@ export default function ItemContactsSection({ itemType, itemId, canManage, syncF
     },
   });
 
-  if (isLoading) {
-    return <Typography variant="body2" color="text.secondary">{t('contacts.loadingContacts')}</Typography>;
-  }
+  // First name is the name column (no width): the row link sits on it, and a wider sibling
+  // section stretches this table up to the shared width.
+  const columns = React.useMemo<Array<RelationsColumn<ItemContactLink>>>(() => [
+    {
+      key: 'role',
+      header: t('labels.role'),
+      width: 120,
+      render: (link) => (
+        <Box
+          component="span"
+          sx={{ color: 'kanap.text.secondary' }}
+          title={link.origin === 'supplier' ? t('contacts.fromSupplier') : t('contacts.manuallyAdded')}
+        >
+          {t(roleLabelKey(link.role))}
+        </Box>
+      ),
+    },
+    {
+      key: 'firstName',
+      header: t('contacts.firstName'),
+      render: (link) => link.contact.first_name || '',
+    },
+    {
+      key: 'lastName',
+      header: t('contacts.lastName'),
+      width: 140,
+      render: (link) => link.contact.last_name || '',
+    },
+    {
+      key: 'jobTitle',
+      header: t('contacts.jobTitle'),
+      width: 150,
+      hideOrder: 2,
+      render: (link) => link.contact.job_title || '',
+    },
+    {
+      key: 'email',
+      header: t('labels.email'),
+      width: 200,
+      render: (link) => link.contact.email,
+    },
+    {
+      key: 'mobile',
+      header: t('contacts.mobile'),
+      width: 130,
+      hideOrder: 1,
+      render: (link) => link.contact.mobile || '',
+    },
+  ], [t]);
+
+  const toggleAdd = () => {
+    setAdding((open) => !open);
+    setSelectedContact(null);
+  };
 
   return (
-    <Stack spacing={1.25}>
-      <RelationsSectionTitle>{t('contacts.title')}</RelationsSectionTitle>
-      {!!error && <Alert severity="error" onClose={() => setError(null)}>{error}</Alert>}
-
-      {contacts.length === 0 ? (
-        <Typography variant="body2" sx={{ fontSize: 13, color: 'kanap.text.tertiary' }}>
-          {t('contacts.noContactsLinked')}
-        </Typography>
-      ) : (
-        <Box sx={{ overflowX: 'auto' }}>
-          <Table size="small" sx={{
-            '& th': { fontSize: 12, fontWeight: 500, color: 'kanap.text.tertiary', borderBottomColor: 'kanap.border.default' },
-            '& td': { fontSize: 13, borderBottomColor: 'kanap.border.soft' },
-            '& tbody tr': { cursor: 'pointer' },
-            '& tbody tr:hover': { backgroundColor: 'kanap.bg.hover' },
-            '& tbody tr:hover .contact-row-delete': { opacity: 1 },
-          }}>
-            <TableHead>
-              <TableRow>
-                <TableCell sx={{ width: 130 }}>{t('labels.role')}</TableCell>
-                <TableCell>{t('contacts.firstName')}</TableCell>
-                <TableCell>{t('contacts.lastName')}</TableCell>
-                <TableCell>{t('contacts.jobTitle')}</TableCell>
-                <TableCell>{t('labels.email')}</TableCell>
-                <TableCell>{t('contacts.mobile')}</TableCell>
-                <TableCell align="right" sx={{ width: 56 }} />
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {contacts.map((link) => (
-                <TableRow key={link.id} hover onClick={() => navigate(`/master-data/contacts/${link.contact.id}/overview`)}>
-                  <TableCell onClick={(e) => e.stopPropagation()}>
-                    <Typography
-                      variant="body2"
-                      sx={{ fontSize: 13, color: 'kanap.text.secondary' }}
-                      title={link.origin === 'supplier' ? t('contacts.fromSupplier') : t('contacts.manuallyAdded')}
-                    >
-                      {t(`contacts.role${link.role.charAt(0).toUpperCase() + link.role.slice(1)}`)}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>{link.contact.first_name || ''}</TableCell>
-                  <TableCell>{link.contact.last_name || ''}</TableCell>
-                  <TableCell>{link.contact.job_title || ''}</TableCell>
-                  <TableCell>{link.contact.email}</TableCell>
-                  <TableCell>{link.contact.mobile || ''}</TableCell>
-                  <TableCell align="right" onClick={(e) => e.stopPropagation()}>
-                    <Tooltip title={canManage ? t('contacts.removeContact') : t('contacts.insufficientPermission')}>
-                      <span>
-                        <IconButton
-                          className="contact-row-delete"
-                          size="small"
-                          aria-label={t('contacts.removeContact')}
-                          disabled={!canManage}
-                          onClick={() => { void run(() => detach(link.id)); }}
-                          sx={{ opacity: 0, transition: 'opacity 120ms', color: 'kanap.text.tertiary', '&:hover': { color: 'kanap.danger' } }}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </span>
-                    </Tooltip>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Box>
-      )}
-
-      {canManage && syncFromSupplier && (
+    <RelationsSection
+      title={t('contacts.title')}
+      count={isLoading ? undefined : contacts.length}
+      onAdd={canManage ? toggleAdd : undefined}
+      adding={adding}
+      addLabel={t('buttons.add')}
+      actions={canManage && syncFromSupplier ? (
         <Button
+          variant="text"
+          size="small"
           onClick={() => { void run(() => syncSupplier()); }}
           disabled={syncing}
-          sx={{ p: 0, minWidth: 0, fontSize: 12, alignSelf: 'flex-start' }}
+          sx={textButtonSx}
         >
           {t('contacts.syncFromSupplier')}
         </Button>
+      ) : undefined}
+    >
+      {!!error && <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 1 }}>{error}</Alert>}
+      {isLoading ? (
+        <RelationsEmpty>{t('contacts.loadingContacts')}</RelationsEmpty>
+      ) : contacts.length === 0 ? (
+        <RelationsEmpty>{t('contacts.noContactsLinked')}</RelationsEmpty>
+      ) : (
+        <RelationsTable
+          ariaLabel={t('contacts.title')}
+          columns={columns}
+          rows={contacts}
+          rowKey={(link) => link.id}
+          rowHref={(link) => `/master-data/contacts/${link.contact.id}/overview`}
+          linkRows
+          onRemove={canManage ? (link) => { void run(() => detach(link.id)); } : undefined}
+          removeLabel={() => t('contacts.removeContact')}
+        />
       )}
-
-      {canManage && (
-        <Stack direction="row" spacing={2} alignItems="center">
+      {canManage && adding && (
+        <Stack direction="row" spacing={2} alignItems="center" sx={{ mt: 1 }}>
           <Box sx={{ width: '100%', maxWidth: 420 }}>
             <ContactSelect
               hideLabel
@@ -228,13 +236,13 @@ export default function ItemContactsSection({ itemType, itemId, canManage, syncF
             >
               {ROLES.map((value) => (
                 <MenuItem key={value} value={value} sx={drawerMenuItemSx}>
-                  {t(`contacts.role${value.charAt(0).toUpperCase() + value.slice(1)}`)}
+                  {t(roleLabelKey(value))}
                 </MenuItem>
               ))}
             </TextField>
           )}
         </Stack>
       )}
-    </Stack>
+    </RelationsSection>
   );
 }

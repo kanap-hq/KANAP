@@ -72,4 +72,18 @@ describe('DepartmentsPage year', () => {
     expect(grid.extraParams).toMatchObject({ year: complete });
     expect(grid.refreshKey).not.toBe(refreshKey);
   });
+
+  it('steps the year from the arrows and keeps a partial draft off the request', () => {
+    renderPage();
+    const initial = Number(grid.extraParams?.year);
+    fireEvent.click(screen.getByRole('button', { name: 'common:yearTabs.next' }));
+    expect(grid.extraParams).toMatchObject({ year: initial + 1 });
+    expect(yearField()).toHaveValue(initial + 1);
+
+    fireEvent.change(yearField(), { target: { value: '20' } });
+    expect(grid.extraParams).toMatchObject({ year: initial + 1 });
+    fireEvent.click(screen.getByRole('button', { name: 'common:yearTabs.previous' }));
+    expect(grid.extraParams).toMatchObject({ year: initial });
+    expect(yearField()).toHaveValue(initial);
+  });
 });

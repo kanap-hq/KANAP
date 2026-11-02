@@ -50,6 +50,7 @@ vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
       </div>
       <div>{props.metadata}</div>
       <div>{props.actions}</div>
+      <div data-testid="workspace-notices">{props.notices}</div>
       <aside>{props.properties}</aside>
       <main>{props.children}</main>
     </div>

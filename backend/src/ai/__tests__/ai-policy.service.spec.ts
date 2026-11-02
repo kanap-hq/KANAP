@@ -4,6 +4,7 @@ import { Features } from '../../config/features';
 import { Tenant, TenantStatus } from '../../tenants/tenant.entity';
 import { UserRole } from '../../users/user-role.entity';
 import { Subscription, SubscriptionStatus } from '../../billing/subscription.entity';
+import { DATA_ACCESS_RESERVED_MESSAGE } from '../../data-access/reserved-operations';
 
 type TestSettings = {
   tenant_id: string;
@@ -20,6 +21,8 @@ function createManager(options?: {
   tenantStatus?: TenantStatus;
   userRoles?: Array<{ role_id: string; role?: { role_name?: string | null } }>;
   subscription?: any;
+  /** The person's data access (`dataAccessModeOf`): limited, or all when left out. */
+  limited?: boolean;
 }) {
   const tenant = {
     id: 'tenant-1',
@@ -28,7 +31,10 @@ function createManager(options?: {
   const userRoles = options?.userRoles ?? [{ role_id: 'role-1', role: { role_name: 'AI Chat User' } }];
   const subscription = options?.subscription ?? null;
 
+  const limited = options?.limited === true;
   return {
+    // `app.da_mode`, then the person's mode and roles: both answer `limited`.
+    query: async () => [{ limited }],
     getRepository(entity: unknown) {
       if (entity === UserRole) {
         return {
@@ -120,6 +126,14 @@ function createPolicy(options?: {
   );
 }
 
+/** The translatable code and params of a coded 403. */
+function refusal(error: any, code: string, params?: Record<string, unknown>): boolean {
+  const body = error?.getResponse?.();
+  assert.equal(body?.code, code);
+  if (params) assert.deepEqual(body?.params, params);
+  return true;
+}
+
 async function testListReadableEntityTypesFiltersUnreadableFamilies() {
   const originalFeature = Features.AI_CHAT_ENABLED;
   Features.AI_CHAT_ENABLED = true;
@@ -145,6 +159,15 @@ async function testListReadableEntityTypesFiltersUnreadableFamilies() {
   );
 
   assert.deepEqual(readable, ['applications', 'tasks']);
+
+  // Master data (Plaid L9): each family with the right of its page, the budget right alone reads neither.
+  const chat = { tenantId: 'tenant-1', userId: 'user-1', isPlatformHost: false, surface: 'chat' as const, authMethod: 'jwt' as const };
+  const families = ['working_day_calendars', 'analytics_axes'] as any[];
+  const readableWith = (rights: Array<[string, string]>) =>
+    createPolicy({ permissions: new Map([['ai_chat', 'reader'], ...rights]) as any }).listReadableEntityTypes(chat, families, createManager());
+  assert.deepEqual(await readableWith([['working_day_profiles', 'reader']]), ['working_day_calendars']);
+  assert.deepEqual(await readableWith([['analytics', 'reader']]), ['analytics_axes']);
+  assert.deepEqual(await readableWith([['budget', 'admin'], ['reporting', 'admin']]), []);
   Features.AI_CHAT_ENABLED = originalFeature;
 }
 
@@ -211,7 +234,7 @@ async function testModelConfigReadTierMatrix() {
       { ...context, isPlatformHost: true },
       createManager(),
     ),
-    /platform host/,
+    (error: any) => /platform host/.test(error.message) && refusal(error, 'AI_PLATFORM_HOST'),
   );
 
   Features.AI_SETTINGS_ENABLED = originalFeature;
@@ -314,7 +337,7 @@ async function testChatSurfaceRequiresTenantEnablement() {
       },
       createManager(),
     ),
-    /AI chat is disabled for this tenant/,
+    (error: any) => /AI chat is disabled for this tenant/.test(error.message) && refusal(error, 'AI_CHAT_DISABLED'),
   );
 
   Features.AI_CHAT_ENABLED = originalFeature;
@@ -338,7 +361,7 @@ async function testMcpSurfaceRequiresTenantEnablement() {
       },
       createManager(),
     ),
-    /AI MCP access is disabled for this tenant/,
+    (error: any) => /AI MCP access is disabled for this tenant/.test(error.message) && refusal(error, 'AI_MCP_DISABLED'),
   );
 
   Features.AI_MCP_ENABLED = originalFeature;
@@ -362,7 +385,7 @@ async function testChatSurfaceRequiresProviderReadiness() {
       },
       createManager(),
     ),
-    /AI chat is not fully configured for this tenant/,
+    (error: any) => /AI chat is not fully configured for this tenant/.test(error.message) && refusal(error, 'AI_NOT_CONFIGURED'),
   );
 
   Features.AI_CHAT_ENABLED = originalFeature;
@@ -384,7 +407,7 @@ async function testSurfaceRequiresActiveTenant() {
       },
       createManager({ tenantStatus: TenantStatus.FROZEN }),
     ),
-    /inactive/,
+    (error: any) => /inactive/.test(error.message) && refusal(error, 'AI_TENANT_INACTIVE'),
   );
 
   Features.AI_CHAT_ENABLED = originalFeature;
@@ -413,7 +436,7 @@ async function testSurfaceRejectsDisabledUsers() {
       },
       createManager(),
     ),
-    /User is not allowed to use AI/,
+    (error: any) => /User is not allowed to use AI/.test(error.message) && refusal(error, 'AI_USER_NOT_ALLOWED'),
   );
 
   Features.AI_CHAT_ENABLED = originalFeature;
@@ -599,7 +622,7 @@ async function testSurfaceRejectsPlatformHost() {
       },
       createManager(),
     ),
-    /platform host/,
+    (error: any) => /platform host/.test(error.message) && refusal(error, 'AI_PLATFORM_HOST'),
   );
 
   Features.AI_CHAT_ENABLED = originalFeature;
@@ -619,7 +642,7 @@ async function testKeyManagementRejectsPlatformHost() {
       },
       createManager(),
     ),
-    /platform host/,
+    (error: any) => /platform host/.test(error.message) && refusal(error, 'AI_PLATFORM_HOST'),
   );
 
   Features.AI_MCP_ENABLED = originalFeature;
@@ -639,7 +662,7 @@ async function testSettingsAccessRejectsPlatformHost() {
       },
       createManager(),
     ),
-    /platform host/,
+    (error: any) => /platform host/.test(error.message) && refusal(error, 'AI_PLATFORM_HOST'),
   );
 
   Features.AI_SETTINGS_ENABLED = originalFeature;
@@ -657,7 +680,7 @@ async function testCapabilitiesRejectPlatformHost() {
       },
       createManager(),
     ),
-    /platform host/,
+    (error: any) => /platform host/.test(error.message) && refusal(error, 'AI_PLATFORM_HOST'),
   );
 }
 
@@ -666,8 +689,51 @@ async function testMissingRightIsSaidInPlainWords() {
   assert.equal(missingRightMessage('portfolio_projects', 'member'), 'You need the right to modify projects, which your role does not give. An administrator can add it to your role.');
   assert.equal(missingRightMessage('budget', 'reader'), 'You need the right to read budget lines, which your role does not give. An administrator can add it to your role.');
   assert.match(missingRightMessage('ai_chat', 'member'), /^Your role lets you ask Plaid questions but not prepare changes with it/);
-  for (const [resource, level] of [['budget', 'reader'], ['infrastructure', 'reader'], ['applications', 'member'], ['knowledge', 'reader']] as const) {
+  // Master data (Plaid L9): the right of each page, named in words with its screen.
+  assert.equal(
+    missingRightMessage('working_day_profiles', 'reader', 'Master data › Working-day calendars'),
+    'You need the right to read working-day calendars (the right the Master data › Working-day calendars screen asks for), which your role does not give. An administrator can add it to your role.',
+  );
+  assert.equal(
+    missingRightMessage('analytics', 'reader', 'Master data › Analytics dimensions'),
+    'You need the right to read analytics dimensions (the right the Master data › Analytics dimensions screen asks for), which your role does not give. An administrator can add it to your role.',
+  );
+  for (const [resource, level] of [['budget', 'reader'], ['infrastructure', 'reader'], ['applications', 'member'], ['knowledge', 'reader'], ['working_day_profiles', 'reader']] as const) {
     assert.doesNotMatch(missingRightMessage(resource, level), /:|reader|member/, `${resource}: no permission code`);
+  }
+}
+
+/**
+ * Plaid L9, lot D: the exchange rates are read with the budget right at reader level, as their
+ * routes, limited access included; the refusal names the budget right and the exchange rates.
+ */
+async function testExchangeRatesNeedBudgetReader() {
+  const originalFeature = Features.AI_CHAT_ENABLED;
+  Features.AI_CHAT_ENABLED = true;
+  const context = { tenantId: 'tenant-1', userId: 'user-1', isPlatformHost: false, surface: 'chat' as const, authMethod: 'jwt' as const };
+  try {
+    assert.equal(
+      missingRightMessage('budget', 'reader', undefined, 'the exchange rates and the currency settings'),
+      'You need the right to read budget lines to read the exchange rates and the currency settings, which your role does not give. An administrator can add it to your role.',
+    );
+    const withoutBudget = createPolicy({ permissions: new Map([['ai_chat', 'reader'], ['budget_ops', 'admin']]) });
+    await assert.rejects(
+      () => withoutBudget.assertEntityTypeReadAccess(context, 'exchange_rates', createManager()),
+      (error: any) => {
+        assert.equal(error.message, missingRightMessage('budget', 'reader', undefined, 'the exchange rates and the currency settings'));
+        assert.equal(error.getResponse().code, 'MODULE_RIGHT_REQUIRED');
+        return true;
+      },
+    );
+    const reader = createPolicy({ permissions: new Map([['ai_chat', 'reader'], ['budget', 'reader']]) });
+    await reader.assertEntityTypeReadAccess(context, 'exchange_rates', createManager());
+    // Not reserved: a person in limited access reads them, their access is never read for it.
+    const noQuery = { ...createManager({ limited: true }), query: async () => { throw new Error('the access is read for the reserved families only'); } } as any;
+    assert.equal(await reader.canReadEntityType(context, 'exchange_rates', noQuery), true, 'budget:reader reads them, limited access included');
+    assert.deepEqual(await reader.listReadableEntityTypes(context, ['exchange_rates'] as any[], createManager({ limited: true })), ['exchange_rates']);
+    assert.deepEqual(await withoutBudget.listReadableEntityTypes(context, ['exchange_rates'] as any[], createManager()), []);
+  } finally {
+    Features.AI_CHAT_ENABLED = originalFeature;
   }
 }
 
@@ -687,7 +753,8 @@ async function testContributorWritesAtTheScreenLevel() {
   // Counter-checks: the name is not opened to a contributor; a member write stays at member.
   await assert.rejects(
     () => contributor.assertWriteAccess(chat, 'portfolio_projects', createManager(), { ...projectFields, fields: { name: 'Name', purpose: 'Purpose' } }),
-    (error: any) => error.message === contributorFieldsMessage('portfolio_projects', ['Name']),
+    (error: any) => error.message === contributorFieldsMessage('portfolio_projects', ['Name'])
+      && refusal(error, 'MODULE_RIGHT_REQUIRED', { resource: 'portfolio_projects', level: 'member' }),
   );
   await assert.rejects(
     () => contributor.assertWriteAccess(chat, 'portfolio_projects', createManager()),
@@ -709,7 +776,7 @@ async function testContributorWritesAtTheScreenLevel() {
   // MCP stays read only.
   await assert.rejects(
     () => member.assertWriteAccess({ ...chat, surface: 'mcp' }, 'portfolio_projects', createManager(), { level: 'contributor' }),
-    /MCP write access is not available/,
+    (error: any) => /MCP write access is not available/.test(error.message) && refusal(error, 'AI_MCP_WRITE_UNAVAILABLE'),
   );
 
   // The rights the refusals name: a contributor contributes to projects, modifies no module.
@@ -722,7 +789,122 @@ async function testContributorWritesAtTheScreenLevel() {
   Features.AI_CHAT_ENABLED = originalFeature;
 }
 
+/**
+ * The roles and their rights (Plaid L7 lot A) are read as Admin › Roles: users at admin level, by a
+ * person whose access is not limited. Below that, refused in words and left out of the families.
+ */
+async function testRolesNeedUsersAdminAndUnlimitedAccess() {
+  const originalFeature = Features.AI_CHAT_ENABLED;
+  Features.AI_CHAT_ENABLED = true;
+  const context = {
+    tenantId: 'tenant-1',
+    userId: 'user-1',
+    isPlatformHost: false,
+    surface: 'chat' as const,
+    authMethod: 'jwt' as const,
+  };
+  const withUsers = (level: string) => createPolicy({ permissions: new Map([['ai_chat', 'reader'], ['users', level]]) });
+  const administrator = createPolicy({
+    user: { id: 'user-1', status: 'enabled', role_id: 'role-admin', role: { role_name: 'Administrator', is_system: true } },
+  });
+  const adminManager = (limited = false) => createManager({ limited, userRoles: [{ role_id: 'role-admin', role: { role_name: 'Administrator' } }] });
+  try {
+    for (const family of ['roles', 'role_permissions'] as const) {
+      // users:reader: the right is missing, named in words with its screen.
+      const reader = withUsers('reader');
+      await assert.rejects(
+        () => reader.assertEntityTypeReadAccess(context, family, createManager()),
+        (error: any) => {
+          assert.equal(error.message, 'You need the right to administer users (the right the Admin › Roles screen asks for), which your role does not give. An administrator can add it to your role.');
+          assert.equal(error.getResponse().code, 'MODULE_RIGHT_REQUIRED');
+          return true;
+        },
+        `${family}: users:reader is refused`,
+      );
+      assert.equal(await reader.canReadEntityType(context, family, createManager()), false, `${family}: users:reader cannot read`);
+      assert.equal(await reader.canReadEntityType(context, family, createManager(), 'reader'), false, `${family}: a reader level asked is raised to admin`);
+
+      // users:admin in limited access: reserved to people with access to all data.
+      const admin = withUsers('admin');
+      await assert.rejects(
+        () => admin.assertEntityTypeReadAccess(context, family, createManager({ limited: true })),
+        (error: any) => {
+          assert.equal(error.message, DATA_ACCESS_RESERVED_MESSAGE);
+          assert.equal(error.getResponse().code, 'DATA_ACCESS_LIMITED');
+          return true;
+        },
+        `${family}: users:admin in limited access is refused`,
+      );
+      assert.equal(await admin.canReadEntityType(context, family, createManager({ limited: true })), false, `${family}: users:admin limited cannot read`);
+
+      // users:admin with access to all data, and an Administrator: read.
+      await admin.assertEntityTypeReadAccess(context, family, createManager());
+      assert.equal(await admin.canReadEntityType(context, family, createManager()), true, `${family}: users:admin unlimited reads`);
+      await administrator.assertEntityTypeReadAccess(context, family, adminManager());
+      assert.equal(await administrator.canReadEntityType(context, family, adminManager()), true, `${family}: an Administrator reads`);
+    }
+
+    // The readable families (the prompt's "Readable entity types"): the two families only for the
+    // last two, users still for the first two.
+    const requested = ['users', 'roles', 'role_permissions'] as any[];
+    assert.deepEqual(await withUsers('reader').listReadableEntityTypes(context, requested, createManager()), ['users'], 'users:reader');
+    assert.deepEqual(await withUsers('admin').listReadableEntityTypes(context, requested, createManager({ limited: true })), ['users'], 'users:admin limited');
+    assert.deepEqual(await withUsers('admin').listReadableEntityTypes(context, requested, createManager()), requested, 'users:admin unlimited');
+    assert.deepEqual(await administrator.listReadableEntityTypes(context, requested, adminManager()), requested, 'Administrator');
+
+    // Every other family keeps the reader level, without reading the access.
+    const noQuery = { ...createManager(), query: async () => { throw new Error('the access is read for the reserved families only'); } } as any;
+    assert.equal(await withUsers('reader').canReadEntityType(context, 'users', noQuery), true, 'users stays at reader level');
+    assert.equal(await withUsers('reader').canReadEntityType(context, 'users', noQuery, 'admin'), false, 'a level asked above it still applies');
+  } finally {
+    Features.AI_CHAT_ENABLED = originalFeature;
+  }
+}
+
+/** Plaid L9, lot A: the cost centers need the right of their page, limited access included, refused in words. */
+async function testCostCentersNeedTheirPageRight() {
+  const originalFeature = Features.AI_CHAT_ENABLED;
+  Features.AI_CHAT_ENABLED = true;
+  const context = {
+    tenantId: 'tenant-1',
+    userId: 'user-1',
+    isPlatformHost: false,
+    surface: 'chat' as const,
+    authMethod: 'jwt' as const,
+  };
+  try {
+    // budget:reader reads cost_center on its lines, not the family: the right of the page is missing.
+    const budgetReader = createPolicy({ permissions: new Map([['ai_chat', 'reader'], ['budget', 'reader']]) });
+    await assert.rejects(
+      () => budgetReader.assertEntityTypeReadAccess(context, 'cost_centers', createManager()),
+      (error: any) => {
+        assert.equal(error.message, 'You need the right to read cost centers (the right the Master data › Cost centers screen asks for), which your role does not give. An administrator can add it to your role.');
+        assert.equal(error.getResponse().code, 'MODULE_RIGHT_REQUIRED');
+        return true;
+      },
+      'budget:reader is refused',
+    );
+    assert.equal(await budgetReader.canReadEntityType(context, 'cost_centers', createManager()), false, 'budget:reader cannot read');
+
+    // cost_centers:reader reads, in limited access too: the family is not reserved.
+    const reader = createPolicy({ permissions: new Map([['ai_chat', 'reader'], ['cost_centers', 'reader']]) });
+    await reader.assertEntityTypeReadAccess(context, 'cost_centers', createManager());
+    await reader.assertEntityTypeReadAccess(context, 'cost_centers', createManager({ limited: true }));
+    assert.equal(await reader.canReadEntityType(context, 'cost_centers', createManager({ limited: true })), true, 'limited access reads the tree');
+    assert.deepEqual(
+      await reader.listReadableEntityTypes(context, ['cost_centers', 'budget_lines'] as any[], createManager({ limited: true })),
+      ['cost_centers'],
+      'listed among the readable families',
+    );
+  } finally {
+    Features.AI_CHAT_ENABLED = originalFeature;
+  }
+}
+
 async function run() {
+  await testRolesNeedUsersAdminAndUnlimitedAccess();
+  await testCostCentersNeedTheirPageRight();
+  await testExchangeRatesNeedBudgetReader();
   await testContributorWritesAtTheScreenLevel();
   await testMissingRightIsSaidInPlainWords();
   await testListReadableEntityTypesFiltersUnreadableFamilies();

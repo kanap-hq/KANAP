@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -34,9 +34,10 @@ vi.mock('./workspace/LocationContactsTab', () => ({ default: () => null }));
 vi.mock('./workspace/LocationRelationsTab', () => ({ default: () => null }));
 
 import api from '../../api';
+import { KanapDialogProvider } from '../../components/design';
 import LocationWorkspacePage from './LocationWorkspacePage';
 
-const mocked = api as unknown as Record<'get' | 'post' | 'patch', ReturnType<typeof vi.fn>>;
+const mocked = api as unknown as Record<'get' | 'post' | 'patch' | 'delete', ReturnType<typeof vi.fn>>;
 
 const LOCATION = {
   id: 'loc-1',
@@ -56,11 +57,13 @@ const duplicate = { response: { status: 409, data: { code: 'duplicate', message:
 function renderAt(path: string) {
   return render(
     <ThemeProvider theme={createAppTheme('light')}>
-      <MemoryRouter initialEntries={[path]}>
-        <Routes>
-          <Route path="/it/locations/:id/:tab" element={<LocationWorkspacePage />} />
-        </Routes>
-      </MemoryRouter>
+      <KanapDialogProvider>
+        <MemoryRouter initialEntries={[path]}>
+          <Routes>
+            <Route path="/it/locations/:id/:tab" element={<LocationWorkspacePage />} />
+          </Routes>
+        </MemoryRouter>
+      </KanapDialogProvider>
     </ThemeProvider>,
   );
 }
@@ -127,5 +130,96 @@ describe('LocationWorkspacePage relations badge', () => {
     const tab = await screen.findByRole('tab', { name: /workspace\.location\.tabs\.relations/ });
     await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/locations/loc-1/relation-counts'));
     expect(tab.textContent).toBe('workspace.location.tabs.relations');
+  });
+});
+
+describe('LocationWorkspacePage delete', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  function loadWith(usageCount: number) {
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/locations/loc-1') return { data: { ...LOCATION, usage_count: usageCount } };
+      return { data: [] };
+    });
+  }
+
+  it('refuses a location that still holds assets, with the reason and Close only, without calling the delete', async () => {
+    loadWith(2);
+    renderAt('/it/locations/loc-1/overview');
+    await screen.findByText('Paris DC');
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.delete' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('errors:LOCATION_IN_USE')).toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: 'common:buttons.delete' })).toBeNull();
+    expect(within(dialog).queryByText('common:delete.cannotUndo')).toBeNull();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'buttons.close' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(mocked.delete).not.toHaveBeenCalled();
+    expect(navigateMock).not.toHaveBeenCalled();
+  });
+
+  it('asks before deleting a location without assets, then deletes it and returns to the list', async () => {
+    loadWith(0);
+    mocked.delete.mockResolvedValueOnce({ data: { ok: true } });
+    renderAt('/it/locations/loc-1/overview');
+    await screen.findByText('Paris DC');
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.delete' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('common:delete.cannotUndo')).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'common:buttons.delete' }));
+    await waitFor(() => expect(mocked.delete).toHaveBeenCalledWith('/locations/loc-1'));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/it/locations'));
+  });
+
+  it('shows the server refusal when an asset arrived after the page loaded', async () => {
+    loadWith(0);
+    mocked.delete.mockRejectedValueOnce({
+      response: { status: 409, data: { code: 'LOCATION_IN_USE', message: 'Cannot delete location', usages: [{ type: 'assets', total: 1 }] } },
+    });
+    renderAt('/it/locations/loc-1/overview');
+    await screen.findByText('Paris DC');
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.delete' }));
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'common:buttons.delete' }));
+    expect(await screen.findByText('errors:LOCATION_IN_USE')).toBeInTheDocument();
+    expect(navigateMock).not.toHaveBeenCalled();
+  });
+});
+
+function rejectRead(status: number, message?: string) {
+  const error = new Error(`status ${status}`) as Error & { response?: { status: number; data?: { message: string } } };
+  error.response = message ? { status, data: { message } } : { status };
+  return error;
+}
+
+describe('LocationWorkspacePage missing location', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('shows a not-found screen and the link back to the list, without the form, when the read is a 404', async () => {
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/locations/LOC-9999') throw rejectRead(404, 'Location not found');
+      return { data: [] };
+    });
+    renderAt('/it/locations/LOC-9999/overview?sort=name&q=paris');
+    expect(await screen.findByText('workspace.location.notFound')).toBeInTheDocument();
+    expect(screen.queryByText('Location not found')).toBeNull();
+    expect(screen.queryByRole('tab')).toBeNull();
+    expect(screen.queryByRole('textbox')).toBeNull();
+    expect(screen.queryByText('workspace.location.untitled')).toBeNull();
+    expect(screen.getByRole('link', { name: 'pages.locations.title' })).toHaveAttribute('href', '/it/locations?sort=name&q=paris');
+  });
+
+  it('keeps the load failure banner, and not the not-found screen, when the read fails with a 500', async () => {
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/locations/LOC-500') throw rejectRead(500);
+      return { data: [] };
+    });
+    renderAt('/it/locations/LOC-500/overview');
+    expect(await screen.findByText('messages.loadLocationFailed')).toBeInTheDocument();
+    expect(screen.queryByText('workspace.location.notFound')).toBeNull();
+    expect(screen.getByRole('tab', { name: 'workspace.location.tabs.overview' })).toBeInTheDocument();
   });
 });

@@ -245,6 +245,10 @@ Wer Budgetzeilen (Budget) lesen kann, kann im Budget-Tab einen Kalender wählen,
 
 ---
 
+## Den Assistenten fragen
+
+[Plaid](ai-assistant.md#tool-calls) liest die Kalender für alle, die sie lesen dürfen, und zitiert die Arbeitstage eines Jahres so, wie KANAP sie berechnet. Fragen Sie zum Beispiel: „Wie viele Arbeitstage hat Frankreich 2026?“
+
 ## Tipps
 
 - **Beginnen Sie mit den Standardkalendern**: Einer pro Land deckt die meisten Budgets ab. Fügen Sie eine Region nur hinzu, wenn deren Feiertage abweichen, zum Beispiel Moselle in Frankreich oder Bayern in Deutschland.

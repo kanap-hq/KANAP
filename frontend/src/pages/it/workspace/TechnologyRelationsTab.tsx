@@ -7,6 +7,7 @@ import { useAuth } from '../../../auth/AuthContext';
 import { useKanapDialogs } from '../../../components/design';
 import useBudgetColumns from '../../../hooks/useBudgetColumns';
 import LinksAndFilesSection, { type LinkDraft, type LinksAndFilesFile, type LinksAndFilesLink } from '../../../components/workspace/LinksAndFilesSection';
+import { removeWebLinkWithUndo, webLinkDraft, webLinkLabel } from '../../../components/workspace/removeWebLink';
 import {
   RelationSections,
   budgetLinesSection,
@@ -21,6 +22,7 @@ import {
   type SectionSpec,
 } from '../../../components/workspace/relations';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
+import { EnsureApplicationFeedback, useApplicationFeedback } from '../applicationFeedback';
 
 export type TechnologyRelationKind = 'budget_lines' | 'contracts' | 'projects' | 'incidents';
 
@@ -65,8 +67,9 @@ export function technologyRelationsCount(data: TechnologyRelationsData | undefin
  * module the caller cannot read is absent. Documents and web links are the same section as on an
  * application (`LinksAndFilesSection`), saved by the technology's own routes.
  */
-export default function TechnologyRelationsTab({ id }: { id: string }) {
+function TechnologyRelationsTabView({ id }: { id: string }) {
   const { t, i18n } = useTranslation(['it', 'common', 'portfolio', 'ops']);
+  const feedback = useApplicationFeedback();
   const theme = useTheme();
   const { hasLevel } = useAuth();
   const dialogs = useKanapDialogs();
@@ -124,16 +127,17 @@ export default function TechnologyRelationsTab({ id }: { id: string }) {
 
   const removeLink = async (linkRow: LinksAndFilesLink) => {
     setError(null);
-    const previous = queryClient.getQueryData<LinkRow[]>(linksKey);
-    queryClient.setQueryData<LinkRow[]>(linksKey, (rows) => (rows ? rows.filter((row) => row.id !== linkRow.id) : rows));
-    try {
-      await api.delete(`/technologies/${id}/links/${linkRow.id}`);
-    } catch (e) {
-      if (previous) queryClient.setQueryData(linksKey, previous);
-      failed(e);
-      return;
-    }
-    await refreshList(linksKey);
+    await removeWebLinkWithUndo<LinkRow[]>({
+      queryClient,
+      queryKey: linksKey,
+      without: (rows) => rows.filter((row) => row.id !== linkRow.id),
+      commit: () => api.delete(`/technologies/${id}/links/${linkRow.id}`),
+      refresh: () => refreshList(linksKey),
+      restore: () => saveLink(null, webLinkDraft(linkRow)),
+      message: t('common:linksAndFiles.removed', { name: webLinkLabel(linkRow) }),
+      feedback,
+      onError: failed,
+    });
   };
 
   const uploadFiles = async (chosen: File[]) => {
@@ -228,5 +232,14 @@ export default function TechnologyRelationsTab({ id }: { id: string }) {
         onRemoveFile={(file) => { void removeFile(file); }}
       />
     </Stack>
+  );
+}
+
+/** The tab, with the undo message when the page does not already show one. */
+export default function TechnologyRelationsTab(props: React.ComponentProps<typeof TechnologyRelationsTabView>) {
+  return (
+    <EnsureApplicationFeedback>
+      <TechnologyRelationsTabView {...props} />
+    </EnsureApplicationFeedback>
   );
 }

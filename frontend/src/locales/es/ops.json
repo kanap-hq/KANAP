@@ -47,22 +47,15 @@
       "history": "Historial"
     },
     "editor": {
-      "productNameRequired": "El nombre del producto es obligatorio",
-      "currencyMust3": "La moneda debe tener 3 letras",
-      "payingCompanyRequired": "La empresa pagadora es obligatoria",
-      "accountRequired": "La cuenta es obligatoria",
-      "dimensionRequired": "El campo {{name}} es obligatorio",
       "requiredLeaveTitle_one": "Falta un valor obligatorio",
       "requiredLeaveTitle_other": "Faltan valores obligatorios",
       "requiredLeaveMessage_one": "El campo {{names}} es obligatorio. Elija un valor antes de salir.",
       "requiredLeaveMessage_other": "Los campos {{names}} son obligatorios. Elija valores antes de salir.",
       "requiredLeaveStay": "Quedarse",
       "requiredLeaveConfirm": "Salir de todos modos",
-      "effectiveStartRequired": "La fecha de inicio efectivo es obligatoria",
       "failedToCreate": "No se pudo crear la línea",
       "failedToSave": "No se pudo guardar",
-      "failedToLoad": "No se pudo cargar la línea",
-      "obsoleteAccount": "Cuenta obsoleta detectada. La cuenta seleccionada no pertenece al plan de cuentas de la empresa. Actualice la cuenta."
+      "failedToLoad": "No se pudo cargar la línea"
     },
     "budget": {
       "title": "Presupuesto",
@@ -370,6 +363,7 @@
       "deleted_other": "{{count}} contratos eliminados"
     },
     "title": "Contratos",
+    "empty": "Todavía no hay contratos.",
     "newButton": "Nuevo",
     "importCsv": "Importar CSV",
     "exportTitle": "Exportar contratos",
@@ -437,7 +431,8 @@
       "overview": "Vista general",
       "budget": "Presupuesto",
       "compliance": "Conformidad",
-      "relations": "Relaciones"
+      "relations": "Relaciones",
+      "history": "Historial"
     },
     "sections": {
       "parties": "Partes",
@@ -544,6 +539,16 @@
       "title": "Líneas presupuestarias vinculadas",
       "empty": "Ninguna línea presupuestaria vinculada.",
       "pickerLabel": "Vincular o quitar líneas presupuestarias",
+      "mismatch": {
+        "notSet": "Sin definir",
+        "line": "{{field}}: {{line}} en la línea, {{contract}} en el contrato",
+        "fields": {
+          "paying_company": "Empresa pagadora",
+          "cost_center": "Centro de coste",
+          "supplier": "Proveedor",
+          "currency": "Moneda"
+        }
+      },
       "columns": {
         "ref": "Ref.",
         "line": "Línea presupuestaria",
@@ -1088,6 +1093,8 @@
       "warningsTitle": "Advertencias",
       "ignoredColumns": "Columnas ignoradas: {{columns}}.",
       "firstSheetOnly": "Solo se leyó la primera hoja, {{name}}.",
+      "calculationLines": "{{item}} · {{column}} {{year}}: {{count}} líneas de cálculo ({{total}}) ya no determinarán estos importes.",
+      "calculationLines_one": "{{item}} · {{column}} {{year}}: 1 línea de cálculo ({{total}}) ya no determinará estos importes.",
       "ignoredColumns_one": "Columna ignorada: {{columns}}.",
       "createsTitle": "Creados por la carga",
       "createSuppliersList": "Proveedores: {{names}}",
@@ -1499,6 +1506,8 @@
       "totalMetric": "{{metric}}, total",
       "ofFilteredMetric": "{{pct}} % del total filtrado",
       "shareSubtitle": "Participación en el total anual ({{metric}})",
+      "pieShareSubtitle": "Participación en el top {{count}} ({{metric}})",
+      "shareOfAllLines": "Participación de todas las líneas",
       "chartTitle": "Top {{count}} {{type}} · {{metric}} {{year}}",
       "chartTitle_all": "Top {{count}} líneas · {{metric}} {{year}}"
     },
@@ -1587,6 +1596,18 @@
       "totalMetric": "Total {{metric}}",
       "unassigned": "Sin asignar",
       "unnamed": "Valor sin nombre",
+      "lines": "Líneas",
+      "nature": "Naturaleza",
+      "detail": "Detalle por línea",
+      "split": "Reparto OPEX / CAPEX",
+      "opexShare": "Proporción OPEX",
+      "capexShare": "Proporción CAPEX",
+      "splitChartTitle": "Reparto OPEX y CAPEX por {{dimension}} · {{year}}",
+      "level": "Nivel",
+      "levelValue": "Valor",
+      "levelLine": "Línea",
+      "hidden_one": "y {{count}} línea fuera de su acceso",
+      "hidden_other": "y {{count}} líneas fuera de su acceso",
       "defaultDimensionInSentence": "dimensión analítica"
     },
     "staffing": {
@@ -1875,6 +1896,7 @@
     "titleWithCurrency": "Líneas presupuestarias ({{currency}})",
     "type": "Tipo",
     "newLine": "Nueva línea",
+    "empty": "Todavía no hay líneas presupuestarias.",
     "opexLine": "Línea OPEX",
     "capexLine": "Línea CAPEX",
     "exportTitle": "Exportar archivo presupuestario",
@@ -1893,8 +1915,19 @@
       "kept_one": "{{count}} línea presupuestaria no se puede eliminar y se conserva:",
       "kept_other": "{{count}} líneas presupuestarias no se pueden eliminar y se conservan:",
       "deleted_one": "{{count}} línea presupuestaria eliminada",
-      "deleted_other": "{{count}} líneas presupuestarias eliminadas"
+      "deleted_other": "{{count}} líneas presupuestarias eliminadas",
+      "failed": "No se pudo eliminar la línea presupuestaria."
     },
-    "readOnlyInYourAccess": "Solo lectura en su acceso"
+    "readOnlyInYourAccess": "Solo lectura en su acceso",
+    "creation": {
+      "record": "La línea presupuestaria",
+      "missing": "Falta: {{fields}}",
+      "placeFirst": "Elija primero la empresa pagadora o el centro de coste.",
+      "leaveTitle": "Esta línea está incompleta",
+      "leaveComplete": "Completarla",
+      "leaveDelete": "Eliminarla",
+      "leaveAnyway": "Salir de todos modos",
+      "completeFailed": "No se pudo comprobar la línea."
+    }
   }
 }

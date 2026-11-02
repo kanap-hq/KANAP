@@ -49,7 +49,7 @@ Jede Zeile öffnet den Vertrag. Ihre Suche, Filter und Sortierung bleiben bei de
 **Standardspalten**:
 
 - **Vertrag**, **Lieferant**, **Unternehmen**
-- **Nächste Frist**: der nächste Kündigungstermin eines Vertrags mit stillschweigender Verlängerung, oder das Ende jedes anderen Vertrags. Auf das Datum folgt „in n Tagen“. Ein abgelaufener Vertrag zeigt ausgegraut den Tag, an dem er endete
+- **Nächste Frist**: „Kündigung möglich bis {date}“, wenn dieses Datum der Kündigungstermin ist und vor dem Ende der Laufzeit liegt, oder „Endet am {date}“, wenn das Datum das Vertragsende ist. Die Zeile endet mit „in n Tagen“. Ein abgelaufener Vertrag zeigt ausgegraut den Tag, an dem er endete
 - **Stand**: siehe unten
 - **Jahresbetrag**: der Betrag bei Unterzeichnung, gefolgt von seiner Währung
 - **Verpflichtet**, **Budget** und **Abweichung** für das gewählte Budgetjahr. Siehe [Budgetspalten](#budgetspalten)
@@ -136,7 +136,7 @@ Zum Bearbeiten benötigen Sie `contracts:member`. Leser sehen dieselbe Seite mit
 
 **Teilen** in der Kopfzeile schickt Kollegen Ihres Arbeitsbereichs einen Link zum Vertrag per E-Mail.
 
-Die Seite hat vier Reiter: **Übersicht**, **Budget**, **Konformität** und **Verknüpfungen**. Die Adressen der früheren Reiter **Details** und **Aufgaben** öffnen die Übersicht.
+Die Seite hat fünf Reiter: **Übersicht**, **Budget**, **Konformität**, **Verknüpfungen** und **Verlauf** (die Änderungen am Vertrag, siehe [Verlauf der Datensätze](record-history.md)). Die Adressen der früheren Reiter **Details** und **Aufgaben** öffnen die Übersicht.
 
 ### Übersicht
 
@@ -158,7 +158,7 @@ Die Seite berechnet diese Daten neu, während Sie Beginn, Laufzeit, Kündigungsf
 
 ### Budget
 
-Der Reiter listet die verknüpften Budgetzeilen, OPEX und CAPEX zusammen, mit Referenz (`BL-12`), Name, Typ und Unternehmen. Mit der Auswahl unter der Tabelle verknüpfen oder entfernen Sie Zeilen.
+Der Reiter listet die verknüpften Budgetzeilen, OPEX und CAPEX zusammen, mit Referenz (`BL-12`), Name, Typ und Unternehmen. Mit der Auswahl unter der Tabelle verknüpfen oder entfernen Sie Zeilen. Eine Zeile, deren zahlendes Unternehmen, Kostenstelle, Lieferant oder Währung vom Vertrag abweicht, zeigt eine kleine orangefarbene Markierung. Fahren Sie mit der Maus über die Markierung, um jeden Unterschied zu sehen, mit dem Wert auf der Zeile und dem Wert auf dem Vertrag. Die Auswahl zeigt dieselbe Markierung an einer Zeile, bevor Sie sie verknüpfen. Die Verknüpfung bleibt möglich. Die Markierung erscheint für eine Zeile, die Sie lesen dürfen.
 
 Mit Lesezugriff auf Budgetzeilen (`budget:reader`) zeigt der Reiter auch Zahlen:
 
@@ -246,7 +246,7 @@ Der Abschnitt fehlt, wenn es nichts vorzuschlagen gibt.
 
 - **Link hinzufügen** öffnet einen Dialog für eine URL und einen optionalen Namen; der Link wird sofort gespeichert. Um einen Link zu ändern, fahren Sie mit der Maus über seine Zeile und klicken Sie auf den Stift.
 - **Datei anhängen** öffnet die Dateiauswahl. Sie können Dateien auch auf den Abschnitt ziehen.
-- Um einen Link oder eine Datei zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz. Das Löschen einer Datei fragt zuerst nach einer Bestätigung.
+- Um einen Link oder eine Datei zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz. Das Entfernen eines Links zeigt eine Meldung und bietet **Rückgängig** an, womit der Link wieder angelegt wird. Das Löschen einer Datei fragt zuerst nach einer Bestätigung.
 
 ### Einen Vertrag löschen
 
@@ -321,11 +321,12 @@ Der Export schreibt eine CSV-Datei oder eine Excel-Arbeitsmappe (`.xlsx`): Wähl
 
 Halten Sie Ihre Vertragsliste mit CSV-Dateien oder Excel-Arbeitsmappen mit anderen Werkzeugen synchron (`contracts:admin`).
 
-**Export**: lädt die Verträge der Liste (oder, auf Wunsch im Dialog, alle Verträge) mit diesen Spalten herunter: `name`, `company_name`, `supplier_name`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. Die berechneten Daten (Laufzeitende, Kündigungstermine, Stand) werden nicht exportiert.
+**Export**: lädt die Verträge der Liste (oder, auf Wunsch im Dialog, alle Verträge) herunter. Die Spalten tragen Titel in der Sprache Ihrer Oberfläche; ihre technischen Namen, die der Import ebenfalls liest, sind `name`, `company_name`, `supplier_name`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. Die berechneten Daten (Laufzeitende, Kündigungstermine, Stand) werden nicht exportiert.
 
 **Import**:
 
 - Verwenden Sie die **Vorprüfung**, um die Datei vor dem Anwenden zu prüfen
+- **Beispiel herunterladen** im Importdialog liefert zwei Beispielverträge und was jede Spalte aufnimmt. Siehe [Beispieldateien](csv-files.md#example-files)
 - Eine Zeile wird einem Vertrag über Vertragsnamen und Lieferant zugeordnet
 - Unterstützt Neuanlage und Aktualisierungen
 - Die Datei hat keine Spalte für das Ende der Gültigkeit. Bei einer Aktualisierung behält ein leeres `status`, oder eines, das dem aktuellen Status des Vertrags entspricht, sein Ende der Gültigkeit. Ein abweichender Status wird angewendet: `enabled` löscht das Ende der Gültigkeit, und `disabled` beendet den Vertrag heute, sofern sein Ende der Gültigkeit nicht bereits vergangen ist

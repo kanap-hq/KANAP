@@ -188,8 +188,27 @@ describe('history lines', () => {
     ]);
   });
 
+  it('reads a dimension set on creation as its value only', () => {
+    const lines = historyLines(item({ kind: 'record' }, [
+      { field: 'dimension', dimension: 'Cost pool', after: 'Cloud' },
+    ]), context);
+    expect(lines).toEqual([{ label: 'Dimension Cost pool', after: 'Cloud' }]);
+  });
+
+  it('compresses consecutive months into a range and keeps separate months', () => {
+    const amount = (months: string[], wholeYear?: boolean) => historyLines(item({ kind: 'amounts' }, [
+      { field: 'planned', before: '100.00', after: '150.00', year: 2027, column: 'planned', months, ...(wholeYear ? { wholeYear } : {}) },
+    ]), context);
+
+    const year = Array.from({ length: 12 }, (_, index) => `2027-${String(index + 1).padStart(2, '0')}`);
+    expect(amount(year, true)[0].suffix).toEqual(['months January to December 2027']);
+    expect(amount(['2027-05', '2027-03', '2027-04'])[0].suffix).toEqual(['months March to May 2027']);
+    expect(amount(['2027-03', '2027-01'])[0].suffix).toEqual(['months Jan 2027, Mar 2027']);
+    expect(amount(['2026-12', '2027-01', '2027-02'])[0].suffix).toEqual(['months December 2026 to February 2027']);
+  });
+
   it('names the version in the header and the budget column of a round input', () => {
-    expect(historySubjectText({ kind: 'version', label: 'Y2026' }, t)).toBe('Version Y2026');
+    expect(historySubjectText({ kind: 'version', label: '2026' }, t)).toBe('Budget 2026');
     expect(historySubjectText({ kind: 'round_input', label: 'planned' }, t)).toBe('Budget input Budget');
     expect(historySubjectText({ kind: 'allocations', label: 'Y2026' }, t)).toBe('Allocation Y2026');
     expect(historySubjectText({ kind: 'record' }, t)).toBeNull();
@@ -238,8 +257,8 @@ describe('history lines', () => {
   });
 
   it('reads a technical child creation and deletion by its title alone', () => {
-    const versionCreate = { ...item({ kind: 'version', label: 'Y2026' }, []), action: 'create' };
-    expect(historyChildTitle(versionCreate, t)).toBe('Version Y2026 added');
+    const versionCreate = { ...item({ kind: 'version', label: '2027' }, []), action: 'create' };
+    expect(historyChildTitle(versionCreate, t)).toBe('Budget 2027 added');
     expect(historyChildTitle({ ...item({ kind: 'technology_version', label: '2.1' }, []), action: 'create' }, t)).toBe('Version 2.1 added');
     expect(historyChildTitle({ ...item({ kind: 'hardware' }, []), action: 'create' }, t)).toBe('Hardware added');
     expect(historyChildTitle({ ...item({ kind: 'hardware' }, []), action: 'delete' }, t)).toBe('Hardware removed');
@@ -250,9 +269,9 @@ describe('history lines', () => {
     const allocationCreate = { ...item({ kind: 'allocations', label: 'Y2026' }, []), action: 'create' };
     expect(historyChildTitle(allocationCreate, t)).toBe('Allocation Y2026 added');
     const versionDelete = { ...versionCreate, action: 'delete' };
-    expect(historyChildTitle(versionDelete, t)).toBe('Version Y2026 deleted');
+    expect(historyChildTitle(versionDelete, t)).toBe('Budget 2027 deleted');
     expect(historyChildTitle({
-      ...item({ kind: 'version', label: 'Y2026' }, [{ field: 'input_grain', after: 'annual' }]),
+      ...item({ kind: 'version', label: '2027' }, [{ field: 'input_grain', after: 'annual' }]),
       action: 'create',
     }, t)).toBeNull();
     expect(historyChildTitle({ ...item({ kind: 'record' }, []), action: 'create' }, t)).toBeNull();
@@ -273,5 +292,238 @@ describe('history lines', () => {
     expect(historyActorText({ kind: 'import', name: 'Ava Reader' }, t)).toBe('Import');
     expect(historyActorText({ kind: 'assistant', name: 'Ava Reader' }, t)).toBe('Plaid for Ava Reader');
     expect(historyActorText({ kind: 'assistant', name: null }, t)).toBe('Plaid');
+  });
+});
+
+describe('contact and mapping history lines', () => {
+  it('names a hidden contact field without its value, and a mapping group by its title', () => {
+    expect(historyLines(item({ kind: 'record' }, [
+      { field: 'email', text: 'emailChanged' },
+      { field: 'phone', text: 'phoneChanged' },
+      { field: 'mobile', text: 'mobileChanged' },
+      { field: 'notes', text: 'notesChanged' },
+    ]), context)).toEqual([
+      { text: 'Email changed' },
+      { text: 'Phone changed' },
+      { text: 'Mobile changed' },
+      { text: 'Notes changed' },
+    ]);
+    expect(historyLines(item({ kind: 'set' }, [
+      { field: 'mapping_group', event: 'added', after: 'Header' },
+    ]), context)).toEqual([{ text: 'Mapping group added: Header' }]);
+    expect(historyLines(item({ kind: 'set' }, [
+      { field: 'mapping_rule', event: 'removed', before: 'Customer id' },
+    ]), context)).toEqual([{ text: 'Mapping rule removed: Customer id' }]);
+  });
+});
+
+describe('contract history lines', () => {
+  it('reads the renewal markers as sentences, with the contract screen labels', () => {
+    expect(historyLines(item({ kind: 'record' }, [
+      { field: 'renewal_decision', after: 'terminate' },
+      { field: 'renewal_reason', after: 'Price increase' },
+    ]), context)).toEqual([
+      { text: 'Renewal decided: Terminate' },
+      { text: 'Justification: Price increase' },
+    ]);
+    expect(historyLines(item({ kind: 'record' }, [{ field: 'renewal_decision', after: 'end' }]), context))
+      .toEqual([{ text: 'Renewal decided: Let it end' }]);
+    expect(historyLines(item({ kind: 'record' }, [{ field: 'renewal_decision', after: 'undo' }]), context))
+      .toEqual([{ text: 'Renewal decision undone' }]);
+    expect(historyLines(item({ kind: 'record' }, [
+      { field: 'renewal_stop', text: 'renewalStopped' },
+      { field: 'renewal_resume', text: 'renewalResumed' },
+      { field: 'notes', text: 'notesChanged' },
+    ]), context)).toEqual([
+      { text: 'Renewal stopped' },
+      { text: 'Renewal resumed' },
+      { text: 'Notes changed' },
+    ]);
+    expect(historyLines(item({ kind: 'record' }, [
+      { field: 'renewal_task', event: 'added', after: { kind: 'task', id: ID, label: 'Decide', reference: 'T-12' } },
+    ]), context)).toEqual([{ text: 'Renewal task created: Decide (T-12)' }]);
+  });
+
+  it('counts the budget lines outside the reader access, never names them', () => {
+    expect(historyLines(item({ kind: 'budget_line' }, [
+      { field: 'budget_line', event: 'added', after: { kind: 'budget_line', id: ID, label: 'Hosting', reference: 'BL-3' } },
+      { field: 'budget_lines_outside', event: 'added', after: 2 },
+    ]), context)).toEqual([
+      { text: 'Budget line added: Hosting (BL-3)' },
+      { text: 'and 2 lines outside your access' },
+    ]);
+    expect(historyLines(item({ kind: 'budget_line' }, [
+      { field: 'budget_lines_outside', event: 'removed', before: 1 },
+    ]), context)).toEqual([{ text: '1 budget line outside your access removed' }]);
+  });
+
+  it('names a compliance item by its requirement and reads its state', () => {
+    expect(historySubjectText({ kind: 'compliance_item', label: 'exit_plan' }, t)).toBe('Exit plan');
+    expect(historySubjectText({ kind: 'compliance_item', label: 'unknown_code' }, t)).toBeNull();
+    expect(historyLines(item({ kind: 'compliance_item', label: 'exit_plan' }, [
+      { field: 'compliance_state', before: null, after: 'not_applicable' },
+      { field: 'compliance_reference', before: 'Clause 4', after: 'Clause 5' },
+    ]), context)).toEqual([
+      { label: 'State', before: '—', after: 'Not applicable' },
+      { label: 'Reference', before: 'Clause 4', after: 'Clause 5' },
+    ]);
+    expect(historyLines(item({ kind: 'record' }, [{ field: 'billing_frequency', before: 'annual', after: 'monthly' }]), context))
+      .toEqual([{ label: 'Billing', before: 'Annual', after: 'Monthly' }]);
+  });
+});
+
+describe('incident history lines', () => {
+  it('reads the incident fields with the register labels', () => {
+    const incident: HistoryTextContext = { ...context, table: 'incidents' };
+    expect(historyLines(item({ kind: 'record' }, [
+      { field: 'category', before: 'security', after: 'data' },
+      { field: 'severity', before: 'low', after: 'critical' },
+      { field: 'description', text: 'descriptionChanged' },
+      { field: 'notified_parties', before: null, after: 'Regulator' },
+    ]), incident)).toEqual([
+      { label: 'Category', before: 'Security', after: 'Data' },
+      { label: 'Severity', before: 'Low', after: 'Critical' },
+      { text: 'Description changed' },
+      { label: 'Parties informed', before: '—', after: 'Regulator' },
+    ]);
+  });
+});
+
+describe('application history entries', () => {
+  const fr = i18n.getFixedT('fr', ['admin', 'ops', 'common', 'it']) as unknown as Translate;
+  const en = i18n.getFixedT('en', ['admin', 'ops', 'common', 'it']) as unknown as Translate;
+
+  it('reads a deployment by its environment, as the Deployments tab names it', () => {
+    const added = item({ kind: 'instance' }, [{ field: 'instance', event: 'added', after: 'pre_prod' }]);
+    expect(historyLines(added, { t: en, locale: 'en' }).map((line) => line.text)).toEqual(['Environment added: Pre-prod']);
+    expect(historyLines(added, { t: fr, locale: 'fr' }).map((line) => line.text)).toEqual(['Environnement ajouté : Pré-prod']);
+    expect(historySubjectText({ kind: 'instance', label: 'prod' }, en)).toBe('Prod environment');
+  });
+
+  it('names a server under its environment, or the noun when the asset is not readable', () => {
+    const changes: RecordHistoryChange[] = [{ field: 'assignment', event: 'added', after: { kind: 'asset', id: ID, label: 'srv-db-1', reference: 'AST-4' } }];
+    expect(historyLines(item({ kind: 'assignment', label: 'prod' }, changes), { t: en, locale: 'en' })[0].text).toBe('Server added: srv-db-1 (AST-4)');
+    expect(historySubjectText({ kind: 'assignment', label: 'prod' }, fr)).toBe('Environnement Prod');
+    const hidden = item({ kind: 'assignment' }, [{ field: 'assignment', event: 'removed', before: { hidden: true, kind: 'asset' } }]);
+    expect(historyLines(hidden, { t: fr, locale: 'fr' })[0].text).toBe('Serveur retiré : un actif');
+  });
+});
+
+describe('project history entries', () => {
+  const fr = i18n.getFixedT('fr', ['admin', 'ops', 'common', 'portfolio']) as unknown as Translate;
+  const en = i18n.getFixedT('en', ['admin', 'ops', 'common', 'portfolio']) as unknown as Translate;
+  const jane = { kind: 'user', id: ID, label: 'Jane Doe' };
+
+  it('names a phase, a milestone, a time entry and a team member as they are added or removed', () => {
+    const changes: RecordHistoryChange[] = [
+      { field: 'phase', event: 'added', after: 'Design' },
+      { field: 'milestone', event: 'removed', before: 'Go-live' },
+      { field: 'time_entry', event: 'added', after: jane },
+      { field: 'it_team', event: 'added', after: jane },
+      { field: 'business_team', event: 'removed', before: { hidden: true, kind: 'user' } },
+    ];
+    expect(historyLines(item({ kind: 'team' }, changes), { t: en, locale: 'en' }).map((line) => line.text)).toEqual([
+      'Phase added: Design',
+      'Milestone removed: Go-live',
+      'Time entry added: Jane Doe',
+      'IT team member added: Jane Doe',
+      'Business team member removed: a user',
+    ]);
+    const frLines = historyLines(item({ kind: 'phase' }, changes.slice(0, 1)), { t: fr, locale: 'fr' });
+    expect(frLines[0].text).toMatch(/^Phase ajoutée\u00a0: Design$/);
+  });
+
+  it('titles an updated phase or milestone by its name', () => {
+    expect(historySubjectText({ kind: 'phase', label: 'Design' }, en)).toBe('Design');
+    expect(historySubjectText({ kind: 'milestone', label: 'Go-live' }, en)).toBe('Go-live');
+    expect(historySubjectText({ kind: 'phase' }, en)).toBeNull();
+  });
+
+  it('reads a scoring criterion by its name and options, never an identifier', () => {
+    const lines = historyLines(item({ kind: 'record' }, [
+      { field: 'criterion', dimension: 'Strategic fit', before: 'Low', after: 'High' },
+      { field: 'criterion', dimension: null, before: 'High', after: { hidden: true, kind: 'criterion_value', deleted: true } },
+    ]), { t: en, locale: 'en' });
+    expect(lines).toEqual([
+      { label: 'Criterion Strategic fit', before: 'Low', after: 'High' },
+      { label: 'A criterion', before: 'High', after: 'a deleted option' },
+    ]);
+    expect(JSON.stringify(lines)).not.toContain(ID);
+  });
+
+  it('reads a link whose address changed under its label, from the old address to the new', () => {
+    const changes: RecordHistoryChange[] = [
+      { field: 'link', dimension: 'Specification', before: 'https://a.example/spec', after: 'https://b.example/spec' },
+      { field: 'link', event: 'added', after: 'Doc (https://example.invalid/two)' },
+    ];
+    expect(historyLines(item({ kind: 'link' }, changes), { t: en, locale: 'en' })).toEqual([
+      { label: 'Link Specification changed', before: 'https://a.example/spec', after: 'https://b.example/spec' },
+      { text: 'Link added: Doc (https://example.invalid/two)' },
+    ]);
+    const frLines = historyLines(item({ kind: 'link' }, changes.slice(0, 1)), { t: fr, locale: 'fr' });
+    expect(frLines[0].label).toBe('Lien Specification modifié');
+  });
+
+  it('reads an effort share as a percentage, under the person', () => {
+    const changes: RecordHistoryChange[] = [
+      { field: 'effort_allocation_it', dimension: 'Jane Doe', before: 40, after: 60 },
+      { field: 'effort_allocation_business', dimension: null, before: null, after: 25 },
+    ];
+    expect(historyLines(item({ kind: 'team' }, changes), { t: en, locale: 'en' })).toEqual([
+      { label: 'IT effort share, Jane Doe', before: '40%', after: '60%' },
+      { label: 'Business effort share, a user', before: '—', after: '25%' },
+    ]);
+    const frLine = historyLines(item({ kind: 'team' }, changes.slice(0, 1)), { t: fr, locale: 'fr' })[0];
+    expect(frLine.after).toBe('60\u00a0%');
+  });
+
+  it('names the edited document by the label of its screen', () => {
+    const lines = (slot: string, t: Translate, locale: string) =>
+      historyLines(item({ kind: 'document' }, [{ field: 'document_updated', after: slot }]), { t, locale }).map((line) => line.text);
+    expect(lines('purpose', en, 'en')).toEqual(['Document modified: Purpose']);
+    expect(lines('risks_mitigations', en, 'en')).toEqual(['Document modified: Risks']);
+    expect(lines('purpose', fr, 'fr')[0]).toMatch(/Objectif$/);
+    expect(lines('specification', en, 'en')).toEqual(['Document modified']);
+  });
+});
+
+describe('request history entries', () => {
+  const fr = i18n.getFixedT('fr', ['admin', 'ops', 'common', 'portfolio']) as unknown as Translate;
+  const en = i18n.getFixedT('en', ['admin', 'ops', 'common', 'portfolio']) as unknown as Translate;
+  const task = { kind: 'task', id: ID, label: 'Follow up', reference: 'T-4' };
+
+  it('reads the request fields with its screen labels, the rich texts as changed only', () => {
+    const changes: RecordHistoryChange[] = [
+      { field: 'origin_task_id', after: task },
+      { field: 'origin_task_id', before: { hidden: true, kind: 'task', deleted: true }, after: null },
+      { field: 'status', before: 'pending_review', after: 'candidate' },
+      { field: 'current_situation', text: 'currentSituationChanged' },
+      { field: 'feasibility_review', text: 'feasibilityReviewChanged' },
+    ];
+    const read = (t: Translate, locale: string) => historyLines(item({ kind: 'record' }, changes), { t, locale, table: 'portfolio_requests' });
+    expect(read(en, 'en')).toEqual([
+      { label: 'Created from task', after: 'Follow up (T-4)' },
+      { label: 'Created from task', before: 'a deleted task', after: '—' },
+      { label: 'Status', before: 'Pending review', after: 'Candidate' },
+      { text: 'Current situation changed' },
+      { text: 'Feasibility review changed' },
+    ]);
+    const frLines = read(fr, 'fr');
+    expect(frLines[0]).toEqual({ label: 'Créée depuis la tâche', after: 'Follow up (T-4)' });
+    expect(frLines[2]).toEqual({ label: 'Statut', before: 'En attente de revue', after: 'Candidat' });
+    expect(frLines[3]).toEqual({ text: 'Situation actuelle modifiée' });
+  });
+
+  it('names a business process and a request dependency as the request adds them', () => {
+    const changes: RecordHistoryChange[] = [
+      { field: 'business_process', event: 'added', after: { kind: 'business_process', id: ID, label: 'Order to cash' } },
+      { field: 'dependency', event: 'added', after: { kind: 'request', id: ID, label: 'Request Beta', reference: 'REQ-12' } },
+    ];
+    expect(historyLines(item({ kind: 'business_process' }, changes), { t: en, locale: 'en' }).map((line) => line.text)).toEqual([
+      'Business process added: Order to cash',
+      'Dependency added: Request Beta (REQ-12)',
+    ]);
+    expect(historyLines(item({ kind: 'business_process' }, changes.slice(0, 1)), { t: fr, locale: 'fr' })[0].text)
+      .toMatch(/ : Order to cash$/);
   });
 });

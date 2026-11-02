@@ -260,6 +260,7 @@ jobs:
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: backend
+          build-contexts: help-docs=doc/help/docs
           target: runtime
           platforms: linux/amd64
           tags: kanap-api:release-check
@@ -277,6 +278,7 @@ jobs:
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: backend
+          build-contexts: help-docs=doc/help/docs
           target: runtime
           platforms: linux/amd64
           tags: ${{ steps.meta-api.outputs.tags }}
@@ -293,6 +295,7 @@ jobs:
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: backend
+          build-contexts: help-docs=doc/help/docs
           target: dev
           platforms: linux/amd64
           tags: ${{ steps.meta-tools.outputs.tags }}

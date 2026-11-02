@@ -44,6 +44,32 @@ const SEARCH_STALE_MS = 30_000;
 /** The label shown while a chosen value's label loads. */
 const PENDING_LABEL = '…';
 
+/**
+ * The id of the option that offers to create the missing record. It is not a row:
+ * choosing it runs the picker's `create` callback, and only a returned record becomes the value.
+ */
+export const LOOKUP_CREATE_ID = '__lookup_create__';
+
+type LookupCreateMarker = LookupOption & {
+  /** The trimmed text the option offers to create. */
+  lookupCreateText: string;
+  /** The option's label, computed while rendering the picker (never inside the list's own render). */
+  lookupCreateLabel: string;
+};
+
+/** The trimmed text of the create option, or null when the option is a real record. */
+export function lookupCreateText(option: LookupOption | null | undefined): string | null {
+  if (!option || option.id !== LOOKUP_CREATE_ID) return null;
+  const text = (option as Partial<LookupCreateMarker>).lookupCreateText;
+  return typeof text === 'string' ? text : null;
+}
+
+function lookupCreateLabelOf(option: LookupOption | null | undefined): string | null {
+  if (lookupCreateText(option) === null) return null;
+  const label = (option as Partial<LookupCreateMarker>).lookupCreateLabel;
+  return typeof label === 'string' ? label : lookupCreateText(option);
+}
+
 /** The rows whose label holds the text (folded): the rows a pending search can still show. */
 export function narrowToText<T>(options: T[], text: string | null | undefined, label: (option: T) => string): T[] {
   const needle = foldText((text ?? '').trim());
@@ -150,6 +176,8 @@ export function useLookupSearch<T>({
     searchedText: q,
     /** While pending: the typed text the rows shown must still match (`narrowToText`); null otherwise. */
     pendingText: pending ? trimmed : null,
+    /** The page shown is the answer for the text typed: not a previous page, and not an error. */
+    settled: !pending && query.isSuccess,
   };
 }
 
@@ -188,6 +216,21 @@ export function useLookupHydration<T extends LookupOption>({ endpoint, ids, know
   };
 }
 
+/**
+ * Offers to create the missing record from the typed text. Contacts, companies and cost centers
+ * can pass the same option later. The option is the last row once the search for that text has
+ * settled and no option's label matches it exactly (accents and case ignored), never while it loads.
+ * `create` returns the new record, or null when the person cancels; a cancelled create leaves the pick as it was.
+ */
+export type LookupCreate<T extends LookupOption> = {
+  /** The person may create. When false the option is absent. */
+  allowed: boolean;
+  /** The option's label for the trimmed typed text. */
+  label: (typed: string) => string;
+  /** Creates the record. Null means the person cancelled. */
+  create: (typed: string) => Promise<T | null>;
+};
+
 type PickerOptions<T extends LookupOption> = {
   endpoint: string;
   scope?: LookupScope;
@@ -198,6 +241,8 @@ type PickerOptions<T extends LookupOption> = {
   given?: Array<T | null | undefined>;
   limit?: number;
   debounceMs?: number;
+  /** When set, the list can offer to create the missing record. */
+  create?: LookupCreate<T>;
 };
 
 /**
@@ -213,11 +258,15 @@ export function useLookupPicker<T extends LookupOption>({
   given,
   limit,
   debounceMs,
+  create,
 }: PickerOptions<T>) {
   const { t } = useTranslation('common');
   const [open, setOpen] = React.useState(false);
   const [text, setText] = React.useState('');
   const [remembered, setRemembered] = React.useState<ReadonlyMap<string, T>>(() => new Map());
+  // A fresh `create` object on every render must not rebuild the list handlers (that clears the typed text).
+  const createRef = React.useRef(create);
+  createRef.current = create;
 
   const search = useLookupSearch<T>({ endpoint, scope, open, text, enabled, limit, debounceMs });
   const ids = useShallowStable(value.filter(Boolean)) as string[];
@@ -283,13 +332,24 @@ export function useLookupPicker<T extends LookupOption>({
   // A search shows its own matches; while the next one loads, the rows shown are narrowed to the
   // typed text (as the server folds it), so a row that does not match can never be picked. A chosen
   // value whose label cannot be read is never offered.
+  // The create option waits for that same answer: the search for this text has settled, and no
+  // label matches it exactly. The label is read here, because `t` inside the list's render updates
+  // this panel while Autocomplete is still rendering.
   const pendingText = search.pendingText;
+  const typed = text.trim();
+  const offerCreate = !!create?.allowed && typed !== '' && search.settled && search.searchedText === typed;
+  const createLabel = offerCreate ? (createRef.current?.label(typed) ?? typed) : null;
   const filterOptions = React.useCallback(
     (list: T[], state: { getOptionLabel: (option: T) => string }) => {
-      const shown = list.filter((option) => !unavailableSet.has(option.id) && (!searching || resultIds.has(option.id)));
-      return narrowToText(shown, pendingText, state.getOptionLabel);
+      const shown = list.filter((option) => lookupCreateText(option) === null && !unavailableSet.has(option.id) && (!searching || resultIds.has(option.id)));
+      const narrowed = narrowToText(shown, pendingText, state.getOptionLabel);
+      if (!offerCreate || createLabel === null) return narrowed;
+      const needle = foldText(typed);
+      const exact = narrowed.some((option) => foldText((state.getOptionLabel(option) ?? '').trim()) === needle);
+      if (exact) return narrowed;
+      return [...narrowed, { id: LOOKUP_CREATE_ID, lookupCreateText: typed, lookupCreateLabel: createLabel } as unknown as T];
     },
-    [searching, resultIds, pendingText, unavailableSet],
+    [searching, resultIds, pendingText, unavailableSet, offerCreate, createLabel, typed],
   );
 
   // Read once here. `label` runs inside Autocomplete's render, and calling `t` from there
@@ -297,6 +357,8 @@ export function useLookupPicker<T extends LookupOption>({
   const unavailableLabel = t('selects.valueUnavailable');
   /** The label of an option: the picker's own, `…` while it loads, "Value no longer available" when it cannot. */
   const label = React.useCallback((option: T | null | undefined, own: (option: T) => string): string => {
+    const created = lookupCreateLabelOf(option);
+    if (created !== null) return created;
     if (!option?.id) return '';
     if (unavailableSet.has(option.id)) return unavailableLabel;
     if (pendingSet.has(option.id)) return PENDING_LABEL;
@@ -316,6 +378,20 @@ export function useLookupPicker<T extends LookupOption>({
     else setText('');
   }, []);
   const isOptionEqualToValue = React.useCallback((option: T, chosen: T) => option.id === chosen.id, []);
+  // A click on the create option runs `create` and, when it returns a record, remembers it and
+  // reports it. A cancelled create reports nothing, so the field keeps its previous value.
+  const choose = React.useCallback(async (option: T | null, report: (picked: T | null) => void) => {
+    const typedText = lookupCreateText(option);
+    if (typedText !== null) {
+      const created = await createRef.current?.create(typedText);
+      if (!created?.id || created.id === LOOKUP_CREATE_ID) return;
+      remember([created]);
+      report(created);
+      return;
+    }
+    remember([option]);
+    report(option);
+  }, [remember]);
   const slotProps = React.useMemo(
     () => ({ paper: { moreResults: open && search.hasMore } as LookupListPaperProps as PaperProps }),
     [open, search.hasMore],
@@ -339,8 +415,11 @@ export function useLookupPicker<T extends LookupOption>({
     results: search.items,
     hasMore: search.hasMore,
     searching,
+    /** The open list shows the answer for the text currently typed. */
+    searchSettled: open && search.settled,
     loading,
     remember,
+    choose,
     autocomplete,
   };
 }

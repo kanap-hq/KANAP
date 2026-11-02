@@ -65,6 +65,40 @@ const BUDGET_ENUM_CASES: Array<{ field: string; code: string; key: string }> = [
 ];
 
 describe('formatAuditValue', () => {
+  it('names an application\'s category, access methods and user count method as its screen does', () => {
+    const app = context({ table: 'applications' });
+    expect(formatAuditValue('line_of_business', 'category', app).text).toBe('Line of business');
+    expect(formatAuditValue(['local', 'vdi'], 'access_methods', app).text).toBe('Locally installed application, VDI / remote desktop');
+    expect(formatAuditValue('it_users', 'users_mode', app).text).toBe('Derived');
+    expect(formatAuditValue('headcount', 'users_mode', app).text).toBe('Derived');
+    expect(formatAuditValue('manual', 'users_mode', app).text).toBe('Manual');
+    const fr = context({ t: tFr, locale: 'fr', table: 'applications' });
+    expect(formatAuditValue('it_users', 'users_mode', fr).text).toBe('Dérivé');
+    // A code the shipped catalog does not know stays as stored.
+    expect(formatAuditValue('custom_cat', 'category', app).text).toBe('custom_cat');
+  });
+
+  it('reads a tenant catalog code with the tenant\'s label first, then the shipped one, then the code', () => {
+    const tenant: Record<string, Record<string, string>> = {
+      applicationCategories: { line_of_business: 'Core business', custom_cat: 'Shop floor' },
+      accessMethods: { kiosk_plus: 'Kiosk plus' },
+      incidentCategories: { plant_stop: 'Plant stop' },
+      serverRoles: { db: 'Our database' },
+    };
+    const catalogLabel = (list: string, code: string) => tenant[list]?.[code] ?? null;
+    const app = context({ table: 'applications', catalogLabel });
+    expect(formatAuditValue('line_of_business', 'category', app).text).toBe('Core business');
+    expect(formatAuditValue('custom_cat', 'category', app).text).toBe('Shop floor');
+    expect(formatAuditValue(['kiosk_plus', 'vdi'], 'access_methods', app).text).toBe('Kiosk plus, VDI / remote desktop');
+    expect(formatAuditValue('db', 'server_role', app).text).toBe('Our database');
+    expect(formatAuditValue('unknown_role', 'server_role', app).text).toBe('unknown_role');
+    const incident = context({ table: 'incidents', catalogLabel });
+    expect(formatAuditValue('plant_stop', 'category', incident).text).toBe('Plant stop');
+    // The application list never names an incident's category, nor the reverse.
+    expect(formatAuditValue('custom_cat', 'category', incident).text).toBe('custom_cat');
+    expect(formatAuditValue('plant_stop', 'category', app).text).toBe('plant_stop');
+  });
+
   it('marks every empty value with the empty-cell glyph', () => {
     expect(formatAuditValue(null, 'notes', context()).text).toBe('—');
     expect(formatAuditValue(undefined, 'notes', context()).text).toBe('—');
@@ -261,9 +295,151 @@ describe('formatAuditValue', () => {
     expect(formatAuditValue('shelf', 'kind', context({ table: 'cost_centers' })).text).toBe('shelf');
   });
 
+  it('names a project, phase and milestone status, origin, modes and effort type from the portfolio lists', () => {
+    const project = (locale: 'en' | 'fr') => ({
+      locale,
+      t: i18n.getFixedT(locale, ['admin', 'portfolio']) as unknown as Translate,
+      table: 'portfolio_projects',
+    });
+    expect(formatAuditValue('in_testing', 'status', project('en')).text).toBe('In testing');
+    expect(formatAuditValue('waiting_list', 'status', project('fr')).text).toBe("Liste d'attente");
+    expect(formatAuditValue('in_progress', 'phase_status', project('en')).text).toBe('In progress');
+    expect(formatAuditValue('achieved', 'milestone_status', project('fr')).text).toBe('Atteint');
+    expect(formatAuditValue('fast_track', 'origin', project('en')).text).toBe('Fast-track');
+    expect(formatAuditValue('collaborative', 'scheduling_mode', project('fr')).text).toBe('Collaboratif');
+    expect(formatAuditValue('manual', 'it_effort_allocation_mode', project('en')).text).toBe('Manual');
+    expect(formatAuditValue('auto', 'business_effort_allocation_mode', project('en')).text).toBe('Automatic');
+    expect(formatAuditValue('business', 'category', project('en')).text).toBe('Business');
+    // Elsewhere the shared names keep their own lists.
+    expect(formatAuditValue('closed', 'status', { locale: 'fr', t: tFrAll, table: 'suppliers' }).text).toBe('Fermé');
+    expect(formatAuditValue('business', 'category', { locale: 'en', t: tEnAll, table: 'suppliers' }).text).toBe('business');
+  });
+
+  it('names a request status from the request list', () => {
+    const request = (locale: 'en' | 'fr') => ({
+      locale,
+      t: i18n.getFixedT(locale, ['admin', 'portfolio']) as unknown as Translate,
+      table: 'portfolio_requests',
+    });
+    expect(formatAuditValue('pending_review', 'status', request('en')).text).toBe('Pending review');
+    expect(formatAuditValue('converted', 'status', request('en')).text).toBe('Converted');
+  });
+
   it('leaves an unknown budget enumeration code as stored', () => {
     expect(formatAuditValue('not_a_profile', 'spread_profile_name', context()).text).toBe('not_a_profile');
     expect(formatAuditValue('not_a_method', 'method', context()).text).toBe('not_a_method');
+  });
+
+  const costCenterId = '44444444-4444-4444-8444-444444444444';
+  const ctxId = '33333333-3333-4333-8333-333333333333';
+  const budgetQuery = {
+    amountYears: '2025,2026',
+    columns: 'budget,forecast,actual',
+    ctx: ctxId,
+    detail: 'yearly',
+    filters: JSON.stringify({
+      status: { filterType: 'set', values: ['enabled'] },
+      name: { filterType: 'text', type: 'contains', filter: 'Acme' },
+    }),
+    format: 'xlsx',
+    language: 'en',
+    q: 'hosting',
+    truncated: true,
+  };
+  const reportQuery = {
+    costCenter: costCenterId,
+    ctx: ctxId,
+    format: 'csv',
+    language: 'fr',
+    measure: 'amount',
+    metric: 'budget',
+    runBuild: 'run',
+    scope: 'opex',
+    top: '10',
+    truncated: true,
+    tz: 'Europe/Paris',
+    year: '2026',
+  };
+
+  it('names a budget file export and lists its parameters', () => {
+    const exported = context({ table: 'export' });
+    expect(formatAuditValue('budget-lines/budget-file', 'resource', exported).text).toBe('Budget file');
+    expect(formatAuditValue('xlsx', 'format', exported).text).toBe('Excel (.xlsx)');
+    const parameters = formatAuditValue(budgetQuery, 'query', exported);
+    expect(parameters.text).toBe([
+      'Years: 2025, 2026',
+      'Columns: Budget, Forecast, Actuals',
+      'Detail: Yearly totals',
+      'Status: Enabled',
+      'Name: Acme',
+      'Format: Excel (.xlsx)',
+      'Language: English',
+      'Search: hosting',
+    ].join('\n'));
+    expect(parameters.title).toBeUndefined();
+    expect(parameters.text).not.toContain(ctxId);
+
+    const french = context({ locale: 'fr', t: tFr, table: 'export' });
+    expect(formatAuditValue('budget-lines/budget-file', 'resource', french).text).toBe('Fichier budgétaire');
+    expect(formatAuditValue(budgetQuery, 'query', french).text).toBe([
+      'Années\u00a0: 2025, 2026',
+      'Colonnes\u00a0: Budget, Prévision, Réalisé',
+      'Détail\u00a0: Totaux annuels',
+      'Statut\u00a0: Activé',
+      'Nom\u00a0: Acme',
+      'Format\u00a0: Excel (.xlsx)',
+      'Langue\u00a0: English',
+      'Recherche\u00a0: hosting',
+    ].join('\n'));
+  });
+
+  it('names a report export and lists its parameters, with an identifier in the title', () => {
+    const exported = context({ table: 'export' });
+    expect(formatAuditValue('reports/budget/top-lines', 'resource', exported).text).toBe('Top lines report');
+    expect(formatAuditValue('csv', 'format', exported).text).toBe('CSV');
+    const parameters = formatAuditValue(reportQuery, 'query', exported);
+    expect(parameters.text).toBe([
+      'Cost center: Identifier',
+      'Format: CSV',
+      'Language: Français',
+      'Measure: Amount',
+      'Metric: Budget',
+      'Run or build: Run',
+      'Scope: OPEX',
+      'Top count: 10',
+      'Time zone: Europe/Paris',
+      'Year: 2026',
+    ].join('\n'));
+    expect(parameters.title).toBe(costCenterId);
+    expect(parameters.text).not.toContain(costCenterId);
+    expect(parameters.text).not.toContain(ctxId);
+
+    const french = context({ locale: 'fr', t: tFr, table: 'export' });
+    expect(formatAuditValue('reports/budget/top-lines', 'resource', french).text).toBe('Rapport du top lignes');
+    const frenchParameters = formatAuditValue(reportQuery, 'query', french);
+    expect(frenchParameters.text).toBe([
+      'Centre de coûts\u00a0: Identifiant',
+      'Format\u00a0: CSV',
+      'Langue\u00a0: Français',
+      'Mesure\u00a0: Montant',
+      'Métrique\u00a0: Budget',
+      'Run ou build\u00a0: Run',
+      'Périmètre\u00a0: OPEX',
+      'Nombre de premiers\u00a0: 10',
+      'Fuseau horaire\u00a0: Europe/Paris',
+      'Année\u00a0: 2026',
+    ].join('\n'));
+    expect(frenchParameters.title).toBe(costCenterId);
+  });
+
+  it('leaves an unknown export resource as stored, and a query on another table as JSON', () => {
+    expect(formatAuditValue('not-a-resource', 'resource', context({ table: 'export' })).text).toBe('not-a-resource');
+    expect(formatAuditValue('pdf', 'format', context({ table: 'export' })).text).toBe('pdf');
+    expect(formatAuditValue({ q: 'enabled', scope: 'data', sort: 'name:ASC' }, 'query', context({ table: 'export' })).text)
+      .toBe('Search: enabled\nScope: data\nSort: name:ASC');
+    expect(formatAuditValue({ a: 1 }, 'query', context({ table: 'suppliers' })).text).toBe('{"a":1}');
+    expect(formatAuditValue('budget-lines/budget-file', 'resource', context({ table: 'suppliers' })).text)
+      .toBe('budget-lines/budget-file');
   });
 });
 
@@ -325,6 +501,21 @@ describe('audit entry helpers', () => {
     });
     expect(fields.mode).toBe('single');
     expect(fields.rows.map((row) => row.key)).toEqual(['resource', 'format']);
+  });
+
+  it('keeps the route of an export out of the field list', () => {
+    const fields = auditFields({
+      action: 'export',
+      table_name: 'export',
+      after_json: {
+        resource: 'budget-lines/budget-file',
+        path: '/budget-lines/budget-file/export',
+        query: { format: 'xlsx' },
+        format: 'xlsx',
+        rows: 4,
+      },
+    });
+    expect(fields.rows.map((row) => row.key)).toEqual(['resource', 'query', 'format', 'rows']);
   });
 
   it('detects a payload that is not an object', () => {

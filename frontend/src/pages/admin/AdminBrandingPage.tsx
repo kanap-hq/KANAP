@@ -24,9 +24,12 @@ import { useAuth } from '../../auth/AuthContext';
 import { useTenant } from '../../tenant/TenantContext';
 import ForbiddenPage from '../ForbiddenPage';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
-import { useKanapDialogs } from '../../components/design';
+import { PropertyRow, useKanapDialogs } from '../../components/design';
+
+const ORGANIZATION_NAME_MAX = 120;
 
 type BrandingSettings = {
+  name: string;
   has_logo: boolean;
   logo_version: number;
   use_logo_in_dark: boolean;
@@ -35,6 +38,7 @@ type BrandingSettings = {
 };
 
 type BrandingFormState = {
+  organizationName: string;
   useLogoInDark: boolean;
   primaryColorLight: string;
   primaryColorDark: string;
@@ -79,8 +83,20 @@ function describeTextTone(color: string): 'white' | 'dark' {
   return vsWhite > vsBlack ? 'dark' : 'white';
 }
 
+function validateOrganizationName(
+  value: string,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): { normalized: string; error: string | null } {
+  const normalized = value.trim();
+  if (normalized.length < 1 || normalized.length > ORGANIZATION_NAME_MAX) {
+    return { normalized, error: t('branding.validation.organizationNameLength') };
+  }
+  return { normalized, error: null };
+}
+
 function toFormState(settings: BrandingSettings): BrandingFormState {
   return {
+    organizationName: settings.name,
     useLogoInDark: settings.use_logo_in_dark,
     primaryColorLight: settings.primary_color_light ?? '',
     primaryColorDark: settings.primary_color_dark ?? '',
@@ -90,6 +106,7 @@ function toFormState(settings: BrandingSettings): BrandingFormState {
 function normalizeSettings(data: any): BrandingSettings {
   const logoVersion = Number(data?.logo_version);
   return {
+    name: typeof data?.name === 'string' ? data.name : '',
     has_logo: !!data?.has_logo,
     logo_version: Number.isFinite(logoVersion) && logoVersion >= 0 ? logoVersion : 0,
     use_logo_in_dark: data?.use_logo_in_dark !== false,
@@ -152,6 +169,7 @@ export default function AdminBrandingPage() {
   const [success, setSuccess] = React.useState<string | null>(null);
   const [settings, setSettings] = React.useState<BrandingSettings | null>(null);
   const [form, setForm] = React.useState<BrandingFormState>({
+    organizationName: '',
     useLogoInDark: true,
     primaryColorLight: '',
     primaryColorDark: '',
@@ -197,20 +215,23 @@ export default function AdminBrandingPage() {
 
   const lightValidation = validateHexField(form.primaryColorLight, t);
   const darkValidation = validateHexField(form.primaryColorDark, t);
+  const nameValidation = validateOrganizationName(form.organizationName, t);
 
   const baseLight = normalizeColorForCompare(settings?.primary_color_light);
   const baseDark = normalizeColorForCompare(settings?.primary_color_dark);
   const currentLight = normalizeColorForCompare(form.primaryColorLight);
   const currentDark = normalizeColorForCompare(form.primaryColorDark);
 
+  const nameDirty = !!settings && nameValidation.normalized !== settings.name.trim();
   const isDirty = !!settings && (
     !!selectedFile
+    || nameDirty
     || form.useLogoInDark !== settings.use_logo_in_dark
     || currentLight !== baseLight
     || currentDark !== baseDark
   );
 
-  const isInputInvalid = !!lightValidation.error || !!darkValidation.error;
+  const isInputInvalid = !!nameValidation.error || !!lightValidation.error || !!darkValidation.error;
   const canSubmit = !!settings && isDirty && !isInputInvalid && !saving && !deletingLogo && !resetting;
   const previewLogoUrl = selectedFileUrl || logoUrl;
 
@@ -265,6 +286,9 @@ export default function AdminBrandingPage() {
       }
 
       const payload: Record<string, unknown> = {};
+      if (nameDirty) {
+        payload.name = nameValidation.normalized;
+      }
       if (form.useLogoInDark !== settings.use_logo_in_dark) {
         payload.use_logo_in_dark = form.useLogoInDark;
       }
@@ -357,6 +381,34 @@ export default function AdminBrandingPage() {
         <Stack spacing={2} maxWidth={900}>
           {error && <Alert severity="error">{error}</Alert>}
           {success && <Alert severity="success">{success}</Alert>}
+
+          <Card>
+            <CardContent>
+              <PropertyRow
+                label={t('branding.fields.organizationName')}
+                required
+                helperText={t('branding.fields.organizationNameHelper')}
+              >
+                <TextField
+                  variant="standard"
+                  fullWidth
+                  value={form.organizationName}
+                  onChange={(event) => {
+                    setForm((prev) => ({ ...prev, organizationName: event.target.value }));
+                    setSuccess(null);
+                  }}
+                  placeholder={t('branding.fields.organizationNamePlaceholder')}
+                  error={!!nameValidation.error}
+                  helperText={nameValidation.error || undefined}
+                  disabled={saving || deletingLogo || resetting}
+                  inputProps={{
+                    'aria-label': t('branding.fields.organizationName'),
+                    'aria-required': true,
+                  }}
+                />
+              </PropertyRow>
+            </CardContent>
+          </Card>
 
           <Card>
             <CardContent>

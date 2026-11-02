@@ -16,11 +16,23 @@ Every master data page has **Export** and **Import** in its toolbar, and documen
 
 **Columns are matched by name**, in any order, whatever the case, the spaces and the underscores. These files are strict: a column KANAP does not know refuses the whole file, and the message, on a **Header** line, names the unknown and the missing ones. The budget file is the one that ignores the columns it does not know. See [Load a budget from a spreadsheet](budget-file.md).
 
+**Column titles.** The applications, assets, projects, incidents, suppliers and contracts files title their columns in the language of your screen, for example `Name` in English and `Nom` in French. The import reads these titles in any of the four languages, and the technical names the pages list (`name`). The other files, the budget file included, use the technical names.
+
 **Excel workbooks.** An import reads a CSV file or an Excel workbook (`.xlsx`), with the same columns and the same rules. KANAP reads the first sheet only. When the workbook has other sheets, the check says which sheet it read. A number or a date typed in a cell is read as it is, with no question of separator or day order, and a date with a time keeps its time. A date or an amount typed as text follows the rules of a CSV file below. An old Excel file (`.xls`) is refused with a message: save it as `.xlsx` or CSV. Import templates are CSV files, which Excel opens.
 
 **Encoding and separator of a CSV file.** Save the file as UTF-8 ("CSV UTF-8" in Excel). A file Excel saved as plain CSV, in Windows-1252, imports too, accents included. The separator is read from the header line: `,`, `;` or a tab. The export writes the separator of the language the screen is shown in.
 
 **Other files.** An OpenDocument spreadsheet (`.ods`) is refused before any column is read, with a message that says how to save it as CSV. In LibreOffice Calc: **File › Save As › Text CSV**, or **Excel 2007-365 (.xlsx)**. Any other file that is not text is refused the same way.
+
+## Example files { #example-files }
+
+The import dialog of applications, assets, projects, suppliers, contracts and the budget file offers **Download an example**: an Excel workbook in the language of your screen.
+
+- The first sheet holds a few Fromage & Co examples of the columns most used. It is the sheet the import reads.
+- **Advanced** shows the other columns for the same rows, when the import has more than the first sheet holds. To use one, copy it into the first sheet.
+- **Notes** says what each column takes. Lists show the values your workspace accepts, such as its application categories or its analytics dimensions.
+
+Names, codes and emails must match records of your workspace. The examples use those of the Fromage & Co sample data: replace them with yours, for example the location of a server or the company of a contract.
 
 ## Amounts, dates and yes or no
 

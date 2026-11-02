@@ -124,12 +124,14 @@ payloads to the model.
 
 Plaid can currently read these entity families:
 
-`accounts`, `analytics_categories`, `applications`, `assets`,
-`budget_lines`, `business_processes`, `chart_of_accounts`, `companies`,
-`connections`, `contacts`, `contracts`, `departments`, `documents`,
-`incidents`, `interfaces`, `locations`, `projects`, `requests`,
-`suppliers`, `support_deadlines`, `support_gaps`, `tasks`, `technologies`,
-`technology_versions`, `users`, and `vulnerabilities`.
+`accounts`, `analytics_axes`, `analytics_categories`, `applications`, `assets`,
+`budget_lines`, `business_processes`, `chargeback`, `chargeback_lines`,
+`chart_of_accounts`, `companies`, `connections`, `contacts`, `contracts`,
+`cost_centers`, `data_access`, `departments`,
+`documents`, `exchange_rates`, `incidents`, `interfaces`, `locations`, `projects`, `requests`,
+`role_permissions`, `roles`, `suppliers`, `support_deadlines`, `support_gaps`,
+`tasks`, `technologies`, `technology_versions`, `users`, `vulnerabilities`, and
+`working_day_calendars`.
 
 `budget_lines` is one family for the OPEX and CAPEX lines of `spend_items`
 (`nature`, `opex` or `capex`). A question without a nature covers both;
@@ -137,11 +139,27 @@ Plaid can currently read these entity families:
 the line is. The references are `BL-n`; a typed `OPX-n` or `CPX-n` is accepted
 as an input reference and resolves to the same line.
 
-`search_all` searches every family but the ones without a search index:
-`vulnerabilities`, `technology_versions`, `support_gaps` and
-`support_deadlines`. `AI_SEARCH_ENTITY_TYPES` (the
-searched families) and `AI_QUERY_ENTITY_TYPES` (the listed ones) are two lists
-in `ai.types.ts`; the listed-only families have no detail of their own.
+`search_all` searches every family of the search index (`AI_SEARCH_ENTITY_TYPES`
+in `ai.types.ts`) and three reference data families without an index
+(`AI_SEARCH_REFERENCE_ENTITY_TYPES`): `cost_centers`, `working_day_calendars`
+and `analytics_axes`, by code and by name. It leaves out `vulnerabilities`,
+`technology_versions`, `support_gaps`, `support_deadlines`, `roles`,
+`role_permissions`, `data_access`, `chargeback`, `chargeback_lines` and
+`exchange_rates`. `AI_QUERY_ENTITY_TYPES` lists every family the read tools
+take; the families with no detail of their own are filtered out of
+`AI_DETAIL_ENTITY_TYPES`.
+
+The reference data search runs through the reads of the families
+(`AiQueryExecutor.searchReferenceData`), for the families the person reads
+(`listReadableEntityTypes`) and that `entity_types` keeps: the family's quick
+search (`q`), then the rows whose code or name holds the query. The path of a
+cost center does not count, so a group's name does not bring back the whole
+group. An exact code or name, without case, gets the score of a reference (4),
+a part of one the score of a label (3), on the scale of the index query; at
+most five rows per family join the first page, and `total` counts every
+match. Each family runs in its own savepoint: one that fails is named in
+`failed_entity_types` and in a sentence of `warnings`, and the answer is
+marked incomplete.
 
 `get_entity_context` takes `applications`, `assets`, `projects`, `requests`,
 `tasks` and `technologies` (`AI_CONTEXT_ENTITY_TYPES` in `ai.types.ts`).
@@ -157,8 +175,12 @@ The core read tools are:
 - `get_entity_detail`
 - `get_entity_context`
 - `get_entity_comments`
+- `get_record_history` (the History tab of one record, for the families that have one;
+  the other families are refused in words)
 - `search_knowledge`
 - `get_document`
+- `list_help_topics` and `read_help_section` (the user manual, for every person who
+  may use the assistant)
 - `web_search`, when the feature and tenant setting are enabled
 
 Structured query and aggregate tools are authoritative for counts, filters, and
@@ -210,7 +232,9 @@ Nothing the model asks for is dropped silently:
   (`status: invalid_filter`);
 - a sort field the registry does not know is named in `sort_ignored`; the
   items come in the default order, `sort` says which, `sortable_fields` lists
-  the fields the family takes, and `complete` is false;
+  the fields the family takes, and `complete` is false; a field withheld for
+  lack of a right (the consolidation account without the right on accounts)
+  also comes with its entry of `fields_withheld`, the reason in words;
 - every result carries `sort`, the order of its items.
 
 Plaid chat attaches a blocking validation to either case
@@ -580,6 +604,166 @@ them; a request naming one is refused in words and names the Relations tab.
 owns them). Deleting a technology or a version, the vulnerabilities matching and
 the vulnerability states stay outside L5.
 
+### Roles, data access and record history
+
+`roles` and `role_permissions` read Admin › Roles through the screen's services
+(`backend/src/ai/query/ai-roles.query.ts`: `RolesService.list` and `userCounts`,
+`PermissionsService.getRolePermissionMatrix`, so former right names fold into
+today's and the derived contacts right is included). `roles` has one row per
+role with its kind (system, built in, custom) and `user_count`; no person is
+named. `role_permissions` has one row per role and right it gives. The detail
+of a role (`get_entity_detail` on `roles`, by name or id) is the screen's matrix
+(`permissions`) plus `rights`, the rights it gives. Every right and level
+carries the screen's words in the person's language (`resource_label`,
+`level_label`, and `label` on the groups of `aggregate_entities` by right or
+level), copied from `frontend/src/locales/*/admin.json` into
+`backend/src/ai/ai-role-labels.ts` and compared by `ai-role-labels.spec.ts`;
+without a profile language they come in the four languages. Plaid reads the
+rights the screen shows and no other (`AI_SCREEN_RESOURCES`, compared with the
+screen's `frontend/src/pages/admin/rolePermissionGroups.ts`): `projects`, a
+server right the screen does not show, is in no row, detail or group.
+`user_count` is the screen's count: each person who holds the role, as their
+primary role (`users.role_id`) or through `user_roles`, once. It is the same
+number as the users list filtered on `roles`, which the field's description says.
+
+`data_access` reads Admin › Data access (`ai-data-access.query.ts`, through
+`DataAccessAdminService`): one row per limited person and node, one row with
+no node for a limited person without one, Administrators left out (they see
+all data whatever is stored). On `users`, the administrator of users also gets
+`roles` (every role) and `data_access` (the effective mode) as fields and
+filters, and the detail of a person and of a company carries the Data access
+block of its screen tab. Every administration field of a person (job, company,
+department, primary role, locale, team, contributor profile, availability,
+expertise, roles, access mode) follows one rule, `UNSCOPED_ADMIN_FIELDS` in
+`backend/src/ai/query/registries/index.ts`: users at admin level and access not
+limited, as the screen, which closes the administration of users to a limited
+person. The same rule decides what finds a person: the quick search of `users`,
+`search_all` (index and legacy paths) and the @ mentions look in those fields
+for their readers only, and in the name and the email for everyone else.
+
+The right is a level, not the reader level of the family's resource: the
+three families need `users` at admin level (`ENTITY_MIN_LEVEL` in
+`ai-policy.service.ts`) and a person whose own access is not limited
+(`UNSCOPED_ONLY_ENTITY_TYPES`, checked in the person's transaction; the
+database does not protect the nodes, so this check is the only gate). Every
+check of a family reads both: `canReadEntityType`,
+`assertEntityTypeReadAccess`, `listReadableEntityTypes`. A refusal names the
+right and the screen, or the reserved message for a limited person.
+`AiPolicyService.adminFamiliesGap` says which of the two is missing; the lists
+of what the tools do not read (`ai-unread-families.ts`, entries marked
+`usersAdminOnly`) drop the two families for a person who reads them and name
+what is missing for the others. The entries of the reference data (`readAs`:
+cost centers, working-day calendars, analytics dimensions and exchange rates)
+follow the same rule with the right of their page: `unreadFamiliesReachOf`
+probes the families once per answer, the entry is dropped for a person who
+reads the family and names the right (Cost centers, Working-day calendars,
+Analytics, Budget) for the others. The tool descriptions, common to everyone,
+no longer list them. The exchange rates are read but not searched: a search
+whose words ask for rates or currencies (`taux de change`, `EUR`, `EUR/USD`)
+gets `not_searched_here`, which points to `query_entities` on
+`exchange_rates`. No tool writes a person's access, their roles,
+a role's rights or a person: the chat prompt says those stay on Admin › Data
+access, Admin › Roles and Admin › Users, and the context profile sends such a
+request to the general write profile, which refuses in words.
+
+`get_record_history` reads the History tab of one record through
+`RecordHistoryService` (`ai-record-history.service.ts`), under the record's
+own right, for the families of the history inventory
+(`backend/src/audit/record-history.inventory.ts`). A family without a History
+tab is refused in words with the list of the families that have one; the prompt
+says a history is never rebuilt from other data, the audit log included. The
+tool is in the MCP core read group. The chat shows its entries as the tab's
+first lines (`ToolResultRenderer`, phase `reading_context`).
+
+`list_help_topics` and `read_help_section` read the user manual of the running
+version through `AiHelpManualService` (`ai-help-manual.service.ts`). The API image
+carries the Markdown pages of `doc/help/docs` in `/app/help-docs` (the named build
+context `help-docs` of `backend/Dockerfile`, passed by every Compose file that builds
+the API and by the CI workflows); a checkout reads the repository's `doc/help/docs`.
+The service reads every page of the four languages once, at start: title, H2 to H6
+headings with the anchors MkDocs gives them, and each section's extent. The table of
+contents lists every page with its H2 headings, or, with words, the pages and H2/H3
+sections that hold them; a read returns the section's text without images, HTML
+wrappers or attribute lists, admonitions unindented, links rewritten to doc.kanap.net,
+capped at 12,000 characters (`truncated`, `subsections`), with the section's
+doc.kanap.net address. The language is the one asked for, else the person's interface
+language, else English. In multi-tenant mode the on-premise installation pages are
+left out. The manual is public: the tools need no right and are offered whenever the
+pages were found. The fixed part of the chat prompt (tool usage guidelines) says to
+read the manual before describing a screen, and the MCP `initialize` instructions
+say it to MCP clients (they stay under 1,200 characters, `ai-mcp-transport.spec.ts`).
+
+### Budget reports and chargeback
+
+The budget reports are read through `aggregate_entities` on `budget_lines`,
+with the requests and readers of the report screens themselves
+(`spend/reports/`, the server copy of `reportAggregates.ts`), so a figure of
+Plaid is the screen's figure:
+
+- the consolidation account (`consolidation_account`, the label of the
+  Consolidation accounts report) is a field, a filter and a group for a person
+  with the budget right and `accounts:reader`. Without the right on accounts
+  the field is absent from the registry and named in `fields_withheld` with
+  the reason; a filter, a group or a `then_by` on it is refused in words, never
+  one "unassigned" group. The list engine gets the person's access
+  (`AiPolicyService.effectiveAccess`), without which it reads the field as
+  null for everyone;
+- `metrics` (2 to 8 measures with one function) gives a table in one call,
+  each group and `overall` carrying `values` by metric; `then_by` crosses a
+  second field (`then_key`), refused for `line` and for the streams and
+  categories of the linked projects; `limit` keeps the first groups
+  (50 by default with `then_by`, at most 100), `others` gives the same measure
+  over the rest and `group_count` counts every group;
+- a change between two columns is the metric `<destination>_minus_<source>`
+  (`y_review_minus_y_budget`, in FTE `y_review_fte_minus_y_budget_fte`), read
+  as the "Top increase / decrease" report: the groups that rise or fall
+  (`direction`), 10 by default, each with previous, current, delta and
+  pct_increase, and `overall` with the net change and its gross increase and
+  decrease. `line` groups by line (its `BL-n` and title);
+- the FTE month by month is the metric `<year>_<column>_fte_by_month`, read as
+  the "Staffing by month" report: twelve months, average (÷ 12) and peak per
+  group, with `monthly_fte_note`.
+
+These figures read every line, ended ones included; the reports read the lines
+still active on 1 January of the year before the first year they show. The
+tool description says so. The cost per FTE and the day rate (L2) follow the
+same model.
+
+`chargeback` and `chargeback_lines` read Reporting › Global chargeback and
+Reporting › Company chargeback through `ChargebackReportService`
+(`ai/query/ai-chargeback.query.ts`), which recomputes every allocation of the
+year with the calculator of the Allocations tab; `spend_allocations` is never
+read directly, the default splits not being stored. One call of the service
+serves the request, filtered, sorted, paged and grouped in memory. `year` (one
+year, 1900 to 3000), `column` (the assistant's keys, `review` being the
+service's `revision`) and `nature` (none or both: the two natures, said in
+`chargeback.nature`; the screens open on OPEX) are report parameters given as
+filters. `chargeback` holds the rows of the "Detailed allocations" table: each
+beneficiary company with its paid, net and indicators, then its departments
+and its costs without a department. A group adds up the company rows, or the
+department and common rows when grouped by department, when a department is
+filtered or when the filters keep no company row; grouped by department, a
+group is "company › department" or "company › common costs", so two
+departments of one name in two companies stay apart. Each row has its own
+stable id in the form of a UUID (a company's common costs get one derived from
+the company's), so it opens its report through `page_url`. `chargeback_lines`
+lists the lines charged to the one company its `company` filter names (its
+exact name, or the one name that contains it), with the company's figures and
+departments in `chargeback.company`.
+
+Both families need `reporting:reader`, as the routes; the database does not
+guard it, so the executors check it again. The service's warnings (a line it
+could not spread, a line without a paying company, an amount or a turnover
+without an exchange rate) come back in English words in `chargeback.warnings`
+with a note asking the answer to repeat them. A person in limited access gets
+the service's rules: the global rows of the lines they read without the group
+total, their company report with every share charged to it (a line they do not
+read named by its reference and title, as the screen's line column, without id
+or link), and another company refused with the service's sentence. The entry
+"chargeback by beneficiary company" of the unread families (`reportingOnly`)
+is dropped for a person who reads the families and names the Reporting right
+for the others.
+
 ### Vulnerabilities
 
 Vulnerabilities (right `infrastructure`) are read through
@@ -593,7 +777,7 @@ every row. The item's `ref` and label are the CVE id. Fields: `cve_id`, `summary
 CVE.org), `exploited` (CISA KEV or EU KEV), `epss`, `state`, `note`,
 `technology` (`TEC-n`, also filtered by name) and `technology_name`, `version`
 (`null`: no version recorded), `sources` (`nvd`, `cve_org`), `alerts`,
-`published_at`, `detected_at`, and the reach by direct links only
+`estate`, `matching`, `published_at`, `detected_at`, and the reach by direct links only
 (`backend/src/vulnerabilities/vulnerability-reach-counts.ts`), as the page's
 columns:
 
@@ -613,9 +797,44 @@ in those direct links; an unknown asset, or an application unknown or outside
 the user's scope, matches nothing. Each item carries `page_url`, the
 vulnerabilities page filtered on it. `get_entity_detail` takes a row id or a CVE
 id (then the CVE's first row) and adds the CVE's signals and `rows`, every
-technology version the CVE concerns. The aggregates count rows. With the
+technology version the CVE concerns. With the
 vulnerability feed off, the family is left out of the readable families and its
 tools answer `vulnerabilityFeed is not available` (`ai-policy.service.ts`).
+
+Rows and CVE (L6): `total` counts rows, so a CVE on two versions counts twice.
+Beside it, as the page's total ("117 rows (112 CVE)"), the list returns
+`distinct_total`, the distinct CVE among every row the filters keep (a CTE of
+the filtered rows; the order, the paging and the 10,000 id cap of the
+aggregates do not change), and `distinct_label` `cve`. The aggregates read it
+from the registry's `distinctRecord` (`{ name: 'cve', expression: 'tv.cve_id' }`,
+`AiAggregateConfig`): a count gives each group `distinct_count`, and the result
+`distinct_total` over the aggregated ids, which is not the sum of the groups. The
+groups of the CVE's own fields (`severity`, `score_source`, `exploited`) add up
+to it; a CVE whose rows differ in state, technology, version, alert setting or
+estate counts in each of its groups. A family without `distinctRecord` returns
+neither field.
+
+- `estate`: the technology is in use in the estate, the page's "In use in the
+  estate" filter (`technologyInEstateSql`, `vulnerability-reach-counts.ts`):
+  installed on an asset in service, or declared by an application in service,
+  whatever the version. A boolean on the technology, over every application as
+  on the page; it names none. It filters and groups; with `severity`,
+  `published_at` and `exploited` it gives the home tile's figures (no tool of its
+  own).
+- `matching`: false when the matching no longer finds the row and keeps it for
+  its review state (never `to_review`, so it needs a `state` filter). It filters
+  and is in the item, the detail and each of the detail's `rows`.
+- `version` groups by technology and version (`PostgreSQL 14`), and
+  `PostgreSQL (no version recorded)` for a row without a version (the page's
+  `version=none`).
+- `feeds`, on the list and the aggregates of this family only: the NVD and
+  CVE.org when they are on (`vulnerabilityFeedSources`, the `items` of
+  `GET /vulnerabilities/sources`), their displayed name, `last_success_at`
+  (ISO text: the dispatcher's redaction would empty a `Date`) and `failing`
+  (the page's rule: an error kept from an attempt newer than the last success).
+  Never the error text. The exploitation catalogues are the route's `signals`
+  field, shown on the page, and stay off this read.
+  `vulnerability_feed_sources` is a platform table, with no tenant column.
 
 Assets and applications carry `open_vulnerabilities` and
 `severe_vulnerabilities` (`backend/src/ai/query/ai-vulnerability-counts.util.ts`):

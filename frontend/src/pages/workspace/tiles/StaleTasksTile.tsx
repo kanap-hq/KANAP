@@ -63,6 +63,7 @@ export default function StaleTasksTile({ config }: StaleTasksTileProps) {
     <DashboardTile
       title={t('dashboard.tiles.staleTasks')}
       icon="Warning"
+      isEmpty={items.length === 0}
       isLoading={isLoading}
       isError={isError}
       onRetry={() => { void refetch(); }}

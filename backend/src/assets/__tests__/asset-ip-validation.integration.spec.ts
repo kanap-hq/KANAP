@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { randomUUID } from 'node:crypto';
 import * as assert from 'node:assert/strict';
 import { BadRequestException } from '@nestjs/common';
 import dataSource from '../../data-source';
@@ -47,7 +48,9 @@ async function run() {
         { labelOf: async () => null } as any,
       );
       const opts = { manager: runner.manager, tenantId };
-      const base = { name: 'Edge', kind: 'vm', provider: 'other', environment: 'prod' };
+      const siteId = randomUUID();
+      await runner.query(`INSERT INTO locations (id, tenant_id, location_reference, name, hosting_type) VALUES ($1, $2, 'LOC-0', 'Site', 'on_prem')`, [siteId, tenantId]);
+      const base = { name: 'Edge', kind: 'vm', provider: 'other', environment: 'prod', location_id: siteId };
 
       const created = await refused(() => crud.create(
         { ...base, ip_addresses: [{ type: 'host', ip: '999.999.1.1', subnet_cidr: null }] } as any,

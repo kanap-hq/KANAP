@@ -47,6 +47,7 @@ import BudgetTotalCell from './BudgetTotalCell';
 import { statusColumnProps } from '../../components/grid/statusColumn';
 import FxMissingNotice, { FxMissingMark } from '../../components/finance/FxMissingNotice';
 import { ImportLabel } from '../../components/csv/importFiles';
+import { allocationListLabel } from '../../utils/allocationLabels';
 
 /** A cell amount in the line currency (its year has no exchange rate): secondary text, visited or not. */
 const LOCAL_AMOUNT_LINK_SX = { color: 'kanap.text.secondary', '&:visited, &:hover': { color: 'kanap.text.secondary' } } as const;
@@ -544,6 +545,8 @@ function BudgetListPageView() {
     {
       colId: 'contract_name',
       headerName: t('opex.columns.contract'),
+      // Off the default view: the amounts stay in sight on a first visit (the column chooser brings it back).
+      defaultHidden: true,
       valueGetter: (p) => (p.data?.contract_hidden ? t('contracts.outsideYourAccess') : p.data?.latest_contract_name || ''),
       width: 200,
       cellRenderer: (params: any) => (
@@ -614,14 +617,27 @@ function BudgetListPageView() {
     {
       colId: 'allocation_label',
       headerName: t('opex.columns.allocation'),
+      defaultHidden: true,
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
-        getValues: getBudgetFilterValues('allocation_label'),
+        // No label on the options: `labelFormatter` translates the checkbox, and the value
+        // sent to the API stays the server's English constant.
+        getValues: async (ctx: any) => {
+          const options = await getBudgetFilterValues('allocation_label')(ctx);
+          return options.map(({ value }) => ({ value }));
+        },
+        labelFormatter: (value: string | null) => (value ? allocationListLabel(t, value) : t('shared.blank')),
+        sortComparator: (a: { value: string | null; label?: string }, b: { value: string | null; label?: string }) => {
+          if (a.value == null) return b.value == null ? 0 : 1;
+          if (b.value == null) return -1;
+          return (a.label || '').localeCompare(b.label || '', locale);
+        },
         searchable: false,
       },
       valueGetter: (p) => p.data?.allocation_method_label ?? '',
-      tooltipValueGetter: (p) => p.data?.allocation_method_label ?? '',
+      valueFormatter: (p) => allocationListLabel(t, p.value == null ? '' : String(p.value)),
+      tooltipValueGetter: (p) => allocationListLabel(t, p.data?.allocation_method_label),
       width: 180,
       cellRenderer: (params: any) => (
         <LinkCellRenderer
@@ -635,6 +651,7 @@ function BudgetListPageView() {
     ...buildAmountColumnDefs<SummaryRow>({
       t,
       currentYear: Y,
+      locale,
       columns: budgetColumns,
       cellRenderer: (colId) => (params: any) => {
         // No exchange rate that year: the amount in the line currency, marked, left out of the totals.
@@ -704,6 +721,7 @@ function BudgetListPageView() {
     {
       colId: 'latest_task_text',
       headerName: t('opex.columns.task'),
+      defaultHidden: true,
       valueGetter: (p) => p.data?.latest_task?.title ?? '',
       tooltipValueGetter: (p) => (p.value ? String(p.value) : ''),
       flex: 1,
@@ -1052,6 +1070,16 @@ function BudgetListPageView() {
         }}
         enableRowSelection={canDelete}
         onSelectionChanged={setSelectedRows}
+        emptyState={(
+          <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="center" data-testid="budget-empty">
+            <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t('budget.empty')}</Typography>
+            {canCreate && (
+              <Button variant="contained" size="small" onClick={() => openNew(natureScope === 'all' ? 'opex' : natureScope)}>
+                {t('budget.newLine')}
+              </Button>
+            )}
+          </Stack>
+        )}
         footer={fxMissing?.length ? <FxMissingNotice items={fxMissing} /> : undefined}
       />}
       <BudgetFileExportDialog

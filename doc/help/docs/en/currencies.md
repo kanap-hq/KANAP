@@ -214,12 +214,16 @@ Reuse the current year's rate as a forward estimate. This provides budget planni
 ### Frozen years
 Freezing the default budget column of a year fixes that year's rates for the type you freeze (OPEX or CAPEX): KANAP refreshes the year's rates, then keeps that set for every amount of the year, even when newer rates arrive. If the reporting currency changes later, these amounts keep the frozen rates and then convert into the new reporting currency at that year's rate of the former one. Without that rate, they are left out of the totals and named like any missing rate: the former reporting currency then shows in the missing rates block for that year, and a manual rate fills it. Unfreezing the default column releases them. See [Freezing the default column fixes the exchange rates](budget-operations.md#freezing-the-default-column-fixes-the-exchange-rates).
 
-**Missing rate**: When a year has no rate for a currency in use, the budget line amounts in that currency are left out of every total in the reporting currency for that year. This covers the budget lines list, the budget management overview, the budget and chargeback reports, the contracts and the Relations tabs of applications and technologies. The screen says so where it matters:
+**Missing rate**: When a year has no rate for a currency in use, the budget line amounts in that currency are left out of every total in the reporting currency for that year. This covers the budget lines list, the Budget management section of the home page, the budget and chargeback reports, the contracts and the Relations tabs of applications and technologies. The screen says so where it matters:
 
 - A one-line warning names what is left out, for example "Excluding 3 lines with no exchange rate: USD 2026." It shows under the totals of the budget lines list, on the overview tiles, at the top of each budget and chargeback report, and under the budget figures of contracts, applications and technologies. Budget administration users at admin level also see **Enter a rate**, which opens this page on the missing rate.
 - On the line itself, the amount shows in its own currency with a small orange mark. Hover the mark to read, for example, "No USD exchange rate for 2026: left out of totals."
 
 KANAP fetches the rates of that year in the background (at most once every six hours per year), so the next display uses the new rate once the source publishes it. To spot missing rates, check the missing rates block above the FX Rate Snapshots table, and run **Force FX rates sync** to fetch the rates at once. Entering a [manual rate](#manual-rates) fixes it immediately.
+
+## Ask the assistant
+
+[Plaid](ai-assistant.md#tool-calls) reads the currencies and the rates of this page for anyone with read access to the budget. Ask, for example: "What is the USD rate for 2026?"
 
 ## Tips
 

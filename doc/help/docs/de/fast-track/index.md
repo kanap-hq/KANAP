@@ -39,23 +39,22 @@ Diese Pipeline stellt sicher, dass jede Initiative fair bewertet, transparent pr
 
 ## Schritt 1: Anfrage einreichen
 
-Gehen Sie zu **Portfolio > Anfragen** und klicken Sie auf **+ Neue Anfrage**.
+Gehen Sie zu **Portfolio > Anfragen** und klicken Sie auf **Neue Anfrage**.
 
-Neue Anfragen öffnen sich auf der **Zusammenfassung** mit der bereits sichtbaren Eigenschafts-Seitenleiste. Beginnen Sie mit den strukturellen Feldern in der Seitenleiste, dann erfassen Sie den Inhalt unter **Zweck**.
+Geben Sie in der Kopfzeile einen klaren, prägnanten Titel für die Initiative ein und drücken Sie die Eingabetaste. Ihre Anfrage geht mit dem Status **Prüfung ausstehend** in die Pipeline, und alle ihre Reiter öffnen sich.
 
-Füllen Sie die Mindestangaben zum Starten aus:
+Füllen Sie dann die Mindestangaben in der Eigenschafts-Seitenleiste aus:
 
 | Feld | Was eingeben |
 |------|-------------|
-| **Name** | Ein klarer, prägnanter Titel für die Initiative |
 | **Quelle** | Woher kommt das? (Fachbereich, Regulierung, IT-Strategie...) |
 | **Kategorie** | Die Art der Initiative (z. B. Neue Anwendung, Infrastruktur, Prozessverbesserung) |
-| **Antragsteller** | Wer bittet darum? |
+| **Antragsteller** | Wer bittet darum? Standardmäßig Sie |
 | **Ziel-Lieferdatum** | Wann wird das idealerweise benötigt? |
 
 Verwenden Sie dann das **Zweck**-Dokument auf der **Zusammenfassung**, um den Geschäftsbedarf und das erwartete Ergebnis in einfacher Sprache zu erklären. Wenn Sie bereits ein Briefing in Word haben, verwenden Sie die **Importieren**-Schaltfläche im Zweck-Editor, um die `.docx`-Datei direkt einzulesen. Kein Kopieren und Einfügen nötig.
 
-Klicken Sie auf **Erstellen**. Ihre Anfrage geht mit dem Status **Prüfung ausstehend** in die Pipeline.
+Solange Sie auf ihrer Seite sind, behält **Erstellen** in der Kopfzeile die neue Anfrage und schließt sie, und **Abbrechen** löscht sie.
 
 !!! tip "Halten Sie es schlank"
     Sie können tiefere Analysen, verknüpfte Wissensdatenbank-Dokumente und Belege später hinzufügen. Das Ziel jetzt ist, die Anfrage in den gesteuerten Intake-Flow zu bekommen.
@@ -156,7 +155,7 @@ Siehe [Anfragen-Referenz](../portfolio-requests.md) für alle Statusübergänge.
 
 Ihr neues Projekt erbt den Anfragenkontext, muss aber noch für die Umsetzung eingerichtet werden.
 
-Gehen Sie zu **Portfolio > Projekte** und öffnen Sie Ihr neu erstelltes Projekt. Der Projekt-Arbeitsbereich hat sieben Tabs (**Zusammenfassung**, **Aktivität**, **Zeitplan**, **Fortschritt**, **Aufgaben**, **Bewertung** und **Wissensdatenbank**) mit einer dauerhaft sichtbaren **Projekteigenschaften**-Seitenleiste für Kernfelder, Team und Beziehungen.
+Gehen Sie zu **Portfolio > Projekte** und öffnen Sie Ihr neu erstelltes Projekt. Der Projekt-Arbeitsbereich hat sieben Tabs (**Zusammenfassung**, **Aktivität**, **Zeitplan**, **Aufwand**, **Aufgaben**, **Bewertung** und **Wissensdatenbank**) mit einer dauerhaft sichtbaren **Projekteigenschaften**-Seitenleiste für Kernfelder, Team und Beziehungen.
 
 ### Seitenleiste: Ihre Personen und Kernstruktur zuweisen
 
@@ -186,9 +185,9 @@ Die gleiche Seitenleiste hält auch **Kerneigenschaften** und **Beziehungen** si
 
 **Zusammenfassung** ist das Projekt-Cockpit. Es zeigt den aktuellen Status, das Lieferfenster, den Aufwandsverbrauch, die Teamabdeckung und die neueste Aktivität in einem Durchgang. Der **Zweck**-Editor ist auch hier. Wenn Ihr Projektbrief bereits als Word-Dokument existiert, verwenden Sie die **Importieren**-Schaltfläche, um die `.docx` direkt einzulesen.
 
-### Fortschritt-Tab: Aufwand und Zuordnungen validieren
+### Aufwand-Tab: Aufwand und Zuordnungen validieren
 
-Verwenden Sie **Fortschritt**, um den Aufwand zu bestätigen, der die Lieferplanung steuert:
+Verwenden Sie **Aufwand**, um den Aufwand zu bestätigen, der die Lieferplanung steuert:
 
 - **IT-Aufwand (PT)**: Gesamtpersonentage erwartet von IT-Mitwirkenden
 - **Fachbereichs-Aufwand (PT)**: Gesamtpersonentage erwartet von Fachbereichs-Mitwirkenden
@@ -212,7 +211,7 @@ Jetzt beginnt die eigentliche Arbeit. Während das Projekt voranschreitet, halte
 
 ### Fortschritt aktualisieren
 
-Verwenden Sie den **Umsetzungsfortschritt**-Schieberegler auf dem Fortschritt-Tab, um anzuzeigen, wie weit das Projekt ist. Dies ist ein einfacher Prozentsatz (0 bis 100 %), der in Dashboards und Berichte einfließt.
+Verwenden Sie den **Fortschritt**-Schieberegler auf dem Aufwand-Tab, um anzuzeigen, wie weit das Projekt ist. Dies ist ein einfacher Prozentsatz (0 bis 100 %), der in Dashboards und Berichte einfließt.
 
 Bewegen Sie das Projekt durch die Status, während die Arbeit voranschreitet. In der Praxis bewegen sich die meisten Projekte von **Warteliste** oder **Geplant** in die aktive Umsetzung:
 
@@ -225,7 +224,7 @@ Bewegen Sie das Projekt durch die Status, während die Arbeit voranschreitet. In
 
 Es gibt zwei Stellen zur Zeiterfassung:
 
-1. **Fortschritt-Tab**: Overhead-Zeit auf Projektebene erfassen (Besprechungen, Koordination, Management)
+1. **Aufwand-Tab**: Overhead-Zeit auf Projektebene erfassen (Besprechungen, Koordination, Management)
 2. **Aufgaben**: Aufgabenspezifische Zeit gegen einzelne Arbeitspakete erfassen
 
 Warum das wichtig ist:
@@ -329,14 +328,14 @@ Siehe [Berichte-Referenz](../portfolio-reporting.md).
 
 | Ich möchte... | Gehe zu... |
 |---------------|------------|
-| Eine neue Idee einreichen | Portfolio > Anfragen > + Neu |
+| Eine neue Idee einreichen | Portfolio > Anfragen > Neue Anfrage |
 | Eine Anfrage bewerten | Anfrage öffnen > Bewertungs-Tab |
 | Machbarkeit bewerten | Anfrage öffnen > Analyse-Tab |
 | Das Projektteam festlegen | Projekt öffnen > Projekteigenschaften-Seitenleiste > Team |
 | Word-Dokument importieren | Anfrage/Projekt/Aufgabe öffnen > Importieren-Schaltfläche auf Zweck oder Beschreibung |
 | Die Projekt-Pipeline sehen | Portfolio > Planung |
 | Team-Kapazität prüfen | Portfolio > Planung > Kapazitätsansicht, oder Portfolio > Berichte > Kapazitäts-Heatmap |
-| Zeit für ein Projekt erfassen | Projekt öffnen > Fortschritt-Tab oder Aufgaben |
+| Zeit für ein Projekt erfassen | Projekt öffnen > Aufwand-Tab oder Aufgaben |
 | Eine Roadmap generieren | Portfolio > Planung > Roadmap-Generator |
 | Berichte anzeigen | Portfolio > Berichte |
 | Bewertungsgewichte konfigurieren | Portfolio > Einstellungen > Bewertungskriterien |

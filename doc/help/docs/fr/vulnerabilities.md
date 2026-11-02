@@ -75,7 +75,7 @@ La portée par un autre actif reste visible, sans être comptée : dans le panne
 
 La liste utilise la grille standard : une ligne par technologie, version et vulnérabilité. Les vulnérabilités exploitées activement viennent en premier, puis les plus sévères. Une vulnérabilité qui concerne trois versions de SQL Server donne trois lignes, chacune avec son propre état. Elle s'ouvre sur les lignes **À traiter** qui sont dans les alertes : videz le filtre de la colonne **État** pour voir les autres états.
 
-Une ligne au-dessus de la grille indique quand KANAP a lu chaque source pour la dernière fois : **Données lues**, puis la NVD et les éditeurs (CVE.org), chacun avec le jour et l'heure de sa dernière lecture. Une source désactivée n'y figure pas. Un avertissement suit sur la même ligne quand la dernière lecture d'une source a échoué, ou quand une source n'a pas été lue depuis plus de 3 jours. Les données de cette source peuvent alors être en retard.
+Une ligne au-dessus de la grille indique quand KANAP a lu chaque source pour la dernière fois : **Données lues**, puis la NVD, les éditeurs (CVE.org) et les catalogues d'exploitation (CISA KEV, EU KEV, EPSS et EUVD). La NVD, les éditeurs, CISA KEV, EU KEV et EUVD indiquent le jour et l'heure de la dernière lecture. EPSS indique le jour de ses scores. Une source désactivée n'y figure pas. Un avertissement suit sur la même ligne quand la dernière lecture d'une source a échoué, ou quand une source n'a pas été lue depuis plus de 3 jours. Les données de cette source peuvent alors être en retard.
 
 **Alertes**, **Publiée** et **Exploitées seulement** sont au-dessus de la grille. **Alertes** choisit les lignes selon leur réglage d'alertes : **Incluses** (par défaut), **Exclues** ou **Toutes**. Sous **Toutes**, les lignes hors des alertes sont grisées. Quand aucune ligne n'est dans les alertes et que certaines sont exclues, la liste vide propose **Afficher les exclues**. **Publiée** garde les vulnérabilités selon leur date de publication : **Toutes** (par défaut), **Moins de 7 jours**, **Moins de 30 jours**, **Moins de 90 jours**, **Moins d'un an** ou **Plus d'un an**. La période se compte à partir d'aujourd'hui, donc un lien enregistré ou partagé continue de montrer les plus récentes. **Exploitées seulement** ne garde que les vulnérabilités listées comme exploitées activement. L'adresse porte `exploited=1`. **Réinitialiser les filtres** ramène la page à son état d'ouverture : les lignes **À traiter**, les vulnérabilités exploitées activement en premier, **Alertes** sur **Incluses**, **Publiée** sur toutes les dates et **Exploitées seulement** éteint. L'export et un changement d'état en masse suivent ces trois réglages.
 
@@ -147,7 +147,7 @@ Réglez l'état de chaque version :
 | **Traitée** | La version est corrigée, ou un contournement est en place |
 | **Non concernée** | La vulnérabilité ne s'applique pas à votre installation |
 
-La note dit comment, par exemple « corrigé le 12 mars, changement CHG-123 ». Elle s'enregistre quand vous quittez le champ. Le journal d'audit garde qui a changé un état, et quand.
+La note dit comment, par exemple « corrigé le 12 mars, changement CHG-123 ». Elle s'enregistre quand vous quittez le champ. Le journal d'audit garde qui a changé un état, et quand. Vous pouvez aussi demander à [Plaid](#demander-a-lassistant) de changer un état.
 
 KANAP ne change jamais un état que vous avez choisi. Quand une version ne correspond plus (vous l'avez mise à jour, la technologie a été retirée, une source a changé ses données), une ligne encore **À traiter** disparaît. Une ligne que vous avez traitée reste, grisée, avec son état ; elle revient telle quelle si la version correspond de nouveau.
 
@@ -185,7 +185,23 @@ Les destinataires sont les responsables IT de la technologie dont le compte est 
 - **Listes des actifs et des applications** : la colonne **Vulnérabilités à traiter**. Voir [Actifs](assets.md#working-with-the-list) et [Applications](applications.md#working-with-the-list).
 - **Fiches actif et application** : la section **Vulnérabilités** et le badge des vulnérabilités graves dans l'en-tête. Voir [Actifs](assets.md#operations) et [Applications](applications.md#operations).
 - **Tableau de bord** : la tuile **Vulnérabilités du parc**. Voir [Mon tableau de bord](my-dashboard.md#vulnerabilities).
-- **Plaid** : l'assistant répond aux questions sur les vulnérabilités. Voir [Plaid](ai-assistant.md#tool-calls).
+- **Plaid** : l'assistant répond aux questions sur les vulnérabilités et change leur état. Voir [Demander à l'assistant](#demander-a-lassistant).
+
+## Demander à l'assistant
+
+[Plaid](ai-assistant.md) lit les vulnérabilités avec les mêmes droits que cette page. Il compte les lignes et les CVE distinctes, comme la page, garde les technologies en usage dans le parc quand vous le demandez, et dit quand KANAP a lu chaque source pour la dernière fois. Demandez par exemple : « Combien de vulnérabilités critiques sont à traiter sur PostgreSQL, par version ? » ou « Quelles CVE exploitées touchent APP-4 ? »
+
+Avec `infrastructure:member`, Plaid change aussi l'état des lignes, et chaque changement arrive sous forme d'aperçu que vous approuvez :
+
+- Nommez une CVE pour changer toutes ses lignes, ou ajoutez une technologie, ou une technologie et une version.
+- Ou décrivez les lignes avec les filtres de la page, par exemple les lignes critiques d'une technologie.
+- Donnez une note pour l'écrire sur chaque ligne. Sans note, chaque ligne garde la sienne.
+
+Un changement porte sur 5 000 lignes au plus, comme **Changer l'état**. L'aperçu dit combien de lignes et de CVE changent, et combien sont hors des alertes. Quand des lignes qui ne correspondent plus repassent **À traiter**, il les compte : elles disparaissent au prochain rapprochement. **Acceptée** n'est pas un état : Plaid propose **Traitée** avec une note comme « risque accepté », ou **Non concernée**, et attend votre choix. Demandez à Plaid d'annuler un changement qu'il a fait dans la conversation. Il refuse quand une ligne a changé depuis.
+
+Demandez par exemple : « Passe CVE-2024-3094 en non concernée sur TEC-3 version 5.6, le paquet n'est pas installé » ou « Passe les lignes critiques de PostgreSQL 14 en traitée avec la note "corrigé en mars" ».
+
+Le nouveau rapprochement (**Actualiser**) reste dans la section **Vulnérabilités** de la technologie. Voir [Technologies](technologies.md#vulnerabilites).
 
 ## Conseils
 

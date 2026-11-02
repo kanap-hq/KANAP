@@ -3,6 +3,7 @@ import { BadRequestException } from '@nestjs/common';
 import { Features } from '../../config/features';
 import { AiAggregateExecutor } from '../query/ai-aggregate.executor';
 import { AiQueryExecutor } from '../query/ai-query.executor';
+import { BUDGET_DELTA_FAMILY, budgetReportMetricFamilies } from '../query/registries/budget-amount-fields';
 import { AiToolRegistry } from '../ai-tool.registry';
 import { AiDocumentMutationSupportService } from '../mutation/ai-document-mutation-support.service';
 import { CreateDocumentAiMutationOperation } from '../mutation/operations/create-document.ai-mutation-operation';
@@ -42,7 +43,12 @@ function createRegistry(overrides?: {
   braveSearch?: any;
   previews?: any;
   mutationOperations?: any;
+  /** null: a registry built without the history service. */
+  recordHistory?: any;
 }) {
+  const recordHistory = overrides && 'recordHistory' in overrides
+    ? overrides.recordHistory ?? undefined
+    : { getRecordHistory: async (_context: any, input: any) => ({ entity: { type: input.entity_type, id: input.entity_id }, items: [], returned: 0, next_cursor: null, truncated: false, complete: true, note: 'History tab' }) };
   return new AiToolRegistry(
     {
       searchAll: async () => ({ items: [], total: 0, complete: false, entity_types: ['applications'] }),
@@ -78,6 +84,8 @@ function createRegistry(overrides?: {
       canReadKnowledge: async () => true,
       assertKnowledgeReadAccess: async () => undefined,
       assertEntityTypeReadAccess: async () => undefined,
+      // No right to administer users: the families of Admin › Roles and Admin › Data access stay unread.
+      adminFamiliesGap: async () => 'right',
       ...(overrides?.policy || {}),
     } as any,
     {
@@ -524,6 +532,8 @@ function createRegistry(overrides?: {
       },
       ...(overrides?.mutationOperations || {}),
     } as any,
+    undefined,
+    recordHistory,
   );
 }
 
@@ -612,7 +622,7 @@ async function testListAvailableTools() {
   const tools = await registry.listAvailableTools(createContext());
   assert.deepEqual(
     tools.map((tool) => tool.name),
-    ['search_all', 'describe_entity_filters', 'query_entities', 'aggregate_entities', 'get_filter_values', 'get_application_classification_catalog', 'get_entity_detail', 'get_entity_context', 'search_knowledge', 'get_document'],
+    ['search_all', 'describe_entity_filters', 'query_entities', 'aggregate_entities', 'get_filter_values', 'get_application_classification_catalog', 'get_entity_detail', 'get_entity_context', 'get_record_history', 'search_knowledge', 'get_document'],
   );
   assert.match(
     tools.find((tool) => tool.name === 'describe_entity_filters')?.description || '',
@@ -640,6 +650,38 @@ async function testListAvailableTools() {
   );
 }
 
+// Plaid L6, lot A: what the model reads about the vulnerabilities, one sentence per tool.
+async function testVulnerabilityReadsAreDescribed() {
+  const tools = await createRegistry().listAvailableTools(createContext());
+  const text = (name: string) => tools.find((tool) => tool.name === name)?.description || '';
+  assert.match(text('query_entities'), /On vulnerabilities, `total` counts rows \(technology, version, CVE\) and `distinct_total` the distinct CVE/);
+  assert.match(text('query_entities'), /`feeds` gives each feed's last success and whether it is failing/);
+  assert.match(text('query_entities'), /`estate` true keeps the technologies in use in the estate, so the home tile's figures \(critical CVE published in the last 7 and 30 days, exploited CVE, in the estate\) read with `estate` true and `severity`, `published_at` or `exploited`/);
+  assert.match(text('aggregate_entities'), /On vulnerabilities, a group's `count` counts rows and its `distinct_count` the distinct CVE, and `distinct_total` is the distinct CVE of the whole set, not a sum of groups/);
+  assert.match(text('aggregate_entities'), /add up on the fields of the CVE itself \(severity, score_source, exploited\)/);
+  assert.match(text('search_all'), /Vulnerabilities are not searched here: query_entities on `vulnerabilities` finds a CVE by `cve_id` or `q`/);
+  // Each sentence once: the three tools do not repeat one another.
+  assert.doesNotMatch(text('aggregate_entities'), /feeds|estate` true/);
+  assert.doesNotMatch(text('search_all'), /distinct_total|estate/);
+}
+
+/** Plaid L7, lot D: the families of Admin › Roles and Admin › Data access, each fact said once. */
+async function testAccessFamiliesAreDescribed() {
+  const tools = await createRegistry().listAvailableTools(createContext());
+  const text = (name: string) => tools.find((tool) => tool.name === name)?.description || '';
+  const query = text('query_entities');
+  assert.match(query, /For an administrator of users with access to all data, the families `roles` \(each role with its count of people\), `role_permissions` \(one row per role and right it gives\) and `data_access` \(the people whose access is limited, one row per node; Administrators see all data and are not listed\)/);
+  assert.match(query, /on users `primary_role` is the primary role only, `roles` every role of the person/);
+  assert.match(query, /a limited person without a node sees no budget or contract data, a limited access covers the budget and the contracts only, and who sees one company is in the company's get_entity_detail/);
+  assert.doesNotMatch(query, /not readable here/, 'the text of before lot A is gone');
+  assert.match(text('search_all'), /`roles`, `role_permissions`, `data_access`\) are not searched here either: query_entities reads them/);
+  assert.match(text('describe_entity_filters'), /`roles`, `role_permissions` and `data_access` are described for an administrator of users with access to all data only/);
+  // Each fact once: the other two tools do not repeat the facts of query_entities.
+  for (const name of ['search_all', 'describe_entity_filters', 'aggregate_entities']) {
+    assert.doesNotMatch(text(name), /primary role only|without a node|not listed/, name);
+  }
+}
+
 // Anthropic's connector review refuses tool text that reads like instructions to the model.
 async function testReadToolTextStatesFacts() {
   const registry = createRegistry();
@@ -663,6 +705,47 @@ async function testTaskReadersSeeEntityCommentsTool() {
   assert.ok(tools.some((tool) => tool.name === 'get_entity_comments'));
 }
 
+/**
+ * The history tool is offered to a person who reads one family with a History tab (Plaid L7, lot C),
+ * whatever the family of the record they then name: "Historique de APP-36" keeps the tool, which
+ * answers that applications have no history. The record's own right is checked on the call.
+ */
+async function testRecordHistoryOfferFollowsTheFamilyRights() {
+  const offered = async (readable: string[], recordHistory?: any) => {
+    const registry = createRegistry({
+      policy: { listReadableEntityTypes: async () => readable },
+      ...(recordHistory === undefined ? {} : { recordHistory }),
+    });
+    return (await registry.listAvailableTools(createContext())).some((tool) => tool.name === 'get_record_history');
+  };
+  assert.equal(await offered(['technologies']), true, 'a reader of technologies');
+  assert.equal(await offered(['budget_lines']), true, 'a reader of the budget');
+  assert.equal(await offered(['projects']), true, 'a reader of projects');
+  assert.equal(await offered(['users', 'vulnerabilities', 'roles']), false, 'no family with a history');
+  // Master data (Plaid L9): a calendar's History tab is its table working_day_profiles, a dimension's analytics_axes.
+  assert.equal(await offered(['working_day_calendars']), true, 'a reader of working-day calendars');
+  assert.equal(await offered(['analytics_axes']), true, 'a reader of analytics dimensions');
+  assert.equal(await offered(['technologies'], null), false, 'a registry without the history service');
+
+  const calls: any[] = [];
+  const registry = createRegistry({
+    recordHistory: { getRecordHistory: async (_context: any, input: any) => { calls.push(input); return { items: [] }; } },
+  });
+  await registry.execute(createContext(), 'get_record_history', { entity_type: 'technologies', entity_id: 'TEC-3' });
+  assert.deepEqual(calls, [{ entity_type: 'technologies', entity_id: 'TEC-3', limit: 50 }], 'the default page of the History tab');
+  await assert.rejects(
+    registry.execute(createContext(), 'get_record_history', { entity_type: 'technologies', entity_id: 'TEC-3', limit: 101 }),
+    /invalid|limit/i,
+  );
+  const schema = registry.toToolJsonSchemas([{ name: 'get_record_history' }])[0];
+  assert.ok((schema.parameters as any).properties.entity_type.enum.includes('applications'), 'an application is accepted, to be refused in words');
+  for (const family of ['working_day_calendars', 'analytics_axes']) {
+    assert.ok((schema.parameters as any).properties.entity_type.enum.includes(family), `${family}: its History tab is read`);
+  }
+  assert.match(schema.description, /budget lines, business processes/);
+  assert.equal(registry.listRegisteredTools().find((tool) => tool.name === 'get_record_history')?.category, 'inspection');
+}
+
 async function testListRegisteredToolsExposesRuntimeRegistry() {
   const registry = createRegistry();
 
@@ -678,8 +761,11 @@ async function testListRegisteredToolsExposesRuntimeRegistry() {
       'get_entity_detail',
       'get_entity_context',
       'get_entity_comments',
+      'get_record_history',
       'search_knowledge',
       'get_document',
+      'list_help_topics',
+      'read_help_section',
       'prepare_mutation_plan',
       'update_task_assignees',
       'undo_preview',
@@ -993,6 +1079,43 @@ async function testPrepareMutationPlanDelegatesToPreviewService() {
     'create_project',
     'task_1',
   ]);
+}
+
+/** The vulnerability state tool needs infrastructure member and the vulnerability feed, as the screen's route. */
+async function testVulnerabilityStateToolFollowsTheRightAndTheFeed() {
+  const operation = {
+    toolName: 'change_vulnerability_state',
+    description: 'Create a preview to change the state of vulnerability rows.',
+    inputSchema: { safeParse: (value: any) => ({ success: true, data: value }) },
+    inputSummary: { state: 'The new state.', rows: 'The rows.' },
+    businessResource: 'infrastructure',
+    writePreview: { entity_type: 'vulnerabilities', fields: ['vulnerability_state'], reversible: true, prompt_hint: 'For the state of vulnerability rows.' },
+  };
+  const mutationOperations = {
+    listOperations: () => [operation],
+    getOperationOrNull: (toolName: string) => (toolName === operation.toolName ? operation : null),
+    isSupportedToolName: (toolName: string) => toolName === operation.toolName,
+  };
+  const registry = (level: 'member' | 'reader') => createRegistry({
+    policy: {
+      assertWriteAccess: async (_context: any, resource: string, _manager: any, options: { level: string }) => {
+        if (resource !== 'infrastructure' || (level === 'reader' && options.level !== 'reader')) throw new Error('missing right');
+      },
+    },
+    mutationOperations,
+  });
+  const offered = async (level: 'member' | 'reader') => (await registry(level).listAvailableTools(createChatContext()))
+    .some((tool) => tool.name === 'change_vulnerability_state');
+  const feed = Features.VULNERABILITY_FEED_ENABLED;
+  try {
+    Features.VULNERABILITY_FEED_ENABLED = true;
+    assert.equal(await offered('member'), true, 'an infrastructure member is offered the tool');
+    assert.equal(await offered('reader'), false, 'an infrastructure reader is not');
+    Features.VULNERABILITY_FEED_ENABLED = false;
+    assert.equal(await offered('member'), false, 'nobody is offered it while the feed is off');
+  } finally {
+    Features.VULNERABILITY_FEED_ENABLED = feed;
+  }
 }
 
 async function testUndoPreviewStaysHiddenWhenOnlyNonReversibleWritesExist() {
@@ -1610,10 +1733,19 @@ async function testQueryEntitiesLeavesThePageSizeToTheExecutor() {
  * A refused input names each field and why, in the message the caller's model reads: the
  * dispatcher's schema check (MCP and the chat capabilities) and the tool's own (Zod).
  */
+/** get_entity_detail names a reference data record by its code and reads a calendar's year (Plaid L9, lot F, m7). */
+async function testEntityDetailDescribesTheReferenceData() {
+  const registry = createRegistry();
+  const [schema] = registry.toToolJsonSchemas([{ name: 'get_entity_detail' }]);
+  const properties = (schema.parameters as any).properties;
+  assert.match(properties.entity_id.description, /A cost center, a working-day calendar or an analytics dimension is also named by its code/);
+  assert.match(properties.year.description, /on companies and departments, and the year whose working days a working-day calendar gives\./);
+}
+
 async function testInvalidInputNamesTheFieldAndWhy() {
   const { AiCapabilityDispatcherService } = require('../control-plane/dispatcher/ai-capability-dispatcher.service');
   const registry = createRegistry();
-  const schemas = new Map(registry.toToolJsonSchemas([{ name: 'get_entity_detail' }, { name: 'query_entities' }]).map((schema) => [schema.name, schema.parameters]));
+  const schemas = new Map(registry.toToolJsonSchemas([{ name: 'get_entity_detail' }, { name: 'query_entities' }, { name: 'aggregate_entities' }]).map((schema) => [schema.name, schema.parameters]));
   const dispatcher = new AiCapabilityDispatcherService(...Array.from({ length: 9 }, () => ({}) as any));
   const refusal = (name: string, input: unknown): string => {
     try {
@@ -1633,6 +1765,36 @@ async function testInvalidInputNamesTheFieldAndWhy() {
   const enumValue = refusal('get_entity_detail', { entity_type: 'spend_items', entity_id: 'BL-102' });
   assert.match(enumValue, /"entity_type" must be one of: "accounts", .*"budget_lines".*"users"/, enumValue);
   assert.doesNotMatch(enumValue, /"spend_items"/, 'no alias: spend_items is not an accepted type');
+  // The roles of Admin › Roles: a role has a detail (its rights), a right of a role is a list row only.
+  assert.match(enumValue, /"roles"/, enumValue);
+  assert.doesNotMatch(enumValue, /"role_permissions"/, enumValue);
+  // More than 30 families since the chargeback reports (Plaid L8, lot D): the refusal points to the
+  // schema, whose enum names every family.
+  const listed = refusal('query_entities', { entity_type: 'spend_items' });
+  assert.match(listed, /"entity_type" must be one of the \d+ values listed in the tool's input schema/, listed);
+  const queried: string[] = (schemas.get('query_entities') as any).properties.entity_type.enum;
+  assert.ok(queried.includes('roles') && queried.includes('role_permissions'), 'the roles and their rights are listed');
+  // Admin › Data access: a row names a person, read with get_entity_detail on users.
+  assert.ok(queried.includes('data_access'), 'data_access is listed');
+  assert.doesNotMatch(enumValue, /"data_access"/, enumValue);
+  // The chargeback reports: computed rows, listed and grouped, with no detail of their own.
+  assert.ok(queried.includes('chargeback') && queried.includes('chargeback_lines'), 'the chargeback reports are listed');
+  assert.doesNotMatch(enumValue, /"chargeback/, enumValue);
+  // Master data › Cost centers (Plaid L9, lot A): listed, grouped, and a node has its detail and history.
+  assert.ok(queried.includes('cost_centers'), 'the cost centers are listed');
+  assert.match(enumValue, /"cost_centers"/, enumValue);
+  const more = new Map(registry.toToolJsonSchemas([{ name: 'aggregate_entities' }, { name: 'get_record_history' }]).map((schema) => [schema.name, schema.parameters]));
+  assert.ok((more.get('aggregate_entities') as any).properties.entity_type.enum.includes('cost_centers'), 'the cost centers are grouped');
+  assert.ok((more.get('get_record_history') as any).properties.entity_type.enum.includes('cost_centers'), 'a cost center has its history');
+  // Master data › Working-day calendars and Analytics dimensions (Plaid L9): listed, grouped, and a detail by code.
+  for (const family of ['working_day_calendars', 'analytics_axes']) {
+    assert.ok(queried.includes(family), `${family} is listed`);
+    assert.match(enumValue, new RegExp(`"${family}"`), enumValue);
+  }
+  // The exchange rates (Plaid L9, lot D): cells of the rate matrix, listed and grouped, with no detail.
+  assert.ok(queried.includes('exchange_rates'), 'the exchange rates are listed');
+  assert.ok((schemas.get('aggregate_entities') as any).properties.entity_type.enum.includes('exchange_rates'), 'and grouped');
+  assert.doesNotMatch(enumValue, /"exchange_rates"/, enumValue);
 
   const nested = refusal('query_entities', { entity_type: 'budget_lines', sort: { field: 'y_budget', direction: 'down' }, page: 'two' });
   assert.match(nested, /"sort.direction" must be one of: "asc", "desc"/, nested);
@@ -1717,6 +1879,148 @@ async function testAggregateEntitiesSchemaExposesMetricAndFunction() {
 
   assert.equal(aggregate.parameters.properties.metric.type, 'string');
   assert.deepEqual(aggregate.parameters.properties.function.enum, ['count', 'sum', 'avg', 'min', 'max']);
+}
+
+/** Plaid L8, lot B: several metrics, a second group field and a limit, one sentence each, chat and MCP alike. */
+async function testAggregateEntitiesSchemaExposesMetricsAndThenBy() {
+  const registry = createRegistry();
+  const schemas = await registry.getToolJsonSchemas(createContext()) as any[];
+  const { properties } = schemas.find((schema) => schema.name === 'aggregate_entities').parameters;
+  assert.deepEqual([properties.metrics.type, properties.metrics.items.type, properties.metrics.minItems, properties.metrics.maxItems], ['array', 'string', 2, 8]);
+  assert.equal(properties.then_by.type, 'string');
+  assert.deepEqual([properties.limit.type, properties.limit.minimum, properties.limit.maximum], ['integer', 1, 100]);
+  assert.deepEqual(properties.function.enum, ['count', 'sum', 'avg', 'min', 'max'], 'the functions do not change');
+  assert.match(properties.metrics.description, /^Budget lines, in place of metric: 2 to 8 amounts, FTE or line totals measured with one function in one call, each group and `overall` then carrying `values` by metric/);
+  assert.match(properties.metrics.description, /group_by paying_company, metrics y_budget, y_review, y_landing\) or of suppliers by year \(group_by supplier, metrics y_minus1_budget, y_budget, y_plus1_budget\)/);
+  assert.match(properties.then_by.description, /^Budget lines: a second group-by field, each group then carrying `then_key` \(a null key or then_key is the group of the lines without that value\), at most limit groups \(50 by default\)/);
+  assert.match(properties.then_by.description, /streams and categories of the linked projects do not cross/);
+  assert.match(properties.limit.description, /`others` gives the same measure over the rest, and `group_count` counts every group/);
+  assert.doesNotMatch(properties.limit.description, /summed/, 'with avg, min or max the rest is not a sum');
+  // Each fact once: the tool's description and the metric field do not repeat them.
+  const tools = await registry.listAvailableTools(createContext());
+  const aggregate = tools.find((tool) => tool.name === 'aggregate_entities')!;
+  assert.doesNotMatch(`${aggregate.description} ${properties.metric.description}`, /then_key|then_by|`values`|group_count/);
+  // The MCP server lists the same schema (one registry).
+  const mcp = registry.toToolJsonSchemas(registry.listRegisteredTools().filter((tool) => tool.surfaces.includes('mcp'))) as any[];
+  assert.deepEqual(mcp.find((schema) => schema.name === 'aggregate_entities').parameters.properties.then_by, properties.then_by);
+}
+
+async function testAggregateEntitiesPassesMetricsAndThenBy() {
+  const calls: unknown[] = [];
+  const registry = createRegistry({
+    aggregateExecutor: {
+      execute: async (_context: unknown, input: unknown) => {
+        calls.push(input);
+        return { group_by: 'paying_company', then_by: 'supplier', metrics: ['y_budget', 'y_review'], function: 'sum', groups: [], total: 0, filters_applied: [], filters_ignored: [], complete: true };
+      },
+    },
+  });
+  const input = { entity_type: 'budget_lines', group_by: 'paying_company', then_by: 'supplier', metrics: ['y_budget', 'y_review'], function: 'sum', limit: 20 };
+  await registry.execute(createContext(), 'aggregate_entities', input);
+  assert.deepEqual(calls, [input], 'metrics, then_by and limit reach the executor');
+  await assert.rejects(registry.execute(createContext(), 'aggregate_entities', { ...input, metrics: ['y_budget'] }), 'one metric goes in metric');
+  await assert.rejects(registry.execute(createContext(), 'aggregate_entities', { ...input, limit: 101 }), 'a limit past 100');
+  assert.equal(calls.length, 1, 'neither reaches the executor');
+}
+
+/** Plaid L8, lot C: the change between two columns, the FTE by month and the window of lines, said once each, chat and MCP alike. */
+async function testAggregateEntitiesDescribesChangesAndMonthlyFte() {
+  const registry = createRegistry();
+  const schemas = await registry.getToolJsonSchemas(createContext()) as any[];
+  const { properties } = schemas.find((schema) => schema.name === 'aggregate_entities').parameters;
+  assert.deepEqual([properties.direction.type, properties.direction.enum], ['string', ['increase', 'decrease']]);
+  assert.match(properties.direction.description, /^Budget lines, a change between two columns \(metric `y_review_minus_y_budget`\): increase \(the default\)/);
+  assert.match(properties.limit.description, /A change between two columns keeps 10 groups by default, and the FTE by month keeps the largest averages\./);
+  const tools = await registry.listAvailableTools(createContext());
+  const aggregate = tools.find((tool) => tool.name === 'aggregate_entities')!;
+  assert.match(aggregate.description, /A change between two columns is the metric `<destination>_minus_<source>` \(`y_review_minus_y_budget`; in FTE `y_review_fte_minus_y_budget_fte`\), computed as the "Top increase \/ decrease" report/);
+  assert.match(aggregate.description, /Like the report, a question about the largest increases or decreases groups by `line`, unless the person names another axis \(by supplier\)\./);
+  assert.match(aggregate.description, /The FTE month by month is the metric `<year>_<column>_fte_by_month` \(`y_budget_fte_by_month`\), computed as the "Staffing by month" report: each group's twelve months, average \(÷ 12\) and peak, with `monthly_fte_note`/);
+  assert.match(aggregate.description, /These budget figures read every line, ended ones included, while the budget reports read the lines still active on 1 January of the year before the first year they show/);
+  for (const sentence of [/computed as the "Top increase \/ decrease" report/g, /These budget figures read every line/g]) {
+    assert.equal(`${aggregate.description} ${properties.metric.description}`.match(sentence)?.length, 1, `said once: ${sentence}`);
+  }
+  assert.match(budgetReportMetricFamilies().find((family) => family.family === BUDGET_DELTA_FAMILY)!.description, /group_by line gives the lines themselves, by reference and title, as the report does: use it unless the person names another axis \(by supplier\)\./);
+  const describe = tools.find((tool) => tool.name === 'describe_entity_filters')!;
+  assert.match(describe.description, /`metric_families` the cost per FTE, the day rate, the change between two columns and the FTE by month aggregate_entities computes/);
+  const mcp = registry.toToolJsonSchemas(registry.listRegisteredTools().filter((tool) => tool.surfaces.includes('mcp'))) as any[];
+  assert.deepEqual(mcp.find((schema) => schema.name === 'aggregate_entities').parameters.properties.direction, properties.direction, 'the MCP server lists the same schema');
+}
+
+/** Plaid L8, lot E: a withheld field and the chargeback families, said once per tool, chat and MCP alike. */
+async function testWithheldFieldsAndChargebackAreDescribed() {
+  const registry = createRegistry();
+  const tools = await registry.listAvailableTools(createContext());
+  const text = (name: string) => tools.find((tool) => tool.name === name)?.description || '';
+  assert.match(text('describe_entity_filters'), /`fields_withheld` names each field of the family this person may not read, for lack of a right, with the reason: the field is withheld, which says nothing of its values \(they are not empty\)/);
+  assert.match(text('get_filter_values'), /`fields_withheld` names those this person may not read, for lack of a right, with the reason: their values are withheld, not empty/);
+  assert.match(text('query_entities'), /in the default order \(with the reason in `fields_withheld` for a field this person may not read\)/);
+  for (const name of ['query_entities', 'aggregate_entities']) {
+    const description = text(name);
+    assert.equal(description.match(/The chargeback reports are read for a person with the Reporting right/g)?.length, 1, `${name}: the chargeback sentence once`);
+    assert.match(description, /`chargeback_lines` the budget lines charged to the one company its `company` filter names/);
+    assert.match(description, /Each reads one year and one column; without a `nature` filter it covers both natures/);
+    assert.match(description, /`chargeback.warnings` names in words what the figures leave out, for the answer to repeat/);
+    assert.match(description, /a group by department keyed "company › department"/);
+  }
+  assert.match(text('query_entities'), /data access row, chargeback row, which opens its report\), and a cost center, working-day calendar or analytics dimension, whose `ref` is its code, carries `page_url`/);
+  const mcp = registry.listRegisteredTools().filter((tool) => tool.surfaces.includes('mcp'));
+  assert.equal(mcp.find((tool) => tool.name === 'aggregate_entities')?.description, text('aggregate_entities'), 'the MCP server reads the same description');
+}
+
+/** Plaid L9, lot E: the reference data, one sentence in each read tool, the search and the history said as they are. */
+async function testReferenceDataFamiliesAreDescribed() {
+  const registry = createRegistry();
+  const tools = await registry.listAvailableTools(createContext());
+  const text = (name: string) => tools.find((tool) => tool.name === name)?.description || '';
+  for (const name of ['query_entities', 'aggregate_entities', 'describe_entity_filters']) {
+    const description = text(name);
+    assert.equal(description.match(/The reference data are families too/g)?.length, 1, `${name}: the reference data sentence once`);
+    assert.match(description, /on `cost_centers` \(Master data › Cost centers\), `budget_holder` is the budget holder of the node, the person responsible for it, `under` keeps every node below a group and `parent` the nodes directly under it/);
+    assert.match(description, /a `working_day_calendars` row reads one year \(the `year` filter\), whose `total_days` the server computes/);
+    assert.match(description, /`required_for` is where a value is required now, an enabled dimension only/);
+    assert.match(description, /`exchange_rates` gives each currency's rate for a year in the reporting currency for 1 unit of that currency, with `inverse_rate` and, with the `against` filter, `cross_rate` computed by the server/);
+    // Plaid L9, lot G: the pair with the reporting currency is on the other currency's row.
+    assert.match(description, /a pair with the reporting currency reads on the row of the other currency \(`rate` and `inverse_rate`\), and `against` serves a pair of two other currencies\./);
+  }
+  // A number alone is a filter value (2026 is eq 2026), on both tools that filter.
+  for (const schema of registry.toToolJsonSchemas([{ name: 'query_entities' }, { name: 'aggregate_entities' }])) {
+    const values = (schema.parameters as any).properties.filters.additionalProperties.anyOf;
+    assert.ok(values.some((value: any) => value.type === 'number'), `${schema.name}: a number alone is accepted (${JSON.stringify(values)})`);
+  }
+  const search = text('search_all');
+  assert.match(search, /It also searches the cost centers, working-day calendars and analytics dimensions by code and by name \(`ref` is the code; at most five of each family\)/);
+  assert.match(search, /The exchange rates are not searched here: query_entities on `exchange_rates` reads them, and `not_searched_here` says so/);
+  assert.doesNotMatch(search, /The reference data are families too/, 'search_all says what it searches, not the facts of the families');
+  // No sentence says the reference data are not read.
+  for (const tool of tools) {
+    assert.doesNotMatch(tool.description, /(do|does) not read (the )?(cost centers|working-day calendars|exchange rates|analytics dimensions)/, tool.name);
+    const unread = tool.description.match(/what these tools do not read: [^.]*\./)?.[0] ?? '';
+    assert.doesNotMatch(unread, /(: |; )(cost centers|working-day calendars|exchange rates|analytics dimensions)(;| \(|\.)/, tool.name);
+  }
+  // The history: the families come from the inventory; no stale list of families without one.
+  const history = registry.listRegisteredTools().find((tool) => tool.name === 'get_record_history')!.description;
+  assert.match(history, /cost centers/);
+  assert.match(history, /working-day calendars/);
+  assert.match(history, /The other families have no History tab in KANAP, so no history here\./);
+  assert.doesNotMatch(history, /applications, contracts, projects, requests, tasks, incidents, users and more/);
+}
+
+async function testAggregateEntitiesPassesDirection() {
+  const calls: unknown[] = [];
+  const registry = createRegistry({
+    aggregateExecutor: {
+      execute: async (_context: unknown, input: unknown) => {
+        calls.push(input);
+        return { group_by: 'line', metric: 'y_review_minus_y_budget', function: 'delta', direction: 'decrease', groups: [], total: 0, filters_applied: [], filters_ignored: [], complete: true };
+      },
+    },
+  });
+  const input = { entity_type: 'budget_lines', group_by: 'line', metric: 'y_review_minus_y_budget', direction: 'decrease', limit: 5 };
+  await registry.execute(createContext(), 'aggregate_entities', input);
+  assert.deepEqual(calls, [input], 'direction and limit reach the executor');
+  await assert.rejects(registry.execute(createContext(), 'aggregate_entities', { ...input, direction: 'both' }), 'increase or decrease only');
+  assert.equal(calls.length, 1, 'an unknown direction does not reach the executor');
 }
 
 async function testGetFilterValuesDelegatesToQueryExecutor() {
@@ -2114,9 +2418,12 @@ async function testAggregateExecutorMarksUnresolvedScopeIncomplete() {
 }
 
 async function run() {
+  await testAccessFamiliesAreDescribed();
   await testListAvailableTools();
   await testTaskReadersSeeEntityCommentsTool();
+  await testRecordHistoryOfferFollowsTheFamilyRights();
   await testReadToolTextStatesFacts();
+  await testVulnerabilityReadsAreDescribed();
   await testListRegisteredToolsExposesRuntimeRegistry();
   await testListAvailableToolsIncludesCategories();
   await testRegisteredToolCategoriesMatchExpectedAssignments();
@@ -2127,6 +2434,7 @@ async function run() {
   await testAdministratorOnlyIncidentToolsNeedTheAdminLevel();
   await testWritePreviewToolsStayHiddenWithoutWriteAccess();
   await testDeleteRecordIsOfferedOnChatOnly();
+  await testVulnerabilityStateToolFollowsTheRightAndTheFeed();
   await testUpdateTaskAssigneesCreatesOnePreviewPerTaskAndReturnsPartialErrors();
   await testPrepareMutationPlanDelegatesToPreviewService();
   await testUndoPreviewStaysHiddenWhenOnlyNonReversibleWritesExist();
@@ -2143,6 +2451,12 @@ async function run() {
   await testQueryEntitiesLeavesThePageSizeToTheExecutor();
   await testAggregateEntitiesDelegatesToAggregateExecutor();
   await testAggregateEntitiesSchemaExposesMetricAndFunction();
+  await testAggregateEntitiesSchemaExposesMetricsAndThenBy();
+  await testAggregateEntitiesPassesMetricsAndThenBy();
+  await testAggregateEntitiesDescribesChangesAndMonthlyFte();
+  await testWithheldFieldsAndChargebackAreDescribed();
+  await testReferenceDataFamiliesAreDescribed();
+  await testAggregateEntitiesPassesDirection();
   await testGetFilterValuesDelegatesToQueryExecutor();
   await testGetEntityContextDelegatesToEntityTools();
   await testGetEntityCommentsDelegatesToEntityTools();
@@ -2150,6 +2464,7 @@ async function run() {
   await testSearchKnowledgeAppliesDefaultLimit();
   await testSchemasExposeDefaultLimits();
   await testInvalidInputNamesTheFieldAndWhy();
+  await testEntityDetailDescribesTheReferenceData();
   await testGetEntityCommentsSchemaExposesPaginationDefaults();
   await testGetDocumentMapsStableDto();
   await testWebSearchRejectsOversizedQueries();

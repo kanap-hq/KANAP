@@ -243,6 +243,17 @@ export class ContractsController {
     return this.svc.listBudgetLines(id, { manager: req?.queryRunner?.manager, budgetAccess: canReadContractBudget(req) });
   }
 
+  /**
+   * The budget-line picker: each candidate the caller can read, with the fields that would differ
+   * once linked. Without the budget right the answer is empty and no line is read.
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'reader')
+  @Get(':id/budget-line-consistency')
+  budgetLineConsistency(@Param('id') id: string, @Query('ids') ids: string | undefined, @Req() req: any) {
+    return this.svc.budgetLineConsistency(id, ids, { manager: req?.queryRunner?.manager, budgetAccess: canReadContractBudget(req) });
+  }
+
   // The Budget tab's figures for a year and column; also needs the right to read the budget.
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'reader')

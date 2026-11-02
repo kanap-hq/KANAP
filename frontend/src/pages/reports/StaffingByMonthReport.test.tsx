@@ -149,16 +149,18 @@ function LocationProbe() {
 
 function renderReport(path: string) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const tree = (entry = path) => (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={createAppTheme('light')}>
-        <MemoryRouter initialEntries={[path]}>
+        <MemoryRouter initialEntries={[entry]}>
           <StaffingByMonthReport />
           <LocationProbe />
         </MemoryRouter>
       </ThemeProvider>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  const view = render(tree());
+  return { ...view, rerenderReport: () => view.rerender(tree()) };
 }
 
 const gridRows = () => JSON.parse(screen.getByTestId('grid').textContent || '[]') as Array<Record<string, any>>;
@@ -373,6 +375,24 @@ describe('Staffing by month', () => {
     await waitFor(() => expect(gridRows()).toHaveLength(3));
     expect(screen.queryByRole('note')).toBeNull();
   });
+});
+
+it('asks the monthly FTE once, after the column setting, on the tenant default', async () => {
+  const tenant = {
+    enabled: { planned: true, committed: true, forecast: true, actual: true, expected_landing: true },
+    default_column: 'forecast' as const,
+  };
+  setBudgetColumns(tenant, false);
+  const { rerenderReport } = renderReport('/report');
+  await waitFor(() => expect(post.mock.calls.some(([, body]) => body.spec.groupBy?.[0] === 'run_build')).toBe(true));
+  expect(post.mock.calls.some(([, body]) => body.spec.measures.some((m: { field?: string }) => m.field?.startsWith('fte_month_')))).toBe(false);
+
+  setBudgetColumns(tenant);
+  rerenderReport();
+  await waitFor(() => expect(lastRequest()?.spec.measures[0].field).toBe(`fte_month_01_y${Y}Forecast`));
+  const monthly = post.mock.calls.filter(([, body]) => body.spec.measures.some((m: { field: string }) => m.field.startsWith('fte_month_')));
+  expect(monthly).toHaveLength(1);
+  expect(monthly[0][1].spec.measures.filter((m: { field: string }) => m.field.startsWith('fte_month_')).every((m: { field: string }) => m.field.endsWith('Forecast'))).toBe(true);
 });
 
 it('defaults to All and requests monthly FTE once from the unified endpoint', async () => {

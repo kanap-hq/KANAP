@@ -15,7 +15,7 @@ Für portfolio-weite Sequenzierung und Roadmap-Arbeit verwenden Sie [Portfolio-P
 
 - `portfolio_projects:reader`: die Liste öffnen und Projekt-Arbeitsbereiche anzeigen
 - `portfolio_projects:contributor`: das verwaltete Dokument **Zweck** aktualisieren, Zeit auf dem Projekt erfassen (Projekt-Overhead-Einträge und Einträge auf Projektaufgaben) und im Reiter **Beziehungen** verknüpfte Datensätze, Links und Dateien pflegen (Abhängigkeiten erfordern `portfolio_projects:member`)
-- `portfolio_projects:member`: Projekte erstellen und Projektdaten, Status, Team, Beziehungen, Zeitleiste, Fortschritt, Aufgaben, Bewertung, Kommentare und Entscheidungen verwalten
+- `portfolio_projects:member`: Projekte erstellen und Projektdaten, Status, Team, Beziehungen, Zeitleiste, Aufwand, Aufgaben, Bewertung, Kommentare und Entscheidungen verwalten
 - `portfolio_projects:admin`: enthält die Member-Funktionen und kann auch importieren und exportieren, Prioritäts-Überschreibungen speichern und Projekt-Overhead-Zeiteinträge anderer Benutzer pflegen
 - Die Anzeige der Wissensdatenbank erfordert auch Wissensdatenbank-Zugriff
 - Das Erstellen oder Verknüpfen von eigenständigem Wissen erfordert auch eine Wissens-Erstellungsrolle
@@ -43,7 +43,7 @@ Die Projektliste ist darauf ausgelegt, zwei Fragen schnell zu beantworten: „Wo
 | **Priorität** | Berechneter Prioritätswert |
 | **Status** | Aktueller Ausführungszustand mit einem farbigen Punkt |
 | **Herkunft** | Anfrage, Schnellstart oder Legacy |
-| **Fortschritt** | Ausführungsfortschritt als Balken |
+| **Aufwand** | Ausführungsfortschritt als Balken |
 | **Quelle** | Portfolio-Quellklassifizierung |
 | **Kategorie** | Portfolio-Kategorie |
 | **Stream** | Portfolio-Stream |
@@ -70,22 +70,34 @@ Die Projektliste ist darauf ausgelegt, zwei Fragen schnell zu beantworten: „Wo
 
 Das Öffnen eines Projekts aus der Liste bewahrt den aktuellen Listenkontext. Der Projekt-Arbeitsbereich verwendet denselben Kontext für die **Vorherige**- und **Nächste**-Navigation, sodass Sie einen gefilterten Satz überprüfen können, ohne Ihren Platz zu verlieren.
 
-## Ein Projekt erstellen
+## Ein Projekt erstellen { #creating-a-project }
 
 Die direkte Projekterstellung ist für Arbeit gedacht, die ohne separate Anfragenaufzeichnung in die Ausführung gehen soll.
 
-- Neue Projekte öffnen sich nur auf **Zusammenfassung**
-- Bis das Projekt zum ersten Mal gespeichert wird, sind die anderen Reiter nicht verfügbar
-- Direkt erstellte Projekte verwenden die Herkunft **Schnellstart** oder **Legacy**
-- Projekte mit Anfragenherkunft behalten ihre Anfragenherkunft und Quellverknüpfung
+1. Klicken Sie auf **Neues Projekt**. Die Seite des Projekts öffnet sich auf **Zusammenfassung** mit einem leeren Titel in der Kopfzeile. Der Rest der Seite ist abgeblendet.
+2. Geben Sie den Namen des Projekts ein.
+3. Drücken Sie die Eingabetaste oder klicken Sie außerhalb des Titels. KANAP erstellt das Projekt sofort, mit der Herkunft **Fast-track**. Seine Referenz (`PRJ-12`) erscheint und alle Reiter öffnen sich.
 
-Verwenden Sie **Schnellstart** für Arbeit, die wirklich direkt in die Lieferung eingeführt wird. Verwenden Sie **Legacy** für Arbeit, die bereits außerhalb der normalen Erfassungshistorie existiert. Diese Unterscheidung wirkt sich auf die Berichterstattung aus und macht spätere Portfolio-Analysen weitaus weniger verwirrend.
+Füllen Sie dann die Eigenschaftsleiste und den **Zweck** aus. Der Name wird nur in der Kopfzeile bearbeitet. Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erstellen.
+
+Ein so erstelltes Projekt kann in der Eigenschaftsleiste zwischen **Fast-track** und **Altbestand** wechseln. Ein aus einer Anfrage umgewandeltes Projekt behält die Herkunft **Anfrage** und seine Quellverknüpfung.
+
+Verwenden Sie **Fast-track** für Arbeit, die wirklich direkt in die Lieferung eingeführt wird. Verwenden Sie **Altbestand** für Arbeit, die bereits außerhalb der normalen Erfassungshistorie existiert. Diese Unterscheidung wirkt sich auf die Berichterstattung aus und macht spätere Portfolio-Analysen weitaus weniger verwirrend.
+
+### Erstellen oder abbrechen { #cancelling-a-creation }
+
+Solange das Projekt erstellt wird, zeigt seine Kopfzeile **Erstellen** und **Abbrechen**. Beide bleiben, bis Sie das Projekt verlassen.
+
+- **Erstellen** behält das Projekt und schließt es. Sie kehren dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm. Bei leerem Titel schließt sich nichts, und der Titel verlangt einen
+- **Abbrechen** schließt, ohne etwas zu behalten. Ein bereits erstelltes Projekt wird gelöscht. Wenn Sie mehr als den Namen eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne jedes Löschrecht abbrechen
+
+Nur mit **Abbrechen** lässt sich ein Projekt löschen. Sobald Sie das Projekt verlassen, bleibt es bestehen: Setzen Sie seinen Status auf **Abgebrochen**, wenn es nicht zustande kommt. Ein mit einer Anfrage verknüpftes Projekt kann nicht gelöscht werden. Die Referenz eines abgebrochenen Projekts wird nicht wiederverwendet.
 
 ## Mentales Modell des Arbeitsbereichs
 
 Der Projekt-Arbeitsbereich hat zwei Schichten:
 
-- Den **Hauptinhaltsbereich** für die operativen Reiter: **Zusammenfassung**, **Aufgaben**, **Zeitleiste**, **Fortschritt**, **Bewertung**, **Beziehungen** und **Wissensdatenbank**
+- Den **Hauptinhaltsbereich** für die operativen Reiter: **Zusammenfassung**, **Aufgaben**, **Zeitleiste**, **Aufwand**, **Bewertung**, **Beziehungen**, **Wissensdatenbank** und **Verlauf** (die Änderungen am Projekt, siehe [Verlauf der Datensätze](record-history.md))
 - Eine persistente **Eigenschaftsleiste** am rechten Rand für Kerneigenschaften, Teamzuweisung und Quell-Anfragen
 
 Öffnen oder schließen Sie die Eigenschaftsleiste mit der vertikalen Registerkarte am rechten Rand.
@@ -101,6 +113,7 @@ Die Arbeitsbereichs-Kopfzeile ist eine Steuerungsleiste, keine Dekoration.
 - Eine kompakte Metadatenzeile: **Status**, **Bewertung**, **Fortschritt**, **IT-Leiter**, **Geplantes Ende** und **Herkunft** (oder die Quell-Anfragen-Referenz für Projekte mit Anfragenherkunft)
 - **Vorherige** und **Nächste** bewegen sich durch das aktuelle Listenergebnis, nicht durch jedes Projekt im System
 - **Teilen** sendet die aktuelle Projekt-URL per E-Mail mit einer optionalen Nachricht
+- **Erstellen** und **Abbrechen**, solange das Projekt erstellt wird. Siehe [Erstellen oder abbrechen](#cancelling-a-creation)
 
 Das Senden eines Links gewährt keinen Zugriff. Es teilt nur den Standort. Berechtigungen bleiben genau so, wie sie vor dem Versenden der E-Mail waren.
 
@@ -121,9 +134,8 @@ Behandeln Sie die Eigenschaftsleiste als die persistente Identitätskarte des Pr
 
 ### Kerneigenschaften
 
-- Projektname
 - Status
-- Herkunft (nur während der initialen Erstellung; danach gesperrt)
+- Herkunft: **Fast-track** oder **Altbestand** für ein direkt erstelltes Projekt. Ein aus einer Anfrage umgewandeltes Projekt behält die Herkunft **Anfrage**
 - Quelle, Kategorie, Stream
 - Unternehmen, Abteilung
 - Geplanter Start, Geplantes Ende
@@ -142,7 +154,7 @@ Diese Zuweisungen tun mehr, als Felder auszufüllen:
 
 - sie bestimmen, was in **Meine Projekte** und **Projekte meines Teams** erscheint
 - sie speisen den Projektkontext in Zusammenfassung und Berichterstattung ein
-- sie definieren, wer für die Aufwandszuweisung im Reiter **Fortschritt** verfügbar ist
+- sie definieren, wer für die Aufwandszuweisung im Reiter **Aufwand** verfügbar ist
 
 Wenn Leiter und Mitwirkende falsch sind, ist auch Ihre Aufwandsplanung falsch.
 
@@ -180,18 +192,15 @@ Das verwaltete Zweck-Dokument unterscheidet sich vom Reiter **Wissensdatenbank**
 
 ### Aktivität
 
-Unter Zweck enthält der Reiter Zusammenfassung den Projektaktivitäts-Stream:
+Unter Zweck enthält der Reiter Zusammenfassung den Projektaktivitäts-Stream: Kommentare für Diskussion, kontextbezogene Notizen und formale Entscheidungen.
 
-- **Kommentare** für Diskussion, kontextbezogene Notizen und formale Entscheidungen
-- **Historie** für das Audit-Protokoll von Feld- und Statusänderungen
-
-**Historie** listet die erfassten Änderungen auf (Statuswechsel, Feldänderungen, Team- und Beziehungsänderungen, Änderungen am Dokument Zweck) und endet mit dem Erstellungseintrag: wer das Projekt erstellt hat und wann.
+Die Änderungen am Projekt stehen im Reiter **Verlauf**: Statuswechsel, Feldänderungen, Team- und Beziehungsänderungen, Änderungen am Dokument Zweck und der Erstellungseintrag (wer das Projekt erstellt hat und wann).
 
 Benutzer mit `portfolio_projects:member` können Projektkommentare hinzufügen und bearbeiten. Kommentare können auch als formale Entscheidungen aufgezeichnet werden, mit einem Ergebnis und einer optionalen Statusänderung. Verwenden Sie das, wenn die Diskussion selbst den Verlauf des Projekts ändert.
 
 Bilder können in Aktivitätskommentaren enthalten sein, wenn visuelle Beweise nützlich sind: Architekturskizzen, Screenshots oder Review-Beweise.
 
-Verwenden Sie **Historie**, wenn Sie wissen müssen, was sich geändert hat. Verwenden Sie **Kommentare**, wenn Sie wissen müssen, warum.
+Verwenden Sie den Reiter **Verlauf**, wenn Sie wissen müssen, was sich geändert hat. Verwenden Sie die Kommentare, wenn Sie wissen müssen, warum.
 
 ## Aufgaben
 
@@ -204,7 +213,7 @@ Der Reiter **Aufgaben** ist die Ausführungswarteschlange des Projekts. Das Reit
 
 Dieser Reiter ist für die Verwaltung von projektbezogenen Aufgaben im Kontext, nicht für den Ersatz des vollständigen Aufgaben-Arbeitsbereichs. Das Öffnen einer Aufgabe führt Sie zu ihrem eigenen Arbeitsbereich, wo aufgabenspezifische Details und Zeiterfassung fortgesetzt werden.
 
-Aus Projektsicht ist die wichtige Konsequenz folgende: Aufgabenstatus und Aufgabenzeit sind nicht isoliert. Sie fließen zurück in Zusammenfassung und Fortschritt, sodass vernachlässigte Aufgaben das gesamte Projektbild weniger vertrauenswürdig machen.
+Aus Projektsicht ist die wichtige Konsequenz folgende: Aufgabenstatus und Aufgabenzeit sind nicht isoliert. Sie fließen zurück in Zusammenfassung und Aufwand, sodass vernachlässigte Aufgaben das gesamte Projektbild weniger vertrauenswürdig machen.
 
 ## Zeitleiste
 
@@ -250,20 +259,20 @@ Phasen-Abschluss-Meilensteine folgen der Phase, an die sie angehängt sind. Eige
 
 Nur Phasen mit verwendbaren Start- und Enddaten erscheinen sinnvoll im Gantt. Wenn die Daten vage sind, ist das Diagramm gleichermaßen vage. In der Gantt-Ansicht können Sie Phasenbalken ziehen, um Start-/Enddaten anzupassen (mit Verwaltungsberechtigung).
 
-## Fortschritt
+## Aufwand
 
-Der Reiter **Fortschritt** kombiniert Ausführungsfortschritt, Arbeitslastplanung und tatsächlichen Zeitverbrauch. Diese Kombination ist wichtig, weil ein Projekt, das 80 % Fortschritt mit 20 % verbrauchtem Aufwand meldet, nicht unbedingt effizient ist; es kann einfach schlecht geschätzt sein.
+Der Reiter **Aufwand** kombiniert Ausführungsfortschritt, Arbeitslastplanung und tatsächlichen Zeitverbrauch. Diese Kombination ist wichtig, weil ein Projekt, das 80 % Fortschritt mit 20 % verbrauchtem Aufwand meldet, nicht unbedingt effizient ist; es kann einfach schlecht geschätzt sein.
 
 ### Fortschritt und Arbeitslast
 
-- **Ausführungsfortschritt** ist das Gesamtabschluss-Signal für das Projekt
+- **Fortschritt** ist das Gesamtabschluss-Signal für das Projekt
 - **Arbeitslastverbrauch** vergleicht den tatsächlichen Aufwand mit dem geplanten Aufwand
 
 Halten Sie diese beiden Zahlen mit der Realität abgestimmt. Wenn der Fortschritt ohne entsprechenden Aufwand voranschreitet oder Aufwand ohne Lieferbewegung anwächst, sagt Ihnen die Diskrepanz normalerweise etwas Wichtiges über Umfang, Schätzung oder Berichtsdisziplin.
 
 ### Geschätzter Aufwand und Zuweisungen
 
-Der Fortschritt trennt den geschätzten Aufwand in:
+Der Reiter **Aufwand** trennt den geschätzten Aufwand in:
 
 - **IT-Aufwand**
 - **Fachbereichs-Aufwand**
@@ -283,7 +292,7 @@ Wichtige Konsequenzen:
 
 - Aufgabenzeit trägt automatisch zum tatsächlichen Projekt-Aufwand bei
 - Aufgabenzeit ist hier sichtbar, muss aber im Aufgaben-Arbeitsbereich korrigiert werden
-- Projekt-Overhead-Einträge werden vom Reiter Fortschritt aus gepflegt
+- Projekt-Overhead-Einträge werden vom Reiter Aufwand aus gepflegt
 - Mitwirkende können ihre eigenen Projekt-Overhead-Einträge pflegen
 - Administratoren können Projekt-Overhead-Einträge benutzerübergreifend pflegen
 
@@ -333,7 +342,7 @@ Ein Abschnitt fehlt, wenn Sie sein Modul nicht lesen dürfen: Budgetzeilen erfor
 
 **Verknüpfungen hinzufügen und entfernen** (`portfolio_projects:contributor`): **Hinzufügen** rechts neben einem Abschnitt öffnet eine Suche unter der Schaltfläche. Geben Sie einen Namen oder eine Referenz ein und wählen Sie ein Ergebnis: Die Verknüpfung wird sofort gespeichert. Um eine Verknüpfung zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz am Zeilenende. Es gibt keine Bestätigung, und das Entfernen einer Verknüpfung löscht nichts anderes. Das Verknüpfen einer Technologie erfordert zusätzlich Leserechte auf die Infrastruktur. Leser sehen die Tabellen schreibgeschützt.
 
-Verknüpfungen mit Budgetzeilen, Anwendungen und Assets werden in der **Historie** des Projekts erfasst.
+Verknüpfungen mit Budgetzeilen, Anwendungen und Assets werden im Reiter **Verlauf** des Projekts erfasst.
 
 ### Links und Dateien
 
@@ -341,7 +350,7 @@ Verknüpfungen mit Budgetzeilen, Anwendungen und Assets werden in der **Historie
 
 - **Link hinzufügen** öffnet einen Dialog für eine URL und einen optionalen Namen; der Link wird sofort gespeichert. Um einen Link zu ändern, fahren Sie mit der Maus über seine Zeile und klicken Sie auf den Stift.
 - **Datei anhängen** öffnet die Dateiauswahl. Sie können Dateien auch auf den Abschnitt ziehen.
-- Um einen Link oder eine Datei zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz. Das Löschen einer Datei fragt zuerst nach einer Bestätigung.
+- Um einen Link oder eine Datei zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz. Das Entfernen eines Links zeigt eine Meldung und bietet **Rückgängig** an, womit der Link wieder angelegt wird. Das Löschen einer Datei fragt zuerst nach einer Bestätigung.
 
 ## Wissensdatenbank
 
@@ -389,7 +398,7 @@ Verwenden Sie **Datenanreicherung**, wenn Sie exportieren, ausgewählte Felder e
 
 Importe sind für kontrollierte Massenänderungen ausgelegt:
 
-- laden Sie zuerst eine Vorlage herunter, wenn Sie die korrekte Struktur benötigen
+- laden Sie zuerst eine Vorlage herunter, wenn Sie die korrekte Struktur benötigen, oder ein Beispiel, um Beispielprojekte und die Werte jeder Spalte zu sehen ([Beispieldateien](csv-files.md#example-files))
 - validieren Sie vor dem Import
 - verwenden Sie erweiterte Optionen, um Anreicherungs- vs. Ersetzungsverhalten und Einfüge-/Aktualisierungsregeln zu wählen
 
@@ -410,6 +419,6 @@ Erneut: Das Senden eines Links gewährt keinen Zugriff. Es erspart den Leuten nu
 - Verwenden Sie die Eigenschaftsleiste für strukturelle Daten, die sichtbar bleiben sollen, während Sie arbeiten.
 - Verwenden Sie **Zusammenfassung** für die Projekterzählung, die neueste Aktivität und das übergeordnete Betriebsbild.
 - Verwenden Sie **Zeitleiste**, um die Lieferstruktur zu definieren, bevor das Aufgabenvolumen wächst.
-- Verwenden Sie **Fortschritt** regelmäßig, sonst kommt die Aufwandsabweichung als Überraschung, obwohl die Daten Sie bereits gewarnt haben.
+- Verwenden Sie **Aufwand** regelmäßig, sonst kommt die Aufwandsabweichung als Überraschung, obwohl die Daten Sie bereits gewarnt haben.
 - Verwenden Sie **Wissensdatenbank** für wiederverwendbare oder gesteuerte Dokumentation, nicht als zweite Kopie des Zweck-Briefs.
 - Verwenden Sie **Importieren** im Zweck-Editor, wenn ein Projekt-Brief bereits als Word-Dokument existiert, anstatt ihn von Hand neu zu formatieren.

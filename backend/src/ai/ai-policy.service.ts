@@ -1,11 +1,13 @@
 import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
-import { moduleRightRequired } from '../auth/module-right-required';
+import { codedForbidden, moduleRightRequired, requestContextMissing } from '../auth/module-right-required';
 import { throwFeatureDisabled } from '../common/feature-gates';
 import { StripeConfigService } from '../billing/stripe';
 import { Subscription } from '../billing/subscription.entity';
 import { evaluateSubscriptionAccess } from '../billing/subscription-freeze.util';
 import { Features } from '../config/features';
+import { DataAccessReservedException, dataAccessModeOf } from '../data-access/reserved-operations';
+import type { AiAdminFamiliesGap } from './ai-unread-families';
 import { PermissionLevel, PermissionsService } from '../permissions/permissions.service';
 import { Tenant, TenantStatus } from '../tenants/tenant.entity';
 import { UsersService } from '../users/users.service';
@@ -74,7 +76,71 @@ const ENTITY_RESOURCE: Record<AiQueryEntityType | AiContextEntityType, string> =
   documents: 'knowledge',
   // The CVE rows of the technologies, as the vulnerabilities page reads them.
   vulnerabilities: 'infrastructure',
+  // The roles and their rights, as Admin › Roles reads them (`GET /roles`, `GET /roles/:id/permissions`).
+  roles: 'users',
+  role_permissions: 'users',
+  // The limited persons and their nodes, as Admin › Data access reads them (`GET /data-access`).
+  data_access: 'users',
+  // The chargeback reports, read with the reporting right as their routes (`GET /reports/chargeback/*`).
+  chargeback: 'reporting',
+  chargeback_lines: 'reporting',
+  // The tree of cost centers, read with the right of its page (`GET /cost-centers`).
+  cost_centers: 'cost_centers',
+  // Master data › Working-day calendars and Analytics dimensions, read with the right of their page.
+  working_day_calendars: 'working_day_profiles',
+  analytics_axes: 'analytics',
+  // The exchange rates and the currency settings, read with the budget right as their routes
+  // (`GET /currency/rates`, `/rates/missing`, `/settings`), limited access included.
+  exchange_rates: 'budget',
 };
+
+/**
+ * The families whose screen asks more than the reader level of their right: Admin › Roles and
+ * Admin › Data access need users at admin level. Every check of a family reads it (`canReadEntityType`,
+ * `assertEntityTypeReadAccess`, `listReadableEntityTypes`); a lower level asked by a caller is
+ * raised to it.
+ */
+const ENTITY_MIN_LEVEL: Partial<Record<AiQueryEntityType | AiContextEntityType, PermissionLevel>> = {
+  roles: 'admin',
+  role_permissions: 'admin',
+  data_access: 'admin',
+};
+
+/**
+ * The families reserved to people whose access is not limited, as their screen: Admin › Roles is
+ * closed to a person in limited access whatever their role (`frontend/src/auth/dataAccess.ts`), and
+ * the routes of Admin › Data access refuse them (`@ReservedToUnscopedDataAccess`). The database
+ * does not protect the nodes: this check is the only gate.
+ * Checked in the person's transaction (`dataAccessModeOf`), refused with the reserved message.
+ */
+const UNSCOPED_ONLY_ENTITY_TYPES: ReadonlySet<string> = new Set(['roles', 'role_permissions', 'data_access']);
+
+/** The screen whose right a family's refusal names, for the families read as their screen. */
+const ENTITY_SCREEN: Partial<Record<AiQueryEntityType | AiContextEntityType, string>> = {
+  roles: 'Admin › Roles',
+  role_permissions: 'Admin › Roles',
+  data_access: 'Admin › Data access',
+  chargeback: 'Reporting › Global chargeback',
+  chargeback_lines: 'Reporting › Company chargeback',
+  cost_centers: 'Master data › Cost centers',
+  working_day_calendars: 'Master data › Working-day calendars',
+  analytics_axes: 'Master data › Analytics dimensions',
+};
+
+/**
+ * What a family's refusal says it reads, when the family is read with the right of another module
+ * and its screen asks for more than its routes: the exchange rates are read with the budget right,
+ * while the Currency settings page is a budget administration setting.
+ */
+const ENTITY_READ_SUBJECT: Partial<Record<AiQueryEntityType | AiContextEntityType, string>> = {
+  exchange_rates: 'the exchange rates and the currency settings',
+};
+
+/** The level a family is read at: the caller's, raised to the family's minimum. */
+function entityReadLevel(entityType: AiQueryEntityType | AiContextEntityType, level?: PermissionLevel): PermissionLevel {
+  const minimum = ENTITY_MIN_LEVEL[entityType] ?? 'reader';
+  return level && LEVEL_RANK[level] > LEVEL_RANK[minimum] ? level : minimum;
+}
 
 /** Each right in plain words, as a refusal names it to the person (never its code, P4-9). */
 const RIGHT_PLAIN_NAMES: Record<string, string> = {
@@ -98,6 +164,16 @@ const RIGHT_PLAIN_NAMES: Record<string, string> = {
   users: 'users',
 };
 
+/**
+ * The rights Plaid reads with but writes nothing under, in plain words for a refusal: kept out of
+ * `RIGHT_PLAIN_NAMES`, whose modules a person may be told they modify.
+ */
+const READ_RIGHT_PLAIN_NAMES: Record<string, string> = {
+  reporting: 'the reports',
+  cost_centers: 'cost centers',
+  working_day_profiles: 'working-day calendars',
+};
+
 const LEVEL_PLAIN_VERBS: Record<PermissionLevel, string> = {
   reader: 'read',
   contributor: 'contribute to',
@@ -109,16 +185,18 @@ const LEVEL_PLAIN_VERBS: Record<PermissionLevel, string> = {
  * The refusal of a missing right, in plain words: which right, at which level (P4-5, P4-9). The
  * chat model says it again in the person's language; an MCP client reads it as is.
  */
-export function missingRightMessage(resource: string, minimumLevel: PermissionLevel): string {
+export function missingRightMessage(resource: string, minimumLevel: PermissionLevel, screen?: string, subject?: string): string {
   if (resource === 'ai_chat') {
     return minimumLevel === 'reader'
       ? 'Your role does not give access to Plaid. An administrator can add it to your role.'
       : 'Your role lets you ask Plaid questions but not prepare changes with it: that needs the Plaid right at member level. An administrator can add it to your role.';
   }
-  const name = RIGHT_PLAIN_NAMES[resource];
+  const name = RIGHT_PLAIN_NAMES[resource] ?? READ_RIGHT_PLAIN_NAMES[resource];
   // The rights of the settings and the MCP surface keep their code: the administration screens read it.
   if (!name) return `Missing required permission ${resource}:${minimumLevel}.`;
-  return `You need the right to ${LEVEL_PLAIN_VERBS[minimumLevel] ?? minimumLevel} ${name}, which your role does not give. An administrator can add it to your role.`;
+  const where = screen ? ` (the right the ${screen} screen asks for)` : '';
+  const what = subject ? ` to read ${subject}` : '';
+  return `You need the right to ${LEVEL_PLAIN_VERBS[minimumLevel] ?? minimumLevel} ${name}${where}${what}, which your role does not give. An administrator can add it to your role.`;
 }
 
 /**
@@ -235,7 +313,7 @@ export class AiPolicyService {
   ): Promise<EffectivePermissionState> {
     const state = await this.getEffectivePermissionStateOrNull(userId, manager);
     if (!state) {
-      throw new ForbiddenException('User is not allowed to use AI.');
+      throw codedForbidden('AI_USER_NOT_ALLOWED', 'User is not allowed to use AI.');
     }
     return state;
   }
@@ -257,7 +335,7 @@ export class AiPolicyService {
 
   private assertPlatformHostAllowed(context: Pick<AiExecutionContext, 'isPlatformHost'>): void {
     if (context.isPlatformHost) {
-      throw new ForbiddenException('AI is not available on the platform host.');
+      throw codedForbidden('AI_PLATFORM_HOST', 'AI is not available on the platform host.');
     }
   }
 
@@ -277,10 +355,10 @@ export class AiPolicyService {
       where: { id: tenantId },
     });
     if (!tenant) {
-      throw new ForbiddenException('Tenant not found.');
+      throw requestContextMissing('Tenant not found.');
     }
     if (tenant.status !== TenantStatus.ACTIVE) {
-      throw new ForbiddenException('AI is not available for this tenant while it is inactive.');
+      throw codedForbidden('AI_TENANT_INACTIVE', 'AI is not available for this tenant while it is inactive.');
     }
   }
 
@@ -289,6 +367,8 @@ export class AiPolicyService {
     resource: string,
     minimumLevel: PermissionLevel,
     manager: EntityManager,
+    screen?: string,
+    subject?: string,
   ): Promise<void> {
     const state = await this.getEffectivePermissionState(userId, manager);
     if (state.isAdmin) {
@@ -297,8 +377,21 @@ export class AiPolicyService {
 
     const current = state.permissions.get(resource);
     if (!current || (LEVEL_RANK[current] ?? 0) < (LEVEL_RANK[minimumLevel] ?? 0)) {
-      throw moduleRightRequired(resource, minimumLevel, missingRightMessage(resource, minimumLevel));
+      throw moduleRightRequired(resource, minimumLevel, missingRightMessage(resource, minimumLevel, screen, subject));
     }
+  }
+
+  /**
+   * Whether a family reserved to people whose access is not limited is closed to this person: their
+   * access is limited in the transaction of the call (`app.da_mode`, or their mode and roles).
+   */
+  private async isReservedFamilyClosed(
+    context: Pick<AiExecutionContext, 'userId'>,
+    entityType: AiQueryEntityType | AiContextEntityType,
+    manager: EntityManager,
+  ): Promise<boolean> {
+    if (!UNSCOPED_ONLY_ENTITY_TYPES.has(entityType)) return false;
+    return (await dataAccessModeOf({ manager, userId: context.userId })) === 'limited';
   }
 
   /**
@@ -337,17 +430,20 @@ export class AiPolicyService {
 
   /**
    * Whether the user reads `entityType`, without the surface checks (the tool already made them):
-   * for a section of another family inside a record, which is left out rather than refused.
+   * for a section of another family inside a record, which is left out rather than refused. The
+   * level defaults to the family's (`ENTITY_MIN_LEVEL`), and a family reserved to people whose
+   * access is not limited is closed to the others.
    */
   async canReadEntityType(
     context: AiExecutionContext,
     entityType: AiQueryEntityType | AiContextEntityType,
     manager: EntityManager,
-    level: PermissionLevel = 'reader',
+    level: PermissionLevel = entityReadLevel(entityType),
   ): Promise<boolean> {
     if (!KNOWN_ENTITY_TYPES.has(entityType) || entityTypeFeature(entityType)) return false;
     try {
-      await this.assertUserPermission(context.userId, ENTITY_RESOURCE[entityType], level, manager);
+      await this.assertUserPermission(context.userId, ENTITY_RESOURCE[entityType], entityReadLevel(entityType, level), manager);
+      if (await this.isReservedFamilyClosed(context, entityType, manager)) return false;
       return true;
     } catch (error) {
       if (!(error instanceof ForbiddenException)) {
@@ -366,6 +462,36 @@ export class AiPolicyService {
   async readableResources(context: AiExecutionContext, resources: string[], manager: EntityManager): Promise<Set<string>> {
     const state = await this.getEffectivePermissionStateOrNull(context.userId, manager);
     return new Set(resources.filter((resource) => this.hasPermission(state, resource, 'reader')));
+  }
+
+  /**
+   * Why the families of Admin › Roles and Admin › Data access are closed to this person, for the
+   * lists of what the tools do not read (`AiAdminFamiliesGap`): `right` without users at admin
+   * level, `all_data` with it in limited access, null when they read them.
+   */
+  async adminFamiliesGap(
+    context: Pick<AiExecutionContext, 'userId'>,
+    manager: EntityManager,
+  ): Promise<AiAdminFamiliesGap> {
+    const state = context.userId ? await this.getEffectivePermissionStateOrNull(context.userId, manager) : null;
+    if (!this.hasPermission(state, 'users', 'admin')) return 'right';
+    return (await dataAccessModeOf({ manager, userId: context.userId })) === 'limited' ? 'all_data' : null;
+  }
+
+  /**
+   * The person's rights in the shape a request carries them (`TenantRequest.isAdmin`,
+   * `permissions`), for a service of the screens that checks them itself (the record history).
+   * The same read as every check of this policy; a person the policy refuses holds nothing.
+   */
+  async effectiveAccess(
+    context: Pick<AiExecutionContext, 'userId'>,
+    manager: EntityManager,
+  ): Promise<{ isAdmin: boolean; permissions: Record<string, PermissionLevel> }> {
+    const state = context.userId ? await this.getEffectivePermissionStateOrNull(context.userId, manager) : null;
+    return {
+      isAdmin: state?.isAdmin === true,
+      permissions: state ? Object.fromEntries(state.permissions) : {},
+    };
   }
 
   async getCapabilities(
@@ -480,7 +606,7 @@ export class AiPolicyService {
     const settings = await this.aiSettings.get(context.tenantId, { manager });
     if (context.surface === 'chat') {
       if (!settings.chat_enabled) {
-        throw new ForbiddenException('AI chat is disabled for this tenant.');
+        throw codedForbidden('AI_CHAT_DISABLED', 'AI chat is disabled for this tenant.');
       }
       // Agent runs and system work pass here to use KANAP tools. Every model call they
       // make goes through the model resolver, which checks the included model's
@@ -492,16 +618,16 @@ export class AiPolicyService {
         ? await this.aiSettings.getProviderErrorsWithoutConfirmation(settings, manager)
         : await this.aiSettings.getProviderValidationErrors(settings, manager);
       if (providerErrors.length > 0) {
-        throw new ForbiddenException('AI chat is not fully configured for this tenant.');
+        throw codedForbidden('AI_NOT_CONFIGURED', 'AI chat is not fully configured for this tenant.');
       }
     }
     if (context.surface === 'mcp') {
       if (!settings.mcp_enabled) {
-        throw new ForbiddenException('AI MCP access is disabled for this tenant.');
+        throw codedForbidden('AI_MCP_DISABLED', 'AI MCP access is disabled for this tenant.');
       }
       // MCP sends KANAP data to the user's own client, never to the included model.
       if ((await this.aiSettings.getProviderErrorsWithoutConfirmation(settings, manager)).length > 0) {
-        throw new ForbiddenException('AI MCP is not fully configured for this tenant.');
+        throw codedForbidden('AI_MCP_NOT_CONFIGURED', 'AI MCP is not fully configured for this tenant.');
       }
     }
 
@@ -620,14 +746,34 @@ export class AiPolicyService {
     await this.assertUserPermission(context.userId, businessResource, minimumLevel, manager);
   }
 
+  /**
+   * A read of a family: the surface, the family's right at its level (`ENTITY_MIN_LEVEL`), its
+   * feature, then, for a family reserved to people whose access is not limited, the person's
+   * access (refused with the reserved message, as the screen is closed to them).
+   */
   async assertEntityTypeReadAccess(
     context: AiExecutionContext,
     entityType: AiQueryEntityType | AiContextEntityType,
     manager: EntityManager,
   ): Promise<void> {
-    await this.assertBusinessPermission(context, ENTITY_RESOURCE[entityType], 'reader', manager);
+    await this.assertSurfaceAccess(context, manager);
+    await this.assertEntityTypeReadRight(context, entityType, manager);
+  }
+
+  /**
+   * The read right of a family alone (`canReadEntityType`, refused in words: the right and its
+   * screen, the disabled feature, or the reserved message), without the surface checks the tool
+   * made first. The executors check it again for the families the database does not guard.
+   */
+  async assertEntityTypeReadRight(
+    context: AiExecutionContext,
+    entityType: AiQueryEntityType | AiContextEntityType,
+    manager: EntityManager,
+  ): Promise<void> {
+    await this.assertUserPermission(context.userId, ENTITY_RESOURCE[entityType], entityReadLevel(entityType), manager, ENTITY_SCREEN[entityType], ENTITY_READ_SUBJECT[entityType]);
     const feature = entityTypeFeature(entityType);
     if (feature) throwFeatureDisabled(feature);
+    if (await this.isReservedFamilyClosed(context, entityType, manager)) throw new DataAccessReservedException();
   }
 
   async listReadableEntityTypes(
@@ -638,11 +784,17 @@ export class AiPolicyService {
     await this.assertSurfaceAccess(context, manager);
 
     const readable: Array<AiQueryEntityType | AiContextEntityType> = [];
+    // Read once, and only when a requested family is reserved to people whose access is not limited.
+    let limited: boolean | null = null;
     for (const entityType of requested) {
       // Checked before the permissions: an administrator passes every permission check.
       if (!KNOWN_ENTITY_TYPES.has(entityType) || entityTypeFeature(entityType)) continue;
       try {
-        await this.assertUserPermission(context.userId, ENTITY_RESOURCE[entityType], 'reader', manager);
+        await this.assertUserPermission(context.userId, ENTITY_RESOURCE[entityType], entityReadLevel(entityType), manager);
+        if (UNSCOPED_ONLY_ENTITY_TYPES.has(entityType)) {
+          limited ??= await this.isReservedFamilyClosed(context, entityType, manager);
+          if (limited) continue;
+        }
         readable.push(entityType);
       } catch (error) {
         if (!(error instanceof ForbiddenException)) {
@@ -670,7 +822,7 @@ export class AiPolicyService {
     requirement: AiWriteAccessRequirement = {},
   ): Promise<void> {
     if (context.surface !== 'chat') {
-      throw new ForbiddenException('MCP write access is not available.');
+      throw codedForbidden('AI_MCP_WRITE_UNAVAILABLE', 'MCP write access is not available.');
     }
 
     const level = requirement.level ?? 'member';
@@ -683,10 +835,14 @@ export class AiPolicyService {
       if (refused.length > 0) {
         const state = await this.getEffectivePermissionState(context.userId, manager);
         if (!this.hasPermission(state, businessResource, 'member')) {
-          throw new ForbiddenException(contributorFieldsMessage(
+          throw moduleRightRequired(
             businessResource,
-            refused.map((field) => requirement.fields?.[field] || field),
-          ));
+            'member',
+            contributorFieldsMessage(
+              businessResource,
+              refused.map((field) => requirement.fields?.[field] || field),
+            ),
+          );
         }
       }
     }

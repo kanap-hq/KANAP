@@ -35,10 +35,12 @@ vi.mock('../../components/fields/ContactSelect', () => ({ default: () => null })
 vi.mock('../../components/fields/CompanySelect', () => ({ default: () => null }));
 vi.mock('../../components/fields/DepartmentMultiSelect', () => ({ default: () => null }));
 vi.mock('../../components/fields/TeamMemberMultiSelect', () => ({ default: () => null }));
-vi.mock('./editors/ApplicationCreateEditor', () => ({ default: () => <div data-testid="create-editor" /> }));
 vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => true }) }));
 vi.mock('../../components/IntegratedDocumentEditor', () => ({ default: () => <div data-testid="description-editor" /> }));
 vi.mock('../../components/EntityKnowledgePanel', () => ({ default: () => <div data-testid="knowledge-panel" /> }));
+vi.mock('../../components/history/RecordHistoryTab', () => ({
+  default: ({ table, recordId }: { table: string; recordId: string }) => <div data-testid="record-history">{`${table}:${recordId}`}</div>,
+}));
 vi.mock('../../hooks/useItOpsEnumOptions', () => ({
   default: () => ({ byField: { accessMethod: [] }, labelFor: (_field: string, code: string) => code }),
 }));
@@ -434,9 +436,27 @@ describe('Application workspace vulnerabilities', () => {
     expect(await screen.findByText('workspace.application.untitled')).toBeInTheDocument();
   });
 
+  it('shows the History tab last and renders the application history by its id, from an APP-N route', async () => {
+    renderPage('/it/applications/APP-1/history');
+    const history = await screen.findByTestId('record-history');
+    // The route names the reference; the history reads the uuid the page loaded.
+    expect(history.textContent).toBe('applications:app-1');
+    const tabs = screen.getAllByRole('tab');
+    expect(tabs[tabs.length - 1].textContent).toContain('workspace.application.tabs.history');
+    expect(screen.getByTestId('location').textContent).toBe('/it/applications/APP-1/history');
+  });
+
+  it('keeps the History tab disabled while creating an application', async () => {
+    renderPage('/it/applications/new/overview');
+    await screen.findByRole('textbox', { name: 'common:buttons.editTitle' });
+    const history = screen.getByRole('tab', { name: /workspace\.application\.tabs\.history/ });
+    expect(history).toBeDisabled();
+    expect(screen.queryByTestId('record-history')).toBeNull();
+  });
+
   it('reads nothing while creating an application', async () => {
     renderPage('/it/applications/new/overview');
-    await screen.findByTestId('create-editor');
+    await screen.findByRole('textbox', { name: 'common:buttons.editTitle' });
     expect(vulnerabilityCalls()).toHaveLength(0);
     expect(screen.queryByTestId('vulnerability-severe-badge')).toBeNull();
   });

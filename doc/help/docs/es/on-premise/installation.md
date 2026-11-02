@@ -9,7 +9,7 @@
 - Plugin Docker Compose 2.20 o posterior (las versiones actuales son 5.x)
 - Git
 - 4 GB de RAM como mínimo, 8 GB recomendados cuando PostgreSQL se ejecuta en el mismo servidor. Más procesos de API necesitan más memoria, consulte [Configuración](configuration.md#opcional-capacidad-y-rendimiento).
-- 10 GB de disco como mínimo. KANAP ocupa unos 1,5 GB (sus imágenes). La base de datos y los archivos almacenados crecen con el tiempo.
+- 10 GB de disco como mínimo. KANAP ocupa unos 1,5 GB (sus imágenes), 2 GB con la imagen de herramientas de mantenimiento. La base de datos y los archivos almacenados crecen con el tiempo.
 - Acceso HTTPS saliente a `ghcr.io` en la instalación y en cada actualización, para descargar las imágenes (consulte [Reglas de cortafuegos](configuration.md#outbound-installation-and-upgrades)).
 
 **Infraestructura aportada por el cliente:**
@@ -236,7 +236,7 @@ server {
 
 **`host.docker.internal`:** cuando PostgreSQL o el almacenamiento S3 se ejecutan en el host Docker (fuera de un contenedor), use `host.docker.internal` como nombre de host en `DATABASE_URL` y `S3_ENDPOINT`. El archivo `compose.onprem.yml` incluye la asignación `extra_hosts` que lo hace posible. Apunta a la dirección del puente Docker del servidor (`172.17.0.1` por defecto), así que los servicios del host deben aceptar conexiones desde esa red (consulte el [ejemplo de instalación](installation-example.md)).
 
-**Estado.** La API responde a `GET /health` en su propio puerto (`http://127.0.0.1:8080/health`) y a `GET /api/health` a través del proxy. Ambos devuelven `{"status":"ok"}`. `docker compose -f infra/compose.onprem.yml ps` muestra `healthy` para los contenedores `api` y `web` cuando responden.
+**Estado.** La API responde a `GET /health` en su propio puerto (`http://127.0.0.1:8080/health`) y a `GET /api/health` a través del proxy. Ambos devuelven `{"status":"ok","text_processing":"ready"}`. [Monitorización](operations.md#monitorizacion) explica los demás valores de `text_processing`. `docker compose -f infra/compose.onprem.yml ps` muestra `healthy` para los contenedores `api` y `web` cuando responden.
 
 ## Arquitectura de red
 

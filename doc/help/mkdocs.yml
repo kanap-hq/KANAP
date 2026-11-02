@@ -154,7 +154,6 @@ plugins:
             Sample data: Données d'exemple
             Master data freeze and metrics copy: Gel des données de référence et copie des indicateurs
             CSV and Excel files: Fichiers CSV et Excel
-            Budget Overview: Vue d'ensemble
             On-Premise: On-Premise
             Overview: Vue d'ensemble
             Installation: Installation
@@ -242,7 +241,6 @@ plugins:
             Sample data: Beispieldaten
             Master data freeze and metrics copy: Stammdaten einfrieren und Kennzahlen kopieren
             CSV and Excel files: CSV- und Excel-Dateien
-            Budget Overview: Übersicht
             On-Premise: On-Premise
             Overview: Übersicht
             Installation: Installation
@@ -330,7 +328,6 @@ plugins:
             Sample data: Datos de ejemplo
             Master data freeze and metrics copy: Congelar datos maestros y copiar indicadores
             CSV and Excel files: Archivos CSV y Excel
-            Budget Overview: Vista general
             On-Premise: On-Premise
             Overview: Vista general
             Installation: Instalación
@@ -395,7 +392,6 @@ nav:
     - Knowledge: knowledge.md
 
   - Budget Management:
-    - Budget Overview: operations-dashboard.md
     - Budget lines: budget-lines.md
     - Contracts: contracts.md
     - Budget Administration:

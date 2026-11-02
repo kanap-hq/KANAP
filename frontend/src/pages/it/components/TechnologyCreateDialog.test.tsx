@@ -156,6 +156,92 @@ describe('TechnologyCreateDialog', () => {
     expect(post).toHaveBeenCalledWith('/technologies', { name: 'In-house broker', family: undefined, editor: undefined, hosting_type: 'saas' });
   });
 
+  it('lists an already adopted entry with its reference, and opens it instead of adopting it', async () => {
+    get.mockImplementation(async (url: string) => {
+      if (url === '/technologies/catalog') {
+        return {
+          data: {
+            items: [{
+              key: 'amazon-aurora-postgresql',
+              name: 'Amazon Aurora PostgreSQL',
+              editor: 'AWS',
+              family: 'database',
+              hosting_type: 'public_cloud',
+              versions: 1,
+              latest_version: '16',
+              description: null,
+              completes: null,
+            }],
+            adopted: [{
+              key: 'postgresql',
+              name: 'PostgreSQL',
+              editor: 'PostgreSQL Global Development Group',
+              family: 'database',
+              family_label: 'Database',
+              reference: 'TEC-3',
+              id: 'pg-id',
+            }],
+          },
+        };
+      }
+      return { data: { items: [] } };
+    });
+    const onCreated = renderDialog();
+    const offer = await screen.findByRole('listitem');
+    expect(within(offer).getByText('Amazon Aurora PostgreSQL')).toBeTruthy();
+    expect(screen.queryByText('pages.technologies.create.alreadyHeading')).toBeNull();
+    expect(screen.queryByText('TEC-3')).toBeNull();
+
+    fireEvent.change(screen.getByLabelText('pages.technologies.create.searchLabel'), { target: { value: 'postgres' } });
+    await waitFor(() => expect(get).toHaveBeenCalledWith('/technologies/catalog', { params: { q: 'postgres', language: 'en' } }));
+    const heading = await screen.findByText('pages.technologies.create.alreadyHeading');
+    const rows = screen.getAllByRole('listitem');
+    const aurora = rows.find((row) => within(row).queryByText('Amazon Aurora PostgreSQL'))!;
+    const pg = rows.find((row) => within(row).queryByText('PostgreSQL', { exact: true }))!;
+    expect(aurora.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(heading.compareDocumentPosition(pg) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const reference = within(pg).getByText('TEC-3');
+    expect(reference.parentElement).toHaveClass('kanap-autocomplete-option-secondary');
+    expect(getComputedStyle(reference).whiteSpace).toBe('nowrap');
+    expect(within(pg).getByText('Database')).toBeTruthy();
+    expect(within(pg).getByText('PostgreSQL Global Development Group')).toBeTruthy();
+    expect(pg.childElementCount).toBe(2);
+    fireEvent.click(pg);
+    await waitFor(() => expect(onCreated).toHaveBeenCalledWith('TEC-3'));
+    expect(post).not.toHaveBeenCalled();
+  });
+
+  it('replaces the empty catalog message with the adopted section, and keeps the manual link', async () => {
+    get.mockImplementation(async (url: string) => {
+      if (url === '/technologies/catalog') {
+        return {
+          data: {
+            items: [],
+            adopted: [{
+              key: 'postgresql',
+              name: 'PostgreSQL',
+              editor: 'PostgreSQL Global Development Group',
+              family: 'database',
+              family_label: 'Database',
+              reference: 'TEC-3',
+              id: 'pg-id',
+            }],
+          },
+        };
+      }
+      return { data: { items: [] } };
+    });
+    renderDialog();
+    expect(await screen.findByText('pages.technologies.create.noMatch')).toBeTruthy();
+    expect(screen.queryByText('pages.technologies.create.alreadyHeading')).toBeNull();
+    expect(screen.getByText('pages.technologies.create.manualLink')).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('pages.technologies.create.searchLabel'), { target: { value: 'postgres' } });
+    expect(await screen.findByText('pages.technologies.create.alreadyHeading')).toBeTruthy();
+    expect(screen.queryByText('pages.technologies.create.noMatch')).toBeNull();
+    expect(screen.getByText('TEC-3')).toBeTruthy();
+    expect(screen.getByText('pages.technologies.create.manualLink')).toBeTruthy();
+  });
+
   it('says under the name that the tenant already has it, and goes back to the catalog', async () => {
     post.mockRejectedValueOnce({ response: { status: 409, data: { code: 'duplicate', message: 'A technology with this name already exists.' } } });
     const onCreated = renderDialog();

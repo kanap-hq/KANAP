@@ -1,4 +1,5 @@
-import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException, forwardRef } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException, forwardRef } from '@nestjs/common';
+import { codedForbidden } from '../auth/module-right-required';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { TaskTimeEntry, TaskTimeEntryCategory } from './task-time-entry.entity';
@@ -168,7 +169,7 @@ export class TaskTimeEntriesService {
 
     const targetUserId = dto.user_id ?? userId ?? null;
     if (!isAdmin && (!userId || targetUserId !== userId)) {
-      throw new ForbiddenException('You can only create time entries for yourself');
+      throw codedForbidden('TIME_ENTRY_CREATE_SELF_ONLY', 'You can only create time entries for yourself');
     }
     await assertTaskModifiable(manager, taskId);
 
@@ -212,10 +213,10 @@ export class TaskTimeEntriesService {
 
     if (!isAdmin) {
       if (!userId || existing.user_id !== userId) {
-        throw new ForbiddenException('You can only edit your own time entries');
+        throw codedForbidden('TIME_ENTRY_EDIT_OWN_ONLY', 'You can only edit your own time entries');
       }
       if (dto.user_id !== undefined && dto.user_id !== userId) {
-        throw new ForbiddenException('You can only edit your own time entries');
+        throw codedForbidden('TIME_ENTRY_EDIT_OWN_ONLY', 'You can only edit your own time entries');
       }
     }
 
@@ -268,7 +269,7 @@ export class TaskTimeEntriesService {
 
     const isAdmin = opts?.isAdmin ?? false;
     if (!isAdmin && (!userId || existing.user_id !== userId)) {
-      throw new ForbiddenException('You can only delete your own time entries');
+      throw codedForbidden('TIME_ENTRY_DELETE_OWN_ONLY', 'You can only delete your own time entries');
     }
     await assertTaskModifiable(manager, existing.task_id);
 

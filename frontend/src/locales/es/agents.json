@@ -467,6 +467,7 @@
     "loadFailed": "No se pudieron cargar los perfiles de contexto compartido.",
     "saveFailed": "No se pudo guardar el perfil.",
     "archiveFailed": "No se pudo archivar el perfil.",
+    "restoreFailed": "No se pudo restaurar el perfil.",
     "editTitle": "Editar perfil de contexto compartido",
     "save": "Guardar cambios",
     "description": "Descripción",
@@ -476,6 +477,7 @@
     "archived": "Archivado",
     "edit": "Editar",
     "archive": "Archivar",
+    "restore": "Restaurar",
     "archiveTitle": "¿Archivar este perfil?",
     "archiveBody": "«{{name}}» dejará de estar disponible para los agentes. Cualquier agente que lo esté usando funcionará sin contexto compartido hasta que lo apunte a otro perfil."
   },
@@ -665,7 +667,7 @@
       "classification": "Clasificación",
       "status": "Cambios de estado",
       "assignment": "Asignación",
-      "participant": "Participantes"
+      "participant": "Observadores"
     },
     "autonomy": "Autonomía",
     "autonomyDialog": {
@@ -679,7 +681,7 @@
       "highRisk": {
         "public_reply": "El agente responderá directamente a los solicitantes, sin que nadie lea la respuesta antes. Actívelo solo si le convence lo que ha propuesto hasta ahora.",
         "assignment": "El agente reasignará tickets a otras personas, sin que nadie revise el cambio antes.",
-        "participant": "El agente añadirá y quitará personas en los tickets, sin que nadie revise el cambio antes."
+        "participant": "El agente añadirá un observador a los tickets, sin que nadie revise el cambio antes. El solicitante no cambia."
       },
       "reasonHighRiskHint": "Obligatorio. Se conserva en el historial del agente para que su equipo vea quién lo aceptó y por qué."
     },
@@ -704,7 +706,7 @@
       "status": "Actualización de estado",
       "public_reply": "Respuesta al solicitante",
       "assignment": "Asignación",
-      "participant": "Participantes"
+      "participant": "Observadores"
     },
     "monitoringTargetingFields": {
       "status": "Estado de la alerta",
@@ -816,7 +818,7 @@
     "autonomyHighRiskNote": {
       "public_reply": "El agente respondería al solicitante sin que nadie lo lea antes.",
       "assignment": "El agente reasignaría tickets sin que nadie lo revise antes.",
-      "participant": "El agente añadiría o quitaría personas en los tickets sin que nadie lo revise antes."
+      "participant": "El agente añadiría un observador a los tickets sin que nadie lo revise antes. El solicitante no cambia."
     },
     "charCounter": "{{used}} / {{max}} caracteres",
     "instructionsOverLimit": "Las instrucciones están limitadas a {{max}} caracteres. Más allá, una parte dejaría de llegar al agente. Esta sección no se guarda mientras lo supere.",
@@ -832,7 +834,7 @@
     "closeTicket": "Cerrar ticket",
     "solveTicket": "Resolver ticket",
     "assignment": "Asignación",
-    "participants": "Participantes",
+    "participants": "Observadores",
     "classificationUpdate": "Actualización de clasificación",
     "statusUpdate": "Actualización de estado",
     "reason": "Motivo",
@@ -850,7 +852,10 @@
     "assignToTechnician": "Asignar al técnico",
     "currentTechnicians": "Asignado actualmente",
     "noTechnicianAssigned": "Ningún técnico asignado",
-    "participantUpdate": "Actualización de participantes",
+    "participantUpdate": "Actualización de observadores",
+    "addObserver": "Añadir observador",
+    "currentObservers": "Observadores actuales",
+    "noObservers": "Sin observadores",
     "classificationFields": {
       "category": "Categoría",
       "type": "Tipo",

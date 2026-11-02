@@ -207,7 +207,7 @@ Les deux réglages doivent concorder. Une dimension ne peut pas être réglée s
 
 Activez **Obligatoire** lorsque chaque ligne budgétaire doit être classée sur une dimension. KANAP contrôle alors les lignes des types pour lesquels la dimension est utilisée :
 
-- **Une nouvelle ligne doit avoir une valeur sur la dimension.** Cela vaut pour toutes les façons de créer une ligne : les écrans OPEX et CAPEX, un fichier budgétaire, Plaid et l'API. Sans valeur, la ligne n'est pas créée, avec le message « The Nature de coût dimension is required. Choose a value. »
+- **Une nouvelle ligne doit avoir une valeur sur la dimension.** Un fichier budgétaire, Plaid et l'API ne créent pas de ligne sans valeur, avec le message « The Nature de coût dimension is required. Choose a value. » Sur l'écran des lignes budgétaires, une ligne existe dès son titre, et **Créer** signale la dimension comme manquante tant qu'elle n'a pas de valeur.
 - **Une ligne qui porte une valeur ne peut pas la perdre.** Vous pouvez choisir une autre valeur. Le champ ne peut pas être vidé.
 - **Une ligne créée avant l'activation du réglage continue de fonctionner.** Si elle n'a pas de valeur sur la dimension, elle reste modifiable et vous pouvez y enregistrer d'autres modifications. Son champ est marqué comme obligatoire. Sur les écrans OPEX et CAPEX, quitter une telle ligne après l'avoir modifiée vous demande d'abord de choisir une valeur, avec **Rester** et **Quitter quand même**. L'ouvrir sans rien modifier ne demande jamais rien.
 
@@ -332,7 +332,7 @@ La dimension par défaut ne peut pas être désactivée.
 Dans le panneau **Propriétés** d'une ligne OPEX ou CAPEX, et lorsque vous en créez une, chaque dimension activée utilisée pour ce type de ligne a son propre champ, au nom de la dimension, dans l'ordre des dimensions. La dimension par défaut s'affiche comme **Dimension analytique** tant que vous ne la renommez pas.
 
 - Choisissez une valeur, ou videz le champ pour laisser la ligne sans valeur sur cette dimension. La modification s'enregistre aussitôt.
-- Le champ d'une dimension obligatoire est marqué d'un astérisque. Une nouvelle ligne ne peut pas être créée sans valeur sur cette dimension, avec le message « Nature de coût est obligatoire ». Sur une ligne qui porte une valeur, le champ n'a pas de bouton d'effacement : vous pouvez seulement choisir une autre valeur. Voir [Dimensions obligatoires](#dimensions-obligatoires).
+- Le champ d'une dimension obligatoire est marqué d'un astérisque. Sur une ligne en cours de création, **Créer** la signale comme manquante tant qu'elle n'a pas de valeur. Sur une ligne qui porte une valeur, le champ n'a pas de bouton d'effacement : vous pouvez seulement choisir une autre valeur. Voir [Dimensions obligatoires](#dimensions-obligatoires).
 - Le champ liste les valeurs activées de sa dimension utilisées pour ce type de ligne. Une valeur désactivée, ou une valeur réservée à l'autre type de ligne, reste affichée sur les lignes qui l'ont. Voir [Valeurs OPEX ou CAPEX](#valeurs-opex-ou-capex).
 - Sur une dimension à [valeurs ouvertes](#open-values), le champ propose **Ajouter « … »** pour un nom qui n'existe pas. Sur les autres dimensions, le champ ne peut pas créer de valeur : créez les valeurs sur la page Dimensions analytiques, ou laissez le fichier budget les créer.
 - Une valeur s'applique à toute la ligne, sur toutes les années.
@@ -366,6 +366,7 @@ Les sept rapports budgétaires peuvent aussi être restreints à une valeur d'un
 - Quand Plaid crée une ligne, il lui faut une valeur sur chaque dimension obligatoire du type de la ligne. Dans un espace de travail créé avant les dimensions recommandées, une ligne CAPEX demande **PP&E type**, **Investment type** et **Priority**.
 - Plaid sait quelles dimensions sont obligatoires. Une nouvelle ligne doit avoir une valeur sur chacune d'elles, et Plaid ne peut pas effacer la valeur d'une dimension obligatoire. Plaid refuse une demande qui enfreint la règle et en donne la raison, par exemple « Nature de coût is required for spend item creation. »
 - Plaid peut aussi créer une valeur dans la dimension que vous nommez. Sans dimension, la valeur est créée dans la dimension par défaut.
+- Avec le droit de lecture sur l'analytique, Plaid lit aussi les réglages de chaque dimension, son nombre de valeurs et les lignes qui l'utilisent. Demandez par exemple : « Quelles dimensions sont obligatoires ? »
 
 ---
 

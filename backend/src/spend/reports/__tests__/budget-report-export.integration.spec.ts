@@ -98,6 +98,15 @@ const LABELS: T.ReportTableLabels = {
   analyticsUnassigned: L.analyticsUnassigned,
   analyticsUnnamed: L.analyticsUnnamed,
   analyticsTotal: (metric) => L.analyticsTotal.replace('{{metric}}', metric),
+  analyticsLines: L.analyticsLines,
+  analyticsNature: L.analyticsNature,
+  analyticsOpexShare: L.analyticsOpexShare,
+  analyticsCapexShare: L.analyticsCapexShare,
+  analyticsLevel: L.analyticsLevel,
+  analyticsLevelValue: L.analyticsLevelValue,
+  analyticsLevelLine: L.analyticsLevelLine,
+  natureOpex: L.scope_opex,
+  natureCapex: L.scope_capex,
   monthNames: T.shortMonthNames('en'),
   average: L.average,
   peak: L.peak,
@@ -494,7 +503,7 @@ async function testDeltaGroupTables(runner: QueryRunner, f: Fixture): Promise<vo
     // Analytics on the second dimension, filtered on the first: L1 to L3 hold its value, the other INF lines none.
     const analyticsFilters = R.reportFilterModels({ costCenterIds: inf, runBuild: null, analytics: [[f.axis1, f.category1]], withFte: false });
     const analyticsAnswer = await screenAnswer(svc, m, f, admin, 'all', R.analyticsRequest({ axisId: f.axis2, years, metric: 'budget', excludedIds: [], filters: analyticsFilters, measure: 'amount' }));
-    const analytics = T.analyticsTable({ years, metric: 'budget', measure: 'amount', dimension: f.axis2Name }, analyticsAnswer, LABELS);
+    const analytics = T.analyticsTable({ scope: 'all', years, metric: 'budget', measure: 'amount', dimension: f.axis2Name }, analyticsAnswer, LABELS);
     assert.deepEqual(new Set(analytics.rows.map((row) => row.group)), new Set([f.category2Name, L.analyticsUnassigned]));
     assertColumnsAddUp(analytics, 'analytics');
     const analyticsFile = await exportFile(svc.controller, m, f, admin, 'analytics', {
@@ -504,13 +513,13 @@ async function testDeltaGroupTables(runner: QueryRunner, f: Fixture): Promise<vo
     assert.deepEqual(dataSheet(analyticsSheets), written(analytics), 'analytics = the screen table, headed by the dimension');
     assert.ok(analyticsSheets.get('Parameters')!.some((row) => row[0] === 'Dimension' && row[1] === f.axis2Name));
     const valuedAnswer = await screenAnswer(svc, m, f, admin, 'all', R.analyticsRequest({ axisId: f.axis2, years, metric: 'budget', excludedIds: [R.NO_ANALYTICS_VALUE], filters: analyticsFilters, measure: 'amount' }));
-    const valued = T.analyticsTable({ years, metric: 'budget', measure: 'amount', dimension: f.axis2Name }, valuedAnswer, LABELS);
+    const valued = T.analyticsTable({ scope: 'all', years, metric: 'budget', measure: 'amount', dimension: f.axis2Name }, valuedAnswer, LABELS);
     const valuedFile = await exportFile(svc.controller, m, f, admin, 'analytics', {
       costCenter: f.inf, analytics: `${f.axis1}:${f.category1}`, axis: f.axis2, startYear: String(Y), endYear: String(Y + 1), metric: 'budget', excludeValues: 'none', format: 'csv', language: 'en',
     });
     const csv = valuedFile.body().toString('utf8').replace(/^﻿/, '').trim().split(/\r?\n/);
     assert.equal(csv.length, 1 + valued.rows.length + 1, 'CSV: header, the valued group, the total');
-    assert.equal(csv[0], `${f.axis2Name},${Y},${Y + 1}`);
+    assert.equal(csv[0], `${f.axis2Name},${L.analyticsLines},${Y},${Y + 1}`);
   });
 
   // A person who cannot read the accounts page: every line unassigned, on the screen and in the file.

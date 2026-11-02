@@ -34,34 +34,36 @@ Different teams can use categories to focus on their area of responsibility:
 
 ---
 
-## Getting started
+## Getting started { #getting-started }
 
-Navigate to **IT Landscape > Applications** to see your list. Click **New App / Service** to create your first entry.
+Navigate to **IT Landscape > Applications** to see your list. To create an application:
 
-**Required fields**:
-- **Name**: A recognizable name for the application or service, up to 200 characters. See [Unique names](#unique-names)
-- **Category**: The primary purpose of this application (see categories above)
-- **Lifecycle**: Current status (Active, Proposed, Deprecated, Retired, or any custom code defined in Settings)
+1. Click **New application**. The application page opens with an empty title in the header. The rest of the page is dimmed.
+2. Type the name of the application or service, up to 200 characters. See [Unique names](#unique-names).
+3. Press Enter, or click outside the title. KANAP creates the application at once. Its reference (`APP-12`) shows and all tabs open.
 
-**Strongly recommended**:
-- **Supplier**: The supplier providing the software (links to your Suppliers master data)
-- **Publisher**: The software publisher (e.g., Microsoft, SAP, Oracle)
-- **Description**: What this application does
+The new application is **Active**, in the default category. Change them in the header and the properties drawer, then fill in the rest:
 
-Classification fields are optional when you create an application. **Business criticality**, cyber criticality, data confidentiality and recovery wave are chosen among the levels your organization defined in **IT Landscape > Settings**; each option shows the level's definition. Values remain unset until you choose them.
+- **Category**: the primary purpose of this application (see categories above)
+- **Lifecycle**: Active, Proposed, Deprecated, Retired, or any custom code defined in Settings
+- **Supplier**: the supplier providing the software (links to your Suppliers master data)
+- **Publisher**: the software publisher (e.g., Microsoft, SAP, Oracle)
+- **Description**: what this application does
+- **Classification**: **Business criticality**, cyber criticality, data confidentiality and recovery wave are chosen among the levels your organization defined in **IT Landscape > Settings**. Each option shows the level's definition. They stay unset until you choose them
+- **Version**, **Go live**, **End of support**, **Retired date**: the current version and its dates. **End of support** and **Retired date** cannot be earlier than **Go live**
+- **Licensing** and **Notes**: license terms and free-form internal notes
+- **Can have child apps**: use this application as a "suite" that groups other applications
 
-**Optional but useful**:
-- **Version**: Current version identifier (free text, e.g., "4.2.1", "2023", "Q1 2024")
-- **Go live**: When this version went or will go live
-- **End of support**: When vendor support ends for this version
-- **Retired date**: When this version was actually decommissioned
-- **Licensing**: License terms and notes
-- **Notes**: Free-form internal notes
-- **Can have child apps**: Enable to use this application as a "suite" that groups other applications
+Press Escape on the empty title to leave without creating anything. A name that another application already uses is refused, with a message under the title.
 
-**End of support** and **Retired date** cannot be earlier than **Go live**.
+### Creating or cancelling { #cancelling-a-creation }
 
-Once you save, the workspace unlocks all tabs for detailed documentation.
+While the application is being created, its header shows **Create** and **Cancel**. They stay until you leave the application.
+
+- **Create** keeps the application and closes it. You go back to where you started: the list or the previous screen. With an empty title, nothing closes and the title asks for one
+- **Cancel** closes without keeping anything. On an application already created, it deletes it. If you entered more than the name, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete applications
+
+Leaving the application any other way keeps it. Delete it like any other application. The reference of a cancelled application is not used again.
 
 ### Unique names { #unique-names }
 
@@ -126,7 +128,7 @@ A cell with no value shows a dash.
 - **Vulnerabilities to review** filters on **With severe vulnerabilities**, **With vulnerabilities** or **Without**, and sorts by the critical or high vulnerabilities, then by the total. Disabled applications come last and are in none of the filter values.
 
 **Actions**:
-- **New App / Service**: Create a new entry (`applications:member`)
+- **New application**: Create a new entry (`applications:member`). See [Getting started](#getting-started)
 - **Import**: Bulk import from a CSV file or an Excel workbook (`applications:admin`)
 - **Export**: Export the applications the list shows to a CSV file or an Excel workbook (`applications:admin`). See [Export options](#export-options).
 - **Copy item**: Duplicate a selected application with all its core relations (`applications:member`). See [Copying applications](#copying-applications) for what is and is not copied.
@@ -137,6 +139,8 @@ A cell with no value shows a dash.
 ## The Applications workspace
 
 Click any row to open the workspace. The workspace has a **header** with quick metadata, a **properties drawer** on the right (the application's identity card, always visible), and a **content area** in the centre that switches with each tab.
+
+The tabs are **Overview**, **Deployments**, **Interfaces**, **Operations**, **Compliance**, **Relations** and **History** (the changes made to the application, see [Record history](record-history.md)).
 
 ### Header
 
@@ -151,6 +155,7 @@ The header shows:
 - **Share**: copy a shareable link to this workspace
 - **New version**: launch the version migration wizard (see [Version management](#version-management))
 - **Convert to technology** (`applications:admin` and `infrastructure:member`): see [Converting an application to a technology](#converting-an-application-to-a-technology)
+- **Create** and **Cancel**: shown while the application is being created, in place of the close button. See [Creating or cancelling](#cancelling-a-creation)
 - **Delete**, a trash icon with its name in a tooltip (`applications:admin`): an application with interfaces gets the refusal and why, with Close only. Otherwise the confirmation names the application and counts the deployments deleted with it, along with its links to other records
 - **Previous / Next**: walk through the filtered list without returning to the grid
 
@@ -368,7 +373,7 @@ Click **Link** to add the suggestion to its section. The section is absent when 
 
 - **Add link** opens a dialog for a URL and an optional name; the link is saved at once. To change a link, hover its row and click the pencil.
 - **Attach file** opens the file chooser. You can also drop files on the section: it is highlighted while you drag.
-- To remove a link or a file, hover the row and click the cross. Deleting a file asks for confirmation first.
+- To remove a link or a file, hover the row and click the cross. Removing a link shows a message and offers **Undo**, which creates the link again. Deleting a file asks for confirmation first.
 
 ---
 
@@ -396,14 +401,14 @@ KANAP offers **two ways to manage application versions**, depending on how your 
 
 | Approach | Best for | What happens |
 |----------|----------|--------------|
-| **Simple** | Most applications | Update the version fields in the properties drawer or in the create form: same record, new version number |
+| **Simple** | Most applications | Update the version fields in the properties drawer: same record, new version number |
 | **Sophisticated** | Major migrations | Use **New version** to create a new application record with lineage tracking. Run old and new versions side by side |
 
 ### Simple version tracking (in-place updates)
 
-For most applications (where you upgrade and the old version simply goes away), update **Version**, **Go live**, **End of support** and **Retired date** in the create form or the properties drawer. The header version chip and the **Go live** metadata reflect what you set.
+For most applications (where you upgrade and the old version simply goes away), update **Version**, **Go live**, **End of support** and **Retired date** in the properties drawer. The header version chip and the **Go live** metadata reflect what you set.
 
-This approach keeps everything in a single record. When you upgrade, update the version fields and you're done. History is tracked in the audit log.
+This approach keeps everything in a single record. When you upgrade, update the version fields and you're done. The **History** tab keeps the earlier values.
 
 **Use this when**: upgrades happen in place with no overlap: one version replaces another.
 
@@ -531,6 +536,7 @@ From the Applications list:
 - **Export**: Download applications to a CSV file or an Excel workbook
 - **Import**: Upload a CSV file or an Excel workbook to create or update applications
 - **Download Template** (from inside the import dialog): Get a blank CSV with correct headers
+- **Download an example** (from inside the import dialog): an Excel workbook of sample applications, with what each column takes. See [Example files](csv-files.md#example-files)
 
 **Permissions required**: `applications:admin` for import/export operations.
 
@@ -540,7 +546,7 @@ From the Applications list:
 
 **Format**: **CSV** or **Excel (.xlsx)**, chosen in the dialog and remembered in your browser. The workbook holds the same columns as the CSV on one sheet, with numbers and dates as values Excel can sort and filter. The import reads either; in a workbook, it reads the first sheet. See [CSV and Excel files](csv-files.md).
 
-**Columns**: the file starts with `id` and `reference` (`APP-12`), then the columns follow the workspace, tab by tab. The import ignores `reference`.
+**Columns**: the file starts with `id` and the reference (`APP-12`), then the columns follow the workspace, tab by tab. Their titles are in the language of your screen, and the import reads them in any language. The import ignores the reference.
 
 **Language of the values**: catalog values (category, lifecycle, criticality, cyber criticality, recovery wave, data class, access methods) and the status are written as the screen shows them, in the language of your screen: `Active` in English, `Actif` in French. A name your organization gave a value in **IT Landscape > Settings** stays as it is.
 

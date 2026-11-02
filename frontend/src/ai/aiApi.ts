@@ -9,6 +9,7 @@ import {
   ConversationMessagesResponse,
 } from './aiTypes';
 import i18n from '../i18n';
+import { getApiErrorMessage } from '../utils/apiErrorMessage';
 import type { AiBuiltinProvider } from './includedModel';
 
 const MAX_STREAM_BUFFER_CHARS = 1_048_576;
@@ -110,6 +111,17 @@ export type AiProviderTestResult = {
   latency_ms: number | null;
   message: string;
   validation_errors: string[];
+  // The effort the test call sent; null when none was.
+  reasoning_effort_sent?: AiReasoningEffort | null;
+  // Reasoning tokens the response reported (OpenAI-compatible providers); null when not reported.
+  reasoning_tokens?: number | null;
+};
+
+// The reasoning efforts a provider and model accept (backend reasoning-effort.capability.ts).
+export type AiReasoningEffortSupport = {
+  levels: AiReasoningEffort[];
+  // True when the server may ignore the field (Ollama, custom endpoints).
+  server_may_ignore: boolean;
 };
 
 export type AiModelConfigUsage = {
@@ -127,6 +139,8 @@ export type AiModelConfig = {
   supports_vision: boolean;
   price_input_eur_per_mtok: number | null;
   price_output_eur_per_mtok: number | null;
+  price_cache_read_eur_per_mtok: number | null;
+  reasoning_effort: AiReasoningEffort | null;
   llm_timeout_ms: number | null;
   status: 'active' | 'archived';
   is_default: boolean;
@@ -147,6 +161,10 @@ export type AiModelAssignmentOption = {
   is_default: boolean;
 };
 
+// How much a reasoning model thinks before answering; null: the provider's default.
+export const AI_REASONING_EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;
+export type AiReasoningEffort = (typeof AI_REASONING_EFFORTS)[number];
+
 export type AiModelConfigInput = {
   name?: string;
   provider?: string;
@@ -156,6 +174,8 @@ export type AiModelConfigInput = {
   supports_vision?: boolean;
   price_input_eur_per_mtok?: number | null;
   price_output_eur_per_mtok?: number | null;
+  price_cache_read_eur_per_mtok?: number | null;
+  reasoning_effort?: AiReasoningEffort | null;
   llm_timeout_ms?: number | null;
   is_default?: boolean;
 };
@@ -207,6 +227,7 @@ export type AiAdminOverview = {
       cost_last_30_days_eur: number;
     }>;
     chat_priced: boolean;
+    chat_estimated: boolean;
   };
 };
 
@@ -1272,8 +1293,12 @@ export async function* streamChat(params: {
     } catch {
       payload = null;
     }
+    const fallback = raw || i18n.t('ai:errors.streamRequestFailed');
     throw new ChatStreamRequestError(
-      payload?.message || raw || i18n.t('ai:errors.streamRequestFailed'),
+      // A coded refusal (`AI_CHAT_DISABLED`, `MODULE_RIGHT_REQUIRED`) is shown in the language of the screen.
+      payload && typeof payload === 'object'
+        ? getApiErrorMessage({ response: { status: response.status, data: payload } }, i18n.t.bind(i18n), fallback)
+        : fallback,
       {
         status: response.status,
         code: payload?.code ?? null,
@@ -1459,6 +1484,10 @@ export const aiModelConfigsApi = {
     const res = await api.post(`/ai/model-configs/${id}/test`);
     return res.data;
   },
+  async reasoningEfforts(provider: string, model: string): Promise<AiReasoningEffortSupport> {
+    const res = await api.get('/ai/model-configs/reasoning-efforts', { params: { provider, model } });
+    return res.data;
+  },
 };
 
 export const aiAgentControlApi = {
@@ -1530,6 +1559,10 @@ export const aiAgentControlApi = {
   },
   async archiveSharedContextProfile(id: string): Promise<{ profile: AiSharedContextProfile }> {
     const res = await api.post(`/ai/admin/control-plane/shared-context-profiles/${id}/archive`);
+    return res.data;
+  },
+  async restoreSharedContextProfile(id: string): Promise<{ profile: AiSharedContextProfile }> {
+    const res = await api.post(`/ai/admin/control-plane/shared-context-profiles/${id}/restore`);
     return res.data;
   },
   async listKnowledgeLibraries(): Promise<AiKnowledgeLibrary[]> {

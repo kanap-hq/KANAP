@@ -3,7 +3,6 @@ import {
   Body,
   Controller,
   Delete,
-  ForbiddenException,
   Get,
   HttpCode,
   HttpStatus,
@@ -43,6 +42,7 @@ import {
 import { AGENT_ACTIVITY_TYPES } from './ai-agent-activity-timeline';
 import { SharedContextProfileInput } from './ai-shared-context-profile.service';
 import { ReservedToUnscopedDataAccess } from '../../../data-access/reserved-operations';
+import { codedForbidden, requestContextMissing } from '../../../auth/module-right-required';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -123,7 +123,7 @@ export class AiAgentControlController {
   private buildContext(req: any): AiExecutionContext {
     const tenantId = req?.tenant?.id ? String(req.tenant.id) : '';
     if (!tenantId || !isUuid(tenantId)) {
-      throw new ForbiddenException('Valid tenant context is required.');
+      throw requestContextMissing('Valid tenant context is required.');
     }
 
     return {
@@ -311,6 +311,15 @@ export class AiAgentControlController {
   ) {
     const context = this.buildContext(req);
     return this.runTransaction(context, 'admin', (tenantContext) => this.control.archiveSharedContextProfile(tenantContext, id));
+  }
+
+  @Post('shared-context-profiles/:id/restore')
+  async restoreSharedContextProfile(
+    @Req() req: any,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ) {
+    const context = this.buildContext(req);
+    return this.runTransaction(context, 'admin', (tenantContext) => this.control.restoreSharedContextProfile(tenantContext, id));
   }
 
   @Get('agents/:id/autonomy')
@@ -690,7 +699,7 @@ export class AiAgentControlController {
     const scope = body?.scope === 'agent' ? 'agent' : 'tenant';
     const reason = typeof body?.reason === 'string' ? body.reason.trim() : '';
     if (!reason) {
-      throw new ForbiddenException('An emergency pause requires an explicit reason.');
+      throw codedForbidden('AGENT_PAUSE_REASON_REQUIRED', 'An emergency pause requires an explicit reason.');
     }
     const expiresInMinutes = typeof body?.expires_in_minutes === 'number'
       && Number.isFinite(body.expires_in_minutes) && body.expires_in_minutes > 0
@@ -732,7 +741,7 @@ export class AiAgentControlController {
     return this.runTransaction(context, 'operate', async (tenantContext) => {
       const existing = await this.emergencyPause.getPause(tenantContext, id);
       if (!existing) {
-        throw new ForbiddenException('Emergency pause not found.');
+        throw codedForbidden('AGENT_PAUSE_NOT_FOUND', 'Emergency pause not found.');
       }
       if (existing.scope !== 'agent') {
         await this.policy.assertAgentAdmin(tenantContext, tenantContext.manager);

@@ -2,7 +2,7 @@ import React from 'react';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  Alert, Box, Button, IconButton, LinearProgress, Stack, Typography, useTheme,
+  Alert, Box, IconButton, LinearProgress, Stack, Typography, useTheme,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import api from '../../api';
@@ -46,13 +46,16 @@ import { fetchProjectTasksCount } from '../../utils/workspaceTabCounts';
 import { portfolioLinksKey, usePortfolioRelationsBadge } from './workspace/portfolioRelations';
 import { unsavedConfirm, useKanapDialogs } from '../../components/design';
 import { carryListFilters } from '../../lib/listContext';
+import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
+import { CreationActions, CreationPreview, useCreationReturn, useNewRecordCreate, useRecordCreation } from '../../components/workspace/creation';
+import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 
-type TabKey = 'summary' | 'tasks' | 'timeline' | 'effort' | 'scoring' | 'relations' | 'knowledge';
+type TabKey = 'summary' | 'tasks' | 'timeline' | 'effort' | 'scoring' | 'relations' | 'knowledge' | typeof RECORD_HISTORY_TAB_KEY;
 type LegacyPanelRoute = 'overview' | 'activity' | 'team';
 type RouteTabKey = TabKey | LegacyPanelRoute;
 type DependencyTarget = { type: 'request' | 'project'; id: string; name: string };
 
-const PROJECT_TAB_KEYS: TabKey[] = ['summary', 'tasks', 'timeline', 'effort', 'scoring', 'relations', 'knowledge'];
+const PROJECT_TAB_KEYS: TabKey[] = ['summary', 'tasks', 'timeline', 'effort', 'scoring', 'relations', 'knowledge', RECORD_HISTORY_TAB_KEY];
 
 const ALLOWED_TRANSITIONS: Record<string, string[]> = {
   waiting_list: ['planned', 'on_hold', 'cancelled'],
@@ -86,6 +89,10 @@ function formatDate(locale: string, value?: string | null) {
   return formatShortDate(value, locale, { year: 'always' }) || null;
 }
 
+/** The preview of a new project (`CreationPreview`) is out of reach: its handlers never run. */
+const ignoreDraftChange = () => undefined;
+const ignoreDraftRefetch = async () => undefined;
+
 const ProjectTimelineTab = React.lazy(() => import('./workspace/project/ProjectTimelineTab'));
 const ProjectScoringTab = React.lazy(() => import('./workspace/project/ProjectScoringTab'));
 const ProjectEffortTab = React.lazy(() => import('./workspace/project/ProjectEffortTab'));
@@ -93,6 +100,8 @@ const ProjectTasksPanel = React.lazy(() => import('./editors/ProjectTasksPanel')
 const ProjectActivityTab = React.lazy(() => import('./workspace/project/ProjectActivityTab'));
 const PortfolioRelationsTab = React.lazy(() => import('./workspace/PortfolioRelationsTab'));
 const ProjectKnowledgeTab = React.lazy(() => import('./workspace/project/ProjectKnowledgeTab'));
+const historyTab = retryableLazy(() => import('../../components/history/RecordHistoryTab'));
+const HistoryTab = historyTab.Component;
 
 export default function ProjectWorkspacePage() {
   const { t } = useTranslation(['portfolio', 'common', 'errors']);
@@ -128,12 +137,9 @@ export default function ProjectWorkspacePage() {
     { key: 'scoring', label: t('portfolio:labels.scoring') },
     { key: 'relations', label: t('portfolio:labels.relations') },
     { key: 'knowledge', label: t('portfolio:labels.knowledge') },
+    { key: RECORD_HISTORY_TAB_KEY, label: t('portfolio:labels.history') },
   ], [t]);
   const statusOptions = React.useMemo(() => getProjectStatusOptions(t), [t]);
-  const originOptions = React.useMemo(() => [
-    { value: 'fast_track', label: t('portfolio:origin.fast_track') },
-    { value: 'legacy', label: t('portfolio:origin.legacy') },
-  ], [t]);
   const originLabels = React.useMemo<Record<string, string>>(() => ({
     standard: t('portfolio:workspace.project.origin.standard'),
     fast_track: t('portfolio:workspace.project.origin.fastTrack'),
@@ -205,7 +211,7 @@ export default function ProjectWorkspacePage() {
   }, [data?.id, data?.item_number, idParam]);
 
   // Fetch classification data (types, categories, streams)
-  const { data: classificationData } = useQuery({
+  const { data: classificationData, isError: classificationFailed } = useQuery({
     queryKey: ['portfolio-classification'],
     queryFn: async () => {
       const res = await api.get('/portfolio/classification/all');
@@ -451,98 +457,91 @@ export default function ProjectWorkspacePage() {
     }
   }, [form?.id, queryClient, refetch, t]);
 
+  // The classification a new project takes from the tenant's defaults (source, category, stream,
+  // company), on the fields the person has not set: what the create sends besides the name.
+  const withClassificationDefaults = React.useCallback((prev: any) => {
+    const next = { ...(prev || {}) } as any;
+    const isUnset = (value: any) => value === undefined || value === null || value === '';
+    let changed = false;
+
+    const applyField = (
+      field: 'source_id' | 'category_id' | 'company_id',
+      value: string | null,
+    ) => {
+      if (!value) return;
+      if (classificationTouchedRef.current[field]) return;
+      if (!isUnset(next[field])) return;
+      next[field] = value;
+      changed = true;
+    };
+
+    applyField('source_id', classificationDefaults?.source_id ?? null);
+    applyField('category_id', classificationDefaults?.category_id ?? null);
+    applyField('company_id', classificationDefaults?.company_id ?? null);
+
+    const defaultStreamId = classificationDefaults?.stream_id ?? null;
+    if (
+      defaultStreamId &&
+      !classificationTouchedRef.current.stream_id &&
+      isUnset(next.stream_id)
+    ) {
+      const effectiveCategory = isUnset(next.category_id) ? null : next.category_id;
+      const stream = streams.find((s) => s.id === defaultStreamId);
+      const matchesCategory = !stream || !effectiveCategory || stream.category_id === effectiveCategory;
+      if (matchesCategory) {
+        next.stream_id = defaultStreamId;
+        changed = true;
+      }
+    }
+
+    return changed ? next : prev;
+  }, [classificationDefaults, streams]);
+  // The defaults are read (or could not be): a title committed before waits for this.
+  const classificationReady = !classificationDefaultsLoading && (!!classificationData || classificationFailed);
+
   React.useEffect(() => {
     if (!isCreate || defaultsAppliedRef.current || classificationDefaultsLoading) return;
     if (!classificationData) return;
-
-    setForm((prev: any) => {
-      const next = { ...(prev || {}) } as any;
-      const isUnset = (value: any) => value === undefined || value === null || value === '';
-      let changed = false;
-
-      const applyField = (
-        field: 'source_id' | 'category_id' | 'company_id',
-        value: string | null,
-      ) => {
-        if (!value) return;
-        if (classificationTouchedRef.current[field]) return;
-        if (!isUnset(next[field])) return;
-        next[field] = value;
-        changed = true;
-      };
-
-      applyField('source_id', classificationDefaults?.source_id ?? null);
-      applyField('category_id', classificationDefaults?.category_id ?? null);
-      applyField('company_id', classificationDefaults?.company_id ?? null);
-
-      const defaultStreamId = classificationDefaults?.stream_id ?? null;
-      if (
-        defaultStreamId &&
-        !classificationTouchedRef.current.stream_id &&
-        isUnset(next.stream_id)
-      ) {
-        const effectiveCategory = isUnset(next.category_id) ? null : next.category_id;
-        const stream = streams.find((s) => s.id === defaultStreamId);
-        const matchesCategory = !stream || !effectiveCategory || stream.category_id === effectiveCategory;
-        if (matchesCategory) {
-          next.stream_id = defaultStreamId;
-          changed = true;
-        }
-      }
-
-      return changed ? next : prev;
-    });
-
+    setForm(withClassificationDefaults);
     defaultsAppliedRef.current = true;
   }, [
     isCreate,
     classificationDefaultsLoading,
-    classificationDefaults,
     classificationData,
-    streams,
+    withClassificationDefaults,
   ]);
 
   const handleSave = async (): Promise<boolean> => {
     setSaveError(null);
+    if (isCreate) return false;
     try {
-      if (isCreate) {
-        const res = await api.post('/portfolio/projects', form);
-        const newId = res.data?.id;
-        if (newId) {
-          setDirty(false);
-          navigate(`/portfolio/projects/${newId}/summary?${searchParams.toString()}`);
-          return true;
-        }
+      if (!canManage && (dirty || scoringDirty)) {
+        setSaveError(t('portfolio:workspace.project.messages.permissionSaveWorkspace'));
         return false;
-      } else {
-        if (!canManage && (dirty || scoringDirty)) {
-          setSaveError(t('portfolio:workspace.project.messages.permissionSaveWorkspace'));
-          return false;
-        }
-
-        if (canManage) {
-          const projectPayload = { ...form };
-          delete projectPayload.purpose;
-          await api.patch(`/portfolio/projects/${id}`, projectPayload);
-
-          // Save scoring editor data if dirty.
-          if (scoringEditorRef.current?.isDirty()) {
-            await scoringEditorRef.current.save();
-          }
-        }
-
-        if (purposeEditorRef.current?.isDirty()) {
-          const ok = await purposeEditorRef.current.save();
-          if (!ok) return false;
-        }
-
-        setDirty(false);
-        setScoringDirty(false);
-        setPurposeDirty(false);
-        await refetch();
-        queryClient.invalidateQueries({ queryKey: ['portfolio-projects'] });
-        return true;
       }
+
+      if (canManage) {
+        const projectPayload = { ...form };
+        delete projectPayload.purpose;
+        await api.patch(`/portfolio/projects/${id}`, projectPayload);
+
+        // Save scoring editor data if dirty.
+        if (scoringEditorRef.current?.isDirty()) {
+          await scoringEditorRef.current.save();
+        }
+      }
+
+      if (purposeEditorRef.current?.isDirty()) {
+        const ok = await purposeEditorRef.current.save();
+        if (!ok) return false;
+      }
+
+      setDirty(false);
+      setScoringDirty(false);
+      setPurposeDirty(false);
+      await refetch();
+      queryClient.invalidateQueries({ queryKey: ['portfolio-projects'] });
+      return true;
     } catch (error) {
       setSaveError(getApiErrorMessage(error, t, t('portfolio:workspace.project.messages.saveFailed')));
       return false;
@@ -717,8 +716,6 @@ export default function ProjectWorkspacePage() {
 
   const hasPageDirtyChanges = dirty || scoringDirty;
   const hasUnsavedChanges = hasPageDirtyChanges || purposeDirty;
-  const canSaveManagedDocsOnly = !hasPageDirtyChanges && purposeDirty && canContributeToProject;
-  const saveDisabled = !hasUnsavedChanges || (!canManage && !canSaveManagedDocsOnly);
 
   const listContextParams = React.useMemo(() => {
     const sp = new URLSearchParams();
@@ -802,7 +799,76 @@ export default function ProjectWorkspacePage() {
     navigate(`/portfolio/projects/${targetId}/${routeTab}${qs ? `?${qs}` : ''}`);
   }, [dialogs, handleSave, handleReset, hasUnsavedChanges, listContextParams, navigate, routeTab, t]);
 
+  const listPath = React.useMemo(() => {
+    const qs = listContextParams.toString();
+    return `/portfolio/projects${qs ? `?${qs}` : ''}`;
+  }, [listContextParams]);
+  // Where the creation started: a new project left empty, or cancelled, goes back there.
+  const creationReturn = useCreationReturn(listPath);
+  const creation = useRecordCreation({
+    family: 'projects',
+    apiBase: '/portfolio/projects',
+    recordId: !isCreate && projectMatchesCurrentRoute ? data?.id ?? null : null,
+    listPath,
+    recordLabel: t('portfolio:workspace.project.creation.record'),
+    queryKeyPrefixes: ['portfolio-projects'],
+    onError: setSaveError,
+  });
+  // "Cancel" counts what was written: a purpose still typed is saved first.
+  const cancelCreation = React.useCallback(async () => {
+    if (purposeEditorRef.current?.isDirty() && !(await purposeEditorRef.current.save())) return;
+    await creation.cancelCreation();
+  }, [creation]);
+  // A refusal of the name typed on a new project.
+  const [titleError, setTitleError] = React.useState<string | null>(null);
+  const newCreate = useNewRecordCreate({ setTitleError, requiredMessage: t('common:creation.titleRequired') });
+  // The name committed before the classification defaults were read: created once they are.
+  const [pendingName, setPendingName] = React.useState<string | null>(null);
+  const creatingRef = React.useRef(false);
+
+  // The name committed in the header creates the project at once (fast track), with the
+  // classification defaults the form would have sent; the page moves to it, every tab open,
+  // with Create and Cancel (or closes it, kept, when Create was clicked meanwhile).
+  const createProject = React.useCallback(async (name: string) => {
+    if (creatingRef.current) return;
+    creatingRef.current = true;
+    setTitleError(null);
+    setSaveError(null);
+    try {
+      const res = await api.post('/portfolio/projects', { ...withClassificationDefaults(form), origin: 'fast_track', name });
+      const { creation_token: token, ...created } = res.data;
+      if (newCreate.titleSettled()) {
+        void queryClient.invalidateQueries({ queryKey: ['portfolio-projects'], refetchType: 'none' });
+        navigate(creationReturn, { replace: true });
+        return;
+      }
+      creation.startCreation({ recordId: created.id, token, returnTo: creationReturn });
+      const reference = formatItemRef('project', created.item_number);
+      // The page keeps its header while the full project loads.
+      queryClient.setQueryData(['portfolio-project', reference, getProjectWorkspaceInclude('summary')], { activities: [], ...created });
+      void queryClient.invalidateQueries({ queryKey: ['portfolio-projects'], refetchType: 'none' });
+      const qs = searchParams.toString();
+      navigate(`/portfolio/projects/${reference}/summary${qs ? `?${qs}` : ''}`, { replace: true });
+    } catch (err) {
+      newCreate.titleSettled();
+      setTitleError(getApiErrorMessage(err, t, t('portfolio:workspace.project.messages.saveFailed')));
+    } finally {
+      creatingRef.current = false;
+    }
+  }, [creation, creationReturn, form, navigate, newCreate, queryClient, searchParams, t, withClassificationDefaults]);
+
+  React.useEffect(() => {
+    if (!isCreate || pendingName === null || !classificationReady) return;
+    setPendingName(null);
+    void createProject(pendingName);
+  }, [classificationReady, createProject, isCreate, pendingName]);
+
   const closeWorkspace = React.useCallback(async () => {
+    // A new project left before it has a name goes back where the creation started.
+    if (isCreate) {
+      navigate(creationReturn);
+      return;
+    }
     if (hasUnsavedChanges) {
       const proceed = await dialogs.confirm(unsavedConfirm(t, 'saveAndLeave'));
       if (proceed) {
@@ -812,9 +878,20 @@ export default function ProjectWorkspacePage() {
         await handleReset();
       }
     }
-    const qs = listContextParams.toString();
-    navigate(`/portfolio/projects${qs ? `?${qs}` : ''}`);
-  }, [dialogs, handleSave, handleReset, hasUnsavedChanges, listContextParams, navigate, t]);
+    navigate(listPath);
+  }, [creationReturn, dialogs, handleSave, handleReset, hasUnsavedChanges, isCreate, listPath, navigate, t]);
+
+  // Create: on the new page, the title is the only field; on a project being created, what is still
+  // being typed is saved, then the project is kept and closed.
+  const createAction = React.useCallback(async () => {
+    if (isCreate) {
+      newCreate.create(titleError);
+      return;
+    }
+    if (purposeEditorRef.current?.isDirty() && !(await purposeEditorRef.current.save())) return;
+    if (hasUnsavedChanges && !(await handleSave())) return;
+    creation.finishCreation();
+  }, [creation, handleSave, hasUnsavedChanges, isCreate, newCreate, titleError]);
 
   const statusLabel = form?.status ? getProjectStatusLabel(t, form.status) : '';
   const statusColor = (PROJECT_STATUS_COLORS[form?.status] || 'default') as 'default' | 'primary' | 'secondary' | 'success' | 'error' | 'warning' | 'info';
@@ -833,7 +910,6 @@ export default function ProjectWorkspacePage() {
   const sourceRequestReference = sourceRequest?.item_number
     ? `REQ-${sourceRequest.item_number}`
     : null;
-  const createDisabled = !String(form?.name || '').trim() || saveDisabled;
   const originLabel = originLabels[form?.origin] || form?.origin || '';
   if (!isCreate && isLoading && !data) {
     return (
@@ -848,10 +924,13 @@ export default function ProjectWorkspacePage() {
 
   return (
     <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-      {!!error && <Alert severity="error" sx={{ mx: 2, mt: 1 }}>{t('portfolio:workspace.project.messages.loadFailed')}</Alert>}
-      {!!saveError && <Alert severity="error" sx={{ mx: 2, mt: 1 }}>{saveError}</Alert>}
-
       <PortfolioDetailWorkspaceShell
+        notices={(error || saveError) ? (
+          <>
+            {!!error && <Alert severity="error">{t('portfolio:workspace.project.messages.loadFailed')}</Alert>}
+            {!!saveError && <Alert severity="error">{saveError}</Alert>}
+          </>
+        ) : undefined}
         activeTab={routeTab}
         tabs={tabs.map((tab) => ({
           ...tab,
@@ -870,10 +949,24 @@ export default function ProjectWorkspacePage() {
         onBack={() => { void closeWorkspace(); }}
         itemReference={projectReference}
         onCopyReference={projectReference ? () => { void navigator.clipboard?.writeText(projectReference); } : undefined}
-        title={form?.name || ''}
+        title={isCreate ? '' : form?.name || ''}
         titleFallback={isCreate ? t('portfolio:workspace.project.title.new') : t('portfolio:workspace.project.title.fallback')}
         canEditTitle={isCreate || canManage}
-        onTitleSave={(value) => { void persistPanelPatch({ name: value }); }}
+        onTitleSave={(value) => {
+          if (isCreate) {
+            setTitleError(null);
+            newCreate.titleSent();
+            setPendingName(value);
+            return;
+          }
+          void persistPanelPatch({ name: value });
+        }}
+        onTitleDraftChange={isCreate ? () => setTitleError(null) : undefined}
+        titleError={isCreate ? titleError : undefined}
+        titleAutoEdit={isCreate}
+        titleOnCancel={isCreate ? () => { void closeWorkspace(); } : undefined}
+        titleFocusRequest={newCreate.focusRequest}
+        isCreate={isCreate}
         nav={!isCreate && total > 0 ? {
           currentIndex: index + 1,
           totalCount: total,
@@ -884,8 +977,36 @@ export default function ProjectWorkspacePage() {
           previousLabel: t('portfolio:actions.previous'),
           nextLabel: t('portfolio:actions.next'),
         } : undefined}
-        onSaveShortcut={hasUnsavedChanges ? () => { void handleSave(); } : undefined}
-        metadata={!isCreate ? (
+        onSaveShortcut={isCreate ? ignoreDraftChange : hasUnsavedChanges ? () => { void handleSave(); } : undefined}
+        metadata={isCreate ? (
+          // The metadata of the project to be, dimmed like the rest, so the page does not move when it is created.
+          <CreationPreview sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 'inherit' }}>
+            <PortfolioStatusMetadata
+              value="waiting_list"
+              label={getProjectStatusLabel(t, 'waiting_list')}
+              color={getDotColor((PROJECT_STATUS_COLORS.waiting_list || 'default') as 'default', theme.palette.mode)}
+              options={statusMenuOptions}
+              onChange={ignoreDraftChange}
+              disabled
+            />
+            <PortfolioProgressMetadata
+              label={t('portfolio:workspace.project.summary.fields.executionProgress')}
+              value={0}
+            />
+            <MetadataUserPicker
+              label={t('portfolio:workspace.project.fields.itLead')}
+              value={null}
+              displayName={null}
+              placeholder={t('portfolio:activity.history.values.itLeadMissing')}
+              searchPlaceholder={t('portfolio:workspace.project.fields.itLead')}
+              disabled
+              onChange={ignoreDraftChange}
+            />
+            <PortfolioMetadataItem label={t('portfolio:workspace.project.fields.origin')}>
+              {originLabels.fast_track || 'fast_track'}
+            </PortfolioMetadataItem>
+          </CreationPreview>
+        ) : (
           <>
             {form?.status && (
               <PortfolioStatusMetadata
@@ -940,7 +1061,7 @@ export default function ProjectWorkspacePage() {
               </PortfolioMetadataItem>
             )}
           </>
-        ) : undefined}
+        )}
         actions={(
           <>
             {!isCreate && (
@@ -951,28 +1072,52 @@ export default function ProjectWorkspacePage() {
                 itemNumber={form?.item_number}
               />
             )}
-            {isCreate && (
-              <Button variant="contained" onClick={() => void handleSave()} disabled={createDisabled} size="small">
-                {t('common:buttons.create')}
-              </Button>
+            {isCreate || creation.beingCreated ? (
+              <CreationActions
+                busy={creation.cancelling}
+                onCreate={() => { void createAction(); }}
+                onCancel={() => { if (isCreate) void closeWorkspace(); else void cancelCreation(); }}
+              />
+            ) : (
+              <IconButton
+                aria-label={t('common:buttons.close')}
+                title={t('common:buttons.close')}
+                onClick={() => { void closeWorkspace(); }}
+                size="small"
+              >
+                <CloseIcon />
+              </IconButton>
             )}
-            <IconButton
-              aria-label={t('common:buttons.close')}
-              title={t('common:buttons.close')}
-              onClick={() => { void closeWorkspace(); }}
-              size="small"
-            >
-              <CloseIcon />
-            </IconButton>
           </>
         )}
-        properties={(
+        properties={isCreate ? (
+          <CreationPreview>
+            <ProjectPropertyPanel
+              canManage={canManage}
+              categories={categories}
+              form={{ status: 'waiting_list', scheduling_mode: 'independent', ...form }}
+              onCategoryChange={ignoreDraftChange}
+              onCompanyChange={ignoreDraftChange}
+              onLocalUpdate={ignoreDraftChange}
+              onPlannedEndChange={ignoreDraftChange}
+              onPlannedStartChange={ignoreDraftChange}
+              onRefetch={ignoreDraftRefetch}
+              onSourceChange={ignoreDraftChange}
+              onStatusChange={ignoreDraftChange}
+              onStreamChange={ignoreDraftChange}
+              onUpdate={ignoreDraftChange}
+              originLabels={originLabels}
+              sources={sources}
+              statusOptions={statusOptions}
+              streams={streams}
+            />
+          </CreationPreview>
+        ) : (
           <ProjectPropertyPanel
             canManage={canManage}
             categories={categories}
             form={form}
             focusSection={propertyPanelFocusSection}
-            isCreate={isCreate}
             onCategoryChange={(value) => {
               classificationTouchedRef.current.category_id = true;
               classificationTouchedRef.current.stream_id = true;
@@ -983,8 +1128,6 @@ export default function ProjectWorkspacePage() {
               void persistPanelPatch({ company_id: value });
             }}
             onLocalUpdate={applyPanelLocalUpdate}
-            onNameChange={(value) => { void persistPanelPatch({ name: value }); }}
-            onOriginChange={(value) => { void persistPanelPatch({ origin: value }); }}
             onPlannedEndChange={(value) => { void persistPanelPatch({ planned_end: value }); }}
             onPlannedStartChange={(value) => { void persistPanelPatch({ planned_start: value }); }}
             onRefetch={refetch}
@@ -998,7 +1141,6 @@ export default function ProjectWorkspacePage() {
               void persistPanelPatch({ stream_id: value });
             }}
             onUpdate={(patch) => { void persistPanelPatch(patch); }}
-            originOptions={originOptions}
             originLabels={originLabels}
             sources={sources}
             statusOptions={statusOptions}
@@ -1006,7 +1148,20 @@ export default function ProjectWorkspacePage() {
           />
         )}
       >
-        {routeTab === 'summary' && (
+        {isCreate && (
+          <CreationPreview>
+            <ProjectSummaryTab
+              canEditManagedDocs={canContributeToProject}
+              form={form}
+              id={id}
+              isCreate
+              onPurposeDirtyChange={ignoreDraftChange}
+              onPurposeDraftChange={ignoreDraftChange}
+              purposeEditorRef={purposeEditorRef}
+            />
+          </CreationPreview>
+        )}
+        {routeTab === 'summary' && !isCreate && (
           <Stack spacing={3}>
             <ProjectSummaryTab
               canEditManagedDocs={canContributeToProject}
@@ -1022,8 +1177,6 @@ export default function ProjectWorkspacePage() {
                 <ProjectActivityTab
                   entityId={form?.id || ''}
                   activities={form?.activities || []}
-                  createdAt={form?.created_at || null}
-                  createdByName={form?.created_by_name || null}
                   currentStatus={form?.status || ''}
                   allowedTransitions={ALLOWED_TRANSITIONS[form?.status] || []}
                   statusOptions={statusOptions}
@@ -1134,6 +1287,14 @@ export default function ProjectWorkspacePage() {
               canCreate={hasLevel('knowledge', 'member')}
             />
           </React.Suspense>
+        )}
+
+        {routeTab === RECORD_HISTORY_TAB_KEY && !isCreate && form?.id && (
+          <WorkspaceTabBoundary resetKey={routeTab} onRetry={historyTab.retry}>
+            <React.Suspense fallback={null}>
+              <HistoryTab key={form.id} table="portfolio_projects" recordId={form.id} />
+            </React.Suspense>
+          </WorkspaceTabBoundary>
         )}
 
       </PortfolioDetailWorkspaceShell>

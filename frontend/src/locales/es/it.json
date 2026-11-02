@@ -3,6 +3,7 @@
     "incidents": {
       "title": "Registro de incidentes",
       "newIncident": "Nuevo incidente",
+      "empty": "Todavía no hay incidentes.",
       "importCsv": "Importar CSV",
       "importTitle": "Importar incidentes",
       "exportTitle": "Exportar incidentes",
@@ -67,7 +68,7 @@
     },
     "applications": {
       "title": "Aplicaciones",
-      "newAppService": "Nueva aplicación / servicio",
+      "newAppService": "Nueva aplicación",
       "empty": "Todavía no hay aplicaciones.",
       "appService": "Aplicación / Servicio",
       "importCsv": "Importar CSV",
@@ -296,6 +297,7 @@
         "searchLabel": "Buscar en el catálogo",
         "searchPlaceholder": "p. ej., SQL Server",
         "noMatch": "Ninguna entrada del catálogo coincide.",
+        "alreadyHeading": "Ya en sus tecnologías",
         "manualLink": "Introducir una tecnología que no está en el catálogo",
         "backToCatalog": "Volver al catálogo",
         "completes": "Completa {{reference}}"
@@ -678,15 +680,32 @@
         "age": {
           "line": "Datos leídos: {{list}}",
           "item": "{{source}} el {{date}} a las {{time}}",
+          "scores": "puntuaciones {{source}} del {{date}}",
           "never": "{{source}} aún no leída",
           "nvd": "NVD",
           "cve_org": "Editores (CVE.org)",
+          "cisa_kev": "CISA KEV",
+          "eu_kev": "EU KEV",
+          "epss": "EPSS",
+          "euvd": "EUVD",
           "failingNvd": "La última lectura de la NVD falló",
           "failingCveOrg": "La última lectura de CVE.org falló",
+          "failingCisaKev": "La última lectura de CISA KEV falló",
+          "failingEuKev": "La última lectura de EU KEV falló",
+          "failingEpss": "La última lectura de EPSS falló",
+          "failingEuvd": "La última lectura de EUVD falló",
           "staleNvd_one": "La NVD no se ha leído desde hace {{count}} día",
           "staleNvd_other": "La NVD no se ha leído desde hace {{count}} días",
           "staleCveOrg_one": "CVE.org no se ha leído desde hace {{count}} día",
-          "staleCveOrg_other": "CVE.org no se ha leído desde hace {{count}} días"
+          "staleCveOrg_other": "CVE.org no se ha leído desde hace {{count}} días",
+          "staleCisaKev_one": "CISA KEV no se ha leído desde hace {{count}} día",
+          "staleCisaKev_other": "CISA KEV no se ha leído desde hace {{count}} días",
+          "staleEuKev_one": "EU KEV no se ha leído desde hace {{count}} día",
+          "staleEuKev_other": "EU KEV no se ha leído desde hace {{count}} días",
+          "staleEpss_one": "EPSS no se ha leído desde hace {{count}} día",
+          "staleEpss_other": "EPSS no se ha leído desde hace {{count}} días",
+          "staleEuvd_one": "EUVD no se ha leído desde hace {{count}} día",
+          "staleEuvd_other": "EUVD no se ha leído desde hace {{count}} días"
         }
       },
       "reach": {
@@ -1553,6 +1572,9 @@
     "incident": {
       "title": "Incidente",
       "newTitle": "Nuevo incidente",
+      "creation": {
+        "record": "El incidente"
+      },
       "fields": {
         "title": "Título"
       },
@@ -1564,7 +1586,8 @@
         "overview": "Vista general",
         "journal": "Diario",
         "relations": "Relaciones",
-        "documents": "Documentos"
+        "documents": "Documentos",
+        "history": "Historial"
       },
       "actions": {
         "changeStatus": "Cambiar estado",
@@ -1604,10 +1627,7 @@
         "minutes": "{{count}} min"
       },
       "create": {
-        "description": "Descripción",
-        "titleRequired": "El título es obligatorio.",
-        "severityRequired": "La gravedad es obligatoria.",
-        "detectedRequired": "La fecha de detección es obligatoria."
+        "description": "Descripción"
       },
       "overview": {
         "description": "Descripción",
@@ -1685,7 +1705,10 @@
     },
     "application": {
       "title": "Aplicación / Servicio",
-      "newTitle": "Nueva aplicación / servicio",
+      "newTitle": "Nueva aplicación",
+      "creation": {
+        "record": "La aplicación"
+      },
       "indexOfTotal": "({{index}} de {{total}})",
       "tabs": {
         "overview": "Vista general",
@@ -1698,7 +1721,8 @@
         "knowledge": "Base de conocimiento",
         "compliance": "Conformidad",
         "deployments": "Despliegues",
-        "operations": "Operaciones"
+        "operations": "Operaciones",
+        "history": "Historial"
       },
       "createNewVersion": "Nueva versión",
       "saveBeforeVersion": "Guarde los cambios antes de crear una nueva versión",
@@ -2186,7 +2210,7 @@
         "assignmentAdded": "Asignación añadida",
         "removed": "{{name}} eliminado.",
         "application": "Aplicación",
-        "environment": "Entorno",
+        "environment": "Despliegue",
         "role": "Rol",
         "since": "Desde",
         "notes": "Notas",
@@ -2195,13 +2219,13 @@
         "removeAssignment": "Eliminar asignación",
         "addAssignmentDialog": "Añadir asignación",
         "applicationRequired": "La aplicación es obligatoria",
-        "environmentRequired": "El entorno (instancia) es obligatorio",
+        "environmentRequired": "Elija un despliegue.",
         "roleRequired": "El rol es obligatorio",
-        "selectAppForEnv": "Seleccione una aplicación para elegir un entorno.",
-        "chooseEnvironment": "Elija un entorno.",
-        "noInstances": "No hay instancias para esta aplicación",
+        "selectAppForEnv": "Seleccione una aplicación para elegir un despliegue.",
+        "chooseEnvironment": "Elija un despliegue.",
         "noServerRoles": "No hay roles de servidor configurados; actualice la configuración del panorama IT.",
-        "assign": "Asignar"
+        "assign": "Asignar",
+        "createDeployment": "+ Crear el despliegue {{environment}}"
       },
       "connections": {
         "loadingConnections": "Cargando conexiones…",
@@ -3022,12 +3046,8 @@
         "missingInstance_other": "No hay despliegues de {{roles}} disponibles para {{env}}. Cree los despliegues que faltan antes de añadir este enlace.",
         "sourceInstance": "Despliegue de origen",
         "targetInstance": "Despliegue de destino",
-        "sourceInstanceLabel": "Despliegue de origen:",
-        "targetInstanceLabel": "Despliegue de destino:",
         "integrationTool": "Herramienta de integración",
         "status": "Estado",
-        "statusLine": "Estado: {{value}}",
-        "authLine": "Autenticación: {{value}}",
         "authMode": "Modo de autenticación",
         "notSpecified": "No especificado",
         "infraConnection": "Conexión de infraestructura",
@@ -3038,8 +3058,6 @@
         "additionalConnections_other": "{{count}} conexiones vinculadas adicionales se mantienen sin cambios.",
         "sourceEndpoint": "Punto de conexión de origen",
         "targetEndpoint": "Punto de conexión de destino",
-        "sourceEndpointLine": "Punto de conexión de origen: {{value}}",
-        "targetEndpointLine": "Punto de conexión de destino: {{value}}",
         "endpointPlaceholder": "Ruta de archivo, URL, nombre de cola",
         "triggerDetails": "Detalles del disparador",
         "triggerDetailsPlaceholder": "Expresión cron, descripción del evento, ventana de procesamiento",
@@ -3047,9 +3065,7 @@
         "usesJobName": "Usa {{name}}",
         "usesFlowJobName": "Usa el nombre del job del flujo",
         "monitoringUrl": "URL de supervisión",
-        "monitoringLine": "Supervisión: {{value}}",
         "notes": "Notas",
-        "notesLine": "Notas: {{value}}",
         "notesPlaceholder": "Notas específicas del entorno",
         "missingConnection": "Falta la conexión",
         "configured": "Configurado",
@@ -3067,12 +3083,6 @@
         "noLegs": "Todavía no hay tramos definidos para esta interfaz.",
         "autosaveFailed": "Error al guardar automáticamente",
         "closePanel": "Cerrar el panel de enlace",
-        "noBindingForLeg": "No hay ningún enlace definido para este tramo en {{env}}.",
-        "loadingConnections": "Cargando conexiones de infraestructura…",
-        "noInfraConnections": "Ninguna conexión de infraestructura vinculada",
-        "activeWithoutConnection": "Enlace activo sin conexión de infraestructura",
-        "manageConnections": "Gestionar conexiones de infraestructura",
-        "manageConnectionButton": "Gestionar conexiones",
         "title": "Entornos y enlaces",
         "intro": "Para cada entorno, configure qué despliegues se conectan en cada tramo de la interfaz.",
         "routeViaMiddleware": "Tipo de ruta: a través de middleware. Tramos: {{legs}}.",
@@ -3080,21 +3090,8 @@
         "addEnvironment": "Añadir entorno",
         "loadingBindings": "Cargando enlaces…",
         "noEnvironments": "Todavía no hay entornos definidos. Haga clic en «Añadir entorno» para documentar los enlaces. Cada entorno necesita despliegues de aplicación, creados en el espacio Aplicaciones, antes de poder añadir enlaces.",
-        "environmentLine": "Entorno: {{env}}",
-        "technicalTemplate": "Plantilla técnica",
         "bindingIn": "Enlace en {{env}}",
-        "connections": "Conexiones",
-        "envLegLine": "Entorno: {{env}} · Tramo: {{leg}}",
-        "noInfraConnectionsYet": "Todavía no hay conexiones de infraestructura vinculadas.",
-        "lifecycleLine": "Ciclo de vida: {{value}}",
-        "criticalityLine": "Criticidad: {{value}}",
         "noPii": "Sin PII",
-        "openConnection": "Abrir conexión",
-        "unlinking": "Desvinculando…",
-        "linkExisting": "Vincular una conexión existente",
-        "nameOrId": "Nombre o ID",
-        "linking": "Vinculando…",
-        "createConnection": "Crear conexión…",
         "deleteBindingMessage": "Eliminar este enlace de entorno. También se quitarán las conexiones de infraestructura vinculadas a este enlace.",
         "deleteEnvironmentMessage_one": "Eliminar {{count}} enlace de {{env}}.",
         "deleteEnvironmentMessage_other": "Eliminar los {{count}} enlaces de {{env}}.",
@@ -3111,12 +3108,12 @@
         "history": "Historial"
       },
       "deleteTitle": "¿Eliminar ubicación?",
-      "deleteMessage": "Esto eliminará permanentemente esta ubicación y desasignará automáticamente todos los activos vinculados.",
       "deleteUnsavedWarning": "También tiene cambios no guardados en este espacio. Esos cambios se perderán.",
       "subLocationsAfterCreate": "Las sub-ubicaciones están disponibles después de crear la ubicación.",
       "contactsAfterCreate": "Los contactos están disponibles después de crear la ubicación.",
       "relationsAfterCreate": "Las relaciones están disponibles después de crear la ubicación.",
       "untitled": "Ubicación sin nombre",
+      "notFound": "Ubicación no encontrada.",
       "previous": "Ubicación anterior",
       "next": "Ubicación siguiente",
       "namePlaceholder": "p. ej., Centro de operaciones París",
@@ -3188,7 +3185,9 @@
         "deleteUsage_other": "<strong>{{count}} activos están</strong> asignados actualmente a <strong>{{name}}</strong>. Al eliminar esta sub-ubicación, quedarán sin sub-ubicación asignada.",
         "deleteKeepsAssets": "Los registros de los activos se conservan; solo se borra su vínculo con la sub-ubicación.",
         "deleteAnyway": "Eliminar de todos modos"
-      }
+      },
+      "createOption": "+ Crear la ubicación «{{name}}»",
+      "createNew": "+ Nueva ubicación"
     }
   },
   "components": {
@@ -3420,6 +3419,7 @@
     "removeLayerFailed": "Error al eliminar la capa",
     "loadInterfaceFailed": "Error al cargar la interfaz",
     "saveInterfaceFailed": "Error al guardar la interfaz",
+    "deleteInterfaceFailed": "Error al eliminar la interfaz",
     "loadLocationFailed": "Error al cargar la ubicación",
     "saveLocationFailed": "Error al guardar la ubicación",
     "deleteLocationFailed": "Error al eliminar la ubicación",
@@ -3460,8 +3460,6 @@
     "loadBindingsFailed": "Error al cargar los enlaces",
     "saveBindingFailed": "Error al guardar el enlace",
     "deleteBindingFailed": "Error al eliminar el enlace",
-    "linkConnectionFailed": "Error al vincular la conexión",
-    "unlinkConnectionFailed": "Error al desvincular la conexión",
     "deleteEnvBindingsFailed": "Error al eliminar los enlaces de entorno",
     "createApplicationFailed": "Error al crear la aplicación",
     "loadRelationsFailed": "Error al cargar las relaciones",
@@ -3515,7 +3513,6 @@
     "next": "Siguiente",
     "remove": "Eliminar",
     "search": "Buscar",
-    "actions": "Acciones",
     "loading": "Cargando…",
     "name": "Nombre",
     "user": "Usuario",

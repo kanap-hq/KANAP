@@ -294,7 +294,7 @@ export class AuthService {
   }
 
   /** Sets the password of the account a reset link names and closes its sessions; returns the account. */
-  async resetPasswordWithToken(token: string, nextPassword: string, opts?: { manager?: import('typeorm').EntityManager }): Promise<string> {
+  async resetPasswordWithToken(token: string, nextPassword: string, opts?: { manager?: import('typeorm').EntityManager }): Promise<{ id: string; email: string }> {
     const secret = getPasswordResetSecret();
     let payload: any;
     try {
@@ -342,7 +342,7 @@ export class AuthService {
       await this.users.enableUser(user.id, null, { manager: opts?.manager });
     }
     await this.revokeAllTokens(user.id, opts?.manager);
-    return user.id;
+    return { id: user.id, email: user.email };
   }
 
   getPasswordResetExpirationMinutes() {

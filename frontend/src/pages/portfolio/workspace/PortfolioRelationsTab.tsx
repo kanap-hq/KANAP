@@ -7,6 +7,7 @@ import { useAuth } from '../../../auth/AuthContext';
 import { useKanapDialogs } from '../../../components/design';
 import useBudgetColumns from '../../../hooks/useBudgetColumns';
 import LinksAndFilesSection, { type LinkDraft, type LinksAndFilesFile, type LinksAndFilesLink } from '../../../components/workspace/LinksAndFilesSection';
+import { removeWebLinkWithUndo, webLinkDraft, webLinkLabel } from '../../../components/workspace/removeWebLink';
 import {
   RelationSections,
   applicationsSection,
@@ -20,6 +21,7 @@ import {
 } from '../../../components/workspace/relations';
 import { useRelationLabels } from '../../../components/workspace/relations/labels';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
+import { EnsureApplicationFeedback, useApplicationFeedback } from '../../it/applicationFeedback';
 import {
   fetchPortfolioLinks,
   portfolioBase,
@@ -41,7 +43,7 @@ type RelationsData = ProjectRelationsData | RequestRelationsData;
  * Technologies also need a read of the infrastructure, processes the right to manage them:
  * without it the section stays, and Add is left out.
  */
-export default function PortfolioRelationsTab({
+function PortfolioRelationsTabView({
   entity,
   id,
   onRelationsChange,
@@ -52,6 +54,7 @@ export default function PortfolioRelationsTab({
   onRelationsChange: () => void;
 }) {
   const { t } = useTranslation(['it', 'common', 'portfolio', 'ops']);
+  const feedback = useApplicationFeedback();
   const { hasLevel } = useAuth();
   const dialogs = useKanapDialogs();
   const queryClient = useQueryClient();
@@ -125,17 +128,20 @@ export default function PortfolioRelationsTab({
   const removeLink = async (linkRow: LinksAndFilesLink) => {
     setError(null);
     const previous = queryClient.getQueryData<PortfolioLinksData>(linksKey);
+    // A replacement must not send an empty list when the read has not landed.
     if (!previous) return;
     const remaining = previous.urls.filter((row) => row.id !== linkRow.id);
-    queryClient.setQueryData<PortfolioLinksData>(linksKey, { ...previous, urls: remaining });
-    try {
-      await api.post(`${base}/urls`, { urls: urlBody(remaining) });
-    } catch (e) {
-      queryClient.setQueryData(linksKey, previous);
-      failed(e);
-      return;
-    }
-    await refreshLinks();
+    await removeWebLinkWithUndo<PortfolioLinksData>({
+      queryClient,
+      queryKey: linksKey,
+      without: (cached) => ({ ...cached, urls: cached.urls.filter((row) => row.id !== linkRow.id) }),
+      commit: () => api.post(`${base}/urls`, { urls: urlBody(remaining) }),
+      refresh: refreshLinks,
+      restore: () => saveLink(null, webLinkDraft(linkRow)),
+      message: t('common:linksAndFiles.removed', { name: webLinkLabel(linkRow) }),
+      feedback,
+      onError: failed,
+    });
   };
 
   const uploadFiles = async (chosen: File[]) => {
@@ -285,5 +291,14 @@ export default function PortfolioRelationsTab({
         onRemoveFile={(file) => { void removeFile(file); }}
       />
     </Stack>
+  );
+}
+
+/** The tab, with the undo message when the page does not already show one. */
+export default function PortfolioRelationsTab(props: React.ComponentProps<typeof PortfolioRelationsTabView>) {
+  return (
+    <EnsureApplicationFeedback>
+      <PortfolioRelationsTabView {...props} />
+    </EnsureApplicationFeedback>
   );
 }

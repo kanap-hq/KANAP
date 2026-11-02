@@ -17,15 +17,17 @@
     "untitled": "Sans titre"
   },
   "errors": {
+    "attachmentRefused": "{{name}} : {{reason}}",
     "generic": "Une erreur s'est produite.",
     "noResponseBody": "Aucun corps de réponse.",
     "sendFailed": "Échec de l'envoi du message.",
     "streamBufferExceeded": "Le tampon de flux a dépassé la taille maximale autorisée.",
-    "streamRequestFailed": "La requête de flux a échoué."
+    "streamRequestFailed": "La requête de flux a échoué.",
+    "uploadFailed": "Le fichier n'a pas pu être envoyé."
   },
   "input": {
-    "attach": "Joindre une image",
-    "dropHint": "Déposer l'image pour la joindre",
+    "attach": "Joindre un fichier",
+    "dropHint": "Déposez un fichier pour le joindre",
     "hintEnter": "Entrée pour envoyer",
     "hintShiftEnter": "Maj+Entrée retour à la ligne",
     "placeholder": "Posez votre question à Plaid sur vos données KANAP…",
@@ -265,11 +267,12 @@
       "technology_owners": "Responsables",
       "technology_support_contacts": "Contacts de support",
       "technology_web_links": "Liens web",
-      "technology_vulnerability_alerts": "Alertes de failles",
+      "technology_vulnerability_alerts": "Alertes de vulnérabilité",
       "turnover": "Chiffre d'affaires",
       "typical_data": "Données typiques",
       "users_year": "Année des utilisateurs",
       "version_name": "Nom de la version",
+      "vulnerability_state": "État de la vulnérabilité",
       "zone": "Zone"
     },
     "none": "Aucun",
@@ -364,10 +367,13 @@
       "get_entity_context": "Obtenir le contexte de l'entité",
       "get_entity_detail": "Obtenir le détail de l'entité",
       "get_filter_values": "Obtenir les valeurs de filtre",
+      "get_record_history": "Obtenir l'historique",
       "import_ticket": "Importer un ticket",
       "import_glpi_ticket": "Importer un ticket GLPI",
+      "list_help_topics": "Parcourir le manuel utilisateur",
       "prepare_mutation_plan": "Préparer le plan de modifications",
       "query_entities": "Interroger les entités",
+      "read_help_section": "Lire le manuel utilisateur",
       "search_all": "Rechercher tout",
       "search_knowledge": "Rechercher dans la base de connaissances",
       "web_search": "Recherche web"
@@ -379,39 +385,49 @@
     "aliases": "Alias : {{aliases}}"
   },
   "tokenUsage": {
-    "total": "Tokens",
-    "input": "Entrée",
-    "output": "Sortie",
-    "lastInput": "Dernière entrée"
+    "total": "Volume traité",
+    "input": "Tokens en entrée",
+    "output": "Tokens en sortie",
+    "lastInput": "Contexte de la dernière requête"
   },
   "usageIndicator": {
-    "limitReached": "Monthly limit reached. Resets {{resetDate}}.",
-    "limitReachedCta": "Monthly limit reached.",
-    "openSettings": "Configure your own provider",
-    "remaining_one": "{{count}} message remaining this month",
-    "remaining_other": "{{count}} messages remaining this month"
+    "limitReached": "Limite mensuelle atteinte. Réinitialisation le {{resetDate}}.",
+    "limitReachedCta": "Limite mensuelle atteinte.",
+    "openSettings": "Configurer votre propre fournisseur",
+    "remaining_one": "{{count}} message restant ce mois-ci",
+    "remaining_other": "{{count}} messages restants ce mois-ci"
   },
   "workspace": {
     "empty": {
-      "subtitle": "Posez n'importe quelle question sur vos tâches, projets, assets ou documents.",
+      "subtitle": "Posez n'importe quelle question sur vos tâches, projets, actifs ou documents.",
       "suggestionsTitle": "Pour démarrer",
       "title": "Plaid est prêt"
     },
     "messages": {
-      "disabled": "Le chat IA est désactivé pour cet espace de travail.",
-      "builtinNotAccepted": "Un administrateur doit confirmer le fournisseur d'IA dans Administration > Plaid."
+      "disabled": "Plaid est désactivé pour cet espace de travail.",
+      "tenantDisabledAdminLink": "Activez-le dans Administration › Plaid",
+      "tenantDisabledAskAdmin": "Demandez à un administrateur de l'activer.",
+      "builtinNotAccepted": "Plaid attend qu'un administrateur l'active."
     },
     "suggestions": {
-      "applicationMention": "Résume @APP-",
+      "applicationMention": "Résume une application : tapez @ pour la choisir",
+      "budgetLines": "Quelles sont mes cinq plus grosses lignes budgétaires cette année ?",
       "knowledgeSearch": "Trouve des documents sur les sauvegardes",
       "myProjects": "Quels projets me sont assignés ?",
-      "overdueTasks": "Liste mes tâches en retard"
+      "overdueTasks": "Liste mes tâches en retard",
+      "noOwner": "Quelles lignes n'ont pas de responsable ?",
+      "endOfSupport": "Quelles technologies arrivent en fin de support dans les six mois ?",
+      "noRecovery": "Quelles applications critiques n'ont pas de plan de reprise ?",
+      "overBudget": "Quels projets dépassent leur budget ?",
+      "awaitingDecision": "Quelles demandes attendent un arbitrage ?",
+      "savings": "Quelles sont les principales opportunités d'économies dans les OPEX IT ?"
     },
     "title": "Plaid"
   },
-  "enablePlaid": {
-    "text": "Plaid, l'assistant de KANAP, est désactivé.",
-    "action": "Activer",
-    "dismiss": "Masquer"
+  "consent": {
+    "accept": "J'accepte que {{name}} ({{place}}) traite mes questions et les données qu'elles concernent pour les réponses de Plaid. Elles ne servent pas à entraîner ses modèles.",
+    "otherModel": "Autre modèle ou désactivation :",
+    "otherModelLink": "Administration › Plaid",
+    "loading": "Chargement du fournisseur"
   }
 }

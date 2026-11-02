@@ -43,17 +43,18 @@ export default function ComparisonReport() {
     [budgetColumns],
   );
 
-  // One total per column and year of the range, over the lines the filter bar keeps.
-  const request = useMemo(() => (reportFilters.queryFilters == null ? null : trendRequest({
+  // One total per column and year of the range, over the lines the filter bar keeps. The preselected
+  // columns follow the tenant default: wait for the setting, or the product default is asked first.
+  const request = useMemo(() => (!budgetColumns.ready || reportFilters.queryFilters == null ? null : trendRequest({
     years,
     metrics: metrics as MetricKey[],
     windowYears: allowedYears,
     filters: reportFilters.queryFilters,
     measure,
-  })), [reportFilters.queryFilters, years, metrics, measure]); // eslint-disable-line react-hooks/exhaustive-deps
+  })), [budgetColumns.ready, reportFilters.queryFilters, years, metrics, measure]); // eslint-disable-line react-hooks/exhaustive-deps
   const report = useBudgetAggregate(scope, request, { keepPrevious: true });
-  // Loading, the filter bar still reading its address, or the last answer kept while the new one loads.
-  const busy = reportFilters.queryFilters == null || report.isLoading || report.isPlaceholderData;
+  // Loading, the column setting or the filter bar still unread, or the last answer kept while the new one loads.
+  const busy = !budgetColumns.ready || reportFilters.queryFilters == null || report.isLoading || report.isPlaceholderData;
   // The key table (`reportTables.ts`, the same code as the export): one row per column, one column per year.
   const table = useMemo(
     () => comparisonTable({ years, metrics: metrics as MetricKey[], measure }, report.data, tableLabels),

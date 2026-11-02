@@ -29,6 +29,6 @@ import { VulnerabilityNotificationsService } from './vulnerability-notifications
   imports: [AuditModule, NotificationsModule, PermissionsModule, forwardRef(() => UsersModule), ScheduledTasksModule, TechnologiesModule],
   controllers: [VulnerabilitiesController, TechnologyVulnerabilitiesController, AssetVulnerabilitiesController, ApplicationVulnerabilitiesController],
   providers: [VulnerabilitySignalsService, CveListFeedService, NvdFeedService, VulnerabilitiesService, VulnerabilityMatchService, VulnerabilityReachService, VulnerabilityNotificationsService, VulnerabilityFeedGuard],
-  exports: [VulnerabilityMatchService],
+  exports: [VulnerabilitiesService, VulnerabilityMatchService],
 })
 export class VulnerabilitiesModule {}

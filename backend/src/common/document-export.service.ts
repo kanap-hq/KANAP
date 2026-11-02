@@ -140,6 +140,9 @@ export class DocumentExportService {
       );
       const parsedAst = await this.readAstFile(parsedAstFile, MAX_PARSED_AST_JSON_BYTES);
       this.applyDeclaredTableWidths(parsedAst);
+      // A link to a heading that was renamed is a Typst label that does not exist.
+      // `typst compile` then rejects the PDF. Drop that link before the writer runs.
+      this.rewriteMissingInternalLinks(parsedAst);
 
       // Toutes les ressources sont validées puis incorporées ici : la passe 2 ne
       // verra plus que des data: URI produites par nos soins. Les métadonnées du
@@ -325,6 +328,103 @@ export class DocumentExportService {
       Array.isArray(spec) ? spec[0] : { t: 'AlignDefault' },
       { t: 'ColWidth', c: weights[index] / total },
     ]);
+  }
+
+  /**
+   * Pandoc turns `[text](#id)` into a Typst label reference (`#link(<id>)`).
+   * Typst stops when that label is not in the document (`label <id> does not
+   * exist`), which is what a renamed or removed heading leaves behind. The
+   * link is replaced by its own text, formatting included. A link whose target
+   * is an identifier of this document stays a link, and so does every target
+   * that does not start with `#` (an external URL, another file).
+   *
+   * The Typst writer percent-decodes the identifier one `%HH` byte at a time
+   * before it builds the label (`Network.URI.unEscapeString`). The comparison
+   * uses that same decoding. A heading's identifier is the first field of its
+   * attribute, and the attribute follows the level (`c[1]`); on a Div or a
+   * Span the attribute is `c[0]`.
+   */
+  private rewriteMissingInternalLinks(ast: any): void {
+    if (!ast || typeof ast !== 'object') return;
+    const identifiers = new Set<string>();
+    this.collectDocumentIdentifiers(ast, identifiers);
+    ast.blocks = this.rewriteMissingLinkNodes(ast.blocks, identifiers);
+  }
+
+  private collectDocumentIdentifiers(node: any, identifiers: Set<string>): void {
+    if (Array.isArray(node)) {
+      for (const child of node) this.collectDocumentIdentifiers(child, identifiers);
+      return;
+    }
+    if (!node || typeof node !== 'object') return;
+    const label = this.documentIdentifier(node);
+    if (label) identifiers.add(label);
+    for (const value of Object.values(node)) this.collectDocumentIdentifiers(value, identifiers);
+  }
+
+  /** Typst label of a Header, Div or Span, or null when that node defines none. */
+  private documentIdentifier(node: any): string | null {
+    if (!node || typeof node !== 'object' || !Array.isArray(node.c)) return null;
+    const attr = node.t === 'Header' ? node.c[1]
+      : node.t === 'Div' || node.t === 'Span' ? node.c[0]
+      : null;
+    if (!Array.isArray(attr) || typeof attr[0] !== 'string' || attr[0].length === 0) return null;
+    const label = this.typstLabelName(attr[0]);
+    return label.length > 0 ? label : null;
+  }
+
+  /**
+   * Decoded fragment of an internal link. Empty for a bare `#`, which names
+   * no identifier. Null when the target is not internal (it has no leading `#`).
+   */
+  private internalLinkLabel(target: string): string | null {
+    const value = String(target ?? '').trim();
+    if (!value.startsWith('#')) return null;
+    return this.typstLabelName(value.slice(1));
+  }
+
+  /** Percent-decoding of one `%HH` byte, matching Pandoc's `unEscapeString`. */
+  private typstLabelName(ident: string): string {
+    return String(ident ?? '').replace(/%([0-9A-Fa-f]{2})/g, (_match, hex: string) =>
+      String.fromCharCode(Number.parseInt(hex, 16)),
+    );
+  }
+
+  private rewriteMissingLinkNodes(node: any, identifiers: Set<string>): any {
+    if (Array.isArray(node)) {
+      const rewritten: any[] = [];
+      for (const child of node) {
+        // Nested arrays (attributes, table rows, list items) stay nested.
+        if (Array.isArray(child)) {
+          rewritten.push(this.rewriteMissingLinkNodes(child, identifiers));
+          continue;
+        }
+        // `null` and scalars are significant (an empty Maybe, a heading level).
+        if (child === null || typeof child !== 'object') {
+          rewritten.push(child);
+          continue;
+        }
+        // A dropped link is replaced by its inlines, which splice in here.
+        const value = this.rewriteMissingLinkNodes(child, identifiers);
+        if (Array.isArray(value)) rewritten.push(...value);
+        else rewritten.push(value);
+      }
+      return rewritten;
+    }
+    if (!node || typeof node !== 'object') return node;
+
+    if (node.t === 'Link' && Array.isArray(node.c) && Array.isArray(node.c[2])) {
+      const label = this.internalLinkLabel(String(node.c[2][0] ?? ''));
+      if (label !== null && !identifiers.has(label)) {
+        const inlines = Array.isArray(node.c[1]) ? node.c[1] : [];
+        return this.rewriteMissingLinkNodes(inlines, identifiers);
+      }
+    }
+
+    for (const key of Object.keys(node)) {
+      node[key] = this.rewriteMissingLinkNodes(node[key], identifiers);
+    }
+    return node;
   }
 
   private async inlineAstImages(ast: any, ctx: AstImageContext): Promise<void> {

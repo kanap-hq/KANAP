@@ -32,7 +32,7 @@ La búsqueda por ticket y los chips de tipo se combinan, de modo que puede ver, 
 Cada entrada es una cosa que ocurrió y lleva suficiente contexto para entenderla de un vistazo:
 
 - Un **chip de tipo**: a cuál de las siete categorías anteriores pertenece el evento.
-- Un **chip de tipo de acción** (cuando el evento trata de un tipo concreto de trabajo sobre el ticket): **Nota interna**, **Respuesta al solicitante**, **Actualización de clasificación**, **Actualización de estado**, **Asignación** o **Participantes**.
+- Un **chip de tipo de acción** (cuando el evento trata de un tipo concreto de trabajo sobre el ticket): **Nota interna**, **Respuesta al solicitante**, **Actualización de clasificación**, **Actualización de estado**, **Asignación** u **Observadores**.
 - Un **punto de estado** con una etiqueta en lenguaje claro (por ejemplo «Esperando aprobación», «Hecho», «Rechazado», «Descartado», «Requiere atención») que describe en qué situación se encuentra ese elemento.
 - El **nombre del agente** y el **ticket** al que se refiere (mostrado como `#N`).
 - Un **título de evento**: por ejemplo, «Propuesta creada» o «Comprobación de tickets: 3 tickets nuevos».
@@ -74,7 +74,7 @@ Una entrada de comprobación le dice qué encontró el agente, en su propio tít
 
 - El **desglose de la comprobación** descrito más arriba.
 - El **Mensaje propuesto** completo: el texto íntegro que redactó el agente, no solo la vista previa de una línea.
-- **Cambios de campo**, escritos como «Campo: de → a» (por ejemplo «Estado: Asignado → Pendiente»), de modo que un cambio de clasificación, estado, asignación o participante sea legible sin abrir el ticket.
+- **Cambios de campo**, escritos como «Campo: de → a» (por ejemplo «Estado: Asignado → Pendiente»), de modo que un cambio de clasificación, estado, asignación u observador sea legible sin abrir el ticket.
 - El **Motivo**: la breve justificación del agente para la propuesta.
 - La **Nota del revisor**: la nota registrada cuando se decidió la propuesta.
 - Una línea **«{n} fuentes citadas»**: cuántos de los resultados de su [biblioteca de conocimiento](knowledge.md) respaldaron la respuesta redactada. Es la señal honesta de si la respuesta se apoya en sus propias fuentes; una respuesta con fuentes citadas es una que el agente podría defender. Su ausencia en una respuesta administrativa o de procedimiento es normal y no significa que algo haya fallado; para ver cómo se refleja esto durante la revisión, consulte [Aprobaciones](agents-approvals.md).

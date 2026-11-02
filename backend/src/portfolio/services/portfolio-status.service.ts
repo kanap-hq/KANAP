@@ -1,4 +1,5 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { codedForbidden } from '../../auth/module-right-required';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PortfolioProject } from '../portfolio-project.entity';
@@ -166,7 +167,7 @@ export class PortfolioStatusService extends PortfolioProjectsBaseService {
 
     // Only allow the author to edit
     if (activity.author_id !== userId) {
-      throw new ForbiddenException('You can only edit your own comments');
+      throw codedForbidden('OWN_COMMENTS_ONLY', 'You can only edit your own comments');
     }
 
     const oldContent = activity.content;

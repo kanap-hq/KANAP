@@ -136,7 +136,7 @@ async function seedAll(tenantId: string, foreignTenantId: string): Promise<Seede
       const contactUpdate = await audit(runner, {
         table: 'contacts', recordId: data.contact, action: 'update', userId: allReader.id, before, after,
       });
-      // A write that only touches personal data has no visible change: the history drops it.
+      // A write that only touches the phone: the history says the phone changed and shows no number.
       const phoneOnly = await audit(runner, {
         table: 'contacts', recordId: data.contact, action: 'update', userId: allReader.id,
         before: after,
@@ -284,22 +284,29 @@ async function testRecordEntries(seeded: Seeded) {
   assert.equal(page.items.some((item) => item.changes.some((change) => change.field === 'supplier_id')), false);
   assert.equal(page.items.some((item) => item.changes.some((change) => change.field === 'supplier_role')), false);
 
-  const update = findItem(page, 'update', 'record');
+  const update = page.items.find((item) => item.action === 'update' && item.subject.kind === 'record'
+    && item.changes.some((change) => change.field === 'job_title'));
+  assert.ok(update, 'the contact update that renamed the job');
   assert.equal(findChange(update, 'job_title').before, 'Buyer');
   assert.equal(findChange(update, 'job_title').after, 'Senior buyer');
-  for (const field of ['phone', 'email', 'mobile', 'notes']) {
-    assert.equal(update.changes.some((change) => change.field === field), false, `${field}: hidden, never a change`);
+  // Email and phone changed on this write: the history names the field and keeps the value out.
+  assert.deepEqual(findChange(update, 'email'), { field: 'email', text: 'emailChanged' }, 'the email says changed, never the address');
+  assert.deepEqual(findChange(update, 'phone'), { field: 'phone', text: 'phoneChanged' }, 'the phone says changed, never the number');
+  for (const field of ['mobile', 'notes']) {
+    assert.equal(update.changes.some((change) => change.field === field), false, `${field}: unchanged on this write`);
   }
 
-  const ids = new Set(page.items.map((item) => item.id));
-  assert.equal(ids.has(seeded.ids.phoneOnly), false, 'a write of personal data only has no entry');
-  for (const raw of ['cora@example.invalid', '+33 1 23 45 67 89', '+33 6 12 34 56 78', 'Prefers email']) {
+  const phoneOnly = page.items.find((item) => item.id === seeded.ids.phoneOnly);
+  assert.ok(phoneOnly, 'a write of the phone alone still has an entry');
+  assert.deepEqual(phoneOnly.changes, [{ field: 'phone', text: 'phoneChanged' }], 'the phone-only write names the change');
+
+  for (const raw of ['@example.invalid', '+33 1 23 45 67 89', '+33 6 12 34 56 78', 'Prefers email', '+33 9 87 65 43 21', '+33 9 00 00 00 00']) {
     assert.ok(!JSON.stringify(page).includes(raw), `personal data never reaches the answer: ${raw}`);
   }
   for (const field of ['id', 'tenant_id', 'created_at', 'updated_at']) {
     assert.equal(page.items.some((item) => item.changes.some((change) => change.field === field)), false, `${field}: hidden`);
   }
-  console.log('  contact creation and modification in words, email, phone, mobile and notes dropped: OK');
+  console.log('  contact creation and modification in words, email and phone changed with no value: OK');
 }
 
 async function testLinks(seeded: Seeded) {

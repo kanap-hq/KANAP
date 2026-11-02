@@ -12,6 +12,7 @@
  */
 import * as assert from 'node:assert/strict';
 import { ContractsService } from '../contracts.service';
+import { CONTRACT_CSV_COLUMNS, CONTRACT_CSV_HEADERS } from '../contract-csv-headers';
 
 const TENANT = 't1';
 
@@ -63,24 +64,29 @@ function createService(): ContractsService {
 const HEADER =
   'name;company_name;supplier_name;cost_center;start_date;duration_months;auto_renewal;notice_period_months;yearly_amount_at_signature;currency;billing_frequency;status;owner_email;notes';
 
+// The template and the export write the titles of the file's language; the import reads them and HEADER.
+const FRENCH_TITLES =
+  'Nom;Société;Fournisseur;Centre de coûts;Date de début;Durée en mois;Reconduction tacite;Préavis en mois;Montant annuel à la signature;Devise;Fréquence de facturation;Statut;E-mail du responsable;Notes';
+const ENGLISH_TITLES = CONTRACT_CSV_COLUMNS.map((column) => CONTRACT_CSV_HEADERS[column].en).join(',');
+
 async function testTemplateContainsHeaderRow() {
   const svc = createService();
   const french = await svc.exportCsv('template', { manager: createMockManager(), language: 'fr' });
-  assert.equal(french.content.replace(/^﻿/, '').trim(), HEADER, 'template must contain exactly the header row');
+  assert.equal(french.content.replace(/^﻿/, '').trim(), FRENCH_TITLES, 'template must contain exactly the header row');
   const english = await svc.exportCsv('template', { manager: createMockManager() });
-  assert.equal(english.content.replace(/^﻿/, '').trim(), HEADER.replace(/;/g, ','), 'an English template uses commas');
+  assert.equal(english.content.replace(/^﻿/, '').trim(), ENGLISH_TITLES, 'an English template uses commas');
 }
 
 async function testExportEmitsOwnerEmailAndIsoDate() {
   const svc = createService();
   const result = await svc.exportCsv('data', { manager: createMockManager() });
   const lines = result.content.replace(/^﻿/, '').trim().split('\n');
-  assert.equal(lines[0], HEADER.replace(/;/g, ','));
+  assert.equal(lines[0], ENGLISH_TITLES);
   assert.ok(lines[1].includes('alice@fromage.co'), 'export must emit the owner email');
   assert.ok(lines[1].includes(',2024-01-15,'), 'an English export emits an ISO start_date');
   assert.ok(lines[1].includes('"notes; with delimiter"') === false, 'a semicolon needs no quotes in a comma file');
   const french = (await svc.exportCsv('data', { manager: createMockManager(), language: 'fr' })).content.replace(/^﻿/, '').trim().split('\n');
-  assert.equal(french[0], HEADER);
+  assert.equal(french[0], FRENCH_TITLES);
   assert.ok(french[1].includes(';15/01/2024;'), 'a French export emits a local start_date');
   assert.ok(french[1].endsWith(';"notes; with delimiter"'), 'a cell holding the separator is quoted');
 }
@@ -176,6 +182,71 @@ async function testImportCodesEveryRowProblem() {
   assert.deepEqual(byColumn(4), { start_date: { code: 'CSV_DATE_INVALID', params: { value: 'not a date' } } });
 }
 
+function errorsByColumn(result: { errors: Array<{ row?: number; column?: string; code?: string; params?: Record<string, unknown> }> }, row: number) {
+  return Object.fromEntries(
+    result.errors.filter((error) => error.row === row).map((error) => [error.column, { code: error.code, params: error.params ?? {} }]),
+  );
+}
+
+// A bad yes/no, amount or month count does not hide the other errors of the same row.
+// Dry run and load report the same list, and a valid row in the file is not given an error.
+async function testImportReportsEveryErrorOfARow() {
+  const svc = createService();
+  const rows = [
+    'New Deal;Ghost Corp;Ghost Supplier;;2024-01-01;12;maybe;1;0;EUR;annual;enabled;;',
+    'Kept Deal;Fromage Co;Dell;;2024-01-15;36;yes;3;12000;EUR;annual;enabled;alice@fromage.co;',
+    'Short;Ghost Corp;Dell;;2024-01-01;soon;no;later;nope;EUR;annual;enabled;;',
+  ];
+  for (const dryRun of [true, false]) {
+    const result = await svc.importCsv(
+      { file: { buffer: Buffer.from(`${HEADER}\n${rows.join('\n')}\n`, 'utf8') } as any, dryRun },
+      { manager: createMockManager() },
+    );
+    assert.equal(result.ok, false, JSON.stringify(result.errors));
+    assert.deepEqual(errorsByColumn(result, 2), {
+      auto_renewal: { code: 'CSV_BOOLEAN_INVALID', params: { value: 'maybe' } },
+      company_name: { code: 'CSV_REFERENCE_NOT_FOUND', params: { value: 'Ghost Corp' } },
+      supplier_name: { code: 'CSV_REFERENCE_NOT_FOUND', params: { value: 'Ghost Supplier' } },
+    }, dryRun ? 'dry run' : 'load');
+    assert.deepEqual(errorsByColumn(result, 3), {}, 'a valid row stays clean');
+    assert.deepEqual(errorsByColumn(result, 4), {
+      duration_months: { code: 'CSV_NUMBER_INVALID', params: { value: 'soon' } },
+      notice_period_months: { code: 'CSV_NUMBER_INVALID', params: { value: 'later' } },
+      yearly_amount_at_signature: { code: 'CSV_NUMBER_INVALID', params: { value: 'nope' } },
+      company_name: { code: 'CSV_REFERENCE_NOT_FOUND', params: { value: 'Ghost Corp' } },
+    });
+    assert.equal(result.inserted, 0);
+    assert.equal(result.updated, 0);
+  }
+}
+
+// Text that is not a whole number of months is a row error. Blank keeps the column default, and 0 is a number.
+async function testInvalidMonthCountsAreRowErrors() {
+  const svc = createService();
+  for (const value of ['soon', '12.5', '12abc', '-1', '2147483648']) {
+    const row = `New Deal;Fromage Co;Dell;;2024-01-01;${value};no;1;0;EUR;annual;enabled;;`;
+    const result = await svc.importCsv(
+      { file: { buffer: Buffer.from(`${HEADER}\n${row}\n`, 'utf8') } as any, dryRun: true },
+      { manager: createMockManager() },
+    );
+    assert.equal(result.ok, false, value);
+    assert.deepEqual(errorsByColumn(result, 2), {
+      duration_months: { code: 'CSV_NUMBER_INVALID', params: { value } },
+    }, JSON.stringify(result.errors));
+  }
+  for (const row of [
+    'Fresh;Fromage Co;Dell;;2024-01-01;;no;;0;EUR;annual;enabled;;',
+    'Zero;Fromage Co;Dell;;2024-01-01;0;no;0;0;EUR;annual;enabled;;',
+  ]) {
+    const result = await svc.importCsv(
+      { file: { buffer: Buffer.from(`${HEADER}\n${row}\n`, 'utf8') } as any, dryRun: true },
+      { manager: createMockManager() },
+    );
+    assert.equal(result.ok, true, `${row}: ${JSON.stringify(result.errors)}`);
+    assert.equal(result.inserted, 1, row);
+  }
+}
+
 async function testImportReadsWindows1252() {
   const svc = createService();
   // Excel "CSV (semicolon)" on Windows writes Windows-1252: latin1 matches it for "é".
@@ -205,6 +276,8 @@ async function testImportRefusesUtf16WithBadRequest() {
   await testImportReportsUnresolvedReferences();
   await testImportCodesAnInvalidYesNo();
   await testImportCodesEveryRowProblem();
+  await testImportReportsEveryErrorOfARow();
+  await testInvalidMonthCountsAreRowErrors();
   await testImportReadsWindows1252();
   await testImportRefusesUtf16WithBadRequest();
 

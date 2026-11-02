@@ -49,14 +49,15 @@ export default function StaffingByMonthReport() {
   // The group as the first column names it, as a sentence names it, and its rows without a key.
   const { kind, group, header: groupHeader, inSentence: groupInSentence, labels } = grouping;
 
-  // One request: per group, the twelve monthly FTE of the column; on the total row, the notices.
-  const request = useMemo(() => (reportFilters.queryFilters == null || group == null ? null : staffingRequest({
+  // One request, once the tenant's default column is known: per group, the twelve monthly FTE of the
+  // column; on the total row, the notices. Before the setting loads, the product default would be asked first.
+  const request = useMemo(() => (!budgetColumns.ready || reportFilters.queryFilters == null || group == null ? null : staffingRequest({
     scope,
     year,
     metric,
     group,
     filters: reportFilters.queryFilters,
-  })), [reportFilters.queryFilters, scope, year, metric, group]);
+  })), [budgetColumns.ready, reportFilters.queryFilters, scope, year, metric, group]);
   const report = useBudgetAggregate(scope, request, { keepPrevious: true });
   // A group name opens its item, or the list of the lines the row counts (the group, the bar, the
   // report's window, the lines that declare FTE), in a new tab.

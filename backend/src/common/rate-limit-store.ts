@@ -156,6 +156,8 @@ export interface HitCounter {
   block(key: string, durationMs: number): Promise<void>;
   /** Forgets the key: its next hit opens a new window. */
   clear(key: string): Promise<void>;
+  /** Forgets every key that starts with `prefix`. */
+  clearPrefix(prefix: string): Promise<void>;
   /**
    * Takes back one hit counted in `window` (from its `HitOutcome`), while that window is still the
    * key's and the key is not blocked. The other hits of the window stay counted.
@@ -203,6 +205,10 @@ export class MemoryHitCounter implements HitCounter {
 
   async clear(key: string): Promise<void> {
     this.entries.delete(key);
+  }
+
+  async clearPrefix(prefix: string): Promise<void> {
+    for (const key of this.entries.keys()) if (key.startsWith(prefix)) this.entries.delete(key);
   }
 
   async release(key: string, window: string): Promise<void> {
@@ -262,6 +268,15 @@ export class DatabaseHitCounter implements HitCounter {
     await this.fallback.clear(key);
     try {
       await answerWithin(this.dataSource.query(`DELETE FROM rate_limit_hits WHERE key = $1`, [key]), this.waitMs);
+    } catch (error) {
+      this.warn(error);
+    }
+  }
+
+  async clearPrefix(prefix: string): Promise<void> {
+    await this.fallback.clearPrefix(prefix);
+    try {
+      await answerWithin(this.dataSource.query(`DELETE FROM rate_limit_hits WHERE starts_with(key, $1)`, [prefix]), this.waitMs);
     } catch (error) {
       this.warn(error);
     }

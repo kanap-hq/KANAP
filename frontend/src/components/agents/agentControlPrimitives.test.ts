@@ -274,6 +274,7 @@ describe('capabilityLabelFromName', () => {
     expect(capabilityLabelFromName('ticketing.ticket.public_reply.add_approved')).toBe('Requester reply');
     expect(capabilityLabelFromName('ticketing.ticket.internal_note.add_approved')).toBe('Internal note');
     expect(capabilityLabelFromName('ticketing.ticket.status_update.prepare')).toBe('Status');
+    expect(capabilityLabelFromName('ticketing.ticket.participant_update.prepare')).toBe('Observers');
   });
 
   it('does not label read-only context lookups as write actions', () => {
@@ -528,5 +529,38 @@ describe('technician assignment approval summary', () => {
     }));
     expect(summary).toContain('Assign to technician: Marie Dupont');
     expect(summary).toContain('Currently assigned: No technician assigned');
+  });
+});
+
+describe('observer approval summary', () => {
+  it('names the observer being added and the observers already on the ticket', () => {
+    const summary = actionUpdateSummary(action({
+      capability_name: 'ticketing.ticket.participant_update.approved',
+      action_payload_json: {
+        operation: 'add_observer',
+        participants: [{ kind: 'group', key: '12', label: 'SAP-team' }],
+        current: {
+          observerTargets: [{ kind: 'user', key: '21', label: 'Marie Dupont' }],
+          observers: ['Marie Dupont'],
+        },
+        reason: 'Keep SAP informed.',
+      },
+    }));
+    expect(summary).toContain('Observer update');
+    expect(summary).toContain('Add observer: SAP-team');
+    expect(summary).toContain('Current observers: Marie Dupont');
+    expect(summary).toContain('Reason: Keep SAP informed.');
+  });
+
+  it('says so when the ticket has no observer yet', () => {
+    const summary = actionUpdateSummary(action({
+      capability_name: 'ticketing.ticket.participant_update.approved',
+      action_payload_json: {
+        participants: [{ kind: 'user', key: '21', label: 'Marie Dupont' }],
+        current: { observers: [] },
+      },
+    }));
+    expect(summary).toContain('Add observer: Marie Dupont');
+    expect(summary).toContain('Current observers: No observers');
   });
 });

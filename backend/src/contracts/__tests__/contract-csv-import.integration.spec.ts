@@ -88,6 +88,75 @@ async function testIdenticalRowsUnchanged() {
   });
 }
 
+function errorsByColumn(result: { errors: Array<{ row?: number; column?: string; code?: string; params?: Record<string, unknown> }> }, row: number) {
+  return Object.fromEntries(
+    result.errors.filter((error) => error.row === row).map((error) => [error.column, { code: error.code, params: error.params ?? {} }]),
+  );
+}
+
+// One pass reports every error of a row, in the dry run and the load, and writes nothing.
+// A valid row in the same file gets no error of its own and is left as it was.
+async function testEveryErrorOfARowIsReportedAndNothingIsWritten() {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, 'contract-csv-errors');
+    const { companyId } = await seedCompany(runner, tenantId, 'Fromage Co');
+    const [supplier] = await runner.query(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Dell') RETURNING id`, [tenantId]);
+    const keptId = await seedContract(runner, {
+      tenant_id: tenantId, company_id: companyId, supplier_id: supplier.id, currency: 'EUR', billing_frequency: 'annual',
+      name: 'Kept Deal', start_date: '2024-01-15', duration_months: 36,
+      auto_renewal: true, notice_period_months: 3, yearly_amount_at_signature: 12000,
+    });
+    const svc = contracts();
+    const opts = { manager: runner.manager };
+    const upload = file([
+      HEADER,
+      'New Deal;Ghost Corp;Ghost Supplier;2024-01-01;12;maybe;1;0;EUR;annual;enabled;;',
+      'Kept Deal;Fromage Co;Dell;2024-01-15;36;yes;3;12000;EUR;annual;enabled;;',
+      'Short;Fromage Co;Dell;2024-01-01;soon;no;1;0;EUR;annual;enabled;;',
+    ]);
+    for (const dryRun of [true, false]) {
+      const result: any = await svc.importCsv({ file: upload, dryRun }, opts);
+      assert.equal(result.ok, false, JSON.stringify(result.errors));
+      assert.deepEqual(errorsByColumn(result, 2), {
+        auto_renewal: { code: 'CSV_BOOLEAN_INVALID', params: { value: 'maybe' } },
+        company_name: { code: 'CSV_REFERENCE_NOT_FOUND', params: { value: 'Ghost Corp' } },
+        supplier_name: { code: 'CSV_REFERENCE_NOT_FOUND', params: { value: 'Ghost Supplier' } },
+      }, dryRun ? 'dry run' : 'load');
+      assert.deepEqual(errorsByColumn(result, 3), {}, 'the valid row has no error');
+      assert.deepEqual(errorsByColumn(result, 4), {
+        duration_months: { code: 'CSV_NUMBER_INVALID', params: { value: 'soon' } },
+      });
+      assert.deepEqual([result.inserted, result.updated, result.unchanged], [0, 0, 0]);
+    }
+    const names = await runner.query(`SELECT name FROM contracts WHERE tenant_id = $1 ORDER BY name`, [tenantId]);
+    assert.deepEqual(names.map((row: { name: string }) => row.name), ['Kept Deal'], 'the load writes nothing');
+    const kept = await runner.query(
+      `SELECT updated_at = '2020-01-01T00:00:00Z'::timestamptz AS kept FROM contracts WHERE id = $1`,
+      [keptId],
+    );
+    assert.equal(kept[0].kept, true, 'the valid contract keeps its updated_at');
+
+    // A clean file still loads. Blank month cells keep 12 and 1; a written 0 stays 0.
+    const clean = file([
+      HEADER,
+      'Zero;Fromage Co;Dell;2024-02-01;0;no;0;0;EUR;annual;enabled;;',
+      'Blank;Fromage Co;Dell;2024-03-01;;;;0;EUR;annual;enabled;;',
+    ]);
+    const loaded: any = await svc.importCsv({ file: clean, dryRun: false }, opts);
+    assert.equal(loaded.ok, true, JSON.stringify(loaded.errors));
+    assert.equal(loaded.inserted, 2);
+    const stored = await runner.query(
+      `SELECT name, duration_months, notice_period_months, auto_renewal
+         FROM contracts WHERE tenant_id = $1 AND name = ANY($2) ORDER BY name`,
+      [tenantId, ['Blank', 'Zero']],
+    );
+    assert.deepEqual(stored, [
+      { name: 'Blank', duration_months: 12, notice_period_months: 1, auto_renewal: false },
+      { name: 'Zero', duration_months: 0, notice_period_months: 0, auto_renewal: false },
+    ]);
+  });
+}
+
 async function testChangedOwnerIsUpdate() {
   await inRolledBackTransaction(async (runner) => {
     const tenantId = await seedTenant(runner, 'contract-csv-owner');
@@ -112,4 +181,5 @@ async function testChangedOwnerIsUpdate() {
 void runSpecs('contract-csv-import.integration.spec', [
   ['testIdenticalRowsUnchanged', testIdenticalRowsUnchanged],
   ['testChangedOwnerIsUpdate', testChangedOwnerIsUpdate],
+  ['testEveryErrorOfARowIsReportedAndNothingIsWritten', testEveryErrorOfARowIsReportedAndNothingIsWritten],
 ]);

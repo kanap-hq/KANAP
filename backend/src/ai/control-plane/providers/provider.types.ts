@@ -311,7 +311,10 @@ export type TicketRoutingContext = {
 export type TicketParticipantContext = {
   ticketId: string;
   requester?: string | null;
+  // Display names of the current observers. `observerTargets` carries the same
+  // people and groups with catalogue keys, so a proposal can skip one already listed.
   observers: string[];
+  observerTargets?: TicketRoutingTarget[];
   watchers: string[];
   viewers: string[];
   participantUpdatesSupported: boolean;

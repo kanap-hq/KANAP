@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { validate as isUuid } from 'uuid';
 import { ApplicationsService } from '../../applications/services/applications.service';
@@ -22,6 +22,7 @@ import { PortfolioProjectsService } from '../../portfolio/services';
 import { BudgetLinesService } from '../../spend/budget-lines.service';
 import { lockBudgetLine } from '../../spend/budget-locks';
 import { auditTableOf, BUDGET_LINE_PREFIX, BUDGET_NATURES, BudgetNature, naturesAnd } from '../../spend/budget-nature';
+import { parseItemNumber } from '../../common/parse-item-number';
 import { budgetLineReferenceNumbers, parseItemRef, resolveBudgetLine } from '../../common/resolve-item-id';
 import {
   DISABLED_VALUE_MESSAGE,
@@ -57,10 +58,11 @@ import {
   AiMutationPreviewPresentation,
   AiPreparedMutationPreview,
 } from './ai-mutation-operation.types';
+import { nameWithoutLeadingReference } from './name-without-leading-reference';
 import { AiTaskMutationSupportService } from './ai-task-mutation-support.service';
 import { INCIDENT_SEVERITIES, INCIDENT_STATUSES, INCIDENT_STATUS_RANK } from '../../incidents/incident.entity';
 import {
-  INCIDENT_LOCKED_MESSAGE,
+  incidentLocked,
   incidentVisibilitySql,
   isFrozenIncidentStatus,
   resolveIncidentViewer,
@@ -280,7 +282,8 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
       cluster: { label: 'Cluster', kind: 'text', nullable: true },
       is_cluster: { label: 'Cluster Asset', kind: 'boolean' },
       operating_system: { label: 'Operating System', kind: 'text', nullable: true },
-      location_id: { label: 'Location', kind: 'relation', nullable: true, relationTarget: 'locations' as RelationTarget, aliases: ['location'] },
+      // Every asset has a site: required at creation, and an update cannot clear it.
+      location_id: { label: 'Location', kind: 'relation', requiredOnCreate: true, relationTarget: 'locations' as RelationTarget, aliases: ['location'] },
       sub_location_id: { label: 'Sub-location', kind: 'relation', nullable: true, relationTarget: 'location_sub_items' as RelationTarget, aliases: ['sub_location'] },
       status: { label: 'Status', kind: 'text' },
       go_live_date: { label: 'Go-Live Date', kind: 'date', nullable: true },
@@ -594,21 +597,6 @@ function textOrNull(value: unknown): string | null {
   if (value == null) return null;
   const normalized = String(value).trim();
   return normalized || null;
-}
-
-/**
- * A record's name without a reference it repeats at its start ("CON-1 - DB link" for CON-1):
- * the label prepends the reference for the screens, and prepending it to a name that already
- * carries it would show it twice ("CON-1 - CON-1 - DB link").
- */
-function nameWithoutLeadingReference(reference: string | null, name: string | null): string | null {
-  if (!name) return null;
-  if (!reference) return name;
-  const escaped = reference.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const rest = name.replace(new RegExp(`^${escaped}(?:\\s*[-–—·:|]\\s*|\\s+)`, 'i'), '').trim();
-  if (rest && rest !== name) return rest;
-  // A name that is only the reference leaves the title to the reference the card already shows.
-  return name.toLowerCase() === reference.toLowerCase() ? null : name;
 }
 
 function formatPlainValue(value: unknown): string | null {
@@ -1292,7 +1280,8 @@ export class AiBusinessRecordMutationSupportService {
     ref: string,
   ): Promise<Record<string, unknown>[]> {
     const uuid = isUuid(ref);
-    const itemNumber = Number((ref.match(/(?:^|[-\s])(\d+)$/)?.[1] ?? '').trim());
+    const rawDigits = ref.match(/(?:^|[-\s])(\d+)$/)?.[1];
+    const itemNumber = rawDigits == null ? 0 : (parseItemNumber(rawDigits) ?? -1);
     const { manager, tenantId } = context;
     switch (entityType) {
       case 'applications': {
@@ -1538,10 +1527,14 @@ export class AiBusinessRecordMutationSupportService {
 
   private recordTitle(entityType: RelationTarget, row: Record<string, unknown>): string {
     switch (entityType) {
-      case 'applications':
-        return [row.sequential_id, row.name].map(textOrNull).filter(Boolean).join(' - ') || 'Untitled application';
-      case 'assets':
-        return [row.asset_reference, row.name].map(textOrNull).filter(Boolean).join(' - ') || 'Untitled asset';
+      case 'applications': {
+        const reference = textOrNull(row.sequential_id);
+        return [reference, nameWithoutLeadingReference(reference, textOrNull(row.name))].filter(Boolean).join(' - ') || 'Untitled application';
+      }
+      case 'assets': {
+        const reference = textOrNull(row.asset_reference);
+        return [reference, nameWithoutLeadingReference(reference, textOrNull(row.name))].filter(Boolean).join(' - ') || 'Untitled asset';
+      }
       case 'interfaces': {
         const reference = textOrNull(row.interface_reference) || textOrNull(row.interface_id);
         return [reference, nameWithoutLeadingReference(reference, textOrNull(row.name))].filter(Boolean).join(' - ') || 'Untitled interface';
@@ -1550,10 +1543,14 @@ export class AiBusinessRecordMutationSupportService {
         const reference = textOrNull(row.connection_reference);
         return [reference, nameWithoutLeadingReference(reference, textOrNull(row.name))].filter(Boolean).join(' - ') || 'Untitled connection';
       }
-      case 'projects':
-        return [row.item_number == null ? null : `PRJ-${row.item_number}`, row.name].map(textOrNull).filter(Boolean).join(' - ') || 'Untitled project';
-      case 'requests':
-        return [row.item_number == null ? null : `REQ-${row.item_number}`, row.name].map(textOrNull).filter(Boolean).join(' - ') || 'Untitled request';
+      case 'projects': {
+        const reference = row.item_number == null ? null : `PRJ-${row.item_number}`;
+        return [reference, nameWithoutLeadingReference(reference, textOrNull(row.name))].filter(Boolean).join(' - ') || 'Untitled project';
+      }
+      case 'requests': {
+        const reference = row.item_number == null ? null : `REQ-${row.item_number}`;
+        return [reference, nameWithoutLeadingReference(reference, textOrNull(row.name))].filter(Boolean).join(' - ') || 'Untitled request';
+      }
       case 'budget_lines':
         return textOrNull(row.product_name) || 'Untitled budget line';
       case 'incidents': {
@@ -1895,7 +1892,7 @@ export class AiBusinessRecordMutationSupportService {
     opts: { sourcePreviewId: string | null },
   ): Promise<AiPreparedMutationPreview> {
     if (entityType === 'incidents' && isFrozenIncidentStatus(String(target.row.status ?? ''))) {
-      throw new ForbiddenException(INCIDENT_LOCKED_MESSAGE);
+      throw incidentLocked();
     }
     const normalized = await this.normalizeFields(context, entityType, rawFields, 'update', target.row);
     if (entityType === 'technologies') {

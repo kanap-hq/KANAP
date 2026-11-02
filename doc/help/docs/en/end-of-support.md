@@ -64,7 +64,7 @@ The rows about applications need the right to read applications.
 
 ## Ask the assistant
 
-[Plaid](ai-assistant.md) reads both views, **Deadlines** and **Missing data**, with the same rights as the report. It names each item by its reference (`APP-4`, `AST-12`, `TEC-3`) and reads one horizon at a time: 6, 12, 24 or 36 months. When you cannot read applications, Plaid says that it left the application rows out.
+[Plaid](ai-assistant.md) reads both views, **Deadlines** and **Missing data**, with the same rights as the report. It names each item by its reference (`APP-4`, `AST-12`, `TEC-3`) and reads one horizon at a time: 6, 12, 24 or 36 months. Plaid lists the deadlines 30 at a time and can read the following pages; its counts and totals cover every deadline. When you cannot read applications, Plaid says that it left the application rows out.
 
 Plaid can also add technology versions and correct their support dates, with your approval. The end of support of an application is a field of the application: Plaid changes it as it changes the application, with the rights of the [Applications](applications.md) page.
 

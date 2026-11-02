@@ -1,4 +1,5 @@
-import { Controller, ForbiddenException, Get, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Req, UseGuards } from '@nestjs/common';
+import { requestContextMissing } from '../auth/module-right-required';
 import { validate as isUuid } from 'uuid';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { SkipTenantTransaction } from '../common/skip-tenant-transaction.decorator';
@@ -22,7 +23,7 @@ export class AiAdminOverviewController {
   private buildContext(req: any): AiExecutionContext {
     const tenantId = req?.tenant?.id ? String(req.tenant.id) : '';
     if (!tenantId || !isUuid(tenantId)) {
-      throw new ForbiddenException('Valid tenant context is required.');
+      throw requestContextMissing('Valid tenant context is required.');
     }
 
     return {

@@ -30,6 +30,7 @@ import { useFreezeState } from '../../../hooks/useFreezeState';
 import { useAuth } from '../../../auth/AuthContext';
 import { useLocale } from '../../../i18n/useLocale';
 import { masterDataCopyName, masterDataCopyStatus } from './masterDataCopyRows';
+import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 
 const YEARS_SPAN = 7;
 const COMPANY_METRIC_KEYS: { value: MasterDataMetric; labelKey: string }[] = [
@@ -235,7 +236,7 @@ export default function MasterDataCopyPage() {
         setFeedback({ type: dryRun ? 'success' : 'success', message: dryRun ? t('admin.copy.dryRunCompleted') : t('admin.copy.copyCompleted') });
       }
     } catch (err: any) {
-      const message = err?.response?.data?.message || err?.message || t('admin.copy.operationFailed');
+      const message = getApiErrorMessage(err, t, t('admin.copy.operationFailed'));
       setFeedback({ type: 'error', message });
     } finally {
       setIsProcessing(false);

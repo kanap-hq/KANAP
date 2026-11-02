@@ -2,7 +2,7 @@
 title: Your hardware inventory already exists, and it is in Netbox
 description: "The infrastructure team keeps Netbox current. KANAP reads it, keeps its asset records in step without retyping, and adds what Netbox does not know: applications, contracts, costs."
 date: 2026-09-23
-topic: product
+topic: mapping
 features: [it-landscape]
 author: Friedrich
 authorRole: Founder, CIO

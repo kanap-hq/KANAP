@@ -15,7 +15,7 @@ For portfolio-wide sequencing and roadmap work, use [Portfolio Planning](portfol
 
 - `portfolio_projects:reader`: open the list and view project workspaces
 - `portfolio_projects:contributor`: update the managed **Purpose** document, log time on the project (project-overhead entries and project task entries), and maintain linked records, links and files on the **Relations** tab (dependencies need `portfolio_projects:member`)
-- `portfolio_projects:member`: create projects and manage project data, status, team, relations, timeline, progress, tasks, scoring, comments, and decisions
+- `portfolio_projects:member`: create projects and manage project data, status, team, relations, timeline, effort, tasks, scoring, comments, and decisions
 - `portfolio_projects:admin`: includes member capabilities and can also import and export, save priority overrides and maintain other users' project-overhead time entries
 - Knowledge viewing also requires Knowledge access
 - Creating or linking standalone knowledge also requires a Knowledge creation role
@@ -43,7 +43,7 @@ The project list is designed to answer two questions quickly: "what should I car
 | **Priority** | Calculated priority score |
 | **Status** | Current execution state with a colored dot |
 | **Origin** | Request, Fast-track, or Legacy |
-| **Progress** | Execution progress as a bar |
+| **Effort** | Execution progress as a bar |
 | **Source** | Portfolio source classification |
 | **Category** | Portfolio category |
 | **Stream** | Portfolio stream |
@@ -65,27 +65,39 @@ The project list is designed to answer two questions quickly: "what should I car
 
 **Bulk administration**
 
-- **New Project** is available with `portfolio_projects:member`
+- **New project** is available with `portfolio_projects:member`
 - **Import** and **Export** are available to administrators
 
 Opening a project from the list preserves the current list context. The project workspace uses the same context for **Previous** and **Next** navigation, so you can review a filtered set without losing your place.
 
-## Creating a project
+## Creating a project { #creating-a-project }
 
 Direct project creation is for work that should enter execution without a separate request record.
 
-- New projects open on **Summary** only
-- Until the project is saved the first time, the other tabs are unavailable
-- Directly created projects use an origin of **Fast-track** or **Legacy**
-- Request-origin projects keep their request origin and source linkage
+1. Click **New project**. The project page opens on **Summary** with an empty title in the header. The rest of the page is dimmed.
+2. Type the name of the project.
+3. Press Enter, or click outside the title. KANAP creates the project at once, with the origin **Fast-track**. Its reference (`PRJ-12`) shows and all tabs open.
+
+Then fill in the Properties drawer and the **Purpose**. The name is edited in the header only. Press Escape on the empty title to leave without creating anything.
+
+A project created this way can switch between **Fast-track** and **Legacy** in the Properties drawer. A project converted from a request keeps the **Request** origin and its source linkage.
 
 Use **Fast-track** for work that is genuinely being introduced directly into delivery. Use **Legacy** for work that already exists outside the normal intake history. That distinction affects reporting and makes later portfolio analysis much less confusing.
+
+### Creating or cancelling { #cancelling-a-creation }
+
+While the project is being created, its header shows **Create** and **Cancel**. They stay until you leave the project.
+
+- **Create** keeps the project and closes it. You go back to where you started: the list or the previous screen. With an empty title, nothing closes and the title asks for one
+- **Cancel** closes without keeping anything. On a project already created, it deletes it. If you entered more than the name, a confirmation lists what will be deleted. You can cancel your own creation without any delete right
+
+**Cancel** is the only way to delete a project. Once you leave the project, it stays: set its status to **Cancelled** if it does not go ahead. A project linked to a request cannot be deleted. The reference of a cancelled project is not used again.
 
 ## Workspace mental model
 
 The project workspace has two layers:
 
-- The **main content area** for the operational tabs: **Summary**, **Tasks**, **Timeline**, **Progress**, **Scoring**, **Relations**, and **Knowledge**
+- The **main content area** for the operational tabs: **Summary**, **Tasks**, **Timeline**, **Effort**, **Scoring**, **Relations**, **Knowledge**, and **History** (the changes made to the project, see [Record history](record-history.md))
 - A persistent **Properties** drawer on the right edge for core properties, team assignment, and source requests
 
 Open or close the Properties drawer using the vertical tab on the right edge.
@@ -101,6 +113,7 @@ The workspace header is a control strip, not decoration.
 - A compact metadata row: **Status**, **Score**, **Progress**, **IT Lead**, **Planned End**, and **Origin** (or the source request reference for request-origin projects)
 - **Previous** and **Next** move through the current list result set, not through every project in the system
 - **Share** emails the current project URL with an optional message
+- **Create** and **Cancel**, while the project is being created. See [Creating or cancelling](#cancelling-a-creation)
 
 Sending a link does not grant access. It only shares the location. Permissions remain exactly as they were before the email was sent.
 
@@ -121,9 +134,8 @@ Treat the Properties drawer as the project's persistent identity card. It is gro
 
 ### Core properties
 
-- Project name
 - Status
-- Origin (during initial creation only; locked afterward)
+- Origin: **Fast-track** or **Legacy** for a project created directly. A project converted from a request keeps the **Request** origin
 - Source, Category, Stream
 - Company, Department
 - Planned start, Planned end
@@ -142,7 +154,7 @@ These assignments do more than fill boxes:
 
 - they determine what appears in **My projects** and **My team's projects**
 - they feed project context in summary and reporting
-- they define who is available for effort allocation in the **Progress** tab
+- they define who is available for effort allocation in the **Effort** tab
 
 If leads and contributors are wrong, your effort planning will also be wrong.
 
@@ -180,18 +192,15 @@ The managed Purpose document is different from the **Knowledge** tab:
 
 ### Activity
 
-Below Purpose, the Summary tab includes the project activity stream:
+Below Purpose, the Summary tab includes the project activity stream: comments for discussion, contextual notes, and formal decisions.
 
-- **Comments** for discussion, contextual notes, and formal decisions
-- **History** for the audit trail of field and status changes
-
-**History** lists the recorded changes (status moves, field edits, team and relation changes, edits to the Purpose document) and closes with the creation entry: who created the project and when.
+The changes made to the project are in the **History** tab: status moves, field edits, team and relation changes, edits to the Purpose document, and the creation entry (who created the project and when).
 
 Users with `portfolio_projects:member` can add and edit project comments. Comments can also be recorded as formal decisions, with an outcome and an optional status change. Use that when the discussion itself changes the project's course.
 
 Images can be included in activity comments when visual evidence is useful: architecture sketches, screenshots, or review evidence.
 
-Use **History** when you need to know what changed. Use **Comments** when you need to know why.
+Use the **History** tab when you need to know what changed. Use the comments when you need to know why.
 
 ## Tasks
 
@@ -204,7 +213,7 @@ The **Tasks** tab is the project's execution queue. The tab badge shows the numb
 
 This tab is for managing project-linked tasks in context, not for replacing the full task workspace. Opening a task takes you to its own workspace, where task-specific detail and time logging continue.
 
-From a project perspective, the important consequence is this: task status and task time are not isolated. They feed back into Summary and Progress, so neglected tasks make the whole project picture less trustworthy.
+From a project perspective, the important consequence is this: task status and task time are not isolated. They feed back into Summary and Effort, so neglected tasks make the whole project picture less trustworthy.
 
 ## Timeline
 
@@ -250,20 +259,20 @@ Above the phase list, switch between **Table** and **Gantt** views:
 
 Only phases with usable start and end dates appear meaningfully on the Gantt. If the dates are vague, the chart will be equally vague. In Gantt view, you can drag phase bars to adjust start/end dates (with manage permission).
 
-## Progress
+## Effort
 
-The **Progress** tab combines execution progress, workload planning, and actual time consumption. That combination matters because a project that reports 80% progress with 20% of the effort consumed is not necessarily efficient; it may simply be badly estimated.
+The **Effort** tab combines execution progress, workload planning, and actual time consumption. That combination matters because a project that reports 80% progress with 20% of the effort consumed is not necessarily efficient; it may simply be badly estimated.
 
 ### Progress and workload
 
-- **Execution Progress** is the overall completion signal for the project
+- **Progress** is the overall completion signal for the project
 - **Workload consumption** compares actual effort with planned effort
 
 Keep these two numbers aligned with reality. If progress advances without corresponding effort, or effort accumulates without delivery movement, the mismatch is usually telling you something important about scope, estimation, or reporting discipline.
 
 ### Estimated effort and allocations
 
-Progress separates estimated effort into:
+The **Effort** tab separates estimated effort into:
 
 - **IT effort**
 - **Business effort**
@@ -283,7 +292,7 @@ Important consequences:
 
 - task time contributes to project actual effort automatically
 - task time is visible here but must be corrected in the task workspace
-- project-overhead entries are maintained from the Progress tab
+- project-overhead entries are maintained from the Effort tab
 - contributors can maintain their own project-overhead entries
 - administrators can maintain project-overhead entries across users
 
@@ -333,7 +342,7 @@ A section is absent when you cannot read its module: budget lines need the budge
 
 **Adding and removing links** (`portfolio_projects:contributor`): **Add** at the right of a section opens a search below the button. Type a name or a reference and pick a result: the link is saved at once. To remove a link, hover the row and click the cross at its end. There is no confirmation, and removing a link deletes nothing else. Linking a technology also needs a read of the infrastructure. Readers see the tables read-only.
 
-Links to budget lines, applications and assets are recorded in the project's **History**.
+Links to budget lines, applications and assets are recorded in the project's **History** tab.
 
 ### Links and files
 
@@ -341,7 +350,7 @@ Links to budget lines, applications and assets are recorded in the project's **H
 
 - **Add link** opens a dialog for a URL and an optional name; the link is saved at once. To change a link, hover its row and click the pencil.
 - **Attach file** opens the file chooser. You can also drop files on the section.
-- To remove a link or a file, hover the row and click the cross. Deleting a file asks for confirmation first.
+- To remove a link or a file, hover the row and click the cross. Removing a link shows a message and offers **Undo**, which creates the link again. Deleting a file asks for confirmation first.
 
 ## Knowledge
 
@@ -389,7 +398,7 @@ Use **Data Enrichment** when you want to export, adjust selected fields external
 
 Imports are designed for controlled bulk changes:
 
-- download a template first when you need the correct structure
+- download a template first when you need the correct structure, or an example to see sample projects and the values each column takes ([Example files](csv-files.md#example-files))
 - validate before importing
 - use advanced options to choose enrichment vs replacement behavior and insert/update rules
 
@@ -410,6 +419,6 @@ Again, sending a link does not grant access. It only saves people from hunting f
 - Use the Properties drawer for structural data that should stay visible while you work.
 - Use **Summary** for the project narrative, latest activity, and high-level operating picture.
 - Use **Timeline** to define delivery structure before task volume grows.
-- Use **Progress** regularly, otherwise effort variance arrives as a surprise even though the data was already warning you.
+- Use **Effort** regularly, otherwise effort variance arrives as a surprise even though the data was already warning you.
 - Use **Knowledge** for reusable or governed documentation, not as a second copy of the Purpose brief.
 - Use **Import** on the Purpose editor when a project brief already exists as a Word document, rather than reformatting it by hand.

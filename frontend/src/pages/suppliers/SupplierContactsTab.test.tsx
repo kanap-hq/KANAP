@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
+import { NotifyProvider } from '../../components/notify/NotifyProvider';
 
 // A stable `t`: a new one on each render would loop the effects.
 const t = vi.hoisted(() => (key: string) => key);
@@ -37,11 +38,13 @@ function renderTab() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <ThemeProvider theme={createAppTheme('light')}>
-      <QueryClientProvider client={client}>
-        <MemoryRouter>
-          <SupplierContactsTab supplierId="s-1" canManage />
-        </MemoryRouter>
-      </QueryClientProvider>
+      <NotifyProvider>
+        <QueryClientProvider client={client}>
+          <MemoryRouter>
+            <SupplierContactsTab supplierId="s-1" canManage />
+          </MemoryRouter>
+        </QueryClientProvider>
+      </NotifyProvider>
     </ThemeProvider>,
   );
 }
@@ -65,7 +68,7 @@ describe('SupplierContactsTab', () => {
     expect(await screen.findByText('suppliers.contacts.linkRemoved')).toBeInTheDocument();
     expect(within(commercial).queryByText('Alex Martin')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'suppliers.contacts.undo' }));
+    fireEvent.click(screen.getByRole('button', { name: 'buttons.undo' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith(
       '/suppliers/s-1/contacts',
       { contactId: 'c-1', role: 'commercial', isPrimary: true },

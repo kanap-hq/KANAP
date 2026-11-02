@@ -16,8 +16,19 @@ Plaid no reemplaza al resto de la aplicación. Es una forma más rápida de resu
 
 El espacio de trabajo también está disponible para los administradores con `ai_chat:admin`, que pueden ver y moderar todo lo que hacen los usuarios habituales.
 
-!!! note "A la espera de un administrador"
-    En el servicio alojado, Plaid puede funcionar con el modelo incluido de KANAP. Antes, un administrador confirma el proveedor y el lugar donde trata los datos. Hasta entonces, el espacio de trabajo muestra *Un administrador debe confirmar el proveedor de IA en Administración > Plaid.* en lugar del chat. Un administrador lo hace en la página [Configuración de Plaid](ai-settings.md#confirmar-el-modelo-incluido-de-kanap). Las organizaciones que usan un modelo propio nunca ven este aviso.
+### Antes de aceptar el modelo incluido { #included-model-acceptance }
+
+En el servicio alojado, Plaid puede funcionar con el modelo incluido de KANAP. Antes, un administrador acepta el proveedor y el lugar donde trata los datos. Los nuevos espacios de trabajo en prueba empiezan en este estado, con Plaid desactivado.
+
+Hasta entonces, la página de Plaid se abre con normalidad, con sus sugerencias. Una casilla ocupa el lugar del campo de mensaje: *Acepto que {proveedor} ({lugar}) trate mis preguntas y los datos a los que se refieren para las respuestas de Plaid. No se usan para entrenar sus modelos.*, seguida de *Otro modelo o desactivación: Administración › Plaid*.
+
+- Un administrador de la configuración de Plaid marca la casilla. Esto activa Plaid y registra la aceptación, con quién y cuándo. A continuación aparece el campo de mensaje.
+- Las demás personas leen *Plaid espera a que un administrador lo active.*
+
+Los administradores también pueden aceptar en la página [Configuración de Plaid](ai-settings.md#confirmar-el-modelo-incluido-de-kanap). Las organizaciones que usan un modelo propio nunca ven esta casilla.
+
+!!! note "Chat desactivado"
+    Cuando un administrador desactiva el chat en **Administración › Plaid**, una persona que puede usar el chat sigue abriendo esta página, y la entrada Plaid permanece en la navegación superior. La página dice *Plaid está desactivado para este espacio de trabajo.* Un administrador del asistente también ve *Actívelo en Administración › Plaid*, que abre la configuración de Plaid. Las demás personas ven *Pida a un administrador que lo active.* Una persona sin el permiso de chat ve la página de acceso denegado. Mientras el modelo incluido espera su aceptación, la página muestra en su lugar la casilla de aceptación, incluso con el chat desactivado: véase [Antes de aceptar el modelo incluido](#included-model-acceptance).
 
 ## Iniciar una conversación
 
@@ -28,6 +39,14 @@ Cuando abre Plaid por primera vez, llega a una pantalla de bienvenida con:
 - El cuadro de redacción en la parte inferior, listo para aceptar su primer mensaje
 
 Haga clic en cualquier sugerencia para enviarla directamente o, en el caso de las preguntas que contienen un marcador `@`, colocar la sugerencia en el cuadro de redacción para que pueda terminarla.
+
+Cuando se eligió un recorrido para el espacio de trabajo en su primera apertura, durante la prueba, las sugerencias empiezan por sus dos preguntas, entre las que usted puede leer, y luego las habituales, cinco como máximo:
+
+| Recorrido | Preguntas |
+|---|---|
+| Presupuesto de TI | *¿Cuáles son las principales oportunidades de ahorro en el OPEX de TI?*, *¿Qué líneas presupuestarias no tienen responsable?* |
+| Mapa del SI | *¿Qué tecnologías llegan al fin de soporte en los próximos seis meses?*, *¿Qué aplicaciones críticas no tienen plan de recuperación?* |
+| Proyectos y solicitudes | *¿Qué proyectos superan su presupuesto?*, *¿Qué solicitudes esperan una decisión?* |
 
 Escriba un mensaje y pulse **Intro** para enviarlo. **Mayús+Intro** inserta un salto de línea. El botón de enviar se desactiva cuando no hay nada que enviar y se transforma en un botón rojo **Detener** mientras Plaid responde.
 
@@ -53,21 +72,28 @@ La búsqueda filtra la lista por título a medida que escribe. El cambio de nomb
 El cuadro de redacción es el principal punto de control del espacio de trabajo. Admite:
 
 - Texto de varias líneas, hasta 10 filas visibles antes de que se desplace
-- Adjuntos de imágenes en línea (PNG, JPG, GIF, WEBP)
+- Adjuntos: imágenes (PNG, JPG, GIF, WEBP) y hojas de cálculo (.xlsx, CSV)
 - Menciones con `@` de registros de KANAP
 - Un recordatorio de atajos de teclado ("Intro para enviar · Mayús+Intro para nueva línea")
 
-### Adjuntar imágenes
+### Adjuntar imágenes y hojas de cálculo
 
-Puede añadir imágenes de tres maneras:
+Puede adjuntar imágenes (PNG, JPG, GIF, WEBP) y hojas de cálculo: libros de Excel (.xlsx) y archivos CSV. Hay tres maneras de añadirlos:
 
-- Haga clic en el icono de clip y seleccione archivos de su ordenador
-- Arrastre y suelte archivos de imagen sobre el cuadro de redacción (una superposición de ayuda confirma la zona de destino)
-- Pegue una imagen directamente desde el portapapeles
+- Haga clic en el icono de clip (**Adjuntar un archivo**) y seleccione archivos de su ordenador
+- Arrastre y suelte archivos sobre el cuadro de redacción (una superposición de ayuda confirma la zona de destino)
+- Pegue un archivo directamente desde el portapapeles
 
-Cada imagen pendiente aparece como una miniatura encima del texto. Haga clic en la pequeña **X** de una miniatura para quitarla. Existe un límite de adjuntos por mensaje; una vez alcanzado, el clip se desactiva hasta que quite o envíe los adjuntos actuales.
+Cada imagen pendiente aparece como una miniatura encima del texto. Cada hoja de cálculo pendiente aparece como un pequeño mosaico con su nombre y su tamaño. Haga clic en la pequeña **X** para quitar uno. Un mensaje admite hasta 8 adjuntos, entre imágenes y hojas de cálculo. Una vez alcanzado el límite, el clip se desactiva hasta que quite o envíe los adjuntos actuales.
 
 Las imágenes se cargan junto con su mensaje para que Plaid pueda describirlas, compararlas o extraer detalles.
+
+KANAP lee una hoja de cálculo cuando usted envía el mensaje:
+
+- Un archivo puede tener hasta 5 MB y 20 000 filas. Solo se lee la primera hoja de un libro.
+- Un archivo que no se puede leer (dañado, vacío, formato .xls antiguo, demasiado grande) se rechaza de inmediato, con el motivo. El mensaje no se envía.
+- Plaid recibe un resumen del archivo: los encabezados de columna, el tipo de cada columna (texto, número o fecha), las diez primeras filas y el número de filas. Puede describir el archivo, decir qué contiene cada columna y detectar problemas en las primeras filas. No puede responder sobre las filas posteriores a las diez primeras.
+- El resumen queda adjunto al mensaje durante el resto de la conversación.
 
 ### Mencionar registros con `@`
 
@@ -112,13 +138,15 @@ Las imágenes almacenadas en KANAP, como los archivos adjuntos, se muestran con 
 
 Plaid usa un pequeño conjunto de herramientas internas para responder preguntas: `Search all`, `Search knowledge`, `Get document`, `Get entity context` y algunas otras. Cada llamada a herramienta aparece como una línea compacta debajo del mensaje ("ha usado Buscar todo · 8 resultados"). Normalmente no necesita leer los detalles de las herramientas, pero están ahí si quiere ver exactamente en qué registros se basó la respuesta.
 
+Cuando pregunta cómo hacer algo en KANAP, por ejemplo dónde está un ajuste o los pasos de una tarea, Plaid lee el manual de usuario de su versión de KANAP, en su idioma (`Explorar el manual de usuario`, `Leer el manual de usuario`). Describe las pantallas como lo hace el manual y enlaza la sección que ha leído en doc.kanap.net.
+
 `Search all` encuentra las líneas presupuestarias por el nombre de sus valores analíticos e indica a Plaid qué valores tiene cada línea. Plaid nombra una línea presupuestaria por su referencia `BL-12`, y sus enlaces abren la línea. Un número solo, como 21, designa `BL-21`. Los antiguos números siguen funcionando: `OPX-12` o `CPX-3` encuentra su línea.
 
 Plaid lee las líneas OPEX y CAPEX juntas. Una pregunta que no nombra ninguno de los dos tipos abarca ambos, y Plaid puede filtrar o agrupar las líneas por tipo.
 
 Plaid lista y lee las tecnologías para los usuarios que pueden leer la infraestructura. Puede filtrarlas por familia, editor, versión, responsable, fin de soporte o número de servidores, y leer las versiones, los servidores, las aplicaciones, los responsables, los contactos de soporte, los enlaces web y el ajuste de las alertas de vulnerabilidad de una tecnología. También lee las dos vistas del informe [Fin de soporte](end-of-support.md#preguntar-al-asistente), así como la versión y las fechas de cada aplicación. Si se le pregunta por un servidor, una aplicación o una tecnología por su nombre, sin su referencia, también lee los registros relacionados. Pregunte, por ejemplo: «¿Qué tecnologías no tienen responsable de TI?» Los asistentes conectados por MCP obtienen las mismas respuestas.
 
-Cuando se siguen las vulnerabilidades, Plaid también lista, cuenta y lee las vulnerabilidades, para los usuarios que leen la infraestructura. Un elemento es una CVE en una versión de una tecnología, como en la página [Vulnerabilidades](vulnerabilities.md). Plaid puede filtrarlas por gravedad, explotación, estado, alertas, tecnología, fecha de publicación, activo o aplicación, y contarlas por gravedad o por tecnología. Salvo que pida otra cosa, Plaid conserva las vulnerabilidades por revisar que están en las alertas, como la página. Los servidores y las aplicaciones que alcanza una vulnerabilidad siguen los vínculos directos, como los cuenta la página (consulte [Lo que KANAP cuenta](vulnerabilities.md#what-kanap-counts)). En los activos y las aplicaciones, Plaid lee cuántas vulnerabilidades quedan por revisar y cuántas son críticas o altas. Pregunte, por ejemplo: «¿Qué aplicaciones críticas están afectadas por una CVE explotada?» Plaid no puede cambiar el estado de una vulnerabilidad. Los asistentes conectados por MCP obtienen las mismas respuestas.
+Cuando se siguen las vulnerabilidades, Plaid también lista, cuenta y lee las vulnerabilidades, para los usuarios que leen la infraestructura. Un elemento es una CVE en una versión de una tecnología, como en la página [Vulnerabilidades](vulnerabilities.md). Plaid puede filtrarlas por gravedad, explotación, estado, alertas, tecnología, fecha de publicación, activo o aplicación. También puede conservar las tecnologías en uso en el parque, o las filas que ya no coinciden. Las cuenta por gravedad, por tecnología o por versión, en filas y en CVE distintas, como la página: «117 filas (112 CVE)». Salvo que pida otra cosa, Plaid conserva las vulnerabilidades por revisar que están en las alertas, como la página. También dice cuándo leyó KANAP la NVD y CVE.org por última vez, y si la última lectura falló. Los servidores y las aplicaciones que alcanza una vulnerabilidad siguen los vínculos directos, como los cuenta la página (consulte [Lo que KANAP cuenta](vulnerabilities.md#what-kanap-counts)). En los activos y las aplicaciones, Plaid lee cuántas vulnerabilidades quedan por revisar y cuántas son críticas o altas. Pregunte, por ejemplo: «¿Qué aplicaciones críticas están afectadas por una CVE explotada?» Los asistentes conectados por MCP obtienen las mismas respuestas.
 
 Plaid lista, cuenta y lee los incidentes. Los filtra por activo, aplicación o tecnología, los agrupa por registro vinculado o por mes y lee el tiempo de resolución. Un incidente restringido que usted no puede ver no aparece en ninguna parte. Consulte [Preguntar al asistente](incidents.md#preguntar-al-asistente).
 
@@ -128,9 +156,32 @@ Plaid nombra un registro por su referencia, como `APP-8` o `BL-14`, o por su nom
 
 Plaid nombra un registro vinculado al que usted consulta solo si puede leer su módulo, como la página del registro: las aplicaciones de un proyecto requieren las aplicaciones, sus activos la infraestructura, sus solicitudes de origen las solicitudes. Un Business Contributor solo obtiene los proyectos, solicitudes y aplicaciones en los que participa. Los servidores en los que se ejecuta una aplicación son la excepción: vienen con la aplicación, como en su pestaña **Despliegues**. Si se le pregunta por una persona, Plaid da lo que le muestra la lista de usuarios: un administrador de usuarios obtiene el perfil completo, los demás el nombre, el correo electrónico y el estado. Los asistentes conectados por MCP obtienen las mismas respuestas.
 
+Un administrador de usuarios con acceso a todos los datos lee con Plaid lo que muestran **Administración › Roles** y **Administración › Acceso a los datos**. Plaid lista los roles, el número de personas de cada uno y los derechos que da cada rol, con las palabras de la pantalla Roles. Indica quién está limitado a qué empresas, centros de coste o grupos, en Lectura o en Edición, quién está limitado sin ningún nodo y quién ve una empresa. La lista de usuarios incluye también todos los roles de una persona y su acceso. Pregunte, por ejemplo: «¿Quién está limitado a Alpha Spain, y con qué acceso?» o «¿Qué roles dan el nivel Administrador en presupuesto?» Una persona cuyo propio acceso está limitado no lee estos datos, aunque sea administradora de usuarios, y Plaid lo indica. Plaid no cambia nada de esto: el acceso a los datos de una persona, sus roles, los derechos de un rol y la creación o desactivación de una persona se quedan en las pantallas de **Administración**. Los asistentes conectados por MCP obtienen las mismas respuestas.
+
+Plaid lee el [historial](record-history.md) de un registro, tal como lo muestra su pestaña **Historial**, para cualquier persona que pueda abrir el registro. Pregunte, por ejemplo: «¿Quién cambió los importes de BL-12?» Un registro sin pestaña Historial, como un usuario o un rol, no tiene historial en KANAP: Plaid lo indica y no reconstruye ninguno a partir de otros datos. Los asistentes conectados por MCP obtienen las mismas respuestas.
+
 Cuando Plaid suma importes presupuestarios, una línea cuya moneda no tiene tipo de cambio para el año queda excluida de la suma. Plaid indica entonces qué monedas y años ha excluido. Los asistentes conectados por MCP reciben la misma respuesta.
 
 Plaid lee las cifras de personal del informe [Coste por ETC](reports.md#coste-por-etc) para cada año y columna presupuestaria: el coste y los ETC de las líneas en personas o días, el coste de las líneas con precio diario y los días que compran. KANAP calcula el coste por ETC y la tarifa diaria media por proveedor, empresa, centro de coste o cualquier otra agrupación, como hace el informe, y Plaid los cita. Pregunte, por ejemplo: "¿Cuáles son los ETC externos y la tarifa diaria media por proveedor en 2026?" Cuando usted no nombra ni OPEX ni CAPEX, Plaid responde para ambos tipos. Los asistentes conectados por MCP reciben las mismas respuestas.
+
+Plaid también da las cifras de otros informes presupuestarios. Con derecho de lectura sobre las cuentas, totaliza el presupuesto por cuenta de consolidación, como el informe [Cuentas de consolidación](reports.md#cuentas-de-consolidacion). Sin ese derecho, Plaid dice que hace falta el derecho sobre las cuentas. Mide varias columnas o años en una misma respuesta y añade una segunda agrupación, por ejemplo el presupuesto, la revisión y el aterrizaje previsto de cada empresa, o cada proveedor a lo largo de tres años. Encuentra los mayores aumentos o disminuciones entre dos columnas, 10 por defecto, como el informe [Top aumento / disminución](reports.md#top-aumento-disminucion). Da los ETC mes a mes con la media y el mes más alto, como [Plantilla por mes](reports.md#plantilla-por-mes). Pregunte, por ejemplo: "¿Qué líneas suben más del presupuesto 2026 a la revisión?" o "¿Cuál es el presupuesto de cada proveedor en 2025, 2026 y 2027?" Plaid lee todas las líneas presupuestarias, mientras que los informes leen las líneas aún activas el 1 de enero del año anterior al primer año mostrado, así que una línea terminada antes puede hacer que una cifra difiera del informe. Los asistentes conectados por MCP reciben las mismas respuestas.
+
+Con derecho de lectura sobre Informes, Plaid lee el contracargo tal como lo muestran los informes [Contracargo global](reports.md#contracargo-global) y [Contracargo por empresa](reports.md#contracargo-por-empresa): el importe imputado a cada empresa y departamento beneficiarios, lo que paga cada empresa, el neto, las ratios por usuario y sobre la facturación, y las líneas imputadas a una empresa. Cuando usted no nombra ni OPEX ni CAPEX, cubre ambos tipos. Plaid repite los avisos del informe, como una línea que no pudo repartir, una línea sin empresa pagadora o un importe sin tipo de cambio. Cuando su acceso a los datos está limitado, las cifras cubren las líneas que usted puede leer, sin el total del grupo, y Plaid lista las líneas imputadas a una empresa solo para las empresas de su acceso. Los asistentes conectados por MCP reciben las mismas respuestas.
+
+Plaid lee cuatro clases de datos de referencia, tal como los muestran sus pantallas. No modifica ninguna.
+
+- **Centros de coste**, con derecho de lectura sobre los centros de coste: el árbol de grupos de centros y centros de coste, la empresa y el responsable del presupuesto de cada nodo, y el número de líneas OPEX y CAPEX que lo usan. Plaid lista todos los nodos bajo un grupo, en todos los niveles, o solo los nodos situados justo debajo.
+- **Calendarios laborales**, con derecho de lectura sobre los calendarios laborales: los días laborables de un año, mes a mes, y los festivos de un calendario estándar. KANAP calcula el total del año y Plaid lo cita. Un país sin calendario en su espacio de trabajo no tiene ninguno, y Plaid no calcula sus días.
+- **Dimensiones analíticas**, con derecho de lectura sobre la analítica: los ajustes de cada dimensión (los tipos de línea a los que se aplica, si un valor es obligatorio, si cualquiera puede añadir un valor), su número de valores y las líneas que la usan. Una dimensión obligatoria solo cuenta como obligatoria mientras está activada.
+- **Tipos de cambio y moneda de reporting**, con derecho de lectura sobre el presupuesto: la moneda de reporting, las monedas por defecto y permitidas, el tipo de cada moneda para cada año con su fuente, los tipos introducidos a mano y los tipos que faltan.
+
+Un tipo de cambio es el importe en la moneda de reporting por 1 unidad de la moneda. En un espacio de trabajo que informa en euros, un tipo de 0,89 para USD significa 1 USD = 0,89 EUR. KANAP calcula el tipo inverso y el tipo entre otras dos monedas, por ejemplo de USD a CHF, y Plaid los cita.
+
+Sin el derecho que pide una clase de datos de referencia, Plaid nombra el derecho que falta. Cuando su acceso a los datos está limitado, usted lee todos los datos de referencia, como en las pantallas. Solo los recuentos de líneas presupuestarias cubren su acceso, y las monedas listadas con sus tipos son las de las líneas y contratos que usted puede leer.
+
+Plaid lee el historial de un centro de coste, un calendario o una dimensión, tal como lo muestra su pestaña **Historial**. `Search all` encuentra un centro de coste, un calendario o una dimensión por su código o su nombre. No busca los tipos de cambio: Plaid los lista en su lugar.
+
+Pregunte, por ejemplo: «¿Qué centros de coste dependen de Group IT?», «¿Quién es el responsable del presupuesto de FR-TRV-600?», «¿Cuántos días laborables tiene Francia en 2026?», «¿Qué dimensiones son obligatorias?» o «¿Cuál es el tipo del USD para 2026?» Los asistentes conectados por MCP reciben las mismas respuestas.
 
 Los totales vienen de KANAP. Una lista de líneas presupuestarias o de contratos llega con el total de todos los registros que coinciden, todas las páginas incluidas, y con el total de los registros listados, así que Plaid cita uno de los dos o pide una suma a KANAP. Si usted pide las diez líneas más grandes y su total, Plaid da el total de esas diez líneas. Cuando su acceso a los datos está limitado a algunas empresas o centros de coste, Plaid indica que sus recuentos y totales cubren su acceso, y no los presenta como el total del espacio de trabajo.
 
@@ -142,7 +193,9 @@ Plaid solo hace los cambios que sus pantallas le permiten hacer, en los registro
 
 Con el nivel Colaborador en los incidentes, Plaid registra un incidente, cambia sus campos, hace avanzar su estado hasta Cerrado, añade notas al diario y vincula activos, aplicaciones y tecnologías. Con el nivel Miembro en las tareas, crea una tarea de seguimiento en un incidente. Con el nivel Administrador en los incidentes, reabre o cancela un incidente, con un motivo, y activa o desactiva su restricción. El cierre congela el incidente. Su eliminación se queda en su pantalla. Consulte [Preguntar al asistente](incidents.md#preguntar-al-asistente).
 
-Con el nivel Miembro en la infraestructura, Plaid crea una tecnología, la adopta del catálogo de KANAP o completa una tecnología introducida a mano. Cambia sus campos, añade versiones y cambia sus fechas, la vincula a aplicaciones y servidores, añade o quita sus responsables, sus contactos de soporte y sus enlaces web, y activa o desactiva sus alertas de vulnerabilidad, para toda la tecnología o para una versión. Vincular una aplicación también requiere el derecho de leer las aplicaciones. Añadir un contacto de soporte requiere el derecho de leer los contactos. Pida a Plaid que deshaga un cambio que hizo en la conversación: prepara una vista previa que restablece lo anterior. La creación o la adopción de una tecnología no se puede deshacer, y una versión añadida de paso se queda. La eliminación de una tecnología o de una versión, los archivos adjuntos, los identificadores de vulnerabilidad y los estados de las vulnerabilidades se quedan en las pantallas. Consulte [Preguntar al asistente](technologies.md#preguntar-al-asistente).
+Con el nivel Miembro en la infraestructura, Plaid crea una tecnología, la adopta del catálogo de KANAP o completa una tecnología introducida a mano. Cambia sus campos, añade versiones y cambia sus fechas, la vincula a aplicaciones y servidores, añade o quita sus responsables, sus contactos de soporte y sus enlaces web, y activa o desactiva sus alertas de vulnerabilidad, para toda la tecnología o para una versión. Vincular una aplicación también requiere el derecho de leer las aplicaciones. Añadir un contacto de soporte requiere el derecho de leer los contactos. Pida a Plaid que deshaga un cambio que hizo en la conversación: prepara una vista previa que restablece lo anterior. La creación o la adopción de una tecnología no se puede deshacer, y una versión añadida de paso se queda. La eliminación de una tecnología o de una versión, los archivos adjuntos, los identificadores de vulnerabilidad y el nuevo cotejo de las vulnerabilidades (**Actualizar**) se quedan en las pantallas. Consulte [Preguntar al asistente](technologies.md#preguntar-al-asistente).
+
+Con el mismo nivel, cuando se siguen las vulnerabilidades, Plaid cambia el estado de las vulnerabilidades a **Por revisar**, **Tratada** o **No afectada**, con una nota si usted la da. Nombre una CVE para cambiar todas sus filas, añada una tecnología, o una tecnología y una versión, para acotar, o describa las filas con los filtros de la página. Un cambio abarca 5000 filas como máximo, como en la página. La vista previa dice cuántas filas y CVE cambian. **Aceptada** no es un estado: Plaid propone **Tratada** con una nota, o **No afectada**. Pida a Plaid que deshaga el cambio en la conversación. Pregunte, por ejemplo: «Marca CVE-2024-3094 como no afectada en TEC-3, el paquete no está instalado». Consulte [Preguntar al asistente](vulnerabilities.md#preguntar-al-asistente).
 
 Cuando Plaid crea una línea presupuestaria, pregunta si la línea es OPEX o CAPEX si usted no lo ha dicho. No cambia el tipo de una línea existente: use **Cambiar el tipo...** en el espacio de trabajo de la línea (consulte [Cambiar el tipo](budget-lines.md#cambiar-el-tipo)). Plaid solo define el contrato de las líneas OPEX. Una línea CAPEX llega a sus contratos mediante los vínculos de su pestaña **Relaciones**.
 
@@ -181,14 +234,8 @@ Los demás registros, como las aplicaciones, los activos, los contratos, los pro
 
 Plaid no lee:
 
-- Los centros de coste (**Datos maestros › Centros de coste**). Una línea presupuestaria indica su centro de coste, así que Plaid puede filtrar las líneas por él.
-- Los calendarios laborales (**Datos maestros › Calendarios laborales**)
-- Los tipos de cambio (**Gestión presupuestaria › Administración › Monedas**). Los importes presupuestarios llegan a Plaid ya convertidos a la moneda de informes.
-- Los ajustes de las dimensiones analíticas (**Datos maestros › Dimensiones analíticas**). Sus valores, y el valor que tiene cada línea presupuestaria, se pueden leer.
-- El acceso a los datos, es decir, a qué empresas o centros de coste está limitada una persona (**Administración › Acceso a los datos**)
 - El registro de auditoría (**Administración › Registro de auditoría**)
 - Los agentes IA
-- El contracargo por empresa beneficiaria (**Gestión presupuestaria › Informes › Contracargo global**)
 
 Cuando una pregunta toca uno de estos elementos, Plaid dice que no puede leerlo y nombra la pantalla que lo muestra, como la nombran sus menús en el idioma de su perfil. Una búsqueda sin resultado indica a Plaid lo que no ha buscado, para que la respuesta no afirme que el registro no existe. Lo mismo ocurre con un campo: el contexto de un registro incluye sus campos principales, y Plaid lee el registro completo antes de decir que un campo está vacío. Los asistentes conectados por MCP obtienen las mismas respuestas.
 
@@ -216,18 +263,17 @@ Para las vistas previas de cambios pendientes, el panel ofrece dos botones:
 
 Una vista previa, y el mensaje que Plaid escribe después de que usted la apruebe o la rechace, están en el idioma de su perfil, con los nombres de campo y los valores de las pantallas. Una línea presupuestaria pedida con un importe llega como una sola vista previa: una sola aprobación crea la línea, su versión presupuestaria del año y el importe.
 
-Cuando usted pide un cambio que Plaid no puede hacer, como eliminar un proyecto o cambiar el estado de una vulnerabilidad, Plaid lo dice e indica la pantalla donde puede hacerlo. No prepara ningún otro cambio en su lugar.
+Cuando usted pide un cambio que Plaid no puede hacer, como eliminar un proyecto o volver a lanzar el cotejo de las vulnerabilidades, Plaid lo dice e indica la pantalla donde puede hacerlo. No prepara ningún otro cambio en su lugar.
 
 Nada que modifique los datos de KANAP se aplica de forma silenciosa. La vista previa es la barrera de control.
 
 ## Indicadores de uso
 
-Encima del cuadro de redacción, dos pequeños indicadores le ayudan a estar al tanto del coste y los límites:
+Encima del cuadro de redacción, un pequeño indicador muestra cuánto queda del volumen mensual incluido:
 
 - **Uso integrado**: cuando Plaid funciona con el modelo incluido de KANAP en lugar de con uno de los modelos propios de su organización, esto muestra cuántos mensajes quedan en el mes actual y la fecha en la que se restablece la cuota. Un administrador ha confirmado ese modelo antes (consulte [Configuración de Plaid](ai-settings.md#confirmar-el-modelo-incluido-de-kanap)). Cuando se alcanza el límite, el cuadro de redacción se desactiva y un texto de ayuda invita a los administradores a cambiar a un modelo propio; consulte [Modelos IA](ai-models.md).
-- **Uso de tokens**: una barra fina con contadores de tokens de entrada/salida para la conversación actual, además del tamaño de la última solicitud. Las conversaciones largas se vuelven más caras con el tiempo; la barra hace visible ese coste para que pueda decidir cuándo iniciar un nuevo hilo.
 
-La barra de uso de tokens solo aparece una vez que la conversación tiene al menos un intercambio.
+Las personas que pueden abrir **Administración > Plaid** ven también una barra fina bajo el cuadro de redacción, cuando la conversación tiene al menos un intercambio. **Volumen procesado** suma los tokens de entrada y de salida de cada mensaje de esta conversación. Cada pregunta reenvía los mensajes anteriores, de modo que el volumen crece más rápido que el número de turnos. **Contexto de la última solicitud** es la entrada de la última pregunta. La barra muestra también los tokens de entrada y los tokens de salida de la conversación.
 
 ## Consejos
 

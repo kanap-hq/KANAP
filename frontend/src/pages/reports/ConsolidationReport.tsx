@@ -61,17 +61,18 @@ export default function ConsolidationReport() {
   ], [accountOptions.options, t]);
 
   // The server groups the kept lines by the consolidation line of their account, one sum per year,
-  // the first year's largest first; lines without one are unassigned.
-  const request = useMemo(() => (reportFilters.queryFilters == null ? null : consolidationRequest({
+  // the first year's largest first; lines without one are unassigned. The preselected column is the
+  // tenant default: wait for the setting, or the product default is asked first.
+  const request = useMemo(() => (!budgetColumns.ready || reportFilters.queryFilters == null ? null : consolidationRequest({
     years,
     metric,
     excludedAccountIds: excludedAccounts,
     filters: reportFilters.queryFilters,
     measure,
-  })), [reportFilters.queryFilters, years, metric, excludedAccounts, measure]);
+  })), [budgetColumns.ready, reportFilters.queryFilters, years, metric, excludedAccounts, measure]);
   const report = useBudgetAggregate(scope, request, { keepPrevious: true });
-  // Loading, the filter bar still reading its address, or the last answer kept while the new one loads.
-  const busy = reportFilters.queryFilters == null || report.isLoading || report.isPlaceholderData;
+  // Loading, the column setting or the filter bar still unread, or the last answer kept while the new one loads.
+  const busy = !budgetColumns.ready || reportFilters.queryFilters == null || report.isLoading || report.isPlaceholderData;
   const unassigned = t('reports.consolidation.unassigned');
   // FTE: only the consolidation lines that declare FTE in one of the years.
   const { groups } = useMemo(() => readConsolidation(years, report.data, unassigned, measure), [years, report.data, unassigned, measure]);

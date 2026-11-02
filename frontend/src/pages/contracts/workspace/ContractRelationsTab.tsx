@@ -6,6 +6,7 @@ import api from '../../../api';
 import ItemContactsSection from '../../../components/contacts/ItemContactsSection';
 import { useKanapDialogs } from '../../../components/design';
 import LinksAndFilesSection, { type LinkDraft, type LinksAndFilesFile, type LinksAndFilesLink } from '../../../components/workspace/LinksAndFilesSection';
+import { removeWebLinkWithUndo, webLinkDraft, webLinkLabel } from '../../../components/workspace/removeWebLink';
 import {
   RelationSections,
   RelationSuggestions,
@@ -21,6 +22,7 @@ import {
 import { useRelationLabels } from '../../../components/workspace/relations/labels';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { buildItemPath } from '../../../utils/item-ref';
+import { EnsureApplicationFeedback, useApplicationFeedback } from '../../it/applicationFeedback';
 
 type Suggestion = {
   type: 'application' | 'asset';
@@ -57,7 +59,7 @@ const SUGGESTION_KIND: Record<Suggestion['type'], 'applications' | 'assets'> = {
  * A contract opened through one of its lines (`closedDocumentsCount` above 0) shows the number of
  * its attachments and documentary links instead of them: those detail other companies (spec §5.4).
  */
-export default function ContractRelationsTab({
+function ContractRelationsTabView({
   contractId,
   readOnly,
   closedDocumentsCount = 0,
@@ -71,6 +73,7 @@ export default function ContractRelationsTab({
   onChanged: () => void;
 }) {
   const { t } = useTranslation(['it', 'common', 'ops']);
+  const feedback = useApplicationFeedback();
   const dialogs = useKanapDialogs();
   const queryClient = useQueryClient();
   const labels = useRelationLabels();
@@ -126,17 +129,20 @@ export default function ContractRelationsTab({
 
   const removeLink = async (linkRow: LinksAndFilesLink) => {
     setError(null);
-    const previous = queryClient.getQueryData<WebLinkRow[]>(linksKey);
-    queryClient.setQueryData<WebLinkRow[]>(linksKey, (rows) => (rows ? rows.filter((row) => row.id !== linkRow.id) : rows));
-    try {
-      await api.delete(`/contracts/${contractId}/links/${linkRow.id}`);
-    } catch (e) {
-      if (previous) queryClient.setQueryData(linksKey, previous);
-      failed(e);
-      return;
-    }
-    await queryClient.invalidateQueries({ queryKey: linksKey });
-    onChanged();
+    await removeWebLinkWithUndo<WebLinkRow[]>({
+      queryClient,
+      queryKey: linksKey,
+      without: (rows) => rows.filter((row) => row.id !== linkRow.id),
+      commit: () => api.delete(`/contracts/${contractId}/links/${linkRow.id}`),
+      refresh: async () => {
+        await queryClient.invalidateQueries({ queryKey: linksKey });
+        onChanged();
+      },
+      restore: () => saveLink(null, webLinkDraft(linkRow)),
+      message: t('common:linksAndFiles.removed', { name: webLinkLabel(linkRow) }),
+      feedback,
+      onError: failed,
+    });
   };
 
   const uploadFiles = async (chosen: File[]) => {
@@ -257,5 +263,14 @@ export default function ContractRelationsTab({
         />
       )}
     </Stack>
+  );
+}
+
+/** The tab, with the undo message when the page does not already show one. */
+export default function ContractRelationsTab(props: React.ComponentProps<typeof ContractRelationsTabView>) {
+  return (
+    <EnsureApplicationFeedback>
+      <ContractRelationsTabView {...props} />
+    </EnsureApplicationFeedback>
   );
 }

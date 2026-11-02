@@ -1,6 +1,6 @@
 # Personalización
 
-Use la página Personalización para aplicar la identidad de su empresa en KANAP. Aquí define el logotipo y los colores principales, y el cambio es visible para todos los usuarios de su espacio de trabajo la próxima vez que recarguen la página.
+Use la página Personalización para aplicar la identidad de su empresa en KANAP. Aquí define el nombre de la organización, el logotipo y los colores principales, y el cambio es visible para todos los usuarios de su espacio de trabajo la próxima vez que recarguen la página.
 
 ## Dónde encontrarlo
 
@@ -13,8 +13,12 @@ Los cambios se aplican únicamente a su espacio de trabajo actual.
 
 ## Qué puede personalizar
 
-La página tiene dos tarjetas: **Logotipo** y **Colores principales**. Ambas son opcionales. Si no se establece nada, KANAP muestra su encabezado de texto e icono predeterminado y los colores de tema predeterminados.
+La página tiene tres tarjetas: **Nombre de la organización**, **Logotipo** y **Colores principales**. El logotipo y los colores son opcionales. Si no se establece nada, KANAP muestra su encabezado de texto e icono predeterminado y los colores de tema predeterminados.
 
+- **Nombre de la organización**
+  - El nombre que aparece con el logotipo, en Acerca de, en la página de consentimiento y para el asistente
+  - De 1 a 120 caracteres
+  - La dirección del espacio de trabajo sigue igual
 - **Logotipo**
   - Aparece en la barra superior de la app (cuando ha iniciado sesión)
   - Aparece en el encabezado de la página de inicio de sesión
@@ -22,6 +26,13 @@ La página tiene dos tarjetas: **Logotipo** y **Colores principales**. Ambas son
   - Un color principal para el **modo claro**
   - Un color principal para el **modo oscuro**
   - Utilizado por la barra de la app, los botones principales y los enlaces
+
+## Nombre de la organización
+
+1. Escriba el nombre.
+2. Haga clic en **Guardar cambios**.
+
+**Restablecer a valores predeterminados** deja el nombre como está. Quita el logotipo y los colores personalizados.
 
 ## Configuración del logotipo
 
@@ -73,9 +84,9 @@ La advertencia es informativa (aún puede guardar), pero el contraste bajo suele
 
 Tres acciones en la parte inferior de la página controlan la persistencia:
 
-- **Guardar cambios**: confirma la subida del logotipo seleccionado y los valores de color. Deshabilitado mientras no haya cambios pendientes o mientras una entrada hexadecimal sea inválida.
+- **Guardar cambios**: confirma el nombre de la organización, la subida del logotipo seleccionado y los valores de color. Deshabilitado mientras no haya cambios pendientes, mientras el nombre esté vacío o supere los 120 caracteres, o mientras una entrada hexadecimal sea inválida.
 - **Descartar**: revierte cualquier edición sin guardar en la página (no afecta a lo que ya está guardado).
-- **Restablecer a valores predeterminados**: elimina el logotipo guardado y borra todos los colores personalizados. Pide confirmación antes de ejecutarse.
+- **Restablecer a valores predeterminados**: elimina el logotipo guardado y borra todos los colores personalizados. El nombre de la organización permanece. Pide confirmación antes de ejecutarse.
 
 Una pequeña leyenda debajo de las acciones muestra el contador de **versión del logotipo**, que se incrementa cada vez que se sube el logotipo. Esto es principalmente una indicación de que las cachés del navegador se actualizarán.
 

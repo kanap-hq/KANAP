@@ -13,7 +13,7 @@ Navigieren Sie zu **Stammdaten > Lieferanten**, um das Lieferantenverzeichnis zu
 - **ERP-Lieferanten-ID**: Referenz-ID aus Ihrem ERP- oder Beschaffungssystem
 - **Notizen**: Freitext-Notizen zur Anbieterbeziehung
 
-**Tipp**: Erstellen Sie Lieferanten, bevor Sie Anwendungen oder Verträge anlegen. Sie können sie dann bei der Erstellung verknüpfen.
+**Tipp**: Geben Sie in einem Vertrag, einer Anwendung oder einer Budgetzeile den Namen des Lieferanten ein und wählen Sie **+ Lieferant erstellen**, wenn es ihn noch nicht gibt. **Neu** auf dieser Seite legt einen Lieferanten für sich an.
 
 ---
 
@@ -113,9 +113,9 @@ Klicken Sie in der Liste auf **Neu**. Geben Sie den Namen (Pflicht), die ERP-Lie
 
 Der Export schreibt eine CSV-Datei oder eine Excel-Arbeitsmappe (`.xlsx`): Wählen Sie unter **Format** im Dialog. Der Import liest beides. Siehe [CSV- und Excel-Dateien](csv-files.md).
 
-**Exportieren** lädt die Lieferanten herunter, die die Liste zeigt, mit ihrer Suche, ihren Filtern und ihrer Sortierung. Wählen Sie im Dialog **Das ganze Verzeichnis**, um alle Lieferanten herunterzuladen, aktivierte und deaktivierte. Der Dialog schließt sich, sobald die Datei heruntergeladen ist. **Importieren** liest eine Datei wieder ein. Der Importdialog bietet außerdem **Vorlage herunterladen**: eine Datei nur mit den Kopfzeilen. Er nennt die zulässigen Werte.
+**Exportieren** lädt die Lieferanten herunter, die die Liste zeigt, mit ihrer Suche, ihren Filtern und ihrer Sortierung. Wählen Sie im Dialog **Das ganze Verzeichnis**, um alle Lieferanten herunterzuladen, aktivierte und deaktivierte. Der Dialog schließt sich, sobald die Datei heruntergeladen ist. **Importieren** liest eine Datei wieder ein. Der Importdialog bietet außerdem **Vorlage herunterladen**, eine Datei nur mit den Kopfzeilen, und **Beispiel herunterladen** an (siehe [Beispieldateien](csv-files.md#example-files)). Er nennt die zulässigen Werte.
 
-Die Spalten:
+Die Datei benennt die Spalten in der Sprache Ihrer Oberfläche. Die Tabelle nennt ihre technischen Namen, die der Import ebenfalls liest:
 
 | Spalte | Inhalt |
 |---|---|

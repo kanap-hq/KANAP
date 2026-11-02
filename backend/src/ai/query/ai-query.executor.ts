@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
+import { codedForbidden } from '../../auth/module-right-required';
 import { AccountsService } from '../../accounts/accounts.service';
 import { ChartOfAccountsService } from '../../accounts/chart-of-accounts.service';
 import { AnalyticsCategoriesService } from '../../analytics/analytics-categories.service';
@@ -29,6 +30,10 @@ import type { SpendVersion } from '../../spend/spend-version.entity';
 import { SuppliersService } from '../../suppliers/suppliers.service';
 import { TechnologiesService } from '../../technologies/technologies.service';
 import { EndOfSupportService, type DeadlineRow } from '../../technologies/reports/end-of-support.service';
+import { PermissionsService } from '../../permissions/permissions.service';
+import { RolesService } from '../../roles/roles.service';
+import { DataAccessAdminService } from '../../data-access/data-access-admin.service';
+import { DataAccessReservedException } from '../../data-access/reserved-operations';
 import { UsersService } from '../../users/users.service';
 import {
   AiEntityMetadata,
@@ -36,6 +41,7 @@ import {
   AiEntitySummaryDto,
   AiExecutionContextWithManager,
   AiQueryEntityType,
+  AiSearchReferenceEntityType,
   AiQueryScope,
 } from '../ai.types';
 import { adaptFilters } from './ai-filter.adapter';
@@ -61,9 +67,13 @@ import {
 } from './ai-filter.types';
 import { assertPlainTextQuickSearch } from './ai-quick-search-validation.util';
 import { aiAmountsCurrency } from './ai-amounts-currency.util';
-import { aiDataAccessNote } from './ai-data-access-note.util';
+import { aiDataAccessCountsNote, aiDataAccessNote } from './ai-data-access-note.util';
+import { aiBudgetListAccess } from './ai-budget-list-access.util';
+import { compareNullableText } from '../../common/list-engine/sql-fragments';
+import type { BudgetListAccess } from '../../spend/budget-list/budget-list.runtime';
 import { coveredRecordsText, loadContractCoverage } from './ai-contract-coverage';
 import { hiddenContractLineCount } from '../../contracts/contract-relations';
+import { contractMismatchesAgainstLine, lineMismatchesAgainstContract } from '../../contracts/contract-line-match';
 import { AiReadProbe, analyticsAxisFields, resolveAiEntityRegistry } from './registries';
 import { taskRelatedFamily } from './registries/tasks.registry';
 import { budgetFteFields, budgetLineTotalFieldsOf, budgetPairOfKey, isBudgetMoneyKey } from './registries/budget-amount-fields';
@@ -81,12 +91,72 @@ import {
   technologyContractCount,
   technologyVersionFigures,
 } from './ai-technologies.query';
-import { AiVulnerabilityDetailRow, AiVulnerabilityRow, listAiVulnerabilities } from './ai-vulnerabilities.query';
+import { AiVulnerabilityDetailRow, AiVulnerabilityRow, listAiVulnerabilities, readAiVulnerabilityFeeds } from './ai-vulnerabilities.query';
 import { APPLICATIONS_UNREAD_NOTE, listAiSupportDeadlines, listAiSupportGaps, type AiSupportGapRow } from './ai-support.query';
+import {
+  findAiRole,
+  listAiRolePermissions,
+  listAiRoles,
+  type AiRolePermissionRow,
+  type AiRoleRow,
+  type AiRolesServices,
+} from './ai-roles.query';
+import {
+  AI_DATA_ACCESS_COVERAGE_NOTE,
+  AI_DATA_ACCESS_DELETED_NODE,
+  AI_DATA_ACCESS_NO_NODE_NOTE,
+  AI_DATA_ACCESS_UNAVAILABLE_NOTE,
+  listAiDataAccess,
+  type AiDataAccessRow,
+} from './ai-data-access.query';
+import { ChargebackReportService } from '../../spend/chargeback-report.service';
+import {
+  chargebackRowId,
+  chargebackRowLabel,
+  listAiChargeback,
+  listAiChargebackLines,
+  type AiChargebackLineRow,
+  type AiChargebackList,
+  type AiChargebackRow,
+} from './ai-chargeback.query';
+import { CostCentersService } from '../../cost-centers/cost-centers.service';
+import {
+  aiCostCenterDetail,
+  costCenterFilterValues,
+  filterAiCostCenters,
+  listAiCostCenters,
+  readAiCostCenterTree,
+  type AiCostCenterRow,
+} from './ai-cost-centers.query';
+import { WorkingDayProfilesService } from '../../working-day-profiles/working-day-profiles.service';
+import { AnalyticsAxesService } from '../../analytics/analytics-axes.service';
+import {
+  AI_CALENDAR_NO_YEAR_NOTE,
+  AI_CALENDAR_YEAR_NOTE,
+  calendarHolidays,
+  calendarMonths,
+  calendarYearOf,
+  listAiWorkingDayCalendars,
+  readCalendarYear,
+  type AiWorkingDayCalendarOpts,
+  type AiWorkingDayCalendarRow,
+} from './ai-working-day-calendars.query';
+import { AI_AXIS_VALUES_NOTE, listAiAnalyticsAxes, toAiAnalyticsAxisRow, type AiAnalyticsAxisRow } from './ai-analytics-axes.query';
+import { CurrencySettingsService } from '../../currency/currency-settings.service';
+import { ManualRatesService } from '../../currency/manual-rates.service';
+import { readAiExchangeRates, type AiExchangeRateRow } from './ai-exchange-rates.query';
 import { applicationVulnerabilityCounts, assetVulnerabilityCounts, VulnerabilityReachCounts } from '../../vulnerabilities/vulnerability-reach-counts';
 import { FIXED_SLOTS, FixedSlot, fteFieldKey, resolveFteField, SlotMetric, SUMMARY_COLUMNS } from '../../spend/spend-summary.builder';
 import { classificationLabels } from '../../applications/services/application-classification';
 import { readClassificationCatalog } from '../ai-classification-catalog.util';
+import { AI_SCREEN_RESOURCES, aiPermissionLevelLabel, aiResourceLabel } from '../ai-role-labels';
+import {
+  readAiScreenLanguage,
+  referenceSearchExact,
+  referenceSearchMatches,
+  referenceSearchWords,
+  type AiScreenLanguage,
+} from '../ai-unread-families';
 
 function toIso(value: Date | string | null | undefined): string | null {
   if (!value) return null;
@@ -397,12 +467,17 @@ function withDetailAiKeys(row: Record<string, any> | undefined, registry: AiEnti
   return output;
 }
 
-/** The descriptive fields both budget item types share, for the registry resolved for the tenant. */
-function budgetItemMetadata(row: any, registry: AiEntityFilterRegistry): AiEntityMetadata {
+/**
+ * The descriptive fields both budget item types share, for the registry resolved for the tenant.
+ * `consolidation`: each line's consolidation account (`consolidationLabels`), for a registry that
+ * holds the field (a person who reads the accounts).
+ */
+function budgetItemMetadata(row: any, registry: AiEntityFilterRegistry, consolidation?: Map<string, string | null>): AiEntityMetadata {
   return {
     supplier: scalar(row.supplier_name),
     paying_company: scalar(row.paying_company_name ?? row.company_name),
     account: scalar(row.account_display),
+    ...(registry.fields.consolidation_account ? { consolidation_account: consolidation?.get(row.id) ?? null } : {}),
     owner_it: scalar(row.owner_it_name),
     owner_business: scalar(row.owner_business_name),
     analytics_category: registry.fields.analytics_category?.nature && registry.fields.analytics_category.nature !== row.nature
@@ -562,6 +637,12 @@ function withoutHiddenLine<T extends { related_object_hidden?: true }>(row: T): 
   return { ...task, related_object_id: null, related_object_name: null } as unknown as T;
 }
 
+/**
+ * A reference data search whose right the caller has checked (`listReadableEntityTypes`), with the
+ * person's language read once for every family.
+ */
+export type ReferenceSearchChecked = { language: AiScreenLanguage | null };
+
 @Injectable()
 export class AiQueryExecutor {
   constructor(
@@ -595,6 +676,22 @@ export class AiQueryExecutor {
     @Optional() private readonly technologies?: TechnologiesService,
     /** The End of support report of the screen, which the two report families read. */
     @Optional() private readonly endOfSupport?: EndOfSupportService,
+    /** The services of Admin › Roles, which `roles` and `role_permissions` read. */
+    @Optional() private readonly roles?: RolesService,
+    @Optional() private readonly permissions?: PermissionsService,
+    /** Admin › Data access: the `data_access` family, and the access blocks of a person and a company. */
+    @Optional() private readonly dataAccess?: DataAccessAdminService,
+    /** The chargeback reports of the screens, which `chargeback` and `chargeback_lines` read. */
+    @Optional() private readonly chargeback?: ChargebackReportService,
+    /** Master data › Cost centers, which the `cost_centers` family reads. */
+    @Optional() private readonly costCenters?: CostCentersService,
+    /** Master data › Working-day calendars and Analytics dimensions: `working_day_calendars`, `analytics_axes`. */
+    @Optional() private readonly workingDayProfiles?: WorkingDayProfilesService,
+    @Optional() private readonly analyticsAxes?: AnalyticsAxesService,
+    /** The rate matrix and the missing rates of the Currency settings screen, which `exchange_rates` reads. */
+    @Optional() private readonly manualRates?: ManualRatesService,
+    /** The currency settings, in every `exchange_rates` response. */
+    @Optional() private readonly currencySettings?: CurrencySettingsService,
   ) {
     // Absent, the technology figures close (no application count, no detail): say so once, at start.
     const logger = new Logger(AiQueryExecutor.name);
@@ -854,7 +951,7 @@ export class AiQueryExecutor {
         last_dr_test: scalar(row.last_dr_test),
         category: scalar(row.category),
         editor: scalar(row.editor),
-        environment: scalar(row.environment),
+        // Deployments only. The legacy applications.environment column defaults to prod and is not a deployment.
         environments: scalar(Array.isArray(row.instances)
           ? row.instances.map((item: any) => item.environment).filter(Boolean).join(', ')
           : null),
@@ -904,7 +1001,7 @@ export class AiQueryExecutor {
    * A budget line of either nature, in the native shape of the unified list: `product_name` is
    * the title, `description` the description, and `nature` says which nature the line is.
    */
-  private mapBudgetLine(row: any, registry: AiEntityFilterRegistry): AiEntitySummaryDto {
+  private mapBudgetLine(row: any, registry: AiEntityFilterRegistry, consolidation?: Map<string, string | null>): AiEntitySummaryDto {
     const anchorYear = new Date().getFullYear();
     const summary = row.description
       ?? ([row.supplier_name, row.paying_company_name, row.account_display].filter(Boolean).join(' | ') || null);
@@ -919,7 +1016,7 @@ export class AiQueryExecutor {
       updated_at: row.updated_at ?? null,
       metadata: {
         nature: scalar(row.nature),
-        ...budgetItemMetadata(row, registry),
+        ...budgetItemMetadata(row, registry, consolidation),
         budget_anchor_year: anchorYear,
         ...budgetAmountMetadata(row, anchorYear),
       },
@@ -1207,6 +1304,8 @@ export class AiQueryExecutor {
         version: scalar(row.version),
         sources: row.sources.join(', '),
         alerts: row.alerts,
+        estate: row.estate,
+        matching: row.matching,
         published_at: scalar(row.published_at),
         detected_at: scalar(row.detected_at),
         servers_reached: row.servers_reached,
@@ -1298,6 +1397,419 @@ export class AiQueryExecutor {
         version: scalar(row.version),
       },
     });
+  }
+
+  /** A role of Admin › Roles: its name, kind and count of people (never their names). */
+  private mapRole(row: AiRoleRow): AiEntitySummaryDto {
+    return toEntitySummary('roles', {
+      id: row.id,
+      label: row.name,
+      status: row.type,
+      summary: row.description,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      metadata: {
+        name: row.name,
+        type: row.type,
+        user_count: row.user_count,
+      },
+    });
+  }
+
+  /**
+   * A right a role gives, at the level the Roles screen shows, with the screen's words for the right
+   * and the level in the person's language (`language`; null: the four languages).
+   */
+  private mapRolePermission(row: AiRolePermissionRow, language: AiScreenLanguage | null): AiEntitySummaryDto {
+    const resourceLabel = aiResourceLabel(row.resource, language);
+    return toEntitySummary('role_permissions', {
+      id: row.key,
+      label: `${row.role}: ${resourceLabel ?? row.resource}`,
+      status: row.level,
+      created_at: null,
+      updated_at: null,
+      metadata: {
+        role: row.role,
+        role_type: row.role_type,
+        resource: row.resource,
+        resource_label: resourceLabel,
+        level: row.level,
+        level_label: aiPermissionLevelLabel(row.level, language),
+      },
+    });
+  }
+
+  /**
+   * A row of Admin › Data access: a person in limited access and one of their nodes, or no node.
+   * The person names the row (`id` is theirs); no email.
+   */
+  private mapDataAccess(row: AiDataAccessRow): AiEntitySummaryDto {
+    const where = row.node_type === null
+      ? 'no node'
+      : row.node_type === 'all' ? 'all data' : row.node ?? '';
+    return toEntitySummary('data_access', {
+      id: row.person_id,
+      label: `${row.person}: ${where}`,
+      status: row.access,
+      summary: row.node_type === null ? AI_DATA_ACCESS_NO_NODE_NOTE : null,
+      created_at: null,
+      updated_at: row.changed_at,
+      metadata: {
+        person: row.person,
+        roles: row.roles.join(', '),
+        node_type: row.node_type,
+        node: row.node,
+        node_code: row.node_code,
+        node_kind: row.node_kind,
+        access: row.access,
+        changed_at: row.changed_at,
+        changed_by: row.changed_by,
+      },
+    });
+  }
+
+  /** A row of the global chargeback: a company, or one of its departments, named by both. */
+  private mapChargeback(row: AiChargebackRow): AiEntitySummaryDto {
+    return toEntitySummary('chargeback', {
+      // Distinct per row: a company's row and its common costs share the company.
+      id: chargebackRowId(row),
+      label: chargebackRowLabel(row),
+      status: row.level,
+      summary: null,
+      created_at: null,
+      updated_at: null,
+      metadata: {
+        level: row.level,
+        company: row.company,
+        department: row.department,
+        nature: row.nature,
+        amount: row.amount,
+        share: row.share,
+        headcount: row.headcount,
+        cost_per_user: row.cost_per_user,
+        ...(row.level === 'company' ? {
+          paid: row.paid,
+          net: row.net,
+          it_users: row.it_users,
+          turnover: row.turnover,
+          cost_per_it_user: row.cost_per_it_user,
+          cost_vs_turnover_pct: row.cost_vs_turnover_pct,
+        } : {}),
+      },
+    });
+  }
+
+  /**
+   * A line charged to the company of the report. A line the person does not read keeps no id: its
+   * BL reference and title name it, as the screen's line column, and it opens nothing.
+   */
+  private mapChargebackLine(row: AiChargebackLineRow): AiEntitySummaryDto {
+    return toEntitySummary('chargeback_lines', {
+      id: row.item_id ?? row.ref ?? row.key,
+      reference: row.ref,
+      label: row.line ?? row.ref ?? 'line outside your access',
+      status: row.allocation_method,
+      summary: null,
+      created_at: null,
+      updated_at: null,
+      metadata: {
+        nature: row.nature,
+        allocation_method: row.allocation_method,
+        amount: row.amount,
+        share_pct: row.share_pct,
+        readable: row.readable,
+        ...(row.paying_company !== undefined ? {
+          paying_company: row.paying_company,
+          allocation_pct: row.allocation_pct ?? null,
+          departments: (row.departments ?? []).join(', ') || null,
+        } : {}),
+      },
+    });
+  }
+
+  /** A working-day calendar of Master data, `ref` its code; with a year, its source and exact total. */
+  private mapWorkingDayCalendar(row: AiWorkingDayCalendarRow): AiEntitySummaryDto {
+    return toEntitySummary('working_day_calendars', {
+      id: row.id,
+      reference: row.code,
+      label: row.name,
+      status: row.status,
+      summary: row.description,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      metadata: {
+        code: row.code,
+        name: row.name,
+        kind: row.kind,
+        country: row.country,
+        country_code: row.country_code,
+        region: row.region,
+        region_code: row.region_code,
+        disabled_at: row.disabled_at,
+        years_edited: row.years_edited.join(', ') || null,
+        ...(row.year != null ? { year: row.year, source: row.source, total_days: row.total_days } : {}),
+      },
+    });
+  }
+
+  /** An analytics dimension of Master data, `ref` its code, with its settings and its budget_lines field. */
+  private mapAnalyticsAxis(row: AiAnalyticsAxisRow): AiEntitySummaryDto {
+    return toEntitySummary('analytics_axes', {
+      id: row.id,
+      reference: row.code,
+      label: row.name,
+      status: row.status,
+      summary: row.description,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      metadata: {
+        code: row.code,
+        name: row.name,
+        is_default: row.is_default,
+        applies_to: row.applies_to,
+        required: row.required,
+        required_for: row.required_for.join(', ') || null,
+        open_values: row.open_values,
+        disabled_at: row.disabled_at,
+        sort_order: row.sort_order,
+        field: row.field,
+      },
+    });
+  }
+
+  /**
+   * The services of Master data › Working-day calendars and Analytics dimensions, read with the
+   * right of their page: checked again here, the database not guarding it, refused in words (the
+   * right and the screen).
+   */
+  private async workingDayCalendarServices(context: AiExecutionContextWithManager, year?: number | null, checked?: ReferenceSearchChecked) {
+    if (!this.policy || !this.workingDayProfiles) throw new BadRequestException('The working-day calendars are not available.');
+    if (!checked) await this.policy.assertEntityTypeReadRight(context, 'working_day_calendars', context.manager);
+    const language = checked ? checked.language : await readAiScreenLanguage(context.manager, context.tenantId, context.userId);
+    const opts: AiWorkingDayCalendarOpts = {
+      manager: context.manager,
+      tenantId: context.tenantId,
+      userId: context.userId,
+      lang: language ?? 'en',
+      year: year ?? null,
+    };
+    return { services: { calendars: this.workingDayProfiles }, opts };
+  }
+
+  private async analyticsAxesServices(context: AiExecutionContextWithManager, checked?: ReferenceSearchChecked) {
+    if (!this.policy || !this.analyticsAxes) throw new BadRequestException('The analytics dimensions are not available.');
+    if (!checked) await this.policy.assertEntityTypeReadRight(context, 'analytics_axes', context.manager);
+    const language = checked ? checked.language : await readAiScreenLanguage(context.manager, context.tenantId, context.userId);
+    return {
+      services: { axes: this.analyticsAxes },
+      opts: { manager: context.manager, tenantId: context.tenantId, userId: context.userId, language },
+    };
+  }
+
+  /**
+   * A cell of the Currency settings matrix: a currency in one year, named `USD 2026`. No reference
+   * and no page link: the screen is an administration setting.
+   */
+  private mapExchangeRate(row: AiExchangeRateRow): AiEntitySummaryDto {
+    return toEntitySummary('exchange_rates', {
+      id: row.key,
+      label: `${row.currency} ${row.year}`,
+      status: row.source,
+      summary: row.rate == null ? row.rate_note ?? null : null,
+      created_at: null,
+      updated_at: row.captured_at,
+      metadata: {
+        year: row.year,
+        currency: row.currency,
+        rate: row.rate,
+        inverse_rate: row.inverse_rate,
+        source: row.source,
+        manual: row.manual,
+        captured_at: row.captured_at,
+        reporting_currency: row.reporting_currency,
+        ...(row.cross_rate !== undefined ? { cross_rate: row.cross_rate } : {}),
+        ...(row.cross_rate_note ? { cross_rate_note: row.cross_rate_note } : {}),
+      },
+    });
+  }
+
+  /**
+   * The chargeback reports, read with the reporting right as their routes: checked again here, the
+   * database not guarding it, refused in words (the right and the screen).
+   */
+  private async chargebackServices(context: AiExecutionContextWithManager, entityType: 'chargeback' | 'chargeback_lines') {
+    if (!this.policy || !this.chargeback) throw new BadRequestException('The chargeback reports are not available.');
+    await this.policy.assertEntityTypeReadRight(context, entityType, context.manager);
+    return { chargeback: this.chargeback };
+  }
+
+  /**
+   * The tree of cost centers, read with the right of its page as its route: checked again here,
+   * the database not guarding it, refused in words (the right and the screen).
+   */
+  private async costCenterServices(context: AiExecutionContextWithManager, checked?: ReferenceSearchChecked) {
+    if (!this.policy || !this.costCenters) throw new BadRequestException('The cost centers are not available.');
+    if (!checked) await this.policy.assertEntityTypeReadRight(context, 'cost_centers', context.manager);
+    return { services: { costCenters: this.costCenters }, opts: { manager: context.manager, tenantId: context.tenantId } };
+  }
+
+  /**
+   * The cost centers, working-day calendars or analytics dimensions that match a search, for
+   * `search_all`: the family's own read, every row, the right of its page checked as for
+   * query_entities. The words that name the family are taken out of the search ("centre de coûts
+   * Group IT" searches `group` and `it`), then a row matches when its code or its name holds every
+   * word left, without case or accents (`referenceSearchWords`). The path of a cost center does not
+   * count, so that a group's name does not bring back the whole group. A code or name equal to the
+   * rest comes first (`exact`); at most `limit` items, and `total` counts every match. `named`: the
+   * search names the family in words. `checked`: the caller has checked the right (search_all, for
+   * every family at once) and read the person's language.
+   */
+  async searchReferenceData(
+    context: AiExecutionContextWithManager,
+    entityType: AiSearchReferenceEntityType,
+    query: string,
+    limit = 5,
+    checked?: ReferenceSearchChecked,
+  ): Promise<{ items: Array<{ item: AiEntitySummaryDto; exact: boolean }>; total: number; named: boolean }> {
+    if (!String(query ?? '').trim()) return { items: [], total: 0, named: false };
+    const { words, rest, named } = referenceSearchWords(entityType, query);
+    let rows: Array<{ code: string; name: string; item: AiEntitySummaryDto }>;
+    if (entityType === 'cost_centers') {
+      const { services, opts } = await this.costCenterServices(context, checked);
+      const found = await filterAiCostCenters(services, opts, {});
+      // Where it matched, as the quick search says it: the code when it holds every word.
+      rows = found.rows.map((row) => ({
+        code: row.code,
+        name: row.name,
+        item: this.mapCostCenter({ ...row, matched_on: referenceSearchMatches(words, row.code, '') ? 'code' : 'name' }),
+      }));
+    } else if (entityType === 'working_day_calendars') {
+      const { services, opts } = await this.workingDayCalendarServices(context, null, checked);
+      const found = await listAiWorkingDayCalendars(services, {}, opts, true);
+      rows = found.items.map((row) => ({ code: row.code, name: row.name, item: this.mapWorkingDayCalendar(row) }));
+    } else {
+      const { services, opts } = await this.analyticsAxesServices(context, checked);
+      const found = await listAiAnalyticsAxes(services, {}, opts, true);
+      rows = found.items.map((row) => ({ code: row.code, name: row.name, item: this.mapAnalyticsAxis(row) }));
+    }
+    const matched = rows
+      .filter((row) => referenceSearchMatches(words, row.code, row.name))
+      .map((row) => ({ item: row.item, exact: referenceSearchExact(rest, row.code, row.name) }));
+    const ordered = [...matched.filter((row) => row.exact), ...matched.filter((row) => !row.exact)];
+    return { items: ordered.slice(0, limit), total: ordered.length, named };
+  }
+
+  /** A node of the tree of cost centers: its code is its reference, its name its label; no person id. */
+  private mapCostCenter(row: AiCostCenterRow): AiEntitySummaryDto {
+    return toEntitySummary('cost_centers', {
+      id: row.id,
+      reference: row.code,
+      label: row.name,
+      status: row.status,
+      summary: null,
+      created_at: null,
+      updated_at: null,
+      metadata: {
+        code: row.code,
+        name: row.name,
+        kind: row.kind,
+        parent: row.parent,
+        parent_code: row.parent_code,
+        company: row.company,
+        budget_holder: row.budget_holder,
+        status: row.status,
+        depth: row.depth,
+        path: row.path,
+        children: row.children,
+        disabled_at: row.disabled_at,
+        ...(row.matched_on ? { matched_on: row.matched_on } : {}),
+      },
+    });
+  }
+
+  /**
+   * Whether the caller reads Admin › Data access: users at admin level and access not limited, the
+   * family's gate (`AiPolicyService`). The database does not protect the nodes: every read of them
+   * (the family, the users fields, the person and company blocks) passes here. Closed without the
+   * policy or the service.
+   */
+  private async dataAccessView(context: AiExecutionContextWithManager): Promise<boolean> {
+    if (!this.dataAccess) return false;
+    return (await this.policy?.canReadEntityType(context, 'data_access', context.manager)) === true;
+  }
+
+  /**
+   * A person's access as the Data access tab of their dialog shows it (`GET /users/:id/data-access`):
+   * the mode, the nodes with their level, who changed it last, the cost centers they own. Missing
+   * parts of the function in the screen's words.
+   */
+  private personAccessBlock(access: Awaited<ReturnType<DataAccessAdminService['personAccess']>>): Record<string, unknown> {
+    const nodes = access.nodes.map((node) => {
+      if (node.type === 'all') return { type: 'all', access: node.access };
+      if (node.type === 'company') return { type: 'company', name: node.name ?? AI_DATA_ACCESS_DELETED_NODE, access: node.access };
+      const name = [node.code, node.name].filter((part) => !!part && String(part).trim()).join(' ');
+      return { type: 'cost_center', kind: node.kind, code: node.code, name: name || AI_DATA_ACCESS_DELETED_NODE, access: node.access };
+    });
+    const note = access.is_administrator
+      ? 'Administrator: sees all data, whatever is stored.'
+      : access.mode === 'all'
+        ? 'Sees all budget and contract data.'
+        : nodes.length === 0
+          ? AI_DATA_ACCESS_NO_NODE_NOTE
+          : 'Limited to these nodes: a company node covers the company and the cost centers of that company; a group node covers the group, its sub-groups and their cost centers, whatever their company; a cost center node covers that cost center only; all covers everything. Edit includes read. The person also always sees what they are named on.';
+    return {
+      mode: access.mode,
+      is_administrator: access.is_administrator,
+      nodes,
+      updated_at: access.updated_at,
+      updated_by_name: access.updated_by_name,
+      budget_owner_centers: access.budget_owner_centers.map((center) => ({ code: center.code, name: center.name })),
+      available: access.available,
+      ...(access.available ? {} : { unavailable_note: AI_DATA_ACCESS_UNAVAILABLE_NOTE }),
+      note,
+      coverage_note: AI_DATA_ACCESS_COVERAGE_NOTE,
+    };
+  }
+
+  /**
+   * Who sees a company, as its Access tab (`GET /companies/:id/data-access`): `full`, the people in
+   * limited access with an `all` node or a node on the company (by the most direct one), and
+   * `partial`, those whose cost center or group node covers a part of it. People whose access is
+   * not limited see it whole and are not listed.
+   */
+  private companyAccessBlock(access: Awaited<ReturnType<DataAccessAdminService['companyAccess']>>): Record<string, unknown> {
+    return {
+      full: access.full.map((entry) => ({
+        person: entry.person.name,
+        via: entry.via.type === 'all' ? 'all data' : entry.via.name ?? AI_DATA_ACCESS_DELETED_NODE,
+        via_type: entry.via.type,
+        access: entry.access,
+      })),
+      partial: access.partial.map((entry) => ({
+        person: entry.person.name,
+        via: [entry.via.code, entry.via.name].filter((part) => !!part && String(part).trim()).join(' ') || AI_DATA_ACCESS_DELETED_NODE,
+        via_type: entry.via.type,
+        access: entry.access,
+      })),
+      note: 'Only people in limited access are listed: everyone else sees the whole company. full: a node on all data or on this company; partial: a node on a cost center or group that covers a part of it. Who has a node on one cost center: query_entities on data_access filtered on node_code; what a cost center inherits is on its Access tab in KANAP.',
+      coverage_note: AI_DATA_ACCESS_COVERAGE_NOTE,
+    };
+  }
+
+  /** The services the two role families read; refused without them, never an empty list. */
+  private rolesServices(): AiRolesServices {
+    if (!this.roles || !this.permissions) throw new BadRequestException('The roles are not available.');
+    return { roles: this.roles, permissions: this.permissions };
+  }
+
+  /**
+   * The roles and their rights, checked again here though the tool checked them, as the data access
+   * branch: users at admin level and access not limited, refused in the policy's words (the right
+   * and the screen, or the reserved message). Closed without the policy.
+   */
+  private async assertRolesRead(context: AiExecutionContextWithManager, entityType: 'roles' | 'role_permissions'): Promise<void> {
+    if (!this.policy) throw codedForbidden('AI_ROLES_UNAVAILABLE', 'The roles are not available.');
+    await this.policy.assertEntityTypeReadRight(context, entityType, context.manager);
   }
 
   /**
@@ -1418,10 +1930,12 @@ export class AiQueryExecutor {
   }
 
   /**
-   * A user as the users list shows them: every column to an administrator of users, name, email and
-   * status to a reader (`adminView` false), as the screen does.
+   * A user as the users list shows them: every column to an administrator of users whose own access
+   * is not limited, name, email and status to anyone else (`adminView` false), as the screen does. The roles and the data-access mode
+   * (`accessView`) only to an administrator of users whose own access is not limited, as the
+   * list's Access column.
    */
-  private mapUser(row: any, adminView: boolean): AiEntitySummaryDto {
+  private mapUser(row: any, adminView: boolean, accessView = false): AiEntitySummaryDto {
     const label = displayName(row) ?? row.email ?? 'Unknown user';
     if (!adminView) {
       return toEntitySummary('users', {
@@ -1461,6 +1975,12 @@ export class AiQueryExecutor {
         contributor_profile: scalar(row.contributor_profile),
         project_availability: numericScalar(row.project_availability),
         areas_of_expertise: scalar(row.areas_of_expertise),
+        ...(accessView
+          ? {
+            roles: Array.isArray(row.roles) ? row.roles.join(', ') : null,
+            data_access: scalar(row.data_access),
+          }
+          : {}),
       },
     });
   }
@@ -1531,12 +2051,14 @@ export class AiQueryExecutor {
     const amounts = await aiAmountsCurrency(context, input.entity_type);
     const dataAccess = await aiDataAccessNote(context, input.entity_type);
     if (!sort.ignored.length) return { ...result, sort: sort.applied, sort_ignored: [], ...limitCapped, ...amounts, ...dataAccess };
-    // The items come in the default order, said so.
+    // The items come in the default order, said so; a field withheld for lack of a right says why.
+    const withheld = (registry.withheldFields ?? []).filter((entry) => sort.ignored.includes(entry.field));
     return {
       ...result,
       complete: false,
       sort: sort.applied,
       sort_ignored: sort.ignored,
+      ...(withheld.length ? { fields_withheld: withheld } : {}),
       sortable_fields: Object.keys(registry.sortFields),
       ...limitCapped,
       ...amounts,
@@ -1552,8 +2074,9 @@ export class AiQueryExecutor {
     rows: any[],
     anchorYear: number,
     named: string[],
+    access: BudgetListAccess,
   ): Promise<{ amount_totals: AiAmountTotals; page_amount_totals: AiAmountTotals }> {
-    const amountTotals = await this.budgetAmountTotals(context, query, records);
+    const amountTotals = await this.budgetAmountTotals(context, query, records, access);
     const pageTotals = budgetPageAmountTotals(rows, anchorYear, amountTotals.currency);
     // The line totals (staff cost and FTE, day cost, days) of every line kept, and of the page's lines:
     // the five columns of the current year and the years and columns the filters or the sort name
@@ -1566,12 +2089,12 @@ export class AiQueryExecutor {
     const { page: _page, limit: _limit, sort: _sort, years: _years, ...listState } = query;
     const ids = rows.map((row) => row?.id).filter((id): id is string => typeof id === 'string');
     // One after the other: both read on the request's connection.
-    const all = await this.budgetLineTotals(context, listState, pairs);
+    const all = await this.budgetLineTotals(context, listState, pairs, access);
     // A page that holds every line kept sums as all of them: no second statement.
     let page = all;
     if (ids.length !== records) {
       page = ids.length
-        ? await this.budgetLineTotals(context, { ...listState, filters: { ...(listState.filters ?? {}), id: { filterType: 'set', values: ids } } }, pairs)
+        ? await this.budgetLineTotals(context, { ...listState, filters: { ...(listState.filters ?? {}), id: { filterType: 'set', values: ids } } }, pairs, access)
         : Object.fromEntries(budgetLineTotalFieldsOf(pairs).map((field) => [field.ai, isBudgetMoneyKey(field.ai) ? 0 : null]));
     }
     const note = ' The staff cost, staff FTE, day cost and days (`<year>_<column>_staff_cost`...) are summed for the current year\'s columns '
@@ -1593,6 +2116,7 @@ export class AiQueryExecutor {
     context: AiExecutionContextWithManager,
     listState: Record<string, any>,
     pairs: ReadonlySet<string>,
+    access: BudgetListAccess,
   ): Promise<Record<string, number | null>> {
     const fields = budgetLineTotalFieldsOf(pairs);
     const values: Record<string, number | null> = {};
@@ -1602,7 +2126,7 @@ export class AiQueryExecutor {
       const result = await this.budgetLines.summaryAggregate(
         listState,
         { groupBy: [], measures: chunk.map((field, i) => ({ id: `m${i}`, fn: 'sum' as const, field: field.grid })) },
-        { manager: context.manager },
+        { manager: context.manager, access },
       );
       chunk.forEach((field, i) => {
         const value = result.total.values[`m${i}`] ?? null;
@@ -1613,6 +2137,46 @@ export class AiQueryExecutor {
   }
 
   /**
+   * The consolidation account of each line of `rows`, as the list engine labels it for the
+   * Consolidation accounts report (`account_consolidation_label`: one label per consolidation
+   * number, null without one), in one statement on their ids. Nothing when the registry holds no
+   * such field (a person who does not read the accounts).
+   */
+  private async consolidationLabels(
+    context: AiExecutionContextWithManager,
+    rows: any[],
+    registry: AiEntityFilterRegistry,
+    access: BudgetListAccess,
+  ): Promise<Map<string, string | null> | undefined> {
+    if (!registry.fields.consolidation_account) return undefined;
+    const ids = rows.map((row) => row?.id).filter((id): id is string => typeof id === 'string');
+    if (!ids.length) return new Map();
+    const result = await this.budgetLines.summaryAggregate(
+      { filters: { id: { filterType: 'set', values: ids } }, includeDisabled: true },
+      { groupBy: ['id', registry.fields.consolidation_account.grid], measures: [] },
+      { manager: context.manager, access },
+    );
+    return new Map(result.groups.map((group: { keys: Array<string | null> }) => [String(group.keys[0]), group.keys[1] ?? null]));
+  }
+
+  /**
+   * The consolidation accounts of the tenant's budget lines (every line, as the other values), in
+   * text order with null (a line without one) last: one aggregate statement grouped by the label.
+   */
+  private async consolidationValues(
+    context: AiExecutionContextWithManager,
+    grid: string,
+    access: BudgetListAccess,
+  ): Promise<Array<string | null>> {
+    const result = await this.budgetLines.summaryAggregate(
+      { includeDisabled: true },
+      { groupBy: [grid], measures: [] },
+      { manager: context.manager, access },
+    );
+    return result.groups.map((group: { keys: Array<string | null> }) => group.keys[0] ?? null).sort(compareNullableText);
+  }
+
+  /**
    * The amounts of every budget line the query keeps, all pages, as the list footer computes them
    * (`summaryTotals`, same filters and quick search): the total an answer quotes.
    */
@@ -1620,9 +2184,10 @@ export class AiQueryExecutor {
     context: AiExecutionContextWithManager,
     query: Record<string, any>,
     records: number,
+    access: BudgetListAccess,
   ): Promise<AiAmountTotals> {
     const { page: _page, limit: _limit, sort: _sort, years: _years, ...listState } = query;
-    const totals: any = await this.budgetLines.summaryTotals(listState, { manager: context.manager });
+    const totals: any = await this.budgetLines.summaryTotals(listState, { manager: context.manager, access });
     const values: Record<string, number> = {};
     for (const slot of FIXED_SLOTS) {
       for (const column of SUMMARY_COLUMNS) values[`${slot.ai}_${column.ai}`] = Number(totals?.[`${slot.key}${column.suffix}`] ?? 0);
@@ -1832,20 +2397,23 @@ export class AiQueryExecutor {
 
     if (input.entity_type === 'budget_lines') {
       const anchorYear = new Date().getFullYear();
+      // The person's access, as the screen passes it, to every engine call of the list.
+      const access = await aiBudgetListAccess(this.policy, context);
       const result = await this.budgetLines.summary(
         {
           ...scoped.query,
           years: budgetQueryYears(anchorYear).join(','),
         },
-        { manager: context.manager },
+        { manager: context.manager, access },
       );
+      const consolidation = await this.consolidationLabels(context, result.items || [], registry, access);
       const resultPage = result.page ?? page;
       const resultLimit = result.limit ?? limit;
       const returned = Array.isArray(result.items) ? result.items.length : 0;
       // The list has no cap: the total is every matching line of either nature.
       const truncated = (result.total ?? 0) > ((resultPage - 1) * resultLimit + returned);
       return {
-        items: (result.items || []).map((row: any) => this.mapBudgetLine(row, registry)),
+        items: (result.items || []).map((row: any) => this.mapBudgetLine(row, registry, consolidation)),
         total: result.total ?? 0,
         page: resultPage,
         limit: resultLimit,
@@ -1854,7 +2422,7 @@ export class AiQueryExecutor {
         complete: isCompleteQueryResult(resultPage, truncated),
         filters_applied: filtersApplied,
         filters_ignored: filtersIgnored,
-        ...await this.budgetTotals(context, scoped.query, result.total ?? 0, result.items || [], anchorYear, [...Object.keys(input.filters ?? {}), sort.applied.field]),
+        ...await this.budgetTotals(context, scoped.query, result.total ?? 0, result.items || [], anchorYear, [...Object.keys(input.filters ?? {}), sort.applied.field], access),
         scope: null,
       };
     }
@@ -2213,6 +2781,170 @@ export class AiQueryExecutor {
       };
     }
 
+    if (input.entity_type === 'roles' || input.entity_type === 'role_permissions') {
+      await this.assertRolesRead(context, input.entity_type);
+      const services = this.rolesServices();
+      const result = input.entity_type === 'roles'
+        ? await listAiRoles(services, context.manager, scoped.query)
+        : await listAiRolePermissions(services, context.manager, scoped.query);
+      const returned = result.items.length;
+      const truncated = result.total > ((result.page - 1) * result.limit + returned);
+      // The words of the rights follow the person's menus; a list of roles names none.
+      const language = input.entity_type === 'role_permissions'
+        ? await readAiScreenLanguage(context.manager, context.tenantId, context.userId)
+        : null;
+      return {
+        items: result.items.map((row) => (input.entity_type === 'roles'
+          ? this.mapRole(row as AiRoleRow)
+          : this.mapRolePermission(row as AiRolePermissionRow, language))),
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        returned,
+        truncated,
+        complete: isCompleteQueryResult(result.page, truncated),
+        filters_applied: filtersApplied,
+        filters_ignored: filtersIgnored,
+        scope: null,
+      };
+    }
+
+    if (input.entity_type === 'data_access') {
+      // The tool already checked the family; checked again here, the database not guarding the nodes.
+      if (!this.dataAccess || !(await this.dataAccessView(context))) throw new DataAccessReservedException();
+      const result = await listAiDataAccess({ dataAccess: this.dataAccess }, context.manager, scoped.query);
+      const returned = result.items.length;
+      const truncated = result.total > ((result.page - 1) * result.limit + returned);
+      return {
+        available: result.available,
+        missing: result.missing,
+        ...(result.available ? {} : { unavailable_note: AI_DATA_ACCESS_UNAVAILABLE_NOTE }),
+        counters: result.counters,
+        coverage_note: AI_DATA_ACCESS_COVERAGE_NOTE,
+        items: result.items.map((row) => this.mapDataAccess(row)),
+        total: result.total,
+        distinct_total: result.distinct_total,
+        distinct_label: 'person',
+        page: result.page,
+        limit: result.limit,
+        returned,
+        truncated,
+        complete: isCompleteQueryResult(result.page, truncated),
+        filters_applied: filtersApplied,
+        filters_ignored: filtersIgnored,
+        scope: null,
+      };
+    }
+
+    if (input.entity_type === 'chargeback' || input.entity_type === 'chargeback_lines') {
+      const services = await this.chargebackServices(context, input.entity_type);
+      const opts = { manager: context.manager, tenantId: context.tenantId, year: input.year };
+      const result: AiChargebackList<AiChargebackRow | AiChargebackLineRow> = input.entity_type === 'chargeback'
+        ? await listAiChargeback(services, scoped.query, opts)
+        : await listAiChargebackLines(services, scoped.query, opts);
+      const returned = result.items.length;
+      const truncated = result.total > ((result.page - 1) * result.limit + returned);
+      return {
+        chargeback: result.report,
+        items: result.items.map((row) => (input.entity_type === 'chargeback'
+          ? this.mapChargeback(row as AiChargebackRow)
+          : this.mapChargebackLine(row as AiChargebackLineRow))),
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        returned,
+        truncated,
+        complete: isCompleteQueryResult(result.page, truncated),
+        filters_applied: filtersApplied,
+        filters_ignored: filtersIgnored,
+        scope: null,
+      };
+    }
+
+    if (input.entity_type === 'cost_centers') {
+      const { services, opts } = await this.costCenterServices(context);
+      const result = await listAiCostCenters(services, opts, scoped.query);
+      const returned = result.items.length;
+      const truncated = result.total > ((result.page - 1) * result.limit + returned);
+      return {
+        ...(result.unmatched_note ? { unmatched_note: result.unmatched_note } : {}),
+        items: result.items.map((row) => this.mapCostCenter(row)),
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        returned,
+        truncated,
+        complete: isCompleteQueryResult(result.page, truncated),
+        filters_applied: filtersApplied,
+        filters_ignored: filtersIgnored,
+        scope: null,
+      };
+    }
+
+    if (input.entity_type === 'working_day_calendars') {
+      const { services, opts } = await this.workingDayCalendarServices(context, input.year);
+      const result = await listAiWorkingDayCalendars(services, scoped.query, opts);
+      const returned = result.items.length;
+      const truncated = result.total > ((result.page - 1) * result.limit + returned);
+      return {
+        calendar_year: result.year,
+        calendar_note: result.year != null ? AI_CALENDAR_YEAR_NOTE : AI_CALENDAR_NO_YEAR_NOTE,
+        items: result.items.map((row) => this.mapWorkingDayCalendar(row)),
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        returned,
+        truncated,
+        complete: isCompleteQueryResult(result.page, truncated),
+        filters_applied: filtersApplied,
+        filters_ignored: filtersIgnored,
+        scope: null,
+      };
+    }
+
+    if (input.entity_type === 'analytics_axes') {
+      const { services, opts } = await this.analyticsAxesServices(context);
+      const result = await listAiAnalyticsAxes(services, scoped.query, opts);
+      const returned = result.items.length;
+      const truncated = result.total > ((result.page - 1) * result.limit + returned);
+      return {
+        values_note: AI_AXIS_VALUES_NOTE,
+        items: result.items.map((row) => this.mapAnalyticsAxis(row)),
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        returned,
+        truncated,
+        complete: isCompleteQueryResult(result.page, truncated),
+        filters_applied: filtersApplied,
+        filters_ignored: filtersIgnored,
+        scope: null,
+      };
+    }
+
+    if (input.entity_type === 'exchange_rates') {
+      const result = await readAiExchangeRates(
+        { policy: this.policy, rates: this.manualRates, settings: this.currencySettings },
+        context,
+        scoped.query,
+      );
+      const returned = result.items.length;
+      const truncated = result.total > ((result.page - 1) * result.limit + returned);
+      return {
+        exchange_rates: result.block,
+        items: result.items.map((row) => this.mapExchangeRate(row)),
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        returned,
+        truncated,
+        complete: isCompleteQueryResult(result.page, truncated),
+        filters_applied: filtersApplied,
+        filters_ignored: filtersIgnored,
+        scope: null,
+      };
+    }
+
     if (input.entity_type === 'vulnerabilities') {
       const applications = await resolveAiApplicationsReach(context, this.policy);
       const result = await listAiVulnerabilities(context.manager, context.tenantId, scoped.query, applications);
@@ -2221,6 +2953,10 @@ export class AiQueryExecutor {
       return {
         items: result.items.map((row) => this.mapVulnerability(row)),
         total: result.total,
+        // The rows and the distinct CVE among them, as the page's total.
+        distinct_total: result.distinct_total,
+        distinct_label: 'cve',
+        feeds: await readAiVulnerabilityFeeds(context.manager),
         page: result.page,
         limit: result.limit,
         returned,
@@ -2274,16 +3010,18 @@ export class AiQueryExecutor {
 
     if (input.entity_type === 'users') {
       const adminView = await this.usersAdminView(context);
+      const accessView = adminView && await this.dataAccessView(context);
       const result = await this.users.listForAi(scoped.query, {
         manager: context.manager,
         tenantId: context.tenantId,
+        accessView,
       });
       const resultPage = result.page ?? page;
       const resultLimit = result.limit ?? limit;
       const returned = Array.isArray(result.items) ? result.items.length : 0;
       const truncated = (result.total ?? 0) > ((resultPage - 1) * resultLimit + returned);
       return {
-        items: (result.items || []).map((row: any) => this.mapUser(row, adminView)),
+        items: (result.items || []).map((row: any) => this.mapUser(row, adminView, accessView)),
         total: result.total ?? 0,
         page: resultPage,
         limit: resultLimit,
@@ -2299,7 +3037,8 @@ export class AiQueryExecutor {
     throw new BadRequestException('Unsupported entity type.');
   }
 
-  private async resolveDetailEntityId(
+  /** The record an `entity_id` names (uuid, reference or name), as get_entity_detail reads it; get_record_history reads it the same way. */
+  async resolveDetailEntityId(
     context: AiExecutionContextWithManager,
     entityType: AiQueryEntityType,
     rawId: string,
@@ -2606,6 +3345,18 @@ export class AiQueryExecutor {
         ? (nature === 'opex'
           ? this.contracts.listContractsForSpendItem(lineId, { manager: context.manager })
           : this.contracts.listContractsForCapexItem(lineId, { manager: context.manager })).catch(() => ({ items: [] }))
+          .then(async (linked) => {
+            if (!linked || linked.items.length === 0) return linked;
+            const mismatches = await contractMismatchesAgainstLine(
+              context.manager,
+              context.tenantId,
+              lineId,
+              linked.items.map((row) => row.id),
+            );
+            return {
+              items: linked.items.map((row) => ({ ...row, mismatches: mismatches?.get(row.id) ?? [] })),
+            };
+          })
         : null,
       this.budgetLines.listLinks(lineId, nature, { manager: context.manager }).catch(() => []),
       this.budgetLines.listAttachments(lineId, nature, { manager: context.manager }).catch(() => []),
@@ -2671,13 +3422,19 @@ export class AiQueryExecutor {
     // The contract's budget lines, both natures in one list: the OPEX lines come with the contract
     // (`contracts.get`), the CAPEX lines from their own link read. Null without the budget right,
     // which is not "none".
+    const linkedBudgetLineRows = [
+      ...(linkedSpendItems ?? []).map((line) => ({ id: line.id, reference: budgetLineReference(line.item_number), product_name: line.product_name, nature: 'opex' as const })),
+      ...((linkedCapexItems?.items ?? []) as Array<{ id: string; description: string | null; item_number?: number | null }>)
+        .map((line) => ({ id: line.id, reference: budgetLineReference(line.item_number), product_name: line.description, nature: 'capex' as const })),
+    ];
+    const lineMismatches = reads.budget && linkedBudgetLineRows.length > 0
+      ? await lineMismatchesAgainstContract(context.manager, context.tenantId, contractId, linkedBudgetLineRows.map((line) => line.id))
+      : null;
+    // Null without the budget right, which is not "none". A line outside data access is already
+    // absent; `mismatches` is empty when the visible line agrees with the contract.
     const linkedBudgetLines = reads.budget
       ? {
-        items: [
-          ...(linkedSpendItems ?? []).map((line) => ({ id: line.id, reference: budgetLineReference(line.item_number), product_name: line.product_name, nature: 'opex' as const })),
-          ...((linkedCapexItems?.items ?? []) as Array<{ id: string; description: string | null; item_number?: number | null }>)
-            .map((line) => ({ id: line.id, reference: budgetLineReference(line.item_number), product_name: line.description, nature: 'capex' as const })),
-        ],
+        items: linkedBudgetLineRows.map((line) => ({ ...line, mismatches: lineMismatches?.get(line.id) ?? [] })),
       }
       : null;
     // What the contract covers, each family on its module's read right:
@@ -2728,9 +3485,14 @@ export class AiQueryExecutor {
     return new Map(contractIds.map((id) => [id, coveredRecordsText(byContract.get(id))]));
   }
 
-  /** Whether the caller administers users, as the users list decides its columns (`canViewUserAdministration`). */
+  /**
+   * Whether the caller reads the administration fields of a person: users at admin level and access
+   * not limited, as the users list decides its columns (`canViewUserAdministration`, closed to a
+   * limited person by `frontend/src/auth/dataAccess.ts`). The rule of the registry
+   * (`UNSCOPED_ADMIN_FIELDS`).
+   */
   private async usersAdminView(context: AiExecutionContextWithManager): Promise<boolean> {
-    return (await this.policy?.canReadEntityType(context, 'users', context.manager, 'admin')) === true;
+    return (await this.policy?.canReadEntityType(context, 'data_access', context.manager)) === true;
   }
 
   /**
@@ -2763,7 +3525,7 @@ export class AiQueryExecutor {
 
   /** Whether the caller reads a family; nothing without the policy. */
   private readProbe(context: AiExecutionContextWithManager): AiReadProbe {
-    return async (entityType, level) => !!(await this.policy?.canReadEntityType(context, entityType, context.manager, level));
+    return async (entityType) => !!(await this.policy?.canReadEntityType(context, entityType, context.manager));
   }
 
   /**
@@ -2811,7 +3573,22 @@ export class AiQueryExecutor {
       // A report row has no page of its own: it names its subject by `subject`.
       throw new BadRequestException('An End of support report row has no detail of its own: its `subject` names the record, read with get_entity_detail on its family (applications, assets or technologies) by that reference or name.');
     }
+    if (entityType === 'role_permissions') {
+      throw new BadRequestException('A right of a role has no detail of its own: read the role with get_entity_detail on roles (by name), which lists all its rights.');
+    }
+    if (entityType === 'roles') return this.roleDetail(context, input.entity_id);
+    if (entityType === 'data_access') {
+      throw new BadRequestException('A row of Admin › Data access has no detail of its own: read the person with get_entity_detail on users (by name or email), which gives their data access.');
+    }
     const entityId = await this.resolveDetailEntityId(context, entityType, input.entity_id);
+    if (entityType === 'cost_centers') {
+      const { services, opts } = await this.costCenterServices(context);
+      const { row, data } = await aiCostCenterDetail(services, opts, entityId);
+      // The line counts pass the lines' access rules: within the person's access when it is limited.
+      return { ...this.toDetailResult(this.mapCostCenter(row), data), ...await aiDataAccessCountsNote(context, entityType) };
+    }
+    if (entityType === 'working_day_calendars') return this.workingDayCalendarDetail(context, entityId, input.year);
+    if (entityType === 'analytics_axes') return this.analyticsAxisDetail(context, entityId);
     const accessScope = await resolveAiParticipationAccessScope(context, entityType);
 
     if (entityType === 'tasks') {
@@ -2930,6 +3707,8 @@ export class AiQueryExecutor {
       Object.assign(row, vulnerabilityCountsOf((await applicationVulnerabilityCounts(context.manager, context.tenantId, [row.id])).get(row.id)));
       // The labels and ranks of the classification, as the list gives them.
       Object.assign(row, classificationLabels(row, await readClassificationCatalog(context)));
+      // The deprecated column defaults to prod on every application. The deployments keep their own environment.
+      delete row.environment;
       return this.toDetailResult(this.mapApplication(row), row);
     }
 
@@ -2961,8 +3740,8 @@ export class AiQueryExecutor {
     }
 
     if (entityType === 'budget_lines') {
-      // The unified read engine resolves BL-n, a legacy OPX-n or CPX-n, a bare number or a UUID,
-      // and answers the line of either nature (`resolveBudgetLine`).
+      // The unified read engine resolves BL-n, a bare number, a UUID, or OPX-n / CPX-n (the line
+      // number first, then the legacy number) and answers the line of either nature (`resolveBudgetLine`).
       const row: any = await this.budgetLines.get(entityId, { manager: context.manager });
       if (row.tenant_id && row.tenant_id !== context.tenantId) throw new NotFoundException('Budget line not found.');
       // The workspace's own read adds its picker references, its change-of-type lineage and, for a
@@ -2974,7 +3753,8 @@ export class AiQueryExecutor {
       const registry = await resolveAiEntityRegistry(context, entityType, this.readProbe(context));
       // The id, not the reference the caller may have given (`get` accepts both).
       Object.assign(row, await this.loadBudgetLineDeepDetail(context, row.id as string, row.nature, registry));
-      return this.toDetailResult(this.mapBudgetLine(row, registry), row);
+      const consolidation = await this.consolidationLabels(context, [row], registry, await aiBudgetListAccess(this.policy, context));
+      return this.toDetailResult(this.mapBudgetLine(row, registry, consolidation), row);
     }
 
     if (entityType === 'contracts') {
@@ -3001,6 +3781,10 @@ export class AiQueryExecutor {
         row.it_users_year = selectedMetric.it_users;
         row.turnover_year = selectedMetric.turnover;
         row.metrics_frozen = selectedMetric.is_frozen;
+      }
+      // The company's Access tab, to an administrator of users whose own access is not limited only.
+      if (this.dataAccess && await this.dataAccessView(context)) {
+        row.data_access = this.companyAccessBlock(await this.dataAccess.companyAccess(context.manager, entityId));
       }
       return this.toDetailResult(this.mapCompany(row), row);
     }
@@ -3082,14 +3866,30 @@ export class AiQueryExecutor {
     }
 
     if (entityType === 'users') {
-      const row = await this.users.findById(entityId, { manager: context.manager });
-      if (!row) throw new NotFoundException('User not found.');
+      const user = await this.users.findById(entityId, { manager: context.manager });
+      if (!user) throw new NotFoundException('User not found.');
       // A reader of users gets what the user's page gives them (`toUserLookup`): name, email, status.
       if (!(await this.usersAdminView(context))) {
-        const lookup = { id: row.id, email: row.email, first_name: row.first_name, last_name: row.last_name, status: row.status };
+        const lookup = { id: user.id, email: user.email, first_name: user.first_name, last_name: user.last_name, status: user.status };
         return this.toDetailResult(this.mapUser(lookup, false), lookup);
       }
-      return this.toDetailResult(this.mapUser(row, true), row);
+      // `findById` gives the entity; `mapUser` reads the columns of the users list (company,
+      // department, primary role, team, contributor profile, availability, expertise), read by the
+      // list's own query for this one person.
+      const listed = await this.users.listForAi({ limit: 1 }, { manager: context.manager, tenantId: context.tenantId, ids: [user.id] });
+      const row = { ...user, ...(listed.items[0] ?? {}) };
+      // The Data access tab of the person's dialog, to an administrator of users whose own access
+      // is not limited only (the database does not guard the nodes: the gate is here).
+      if (!this.dataAccess || !(await this.dataAccessView(context))) {
+        return this.toDetailResult(this.mapUser(row, true), row);
+      }
+      const roles = await this.users.rolesOf(row, { manager: context.manager });
+      const access = await this.dataAccess.personAccess(context.manager, row.id);
+      const detail = { ...row, roles, data_access: access.mode };
+      return this.toDetailResult(this.mapUser(detail, true, true), {
+        ...detail,
+        data_access: this.personAccessBlock(access),
+      });
     }
 
     if (entityType === 'documents') {
@@ -3259,9 +4059,132 @@ export class AiQueryExecutor {
         version: item.version,
         state: item.state,
         alerts: item.alerts,
+        matching: item.matching,
         servers_reached: item.servers_reached,
         applications_reached: item.applications_reached,
       })),
+    });
+  }
+
+  /**
+   * A working-day calendar as its page (`GET /working-day-profiles/:id`): its source, the years
+   * stored, the OPEX and CAPEX lines using it (within the person's access) and, with a year, that
+   * year as its tab (`GET /working-day-profiles/:id/years/:year`): the source, the twelve months,
+   * their exact total and the public holidays by name in the person's language.
+   */
+  private async workingDayCalendarDetail(context: AiExecutionContextWithManager, id: string, rawYear?: number): Promise<AiEntityDetailDto> {
+    const { services, opts } = await this.workingDayCalendarServices(context);
+    const year = calendarYearOf(undefined, rawYear ?? null);
+    const ctx = { manager: context.manager, tenantId: context.tenantId, userId: context.userId };
+    const calendar = await services.calendars.get(id, ctx, opts.lang);
+    const row: AiWorkingDayCalendarRow = {
+      id: calendar.id,
+      code: calendar.code,
+      name: calendar.name,
+      kind: calendar.country_iso ? 'standard' : 'custom',
+      country: calendar.country_name,
+      country_code: calendar.country_iso,
+      region: calendar.region_name,
+      region_code: calendar.region_code,
+      status: calendar.status,
+      disabled_at: calendar.disabled_at,
+      description: calendar.description,
+      years_edited: Object.keys(calendar.days_by_year ?? {}),
+      created_at: calendar.created_at,
+      updated_at: calendar.updated_at,
+      year: null,
+      source: null,
+      total_days: null,
+    };
+    let yearBlock: Record<string, unknown> = { year_note: AI_CALENDAR_NO_YEAR_NOTE };
+    if (year != null) {
+      const read = await readCalendarYear(services, opts, id, year);
+      row.year = year;
+      row.source = read.source;
+      row.total_days = read.total_days;
+      yearBlock = {
+        year,
+        source: read.source,
+        total_days: read.total_days,
+        months: calendarMonths(read.days),
+        ...(read.source === 'edited' && read.standard_days ? { standard_total_days: read.standard_total_days } : {}),
+        holidays: calendarHolidays(read.holidays),
+        year_note: AI_CALENDAR_YEAR_NOTE,
+      };
+    }
+    const { days_by_year: _days, opex_count: _opex, capex_count: _capex, ...rest } = calendar;
+    return {
+      ...this.toDetailResult(this.mapWorkingDayCalendar(row), {
+        ...rest,
+        kind: row.kind,
+        years_edited: row.years_edited,
+        lines_using: { opex: calendar.opex_count, capex: calendar.capex_count },
+        lines_using_note: 'The OPEX and CAPEX lines with a quantity × price line on this calendar, whatever the year or column.',
+        ...yearBlock,
+      }),
+      ...(await aiDataAccessCountsNote(context, 'working_day_calendars')),
+    };
+  }
+
+  /**
+   * An analytics dimension as its page (`GET /analytics-axes/:id`): its settings, its number of
+   * values, the OPEX and CAPEX lines holding a value on it and without one (within the person's
+   * access), and the natures on which no enabled value can be chosen.
+   */
+  private async analyticsAxisDetail(context: AiExecutionContextWithManager, id: string): Promise<AiEntityDetailDto> {
+    const { services, opts } = await this.analyticsAxesServices(context);
+    const axis = await services.axes.get(id, { manager: context.manager, tenantId: context.tenantId, userId: context.userId });
+    const row = toAiAnalyticsAxisRow(axis, opts.language);
+    return {
+      ...this.toDetailResult(this.mapAnalyticsAxis(row), {
+        ...row,
+        value_count: axis.value_count,
+        opex_count: axis.opex_count,
+        capex_count: axis.capex_count,
+        opex_missing: axis.opex_missing,
+        capex_missing: axis.capex_missing,
+        unusable_for: axis.unusable_for,
+        counts_note: 'opex_count and capex_count: the lines holding a value on the dimension; opex_missing and capex_missing: the lines of every status without one (0 for a nature it does not apply to), whether or not it is required; unusable_for: the natures it applies to on which none of its enabled values can be chosen.',
+        values_note: AI_AXIS_VALUES_NOTE,
+      }),
+      ...(await aiDataAccessCountsNote(context, 'analytics_axes')),
+    };
+  }
+
+  /**
+   * A role by its name or id, with its rights as the Roles screen's matrix: every right, in the
+   * screen's order, at the level the role gives, null where it gives none, and `rights`, the rights
+   * it gives with the screen's words in the person's language. The people it is given to are
+   * counted, never named.
+   */
+  private async roleDetail(context: AiExecutionContextWithManager, entityId: string): Promise<AiEntityDetailDto> {
+    await this.assertRolesRead(context, 'roles');
+    const services = this.rolesServices();
+    const value = String(entityId ?? '').trim();
+    const role = await findAiRole(services, context.manager, value);
+    if (!role) throw entityNotFound('roles', value);
+    const matrix = await services.permissions.getRolePermissionMatrix(role.id, { manager: context.manager });
+    // The rights the Roles screen shows, and no other (`AI_SCREEN_RESOURCES`).
+    const permissions = Object.fromEntries(AI_SCREEN_RESOURCES.map((resource) => [resource, matrix[resource] ?? null]));
+    const language = await readAiScreenLanguage(context.manager, context.tenantId, context.userId);
+    const rights = (Object.entries(permissions) as Array<[AiRolePermissionRow['resource'], AiRolePermissionRow['level'] | null]>)
+      .filter((entry): entry is [AiRolePermissionRow['resource'], AiRolePermissionRow['level']] => entry[1] != null)
+      .map(([resource, level]) => ({
+        resource,
+        resource_label: aiResourceLabel(resource, language),
+        level,
+        level_label: aiPermissionLevelLabel(level, language),
+      }));
+    return this.toDetailResult(this.mapRole(role), {
+      name: role.name,
+      description: role.description,
+      type: role.type,
+      user_count: role.user_count,
+      created_at: role.created_at,
+      updated_at: role.updated_at,
+      permissions,
+      rights,
+      permissions_note: '`permissions` gives every right of the Roles screen with the level the role gives (null: none); `rights` lists the rights it gives with the words of the Roles screen (`resource_label`, `level_label`), the ones to quote, never the codes.',
     });
   }
 
@@ -3404,6 +4327,8 @@ export class AiQueryExecutor {
     const fieldsIgnored = new Set<string>();
     const dynamicFieldMap = new Map<string, string[]>();
 
+    // The requested fields the person may not read, with the reason.
+    const withheld = (registry.withheldFields ?? []).filter((entry) => requestedFields.includes(entry.field));
     for (const fieldName of requestedFields) {
       const field = registry.fields[fieldName];
       if (!field || field.discoverable !== true) {
@@ -3428,6 +4353,7 @@ export class AiQueryExecutor {
       return {
         values,
         fields_ignored: ignoredFields,
+        ...(withheld.length ? { fields_withheld: withheld } : {}),
         total: requestedFields.length,
         returned: Object.keys(values).length,
         truncated: false,
@@ -3489,9 +4415,11 @@ export class AiQueryExecutor {
         accessScope,
       }) as any;
     } else if (input.entity_type === 'budget_lines') {
-      raw = await this.budgetLines.summaryFilterValues(query, {
-        manager: context.manager,
-      }) as any;
+      const access = await aiBudgetListAccess(this.policy, context);
+      raw = await this.budgetLines.summaryFilterValues(query, { manager: context.manager, access }) as any;
+      // The consolidation account is no column of the list: its values are the engine's labels of the lines.
+      const consolidation = registry.fields.consolidation_account?.grid;
+      if (consolidation && dynamicFieldMap.has(consolidation)) raw[consolidation] = await this.consolidationValues(context, consolidation, access);
     } else if (input.entity_type === 'contracts') {
       raw = await this.contracts.listFilterValues(query, {
         manager: context.manager,
@@ -3535,6 +4463,13 @@ export class AiQueryExecutor {
       // The labels have no value list on the version row: they are read from the labels of the
       // tenant's technology versions, one query (the `version` values of the technologies).
       if (dynamicFieldMap.has('label')) raw.label = await this.technologyVersionLabels(context);
+    } else if (input.entity_type === 'cost_centers') {
+      // The names the nodes carry, read from the tree: no column to read them from.
+      const { services, opts } = await this.costCenterServices(context);
+      const { rows } = await readAiCostCenterTree(services, opts);
+      for (const field of ['company', 'budget_holder'] as const) {
+        if (dynamicFieldMap.has(field)) raw[field] = costCenterFilterValues(rows, field);
+      }
     } else if (input.entity_type === 'incidents') {
       const viewer = await resolveIncidentViewer(context.manager, context.userId, context.tenantId);
       const reads = this.readProbe(context);
@@ -3575,6 +4510,7 @@ export class AiQueryExecutor {
     return {
       values,
       fields_ignored: ignoredFields,
+      ...(withheld.length ? { fields_withheld: withheld } : {}),
       total: requestedFields.length,
       returned: Object.keys(values).length,
       truncated: false,

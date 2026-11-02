@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { assertLinesEditable } from '../../data-access/line-write-checks';
 import { validate as isUuid } from 'uuid';
 import { RelatedType } from '../../tasks/tasks-unified.service';
@@ -10,11 +10,12 @@ import {
   resolveAiParticipationAccessScope,
 } from '../query/ai-query-scope.util';
 import {
-  INCIDENT_LOCKED_MESSAGE,
+  incidentLocked,
   incidentVisibilitySql,
   isFrozenIncidentStatus,
   taskIncidentVisibilitySql,
 } from '../../incidents/incident-visibility';
+import { parseItemNumber } from '../../common/parse-item-number';
 import { budgetLineReferenceNumbers } from '../../common/resolve-item-id';
 import { BUDGET_LINE_PREFIX } from '../../spend/budget-nature';
 
@@ -282,7 +283,7 @@ export class AiTaskMutationSupportService {
 
   private parseProjectItemNumber(input: string): number | null {
     const match = String(input || '').trim().match(PROJECT_REF_RE);
-    return match ? Number.parseInt(match[1], 10) : null;
+    return match ? parseItemNumber(match[1]) : null;
   }
 
   /**
@@ -297,7 +298,7 @@ export class AiTaskMutationSupportService {
     const raw = textOrNull(reference);
     if (!raw) throw new BadRequestException('relation_ref is required when relation_type is incident.');
     const uuid = isUuid(raw);
-    const itemNumber = raw.match(/^INC-(\d+)$/i)?.[1] ?? null;
+    const itemNumber = parseItemNumber(raw.match(/^INC-(\d+)$/i)?.[1]);
     const viewer = await resolveAiIncidentViewer(context);
     const params: unknown[] = [context.tenantId, raw, itemNumber];
     const visibility = incidentVisibilitySql('target', viewer, params);
@@ -320,7 +321,7 @@ export class AiTaskMutationSupportService {
     if (rows.length === 0) throw new NotFoundException(`No incident found matching "${raw}".`);
     if (rows.length > 1) throw new BadRequestException(`Multiple incidents matched "${raw}". Use an INC reference.`);
     const row = rows[0];
-    if (isFrozenIncidentStatus(row.status)) throw new ForbiddenException(INCIDENT_LOCKED_MESSAGE);
+    if (isFrozenIncidentStatus(row.status)) throw incidentLocked();
     const ref = row.item_number == null ? raw : `INC-${row.item_number}`;
     return {
       mode: 'incident',
@@ -605,7 +606,9 @@ export class AiTaskMutationSupportService {
       if (!match) {
         throw new BadRequestException('Task reference must be a task UUID or a T-123 style reference.');
       }
-      const params: unknown[] = [context.tenantId, Number.parseInt(match[1], 10)];
+      const itemNumber = parseItemNumber(match[1]);
+      if (itemNumber == null) throw new NotFoundException('Task not found.');
+      const params: unknown[] = [context.tenantId, itemNumber];
       const accessScopeSql = appendParticipationScopeSql('tasks', 't', params, accessScope);
       const incidentSql = taskIncidentVisibilitySql('t', viewer, params);
       rows = await context.manager.query(

@@ -168,7 +168,7 @@ The drawer shows the asset's identity card on every tab. Edits save automaticall
 - **Administration zone**: The zone of your administration model the asset belongs to, for example Tier 0 for a domain controller and the hypervisor that runs it. Choose from the zones configured in **IT Landscape > Settings**, or **No zone**. The asset then appears in that zone on the [Administration zones](administration-view.md) page
 
 **Location**:
-- **Location** (required)
+- **Location** (required): every asset has one, whether it comes from the screen, an import or the assistant. When the location does not exist yet, type its name and choose **+ Create location "…"**: give its hosting type, and the new location goes into the field. This needs `locations:member`
 - **Sub-location** (when the location has sub-locations defined)
 - **Hosting type**, **Operating company** or **Cloud provider**, **Country**, **City**: read-only, derived from the location. They follow when you change the location
 
@@ -217,12 +217,12 @@ The Operations tab shows the cluster of the asset and what runs on it: the appli
 | Column | What it shows |
 |--------|---------------|
 | **Application** | Application name. Click it to open the application on its **Deployments** tab |
-| **Environment** | The deployment environment the assignment belongs to |
+| **Deployment** | The deployment of the application that the asset serves, named after its environment |
 | **Role** | Server role (Web, Database, Application, etc.) |
 | **Since** | Date the server was assigned |
 | **Notes** | Free-text notes |
 
-Click **Add assignment** to attach this asset to an application deployment. Pick the application, then the environment (the application must already have a deployment in that environment), then the role and optional date / notes. On a member of a cluster, KANAP first asks whether to assign the cluster or this server only. See [Applications on a cluster](#applications-on-a-cluster). The pencil at the end of a row opens the application: the assignment is edited in its **Deployments** tab. The bin icon removes the assignment, after a confirmation. **Add assignment** is unavailable while no server role is set up in **IT Landscape > Settings**. These commands need `infrastructure:member` and `applications:member`. Without both, the table is read-only.
+Click **Add assignment** to attach this asset to an application deployment. Pick the application, then its deployment. When the application has no deployment in an environment yet, **+ Create the … deployment** creates it along with the assignment. Then pick the role and optional date / notes. On a member of a cluster, KANAP first asks whether to assign the cluster or this server only. See [Applications on a cluster](#applications-on-a-cluster). The pencil at the end of a row opens the application: the assignment is edited in its **Deployments** tab. The bin icon removes the assignment, after a confirmation. **Add assignment** is unavailable while no server role is set up in **IT Landscape > Settings**. These commands need `infrastructure:member` and `applications:member`. Without both, the table is read-only.
 
 On a member, an application assigned to its cluster shows "via" the cluster's name, without pencil or bin: change it on the cluster.
 
@@ -374,7 +374,7 @@ Dates in orange need attention: a contract whose renewal decision is due within 
 
 - **Add link** opens a dialog for a URL and an optional name; the link is saved at once. An address typed without `http://` or `https://` gets `https://`. Any other scheme is refused. To change a link, hover its row and click the pencil.
 - **Attach file** opens the file chooser. You can also drop files on the section.
-- To remove a link or a file, hover the row and click the cross. Deleting a file asks for confirmation first.
+- To remove a link or a file, hover the row and click the cross. Removing a link shows a message and offers **Undo**, which creates the link again. Deleting a file asks for confirmation first.
 
 ---
 
@@ -407,6 +407,10 @@ The asset type, lifecycle, domain, administration zone and IP address type colum
 | **Custom Selection** | Choose specific fields to include in your export |
 
 **Template download** (from Import dialog): Downloads a blank CSV with all importable field headers. Use this to prepare import files with the correct structure.
+
+**Download an example** (from Import dialog): an Excel workbook of sample servers, with what each column takes. See [Example files](csv-files.md#example-files).
+
+The export and the template title the columns in the language of your screen. The import reads the titles of any language.
 
 ### Import workflow
 
@@ -512,7 +516,7 @@ Some fields are computed and cannot be imported:
 ### Limitations
 
 - **Maximum 4 IP addresses**: Assets support up to 4 IP address entries in a file
-- **Location required**: Every asset must have the code of an existing location
+- **Location required**: Every asset must have the code of an existing location. **Preflight** reports an error on a row with an empty `location_reference` cell and refuses a file without that column
 - **Relations not included**: Application assignments, connections, financial links, projects, tasks, and attachments must be managed in the workspace
 
 ### Troubleshooting

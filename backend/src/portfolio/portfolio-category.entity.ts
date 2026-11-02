@@ -31,11 +31,3 @@ export class PortfolioCategory {
   @Column('timestamptz', { default: () => 'now()' })
   updated_at!: Date;
 }
-
-// Default categories (Security & Compliance removed - now a Type)
-export const DEFAULT_CATEGORIES = [
-  { name: 'Business Applications', description: 'ERP, CRM, and business software systems', display_order: 0, is_system: true },
-  { name: 'End-user Computing & Services', description: 'Workplace, devices, and end-user support', display_order: 1, is_system: true },
-  { name: 'Infrastructure & Operations', description: 'Network, servers, cloud, and data center', display_order: 2, is_system: true },
-  { name: 'Innovation & Digital Transformation', description: 'New technologies, analytics, and digital initiatives', display_order: 3, is_system: true },
-];

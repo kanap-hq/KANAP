@@ -30,6 +30,7 @@ import {
   runSpecs,
   Services,
 } from '../../admin/tenants/__tests__/tenant-reset-test-helpers';
+import { ensureStartingPortfolioClassification } from '../../portfolio/starting-classification.seed';
 import {
   DEMO_LOAD_EMPTY_TABLES,
   DEMO_SCRIPT_RELATIVE_PATH,
@@ -577,6 +578,13 @@ async function testRefusals() {
     const [seeded] = await inTenant(t.tenantId, (m) => m.query(`SELECT count(*)::int AS n FROM analytics_categories WHERE tenant_id = $1`, [t.tenantId]));
     assert.equal(seeded.n, 30, 'the values of the recommended dimensions');
     assert.deepEqual(await inTenant(t.tenantId, (m) => findTenantContent(m, t.tenantId)), [], 'the seeded values: still loadable');
+    // So do the starting sources and categories of the portfolio, in any seed language.
+    await inTenant(t.tenantId, (m) => ensureStartingPortfolioClassification(m, t.tenantId, 'fr'));
+    const [classified] = await inTenant(t.tenantId, (m) => m.query(
+      `SELECT (SELECT count(*) FROM portfolio_sources WHERE tenant_id = $1)::int AS sources,
+              (SELECT count(*) FROM portfolio_categories WHERE tenant_id = $1)::int AS categories`, [t.tenantId]));
+    assert.deepEqual(classified, { sources: 6, categories: 10 }, 'English and French starting values');
+    assert.deepEqual(await inTenant(t.tenantId, (m) => findTenantContent(m, t.tenantId)), [], 'the starting classification: still loadable');
     // An older workspace also holds the 13 values of the three CAPEX dimensions (lot C1), and an
     // administrator may have added the optional pack in French: still loadable.
     await inTenant(t.tenantId, async (m) => {
@@ -595,6 +603,40 @@ async function testRefusals() {
     // The recommended priority has the CAPEX priority's English values already: nothing was added to it.
     const [after] = await inTenant(t.tenantId, (m) => m.query(`SELECT count(*)::int AS n FROM analytics_categories WHERE tenant_id = $1`, [t.tenantId]));
     assert.equal(after.n, 30, 'back to the recommended values');
+    // A document bound to a record belongs to that record (its page creates the document the
+    // first time it opens). Alone, it does not block. Beside a document of the Documents
+    // library, only that one is counted.
+    await inTenant(t.tenantId, async (m) => {
+      const [bound] = await m.query(
+        `INSERT INTO documents (tenant_id, item_number, title, content_markdown, library_id)
+         SELECT $1, 9002, 'Bound document', '', id FROM document_libraries WHERE tenant_id = $1 AND slug = 'documents'
+         RETURNING id`,
+        [t.tenantId],
+      );
+      await m.query(
+        `INSERT INTO integrated_document_bindings
+           (tenant_id, source_entity_type, source_entity_id, slot_key, document_id)
+         VALUES ($1, 'applications', gen_random_uuid(), 'overview', $2)`,
+        [t.tenantId, bound.id],
+      );
+    });
+    assert.deepEqual(await inTenant(t.tenantId, (m) => findTenantContent(m, t.tenantId)), [], 'a bound document alone does not block');
+    await inTenant(t.tenantId, (m) => m.query(
+      `INSERT INTO documents (tenant_id, item_number, title, content_markdown, library_id)
+       SELECT $1, 9001, 'Real document', '', id FROM document_libraries WHERE tenant_id = $1 AND slug = 'documents'`,
+      [t.tenantId],
+    ));
+    const withBoth = await inTenant(t.tenantId, (m) => countTenantContent(m, t.tenantId));
+    assert.deepEqual(
+      withBoth.map((row) => `${row.table}:${row.count}`),
+      ['documents:1'],
+      'an ordinary document still counts, the bound one does not',
+    );
+    await inTenant(t.tenantId, async (m) => {
+      await m.query(`DELETE FROM integrated_document_bindings WHERE tenant_id = $1`, [t.tenantId]);
+      await m.query(`DELETE FROM documents WHERE tenant_id = $1 AND title IN ('Bound document', 'Real document')`, [t.tenantId]);
+    });
+    assert.deepEqual(await inTenant(t.tenantId, (m) => findTenantContent(m, t.tenantId)), [], 'the bound document: removed');
     for (const [tables, insert, remove] of cases) {
       await inTenant(t.tenantId, (m) => m.query(insert, [t.tenantId]));
       const error = await refusal(() => h.service.load(params));
@@ -674,6 +716,7 @@ async function testManualReset() {
       status: 'idle', step: null, started_at: null, heartbeat_at: null, loaded_at: null, loaded_by: null,
       failed_at: null, error_code: null, dismissed_at: '2026-10-07T11:00:00.000Z', run_id: null,
       ever_loaded_at: '2026-10-07T10:00:00.000Z', reset_failed_at: null, reset_by: null,
+      cancel_requested_at: null, cancel_requested_by: null, reset_notify: null,
     });
     await settle();
     assert.deepEqual(h.emails, [{ tenantId: t.tenantId, actorId: t.ownerId }], 'the administrators are e-mailed');
@@ -888,8 +931,8 @@ async function testLoadResetsItemSequences() {
     ));
     assert.deepEqual(
       rows.map((row: { entity_type: string; next_val: number }) => [row.entity_type, Number(row.next_val)]),
-      [['document', 40]],
-      'the incident and task counters are gone; the document counter stays',
+      [['document', 40], ['technology', 3]],
+      'the incident and task counters are gone; the document and technology counters stay',
     );
     const first = await inTenant(t.tenantId, (m) => allocateItemNumbers('incident', t!.tenantId, 1, m));
     assert.equal(first, 1, 'the next incident is INC-1');

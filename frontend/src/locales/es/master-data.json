@@ -1,26 +1,4 @@
 {
-  "home": {
-    "title": "Datos maestros",
-    "subtitle": "Gestione la estructura organizativa, proveedores, cuentas y dimensiones analíticas.",
-    "cards": {
-      "companiesTitle": "Empresas",
-      "companiesDescription": "Gestione las entidades empresariales y sus indicadores",
-      "departmentsTitle": "Departamentos",
-      "departmentsDescription": "Gestione los departamentos en las empresas",
-      "costCentersTitle": "Centros de coste",
-      "costCentersDescription": "Organice quién es responsable de cada línea de presupuesto, entre entidades jurídicas",
-      "suppliersTitle": "Proveedores",
-      "suppliersDescription": "Gestione la información de proveedores",
-      "coaTitle": "Planes de cuentas",
-      "coaDescription": "Gestione los planes de cuentas y las cuentas",
-      "workingDayCalendarsTitle": "Calendarios laborales",
-      "workingDayCalendarsDescription": "Defina los días laborables de cada mes para las líneas con precio por día",
-      "businessProcessesTitle": "Procesos de negocio",
-      "businessProcessesDescription": "Gestione los procesos de negocio de tipo ISO 9001",
-      "analyticsDimensionsTitle": "Dimensiones analíticas",
-      "analyticsDimensionsDescription": "Configure las dimensiones analíticas"
-    }
-  },
   "shared": {
     "columns": {
       "name": "Nombre",
@@ -55,8 +33,7 @@
       "prev": "Ant.",
       "next": "Sig.",
       "enabled": "Habilitado",
-      "access": "Acceso",
-      "history": "Historial"
+      "access": "Acceso"
     },
     "workspace": {
       "itemCountOf": "{{entity}} {{current}} de {{total}}"
@@ -430,6 +407,7 @@
   "suppliers": {
     "title": "Proveedores",
     "newSupplier": "Nuevo proveedor",
+    "empty": "Todavía no hay proveedores.",
     "supplierFallback": "Proveedor",
     "contactsTabHint": "La pestaña Contactos estará disponible después de crear el proveedor.",
     "loadError": "Error al cargar el proveedor.",
@@ -437,6 +415,9 @@
       "erpSupplierId": "ID de proveedor ERP"
     },
     "noSuppliersFound": "No se encontraron proveedores",
+    "noSupplierAskAdmin": "No se encontró ningún proveedor. Pida a un administrador de su espacio de trabajo que lo cree.",
+    "createOption": "+ Crear el proveedor «{{name}}»",
+    "selectExisting": "Seleccionar el proveedor existente",
     "export": "Exportar proveedores",
     "import": "Importar proveedores",
     "importHint": "Valores aceptados para status: enabled o disabled. disabled_at contiene el fin de validez o queda vacío. Las columnas de contacto llevan el correo electrónico de un contacto que ya existe en Contactos.",

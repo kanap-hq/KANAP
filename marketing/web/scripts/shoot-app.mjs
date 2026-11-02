@@ -329,7 +329,7 @@ const PAGES = {
     visit: [
       '/it/applications/APP-8', // SAP S/4HANA
       '/portfolio/projects/PRJ-12', // Customer 360 Data Contracts
-      '/portfolio/requests/REQ-6', // Cave climate sensors dashboard
+      '/portfolio/requests/REQ-3', // Cave Climate Digital Twin
       '/portfolio/tasks/T-2', // SAP Cheddar vendor selection
       '/portfolio/projects/PRJ-3', // Fromage-as-a-Service
       '/portfolio/projects/PRJ-6', // SAP Cheddar Migration
@@ -1114,6 +1114,83 @@ const PAGES = {
       await page.waitForFunction(() => /Total \(\d+\)/.test(document.body.innerText), { timeout: 30000 }).catch(() => {});
       await sleep(1000);
     },
+  },
+  // Technologies article (2026-10-29): "New technology" dialog open on the catalog, searched by editor ("oracle": five products, none adopted on Fromage). Read-only: nothing is created.
+  'technologies-catalog-oracle-2026-10-29': {
+    frame: 1280,
+    path: '/it/technologies',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForSelector('.ag-center-cols-container .ag-row', { timeout: 60000 });
+      await sleep(1000);
+      await page.evaluate(() => {
+        const b = [...document.querySelectorAll('button')].find((n) => /New technology/.test(n.textContent || ''));
+        b?.click();
+      });
+      await page.waitForSelector('input[aria-label="Search the catalog"], [role=dialog] input', { timeout: 15000 });
+      await sleep(800);
+      const input = await page.$('input[aria-label="Search the catalog"]') || await page.$('[role=dialog] input');
+      await input.type(process.env.CATALOG_QUERY || 'oracle', { delay: 60 });
+      await sleep(2500);
+    },
+  },
+  // Technologies article (2026-10-29): overview tab with the versions table. Read-only.
+  'technologies-versions-2026-10-29': {
+    frame: 1920,
+    path: '/it/technologies/TEC-5/overview',
+    waitFor: 'main',
+    async prepare(page) {
+      await waitForWidgets(page);
+      await page.waitForFunction(() => /22\.04/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 }).catch(() => {});
+      await sleep(1000);
+    },
+  },
+  // Technologies article (2026-10-29): applications tab, hosted and declared rows. Read-only.
+  'technologies-applications-2026-10-29': {
+    frame: 1600,
+    path: '/it/technologies/TEC-3/applications',
+    waitFor: 'main',
+    async prepare(page) {
+      await waitForWidgets(page);
+      await sleep(1500);
+    },
+  },
+  // Technologies article (2026-10-29): relations tab of TEC-21 VMware vSphere, contract (Broadcom VMware ELA) and linked budget line BL-12. Read-only.
+  'technologies-relations-vsphere-2026-10-29': {
+    frame: 1280,
+    path: '/it/technologies/TEC-21/relations',
+    waitFor: 'main',
+    async prepare(page) {
+      await waitForWidgets(page);
+      await sleep(1500);
+    },
+  },
+  // Release 26.10.8 (2026-10-30): the History tab of a budget line, the last tab of the record.
+  'history-budget-line-2026-10-30': {
+    frame: 1440,
+    path: '/ops/budget/BL-53/history',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForFunction(() => /History/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 }).catch(() => {});
+      await sleep(2500);
+    },
+  },
+  // Release 26.10.8: Plaid reads the history of a record (read only, nothing is written).
+  'plaid-history-2026-10-30': {
+    frame: 1920,
+    path: '/ai',
+    waitFor: 'main',
+    async prepare(page) {
+      await askPlaid(page, 'What changed on budget line BL-53 and who did it? Answer in English.', () => /BL-53/.test(document.querySelector('main')?.innerText || ''));
+    },
+  },
+  // Release 26.10.8: the access denied page names the missing right. Run it with a reader account
+  // (APP_EMAIL / APP_PASSWORD of a user without administration rights).
+  'access-denied-2026-10-30': {
+    frame: 1280,
+    path: '/admin/users',
+    waitFor: 'main',
+    prepare: (page) => sleep(1500),
   },
 };
 PAGES['chargeback-company-2026-10-13'] = PAGES['chargeback-company'];

@@ -253,6 +253,17 @@ const STORED_FILE_ROUTES = [
   'GET /technologies/attachments/:attachmentId',
 ];
 
+// The example files of the imports: the server writes them from its fixtures and the workspace's
+// catalogs, with no record of the workspace in them.
+const EXAMPLE_FILE_ROUTES = [
+  'GET /import-examples/applications',
+  'GET /import-examples/assets',
+  'GET /import-examples/budget-lines',
+  'GET /import-examples/contracts',
+  'GET /import-examples/portfolio-projects',
+  'GET /import-examples/suppliers',
+];
+
 // Routes whose name looks like an export but that send no exported data.
 const NOT_EXPORTS = new Set(['/applications/csv-fields', '/assets/csv-fields', '/incidents/csv-fields', '/portfolio/projects/csv-fields', '/portfolio/requests/csv-fields', '/tasks/csv-fields']);
 
@@ -264,7 +275,7 @@ function testEveryRouteThatSendsAFileIsRecorded() {
 
   // A route that sends a file (StreamableFile, Content-Disposition, a download, a body or a
   // stream written to the response) is recorded, unless it sends a stored file.
-  const storedFiles = new Set(STORED_FILE_ROUTES);
+  const storedFiles = new Set([...STORED_FILE_ROUTES, ...EXAMPLE_FILE_ROUTES]);
   const unrecorded = routes
     .filter((route) => route.fileSigns.length > 0 && !route.recordedAsExport && !storedFiles.has(route.route))
     .map((route) => `${route.route} (${route.handler}: ${route.fileSigns.join(', ')})`);
@@ -272,7 +283,7 @@ function testEveryRouteThatSendsAFileIsRecorded() {
   for (const route of KNOWN_EXPORT_ROUTES) {
     assert.ok(routes.some((scanned) => scanned.route === route && scanned.fileSigns.length > 0), `the scan sees the file ${route} sends`);
   }
-  for (const route of STORED_FILE_ROUTES) {
+  for (const route of [...STORED_FILE_ROUTES, ...EXAMPLE_FILE_ROUTES]) {
     const scanned = routes.filter((candidate) => candidate.route === route);
     assert.ok(scanned.length > 0 && scanned.every((candidate) => candidate.fileSigns.length > 0 && !candidate.recordedAsExport), `${route} still sends a stored file`);
   }

@@ -46,7 +46,7 @@ La grille standard met en évidence les champs qui comptent pendant l'intake et 
 | **Statut** | État d'intake actuel |
 | **Source** | Classification source du portefeuille |
 | **Catégorie** | Catégorie du portefeuille |
-| **Stream** | Stream du portefeuille |
+| **Filière** | Filière du portefeuille |
 | **Société** | Classification société |
 | **Demandeur** | Personne ayant soulevé la demande |
 | **Date cible** | Date de livraison cible demandée |
@@ -71,7 +71,7 @@ La grille standard met en évidence les champs qui comptent pendant l'intake et 
 
 L'espace de travail utilise un modèle divisé :
 
-- La zone principale contient les onglets opérationnels : **Synthèse**, **Analyse**, **Évaluation**, **Relations** et **Connaissances**.
+- La zone principale contient les onglets opérationnels : **Synthèse**, **Analyse**, **Évaluation**, **Relations**, **Connaissances** et **Historique** (les modifications de la demande, voir [Historique des fiches](record-history.md)).
 - Un tiroir **Propriétés** persistant sur le bord droit contient les métadonnées stables de la demande, l'assignation d'équipe et les projets résultants. Ouvrez ou fermez-le à l'aide de l'onglet vertical sur le bord droit.
 
 Cela compte parce que tout n'est pas enregistré de la même manière :
@@ -80,16 +80,32 @@ Cela compte parce que tout n'est pas enregistré de la même manière :
 - Les modifications dans **Synthèse**, **Analyse** et **Évaluation** sont des modifications d'espace de travail et utilisent **Enregistrer** / **Réinitialiser**.
 - Les documents managés **Objectif** et **Risques et atténuations** utilisent également le flux d'enregistrement de l'espace de travail.
 
-Si vous créez une nouvelle demande, KANAP démarre sur **Synthèse**. Les autres onglets deviennent utiles après que la demande existe comme un véritable enregistrement plutôt que comme une idée très sincère.
-
 L'en-tête de l'espace de travail vous donne le contexte opérationnel sans quitter la page :
 
 - une référence de demande copiable telle que `REQ-42`
 - une bande de métadonnées avec **Statut**, **Score**, **Demandeur**, **Responsable IT**, **Date de livraison cible** et (lorsque applicable) la **Tâche source** depuis laquelle la demande a été créée
 - **Partager** pour envoyer un lien vers la demande
 - **Convertir en projet** lorsque la demande est **Approuvée** ou **Convertie**
+- **Créer** et **Annuler**, tant que la demande est en cours de création. Voir [Créer ou annuler](#cancelling-a-creation)
 - **Supprimer**, une icône corbeille, pour les administrateurs (lorsque la demande n'est pas encore convertie). Une demande convertie reste l'origine de son projet et ne peut pas être supprimée
 - navigation précédent/suivant basée sur le contexte exact de la liste d'où vous venez
+
+### Créer une demande { #creating-a-request }
+
+1. Cliquez sur **Nouvelle demande**. La page de la demande s'ouvre sur **Synthèse** avec un titre vide dans l'en-tête. Le reste de la page est grisé.
+2. Saisissez le nom de la demande.
+3. Appuyez sur Entrée, ou cliquez hors du titre. KANAP crée la demande aussitôt, au statut **En attente de revue** et avec vous comme demandeur. Sa référence (`REQ-42`) apparaît et tous les onglets s'ouvrent.
+
+Complétez ensuite le tiroir Propriétés et l'**Objectif**. Le nom se modifie uniquement dans l'en-tête. Appuyez sur Échap dans le titre vide pour partir sans rien créer.
+
+### Créer ou annuler { #cancelling-a-creation }
+
+Tant que la demande est en cours de création, son en-tête affiche **Créer** et **Annuler**. Ils restent jusqu'à ce que vous quittiez la demande.
+
+- **Créer** conserve la demande et la ferme. Vous revenez à votre point de départ : la liste ou l'écran précédent. Avec un titre vide, rien ne se ferme et le titre en demande un
+- **Annuler** ferme sans rien conserver. Sur une demande déjà créée, il la supprime. Si vous avez saisi plus que le nom, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des demandes
+
+Si vous quittez la demande autrement, elle reste. Un administrateur peut alors la supprimer avec **Supprimer**. La référence d'une demande annulée n'est pas réutilisée.
 
 ### Tiroir des propriétés
 
@@ -97,9 +113,8 @@ Traitez le tiroir comme la colonne vertébrale structurelle de la demande. Il co
 
 #### Propriétés principales
 
-- Nom de la demande
 - Statut
-- Source, Catégorie, Stream
+- Source, Catégorie, Filière
 - Demandeur
 - Société, Département
 - Date de livraison cible
@@ -107,7 +122,7 @@ Traitez le tiroir comme la colonne vertébrale structurelle de la demande. Il co
 Ces champs façonnent la manière dont la demande est routée, filtrée et revue ailleurs dans l'espace de travail. Par exemple :
 
 - changer le **Statut** affecte les décisions qui peuvent suivre et si la conversion est disponible
-- changer la **Catégorie** ou le **Stream** change le contexte analytique pour la faisabilité et l'évaluation
+- changer la **Catégorie** ou la **Filière** change le contexte analytique pour la faisabilité et l'évaluation
 - changer la **Société** ou le **Demandeur** change le reporting et la visibilité de la responsabilité dans tout le portefeuille
 
 #### Équipe
@@ -146,10 +161,7 @@ La section **Objectif** est un document markdown managé intégré directement d
 
 ### Activité
 
-Sous Objectif, l'onglet Synthèse inclut le flux d'activité de la demande :
-
-- **Commentaires** pour la discussion, les notes contextuelles et les décisions formelles
-- **Historique** pour le journal d'audit des changements de champs et de statut
+Sous Objectif, l'onglet Synthèse inclut le flux d'activité de la demande : les commentaires pour la discussion, les notes contextuelles et les décisions formelles. Les modifications de la demande sont dans l'onglet **Historique**.
 
 Cela place l'activité la plus récente directement devant les relecteurs sans les obliger à naviguer vers un onglet séparé.
 
@@ -168,7 +180,7 @@ Les commentaires prennent en charge le markdown et les images en ligne, ce qui e
 
 #### Historique
 
-L'historique est la vue d'audit. Utilisez-la lorsque vous devez répondre à des questions telles que :
+L'onglet **Historique** liste les modifications de la demande. Utilisez-le lorsque vous devez répondre à des questions telles que :
 
 - qui a changé le statut
 - quand les assignations d'équipe ont changé
@@ -176,7 +188,7 @@ L'historique est la vue d'audit. Utilisez-la lorsque vous devez répondre à des
 
 La liste se termine par l'entrée de création (qui a créé la demande et quand), sous les changements enregistrés, qui incluent les modifications des documents Objectif et Risques.
 
-Si vous avez besoin de récit, utilisez Commentaires. Si vous avez besoin de preuve, utilisez Historique.
+Si vous avez besoin de récit, utilisez les commentaires. Si vous avez besoin de preuve, utilisez l'onglet **Historique**.
 
 ## Analyse
 
@@ -277,7 +289,7 @@ Une section est absente si vous ne pouvez pas lire son module : les lignes budg�
 
 **Ajouter et retirer des liens** (`portfolio_requests:contributor`) : **Ajouter**, à droite d'une section, ouvre une recherche sous le bouton. Tapez un nom ou une référence et choisissez un résultat : le lien est enregistré aussitôt. Pour retirer un lien, survolez la ligne et cliquez sur la croix en fin de ligne. Il n'y a pas de confirmation, et retirer un lien ne supprime rien d'autre. Lier un processus métier demande aussi `business_processes:member`. Les lecteurs voient les tableaux en lecture seule.
 
-Les liens vers les lignes budgétaires, les applications et les actifs sont notés dans l'**Historique** de la demande.
+Les liens vers les lignes budgétaires, les applications et les actifs sont notés dans l'onglet **Historique** de la demande.
 
 ### Liens et fichiers
 
@@ -285,7 +297,7 @@ Les liens vers les lignes budgétaires, les applications et les actifs sont not�
 
 - **Ajouter un lien** ouvre une boîte de dialogue pour une URL et un nom optionnel ; le lien est enregistré aussitôt. Pour modifier un lien, survolez sa ligne et cliquez sur le crayon.
 - **Joindre un fichier** ouvre le sélecteur de fichiers. Vous pouvez aussi déposer des fichiers sur la section.
-- Pour retirer un lien ou un fichier, survolez la ligne et cliquez sur la croix. La suppression d'un fichier demande d'abord une confirmation.
+- Pour retirer un lien ou un fichier, survolez la ligne et cliquez sur la croix. Retirer un lien affiche un message et propose **Annuler**, qui recrée le lien. La suppression d'un fichier demande d'abord une confirmation.
 
 ## Connaissances
 

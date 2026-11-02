@@ -21,18 +21,24 @@ export type ScopedAiEntityType =
   | 'assets'
   | 'budget_lines'
   | 'business_processes'
+  | 'chargeback'
+  | 'chargeback_lines'
   | 'chart_of_accounts'
   | 'companies'
   | 'connections'
   | 'contacts'
   | 'contracts'
+  | 'data_access'
   | 'departments'
   | 'documents'
+  | 'exchange_rates'
   | 'incidents'
   | 'interfaces'
   | 'locations'
   | 'projects'
   | 'requests'
+  | 'role_permissions'
+  | 'roles'
   | 'suppliers'
   | 'support_deadlines'
   | 'support_gaps'
@@ -40,7 +46,10 @@ export type ScopedAiEntityType =
   | 'technologies'
   | 'technology_versions'
   | 'users'
-  | 'vulnerabilities';
+  | 'vulnerabilities'
+  | 'cost_centers'
+  | 'working_day_calendars'
+  | 'analytics_axes';
 
 export type ResolvedAiScope = {
   requested: AiQueryScope;

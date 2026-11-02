@@ -239,11 +239,12 @@ service reads the same rules).
 | Entra login handoff | `type: 'entra_login_handoff'` | idem SSO state | `EntraAuthService.verifyLoginHandoff` |
 | MCP OAuth authorization code | `purpose: 'kanap:v1:mcp-oauth-code'` | `MCP_OAUTH_CODE_SECRET`, else derived | `McpOAuthService` (token endpoint) |
 | MCP OAuth access token | `purpose: 'kanap:v1:mcp-access'` | `MCP_ACCESS_TOKEN_SECRET`, else derived | `McpApiKeyAuthGuard` (MCP endpoint only) |
+| Creation token (HMAC, not a JWT) | label `kanap:v1:creation`, signs tenant, family, record, creator, issue time | `CREATION_TOKEN_SECRET`, else derived | `verifyCreationToken` (`DELETE /applications/:id/creation`) |
 
 Rules:
 
 - A family with a configured key uses **only** that key — never a retry with `JWT_SECRET` after a
-  failure. Without its own variable, password-reset, SSO state and the two MCP OAuth families derive a key from `JWT_SECRET`
+  failure. Without its own variable, password-reset, SSO state, the two MCP OAuth families and the creation token derive a key from `JWT_SECRET`
   through HMAC-SHA256 with a stable, versioned label (`kanap:v1:<family>`, `token-secret.util.ts`).
   The label version is a contract: bumping it rotates that family's key material.
 - **Provisioning is the deliberate exception.** Its tokens are minted by a service outside this
@@ -301,238 +302,248 @@ Rules:
 
 #### Deployment mode (`Features.SINGLE_TENANT`)
 
-| File | Line | What | Behavior |
-|------|------|------|----------|
-| `main.ts` | 360 | First-boot provisioning | Creates tenant, admin user, subscription (On-Prem, no user limit) |
-| `main.ts` | 324 | Tenancy middleware | Skips Host parsing, resolves to `DEFAULT_TENANT_SLUG`; returns 503 if tenant not ready |
-| `platform-admin.util.ts` | 18 | `isPlatformAdmin()` | Returns `false` unconditionally |
-| `public.controller.ts` | 157 | `POST /public/start-trial` | 404 |
-| `public.controller.ts` | 277 | `POST /public/request-support-invoice` | 404 |
-| `public.controller.ts` | 373 | `POST /public/activate-trial` | 404 |
-| `admin-tenants.controller.ts` | 10 | All `/admin/tenants/*` | 404 via `MultiTenantOnlyGuard` |
-| `admin-coa-templates.controller.ts` | 11 | All `/admin/coa-templates/*` | 404 via `MultiTenantOnlyGuard` |
-| `admin-ops.controller.ts` | 11 | All `/admin/ops/*` | 404 via `MultiTenantOnlyGuard` |
-| `billing.service.ts` | 1280 | `ensureSubscription()` fallback | Defaults to On-Prem, no user limit (single-tenant) or Trial, no user limit (cloud) |
-| `url.ts` | 164 | `resolveConfiguredAppBaseUrl()` | Single-tenant: `APP_BASE_URL` (then `PUBLIC_APP_URL`) as configured, no subdomain substitution; nothing configured returns null and callers answer 400 or skip |
-| `portfolio-status-change-report.controller.ts` | 134 | Export base URL | Delegates to `resolveNotificationBaseUrl()` |
-| `feature-gates.ts` | 34 | `MultiTenantOnlyGuard` | Throws 404 when `SINGLE_TENANT` is true |
+| File | What | Behavior |
+|------|------|----------|
+| `main.ts` | `bootstrap` (`createSingleTenantOnFirstStart`) | Creates tenant, admin user, subscription (On-Prem, no user limit) |
+| `common/tenancy/request-tenancy.middleware.ts` | `createRequestTenancyMiddleware` | Skips Host parsing when `singleTenant`, resolves to `defaultTenantSlug`; returns 503 `TENANT_NOT_READY` if the tenant is not ready. `main.ts` calls `applyTenancyAndPipeline` |
+| `platform-admin.util.ts` | `isPlatformAdmin` | Returns `false` when `SINGLE_TENANT` is true |
+| `public.controller.ts` | `@Post('start-trial')` | 404 via `throwNotAvailableInMode` |
+| `public.controller.ts` | `@Post('request-support-invoice')` | 404 via `throwNotAvailableInMode` |
+| `public.controller.ts` | `@Post('activate-trial')` | 404 via `throwNotAvailableInMode` |
+| `public.controller.ts` | `@Post('contact')` | 404 via `throwNotAvailableInMode` |
+| `admin-tenants.controller.ts` | `MultiTenantOnlyGuard` on `admin/tenants` | Answers 404 |
+| `admin-coa-templates.controller.ts` | `MultiTenantOnlyGuard` on `admin/coa-templates` | Answers 404 |
+| `admin-ops.controller.ts` | `MultiTenantOnlyGuard` on `admin/ops` | Answers 404 |
+| `ai/platform/platform-ai-admin.controller.ts` | `MultiTenantOnlyGuard` on `admin/ai` | Answers 404 |
+| `billing.service.ts` | `ensureSubscription()` fallback | Defaults to On-Prem, no user limit (single-tenant) or Trial, no user limit (cloud) |
+| `url.ts` | `resolveConfiguredAppBaseUrl()` | Single-tenant: `APP_BASE_URL` (then `PUBLIC_APP_URL`) as configured, no subdomain substitution; nothing configured returns null and callers answer 400 or skip |
+| `portfolio/portfolio-weekly-report.controller.ts` | `resolveExportBaseUrl` | Single-tenant: `resolveConfiguredAppBaseUrl()`. Multi-tenant: `resolveTenantAppBaseUrl` or `resolveAppBaseUrl` |
+| `feature-gates.ts` | `MultiTenantOnlyGuard` | Throws 404 when `SINGLE_TENANT` is true |
+| `ai/ai-help-manual.service.ts` | User manual of the assistant (`list_help_topics`, `read_help_section`) | The on-premise installation pages (`on-premise/`) are listed and read in single-tenant mode only |
 
 #### Sample data (cloud only, `!Features.SINGLE_TENANT`)
 
 Administration > Sample data loads the Fromage & Co set into an empty workspace and erases a workspace back to its starting state. On-premise there is no navigation entry and no home banner, every API route answers 404, and the page refuses itself. The flag is `sampleData` in `GET /config/public`.
 
-| File | Line | What | Behavior |
-|------|------|------|----------|
-| `demo-data/demo-data.controller.ts` | 29, 89 | All `/admin/sample-data/*` routes | 404 via `MultiTenantOnlyGuard`; also 404 on the platform host and for system tenants. Administrator role checked by the service on every route (403 `administrator_required`) |
-| `demo-data/demo-data.service.ts` | 749 | `readTenant()` | `throwNotAvailableInMode()` when `SINGLE_TENANT`: the service refuses by itself, whoever calls it |
-| `demo-data/demo-data.service.ts` | 687 | `reconcileOnStartup()` | No-op when `SINGLE_TENANT` (no sweep of orphaned loads or resets) |
-| `config/config.controller.ts` | 23 | `sampleData` | `!Features.SINGLE_TENANT` in `GET /config/public` |
-| `frontend/src/config/FeaturesContext.tsx` | 15, 37 | `sampleData` | Type key; default `false`, so the feature stays hidden if `/config/public` cannot be read |
+| File | What | Behavior |
+|------|------|----------|
+| `demo-data/demo-data.controller.ts` | `MultiTenantOnlyGuard` on `admin/sample-data` | 404 via `MultiTenantOnlyGuard`; also 404 on the platform host and for system tenants. Administrator role checked by the service on every route (403 `administrator_required`) |
+| `demo-data/demo-data.service.ts` | `readTenant()` | `throwNotAvailableInMode()` when `SINGLE_TENANT`: the service refuses by itself, whoever calls it |
+| `demo-data/demo-data.service.ts` | `reconcileOnStartup()` | No-op when `SINGLE_TENANT` (no sweep of orphaned loads or resets) |
+| `config/config.controller.ts` | `sampleData` | `!Features.SINGLE_TENANT` in `@Get('public')` |
+| `frontend/src/config/FeaturesContext.tsx` | `sampleData` | Type key; default `false`, so the feature stays hidden if `/config/public` cannot be read |
+
+#### Discovery call (cloud only, `!Features.SINGLE_TENANT`)
+
+The "Book a discovery call" button of trial workspaces, its click events and the Cal.com webhook that stores the call's date (`doc/discovery-call.md`). On-premise the variables are ignored, the button never shows and both routes answer 404.
+
+| File | What | Behavior |
+|------|------|----------|
+| `discovery-call/discovery-call.config.ts` | `discoveryCallConfig()` | Every value empty when `SINGLE_TENANT`, whatever `DISCOVERY_CALL_URL`, `DISCOVERY_CALL_FALLBACK_EMAIL` and `DISCOVERY_CALL_WEBHOOK_SECRET` say |
+| `discovery-call/discovery-call.controller.ts` | `MultiTenantOnlyGuard` on `discovery-call` | 404; the webhook also answers 404 while no secret is set |
+| `config/config.controller.ts` | `discoveryCall` | `{ url, fallbackEmail }` from `discoveryCallConfig()` in `@Get('public')` |
+| `frontend/src/components/BookDiscoveryCallButton.tsx` | `useDiscoveryCall()` | Hidden on-premise, without a running trial, for a platform administrator, and when both values are empty |
 
 #### Microsoft Entra (`Features.ENTRA_SSO`)
 
 Optional in both modes: true when `ENTRA_CLIENT_ID` is configured. Per-tenant activation lives on `tenants.sso_provider` / `sso_enabled`; everything below is inert for tenants without Entra.
 
-| File | Line | What | Behavior |
-|------|------|------|----------|
-| `entra-directory-sync.service.ts` | 68 | `entra-directory-sync` scheduled task (default daily 03:00) | Registered in both modes; handler (line 79) returns `skipped` when `ENTRA_SSO` is false, otherwise iterates active tenants with `sso_provider='entra'` under RLS. Tenants whose Entra admin has not granted application consent are reported `consent_required` and keep login-time enrichment only. The contributor reporting line imported from the directory rides on the same gate (`syncDirectoryManagers`, same file) |
-| `admin-auth.controller.ts` | 58 | `POST /admin/auth/directory-sync` | 400 `SSO_NOT_CONFIGURED` when `ENTRA_SSO` is false |
-| `admin-auth.controller.ts` | 42 | `GET /admin/auth/settings` → `directory_sync` | `null` unless the tenant is connected to Entra and `ENTRA_SSO` is true |
+| File | What | Behavior |
+|------|------|----------|
+| `entra-directory-sync.service.ts` | `entra-directory-sync` scheduled task (default daily 03:00) | Registered in both modes; handler `runAll` returns `skipped` when `ENTRA_SSO` is false, otherwise iterates active tenants with `sso_provider='entra'` under RLS. Tenants whose Entra admin has not granted application consent are reported `consent_required` and keep login-time enrichment only. The contributor reporting line imported from the directory rides on the same gate (`syncDirectoryManagers`, same file) |
+| `admin-auth.controller.ts` | `@Post('directory-sync')` | 400 `SSO_NOT_CONFIGURED` when `ENTRA_SSO` is false |
+| `admin-auth.controller.ts` | `getSettings` → `directory_sync` | `null` unless the tenant is connected to Entra and `ENTRA_SSO` is true |
 
 #### Billing (`Features.STRIPE_BILLING`)
 
-| File | Line | What | Behavior |
-|------|------|------|----------|
-| `billing.controller.ts` | 142 | `GET /billing/plans` | 403 `FEATURE_DISABLED` |
-| `billing.controller.ts` | 148 | `GET /billing/subscription` | 403 `FEATURE_DISABLED` |
-| `billing.controller.ts` | 156 | `POST /billing/change-plan` | 403 `FEATURE_DISABLED` |
-| `billing.controller.ts` | 201 | `POST /billing/scheduled-change/cancel` | 403 `FEATURE_DISABLED` |
-| `billing.controller.ts` | 169 | `POST /billing/request-invoice` | 403 `FEATURE_DISABLED` |
-| `billing.controller.ts` | 182 | `GET /billing/profile` | 403 `FEATURE_DISABLED` |
-| `billing.controller.ts` | 197 | `POST /billing/portal` | 403 `FEATURE_DISABLED` |
-| `billing.controller.ts` | 211 | `POST /billing/checkout` | 403 `FEATURE_DISABLED` |
-| `billing.controller.ts` | 236 | `PATCH /billing/profile` | 403 `FEATURE_DISABLED` |
+| File | What | Behavior |
+|------|------|----------|
+| `billing.controller.ts` | `@Get('plans')` | 403 `FEATURE_DISABLED` |
+| `billing.controller.ts` | `@Get('subscription')` | 403 `FEATURE_DISABLED` |
+| `billing.controller.ts` | `@Post('change-plan')` | 403 `FEATURE_DISABLED` |
+| `billing.controller.ts` | `@Post('scheduled-change/cancel')` | 403 `FEATURE_DISABLED` |
+| `billing.controller.ts` | `@Post('request-invoice')` | 403 `FEATURE_DISABLED` |
+| `billing.controller.ts` | `@Get('profile')` | 403 `FEATURE_DISABLED` |
+| `billing.controller.ts` | `@Post('portal')` | 403 `FEATURE_DISABLED` |
+| `billing.controller.ts` | `@Post('checkout')` | 403 `FEATURE_DISABLED` |
+| `billing.controller.ts` | `@Patch('profile')` | 403 `FEATURE_DISABLED` |
 
 #### Email (`Features.EMAIL_ENABLED`)
 
-| File | Line | What | Behavior |
-|------|------|------|----------|
-| `auth.controller.ts` | 206 | `POST /auth/password-reset/request` | 403 `FEATURE_DISABLED` |
-| `users.controller.ts` | 106 | `POST /users/:id/invite` | 403 `FEATURE_DISABLED` |
-| `notification-preferences.controller.ts` | 46 | `POST /users/me/notification-preferences/test-weekly-review` | 403 `FEATURE_DISABLED` |
-| `email.service.ts` | 183 | `ensureClient()` internal | Throws `FeatureDisabledError('email')` — caught by callers via `error.code` |
-| `public.controller.ts` | 221, 356, 467 | Trial/activation catch blocks | Checks `error.code === 'FEATURE_DISABLED'` — suppresses, returns graceful fallback |
+| File | What | Behavior |
+|------|------|----------|
+| `auth.controller.ts` | `@Post('password-reset/request')` | 403 `FEATURE_DISABLED` |
+| `users.controller.ts` | `@Post(':id/invite')` | 403 `FEATURE_DISABLED` |
+| `notification-preferences.controller.ts` | `@Post('test-weekly-review')` | 403 `FEATURE_DISABLED` |
+| `email/transports/disabled-email.transport.ts` | `DisabledEmailTransport` | `send` throws `FeatureDisabledError('email')`. `createEmailTransport` selects this transport when none is configured. Callers still read `error.code` |
+| `public.controller.ts` | `FEATURE_DISABLED` in `startTrial`, `requestSupportInvoice`, `activateTrial` | Checks `error.code === 'FEATURE_DISABLED'`: suppresses it and returns a graceful fallback |
 
 #### AI Chat / MCP / Settings / Web Search (`Features.AI_CHAT_ENABLED`, `Features.AI_MCP_ENABLED`, `Features.AI_SETTINGS_ENABLED`, `Features.AI_WEB_SEARCH_READY`)
 
-| File | Line | What | Behavior |
-|------|------|------|----------|
-| `backend/src/config/config.controller.ts` | 10 | `GET /config/public` feature payload | Exposes `aiChat`, `aiMcp`, `aiSettings`, `aiWebSearch`, and `builtinAiProvider` to the frontend |
-| `backend/src/config/config.controller.ts` | 24 | `builtinAiProvider` gate | Returns `true` for cloud deployments and `false` in single-tenant mode |
-| `backend/src/ai/ai-capabilities.controller.ts` | 1 | `GET /ai/capabilities` | Returns per-surface AI availability derived from feature flags, tenant settings, permissions, and provider readiness |
-| `backend/src/ai/ai-policy.service.ts` | 1 | Surface and permission checks | `assertSurfaceAccess()`, `assertSettingsAccess()`, `assertKeyManagementAccess()`, and readable-entity/knowledge probes enforce AI gates |
-| `backend/src/ai/ai-chat.controller.ts` | 1 | `POST /ai/chat/stream` | Chat surface is unavailable when native AI chat is disabled by feature flag or tenant settings |
-| `backend/src/ai/ai-mcp.controller.ts` | 1 | MCP endpoints | MCP surface is unavailable when MCP is disabled by feature flag or tenant settings |
-| `backend/src/ai/ai-settings.controller.ts` | 1 | AI settings endpoints | AI settings surface is unavailable when the AI settings feature is disabled |
-| `backend/src/ai/ai-tool.registry.ts` | 1 | Chat `web_search` tool registration and execution | The Plaid **chat** web search tool is only listed and executable when `AI_WEB_SEARCH_READY` is true and the tenant chat web search toggle is enabled |
-| `backend/src/ai/control-plane/capability/ai-capability.registry.ts` | 1 | Control-plane `web_search` capability | A separate governed internal capability used by agents (e.g. Helpdesk triage). Shares the same `AI_WEB_SEARCH_READY` readiness gate (`BRAVE_SEARCH_API_KEY`) but is independent of the tenant chat toggle and is gated per-agent by that agent's own "Search the web" setting. Not exposed over MCP. Mode-agnostic — no cloud/on-prem branch. |
-| `backend/src/ai/control-plane/agent-control/ai-ticket-evidence-extraction.service.ts` | 1 | Agent screenshot evidence extraction | **Not a feature gate.** Vision is best-effort on the tenant's default LLM (the one shared with Plaid chat); whether to attempt it is the per-tenant admin-GUI setting `ai_settings.llm_supports_vision` (default ON). When the model is text-only the vision call errors or is ignored and GLPI triage silently degrades to text. No `AI_AGENT_VISION_*` runtime config. |
-| `backend/src/ai/control-plane/agent-control/ai-agent-control.controller.ts` | 83 | `ai/admin/control-plane` agent surface (all agent overview/approvals/activity/settings/shared-context APIs) | The entire AI Agents control-plane API is gated by `AiPolicyService` access checks on the `ai_agents` resource; unavailable when the AI settings surface is disabled. This is the top-level gate behind every `/agents` page. |
-| `frontend/src/components/Layout.tsx` + `frontend/src/App.tsx` | 1 | AI Agents nav group + `/agents/*` routes | The whole **AI Agents** section (Overview, Approvals, Activity, Shared context, and the per-agent workspace) is hidden unless `features.aiSettings` is true, the instance AI-settings capability is on, and the user has `ai_agents:reader`; the Shared context item additionally requires `ai_agents:admin`. |
-| `frontend/src/config/FeaturesContext.tsx` | 1 | Frontend feature bootstrap | Normalizes AI feature flags from `/config/public` for route and UI gating |
-| `frontend/src/pages/ai/AiWorkspacePage.tsx` | 1 | Plaid workspace route | Hides native AI chat UI when `aiChat` is false |
-| `frontend/src/pages/admin/AdminAiPage.tsx` | 1 | Admin AI settings page | Hides AI settings and web search controls when the corresponding flags are false |
+| File | What | Behavior |
+|------|------|----------|
+| `backend/src/config/config.controller.ts` | `@Get('public')` feature payload | Exposes `aiChat`, `aiMcp`, `aiSettings`, `aiWebSearch`, and `builtinAiProvider` to the frontend |
+| `backend/src/config/config.controller.ts` | `builtinAiProvider` gate | Returns `true` for cloud deployments and `false` in single-tenant mode |
+| `backend/src/ai/ai-capabilities.controller.ts` | `@Get('capabilities')` | Returns per-surface AI availability derived from feature flags, tenant settings, permissions, and provider readiness |
+| `backend/src/ai/ai-policy.service.ts` | `assertSurfaceAccess()`, `assertSettingsAccess()`, `assertKeyManagementAccess()` | Surface, settings, key-management and readable-entity checks enforce the AI gates |
+| `backend/src/ai/ai-chat.controller.ts` | `@Controller('ai/chat')`, `@Post('stream')` | Chat surface is unavailable when native AI chat is disabled by feature flag or tenant settings |
+| `backend/src/ai/ai-mcp.controller.ts` | `@Controller('ai/mcp')` | MCP surface is unavailable when MCP is disabled by feature flag or tenant settings |
+| `backend/src/ai/ai-settings.controller.ts` | `@Controller('ai/settings')` | AI settings surface is unavailable when the AI settings feature is disabled |
+| `backend/src/ai/ai-tool.registry.ts` | Chat `web_search` tool registration and execution | The Plaid **chat** web search tool is only listed and executable when `AI_WEB_SEARCH_READY` is true and the tenant chat web search toggle is enabled |
+| `backend/src/ai/control-plane/capability/ai-capability.registry.ts` | `web_search` (`internalWebSearchContract`, `webSearchInternal`) | Internal capability, `mcp_exposure` disabled. `webSearchInternal` throws when `braveSearch` is absent. No cloud/on-prem branch in this file. |
+| `backend/src/ai/control-plane/agent-control/ai-agent-control.service.ts` | `AI_WEB_SEARCH_READY` | An agent calls `web_search` only when `knowledgeSources.webEnabled` and `Features.AI_WEB_SEARCH_READY` are both true. |
+| `backend/src/ai/control-plane/agent-control/ai-ticket-evidence-extraction.service.ts` | `supportsVision` | Not a cloud/on-prem feature gate. Screenshot evidence is skipped when `runtime.supportsVision` is false (`vision_disabled_by_setting`). Limits are `AI_AGENT_VISION_MAX_IMAGES`, `AI_AGENT_VISION_MAX_IMAGE_BYTES`, `AI_AGENT_VISION_EXTRACTION_MAX_TOKENS` and `AI_AGENT_VISION_EXTRACTION_TIMEOUT_MS`. |
+| `backend/src/ai/control-plane/agent-control/ai-agent-control.controller.ts` | `@Controller('ai/admin/control-plane')` | The AI Agents control-plane API. Unavailable when the AI settings surface is disabled. This is the API behind every `/agents` page. |
+| `frontend/src/components/Layout.tsx` | `canShowAgents` | The AI Agents nav group is shown when `features.aiSettings` is true, the instance AI-settings capability is on, and `hasLevel('ai_agents', 'reader')` holds. The Shared context item sets `resource: 'ai_agents', level: 'admin'`. |
+| `frontend/src/components/ProtectedRoute.tsx` | `isAgentsRoute` | `/agents` routes, registered in App.tsx, call `refuse()` when `features.aiSettings` is false or `instance_features.ai_settings` is not true |
+| `frontend/src/config/FeaturesContext.tsx` | `normalizeFeaturesConfig` | Normalizes AI feature flags from `/config/public` for route and UI gating |
+| `frontend/src/pages/ai/AiWorkspacePage.tsx` | `features.aiChat` | Hides native AI chat UI when `aiChat` is false |
+| `frontend/src/pages/admin/AdminAiPage.tsx` | `features.aiSettings` | Hides AI settings and web search controls when the corresponding flags are false |
 
 #### Living catalog of technologies (`Features.TECHNOLOGY_CATALOG_SYNC_ENABLED`)
 
 The living catalog reads the release cycles of endoflife.date (`https://endoflife.date/api/v1`, or a mirror in `ENDOFLIFE_API_BASE_URL`) for the catalog entries the technologies were adopted from. `TECHNOLOGY_CATALOG_SYNC_ENABLED` is true by default in the cloud and false by default on-premise; set either way, it wins. Off, nothing leaves for endoflife.date: the scheduled task `technology-catalog` still runs at each start and daily (while it is enabled in the scheduled tasks), the cache is not read, and the task brings the catalog shipped with the installed version to the adopted technologies (new versions, dates and CPE identifiers, the withdrawal of an identifier `shipped_cpe` listed, that `cpe_written` records as written by the catalog, and that the shipped file no longer lists (a file that lists no identifier without `noCpe` withdraws nothing, a cache identifier stays while the cache omits it, and an identifier the tenant typed is kept), and a description the catalog wrote in `description_language` when that language's text changes and the technology still holds the same characters (a change of the tenant's language rewrites nothing, and a state without `description_language` takes the language whose catalog text equals the remembered description or is left unchanged when none does)). CVE.org names follow the same pass: a name the catalog gains is added, a name the tenant removed stays removed, and a name is removed only when `cve_names_written` lists it, `shipped_cve_names` listed it and the shipped file no longer does. A state without those keys removes nothing. An empty name list withdraws the names that rule names. A value the tenant typed stays. The frontend shows nothing different.
 
-| File | Line | What | Behavior |
-|------|------|------|----------|
-| `config/features.ts` | 20 | `TECHNOLOGY_CATALOG_SYNC_ENABLED` | Env value when set, otherwise `!SINGLE_TENANT` |
-| `technologies/catalog/technology-catalog-sync.service.ts` | n/a | `technology-catalog` scheduled task (daily 04:40 UTC, and at start), registered in both modes | Reads endoflife.date only when on; syncs the tenants either way |
-| `config/config.controller.ts` | 24 | `technologyCatalogSync` | `Features.TECHNOLOGY_CATALOG_SYNC_ENABLED` in `GET /config/public` |
-| `frontend/src/config/FeaturesContext.tsx` | 43 | `features.technologyCatalogSync` | False until `GET /config/public` says otherwise; no screen depends on it |
+| File | What | Behavior |
+|------|------|----------|
+| `config/features.ts` | `TECHNOLOGY_CATALOG_SYNC_ENABLED` | Env value when set, otherwise `!SINGLE_TENANT` |
+| `technologies/catalog/technology-catalog-sync.service.ts` | `technology-catalog` scheduled task (daily 04:40 UTC, and at start), registered in both modes | Reads endoflife.date only when on; syncs the tenants either way |
+| `config/config.controller.ts` | `technologyCatalogSync` | `Features.TECHNOLOGY_CATALOG_SYNC_ENABLED` in `@Get('public')` |
+| `frontend/src/config/FeaturesContext.tsx` | `technologyCatalogSync` | False until `GET /config/public` says otherwise; no screen depends on it |
 
 #### Vulnerabilities (`Features.VULNERABILITY_FEED_ENABLED`)
 
 The NVD feed needs the way out to the NVD (`https://services.nvd.nist.gov`) or to a mirror (`NVD_API_BASE_URL`). `VULNERABILITY_FEED_ENABLED` is true by default in the cloud and false by default on-premise; set either way, it wins. `NVD_API_KEY` is optional (more requests per 30 seconds). The same switch runs the exploitation signals (`vulnerability-signals`, minute 50 of every sixth hour): the CISA catalog (`KEV_FEED_URL`, default CISA's GitHub mirror `https://raw.githubusercontent.com/cisagov/kev-data/develop/known_exploited_vulnerabilities.json`; `www.cisa.gov` answers 403 to data-centre addresses), the EU catalog and the EUVD mapping (`EUVD_BASE_URL`, default `https://euvdservices.enisa.europa.eu`; a mirror serves `/api/kev/dump` and `/api/dump/cve-euvd-mapping` under it) and the EPSS scores (`EPSS_FEED_URL`, default `https://epss.empiricalsecurity.com/epss_scores-current.csv.gz`, gzip or plain CSV; see EPSS at https://www.first.org/epss). An empty variable keeps the default address. Outbound HTTPS, port 443: `raw.githubusercontent.com`, `euvdservices.enisa.europa.eu`, `epss.empiricalsecurity.com`. A source that cannot be reached leaves its columns as they are and is named in the task summary. The other sources and the NVD collection continue. The European record is ENISA's European vulnerability database. Off, the frontend shows none of it: no IT › Vulnerabilities page or navigation entry, no "Vulnerabilities to review" column in the technologies, assets and applications lists, no vulnerabilities section or severe badge on an asset or application record, no Vulnerabilities dashboard tile, no Technologies group in the notification preferences, and no email to the IT owners. With the feed on and email off (`EMAIL_ENABLED`), the run claims and sends nothing. With the feed on, the email lists critical or high CVE and, at any severity, CVE known to be exploited.
 
-| File | Line | What | Behavior |
-|------|------|------|----------|
-| `config/features.ts` | 25 | `VULNERABILITY_FEED_ENABLED` | Env value when set, otherwise `!SINGLE_TENANT` |
-| `vulnerabilities/vulnerabilities.controller.ts` | 19 | `VulnerabilityFeedGuard` on `/vulnerabilities/*` and `/technologies/:id/vulnerabilities/*` | 403 `FEATURE_DISABLED` when off |
-| `vulnerabilities/nvd-feed.service.ts` | 217 | `vulnerability-feed` scheduled task (default every 6 hours, minute 20), and the notifications of each run | Registered only when on: no request leaves for the NVD and no vulnerability email goes out otherwise |
-| `vulnerabilities/vulnerability-signals.service.ts` | 112 | `vulnerability-signals` scheduled task (minute 50 of every sixth hour) | Registered only when the feed is on. Updates the cached CVE from CISA, the EU KEV, EPSS and the EUVD mapping. One source failing leaves its columns and does not fail the task |
-| `technologies/technologies.service.ts` | 213 | `vulnerabilities_to_review`, `vulnerabilities_severe` in `GET /technologies` (rows that alert) | `null` when off |
-| `config/config.controller.ts` | 26 | `vulnerabilityFeed` | `Features.VULNERABILITY_FEED_ENABLED` in `GET /config/public` |
-| `frontend/src/config/FeaturesContext.tsx` | 44 | `features.vulnerabilityFeed` | False until `GET /config/public` says otherwise |
-| `frontend/src/App.tsx` | 272 | Route `/it/vulnerabilities` | Not registered when off |
-| `frontend/src/components/Layout.tsx` | 189 | IT › Operations › Vulnerabilities navigation entry | Hidden when off |
-| `frontend/src/pages/it/VulnerabilitiesPage.tsx` | 472 | The page itself (list grid, change of state in bulk, side panel) | Renders nothing when off |
-| `frontend/src/pages/it/TechnologiesPage.tsx` | 230 | "Vulnerabilities to review" column, and the publisher's link to the page | Hidden when off (the publisher opens the technology) |
-| `frontend/src/pages/settings/NotificationsTab.tsx` | 508 | Technologies group of the notification preferences | Hidden when off |
-| `frontend/src/pages/it/workspace/TechnologyVulnerabilitiesSection.tsx` | 41 | Vulnerabilities section of the technology record | Renders nothing and reads nothing when off |
-| `vulnerabilities/vulnerabilities.controller.ts` | 101 | `GET /vulnerabilities/home-summary` (dashboard tile) | Behind the class's `VulnerabilityFeedGuard`: 403 `FEATURE_DISABLED` when off |
-| `vulnerabilities/vulnerabilities.controller.ts` | 146 | `VulnerabilityFeedGuard` on `GET /assets/:id/vulnerabilities` | 403 `FEATURE_DISABLED` when off |
-| `vulnerabilities/vulnerabilities.controller.ts` | 162 | `VulnerabilityFeedGuard` on `GET /applications/:id/vulnerabilities` | 403 `FEATURE_DISABLED` when off |
-| `vulnerabilities/vulnerability-reach-counts.ts` | 53 | `vulnerabilityCountsEnabled()`: every count per asset and per application (lists, records, assistant) | Counts `null` when off |
-| `assets/services/assets-list.service.ts` | 37 | Sort and filter of `vulnerabilities_to_review` in `GET /assets` | Sorts as an unknown column, the filter matches nothing, counts `null` when off |
-| `applications/services/applications-list.service.ts` | 562 | Sort and filter of `vulnerabilities_to_review` in `GET /applications` (`include=vulnerabilities`) | Same as the assets list |
-| `vulnerabilities/vulnerability-list-column.ts` | 86 | `csvConfigForVulnerabilityFeed`: `vulnerabilities_to_review` and `severe_vulnerabilities` in the assets and applications CSV export | Columns left out of the export and its field list when off |
-| `frontend/src/pages/it/AssetsPage.tsx` | 307 | "Vulnerabilities to review" column of the assets list | Hidden when off |
-| `frontend/src/pages/it/ApplicationsPage.tsx` | 674 | "Vulnerabilities to review" column of the applications list | Hidden when off |
-| `frontend/src/pages/it/AssetWorkspacePage.tsx` | 1071 | Vulnerabilities section (Technical tab) and severe badge of the asset record | Reads nothing and renders nothing when off |
-| `frontend/src/pages/it/ApplicationWorkspacePage.tsx` | 1267 | Vulnerabilities section (Operations tab) and severe badge of the application record | Reads nothing and renders nothing when off |
-| `frontend/src/pages/workspace/tiles/TileRegistry.ts` | 161 | `requiredFeature: 'vulnerabilityFeed'` on the Vulnerabilities dashboard tile (`useTilePermissions`) | Tile absent from the dashboard and its settings when off |
-| `ai/ai-policy.service.ts` | 86 | `vulnerabilities` entity of the assistant and the MCP server | Left out of the readable families, refused with `vulnerabilityFeed` when off |
+| File | What | Behavior |
+|------|------|----------|
+| `config/features.ts` | `VULNERABILITY_FEED_ENABLED` | Env value when set, otherwise `!SINGLE_TENANT` |
+| `vulnerabilities/vulnerabilities.controller.ts` | `VulnerabilityFeedGuard` on `vulnerabilities` and `technologies/:id/vulnerabilities` | 403 `FEATURE_DISABLED` when off |
+| `vulnerabilities/nvd-feed.service.ts` | `vulnerability-feed` scheduled task (default every 6 hours, minute 20), and the notifications of each run | Registered only when on: no request leaves for the NVD and no vulnerability email goes out otherwise |
+| `vulnerabilities/vulnerability-signals.service.ts` | `vulnerability-signals` scheduled task (minute 50 of every sixth hour) | Registered only when the feed is on. Updates the cached CVE from CISA, the EU KEV, EPSS and the EUVD mapping. One source failing leaves its columns and does not fail the task |
+| `technologies/technologies.service.ts` | `vulnerabilities_to_review`, `vulnerabilities_severe` (GET /technologies, rows that alert) | `null` when off |
+| `config/config.controller.ts` | `vulnerabilityFeed` | `Features.VULNERABILITY_FEED_ENABLED` in `@Get('public')` |
+| `frontend/src/config/FeaturesContext.tsx` | `vulnerabilityFeed` | False until `GET /config/public` says otherwise |
+| `frontend/src/App.tsx` | Route `/it/vulnerabilities` | Not registered when `features.vulnerabilityFeed` is off |
+| `frontend/src/components/Layout.tsx` | `features.vulnerabilityFeed` | IT › Operations › Vulnerabilities navigation entry hidden when off |
+| `frontend/src/pages/it/VulnerabilitiesPage.tsx` | `features.vulnerabilityFeed` | The page (list grid, change of state in bulk, side panel) renders nothing when off |
+| `frontend/src/pages/it/TechnologiesPage.tsx` | `features.vulnerabilityFeed` | "Vulnerabilities to review" column, and the publisher's link to the page, hidden when off (the publisher opens the technology) |
+| `frontend/src/pages/settings/NotificationsTab.tsx` | `features.vulnerabilityFeed` | Technologies group of the notification preferences hidden when off |
+| `frontend/src/pages/it/workspace/TechnologyVulnerabilitiesSection.tsx` | `features.vulnerabilityFeed` | Vulnerabilities section of the technology record renders nothing and reads nothing when off |
+| `vulnerabilities/vulnerabilities.controller.ts` | `@Get('home-summary')` | Behind the class's `VulnerabilityFeedGuard`: 403 `FEATURE_DISABLED` when off |
+| `vulnerabilities/vulnerabilities.controller.ts` | `VulnerabilityFeedGuard` on `assets/:id/vulnerabilities` | 403 `FEATURE_DISABLED` when off |
+| `vulnerabilities/vulnerabilities.controller.ts` | `VulnerabilityFeedGuard` on `applications/:id/vulnerabilities` | 403 `FEATURE_DISABLED` when off |
+| `vulnerabilities/vulnerability-reach-counts.ts` | `vulnerabilityCountsEnabled()`: every count per asset and per application (lists, records, assistant) | Counts `null` when off |
+| `assets/services/assets-list.service.ts` | `VULNERABILITIES_LIST_FIELD` | Sort and filter of the vulnerabilities column in GET /assets: sorts as an unknown column, the filter matches nothing, counts `null` when off |
+| `applications/services/applications-list.service.ts` | `VULNERABILITIES_LIST_FIELD` (`include.has('vulnerabilities')`) | Same as the assets list |
+| `vulnerabilities/vulnerability-list-column.ts` | `csvConfigForVulnerabilityFeed`: `vulnerabilities_to_review` and `severe_vulnerabilities` in the assets and applications CSV export | Columns left out of the export and its field list when off |
+| `frontend/src/pages/it/AssetsPage.tsx` | `features.vulnerabilityFeed` | "Vulnerabilities to review" column of the assets list hidden when off |
+| `frontend/src/pages/it/ApplicationsPage.tsx` | `features.vulnerabilityFeed` | "Vulnerabilities to review" column of the applications list hidden when off |
+| `frontend/src/pages/it/AssetWorkspacePage.tsx` | `features.vulnerabilityFeed` | Vulnerabilities section (Technical tab) and severe badge of the asset record: reads nothing and renders nothing when off |
+| `frontend/src/pages/it/ApplicationWorkspacePage.tsx` | `features.vulnerabilityFeed` | Vulnerabilities section (Operations tab) and severe badge of the application record: reads nothing and renders nothing when off |
+| `frontend/src/pages/workspace/tiles/TileRegistry.ts` | `requiredFeature: 'vulnerabilityFeed'` | Vulnerabilities dashboard tile. The hook in `frontend/src/pages/workspace/hooks/useTilePermissions.ts` drops a tile whose `requiredFeature` is off |
+| `ai/ai-policy.service.ts` | `vulnerabilities` | Left out of the readable families of the assistant and the MCP server, refused with `vulnerabilityFeed` when off |
 
 #### CVE.org names (`Features.CVE_LIST_FEED_ENABLED`)
 
-The CVE.org list (cvelistV5) fills the platform cache of published records. `CVE_LIST_FEED_ENABLED` defaults to the vulnerability feed; a value set either way wins. `cveListEnabled()` is the two switches together, so the collector and the name routes stay idle while the vulnerability feed is off. With the list off and the feed on, `GET /vulnerabilities/cve-names` and `GET /technologies/:id/cve-names/suggestions` answer 403 `FEATURE_DISABLED` for `cveNames`. With the vulnerability feed off, the vulnerabilities controller answers for `vulnerabilityFeed` before the directory handler; the suggestions route answers for `cveNames`. The screen that reads `features.cveNames` is Technologies › Overview, section CVE.org names, and arrives in the following run. `GET /vulnerabilities/sources` reports both feeds. `enabled` for the NVD is `VULNERABILITY_FEED_ENABLED`, and for CVE.org it is `cveListEnabled()`. No new gate: the route uses the vulnerability-feed guard.
+The CVE.org list (cvelistV5) fills the platform cache of published records. `CVE_LIST_FEED_ENABLED` defaults to the vulnerability feed; a value set either way wins. `cveListEnabled()` is the two switches together, so the collector and the name routes stay idle while the vulnerability feed is off. With the list off and the feed on, `GET /vulnerabilities/cve-names` and `GET /technologies/:id/cve-names/suggestions` answer 403 `FEATURE_DISABLED` for `cveNames`. With the vulnerability feed off, the vulnerabilities controller answers for `vulnerabilityFeed` before the directory handler; the suggestions route answers for `cveNames`. The screen that reads `features.cveNames` is Technologies › Overview, section CVE.org names, and arrives in the following run. `GET /vulnerabilities/sources` reports both feeds in `items`, and the four exploitation catalogues (CISA KEV, EU KEV, EPSS, EUVD) in `signals`. `enabled` for the NVD and for each catalogue is `VULNERABILITY_FEED_ENABLED`, and for CVE.org it is `cveListEnabled()`. No new gate: the route uses the vulnerability-feed guard. The catalogues have no switch of their own.
 
-| File | Line | What | Behavior |
-|------|------|------|----------|
-| `config/features.ts` | 31 | `CVE_LIST_FEED_ENABLED` | Env value when set, otherwise the vulnerability feed |
-| `vulnerabilities/cve-list-feed.service.ts` | 101 | `cveListEnabled()` | True when the vulnerability feed and the CVE.org list are both on |
-| `vulnerabilities/cve-list-feed.service.ts` | 132 | `collect` inside the 6-hour vulnerability pass | Returns a disabled summary and fetches nothing when `cveListEnabled()` is false |
-| `vulnerabilities/cve-names.service.ts` | 42 | Directory and suggestions | 403 `FEATURE_DISABLED` (`cveNames`) when `cveListEnabled()` is false |
-| `vulnerabilities/vulnerabilities.controller.ts` | 85 | `GET /vulnerabilities/cve-names` | `infrastructure:reader`. The feed guard answers first when the vulnerability feed is off |
-| `technologies/technologies.controller.ts` | 301 | `GET /technologies/:id/cve-names/suggestions` | `infrastructure:reader`, the same right as reading the technology |
-| `config/config.controller.ts` | 29 | `cveNames` | `cveListEnabled()` in `GET /config/public`, beside `vulnerabilityFeed` |
-| `frontend/src/config/FeaturesContext.tsx` | 21 | `features.cveNames` | False until `GET /config/public` says otherwise. Technologies › Overview, section CVE.org names, arrives in the following run |
+| File | What | Behavior |
+|------|------|----------|
+| `config/features.ts` | `CVE_LIST_FEED_ENABLED` | Env value when set, otherwise the vulnerability feed |
+| `vulnerabilities/cve-list-feed.service.ts` | `cveListEnabled()` | True when the vulnerability feed and the CVE.org list are both on |
+| `vulnerabilities/cve-list-feed.service.ts` | `collect` inside the 6-hour vulnerability pass | Returns a disabled summary and fetches nothing when `cveListEnabled()` is false |
+| `vulnerabilities/cve-names.service.ts` | `cveListEnabled` | Directory and suggestions answer 403 `FEATURE_DISABLED` (`cveNames`) when `cveListEnabled()` is false |
+| `vulnerabilities/vulnerabilities.controller.ts` | `@Get('cve-names')` | `@RequireLevel('infrastructure', 'reader')`. The feed guard answers first when the vulnerability feed is off |
+| `technologies/technologies.controller.ts` | `@Get(':id/cve-names/suggestions')` | `@RequireLevel('infrastructure', 'reader')`, the same right as reading the technology |
+| `config/config.controller.ts` | `cveNames` | `cveListEnabled()` in `@Get('public')`, beside `vulnerabilityFeed` |
+| `frontend/src/config/FeaturesContext.tsx` | `cveNames` | False until `GET /config/public` says otherwise. Technologies › Overview, section CVE.org names, arrives in the following run |
 
 #### Excel workbooks in the data imports (`Features.IMPORT_XLSX`)
 
 Every data import that takes a CSV file (the master-data lists, the IT and portfolio registers, the budget file, the technology link files, data access, the chart of accounts templates and the incident journal) also takes an Excel workbook (.xlsx): its first worksheet is read with the same columns, rules, preflight and report as the CSV file. `IMPORT_XLSX` is true by default in both modes; set to false, the imports are CSV only, as before the workbooks: the upload filter refuses an .xlsx or .xls by its name with the "save as CSV" sentence (`CSV_FILE_EXCEL`), a workbook that passes under another name meets the CSV decoder and the same sentence, and the dialogs offer `.csv` only. Import templates stay CSV files either way. Nothing leaves the server and no other component is involved: the reader is `backend/src/common/xlsx/read.ts`.
 
-| File | Line | What | Behavior |
-|------|------|------|----------|
-| `config/features.ts` | 39 | `IMPORT_XLSX` | Env value when set, otherwise true |
-| `common/upload.ts` | 58 | `isWorkbookUpload` in the `csv-import` file filter (every CSV import route, and the budget file through `budgetFileMulterOptions`) | Passes an .xlsx or .xls name, or the xlsx type, when on; the "save as CSV" refusal when off |
-| `common/csv-sheet/read.ts` | 141 | `isWorkbookBytes`, read by `readSheet` (master-data files, budget file) and `readImportText` (field engine, registers' follow-up columns, chart of accounts templates, incident journal) | A ZIP or OLE file is read as a workbook when on; it goes to the CSV decoder when off |
-| `config/config.controller.ts` | 31 | `importXlsx` | `Features.IMPORT_XLSX` in `GET /config/public` |
-| `frontend/src/config/FeaturesContext.tsx` | 52 | `features.importXlsx` | False until `GET /config/public` says otherwise |
-| `frontend/src/components/csv/importFiles.tsx` | 12 | `useImportFiles`, `ImportLabel` (import dialogs, budget file dialog, "Import CSV" buttons) | `.csv,.xlsx` and "Import" when on; `.csv` and the CSV labels when off |
+| File | What | Behavior |
+|------|------|----------|
+| `config/features.ts` | `IMPORT_XLSX` | Env value when set, otherwise true |
+| `common/upload.ts` | `isWorkbookUpload` in the `csv-import` filter (`csvImportMulterOptions`) | Passes an .xlsx or .xls name, or the xlsx type, when on; the "save as CSV" refusal when off. The budget file spreads this filter |
+| `common/csv-sheet/read.ts` | `isWorkbookBytes`, read by `readSheet` (master-data files, budget file) and `readImportText` (field engine, registers' follow-up columns, chart of accounts templates, incident journal) | A ZIP or OLE file is read as a workbook when on; it goes to the CSV decoder when off |
+| `config/config.controller.ts` | `importXlsx` | `Features.IMPORT_XLSX` in `@Get('public')` |
+| `frontend/src/config/FeaturesContext.tsx` | `importXlsx` | False until `GET /config/public` says otherwise |
+| `frontend/src/components/csv/importFiles.tsx` | `useImportFiles`, `ImportLabel` (import dialogs, budget file dialog, "Import CSV" buttons) | `.csv,.xlsx` and "Import" when on; `.csv` and the CSV labels when off |
 
 #### Outbound target guard (`backend/src/common/ssrf-guard.ts`)
 
 Shared by every tenant-supplied outbound URL: Netbox, PRTG and GLPI. Not a `Features` flag of its own, but mode-dependent.
 
-| File | Line | What | Behavior |
-|------|------|------|----------|
-| `common/ssrf-guard.ts` | 44 | `shouldEnforce()` (`assertPublicHttpUrl`, `assertPublicHttpTarget`) | Multi-tenant: private / loopback / link-local / CGNAT / metadata ranges are refused. Single-tenant: no-op, since RFC1918 and internal-DNS targets are the normal case on-prem. Callers can force either way with `enforcePrivateBlock`. |
-| `common/ssrf-guard.ts` | 56 | `SSRF_ALLOWED_HOSTS` | Operator escape hatch, comma-separated hosts/IPs allowed even when private. Empty by default, so cloud behavior is unchanged. Read per call. |
+| File | What | Behavior |
+|------|------|----------|
+| `common/ssrf-guard.ts` | `shouldEnforce()` (`assertPublicHttpUrl`, `assertPublicHttpTarget`) | Multi-tenant: private / loopback / link-local / CGNAT / metadata ranges are refused. Single-tenant: no-op, since RFC1918 and internal-DNS targets are the normal case on-prem. Callers can force either way with `enforcePrivateBlock`. |
+| `common/ssrf-guard.ts` | `SSRF_ALLOWED_HOSTS` | Operator escape hatch, comma-separated hosts/IPs allowed even when private. Empty by default, so cloud behavior is unchanged. Read per call. |
 
 #### Netbox inventory (`backend/src/netbox/`)
 
 No feature flag. The module is registered and the API is reachable in both modes; access is a permission check (`infrastructure:admin`), not a mode check. Mode-dependent behavior is limited to the rows below.
 
-| File | Line | What | Behavior |
-|------|------|------|----------|
-| `netbox-sync.service.ts`, `netbox-config.service.ts` | `assertPublicHttpUrl` / `assertPublicHttpTarget` calls | Netbox address validation and every outbound call | Inherits the guard above: a private Netbox address is refused in multi-tenant, accepted in single-tenant. On-prem installs reaching an internal Netbox need nothing extra; a dev/cloud install does via `SSRF_ALLOWED_HOSTS`. |
-| `ai/ai-secret-cipher.service.ts` | 10, 61 | Netbox API token storage | The token is encrypted with `AI_SETTINGS_ENCRYPTION_SECRET`. That variable is therefore required to configure Netbox even when all AI features are off. Without it, `secret_writable` is false and the card warns that the token cannot be stored. |
-| `netbox-scheduled-sync.service.ts` | 99 | `netbox-inventory-sync` hourly task | Registered in both modes. Per-tenant `auto_sync` switch. Frozen or trial-expired tenants are skipped via `evaluateSubscriptionAccess`; the check is short-circuited when `StripeConfigService.isConfigured()` is false, so it is a no-op on-prem. |
-| `frontend/src/components/ProtectedRoute.tsx` | 130 | `/admin/integrations` route gating | Now admitted by `ai_settings:admin` **or** `infrastructure:admin`. Mode-agnostic. |
-| `frontend/src/components/Layout.tsx` | 100 | Admin nav entry for Integrations | Same widened condition; the Integrations entry alone can justify showing the Admin workspace. |
-| `frontend/src/pages/admin/AdminIntegrationsPage.tsx` | 120, 122, 307, 309 | Card visibility | GLPI and monitoring cards require the `ai_settings` surface; the Netbox card requires `infrastructure:admin`. |
+| File | What | Behavior |
+|------|------|----------|
+| `netbox/netbox-sync.service.ts`, `netbox/netbox-config.service.ts` | `assertPublicHttpUrl` | Netbox address validation and every outbound call. A private Netbox address is refused in multi-tenant, accepted in single-tenant. On-prem installs reaching an internal Netbox need nothing extra; a dev/cloud install does via `SSRF_ALLOWED_HOSTS`. |
+| `ai/ai-secret-cipher.service.ts` | `canEncrypt` (`AI_SETTINGS_ENCRYPTION_SECRET`) | The Netbox API token is encrypted with that variable, so it is required to configure Netbox even when all AI features are off. Without it, `canEncrypt()` is false and the card warns that the token cannot be stored. |
+| `netbox/netbox-scheduled-sync.service.ts` | `netbox-inventory-sync` | Hourly task, registered in both modes. Per-tenant `auto_sync` switch. Frozen or trial-expired tenants are skipped via `evaluateSubscriptionAccess`; the check returns early when `isConfigured()` is false, so it is a no-op on-prem. |
+| `frontend/src/components/ProtectedRoute.tsx` | `/admin/integrations` | Admitted by `hasLevel('ai_settings', 'admin')` or `hasLevel('infrastructure', 'admin')`. Mode-agnostic. |
+| `frontend/src/components/Layout.tsx` | `canShowIntegrations` | Admin nav entry for Integrations. The same widened condition; the Integrations entry alone can justify showing the Admin workspace. |
+| `frontend/src/pages/admin/AdminIntegrationsPage.tsx` | `aiSettingsAvailable`, `canManageNetbox` | GLPI and monitoring cards follow `aiSettingsAvailable`; the Netbox card follows `canManageNetbox` (`hasLevel('infrastructure', 'admin')`). |
 
 #### URL resolution
 
-| File | Line | What | Behavior |
-|------|------|------|----------|
-| `url.ts` | 164 | `resolveConfiguredAppBaseUrl()` | Single-tenant: `APP_BASE_URL` directly. Multi-tenant: first of `APP_BASE_URL`, `PUBLIC_APP_URL`, `APP_URL` on a tenant domain, with slug substitution. No default address |
-| `scheduled-notifications.service.ts` | 52, 57 | Weekly review + expiration emails | Calls `resolveNotificationBaseUrl(slug)` |
-| `notifications.service.ts` | 122 | Event-driven notifications | Calls `resolveNotificationBaseUrl(tenantSlug)` |
-| `portfolio-status-change-report.controller.ts` | 134 | PDF export base URL | Calls `resolveNotificationBaseUrl(null)` in single-tenant |
+| File | What | Behavior |
+|------|------|----------|
+| `url.ts` | `resolveConfiguredAppBaseUrl()` | Single-tenant: first of `APP_BASE_URL`, `PUBLIC_APP_URL`, as configured, no slug substitution. Multi-tenant: first of `APP_BASE_URL`, `PUBLIC_APP_URL`, `APP_URL` on a tenant domain, with slug substitution. Nothing configured returns null |
+| `notifications/scheduled-notifications.service.ts` | `getTenantAppUrl` (`resolveNotificationBaseUrl`), `skipWithoutAppUrl` (`resolveConfiguredAppBaseUrl`) | Weekly review links use `resolveNotificationBaseUrl`. Expirations and the weekly review are skipped when `resolveConfiguredAppBaseUrl` returns null |
+| `notifications/notifications.service.ts` | `buildTenantBaseUrl` (`resolveNotificationBaseUrl`) | Event-driven notifications |
+| `portfolio/portfolio-weekly-report.controller.ts` | `resolveExportBaseUrl` | Single-tenant: `resolveConfiguredAppBaseUrl()`. Multi-tenant: `resolveTenantAppBaseUrl` or `resolveAppBaseUrl` |
 
 ### Frontend Gates
 
 All gates read from `useFeatures()` hook (provided by `FeaturesContext.tsx`).
 
-#### Route gating (`App.tsx`)
+#### Route gating (`frontend/src/App.tsx`)
 
-| Line | Condition | Routes affected |
-|------|-----------|----------------|
-| 109 | `config.features.email` | `/forgot-password` — redirects to `/login` if email off |
-| 181–182 | `config.features.billing` | `/admin/billing`, `/admin/choose-plan` — not rendered |
-| 183 | `config.features.sso` | `/admin/auth` — not rendered |
-| 184–189 | `!isSingleTenant` | `/admin/tenants`, `/admin/coa-templates`, `/admin/standard-accounts/*`, `/admin/ops-dashboard` — not rendered |
-| 339 | none (always registered) | `/admin/sample-data` — the page refuses itself (`ForbiddenPage`) when the flag is off (on-premise), for a non-Administrator or on the platform host. A direct page load never falls to the catch-all |
+| Condition | Routes affected |
+|-----------|----------------|
+| `config.features.email` | `/forgot-password`: redirects to `/login` if email is off |
+| `config.features.billing` | `/admin/billing`, `/admin/choose-plan`: not rendered |
+| `config.features.sso` | `/admin/auth`: not rendered |
+| `!isSingleTenant` | `/admin/tenants`, `/admin/coa-templates`, `/admin/standard-accounts`, `/admin/ops-dashboard`, `/admin/platform-ai`: not rendered |
+| `/admin/sample-data` | Always registered. The page refuses itself (`ForbiddenPage`) when the flag is off (on-premise), for a non-Administrator or on the platform host. A direct page load never falls to the catch-all |
 
-#### Navigation gating (`Layout.tsx`)
+#### Navigation gating (`frontend/src/components/Layout.tsx`)
 
-| Line | Condition | Effect |
-|------|-----------|--------|
-| 453 | `isSingleTenant` | Platform admin nav hidden entirely |
-| 454 | `!config.features.billing` | Billing nav item filtered out |
-| 455 | `!config.features.sso` | Auth/SSO nav item filtered out |
-| 495 | `config.features.billing` | `SubscriptionBanner` hidden |
-| 521 | `!isPlatformHost && !isSingleTenant && config.features.sampleData && claims.isGlobalAdmin` | **Sample data** admin nav item (after Branding) added; absent otherwise |
+| Condition | Effect |
+|-----------|--------|
+| `isPlatformHost && !isSingleTenant` | Platform admin nav is used only then. In single-tenant mode an administrator also gets Scheduled tasks (`isSingleTenant`) |
+| `!config.features.billing` | Billing nav item filtered out |
+| `!config.features.sso` | Auth/SSO nav item filtered out |
+| `config.features.billing` | `SubscriptionBanner` hidden when this is false |
+| `!isPlatformHost && !isSingleTenant && config.features.sampleData && claims?.isGlobalAdmin` | **Sample data** admin nav item (after Branding) added; absent otherwise |
 
 #### Component gating
 
-| File | Line | Condition | Effect |
-|------|------|-----------|--------|
-| `LoginPage.tsx` | 95 | `config.features.sso` | "Sign in with Microsoft" button hidden |
-| `LoginPage.tsx` | 164 | `config.features.email` | "Forgot password" link hidden |
-| `ForgotPasswordPage.tsx` | 11 | `!config.features.email` | Shows "contact your administrator" message instead of form |
-| `SubscriptionBanner.tsx` | 14 | `!config.features.billing` | Returns null (hidden) |
-| `ProtectedRoute.tsx` | 116 | `config.features.billing` | Skips billing/subscription redirect when billing off |
-| `pages/admin/SampleDataPage.tsx`, `pages/admin/sample-data/SampleDataBanner.tsx` | 1 | `useSampleDataAvailable()`: not single-tenant, `features.sampleData`, not the platform host, Administrator role | Page shows `ForbiddenPage`; the home banner (rendered first in `WorkspaceDashboardPage.tsx`) renders nothing. No polling or retry after a 403 or 404 |
-| `ProtectedRoute.tsx` | 301 | Billing redirect of a frozen workspace | `/admin/sample-data` is exempt, so an Administrator can erase a frozen workspace |
-
-#### API client (`client.ts`)
-
-| Line | What | Effect |
-|------|------|--------|
-| 107 | `FEATURE_DISABLED` in error code check | Does not redirect to login — lets caller handle gracefully |
+| File | Condition | Effect |
+|------|-----------|--------|
+| `LoginPage.tsx` | `config.features.sso` | "Sign in with Microsoft" button hidden |
+| `LoginPage.tsx` | `config.features.email` | "Forgot password" link hidden |
+| `ForgotPasswordPage.tsx` | `!config.features.email` | Shows "contact your administrator" message instead of form |
+| `SubscriptionBanner.tsx` | `!config.features.billing` | Returns null (hidden) |
+| `ProtectedRoute.tsx` | `config.features.billing` | Skips billing/subscription redirect when billing is off |
+| `pages/admin/SampleDataPage.tsx`, `pages/admin/sample-data/SampleDataBanner.tsx` | `useSampleDataAvailable()` | Not single-tenant, sample data flag on, not the platform host, Administrator role. The page shows `ForbiddenPage`; the home banner (rendered first in `WorkspaceDashboardPage.tsx`) renders nothing. No polling or retry after a 403 or 404 |
+| `ProtectedRoute.tsx` | `/admin/sample-data` | Exempt from the billing redirect of a frozen workspace, so an Administrator can erase that workspace |
 
 ### CI
 
 | File | What |
 |------|------|
-| `.github/workflows/ci.yml:16` | Matrix: `DEPLOYMENT_MODE` set to `single-tenant` for `onprem` mode, unset for `cloud` mode. Both must build cleanly. |
+| `.github/workflows/ci.yml` | `DEPLOYMENT_MODE` on the `onprem` job (`build (onprem)`) is `single-tenant`. The cloud jobs leave it unset. Both builds must pass. |
 
 ### Infra
 
@@ -551,5 +562,5 @@ When adding a new gate, follow this checklist:
 3. **Expose to frontend** via `config.controller.ts` → `GET /config/public` response
 4. **Update `FeaturesContext.tsx`** type definition if adding a new feature key
 5. **Gate the frontend** — both routes (`App.tsx`) and navigation (`Layout.tsx`)
-6. **Update this inventory** — add rows to the tables above
+6. **Update this inventory**. Add rows to the tables above. Cite the file and the symbol (function, class, constant, route or condition), never a line number.
 7. **Test both modes** — CI matrix catches build errors, but manually verify runtime behavior

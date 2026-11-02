@@ -46,7 +46,14 @@ const unknownFieldSx = {
 export function AuditValueCell({ value, field, context }: { value: unknown; field: string; context: AuditValueContext }) {
   const display = formatAuditValue(value, field, context);
   return (
-    <Box component="td" sx={{ color: display.secondary ? 'kanap.text.secondary' : 'kanap.text.primary' }} title={display.title}>
+    <Box
+      component="td"
+      sx={{
+        color: display.secondary ? 'kanap.text.secondary' : 'kanap.text.primary',
+        whiteSpace: display.text.includes('\n') ? 'pre-line' : undefined,
+      }}
+      title={display.title}
+    >
       {display.text}
     </Box>
   );

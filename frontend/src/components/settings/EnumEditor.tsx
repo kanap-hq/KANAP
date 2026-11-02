@@ -66,6 +66,8 @@ export interface EnumEditorProps<T extends EnumItem> {
   hideAddButton?: boolean;
   /** Example shown in the name field. Already translated. Absent means no example. */
   namePlaceholder?: string;
+  /** Every value stays visible. Fields are locked and add, remove and translate are hidden. */
+  readOnly?: boolean;
   addButtonLabel?: string;
   onAddRequest?: () => void;
   addRequestToken?: number;
@@ -145,6 +147,7 @@ export function EnumEditor<T extends EnumItem>({
   forbidComma,
   hideAddButton,
   namePlaceholder,
+  readOnly = false,
   addButtonLabel: addButtonLabelProp,
   onAddRequest,
   addRequestToken,
@@ -207,6 +210,7 @@ export function EnumEditor<T extends EnumItem>({
 
   const handleUpdate = React.useCallback(
     (localId: string, patch: Partial<T>) => {
+      if (readOnly) return;
       setLocalItems((prev) => {
         const next = prev.map((item) =>
           (item as any).localId === localId ? { ...item, ...patch } : item
@@ -215,10 +219,11 @@ export function EnumEditor<T extends EnumItem>({
         return next;
       });
     },
-    [commitToParent]
+    [commitToParent, readOnly]
   );
 
   const handleAdd = React.useCallback(() => {
+    if (readOnly) return;
     const newRow = { code: '', label: '', deprecated: false, localId: makeLocalId('enum') } as T;
     setLocalItems((prev) => {
       const next = [newRow, ...prev];
@@ -226,7 +231,7 @@ export function EnumEditor<T extends EnumItem>({
       return next;
     });
     setFocusId((newRow as any).localId);
-  }, [commitToParent]);
+  }, [commitToParent, readOnly]);
 
   React.useEffect(() => {
     if (addRequestToken === undefined) return;
@@ -257,7 +262,8 @@ export function EnumEditor<T extends EnumItem>({
   });
 
   const effectiveColumns = React.useMemo(() => columns || buildDefaultColumns<T>(t, namePlaceholder), [columns, namePlaceholder, t]);
-  const totalColumns = effectiveColumns.length + 1; // +1 for actions column
+  const showActions = !readOnly;
+  const totalColumns = effectiveColumns.length + (showActions ? 1 : 0);
   const issues = React.useMemo(() => catalogListIssues(localItems, { forbidComma, skipCodes: lockedSet }), [forbidComma, localItems, lockedSet]);
   const issueOf = (item: T): CatalogIssue | undefined => issues.get(localItems.indexOf(item));
 
@@ -285,9 +291,11 @@ export function EnumEditor<T extends EnumItem>({
                   {col.required && <RequiredMark />}
                 </TableCell>
               ))}
-              <TableCell align="right" sx={{ width: '20%' }}>
-                {t('labels.actions')}
-              </TableCell>
+              {showActions && (
+                <TableCell align="right" sx={{ width: '20%' }}>
+                  {t('labels.actions')}
+                </TableCell>
+              )}
             </TableRow>
           </TableHead>
           <TableBody>
@@ -310,6 +318,7 @@ export function EnumEditor<T extends EnumItem>({
               const code = String(typedItem.code || '').toLowerCase();
               const isLocked = lockedSet.has(code);
               const isProtected = !isLocked && protectedSet.has(code);
+              const fieldLocked = readOnly || isLocked;
               const isFocused = typedItem.localId === focusId;
               const issue = issueOf(typedItem);
 
@@ -321,7 +330,7 @@ export function EnumEditor<T extends EnumItem>({
                         col.render(
                           typedItem,
                           (patch) => handleUpdate(typedItem.localId, patch),
-                          isLocked,
+                          fieldLocked,
                           isFocused && colIndex === 0,
                           (el) => {
                             if (isFocused && colIndex === 0) {
@@ -335,27 +344,29 @@ export function EnumEditor<T extends EnumItem>({
                       {colIndex === 0 && issue && issue !== 'nameRequired' && <Typography sx={issueTextSx}>{t(`enumEditor.${issue}`)}</Typography>}
                     </TableCell>
                   ))}
-                  <TableCell align="right" sx={{ verticalAlign: 'top', whiteSpace: 'nowrap' }}>
-                    {!isLocked && typedItem.code && (
-                      <IconButton size="small" aria-label={`${t('enumEditor.translate')} ${typedItem.label}`} sx={{ color: 'kanap.text.secondary', mr: 0.5 }}
-                        onClick={() => translations.openTranslations({ item: typedItem, onSave: (next) => handleUpdate(typedItem.localId, { translations: next } as Partial<T>) })}>
-                        <TranslateIcon sx={{ fontSize: 17 }} />
-                      </IconButton>
-                    )}
-                    {isLocked || isProtected ? (
-                      <Typography component="span" sx={{ fontSize: 12, color: 'kanap.text.tertiary' }} title={isProtected ? t('enumEditor.protectedHint') : undefined}>
-                        {t('enumEditor.locked')}
-                      </Typography>
-                    ) : (
-                      <Button
-                        size="small"
-                        color="error"
-                        onClick={() => void requestRemoval(typedItem)}
-                      >
-                        {t('enumEditor.remove')}
-                      </Button>
-                    )}
-                  </TableCell>
+                  {showActions && (
+                    <TableCell align="right" sx={{ verticalAlign: 'top', whiteSpace: 'nowrap' }}>
+                      {!isLocked && typedItem.code && (
+                        <IconButton size="small" aria-label={`${t('enumEditor.translate')} ${typedItem.label}`} sx={{ color: 'kanap.text.secondary', mr: 0.5 }}
+                          onClick={() => translations.openTranslations({ item: typedItem, onSave: (next) => handleUpdate(typedItem.localId, { translations: next } as Partial<T>) })}>
+                          <TranslateIcon sx={{ fontSize: 17 }} />
+                        </IconButton>
+                      )}
+                      {isLocked || isProtected ? (
+                        <Typography component="span" sx={{ fontSize: 12, color: 'kanap.text.tertiary' }} title={isProtected ? t('enumEditor.protectedHint') : undefined}>
+                          {t('enumEditor.locked')}
+                        </Typography>
+                      ) : (
+                        <Button
+                          size="small"
+                          color="error"
+                          onClick={() => void requestRemoval(typedItem)}
+                        >
+                          {t('enumEditor.remove')}
+                        </Button>
+                      )}
+                    </TableCell>
+                  )}
                 </TableRow>
               );
             })}
@@ -367,7 +378,7 @@ export function EnumEditor<T extends EnumItem>({
           </TableBody>
         </Table>
       </TableContainer>
-      {!hideAddButton && (
+      {!readOnly && !hideAddButton && (
         <Box sx={{ mt: 1 }}>
           <Button size="small" onClick={onAddRequest || handleAdd}>
             {addButtonLabel}
@@ -396,6 +407,7 @@ type DerivedEditorProps<T extends EnumItem> = {
   lockedCodes?: string[];
   protectedCodes?: string[];
   namePlaceholder?: string;
+  readOnly?: boolean;
 };
 
 export type HostingTypeEditorProps = DerivedEditorProps<HostingTypeItem>;

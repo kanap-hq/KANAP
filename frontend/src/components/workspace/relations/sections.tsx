@@ -4,6 +4,7 @@ import type { TFunction } from 'i18next';
 import api from '../../../api';
 import type { IncidentRow } from '../../../api/endpoints/incidents';
 import { StatusDot } from '../../design';
+import ContractLineMismatchMark, { type ContractLineMismatch } from '../../finance/ContractLineMismatchMark';
 import FxMissingNotice, { FxMissingLocalAmount } from '../../finance/FxMissingNotice';
 import { fxMissingOfLines } from '../../finance/fxMissing';
 import { formatAmount } from '../../../i18n/formatters';
@@ -166,11 +167,14 @@ export function contractsSection({
   rows,
   lang,
   hidden = 0,
+  lineId,
 }: {
   t: TFunction;
   rows: ContractRow[] | null;
   lang: string;
   hidden?: number;
+  /** The budget line this section belongs to: candidates are marked before they are linked. */
+  lineId?: string;
 }): SectionSpec<ContractRow> {
   const outsideKey = rows === null ? 'count' : rows.length === 0 ? 'only' : 'and';
   return {
@@ -184,7 +188,16 @@ export function contractsSection({
     label: (row) => row.name,
     muted: (row) => row.status === 'disabled',
     columns: [
-      { key: 'name', header: columnsT(t, 'name'), render: (row) => row.name },
+      {
+        key: 'name',
+        header: columnsT(t, 'name'),
+        render: (row) => (
+          <>
+            {row.name}
+            {row.mismatches && row.mismatches.length > 0 ? <ContractLineMismatchMark mismatches={row.mismatches} /> : null}
+          </>
+        ),
+      },
       { key: 'supplier', header: columnsT(t, 'supplier'), width: 140, hideOrder: 2, render: (row) => row.supplier_name ?? DASH },
       {
         key: 'end',
@@ -216,7 +229,17 @@ export function contractsSection({
         params: { limit: PAGE, ...(q ? { q } : {}) },
         signal,
       });
-      return (res.data?.items || []).map((row) => ({ id: row.id, label: row.name }));
+      const options: RelationOption[] = (res.data?.items || []).map((row) => ({ id: row.id, label: row.name }));
+      if (!lineId || options.length === 0) return options;
+      const consistency = await api.get<{ items: Array<{ id: string; mismatches: ContractLineMismatch[] }> }>(
+        `/budget-lines/${encodeURIComponent(lineId)}/contract-consistency`,
+        { params: { ids: options.map((option) => option.id).join(',') }, signal },
+      );
+      const byId = new Map((consistency.data?.items ?? []).map((item) => [item.id, item.mismatches]));
+      return options.map((option) => {
+        const mismatches = byId.get(option.id);
+        return mismatches && mismatches.length > 0 ? { ...option, mismatches } : option;
+      });
     },
     totals: (contracts) => {
       const byCurrency = new Map<string, number>();

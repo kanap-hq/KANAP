@@ -26,9 +26,9 @@ type FieldKey =
   | 'technologyFamily'
   | 'adminZone';
 
-export function useItOpsEnumOptions() {
+export function useItOpsEnumOptions(options: { enabled?: boolean } = {}) {
   // Display projection: names and descriptions localized for the user; editors use the raw settings hook.
-  const { data } = useLocalizedItOpsSettings();
+  const { data } = useLocalizedItOpsSettings(options);
   const settings = data;
 
   const byField = useMemo<Record<FieldKey, ItOpsEnumOption[]>>(() => ({

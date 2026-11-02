@@ -242,7 +242,8 @@ export async function loadContractBudgetInputs(
 
   const currencies: Array<{ currency: string }> = await manager.query(
     `SELECT DISTINCT ${contractCurrencySql('c')} AS currency FROM contracts c
-      WHERE c.tenant_id = $1${scoped ? ' AND c.id = ANY($2::uuid[])' : ''}`,
+      WHERE c.tenant_id = $1${scoped ? ' AND c.id = ANY($2::uuid[])' : ''}
+      ORDER BY 1`,
     scoped ? [tenantId, ids] : [tenantId],
   );
   const fx = await contractFxRates(deps.fxRates, manager, tenantId, uniqueYears);

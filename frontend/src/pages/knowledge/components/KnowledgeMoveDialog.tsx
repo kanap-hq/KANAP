@@ -64,6 +64,7 @@ interface KnowledgeMoveDialogProps {
   canChangeLibrary: boolean;
   initialTargetLibraryId?: string | null;
   templateLibraryId?: string | null;
+  error?: string | null;
 }
 
 function flattenFolders(nodes: FolderNode[], depth = 0): FlatFolder[] {
@@ -95,6 +96,7 @@ export default function KnowledgeMoveDialog({
   canChangeLibrary,
   initialTargetLibraryId = null,
   templateLibraryId = null,
+  error = null,
 }: KnowledgeMoveDialogProps) {
   const { t } = useTranslation(['knowledge', 'common']);
   const selectedLibraryIds = React.useMemo(
@@ -177,6 +179,7 @@ export default function KnowledgeMoveDialog({
       saveLoading={pending}
     >
         <Stack spacing={2}>
+          {error && <Alert severity="error">{error}</Alert>}
           <Typography variant="body2" color="text.secondary">
             {selectionSummary}
           </Typography>

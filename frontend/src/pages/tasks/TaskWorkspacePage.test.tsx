@@ -159,7 +159,13 @@ vi.mock('./components/TaskDetailHeader', () => ({
     onNavigateToProject,
     projectId,
     crumbs,
+    tabs,
+    activeTab,
+    onTabChange,
   }: {
+    tabs?: Array<{ key: string; label: string }>;
+    activeTab?: string;
+    onTabChange?: (next: string) => void;
     onClose?: () => void;
     onOriginClick?: () => void;
     onParentClick?: (href: string) => void;
@@ -178,6 +184,19 @@ vi.mock('./components/TaskDetailHeader', () => ({
         {projectId && onNavigateToProject ? (
           <button type="button" onClick={() => onNavigateToProject(projectId)}>project-link</button>
         ) : null}
+        <div role="tablist">
+          {tabs?.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              role="tab"
+              aria-selected={tab.key === activeTab}
+              onClick={() => onTabChange?.(tab.key)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
     );
   },
@@ -221,6 +240,12 @@ vi.mock('./components/ConvertToRequestDialog', () => ({
 
 vi.mock('./components/TaskActivity', () => ({
   default: () => null,
+}));
+
+vi.mock('../../components/history/RecordHistoryTab', () => ({
+  default: ({ table, recordId }: { table: string; recordId: string }) => (
+    <div data-testid="record-history-tab" data-table={table} data-record={recordId} />
+  ),
 }));
 
 vi.mock('./components/TaskAttachments', () => ({
@@ -282,6 +307,21 @@ function renderEditPage(initialEntry = '/portfolio/tasks/task-1/overview') {
       <KanapDialogProvider>
         <MemoryRouter initialEntries={[initialEntry]}>
           <Routes>
+            <Route path="/portfolio/tasks/:id/:tab" element={<TaskWorkspacePage />} />
+          </Routes>
+        </MemoryRouter>
+      </KanapDialogProvider>
+    </ThemeProvider>,
+  );
+}
+
+function renderTaskAddress(entry: string) {
+  return render(
+    <ThemeProvider theme={createAppTheme('light')}>
+      <KanapDialogProvider>
+        <MemoryRouter initialEntries={[entry]}>
+          <Routes>
+            <Route path="/portfolio/tasks/:id" element={<TaskWorkspacePage />} />
             <Route path="/portfolio/tasks/:id/:tab" element={<TaskWorkspacePage />} />
           </Routes>
         </MemoryRouter>
@@ -674,5 +714,79 @@ describe('TaskWorkspacePage unsaved close', () => {
     await expect(answer).resolves.toBe(false);
     expect(navigateMock).not.toHaveBeenCalled();
     expect(title).toHaveValue('Draft title');
+  });
+});
+
+describe('TaskWorkspacePage tabs', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    translationMock.reset();
+    taskQueryMock.task = makeTask();
+    taskQueryMock.isLoading = false;
+    taskQueryMock.refetch.mockReset();
+    taskQueryMock.refetch.mockResolvedValue(undefined);
+    vi.mocked(api.patch).mockResolvedValue({ data: {} } as any);
+
+    const localStorageMock = createLocalStorageMock();
+    vi.stubGlobal('localStorage', localStorageMock);
+    Object.defineProperty(window, 'localStorage', {
+      value: localStorageMock,
+      configurable: true,
+    });
+    window.localStorage.setItem('kanap.taskDetail.drawerOpen', 'true');
+
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
+  });
+
+  it('draws an Overview and a History tab, History last', async () => {
+    renderTaskAddress('/portfolio/tasks/task-1/overview');
+    const tabs = await screen.findAllByRole('tab');
+    expect(tabs.map((tab) => tab.textContent)).toEqual([
+      'portfolio:workspace.task.tabs.overview__0',
+      'portfolio:workspace.task.tabs.history__0',
+    ]);
+  });
+
+  it('opens Overview from an address without a tab', async () => {
+    renderTaskAddress('/portfolio/tasks/task-1');
+    expect(await screen.findByLabelText('Task description')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'portfolio:workspace.task.tabs.overview__0' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.queryByTestId('record-history-tab')).toBeNull();
+  });
+
+  it('opens the task history from the history address and keeps the properties panel', async () => {
+    renderTaskAddress('/portfolio/tasks/task-1/history');
+    const history = await screen.findByTestId('record-history-tab');
+    expect(history).toHaveAttribute('data-table', 'tasks');
+    expect(history).toHaveAttribute('data-record', 'task-1');
+    expect(screen.getByRole('tab', { name: 'portfolio:workspace.task.tabs.history__0' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.queryByLabelText('Task description')).toBeNull();
+    expect(screen.getByTestId('task-properties-drawer')).toBeInTheDocument();
+  });
+
+  it('puts the tab in the address and keeps the list context', async () => {
+    renderTaskAddress('/portfolio/tasks/task-1/overview?projectId=project-a&projectTab=tasks');
+    fireEvent.click(await screen.findByRole('tab', { name: 'portfolio:workspace.task.tabs.history__0' }));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/portfolio/tasks/task-1/history?projectId=project-a&projectTab=tasks'));
+  });
+
+  it('has no tab row while the task is being created', async () => {
+    taskQueryMock.task = undefined;
+    renderCreatePage();
+    await screen.findByPlaceholderText('portfolio:workspace.task.title.placeholder__0');
+    expect(screen.queryByRole('tab')).toBeNull();
+    expect(screen.queryByTestId('record-history-tab')).toBeNull();
   });
 });

@@ -160,7 +160,7 @@ El botón **Eliminar** (icono de papelera) del encabezado elimina el elemento tr
 
 ## Centros de coste en las líneas de presupuesto
 
-- **OPEX y CAPEX**: el campo **Centro de coste** del panel **Propiedades** muestra el árbol. Los grupos se muestran para ayudarle a orientarse y no se pueden elegir. Cuando crea una línea y la empresa pagadora está vacía, elegir un centro de coste la completa con la empresa del centro de coste, y la empresa sigue al centro de coste hasta que usted elija una empresa o una cuenta. Cuando las dos empresas difieren, se conservan ambas y una indicación lo señala. Consulte [Líneas presupuestarias](budget-lines.md).
+- **OPEX y CAPEX**: el campo **Centro de coste** del panel **Propiedades** muestra el árbol. Los grupos se muestran para ayudarle a orientarse y no se pueden elegir. Cuando la empresa pagadora está vacía, elegir un centro de coste la completa con la empresa del centro de coste. Cuando las dos empresas difieren, se conservan ambas y una indicación lo señala. Consulte [Líneas presupuestarias](budget-lines.md).
 - **Lista**: las columnas y filtros **Centro de coste** y **Run o build** de la lista de líneas presupuestarias.
 - **Informes**: los informes presupuestarios se pueden filtrar por un centro de coste o un grupo. Consulte [Filtros de centro de coste, de Run o build y de dimensiones analíticas](reports.md#filtros-de-centro-de-coste-de-run-o-build-y-de-dimensiones-analiticas).
 
@@ -230,6 +230,10 @@ Cargue o actualice todo el árbol desde un archivo.
 Cada rol empieza con el nivel que tiene en departamentos, salvo el rol integrado Administrador de presupuesto, que recibe admin. Así, Administrador de presupuesto y Administrador de datos maestros son administradores, Miembro de presupuesto y Miembro de datos maestros son miembros, y los roles de lectura pueden leer. Cualquier persona que pueda leer las líneas presupuestarias (Presupuesto) o los informes puede elegir un centro de coste en una línea o en un filtro de informe sin acceso a esta página.
 
 ---
+
+## Preguntar al asistente
+
+[Plaid](ai-assistant.md#tool-calls) lee los centros de coste para cualquier persona con derecho a leerlos: el árbol, los responsables del presupuesto y las líneas que usan cada nodo. Pregunte, por ejemplo: «¿Qué centros de coste dependen de Group IT?»
 
 ## Consejos
 

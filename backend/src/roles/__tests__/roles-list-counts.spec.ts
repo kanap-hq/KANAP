@@ -1,12 +1,14 @@
 import * as assert from 'node:assert/strict';
+import { userAssignedRolesSql } from '../../users/user-access-sql';
 import { RolesController } from '../roles.controller';
 import { RolesService } from '../roles.service';
 
 /**
- * The roles list counts assignments with one GROUP BY on `user_roles`.
- * A count per role used to run at once on the request's single connection, which node-postgres
- * warns about (`client.query() when the client is already executing a query`; an error in pg 9).
- * The fake connection below fails the spec when two of its queries are in flight together.
+ * The roles list counts people with one GROUP BY: the primary role and `user_roles`, each person
+ * once (`userAssignedRolesSql`). A count per role used to run at once on the request's single
+ * connection, which node-postgres warns about (`client.query() when the client is already
+ * executing a query`; an error in pg 9). The fake connection below fails the spec when two of its
+ * queries are in flight together.
  */
 
 type CountRow = { role_id: string; user_count: number | string };
@@ -80,8 +82,11 @@ async function testRolesListCountsWithOneGroupedQuery() {
   );
   const grouped = calls.filter((call) => /user_roles/i.test(call.sql));
   assert.equal(grouped.length, 1, 'one count for the whole list');
-  assert.match(grouped[0].sql, /GROUP BY role_id/);
-  assert.match(grouped[0].sql, /tenant_id = app_current_tenant\(\)/);
+  assert.ok(grouped[0].sql.includes(userAssignedRolesSql('u')), 'the primary role and user_roles, the same union as the people list');
+  assert.match(grouped[0].sql, /COUNT\(DISTINCT u\.id\)/);
+  assert.match(grouped[0].sql, /FROM users u/);
+  assert.match(grouped[0].sql, /GROUP BY assigned\.role_id/);
+  assert.match(grouped[0].sql, /u\.tenant_id = app_current_tenant\(\)/);
   assert.deepEqual(grouped[0].params, [roles.map((role) => role.id)]);
   assert.equal(calls.filter((call) => call.sql.startsWith('count ')).length, 0);
 }

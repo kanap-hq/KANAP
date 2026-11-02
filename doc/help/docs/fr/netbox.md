@@ -263,7 +263,7 @@ Deux garde-fous s'appliquent. Rien n'est signalé comme absent si l'appel à Net
 
 ## La tuile du tableau de bord
 
-Une tuile **Synchronisation Netbox** est disponible sur votre tableau de bord personnel. Elle est désactivée par défaut. Activez-la depuis les paramètres du tableau de bord, l'icône en forme d'engrenage sur **Tableau de bord**, en cochant **Synchronisation Netbox**. La tuile demande `infrastructure:admin`, comme le reste de l'intégration.
+Une tuile **Synchronisation Netbox** est disponible sur votre tableau de bord personnel. Elle est désactivée par défaut. Pour l'activer, cliquez sur **Personnaliser l'accueil**, puis sur **Ajouter une tuile** dans la section **Cartographie SI**, et choisissez **Synchronisation Netbox**. Voir [Personnaliser votre tableau de bord](my-dashboard.md#customizing-the-budget-section). La tuile demande `infrastructure:admin`, comme le reste de l'intégration.
 
 La tuile reste discrète quand il n'y a rien à faire : une ligne indiquant que la synchronisation est à jour, avec l'heure de la dernière exécution. Quand quelque chose demande votre attention, elle ne liste que cela, objets à décider, actifs absents de Netbox, erreurs ou exécution échouée, et chaque ligne ouvre la liste filtrée correspondante.
 

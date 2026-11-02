@@ -1,5 +1,7 @@
 import 'reflect-metadata';
 import * as assert from 'node:assert/strict';
+import { AsyncLocalStorage } from 'node:async_hooks';
+import { randomUUID } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as http from 'node:http';
 import { AddressInfo } from 'node:net';
@@ -62,13 +64,24 @@ function filterModel(kind: Kind): Record<string, unknown> {
   }
 }
 
-/** Every statement the database receives while recording, with its parameters. */
+/**
+ * Statements of the measured request, with their parameters. The patch wraps every connection of
+ * the process. A flag would also keep statements of other work that runs while the request is in
+ * flight (a scheduled task, an audit write, a request still finishing), and two identical calls
+ * then differ. The client and the server share this process, but a store does not cross the HTTP
+ * socket: `statementsOf` sends `X-Record-Id`, and the middleware below runs the rest of that
+ * request inside the store it opened. A statement is kept only when `getStore()` is that store.
+ */
 const recorded: string[] = [];
-let recording = false;
+const recordStorage = new AsyncLocalStorage<object>();
+const storesByRecordId = new Map<string, object>();
+let measuredStore: object | null = null;
 const realQuery = PostgresQueryRunner.prototype.query;
 PostgresQueryRunner.prototype.query = function patchedQuery(this: PostgresQueryRunner, query: string, parameters?: any[], ...rest: any[]) {
   // The time of the request (a validity date compared with now) differs from one request to the next.
-  if (recording) recorded.push(`${query.replace(/\s+/g, ' ').trim()} -- ${JSON.stringify(parameters ?? []).replace(/\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?Z/g, '<now>')}`);
+  if (recordStorage.getStore() === measuredStore) {
+    recorded.push(`${query.replace(/\s+/g, ' ').trim()} -- ${JSON.stringify(parameters ?? []).replace(/\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?Z/g, '<now>')}`);
+  }
   return (realQuery as any).call(this, query, parameters, ...rest);
 } as any;
 
@@ -84,10 +97,11 @@ function rowCount(body: string): number {
   }
 }
 
-function send(port: number, method: string, path: string, host: string, token: string, body?: unknown) {
+function send(port: number, method: string, path: string, host: string, token: string, body?: unknown, recordId?: string) {
   return new Promise<{ status: number; body: string }>((resolve, reject) => {
     const payload = body === undefined ? undefined : Buffer.from(JSON.stringify(body));
     const headers: Record<string, string> = { Host: host, Authorization: `Bearer ${token}` };
+    if (recordId) headers['X-Record-Id'] = recordId;
     if (payload) Object.assign(headers, { 'Content-Type': 'application/json', 'Content-Length': String(payload.length) });
     const req = http.request({ host: '127.0.0.1', port, method, path, headers }, (res) => {
       const chunks: Buffer[] = [];
@@ -106,13 +120,19 @@ async function statementsOf(port: number, host: string, token: string, endpoint:
   if (filters) params.set('filters', JSON.stringify(filters));
   // Work an earlier request left running in the background (`background-work.ts`) records nothing here.
   assert.equal(await waitForBackgroundWork(Date.now() + 30_000), 0, 'the background work of the earlier requests ends');
+  const recordId = randomUUID();
+  const store = { recordId };
+  storesByRecordId.set(recordId, store);
+  // Replace the measured store before clearing, so a statement still in flight from the previous
+  // request cannot land in this recording.
+  measuredStore = store;
   recorded.length = 0;
-  recording = true;
   try {
-    const res = await send(port, 'GET', `${endpoint}?${params.toString()}`, host, token);
+    const res = await send(port, 'GET', `${endpoint}?${params.toString()}`, host, token, undefined, recordId);
     return { status: res.status, body: res.body, statements: recorded.join('\n') };
   } finally {
-    recording = false;
+    measuredStore = null;
+    storesByRecordId.delete(recordId);
   }
 }
 
@@ -138,6 +158,15 @@ async function testEveryOfferedFilterReachesTheDatabase() {
   const { AppModule } = require('../../app.module');
   const app: INestApplication = await NestFactory.create(AppModule, { logger: ['error'] });
   applyHttpMiddleware(app);
+  // After the HTTP middleware, before tenancy, so the tenant lookup and the list query both run
+  // inside the store named by `X-Record-Id`. No header: the request stays outside every store.
+  app.use((req: { headers: Record<string, string | string[] | undefined> }, _res: unknown, next: () => void) => {
+    const header = req.headers['x-record-id'];
+    const recordId = Array.isArray(header) ? header[0] : header;
+    const store = recordId ? storesByRecordId.get(recordId) : undefined;
+    if (store) recordStorage.run(store, next);
+    else next();
+  });
   applyTenancyAndPipeline(app, app.get(DataSource));
   await app.listen(0, '127.0.0.1');
   app.get(SchedulerRegistry).getCronJobs().forEach((job) => job.stop());

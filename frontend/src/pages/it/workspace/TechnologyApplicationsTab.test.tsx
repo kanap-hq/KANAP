@@ -145,7 +145,7 @@ describe('TechnologyApplicationsTab', () => {
     expect(within(crmRows[1]).queryByRole('button', { name: `${A}.remove(name=CRM)` })).toBeNull();
   });
 
-  it('declares the technology on several applications at once, never offering a declared one', async () => {
+  it('declares the technology on several applications at once, then their version, never offering a declared one', async () => {
     renderTab();
     await screen.findByRole('table', { name: `${A}.title` });
     fireEvent.click(screen.getByText(`${A}.add`));
@@ -159,33 +159,59 @@ describe('TechnologyApplicationsTab', () => {
     fireEvent.click(picker().getByText('HR'));
     fireEvent.click(picker().getByText('HR'));
     fireEvent.click(picker().getByRole('button', { name: `${A}.addCount(count=2)` }));
-    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/technologies/tech-1/applications', { application_ids: ['web', 'hr'] }));
+    // The version comes next, in the picker of the other link writes; nothing is saved before it.
+    await waitFor(() => picker().getByRole('combobox', { name: 'workspace.technology.versionPicker.search' }));
+    expect(mocked.post).not.toHaveBeenCalled();
+    fireEvent.click(picker().getByText('2022'));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/technologies/tech-1/applications', { application_ids: ['web', 'hr'], technology_version_id: 'v22' }));
+    await waitFor(() => expect(document.querySelector('.MuiPopover-paper')).toBeNull());
   });
 
-  it('keeps the picker open with its ticks until the server answers, and says why it refused', async () => {
-    let refuse: (reason: unknown) => void = () => undefined;
-    mocked.post.mockReturnValueOnce(new Promise((_, reject) => { refuse = reject; }) as never);
+  it('declares applications at an unknown version, or at a label the server creates', async () => {
+    renderTab();
+    await screen.findByRole('table', { name: `${A}.title` });
+    const addHr = async () => {
+      fireEvent.click(screen.getByText(`${A}.add`));
+      await waitFor(() => picker().getByText('HR'));
+      fireEvent.click(picker().getByText('HR'));
+      fireEvent.click(picker().getByRole('button', { name: `${A}.addCount(count=1)` }));
+      await waitFor(() => picker().getByRole('combobox', { name: 'workspace.technology.versionPicker.search' }));
+    };
+    await addHr();
+    fireEvent.click(picker().getByText('workspace.technology.versionPicker.unknown'));
+    await waitFor(() => expect(mocked.post).toHaveBeenLastCalledWith('/technologies/tech-1/applications', { application_ids: ['hr'], technology_version_id: null }));
+    await waitFor(() => expect(document.querySelector('.MuiPopover-paper')).toBeNull());
+
+    await addHr();
+    const input = picker().getByRole('combobox', { name: 'workspace.technology.versionPicker.search' });
+    fireEvent.change(input, { target: { value: '2025' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    await waitFor(() => expect(mocked.post).toHaveBeenLastCalledWith('/technologies/tech-1/applications', { application_ids: ['hr'], version_label: '2025' }));
+  });
+
+  it('says why the server refused an add', async () => {
+    mocked.post.mockRejectedValueOnce({ response: { status: 400, data: { message: 'One or more applications not found.' } } });
     renderTab();
     await screen.findByRole('table', { name: `${A}.title` });
     fireEvent.click(screen.getByText(`${A}.add`));
     await waitFor(() => picker().getByText('HR'));
     fireEvent.click(picker().getByText('HR'));
     fireEvent.click(picker().getByRole('button', { name: `${A}.addCount(count=1)` }));
-    expect((picker().getByRole('button', { name: `${A}.addCount(count=1)` }) as HTMLButtonElement).disabled).toBe(true);
-    refuse({ response: { status: 400, data: { message: 'One or more applications not found.' } } });
-    await waitFor(() => expect(picker().getByRole('alert').textContent).toBeTruthy());
-    // Still open, still ticked: a second try sends the same rows.
-    expect((picker().getByRole('button', { name: `${A}.addCount(count=1)` }) as HTMLButtonElement).disabled).toBe(false);
-    fireEvent.click(picker().getByRole('button', { name: `${A}.addCount(count=1)` }));
-    await waitFor(() => expect(document.querySelector('.MuiPopover-paper')).toBeNull());
-    expect(mocked.post).toHaveBeenLastCalledWith('/technologies/tech-1/applications', { application_ids: ['hr'] });
+    await waitFor(() => picker().getByText('2019'));
+    fireEvent.click(picker().getByText('2019'));
+    expect((await screen.findByRole('alert')).textContent).toBeTruthy();
+    expect(mocked.post).toHaveBeenCalledWith('/technologies/tech-1/applications', { application_ids: ['hr'], technology_version_id: 'v19' });
   });
 
   it('changes the version of a declaration in place, and of no hosted row', async () => {
     renderTab();
     await screen.findByRole('table', { name: `${A}.title` });
     expect(screen.queryByRole('button', { name: `${A}.changeVersion(name=ERP)` })).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: `${A}.changeVersion(name=CRM)` }));
+    const button = screen.getByRole('button', { name: `${A}.changeVersion(name=CRM)` });
+    // The control takes the whole cell: a click beside a short label ("—") must not open the application.
+    expect(getComputedStyle(button).display).toBe('block');
+    expect(getComputedStyle(button).width).toBe('100%');
+    fireEvent.click(button);
     fireEvent.click(picker().getByText('2022'));
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/technologies/tech-1/application-links/d-1', { technology_version_id: 'v22' }));
   });

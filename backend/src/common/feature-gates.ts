@@ -20,11 +20,19 @@ export function throwNotAvailableInMode(): never {
   throw new NotFoundException();
 }
 
+/**
+ * The sentence a person reads for a feature turned off, when the feature's code would mean nothing
+ * to them (the code stays in `feature`). The others keep the generic sentence.
+ */
+const FEATURE_DISABLED_MESSAGES: Readonly<Record<string, string>> = {
+  vulnerabilityFeed: 'Vulnerability tracking is turned off in this deployment.',
+};
+
 export function throwFeatureDisabled(feature: string): never {
   throw new ForbiddenException({
     code: 'FEATURE_DISABLED',
     feature,
-    message: `${feature} is not available in this deployment.`,
+    message: FEATURE_DISABLED_MESSAGES[feature] ?? `${feature} is not available in this deployment.`,
   });
 }
 

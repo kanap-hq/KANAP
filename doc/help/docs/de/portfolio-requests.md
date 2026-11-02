@@ -71,7 +71,7 @@ Das Standardraster hebt die Felder hervor, die während der Erfassung und Überp
 
 Der Arbeitsbereich verwendet ein Split-Modell:
 
-- Der Hauptbereich enthält die operativen Reiter: **Zusammenfassung**, **Analyse**, **Bewertung**, **Beziehungen** und **Wissensdatenbank**.
+- Der Hauptbereich enthält die operativen Reiter: **Zusammenfassung**, **Analyse**, **Bewertung**, **Beziehungen**, **Wissensdatenbank** und **Verlauf** (die Änderungen an der Anfrage, siehe [Verlauf der Datensätze](record-history.md)).
 - Eine persistente **Eigenschaftsleiste** am rechten Rand enthält stabile Anfragen-Metadaten, Teamzuweisung und resultierende Projekte. Öffnen oder schließen Sie sie mit der vertikalen Registerkarte am rechten Rand.
 
 Dies ist wichtig, weil nicht alles auf die gleiche Weise gespeichert wird:
@@ -80,16 +80,32 @@ Dies ist wichtig, weil nicht alles auf die gleiche Weise gespeichert wird:
 - Änderungen in **Zusammenfassung**, **Analyse** und **Bewertung** sind Arbeitsbereich-Bearbeitungen und verwenden **Speichern** / **Zurücksetzen**.
 - Die verwalteten Dokumente **Zweck** und **Risiken & Mitigationen** verwenden ebenfalls den Arbeitsbereich-Speicher-Fluss.
 
-Wenn Sie eine neue Anfrage erstellen, beginnt KANAP mit **Zusammenfassung**. Die anderen Reiter werden nützlich, nachdem die Anfrage als echter Datensatz statt als sehr aufrichtige Idee existiert.
-
 Die Arbeitsbereichs-Kopfzeile gibt Ihnen operativen Kontext, ohne die Seite zu verlassen:
 
 - eine kopierbare Anfragenreferenz wie `REQ-42`
 - eine Metadatenleiste mit **Status**, **Bewertung**, **Anforderer**, **IT-Verantwortlicher**, **Ziel-Lieferdatum** und (falls zutreffend) der **Quell-Aufgabe**, aus der die Anfrage erstellt wurde
 - **Teilen**, um einen Link zur Anfrage zu senden
 - **In Projekt umwandeln**, wenn die Anfrage **Genehmigt** oder **Konvertiert** ist
+- **Erstellen** und **Abbrechen**, solange die Anfrage erstellt wird. Siehe [Erstellen oder abbrechen](#cancelling-a-creation)
 - **Löschen**, ein Papierkorbsymbol, für Administratoren (wenn die Anfrage noch nicht konvertiert ist). Eine konvertierte Anfrage bleibt der Ursprung ihres Projekts und kann nicht gelöscht werden
 - Vorherige/Nächste-Navigation basierend auf dem genauen Listenkontext, aus dem Sie kamen
+
+### Eine Anfrage erstellen { #creating-a-request }
+
+1. Klicken Sie auf **Neue Anfrage**. Die Seite der Anfrage öffnet sich auf **Zusammenfassung** mit einem leeren Titel in der Kopfzeile. Der Rest der Seite ist abgeblendet.
+2. Geben Sie den Namen der Anfrage ein.
+3. Drücken Sie die Eingabetaste oder klicken Sie außerhalb des Titels. KANAP erstellt die Anfrage sofort, mit dem Status **Prüfung ausstehend** und Ihnen als Anforderer. Ihre Referenz (`REQ-42`) erscheint und alle Reiter öffnen sich.
+
+Füllen Sie dann die Eigenschaftsleiste und den **Zweck** aus. Der Name wird nur in der Kopfzeile bearbeitet. Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erstellen.
+
+### Erstellen oder abbrechen { #cancelling-a-creation }
+
+Solange die Anfrage erstellt wird, zeigt ihre Kopfzeile **Erstellen** und **Abbrechen**. Beide bleiben, bis Sie die Anfrage verlassen.
+
+- **Erstellen** behält die Anfrage und schließt sie. Sie kehren dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm. Bei leerem Titel schließt sich nichts, und der Titel verlangt einen
+- **Abbrechen** schließt, ohne etwas zu behalten. Eine bereits erstellte Anfrage wird gelöscht. Wenn Sie mehr als den Namen eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Anfragen abbrechen
+
+Verlassen Sie die Anfrage auf andere Weise, bleibt sie bestehen. Ein Administrator kann sie dann mit **Löschen** löschen. Die Referenz einer abgebrochenen Anfrage wird nicht wiederverwendet.
 
 ### Eigenschaftsleiste
 
@@ -97,7 +113,6 @@ Behandeln Sie die Leiste als das strukturelle Rückgrat der Anfrage. Sie enthäl
 
 #### Kerneigenschaften
 
-- Anfragenname
 - Status
 - Quelle, Kategorie, Stream
 - Anforderer
@@ -146,10 +161,7 @@ Der Bereich **Zweck** ist ein verwaltetes Markdown-Dokument, das direkt in die A
 
 ### Aktivität
 
-Unter Zweck enthält der Reiter Zusammenfassung den Anfragenaktivitäts-Stream:
-
-- **Kommentare** für Diskussion, kontextbezogene Notizen und formale Entscheidungen
-- **Historie** für das Audit-Protokoll von Feld- und Statusänderungen
+Unter Zweck enthält der Reiter Zusammenfassung den Anfragenaktivitäts-Stream: Kommentare für Diskussion, kontextbezogene Notizen und formale Entscheidungen. Die Änderungen an der Anfrage stehen im Reiter **Verlauf**.
 
 Dies platziert die neueste Aktivität direkt vor Prüfern, ohne dass sie zu einem separaten Reiter navigieren müssen.
 
@@ -168,7 +180,7 @@ Kommentare unterstützen Markdown und Inline-Bilder, was nützlich für Designno
 
 #### Historie
 
-Die Historie ist die Audit-Ansicht. Verwenden Sie sie, wenn Sie Fragen beantworten müssen wie:
+Der Reiter **Verlauf** listet die Änderungen an der Anfrage. Verwenden Sie ihn, wenn Sie Fragen beantworten müssen wie:
 
 - wer den Status geändert hat
 - wann sich Teamzuweisungen geändert haben
@@ -176,7 +188,7 @@ Die Historie ist die Audit-Ansicht. Verwenden Sie sie, wenn Sie Fragen beantwort
 
 Die Liste endet mit dem Erstellungseintrag (wer die Anfrage erstellt hat und wann) unterhalb der erfassten Änderungen, einschließlich Änderungen an den Dokumenten Zweck und Risiken.
 
-Wenn Sie Erzählung benötigen, verwenden Sie Kommentare. Wenn Sie Beweise benötigen, verwenden Sie die Historie.
+Wenn Sie Erzählung benötigen, verwenden Sie die Kommentare. Wenn Sie Beweise benötigen, verwenden Sie den Reiter **Verlauf**.
 
 ## Analyse
 
@@ -277,7 +289,7 @@ Ein Abschnitt fehlt, wenn Sie sein Modul nicht lesen dürfen: Budgetzeilen erfor
 
 **Verknüpfungen hinzufügen und entfernen** (`portfolio_requests:contributor`): **Hinzufügen** rechts neben einem Abschnitt öffnet eine Suche unter der Schaltfläche. Geben Sie einen Namen oder eine Referenz ein und wählen Sie ein Ergebnis: Die Verknüpfung wird sofort gespeichert. Um eine Verknüpfung zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz am Zeilenende. Es gibt keine Bestätigung, und das Entfernen einer Verknüpfung löscht nichts anderes. Das Verknüpfen eines Geschäftsprozesses erfordert zusätzlich `business_processes:member`. Leser sehen die Tabellen schreibgeschützt.
 
-Verknüpfungen mit Budgetzeilen, Anwendungen und Assets werden in der **Historie** der Anfrage erfasst.
+Verknüpfungen mit Budgetzeilen, Anwendungen und Assets werden im Reiter **Verlauf** der Anfrage erfasst.
 
 ### Links und Dateien
 
@@ -285,7 +297,7 @@ Verknüpfungen mit Budgetzeilen, Anwendungen und Assets werden in der **Historie
 
 - **Link hinzufügen** öffnet einen Dialog für eine URL und einen optionalen Namen; der Link wird sofort gespeichert. Um einen Link zu ändern, fahren Sie mit der Maus über seine Zeile und klicken Sie auf den Stift.
 - **Datei anhängen** öffnet die Dateiauswahl. Sie können Dateien auch auf den Abschnitt ziehen.
-- Um einen Link oder eine Datei zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz. Das Löschen einer Datei fragt zuerst nach einer Bestätigung.
+- Um einen Link oder eine Datei zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz. Das Entfernen eines Links zeigt eine Meldung und bietet **Rückgängig** an, womit der Link wieder angelegt wird. Das Löschen einer Datei fragt zuerst nach einer Bestätigung.
 
 ## Wissensdatenbank
 

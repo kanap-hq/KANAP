@@ -19,13 +19,14 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { SkipTenantTransaction } from '../common/skip-tenant-transaction.decorator';
-import { inlineImageMulterOptions } from '../common/upload';
+import { aiAttachmentMulterOptions } from '../common/upload';
 import { AiAttachmentService } from './ai-attachment.service';
 import { AiConversationService } from './ai-conversation.service';
 import { AiMutationPreviewService } from './ai-mutation-preview.service';
 import { AiPolicyService } from './ai-policy.service';
 import { AiTenantExecutionService } from './execution/ai-tenant-execution.service';
 import { AiExecutionContext } from './ai.types';
+import { publicMessageUsage } from './ai-message-usage.util';
 
 @Controller('ai/conversations')
 @UseGuards(JwtAuthGuard)
@@ -147,13 +148,14 @@ export class AiConversationsController {
           role: m.role,
           content: m.content,
           tool_calls: m.tool_calls,
-          usage_json: m.usage_json,
+          usage_json: publicMessageUsage(m.usage_json),
           created_at: m.created_at?.toISOString(),
           attachments: (attachmentsByMessageId.get(m.id) || []).map((a) => ({
             id: a.id,
             mime_type: a.mime_type,
             size: a.size,
             kind: a.kind,
+            original_filename: a.original_filename,
           })),
         })),
         conversation_usage: conversationUsage,
@@ -213,12 +215,12 @@ export class AiConversationsController {
   }
 
   /**
-   * Upload an inline image for the given conversation. The attachment row starts with
+   * Upload an attachment (an image, or an .xlsx or .csv file) for the given conversation. The attachment row starts with
    * message_id = NULL and is linked to the persisted ai_message when the user sends
    * the next chat stream call.
    */
   @Post(':id/attachments/inline')
-  @UseInterceptors(FileInterceptor('file', inlineImageMulterOptions))
+  @UseInterceptors(FileInterceptor('file', aiAttachmentMulterOptions))
   async uploadInlineAttachment(
     @Param('id') id: string,
     @UploadedFile() file: Express.Multer.File,
@@ -227,7 +229,7 @@ export class AiConversationsController {
     const context = this.buildContext(req);
     return this.tenantExecutor.runWithContext(context, async (ctx) => {
       await this.policy.assertSurfaceAccess(ctx, ctx.manager);
-      const attachment = await this.attachments.uploadInlineImage(
+      const attachment = await this.attachments.uploadAttachment(
         {
           conversationId: id,
           tenantId: ctx.tenantId,

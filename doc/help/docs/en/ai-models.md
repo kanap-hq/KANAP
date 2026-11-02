@@ -78,17 +78,22 @@ On an on-premise installation this row does not appear at all.
 
 - **Understands images**: turn it off for a text-only model. The explanation sits in the info tooltip next to **Capabilities**: screenshots attached to tickets are then *skipped* rather than sent, which is what you want: a text-only model that receives an image fails the call instead of doing useful work. Leave it on for a vision-capable model, and your triage agents will use ticket screenshots as evidence.
 
-**Cost input** and **Cost output**: the info tooltip next to each label explains *Price per million tokens, as shown on your provider's pricing page*:
+**Cost input**, **Cost output** and **Cache read cost**: prices per million tokens, in euros. The info tooltip next to each label says where to find them.
 
-- Copy the two numbers straight from your provider's pricing page. They are usually different, and KANAP prices them separately.
-- **Leave both empty or set them to 0 for a local or self-hosted model.** A model with no prices costs nothing, which is the truth for a model running on your own hardware. Choosing an Ollama provider pre-fills both prices with 0 for exactly that reason.
-- Agent costs are priced as the work happens and then kept, so editing a price changes what agents cost **from now on** and leaves past figures alone. Plaid's cost is worked out differently (see [Usage & costs](ai-usage.md)), and a price change does move its historical figures.
+- Copy the input and output prices straight from your provider's pricing page. They are usually different, and KANAP prices them separately.
+- **Cache read cost** is the price of a token the provider reads back from its prompt cache. Pricing pages often call it *cached input*. It is optional. Left empty, a cached token costs a tenth of the input price with Anthropic and the full input price with other providers (see [Usage & costs](ai-usage.md)).
+- **Leave the prices empty or set them to 0 for a local or self-hosted model.** A model with no prices costs nothing, which is the truth for a model running on your own hardware. Choosing an Ollama provider sets the prices still empty to 0 for that reason, and keeps any price already entered.
+- KANAP prices each Plaid answer and each agent call as it happens, then keeps the cost. Editing a price changes costs **from now on** and leaves past figures alone.
 
 **Timeout**: how long to wait for this model, in seconds, before giving up. The explanation sits in the info tooltip next to the label: leave it empty to use the standard limit. Local models often need more time, which is why the setting lives per model rather than per installation. To make this model the organization default, star it in the **Default** column of the list after saving. That choice is not in the editor.
 
-**Test connection** appears once the model has been saved. It makes one tiny call with the settings as stored and reports either *Connection successful* with the round-trip time, or the provider's own error message. It proves that the provider, model identifier, address, and key work together. It does not check your prices, the images switch, or the response-time setting. Run it after adding a model and after rotating a key: a wrong key is otherwise invisible until real work fails, and it fails quietly (a chat answer that errors, or an agent that skips a step and carries on).
+**Reasoning effort**: how much the model thinks before it answers. It matters for models that reason before replying, which most recent models do. **Provider default** sends nothing and lets the provider decide. **Low**, **Medium**, **High**, **Very high** and **Maximum** ask for less or more thought: more effort gives more careful answers that take longer and cost more, since providers bill the thinking as output tokens. The setting applies to every call made with this model: Plaid answers, agent steps and the connection test.
 
-**Create** / **Save** stay disabled until the name and model identifier are filled in and the prices and response time are valid numbers. Names must be unique within your organization.
+The levels offered depend on the provider and the model. For Anthropic they follow the model: Claude Opus 4.5 takes **Low** to **High**, Claude Opus 4.6 and Claude Sonnet 4.6 add **Maximum**, and later models take all five. The field is greyed out for a model that takes no effort, such as Claude Haiku 4.5. OpenAI receives the level under its own name. Ollama and other compatible servers receive it as set and may ignore it: run **Test connection** to see whether the model reasoned. A provider that refuses a level answers with its own error message.
+
+**Test connection** appears once the model has been saved. It makes one tiny call with the settings as stored and reports either *Connection successful* with the round-trip time and the effort sent (*No effort sent* when none was), or the provider's own error message. When the provider reports reasoning tokens, as OpenAI does, the result also gives their number: zero means the model answered without reasoning. It proves that the provider, model identifier, address, key and reasoning effort work together. It does not check your prices, the images switch, or the response-time setting. Run it after adding a model and after rotating a key: a wrong key is otherwise invisible until real work fails, and it fails quietly (a chat answer that errors, or an agent that skips a step and carries on).
+
+**Create** / **Save** stay disabled until the name and model identifier are filled in and the three prices and the response time are valid numbers. A price cannot be negative. Names must be unique within your organization.
 
 ---
 

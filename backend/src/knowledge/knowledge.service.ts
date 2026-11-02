@@ -1,4 +1,4 @@
-import { LinkedModule, LinkedReads, loadLinkedReads } from '../common/relations/linked-reads';
+import { LINKED_MODULE_RESOURCES, LinkedModule, LinkedReads, loadLinkedReads } from '../common/relations/linked-reads';
 import {
   applicationParticipantCondition,
   projectParticipantCondition,
@@ -10,7 +10,6 @@ import { idsInScope } from '../portfolio/portfolio-linked-reads';
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   GoneException,
   HttpStatus,
   HttpException,
@@ -23,7 +22,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { createHash, randomUUID } from 'crypto';
 import * as path from 'path';
 import { DataSource, EntityManager, In, Repository } from 'typeorm';
-import { moduleRightRequired } from '../auth/module-right-required';
+import { codedForbidden, moduleRightRequired, outsideParticipation, requestContextMissing } from '../auth/module-right-required';
 import { AuditService } from '../audit/audit.service';
 import { extractInlineImageUrls } from '../common/content-image-urls';
 import { displayName } from '../common/display-name';
@@ -94,6 +93,7 @@ import { DocumentType } from './document-type.entity';
 import { DocumentVersion } from './document-version.entity';
 import { Document } from './document.entity';
 import { userNameSharedSql } from '../common/lookup/reference-lookups';
+import { parseItemNumber } from '../common/parse-item-number';
 import { trailingDigits } from '../common/text-scan';
 import { checkIds, RecordInUseException, refusalDetails, refusalsFrom, type DeleteRefusal } from '../common/record-in-use';
 import { textSortKey } from '../common/list-sort';
@@ -1049,7 +1049,7 @@ export class KnowledgeService {
   ): Promise<KnowledgeLibraryView> {
     const view = await this.getLibraryWithAccessOrThrow(manager, libraryId, userId);
     if (!view.can_manage) {
-      throw new ForbiddenException('You are not allowed to manage this library');
+      throw codedForbidden('LIBRARY_NOT_MANAGEABLE', 'You are not allowed to manage this library');
     }
     return view;
   }
@@ -1644,8 +1644,8 @@ export class KnowledgeService {
     if (!value) return null;
     const digits = trailingDigits(value);
     if (!digits) return null;
-    const itemNumber = Number(digits);
-    return Number.isFinite(itemNumber) && itemNumber > 0 ? itemNumber : null;
+    const itemNumber = parseItemNumber(digits);
+    return itemNumber != null && itemNumber > 0 ? itemNumber : null;
   }
 
   private parseItemNumberPrefixQuery(input: string): string | null {
@@ -2023,8 +2023,8 @@ export class KnowledgeService {
     const out: number[] = [];
     const seen = new Set<number>();
     for (const match of matches) {
-      const num = Number(match[1]);
-      if (!Number.isFinite(num) || num <= 0 || seen.has(num)) continue;
+      const num = parseItemNumber(match[1]);
+      if (num == null || num <= 0 || seen.has(num)) continue;
       seen.add(num);
       out.push(num);
     }
@@ -2655,7 +2655,7 @@ export class KnowledgeService {
     const crossLibraryMove = existing.library_id !== target.libraryId;
     const effectiveLevel = knowledgeLevel ?? await this.getKnowledgeLevelForUser(manager, userId);
     if (crossLibraryMove && !this.hasPermissionLevel(effectiveLevel || undefined, 'admin')) {
-      throw new ForbiddenException('Only knowledge admins can move documents between libraries');
+      throw moduleRightRequired('knowledge', 'admin', 'Only knowledge admins can move documents between libraries');
     }
     await this.assertTemplateLibraryMoveAllowed(existing.library_id, targetLibrary, manager);
 
@@ -4153,12 +4153,12 @@ export class KnowledgeService {
     const incidentBinding = await loadDocumentIncidentBinding(manager, id, tenantId);
     if (incidentBinding) {
       if (rawEmails.length > 0) {
-        throw new ForbiddenException('This document cannot be shared outside the application');
+        throw codedForbidden('DOCUMENT_SHARE_EXTERNAL_REFUSED', 'This document cannot be shared outside the application');
       }
       for (const recipientId of userIds) {
         const allowed = await this.canUserOpenDocument(String(recipientId), id, manager, tenantId);
         if (!allowed) {
-          throw new ForbiddenException('One of the recipients is not allowed to open this document');
+          throw codedForbidden('DOCUMENT_RECIPIENT_NOT_ALLOWED', 'One of the recipients is not allowed to open this document');
         }
       }
     }
@@ -4502,7 +4502,7 @@ export class KnowledgeService {
     if (normalizedUserId || opts?.sourceContext) {
       await this.assertDocumentWritable(existing.id, manager, normalizedUserId, opts);
     } else if (opts?.systemOperation !== true) {
-      throw new ForbiddenException('A user or an explicit system operation is required');
+      throw requestContextMissing('A user or an explicit system operation is required');
     }
 
     await this.assertWorkflowAllowsEditing(existing.id, manager);
@@ -5326,7 +5326,7 @@ export class KnowledgeService {
 
       if (crossLibraryMove) {
         if (!this.hasPermissionLevel(knowledgeLevel || undefined, 'admin')) {
-          throw new ForbiddenException('Only knowledge admins can move folders between libraries');
+          throw moduleRightRequired('knowledge', 'admin', 'Only knowledge admins can move folders between libraries');
         }
         await this.assertTemplateFolderMoveAllowed(existing.library_id, targetLibrary, tx);
       }
@@ -5883,7 +5883,11 @@ export class KnowledgeService {
     const reads = await loadLinkedReads(manager, userId);
     const refused = unreadableRelationFamilies(families, reads);
     if (refused.length > 0) {
-      throw new ForbiddenException(`You cannot change the ${refused.join(', ')} linked to this document: you do not read that module.`);
+      throw codedForbidden(
+        'LINKED_MODULE_NOT_READABLE',
+        `You cannot change the ${refused.join(', ')} linked to this document: you do not read that module.`,
+        { resources: [...new Set(refused.map((family) => LINKED_MODULE_RESOURCES[DOCUMENT_RELATION_MODULES[family]]))] },
+      );
     }
     if (mode === 'remove' || !userId) return;
     for (const family of families) {
@@ -5905,7 +5909,7 @@ export class KnowledgeService {
       const added = ids.filter((id) => !current.has(id));
       const visible = await idsInScope(manager, family as keyof typeof KNOWLEDGE_SOURCE_SCOPES, added, scope);
       if (added.some((id) => !visible.has(id))) {
-        throw new ForbiddenException(`You can only link ${family} you take part in to this document.`);
+        throw outsideParticipation(family, `You can only link ${family} you take part in to this document.`);
       }
     }
   }
@@ -6085,7 +6089,7 @@ export class KnowledgeService {
     if (!existing) throw new NotFoundException('Activity not found');
 
     if (existing.author_id !== userId) {
-      throw new HttpException('Only the author can edit this comment', 403);
+      throw codedForbidden('OWN_COMMENTS_ONLY', 'Only the author can edit this comment');
     }
     if (existing.type !== 'comment') {
       throw new BadRequestException('Only comments can be edited via this endpoint');

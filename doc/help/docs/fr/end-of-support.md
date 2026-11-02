@@ -64,7 +64,7 @@ Les lignes qui concernent des applications demandent le droit de lire les applic
 
 ## Demander à l'assistant
 
-[Plaid](ai-assistant.md) lit les deux vues, **Échéances** et **Données manquantes**, avec les mêmes droits que le rapport. Il nomme chaque élément par sa référence (`APP-4`, `AST-12`, `TEC-3`) et lit un horizon à la fois : 6, 12, 24 ou 36 mois. Quand vous ne pouvez pas lire les applications, Plaid dit qu'il a laissé de côté les lignes des applications.
+[Plaid](ai-assistant.md) lit les deux vues, **Échéances** et **Données manquantes**, avec les mêmes droits que le rapport. Il nomme chaque élément par sa référence (`APP-4`, `AST-12`, `TEC-3`) et lit un horizon à la fois : 6, 12, 24 ou 36 mois. Plaid liste les échéances 30 à la fois et peut lire les pages suivantes ; ses décomptes et ses totaux couvrent toutes les échéances. Quand vous ne pouvez pas lire les applications, Plaid dit qu'il a laissé de côté les lignes des applications.
 
 Plaid peut aussi ajouter des versions de technologie et corriger leurs dates de support, avec votre approbation. La fin de support d'une application est un champ de l'application : Plaid la modifie comme il modifie l'application, avec les droits de la page [Applications](applications.md).
 

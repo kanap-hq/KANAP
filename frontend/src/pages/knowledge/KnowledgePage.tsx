@@ -18,7 +18,6 @@ import {
   MenuItem,
   Radio,
   RadioGroup,
-  Snackbar,
   Stack,
   Switch,
   TextField,
@@ -35,7 +34,9 @@ import type { ICellRendererParams } from 'ag-grid-community';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
+import { useNotify } from '../../components/notify/NotifyProvider';
 import DeleteSelectedButton from '../../components/DeleteSelectedButton';
+import DeleteIconButton from '../../components/workspace/DeleteIconButton';
 import { recordsInUseCheck } from '../../utils/deleteCheck';
 import ChipToggleBar, { ChipToggleContextLine } from '../../components/ChipToggleBar';
 import { KanapDialog, PropertyRow, StatusDot, useKanapDialogs } from '../../components/design';
@@ -185,6 +186,7 @@ function StatusCellRenderer(props: any) {
 export default function KnowledgePage() {
   const { hasLevel, profile } = useAuth();
   const { t } = useTranslation(['knowledge', 'common']);
+  const notify = useNotify();
   const locale = useLocale();
   const dialogs = useKanapDialogs();
   const qc = useQueryClient();
@@ -337,11 +339,7 @@ export default function KnowledgePage() {
   const [folderMoveDialogOpen, setFolderMoveDialogOpen] = useState(false);
   const [folderMoveDialogFolder, setFolderMoveDialogFolder] = useState<DraggedFolderState | null>(null);
   const [folderMoveDialogTargetLibraryId, setFolderMoveDialogTargetLibraryId] = useState<string | null>(null);
-  const [moveSnackbar, setMoveSnackbar] = useState<{
-    open: boolean;
-    message: string;
-    severity: 'success' | 'error';
-  }>({ open: false, message: '', severity: 'success' });
+  const [moveError, setMoveError] = useState<string | null>(null);
   const buildWorkspaceSearch = useCallback(() => {
     const sp = new URLSearchParams();
     const sort = lastQueryRef.current?.sort || 'updated_at:DESC';
@@ -956,18 +954,13 @@ export default function KnowledgePage() {
       clearDocumentDragState();
       resetMoveDialogState();
       setRefreshKey((prev) => prev + 1);
-      setMoveSnackbar({
-        open: true,
+      setMoveError(null);
+      notify({
         message: movedCount === 1 ? t('messages.documentMoved') : t('messages.documentsMoved', { count: movedCount }),
-        severity: 'success',
       });
     },
     onError: (error: any) => {
-      setMoveSnackbar({
-        open: true,
-        message: getApiErrorMessage(error, t, t('messages.moveDocumentsFailed')),
-        severity: 'error',
-      });
+      setMoveError(getApiErrorMessage(error, t, t('messages.moveDocumentsFailed')));
       clearDocumentDragState();
     },
   });
@@ -1005,18 +998,11 @@ export default function KnowledgePage() {
           folder_id: variables.id,
         });
       }
-      setMoveSnackbar({
-        open: true,
-        message: t('messages.folderMoved'),
-        severity: 'success',
-      });
+      setMoveError(null);
+      notify({ message: t('messages.folderMoved') });
     },
     onError: (error: any) => {
-      setMoveSnackbar({
-        open: true,
-        message: getApiErrorMessage(error, t, t('messages.moveFolderFailed')),
-        severity: 'error',
-      });
+      setMoveError(getApiErrorMessage(error, t, t('messages.moveFolderFailed')));
       clearFolderDragState();
     },
   });
@@ -1311,6 +1297,13 @@ export default function KnowledgePage() {
     || (!!activeLibrary && !activeLibrary.is_system && !!activeLibrary.can_manage)
     || (activeLibrary?.slug === TEMPLATE_LIBRARY_SLUG && canAdminLibraries);
 
+  const canCreateDocument = canManageDocuments && !!activeLibrary?.can_write;
+  // The sentence names the open folder, this library, or every library.
+  const emptyDocumentsKey = searchAllLibraries
+    ? 'empty.all'
+    : selectedFolderId
+      ? 'empty.folder'
+      : 'empty.library';
   const contextName = searchAllLibraries ? t('scope.allLibraries') : activeLibrary?.name;
   const contextTitle = contextName
     ? [contextName, documentTotal != null ? t('libraries.documentCount', { count: documentTotal }) : null]
@@ -1356,6 +1349,9 @@ export default function KnowledgePage() {
           )}
         </ChipToggleContextLine>
       )}
+      {moveError && !moveDialogOpen && !folderMoveDialogOpen && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setMoveError(null)}>{moveError}</Alert>
+      )}
 
       <Stack direction="row" spacing={2} sx={{ alignItems: 'flex-start' }}>
         {!searchAllLibraries && !!activeLibrary?.id && (
@@ -1399,6 +1395,17 @@ export default function KnowledgePage() {
             onQueryStateChange={(state) => {
               lastQueryRef.current = { sort: state.sort, q: state.q || '', filters: state.filterModel || {} };
             }}
+            extraNarrows={docScope !== 'all'}
+            emptyState={(
+              <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="center" data-testid="knowledge-empty">
+                <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t(emptyDocumentsKey)}</Typography>
+                {canCreateDocument && (
+                  <Button variant="contained" size="small" onClick={goToBlankDocument}>
+                    {t('actions.newDocument')}
+                  </Button>
+                )}
+              </Stack>
+            )}
           />
         </Box>
       </Stack>
@@ -1450,8 +1457,7 @@ export default function KnowledgePage() {
         saveDisabled={!librarySettingsName.trim() || !librarySettingsOwnerId || saveLibraryMutation.isPending || editingLibraryLoading}
         saveLoading={saveLibraryMutation.isPending}
         footerLeft={(
-          <Button
-            variant="action-danger"
+          <DeleteIconButton
             onClick={() => {
               // The default library cannot be deleted: say so, with nothing to confirm.
               if (editingLibraryDetail?.is_default) {
@@ -1464,9 +1470,7 @@ export default function KnowledgePage() {
               setDeleteLibraryConfirmOpen(true);
             }}
             disabled={!editingLibrary || deleteLibraryMutation.isPending || editingLibraryLoading}
-          >
-            {t('common:buttons.delete')}
-          </Button>
+          />
         )}
         sx={{ maxWidth: 720 }}
       >
@@ -1686,10 +1690,12 @@ export default function KnowledgePage() {
         initialTargetLibraryId={moveDialogTargetLibraryId}
         templateLibraryId={templateLibraryId}
         pending={moveDocumentsMutation.isPending}
+        error={moveDialogOpen ? moveError : null}
         onClose={() => {
           if (!moveDocumentsMutation.isPending) {
             setMoveDialogOpen(false);
             resetMoveDialogState();
+            setMoveError(null);
           }
         }}
         onConfirm={(value) => moveDocumentsMutation.mutate({ ids: moveDialogRows.map((row) => row.id), ...value })}
@@ -1704,10 +1710,12 @@ export default function KnowledgePage() {
         initialTargetLibraryId={folderMoveDialogTargetLibraryId}
         templateLibraryId={templateLibraryId}
         pending={moveFolderMutation.isPending}
+        error={folderMoveDialogOpen ? moveError : null}
         onClose={() => {
           if (!moveFolderMutation.isPending) {
             setFolderMoveDialogOpen(false);
             resetFolderMoveDialogState();
+            setMoveError(null);
           }
         }}
         onConfirm={(value) => {
@@ -1715,21 +1723,6 @@ export default function KnowledgePage() {
           moveFolderMutation.mutate({ id: folderMoveTarget.id, ...value });
         }}
       />
-
-      <Snackbar
-        open={moveSnackbar.open}
-        autoHideDuration={6000}
-        onClose={() => setMoveSnackbar((prev) => ({ ...prev, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert
-          onClose={() => setMoveSnackbar((prev) => ({ ...prev, open: false }))}
-          severity={moveSnackbar.severity}
-          variant="filled"
-        >
-          {moveSnackbar.message}
-        </Alert>
-      </Snackbar>
     </>
   );
 }

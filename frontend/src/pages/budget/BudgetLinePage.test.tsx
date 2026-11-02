@@ -1,11 +1,12 @@
 import React from 'react';
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation, useNavigate, type NavigateFunction } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 
+vi.mock('../../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 vi.mock('react-i18next', async () => {
   const React = await import('react');
   const translation = { t: (key: string) => key, i18n: { language: 'en', resolvedLanguage: 'en' } };
@@ -15,13 +16,15 @@ vi.mock('react-i18next', async () => {
   );
   return { useTranslation: () => translation, Trans };
 });
-vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn() } }));
-// A limited data access that allows company-1 only through a cost center (null: unscoped, no filter).
-const placement = vi.hoisted(() => ({ centreOnly: false }));
+vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
+// A limited data access that allows company-1 only through a cost center (null: unscoped, no filter);
+// the place a new line starts from (`useLinePlacementDefault`): none to ask, one company, or a choice.
+const placement = vi.hoisted(() => ({ centreOnly: false, start: { ready: true, companyId: null as string | null, needsChoice: false } }));
 vi.mock('../../hooks/usePlacementOptions', () => ({
   useLinePlacementFilter: (companyId: string | null) => (placement.centreOnly && companyId === 'company-1'
     ? { companyIds: new Set(['company-1']), isCostCenterAllowed: () => true, costCenterRequired: true }
     : null),
+  useLinePlacementDefault: () => placement.start,
 }));
 // The page asks before leaving with changes it could not save.
 const dialogs = vi.hoisted(() => ({ confirm: vi.fn(async () => true), alert: vi.fn(async () => undefined), prompt: vi.fn(async () => null) }));
@@ -40,13 +43,23 @@ vi.mock('../../hooks/useBudgetLineNav', () => ({
 vi.mock('../../hooks/useCurrencySettings', () => ({ default: () => ({ data: { defaultSpendCurrency: 'EUR' } }) }));
 // The signed-in user: a conflict with their own change from another window is said so.
 // May the user change lines (the required dimensions asked before leaving, lot D2).
-const auth = vi.hoisted(() => ({ canEdit: true }));
-vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ profile: { id: 'me' }, hasLevel: () => auth.canEdit }) }));
+const auth = vi.hoisted(() => ({ canEdit: true, admin: true, limited: false }));
+vi.mock('../../auth/AuthContext', () => ({
+  useAuth: () => ({
+    profile: { id: 'me' },
+    dataAccess: auth.limited ? { available: true, mode: 'limited' as const, nodes: [], modules: ['budget'] } : null,
+    hasLevel: (_resource: string, level: string) => {
+      if (!auth.canEdit) return false;
+      if (level === 'admin') return auth.admin;
+      return true;
+    },
+  }),
+}));
 vi.mock('../workspace/hooks/useRecentlyViewed', () => ({ useRecentlyViewed: () => ({ addToRecent: vi.fn() }) }));
 vi.mock('../../utils/workspaceTabCounts', () => ({ fetchBudgetRelationsCount: vi.fn(async () => 0) }));
 vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
-  default: ({ properties, actions, children, onTitleSave, onBack, onTabChange, metadata, itemReference, backLabel, nav: navigation, canEditTitle }: {
-    canEditTitle?: boolean; itemReference?: string | null; backLabel?: string; properties?: React.ReactNode; actions?: React.ReactNode; children?: React.ReactNode; onTitleSave: (v: string) => void;
+  default: ({ properties, actions, children, notices, onTitleSave, onBack, onTabChange, metadata, itemReference, backLabel, nav: navigation, canEditTitle }: {
+    canEditTitle?: boolean; itemReference?: string | null; backLabel?: string; properties?: React.ReactNode; actions?: React.ReactNode; notices?: React.ReactNode; children?: React.ReactNode; onTitleSave: (v: string) => void;
     onBack?: () => void; onTabChange?: (tab: string) => void; metadata?: React.ReactNode; nav?: { onNext?: () => void };
   }) => (
     <div data-testid="workspace-shell" data-can-edit-title={String(!!canEditTitle)}>
@@ -57,7 +70,7 @@ vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
       <button type="button" onClick={() => onTabChange?.('budget')}>budget tab</button>
       <button type="button" onClick={() => onTabChange?.('overview')}>overview tab</button>
       <button type="button" onClick={() => navigation?.onNext?.()}>next budget line</button>
-      {metadata}{actions}{properties}{children}
+      {metadata}{actions}<div data-testid="workspace-notices">{notices}</div>{properties}{children}
     </div>
   ),
 }));
@@ -154,6 +167,7 @@ vi.mock('../../components/finance/BudgetTab', async () => {
       waitingColumns: () => waiting.current,
       isSaving: () => false,
       hasPending: () => waiting.current.length > 0 || budgetStandIn.typed,
+      discard: () => { waiting.current = []; },
       reloadFromServer: async () => {
         if (budgetStandIn.failReload) throw new Error('offline');
         budgetStandIn.reloads += 1;
@@ -200,7 +214,7 @@ import { DEFAULT_BUDGET_COLUMNS } from '../../services/budgetColumns';
 import { resetListContextCache } from '../../lib/listContext';
 
 const mocked = api as unknown as {
-  get: ReturnType<typeof vi.fn>; post: ReturnType<typeof vi.fn>; patch: ReturnType<typeof vi.fn>;
+  get: ReturnType<typeof vi.fn>; post: ReturnType<typeof vi.fn>; patch: ReturnType<typeof vi.fn>; delete: ReturnType<typeof vi.fn>;
 };
 
 const charts = vi.hoisted(() => ({ company2: 'coa-b' }));
@@ -214,7 +228,14 @@ const ITEM_ID = '11111111-2222-3333-4444-555555555555';
 const CHANGES_DAY = new Date('2026-10-02T12:04:00.000Z');
 
 // The edits a page keeps for the session (lot 3C review): each test starts without any.
-beforeEach(() => { resetSharedPatchBuffers(); nav.result = null; nav.unified = false; });
+beforeEach(() => {
+  resetSharedPatchBuffers();
+  nav.result = null;
+  nav.unified = false;
+  auth.canEdit = true;
+  auth.admin = true;
+  auth.limited = false;
+});
 
 /**
  * The PATCH bodies without their `base` (lot 3C), checking that each base
@@ -294,87 +315,74 @@ function renderAt(path: string, previous?: string) {
 describe.each(['opex', 'capex'] as const)('BudgetLinePage %s', (lineNature) => {
   beforeEach(() => { nature = lineNature; });
 describe('BudgetLinePage create', () => {
+  const today = new Date().toISOString().slice(0, 10);
   beforeEach(() => {
     mocked.get.mockReset();
     mocked.post.mockReset();
     mocked.patch.mockReset();
     mocked.get.mockResolvedValue({ data: {} });
-    mocked.post.mockResolvedValue({ data: { id: 'new-id' } });
+    mocked.post.mockImplementation(async (url: string) => (url === '/budget-lines/creation'
+      ? { data: { id: ITEM_ID, item_number: 12, reference: 'BL-12', nature, product_name: 'Monitoring', currency: 'EUR', effective_start: today, creation_token: 'token-1' } }
+      : { data: {} }));
+    placement.centreOnly = false;
+    placement.start = { ready: true, companyId: null, needsChoice: false };
   });
 
-  it('refreshes the dashboard tiles after creating a line', async () => {
+  it('creates the line from its title alone, with the defaults, opens it and refreshes the dashboard tiles', async () => {
     const { queryClient } = renderAt(`/ops/budget/new/overview`);
     seedDashboard(queryClient);
+    // The page to come is dimmed: the properties in their edit layout, no picker of a create form.
+    expect(document.querySelector('[data-testid="creation-preview"] [data-mode="edit"]')).not.toBeNull();
+    expect(document.querySelector('[data-mode="create"]')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'set title' }));
-    fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
-    fireEvent.click(screen.getByRole('button', { name: 'pick account' }));
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
+    expect(mocked.post).toHaveBeenCalledWith('/budget-lines/creation', {
+      nature: lineNature, product_name: 'Monitoring', currency: 'EUR', effective_start: today,
+    });
+    expect(await screen.findByTestId('capex-page')).toHaveAttribute('data-path', '/ops/budget/BL-12/overview');
     await expectDashboardInvalidated(queryClient);
   });
 
-  it('creates a line without a supplier and sends none', async () => {
-    renderAt(`/ops/budget/new/overview`);
-    expect(document.querySelector('[data-mode="create"]')).not.toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'set title' }));
-    fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
-    fireEvent.click(screen.getByRole('button', { name: 'pick account' }));
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
-    await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
-    expect(mocked.post.mock.calls[0][0]).toBe('/budget-lines');
-    expect(mocked.post.mock.calls[0][1]).toMatchObject({
-      product_name: 'Monitoring',
-      supplier_id: null,
-      paying_company_id: 'company-1',
-      account_id: 'account-1',
-    });
-  });
-
-  it('fills an empty paying company from the picked cost center and sends both new fields', async () => {
+  it('fills the one company a limited access allows', async () => {
+    placement.start = { ready: true, companyId: 'company-1', needsChoice: false };
     renderAt(`/ops/budget/new/overview`);
     fireEvent.click(screen.getByRole('button', { name: 'set title' }));
-    fireEvent.click(screen.getByRole('button', { name: 'pick cost center' }));
-    expect(document.querySelector('[data-mode="create"]')).toHaveAttribute('data-company', 'company-2');
-    fireEvent.click(screen.getByRole('button', { name: 'pick build' }));
-    fireEvent.click(screen.getByRole('button', { name: 'pick account' }));
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
-    expect(mocked.post.mock.calls[0][1]).toMatchObject({
-      paying_company_id: 'company-2',
-      cost_center_id: 'cc-2',
-      run_build: 'build',
-    });
+    expect(mocked.post.mock.calls[0][1]).toMatchObject({ paying_company_id: 'company-1' });
   });
 
-  it('keeps a paying company picked first, and sends no cost center or run or build when none is picked', async () => {
+  it('waits for the place a limited access must choose before the title creates the line', async () => {
+    placement.start = { ready: true, companyId: null, needsChoice: true };
     renderAt(`/ops/budget/new/overview`);
-    fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
-    fireEvent.click(screen.getByRole('button', { name: 'pick cost center' }));
-    expect(document.querySelector('[data-mode="create"]')).toHaveAttribute('data-company', 'company-1');
-    fireEvent.click(screen.getByRole('button', { name: 'clear cost center' }));
+    // The place is live, outside the dimmed preview.
+    const live = document.querySelector('[data-mode="create"]');
+    expect(live).not.toBeNull();
+    expect(live!.closest('[data-testid="creation-preview"]')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'set title' }));
-    fireEvent.click(screen.getByRole('button', { name: 'pick account' }));
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+    expect(mocked.post).not.toHaveBeenCalled();
+    // A cost center brings its company, and the title creates the line on that place.
+    fireEvent.click(within(live as HTMLElement).getByRole('button', { name: 'pick cost center' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
-    expect(mocked.post.mock.calls[0][1]).toMatchObject({ paying_company_id: 'company-1', cost_center_id: null, run_build: null });
+    expect(mocked.post.mock.calls[0][1]).toMatchObject({ paying_company_id: 'company-2', cost_center_id: 'cc-2' });
   });
 
-  it('lets a company filled from the cost center follow the next cost center, until an account is picked', async () => {
+  it('asks for a cost center when the chosen company is allowed only through one', async () => {
+    placement.start = { ready: true, companyId: null, needsChoice: true };
+    placement.centreOnly = true;
     renderAt(`/ops/budget/new/overview`);
-    const drawer = () => document.querySelector('[data-mode="create"]');
-    fireEvent.click(screen.getByRole('button', { name: 'pick cost center' }));
-    expect(drawer()).toHaveAttribute('data-company', 'company-2');
-    // While the company follows, the cost center list is not narrowed to it.
-    expect(drawer()).toHaveAttribute('data-company-follows', 'true');
-    fireEvent.click(screen.getByRole('button', { name: 'pick third cost center' }));
-    expect(drawer()).toHaveAttribute('data-company', 'company-3');
-    fireEvent.click(screen.getByRole('button', { name: 'pick account' }));
-    expect(drawer()).toHaveAttribute('data-company-follows', 'false');
-    fireEvent.click(screen.getByRole('button', { name: 'pick cost center' }));
-    expect(drawer()).toHaveAttribute('data-company', 'company-3');
+    const live = document.querySelector('[data-mode="create"]') as HTMLElement;
+    fireEvent.click(within(live).getByRole('button', { name: 'pick company' }));
+    fireEvent.click(screen.getByRole('button', { name: 'set title' }));
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+    expect(mocked.post).not.toHaveBeenCalled();
+    fireEvent.click(within(live).getByRole('button', { name: 'pick cost center' }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
+    expect(mocked.post.mock.calls[0][1]).toMatchObject({ paying_company_id: 'company-1', cost_center_id: 'cc-2' });
   });
 
-  it('empties a cost center of another company when the user picks a company', async () => {
+  it('keeps a paying company picked first when a cost center of another company is picked, then empties that cost center', async () => {
+    placement.start = { ready: true, companyId: null, needsChoice: true };
     const node = (id: string, company: string) => ({
       id, code: id.toUpperCase(), name: id, kind: 'cost_center', parent_id: null, company_id: company, company_name: company,
       owner_user_id: null, owner_name: null, status: 'enabled', disabled_at: null, sort_order: 0, depth: 0, path: id, path_ids: [id],
@@ -383,141 +391,18 @@ describe('BudgetLinePage create', () => {
       ? { data: { items: [node('cc-2', 'company-2'), node('cc-3', 'company-3')] } }
       : { data: {} }));
     renderAt(`/ops/budget/new/overview`);
-    const drawer = () => document.querySelector('[data-mode="create"]');
-    fireEvent.click(screen.getByRole('button', { name: 'pick cost center' }));
-    expect(drawer()).toHaveAttribute('data-company', 'company-2');
-    // The tree names the cost center's company once it has loaded.
+    const live = () => document.querySelector('[data-mode="create"]') as HTMLElement;
+    fireEvent.click(within(live()).getByRole('button', { name: 'pick cost center' }));
+    expect(live()).toHaveAttribute('data-company', 'company-2');
+    expect(live()).toHaveAttribute('data-company-follows', 'true');
+    fireEvent.click(within(live()).getByRole('button', { name: 'pick third cost center' }));
+    expect(live()).toHaveAttribute('data-company', 'company-3');
     await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/cost-centers/tree'));
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
-    fireEvent.click(screen.getByRole('button', { name: 'pick other company' }));
-    expect(drawer()).toHaveAttribute('data-cost-center', 'cc-2');
-    fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
-    expect(drawer()).toHaveAttribute('data-company', 'company-1');
-    expect(drawer()).toHaveAttribute('data-cost-center', '');
-  });
-
-  it('stops following the cost center once the user picks a company', async () => {
-    renderAt(`/ops/budget/new/overview`);
-    const drawer = () => document.querySelector('[data-mode="create"]');
-    fireEvent.click(screen.getByRole('button', { name: 'pick cost center' }));
-    fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
-    expect(drawer()).toHaveAttribute('data-company-follows', 'false');
-    fireEvent.click(screen.getByRole('button', { name: 'pick third cost center' }));
-    expect(drawer()).toHaveAttribute('data-company', 'company-1');
-  });
-
-  it('sends the value of each dimension given one, and never the old single field', async () => {
-    renderAt(`/ops/budget/new/overview`);
-    const drawer = () => document.querySelector('[data-mode="create"]');
-    fireEvent.click(screen.getByRole('button', { name: 'set title' }));
-    fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
-    fireEvent.click(screen.getByRole('button', { name: 'pick account' }));
-    fireEvent.click(screen.getByRole('button', { name: 'pick default value' }));
-    fireEvent.click(screen.getByRole('button', { name: 'pick nature value' }));
-    // A value on one dimension keeps the other.
-    expect(JSON.parse(drawer()!.getAttribute('data-analytics')!)).toEqual({ 'axis-default': 'value-1', 'axis-nature': 'value-2' });
-    fireEvent.click(screen.getByRole('button', { name: 'clear nature value' }));
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
-    await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
-    const payload = mocked.post.mock.calls[0][1];
-    expect(payload.analytics_values).toEqual({ 'axis-default': 'value-1' });
-    expect(payload).not.toHaveProperty('analytics_category_id');
-  });
-
-  it('never sends a value on a dimension for CAPEX lines only', async () => {
-    mocked.get.mockImplementation(async (url: string) => (url === '/analytics-axes'
-      ? { data: { items: [
-        { id: 'axis-default', code: 'default', name: null, description: null, sort_order: 0, is_default: true, applies_to: null, status: 'enabled', disabled_at: null },
-        { id: 'axis-nature', code: 'nature', name: 'Nature', description: null, sort_order: 1, is_default: false, applies_to: lineNature === 'opex' ? 'capex' : 'opex', status: 'enabled', disabled_at: null },
-      ] } }
-      : { data: {} }));
-    renderAt(`/ops/budget/new/overview`);
-    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/analytics-axes'));
-    fireEvent.click(screen.getByRole('button', { name: 'set title' }));
-    fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
-    fireEvent.click(screen.getByRole('button', { name: 'pick account' }));
-    fireEvent.click(screen.getByRole('button', { name: 'pick default value' }));
-    // Picked before the dimension became CAPEX only: no longer shown, so not sent.
-    fireEvent.click(screen.getByRole('button', { name: 'pick nature value' }));
-    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
-    await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
-    expect(mocked.post.mock.calls[0][1].analytics_values).toEqual({ 'axis-default': 'value-1' });
-  });
-
-  it('sends an empty map when no dimension has a value', async () => {
-    renderAt(`/ops/budget/new/overview`);
-    fireEvent.click(screen.getByRole('button', { name: 'set title' }));
-    fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
-    fireEvent.click(screen.getByRole('button', { name: 'pick account' }));
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
-    await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
-    expect(mocked.post.mock.calls[0][1].analytics_values).toEqual({});
-  });
-
-  it('refuses to create a line without a value on a dimension required for OPEX lines, and only those', async () => {
-    mocked.get.mockImplementation(async (url: string) => (url === '/analytics-axes'
-      ? { data: { items: [
-        { id: 'axis-default', code: 'default', name: null, description: null, sort_order: 0, is_default: true, applies_to: null, required: false, status: 'enabled', disabled_at: null },
-        { id: 'axis-nature', code: 'nature', name: 'Nature', description: null, sort_order: 1, is_default: false, applies_to: null, required: true, status: 'enabled', disabled_at: null },
-        // Required, but for CAPEX lines only, or disabled: not checked here.
-        { id: 'axis-other', code: 'other', name: 'Other', description: null, sort_order: 2, is_default: false, applies_to: lineNature === 'opex' ? 'capex' : 'opex', required: true, status: 'enabled', disabled_at: null },
-        { id: 'axis-old', code: 'old', name: 'Old', description: null, sort_order: 3, is_default: false, applies_to: null, required: true, status: 'disabled', disabled_at: '2020-01-01T00:00:00.000Z' },
-      ] } }
-      : { data: {} }));
-    renderAt(`/ops/budget/new/overview`);
-    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/analytics-axes'));
-    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
-    fireEvent.click(screen.getByRole('button', { name: 'set title' }));
-    fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
-    fireEvent.click(screen.getByRole('button', { name: 'pick account' }));
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
-    expect(await screen.findByText('opex.editor.dimensionRequired')).toBeInTheDocument();
-    expect(mocked.post).not.toHaveBeenCalled();
-
-    fireEvent.click(screen.getByRole('button', { name: 'pick nature value' }));
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
-    await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
-    expect(mocked.post.mock.calls[0][1].analytics_values).toEqual({ 'axis-nature': 'value-2' });
-  });
-
-  it('refuses to create a line without a title, with the title message for both types', async () => {
-    renderAt(`/ops/budget/new/overview`);
-    fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
-    fireEvent.click(screen.getByRole('button', { name: 'pick account' }));
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
-    expect(await screen.findByText('opex.editor.productNameRequired')).toBeInTheDocument();
-    expect(screen.queryByText('capex.editor.descriptionRequired')).not.toBeInTheDocument();
-    expect(mocked.post).not.toHaveBeenCalled();
-  });
-
-  it('refuses to create a line without a cost center when the access allows its company only through one', async () => {
-    placement.centreOnly = true;
-    try {
-      renderAt(`/ops/budget/new/overview`);
-      fireEvent.click(screen.getByRole('button', { name: 'set title' }));
-      fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
-      fireEvent.click(screen.getByRole('button', { name: 'pick account' }));
-      fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
-      expect(await screen.findByText('opex.editor.dimensionRequired')).toBeInTheDocument();
-      expect(mocked.post).not.toHaveBeenCalled();
-
-      fireEvent.click(screen.getByRole('button', { name: 'pick cost center' }));
-      fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
-      await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
-      expect(mocked.post.mock.calls[0][1]).toMatchObject({ paying_company_id: 'company-1', cost_center_id: 'cc-2' });
-    } finally {
-      placement.centreOnly = false;
-    }
-  });
-
-  it('refuses to create a line without an account', async () => {
-    renderAt(`/ops/budget/new/overview`);
-    fireEvent.click(screen.getByRole('button', { name: 'set title' }));
-    fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
-    expect(await screen.findByText('opex.editor.accountRequired')).toBeInTheDocument();
-    expect(mocked.post).not.toHaveBeenCalled();
+    fireEvent.click(within(live()).getByRole('button', { name: 'pick company' }));
+    expect(live()).toHaveAttribute('data-company', 'company-1');
+    expect(live()).toHaveAttribute('data-company-follows', 'false');
+    expect(live()).toHaveAttribute('data-cost-center', '');
   });
 });
 
@@ -930,7 +815,7 @@ describe('BudgetLinePage list context', () => {
     mocked.get.mockReset();
     mocked.get.mockImplementation(async (url: string) => {
       if (url === '/budget-columns') return { data: DEFAULT_BUDGET_COLUMNS };
-      if (url === `/budget-lines/${ITEM_ID}`) return { data: { id: ITEM_ID, item_number: 7, product_name: 'Monitoring', currency: 'EUR' } };
+      if (url === `/budget-lines/${ITEM_ID}`) return { data: { id: ITEM_ID, item_number: 7, product_name: 'Monitoring', currency: 'EUR', paying_company_id: 'company-1', account_id: 'account-1' } };
       return { data: {} };
     });
   });
@@ -1008,7 +893,7 @@ describe('BudgetLinePage list context too long for a URL (ctx)', () => {
     mocked.get.mockImplementation(async (url: string) => {
       if (url === '/budget-columns') return { data: DEFAULT_BUDGET_COLUMNS };
       if (url === `/list-contexts/${CTX}`) return { data: { id: CTX, list: 'budget-lines', state: { filters: BIG } } };
-      if (url === `/budget-lines/${ITEM_ID}`) return { data: { id: ITEM_ID, item_number: 7, product_name: 'Monitoring', currency: 'EUR' } };
+      if (url === `/budget-lines/${ITEM_ID}`) return { data: { id: ITEM_ID, item_number: 7, product_name: 'Monitoring', currency: 'EUR', paying_company_id: 'company-1', account_id: 'account-1' } };
       return { data: {} };
     });
   });
@@ -2185,7 +2070,7 @@ describe('native contract and Type', () => {
   beforeEach(() => {
     auth.canEdit = true;
     mocked.get.mockReset(); mocked.patch.mockReset(); mocked.post.mockReset();
-    stored = { id: ITEM_ID, item_number: 127, nature, product_name: 'Investment', description: 'Long description', notes: 'Private notes', currency: 'EUR' };
+    stored = { id: ITEM_ID, item_number: 127, nature, product_name: 'Investment', description: 'Long description', notes: 'Private notes', currency: 'EUR', paying_company_id: 'company-1', account_id: 'account-1' };
     mocked.get.mockImplementation(async (url: string) => {
       if (url.startsWith('/budget-lines/')) return { data: stored };
       return { data: {} };
@@ -2232,33 +2117,6 @@ describe('native contract and Type', () => {
     renderAt(`/ops/budget/BL-127/overview`);
     await screen.findByDisplayValue('Long description');
     expect(screen.queryByRole('button', { name: 'budget.changeType' })).not.toBeInTheDocument();
-  });
-
-  it('defaults the create Type to the route and changes it with the query preserved', async () => {
-    renderAt(`/ops/budget/new/overview?list=budget&year=2027&sort=product_name:ASC`, '/ops/budget?origin=history');
-    expect(screen.getByRole('combobox', { name: 'budget.type' })).toHaveValue(nature);
-    fireEvent.change(screen.getByRole('combobox', { name: 'budget.type' }), { target: { value: otherNature() } });
-    const target = await screen.findByTestId('create-target');
-    expect(target).toHaveAttribute('data-path', `/ops/budget/new`);
-    expect(new URLSearchParams(target.getAttribute('data-search') ?? '').get('nature')).toBe(otherNature());
-    const search = new URLSearchParams(target.getAttribute('data-search') ?? '');
-    expect(search.get('year')).toBe('2027'); expect(search.get('list')).toBe('budget'); expect(search.get('sort')).toBe('product_name:ASC');
-    fireEvent.click(screen.getByRole('button', { name: 'browser back' }));
-    const list = await screen.findByTestId('list-page');
-    expect(new URLSearchParams(list.getAttribute('data-search') ?? '').get('origin')).toBe('history');
-  });
-
-  it('creates through the native API with the route nature and all three texts', async () => {
-    mocked.post.mockResolvedValue({ data: { id: 'new-id' } });
-    renderAt(`/ops/budget/new/overview`);
-    fireEvent.click(screen.getByRole('button', { name: 'set title' }));
-    fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
-    fireEvent.click(screen.getByRole('button', { name: 'pick account' }));
-    const texts = screen.getAllByRole('textbox');
-    fireEvent.change(texts[0], { target: { value: 'Created description' } });
-    fireEvent.change(texts[1], { target: { value: 'Created notes' } });
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
-    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/budget-lines', expect.objectContaining({ nature, product_name: 'Monitoring', description: 'Created description', notes: 'Created notes' })));
   });
 
   it('removes the internal list marker when returning to the budget list', async () => {
@@ -2313,6 +2171,112 @@ describe('BudgetLinePage type changed in place', () => {
     await waitFor(() => expect(screen.getByTestId('line-type')).toHaveTextContent(target));
     await waitFor(() => expect(screen.getByTestId('line-type').parentElement).toHaveAttribute('data-account', `account-${target}`));
     expect(screen.queryByTestId('change-type-dialog')).not.toBeInTheDocument();
+  });
+});
+
+describe('BudgetLinePage delete', () => {
+  const line = {
+    id: ITEM_ID, item_number: 7, product_name: 'Monitoring', supplier_id: 'supplier-1', notes: 'Renewal',
+    paying_company_id: 'company-1', account_id: 'account-1', currency: 'EUR', effective_start: '2026-01-01',
+  };
+
+  beforeEach(() => {
+    mocked.get.mockReset();
+    mocked.post.mockReset();
+    mocked.patch.mockReset();
+    mocked.delete.mockReset();
+    dialogs.confirm.mockReset();
+    dialogs.confirm.mockResolvedValue(true);
+    dialogs.alert.mockReset();
+    dialogs.alert.mockResolvedValue(undefined);
+    mocked.get.mockImplementation(async (url: string) => (
+      url === `/budget-lines/${ITEM_ID}` ? { data: line } : { data: {} }
+    ));
+    mocked.post.mockResolvedValue({ data: { refused: [] } });
+    mocked.delete.mockResolvedValue({ data: { deleted: [ITEM_ID], failed: [] } });
+    mocked.patch.mockResolvedValue({ data: {} });
+  });
+
+  async function openLine() {
+    const view = renderAt(`/ops/budget/${ITEM_ID}/overview?q=monitor&list=budget`);
+    await screen.findByDisplayValue('Renewal');
+    return view;
+  }
+
+  it('hides the icon without budget admin', async () => {
+    auth.admin = false;
+    await openLine();
+    expect(screen.queryByRole('button', { name: 'common:buttons.delete' })).not.toBeInTheDocument();
+    expect(screen.getByDisplayValue('Renewal')).toBeEnabled();
+  });
+
+  it('hides the icon when data access is limited', async () => {
+    auth.limited = true;
+    await openLine();
+    expect(screen.queryByRole('button', { name: 'common:buttons.delete' })).not.toBeInTheDocument();
+  });
+
+  it('hides the icon on a new line', () => {
+    renderAt('/ops/budget/new/overview');
+    expect(screen.queryByRole('button', { name: 'common:buttons.delete' })).not.toBeInTheDocument();
+  });
+
+  it('shows the refusal for a frozen line and does not delete it', async () => {
+    mocked.post.mockImplementation(async (url: string) => (
+      url === '/budget-lines/delete-check'
+        ? { data: { refused: [{ id: ITEM_ID, code: 'BUDGET_LINE_FROZEN', usages: [], params: { column: 'Budget', year: 2026 }, reason: 'English' }] } }
+        : { data: {} }
+    ));
+    await openLine();
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.delete' }));
+    await waitFor(() => expect(dialogs.alert).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'common:delete.recordTitle',
+      message: 'errors:BUDGET_LINE_FROZEN',
+    })));
+    expect(mocked.post).toHaveBeenCalledWith('/budget-lines/delete-check', { ids: [ITEM_ID] });
+    expect(mocked.delete).not.toHaveBeenCalled();
+    expect(dialogs.confirm).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('list-page')).not.toBeInTheDocument();
+  });
+
+  it('shows the refusal when the delete itself keeps a frozen line', async () => {
+    mocked.delete.mockResolvedValue({
+      data: {
+        deleted: [],
+        failed: [{ id: ITEM_ID, name: 'Monitoring', code: 'BUDGET_LINE_FROZEN', reason: 'English', params: { column: 'Budget', year: 2026 } }],
+      },
+    });
+    await openLine();
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.delete' }));
+    await waitFor(() => expect(dialogs.alert).toHaveBeenCalledWith(expect.objectContaining({
+      message: 'errors:BUDGET_LINE_FROZEN',
+    })));
+    expect(mocked.delete).toHaveBeenCalledWith('/budget-lines/bulk', { data: { ids: [ITEM_ID] } });
+    expect(screen.queryByTestId('list-page')).not.toBeInTheDocument();
+  });
+
+  it('deletes the line through the bulk route, drops a pending edit and returns to the list', async () => {
+    const { queryClient } = await openLine();
+    seedDashboard(queryClient);
+    fireEvent.change(screen.getByDisplayValue('Renewal'), { target: { value: 'not saved' } });
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.delete' }));
+    const list = await screen.findByTestId('list-page');
+    expect(mocked.post).toHaveBeenCalledWith('/budget-lines/delete-check', { ids: [ITEM_ID] });
+    expect(dialogs.confirm).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'common:delete.recordTitle',
+      message: 'common:delete.cannotUndo',
+      confirmLabel: 'common:buttons.delete',
+      intent: 'danger',
+    }));
+    expect(dialogs.confirm).not.toHaveBeenCalledWith(expect.objectContaining({ title: 'common:autosave.leaveTitle' }));
+    expect(mocked.delete).toHaveBeenCalledWith('/budget-lines/bulk', { data: { ids: [ITEM_ID] } });
+    const search = new URLSearchParams(list.getAttribute('data-search') ?? '');
+    expect(search.get('q')).toBe('monitor');
+    expect(search.has('list')).toBe(false);
+    expect(mocked.patch).not.toHaveBeenCalled();
+    await expectDashboardInvalidated(queryClient);
+    await act(async () => { await new Promise((resolve) => { setTimeout(resolve, 900); }); });
+    expect(mocked.patch).not.toHaveBeenCalled();
   });
 });
 

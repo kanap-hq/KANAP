@@ -13,7 +13,8 @@ import { DataSource, QueryRunner } from 'typeorm';
 //   Business Contributor's scope reads as missing.
 // - A contact deletes for its administrator, with its links counted by readable family and the
 //   others left unnamed; a member and a limited person are refused, at the preview and at the run.
-// - A location deletes for a member, and its assets keep existing without a location.
+// - A location that still holds assets is refused (`LOCATION_IN_USE`), at the preview and at the
+//   run; one without assets deletes for a member.
 // - An OPEX and a CAPEX line delete through their screen services, with their versions, tasks,
 //   links and dimension values gone; a request keeps its own row and loses its origin task. A
 //   line with amounts in a frozen column refuses before any preview; a budget member and a
@@ -721,6 +722,20 @@ async function testContactRefusals(h: Harness, runner: QueryRunner, s: Seed) {
 
 async function testLocationDelete(h: Harness, runner: QueryRunner, s: Seed) {
   const context = ctx(runner, s, 'member');
+  // A location that still holds an asset is refused before any preview, with the asset counted.
+  const before = await count(runner, 'ai_mutation_previews', 'tenant_id = $1', [s.tenantId]);
+  const refused = await refusal(() => h.previews.createPreview(context, 'delete_record', { entity_type: 'locations', ref: 'LOC-1' }));
+  assert.equal(refused, 'Cannot delete location "Paris DC": it still holds 1 asset. Move it to another location first.');
+  assert.equal(await count(runner, 'ai_mutation_previews', 'tenant_id = $1', [s.tenantId]), before);
+  assert.equal(await count(runner, 'assets', 'tenant_id = $1 AND id = $2 AND location_id = $3', [s.tenantId, s.asset, s.location]), 1);
+
+  // Moved to another location, the asset no longer holds it.
+  const gouda = (await runner.query(
+    `INSERT INTO locations (tenant_id, location_reference, name, hosting_type) VALUES ($1, 'LOC-3', 'Gouda DC', 'cloud') RETURNING id`,
+    [s.tenantId],
+  ))[0].id as string;
+  await runner.query(`UPDATE assets SET location_id = $3 WHERE tenant_id = $1 AND id = $2`, [s.tenantId, s.asset, gouda]);
+
   const preview = await h.previews.createPreview(context, 'delete_record', { entity_type: 'locations', ref: 'LOC-1' });
   assert.equal(preview.status, 'pending');
   assert.equal(preview.target.entity_type, 'locations');
@@ -728,7 +743,6 @@ async function testLocationDelete(h: Harness, runner: QueryRunner, s: Seed) {
   assert.equal(preview.target.title, 'LOC-1 - Paris DC');
   const impact = String(preview.changes.deletion.to);
   for (const line of [
-    'Assets that will lose their location: 1',
     'Links to contacts: 2',
     'Links: 1',
     'Sub-items: 1',
@@ -738,12 +752,12 @@ async function testLocationDelete(h: Harness, runner: QueryRunner, s: Seed) {
     assert.ok(impact.includes(line), `${line} in:\n${impact}`);
   }
   assert.ok(!impact.includes('Links to documents'), impact);
+  assert.ok(!/asset/i.test(impact), impact);
 
   const executed = await h.previews.executePreview(context, preview.preview_id);
   assert.equal(executed.status, 'executed', executed.error_message ?? '');
   assert.equal(await count(runner, 'locations', 'tenant_id = $1 AND id = $2', [s.tenantId, s.location]), 0);
-  const [asset] = await runner.query(`SELECT location_id FROM assets WHERE tenant_id = $1 AND id = $2`, [s.tenantId, s.asset]);
-  assert.equal(asset.location_id, null);
+  assert.equal(await count(runner, 'assets', 'tenant_id = $1 AND id = $2 AND location_id = $3', [s.tenantId, s.asset, gouda]), 1);
   assert.equal(await count(runner, 'location_contacts', 'tenant_id = $1 AND location_id = $2', [s.tenantId, s.location]), 0);
   assert.equal(await count(runner, 'location_user_contacts', 'tenant_id = $1 AND location_id = $2', [s.tenantId, s.location]), 0);
   assert.equal(await count(runner, 'location_links', 'tenant_id = $1 AND location_id = $2', [s.tenantId, s.location]), 0);
@@ -752,7 +766,19 @@ async function testLocationDelete(h: Harness, runner: QueryRunner, s: Seed) {
   const audit = await latestAudit(runner, s.tenantId, 'locations', s.location);
   assert.equal(audit.source, 'ai_chat');
   assert.equal(audit.source_ref, preview.preview_id);
-  console.log('  location deleted by a member, assets kept without a location, audit names the preview: OK');
+
+  // An asset placed there between the preview and the run: the run is refused the same way.
+  const empty = (await runner.query(
+    `INSERT INTO locations (tenant_id, location_reference, name, hosting_type) VALUES ($1, 'LOC-4', 'Delft DC', 'cloud') RETURNING id`,
+    [s.tenantId],
+  ))[0].id as string;
+  const late = await h.previews.createPreview(context, 'delete_record', { entity_type: 'locations', ref: 'LOC-4' });
+  await runner.query(`UPDATE assets SET location_id = $3 WHERE tenant_id = $1 AND id = $2`, [s.tenantId, s.asset, empty]);
+  const failed = await h.previews.executePreview(context, late.preview_id);
+  assert.equal(failed.status, 'failed');
+  assert.equal(failed.error_message, 'Cannot delete location "Delft DC": it still holds 1 asset. Move it to another location first.');
+  assert.equal(await count(runner, 'locations', 'tenant_id = $1 AND id = $2', [s.tenantId, empty]), 1);
+  console.log('  location with assets refused at the preview and at the run; without them, deleted by a member, audit names the preview: OK');
 }
 
 async function testOpexLineDelete(h: Harness, runner: QueryRunner, s: Seed) {

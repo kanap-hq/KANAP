@@ -39,25 +39,24 @@ Ce pipeline garantit que chaque initiative est évaluée équitablement, prioris
 
 ## Étape 1 : Soumettez une demande
 
-Allez dans **Portefeuille > Demandes** et cliquez sur **+ Nouvelle demande**.
+Allez dans **Portefeuille > Demandes** et cliquez sur **Nouvelle demande**.
 
-Les nouvelles demandes s'ouvrent sur le **Résumé** avec la barre latérale de propriétés déjà visible. Commencez par les champs structurels dans la barre latérale, puis capturez le récit dans l'**Objet**.
+Saisissez dans l'en-tête un titre clair et concis pour l'initiative, puis appuyez sur Entrée. Votre demande entre dans le pipeline avec le statut **En attente de revue**, et tous ses onglets s'ouvrent.
 
 <!-- screenshot: Espace de travail Nouvelle demande avec Résumé et barre latérale de propriétés -->
 
-Remplissez les détails minimaux pour commencer :
+Remplissez ensuite les détails minimaux dans la barre latérale de propriétés :
 
 | Champ | Quoi saisir |
 |-------|------------|
-| **Nom** | Un titre clair et concis pour l'initiative |
 | **Source** | D'où vient-elle ? (Direction métier, réglementation, stratégie IT...) |
 | **Catégorie** | Le type d'initiative (ex. : Nouvelle application, Infrastructure, Amélioration de processus) |
-| **Demandeur** | Qui fait la demande ? |
+| **Demandeur** | Qui fait la demande ? Vous, par défaut |
 | **Date de livraison cible** | Quand est-ce idéalement nécessaire ? |
 
 Puis utilisez le document **Objet** dans le **Résumé** pour expliquer le besoin métier et le résultat attendu en langage courant. Si vous avez déjà un brief dans Word, utilisez le bouton **Import** sur l'éditeur d'Objet pour importer le fichier `.docx` directement, sans copier-coller.
 
-Cliquez sur **Créer**. Votre demande entre dans le pipeline avec le statut **En attente de revue**.
+Tant que vous êtes sur sa page, **Créer** dans l'en-tête conserve la nouvelle demande et la ferme, et **Annuler** la supprime.
 
 !!! tip "Conseil : Restez léger"
     Vous pourrez ajouter une analyse plus approfondie, des documents de base de connaissances liés et des preuves de support plus tard. L'objectif maintenant est d'introduire la demande dans le flux d'intake gouverné.
@@ -168,7 +167,7 @@ Consultez la [référence Demandes](../portfolio-requests.md) pour toutes les tr
 
 Votre nouveau projet hérite du contexte de la demande, mais il a encore besoin d'une configuration d'exécution.
 
-Allez dans **Portefeuille > Projets** et ouvrez votre projet nouvellement créé. L'espace de travail du projet comporte sept onglets (**Résumé**, **Activité**, **Chronologie**, **Avancement**, **Tâches**, **Évaluation** et **Base de connaissances**), avec une barre latérale persistante **Propriétés du projet** pour les champs principaux, l'équipe et les relations.
+Allez dans **Portefeuille > Projets** et ouvrez votre projet nouvellement créé. L'espace de travail du projet comporte sept onglets (**Résumé**, **Activité**, **Chronologie**, **Charge**, **Tâches**, **Évaluation** et **Base de connaissances**), avec une barre latérale persistante **Propriétés du projet** pour les champs principaux, l'équipe et les relations.
 
 ### Barre latérale : Assignez vos personnes et la structure principale
 
@@ -200,11 +199,11 @@ La même barre latérale garde aussi les **Propriétés principales** et les **R
 
 Le **Résumé** est le tableau de bord du projet. Il affiche le statut actuel, la fenêtre de livraison, la consommation de charge, la couverture de l'équipe et la dernière activité en une seule passe. L'éditeur d'**Objet** est ici aussi : si votre brief projet existe déjà en tant que document Word, utilisez le bouton **Import** pour importer le `.docx` directement.
 
-### Onglet Avancement : Validez la charge et les ventilations
+### Onglet Charge : Validez la charge et les ventilations
 
-<!-- screenshot: Onglet Avancement montrant les champs Charge IT et Charge Métier -->
+<!-- screenshot: Onglet Charge montrant les champs Charge IT et Charge Métier -->
 
-Utilisez l'**Avancement** pour confirmer la charge qui pilotera la planification de livraison :
+Utilisez la **Charge** pour confirmer la charge qui pilotera la planification de livraison :
 
 - **Charge IT (JH)** : Total de jours-homme attendus des contributeurs IT
 - **Charge Métier (JH)** : Total de jours-homme attendus des contributeurs métier
@@ -230,9 +229,9 @@ Maintenant le vrai travail commence. Au fur et à mesure que le projet avance, g
 
 ### Mettez à jour l'avancement
 
-<!-- screenshot: Curseur Avancement de l'exécution -->
+<!-- screenshot: Curseur Progression -->
 
-Utilisez le curseur **Avancement de l'exécution** dans l'onglet Avancement pour refléter la progression du projet. C'est un simple pourcentage (0-100 %) qui alimente les tableaux de bord et les rapports.
+Utilisez le curseur **Progression** dans l'onglet Charge pour refléter la progression du projet. C'est un simple pourcentage (0-100 %) qui alimente les tableaux de bord et les rapports.
 
 Faites évoluer le projet à travers les statuts au fur et à mesure que le travail progresse. En pratique, la plupart des projets passent de **Liste d'attente** ou **Planifié** vers l'exécution active :
 
@@ -245,7 +244,7 @@ Faites évoluer le projet à travers les statuts au fur et à mesure que le trav
 
 Il y a deux endroits pour saisir du temps :
 
-1. **Onglet Avancement** : Saisissez le temps d'overhead projet (réunions, coordination, management)
+1. **Onglet Charge** : Saisissez le temps d'overhead projet (réunions, coordination, management)
 2. **Tâches** : Saisissez le temps spécifique aux tâches contre des éléments de travail individuels
 
 <!-- screenshot: Boîte de dialogue de saisie de temps -->
@@ -357,14 +356,14 @@ Voir la [référence Rapports](../portfolio-reporting.md).
 
 | Je veux... | Aller à... |
 |------------|-----------|
-| Soumettre une nouvelle idée | Portefeuille > Demandes > + Nouveau |
+| Soumettre une nouvelle idée | Portefeuille > Demandes > Nouvelle demande |
 | Évaluer une demande | Ouvrir la demande > onglet Évaluation |
 | Évaluer la faisabilité | Ouvrir la demande > onglet Analyse |
 | Définir l'équipe projet | Ouvrir le projet > Barre latérale Propriétés du projet > Équipe |
 | Importer un document Word | Ouvrir demande/projet/tâche > bouton Import sur Objet ou Description |
 | Voir le pipeline de projets | Portefeuille > Planification |
 | Vérifier la capacité de l'équipe | Portefeuille > Planification > Vue capacité, ou Portefeuille > Rapports > Planning de capacité |
-| Saisir du temps sur un projet | Ouvrir le projet > onglet Avancement ou Tâches |
+| Saisir du temps sur un projet | Ouvrir le projet > onglet Charge ou Tâches |
 | Générer une roadmap | Portefeuille > Planification > Générateur de roadmap |
 | Consulter les rapports | Portefeuille > Rapports |
 | Configurer les pondérations d'évaluation | Portefeuille > Paramètres > Critères d'évaluation |

@@ -19,7 +19,7 @@ Si vous souhaitez le chemin le plus court vers la productivité, commencez par l
 
 ### Tableau de bord
 
-- [Tableau de bord](my-dashboard.md): Vue d'ensemble personnelle avec des tuiles configurables (cliquez sur le logo KANAP)
+- [Tableau de bord](my-dashboard.md): Vue d'ensemble personnelle avec des tuiles configurables et la section Gestion budgétaire (cliquez sur le logo KANAP)
 
 ### Gestion du portefeuille
 
@@ -124,7 +124,6 @@ Si vous souhaitez le chemin le plus court vers la productivité, commencez par l
 - [Utilisation & coûts](ai-usage.md): L'utilisation de l'IA et les coûts réels du chat et des agents, par agent et par modèle
 - [Intégrations](integrations.md): Connectez GLPI pour l'import de tickets et pour les agents
 - [Tâches planifiées](scheduled-tasks.md): Consultez et gérez les tâches d'arrière-plan récurrentes
-- [Vue d'ensemble de la gestion budgétaire](operations-dashboard.md): Aperçus OPEX et CAPEX, échéances et actions rapides
 
 ### Déploiement et opérations
 

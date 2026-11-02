@@ -37,7 +37,8 @@ export class FixAttachmentFilenameEncoding1816000000000 implements MigrationInte
           SET original_filename = convert_from(convert_to(original_filename, 'LATIN1'), 'UTF8')
           WHERE original_filename ~ '[\\xC0-\\xDF][\\x80-\\xBF]'
         `);
-        const count = Array.isArray(result) ? result.length : (result as any)?.rowCount ?? 0;
+        // An UPDATE answers [rows, rowCount]: the length is always 2.
+        const count = Array.isArray(result) ? Number(result[1] ?? 0) : 0;
         if (count > 0) {
           console.log(`[Migration] Fixed ${count} garbled filename(s) in ${table} for tenant ${tenantId}`);
         }

@@ -35,6 +35,16 @@ function isNumberFilterValue(value: AiFilterValue): value is AiNumberFilterValue
   return !!value && typeof value === 'object' && !Array.isArray(value) && typeof (value as any).op === 'string' && typeof (value as any).value === 'number';
 }
 
+/**
+ * A number given alone, or a string that is only a number (`2026`, `"2026"`): the model writes a
+ * year this way, and it means `{"op": "eq", "value": 2026}`.
+ */
+function bareNumberValue(value: unknown): number | null {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  if (typeof value === 'string' && /^-?\d+(\.\d+)?$/.test(value.trim())) return Number(value.trim());
+  return null;
+}
+
 function isDateFilterValue(value: AiFilterValue): value is AiDateFilterValue {
   return !!value && typeof value === 'object' && !Array.isArray(value) && typeof (value as any).op === 'string' && typeof (value as any).value === 'string';
 }
@@ -165,7 +175,10 @@ export function adaptFilters(
         adapted = { filterType: 'text', type: 'contains', filter: rawValue.trim() };
       }
     } else if (field.type === 'number') {
-      if (isNumberFilterValue(rawValue)) {
+      const bare = bareNumberValue(rawValue);
+      if (bare != null) {
+        adapted = adaptNumberFilter({ op: 'eq', value: bare });
+      } else if (isNumberFilterValue(rawValue)) {
         adapted = adaptNumberFilter(rawValue);
       }
     } else if (field.type === 'date') {

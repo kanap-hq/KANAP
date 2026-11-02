@@ -9,6 +9,7 @@ import { accountFormSchema, AccountFormValues } from '../../forms/AccountForm';
 import { z } from 'zod';
 import { ACCOUNT_NATURES, accountNatureLabel, parseAccountNature } from '../../../constants/accountNature';
 import { STATUS_DISABLED, STATUS_ENABLED, lifecyclePayload } from '../../../constants/status';
+import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 
 export type AccountCreateEditorHandle = {
   isDirty: () => boolean;
@@ -96,7 +97,7 @@ export default forwardRef<AccountCreateEditorHandle, Props>(function AccountCrea
         }
       } catch (e: any) {
         if (!active) return;
-        setLoadError(e?.response?.data?.message || e?.message || t('accounts.fields.loadCoAsError'));
+        setLoadError(getApiErrorMessage(e, t, t('accounts.fields.loadCoAsError')));
       } finally {
         if (active) setLoadingCoas(false);
       }
@@ -122,7 +123,7 @@ export default forwardRef<AccountCreateEditorHandle, Props>(function AccountCrea
       if (extractCreatedId) return extractCreatedId(res.data);
       return String(res.data?.id ?? res.data?.uuid ?? null);
     } catch (e: any) {
-      const msg = e?.response?.data?.message || e?.message || t('shared.messages.failedToCreate', { entity: t('accounts.entity') });
+      const msg = getApiErrorMessage(e, t, t('shared.messages.failedToCreate', { entity: t('accounts.entity') }));
       setServerError(msg);
       throw e;
     } finally {

@@ -119,6 +119,10 @@ import { AiResolvedTenantSecret } from '../control-plane/providers/tenant-secret
 import { AiExecutionContextWithManager } from '../ai.types';
 import { Features } from '../../config/features';
 
+// A control-plane refusal carries its translatable code (`errors:<code>` on the screen).
+const refusedWith = (code: string) => (error: unknown) =>
+  error instanceof ForbiddenException && (error.getResponse() as { code?: string }).code === code;
+
 function baseContract(overrides?: Partial<CapabilityContract>): CapabilityContract {
   return CapabilityContractSchema.parse({
     name: 'search_all',
@@ -1745,7 +1749,7 @@ async function testAutomationCatalogValidationStates() {
   await seedAutomationJob(context, { job_key: 'disabled-job', enabled: false });
   await assert.rejects(
     () => service.getCatalogJob(context, 'mock', 'disabled-job'),
-    (error: unknown) => error instanceof ForbiddenException,
+    refusedWith('AUTOMATION_JOB_DISABLED'),
   );
 
   await seedAutomationJob(context, { job_key: 'prod-job', environment: ' Production ' });
@@ -1753,7 +1757,7 @@ async function testAutomationCatalogValidationStates() {
   assert.equal(prodJob.environment, 'production');
   await assert.rejects(
     async () => service.assertLaunchEligible(prodJob),
-    (error: unknown) => error instanceof ForbiddenException,
+    refusedWith('AGENT_NOT_AVAILABLE_YET'),
   );
 
   await seedAutomationJob(context);
@@ -2879,19 +2883,19 @@ async function testMcpExposureResolverAppliesScopesAndAllowlists() {
 
   await assert.rejects(
     () => exposure.assertCanExecute(context, limitedKey, 'search_all'),
-    (error: unknown) => error instanceof ForbiddenException,
+    refusedWith('MCP_KEY_NOT_ALLOWED'),
   );
   await assert.rejects(
     () => exposure.listToolJsonSchemas(context, mcpApiKey({ mcp_scopes: [MCP_SCOPE_TOOLS_EXECUTE] }), MCP_SCOPE_TOOLS_LIST),
-    (error: unknown) => error instanceof ForbiddenException,
+    refusedWith('MCP_KEY_NOT_ALLOWED'),
   );
   await assert.rejects(
     () => exposure.assertCanExecute(context, mcpApiKey({ mcp_scopes: [MCP_SCOPE_TOOLS_LIST] }), 'query_entities'),
-    (error: unknown) => error instanceof ForbiddenException,
+    refusedWith('MCP_KEY_NOT_ALLOWED'),
   );
   await assert.rejects(
     () => exposure.assertCanExecute(context, mcpApiKey({ mcp_scopes: 'not-an-array' }), 'query_entities'),
-    (error: unknown) => error instanceof ForbiddenException,
+    refusedWith('AI_MCP_KEY_POLICY_INVALID'),
   );
   await assert.rejects(
     () => exposure.assertCanExecute(context, mcpApiKey(), 'ticketing.ticket.internal_note.add_approved'),
@@ -4226,7 +4230,7 @@ async function testDismissActionRequestGuardsTerminalStates() {
   await actions.markExecuted(context, executed, 'executed', null);
   await assert.rejects(
     () => approvals.dismissActionRequest(context, executed.id, 'late dismiss'),
-    (error: unknown) => error instanceof ForbiddenException,
+    refusedWith('AGENT_ACTION_NOT_PENDING'),
   );
 
   const rejected = await actions.createOrEnsureProviderAction(context, providerActionSeed({
@@ -4235,7 +4239,7 @@ async function testDismissActionRequestGuardsTerminalStates() {
   await actions.markRejected(context, rejected, 'already rejected');
   await assert.rejects(
     () => approvals.dismissActionRequest(context, rejected.id, 'late dismiss'),
-    (error: unknown) => error instanceof ForbiddenException,
+    refusedWith('AGENT_ACTION_NOT_PENDING'),
   );
 
   const expired = await actions.createOrEnsureProviderAction(context, providerActionSeed({
@@ -4244,7 +4248,7 @@ async function testDismissActionRequestGuardsTerminalStates() {
   }));
   await assert.rejects(
     () => approvals.dismissActionRequest(context, expired.id, 'late dismiss'),
-    (error: unknown) => error instanceof ForbiddenException,
+    refusedWith('AGENT_ACTION_EXPIRED'),
   );
   assert.equal((stores.get(AiActionRequest.name) ?? []).find((row: AiActionRequest) => row.id === expired.id).status, 'expired');
 
@@ -6013,7 +6017,7 @@ async function callStructuredJsonTestHelper(client: AiAgentLlmClient, context: A
   });
 }
 
-async function testBuiltinRuntimeCapsReasoningEffortCustomDoesNot() {
+async function testAgentCallSendsTheRuntimeReasoningEffort() {
   const captured: any[] = [];
   const fakeProvider = {
     createStream: (params: any) => {
@@ -6025,13 +6029,14 @@ async function testBuiltinRuntimeCapsReasoningEffortCustomDoesNot() {
     },
   };
   const client = Object.create(AiAgentLlmClient.prototype) as AiAgentLlmClient;
-  const runtimeFor = (source: 'builtin' | 'custom') => ({
+  const runtimeFor = (source: 'builtin' | 'custom', reasoningEffort: string | null) => ({
     source,
     provider: fakeProvider,
     providerId: 'custom',
     model: 'xiaomi/mimo-v2.5',
     apiKey: 'key',
     endpointUrl: null,
+    reasoningEffort,
   });
   const callInput = {
     systemPrompt: 'Return JSON.',
@@ -6041,11 +6046,15 @@ async function testBuiltinRuntimeCapsReasoningEffortCustomDoesNot() {
     defaultTimeoutMs: 1000,
   };
 
-  await client.callJsonModel({} as any, { ...callInput, runtime: runtimeFor('builtin') as any });
+  await client.callJsonModel({} as any, { ...callInput, runtime: runtimeFor('builtin', 'low') as any });
   assert.equal(captured[0].reasoningEffort, 'low');
 
-  await client.callJsonModel({} as any, { ...callInput, runtime: runtimeFor('custom') as any });
-  assert.equal(captured[1].reasoningEffort, null);
+  // A registry model sends its own effort; none set sends nothing.
+  await client.callJsonModel({} as any, { ...callInput, runtime: runtimeFor('custom', 'max') as any });
+  assert.equal(captured[1].reasoningEffort, 'max');
+
+  await client.callJsonModel({} as any, { ...callInput, runtime: runtimeFor('custom', null) as any });
+  assert.equal(captured[2].reasoningEffort, null);
 }
 
 async function testAgentRunsConsumeBuiltinFreeMessageQuota() {
@@ -10243,7 +10252,8 @@ async function testAgentControlActivityTimelineAndDailyMetrics() {
   assert.deepEqual(new Set(errors.items.map((entry) => entry.titleKey)), new Set(['run_failed']));
 
   const daily = await service.getHelpdeskEvaluationDaily(context, { days: 2 });
-  const today = daily.days.at(-1);
+  // The UTC day of the rows: in the first seconds after midnight they sit on the day before.
+  const today = daily.days.find((entry) => entry.day === now.toISOString().slice(0, 10));
   assert.ok(today);
   assert.equal(today.proposals, 1);
   assert.equal(today.decided, 1);
@@ -14616,6 +14626,176 @@ async function testGlpiTriagePlannerGroupRoutingUsesCatalogueAndSkipsInvalidTarg
   assert.match(recommendations[0].summary, /assignment update/);
 }
 
+// Observer adds follow the same catalogue rules as assignment: one group and one technician,
+// copied from routing_targets, never an observer already listed. remove_observer and
+// set_observers are skipped before a proposal exists.
+async function testGlpiTriagePlannerAddsObserversFromCatalogue() {
+  const { manager } = createMemoryManager();
+  const context = createContext(manager);
+  const queue = new AiAgentWorkQueueService();
+  const liveTarget = glpiReadSafeTarget();
+  const routingContext = {
+    ticketId: '4',
+    requester: 'Bob Requester',
+    assignee: null,
+    group: 'Tech-desk',
+    assignedUsers: [],
+    assignedGroups: [{ kind: 'group', key: '7', label: 'Tech-desk' }],
+    supportedAssignmentTargets: [
+      { kind: 'group', key: '7', label: 'Tech-desk' },
+      { kind: 'group', key: '12', label: 'SAP-team' },
+      { kind: 'group', key: '13', label: 'PLM-team' },
+      { kind: 'user', key: '21', label: 'Marie Dupont' },
+      { kind: 'user', key: '22', label: 'Paul Martin' },
+    ],
+    assignmentSupported: true,
+    supported: true,
+  };
+  const participantContext = {
+    ticketId: '4',
+    requester: 'Bob Requester',
+    observers: ['SAP-team', 'Paul Martin'],
+    observerTargets: [
+      { kind: 'group', key: '12', label: 'SAP-team' },
+      { kind: 'user', key: '22', label: 'Paul Martin' },
+    ],
+    watchers: [],
+    viewers: [],
+    participantUpdatesSupported: true,
+    supported: true,
+  };
+  const calls: Array<{ capabilityName: string; input: any }> = [];
+  let plannerPayload: any = null;
+  let toolIndex = 0;
+  const dispatcher = {
+    execute: async (_context: unknown, request: any) => {
+      calls.push({ capabilityName: request.capabilityName, input: request.input });
+      toolIndex += 1;
+      const toolExecutionId = `observer-tool-${toolIndex}`;
+      const step = (stepId: string, data: unknown) => ({
+        run_id: 'run-glpi-observers',
+        step_id: stepId,
+        tool_execution_id: toolExecutionId,
+        output: { ok: true, data, evidence: [] },
+      });
+      if (request.capabilityName === 'ticketing.ticket.get') {
+        return step('step-ticket', {
+          id: '4',
+          title: 'SAP order entry blocked',
+          status: 'new',
+          priority: 'medium',
+          description: 'Transaction VA01 fails with an authorization error since this morning.',
+        });
+      }
+      if (request.capabilityName === TICKETING_TICKET_NOTES_LIST_CAPABILITY) {
+        return step('step-notes', { notes: [] });
+      }
+      if (request.capabilityName === TICKETING_CLASSIFICATION_CONTEXT_CAPABILITY) {
+        return step('step-classification', { type: 'Incident', priority: 'Medium', urgency: 'Medium' });
+      }
+      if (request.capabilityName === TICKETING_LIFECYCLE_CONTEXT_CAPABILITY) {
+        return step('step-lifecycle', { terminal: false, allowedTransitions: [] });
+      }
+      if (request.capabilityName === TICKETING_ROUTING_CONTEXT_CAPABILITY) {
+        return step('step-routing', routingContext);
+      }
+      if (request.capabilityName === TICKETING_PARTICIPANT_CONTEXT_CAPABILITY) {
+        return step('step-participant', participantContext);
+      }
+      if (request.capabilityName === 'search_knowledge') {
+        return { run_id: 'run-glpi-observers', step_id: 'step-search', tool_execution_id: toolExecutionId, output: { items: [], total: 0, returned: 0, truncated: false, complete: true } };
+      }
+      if (request.capabilityName === TICKETING_INTERNAL_NOTE_PREPARE_CAPABILITY) {
+        await savePreparedTicketingAction(context, {
+          id: 'observer-internal-action',
+          runId: 'run-glpi-observers',
+          toolExecutionId,
+          capabilityName: TICKETING_INTERNAL_NOTE_ADD_APPROVED_CAPABILITY,
+          body: request.input.note_body,
+          visibility: 'internal',
+          providerKey: 'glpi',
+        });
+        return step('step-internal', { action_request_id: 'observer-internal-action' });
+      }
+      if (request.capabilityName === TICKETING_PARTICIPANT_UPDATE_PREPARE_CAPABILITY) {
+        return step('step-observer', {
+          action_request_id: `observer-${request.input.participants?.[0]?.kind}`,
+          participants: request.input.participants,
+        });
+      }
+      throw new Error(`Unexpected capability ${request.capabilityName}`);
+    },
+  };
+  const actionPlanner = {
+    maxOutputTokens: () => 1600,
+    buildPromptPayload: (plannerInput: any) => {
+      plannerPayload = plannerInput;
+      return plannerInput;
+    },
+    planActions: async () => ({
+      source: 'llm',
+      actions: [
+        { action_type: 'internal_note', reason: 'Summarize the SAP authorization failure for the technicians.' },
+        { action_type: 'participant_update', operation: 'add_observer', participants: [{ kind: 'group', key: '12', label: 'SAP-team' }], reason: 'Already watching.' },
+        { action_type: 'participant_update', operation: 'add_observer', participants: [{ kind: 'group', key: '7', label: 'tech desk' }], reason: 'Keep Tech-desk informed about the SAP outage.' },
+        { action_type: 'participant_update', operation: 'add_observer', participants: [{ kind: 'group', key: '13', label: 'PLM-team' }], reason: 'Also PLM.' },
+        { action_type: 'participant_update', operation: 'add_observer', participants: [{ kind: 'group', key: '99', label: 'Ghost-team' }], reason: 'Invented.' },
+        { action_type: 'participant_update', operation: 'remove_observer', participants: [{ kind: 'user', key: '22', label: 'Paul Martin' }], reason: 'Drop Paul.' },
+        { action_type: 'participant_update', operation: 'set_observers', participants: [{ kind: 'user', key: '21', label: 'Marie Dupont' }, { kind: 'user', key: '22', label: 'Paul Martin' }], reason: 'Replace the list.' },
+        { action_type: 'participant_update', target: { kind: 'user', key: '21', label: 'marie' }, reason: 'Marie follows badge tickets.' },
+        { action_type: 'participant_update', operation: 'add_observer', participants: [{ kind: 'user', key: '22', label: 'Paul Martin' }], reason: 'Already an observer.' },
+      ],
+      rationale: 'Add observers.',
+      confidence: 0.8,
+      model: 'test:planner',
+      usage: null,
+      estimated_tokens: 20,
+      estimated_cost_eur: 0.00004,
+      latency_ms: 1,
+    }),
+  };
+  const service = new AiAgentControlService(
+    {} as any,
+    {} as any,
+    dispatcher as any,
+    { requireSingleEnabledTarget: async () => liveTarget } as any,
+    { getApplicability: async () => ({ available: true }) } as any,
+    queue,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    actionPlanner as any,
+  ) as any;
+  service.getRunDetail = async () => ({ action_requests: [] });
+
+  const triageBundle = await seedTestHelpdeskDefinition(context);
+  const result = await service.runTicketingTriage(context, { provider_key: 'glpi', target_key: '4', agent_definition_id: triageBundle.definition.id });
+
+  assert.equal(plannerPayload.owned_action_types.includes('participant_update'), true);
+  const realPlanner = new AiAgentActionPlannerService({} as any);
+  const prompt = realPlanner.buildPromptPayload(plannerPayload) as any;
+  assert.deepEqual(prompt.routing_targets.map((target: { key: string }) => target.key), ['7', '12', '13', '21', '22']);
+  assert.match(String(prompt.schema.actions[0].operation), /add_observer/);
+  assert.match(String(prompt.schema.actions[0].participants), /routing_targets/);
+
+  const observerCalls = calls.filter((call) => call.capabilityName === TICKETING_PARTICIPANT_UPDATE_PREPARE_CAPABILITY);
+  assert.equal(observerCalls.length, 2);
+  assert.equal(observerCalls[0].input.operation, 'add_observer');
+  assert.deepEqual(observerCalls[0].input.participants, [{ kind: 'group', key: '7', label: 'Tech-desk' }]);
+  assert.equal(observerCalls[0].input.reason, 'Keep Tech-desk informed about the SAP outage.');
+  assert.deepEqual(observerCalls[1].input.participants, [{ kind: 'user', key: '21', label: 'Marie Dupont' }]);
+  const planner = result.diagnostic.action_planner as any;
+  assert.deepEqual(
+    planner.authorized_actions.map((action: any) => action.action_type),
+    ['internal_note', 'participant_update', 'participant_update'],
+  );
+  assert.equal(planner.skipped_actions.participant_update, 'observer_already_present');
+  const recommendations = await manager.getRepository(AiRecommendation).find();
+  assert.equal(recommendations.length, 1);
+  assert.match(recommendations[0].summary, /observer update/);
+}
+
 // Without the Assignment capability the planner is not offered assignment_update at all, and a
 // model proposing it anyway is skipped for the missing grant rather than crashing the run.
 async function testGlpiTriagePlannerClassificationUsesCatalogue(category = 'software > sap', invalidFirst = false) {
@@ -16558,7 +16738,7 @@ async function run() {
   await testHelpdeskAllOpenScopeStaleClosureEnqueuesStaleTickets();
   testStaleProposalSuppressionIgnoresExpired();
   testActionPlannerPromptCompilerIncludesVerbatimCandidates();
-  await testBuiltinRuntimeCapsReasoningEffortCustomDoesNot();
+  await testAgentCallSendsTheRuntimeReasoningEffort();
   await testAgentRunsConsumeBuiltinFreeMessageQuota();
   await testStructuredJsonHelperRetriesEmptyInvalidAndSchemaInvalid();
   await testStructuredJsonHelperLabelsTruncationAndHonoursMaxTokensEnv();
@@ -16640,6 +16820,7 @@ async function run() {
   testSynthesisPayloadIncludesScreenshotEvidence();
   await testGlpiTriageDowngradesUnusableSourcedReplyToInternalNoteAndHonorsLanguage();
   await testGlpiTriagePlannerGroupRoutingUsesCatalogueAndSkipsInvalidTargets();
+  await testGlpiTriagePlannerAddsObserversFromCatalogue();
   await testGlpiTriagePlannerTechnicianRoutingIsKindScoped();
   await testGlpiTriagePlannerTechnicianRoutingRejectsAmbiguousNames();
   await testGlpiTriageAssignmentExpiryIsScopedToTargetKind();

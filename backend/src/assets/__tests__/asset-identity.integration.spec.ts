@@ -71,8 +71,10 @@ async function run() {
         new AssetsListService(runner.manager.getRepository(Asset)),
       );
       const opts = { manager: runner.manager, tenantId };
+      const siteId = randomUUID();
+      await runner.query(`INSERT INTO locations (id, tenant_id, location_reference, name, hosting_type) VALUES ($1, $2, 'LOC-0', 'Site', 'on_prem')`, [siteId, tenantId]);
       const create = (name: string, hostname: string | null, domain: string | null = 'corp') => crud.create(
-        { name, kind: 'vm', provider: 'other', environment: 'prod', hostname, domain } as any,
+        { name, kind: 'vm', provider: 'other', environment: 'prod', hostname, domain, location_id: siteId } as any,
         tenantId,
         null,
         opts,

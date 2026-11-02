@@ -8,6 +8,13 @@ import { assert, captureAudit, inRolledBackTransaction, runSpecs, seedTenant, se
 import { BudgetLinesController } from '../budget-lines.controller';
 import { BudgetLinesService } from '../budget-lines.service';
 import { countItemRelations } from '../item-workspace.util';
+import { addDaysYmd, addMonthsYmd } from '../../contracts/contract-terms';
+import { utcDateYmd } from '../../notifications/expiry-reminder-schedule';
+
+// The terms of a contract are computed on today's date: the contracts start 12 months before
+// today plus 60 days, so they end in 59 days, inside the 90-day renewal window, whatever the day.
+const CONTRACT_START = addDaysYmd(addMonthsYmd(utcDateYmd(new Date()), -12), 60);
+const CONTRACT_END = addDaysYmd(addMonthsYmd(CONTRACT_START, 12), -1);
 
 // GET/POST/DELETE /budget-lines/:id/relations (lot R2d), on an empty migrated database:
 // the tab of an OPEX line and of a CAPEX line, the supplier suggestions, one link at a time
@@ -228,9 +235,9 @@ async function seedTab(runner: QueryRunner, tag: string): Promise<Seed> {
   const contract = async (name: string, supplier: string, columns: { status?: string; ended?: boolean; yearly?: number | null } = {}) => {
     const row = await one(
       `INSERT INTO contracts (tenant_id, name, company_id, supplier_id, start_date, duration_months, notice_period_months, auto_renewal, yearly_amount_at_signature, currency, status, disabled_at)
-       VALUES ($1, $2, $3, $4, DATE '2026-01-01', 12, 1, true, $5, 'EUR', $6, CASE WHEN $7::bool THEN now() - interval '1 day' ELSE NULL END)
+       VALUES ($1, $2, $3, $4, $8::date, 12, 1, true, $5, 'EUR', $6, CASE WHEN $7::bool THEN now() - interval '1 day' ELSE NULL END)
        RETURNING id`,
-      [tenantId, name, companyId, supplier, columns.yearly ?? 0, columns.status ?? 'enabled', columns.ended === true],
+      [tenantId, name, companyId, supplier, columns.yearly ?? 0, columns.status ?? 'enabled', columns.ended === true, CONTRACT_START],
     );
     return row.id as string;
   };
@@ -347,8 +354,10 @@ async function testPayload() {
     assert.deepEqual(res.contracts, [
       {
         id: seed.contracts.alpha, name: 'Alpha contract', supplier_name: seed.supplierName,
-        end_date: '2026-12-31', yearly_amount: 1200, currency: 'EUR', auto_renewal: true,
+        end_date: CONTRACT_END, yearly_amount: 1200, currency: 'EUR', auto_renewal: true,
         in_renewal_window: true, status: 'enabled',
+        // The line has no paying company; the contract names one. Cost center is unset on the contract, so it is not checked.
+        mismatches: [{ field: 'paying_company', line_value: null, contract_value: `Line company ${'blrel-payload'}` }],
       },
     ]);
     assert.deepEqual(res.assets, [

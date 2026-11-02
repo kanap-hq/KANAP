@@ -1,4 +1,5 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
+import { requestContextMissing } from './module-right-required';
 import { EntityManager, ObjectLiteral, SelectQueryBuilder } from 'typeorm';
 import { PermissionLevel } from '../permissions/permissions.service';
 
@@ -52,7 +53,7 @@ export async function resolveBusinessContributorScope(
 
   const manager = managerFromRequest(req);
   if (!manager) {
-    throw new ForbiddenException('Access scope could not be resolved');
+    throw requestContextMissing('Access scope could not be resolved');
   }
 
   const scope = await resolveBusinessContributorScopeForUser({

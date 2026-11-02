@@ -64,6 +64,8 @@ The Interfaces grid shows your integration registry at a glance.
 
 Click any row to open the workspace. The workspace has a side panel with the interface properties on the left, and six tabs on the right. The last one, **History**, lists the changes made to the interface (see [Record history](record-history.md)).
 
+The header carries **Delete**, a trash icon with its name in a tooltip (`applications:admin`). The confirmation uses the same check as **Delete selected**. It says this cannot be undone. When the interface has bindings, it explains them and offers **Also delete related bindings**: the delete is available once that option is checked, the bindings go with the interface, and the connections stay. The list opens again afterwards.
+
 ### Interface properties (side panel)
 
 The side panel stays visible across every tab and groups the most-edited fields into three collapsible sections:
@@ -207,7 +209,7 @@ A dependency goes one way. If you add interface B upstream of interface A, B app
 
 - **Add link** opens a dialog for a URL and an optional name; the link is saved at once. To change a link, hover its row and click the pencil.
 - **Attach file** opens the file chooser. You can also drop files on the section.
-- To remove a link or a file, hover the row and click the cross. Deleting a file asks for confirmation first.
+- To remove a link or a file, hover the row and click the cross. Removing a link shows a message and offers **Undo**, which creates the link again. Deleting a file asks for confirmation first.
 
 **Tip**: Attach the specification and the mapping documents to the interface, so the people who run it find them in one place.
 

@@ -134,64 +134,77 @@ Les modèles de phases fournissent :
 
 ## Classification
 
-Configurez les types, catégories et flux pour organiser les demandes et projets.
+Configurez les sources, catégories et filières pour classifier les demandes et les projets.
 
-### Types
+Un nouvel espace de travail commence avec trois sources (Informatique, Métier, Conformité) et cinq catégories, chacune avec une courte description (Applications métier, Poste de travail et services aux utilisateurs, Infrastructure et exploitation, Innovation et transformation numérique, Cybersécurité), sans filière. Leurs noms suivent la langue de l'espace de travail. Vous pouvez les renommer, les désactiver ou les supprimer comme toute autre valeur.
 
-Les types décrivent la nature du travail :
-- **Amélioration** : Améliorations des capacités existantes
-- **Nouveau développement** : Construction de nouvelles capacités
-- **Maintenance** : Maintien des systèmes opérationnels
-- **Infrastructure** : Plateforme et fondation technique
+### Sources
 
-**Pour ajouter un type** :
-1. Cliquez sur **Ajouter un type**
-2. Saisissez le nom et une description optionnelle
+Une source indique d'où vient la demande. L'espace de travail commence avec Informatique, Métier et Conformité.
+
+**Pour ajouter une source** :
+1. Cliquez sur **Ajouter une source**
+2. Saisissez un nom et une description facultative
 3. Cliquez sur **Enregistrer**
 
-**Pour basculer un type** :
-- Utilisez l'interrupteur pour activer/désactiver
-- Les types désactivés n'apparaîtront pas dans les listes déroulantes de sélection
+**Pour activer ou désactiver une source** :
+- Utilisez l'interrupteur
+- Une source désactivée n'apparaît pas dans les listes déroulantes de sélection
 
-### Catégories & Flux
+### Catégories et filières
 
-Les catégories fournissent un regroupement de haut niveau, et les flux offrent une sous-catégorisation au sein de chaque catégorie.
+Une catégorie regroupe le travail à un niveau large. Une filière est un regroupement plus fin à l'intérieur d'une catégorie.
 
 **Structure** :
 ```
-Catégorie (par ex., "Transformation numérique")
-  ├── Flux (par ex., "Expérience client")
-  ├── Flux (par ex., "Efficacité opérationnelle")
-  └── Flux (par ex., "Analyse de données")
+Catégorie (par exemple, « Transformation numérique »)
+  ├── Filière (par exemple, « Expérience client »)
+  ├── Filière (par exemple, « Efficacité opérationnelle »)
+  └── Filière (par exemple, « Analyse de données »)
 ```
 
 **Pour ajouter une catégorie** :
 1. Cliquez sur **Ajouter une catégorie**
-2. Saisissez le nom et une description optionnelle
+2. Saisissez un nom et une description facultative
 3. Cliquez sur **Enregistrer**
 
-**Pour ajouter un flux** :
+**Pour ajouter une filière** :
 1. Développez la catégorie
-2. Cliquez sur **Ajouter un flux**
-3. Saisissez le nom et une description optionnelle
+2. Cliquez sur **Ajouter une filière**
+3. Saisissez un nom et une description facultative
 4. Cliquez sur **Enregistrer**
 
-**Pour basculer les éléments** :
-- Utilisez les interrupteurs pour activer/désactiver les catégories ou flux
-- Les éléments désactivés n'apparaîtront pas dans les listes déroulantes de sélection
-- Désactiver une catégorie masque tous ses flux
+**Pour activer ou désactiver les éléments** :
+- Utilisez l'interrupteur d'une catégorie ou d'une filière
+- Un élément désactivé n'apparaît pas dans les listes déroulantes de sélection
+
+Supprimer une catégorie supprime ses filières. KANAP l'indique avant la confirmation.
+
+### Types de tâche
+
+Les types de tâche sont la liste utilisée pour les tâches du portefeuille. Voir [Tâches](tasks.md). Un nouvel espace de travail commence avec Tâche, Bug, Problème et Incident. Chaque personne voit ces noms dans sa langue tant que le nom est conservé.
+
+**Pour ajouter un type de tâche** :
+1. Cliquez sur **Ajouter un type de tâche**
+2. Saisissez un nom et une description facultative
+3. Cliquez sur **Enregistrer**
+
+**Pour activer ou désactiver un type de tâche** :
+- Utilisez l'interrupteur
+- Un type de tâche désactivé n'apparaît pas dans les listes déroulantes de sélection
+
+Un type de tâche encore utilisé par des tâches ne peut pas être supprimé. KANAP l'indique avant la confirmation et compte les tâches qui l'utilisent. Désactivez-le.
 
 **Éléments système** :
-- Catégories et types prédéfinis marqués d'une pastille « Système »
-- Peuvent être modifiés ou désactivés mais pas supprimés
-- Un élément encore utilisé par des demandes ou des projets, ou un type de tâche utilisé par des tâches, ne peut pas être supprimé. KANAP l'indique avant de vous demander de confirmer et compte ce qui l'utilise. Désactivez-le plutôt
+- Les sources, les catégories et les types de tâche marqués **Système** peuvent être modifiés ou désactivés. Ils ne peuvent pas être supprimés.
+- Une source, une catégorie ou une filière encore utilisée par des demandes ou des projets ne peut pas être supprimée. Il en va de même pour un type de tâche encore utilisé par des tâches. KANAP l'indique avant la confirmation et compte ce qui l'utilise. Désactivez-le.
 
 ### Bonnes pratiques
 
-- Gardez la liste de types courte (3 à 6 éléments)
-- Utilisez les catégories pour les grands domaines métier ou thèmes stratégiques
-- Utilisez les flux pour des regroupements plus spécifiques au sein des catégories
-- Révisez et nettoyez les éléments de classification inutilisés périodiquement
+- Gardez des listes courtes de sources, de catégories, de filières et de types de tâche
+- Utilisez les catégories pour les grands domaines métier ou les thèmes stratégiques
+- Utilisez les filières pour des regroupements plus précis à l'intérieur d'une catégorie
+- Passez en revue de temps en temps les sources, catégories, filières et types de tâche inutilisés, et désactivez ceux que vous ne proposez plus
 
 ---
 

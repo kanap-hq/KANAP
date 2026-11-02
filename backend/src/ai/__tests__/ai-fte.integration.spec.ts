@@ -56,14 +56,14 @@ function queryExecutor(): AiQueryExecutor {
   args[1] = budgetReadService();
   args[6] = noContracts;
   args[22] = realAllocationCalculator();
-  args[23] = { canReadEntityType: async () => true };
+  args[23] = { canReadEntityType: async () => true, effectiveAccess: async () => ({ isAdmin: false, permissions: {} }) };
   return new (AiQueryExecutor as any)(...args);
 }
 
 function aggregateExecutor(): AiAggregateExecutor {
   const args: any[] = Array.from({ length: 23 }, () => ({}));
   args[1] = budgetReadService();
-  args[21] = { canReadEntityType: async () => true };
+  args[21] = { canReadEntityType: async () => true, effectiveAccess: async () => ({ isAdmin: false, permissions: {} }) };
   return new (AiAggregateExecutor as any)(...args);
 }
 
@@ -121,7 +121,7 @@ async function testRegistryListsFteFields() {
         assert.equal(registry.sortFields[key], `fte_${slot.key}${column.suffix}`);
       }
     }
-    assert.match(registry.fields.y_plus1_review_fte.description, /column 2 \(named Revision by default\) for Y\+1/);
+    assert.match(registry.fields.y_plus1_review_fte.description, /column 2 for Y\+1/);
     assert.match(registry.fields.y_budget_fte.description, /null \(unknown\) when the column has no lines for that year/);
   }
   assert.equal(Object.keys(budgetAmountFields()).length, 25, 'the amount fields are unchanged');

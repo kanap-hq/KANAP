@@ -287,6 +287,7 @@ import {
   resolvePlannerStatusTransition,
   plannerActionKindKey,
   resolvePlannerAssignmentTarget,
+  resolvePlannerObserverTarget,
   resolveVerbatimCandidate,
   plannerActionKey,
   configSnapshot,
@@ -319,6 +320,7 @@ import {
   PHASE_1_PLANNER_OWNED_ACTION_TYPES,
   PLANNER_ASSIGNMENT_ACTION_TYPE,
   PLANNER_CLASSIFICATION_ACTION_TYPE,
+  PLANNER_PARTICIPANT_ACTION_TYPE,
   PLANNER_OWNED_ACTION_TYPES,
   PLANNER_TERMINAL_TRANSITIONS,
   STATIC_CAPABILITY_EXECUTION_PHASES,
@@ -525,6 +527,7 @@ import {
   clampText,
   stripHeadlineTags,
 } from './agent-control-util';
+import { codedForbidden } from '../../../auth/module-right-required';
 
 export type AgentControlAgentDefinitionInput = {
   agent_key?: string | null;
@@ -963,7 +966,12 @@ export class AiAgentControlService {
     stageKey: RunUsageStageKey,
     runId: string,
     result: {
-      usage?: { input_tokens?: number | null; output_tokens?: number | null } | null;
+      usage?: {
+        input_tokens?: number | null;
+        output_tokens?: number | null;
+        cache_read_input_tokens?: number | null;
+        cache_write_input_tokens?: number | null;
+      } | null;
       estimated_tokens?: number | null;
       estimated_cost_eur?: number | null;
       model?: string | null;
@@ -982,6 +990,13 @@ export class AiAgentControlService {
       [stageKey]: {
         input_tokens: result?.usage?.input_tokens ?? null,
         output_tokens: result?.usage?.output_tokens ?? null,
+        // The cache fields only when the provider reported them, as on a chat message.
+        ...(result?.usage?.cache_read_input_tokens != null
+          ? { cache_read_input_tokens: result.usage.cache_read_input_tokens }
+          : {}),
+        ...(result?.usage?.cache_write_input_tokens != null
+          ? { cache_write_input_tokens: result.usage.cache_write_input_tokens }
+          : {}),
         estimated_tokens: result?.estimated_tokens,
       },
     };
@@ -1066,7 +1081,7 @@ export class AiAgentControlService {
           cap: guardrails,
         },
       });
-      throw new ForbiddenException('Agent run exceeded the configured per-run economic cap.');
+      throw codedForbidden('AGENT_RUN_COST_CAP', 'Agent run exceeded the configured per-run economic cap.');
     }
     if (run) {
       await repo.save(run);
@@ -1410,21 +1425,21 @@ export class AiAgentControlService {
     action: AiActionRequest,
   ): Promise<void> {
     if (action.tenant_id !== context.tenantId) {
-      throw new ForbiddenException('Action request does not belong to this tenant.');
+      throw codedForbidden('AGENT_ACTION_NOT_FOUND', 'Action request does not belong to this tenant.');
     }
     if (!['pending', 'approved', APPROVED_ACTION_EXECUTING_STATUS, 'executed'].includes(action.status)) {
-      throw new ForbiddenException(`Action is ${action.status}.`);
+      throw codedForbidden('AGENT_ACTION_NOT_PENDING', `Action is ${action.status}.`);
     }
     if (action.expires_at && action.expires_at <= new Date()) {
-      throw new ForbiddenException('Action request is expired.');
+      throw codedForbidden('AGENT_ACTION_EXPIRED', 'Action request is expired.');
     }
     if ((action.provider_kind && !action.provider_key) || (!action.provider_kind && action.provider_key)) {
-      throw new ForbiddenException('Action request provider identity is incomplete.');
+      throw codedForbidden('AGENT_ACTION_INCOMPLETE', 'Action request provider identity is incomplete.');
     }
     const providerReadiness = await this.providerExecutionReadinessForActions(context, [action]);
     const blockedReason = providerReadiness.get(action.id)?.blocked_reason ?? null;
     if (blockedReason) {
-      throw new ForbiddenException(blockedReason);
+      throw codedForbidden('AGENT_PROVIDER_UNAVAILABLE', blockedReason, { detail: blockedReason });
     }
   }
 
@@ -1726,30 +1741,37 @@ export class AiAgentControlService {
 
   async listSharedContextProfiles(context: AiExecutionContextWithManager) {
     if (!this.sharedContextProfiles) {
-      throw new ForbiddenException('Shared context profiles are not available.');
+      throw codedForbidden('AGENT_SHARED_CONTEXT_UNAVAILABLE', 'Shared context profiles are not available.');
     }
     return this.sharedContextProfiles.list(context);
   }
 
   async createSharedContextProfile(context: AiExecutionContextWithManager, input: SharedContextProfileInput = {}) {
     if (!this.sharedContextProfiles) {
-      throw new ForbiddenException('Shared context profiles are not available.');
+      throw codedForbidden('AGENT_SHARED_CONTEXT_UNAVAILABLE', 'Shared context profiles are not available.');
     }
     return this.sharedContextProfiles.create(context, input);
   }
 
   async updateSharedContextProfile(context: AiExecutionContextWithManager, id: string, input: SharedContextProfileInput = {}) {
     if (!this.sharedContextProfiles) {
-      throw new ForbiddenException('Shared context profiles are not available.');
+      throw codedForbidden('AGENT_SHARED_CONTEXT_UNAVAILABLE', 'Shared context profiles are not available.');
     }
     return this.sharedContextProfiles.update(context, id, input);
   }
 
   async archiveSharedContextProfile(context: AiExecutionContextWithManager, id: string) {
     if (!this.sharedContextProfiles) {
-      throw new ForbiddenException('Shared context profiles are not available.');
+      throw codedForbidden('AGENT_SHARED_CONTEXT_UNAVAILABLE', 'Shared context profiles are not available.');
     }
     return this.sharedContextProfiles.archive(context, id);
+  }
+
+  async restoreSharedContextProfile(context: AiExecutionContextWithManager, id: string) {
+    if (!this.sharedContextProfiles) {
+      throw codedForbidden('AGENT_SHARED_CONTEXT_UNAVAILABLE', 'Shared context profiles are not available.');
+    }
+    return this.sharedContextProfiles.restore(context, id);
   }
 
   async getAgentEffectivePrompt(context: AiExecutionContextWithManager, id: string) {
@@ -1812,7 +1834,7 @@ export class AiAgentControlService {
     input: AgentControlTargetingPreviewInput = {},
   ): Promise<{ preview: TargetingPreviewSummary }> {
     if (!this.agentQueue) {
-      throw new ForbiddenException('Agent work queue is not available.');
+      throw codedForbidden('AGENT_RUNS_UNAVAILABLE', 'Agent work queue is not available.');
     }
     const definition = await context.manager.getRepository(AiAgentDefinition).findOne({
       where: { id, tenant_id: context.tenantId },
@@ -2113,7 +2135,7 @@ export class AiAgentControlService {
       ? normalizeAllowedCapabilitiesForConfig(input.allowed_capabilities_json, agentType)
       : defaults.allowed_capabilities_json;
     const forbiddenCapabilities = input.forbidden_capabilities_json !== undefined
-      ? (() => { throw new ForbiddenException('Forbidden capabilities are immutable from this endpoint.'); })()
+      ? (() => { throw codedForbidden('AGENT_FORBIDDEN_CAPABILITIES_LOCKED', 'Forbidden capabilities are immutable from this endpoint.'); })()
       : [...defaults.forbidden_capabilities_json];
     const scopePolicy = normalizedPolicyObject(input.scope_policy_json, 'Scope policy') ?? defaults.scope_policy_json;
     const normalizedScopePolicy = normalizeScopePolicyForAgentType(agentType, scopePolicy);
@@ -2181,7 +2203,7 @@ export class AiAgentControlService {
       throw new NotFoundException('Agent definition not found.');
     }
     if (Object.prototype.hasOwnProperty.call(input, 'forbidden_capabilities_json')) {
-      throw new ForbiddenException('Forbidden capabilities are immutable from this endpoint.');
+      throw codedForbidden('AGENT_FORBIDDEN_CAPABILITIES_LOCKED', 'Forbidden capabilities are immutable from this endpoint.');
     }
     const before = configSnapshot(definition);
     if (Object.prototype.hasOwnProperty.call(input, 'name')) {
@@ -2608,7 +2630,7 @@ export class AiAgentControlService {
     }
 
     if (input.confirm !== true) {
-      throw new ForbiddenException('Automatic mode requires explicit confirmation.');
+      throw codedForbidden('AGENT_AUTOMATIC_CONFIRMATION_REQUIRED', 'Automatic mode requires explicit confirmation.');
     }
     const rows = await this.autonomyRowsForDefinition(context, definition);
     const row = rows.find((candidate) => candidate.actionClass === actionClassName);
@@ -2623,6 +2645,7 @@ export class AiAgentControlService {
       && acknowledged;
     if (!row || (!row.eligible && !overrideGranted)) {
       throw new ForbiddenException({
+        code: 'AGENT_AUTOMATIC_NOT_ELIGIBLE',
         message: 'Automatic mode is not eligible for this action class.',
         reasons: row?.reasons ?? ['ACTION_CLASS_NOT_FOUND'],
         hardReasons,
@@ -2636,6 +2659,7 @@ export class AiAgentControlService {
     // client, which only mirrors this rule in its dialog.
     if (acknowledgementRequired && !acknowledged) {
       throw new ForbiddenException({
+        code: 'AGENT_AUTOMATIC_CONFIRMATION_REQUIRED',
         message: 'This action class always requires an explicit acknowledgement and a reason before it can run automatically.',
         reasons: ['HIGH_RISK_ACKNOWLEDGEMENT_REQUIRED'],
         hardReasons: [],
@@ -2646,10 +2670,10 @@ export class AiAgentControlService {
     }
     const capabilityName = approvedCapabilityForAutonomyActionClass(actionClassName);
     if (!capabilityName || !isAutomatableAutonomyActionClass(actionClassName)) {
-      throw new ForbiddenException('This action class cannot run automatically.');
+      throw codedForbidden('AGENT_ACTION_NOT_AUTOMATABLE', 'This action class cannot run automatically.');
     }
     if (!definitionAllowsCapability(definition, capabilityName)) {
-      throw new ForbiddenException('The agent definition does not allow this capability.');
+      throw codedForbidden('AGENT_CAPABILITY_NOT_ALLOWED', 'The agent definition does not allow this capability.');
     }
     const ticketingBinding = requireTicketingBinding(definition);
     const providerKey = ticketingBinding.providerKey;
@@ -3840,7 +3864,7 @@ export class AiAgentControlService {
 
     const applicability = await this.providers.getApplicability(context, 'ticketing', providerKey);
     if (!applicability.available) {
-      throw new ForbiddenException(`${options.unavailableMessage ?? 'Ticketing provider is unavailable'}: ${applicability.message ?? applicability.reasonCode ?? 'not ready'}.`);
+      throw codedForbidden('AGENT_PROVIDER_UNAVAILABLE', `${options.unavailableMessage ?? 'Ticketing provider is unavailable'}: ${applicability.message ?? applicability.reasonCode ?? 'not ready'}.`, { detail: applicability.message ?? applicability.reasonCode ?? 'not ready' });
     }
 
     const result = await this.dispatcher.execute(context, {
@@ -3926,7 +3950,7 @@ export class AiAgentControlService {
     input: AgentControlMonitoringDiagnosisInput = {},
   ) {
     if (!this.agentQueue) {
-      throw new ForbiddenException('Agent work queue is required to run monitoring diagnosis.');
+      throw codedForbidden('AGENT_RUNS_UNAVAILABLE', 'Agent work queue is required to run monitoring diagnosis.');
     }
     const workItemId = trimmedString(input.work_item_id);
     if (workItemId) {
@@ -3947,7 +3971,7 @@ export class AiAgentControlService {
     const binding = requireMonitoringBinding(definition, 'Monitoring diagnosis requires a monitoring provider binding.');
     const applicability = await this.providers.getApplicability(context, binding.providerKind, binding.providerKey);
     if (!applicability.available) {
-      throw new ForbiddenException(`Monitoring provider is unavailable: ${applicability.message ?? applicability.reasonCode ?? 'not ready'}.`);
+      throw codedForbidden('AGENT_PROVIDER_UNAVAILABLE', `Monitoring provider is unavailable: ${applicability.message ?? applicability.reasonCode ?? 'not ready'}.`, { detail: applicability.message ?? applicability.reasonCode ?? 'not ready' });
     }
     // Direct provider read before enqueue: the occurrence-scoped dedup key
     // needs the live occurrence timestamp. The queued run re-reads the alert
@@ -3985,7 +4009,7 @@ export class AiAgentControlService {
     workItemId: string,
   ) {
     if (!this.agentQueue) {
-      throw new ForbiddenException('Agent work queue is required to run monitoring diagnosis.');
+      throw codedForbidden('AGENT_RUNS_UNAVAILABLE', 'Agent work queue is required to run monitoring diagnosis.');
     }
     const queuedWorkItem = await context.manager.getRepository(AiAgentWorkItem).findOne({
       where: { id: workItemId, tenant_id: context.tenantId },
@@ -4000,7 +4024,7 @@ export class AiAgentControlService {
       where: { id: queuedWorkItem.agent_definition_id, tenant_id: context.tenantId },
     });
     if (!definition) {
-      throw new ForbiddenException('Queued monitoring diagnosis work item has no tenant-scoped agent definition.');
+      throw codedForbidden('AGENT_WORK_ITEM_NOT_RUNNABLE', 'Queued monitoring diagnosis work item has no tenant-scoped agent definition.');
     }
     this.agentQueue.assertSreMonitoringDefinitionRunnable(definition);
     const binding = requireMonitoringBinding(definition, 'Queued monitoring diagnosis requires a monitoring provider binding.');
@@ -4028,7 +4052,7 @@ export class AiAgentControlService {
     try {
       const applicability = await this.providers.getApplicability(context, binding.providerKind, binding.providerKey);
       if (!applicability.available) {
-        throw new ForbiddenException(`Monitoring provider is unavailable: ${applicability.message ?? applicability.reasonCode ?? 'not ready'}.`);
+        throw codedForbidden('AGENT_PROVIDER_UNAVAILABLE', `Monitoring provider is unavailable: ${applicability.message ?? applicability.reasonCode ?? 'not ready'}.`, { detail: applicability.message ?? applicability.reasonCode ?? 'not ready' });
       }
 
       let stepIndex = 1;
@@ -4860,7 +4884,7 @@ export class AiAgentControlService {
     let agentMetadata: Record<string, unknown> = {};
     if (workItemId) {
       if (!this.agentQueue) {
-        throw new ForbiddenException('Agent work queue is required to run queued ticketing triage.');
+        throw codedForbidden('AGENT_RUNS_UNAVAILABLE', 'Agent work queue is required to run queued ticketing triage.');
       }
       const queuedWorkItem = await context.manager.getRepository(AiAgentWorkItem).findOne({
         where: {
@@ -4884,7 +4908,7 @@ export class AiAgentControlService {
         },
       });
       if (!agentDefinition) {
-        throw new ForbiddenException('Queued ticketing triage work item has no tenant-scoped agent definition.');
+        throw codedForbidden('AGENT_WORK_ITEM_NOT_RUNNABLE', 'Queued ticketing triage work item has no tenant-scoped agent definition.');
       }
       this.agentQueue.assertHelpdeskTicketingDefinitionRunnable(agentDefinition, null);
       const binding = requireTicketingBinding(agentDefinition, 'Queued ticket triage requires a ticketing provider binding.');
@@ -5007,7 +5031,7 @@ export class AiAgentControlService {
     try {
       const applicability = await this.providers.getApplicability(context, 'ticketing', target.provider_key);
       if (!applicability.available) {
-        throw new ForbiddenException(`Ticketing provider is unavailable: ${applicability.message ?? applicability.reasonCode ?? 'not ready'}.`);
+        throw codedForbidden('AGENT_PROVIDER_UNAVAILABLE', `Ticketing provider is unavailable: ${applicability.message ?? applicability.reasonCode ?? 'not ready'}.`, { detail: applicability.message ?? applicability.reasonCode ?? 'not ready' });
       }
       // On the built-in provider, one triage run consumes one included message (same
       // unit as a chat message), reserved before any provider or LLM work happens.
@@ -5835,6 +5859,10 @@ export class AiAgentControlService {
       && definitionAllowsCapability(agentDefinition, TICKETING_ASSIGNMENT_UPDATE_PREPARE_CAPABILITY)
       && definitionAllowsCapability(agentDefinition, TICKETING_ASSIGNMENT_UPDATE_APPROVED_CAPABILITY);
     const assignmentRoutingAvailable = assignmentWriteCapable && routingContext?.assignmentSupported === true;
+    const participantWriteCapable = !!agentDefinition
+      && definitionAllowsCapability(agentDefinition, TICKETING_PARTICIPANT_UPDATE_PREPARE_CAPABILITY)
+      && definitionAllowsCapability(agentDefinition, TICKETING_PARTICIPANT_UPDATE_APPROVED_CAPABILITY);
+    const participantUpdatesAvailable = participantWriteCapable && participantContext?.participantUpdatesSupported === true;
     const classificationWriteCapable = !!agentDefinition
       && definitionAllowsCapability(agentDefinition, TICKETING_CLASSIFICATION_UPDATE_PREPARE_CAPABILITY)
       && definitionAllowsCapability(agentDefinition, TICKETING_CLASSIFICATION_UPDATE_APPROVED_CAPABILITY);
@@ -5843,6 +5871,7 @@ export class AiAgentControlService {
       ...PHASE_1_PLANNER_OWNED_ACTION_TYPES,
       ...(assignmentRoutingAvailable ? [PLANNER_ASSIGNMENT_ACTION_TYPE] : []),
       ...(classificationAvailable ? [PLANNER_CLASSIFICATION_ACTION_TYPE] : []),
+      ...(participantUpdatesAvailable ? [PLANNER_PARTICIPANT_ACTION_TYPE] : []),
     ];
     const closeWriteCapable = !!agentDefinition
       && definitionAllowsCapability(agentDefinition, TICKETING_STATUS_UPDATE_PREPARE_CAPABILITY)
@@ -5948,6 +5977,10 @@ export class AiAgentControlService {
         }
         if (actionType === PLANNER_ASSIGNMENT_ACTION_TYPE && !assignmentRoutingAvailable) {
           markPlannerSkipped(actionType, assignmentWriteCapable ? 'assignment_not_supported_by_provider' : 'prepare_capability_not_granted');
+          continue;
+        }
+        if (actionType === PLANNER_PARTICIPANT_ACTION_TYPE && !participantUpdatesAvailable) {
+          markPlannerSkipped(actionType, participantWriteCapable ? 'participant_updates_not_supported' : 'prepare_capability_not_granted');
           continue;
         }
         if (actionType === PLANNER_CLASSIFICATION_ACTION_TYPE && !classificationAvailable) {
@@ -6077,6 +6110,25 @@ export class AiAgentControlService {
             continue;
           }
           authorizedAction = { ...action, target: resolvedTarget.target } as PlannerAction;
+        } else if (actionType === PLANNER_PARTICIPANT_ACTION_TYPE) {
+          const resolvedTarget = resolvePlannerObserverTarget(routingContext, participantContext, action);
+          if (!resolvedTarget.target) {
+            markPlannerSkipped(actionType, resolvedTarget.reason ?? 'observer_target_not_in_routing_catalogue');
+            continue;
+          }
+          // One group and one technician may be added as observers in the same plan.
+          // The writes are additive, so both can apply in one approved batch.
+          if (plannerAuthorizedActions.some((entry) => entry.action.action_type === PLANNER_PARTICIPANT_ACTION_TYPE
+            && (entry.action.participants?.[0]?.kind ?? entry.action.target?.kind) === resolvedTarget.target!.kind)) {
+            markPlannerSkipped(actionType, 'one_observer_per_kind_per_plan');
+            continue;
+          }
+          authorizedAction = {
+            ...action,
+            operation: 'add_observer',
+            participants: [resolvedTarget.target],
+            target: resolvedTarget.target,
+          } as PlannerAction;
         }
         plannerAuthorizedActions.push({
           action: authorizedAction,
@@ -6105,6 +6157,7 @@ export class AiAgentControlService {
         ? entry.action.transition_resolution
         : null,
       target: entry.action.target ?? null,
+      participants: entry.action.participants ?? null,
       proposed: entry.action.proposed ?? null,
       terminal: entry.terminal,
       reason: entry.action.reason,
@@ -6115,6 +6168,8 @@ export class AiAgentControlService {
       administrative_intent: action.administrative_intent ?? null,
       transition_key: action.transition_key ?? null,
       target: action.target ?? null,
+      participants: action.participants ?? null,
+      operation: action.operation ?? null,
       proposed: action.proposed ?? null,
       verbatim_ref: action.verbatim_ref ?? null,
       body_present: typeof action.body === 'string' && action.body.trim().length > 0,
@@ -6265,6 +6320,7 @@ export class AiAgentControlService {
         ? entry.action.transition_resolution
         : null,
       target: entry.action.target ?? null,
+      participants: entry.action.participants ?? null,
       proposed: entry.action.proposed ?? null,
       terminal: entry.terminal,
       reason: entry.action.reason,
@@ -6351,6 +6407,7 @@ export class AiAgentControlService {
       fallbackStatusUpdateInput || effectivePlannerActions.some((entry) => entry.action.action_type === 'status_update') ? 'status update' : null,
       classificationUpdateInput ? 'classification update' : null,
       effectivePlannerActions.some((entry) => entry.action.action_type === PLANNER_ASSIGNMENT_ACTION_TYPE) ? 'assignment update' : null,
+      effectivePlannerActions.some((entry) => entry.action.action_type === PLANNER_PARTICIPANT_ACTION_TYPE) ? 'observer update' : null,
     ].filter((label): label is string => !!label);
     const anyActionEligible = expectedActionLabels.length > 0;
     const recommendationRepo = context.manager.getRepository(AiRecommendation);
@@ -6869,6 +6926,66 @@ export class AiAgentControlService {
     }
     const assignmentUpdateProposal = assignmentUpdateProposals[0] ?? null;
 
+    // One prepare per proposed kind, same as assignment. A fresh group observer must
+    // not withdraw a technician observer that is still waiting for review.
+    const plannerParticipantUpdates = effectivePlannerActions.filter((entry) => entry.action.action_type === PLANNER_PARTICIPANT_ACTION_TYPE
+      && (entry.action.participants?.length ?? 0) > 0);
+    const participantUpdateProposals: Array<Awaited<ReturnType<typeof this.dispatcher.execute>>> = [];
+    for (const entry of plannerParticipantUpdates) {
+      const proposalHashValue = plannerProposalHashFor({ ...entry, replyBody: null });
+      const contextHashValue = plannerProposalContextHash(entry);
+      const suppression = proposalHashValue && contextHashValue
+        ? await this.unchangedProposalSuppressionReason(context, {
+          capabilityName: TICKETING_PARTICIPANT_UPDATE_APPROVED_CAPABILITY,
+          ...proposalScope,
+          proposalHash: proposalHashValue,
+          contextHash: contextHashValue,
+        })
+        : null;
+      if (suppression) {
+        plannerSuppressionReasons.participant_update = plannerSuppressionReasons.participant_update ?? suppression;
+        continue;
+      }
+      const targetKind = entry.action.participants?.[0]?.kind ?? null;
+      const prepared = await this.dispatcher.execute(context, {
+        capabilityName: TICKETING_PARTICIPANT_UPDATE_PREPARE_CAPABILITY,
+        input: {
+          provider_key: target.provider_key,
+          ticket_id: ticket.id,
+          operation: 'add_observer',
+          participants: entry.action.participants,
+          reason: entry.action.reason,
+          evidence_ids: allEvidenceIds,
+          observation_id: observation.id,
+          recommendation_id: recommendation.id,
+          decision_id: decision.id,
+          evaluation_id: evaluation.id,
+        },
+        execution: {
+          surface: 'internal',
+          trigger_kind: 'internal',
+          runId: ticketResult.run_id,
+          stepIndex: stepIndex++,
+          metadata: plannerMetadata(entry, proposalHashValue, contextHashValue, 'planner_prepare_participant_update'),
+        },
+      });
+      participantUpdateProposals.push(prepared);
+      if (adapterData(prepared.output) != null) {
+        await this.expirePriorPendingSameClass(context, {
+          ...proposalScope,
+          capabilityName: TICKETING_PARTICIPANT_UPDATE_APPROVED_CAPABILITY,
+          agentDefinitionId: proposalAgentDefinitionId,
+          matchPayload: (payload) => isRecord(payload)
+            && Array.isArray(payload.participants)
+            && isRecord(payload.participants[0])
+            && payload.participants[0].kind === targetKind,
+          excludeActionIds: actionRequestIdsFromCapabilityOutput(prepared.output),
+          excludeRunId: ticketResult.run_id,
+        });
+      }
+    }
+    const participantUpdateProposal = participantUpdateProposals[0] ?? null;
+
     const plannerSkippedActionsWithSuppression = {
       ...plannerSkippedActions,
       ...plannerSuppressionReasons,
@@ -6885,6 +7002,7 @@ export class AiAgentControlService {
       ...(classificationUpdateProposal ? actionRequestIdsFromCapabilityOutput(classificationUpdateProposal.output) : []),
       ...(statusUpdateProposal ? actionRequestIdsFromCapabilityOutput(statusUpdateProposal.output) : []),
       ...assignmentUpdateProposals.flatMap((prepared) => actionRequestIdsFromCapabilityOutput(prepared.output)),
+      ...participantUpdateProposals.flatMap((prepared) => actionRequestIdsFromCapabilityOutput(prepared.output)),
     ]));
     const expectedPreparedActionCount = [
       !!proposal && adapterData(proposal.output) != null,
@@ -6892,6 +7010,7 @@ export class AiAgentControlService {
       !!classificationUpdateProposal && adapterData(classificationUpdateProposal.output) != null,
       !!statusUpdateProposal && adapterData(statusUpdateProposal.output) != null,
       ...assignmentUpdateProposals.map((prepared) => adapterData(prepared.output) != null),
+      ...participantUpdateProposals.map((prepared) => adapterData(prepared.output) != null),
     ].filter(Boolean).length;
     const recoveredPreparedActionIds = directPreparedActionIds.length >= expectedPreparedActionCount
       ? []
@@ -7045,7 +7164,7 @@ export class AiAgentControlService {
               ?? statusSuppressionReason
               ?? (statusUpdateInput ? null : 'no_safe_status_transition'),
             assignment: plannerSkippedActionsWithSuppression.assignment_update ?? (assignmentUpdateInput ? null : (assignmentRoutingAvailable ? 'not_selected_by_action_planner' : assignmentWriteCapable ? 'no_supported_assignment_target' : 'assignment_capability_not_granted')),
-            participants: 'provider_participant_update_not_prepared',
+            participants: plannerSkippedActionsWithSuppression.participant_update ?? (participantUpdateProposals.length > 0 ? null : (participantUpdatesAvailable ? 'not_selected_by_action_planner' : participantWriteCapable ? 'participant_updates_not_supported' : 'participant_capability_not_granted')),
           },
         },
       });
@@ -7135,12 +7254,14 @@ export class AiAgentControlService {
         classification_update_tool_execution_id: classificationUpdateProposal?.tool_execution_id ?? null,
         status_update_tool_execution_id: statusUpdateProposal?.tool_execution_id ?? null,
         assignment_update_tool_execution_id: assignmentUpdateProposal?.tool_execution_id ?? null,
+        participant_update_tool_execution_id: participantUpdateProposal?.tool_execution_id ?? null,
       },
       proposal,
       public_reply_proposal: publicReplyProposal,
       classification_update_proposal: classificationUpdateProposal,
       status_update_proposal: statusUpdateProposal,
       assignment_update_proposal: assignmentUpdateProposal,
+      participant_update_proposal: participantUpdateProposal,
       detail: await this.getRunDetail(context, ticketResult.run_id),
     };
     } catch (error) {
