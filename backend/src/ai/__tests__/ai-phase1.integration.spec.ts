@@ -4381,12 +4381,19 @@ async function testAiAggregateExecutorSpendItemsSupportsSummaryMetricsAndProject
 }
 
 async function testAiAdminOverviewAggregatesUsageAndIsTenantScoped() {
-  const now = new Date();
-  const previousMonthUsageAt = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 0, 0, 0, 0, 0));
-  const previousMonthUsageIncludedInLast30Days = previousMonthUsageAt.getTime() >= now.getTime() - (30 * 24 * 60 * 60 * 1000);
   const runner = dataSource.createQueryRunner();
   await runner.connect();
   await runner.startTransaction();
+  // The rows are dated from the month start, and the service counts the last 30 days: whether a
+  // row falls inside depends on the day and the hour. The seeds, the service and this reading
+  // share the transaction, so the same now(). The first user message is 23 hours into the month:
+  // more than 30 days old after 23:00 on the 31st. The previous-month row is one day before it.
+  const [window] = await runner.query(
+    `SELECT date_trunc('month', now()) + interval '23 hours' >= now() - interval '30 days' AS first_question,
+            date_trunc('month', now()) - interval '1 day' >= now() - interval '30 days' AS previous_month`,
+  );
+  const firstQuestionIncludedInLast30Days: boolean = window.first_question;
+  const previousMonthUsageIncludedInLast30Days: boolean = window.previous_month;
 
   const tenantA = randomUUID();
   const tenantB = randomUUID();
@@ -4472,7 +4479,7 @@ async function testAiAdminOverviewAggregatesUsageAndIsTenantScoped() {
     assert.equal(overview.usage.last_30_days.total_tokens, previousMonthUsageIncludedInLast30Days ? 40 : 30);
     // Both user messages sit in the current month; the previous-month row is an
     // assistant message, so it never counts regardless of the 30-day boundary.
-    assert.equal(overview.usage.last_30_days.message_count, 2);
+    assert.equal(overview.usage.last_30_days.message_count, firstQuestionIncludedInLast30Days ? 2 : 1);
     assert.equal(overview.recent_activity.length, 3);
     assert.equal(overview.recent_activity[0].conversation_id, tenantAConversation1);
     assert.equal(

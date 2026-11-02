@@ -48,6 +48,9 @@ let s: Seed;
 let otherUserId: string;
 let hiddenOnly: { axis: string; value: string };
 
+// The year the test asks about; the end dates of the lines are written from it.
+const YEAR = new Date().getFullYear();
+
 async function inTenant(fn: () => Promise<void>): Promise<void> {
   await client.query('BEGIN');
   try {
@@ -127,7 +130,7 @@ async function call(app: INestApplication, body: unknown, userId: string): Promi
 }
 
 async function testHttp(app: INestApplication): Promise<void> {
-  const year = new Date().getFullYear();
+  const year = YEAR;
   const body = (patch: Record<string, unknown> = {}) => ({ axis: s.axis1, values: [s.category1], year, scope: 'all', ...patch });
   const ulla = await call(app, body(), s.persons.ulla);
   assert.equal(ulla.status, 200, ulla.text);
@@ -241,12 +244,13 @@ async function run(): Promise<void> {
       throw error;
     }
     // The base value is held by both natures: L4 CAPEX readable, L5 OPEX and L6 CAPEX and L7 OPEX
-    // hidden. The window cuts L5 (ends in 2025), keeps L6 (2027) and L7 (2026).
+    // hidden. The window of the current year cuts L5 (ended last year), keeps L6 (ends next year)
+    // and L7 (ends this year).
     await inTenant(async () => {
       await client.query(`UPDATE spend_items SET nature = 'capex' WHERE tenant_id = $1 AND id = ANY($2::uuid[])`, [s.tenantId, [s.lines.L4, s.lines.L6]]);
-      await client.query(`UPDATE spend_items SET disabled_at = '2025-06-01' WHERE tenant_id = $1 AND id = $2`, [s.tenantId, s.lines.L5]);
-      await client.query(`UPDATE spend_items SET disabled_at = '2027-03-01' WHERE tenant_id = $1 AND id = $2`, [s.tenantId, s.lines.L6]);
-      await client.query(`UPDATE spend_items SET disabled_at = '2026-09-01' WHERE tenant_id = $1 AND id = $2`, [s.tenantId, s.lines.L7]);
+      await client.query(`UPDATE spend_items SET disabled_at = $3 WHERE tenant_id = $1 AND id = $2`, [s.tenantId, s.lines.L5, `${YEAR - 1}-06-01`]);
+      await client.query(`UPDATE spend_items SET disabled_at = $3 WHERE tenant_id = $1 AND id = $2`, [s.tenantId, s.lines.L6, `${YEAR + 1}-03-01`]);
+      await client.query(`UPDATE spend_items SET disabled_at = $3 WHERE tenant_id = $1 AND id = $2`, [s.tenantId, s.lines.L7, `${YEAR}-09-01`]);
       const hiddenAxis = (await client.query(
         `INSERT INTO analytics_axes (tenant_id, code, name) VALUES ($1, 'hidden-only', 'hidden-only') RETURNING id`,
         [s.tenantId],

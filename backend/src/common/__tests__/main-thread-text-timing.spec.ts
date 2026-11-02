@@ -1,5 +1,4 @@
 import * as assert from 'node:assert/strict';
-import { performance } from 'node:perf_hooks';
 import { stripBase64Images } from '../../ai/ai-chat-orchestrator.service';
 import { selectAiContextProfile } from '../../ai/ai-context-profile';
 import { normalizeKnowledgeText } from '../../ai/control-plane/agent-control/agent-control-knowledge.util';
@@ -8,8 +7,13 @@ import { isExampleRecipient, maskEmailAddresses } from '../../email/email.servic
 import { extractInlineImageUrls } from '../content-image-urls';
 
 // Texts read on the main thread of the API (contents, chat messages, tickets,
-// recipients) take well under 50 ms at 200 KB, whatever they hold, and give the
-// same results as before on ordinary texts.
+// recipients) are scanned in linear time, whatever they hold, and give the
+// same results as before on ordinary texts. A scan that backtracks grows with
+// the square of the text: 64 times longer for a text 8 times longer, where a
+// linear one takes about 8 times longer. The growth is measured, not a time:
+// a time depends on the machine and on what else runs on it (a shared CI runner
+// took 56 ms for a linear scan of 200 KB). It is the CPU time of this thread,
+// which leaves out the time other processes hold the CPU.
 
 const KB = 1024;
 
@@ -17,16 +21,31 @@ function fill(unit: string, size = 200 * KB): string {
   return unit.repeat(Math.ceil(size / unit.length)).slice(0, size);
 }
 
+/** The lower of `current` and the CPU time of one run, in milliseconds. */
+function best(work: (text: string) => unknown, text: string, current: number): number {
+  const start = process.threadCpuUsage();
+  work(text);
+  const { user, system } = process.threadCpuUsage(start);
+  return Math.min(current, (user + system) / 1000);
+}
+
 function assertFast(name: string, units: string[], work: (text: string) => unknown): void {
   for (const unit of units) {
-    const text = fill(unit);
-    let best = Number.POSITIVE_INFINITY;
-    for (let run = 0; run < 3; run += 1) {
-      const start = performance.now();
-      work(text);
-      best = Math.min(best, performance.now() - start);
+    const small = fill(unit, 25 * KB);
+    const large = fill(unit);
+    work(small);
+    let bestSmall = Number.POSITIVE_INFINITY;
+    let bestLarge = Number.POSITIVE_INFINITY;
+    // Interleaved, so that a busy moment slows both sizes; the best run of each is kept.
+    for (let run = 0; run < 5; run += 1) {
+      bestSmall = best(work, small, bestSmall);
+      bestLarge = best(work, large, bestLarge);
     }
-    assert.ok(best < 50, `${name} on ${JSON.stringify(unit)} x 200 KB took ${best.toFixed(1)} ms`);
+    const growth = bestLarge / Math.max(bestSmall, 0.01);
+    assert.ok(
+      bestLarge < 10 || growth < 20,
+      `${name} on ${JSON.stringify(unit)}: ${bestSmall.toFixed(2)} ms at 25 KB, ${bestLarge.toFixed(1)} ms at 200 KB (x${growth.toFixed(1)} for a text 8 times longer)`,
+    );
   }
 }
 

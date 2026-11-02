@@ -9,6 +9,7 @@ import {
   PgClient,
   appRoleName,
   connect,
+  lockOwnTables,
   parseUuidArray,
   readSettings,
   roleExists,
@@ -439,6 +440,7 @@ async function testMigrationRerun(): Promise<void> {
     query: async (sql: string, params?: unknown[]) => (await client.query(sql, params)).rows,
   } as unknown as QueryRunner;
   await inTransaction(async () => {
+    await lockOwnTables((sql) => client.query(sql));
     await new DataAccessFoundations1854400000000().up(queryRunner);
   });
   console.log('  migration up() reruns on a migrated database: OK');
