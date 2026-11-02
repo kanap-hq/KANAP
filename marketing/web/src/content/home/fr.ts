@@ -36,6 +36,7 @@ const content: HomeContent = {
       },
     ],
     outro: 'Chaque ligne est rattachée à son application, son contrat ou son projet : depuis le budget, on retrouve ce que la DSI fait tourner, et ce que chaque chose coûte.',
+    guide: { label: 'Guide : OPEX et CAPEX dans le budget de la DSI', href: '/blog/opex-capex-budget-dsi' },
   },
 
   pillars: {
