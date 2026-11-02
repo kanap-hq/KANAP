@@ -155,5 +155,5 @@ export default function useRecordCreation({
     }
   }, [apiBase, cancelling, dialogs, key, listPath, navigate, onError, queryClient, queryKeyPrefixes, recordId, recordLabel, t]);
 
-  return { beingCreated: !!entry, cancelling, startCreation, finishCreation, cancelCreation };
+  return { beingCreated: !!entry, token: entry?.token ?? null, cancelling, startCreation, finishCreation, cancelCreation };
 }

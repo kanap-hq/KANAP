@@ -675,7 +675,7 @@ export function IncidentWorkspacePage() {
           onError={setError}
         />
       )}
-      {(isCreate || creation.beingCreated) && (
+      {((isCreate && canEdit) || creation.beingCreated) && (
         <CreationActions
           busy={creation.cancelling}
           onCreate={() => { void createAction(); }}

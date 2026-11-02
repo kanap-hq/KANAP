@@ -1,7 +1,7 @@
 import React from 'react';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, Button, IconButton, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, IconButton, Stack, TextField, Typography } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
@@ -14,14 +14,14 @@ import { isReportView, useListFilters, writeListSnapshot } from '../../hooks/use
 import { STATUS_SCOPE_PARAM } from '../../utils/statusScopeParams';
 import { compactListSearchCached } from '../../lib/listContext';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
-import { axisRequiredFor, isHiddenAxis, useAnalyticsAxes } from '../../hooks/useAnalyticsAxes';
+import { axisRequiredFor, useAnalyticsAxes } from '../../hooks/useAnalyticsAxes';
 import { explicitSort, filtersStringOnShownColumns } from '../../components/finance/amountColumns';
 import useAutosave, { autosaveErrorMessage, useAutosaveRegistry } from '../../hooks/useAutosave';
 import { sendPatchBuffer, useSharedPatchBuffer } from '../../hooks/patchBuffer';
 import { ConflictChoice, EditConflict, conflictCompanions, useEditConflicts, useOtherConflictTargets } from '../../hooks/editConflicts';
 import { useLeaveGuard } from '../../hooks/leaveGuard';
-import { useRequiredDimensionsLeave } from '../../hooks/useRequiredDimensionsLeave';
-import { useLinePlacementFilter } from '../../hooks/usePlacementOptions';
+import { ANALYTICS_AXIS_FIELD_ATTR, useRequiredDimensionsLeave } from '../../hooks/useRequiredDimensionsLeave';
+import { useLinePlacementDefault, useLinePlacementFilter } from '../../hooks/usePlacementOptions';
 import EditConflictBanner, { OtherConflictsNotice } from '../../components/workspace/EditConflictBanner';
 import OthersChangesNotice from '../../components/workspace/OthersChangesNotice';
 import { useLineOthersChanges } from '../../components/finance/useLineOthersChanges';
@@ -47,7 +47,9 @@ import { budgetLinePath, openLineAfterTypeChange } from '../../components/financ
 import { invalidateBudgetLists } from '../../components/finance/budgetFile';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
 import BudgetMetadataBar from './workspace/BudgetMetadataBar';
-import BudgetPropertiesDrawer, { RunBuild } from './workspace/BudgetPropertiesDrawer';
+import BudgetPropertiesDrawer, { LINE_FIELD_ATTR, RunBuild } from './workspace/BudgetPropertiesDrawer';
+import useIncompleteLineLeave from './useIncompleteLineLeave';
+import { CreationActions, CreationPreview, useCreationReturn, useNewRecordCreate, useRecordCreation } from '../../components/workspace/creation';
 import type { BudgetTabHandle } from '../../components/finance/BudgetTab';
 import type { AllocationsTabHandle } from '../../components/finance/AllocationsTab';
 import { namesInSentence, useHeldChoices } from '../../components/finance/heldChoices';
@@ -126,13 +128,17 @@ function todayYmd() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function createEmptyBudgetLineForm(currency = 'EUR'): BudgetLineForm {
+/** A new line before its title: the draft its preview shows, with the defaults the title creates it with. */
+function draftBudgetLineForm(currency = 'EUR'): BudgetLineForm {
   return {
     ...EMPTY_FORM,
     currency,
     effective_start: todayYmd(),
   };
 }
+
+/** The preview of a new line is out of reach: its handlers never run. */
+const ignoreDraftChange = () => undefined;
 
 function toNull(value: string): string | null {
   return value === '' ? null : value;
@@ -316,89 +322,40 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     enabled: !!idParam && !isCreate,
   });
 
-  const { data: currencySettings } = useCurrencySettings();
+  const { data: currencySettings, isLoading: currencyLoading } = useCurrencySettings();
   const defaultSpendCurrency = React.useMemo(
     () => currencySettings?.defaultSpendCurrency?.toUpperCase() ?? 'EUR',
     [currencySettings],
   );
   const [form, setForm] = React.useState<BudgetLineForm>(EMPTY_FORM);
-  const [createForm, setCreateForm] = React.useState<BudgetLineForm>(() => createEmptyBudgetLineForm());
-  const [createCurrencyTouched, setCreateCurrencyTouched] = React.useState(false);
-  const [createCompanyFromCostCenter, setCreateCompanyFromCostCenter] = React.useState(false);
-  // A limited data access that allows the paying company only through cost centers: one is required.
-  const createPlacement = useLinePlacementFilter(isCreate ? createForm.paying_company_id || null : null);
-  const [createSubmitting, setCreateSubmitting] = React.useState(false);
+  const draftForm = React.useMemo(() => draftBudgetLineForm(defaultSpendCurrency), [defaultSpendCurrency]);
   const [saveError, setSaveError] = React.useState<string | null>(null);
+  // A person with limited data access places the new line before its title: filled in when the
+  // access allows one company only, chosen on the new page otherwise (`useLinePlacementDefault`).
+  const placementDefault = useLinePlacementDefault();
+  const placementAsked = isCreate && placementDefault.needsChoice;
+  const [placementDraft, setPlacementDraft] = React.useState({ paying_company_id: '', cost_center_id: '', followsCostCenter: false });
+  const draftPlacementFilter = useLinePlacementFilter(placementAsked ? placementDraft.paying_company_id || null : null);
+  const placementReady = !placementAsked || !!placementDraft.cost_center_id
+    || (!!placementDraft.paying_company_id && !draftPlacementFilter?.costCenterRequired);
   React.useEffect(() => {
     if (!isCreate) return;
-    setCreateForm(createEmptyBudgetLineForm(defaultSpendCurrency));
-    setCreateCurrencyTouched(false);
-    setCreateCompanyFromCostCenter(false);
+    setPlacementDraft({ paying_company_id: '', cost_center_id: '', followsCostCenter: false });
     setSaveError(null);
   }, [isCreate, idParam, nature]);
-  React.useEffect(() => {
-    if (!isCreate || createCurrencyTouched) return;
-    setCreateForm((prev) => (
-      prev.currency === defaultSpendCurrency ? prev : { ...prev, currency: defaultSpendCurrency }
-    ));
-  }, [createCurrencyTouched, defaultSpendCurrency, isCreate]);
-
-  const updateCreateForm = React.useCallback((patch: Partial<BudgetLineForm>) => {
-    setCreateForm((prev) => mergePatch(prev, patch));
-    setSaveError(null);
+  // A cost center picked while the paying company is empty brings its company; the company keeps
+  // following the cost center until the person picks a company.
+  const pickDraftCostCenter = React.useCallback((costCenterId: string, node: CostCenterNode | null) => {
+    setPlacementDraft((prev) => {
+      const companyId = costCenterId ? node?.company_id : null;
+      const follow = !!companyId && (!prev.paying_company_id || prev.followsCostCenter);
+      return {
+        cost_center_id: costCenterId,
+        paying_company_id: follow && companyId ? companyId : prev.paying_company_id,
+        followsCostCenter: follow,
+      };
+    });
   }, []);
-
-  // A cost center picked while the paying company is empty brings its company, so the
-  // account picker opens on that company's chart of accounts. The company keeps following
-  // the cost center until the user picks a company or an account.
-  const pickCreateCostCenter = React.useCallback((costCenterId: string, node: CostCenterNode | null) => {
-    const companyId = costCenterId ? node?.company_id : null;
-    const follow = !!companyId && (
-      !createForm.paying_company_id || (createCompanyFromCostCenter && !createForm.account_id)
-    );
-    updateCreateForm({ cost_center_id: costCenterId, ...(follow && companyId ? { paying_company_id: companyId } : {}) });
-    if (follow) setCreateCompanyFromCostCenter(true);
-  }, [createCompanyFromCostCenter, createForm.account_id, createForm.paying_company_id, updateCreateForm]);
-
-  const [createAccountCoaId, setCreateAccountCoaId] = React.useState<string | null>(null);
-  const [createCompanyCoaId, setCreateCompanyCoaId] = React.useState<string | null>(null);
-  React.useEffect(() => {
-    let alive = true;
-    (async () => {
-      if (!isCreate || !createForm.paying_company_id) {
-        setCreateCompanyCoaId(null);
-        return;
-      }
-      try {
-        const res = await api.get(`/companies/${createForm.paying_company_id}`);
-        if (alive) setCreateCompanyCoaId(res.data?.coa_id || null);
-      } catch {
-        if (alive) setCreateCompanyCoaId(null);
-      }
-    })();
-    return () => { alive = false; };
-  }, [createForm.paying_company_id, isCreate]);
-  React.useEffect(() => {
-    let alive = true;
-    (async () => {
-      if (!isCreate || !createForm.account_id) {
-        setCreateAccountCoaId(null);
-        return;
-      }
-      try {
-        const res = await api.get(`/accounts/${createForm.account_id}`);
-        if (alive) setCreateAccountCoaId(res.data?.coa_id || null);
-      } catch {
-        if (alive) setCreateAccountCoaId(null);
-      }
-    })();
-    return () => { alive = false; };
-  }, [createForm.account_id, isCreate]);
-  const hasCreateObsoleteAccount = React.useMemo(() => {
-    if (!isCreate || !createForm.account_id || !createForm.paying_company_id) return false;
-    if (!createAccountCoaId || !createCompanyCoaId) return false;
-    return createAccountCoaId !== createCompanyCoaId;
-  }, [createAccountCoaId, createCompanyCoaId, createForm.account_id, createForm.paying_company_id, isCreate]);
 
   // List context for prev/next + return navigation.
   // The list's sort, '' for the default one: prev/next and the list then use the current default.
@@ -809,16 +766,99 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     (await flushOrAsk(options)) !== 'stay'
   ), [flushOrAsk]);
 
-  // Leaving the line: what is not saved first, then a required dimension left without a value.
-  // One question per move: a user who already chose to leave and drop their edits is not asked
-  // again. A tab change keeps the line and does not ask about the dimension.
+  // ----- Creation at the title (lot 1c) -----
+  const listPath = React.useMemo(() => {
+    const sp = buildListContextParams();
+    sp.delete('list');
+    sp.delete('nature');
+    const qs = sp.toString();
+    return `/ops/budget${qs ? `?${qs}` : ''}`;
+  }, [buildListContextParams]);
+  // Where the creation started: a new line left empty, cancelled or created goes back there.
+  const creationReturn = useCreationReturn(listPath);
+  const creation = useRecordCreation({
+    family: 'budget-lines',
+    apiBase: '/budget-lines',
+    recordId: !isCreate ? (data?.id as string | undefined) ?? null : null,
+    listPath,
+    recordLabel: t('budget.creation.record'),
+    queryKeyPrefixes: ['budget-lines', 'spend-items', 'capex-items'],
+    onError: setSaveError,
+  });
+
+  // The fields a line needs before its creation ends, by the keys of `POST :id/creation/complete`,
+  // in screen order, as far as the screen knows them (the server also checks the account's chart).
+  const linePlacementFilter = useLinePlacementFilter(!isCreate ? form.paying_company_id || null : null);
+  const missingOf = React.useCallback((line: BudgetLineForm): string[] => {
+    const fields: string[] = [];
+    if (!line.paying_company_id) fields.push('paying_company');
+    if (!line.account_id) fields.push('account');
+    for (const axis of analyticsAxes.enabled) {
+      if (axisRequiredFor(axis, nature) && !line.analytics_values[axis.id]) fields.push(`dimension:${axis.id}`);
+    }
+    if (line.paying_company_id && !line.cost_center_id && linePlacementFilter?.costCenterRequired) fields.push('cost_center');
+    return fields;
+  }, [analyticsAxes.enabled, linePlacementFilter, nature]);
+  const fieldLabel = React.useCallback((key: string): string => {
+    if (key === 'paying_company') return t('opex.fields.payingCompany');
+    if (key === 'account') return t('opex.fields.account');
+    if (key === 'cost_center') return t('opex.fields.costCenter');
+    if (key.startsWith('dimension:')) {
+      const axis = analyticsAxes.axes.find((candidate) => candidate.id === key.slice('dimension:'.length));
+      return axis ? analyticsAxes.label(axis) : key;
+    }
+    return key;
+  }, [analyticsAxes, t]);
+  const missingNow = React.useCallback(() => missingOf(formRef.current), [missingOf]);
+  // A line being created asks before it is left while it lacks a field; a line left without its
+  // paying company earlier (a creation never completed) too, as long as it lacks one.
+  const incompleteAsks = React.useCallback(() => {
+    if (isCreate || !canEdit || !dataRef.current?.id || formRef.current.id !== dataRef.current.id) return false;
+    if (!creation.beingCreated && formRef.current.paying_company_id) return false;
+    return missingNow().length > 0;
+  }, [canEdit, creation.beingCreated, isCreate, missingNow]);
+
+  // The panel opens and the field of a missing value takes the focus.
+  const [fieldDrawerRequest, setFieldDrawerRequest] = React.useState(0);
+  const focusLineField = React.useCallback((key: string) => {
+    setFieldDrawerRequest((n) => n + 1);
+    const selector = key.startsWith('dimension:')
+      ? `[${ANALYTICS_AXIS_FIELD_ATTR}="${key.slice('dimension:'.length)}"] input`
+      : `[${LINE_FIELD_ATTR}="${key}"] input`;
+    let tries = 0;
+    const attempt = () => {
+      const input = rootRef.current?.querySelector<HTMLElement>(selector);
+      if (input) {
+        input.focus();
+        return;
+      }
+      tries += 1;
+      if (tries < 20) window.setTimeout(attempt, 25);
+    };
+    window.setTimeout(attempt, 0);
+  }, []);
+  const incompleteLeave = useIncompleteLineLeave({
+    beingCreated: creation.beingCreated,
+    missing: () => missingNow().map((key) => ({ key, label: fieldLabel(key) })),
+    focus: focusLineField,
+    onDelete: () => creation.cancelCreation({ leave: false }),
+  });
+
+  // Leaving the line: what is not saved first, then a line that lacks a field it needs (being
+  // created, or left incomplete), else a required dimension left without a value. One question per
+  // move: a user who already chose to leave and drop their edits is not asked again. A tab change
+  // keeps the line and does not ask.
   const leaveLine = React.useCallback(async (options?: { keepChoices?: boolean }): Promise<boolean> => {
     const outcome = await flushOrAsk(options);
     if (outcome === 'stay') return false;
     if (outcome === 'dropped') return true;
+    if (incompleteAsks()) return incompleteLeave.confirm();
     return confirmRequired();
-  }, [flushOrAsk, confirmRequired]);
-  const leaveAsks = React.useCallback(() => unsavedWork() || requiredMissing(), [unsavedWork, requiredMissing]);
+  }, [flushOrAsk, confirmRequired, incompleteAsks, incompleteLeave]);
+  const leaveAsks = React.useCallback(
+    () => unsavedWork() || requiredMissing() || incompleteAsks(),
+    [unsavedWork, requiredMissing, incompleteAsks],
+  );
 
   // A link of the app (left menu, top bar, user menu) asks the same as the close button.
   useLeaveGuard(leaveAsks, leaveLine);
@@ -845,12 +885,14 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
   }, [leaveLine, buildListContextParams, navigate, routeTab, nature]);
 
   const closeWorkspace = React.useCallback(async () => {
+    // A new line left before it has a title goes back where the creation started.
+    if (isCreate) {
+      navigate(creationReturn);
+      return;
+    }
     if (!(await leaveLine())) return;
-    const sp = buildListContextParams();
-    sp.delete('list');
-    const qs = sp.toString();
-    navigate(`/ops/budget${qs ? `?${qs}` : ''}`);
-  }, [leaveLine, buildListContextParams, navigate]);
+    navigate(listPath);
+  }, [creationReturn, isCreate, leaveLine, listPath, navigate]);
 
   // The line is already gone: pending edits are dropped, not saved and not asked about, then the list opens.
   const leaveAfterDelete = React.useCallback(() => {
@@ -872,7 +914,8 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
 
   // ----- Change type (lot M): from the "…" menu; pending edits are saved first (the dialog sends the line's row_version) -----
   const [changeTypeOpen, setChangeTypeOpen] = React.useState(false);
-  const canChangeType = !isCreate && !stale && !!uuid && canEdit;
+  // Not while the line is being created: its type comes from the new page's address.
+  const canChangeType = !isCreate && !stale && !!uuid && canEdit && !creation.beingCreated;
   const openChangeType = React.useCallback(async () => {
     if ((await flushOrAsk()) === 'stay') return;
     setChangeTypeOpen(true);
@@ -886,80 +929,6 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     if (!(await leaveLine())) return;
     navigate(budgetLinePath(line));
   }, [leaveLine, navigate]);
-
-  const handleCreate = React.useCallback(async () => {
-    if (createSubmitting) return; // Ctrl+S bypasses the disabled button — guard double-submit
-    const productName = createForm.product_name.trim();
-    if (!productName) {
-      setSaveError(t('opex.editor.productNameRequired'));
-      return;
-    }
-    if ((createForm.currency || '').trim().length !== 3) {
-      setSaveError(t('opex.editor.currencyMust3'));
-      return;
-    }
-    if (!createForm.paying_company_id) {
-      setSaveError(t('opex.editor.payingCompanyRequired'));
-      return;
-    }
-    if (!createForm.account_id) {
-      setSaveError(t('opex.editor.accountRequired'));
-      return;
-    }
-    if (createPlacement?.costCenterRequired && !createForm.cost_center_id) {
-      setSaveError(t('opex.editor.dimensionRequired', { name: t('opex.fields.costCenter') }));
-      return;
-    }
-    if (!createForm.effective_start) {
-      setSaveError(t('opex.editor.effectiveStartRequired'));
-      return;
-    }
-    // The server checks it too (and for every other source); the shown dimensions are the ones that apply.
-    const missingDimension = analyticsAxes.enabled.find((axis) => axisRequiredFor(axis, nature) && !createForm.analytics_values[axis.id]);
-    if (missingDimension) {
-      setSaveError(t('opex.editor.dimensionRequired', { name: analyticsAxes.label(missingDimension) }));
-      return;
-    }
-
-    setCreateSubmitting(true);
-    setSaveError(null);
-    try {
-      const payload = {
-        nature,
-        product_name: productName,
-        description: toNull(createForm.description),
-        supplier_id: toNull(createForm.supplier_id),
-        currency: createForm.currency.toUpperCase(),
-        account_id: createForm.account_id,
-        paying_company_id: createForm.paying_company_id,
-        effective_start: createForm.effective_start,
-        ...(createForm.disabled_at
-          ? { disabled_at: createForm.disabled_at, status: deriveStatusFromDisabledAt(createForm.disabled_at) }
-          : {}),
-        owner_it_id: toNull(createForm.owner_it_id),
-        owner_business_id: toNull(createForm.owner_business_id),
-        // Only the dimensions given a value: the others stay empty on the new line. A value picked on a
-        // dimension since disabled or limited to the other type is no longer shown, and is not sent.
-        analytics_values: Object.fromEntries(Object.entries(createForm.analytics_values)
-          .filter(([axisId, id]) => !!id && !isHiddenAxis(analyticsAxes, axisId))),
-        cost_center_id: toNull(createForm.cost_center_id),
-        run_build: toNull(createForm.run_build),
-        notes: toNull(createForm.notes),
-      };
-      const res = await api.post('/budget-lines', payload);
-      const newId = (res.data?.reference || (res.data?.item_number != null ? formatItemRef('budget', res.data.item_number) : res.data?.id)) as string | undefined;
-      if (!newId) throw new Error(t(config.createFailed));
-      invalidateBudgetLists(queryClient);
-      queryClient.invalidateQueries({ queryKey: [config.navQueryKey] });
-      queryClient.invalidateQueries({ queryKey: ['budget-lines-summary-neighbors'] });
-      const sp = buildListContextParams();
-      navigate(`/ops/budget/${newId}/overview?${sp.toString()}`);
-    } catch (e) {
-      setSaveError(getApiErrorMessage(e, t, t(config.createFailed)));
-    } finally {
-      setCreateSubmitting(false);
-    }
-  }, [analyticsAxes, buildListContextParams, createForm, createPlacement, createSubmitting, navigate, queryClient, t, nature, config]);
 
   // ----- Status lifecycle handlers -----
   const handleStatusChange = (next: StatusValue) => {
@@ -983,7 +952,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
   const shownCostCenterId = data?.id && form.id !== data.id ? (data.cost_center_id || '') : form.cost_center_id;
   const analyticsOptions = React.useMemo(() => analyticsValueOptions(data), [data]);
   // The chosen cost center's company: a new paying company drops a cost center of another company.
-  const chosenCostCenterId = isCreate ? createForm.cost_center_id : shownCostCenterId;
+  const chosenCostCenterId = isCreate ? placementDraft.cost_center_id : shownCostCenterId;
   const chosenCostCenter = useCostCenterNode(
     chosenCostCenterId || null,
     isCreate ? null : matching(references.cost_center, chosenCostCenterId),
@@ -1020,6 +989,116 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     });
   }, [costCenterElsewhere, form.account_id, form.paying_company_id, patchNow]);
 
+  // ----- The title creates the line; Create and Cancel (lot 1c) -----
+  const [titleError, setTitleError] = React.useState<string | null>(null);
+  const newCreate = useNewRecordCreate({ setTitleError, requiredMessage: t('common:creation.titleRequired') });
+  // The title committed before the currency and the person's place were known: created once they are.
+  const [pendingName, setPendingName] = React.useState<string | null>(null);
+  const creatingRef = React.useRef(false);
+  // Create was clicked while the title created the line: its check runs once the line shows.
+  const createAfterOpenRef = React.useRef(false);
+
+  // The title creates the line at once with the defaults (the tenant's currency, today, the type of
+  // the address) and, for a person with limited access, its place; the page moves to it, every tab
+  // open, with Create and Cancel.
+  const createLine = React.useCallback(async (name: string) => {
+    if (creatingRef.current) return;
+    creatingRef.current = true;
+    setTitleError(null);
+    setSaveError(null);
+    try {
+      const place = placementAsked
+        ? { paying_company_id: toNull(placementDraft.paying_company_id), cost_center_id: toNull(placementDraft.cost_center_id) }
+        : placementDefault.companyId ? { paying_company_id: placementDefault.companyId } : {};
+      const res = await api.post('/budget-lines/creation', {
+        nature, product_name: name, currency: defaultSpendCurrency, effective_start: todayYmd(), ...place,
+      });
+      const { creation_token: token, ...created } = res.data ?? {};
+      const lineReference = (created.reference || formatItemRef('budget', created.item_number)) as string;
+      if (newCreate.titleSettled()) createAfterOpenRef.current = true;
+      creation.startCreation({ recordId: created.id, token, returnTo: creationReturn });
+      // The page keeps its header while it moves to the line: no wait on the resolve and the detail.
+      queryClient.setQueryData(['budget-line-resolve', lineReference], { id: created.id, nature: created.nature ?? nature, reference: lineReference });
+      queryClient.setQueryData(budgetLineDetailQuery(lineReference).queryKey, created);
+      invalidateBudgetLists(queryClient);
+      const sp = buildListContextParams();
+      sp.delete('nature');
+      navigate(`/ops/budget/${lineReference}/overview?${sp.toString()}`, { replace: true });
+    } catch (e) {
+      newCreate.titleSettled();
+      setTitleError(getApiErrorMessage(e, t, t(config.createFailed)));
+    } finally {
+      creatingRef.current = false;
+    }
+  }, [buildListContextParams, config.createFailed, creation, creationReturn, defaultSpendCurrency, nature, navigate, newCreate, placementAsked, placementDefault.companyId, placementDraft, queryClient, t]);
+
+  React.useEffect(() => {
+    if (!isCreate || pendingName === null || !placementDefault.ready || currencyLoading) return;
+    // The place first: the title waits, and says so.
+    if (!placementReady) {
+      setTitleError(t('budget.creation.placeFirst'));
+      return;
+    }
+    setPendingName(null);
+    void createLine(pendingName);
+  }, [createLine, currencyLoading, isCreate, pendingName, placementDefault.ready, placementReady, t]);
+
+  // Create on a line being created: what is still being typed is saved, then the server checks the
+  // fields the line needs. Missing ones are named once, marked, and the first one gets the focus;
+  // otherwise the line is kept and closed.
+  const [completing, setCompleting] = React.useState(false);
+  const [missingFields, setMissingFields] = React.useState<ReadonlySet<string>>(() => new Set());
+  const createAction = React.useCallback(async () => {
+    if (isCreate) {
+      newCreate.create(titleError);
+      return;
+    }
+    const token = creation.token;
+    if (!uuid || !token || completing) return;
+    if (!(await flushAll())) return;
+    setCompleting(true);
+    setSaveError(null);
+    try {
+      await api.post(`/budget-lines/${uuid}/creation/complete`, { token });
+      setMissingFields(new Set());
+      invalidateBudgetLists(queryClient);
+      creation.finishCreation();
+    } catch (e) {
+      const answer = (e as { response?: { data?: { code?: unknown; params?: { fields?: unknown } } } })?.response?.data;
+      const fields = answer?.code === 'BUDGET_LINE_INCOMPLETE' && Array.isArray(answer.params?.fields) ? answer.params.fields.map(String) : null;
+      if (fields && fields.length > 0) {
+        setMissingFields(new Set(fields));
+        setSaveError(t('budget.creation.missing', { fields: fields.map(fieldLabel).join(', ') }));
+        focusLineField(fields[0]);
+      } else {
+        setSaveError(getApiErrorMessage(e, t, t('budget.creation.completeFailed')));
+      }
+    } finally {
+      setCompleting(false);
+    }
+  }, [completing, creation, fieldLabel, flushAll, focusLineField, isCreate, newCreate, queryClient, t, titleError, uuid]);
+  // Cancel on a line being created: what is still being typed is saved first, so the confirmation
+  // counts it, then the line is deleted (`useRecordCreation`).
+  const cancelLine = React.useCallback(async () => {
+    if (!(await flushAll())) return;
+    await creation.cancelCreation();
+  }, [creation, flushAll]);
+  React.useEffect(() => {
+    if (!createAfterOpenRef.current || !creation.beingCreated || !data?.id || form.id !== data.id) return;
+    createAfterOpenRef.current = false;
+    void createAction();
+  }, [createAction, creation.beingCreated, data?.id, form.id]);
+  // The marks follow the fields: a field given a value loses its mark.
+  const markedFields = React.useMemo(() => {
+    if (missingFields.size === 0) return missingFields;
+    const now = new Set(missingOf(form));
+    return new Set(Array.from(missingFields).filter((field) => now.has(field)));
+  }, [form, missingFields, missingOf]);
+  React.useEffect(() => { setMissingFields(new Set()); }, [uuid]);
+  // A line left without its paying company (a creation never completed) says what it lacks.
+  const incompleteNotice = !isCreate && !creation.beingCreated && canEdit && !!data?.id && form.id === data.id && !form.paying_company_id
+    ? missingOf(form)
+    : [];
 
   const reference = data?.item_number ? formatItemRef('budget', data.item_number) : null;
   React.useEffect(() => {
@@ -1054,6 +1133,11 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
           <>
             {!!error && <Alert severity="error">{t('opex.workspace.failedToLoad')}</Alert>}
             {!!saveError && <Alert severity="error" onClose={() => setSaveError(null)}>{saveError}</Alert>}
+            {incompleteNotice.length > 0 && (
+              <Alert severity="warning" data-testid="line-incomplete">
+                {t('budget.creation.missing', { fields: incompleteNotice.map(fieldLabel).join(', ') })}
+              </Alert>
+            )}
             {!isCreate && (
               <EditConflictBanner
                 conflicts={conflicts}
@@ -1088,19 +1172,26 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
         onBack={() => { void closeWorkspace(); }}
         itemReference={reference}
         onCopyReference={reference ? () => { void navigator.clipboard?.writeText(reference); } : undefined}
-        title={isCreate ? createForm.product_name : form.product_name}
+        title={isCreate ? '' : form.product_name}
         titleFallback={isCreate ? t(config.newTitle) : t('budget.line')}
-        canEditTitle={isCreate || canEdit}
+        canEditTitle={canEdit}
         onTitleSave={(value) => {
           if (isCreate) {
-            updateCreateForm({ product_name: value });
+            setTitleError(null);
+            newCreate.titleSent();
+            setPendingName(value);
           } else {
             void patchNow({ product_name: value });
           }
         }}
+        onTitleDraftChange={isCreate ? () => setTitleError(null) : undefined}
+        titleError={isCreate ? titleError : undefined}
+        titleAutoEdit={isCreate}
+        titleOnCancel={isCreate ? () => { void closeWorkspace(); } : undefined}
+        titleFocusRequest={newCreate.focusRequest}
         isCreate={isCreate}
         forceDrawerOpen={isCreate}
-        drawerOpenRequest={requiredLeave.drawerOpenRequest}
+        drawerOpenRequest={requiredLeave.drawerOpenRequest + fieldDrawerRequest}
         nav={!isCreate && total > 0 ? {
           currentIndex: index + 1,
           totalCount: total,
@@ -1111,8 +1202,26 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
           previousLabel: t('opex.workspace.prev'),
           nextLabel: t('opex.workspace.next'),
         } : undefined}
-        onSaveShortcut={() => { if (isCreate) { void handleCreate(); } else { void flushAll(); } }}
-        metadata={!isCreate ? (
+        // Ctrl+S saves a line, being created or not; on the new page it does nothing.
+        onSaveShortcut={isCreate ? ignoreDraftChange : () => { void flushAll(); }}
+        metadata={isCreate ? (
+          // The metadata of the line to be, dimmed like the rest, so the page does not move when it is created.
+          <CreationPreview sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 'inherit' }}>
+            <BudgetMetadataBar
+              ownerItName={null}
+              ownerBizName={null}
+              status={draftForm.status}
+              ownerItId={null}
+              ownerBizId={null}
+              costCenterId={null}
+              lineRef={null}
+              disabled
+              onStatusChange={ignoreDraftChange}
+              onOwnerItChange={ignoreDraftChange}
+              onOwnerBizChange={ignoreDraftChange}
+            />
+          </CreationPreview>
+        ) : (
           <BudgetMetadataBar
             ownerItName={ownerName(references.owner_it, form.owner_it_id)}
             ownerBizName={ownerName(references.owner_business, form.owner_business_id)}
@@ -1127,7 +1236,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
             onOwnerItChange={(v) => void patchNow({ owner_it_id: (v || '') as string })}
             onOwnerBizChange={(v) => void patchNow({ owner_business_id: (v || '') as string })}
           />
-        ) : undefined}
+        )}
         actions={(
           <>
             {!isCreate && (
@@ -1158,11 +1267,6 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
                 itemRef={reference}
               />
             )}
-            {isCreate && (
-              <Button variant="contained" size="small" onClick={() => void handleCreate()} disabled={!canEdit || createSubmitting}>
-                {t('common:buttons.create')}
-              </Button>
-            )}
             {!isCreate && uuid && canDelete && (
               <RecordDeleteButton
                 base="/budget-lines"
@@ -1173,51 +1277,79 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
                 onDeleted={leaveAfterDelete}
               />
             )}
-            <IconButton aria-label={t('common:buttons.close')} title={t('common:buttons.close')} size="small" onClick={() => { void closeWorkspace(); }}>
-              <CloseIcon />
-            </IconButton>
+            {isCreate || creation.beingCreated ? (
+              <CreationActions
+                busy={creation.cancelling || completing}
+                onCreate={() => { void createAction(); }}
+                onCancel={() => { if (isCreate) void closeWorkspace(); else void cancelLine(); }}
+              />
+            ) : (
+              <IconButton aria-label={t('common:buttons.close')} title={t('common:buttons.close')} size="small" onClick={() => { void closeWorkspace(); }}>
+                <CloseIcon />
+              </IconButton>
+            )}
           </>
         )}
         properties={isCreate ? (
-          <BudgetPropertiesDrawer
-            nature={nature}
-            onNatureChange={(next) => {
-              const sp = new URLSearchParams(location.search);
-              sp.set('nature', next);
-              navigate(`/ops/budget/new?${sp.toString()}`, { replace: true });
-            }}
-            mode="create"
-            supplierId={createForm.supplier_id}
-            payingCompanyId={createForm.paying_company_id}
-            companyFollowsCostCenter={createCompanyFromCostCenter && !createForm.account_id}
-            accountId={createForm.account_id}
-            currency={createForm.currency}
-            analyticsValues={createForm.analytics_values}
-            costCenterId={createForm.cost_center_id}
-            runBuild={createForm.run_build}
-            effectiveStart={createForm.effective_start}
-            disabledAt={createForm.disabled_at}
-            ownerItId={createForm.owner_it_id}
-            ownerBusinessId={createForm.owner_business_id}
-            disabled={createSubmitting}
-            onSupplierChange={(v) => updateCreateForm({ supplier_id: v })}
-            onPayingCompanyChange={(v) => {
-              setCreateCompanyFromCostCenter(false);
-              updateCreateForm({ paying_company_id: v, ...(costCenterElsewhere(v) ? { cost_center_id: '' } : {}) });
-            }}
-            onAccountChange={(v) => updateCreateForm({ account_id: v })}
-            onCurrencyChange={(v) => {
-              setCreateCurrencyTouched(true);
-              updateCreateForm({ currency: v.toUpperCase() });
-            }}
-            onAnalyticsValueChange={(axisId, v) => updateCreateForm({ analytics_values: { [axisId]: v } })}
-            onCostCenterChange={pickCreateCostCenter}
-            onRunBuildChange={(v) => updateCreateForm({ run_build: v })}
-            onEffectiveStartChange={(v) => updateCreateForm({ effective_start: v })}
-            onDisabledAtChange={(v) => updateCreateForm({ disabled_at: v, status: deriveStatusFromDisabledAt(v) })}
-            onOwnerItChange={(v) => updateCreateForm({ owner_it_id: v })}
-            onOwnerBusinessChange={(v) => updateCreateForm({ owner_business_id: v })}
-          />
+          <>
+            {/* The place of a limited person's line comes first, live: the title waits for it. */}
+            {placementAsked && (
+              <BudgetPropertiesDrawer
+                nature={nature}
+                mode="create"
+                section="placement"
+                supplierId=""
+                payingCompanyId={placementDraft.paying_company_id}
+                companyFollowsCostCenter={placementDraft.followsCostCenter}
+                accountId=""
+                currency={draftForm.currency}
+                analyticsValues={{}}
+                costCenterId={placementDraft.cost_center_id}
+                runBuild=""
+                effectiveStart={draftForm.effective_start}
+                onSupplierChange={ignoreDraftChange}
+                onPayingCompanyChange={(v) => setPlacementDraft((prev) => ({
+                  paying_company_id: v,
+                  cost_center_id: costCenterElsewhere(v) ? '' : prev.cost_center_id,
+                  followsCostCenter: false,
+                }))}
+                onAccountChange={ignoreDraftChange}
+                onCurrencyChange={ignoreDraftChange}
+                onAnalyticsValueChange={ignoreDraftChange}
+                onCostCenterChange={pickDraftCostCenter}
+                onRunBuildChange={ignoreDraftChange}
+                onEffectiveStartChange={ignoreDraftChange}
+              />
+            )}
+            <CreationPreview>
+              <BudgetPropertiesDrawer
+                nature={nature}
+                mode="edit"
+                section={placementAsked ? 'rest' : 'all'}
+                disabled
+                supplierId=""
+                payingCompanyId={placementDefault.companyId ?? ''}
+                accountId=""
+                currency={draftForm.currency}
+                analyticsValues={{}}
+                costCenterId=""
+                runBuild=""
+                effectiveStart={draftForm.effective_start}
+                status={draftForm.status}
+                disabledAt={null}
+                onSupplierChange={ignoreDraftChange}
+                onPayingCompanyChange={ignoreDraftChange}
+                onAccountChange={ignoreDraftChange}
+                onCurrencyChange={ignoreDraftChange}
+                onAnalyticsValueChange={ignoreDraftChange}
+                onCostCenterChange={ignoreDraftChange}
+                onRunBuildChange={ignoreDraftChange}
+                onEffectiveStartChange={ignoreDraftChange}
+                onDisabledAtChange={ignoreDraftChange}
+                onDisableNow={ignoreDraftChange}
+              />
+            </CreationPreview>
+          </>
         ) : (
           <BudgetPropertiesDrawer
             nature={nature}
@@ -1239,6 +1371,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
             disabledAt={form.disabled_at}
             createdAt={form.created_at}
             updatedAt={form.updated_at}
+            missingFields={markedFields}
             onSupplierChange={(v) => void patchNow({ supplier_id: v })}
             onPayingCompanyChange={(v) => void changePayingCompany(v)}
             onAccountChange={(v) => void patchNow({ account_id: v })}
@@ -1255,35 +1388,30 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
       >
         {routeTab === 'overview' && (
           isCreate ? (
-            <Stack spacing={3} sx={{ pt: 1 }}>
-              {hasCreateObsoleteAccount && (
-                <Alert severity="warning">
-                  {t('opex.editor.obsoleteAccount')}
-                </Alert>
-              )}
-              <Box>
-                <Typography component="label" sx={sectionLabelSx}>{t('opex.fields.description')}</Typography>
-                <TextField
-                  value={createForm.description}
-                  onChange={(e) => updateCreateForm({ description: e.target.value })}
-                  multiline minRows={3} fullWidth variant="standard"
-                  placeholder={t('opex.fields.descriptionPlaceholder', 'e.g., annual subscription for monitoring')}
-                  sx={composerSx}
-                  disabled={createSubmitting}
-                />
-              </Box>
-              <Box>
-                <Typography component="label" sx={sectionLabelSx}>{t('opex.fields.notes')}</Typography>
-                <TextField
-                  value={createForm.notes}
-                  onChange={(e) => updateCreateForm({ notes: e.target.value })}
-                  multiline minRows={3} fullWidth variant="standard"
-                  placeholder={t('opex.fields.notesPlaceholder', 'e.g., renewal negotiated in Q3')}
-                  sx={composerSx}
-                  disabled={createSubmitting}
-                />
-              </Box>
-            </Stack>
+            <CreationPreview>
+              <Stack spacing={3} sx={{ pt: 1 }}>
+                <Box>
+                  <Typography component="label" sx={sectionLabelSx}>{t('opex.fields.description')}</Typography>
+                  <TextField
+                    value=""
+                    multiline minRows={3} fullWidth variant="standard"
+                    placeholder={t('opex.fields.descriptionPlaceholder', 'e.g., annual subscription for monitoring')}
+                    sx={composerSx}
+                    disabled
+                  />
+                </Box>
+                <Box>
+                  <Typography component="label" sx={sectionLabelSx}>{t('opex.fields.notes')}</Typography>
+                  <TextField
+                    value=""
+                    multiline minRows={3} fullWidth variant="standard"
+                    placeholder={t('opex.fields.notesPlaceholder', 'e.g., renewal negotiated in Q3')}
+                    sx={composerSx}
+                    disabled
+                  />
+                </Box>
+              </Stack>
+            </CreationPreview>
           ) : (
             <Stack spacing={3} sx={{ pt: 1 }}>
               <LineLineage lineage={data?.lineage} onOpen={(line) => { void openLineageLine(line); }} />
@@ -1346,6 +1474,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
         />
       )}
       {requiredLeave.dialog}
+      {incompleteLeave.dialog}
     </Box>
   );
 }

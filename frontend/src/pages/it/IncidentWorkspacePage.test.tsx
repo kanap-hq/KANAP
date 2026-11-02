@@ -239,7 +239,9 @@ describe('IncidentWorkspacePage — new incident title', () => {
     // The drawer shows the severity the incident is created with.
     expect(previews[0]).toHaveTextContent('minor');
     expect(previews[1].querySelector('textarea[placeholder="workspace.incident.overview.descriptionPlaceholder"]')).not.toBeNull();
-    expect(screen.queryByRole('button', { name: 'common:buttons.create' })).toBeNull();
+    // Create and Cancel sit in the header, outside the preview.
+    expect(screen.getByRole('button', { name: 'common:buttons.create' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'common:buttons.cancel' })).toBeTruthy();
   });
 
   it('creates the incident, severity minor, when the title is committed', async () => {
