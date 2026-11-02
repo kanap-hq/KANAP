@@ -14,6 +14,7 @@ import StepHint from './StepHint';
 const env = vi.hoisted(() => ({
   summary: (() => Promise.resolve({ data: { items: [] } })) as (config?: unknown, url?: string) => Promise<unknown>,
   server: null as unknown as ReturnType<typeof import('../../test/fakeOnboardingServer').createFakeOnboardingServer>,
+  discoveryCallUrl: '',
 }));
 
 vi.mock('../../api', () => ({
@@ -30,13 +31,15 @@ vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => ({
     profile: { id: 'u1', email: 'ada@example.com' },
     claims: { isGlobalAdmin: true, isPlatformAdmin: false, permissions: {} },
-    subscription: { status: 'trialing', is_subscription_healthy: true },
+    subscription: { status: 'trialing', is_subscription_healthy: true, trial_days_remaining: 9 },
     refreshMe: vi.fn().mockResolvedValue(undefined),
   }),
 }));
 vi.mock('../../tenant/TenantContext', () => ({ useTenant: () => ({ isPlatformHost: false }) }));
 vi.mock('../../config/FeaturesContext', () => ({
-  useFeatures: () => ({ config: { deploymentMode: 'multi-tenant', features: {} } }),
+  useFeatures: () => ({
+    config: { deploymentMode: 'multi-tenant', features: {}, discoveryCall: { url: env.discoveryCallUrl, fallbackEmail: '' } },
+  }),
 }));
 
 function Where() {
@@ -157,6 +160,27 @@ describe('FirstStepsTile', () => {
     await waitFor(() => expect(screen.getByText('0/5')).toBeInTheDocument());
     expect(env.server.db.angle).toBe('cartography');
     expect(screen.getAllByRole('link')[0]).toHaveTextContent('The application list');
+  });
+
+  it('offers a discovery call at the end of a path during the trial, when a booking page is set', async () => {
+    env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'example' });
+    for (const key of ['budget_overview', 'budget_line', 'budget_report', 'budget_plaid', 'budget_import']) {
+      env.server.db.done.set(`budget/example/${key}`, '2026-11-02T09:20:00.000Z');
+    }
+    const first = renderAt('/', <FirstStepsTile />);
+    await screen.findByText('IT budget path complete!');
+    expect(screen.queryByRole('link', { name: 'Book a discovery call' })).not.toBeInTheDocument();
+    first.unmount();
+
+    env.discoveryCallUrl = 'https://cal.example/discovery';
+    try {
+      renderAt('/', <FirstStepsTile />);
+      const book = await screen.findByRole('link', { name: 'Book a discovery call' });
+      expect(book).toHaveAttribute('href', 'https://cal.example/discovery');
+      expect(book).toHaveAttribute('target', '_blank');
+    } finally {
+      env.discoveryCallUrl = '';
+    }
   });
 
   it('starts a finished path again by undoing its five steps', async () => {

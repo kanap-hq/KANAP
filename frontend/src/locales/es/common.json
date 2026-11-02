@@ -1750,5 +1750,8 @@
       "tasks_other": "{{count}} tareas"
     },
     "titleRequired": "Escriba un título."
+  },
+  "discoveryCall": {
+    "book": "Programar una llamada de descubrimiento"
   }
 }

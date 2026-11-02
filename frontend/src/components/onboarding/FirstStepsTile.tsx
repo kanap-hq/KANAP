@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import DashboardTile from '../../pages/workspace/tiles/DashboardTile';
 import { onboardingApi, ONBOARDING_ANGLES, type OnboardingAngle, type OnboardingState } from './onboardingApi';
 import api from '../../api';
+import BookDiscoveryCallButton from '../BookDiscoveryCallButton';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { buildItemPath, formatItemRef } from '../../utils/item-ref';
 import { STEP_PARAM, stepHref, stepScreen, stepTitleKey, type StepLocationState, type StepScreen } from './onboardingPaths';
@@ -194,6 +195,7 @@ function EndScreen({ state }: { state: OnboardingState }) {
           {t('onboarding.firstSteps.end.restart')}
         </Link>
       </Box>
+      <BookDiscoveryCallButton placement="last_step" sx={{ alignSelf: 'flex-start' }} />
     </Box>
   );
 }

@@ -22,6 +22,8 @@ export type FeaturesConfig = {
     /** The data imports accept an Excel workbook (.xlsx) as well as a CSV file (IMPORT_XLSX). */
     importXlsx: boolean;
   };
+  /** The "Book a discovery call" button of trial workspaces; empty values hide it (always on-premise). */
+  discoveryCall: { url: string; fallbackEmail: string };
   version: string;
   tenantSlug?: string;
 };
@@ -51,6 +53,7 @@ const CLOUD_DEFAULTS: FeaturesConfig = {
     // Off until the server says otherwise: the dialogs offer only what every server reads.
     importXlsx: false,
   },
+  discoveryCall: { url: '', fallbackEmail: '' },
   version: 'unknown',
 };
 
