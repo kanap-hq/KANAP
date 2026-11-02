@@ -389,8 +389,11 @@ const COST_CENTER_COUNT_WORD_RE = /\b(?:how many|combien|count|nombre|wie viele|
  * no count word and stays an inspection. A business reference (APP-3, T-4) stays on
  * its own branch ("Combien de tâches sur APP-3 ?").
  */
+/** The inspection words of the branch below: that profile holds the comments and the history. */
+const INSPECTION_WORD_RE = /\b(?:summarize|resume|resumer|detail|details|context|contexte|commentaires?|comments?|history|historique)\b/;
+
 function isCostCenterCodeCount(rawText: string, text: string): boolean {
-  if (!COST_CENTER_COUNT_WORD_RE.test(text)) return false;
+  if (!COST_CENTER_COUNT_WORD_RE.test(text) || INSPECTION_WORD_RE.test(text)) return false;
   const tokens = rawText.match(/\b[A-Z]{1,6}-\d+\b/g);
   if (tokens == null) return false;
   return tokens.every((token) => !RECORD_REFERENCE_RE.test(token));

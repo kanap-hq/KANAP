@@ -631,6 +631,7 @@ const FIXTURE_ROWS: Row[] = [
   { prompt: 'FR-TRV-600', profile: 'entity_inspection', mode: 'entity' },
   { prompt: 'Combien de tâches sur APP-3 ?', profile: 'read_query', mode: 'read' },
   { prompt: 'Combien de lignes sur APP-3 ?', profile: 'entity_inspection', mode: 'entity' },
+  { prompt: 'How many comments on FR-TRV-600?', profile: 'entity_inspection', mode: 'entity', tools: ['get_entity_comments'] },
 ];
 
 function testTheTable() {
