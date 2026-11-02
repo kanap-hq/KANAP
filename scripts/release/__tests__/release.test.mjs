@@ -10,7 +10,7 @@ import path from 'node:path';
 import { after, describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import {
-  composeVersions, curatedStaleWarning, githubRepoOf, hasImagesSection, imagesSection, imagesToPromote, isImageTag,
+  baseImagePins, composeVersions, curatedStaleWarning, githubRepoOf, hasImagesSection, imagePinWarnings, imagesSection, imagesToPromote, isImageTag,
   parseDigests, pickPromotionRun, runIdFromDispatch, setComposeVersion,
 } from '../release.mjs';
 
@@ -523,6 +523,80 @@ describe('curated catalog age', () => {
     assert.equal(status, 0, output);
     assert.match(output, /Warning: curated catalog: 3 product\(s\) checked more than 120 days ago: broken, mixed, old-os \(run the technology-catalog-curation skill\)/);
     assert.equal(existsSync(path.join(repo.base, 'kanap-release')), false);
+  });
+});
+
+describe('base image pins', () => {
+  const pinned = `sha256:${'ab'.repeat(32)}`;
+  const current = `sha256:${'cd'.repeat(32)}`;
+  const nginx = `sha256:${'ef'.repeat(32)}`;
+
+  it('stays quiet when the pin is the digest the tag resolves to', () => {
+    assert.equal(imagePinWarnings([
+      { file: 'backend/Dockerfile', image: 'node:24-alpine', digest: pinned },
+    ], () => pinned), null);
+  });
+
+  it('names the file, the image and both digests of each pin the tag has moved past', () => {
+    const seen = [];
+    const warnings = imagePinWarnings([
+      { file: 'backend/Dockerfile', image: 'node:24-alpine', digest: pinned },
+      { file: 'frontend/Dockerfile', image: 'nginx:alpine', digest: nginx },
+      { file: 'marketing/Dockerfile', image: 'node:24-alpine', digest: pinned },
+    ], (image) => {
+      seen.push(image);
+      return image === 'nginx:alpine' ? nginx : current;
+    });
+    assert.deepEqual(seen, ['node:24-alpine', 'nginx:alpine']);
+    assert.equal(warnings, [
+      `Warning: backend/Dockerfile: node:24-alpine is pinned to ${pinned}, the tag now resolves to ${current}`,
+      `Warning: marketing/Dockerfile: node:24-alpine is pinned to ${pinned}, the tag now resolves to ${current}`,
+    ].join('\n'));
+  });
+
+  it('stays quiet and does not throw when the resolver fails', () => {
+    const pins = [
+      { file: 'backend/Dockerfile', image: 'node:24-alpine', digest: pinned },
+      { file: 'frontend/Dockerfile', image: 'nginx:alpine', digest: pinned },
+    ];
+    assert.equal(imagePinWarnings(pins, () => { throw new Error('docker: not found'); }), null);
+    assert.equal(imagePinWarnings(pins, () => null), null);
+    assert.equal(imagePinWarnings(pins, () => 'not a digest'), null);
+    assert.equal(imagePinWarnings(pins, null), null);
+    assert.equal(imagePinWarnings(pins, (image) => {
+      if (image === 'node:24-alpine') throw new Error('unavailable');
+      return current;
+    }), `Warning: frontend/Dockerfile: nginx:alpine is pinned to ${pinned}, the tag now resolves to ${current}`);
+  });
+
+  it('reads a pinned reference and skips a stage name', () => {
+    const text = [
+      `FROM --platform=linux/amd64 node:24-alpine@${pinned} AS base`,
+      'FROM base AS build',
+      `FROM example.com:5000/nginx:1.27@${pinned}`,
+    ].join('\n');
+    assert.deepEqual(baseImagePins('backend/Dockerfile', text), [
+      { file: 'backend/Dockerfile', image: 'node:24-alpine', digest: pinned },
+      { file: 'backend/Dockerfile', image: 'example.com:5000/nginx:1.27', digest: pinned },
+    ]);
+  });
+
+  it('reads the base image pins of the Dockerfiles', () => {
+    const expected = {
+      'backend/Dockerfile': ['node:24-alpine'],
+      'frontend/Dockerfile': ['node:24-alpine', 'nginx:alpine'],
+      'frontend/Dockerfile.dev': ['node:24-alpine'],
+      'marketing/Dockerfile': ['node:24-alpine', 'nginx:alpine'],
+    };
+    for (const [file, images] of Object.entries(expected)) {
+      const text = readFileSync(path.join(ROOT, file), 'utf8');
+      const pins = baseImagePins(file, text);
+      assert.deepEqual(pins.map((pin) => pin.image), images, file);
+      for (const pin of pins) {
+        assert.match(pin.digest, /^sha256:[0-9a-f]{64}$/);
+        assert.ok(text.includes(`FROM ${pin.image}@${pin.digest}`), `${file} ${pin.image}`);
+      }
+    }
   });
 });
 

@@ -69,6 +69,8 @@ Refresh the KANAP-maintained catalog before preparing a version. Its files are
 `backend/src/technologies/catalog/curated/*.json`. The `technology-catalog-curation` skill reads
 each vendor source again and regenerates the shipped catalog. `prepare` then warns when a
 product's oldest `checked_on` is more than 120 days old. The warning does not stop the command.
+`prepare` also warns once per Dockerfile pin whose digest differs from the digest its tag resolves
+to now, and prints nothing when Docker or the network is unavailable.
 
 The command:
 
