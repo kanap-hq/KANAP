@@ -19,17 +19,18 @@ import { DataSource, EntityManager } from 'typeorm';
 import { TENANT_RESET_RUNNING_CODE, TenantResetService } from '../admin/tenants/tenant-reset.service';
 import { capexDimensionTable } from '../analytics/capex-dimensions.seed';
 import { DEFAULT_ANALYTICS_AXIS_CODE } from '../analytics/analytics-axes.util';
-import { RECOMMENDED_DIMENSIONS, SEED_LANGUAGES } from '../analytics/recommended-dimensions.seed';
+import { RECOMMENDED_DIMENSIONS, SEED_LANGUAGES, tenantSeedLanguage } from '../analytics/recommended-dimensions.seed';
 import { AuthService } from '../auth/auth.service';
 import { DEFAULT_ACCESS_TOKEN_TTL, parseDurationMs } from '../auth/token-ttl.util';
 import { StripeConfigService } from '../billing/stripe/stripe.config';
-import { Subscription } from '../billing/subscription.entity';
+import { Subscription, SubscriptionStatus } from '../billing/subscription.entity';
 import { evaluateSubscriptionAccess } from '../billing/subscription-freeze.util';
 import { trackBackgroundWork } from '../common/background-work';
 import { NeverRejects } from '../common/never-rejects';
 import { throwNotAvailableInMode } from '../common/feature-gates';
 import { tenantSlugFromHost } from '../common/tenancy/request-tenancy.middleware';
 import { withTenant } from '../common/tenant-runner';
+import { resolveNotificationBaseUrl } from '../common/url';
 import { Features } from '../config/features';
 import { startingClassificationNames } from '../portfolio/starting-classification.seed';
 import { TenantBaselineService } from '../tenants/tenant-baseline.service';
@@ -254,6 +255,12 @@ export type DemoLoaderConfig = {
   provisionRetryMaxMs: number;
   spawn: typeof nodeSpawn;
 };
+
+/**
+ * A trial created longer ago than this, still `idle`, was left that way on purpose.
+ * The start-up resume ignores it. Next to `provisionRetryMaxMs` (the wait inside one process).
+ */
+const PROVISION_RESUME_MAX_AGE_MS = 2 * 60 * 60_000;
 
 /**
  * The loader script, looked up from `from` up to the backend directory (the one holding
@@ -605,10 +612,14 @@ export class DemoDataService implements OnApplicationShutdown {
   readonly config: DemoLoaderConfig = readDemoLoaderConfig();
   /** Loads this API process runs, by tenant. */
   private readonly running = new Map<string, RunningLoad>();
+  /** Trials whose provisioning is in progress in this process (`provisionTrialSampleData`). */
+  private readonly provisioning = new Set<string>();
   private stopping = false;
   /** The lead process's periodic pass over the tenants (`reconcileOnStartup`). */
   private sweepTimer: NodeJS.Timeout | null = null;
   private sweeping: Promise<void> | null = null;
+  /** Set on the first start-up pass: later passes do not resume idle trials. */
+  private startupTrialsResumed = false;
 
   constructor(
     private readonly dataSource: DataSource,
@@ -814,43 +825,50 @@ export class DemoDataService implements OnApplicationShutdown {
 
   /**
    * Loads the sample data into a trial tenant just activated, in the background: started by the
-   * activation, never awaited. Refused for `demo_load_capacity`, the load is tried again every
-   * `provisionRetryMs` for `provisionRetryMaxMs`, until the API process stops; then the workspace
-   * stays `idle` and its administrators can load the sample data themselves. Any other refusal
-   * (`tenant_not_empty` included: the administrator started with their own records meanwhile)
-   * ends it at once, and so does the home banner hidden meanwhile (`dismissed_at`: the onboarding
-   * choice "start with my own data" hides it). Each end without a load is one warning in the
-   * server log. `tenantUrl` is the tenant's address; its host is read here, inside the guard.
+   * activation and, after a restart, by the lead process (`resumeIdleTrialLoads`). Never awaited.
+   * Refused for `demo_load_capacity`, the load is tried again every `provisionRetryMs` for
+   * `provisionRetryMaxMs`. Any other refusal (`tenant_not_empty` included: the administrator
+   * started with their own records meanwhile) ends it at once, and so does the home banner hidden
+   * meanwhile (`dismissed_at`: the onboarding choice "start with my own data" hides it). Each end
+   * without a load is one warning in the server log. A second call for a tenant this process is
+   * already provisioning returns at once (the activation still waiting, or two start-up passes).
+   * `tenantUrl` is the tenant's address; its host is read here, inside the guard.
    */
   @NeverRejects()
   async provisionTrialSampleData(params: { tenantId: string; actorId: string; tenantUrl: string; language: unknown }): Promise<void> {
-    const host = new URL(params.tenantUrl).host;
-    const giveUpAt = Date.now() + this.config.provisionRetryMaxMs;
-    for (;;) {
-      if (this.stopping) {
-        this.logger.warn(`Sample data not loaded into the new trial tenant ${params.tenantId}: the server is stopping`);
-        return;
+    if (this.provisioning.has(params.tenantId)) return;
+    this.provisioning.add(params.tenantId);
+    try {
+      const host = new URL(params.tenantUrl).host;
+      const giveUpAt = Date.now() + this.config.provisionRetryMaxMs;
+      for (;;) {
+        if (this.stopping) {
+          this.logger.warn(`Sample data not loaded into the new trial tenant ${params.tenantId}: the server is stopping`);
+          return;
+        }
+        try {
+          if ((await this.readState(params.tenantId)).dismissed_at) {
+            this.logger.warn(`Sample data not loaded into the new trial tenant ${params.tenantId}: declined meanwhile`);
+            return;
+          }
+          // The claim checks the banner again: a choice made after the read above still counts.
+          await this.loadDemoData(params.tenantId, { language: params.language, actorId: params.actorId, host, unlessBannerHidden: true });
+          return;
+        } catch (error) {
+          const code = errorCode(error);
+          if (code !== 'demo_load_capacity') {
+            this.logger.warn(`Sample data not loaded into the new trial tenant ${params.tenantId}: ${code}`);
+            return;
+          }
+          if (Date.now() + this.config.provisionRetryMs > giveUpAt) {
+            this.logger.warn(`Sample data not loaded into the new trial tenant ${params.tenantId}: other loads kept running`);
+            return;
+          }
+        }
+        await this.waitUnlessStopping(this.config.provisionRetryMs);
       }
-      try {
-        if ((await this.readState(params.tenantId)).dismissed_at) {
-          this.logger.warn(`Sample data not loaded into the new trial tenant ${params.tenantId}: declined meanwhile`);
-          return;
-        }
-        // The claim checks the banner again: a choice made after the read above still counts.
-        await this.loadDemoData(params.tenantId, { language: params.language, actorId: params.actorId, host, unlessBannerHidden: true });
-        return;
-      } catch (error) {
-        const code = errorCode(error);
-        if (code !== 'demo_load_capacity') {
-          this.logger.warn(`Sample data not loaded into the new trial tenant ${params.tenantId}: ${code}`);
-          return;
-        }
-        if (Date.now() + this.config.provisionRetryMs > giveUpAt) {
-          this.logger.warn(`Sample data not loaded into the new trial tenant ${params.tenantId}: other loads kept running`);
-          return;
-        }
-      }
-      await this.waitUnlessStopping(this.config.provisionRetryMs);
+    } finally {
+      this.provisioning.delete(params.tenantId);
     }
   }
 
@@ -1035,7 +1053,10 @@ export class DemoDataService implements OnApplicationShutdown {
    * resets left by a stopped API process are taken over (reset, then `failed` or `idle`). A load
    * another API process runs is never touched; deleted tenants are left out; one tenant that
    * cannot be taken over does not stop the pass. Resolves when the first pass has claimed what
-   * it takes over (the resets run in the background); never rejects.
+   * it takes over (the resets run in the background); never rejects. The first pass also resumes
+   * sample data for trial workspaces left `idle` just after activation (a restart during the
+   * wait). That resume starts after this pass and does not delay it; the later passes do not
+   * resume.
    */
   reconcileOnStartup(): Promise<void> {
     if (Features.SINGLE_TENANT || this.stopping) return Promise.resolve();
@@ -1043,7 +1064,15 @@ export class DemoDataService implements OnApplicationShutdown {
       this.sweepTimer = setInterval(() => { void this.sweep(); }, this.config.staleMs);
       this.sweepTimer.unref();
     }
-    return this.sweep();
+    const pass = this.sweep();
+    if (!this.startupTrialsResumed) {
+      this.startupTrialsResumed = true;
+      void pass.then(() => {
+        if (this.stopping || Features.SINGLE_TENANT) return;
+        trackBackgroundWork(this.resumeIdleTrialLoads());
+      });
+    }
+    return pass;
   }
 
   /** One pass (one at a time). */
@@ -1075,6 +1104,83 @@ export class DemoDataService implements OnApplicationShutdown {
         this.logger.warn(`Sample data state of tenant ${row.id} not checked: ${errorMessage(error)}`);
       }
     }
+  }
+
+  /**
+   * Resumes the sample data load of trial workspaces left `idle` by a restart during the
+   * activation wait. One query on `tenants` (no tenant context, as `sweepOnce`). `subscriptions`
+   * is under FORCE RLS, so the trialing check is per tenant, inside `withTenant`, with the user.
+   * Tenants are resumed one after the other: the load slots decide how many loaders run, and the
+   * others wait inside `provisionTrialSampleData`. Never rejects.
+   */
+  private async resumeIdleTrialLoads(): Promise<void> {
+    if (Features.SINGLE_TENANT || this.stopping) return;
+    let rows: Array<{ id: string; slug: string; metadata: unknown }>;
+    try {
+      rows = await this.dataSource.query(
+        `SELECT id, slug, metadata FROM tenants
+          WHERE is_system_tenant IS NOT TRUE
+            AND status = $1
+            AND created_at > now() - make_interval(secs => $2::int)
+            AND ${STATUS_SQL} = 'idle'
+            AND metadata->'demo'->>'dismissed_at' IS NULL
+            AND metadata->'demo'->>'ever_loaded_at' IS NULL
+            AND metadata->'demo'->>'failed_at' IS NULL
+          ORDER BY created_at, id`,
+        [TenantStatus.ACTIVE, PROVISION_RESUME_MAX_AGE_MS / 1000],
+      );
+    } catch (error) {
+      this.logger.warn(`Trial sample data not resumed: ${errorMessage(error)}`);
+      return;
+    }
+    for (const row of rows) {
+      if (this.stopping) return;
+      try {
+        await this.resumeOneIdleTrial(row);
+      } catch (error) {
+        this.logger.warn(`Sample data load of trial tenant ${row.id} not resumed: ${errorCode(error)}`);
+      }
+    }
+  }
+
+  /** One tenant of `resumeIdleTrialLoads`. A non-trial is left alone, with no log line. */
+  private async resumeOneIdleTrial(row: { id: string; slug: string; metadata: unknown }): Promise<void> {
+    const actorId = await this.trialActivationActor(row);
+    if (!actorId) return;
+    const tenantUrl = resolveNotificationBaseUrl(row.slug);
+    this.logger.log(`Sample data load resumed for trial tenant ${row.id}`);
+    // A tenant this process is already provisioning returns at once (`provisioning`).
+    await this.provisionTrialSampleData({
+      tenantId: row.id,
+      actorId,
+      tenantUrl,
+      language: tenantSeedLanguage(row.metadata),
+    });
+  }
+
+  /**
+   * The person who activated the trial: the user of this tenant whose email is the trial
+   * sign-up's, read under the tenant (`users` is under RLS). Null when the workspace is not a
+   * trial. Throws when that person is missing or is not an administrator (one warning upstream).
+   */
+  private async trialActivationActor(row: { id: string; slug: string }): Promise<string | null> {
+    return withTenant(this.dataSource, row.id, async (manager) => {
+      const [subscription]: Array<{ status: string | null }> = await manager.query(
+        `SELECT status::text AS status FROM subscriptions WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 1`,
+        [row.id],
+      );
+      if (subscription?.status !== SubscriptionStatus.TRIALING) return null;
+      const [signup]: Array<{ email: string | null }> = await manager.query(
+        `SELECT email FROM trial_signups WHERE slug = $1`,
+        [row.slug],
+      );
+      const [user]: Array<{ id: string }> = signup?.email
+        ? await manager.query(`SELECT id FROM users WHERE tenant_id = $1 AND email = $2`, [row.id, signup.email])
+        : [];
+      if (!user?.id) throw new Error('no administrator from the trial sign-up');
+      await this.requireAdministrator(manager, row.id, user.id);
+      return user.id;
+    });
   }
 
   /**
