@@ -45,6 +45,8 @@ export interface FeatureContent {
     lead: string;
   };
   sections: FeatureSection[];
+  /** Blog series key listed in full on the page, in order, above the latest posts. */
+  series?: string;
   more: {
     title: string;
     items: FeatureMore[];

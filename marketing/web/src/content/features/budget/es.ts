@@ -61,6 +61,7 @@ const content: FeatureContent = {
       shotAlt: 'Las 10 mayores líneas OPEX del presupuesto 2026, en gráfico circular',
     },
   ],
+  series: 'opex-budget',
   more: {
     title: 'Y además',
     items: [

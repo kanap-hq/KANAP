@@ -36,6 +36,7 @@ const content: HomeContent = {
       },
     ],
     outro: 'Every line is attached to its application, contract or project: from the budget, you find what IT runs and what each piece costs.',
+    guide: { label: 'Guide: OPEX and CAPEX in the IT budget', href: '/blog/opex-capex-it-budget' },
   },
 
   pillars: {

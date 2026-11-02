@@ -40,6 +40,8 @@ export interface LayersSection {
   items: Pillar[];
   /** Closing line below the layer cards. */
   outro: string;
+  /** Link to the budget guide article, below the closing line. `href` gets locale-prefixed. */
+  guide?: { label: string; href: string };
 }
 
 export interface HomeContent {

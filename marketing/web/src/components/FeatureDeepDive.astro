@@ -11,7 +11,7 @@ import {
 import { getLocaleFromUrl, localePath, useTranslations } from '../i18n/ui';
 import type { FeatureContent } from '../content/features/types';
 import { FEATURE_SCREENSHOTS, getFeatureSlugFromPath } from '../content/screenshots';
-import { getPostsForFeature } from '../lib/blog';
+import { getPostsForFeature, getSeriesByKey } from '../lib/blog';
 import BlogStrip from './BlogStrip.astro';
 
 interface Props {
@@ -23,7 +23,13 @@ const locale = getLocaleFromUrl(Astro.url);
 const t = useTranslations(locale);
 const featureSlug = getFeatureSlugFromPath(Astro.url.pathname);
 const featureScreenshots = featureSlug ? FEATURE_SCREENSHOTS[featureSlug] : undefined;
-const featurePosts = featureSlug ? await getPostsForFeature(featureSlug, locale) : [];
+const seriesPosts = content.series ? await getSeriesByKey(content.series, locale) : [];
+const inSeries = new Set(seriesPosts.map((i) => i.translationKey));
+const featurePosts = featureSlug
+  ? (await getPostsForFeature(featureSlug, locale, 3 + seriesPosts.length))
+      .filter((i) => !inSeries.has(i.translationKey))
+      .slice(0, 3)
+  : [];
 ---
 
 <BaseLayout title={content.meta.title} description={content.meta.description}>
@@ -55,6 +61,18 @@ const featurePosts = featureSlug ? await getPostsForFeature(featureSlug, locale)
       columns={2}
     />
   </Section>
+
+  {seriesPosts.length > 1 && (
+    <Section tone="default">
+      <BlogStrip
+        posts={seriesPosts}
+        locale={locale}
+        title={seriesPosts[0].post.data.series!.title}
+        allLabel={t('blog.home.all')}
+        allHref={localePath(locale, '/blog')}
+      />
+    </Section>
+  )}
 
   {featurePosts.length > 0 && (
     <Section tone="default">
