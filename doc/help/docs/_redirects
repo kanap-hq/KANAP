@@ -4,5 +4,13 @@
 # English is served at the site root (no /en/ prefix).
 # Translations are served at /fr/, /de/, /es/.
 
-# Old URL compatibility (if migrating from another system)
-# /old-path /new-path 301
+# The Budget management overview page was folded into My dashboard.
+# Older installations, bookmarks and external links still open the old addresses.
+/operations-dashboard /my-dashboard/ 301
+/operations-dashboard/ /my-dashboard/ 301
+/fr/operations-dashboard /fr/my-dashboard/ 301
+/fr/operations-dashboard/ /fr/my-dashboard/ 301
+/de/operations-dashboard /de/my-dashboard/ 301
+/de/operations-dashboard/ /de/my-dashboard/ 301
+/es/operations-dashboard /es/my-dashboard/ 301
+/es/operations-dashboard/ /es/my-dashboard/ 301
