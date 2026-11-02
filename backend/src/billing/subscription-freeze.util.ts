@@ -1,7 +1,8 @@
 import { CollectionMethod, Subscription, SubscriptionStatus } from './subscription.entity';
-import { FREEZE_GRACE_DAYS } from './plans.config';
+import { FREEZE_GRACE_DAYS, TRIAL_WORKSPACE_RETENTION_DAYS } from './plans.config';
 
 const GRACE_MS = FREEZE_GRACE_DAYS * 86400000;
+const TRIAL_RETENTION_MS = TRIAL_WORKSPACE_RETENTION_DAYS * 86400000;
 
 /**
  * When a PAST_DUE subscription's grace period expires and it becomes "frozen".
@@ -86,4 +87,29 @@ export function evaluateSubscriptionAccess(
     default:
       return { allowed: false, reason: 'SUBSCRIPTION_FROZEN', message: 'Your subscription is not active.' };
   }
+}
+
+/**
+ * Single source of truth for "when is this workspace deleted for a trial that ended without a
+ * subscription?": the trial end plus TRIAL_WORKSPACE_RETENTION_DAYS. Read by the daily deletion
+ * task (TrialWorkspaceExpiryService), the subscription summary (`trial_deletion_at`) and the
+ * trial emails.
+ *
+ * Only a local trial has one (status trialing, a trial end, no Stripe subscription): a tenant
+ * that subscribed (the Stripe id stays on its one subscription row, whatever the status), or that
+ * a platform administrator reactivated (internal plan, another status), has none. A trial end
+ * moved forward moves the date with it.
+ *
+ * `billingEnforced` is the on-premise escape hatch of `evaluateSubscriptionAccess`: no billing,
+ * no trial lock, no deletion. Pass `!Features.SINGLE_TENANT && stripeConfig.isConfigured()`.
+ */
+export function computeTrialDeletionAt(
+  subscription: Pick<Subscription, 'status' | 'trial_end' | 'stripe_subscription_id'> | null,
+  billingEnforced: boolean,
+): Date | null {
+  if (!billingEnforced || !subscription) return null;
+  if (subscription.status !== SubscriptionStatus.TRIALING || subscription.stripe_subscription_id || !subscription.trial_end) {
+    return null;
+  }
+  return new Date(subscription.trial_end.getTime() + TRIAL_RETENTION_MS);
 }

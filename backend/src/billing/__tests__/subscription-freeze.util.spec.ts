@@ -1,6 +1,6 @@
 import * as assert from 'node:assert/strict';
 import { CollectionMethod, Subscription, SubscriptionStatus } from '../subscription.entity';
-import { computeFreezeEffectiveAt, evaluateSubscriptionAccess } from '../subscription-freeze.util';
+import { computeFreezeEffectiveAt, computeTrialDeletionAt, evaluateSubscriptionAccess } from '../subscription-freeze.util';
 import { BillingService } from '../billing.service';
 
 const DAY_MS = 86400000;
@@ -118,6 +118,28 @@ async function testPastDueCloverSubscriptionKeepsItsGrace() {
   assert.equal(evaluateSubscriptionAccess(stored, NOW, true).allowed, true);
 }
 
+function testTrialDeletionDate() {
+  const trialEnd = new Date(NOW - 3 * DAY_MS);
+  const trial = (partial: Partial<Subscription> = {}) =>
+    sub({ status: SubscriptionStatus.TRIALING, trial_end: trialEnd, stripe_subscription_id: null, ...partial });
+
+  // A local trial: its end plus 30 days, whether the trial is over or not.
+  assert.equal(computeTrialDeletionAt(trial(), true)?.getTime(), trialEnd.getTime() + 30 * DAY_MS);
+  const running = new Date(NOW + 5 * DAY_MS);
+  assert.equal(computeTrialDeletionAt(trial({ trial_end: running }), true)?.getTime(), running.getTime() + 30 * DAY_MS);
+
+  // No billing (on-premise), no subscription, no trial end: no date.
+  assert.equal(computeTrialDeletionAt(trial(), false), null);
+  assert.equal(computeTrialDeletionAt(null, true), null);
+  assert.equal(computeTrialDeletionAt(trial({ trial_end: null }), true), null);
+
+  // Subscribed (a Stripe trial included), reactivated, paid then canceled or frozen: never.
+  assert.equal(computeTrialDeletionAt(trial({ stripe_subscription_id: 'sub_1' }), true), null);
+  for (const status of [SubscriptionStatus.ACTIVE, SubscriptionStatus.PAST_DUE, SubscriptionStatus.CANCELED, SubscriptionStatus.UNPAID, null]) {
+    assert.equal(computeTrialDeletionAt(trial({ status: status as any }), true), null, `status ${status}`);
+  }
+}
+
 async function run() {
   testUnconfiguredAlwaysAllowed();
   testMissingSubscriptionIsFrozen();
@@ -127,6 +149,7 @@ async function run() {
   testUnknownStatusFrozen();
   testComputeFreezeInvoiceBased();
   await testPastDueCloverSubscriptionKeepsItsGrace();
+  testTrialDeletionDate();
   // eslint-disable-next-line no-console
   console.log('subscription-freeze.util.spec: all assertions passed');
 }

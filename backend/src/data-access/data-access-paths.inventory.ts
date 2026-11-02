@@ -256,6 +256,7 @@ export const DATA_ACCESS_PATHS: DataAccessPathEntry[] = [
   { file: 'admin/tenants/admin-tenants.service.ts', member: 'buildTenantSummary', site: 'with_tenant', class: 'system', reason: 'platform administration: subscription summary of a tenant' },
   { file: 'admin/tenants/admin-tenants.service.ts', member: 'logTenantAction', site: 'with_tenant', class: 'system', reason: 'platform administration: audit_log entry on the tenant' },
   { file: 'admin/tenants/admin-tenants.service.ts', member: 'purgeTenantData', site: 'with_tenant', class: 'system', reason: 'platform administration: tenant deletion purges every table, budget block included' },
+  { file: 'admin/tenants/trial-workspace-expiry.service.ts', member: 'run', site: 'with_tenant', class: 'system', reason: 'daily deletion of workspaces whose trial ended without a subscription: reads the subscriptions of a tenant' },
   { file: 'admin/tenants/tenant-stats.service.ts', member: 'compute', site: 'with_tenant', class: 'system', reason: 'platform administration: row counts of a tenant, budget lines included' },
 
   // Scheduled and detached jobs, command-line scripts: no person.

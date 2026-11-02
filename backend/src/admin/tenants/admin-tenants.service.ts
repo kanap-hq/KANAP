@@ -18,6 +18,9 @@ import { assertTenantPurgeConfiguration, TENANT_PURGE_TABLES } from './tenant-pu
 import { deleteStorageObjects, purgeTenantTables } from './tenant-data-purge';
 import { orderListQuery } from '../../common/list-sort';
 
+/** Who did a tenant action when no person did: the audit `source` and `source_ref`. */
+export type TenantActionOrigin = { source: 'system'; sourceRef: string };
+
 @Injectable()
 export class AdminTenantsService {
   constructor(
@@ -299,7 +302,20 @@ export class AdminTenantsService {
     );
   }
 
-  async deleteTenant(tenantId: string, actorId: string | null, dto: DeleteTenantDto) {
+  /**
+   * Deletes a tenant: marks it deleting, purges its data, marks it deleted. `opts` serves the
+   * daily deletion of expired trials (TrialWorkspaceExpiryService): `origin` stamps its audit
+   * entries as a system action, and `stillDue` runs in the purge transaction, before any row
+   * goes. When it answers false (the tenant subscribed in the meantime) nothing is purged, the
+   * tenant is set back to active and the call returns `cancelled: true`.
+   */
+  async deleteTenant(
+    tenantId: string,
+    actorId: string | null,
+    dto: DeleteTenantDto,
+    opts?: { origin?: TenantActionOrigin; stillDue?: (manager: EntityManager) => Promise<boolean> },
+  ) {
+    const origin = opts?.origin;
     const tenant = await this.findTenantOrFail(tenantId);
     this.ensureNotSystemTenant(tenant);
     if (tenant.status === TenantStatus.DELETED) {
@@ -320,16 +336,28 @@ export class AdminTenantsService {
       deletion_requested_by: actorId ?? null,
       deletion_reason: reason,
     });
-    await this.logTenantAction(tenantId, actorId, 'delete-request', beforeRequest, this.serializeTenant(tenant));
+    await this.logTenantAction(tenantId, actorId, 'delete-request', beforeRequest, this.serializeTenant(tenant), origin);
 
-    let purgeReport: Array<{ table: string; deleted: number }> = [];
+    let purgeReport: Array<{ table: string; deleted: number }> | null;
     try {
-      purgeReport = await this.purgeTenantData(tenantId, tenant.branding);
+      purgeReport = await this.purgeTenantData(tenantId, tenant.branding, opts?.stillDue);
     } catch (error) {
       const beforeFail = this.serializeTenant(tenant);
       await this.writeTenantColumns(tenant, { status: TenantStatus.FROZEN });
-      await this.logTenantAction(tenantId, actorId, 'delete-failed', beforeFail, this.serializeTenant(tenant));
+      await this.logTenantAction(tenantId, actorId, 'delete-failed', beforeFail, this.serializeTenant(tenant), origin);
       throw error;
+    }
+
+    if (!purgeReport) {
+      const beforeCancel = this.serializeTenant(tenant);
+      await this.writeTenantColumns(tenant, {
+        status: TenantStatus.ACTIVE,
+        deletion_requested_at: null,
+        deletion_requested_by: null,
+        deletion_reason: null,
+      });
+      await this.logTenantAction(tenantId, actorId, 'delete-cancelled', beforeCancel, this.serializeTenant(tenant), origin);
+      return { tenant: await this.getTenantDetail(tenantId), purgeReport: [], cancelled: true };
     }
 
     const beforeComplete = this.serializeTenant(tenant);
@@ -344,7 +372,7 @@ export class AdminTenantsService {
       // Clear slug to free reuse and avoid ambiguity for deleted tenants
       slug: `deleted-${tenant.slug}-${completedAt.getTime()}`,
     });
-    await this.logTenantAction(tenantId, actorId, 'delete-complete', beforeComplete, this.serializeTenant(tenant));
+    await this.logTenantAction(tenantId, actorId, 'delete-complete', beforeComplete, this.serializeTenant(tenant), origin);
 
     // Clean up any trial signup for the original slug to allow clean re-signup
     try {
@@ -355,15 +383,16 @@ export class AdminTenantsService {
     }
 
     const detail = await this.getTenantDetail(tenantId);
-    return { tenant: detail, purgeReport };
+    return { tenant: detail, purgeReport, cancelled: false };
   }
 
   private async logTenantAction(
     tenantId: string,
     actorId: string | null,
-    action: 'freeze' | 'unfreeze' | 'plan-update' | 'delete-request' | 'delete-complete' | 'delete-failed',
+    action: 'freeze' | 'unfreeze' | 'plan-update' | 'delete-request' | 'delete-complete' | 'delete-failed' | 'delete-cancelled',
     before: any,
     after: any,
+    origin?: TenantActionOrigin,
   ) {
     await withTenant(this.dataSource, tenantId, async (manager) => {
       await this.audit.log(
@@ -374,17 +403,26 @@ export class AdminTenantsService {
           before,
           after,
           userId: actorId ?? null,
+          ...(origin ? { source: origin.source, sourceRef: origin.sourceRef } : {}),
         },
         { manager },
       );
     });
   }
 
-  private async purgeTenantData(tenantId: string, branding?: TenantBranding | Record<string, any> | null) {
+  /** The purge report, or null when `stillDue` stopped it before any row went. */
+  private async purgeTenantData(
+    tenantId: string,
+    branding?: TenantBranding | Record<string, any> | null,
+    stillDue?: (manager: EntityManager) => Promise<boolean>,
+  ) {
     assertTenantPurgeConfiguration();
-    const { report, storagePaths } = await withTenant(this.dataSource, tenantId, (manager) =>
-      purgeTenantTables(manager, TENANT_PURGE_TABLES),
-    );
+    const purged = await withTenant(this.dataSource, tenantId, async (manager) => {
+      if (stillDue && !(await stillDue(manager))) return null;
+      return purgeTenantTables(manager, TENANT_PURGE_TABLES);
+    });
+    if (!purged) return null;
+    const { report, storagePaths } = purged;
 
     // Storage objects go once their rows are gone for good. The branding logo lives on
     // tenants.branding (no tenant_id column), so it is cleaned explicitly.
