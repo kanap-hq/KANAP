@@ -94,15 +94,15 @@ La liste (dans **Gestion budgétaire > Lignes budgétaires**) contient les ligne
 - **Nom du produit** : Le titre de la ligne (ouvre l'onglet **Vue d'ensemble**)
 - **Fournisseur** : Le nom du fournisseur
 - **Société payeuse** : Quelle société paie cette ligne
-- **Contrat** : Le nom du dernier contrat lié (ouvre l'espace de travail du Contrat)
 - **Compte** : Le numéro et le nom du compte comptable
-- **Ventilation** : Le libellé de la méthode de ventilation pour l'année en cours (ouvre l'onglet **Ventilations**)
 - **Budget A** et **Atterrissage prévu A** : Les montants de l'année en cours de la colonne par défaut et de la dernière colonne affichée (ouvre l'onglet **Budget** pour cette année). Avec les réglages standard, ce sont Budget et Atterrissage prévu. Quand la colonne par défaut est aussi la dernière affichée, une seule colonne de montant apparaît. Voir [Colonnes budgétaires](budget-operations.md#colonnes-budgetaires)
 - **Dimensions obligatoires** : Une colonne par dimension activée obligatoire pour l'un ou l'autre type, à son nom. Un nouvel espace de travail n'en a aucune
-- **Tâche** : Le titre de la dernière tâche (ouvre l'onglet **Vue d'ensemble**, où se trouve le panneau des tâches)
 
 **Colonnes supplémentaires** (masquées par défaut, activez-les via le sélecteur de colonnes) :
 
+- **Contrat** : Le nom du dernier contrat lié (ouvre l'espace de travail du Contrat)
+- **Ventilation** : Le libellé de la méthode de ventilation pour l'année en cours (ouvre l'onglet **Ventilations**)
+- **Tâche** : Le titre de la dernière tâche (ouvre l'onglet **Vue d'ensemble**, où se trouve le panneau des tâches)
 - **Colonnes de montants** : Chaque colonne budgétaire affichée pour A-1, A, A+1 et A+2, sous les noms choisis par votre organisation. L'en-tête indique la colonne, l'année par rapport à aujourd'hui et l'année civile, par exemple **Révision A+1 (2027)**. Les colonnes masquées ne sont pas proposées
 - **Colonnes ETP** : L'ETP de chaque colonne budgétaire affichée pour A-1, A, A+1 et A+2, sous les noms choisis par votre organisation, juste après les colonnes de montants dans le sélecteur de colonnes. L'en-tête indique la colonne et l'année civile, par exemple **ETP Budget (2026)**. L'ETP d'une ligne est la somme des ETP de ses lignes de quantité et prix dans cette colonne. Voir [ETP](#etp). La cellule est vide lorsque la colonne n'a aucune ligne
 - **ETP déclarés** : **Oui** lorsque la ligne déclare des ETP dans au moins une colonne budgétaire, toutes années confondues, sinon vide. Ce sont les lignes que garde le filtre **Lignes avec ETP** des rapports
@@ -366,8 +366,9 @@ Sur une colonne vide, un clic sur un onglet bascule aussitôt. Sur une colonne q
 
 - Sous l'éditeur, **Résultat par mois** montre l'année mois par mois pour chaque colonne affichée, dans la devise de la ligne, avec un sous-total par trimestre (**T1** à **T4**) et une ligne **Total**. La colonne active est mise en évidence
 - Avec deux colonnes ou plus, une dernière ligne donne l'écart de chaque colonne avec l'une d'elles, par exemple « +12 000 (+1,8 %) ». Choisissez cette colonne dans **Écart avec** au-dessus du tableau. Elle part de la colonne par défaut
-- Tant que chaque colonne est vide, ou un montant réparti linéairement sur toute l'année, une phrase remplace le tableau, par exemple « Toutes les colonnes sont réparties linéairement sur l'année : le détail mensuel n'apprend rien de plus. » **Afficher le détail** ouvre le tableau et **Masquer le détail** le replie. Votre choix tient tant que vous restez sur la ligne
-- Le tableau reste ouvert pendant que la colonne active est saisie par mois ou qu'une colonne attend votre choix
+- Le tableau est replié par défaut. **Afficher le détail** l'ouvre et **Masquer le détail** le replie. Votre choix tient tant que vous restez sur la ligne
+- Replié, la section affiche son titre et **Afficher le détail**. Tant que chaque colonne est vide, ou un montant réparti linéairement sur toute l'année, une phrase en donne la raison, par exemple « Toutes les colonnes sont réparties linéairement sur l'année : le détail mensuel n'apprend rien de plus. »
+- Le tableau s'ouvre de lui-même pendant que la colonne active est saisie par mois ou qu'une colonne attend votre choix
 
 **Revenir aux valeurs d'ouverture** :
 

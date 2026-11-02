@@ -300,7 +300,16 @@ const modeTab = (name: 'Amount' | 'Quantity and price' | 'By month') => within(e
 const switchButton = () => screen.getByRole('button', { name: 'Switch' });
 
 /** A month of a column in the result table. */
-const tableCell = (measure: string, month: number) => screen.getByTestId(`cell-${measure}-${month}`);
+/** The monthly detail is folded by default: open it before reading or typing a month. */
+function openDetail() {
+  if (screen.queryByTestId('monthly-result')) return;
+  const show = screen.queryByRole('button', { name: 'Show the detail' });
+  if (show) fireEvent.click(show);
+}
+const tableCell = (measure: string, month: number) => {
+  openDetail();
+  return screen.getByTestId(`cell-${measure}-${month}`);
+};
 /** The field of a month, when the column is typed by month and active; null otherwise. */
 const monthInput = (measure: string, month: number) => tableCell(measure, month).querySelector('input');
 /** A month as the table shows it: the field's value, else the text. */
@@ -428,6 +437,7 @@ describe('BudgetTab columns and cards', () => {
     setupApi();
     const { container } = renderTab();
     await waitForAmounts();
+    openDetail();
 
     expect(COLUMNS.filter((c) => screen.queryByTestId(`budget-column-${c}`))).toEqual(['planned', 'committed', 'actual', 'expected_landing']);
     expect(within(card('actual')).getByText('Révision 9+3')).toBeInTheDocument();
@@ -1233,6 +1243,7 @@ describe('BudgetTab clear column', () => {
     setupApi();
     const { ref } = renderTab();
     await waitForAmounts();
+    openDetail();
     pick('committed');
 
     fireEvent.click(within(editor()).getByRole('button', { name: 'opex.budget.clearColumn' }));
@@ -1356,6 +1367,7 @@ describe('BudgetTab frozen columns', () => {
     setupApi({ frozen: ['forecast'] });
     const { ref } = renderTab();
     await waitForAmounts();
+    openDetail();
     await waitFor(() => expect(within(card('forecast')).getByTestId('LockOutlinedIcon')).toBeInTheDocument());
     expect(within(screen.getByTestId('budget-head-forecast')).getByTestId('LockOutlinedIcon')).toBeInTheDocument();
     expect(tableCell('forecast', 1)).not.toHaveAttribute('title');
@@ -3292,6 +3304,7 @@ describe('BudgetTab difference with a column', () => {
     setupApi();
     renderTab();
     await waitForAmounts();
+    openDetail();
     expect(screen.getByTestId('difference-row')).toHaveTextContent('Difference with Budget');
     expect(screen.getByTestId('difference-planned')).toHaveTextContent('—');
     expect(screen.getByTestId('difference-committed')).toHaveTextContent('-1 200 (-10%)');
@@ -3312,6 +3325,7 @@ describe('BudgetTab difference with a column', () => {
     setupApi({ monthValues: { forecast: '0' } });
     renderTab();
     await waitForAmounts();
+    openDetail();
     expect(screen.getByTestId('difference-row')).toHaveTextContent('Difference with Forecast');
     expect(screen.getByTestId('difference-planned')).toHaveTextContent(/^\+12 000$/);
   });
@@ -3347,12 +3361,14 @@ describe('BudgetTab folded result', () => {
     ['lines kept as a reference', record({ measure: 'committed', period_start: '2026-01-01', lines: [storedLine()], fte: '0.40' })],
     ['months typed by hand', record({ measure: 'committed', period_start: '2026-01-01', method: 'manual' })],
     ['amounts with no record', null],
-  ])('open as soon as a column has %s', async (_, committed) => {
+  ])('folded with no sentence when a column has %s; the detail opens on demand', async (_, committed) => {
     const others = COLUMNS.filter((c) => c !== 'committed').map((c) => wholeYearFlat(c));
     setupApi({ roundInputs: committed ? [...others, committed] : others });
     renderTab();
     await waitForAmounts();
     expect(screen.queryByTestId('result-folded')).toBeNull();
+    expect(screen.queryByTestId('monthly-result')).toBeNull();
+    showDetail();
     expect(screen.getByTestId('monthly-result')).toBeInTheDocument();
   });
 

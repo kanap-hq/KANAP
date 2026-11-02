@@ -542,6 +542,8 @@ function BudgetListPageView() {
     {
       colId: 'contract_name',
       headerName: t('opex.columns.contract'),
+      // Off the default view: the amounts stay in sight on a first visit (the column chooser brings it back).
+      defaultHidden: true,
       valueGetter: (p) => (p.data?.contract_hidden ? t('contracts.outsideYourAccess') : p.data?.latest_contract_name || ''),
       width: 200,
       cellRenderer: (params: any) => (
@@ -612,6 +614,7 @@ function BudgetListPageView() {
     {
       colId: 'allocation_label',
       headerName: t('opex.columns.allocation'),
+      defaultHidden: true,
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
@@ -715,6 +718,7 @@ function BudgetListPageView() {
     {
       colId: 'latest_task_text',
       headerName: t('opex.columns.task'),
+      defaultHidden: true,
       valueGetter: (p) => p.data?.latest_task?.title ?? '',
       tooltipValueGetter: (p) => (p.value ? String(p.value) : ''),
       flex: 1,

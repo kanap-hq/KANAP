@@ -94,15 +94,15 @@ The list (at **Budget management > Budget lines**) holds the OPEX and CAPEX line
 - **Product name**: The line's title (links to the **Overview** tab)
 - **Supplier**: The supplier name
 - **Paying company**: Which company pays for this line
-- **Contract**: The latest linked contract name (links to the Contract workspace)
 - **Account**: The GL account number and name
-- **Allocation**: The allocation method label for the current year (links to the **Allocations** tab)
 - **Budget Y** and **Expected landing Y**: The current-year amounts of the default column and of the last shown column (links to the **Budget** tab for this year). With the standard settings these are Budget and Expected landing. When the default column is also the last shown one, a single amount column appears. See [Budget columns](budget-operations.md#budget-columns)
 - **Required dimensions**: One column per enabled dimension that is required for either type, named after it. A new workspace has none
-- **Task**: The latest task title (links to the **Overview** tab, where the Tasks panel sits)
 
 **Additional columns** (hidden by default, toggle via the column chooser):
 
+- **Contract**: The latest linked contract name (links to the Contract workspace)
+- **Allocation**: The allocation method label for the current year (links to the **Allocations** tab)
+- **Task**: The latest task title (links to the **Overview** tab, where the Tasks panel sits)
 - **Amount columns**: Every shown budget column for Y-1, Y, Y+1 and Y+2, under the names your organisation chose. The header gives the column, the year relative to today and the calendar year, for example **Revision Y+1 (2027)**. Hidden columns are not offered
 - **FTE columns**: The FTE of every shown budget column for Y-1, Y, Y+1 and Y+2, under the names your organisation chose, right after the amount columns in the column chooser. The header gives the column and the calendar year, for example **Budget FTE (2026)**. A line's FTE is the sum of the FTE of its quantity and price lines in that column. See [FTE](#fte). The cell is empty when the column has no lines
 - **FTE declared**: **Yes** when the line declares FTE in at least one budget column of any year, otherwise empty. These are the lines the **Lines with FTE** filter of the reports keeps
@@ -366,8 +366,9 @@ On an empty column, a click on a tab switches at once. On a column with amounts,
 
 - Under the editor, **Monthly result** shows the year month by month for every shown column, in the line's currency, with a subtotal per quarter (**Q1** to **Q4**) and a **Total** row. The active column is highlighted
 - With two columns or more, a last row gives the difference of each column with one of them, for example "+12,000 (+1.8%)". Pick that column in **Difference with** above the table. It starts on the default column
-- While every column is empty, or an amount spread flat over the whole year, a sentence replaces the table, for example "All columns are spread flat over the whole year: the monthly detail adds nothing." **Show the detail** opens the table and **Hide the detail** folds it again. Your choice holds while you stay on the line
-- The table stays open while the active column is typed by month or a column waits for your choice
+- The table is folded by default. **Show the detail** opens it and **Hide the detail** folds it again. Your choice holds while you stay on the line
+- Folded, the section shows its title and **Show the detail**. While every column is empty, or an amount spread flat over the whole year, a sentence adds why, for example "All columns are spread flat over the whole year: the monthly detail adds nothing."
+- The table opens by itself while the active column is typed by month or a column waits for your choice
 
 **Back to the opening values**:
 

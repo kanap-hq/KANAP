@@ -94,15 +94,15 @@ Die Liste (unter **Budgetverwaltung > Budgetzeilen**) enthält die OPEX- und CAP
 - **Produktname**: Der Titel der Zeile (verlinkt zum Tab **Übersicht**)
 - **Lieferant**: Der Lieferantenname
 - **Zahlendes Unternehmen**: Welches Unternehmen diese Zeile bezahlt
-- **Vertrag**: Der neueste verknüpfte Vertragsname (verlinkt zum Vertrags-Arbeitsbereich)
 - **Konto**: Die Sachkonto-Nummer und -Bezeichnung
-- **Zuordnung**: Die Zuordnungsmethoden-Bezeichnung für das aktuelle Jahr (verlinkt zum Tab **Zuordnungen**)
 - **Budget J** und **Erwarteter Endwert J**: Die Beträge des aktuellen Jahres in der Standardspalte und in der letzten angezeigten Spalte (verlinkt zum Tab **Budget** für dieses Jahr). Mit den Standardeinstellungen sind das Budget und Erwarteter Endwert. Ist die Standardspalte zugleich die letzte angezeigte Spalte, erscheint nur eine Betragsspalte. Siehe [Budgetspalten](budget-operations.md#budgetspalten)
 - **Erforderliche Dimensionen**: Eine Spalte pro aktivierter Dimension, die für einen der beiden Typen erforderlich ist, nach ihr benannt. Ein neuer Arbeitsbereich hat keine
-- **Aufgabe**: Der neueste Aufgabentitel (verlinkt zum Tab **Übersicht**, in dem sich der Aufgabenbereich befindet)
 
 **Zusätzliche Spalten** (standardmäßig ausgeblendet, über die Spaltenauswahl umschaltbar):
 
+- **Vertrag**: Der neueste verknüpfte Vertragsname (verlinkt zum Vertrags-Arbeitsbereich)
+- **Zuordnung**: Die Zuordnungsmethoden-Bezeichnung für das aktuelle Jahr (verlinkt zum Tab **Zuordnungen**)
+- **Aufgabe**: Der neueste Aufgabentitel (verlinkt zum Tab **Übersicht**, in dem sich der Aufgabenbereich befindet)
 - **Betragsspalten**: Jede angezeigte Budgetspalte für J-1, J, J+1 und J+2, unter den Namen, die Ihre Organisation gewählt hat. Die Überschrift nennt die Spalte, das Jahr relativ zu heute und das Kalenderjahr, zum Beispiel **Revision J+1 (2027)**. Ausgeblendete Spalten werden nicht angeboten
 - **VZÄ-Spalten**: Die VZÄ jeder angezeigten Budgetspalte für J-1, J, J+1 und J+2, unter den Namen, die Ihre Organisation gewählt hat, in der Spaltenauswahl direkt nach den Betragsspalten. Die Überschrift nennt die Spalte und das Kalenderjahr, zum Beispiel **VZÄ Budget (2026)**. Die VZÄ einer Zeile sind die Summe der VZÄ ihrer Zeilen unter Menge und Preis in dieser Spalte. Siehe [VZÄ](#vza). Die Zelle ist leer, wenn die Spalte keine solchen Zeilen hat
 - **VZÄ gemeldet**: **Ja**, wenn die Zeile in mindestens einer Budgetspalte eines beliebigen Jahres VZÄ meldet, sonst leer. Das sind die Zeilen, die der Filter **Zeilen mit VZÄ** der Berichte behält
@@ -366,8 +366,9 @@ Bei einer leeren Spalte wechselt ein Klick auf einen Tab sofort. Bei einer Spalt
 
 - Unter dem Editor zeigt **Ergebnis pro Monat** das Jahr Monat für Monat für jede angezeigte Spalte, in der Währung der Zeile, mit einer Zwischensumme pro Quartal (**Q1** bis **Q4**) und einer Zeile **Gesamt**. Die aktive Spalte ist hervorgehoben
 - Ab zwei Spalten gibt eine letzte Zeile die Abweichung jeder Spalte zu einer von ihnen an, zum Beispiel „+12.000 (+1,8 %)“. Wählen Sie diese Spalte unter **Abweichung zu** über der Tabelle. Sie beginnt bei der Standardspalte
-- Solange jede Spalte leer oder ein gleichmäßig über das ganze Jahr verteilter Betrag ist, ersetzt ein Satz die Tabelle, zum Beispiel „Alle Spalten sind linear über das ganze Jahr verteilt: Die Monatswerte zeigen nichts Neues.“ **Details anzeigen** öffnet die Tabelle, **Details ausblenden** klappt sie wieder zu. Ihre Wahl gilt, solange Sie auf der Zeile bleiben
-- Die Tabelle bleibt offen, solange die aktive Spalte pro Monat erfasst wird oder eine Spalte auf Ihre Wahl wartet
+- Die Tabelle ist standardmäßig zugeklappt. **Details anzeigen** öffnet sie, **Details ausblenden** klappt sie wieder zu. Ihre Wahl gilt, solange Sie auf der Zeile bleiben
+- Zugeklappt zeigt der Abschnitt seinen Titel und **Details anzeigen**. Solange jede Spalte leer oder ein gleichmäßig über das ganze Jahr verteilter Betrag ist, nennt ein Satz den Grund, zum Beispiel „Alle Spalten sind linear über das ganze Jahr verteilt: Die Monatswerte zeigen nichts Neues.“
+- Die Tabelle öffnet sich von selbst, solange die aktive Spalte pro Monat erfasst wird oder eine Spalte auf Ihre Wahl wartet
 
 **Zurück zu den Werten beim Öffnen**:
 
