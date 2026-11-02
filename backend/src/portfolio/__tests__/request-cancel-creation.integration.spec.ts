@@ -11,6 +11,7 @@ import { ItemNumberService } from '../../common/item-number.service';
 import { closeMarkdownWorkers } from '../../common/markdown-worker';
 import { issueCreationToken } from '../../common/creation/creation-token';
 import {
+  auditedEdit,
   boundDocuments,
   deletionAuthors,
   inRolledBackTransaction,
@@ -30,7 +31,8 @@ import { PortfolioRequestsService } from '../portfolio-requests.service';
 // edited purpose and risks documents, attachments); `DELETE :id/creation` deletes the request for
 // its creator at the create level (member), through the request delete and its audit entry.
 // Another person's token, another request's, a missing or an expired one is refused with
-// `CREATION_CANCEL_EXPIRED`. (A converted request, the family's own refusal, cannot be a fresh one.)
+// `CREATION_CANCEL_EXPIRED`, and so is the cancel of a request another person wrote on (the creator's
+// own edits keep it open). (A converted request, the family's own refusal, cannot be a fresh one.)
 
 function controllerFor(runner: QueryRunner) {
   const manager = runner.manager;
@@ -99,6 +101,13 @@ async function testCreatorCancelsTheCreation() {
       { now: Date.now() - 25 * 60 * 60 * 1000 },
     );
     await refusedAsExpired(controller.cancelCreation(created.id, { token: expired }, asCreator), 'expired token');
+
+    // Another person wrote on the other request: its creator's cancel is over (preflight and cancel).
+    await auditedEdit(runner, 'portfolio_requests', other.id, otherId);
+    await refusedAsExpired(controller.creationChanges(other.id, other.creation_token, asCreator), 'another author, preflight');
+    await refusedAsExpired(controller.cancelCreation(other.id, { token: other.creation_token }, asCreator), 'another author');
+    // The creator's own edit keeps it open.
+    await auditedEdit(runner, 'portfolio_requests', created.id, creatorId);
 
     // The creator, a member without the delete level (admin), cancels it with its token.
     await controller.cancelCreation(created.id, { token: created.creation_token }, asCreator);

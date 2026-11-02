@@ -40,6 +40,7 @@ import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-ti
 import { buildRelationsAccess, hasLevel } from '../common/relations/relations-access';
 import { creationCancelExpired, issueCreationToken, verifyCreationToken } from '../common/creation/creation-token';
 import {
+  assertCreatorAloneSinceCreation,
   countChangesSinceCreation,
   countEditedManagedDocuments,
   withChildCount,
@@ -638,6 +639,7 @@ export class PortfolioRequestsController {
     const tenantId = req?.tenant?.id ?? '';
     const found = await manager.query('SELECT 1 FROM portfolio_requests WHERE id = $1 AND tenant_id = $2', [id, tenantId]);
     if (!found.length) throw new NotFoundException('Request not found');
+    await assertCreatorAloneSinceCreation(manager, tenantId, 'portfolio_requests', id, req?.user?.sub ?? '');
     let changes = await countChangesSinceCreation(manager, tenantId, 'portfolio_requests', id);
     changes = withChildCount(changes, 'document', await countEditedManagedDocuments(manager, tenantId, 'requests', id));
     const [{ total }] = await manager.query(
@@ -649,14 +651,18 @@ export class PortfolioRequestsController {
 
   /**
    * "Cancel creation": the creator deletes the request they just created, with its token, even
-   * without the delete right (admin). Same delete as `DELETE :id` (refusals, cascades, audit entry).
+   * without the delete right (admin), while nobody else has written on it (403
+   * `CREATION_CANCEL_EXPIRED` otherwise, checked under its lock). Same delete as `DELETE :id`
+   * (refusals, cascades, audit entry).
    */
   @UseGuards(PermissionGuard)
   @RequireLevel('portfolio_requests', 'member')
   @Delete(':id/creation')
   async cancelCreation(@Param('id') id: string, @Body() body: { token?: string }, @Req() req: any): Promise<void> {
     this.assertCreationToken(id, body?.token, req);
-    await this.svc.delete(id, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+    const manager = req?.queryRunner?.manager;
+    await assertCreatorAloneSinceCreation(manager, req?.tenant?.id ?? '', 'portfolio_requests', id, req?.user?.sub ?? '', { lock: true });
+    await this.svc.delete(id, req.user?.sub ?? null, { manager });
   }
 
   @UseGuards(PermissionGuard)

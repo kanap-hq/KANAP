@@ -57,6 +57,7 @@ import {
 import { incidentViewerFromContext } from './incident-visibility';
 import { creationCancelExpired, issueCreationToken, verifyCreationToken } from '../common/creation/creation-token';
 import {
+  assertCreatorAloneSinceCreation,
   countChangesSinceCreation,
   countEditedManagedDocuments,
   withChildCount,
@@ -809,6 +810,7 @@ export class IncidentsController {
       [ctx.tenantId, id],
     );
     if (!counts?.found) throw new NotFoundException('Incident not found.');
+    await assertCreatorAloneSinceCreation(manager, ctx.tenantId, 'incidents', id, ctx.userId);
     let changes = await countChangesSinceCreation(manager, ctx.tenantId, 'incidents', id);
     changes = withChildCount(changes, 'document', await countEditedManagedDocuments(manager, ctx.tenantId, 'incidents', id));
     changes = withChildCount(changes, 'attachment', counts.attachments);
@@ -818,7 +820,9 @@ export class IncidentsController {
   /**
    * "Cancel creation": the creator deletes the incident they just created, with its token, at the
    * create level instead of the delete right (admin). Same delete as `DELETE :id`: a closed or
-   * cancelled incident, or one holding regulatory reporting data, is refused with its 409.
+   * cancelled incident, or one holding regulatory reporting data, is refused with its 409. Once
+   * someone else has written on it, the cancel is over (403 `CREATION_CANCEL_EXPIRED`, checked
+   * under its lock).
    */
   @UseGuards(PermissionGuard)
   @RequireLevel('incidents', 'contributor')
@@ -829,7 +833,9 @@ export class IncidentsController {
     @Tenant() ctx: TenantRequest,
   ): Promise<void> {
     this.assertCreationToken(id, body?.token, ctx);
-    await this.deleteSvc.delete(id, { manager: ctx.manager as EntityManager, userId: ctx.userId || null });
+    const manager = ctx.manager as EntityManager;
+    await assertCreatorAloneSinceCreation(manager, ctx.tenantId, 'incidents', id, ctx.userId, { lock: true });
+    await this.deleteSvc.delete(id, { manager, userId: ctx.userId || null });
   }
 
   @UseGuards(PermissionGuard)

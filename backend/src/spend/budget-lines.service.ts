@@ -21,7 +21,14 @@ import { CapexItemsService, SpendItemsService } from './spend-items.service';
 import { hiddenCategoryLineCounts } from '../data-access/hidden-links';
 import { withCreatorCancelAccess } from '../data-access/creator-cancel-access';
 import { countChangesSinceCreation, withChildCount, type CreationChanges } from '../common/creation/creation-changes';
-import { budgetLineIncomplete, creationBody, missingCreationFields } from './budget-line-creation';
+import { assertCreatorAloneSinceCreation } from '../common/creation/creation-changes';
+import { creationCancelExpired } from '../common/creation/creation-token';
+import {
+  budgetLineIncomplete,
+  creationBody,
+  hasSuccessorLine,
+  missingCreationFields,
+} from './budget-line-creation';
 import { lockBudgetLine } from './budget-locks';
 
 type ReadOptions = { manager: EntityManager; access?: BudgetListAccess };
@@ -87,14 +94,20 @@ export class BudgetLinesService {
     return this.get(created.id, opts);
   }
 
-  /** What was written on the line and its children since its creation, before "Cancel" (nothing is written). */
-  async creationChanges(id: string, opts: { manager: EntityManager }): Promise<{ changes: CreationChanges }> {
+  /**
+   * What was written on the line and its children since its creation, before "Cancel" (nothing is
+   * written); 403 `CREATION_CANCEL_EXPIRED` when "Cancel" would be refused: another person wrote on
+   * it, or a line continues it.
+   */
+  async creationChanges(id: string, userId: string, opts: { manager: EntityManager }): Promise<{ changes: CreationChanges }> {
     const tenantId = await summaryTenantId(opts.manager);
     const found = await opts.manager.query(
       `SELECT 1 FROM spend_items WHERE tenant_id = $1 AND id = $2 AND nature IN ('opex', 'capex')`,
       [tenantId, id],
     );
     if (!found.length) throw new NotFoundException('Budget line not found');
+    await assertCreatorAloneSinceCreation(opts.manager, tenantId, 'spend_items', id, userId);
+    if (await hasSuccessorLine(opts.manager, tenantId, id)) throw creationCancelExpired();
     const changes = await countChangesSinceCreation(opts.manager, tenantId, 'spend_items', id);
     const [{ total }] = await opts.manager.query(
       'SELECT count(*)::int AS total FROM spend_attachments WHERE tenant_id = $1 AND spend_item_id = $2',
@@ -116,8 +129,9 @@ export class BudgetLinesService {
    * The screen's "Cancel" of a line being created: its creator deletes it (the caller checked the
    * token), through the delete of its nature (refusals such as `BUDGET_LINE_FROZEN`, children,
    * audit entry). The line is locked FOR UPDATE under the person's access first: a line hidden from
-   * them is 404, one they may no longer modify 403. A limited person's delete then runs in
-   * `withCreatorCancelAccess`, for this line only.
+   * them is 404, one they may no longer modify 403. Under that lock, a line another person wrote on,
+   * or that a line continues, is refused with `CREATION_CANCEL_EXPIRED`. A limited person's delete
+   * then runs in `withCreatorCancelAccess`, for this line only.
    */
   async cancelCreation(id: string, userId: string, opts: { manager: EntityManager }): Promise<void> {
     const tenantId = await summaryTenantId(opts.manager);
@@ -125,6 +139,8 @@ export class BudgetLinesService {
     if (!(await lockBudgetLine(opts.manager, line.nature, tenantId, line.id, 'update'))) {
       throw new NotFoundException('Budget line not found');
     }
+    await assertCreatorAloneSinceCreation(opts.manager, tenantId, 'spend_items', line.id, userId);
+    if (await hasSuccessorLine(opts.manager, tenantId, line.id)) throw creationCancelExpired();
     const deleter = line.nature === 'capex' ? this.capexDelete : this.opexDelete;
     await withCreatorCancelAccess(opts.manager, userId, (manager) => deleter.delete(line.id, { manager, userId }));
   }

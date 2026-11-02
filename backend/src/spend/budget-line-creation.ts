@@ -4,6 +4,7 @@ import { ANALYTICS_LINK_TABLES, loadAnalyticsAxes } from '../analytics/analytics
 import { dimensionPhrase, missingRequiredDimensions } from './item-analytics.util';
 import { isLimitedTransaction } from '../data-access/line-write-checks';
 import type { BudgetNature } from './budget-nature';
+import { readSuccessor } from './budget-line-lineage';
 
 /**
  * A budget line created at its title on the screen (lot 1c of the creation frame):
@@ -16,11 +17,24 @@ import type { BudgetNature } from './budget-nature';
  *   (`missingCreationFields`); a line lacking any of it is refused with `BUDGET_LINE_INCOMPLETE` and
  *   the fields by stable key, which the screen names, marks and focuses.
  * - The creation token of `common/creation` opens the preflight and "Cancel" (`GET` and
- *   `DELETE :id/creation`) for the creator, on that line only.
+ *   `DELETE :id/creation`) for the creator, on that line only, while nobody else has written on it
+ *   and no line continues it (403 `CREATION_CANCEL_EXPIRED` otherwise).
  */
 
 /** The family of the creation token of a budget line. */
 export const BUDGET_LINE_CREATION_FAMILY = 'budget-lines';
+
+/**
+ * Whether another line continues this one (`spend_items.predecessor_id`, a type change): "Cancel"
+ * stops then, as its delete would unlink it. A successor the person cannot read counts too
+ * (`data_access_reference`, which names it without reading it).
+ */
+export async function hasSuccessorLine(manager: EntityManager, tenantId: string, lineId: string): Promise<boolean> {
+  if (await readSuccessor(manager, tenantId, lineId)) return true;
+  if (!(await isLimitedTransaction(manager))) return false;
+  const [row]: Array<{ reference: string | null }> = await manager.query(`SELECT data_access_reference('line_successor', $1) AS reference`, [lineId]);
+  return !!row?.reference;
+}
 
 /** The fields `POST /budget-lines/creation` writes; anything else in the body is dropped. */
 const CREATION_FIELDS = ['product_name', 'currency', 'effective_start', 'paying_company_id', 'cost_center_id'] as const;

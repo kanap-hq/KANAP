@@ -26,7 +26,8 @@ import { inRolledBackTransaction, runSpecs, seedTenant, setTenant } from './roun
 //   lacks its company, its account or a required dimension, then succeeds;
 // - `GET :id/creation` counts what was written since; `DELETE :id/creation` deletes the line for its
 //   creator at the member level; another person, another line's token, none or an expired one is
-//   refused (`CREATION_CANCEL_EXPIRED`);
+//   refused (`CREATION_CANCEL_EXPIRED`), and so is a line another person wrote on or that a line
+//   continues; the creator's own edits keep the cancel open;
 // - a person whose data access is limited: a creation without a place is refused, with one it is
 //   allowed, and the cancel deletes the line (outside the limited role for that delete only), the
 //   limited role and mode back afterwards.
@@ -184,7 +185,20 @@ async function testTitleCreationCompleteAndCancel() {
     );
     await refusedAsExpired(controller.cancelCreation(created.id, { token: expired }, asCreator), 'expired token');
 
-    // The creator, a budget member (no admin), cancels it.
+    // Another person wrote on the other line: its creator's cancel is over (preflight and cancel).
+    await svc.update(other.id, { notes: 'Seen by a colleague' }, s.otherId, { manager: runner.manager });
+    await refusedAsExpired(controller.creationChanges(other.id, other.creation_token, asCreator), 'another author, preflight');
+    await refusedAsExpired(controller.cancelCreation(other.id, { token: other.creation_token }, asCreator), 'another author');
+
+    // A line that another line continues: its delete would unlink it, so the cancel is over too.
+    const continued: any = await controller.createAtTitle(titleBody('Continued'), asCreator);
+    const successor: any = await controller.createAtTitle(titleBody('Successor'), asCreator);
+    await runner.query(`UPDATE spend_items SET predecessor_id = $3 WHERE tenant_id = $1 AND id = $2`, [s.tenantId, successor.id, continued.id]);
+    await refusedAsExpired(controller.creationChanges(continued.id, continued.creation_token, asCreator), 'successor, preflight');
+    await refusedAsExpired(controller.cancelCreation(continued.id, { token: continued.creation_token }, asCreator), 'successor');
+    assert.equal(await lineCount(runner, s, continued.id), 1, 'the continued line stays');
+
+    // The creator, a budget member (no admin), cancels it: their own edits keep the cancel open.
     await controller.cancelCreation(created.id, { token: created.creation_token }, asCreator);
     assert.equal(await lineCount(runner, s, created.id), 0, 'the line is gone');
     assert.deepEqual(await deletionAuthors(runner, s.tenantId, 'spend_items', created.id), [s.creatorId], 'the delete is audited under its creator');
@@ -230,6 +244,7 @@ async function testLimitedPerson() {
     // Another person's token for this line is refused before anything.
     const foreign = issueCreationToken({ tenantId: s.tenantId, family: 'budget-lines', recordId: kept.id, userId: s.creatorId });
     await refusedAsExpired(controller.cancelCreation(kept.id, { token: foreign }, asLimited), 'another person\'s token');
+
   });
 }
 

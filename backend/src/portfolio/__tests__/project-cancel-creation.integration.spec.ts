@@ -12,6 +12,7 @@ import { ItemNumberService } from '../../common/item-number.service';
 import { closeMarkdownWorkers } from '../../common/markdown-worker';
 import { issueCreationToken } from '../../common/creation/creation-token';
 import {
+  auditedEdit,
   boundDocuments,
   deletionAuthors,
   inRolledBackTransaction,
@@ -130,6 +131,13 @@ async function testCreatorCancelsTheCreation() {
       { now: Date.now() - 25 * 60 * 60 * 1000 },
     );
     await refusedAsExpired(controller.cancelCreation(created.id, { token: expired }, asCreator), 'expired token');
+
+    // Another person wrote on the other project: its creator's cancel is over (preflight and cancel).
+    await auditedEdit(runner, 'portfolio_projects', other.id, otherId);
+    await refusedAsExpired(controller.creationChanges(other.id, other.creation_token, asCreator), 'another author, preflight');
+    await refusedAsExpired(controller.cancelCreation(other.id, { token: other.creation_token }, asCreator), 'another author');
+    // The creator's own edit keeps it open.
+    await auditedEdit(runner, 'portfolio_projects', created.id, creatorId);
 
     await controller.cancelCreation(created.id, { token: created.creation_token }, asCreator);
     const left = (table: string, column = 'project_id') =>

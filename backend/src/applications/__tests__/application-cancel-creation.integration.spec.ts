@@ -139,6 +139,12 @@ async function testCreatorCancelsTheCreation() {
     await refusedAsExpired(controller.cancelCreation(created.id, { token: other.creation_token }, ctx(creatorId) as any), 'other application');
     await refusedAsExpired(controller.cancelCreation(created.id, {}, ctx(creatorId) as any), 'no token');
 
+    // Another person edited the other application: its creator's cancel is over (preflight and
+    // cancel). The creator's own edit above keeps theirs open.
+    await controller.update(other.id, { version: '3.0' } as any, ctx(otherId) as any);
+    await refusedAsExpired(controller.creationChanges(other.id, other.creation_token, ctx(creatorId) as any), 'another author, preflight');
+    await refusedAsExpired(controller.cancelCreation(other.id, { token: other.creation_token }, ctx(creatorId) as any), 'another author');
+
     // The creator, a member without the admin level, cancels it with its token.
     await controller.cancelCreation(created.id, { token: created.creation_token }, ctx(creatorId) as any);
     const [{ n }] = await runner.query(`SELECT count(*)::int AS n FROM applications WHERE tenant_id = $1 AND id = $2`, [tenantId, created.id]);

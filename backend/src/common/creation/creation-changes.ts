@@ -3,6 +3,7 @@ import { recordHistoryChildKind, recordHistoryEntry } from '../../audit/record-h
 import { auditPageQuery } from '../../audit/record-history/query';
 import { historyFields } from '../../audit/record-history/fields';
 import { deepEqual, isPlainObject } from '../../audit/record-history/values';
+import { creationCancelExpired } from './creation-token';
 
 /**
  * What was written on a record and its children since its creation, read before "Cancel creation"
@@ -118,4 +119,66 @@ export function withChildCount(changes: CreationChanges, kind: string, total: nu
   if (total > 0) children[kind] = total;
   else delete children[kind];
   return { fields: changes.fields, children };
+}
+
+/**
+ * How many people other than `userId` wrote on the record or its children since its creation: the
+ * audit rows its history reads (as `countChangesSinceCreation`, every row, in one query), from its
+ * `create` row on, by a person (`user_id` set) who is not `userId`. A system write (no person) is
+ * not counted.
+ */
+export async function countOtherAuthorsSinceCreation(
+  manager: EntityManager,
+  tenantId: string,
+  table: string,
+  recordId: string,
+  userId: string,
+): Promise<number> {
+  const entry = recordHistoryEntry(table);
+  if (!entry) throw new Error(`No record history entry for ${table}`);
+  const id = recordId.toLowerCase();
+  const query = auditPageQuery(entry, tenantId, id, null, MAX_ROWS);
+  // `$6` is the limit of each branch and of the page: NULL reads every row.
+  const params = [...query.params];
+  params[5] = null;
+  const ownLabels = params.push(entry.auditLabels);
+  const creator = params.push(String(userId ?? '').toLowerCase());
+  const [row]: Array<{ others: number }> = await manager.query(
+    `WITH h AS (${query.sql})
+     SELECT count(DISTINCT h.user_id)::int AS others
+       FROM h
+      WHERE h.user_id IS NOT NULL
+        AND lower(h.user_id::text) <> $${creator}::text
+        AND h.created_at >= coalesce(
+          (SELECT max(c.created_at) FROM h c
+            WHERE c.action = 'create' AND c.table_name = ANY($${ownLabels}::text[]) AND c.record_id = $3::uuid),
+          '-infinity'::timestamptz)`,
+    params,
+  );
+  return row?.others ?? 0;
+}
+
+/**
+ * "Cancel" of a record being created stops once another person has worked on it: 403
+ * `CREATION_CANCEL_EXPIRED` when its history since its creation holds a write by anyone but
+ * `userId` (the token's person). The cancel routes call it with the record locked FOR UPDATE
+ * (`lock`: here, on the record's own table), so no write of another person lands between this read
+ * and the delete; their preflight calls it without the lock.
+ */
+export async function assertCreatorAloneSinceCreation(
+  manager: EntityManager,
+  tenantId: string,
+  table: string,
+  recordId: string,
+  userId: string,
+  options: { lock?: boolean } = {},
+): Promise<void> {
+  if (options.lock) {
+    const entry = recordHistoryEntry(table);
+    if (!entry) throw new Error(`No record history entry for ${table}`);
+    // A record not found is left to the delete, which reports it as its family does.
+    const locked = await manager.query(`SELECT 1 FROM ${entry.table} WHERE tenant_id = $1 AND id = $2 FOR UPDATE`, [tenantId, recordId]);
+    if (!locked.length) return;
+  }
+  if ((await countOtherAuthorsSinceCreation(manager, tenantId, table, recordId, userId)) > 0) throw creationCancelExpired();
 }

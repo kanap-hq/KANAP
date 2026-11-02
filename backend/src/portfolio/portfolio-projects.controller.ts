@@ -44,6 +44,7 @@ import { linkedReadsFromContext } from '../common/relations/linked-reads';
 import { assertApplicationsInScope, idsInScope, PortfolioLinkedReads } from './portfolio-linked-reads';
 import { creationCancelExpired, issueCreationToken, verifyCreationToken } from '../common/creation/creation-token';
 import {
+  assertCreatorAloneSinceCreation,
   countChangesSinceCreation,
   countEditedManagedDocuments,
   withChildCount,
@@ -629,6 +630,7 @@ export class PortfolioProjectsController {
       [ctx.tenantId, id],
     );
     if (!counts?.found) throw new NotFoundException('Project not found');
+    await assertCreatorAloneSinceCreation(manager, ctx.tenantId, 'portfolio_projects', id, ctx.userId);
     let changes = await countChangesSinceCreation(manager, ctx.tenantId, 'portfolio_projects', id);
     changes = withChildCount(changes, 'document', await countEditedManagedDocuments(manager, ctx.tenantId, 'projects', id));
     changes = withChildCount(changes, 'attachment', counts.attachments);
@@ -637,7 +639,9 @@ export class PortfolioProjectsController {
 
   /**
    * "Cancel creation": the creator deletes the project they just created, with its token. Projects
-   * have no other delete: this route is the only one (`PortfolioProjectCreationService`).
+   * have no other delete: this route is the only one (`PortfolioProjectCreationService`). Once
+   * someone else has written on it, the cancel is over (403 `CREATION_CANCEL_EXPIRED`, checked
+   * under its lock).
    */
   @UseGuards(PermissionGuard)
   @RequireLevel('portfolio_projects', 'member')
@@ -648,7 +652,9 @@ export class PortfolioProjectsController {
     @Tenant() ctx: TenantRequest,
   ): Promise<void> {
     this.assertCreationToken(id, body?.token, ctx);
-    await this.creationSvc.deleteCreated(id, ctx.tenantId, ctx.userId || null, this.requireManager(ctx));
+    const manager = this.requireManager(ctx);
+    await assertCreatorAloneSinceCreation(manager, ctx.tenantId, 'portfolio_projects', id, ctx.userId, { lock: true });
+    await this.creationSvc.deleteCreated(id, ctx.tenantId, ctx.userId || null, manager);
   }
 
   @UseGuards(PermissionGuard)

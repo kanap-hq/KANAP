@@ -287,7 +287,7 @@ export class BudgetLinesController {
   @Get(':id/creation')
   async creationChanges(@Param('id') id: string, @Query('token') token: string, @Tenant() ctx: TenantRequest) {
     this.assertCreationToken(id, token, ctx);
-    return this.svc.creationChanges(id, { manager: ctx.manager as EntityManager });
+    return this.svc.creationChanges(id, ctx.userId || '', { manager: ctx.manager as EntityManager });
   }
 
   /** "Create" of a line being created: 400 `BUDGET_LINE_INCOMPLETE` (`params.fields`) while it lacks a field it needs. */
@@ -310,7 +310,7 @@ export class BudgetLinesController {
   @Delete(':id/creation')
   async cancelCreation(@Param('id') id: string, @Body() body: { token?: string }, @Tenant() ctx: TenantRequest): Promise<void> {
     this.assertCreationToken(id, body?.token, ctx);
-    await this.svc.cancelCreation(id, ctx.userId, { manager: ctx.manager as EntityManager });
+    await this.svc.cancelCreation(id, ctx.userId || '', { manager: ctx.manager as EntityManager });
   }
 
   @UseGuards(PermissionGuard)
