@@ -3113,6 +3113,7 @@
       "contactsAfterCreate": "Los contactos están disponibles después de crear la ubicación.",
       "relationsAfterCreate": "Las relaciones están disponibles después de crear la ubicación.",
       "untitled": "Ubicación sin nombre",
+      "notFound": "Ubicación no encontrada.",
       "previous": "Ubicación anterior",
       "next": "Ubicación siguiente",
       "namePlaceholder": "p. ej., Centro de operaciones París",
