@@ -164,7 +164,7 @@ Click **Unassigned work** to expand details.
 ### Drill-down
 Click a contributor row to open a project breakdown:
 - Each row shows remaining effort, allocation %, and your days.
-- Project names are clickable and open the project's **Progress** tab.
+- Project names are clickable and open the project's **Effort** tab.
 
 ### Exports
 - **Export table**: CSV or Excel. The file holds the table of the grouping on screen, contributors or teams, with the capacity mode, the teams and the statuses on screen. Days carry their decimals. The Excel file adds a **Parameters** sheet. See [Reporting](reports.md#export-options)

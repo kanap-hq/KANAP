@@ -60,7 +60,7 @@ Der Roadmap-Generator berechnet vorgeschlagene Projekttermine aus dem ausgewähl
 
 Nach der Generierung zeigt der Reiter Zeitplan die vorgeschlagenen Projekttermine.
 
-- Projekttitel sind klickbar und öffnen den Reiter **Fortschritt** des Projekts.
+- Projekttitel sind klickbar und öffnen den Reiter **Aufwand** des Projekts.
 - Kontrollkästchen definieren den Szenarioumfang.
 - Ein Filter **Kategorie (Vorschau)** ermöglicht es, die Roadmap-Gantt-Anzeige zu filtern, ohne den generierten Zeitplan selbst zu ändern.
 - Das Abwählen eines Projekts generiert das Szenario sofort neu:

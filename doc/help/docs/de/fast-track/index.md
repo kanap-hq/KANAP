@@ -155,7 +155,7 @@ Siehe [Anfragen-Referenz](../portfolio-requests.md) für alle Statusübergänge.
 
 Ihr neues Projekt erbt den Anfragenkontext, muss aber noch für die Umsetzung eingerichtet werden.
 
-Gehen Sie zu **Portfolio > Projekte** und öffnen Sie Ihr neu erstelltes Projekt. Der Projekt-Arbeitsbereich hat sieben Tabs (**Zusammenfassung**, **Aktivität**, **Zeitplan**, **Fortschritt**, **Aufgaben**, **Bewertung** und **Wissensdatenbank**) mit einer dauerhaft sichtbaren **Projekteigenschaften**-Seitenleiste für Kernfelder, Team und Beziehungen.
+Gehen Sie zu **Portfolio > Projekte** und öffnen Sie Ihr neu erstelltes Projekt. Der Projekt-Arbeitsbereich hat sieben Tabs (**Zusammenfassung**, **Aktivität**, **Zeitplan**, **Aufwand**, **Aufgaben**, **Bewertung** und **Wissensdatenbank**) mit einer dauerhaft sichtbaren **Projekteigenschaften**-Seitenleiste für Kernfelder, Team und Beziehungen.
 
 ### Seitenleiste: Ihre Personen und Kernstruktur zuweisen
 
@@ -185,9 +185,9 @@ Die gleiche Seitenleiste hält auch **Kerneigenschaften** und **Beziehungen** si
 
 **Zusammenfassung** ist das Projekt-Cockpit. Es zeigt den aktuellen Status, das Lieferfenster, den Aufwandsverbrauch, die Teamabdeckung und die neueste Aktivität in einem Durchgang. Der **Zweck**-Editor ist auch hier. Wenn Ihr Projektbrief bereits als Word-Dokument existiert, verwenden Sie die **Importieren**-Schaltfläche, um die `.docx` direkt einzulesen.
 
-### Fortschritt-Tab: Aufwand und Zuordnungen validieren
+### Aufwand-Tab: Aufwand und Zuordnungen validieren
 
-Verwenden Sie **Fortschritt**, um den Aufwand zu bestätigen, der die Lieferplanung steuert:
+Verwenden Sie **Aufwand**, um den Aufwand zu bestätigen, der die Lieferplanung steuert:
 
 - **IT-Aufwand (PT)**: Gesamtpersonentage erwartet von IT-Mitwirkenden
 - **Fachbereichs-Aufwand (PT)**: Gesamtpersonentage erwartet von Fachbereichs-Mitwirkenden
@@ -211,7 +211,7 @@ Jetzt beginnt die eigentliche Arbeit. Während das Projekt voranschreitet, halte
 
 ### Fortschritt aktualisieren
 
-Verwenden Sie den **Umsetzungsfortschritt**-Schieberegler auf dem Fortschritt-Tab, um anzuzeigen, wie weit das Projekt ist. Dies ist ein einfacher Prozentsatz (0 bis 100 %), der in Dashboards und Berichte einfließt.
+Verwenden Sie den **Fortschritt**-Schieberegler auf dem Aufwand-Tab, um anzuzeigen, wie weit das Projekt ist. Dies ist ein einfacher Prozentsatz (0 bis 100 %), der in Dashboards und Berichte einfließt.
 
 Bewegen Sie das Projekt durch die Status, während die Arbeit voranschreitet. In der Praxis bewegen sich die meisten Projekte von **Warteliste** oder **Geplant** in die aktive Umsetzung:
 
@@ -224,7 +224,7 @@ Bewegen Sie das Projekt durch die Status, während die Arbeit voranschreitet. In
 
 Es gibt zwei Stellen zur Zeiterfassung:
 
-1. **Fortschritt-Tab**: Overhead-Zeit auf Projektebene erfassen (Besprechungen, Koordination, Management)
+1. **Aufwand-Tab**: Overhead-Zeit auf Projektebene erfassen (Besprechungen, Koordination, Management)
 2. **Aufgaben**: Aufgabenspezifische Zeit gegen einzelne Arbeitspakete erfassen
 
 Warum das wichtig ist:
@@ -335,7 +335,7 @@ Siehe [Berichte-Referenz](../portfolio-reporting.md).
 | Word-Dokument importieren | Anfrage/Projekt/Aufgabe öffnen > Importieren-Schaltfläche auf Zweck oder Beschreibung |
 | Die Projekt-Pipeline sehen | Portfolio > Planung |
 | Team-Kapazität prüfen | Portfolio > Planung > Kapazitätsansicht, oder Portfolio > Berichte > Kapazitäts-Heatmap |
-| Zeit für ein Projekt erfassen | Projekt öffnen > Fortschritt-Tab oder Aufgaben |
+| Zeit für ein Projekt erfassen | Projekt öffnen > Aufwand-Tab oder Aufgaben |
 | Eine Roadmap generieren | Portfolio > Planung > Roadmap-Generator |
 | Berichte anzeigen | Portfolio > Berichte |
 | Bewertungsgewichte konfigurieren | Portfolio > Einstellungen > Bewertungskriterien |

@@ -167,7 +167,7 @@ Consultez la [référence Demandes](../portfolio-requests.md) pour toutes les tr
 
 Votre nouveau projet hérite du contexte de la demande, mais il a encore besoin d'une configuration d'exécution.
 
-Allez dans **Portefeuille > Projets** et ouvrez votre projet nouvellement créé. L'espace de travail du projet comporte sept onglets (**Résumé**, **Activité**, **Chronologie**, **Avancement**, **Tâches**, **Évaluation** et **Base de connaissances**), avec une barre latérale persistante **Propriétés du projet** pour les champs principaux, l'équipe et les relations.
+Allez dans **Portefeuille > Projets** et ouvrez votre projet nouvellement créé. L'espace de travail du projet comporte sept onglets (**Résumé**, **Activité**, **Chronologie**, **Charge**, **Tâches**, **Évaluation** et **Base de connaissances**), avec une barre latérale persistante **Propriétés du projet** pour les champs principaux, l'équipe et les relations.
 
 ### Barre latérale : Assignez vos personnes et la structure principale
 
@@ -199,11 +199,11 @@ La même barre latérale garde aussi les **Propriétés principales** et les **R
 
 Le **Résumé** est le tableau de bord du projet. Il affiche le statut actuel, la fenêtre de livraison, la consommation de charge, la couverture de l'équipe et la dernière activité en une seule passe. L'éditeur d'**Objet** est ici aussi : si votre brief projet existe déjà en tant que document Word, utilisez le bouton **Import** pour importer le `.docx` directement.
 
-### Onglet Avancement : Validez la charge et les ventilations
+### Onglet Charge : Validez la charge et les ventilations
 
-<!-- screenshot: Onglet Avancement montrant les champs Charge IT et Charge Métier -->
+<!-- screenshot: Onglet Charge montrant les champs Charge IT et Charge Métier -->
 
-Utilisez l'**Avancement** pour confirmer la charge qui pilotera la planification de livraison :
+Utilisez la **Charge** pour confirmer la charge qui pilotera la planification de livraison :
 
 - **Charge IT (JH)** : Total de jours-homme attendus des contributeurs IT
 - **Charge Métier (JH)** : Total de jours-homme attendus des contributeurs métier
@@ -229,9 +229,9 @@ Maintenant le vrai travail commence. Au fur et à mesure que le projet avance, g
 
 ### Mettez à jour l'avancement
 
-<!-- screenshot: Curseur Avancement de l'exécution -->
+<!-- screenshot: Curseur Progression -->
 
-Utilisez le curseur **Avancement de l'exécution** dans l'onglet Avancement pour refléter la progression du projet. C'est un simple pourcentage (0-100 %) qui alimente les tableaux de bord et les rapports.
+Utilisez le curseur **Progression** dans l'onglet Charge pour refléter la progression du projet. C'est un simple pourcentage (0-100 %) qui alimente les tableaux de bord et les rapports.
 
 Faites évoluer le projet à travers les statuts au fur et à mesure que le travail progresse. En pratique, la plupart des projets passent de **Liste d'attente** ou **Planifié** vers l'exécution active :
 
@@ -244,7 +244,7 @@ Faites évoluer le projet à travers les statuts au fur et à mesure que le trav
 
 Il y a deux endroits pour saisir du temps :
 
-1. **Onglet Avancement** : Saisissez le temps d'overhead projet (réunions, coordination, management)
+1. **Onglet Charge** : Saisissez le temps d'overhead projet (réunions, coordination, management)
 2. **Tâches** : Saisissez le temps spécifique aux tâches contre des éléments de travail individuels
 
 <!-- screenshot: Boîte de dialogue de saisie de temps -->
@@ -363,7 +363,7 @@ Voir la [référence Rapports](../portfolio-reporting.md).
 | Importer un document Word | Ouvrir demande/projet/tâche > bouton Import sur Objet ou Description |
 | Voir le pipeline de projets | Portefeuille > Planification |
 | Vérifier la capacité de l'équipe | Portefeuille > Planification > Vue capacité, ou Portefeuille > Rapports > Planning de capacité |
-| Saisir du temps sur un projet | Ouvrir le projet > onglet Avancement ou Tâches |
+| Saisir du temps sur un projet | Ouvrir le projet > onglet Charge ou Tâches |
 | Générer une roadmap | Portefeuille > Planification > Générateur de roadmap |
 | Consulter les rapports | Portefeuille > Rapports |
 | Configurer les pondérations d'évaluation | Portefeuille > Paramètres > Critères d'évaluation |
