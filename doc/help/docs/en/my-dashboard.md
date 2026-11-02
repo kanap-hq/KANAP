@@ -62,6 +62,8 @@ Once a path is chosen, the **Your first five steps** tile comes first on the hom
 
 When the five steps are done, the tile offers the two other paths. It also offers **Restart this path**, which undoes the five steps of this path. The close button (**×**) hides the tile. To show it again, use **Show the first steps** in **About KANAP**.
 
+During the trial, the tile also offers **Book a discovery call**: a 30-minute video call about your situation and your questions, booked on the page that opens at a time that suits you. The same link follows the days left in your trial in **About KANAP**.
+
 | Path | With the example | With your own data |
 |---|---|---|
 | IT budget | The overview, A budget line, A report, A question for Plaid, Your data | Your company, Your budget lines, A linked contract, Your first report, A colleague |

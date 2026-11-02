@@ -62,6 +62,8 @@ Une fois le parcours choisi, la tuile **Vos cinq premiers pas** vient en premier
 
 Quand les cinq étapes sont faites, la tuile propose les deux autres parcours. Elle propose aussi **Recommencer ce parcours**, qui défait les cinq étapes de ce parcours. Le bouton de fermeture (**×**) masque la tuile. Pour l'afficher de nouveau, utilisez **Afficher les premiers pas** dans **À propos de KANAP**.
 
+Pendant l'essai, la tuile propose aussi **Planifier un appel découverte** : un appel vidéo de 30 minutes sur votre situation et vos questions, réservé sur la page qui s'ouvre au moment qui vous convient. Le même lien suit les jours d'essai restants dans **À propos de KANAP**.
+
 | Parcours | Avec l'exemple | Avec vos données |
 |---|---|---|
 | Budget IT | La vue d'ensemble, Une ligne budgétaire, Un rapport, Une question à Plaid, Vos données | Votre société, Vos lignes, Un contrat lié, Votre premier rapport, Un collègue |

@@ -62,6 +62,8 @@ Sobald ein Pfad gewählt ist, steht die Kachel **Ihre ersten fünf Schritte** an
 
 Wenn die fünf Schritte erledigt sind, bietet die Kachel die beiden anderen Pfade an. Sie bietet auch **Diesen Pfad neu beginnen** an, womit die fünf Schritte dieses Pfads wieder als offen gelten. Die Schaltfläche zum Schließen (**×**) blendet die Kachel aus. Um sie wieder anzuzeigen, verwenden Sie **Erste Schritte anzeigen** unter **Über KANAP**.
 
+Während der Testphase bietet die Kachel außerdem **Kennenlerngespräch vereinbaren** an: ein 30-minütiges Videogespräch über Ihre Situation und Ihre Fragen, das Sie auf der sich öffnenden Seite zu einem passenden Zeitpunkt buchen. Derselbe Link steht unter **Über KANAP** nach den verbleibenden Testtagen.
+
 | Pfad | Mit dem Beispiel | Mit Ihren eigenen Daten |
 |---|---|---|
 | IT-Budget | Die Übersicht, Eine Budgetzeile, Ein Bericht, Eine Frage an Plaid, Ihre Daten | Ihr Unternehmen, Ihre Budgetzeilen, Ein verknüpfter Vertrag, Ihr erster Bericht, Eine Kollegin, ein Kollege |
