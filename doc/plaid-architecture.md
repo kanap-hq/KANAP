@@ -318,7 +318,8 @@ on the technology and read through `EXISTS`, never a column of `technologies`:
   without an owner of that type is in no group.
 
 `get_entity_detail` adds the versions (end dates, support state and its date,
-whether in use, servers in service per version), the owners by name and the number of contracts (null for
+whether in use, servers in service per version), the owners by name, the attachments
+(file name, type, size and upload date, never a storage path) and the number of contracts (null for
 a user who cannot read contracts, as on the technology page). `get_entity_context` lists the servers the technology
 is installed on (version, operating system or not), and, for a user who reads
 applications, the applications that declare it and those deduced from the
@@ -594,7 +595,9 @@ outside L5.
 The technology detail (`get_entity_detail`) reads what these tools write: the
 support contacts (name and role), the web links (address and description), the
 technology's alert setting, and each version's own exception and effective
-setting, beside the owners and the versions.
+setting, beside the owners, the versions and the attachments (file name, type,
+size and upload date, never a storage path). The files are read with the
+technology, under the same right. Plaid does not add or remove them.
 
 ### Non-writes of the technology family
 

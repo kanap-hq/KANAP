@@ -379,7 +379,7 @@ A record created as an application may really be a technology, for example a dat
 
 ## Ask the assistant
 
-[Plaid](ai-assistant.md) reads the technologies with the same rights as this page. Ask, for example: "Who is responsible for TEC-3?", "Which web links does PostgreSQL have?", "Are vulnerability alerts on for TEC-3?" or "Which technologies are out of support?"
+[Plaid](ai-assistant.md) reads the technologies with the same rights as this page, including the files attached to one (name, type, size and the date it was added). Ask, for example: "Who is responsible for TEC-3?", "Which web links does PostgreSQL have?", "Which files are attached to TEC-3?", "Are vulnerability alerts on for TEC-3?" or "Which technologies are out of support?"
 
 With the Member level on infrastructure, Plaid also writes, and every change comes as a preview that you approve:
 

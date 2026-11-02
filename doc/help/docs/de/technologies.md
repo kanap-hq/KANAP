@@ -379,7 +379,7 @@ Ein als Anwendung angelegter Eintrag kann in Wirklichkeit eine Technologie sein,
 
 ## Den Assistenten fragen
 
-[Plaid](ai-assistant.md) liest die Technologien mit denselben Rechten wie diese Seite. Fragen Sie zum Beispiel: „Wer ist für TEC-3 verantwortlich?“, „Welche Weblinks hat PostgreSQL?“, „Sind die Schwachstellenwarnungen für TEC-3 eingeschaltet?“ oder „Welche Technologien haben keinen Support mehr?“
+[Plaid](ai-assistant.md) liest die Technologien mit denselben Rechten wie diese Seite, einschließlich der Dateien, die an einer Technologie hängen (Name, Typ, Größe und Datum des Hinzufügens). Fragen Sie zum Beispiel: „Wer ist für TEC-3 verantwortlich?“, „Welche Weblinks hat PostgreSQL?“, „Welche Dateien sind an TEC-3 angehängt?“, „Sind die Schwachstellenwarnungen für TEC-3 eingeschaltet?“ oder „Welche Technologien haben keinen Support mehr?“
 
 Mit der Stufe Mitglied für die Infrastruktur schreibt Plaid auch, und jede Änderung kommt als Vorschau, die Sie genehmigen:
 
