@@ -464,6 +464,8 @@ Sans abonnement en cours (un essai, un essai expiré ou un abonnement terminé),
 
 Pendant un essai, une pastille dans la barre du haut indique aussi les jours restants, par exemple « Essai : 9 j ». Pour les administrateurs de la facturation, elle ouvre cette page. Survolez-la pour voir la date de fin d'essai. Une fois l'essai expiré, un bandeau prend sa place.
 
+Lorsqu'un essai se termine sans abonnement, l'espace de travail reste consultable pendant 30 jours. Il est ensuite supprimé avec toutes ses données. Un abonnement souscrit avant cette date conserve l'espace de travail tel quel.
+
 Lorsqu'un passage à la facturation mensuelle est prévu, une troisième ligne l'indique, par exemple « Passe en mensuel le 7 oct. 2027. » Cliquez sur **Rester en annuel** sur cette ligne pour annuler ce passage.
 
 ### Actions
