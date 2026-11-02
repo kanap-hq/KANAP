@@ -1,8 +1,10 @@
 import 'reflect-metadata';
+import { ConsoleLogger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DataSource } from 'typeorm';
 import { parseBoolean, requireEnv, validateStartupEnv } from './common/env';
+import { shouldColourLogs } from './common/log-colours';
 import { describeTokenPurposePolicy } from './auth/access-token.util';
 import { describeSecretPolicy } from './auth/token-secret.util';
 import { PROCESS_STARTED_AT } from './common/process-start';
@@ -74,7 +76,12 @@ async function bootstrap() {
   // Rich text is processed off the main thread (common/markdown-worker.ts): the workers start
   // while the application initialises.
   const markdownWorkers = startMarkdownWorkers();
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  // Colours only on a terminal. A non-empty NO_COLOR turns them off (log-colours.ts).
+  // A container has no terminal, so `docker compose logs` and log files stay plain.
+  const app = await NestFactory.create(AppModule, {
+    bufferLogs: true,
+    logger: new ConsoleLogger({ colors: shouldColourLogs(process.stdout.isTTY, process.env) }),
+  });
   checkStartupEnv();
   // Start-up report lines (`[SECRETS]`, `[DB]`, `[CORS]`, `[RATE-LIMIT]`, `[SECURITY]`): printed once
   // per start, by the lead process (the single process, or worker 1).
