@@ -38,7 +38,7 @@ Different teams can use categories to focus on their area of responsibility:
 
 Navigate to **IT Landscape > Applications** to see your list. To create an application:
 
-1. Click **New app / service**. The application page opens with an empty title in the header. The rest of the page is dimmed.
+1. Click **New application**. The application page opens with an empty title in the header. The rest of the page is dimmed.
 2. Type the name of the application or service, up to 200 characters. See [Unique names](#unique-names).
 3. Press Enter, or click outside the title. KANAP creates the application at once. Its reference (`APP-12`) shows and all tabs open.
 
@@ -125,7 +125,7 @@ A cell with no value shows a dash.
 - **Vulnerabilities to review** filters on **With severe vulnerabilities**, **With vulnerabilities** or **Without**, and sorts by the critical or high vulnerabilities, then by the total. Disabled applications come last and are in none of the filter values.
 
 **Actions**:
-- **New app / service**: Create a new entry (`applications:member`). See [Getting started](#getting-started)
+- **New application**: Create a new entry (`applications:member`). See [Getting started](#getting-started)
 - **Import**: Bulk import from a CSV file or an Excel workbook (`applications:admin`)
 - **Export**: Export the applications the list shows to a CSV file or an Excel workbook (`applications:admin`). See [Export options](#export-options).
 - **Copy item**: Duplicate a selected application with all its core relations (`applications:member`). See [Copying applications](#copying-applications) for what is and is not copied.

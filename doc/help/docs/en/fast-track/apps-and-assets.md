@@ -39,7 +39,7 @@ The chain is simple: **Application → Environment → Server**. By the end of t
 
 ## Step 1: Create Your Application
 
-Go to **IT Landscape → Applications** and click **New app / service**.
+Go to **IT Landscape → Applications** and click **New application**.
 
 Type the name in the title, for example `Salesforce CRM`, and press Enter. Your application is now in the registry, and its six tabs open for detailed documentation: **Overview**, **Deployments**, **Interfaces**, **Operations**, **Compliance**, and **Relations**.
 
@@ -291,7 +291,7 @@ Then use the [Interface Map](../interface-map.md) to visualize the full applicat
 
 | I want to... | Go to... |
 |------------|--------|
-| Create an application | IT Landscape → Applications → New app / service |
+| Create an application | IT Landscape → Applications → New application |
 | Add environments | Open app → Deployments tab → Add deployment |
 | Assign owners | Open app → Properties panel |
 | Set access methods | Open app → Operations tab |

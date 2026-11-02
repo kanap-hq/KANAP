@@ -38,7 +38,7 @@ Diferentes equipos pueden usar categorías para centrarse en su área de respons
 
 Navegue a **Panorama IT > Aplicaciones** para ver su lista. Para crear una aplicación:
 
-1. Haga clic en **Nueva aplicación / servicio**. La página de la aplicación se abre con un título vacío en el encabezado. El resto de la página aparece atenuado.
+1. Haga clic en **Nueva aplicación**. La página de la aplicación se abre con un título vacío en el encabezado. El resto de la página aparece atenuado.
 2. Escriba el nombre de la aplicación o servicio, de 200 caracteres como máximo. Consulte [Nombres únicos](#unique-names).
 3. Pulse Intro o haga clic fuera del título. KANAP crea la aplicación de inmediato. Su referencia (`APP-12`) aparece y se abren todas las pestañas.
 
@@ -125,7 +125,7 @@ Una celda sin valor muestra un guion.
 - **Vulnerabilidades por revisar** filtra por **Con vulnerabilidades graves**, **Con vulnerabilidades** o **Sin**, y ordena por las vulnerabilidades críticas o altas y luego por el total. Las aplicaciones desactivadas van al final y no entran en ningún valor del filtro.
 
 **Acciones**:
-- **Nueva aplicación / servicio**: Crear una nueva entrada (`applications:member`). Consulte [Primeros pasos](#getting-started)
+- **Nueva aplicación**: Crear una nueva entrada (`applications:member`). Consulte [Primeros pasos](#getting-started)
 - **Importar**: Importación masiva desde un archivo CSV o un libro de Excel (`applications:admin`)
 - **Exportar**: Exportar las aplicaciones que muestra la lista a un archivo CSV o un libro de Excel (`applications:admin`). Consulte [Opciones de exportación](#export-options).
 - **Copiar elemento**: Duplicar una aplicación seleccionada con todas sus relaciones principales (`applications:member`). Consulte [Copiar aplicaciones](#copiar-aplicaciones) para saber qué se copia y qué no.

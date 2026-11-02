@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { I18nextProvider } from 'react-i18next';
@@ -121,7 +121,7 @@ describe('FirstStepsTile', () => {
     renderAt('/', <FirstStepsTile />);
     const links = await screen.findAllByRole('link');
     expect(links.map((link) => link.textContent)).toEqual([
-      'Your applications', 'Your technologies', 'Your servers', 'What KANAP found', 'A colleague',
+      'Your locations', 'Your applications', 'Your technologies', 'Your servers', 'A colleague',
     ]);
     expect(links[4]).toHaveAttribute('href', '/admin/users?step=own_invite');
   });
@@ -300,6 +300,19 @@ describe('StepHint', () => {
     await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/portfolio/projects/PRJ-9/summary?step=portfolio_project'));
     const filters = JSON.parse((asked[0].config as { params: { filters: string } }).params.filters);
     expect(filters).toEqual({ status: { filterType: 'set', values: ['converted'] } });
+  });
+
+  it('opens your project on its Relations tab for its budget, and your contributor profile last', async () => {
+    env.server = createFakeOnboardingServer({ angle: 'portfolio', mode: 'own_data' });
+    env.summary = async (_config, url) => (url === '/portfolio/projects'
+      ? { data: { items: [{ id: 'p-1', item_number: 1, name: 'My project' }] } }
+      : { data: { items: [] } });
+    renderAt('/', <FirstStepsTile />);
+    fireEvent.click(await screen.findByRole('button', { name: "The project's budget" }));
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/portfolio/projects/PRJ-1/relations?step=own_project_budget'));
+    cleanup();
+    renderAt('/', <FirstStepsTile />);
+    expect(await screen.findByRole('link', { name: 'Your contributor profile' })).toHaveAttribute('href', '/portfolio/contributors/me?step=own_invite');
   });
 
   it('opens the best-scored project when no request was converted', async () => {
