@@ -5,7 +5,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /**
  * True when `userId` is an enabled user of the tenant with the Administrator role, as their main
  * role or as an additional one (`user_roles`). A module level (`users: admin`, for instance) does
- * not count. Same rule as the sample data routes (DemoDataService.requireAdministrator).
+ * not count. The single rule, used by onboarding and the sample data routes.
  */
 export async function isTenantAdministrator(
   manager: Pick<EntityManager, 'query'>,

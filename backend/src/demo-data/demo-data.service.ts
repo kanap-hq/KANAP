@@ -35,6 +35,7 @@ import { startingClassificationNames } from '../portfolio/starting-classificatio
 import { TenantBaselineService } from '../tenants/tenant-baseline.service';
 import { TenantStatus } from '../tenants/tenant.entity';
 import { NotificationsService } from '../notifications/notifications.service';
+import { isTenantAdministrator } from '../onboarding/tenant-administrator';
 import { User } from '../users/user.entity';
 
 /**
@@ -1300,19 +1301,7 @@ export class DemoDataService implements OnApplicationShutdown {
       code: 'administrator_required',
       message: 'Only an administrator of this workspace can do this.',
     });
-    if (!UUID.test(String(actorId ?? ''))) throw refused();
-    const [row]: Array<{ is_administrator: boolean }> = await manager.query(
-      `SELECT EXISTS (
-         SELECT 1 FROM users u
-           JOIN roles r ON r.tenant_id = u.tenant_id
-          WHERE u.id = $1 AND u.tenant_id = $2 AND u.status = 'enabled'
-            AND lower(coalesce(r.role_name, '')) = 'administrator'
-            AND (r.id = u.role_id OR EXISTS (
-                  SELECT 1 FROM user_roles ur WHERE ur.tenant_id = $2 AND ur.user_id = u.id AND ur.role_id = r.id))
-       ) AS is_administrator`,
-      [actorId, tenantId],
-    );
-    if (!row?.is_administrator) throw refused();
+    if (!(await isTenantAdministrator(manager, tenantId, actorId))) throw refused();
     const user = await manager.getRepository(User).findOne({ where: { id: actorId, tenant_id: tenantId }, relations: ['role'] });
     if (!user) throw refused();
     return user;
