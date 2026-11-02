@@ -1,4 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
+import { discoveryCallConfig } from '../discovery-call/discovery-call.config';
 import { cveListEnabled } from '../vulnerabilities/cve-list-feed.service';
 import { Features } from './features';
 import { APP_VERSION } from './version';
@@ -30,6 +31,8 @@ export class ConfigController {
         // Data imports accept an Excel workbook (.xlsx) as well as a CSV file (IMPORT_XLSX, on by default).
         importXlsx: Features.IMPORT_XLSX,
       },
+      // The "Book a discovery call" button of trial workspaces: empty values hide it, always on-premise.
+      discoveryCall: (({ url, fallbackEmail }) => ({ url, fallbackEmail }))(discoveryCallConfig()),
       version: APP_VERSION,
       supportedLocales: [...SUPPORTED_LOCALES],
       tenantSlug: Features.SINGLE_TENANT

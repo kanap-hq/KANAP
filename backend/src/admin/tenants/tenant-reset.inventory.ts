@@ -27,6 +27,7 @@ export const TENANT_RESET_KEEP_TABLES: Readonly<Record<string, string>> = {
   tenant_onboarding: 'The onboarding answers and steps outlive "start with my own data", which resets the workspace.',
   onboarding_steps: 'The onboarding answers and steps outlive "start with my own data", which resets the workspace.',
   onboarding_dismissals: 'The onboarding answers and steps outlive "start with my own data", which resets the workspace.',
+  trial_discovery_calls: 'The discovery call is booked by the customer for the trial, not part of the workspace content.',
 };
 
 /** Tables the reset purges: the tenant purge order without the kept tables, in the same order. */
