@@ -2,8 +2,8 @@ import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
 import { describe, expect, it, vi } from 'vitest';
-import ChatInput from './ChatInput';
-import ChatMessageList from './ChatMessageList';
+import ChatInput from '../components/ChatInput';
+import ChatMessageList from '../components/ChatMessageList';
 import type { PendingAttachment } from '../useChat';
 import { createAppTheme } from '../../config/ThemeContext';
 

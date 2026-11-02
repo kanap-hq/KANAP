@@ -61,6 +61,9 @@ export function isTableFile(file: File): boolean {
   return TABLE_FILE_MIME_TYPES.has((file.type || '').toLowerCase());
 }
 
+/** An attachment the server refused: the message was not sent and goes back to the composer. */
+class AttachmentRefusedError extends Error {}
+
 function pendingToChatAttachment(attachment: PendingAttachment): ChatAttachment {
   return {
     id: attachment.localId,
@@ -564,12 +567,13 @@ export function useChat() {
    * new user message (regenerate flow) is opted in via `text === ''` + a non-null
    * truncateFromMessageId. The orchestrator on the backend mirrors that contract.
    */
+  /** Resolves to false when the message was not sent because an attachment was refused. */
   const runStream = useCallback(async (
     text: string,
     opts: { truncateFromMessageId?: string | null; isRegenerate?: boolean } = {},
-  ) => {
-    if (isStreaming) return;
-    if (!opts.isRegenerate && !text.trim()) return;
+  ): Promise<boolean> => {
+    if (isStreaming) return true;
+    if (!opts.isRegenerate && !text.trim()) return true;
     setError(null);
     setIsStreaming(true);
 
@@ -640,7 +644,7 @@ export function useChat() {
             } catch (uploadError) {
               // A refused file (unreadable, too large) says why, in the screen language, with its name.
               const reason = getApiErrorMessage(uploadError, i18n.t, i18n.t('ai:errors.uploadFailed'));
-              throw new Error(i18n.t('ai:errors.attachmentRefused', { name: att.file.name, reason }));
+              throw new AttachmentRefusedError(i18n.t('ai:errors.attachmentRefused', { name: att.file.name, reason }));
             }
             return {
               localId: att.localId,
@@ -882,11 +886,17 @@ export function useChat() {
       }
 
       if (generation !== streamGenerationRef.current) {
-        return;
+        return true;
       }
     } catch (err: any) {
       if (generation !== streamGenerationRef.current) {
-        return;
+        return true;
+      }
+      if (err instanceof AttachmentRefusedError) {
+        // Nothing reached Plaid: the message leaves the list, the attachments stay in the composer.
+        setError(err.message);
+        setMessages((prev) => prev.filter((m) => m.id !== userMsgId && m.id !== assistantId));
+        return false;
       }
       if (err.name === 'AbortError') {
         // Navigation away or manual cancel — mark assistant as done, no error
@@ -948,12 +958,14 @@ export function useChat() {
         }
       }
     }
+    return true;
   }, [conversationId, isStreaming, pendingAttachments, refreshConversationUsage, clearPendingAttachments]);
 
-  const sendMessage = useCallback(async (text: string) => {
+  /** Resolves to false when the message was not sent because an attachment was refused. */
+  const sendMessage = useCallback(async (text: string): Promise<boolean> => {
     const truncateFromMessageId = editingMessageId;
     if (truncateFromMessageId) setEditingMessageId(null);
-    await runStream(text, { truncateFromMessageId });
+    return runStream(text, { truncateFromMessageId });
   }, [editingMessageId, runStream]);
 
   const startEdit = useCallback((messageId: string): string | null => {
