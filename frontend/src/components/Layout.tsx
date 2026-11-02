@@ -58,6 +58,7 @@ import AboutDialog from './about/AboutDialog';
 import { formatUserName } from '../utils/userDisplay';
 import SubscriptionBanner from './SubscriptionBanner';
 import TrialChip, { TrialMenuLine } from './TrialChip';
+import DevBuildIndicator from './DevBuildIndicator';
 import NamePromptDialog from './NamePromptDialog';
 import FirstOpenDialog from './onboarding/FirstOpenDialog';
 import NavigationTracker from './navigation/NavigationTracker';
@@ -517,6 +518,7 @@ export default function Layout() {
             </Tabs>
           )}
           {isPlatformHost && <Box sx={{ flex: 1 }} />}
+          <DevBuildIndicator />
           {token && (
             <>
               <TrialChip />

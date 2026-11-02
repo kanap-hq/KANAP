@@ -10,6 +10,8 @@ backend/dist/
 backend/ci-dist/
 frontend/dist/
 coverage/
+# What the local dev stack runs, written by the maintainer's dev sync before each rebuild
+frontend/public/dev-build.json
 
 # TypeScript
 *.tsbuildinfo
