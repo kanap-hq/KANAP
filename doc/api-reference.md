@@ -248,6 +248,13 @@ Cloud only (404 on-premise). Details, storage and audit events: [discovery-call.
 - POST `/discovery-call/clicks` with `{ placement }` (signed-in user, `204`): records a click on **Book a discovery call**
 - POST `/discovery-call/calcom`: the Cal.com booking webhook, public, signed with `DISCOVERY_CALL_WEBHOOK_SECRET` (`x-cal-signature-256`)
 
+## Trial e-mails
+Cloud only (404 on-premise). The links of the trial e-mails, public, signed with the `trial-mail` key (`?t=`, a bad token is a `404`). Details: [trial-mails.md](trial-mails.md).
+
+- GET `/trial-mails/unsubscribe?t=` → an HTML page that asks to confirm; changes nothing
+- POST `/trial-mails/unsubscribe?t=` → unsubscribes the workspace from the trial e-mails (the page's button and the one-click unsubscribe of mail clients), HTML page, `200`
+- GET `/trial-mails/call?t=` → records the click (`trial.discovery_call_clicked`, placement of the token) and redirects (`302`) to the booking page; `404` without one
+
 ## Billing
 - GET `/billing/subscription` → `{ plan_name, seat_limit, seats_used }`
 - POST `/billing/portal` → `{ url }`

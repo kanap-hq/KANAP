@@ -240,6 +240,7 @@ service reads the same rules).
 | MCP OAuth authorization code | `purpose: 'kanap:v1:mcp-oauth-code'` | `MCP_OAUTH_CODE_SECRET`, else derived | `McpOAuthService` (token endpoint) |
 | MCP OAuth access token | `purpose: 'kanap:v1:mcp-access'` | `MCP_ACCESS_TOKEN_SECRET`, else derived | `McpApiKeyAuthGuard` (MCP endpoint only) |
 | Creation token (HMAC, not a JWT) | label `kanap:v1:creation`, signs tenant, family, record, creator, issue time | `CREATION_TOKEN_SECRET`, else derived | `verifyCreationToken` (`DELETE /applications/:id/creation`) |
+| Trial e-mail link (HMAC, not a JWT, cloud only) | label `kanap:v1:trial-mail`, signs tenant and purpose (unsubscribe or a discovery call placement) | `TRIAL_MAIL_LINK_SECRET`, else derived | `verifyTrialMailLink` (`/trial-mails/unsubscribe`, `/trial-mails/call`) |
 
 Rules:
 
@@ -343,6 +344,16 @@ The "Book a discovery call" button of trial workspaces, its click events and the
 | `discovery-call/discovery-call.controller.ts` | `MultiTenantOnlyGuard` on `discovery-call` | 404; the webhook also answers 404 while no secret is set |
 | `config/config.controller.ts` | `discoveryCall` | `{ url, fallbackEmail }` from `discoveryCallConfig()` in `@Get('public')` |
 | `frontend/src/components/BookDiscoveryCallButton.tsx` | `useDiscoveryCall()` | Hidden on-premise, without a running trial, for a platform administrator, and when both values are empty |
+
+#### Trial e-mails (cloud only, `!Features.SINGLE_TENANT`)
+
+The e-mails of trial workspaces and the thank-you at the first subscription (`doc/trial-mails.md`). On-premise nothing is scheduled and the link routes answer 404.
+
+| File | What | Behavior |
+|------|------|----------|
+| `email/trial-mails/trial-mails.service.ts` | `onModuleInit()` | The task `send-trial-mails` is not registered when `SINGLE_TENANT` |
+| `email/trial-mails/trial-mails.service.ts` | `run()`, `onSubscriptionChanged()` | Nothing read or sent when `SINGLE_TENANT` (summary `not available on-premise`) |
+| `email/trial-mails/trial-mails.controller.ts` | `MultiTenantOnlyGuard` on `trial-mails` | 404 |
 
 #### Microsoft Entra (`Features.ENTRA_SSO`)
 
