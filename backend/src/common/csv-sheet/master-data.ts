@@ -17,6 +17,11 @@ export interface MasterDataFileRequest {
   file: Buffer;
   /** The export's columns. */
   fields: readonly string[];
+  /**
+   * The titles each column is also read by (`CsvReadSchema.fieldLabels`), and the one a header
+   * refusal names it by: the title in `language`, else the column.
+   */
+  fieldLabels?: Readonly<Record<string, Readonly<Partial<Record<CsvLanguage, string>>>>>;
   /** The decimal columns of the file, written `<name>_<year>` (`turnover_2027`). */
   amounts?: readonly CsvAmountColumn[];
   /** The columns read as dates. They must also be listed in `fields`. */
@@ -65,6 +70,7 @@ export interface MasterDataFileRead {
 export async function readMasterDataFile(request: MasterDataFileRequest): Promise<MasterDataFileRead> {
   const read = await readSheet(request.file, {
     fields: request.fields,
+    fieldLabels: request.fieldLabels ? labelLists(request.fieldLabels) : undefined,
     amounts: request.amounts,
     dateFields: request.dateFields,
     language: request.language,
@@ -90,7 +96,16 @@ export async function readMasterDataFile(request: MasterDataFileRequest): Promis
   };
 }
 
-/** The refusal of a file for its headers: the missing columns, then the unknown ones. */
+/** The titles of each column, every language, for the reader. */
+function labelLists(labels: NonNullable<MasterDataFileRequest['fieldLabels']>): Record<string, string[]> {
+  const lists: Record<string, string[]> = {};
+  for (const [field, byLanguage] of Object.entries(labels)) {
+    lists[field] = Object.values(byLanguage).filter((label): label is string => !!label);
+  }
+  return lists;
+}
+
+/** The refusal of a file for its headers: the missing columns (by their title in the file's language), then the unknown ones. */
 function headerProblem(
   request: MasterDataFileRequest,
   read: { headerErrors: string[]; columns: Array<{ id: string }>; ignoredColumns: string[] },
@@ -98,7 +113,9 @@ function headerProblem(
   if (read.headerErrors.length > 0) return { row: 0, message: read.headerErrors.join(' ') };
   const optional = new Set(request.optional ?? []);
   const present = new Set(read.columns.map((column) => column.id));
-  const missing = request.fields.filter((field) => !optional.has(field) && !present.has(field));
+  const missing = request.fields
+    .filter((field) => !optional.has(field) && !present.has(field))
+    .map((field) => request.fieldLabels?.[field]?.[request.language] ?? field);
   const notice = request.noticeUnknown;
   const extras = notice ? read.ignoredColumns.filter((header) => !notice(header)) : read.ignoredColumns;
   return headerMismatchError(missing, extras);

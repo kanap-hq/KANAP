@@ -1,0 +1,130 @@
+{
+  "essential": ["name", "description", "category", "lifecycle", "editor", "version", "go_live_date", "criticality", "external_facing", "contains_pii"],
+  "advanced": [
+    "supplier_name", "business_owner_email_1", "it_owner_email_1", "end_of_support_date", "access_methods", "data_class",
+    "cyber_criticality", "recovery_wave", "rto_minutes", "rpo_minutes", "data_residency", "last_dr_test", "support_notes", "licensing", "notes"
+  ],
+  "rows": [
+    {
+      "name": "AffinOps",
+      "description": {
+        "en": "Plans the ripening cycle of each cave and tells the cellar masters which wheels to turn, brush or move.",
+        "fr": "Planifie l'affinage de chaque cave et indique aux maîtres affineurs les meules à retourner, brosser ou déplacer.",
+        "de": "Plant die Reifung jedes Kellers und zeigt den Kellermeistern, welche Laibe zu wenden, zu bürsten oder umzulagern sind.",
+        "es": "Planifica la maduración de cada cava e indica a los maestros afinadores qué ruedas voltear, cepillar o trasladar."
+      },
+      "category": "line_of_business",
+      "lifecycle": "active",
+      "editor": "Cavelogic Systems",
+      "version": "4.2",
+      "go_live_date": "{Y-2}-04-15",
+      "criticality": "high",
+      "external_facing": false,
+      "contains_pii": false,
+      "supplier_name": "Cavelogic Systems",
+      "business_owner_email_1": "jacques.dubois@fromage-co.example",
+      "it_owner_email_1": "sophie.laurent@fromage-co.example",
+      "end_of_support_date": "{Y+3}-12-31",
+      "access_methods": ["mobile"],
+      "data_class": "internal",
+      "cyber_criticality": "moderate",
+      "recovery_wave": "priority",
+      "rto_minutes": 480,
+      "rpo_minutes": 240,
+      "data_residency": "FR",
+      "last_dr_test": "{Y-1}-10-08",
+      "support_notes": {
+        "en": "Cavelogic hotline on working days, 8 am to 6 pm.",
+        "fr": "Hotline Cavelogic les jours ouvrés, de 8 h à 18 h.",
+        "de": "Cavelogic-Hotline an Werktagen von 8 bis 18 Uhr.",
+        "es": "Línea de soporte de Cavelogic los días laborables, de 8 a 18 h."
+      },
+      "licensing": {
+        "en": "Site licence for the Paris caves",
+        "fr": "Licence de site pour les caves de Paris",
+        "de": "Standortlizenz für die Pariser Keller",
+        "es": "Licencia de sitio para las cavas de París"
+      },
+      "notes": ""
+    },
+    {
+      "name": "LabTrack LIMS",
+      "description": {
+        "en": "Records the milk and cheese samples of the quality lab and the results of each analysis.",
+        "fr": "Enregistre les échantillons de lait et de fromage du laboratoire qualité et les résultats de chaque analyse.",
+        "de": "Erfasst die Milch- und Käseproben des Qualitätslabors und die Ergebnisse jeder Analyse.",
+        "es": "Registra las muestras de leche y queso del laboratorio de calidad y los resultados de cada análisis."
+      },
+      "category": "line_of_business",
+      "lifecycle": "active",
+      "editor": "LabWare",
+      "version": "8.1",
+      "go_live_date": "{Y-4}-09-01",
+      "criticality": "business_critical",
+      "external_facing": false,
+      "contains_pii": false,
+      "supplier_name": "Fromatech Consulting",
+      "business_owner_email_1": "jacques.dubois@fromage-co.example",
+      "it_owner_email_1": "marc.petit@fromage-co.example",
+      "end_of_support_date": "{Y+1}-06-30",
+      "access_methods": [],
+      "data_class": "confidential",
+      "cyber_criticality": "high",
+      "recovery_wave": "vital",
+      "rto_minutes": 240,
+      "rpo_minutes": 60,
+      "data_residency": "FR",
+      "last_dr_test": "{Y-1}-11-20",
+      "support_notes": "",
+      "licensing": {
+        "en": "25 named users",
+        "fr": "25 utilisateurs nommés",
+        "de": "25 benannte Benutzer",
+        "es": "25 usuarios nominales"
+      },
+      "notes": {
+        "en": "Results feed the release of each batch.",
+        "fr": "Les résultats conditionnent la libération de chaque lot.",
+        "de": "Die Ergebnisse entscheiden über die Freigabe jeder Charge.",
+        "es": "Los resultados condicionan la liberación de cada lote."
+      }
+    },
+    {
+      "name": "Expense Snap",
+      "description": {
+        "en": "Mobile app to photograph receipts and send expense reports.",
+        "fr": "Application mobile pour photographier les justificatifs et envoyer les notes de frais.",
+        "de": "Mobile App zum Fotografieren von Belegen und Einreichen von Spesenabrechnungen.",
+        "es": "Aplicación móvil para fotografiar los recibos y enviar las notas de gastos."
+      },
+      "category": "productivity",
+      "lifecycle": "proposed",
+      "editor": "Snapfin",
+      "version": "",
+      "go_live_date": "{Y}-09-01",
+      "criticality": "low",
+      "external_facing": true,
+      "contains_pii": true,
+      "supplier_name": "",
+      "business_owner_email_1": "",
+      "it_owner_email_1": "",
+      "end_of_support_date": "",
+      "access_methods": ["mobile"],
+      "data_class": "confidential",
+      "cyber_criticality": "",
+      "recovery_wave": "normal",
+      "rto_minutes": "",
+      "rpo_minutes": "",
+      "data_residency": "FR, NL",
+      "last_dr_test": "",
+      "support_notes": "",
+      "licensing": "",
+      "notes": {
+        "en": "Pilot with the sales teams before a group-wide rollout.",
+        "fr": "Pilote avec les équipes commerciales avant un déploiement dans tout le groupe.",
+        "de": "Pilot mit den Vertriebsteams vor der Einführung in der ganzen Gruppe.",
+        "es": "Piloto con los equipos comerciales antes de extenderlo a todo el grupo."
+      }
+    }
+  ]
+}

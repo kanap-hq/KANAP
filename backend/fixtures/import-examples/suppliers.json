@@ -1,0 +1,51 @@
+{
+  "essential": ["name", "erp_supplier_id", "commercial_contact", "technical_contact", "support_contact", "notes", "status", "disabled_at"],
+  "advanced": [],
+  "rows": [
+    {
+      "name": "Cavelogic Systems",
+      "erp_supplier_id": "SUP-210",
+      "commercial_contact": "",
+      "technical_contact": "",
+      "support_contact": "",
+      "notes": {
+        "en": "Publisher of AffinOps, the cave ripening planner.",
+        "fr": "Éditeur d'AffinOps, le planificateur d'affinage des caves.",
+        "de": "Hersteller von AffinOps, der Reifungsplanung der Keller.",
+        "es": "Editor de AffinOps, el planificador de maduración de las cavas."
+      },
+      "status": "enabled",
+      "disabled_at": ""
+    },
+    {
+      "name": "Normandie Réseaux",
+      "erp_supplier_id": "SUP-214",
+      "commercial_contact": "",
+      "technical_contact": "",
+      "support_contact": "",
+      "notes": {
+        "en": "Network cabling and Wi-Fi of the plants in Normandy.",
+        "fr": "Câblage réseau et Wi-Fi des usines de Normandie.",
+        "de": "Netzwerkverkabelung und WLAN der Werke in der Normandie.",
+        "es": "Cableado de red y wifi de las plantas de Normandía."
+      },
+      "status": "enabled",
+      "disabled_at": ""
+    },
+    {
+      "name": "PrintFlex",
+      "erp_supplier_id": "SUP-187",
+      "commercial_contact": "",
+      "technical_contact": "",
+      "support_contact": "",
+      "notes": {
+        "en": "Former label printer maintenance, replaced at the end of last year.",
+        "fr": "Ancienne maintenance des imprimantes d'étiquettes, remplacée fin de l'année dernière.",
+        "de": "Frühere Wartung der Etikettendrucker, Ende letzten Jahres ersetzt.",
+        "es": "Antiguo mantenimiento de las impresoras de etiquetas, sustituido a finales del año pasado."
+      },
+      "status": "disabled",
+      "disabled_at": "{Y-1}-12-31"
+    }
+  ]
+}

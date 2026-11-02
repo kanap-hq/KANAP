@@ -398,7 +398,7 @@ Use **Data Enrichment** when you want to export, adjust selected fields external
 
 Imports are designed for controlled bulk changes:
 
-- download a template first when you need the correct structure
+- download a template first when you need the correct structure, or an example to see sample projects and the values each column takes ([Example files](csv-files.md#example-files))
 - validate before importing
 - use advanced options to choose enrichment vs replacement behavior and insert/update rules
 

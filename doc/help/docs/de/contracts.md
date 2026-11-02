@@ -321,11 +321,12 @@ Der Export schreibt eine CSV-Datei oder eine Excel-Arbeitsmappe (`.xlsx`): Wähl
 
 Halten Sie Ihre Vertragsliste mit CSV-Dateien oder Excel-Arbeitsmappen mit anderen Werkzeugen synchron (`contracts:admin`).
 
-**Export**: lädt die Verträge der Liste (oder, auf Wunsch im Dialog, alle Verträge) mit diesen Spalten herunter: `name`, `company_name`, `supplier_name`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. Die berechneten Daten (Laufzeitende, Kündigungstermine, Stand) werden nicht exportiert.
+**Export**: lädt die Verträge der Liste (oder, auf Wunsch im Dialog, alle Verträge) herunter. Die Spalten tragen Titel in der Sprache Ihrer Oberfläche; ihre technischen Namen, die der Import ebenfalls liest, sind `name`, `company_name`, `supplier_name`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. Die berechneten Daten (Laufzeitende, Kündigungstermine, Stand) werden nicht exportiert.
 
 **Import**:
 
 - Verwenden Sie die **Vorprüfung**, um die Datei vor dem Anwenden zu prüfen
+- **Beispiel herunterladen** im Importdialog liefert zwei Beispielverträge und was jede Spalte aufnimmt. Siehe [Beispieldateien](csv-files.md#example-files)
 - Eine Zeile wird einem Vertrag über Vertragsnamen und Lieferant zugeordnet
 - Unterstützt Neuanlage und Aktualisierungen
 - Die Datei hat keine Spalte für das Ende der Gültigkeit. Bei einer Aktualisierung behält ein leeres `status`, oder eines, das dem aktuellen Status des Vertrags entspricht, sein Ende der Gültigkeit. Ein abweichender Status wird angewendet: `enabled` löscht das Ende der Gültigkeit, und `disabled` beendet den Vertrag heute, sofern sein Ende der Gültigkeit nicht bereits vergangen ist

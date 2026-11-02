@@ -40,6 +40,8 @@ El archivo Excel tiene las mismas columnas en una hoja llamada `budget`. Los imp
 
 Exportar una lista sin líneas devuelve solo la fila de encabezados. Esa es su plantilla.
 
+El diálogo de importación también ofrece **Descargar un ejemplo**: tres líneas de ejemplo con las columnas principales en la primera hoja, las demás columnas en la hoja **Avanzado** y lo que admite cada columna en la hoja **Notas**. Consulte [Archivos de ejemplo](csv-files.md#example-files).
+
 Cada exportación queda anotada en el [registro de auditoría](admin.md#registro-de-auditoria), con sus ajustes, su formato y su número de líneas.
 
 ## Las columnas

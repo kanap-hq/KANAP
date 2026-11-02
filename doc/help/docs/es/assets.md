@@ -408,6 +408,10 @@ Las columnas de tipo de activo, ciclo de vida, dominio, zona de administración 
 
 **Descarga de plantilla** (desde el diálogo de Importación): Descarga un CSV en blanco con todos los encabezados de campos importables. Úselo para preparar archivos de importación con la estructura correcta.
 
+**Descargar un ejemplo** (desde el diálogo de Importación): un libro de Excel con servidores de ejemplo y lo que admite cada columna. Consulte [Archivos de ejemplo](csv-files.md#example-files).
+
+La exportación y la plantilla titulan las columnas en el idioma de su pantalla. La importación lee los títulos de cualquier idioma.
+
 ### Flujo de trabajo de importación
 
 1. **Prepare su archivo**: un archivo CSV o un libro de Excel (`.xlsx`). Guarde un archivo CSV en UTF-8. Las comas y los puntos y coma funcionan, y también un archivo que Excel guardó como CSV simple (Windows-1252). Descargue una plantilla para asegurar los encabezados correctos. El separador, los importes, las fechas y los sí o no de cada idioma están en [Archivos CSV y Excel](csv-files.md).

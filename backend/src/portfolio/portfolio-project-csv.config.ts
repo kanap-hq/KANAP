@@ -1,3 +1,4 @@
+import type { CsvLanguage } from '../common/csv-sheet';
 import {
   CsvEntityConfig,
   CsvFieldType,
@@ -61,12 +62,108 @@ function normalizeCodes(entity: any): void {
  * - Progress: execution_progress, efforts
  * - Scoring: criteria_values, priority fields
  */
+/**
+ * The title of each column in the file's language, as the export dialog names the project fields
+ * (`csv.fields.portfolio_projects` of the screen). The export and the template write it, and the import reads
+ * the titles of every language as well as the technical column.
+ */
+const PORTFOLIO_PROJECT_CSV_HEADERS: Record<string, Record<CsvLanguage, string>> = {
+  reference: { en: 'Reference', fr: 'Référence', de: 'Referenz', es: 'Referencia' },
+  name: { en: 'Name', fr: 'Nom', de: 'Name', es: 'Nombre' },
+  purpose: { en: 'Purpose', fr: 'Objectif', de: 'Zweck', es: 'Objetivo' },
+  status: { en: 'Status', fr: 'Statut', de: 'Status', es: 'Estado' },
+  origin: { en: 'Origin', fr: 'Origine', de: 'Herkunft', es: 'Procedencia' },
+  source_name: { en: 'Source', fr: 'Source', de: 'Quelle', es: 'Origen' },
+  category_name: { en: 'Category', fr: 'Catégorie', de: 'Kategorie', es: 'Categoría' },
+  stream_name: { en: 'Stream', fr: 'Filière', de: 'Stream', es: 'Línea' },
+  company_name: { en: 'Company', fr: 'Société', de: 'Unternehmen', es: 'Empresa' },
+  department_name: { en: 'Department', fr: 'Département', de: 'Abteilung', es: 'Departamento' },
+  planned_start: { en: 'Planned start', fr: 'Début prévu', de: 'Geplanter Start', es: 'Inicio planificado' },
+  planned_end: { en: 'Planned end', fr: 'Fin prévue', de: 'Geplantes Ende', es: 'Fin planificado' },
+  business_sponsor_email: {
+    en: 'Business sponsor email',
+    fr: 'E-mail du sponsor métier',
+    de: 'E-Mail Fachbereichssponsor',
+    es: 'Correo del patrocinador de negocio',
+  },
+  business_lead_email: {
+    en: 'Business lead email',
+    fr: 'E-mail du responsable métier',
+    de: 'E-Mail Fachbereichsleiter',
+    es: 'Correo del responsable de negocio',
+  },
+  it_sponsor_email: { en: 'IT sponsor email', fr: 'E-mail du sponsor IT', de: 'E-Mail IT-Sponsor', es: 'Correo del patrocinador IT' },
+  it_lead_email: { en: 'IT lead email', fr: 'E-mail du responsable IT', de: 'E-Mail IT-Leiter', es: 'Correo del responsable IT' },
+  actual_start: { en: 'Actual start', fr: 'Début réel', de: 'Tatsächlicher Beginn', es: 'Inicio real' },
+  actual_end: { en: 'Actual end', fr: 'Fin réelle', de: 'Tatsächliches Ende', es: 'Fin real' },
+  baseline_start_date: { en: 'Baseline start', fr: 'Début de référence', de: 'Baseline-Start', es: 'Inicio de línea base' },
+  baseline_end_date: { en: 'Baseline end', fr: 'Fin de référence', de: 'Baseline-Ende', es: 'Fin de línea base' },
+  execution_progress: { en: 'Progress (%)', fr: 'Progression (%)', de: 'Fortschritt (%)', es: 'Progreso (%)' },
+  estimated_effort_it: {
+    en: 'Estimated IT effort (MD)',
+    fr: 'Charge IT estimée (JH)',
+    de: 'Geschätzter IT-Aufwand (PT)',
+    es: 'Esfuerzo IT estimado (DP)',
+  },
+  estimated_effort_business: {
+    en: 'Estimated business effort (MD)',
+    fr: 'Charge métier estimée (JH)',
+    de: 'Geschätzter Fachbereichs-Aufwand (PT)',
+    es: 'Esfuerzo de negocio estimado (DP)',
+  },
+  actual_effort_it: {
+    en: 'Actual IT effort (MD)',
+    fr: 'Charge IT réelle (JH)',
+    de: 'Tatsächlicher IT-Aufwand (PT)',
+    es: 'Esfuerzo IT real (DP)',
+  },
+  actual_effort_business: {
+    en: 'Actual business effort (MD)',
+    fr: 'Charge métier réelle (JH)',
+    de: 'Tatsächlicher Fachbereichs-Aufwand (PT)',
+    es: 'Esfuerzo de negocio real (DP)',
+  },
+  baseline_effort_it: {
+    en: 'Baseline IT effort (MD)',
+    fr: 'Charge IT de référence (JH)',
+    de: 'Baseline IT-Aufwand (PT)',
+    es: 'Esfuerzo IT de línea base (DP)',
+  },
+  baseline_effort_business: {
+    en: 'Baseline business effort (MD)',
+    fr: 'Charge métier de référence (JH)',
+    de: 'Baseline Fachbereichs-Aufwand (PT)',
+    es: 'Esfuerzo de negocio de línea base (DP)',
+  },
+  criteria_values: {
+    en: 'Evaluation criteria (JSON)',
+    fr: 'Critères d’évaluation (JSON)',
+    de: 'Bewertungskriterien (JSON)',
+    es: 'Criterios de evaluación (JSON)',
+  },
+  priority_score: { en: 'Priority score', fr: 'Score de priorité', de: 'Prioritätsscore', es: 'Puntuación de prioridad' },
+  priority_override: {
+    en: 'Priority override',
+    fr: 'Surcharge de priorité',
+    de: 'Prioritätsüberschreibung',
+    es: 'Sobrescritura de prioridad',
+  },
+  override_value: { en: 'Override value', fr: 'Valeur de surcharge', de: 'Überschreibungswert', es: 'Valor de sobrescritura' },
+  override_justification: {
+    en: 'Override justification',
+    fr: 'Justification de la surcharge',
+    de: 'Begründung der Überschreibung',
+    es: 'Justificación de la sobrescritura',
+  },
+};
+
 export const portfolioProjectCsvConfig: CsvEntityConfig = {
   entityName: 'portfolio_project',
   // The sheet of an xlsx export: the list's title on screen.
   sheetNames: { en: 'Portfolio projects', fr: 'Projets du portefeuille', de: 'Portfolio-Projekte', es: 'Proyectos del portafolio' },
   tableName: 'portfolio_projects',
   displayName: 'Portfolio Projects',
+  headerLabels: PORTFOLIO_PROJECT_CSV_HEADERS,
   upsertKey: ['name'],
   fields: [
     // === IDENTITY ===

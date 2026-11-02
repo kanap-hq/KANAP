@@ -12,6 +12,7 @@
  */
 import * as assert from 'node:assert/strict';
 import { ContractsService } from '../contracts.service';
+import { CONTRACT_CSV_COLUMNS, CONTRACT_CSV_HEADERS } from '../contract-csv-headers';
 
 const TENANT = 't1';
 
@@ -63,24 +64,29 @@ function createService(): ContractsService {
 const HEADER =
   'name;company_name;supplier_name;cost_center;start_date;duration_months;auto_renewal;notice_period_months;yearly_amount_at_signature;currency;billing_frequency;status;owner_email;notes';
 
+// The template and the export write the titles of the file's language; the import reads them and HEADER.
+const FRENCH_TITLES =
+  'Nom;Société;Fournisseur;Centre de coûts;Date de début;Durée en mois;Reconduction tacite;Préavis en mois;Montant annuel à la signature;Devise;Fréquence de facturation;Statut;E-mail du responsable;Notes';
+const ENGLISH_TITLES = CONTRACT_CSV_COLUMNS.map((column) => CONTRACT_CSV_HEADERS[column].en).join(',');
+
 async function testTemplateContainsHeaderRow() {
   const svc = createService();
   const french = await svc.exportCsv('template', { manager: createMockManager(), language: 'fr' });
-  assert.equal(french.content.replace(/^﻿/, '').trim(), HEADER, 'template must contain exactly the header row');
+  assert.equal(french.content.replace(/^﻿/, '').trim(), FRENCH_TITLES, 'template must contain exactly the header row');
   const english = await svc.exportCsv('template', { manager: createMockManager() });
-  assert.equal(english.content.replace(/^﻿/, '').trim(), HEADER.replace(/;/g, ','), 'an English template uses commas');
+  assert.equal(english.content.replace(/^﻿/, '').trim(), ENGLISH_TITLES, 'an English template uses commas');
 }
 
 async function testExportEmitsOwnerEmailAndIsoDate() {
   const svc = createService();
   const result = await svc.exportCsv('data', { manager: createMockManager() });
   const lines = result.content.replace(/^﻿/, '').trim().split('\n');
-  assert.equal(lines[0], HEADER.replace(/;/g, ','));
+  assert.equal(lines[0], ENGLISH_TITLES);
   assert.ok(lines[1].includes('alice@fromage.co'), 'export must emit the owner email');
   assert.ok(lines[1].includes(',2024-01-15,'), 'an English export emits an ISO start_date');
   assert.ok(lines[1].includes('"notes; with delimiter"') === false, 'a semicolon needs no quotes in a comma file');
   const french = (await svc.exportCsv('data', { manager: createMockManager(), language: 'fr' })).content.replace(/^﻿/, '').trim().split('\n');
-  assert.equal(french[0], HEADER);
+  assert.equal(french[0], FRENCH_TITLES);
   assert.ok(french[1].includes(';15/01/2024;'), 'a French export emits a local start_date');
   assert.ok(french[1].endsWith(';"notes; with delimiter"'), 'a cell holding the separator is quoted');
 }

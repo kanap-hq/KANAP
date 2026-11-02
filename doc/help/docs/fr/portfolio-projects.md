@@ -398,7 +398,7 @@ Utilisez **Enrichissement de données** lorsque vous voulez exporter, ajuster de
 
 Les imports sont conçus pour des changements en masse contrôlés :
 
-- téléchargez d'abord un modèle quand vous avez besoin de la structure correcte
+- téléchargez d'abord un modèle quand vous avez besoin de la structure correcte, ou un exemple pour voir des projets d'exemple et les valeurs que chaque colonne accepte ([Fichiers d'exemple](csv-files.md#example-files))
 - validez avant d'importer
 - utilisez les options avancées pour choisir le comportement enrichissement vs remplacement et les règles d'insertion/mise à jour
 

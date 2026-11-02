@@ -16,11 +16,23 @@ Chaque page de données de référence dispose de **Exporter** et **Importer** d
 
 **Les colonnes sont rapprochées par leur nom**, dans n'importe quel ordre, quelles que soient la casse, les espaces et les tirets bas. Ces fichiers sont stricts : une colonne que KANAP ne connaît pas refuse tout le fichier, et le message, sur une ligne **En-tête**, nomme les colonnes inconnues et les colonnes manquantes. Le fichier budgétaire est celui qui ignore les colonnes qu'il ne connaît pas. Voir [Charger un budget depuis un tableur](budget-file.md).
 
+**Titres des colonnes.** Les fichiers des applications, des actifs, des projets, des incidents, des fournisseurs et des contrats titrent leurs colonnes dans la langue de votre écran, par exemple `Name` en anglais et `Nom` en français. L'import lit ces titres dans chacune des quatre langues, ainsi que les noms techniques que les pages listent (`name`). Les autres fichiers, fichier budgétaire compris, utilisent les noms techniques.
+
 **Classeurs Excel.** Un import lit un fichier CSV ou un classeur Excel (`.xlsx`), avec les mêmes colonnes et les mêmes règles. KANAP lit seulement la première feuille. Quand le classeur a d'autres feuilles, la vérification indique la feuille lue. Un nombre ou une date saisi dans une cellule est lu tel quel, sans question de séparateur ni d'ordre du jour et du mois, et une date avec une heure garde son heure. Une date ou un montant saisi en texte suit les règles d'un fichier CSV ci-dessous. Un ancien fichier Excel (`.xls`) est refusé avec un message : enregistrez-le en `.xlsx` ou en CSV. Les modèles d'import sont des fichiers CSV, qu'Excel ouvre.
 
 **Encodage et séparateur d'un fichier CSV.** Enregistrez le fichier en UTF-8 (« CSV UTF-8 » dans Excel). Un fichier qu'Excel a enregistré en CSV simple, en Windows-1252, s'importe aussi, accents compris. Le séparateur est lu sur la ligne d'en-tête : `,`, `;` ou une tabulation. L'export écrit le séparateur de la langue d'affichage de l'écran.
 
 **Autres fichiers.** Une feuille de calcul OpenDocument (`.ods`) est refusée avant la lecture de toute colonne, avec un message qui explique comment l'enregistrer en CSV. Dans LibreOffice Calc : **Fichier › Enregistrer sous › Texte CSV**, ou **Excel 2007-365 (.xlsx)**. Tout autre fichier qui n'est pas du texte est refusé de la même façon.
+
+## Fichiers d'exemple { #example-files }
+
+La fenêtre d'import des applications, des actifs, des projets, des fournisseurs, des contrats et du fichier budgétaire propose **Télécharger un exemple** : un classeur Excel dans la langue de votre écran.
+
+- La première feuille contient quelques exemples Fromage & Co des colonnes les plus utilisées. C'est la feuille que l'import lit.
+- **Avancé** montre les autres colonnes pour les mêmes lignes, quand l'import en accepte plus que la première feuille n'en contient. Pour en utiliser une, copiez-la dans la première feuille.
+- **Notes** indique ce que chaque colonne accepte. Les listes donnent les valeurs que votre espace accepte, comme ses catégories d'applications ou ses dimensions analytiques.
+
+Les noms, codes et e-mails doivent correspondre à des enregistrements de votre espace. Les exemples reprennent ceux des données d'exemple Fromage & Co : remplacez-les par les vôtres, par exemple le site d'un serveur ou la société d'un contrat.
 
 ## Montants, dates et oui ou non
 

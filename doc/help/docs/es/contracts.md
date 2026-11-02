@@ -321,11 +321,12 @@ La exportación escribe un archivo CSV o un libro de Excel (`.xlsx`): elija en *
 
 Mantenga su lista de contratos sincronizada con otras herramientas mediante archivos CSV o libros de Excel (`contracts:admin`).
 
-**Exportar**: descarga los contratos que muestra la lista (o, a petición en el diálogo, todos los contratos) con estas columnas: `name`, `company_name`, `supplier_name`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. Las fechas calculadas (fin del periodo, fechas límite, situación) no se exportan.
+**Exportar**: descarga los contratos que muestra la lista (o, a petición en el diálogo, todos los contratos). Las columnas llevan títulos en el idioma de su pantalla; sus nombres técnicos, que la importación también lee, son `name`, `company_name`, `supplier_name`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. Las fechas calculadas (fin del periodo, fechas límite, situación) no se exportan.
 
 **Importar**:
 
 - Utilice **Verificación previa** para comprobar el archivo antes de aplicarlo
+- **Descargar un ejemplo**, en el diálogo de importación, ofrece dos contratos de ejemplo y lo que admite cada columna. Consulte [Archivos de ejemplo](csv-files.md#example-files)
 - Una fila corresponde a un contrato por su nombre y su proveedor
 - Admite creación y actualizaciones
 - El archivo no tiene columna de fin de validez. En una actualización, un `status` vacío, o igual al estado actual del contrato, conserva su fin de validez. Un estado distinto se aplica: `enabled` borra el fin de validez, y `disabled` termina el contrato hoy, salvo que su fin de validez ya haya pasado

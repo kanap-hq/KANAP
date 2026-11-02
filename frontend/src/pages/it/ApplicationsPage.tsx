@@ -1204,6 +1204,7 @@ export default function ApplicationsPage() {
         open={importOpen}
         onClose={() => setImportOpen(false)}
         endpoint="/applications"
+        example="applications"
         title={t('pages.applications.importTitle')}
         note={t('pages.applications.importNote')}
         onImported={() => setRefreshKey((k) => k + 1)}

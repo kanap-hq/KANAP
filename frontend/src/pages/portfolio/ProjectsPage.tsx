@@ -566,6 +566,7 @@ export default function ProjectsPage() {
         open={importOpen}
         onClose={() => setImportOpen(false)}
         endpoint="/portfolio/projects"
+        example="portfolio-projects"
         title={t('projects.csv.importTitle')}
         onImported={() => setRefreshKey((k) => k + 1)}
       />

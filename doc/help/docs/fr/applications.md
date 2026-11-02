@@ -536,6 +536,7 @@ Depuis la liste des Applications :
 - **Exporter** : Télécharger les applications dans un fichier CSV ou un classeur Excel
 - **Importer** : Téléverser un fichier CSV ou un classeur Excel pour créer ou mettre à jour des applications
 - **Télécharger le modèle** (depuis la boîte de dialogue d'import) : Obtenir un CSV vierge avec les en-têtes corrects
+- **Télécharger un exemple** (depuis la boîte de dialogue d'import) : un classeur Excel d'applications d'exemple, avec ce que chaque colonne accepte. Voir [Fichiers d'exemple](csv-files.md#example-files)
 
 **Autorisations requises** : `applications:admin` pour les opérations d'import/export.
 
@@ -545,7 +546,7 @@ Depuis la liste des Applications :
 
 **Format** : **CSV** ou **Excel (.xlsx)**, choisi dans la fenêtre et mémorisé par votre navigateur. Le classeur contient les mêmes colonnes que le CSV sur une feuille, avec les nombres et les dates en valeurs qu'Excel sait trier et filtrer. L'import lit l'un ou l'autre ; dans un classeur, il lit la première feuille. Voir [Fichiers CSV et Excel](csv-files.md).
 
-**Colonnes** : le fichier commence par `id` et `reference` (`APP-12`), puis les colonnes suivent l'espace de travail, onglet par onglet. L'import ignore `reference`.
+**Colonnes** : le fichier commence par `id` et la référence (`APP-12`), puis les colonnes suivent l'espace de travail, onglet par onglet. Leurs titres sont dans la langue de votre écran, et l'import les lit dans toutes les langues. L'import ignore la référence.
 
 **Langue des valeurs** : les valeurs de catalogue (catégorie, cycle de vie, criticité, criticité cyber, vague de reprise, classification des données, méthodes d'accès) et le statut sont écrits comme l'écran les affiche, dans la langue de votre écran : `Active` en anglais, `Actif` en français. Un nom que votre organisation a donné à une valeur dans **Cartographie SI > Paramètres** reste tel quel.
 

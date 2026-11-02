@@ -536,6 +536,7 @@ Aus der Anwendungsliste:
 - **Exportieren**: Anwendungen in eine CSV-Datei oder Excel-Arbeitsmappe herunterladen
 - **Importieren**: Eine CSV-Datei oder Excel-Arbeitsmappe hochladen, um Anwendungen zu erstellen oder zu aktualisieren
 - **Vorlage herunterladen** (im Import-Dialog): Eine leere CSV mit korrekten Spaltenköpfen erhalten
+- **Beispiel herunterladen** (im Import-Dialog): eine Excel-Arbeitsmappe mit Beispielanwendungen und dem, was jede Spalte aufnimmt. Siehe [Beispieldateien](csv-files.md#example-files)
 
 **Erforderliche Berechtigungen**: `applications:admin` für Import-/Export-Operationen.
 
@@ -545,7 +546,7 @@ Aus der Anwendungsliste:
 
 **Format**: **CSV** oder **Excel (.xlsx)**, im Dialog gewählt und von Ihrem Browser gespeichert. Die Arbeitsmappe enthält dieselben Spalten wie die CSV-Datei auf einem Blatt, mit Zahlen und Datumsangaben als Werte, die Excel sortieren und filtern kann. Der Import liest beides; in einer Arbeitsmappe liest er das erste Blatt. Siehe [CSV- und Excel-Dateien](csv-files.md).
 
-**Spalten**: Die Datei beginnt mit `id` und `reference` (`APP-12`), dann folgen die Spalten dem Arbeitsbereich, Registerkarte für Registerkarte. Der Import ignoriert `reference`.
+**Spalten**: Die Datei beginnt mit `id` und der Referenz (`APP-12`), dann folgen die Spalten dem Arbeitsbereich, Registerkarte für Registerkarte. Ihre Titel stehen in der Sprache Ihrer Oberfläche, und der Import liest sie in jeder Sprache. Der Import ignoriert die Referenz.
 
 **Sprache der Werte**: Katalogwerte (Kategorie, Lebenszyklus, Kritikalität, Cyberkritikalität, Wiederherstellungswelle, Datenklasse, Zugriffsmethoden) und der Status werden so geschrieben, wie der Bildschirm sie zeigt, in der Sprache Ihres Bildschirms: `Active` auf Englisch, `Aktiv` auf Deutsch. Ein Name, den Ihre Organisation einem Wert unter **IT-Landschaft > Einstellungen** gegeben hat, bleibt unverändert.
 
