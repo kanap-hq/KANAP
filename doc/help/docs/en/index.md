@@ -8,6 +8,14 @@ KANAP helps IT and finance teams manage their technology landscape, budgets, and
 
 If you want the shortest path to productivity, start with the Fast Track guides before diving into the full reference pages.
 
+## First steps
+
+Ten minutes per path, with the Fromage & Co example or with your own data:
+
+- IT budget: [explore with the example](first-steps/budget-example.md), [start with my own data](first-steps/budget-own-data.md)
+- IT landscape map: [explore with the example](first-steps/landscape-example.md), [start with my own data](first-steps/landscape-own-data.md)
+- Projects and requests: [explore with the example](first-steps/portfolio-example.md), [start with my own data](first-steps/portfolio-own-data.md)
+
 ## Fast Track Guides
 
 - [Getting Started: Your First 10 Minutes in KANAP](fast-track/getting-started.md): First-day onboarding, profile setup, dashboard, and core concepts

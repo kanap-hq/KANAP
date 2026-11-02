@@ -8,6 +8,14 @@ KANAP unterstützt IT- und Finanzteams bei der Verwaltung ihrer Technologielands
 
 Wenn Sie schnellstmöglich produktiv werden möchten, beginnen Sie mit den Fast-Track-Anleitungen, bevor Sie sich in die ausführlichen Referenzseiten vertiefen.
 
+## Ihre ersten Schritte
+
+Zehn Minuten je Pfad, mit dem Beispiel Fromage & Co oder mit Ihren eigenen Daten:
+
+- IT-Budget: [mit dem Beispiel entdecken](first-steps/budget-example.md), [mit meinen eigenen Daten beginnen](first-steps/budget-own-data.md)
+- IT-Landkarte: [mit dem Beispiel entdecken](first-steps/landscape-example.md), [mit meinen eigenen Daten beginnen](first-steps/landscape-own-data.md)
+- Projekte und Anfragen: [mit dem Beispiel entdecken](first-steps/portfolio-example.md), [mit meinen eigenen Daten beginnen](first-steps/portfolio-own-data.md)
+
 ## Fast-Track-Anleitungen
 
 - [Erste Schritte: Ihre ersten 10 Minuten in KANAP](fast-track/getting-started.md): Onboarding am ersten Tag, Profileinrichtung, Dashboard und Kernkonzepte

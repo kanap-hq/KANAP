@@ -195,3 +195,15 @@ reports.md	backend/src/common/report-export/*.ts
 admin.md	backend/src/audit/export-events.interceptor.ts
 on-premise/configuration.md	backend/src/config/features.ts
 on-premise/configuration.md	infra/.env.onprem.example
+first-steps/budget-example.md	frontend/src/components/onboarding/onboardingPaths.ts
+first-steps/budget-example.md	backend/src/onboarding/onboarding-paths.ts
+first-steps/budget-own-data.md	frontend/src/components/onboarding/onboardingPaths.ts
+first-steps/budget-own-data.md	backend/src/onboarding/onboarding-paths.ts
+first-steps/landscape-example.md	frontend/src/components/onboarding/onboardingPaths.ts
+first-steps/landscape-example.md	backend/src/onboarding/onboarding-paths.ts
+first-steps/landscape-own-data.md	frontend/src/components/onboarding/onboardingPaths.ts
+first-steps/landscape-own-data.md	backend/src/onboarding/onboarding-paths.ts
+first-steps/portfolio-example.md	frontend/src/components/onboarding/onboardingPaths.ts
+first-steps/portfolio-example.md	backend/src/onboarding/onboarding-paths.ts
+first-steps/portfolio-own-data.md	frontend/src/components/onboarding/onboardingPaths.ts
+first-steps/portfolio-own-data.md	backend/src/onboarding/onboarding-paths.ts

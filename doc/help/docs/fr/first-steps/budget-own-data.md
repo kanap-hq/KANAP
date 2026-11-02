@@ -1,85 +1,58 @@
 ---
 title: "Votre budget IT dans KANAP en dix minutes : commencer avec vos données"
-description: Cinq pas pour mettre votre propre budget IT dans KANAP, de votre société à votre premier rapport, puis l'ouvrir à un collègue, en dix minutes.
+description: Les cinq pas du parcours budget IT sur vos propres données, de votre société à votre premier rapport, puis un collègue.
 ---
-
-<!--
-Brouillon du 31 octobre 2026, à relire avant publication.
-Dépend encore d'une décision :
-- Langue des données d'exemple : sans effet sur ce texte, qui ne cite aucune donnée d'exemple ; les captures attendent cette décision et la livraison des écrans d'onboarding de la 26.11, et se prendront sur un espace rempli de données vraisemblables.
-- Prise de rendez-vous avec le fondateur. La fin de page renvoie aux deux autres parcours ; si le rendez-vous est retenu, y ajouter son lien.
-Écrit pour la 26.11 :
-- Pas 2 : le dépôt d'un fichier à Plaid suppose l'import par Plaid de la 26.11.
-- Pas 4 : les tuiles budgétaires sont sur l'accueil (fusion prévue en 26.11) ; sinon « Gestion budgétaire › Vue d'ensemble ».
-Écarts avec la liste « Vos cinq premiers pas » prévue :
-- Pas 3 : KANAP n'a pas de contrat « principal » ni d'alerte de préavis en tant que telle ; une ligne peut porter plusieurs contrats, et l'approche de la date de résiliation crée une tâche de décision pour le responsable du contrat.
--->
 
 # Votre budget IT dans KANAP en dix minutes
 
 [Découvrir avec l'exemple](budget-example.md) · **Commencer avec mes données**
 
-En dix minutes, vous aurez votre société, vos lignes budgétaires et un contrat dans KANAP, votre premier rapport sur vos chiffres, et un collègue qui peut les lire. Votre espace de travail est vide, à une exception près : la société créée à votre inscription.
+En dix minutes, votre société, vos lignes budgétaires et un contrat sont dans KANAP, votre premier rapport tourne sur vos chiffres, et un collègue peut les lire. Commencer avec vos données efface l'exemple : ce que vous voyez à la fin vient de vous.
+
+Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le parcours **Le budget IT** avec **Commencer avec mes données**. Chaque pas de la tuile ouvre son écran avec une courte indication. Une fois le pas fait, cliquez sur **Fait** dans l'indication, ou sur la marque à côté du pas. Voir [Essai : votre parcours et vos premiers pas](../my-dashboard.md#trial-first-steps).
 
 ## 1. Votre société
 
-:material-clock-outline: 2 minutes
+**Données de référence > Sociétés**
 
-La société est l'entité juridique qui paie ; elle fixe la devise de ses lignes et le plan comptable où l'on choisit leurs comptes.
+**Le geste.** Ouvrez la société créée avec votre espace de travail. Vérifiez sa **Devise de base** et son **Plan comptable**, puis complétez les autres champs. Ajoutez votre propre plan dans **Données de référence > Plans comptables** si celui proposé ne convient pas. Créez vos autres sociétés avec **Nouveau**.
 
-**Le geste.** Ouvrez « Données de référence » › « Sociétés », puis votre société, créée à l'inscription avec votre pays et sa devise. Complétez la « Ville ». Vérifiez le « Plan comptable » proposé. Ouvrez l'onglet « Détails » et saisissez l'« Effectif » de l'année.
-
-**Ce que vous lisez.** Le « Nom », le « Pays » et la « Devise de base », déjà remplis. Le plan comptable proposé par KANAP ; un autre plan, par exemple celui de votre pays, se crée depuis un modèle dans « Données de référence » › « Plans comptables ». L'effectif, avec les « Utilisateurs IT » et le « Chiffre d'affaires », sert à répartir les coûts et nourrit les rapports. Une autre filiale se crée avec « Nouveau ».
-
-<!-- capture : Données de référence › Sociétés, fiche d'une société, onglet « Détails » de l'année en cours ; cadrer les champs Effectif, Utilisateurs IT et Chiffre d'affaires -->
+**Ce que vous lisez.** La société est l'entité juridique qui paie. Elle fixe la devise de ses lignes et le plan comptable d'où viennent leurs comptes.
 
 ## 2. Vos lignes
 
-:material-clock-outline: 3 minutes
+**Gestion budgétaire > Lignes budgétaires**
 
-Une ligne budgétaire est un poste OPEX ou CAPEX : un nom, une société qui paie, un compte, une devise, une date de début, puis des montants par année.
+**Le geste.** Importez votre fichier budget, ou créez une première ligne à la main.
 
-**Le geste.** Le plus court : ouvrez « Plaid », glissez votre fichier budget, Excel ou CSV, sur la zone de saisie et écrivez « Charge ce budget ». Plaid montre comment il a lu chaque colonne ; corrigez ce qui doit l'être, puis approuvez. Sans fichier : « Gestion budgétaire » › « Lignes budgétaires » › « Nouvelle ligne ». Saisissez le nom du produit, la « Société payeuse », le « Compte », la « Devise » et le « Début d'effet », puis « Créer ». Dans l'onglet « Budget », cliquez sur la carte « Budget », saisissez le « Montant annuel » et, sous « Quand », choisissez « Toute l'année » ou « Une période ».
+- **Importer un fichier.** Cliquez d'abord sur **Exporter** : sur une liste vide, le fichier ne contient que la ligne de titres, votre modèle. **Importer > Télécharger un exemple** donne un classeur avec quelques lignes d'exemple et ce que prend chaque colonne. Remplissez vos lignes, puis **Importer**.
+- **Créer une ligne.** Cliquez sur **Nouvelle ligne**, tapez son nom dans le titre et appuyez sur Entrée. Remplissez le panneau **Propriétés** : société payeuse, compte, devise. Saisissez les montants dans l'onglet **Budget**, puis cliquez sur **Créer**. **Annuler** abandonne la ligne.
 
-**Ce que vous lisez.** Avec Plaid : ce qu'il a placé, ce qu'il a supposé, ce qu'il n'a pas su placer, puis la vérification de KANAP, « Erreurs », « Modifications » et « Avertissements » ; rien n'est chargé tant qu'une erreur reste. À la main : la phrase qui résume la répartition, par exemple « 120 000 répartis linéairement d'avril à décembre (9 mois) ». Un mois compte si la période couvre son 15.
-
-<!-- capture : Gestion budgétaire › Lignes budgétaires, une ligne OPEX, onglet « Budget », éditeur de la colonne Budget en mode « Montant » ; cadrer le montant, la période et la phrase de résultat -->
+**Ce que vous lisez.** Un import vérifie tout le fichier et annonce les lignes à créer, à mettre à jour et celles qui ne changent pas. Un fichier avec une erreur ne charge rien. Une ligne créée à la main apparaît dans la liste avec ses montants de l'année.
 
 ## 3. Un contrat lié
 
-:material-clock-outline: 2 minutes
+**Gestion budgétaire > Contrats**
 
-Un contrat porte ce que le budget ne dit pas : sa durée, sa reconduction et le préavis qui fixe la date limite pour le résilier.
+**Le geste.** Cliquez sur **Nouveau contrat**, remplissez le formulaire, puis **Créer**. Dans l'onglet **Budget** du contrat, liez la ligne qu'il paie avec le sélecteur sous le tableau.
 
-**Le geste.** Ouvrez « Gestion budgétaire » › « Contrats » › « Nouveau ». Saisissez le « Nom du contrat », le « Fournisseur », la « Société contractante », le « Début », la « Durée (mois) », la « Devise » et le « Préavis (mois) », choisissez-vous comme « Responsable », puis « Créer ». Dans l'onglet « Budget » du contrat, liez la ligne qu'il finance avec « Lier ou retirer des lignes budgétaires ».
-
-**Ce que vous lisez.** Dans la liste des contrats : la « Prochaine échéance », la date « Résiliation avant » et l'« État » (« À décider », « En cours », « Reconduit au… »). Quand la date limite de résiliation entre dans le délai de décision, 90 jours par défaut, KANAP crée une tâche « Décider du renouvellement » pour le responsable et la lui envoie par e-mail.
-
-<!-- capture : Gestion budgétaire › Contrats, liste avec les colonnes Prochaine échéance, Résiliation avant et État ; cadrer un contrat « À décider » -->
+**Ce que vous lisez.** Le contrat date chaque période, dit quand une décision de renouvellement est due, et compare ce qu'il engage avec les lignes budgétaires qui lui sont liées.
 
 ## 4. Votre premier rapport
 
-:material-clock-outline: 1 minute
+**Gestion budgétaire > Rapports > Top lignes**
 
-Dès que vos lignes portent des montants, les tuiles et les rapports se calculent sur vos chiffres.
+**Le geste.** Vérifiez que les filtres suivent vos saisies : **Année**, OPEX ou CAPEX, **Nombre de premiers**. Ajoutez des lignes pour enrichir les rapports.
 
-**Le geste.** Ouvrez l'accueil, en cliquant sur le logo KANAP, puis « Gestion budgétaire » › « Rapports » › « Top lignes ».
-
-**Ce que vous lisez.** Sur l'accueil, la tuile « Budget » : votre OPEX, votre CAPEX et leur total, dans chaque colonne affichée. « Top lignes » classe vos dix plus gros postes de l'année, avec leur part du total ; chaque nom ouvre sa ligne.
-
-<!-- capture : Gestion budgétaire › Rapports › « Top lignes » sur un budget saisi ; cadrer le tableau et le graphique -->
+**Ce que vous lisez.** Vos plus grosses lignes de l'année avec leur part du total. Un clic sur une ligne l'ouvre.
 
 ## 5. Un collègue
 
-:material-clock-outline: 2 minutes
+**Administration > Utilisateurs**
 
-Le budget se travaille à plusieurs : le contrôle de gestion lit les mêmes chiffres que vous, sans pouvoir les modifier.
+**Le geste.** Cliquez sur **Nouveau**, saisissez l'**E-mail** de votre collègue, choisissez un rôle dans **Rôles**, par exemple **Lecteur budget**, puis **Enregistrer et inviter**. Pour que vos collègues se connectent avec Microsoft Entra ID, configurez le SSO dans **Administration > Authentification**.
 
-**Le geste.** Ouvrez « Administration » › « Utilisateurs » › « Nouveau ». Saisissez l'« E-mail » de votre collègue, choisissez le rôle « Lecteur budget » dans « Rôles », puis « Enregistrer et inviter ».
-
-**Ce que vous lisez.** Votre collègue apparaît avec le statut « Invité » et reçoit l'e-mail « Vous êtes invité sur KANAP », avec un lien pour choisir son mot de passe. Une fois entré, il lit les lignes, les contrats et les rapports, sans rien modifier, ni importer, ni exporter.
-
-<!-- capture : Administration › Utilisateurs, fenêtre « Nouvel utilisateur » avec le rôle « Lecteur budget » ; cadrer l'e-mail, les rôles et le bouton « Enregistrer et inviter » -->
+**Ce que vous lisez.** Votre collègue apparaît avec le statut **Invité** et reçoit un e-mail avec un lien pour choisir son mot de passe. **Lecteur budget** lit les lignes, les contrats et les rapports sans les modifier.
 
 ## Et ensuite
 
@@ -88,4 +61,6 @@ Votre budget IT est dans KANAP. Les deux autres parcours prennent aussi dix minu
 - [Votre système d'information dans KANAP en dix minutes](landscape-own-data.md)
 - [Votre portefeuille dans KANAP en dix minutes](portfolio-own-data.md)
 
-Pour aller plus loin sur ce parcours : [Sociétés](../companies.md), [Lignes budgétaires](../budget-lines.md), [Contrats](../contracts.md), [Charger un budget depuis un tableur](../budget-file.md).
+Une fois les cinq pas faits, la tuile propose ces parcours. Pendant l'essai, elle propose aussi **Planifier un appel découverte**.
+
+Pour aller plus loin : [Sociétés](../companies.md), [Lignes budgétaires](../budget-lines.md), [Contrats](../contracts.md), [Charger un budget depuis un tableur](../budget-file.md), [Administration](../admin.md).

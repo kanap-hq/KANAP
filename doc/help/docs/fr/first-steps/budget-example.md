@@ -1,93 +1,59 @@
 ---
 title: "Votre budget IT dans KANAP en dix minutes : découvrir avec l'exemple"
-description: Cinq pas sur l'exemple Fromage & Co pour voir ce que KANAP fait d'un budget IT, de la vue d'ensemble à la question posée à Plaid, en dix minutes.
+description: Les cinq pas du parcours budget IT sur l'exemple Fromage & Co, de la liste des lignes budgétaires à votre propre fichier.
 ---
-
-<!--
-Brouillon du 31 octobre 2026, à relire avant publication.
-Dépend encore d'une décision :
-- Langue des données d'exemple. Les noms cités (lignes, centres de coûts, fournisseurs) sont ceux du jeu Fromage & Co actuel, en anglais. Si le jeu est traduit, reprendre les noms. Les captures attendent cette décision et la livraison des écrans d'onboarding de la 26.11.
-- Prise de rendez-vous avec le fondateur. La fin de page renvoie aux deux autres parcours ; si le rendez-vous est retenu, y ajouter son lien.
-Écrit pour la 26.11 :
-- Pas 1 : les tuiles budgétaires sont sur l'accueil (fusion de l'accueil de Gestion budgétaire dans l'accueil principal, prévue en 26.11). Si la fusion n'est pas livrée, écrire « Gestion budgétaire › Vue d'ensemble ».
-- Pas 5 : le dépôt d'un fichier à Plaid suppose l'import par Plaid de la 26.11.
-Écart avec la liste « Vos cinq premiers pas » prévue :
-- Pas 1 : l'écran ne donne pas de total par société ; le pas montre le total de l'année et la tuile « Par centre de coûts ».
--->
 
 # Votre budget IT dans KANAP en dix minutes
 
 **Découvrir avec l'exemple** · [Commencer avec mes données](budget-own-data.md)
 
-En dix minutes, sur le budget de Fromage & Co, vous saurez lire un budget IT dans KANAP, ouvrir une ligne et suivre ses mois, trouver les plus gros postes et les plus fortes hausses, et vérifier une réponse de Plaid, l'assistant. Fromage & Co est un groupe fromager fictif dont l'exemple est chargé dans votre espace de travail.
+Fromage & Co est un groupe fromager fictif dont l'exemple est chargé dans votre espace de travail. En dix minutes sur son budget, vous lisez les lignes budgétaires, ouvrez la plus grosse, lancez un rapport, posez une question à Plaid et voyez comment votre propre fichier entre dans KANAP.
+
+Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le parcours **Le budget IT** avec **Découvrir avec l'exemple complet**. Chaque pas de la tuile ouvre son écran avec une courte indication, et l'ouvrir le marque comme fait. Voir [Essai : votre parcours et vos premiers pas](../my-dashboard.md#trial-first-steps).
 
 ## 1. La vue d'ensemble
 
-:material-clock-outline: 2 minutes
+**Gestion budgétaire > Lignes budgétaires**
 
-Pour chaque ligne et chaque année, KANAP garde cinq colonnes de montants, une par étape du cycle budgétaire ; la colonne par défaut, « Budget », est celle que les écrans et les rapports montrent d'abord.
+**Le geste.** Filtrez la liste par **Type** (OPEX ou CAPEX) ou par **Société payeuse**, ou tapez un nom dans **Filtre rapide**.
 
-**Le geste.** Ouvrez l'accueil, en cliquant sur le logo KANAP. Regardez la tuile « Budget », puis la tuile « Par centre de coûts ».
-
-**Ce que vous lisez.** La tuile « Budget » donne trois années côte à côte, l'OPEX, le CAPEX et leur total, dans chaque colonne affichée :
-
-- « Budget » : le budget voté ;
-- « Révision » : le budget révisé en cours d'année ;
-- « Réalisé » : la dépense constatée ;
-- « Atterrissage prévu » : l'estimation de fin d'année ;
-- « Prévision », la cinquième colonne, est masquée au départ.
-
-Les noms se changent dans les réglages, l'ordre ne change pas. La tuile « Par centre de coûts » donne les cinq équipes qui portent le plus de budget cette année.
-
-<!-- capture : Accueil, tuiles « Budget » et « Par centre de coûts » sur l'année en cours ; cadrer les deux tuiles côte à côte -->
+**Ce que vous lisez.** Toutes les lignes budgétaires de l'exemple, triées par leur budget de l'année en cours. Chaque ligne a une société payeuse, un compte, un fournisseur et des montants pour chaque année.
 
 ## 2. Une ligne budgétaire
 
-:material-clock-outline: 2 minutes
+**La plus grosse ligne de l'année**, ouverte par le pas
 
-Une ligne budgétaire est un poste OPEX ou CAPEX ; autour d'elle, tout dit qui paie, sur quel compte, qui en répond et comment on la classe.
+**Le geste.** Ouvrez l'onglet **Budget**, puis **Relations** et **Historique**.
 
-**Le geste.** Ouvrez « Gestion budgétaire » › « Lignes budgétaires », puis « Microsoft Enterprise (M365 + Azure + GitHub) », la plus grosse ligne de l'exemple. Ouvrez l'onglet « Budget », année en cours, puis l'onglet « Historique ».
-
-**Ce que vous lisez.** Dans le panneau « Propriétés » : la « Société payeuse » (Fromage & Co SA), le « Compte » (612100, abonnements SaaS), le « Centre de coûts » (Workplace and support) et la « Nature de coût », une dimension analytique. Dans l'onglet « Budget » : une carte par colonne, 650 000 € au « Budget », 659 500 € en « Atterrissage prévu », et le « Résultat par mois », qui étale chaque colonne sur les douze mois et les quatre trimestres. L'onglet « Historique » garde chaque modification, avec son auteur et sa date.
-
-<!-- capture : Gestion budgétaire › Lignes budgétaires, ligne « Microsoft Enterprise (M365 + Azure + GitHub) », onglet « Budget » de l'année en cours ; cadrer les cartes des colonnes et le résultat par mois -->
+**Ce que vous lisez.** **Budget** montre les montants de l'année dans quatre colonnes budgétaires sur les cinq possibles. Leurs noms et celles qui s'affichent se règlent dans **Gestion budgétaire > Administration**. **Relations** relie la ligne à ce qu'elle paie : contrats, applications, projets. **Historique** garde chaque modification avec son auteur et sa date.
 
 ## 3. Un rapport
 
-:material-clock-outline: 2 minutes
+**Gestion budgétaire > Rapports > Top lignes**
 
-Les rapports répondent aux questions de la revue budgétaire ; chaque ligne d'un rapport ramène à la ligne budgétaire qui la porte.
+**Le geste.** Passez de l'OPEX au CAPEX, changez l'**Année**, la **Métrique** ou le **Nombre de premiers**. Cliquez sur une ligne des résultats pour l'ouvrir.
 
-**Le geste.** Ouvrez « Gestion budgétaire » › « Rapports », puis « Top lignes ». Revenez et ouvrez « Top hausse / baisse » : il compare par défaut l'an dernier et cette année, sur la colonne « Budget ». Cliquez sur le nom d'une ligne.
-
-**Ce que vous lisez.** « Top lignes » classe les dix plus gros postes de l'année, avec leur part du total : Microsoft en tête, puis IT Staff Augmentation et SAP S/4HANA Maintenance. « Top hausse / baisse » donne l'écart de chaque ligne, en montant et en pourcentage : « Workday HCM » passe ainsi de 80 000 à 150 000 €, avec le déploiement de Workday dans les filiales. Le nom ouvre la ligne dans un nouvel onglet, pour comprendre la hausse.
-
-<!-- capture : Gestion budgétaire › Rapports › « Top hausse / baisse », année précédente contre année en cours, colonne « Budget » ; cadrer le tableau des hausses -->
+**Ce que vous lisez.** Les plus grosses lignes de l'année avec leur part du total, en graphique et en tableau. Chaque rapport s'exporte en .pdf, .png ou .xlsx.
 
 ## 4. Une question à Plaid
 
-:material-clock-outline: 2 minutes
+**Plaid**, dans la barre du haut
 
-Plaid lit le budget avec vos droits ; les totaux qu'il cite sont calculés par KANAP, pas par le modèle.
+**Le geste.** Sous **Pour démarrer**, cliquez sur **Quelles sont les principales opportunités d'économies dans les OPEX IT ?** La deuxième question du parcours, **Quelles lignes n'ont pas de responsable ?**, vient ensuite.
 
-**Le geste.** Ouvrez « Plaid » dans la barre du haut et demandez : « Quelles sont mes cinq plus grosses lignes cette année ? »
+**Ce que vous lisez.** Une réponse construite sur les lignes budgétaires de l'exemple. Plaid les lit avec vos droits. Vérifiez une ligne qu'il cite dans la liste du pas 1.
 
-**Ce que vous lisez.** Cinq lignes, leur montant au « Budget » et leur total, chacune avec un lien vers sa fiche. Vérifiez contre le rapport « Top lignes » du pas précédent : les trois premières sont les mêmes, aux mêmes montants.
-
-<!-- capture : Plaid, réponse à « Quelles sont mes cinq plus grosses lignes cette année ? » ; cadrer la question et la liste des cinq lignes -->
+Pendant l'essai, Plaid démarre désactivé. Un administrateur l'active en cochant la case qui tient la place du champ de message. Les autres lisent que Plaid attend un administrateur. Voir [Avant l'acceptation du modèle inclus](../ai-assistant.md#included-model-acceptance).
 
 ## 5. Vos données
 
-:material-clock-outline: 2 minutes
+**Gestion budgétaire > Lignes budgétaires**, **Exporter**
 
-Un budget entre dans KANAP par un fichier, celui que vous tenez déjà : KANAP le vérifie entièrement avant d'en charger la moindre ligne.
+**Le geste.** Cliquez sur **Exporter**, choisissez **CSV** ou **Excel (.xlsx)** et ouvrez le fichier. Cliquez ensuite sur **Importer**, puis **Télécharger un exemple**.
 
-**Le geste.** Dans « Gestion budgétaire » › « Lignes budgétaires », cliquez sur « Exporter », choisissez le format « Excel (.xlsx) » et ouvrez le fichier : c'est le format de KANAP. Puis ouvrez « Plaid », glissez votre propre fichier budget sur la zone de saisie et écrivez : « Charge ce budget ». Plaid montre comment il a lu chaque colonne ; corrigez ce qui doit l'être, puis approuvez.
+**Ce que vous lisez.** L'export est le fichier budget : les mêmes colonnes que celles que lit l'import. Servez-vous-en comme modèle pour mettre à jour des lignes en masse ou en charger de nouvelles. Le classeur d'exemple contient quelques lignes, les autres colonnes sur une feuille **Avancé** et ce que prend chaque colonne sur une feuille **Notes**. Un import vérifie tout le fichier avant de charger quoi que ce soit. **Exporter** et **Importer** s'affichent pour les administrateurs du budget.
 
-**Ce que vous lisez.** Ce que Plaid a placé, ce qu'il a supposé et ce qu'il n'a pas su placer. Puis la vérification de KANAP : les « Erreurs », qui bloquent le chargement, les « Modifications » (lignes à créer, à mettre à jour, inchangées) et les « Avertissements ». Rien n'est chargé tant qu'une erreur reste.
-
-<!-- capture : Plaid, résultat de la vérification d'un fichier budget avant chargement ; cadrer les sections « Erreurs », « Modifications » et « Avertissements » -->
+Pour partir d'un fichier que vous tenez déjà, joignez-le à un message dans Plaid avec **Joindre un fichier**. Plaid lit les titres de ses colonnes, le type de chaque colonne et les dix premières lignes, et peut dire ce que contient chaque colonne.
 
 ## Et ensuite
 
@@ -96,4 +62,6 @@ Vous avez vu l'essentiel de KANAP pour le budget IT. Les deux autres parcours pr
 - [Votre système d'information dans KANAP en dix minutes](landscape-example.md)
 - [Votre portefeuille dans KANAP en dix minutes](portfolio-example.md)
 
-Pour aller plus loin sur ce parcours : [Lignes budgétaires](../budget-lines.md), [Rapports](../reports.md), [Charger un budget depuis un tableur](../budget-file.md).
+Une fois les cinq pas faits, la tuile propose ces parcours. Pendant l'essai, elle propose aussi **Planifier un appel découverte**.
+
+Pour aller plus loin : [Lignes budgétaires](../budget-lines.md), [Rapports](../reports.md), [Charger un budget depuis un tableur](../budget-file.md).

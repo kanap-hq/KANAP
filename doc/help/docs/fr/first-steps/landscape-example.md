@@ -1,85 +1,57 @@
 ---
 title: "Votre système d'information dans KANAP en dix minutes : découvrir avec l'exemple"
-description: Cinq pas sur l'exemple Fromage & Co pour voir ce que KANAP fait de votre cartographie, des flux entre applications aux fins de support et aux vulnérabilités, en dix minutes.
+description: Les cinq pas du parcours cartographie du SI sur l'exemple Fromage & Co, de la liste des applications aux fins de support et à votre propre fichier.
 ---
-
-<!--
-Brouillon du 31 octobre 2026, à relire avant publication.
-Dépend encore d'une décision :
-- Langue des données d'exemple. Les noms cités (applications, serveurs, technologies) sont ceux du jeu Fromage & Co actuel, en anglais. Si le jeu est traduit, reprendre les noms. Les captures attendent cette décision et la livraison des écrans d'onboarding de la 26.11.
-- Prise de rendez-vous avec le fondateur. La fin de page renvoie aux deux autres parcours ; si le rendez-vous est retenu, y ajouter son lien.
-Écrit pour la 26.11 :
-- Pas 5 : le dépôt du fichier des applications à Plaid suppose l'import par Plaid de la 26.11. « Collez votre liste » n'est prévu qu'en lot suivant : la liste des technologies passe ici par Plaid, qui sait déjà créer une technologie depuis le catalogue et la relier à une application.
-Points qui varient avec la date :
-- Pas 3 : les dates de fin de support viennent du catalogue et ne suivent pas l'année de l'exemple ; PostgreSQL 13 restera hors support, les autres exemples peuvent changer d'état.
-- Pas 4 : l'exemple ne contient aucune CVE ; elles viennent de la synchronisation des bases publiques et changent chaque jour. Aucune CVE n'est citée.
--->
 
 # Votre système d'information dans KANAP en dix minutes
 
 **Découvrir avec l'exemple** · [Commencer avec mes données](landscape-own-data.md)
 
-En dix minutes, sur le système d'information de Fromage & Co, vous saurez lire un flux entre deux applications, ouvrir la fiche d'une application et voir où elle tourne, repérer ce qui sort du support et les failles qui touchent vos serveurs. Fromage & Co est un groupe fromager fictif dont l'exemple est chargé dans votre espace de travail.
+Fromage & Co est un groupe fromager fictif dont l'exemple est chargé dans votre espace de travail. En dix minutes sur son système d'information, vous lisez l'inventaire des applications, ouvrez une application critique, voyez où elle tourne, repérez ce qui arrive en fin de support et voyez comment votre propre fichier entre dans KANAP.
 
-## 1. La carte des applications
+Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le parcours **La cartographie du SI** avec **Découvrir avec l'exemple complet**. Chaque pas de la tuile ouvre son écran avec une courte indication, et l'ouvrir le marque comme fait. Voir [Essai : votre parcours et vos premiers pas](../my-dashboard.md#trial-first-steps).
 
-:material-clock-outline: 2 minutes
+## 1. La liste des applications
 
-Une interface est un flux de données d'une application vers une autre ; la carte les dessine toutes, environnement par environnement.
+**Cartographie SI > Applications**
 
-**Le geste.** Ouvrez « Cartographie SI » › « Carte des interfaces ». Laissez l'« Environnement » sur « Prod ». Cliquez sur la flèche qui va de « CheeseTrack » à « SAP S/4HANA ».
+**Le geste.** Filtrez, triez et cherchez dans la liste, par exemple sur la criticité.
 
-**Ce que vous lisez.** Chaque nœud est une application, chaque flèche une interface, dans le sens du flux. Le panneau « Détails de l'interface » donne sa criticité, sa route (directe ou via un middleware) et ses « Points de terminaison » en production : CheeseTrack envoie chaque heure ses lots de production à SAP, pour la traçabilité. « Ouvrir l'interface » mène à sa fiche complète.
-
-<!-- capture : Cartographie SI › Carte des interfaces, environnement Prod, panneau « Détails de l'interface » ouvert sur CheeseTrack → SAP S/4HANA ; cadrer la carte et le panneau -->
+**Ce que vous lisez.** Toutes les applications de l'exemple avec leur criticité, leur responsable et leur société. C'est l'inventaire auquel se rattache le reste de la cartographie.
 
 ## 2. Une fiche d'application
 
-:material-clock-outline: 2 minutes
+**L'application la plus critique**, ouverte par le pas
 
-Une fiche d'application dit ce que l'application fait pour le métier, qui en répond, avec quoi elle échange et où elle tourne.
+**Le geste.** Lisez le panneau des propriétés, puis ouvrez les onglets **Déploiements**, **Interfaces**, **Exploitation** et **Relations**.
 
-**Le geste.** Ouvrez « Cartographie SI » › « Applications », puis « SAP S/4HANA ». Parcourez les onglets « Interfaces » et « Déploiements ».
+**Ce que vous lisez.** Le panneau des propriétés donne l'éditeur, les dates de son cycle de vie et ses responsables. **Déploiements** montre un bloc par environnement avec les serveurs qui la font tourner. **Interfaces** liste les flux de données entrants et sortants. **Exploitation** liste les technologies dont l'application dépend, avec leur fin de support. **Relations** la relie aux lignes budgétaires, aux contrats et aux projets.
 
-**Ce que vous lisez.** En en-tête, la criticité : « Critique ». Dans le panneau des propriétés, les « Responsables métier » (Maria Casanova) et les « Responsables IT » (Sophie Laurent), l'éditeur et la date de « Fin de support » de l'application. L'onglet « Interfaces » sépare les flux entrants et sortants. L'onglet « Déploiements » montre un bloc par environnement avec ses serveurs : PAR-ERP-01 en production, PAR-ERP-QA-01 en QA. L'onglet « Relations » la relie aux lignes budgétaires, aux contrats et aux projets.
+## 3. Les serveurs
 
-<!-- capture : Cartographie SI › Applications, fiche « SAP S/4HANA », onglet « Déploiements » ; cadrer l'en-tête avec la criticité, le panneau des responsables et les blocs Prod et QA -->
+**Cartographie SI > Actifs**
 
-## 3. Les technologies et les fins de support
+**Le geste.** Ouvrez un serveur.
 
-:material-clock-outline: 2 minutes
+**Ce que vous lisez.** Chaque serveur dit où tournent les applications : son environnement, son site et les technologies qui y sont installées. Son onglet **Exploitation** liste les applications qu'il héberge.
 
-Chaque serveur et chaque application déclare ses technologies et leurs versions ; KANAP connaît la date de fin de support de chaque version par son catalogue, tenu à jour à partir des calendriers publics des éditeurs.
+## 4. Les technologies, fins de support et failles
 
-**Le geste.** Ouvrez « Cartographie SI » › « Fins de support » et choisissez l'« Horizon » « 6 mois ». Cliquez sur la ligne « PostgreSQL 13 ». Puis ouvrez la technologie elle-même, depuis « Cartographie SI » › « Technologies ».
+**Cartographie SI > Fins de support**
 
-**Ce que vous lisez.** Une ligne par version qui sort du support dans les six mois, ou qui en est déjà sortie, avec son « État » : « Hors support », « Support étendu » ou « Fin proche ». PostgreSQL 13 est hors support ; la ligne dépliée montre le serveur PAR-DB-01 et l'application qui en dépend. Sur la fiche de la technologie, la pastille « Catalogue » et la mention « Versions et dates tenues à jour depuis le catalogue » disent d'où vient la date.
+**Le geste.** Choisissez un **Horizon**, puis cliquez sur une ligne pour déplier les serveurs et les applications qu'elle touche. Ouvrez une technologie depuis sa ligne.
 
-<!-- capture : Cartographie SI › Fins de support, horizon 6 mois, ligne PostgreSQL 13 dépliée ; cadrer le tableau et les serveurs et applications touchés -->
-
-## 4. Les vulnérabilités
-
-:material-clock-outline: 2 minutes
-
-KANAP rapproche chaque jour les vulnérabilités publiées, les CVE, des technologies et des versions que vous déclarez : vous ne voyez que celles qui touchent votre parc.
-
-**Le geste.** Ouvrez « Cartographie SI » › « Vulnérabilités ». Triez par « Score », puis cliquez sur une CVE qui touche PostgreSQL 13. Si elle ne vous concerne pas, « Changer l'état » la passe à « Non concernée », avec une note.
-
-**Ce que vous lisez.** Pour chaque CVE : sa « Sévérité », son « Score », si elle est « Exploitée », et son « État » (« À traiter », « Traitée », « Non concernée »). Le détail donne la technologie et la version en cause, puis les « Serveurs » et les « Applications » touchés : la liste des machines à corriger, sans recherche à la main.
-
-<!-- capture : Cartographie SI › Vulnérabilités, détail d'une CVE PostgreSQL 13 ; cadrer la sévérité, l'état et les serveurs et applications touchés -->
+**Ce que vous lisez.** Ce qui est arrivé ou arrive en fin de support dans l'horizon, avec son **État** : **Hors support**, **Support étendu** ou **Fin proche**. Sur une technologie, une version marquée **Catalogue** tient ses dates du catalogue KANAP, tenu à jour à partir des calendriers des éditeurs. **Cartographie SI > Vulnérabilités** liste les vulnérabilités publiées (CVE) qui touchent les versions que vous déclarez, avec les serveurs et les applications concernés.
 
 ## 5. Vos données
 
-:material-clock-outline: 2 minutes
+**Cartographie SI > Applications**, **Exporter**
 
-Le plus court chemin vers votre propre cartographie est la liste que vous tenez déjà : vos applications et ce sur quoi elles tournent.
+**Le geste.** Cliquez sur **Exporter**, choisissez **CSV** ou **Excel (.xlsx)** et ouvrez le fichier. Cliquez ensuite sur **Importer**, puis **Télécharger un exemple**.
 
-**Le geste.** Ouvrez « Plaid », glissez votre fichier d'applications, en Excel ou en CSV, sur la zone de saisie et écrivez : « Importe ces applications ». Plaid montre comment il a lu chaque colonne ; corrigez, puis approuvez. Collez ensuite dans Plaid la liste de vos technologies, avec leurs versions et l'application qui les utilise : « Ajoute ces technologies et relie-les à ces applications ».
+**Ce que vous lisez.** L'export titre ses colonnes dans votre langue et l'import lit les mêmes colonnes : servez-vous-en comme modèle pour vos propres applications. Le classeur d'exemple contient quelques applications, les autres colonnes sur une feuille **Avancé** et ce que prend chaque colonne sur une feuille **Notes**. Poursuivez avec les technologies pour y associer les fins de support et les vulnérabilités. **Exporter** et **Importer** s'affichent pour les administrateurs de la liste.
 
-**Ce que vous lisez.** Ce que Plaid a placé, ce qu'il a supposé et ce qu'il n'a pas su placer, puis la vérification de KANAP avant tout chargement. Les technologies reconnues dans le catalogue arrivent avec leurs dates : dans la minute, vos versions apparaissent dans « Fins de support » ; leurs vulnérabilités suivent à la synchronisation suivante.
-
-<!-- capture : Plaid, aperçu de la correspondance des colonnes d'un fichier d'applications avant import ; cadrer le tableau de correspondance et les boutons d'approbation -->
+Pour partir d'un fichier que vous tenez déjà, joignez-le à un message dans Plaid avec **Joindre un fichier**. Plaid lit les titres de ses colonnes, le type de chaque colonne et les dix premières lignes, et peut dire ce que contient chaque colonne.
 
 ## Et ensuite
 
@@ -88,4 +60,6 @@ Vous avez vu l'essentiel de KANAP pour la cartographie du SI. Les deux autres pa
 - [Votre budget IT dans KANAP en dix minutes](budget-example.md)
 - [Votre portefeuille dans KANAP en dix minutes](portfolio-example.md)
 
-Pour aller plus loin sur ce parcours : [Applications](../applications.md), [Carte des interfaces](../interface-map.md), [Fins de support](../end-of-support.md), [Vulnérabilités](../vulnerabilities.md).
+Une fois les cinq pas faits, la tuile propose ces parcours. Pendant l'essai, elle propose aussi **Planifier un appel découverte**.
+
+Pour aller plus loin : [Applications](../applications.md), [Actifs](../assets.md), [Fins de support](../end-of-support.md), [Vulnérabilités](../vulnerabilities.md), [Fichiers CSV et Excel](../csv-files.md).
