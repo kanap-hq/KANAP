@@ -210,7 +210,7 @@ export function buildTrialWelcomeEmail(params: TrialMailCommon & {
     const links = pathLinks(letter, params.mode, others);
     letter.paragraph(t.angle, {
       angle: letter.strings.trialMails.angleChosen[params.angle],
-      guide: urlLink(trialGuideUrl(letter.locale, params.angle, params.mode)),
+      guide: { link: { label: letter.strings.trialMails.guideTitles[params.angle], url: trialGuideUrl(letter.locale, params.angle, params.mode) } },
       other1: links[others[0]],
       other2: links[others[1]],
     });

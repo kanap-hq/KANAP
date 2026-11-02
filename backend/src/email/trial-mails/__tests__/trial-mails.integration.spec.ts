@@ -29,8 +29,8 @@ import { TrialMailsService } from '../trial-mails.service';
 // - J0 after the choice of a path, once, and not again from a new process (a restart);
 // - J0 an hour after the first sign-in seen without a choice, with the three paths;
 // - J+5 from Friedrich, by the discovery call; J+12 and the end-of-trial notice at their time;
-// - the thank-you once at the first Stripe subscription, never for a workspace never seen in
-//   trial; nothing more of the trial sequence after it;
+// - the thank-you once at the first Stripe subscription; nothing more of the trial sequence after
+//   it; nothing at all for a workspace created before the trial e-mails (no row);
 // - a failed send lifts its stamp; nothing at all while e-mail sending is off;
 // - over HTTP: the unsubscribe page, its confirmation (and the audit entry) that stops the
 //   sequence, the counted redirect to the discovery call, 404 on a bad token.
@@ -104,9 +104,9 @@ async function testWelcomeOnceAfterTheChoice() {
     const { start } = await trialDates(t);
     await withEnv(ENV, async () => {
       const { email, trialMails } = service();
+      assert.ok(await readState(t!.tenantId), 'the activation enrols the trial');
       await trialMails.onSubscriptionChanged(t!.tenantId, new Date(start.getTime() + 60_000));
       assert.equal(email.to(t!.ownerEmail).length, 0, 'nothing before a choice or a sign-in');
-      assert.ok(await readState(t!.tenantId), 'the trial is enrolled');
 
       await choose(t!.tenantId, 'budget', 'example');
       await trialMails.onSubscriptionChanged(t!.tenantId, new Date(start.getTime() + 120_000));
@@ -206,7 +206,8 @@ async function testThanksAtTheFirstSubscriptionOnly() {
       `UPDATE subscriptions SET status = 'active', stripe_subscription_id = 'sub_' || substr(md5(random()::text), 1, 12), trial_end = NULL WHERE tenant_id = $1`,
       [tenantId],
     ));
-    await subscribe(before.tenantId);
+    // A workspace created before the trial e-mails shipped has no row.
+    await inTenant(before.tenantId, (m) => m.query(`DELETE FROM trial_mails WHERE tenant_id = $1`, [before!.tenantId]));
     await withEnv(ENV, async () => {
       const { email, trialMails } = service();
       await trialMails.onSubscriptionChanged(t!.tenantId, new Date(start.getTime() + 60_000));
@@ -219,8 +220,12 @@ async function testThanksAtTheFirstSubscriptionOnly() {
       await trialMails.onSubscriptionChanged(t!.tenantId, new Date(start.getTime() + 13 * DAY));
       assert.equal(email.to(t!.ownerEmail).length, 1, 'once, and the trial sequence stops');
 
+      await choose(before!.tenantId, 'budget', 'example');
+      await trialMails.onSubscriptionChanged(before!.tenantId, new Date(start.getTime() + 2 * DAY));
       await trialMails.onSubscriptionChanged(before!.tenantId, new Date(start.getTime() + 6 * DAY));
-      assert.equal(email.to(before!.ownerEmail).length, 0, 'never seen in trial: no thank-you');
+      await subscribe(before!.tenantId);
+      await trialMails.onSubscriptionChanged(before!.tenantId, new Date(start.getTime() + 7 * DAY));
+      assert.equal(email.to(before!.ownerEmail).length, 0, 'created before the trial e-mails: no mail, no thank-you');
       assert.equal(await readState(before!.tenantId), null);
     });
   } finally {
@@ -240,7 +245,7 @@ async function testFailedSendAndEmailOff() {
       const off = service();
       off.email.transportName = 'disabled';
       assert.equal((await off.trialMails.run(now)).skipped_reason, 'e-mail sending is off');
-      assert.equal(await readState(t!.tenantId), null, 'nothing written while sending is off');
+      assert.equal((await readState(t!.tenantId)).j0_sent_at, null, 'nothing sent or stamped while sending is off');
 
       const { email, trialMails } = service();
       email.fail = true;
@@ -318,7 +323,7 @@ async function testLinksOverHttp() {
       const page = await request(served, 'GET', unsubscribe);
       assert.equal(page.status, 200);
       assert.ok(page.body.includes('Trial Links') && page.body.includes('<form method="post"'), 'a page that asks to confirm');
-      assert.equal(await readState(t!.tenantId), null, 'opening the page unsubscribes nobody');
+      assert.equal((await readState(t!.tenantId)).unsubscribed_at, null, 'opening the page unsubscribes nobody');
 
       // The one-click unsubscribe of mail clients posts the same address.
       const done = await request(served, 'POST', unsubscribe, 'List-Unsubscribe=One-Click');

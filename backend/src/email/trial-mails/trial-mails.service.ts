@@ -67,6 +67,14 @@ type TenantFacts = {
   call: { timing: ReturnType<typeof discoveryCallTiming>; date: Date | null };
 };
 
+/**
+ * Enrols a new trial workspace in the trial e-mails: called in the transaction that activates
+ * the trial. A workspace without a row (created before the trial e-mails shipped) gets none.
+ */
+export async function enrollTrialMails(manager: EntityManager, tenantId: string): Promise<void> {
+  await manager.query(`INSERT INTO trial_mails (tenant_id) VALUES ($1) ON CONFLICT (tenant_id) DO NOTHING`, [tenantId]);
+}
+
 export type TrialMailsRunSummary = {
   tenants: number;
   sent: Partial<Record<TrialMailMilestone, number>>;
@@ -226,9 +234,6 @@ export class TrialMailsService implements OnModuleInit {
     );
     if (!subscription) return null;
     const trialing = subscription.status === 'trialing';
-    if (trialing) {
-      await manager.query(`INSERT INTO trial_mails (tenant_id) VALUES ($1) ON CONFLICT (tenant_id) DO NOTHING`, [row.id]);
-    }
     const [state]: StateRow[] = await manager.query(`SELECT * FROM trial_mails WHERE tenant_id = $1`, [row.id]);
     if (!state) return null;
 

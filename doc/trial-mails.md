@@ -24,13 +24,13 @@ The recipient is the person of the trial sign-up (`trial_signups.email`), the wo
 
 The common template `emailWrapper` (`notifications/notification-templates.ts`): KANAP logo, white card, primary colour, footer "Powered by KANAP". The four trial e-mails put the unsubscribe link in the place of the notification preferences link, with the line "You are receiving this message because you are trying KANAP." The thank-you is a service e-mail and has neither. One button at most; every other link is in the text. Each e-mail has a text version. French texts follow the application's typography (`frenchSpacing`): no-break space before `:` and inside guillemets, narrow no-break space before `;`, `!`, `?`.
 
-Links: the first-steps guides `https://doc.kanap.net/<lang>/first-steps/<budget|landscape|portfolio>-<example|own-data>/`, the on-premise installation guide, the offer page (`MARKETING_BASE_URL/<lang>/offer`), billing (`/admin/billing` of the workspace), `support@kanap.net`.
+Links read as names (the paths, the chosen guide by its title), except the installation guide and the offer page, written as addresses. Links: the first-steps guides `https://doc.kanap.net/<lang>/first-steps/<budget|landscape|portfolio>-<example|own-data>/`, the on-premise installation guide, the offer page (`MARKETING_BASE_URL/<lang>/offer`), billing (`/admin/billing` of the workspace), `support@kanap.net`.
 
 ## Scheduler and storage
 
 The scheduled task `send-trial-mails` (every ten minutes, `*/10 * * * *`, disabled or rescheduled from the platform console) looks at the workspaces with an activated trial sign-up in the last ninety days, active, not a system tenant. The Stripe webhook also runs one workspace as soon as its subscription changes (`TrialMailsService.onSubscriptionChanged`, not awaited, never rejects), so the thank-you does not wait for the task.
 
-`trial_mails`, one row per tenant, tenant-scoped (RLS, `trial_mails_tenant_isolation`), kept by the workspace reset. The row is created when the scheduler first sees the workspace in trial: a workspace that subscribed before has none and gets nothing.
+`trial_mails`, one row per tenant, tenant-scoped (RLS, `trial_mails_tenant_isolation`), kept by the workspace reset. The row is created with the trial workspace, in the transaction of `POST /public/activate-trial` (`enrollTrialMails`). A workspace without a row gets no e-mail at all: the workspaces created before the trial e-mails shipped receive none.
 
 | Column | Content |
 |---|---|

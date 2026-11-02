@@ -13,7 +13,10 @@ import {
   buildTrialWelcomeEmail,
   frenchSpacing,
 } from '../trial-mail-templates';
+import { getEmailStrings } from '../../../i18n/email-i18n';
 import { signTrialMailLink, trialMailLinkUrl, verifyTrialMailLink } from '../trial-mail-links';
+
+const escapeForHtml = (text: string) => text.replace(/&/g, '&amp;').replace(/'/g, '&#039;');
 
 // The trial e-mails (`doc/trial-mails.md`) without a database:
 // - the schedule: each mail at its time, never one already sent, never a missed one late, nothing
@@ -124,6 +127,10 @@ function testVariants() {
     assert.ok(!mails.j0NoCall.text.includes(CALL.url));
     // The chosen path's guide in its mode, then the two others.
     assert.ok(mails.j0Angle.text.includes('/first-steps/landscape-own-data/'), `${locale}: guide of the path`);
+    // Every path link reads as a name, the chosen guide by its title.
+    const title = getEmailStrings(locale).trialMails.guideTitles.cartography;
+    assert.ok(mails.j0Angle.html.includes(`>${escapeForHtml(locale === 'fr' ? frenchSpacing(title) : title)}</a>`), `${locale}: guide link by its title`);
+    assert.ok(!/>https?:\/\/doc\.kanap\.net/.test(mails.j0Angle.html) && !/>doc\.kanap\.net/.test(mails.j0Angle.html), `${locale}: no address as link text`);
     assert.ok(mails.j0Angle.text.includes('/first-steps/budget-own-data/') && mails.j0Angle.text.includes('/first-steps/portfolio-own-data/'));
     assert.ok(mails.j0None.text.includes('/first-steps/budget-example/') && mails.j0None.text.includes('/first-steps/landscape-example/'));
     for (const name of ['j5Upcoming', 'j5Past', 'j5None'] as const) {

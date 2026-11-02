@@ -237,6 +237,11 @@ export const en = {
       cartography: 'the IT landscape map',
       portfolio: 'projects and requests',
     },
+    guideTitles: {
+      budget: 'Your IT budget in KANAP in ten minutes',
+      cartography: 'Your information system in KANAP in ten minutes',
+      portfolio: 'Your portfolio in KANAP in ten minutes',
+    },
     billingPath: 'Administration › Billing',
     footer: {
       reason: 'You are receiving this message because you are trying KANAP.',

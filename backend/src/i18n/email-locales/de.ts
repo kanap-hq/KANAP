@@ -237,6 +237,11 @@ export const de: EmailStrings = {
       cartography: 'die IT-Landkarte',
       portfolio: 'die Projekte und Anfragen',
     },
+    guideTitles: {
+      budget: 'Ihr IT-Budget in KANAP in zehn Minuten',
+      cartography: 'Ihr Informationssystem in KANAP in zehn Minuten',
+      portfolio: 'Ihr Portfolio in KANAP in zehn Minuten',
+    },
     billingPath: 'Administration › Abrechnung',
     footer: {
       reason: 'Sie erhalten diese Nachricht, weil Sie KANAP testen.',
