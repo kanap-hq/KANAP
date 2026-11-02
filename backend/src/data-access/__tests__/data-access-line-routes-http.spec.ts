@@ -129,7 +129,7 @@ function testModule(): any {
   );
   const real = new Map<unknown, unknown>([
     [TasksUnifiedService, unified],
-    [SpendTasksService, new SpendTasksService(unified, audit)],
+    [SpendTasksService, new SpendTasksService(unified)],
     // The Relations tab needs the audit only (`setRelation`).
     [BudgetLinesService, new BudgetLinesService(null as any, null as any, null as any, null as any, null as any, null as any, audit)],
     [DataSource, dataSource],

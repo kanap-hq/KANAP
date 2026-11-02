@@ -356,7 +356,7 @@ function controllers(runner: QueryRunner) {
     none, audit as any, none, none, { getTaskRecipients: async () => [] } as any, new ItemNumberService(),
     { logChange: async () => undefined } as any, { cleanupOrphanedImages: async () => undefined } as any, none,
   );
-  const tasks = new SpendTasksController(new SpendTasksService(unified, audit as any)) as any;
+  const tasks = new SpendTasksController(new SpendTasksService(unified)) as any;
   const contracts = new SpendItemContractsController(new ContractsService(none, none, none, none, audit as any, none, none, none, none, none)) as any;
   return { svc, items, versions, tasks, contracts };
 }
