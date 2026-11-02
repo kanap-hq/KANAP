@@ -28,16 +28,44 @@ type SeedOptions = {
   frozenAt?: Date | null;
   deletionReason?: string | null;
   /** Its subscription row (one per tenant), or none. */
-  subscriptions?: Array<{ status: string | null; trialEnd?: Date | null; stripeSubscriptionId?: string | null; planName?: string }>;
+  subscriptions?: Array<{
+    status: string | null;
+    trialEnd?: Date | null;
+    stripeSubscriptionId?: string | null;
+    stripeCustomerId?: string | null;
+    planName?: string;
+  }>;
   withData?: boolean;
 };
 
-function expiryService(svc: Services, billingConfigured = true) {
+/** Stripe double: what it holds per customer id; a customer named `cus_down` fails. */
+function stripeDouble(byCustomer: Record<string, { subscriptions?: Array<{ id: string; status: string }>; openSessions?: string[] }> = {}) {
+  const read = (customer: string) => {
+    if (customer === 'cus_down') throw new Error('Stripe is unreachable');
+    return byCustomer[customer] ?? {};
+  };
+  return {
+    getClient: () => ({
+      subscriptions: { list: async ({ customer }: { customer: string }) => ({ data: read(customer).subscriptions ?? [] }) },
+      checkout: {
+        sessions: {
+          list: async ({ customer, status }: { customer: string; status: string }) => {
+            assert.equal(status, 'open');
+            return { data: (read(customer).openSessions ?? []).map((id) => ({ id })) };
+          },
+        },
+      },
+    }),
+  };
+}
+
+function expiryService(svc: Services, opts: { billingConfigured?: boolean; stripe?: ReturnType<typeof stripeDouble> } = {}) {
   return new TrialWorkspaceExpiryService(
     dataSource,
     { register: () => undefined } as any,
     svc.admin,
-    { isConfigured: () => billingConfigured } as any,
+    { isConfigured: () => opts.billingConfigured ?? true } as any,
+    (opts.stripe ?? stripeDouble()) as any,
   );
 }
 
@@ -60,9 +88,9 @@ async function seedTenant(opts: SeedOptions): Promise<string> {
   await inTenant(id, async (manager) => {
     for (const sub of opts.subscriptions ?? []) {
       await manager.query(
-        `INSERT INTO subscriptions (tenant_id, status, trial_end, stripe_subscription_id, plan_name, seat_limit, active_seats)
-         VALUES ($1, $2, $3, $4, $5, NULL, 0)`,
-        [id, sub.status, sub.trialEnd ?? null, sub.stripeSubscriptionId ?? null, sub.planName ?? 'Trial'],
+        `INSERT INTO subscriptions (tenant_id, status, trial_end, stripe_subscription_id, stripe_customer_id, plan_name, seat_limit, active_seats)
+         VALUES ($1, $2, $3, $4, $5, $6, NULL, 0)`,
+        [id, sub.status, sub.trialEnd ?? null, sub.stripeSubscriptionId ?? null, sub.stripeCustomerId ?? null, sub.planName ?? 'Trial'],
       );
     }
     if (opts.withData) {
@@ -120,21 +148,38 @@ async function testSelection() {
     ids.noSubscription = await seedTenant({ tag: 'nosub' });
     ids.noTrialEnd = await seedTenant({ tag: 'noend', subscriptions: [{ status: 'trialing', trialEnd: null }] });
     ids.adminFrozen = await seedTenant({ tag: 'frozen', status: TenantStatus.FROZEN, frozenAt: daysAgo(2), subscriptions: trialEndedDaysAgo(40) });
+    // Frozen by a platform administrator after a failed run of this task: frozen_at decides.
+    ids.adminFrozenAfterRun = await seedTenant({
+      tag: 'frozenrun', status: TenantStatus.FROZEN, frozenAt: daysAgo(1), deletionReason: TRIAL_WORKSPACE_EXPIRY_REASON, subscriptions: trialEndedDaysAgo(40),
+    });
+    // Checkout opened, not paid yet: nothing written here, Stripe holds an open session.
+    ids.checkoutOpen = await seedTenant({ tag: 'checkout', subscriptions: [{ status: 'trialing', trialEnd: daysAgo(40), stripeCustomerId: 'cus_spec_open' }] });
+    // Paid through Stripe, webhook not received: Stripe holds the subscription.
+    ids.webhookLate = await seedTenant({ tag: 'late', subscriptions: [{ status: 'trialing', trialEnd: daysAgo(40), stripeCustomerId: 'cus_spec_paid' }] });
+    // An abandoned checkout long ago (expired first payment): deleted like any trial.
+    ids.abandoned = await seedTenant({ tag: 'abandoned', subscriptions: [{ status: 'trialing', trialEnd: daysAgo(40), stripeCustomerId: 'cus_spec_gone' }] });
     ids.system = await seedTenant({ tag: 'system', isSystem: true, subscriptions: trialEndedDaysAgo(40) });
     ids.defaultTenant = await seedTenant({ tag: 'default', slug: defaultSlug, subscriptions: trialEndedDaysAgo(40) });
 
     const scope = Object.values(ids);
     const ended31Slug = (await tenantRow(ids.ended31)).slug;
+    const abandonedSlug = (await tenantRow(ids.abandoned)).slug;
+    const stripe = stripeDouble({
+      cus_spec_open: { subscriptions: [{ id: 'sub_x', status: 'incomplete_expired' }], openSessions: ['cs_spec'] },
+      cus_spec_paid: { subscriptions: [{ id: 'sub_spec_paid', status: 'active' }] },
+      cus_spec_gone: { subscriptions: [{ id: 'sub_spec_gone', status: 'incomplete_expired' }] },
+    });
 
     // Without billing (no trial lock), nothing happens.
-    const idle = await expiryService(svc, false).run({ tenantIds: scope });
+    const idle = await expiryService(svc, { billingConfigured: false, stripe }).run({ tenantIds: scope });
     assert.ok(idle.skipped);
     assert.equal((await tenantRow(ids.ended31)).status, TenantStatus.ACTIVE);
 
-    const summary = await expiryService(svc).run({ tenantIds: scope });
+    const summary = await expiryService(svc, { stripe }).run({ tenantIds: scope });
     assert.deepEqual(summary.errors, []);
-    assert.deepEqual(summary.deleted, [ended31Slug]);
-    assert.equal(summary.candidates, 1);
+    assert.deepEqual(summary.deleted.sort(), [abandonedSlug, ended31Slug].sort());
+    assert.equal(summary.kept.length, 2);
+    assert.equal(summary.candidates, 4);
     assert.equal(summary.deferred, 0);
 
     const deleted = await tenantRow(ids.ended31);
@@ -149,16 +194,17 @@ async function testSelection() {
       'the completion entry survives the purge, with a system origin',
     );
 
+    assert.equal((await tenantRow(ids.abandoned)).status, TenantStatus.DELETED);
     for (const [name, id] of Object.entries(ids)) {
-      if (name === 'ended31') continue;
+      if (name === 'ended31' || name === 'abandoned') continue;
       const row = await tenantRow(id);
       assert.equal(row.deleted_at, null, `${name} is kept`);
       assert.equal(row.deletion_requested_at, null, `${name} was never marked`);
     }
 
-    // A second run finds nothing more.
-    const again = await expiryService(svc).run({ tenantIds: scope });
-    assert.deepEqual([again.deleted, again.candidates], [[], 0]);
+    // A second run deletes nothing more; the two Stripe customers are still kept.
+    const again = await expiryService(svc, { stripe }).run({ tenantIds: scope });
+    assert.deepEqual([again.deleted, again.kept.length], [[], 2]);
   } finally {
     if (previousDefault === undefined) delete process.env.DEFAULT_TENANT_SLUG;
     else process.env.DEFAULT_TENANT_SLUG = previousDefault;
@@ -177,7 +223,7 @@ async function testCapPerRun() {
     const first = await expiryService(svc).run({ tenantIds: ids, maxPerRun: 2 });
     assert.deepEqual([first.deleted.length, first.deferred, first.candidates], [2, 1, 3]);
     const statuses = await Promise.all(ids.map(async (id) => (await tenantRow(id)).status));
-    assert.equal(statuses.filter((status) => status === TenantStatus.DELETED).length, 2);
+    assert.deepEqual(statuses, [TenantStatus.DELETED, TenantStatus.DELETED, TenantStatus.ACTIVE], 'the oldest first');
 
     const second = await expiryService(svc).run({ tenantIds: ids, maxPerRun: 2 });
     assert.deepEqual([second.deleted.length, second.deferred], [1, 0]);
@@ -204,6 +250,8 @@ async function testResumption() {
     });
     // Deleting for another reason (a platform administrator's deletion): not this task's.
     ids.adminDeleting = await seedTenant({ tag: 'admindel', status: TenantStatus.DELETING, deletionReason: 'Closed', subscriptions: trialEndedDaysAgo(35) });
+    // Frozen by a purge whose commit reported an error: no row left, marked deleted.
+    ids.frozenAfterCommit = await seedTenant({ tag: 'frozencommit', status: TenantStatus.FROZEN, deletionReason: TRIAL_WORKSPACE_EXPIRY_REASON });
     // Left deleting by this task, but reactivated meanwhile: cancelled, set back to active.
     ids.reactivated = await seedTenant({
       tag: 'react', status: TenantStatus.DELETING, deletionReason: TRIAL_WORKSPACE_EXPIRY_REASON, subscriptions: [{ status: 'active', planName: 'Internal' }],
@@ -211,14 +259,15 @@ async function testResumption() {
 
     const summary = await expiryService(svc).run({ tenantIds: Object.values(ids) });
     assert.deepEqual(summary.errors, []);
-    assert.equal(summary.deleted.length, 3);
-    for (const name of ['beforePurge', 'afterPurge', 'failed']) {
+    assert.equal(summary.deleted.length, 4);
+    assert.equal(summary.cancelled.length, 1);
+    for (const name of ['beforePurge', 'afterPurge', 'failed', 'frozenAfterCommit']) {
       assert.equal((await tenantRow(ids[name])).status, TenantStatus.DELETED, `${name} is deleted`);
     }
     assert.equal((await tenantRow(ids.adminDeleting)).status, TenantStatus.DELETING, 'another deletion is left alone');
     assert.equal(await subscriptionCount(ids.adminDeleting), 1);
-    // Not due: never selected for deletion, so it stays as it is for a person to look at.
-    assert.equal((await tenantRow(ids.reactivated)).status, TenantStatus.DELETING);
+    const reactivated = await tenantRow(ids.reactivated);
+    assert.deepEqual([reactivated.status, reactivated.deletion_reason], [TenantStatus.ACTIVE, null]);
     assert.equal(await subscriptionCount(ids.reactivated), 1);
   } finally {
     await cleanupTenants(Object.values(ids));
@@ -263,9 +312,57 @@ async function testSubscribedMeanwhile() {
   }
 }
 
+// Spec 5: Stripe cannot be read: the tenant is kept, the others go, and the run fails.
+async function testStripeUnreachable() {
+  const svc = buildServices();
+  const ids: string[] = [];
+  try {
+    ids.push(await seedTenant({ tag: 'down', subscriptions: [{ status: 'trialing', trialEnd: daysAgo(40), stripeCustomerId: 'cus_down' }] }));
+    ids.push(await seedTenant({ tag: 'plain', subscriptions: trialEndedDaysAgo(40) }));
+    await assert.rejects(() => expiryService(svc).run({ tenantIds: ids }), /1 failure\(s\), 1 deleted: .*Stripe is unreachable/);
+    assert.equal((await tenantRow(ids[0])).status, TenantStatus.ACTIVE);
+    assert.equal(await subscriptionCount(ids[0]), 1);
+    assert.equal((await tenantRow(ids[1])).status, TenantStatus.DELETED);
+  } finally {
+    await cleanupTenants(ids);
+  }
+}
+
+// Spec 6: the re-check holds the subscription row: a write started during the purge waits for it.
+async function testRecheckLocksTheRow() {
+  const svc = buildServices();
+  const ids: string[] = [];
+  try {
+    const id = await seedTenant({ tag: 'lock', subscriptions: trialEndedDaysAgo(40) });
+    ids.push(id);
+    let writer: Promise<unknown> | null = null;
+    let writerDone = false;
+    const purge = (svc.admin as any).purgeTenantData.bind(svc.admin);
+    (svc.admin as any).purgeTenantData = (tenantId: string, branding: unknown, stillDue: any) =>
+      purge(tenantId, branding, async (manager: any) => {
+        const due = await stillDue(manager);
+        // Another connection tries to subscribe the tenant while the purge transaction runs.
+        writer = inTenant(id, (other) => other.query(
+          `UPDATE subscriptions SET status = 'active' WHERE tenant_id = $1`, [id],
+        )).then(() => { writerDone = true; });
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        assert.equal(writerDone, false, 'the write waits for the purge transaction');
+        return due;
+      });
+    const summary = await expiryService(svc).run({ tenantIds: ids });
+    await writer;
+    assert.equal(summary.deleted.length, 1);
+    assert.equal(await subscriptionCount(id), 0, 'the waiting write found no row');
+  } finally {
+    await cleanupTenants(ids);
+  }
+}
+
 void runSpecs('trial-workspace-expiry.integration.spec', [
   testSelection,
   testCapPerRun,
   testResumption,
   testSubscribedMeanwhile,
+  testStripeUnreachable,
+  testRecheckLocksTheRow,
 ]);
