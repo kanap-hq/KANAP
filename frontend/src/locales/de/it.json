@@ -3113,6 +3113,7 @@
       "contactsAfterCreate": "Kontakte sind verfügbar, nachdem Sie den Standort erstellt haben.",
       "relationsAfterCreate": "Beziehungen sind verfügbar, nachdem Sie den Standort erstellt haben.",
       "untitled": "Unbenannter Standort",
+      "notFound": "Standort nicht gefunden.",
       "previous": "Vorheriger Standort",
       "next": "Nächster Standort",
       "namePlaceholder": "z. B. Betriebszentrum Paris",

@@ -1,9 +1,10 @@
 import React from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   Alert,
   Box,
   Button,
+  Link as MuiLink,
   MenuItem,
   Stack,
   TextField,
@@ -84,6 +85,8 @@ export default function LocationWorkspacePage() {
   const [data, setData] = React.useState<LocationRecord | null>(null);
   const [loading, setLoading] = React.useState(!isCreate);
   const [error, setError] = React.useState<string | null>(null);
+  // HTTP status of the last failed read. Null once a location is on screen.
+  const [loadStatus, setLoadStatus] = React.useState<number | null>(null);
   // A refused name shows under the title.
   const [nameError, setNameError] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
@@ -139,10 +142,12 @@ export default function LocationWorkspacePage() {
     if (isCreate || !routeId) return;
     setLoading(true);
     setError(null);
+    setLoadStatus(null);
     try {
       const res = await api.get(`/locations/${routeId}`);
       const payload = res.data as LocationRecord;
       setData(payload);
+      setLoadStatus(null);
       if (payload.operating_company_id) {
         try {
           const companyRes = await api.get(`/companies/${payload.operating_company_id}`);
@@ -154,7 +159,15 @@ export default function LocationWorkspacePage() {
         setOperatingCompanyName(null);
       }
     } catch (e: any) {
-      setError(getApiErrorMessage(e, t, t('messages.loadLocationFailed')));
+      const status = e?.response?.status;
+      const httpStatus = typeof status === 'number' ? status : null;
+      setLoadStatus(httpStatus);
+      // A missing location has its own screen. The API sentence stays off it.
+      if (httpStatus === 404) {
+        setData(null);
+      } else {
+        setError(getApiErrorMessage(e, t, t('messages.loadLocationFailed')));
+      }
     } finally {
       setLoading(false);
     }
@@ -514,6 +527,23 @@ export default function LocationWorkspacePage() {
       )}
     </>
   );
+
+  // A missing location is its own screen, in the language of the interface. The form stays for every other failure.
+  if (!isCreate && !data && loadStatus === 404) {
+    const qs = listContextParams.toString();
+    return (
+      <Box sx={{ p: 2 }}>
+        <Alert severity="error">{t('workspace.location.notFound')}</Alert>
+        <MuiLink
+          component={RouterLink}
+          to={`/it/locations${qs ? `?${qs}` : ''}`}
+          sx={{ display: 'inline-block', mt: 2, fontSize: 13, fontWeight: 400, color: 'kanap.teal' }}
+        >
+          {t('pages.locations.title')}
+        </MuiLink>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
