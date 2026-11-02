@@ -379,7 +379,7 @@ Una ficha creada como aplicación puede ser en realidad una tecnología, por eje
 
 ## Preguntar al asistente
 
-[Plaid](ai-assistant.md) lee las tecnologías con los mismos derechos que esta página. Pregunte, por ejemplo: «¿Quién es responsable de TEC-3?», «¿Qué enlaces web tiene PostgreSQL?», «¿Están activas las alertas de vulnerabilidad en TEC-3?» o «¿Qué tecnologías están sin soporte?»
+[Plaid](ai-assistant.md) lee las tecnologías con los mismos derechos que esta página, incluidos los archivos adjuntos a una de ellas (nombre, tipo, tamaño y fecha en que se añadió). Pregunte, por ejemplo: «¿Quién es responsable de TEC-3?», «¿Qué enlaces web tiene PostgreSQL?», «¿Qué archivos tiene TEC-3?», «¿Están activas las alertas de vulnerabilidad en TEC-3?» o «¿Qué tecnologías están sin soporte?»
 
 Con el nivel Miembro en la infraestructura, Plaid también escribe, y cada cambio llega como una vista previa que usted aprueba:
 
