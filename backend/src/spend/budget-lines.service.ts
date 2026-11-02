@@ -135,7 +135,8 @@ export class BudgetLinesService {
    * - The line is locked FOR UPDATE under the person's access: a line hidden from them is 404, one
    *   they may no longer modify 403. Under that lock, a line another person wrote on, or that a line
    *   continues, is refused with `CREATION_CANCEL_EXPIRED`.
-   * - A limited person's delete then runs in `withCreatorCancelAccess`, for this line only.
+   * - A limited person's delete then runs in `withCreatorCancelAccess`, for this line only; its
+   *   attachment files go once the window is closed and the person's access is back.
    */
   async cancelCreation(id: string, token: unknown, userId: string, opts: { manager: EntityManager }): Promise<void> {
     const tenantId = await summaryTenantId(opts.manager);
@@ -147,7 +148,8 @@ export class BudgetLinesService {
     await assertCreatorAloneSinceCreation(opts.manager, tenantId, 'spend_items', line.id, userId);
     if (await hasSuccessorLine(opts.manager, tenantId, line.id)) throw creationCancelExpired();
     const deleter = line.nature === 'capex' ? this.capexDelete : this.opexDelete;
-    await withCreatorCancelAccess(opts.manager, userId, (manager) => deleter.delete(line.id, { manager, userId }));
+    const paths = await withCreatorCancelAccess(opts.manager, userId, (manager) => deleter.deleteRowsOf(line.id, { manager, userId }));
+    await deleter.deleteFiles(paths);
   }
 
   async update(ref: string, body: unknown, userId: string | undefined, opts: { manager: EntityManager }) {

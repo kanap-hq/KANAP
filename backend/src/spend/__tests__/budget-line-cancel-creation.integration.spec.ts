@@ -31,8 +31,8 @@ import { inRolledBackTransaction, runSpecs, seedTenant, setTenant } from './roun
 //   continues; the creator's own edits keep the cancel open; the service checks the token itself;
 // - a person whose data access is limited: a creation without a place is refused, with one it is
 //   allowed, and the cancel deletes the line (outside the limited role for that delete only), the
-//   limited role and mode back afterwards; the window refuses a person other than the one whose
-//   access the transaction runs under.
+//   limited role and mode back afterwards, the attachment files removed only then; the window
+//   refuses a person other than the one whose access the transaction runs under.
 
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'budget-line-creation-spec-secret';
 
@@ -40,7 +40,14 @@ const TODAY = new Date().toISOString().slice(0, 10);
 
 function services(runner: QueryRunner) {
   const audit = new AuditService(runner.manager.getRepository(AuditLog));
-  const storage = { deleteObject: async () => undefined };
+  // Each removed file, with the role the transaction ran under at that moment.
+  const deleted: Array<{ path: string; role: string | null }> = [];
+  const storage = {
+    deleteObject: async (path: string) => {
+      const [row] = await runner.query(`SELECT current_setting('role', true) AS role`);
+      deleted.push({ path, role: row?.role ?? null });
+    },
+  };
   const args: any[] = [runner.manager.getRepository(SpendItem), undefined, undefined, undefined, audit, storage, new UserTimeAggregateService()];
   const svc = new BudgetLinesService(
     deps.allocationCalculator as any,
@@ -53,7 +60,7 @@ function services(runner: QueryRunner) {
   );
   const controller = Object.create(BudgetLinesController.prototype) as BudgetLinesController;
   Object.assign(controller, { svc });
-  return { svc, controller };
+  return { svc, controller, deleted };
 }
 
 type Seed = {
@@ -215,7 +222,7 @@ async function testTitleCreationCompleteAndCancel() {
 async function testLimitedPerson() {
   await inRolledBackTransaction(async (runner) => {
     const s = await seed(runner);
-    const { controller } = services(runner);
+    const { controller, deleted: removedFiles } = services(runner);
     const asLimited = ctx(s, s.limitedId, runner);
     await setTenant(runner, s.tenantId);
     assert.equal(await applyDataAccess(runner, s.limitedId), 'limited');
@@ -240,7 +247,14 @@ async function testLimitedPerson() {
 
     // ...and the creator's cancel deletes it, for that line only.
     const kept: any = await controller.createAtTitle(titleBody('Kept', { paying_company_id: s.companyId }), asLimited);
+    const file = `spend/${created.id}/quote.pdf`;
+    await runner.query(
+      `INSERT INTO spend_attachments (tenant_id, spend_item_id, original_filename, stored_filename, storage_path)
+       VALUES ($1, $2, 'quote.pdf', 'quote.pdf', $3)`,
+      [s.tenantId, created.id, file],
+    );
     await controller.cancelCreation(created.id, { token: created.creation_token }, asLimited);
+    assert.deepEqual(removedFiles, [{ path: file, role: 'kanap_data_limited' }], 'its file is removed once the limited role is back');
     const [state] = await runner.query(`SELECT current_setting('role', true) AS role, current_setting('app.da_mode', true) AS mode`);
     assert.deepEqual(state, { role: 'kanap_data_limited', mode: 'limited' }, 'the limited access is back after the cancel');
     assert.equal(await lineCount(runner, s, created.id), 0, 'the line is gone');

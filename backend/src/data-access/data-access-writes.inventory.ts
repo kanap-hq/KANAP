@@ -64,7 +64,7 @@ export const DATA_ACCESS_WRITE_ROOTS = ['spend', 'tasks', 'contracts'];
 const LINE_LOCK = 'under the line lock (lockBudgetLine): 403 when the line is read only';
 const VERSION_LOCK = 'under the version lock (lockBudgetVersions, through lockVersion or lockVersionWithLine): 403 when the line is read only';
 const OWN_LINE_LOCK = 'the line locked FOR NO KEY UPDATE first; no row: assertLinesEditable gives the 403 of a read-only line, else 404';
-const LINE_DELETE = 'delete of a line: reserved (spec §2.7); the creator of a line being created cancels it with its token (withCreatorCancelAccess, that line only)';
+const LINE_DELETE = 'delete of a line: reserved (spec §2.7); the creator of a line being created cancels it with its token (the cancelCreation of the budget lines service, through deleteRowsOf: token checked, line locked under the policies, withCreatorCancelAccess for that line only)';
 const BUDGET_FILE = 'budget file load: rows planned with the line rules (budget-file/access.ts); a refused write rolls the load back (409)';
 const ACTIVITIES = 'portfolio_activities has no data-access policy (data-access-tables.inventory.ts); the task is read first under the policies (404 when hidden)';
 const TASK_ELEMENT = 'assertTaskModifiable (data_access_task_modifiable, the policy of the task elements) before the write';
@@ -87,7 +87,6 @@ export const DATA_ACCESS_WRITES: DataAccessWriteEntry[] = [
   { file: 'spend/budget-line-type-change.service.ts', member: 'changeFromYear', count: 4, handling: 'lock', reason: `${LINE_LOCK}; the versions, links and tasks of a line the person may modify are all visible and modifiable` },
   { file: 'spend/budget-line-type-change.service.ts', member: 'changeInPlace', count: 2, handling: 'lock', reason: `${LINE_LOCK}; the tasks of a line the person may modify are modifiable` },
   { file: 'spend/budget-lines.controller.ts', member: 'update', count: 1, handling: 'delegates', reason: 'BudgetLinesService.update' },
-  { file: 'spend/budget-lines.service.ts', member: 'cancelCreation', count: 1, handling: 'lock', reason: 'cancel of a line being created by its creator (token checked by the service itself): the line locked FOR UPDATE under the policies first (404 hidden, 403 read only), refused once another person wrote on it or a line continues it, then its delete, in withCreatorCancelAccess for a limited person whose access applies (that line only)' },
   { file: 'spend/budget-lines.service.ts', member: 'update', count: 1, handling: 'delegates', reason: 'SpendItemsService.update: resolveItemWrite (editable, placement, contract) and the line lock' },
   { file: 'spend/budget-version-ensure.ts', member: 'ensureBudgetVersion', count: 1, handling: 'lock', reason: LINE_LOCK },
   { file: 'spend/capex-items.controller.ts', member: 'delete', count: 1, handling: 'reserved', reason: LINE_DELETE },
