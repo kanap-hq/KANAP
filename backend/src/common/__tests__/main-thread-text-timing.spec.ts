@@ -14,19 +14,37 @@ import { extractInlineImageUrls } from '../content-image-urls';
 // a time depends on the machine and on what else runs on it (a shared CI runner
 // took 56 ms for a linear scan of 200 KB). It is the CPU time of this thread,
 // which leaves out the time other processes hold the CPU.
+//
+// That clock steps by about 1 ms, so one call on the 25 KB text often reads 0.
+// Dividing a 10 ms reading by a 0.01 ms floor then reports a growth near 1000
+// for a scan that is linear. Each of the five runs repeats the call until the
+// thread has used about 20 ms, and the sizes are compared by the time of one
+// call. A linear scan stays near 8 times and a quadratic one near 64; the bound is 20.
 
 const KB = 1024;
+const SAMPLE_CPU_MS = 20;
+const MAX_CALLS = 1_000_000;
 
 function fill(unit: string, size = 200 * KB): string {
   return unit.repeat(Math.ceil(size / unit.length)).slice(0, size);
 }
 
-/** The lower of `current` and the CPU time of one run, in milliseconds. */
+/** The lower of `current` and the CPU milliseconds of one call. */
 function best(work: (text: string) => unknown, text: string, current: number): number {
   const start = process.threadCpuUsage();
-  work(text);
-  const { user, system } = process.threadCpuUsage(start);
-  return Math.min(current, (user + system) / 1000);
+  let calls = 0;
+  let elapsedUs = 0;
+  do {
+    work(text);
+    calls += 1;
+    const { user, system } = process.threadCpuUsage(start);
+    elapsedUs = user + system;
+  } while (elapsedUs < SAMPLE_CPU_MS * 1000 && calls < MAX_CALLS);
+  assert.ok(
+    elapsedUs >= SAMPLE_CPU_MS * 1000,
+    `thread CPU clock read ${elapsedUs} us after ${calls} calls`,
+  );
+  return Math.min(current, elapsedUs / calls / 1000);
 }
 
 function assertFast(name: string, units: string[], work: (text: string) => unknown): void {
@@ -41,10 +59,10 @@ function assertFast(name: string, units: string[], work: (text: string) => unkno
       bestSmall = best(work, small, bestSmall);
       bestLarge = best(work, large, bestLarge);
     }
-    const growth = bestLarge / Math.max(bestSmall, 0.01);
+    const growth = bestLarge / bestSmall;
     assert.ok(
-      bestLarge < 10 || growth < 20,
-      `${name} on ${JSON.stringify(unit)}: ${bestSmall.toFixed(2)} ms at 25 KB, ${bestLarge.toFixed(1)} ms at 200 KB (x${growth.toFixed(1)} for a text 8 times longer)`,
+      growth < 20,
+      `${name} on ${JSON.stringify(unit)}: ${bestSmall.toFixed(3)} ms/call at 25 KB, ${bestLarge.toFixed(3)} ms/call at 200 KB (x${growth.toFixed(1)} for a text 8 times longer)`,
     );
   }
 }
