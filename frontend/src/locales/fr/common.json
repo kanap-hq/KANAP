@@ -1632,10 +1632,11 @@
         },
         "own_invite": {
           "title": "Un collègue",
+          "portfolioTitle": "Votre fiche contributeur",
           "hint": {
             "budget": "Invitez vos collègues en créant leur compte utilisateur. Passez par le menu Authentification pour configurer le SSO avec Entra ID.",
-            "cartography": "Invitez un responsable d'application : créez l'utilisateur, puis envoyez l'invitation depuis le menu de sa ligne.",
-            "portfolio": "Invitez un chef de projet : créez l'utilisateur, puis envoyez l'invitation depuis le menu de sa ligne."
+            "cartography": "Invitez un responsable d'application ou d'actif.",
+            "portfolio": "Ajoutez-vous comme contributeur : équipe, disponibilité projet. Pas encore d'équipe ? Créez-la dans Paramètres › Équipes."
           }
         },
         "map_application": {
@@ -1650,13 +1651,17 @@
           "title": "Vos données",
           "hint": "Exportez les applications en csv ou en Excel, puis utilisez le modèle pour importer les vôtres. Poursuivez avec les technologies pour y associer les fins de support et les vulnérabilités."
         },
+        "own_sites": {
+          "title": "Vos sites",
+          "hint": "Créez vos sites : salles serveurs, datacenters ou clouds. Chaque serveur est rattaché à l'un d'eux."
+        },
         "own_applications": {
           "title": "Vos applications",
-          "hint": "Importez la liste de vos applications, ou créez la première."
+          "hint": "Importez la liste de vos applications puis enrichissez-les, ou créez-les directement dans KANAP."
         },
         "own_technologies": {
           "title": "Vos technologies",
-          "hint": "Rattachez des technologies à vos applications : KANAP y accroche les fins de support."
+          "hint": "Activez des technologies et liez-les à vos applications. KANAP s'occupe du reste."
         },
         "own_assets": {
           "title": "Vos serveurs",
@@ -1672,7 +1677,7 @@
         },
         "own_projects": {
           "title": "Votre projet",
-          "hint": "Le projet né de la demande : responsable, dates, équipe. Vos projets existants s'importent en liste."
+          "hint": "Le projet issu de la demande est créé. Découvrez ses détails : responsables, équipe projet, phases, charge…"
         },
         "own_request": {
           "title": "Votre première demande",
@@ -1680,7 +1685,7 @@
         },
         "own_project_budget": {
           "title": "Le budget du projet",
-          "hint": "Liez une ligne budgétaire à votre projet dans ses relations : la dépense suit."
+          "hint": "Dans l'onglet Relations, liez une ou plusieurs lignes budgétaires à votre projet pour en voir les coûts."
         },
         "map_applications": {
           "title": "La liste des applications",
@@ -1689,10 +1694,6 @@
         "map_assets": {
           "title": "Les serveurs",
           "hint": "Chaque serveur dit où tournent les applications : environnement, site, technologies installées. Ouvrez une fiche pour en savoir plus."
-        },
-        "own_findings": {
-          "title": "Ce que KANAP a trouvé",
-          "hint": "Fins de support et failles connues de vos technologies, sans rien saisir de plus."
         },
         "portfolio_project": {
           "title": "Le projet issu de la demande",
@@ -1708,7 +1709,7 @@
         },
         "own_tasks": {
           "title": "Les premières tâches",
-          "hint": "Créez les tâches du projet, affectez-les, saisissez le temps passé."
+          "hint": "Créez une tâche et liez-la au projet. Affectez-vous la tâche et ajoutez un commentaire ; vous pouvez aussi modifier son statut et enregistrer du temps."
         }
       }
     }

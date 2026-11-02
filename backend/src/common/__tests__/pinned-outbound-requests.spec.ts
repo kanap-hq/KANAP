@@ -6,6 +6,7 @@ import * as path from 'node:path';
 import { AddressInfo, Socket } from 'node:net';
 import { Features } from '../../config/features';
 import { AiProviderTestService } from '../../ai/ai-provider-test.service';
+import { PROVIDER_TEST_USAGE_GRACE_MS } from '../../ai/provider-test.constants';
 import { PlatformAiAdminController } from '../../ai/platform/platform-ai-admin.controller';
 import { CustomAiProviderAdapter } from '../../ai/providers/custom-ai-provider.adapter';
 import { openaiCompatibleStream } from '../../ai/providers/openai-stream.util';
@@ -360,6 +361,7 @@ async function testProviderTestsCloseTheStream(port: number) {
   const registry = { validate: (snapshot: any) => adapter.validateConfiguration(snapshot), get: () => adapter, list: () => [] };
 
   reset('hang');
+  const startedAt = Date.now();
   const service = new AiProviderTestService(
     { find: async () => null } as any,
     { decrypt: (value: string) => value } as any,
@@ -372,6 +374,8 @@ async function testProviderTestsCloseTheStream(port: number) {
     llm_api_key: 'test-key',
   }, { skipStoredFallback: true });
   assert.equal(tenantTest.ok, true, tenantTest.message);
+  // It reads past the first event for a short grace, then stops: the open stream does not hold it.
+  assert.ok(Date.now() - startedAt < PROVIDER_TEST_USAGE_GRACE_MS + 10_000, 'provider test: it ends after the grace');
   expectPinned('provider test', port);
   await expectConnectionsClosed('provider test');
 

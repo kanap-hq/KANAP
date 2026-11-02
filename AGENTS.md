@@ -6,14 +6,22 @@ Tool-specific or private notes live in each tool's local files, never here.
 
 ## How agents work on this repository
 
-- **Bounded tasks** (a fix, a small feature, a doc update): the maintainer gives them to you
-  directly. Handle them end to end: analysis, code, tests, user docs if needed, local verification,
-  then hand back to the maintainer for testing.
-- **Large tasks** (several lots, architecture, migrations, cross-cutting refactors): Claude leads,
-  splits the work into lots and writes a brief for each one. Follow the brief. If it contradicts the
-  code or this file, say so before going further.
-- If a bounded task turns out to be large (schema change, several modules, a product decision),
-  stop and ask the maintainer instead of improvising a large change.
+- **Release sprints.** Work is organised by release (a few days, a week at most). The maintainer
+  writes each release plan with Claude: what is in, what is out, and the lots. A lot is one
+  branch, one PR and one session (or one issue for the autopilot), with a short brief.
+- **One session, one lot.** Work from the brief, in your own worktree from `origin/main`, end to
+  end: analysis, code, tests, user docs if needed, local verification. Do not take on other lots
+  and do not coordinate with other sessions by message: the plan is the contract, and a lot that
+  needs another one starts once that one has merged. If the brief contradicts the code or this
+  file, say so before going further. A bounded task the maintainer gives directly is a lot too.
+- If a lot turns out to be large (schema change, several modules, a product decision), stop and
+  ask the maintainer instead of improvising a large change.
+- An idea or defect found while testing that lies outside the lot goes to the maintainer's
+  tracker, or into the plan as a new lot when the maintainer puts it in the release. It does not
+  grow the current lot.
+- **To the end of the lot.** A session carries its lot through and ends once its PR is open. Use
+  helper agents only for a broad exploration, or for the adversarial review of a migration, RLS or
+  concurrency change.
 - **Private context.** If `CLAUDE.local.md` exists at the repository root, read it at session start
   (it is gitignored, so most tools do not load it automatically). It points to the single project
   memory and explains how to record findings there. Do not keep a separate project memory of your own.
@@ -44,24 +52,33 @@ Tool-specific or private notes live in each tool's local files, never here.
 ## Workflow with the maintainer
 
 - The maintainer tests every change personally on the local dev stack before it goes anywhere.
-- Work and commit locally on a dev branch. **Nothing is pushed or opened before the maintainer
-  has validated on dev.** Never push to `main`.
+- **The maintainer approves one thing: the move to PR.** Everything on the way is done without
+  asking and reported in one line: putting the branch on the dev stack, rebuilding it, merging
+  `origin/main` into the branch, fixing a test, removing a finished worktree. Ask only for a
+  product decision. Publishing a release, deploying to QA or prod, and anything sent or published
+  outside the repository still need the maintainer's explicit go.
+- Work and commit on the lot's branch. To show it, put it on the maintainer's dev stack
+  (`CLAUDE.local.md` says how), then say what to test and how. **Nothing is pushed or opened
+  before the maintainer has validated on dev.** Never push to `main`.
 - Once validated ("send the PR"): open the PR as ready, not as a draft (`gh pr create`: problem,
-  changes, testing notes, screenshots for UI). That is the agent's last step: the `auto-queue`
+  changes, testing notes, screenshots for UI). That is the session's last step: the `auto-queue`
   workflow (`.github/workflows/auto-queue.yml`) puts the ready PRs opened by `kanap-it` into the
   merge queue, one at a time, in the order they were opened. Never open a ready PR before the
   maintainer's go: open it as a draft instead. Turning a queued PR back into a draft takes it
-  out of the queue. From there the agent owns the PR up to a confirmed merge and reports the merge
-  commit. The maintainer does not need to say "merge".
+  out of the queue. The maintainer does not need to say "merge".
+- From there the maintainer's queue keeper owns the PR: it requeues a PR dropped by a known flaky
+  spec or by a failure that is not its own, and starts a short fix session on a conflict or a real
+  failure. The session that opened the PR does not watch it.
+- When `main` itself is red (the same spec failing for several PRs, untouched by them), a fix
+  that only touches tests opens as a ready PR without waiting for the maintainer and goes to the
+  front of the queue. A fix that needs product code waits for the maintainer like any other.
 - CI runs in the merge queue only, one PR at a time. The queue tests each PR on `main` plus the
   PRs ahead of it, in the order they were added, and merges it when `backend (cloud)`,
   `frontend (cloud)` and `build (onprem)` pass on that combination. On a PR these three jobs are
   skipped and report as passed within seconds, so the PR can enter the queue right away. A push
   on `main` runs no CI. Every Monday, the `images` job builds the images on `main` to refresh
   their cache; it blocks nothing. The repository squashes, keeps `(#NNN)` in the subject and deletes the
-  branch. Do not watch or poll CI: arrange to be notified of a failure (Claude Code: Auto-fix,
-  see `CLAUDE.md`) and report the merge commit on the next exchange. A merge needs no message:
-  no news means it merged.
+  branch. Do not watch or poll CI. A merge needs no message: no news means it merged.
 - A failed check or a conflict with `main` drops that PR from the queue, along with the queued
   PRs that contain it. Fix it, merge `origin/main` into the branch if it conflicts, and push:
   the `auto-queue` workflow sends it back to the queue by itself. Meanwhile the PRs behind it go
@@ -95,7 +112,6 @@ Tool-specific or private notes live in each tool's local files, never here.
   line between two keys, so that two PRs updating neighbouring pages merge without a conflict.
   After the `translate-docs` skill writes it, run `node scripts/docs/format-translation-manifest.mjs`;
   `build (onprem)` fails on a manifest that is not in that form.
-- When a task is finished, say so and ask the maintainer to test.
 - Commits: imperative mood, short scope prefix when useful (`backend: ...`, `frontend: ...`,
   `master data: ...`). Attribution footers only when the agent actually wrote the code.
 - Guard every `cd` before git commands (`set -e` or `git -C <dir>`): a failed `cd` once ran a

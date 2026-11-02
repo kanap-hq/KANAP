@@ -38,7 +38,7 @@ Verschiedene Teams können Kategorien verwenden, um sich auf ihren Verantwortung
 
 Navigieren Sie zu **IT-Landschaft > Anwendungen**, um Ihre Liste zu sehen. So erstellen Sie eine Anwendung:
 
-1. Klicken Sie auf **Neue Anwendung / Service**. Die Seite der Anwendung öffnet sich mit einem leeren Titel in der Kopfzeile. Der Rest der Seite ist abgeblendet.
+1. Klicken Sie auf **Neue Anwendung**. Die Seite der Anwendung öffnet sich mit einem leeren Titel in der Kopfzeile. Der Rest der Seite ist abgeblendet.
 2. Geben Sie den Namen der Anwendung oder des Dienstes ein, höchstens 200 Zeichen. Siehe [Eindeutige Namen](#unique-names).
 3. Drücken Sie die Eingabetaste oder klicken Sie außerhalb des Titels. KANAP erstellt die Anwendung sofort. Ihre Referenz (`APP-12`) erscheint und alle Reiter öffnen sich.
 
@@ -128,7 +128,7 @@ Eine Zelle ohne Wert zeigt einen Strich.
 - **Zu prüfende Schwachstellen** filtert nach **Mit schwerwiegenden Schwachstellen**, **Mit Schwachstellen** oder **Ohne** und sortiert nach den kritischen oder hohen Schwachstellen, dann nach der Gesamtzahl. Deaktivierte Anwendungen stehen zuletzt und fallen unter keinen Filterwert.
 
 **Aktionen**:
-- **Neue Anwendung / Service**: Einen neuen Eintrag erstellen (`applications:member`). Siehe [Erste Schritte](#getting-started)
+- **Neue Anwendung**: Einen neuen Eintrag erstellen (`applications:member`). Siehe [Erste Schritte](#getting-started)
 - **Importieren**: Massenimport aus einer CSV-Datei oder Excel-Arbeitsmappe (`applications:admin`)
 - **Exportieren**: Die Anwendungen, die die Liste anzeigt, in eine CSV-Datei oder Excel-Arbeitsmappe exportieren (`applications:admin`). Siehe [Exportoptionen](#export-options).
 - **Element kopieren**: Eine ausgewählte Anwendung mit allen Kernbeziehungen duplizieren (`applications:member`). Siehe [Anwendungen kopieren](#anwendungen-kopieren) für Details.

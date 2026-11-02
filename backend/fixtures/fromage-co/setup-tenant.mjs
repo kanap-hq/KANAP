@@ -201,9 +201,22 @@ function normalizeValue(value) {
   return String(value).trim();
 }
 
-/** A dataset file as loaded: its dates moved by YEAR_SHIFT. */
+/** Today minus `days`, in local time, as YYYY-MM-DD. */
+function localDay(days = 0) {
+  const now = new Date();
+  return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate() - days)).toISOString().slice(0, 10);
+}
+
+// The incidents are past events: their register, journal and corrective tasks move together, one
+// year less than the rest of the dataset while their last day (INCIDENTS_LAST_DAY, moved) is not
+// yet past, so a load made before it does not date them in the future.
+const INCIDENT_FILES = new Set(['19b-incident-tasks.csv', '31-incidents.csv', '32-incident-journal.csv']);
+const INCIDENTS_LAST_DAY = '2026-10-19';
+const INCIDENT_YEAR_SHIFT = shiftIsoDate(INCIDENTS_LAST_DAY, YEAR_SHIFT) < localDay() ? YEAR_SHIFT : YEAR_SHIFT - 1;
+
+/** A dataset file as loaded: its dates moved by YEAR_SHIFT (INCIDENT_YEAR_SHIFT for the incidents). */
 function fixtureText(name) {
-  return shiftCsvText(readFileSync(file(name), 'utf8'), YEAR_SHIFT);
+  return shiftCsvText(readFileSync(file(name), 'utf8'), INCIDENT_FILES.has(name) ? INCIDENT_YEAR_SHIFT : YEAR_SHIFT);
 }
 
 function readCsv(name) {
@@ -1910,8 +1923,8 @@ async function ensureProjectTeams() {
 }
 
 // Time booked on the converted project, after its tasks exist. The note is the
-// identity of a row: a re-run that finds it adds nothing. Days stay in the past
-// of a load made in the dataset year (the project route refuses a future day).
+// identity of a row: a re-run that finds it adds nothing. The project route
+// refuses a future day: see bookedDay.
 const CAVE_TASK_TIME = [
   { title: 'Collect CaveGuard sensor history', email: 'marc.petit@fromage-co.example', category: 'it', hours: 16, day: '2026-06-12', notes: 'Sample data: CaveGuard history review' },
   { title: 'Model cave airflow and temperature', email: 'marc.petit@fromage-co.example', category: 'it', hours: 24, day: '2026-09-18', notes: 'Sample data: airflow model' },
@@ -1922,6 +1935,24 @@ const CAVE_PROJECT_TIME = [
   { email: 'marc.petit@fromage-co.example', category: 'it', hours: 8, day: '2026-10-16', notes: 'Sample data: twin steering' },
   { email: 'jacques.dubois@fromage-co.example', category: 'business', hours: 8, day: '2026-10-22', notes: 'Sample data: production workshop' },
 ];
+
+const LAST_BOOKED_DAY = '2026-10-22';
+
+function utcDay(ymd) {
+  return Date.parse(`${ymd}T00:00:00.000Z`);
+}
+
+/**
+ * The day a sample time entry is booked on: its dataset day, moved like the dataset. A load made
+ * before the shifted LAST_BOOKED_DAY has passed moves every entry back by the same number of days,
+ * so the last one lands on yesterday (local) and the gaps between entries stay as written.
+ */
+function bookedDay(day) {
+  const yesterday = utcDay(localDay(1));
+  const last = utcDay(shiftedDate(LAST_BOOKED_DAY));
+  const back = Math.max(0, last - yesterday);
+  return new Date(utcDay(shiftedDate(day)) - back).toISOString().slice(0, 10);
+}
 
 async function ensureCaveProjectStory() {
   const projectId = await caveProjectId();
@@ -1969,7 +2000,7 @@ async function ensureCaveProjectStory() {
       hours: entry.hours,
       category: entry.category,
       notes: entry.notes,
-      logged_at: shiftedDate(entry.day),
+      logged_at: bookedDay(entry.day),
     });
     booked += 1;
   }
@@ -1987,7 +2018,7 @@ async function ensureCaveProjectStory() {
       hours: entry.hours,
       category: entry.category,
       notes: entry.notes,
-      logged_at: shiftedDate(entry.day),
+      logged_at: bookedDay(entry.day),
     });
     booked += 1;
   }

@@ -156,9 +156,19 @@ export async function inRequest<T>(party: Party, tenantId: string, fn: (manager:
   }
 }
 
-/** Whether the backend waits on a lock held by another backend. */
+/**
+ * Whether the backend waits on a lock held by another session of the application role (the
+ * parties, the work they started). A VACUUM aside: autovacuum, or one run by hand, that truncates
+ * the end of a table holds it in ACCESS EXCLUSIVE for a moment and gives way to the waiters, so
+ * a party that meets it is on its way, not blocked by the choreography. Its row in
+ * pg_stat_activity names no user (autovacuum) or another one.
+ */
 export async function isBlocked(pid: number): Promise<boolean> {
-  const [row] = await dataSource.query(`SELECT cardinality(pg_blocking_pids($1::int)) AS n`, [pid]);
+  const [row] = await dataSource.query(
+    `SELECT count(*)::int AS n FROM unnest(pg_blocking_pids($1::int)) AS b(pid)
+      WHERE EXISTS (SELECT 1 FROM pg_stat_activity a WHERE a.pid = b.pid AND a.usename = session_user)`,
+    [pid],
+  );
   return Number(row?.n ?? 0) > 0;
 }
 

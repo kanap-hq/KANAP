@@ -1632,10 +1632,11 @@
         },
         "own_invite": {
           "title": "Eine Kollegin, ein Kollege",
+          "portfolioTitle": "Ihr Mitwirkendenprofil",
           "hint": {
             "budget": "Laden Sie Ihre Kolleginnen und Kollegen ein, indem Sie ihre Benutzerkonten anlegen. Über das Menü Authentifizierung richten Sie SSO mit Entra ID ein.",
-            "cartography": "Laden Sie eine verantwortliche Person einer Anwendung ein: Legen Sie den Benutzer an und senden Sie die Einladung über das Menü seiner Zeile.",
-            "portfolio": "Laden Sie eine Projektleitung ein: Legen Sie den Benutzer an und senden Sie die Einladung über das Menü seiner Zeile."
+            "cartography": "Laden Sie eine verantwortliche Person für eine Anwendung oder ein Asset ein.",
+            "portfolio": "Tragen Sie sich als Mitwirkende oder Mitwirkender ein: Team, Projektverfügbarkeit. Noch kein Team? Legen Sie es unter Einstellungen › Teams an."
           }
         },
         "map_application": {
@@ -1650,13 +1651,17 @@
           "title": "Ihre Daten",
           "hint": "Exportieren Sie die Anwendungen als csv oder Excel und importieren Sie dann Ihre eigenen mit der Vorlage. Fahren Sie mit den Technologien fort, um ihnen Supportende und Schwachstellen zuzuordnen."
         },
+        "own_sites": {
+          "title": "Ihre Standorte",
+          "hint": "Legen Sie Ihre Standorte an: Serverräume, Rechenzentren oder Clouds. Jeder Server gehört zu einem davon."
+        },
         "own_applications": {
           "title": "Ihre Anwendungen",
-          "hint": "Importieren Sie die Liste Ihrer Anwendungen oder legen Sie die erste an."
+          "hint": "Importieren Sie die Liste Ihrer Anwendungen und ergänzen Sie sie anschließend, oder legen Sie sie direkt in KANAP an."
         },
         "own_technologies": {
           "title": "Ihre Technologien",
-          "hint": "Verknüpfen Sie Technologien mit Ihren Anwendungen: KANAP ergänzt ihr Supportende."
+          "hint": "Aktivieren Sie Technologien und verknüpfen Sie sie mit Ihren Anwendungen. Um den Rest kümmert sich KANAP."
         },
         "own_assets": {
           "title": "Ihre Server",
@@ -1672,7 +1677,7 @@
         },
         "own_projects": {
           "title": "Ihr Projekt",
-          "hint": "Das aus der Anfrage entstandene Projekt: Verantwortliche, Termine, Team. Ihre bestehenden Projekte importieren Sie als Liste."
+          "hint": "Das Projekt aus der Anfrage ist angelegt. Entdecken Sie seine Details: Verantwortliche, Projektteam, Phasen, Aufwand…"
         },
         "own_request": {
           "title": "Ihre erste Anfrage",
@@ -1680,7 +1685,7 @@
         },
         "own_project_budget": {
           "title": "Das Budget des Projekts",
-          "hint": "Verknüpfen Sie eine Budgetzeile mit Ihrem Projekt in dessen Beziehungen: Die Ausgaben folgen."
+          "hint": "Verknüpfen Sie im Tab Beziehungen eine oder mehrere Budgetzeilen mit Ihrem Projekt, um seine Kosten zu sehen."
         },
         "map_applications": {
           "title": "Die Anwendungsliste",
@@ -1689,10 +1694,6 @@
         "map_assets": {
           "title": "Die Server",
           "hint": "Jeder Server zeigt, wo die Anwendungen laufen: Umgebung, Standort, installierte Technologien. Öffnen Sie einen Datensatz, um mehr zu erfahren."
-        },
-        "own_findings": {
-          "title": "Was KANAP gefunden hat",
-          "hint": "Supportende und bekannte Schwachstellen Ihrer Technologien, ohne weitere Eingabe."
         },
         "portfolio_project": {
           "title": "Das aus der Anfrage entstandene Projekt",
@@ -1708,7 +1709,7 @@
         },
         "own_tasks": {
           "title": "Die ersten Aufgaben",
-          "hint": "Legen Sie die Aufgaben des Projekts an, weisen Sie sie zu und erfassen Sie die aufgewendete Zeit."
+          "hint": "Legen Sie eine Aufgabe an und verknüpfen Sie sie mit dem Projekt. Weisen Sie sie sich selbst zu und fügen Sie einen Kommentar hinzu; Sie können auch ihren Status ändern und Zeit erfassen."
         }
       }
     }

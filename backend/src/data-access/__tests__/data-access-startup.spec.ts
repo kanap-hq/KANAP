@@ -20,6 +20,7 @@ import {
   adminUrlForAppDatabase,
   appRoleName,
   connect,
+  lockOwnTables,
   roleExists,
 } from './data-access-test-helpers';
 
@@ -212,6 +213,8 @@ async function testForeignRelations(admin: PgClient): Promise<void> {
     await admin.query(`CREATE SEQUENCE data_access_spec_foreign_seq`);
     await admin.query(`REVOKE ALL ON SEQUENCE data_access_spec_foreign_seq FROM PUBLIC`);
     await admin.query(`SET LOCAL ROLE "${APP_ROLE}"`);
+    // The down() and up() below replay the migrations: before the first sync grants anything.
+    await lockOwnTables((sql) => admin.query(sql));
     await admin.query(`SELECT data_access_sync_policies()`);
     assert.deepEqual(
       await checkDataAccessAvailability(savepointSession(admin)),

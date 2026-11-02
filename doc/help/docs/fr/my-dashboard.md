@@ -65,7 +65,7 @@ Quand les cinq étapes sont faites, la tuile propose les deux autres parcours. E
 | Parcours | Avec l'exemple | Avec vos données |
 |---|---|---|
 | Budget IT | La vue d'ensemble, Une ligne budgétaire, Un rapport, Une question à Plaid, Vos données | Votre société, Vos lignes, Un contrat lié, Votre premier rapport, Un collègue |
-| Cartographie du SI | La liste des applications, Une fiche d'application, Les serveurs, Les technologies, fins de support et failles, Vos données | Vos applications, Vos technologies, Vos serveurs, Ce que KANAP a trouvé, Un collègue |
+| Cartographie du SI | La liste des applications, Une fiche d'application, Les serveurs, Les technologies, fins de support et failles, Vos données | Vos sites, Vos applications, Vos technologies, Vos serveurs, Un collègue |
 | Projets et demandes | Une demande et son score, Le projet issu de la demande, Les tâches, Les rapports, Vos données | Votre première demande, Votre projet, Les premières tâches, Le budget du projet, Un collègue |
 
 ### La page d'accueil suit votre parcours

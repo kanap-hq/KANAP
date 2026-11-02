@@ -65,16 +65,19 @@ async function run() {
   const svc = new PortfolioTimeLoggedReportService();
   const today = todayIn('UTC');
   const months6 = buildMonths(today, 6).map((bound) => bound.periodStart.slice(0, 7));
-  const months12 = buildMonths(today, 12).map((bound) => bound.periodStart.slice(0, 7));
   const [first, second] = months6;
   const current = months6[5];
 
   {
+    // The months of the zone given: from 23:00 UTC on the last day of a month, Paris is already
+    // in the next one.
+    const parisToday = todayIn('Europe/Paris');
+    const parisMonths12 = buildMonths(parisToday, 12).map((bound) => bound.periodStart.slice(0, 7));
     const { manager, calls } = stubManager([], []);
     const report = await svc.getReport(TENANT, { months: 12, timeZone: 'Europe/Paris' }, { manager });
-    assert.deepEqual(report.months, months12);
+    assert.deepEqual(report.months, parisMonths12);
     assert.equal(report.months.length, 12);
-    assert.equal(report.months[11], today.slice(0, 7), 'the month in progress is the last one');
+    assert.equal(report.months[11], parisToday.slice(0, 7), 'the month in progress is the last one');
     assert.equal(report.series.length, 12);
     assert.deepEqual(report.teams, []);
     assert.deepEqual(report.totals, {
@@ -86,7 +89,7 @@ async function run() {
     });
     // The window opens on the first day of the oldest month and closes today, in the zone given.
     const hoursCall = calls.find((call) => call.sql.includes('UNION ALL'))!;
-    assert.deepEqual(hoursCall.params.slice(0, 4), [TENANT, `${months12[0]}-01`, 'Europe/Paris', todayIn('Europe/Paris')]);
+    assert.deepEqual(hoursCall.params.slice(0, 4), [TENANT, `${parisMonths12[0]}-01`, 'Europe/Paris', parisToday]);
   }
 
   {

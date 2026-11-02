@@ -38,7 +38,7 @@ Les différentes équipes peuvent utiliser les catégories pour se concentrer su
 
 Rendez-vous dans **Cartographie SI > Applications** pour voir votre liste. Pour créer une application :
 
-1. Cliquez sur **Nouvelle application / service**. La page de l'application s'ouvre avec un titre vide dans l'en-tête. Le reste de la page est grisé.
+1. Cliquez sur **Nouvelle application**. La page de l'application s'ouvre avec un titre vide dans l'en-tête. Le reste de la page est grisé.
 2. Saisissez le nom de l'application ou du service, de 200 caractères au plus. Voir [Noms uniques](#unique-names).
 3. Appuyez sur Entrée, ou cliquez hors du titre. KANAP crée l'application aussitôt. Sa référence (`APP-12`) s'affiche et tous les onglets s'ouvrent.
 
@@ -128,7 +128,7 @@ Une cellule sans valeur affiche un tiret.
 - **Vulnérabilités à traiter** filtre sur **Avec des vulnérabilités graves**, **Avec des vulnérabilités** ou **Sans**, et trie par les vulnérabilités critiques ou élevées, puis par le total. Les applications désactivées viennent en dernier et n'entrent dans aucune valeur du filtre.
 
 **Actions** :
-- **Nouvelle application / service** : Créer une nouvelle entrée (`applications:member`). Voir [Premiers pas](#getting-started)
+- **Nouvelle application** : Créer une nouvelle entrée (`applications:member`). Voir [Premiers pas](#getting-started)
 - **Importer** : Import en masse depuis un fichier CSV ou un classeur Excel (`applications:admin`)
 - **Exporter** : Exporter les applications que la liste affiche dans un fichier CSV ou un classeur Excel (`applications:admin`). Voir [Options d'export](#export-options).
 - **Copier l'élément** : Dupliquer une application sélectionnée avec toutes ses relations principales (`applications:member`). Voir [Copier des applications](#copier-des-applications) pour ce qui est et n'est pas copié.
