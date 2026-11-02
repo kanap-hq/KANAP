@@ -45,6 +45,30 @@ export async function roleExists(client: PgClient): Promise<boolean> {
   return rows[0].present === true;
 }
 
+/**
+ * Before a scenario replays a data-access migration inside its transaction: ACCESS EXCLUSIVE on
+ * every table of public the current role owns. The sync of the migration grants on each table
+ * (a GRANT rewrites the table's pg_class row), then drops or creates its policies (ACCESS
+ * EXCLUSIVE). An ANALYZE that autovacuum runs on that table meanwhile holds its lock and, to write
+ * its statistics into the same pg_class row, waits for the transaction that rewrote it: deadlock
+ * (seen on spend_round_input_lines after the specs that fill it). Locked first, a running
+ * autovacuum is cancelled after deadlock_timeout and no new one starts on these tables.
+ */
+export async function lockOwnTables(query: (sql: string) => Promise<unknown>): Promise<void> {
+  await query(`
+    DO $$
+    DECLARE v_tables text;
+    BEGIN
+      SELECT string_agg(format('public.%I', c.relname), ', ' ORDER BY c.relname) INTO v_tables
+      FROM pg_class c
+      WHERE c.relnamespace = 'public'::regnamespace AND c.relkind IN ('r', 'p') AND pg_has_role(c.relowner, 'USAGE');
+      IF v_tables IS NOT NULL THEN
+        EXECUTE 'LOCK TABLE ' || v_tables || ' IN ACCESS EXCLUSIVE MODE';
+      END IF;
+    END
+    $$`);
+}
+
 /** The SQLSTATE of the error `fn` throws; fails when it does not throw. */
 export async function sqlState(fn: () => Promise<unknown>): Promise<string> {
   try {

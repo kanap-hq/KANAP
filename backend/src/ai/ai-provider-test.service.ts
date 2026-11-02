@@ -119,6 +119,9 @@ export class AiProviderTestService {
     }
 
     const effortSent = reasoningEffortToSend(provider, model, input.reasoning_effort);
+    // Closing the iterator while a read is pending waits for the provider's next chunk: the
+    // request is aborted first, so a stream left open after the grace ends at once.
+    const abort = new AbortController();
     try {
       const stream = adapter.createStream({
         model: model!,
@@ -131,6 +134,7 @@ export class AiProviderTestService {
         timeoutMs: PROVIDER_TEST_TIMEOUT_MS,
         maxRetries: PROVIDER_TEST_MAX_RETRIES,
         reasoningEffort: effortSent,
+        signal: abort.signal,
       });
 
       // The answer is read to its end (a few tokens) when it comes within a short grace after the
@@ -168,6 +172,7 @@ export class AiProviderTestService {
         }
       } finally {
         clearTimeout(graceTimer);
+        abort.abort();
         await iterator.return?.(undefined).catch(() => undefined);
       }
 

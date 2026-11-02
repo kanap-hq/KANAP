@@ -10248,7 +10248,8 @@ async function testAgentControlActivityTimelineAndDailyMetrics() {
   assert.deepEqual(new Set(errors.items.map((entry) => entry.titleKey)), new Set(['run_failed']));
 
   const daily = await service.getHelpdeskEvaluationDaily(context, { days: 2 });
-  const today = daily.days.at(-1);
+  // The UTC day of the rows: in the first seconds after midnight they sit on the day before.
+  const today = daily.days.find((entry) => entry.day === now.toISOString().slice(0, 10));
   assert.ok(today);
   assert.equal(today.proposals, 1);
   assert.equal(today.decided, 1);
