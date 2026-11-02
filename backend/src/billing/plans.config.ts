@@ -23,6 +23,8 @@ export const CLOUD_SUBSCRIPTION_QUANTITY = 1;
  * `POST /admin/tenants/:id/mark-internal`. Commercial indicators leave these tenants out.
  */
 export const INTERNAL_PLAN_NAME = 'Internal';
+/** Plan name of a trial subscription, as activation writes it. Only such a plan is ever deleted at the end of a trial. */
+export const TRIAL_PLAN_NAME = 'Trial';
 
 export interface PlanPrices {
   monthly: number; // EUR cents

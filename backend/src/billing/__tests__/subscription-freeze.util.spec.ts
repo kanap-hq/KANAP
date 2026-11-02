@@ -135,9 +135,16 @@ function testTrialDeletionDate() {
 
   // Subscribed (a Stripe trial included), reactivated, paid then canceled or frozen: never.
   assert.equal(computeTrialDeletionAt(trial({ stripe_subscription_id: 'sub_1' }), true), null);
-  for (const status of [SubscriptionStatus.ACTIVE, SubscriptionStatus.PAST_DUE, SubscriptionStatus.CANCELED, SubscriptionStatus.UNPAID, null]) {
+  for (const status of [SubscriptionStatus.ACTIVE, SubscriptionStatus.PAST_DUE, SubscriptionStatus.CANCELED, SubscriptionStatus.UNPAID, SubscriptionStatus.INCOMPLETE_EXPIRED, null]) {
     assert.equal(computeTrialDeletionAt(trial({ status: status as any }), true), null, `status ${status}`);
   }
+  // Set back to trialing by hand: any trace of a subscription, or another plan name, keeps it.
+  assert.equal(computeTrialDeletionAt(trial({ latest_invoice_id: 'in_1' }), true), null);
+  assert.equal(computeTrialDeletionAt(trial({ current_period_end: new Date(NOW - 60 * DAY_MS) }), true), null);
+  assert.equal(computeTrialDeletionAt(trial({ canceled_at: new Date(NOW - 60 * DAY_MS) }), true), null);
+  assert.equal(computeTrialDeletionAt(trial({ plan_name: 'Internal' }), true), null);
+  assert.equal(computeTrialDeletionAt(trial({ plan_name: 'Hosted KANAP' }), true), null);
+  assert.ok(computeTrialDeletionAt(trial({ plan_name: 'Trial' }), true));
 }
 
 async function run() {

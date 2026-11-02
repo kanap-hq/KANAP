@@ -143,6 +143,15 @@ async function testSelection() {
     ids.subscribed = await seedTenant({ tag: 'subscribed', subscriptions: [{ status: 'active', stripeSubscriptionId: 'sub_spec_1', planName: 'Hosted KANAP' }] });
     ids.stripeTrial = await seedTenant({ tag: 'stripetrial', subscriptions: [{ status: 'trialing', trialEnd: daysAgo(40), stripeSubscriptionId: 'sub_spec_2' }] });
     ids.reactivated = await seedTenant({ tag: 'reactivated', subscriptions: [{ status: 'active', planName: 'Internal' }] });
+    // Internal plan whose status was later set back to trialing by hand.
+    ids.internalTrialing = await seedTenant({ tag: 'inttrial', subscriptions: [{ status: 'trialing', trialEnd: daysAgo(40), planName: 'Internal' }] });
+    // Paid offline: a platform administrator set the plan by hand (active, bank transfer).
+    ids.paidOffline = await seedTenant({ tag: 'offline', subscriptions: [{ status: 'active', trialEnd: daysAgo(40), planName: 'Hosted KANAP' }] });
+    // Paid offline, not renewed, set back to trialing by hand: the plan name keeps it.
+    ids.offlineEnded = await seedTenant({ tag: 'offended', subscriptions: [{ status: 'trialing', trialEnd: daysAgo(40), planName: 'Hosted KANAP' }] });
+    // A Stripe subscription not renewed (unpaid), a first payment never made.
+    ids.unpaid = await seedTenant({ tag: 'unpaid', subscriptions: [{ status: 'unpaid', trialEnd: daysAgo(90), stripeSubscriptionId: 'sub_spec_6' }] });
+    ids.incompleteExpired = await seedTenant({ tag: 'incexp', subscriptions: [{ status: 'incomplete_expired', trialEnd: daysAgo(90), stripeSubscriptionId: 'sub_spec_7' }] });
     ids.canceled = await seedTenant({ tag: 'canceled', subscriptions: [{ status: 'canceled', trialEnd: daysAgo(90), stripeSubscriptionId: 'sub_spec_3' }] });
     ids.pastDue = await seedTenant({ tag: 'pastdue', subscriptions: [{ status: 'past_due', stripeSubscriptionId: 'sub_spec_4' }] });
     ids.noSubscription = await seedTenant({ tag: 'nosub' });

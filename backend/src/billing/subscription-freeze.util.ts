@@ -1,5 +1,5 @@
 import { CollectionMethod, Subscription, SubscriptionStatus } from './subscription.entity';
-import { FREEZE_GRACE_DAYS, TRIAL_WORKSPACE_RETENTION_DAYS } from './plans.config';
+import { FREEZE_GRACE_DAYS, TRIAL_PLAN_NAME, TRIAL_WORKSPACE_RETENTION_DAYS } from './plans.config';
 
 const GRACE_MS = FREEZE_GRACE_DAYS * 86400000;
 const TRIAL_RETENTION_MS = TRIAL_WORKSPACE_RETENTION_DAYS * 86400000;
@@ -95,21 +95,29 @@ export function evaluateSubscriptionAccess(
  * task (TrialWorkspaceExpiryService), the subscription summary (`trial_deletion_at`) and the
  * trial emails.
  *
- * Only a local trial has one (status trialing, a trial end, no Stripe subscription): a tenant
- * that subscribed (the Stripe id stays on its one subscription row, whatever the status), or that
- * a platform administrator reactivated (internal plan, another status), has none. A trial end
- * moved forward moves the date with it.
+ * Only a trial that never became anything else has one: status trialing, a trial end, the
+ * trial plan name, and no trace of a subscription (Stripe subscription, invoice, period, cancel
+ * date). A tenant that subscribed, even long ended, and a tenant a platform administrator
+ * activated (internal tenant, or a plan set by hand: another status or plan name) have none.
+ * A trial end moved forward moves the date with it.
  *
  * `billingEnforced` is the on-premise escape hatch of `evaluateSubscriptionAccess`: no billing,
  * no trial lock, no deletion. Pass `!Features.SINGLE_TENANT && stripeConfig.isConfigured()`.
  */
 export function computeTrialDeletionAt(
-  subscription: Pick<Subscription, 'status' | 'trial_end' | 'stripe_subscription_id'> | null,
+  subscription: Pick<
+    Subscription,
+    'status' | 'trial_end' | 'plan_name' | 'stripe_subscription_id' | 'latest_invoice_id' | 'current_period_end' | 'canceled_at'
+  > | null,
   billingEnforced: boolean,
 ): Date | null {
-  if (!billingEnforced || !subscription) return null;
-  if (subscription.status !== SubscriptionStatus.TRIALING || subscription.stripe_subscription_id || !subscription.trial_end) {
-    return null;
-  }
+  if (!billingEnforced || !subscription || !subscription.trial_end) return null;
+  if (subscription.status !== SubscriptionStatus.TRIALING) return null;
+  if ((subscription.plan_name ?? TRIAL_PLAN_NAME) !== TRIAL_PLAN_NAME) return null;
+  const subscribedOnce = subscription.stripe_subscription_id
+    || subscription.latest_invoice_id
+    || subscription.current_period_end
+    || subscription.canceled_at;
+  if (subscribedOnce) return null;
   return new Date(subscription.trial_end.getTime() + TRIAL_RETENTION_MS);
 }
