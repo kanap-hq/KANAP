@@ -52,7 +52,7 @@ Luego complete lo esencial en el encabezado y el panel de propiedades:
 | **Criticidad de negocio** | Importancia para el negocio | `Crítica para el negocio` |
 | **Ciclo de vida** | Estado actual (Activo al crearla) | `Activo` |
 
-Mientras siga en su página, **Cancelar la creación** en el encabezado elimina la nueva aplicación.
+Mientras siga en su página, **Crear** en el encabezado conserva la nueva aplicación y la cierra, y **Cancelar** la elimina.
 
 !!! tip "Empiece con lo que sabe"
     Descripción, editor, versión, licencia: todo útil, pero opcional en esta etapa. Puede enriquecer más tarde. El objetivo es tener la app en el sistema.

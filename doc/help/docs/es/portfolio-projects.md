@@ -84,11 +84,14 @@ Un proyecto creado así puede pasar de **Fast-track** a **Histórico** y vicever
 
 Use **Fast-track** para trabajo que se introduce genuinamente directo en la entrega. Use **Histórico** para trabajo que ya existe fuera del historial normal de captación. Esa distinción afecta a los informes y hace que el análisis posterior del portafolio sea mucho menos confuso.
 
-### Cancelar la creación { #cancelling-a-creation }
+### Crear o cancelar { #cancelling-a-creation }
 
-Mientras permanezca en el proyecto que acaba de crear, **Cancelar la creación** en el encabezado lo elimina y le devuelve al punto de partida: la lista o la pantalla anterior. Si introdujo algo más que el nombre, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin ningún derecho de eliminación.
+Mientras el proyecto se está creando, su encabezado muestra **Crear** y **Cancelar**. Permanecen hasta que salga del proyecto.
 
-Es la única forma de eliminar un proyecto. Una vez que sale del proyecto, este permanece: cambie su estado a **Cancelado** si no sigue adelante. Un proyecto vinculado a una solicitud no se puede eliminar. La referencia de un proyecto cancelado no se reutiliza.
+- **Crear** conserva el proyecto y lo cierra. Vuelve al punto de partida: la lista o la pantalla anterior. Con el título vacío, no se cierra nada y el título pide uno
+- **Cancelar** cierra sin conservar nada. En un proyecto ya creado, lo elimina. Si introdujo algo más que el nombre, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin ningún derecho de eliminación
+
+**Cancelar** es la única forma de eliminar un proyecto. Una vez que sale del proyecto, este permanece: cambie su estado a **Cancelado** si no sigue adelante. Un proyecto vinculado a una solicitud no se puede eliminar. La referencia de un proyecto cancelado no se reutiliza.
 
 ## Modelo mental del espacio de trabajo
 
@@ -110,7 +113,7 @@ El encabezado del espacio de trabajo es una franja de control, no decoración.
 - Una fila de metadatos compacta: **Estado**, **Puntuación**, **Progreso**, **Responsable IT**, **Fin planificado** y **Origen** (o la referencia de la solicitud de origen para proyectos de origen-solicitud)
 - **Anterior** y **Siguiente** se mueven por el conjunto de resultados de la lista actual, no por todos los proyectos del sistema
 - **Compartir** envía por correo la URL actual del proyecto con un mensaje opcional
-- **Cancelar la creación**, mientras permanezca en un proyecto que acaba de crear. Consulte [Cancelar la creación](#cancelling-a-creation)
+- **Crear** y **Cancelar**, mientras el proyecto se está creando. Consulte [Crear o cancelar](#cancelling-a-creation)
 
 Enviar un enlace no concede acceso. Solo comparte la ubicación. Los permisos permanecen exactamente como estaban antes de enviar el correo.
 

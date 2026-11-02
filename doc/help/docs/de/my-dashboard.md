@@ -14,7 +14,7 @@ Der Kopfbereich oben im Dashboard bietet Schnellzugriffsschaltflächen für gew�
 
 - **Aufgabe erstellen**: öffnet den Erstellungsfluss für eigenständige Aufgaben. Erfordert `tasks:member` oder höher.
 - **Zeit erfassen**: öffnet den Dialog **Schnelle Zeiterfassung** (siehe unten). Erfordert `portfolio_projects:contributor` oder `tasks:member`.
-- **Neue Budgetzeile**: öffnet eine neue Budgetzeile. Sie beginnt als OPEX, und die Zeile **Typ** in ihrem Bereich Eigenschaften stellt sie auf CAPEX um (siehe [Budgetzeilen](budget-lines.md#der-arbeitsbereich)). Erfordert `budget:member` oder höher.
+- **Neue Budgetzeile**: öffnet eine neue OPEX-Zeile (siehe [Budgetzeilen](budget-lines.md#der-arbeitsbereich)). Erfordert `budget:member` oder höher.
 - **Neue Anwendung**: öffnet den Erstellungsfluss für Anwendungen. Erfordert `applications:member` oder höher.
 - **Neues Asset**: öffnet den Erstellungsfluss für Assets. Erfordert `infrastructure:member` oder höher.
 - **Neues Dokument** (Split-Schaltfläche): erstellt ein leeres Wissensdokument oder öffnet den Vorlagen-Picker, um aus einer veröffentlichten Vorlage zu beginnen. Erfordert `knowledge:member` oder höher.

@@ -52,7 +52,7 @@ Then fill in the essentials in the header and the properties drawer:
 | **Business criticality** | Business importance | `Business critical` |
 | **Lifecycle** | Current status (Active when created) | `Active` |
 
-While you are still on its page, **Cancel creation** in the header deletes the new application.
+While you are still on its page, **Create** in the header keeps the new application and closes it, and **Cancel** deletes it.
 
 !!! tip "Start with what you know"
     Description, publisher, version, licensing: all useful, but optional at this stage. You can enrich later. The goal is to get the app into the system.

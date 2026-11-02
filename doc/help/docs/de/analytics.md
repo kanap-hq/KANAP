@@ -207,7 +207,7 @@ Die beiden Einstellungen müssen zusammenpassen. Eine Dimension kann nicht auf e
 
 Schalten Sie **Erforderlich** ein, wenn jede Budgetzeile in einer Dimension klassifiziert sein muss. KANAP prüft dann die Zeilen der Arten, für die die Dimension verwendet wird:
 
-- **Eine neue Zeile braucht einen Wert in der Dimension.** Das gilt für jeden Weg, eine Zeile anzulegen: die OPEX- und CAPEX-Bildschirme, eine Budgetdatei, Plaid und die API. Ohne Wert wird die Zeile nicht angelegt, mit der Meldung „The Kostenart dimension is required. Choose a value.“
+- **Eine neue Zeile braucht einen Wert in der Dimension.** Eine Budgetdatei, Plaid und die API legen keine Zeile ohne Wert an, mit der Meldung „The Kostenart dimension is required. Choose a value.“ Auf dem Bildschirm der Budgetzeilen besteht eine Zeile ab ihrem Titel, und **Erstellen** nennt die Dimension als fehlend, bis sie einen Wert hat.
 - **Eine Zeile mit einem Wert kann ihn nicht verlieren.** Sie können einen anderen Wert wählen. Das Feld kann nicht geleert werden.
 - **Eine Zeile, die vor dem Einschalten angelegt wurde, funktioniert weiter.** Hat sie keinen Wert in der Dimension, bleibt sie bearbeitbar, und Sie können andere Änderungen an ihr speichern. Ihr Feld ist als erforderlich markiert. In den OPEX- und CAPEX-Bildschirmen fragt KANAP beim Verlassen einer solchen Zeile nach einer Änderung zuerst nach einem Wert, mit **Bleiben** und **Trotzdem verlassen**. Wird sie nur geöffnet, ohne etwas zu ändern, fragt KANAP nie.
 
@@ -332,7 +332,7 @@ Die Standarddimension kann nicht deaktiviert werden.
 Im Bereich **Eigenschaften** einer OPEX- oder CAPEX-Zeile, und wenn Sie eine erstellen, hat jede aktivierte Dimension, die für diese Zeilenart verwendet wird, ein eigenes Feld, nach der Dimension benannt, in der Reihenfolge der Dimensionen. Die Standarddimension erscheint als **Analysedimension**, bis Sie sie umbenennen.
 
 - Wählen Sie einen Wert, oder leeren Sie das Feld, um die Zeile in dieser Dimension ohne Wert zu lassen. Die Änderung wird sofort gespeichert.
-- Das Feld einer erforderlichen Dimension ist mit einem Sternchen markiert. Eine neue Budgetzeile kann ohne Wert in ihr nicht angelegt werden, mit der Meldung „Kostenart ist erforderlich“. Bei einer Budgetzeile mit einem Wert hat das Feld keine Schaltfläche zum Leeren: Sie können nur einen anderen Wert wählen. Siehe [Erforderliche Dimensionen](#erforderliche-dimensionen).
+- Das Feld einer erforderlichen Dimension ist mit einem Sternchen markiert. Bei einer Budgetzeile, die erstellt wird, nennt **Erstellen** sie als fehlend, bis sie einen Wert hat. Bei einer Budgetzeile mit einem Wert hat das Feld keine Schaltfläche zum Leeren: Sie können nur einen anderen Wert wählen. Siehe [Erforderliche Dimensionen](#erforderliche-dimensionen).
 - Das Feld listet die aktivierten Werte seiner Dimension, die für diese Zeilenart verwendet werden. Ein deaktivierter Wert oder ein Wert, der nur für die andere Zeilenart gilt, bleibt auf den Zeilen sichtbar, die ihn haben. Siehe [OPEX- oder CAPEX-Werte](#opex-oder-capex-werte).
 - Bei einer Dimension mit [offenen Werten](#open-values) bietet das Feld **„…“ hinzufügen** für einen nicht vorhandenen Namen an. Bei den anderen Dimensionen kann das Feld keinen Wert anlegen: Legen Sie Werte auf der Seite Analysedimensionen an, oder lassen Sie sie von der Budgetdatei anlegen.
 - Ein Wert gilt für die ganze Zeile, über alle Jahre.

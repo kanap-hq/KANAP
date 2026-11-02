@@ -39,11 +39,14 @@ El nuevo incidente queda **Abierto**, con gravedad **Media**, detectado ahora y 
 
 Ambas fechas admiten valores pasados: un incidente descubierto el lunes por la mañana puede registrarse como iniciado el sábado por la noche. Pulse Escape en el título vacío para salir sin registrar nada.
 
-### Cancelar la creación { #cancelling-a-creation }
+### Crear o cancelar { #cancelling-a-creation }
 
-Mientras permanezca en el incidente que acaba de registrar, **Cancelar la creación** en el encabezado lo elimina y le devuelve al punto de partida: la lista o la pantalla anterior. Si introdujo algo más que el título, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar incidentes. **Cancelar incidente** permanece oculto mientras tanto.
+Mientras el incidente se está creando, su encabezado muestra **Crear** y **Cancelar**. Permanecen hasta que salga del incidente.
 
-La cancelación de la creación se rechaza en cuanto el incidente está cerrado o cancelado, o contiene datos de notificación reglamentaria (consulte [Eliminar un incidente](#eliminar-un-incidente)). Una vez que sale del incidente, este permanece en el registro. La referencia de una creación cancelada no se reutiliza.
+- **Crear** conserva el incidente y lo cierra. Vuelve al punto de partida: la lista o la pantalla anterior. Con el título vacío, no se cierra nada y el título pide uno
+- **Cancelar** cierra sin conservar nada. En un incidente ya creado, lo elimina. Si introdujo algo más que el título, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar incidentes
+
+**Cancelar incidente** permanece oculto mientras el incidente se está creando. La cancelación de la creación se rechaza en cuanto el incidente está cerrado o cancelado, o contiene datos de notificación reglamentaria (consulte [Eliminar un incidente](#eliminar-un-incidente)). Si sale del incidente de otra forma, este permanece en el registro. La referencia de una creación cancelada no se reutiliza.
 
 **Permisos**:
 

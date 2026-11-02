@@ -86,7 +86,7 @@ L'en-tête de l'espace de travail vous donne le contexte opérationnel sans quit
 - une bande de métadonnées avec **Statut**, **Score**, **Demandeur**, **Responsable IT**, **Date de livraison cible** et (lorsque applicable) la **Tâche source** depuis laquelle la demande a été créée
 - **Partager** pour envoyer un lien vers la demande
 - **Convertir en projet** lorsque la demande est **Approuvée** ou **Convertie**
-- **Annuler la création**, tant que vous restez sur une demande que vous venez de créer. Voir [Annuler la création](#cancelling-a-creation)
+- **Créer** et **Annuler**, tant que la demande est en cours de création. Voir [Créer ou annuler](#cancelling-a-creation)
 - **Supprimer**, une icône corbeille, pour les administrateurs (lorsque la demande n'est pas encore convertie). Une demande convertie reste l'origine de son projet et ne peut pas être supprimée
 - navigation précédent/suivant basée sur le contexte exact de la liste d'où vous venez
 
@@ -98,11 +98,14 @@ L'en-tête de l'espace de travail vous donne le contexte opérationnel sans quit
 
 Complétez ensuite le tiroir Propriétés et l'**Objectif**. Le nom se modifie uniquement dans l'en-tête. Appuyez sur Échap dans le titre vide pour partir sans rien créer.
 
-### Annuler la création { #cancelling-a-creation }
+### Créer ou annuler { #cancelling-a-creation }
 
-Tant que vous restez sur la demande que vous venez de créer, **Annuler la création** dans l'en-tête la supprime et vous ramène là où vous avez commencé : la liste ou l'écran précédent. Si vous avez saisi plus que le nom, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des demandes.
+Tant que la demande est en cours de création, son en-tête affiche **Créer** et **Annuler**. Ils restent jusqu'à ce que vous quittiez la demande.
 
-Une fois que vous quittez la demande, elle reste. Un administrateur peut alors la supprimer avec **Supprimer**. La référence d'une demande annulée n'est pas réutilisée.
+- **Créer** conserve la demande et la ferme. Vous revenez à votre point de départ : la liste ou l'écran précédent. Avec un titre vide, rien ne se ferme et le titre en demande un
+- **Annuler** ferme sans rien conserver. Sur une demande déjà créée, il la supprime. Si vous avez saisi plus que le nom, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des demandes
+
+Si vous quittez la demande autrement, elle reste. Un administrateur peut alors la supprimer avec **Supprimer**. La référence d'une demande annulée n'est pas réutilisée.
 
 ### Tiroir des propriétés
 

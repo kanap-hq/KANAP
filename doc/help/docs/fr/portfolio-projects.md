@@ -84,11 +84,14 @@ Un projet créé ainsi peut passer de **Fast-track** à **Historique** et invers
 
 Utilisez **Fast-track** pour le travail qui est réellement introduit directement en livraison. Utilisez **Historique** pour le travail qui existe déjà en dehors de l'historique d'intake normal. Cette distinction affecte le reporting et rend l'analyse de portefeuille ultérieure beaucoup moins déroutante.
 
-### Annuler la création { #cancelling-a-creation }
+### Créer ou annuler { #cancelling-a-creation }
 
-Tant que vous restez sur le projet que vous venez de créer, **Annuler la création** dans l'en-tête le supprime et vous ramène là où vous avez commencé : la liste ou l'écran précédent. Si vous avez saisi plus que le nom, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans aucun droit de suppression.
+Tant que le projet est en cours de création, son en-tête affiche **Créer** et **Annuler**. Ils restent jusqu'à ce que vous quittiez le projet.
 
-C'est le seul moyen de supprimer un projet. Une fois que vous quittez le projet, il reste : passez son statut à **Annulé** s'il ne se fait pas. Un projet lié à une demande ne peut pas être supprimé. La référence d'un projet annulé n'est pas réutilisée.
+- **Créer** conserve le projet et le ferme. Vous revenez à votre point de départ : la liste ou l'écran précédent. Avec un titre vide, rien ne se ferme et le titre en demande un
+- **Annuler** ferme sans rien conserver. Sur un projet déjà créé, il le supprime. Si vous avez saisi plus que le nom, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans aucun droit de suppression
+
+**Annuler** est le seul moyen de supprimer un projet. Une fois que vous quittez le projet, il reste : passez son statut à **Annulé** s'il ne se fait pas. Un projet lié à une demande ne peut pas être supprimé. La référence d'un projet annulé n'est pas réutilisée.
 
 ## Modèle mental de l'espace de travail
 
@@ -110,7 +113,7 @@ L'en-tête de l'espace de travail est une bande de contrôle, pas de la décorat
 - Une rangée de métadonnées compacte : **Statut**, **Score**, **Avancement**, **Responsable IT**, **Fin planifiée** et **Origine** (ou la référence de la demande source pour les projets d'origine demande)
 - **Précédent** et **Suivant** parcourent l'ensemble de résultats de la liste actuelle, pas tous les projets du système
 - **Partager** envoie l'URL du projet courant par e-mail avec un message optionnel
-- **Annuler la création**, tant que vous restez sur un projet que vous venez de créer. Voir [Annuler la création](#cancelling-a-creation)
+- **Créer** et **Annuler**, tant que le projet est en cours de création. Voir [Créer ou annuler](#cancelling-a-creation)
 
 Envoyer un lien n'accorde pas l'accès. Cela ne fait que partager l'emplacement. Les autorisations restent exactement comme elles étaient avant l'envoi de l'e-mail.
 

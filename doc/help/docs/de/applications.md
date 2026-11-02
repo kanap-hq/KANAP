@@ -56,11 +56,14 @@ Die neue Anwendung ist **Aktiv**, in der Standardkategorie. Ändern Sie beides i
 
 Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erstellen. Ein Name, den bereits eine andere Anwendung trägt, wird abgelehnt, mit einer Meldung unter dem Titel.
 
-### Erstellung abbrechen { #cancelling-a-creation }
+### Erstellen oder abbrechen { #cancelling-a-creation }
 
-Solange Sie auf der gerade erstellten Anwendung bleiben, löscht **Erstellung abbrechen** in der Kopfzeile sie und bringt Sie dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm. Wenn Sie mehr als den Namen eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Anwendungen abbrechen.
+Solange die Anwendung erstellt wird, zeigt ihre Kopfzeile **Erstellen** und **Abbrechen**. Beide bleiben, bis Sie die Anwendung verlassen.
 
-Sobald Sie die Anwendung verlassen, bleibt sie bestehen. Löschen Sie sie dann wie jede andere Anwendung. Die Referenz einer abgebrochenen Anwendung wird nicht wiederverwendet.
+- **Erstellen** behält die Anwendung und schließt sie. Sie kehren dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm. Bei leerem Titel schließt sich nichts, und der Titel verlangt einen
+- **Abbrechen** schließt, ohne etwas zu behalten. Eine bereits erstellte Anwendung wird gelöscht. Wenn Sie mehr als den Namen eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Anwendungen abbrechen
+
+Verlassen Sie die Anwendung auf andere Weise, bleibt sie bestehen. Löschen Sie sie dann wie jede andere Anwendung. Die Referenz einer abgebrochenen Anwendung wird nicht wiederverwendet.
 
 ### Eindeutige Namen { #unique-names }
 
@@ -152,7 +155,7 @@ Die Kopfzeile zeigt:
 - **Teilen**: Einen teilbaren Link zu diesem Arbeitsbereich kopieren
 - **Neue Version**: Den Versionsmigrations-Assistenten starten (siehe [Versionsverwaltung](#versionsverwaltung))
 - **In Technologie umwandeln** (`applications:admin` und `infrastructure:member`): siehe [Eine Anwendung in eine Technologie umwandeln](#eine-anwendung-in-eine-technologie-umwandeln)
-- **Erstellung abbrechen**: sichtbar, solange Sie auf einer gerade erstellten Anwendung bleiben. Siehe [Erstellung abbrechen](#cancelling-a-creation)
+- **Erstellen** und **Abbrechen**: sichtbar, solange die Anwendung erstellt wird, anstelle der Schließen-Schaltfläche. Siehe [Erstellen oder abbrechen](#cancelling-a-creation)
 - **Löschen**, ein Papierkorbsymbol mit seinem Namen im Tooltip (`applications:admin`): eine Anwendung mit Schnittstellen erhält die Ablehnung und den Grund, nur mit Schließen. Sonst nennt die Bestätigung die Anwendung und zählt die Bereitstellungen, die mit ihr gelöscht werden, zusammen mit ihren Verknüpfungen zu anderen Einträgen
 - **Vorherige / Nächste**: Durch die gefilterte Liste navigieren, ohne zum Raster zurückzukehren
 

@@ -11,7 +11,16 @@ Beide Typen stehen in einer Liste und öffnen sich im selben Arbeitsbereich, mit
 
 Navigieren Sie zu **Budgetverwaltung > Budgetzeilen**, um die Liste zu sehen. Klicken Sie auf **Neue Zeile**, um eine Zeile zu erstellen.
 
-Der Arbeitsbereich öffnet sich im Erstellungsmodus mit dem Titel **Neue OPEX-Zeile** oder **Neue CAPEX-Zeile**, mit geöffnetem Bereich **Eigenschaften** rechts. Seine erste Zeile ist **Typ**: Wählen Sie **OPEX** oder **CAPEX**. Er beginnt auf dem Typ, auf den die Liste in ihrer Spalte **Typ** gefiltert ist, sonst auf **OPEX**. Geben Sie den Namen der Zeile oben im Titel ein, füllen Sie die Eigenschaften aus und klicken Sie dann auf **Erstellen**.
+Der Arbeitsbereich öffnet sich auf einer neuen Zeile mit dem Titel **Neue OPEX-Zeile** oder **Neue CAPEX-Zeile**. Ihr Typ ist der, auf den die Liste in ihrer Spalte **Typ** gefiltert ist, sonst **OPEX**. Er kann nicht geändert werden, solange die Zeile erstellt wird. Geben Sie den Namen der Zeile oben im Titel ein und drücken Sie Enter. Die Zeile besteht sofort, mit der Währung Ihres Arbeitsbereichs und dem heutigen Tag als Beginn der Gültigkeit, und alle Tabs öffnen sich, **Budget** eingeschlossen. Füllen Sie den Bereich **Eigenschaften** aus: Jede Änderung wird sofort gespeichert.
+
+Wenn Ihr Datenzugriff auf ein Unternehmen beschränkt ist, wird das zahlende Unternehmen damit gefüllt. Wenn Sie wählen müssen, wählen Sie das zahlende Unternehmen oder die Kostenstelle, bevor Sie den Titel eingeben.
+
+Solange die Zeile erstellt wird, zeigt ihre Kopfzeile **Erstellen** und **Abbrechen** anstelle der Schaltfläche zum Schließen:
+
+- **Erstellen** prüft die unten genannten Pflichtfelder. Fehlt eines, nennt eine Meldung die fehlenden Felder, sie werden im Bereich **Eigenschaften** markiert, und der Cursor springt in das erste. Andernfalls schließt sich die Zeile, und Sie kehren dorthin zurück, wo Sie begonnen haben: zum vorherigen Bildschirm, sonst zur Liste
+- **Abbrechen** löscht die Zeile und alles, was darin erfasst wurde, Beträge eingeschlossen. Wenn Sie mehr als den Titel eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Zeilen abbrechen. Eine Zeile mit Beträgen in einer eingefrorenen Spalte kann nicht abgebrochen werden
+
+Verlassen Sie die Zeile auf andere Weise, während ein Pflichtfeld fehlt, fragt KANAP, ob Sie sie vervollständigen oder löschen möchten. Eine Zeile, die ohne zahlendes Unternehmen verlassen wurde, zeigt eine Warnung mit den fehlenden Feldern und fragt bei jedem Verlassen erneut. Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erstellen.
 
 **Pflichtfelder**:
 
@@ -19,8 +28,9 @@ Der Arbeitsbereich öffnet sich im Erstellungsmodus mit dem Titel **Neue OPEX-Ze
 - **Zahlendes Unternehmen**: Welches Unternehmen bezahlt (erforderlich für die Buchhaltung)
 - **Konto**: Das Sachkonto. Es erscheinen nur Konten aus dem Kontenplan des zahlenden Unternehmens, und zwar nur solche, die in [Kontenpläne und Kontenverwaltung](chart-of-accounts.md#opex-oder-capex-konten) zum Typ der Zeile passen: **OPEX und CAPEX**, oder **Nur OPEX** für eine OPEX-Zeile und **Nur CAPEX** für eine CAPEX-Zeile. Eine Zeile, die bereits ein Konto für den anderen Typ hat, behält es und bleibt bearbeitbar. Ein solches Konto für eine neue Zeile oder beim Ändern des Kontos zu wählen, wird abgelehnt
 - **Währung**: ISO-Code (z. B. USD, EUR). Standardmäßig Ihre Arbeitsbereich-Währung; kann pro Zeile überschrieben werden
-- **Beginn der Gültigkeit**: Wann diese Ausgabe beginnt (TT.MM.JJJJ)
+- **Beginn der Gültigkeit**: Wann diese Ausgabe beginnt (TT.MM.JJJJ). Standardmäßig der Tag, an dem Sie die Zeile erstellen
 - **Erforderliche Dimensionen**: ein Feld pro Dimension, die für den Typ der Zeile erforderlich ist. Ein neuer Arbeitsbereich hat keine erforderliche Dimension. Siehe [Empfohlene Dimensionen](#empfohlene-dimensionen)
+- **Kostenstelle**, wenn Ihr Datenzugriff eine verlangt
 
 **Optional aber nützlich**:
 
@@ -35,8 +45,6 @@ Der Arbeitsbereich öffnet sich im Erstellungsmodus mit dem Titel **Neue OPEX-Ze
 Einmal gesetzt, können **Zahlendes Unternehmen** und **Konto** geändert, aber nicht geleert werden. **Lieferant** können Sie jederzeit leeren.
 
 Wenn Sie das zahlende Unternehmen einer Zeile mit Konto ändern und das neue Unternehmen einen anderen Kontenplan verwendet, wird das Konto in derselben Speicherung geleert. **Konto** erscheint dann als Pflichtfeld, mit der Liste aus dem Kontenplan des neuen Unternehmens. Wählen Sie das neue Konto, um abzuschließen.
-
-Sobald die Zeile erstellt ist, schaltet der Arbeitsbereich alle vier Tabs frei: **Übersicht**, **Budget**, **Zuordnungen** und **Verknüpfungen**.
 
 **Tipp**: Sie können Zeilen schnell erstellen und Budgets und Zuordnungen später ergänzen. Beginnen Sie mit dem Wesentlichen und verfeinern Sie iterativ.
 
@@ -194,10 +202,10 @@ Eine von Ihnen gespeicherte Spaltenanordnung behält ihre eigene Auswahl an Spal
 
 Klicken Sie auf eine beliebige Zeile der Liste, um den Arbeitsbereich zu öffnen. Seine Adresse nennt die Zeile über ihre Referenz, zum Beispiel `/ops/budget/BL-12/overview`. Er besteht aus vier Teilen:
 
-- **Kopfzeile**: die Referenz der Zeile (z. B. `BL-12`) mit einer Kopierschaltfläche, der Titel der Zeile (anklicken, um die Zeile umzubenennen), **Zurück** / **Weiter**, **Teilen**, **Löschen** (Papierkorbsymbol, `budget:admin`, Zugriff auf alle Daten) und die Schaltfläche zum Schließen
+- **Kopfzeile**: die Referenz der Zeile (z. B. `BL-12`) mit einer Kopierschaltfläche, der Titel der Zeile (anklicken, um die Zeile umzubenennen), **Zurück** / **Weiter**, **Teilen**, **Löschen** (Papierkorbsymbol, `budget:admin`, Zugriff auf alle Daten) und die Schaltfläche zum Schließen. Solange die Zeile erstellt wird, ersetzen **Erstellen** und **Abbrechen** die Schaltfläche zum Schließen
 - **Metadatenleiste** unter dem Titel: **Status**, **IT-Verantwortlicher** und **Fachbereichsverantwortlicher**, direkt bearbeitbar. Hat die Kostenstelle der Zeile einen Budgetverantwortlichen, folgt **Budgetverantwortlicher** danach. Er ist schreibgeschützt und aus der Kostenstelle abgeleitet, nicht auf der Zeile gespeichert: Fahren Sie mit der Maus darüber, um zu sehen, aus welcher Kostenstelle er stammt, und ändern Sie ihn auf der Kostenstelle (siehe [Kostenstellen](cost-centers.md#budgetverantwortlicher-auf-budgetzeilen))
 - **Fünf Tabs**: **Übersicht**, **Budget**, **Zuordnungen**, **Verknüpfungen** (der Tab Verknüpfungen zeigt die Anzahl der Verknüpfungen der Zeile) und **Verlauf**
-- **Bereich Eigenschaften** rechts: die Hauptfelder der Zeile, beginnend mit **Typ** (bei einer bestehenden Zeile mit **Typ ändern…** daneben, siehe [Typ ändern](#typ-andern)). Öffnen oder schließen Sie ihn mit der Eigenschaften-Schaltfläche; der Arbeitsbereich merkt sich Ihre Wahl
+- **Bereich Eigenschaften** rechts: die Hauptfelder der Zeile, beginnend mit **Typ** (mit **Typ ändern…** daneben, sobald die Zeile nicht mehr erstellt wird, siehe [Typ ändern](#typ-andern)). Öffnen oder schließen Sie ihn mit der Eigenschaften-Schaltfläche; der Arbeitsbereich merkt sich Ihre Wahl
 
 **Auswahl der Verantwortlichen**:
 
@@ -245,7 +253,7 @@ Ersetzt die Zeile eine andere, oder wurde sie nach einer Typänderung ab einem s
 
 **Bereich Eigenschaften**:
 
-- **Typ**: **OPEX** oder **CAPEX**. Bei einer bestehenden Zeile öffnet **Typ ändern…** daneben den unter [Typ ändern](#typ-andern) beschriebenen Dialog
+- **Typ**: **OPEX** oder **CAPEX**. Sobald die Zeile nicht mehr erstellt wird, öffnet **Typ ändern…** daneben den unter [Typ ändern](#typ-andern) beschriebenen Dialog
 - **Lieferant**, **Kostenstelle**, **Zahlendes Unternehmen**, **Konto** (gefiltert nach dem Kontenplan des zahlenden Unternehmens und dem Typ der Zeile), **Währung** (nur die in Ihrem Arbeitsbereich erlaubten Währungen), ein Feld pro Analysedimension, die für den Typ der Zeile verwendet wird, **Run oder Build** und **Beginn der Gültigkeit**
 - **Lebenszyklus**: der Statusschalter, dessen Beschriftung den aktuellen Zustand zeigt (**Aktiviert** oder **Deaktiviert**), und das Datum **Ende der Gültigkeit**. Siehe [Status und Lebenszyklus](#status-und-lebenszyklus)
 - Die Daten **Erstellt** und **Aktualisiert** (schreibgeschützt)
@@ -256,7 +264,7 @@ Ersetzt die Zeile eine andere, oder wurde sie nach einer Typänderung ab einem s
 - Die Liste zeigt den Kostenstellenbaum. Gruppen werden zur Orientierung angezeigt und können nicht gewählt werden. Suchen Sie nach Code, Name oder Gruppenname
 - Ist das zahlende Unternehmen gewählt, zeigt die Liste nur die Kostenstellen dieses Unternehmens, mit den Gruppen darüber. Eine Zeile, die bereits eine Kostenstelle eines anderen Unternehmens hat, behält sie in der Liste. Hat das Unternehmen keine Kostenstelle, weist die Liste darauf hin
 - Eine deaktivierte Kostenstelle ist als **Deaktiviert** markiert. Sie bleibt auf den Zeilen, die sie bereits haben, und kann für keine andere Zeile gewählt werden
-- Wenn Sie eine Zeile erstellen und das zahlende Unternehmen leer ist, zeigt die Liste alle Kostenstellen. Die Wahl einer Kostenstelle füllt das zahlende Unternehmen mit dem Unternehmen der Kostenstelle, sodass die Liste **Konto** den Kontenplan dieses Unternehmens zeigt. Solange Sie nicht selbst ein Unternehmen oder ein Konto wählen, zeigt die Liste weiterhin alle Kostenstellen und die Wahl einer anderen Kostenstelle aktualisiert auch das Unternehmen
+- Solange das zahlende Unternehmen leer ist, zeigt die Liste alle Kostenstellen. Die Wahl einer Kostenstelle füllt das zahlende Unternehmen mit dem Unternehmen der Kostenstelle, sodass die Liste **Konto** den Kontenplan dieses Unternehmens zeigt
 - Wenn Sie das zahlende Unternehmen ändern, wird eine Kostenstelle eines anderen Unternehmens beim selben Speichern entfernt. **Kostenstelle** zeigt dann die Kostenstellen des neuen Unternehmens
 - Eine Zeile, deren Kostenstelle zu einem anderen Unternehmen gehört, aus einer Datei oder über die API, behält beide. Ein Hinweis unter dem Feld lautet „Diese Kostenstelle gehört zu“, gefolgt vom Namen des Unternehmens
 - Eine über die API gespeicherte Zeile mit Kostenstelle und ohne zahlendes Unternehmen erhält das Unternehmen der Kostenstelle. Für importierte Dateien siehe [CSV-Import/Export](#csv-importexport)
@@ -269,10 +277,10 @@ Ersetzt die Zeile eine andere, oder wurde sie nach einer Typänderung ab einem s
 - Jedes Feld listet die aktivierten Werte seiner Dimension. Ein deaktivierter Wert bleibt auf den Zeilen, die ihn bereits haben, und kann für keine andere Zeile gewählt werden
 - Ein Wert, der nur für den anderen Typ verwendet wird, wird nicht angeboten, und seine Wahl wird abgelehnt. Eine Zeile, die ihn bereits hat, behält ihn und bleibt bearbeitbar. Siehe [OPEX- oder CAPEX-Werte](analytics.md#opex-oder-capex-werte)
 - Das Feld kann keinen Wert erstellen: Erstellen Sie ihn unter [Analysedimensionen](analytics.md), oder lassen Sie ihn von einem Import erstellen
-- Eine erforderliche Dimension ist mit einem Sternchen markiert. Eine neue Zeile braucht einen Wert in ihr: **Erstellen** bricht mit „Kostenart ist erforderlich“ ab, bis Sie einen wählen. Bei einer Zeile mit einem Wert kann das Feld nicht geleert, nur geändert werden. Eine Zeile ohne Wert bleibt bearbeitbar. Wenn Sie eine solche Zeile ändern, fragt KANAP beim Verlassen zuerst: „Kostenart ist erforderlich. Wählen Sie einen Wert, bevor Sie die Seite verlassen.“ **Bleiben** setzt den Cursor in das fehlende Feld. **Trotzdem verlassen** verlässt die Zeile. Siehe [Erforderliche Dimensionen](analytics.md#erforderliche-dimensionen)
+- Eine erforderliche Dimension ist mit einem Sternchen markiert. Eine Zeile, die erstellt wird, braucht einen Wert in ihr: **Erstellen** nennt sie als fehlend, bis Sie einen wählen. Bei einer Zeile mit einem Wert kann das Feld nicht geleert, nur geändert werden. Eine Zeile ohne Wert bleibt bearbeitbar. Wenn Sie eine solche Zeile ändern, fragt KANAP beim Verlassen zuerst: „Kostenart ist erforderlich. Wählen Sie einen Wert, bevor Sie die Seite verlassen.“ **Bleiben** setzt den Cursor in das fehlende Feld. **Trotzdem verlassen** verlässt die Zeile. Siehe [Erforderliche Dimensionen](analytics.md#erforderliche-dimensionen)
 - Können die Dimensionen nicht geladen werden, ersetzt eine Zeile diese Felder: „Die Dimensionen konnten nicht geladen werden.“
 
-**Tipp**: Beim Erstellen einer Zeile bedeutet die Warnung „Veraltetes Konto“, dass das ausgewählte Konto nicht zum Kontenplan des zahlenden Unternehmens gehört. Wählen Sie ein anderes Konto, um die Warnung zu beheben. Eine bestehende Zeile, deren Konto außerhalb des Kontenplans ihres Unternehmens liegt, lässt sich weiterhin bearbeiten: Der Kontenplan wird nur geprüft, wenn sich das Unternehmen oder das Konto ändert.
+**Tipp**: Ein Konto außerhalb des Kontenplans des zahlenden Unternehmens wird abgelehnt, wenn Sie es wählen. Eine bestehende Zeile, deren Konto außerhalb des Kontenplans ihres Unternehmens liegt, lässt sich weiterhin bearbeiten: Der Kontenplan wird nur geprüft, wenn sich das Unternehmen oder das Konto ändert, und wenn Sie bei einer Zeile, die erstellt wird, auf **Erstellen** klicken.
 
 ---
 
@@ -637,7 +645,7 @@ Jede Zeile hat einen **Status** (Aktiviert oder Deaktiviert) und ein optionales 
 
 **Status setzen**:
 
-- Beim Anlegen der Zeile können Sie ihr **Ende der Gültigkeit** im Bereich **Eigenschaften** festlegen
+- Solange die Zeile erstellt wird, können Sie ihr **Ende der Gültigkeit** im Bereich **Eigenschaften** festlegen
 - Später ändern Sie den **Status** in der Metadatenleiste oder verwenden das Feld **Lebenszyklus** im Bereich **Eigenschaften** (Statusschalter und **Ende der Gültigkeit**). Ein Wechsel auf **Deaktiviert** setzt das Ende der Gültigkeit auf jetzt: Die Deaktivierung gilt sofort. Solange ein zukünftiges Datum gesetzt ist, zeigt der Schalter **Aktiv bis** und dieses Datum
 - Sie können ein zukünftiges Ende der Gültigkeit planen, zum Beispiel das Ende eines Vertrags, eine geplante Veräußerung oder das Ende der Nutzungsdauer eines Assets
 

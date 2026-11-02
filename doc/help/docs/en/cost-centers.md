@@ -160,7 +160,7 @@ The **Delete** button (trash icon) in the header deletes the node after a confir
 
 ## Cost centers on budget lines
 
-- **OPEX and CAPEX**: the **Cost center** field in the **Properties** panel lists the tree. Groups are shown to help you find your way and cannot be picked. When you create a line and the paying company is empty, picking a cost center fills it with the cost center's company, and the company follows the cost center until you pick a company or an account yourself. When the two companies differ, both are kept and a hint says so. See [Budget lines](budget-lines.md).
+- **OPEX and CAPEX**: the **Cost center** field in the **Properties** panel lists the tree. Groups are shown to help you find your way and cannot be picked. When the paying company is empty, picking a cost center fills it with the cost center's company. When the two companies differ, both are kept and a hint says so. See [Budget lines](budget-lines.md).
 - **List**: the **Cost center** and **Run or build** columns and filters of the budget lines list.
 - **Reports**: the budget reports can be filtered on a cost center or a group. See [Cost center, run or build and analytics filters](reports.md#cost-center-run-or-build-and-analytics-filters).
 

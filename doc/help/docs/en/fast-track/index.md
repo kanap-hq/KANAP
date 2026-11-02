@@ -56,7 +56,7 @@ Then fill in the minimum details in the property sidebar:
 
 Then use the **Purpose** document on **Summary** to explain the business need and expected outcome in plain language. If you already have a brief in Word, use the **Import** button on the Purpose editor to pull the `.docx` file in directly, with no copy-paste needed.
 
-While you are on its page, **Cancel creation** in the header deletes the new request.
+While you are on its page, **Create** in the header keeps the new request and closes it, and **Cancel** deletes it.
 
 !!! tip "Keep it lean"
     You can add deeper analysis, linked knowledge, and supporting evidence later. The goal right now is to get the request into the governed intake flow.

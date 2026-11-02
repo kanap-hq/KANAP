@@ -52,7 +52,7 @@ Complétez ensuite l'essentiel dans l'en-tête et le tiroir des propriétés :
 | **Criticité business** | Importance métier | `Critique métier` |
 | **Cycle de vie** | Statut actuel (Actif à la création) | `Actif` |
 
-Tant que vous êtes sur sa page, **Annuler la création** dans l'en-tête supprime la nouvelle application.
+Tant que vous êtes sur sa page, **Créer** dans l'en-tête conserve la nouvelle application et la ferme, et **Annuler** la supprime.
 
 !!! tip "Conseil : Commencez avec ce que vous savez"
     Description, éditeur, version, licences : tout est utile, mais optionnel à ce stade. Vous pourrez enrichir plus tard. L'objectif est d'enregistrer l'app dans le système.

@@ -54,7 +54,7 @@ Füllen Sie dann die Mindestangaben in der Eigenschafts-Seitenleiste aus:
 
 Verwenden Sie dann das **Zweck**-Dokument auf der **Zusammenfassung**, um den Geschäftsbedarf und das erwartete Ergebnis in einfacher Sprache zu erklären. Wenn Sie bereits ein Briefing in Word haben, verwenden Sie die **Importieren**-Schaltfläche im Zweck-Editor, um die `.docx`-Datei direkt einzulesen. Kein Kopieren und Einfügen nötig.
 
-Solange Sie auf ihrer Seite sind, löscht **Erstellung abbrechen** in der Kopfzeile die neue Anfrage.
+Solange Sie auf ihrer Seite sind, behält **Erstellen** in der Kopfzeile die neue Anfrage und schließt sie, und **Abbrechen** löscht sie.
 
 !!! tip "Halten Sie es schlank"
     Sie können tiefere Analysen, verknüpfte Wissensdatenbank-Dokumente und Belege später hinzufügen. Das Ziel jetzt ist, die Anfrage in den gesteuerten Intake-Flow zu bekommen.

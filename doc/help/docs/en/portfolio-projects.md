@@ -84,11 +84,14 @@ A project created this way can switch between **Fast-track** and **Legacy** in t
 
 Use **Fast-track** for work that is genuinely being introduced directly into delivery. Use **Legacy** for work that already exists outside the normal intake history. That distinction affects reporting and makes later portfolio analysis much less confusing.
 
-### Cancelling a creation { #cancelling-a-creation }
+### Creating or cancelling { #cancelling-a-creation }
 
-While you stay on the project you just created, **Cancel creation** in the header deletes it and takes you back to where you started: the list or the previous screen. If you entered more than the name, a confirmation lists what will be deleted. You can cancel your own creation without any delete right.
+While the project is being created, its header shows **Create** and **Cancel**. They stay until you leave the project.
 
-This is the only way to delete a project. Once you leave the project, it stays: set its status to **Cancelled** if it does not go ahead. A project linked to a request cannot be deleted. The reference of a cancelled project is not used again.
+- **Create** keeps the project and closes it. You go back to where you started: the list or the previous screen. With an empty title, nothing closes and the title asks for one
+- **Cancel** closes without keeping anything. On a project already created, it deletes it. If you entered more than the name, a confirmation lists what will be deleted. You can cancel your own creation without any delete right
+
+**Cancel** is the only way to delete a project. Once you leave the project, it stays: set its status to **Cancelled** if it does not go ahead. A project linked to a request cannot be deleted. The reference of a cancelled project is not used again.
 
 ## Workspace mental model
 
@@ -110,7 +113,7 @@ The workspace header is a control strip, not decoration.
 - A compact metadata row: **Status**, **Score**, **Progress**, **IT Lead**, **Planned End**, and **Origin** (or the source request reference for request-origin projects)
 - **Previous** and **Next** move through the current list result set, not through every project in the system
 - **Share** emails the current project URL with an optional message
-- **Cancel creation**, while you stay on a project you just created. See [Cancelling a creation](#cancelling-a-creation)
+- **Create** and **Cancel**, while the project is being created. See [Creating or cancelling](#cancelling-a-creation)
 
 Sending a link does not grant access. It only shares the location. Permissions remain exactly as they were before the email was sent.
 

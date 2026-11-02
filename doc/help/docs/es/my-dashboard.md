@@ -14,7 +14,7 @@ La franja del encabezado en la parte superior del panel proporciona botones de a
 
 - **Crear tarea**: abre el flujo de creación de tarea independiente. Requiere `tasks:member` o superior.
 - **Registrar tiempo**: abre el diálogo **Registro rápido de tiempo** (vea más abajo). Requiere `portfolio_projects:contributor` o `tasks:member`.
-- **Nueva línea presupuestaria**: abre una nueva línea presupuestaria. Empieza como OPEX, y la fila **Tipo** de su panel Propiedades la cambia a CAPEX (consulte [Líneas presupuestarias](budget-lines.md#el-espacio-de-trabajo)). Requiere `budget:member` o superior.
+- **Nueva línea presupuestaria**: abre una nueva línea OPEX (consulte [Líneas presupuestarias](budget-lines.md#el-espacio-de-trabajo)). Requiere `budget:member` o superior.
 - **Nueva aplicación**: abre el flujo de creación de aplicación. Requiere `applications:member` o superior.
 - **Nuevo activo**: abre el flujo de creación de activo. Requiere `infrastructure:member` o superior.
 - **Nuevo documento** (botón dividido): crea un documento de Base de conocimiento en blanco, o abre el selector de plantillas para empezar desde una plantilla publicada. Requiere `knowledge:member` o superior.

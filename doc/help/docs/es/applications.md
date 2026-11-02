@@ -56,11 +56,14 @@ La nueva aplicación está **Activa**, en la categoría por defecto. Cámbielas 
 
 Pulse Escape en el título vacío para salir sin crear nada. Un nombre que ya usa otra aplicación se rechaza, con un mensaje bajo el título.
 
-### Cancelar una creación { #cancelling-a-creation }
+### Crear o cancelar { #cancelling-a-creation }
 
-Mientras permanezca en la aplicación que acaba de crear, **Cancelar la creación** en el encabezado la elimina y le devuelve al punto de partida: la lista o la pantalla anterior. Si introdujo algo más que el nombre, una confirmación indica lo que se eliminará. Puede cancelar su propia creación sin el derecho de eliminar aplicaciones.
+Mientras la aplicación se está creando, su encabezado muestra **Crear** y **Cancelar**. Permanecen hasta que salga de la aplicación.
 
-Una vez que sale de la aplicación, esta se conserva. Elimínela como cualquier otra aplicación. La referencia de una aplicación cancelada no se reutiliza.
+- **Crear** conserva la aplicación y la cierra. Vuelve al punto de partida: la lista o la pantalla anterior. Con el título vacío, no se cierra nada y el título pide uno
+- **Cancelar** cierra sin conservar nada. En una aplicación ya creada, la elimina. Si introdujo algo más que el nombre, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar aplicaciones
+
+Si sale de la aplicación de otra forma, esta se conserva. Elimínela como cualquier otra aplicación. La referencia de una aplicación cancelada no se reutiliza.
 
 ### Nombres únicos { #unique-names }
 
@@ -152,7 +155,7 @@ El encabezado muestra:
 - **Compartir**: copiar un enlace compartible a este espacio de trabajo
 - **Nueva versión**: lanzar el asistente de migración de versión (consulte [Gestión de versiones](#gestion-de-versiones))
 - **Convertir en tecnología** (`applications:admin` e `infrastructure:member`): consulte [Convertir una aplicación en tecnología](#convertir-una-aplicacion-en-tecnologia)
-- **Cancelar la creación**: visible mientras permanece en una aplicación que acaba de crear. Consulte [Cancelar una creación](#cancelling-a-creation)
+- **Crear** y **Cancelar**: visibles mientras la aplicación se está creando, en lugar del botón de cierre. Consulte [Crear o cancelar](#cancelling-a-creation)
 - **Eliminar**, un icono de papelera con su nombre en una información emergente (`applications:admin`): una aplicación con interfaces recibe el rechazo y el motivo, solo con Cerrar. Si no, la confirmación nombra la aplicación y cuenta los despliegues eliminados con ella, junto con sus vínculos con otros elementos
 - **Anterior / Siguiente**: recorrer la lista filtrada sin volver a la cuadrícula
 

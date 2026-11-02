@@ -56,11 +56,14 @@ The new application is **Active**, in the default category. Change them in the h
 
 Press Escape on the empty title to leave without creating anything. A name that another application already uses is refused, with a message under the title.
 
-### Cancelling a creation { #cancelling-a-creation }
+### Creating or cancelling { #cancelling-a-creation }
 
-While you stay on the application you just created, **Cancel creation** in the header deletes it and takes you back to where you started: the list or the previous screen. If you entered more than the name, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete applications.
+While the application is being created, its header shows **Create** and **Cancel**. They stay until you leave the application.
 
-Once you leave the application, it stays. Delete it like any other application. The reference of a cancelled application is not used again.
+- **Create** keeps the application and closes it. You go back to where you started: the list or the previous screen. With an empty title, nothing closes and the title asks for one
+- **Cancel** closes without keeping anything. On an application already created, it deletes it. If you entered more than the name, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete applications
+
+Leaving the application any other way keeps it. Delete it like any other application. The reference of a cancelled application is not used again.
 
 ### Unique names { #unique-names }
 
@@ -152,7 +155,7 @@ The header shows:
 - **Share**: copy a shareable link to this workspace
 - **New version**: launch the version migration wizard (see [Version management](#version-management))
 - **Convert to technology** (`applications:admin` and `infrastructure:member`): see [Converting an application to a technology](#converting-an-application-to-a-technology)
-- **Cancel creation**: shown while you stay on an application you just created. See [Cancelling a creation](#cancelling-a-creation)
+- **Create** and **Cancel**: shown while the application is being created, in place of the close button. See [Creating or cancelling](#cancelling-a-creation)
 - **Delete**, a trash icon with its name in a tooltip (`applications:admin`): an application with interfaces gets the refusal and why, with Close only. Otherwise the confirmation names the application and counts the deployments deleted with it, along with its links to other records
 - **Previous / Next**: walk through the filtered list without returning to the grid
 
