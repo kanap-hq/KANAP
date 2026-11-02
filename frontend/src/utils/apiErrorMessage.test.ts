@@ -266,6 +266,76 @@ describe('getApiErrorMessage', () => {
     }
   });
 
+  it('translates every coded 403 of the agent control plane in the four languages', () => {
+    const refusal = (code: string, params?: Record<string, unknown>) => ({
+      response: { status: 403, data: { statusCode: 403, error: 'Forbidden', code, message: 'English sentence of the server.', ...(params ? { params } : {}) } },
+    });
+    const cases: Array<[string, Record<string, unknown> | undefined, Record<string, string>]> = [
+      ['AGENT_ACTION_APPROVAL_REQUIRED', undefined, {}],
+      ['AGENT_ACTION_POLICY_DENIED', undefined, {}],
+      ['AGENT_ACTION_ALREADY_EXECUTED', undefined, {}],
+      ['AGENT_ACTION_EXPIRED', undefined, { en: 'This proposal has expired. Run the analysis again to get a new one.', fr: "Cette proposition a expiré. Relancez l'analyse pour en obtenir une nouvelle." }],
+      ['AGENT_ACTION_REJECTED', undefined, {}],
+      ['AGENT_ACTION_DISMISSED', undefined, {}],
+      ['AGENT_ACTION_FAILED', undefined, {}],
+      ['AGENT_ACTION_NOT_PENDING', undefined, {}],
+      ['AGENT_ACTION_NOT_FOUND', undefined, {}],
+      ['AGENT_ACTION_CHANGED', undefined, {}],
+      ['AGENT_ACTION_INCOMPLETE', undefined, {}],
+      ['AGENT_ACTION_NOT_AUTOMATABLE', undefined, {}],
+      ['AGENT_AUTOMATIC_NOT_ELIGIBLE', undefined, {}],
+      ['AGENT_AUTOMATIC_CONFIRMATION_REQUIRED', undefined, {}],
+      ['AGENT_AUTOMATIC_WRITES_NOT_ALLOWED', undefined, {}],
+      ['AGENT_CAPABILITY_NOT_ALLOWED', undefined, {}],
+      ['AGENT_CAPABILITY_LIMIT', { max: 'A2' }, { en: 'This action cannot go above autonomy level A2 for this kind of agent.' }],
+      ['AGENT_FORBIDDEN_CAPABILITIES_LOCKED', undefined, {}],
+      ['AGENT_COOLDOWN_ACTIVE', undefined, {}],
+      ['AGENT_CREDENTIAL_UNAVAILABLE', undefined, {}],
+      ['CREDENTIAL_STORAGE_NOT_CONFIGURED', undefined, {}],
+      ['AGENT_RUN_COST_CAP', undefined, {}],
+      ['AGENT_DAILY_CAP_REACHED', undefined, {}],
+      ['AGENT_GUARDRAILS_MISSING', undefined, {}],
+      ['AGENT_NOT_AVAILABLE_YET', undefined, {}],
+      ['AGENT_NOT_FOUND', undefined, {}],
+      ['AGENT_PAUSE_NOT_ALLOWED', undefined, {}],
+      ['AGENT_PAUSE_NOT_FOUND', undefined, {}],
+      ['AGENT_PAUSE_REASON_REQUIRED', undefined, {}],
+      ['AI_EMERGENCY_PAUSE_ACTIVE', { reason: 'Ticket replies under review' }, { en: 'Emergency pause active: Ticket replies under review', fr: "Pause d'urgence active\u00a0: Ticket replies under review" }],
+      ['AGENT_PROVIDER_REQUIRED', undefined, {}],
+      ['AGENT_PROVIDER_UNAVAILABLE', { detail: 'timeout' }, { en: 'The connected tool cannot be used right now (timeout).', de: 'Das verbundene Tool ist im Moment nicht verfügbar (timeout).' }],
+      ['AGENT_RUNS_UNAVAILABLE', undefined, {}],
+      ['AGENT_SETTINGS_INVALID', undefined, {}],
+      ['AGENT_SHARED_CONTEXT_UNAVAILABLE', undefined, {}],
+      ['AGENT_TURNED_OFF', undefined, { es: 'Este agente está desactivado. Cambie primero su modo de funcionamiento a Solo manual o Vigilancia.' }],
+      ['AGENT_WATCHING_OFF', undefined, {}],
+      ['AGENT_WORK_ITEM_BUSY', undefined, {}],
+      ['AGENT_WORK_ITEM_NOT_RUNNABLE', undefined, {}],
+      ['AUTOMATION_DRY_RUN_REQUIRED', undefined, {}],
+      ['AUTOMATION_JOB_DISABLED', undefined, {}],
+      ['AUTOMATION_LAUNCH_NOT_ALLOWED', undefined, {}],
+      ['AUTOMATION_LAUNCH_PENDING', undefined, {}],
+      ['AUTOMATION_TARGET_NOT_ALLOWED', undefined, {}],
+      ['AUTONOMY_ROUTINE_DISABLED', undefined, {}],
+      ['EXTERNAL_MCP_NOT_ALLOWED', undefined, {}],
+      ['LIVE_TEST_NOT_READY', undefined, {}],
+      ['LIVE_TEST_TARGET_AMBIGUOUS', undefined, {}],
+      ['LIVE_TEST_TARGET_NOT_ALLOWED', undefined, {}],
+      ['MCP_KEY_NOT_ALLOWED', undefined, {}],
+      ['ORIGIN_NOT_ALLOWED', undefined, {}],
+      ['REQUEST_CONTEXT_MISSING', undefined, {}],
+    ];
+    for (const [code, params, expected] of cases) {
+      for (const language of ['en', 'fr', 'de', 'es']) {
+        const text = getApiErrorMessage(refusal(code, params), i18n.getFixedT(language), 'fallback');
+        expect(text, `${code} ${language}`).not.toBe('English sentence of the server.');
+        expect(text, `${code} ${language}`).not.toBe(i18n.getFixedT(language)('errors:forbidden'));
+        expect(text, `${code} ${language}`).not.toContain('{{');
+        expect(text, `${code} ${language}`).not.toContain('errors:');
+        if (expected[language]) expect(text, `${code} ${language}`).toBe(expected[language]);
+      }
+    }
+  });
+
   it('says why a refusal coded in its error field happened', () => {
     const trial = { response: { status: 403, data: { error: 'TRIAL_EXPIRED', message: 'Trial expired' } } };
     expect(getApiErrorMessage(trial, t, 'fallback')).toBe('Your trial has expired. Please choose a plan to continue.');

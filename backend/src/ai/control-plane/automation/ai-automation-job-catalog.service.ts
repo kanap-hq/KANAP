@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import Ajv, { ValidateFunction } from 'ajv';
 import addFormats from 'ajv-formats';
@@ -18,6 +18,7 @@ import {
   AutomationTargetSelector,
 } from '../providers/provider.types';
 import { isRecord } from '../../../common/object-guards';
+import { codedForbidden } from '../../../auth/module-right-required';
 
 const SECRET_KEY_RE = /(api[-_]?key|token|secret|password|authorization|cookie|session|credential)/i;
 const SECRET_VALUE_RE = /\b(Bearer\s+[A-Za-z0-9._~+/=-]{12,}|(?:password|token|secret|api[-_]?key)\s*[:=]\s*[^ \n\r\t]+)/i;
@@ -195,7 +196,7 @@ export class AiAutomationJobCatalogService {
   assertCatalogSafe(job: AutomationCatalogJob): void {
     const environment = typeof job.environment === 'string' ? normalizeEnvironment(job.environment) : '';
     if (!job.enabled) {
-      throw new ForbiddenException('Automation job is disabled.');
+      throw codedForbidden('AUTOMATION_JOB_DISABLED', 'Automation job is disabled.');
     }
     if (!VALID_ENVIRONMENTS.has(environment)) {
       throw new BadRequestException('Automation job environment is invalid.');
@@ -223,17 +224,17 @@ export class AiAutomationJobCatalogService {
   assertLaunchEligible(job: AutomationCatalogJob): void {
     this.assertCatalogSafe(job);
     if (!job.launchAllowed) {
-      throw new ForbiddenException('Automation job launch is not allowed by the catalog.');
+      throw codedForbidden('AUTOMATION_LAUNCH_NOT_ALLOWED', 'Automation job launch is not allowed by the catalog.');
     }
     if (normalizeEnvironment(String(job.environment)) === 'production') {
-      throw new ForbiddenException('Production automation launch is not enabled in Phase 4.');
+      throw codedForbidden('AGENT_NOT_AVAILABLE_YET', 'Production automation launch is not enabled in Phase 4.');
     }
   }
 
   assertDryRunEligible(job: AutomationCatalogJob): void {
     this.assertCatalogSafe(job);
     if (!job.dryRunSupported) {
-      throw new ForbiddenException('Automation job does not support dry-run/check mode.');
+      throw codedForbidden('AUTOMATION_LAUNCH_NOT_ALLOWED', 'Automation job does not support dry-run/check mode.');
     }
   }
 
@@ -268,7 +269,7 @@ export class AiAutomationJobCatalogService {
     const policy = isRecord(job.targetPolicy) ? job.targetPolicy as TargetPolicy : {};
     const allowedTypes = parseStringArray(policy.allowed_types);
     if (allowedTypes.length > 0 && !allowedTypes.includes(type)) {
-      throw new ForbiddenException('Automation target type is not allowed for this job.');
+      throw codedForbidden('AUTOMATION_TARGET_NOT_ALLOWED', 'Automation target type is not allowed for this job.');
     }
     const forbidden = new Set([
       ...parseStringArray(policy.forbidden_selectors).map((value) => value.toLowerCase()),
@@ -279,7 +280,7 @@ export class AiAutomationJobCatalogService {
     for (const value of normalizedValues) {
       const lower = value.toLowerCase();
       if (!allowBroad && forbidden.has(lower)) {
-        throw new ForbiddenException('Broad or forbidden automation target selectors are not allowed.');
+        throw codedForbidden('AUTOMATION_TARGET_NOT_ALLOWED', 'Broad or forbidden automation target selectors are not allowed.');
       }
     }
     const allowedValues = parseStringArray(policy.allowed_values);
@@ -288,23 +289,23 @@ export class AiAutomationJobCatalogService {
       const allowedSet = new Set(allowedValues);
       for (const value of normalizedValues) {
         if (!allowedSet.has(value)) {
-          throw new ForbiddenException('Automation target selector is outside the job allowlist.');
+          throw codedForbidden('AUTOMATION_TARGET_NOT_ALLOWED', 'Automation target selector is outside the job allowlist.');
         }
       }
     } else if (allowedPatterns.length > 0) {
       for (const value of normalizedValues) {
         if (!allowedPatterns.some((pattern) => pattern.test(value))) {
-          throw new ForbiddenException('Automation target selector does not match an allowed catalog pattern.');
+          throw codedForbidden('AUTOMATION_TARGET_NOT_ALLOWED', 'Automation target selector does not match an allowed catalog pattern.');
         }
       }
     } else if (policy.allow_unlisted_values !== true) {
-      throw new ForbiddenException('Automation target policy must explicitly allow the requested selector.');
+      throw codedForbidden('AUTOMATION_TARGET_NOT_ALLOWED', 'Automation target policy must explicitly allow the requested selector.');
     }
     const maxTargets = Number.isInteger(policy.max_targets) && Number(policy.max_targets) > 0
       ? Number(policy.max_targets)
       : job.blastRadiusLimit;
     if (normalizedValues.length > job.blastRadiusLimit || normalizedValues.length > maxTargets) {
-      throw new ForbiddenException('Automation target selector exceeds the configured blast-radius limit.');
+      throw codedForbidden('AUTOMATION_TARGET_NOT_ALLOWED', 'Automation target selector exceeds the configured blast-radius limit.');
     }
     return {
       type,
@@ -376,7 +377,7 @@ export class AiAutomationJobCatalogService {
         && payload.status === 'successful';
     });
     if (!evidence) {
-      throw new ForbiddenException('Matching successful dry-run evidence is required before launch preparation.');
+      throw codedForbidden('AUTOMATION_DRY_RUN_REQUIRED', 'Matching successful dry-run evidence is required before launch preparation.');
     }
     const payload = evidence.payload_json as Record<string, unknown>;
     const dryRunResultHash = typeof payload.dryRunResultHash === 'string'
@@ -452,11 +453,11 @@ export class AiAutomationJobCatalogService {
         if (action.idempotency_key === input.idempotencyKey) {
           continue;
         }
-        throw new ForbiddenException('Another automation launch for this job and target is already pending or approved.');
+        throw codedForbidden('AUTOMATION_LAUNCH_PENDING', 'Another automation launch for this job and target is already pending or approved.');
       }
       const executedAt = action.executed_at instanceof Date ? action.executed_at : null;
       if (executedAt && now - executedAt.getTime() < cooldownMs) {
-        throw new ForbiddenException('Automation job cooldown is active for this target.');
+        throw codedForbidden('AGENT_COOLDOWN_ACTIVE', 'Automation job cooldown is active for this target.');
       }
     }
   }

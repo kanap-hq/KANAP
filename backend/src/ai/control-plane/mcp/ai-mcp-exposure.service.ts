@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { AiPolicyService } from '../../ai-policy.service';
 import { AiExecutionContextWithManager } from '../../ai.types';
 import { AiProviderToolDef } from '../../providers/ai-provider.types';
@@ -13,6 +13,7 @@ import {
   MCP_SCOPE_AUDIT_READ,
   parseMcpApiKeyPolicy,
 } from './ai-mcp-access-policy';
+import { codedForbidden } from '../../../auth/module-right-required';
 
 export type McpToolRefusal = {
   reason: 'unknown_tool' | 'read_only' | 'key_policy' | 'disabled' | 'permission';
@@ -78,7 +79,7 @@ export class AiMcpExposureService {
     const keyPolicy = this.assertApiKeyAllowedForContext(context, apiKey, 'mcp:tools:execute');
     const resolved = await this.registry.resolve(context, capabilityName);
     if (!(await this.isCapabilityVisible(context, resolved.contract, keyPolicy))) {
-      throw new ForbiddenException('MCP API key is not allowed to execute this capability.');
+      throw codedForbidden('MCP_KEY_NOT_ALLOWED', 'MCP API key is not allowed to execute this capability.');
     }
     return resolved;
   }
@@ -153,10 +154,10 @@ export class AiMcpExposureService {
     apiKey: AiMcpApiKeyContext,
   ): void {
     if (apiKey.tenant_id && apiKey.tenant_id !== context.tenantId) {
-      throw new ForbiddenException('MCP API key tenant mismatch.');
+      throw codedForbidden('MCP_KEY_NOT_ALLOWED', 'MCP API key tenant mismatch.');
     }
     if (apiKey.user_id && apiKey.user_id !== context.userId) {
-      throw new ForbiddenException('MCP API key owner mismatch.');
+      throw codedForbidden('MCP_KEY_NOT_ALLOWED', 'MCP API key owner mismatch.');
     }
   }
 

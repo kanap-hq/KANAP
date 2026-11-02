@@ -119,6 +119,10 @@ import { AiResolvedTenantSecret } from '../control-plane/providers/tenant-secret
 import { AiExecutionContextWithManager } from '../ai.types';
 import { Features } from '../../config/features';
 
+// A control-plane refusal carries its translatable code (`errors:<code>` on the screen).
+const refusedWith = (code: string) => (error: unknown) =>
+  error instanceof ForbiddenException && (error.getResponse() as { code?: string }).code === code;
+
 function baseContract(overrides?: Partial<CapabilityContract>): CapabilityContract {
   return CapabilityContractSchema.parse({
     name: 'search_all',
@@ -1745,7 +1749,7 @@ async function testAutomationCatalogValidationStates() {
   await seedAutomationJob(context, { job_key: 'disabled-job', enabled: false });
   await assert.rejects(
     () => service.getCatalogJob(context, 'mock', 'disabled-job'),
-    (error: unknown) => error instanceof ForbiddenException,
+    refusedWith('AUTOMATION_JOB_DISABLED'),
   );
 
   await seedAutomationJob(context, { job_key: 'prod-job', environment: ' Production ' });
@@ -1753,7 +1757,7 @@ async function testAutomationCatalogValidationStates() {
   assert.equal(prodJob.environment, 'production');
   await assert.rejects(
     async () => service.assertLaunchEligible(prodJob),
-    (error: unknown) => error instanceof ForbiddenException,
+    refusedWith('AGENT_NOT_AVAILABLE_YET'),
   );
 
   await seedAutomationJob(context);
@@ -2879,19 +2883,19 @@ async function testMcpExposureResolverAppliesScopesAndAllowlists() {
 
   await assert.rejects(
     () => exposure.assertCanExecute(context, limitedKey, 'search_all'),
-    (error: unknown) => error instanceof ForbiddenException,
+    refusedWith('MCP_KEY_NOT_ALLOWED'),
   );
   await assert.rejects(
     () => exposure.listToolJsonSchemas(context, mcpApiKey({ mcp_scopes: [MCP_SCOPE_TOOLS_EXECUTE] }), MCP_SCOPE_TOOLS_LIST),
-    (error: unknown) => error instanceof ForbiddenException,
+    refusedWith('MCP_KEY_NOT_ALLOWED'),
   );
   await assert.rejects(
     () => exposure.assertCanExecute(context, mcpApiKey({ mcp_scopes: [MCP_SCOPE_TOOLS_LIST] }), 'query_entities'),
-    (error: unknown) => error instanceof ForbiddenException,
+    refusedWith('MCP_KEY_NOT_ALLOWED'),
   );
   await assert.rejects(
     () => exposure.assertCanExecute(context, mcpApiKey({ mcp_scopes: 'not-an-array' }), 'query_entities'),
-    (error: unknown) => error instanceof ForbiddenException,
+    refusedWith('AI_MCP_KEY_POLICY_INVALID'),
   );
   await assert.rejects(
     () => exposure.assertCanExecute(context, mcpApiKey(), 'ticketing.ticket.internal_note.add_approved'),
@@ -4226,7 +4230,7 @@ async function testDismissActionRequestGuardsTerminalStates() {
   await actions.markExecuted(context, executed, 'executed', null);
   await assert.rejects(
     () => approvals.dismissActionRequest(context, executed.id, 'late dismiss'),
-    (error: unknown) => error instanceof ForbiddenException,
+    refusedWith('AGENT_ACTION_NOT_PENDING'),
   );
 
   const rejected = await actions.createOrEnsureProviderAction(context, providerActionSeed({
@@ -4235,7 +4239,7 @@ async function testDismissActionRequestGuardsTerminalStates() {
   await actions.markRejected(context, rejected, 'already rejected');
   await assert.rejects(
     () => approvals.dismissActionRequest(context, rejected.id, 'late dismiss'),
-    (error: unknown) => error instanceof ForbiddenException,
+    refusedWith('AGENT_ACTION_NOT_PENDING'),
   );
 
   const expired = await actions.createOrEnsureProviderAction(context, providerActionSeed({
@@ -4244,7 +4248,7 @@ async function testDismissActionRequestGuardsTerminalStates() {
   }));
   await assert.rejects(
     () => approvals.dismissActionRequest(context, expired.id, 'late dismiss'),
-    (error: unknown) => error instanceof ForbiddenException,
+    refusedWith('AGENT_ACTION_EXPIRED'),
   );
   assert.equal((stores.get(AiActionRequest.name) ?? []).find((row: AiActionRequest) => row.id === expired.id).status, 'expired');
 

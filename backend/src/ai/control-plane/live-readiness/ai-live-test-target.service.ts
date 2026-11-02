@@ -1,8 +1,9 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AiExecutionContextWithManager } from '../../ai.types';
 import { AiLiveTestTarget } from '../entities/ai-live-test-target.entity';
+import { codedForbidden, requestContextMissing } from '../../../auth/module-right-required';
 
 export type LiveTestAllowedEffect = 'read' | 'dry_run' | 'sandbox_write';
 export type LiveTestSafetyLabel = 'read_only' | 'dry_run_only' | 'sandbox_only';
@@ -108,7 +109,7 @@ function normalizeIdentifier(value: string, field: string, max = 128): string {
   }
   const lower = normalized.toLowerCase();
   if (BROAD_VALUES.has(lower) || lower.includes('*')) {
-    throw new ForbiddenException(`${field} cannot be broad or wildcard-like.`);
+    throw codedForbidden('LIVE_TEST_TARGET_NOT_ALLOWED', `${field} cannot be broad or wildcard-like.`);
   }
   return normalized;
 }
@@ -183,10 +184,10 @@ export class AiLiveTestTargetService {
     const allowedEffect = normalizeLower(input.allowedEffect, 'allowedEffect', VALID_EFFECTS) as LiveTestAllowedEffect;
     const safetyLabel = normalizeLower(input.safetyLabel, 'safetyLabel', VALID_SAFETY_LABELS) as LiveTestSafetyLabel;
     if (!safetyAllowsEffect(allowedEffect, safetyLabel)) {
-      throw new ForbiddenException('Live-test target safety label does not allow the requested effect.');
+      throw codedForbidden('LIVE_TEST_TARGET_NOT_ALLOWED', 'Live-test target safety label does not allow the requested effect.');
     }
     if (allowedEffect !== 'read' && environment === 'production') {
-      throw new ForbiddenException('Production live-test targets cannot allow dry-run or sandbox write effects in Phase 8.');
+      throw codedForbidden('AGENT_NOT_AVAILABLE_YET', 'Production live-test targets cannot allow dry-run or sandbox write effects in Phase 8.');
     }
     assertNoSecrets(input.metadata, 'metadata');
     assertNoSecrets(input.redactionPolicy, 'redaction policy');
@@ -226,7 +227,7 @@ export class AiLiveTestTargetService {
     input: SaveLiveTestTargetInput,
   ): Promise<AiLiveTestTarget> {
     if (!context.tenantId) {
-      throw new ForbiddenException('Tenant context is required for live-test target storage.');
+      throw requestContextMissing('Tenant context is required for live-test target storage.');
     }
     const normalized = this.validateInput(input);
     const repo = this.repository(context);
@@ -265,7 +266,7 @@ export class AiLiveTestTargetService {
     criteria: LiveTargetCriteria,
   ): Promise<AiLiveTestTarget[]> {
     if (!context.tenantId) {
-      throw new ForbiddenException('Tenant context is required for live-test target lookup.');
+      throw requestContextMissing('Tenant context is required for live-test target lookup.');
     }
     const rows = await this.repository(context).find({
       where: {
@@ -305,7 +306,7 @@ export class AiLiveTestTargetService {
       throw new NotFoundException('No enabled safe live-test target matches the requested provider/effect.');
     }
     if (matches.length > 1) {
-      throw new ForbiddenException('Live-test target selection is ambiguous; specify a provider key or target key.');
+      throw codedForbidden('LIVE_TEST_TARGET_AMBIGUOUS', 'Live-test target selection is ambiguous; specify a provider key or target key.');
     }
     return matches[0];
   }
