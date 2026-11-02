@@ -19,6 +19,17 @@
     "themeLabel": "Thème : {{mode}}",
     "account": "Compte"
   },
+  "devBuild": {
+    "main": "main du {{date}} à {{time}}",
+    "branches_one": "{{count}} branche",
+    "branches_other": "{{count}} branches",
+    "builtAt": "Construit le {{date}} à {{time}}",
+    "pr": "PR #{{number}}",
+    "prOpen": "PR #{{number}} ouverte",
+    "prMerged": "PR #{{number}} fusionnée",
+    "prClosed": "PR #{{number}} fermée",
+    "conflict": "En conflit, laissée hors de dev"
+  },
   "userMenu": {
     "myProfile": "Mon profil",
     "logout": "Déconnexion"

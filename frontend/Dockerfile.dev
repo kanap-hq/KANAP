@@ -6,8 +6,10 @@ COPY package.json package-lock.json* ./
 RUN npm ci
 COPY tsconfig*.json vite.config.ts ./
 COPY index.html ./
-COPY public ./public
 COPY src ./src
 RUN npm run typecheck
+# After the typecheck: public/dev-build.json (what this stack runs, written before each rebuild of
+# the maintainer's dev stack) changes every time, and must not rerun the typecheck on its own.
+COPY public ./public
 EXPOSE 5173
 # No default CMD; compose runs: npm run dev -- --host
