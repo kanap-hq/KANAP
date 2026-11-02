@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useMemo, useState } from 'react';
-import { Box, Typography, Stack, Button, Checkbox, Divider, FormControlLabel, Tab, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Tabs } from '@mui/material';
+import { Box, Typography, Stack, Button, Checkbox, Divider, FormControlLabel, Tab, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Tabs, Tooltip } from '@mui/material';
 import { useTheme, type Theme } from '@mui/material/styles';
 import type { DashboardTileConfig } from './hooks/useDashboardConfig';
 import TileSection, { type SectionEditing, type SectionEntry } from './TileSection';
@@ -511,22 +511,24 @@ export default function BudgetSection({ tiles: tilesConfig, loading = false, lea
   const upcomingRenewals = nextContract?.items || [];
 
   const snapshotSlots: readonly YearSlot[] = ['yMinus1', 'y', 'yPlus1'];
-  const snapshotRows = snapshotSlots.flatMap((slot) => (['opex', 'capex', 'all'] as const).map((scope) => ({
+  const valuesFor = (slot: YearSlot, scope: 'opex' | 'capex' | 'all') => Object.fromEntries(budgetColumns.shown.map((column) => {
+    const field = amountFieldKey(slot, column);
+    return [column.key, snapshot.data?.totals[scope][field] ?? 0];
+  })) as Record<AmountColumnKey, number>;
+  // The three scopes stay loaded. The tile draws the total; the tooltip reads the two natures.
+  const snapshotBySlot = snapshotSlots.map((slot) => ({
     slot,
-    scope,
     year: yearSlotLabel(t, slot, Y),
-    label: scope === 'all' ? t('ops:shared.total') : scopeLabel(scope),
-    values: Object.fromEntries(budgetColumns.shown.map((column) => {
-      const field = amountFieldKey(slot, column);
-      return [column.key, snapshot.data?.totals[scope][field] ?? 0];
-    })) as Record<AmountColumnKey, number>,
-  })));
+    opex: valuesFor(slot, 'opex'),
+    capex: valuesFor(slot, 'capex'),
+    total: valuesFor(slot, 'all'),
+  }));
   // Keep a column if either nature has a value, even when the combined total is zero.
   const chosenColumns = tilesConfig.find((tile) => tile.id === 'budget')?.config.columns as AmountColumnKey[] | null | undefined;
   // The tile shows Y-1 to Y+1: the amounts left out of those years only.
   const snapshotYears = new Set(snapshotSlots.map((slot) => slotYear(slot, Y)));
   const snapshotFxMissing = (snapshot.data?.fxMissing ?? []).filter((entry) => snapshotYears.has(entry.year));
-  const snapshotColumns = budgetColumns.shown.filter((column) => chosenColumns == null || chosenColumns.includes(column.key)).filter((column) => snapshotRows.some((row) => row.values[column.key] !== 0));
+  const snapshotColumns = budgetColumns.shown.filter((column) => chosenColumns == null || chosenColumns.includes(column.key)).filter((column) => snapshotBySlot.some((row) => row.opex[column.key] !== 0 || row.capex[column.key] !== 0 || row.total[column.key] !== 0));
 
   const tiles: Record<string, React.ReactNode> = {
     'budget': (canOpex) ? (
@@ -544,26 +546,34 @@ export default function BudgetSection({ tiles: tilesConfig, loading = false, lea
               <Typography variant="body1" color="text.secondary">{t('labels.noData')}</Typography>
             ) : (
               <TableContainer>
-                <Table size="small" sx={{ '& th, & td': { py: 0.75, whiteSpace: 'nowrap' }, '& td[rowspan]': { verticalAlign: 'top' } }}>
+                <Table size="small" sx={{ '& th, & td': { py: 0.75, whiteSpace: 'nowrap' } }}>
                   <TableHead>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 500 }}>{t('labels.year')}</TableCell>
-                      <TableCell sx={{ fontWeight: 500 }}>{t('ops:budget.type')}</TableCell>
                       {snapshotColumns.map((column) => (
                         <TableCell key={column.key} align="right" sx={{ fontWeight: 500, minWidth: 76 }}>{column.label}</TableCell>
                       ))}
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {snapshotRows.map((row, index) => (
-                      <TableRow key={`${row.slot}-${row.scope}`}>
-                        {index % 3 === 0 && <TableCell rowSpan={3}>{row.year}</TableCell>}
-                        <TableCell sx={{ fontWeight: row.scope === 'all' ? 500 : 400 }}>{row.label}</TableCell>
+                    {snapshotBySlot.map((row) => (
+                      <TableRow key={row.slot}>
+                        <TableCell>{row.year}</TableCell>
                         {snapshotColumns.map((column) => (
                           <TableCell key={column.key} align="right">
-                            <Box component={RouterLink} to={listHref(row.scope, {})} sx={ROW_LINK_SX}>
-                              {formatThousandsAmount(row.values[column.key], locale)}
-                            </Box>
+                            <Tooltip
+                              describeChild
+                              title={(
+                                <Box component="span">
+                                  <Box component="span" sx={{ display: 'block' }}>{scopeLabel('opex')} {formatThousandsAmount(row.opex[column.key], locale)}</Box>
+                                  <Box component="span" sx={{ display: 'block' }}>{scopeLabel('capex')} {formatThousandsAmount(row.capex[column.key], locale)}</Box>
+                                </Box>
+                              )}
+                            >
+                              <Box component={RouterLink} to={listHref('all', {})} sx={ROW_LINK_SX}>
+                                {formatThousandsAmount(row.total[column.key], locale)}
+                              </Box>
+                            </Tooltip>
                           </TableCell>
                         ))}
                       </TableRow>

@@ -278,9 +278,9 @@ Die Kacheln sind unten in ihrer Standardreihenfolge aufgeführt.
 
 ### Budget
 
-Eine Tabelle, die drei Geschäftsjahre abdeckt: Vorjahr (J-1), aktuelles Jahr (J) und nächstes Jahr (J+1). Jedes Jahr hat drei Zeilen: **OPEX**, **CAPEX** und **Gesamt**. Die Wertspalten sind die Budgetspalten, die Ihre Organisation anzeigt, unter ihren Namen (**Budget**, **Revision**, **Ist-Werte** und **Erwarteter Endwert** mit den Standardeinstellungen, dazu **Prognose**, wenn sie angezeigt wird). In den Optionen der Kachel können Sie weniger davon behalten (siehe [Ihr Dashboard anpassen](#customizing-the-budget-section)). Eine Spalte erscheint, sobald sie für mindestens eine Zeile einen Betrag enthält. Ausgeblendete Spalten erscheinen nie. Alle Beträge sind auf den nächsten Tausender gerundet und mit dem Suffix „k“ angezeigt (z. B. `7.846 k`). Die Trennzeichen folgen der Sprache der Oberfläche.
+Eine Tabelle, die drei Geschäftsjahre abdeckt: Vorjahr (J-1), aktuelles Jahr (J) und nächstes Jahr (J+1). Jedes Jahr steht in einer Zeile, und jeder Betrag ist das Gesamt aus OPEX und CAPEX. Lassen Sie den Zeiger auf einem Betrag ruhen, oder erreichen Sie ihn mit der Tastatur, um OPEX und CAPEX dieses Jahres und dieser Spalte zu lesen. Die Wertspalten sind die Budgetspalten, die Ihre Organisation anzeigt, unter ihren Namen (**Budget**, **Revision**, **Ist-Werte** und **Erwarteter Endwert** mit den Standardeinstellungen, dazu **Prognose**, wenn sie angezeigt wird). In den Optionen der Kachel können Sie weniger davon behalten (siehe [Ihr Dashboard anpassen](#customizing-the-budget-section)). Eine Spalte erscheint, sobald OPEX, CAPEX oder das Gesamt einen Betrag enthält. Ausgeblendete Spalten erscheinen nie. Alle Beträge sind auf den nächsten Tausender gerundet und mit dem Suffix „k“ angezeigt (z. B. `7.846 k`). Die Trennzeichen folgen der Sprache der Oberfläche.
 
-Klicken Sie auf einen Betrag, um die [Liste der Budgetzeilen](budget-lines.md) auf diesem Typ zu öffnen. Ein Betrag in **Gesamt** öffnet die Liste auf beiden Typen. Klicken Sie auf **Ansehen**, um die Liste zu öffnen.
+Klicken Sie auf einen Betrag, um die [Liste der Budgetzeilen](budget-lines.md) für beide Typen zu öffnen. Klicken Sie auf **Ansehen**, um dieselbe Liste zu öffnen.
 
 ### Top-Zeilen
 

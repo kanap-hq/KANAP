@@ -278,9 +278,9 @@ The tiles below are listed in their default order.
 
 ### Budget
 
-A table covering three fiscal years: last year (Y-1), the current year (Y) and next year (Y+1). Each year has three rows: **OPEX**, **CAPEX** and **Total**. The value columns are the budget columns your organisation shows, under their names (**Budget**, **Revision**, **Actuals** and **Expected landing** with the standard settings, plus **Forecast** when it is shown). You can keep fewer of them in the tile's options (see [Customizing your dashboard](#customizing-the-budget-section)). A column shows when it holds an amount for at least one row. Hidden columns never appear. All amounts are rounded to the nearest thousand and displayed with a "k" suffix (for example, `7,846k`). Separators follow the interface language.
+A table covering three fiscal years: last year (Y-1), the current year (Y) and next year (Y+1). Each year is one row, and each amount is the total of OPEX and CAPEX. Rest the pointer on an amount, or move to it with the keyboard, to read the OPEX and the CAPEX of that year and that column. The value columns are the budget columns your organisation shows, under their names (**Budget**, **Revision**, **Actuals** and **Expected landing** with the standard settings, plus **Forecast** when it is shown). You can keep fewer of them in the tile's options (see [Customizing your dashboard](#customizing-the-budget-section)). A column shows when OPEX, CAPEX or the total holds an amount. Hidden columns never appear. All amounts are rounded to the nearest thousand and displayed with a "k" suffix (for example, `7,846k`). Separators follow the interface language.
 
-Click an amount to open the [budget lines list](budget-lines.md) on that type. A **Total** amount opens the list on both types. Click **View** to open the list.
+Click an amount to open the [budget lines list](budget-lines.md) on both types. Click **View** to open the same list.
 
 ### Top lines
 
