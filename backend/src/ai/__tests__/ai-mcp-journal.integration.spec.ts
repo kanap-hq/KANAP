@@ -6,6 +6,8 @@ import { AddressInfo } from 'node:net';
 import * as express from 'express';
 import { BadRequestException, HttpException } from '@nestjs/common';
 import dataSource from '../../data-source';
+import { AuditLog } from '../../audit/audit.entity';
+import { AuditService } from '../../audit/audit.service';
 import { createBodyParsers } from '../../common/body-parsers';
 import { User } from '../../users/user.entity';
 import { AiApiKey } from '../ai-api-key.entity';
@@ -73,7 +75,7 @@ const apiKeys = new AiApiKeysService(
   users,
   new McpApiKeyHashService(),
   { find: async () => null } as any,
-  { log: async () => undefined } as any,
+  new AuditService(dataSource.getRepository(AuditLog)),
   executor,
 );
 
@@ -180,6 +182,17 @@ function asAdmin<T>(seed: Seed, fn: (ctx: any) => Promise<T>): Promise<T> {
   }, fn);
 }
 
+/** Audit rows of a refused key (`authentication: 'failed'`), the ones Administration › Audit log shows. */
+async function failedAuthentications(seed: Seed): Promise<Array<{ record_id: string; user_id: string; after_json: { authentication?: string; reason?: string } }>> {
+  return executor.run(seed.tenantId, (manager) => manager.query(
+    `SELECT record_id, user_id, after_json
+       FROM audit_log
+      WHERE tenant_id = $1
+        AND after_json->>'authentication' = 'failed'`,
+    [seed.tenantId],
+  ));
+}
+
 async function testRefusalsAndRevokedKeyAreJournaled(a: Seed) {
   await withServer([a], async (url) => {
     const unknown = await call(url, a, 'does_not_exist', { query: 'SAP' });
@@ -194,6 +207,18 @@ async function testRefusalsAndRevokedKeyAreJournaled(a: Seed) {
     await executor.run(a.tenantId, (manager) => apiKeys.revokeKey(a.keyId, { manager, userId: a.userId, revocationReason: 'user_self_service' }));
     const revoked = await call(url, a, 'search_all', { query: 'after revocation' });
     assert.equal(revoked.status, 401);
+    const afterFirst = await failedAuthentications(a);
+    assert.equal(afterFirst.length, 1, JSON.stringify(afterFirst));
+    assert.equal(afterFirst[0].record_id, a.keyId);
+    assert.equal(afterFirst[0].user_id, a.userId);
+    assert.equal(afterFirst[0].after_json.authentication, 'failed');
+    assert.equal(afterFirst[0].after_json.reason, 'revoked');
+    assert.equal(JSON.stringify(afterFirst).includes(a.key), false);
+
+    const again = await call(url, a, 'search_all', { query: 'after revocation again' });
+    assert.equal(again.status, 401);
+    const afterSecond = await failedAuthentications(a);
+    assert.equal(afterSecond.length, 1, JSON.stringify(afterSecond));
   });
 
   const page = await asAdmin(a, (ctx) => audit.list(ctx, { limit: 50 }));

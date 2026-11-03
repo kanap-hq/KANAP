@@ -65,7 +65,8 @@ export type AiApiKeyAuthentication = {
 
 /**
  * A presented key KANAP recognises (its hash matches) and refuses. The MCP guard writes the
- * refusal to the MCP journal, with the key's id and never its value.
+ * refusal to the MCP journal and to the general audit log, each in its own transaction, with
+ * the key's id and never its value.
  */
 export class McpKeyRefusedException extends UnauthorizedException {
   constructor(
@@ -333,19 +334,9 @@ export class AiApiKeysService {
       );
       throw new UnauthorizedException('Invalid MCP API key.');
     }
+    // Revoked, expired and owner-not-allowed refusals throw here. The guard writes the audit
+    // row afterwards, in its own transaction: a write on this manager would roll back with it.
     if (record.revoked_at) {
-      await this.logAudit(
-        {
-          table: 'ai_api_keys',
-          recordId: record.id,
-          action: 'update',
-          before: null,
-          after: { authentication: 'failed', reason: 'revoked' },
-          userId: record.user_id,
-          source: 'system',
-        },
-        { manager: opts?.manager, tenantId: record.tenant_id },
-      );
       throw new McpKeyRefusedException('MCP API key has been revoked.', {
         tenantId: record.tenant_id,
         keyId: record.id,
@@ -354,18 +345,6 @@ export class AiApiKeysService {
       });
     }
     if (record.expires_at && record.expires_at.getTime() <= Date.now()) {
-      await this.logAudit(
-        {
-          table: 'ai_api_keys',
-          recordId: record.id,
-          action: 'update',
-          before: null,
-          after: { authentication: 'failed', reason: 'expired' },
-          userId: record.user_id,
-          source: 'system',
-        },
-        { manager: opts?.manager, tenantId: record.tenant_id },
-      );
       throw new McpKeyRefusedException('MCP API key has expired.', {
         tenantId: record.tenant_id,
         keyId: record.id,
@@ -376,18 +355,6 @@ export class AiApiKeysService {
 
     const user = await this.users.findById(record.user_id, { manager: opts?.manager });
     if (!this.ownerMayAuthenticate(user)) {
-      await this.logAudit(
-        {
-          table: 'ai_api_keys',
-          recordId: record.id,
-          action: 'update',
-          before: null,
-          after: { authentication: 'failed', reason: 'owner_not_allowed' },
-          userId: record.user_id,
-          source: 'system',
-        },
-        { manager: opts?.manager, tenantId: record.tenant_id },
-      );
       throw new McpKeyRefusedException('The MCP API key owner is not allowed to authenticate.', {
         tenantId: record.tenant_id,
         keyId: record.id,
