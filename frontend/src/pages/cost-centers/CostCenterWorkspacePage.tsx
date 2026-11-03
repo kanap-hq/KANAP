@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Box, Stack, TextField, Typography } from '@mui/material';
-import { CreationActions, useCreationLeave, useCreationTitle } from '../../components/workspace/creation';
+import { CreationActions, useCreationLeave, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/AuthContext';
 import { useDataAccessAdmin } from '../../auth/dataAccess';
@@ -239,52 +239,81 @@ export default function CostCenterWorkspacePage() {
   const deleteBlock = data ? costCenterDeleteBlock(t, usage, childCount) : null;
   const disabled = !canEdit;
 
-  // Create sends the draft with the header's name, then goes back where the creation started.
+  // The draft is created once it has its name, its code and, for a cost center, its company; the
+  // node then opens, every tab available, with Create (kept, back where the creation started) and
+  // Cancel (deleted).
   const leave = useCreationLeave(handleClose);
-  const title = useCreationTitle({ requiredMessage: t('costCenters.messages.nameRequired'), onCancel: leave });
-  const [creating, setCreating] = React.useState(false);
-  const handleCreate = async () => {
-    if (!canEdit || creating) return;
-    const name = title.require();
-    const form = draftRef.current;
-    const nextErrors: FieldErrors = {};
-    if (!form.code) nextErrors.code = t('costCenters.messages.codeRequired');
-    if (form.kind === 'cost_center' && !form.company_id) nextErrors.company_id = t('costCenters.messages.companyRequired');
-    setErrors((prev) => ({ ...prev, ...nextErrors }));
-    if (!name || Object.keys(nextErrors).length > 0) return;
-    setCreating(true);
-    setPageError(null);
-    try {
-      const created = await createCostCenter({
-        code: form.code,
-        name,
-        kind: form.kind,
-        parent_id: form.parent_id,
-        company_id: form.kind === 'cost_center' ? form.company_id : null,
-        owner_user_id: form.owner_user_id,
-        description: form.description,
-        status: form.status,
-        disabled_at: form.disabled_at,
-      });
-      void queryClient.invalidateQueries({ queryKey: ['cost-centers'] });
-      afterWrite();
-      // The new node opens in place, every tab available.
-      navigate(`${LIST_PATH}/${created.id}/overview${listContext ? `?${listContext}` : ''}`, { replace: true });
-    } catch (e) {
-      const message = getApiErrorMessage(e, t, t('costCenters.messages.createFailed'));
-      const field = refusalField(e);
-      // A refusal goes under the field it names when the page shows that field.
-      if (field === 'name') title.refuse(message);
-      else if (field && CREATE_FIELDS.has(field) && !(field === 'company_id' && form.kind !== 'cost_center')) {
-        setErrors((prev) => ({ ...prev, [field]: message }));
-      } else setPageError(message);
-    } finally {
-      setCreating(false);
+  const title = useCreationTitle({
+    requiredMessage: t('costCenters.messages.nameRequired'),
+    onCancel: leave,
+    onCommit: () => creation.attempt(),
+  });
+  const missingFields = (form: CostCenterDetail): FieldErrors => {
+    const missing: FieldErrors = {};
+    if (!form.code) missing.code = t('costCenters.messages.codeRequired');
+    if (form.kind === 'cost_center' && !form.company_id) missing.company_id = t('costCenters.messages.companyRequired');
+    return missing;
+  };
+  const creation = useDraftCreation({
+    isCreate,
+    family: 'cost_centers',
+    apiBase: '/cost-centers',
+    recordId: stored?.id ?? null,
+    listPath: `${LIST_PATH}${listContext ? `?${listContext}` : ''}`,
+    recordLabel: t('costCenters.creationRecord'),
+    queryKeyPrefixes: ['cost-centers'],
+    ready: () => !!title.current().trim() && Object.keys(missingFields(draftRef.current)).length === 0,
+    post: async () => {
+      const form = draftRef.current;
+      setPageError(null);
+      try {
+        const created = await createCostCenter({
+          code: form.code,
+          name: title.current().trim(),
+          kind: form.kind,
+          parent_id: form.parent_id,
+          company_id: form.kind === 'cost_center' ? form.company_id : null,
+          owner_user_id: form.owner_user_id,
+          description: form.description,
+          status: form.status,
+          disabled_at: form.disabled_at,
+        });
+        void queryClient.invalidateQueries({ queryKey: ['cost-centers'] });
+        afterWrite();
+        return { id: created.id, token: created.creation_token, path: `${LIST_PATH}/${created.id}/overview${listContext ? `?${listContext}` : ''}` };
+      } catch (e) {
+        const message = getApiErrorMessage(e, t, t('costCenters.messages.createFailed'));
+        const field = refusalField(e);
+        // A refusal goes under the field it names when the page shows that field.
+        if (field === 'name') title.refuse(message);
+        else if (field && CREATE_FIELDS.has(field) && !(field === 'company_id' && form.kind !== 'cost_center')) {
+          setErrors((prev) => ({ ...prev, [field]: message }));
+        } else setPageError(message);
+        return null;
+      }
+    },
+    onError: setPageError,
+  });
+  React.useEffect(() => { creation.attempt(); }, [creation.attempt, draft]);
+  const handleCreate = () => {
+    if (creation.beingCreated) {
+      creation.finishCreation();
+      return;
     }
+    if (!canEdit) return;
+    const name = title.require();
+    const missing = missingFields(draftRef.current);
+    setErrors((prev) => ({ ...prev, ...missing }));
+    if (!name || Object.keys(missing).length > 0) return;
+    void creation.createAndLeave();
   };
 
-  const actions = isCreate ? (
-    <CreationActions onCreate={() => void handleCreate()} onCancel={leave} busy={!canEdit || creating} />
+  const actions = isCreate || creation.beingCreated ? (
+    <CreationActions
+      onCreate={handleCreate}
+      onCancel={isCreate ? leave : () => { void creation.cancelCreation(); }}
+      busy={!canEdit || creation.busy}
+    />
   ) : canDelete && data ? (
     <DeleteIconButton onClick={() => void handleDelete()} disabled={deleting || !!deleteBlock} />
   ) : undefined;

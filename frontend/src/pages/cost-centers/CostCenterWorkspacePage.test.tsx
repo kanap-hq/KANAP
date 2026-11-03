@@ -136,15 +136,17 @@ describe('CostCenterWorkspacePage', () => {
     expect(screen.queryByRole('tab')).toBeNull();
   });
 
-  it('creates on Create with the header name, then opens the new node', async () => {
-    mocked.createCostCenter.mockResolvedValue({ ...NODE, id: 'cc-new' });
+  it('creates the node once it has its name, code and company, then opens it', async () => {
+    mocked.createCostCenter.mockResolvedValue({ ...NODE, id: 'cc-new', creation_token: 'token-1' });
     renderAt('/master-data/cost-centers/new/overview?sort=path%3AASC');
     expect(screen.queryByRole('button', { name: 'admin:auditLogs.history.title' })).toBeNull();
     fireEvent.change(screen.getByLabelText('costCenters.fields.code'), { target: { value: ' IT-400 ' } });
     fireEvent.blur(screen.getByLabelText('costCenters.fields.code'));
-    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Workplace' } });
+    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    fireEvent.change(title, { target: { value: 'Workplace' } });
+    fireEvent.blur(title);
+    expect(mocked.createCostCenter).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(mocked.createCostCenter).toHaveBeenCalledTimes(1));
     expect(mocked.createCostCenter).toHaveBeenCalledWith({
       code: 'IT-400',

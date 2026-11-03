@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
+import { KanapDialogProvider } from '../../components/design';
 
 const navigateMock = vi.hoisted(() => vi.fn());
 const auth = vi.hoisted(() => ({ canEdit: true }));
@@ -96,12 +97,14 @@ function renderAt(path: string) {
   return render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={createAppTheme('light')}>
+        <KanapDialogProvider>
         <MemoryRouter initialEntries={[path]}>
           <Link to="/master-data/accounts/acc-2/overview">go to acc-2</Link>
           <Routes>
             <Route path="/master-data/accounts/:id/:tab" element={<AccountWorkspacePage />} />
           </Routes>
         </MemoryRouter>
+        </KanapDialogProvider>
       </ThemeProvider>
     </QueryClientProvider>,
   );
@@ -509,7 +512,7 @@ describe('AccountWorkspacePage', () => {
     expect(navigateMock).toHaveBeenCalledWith('/master-data/accounts/acc-2/overview?selected=coa-fr&consolidation=unmapped');
   });
 
-  it('validates and creates on Create with the header name, the chart preselected from the list', async () => {
+  it('names what is missing on Create, then creates the account once complete, the chart preselected from the list', async () => {
     mocked.post.mockResolvedValue({ data: { ...ACCOUNT, id: 'acc-new' } });
     renderAt('/master-data/accounts/new/overview?selected=coa-fr&coaId=coa-fr&consolidation=unmapped');
     expect(screen.queryByRole('button', { name: 'admin:auditLogs.history.title' })).toBeNull();
@@ -525,12 +528,14 @@ describe('AccountWorkspacePage', () => {
     fireEvent.change(screen.getByLabelText('accounts.fields.accountNumber'), { target: { value: ' 606300 ' } });
 
     fireEvent.blur(screen.getByLabelText('accounts.fields.accountNumber'));
-    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Telecom' } });
     fireEvent.change(screen.getByLabelText('accounts.fields.nativeName'), { target: { value: 'Télécoms' } });
     fireEvent.blur(screen.getByLabelText('accounts.fields.nativeName'));
     const listbox = await openConsolidation();
     fireEvent.click(within(listbox).getByRole('option', { name: '1200 · Software' }));
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    expect(mocked.post).not.toHaveBeenCalled();
+    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    fireEvent.change(title, { target: { value: 'Telecom' } });
+    fireEvent.blur(title);
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/accounts', {
       coa_id: 'coa-fr',
       account_number: 606300,
@@ -544,6 +549,7 @@ describe('AccountWorkspacePage', () => {
     }));
     // The new account opens in place.
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith(expect.stringMatching(/^\/master-data\/accounts\/acc-new\/overview/), { replace: true }));
+    expect(mocked.post).toHaveBeenCalledTimes(1);
   });
 
   it('shows a create refusal for a number already used under the number field', async () => {
@@ -568,8 +574,8 @@ describe('AccountWorkspacePage', () => {
     expect(natureSelect()).toHaveTextContent('master-data:shared.lineTypeUsage.both');
     fireEvent.change(screen.getByLabelText('accounts.fields.accountNumber'), { target: { value: '218300' } });
     fireEvent.blur(screen.getByLabelText('accounts.fields.accountNumber'));
-    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'IT hardware' } });
     await pickNature('master-data:shared.lineTypeUsage.capex');
+    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'IT hardware' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/accounts', expect.objectContaining({
       account_number: 218300, account_name: 'IT hardware', nature: 'capex',

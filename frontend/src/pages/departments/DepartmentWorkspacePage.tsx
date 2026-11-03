@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Box, Stack, TextField, Typography } from '@mui/material';
-import { CreationActions, useCreationLeave, useCreationTitle } from '../../components/workspace/creation';
+import { CreationActions, useCreationLeave, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
 import { useDepartmentNav } from '../../hooks/useDepartmentNav';
@@ -160,34 +160,57 @@ export default function DepartmentWorkspacePage() {
     setSearchParams(sp, { replace: true });
   };
 
-  // Create sends the draft with the header's name, then goes back where the creation started.
+  // The draft is created once it has its name and company; the department then opens, every tab
+  // available, with Create (kept, back where the creation started) and Cancel (deleted).
   const leave = useCreationLeave(handleClose);
-  const title = useCreationTitle({ requiredMessage: t('departments.messages.nameRequired'), onCancel: leave });
-  const [creating, setCreating] = React.useState(false);
+  const title = useCreationTitle({
+    requiredMessage: t('departments.messages.nameRequired'),
+    onCancel: leave,
+    onCommit: () => creation.attempt(),
+  });
   const [createError, setCreateError] = React.useState<string | null>(null);
-  const handleCreate = async () => {
-    if (!canEdit || creating) return;
+  const creation = useDraftCreation({
+    isCreate,
+    family: 'departments',
+    apiBase: '/departments',
+    recordId: stored?.id ?? null,
+    listPath: withContext(LIST_PATH),
+    recordLabel: t('departments.creationRecord'),
+    queryKeyPrefixes: ['departments'],
+    ready: () => !!title.current().trim() && !!draftRef.current.company_id,
+    post: async () => {
+      setCreateError(null);
+      try {
+        const { company_id, description, status, disabled_at } = draftRef.current;
+        const { data: created } = await api.post<Department & { creation_token: string }>('/departments', {
+          name: title.current().trim(), company_id, description, status, disabled_at,
+        });
+        void queryClient.invalidateQueries({ queryKey: ['departments'] });
+        return { id: created.id, token: created.creation_token, path: withContext(`${LIST_PATH}/${created.id}/overview`) };
+      } catch (e) {
+        const message = getApiErrorMessage(e, t, t('departments.messages.createFailed'));
+        const field = departmentRefusalField(e);
+        if (isDuplicateError(e)) title.refuse(t('departments.messages.nameTaken'));
+        else if (field === 'name') title.refuse(message);
+        else if (field) setErrors((prev) => ({ ...prev, [field]: message }));
+        else setCreateError(message);
+        return null;
+      }
+    },
+    onError: setCreateError,
+  });
+  React.useEffect(() => { creation.attempt(); }, [creation.attempt, draft]);
+  const handleCreate = () => {
+    if (creation.beingCreated) {
+      creation.finishCreation();
+      return;
+    }
+    if (!canEdit) return;
     const name = title.require();
-    const { company_id, description, status, disabled_at } = draftRef.current;
+    const { company_id } = draftRef.current;
     if (!company_id) setErrors((prev) => ({ ...prev, company_id: t('departments.messages.companyRequired') }));
     if (!name || !company_id) return;
-    setCreating(true);
-    setCreateError(null);
-    try {
-      const { data: created } = await api.post<Department>('/departments', { name, company_id, description, status, disabled_at });
-      void queryClient.invalidateQueries({ queryKey: ['departments'] });
-      // The new department opens in place, every tab available.
-      navigate(withContext(`${LIST_PATH}/${created.id}/overview`), { replace: true });
-    } catch (e) {
-      const message = getApiErrorMessage(e, t, t('departments.messages.createFailed'));
-      const field = departmentRefusalField(e);
-      if (isDuplicateError(e)) title.refuse(t('departments.messages.nameTaken'));
-      else if (field === 'name') title.refuse(message);
-      else if (field) setErrors((prev) => ({ ...prev, [field]: message }));
-      else setCreateError(message);
-    } finally {
-      setCreating(false);
-    }
+    void creation.createAndLeave();
   };
 
   const disabled = !canEdit;
@@ -269,8 +292,12 @@ export default function DepartmentWorkspacePage() {
           previousLabel: t('departments.previous'),
           nextLabel: t('departments.next'),
         } : undefined}
-        actions={isCreate ? (
-          <CreationActions onCreate={() => void handleCreate()} onCancel={leave} busy={!canEdit || creating} />
+        actions={isCreate || creation.beingCreated ? (
+          <CreationActions
+            onCreate={handleCreate}
+            onCancel={isCreate ? leave : () => { void creation.cancelCreation(); }}
+            busy={!canEdit || creation.busy}
+          />
         ) : data && canDelete ? (
           <RecordDeleteButton
             base="/departments"

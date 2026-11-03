@@ -45,9 +45,12 @@ export default function useDraftCreation({ isCreate, ready, post, ...record }: O
   latest.current = { ready, post, returnTo, startCreation: creation.startCreation };
   const running = React.useRef(false);
   const finishAfter = React.useRef(false);
+  // The draft is written: the page is moving to the record, nothing more is sent.
+  const written = React.useRef(false);
   const [writing, setWriting] = React.useState(false);
 
   const write = React.useCallback(async (finish: boolean) => {
+    if (written.current) return;
     if (running.current) {
       if (finish) finishAfter.current = true;
       return;
@@ -58,6 +61,7 @@ export default function useDraftCreation({ isCreate, ready, post, ...record }: O
     try {
       const created = await latest.current.post();
       if (!created) return;
+      written.current = true;
       if (finishAfter.current) {
         navigate(latest.current.returnTo, { replace: true });
         return;

@@ -216,12 +216,14 @@ describe('DepartmentWorkspacePage', () => {
     expect(mocked.patch).toHaveBeenCalledTimes(2);
   });
 
-  it('creates on Create with the header name, then opens the new department', async () => {
-    mocked.post.mockResolvedValue({ data: { ...DEPARTMENT, id: 'dep-new' } });
+  it('creates the department once it has its name and company, then opens it', async () => {
+    mocked.post.mockResolvedValue({ data: { ...DEPARTMENT, id: 'dep-new', creation_token: 'token-1' } });
     renderAt('/master-data/departments/new/overview?year=2026');
-    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Legal' } });
+    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    fireEvent.change(title, { target: { value: 'Legal' } });
+    fireEvent.blur(title);
+    expect(mocked.post).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/departments', {
       name: 'Legal', company_id: 'company-2', description: null, status: 'enabled', disabled_at: null,
     }));

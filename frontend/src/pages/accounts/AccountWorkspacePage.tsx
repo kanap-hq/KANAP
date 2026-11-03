@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Box, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
-import { CreationActions, useCreationLeave, useCreationTitle } from '../../components/workspace/creation';
+import { CreationActions, useCreationLeave, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
 import { useAccountNav } from '../../hooks/useAccountNav';
@@ -238,9 +238,12 @@ export default function AccountWorkspacePage() {
 
   const commitNumber = (raw: string) => {
     if (!data) return;
-    // A new account's number is checked on Create.
+    // A new account keeps what was typed; an invalid number is said at once, and holds the creation.
     if (isCreate) {
       void patch({ account_number: raw.trim() }, 'account_number');
+      if (raw.trim() && parseAccountNumber(raw) == null) {
+        setErrors((prev) => ({ ...prev, account_number: t('accounts.messages.numberInvalid', { max: ACCOUNT_NUMBER_MAX_DIGITS }) }));
+      }
       return;
     }
     const next = parseAccountNumber(raw);
@@ -251,48 +254,78 @@ export default function AccountWorkspacePage() {
     commitTyped('account_number', next, Number(data.account_number));
   };
 
-  // Create sends the draft with the header's name, then goes back where the creation started.
+  // The draft is created once it has its name, its chart and a valid number; the account then
+  // opens, every tab available, with Create (kept, back where the creation started) and Cancel
+  // (deleted).
   const leave = useCreationLeave(handleClose);
-  const title = useCreationTitle({ requiredMessage: t('accounts.messages.nameRequired'), onCancel: leave });
-  const [creating, setCreating] = React.useState(false);
-  const handleCreate = async () => {
-    if (!canEdit || creating) return;
-    const name = title.require();
-    const values = draftRef.current;
-    const number = parseAccountNumber(String(values.account_number));
-    const nextErrors: FieldErrors = {};
-    if (!newCoaId) nextErrors.coa_id = t('accounts.messages.chartRequired');
-    if (number == null) nextErrors.account_number = t('accounts.messages.numberInvalid', { max: ACCOUNT_NUMBER_MAX_DIGITS });
-    setErrors((prev) => ({ ...prev, ...nextErrors }));
-    if (!name || Object.keys(nextErrors).length > 0) return;
-    setCreating(true);
-    setPageError(null);
-    try {
-      const { data: created } = await api.post<Account>('/accounts', {
-        coa_id: newCoaId,
-        account_number: number,
-        account_name: name,
-        native_name: values.native_name,
-        description: values.description,
-        consolidation_account_number: values.consolidation_account_number,
-        nature: values.nature,
-        status: values.status,
-        disabled_at: values.disabled_at,
-      });
-      afterWrite([newCoaId]);
-      // The new account opens in place, every tab available.
-      navigate(withContext(`${ACCOUNT_PATH}/${created.id}/overview`), { replace: true });
-    } catch (e) {
-      const message = getApiErrorMessage(e, t, t('accounts.messages.createFailed'));
-      // The page checks everything else first: a 400 that names no field is the number already
-      // used in the chosen chart.
-      const field = accountRefusalField(e) ?? (httpStatus(e) === 400 ? 'account_number' : null);
-      if (field === 'account_name') title.refuse(message);
-      else if (field) setErrors((prev) => ({ ...prev, [field]: message }));
-      else setPageError(message);
-    } finally {
-      setCreating(false);
+  const title = useCreationTitle({
+    requiredMessage: t('accounts.messages.nameRequired'),
+    onCancel: leave,
+    onCommit: () => creation.attempt(),
+  });
+  const missingFields = (): FieldErrors => {
+    const missing: FieldErrors = {};
+    if (!newCoaIdRef.current) missing.coa_id = t('accounts.messages.chartRequired');
+    if (parseAccountNumber(String(draftRef.current.account_number)) == null) {
+      missing.account_number = t('accounts.messages.numberInvalid', { max: ACCOUNT_NUMBER_MAX_DIGITS });
     }
+    return missing;
+  };
+  // The chart the draft holds, or the one preselected: read by the creation in the event that sets it.
+  const newCoaIdRef = React.useRef(newCoaId);
+  newCoaIdRef.current = draftRef.current.coa_id ?? preselectedCoaId;
+  const creation = useDraftCreation({
+    isCreate,
+    family: 'accounts',
+    apiBase: '/accounts',
+    recordId: stored?.id ?? null,
+    listPath: withContext(LIST_PATH),
+    recordLabel: t('accounts.creationRecord'),
+    queryKeyPrefixes: ['accounts'],
+    ready: () => !!title.current().trim() && Object.keys(missingFields()).length === 0,
+    post: async () => {
+      const values = draftRef.current;
+      const coaId = newCoaIdRef.current;
+      setPageError(null);
+      try {
+        const { data: created } = await api.post<Account & { creation_token: string }>('/accounts', {
+          coa_id: coaId,
+          account_number: parseAccountNumber(String(values.account_number)),
+          account_name: title.current().trim(),
+          native_name: values.native_name,
+          description: values.description,
+          consolidation_account_number: values.consolidation_account_number,
+          nature: values.nature,
+          status: values.status,
+          disabled_at: values.disabled_at,
+        });
+        afterWrite([coaId]);
+        return { id: created.id, token: created.creation_token, path: withContext(`${ACCOUNT_PATH}/${created.id}/overview`) };
+      } catch (e) {
+        const message = getApiErrorMessage(e, t, t('accounts.messages.createFailed'));
+        // The page checks everything else first: a 400 that names no field is the number already
+        // used in the chosen chart.
+        const field = accountRefusalField(e) ?? (httpStatus(e) === 400 ? 'account_number' : null);
+        if (field === 'account_name') title.refuse(message);
+        else if (field) setErrors((prev) => ({ ...prev, [field]: message }));
+        else setPageError(message);
+        return null;
+      }
+    },
+    onError: setPageError,
+  });
+  React.useEffect(() => { creation.attempt(); }, [creation.attempt, draft, preselectedCoaId]);
+  const handleCreate = () => {
+    if (creation.beingCreated) {
+      creation.finishCreation();
+      return;
+    }
+    if (!canEdit) return;
+    const name = title.require();
+    const missing = missingFields();
+    setErrors((prev) => ({ ...prev, ...missing }));
+    if (!name || Object.keys(missing).length > 0) return;
+    void creation.createAndLeave();
   };
 
   const disabled = !canEdit;
@@ -384,8 +417,12 @@ export default function AccountWorkspacePage() {
         isCreate={isCreate}
         // A new record's required fields sit in the drawer: it stays open.
         forceDrawerOpen={isCreate}
-        actions={isCreate ? (
-          <CreationActions onCreate={() => void handleCreate()} onCancel={leave} busy={!canEdit || creating} />
+        actions={isCreate || creation.beingCreated ? (
+          <CreationActions
+            onCreate={handleCreate}
+            onCancel={isCreate ? leave : () => { void creation.cancelCreation(); }}
+            busy={!canEdit || creation.busy}
+          />
         ) : undefined}
         nav={!isCreate && shownNav ? {
           currentIndex: shownNav.index + 1,
