@@ -77,27 +77,31 @@ describe('ContractWorkspacePage creation', () => {
       if (url === '/currency/settings') return { data: { reportingCurrency: 'EUR', defaultSpendCurrency: 'EUR', defaultCapexCurrency: 'EUR', allowedCurrencies: ['EUR', 'USD'] } };
       return { data: { items: [] } };
     });
-    mocked.post.mockResolvedValue({ data: { id: 'c-new' } });
+    mocked.post.mockResolvedValue({ data: { id: 'c-new', creation_token: 'tok' } });
   });
 
-  it('posts the header name and the drawer fields on Create, then opens the new contract', async () => {
+  it('creates the contract once its name and required fields are given, then opens it', async () => {
     renderNew();
-    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: ' Oracle support ' } });
+    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    fireEvent.change(title, { target: { value: ' Oracle support ' } });
+    fireEvent.blur(title);
     const drawer = screen.getByRole('complementary');
     fireEvent.change(within(drawer).getByLabelText('contracts.fields.supplier'), { target: { value: 'sup-1' } });
     fireEvent.change(within(drawer).getByLabelText('contracts.fields.company'), { target: { value: 'co-1' } });
     fireEvent.change(within(drawer).getByLabelText('start-date'), { target: { value: '2026-01-01' } });
-    const duration = within(drawer).getByRole('textbox', { name: 'contracts.fields.durationMonths' });
-    fireEvent.change(duration, { target: { value: '24' } });
-    fireEvent.blur(duration);
     // Only the person's own typing counts in the notes: they focus the editor first.
     const notes = await screen.findByLabelText('markdown-editor');
     fireEvent.focus(notes);
     fireEvent.change(notes, { target: { value: 'Signed by the CIO' } });
     // The tenant's currency is the default, as on the former form.
     await waitFor(() => expect(within(drawer).getByRole('combobox', { name: 'contracts.fields.currency' })).toHaveValue('EUR · Euro'));
+    expect(mocked.post).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    // A keystroke creates nothing; leaving the last required field does.
+    const duration = within(drawer).getByRole('textbox', { name: 'contracts.fields.durationMonths' });
+    fireEvent.change(duration, { target: { value: '24' } });
+    expect(mocked.post).not.toHaveBeenCalled();
+    fireEvent.blur(duration);
 
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/contracts', {
       name: 'Oracle support',

@@ -2,7 +2,7 @@ import React from 'react';
 import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Box, IconButton, Stack, Typography } from '@mui/material';
-import { CreationActions, useCreationLeave, useCreationTitle } from '../../components/workspace/creation';
+import { CreationActions, useCreationLeave, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
 import { useTheme } from '@mui/material/styles';
 import CloseIcon from '@mui/icons-material/Close';
 import { useTranslation } from 'react-i18next';
@@ -235,7 +235,9 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
   const editable = isCreate ? canEdit : canEdit && data?.editable !== false && !stale && !!data && form?.id === data.id;
   const readOnlyInAccess = !!data && data.editable === false && canEdit;
 
-  // A new contract keeps its edits in the draft until Create.
+  // A new contract keeps its edits in the draft until it is created. A committed change (a picker,
+  // a date, a typed field left) may create it; a keystroke does not.
+  const [draftCommits, setDraftCommits] = React.useState(0);
   const patchDraft = React.useCallback((patch: ContractPatch) => {
     setForm((prev) => (prev ? mergePatch(prev, patch) : prev));
     setErrors((prev) => {
@@ -246,7 +248,7 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
   }, []);
 
   const patchNow = React.useCallback(async (patch: ContractPatch) => {
-    if (isCreate) { patchDraft(patch); return; }
+    if (isCreate) { patchDraft(patch); setDraftCommits((n) => n + 1); return; }
     if (!editable || !data) return;
     setForm((prev) => (prev ? mergePatch(prev, patch) : prev));
     setSaveError(null);
@@ -266,7 +268,10 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
     if (patchBuffer.add(data.id, patch)) autosave.schedule(flushPending);
   }, [autosave, data, editable, flushPending, isCreate, patchBuffer, patchDraft]);
 
-  const flushNow = React.useCallback(() => { void autosave.flush(); }, [autosave]);
+  const flushNow = React.useCallback(() => {
+    if (isCreate) setDraftCommits((n) => n + 1);
+    else void autosave.flush();
+  }, [autosave, isCreate]);
 
   // ----- Navigation: pending edits are saved before the page shows another contract or tab -----
   const go = React.useCallback(async (path: string) => {
@@ -309,7 +314,7 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
   // renewal on and removes that end (`ContractResumeRenewalDialog`), whatever set it.
   const [resumeRenewalOpen, setResumeRenewalOpen] = React.useState(false);
   const onPropertiesPatch = (patch: ContractPatch) => {
-    if (isCreate) { patchDraft(patch); return; }
+    if (isCreate) { void patchNow(patch); return; }
     if (patch.auto_renewal === false && (renewedSoFar > 0 || decisionAwaited)) {
       setStopRenewalOpen(true);
       return;
@@ -347,49 +352,81 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
     { key: RECORD_HISTORY_TAB_KEY, label: t('contracts.tabs.history'), disabled: isCreate },
   ];
 
-  // ----- A new contract: its name in the header, Create checks the required fields and posts the draft -----
+  // ----- A new contract: created once it has its name and its required fields; it then opens, every
+  // tab available, with Create (kept, back where the creation started) and Cancel (deleted) -----
   const leave = useCreationLeave(close);
-  const creationTitle = useCreationTitle({ requiredMessage: t('contracts.messages.nameRequired'), onCancel: leave });
-  const [creating, setCreating] = React.useState(false);
-  const handleCreate = async () => {
-    if (!form || !canEdit || creating) return;
-    const name = creationTitle.require();
+  const creationTitle = useCreationTitle({
+    requiredMessage: t('contracts.messages.nameRequired'),
+    onCancel: leave,
+    onCommit: () => creation.attempt(),
+  });
+  const formRef = React.useRef(form);
+  formRef.current = form;
+  const missingFields = (draft: ContractForm): ContractFieldErrors => {
     const next: ContractFieldErrors = {};
-    if (!form.supplier_id) next.supplier_id = t('contracts.messages.supplierRequired');
-    if (!form.company_id) next.company_id = t('contracts.messages.companyRequired');
-    if (!form.start_date) next.start_date = t('contracts.messages.startRequired');
-    if (!form.duration_months || form.duration_months < 1) next.duration_months = t('contracts.messages.durationRequired');
-    if (!form.currency) next.currency = t('contracts.messages.currencyRequired');
+    if (!draft.supplier_id) next.supplier_id = t('contracts.messages.supplierRequired');
+    if (!draft.company_id) next.company_id = t('contracts.messages.companyRequired');
+    if (!draft.start_date) next.start_date = t('contracts.messages.startRequired');
+    if (!draft.duration_months || draft.duration_months < 1) next.duration_months = t('contracts.messages.durationRequired');
+    if (!draft.currency) next.currency = t('contracts.messages.currencyRequired');
+    return next;
+  };
+  const creation = useDraftCreation({
+    isCreate,
+    family: 'contracts',
+    apiBase: '/contracts',
+    recordId: data?.id ?? null,
+    listPath: withContext(LIST_PATH),
+    recordLabel: t('contracts.workspace.creationRecord'),
+    queryKeyPrefixes: ['contracts', 'contracts-ids'],
+    ready: () => {
+      const draft = formRef.current;
+      return canEdit && !!draft && !!creationTitle.current().trim() && Object.keys(missingFields(draft)).length === 0;
+    },
+    post: async () => {
+      const draft = formRef.current;
+      if (!draft) return null;
+      setSaveError(null);
+      try {
+        const { data: created } = await api.post<{ id: string; creation_token: string }>('/contracts', {
+          name: creationTitle.current().trim(),
+          supplier_id: draft.supplier_id,
+          company_id: draft.company_id,
+          ...(draft.cost_center_id ? { cost_center_id: draft.cost_center_id } : {}),
+          owner_user_id: draft.owner_user_id,
+          start_date: draft.start_date,
+          duration_months: draft.duration_months,
+          notice_period_months: draft.notice_period_months,
+          auto_renewal: draft.auto_renewal,
+          yearly_amount_at_signature: draft.yearly_amount_at_signature,
+          currency: draft.currency,
+          billing_frequency: draft.billing_frequency,
+          notes: draft.notes.trim() ? draft.notes : null,
+          status: draft.status,
+          disabled_at: draft.disabled_at,
+        });
+        void queryClient.invalidateQueries({ queryKey: ['contracts-ids'] });
+        return { id: created.id, token: created.creation_token, path: withContext(`${LIST_PATH}/${created.id}/overview`) };
+      } catch (e) {
+        setSaveError(getApiErrorMessage(e, t, t('contracts.messages.createFailed')));
+        return null;
+      }
+    },
+    onError: setSaveError,
+  });
+  React.useEffect(() => { creation.attempt(); }, [creation.attempt, draftCommits]);
+  const handleCreate = async () => {
+    await autosave.flush();
+    if (creation.beingCreated) {
+      creation.finishCreation();
+      return;
+    }
+    if (!form || !canEdit) return;
+    const name = creationTitle.require();
+    const next = missingFields(form);
     setErrors(next);
     if (!name || Object.keys(next).length > 0) return;
-    setCreating(true);
-    setSaveError(null);
-    try {
-      const { data: created } = await api.post<{ id: string }>('/contracts', {
-        name,
-        supplier_id: form.supplier_id,
-        company_id: form.company_id,
-        ...(form.cost_center_id ? { cost_center_id: form.cost_center_id } : {}),
-        owner_user_id: form.owner_user_id,
-        start_date: form.start_date,
-        duration_months: form.duration_months,
-        notice_period_months: form.notice_period_months,
-        auto_renewal: form.auto_renewal,
-        yearly_amount_at_signature: form.yearly_amount_at_signature,
-        currency: form.currency,
-        billing_frequency: form.billing_frequency,
-        notes: form.notes.trim() ? form.notes : null,
-        status: form.status,
-        disabled_at: form.disabled_at,
-      });
-      void queryClient.invalidateQueries({ queryKey: ['contracts-ids'] });
-      // The new contract opens in place, every tab available.
-      navigate(withContext(`${LIST_PATH}/${created.id}/overview`), { replace: true });
-    } catch (e) {
-      setSaveError(getApiErrorMessage(e, t, t('contracts.messages.createFailed')));
-    } finally {
-      setCreating(false);
-    }
+    void creation.createAndLeave();
   };
 
   const savingHint = autosave.status === 'saving' || autosave.status === 'pending'
@@ -481,8 +518,12 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
             </PortfolioMetadataItem>
           </>
         ) : undefined}
-        actions={isCreate ? (
-          <CreationActions onCreate={() => void handleCreate()} onCancel={leave} busy={!canEdit || creating} />
+        actions={isCreate || creation.beingCreated ? (
+          <CreationActions
+            onCreate={() => void handleCreate()}
+            onCancel={isCreate ? leave : () => { void creation.cancelCreation(); }}
+            busy={!canEdit || creation.busy}
+          />
         ) : (
           <>
             {readOnlyInAccess && (
