@@ -3201,7 +3201,8 @@
         "deleteAnyway": "Eliminar de todos modos"
       },
       "createOption": "+ Crear la ubicación «{{name}}»",
-      "createNew": "+ Nueva ubicación"
+      "createNew": "+ Nueva ubicación",
+      "creationRecord": "La ubicación"
     }
   },
   "components": {

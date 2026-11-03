@@ -26,7 +26,7 @@ import { getDotColor } from '../../utils/statusColors';
 import { SupplierNameTitle, SupplierNotes, SupplierTextRow } from './SupplierFields';
 import SupplierContactsTab, { useSupplierContacts } from './SupplierContactsTab';
 import RecordDeleteButton from '../../components/workspace/RecordDeleteButton';
-import { CreationActions, useCreationLeave, useCreationTitle } from '../../components/workspace/creation';
+import { CreationActions, useCreationLeave, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
 import RecordUsagesSection, { scrollToUsages, useRecordUsages } from '../../components/usages/RecordUsagesSection';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
@@ -200,30 +200,51 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
     if (targetId) void go(`${SUPPLIERS_PATH}/${targetId}/${nextTab}`);
   };
 
-  // Create sends the draft with the header's name, then goes back where the creation started.
+  // The draft is created once it has its name; the supplier then opens, every tab available, with
+  // Create (kept, back where the creation started) and Cancel (deleted).
   const leave = useCreationLeave(close);
-  const title = useCreationTitle({ requiredMessage: t('suppliers.messages.nameRequired'), onCancel: leave });
-  const [creating, setCreating] = React.useState(false);
+  const title = useCreationTitle({
+    requiredMessage: t('suppliers.messages.nameRequired'),
+    onCancel: leave,
+    onCommit: () => creation.attempt(),
+  });
   const [createError, setCreateError] = React.useState<string | null>(null);
+  const creation = useDraftCreation({
+    isCreate,
+    family: 'suppliers',
+    apiBase: '/suppliers',
+    recordId: stored?.id ?? null,
+    listPath: withContext(SUPPLIERS_PATH),
+    recordLabel: t('suppliers.creationRecord'),
+    queryKeyPrefixes: ['suppliers'],
+    ready: () => !!title.current().trim(),
+    post: async () => {
+      await autosave.flush();
+      setCreateError(null);
+      try {
+        const { erp_supplier_id, notes, status, disabled_at } = draftRef.current;
+        const { data: created } = await api.post<Supplier & { creation_token: string }>('/suppliers', {
+          name: title.current().trim(), erp_supplier_id, notes, status, disabled_at,
+        });
+        void queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+        return { id: created.id, token: created.creation_token, path: withContext(`${SUPPLIERS_PATH}/${created.id}/overview`) };
+      } catch (e) {
+        if (isDuplicateError(e)) title.refuse(t('suppliers.messages.nameTaken'));
+        else setCreateError(getApiErrorMessage(e, t, t('suppliers.messages.createFailed')));
+        return null;
+      }
+    },
+    onError: setCreateError,
+  });
+  React.useEffect(() => { creation.attempt(); }, [creation.attempt, draft]);
   const handleCreate = async () => {
-    if (!canEdit || creating) return;
     await autosave.flush();
-    const name = title.require();
-    if (!name) return;
-    setCreating(true);
-    setCreateError(null);
-    try {
-      const { erp_supplier_id, notes, status, disabled_at } = draftRef.current;
-      const { data: created } = await api.post<Supplier>('/suppliers', { name, erp_supplier_id, notes, status, disabled_at });
-      void queryClient.invalidateQueries({ queryKey: ['suppliers'] });
-      // The new supplier opens in place, every tab available.
-      navigate(withContext(`${SUPPLIERS_PATH}/${created.id}/overview`), { replace: true });
-    } catch (e) {
-      if (isDuplicateError(e)) title.refuse(t('suppliers.messages.nameTaken'));
-      else setCreateError(getApiErrorMessage(e, t, t('suppliers.messages.createFailed')));
-    } finally {
-      setCreating(false);
+    if (creation.beingCreated) {
+      creation.finishCreation();
+      return;
     }
+    if (!canEdit || !title.require()) return;
+    void creation.createAndLeave();
   };
 
   React.useEffect(() => {
@@ -371,8 +392,12 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
         } : undefined}
         onSaveShortcut={() => { void autosave.flush(); }}
         metadata={metadata}
-        actions={isCreate ? (
-          <CreationActions onCreate={() => void handleCreate()} onCancel={leave} busy={!canEdit || creating} />
+        actions={isCreate || creation.beingCreated ? (
+          <CreationActions
+            onCreate={() => void handleCreate()}
+            onCancel={isCreate ? leave : () => { void creation.cancelCreation(); }}
+            busy={!canEdit || creation.busy}
+          />
         ) : (
           <>
             {savingHint && (

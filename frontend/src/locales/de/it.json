@@ -3201,7 +3201,8 @@
         "deleteAnyway": "Trotzdem löschen"
       },
       "createOption": "+ Standort „{{name}}“ anlegen",
-      "createNew": "+ Neuer Standort"
+      "createNew": "+ Neuer Standort",
+      "creationRecord": "Der Standort"
     }
   },
   "components": {

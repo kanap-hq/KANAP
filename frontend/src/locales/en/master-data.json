@@ -174,7 +174,8 @@
       "title_other": "Delete the {{count}} selected companies",
       "keptDone_one": "{{count}} company kept",
       "keptDone_other": "{{count}} companies kept"
-    }
+    },
+    "creationRecord": "The company"
   },
   "departments": {
     "title": "Departments",
@@ -219,7 +220,8 @@
       "kept_other": "{{count}} departments cannot be deleted and are kept:",
       "deleted_one": "{{count}} department deleted",
       "deleted_other": "{{count}} departments deleted"
-    }
+    },
+    "creationRecord": "The department"
   },
   "costCenters": {
     "title": "Cost centers",
@@ -294,7 +296,8 @@
       "kept_other": "{{count}} cost centers cannot be deleted and are kept:",
       "deleted_one": "{{count}} cost center deleted",
       "deleted_other": "{{count}} cost centers deleted"
-    }
+    },
+    "creationRecord": "The cost center"
   },
   "workingDayCalendars": {
     "title": "Working-day calendars",
@@ -394,7 +397,8 @@
       "kept_other": "{{count}} calendars cannot be deleted and are kept:",
       "deleted_one": "{{count}} calendar deleted",
       "deleted_other": "{{count}} calendars deleted"
-    }
+    },
+    "creationRecord": "The calendar"
   },
   "suppliers": {
     "title": "Suppliers",
@@ -460,7 +464,8 @@
       "kept_other": "{{count}} suppliers are still in use and are kept. Disable them instead:",
       "deleted_one": "{{count}} supplier deleted",
       "deleted_other": "{{count}} suppliers deleted"
-    }
+    },
+    "creationRecord": "The supplier"
   },
   "contacts": {
     "title": "Contacts",
@@ -537,7 +542,8 @@
       "deleted_other": "{{count}} contacts deleted",
       "title_one": "Delete the selected contact",
       "title_other": "Delete the {{count}} selected contacts"
-    }
+    },
+    "creationRecord": "The contact"
   },
   "coa": {
     "title": "Charts of accounts",
@@ -724,7 +730,8 @@
       "chartRequired": "Choose a chart of accounts.",
       "numberInvalid": "Enter a whole number greater than zero, with at most {{max}} digits.",
       "nameRequired": "Enter a name."
-    }
+    },
+    "creationRecord": "The account"
   },
   "analytics": {
     "title": "Analytics dimensions",
@@ -920,7 +927,9 @@
       "failed": "The dimensions could not be added.",
       "loadFailed": "The recommended dimensions could not be loaded."
     },
-    "addValue": "Add “{{value}}”"
+    "addValue": "Add “{{value}}”",
+    "valueCreationRecord": "The value",
+    "dimensionCreationRecord": "The dimension"
   },
   "businessProcesses": {
     "title": "Business processes",

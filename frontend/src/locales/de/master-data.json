@@ -174,7 +174,8 @@
       "title_other": "{{count}} ausgewählte Unternehmen löschen",
       "keptDone_one": "{{count}} Unternehmen behalten",
       "keptDone_other": "{{count}} Unternehmen behalten"
-    }
+    },
+    "creationRecord": "Das Unternehmen"
   },
   "departments": {
     "title": "Abteilungen",
@@ -219,7 +220,8 @@
       "kept_other": "{{count}} Abteilungen können nicht gelöscht werden und bleiben erhalten:",
       "deleted_one": "{{count}} Abteilung gelöscht",
       "deleted_other": "{{count}} Abteilungen gelöscht"
-    }
+    },
+    "creationRecord": "Die Abteilung"
   },
   "costCenters": {
     "title": "Kostenstellen",
@@ -294,7 +296,8 @@
       "kept_other": "{{count}} Kostenstellen können nicht gelöscht werden und bleiben erhalten:",
       "deleted_one": "{{count}} Kostenstelle gelöscht",
       "deleted_other": "{{count}} Kostenstellen gelöscht"
-    }
+    },
+    "creationRecord": "Die Kostenstelle"
   },
   "workingDayCalendars": {
     "title": "Arbeitstagekalender",
@@ -394,7 +397,8 @@
       "kept_other": "{{count}} Kalender können nicht gelöscht werden und bleiben erhalten:",
       "deleted_one": "{{count}} Kalender gelöscht",
       "deleted_other": "{{count}} Kalender gelöscht"
-    }
+    },
+    "creationRecord": "Der Kalender"
   },
   "suppliers": {
     "title": "Lieferanten",
@@ -460,7 +464,8 @@
       "kept_other": "{{count}} Lieferanten werden noch verwendet und bleiben erhalten. Deaktivieren Sie sie stattdessen:",
       "deleted_one": "{{count}} Lieferant gelöscht",
       "deleted_other": "{{count}} Lieferanten gelöscht"
-    }
+    },
+    "creationRecord": "Der Lieferant"
   },
   "contacts": {
     "title": "Kontakte",
@@ -537,7 +542,8 @@
       "deleted_other": "{{count}} Kontakte gelöscht",
       "title_one": "Ausgewählten Kontakt löschen",
       "title_other": "{{count}} ausgewählte Kontakte löschen"
-    }
+    },
+    "creationRecord": "Der Kontakt"
   },
   "coa": {
     "title": "Kontenpläne",
@@ -724,7 +730,8 @@
       "chartRequired": "Wählen Sie einen Kontenplan.",
       "numberInvalid": "Geben Sie eine ganze Zahl größer als null mit höchstens {{max}} Ziffern ein.",
       "nameRequired": "Geben Sie einen Namen ein."
-    }
+    },
+    "creationRecord": "Das Konto"
   },
   "analytics": {
     "title": "Analysedimensionen",
@@ -920,7 +927,9 @@
       "failed": "Die Dimensionen konnten nicht hinzugefügt werden.",
       "loadFailed": "Die empfohlenen Dimensionen konnten nicht geladen werden."
     },
-    "addValue": "„{{value}}“ hinzufügen"
+    "addValue": "„{{value}}“ hinzufügen",
+    "valueCreationRecord": "Der Wert",
+    "dimensionCreationRecord": "Die Dimension"
   },
   "businessProcesses": {
     "title": "Geschäftsprozesse",

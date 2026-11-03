@@ -55,6 +55,7 @@ vi.mock('../../components/fields/ContactSelect', () => ({
 }));
 
 import api from '../../api';
+import { clearCreation, creationKey, getCreation, setCreation } from '../../components/workspace/creation/creationStore';
 import SupplierWorkspacePage from './SupplierWorkspacePage';
 
 const mocked = api as unknown as {
@@ -424,17 +425,17 @@ describe('SupplierWorkspacePage', () => {
     expect(screen.getByRole('tab', { name: 'shared.labels.contacts' })).toBeDisabled();
   });
 
-  it('creates the supplier on Create with the header name, then opens it', async () => {
-    mocked.post.mockResolvedValueOnce({ data: { ...SUPPLIER, id: 's-new' } });
+  it('creates the supplier once its name is committed, with the fields given before, then opens it', async () => {
+    mocked.post.mockResolvedValueOnce({ data: { ...SUPPLIER, id: 's-new', creation_token: 'token-1' } });
     renderAt('/master-data/suppliers/new/overview?sort=name%3AASC');
-    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
-    fireEvent.change(title, { target: { value: ' Initech ' } });
-    fireEvent.blur(title);
-    expect(mocked.post).not.toHaveBeenCalled();
     const erp = screen.getByLabelText('suppliers.fields.erpSupplierId');
     fireEvent.change(erp, { target: { value: 'SUP-077' } });
     fireEvent.blur(erp);
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    expect(mocked.post).not.toHaveBeenCalled();
+    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    fireEvent.change(title, { target: { value: ' Initech ' } });
+    expect(mocked.post).not.toHaveBeenCalled();
+    fireEvent.blur(title);
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/suppliers', {
       name: 'Initech',
       erp_supplier_id: 'SUP-077',
@@ -443,6 +444,39 @@ describe('SupplierWorkspacePage', () => {
       disabled_at: null,
     }));
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/suppliers/s-new/overview?sort=name%3AASC', { replace: true }));
+    expect(getCreation(creationKey('suppliers', 's-new'))).toEqual({ token: 'token-1', returnTo: '/master-data/suppliers?sort=name%3AASC' });
+    clearCreation(creationKey('suppliers', 's-new'));
+  });
+
+  it('creates the supplier on Create while the name is still typed, then goes back where it started', async () => {
+    mocked.post.mockResolvedValueOnce({ data: { ...SUPPLIER, id: 's-new', creation_token: 'token-1' } });
+    renderAt('/master-data/suppliers/new/overview?sort=name%3AASC');
+    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Initech' } });
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/suppliers?sort=name%3AASC', { replace: true }));
+    expect(mocked.post).toHaveBeenCalledTimes(1);
+    expect(getCreation(creationKey('suppliers', 's-new'))).toBeUndefined();
+  });
+
+  it('shows Create and Cancel on a supplier being created: Create keeps it, Cancel deletes it', async () => {
+    setCreation(creationKey('suppliers', 's-1'), { token: 'token-1', returnTo: '/home' });
+    mocked.delete.mockResolvedValue({ data: undefined });
+    renderAt('/master-data/suppliers/s-1/overview');
+    expect(await screen.findByRole('button', { name: 'common:buttons.cancel' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'shared.labels.contacts' })).not.toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'common:buttons.close' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'common:buttons.delete' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.cancel' }));
+    await waitFor(() => expect(mocked.delete).toHaveBeenCalledWith('/suppliers/s-1/creation', { data: { token: 'token-1' } }));
+    expect(mocked.get).toHaveBeenCalledWith('/suppliers/s-1/creation', { params: { token: 'token-1' } });
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/home', { replace: true }));
+    expect(getCreation(creationKey('suppliers', 's-1'))).toBeUndefined();
+
+    navigateMock.mockClear();
+    setCreation(creationKey('suppliers', 's-1'), { token: 'token-2', returnTo: '/home' });
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.create' }));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/home'));
+    expect(mocked.delete).toHaveBeenCalledTimes(1);
   });
 
   it('shows a missing or taken name under the header title and gives it the focus', async () => {
@@ -473,15 +507,16 @@ describe('SupplierWorkspacePage', () => {
     expect(mocked.post).not.toHaveBeenCalled();
   });
 
-  it('leaves the header name with Tab without creating anything', async () => {
+  it('creates the supplier when Tab leaves its name', async () => {
+    mocked.post.mockResolvedValueOnce({ data: { ...SUPPLIER, id: 's-new', creation_token: 'token-1' } });
     const user = userEvent.setup();
     renderAt('/master-data/suppliers/new/overview');
     const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
     await user.type(title, 'Initech');
-    await user.tab();
-    expect(title).not.toHaveFocus();
-    expect(title).toHaveValue('Initech');
     expect(mocked.post).not.toHaveBeenCalled();
+    await user.tab();
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/suppliers', expect.objectContaining({ name: 'Initech' })));
+    clearCreation(creationKey('suppliers', 's-new'));
   });
 
   it('shows the supplier page itself, with the tabs that need a saved supplier greyed', () => {

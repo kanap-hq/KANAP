@@ -3201,7 +3201,8 @@
         "deleteAnyway": "Delete anyway"
       },
       "createOption": "+ Create location \"{{name}}\"",
-      "createNew": "+ New location"
+      "createNew": "+ New location",
+      "creationRecord": "The location"
     }
   },
   "components": {

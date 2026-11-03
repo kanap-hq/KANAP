@@ -425,7 +425,8 @@
       "newContract": "New contract",
       "contract": "Contract",
       "previous": "Previous contract",
-      "next": "Next contract"
+      "next": "Next contract",
+      "creationRecord": "The contract"
     },
     "tabs": {
       "overview": "Overview",

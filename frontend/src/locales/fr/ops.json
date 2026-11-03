@@ -425,7 +425,8 @@
       "newContract": "Nouveau contrat",
       "contract": "Contrat",
       "previous": "Contrat précédent",
-      "next": "Contrat suivant"
+      "next": "Contrat suivant",
+      "creationRecord": "Le contrat"
     },
     "tabs": {
       "overview": "Vue d'ensemble",

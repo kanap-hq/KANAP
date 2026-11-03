@@ -174,7 +174,8 @@
       "title_other": "Supprimer les {{count}} sociétés sélectionnées",
       "keptDone_one": "{{count}} société conservée",
       "keptDone_other": "{{count}} sociétés conservées"
-    }
+    },
+    "creationRecord": "La société"
   },
   "departments": {
     "title": "Départements",
@@ -219,7 +220,8 @@
       "kept_other": "{{count}} départements ne peuvent pas être supprimés et sont conservés :",
       "deleted_one": "{{count}} département supprimé",
       "deleted_other": "{{count}} départements supprimés"
-    }
+    },
+    "creationRecord": "Le département"
   },
   "costCenters": {
     "title": "Centres de coûts",
@@ -294,7 +296,8 @@
       "kept_other": "{{count}} centres de coûts ne peuvent pas être supprimés et sont conservés :",
       "deleted_one": "{{count}} centre de coûts supprimé",
       "deleted_other": "{{count}} centres de coûts supprimés"
-    }
+    },
+    "creationRecord": "Le centre de coûts"
   },
   "workingDayCalendars": {
     "title": "Calendriers de jours ouvrés",
@@ -394,7 +397,8 @@
       "kept_other": "{{count}} calendriers ne peuvent pas être supprimés et sont conservés :",
       "deleted_one": "{{count}} calendrier supprimé",
       "deleted_other": "{{count}} calendriers supprimés"
-    }
+    },
+    "creationRecord": "Le calendrier"
   },
   "suppliers": {
     "title": "Fournisseurs",
@@ -460,7 +464,8 @@
       "kept_other": "{{count}} fournisseurs sont encore utilisés et sont conservés. Désactivez-les plutôt :",
       "deleted_one": "{{count}} fournisseur supprimé",
       "deleted_other": "{{count}} fournisseurs supprimés"
-    }
+    },
+    "creationRecord": "Le fournisseur"
   },
   "contacts": {
     "title": "Contacts",
@@ -537,7 +542,8 @@
       "deleted_other": "{{count}} contacts supprimés",
       "title_one": "Supprimer le contact sélectionné",
       "title_other": "Supprimer les {{count}} contacts sélectionnés"
-    }
+    },
+    "creationRecord": "Le contact"
   },
   "coa": {
     "title": "Plans comptables",
@@ -724,7 +730,8 @@
       "chartRequired": "Choisissez un plan comptable.",
       "numberInvalid": "Saisissez un nombre entier supérieur à zéro, de {{max}} chiffres au plus.",
       "nameRequired": "Saisissez un nom."
-    }
+    },
+    "creationRecord": "Le compte"
   },
   "analytics": {
     "title": "Dimensions analytiques",
@@ -920,7 +927,9 @@
       "failed": "Les dimensions n'ont pas pu être ajoutées.",
       "loadFailed": "Les dimensions recommandées n'ont pas pu être chargées."
     },
-    "addValue": "Ajouter « {{value}} »"
+    "addValue": "Ajouter « {{value}} »",
+    "valueCreationRecord": "La valeur",
+    "dimensionCreationRecord": "La dimension"
   },
   "businessProcesses": {
     "title": "Processus métier",
