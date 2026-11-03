@@ -17,6 +17,8 @@ type Options = {
   recordId: string | null;
   /** Where to go when no starting address was kept: the list, with its context. */
   listPath: string;
+  /** Where the creation started, when the page knows it better than the link state (`?returnTo=`). */
+  returnTo?: string | null;
   /** The record as Cancel's confirmation names it ("The supplier"). */
   recordLabel: string;
   /** Query keys (first element prefixes) to mark stale once the record is cancelled (its lists). */
@@ -37,9 +39,10 @@ type Options = {
  * draft: it writes the draft, or waits for the write under way, and goes back where the creation
  * started, the record kept.
  */
-export default function useDraftCreation({ isCreate, ready, post, ...record }: Options) {
+export default function useDraftCreation({ isCreate, ready, post, returnTo: knownReturn, ...record }: Options) {
   const navigate = useNavigate();
-  const returnTo = useCreationReturn(record.listPath);
+  const startedFrom = useCreationReturn(record.listPath);
+  const returnTo = knownReturn || startedFrom;
   const creation = useRecordCreation({ ...record, recordId: isCreate ? null : record.recordId });
   const latest = React.useRef({ ready, post, returnTo, startCreation: creation.startCreation });
   latest.current = { ready, post, returnTo, startCreation: creation.startCreation };

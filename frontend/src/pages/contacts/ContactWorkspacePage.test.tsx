@@ -367,18 +367,22 @@ describe('ContactWorkspacePage create', () => {
     expect(screen.queryByRole('button', { name: 'admin:auditLogs.history.title' })).toBeNull();
   });
 
-  it('creates a contact from a supplier with its type, then opens it with the way back to the supplier', async () => {
+  it('creates a contact from a supplier with its type once it has its email, then opens it with the way back to the supplier', async () => {
     renderAt('/master-data/contacts/new/overview?supplier_id=s-1&supplier_role=technical&returnTo=/master-data/suppliers/s-1/contacts');
     expect(screen.getByTestId('supplier-select')).toHaveAttribute('data-value', 's-1');
     expect(screen.getByTestId('supplier-select')).toHaveAttribute('data-disabled', 'true');
+    // The names alone create nothing: the email is the contact's key.
+    fireEvent.change(screen.getByLabelText('contacts.fields.firstName'), { target: { value: 'Sam' } });
+    fireEvent.change(screen.getByLabelText('contacts.fields.lastName'), { target: { value: 'Stone' } });
+    fireEvent.blur(screen.getByLabelText('contacts.fields.lastName'));
+    expect(mocked.post).not.toHaveBeenCalled();
     fireEvent.change(screen.getByLabelText('contacts.fields.email'), { target: { value: 'sam@example.com' } });
     fireEvent.blur(screen.getByLabelText('contacts.fields.email'));
-    fireEvent.change(screen.getByLabelText('contacts.fields.firstName'), { target: { value: 'Sam' } });
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
     expect(mocked.post.mock.calls[0][1]).toMatchObject({
       email: 'sam@example.com',
       first_name: 'Sam',
+      last_name: 'Stone',
       supplier_id: 's-1',
       supplier_role: 'technical',
       active: true,
@@ -399,10 +403,9 @@ describe('ContactWorkspacePage create', () => {
 
   it('gives a supplier chosen on the form the default type', async () => {
     renderAt('/master-data/contacts/new/overview?sort=last_name%3AASC');
+    fireEvent.click(screen.getByRole('button', { name: 'pick supplier' }));
     fireEvent.change(screen.getByLabelText('contacts.fields.email'), { target: { value: 'sam@example.com' } });
     fireEvent.blur(screen.getByLabelText('contacts.fields.email'));
-    fireEvent.click(screen.getByRole('button', { name: 'pick supplier' }));
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
     expect(mocked.post.mock.calls[0][1]).toMatchObject({ supplier_id: 's-2', supplier_role: 'commercial' });
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/contacts/c-9/overview?sort=last_name%3AASC', { replace: true }));

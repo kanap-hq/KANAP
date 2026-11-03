@@ -285,11 +285,14 @@ export function ContactNameDraft({
   lastName,
   onChange,
   onCancel,
+  onCommit,
 }: {
   firstName: string;
   lastName: string;
   onChange: (next: { first_name: string; last_name: string }) => void;
   onCancel: () => void;
+  /** The focus left the two names (Enter, Tab past the last name, a click elsewhere). */
+  onCommit?: () => void;
 }) {
   const { t } = useTranslation(['master-data']);
   const empty = !firstName && !lastName;
@@ -315,7 +318,12 @@ export function ContactNameDraft({
     ...titleToGiveSx(theme, empty),
   });
   return (
-    <Box sx={{ display: 'flex', gap: 2, width: '100%' }}>
+    <Box
+      sx={{ display: 'flex', gap: 2, width: '100%' }}
+      onBlur={(event: React.FocusEvent<HTMLDivElement>) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) onCommit?.();
+      }}
+    >
       <Box
         component="input"
         autoFocus

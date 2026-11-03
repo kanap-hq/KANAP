@@ -35,7 +35,7 @@ import { ContactNameDraft, ContactNameTitle, ContactPhoneField, ContactRoleSelec
 import RecordUsagesSection, { recordUsagesKey, scrollToUsages, useRecordUsages } from '../../components/usages/RecordUsagesSection';
 import { SUPPLIERS_PATH } from '../suppliers/supplierModel';
 import RecordDeleteButton from '../../components/workspace/RecordDeleteButton';
-import { CreationActions, useCreationLeave } from '../../components/workspace/creation';
+import { CreationActions, useCreationLeave, useDraftCreation } from '../../components/workspace/creation';
 
 const LIST_PATH = '/master-data/contacts';
 const DRAWER_KEY = 'kanap.contacts.drawerOpen';
@@ -250,50 +250,81 @@ function ContactEditor({ id }: { id: string }) {
   // Back where the creation started: the supplier it came from, else the previous page, else the list.
   const leave = useCreationLeave(() => navigate(withContext(LIST_PATH)));
   const leaveCreation = () => (returnTo ? navigate(returnTo) : leave());
-  const [creating, setCreating] = React.useState(false);
-  const handleCreate = async () => {
-    if (!canEdit || creating) return;
-    await autosave.flush();
+  // What the draft still lacks: an email (the contact's key), valid phones, the type of a supplier contact.
+  const missingFields = (): FieldErrors => {
     const values = draftRef.current;
-    const nextErrors: FieldErrors = {};
+    const missing: FieldErrors = {};
     const invalidEmail = emailError(values.email, t);
-    if (invalidEmail) nextErrors.email = invalidEmail;
+    if (invalidEmail) missing.email = invalidEmail;
     const invalidPhone = phoneError(values.phone, t);
-    if (invalidPhone) nextErrors.phone = invalidPhone;
+    if (invalidPhone) missing.phone = invalidPhone;
     const invalidMobile = phoneError(values.mobile, t);
-    if (invalidMobile) nextErrors.mobile = invalidMobile;
-    if (values.supplier_id && !values.supplier_role) nextErrors.supplier_role = t('contacts.messages.typeRequired');
-    setErrors((prev) => ({ ...prev, ...nextErrors }));
-    if (Object.keys(nextErrors).length > 0) return;
-    setCreating(true);
-    setPageError(null);
-    try {
-      const { data: created } = await api.post<Contact>('/contacts', {
-        email: values.email,
-        first_name: values.first_name?.trim() || null,
-        last_name: values.last_name?.trim() || null,
-        job_title: values.job_title,
-        phone: values.phone,
-        mobile: values.mobile,
-        country: values.country,
-        supplier_id: values.supplier_id,
-        supplier_role: values.supplier_id ? values.supplier_role : null,
-        notes: values.notes,
-        active: values.active,
-      });
-      void queryClient.invalidateQueries({ queryKey: ['supplier-contacts'] });
-      // The new contact opens in place; its back arrow still leads to the supplier it came from.
-      const back = returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : '';
-      navigate(returnTo ? `${LIST_PATH}/${created.id}/overview${back}` : withContext(`${LIST_PATH}/${created.id}/overview`), { replace: true });
-    } catch (e) {
-      const status = (e as { response?: { status?: number } } | null)?.response?.status;
-      const message = getApiErrorMessage(e, t, t('contacts.messages.createFailed'));
-      // The email is the one field the page cannot check by itself: another contact may have it.
-      if (status === 400 && /email/i.test(message)) setErrors((prev) => ({ ...prev, email: t('contacts.messages.emailTaken') }));
-      else setPageError(message);
-    } finally {
-      setCreating(false);
+    if (invalidMobile) missing.mobile = invalidMobile;
+    if (values.supplier_id && !values.supplier_role) missing.supplier_role = t('contacts.messages.typeRequired');
+    return missing;
+  };
+  // The draft is created once it has a valid email (and the names typed are left); the contact then
+  // opens with Create (kept, back where the creation started) and Cancel (deleted).
+  const creation = useDraftCreation({
+    isCreate,
+    family: 'contacts',
+    apiBase: '/contacts',
+    recordId: stored?.id ?? null,
+    listPath: withContext(LIST_PATH),
+    returnTo,
+    recordLabel: t('contacts.creationRecord'),
+    queryKeyPrefixes: ['contacts', 'supplier-contacts'],
+    ready: () => Object.keys(missingFields()).length === 0,
+    post: async () => {
+      await autosave.flush();
+      const values = draftRef.current;
+      setPageError(null);
+      try {
+        const { data: created } = await api.post<Contact & { creation_token: string }>('/contacts', {
+          email: values.email,
+          first_name: values.first_name?.trim() || null,
+          last_name: values.last_name?.trim() || null,
+          job_title: values.job_title,
+          phone: values.phone,
+          mobile: values.mobile,
+          country: values.country,
+          supplier_id: values.supplier_id,
+          supplier_role: values.supplier_id ? values.supplier_role : null,
+          notes: values.notes,
+          active: values.active,
+        });
+        void queryClient.invalidateQueries({ queryKey: ['supplier-contacts'] });
+        // Its back arrow still leads to the supplier it came from.
+        const back = returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : '';
+        const path = returnTo ? `${LIST_PATH}/${created.id}/overview${back}` : withContext(`${LIST_PATH}/${created.id}/overview`);
+        return { id: created.id, token: created.creation_token, path };
+      } catch (e) {
+        const status = (e as { response?: { status?: number } } | null)?.response?.status;
+        const message = getApiErrorMessage(e, t, t('contacts.messages.createFailed'));
+        // The email is the one field the page cannot check by itself: another contact may have it.
+        if (status === 400 && /email/i.test(message)) setErrors((prev) => ({ ...prev, email: t('contacts.messages.emailTaken') }));
+        else setPageError(message);
+        return null;
+      }
+    },
+    onError: setPageError,
+  });
+  // Each committed field, never a keystroke of the names in the header (they commit on leaving them).
+  React.useEffect(() => { creation.attempt(); }, [
+    creation.attempt, draft.email, draft.job_title, draft.phone, draft.mobile, draft.country,
+    draft.supplier_id, draft.supplier_role, draft.notes, draft.active,
+  ]);
+  const handleCreate = async () => {
+    await autosave.flush();
+    if (creation.beingCreated) {
+      creation.finishCreation();
+      return;
     }
+    if (!canEdit) return;
+    const missing = missingFields();
+    setErrors((prev) => ({ ...prev, ...missing }));
+    if (Object.keys(missing).length > 0) return;
+    void creation.createAndLeave();
   };
 
   const [drawerOpenRequest, setDrawerOpenRequest] = React.useState(0);
@@ -497,6 +528,7 @@ function ContactEditor({ id }: { id: string }) {
             lastName={draft.last_name ?? ''}
             onChange={(next) => saveNow(next, 'name')}
             onCancel={leaveCreation}
+            onCommit={() => creation.attempt()}
           />
         ) : data ? (
           <ContactNameTitle
@@ -513,8 +545,12 @@ function ContactEditor({ id }: { id: string }) {
         // One tab: the shell shows the History button in the header, never a tab, and mounts the
         // shared history in its right panel on demand.
         history={data && !isCreate ? { table: 'contacts', recordId: data.id } : undefined}
-        actions={isCreate ? (
-          <CreationActions onCreate={() => void handleCreate()} onCancel={leaveCreation} busy={!canEdit || creating} />
+        actions={isCreate || creation.beingCreated ? (
+          <CreationActions
+            onCreate={() => void handleCreate()}
+            onCancel={isCreate ? leaveCreation : () => { void creation.cancelCreation(); }}
+            busy={!canEdit || creation.busy}
+          />
         ) : (
           <>
             {savingHint && (
