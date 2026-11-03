@@ -40,14 +40,12 @@ const c = getTrialContent(locale).start;
         <div class="mk-tf__field">
           <label for="tf-org">{c.form.orgLabel}</label>
           <input id="tf-org" name="org_name" type="text" required autocomplete="organization" />
-          <p class="mk-tf__help">{c.form.orgHelp}</p>
         </div>
 
         <CountryField
           id="tf-country"
           name="country_iso"
           label={c.form.countryLabel}
-          help={c.form.countryHelp}
           options={c.countryOptions}
           noMatch={c.form.countryNoMatch}
           required
@@ -67,13 +65,11 @@ const c = getTrialContent(locale).start;
             />
             <span class="mk-tf__suffix-text">{c.form.slugDomain}</span>
           </div>
-          <p class="mk-tf__help">{c.form.slugHelp}</p>
         </div>
 
         <div class="mk-tf__field">
           <label for="tf-email">{c.form.emailLabel}</label>
           <input id="tf-email" name="email" type="email" required autocomplete="email" />
-          <p class="mk-tf__help">{c.form.emailHelp}</p>
         </div>
 
         <div class="mk-tf__field" data-turnstile-field hidden>
@@ -306,13 +302,6 @@ const c = getTrialContent(locale).start;
     outline: none;
     border-color: var(--kanap-teal);
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--kanap-teal) 30%, transparent);
-  }
-
-  .mk-tf__help {
-    margin: 0;
-    font-size: 12px;
-    color: var(--kanap-text-tertiary);
-    line-height: 1.5;
   }
 
   .mk-tf__suffix {
