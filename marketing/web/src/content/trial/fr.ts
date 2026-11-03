@@ -3,15 +3,15 @@ import type { TrialContent } from './types';
 const content: TrialContent = {
   start: {
     title: 'Commencer votre essai gratuit',
-    description: 'Créez votre workspace KANAP. Essai 14 jours, sans carte bancaire, session d\'activation 60 min offerte.',
+    description: 'Créez votre espace de travail KANAP. Essai de quatorze jours, toutes les fonctions, sans carte bancaire.',
     eyebrow: 'Essai gratuit',
     heading: 'Commencez votre essai gratuit.',
-    lead: 'Créez votre workspace en une minute. Vous recevrez un lien par email, définissez votre mot de passe, et c\'est parti. 14 jours, toutes les fonctionnalités, sans carte.',
+    lead: 'Dans deux minutes, votre espace de travail est prêt. Vous recevez un lien par e-mail, vous choisissez votre mot de passe, et vous entrez : avec un exemple complet d\'entreprise pour voir tout de suite ce que fait KANAP, ou directement avec vos données. Quatorze jours, toutes les fonctions, sans carte bancaire.',
     benefits: [
-      'Toutes les fonctionnalités déverrouillées pendant 14 jours',
-      'Session d\'activation de 60 min offerte',
-      'Sans carte, vous décidez à la fin',
-      'Alternative d\'auto-hébergement possible à tout moment',
+      'Toutes les fonctions pendant quatorze jours, sans carte bancaire.',
+      'Un exemple complet d\'entreprise prêt à l\'ouverture, ou vos propres données dès le premier jour : vous choisissez.',
+      'Plaid, l\'assistant, répond à vos questions sur vos données et met vos fichiers Excel au format.',
+      'Un appel découverte de trente minutes, à planifier depuis votre espace quand vous le voulez.',
     ],
     form: {
       firstNameLabel: 'Prénom',
@@ -21,10 +21,10 @@ const content: TrialContent = {
       countryLabel: 'Pays',
       countryHelp: 'Utilisé pour définir votre devise par défaut et la société par défaut.',
       countryNoMatch: 'Aucun pays correspondant',
-      slugLabel: 'URL du workspace',
+      slugLabel: 'Adresse de l\'espace de travail',
       slugHelp: 'Lettres minuscules, chiffres et traits d\'union.',
       slugDomain: '.kanap.net',
-      emailLabel: 'Email admin',
+      emailLabel: 'E-mail de l\'administrateur',
       emailHelp: 'Le lien d\'activation sera envoyé à cette adresse. Ce sera le premier compte administrateur.',
       submitLabel: 'Envoyer le lien d\'activation',
       submitting: 'Envoi…',
@@ -33,7 +33,7 @@ const content: TrialContent = {
       errorEmail: 'Entrez une adresse email valide.',
       errorSlug: 'Uniquement lettres minuscules, chiffres et traits d\'union.',
       captchaLabel: 'Vérification de sécurité',
-      privacyNote: 'Votre email ne sert qu\'à vous envoyer le lien d\'activation et les premiers conseils d\'usage. Aucune newsletter.',
+      privacyNote: 'Votre adresse sert au lien d\'activation et à quatre messages pendant l\'essai, avis de fin compris. Aucune lettre d\'information ; vous pouvez vous désinscrire de ces messages à tout moment.',
     },
     countryOptions: [
       { value: 'FR', label: 'France' },

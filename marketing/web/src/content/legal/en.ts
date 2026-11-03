@@ -14,7 +14,7 @@ const content: LegalContent = {
     header: {
       eyebrow: 'Legal',
       title: 'Privacy policy',
-      lastUpdated: 'Last updated: 12 October 2026',
+      lastUpdated: 'Last updated: 3 November 2026',
     },
     body: `
 <h2>Preamble</h2>
@@ -33,6 +33,7 @@ const content: LegalContent = {
   <li><strong>Usage data:</strong> Platform usage logs, session information, IP addresses</li>
   <li><strong>Financial data:</strong> Budget items, CAPEX/OPEX data, allocation information, contract details entered by users</li>
   <li><strong>Billing information:</strong> Company name, billing address, VAT number</li>
+  <li><strong>Discovery call:</strong> If you schedule one, your name, email address, chosen date and the optional message you leave</li>
 </ul>
 <p>Payment information (credit card details) is not known to KANAP. It is processed directly by the secure payment platform (Stripe).</p>
 
@@ -44,12 +45,14 @@ const content: LegalContent = {
   <li><strong>Billing and invoicing:</strong> Data is necessary to process subscriptions, issue invoices, and manage payments.</li>
   <li><strong>Security:</strong> Data is processed to ensure the security of the Platform, detect and prevent fraud, unauthorized access, and security incidents.</li>
   <li><strong>Legal compliance:</strong> Data is processed to comply with legal and regulatory obligations.</li>
+  <li><strong>Trial messages:</strong> During a trial, three onboarding messages and the end-of-trial notice. Each message contains an unsubscribe link.</li>
+  <li><strong>Discovery call:</strong> Organizing the call you requested.</li>
 </ul>
 
 <h2>4. Legal basis for processing</h2>
 <ul>
-  <li><strong>Contract performance:</strong> Processing is necessary to provide the KANAP service (account management, Platform access, etc.).</li>
-  <li><strong>Legitimate interest:</strong> Processing for service improvement, security, and fraud prevention is based on KANAP's legitimate interest in developing and providing a quality and secure service.</li>
+  <li><strong>Contract performance:</strong> Processing is necessary to provide the KANAP service (account management, Platform access, etc.), including steps taken at your request before subscribing (trial, discovery call).</li>
+  <li><strong>Legitimate interest:</strong> Processing for service improvement, security, and fraud prevention is based on KANAP's legitimate interest in developing and providing a quality and secure service, as well as the trial messages, which you can unsubscribe from at any time.</li>
   <li><strong>Legal obligation:</strong> Processing may be necessary to comply with legal obligations (accounting, tax, anti-money laundering, etc.).</li>
   <li><strong>Consent:</strong> For certain optional features or communications, processing may be based on the user's explicit consent.</li>
 </ul>
@@ -65,15 +68,19 @@ const content: LegalContent = {
 <ul>
   <li><strong>Hetzner Online GmbH</strong> (Germany): hosting of the servers, database and file storage.</li>
   <li><strong>Cloudflare</strong> (United States): network, CDN and TLS termination in front of the servers, with contractual safeguards for transfers outside the European Union.</li>
-  <li><strong>Resend</strong> (transactional email, United States): account activation, password reset and notification emails.</li>
+  <li><strong>Resend</strong> (transactional email, United States): account activation, password reset and notification emails, and trial messages.</li>
   <li><strong>Stripe</strong> (payments, Ireland and United States): payment processing and subscription billing.</li>
-  <li><strong>AI model provider</strong> for the built-in AI features of the cloud service: AI features are off by default. The built-in model receives no data until the workspace has accepted its provider and where it processes data, both named in the application. An administrator of the workspace gives this confirmation, which covers the assistant, the agents and scheduled processing, and a new confirmation is asked if the provider or the location changes. Administrators can use their own model provider instead. The provider may process data outside the European Union.</li>
+  <li><strong>Anthropic</strong> (United States) or <strong>Mistral AI</strong> (European Union), provider of the built-in AI model of the cloud service, depending on which one KANAP has selected and the application shows: AI features are off by default. The built-in model receives no data until the workspace has accepted its provider and where it processes data, both named in the application. An administrator of the workspace gives this confirmation, which covers the assistant, the agents and scheduled processing. A new confirmation is asked if the provider or the location changes, and this policy is updated. KANAP only selects a provider and an offering whose terms exclude training its models on the data sent. Administrators can use their own model provider instead.</li>
+  <li><strong>Cal.com</strong> (United States): scheduling of discovery calls.</li>
 </ul>
 <p>Customers who self-host KANAP choose their own providers, and KANAP does not process their data. Customers of the cloud service who connect their own AI model provider choose that provider, and KANAP does not send their data to its built-in model.</p>
 
 <h2>6. Data retention period</h2>
 <ul>
   <li>Account data and the data entered by customers into the Platform are retained for the duration of the contract. On termination, they are deleted at the customer's request.</li>
+  <li>A trial workspace without a subscription is permanently deleted, with all its data, thirty days after the trial ends.</li>
+  <li>A sign-up whose activation link was never used is deleted after 90 days.</li>
+  <li>Discovery call data is kept for at most sixty days after the call.</li>
   <li>Billing and invoicing data is retained for 10 years in accordance with French accounting and tax regulations.</li>
   <li>Payment data is not retained by KANAP and is managed directly by the payment processor (Stripe).</li>
 </ul>

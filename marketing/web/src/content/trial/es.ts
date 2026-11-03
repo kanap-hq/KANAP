@@ -3,15 +3,15 @@ import type { TrialContent } from './types';
 const content: TrialContent = {
   start: {
     title: 'Empezar la prueba gratuita',
-    description: 'Crea tu workspace KANAP. Prueba de 14 días, sin tarjeta, sesión de activación de 60 min gratuita.',
+    description: 'Crea tu espacio de trabajo KANAP. Prueba de catorce días, todas las funciones, sin tarjeta bancaria.',
     eyebrow: 'Prueba gratuita',
     heading: 'Empieza tu prueba gratuita.',
-    lead: 'Crea tu workspace en un minuto. Recibirás un enlace por email, define tu contraseña y listo. 14 días, todas las funcionalidades, sin tarjeta.',
+    lead: 'En dos minutos, tu espacio de trabajo está listo. Recibes un enlace por email, eliges tu contraseña y entras: con un ejemplo completo de empresa para ver enseguida lo que hace KANAP, o directamente con tus datos. Catorce días, todas las funciones, sin tarjeta bancaria.',
     benefits: [
-      'Todas las funcionalidades activas durante 14 días',
-      'Sesión de activación de 60 min gratuita',
-      'Sin tarjeta, decides al final',
-      'Alternativa de autoalojamiento disponible en cualquier momento',
+      'Todas las funciones durante catorce días, sin tarjeta bancaria.',
+      'Un ejemplo completo de empresa listo al abrir, o tus propios datos desde el primer día: tú eliges.',
+      'Plaid, el asistente, responde a tus preguntas sobre tus datos y pone tus archivos Excel en el formato correcto.',
+      'Una llamada de descubrimiento de treinta minutos, que puedes programar desde tu espacio de trabajo cuando quieras.',
     ],
     form: {
       firstNameLabel: 'Nombre',
@@ -21,10 +21,10 @@ const content: TrialContent = {
       countryLabel: 'País',
       countryHelp: 'Se usa para definir tu moneda y empresa por defecto.',
       countryNoMatch: 'Ningún país coincide',
-      slugLabel: 'URL del workspace',
+      slugLabel: 'Dirección del espacio de trabajo',
       slugHelp: 'Letras minúsculas, números y guiones.',
       slugDomain: '.kanap.net',
-      emailLabel: 'Email de administrador',
+      emailLabel: 'Email del administrador',
       emailHelp: 'El enlace de activación se enviará aquí. Esta será la primera cuenta de administrador.',
       submitLabel: 'Enviar enlace de activación',
       submitting: 'Enviando…',
@@ -33,7 +33,7 @@ const content: TrialContent = {
       errorEmail: 'Introduce una dirección de email válida.',
       errorSlug: 'Solo letras minúsculas, números y guiones.',
       captchaLabel: 'Comprobación de seguridad',
-      privacyNote: 'Tu email solo se usa para enviarte el enlace de activación y la guía inicial. Sin newsletter.',
+      privacyNote: 'Tu dirección sirve para el enlace de activación y para cuatro mensajes durante la prueba, incluido el aviso de fin de prueba. Sin boletines. Puedes darte de baja de estos mensajes en cualquier momento.',
     },
     countryOptions: [
       { value: 'ES', label: 'España' },

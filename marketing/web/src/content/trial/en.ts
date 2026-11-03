@@ -3,15 +3,15 @@ import type { TrialContent } from './types';
 const content: TrialContent = {
   start: {
     title: 'Start your free trial',
-    description: 'Create your KANAP workspace. 14-day trial, no credit card, free 60-minute activation session.',
+    description: 'Create your KANAP workspace. Fourteen-day trial, all features, no credit card.',
     eyebrow: 'Free trial',
     heading: 'Start your free trial.',
-    lead: 'Create your workspace in a minute. You\'ll get a link by email, set your password, and you\'re in. 14 days, all features, no credit card.',
+    lead: 'In two minutes, your workspace is ready. You get a link by email, you choose your password, and you\'re in: with a complete sample company to see right away what KANAP does, or straight away with your own data. Fourteen days, all features, no credit card.',
     benefits: [
-      'All features unlocked for 14 days',
-      'Free 60-minute activation session included',
-      'No credit card, decide at the end',
-      'Self-hosting alternative available at any time',
+      'All features for fourteen days, no credit card.',
+      'A complete sample company ready when you open it, or your own data from day one: you choose.',
+      'Plaid, the assistant, answers your questions about your data and puts your Excel files into the right format.',
+      'A thirty-minute discovery call, to schedule from your workspace whenever you like.',
     ],
     form: {
       firstNameLabel: 'First name',
@@ -21,10 +21,10 @@ const content: TrialContent = {
       countryLabel: 'Country',
       countryHelp: 'Used to set your default currency and default company.',
       countryNoMatch: 'No matching country',
-      slugLabel: 'Workspace URL',
+      slugLabel: 'Workspace address',
       slugHelp: 'Lowercase letters, numbers, and hyphens.',
       slugDomain: '.kanap.net',
-      emailLabel: 'Admin email',
+      emailLabel: 'Administrator email',
       emailHelp: 'The activation link will be sent here. This becomes the first admin user.',
       submitLabel: 'Send activation link',
       submitting: 'Sending…',
@@ -33,7 +33,7 @@ const content: TrialContent = {
       errorEmail: 'Enter a valid email address.',
       errorSlug: 'Only lowercase letters, numbers and hyphens.',
       captchaLabel: 'Security check',
-      privacyNote: 'We use the email only to send your activation link and first-use guidance. No newsletter.',
+      privacyNote: 'Your address is used for the activation link and four messages during the trial, including the end-of-trial notice. No newsletter. You can unsubscribe from these messages at any time.',
     },
     countryOptions: [
       { value: 'FR', label: 'France' },

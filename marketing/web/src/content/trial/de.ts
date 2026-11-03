@@ -3,15 +3,15 @@ import type { TrialContent } from './types';
 const content: TrialContent = {
   start: {
     title: 'Kostenlose Testversion starten',
-    description: 'Erstellen Sie Ihren KANAP-Workspace. 14 Tage, keine Kreditkarte, kostenlose 60-min Aktivierungssitzung.',
+    description: 'Erstellen Sie Ihren KANAP-Arbeitsbereich. Vierzehn Tage Testversion, alle Funktionen, keine Kreditkarte.',
     eyebrow: 'Kostenlose Testversion',
     heading: 'Starten Sie Ihre kostenlose Testversion.',
-    lead: 'Workspace in einer Minute erstellen. Sie erhalten einen Link per E-Mail, setzen Ihr Passwort und sind drin. 14 Tage, alle Funktionen, keine Kreditkarte.',
+    lead: 'In zwei Minuten ist Ihr Arbeitsbereich bereit. Sie erhalten einen Link per E-Mail, wählen Ihr Passwort und sind drin: mit einem vollständigen Beispielunternehmen, um sofort zu sehen, was KANAP kann, oder direkt mit Ihren eigenen Daten. Vierzehn Tage, alle Funktionen, keine Kreditkarte.',
     benefits: [
-      'Alle Funktionen 14 Tage freigeschaltet',
-      'Kostenlose 60-min Aktivierungssitzung',
-      'Keine Kreditkarte, Sie entscheiden am Ende',
-      'Self-Hosting-Alternative jederzeit verfügbar',
+      'Alle Funktionen vierzehn Tage lang, ohne Kreditkarte.',
+      'Ein vollständiges Beispielunternehmen, bereit beim ersten Öffnen, oder Ihre eigenen Daten ab dem ersten Tag: Sie entscheiden.',
+      'Plaid, der Assistent, beantwortet Ihre Fragen zu Ihren Daten und bringt Ihre Excel-Dateien ins richtige Format.',
+      'Ein Kennenlerngespräch von dreißig Minuten, das Sie jederzeit aus Ihrem Arbeitsbereich vereinbaren.',
     ],
     form: {
       firstNameLabel: 'Vorname',
@@ -21,10 +21,10 @@ const content: TrialContent = {
       countryLabel: 'Land',
       countryHelp: 'Wird für Ihre Standardwährung und Standardfirma verwendet.',
       countryNoMatch: 'Kein passendes Land',
-      slugLabel: 'Workspace-URL',
+      slugLabel: 'Adresse des Arbeitsbereichs',
       slugHelp: 'Kleinbuchstaben, Ziffern und Bindestriche.',
       slugDomain: '.kanap.net',
-      emailLabel: 'Admin-E-Mail',
+      emailLabel: 'E-Mail des Administrators',
       emailHelp: 'Der Aktivierungslink wird hierhin geschickt. Dies wird der erste Admin-Account.',
       submitLabel: 'Aktivierungslink senden',
       submitting: 'Wird gesendet …',
@@ -33,7 +33,7 @@ const content: TrialContent = {
       errorEmail: 'Geben Sie eine gültige E-Mail-Adresse ein.',
       errorSlug: 'Nur Kleinbuchstaben, Ziffern und Bindestriche.',
       captchaLabel: 'Sicherheitsprüfung',
-      privacyNote: 'Ihre E-Mail wird nur für den Aktivierungslink und erste Nutzungshinweise verwendet. Kein Newsletter.',
+      privacyNote: 'Ihre Adresse dient dem Aktivierungslink und vier Nachrichten während der Testphase, die Mitteilung zum Testende eingeschlossen. Kein Newsletter. Sie können sich jederzeit von diesen Nachrichten abmelden.',
     },
     countryOptions: [
       { value: 'DE', label: 'Deutschland' },
