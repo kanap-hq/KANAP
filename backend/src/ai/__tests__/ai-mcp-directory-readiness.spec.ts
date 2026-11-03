@@ -269,6 +269,7 @@ function testArgumentPreviewKeepsValuesWithoutSecrets() {
 async function testGuardJournalsARefusedKeyWithoutItsValue() {
   const rawKey = 'kanap_mcp_abcdefghijklmnopqrstuvwxyz012345';
   const journal: Array<{ tenantId: string; record: AiMcpCallRecord }> = [];
+  const audits: Array<{ after: { authentication?: string; reason?: string }; recordId?: string; tenantId?: string }> = [];
   const guard = new McpApiKeyAuthGuard(
     {
       authenticatePresentedKey: async () => {
@@ -276,8 +277,11 @@ async function testGuardJournalsARefusedKeyWithoutItsValue() {
           tenantId: 'tenant-1', keyId: 'key-1', userId: 'user-1', reason: 'key_revoked',
         });
       },
+      logAudit: async (params: any, opts: any) => {
+        audits.push({ after: params.after, recordId: params.recordId, tenantId: opts?.manager?.tenantId });
+      },
     } as any,
-    { run: async (_tenantId: string, fn: (manager: any) => Promise<unknown>) => fn({}) } as any,
+    { run: async (tenantId: string, fn: (manager: any) => Promise<unknown>) => fn({ tenantId }) } as any,
     {} as any,
     { recordCall: async (ctx: any, record: AiMcpCallRecord) => { journal.push({ tenantId: ctx.tenantId, record }); } } as any,
   );
@@ -306,9 +310,13 @@ async function testGuardJournalsARefusedKeyWithoutItsValue() {
   // Like every other refusal, the line carries a duration (R3 of the 27/10 check: it was empty).
   const durationMs = journal[0].record.durationMs;
   assert.ok(typeof durationMs === 'number' && durationMs >= 0, `durationMs ${String(durationMs)}`);
+  assert.equal(audits.length, 1);
 
   await assert.rejects(() => guard.canActivate(http(request())), (error: unknown) => error instanceof UnauthorizedException);
   assert.equal(journal.length, 1);
+  assert.equal(audits.length, 1);
+  assert.deepEqual(audits[0], { after: { authentication: 'failed', reason: 'revoked' }, recordId: 'key-1', tenantId: 'tenant-1' });
+  assert.doesNotMatch(JSON.stringify(audits), /kanap_mcp_/);
 }
 
 // Plaid L6, lot A: the dispatcher redacts every tool output before MCP sends it. It keeps the
@@ -332,6 +340,46 @@ function testRedactionKeepsTheVulnerabilityReads() {
   assert.deepEqual(evidence.redact({ last_success_at: new Date('2026-10-01T06:00:00Z') }), { last_success_at: {} }, 'why the feeds carry text');
 }
 
+// Each known-key refusal (revoked, expired, owner no longer allowed) writes one audit row,
+// and a second try inside the gap does not write another.
+async function testGuardAuditsEachRefusedKeyReasonOnce() {
+  const reasons = [
+    ['key_revoked', 'revoked'],
+    ['key_expired', 'expired'],
+    ['owner_not_allowed', 'owner_not_allowed'],
+  ] as const;
+  for (const [reason, auditReason] of reasons) {
+    const audits: string[] = [];
+    const guard = new McpApiKeyAuthGuard(
+      {
+        authenticatePresentedKey: async () => {
+          throw new McpKeyRefusedException('refused', {
+            tenantId: 'tenant-1', keyId: `key-${reason}`, userId: 'user-1', reason,
+          });
+        },
+        logAudit: async (params: any) => { audits.push(params.after.reason); },
+      } as any,
+      { run: async (_tenantId: string, fn: (manager: any) => Promise<unknown>) => fn({}) } as any,
+      {} as any,
+      { recordCall: async () => undefined } as any,
+    );
+    const http = {
+      switchToHttp: () => ({
+        getRequest: () => ({
+          method: 'POST',
+          headers: { authorization: 'Bearer kanap_mcp_abcdefghijklmnopqrstuvwxyz012345' },
+          tenant: { id: 'tenant-1' },
+          body: { jsonrpc: '2.0', id: 1, method: 'ping' },
+        }),
+        getResponse: () => ({ headersSent: false, setHeader: () => undefined }),
+      }),
+    } as any;
+    await assert.rejects(() => guard.canActivate(http), (error: unknown) => error instanceof UnauthorizedException);
+    await assert.rejects(() => guard.canActivate(http), (error: unknown) => error instanceof UnauthorizedException);
+    assert.deepEqual(audits, [auditReason], reason);
+  }
+}
+
 async function run() {
   testRedactionKeepsTheVulnerabilityReads();
   await testStandardKeyListsFourteenToolsFifteenWithWebSearch();
@@ -340,6 +388,7 @@ async function run() {
   await testDoubleRevocationKeepsDateAndReason();
   testArgumentPreviewKeepsValuesWithoutSecrets();
   await testGuardJournalsARefusedKeyWithoutItsValue();
+  await testGuardAuditsEachRefusedKeyReasonOnce();
 }
 
 run().catch((error) => {
