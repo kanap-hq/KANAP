@@ -91,15 +91,36 @@ describe('LocationWorkspacePage name refusals', () => {
     expect(await screen.findByText('Paris DC')).toBeInTheDocument();
   });
 
-  it('says another location has the name, under the name field, when a create is a duplicate', async () => {
+  it('says another location has the name, under the header title, when a create is a duplicate', async () => {
     mocked.post.mockRejectedValueOnce(duplicate);
     renderAt('/it/locations/new/overview');
-    fireEvent.change(screen.getByPlaceholderText('workspace.location.namePlaceholder'), { target: { value: 'paris dc' } });
-    fireEvent.click(screen.getByRole('button', { name: /create/i }));
+    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    fireEvent.change(title, { target: { value: 'paris dc' } });
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('messages.locationNameTaken')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('workspace.location.namePlaceholder')).toHaveAttribute('aria-invalid', 'true');
+    expect(title).toHaveFocus();
     expect(screen.queryByRole('alert')).toBeNull();
     expect(navigateMock).not.toHaveBeenCalled();
+  });
+
+  it('creates the site on Create with the header name, then goes back to the list', async () => {
+    mocked.post.mockResolvedValueOnce({ data: { id: 'loc-new', location_reference: 'LOC-9', name: 'Lyon DC' } });
+    renderAt('/it/locations/new/overview');
+    expect(screen.queryByPlaceholderText('workspace.location.namePlaceholder')).toBeNull();
+    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: ' Lyon DC ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/locations', expect.objectContaining({ name: 'Lyon DC' })));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/it/locations'));
+  });
+
+  it('asks for the name on Create with an empty title, and leaves on Cancel', async () => {
+    renderAt('/it/locations/new/overview');
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    expect(await screen.findByText('messages.nameRequired')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'common:buttons.editTitle' })).toHaveFocus();
+    expect(mocked.post).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.cancel' }));
+    expect(navigateMock).toHaveBeenCalledWith('/it/locations');
   });
 });
 

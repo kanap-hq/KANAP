@@ -3,7 +3,6 @@ import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'rea
 import {
   Alert,
   Box,
-  Button,
   Link as MuiLink,
   MenuItem,
   Stack,
@@ -27,7 +26,7 @@ import LocationContactsTab from './workspace/LocationContactsTab';
 import LocationRelationsTab from './workspace/LocationRelationsTab';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import { useLocationItemNav } from '../../hooks/useModuleItemNav';
-import { drawerSelectSx, drawerMenuItemSx, drawerFieldValueSx } from '../../theme/formSx';
+import { drawerSelectSx, drawerMenuItemSx } from '../../theme/formSx';
 import { getApiErrorMessage, isDuplicateError } from '../../utils/apiErrorMessage';
 import { deleteFailureReason } from '../../utils/deleteRefusal';
 import { useLocale } from '../../i18n/useLocale';
@@ -37,6 +36,7 @@ import DeleteIconButton from '../../components/workspace/DeleteIconButton';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
 
+import { CreationActions, useCreationLeave, useCreationTitle } from '../../components/workspace/creation';
 type TabKey = 'overview' | 'contacts' | 'relations' | typeof RECORD_HISTORY_TAB_KEY;
 
 type LocationRecord = {
@@ -98,11 +98,9 @@ export default function LocationWorkspacePage() {
   const [pendingHostingType, setPendingHostingType] = React.useState<string | null>(null);
 
   // Create state
-  const [createName, setCreateName] = React.useState('');
   const [createHostingType, setCreateHostingType] = React.useState<string>('');
   const [createSubmitting, setCreateSubmitting] = React.useState(false);
   const [createError, setCreateError] = React.useState<string | null>(null);
-  const [createNameError, setCreateNameError] = React.useState<string | null>(null);
 
   const subItemsAnchorRef = React.useRef<HTMLDivElement>(null);
   const locationId = React.useMemo(() => {
@@ -232,6 +230,9 @@ export default function LocationWorkspacePage() {
     const qs = listContextParams.toString();
     navigate(`/it/locations${qs ? `?${qs}` : ''}`);
   }, [listContextParams, navigate]);
+  // A new site: its name is typed in the header; Create and Cancel go back where the creation started.
+  const leaveCreation = useCreationLeave(handleClose);
+  const creationTitle = useCreationTitle({ requiredMessage: t('messages.nameRequired'), onCancel: leaveCreation });
 
   const handleTabChange = React.useCallback(
     (nextTab: string) => {
@@ -334,12 +335,8 @@ export default function LocationWorkspacePage() {
 
   const handleCreate = async () => {
     if (!canManage) return;
-    const name = createName.trim();
-    setCreateNameError(null);
-    if (!name) {
-      setCreateNameError(t('messages.nameRequired'));
-      return;
-    }
+    const name = creationTitle.require();
+    if (!name) return;
     if (!createHostingType) {
       setCreateError(t('messages.hostingTypeRequired'));
       return;
@@ -347,14 +344,13 @@ export default function LocationWorkspacePage() {
     setCreateSubmitting(true);
     setCreateError(null);
     try {
-      const res = await api.post('/locations', {
+      await api.post('/locations', {
         name,
         hosting_type: createHostingType,
       });
-      const saved = res.data as LocationRecord;
-      navigate(`/it/locations/${saved.location_reference || saved.id}/overview`, { replace: true });
+      leaveCreation();
     } catch (e: any) {
-      if (isDuplicateError(e)) setCreateNameError(t('messages.locationNameTaken'));
+      if (isDuplicateError(e)) creationTitle.refuse(t('messages.locationNameTaken'));
       else setCreateError(getApiErrorMessage(e, t, t('messages.saveLocationFailed')));
     } finally {
       setCreateSubmitting(false);
@@ -451,9 +447,7 @@ export default function LocationWorkspacePage() {
     { key: RECORD_HISTORY_TAB_KEY, label: t('workspace.location.tabs.history'), disabled: isCreate },
   ];
 
-  const title = isCreate
-    ? createName
-    : data?.name || '';
+  const title = data?.name || '';
 
   const category: HostingCategory = data ? getHostingCategory(data.hosting_type) : 'cloud';
 
@@ -505,14 +499,7 @@ export default function LocationWorkspacePage() {
   const actions = (
     <>
       {isCreate && (
-        <Button
-          variant="contained"
-          onClick={() => void handleCreate()}
-          disabled={createSubmitting || !canManage}
-          size="small"
-        >
-          {t('common:buttons.create')}
-        </Button>
+        <CreationActions onCreate={() => void handleCreate()} onCancel={leaveCreation} busy={createSubmitting || !canManage} />
       )}
       {!isCreate && data && (
         <SendLinkButton
@@ -554,18 +541,20 @@ export default function LocationWorkspacePage() {
         onTabChange={handleTabChange}
         drawerStorageKey="kanap.locations.drawerOpen"
         backLabel={t('pages.locations.title')}
-        onBack={handleClose}
+        onBack={isCreate ? leaveCreation : handleClose}
         itemReference={!isCreate ? data?.location_reference || null : null}
         onCopyReference={
           !isCreate && data?.location_reference
             ? () => { void navigator.clipboard?.writeText(data.location_reference); }
             : undefined
         }
-        title={title}
+        {...(isCreate ? creationTitle.shellProps : {
+          title,
+          canEditTitle: canManage,
+          onTitleSave: handleTitleSave,
+          titleError: nameError,
+        })}
         titleFallback={isCreate ? t('workspace.location.newTitle') : t('workspace.location.untitled')}
-        canEditTitle={canManage && !isCreate}
-        onTitleSave={handleTitleSave}
-        titleError={nameError}
         isCreate={isCreate}
         nav={!isCreate && total > 0 ? {
           currentIndex: index + 1,
@@ -583,19 +572,6 @@ export default function LocationWorkspacePage() {
       >
         {isCreate ? (
           <Stack spacing={1.5} sx={{ maxWidth: 560 }}>
-            <PropertyRow label={t('common.name')} required valueSx={{ maxWidth: 520 }}>
-              <TextField
-                value={createName}
-                onChange={(e) => setCreateName(e.target.value)}
-                placeholder={t('workspace.location.namePlaceholder')}
-                error={!!createNameError}
-                helperText={createNameError}
-                required
-                size="small"
-                variant="standard"
-                sx={drawerFieldValueSx}
-              />
-            </PropertyRow>
             <PropertyRow label={t('pages.locations.columns.hostingType')} required valueSx={{ maxWidth: 520 }}>
               <TextField
                 select
