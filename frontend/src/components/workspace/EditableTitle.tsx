@@ -168,6 +168,8 @@ export type EditableTitleProps = {
   fallback: string;
   /** Each new value moves the focus to the title (its field while typing): a page's Create on an empty title. */
   focusRequest?: number;
+  /** Each new seed (its `n`) puts its value in the field being typed, as if typed: a name prefilled by the page. */
+  draftSeed?: { value: string; n: number };
   maxLength?: number;
   /** Fired on each keystroke, so the caller can drop a refusal that the draft has answered. */
   onDraftChange?: (draft: string) => void;
@@ -188,6 +190,7 @@ export default function EditableTitle({
   error,
   fallback,
   focusRequest = 0,
+  draftSeed,
   maxLength,
   onDraftChange,
   onCancel,
@@ -228,6 +231,14 @@ export default function EditableTitle({
     pendingFocus.current = false;
     buttonRef.current?.focus();
   }, [editing]);
+
+  React.useEffect(() => {
+    if (!draftSeed) return;
+    submitted.current = null;
+    setDraft(draftSeed.value);
+    // Only the seed's number says it is new.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftSeed?.n]);
 
   React.useEffect(() => {
     if (!focusRequest) return;

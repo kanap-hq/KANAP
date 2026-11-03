@@ -1,7 +1,8 @@
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, Button, Stack, Switch, TextField, Typography } from '@mui/material';
+import { Alert, Box, Stack, Switch, TextField, Typography } from '@mui/material';
+import { CreationActions, useCreationLeave, useCreationTitle } from '../../components/workspace/creation';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/AuthContext';
 import { isDataAccessLimited } from '../../auth/dataAccess';
@@ -167,7 +168,7 @@ export default function AnalyticsDimensionWorkspacePage() {
   };
 
   if (isCreate) {
-    return <DimensionCreate canCreate={canEdit} onClose={handleClose} onCreated={goTo} />;
+    return <DimensionCreate canCreate={canEdit} onClose={handleClose} />;
   }
 
   const isDefault = !!data?.is_default;
@@ -372,26 +373,28 @@ function DimensionProperties({
   return (
     <>
       <PropertyGroup>
-        <PropertyRow
-          label={t('analytics.fields.name')}
-          required={!axis.is_default}
-          helperText={axis.is_default ? t('analytics.hints.nameDefault', { label: defaultLabel }) : undefined}
-        >
-          <TextField
-            value={name}
-            onChange={(event) => nameDraft.setDraft(event.target.value)}
-            onFocus={nameDraft.onFocus}
-            onBlur={commitName}
-            onKeyDown={blurOnEnter}
-            variant="standard"
-            sx={drawerFieldValueSx}
-            placeholder={axis.is_default ? defaultLabel : t('analytics.placeholders.dimensionName')}
-            disabled={disabled}
-            error={!!errors.name}
-            helperText={errors.name}
-            inputProps={{ 'aria-label': t('analytics.fields.name'), autoComplete: 'off' }}
-          />
-        </PropertyRow>
+        {/* The name is the header title; the default dimension keeps this field, which may be emptied for the translated label. */}
+        {axis.is_default && (
+          <PropertyRow
+            label={t('analytics.fields.name')}
+            helperText={t('analytics.hints.nameDefault', { label: defaultLabel })}
+          >
+            <TextField
+              value={name}
+              onChange={(event) => nameDraft.setDraft(event.target.value)}
+              onFocus={nameDraft.onFocus}
+              onBlur={commitName}
+              onKeyDown={blurOnEnter}
+              variant="standard"
+              sx={drawerFieldValueSx}
+              placeholder={defaultLabel}
+              disabled={disabled}
+              error={!!errors.name}
+              helperText={errors.name}
+              inputProps={{ 'aria-label': t('analytics.fields.name'), autoComplete: 'off' }}
+            />
+          </PropertyRow>
+        )}
         <PropertyRow
           label={t('analytics.fields.code')}
           required
@@ -574,11 +577,9 @@ const EMPTY_FORM: CreateForm = { name: '', code: '', description: '', appliesTo:
 function DimensionCreate({
   canCreate,
   onClose,
-  onCreated,
 }: {
   canCreate: boolean;
   onClose: () => void;
-  onCreated: (id: string) => void;
 }) {
   const { t } = useTranslation(['master-data', 'common']);
   const queryClient = useQueryClient();
@@ -588,6 +589,13 @@ function DimensionCreate({
   const [errors, setErrors] = React.useState<FieldErrors>({});
   const [serverError, setServerError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
+  const leave = useCreationLeave(onClose);
+  // The name is typed in the header; the code follows it.
+  const title = useCreationTitle({
+    requiredMessage: t('analytics.messages.nameRequired'),
+    onCancel: leave,
+    onChange: (name) => setForm((prev) => ({ ...prev, name })),
+  });
 
   const code = codeTouched ? form.code : proposeDimensionCode(form.name);
 
@@ -595,18 +603,17 @@ function DimensionCreate({
 
   const handleCreate = async () => {
     if (!canCreate || submitting) return;
-    const name = form.name.trim();
+    const name = title.require();
     const trimmedCode = code.trim();
     const nextErrors: FieldErrors = {};
-    if (!name) nextErrors.name = t('analytics.messages.nameRequired');
     if (!trimmedCode) nextErrors.code = t('analytics.messages.codeRequired');
     else if (!DIMENSION_CODE_PATTERN.test(trimmedCode)) nextErrors.code = t('analytics.messages.codeInvalid');
     setErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0) return;
+    if (!name || Object.keys(nextErrors).length > 0) return;
     setSubmitting(true);
     setServerError(null);
     try {
-      const saved = await createAnalyticsAxis({
+      await createAnalyticsAxis({
         code: trimmedCode,
         name,
         description: form.description.trim() || null,
@@ -614,11 +621,13 @@ function DimensionCreate({
         required: form.required,
       });
       void queryClient.invalidateQueries({ queryKey: ANALYTICS_AXES_QUERY_KEY, exact: true });
-      onCreated(saved.id);
+      leave();
     } catch (e) {
       const message = getApiErrorMessage(e, t, t('analytics.messages.dimensionCreateFailed'));
       const field = analyticsRefusalField(e);
-      if (field === 'name' || field === 'code' || field === 'description' || field === 'applies_to' || field === 'required') {
+      if (field === 'name') {
+        title.refuse(message);
+      } else if (field === 'code' || field === 'description' || field === 'applies_to' || field === 'required') {
         setErrors({ [field]: message });
       } else {
         setServerError(message);
@@ -636,29 +645,13 @@ function DimensionCreate({
         onTabChange={() => undefined}
         drawerStorageKey={DRAWER_KEY}
         backLabel={t('analytics.title')}
-        onBack={onClose}
-        title={form.name}
+        onBack={leave}
+        {...title.shellProps}
         titleFallback={t('analytics.newDimension')}
         isCreate
-        actions={(
-          <Button variant="contained" size="small" onClick={() => void handleCreate()} disabled={!canCreate || submitting}>
-            {t('common:buttons.create')}
-          </Button>
-        )}
+        actions={<CreationActions onCreate={() => void handleCreate()} onCancel={leave} busy={!canCreate || submitting} />}
       >
         <Stack spacing={1.5} sx={{ maxWidth: 560 }}>
-          <PropertyRow label={t('analytics.fields.name')} required valueSx={{ maxWidth: 520 }}>
-            <TextField
-              value={form.name}
-              onChange={(e) => update({ name: e.target.value })}
-              variant="standard"
-              sx={drawerFieldValueSx}
-              placeholder={t('analytics.placeholders.dimensionName')}
-              error={!!errors.name}
-              helperText={errors.name}
-              inputProps={{ 'aria-label': t('analytics.fields.name'), autoComplete: 'off' }}
-            />
-          </PropertyRow>
           <PropertyRow label={t('analytics.fields.code')} required helperText={t('analytics.hints.codeCreate')} valueSx={{ maxWidth: 520 }}>
             <TextField
               value={code}

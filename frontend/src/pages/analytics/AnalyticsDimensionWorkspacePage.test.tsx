@@ -162,7 +162,10 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     fireEvent.blur(code);
     await waitFor(() => expect(mocked.updateAnalyticsAxis).toHaveBeenCalledWith('ax-nature', { code: 'kind' }));
 
-    const name = screen.getByLabelText('analytics.fields.name');
+    // The name is the header title: no name field in the panel.
+    expect(screen.queryByLabelText('analytics.fields.name')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.editTitle' }));
+    const name = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
     fireEvent.change(name, { target: { value: ' Kind of cost ' } });
     fireEvent.blur(name);
     await waitFor(() => expect(mocked.updateAnalyticsAxis).toHaveBeenCalledWith('ax-nature', { name: 'Kind of cost' }));
@@ -190,12 +193,14 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     expect(screen.queryByText('analytics.fields.order')).toBeNull();
   });
 
-  it('keeps a name on the other dimensions: clearing it restores the stored one', async () => {
+  it('keeps a name on the other dimensions: clearing the title restores the stored one', async () => {
     renderAt('/master-data/analytics/dimensions/ax-nature/overview');
-    const name = await screen.findByLabelText('analytics.fields.name');
+    await screen.findByLabelText('analytics.fields.code');
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.editTitle' }));
+    const name = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
     fireEvent.change(name, { target: { value: '  ' } });
     fireEvent.blur(name);
-    await waitFor(() => expect(name).toHaveValue('Nature'));
+    expect(await screen.findByRole('button', { name: 'common:buttons.editTitle' })).toHaveTextContent('Nature');
     expect(mocked.updateAnalyticsAxis).not.toHaveBeenCalled();
   });
 
@@ -398,11 +403,11 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     expect(navigateMock).toHaveBeenLastCalledWith('/master-data/analytics?axis=ax-nature');
   });
 
-  it('creates with an explicit button and the code proposed from the name, with no position (the server places it last)', async () => {
+  it('creates on Create with the header name and the code proposed from it, with no position (the server places it last)', async () => {
     mocked.createAnalyticsAxis.mockResolvedValue({ ...NATURE, id: 'ax-new' });
     renderAt('/master-data/analytics/dimensions/new/overview');
     expect(screen.queryByRole('complementary')).toBeNull();
-    fireEvent.change(screen.getByLabelText('analytics.fields.name'), { target: { value: 'Nature de coût' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Nature de coût' } });
     expect(screen.getByLabelText('analytics.fields.code')).toHaveValue('nature-de-cout');
     expect(screen.queryByLabelText('analytics.fields.order')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
@@ -413,13 +418,13 @@ describe('AnalyticsDimensionWorkspacePage', () => {
       applies_to: null,
       required: false,
     }));
-    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/analytics/dimensions/ax-new/overview'));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/analytics'));
   });
 
   it('creates a dimension for one type of line', async () => {
     mocked.createAnalyticsAxis.mockResolvedValue({ ...NATURE, id: 'ax-new', applies_to: 'capex' });
     renderAt('/master-data/analytics/dimensions/new/overview');
-    fireEvent.change(screen.getByLabelText('analytics.fields.name'), { target: { value: 'Investment type' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Investment type' } });
     expect(usageSelect()).toHaveTextContent('master-data:shared.lineTypeUsage.both');
     await pickUsage('master-data:shared.lineTypeUsage.capex');
     expect(usageSelect()).toHaveTextContent('master-data:shared.lineTypeUsage.capex');
@@ -594,7 +599,7 @@ describe('AnalyticsDimensionWorkspacePage', () => {
   it('creates a required dimension', async () => {
     mocked.createAnalyticsAxis.mockResolvedValue({ ...NATURE, id: 'ax-new', required: true });
     renderAt('/master-data/analytics/dimensions/new/overview');
-    fireEvent.change(screen.getByLabelText('analytics.fields.name'), { target: { value: 'Investment type' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Investment type' } });
     expect(requiredSwitch()).not.toBeChecked();
     fireEvent.click(requiredSwitch());
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
@@ -611,7 +616,7 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     renderAt('/master-data/analytics/dimensions/new/overview');
     const code = screen.getByLabelText('analytics.fields.code');
     fireEvent.change(code, { target: { value: 'nature' } });
-    fireEvent.change(screen.getByLabelText('analytics.fields.name'), { target: { value: 'Cost nature' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Cost nature' } });
     expect(code).toHaveValue('nature');
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     const message = await screen.findByText('A dimension with code nature already exists.');

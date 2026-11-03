@@ -414,10 +414,23 @@ describe('SupplierWorkspacePage', () => {
     expect(mocked.get.mock.calls.filter(([url]) => url === '/suppliers/s-1')).toHaveLength(loadsBefore);
   });
 
-  it('creates a supplier and opens it with the list parameters', async () => {
+  it('opens with the name to type in the header, and no name field in the form', async () => {
+    renderAt('/master-data/suppliers/new/overview');
+    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    expect(title).toHaveFocus();
+    expect(title).toHaveAttribute('placeholder', 'suppliers.newSupplier');
+    expect(screen.queryByLabelText('suppliers.fields.name')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'common:buttons.close' })).toBeNull();
+    expect(screen.getByRole('tab', { name: 'shared.labels.contacts' })).toBeDisabled();
+  });
+
+  it('creates the supplier on Create with the header name, then goes back to the list', async () => {
     mocked.post.mockResolvedValueOnce({ data: { ...SUPPLIER, id: 's-new' } });
     renderAt('/master-data/suppliers/new/overview?sort=name%3AASC');
-    fireEvent.change(screen.getByLabelText('suppliers.fields.name'), { target: { value: ' Initech ' } });
+    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    fireEvent.change(title, { target: { value: ' Initech ' } });
+    fireEvent.blur(title);
+    expect(mocked.post).not.toHaveBeenCalled();
     fireEvent.change(screen.getByLabelText('suppliers.fields.erpSupplierId'), { target: { value: 'SUP-077' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/suppliers', {
@@ -427,43 +440,54 @@ describe('SupplierWorkspacePage', () => {
       status: 'enabled',
       disabled_at: null,
     }));
-    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/suppliers/s-new/overview?sort=name%3AASC'));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/suppliers?sort=name%3AASC'));
   });
 
-  it('shows the errors of the create form on the name field', async () => {
+  it('shows a missing or taken name under the header title and gives it the focus', async () => {
     renderAt('/master-data/suppliers/new/overview');
+    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    fireEvent.change(screen.getByLabelText('suppliers.fields.erpSupplierId'), { target: { value: 'SUP-077' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('suppliers.messages.nameRequired')).toBeInTheDocument();
-    expect(screen.getByLabelText('suppliers.fields.name')).toHaveFocus();
+    expect(title).toHaveFocus();
     expect(mocked.post).not.toHaveBeenCalled();
 
     mocked.post.mockRejectedValueOnce(duplicate);
-    fireEvent.change(screen.getByLabelText('suppliers.fields.name'), { target: { value: 'Acme Software' } });
+    fireEvent.change(title, { target: { value: 'Acme Software' } });
     expect(screen.queryByText('suppliers.messages.nameRequired')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('suppliers.messages.nameTaken')).toBeInTheDocument();
+    expect(title).toHaveFocus();
     expect(navigateMock).not.toHaveBeenCalled();
   });
 
-  it('moves through the create form with Tab up to Create', async () => {
+  it('leaves without creating on Cancel, and on Escape in the empty title', async () => {
+    renderAt('/master-data/suppliers/new/overview?sort=name%3AASC');
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.cancel' }));
+    expect(navigateMock).toHaveBeenCalledWith('/master-data/suppliers?sort=name%3AASC');
+    navigateMock.mockClear();
+    fireEvent.keyDown(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { key: 'Escape' });
+    expect(navigateMock).toHaveBeenCalledWith('/master-data/suppliers?sort=name%3AASC');
+    expect(mocked.post).not.toHaveBeenCalled();
+  });
+
+  it('moves from the header name to the form fields with Tab', async () => {
     const user = userEvent.setup();
     renderAt('/master-data/suppliers/new/overview');
-    const name = screen.getByLabelText('suppliers.fields.name');
-    name.focus();
+    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    await user.type(title, 'Initech');
     const expectNext = async (element: HTMLElement) => {
       await user.tab();
       expect(document.activeElement).toBe(element);
     };
+    // Cancel and Create sit in the title row, then the tab bar, then the fields.
+    await expectNext(screen.getByRole('button', { name: 'common:buttons.cancel' }));
+    await expectNext(screen.getByRole('button', { name: 'common:buttons.create' }));
+    await expectNext(screen.getByRole('tab', { name: 'shared.labels.overview' }));
     await expectNext(screen.getByLabelText('suppliers.fields.erpSupplierId'));
     await expectNext(screen.getByLabelText('suppliers.fields.notes'));
-    // Create sits in the title row, above the fields, as on every create page of the shell.
-    await expectNext(document.body);
-    await expectNext(within(screen.getByRole('banner')).getByRole('button', { name: 'suppliers.title' }));
-    await expectNext(screen.getByRole('button', { name: 'common:buttons.create' }));
-    await expectNext(screen.getByRole('button', { name: 'common:buttons.close' }));
-    // The tab bar (the contacts tab waits for the supplier), then the first field again.
-    await expectNext(screen.getByRole('tab', { name: 'shared.labels.overview' }));
-    await expectNext(name);
+    expect(title).toHaveValue('Initech');
+    expect(mocked.post).not.toHaveBeenCalled();
   });
 });
 

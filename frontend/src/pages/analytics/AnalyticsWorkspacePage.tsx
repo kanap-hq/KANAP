@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, Button, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import { CreationActions, useCreationLeave, useCreationTitle } from '../../components/workspace/creation';
 import { useAuth } from '../../auth/AuthContext';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
 import { KanapDialog, PropertyGroup, PropertyRow } from '../../components/design';
@@ -185,11 +186,6 @@ export default function AnalyticsWorkspacePage() {
         canCreate={canEdit}
         requestedAxisId={searchParams.get('axis')}
         onClose={handleClose}
-        onCreated={(newId, newAxisId) => {
-          const sp = new URLSearchParams(listContext);
-          sp.set('axis', newAxisId);
-          goTo(newId, sp.toString());
-        }}
       />
     );
   }
@@ -389,18 +385,17 @@ function ValueCreate({
   canCreate,
   requestedAxisId,
   onClose,
-  onCreated,
 }: {
   canCreate: boolean;
   requestedAxisId: string | null;
   onClose: () => void;
-  onCreated: (id: string, axisId: string) => void;
 }) {
   const { t } = useTranslation(['master-data', 'common']);
   const queryClient = useQueryClient();
   const axes = useAnalyticsAxes();
   const [chosenAxisId, setChosenAxisId] = React.useState<string | null>(null);
-  const [name, setName] = React.useState('');
+  const leave = useCreationLeave(onClose);
+  const title = useCreationTitle({ requiredMessage: t('analytics.messages.nameRequired'), onCancel: leave });
   const [description, setDescription] = React.useState('');
   const [appliesTo, setAppliesTo] = React.useState<LineType | null>(null);
   const [errors, setErrors] = React.useState<FieldErrors>({});
@@ -424,16 +419,15 @@ function ValueCreate({
 
   const handleCreate = async () => {
     if (!canCreate || submitting) return;
-    const trimmed = name.trim();
+    const trimmed = title.require();
     const nextErrors: FieldErrors = {};
-    if (!trimmed) nextErrors.name = t('analytics.messages.nameRequired');
     if (axes.enabled.length > 0 && !axisId) nextErrors.axis_id = t('analytics.messages.dimensionRequired');
     setErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0) return;
+    if (!trimmed || Object.keys(nextErrors).length > 0) return;
     setSubmitting(true);
     setServerError(null);
     try {
-      const saved = await createAnalyticsValue({
+      await createAnalyticsValue({
         ...(axisId ? { axis_id: axisId } : {}),
         name: trimmed,
         description: description.trim() || null,
@@ -442,11 +436,12 @@ function ValueCreate({
       void queryClient.invalidateQueries({ queryKey: ['analytics-categories'] });
       void queryClient.invalidateQueries({ queryKey: ['analytics-ids'] });
       void queryClient.invalidateQueries({ queryKey: ANALYTICS_AXES_QUERY_KEY });
-      onCreated(saved.id, saved.axis_id ?? axisId ?? '');
+      leave();
     } catch (e) {
       const message = getApiErrorMessage(e, t, t('analytics.messages.createFailed'));
       const field = analyticsRefusalField(e);
-      if (field === 'name' || field === 'description' || field === 'axis_id' || field === 'applies_to') setErrors({ [field]: message });
+      if (field === 'name') title.refuse(message);
+      else if (field === 'description' || field === 'axis_id' || field === 'applies_to') setErrors({ [field]: message });
       else setServerError(message);
     } finally {
       setSubmitting(false);
@@ -461,20 +456,11 @@ function ValueCreate({
         onTabChange={() => undefined}
         drawerStorageKey={DRAWER_KEY}
         backLabel={t('analytics.title')}
-        onBack={onClose}
-        title={name}
+        onBack={leave}
+        {...title.shellProps}
         titleFallback={t('analytics.newValue')}
         isCreate
-        actions={(
-          <Button
-            variant="contained"
-            size="small"
-            onClick={() => void handleCreate()}
-            disabled={!canCreate || submitting || !axes.ready}
-          >
-            {t('common:buttons.create')}
-          </Button>
-        )}
+        actions={<CreationActions onCreate={() => void handleCreate()} onCancel={leave} busy={!canCreate || submitting || !axes.ready} />}
       >
         <Stack spacing={1.5} sx={{ maxWidth: 560 }}>
           <PropertyRow label={t('analytics.fields.dimension')} required valueSx={{ maxWidth: 520 }}>
@@ -503,18 +489,6 @@ function ValueCreate({
               excluded={excluded}
               error={errors.applies_to}
               onChange={setAppliesTo}
-            />
-          </PropertyRow>
-          <PropertyRow label={t('analytics.fields.name')} required valueSx={{ maxWidth: 520 }}>
-            <TextField
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              variant="standard"
-              sx={drawerFieldValueSx}
-              placeholder={t('analytics.placeholders.valueName')}
-              error={!!errors.name}
-              helperText={errors.name}
-              inputProps={{ 'aria-label': t('analytics.fields.name'), autoComplete: 'off' }}
             />
           </PropertyRow>
           <PropertyRow label={t('analytics.fields.description')} valueSx={{ maxWidth: 520 }}>

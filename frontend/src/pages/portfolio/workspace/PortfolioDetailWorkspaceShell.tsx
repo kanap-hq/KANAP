@@ -72,6 +72,8 @@ type PortfolioDetailWorkspaceShellProps = {
   titleOnCancel?: () => void;
   /** Each new value moves the focus to the title (Create on an empty title). */
   titleFocusRequest?: number;
+  /** Each new seed puts its value in the title being typed (`EditableTitle` `draftSeed`). */
+  titleDraftSeed?: { value: string; n: number };
   /** Omitted (e.g. on a create page), the shell draws no Properties tab and no drawer. */
   properties?: React.ReactNode;
   tabs: PortfolioDetailWorkspaceTab[];
@@ -215,6 +217,7 @@ export default function PortfolioDetailWorkspaceShell({
   titleMaxLength,
   titleOnCancel,
   titleFocusRequest,
+  titleDraftSeed,
   titleRequiredMessage,
   properties,
   tabs,
@@ -444,6 +447,7 @@ export default function PortfolioDetailWorkspaceShell({
                         emphasizeEmpty={titleAutoEdit}
                         onCancel={titleOnCancel}
                         focusRequest={titleFocusRequest}
+                        draftSeed={titleDraftSeed}
                       />
                     </>
                   )}

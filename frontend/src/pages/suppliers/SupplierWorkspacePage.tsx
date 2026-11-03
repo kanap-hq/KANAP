@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, Button, IconButton, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, IconButton, Stack, TextField, Typography } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import CloseIcon from '@mui/icons-material/Close';
 import api from '../../api';
@@ -27,6 +27,7 @@ import { getDotColor } from '../../utils/statusColors';
 import { SupplierNameTitle, SupplierNotes, SupplierTextRow } from './SupplierFields';
 import SupplierContactsTab, { useSupplierContacts } from './SupplierContactsTab';
 import RecordDeleteButton from '../../components/workspace/RecordDeleteButton';
+import { CreationActions, useCreationReturn, useCreationTitle } from '../../components/workspace/creation';
 import RecordUsagesSection, { scrollToUsages, useRecordUsages } from '../../components/usages/RecordUsagesSection';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
@@ -367,44 +368,37 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
   );
 }
 
-type CreateValues = { name: string; erp_supplier_id: string; notes: string };
+type CreateValues = { erp_supplier_id: string; notes: string };
 
 function SupplierCreate() {
   const { t } = useTranslation(['master-data', 'common']);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [searchParams] = useSearchParams();
   const { hasLevel } = useAuth();
   const canCreate = hasLevel('suppliers', 'manager');
   const withContext = useListContext();
 
-  const [values, setValues] = React.useState<CreateValues>({ name: '', erp_supplier_id: '', notes: '' });
-  const [errors, setErrors] = React.useState<FieldErrors>({});
+  const [values, setValues] = React.useState<CreateValues>({ erp_supplier_id: '', notes: '' });
   const [serverError, setServerError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
-  const nameRef = React.useRef<HTMLInputElement>(null);
+  // Where the creation started: Create and Cancel go back there.
+  const creationReturn = useCreationReturn(withContext(SUPPLIERS_PATH));
+  const close = () => navigate(creationReturn);
+  const title = useCreationTitle({ requiredMessage: t('suppliers.messages.nameRequired'), onCancel: close });
 
-  // A field the user changes loses its error until the next Create.
   const set = (field: keyof CreateValues, value: string) => {
     setValues((prev) => ({ ...prev, [field]: value }));
-    setErrors((prev) => (prev[field] ? { ...prev, [field]: undefined } : prev));
   };
 
-  const close = () => navigate(withContext(SUPPLIERS_PATH));
-
+  // Create sends the supplier with the header's name, then goes back where the creation started.
   const handleCreate = async () => {
     if (!canCreate || submitting) return;
-    const name = values.name.trim();
-    if (!name) {
-      setErrors({ name: t('suppliers.messages.nameRequired') });
-      nameRef.current?.focus();
-      return;
-    }
-    setErrors({});
+    const name = title.require();
+    if (!name) return;
     setSubmitting(true);
     setServerError(null);
     try {
-      const res = await api.post<Supplier>('/suppliers', {
+      await api.post<Supplier>('/suppliers', {
         name,
         erp_supplier_id: values.erp_supplier_id.trim() || null,
         notes: values.notes.trim() || null,
@@ -412,29 +406,23 @@ function SupplierCreate() {
         disabled_at: null,
       });
       void queryClient.invalidateQueries({ queryKey: ['suppliers'] });
-      // The new supplier opens, with the list's address parameters, as before.
-      navigate(`${SUPPLIERS_PATH}/${res.data.id}/overview?${searchParams.toString()}`);
+      close();
     } catch (e) {
-      if (isDuplicateError(e)) {
-        setErrors({ name: t('suppliers.messages.nameTaken') });
-        nameRef.current?.focus();
-      } else setServerError(getApiErrorMessage(e, t, t('suppliers.messages.createFailed')));
+      if (isDuplicateError(e)) title.refuse(t('suppliers.messages.nameTaken'));
+      else setServerError(getApiErrorMessage(e, t, t('suppliers.messages.createFailed')));
     } finally {
       setSubmitting(false);
     }
   };
 
-  const textRow = (field: 'name' | 'erp_supplier_id', label: string, placeholder: string, required = false) => (
-    <PropertyRow label={label} required={required}>
+  const textRow = (field: 'erp_supplier_id', label: string, placeholder: string) => (
+    <PropertyRow label={label}>
       <TextField
         value={values[field]}
         onChange={(event) => set(field, event.target.value)}
         variant="standard"
         sx={drawerFieldValueSx}
         placeholder={placeholder}
-        error={!!errors[field]}
-        helperText={errors[field]}
-        inputRef={field === 'name' ? nameRef : undefined}
         inputProps={{ 'aria-label': label, autoComplete: 'off' }}
       />
     </PropertyRow>
@@ -452,24 +440,13 @@ function SupplierCreate() {
         drawerStorageKey={DRAWER_KEY}
         backLabel={t('suppliers.title')}
         onBack={close}
-        title={values.name}
+        {...title.shellProps}
         titleFallback={t('suppliers.newSupplier')}
         isCreate
-        actions={(
-          <>
-            <Button variant="contained" size="small" onClick={() => void handleCreate()} disabled={!canCreate || submitting}>
-              {t('common:buttons.create')}
-            </Button>
-            <IconButton aria-label={t('common:buttons.close')} title={t('common:buttons.close')} size="small" onClick={close}>
-              <CloseIcon />
-            </IconButton>
-          </>
-        )}
+        actions={<CreationActions onCreate={() => void handleCreate()} onCancel={close} busy={!canCreate || submitting} />}
       >
         <Stack spacing={3} sx={{ maxWidth: 560 }}>
           <Box>
-            <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', mb: 1.5 }}>{t('suppliers.contactsTabHint')}</Typography>
-            {textRow('name', t('suppliers.fields.name'), t('suppliers.placeholders.name'), true)}
             {textRow('erp_supplier_id', t('suppliers.fields.erpSupplierId'), t('suppliers.placeholders.erpSupplierId'))}
           </Box>
           <PropertyRow label={t('suppliers.fields.notes')} valueSx={{ maxWidth: 560 }}>

@@ -372,7 +372,7 @@ describe('AnalyticsWorkspacePage', () => {
     expect(screen.queryByRole('complementary')).toBeNull();
     const dimension = screen.getByLabelText('analytics.fields.dimension');
     expect(within(dimension.parentElement as HTMLElement).getByRole('combobox')).toHaveTextContent('Nature');
-    fireEvent.change(screen.getByLabelText('analytics.fields.name'), { target: { value: ' Hardware ' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: ' Hardware ' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(mocked.createAnalyticsValue).toHaveBeenCalledWith({
       axis_id: 'ax-nature',
@@ -380,7 +380,7 @@ describe('AnalyticsWorkspacePage', () => {
       description: null,
       applies_to: null,
     }));
-    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/analytics/v-new/overview?sort=name%3AASC&axis=ax-nature'));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/analytics?sort=name%3AASC&axis=ax-nature'));
   });
 
   it('offers enabled dimensions only, and falls back to the default for a disabled one', async () => {
@@ -393,7 +393,7 @@ describe('AnalyticsWorkspacePage', () => {
     const options = await screen.findAllByRole('option');
     expect(options.map((o) => o.textContent)).toEqual(['Analytics dimension', 'Nature']);
     fireEvent.click(options[1]);
-    fireEvent.change(screen.getByLabelText('analytics.fields.name'), { target: { value: 'Hardware' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Hardware' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(mocked.createAnalyticsValue).toHaveBeenCalledWith(expect.objectContaining({ axis_id: 'ax-nature' })));
   });
@@ -403,7 +403,7 @@ describe('AnalyticsWorkspacePage', () => {
     renderAt('/master-data/analytics/new/overview?axis=ax-nature');
     expect(usageSelect()).toHaveTextContent('master-data:shared.lineTypeUsage.both');
     await pickUsage('master-data:shared.lineTypeUsage.capex');
-    fireEvent.change(screen.getByLabelText('analytics.fields.name'), { target: { value: 'Leasing' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Leasing' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(mocked.createAnalyticsValue).toHaveBeenCalledWith({
       axis_id: 'ax-nature',
@@ -434,7 +434,7 @@ describe('AnalyticsWorkspacePage', () => {
     expect(within(listbox).getByRole('option', { name: 'master-data:shared.lineTypeUsage.capex' })).not.toHaveAttribute('aria-disabled');
     expect(within(listbox).getByRole('option', { name: 'master-data:shared.lineTypeUsage.both' })).not.toHaveAttribute('aria-disabled');
     fireEvent.keyDown(listbox, { key: 'Escape' });
-    fireEvent.change(screen.getByLabelText('analytics.fields.name'), { target: { value: 'Leasing' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Leasing' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(mocked.createAnalyticsValue).toHaveBeenCalledWith(expect.objectContaining({ axis_id: 'ax-nature', applies_to: null })));
     // A refusal on the field shows under it.
