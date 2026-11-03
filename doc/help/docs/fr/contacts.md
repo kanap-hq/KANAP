@@ -85,7 +85,7 @@ Cliquez sur une ligne pour ouvrir sa fiche. Une liste montre jusqu'à 50 éléme
 
 ### Créer un contact
 
-Cliquez sur **Nouveau** dans la liste. Saisissez le prénom et le nom dans le titre en haut de la page, renseignez l'e-mail (obligatoire) et les autres champs, puis cliquez sur **Créer**. Choisir un fournisseur règle le type de contact sur **Commercial**, que vous pouvez changer avant de créer. Vous revenez à votre point de départ une fois le contact créé. **Annuler**, ou Échap tant que le nom est vide, part sans rien créer.
+Cliquez sur **Nouveau** dans la liste. La page du nouveau contact s'ouvre. Saisissez le prénom et le nom dans le titre en haut de la page, renseignez l'e-mail (obligatoire) et les autres champs, puis cliquez sur **Créer**. Choisir un fournisseur règle le type de contact sur **Commercial**, que vous pouvez changer avant de créer. Vous revenez à votre point de départ une fois le contact créé. **Annuler**, ou Échap tant que le nom est vide, part sans rien créer.
 
 ---
 

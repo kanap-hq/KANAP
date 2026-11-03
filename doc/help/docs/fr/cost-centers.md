@@ -93,7 +93,7 @@ Cliquez sur n'importe quelle cellule pour ouvrir l'espace de travail.
 
 ## Créer un centre de coûts
 
-Cliquez sur **Nouveau**. Saisissez le nom dans le titre en haut de la page, remplissez les champs, puis cliquez sur **Créer**. Un nouvel élément est activé.
+Cliquez sur **Nouveau**. La page du nouvel élément s'ouvre, son panneau des propriétés ouvert. Saisissez le nom dans le titre en haut de la page, remplissez les champs, puis cliquez sur **Créer**. Un nouvel élément est activé.
 
 Le **Type** commence sur **Centre de coûts**. Choisissez **Groupe** pour créer un groupe : le champ **Société** disparaît alors.
 

@@ -127,7 +127,7 @@ Haga clic en cualquier celda para abrir el espacio de trabajo del valor.
 
 ### Crear una dimensión
 
-Haga clic en **Nuevo** en la barra de selección. Escriba el nombre en el título de la parte superior de la página, complete los campos y haga clic en **Crear**. Vuelve al punto de partida. Una dimensión nueva está activada. **Cancelar**, o Escape en el título vacío, sale sin crear nada.
+Haga clic en **Nuevo** en la barra de selección. Se abre la página de la dimensión nueva, con su panel de propiedades abierto. Escriba el nombre en el título de la parte superior de la página, complete los campos y haga clic en **Crear**. Vuelve al punto de partida. Una dimensión nueva está activada. **Cancelar**, o Escape en el título vacío, sale sin crear nada.
 
 - El nombre es obligatorio.
 - **Código** se propone a partir del nombre: en minúsculas, sin acentos y con los espacios sustituidos por `-`. Puede cambiarlo antes de crear la dimensión.
@@ -242,7 +242,7 @@ Para conservar los valores en las líneas, desactive la dimensión en su lugar.
 
 ### Crear un valor
 
-Haga clic en **Nuevo valor**. El campo **Dimensión** empieza en la dimensión seleccionada en la página y solo ofrece las dimensiones activadas. Escriba el nombre en el título de la parte superior de la página y, si lo desea, una **Descripción**. **Usada para** empieza en **OPEX y CAPEX**: cámbielo si el valor solo sirve para un tipo de línea. Después haga clic en **Crear**. Vuelve al punto de partida. Un valor nuevo está activado. **Cancelar**, o Escape en el título vacío, sale sin crear nada.
+Haga clic en **Nuevo valor**. Se abre la página del valor nuevo, con su panel de propiedades abierto. El campo **Dimensión** empieza en la dimensión seleccionada en la página y solo ofrece las dimensiones activadas. Escriba el nombre en el título de la parte superior de la página y, si lo desea, una **Descripción**. **Usada para** empieza en **OPEX y CAPEX**: cámbielo si el valor solo sirve para un tipo de línea. Después haga clic en **Crear**. Vuelve al punto de partida. Un valor nuevo está activado. **Cancelar**, o Escape en el título vacío, sale sin crear nada.
 
 ### El espacio de trabajo del valor
 

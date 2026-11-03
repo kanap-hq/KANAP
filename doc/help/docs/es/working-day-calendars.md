@@ -72,7 +72,7 @@ Haga clic en cualquier celda para abrir el espacio de trabajo.
 
 ## Crear un calendario
 
-Haga clic en **Nuevo** y después:
+Haga clic en **Nuevo**. Se abre la página del calendario nuevo, con su panel de propiedades abierto. Después:
 
 1. **País** (opcional): escriba para buscar, por nombre o por el código de dos letras. Con un país, el calendario es estándar
 2. **Región**: se muestra cuando el país tiene regiones, por ejemplo los estados alemanes o los departamentos franceses con sus propios festivos. Conserve **Todo el país** o elija una región
@@ -80,7 +80,7 @@ Haga clic en **Nuevo** y después:
 4. **Descripción**: opcional
 5. Haga clic en **Crear**
 
-Un calendario nuevo está activado, y vuelve al punto de partida. **Cancelar**, o Escape en el título vacío, sale sin crear nada. Un calendario estándar ya contiene los días laborables de todos los años. En uno personalizado, introdúzcalos año por año.
+Un calendario nuevo está activado, y vuelve al punto de partida. **Cancelar**, o Escape en el título vacío, sale sin crear nada. Un calendario estándar contiene los días laborables de todos los años: se muestran una vez creado. En uno personalizado, introdúzcalos año por año.
 
 El país y la región se definen una sola vez, al crear el calendario. Para seguir otro país, cree otro calendario.
 

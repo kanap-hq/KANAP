@@ -72,7 +72,7 @@ Cliquez sur n'importe quelle cellule pour ouvrir l'espace de travail.
 
 ## Créer un calendrier
 
-Cliquez sur **Nouveau**, puis :
+Cliquez sur **Nouveau**. La page du nouveau calendrier s'ouvre, son panneau des propriétés ouvert. Ensuite :
 
 1. **Pays** (facultatif) : tapez pour rechercher, par nom ou par code à deux lettres. Avec un pays, le calendrier est standard
 2. **Région** : affichée lorsque le pays a des régions, par exemple les Länder allemands ou les départements français qui ont leurs propres jours fériés. Gardez **Tout le pays**, ou choisissez une région
@@ -80,7 +80,7 @@ Cliquez sur **Nouveau**, puis :
 4. **Description** : facultative
 5. Cliquez sur **Créer**
 
-Un nouveau calendrier est activé, et vous revenez à votre point de départ. **Annuler**, ou Échap dans le titre vide, part sans rien créer. Un calendrier standard contient déjà les jours ouvrés de chaque année. Pour un calendrier personnalisé, saisissez-les année par année.
+Un nouveau calendrier est activé, et vous revenez à votre point de départ. **Annuler**, ou Échap dans le titre vide, part sans rien créer. Un calendrier standard contient les jours ouvrés de chaque année : ils s'affichent une fois le calendrier créé. Pour un calendrier personnalisé, saisissez-les année par année.
 
 Le pays et la région se définissent une seule fois, à la création. Pour suivre un autre pays, créez un autre calendrier.
 

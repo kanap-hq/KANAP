@@ -72,7 +72,7 @@ Klicken Sie auf eine beliebige Zelle, um den Arbeitsbereich zu öffnen.
 
 ## Einen Kalender erstellen
 
-Klicken Sie auf **Neu** und dann:
+Klicken Sie auf **Neu**. Die Seite des neuen Kalenders öffnet sich mit geöffnetem Eigenschaftenbereich. Dann:
 
 1. **Land** (optional): Tippen Sie, um nach Name oder zweistelligem Code zu suchen. Mit einem Land ist der Kalender ein Standardkalender
 2. **Region**: erscheint, wenn das Land Regionen hat, zum Beispiel die deutschen Bundesländer oder die französischen Départements mit eigenen Feiertagen. Behalten Sie **Ganzes Land** oder wählen Sie eine Region
@@ -80,7 +80,7 @@ Klicken Sie auf **Neu** und dann:
 4. **Beschreibung**: optional
 5. Klicken Sie auf **Erstellen**
 
-Ein neuer Kalender ist aktiviert, und Sie kehren dorthin zurück, wo Sie begonnen haben. **Abbrechen** oder Escape im leeren Titel verlässt die Seite, ohne etwas zu erstellen. Ein Standardkalender enthält bereits die Arbeitstage jedes Jahres. Bei einem individuellen Kalender geben Sie sie Jahr für Jahr ein.
+Ein neuer Kalender ist aktiviert, und Sie kehren dorthin zurück, wo Sie begonnen haben. **Abbrechen** oder Escape im leeren Titel verlässt die Seite, ohne etwas zu erstellen. Ein Standardkalender enthält die Arbeitstage jedes Jahres: Sie werden angezeigt, sobald er erstellt ist. Bei einem individuellen Kalender geben Sie sie Jahr für Jahr ein.
 
 Land und Region werden einmal festgelegt, beim Anlegen. Um einem anderen Land zu folgen, legen Sie einen weiteren Kalender an.
 

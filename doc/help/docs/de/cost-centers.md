@@ -93,7 +93,7 @@ Klicken Sie auf eine beliebige Zelle, um den Arbeitsbereich zu öffnen.
 
 ## Eine Kostenstelle erstellen
 
-Klicken Sie auf **Neu**. Geben Sie den Namen im Titel oben auf der Seite ein, füllen Sie die Felder aus und klicken Sie dann auf **Erstellen**. Ein neues Element ist aktiviert.
+Klicken Sie auf **Neu**. Die Seite des neuen Elements öffnet sich mit geöffnetem Eigenschaftenbereich. Geben Sie den Namen im Titel oben auf der Seite ein, füllen Sie die Felder aus und klicken Sie dann auf **Erstellen**. Ein neues Element ist aktiviert.
 
 Der **Typ** steht zunächst auf **Kostenstelle**. Wählen Sie **Gruppe**, um eine Gruppe zu erstellen: Das Feld **Unternehmen** verschwindet dann.
 

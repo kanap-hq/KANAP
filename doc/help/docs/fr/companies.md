@@ -116,7 +116,7 @@ L'onglet Vue d'ensemble contient l'adresse, les informations d'immatriculation e
     - **Numéro de TVA** : numéro d'identification TVA
 - **Notes** : notes en texte libre
 
-**Créer une société** : **Nouveau** ouvre un formulaire unique. Saisissez le nom dans le titre en haut de la page, puis renseignez **Pays**, **Devise de base**, **Plan comptable**, **Ville**, les autres champs d'adresse, les champs d'immatriculation et **Notes**. Le choix d'un pays renseigne le **Plan comptable** à votre place : le plan par défaut du pays s'il en existe un, sinon un plan global. Vous pouvez le modifier avant d'enregistrer. Cliquez sur **Créer** pour enregistrer la société : vous revenez à votre point de départ. **Annuler**, ou Échap dans le titre vide, part sans rien créer.
+**Créer une société** : **Nouveau** ouvre la page de la nouvelle société, son panneau des propriétés ouvert. Saisissez le nom dans le titre en haut de la page, puis renseignez **Pays**, **Devise de base**, **Plan comptable**, **Ville**, les autres champs d'adresse, les champs d'immatriculation et **Notes**. Le choix d'un pays renseigne le **Plan comptable** à votre place : le plan par défaut du pays s'il en existe un, sinon un plan global. Vous pouvez le modifier avant d'enregistrer. Cliquez sur **Créer** pour enregistrer la société : un champ obligatoire manquant est signalé, sinon vous revenez à votre point de départ. Les autres onglets deviennent disponibles une fois la société créée. **Annuler**, ou Échap dans le titre vide, part sans rien créer.
 
 ---
 

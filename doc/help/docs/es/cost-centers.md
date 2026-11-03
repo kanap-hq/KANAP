@@ -93,7 +93,7 @@ Haga clic en cualquier celda para abrir el espacio de trabajo.
 
 ## Crear un centro de coste
 
-Haga clic en **Nuevo**. Escriba el nombre en el título de la parte superior de la página, complete los campos y haga clic en **Crear**. Un elemento nuevo está activado.
+Haga clic en **Nuevo**. Se abre la página del elemento nuevo, con su panel de propiedades abierto. Escriba el nombre en el título de la parte superior de la página, complete los campos y haga clic en **Crear**. Un elemento nuevo está activado.
 
 El **Tipo** empieza en **Centro de coste**. Elija **Grupo** para crear un grupo: el campo **Empresa** desaparece entonces.
 

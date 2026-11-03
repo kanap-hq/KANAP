@@ -4,7 +4,7 @@ Las Ubicaciones documentan dónde está alojada su infraestructura IT: centros d
 
 ## Primeros pasos
 
-Navegue a **Panorama IT > Ubicaciones** para abrir el registro de ubicaciones. Haga clic en **Añadir ubicación** para crear una nueva entrada. Escriba el nombre en el título de la parte superior de la página, elija el **Tipo de alojamiento** y haga clic en **Crear**: vuelve al punto de partida. **Cancelar**, o Escape en el título vacío, sale sin crear nada.
+Navegue a **Panorama IT > Ubicaciones** para abrir el registro de ubicaciones. Haga clic en **Añadir ubicación** para crear una nueva entrada: se abre la página de la ubicación nueva, con su panel de propiedades abierto. Escriba el nombre en el título de la parte superior de la página, elija el **Tipo de alojamiento**, rellene los demás campos y haga clic en **Crear**: vuelve al punto de partida. **Cancelar**, o Escape en el título vacío, sale sin crear nada.
 
 **Campos obligatorios**:
 - **Código**: Un identificador corto único (p. ej., `DC-EU-WEST`, `AWS-US-EAST-1`)

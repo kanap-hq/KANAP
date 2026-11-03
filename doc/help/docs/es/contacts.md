@@ -85,7 +85,7 @@ Haga clic en una fila para abrir su página. Una lista muestra hasta 50 elemento
 
 ### Crear un contacto
 
-Haga clic en **Nuevo** en la lista. Escriba el nombre y los apellidos en el título de la parte superior de la página, indique el correo electrónico (obligatorio) y los demás campos, y haga clic en **Crear**. Elegir un proveedor fija el tipo de contacto en **Comercial**, que puede cambiar antes de crear. Vuelve al punto de partida una vez creado el contacto. **Cancelar**, o Escape mientras el nombre está vacío, sale sin crear nada.
+Haga clic en **Nuevo** en la lista. Se abre la página del contacto nuevo. Escriba el nombre y los apellidos en el título de la parte superior de la página, indique el correo electrónico (obligatorio) y los demás campos, y haga clic en **Crear**. Elegir un proveedor fija el tipo de contacto en **Comercial**, que puede cambiar antes de crear. Vuelve al punto de partida una vez creado el contacto. **Cancelar**, o Escape mientras el nombre está vacío, sale sin crear nada.
 
 ---
 
