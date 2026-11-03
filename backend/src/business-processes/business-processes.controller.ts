@@ -152,7 +152,7 @@ export class BusinessProcessesController {
     this.assertCreationToken(id, body?.token, req);
     const manager = req?.queryRunner?.manager;
     await assertCreatorAloneSinceCreation(manager, req?.tenant?.id ?? '', 'business_processes', id, req?.user?.sub ?? '', { lock: true });
-    await this.deleteSvc.cancelCreation(id, { manager, userId: req.user?.sub ?? null });
+    await this.deleteSvc.deleteBeingCreated(id, { manager, userId: req.user?.sub ?? null });
   }
 
   @ReservedToUnscopedDataAccess()

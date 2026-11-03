@@ -96,7 +96,7 @@ export class BusinessProcessesDeleteService extends BaseDeleteService<BusinessPr
    * alone since its creation): the application links made meanwhile are removed first, each
    * audited as an unlink, so they do not refuse the delete; then the usual delete.
    */
-  async cancelCreation(id: string, opts: { manager: EntityManager; userId: string | null }): Promise<void> {
+  async deleteBeingCreated(id: string, opts: { manager: EntityManager; userId: string | null }): Promise<void> {
     const removed: Array<{ application_id: string }> = await opts.manager.query(
       `WITH removed AS (
          DELETE FROM application_business_processes
