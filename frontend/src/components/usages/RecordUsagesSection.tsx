@@ -8,6 +8,7 @@ import api from '../../api';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
 import { getProjectStatusLabel, getRequestStatusLabel } from '../../utils/portfolioI18n';
 import { useItOpsSettings } from '../../hooks/useItOpsSettings';
+import { buildItemPath } from '../../utils/item-ref';
 import { usageListLink, type UsageListLink } from './usageListLinks';
 
 /** What `GET /suppliers/:id/usages` and `GET /contacts/:id/usages` answer (backend `common/record-usages.ts`). */
@@ -37,18 +38,19 @@ export function useRecordUsages(owner: UsageOwner, id: string) {
   });
 }
 
-/** The page of an object, in the same tab. A budget line (`BL-n`) and a technology (`TEC-n`) open by their reference. */
+/** The page of an object, in the same tab, by its business reference. The id is the fallback. */
 export function usageHref(type: UsageType, item: UsageItem): string {
+  const ref = item.reference ?? item.id;
   switch (type) {
-    case 'suppliers': return `/master-data/suppliers/${item.id}/overview`;
-    case 'budget_lines': return `/ops/budget/${item.reference ?? item.id}`;
-    case 'contracts': return `/ops/contracts/${item.id}`;
-    case 'applications': return `/it/applications/${item.id}`;
-    case 'assets': return `/it/assets/${item.id}`;
-    case 'technologies': return `/it/technologies/${item.reference ?? item.id}`;
-    case 'locations': return `/it/locations/${item.id}`;
-    case 'projects': return `/portfolio/projects/${item.id}`;
-    case 'requests': return `/portfolio/requests/${item.id}`;
+    case 'suppliers': return `/master-data/suppliers/${ref}/overview`;
+    case 'budget_lines': return buildItemPath('budget', ref);
+    case 'contracts': return `/ops/contracts/${ref}`;
+    case 'applications': return buildItemPath('application', ref);
+    case 'assets': return buildItemPath('asset', ref);
+    case 'technologies': return buildItemPath('technology', ref);
+    case 'locations': return buildItemPath('location', ref);
+    case 'projects': return buildItemPath('project', ref);
+    case 'requests': return buildItemPath('request', ref);
   }
 }
 

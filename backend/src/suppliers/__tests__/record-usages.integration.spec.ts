@@ -155,8 +155,8 @@ async function testSupplierUsages() {
     assert.deepEqual(shape(usages), {
       budget_lines: ['BL-1|OPEX A|opex|active|-', `${capexRef}|CAPEX A|capex|inactive|-`],
       contracts: ['-|Contract A|-|active|-'],
-      applications: ['-|Application A|-|active|-'],
-      assets: ['-|Asset A|-|active|-'],
+      applications: ['APP-1|Application A|-|active|-'],
+      assets: ['AST-1|Asset A|-|active|-'],
     }, 'every object of tenant A naming the supplier, both natures, active ones first');
     assert.deepEqual(usages.groups.map((group) => group.total), [2, 1, 1, 1]);
     assert.equal(usages.total, 5);
@@ -174,10 +174,10 @@ async function testContactUsages() {
       suppliers: ['-|Microsoft|-|active|technical'],
       budget_lines: ['BL-1|OPEX A|opex|active|commercial+technical', `BL-${1 + CAPEX_NUMBER_OFFSET}|CAPEX A|capex|active|support`],
       contracts: ['-|Contract A|-|active|commercial'],
-      applications: ['-|Application A|-|active|Account manager'],
-      assets: ['-|Asset A|-|active|Hardware support'],
+      applications: ['APP-1|Application A|-|active|Account manager'],
+      assets: ['AST-1|Asset A|-|active|Hardware support'],
       technologies: ['TEC-1|Technology A|-|active|Database support'],
-      locations: ['-|Location A|-|active|'],
+      locations: ['LOC-A|Location A|-|active|'],
       projects: ['PRJ-1|Project A|-|active|'],
       requests: ['REQ-1|Request A|-|active|'],
     }, 'one item per object, the contact\'s roles on it (types in their order, text trimmed, blanks dropped)');
