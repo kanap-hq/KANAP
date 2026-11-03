@@ -63,6 +63,12 @@ type Company = {
   disabled_at: string | null;
 };
 
+/** What a new company starts from. */
+const NEW_COMPANY: Company = {
+  id: '', name: '', coa_id: null, country_iso: '', base_currency: null, city: '', address1: null, address2: null,
+  postal_code: null, state: null, reg_number: null, vat_number: null, notes: null, status: STATUS_ENABLED, disabled_at: null,
+};
+
 type TextKey = 'city' | 'address1' | 'address2' | 'postal_code' | 'state' | 'reg_number' | 'vat_number' | 'notes';
 type CompanyField = 'name' | 'country_iso' | 'base_currency' | 'coa_id' | 'disabled_at' | TextKey;
 type FieldErrors = Partial<Record<CompanyField, string>>;
@@ -147,11 +153,15 @@ export default function CompanyWorkspacePage() {
   const detailKey = React.useMemo(() => ['companies', id] as const, [id]);
   // Once deleted, the company is never loaded again, even while the page waits for the list.
   const [deletedId, setDeletedId] = React.useState<string | null>(null);
-  const { data, error: loadError } = useQuery({
+  const { data: stored, error: loadError } = useQuery({
     queryKey: detailKey,
     queryFn: async () => (await api.get<Company>(`/companies/${id}`)).data,
     enabled: !isCreate && !!id && deletedId !== id,
   });
+  // The new page is the company's own page on a draft: the fields write here, Create sends it.
+  const [draft, setDraft] = React.useState<Company>(NEW_COMPANY);
+  const draftRef = React.useRef(draft);
+  const data = isCreate ? draft : stored;
 
   React.useEffect(() => {
     if (!isCreate && data?.id && data.name) addToRecent('company', data.id, data.name);
@@ -192,6 +202,12 @@ export default function CompanyWorkspacePage() {
 
   const patch = React.useCallback(
     (body: Partial<Company>, field: CompanyField): Promise<boolean> => {
+      if (isCreate) {
+        setErrors((prev) => ({ ...prev, [field]: undefined }));
+        draftRef.current = { ...draftRef.current, ...body };
+        setDraft(draftRef.current);
+        return Promise.resolve(true);
+      }
       const recordId = data?.id;
       if (!recordId || !canEdit) return Promise.resolve(false);
       setErrors((prev) => ({ ...prev, [field]: undefined }));
@@ -215,7 +231,7 @@ export default function CompanyWorkspacePage() {
       chainRef.current = result.then(() => undefined, () => undefined);
       return result;
     },
-    [canEdit, data?.id, queryClient, t],
+    [canEdit, data?.id, isCreate, queryClient, t],
   );
 
   // Fields saved on blur show Saving, then Saved. A skipped or refused save does not.
@@ -226,6 +242,8 @@ export default function CompanyWorkspacePage() {
     if (savedTimerRef.current != null) window.clearTimeout(savedTimerRef.current);
   }, []);
   const trackSave = React.useCallback((pending: Promise<boolean>) => {
+    // A draft is not saved: nothing to show.
+    if (isCreate) return;
     if (savedTimerRef.current != null) window.clearTimeout(savedTimerRef.current);
     setFieldSaved(false);
     setFieldSaves((n) => n + 1);
@@ -237,7 +255,7 @@ export default function CompanyWorkspacePage() {
         setFieldSaved(false);
       }, SAVED_LINGER_MS);
     }).finally(() => setFieldSaves((n) => n - 1));
-  }, []);
+  }, [isCreate]);
 
   const clearError = (field: CompanyField) => {
     setErrors((prev) => (prev[field] ? { ...prev, [field]: undefined } : prev));
@@ -249,7 +267,8 @@ export default function CompanyWorkspacePage() {
    */
   const commitText = (field: TextKey, next: string | null): boolean => {
     if (!data) return true;
-    if (field === 'city' && !next) {
+    // A new company's missing city is said on Create.
+    if (field === 'city' && !next && !isCreate) {
       setErrors((prev) => ({ ...prev, city: t('companies.messages.cityRequired') }));
       return false;
     }
@@ -272,6 +291,10 @@ export default function CompanyWorkspacePage() {
     if (current && current.scope === 'COUNTRY' && current.country_iso !== country) {
       body.coa_id = defaultCoaFor(coas, country);
     }
+    // A new company gets a chart from its country: the country default, else the global default, else any global chart.
+    if (isCreate && !body.coa_id && !(current && current.scope !== 'COUNTRY')) {
+      body.coa_id = defaultCoaFor(coas, country) ?? coas.find((coa) => coa.scope === 'GLOBAL')?.id ?? null;
+    }
     trackSave(patch(body, 'country_iso'));
   };
 
@@ -281,21 +304,45 @@ export default function CompanyWorkspacePage() {
     setSearchParams(sp, { replace: true });
   };
 
-  if (isCreate) {
-    return (
-      <CompanyCreate
-        canCreate={canEdit}
-        onClose={handleClose}
-      />
-    );
-  }
+  // Create sends the draft with the header's name, then goes back where the creation started.
+  const leave = useCreationLeave(handleClose);
+  const title = useCreationTitle({ requiredMessage: t('companies.messages.nameRequired'), onCancel: leave });
+  const [creating, setCreating] = React.useState(false);
+  const [createError, setCreateError] = React.useState<string | null>(null);
+  const handleCreate = async () => {
+    if (!canEdit || creating) return;
+    const name = title.require();
+    const values = draftRef.current;
+    const nextErrors: FieldErrors = {};
+    if (!values.country_iso) nextErrors.country_iso = t('companies.messages.countryRequired');
+    if (!values.base_currency) nextErrors.base_currency = t('companies.messages.currencyRequired');
+    if (!values.city) nextErrors.city = t('companies.messages.cityRequired');
+    setErrors((prev) => ({ ...prev, ...nextErrors }));
+    if (!name || Object.keys(nextErrors).length > 0) return;
+    setCreating(true);
+    setCreateError(null);
+    try {
+      const { id: _id, name: _name, ...fields } = values;
+      await api.post<Company>('/companies', { ...fields, name });
+      void queryClient.invalidateQueries({ queryKey: ['companies'] });
+      leave();
+    } catch (e) {
+      const message = getApiErrorMessage(e, t, t('companies.messages.createFailed'));
+      const field = isDuplicateError(e) ? 'name' : companyRefusalField(e);
+      if (field === 'name') title.refuse(isDuplicateError(e) ? t('companies.messages.nameTaken') : message);
+      else if (field) setErrors((prev) => ({ ...prev, [field]: message }));
+      else setCreateError(message);
+    } finally {
+      setCreating(false);
+    }
+  };
 
   const disabled = !canEdit;
   const tabs = [
     { key: 'overview', label: t('shared.labels.overview') },
-    { key: 'details', label: t('shared.labels.details') },
-    ...(canAdminDataAccess ? [{ key: 'access', label: t('shared.labels.access') }] : []),
-    { key: RECORD_HISTORY_TAB_KEY, label: t('shared.labels.history') },
+    { key: 'details', label: t('shared.labels.details'), disabled: isCreate },
+    ...(canAdminDataAccess ? [{ key: 'access', label: t('shared.labels.access'), disabled: isCreate }] : []),
+    { key: RECORD_HISTORY_TAB_KEY, label: t('shared.labels.history'), disabled: isCreate },
   ];
 
   // The header shows the status as the supplier's does: the menu disables at once (end of
@@ -407,10 +454,11 @@ export default function CompanyWorkspacePage() {
         onTabChange={(next) => goTo(id, next as TabKey)}
         drawerStorageKey="kanap.companies.drawerOpen"
         backLabel={t('companies.title')}
-        onBack={handleClose}
-        title={data?.name ?? ''}
-        titleFallback={t('companies.companyFallback')}
-        titleEditor={data ? (
+        onBack={isCreate ? leave : handleClose}
+        {...(isCreate ? title.shellProps : { title: data?.name ?? '' })}
+        titleFallback={isCreate ? t('companies.newCompany') : t('companies.companyFallback')}
+        isCreate={isCreate}
+        titleEditor={data && !isCreate ? (
           <CompanyNameTitle
             key={data.id}
             name={data.name}
@@ -421,7 +469,7 @@ export default function CompanyWorkspacePage() {
             onClearError={() => clearError('name')}
           />
         ) : undefined}
-        nav={nav.total > 0 ? {
+        nav={!isCreate && nav.total > 0 ? {
           currentIndex: nav.index + 1,
           totalCount: nav.total,
           hasPrev: nav.hasPrev,
@@ -432,7 +480,9 @@ export default function CompanyWorkspacePage() {
           nextLabel: t('companies.next'),
         } : undefined}
         metadata={metadata}
-        actions={(fieldSaves > 0 || fieldSaved || (data && canDelete)) ? (
+        actions={isCreate ? (
+          <CreationActions onCreate={() => void handleCreate()} onCancel={leave} busy={!canEdit || creating} />
+        ) : (fieldSaves > 0 || fieldSaved || (data && canDelete)) ? (
           <>
             {(fieldSaves > 0 || fieldSaved) && (
               <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', alignSelf: 'center' }}>
@@ -464,6 +514,7 @@ export default function CompanyWorkspacePage() {
               onCommit={(notes) => commitText('notes', notes)}
               onEdit={() => clearError('notes')}
             />
+            {createError && <Alert severity="error">{createError}</Alert>}
           </Stack>
         )}
         {data && tab === 'details' && (
@@ -691,195 +742,6 @@ function NotesField({
         sx={longFormSurfaceFieldSx}
         inputProps={{ 'aria-label': t('companies.fields.notes') }}
       />
-    </Box>
-  );
-}
-
-type CreateValues = {
-  country_iso: string;
-  base_currency: string;
-  coa_id: string | null;
-} & Record<TextKey, string>;
-
-const EMPTY_CREATE: CreateValues = {
-  country_iso: '',
-  base_currency: '',
-  coa_id: null,
-  city: '',
-  address1: '',
-  address2: '',
-  postal_code: '',
-  state: '',
-  reg_number: '',
-  vat_number: '',
-  notes: '',
-};
-
-function CompanyCreate({
-  canCreate,
-  onClose,
-}: {
-  canCreate: boolean;
-  onClose: () => void;
-}) {
-  const { t } = useTranslation(['master-data', 'common']);
-  const queryClient = useQueryClient();
-  const leave = useCreationLeave(onClose);
-  const title = useCreationTitle({ requiredMessage: t('companies.messages.nameRequired'), onCancel: leave });
-  const { coas } = useCoaList();
-  const sections = useOptionalSections();
-  const [values, setValues] = React.useState<CreateValues>(EMPTY_CREATE);
-  const [errors, setErrors] = React.useState<FieldErrors>({});
-  const [serverError, setServerError] = React.useState<string | null>(null);
-  const [submitting, setSubmitting] = React.useState(false);
-
-  const set = <K extends keyof CreateValues>(field: K, value: CreateValues[K]) => {
-    setValues((prev) => ({ ...prev, [field]: value }));
-    const key = field as CompanyField;
-    setErrors((prev) => (prev[key] ? { ...prev, [key]: undefined } : prev));
-  };
-
-  /** The chart is preselected from the country (country default, else global default, else any global chart). */
-  const changeCountry = (country: string) => {
-    setErrors((prev) => (prev.country_iso ? { ...prev, country_iso: undefined } : prev));
-    setValues((prev) => {
-      const current = coas.find((coa) => coa.id === prev.coa_id);
-      const keep = current && !(current.scope === 'COUNTRY' && current.country_iso !== country);
-      const preselected = country
-        ? defaultCoaFor(coas, country) ?? coas.find((coa) => coa.scope === 'GLOBAL')?.id ?? null
-        : null;
-      return { ...prev, country_iso: country, coa_id: keep ? prev.coa_id : preselected };
-    });
-  };
-
-  const handleCreate = async () => {
-    if (!canCreate || submitting) return;
-    const name = title.require();
-    const city = values.city.trim();
-    const nextErrors: FieldErrors = {};
-    if (!values.country_iso) nextErrors.country_iso = t('companies.messages.countryRequired');
-    if (!values.base_currency) nextErrors.base_currency = t('companies.messages.currencyRequired');
-    if (!city) nextErrors.city = t('companies.messages.cityRequired');
-    setErrors(nextErrors);
-    if (!name || Object.keys(nextErrors).length > 0) return;
-    setSubmitting(true);
-    setServerError(null);
-    const optional = (value: string) => value.trim() || null;
-    try {
-      await api.post<Company>('/companies', {
-        name,
-        coa_id: values.coa_id,
-        country_iso: values.country_iso,
-        city,
-        postal_code: optional(values.postal_code),
-        address1: optional(values.address1),
-        address2: optional(values.address2),
-        reg_number: optional(values.reg_number),
-        vat_number: optional(values.vat_number),
-        state: optional(values.state),
-        base_currency: values.base_currency,
-        status: STATUS_ENABLED,
-        disabled_at: null,
-        notes: optional(values.notes),
-      });
-      void queryClient.invalidateQueries({ queryKey: ['companies'] });
-      leave();
-    } catch (e) {
-      const message = getApiErrorMessage(e, t, t('companies.messages.createFailed'));
-      const field = isDuplicateError(e) ? 'name' : companyRefusalField(e);
-      if (field === 'name') title.refuse(isDuplicateError(e) ? t('companies.messages.nameTaken') : message);
-      else if (field && field !== 'disabled_at') setErrors({ [field]: message });
-      else setServerError(message);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const renderTextRow = (row: AddressField) => (
-    <PropertyRow key={row.field} label={row.label} required={row.required}>
-      <TextField
-        value={values[row.field]}
-        onChange={(e) => set(row.field, e.target.value)}
-        variant="standard"
-        sx={drawerFieldValueSx}
-        placeholder={row.placeholder}
-        error={!!errors[row.field]}
-        helperText={errors[row.field]}
-        inputProps={{ 'aria-label': row.label, autoComplete: 'off' }}
-      />
-    </PropertyRow>
-  );
-  const city = sections.address.find((row) => row.field === 'city') as AddressField;
-
-  return (
-    <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-      <PortfolioDetailWorkspaceShell
-        activeTab="overview"
-        tabs={[
-          { key: 'overview', label: t('shared.labels.overview') },
-          { key: 'details', label: t('shared.labels.details'), disabled: true },
-        ]}
-        onTabChange={() => undefined}
-        drawerStorageKey="kanap.companies.drawerOpen"
-        backLabel={t('companies.title')}
-        onBack={leave}
-        {...title.shellProps}
-        titleFallback={t('companies.newCompany')}
-        isCreate
-        actions={<CreationActions onCreate={() => void handleCreate()} onCancel={leave} busy={!canCreate || submitting} />}
-      >
-        <Stack spacing={3} sx={{ maxWidth: 560 }}>
-          <Box>
-            <Box sx={twoColumnsSx}>
-              <PropertyRow label={t('companies.fields.country')} required>
-                <CountryField value={values.country_iso} onChange={changeCountry} clearable error={errors.country_iso} />
-              </PropertyRow>
-              <PropertyRow label={t('companies.fields.baseCurrency')} required>
-                <CurrencyField
-                  value={values.base_currency}
-                  onChange={(currency) => set('base_currency', currency)}
-                  clearable
-                  error={errors.base_currency}
-                />
-              </PropertyRow>
-              <PropertyRow label={t('companies.fields.chartOfAccounts')}>
-                <CoaField
-                  coas={coas}
-                  country={values.country_iso}
-                  value={values.coa_id}
-                  onChange={(coaId) => set('coa_id', coaId)}
-                  clearable
-                  error={errors.coa_id}
-                />
-              </PropertyRow>
-              {renderTextRow(city)}
-            </Box>
-          </Box>
-          <Box>
-            <Typography sx={sectionLabelSx}>{t('companies.sections.address')}</Typography>
-            <Box sx={twoColumnsSx}>{sections.address.filter((row) => row.field !== 'city').map(renderTextRow)}</Box>
-          </Box>
-          <Box>
-            <Typography sx={sectionLabelSx}>{t('companies.sections.registration')}</Typography>
-            <Box sx={twoColumnsSx}>{sections.registration.map(renderTextRow)}</Box>
-          </Box>
-          <PropertyRow label={t('companies.fields.notes')} valueSx={{ maxWidth: 560 }}>
-            <TextField
-              value={values.notes}
-              onChange={(e) => set('notes', e.target.value)}
-              multiline
-              minRows={2}
-              variant="standard"
-              sx={drawerFieldValueSx}
-              placeholder={t('companies.placeholders.notes')}
-              error={!!errors.notes}
-              helperText={errors.notes}
-              inputProps={{ 'aria-label': t('companies.fields.notes') }}
-            />
-          </PropertyRow>
-          {serverError && <Alert severity="error">{serverError}</Alert>}
-        </Stack>
-      </PortfolioDetailWorkspaceShell>
     </Box>
   );
 }

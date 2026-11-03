@@ -146,7 +146,7 @@ describe('CompanyWorkspacePage', () => {
     expect(screen.getByRole('tab', { name: 'shared.labels.history' })).toBeInTheDocument();
   });
 
-  it('opens the History tab with the company history, and never in creation', async () => {
+  it('opens the History tab with the company history, greyed in creation', async () => {
     const history = renderAt('/master-data/companies/co-1/history');
     expect(await screen.findByText('companies:co-1')).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'shared.labels.history' })).toHaveAttribute('aria-selected', 'true');
@@ -154,7 +154,7 @@ describe('CompanyWorkspacePage', () => {
 
     renderAt('/master-data/companies/new/overview');
     expect(await screen.findByPlaceholderText('companies.newCompany')).toBeInTheDocument();
-    expect(screen.queryByRole('tab', { name: 'shared.labels.history' })).toBeNull();
+    expect(screen.getByRole('tab', { name: 'shared.labels.history' })).toBeDisabled();
   });
 
   it('opens the Access tab for an unscoped user administrator', async () => {
@@ -390,7 +390,8 @@ describe('CompanyWorkspacePage', () => {
   it('validates and creates on Create with the header name, the chart preselected from the country', async () => {
     mocked.post.mockResolvedValue({ data: { ...COMPANY, id: 'co-new' } });
     renderAt('/master-data/companies/new/overview?year=2026');
-    expect(screen.queryByRole('complementary')).toBeNull();
+    // The company's own page: country and currency sit in its Properties drawer.
+    expect(screen.getByRole('complementary')).toContainElement(screen.getByLabelText('companies.fields.country'));
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('companies.messages.nameRequired')).toBeInTheDocument();
     expect(screen.getByText('companies.messages.countryRequired')).toBeInTheDocument();
@@ -404,7 +405,9 @@ describe('CompanyWorkspacePage', () => {
     await waitFor(() => expect(screen.getByLabelText('companies.fields.chartOfAccounts')).toHaveValue('COA-DE · German chart'));
     await pickOption('companies.fields.baseCurrency', 'Euro', 'EUR · Euro');
     fireEvent.change(screen.getByLabelText('companies.fields.city'), { target: { value: 'Berlin' } });
+    fireEvent.blur(screen.getByLabelText('companies.fields.city'));
     fireEvent.change(screen.getByLabelText('companies.fields.vatNumber'), { target: { value: 'DE123' } });
+    fireEvent.blur(screen.getByLabelText('companies.fields.vatNumber'));
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/companies', {
       name: 'Acme Germany',
@@ -432,6 +435,7 @@ describe('CompanyWorkspacePage', () => {
     await pickOption('companies.fields.country', 'Fran', 'France (FR)');
     await pickOption('companies.fields.baseCurrency', 'Euro', 'EUR · Euro');
     fireEvent.change(screen.getByLabelText('companies.fields.city'), { target: { value: 'Paris' } });
+    fireEvent.blur(screen.getByLabelText('companies.fields.city'));
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('companies.messages.nameTaken')).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'common:buttons.editTitle' })).toHaveFocus();
@@ -447,6 +451,7 @@ describe('CompanyWorkspacePage', () => {
     await pickOption('companies.fields.country', 'Fran', 'France (FR)');
     await pickOption('companies.fields.baseCurrency', 'Euro', 'EUR · Euro');
     fireEvent.change(screen.getByLabelText('companies.fields.city'), { target: { value: 'Paris' } });
+    fireEvent.blur(screen.getByLabelText('companies.fields.city'));
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('Name already used.')).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'common:buttons.editTitle' })).toHaveFocus();
