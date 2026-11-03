@@ -76,6 +76,8 @@ type Props = {
   linkedInterfacesError: string | null;
   derivedInterfaceCount: number;
   onDescriptionSaved?: (next: string) => void;
+  /** Set to a function that saves a description still waiting for its debounce ("Create", "Cancel"). */
+  descriptionFlushRef?: React.MutableRefObject<(() => Promise<void>) | null>;
   onEndpointChange: (
     side: 'source' | 'destination',
     next: { asset_id: string | null; entity_code: string | null },
@@ -122,6 +124,7 @@ export default function ConnectionOverviewTab({
   linkedInterfacesError,
   derivedInterfaceCount,
   onDescriptionSaved,
+  descriptionFlushRef,
   onEndpointChange,
   onMultiServerChange,
   onProtocolsChange,
@@ -206,6 +209,19 @@ export default function ConnectionOverviewTab({
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, []);
+
+  const descriptionRef = React.useRef(description);
+  descriptionRef.current = description;
+  React.useEffect(() => {
+    if (!descriptionFlushRef) return undefined;
+    descriptionFlushRef.current = async () => {
+      if (!debounceRef.current) return;
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+      await persistDescription(descriptionRef.current);
+    };
+    return () => { descriptionFlushRef.current = null; };
+  }, [descriptionFlushRef, persistDescription]);
 
   const multiServerOptions = React.useMemo(
     () => multiServerIds.map((id) => assetMap[id] ?? {
@@ -296,6 +312,7 @@ export default function ConnectionOverviewTab({
         <SectionHeader>{t('workspace.connection.create.endpoints')}</SectionHeader>
         {topology === 'server_to_server' ? (
           <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 2.5, maxWidth: 760 }}>
+            <Box data-creation-field="source">
             <ConnectionEndpointPicker
               label={t('workspace.connection.layers.source')}
               value={source}
@@ -303,6 +320,8 @@ export default function ConnectionOverviewTab({
               initialAsset={source.asset_id ? assetMap[source.asset_id] : null}
               onChange={(next, asset) => onEndpointChange('source', next, asset)}
             />
+            </Box>
+            <Box data-creation-field="destination">
             <ConnectionEndpointPicker
               label={t('workspace.connection.layers.destination')}
               value={destination}
@@ -310,9 +329,10 @@ export default function ConnectionOverviewTab({
               initialAsset={destination.asset_id ? assetMap[destination.asset_id] : null}
               onChange={(next, asset) => onEndpointChange('destination', next, asset)}
             />
+            </Box>
           </Box>
         ) : (
-          <Box sx={{ maxWidth: 760 }}>
+          <Box sx={{ maxWidth: 760 }} data-creation-field="servers">
             <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', mb: 0.25 }}>{t('workspace.connection.overview.serversMin')}</Typography>
             <ConnectionServersPicker
               value={multiServerOptions}
@@ -331,7 +351,7 @@ export default function ConnectionOverviewTab({
 
       <Box>
         <SectionHeader>{t('workspace.connection.overview.protocols')}</SectionHeader>
-        <Box sx={{ maxWidth: 760 }}>
+        <Box sx={{ maxWidth: 760 }} data-creation-field="protocols">
           <Autocomplete
             size="small"
             multiple

@@ -4,6 +4,8 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
+import { KanapDialogProvider } from '../../components/design';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const shell = vi.hoisted(() => ({ tabs: [] as Array<{ key: string; label: string; disabled?: boolean }> }));
 const stableT = vi.hoisted(() => (key: string) => key);
@@ -87,11 +89,15 @@ const CONNECTION = {
 function renderAt(path: string) {
   return render(
     <ThemeProvider theme={createAppTheme('light')}>
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <KanapDialogProvider>
       <MemoryRouter initialEntries={[path]}>
         <Routes>
           <Route path="/it/connections/:id/:tab" element={<ConnectionWorkspacePage />} />
         </Routes>
       </MemoryRouter>
+      </KanapDialogProvider>
+      </QueryClientProvider>
     </ThemeProvider>,
   );
 }

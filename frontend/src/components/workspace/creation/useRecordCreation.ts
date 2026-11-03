@@ -50,6 +50,8 @@ const KIND_WORDS: Record<string, string> = {
   version: 'versions',
   contact: 'contacts',
   task: 'tasks',
+  protocol: 'protocols',
+  leg: 'hops',
 };
 
 /** "2 fields, 1 relation": what the person added since the creation, in a few words. */

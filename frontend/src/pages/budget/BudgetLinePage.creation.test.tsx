@@ -263,15 +263,15 @@ describe('Budget line creation at the title', () => {
     // The back arrow: the line lacks its paying company and its account.
     fireEvent.click(screen.getByRole('button', { name: 'budget.title' }));
     let dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText('budget.creation.missing(fields=opex.fields.payingCompany, opex.fields.account)')).toBeTruthy();
-    fireEvent.click(within(dialog).getByRole('button', { name: 'budget.creation.leaveComplete' }));
+    expect(within(dialog).getByText('ops:budget.creation.missing(fields=opex.fields.payingCompany, opex.fields.account)')).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'ops:budget.creation.leaveComplete' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(location()).toBe('/ops/budget/BL-12/overview');
     await waitFor(() => expect(screen.getByRole('textbox', { name: 'opex.fields.payingCompany' })).toHaveFocus());
 
     fireEvent.click(screen.getByRole('button', { name: 'budget.title' }));
     dialog = await screen.findByRole('dialog');
-    fireEvent.click(within(dialog).getByRole('button', { name: 'budget.creation.leaveDelete' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'ops:budget.creation.leaveDelete' }));
     await waitFor(() => expect(location()).toBe('/ops/budget'));
     expect(mocked.delete).toHaveBeenCalledWith(`/budget-lines/${ITEM_ID}/creation`, { data: { token: 'token-1' } });
   });
@@ -284,7 +284,7 @@ describe('Budget line creation at the title', () => {
     expect(screen.queryByRole('button', { name: 'common:buttons.create' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.close' }));
     const dialog = await screen.findByRole('dialog');
-    fireEvent.click(within(dialog).getByRole('button', { name: 'budget.creation.leaveAnyway' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'ops:budget.creation.leaveAnyway' }));
     await waitFor(() => expect(location()).toBe('/ops/budget'));
     expect(mocked.delete).not.toHaveBeenCalled();
   });

@@ -1748,7 +1748,11 @@
       "contacts_one": "{{count}} contact",
       "contacts_other": "{{count}} contacts",
       "tasks_one": "{{count}} task",
-      "tasks_other": "{{count}} tasks"
+      "tasks_other": "{{count}} tasks",
+      "protocols_one": "{{count}} protocol",
+      "protocols_other": "{{count}} protocols",
+      "hops_one": "{{count}} hop",
+      "hops_other": "{{count}} hops"
     },
     "titleRequired": "Enter a title."
   },

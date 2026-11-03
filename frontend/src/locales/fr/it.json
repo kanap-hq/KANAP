@@ -2404,6 +2404,15 @@
         "via": "Via",
         "placementReplaced": "{{cluster}} remplace le lien entre {{hosts}} et {{asset}}.",
         "placementLinked": "Lien posé sur {{cluster}}."
+      },
+      "creation": {
+        "record": "L’actif",
+        "missing": "Manquant : {{fields}}",
+        "leaveTitle": "Cet actif est incomplet",
+        "leaveComplete": "Le compléter",
+        "leaveDelete": "Le supprimer",
+        "leaveAnyway": "Quitter quand même",
+        "completeFailed": "L’actif n’a pas pu être vérifié."
       }
     },
     "technology": {
@@ -2644,7 +2653,6 @@
       "createFromBinding": "Création depuis le contexte de liaison d'interface",
       "overview": {
         "connectionReference": "Référence",
-        "name": "Nom",
         "purpose": "Objectif",
         "connectionType": "Type de connexion",
         "selectSource": "Sélectionnez une entité ou un serveur source",
@@ -2739,18 +2747,8 @@
       "sourceMissing": "Source manquante",
       "destinationMissing": "Destination manquante",
       "create": {
-        "title": "Créer une connexion",
-        "namePlaceholder": "ex. : Niveau applicatif vers niveau base de données",
         "endpoints": "Endpoints",
-        "serversPlaceholder": "ex. : server1",
-        "protocolsPlaceholder": "ex. : HTTPS",
-        "description": "Description",
-        "descriptionPlaceholder": "ex. : Export nocturne du niveau applicatif vers le niveau base de données",
-        "pathAfterCreate": "Créez d'abord la connexion pour ajouter les sauts du chemin réseau.",
-        "afterCreation": "Après la création",
-        "protocolRequired": "Sélectionnez au moins un protocole.",
-        "sourceRequired": "Sélectionnez un actif ou une entité source.",
-        "destinationRequired": "Sélectionnez un actif ou une entité de destination."
+        "description": "Description"
       },
       "deleteDialog": {
         "title": "Supprimer la connexion ?",
@@ -2830,6 +2828,15 @@
         "addFailed": "Échec de l'ajout du saut",
         "removeFailed": "Échec du retrait du saut",
         "reorderFailed": "Échec du réordonnancement des sauts"
+      },
+      "creation": {
+        "record": "La connexion",
+        "missing": "Manquant : {{fields}}",
+        "leaveTitle": "Cette connexion est incomplète",
+        "leaveComplete": "La compléter",
+        "leaveDelete": "La supprimer",
+        "leaveAnyway": "Quitter quand même",
+        "completeFailed": "La connexion n’a pas pu être vérifiée."
       }
     },
     "interface": {

@@ -1748,7 +1748,11 @@
       "contacts_one": "{{count}} contact",
       "contacts_other": "{{count}} contacts",
       "tasks_one": "{{count}} tâche",
-      "tasks_other": "{{count}} tâches"
+      "tasks_other": "{{count}} tâches",
+      "protocols_one": "{{count}} protocole",
+      "protocols_other": "{{count}} protocoles",
+      "hops_one": "{{count}} saut",
+      "hops_other": "{{count}} sauts"
     },
     "titleRequired": "Saisissez un titre."
   },

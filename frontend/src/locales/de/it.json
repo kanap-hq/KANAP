@@ -2404,6 +2404,15 @@
         "via": "Über",
         "placementReplaced": "{{cluster}} ersetzt die Verknüpfung zwischen {{hosts}} und {{asset}}.",
         "placementLinked": "Verknüpfung auf {{cluster}} gelegt."
+      },
+      "creation": {
+        "record": "Das Asset",
+        "missing": "Fehlt: {{fields}}",
+        "leaveTitle": "Dieses Asset ist unvollständig",
+        "leaveComplete": "Vervollständigen",
+        "leaveDelete": "Löschen",
+        "leaveAnyway": "Trotzdem verlassen",
+        "completeFailed": "Das Asset konnte nicht geprüft werden."
       }
     },
     "technology": {
@@ -2644,7 +2653,6 @@
       "createFromBinding": "Erstellung aus Schnittstellen-Bindungskontext",
       "overview": {
         "connectionReference": "Referenz",
-        "name": "Name",
         "purpose": "Zweck",
         "connectionType": "Verbindungstyp",
         "selectSource": "Quellentität oder -server auswählen",
@@ -2739,18 +2747,8 @@
       "sourceMissing": "Quelle fehlt",
       "destinationMissing": "Ziel fehlt",
       "create": {
-        "title": "Verbindung erstellen",
-        "namePlaceholder": "z. B. App-Schicht zu DB-Schicht",
         "endpoints": "Endpunkte",
-        "serversPlaceholder": "z. B. server1",
-        "protocolsPlaceholder": "z. B. HTTPS",
-        "description": "Beschreibung",
-        "descriptionPlaceholder": "z. B. Nächtlicher Export von der App-Schicht zur DB-Schicht",
-        "pathAfterCreate": "Erstellen Sie zuerst die Verbindung, um Hops zum Netzwerkpfad hinzuzufügen.",
-        "afterCreation": "Nach dem Erstellen",
-        "protocolRequired": "Wählen Sie mindestens ein Protokoll aus.",
-        "sourceRequired": "Wählen Sie ein Quell-Asset oder eine Quellentität aus.",
-        "destinationRequired": "Wählen Sie ein Ziel-Asset oder eine Zielentität aus."
+        "description": "Beschreibung"
       },
       "deleteDialog": {
         "title": "Verbindung löschen?",
@@ -2830,6 +2828,15 @@
         "addFailed": "Hop konnte nicht hinzugefügt werden",
         "removeFailed": "Hop konnte nicht entfernt werden",
         "reorderFailed": "Hops konnten nicht neu angeordnet werden"
+      },
+      "creation": {
+        "record": "Die Verbindung",
+        "missing": "Fehlt: {{fields}}",
+        "leaveTitle": "Diese Verbindung ist unvollständig",
+        "leaveComplete": "Vervollständigen",
+        "leaveDelete": "Löschen",
+        "leaveAnyway": "Trotzdem verlassen",
+        "completeFailed": "Die Verbindung konnte nicht geprüft werden."
       }
     },
     "interface": {

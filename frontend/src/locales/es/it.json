@@ -2404,6 +2404,15 @@
         "via": "Vía",
         "placementReplaced": "{{cluster}} sustituye el vínculo entre {{hosts}} y {{asset}}.",
         "placementLinked": "Vínculo colocado en {{cluster}}."
+      },
+      "creation": {
+        "record": "El activo",
+        "missing": "Falta: {{fields}}",
+        "leaveTitle": "Este activo está incompleto",
+        "leaveComplete": "Completarlo",
+        "leaveDelete": "Eliminarlo",
+        "leaveAnyway": "Salir de todos modos",
+        "completeFailed": "No se pudo comprobar el activo."
       }
     },
     "technology": {
@@ -2644,7 +2653,6 @@
       "createFromBinding": "Creación desde el contexto de enlace de interfaz",
       "overview": {
         "connectionReference": "Referencia",
-        "name": "Nombre",
         "purpose": "Propósito",
         "connectionType": "Tipo de conexión",
         "selectSource": "Seleccione una entidad o servidor de origen",
@@ -2739,18 +2747,8 @@
       "sourceMissing": "Falta el origen",
       "destinationMissing": "Falta el destino",
       "create": {
-        "title": "Crear conexión",
-        "namePlaceholder": "p. ej., Capa de aplicación a capa de base de datos",
         "endpoints": "Endpoints",
-        "serversPlaceholder": "p. ej., server1",
-        "protocolsPlaceholder": "p. ej., HTTPS",
-        "description": "Descripción",
-        "descriptionPlaceholder": "p. ej., Exportación nocturna de la capa de aplicación a la capa de base de datos",
-        "pathAfterCreate": "Cree primero la conexión para añadir saltos a la ruta de red.",
-        "afterCreation": "Tras la creación",
-        "protocolRequired": "Seleccione al menos un protocolo.",
-        "sourceRequired": "Seleccione un activo o una entidad de origen.",
-        "destinationRequired": "Seleccione un activo o una entidad de destino."
+        "description": "Descripción"
       },
       "deleteDialog": {
         "title": "¿Eliminar la conexión?",
@@ -2830,6 +2828,15 @@
         "addFailed": "No se pudo añadir el salto",
         "removeFailed": "No se pudo quitar el salto",
         "reorderFailed": "No se pudieron reordenar los saltos"
+      },
+      "creation": {
+        "record": "La conexión",
+        "missing": "Falta: {{fields}}",
+        "leaveTitle": "Esta conexión está incompleta",
+        "leaveComplete": "Completarla",
+        "leaveDelete": "Eliminarla",
+        "leaveAnyway": "Salir de todos modos",
+        "completeFailed": "No se pudo comprobar la conexión."
       }
     },
     "interface": {
