@@ -173,7 +173,7 @@ Los nuevos artículos pueden empezar de dos formas:
 
 Cuando crea desde una plantilla, el contenido de la plantilla se copia en el nuevo documento. A partir de ese momento, el nuevo artículo es independiente. Actualizar la plantilla más tarde no reescribe los documentos existentes.
 
-Un documento nuevo se abre con su título por escribir en el encabezado. Pulse Intro para crear el documento. Se abre en modo de edición, con el editor, **Importar** y el panel lateral disponibles. Haga clic en **Crear** para conservarlo: vuelve al lugar donde empezó, o a la biblioteca. Haga clic en **Cancelar** para eliminarlo en su lugar. KANAP pide confirmación primero cuando ha introducido más que el título. En cualquier documento en modo de edición, haga clic en el título del encabezado para cambiarlo.
+Un documento nuevo se abre con su título por escribir en el encabezado. Pulse Intro para crear el documento, o Tab para crearlo y empezar a escribir su texto. Se abre en modo de edición, con el editor, **Importar** y el panel lateral disponibles. Haga clic en **Crear** para conservarlo: vuelve al lugar donde empezó, o a la biblioteca. Haga clic en **Cancelar** para eliminarlo en su lugar. KANAP pide confirmación primero cuando ha introducido más que el título. En cualquier documento en modo de edición, haga clic en el título del encabezado para cambiarlo.
 
 El espacio de trabajo del documento mantiene la escritura en el centro y la gobernanza en la barra lateral.
 

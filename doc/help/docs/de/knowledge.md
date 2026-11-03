@@ -173,7 +173,7 @@ Neue Artikel können auf zwei Arten beginnen:
 
 Wenn Sie aus einer Vorlage erstellen, wird der Vorlageninhalt in das neue Dokument kopiert. Ab diesem Zeitpunkt ist der neue Artikel unabhängig. Eine spätere Aktualisierung der Vorlage schreibt vorhandene Dokumente nicht neu.
 
-Ein neues Dokument öffnet sich mit seinem Titel zur Eingabe in der Kopfzeile. Drücken Sie die Eingabetaste, um das Dokument zu erstellen. Es öffnet sich im Bearbeitungsmodus, mit Editor, **Importieren** und Seitenleiste. Klicken Sie auf **Erstellen**, um es zu behalten: Sie kehren dorthin zurück, wo Sie begonnen haben, oder zur Bibliothek. Klicken Sie stattdessen auf **Abbrechen**, um es zu löschen. KANAP fragt zuerst nach, wenn Sie mehr als den Titel eingegeben haben. Bei jedem Dokument im Bearbeitungsmodus klicken Sie auf den Titel in der Kopfzeile, um ihn zu ändern.
+Ein neues Dokument öffnet sich mit seinem Titel zur Eingabe in der Kopfzeile. Drücken Sie die Eingabetaste, um das Dokument zu erstellen, oder die Tabulatortaste, um es zu erstellen und direkt mit dem Text zu beginnen. Es öffnet sich im Bearbeitungsmodus, mit Editor, **Importieren** und Seitenleiste. Klicken Sie auf **Erstellen**, um es zu behalten: Sie kehren dorthin zurück, wo Sie begonnen haben, oder zur Bibliothek. Klicken Sie stattdessen auf **Abbrechen**, um es zu löschen. KANAP fragt zuerst nach, wenn Sie mehr als den Titel eingegeben haben. Bei jedem Dokument im Bearbeitungsmodus klicken Sie auf den Titel in der Kopfzeile, um ihn zu ändern.
 
 Der Dokumenten-Arbeitsbereich hält das Schreiben in der Mitte und die Governance in der Seitenleiste.
 

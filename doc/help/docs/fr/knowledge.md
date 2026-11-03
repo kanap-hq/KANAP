@@ -173,7 +173,7 @@ Les nouveaux articles peuvent démarrer de deux manières :
 
 Lorsque vous créez à partir d'un modèle, le contenu du modèle est copié dans le nouveau document. À partir de ce moment, le nouvel article est indépendant. Mettre à jour le modèle plus tard ne réécrit pas les documents existants.
 
-Un nouveau document s'ouvre avec son titre à saisir dans l'en-tête. Appuyez sur Entrée pour créer le document. Il s'ouvre en mode édition, avec l'éditeur, **Importer** et le panneau latéral disponibles. Cliquez sur **Créer** pour le garder : vous revenez là où vous avez commencé, ou à la bibliothèque. Cliquez sur **Annuler** pour le supprimer à la place. KANAP demande d'abord confirmation lorsque vous avez saisi plus que le titre. Sur tout document en mode édition, cliquez sur le titre dans l'en-tête pour le modifier.
+Un nouveau document s'ouvre avec son titre à saisir dans l'en-tête. Appuyez sur Entrée pour créer le document, ou sur Tab pour le créer et commencer à saisir son texte. Il s'ouvre en mode édition, avec l'éditeur, **Importer** et le panneau latéral disponibles. Cliquez sur **Créer** pour le garder : vous revenez là où vous avez commencé, ou à la bibliothèque. Cliquez sur **Annuler** pour le supprimer à la place. KANAP demande d'abord confirmation lorsque vous avez saisi plus que le titre. Sur tout document en mode édition, cliquez sur le titre dans l'en-tête pour le modifier.
 
 L'espace de travail document garde l'écriture au centre et la gouvernance dans la barre latérale.
 
