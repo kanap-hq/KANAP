@@ -76,11 +76,11 @@ Click **New**, then:
 
 1. **Country** (optional): type to search, by name or by two-letter code. With a country, the calendar is standard
 2. **Region**: shown when the country has regions, for example the German states or the French departments with their own holidays. Keep **Whole country**, or pick a region
-3. **Code** and **Name**: choosing a country fills them, for example `FR-57` and "France (Département Moselle)". Change them if you wish
+3. **Code** and name: choosing a country fills them, the name in the title at the top of the page, for example `FR-57` and "France (Département Moselle)". Change them if you wish
 4. **Description**: optional
 5. Click **Create**
 
-A new calendar is enabled, and its workspace opens. A standard calendar already holds the working days of every year. For a custom one, enter them year by year.
+A new calendar is enabled, and you go back to where you started. **Cancel**, or Escape on the empty title, leaves without creating anything. A standard calendar already holds the working days of every year. For a custom one, enter them year by year.
 
 The country and region are set once, at creation. To follow another country, create another calendar.
 

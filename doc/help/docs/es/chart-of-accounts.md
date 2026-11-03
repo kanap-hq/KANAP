@@ -152,7 +152,7 @@ La sección **Consolidación** contiene un único campo, **Cuenta de consolidaci
 
 ### Crear una cuenta
 
-**Nueva cuenta** en la lista abre un formulario breve con el plan que estaba consultando ya seleccionado. Rellene el plan, el número de cuenta y el nombre, además de los campos opcionales, y haga clic en **Crear cuenta**. Tras la creación, la cuenta se abre en el espacio de trabajo y se guarda automáticamente a partir de entonces.
+**Nueva cuenta** en la lista abre un formulario breve con el plan que estaba consultando ya seleccionado. Escriba el nombre de la cuenta en el título de la parte superior de la página, rellene el plan y el número de cuenta, además de los campos opcionales, y haga clic en **Crear**. Vuelve al punto de partida. Una vez creada, la cuenta se guarda automáticamente con cada cambio. **Cancelar**, o Escape en el título vacío, sale sin crear nada.
 
 ## Configurar Planes de cuentas
 

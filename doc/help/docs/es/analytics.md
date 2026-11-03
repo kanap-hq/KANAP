@@ -127,9 +127,9 @@ Haga clic en cualquier celda para abrir el espacio de trabajo del valor.
 
 ### Crear una dimensión
 
-Haga clic en **Nuevo** en la barra de selección, complete los campos y haga clic en **Crear**. Se abre el espacio de trabajo de la nueva dimensión. Una dimensión nueva está activada.
+Haga clic en **Nuevo** en la barra de selección. Escriba el nombre en el título de la parte superior de la página, complete los campos y haga clic en **Crear**. Vuelve al punto de partida. Una dimensión nueva está activada. **Cancelar**, o Escape en el título vacío, sale sin crear nada.
 
-- **Nombre** es obligatorio.
+- El nombre es obligatorio.
 - **Código** se propone a partir del nombre: en minúsculas, sin acentos y con los espacios sustituidos por `-`. Puede cambiarlo antes de crear la dimensión.
 - **Usada para** empieza en **OPEX y CAPEX**. Consulte [Dimensiones OPEX o CAPEX](#dimensiones-opex-o-capex).
 - **Obligatoria** empieza desactivado. Consulte [Dimensiones obligatorias](#dimensiones-obligatorias).
@@ -242,7 +242,7 @@ Para conservar los valores en las líneas, desactive la dimensión en su lugar.
 
 ### Crear un valor
 
-Haga clic en **Nuevo valor**. El campo **Dimensión** empieza en la dimensión seleccionada en la página y solo ofrece las dimensiones activadas. Introduzca el **Nombre** y, si lo desea, una **Descripción**. **Usada para** empieza en **OPEX y CAPEX**: cámbielo si el valor solo sirve para un tipo de línea. Después haga clic en **Crear**. Se abre el espacio de trabajo del nuevo valor. Un valor nuevo está activado.
+Haga clic en **Nuevo valor**. El campo **Dimensión** empieza en la dimensión seleccionada en la página y solo ofrece las dimensiones activadas. Escriba el nombre en el título de la parte superior de la página y, si lo desea, una **Descripción**. **Usada para** empieza en **OPEX y CAPEX**: cámbielo si el valor solo sirve para un tipo de línea. Después haga clic en **Crear**. Vuelve al punto de partida. Un valor nuevo está activado. **Cancelar**, o Escape en el título vacío, sale sin crear nada.
 
 ### El espacio de trabajo del valor
 

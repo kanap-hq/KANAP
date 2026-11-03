@@ -76,11 +76,11 @@ Cliquez sur **Nouveau**, puis :
 
 1. **Pays** (facultatif) : tapez pour rechercher, par nom ou par code à deux lettres. Avec un pays, le calendrier est standard
 2. **Région** : affichée lorsque le pays a des régions, par exemple les Länder allemands ou les départements français qui ont leurs propres jours fériés. Gardez **Tout le pays**, ou choisissez une région
-3. **Code** et **Nom** : le choix d'un pays les remplit, par exemple `FR-57` et « France (Département Moselle) ». Modifiez-les si vous le souhaitez
+3. **Code** et nom : le choix d'un pays les remplit, le nom dans le titre en haut de la page, par exemple `FR-57` et « France (Département Moselle) ». Modifiez-les si vous le souhaitez
 4. **Description** : facultative
 5. Cliquez sur **Créer**
 
-Un nouveau calendrier est activé, et son espace de travail s'ouvre. Un calendrier standard contient déjà les jours ouvrés de chaque année. Pour un calendrier personnalisé, saisissez-les année par année.
+Un nouveau calendrier est activé, et vous revenez à votre point de départ. **Annuler**, ou Échap dans le titre vide, part sans rien créer. Un calendrier standard contient déjà les jours ouvrés de chaque année. Pour un calendrier personnalisé, saisissez-les année par année.
 
 Le pays et la région se définissent une seule fois, à la création. Pour suivre un autre pays, créez un autre calendrier.
 

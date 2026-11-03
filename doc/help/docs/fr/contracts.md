@@ -6,11 +6,11 @@ Les contrats décrivent vos accords avec les fournisseurs : licences logicielles
 
 Rendez-vous dans **Gestion budgétaire > Contrats** pour voir la liste. Cliquez sur **Nouveau** pour créer un contrat (`contracts:member`).
 
-La page s'ouvre sur un formulaire unique. Remplissez-le, puis cliquez sur **Créer**.
+La page s'ouvre sur un formulaire unique. Saisissez le nom du contrat dans le titre en haut de la page, remplissez le formulaire, puis cliquez sur **Créer**. Vous revenez à votre point de départ. **Annuler**, ou Échap dans le titre vide, part sans rien créer.
 
 **Champs obligatoires** :
 
-- **Nom du contrat** : un nom facile à reconnaître
+- **Nom**, dans le titre : un nom facile à reconnaître
 - **Fournisseur** et **Société contractante** : qui fournit le service et laquelle de vos sociétés a signé
 - **Début** : le premier jour du contrat
 - **Durée (mois)** : la durée d'un terme, au moins un mois

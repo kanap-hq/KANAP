@@ -4,7 +4,7 @@ Standorte dokumentieren, wo Ihre IT-Infrastruktur gehostet wird: Rechenzentren, 
 
 ## Erste Schritte
 
-Navigieren Sie zu **IT-Landschaft > Standorte**, um das Standortverzeichnis zu öffnen. Klicken Sie auf **Standort hinzufügen**, um einen neuen Eintrag zu erstellen.
+Navigieren Sie zu **IT-Landschaft > Standorte**, um das Standortverzeichnis zu öffnen. Klicken Sie auf **Standort hinzufügen**, um einen neuen Eintrag zu erstellen. Geben Sie den Namen im Titel oben auf der Seite ein, wählen Sie den **Hosting-Typ** und klicken Sie auf **Erstellen**: Sie kehren dorthin zurück, wo Sie begonnen haben. **Abbrechen** oder Escape im leeren Titel verlässt die Seite, ohne etwas zu erstellen.
 
 **Pflichtfelder**:
 - **Code**: Ein eindeutiger Kurzidentifikator (z. B. `DC-EU-WEST`, `AWS-US-EAST-1`)

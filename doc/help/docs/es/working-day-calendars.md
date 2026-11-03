@@ -76,11 +76,11 @@ Haga clic en **Nuevo** y después:
 
 1. **País** (opcional): escriba para buscar, por nombre o por el código de dos letras. Con un país, el calendario es estándar
 2. **Región**: se muestra cuando el país tiene regiones, por ejemplo los estados alemanes o los departamentos franceses con sus propios festivos. Conserve **Todo el país** o elija una región
-3. **Código** y **Nombre**: al elegir un país se rellenan, por ejemplo `FR-57` y "Francia (Département Moselle)". Cámbielos si lo desea
+3. **Código** y nombre: al elegir un país se rellenan, el nombre en el título de la parte superior de la página, por ejemplo `FR-57` y "Francia (Département Moselle)". Cámbielos si lo desea
 4. **Descripción**: opcional
 5. Haga clic en **Crear**
 
-Un calendario nuevo está activado, y se abre su espacio de trabajo. Un calendario estándar ya contiene los días laborables de todos los años. En uno personalizado, introdúzcalos año por año.
+Un calendario nuevo está activado, y vuelve al punto de partida. **Cancelar**, o Escape en el título vacío, sale sin crear nada. Un calendario estándar ya contiene los días laborables de todos los años. En uno personalizado, introdúzcalos año por año.
 
 El país y la región se definen una sola vez, al crear el calendario. Para seguir otro país, cree otro calendario.
 

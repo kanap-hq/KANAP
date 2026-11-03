@@ -105,7 +105,7 @@ Consulte esta sección antes de desactivar o eliminar un proveedor. Un proveedor
 
 ### Crear un proveedor
 
-Haga clic en **Nuevo** en la lista. Rellene el nombre (obligatorio), el ID de proveedor ERP y las notas, y luego haga clic en **Crear**. El proveedor se crea activado y se abre su página, con la pestaña **Contactos** disponible.
+Haga clic en **Nuevo** en la lista. Escriba el nombre en el título de la parte superior de la página, rellene el ID de proveedor ERP y las notas, y luego haga clic en **Crear**. El proveedor se crea activado y vuelve al punto de partida. **Cancelar**, o Escape en el título vacío, sale sin crear nada.
 
 ---
 

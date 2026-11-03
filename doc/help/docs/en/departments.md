@@ -68,7 +68,7 @@ The Overview tab holds the description. The other fields are in the header and t
 - **Description**: Free-text description
 - **Lifecycle**: the status switch, labelled with the current state (**Enabled** or **Disabled**), and the **End of validity** date. Leave the date blank to keep the department active indefinitely, or set a future date to schedule its end. Switching the department to **Disabled** ends its validity now: it is disabled at once. While a future date is set, the switch reads **Active until** and that date
 
-**Creating a department**: **New** opens a form with **Name**, **Company** and **Description**. Click **Create** to save it. The Details tab becomes available after you create the department.
+**Creating a department**: **New** opens a form. Type the name in the title at the top of the page, choose the **Company** and add a **Description** if you like. Click **Create** to save it: you go back to where you started. **Cancel**, or Escape on the empty title, leaves without creating anything.
 
 ---
 

@@ -116,7 +116,7 @@ La pestaña Visión general contiene la dirección, los datos de registro y las 
     - **Número de IVA**: número de identificación de IVA
 - **Notas**: notas de texto libre
 
-**Crear una empresa**: **Nuevo** abre un único formulario con el nombre, **País**, **Moneda base**, **Plan de cuentas**, **Ciudad**, los demás campos de dirección, los campos de registro y **Notas**. Al elegir un país se rellena el **Plan de cuentas** por usted: el plan predeterminado del país si existe, y si no un plan global. Puede cambiarlo antes de guardar. Haga clic en **Crear** para guardar la empresa. La pestaña **Detalles** estará disponible después de crear la empresa.
+**Crear una empresa**: **Nuevo** abre un único formulario. Escriba el nombre en el título de la parte superior de la página y después rellene **País**, **Moneda base**, **Plan de cuentas**, **Ciudad**, los demás campos de dirección, los campos de registro y **Notas**. Al elegir un país se rellena el **Plan de cuentas** por usted: el plan predeterminado del país si existe, y si no un plan global. Puede cambiarlo antes de guardar. Haga clic en **Crear** para guardar la empresa: vuelve al punto de partida. **Cancelar**, o Escape en el título vacío, sale sin crear nada.
 
 ---
 

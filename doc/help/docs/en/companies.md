@@ -116,7 +116,7 @@ The Overview tab holds the address, the registration details and the notes. The 
     - **VAT number**: VAT identification number
 - **Notes**: free-text notes
 
-**Creating a company**: **New** opens a single form with the name, **Country**, **Base currency**, **Chart of accounts**, **City**, the other address fields, the registration fields and **Notes**. Choosing a country fills in the **Chart of accounts** for you: the country's default chart if there is one, otherwise a global chart. You can change it before you save. Click **Create** to save the company. The **Details** tab becomes available after you create the company.
+**Creating a company**: **New** opens a single form. Type the name in the title at the top of the page, then fill in **Country**, **Base currency**, **Chart of accounts**, **City**, the other address fields, the registration fields and **Notes**. Choosing a country fills in the **Chart of accounts** for you: the country's default chart if there is one, otherwise a global chart. You can change it before you save. Click **Create** to save the company: you go back to where you started. **Cancel**, or Escape on the empty title, leaves without creating anything.
 
 ---
 

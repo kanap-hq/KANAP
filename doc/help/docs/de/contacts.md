@@ -85,7 +85,7 @@ Klicken Sie auf eine Zeile, um die zugehörige Seite zu öffnen. Eine Liste zeig
 
 ### Einen Kontakt erstellen
 
-Klicken Sie in der Liste auf **Neu**. Geben Sie die E-Mail (Pflichtfeld) und die weiteren Felder ein und klicken Sie dann auf **Erstellen**. Die Wahl eines Lieferanten setzt den Kontakttyp auf **Vertrieb**, den Sie vor dem Erstellen ändern können. Nach dem Erstellen kehren Sie zur Liste zurück.
+Klicken Sie in der Liste auf **Neu**. Geben Sie Vor- und Nachnamen im Titel oben auf der Seite ein, dann die E-Mail (Pflichtfeld) und die weiteren Felder, und klicken Sie auf **Erstellen**. Die Wahl eines Lieferanten setzt den Kontakttyp auf **Vertrieb**, den Sie vor dem Erstellen ändern können. Nach dem Erstellen kehren Sie dorthin zurück, wo Sie begonnen haben. **Abbrechen** oder Escape, solange der Name leer ist, verlässt die Seite, ohne etwas zu erstellen.
 
 ---
 

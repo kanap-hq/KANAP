@@ -127,9 +127,9 @@ Klicken Sie auf eine beliebige Zelle, um den Arbeitsbereich des Werts zu öffnen
 
 ### Eine Dimension erstellen
 
-Klicken Sie in der Auswahlleiste auf **Neu**, füllen Sie die Felder aus und klicken Sie dann auf **Erstellen**. Der Arbeitsbereich der neuen Dimension öffnet sich. Eine neue Dimension ist aktiviert.
+Klicken Sie in der Auswahlleiste auf **Neu**. Geben Sie den Namen im Titel oben auf der Seite ein, füllen Sie die Felder aus und klicken Sie dann auf **Erstellen**. Sie kehren dorthin zurück, wo Sie begonnen haben. Eine neue Dimension ist aktiviert. **Abbrechen** oder Escape im leeren Titel verlässt die Seite, ohne etwas zu erstellen.
 
-- **Name** ist Pflicht.
+- Der Name ist Pflicht.
 - **Code** wird aus dem Namen vorgeschlagen: Kleinbuchstaben, ohne Akzente, Leerzeichen durch `-` ersetzt. Sie können ihn ändern, bevor Sie die Dimension erstellen.
 - **Verwendet für** beginnt mit **OPEX und CAPEX**. Siehe [OPEX- oder CAPEX-Dimensionen](#opex-oder-capex-dimensionen).
 - **Erforderlich** ist zu Beginn ausgeschaltet. Siehe [Erforderliche Dimensionen](#erforderliche-dimensionen).
@@ -242,7 +242,7 @@ Um die Werte stattdessen auf den Zeilen zu behalten, deaktivieren Sie die Dimens
 
 ### Einen Wert erstellen
 
-Klicken Sie auf **Neuer Wert**. Das Feld **Dimension** steht zunächst auf der Dimension, die auf der Seite ausgewählt ist, und bietet nur aktivierte Dimensionen an. Füllen Sie **Name** und bei Bedarf **Beschreibung** aus. **Verwendet für** steht zunächst auf **OPEX und CAPEX**: Ändern Sie es, wenn der Wert nur zu einer Zeilenart passt. Klicken Sie dann auf **Erstellen**. Der Arbeitsbereich des neuen Werts öffnet sich. Ein neuer Wert ist aktiviert.
+Klicken Sie auf **Neuer Wert**. Das Feld **Dimension** steht zunächst auf der Dimension, die auf der Seite ausgewählt ist, und bietet nur aktivierte Dimensionen an. Geben Sie den Namen im Titel oben auf der Seite ein und bei Bedarf eine **Beschreibung**. **Verwendet für** steht zunächst auf **OPEX und CAPEX**: Ändern Sie es, wenn der Wert nur zu einer Zeilenart passt. Klicken Sie dann auf **Erstellen**. Sie kehren dorthin zurück, wo Sie begonnen haben. Ein neuer Wert ist aktiviert. **Abbrechen** oder Escape im leeren Titel verlässt die Seite, ohne etwas zu erstellen.
 
 ### Der Werte-Arbeitsbereich
 

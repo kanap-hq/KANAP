@@ -68,7 +68,7 @@ L'onglet Vue d'ensemble contient la description. Les autres champs se trouvent d
 - **Description** : Description libre
 - **Cycle de vie** : l'interrupteur de statut, dont le libellé indique l'état actuel (**Activé** ou **Désactivé**), et la date de **Fin de validité**. Laissez la date vide pour que le département reste actif indéfiniment, ou fixez une date future pour programmer sa fin. Passer à **Désactivé** fixe la fin de validité à maintenant : la désactivation est immédiate. Tant qu'une date future est fixée, l'interrupteur affiche **Actif jusqu'au** et cette date
 
-**Créer un département** : **Nouveau** ouvre un formulaire avec **Nom**, **Société** et **Description**. Cliquez sur **Créer** pour l'enregistrer. L'onglet Détails devient disponible après la création du département.
+**Créer un département** : **Nouveau** ouvre un formulaire. Saisissez le nom dans le titre en haut de la page, choisissez la **Société** et ajoutez une **Description** si vous le souhaitez. Cliquez sur **Créer** pour l'enregistrer : vous revenez à votre point de départ. **Annuler**, ou Échap dans le titre vide, part sans rien créer.
 
 ---
 

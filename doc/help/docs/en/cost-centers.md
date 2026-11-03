@@ -93,11 +93,11 @@ Click any cell to open the workspace.
 
 ## Creating a cost center
 
-Click **New**. Fill in the fields, then click **Create**. A new node is enabled.
+Click **New**. Type the name in the title at the top of the page, fill in the fields, then click **Create**. A new node is enabled.
 
 The **Type** starts on **Cost center**. Choose **Group** to create a group: the **Company** field then disappears.
 
-After **Create**, the workspace of the new node opens.
+After **Create**, you go back to where you started. **Cancel**, or Escape on the empty title, leaves without creating anything.
 
 ---
 

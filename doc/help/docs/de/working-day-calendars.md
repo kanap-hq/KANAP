@@ -76,11 +76,11 @@ Klicken Sie auf **Neu** und dann:
 
 1. **Land** (optional): Tippen Sie, um nach Name oder zweistelligem Code zu suchen. Mit einem Land ist der Kalender ein Standardkalender
 2. **Region**: erscheint, wenn das Land Regionen hat, zum Beispiel die deutschen Bundesländer oder die französischen Départements mit eigenen Feiertagen. Behalten Sie **Ganzes Land** oder wählen Sie eine Region
-3. **Code** und **Name**: Die Wahl eines Landes füllt sie aus, zum Beispiel `FR-57` und „Frankreich (Département Moselle)“. Ändern Sie sie bei Bedarf
+3. **Code** und Name: Die Wahl eines Landes füllt sie aus, den Namen im Titel oben auf der Seite, zum Beispiel `FR-57` und „Frankreich (Département Moselle)“. Ändern Sie sie bei Bedarf
 4. **Beschreibung**: optional
 5. Klicken Sie auf **Erstellen**
 
-Ein neuer Kalender ist aktiviert, und sein Arbeitsbereich öffnet sich. Ein Standardkalender enthält bereits die Arbeitstage jedes Jahres. Bei einem individuellen Kalender geben Sie sie Jahr für Jahr ein.
+Ein neuer Kalender ist aktiviert, und Sie kehren dorthin zurück, wo Sie begonnen haben. **Abbrechen** oder Escape im leeren Titel verlässt die Seite, ohne etwas zu erstellen. Ein Standardkalender enthält bereits die Arbeitstage jedes Jahres. Bei einem individuellen Kalender geben Sie sie Jahr für Jahr ein.
 
 Land und Region werden einmal festgelegt, beim Anlegen. Um einem anderen Land zu folgen, legen Sie einen weiteren Kalender an.
 

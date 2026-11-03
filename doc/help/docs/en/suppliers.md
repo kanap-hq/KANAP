@@ -105,7 +105,7 @@ Check this section before you disable or delete a supplier. A supplier still use
 
 ### Creating a supplier
 
-Click **New** in the list. Fill in the name (required), the ERP supplier ID and the notes, then click **Create**. The supplier is created enabled and its page opens, with the **Contacts** tab ready.
+Click **New** in the list. Type the name in the title at the top of the page, fill in the ERP supplier ID and the notes, then click **Create**. The supplier is created enabled, and you go back to where you started. **Cancel**, or Escape on the empty title, leaves without creating anything.
 
 ---
 
