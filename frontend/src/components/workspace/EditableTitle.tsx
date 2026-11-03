@@ -174,6 +174,12 @@ export type EditableTitleProps = {
   /** Escape in the empty field opened by `autoEdit`: the person leaves without naming anything. */
   onCancel?: () => void;
   onSave?: (nextTitle: string) => void;
+  /**
+   * Tab in the field with a title typed: the title is committed as on a blur, and the caller moves
+   * the focus to what follows the title (the document's text). The title does not take it back
+   * when a title still to give is created.
+   */
+  onTab?: () => void;
   requiredMessage?: string;
   /** Resting size. Callers on a page header pass that header's type scale. */
   typography?: EditableTitleTypography;
@@ -192,6 +198,7 @@ export default function EditableTitle({
   onDraftChange,
   onCancel,
   onSave,
+  onTab,
   requiredMessage,
   typography = workspaceTitleTypography,
   value,
@@ -209,13 +216,16 @@ export default function EditableTitle({
   // field until the value arrives. The blur that follows an Enter does not send it twice.
   const pendingTitle = autoEdit && !value;
   const submitted = React.useRef<string | null>(null);
+  // The name was sent by Tab: the focus has gone on (`onTab`), the title does not take it back.
+  const tabbed = React.useRef(false);
 
   React.useEffect(() => {
     // The caller's value arrived for the name sent: the title rests, and the focus goes to it.
     if (!editing || submitted.current === null || !value) return;
     submitted.current = null;
     closing.current = true;
-    pendingFocus.current = true;
+    pendingFocus.current = !tabbed.current;
+    tabbed.current = false;
     setEditing(false);
   }, [editing, value]);
 
@@ -334,6 +344,13 @@ export default function EditableTitle({
           if (event.key === 'Escape') {
             event.preventDefault();
             cancel();
+          }
+          // An empty title still to give, or required, keeps the browser's Tab: nothing to commit.
+          if (event.key === 'Tab' && !event.shiftKey && onTab && (draft.trim() || (!pendingTitle && !requiredMessage))) {
+            event.preventDefault();
+            tabbed.current = pendingTitle;
+            finish(false);
+            onTab();
           }
         }}
         placeholder={pendingTitle ? fallback : undefined}

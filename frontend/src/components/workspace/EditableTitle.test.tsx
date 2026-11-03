@@ -141,6 +141,39 @@ describe('EditableTitle', () => {
     expect(title).toHaveFocus();
   });
 
+  it('commits on Tab and hands the focus on with onTab', () => {
+    const onTab = vi.fn();
+    const { onSave } = renderTitle({ onTab });
+    fireEvent.click(screen.getByRole('button', { name: LABEL }));
+    const input = screen.getByRole('textbox');
+    fireEvent.change(input, { target: { value: 'Payroll run' } });
+    fireEvent.keyDown(input, { key: 'Tab' });
+    expect(onSave).toHaveBeenCalledWith('Payroll run');
+    expect(onTab).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('button', { name: LABEL })).not.toHaveFocus();
+  });
+
+  it('sends a name still to give on Tab, and does not take the focus back when it arrives', () => {
+    const onSave = vi.fn();
+    const onTab = vi.fn();
+    const { rerender } = renderTitle({ value: '', autoEdit: true, onSave, onTab });
+    const input = screen.getByRole('textbox');
+    fireEvent.keyDown(input, { key: 'Tab' });
+    expect(onTab).not.toHaveBeenCalled();
+    fireEvent.change(input, { target: { value: 'Billing' } });
+    fireEvent.keyDown(input, { key: 'Tab' });
+    fireEvent.blur(input);
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onTab).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <EditableTitle value="Billing" fallback="New incident" canEdit onSave={onSave} onTab={onTab} />
+      </ThemeProvider>,
+    );
+    expect(screen.getByRole('button', { name: LABEL })).not.toHaveFocus();
+  });
+
   it('keeps a refusal under a name still to give, until the person types again', () => {
     const onSave = vi.fn();
     const onDraftChange = vi.fn();

@@ -8,29 +8,32 @@ Rendez-vous dans **Portefeuille > Tâches** pour voir toutes les tâches de votr
 
 ### Créer une nouvelle tâche
 
-Lorsque vous cliquez sur **Nouvelle**, l'espace de travail complet de la tâche s'ouvre. Pour créer une tâche :
+Lorsque vous cliquez sur **Nouvelle**, la page de la tâche s'ouvre avec un titre vide dans son en-tête, affiché en bleu clair. Le reste de la page est grisé tant que la tâche n'existe pas. Pour créer une tâche :
 
-1. **Saisissez le titre** (obligatoire) :
-   - Tapez le titre de la tâche dans le champ texte en haut
+1. **Saisissez le titre** (obligatoire) dans l'en-tête.
 
-2. **Choisissez le contexte** :
-   - **Tâche autonome** (par défaut) : Gardez « Lié à » sur **Autonome**
-   - **Tâche liée** : Sélectionnez **Projet**, **OPEX**, **Contrat** ou **CAPEX**, puis choisissez l'élément spécifique
+2. **Appuyez sur Entrée**, ou quittez le champ. KANAP crée la tâche aussitôt, avec ces valeurs par défaut :
+   - **Statut** : **Ouverte**
+   - **Priorité** : **Normale**
+   - **Assignée à** et **Demandeur** : vous
+   - **Type de tâche** : le type par défaut, lorsqu'il est défini
+   - **Lié à** : l'élément depuis lequel vous avez commencé, et sa phase lorsque vous avez commencé depuis une phase. Une tâche commencée depuis la page Tâches est autonome
+   - **Classification** (tâches autonomes et de projet) : pour les tâches de projet, **Source**, **Catégorie**, **Stream** et **Société** proviennent du projet parent. Pour les tâches autonomes, les valeurs de classification par défaut de votre organisation sont utilisées lorsqu'elles existent
 
-3. **Remplissez les détails optionnels** :
-   - **Type de tâche** : Sélectionnez une catégorie pour le travail (ex. : Tâche, Bug, Problème, Incident). Par défaut « Tâche » lorsque disponible
+3. **Remplissez les détails**. Tous les onglets et tous les champs sont maintenant disponibles, avec le tiroir Propriétés à droite :
+   - **Lié à** : Gardez **Autonome**, ou sélectionnez **Projet**, **OPEX**, **Contrat** ou **CAPEX**, puis choisissez l'élément spécifique
+   - **Type de tâche** : Une catégorie pour le travail (ex. : Tâche, Bug, Problème, Incident)
    - **Étiquettes** : Mots libres, par exemple urgent ou suivi. Saisissez-en un et appuyez sur Entrée
    - **Description** : Ajoutez des informations détaillées avec l'éditeur markdown (prend en charge formatage, listes, liens, images)
    - **Phase** : Pour les tâches de projet, sélectionnez une phase ou laissez sur « Niveau projet »
-   - **Classification** (tâches autonomes et de projet) : Définissez **Source**, **Catégorie**, **Stream** et **Société**. Pour les tâches de projet, ces valeurs proviennent par défaut du projet parent. Pour les tâches autonomes, les valeurs de classification par défaut de votre organisation sont pré-remplies lorsque disponibles
-   - **Statut** : Par défaut sur **Ouverte**
-   - **Priorité** : Par défaut sur **Normale**
    - **Dates** : Définir les dates de début et d'échéance
-   - **Assignée à** : Par défaut sur vous ; modifier si nécessaire
+   - **Assignée à**, **Statut**, **Priorité** : Modifiez-les si nécessaire
 
-4. Cliquez sur **Créer** lorsque vous êtes prêt (activé une fois le titre défini). Vous pouvez également appuyer sur **Ctrl+S** (ou **Cmd+S** sur Mac)
+4. Cliquez sur **Créer** pour garder la tâche. Vous revenez là où vous avez commencé : une tâche commencée depuis l'onglet **Tâches** d'un projet revient à cet onglet. Cliquez sur **Annuler** pour supprimer la tâche à la place. KANAP demande d'abord confirmation lorsque vous avez saisi plus que le titre.
 
-**Conseil** : Vous pouvez coller des images directement dans la description. Elles sont téléversées vers le stockage automatiquement lorsque vous créez la tâche.
+Appuyer sur **Échap** sur le titre vide équivaut à **Annuler**. Quitter la tâche de toute autre façon la conserve.
+
+**Conseil** : Vous pouvez coller des images directement dans la description. Elles se téléversent automatiquement.
 
 **Note** : Les tâches peuvent également être créées depuis d'autres espaces de travail (lignes OPEX, Contrats, lignes CAPEX, Projets du portefeuille) où la relation est pré-sélectionnée.
 
@@ -146,7 +149,7 @@ Sous la barre d'outils, le bloc de titre affiche :
 
 L'onglet **Vue d'ensemble** contient le contenu de la tâche.
 
-**Description** : Un éditeur markdown qui prend en charge le formatage, les listes, les liens, les blocs de code et les images. Vous pouvez coller des images directement ; elles se téléversent automatiquement. Appuyer sur **Tab** depuis le champ titre saute dans l'éditeur de description. La description s'enregistre automatiquement quelques secondes après que vous arrêtez de taper ; l'en-tête affiche brièvement **Enregistré** à chaque persistance.
+**Description** : Un éditeur markdown qui prend en charge le formatage, les listes, les liens, les blocs de code et les images. Vous pouvez coller des images directement ; elles se téléversent automatiquement. La description s'enregistre automatiquement quelques secondes après que vous arrêtez de taper ; l'en-tête affiche brièvement **Enregistré** à chaque persistance.
 
 **Pièces jointes** : Glissez-déposez des fichiers sur la description, ou utilisez la zone de téléversement lorsqu'elle apparaît. Les fichiers téléversés apparaissent comme des pastilles sous la description. Cliquez sur une pastille pour télécharger ; cliquez sur le bouton **x** pour supprimer (nécessite l'autorisation de modification). Maximum 20 Mo par fichier.
 
@@ -403,9 +406,9 @@ Les tâches autonomes sont des éléments de travail indépendants non liés à 
 ### Créer des tâches autonomes
 
 1. Cliquez sur **Nouvelle** dans la page Tâches
-2. Laissez le menu déroulant **Lié à** sur **Autonome**
+2. Saisissez le titre et appuyez sur Entrée : la tâche est créée comme autonome
 3. Le tiroir Propriétés affiche « Tâche autonome » dans le groupe Contexte
-4. Remplissez le titre, la description et autres détails
+4. Remplissez la description et les autres détails
 5. Cliquez sur **Créer**
 
 ### Champs de classification
@@ -731,8 +734,7 @@ Lorsque le focus n'est pas sur un champ de saisie, vous pouvez utiliser :
 - **K** ou **→** : Tâche suivante dans la liste actuelle
 - **P** : Basculer le tiroir Propriétés
 - **Échap** : Fermer et retourner à la liste
-- **Ctrl+S** / **Cmd+S** : Enregistrer (ou créer, en mode création)
-- **Tab** depuis le champ titre : Sauter directement dans l'éditeur de description
+- **Ctrl+S** / **Cmd+S** : Enregistrer
 
 ---
 

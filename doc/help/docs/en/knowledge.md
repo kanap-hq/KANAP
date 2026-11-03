@@ -173,6 +173,8 @@ New articles can start in two ways:
 
 When you create from a template, the template content is copied into the new document. From that point on, the new article is independent. Updating the template later does not rewrite existing documents.
 
+A new document opens with its title to type in the header. Press Enter to create the document, or Tab to create it and start typing its text. It opens in edit mode, with the editor, **Import**, and the sidebar available. Click **Create** to keep it: you return to where you started, or to the library. Click **Cancel** to delete it instead. KANAP asks first when you entered more than the title. On any document in edit mode, click the title in the header to change it.
+
 The document workspace keeps writing in the center and governance in the sidebar.
 
 Core properties include:
@@ -183,7 +185,7 @@ Core properties include:
 - **Based on template**: the template lineage, when relevant
 - **Summary**: a short description for context
 
-After the first save, the full document governance model becomes available. That is when you can manage contributors, classifications, relations, comments, and version history against a stable document reference.
+Once the document is created, the full document governance model becomes available. That is when you can manage contributors, classifications, relations, comments, and version history against a stable document reference.
 
 ### Status and what it means
 
@@ -212,22 +214,21 @@ How it works:
 This avoids silent overwrites, which is excellent for document integrity and less excellent if two people both thought they had "just one quick tweak."
 
 While you are editing:
-- changes are saved manually with **Save**
-- unsaved content is also autosaved periodically while your lock is active
-- **Discard** returns to the last saved state
+- changes are saved automatically a couple of seconds after you stop typing, while your lock is active
+- **Done** saves what is pending, releases the lock, and leaves edit mode
 
 The workspace also supports inline image upload inside the markdown content area, so screenshots and diagrams can live with the article rather than in a mysterious folder on somebody's desktop. When you paste or reference an image from an external URL, the image is automatically imported and stored within the document so it remains available even if the original URL goes offline.
 
 ## Importing a Word document
 
-You can import a Word document (`.docx`) into an existing Knowledge article. The **Import** button appears in the workspace toolbar once the document has been saved at least once and you are in edit mode.
+You can import a Word document (`.docx`) into an existing Knowledge article. The **Import** button appears in the workspace toolbar when you are in edit mode. On a new document, it is available as soon as the title is entered.
 
 How it works:
 
 - Click **Import** and select a `.docx` file from your computer.
 - If the article already has content, a confirmation dialog asks whether you want to replace it. Choosing **Continue** overwrites the current markdown with the imported content.
 - The Word content is converted to markdown and loaded into the editor. Images embedded in the Word file are extracted and stored as inline attachments, so you do not have to re-upload them manually.
-- After import, your changes are unsaved. Use **Save** to persist the imported content.
+- The imported content is saved automatically, like any other change.
 
 If the import encounters a lock conflict (someone else acquired the lock) or an expired lock, editing mode ends and an appropriate message is shown. Re-enter edit mode and try again.
 

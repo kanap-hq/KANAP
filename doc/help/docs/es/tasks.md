@@ -8,29 +8,32 @@ Navegue a **Portafolio > Tareas** para ver todas las tareas de su organización.
 
 ### Crear una nueva tarea
 
-Al hacer clic en **Nuevo**, se abre el espacio de trabajo completo de la tarea. Para crear una tarea:
+Al hacer clic en **Nuevo**, la página de la tarea se abre con un título vacío en su encabezado, mostrado en azul claro. El resto de la página aparece atenuado hasta que la tarea existe. Para crear una tarea:
 
-1. **Introduzca el título** (obligatorio):
-   - Escriba el título de la tarea en el campo de texto superior
+1. **Escriba el título** (obligatorio) en el encabezado.
 
-2. **Elija el contexto**:
-   - **Tarea independiente** (predeterminado): Mantenga "Relacionado con" como **Independiente**
-   - **Tarea vinculada**: Seleccione **Proyecto**, **OPEX**, **Contrato** o **CAPEX**, luego elija el elemento específico
+2. **Pulse Intro**, o salga del campo. KANAP crea la tarea al instante, con estos valores predeterminados:
+   - **Estado**: **Abierto**
+   - **Prioridad**: **Normal**
+   - **Asignado** y **Solicitante**: usted
+   - **Tipo de tarea**: el tipo predeterminado, cuando hay uno definido
+   - **Relacionado con**: el registro desde el que empezó, y su fase cuando empezó desde una fase. Una tarea empezada desde la página de Tareas es independiente
+   - **Clasificación** (tareas independientes y de proyecto): para tareas de proyecto, **Origen**, **Categoría**, **Flujo** y **Empresa** proceden del proyecto padre. Para tareas independientes, se usan los valores de clasificación predeterminados de su organización cuando existen
 
-3. **Complete los detalles opcionales**:
-   - **Tipo de tarea**: Seleccione una categoría para el trabajo (p. ej., Tarea, Bug, Problema, Incidente). Por defecto es "Tarea" cuando está disponible
+3. **Complete los detalles**. Todas las pestañas y todos los campos están ahora disponibles, con el panel de Propiedades a la derecha:
+   - **Relacionado con**: Mantenga **Independiente**, o seleccione **Proyecto**, **OPEX**, **Contrato** o **CAPEX**, luego elija el elemento específico
+   - **Tipo de tarea**: Una categoría para el trabajo (p. ej., Tarea, Bug, Problema, Incidente)
    - **Etiquetas**: Etiquetas libres, por ejemplo urgente o seguimiento. Escriba una y pulse Intro
    - **Descripción**: Añada información detallada usando el editor markdown (admite formato, listas, enlaces, imágenes)
    - **Fase**: Para tareas de proyecto, seleccione una fase o deje como "Nivel de proyecto"
-   - **Clasificación** (tareas independientes y de proyecto): Establezca **Origen**, **Categoría**, **Flujo** y **Empresa**. Para tareas de proyecto, estos valores se heredan del proyecto padre. Para tareas independientes, los valores de clasificación predeterminados de su organización se rellenan automáticamente cuando están disponibles
-   - **Estado**: Por defecto es **Abierto**
-   - **Prioridad**: Por defecto es **Normal**
    - **Fechas**: Establezca fechas de inicio y vencimiento
-   - **Asignado**: Por defecto es usted; cámbielo si es necesario
+   - **Asignado**, **Estado**, **Prioridad**: Cámbielos si es necesario
 
-4. Haga clic en **Crear** cuando esté listo (se habilita una vez establecido el título). También puede pulsar **Ctrl+S** (o **Cmd+S** en Mac)
+4. Haga clic en **Crear** para conservar la tarea. Vuelve al lugar donde empezó: una tarea empezada desde la pestaña **Tareas** de un proyecto vuelve a esa pestaña. Haga clic en **Cancelar** para eliminar la tarea en su lugar. KANAP pide confirmación primero cuando ha introducido más que el título.
 
-**Consejo**: Puede pegar imágenes directamente en la descripción. Se suben automáticamente al almacenamiento cuando crea la tarea.
+Pulsar **Escape** en el título vacío equivale a **Cancelar**. Salir de la tarea de cualquier otra forma la conserva.
+
+**Consejo**: Puede pegar imágenes directamente en la descripción. Se suben automáticamente.
 
 **Nota**: Las tareas también pueden crearse desde otros espacios de trabajo (líneas OPEX, Contratos, líneas CAPEX, Proyectos del portafolio) donde la relación viene preseleccionada.
 
@@ -146,7 +149,7 @@ Debajo de la barra de herramientas, el bloque de título muestra:
 
 La pestaña **Vista general** contiene el contenido de la tarea.
 
-**Descripción**: Un editor markdown que admite formato, listas, enlaces, bloques de código e imágenes. Puede pegar imágenes directamente; se suben automáticamente. Pulsar **Tab** desde el campo de título salta al editor de descripción. La descripción se autoguarda un par de segundos después de que deje de escribir; el encabezado muestra **Guardado** brevemente cada vez que persiste.
+**Descripción**: Un editor markdown que admite formato, listas, enlaces, bloques de código e imágenes. Puede pegar imágenes directamente; se suben automáticamente. La descripción se autoguarda un par de segundos después de que deje de escribir; el encabezado muestra **Guardado** brevemente cada vez que persiste.
 
 **Adjuntos**: Arrastre y suelte archivos sobre la descripción, o use el área de carga cuando aparezca. Los archivos subidos aparecen como chips debajo de la descripción. Haga clic en un chip para descargar; haga clic en el botón **x** para eliminar (requiere permiso de edición). Máximo 20 MB por archivo.
 
@@ -403,9 +406,9 @@ Las tareas independientes son elementos de trabajo que no están vinculados a ni
 ### Crear tareas independientes
 
 1. Haga clic en **Nuevo** en la página de Tareas
-2. Deje el desplegable **Relacionado con** como **Independiente**
+2. Escriba el título y pulse Intro: la tarea se crea como independiente
 3. El panel de Propiedades muestra "Tarea independiente" en el grupo Contexto
-4. Complete el título, descripción y otros detalles
+4. Complete la descripción y otros detalles
 5. Haga clic en **Crear**
 
 ### Campos de clasificación
@@ -731,8 +734,7 @@ Cuando el foco no está en un campo de entrada, puede usar:
 - **K** o **→**: Siguiente tarea en la lista actual
 - **P**: Alternar el panel de Propiedades
 - **Escape**: Cerrar y volver a la lista
-- **Ctrl+S** / **Cmd+S**: Guardar (o crear, en modo creación)
-- **Tab** desde el campo de título: Saltar directamente al editor de descripción
+- **Ctrl+S** / **Cmd+S**: Guardar
 
 ---
 

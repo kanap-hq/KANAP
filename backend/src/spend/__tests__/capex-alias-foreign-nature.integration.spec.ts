@@ -26,6 +26,9 @@ import { realSummaryDeps } from './oracle/oracle-deps';
 import { itemService, seedCompany } from './cost-center.fixtures';
 import { assert, captureAudit, amountsService, inRolledBackTransaction, period, runSpecs, setTenant } from './round-inputs.fixtures';
 
+// A task created through a line's route carries a creation token, signed with the JWT secret.
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'capex-alias-foreign-nature-spec-secret';
+
 // The CAPEX routes (`/capex-items*`, `/capex-versions*`, aliases on the single family since lot
 // Z1 of plan planning/budget-unifie.md) never reach an OPEX line, the mirror of
 // `budget-line-foreign-nature.integration.spec.ts` (a CAPEX line through the OPEX routes):
