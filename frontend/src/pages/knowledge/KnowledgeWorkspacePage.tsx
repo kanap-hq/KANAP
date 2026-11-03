@@ -1791,10 +1791,10 @@ export default function KnowledgeWorkspacePage() {
       }
       creation.startCreation({ recordId: created.id, token, returnTo: creationReturn });
       const itemRef = created.item_ref || `DOC-${created.item_number}`;
-      // The page keeps the document while it is read again: the create answers with the row
-      // alone, without its owner, relations and classifications.
-      qc.setQueryData(['knowledge', itemRef], created);
-      void qc.invalidateQueries({ queryKey: ['knowledge', itemRef], exact: true });
+      // The create answers with the row alone, without its owner, relations and classifications:
+      // the page opens on the document as read, its first state (the row if the read fails).
+      const full = await api.get(`/knowledge/${created.id}`).then((r) => r.data).catch(() => null);
+      qc.setQueryData(['knowledge', itemRef], full || created);
       const sp = new URLSearchParams();
       if (workspaceLibrarySlug) sp.set('library', workspaceLibrarySlug);
       sp.set('allLibraries', '0');
