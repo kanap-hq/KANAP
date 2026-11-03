@@ -587,9 +587,7 @@ const KnowledgeSidebar = React.memo(function KnowledgeSidebar({
               </PropertyRow>
             </Stack>
 
-            {isCreate ? (
-              <Alert severity="info" sx={{ fontSize: '0.75rem' }}>{t('sidebar.messages.saveFirstAll')}</Alert>
-            ) : (
+            {isCreate ? null : (
               <>
             <Divider />
 

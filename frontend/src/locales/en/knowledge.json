@@ -352,9 +352,6 @@
         "waiting": "Waiting",
         "you": "You"
       }
-    },
-    "messages": {
-      "saveFirstAll": "Save the document first to manage contributors, workflow, classification, relations, and versions."
     }
   },
   "statuses": {
@@ -502,6 +499,9 @@
       "loadFailedTitle": "This document could not be loaded",
       "loadFailedBody": "Check your connection and try again.",
       "backToLibrary": "Back to the library"
+    },
+    "creation": {
+      "record": "The document"
     }
   },
   "delete": {
