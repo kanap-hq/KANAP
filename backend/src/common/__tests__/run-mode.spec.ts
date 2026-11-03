@@ -199,12 +199,12 @@ function lineAbout(extra: Record<string, string | undefined>, name: string): str
 }
 
 function testConfigValueWarnings() {
-  // Invalid token lifetimes: one warning per variable, naming the value. The token still lasts 15 minutes.
+  // Invalid token lifetimes: one warning per variable, naming the value. Each token keeps its own default (15 minutes, 4 hours).
   const both = configured({ JWT_ACCESS_TOKEN_TTL: 'tomorrow', JWT_REFRESH_TOKEN_TTL: 'later' });
   const access = both.warnings.find((warning) => warning.includes('JWT_ACCESS_TOKEN_TTL'));
   const refresh = both.warnings.find((warning) => warning.includes('JWT_REFRESH_TOKEN_TTL'));
   assert.ok(access?.startsWith('[CONFIG]') && access.includes('"tomorrow"') && access.includes('15 minutes'), access);
-  assert.ok(refresh?.startsWith('[CONFIG]') && refresh.includes('"later"') && refresh.includes('15 minutes'), refresh);
+  assert.ok(refresh?.startsWith('[CONFIG]') && refresh.includes('"later"') && refresh.includes('4 hours'), refresh);
   assert.equal(lineAbout({ JWT_ACCESS_TOKEN_TTL: '15m', JWT_REFRESH_TOKEN_TTL: '4h' }, 'JWT_ACCESS_TOKEN_TTL'), undefined);
   assert.equal(lineAbout({ JWT_ACCESS_TOKEN_TTL: '15m', JWT_REFRESH_TOKEN_TTL: '4h' }, 'JWT_REFRESH_TOKEN_TTL'), undefined);
 
