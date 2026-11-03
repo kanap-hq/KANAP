@@ -173,6 +173,8 @@ Les nouveaux articles peuvent démarrer de deux manières :
 
 Lorsque vous créez à partir d'un modèle, le contenu du modèle est copié dans le nouveau document. À partir de ce moment, le nouvel article est indépendant. Mettre à jour le modèle plus tard ne réécrit pas les documents existants.
 
+Un nouveau document s'ouvre avec son titre à saisir dans l'en-tête. Appuyez sur Entrée pour créer le document. Il s'ouvre en mode édition, avec l'éditeur, **Importer** et le panneau latéral disponibles. Cliquez sur **Créer** pour le garder : vous revenez là où vous avez commencé, ou à la bibliothèque. Cliquez sur **Annuler** pour le supprimer à la place. KANAP demande d'abord confirmation lorsque vous avez saisi plus que le titre. Sur tout document en mode édition, cliquez sur le titre dans l'en-tête pour le modifier.
+
 L'espace de travail document garde l'écriture au centre et la gouvernance dans la barre latérale.
 
 Les propriétés principales incluent :
@@ -183,7 +185,7 @@ Les propriétés principales incluent :
 - **Basé sur le modèle** : la lignée de modèle, lorsque pertinente
 - **Résumé** : une courte description pour le contexte
 
-Après le premier enregistrement, le modèle complet de gouvernance du document devient disponible. C'est à ce moment que vous pouvez gérer les contributeurs, classifications, relations, commentaires et historique des versions par rapport à une référence de document stable.
+Une fois le document créé, le modèle complet de gouvernance du document devient disponible. C'est à ce moment que vous pouvez gérer les contributeurs, classifications, relations, commentaires et historique des versions par rapport à une référence de document stable.
 
 ### Statut et ce qu'il signifie
 
@@ -212,22 +214,21 @@ Comment ça fonctionne :
 Cela évite les écrasements silencieux, ce qui est excellent pour l'intégrité du document et moins excellent si deux personnes pensent toutes les deux avoir « juste un petit ajustement à faire ».
 
 Pendant que vous éditez :
-- les modifications sont enregistrées manuellement avec **Enregistrer**
-- le contenu non sauvegardé est aussi sauvegardé automatiquement périodiquement pendant que votre verrou est actif
-- **Annuler** revient au dernier état enregistré
+- les modifications sont enregistrées automatiquement quelques secondes après que vous arrêtez de taper, tant que votre verrou est actif
+- **Terminé** enregistre ce qui reste en attente, libère le verrou et quitte le mode édition
 
 L'espace de travail prend également en charge le téléversement d'images en ligne dans la zone de contenu markdown, afin que les captures d'écran et diagrammes puissent vivre avec l'article plutôt que dans un dossier mystérieux sur le bureau de quelqu'un. Lorsque vous collez ou référencez une image depuis une URL externe, l'image est automatiquement importée et stockée dans le document afin qu'elle reste disponible même si l'URL d'origine devient hors ligne.
 
 ## Importer un document Word
 
-Vous pouvez importer un document Word (`.docx`) dans un article de connaissances existant. Le bouton **Importer** apparaît dans la barre d'outils de l'espace de travail une fois que le document a été enregistré au moins une fois et que vous êtes en mode édition.
+Vous pouvez importer un document Word (`.docx`) dans un article de connaissances existant. Le bouton **Importer** apparaît dans la barre d'outils de l'espace de travail lorsque vous êtes en mode édition. Sur un nouveau document, il est disponible dès que le titre est saisi.
 
 Comment ça fonctionne :
 
 - Cliquez sur **Importer** et sélectionnez un fichier `.docx` depuis votre ordinateur.
 - Si l'article a déjà du contenu, une boîte de dialogue de confirmation demande si vous souhaitez le remplacer. Choisir **Continuer** écrase le markdown actuel avec le contenu importé.
 - Le contenu Word est converti en markdown et chargé dans l'éditeur. Les images intégrées dans le fichier Word sont extraites et stockées comme pièces jointes en ligne, vous n'avez donc pas à les téléverser à nouveau manuellement.
-- Après l'import, vos modifications sont non sauvegardées. Utilisez **Enregistrer** pour persister le contenu importé.
+- Le contenu importé est enregistré automatiquement, comme toute autre modification.
 
 Si l'import rencontre un conflit de verrou (quelqu'un d'autre a acquis le verrou) ou un verrou expiré, le mode édition se termine et un message approprié est affiché. Ré-entrez en mode édition et réessayez.
 

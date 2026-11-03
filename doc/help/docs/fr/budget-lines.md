@@ -246,7 +246,7 @@ Lorsque la ligne en remplace une autre, ou a été remplacée à partir d'une an
 
 - Liste toutes les tâches liées à cette ligne, avec les colonnes **Titre**, **Statut**, **Priorité**, **Échéance** et **Actions**. Le titre du panneau indique le nombre de tâches
 - Filtre **Statut** : Tous (par défaut), Actifs (non terminés), Ouvert, En cours, En attente, En test, Terminé ou Annulé. Le bouton de réinitialisation l'efface
-- Cliquez sur **Ajouter une tâche** pour ouvrir une nouvelle tâche déjà liée à cette ligne. Remplissez le titre, la description, la priorité, le responsable et l'échéance dans l'espace de travail de la tâche
+- Cliquez sur **Ajouter une tâche** pour ouvrir une nouvelle tâche déjà liée à cette ligne. Saisissez le titre et appuyez sur Entrée pour la créer, puis remplissez la description, la priorité, le responsable et l'échéance
 - Utilisez l'icône d'ouverture pour aller sur une tâche, et l'icône de suppression pour la supprimer (après confirmation)
 - Les tâches ont leurs propres autorisations (`tasks:member` pour créer et modifier). L'accès Membre sur Budget ne donne pas à lui seul le droit de modifier les tâches ; vérifiez avec votre admin si vous ne pouvez pas créer de tâches
 - Les tâches peuvent aussi être consultées et gérées depuis **Portefeuille > Tâches**, qui affiche toutes les tâches de votre organisation

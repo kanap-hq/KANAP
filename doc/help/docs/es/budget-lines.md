@@ -246,7 +246,7 @@ Cuando la línea sustituye a otra, o fue sustituida a partir de un año posterio
 
 - Muestra todas las tareas vinculadas a esta línea, con las columnas **Título**, **Estado**, **Prioridad**, **Fecha de vencimiento** y **Acciones**. El título del panel indica el número de tareas
 - Filtro **Estado**: Todos (por defecto), Activas (no completadas), Abierta, En curso, Pendiente, En pruebas, Completada o Cancelada. El botón de borrar lo restablece
-- Haga clic en **Agregar tarea** para abrir una tarea nueva ya vinculada a esta línea. Complete el título, la descripción, la prioridad, el responsable y la fecha de vencimiento en el espacio de trabajo de la tarea
+- Haga clic en **Agregar tarea** para abrir una tarea nueva ya vinculada a esta línea. Escriba el título y pulse Intro para crearla, luego complete la descripción, la prioridad, el responsable y la fecha de vencimiento
 - Use el icono de abrir para ir a una tarea y el icono de eliminar para borrarla (tras confirmar)
 - Las tareas tienen sus propios permisos (`tasks:member` para crear y editar). El nivel Miembro en Presupuesto no da por sí solo derechos de edición de tareas; consulte a su administrador si no puede crear tareas
 - Las tareas también se pueden ver y gestionar desde **Portafolio > Tareas**, que muestra todas las tareas de su organización
