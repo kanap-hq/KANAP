@@ -75,7 +75,8 @@ export default function ContactWorkspacePage() {
   if (params.tab && params.tab !== 'overview') {
     return <Navigate replace to={`${LIST_PATH}/${id}/overview${location.search}`} />;
   }
-  if (id === 'new') return <ContactCreate />;
+  // The new page is the contact's own page on a draft, sent by Create.
+  if (id === 'new') return <ContactEditor key="new" id="new" />;
   // Keyed by contact: drafts and pending saves belong to the contact they were typed on.
   return <ContactEditor key={id} id={id} />;
 }
@@ -92,16 +93,32 @@ function ContactEditor({ id }: { id: string }) {
   const canDelete = hasLevel('contacts', 'admin') && !dataAccessLimited;
   const withContext = useListContext();
   const roleOptions = useContactRoleOptions();
+  const isCreate = id === 'new';
+  const [searchParams] = useSearchParams();
+
+  // Opened from a supplier's contacts: the supplier and the type come with the address.
+  const prefillSupplierId = isCreate ? searchParams.get('supplier_id') || null : null;
+  const rawRole = searchParams.get('supplier_role');
+  const prefillRole = prefillSupplierId && isContactRole(rawRole) ? rawRole : null;
+  const returnTo = isCreate ? safeReturnTo(searchParams.get('returnTo')) : null;
 
   const detailKey = React.useMemo(() => ['contacts', id] as const, [id]);
   // Set once the contact is deleted: the page leaves without loading it again.
   const [deletedId, setDeletedId] = React.useState<string | null>(null);
-  const { data, error: loadError } = useQuery({
+  const { data: stored, error: loadError } = useQuery({
     queryKey: detailKey,
     queryFn: async () => (await api.get<Contact>(`/contacts/${id}`)).data,
-    enabled: deletedId !== id,
+    enabled: deletedId !== id && !isCreate,
   });
-  const { data: usages } = useRecordUsages('contacts', id);
+  // A new contact: the fields write here, Create sends it.
+  const [draft, setDraft] = React.useState<Contact>(() => ({
+    id: '', first_name: null, last_name: null, job_title: null, email: '', phone: null, mobile: null, country: null,
+    notes: null, active: true, supplier_id: prefillSupplierId,
+    supplier_role: prefillSupplierId ? prefillRole ?? DEFAULT_CONTACT_ROLE : null,
+  }));
+  const draftRef = React.useRef(draft);
+  const data = isCreate ? draft : stored;
+  const { data: usages } = useRecordUsages('contacts', id, !isCreate);
 
   const [errors, setErrors] = React.useState<FieldErrors>({});
   const [pageError, setPageError] = React.useState<string | null>(null);
@@ -117,6 +134,12 @@ function ContactEditor({ id }: { id: string }) {
    * a refusal shows under the field and the stored values come back.
    */
   const save = React.useCallback((patch: ContactPatch, field: FieldKey, optimistic?: Partial<Contact>): Promise<void> => {
+    if (isCreate) {
+      setErrors((prev) => ({ ...prev, [field]: undefined }));
+      draftRef.current = { ...draftRef.current, ...patch };
+      setDraft(draftRef.current);
+      return Promise.resolve();
+    }
     if (!canEdit || !queryClient.getQueryData(detailKey)) return Promise.resolve();
     setErrors((prev) => ({ ...prev, [field]: undefined }));
     if (field === 'name') setPageError(null);
@@ -152,7 +175,7 @@ function ContactEditor({ id }: { id: string }) {
     const result = chainRef.current.then(run, run);
     chainRef.current = result.catch(() => undefined);
     return result;
-  }, [canEdit, detailKey, id, queryClient, t]);
+  }, [canEdit, detailKey, id, isCreate, queryClient, t]);
 
   const saveNow = (patch: ContactPatch, field: FieldKey, optimistic?: Partial<Contact>) => {
     void save(patch, field, optimistic).catch(() => undefined);
@@ -161,6 +184,11 @@ function ContactEditor({ id }: { id: string }) {
   const commitText = (field: 'email' | 'job_title', raw: string) => {
     if (!data) return;
     const next = raw.trim();
+    // A new contact's fields are checked on Create.
+    if (isCreate) {
+      saveNow({ [field]: field === 'email' ? next : next || null }, field);
+      return;
+    }
     if (field === 'email') {
       const invalid = emailError(next, t);
       if (invalid) {
@@ -184,7 +212,7 @@ function ContactEditor({ id }: { id: string }) {
 
   const commitPhone = (field: 'phone' | 'mobile', next: string | null) => {
     if (!data) return;
-    const invalid = phoneError(next, t);
+    const invalid = isCreate ? null : phoneError(next, t);
     if (invalid) {
       setErrors((prev) => ({ ...prev, [field]: invalid }));
       return;
@@ -218,6 +246,56 @@ function ContactEditor({ id }: { id: string }) {
     navigate(withContext(LIST_PATH));
   };
 
+  // Back where the creation started: the supplier it came from, else the previous page, else the list.
+  const leave = useCreationLeave(() => navigate(withContext(LIST_PATH)));
+  const leaveCreation = () => (returnTo ? navigate(returnTo) : leave());
+  const [creating, setCreating] = React.useState(false);
+  const handleCreate = async () => {
+    if (!canEdit || creating) return;
+    await autosave.flush();
+    const values = draftRef.current;
+    const nextErrors: FieldErrors = {};
+    const invalidEmail = emailError(values.email, t);
+    if (invalidEmail) nextErrors.email = invalidEmail;
+    const invalidPhone = phoneError(values.phone, t);
+    if (invalidPhone) nextErrors.phone = invalidPhone;
+    const invalidMobile = phoneError(values.mobile, t);
+    if (invalidMobile) nextErrors.mobile = invalidMobile;
+    if (values.supplier_id && !values.supplier_role) nextErrors.supplier_role = t('contacts.messages.typeRequired');
+    setErrors((prev) => ({ ...prev, ...nextErrors }));
+    if (Object.keys(nextErrors).length > 0) {
+      setDrawerOpenRequest((n) => n + 1);
+      return;
+    }
+    setCreating(true);
+    setPageError(null);
+    try {
+      await api.post<Contact>('/contacts', {
+        email: values.email,
+        first_name: values.first_name?.trim() || null,
+        last_name: values.last_name?.trim() || null,
+        job_title: values.job_title,
+        phone: values.phone,
+        mobile: values.mobile,
+        country: values.country,
+        supplier_id: values.supplier_id,
+        supplier_role: values.supplier_id ? values.supplier_role : null,
+        notes: values.notes,
+        active: values.active,
+      });
+      void queryClient.invalidateQueries({ queryKey: ['supplier-contacts'] });
+      leaveCreation();
+    } catch (e) {
+      const status = (e as { response?: { status?: number } } | null)?.response?.status;
+      const message = getApiErrorMessage(e, t, t('contacts.messages.createFailed'));
+      // The email is the one field the page cannot check by itself: another contact may have it.
+      if (status === 400 && /email/i.test(message)) setErrors((prev) => ({ ...prev, email: t('contacts.messages.emailTaken') }));
+      else setPageError(message);
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const [drawerOpenRequest, setDrawerOpenRequest] = React.useState(0);
   const openDrawer = () => setDrawerOpenRequest((n) => n + 1);
 
@@ -228,14 +306,14 @@ function ContactEditor({ id }: { id: string }) {
   const roleError = errors.supplier_role ?? (roleMissing ? t('contacts.messages.typeRequired') : undefined);
   const activeColor = getDotColor('success', theme.palette.mode);
   const inactiveColor = getDotColor('default', theme.palette.mode);
-  const savingHint = autosave.status === 'saving' || autosave.status === 'pending'
+  const savingHint = isCreate ? null : autosave.status === 'saving' || autosave.status === 'pending'
     ? t('common:status.saving')
     : autosave.status === 'saved' ? t('common:status.saved') : null;
   const tertiary = (text: string) => <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>{text}</Box>;
 
   const metadata = data ? (
     <>
-      {data.supplier_id ? (
+      {isCreate ? null : data.supplier_id ? (
         <PortfolioMetadataItem label={t('contacts.fields.supplier')}>
           <Box
             component={RouterLink}
@@ -260,7 +338,7 @@ function ContactEditor({ id }: { id: string }) {
           {tertiary(t('contacts.metadata.supplierMissing'))}
         </PortfolioMetadataItem>
       )}
-      {data.supplier_id && (
+      {!isCreate && data.supplier_id && (
         <PortfolioMetadataItem label={t('contacts.fields.contactType')}>
           <MetadataMenu<ContactRole>
             value={data.supplier_role}
@@ -295,13 +373,15 @@ function ContactEditor({ id }: { id: string }) {
           disabled={disabled}
         />
       </PortfolioMetadataItem>
-      <PortfolioMetadataItem
-        label={t('shared.usages.title')}
-        onClick={scrollToUsages}
-        title={t('shared.usages.open')}
-      >
-        {usages ? usages.total : '…'}
-      </PortfolioMetadataItem>
+      {!isCreate && (
+        <PortfolioMetadataItem
+          label={t('shared.usages.title')}
+          onClick={scrollToUsages}
+          title={t('shared.usages.open')}
+        >
+          {usages ? usages.total : '…'}
+        </PortfolioMetadataItem>
+      )}
     </>
   ) : undefined;
 
@@ -317,7 +397,7 @@ function ContactEditor({ id }: { id: string }) {
               ? { id: data.supplier_id, name: data.supplier_name, erp_supplier_id: null, status: 'enabled' }
               : null}
             onChange={(supplierId) => changeSupplier(supplierId, null)}
-            disabled={disabled}
+            disabled={disabled || !!prefillSupplierId}
             error={!!errors.supplier_id}
             helperText={errors.supplier_id}
             placeholder={t('contacts.placeholders.supplier')}
@@ -328,7 +408,7 @@ function ContactEditor({ id }: { id: string }) {
             value={data.supplier_role}
             hasSupplier={!!data.supplier_id}
             onChange={changeRole}
-            disabled={disabled}
+            disabled={disabled || !!prefillRole}
             error={roleError}
           />
         </PropertyRow>
@@ -403,11 +483,20 @@ function ContactEditor({ id }: { id: string }) {
         onTabChange={() => undefined}
         drawerStorageKey={DRAWER_KEY}
         drawerOpenRequest={drawerOpenRequest}
-        backLabel={t('contacts.title')}
-        onBack={() => { void close(); }}
-        title={name ?? ''}
-        titleFallback={t('contacts.contactFallback')}
-        titleEditor={data ? (
+        // Opened from a supplier, the way back names the suppliers.
+        backLabel={returnTo?.startsWith(`${SUPPLIERS_PATH}/`) ? t('suppliers.title') : t('contacts.title')}
+        onBack={isCreate ? leaveCreation : () => { void close(); }}
+        title={isCreate ? '' : name ?? ''}
+        titleFallback={isCreate ? t('contacts.newContact') : t('contacts.contactFallback')}
+        isCreate={isCreate}
+        titleEditor={isCreate ? (
+          <ContactNameDraft
+            firstName={draft.first_name ?? ''}
+            lastName={draft.last_name ?? ''}
+            onChange={(next) => saveNow(next, 'name')}
+            onCancel={leaveCreation}
+          />
+        ) : data ? (
           <ContactNameTitle
             firstName={data.first_name}
             lastName={data.last_name}
@@ -421,8 +510,10 @@ function ContactEditor({ id }: { id: string }) {
         metadata={metadata}
         // One tab: the shell shows the History button in the header, never a tab, and mounts the
         // shared history in its right panel on demand.
-        history={data ? { table: 'contacts', recordId: data.id } : undefined}
-        actions={(
+        history={data && !isCreate ? { table: 'contacts', recordId: data.id } : undefined}
+        actions={isCreate ? (
+          <CreationActions onCreate={() => void handleCreate()} onCancel={leaveCreation} busy={!canEdit || creating} />
+        ) : (
           <>
             {savingHint && (
               <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', alignSelf: 'center', mr: 0.5 }}>{savingHint}</Typography>
@@ -457,7 +548,7 @@ function ContactEditor({ id }: { id: string }) {
               }}
               onCommit={() => { void autosave.flush(); }}
             />
-            <RecordUsagesSection owner="contacts" id={id} />
+            {!isCreate && <RecordUsagesSection owner="contacts" id={id} />}
           </Stack>
         )}
       </PortfolioDetailWorkspaceShell>
@@ -551,226 +642,6 @@ function ContactNotes({
         sx={longFormSurfaceFieldSx}
         inputProps={{ 'aria-label': t('contacts.fields.notes'), maxLength: NOTES_MAX_LENGTH }}
       />
-    </Box>
-  );
-}
-
-type CreateValues = {
-  email: string;
-  first_name: string;
-  last_name: string;
-  job_title: string;
-  phone: string | null;
-  mobile: string | null;
-  country: string;
-  supplier_id: string | null;
-  supplier_role: ContactRole | null;
-  notes: string;
-};
-
-function ContactCreate() {
-  const { t } = useTranslation(['master-data', 'common']);
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const { hasLevel } = useAuth();
-  const canCreate = hasLevel('contacts', 'manager');
-  const [searchParams] = useSearchParams();
-  const withContext = useListContext();
-
-  // Opened from a supplier's contacts: the supplier and the type come with the address.
-  const prefillSupplierId = searchParams.get('supplier_id') || null;
-  const rawRole = searchParams.get('supplier_role');
-  const prefillRole = prefillSupplierId && isContactRole(rawRole) ? rawRole : null;
-  const returnTo = safeReturnTo(searchParams.get('returnTo'));
-  // Opened from a supplier, the way back names the suppliers.
-  const backLabel = returnTo?.startsWith(`${SUPPLIERS_PATH}/`) ? t('suppliers.title') : t('contacts.title');
-
-  const [values, setValues] = React.useState<CreateValues>({
-    email: '',
-    first_name: '',
-    last_name: '',
-    job_title: '',
-    phone: null,
-    mobile: null,
-    country: '',
-    supplier_id: prefillSupplierId,
-    supplier_role: prefillSupplierId ? prefillRole ?? DEFAULT_CONTACT_ROLE : null,
-    notes: '',
-  });
-  const [errors, setErrors] = React.useState<FieldErrors>({});
-  const [serverError, setServerError] = React.useState<string | null>(null);
-  const [submitting, setSubmitting] = React.useState(false);
-
-  // A field the user changes loses its error until the next Create.
-  const clearError = (field: FieldKey) => setErrors((prev) => (prev[field] ? { ...prev, [field]: undefined } : prev));
-  const set = <K extends keyof CreateValues>(field: K, value: CreateValues[K]) => {
-    setValues((prev) => ({ ...prev, [field]: value }));
-    clearError(field as FieldKey);
-  };
-
-  // Back where the creation started: the supplier it came from, else the previous page, else the list.
-  const leave = useCreationLeave(() => navigate(withContext(LIST_PATH)));
-  const close = () => (returnTo ? navigate(returnTo) : leave());
-
-  const setPhone = (field: 'phone' | 'mobile', next: string | null) => {
-    clearError(field);
-    setValues((prev) => {
-      const patch = withGuessedCountry({ [field]: next }, next, prev.country || null);
-      return { ...prev, [field]: next, country: patch.country ?? prev.country };
-    });
-  };
-
-  const handleCreate = async () => {
-    if (!canCreate || submitting) return;
-    const email = values.email.trim();
-    const nextErrors: FieldErrors = {};
-    const invalidEmail = emailError(email, t);
-    if (invalidEmail) nextErrors.email = invalidEmail;
-    const invalidPhone = phoneError(values.phone, t);
-    if (invalidPhone) nextErrors.phone = invalidPhone;
-    const invalidMobile = phoneError(values.mobile, t);
-    if (invalidMobile) nextErrors.mobile = invalidMobile;
-    if (values.supplier_id && !values.supplier_role) nextErrors.supplier_role = t('contacts.messages.typeRequired');
-    setErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0) return;
-    setSubmitting(true);
-    setServerError(null);
-    const optional = (value: string) => value.trim() || null;
-    try {
-      await api.post<Contact>('/contacts', {
-        email,
-        first_name: optional(values.first_name),
-        last_name: optional(values.last_name),
-        job_title: optional(values.job_title),
-        phone: values.phone,
-        mobile: values.mobile,
-        country: values.country || null,
-        supplier_id: values.supplier_id,
-        supplier_role: values.supplier_id ? values.supplier_role : null,
-        notes: optional(values.notes),
-        active: true,
-      });
-      void queryClient.invalidateQueries({ queryKey: ['supplier-contacts'] });
-      close();
-    } catch (e) {
-      const status = (e as { response?: { status?: number } } | null)?.response?.status;
-      const message = getApiErrorMessage(e, t, t('contacts.messages.createFailed'));
-      // The email is the one field the form cannot check by itself: another contact may have it.
-      if (status === 400 && /email/i.test(message)) setErrors({ email: t('contacts.messages.emailTaken') });
-      else setServerError(message);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const textRow = (field: 'email' | 'job_title', label: string, placeholder: string, required = false) => (
-    <PropertyRow label={label} required={required}>
-      <TextField
-        value={values[field]}
-        onChange={(event) => set(field, event.target.value)}
-        type={field === 'email' ? 'email' : undefined}
-        variant="standard"
-        sx={drawerFieldValueSx}
-        placeholder={placeholder}
-        error={!!errors[field as FieldKey]}
-        helperText={errors[field as FieldKey]}
-        inputProps={{ 'aria-label': label, autoComplete: 'off' }}
-      />
-    </PropertyRow>
-  );
-  const twoColumnsSx = {
-    display: 'grid',
-    gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
-    columnGap: 3,
-  } as const;
-
-  return (
-    <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-      <PortfolioDetailWorkspaceShell
-        activeTab="overview"
-        tabs={[{ key: 'overview', label: t('shared.labels.overview') }]}
-        onTabChange={() => undefined}
-        drawerStorageKey={DRAWER_KEY}
-        backLabel={backLabel}
-        onBack={close}
-        title=""
-        titleFallback={t('contacts.newContact')}
-        titleEditor={(
-          <ContactNameDraft
-            firstName={values.first_name}
-            lastName={values.last_name}
-            onChange={(next) => setValues((prev) => ({ ...prev, ...next }))}
-            onCancel={close}
-          />
-        )}
-        isCreate
-        actions={<CreationActions onCreate={() => void handleCreate()} onCancel={close} busy={!canCreate || submitting} />}
-      >
-        <Stack spacing={3} sx={{ maxWidth: 640 }}>
-          <Box sx={twoColumnsSx}>
-            {textRow('email', t('contacts.fields.email'), t('contacts.placeholders.email'), true)}
-            {textRow('job_title', t('contacts.fields.jobTitle'), t('contacts.placeholders.jobTitle'))}
-            <PropertyRow label={t('contacts.fields.supplier')}>
-              <SupplierSelect
-                label={t('contacts.fields.supplier')}
-                hideLabel
-                value={values.supplier_id}
-                onChange={(supplierId) => { clearError('supplier_role'); setValues((prev) => ({
-                  ...prev,
-                  supplier_id: supplierId,
-                  // A supplier never stays without a type: the default one comes with the choice.
-                  supplier_role: supplierId ? prev.supplier_role ?? DEFAULT_CONTACT_ROLE : null,
-                })); }}
-                disabled={!!prefillSupplierId}
-                placeholder={t('contacts.placeholders.supplier')}
-              />
-            </PropertyRow>
-            <PropertyRow label={t('contacts.fields.contactType')} required={!!values.supplier_id}>
-              <ContactRoleSelect
-                value={values.supplier_role}
-                hasSupplier={!!values.supplier_id}
-                onChange={(role) => set('supplier_role', role)}
-                disabled={!!prefillRole}
-                error={errors.supplier_role}
-              />
-            </PropertyRow>
-            <PropertyRow label={t('contacts.fields.phone')}>
-              <ContactPhoneField
-                value={values.phone}
-                label={t('contacts.fields.phone')}
-                placeholder={t('contacts.placeholders.phone')}
-                onChange={(next) => setPhone('phone', next)}
-                error={errors.phone}
-              />
-            </PropertyRow>
-            <PropertyRow label={t('contacts.fields.mobile')}>
-              <ContactPhoneField
-                value={values.mobile}
-                label={t('contacts.fields.mobile')}
-                placeholder={t('contacts.placeholders.mobile')}
-                onChange={(next) => setPhone('mobile', next)}
-                error={errors.mobile}
-              />
-            </PropertyRow>
-            <PropertyRow label={t('contacts.fields.country')}>
-              <CountryField value={values.country} onChange={(country) => set('country', country)} clearable />
-            </PropertyRow>
-          </Box>
-          <PropertyRow label={t('contacts.fields.notes')} valueSx={{ maxWidth: 640 }}>
-            <TextField
-              value={values.notes}
-              onChange={(event) => set('notes', event.target.value)}
-              multiline
-              minRows={3}
-              variant="standard"
-              sx={drawerFieldValueSx}
-              placeholder={t('contacts.placeholders.notes')}
-              inputProps={{ 'aria-label': t('contacts.fields.notes'), maxLength: NOTES_MAX_LENGTH }}
-            />
-          </PropertyRow>
-          {serverError && <Alert severity="error">{serverError}</Alert>}
-        </Stack>
-      </PortfolioDetailWorkspaceShell>
     </Box>
   );
 }

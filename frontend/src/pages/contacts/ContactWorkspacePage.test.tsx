@@ -372,6 +372,7 @@ describe('ContactWorkspacePage create', () => {
     expect(screen.getByTestId('supplier-select')).toHaveAttribute('data-value', 's-1');
     expect(screen.getByTestId('supplier-select')).toHaveAttribute('data-disabled', 'true');
     fireEvent.change(screen.getByLabelText('contacts.fields.email'), { target: { value: 'sam@example.com' } });
+    fireEvent.blur(screen.getByLabelText('contacts.fields.email'));
     fireEvent.change(screen.getByLabelText('contacts.fields.firstName'), { target: { value: 'Sam' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
@@ -396,6 +397,7 @@ describe('ContactWorkspacePage create', () => {
   it('gives a supplier chosen on the form the default type', async () => {
     renderAt('/master-data/contacts/new/overview?sort=last_name%3AASC');
     fireEvent.change(screen.getByLabelText('contacts.fields.email'), { target: { value: 'sam@example.com' } });
+    fireEvent.blur(screen.getByLabelText('contacts.fields.email'));
     fireEvent.click(screen.getByRole('button', { name: 'pick supplier' }));
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
@@ -406,13 +408,18 @@ describe('ContactWorkspacePage create', () => {
   it('shows the errors on their fields and creates nothing', async () => {
     renderAt('/master-data/contacts/new/overview');
     fireEvent.change(screen.getByLabelText('contacts.fields.email'), { target: { value: 'sam' } });
+    fireEvent.blur(screen.getByLabelText('contacts.fields.email'));
     fireEvent.change(screen.getByLabelText('contacts.fields.mobile'), { target: { value: '12' } });
+    fireEvent.blur(screen.getByLabelText('contacts.fields.mobile'));
+    // Nothing is checked before Create.
+    expect(screen.queryByText('master-data:contacts.messages.emailInvalid')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('master-data:contacts.messages.emailInvalid')).toBeInTheDocument();
     expect(screen.getByText('master-data:contacts.messages.phoneInvalid')).toBeInTheDocument();
     expect(mocked.post).not.toHaveBeenCalled();
-    // A corrected field loses its error at once.
+    // A corrected field loses its error once it is left, as on a saved contact.
     fireEvent.change(screen.getByLabelText('contacts.fields.email'), { target: { value: 'sam@example.com' } });
+    fireEvent.blur(screen.getByLabelText('contacts.fields.email'));
     expect(screen.queryByText('master-data:contacts.messages.emailInvalid')).toBeNull();
   });
 
@@ -447,24 +454,20 @@ describe('ContactWorkspacePage create', () => {
       expect(document.activeElement).toBe(element);
     };
     await expectNext(screen.getByLabelText('contacts.fields.lastName'));
-    // Cancel and Create sit in the title row, then the fields.
-    await expectNext(screen.getByRole('button', { name: 'common:buttons.cancel' }));
-    await expectNext(screen.getByRole('button', { name: 'common:buttons.create' }));
-    await expectNext(screen.getByLabelText('contacts.fields.email'));
-    await expectNext(screen.getByLabelText('contacts.fields.jobTitle'));
-    await expectNext(screen.getByLabelText('contacts.fields.supplier'));
+    // The fields sit in the contact's Properties drawer, as on a saved contact.
     const type = screen.getByRole('combobox', { name: 'contacts.fields.contactType' });
-    await expectNext(type);
+    type.focus();
     // A choice made in the menu gives the focus back to the field, so Tab goes on from there.
     await user.keyboard('{Enter}');
     await user.click(await screen.findByRole('option', { name: 'contacts.roles.technical' }));
     await waitFor(() => expect(document.activeElement).toBe(type));
+    await expectNext(screen.getByLabelText('contacts.fields.email'));
+    await expectNext(screen.getByLabelText('contacts.fields.jobTitle'));
     await expectNext(screen.getByLabelText('contacts.fields.dialCodeOf:contacts.fields.phone'));
     await expectNext(screen.getByLabelText('contacts.fields.phone'));
     await expectNext(screen.getByLabelText('contacts.fields.dialCodeOf:contacts.fields.mobile'));
     await expectNext(screen.getByLabelText('contacts.fields.mobile'));
     await expectNext(screen.getByLabelText('companies.fields.country'));
-    await expectNext(screen.getByLabelText('contacts.fields.notes'));
   });
 
   it('ignores a return address outside the app', async () => {
