@@ -43,7 +43,7 @@ La liste affiche tous les processus métier de votre tenant.
 
 **Actions** (barre d'outils en haut à droite) :
 
-- **Nouveau** (`business_processes:member`) : créer un nouveau processus métier.
+- **Nouveau** (`business_processes:member`) : créer un nouveau processus métier. Voir [Créer un processus métier](#creating-a-business-process).
 - **Gérer les catégories** (`business_processes:member`) : ouvrir le dialogue de gestion des catégories.
 - **Importer** (Admin) : import en masse de processus depuis un fichier CSV ou un classeur Excel.
 - **Exporter** (Admin) : exporter les processus que la liste affiche, ou tous les processus, dans un fichier CSV ou un classeur Excel.
@@ -51,45 +51,60 @@ La liste affiche tous les processus métier de votre tenant.
 
 ---
 
+## Créer un processus métier { #creating-a-business-process }
+
+1. Cliquez sur **Nouveau** dans la liste. La page du processus s'ouvre avec un titre vide dans l'en-tête. Le reste de la page est grisé.
+2. Saisissez le nom du processus, idéalement avec son code court (par ex. « Order-to-Cash (O2C) »).
+3. Appuyez sur Entrée, ou cliquez hors du titre. KANAP crée le processus aussitôt, activé, et tous les onglets s'ouvrent.
+
+Appuyez sur Échap dans le titre vide pour partir sans rien créer. Deux processus ne peuvent pas porter le même nom, quelle que soit la casse : un nom déjà utilisé est refusé, avec un message sous le titre.
+
+Tant que le processus est en cours de création, son en-tête affiche **Créer** et **Annuler**. Ils restent jusqu'à ce que vous quittiez le processus.
+
+- **Créer** conserve le processus et le ferme. Vous revenez à votre point de départ : la liste ou l'écran précédent. Avec un titre vide, rien ne se ferme et le titre en demande un.
+- **Annuler** ferme sans rien conserver. Sur un processus déjà créé, il le supprime, avec les liens vers les applications que vous avez ajoutés. Si vous avez saisi plus que le nom, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des processus.
+
+Si vous quittez le processus autrement, il est conservé.
+
+---
+
 ## L'espace de travail Processus métier
 
-Cliquez sur n'importe quelle ligne de la liste (ou le bouton **Nouveau**) pour ouvrir l'espace de travail. Le bouton **Historique** de l'en-tête ouvre l'historique du processus dans un panneau latéral. Voir [Historique des fiches](record-history.md).
+Cliquez sur n'importe quelle ligne de la liste pour ouvrir l'espace de travail. Chaque modification s'enregistre d'elle-même : une liste ou un sélecteur quand vous choisissez une valeur, un texte quand vous le quittez. **Enregistré** s'affiche brièvement dans l'en-tête.
 
-L'espace de travail comporte un seul onglet **Vue d'ensemble** à gauche, et une barre d'outils en haut :
+L'en-tête contient :
 
-- **Préc / Suiv** : naviguer entre les processus dans l'ordre de la liste actuelle.
-- **Réinitialiser** : annuler les modifications non enregistrées.
-- **Enregistrer** : persister les modifications.
+- **Processus métier** (flèche de retour) : revenir à la liste en conservant vos filtres et votre tri.
+- Le **nom** : cliquez dessus pour renommer le processus.
+- Les flèches **précédent / suivant** : parcourir les processus dans l'ordre de la liste actuelle.
+- **Statut** : **Activé** ou **Désactivé**. Les processus activés apparaissent dans les sélecteurs de l'application. Désactivez un processus pour le retirer sans le supprimer, afin que les références historiques restent intactes.
 - **Supprimer** (icône corbeille, Admin) : supprimer le processus et revenir à la liste. Un processus utilisé par des applications ou des interfaces ne peut pas être supprimé : le message les compte. Désactivez-le plutôt.
-- **Fermer** (icône X) : revenir à la liste en conservant vos filtres et tri intacts.
 
-Si vous quittez la page avec des modifications non enregistrées, vous serez invité à enregistrer ou annuler.
+Sans `business_processes:member`, la page s'ouvre en lecture seule.
+
+### Propriétés
+
+Le tiroir des propriétés, à droite, contient :
+
+- **Catégories** : une ou plusieurs catégories. Choisissez des catégories existantes, créez-en une avec **Nouvelle catégorie**, ou ouvrez le dialogue de gestion des catégories avec **Modifier les catégories**.
+- **Responsable du processus** : l'utilisateur ultimement responsable du processus. Affiché dans la liste.
+- **Responsable IT** : l'utilisateur responsable des systèmes et outils IT qui soutiennent le processus.
+- **Cycle de vie** : l'interrupteur de statut et la date de fin de validité. Un processus dont la fin de validité est passée est désactivé.
 
 ### Vue d'ensemble
 
-L'onglet Vue d'ensemble est organisé en trois sections.
+- **Description** : ce que couvre le processus, idéalement de son point de départ à son point d'arrivée (par ex. « De la commande client jusqu'à la livraison, la facturation et la réception du paiement »).
+- **Notes** : informations internes telles que des liens vers des cartographies de processus, des procédures, des notes de périmètre ou des plans d'amélioration.
 
-**Informations de base**
+### Relations
 
-- **Nom** (obligatoire) : utilisez un nom clair incluant le code court, par ex. « Order-to-Cash (O2C) » ou « Hire-to-Retire (H2R) ».
-- **Description** : un bref résumé de ce que couvre le processus. Une bonne description capture les points de départ et d'arrivée (par ex. « De la commande client jusqu'à la livraison, la facturation et la réception du paiement. »).
-- **Interrupteur de statut** : son libellé indique l'état actuel (**Activé** ou **Désactivé**). Les processus activés apparaissent dans les sélecteurs de l'application. Désactivez un processus pour le retirer sans le supprimer, afin que les références historiques restent intactes.
+La section **Applications** liste les applications qui soutiennent le processus, avec leur référence, leur criticité et leur responsable IT. **Ajouter** ouvre une recherche ; un lien s'enregistre aussitôt. Survolez une ligne et cliquez sur sa croix pour retirer le lien. L'application affiche le même lien dans la section **Processus métier** de son onglet Relations.
 
-**Classification**
+Il faut `business_processes:member` pour modifier les liens. L'onglet n'apparaît que si vous pouvez lire les applications. Un Business Contributor ne voit et ne lie que les applications de son périmètre.
 
-- **Catégories** (sélection multiple) : assignez une ou plusieurs catégories. Vous pouvez choisir parmi les catégories existantes, en créer une nouvelle en ligne avec **Nouvelle catégorie**, ou cliquer sur **Modifier les catégories** pour ouvrir le dialogue complet de gestion des catégories.
-- **Responsable du processus** : l'utilisateur ultimement responsable du processus. Affiché dans la grille de la liste et disponible pour les futures notifications et approbations.
-- **Responsable IT** : l'utilisateur responsable des systèmes et outils IT qui supportent ce processus.
+### Historique
 
-**Détails**
-
-- **Notes** : champ libre pour des informations internes telles que des liens vers des cartographies de processus, des procédures, des notes de périmètre ou des plans d'amélioration.
-
-**Applications**
-
-Sous les détails, la section **Applications** liste les applications qui soutiennent le processus, avec leur référence, leur criticité et leur responsable IT. **Ajouter** ouvre une recherche ; un lien s'enregistre aussitôt, sans **Enregistrer**. Survolez une ligne et cliquez sur sa croix pour retirer le lien. L'application affiche le même lien dans la section **Processus métier** de son onglet Relations.
-
-Il faut `business_processes:member` pour modifier les liens. La section n'apparaît que si vous pouvez lire les applications. Un Business Contributor ne voit et ne lie que les applications de son périmètre.
+Les modifications apportées au processus et à ses liens vers les applications. Voir [Historique des fiches](record-history.md).
 
 ---
 
@@ -98,7 +113,7 @@ Il faut `business_processes:member` pour modifier les liens. La section n'appara
 Les catégories sont partagées entre tous les processus métier. Vous pouvez les gérer depuis deux endroits :
 
 1. Sur la page de la liste, cliquez sur **Gérer les catégories**.
-2. Dans l'espace de travail, sous le champ **Catégories**, cliquez sur **Modifier les catégories**.
+2. Dans l'espace de travail, sous le champ **Catégories** du tiroir des propriétés, cliquez sur **Modifier les catégories**.
 
 Les deux ouvrent le dialogue **Gérer les catégories de processus métier**.
 

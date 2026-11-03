@@ -43,7 +43,7 @@ La lista muestra todos los procesos de negocio de su espacio de trabajo.
 
 **Acciones** (barra de herramientas superior derecha):
 
-- **Nuevo** (`business_processes:member`): crear un nuevo proceso de negocio.
+- **Nuevo** (`business_processes:member`): crear un nuevo proceso de negocio. Consulte [Crear un proceso de negocio](#creating-a-business-process).
 - **Gestionar categorías** (`business_processes:member`): abrir el diálogo de gestión de categorías.
 - **Importar** (Admin): importación masiva de procesos desde un archivo CSV o un libro de Excel.
 - **Exportar** (Admin): exportar los procesos que muestra la lista, o todos los procesos, a un archivo CSV o un libro de Excel.
@@ -51,45 +51,60 @@ La lista muestra todos los procesos de negocio de su espacio de trabajo.
 
 ---
 
+## Crear un proceso de negocio { #creating-a-business-process }
+
+1. Haga clic en **Nuevo** en la lista. La página del proceso se abre con un título vacío en el encabezado. El resto de la página aparece atenuado.
+2. Escriba el nombre del proceso, idealmente con su código corto (p. ej., "Order-to-Cash (O2C)").
+3. Pulse Intro o haga clic fuera del título. KANAP crea el proceso de inmediato, activado, y se abren todas las pestañas.
+
+Pulse Escape en el título vacío para salir sin crear nada. Dos procesos no pueden tener el mismo nombre, sin distinguir mayúsculas de minúsculas: un nombre ya usado se rechaza, con un mensaje bajo el título.
+
+Mientras el proceso se está creando, su encabezado muestra **Crear** y **Cancelar**. Permanecen hasta que salga del proceso.
+
+- **Crear** conserva el proceso y lo cierra. Vuelve al punto de partida: la lista o la pantalla anterior. Con el título vacío, no se cierra nada y el título pide uno.
+- **Cancelar** cierra sin conservar nada. En un proceso ya creado, lo elimina, con los vínculos a aplicaciones que haya añadido. Si introdujo algo más que el nombre, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar procesos.
+
+Si sale del proceso de otra forma, este se conserva.
+
+---
+
 ## El espacio de trabajo de Procesos de negocio
 
-Haga clic en cualquier fila de la lista (o en el botón **Nuevo**) para abrir el espacio de trabajo. El botón **Historial** de la cabecera abre el historial del proceso en un panel lateral. Vea [Historial de los registros](record-history.md).
+Haga clic en cualquier fila de la lista para abrir el espacio de trabajo. Cada cambio se guarda solo: una lista o un selector cuando elige un valor, un texto cuando sale de él. **Guardado** aparece un momento en el encabezado.
 
-El espacio de trabajo tiene una única pestaña **Visión general** a la izquierda, y una barra de herramientas en la parte superior:
+El encabezado contiene:
 
-- **Anterior / Siguiente**: recorrer los procesos en el orden actual de la lista.
-- **Restablecer**: descartar cambios no guardados.
-- **Guardar**: persistir los cambios.
+- **Procesos de negocio** (flecha de retroceso): volver a la lista, manteniendo sus filtros y su ordenación.
+- El **nombre**: haga clic en él para renombrar el proceso.
+- Las flechas **anterior / siguiente**: recorrer los procesos en el orden actual de la lista.
+- **Estado**: **Activado** o **Desactivado**. Los procesos activados aparecen en los selectores de toda la aplicación. Desactive un proceso para retirarlo sin eliminarlo, para que las referencias históricas permanezcan intactas.
 - **Eliminar** (icono de papelera, Admin): eliminar el proceso y volver a la lista. Un proceso que usan aplicaciones o interfaces no se puede eliminar: el mensaje los cuenta. Desactívelo en su lugar.
-- **Cerrar** (icono X): volver a la lista, manteniendo sus filtros y ordenación intactos.
 
-Si navega fuera con cambios sin guardar, se le solicitará que guarde o descarte.
+Sin `business_processes:member`, la página se abre en solo lectura.
 
-### Visión general
+### Propiedades
 
-La pestaña Visión general está organizada en tres secciones.
+El panel de propiedades, a la derecha, contiene:
 
-**Información básica**
+- **Categorías**: una o más categorías. Elija categorías existentes, cree una con **Nueva categoría**, o abra el diálogo de gestión de categorías con **Editar categorías**.
+- **Responsable del proceso**: el usuario responsable último del proceso. Se muestra en la lista.
+- **Responsable IT**: el usuario responsable de los sistemas y herramientas IT que respaldan el proceso.
+- **Ciclo de vida**: el interruptor de estado y la fecha de fin de validez. Un proceso cuyo fin de validez ha pasado queda desactivado.
 
-- **Nombre** (obligatorio): utilice un nombre claro incluyendo el código corto, p. ej., "Pedido a cobro (O2C)" o "Contratación a jubilación (H2R)".
-- **Descripción**: un breve resumen de lo que cubre el proceso. Una buena descripción captura los puntos de inicio y fin (p. ej., "Desde el pedido del cliente hasta la entrega, facturación y cobro.").
-- **Interruptor de estado**: su etiqueta muestra el estado actual (**Activado** o **Desactivado**). Los procesos activados aparecen en los selectores de toda la aplicación. Desactive un proceso para retirarlo sin eliminarlo, para que las referencias históricas permanezcan intactas.
+### Vista general
 
-**Clasificación**
+- **Descripción**: lo que cubre el proceso, idealmente desde su inicio hasta su punto final (p. ej., "Desde el pedido del cliente hasta la entrega, la facturación y el cobro").
+- **Notas**: información interna como enlaces a mapas de procesos, procedimientos, notas de alcance o planes de mejora.
 
-- **Categorías** (selección múltiple): asigne una o más categorías. Puede elegir entre categorías existentes, crear una nueva en línea con **Nueva categoría**, o hacer clic en **Editar categorías** para abrir el diálogo completo de gestión de categorías.
-- **Responsable del proceso**: el usuario responsable último del proceso. Se muestra en la cuadrícula de la lista y disponible para futuras notificaciones y aprobaciones.
-- **Responsable IT**: el usuario responsable de los sistemas y herramientas IT que soportan este proceso.
+### Relaciones
 
-**Detalles**
+La sección **Aplicaciones** lista las aplicaciones que respaldan el proceso, con su referencia, su criticidad y su responsable IT. **Añadir** abre una búsqueda; un vínculo se guarda al instante. Pase el ratón por una fila y haga clic en su cruz para quitar el vínculo. La aplicación muestra el mismo vínculo en la sección **Procesos de negocio** de su pestaña Relaciones.
 
-- **Notas**: campo de texto libre para información interna como enlaces a mapas de procesos, procedimientos operativos estándar, notas de alcance o planes de mejora.
+Necesita `business_processes:member` para cambiar los vínculos. La pestaña solo aparece si puede leer las aplicaciones. Un Business Contributor solo ve y vincula las aplicaciones de su ámbito.
 
-**Aplicaciones**
+### Historial
 
-Debajo de los detalles, la sección **Aplicaciones** lista las aplicaciones que respaldan el proceso, con su referencia, su criticidad y su responsable de TI. **Añadir** abre una búsqueda; un vínculo se guarda al instante, sin **Guardar**. Pase el ratón por una fila y haga clic en su cruz para quitar el vínculo. La aplicación muestra el mismo vínculo en la sección **Procesos de negocio** de su pestaña Relaciones.
-
-Necesita `business_processes:member` para cambiar los vínculos. La sección solo aparece si puede leer las aplicaciones. Un Business Contributor solo ve y vincula las aplicaciones de su ámbito.
+Los cambios del proceso y de sus vínculos con aplicaciones. Vea [Historial de los registros](record-history.md).
 
 ---
 
@@ -98,7 +113,7 @@ Necesita `business_processes:member` para cambiar los vínculos. La sección sol
 Las categorías se comparten entre todos los procesos de negocio. Puede gestionarlas desde dos lugares:
 
 1. En la página de la lista, haga clic en **Gestionar categorías**.
-2. En el espacio de trabajo, bajo el campo **Categorías**, haga clic en **Editar categorías**.
+2. En el espacio de trabajo, bajo el campo **Categorías** del panel de propiedades, haga clic en **Editar categorías**.
 
 Ambos abren el diálogo **Gestionar categorías de procesos de negocio**.
 
