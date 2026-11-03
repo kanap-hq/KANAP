@@ -103,7 +103,7 @@ describe('DepartmentWorkspacePage', () => {
     expect(screen.getByRole('tab', { name: 'shared.labels.history' })).toBeInTheDocument();
   });
 
-  it('opens the History tab with the department history, and never in creation', async () => {
+  it('opens the History tab with the department history, greyed in creation', async () => {
     const history = renderAt('/master-data/departments/dep-1/history');
     expect(await screen.findByText('departments:dep-1')).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'shared.labels.history' })).toHaveAttribute('aria-selected', 'true');
@@ -111,7 +111,8 @@ describe('DepartmentWorkspacePage', () => {
 
     renderAt('/master-data/departments/new/overview');
     expect(await screen.findByPlaceholderText('departments.newDepartment')).toBeInTheDocument();
-    expect(screen.queryByRole('tab', { name: 'shared.labels.history' })).toBeNull();
+    expect(screen.getByRole('tab', { name: 'shared.labels.history' })).toBeDisabled();
+    expect(screen.getByRole('tab', { name: 'shared.labels.details' })).toBeDisabled();
   });
 
   it('hides delete from someone who is not a departments admin', async () => {
@@ -218,11 +219,12 @@ describe('DepartmentWorkspacePage', () => {
   it('creates on Create with the header name, then goes back to the list', async () => {
     mocked.post.mockResolvedValue({ data: { ...DEPARTMENT, id: 'dep-new' } });
     renderAt('/master-data/departments/new/overview?year=2026');
-    expect(screen.queryByRole('complementary')).toBeNull();
     fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Legal' } });
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
-    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/departments', { name: 'Legal', company_id: 'company-2', description: null }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/departments', {
+      name: 'Legal', company_id: 'company-2', description: null, status: 'enabled', disabled_at: null,
+    }));
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/departments?year=2026'));
   });
 
