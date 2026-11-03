@@ -216,14 +216,17 @@ export class IncidentsController {
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Post('import')
   @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
-  importCsv(
+  async importCsv(
     @UploadedFile() file: Express.Multer.File,
     @Query('dryRun') dryRun: string = 'true',
     @Query('mode') mode: 'replace' | 'enrich' = 'enrich',
     @Query('operation') operation: 'upsert' | 'update_only' | 'insert_only' = 'upsert',
+    @Query('language') languageRaw: string | undefined,
     @Tenant() ctx: TenantRequest,
   ) {
     const viewer = incidentViewerFromContext(ctx);
+    // The screen's language (the user's own when the screen sends none), as the export.
+    const language = await languageOf(ctx.manager as EntityManager, ctx.tenantId, ctx.userId ?? null, languageRaw);
     return this.csvSvc.import(
       file,
       { dryRun: dryRun !== 'false', mode, operation },
@@ -233,6 +236,7 @@ export class IncidentsController {
         userId: ctx.userId || null,
         isAdmin: viewer.isAdmin,
         viewer,
+        language,
       },
     );
   }

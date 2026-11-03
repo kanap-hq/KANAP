@@ -159,6 +159,16 @@ export function importStatusReservedMessage(label: string, from: string, to: str
     + 'Only a register administrator can do that; use Reopen or Cancel in the app instead.';
 }
 
+/**
+ * The status as the file names it, the same words the status column exports.
+ * An unknown code stays the code. Without a file language, the code stays too.
+ */
+function incidentStatusLabel(code: unknown, language: CsvLanguage | undefined): string {
+  const value = String(code);
+  if (!language) return value;
+  return INCIDENT_STATUS_LABELS[language]?.[value] ?? value;
+}
+
 const IMPORT_STATUS_RESERVED_CODE = 'CSV_INCIDENT_STATUS_RESERVED';
 
 function importViewer(context: CsvImportContext): IncidentViewer {
@@ -537,12 +547,14 @@ export const incidentCsvConfig: CsvEntityConfig = {
       const next = row.parsed.status;
       if (!isReservedIncidentStatusMove(next, previous)) continue;
       const reference = incidentLabel(row.existingEntity);
+      const from = incidentStatusLabel(previous, context.language);
+      const to = incidentStatusLabel(next, context.language);
       row.errors.push({
         row: row.rowNumber,
         column: 'status',
-        message: importStatusReservedMessage(reference, previous, next),
+        message: importStatusReservedMessage(reference, from, to),
         code: IMPORT_STATUS_RESERVED_CODE,
-        params: { reference, from: String(previous), to: String(next) },
+        params: { reference, from, to },
       });
     }
   },
@@ -676,7 +688,11 @@ export const incidentCsvConfig: CsvEntityConfig = {
         // The authoritative check, on the locked pre-image: afterValidate saw the
         // row before the lock, and another transaction may have closed it since.
         if (row && !viewer.isAdmin && isReservedIncidentStatusMove(entity.status, row.status)) {
-          throw new Error(importStatusReservedMessage(incidentLabel(entity), row.status, String(entity.status)));
+          throw new Error(importStatusReservedMessage(
+            incidentLabel(entity),
+            incidentStatusLabel(row.status, context.language),
+            incidentStatusLabel(entity.status, context.language),
+          ));
         }
         if (entity.confidential == null) {
           entity.confidential = row?.confidential ?? false;

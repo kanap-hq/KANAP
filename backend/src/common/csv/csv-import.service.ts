@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { EntityManager, In } from 'typeorm';
 import { parseString } from '@fast-csv/parse';
+import type { CsvLanguage } from '../csv-sheet/types';
 import { parseCsvBoolean } from '../csv-sheet/boolean';
 import { knownTimeZone, readTimeZoneHeader } from '../csv-sheet/date';
 import { CsvDecodeError } from '../csv-sheet/decode';
@@ -58,6 +59,8 @@ export interface CsvImportOptions {
   viewer?: { userId: string | null; isAdmin: boolean };
   /** Effective IT Ops catalogs for code/label resolution (see CsvImportContext). */
   itOpsSettings?: import('../../it-ops-settings/it-ops-settings.service').ItOpsSettings;
+  /** The file's language (the screen's, else the user's). See CsvImportContext. */
+  language?: CsvLanguage;
 }
 
 /** What a full replace needs to know of a stored column to empty it. */
@@ -177,6 +180,7 @@ export class CsvImportService {
       itOpsSettings: opts.itOpsSettings,
       markdownBudget: markdownWorkBudget(),
       timeZones,
+      language: opts.language,
     };
 
     // Full replace empties the cells of the columns the file holds, by the stored column's rules.
