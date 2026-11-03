@@ -5,7 +5,7 @@ import { DIAL_CODES } from '../../constants/dialCodes';
 import { combineDialCode, normalizeDialCode, splitPhone } from '../../lib/phoneUtils';
 import { drawerAutocompleteListboxSx, drawerMenuItemSx, drawerSelectSx, selectKeepsFocus } from '../../theme/formSx';
 import { metaItemSx } from '../tasks/theme/taskDetailTokens';
-import { EditableTitleDisplay } from '../../components/workspace/EditableTitle';
+import { EditableTitleDisplay, titleToGiveSx } from '../../components/workspace/EditableTitle';
 import { CONTACT_ROLES, type ContactRole } from './contactModel';
 
 // A dial code shared by several countries is listed once.
@@ -268,6 +268,70 @@ export function ContactNameTitle({
         placeholder={t('contacts.fields.lastName')}
         aria-label={t('contacts.fields.lastName')}
         onChange={(event: React.ChangeEvent<HTMLInputElement>) => setLast(event.target.value)}
+        onKeyDown={onKeyDown}
+        sx={inputSx}
+      />
+    </Box>
+  );
+}
+
+/**
+ * The name of a new contact in the page title: first and last name side by side, open for typing
+ * from the start, light blue while both are empty. Both are optional (the email is the required
+ * field). Escape with both empty leaves (`onCancel`).
+ */
+export function ContactNameDraft({
+  firstName,
+  lastName,
+  onChange,
+  onCancel,
+}: {
+  firstName: string;
+  lastName: string;
+  onChange: (next: { first_name: string; last_name: string }) => void;
+  onCancel: () => void;
+}) {
+  const { t } = useTranslation(['master-data']);
+  const empty = !firstName && !lastName;
+  const onKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      (event.target as HTMLInputElement).blur();
+    }
+    if (event.key === 'Escape' && empty) {
+      event.preventDefault();
+      onCancel();
+    }
+  };
+  const inputSx = (theme: import('@mui/material/styles').Theme) => ({
+    font: 'inherit',
+    color: 'inherit',
+    outline: 'none',
+    m: 0,
+    flex: 1,
+    minWidth: 0,
+    '&::placeholder': { color: theme.palette.kanap.text.tertiary, opacity: 1 },
+    '&:focus': { borderBottomColor: theme.palette.kanap.teal },
+    ...titleToGiveSx(theme, empty),
+  });
+  return (
+    <Box sx={{ display: 'flex', gap: 2, width: '100%' }}>
+      <Box
+        component="input"
+        autoFocus
+        value={firstName}
+        placeholder={t('contacts.fields.firstName')}
+        aria-label={t('contacts.fields.firstName')}
+        onChange={(event: React.ChangeEvent<HTMLInputElement>) => onChange({ first_name: event.target.value, last_name: lastName })}
+        onKeyDown={onKeyDown}
+        sx={inputSx}
+      />
+      <Box
+        component="input"
+        value={lastName}
+        placeholder={t('contacts.fields.lastName')}
+        aria-label={t('contacts.fields.lastName')}
+        onChange={(event: React.ChangeEvent<HTMLInputElement>) => onChange({ first_name: firstName, last_name: event.target.value })}
         onKeyDown={onKeyDown}
         sx={inputSx}
       />

@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, Button, IconButton, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, IconButton, Stack, TextField, Typography } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import CloseIcon from '@mui/icons-material/Close';
 import api from '../../api';
@@ -31,10 +31,11 @@ import {
   phoneError,
   safeReturnTo,
 } from './contactModel';
-import { ContactNameTitle, ContactPhoneField, ContactRoleSelect, MetadataMenu, useContactRoleOptions } from './ContactFields';
+import { ContactNameDraft, ContactNameTitle, ContactPhoneField, ContactRoleSelect, MetadataMenu, useContactRoleOptions } from './ContactFields';
 import RecordUsagesSection, { recordUsagesKey, scrollToUsages, useRecordUsages } from '../../components/usages/RecordUsagesSection';
 import { SUPPLIERS_PATH } from '../suppliers/supplierModel';
 import RecordDeleteButton from '../../components/workspace/RecordDeleteButton';
+import { CreationActions, useCreationLeave } from '../../components/workspace/creation';
 
 const LIST_PATH = '/master-data/contacts';
 const DRAWER_KEY = 'kanap.contacts.drawerOpen';
@@ -607,7 +608,9 @@ function ContactCreate() {
     clearError(field as FieldKey);
   };
 
-  const close = () => navigate(returnTo ?? withContext(LIST_PATH));
+  // Back where the creation started: the supplier it came from, else the previous page, else the list.
+  const leave = useCreationLeave(() => navigate(withContext(LIST_PATH)));
+  const close = () => (returnTo ? navigate(returnTo) : leave());
 
   const setPhone = (field: 'phone' | 'mobile', next: string | null) => {
     clearError(field);
@@ -660,7 +663,7 @@ function ContactCreate() {
     }
   };
 
-  const textRow = (field: 'email' | 'first_name' | 'last_name' | 'job_title', label: string, placeholder: string, required = false) => (
+  const textRow = (field: 'email' | 'job_title', label: string, placeholder: string, required = false) => (
     <PropertyRow label={label} required={required}>
       <TextField
         value={values[field]}
@@ -680,7 +683,6 @@ function ContactCreate() {
     gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
     columnGap: 3,
   } as const;
-  const title = contactName({ first_name: values.first_name, last_name: values.last_name });
 
   return (
     <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
@@ -691,24 +693,21 @@ function ContactCreate() {
         drawerStorageKey={DRAWER_KEY}
         backLabel={backLabel}
         onBack={close}
-        title={title ?? ''}
+        title=""
         titleFallback={t('contacts.newContact')}
-        isCreate
-        actions={(
-          <>
-            <Button variant="contained" size="small" onClick={() => void handleCreate()} disabled={!canCreate || submitting}>
-              {t('common:buttons.create')}
-            </Button>
-            <IconButton aria-label={t('common:buttons.close')} title={t('common:buttons.close')} size="small" onClick={close}>
-              <CloseIcon />
-            </IconButton>
-          </>
+        titleEditor={(
+          <ContactNameDraft
+            firstName={values.first_name}
+            lastName={values.last_name}
+            onChange={(next) => setValues((prev) => ({ ...prev, ...next }))}
+            onCancel={close}
+          />
         )}
+        isCreate
+        actions={<CreationActions onCreate={() => void handleCreate()} onCancel={close} busy={!canCreate || submitting} />}
       >
         <Stack spacing={3} sx={{ maxWidth: 640 }}>
           <Box sx={twoColumnsSx}>
-            {textRow('first_name', t('contacts.fields.firstName'), t('contacts.placeholders.firstName'))}
-            {textRow('last_name', t('contacts.fields.lastName'), t('contacts.placeholders.lastName'))}
             {textRow('email', t('contacts.fields.email'), t('contacts.placeholders.email'), true)}
             {textRow('job_title', t('contacts.fields.jobTitle'), t('contacts.placeholders.jobTitle'))}
             <PropertyRow label={t('contacts.fields.supplier')}>

@@ -416,7 +416,27 @@ describe('ContactWorkspacePage create', () => {
     expect(screen.queryByText('master-data:contacts.messages.emailInvalid')).toBeNull();
   });
 
-  it('moves through the fields with Tab, a type chosen from its menu included, up to Create', async () => {
+  it('opens with first and last name to type in the header, and no name fields in the form', () => {
+    renderAt('/master-data/contacts/new/overview');
+    // One first name and one last name, in the title: the form has none.
+    expect(screen.getAllByLabelText('contacts.fields.firstName')).toHaveLength(1);
+    expect(screen.getAllByLabelText('contacts.fields.lastName')).toHaveLength(1);
+    expect(screen.getByLabelText('contacts.fields.firstName')).toHaveFocus();
+    expect(screen.getByLabelText('contacts.fields.firstName')).toHaveAttribute('placeholder', 'contacts.fields.firstName');
+    expect(screen.queryByRole('button', { name: 'common:buttons.close' })).toBeNull();
+  });
+
+  it('leaves without creating on Cancel, and on Escape with no name typed', () => {
+    renderAt('/master-data/contacts/new/overview?sort=last_name%3AASC');
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.cancel' }));
+    expect(navigateMock).toHaveBeenCalledWith('/master-data/contacts?sort=last_name%3AASC');
+    navigateMock.mockClear();
+    fireEvent.keyDown(screen.getByLabelText('contacts.fields.firstName'), { key: 'Escape' });
+    expect(navigateMock).toHaveBeenCalledWith('/master-data/contacts?sort=last_name%3AASC');
+    expect(mocked.post).not.toHaveBeenCalled();
+  });
+
+  it('moves through the header name and the fields with Tab, a type chosen from its menu included', async () => {
     const user = userEvent.setup();
     renderAt('/master-data/contacts/new/overview');
     fireEvent.click(screen.getByRole('button', { name: 'pick supplier' }));
@@ -427,6 +447,9 @@ describe('ContactWorkspacePage create', () => {
       expect(document.activeElement).toBe(element);
     };
     await expectNext(screen.getByLabelText('contacts.fields.lastName'));
+    // Cancel and Create sit in the title row, then the fields.
+    await expectNext(screen.getByRole('button', { name: 'common:buttons.cancel' }));
+    await expectNext(screen.getByRole('button', { name: 'common:buttons.create' }));
     await expectNext(screen.getByLabelText('contacts.fields.email'));
     await expectNext(screen.getByLabelText('contacts.fields.jobTitle'));
     await expectNext(screen.getByLabelText('contacts.fields.supplier'));
@@ -442,14 +465,6 @@ describe('ContactWorkspacePage create', () => {
     await expectNext(screen.getByLabelText('contacts.fields.mobile'));
     await expectNext(screen.getByLabelText('companies.fields.country'));
     await expectNext(screen.getByLabelText('contacts.fields.notes'));
-    // Create sits in the title row, above the fields, as on every create page of the shell: after
-    // the last field the focus leaves the page (the browser's own controls), then starts again at
-    // the top of the page: back link, Create.
-    await expectNext(document.body);
-    await expectNext(within(screen.getByRole('banner')).getByRole('button', { name: 'contacts.title' }));
-    await expectNext(screen.getByRole('button', { name: 'common:buttons.create' }));
-    await expectNext(screen.getByRole('button', { name: 'common:buttons.close' }));
-    await expectNext(firstName);
   });
 
   it('ignores a return address outside the app', async () => {

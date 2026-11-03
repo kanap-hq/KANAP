@@ -36,6 +36,28 @@ function emptyTint(theme: Theme) {
   return theme.palette.mode === 'dark' ? { fill: 0.16, border: 0.4 } : { fill: 0.08, border: 0.25 };
 }
 
+/**
+ * The field of a title still to give: light blue while `empty`, plain once a character is typed
+ * (the look of a task title still to give, TaskWorkspacePage `titleBarSx`). The box keeps its
+ * size, so the text does not move. On the dark background the same blue needs about twice the
+ * strength to show.
+ */
+export function titleToGiveSx(theme: Theme, empty: boolean) {
+  return {
+    bgcolor: empty ? alpha(theme.palette.info.main, emptyTint(theme).fill) : 'transparent',
+    border: `1px solid ${empty ? alpha(theme.palette.info.main, emptyTint(theme).border) : 'transparent'}`,
+    borderBottomColor: empty ? alpha(theme.palette.info.main, emptyTint(theme).border) : theme.palette.kanap.border.default,
+    borderRadius: empty ? '6px' : 0,
+    px: 1,
+    py: 0.25,
+    // The padding and border spill over the line: the title line keeps its height, so the header
+    // does not move and the actions stay centred on it.
+    my: '-3px',
+    boxSizing: 'border-box',
+    transition: 'border-color 120ms ease, background-color 120ms ease',
+  } as const;
+}
+
 function titleColor(theme: Theme, placeholder: boolean, muted: boolean) {
   if (placeholder) return theme.palette.kanap.text.tertiary;
   if (muted) return theme.palette.kanap.text.secondary;
@@ -366,24 +388,7 @@ export default function EditableTitle({
           mb: '-1px',
           width: '100%',
           '&::placeholder': { color: theme.palette.kanap.text.tertiary, opacity: 1 },
-          // The look of a task title still to give (TaskWorkspacePage `titleBarSx`), plain once a
-          // character is typed. The box keeps its size, so the text does not move. On the dark
-          // background the same blue needs about twice the strength to show.
-          ...(emphasizeEmpty
-            ? {
-              bgcolor: draft ? 'transparent' : alpha(theme.palette.info.main, emptyTint(theme).fill),
-              border: `1px solid ${draft ? 'transparent' : alpha(theme.palette.info.main, emptyTint(theme).border)}`,
-              borderBottomColor: draft ? theme.palette.kanap.border.default : alpha(theme.palette.info.main, emptyTint(theme).border),
-              borderRadius: draft ? 0 : '6px',
-              px: 1,
-              py: 0.25,
-              // The padding and border spill over the line: the title line keeps its height, so
-              // the header does not move and the actions stay centred on it.
-              my: '-3px',
-              boxSizing: 'border-box',
-              transition: 'border-color 120ms ease, background-color 120ms ease',
-            }
-            : {}),
+          ...(emphasizeEmpty ? titleToGiveSx(theme, !draft) : {}),
         })}
       />
       {messageNode}
