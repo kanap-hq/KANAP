@@ -57,7 +57,7 @@ export const CONTACT_USAGE_QUERIES: readonly UsageQuery[] = [
   {
     type: 'applications',
     resource: 'applications',
-    sql: `SELECT a.id, NULL::text AS reference, a.name, a.lifecycle AS status, ${activeSql('a')} AS active,
+    sql: `SELECT a.id, a.sequential_id AS reference, a.name, a.lifecycle AS status, ${activeSql('a')} AS active,
                  ${textRoles('l')} AS roles, count(*) OVER () AS total
             FROM application_support_contacts l
             JOIN applications a ON a.tenant_id = l.tenant_id AND a.id = l.application_id
@@ -69,7 +69,7 @@ export const CONTACT_USAGE_QUERIES: readonly UsageQuery[] = [
   {
     type: 'assets',
     resource: 'infrastructure',
-    sql: `SELECT a.id, NULL::text AS reference, a.name, a.status, true AS active,
+    sql: `SELECT a.id, a.asset_reference AS reference, a.name, a.status, true AS active,
                  ${textRoles('l')} AS roles, count(*) OVER () AS total
             FROM asset_support_contacts l
             JOIN assets a ON a.tenant_id = l.tenant_id AND a.id = l.asset_id
@@ -94,7 +94,7 @@ export const CONTACT_USAGE_QUERIES: readonly UsageQuery[] = [
   {
     type: 'locations',
     resource: 'locations',
-    sql: `SELECT o.id, NULL::text AS reference, o.name, NULL::text AS status, true AS active,
+    sql: `SELECT o.id, o.location_reference AS reference, o.name, NULL::text AS status, true AS active,
                  ${textRoles('l')} AS roles, count(*) OVER () AS total
             FROM location_contacts l
             JOIN locations o ON o.tenant_id = l.tenant_id AND o.id = l.location_id

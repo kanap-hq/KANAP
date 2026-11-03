@@ -34,7 +34,7 @@ export const SUPPLIER_USAGE_QUERIES: readonly UsageQuery[] = [
   {
     type: 'applications',
     resource: 'applications',
-    sql: `SELECT a.id, NULL::text AS reference, a.name, a.lifecycle AS status, ${activeSql('a')} AS active,
+    sql: `SELECT a.id, a.sequential_id AS reference, a.name, a.lifecycle AS status, ${activeSql('a')} AS active,
                  count(*) OVER () AS total
             FROM applications a
            WHERE a.tenant_id = $1 AND a.supplier_id = $2
@@ -44,7 +44,7 @@ export const SUPPLIER_USAGE_QUERIES: readonly UsageQuery[] = [
   {
     type: 'assets',
     resource: 'infrastructure',
-    sql: `SELECT a.id, NULL::text AS reference, a.name, a.status, true AS active, count(*) OVER () AS total
+    sql: `SELECT a.id, a.asset_reference AS reference, a.name, a.status, true AS active, count(*) OVER () AS total
             FROM assets a
            WHERE a.tenant_id = $1
              AND EXISTS (SELECT 1 FROM asset_support_info i
