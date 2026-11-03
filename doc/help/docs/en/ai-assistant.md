@@ -63,9 +63,9 @@ The list contains:
 Each row shows the conversation title (or **Untitled** when none has been set yet). Hover or focus a row to reveal:
 
 - A pencil icon: **Rename** the conversation. Double-click the title to do the same thing.
-- A trash icon: **Archive** the conversation. Archived conversations disappear from the list. If you archive the conversation you currently have open, Plaid switches to a fresh empty chat.
+- A trash icon: **Delete** the conversation. The conversation and its messages are deleted. This cannot be undone. If you delete the conversation you currently have open, Plaid switches to a fresh empty chat.
 
-Search filters the list by title as you type. Renaming and archiving are saved immediately.
+Search filters the list by title as you type. Renaming and deleting are saved immediately.
 
 ## Writing a message
 

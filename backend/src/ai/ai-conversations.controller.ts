@@ -20,7 +20,9 @@ import type { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { SkipTenantTransaction } from '../common/skip-tenant-transaction.decorator';
 import { aiAttachmentMulterOptions } from '../common/upload';
+import { StorageService } from '../common/storage/storage.service';
 import { AiAttachmentService } from './ai-attachment.service';
+import { deleteAiConversationFiles } from './ai-conversation-purge';
 import { AiConversationService } from './ai-conversation.service';
 import { AiMutationPreviewService } from './ai-mutation-preview.service';
 import { AiPolicyService } from './ai-policy.service';
@@ -38,6 +40,7 @@ export class AiConversationsController {
     private readonly conversations: AiConversationService,
     private readonly previews: AiMutationPreviewService,
     private readonly attachments: AiAttachmentService,
+    private readonly storage: StorageService,
   ) {}
 
   private buildContext(req: any): AiExecutionContext {
@@ -176,15 +179,16 @@ export class AiConversationsController {
   }
 
   @Delete(':id')
-  async archive(@Param('id') id: string, @Req() req: any) {
+  async remove(@Param('id') id: string, @Req() req: any) {
     const context = this.buildContext(req);
-    return this.tenantExecutor.runWithContext(context, async (ctx) => {
+    const storagePaths = await this.tenantExecutor.runWithContext(context, async (ctx) => {
       await this.policy.assertSurfaceAccess(ctx, ctx.manager);
-      await this.conversations.archiveConversation(id, ctx.tenantId, ctx.userId, {
+      return this.conversations.deleteConversation(id, ctx.tenantId, ctx.userId, {
         manager: ctx.manager,
       });
-      return { success: true };
     });
+    await deleteAiConversationFiles(this.storage, storagePaths, 'delete conversation');
+    return { success: true };
   }
 
   @Patch(':id')

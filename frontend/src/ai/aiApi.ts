@@ -1376,7 +1376,7 @@ export const aiConversationsApi = {
     const res = await api.get(`/ai/conversations/${id}/previews`);
     return res.data;
   },
-  async archive(id: string) {
+  async remove(id: string) {
     const res = await api.delete(`/ai/conversations/${id}`);
     return res.data;
   },

@@ -248,12 +248,12 @@ export default function AiWorkspacePage() {
     [handleSend],
   );
 
-  const handleArchive = useCallback(
+  const handleDelete = useCallback(
     async (id: string) => {
       const confirmed = await dialogs.confirm({
-        title: t('conversationList.archiveConfirmTitle'),
-        message: t('conversationList.archiveConfirmMessage'),
-        confirmLabel: t('conversationList.archive'),
+        title: t('conversationList.deleteConfirmTitle'),
+        message: t('conversationList.deleteConfirmMessage'),
+        confirmLabel: t('conversationList.delete'),
         intent: 'danger',
       });
       if (!confirmed) return;
@@ -265,7 +265,7 @@ export default function AiWorkspacePage() {
         (old) => old?.filter((c) => c.id !== id),
       );
       try {
-        await aiConversationsApi.archive(id);
+        await aiConversationsApi.remove(id);
       } catch {
         queryClient.invalidateQueries({ queryKey: ['ai-conversations'] });
       }
@@ -376,7 +376,7 @@ export default function AiWorkspacePage() {
             activeId={chat.conversationId}
             onSelect={handleSelect}
             onNew={handleNew}
-            onArchive={handleArchive}
+            onDelete={handleDelete}
           />
         </Box>
       )}

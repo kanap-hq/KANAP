@@ -106,11 +106,11 @@ vi.mock('../../ai/components/ArtifactPanel', () => ({
 }));
 
 vi.mock('../../ai/components/ChatConversationList', () => ({
-  default: ({ onSelect, onNew, onArchive }: any) => (
+  default: ({ onSelect, onNew, onDelete }: any) => (
     <div>
       <button type="button" onClick={() => onNew()}>New chat</button>
       <button type="button" onClick={() => onSelect('conv-1')}>Select conversation</button>
-      <button type="button" onClick={() => onArchive('conv-1')}>Archive conversation</button>
+      <button type="button" onClick={() => onDelete('conv-1')}>Delete conversation</button>
     </div>
   ),
 }));
@@ -133,7 +133,7 @@ vi.mock('../../ai/components/TokenUsageBar', () => ({
 
 vi.mock('../../ai/aiApi', () => ({
   aiConversationsApi: {
-    archive: vi.fn(async () => undefined),
+    remove: vi.fn(async () => undefined),
   },
 }));
 
@@ -520,7 +520,7 @@ describe('AiWorkspacePage', () => {
     });
   });
 
-  it('optimistically archives the active conversation and clears it from the query cache', async () => {
+  it('optimistically deletes the active conversation and clears it from the query cache', async () => {
     const client = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
@@ -551,16 +551,17 @@ describe('AiWorkspacePage', () => {
 
     renderPage(client);
 
-    fireEvent.click(screen.getByText('Archive conversation'));
+    fireEvent.click(screen.getByText('Delete conversation'));
 
     const dialog = await screen.findByRole('dialog');
-    expect(dialog).toHaveTextContent('conversationList.archiveConfirmTitle');
-    expect(aiConversationsApi.archive).not.toHaveBeenCalled();
-    fireEvent.click(within(dialog).getByRole('button', { name: 'conversationList.archive' }));
+    expect(dialog).toHaveTextContent('conversationList.deleteConfirmTitle');
+    expect(dialog).toHaveTextContent('conversationList.deleteConfirmMessage');
+    expect(aiConversationsApi.remove).not.toHaveBeenCalled();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'conversationList.delete' }));
 
     await waitFor(() => {
       expect(chatState.newConversation).toHaveBeenCalledTimes(1);
-      expect(aiConversationsApi.archive).toHaveBeenCalledWith('conv-1');
+      expect(aiConversationsApi.remove).toHaveBeenCalledWith('conv-1');
     });
 
     expect(client.getQueryData<ChatConversation[]>(['ai-conversations'])).toEqual([
@@ -568,7 +569,7 @@ describe('AiWorkspacePage', () => {
     ]);
   });
 
-  it('keeps the conversation when the archive confirmation is cancelled', async () => {
+  it('keeps the conversation when the delete confirmation is cancelled', async () => {
     const client = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
@@ -599,7 +600,7 @@ describe('AiWorkspacePage', () => {
 
     renderPage(client);
 
-    fireEvent.click(screen.getByText('Archive conversation'));
+    fireEvent.click(screen.getByText('Delete conversation'));
 
     const dialog = await screen.findByRole('dialog');
     fireEvent.click(within(dialog).getByRole('button', { name: 'buttons.cancel' }));
@@ -608,7 +609,7 @@ describe('AiWorkspacePage', () => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
     expect(chatState.newConversation).not.toHaveBeenCalled();
-    expect(aiConversationsApi.archive).not.toHaveBeenCalled();
+    expect(aiConversationsApi.remove).not.toHaveBeenCalled();
     expect(client.getQueryData<ChatConversation[]>(['ai-conversations'])).toEqual(conversations);
   });
 });

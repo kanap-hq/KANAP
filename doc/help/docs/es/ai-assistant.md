@@ -63,9 +63,9 @@ La lista contiene:
 Cada fila muestra el título de la conversación (o **Sin título** cuando aún no se ha definido ninguno). Pase el cursor por encima de una fila o sitúe el foco en ella para mostrar:
 
 - Un icono de lápiz: **Renombrar** la conversación. Haga doble clic en el título para hacer lo mismo.
-- Un icono de papelera: **Archivar** la conversación. Las conversaciones archivadas desaparecen de la lista. Si archiva la conversación que tiene abierta en ese momento, Plaid cambia a un chat vacío nuevo.
+- Un icono de papelera: **Eliminar** la conversación. La conversación y sus mensajes se eliminan. Esta acción no se puede deshacer. Si elimina la conversación que tiene abierta en ese momento, Plaid cambia a un chat vacío nuevo.
 
-La búsqueda filtra la lista por título a medida que escribe. El cambio de nombre y el archivado se guardan de inmediato.
+La búsqueda filtra la lista por título a medida que escribe. El cambio de nombre y la eliminación se guardan de inmediato.
 
 ## Escribir un mensaje
 

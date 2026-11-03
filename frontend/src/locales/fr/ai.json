@@ -1,8 +1,8 @@
 {
   "conversationList": {
-    "archive": "Archiver",
-    "archiveConfirmMessage": "La conversation quitte votre liste. Elle ne pourra pas être rouverte.",
-    "archiveConfirmTitle": "Archiver cette conversation ?",
+    "delete": "Supprimer",
+    "deleteConfirmMessage": "La conversation et ses messages sont supprimés. Cette action est irréversible.",
+    "deleteConfirmTitle": "Supprimer cette conversation ?",
     "dateGroups": {
       "lastWeek": "7 derniers jours",
       "older": "Plus ancien",
