@@ -223,7 +223,7 @@ export default function AnalyticsWorkspacePage() {
     setCreating(true);
     setPageError(null);
     try {
-      await createAnalyticsValue({
+      const created = await createAnalyticsValue({
         ...(newAxisId ? { axis_id: newAxisId } : {}),
         name,
         description,
@@ -234,7 +234,8 @@ export default function AnalyticsWorkspacePage() {
       void queryClient.invalidateQueries({ queryKey: ['analytics-categories'] });
       void queryClient.invalidateQueries({ queryKey: ['analytics-ids'] });
       void queryClient.invalidateQueries({ queryKey: ANALYTICS_AXES_QUERY_KEY });
-      leave();
+      // The new value opens in place, every tab available.
+      navigate(`${ANALYTICS_LIST_PATH}/${created.id}/overview${listContext ? `?${listContext}` : ''}`, { replace: true });
     } catch (e) {
       const message = getApiErrorMessage(e, t, t('analytics.messages.createFailed'));
       const field = analyticsRefusalField(e);

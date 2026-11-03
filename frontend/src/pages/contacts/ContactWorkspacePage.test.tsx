@@ -367,7 +367,7 @@ describe('ContactWorkspacePage create', () => {
     expect(screen.queryByRole('button', { name: 'admin:auditLogs.history.title' })).toBeNull();
   });
 
-  it('creates a contact from a supplier with its type, then goes back to the supplier', async () => {
+  it('creates a contact from a supplier with its type, then opens it with the way back to the supplier', async () => {
     renderAt('/master-data/contacts/new/overview?supplier_id=s-1&supplier_role=technical&returnTo=/master-data/suppliers/s-1/contacts');
     expect(screen.getByTestId('supplier-select')).toHaveAttribute('data-value', 's-1');
     expect(screen.getByTestId('supplier-select')).toHaveAttribute('data-disabled', 'true');
@@ -383,7 +383,10 @@ describe('ContactWorkspacePage create', () => {
       supplier_role: 'technical',
       active: true,
     });
-    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/suppliers/s-1/contacts'));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith(
+      '/master-data/contacts/c-9/overview?returnTo=%2Fmaster-data%2Fsuppliers%2Fs-1%2Fcontacts',
+      { replace: true },
+    ));
   });
 
   it('names the suppliers on the way back when it opened from a supplier', async () => {
@@ -402,7 +405,7 @@ describe('ContactWorkspacePage create', () => {
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
     expect(mocked.post.mock.calls[0][1]).toMatchObject({ supplier_id: 's-2', supplier_role: 'commercial' });
-    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/contacts?sort=last_name%3AASC'));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/contacts/c-9/overview?sort=last_name%3AASC', { replace: true }));
   });
 
   it('shows the errors on their fields and creates nothing', async () => {

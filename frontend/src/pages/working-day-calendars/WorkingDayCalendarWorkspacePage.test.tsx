@@ -161,7 +161,7 @@ describe('WorkingDayCalendarWorkspacePage', () => {
     await waitFor(() => expect(mocked.createWorkingDayProfile).toHaveBeenCalledWith({
       code: 'CAL-02', name: 'Contractors', description: null, status: 'enabled', disabled_at: null, days_by_year: {},
     }));
-    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/working-day-calendars?sort=name%3AASC'));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/working-day-calendars/wd-new/overview?sort=name%3AASC', { replace: true }));
   });
 
   it('reads the calendar with its names in the UI language, and no year route for a custom calendar', async () => {
@@ -211,7 +211,7 @@ describe('WorkingDayCalendarWorkspacePage', () => {
       country_iso: 'FR',
       region_code: '57',
     }));
-    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/working-day-calendars'));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/working-day-calendars/wd-new/overview', { replace: true }));
   });
 
   it('keeps a code or name typed by the user when the country changes, and offers no region when there is none', async () => {

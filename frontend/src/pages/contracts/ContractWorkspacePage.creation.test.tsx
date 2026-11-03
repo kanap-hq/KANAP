@@ -80,7 +80,7 @@ describe('ContractWorkspacePage creation', () => {
     mocked.post.mockResolvedValue({ data: { id: 'c-new' } });
   });
 
-  it('posts the header name and the drawer fields on Create, then goes back to the list', async () => {
+  it('posts the header name and the drawer fields on Create, then opens the new contract', async () => {
     renderNew();
     fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: ' Oracle support ' } });
     const drawer = screen.getByRole('complementary');
@@ -115,7 +115,7 @@ describe('ContractWorkspacePage creation', () => {
       status: 'enabled',
       disabled_at: null,
     }));
-    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/ops/contracts'));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/ops/contracts/c-new/overview', { replace: true }));
   });
 
   it('keeps Ctrl+S as Create on the new page', async () => {

@@ -381,7 +381,8 @@ describe('AnalyticsWorkspacePage', () => {
       status: 'enabled',
       disabled_at: null,
     }));
-    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/analytics?sort=name%3AASC&axis=ax-nature'));
+    // The new value opens in place, in the list's context.
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/analytics/v-new/overview?sort=name%3AASC&axis=ax-nature', { replace: true }));
   });
 
   it('offers enabled dimensions only, and falls back to the default for a disabled one', async () => {

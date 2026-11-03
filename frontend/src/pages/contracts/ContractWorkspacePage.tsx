@@ -365,7 +365,7 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
     setCreating(true);
     setSaveError(null);
     try {
-      await api.post('/contracts', {
+      const { data: created } = await api.post<{ id: string }>('/contracts', {
         name,
         supplier_id: form.supplier_id,
         company_id: form.company_id,
@@ -383,7 +383,8 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
         disabled_at: form.disabled_at,
       });
       void queryClient.invalidateQueries({ queryKey: ['contracts-ids'] });
-      leave();
+      // The new contract opens in place, every tab available.
+      navigate(withContext(`${LIST_PATH}/${created.id}/overview`), { replace: true });
     } catch (e) {
       setSaveError(getApiErrorMessage(e, t, t('contracts.messages.createFailed')));
     } finally {

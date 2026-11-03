@@ -103,7 +103,7 @@ describe('LocationWorkspacePage name refusals', () => {
     expect(navigateMock).not.toHaveBeenCalled();
   });
 
-  it('creates the site on Create with the header name and the drawer fields, then goes back to the list', async () => {
+  it('creates the site on Create with the header name and the drawer fields, then opens it', async () => {
     mocked.post.mockResolvedValueOnce({ data: { id: 'loc-new', location_reference: 'LOC-9', name: 'Lyon DC' } });
     renderAt('/it/locations/new/overview');
     expect(screen.queryByPlaceholderText('workspace.location.namePlaceholder')).toBeNull();
@@ -121,7 +121,7 @@ describe('LocationWorkspacePage name refusals', () => {
     }));
     // The new site reads nothing: no id to read with.
     expect(mocked.get).not.toHaveBeenCalled();
-    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/it/locations'));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/it/locations/LOC-9/overview', { replace: true }));
   });
 
   it('asks for the name on Create with an empty title, and leaves on Cancel', async () => {

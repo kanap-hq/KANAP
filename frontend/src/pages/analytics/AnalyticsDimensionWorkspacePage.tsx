@@ -204,7 +204,7 @@ export default function AnalyticsDimensionWorkspacePage() {
     setCreating(true);
     setPageError(null);
     try {
-      await createAnalyticsAxis({
+      const created = await createAnalyticsAxis({
         code,
         name,
         description: form.description,
@@ -215,7 +215,8 @@ export default function AnalyticsDimensionWorkspacePage() {
         disabled_at: form.disabled_at,
       });
       void queryClient.invalidateQueries({ queryKey: ANALYTICS_AXES_QUERY_KEY, exact: true });
-      leave();
+      // The new dimension opens in place, every tab available.
+      navigate(`${ANALYTICS_DIMENSIONS_PATH}/${created.id}/overview`, { replace: true });
     } catch (e) {
       const message = getApiErrorMessage(e, t, t('analytics.messages.dimensionCreateFailed'));
       const field = analyticsRefusalField(e);

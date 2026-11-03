@@ -136,7 +136,7 @@ describe('CostCenterWorkspacePage', () => {
     expect(screen.queryByRole('tab')).toBeNull();
   });
 
-  it('creates on Create with the header name, then goes back to the list', async () => {
+  it('creates on Create with the header name, then opens the new node', async () => {
     mocked.createCostCenter.mockResolvedValue({ ...NODE, id: 'cc-new' });
     renderAt('/master-data/cost-centers/new/overview?sort=path%3AASC');
     expect(screen.queryByRole('button', { name: 'admin:auditLogs.history.title' })).toBeNull();
@@ -157,7 +157,7 @@ describe('CostCenterWorkspacePage', () => {
       status: 'enabled',
       disabled_at: null,
     });
-    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/cost-centers?sort=path%3AASC'));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/cost-centers/cc-new/overview?sort=path%3AASC', { replace: true }));
   });
 
   it('refuses to create a cost center without a company', async () => {

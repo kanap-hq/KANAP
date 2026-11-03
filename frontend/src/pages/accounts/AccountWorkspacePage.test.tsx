@@ -542,9 +542,8 @@ describe('AccountWorkspacePage', () => {
       status: 'enabled',
       disabled_at: null,
     }));
-    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith(
-      '/master-data/coa?selected=coa-fr&coaId=coa-fr&consolidation=unmapped',
-    ));
+    // The new account opens in place.
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith(expect.stringMatching(/^\/master-data\/accounts\/acc-new\/overview/), { replace: true }));
   });
 
   it('shows a create refusal for a number already used under the number field', async () => {

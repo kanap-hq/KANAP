@@ -244,7 +244,7 @@ export default function WorkingDayCalendarWorkspacePage() {
     setCreating(true);
     setPageError(null);
     try {
-      await createWorkingDayProfile({
+      const created = await createWorkingDayProfile({
         code: form.code,
         name,
         description: form.description,
@@ -256,7 +256,8 @@ export default function WorkingDayCalendarWorkspacePage() {
       });
       void queryClient.invalidateQueries({ queryKey: ['working-day-profiles'] });
       afterWrite();
-      leave();
+      // The new calendar opens in place, its days and every tab available.
+      navigate(`${WORKING_DAY_CALENDARS_PATH}/${created.id}/overview${listContext ? `?${listContext}` : ''}`, { replace: true });
     } catch (e) {
       const message = getApiErrorMessage(e, t, t('workingDayCalendars.messages.createFailed'));
       const field = refusalField(e);

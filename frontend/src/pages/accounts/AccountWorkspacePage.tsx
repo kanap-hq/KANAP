@@ -268,7 +268,7 @@ export default function AccountWorkspacePage() {
     setCreating(true);
     setPageError(null);
     try {
-      await api.post<Account>('/accounts', {
+      const { data: created } = await api.post<Account>('/accounts', {
         coa_id: newCoaId,
         account_number: number,
         account_name: name,
@@ -280,7 +280,8 @@ export default function AccountWorkspacePage() {
         disabled_at: values.disabled_at,
       });
       afterWrite([newCoaId]);
-      leave();
+      // The new account opens in place, every tab available.
+      navigate(withContext(`${ACCOUNT_PATH}/${created.id}/overview`), { replace: true });
     } catch (e) {
       const message = getApiErrorMessage(e, t, t('accounts.messages.createFailed'));
       // The page checks everything else first: a 400 that names no field is the number already

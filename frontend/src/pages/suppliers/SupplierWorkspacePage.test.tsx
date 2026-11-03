@@ -424,7 +424,7 @@ describe('SupplierWorkspacePage', () => {
     expect(screen.getByRole('tab', { name: 'shared.labels.contacts' })).toBeDisabled();
   });
 
-  it('creates the supplier on Create with the header name, then goes back to the list', async () => {
+  it('creates the supplier on Create with the header name, then opens it', async () => {
     mocked.post.mockResolvedValueOnce({ data: { ...SUPPLIER, id: 's-new' } });
     renderAt('/master-data/suppliers/new/overview?sort=name%3AASC');
     const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
@@ -442,7 +442,7 @@ describe('SupplierWorkspacePage', () => {
       status: 'enabled',
       disabled_at: null,
     }));
-    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/suppliers?sort=name%3AASC'));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/suppliers/s-new/overview?sort=name%3AASC', { replace: true }));
   });
 
   it('shows a missing or taken name under the header title and gives it the focus', async () => {

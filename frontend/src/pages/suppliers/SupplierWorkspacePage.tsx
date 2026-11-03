@@ -214,9 +214,10 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
     setCreateError(null);
     try {
       const { erp_supplier_id, notes, status, disabled_at } = draftRef.current;
-      await api.post<Supplier>('/suppliers', { name, erp_supplier_id, notes, status, disabled_at });
+      const { data: created } = await api.post<Supplier>('/suppliers', { name, erp_supplier_id, notes, status, disabled_at });
       void queryClient.invalidateQueries({ queryKey: ['suppliers'] });
-      leave();
+      // The new supplier opens in place, every tab available.
+      navigate(withContext(`${SUPPLIERS_PATH}/${created.id}/overview`), { replace: true });
     } catch (e) {
       if (isDuplicateError(e)) title.refuse(t('suppliers.messages.nameTaken'));
       else setCreateError(getApiErrorMessage(e, t, t('suppliers.messages.createFailed')));

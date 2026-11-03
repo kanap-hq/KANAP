@@ -100,7 +100,8 @@ function ContactEditor({ id }: { id: string }) {
   const prefillSupplierId = isCreate ? searchParams.get('supplier_id') || null : null;
   const rawRole = searchParams.get('supplier_role');
   const prefillRole = prefillSupplierId && isContactRole(rawRole) ? rawRole : null;
-  const returnTo = isCreate ? safeReturnTo(searchParams.get('returnTo')) : null;
+  // Where the contact was opened from (a supplier page): its back arrow leads there.
+  const returnTo = safeReturnTo(searchParams.get('returnTo'));
 
   const detailKey = React.useMemo(() => ['contacts', id] as const, [id]);
   // Set once the contact is deleted: the page leaves without loading it again.
@@ -243,7 +244,7 @@ function ContactEditor({ id }: { id: string }) {
 
   const close = async () => {
     await registry.flushAll();
-    navigate(withContext(LIST_PATH));
+    navigate(returnTo ?? withContext(LIST_PATH));
   };
 
   // Back where the creation started: the supplier it came from, else the previous page, else the list.
@@ -267,7 +268,7 @@ function ContactEditor({ id }: { id: string }) {
     setCreating(true);
     setPageError(null);
     try {
-      await api.post<Contact>('/contacts', {
+      const { data: created } = await api.post<Contact>('/contacts', {
         email: values.email,
         first_name: values.first_name?.trim() || null,
         last_name: values.last_name?.trim() || null,
@@ -281,7 +282,9 @@ function ContactEditor({ id }: { id: string }) {
         active: values.active,
       });
       void queryClient.invalidateQueries({ queryKey: ['supplier-contacts'] });
-      leaveCreation();
+      // The new contact opens in place; its back arrow still leads to the supplier it came from.
+      const back = returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : '';
+      navigate(returnTo ? `${LIST_PATH}/${created.id}/overview${back}` : withContext(`${LIST_PATH}/${created.id}/overview`), { replace: true });
     } catch (e) {
       const status = (e as { response?: { status?: number } } | null)?.response?.status;
       const message = getApiErrorMessage(e, t, t('contacts.messages.createFailed'));

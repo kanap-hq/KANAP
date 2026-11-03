@@ -28,6 +28,7 @@ import { getApiErrorMessage, isDuplicateError } from '../../utils/apiErrorMessag
 import { getDotColor } from '../../utils/statusColors';
 import { useCoaList } from '../coa/useCoaList';
 import { CoaField, CountryField, CurrencyField, defaultCoaFor } from './CompanyFields';
+import { currencyForCountry } from '../../constants/countryCurrency';
 import RecordDeleteButton from '../../components/workspace/RecordDeleteButton';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
@@ -203,7 +204,8 @@ export default function CompanyWorkspacePage() {
   const patch = React.useCallback(
     (body: Partial<Company>, field: CompanyField): Promise<boolean> => {
       if (isCreate) {
-        setErrors((prev) => ({ ...prev, [field]: undefined }));
+        // A field filled for the person (the country's currency) loses its mark too.
+        setErrors((prev) => ({ ...prev, ...Object.fromEntries(Object.keys(body).map((key) => [key, undefined])), [field]: undefined }));
         draftRef.current = { ...draftRef.current, ...body };
         setDraft(draftRef.current);
         return Promise.resolve(true);
@@ -284,6 +286,7 @@ export default function CompanyWorkspacePage() {
    * A chart of accounts tied to another country does not follow the company abroad: the country
    * change carries the new country's default chart (else the global default, else none).
    */
+  const currencyChosenRef = React.useRef(false);
   const changeCountry = (country: string) => {
     if (!data || !country || country === data.country_iso) return;
     const body: Partial<Company> = { country_iso: country };
@@ -295,6 +298,9 @@ export default function CompanyWorkspacePage() {
     if (isCreate && !body.coa_id && !(current && current.scope !== 'COUNTRY')) {
       body.coa_id = defaultCoaFor(coas, country) ?? coas.find((coa) => coa.scope === 'GLOBAL')?.id ?? null;
     }
+    // A new company takes its country's currency, until the person chooses one.
+    const currency = currencyForCountry(country);
+    if (isCreate && currency && !currencyChosenRef.current) body.base_currency = currency;
     trackSave(patch(body, 'country_iso'));
   };
 
@@ -323,9 +329,10 @@ export default function CompanyWorkspacePage() {
     setCreateError(null);
     try {
       const { id: _id, name: _name, ...fields } = values;
-      await api.post<Company>('/companies', { ...fields, name });
+      const { data: created } = await api.post<Company>('/companies', { ...fields, name });
       void queryClient.invalidateQueries({ queryKey: ['companies'] });
-      leave();
+      // The new company opens in place, every tab available.
+      navigate(withContext(`${LIST_PATH}/${created.id}/overview`), { replace: true });
     } catch (e) {
       const message = getApiErrorMessage(e, t, t('companies.messages.createFailed'));
       const field = isDuplicateError(e) ? 'name' : companyRefusalField(e);
@@ -387,6 +394,7 @@ export default function CompanyWorkspacePage() {
         <CurrencyField
           value={data.base_currency ?? ''}
           onChange={(currency) => {
+            currencyChosenRef.current = true;
             if (currency && currency !== data.base_currency) trackSave(patch({ base_currency: currency }, 'base_currency'));
           }}
           clearable={false}

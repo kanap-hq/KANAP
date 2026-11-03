@@ -422,7 +422,8 @@ describe('AnalyticsDimensionWorkspacePage', () => {
       status: 'enabled',
       disabled_at: null,
     }));
-    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/analytics'));
+    // The new dimension opens in place.
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/analytics/dimensions/ax-new/overview', { replace: true }));
   });
 
   it('creates a dimension for one type of line', async () => {

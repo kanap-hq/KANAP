@@ -374,12 +374,11 @@ describe('CompanyWorkspacePage', () => {
     expect(screen.queryByText('companies.messages.nameRequired')).toBeNull();
     expect(screen.getByText('companies.messages.countryRequired')).toBeInTheDocument();
 
+    // The country brings its currency: both marks go.
     await pickOption('companies.fields.country', 'Germ', 'Germany (DE)');
     expect(screen.queryByText('companies.messages.countryRequired')).toBeNull();
-    expect(screen.getByText('companies.messages.currencyRequired')).toBeInTheDocument();
-
-    await pickOption('companies.fields.baseCurrency', 'Euro', 'EUR · Euro');
     expect(screen.queryByText('companies.messages.currencyRequired')).toBeNull();
+    expect(screen.getByLabelText('companies.fields.baseCurrency')).toHaveValue('EUR · Euro');
     expect(screen.getByText('companies.messages.cityRequired')).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('companies.fields.city'), { target: { value: 'Berlin' } });
@@ -425,7 +424,7 @@ describe('CompanyWorkspacePage', () => {
       disabled_at: null,
       notes: null,
     }));
-    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/companies?year=2026'));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/companies/co-new/overview?year=2026', { replace: true }));
   });
 
   it('says another company has the name, under the header title, when a create is refused as a duplicate', async () => {

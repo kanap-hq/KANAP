@@ -216,7 +216,7 @@ describe('DepartmentWorkspacePage', () => {
     expect(mocked.patch).toHaveBeenCalledTimes(2);
   });
 
-  it('creates on Create with the header name, then goes back to the list', async () => {
+  it('creates on Create with the header name, then opens the new department', async () => {
     mocked.post.mockResolvedValue({ data: { ...DEPARTMENT, id: 'dep-new' } });
     renderAt('/master-data/departments/new/overview?year=2026');
     fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Legal' } });
@@ -225,7 +225,7 @@ describe('DepartmentWorkspacePage', () => {
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/departments', {
       name: 'Legal', company_id: 'company-2', description: null, status: 'enabled', disabled_at: null,
     }));
-    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/departments?year=2026'));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/departments/dep-new/overview?year=2026', { replace: true }));
   });
 
   it('changes year on a click made while the headcount save is still running', async () => {

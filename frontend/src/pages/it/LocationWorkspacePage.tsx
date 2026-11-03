@@ -364,8 +364,10 @@ function LocationEditor() {
     setCreateError(null);
     const { id: _id, location_reference: _reference, ...fields } = data;
     try {
-      await api.post('/locations', { ...fields, name });
-      leaveCreation();
+      const { data: created } = await api.post<LocationRecord>('/locations', { ...fields, name });
+      // The new site opens in place, every tab available.
+      const qs = listContextParams.toString();
+      navigate(`/it/locations/${created.location_reference || created.id}/overview${qs ? `?${qs}` : ''}`, { replace: true });
     } catch (e: any) {
       if (isDuplicateError(e)) creationTitle.refuse(t('messages.locationNameTaken'));
       else setCreateError(getApiErrorMessage(e, t, t('messages.saveLocationFailed')));

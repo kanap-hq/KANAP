@@ -174,9 +174,10 @@ export default function DepartmentWorkspacePage() {
     setCreating(true);
     setCreateError(null);
     try {
-      await api.post<Department>('/departments', { name, company_id, description, status, disabled_at });
+      const { data: created } = await api.post<Department>('/departments', { name, company_id, description, status, disabled_at });
       void queryClient.invalidateQueries({ queryKey: ['departments'] });
-      leave();
+      // The new department opens in place, every tab available.
+      navigate(withContext(`${LIST_PATH}/${created.id}/overview`), { replace: true });
     } catch (e) {
       const message = getApiErrorMessage(e, t, t('departments.messages.createFailed'));
       const field = departmentRefusalField(e);

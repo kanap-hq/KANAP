@@ -255,7 +255,7 @@ export default function CostCenterWorkspacePage() {
     setCreating(true);
     setPageError(null);
     try {
-      await createCostCenter({
+      const created = await createCostCenter({
         code: form.code,
         name,
         kind: form.kind,
@@ -268,7 +268,8 @@ export default function CostCenterWorkspacePage() {
       });
       void queryClient.invalidateQueries({ queryKey: ['cost-centers'] });
       afterWrite();
-      leave();
+      // The new node opens in place, every tab available.
+      navigate(`${LIST_PATH}/${created.id}/overview${listContext ? `?${listContext}` : ''}`, { replace: true });
     } catch (e) {
       const message = getApiErrorMessage(e, t, t('costCenters.messages.createFailed'));
       const field = refusalField(e);
