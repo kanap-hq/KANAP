@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
+import { KanapDialogProvider } from '../../components/design';
 import { STATUS_SCOPE_PARAM } from '../../utils/statusScopeParams';
 import type { AnalyticsAxisDetail, AnalyticsValueDetail } from '../../services/analytics';
 
@@ -103,6 +104,7 @@ function renderAt(path: string, queryClient = new QueryClient({ defaultOptions: 
   return render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={createAppTheme('light')}>
+        <KanapDialogProvider>
         <MemoryRouter initialEntries={[path]}>
           <Link to="/master-data/analytics/v-2/overview?axis=ax-nature">go to v-2</Link>
           <Routes>
@@ -110,6 +112,7 @@ function renderAt(path: string, queryClient = new QueryClient({ defaultOptions: 
             <Route path="/master-data/analytics/:id/:tab" element={<AnalyticsWorkspacePage />} />
           </Routes>
         </MemoryRouter>
+        </KanapDialogProvider>
       </ThemeProvider>
     </QueryClientProvider>,
   );
@@ -366,13 +369,14 @@ describe('AnalyticsWorkspacePage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('A value named Hardware already exists in Nature.');
   });
 
-  it('creates in the page dimension and posts it', async () => {
-    mocked.createAnalyticsValue.mockResolvedValue({ ...VALUE, id: 'v-new' });
+  it('creates the value in the page dimension once its name is committed, then opens it', async () => {
+    mocked.createAnalyticsValue.mockResolvedValue({ ...VALUE, id: 'v-new', creation_token: 'token-1' });
     renderAt('/master-data/analytics/new/overview?axis=ax-nature&sort=name%3AASC');
     const dimension = screen.getByLabelText('analytics.fields.dimension');
     expect(within(dimension.parentElement as HTMLElement).getByRole('combobox')).toHaveTextContent('Nature');
-    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: ' Hardware ' } });
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    fireEvent.change(title, { target: { value: ' Hardware ' } });
+    fireEvent.blur(title);
     await waitFor(() => expect(mocked.createAnalyticsValue).toHaveBeenCalledWith({
       axis_id: 'ax-nature',
       name: 'Hardware',

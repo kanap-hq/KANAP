@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider, focusManager } from '@tanstack/react-
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
+import { KanapDialogProvider } from '../../components/design';
 import type { AnalyticsAxisDetail } from '../../services/analytics';
 
 const navigateMock = vi.hoisted(() => vi.fn());
@@ -116,12 +117,14 @@ function renderAt(path: string, queryClient = new QueryClient({ defaultOptions: 
   return render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={createAppTheme('light')}>
+        <KanapDialogProvider>
         <MemoryRouter initialEntries={[path]}>
           <Link to="/master-data/analytics/dimensions/ax-default/overview">go to the default</Link>
           <Routes>
             <Route path="/master-data/analytics/dimensions/:id/:tab" element={<AnalyticsDimensionWorkspacePage />} />
           </Routes>
         </MemoryRouter>
+        </KanapDialogProvider>
       </ThemeProvider>
     </QueryClientProvider>,
   );
@@ -403,15 +406,16 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     expect(navigateMock).toHaveBeenLastCalledWith('/master-data/analytics?axis=ax-nature');
   });
 
-  it('creates on Create with the header name and the code proposed from it, with no position (the server places it last)', async () => {
-    mocked.createAnalyticsAxis.mockResolvedValue({ ...NATURE, id: 'ax-new' });
+  it('creates the dimension once its name is committed, with the code proposed from it and no position (the server places it last)', async () => {
+    mocked.createAnalyticsAxis.mockResolvedValue({ ...NATURE, id: 'ax-new', creation_token: 'token-1' });
     renderAt('/master-data/analytics/dimensions/new/overview');
     // The dimension's own page: the code sits in its Properties drawer.
     expect(screen.getByRole('complementary')).toContainElement(screen.getByLabelText('analytics.fields.code'));
     fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Nature de coût' } });
     expect(screen.getByLabelText('analytics.fields.code')).toHaveValue('nature-de-cout');
     expect(screen.queryByLabelText('analytics.fields.order')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    expect(mocked.createAnalyticsAxis).not.toHaveBeenCalled();
+    fireEvent.blur(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }));
     await waitFor(() => expect(mocked.createAnalyticsAxis).toHaveBeenCalledWith({
       code: 'nature-de-cout',
       name: 'Nature de coût',
@@ -429,10 +433,10 @@ describe('AnalyticsDimensionWorkspacePage', () => {
   it('creates a dimension for one type of line', async () => {
     mocked.createAnalyticsAxis.mockResolvedValue({ ...NATURE, id: 'ax-new', applies_to: 'capex' });
     renderAt('/master-data/analytics/dimensions/new/overview');
-    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Investment type' } });
     expect(usageSelect()).toHaveTextContent('master-data:shared.lineTypeUsage.both');
     await pickUsage('master-data:shared.lineTypeUsage.capex');
     expect(usageSelect()).toHaveTextContent('master-data:shared.lineTypeUsage.capex');
+    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Investment type' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(mocked.createAnalyticsAxis).toHaveBeenCalledWith(expect.objectContaining({
       code: 'investment-type',

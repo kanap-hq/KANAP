@@ -4,7 +4,7 @@ import type { TFunction } from 'i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Box, MenuItem, Stack, TextField, Typography } from '@mui/material';
-import { CreationActions, useCreationLeave, useCreationTitle } from '../../components/workspace/creation';
+import { CreationActions, useCreationLeave, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
 import { useAuth } from '../../auth/AuthContext';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
 import { KanapDialog, PropertyGroup, PropertyRow } from '../../components/design';
@@ -208,43 +208,62 @@ export default function AnalyticsWorkspacePage() {
     }
   };
 
-  // Create sends the draft with the header's name, then goes back where the creation started.
+  // The draft is created once it has its name and its dimension; the value then opens, every tab
+  // available, with Create (kept, back where the creation started) and Cancel (deleted).
   const leave = useCreationLeave(handleClose);
-  const title = useCreationTitle({ requiredMessage: t('analytics.messages.nameRequired'), onCancel: leave });
-  const [creating, setCreating] = React.useState(false);
-  const handleCreate = async () => {
-    if (!canEdit || creating) return;
+  const title = useCreationTitle({
+    requiredMessage: t('analytics.messages.nameRequired'),
+    onCancel: leave,
+    onCommit: () => creation.attempt(),
+  });
+  const dimensionMissing = axes.enabled.length > 0 && !newAxisId;
+  const creation = useDraftCreation({
+    isCreate,
+    family: 'analytics_categories',
+    apiBase: '/analytics-categories',
+    recordId: stored?.id ?? null,
+    listPath: `${ANALYTICS_LIST_PATH}${listContext ? `?${listContext}` : ''}`,
+    recordLabel: t('analytics.valueCreationRecord'),
+    queryKeyPrefixes: ['analytics'],
+    ready: () => axes.ready && !!title.current().trim() && !dimensionMissing,
+    post: async () => {
+      const { description, status, disabled_at } = draftRef.current;
+      setPageError(null);
+      try {
+        const created = await createAnalyticsValue({
+          ...(newAxisId ? { axis_id: newAxisId } : {}),
+          name: title.current().trim(),
+          description,
+          applies_to: newAppliesTo,
+          status,
+          disabled_at,
+        });
+        void queryClient.invalidateQueries({ queryKey: ['analytics-categories'] });
+        void queryClient.invalidateQueries({ queryKey: ['analytics-ids'] });
+        void queryClient.invalidateQueries({ queryKey: ANALYTICS_AXES_QUERY_KEY });
+        return { id: created.id, token: created.creation_token, path: `${ANALYTICS_LIST_PATH}/${created.id}/overview${listContext ? `?${listContext}` : ''}` };
+      } catch (e) {
+        const message = getApiErrorMessage(e, t, t('analytics.messages.createFailed'));
+        const field = analyticsRefusalField(e);
+        if (field === 'name') title.refuse(message);
+        else if (field === 'description' || field === 'axis_id' || field === 'applies_to') setErrors((prev) => ({ ...prev, [field]: message }));
+        else setPageError(message);
+        return null;
+      }
+    },
+    onError: setPageError,
+  });
+  React.useEffect(() => { creation.attempt(); }, [creation.attempt, draft, newAxisId, axes.ready]);
+  const handleCreate = () => {
+    if (creation.beingCreated) {
+      creation.finishCreation();
+      return;
+    }
+    if (!canEdit || !axes.ready) return;
     const name = title.require();
-    if (axes.enabled.length > 0 && !newAxisId) {
-      setErrors((prev) => ({ ...prev, axis_id: t('analytics.messages.dimensionRequired') }));
-    }
-    if (!name || (axes.enabled.length > 0 && !newAxisId)) return;
-    const { description, status, disabled_at } = draftRef.current;
-    setCreating(true);
-    setPageError(null);
-    try {
-      const created = await createAnalyticsValue({
-        ...(newAxisId ? { axis_id: newAxisId } : {}),
-        name,
-        description,
-        applies_to: newAppliesTo,
-        status,
-        disabled_at,
-      });
-      void queryClient.invalidateQueries({ queryKey: ['analytics-categories'] });
-      void queryClient.invalidateQueries({ queryKey: ['analytics-ids'] });
-      void queryClient.invalidateQueries({ queryKey: ANALYTICS_AXES_QUERY_KEY });
-      // The new value opens in place, every tab available.
-      navigate(`${ANALYTICS_LIST_PATH}/${created.id}/overview${listContext ? `?${listContext}` : ''}`, { replace: true });
-    } catch (e) {
-      const message = getApiErrorMessage(e, t, t('analytics.messages.createFailed'));
-      const field = analyticsRefusalField(e);
-      if (field === 'name') title.refuse(message);
-      else if (field === 'description' || field === 'axis_id' || field === 'applies_to') setErrors((prev) => ({ ...prev, [field]: message }));
-      else setPageError(message);
-    } finally {
-      setCreating(false);
-    }
+    if (dimensionMissing) setErrors((prev) => ({ ...prev, axis_id: t('analytics.messages.dimensionRequired') }));
+    if (!name || dimensionMissing) return;
+    void creation.createAndLeave();
   };
 
   const axis = data ? axes.byId.get(data.axis_id) : undefined;
@@ -254,8 +273,12 @@ export default function AnalyticsWorkspacePage() {
   const confirmation = data ? deleteConfirmation(t, { kind: 'value', name: data.name, lineCount }) : null;
   const disabled = !canEdit;
 
-  const actions = isCreate ? (
-    <CreationActions onCreate={() => void handleCreate()} onCancel={leave} busy={!canEdit || creating || !axes.ready} />
+  const actions = isCreate || creation.beingCreated ? (
+    <CreationActions
+      onCreate={handleCreate}
+      onCancel={isCreate ? leave : () => { void creation.cancelCreation(); }}
+      busy={!canEdit || creation.busy || !axes.ready}
+    />
   ) : canDelete && data ? (
     <DeleteIconButton onClick={() => setConfirmOpen(true)} disabled={deleting} />
   ) : undefined;

@@ -145,8 +145,9 @@ export async function getAnalyticsAxis(id: string): Promise<AnalyticsAxisDetail>
   return res.data;
 }
 
-export async function createAnalyticsAxis(body: AnalyticsAxisWrite): Promise<AnalyticsAxisDetail> {
-  const res = await api.post<AnalyticsAxisDetail>(ANALYTICS_AXES_ENDPOINT, body);
+/** The created dimension, with the token that lets its creator cancel the creation (`DELETE :id/creation`). */
+export async function createAnalyticsAxis(body: AnalyticsAxisWrite): Promise<AnalyticsAxisDetail & { creation_token: string }> {
+  const res = await api.post<AnalyticsAxisDetail & { creation_token: string }>(ANALYTICS_AXES_ENDPOINT, body);
   return res.data;
 }
 
@@ -177,8 +178,9 @@ export async function getAnalyticsValue(id: string): Promise<AnalyticsValueDetai
   return res.data;
 }
 
-export async function createAnalyticsValue(body: AnalyticsValueWrite): Promise<AnalyticsValueDetail> {
-  const res = await api.post<AnalyticsValueDetail>(ANALYTICS_VALUES_ENDPOINT, body);
+/** The created value, with the token that lets its creator cancel the creation (`DELETE :id/creation`). */
+export async function createAnalyticsValue(body: AnalyticsValueWrite): Promise<AnalyticsValueDetail & { creation_token: string }> {
+  const res = await api.post<AnalyticsValueDetail & { creation_token: string }>(ANALYTICS_VALUES_ENDPOINT, body);
   return res.data;
 }
 
