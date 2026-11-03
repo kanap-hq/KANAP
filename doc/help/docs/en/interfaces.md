@@ -6,17 +6,18 @@ Interfaces document the logical data flows between your applications. Each inter
 
 Navigate to **IT Landscape > Interfaces** to see your integration registry. Click **Add interface** to create a new entry, or open an existing one to edit it.
 
-To create an interface you need:
+To create an interface, fill the **Create interface** form on the Overview tab:
 
-- **Interface ID**: A unique short code (e.g., `INT-CRM-ERP-001`)
-- **Name**: A descriptive name for the integration
-- **Business purpose**: A short summary of why this integration exists
-- **Source application** and **Target application**
-- **Data category**: The type of data being transferred
+- **Name** (required): A descriptive name for the integration
+- **Interface code**: An optional short code of your own (e.g., `ERP-ORDERS-SYNC`)
+- **Business process**: The business process the interface supports
+- **Source application** and **Target application** (required)
+- **Data category** (required): The type of data being transferred
+- **Route type**: Direct or Via middleware
 
-Once these are set you can save the interface; the rest of the workspace (Flow, Environments, Data mapping, Relations) becomes available afterwards.
+Click **Create** in the header. KANAP assigns the interface its reference (`INT-4`), and the other tabs (Flow, Environments, Data mapping, Relations, History) become available.
 
-**Tip**: Set the **Integration route type** (Direct or Via middleware) early. It controls which legs are generated automatically and what shows up on the Flow tab and the Environments matrix.
+**Tip**: Set the **Route type** early. It controls which legs are generated automatically and what shows up on the Flow tab and the Environments matrix.
 
 ---
 
@@ -26,7 +27,8 @@ The Interfaces grid shows your integration registry at a glance.
 
 **Default columns**:
 
-- **Interface ID**: The unique identifier (click to open the workspace)
+- **Reference**: The reference KANAP assigns (`INT-4`)
+- **Interface code**: Your own short code, when set
 - **Name**: Interface name
 - **Environments**: Coloured dots showing which environments already have bindings configured (e.g., PROD, QA, DEV)
 - **Source App** and **Target App**: The connected applications
@@ -62,36 +64,37 @@ The Interfaces grid shows your integration registry at a glance.
 
 ## The Interfaces workspace
 
-Click any row to open the workspace. The workspace has a side panel with the interface properties on the left, and six tabs on the right. The last one, **History**, lists the changes made to the interface (see [Record history](record-history.md)).
+Click any row to open the workspace. The workspace has six tabs, with the interface properties in a side panel on the right. The name in the header can be edited in place. The last one, **History**, lists the changes made to the interface (see [Record history](record-history.md)).
 
 The header carries **Delete**, a trash icon with its name in a tooltip (`applications:admin`). The confirmation uses the same check as **Delete selected**. It says this cannot be undone. When the interface has bindings, it explains them and offers **Also delete related bindings**: the delete is available once that option is checked, the bindings go with the interface, and the connections stay. The list opens again afterwards.
 
 ### Interface properties (side panel)
 
-The side panel stays visible across every tab and groups the most-edited fields into three collapsible sections:
+The side panel stays visible across every tab. Click its **Properties** tab to collapse or expand it. It holds three groups of fields:
 
-**Core properties**:
+**Identification**:
 
-- **Interface ID**, **Name**, **Business purpose** (required)
+- **Reference**: Assigned by KANAP, read-only
+- **Interface code**: Your own short code
 - **Business process**: Link to a business process from master data
-- **Lifecycle** and **Criticality**
-- **Source application** and **Target application** (required)
-- **Integration route type**: Direct or Via middleware
-- **Middleware applications**: Only shown when route type is Via middleware. The list is restricted to applications flagged as ETL/middleware.
+- **Lifecycle**
+- **Created on** and **Updated on**: Read-only dates
 
 **Team**:
 
 - **Business owners**: Business stakeholders accountable for the integration
 - **IT owners**: Technical team members responsible for maintenance
+- **Impacted companies**: The companies affected by the integration
 
-**Data & Compliance**:
+**Data and compliance**:
 
-- **Data category**: The kind of data being transferred
-- **Data classification**: Sensitivity level (Public, Internal, Confidential, Restricted)
-- **Contains PII**: When checked, a **PII description** field appears so you can detail what PII is included
-- **Data residency**: Countries where the data flows (ISO 2-letter codes)
+- **Criticality**: Business importance
+- **Data category** (required): The kind of data being transferred
+- **Data class**: Sensitivity level
+- **Contains PII**: When switched on, a **PII description** field appears so you can detail what PII is included
+- **Data residency**: Countries where the data flows
 
-Field changes in the side panel are saved automatically when you leave the field, so you can update properties from any tab without switching context.
+Field changes in the side panel are saved automatically, so you can update properties from any tab without switching context. The source and target applications, the route type and the middleware are set on the Flow tab.
 
 ---
 
@@ -105,9 +108,15 @@ Once the interface is saved, the Overview tab holds the **Specification**, a man
 
 ### Flow
 
-The Flow tab defines the shared **legs** that make up the interface. Legs are templates: they describe what each step does in general (the same definition applies across every environment).
+The Flow tab sets the route of the interface, then the shared **legs** that make it up.
 
-For each leg you can edit:
+**Logical flow**:
+
+- **Source application** and **Target application** (required)
+- **Route type**: Direct or Via middleware
+- **Middleware applications**: Only shown when the route type is Via middleware. The list is restricted to applications flagged as ETL/middleware.
+
+**Leg template**: Legs describe what each step does in general (the same definition applies across every environment). For each leg you can edit:
 
 - **Leg type**: Extract, Transform, Load, or Direct (set automatically based on the integration route)
 - **From -> To**: Which role handles each step (Source app, Target app, or Middleware)
@@ -116,33 +125,38 @@ For each leg you can edit:
 - **Format**: The data format (e.g., JSON, XML, CSV, flat file)
 - **Job name**: An optional default job or process name
 
-If no legs appear yet, save the interface first. Legs are generated from the **Source application**, **Target application**, and **Integration route type** in the side panel.
+If no legs appear yet, select the source and target applications. Legs are generated from the **Source application**, **Target application** and **Route type**.
 
 ---
 
 ### Environments
 
-The Environments tab manages the per-environment bindings that turn the leg templates into actual configurations. It presents a matrix of environments and legs, letting you configure each combination independently.
+The Environments tab manages the per-environment bindings that turn the leg templates into actual configurations. It presents a matrix with one row per leg and one column per environment, so you can configure each combination independently.
 
-**How it works**:
+**Environments**:
 
-- Each environment (Prod, Pre-prod, QA, Test, Dev, Sandbox, or custom) can have bindings for each leg
-- Environments are discovered automatically from your application instances; you can also add custom environments
-- Click an empty cell to create a binding, or click an existing one to edit it
+- **Add environment** (`applications:member`) offers the environments where the source and target applications (and the middleware, for a route via middleware) all have a deployment. Deployments are created in the Applications workspace.
+- An environment appears in the matrix once you add it or once it has a binding.
+- To delete an environment, click the trash icon in its column header. The confirmation gives the number of bindings deleted with it.
+- A strip above the matrix shows each environment with the number of legs configured out of the total, for example `QA 2/3`. The dot is green when every leg is configured, orange when some are, and grey when none is.
+
+**Cells**: Each cell shows the binding status and its source and target endpoints. Once you have opened a binding, its cell also shows its infrastructure connection: the first one, with a count of the others when there are more (`+2`). An **Active** binding with no infrastructure connection then shows **Missing connection** in orange. Click an empty cell to add a binding, or a configured cell to edit it. The trash icon in a cell deletes its binding, after a confirmation.
+
+**Binding panel**: Clicking a cell opens a panel beside the matrix.
+
+- For a new binding, fill the fields and click **Add binding**. The **Source deployment** and **Target deployment** selectors appear when the application has more than one deployment in that environment; otherwise the only deployment is used. The **Integration tool** selector appears, and is required, for a route via middleware when more than one middleware application has a deployment in the environment.
+- For an existing binding, each change is saved as you go. The panel header shows when the change is saved.
 
 **Binding fields**:
 
-- **Source instance** and **Target instance**: Which application instances to use in this environment
-- **Status**: Enabled, Disabled, or Testing
+- **Status**: The [lifecycle statuses](it-ops-settings.md#lifecycle-statuses): Proposed, Active, Deprecated, Retired, plus any your administrator adds
+- **Authentication mode**: How the binding authenticates
+- **Infra connection**: The infrastructure connection from your connection registry, so you can trace the full path from logical interface down to the physical network connection. The panel edits one connection. When the binding has more, the others are listed as a count and kept unchanged.
 - **Source endpoint** and **Target endpoint**: Technical endpoints (URLs, paths, queue names, etc.)
 - **Trigger details**: Environment-specific trigger configuration
-- **Env job name**: Override the leg template's job name for this environment
-- **Authentication mode**: How the binding authenticates
+- **Job name override**: Replaces the leg template's job name in this environment
 - **Monitoring URL**: Link to monitoring or observability for this binding
-- **Integration tool application**: If applicable, the integration tool used
-- **Env notes**: Environment-specific notes
-
-**Connection linking**: Each binding can be linked to infrastructure connections from your connection registry. This lets you trace the full path from logical interface down to the physical network connection.
+- **Notes**: Environment-specific notes
 
 ---
 
@@ -247,7 +261,7 @@ Use this when you want an independent copy of an interface, typically to create 
 | Mapping groups and rules | No |
 | Attachments | No |
 
-**Naming**: The copy gets " - copy" appended to both the name and the Interface ID. An empty interface ID stays empty.
+**Naming**: The copy gets " - copy" appended to both the name and the interface code. An empty interface code stays empty. The copy gets its own reference.
 
 ### Version Migration (from Application versioning)
 
@@ -269,10 +283,10 @@ Use this when upgrading an application to a new version and you need to migrate 
 
 ## Tips
 
-- **Document the "why" first**: Use the **Specification** on the Overview tab and the side-panel **Business purpose** field to capture intent before diving into legs and bindings.
-- **Use the side panel from any tab**: Owners, criticality, route type, PII flag and the rest persist immediately, so you can update them while reviewing rules or bindings.
+- **Document the "why" first**: Use the **Specification** on the Overview tab to capture intent before diving into legs and bindings.
+- **Use the side panel from any tab**: Owners, criticality, PII flag and the rest persist immediately, so you can update them while reviewing rules or bindings.
 - **One interface, many environments**: Don't create separate interfaces for each environment. Use one interface and configure each environment in the Environments tab.
 - **Group your mapping rules**: For interfaces with more than a handful of fields, organise rules into mapping groups (Header, Item lines, Footer, etc.). It makes review and impact analysis far easier.
-- **Keep middleware explicit**: If data flows through middleware, set route type to **Via middleware** and pick the middleware applications. The Interface Map will then render the real data path.
+- **Keep middleware explicit**: If data flows through middleware, set the route type to **Via middleware** on the Flow tab and pick the middleware applications. The Interface Map will then render the real data path.
 - **Duplicate for similar interfaces**: When creating a new interface that's similar to an existing one, use **Duplicate interface** to copy all settings, then modify what's different. Optionally include bindings to get a head start on environment configuration.
 - **Link bindings to infra connections**: On the Environments tab, link each binding to its underlying infrastructure connection so you can trace the full path from business interface down to network connection.
