@@ -42,13 +42,67 @@ const journalFooterSx = {
 } as const;
 
 // The server writes these system entries in English; they are shown in the reader's language,
-// existing entries included. Any other content is someone's text and is shown as written.
+// existing entries included. Link changes are rebuilt from changed_fields (see linkChangeLines).
+// Any other content is someone's text and is shown as written.
 const SYSTEM_ENTRY_KEYS: Record<string, string> = {
   'Incident logged': 'workspace.incident.journal.systemEntries.logged',
   'Imported from CSV': 'workspace.incident.journal.systemEntries.importedFromCsv',
   'Incident review imported from CSV': 'workspace.incident.journal.systemEntries.reviewImportedFromCsv',
   'Incident review imported': 'workspace.incident.journal.systemEntries.reviewImported',
 };
+
+const LINK_FAMILIES = ['assets', 'applications', 'technologies'] as const;
+
+type LinkFamily = (typeof LINK_FAMILIES)[number];
+
+/** One line per family and direction, in the same order the server writes the English sentence. */
+const LINK_CHANGE_KEYS: Record<LinkFamily, { linked: string; unlinked: string }> = {
+  assets: {
+    linked: 'workspace.incident.journal.linkChanges.assets.linked',
+    unlinked: 'workspace.incident.journal.linkChanges.assets.unlinked',
+  },
+  applications: {
+    linked: 'workspace.incident.journal.linkChanges.applications.linked',
+    unlinked: 'workspace.incident.journal.linkChanges.applications.unlinked',
+  },
+  technologies: {
+    linked: 'workspace.incident.journal.linkChanges.technologies.linked',
+    unlinked: 'workspace.incident.journal.linkChanges.technologies.unlinked',
+  },
+};
+
+function stringList(value: unknown): string[] | null {
+  if (!Array.isArray(value) || value.some((item) => typeof item !== 'string')) return null;
+  return value;
+}
+
+/**
+ * Link changes are stored as an English sentence. Added references are `to` minus `from`,
+ * removed ones are `from` minus `to`, one line per family. Returns null when the snapshot
+ * cannot be read, so an old row keeps its stored sentence. A conversion is the two lines
+ * of its application and its technology.
+ */
+function linkChangeLines(
+  changed: IncidentEntry['changed_fields'],
+  translate: (key: string, options: { refs: string }) => string,
+): string[] | null {
+  if (!changed) return null;
+  const lines: string[] = [];
+  let readable = false;
+  for (const family of LINK_FAMILIES) {
+    if (!Object.prototype.hasOwnProperty.call(changed, family)) continue;
+    const change = changed[family];
+    const from = stringList(change?.from);
+    const to = stringList(change?.to);
+    if (!from || !to) continue;
+    readable = true;
+    const added = to.filter((ref) => !from.includes(ref));
+    const removed = from.filter((ref) => !to.includes(ref));
+    if (added.length > 0) lines.push(translate(LINK_CHANGE_KEYS[family].linked, { refs: added.join(', ') }));
+    if (removed.length > 0) lines.push(translate(LINK_CHANGE_KEYS[family].unlinked, { refs: removed.join(', ') }));
+  }
+  return readable ? lines : null;
+}
 
 /** A minute of slack covers the latency between the client's clock and the server write. */
 const RECORDED_AT_TOLERANCE_MS = 60 * 1000;
@@ -217,8 +271,12 @@ export default function IncidentJournalTab({ incidentId, canAdd, onEntryAdded }:
       <Stack spacing="22px">
         {entries.map((entry) => {
           const name = authorName(entry);
-          // Link changes carry a ready-made sentence; showing the raw before/after lists as well would duplicate it.
+          // Link changes are rebuilt below. The raw before/after lists would repeat those lines.
           const changes = entry.changed_fields && entry.kind !== 'link_change' ? Object.entries(entry.changed_fields) : [];
+          const linkLines = entry.kind === 'link_change'
+            ? linkChangeLines(entry.changed_fields, (key, options) => t(key, options))
+            : null;
+          const translatedLinks = linkLines && linkLines.length > 0 ? linkLines : null;
           // `renderReviewVersion` returns null for a malformed snapshot, so the
           // nodes are built first: an entry whose only change renders to nothing
           // must not leave an empty spacer block behind.
@@ -263,7 +321,16 @@ export default function IncidentJournalTab({ incidentId, canAdd, onEntryAdded }:
                     {changeNodes}
                   </Box>
                 )}
-                {entry.content && (
+                {translatedLinks && (
+                  <Box sx={{ mt: '4px' }}>
+                    {translatedLinks.map((line, index) => (
+                      <Typography key={`${entry.id}-${index}`} sx={{ fontSize: 13, lineHeight: 1.55, overflowWrap: 'anywhere' }}>
+                        {line}
+                      </Typography>
+                    ))}
+                  </Box>
+                )}
+                {entry.content && !translatedLinks && (
                   <Typography sx={{ mt: '4px', fontSize: 13, lineHeight: 1.55, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
                     {entry.kind === 'system' && Object.prototype.hasOwnProperty.call(SYSTEM_ENTRY_KEYS, entry.content)
                       ? t(SYSTEM_ENTRY_KEYS[entry.content])

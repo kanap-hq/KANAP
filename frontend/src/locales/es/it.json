@@ -1664,6 +1664,20 @@
           "importedFromCsv": "Importado desde CSV",
           "reviewImportedFromCsv": "Revisión del incidente importada desde CSV",
           "reviewImported": "Revisión del incidente importada"
+        },
+        "linkChanges": {
+          "assets": {
+            "linked": "Activos vinculados: {{refs}}.",
+            "unlinked": "Activos desvinculados: {{refs}}."
+          },
+          "applications": {
+            "linked": "Aplicaciones vinculadas: {{refs}}.",
+            "unlinked": "Aplicaciones desvinculadas: {{refs}}."
+          },
+          "technologies": {
+            "linked": "Tecnologías vinculadas: {{refs}}.",
+            "unlinked": "Tecnologías desvinculadas: {{refs}}."
+          }
         }
       },
       "drawer": {
