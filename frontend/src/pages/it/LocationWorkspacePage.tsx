@@ -32,7 +32,7 @@ import DeleteIconButton from '../../components/workspace/DeleteIconButton';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
 
-import { CreationActions, useCreationLeave, useCreationTitle } from '../../components/workspace/creation';
+import { CreationActions, useCreationLeave, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
 type TabKey = 'overview' | 'contacts' | 'relations' | typeof RECORD_HISTORY_TAB_KEY;
 
 type LocationRecord = {
@@ -113,7 +113,6 @@ function LocationEditor() {
   const [deleting, setDeleting] = React.useState(false);
   const [pendingHostingType, setPendingHostingType] = React.useState<string | null>(null);
 
-  const [createSubmitting, setCreateSubmitting] = React.useState(false);
   const [createError, setCreateError] = React.useState<string | null>(null);
 
   const subItemsAnchorRef = React.useRef<HTMLDivElement>(null);
@@ -249,9 +248,47 @@ function LocationEditor() {
     const qs = listContextParams.toString();
     navigate(`/it/locations${qs ? `?${qs}` : ''}`);
   }, [listContextParams, navigate]);
-  // A new site: its name is typed in the header; Create and Cancel go back where the creation started.
+  // A new site: its name is typed in the header. The draft is created once it has its name and
+  // hosting type; the site then opens, every tab available, with Create (kept, back where the
+  // creation started) and Cancel (deleted).
   const leaveCreation = useCreationLeave(handleClose);
-  const creationTitle = useCreationTitle({ requiredMessage: t('messages.nameRequired'), onCancel: leaveCreation });
+  const creationTitle = useCreationTitle({
+    requiredMessage: t('messages.nameRequired'),
+    onCancel: leaveCreation,
+    onCommit: () => creation.attempt(),
+  });
+  const creation = useDraftCreation({
+    isCreate,
+    family: 'locations',
+    apiBase: '/locations',
+    recordId: data?.id || null,
+    listPath: `/it/locations${listContextParams.toString() ? `?${listContextParams.toString()}` : ''}`,
+    recordLabel: t('workspace.location.creationRecord'),
+    queryKeyPrefixes: ['locations'],
+    ready: () => canManage && !!creationTitle.current().trim() && !!data?.hosting_type,
+    post: async () => {
+      if (!data) return null;
+      setCreateError(null);
+      const { id: _id, location_reference: _reference, ...fields } = data;
+      try {
+        const { data: created } = await api.post<LocationRecord & { creation_token: string }>('/locations', {
+          ...fields, name: creationTitle.current().trim(),
+        });
+        const qs = listContextParams.toString();
+        return {
+          id: created.id,
+          token: created.creation_token,
+          path: `/it/locations/${created.location_reference || created.id}/overview${qs ? `?${qs}` : ''}`,
+        };
+      } catch (e: any) {
+        if (isDuplicateError(e)) creationTitle.refuse(t('messages.locationNameTaken'));
+        else setCreateError(getApiErrorMessage(e, t, t('messages.saveLocationFailed')));
+        return null;
+      }
+    },
+    onError: setCreateError,
+  });
+  React.useEffect(() => { creation.attempt(); }, [creation.attempt, data]);
 
   const handleTabChange = React.useCallback(
     (nextTab: string) => {
@@ -352,7 +389,11 @@ function LocationEditor() {
     [data, patchLocation],
   );
 
-  const handleCreate = async () => {
+  const handleCreate = () => {
+    if (creation.beingCreated) {
+      creation.finishCreation();
+      return;
+    }
     if (!canManage || !data) return;
     const name = creationTitle.require();
     if (!name) return;
@@ -360,20 +401,7 @@ function LocationEditor() {
       setCreateError(t('messages.hostingTypeRequired'));
       return;
     }
-    setCreateSubmitting(true);
-    setCreateError(null);
-    const { id: _id, location_reference: _reference, ...fields } = data;
-    try {
-      const { data: created } = await api.post<LocationRecord>('/locations', { ...fields, name });
-      // The new site opens in place, every tab available.
-      const qs = listContextParams.toString();
-      navigate(`/it/locations/${created.location_reference || created.id}/overview${qs ? `?${qs}` : ''}`, { replace: true });
-    } catch (e: any) {
-      if (isDuplicateError(e)) creationTitle.refuse(t('messages.locationNameTaken'));
-      else setCreateError(getApiErrorMessage(e, t, t('messages.saveLocationFailed')));
-    } finally {
-      setCreateSubmitting(false);
-    }
+    void creation.createAndLeave();
   };
 
   const handleDelete = async () => {
@@ -517,8 +545,12 @@ function LocationEditor() {
 
   const actions = (
     <>
-      {isCreate && (
-        <CreationActions onCreate={() => void handleCreate()} onCancel={leaveCreation} busy={createSubmitting || !canManage} />
+      {(isCreate || creation.beingCreated) && (
+        <CreationActions
+          onCreate={handleCreate}
+          onCancel={isCreate ? leaveCreation : () => { void creation.cancelCreation(); }}
+          busy={creation.busy || !canManage}
+        />
       )}
       {!isCreate && data && (
         <SendLinkButton
@@ -528,7 +560,7 @@ function LocationEditor() {
           itemName={data.name || t('workspace.location.untitled')}
         />
       )}
-      {!isCreate && canDelete && (
+      {!isCreate && !creation.beingCreated && canDelete && (
         <DeleteIconButton onClick={() => { void handleDelete(); }} disabled={deleting} />
       )}
     </>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
@@ -66,6 +67,7 @@ const LOCATION = {
 function renderAt(path: string) {
   return render(
     <ThemeProvider theme={createAppTheme('light')}>
+      <QueryClientProvider client={new QueryClient()}>
       <KanapDialogProvider>
         <MemoryRouter initialEntries={[path]}>
           <Routes>
@@ -73,6 +75,7 @@ function renderAt(path: string) {
           </Routes>
         </MemoryRouter>
       </KanapDialogProvider>
+      </QueryClientProvider>
     </ThemeProvider>,
   );
 }

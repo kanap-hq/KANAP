@@ -1,6 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
@@ -57,6 +58,7 @@ const duplicate = { response: { status: 409, data: { code: 'duplicate', message:
 function renderAt(path: string) {
   return render(
     <ThemeProvider theme={createAppTheme('light')}>
+      <QueryClientProvider client={new QueryClient()}>
       <KanapDialogProvider>
         <MemoryRouter initialEntries={[path]}>
           <Routes>
@@ -64,6 +66,7 @@ function renderAt(path: string) {
           </Routes>
         </MemoryRouter>
       </KanapDialogProvider>
+      </QueryClientProvider>
     </ThemeProvider>,
   );
 }
@@ -103,12 +106,14 @@ describe('LocationWorkspacePage name refusals', () => {
     expect(navigateMock).not.toHaveBeenCalled();
   });
 
-  it('creates the site on Create with the header name and the drawer fields, then opens it', async () => {
-    mocked.post.mockResolvedValueOnce({ data: { id: 'loc-new', location_reference: 'LOC-9', name: 'Lyon DC' } });
+  it('creates the site with the drawer fields once its name is committed, then opens it', async () => {
+    mocked.post.mockResolvedValueOnce({ data: { id: 'loc-new', location_reference: 'LOC-9', name: 'Lyon DC', creation_token: 'token-1' } });
     renderAt('/it/locations/new/overview');
     expect(screen.queryByPlaceholderText('workspace.location.namePlaceholder')).toBeNull();
-    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: ' Lyon DC ' } });
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    fireEvent.change(title, { target: { value: ' Lyon DC ' } });
+    expect(mocked.post).not.toHaveBeenCalled();
+    fireEvent.blur(title);
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/locations', {
       name: 'Lyon DC',
       hosting_type: 'on_prem',
