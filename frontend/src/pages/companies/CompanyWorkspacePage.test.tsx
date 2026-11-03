@@ -386,8 +386,8 @@ describe('CompanyWorkspacePage', () => {
     expect(mocked.post).not.toHaveBeenCalled();
   });
 
-  it('validates and creates on Create with the header name, the chart preselected from the country', async () => {
-    mocked.post.mockResolvedValue({ data: { ...COMPANY, id: 'co-new' } });
+  it('names what is missing on Create, then creates the company once complete, the chart preselected from the country', async () => {
+    mocked.post.mockResolvedValue({ data: { ...COMPANY, id: 'co-new', creation_token: 'token-1' } });
     renderAt('/master-data/companies/new/overview?year=2026');
     // The company's own page: country and currency sit in its Properties drawer.
     expect(screen.getByRole('complementary')).toContainElement(screen.getByLabelText('companies.fields.country'));
@@ -403,11 +403,12 @@ describe('CompanyWorkspacePage', () => {
     await pickOption('companies.fields.country', 'Germ', 'Germany (DE)');
     await waitFor(() => expect(screen.getByLabelText('companies.fields.chartOfAccounts')).toHaveValue('COA-DE · German chart'));
     await pickOption('companies.fields.baseCurrency', 'Euro', 'EUR · Euro');
-    fireEvent.change(screen.getByLabelText('companies.fields.city'), { target: { value: 'Berlin' } });
-    fireEvent.blur(screen.getByLabelText('companies.fields.city'));
     fireEvent.change(screen.getByLabelText('companies.fields.vatNumber'), { target: { value: 'DE123' } });
     fireEvent.blur(screen.getByLabelText('companies.fields.vatNumber'));
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    expect(mocked.post).not.toHaveBeenCalled();
+    // The city is the last field the company needs.
+    fireEvent.change(screen.getByLabelText('companies.fields.city'), { target: { value: 'Berlin' } });
+    fireEvent.blur(screen.getByLabelText('companies.fields.city'));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/companies', {
       name: 'Acme Germany',
       coa_id: 'coa-de',

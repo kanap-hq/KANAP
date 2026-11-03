@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Box, FormHelperText, Stack, TextField, Typography } from '@mui/material';
-import { CreationActions, useCreationLeave, useCreationTitle } from '../../components/workspace/creation';
+import { CreationActions, useCreationLeave, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
 import { useTheme } from '@mui/material/styles';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
@@ -310,38 +310,62 @@ export default function CompanyWorkspacePage() {
     setSearchParams(sp, { replace: true });
   };
 
-  // Create sends the draft with the header's name, then goes back where the creation started.
+  // The draft is created once it has its name, country, currency and city; the company then opens,
+  // every tab available, with Create (kept, back where the creation started) and Cancel (deleted).
   const leave = useCreationLeave(handleClose);
-  const title = useCreationTitle({ requiredMessage: t('companies.messages.nameRequired'), onCancel: leave });
-  const [creating, setCreating] = React.useState(false);
+  const title = useCreationTitle({
+    requiredMessage: t('companies.messages.nameRequired'),
+    onCancel: leave,
+    onCommit: () => creation.attempt(),
+  });
   const [createError, setCreateError] = React.useState<string | null>(null);
-  const handleCreate = async () => {
-    if (!canEdit || creating) return;
-    const name = title.require();
+  const missingFields = (): FieldErrors => {
     const values = draftRef.current;
-    const nextErrors: FieldErrors = {};
-    if (!values.country_iso) nextErrors.country_iso = t('companies.messages.countryRequired');
-    if (!values.base_currency) nextErrors.base_currency = t('companies.messages.currencyRequired');
-    if (!values.city) nextErrors.city = t('companies.messages.cityRequired');
-    setErrors((prev) => ({ ...prev, ...nextErrors }));
-    if (!name || Object.keys(nextErrors).length > 0) return;
-    setCreating(true);
-    setCreateError(null);
-    try {
-      const { id: _id, name: _name, ...fields } = values;
-      const { data: created } = await api.post<Company>('/companies', { ...fields, name });
-      void queryClient.invalidateQueries({ queryKey: ['companies'] });
-      // The new company opens in place, every tab available.
-      navigate(withContext(`${LIST_PATH}/${created.id}/overview`), { replace: true });
-    } catch (e) {
-      const message = getApiErrorMessage(e, t, t('companies.messages.createFailed'));
-      const field = isDuplicateError(e) ? 'name' : companyRefusalField(e);
-      if (field === 'name') title.refuse(isDuplicateError(e) ? t('companies.messages.nameTaken') : message);
-      else if (field) setErrors((prev) => ({ ...prev, [field]: message }));
-      else setCreateError(message);
-    } finally {
-      setCreating(false);
+    const missing: FieldErrors = {};
+    if (!values.country_iso) missing.country_iso = t('companies.messages.countryRequired');
+    if (!values.base_currency) missing.base_currency = t('companies.messages.currencyRequired');
+    if (!values.city) missing.city = t('companies.messages.cityRequired');
+    return missing;
+  };
+  const creation = useDraftCreation({
+    isCreate,
+    family: 'companies',
+    apiBase: '/companies',
+    recordId: stored?.id ?? null,
+    listPath: withContext(LIST_PATH),
+    recordLabel: t('companies.creationRecord'),
+    queryKeyPrefixes: ['companies'],
+    ready: () => !!title.current().trim() && Object.keys(missingFields()).length === 0,
+    post: async () => {
+      setCreateError(null);
+      try {
+        const { id: _id, name: _name, ...fields } = draftRef.current;
+        const { data: created } = await api.post<Company & { creation_token: string }>('/companies', { ...fields, name: title.current().trim() });
+        void queryClient.invalidateQueries({ queryKey: ['companies'] });
+        return { id: created.id, token: created.creation_token, path: withContext(`${LIST_PATH}/${created.id}/overview`) };
+      } catch (e) {
+        const message = getApiErrorMessage(e, t, t('companies.messages.createFailed'));
+        const field = isDuplicateError(e) ? 'name' : companyRefusalField(e);
+        if (field === 'name') title.refuse(isDuplicateError(e) ? t('companies.messages.nameTaken') : message);
+        else if (field) setErrors((prev) => ({ ...prev, [field]: message }));
+        else setCreateError(message);
+        return null;
+      }
+    },
+    onError: setCreateError,
+  });
+  React.useEffect(() => { creation.attempt(); }, [creation.attempt, draft]);
+  const handleCreate = () => {
+    if (creation.beingCreated) {
+      creation.finishCreation();
+      return;
     }
+    if (!canEdit) return;
+    const name = title.require();
+    const missing = missingFields();
+    setErrors((prev) => ({ ...prev, ...missing }));
+    if (!name || Object.keys(missing).length > 0) return;
+    void creation.createAndLeave();
   };
 
   const disabled = !canEdit;
@@ -490,8 +514,12 @@ export default function CompanyWorkspacePage() {
           nextLabel: t('companies.next'),
         } : undefined}
         metadata={metadata}
-        actions={isCreate ? (
-          <CreationActions onCreate={() => void handleCreate()} onCancel={leave} busy={!canEdit || creating} />
+        actions={isCreate || creation.beingCreated ? (
+          <CreationActions
+            onCreate={handleCreate}
+            onCancel={isCreate ? leave : () => { void creation.cancelCreation(); }}
+            busy={!canEdit || creation.busy}
+          />
         ) : (fieldSaves > 0 || fieldSaved || (data && canDelete)) ? (
           <>
             {(fieldSaves > 0 || fieldSaved) && (
