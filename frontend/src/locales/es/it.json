@@ -2151,8 +2151,6 @@
         "searchAssetTypes": "Buscar tipos de activo",
         "searchSubLocations": "Buscar sub-ubicaciones",
         "locationContext": "Contexto de la ubicación",
-        "basics": "Datos básicos",
-        "namePlaceholder": "p. ej., Servidor de archivos 01",
         "description": "Descripción",
         "descriptionPlaceholder": "Describa el activo"
       },
@@ -3466,8 +3464,6 @@
     "loadServerAssignmentsFailed": "Error al cargar las asignaciones",
     "createVersionFailed": "Error al crear la versión",
     "locationRequired": "La ubicación es obligatoria.",
-    "assetTypeRequired": "El tipo de activo es obligatorio.",
-    "providerRequired": "El proveedor es obligatorio.",
     "codeRequired": "El código es obligatorio.",
     "nameRequired": "El nombre es obligatorio.",
     "locationNameTaken": "Otra ubicación ya tiene este nombre.",

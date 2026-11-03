@@ -2151,8 +2151,6 @@
         "searchAssetTypes": "Search asset types",
         "searchSubLocations": "Search sub-locations",
         "locationContext": "Location context",
-        "basics": "Basics",
-        "namePlaceholder": "e.g., File server 01",
         "description": "Description",
         "descriptionPlaceholder": "Describe the asset"
       },
@@ -3466,8 +3464,6 @@
     "loadServerAssignmentsFailed": "Failed to load assignments",
     "createVersionFailed": "Failed to create version",
     "locationRequired": "Location is required.",
-    "assetTypeRequired": "Asset type is required.",
-    "providerRequired": "Provider is required.",
     "codeRequired": "Code is required.",
     "nameRequired": "Name is required.",
     "locationNameTaken": "Another location already has this name.",

@@ -2151,8 +2151,6 @@
         "searchAssetTypes": "Asset-Typen suchen",
         "searchSubLocations": "Unterstandorte suchen",
         "locationContext": "Standortkontext",
-        "basics": "Grunddaten",
-        "namePlaceholder": "z. B. Dateiserver 01",
         "description": "Beschreibung",
         "descriptionPlaceholder": "Beschreiben Sie das Asset"
       },
@@ -3466,8 +3464,6 @@
     "loadServerAssignmentsFailed": "Fehler beim Laden der Zuordnungen",
     "createVersionFailed": "Fehler beim Erstellen der Version",
     "locationRequired": "Standort ist erforderlich.",
-    "assetTypeRequired": "Asset-Typ ist erforderlich.",
-    "providerRequired": "Anbieter ist erforderlich.",
     "codeRequired": "Code ist erforderlich.",
     "nameRequired": "Name ist erforderlich.",
     "locationNameTaken": "Ein anderer Standort hat bereits diesen Namen.",

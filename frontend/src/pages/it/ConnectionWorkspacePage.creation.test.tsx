@@ -171,6 +171,24 @@ describe('Connection creation at the title', () => {
     expect(screen.queryByRole('button', { name: 'common:buttons.delete' })).toBeNull();
   });
 
+  it('checks the connection when Create is clicked while the title is typed, and names what it lacks', async () => {
+    renderPage(['/start']);
+    fireEvent.click(await screen.findByRole('button', { name: 'new connection' }));
+    const input = await screen.findByRole('textbox', { name: TITLE });
+    fireEvent.change(input, { target: { value: 'Web to db' } });
+    mocked.post.mockImplementation(async (url: string) => {
+      if (url === '/connections/creation') return { data: created } as never;
+      throw { response: { status: 400, data: { code: 'CREATION_INCOMPLETE', params: { fields: ['protocols', 'source', 'destination'] } } } };
+    });
+    // In a browser the click's mousedown blurs the title first, which commits it.
+    fireEvent.blur(input);
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    expect(await screen.findByText(/workspace\.connection\.creation\.missing/)).toBeTruthy();
+    expect(mocked.post).toHaveBeenCalledWith('/connections/creation', { name: 'Web to db' });
+    expect(mocked.post).toHaveBeenLastCalledWith('/connections/conn-new/creation/complete', { token: 'token-1' });
+    expect(location()).toBe('/it/connections/CONN-7/overview');
+  });
+
   it('names what the connection lacks on Create, focuses the first field and stays', async () => {
     await createConnection();
     mocked.post.mockRejectedValueOnce({

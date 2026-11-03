@@ -530,8 +530,9 @@ export default function ConnectionWorkspacePage() {
   );
 
   // The name committed in the header creates the connection at once (server to server, no protocol
-  // nor end yet); the page moves to it, every tab open, with Create and Cancel (or closes it, kept,
-  // when Create was clicked meanwhile).
+  // nor end yet); the page moves to it, every tab open, with Create and Cancel. Create clicked
+  // meanwhile checks it there.
+  const creationCheckRef = React.useRef(false);
   const createConnection = async (name: string) => {
     if (creatingRef.current) return;
     creatingRef.current = true;
@@ -540,15 +541,13 @@ export default function ConnectionWorkspacePage() {
     try {
       const res = await api.post<ConnectionDetail & { creation_token: string }>('/connections/creation', { name });
       const { creation_token: token, ...created } = res.data;
-      if (newCreate.titleSettled()) {
-        navigate(creationReturn, { replace: true });
-        return;
-      }
+      const check = newCreate.titleSettled();
       creation.startCreation({ recordId: created.id, token, returnTo: creationReturn });
       // The page keeps its header while the full connection loads.
       setData({ ...DRAFT_CONNECTION, ...created });
       setLegs([]);
       navigate(`/it/connections/${created.connection_reference || created.id}/overview`, { replace: true });
+      creationCheckRef.current = check;
     } catch (e) {
       newCreate.titleSettled();
       setTitleError(getApiErrorMessage(e, t, t('messages.saveConnectionFailed')));
@@ -587,6 +586,13 @@ export default function ConnectionWorkspacePage() {
       setCompleting(false);
     }
   };
+
+  // Create clicked while the title created the connection: the check runs once it is on screen.
+  React.useEffect(() => {
+    if (!creationCheckRef.current || !data?.id || !creation.beingCreated) return;
+    creationCheckRef.current = false;
+    void createAction();
+  });
 
   // Cancel on a connection being created: what is still being typed is saved first, so the
   // confirmation counts it, then the connection is deleted (`useRecordCreation`).

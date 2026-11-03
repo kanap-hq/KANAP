@@ -142,12 +142,13 @@ async function testCreatedAtTitleWithoutSite() {
     await refusedWith(crud.create({ name: 'Nowhere', ...fields } as any, tenantId, creatorId, opts), 'asset_location_required', 'POST /assets without a site');
 
     // The screen's route takes only the fields of a creation at the title: a site in the body is ignored.
-    const created: any = await controller.createAtTitle({ name: 'Edge 1', ...fields, location_id: siteId, notes: 'ignored' }, req(creatorId));
+    const created: any = await controller.createAtTitle({ name: 'Edge 1', ...fields, hostname: 'edge-1', location_id: siteId, notes: 'ignored' }, req(creatorId));
     assert.equal(typeof created.creation_token, 'string', 'the route hands a creation token');
-    const [stored] = await runner.query(`SELECT asset_reference, location_id, notes, kind FROM assets WHERE tenant_id = $1 AND id = $2`, [tenantId, created.id]);
+    const [stored] = await runner.query(`SELECT asset_reference, location_id, notes, kind, hostname FROM assets WHERE tenant_id = $1 AND id = $2`, [tenantId, created.id]);
     assert.equal(stored.location_id, null, 'no site yet');
     assert.equal(stored.notes, null, 'only the creation fields are taken');
     assert.equal(stored.kind, 'virtual_machine');
+    assert.equal(stored.hostname, 'edge-1', 'the host name the screen derives from the title');
     assert.ok(stored.asset_reference, 'the database gives the reference');
     assert.equal(created.asset_reference, stored.asset_reference, 'the route returns the reference');
 

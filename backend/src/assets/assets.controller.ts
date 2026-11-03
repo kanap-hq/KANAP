@@ -617,7 +617,7 @@ export class AssetsController {
     const tenantId: string = req?.tenant?.id ?? '';
     const userId: string = req.user?.sub ?? '';
     const picked: Record<string, unknown> = {};
-    for (const key of ['name', 'kind', 'environment', 'provider', 'status', 'is_cluster']) {
+    for (const key of ['name', 'kind', 'environment', 'provider', 'status', 'is_cluster', 'hostname']) {
       if (body && Object.prototype.hasOwnProperty.call(body, key)) picked[key] = body[key];
     }
     const manager = req?.queryRunner?.manager;

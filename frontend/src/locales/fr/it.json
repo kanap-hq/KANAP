@@ -2151,8 +2151,6 @@
         "searchAssetTypes": "Rechercher un type d'actif",
         "searchSubLocations": "Rechercher un sous-site",
         "locationContext": "Contexte du site",
-        "basics": "Informations de base",
-        "namePlaceholder": "ex. : Serveur de fichiers 01",
         "description": "Description",
         "descriptionPlaceholder": "Décrivez l'actif"
       },
@@ -3466,8 +3464,6 @@
     "loadServerAssignmentsFailed": "Échec du chargement des affectations",
     "createVersionFailed": "Échec de la création de la version",
     "locationRequired": "Le site est requis.",
-    "assetTypeRequired": "Le type d'actif est requis.",
-    "providerRequired": "Le fournisseur est requis.",
     "codeRequired": "Le code est requis.",
     "nameRequired": "Le nom est requis.",
     "locationNameTaken": "Un autre site porte déjà ce nom.",
