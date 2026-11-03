@@ -14,7 +14,7 @@ const content: LegalContent = {
     header: {
       eyebrow: 'Mentions légales',
       title: 'Politique de confidentialité',
-      lastUpdated: 'Dernière mise à jour : 12 octobre 2026',
+      lastUpdated: 'Dernière mise à jour : 3 novembre 2026',
     },
     body: `
 <h2>Préambule</h2>
@@ -33,6 +33,7 @@ const content: LegalContent = {
   <li><strong>Données d'utilisation :</strong> journaux d'utilisation de la Plateforme, informations de session, adresses IP</li>
   <li><strong>Données financières :</strong> postes budgétaires, données CAPEX/OPEX, informations de répartition, détails des contrats saisis par les utilisateurs</li>
   <li><strong>Informations de facturation :</strong> raison sociale, adresse de facturation, numéro de TVA</li>
+  <li><strong>Appel découverte :</strong> si vous en planifiez un, vos nom, adresse e-mail, date choisie et le message facultatif que vous laissez</li>
 </ul>
 <p>Les informations de paiement (données de carte bancaire) ne sont pas connues de KANAP. Elles sont traitées directement par la plateforme de paiement sécurisée (Stripe).</p>
 
@@ -44,12 +45,14 @@ const content: LegalContent = {
   <li><strong>Facturation :</strong> les données sont nécessaires pour traiter les abonnements, émettre les factures et gérer les paiements.</li>
   <li><strong>Sécurité :</strong> les données sont traitées pour assurer la sécurité de la Plateforme, détecter et prévenir la fraude, les accès non autorisés et les incidents de sécurité.</li>
   <li><strong>Respect des obligations légales :</strong> les données sont traitées pour respecter les obligations légales et réglementaires.</li>
+  <li><strong>Messages de l'essai :</strong> pendant un essai, trois messages d'accompagnement et l'avis de fin d'essai. Chaque message contient un lien de désinscription.</li>
+  <li><strong>Appel découverte :</strong> organiser l'échange que vous avez demandé.</li>
 </ul>
 
 <h2>4. Base légale du traitement</h2>
 <ul>
-  <li><strong>Exécution du contrat :</strong> le traitement est nécessaire à la fourniture du service KANAP (gestion des comptes, accès à la Plateforme, etc.).</li>
-  <li><strong>Intérêt légitime :</strong> les traitements destinés à l'amélioration du service, à la sécurité et à la prévention de la fraude reposent sur l'intérêt légitime de KANAP à développer et fournir un service de qualité et sécurisé.</li>
+  <li><strong>Exécution du contrat :</strong> le traitement est nécessaire à la fourniture du service KANAP (gestion des comptes, accès à la Plateforme, etc.), y compris les mesures prises à votre demande avant de souscrire (essai, appel découverte).</li>
+  <li><strong>Intérêt légitime :</strong> les traitements destinés à l'amélioration du service, à la sécurité et à la prévention de la fraude reposent sur l'intérêt légitime de KANAP à développer et fournir un service de qualité et sécurisé, ainsi que les messages de l'essai, dont vous pouvez vous désinscrire à tout moment.</li>
   <li><strong>Obligation légale :</strong> le traitement peut être nécessaire au respect d'obligations légales (comptables, fiscales, de lutte contre le blanchiment, etc.).</li>
   <li><strong>Consentement :</strong> pour certaines fonctionnalités ou communications facultatives, le traitement peut reposer sur le consentement explicite de l'utilisateur.</li>
 </ul>
@@ -65,15 +68,19 @@ const content: LegalContent = {
 <ul>
   <li><strong>Hetzner Online GmbH</strong> (Allemagne) : hébergement des serveurs, de la base de données et du stockage des fichiers.</li>
   <li><strong>Cloudflare</strong> (États-Unis) : réseau, CDN et terminaison TLS en amont des serveurs, avec des garanties contractuelles pour les transferts hors de l'Union européenne.</li>
-  <li><strong>Resend</strong> (e-mails transactionnels, États-Unis) : e-mails d'activation de compte, de réinitialisation de mot de passe et de notification.</li>
+  <li><strong>Resend</strong> (e-mails transactionnels, États-Unis) : e-mails d'activation de compte, de réinitialisation de mot de passe, de notification et messages de l'essai.</li>
   <li><strong>Stripe</strong> (paiements, Irlande et États-Unis) : traitement des paiements et facturation des abonnements.</li>
-  <li><strong>Fournisseur de modèles d'IA</strong> pour les fonctionnalités d'IA intégrées du service cloud : les fonctionnalités d'IA sont désactivées par défaut. Le modèle intégré ne reçoit aucune donnée tant que l'espace de travail n'a pas accepté son fournisseur et le lieu où il traite les données, tous deux indiqués dans l'application. Un administrateur de l'espace de travail donne cette confirmation, qui couvre l'assistant, les agents et les traitements planifiés ; une nouvelle confirmation est demandée si le fournisseur ou le lieu change. Les administrateurs peuvent utiliser leur propre fournisseur de modèles à la place. Le fournisseur peut traiter des données hors de l'Union européenne.</li>
+  <li><strong>Anthropic</strong> (États-Unis) ou <strong>Mistral AI</strong> (Union européenne), fournisseur du modèle d'IA intégré du service cloud, selon celui que KANAP a retenu et que l'application indique : les fonctionnalités d'IA sont désactivées par défaut. Le modèle intégré ne reçoit aucune donnée tant que l'espace de travail n'a pas accepté son fournisseur et le lieu où il traite les données, tous deux indiqués dans l'application. Un administrateur de l'espace de travail donne cette confirmation, qui couvre l'assistant, les agents et les traitements planifiés ; une nouvelle confirmation est demandée si le fournisseur ou le lieu change, et cette politique est mise à jour. KANAP ne retient qu'un fournisseur et une offre dont les conditions excluent l'entraînement de ses modèles sur les données envoyées. Les administrateurs peuvent utiliser leur propre fournisseur de modèles à la place.</li>
+  <li><strong>Cal.com</strong> (États-Unis) : prise de rendez-vous pour les appels découverte.</li>
 </ul>
 <p>Les clients qui hébergent eux-mêmes KANAP choisissent leurs propres prestataires, et KANAP ne traite pas leurs données. Les clients du service cloud qui connectent leur propre fournisseur de modèles d'IA choisissent ce fournisseur, et KANAP n'envoie pas leurs données à son modèle intégré.</p>
 
 <h2>6. Durée de conservation des données</h2>
 <ul>
   <li>Les données de compte et les données saisies par les clients dans la Plateforme sont conservées pendant la durée du contrat. À la fin du contrat, elles sont supprimées à la demande du client.</li>
+  <li>Un espace d'essai sans souscription est supprimé définitivement, avec toutes ses données, trente jours après la fin de l'essai.</li>
+  <li>Une inscription dont le lien d'activation n'a jamais servi est supprimée au bout de 90 jours.</li>
+  <li>Les données d'un appel découverte sont conservées soixante jours au plus après l'appel.</li>
   <li>Les données de facturation sont conservées 10 ans conformément à la réglementation comptable et fiscale française.</li>
   <li>Les données de paiement ne sont pas conservées par KANAP et sont gérées directement par le prestataire de paiement (Stripe).</li>
 </ul>

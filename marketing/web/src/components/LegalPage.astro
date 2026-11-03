@@ -4,30 +4,36 @@ import { Section, PageHeader } from './sections';
 import { getLocaleFromUrl, relocatePath } from '../i18n/ui';
 import type { Locale } from '../i18n/ui';
 import type { LegalDoc } from '../content/legal/types';
+import legalEn from '../content/legal/en';
 
 interface Props {
   doc: LegalDoc;
 }
 
-// The French version is binding. Other locales point to it.
-const NOTICES: Partial<Record<Locale, { text: string; link: string }>> = {
+// The French version is binding. Other locales point to it. `translation` is shown on a
+// translated document, `untranslated` on one that falls back to the English text.
+const NOTICES: Partial<Record<Locale, { translation: string; untranslated?: string; link: string }>> = {
   en: {
-    text: 'This document is a translation. The French version is the legally binding one and prevails in case of discrepancy.',
+    translation: 'This document is a translation. The French version is the legally binding one and prevails in case of discrepancy.',
     link: 'French version',
   },
   de: {
-    text: 'Dieses Dokument ist auf Französisch und Englisch verfügbar. Die französische Fassung ist rechtsverbindlich.',
+    translation: 'Dieses Dokument ist eine Übersetzung. Die französische Fassung ist rechtsverbindlich und hat bei Abweichungen Vorrang.',
+    untranslated: 'Dieses Dokument ist auf Französisch und Englisch verfügbar. Die französische Fassung ist rechtsverbindlich.',
     link: 'Französische Fassung',
   },
   es: {
-    text: 'Este documento está disponible en francés y en inglés. La versión francesa es la jurídicamente vinculante.',
+    translation: 'Este documento es una traducción. La versión francesa es la jurídicamente vinculante y prevalece en caso de discrepancia.',
+    untranslated: 'Este documento está disponible en francés y en inglés. La versión francesa es la jurídicamente vinculante.',
     link: 'Versión francesa',
   },
 };
 
 const { doc } = Astro.props;
 const locale = getLocaleFromUrl(Astro.url);
-const notice = NOTICES[locale];
+const entry = NOTICES[locale];
+const englishFallback = locale !== 'en' && Object.values(legalEn).includes(doc);
+const notice = entry && { text: (englishFallback && entry.untranslated) || entry.translation, link: entry.link };
 const frenchHref = relocatePath(Astro.url, 'fr');
 ---
 
