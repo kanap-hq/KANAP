@@ -84,6 +84,11 @@ export class ConnectionsService {
     return this.crudService.create(body, tenantId, userId, opts);
   }
 
+  /** The screen's creation at the title: the name only, protocols and ends checked at "Create". */
+  createAtTitle(name: unknown, tenantId: string, userId: string | null, opts?: ServiceOpts) {
+    return this.crudService.create({ name }, tenantId, userId, opts, { atTitle: true });
+  }
+
   update(id: string, body: any, tenantId: string, userId: string | null, opts?: ServiceOpts) {
     return this.crudService.update(id, body, tenantId, userId, opts);
   }

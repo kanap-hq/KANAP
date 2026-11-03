@@ -1,5 +1,5 @@
 import { languageOf } from '../common/csv-sheet';
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, NotFoundException, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -23,6 +23,15 @@ import { resolveBusinessContributorScopeForUser } from '../auth/business-contrib
 import { hasLevel } from '../technologies/technologies.controller';
 import { requireManager } from '../technologies/technology-rows';
 import { AssetImpactService } from './services/asset-impact.service';
+import { creationCancelExpired, issueCreationToken, verifyCreationToken } from '../common/creation/creation-token';
+import {
+  assertCreatorAloneSinceCreation,
+  countChangesSinceCreation,
+  countEditedManagedDocuments,
+  withChildCount,
+  type CreationChanges,
+} from '../common/creation/creation-changes';
+import { creationIncomplete } from '../common/creation/creation-incomplete';
 import { buildRelationsAccess } from '../common/relations/relations-access';
 import { canReadResource } from '../common/record-usages';
 import { incidentViewerFromContext, incidentViewerFromRequest } from '../incidents/incident-visibility';
@@ -593,6 +602,96 @@ export class AssetsController {
       manager: req?.queryRunner?.manager,
       tenantId,
     });
+  }
+
+  /**
+   * The screen creates an asset at its title: the fields of `POST /assets` but the site, which
+   * "Create" checks (`POST :id/creation/complete`). Hands the creator a creation token
+   * (`common/creation`) for "Create" and "Cancel" (`DELETE :id/creation`), on this asset and for this
+   * person only. `POST /assets` keeps the site required.
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('infrastructure', 'member')
+  @Post('creation')
+  async createAtTitle(@Body() body: any, @Req() req: any) {
+    const tenantId: string = req?.tenant?.id ?? '';
+    const userId: string = req.user?.sub ?? '';
+    const picked: Record<string, unknown> = {};
+    for (const key of ['name', 'kind', 'environment', 'provider', 'status', 'is_cluster']) {
+      if (body && Object.prototype.hasOwnProperty.call(body, key)) picked[key] = body[key];
+    }
+    const manager = req?.queryRunner?.manager;
+    const created = await this.svc.createAtTitle(picked, tenantId, userId || null, { manager, tenantId });
+    // The database gives the reference on insert, after the row is built: the page opens the asset under it.
+    const [row]: Array<{ asset_reference: string | null }> = await manager.query(
+      'SELECT asset_reference FROM assets WHERE id = $1 AND tenant_id = $2',
+      [created.id, tenantId],
+    );
+    const creation_token = issueCreationToken({ tenantId, family: 'assets', recordId: created.id, userId });
+    return Object.assign(created, { asset_reference: row?.asset_reference ?? created.asset_reference ?? null, creation_token });
+  }
+
+  /** The token of `POST creation` for this asset, tenant and person, still valid; a 403 otherwise. */
+  private assertCreationToken(id: string, token: unknown, req: any): void {
+    if (!verifyCreationToken(token, { tenantId: req?.tenant?.id ?? '', family: 'assets', recordId: String(id ?? ''), userId: req?.user?.sub ?? '' })) {
+      throw creationCancelExpired();
+    }
+  }
+
+  /**
+   * Before "Cancel": what was written on the asset and its children since its creation (its
+   * history's audit rows), its edited managed documents and its attachments. Nothing is written.
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('infrastructure', 'member')
+  @Get(':id/creation')
+  async creationChanges(@Param('id') id: string, @Query('token') token: string, @Req() req: any): Promise<{ changes: CreationChanges }> {
+    this.assertCreationToken(id, token, req);
+    const manager = req?.queryRunner?.manager;
+    const tenantId: string = req?.tenant?.id ?? '';
+    const found = await manager.query('SELECT 1 FROM assets WHERE id = $1 AND tenant_id = $2', [id, tenantId]);
+    if (!found.length) throw new NotFoundException('Asset not found');
+    await assertCreatorAloneSinceCreation(manager, tenantId, 'assets', id, req?.user?.sub ?? '');
+    let changes = await countChangesSinceCreation(manager, tenantId, 'assets', id);
+    changes = withChildCount(changes, 'document', await countEditedManagedDocuments(manager, tenantId, 'assets', id));
+    const [{ total }] = await manager.query(
+      'SELECT count(*)::int AS total FROM asset_attachments WHERE tenant_id = $1 AND asset_id = $2',
+      [tenantId, id],
+    );
+    return { changes: withChildCount(changes, 'attachment', total) };
+  }
+
+  /** "Create" of an asset being created: 400 `CREATION_INCOMPLETE` (`params.fields`: `location`) while it has no site. */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('infrastructure', 'member')
+  @Post(':id/creation/complete')
+  @HttpCode(200)
+  async completeCreation(@Param('id') id: string, @Body() body: { token?: string }, @Req() req: any): Promise<{ ok: true }> {
+    this.assertCreationToken(id, body?.token, req);
+    const manager = req?.queryRunner?.manager;
+    const [row]: Array<{ location_id: string | null }> = await manager.query(
+      'SELECT location_id FROM assets WHERE id = $1 AND tenant_id = $2',
+      [id, req?.tenant?.id ?? ''],
+    );
+    if (!row) throw new NotFoundException('Asset not found');
+    if (!row.location_id) throw creationIncomplete(['location'], ['site']);
+    return { ok: true };
+  }
+
+  /**
+   * "Cancel" of an asset being created: its creator deletes it with its token, even without the
+   * delete right (admin), while nobody else has written on it (403 `CREATION_CANCEL_EXPIRED`
+   * otherwise, checked under its lock). Same delete as `DELETE :id` (refusals, children, audit).
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('infrastructure', 'member')
+  @Delete(':id/creation')
+  async cancelCreation(@Param('id') id: string, @Body() body: { token?: string }, @Req() req: any): Promise<void> {
+    this.assertCreationToken(id, body?.token, req);
+    const manager = req?.queryRunner?.manager;
+    const tenantId: string = req?.tenant?.id ?? '';
+    await assertCreatorAloneSinceCreation(manager, tenantId, 'assets', id, req?.user?.sub ?? '', { lock: true });
+    await this.deleteSvc.deleteAsset(id, tenantId, req.user?.sub ?? null, { manager });
   }
 
   @UseGuards(PermissionGuard)
