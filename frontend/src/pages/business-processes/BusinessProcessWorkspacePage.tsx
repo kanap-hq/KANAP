@@ -37,7 +37,10 @@ const LIST_PATH = '/master-data/business-processes';
 /** How long Saved stays after a field is saved. */
 const SAVED_LINGER_MS = 1500;
 
-/** The preview of a new process (`CreationPreview`) is out of reach: its handlers never run. */
+/**
+ * The preview of a new process (`CreationPreview`) is out of reach: its handlers never run, and
+ * its fields are drawn as they will be (not disabled), only dimmed.
+ */
 const ignore = () => undefined;
 
 export default function BusinessProcessWorkspacePage() {
@@ -263,7 +266,7 @@ export default function BusinessProcessWorkspacePage() {
 
   const properties = isCreate ? (
     <CreationPreview>
-      <BusinessProcessProperties process={EMPTY_BUSINESS_PROCESS} disabled onPatch={ignore} onManageCategories={ignore} />
+      <BusinessProcessProperties process={EMPTY_BUSINESS_PROCESS} disabled={false} onPatch={ignore} onManageCategories={ignore} />
     </CreationPreview>
   ) : process ? (
     <BusinessProcessProperties
@@ -368,7 +371,7 @@ export default function BusinessProcessWorkspacePage() {
       >
         {isCreate && (
           <CreationPreview>
-            <BusinessProcessOverview process={EMPTY_BUSINESS_PROCESS} disabled onPatch={ignore} />
+            <BusinessProcessOverview process={EMPTY_BUSINESS_PROCESS} disabled={false} onPatch={ignore} />
           </CreationPreview>
         )}
         {process && tab === 'overview' && (
