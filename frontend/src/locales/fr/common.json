@@ -233,6 +233,8 @@
       "connections_other": "{{count}} connexions",
       "nodes_one": "{{count}} élément",
       "nodes_other": "{{count}} éléments",
+      "sub_processes_one": "{{count}} sous-processus",
+      "sub_processes_other": "{{count}} sous-processus",
       "companies_one": "{{count}} société",
       "companies_other": "{{count}} sociétés",
       "values_one": "{{count}} valeur",

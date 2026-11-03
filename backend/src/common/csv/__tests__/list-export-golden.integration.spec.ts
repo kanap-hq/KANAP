@@ -14,8 +14,6 @@ import { AccountsService } from '../../../accounts/accounts.service';
 import { AnalyticsCategoriesCsvService } from '../../../analytics/analytics-categories-csv.service';
 import { BusinessProcessesService } from '../../../business-processes/business-processes.service';
 import { BusinessProcess } from '../../../business-processes/business-process.entity';
-import { BusinessProcessCategory } from '../../../business-processes/business-process-category.entity';
-import { BusinessProcessCategoryLink } from '../../../business-processes/business-process-category-link.entity';
 import { CompaniesService } from '../../../companies/companies.service';
 import { CompanyMetricsService } from '../../../companies/company-metrics.service';
 import { Company } from '../../../companies/company.entity';
@@ -92,12 +90,9 @@ async function seed(runner: QueryRunner, tenantId: string): Promise<Ids> {
   await insert(runner, 'working_day_profiles', { ...t, code: 'CAL-B', name: TRICKY, status: 'disabled', disabled_at: '2025-06-30T12:00:00Z', created_at: at(20) });
   await insert(runner, 'contracts', { ...t, name: 'Support', company_id: ids.companyA, supplier_id: ids.supplierA, cost_center_id: ids.ccRoot, owner_user_id: ids.userA, start_date: '2026-03-01', duration_months: 36, auto_renewal: true, notice_period_months: 3, yearly_amount_at_signature: '1250.50', currency: 'EUR', billing_frequency: 'annual', notes: FORMULA, created_at: at(21) });
   await insert(runner, 'contracts', { ...t, name: TRICKY, company_id: ids.companyB, supplier_id: ids.supplierB, start_date: '2024-12-31', auto_renewal: false, yearly_amount_at_signature: '-0.5', currency: 'USD', billing_frequency: 'monthly', status: 'disabled', disabled_at: '2025-12-31T23:30:00Z', created_at: at(22) });
-  ids.categoryA = await insert(runner, 'business_process_categories', { ...t, name: 'Finance' });
-  ids.categoryB = await insert(runner, 'business_process_categories', { ...t, name: 'Sales; ops' });
-  ids.process = await insert(runner, 'business_processes', { ...t, name: 'Order to cash', description: TRICKY, notes: FORMULA, created_at: at(23) });
-  await insert(runner, 'business_processes', { ...t, name: 'Procure to pay', status: 'disabled', disabled_at: '2025-06-30T12:00:00Z', created_at: at(24) });
-  await insert(runner, 'business_process_category_links', { ...t, process_id: ids.process, category_id: ids.categoryA });
-  await insert(runner, 'business_process_category_links', { ...t, process_id: ids.process, category_id: ids.categoryB });
+  ids.processParent = await insert(runner, 'business_processes', { ...t, name: 'Sales; ops', process_type: 'core', created_at: at(23) });
+  ids.process = await insert(runner, 'business_processes', { ...t, name: 'Order to cash', process_type: 'core', parent_id: ids.processParent, description: TRICKY, notes: FORMULA, created_at: at(23) });
+  await insert(runner, 'business_processes', { ...t, name: 'Procure to pay', process_type: 'support', status: 'disabled', disabled_at: '2025-06-30T12:00:00Z', created_at: at(24) });
   await insert(runner, 'user_data_access_nodes', { ...t, user_id: ids.userA, node_type: 'all', access: 'read' });
   await insert(runner, 'user_data_access_nodes', { ...t, user_id: ids.userA, node_type: 'company', company_id: ids.companyB, access: 'edit' });
   await insert(runner, 'user_data_access_nodes', { ...t, user_id: ids.userA, node_type: 'cost_center', cost_center_id: ids.ccChild, access: 'read' });
@@ -134,8 +129,6 @@ function exportsOf(manager: EntityManager, tenantId: string, ids: Ids): Array<[s
   const contracts = new (ContractsService as any)(...contractArgs) as ContractsService;
   const processes = new BusinessProcessesService(
     manager.getRepository(BusinessProcess),
-    manager.getRepository(BusinessProcessCategory),
-    manager.getRepository(BusinessProcessCategoryLink),
     manager.getRepository(User),
     audit,
   );

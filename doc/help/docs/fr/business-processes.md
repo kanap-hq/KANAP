@@ -1,6 +1,6 @@
 # Processus métier
 
-Les processus métier vous permettent de construire et maintenir un catalogue centralisé des processus de bout en bout de votre organisation, comme Order-to-Cash, Procure-to-Pay ou Hire-to-Retire. En centralisant les noms de processus, les catégories et les responsables, vous créez un point de référence unique que le reste de KANAP peut exploiter pour la responsabilité, le reporting et les audits.
+Les processus métier vous permettent de construire et maintenir un catalogue centralisé des processus de bout en bout de votre organisation, comme Order-to-Cash, Procure-to-Pay ou Hire-to-Retire. En centralisant les noms de processus, leurs types, leurs responsables et leur hiérarchie, vous créez un point de référence unique que le reste de KANAP peut exploiter pour la responsabilité, le reporting et les audits.
 
 ## Premiers pas
 
@@ -26,8 +26,9 @@ La liste affiche tous les processus métier de votre tenant.
 
 **Colonnes par défaut** :
 
-- **Nom** : le nom du processus. Cliquez pour ouvrir l'espace de travail.
-- **Catégories** : une ou plusieurs catégories auxquelles le processus appartient (par ex. « Client & Ventes », « Finance & Contrôle de gestion »). Les catégories multiples sont affichées comme une liste séparée par des virgules.
+- **Nom** : le nom du processus. Cliquez pour ouvrir l'espace de travail. Décalé selon le niveau quand la liste est dans l'ordre de l'arborescence.
+- **Type** : **Pilotage**, **Réalisation** ou **Support**, ou vide.
+- **Processus parent** : le processus sous lequel il se trouve, ou vide pour un processus de premier niveau.
 - **Responsable du processus** : l'utilisateur responsable du processus.
 
 **Colonnes supplémentaires** (masquées par défaut ; activez-les avec le sélecteur de colonnes) :
@@ -39,15 +40,15 @@ La liste affiche tous les processus métier de votre tenant.
 
 - La recherche rapide filtre sur toutes les colonnes visibles.
 - Utilisez le bouton bascule **Afficher : Tous / Activés / Désactivés** au-dessus de la liste pour choisir les processus affichés. Par défaut, la liste affiche les processus activés.
-- Le tri par défaut groupe les lignes par **Catégories**, puis par **Nom**.
+- **Type** et **Processus parent** utilisent des filtres à cases à cocher. Le filtre du parent liste les processus qui ont des sous-processus.
+- La liste s'ouvre dans l'ordre de l'arborescence : chaque processus est suivi de ses sous-processus. Cliquez sur un en-tête de colonne pour trier par cette colonne. Le décalage ne s'affiche que dans l'ordre de l'arborescence.
 
 **Actions** (barre d'outils en haut à droite) :
 
 - **Nouveau** (`business_processes:member`) : créer un nouveau processus métier. Voir [Créer un processus métier](#creating-a-business-process).
-- **Gérer les catégories** (`business_processes:member`) : ouvrir le dialogue de gestion des catégories.
 - **Importer** (Admin) : import en masse de processus depuis un fichier CSV ou un classeur Excel.
 - **Exporter** (Admin) : exporter les processus que la liste affiche, ou tous les processus, dans un fichier CSV ou un classeur Excel.
-- **Supprimer la sélection** (Admin) : supprimer une ou plusieurs lignes sélectionnées. Un processus utilisé par des applications ou des interfaces ne peut pas être supprimé : désactivez-le plutôt. Avant toute suppression, la confirmation liste les processus conservés, avec la raison. Les demandes liées à un processus supprimé sont conservées, sans ce lien.
+- **Supprimer la sélection** (Admin) : supprimer une ou plusieurs lignes sélectionnées. Un processus utilisé par des applications ou des interfaces ne peut pas être supprimé : désactivez-le plutôt. Un processus qui a des sous-processus ne peut pas non plus être supprimé : déplacez-les ou supprimez-les d'abord. Avant toute suppression, la confirmation liste les processus conservés, avec la raison. Les demandes liées à un processus supprimé sont conservées, sans ce lien.
 
 ---
 
@@ -78,7 +79,7 @@ L'en-tête contient :
 - Le **nom** : cliquez dessus pour renommer le processus.
 - Les flèches **précédent / suivant** : parcourir les processus dans l'ordre de la liste actuelle.
 - **Statut** : **Activé** ou **Désactivé**. Les processus activés apparaissent dans les sélecteurs de l'application. Désactivez un processus pour le retirer sans le supprimer, afin que les références historiques restent intactes.
-- **Supprimer** (icône corbeille, Admin) : supprimer le processus et revenir à la liste. Un processus utilisé par des applications ou des interfaces ne peut pas être supprimé : le message les compte. Désactivez-le plutôt.
+- **Supprimer** (icône corbeille, Admin) : supprimer le processus et revenir à la liste. Un processus utilisé par des applications ou des interfaces ne peut pas être supprimé : le message les compte. Désactivez-le plutôt. Un processus qui a des sous-processus ne peut pas non plus être supprimé : le message les compte. Déplacez-les ou supprimez-les d'abord.
 
 Sans `business_processes:member`, la page s'ouvre en lecture seule.
 
@@ -86,7 +87,8 @@ Sans `business_processes:member`, la page s'ouvre en lecture seule.
 
 Le tiroir des propriétés, à droite, contient :
 
-- **Catégories** : une ou plusieurs catégories. Choisissez des catégories existantes, créez-en une avec **Nouvelle catégorie**, ou ouvrez le dialogue de gestion des catégories avec **Modifier les catégories**.
+- **Type** : le type de processus ISO 9001, facultatif. Les processus de **Pilotage** orientent et dirigent l'organisation. Les processus de **Réalisation** apportent de la valeur aux clients. Les processus **Support** fournissent des ressources aux autres. Un sous-processus n'hérite pas du type de son parent.
+- **Processus parent** : le processus sous lequel celui-ci se trouve. Les processus forment une arborescence sans limite de profondeur. Le sélecteur affiche l'arborescence avec un décalage par niveau et cherche sur le chemin complet. Le processus lui-même et ses sous-processus n'y figurent pas. Laissez vide pour le premier niveau. Un processus ne peut pas être son propre parent, ni passer sous l'un de ses propres sous-processus.
 - **Responsable du processus** : l'utilisateur ultimement responsable du processus. Affiché dans la liste.
 - **Responsable IT** : l'utilisateur responsable des systèmes et outils IT qui soutiennent le processus.
 - **Cycle de vie** : l'interrupteur de statut et la date de fin de validité. Un processus dont la fin de validité est passée est désactivé.
@@ -104,31 +106,7 @@ Il faut `business_processes:member` pour modifier les liens. L'onglet n'apparaî
 
 ### Historique
 
-Les modifications apportées au processus et à ses liens vers les applications. Voir [Historique des fiches](record-history.md).
-
----
-
-## Gérer les catégories
-
-Les catégories sont partagées entre tous les processus métier. Vous pouvez les gérer depuis deux endroits :
-
-1. Sur la page de la liste, cliquez sur **Gérer les catégories**.
-2. Dans l'espace de travail, sous le champ **Catégories** du tiroir des propriétés, cliquez sur **Modifier les catégories**.
-
-Les deux ouvrent le dialogue **Gérer les catégories de processus métier**.
-
-**Ce que vous pouvez faire** :
-
-- **Renommer** : modifiez le nom directement dans le champ texte.
-- **Activer / Désactiver** : basculez si une catégorie apparaît dans les sélecteurs. Les catégories inactives sont masquées des nouvelles affectations mais préservées sur les processus existants.
-- **Supprimer** : supprimez une catégorie. La suppression ne fonctionne que si aucun processus ne l'utilise ; sinon, le message compte les processus qui l'utilisent. Désactivez-la plutôt.
-- **Nouvelle catégorie** : ajoutez une nouvelle ligne en haut du dialogue.
-
-**Comportement d'enregistrement et d'annulation** :
-
-- Rien n'est enregistré tant que vous ne cliquez pas sur **Enregistrer**. Tant que le dialogue est ouvert, toutes les modifications sont suivies localement.
-- **Annuler** ferme le dialogue et annule tout ce que vous avez changé.
-- Si une erreur survient à l'enregistrement (par ex. un nom en double ou une catégorie encore utilisée), le dialogue reste ouvert pour que vous puissiez corriger le problème.
+Les modifications apportées au processus, comme son type ou son parent, et à ses liens vers les applications. Voir [Historique des fiches](record-history.md).
 
 ---
 
@@ -144,9 +122,10 @@ Cliquez sur **Exporter** sur la page de la liste. Le fichier contient les proces
 
 Le séparateur suit la langue de votre écran. Voir [Fichiers CSV et Excel](csv-files.md) pour l'encodage, le séparateur et les deux étapes d'import.
 
-**Colonnes** : `name`, `categories`, `description`, `notes`, `status`.
+**Colonnes** : `name`, `process_type`, `parent_name`, `description`, `notes`, `status`.
 
-La colonne `categories` peut contenir plusieurs noms de catégories séparés par des points-virgules dans la cellule (par ex. `Client & Ventes; Finance & Contrôle de gestion`).
+- `process_type` : `management`, `core` ou `support`, ou vide.
+- `parent_name` : le nom du processus parent, ou vide pour le premier niveau.
 
 ### Import
 
@@ -159,7 +138,8 @@ Cliquez sur **Importer** sur la page de la liste, puis :
 **Règles de correspondance** :
 
 - Les lignes sont mises en correspondance par **Nom**, quelle que soit la casse. Un nom correspondant met à jour le processus existant et garde le nom enregistré (la vérification préalable indique le processus rapproché) ; un nouveau nom crée un nouveau processus.
-- Chaque catégorie dans la cellule `categories` est nettoyée et mise en correspondance par nom. Si une catégorie n'existe pas encore, elle est créée automatiquement comme catégorie active.
+- `parent_name` est mis en correspondance par nom, quelle que soit la casse : un processus du même fichier ou un processus déjà présent dans KANAP. Quand les deux existent, le fichier l'emporte. Les lignes peuvent venir dans n'importe quel ordre : les parents sont créés avant leurs enfants.
+- Un nom de parent inconnu, un processus placé sous lui-même ou une boucle sont refusés, avec le numéro de la ligne.
 - Le fichier n'a pas de colonne de fin de validité. Lors d'une mise à jour, un `status` vide, ou égal au statut actuel du processus, garde sa fin de validité. Un statut différent s'applique : `enabled` efface la fin de validité, et `disabled` termine le processus aujourd'hui, sauf si sa fin de validité est déjà passée. Un nouveau processus est activé, sauf si la ligne indique `disabled`.
 
 **Conseil** : exportez d'abord vos données actuelles, modifiez le fichier et réimportez. Cela évite les doublons accidentels et garantit que vous travaillez à partir de l'état le plus récent.
@@ -170,5 +150,4 @@ Cliquez sur **Importer** sur la page de la liste, puis :
 
 - **Convention de nommage** : adoptez le format « Nom clair (CODE) » (par ex. « Order-to-Cash (O2C) ») pour que les processus soient faciles à chercher et reconnaissables en un coup d'œil.
 - **Retirez, ne supprimez pas** : désactivez les processus que vous n'utilisez plus au lieu de les supprimer. Cela préserve les références historiques et les pistes d'audit.
-- **Catégories d'abord** : mettez en place votre structure de catégories avant d'importer des processus en masse. L'import créera automatiquement les catégories manquantes, mais planifier à l'avance garde les choses ordonnées.
 - **Responsable du processus tôt** : assigner un responsable du processus maintenant signifie que les données de responsabilité sont déjà en place lorsque de futures fonctionnalités comme les notifications et le routage de tâches seront disponibles.

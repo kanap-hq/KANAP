@@ -25,6 +25,7 @@ export type RefusalKind =
   | 'interface_bindings'
   | 'server_assignments'
   | 'business_processes'
+  | 'sub_processes'
   | 'documents'
   | 'descriptions'
   | 'sub_folders'
@@ -67,6 +68,7 @@ const ENGLISH: Record<RefusalKind, [string, string]> = {
   interface_bindings: ['interface binding', 'interface bindings'],
   server_assignments: ['server assignment', 'server assignments'],
   business_processes: ['business process', 'business processes'],
+  sub_processes: ['sub-process', 'sub-processes'],
   documents: ['document', 'documents'],
   descriptions: ['description', 'descriptions'],
   technologies: ['technology', 'technologies'],

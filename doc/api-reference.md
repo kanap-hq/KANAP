@@ -974,28 +974,24 @@ A tenant classifies its budget lines along analytics dimensions (`analytics_axes
 ### Entities
 
 - `business_processes`:
-  - Fields: `{ id, tenant_id, name, description, notes, status, disabled_at, owner_user_id, it_owner_user_id, is_default, created_at, updated_at }`
+  - Fields: `{ id, tenant_id, name, description, notes, status, disabled_at, owner_user_id, it_owner_user_id, process_type, parent_id, is_default, created_at, updated_at }`
   - Notes:
     - `name` includes the short code in parentheses, e.g. `Order-to-Cash (O2C)`.
     - `owner_user_id` and `it_owner_user_id` are optional FKs to `users(id)`.
-
-- `business_process_categories`:
-  - Fields: `{ id, tenant_id, name, is_default, is_active, sort_order, created_at, updated_at }`
-
-- `business_process_category_links`:
-  - Fields: `{ id, tenant_id, process_id, category_id, created_at, updated_at }`
-  - Many-to-many join table between processes and categories.
+    - `process_type` is the ISO 9001 type: `management`, `core` or `support`, or null (CHECK `business_processes_process_type_check`). A sub-process does not inherit it.
+    - `parent_id` places the process in a tree, as cost centers (migration `1856170000000`): composite key `(tenant_id, parent_id) → business_processes (tenant_id, id)`, `ON DELETE NO ACTION`, CHECK `parent_id <> id`, no depth limit. The service refuses a cycle under the tenant's advisory lock `business-process-tree:<tenant>` (create, update and import take it).
+    - The categories (`business_process_categories`, `business_process_category_links`) were removed by the same migration, with their data.
 
 ### Endpoints
 
 - GET `/business-processes`
   - Query params: `page`, `limit`, `sort`, `q`, `filters`.
-  - Filters: supports AG Grid filters on `name`, `status`; `q` matches name/description/notes.
+  - Filters: AG Grid filters on `name`, `status`, `process_type` (set), `parent_name` (set), `owner_name`, `updated_at`; `under` (text, the assistant) keeps every process below the named ones, at any depth; `q` matches name/description/notes.
+  - Sort: `name`, `status`, `process_type` (in the ISO order), `parent_name`, `path` (the screen's default: the tree order), `created_at`, `updated_at`.
   - Returns list shape: `{ items: BusinessProcessRow[], total, page, limit }`.
   - `BusinessProcessRow` includes:
     - Entity fields plus:
-      - `categories: { id, name, is_active }[]` (sorted by name).
-      - `primary_category_name: string | null` (first category name used for default sorting).
+      - `parent_name: string | null`, `path` (names from the top joined by ` › `), `depth` (0 at the top).
       - `owner_name: string | null` (derived from `owner_user_id`).
   - Permissions: `business_processes:reader`.
 
@@ -1003,27 +999,30 @@ A tenant classifies its budget lines along analytics dimensions (`analytics_axes
   - Same query params/filters as list; returns `{ ids: string[], total: number }` for workspace navigation.
   - Permissions: `business_processes:reader`.
 
+- GET `/business-processes/tree` → `{ items: [{ id, name, parent_id, process_type, status, disabled_at, depth, path, path_ids }] }`: every process, disabled included, in tree order (each after its parent, siblings by name). Declared before `/:id`.
+  - Permissions: `business_processes:reader`.
+
 - GET `/business-processes/:id`
-  - Returns a single process with the same shape as `BusinessProcessRow` plus timestamps.
+  - Returns the stored process plus `parent: { id, name } | null`, `path`, `depth` and `children: { id, name, status }[]` (by name).
   - Permissions: `business_processes:reader`.
 
 - POST `/business-processes`
   - Body: `BusinessProcessUpsertDto`:
-    - `{ name, description?, notes?, status?, disabled_at?, category_ids?: string[], owner_user_id?: string|null, it_owner_user_id?: string|null }`
+    - `{ name, description?, notes?, status?, disabled_at?, process_type?: 'management'|'core'|'support'|null, parent_id?: string|null, owner_user_id?: string|null, it_owner_user_id?: string|null }`
   - Behavior:
     - Validates unique name (per tenant, case-insensitive).
     - Applies lifecycle using `status`/`disabled_at`.
-    - Syncs category links to the provided `category_ids`.
+    - Refusals (`400`, `field: 'parent_id'` or `process_type`): `BUSINESS_PROCESS_TYPE_INVALID`, `BUSINESS_PROCESS_PARENT_NOT_FOUND`, `BUSINESS_PROCESS_OWN_PARENT`, `BUSINESS_PROCESS_PARENT_CYCLE` (`params: { name, parent }`).
   - Returns the process plus `creation_token`, as `POST /applications` (below in this file: the creation routes).
   - Permissions: `business_processes:member`.
 
-- GET `/business-processes/:id/creation?token=` and DELETE `/business-processes/:id/creation` with `{ token }` (`business_processes:member`, reserved to unscoped data access): the creation routes, with the token rules and the `CREATION_CANCEL_EXPIRED` refusal of the applications. `changes` counts the history of the process (fields, `application` links), plus one field when it holds categories (the history does not show them). The cancel removes the application links first (one audit row on `application_business_processes` per link, as an unlink), then deletes the process as `DELETE /business-processes/:id` does, without its admin level: an interface that names the process still refuses it (`BUSINESS_PROCESS_IN_USE`).
+- GET `/business-processes/:id/creation?token=` and DELETE `/business-processes/:id/creation` with `{ token }` (`business_processes:member`, reserved to unscoped data access): the creation routes, with the token rules and the `CREATION_CANCEL_EXPIRED` refusal of the applications. `changes` counts the history of the process (fields, `application` links). The cancel removes the application links first (one audit row on `application_business_processes` per link, as an unlink), then deletes the process as `DELETE /business-processes/:id` does, without its admin level: an interface that names the process still refuses it (`BUSINESS_PROCESS_IN_USE`).
 
 - PATCH `/business-processes/:id`
   - Body: partial `BusinessProcessUpsertDto`.
   - Behavior:
     - Allows renaming (with uniqueness check).
-    - Allows updating description/notes/owners/lifecycle and category links.
+    - Allows updating description/notes/owners/lifecycle, the type and the parent, with the refusals of POST. A move takes the tree lock and checks the new parent against the stored tree.
   - Permissions: `business_processes:member`.
 
 - DELETE `/business-processes/bulk`
@@ -1034,34 +1033,12 @@ A tenant classifies its budget lines along analytics dimensions (`analytics_axes
   - Permissions: `business_processes:admin`.
 
 - DELETE `/business-processes/:id`
-  - Deletes a single process; mirrors bulk behavior.
+  - Deletes a single process; mirrors bulk behavior. A process with sub-processes is refused (`BUSINESS_PROCESS_HAS_SUB_PROCESSES`, usages `[{ type: 'sub_processes', total }]`), before the applications and interfaces check (`BUSINESS_PROCESS_IN_USE`); `POST /business-processes/delete-check` reports both.
   - Permissions: `business_processes:admin`.
 
 ### Applications of a process
 - GET `/business-processes/:id/applications` → `{ items: [{ id, name, reference, criticality, lifecycle, it_owner_names, created_at }] }` (`business_processes:reader`; `items` is `null` without `applications:reader`, a Business Contributor's applications only).
 - POST `/business-processes/:id/applications` `{ application_id }` and DELETE `/business-processes/:id/applications/:applicationId` → `{ ok, changed }` (`business_processes:member` and `applications:reader`, 403 otherwise; an application outside a Business Contributor's scope is a 400). Idempotent; the process row is locked first; one audit row on `application_business_processes` per change. The application's side is the `processes` section of `GET /applications/:id/relations`.
-
-### Categories
-
-- GET `/business-process-categories`
-  - Query params: `page`, `limit`, `sort`, `includeInactive=true|false`.
-  - Default: only active categories unless `includeInactive=true`.
-  - Returns: `{ items: BusinessProcessCategory[], total, page, limit }`.
-  - Permissions: `business_processes:reader`.
-
-- POST `/business-process-categories`
-  - Body: `{ name: string, is_active?: boolean }`.
-  - Behavior:
-    - Names are unique per tenant (case-insensitive).
-  - Permissions: `business_processes:manager`.
-
-- PATCH `/business-process-categories/:id`
-  - Body: `{ name?: string, is_active?: boolean, is_default?: boolean, sort_order?: number }`.
-  - Permissions: `business_processes:manager`.
-
-- DELETE `/business-process-categories/:id`
-  - Fails with `400` if the category is still referenced by any `business_process_category_links`.
-  - Permissions: `business_processes:admin`.
 
 ### CSV Import/Export
 
@@ -1069,8 +1046,8 @@ A tenant classifies its budget lines along analytics dimensions (`analytics_axes
   - `scope=template`: header-only CSV.
   - `scope=data`: data CSV for all processes in the tenant.
   - Format (semicolon `;` separated, UTF‑8 with BOM):
-    - `name;categories;description;notes;status`
-    - `categories` is a semicolon-separated list of category names.
+    - `name;process_type;parent_name;description;notes;status`
+    - `process_type` is the code (`management`, `core`, `support`) or empty; `parent_name` the parent's name, empty at the top.
   - Permissions: `business_processes:admin`.
 
 - POST `/business-processes/import?dryRun=true|false`
@@ -1082,7 +1059,8 @@ A tenant classifies its budget lines along analytics dimensions (`analytics_axes
   - Behavior:
     - Validates headers and required fields.
     - Deduplicates identical rows.
-    - Upserts by `name` per tenant and syncs category links, auto-creating categories as needed.
+    - Upserts by `name` per tenant (case-insensitive). A name twice in the file is a row error (`CSV_DUPLICATE_KEY`).
+    - `parent_name` names a process of the file or a stored one (the file first), case-insensitive; an unknown name is `CSV_REFERENCE_NOT_FOUND`. Under the tree lock, a row under itself (`CSV_BUSINESS_PROCESS_OWN_PARENT`) or under one of its own sub-processes, in the tree the file would make (`CSV_BUSINESS_PROCESS_PARENT_INSIDE`), is refused. Parents are written before their children, wherever their rows are.
   - Permissions: `business_processes:admin`.
 
 ## Allocation Rules (default method per tenant/year)

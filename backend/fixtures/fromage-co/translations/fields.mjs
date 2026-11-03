@@ -29,7 +29,7 @@ export const TRANSLATED_COLUMNS = {
   '08-departments.csv': ['name', 'description'],
   '09-contacts.csv': ['job_title', 'notes'],
   '10-users.csv': ['department_name'],
-  '11-business-processes.csv': ['name', 'categories', 'description', 'notes'],
+  '11-business-processes.csv': ['name', 'parent_name', 'description', 'notes'],
   '12-applications.csv': ['description', 'notes', 'classification_justification'],
   '13-contracts.csv': ['name', 'notes'],
   '14-spend-items.csv': ['product_name', 'description', 'notes'],

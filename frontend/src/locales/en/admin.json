@@ -561,6 +561,7 @@
       "code": "Code",
       "kind": "Type",
       "parent_id": "Parent group",
+      "process_type": "Process type",
       "accountNature": "Used for",
       "costCenterOwner": "Budget holder",
       "summary": "Summary",

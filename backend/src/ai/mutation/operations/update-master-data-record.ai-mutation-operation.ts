@@ -47,7 +47,7 @@ export class UpdateMasterDataRecordAiMutationOperation implements AiMutationOper
       'accounts: coa_id, account_number, account_name, native_name, description, consolidation_account_number, consolidation_account_name, consolidation_account_description, nature, status, disabled_at',
       'chart_of_accounts: code, name, country_iso, scope, is_default',
       'analytics_categories: name, description, applies_to, status, disabled_at',
-      'business_processes: name, description, notes, owner_user_id, it_owner_user_id, status, disabled_at',
+      'business_processes: name, description, notes, owner_user_id, it_owner_user_id, process_type (management, core or support), parent_id (the parent process), status, disabled_at',
       'locations: name, hosting_type, operating_company_id, country_iso, city, provider, region, additional_info',
     ],
     reversible: true,

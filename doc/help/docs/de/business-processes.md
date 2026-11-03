@@ -1,6 +1,6 @@
 # Geschäftsprozesse
 
-Mit Geschäftsprozessen können Sie einen zentralen Katalog der End-to-End-Prozesse Ihrer Organisation erstellen und pflegen, beispielsweise Order-to-Cash, Procure-to-Pay oder Hire-to-Retire. Indem Sie Prozessnamen, Kategorien und Verantwortliche an einem Ort verwalten, schaffen Sie einen einheitlichen Referenzpunkt, auf den der Rest von KANAP für Zuständigkeiten, Berichte und Audits zugreifen kann.
+Mit Geschäftsprozessen können Sie einen zentralen Katalog der End-to-End-Prozesse Ihrer Organisation erstellen und pflegen, beispielsweise Order-to-Cash, Procure-to-Pay oder Hire-to-Retire. Indem Sie Prozessnamen, Typen, Verantwortliche und ihre Hierarchie an einem Ort verwalten, schaffen Sie einen einheitlichen Referenzpunkt, auf den der Rest von KANAP für Zuständigkeiten, Berichte und Audits zugreifen kann.
 
 ## Erste Schritte
 
@@ -26,8 +26,9 @@ Die Liste zeigt alle Geschäftsprozesse Ihres Mandanten.
 
 **Standardspalten**:
 
-- **Name**: der Prozessname. Zum Öffnen des Arbeitsbereichs anklicken.
-- **Kategorien**: eine oder mehrere Kategorien, denen der Prozess angehört (z. B. „Kunden & Vertrieb", „Finanzen & Controlling"). Mehrere Kategorien werden als kommagetrennte Liste angezeigt.
+- **Name**: der Prozessname. Zum Öffnen des Arbeitsbereichs anklicken. In der Baumreihenfolge nach Ebene eingerückt.
+- **Typ**: **Führungsprozess**, **Kernprozess** oder **Unterstützungsprozess**, oder leer.
+- **Übergeordneter Prozess**: der Prozess, unter dem er steht, oder leer für einen Prozess der obersten Ebene.
 - **Prozessverantwortlicher**: der für den Prozess verantwortliche Benutzer.
 
 **Zusätzliche Spalten** (standardmäßig ausgeblendet; über Spaltenauswahl aktivierbar):
@@ -39,15 +40,15 @@ Die Liste zeigt alle Geschäftsprozesse Ihres Mandanten.
 
 - Die Schnellsuche filtert über alle sichtbaren Spalten.
 - Mit dem Umschalter **Anzeigen: Alle / Aktiv / Deaktiviert** über der Liste wählen Sie, welche Prozesse angezeigt werden. Standardmäßig zeigt die Liste aktivierte Prozesse.
-- Die Standardsortierung gruppiert Zeilen nach **Kategorien**, dann nach **Name**.
+- **Typ** und **Übergeordneter Prozess** verwenden Kontrollkästchen-Filter. Der Filter des übergeordneten Prozesses listet die Prozesse, die Teilprozesse haben.
+- Die Liste öffnet sich in der Baumreihenfolge: Auf jeden Prozess folgen seine Teilprozesse. Klicken Sie auf eine Spaltenüberschrift, um stattdessen nach dieser Spalte zu sortieren. Die Einrückung erscheint nur in der Baumreihenfolge.
 
 **Aktionen** (Symbolleiste oben rechts):
 
 - **Neu** (`business_processes:member`): einen neuen Geschäftsprozess erstellen. Siehe [Einen Geschäftsprozess erstellen](#creating-a-business-process).
-- **Kategorien verwalten** (`business_processes:member`): den Dialog zur Kategorieverwaltung öffnen.
 - **Importieren** (Admin): Prozesse aus einer CSV-Datei oder Excel-Arbeitsmappe massenimportieren.
 - **Exportieren** (Admin): die Prozesse der Liste, oder alle Prozesse, in eine CSV-Datei oder Excel-Arbeitsmappe exportieren.
-- **Ausgewählte löschen** (Admin): eine oder mehrere ausgewählte Zeilen löschen. Ein Prozess, den Anwendungen oder Schnittstellen verwenden, kann nicht gelöscht werden: Deaktivieren Sie ihn stattdessen. Bevor etwas gelöscht wird, listet die Bestätigung die behaltenen Prozesse mit dem Grund auf. Anfragen, die mit einem gelöschten Prozess verknüpft sind, bleiben ohne die Verknüpfung erhalten.
+- **Ausgewählte löschen** (Admin): eine oder mehrere ausgewählte Zeilen löschen. Ein Prozess, den Anwendungen oder Schnittstellen verwenden, kann nicht gelöscht werden: Deaktivieren Sie ihn stattdessen. Ein Prozess mit Teilprozessen kann ebenfalls nicht gelöscht werden: Verschieben oder löschen Sie diese zuerst. Bevor etwas gelöscht wird, listet die Bestätigung die behaltenen Prozesse mit dem Grund auf. Anfragen, die mit einem gelöschten Prozess verknüpft sind, bleiben ohne die Verknüpfung erhalten.
 
 ---
 
@@ -78,7 +79,7 @@ Die Kopfzeile enthält:
 - Den **Namen**: Klicken Sie darauf, um den Prozess umzubenennen.
 - Die Pfeile **vorheriger / nächster**: zwischen Prozessen in der aktuellen Listenreihenfolge wechseln.
 - **Status**: **Aktiviert** oder **Deaktiviert**. Aktivierte Prozesse erscheinen in Auswahlfeldern in der gesamten App. Deaktivieren Sie einen Prozess, um ihn stillzulegen ohne zu löschen, damit historische Referenzen erhalten bleiben.
-- **Löschen** (Papierkorb-Symbol, Admin): den Prozess löschen und zur Liste zurückkehren. Ein Prozess, den Anwendungen oder Schnittstellen verwenden, kann nicht gelöscht werden: Die Meldung zählt sie auf. Deaktivieren Sie ihn stattdessen.
+- **Löschen** (Papierkorb-Symbol, Admin): den Prozess löschen und zur Liste zurückkehren. Ein Prozess, den Anwendungen oder Schnittstellen verwenden, kann nicht gelöscht werden: Die Meldung zählt sie auf. Deaktivieren Sie ihn stattdessen. Ein Prozess mit Teilprozessen kann ebenfalls nicht gelöscht werden: Die Meldung zählt sie auf. Verschieben oder löschen Sie diese zuerst.
 
 Ohne `business_processes:member` öffnet sich die Seite nur zum Lesen.
 
@@ -86,7 +87,8 @@ Ohne `business_processes:member` öffnet sich die Seite nur zum Lesen.
 
 Die Eigenschaftsleiste auf der rechten Seite enthält:
 
-- **Kategorien**: eine oder mehrere Kategorien. Wählen Sie bestehende Kategorien, erstellen Sie eine mit **Neue Kategorie** oder öffnen Sie den Dialog zur Kategorieverwaltung mit **Kategorien bearbeiten**.
+- **Typ**: der Prozesstyp nach ISO 9001, optional. Ein **Führungsprozess** steuert und lenkt die Organisation. Ein **Kernprozess** schafft Wert für die Kunden. Ein **Unterstützungsprozess** stellt den anderen Prozessen Ressourcen bereit. Ein Teilprozess erbt den Typ seines übergeordneten Prozesses nicht.
+- **Übergeordneter Prozess**: der Prozess, unter dem dieser steht. Prozesse bilden einen Baum ohne Tiefenbegrenzung. Die Auswahl zeigt den Baum eingerückt und durchsucht den vollständigen Pfad. Der Prozess selbst und seine Teilprozesse werden nicht angeboten. Lassen Sie das Feld für die oberste Ebene leer. Ein Prozess kann nicht sein eigener übergeordneter Prozess sein und nicht unter einen seiner eigenen Teilprozesse verschoben werden.
 - **Prozessverantwortlicher**: der für den Prozess letztlich verantwortliche Benutzer. Wird in der Liste angezeigt.
 - **IT-Verantwortlicher**: der Benutzer, der für die IT-Systeme und Werkzeuge verantwortlich ist, die den Prozess unterstützen.
 - **Lebenszyklus**: der Statusschalter und das Datum **Ende der Gültigkeit**. Ein Prozess, dessen Gültigkeit abgelaufen ist, ist deaktiviert.
@@ -104,31 +106,7 @@ Zum Ändern der Verknüpfungen benötigen Sie `business_processes:member`. Der R
 
 ### Verlauf
 
-Die Änderungen am Prozess und an seinen Verknüpfungen zu Anwendungen. Siehe [Verlauf der Datensätze](record-history.md).
-
----
-
-## Kategorien verwalten
-
-Kategorien werden über alle Geschäftsprozesse hinweg geteilt. Sie können sie von zwei Stellen aus verwalten:
-
-1. Auf der Listenseite klicken Sie auf **Kategorien verwalten**.
-2. Im Arbeitsbereich, unter dem Feld **Kategorien** der Eigenschaftsleiste, klicken Sie auf **Kategorien bearbeiten**.
-
-Beide öffnen den Dialog **Geschäftsprozess-Kategorien verwalten**.
-
-**Was Sie tun können**:
-
-- **Umbenennen**: den Namen direkt im Textfeld bearbeiten.
-- **Aktivieren / Deaktivieren**: umschalten, ob eine Kategorie in Auswahlfeldern erscheint. Inaktive Kategorien werden bei neuen Zuweisungen ausgeblendet, bleiben aber bei bestehenden Prozessen erhalten.
-- **Löschen**: eine Kategorie entfernen. Das Löschen funktioniert nur, wenn kein Prozess sie verwendet; andernfalls zählt die Meldung die Prozesse, die sie verwenden. Deaktivieren Sie sie stattdessen.
-- **Neue Kategorie**: eine neue Zeile oben im Dialog hinzufügen.
-
-**Speichern und Abbrechen**:
-
-- Es wird nichts gespeichert, bis Sie auf **Speichern** klicken. Während der Dialog geöffnet ist, werden alle Änderungen lokal verfolgt.
-- **Abbrechen** schließt den Dialog und verwirft alles, was Sie geändert haben.
-- Wenn beim Speichern ein Fehler auftritt (z. B. ein doppelter Name oder eine noch verwendete Kategorie), bleibt der Dialog geöffnet, damit Sie das Problem korrigieren können.
+Die Änderungen am Prozess, etwa an seinem Typ oder seinem übergeordneten Prozess, und an seinen Verknüpfungen zu Anwendungen. Siehe [Verlauf der Datensätze](record-history.md).
 
 ---
 
@@ -144,9 +122,10 @@ Klicken Sie auf der Listenseite auf **Exportieren**. Die Datei enthält die Proz
 
 Das Trennzeichen folgt der Sprache Ihres Bildschirms. Siehe [CSV- und Excel-Dateien](csv-files.md) für die Kodierung, das Trennzeichen und die beiden Importschritte.
 
-**Spalten**: `name`, `categories`, `description`, `notes`, `status`.
+**Spalten**: `name`, `process_type`, `parent_name`, `description`, `notes`, `status`.
 
-Die Spalte `categories` kann mehrere durch Semikolons getrennte Kategorienamen innerhalb der Zelle enthalten (z. B. `Kunden & Vertrieb; Finanzen & Controlling`).
+- `process_type`: `management`, `core` oder `support`, oder leer.
+- `parent_name`: der Name des übergeordneten Prozesses, oder leer für die oberste Ebene.
 
 ### Importieren
 
@@ -159,7 +138,8 @@ Klicken Sie auf der Listenseite auf **Importieren**, dann:
 **Zuordnungsregeln**:
 
 - Zeilen werden anhand des **Namens** zugeordnet, unabhängig von Groß- und Kleinschreibung. Ein übereinstimmender Name aktualisiert den bestehenden Prozess und behält die gespeicherte Schreibweise (die Vorabprüfung meldet, welchem Prozess die Zeile zugeordnet wurde); ein neuer Name erstellt einen neuen Prozess.
-- Jede Kategorie in der Zelle `categories` wird getrimmt und anhand des Namens zugeordnet. Wenn eine Kategorie noch nicht existiert, wird sie automatisch als aktive Kategorie erstellt.
+- `parent_name` wird anhand des Namens zugeordnet, unabhängig von Groß- und Kleinschreibung: ein Prozess derselben Datei oder ein Prozess, der bereits in KANAP besteht. Gibt es beide, hat die Datei Vorrang. Die Zeilen können in beliebiger Reihenfolge stehen: Übergeordnete Prozesse werden vor ihren Teilprozessen erstellt.
+- Ein unbekannter übergeordneter Name, ein Prozess unter sich selbst oder eine Schleife werden mit der Zeilennummer abgelehnt.
 - Die Datei hat keine Spalte für das Gültigkeitsende. Bei einer Aktualisierung behält ein leerer `status` oder einer, der dem aktuellen Status des Prozesses entspricht, dessen Gültigkeitsende. Ein anderer Status wird angewendet: `enabled` löscht das Gültigkeitsende, und `disabled` beendet den Prozess heute, sofern sein Gültigkeitsende nicht bereits vergangen ist. Ein neuer Prozess ist aktiviert, sofern die Zeile nicht `disabled` angibt.
 
 **Tipp**: Exportieren Sie zuerst Ihre aktuellen Daten, ändern Sie die Datei und importieren Sie erneut. Dies vermeidet versehentliche Duplikate und stellt sicher, dass Sie mit dem aktuellsten Stand arbeiten.
@@ -170,5 +150,4 @@ Klicken Sie auf der Listenseite auf **Importieren**, dann:
 
 - **Namenskonvention**: bleiben Sie beim Format „Klarname (CODE)" (z. B. „Order-to-Cash (O2C)"), damit Prozesse leicht zu finden und auf einen Blick erkennbar sind.
 - **Stilllegen statt löschen**: deaktivieren Sie Prozesse, die Sie nicht mehr nutzen, anstatt sie zu löschen. Dies bewahrt historische Referenzen und Audit-Trails.
-- **Kategorien zuerst**: richten Sie Ihre Kategoriestruktur ein, bevor Sie Prozesse massenimportieren. Der Import erstellt fehlende Kategorien automatisch, aber vorherige Planung hält alles ordentlich.
 - **Prozessverantwortliche frühzeitig**: die Zuweisung eines Prozessverantwortlichen jetzt bedeutet, dass Zuständigkeitsdaten bereits vorhanden sind, wenn künftige Funktionen wie Benachrichtigungen und Aufgabenweiterleitung verfügbar werden.

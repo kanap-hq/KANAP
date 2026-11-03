@@ -561,6 +561,7 @@
       "code": "Código",
       "kind": "Tipo",
       "parent_id": "Grupo superior",
+      "process_type": "Tipo de proceso",
       "accountNature": "Usada para",
       "costCenterOwner": "Responsable del presupuesto",
       "summary": "Resumen",

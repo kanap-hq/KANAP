@@ -1,13 +1,13 @@
-name;categories;description;notes;status
-Cheese Production Management;Production;End-to-end cheese manufacturing from milk reception to packaging;Covers all three production sites;enabled
-Cheese Aging & Maturation;Production;Monitoring and control of cheese aging caves including temperature and humidity;Critical for product quality — drives CaveGuard IoT project;enabled
-Quality Control & Certification;Quality;Product quality testing, AOP/DOP certification and compliance audits;Mandatory for all exported products;enabled
-Order-to-Cash;Sales;Customer order intake, fulfillment, invoicing and payment collection;Includes B2B, B2C (La Boutique) and US distribution channels;enabled
-Procure-to-Pay;Finance;Purchase requisition, supplier ordering, goods receipt and payment;SAP-managed for HQ, Sage for NL and IT entities;enabled
-Financial Consolidation;Finance;Monthly and quarterly consolidation of all four legal entities;Multi-currency (EUR + USD), IFRS-compliant;enabled
-Supply Chain Management;Logistics;Raw material sourcing, cold chain logistics and international distribution;Temperature-controlled throughout, includes US import logistics;enabled
-Customer Relationship Management;Sales;Prospect management, client engagement and retention;B2B via Salesforce, D2C via La Boutique, US via direct sales;enabled
-Regulatory Compliance;Quality;Food safety regulations, traceability requirements and EU/FDA compliance;EU and US food import regulations — drives Digital Cheese Passport project;enabled
-Employee Lifecycle Management;HR;Recruitment, onboarding, development and offboarding across all entities;Four countries, four labor law frameworks — Workday HCM;enabled
-IT Service Management;IT;Incident management, change management and service requests;ServiceNow-based, covers all entities;enabled
-New Cheese Development;R&D;R&D pipeline for new cheese varieties and product innovation;Current focus: plant-based cheese alternatives and aged cheese NFTs;enabled
+name;process_type;parent_name;description;notes;status
+Cheese Production Management;core;;End-to-end cheese manufacturing from milk reception to packaging;Covers all three production sites;enabled
+Cheese Aging & Maturation;core;Cheese Production Management;Monitoring and control of cheese aging caves including temperature and humidity;Critical for product quality — drives CaveGuard IoT project;enabled
+Quality Control & Certification;core;Cheese Production Management;Product quality testing, AOP/DOP certification and compliance audits;Mandatory for all exported products;enabled
+Order-to-Cash;core;;Customer order intake, fulfillment, invoicing and payment collection;Includes B2B, B2C (La Boutique) and US distribution channels;enabled
+Procure-to-Pay;support;;Purchase requisition, supplier ordering, goods receipt and payment;SAP-managed for HQ, Sage for NL and IT entities;enabled
+Financial Consolidation;management;;Monthly and quarterly consolidation of all four legal entities;Multi-currency (EUR + USD), IFRS-compliant;enabled
+Supply Chain Management;core;;Raw material sourcing, cold chain logistics and international distribution;Temperature-controlled throughout, includes US import logistics;enabled
+Customer Relationship Management;core;;Prospect management, client engagement and retention;B2B via Salesforce, D2C via La Boutique, US via direct sales;enabled
+Regulatory Compliance;management;;Food safety regulations, traceability requirements and EU/FDA compliance;EU and US food import regulations — drives Digital Cheese Passport project;enabled
+Employee Lifecycle Management;support;;Recruitment, onboarding, development and offboarding across all entities;Four countries, four labor law frameworks — Workday HCM;enabled
+IT Service Management;support;;Incident management, change management and service requests;ServiceNow-based, covers all entities;enabled
+New Cheese Development;core;;R&D pipeline for new cheese varieties and product innovation;Current focus: plant-based cheese alternatives and aged cheese NFTs;enabled

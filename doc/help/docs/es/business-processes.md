@@ -1,6 +1,6 @@
 # Procesos de negocio
 
-Los Procesos de negocio le permiten construir y mantener un catálogo centralizado de los procesos centrales de extremo a extremo de su organización, como Pedido a cobro, Compra a pago o Contratación a jubilación. Al mantener nombres de procesos, categorías y responsables en un solo lugar, crea un punto de referencia único al que el resto de KANAP puede vincularse para propiedad, informes y auditorías.
+Los Procesos de negocio le permiten construir y mantener un catálogo centralizado de los procesos centrales de extremo a extremo de su organización, como Pedido a cobro, Compra a pago o Contratación a jubilación. Al mantener nombres de procesos, sus tipos, sus responsables y su jerarquía en un solo lugar, crea un punto de referencia único al que el resto de KANAP puede vincularse para propiedad, informes y auditorías.
 
 ## Primeros pasos
 
@@ -26,8 +26,9 @@ La lista muestra todos los procesos de negocio de su espacio de trabajo.
 
 **Columnas predeterminadas**:
 
-- **Nombre**: el nombre del proceso. Haga clic para abrir el espacio de trabajo.
-- **Categorías**: una o más categorías a las que pertenece el proceso (p. ej., "Cliente y ventas", "Finanzas y control"). Múltiples categorías se muestran como lista separada por comas.
+- **Nombre**: el nombre del proceso. Haga clic para abrir el espacio de trabajo. Sangrado por nivel cuando la lista está en el orden del árbol.
+- **Tipo**: **Estratégico**, **Operativo** o **Apoyo**, o vacío.
+- **Proceso padre**: el proceso bajo el que se encuentra, o vacío para un proceso de primer nivel.
 - **Responsable del proceso**: el usuario responsable del proceso.
 
 **Columnas adicionales** (ocultas por defecto; actívelas con el selector de columnas):
@@ -39,15 +40,15 @@ La lista muestra todos los procesos de negocio de su espacio de trabajo.
 
 - La búsqueda rápida filtra en todas las columnas visibles.
 - Use el selector **Mostrar: Todos / Activos / Desactivados** sobre la lista para elegir qué procesos aparecen. La lista muestra por defecto los procesos activados.
-- La ordenación predeterminada agrupa las filas por **Categorías**, luego por **Nombre**.
+- **Tipo** y **Proceso padre** usan filtros con casillas. El filtro del padre lista los procesos que tienen subprocesos.
+- La lista se abre en el orden del árbol: cada proceso va seguido de sus subprocesos. Haga clic en un encabezado de columna para ordenar por esa columna. El sangrado solo aparece en el orden del árbol.
 
 **Acciones** (barra de herramientas superior derecha):
 
 - **Nuevo** (`business_processes:member`): crear un nuevo proceso de negocio. Consulte [Crear un proceso de negocio](#creating-a-business-process).
-- **Gestionar categorías** (`business_processes:member`): abrir el diálogo de gestión de categorías.
 - **Importar** (Admin): importación masiva de procesos desde un archivo CSV o un libro de Excel.
 - **Exportar** (Admin): exportar los procesos que muestra la lista, o todos los procesos, a un archivo CSV o un libro de Excel.
-- **Eliminar seleccionados** (Admin): eliminar una o más filas seleccionadas. Un proceso que usan aplicaciones o interfaces no se puede eliminar: desactívelo en su lugar. Antes de eliminar nada, la confirmación lista los procesos que se conservan, con el motivo. Las solicitudes vinculadas a un proceso eliminado se conservan, sin el vínculo.
+- **Eliminar seleccionados** (Admin): eliminar una o más filas seleccionadas. Un proceso que usan aplicaciones o interfaces no se puede eliminar: desactívelo en su lugar. Un proceso que tiene subprocesos tampoco se puede eliminar: muévalos o elimínelos primero. Antes de eliminar nada, la confirmación lista los procesos que se conservan, con el motivo. Las solicitudes vinculadas a un proceso eliminado se conservan, sin el vínculo.
 
 ---
 
@@ -78,7 +79,7 @@ El encabezado contiene:
 - El **nombre**: haga clic en él para renombrar el proceso.
 - Las flechas **anterior / siguiente**: recorrer los procesos en el orden actual de la lista.
 - **Estado**: **Activado** o **Desactivado**. Los procesos activados aparecen en los selectores de toda la aplicación. Desactive un proceso para retirarlo sin eliminarlo, para que las referencias históricas permanezcan intactas.
-- **Eliminar** (icono de papelera, Admin): eliminar el proceso y volver a la lista. Un proceso que usan aplicaciones o interfaces no se puede eliminar: el mensaje los cuenta. Desactívelo en su lugar.
+- **Eliminar** (icono de papelera, Admin): eliminar el proceso y volver a la lista. Un proceso que usan aplicaciones o interfaces no se puede eliminar: el mensaje los cuenta. Desactívelo en su lugar. Un proceso que tiene subprocesos tampoco se puede eliminar: el mensaje los cuenta. Muévalos o elimínelos primero.
 
 Sin `business_processes:member`, la página se abre en solo lectura.
 
@@ -86,7 +87,8 @@ Sin `business_processes:member`, la página se abre en solo lectura.
 
 El panel de propiedades, a la derecha, contiene:
 
-- **Categorías**: una o más categorías. Elija categorías existentes, cree una con **Nueva categoría**, o abra el diálogo de gestión de categorías con **Editar categorías**.
+- **Tipo**: el tipo de proceso ISO 9001, opcional. Un proceso **Estratégico** orienta y dirige la organización. Un proceso **Operativo** aporta valor a los clientes. Un proceso de **Apoyo** proporciona recursos a los demás. Un subproceso no hereda el tipo de su padre.
+- **Proceso padre**: el proceso bajo el que se encuentra este. Los procesos forman un árbol sin límite de profundidad. El selector muestra el árbol con sangría y busca en la ruta completa. El propio proceso y sus subprocesos no se ofrecen. Déjelo vacío para el primer nivel. Un proceso no puede ser su propio padre ni pasar bajo uno de sus propios subprocesos.
 - **Responsable del proceso**: el usuario responsable último del proceso. Se muestra en la lista.
 - **Responsable IT**: el usuario responsable de los sistemas y herramientas IT que respaldan el proceso.
 - **Ciclo de vida**: el interruptor de estado y la fecha de fin de validez. Un proceso cuyo fin de validez ha pasado queda desactivado.
@@ -104,31 +106,7 @@ Necesita `business_processes:member` para cambiar los vínculos. La pestaña sol
 
 ### Historial
 
-Los cambios del proceso y de sus vínculos con aplicaciones. Vea [Historial de los registros](record-history.md).
-
----
-
-## Gestión de categorías
-
-Las categorías se comparten entre todos los procesos de negocio. Puede gestionarlas desde dos lugares:
-
-1. En la página de la lista, haga clic en **Gestionar categorías**.
-2. En el espacio de trabajo, bajo el campo **Categorías** del panel de propiedades, haga clic en **Editar categorías**.
-
-Ambos abren el diálogo **Gestionar categorías de procesos de negocio**.
-
-**Qué puede hacer**:
-
-- **Renombrar**: edite el nombre directamente en el campo de texto.
-- **Activar / Desactivar**: controle si una categoría aparece en los selectores. Las categorías inactivas se ocultan de las nuevas asignaciones pero se conservan en los procesos existentes.
-- **Eliminar**: eliminar una categoría. La eliminación solo funciona si ningún proceso la utiliza; de lo contrario, el mensaje cuenta los procesos que la usan. Desactívela en su lugar.
-- **Nueva categoría**: añadir una nueva fila en la parte superior del diálogo.
-
-**Comportamiento de guardar y cancelar**:
-
-- Nada se guarda hasta que haga clic en **Guardar**. Mientras el diálogo está abierto, todos los cambios se registran localmente.
-- **Cancelar** cierra el diálogo y descarta todo lo que haya cambiado.
-- Si ocurre un error al guardar (p. ej., un nombre duplicado o una categoría aún en uso), el diálogo permanece abierto para que pueda corregir el problema.
+Los cambios del proceso, como su tipo o su padre, y de sus vínculos con aplicaciones. Vea [Historial de los registros](record-history.md).
 
 ---
 
@@ -144,9 +122,10 @@ Haga clic en **Exportar** en la página de la lista. El archivo contiene los pro
 
 El separador sigue el idioma de su pantalla. Consulte [Archivos CSV y Excel](csv-files.md) para la codificación, el separador y los dos pasos de importación.
 
-**Columnas**: `name`, `categories`, `description`, `notes`, `status`.
+**Columnas**: `name`, `process_type`, `parent_name`, `description`, `notes`, `status`.
 
-La columna `categories` puede contener múltiples nombres de categorías separados por puntos y coma dentro de la celda (p. ej., `Cliente y ventas; Finanzas y control`).
+- `process_type`: `management`, `core` o `support`, o vacío.
+- `parent_name`: el nombre del proceso padre, o vacío para el primer nivel.
 
 ### Importar
 
@@ -159,7 +138,8 @@ Haga clic en **Importar** en la página de la lista, luego:
 **Reglas de coincidencia**:
 
 - Las filas se emparejan por **Nombre**, sin distinguir mayúsculas y minúsculas. Un nombre coincidente actualiza el proceso existente y conserva la grafía guardada (la verificación previa indica con qué proceso se asoció la fila); un nombre nuevo crea un proceso nuevo.
-- Cada categoría en la celda `categories` se recorta y empareja por nombre. Si una categoría no existe aún, se crea automáticamente como categoría activa.
+- `parent_name` se empareja por nombre, sin distinguir mayúsculas y minúsculas: un proceso del mismo archivo o uno que ya existe en KANAP. Si existen ambos, prevalece el archivo. Las filas pueden ir en cualquier orden: los padres se crean antes que sus hijos.
+- Un nombre de padre desconocido, un proceso bajo sí mismo o un bucle se rechazan, con el número de fila.
 - El archivo no tiene columna de fin de validez. En una actualización, un `status` vacío, o igual al estado actual del proceso, conserva su fin de validez. Un estado distinto se aplica: `enabled` borra el fin de validez, y `disabled` termina el proceso hoy, salvo que su fin de validez ya haya pasado. Un proceso nuevo está habilitado salvo que la fila indique `disabled`.
 
 **Consejo**: exporte sus datos actuales primero, modifique el archivo y vuelva a importar. Esto evita duplicados accidentales y garantiza que esté trabajando desde el estado más reciente.
@@ -170,5 +150,4 @@ Haga clic en **Importar** en la página de la lista, luego:
 
 - **Convención de nomenclatura**: siga el formato "Nombre descriptivo (CÓDIGO)" (p. ej., "Pedido a cobro (O2C)") para que los procesos sean fáciles de buscar y reconocibles de un vistazo.
 - **Retire, no elimine**: desactive los procesos que ya no utilice en lugar de eliminarlos. Esto preserva las referencias históricas y los registros de auditoría.
-- **Categorías primero**: configure su estructura de categorías antes de importar procesos de forma masiva. La importación creará automáticamente las categorías faltantes, pero planificar con antelación mantiene todo ordenado.
 - **Responsable del proceso desde el principio**: asignar un responsable del proceso ahora significa que los datos de propiedad ya están en su lugar cuando futuras funcionalidades como notificaciones y enrutamiento de tareas entren en funcionamiento.

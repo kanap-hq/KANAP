@@ -1,6 +1,6 @@
 # Business Processes
 
-Business Processes let you build and maintain a centralized catalog of your organization's core end-to-end processes, such as Order-to-Cash, Procure-to-Pay, or Hire-to-Retire. By keeping process names, categories, and owners in one place, you create a single reference point that the rest of KANAP can link to for ownership, reporting, and audits.
+Business Processes let you build and maintain a centralized catalog of your organization's core end-to-end processes, such as Order-to-Cash, Procure-to-Pay, or Hire-to-Retire. By keeping process names, types, owners and their hierarchy in one place, you create a single reference point that the rest of KANAP can link to for ownership, reporting, and audits.
 
 ## Getting started
 
@@ -26,8 +26,9 @@ The list shows all business processes for your tenant.
 
 **Default columns**:
 
-- **Name**: the process name. Click to open the workspace.
-- **Categories**: one or more categories the process belongs to (e.g. "Customer & Sales", "Finance & Controlling"). Multiple categories are shown as a comma-separated list.
+- **Name**: the process name. Click to open the workspace. Indented by level when the list is in tree order.
+- **Type**: **Management**, **Core** or **Support**, or empty.
+- **Parent process**: the process it sits under, or empty for a top-level process.
 - **Process Owner**: the user responsible for the process.
 
 **Additional columns** (hidden by default; enable them with the column chooser):
@@ -39,15 +40,15 @@ The list shows all business processes for your tenant.
 
 - Quick search filters across all visible columns.
 - Use the **Show: All / Enabled / Disabled** toggle above the list to choose which processes appear. The list shows enabled processes by default.
-- The default sort groups rows by **Categories**, then by **Name**.
+- **Type** and **Parent process** use checkbox filters. The parent filter lists the processes that have sub-processes.
+- The list opens in tree order: each process is followed by its sub-processes. Click a column header to sort by that column instead. The indentation shows only in tree order.
 
 **Actions** (top-right toolbar):
 
 - **New** (`business_processes:member`): create a new business process. See [Creating a business process](#creating-a-business-process).
-- **Manage Categories** (`business_processes:member`): open the category management dialog.
 - **Import** (Admin): bulk-import processes from a CSV file or an Excel workbook.
 - **Export** (Admin): export the processes the list shows, or all processes, to a CSV file or an Excel workbook.
-- **Delete Selected** (Admin): delete one or more selected rows. A process that applications or interfaces use cannot be deleted: disable it instead. Before anything is deleted, the confirmation lists the processes kept, with the reason. Requests linked to a deleted process stay, without the link.
+- **Delete Selected** (Admin): delete one or more selected rows. A process that applications or interfaces use cannot be deleted: disable it instead. A process that has sub-processes cannot be deleted either: move or delete them first. Before anything is deleted, the confirmation lists the processes kept, with the reason. Requests linked to a deleted process stay, without the link.
 
 ---
 
@@ -78,7 +79,7 @@ The header holds:
 - The **name**: click it to rename the process.
 - The **previous / next** arrows: step through processes in the current list order.
 - **Status**: **Enabled** or **Disabled**. Enabled processes appear in selectors across the app. Disable a process to retire it without deleting it, so historical references stay intact.
-- **Delete** (trash icon, Admin): delete the process and return to the list. A process that applications or interfaces use cannot be deleted: the message counts them. Disable it instead.
+- **Delete** (trash icon, Admin): delete the process and return to the list. A process that applications or interfaces use cannot be deleted: the message counts them. Disable it instead. A process that has sub-processes cannot be deleted either: the message counts them. Move or delete them first.
 
 Without `business_processes:member`, the page opens read only.
 
@@ -86,7 +87,8 @@ Without `business_processes:member`, the page opens read only.
 
 The properties drawer on the right holds:
 
-- **Categories**: one or more categories. Pick existing ones, create one with **New category**, or open the category management dialog with **Edit categories**.
+- **Type**: the ISO 9001 process type, optional. **Management** processes steer and direct the organization. **Core** processes deliver value to customers. **Support** processes provide resources to the others. A sub-process does not inherit the type of its parent.
+- **Parent process**: the process this one sits under. Processes form a tree with no depth limit. The picker shows the tree indented and searches on the full path. The process itself and its sub-processes are left out of the list. Leave it empty for the top level. A process cannot be its own parent, and cannot move under one of its own sub-processes.
 - **Process owner**: the user ultimately responsible for the process. Shown in the list.
 - **IT owner**: the user responsible for the IT systems and tools that support the process.
 - **Lifecycle**: the status switch and the end of validity date. A process whose end of validity has passed is disabled.
@@ -104,31 +106,7 @@ You need `business_processes:member` to change the links. The tab appears only i
 
 ### History
 
-The changes made to the process and its application links. See [Record history](record-history.md).
-
----
-
-## Managing categories
-
-Categories are shared across all business processes. You can manage them from two places:
-
-1. On the list page, click **Manage Categories**.
-2. In the workspace, under the **Categories** field of the properties drawer, click **Edit categories**.
-
-Both open the **Manage Business Process Categories** dialog.
-
-**What you can do**:
-
-- **Rename**: edit the name directly in the text field.
-- **Activate / Deactivate**: toggle whether a category appears in selectors. Inactive categories are hidden from new assignments but preserved on existing processes.
-- **Delete**: remove a category. Deletion only works if no process is using it; otherwise the message counts the processes that use it. Disable it instead.
-- **New category**: add a new row at the top of the dialog.
-
-**Save and cancel behavior**:
-
-- Nothing is saved until you click **Save**. While the dialog is open, all changes are tracked locally.
-- **Cancel** closes the dialog and discards everything you changed.
-- If an error occurs on save (e.g. a duplicate name or a category still in use), the dialog stays open so you can correct the problem.
+The changes made to the process, such as its type or its parent, and to its application links. See [Record history](record-history.md).
 
 ---
 
@@ -144,9 +122,10 @@ Click **Export** on the list page. The file holds the processes the list shows, 
 
 The separator follows the language of your screen. See [CSV and Excel files](csv-files.md) for the encoding, the separator and the two import steps.
 
-**Columns**: `name`, `categories`, `description`, `notes`, `status`.
+**Columns**: `name`, `process_type`, `parent_name`, `description`, `notes`, `status`.
 
-The `categories` column may contain multiple category names separated by semicolons inside the cell (e.g. `Customer & Sales; Finance & Controlling`).
+- `process_type`: `management`, `core` or `support`, or empty.
+- `parent_name`: the name of the parent process, or empty for the top level.
 
 ### Importing
 
@@ -159,7 +138,8 @@ Click **Import** on the list page, then:
 **Matching rules**:
 
 - Rows are matched by **Name**, whatever the case. A matching name updates the existing process and keeps its stored spelling (the preflight check says which process the row matched); a new name creates a new process.
-- Each category in the `categories` cell is trimmed and matched by name. If a category does not exist yet, it is created automatically as an active category.
+- `parent_name` is matched by name, whatever the case: a process of the same file or one already in KANAP. When both exist, the file wins. Rows can come in any order: parents are created before their children.
+- An unknown parent name, a process under itself, or a loop is refused, with the row number.
 - The file has no end of validity column. On an update, a blank `status`, or one equal to the process's current status, keeps its end of validity. A different status applies it: `enabled` clears the end of validity, and `disabled` ends the process today unless its end of validity has already passed. A new process is enabled unless the row says `disabled`.
 
 **Tip**: export your current data first, modify the file, and re-import. This avoids accidental duplicates and ensures you are working from the latest state.
@@ -170,5 +150,4 @@ Click **Import** on the list page, then:
 
 - **Naming convention**: stick to the "Plain Name (CODE)" format (e.g. "Order-to-Cash (O2C)") so processes are easy to search and recognizable at a glance.
 - **Retire, don't delete**: disable processes you no longer use instead of deleting them. This preserves historical references and audit trails.
-- **Categories first**: set up your category structure before importing processes in bulk. The import will auto-create missing categories, but planning ahead keeps things tidy.
 - **Process Owner early**: assigning a Process Owner now means ownership data is already in place when future features like notifications and task routing come online.

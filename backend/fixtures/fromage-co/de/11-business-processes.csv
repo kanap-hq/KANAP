@@ -1,13 +1,13 @@
-name;categories;description;notes;status
-Steuerung der Käseproduktion;Produktion;Durchgängige Käseherstellung von der Milchannahme bis zur Verpackung;Deckt alle drei Produktionsstandorte ab;enabled
-Käsereifung und -veredelung;Produktion;Überwachung und Steuerung der Käsereifekeller, einschließlich Temperatur und Feuchtigkeit;Entscheidend für die Produktqualität — treibt das Projekt CaveGuard IoT;enabled
-Qualitätskontrolle und Zertifizierung;Qualität;Produktqualitätsprüfung, AOP/DOP-Zertifizierung und Compliance-Audits;Pflicht für alle exportierten Produkte;enabled
-Order-to-Cash;Vertrieb;Auftragseingang, Auslieferung, Fakturierung und Zahlungseinzug;Umfasst die Vertriebskanäle B2B, B2C (La Boutique) und US-Distribution;enabled
-Procure-to-Pay;Finanzen;Bestellanforderung, Lieferantenbestellung, Wareneingang und Zahlung;Für die Zentrale über SAP verwaltet, Sage für die Gesellschaften in NL und IT;enabled
-Finanzkonsolidierung;Finanzen;Monatliche und vierteljährliche Konsolidierung aller vier Gesellschaften;Mehrwährungsfähig (EUR + USD), IFRS-konform;enabled
-Supply Chain Management;Logistik;Rohstoffbeschaffung, Kühlkettenlogistik und internationale Distribution;Durchgehend temperaturgeführt, einschließlich US-Importlogistik;enabled
-Kundenbeziehungsmanagement;Vertrieb;Interessentenmanagement, Kundenbindung und -pflege;B2B über Salesforce, D2C über La Boutique, USA über Direktvertrieb;enabled
-Regulatorische Compliance;Qualität;Lebensmittelsicherheitsvorschriften, Anforderungen an die Rückverfolgbarkeit und EU/FDA-Compliance;Lebensmittel-Importvorschriften der EU und der USA — treibt das Projekt Digitaler Käsepass;enabled
-Mitarbeiter-Lebenszyklusmanagement;HR;Recruiting, Onboarding, Entwicklung und Offboarding in allen Gesellschaften;Vier Länder, vier arbeitsrechtliche Rahmen — Workday HCM;enabled
-IT-Service-Management;IT;Incident-Management, Change-Management und Serviceanfragen;Basiert auf ServiceNow, deckt alle Gesellschaften ab;enabled
-Entwicklung neuer Käsesorten;F&E;F&E-Pipeline für neue Käsesorten und Produktinnovation;Aktueller Schwerpunkt: pflanzliche Käsealternativen und NFTs für gereiften Käse;enabled
+name;process_type;parent_name;description;notes;status
+Steuerung der Käseproduktion;core;;Durchgängige Käseherstellung von der Milchannahme bis zur Verpackung;Deckt alle drei Produktionsstandorte ab;enabled
+Käsereifung und -veredelung;core;Steuerung der Käseproduktion;Überwachung und Steuerung der Käsereifekeller, einschließlich Temperatur und Feuchtigkeit;Entscheidend für die Produktqualität — treibt das Projekt CaveGuard IoT;enabled
+Qualitätskontrolle und Zertifizierung;core;Steuerung der Käseproduktion;Produktqualitätsprüfung, AOP/DOP-Zertifizierung und Compliance-Audits;Pflicht für alle exportierten Produkte;enabled
+Order-to-Cash;core;;Auftragseingang, Auslieferung, Fakturierung und Zahlungseinzug;Umfasst die Vertriebskanäle B2B, B2C (La Boutique) und US-Distribution;enabled
+Procure-to-Pay;support;;Bestellanforderung, Lieferantenbestellung, Wareneingang und Zahlung;Für die Zentrale über SAP verwaltet, Sage für die Gesellschaften in NL und IT;enabled
+Finanzkonsolidierung;management;;Monatliche und vierteljährliche Konsolidierung aller vier Gesellschaften;Mehrwährungsfähig (EUR + USD), IFRS-konform;enabled
+Supply Chain Management;core;;Rohstoffbeschaffung, Kühlkettenlogistik und internationale Distribution;Durchgehend temperaturgeführt, einschließlich US-Importlogistik;enabled
+Kundenbeziehungsmanagement;core;;Interessentenmanagement, Kundenbindung und -pflege;B2B über Salesforce, D2C über La Boutique, USA über Direktvertrieb;enabled
+Regulatorische Compliance;management;;Lebensmittelsicherheitsvorschriften, Anforderungen an die Rückverfolgbarkeit und EU/FDA-Compliance;Lebensmittel-Importvorschriften der EU und der USA — treibt das Projekt Digitaler Käsepass;enabled
+Mitarbeiter-Lebenszyklusmanagement;support;;Recruiting, Onboarding, Entwicklung und Offboarding in allen Gesellschaften;Vier Länder, vier arbeitsrechtliche Rahmen — Workday HCM;enabled
+IT-Service-Management;support;;Incident-Management, Change-Management und Serviceanfragen;Basiert auf ServiceNow, deckt alle Gesellschaften ab;enabled
+Entwicklung neuer Käsesorten;core;;F&E-Pipeline für neue Käsesorten und Produktinnovation;Aktueller Schwerpunkt: pflanzliche Käsealternativen und NFTs für gereiften Käse;enabled

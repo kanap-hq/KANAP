@@ -1,6 +1,7 @@
 import React from 'react';
 import { render } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../config/ThemeContext';
@@ -19,7 +20,6 @@ vi.mock('../i18n/useLocale', () => ({ useLocale: () => 'fr' }));
 vi.mock('../components/PageHeader', () => ({ default: () => null }));
 vi.mock('../components/ServerDataGrid', () => ({ default: () => null }));
 vi.mock('../components/DeleteSelectedButton', () => ({ default: () => null }));
-vi.mock('./business-processes/BusinessProcessCategoryManagerDialog', () => ({ default: () => null }));
 vi.mock('../components/csv/CsvExportDialog', () => ({
   default: (props: Record<string, any>) => { dialogs.export = props; return null; },
 }));
@@ -32,9 +32,11 @@ import BusinessProcessesPage from './BusinessProcessesPage';
 
 function renderPage(page: React.ReactElement) {
   return render(
-    <ThemeProvider theme={createAppTheme('light')}>
-      <MemoryRouter>{page}</MemoryRouter>
-    </ThemeProvider>,
+    <QueryClientProvider client={new QueryClient()}>
+      <ThemeProvider theme={createAppTheme('light')}>
+        <MemoryRouter>{page}</MemoryRouter>
+      </ThemeProvider>
+    </QueryClientProvider>,
   );
 }
 

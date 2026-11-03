@@ -21,22 +21,42 @@ export const businessProcessesRegistry: AiEntityFilterRegistry = {
       sortable: true,
       groupable: true,
     },
-    primary_category: {
-      ai: 'primary_category',
-      grid: 'primary_category_name',
+    process_type: {
+      ai: 'process_type',
+      grid: 'process_type',
       type: 'set',
-      description: 'Primary business process category.',
+      description: 'ISO 9001 type of the process: management (steering, pilotage), core (realisation, the value chain) or support. Null when not set.',
+      values: ['management', 'core', 'support'],
+      discoverable: true,
+      sortable: true,
+      groupable: true,
+    },
+    parent: {
+      ai: 'parent',
+      grid: 'parent_name',
+      type: 'set',
+      description: 'Name of the parent process: the processes directly under it (`under` gives every level); null keeps the processes at the top of the tree. Each row carries its parent (`parent`) and its path from the top (`path`).',
       dynamic: true,
       discoverable: true,
       sortable: true,
       groupable: true,
+    },
+    under: {
+      ai: 'under',
+      grid: 'under',
+      type: 'text',
+      description: 'Name of a process, compared exactly without case: every process below it, at every level, the process itself left out. Answers "which sub-processes does Order-to-Cash have".',
+      sortable: false,
+      groupable: false,
     },
   },
   sortFields: {
     label: 'name',
     name: 'name',
     status: 'status',
-    primary_category: 'primary_category_name',
+    process_type: 'process_type',
+    parent: 'parent_name',
+    path: 'path',
     created_at: 'created_at',
     updated_at: 'updated_at',
   },
@@ -50,18 +70,10 @@ export const businessProcessesRegistry: AiEntityFilterRegistry = {
     groupFields: {
       status: { expression: 'bp.status' },
       name: { expression: 'bp.name' },
-      primary_category: {
-        expression: 'bpc.name',
-        joins: [
-          `LEFT JOIN LATERAL (
-             SELECT c.name
-             FROM business_process_category_links l
-             JOIN business_process_categories c ON c.id = l.category_id AND c.tenant_id = bp.tenant_id
-             WHERE l.process_id = bp.id AND l.tenant_id = bp.tenant_id
-             ORDER BY c.name ASC
-             LIMIT 1
-           ) bpc ON TRUE`,
-        ],
+      process_type: { expression: 'bp.process_type' },
+      parent: {
+        expression: 'bpp.name',
+        joins: ['LEFT JOIN business_processes bpp ON bpp.id = bp.parent_id AND bpp.tenant_id = bp.tenant_id'],
       },
     },
   },

@@ -1,13 +1,13 @@
-name;categories;description;notes;status
-Gestión de la producción de queso;Producción;Fabricación de queso de principio a fin, de la recepción de la leche al envasado;Cubre las tres plantas de producción;enabled
-Maduración y afinado del queso;Producción;Supervisión y control de las cavas de maduración de queso, incluidas temperatura y humedad;Crítico para la calidad del producto — impulsa el proyecto CaveGuard IoT;enabled
-Control de calidad y certificación;Calidad;Pruebas de calidad de producto, certificación AOP/DOP y auditorías de conformidad;Obligatorio para todos los productos exportados;enabled
-Del pedido al cobro;Ventas;Recepción de pedidos de clientes, preparación, facturación y cobro;Incluye los canales B2B, B2C (La Boutique) y de distribución en EE. UU.;enabled
-De la compra al pago;Finanzas;Solicitud de compra, pedido al proveedor, recepción de mercancía y pago;Gestionado en SAP para la sede central, en Sage para las entidades de NL e IT;enabled
-Consolidación financiera;Finanzas;Consolidación mensual y trimestral de las cuatro entidades jurídicas;Multidivisa (EUR + USD), conforme a las NIIF;enabled
-Gestión de la cadena de suministro;Logística;Abastecimiento de materias primas, logística de cadena de frío y distribución internacional;Temperatura controlada en todo el recorrido, incluye la logística de importación a EE. UU.;enabled
-Gestión de la relación con el cliente;Ventas;Gestión de prospectos, relación con los clientes y fidelización;B2B mediante Salesforce, D2C mediante La Boutique, EE. UU. mediante venta directa;enabled
-Conformidad normativa;Calidad;Normativa de seguridad alimentaria, requisitos de trazabilidad y conformidad UE/FDA;Normativa de importación alimentaria de la UE y EE. UU. — impulsa el proyecto Pasaporte digital del queso;enabled
-Gestión del ciclo de vida del empleado;RR. HH.;Contratación, incorporación, desarrollo y salida de empleados en todas las entidades;Cuatro países, cuatro marcos de legislación laboral — Workday HCM;enabled
-Gestión de servicios de TI;TI;Gestión de incidentes, gestión de cambios y solicitudes de servicio;Basado en ServiceNow, cubre todas las entidades;enabled
-Desarrollo de nuevos quesos;I+D;Cartera de I+D de nuevas variedades de queso e innovación de producto;Prioridad actual: alternativas vegetales al queso y NFT de quesos madurados;enabled
+name;process_type;parent_name;description;notes;status
+Gestión de la producción de queso;core;;Fabricación de queso de principio a fin, de la recepción de la leche al envasado;Cubre las tres plantas de producción;enabled
+Maduración y afinado del queso;core;Gestión de la producción de queso;Supervisión y control de las cavas de maduración de queso, incluidas temperatura y humedad;Crítico para la calidad del producto — impulsa el proyecto CaveGuard IoT;enabled
+Control de calidad y certificación;core;Gestión de la producción de queso;Pruebas de calidad de producto, certificación AOP/DOP y auditorías de conformidad;Obligatorio para todos los productos exportados;enabled
+Del pedido al cobro;core;;Recepción de pedidos de clientes, preparación, facturación y cobro;Incluye los canales B2B, B2C (La Boutique) y de distribución en EE. UU.;enabled
+De la compra al pago;support;;Solicitud de compra, pedido al proveedor, recepción de mercancía y pago;Gestionado en SAP para la sede central, en Sage para las entidades de NL e IT;enabled
+Consolidación financiera;management;;Consolidación mensual y trimestral de las cuatro entidades jurídicas;Multidivisa (EUR + USD), conforme a las NIIF;enabled
+Gestión de la cadena de suministro;core;;Abastecimiento de materias primas, logística de cadena de frío y distribución internacional;Temperatura controlada en todo el recorrido, incluye la logística de importación a EE. UU.;enabled
+Gestión de la relación con el cliente;core;;Gestión de prospectos, relación con los clientes y fidelización;B2B mediante Salesforce, D2C mediante La Boutique, EE. UU. mediante venta directa;enabled
+Conformidad normativa;management;;Normativa de seguridad alimentaria, requisitos de trazabilidad y conformidad UE/FDA;Normativa de importación alimentaria de la UE y EE. UU. — impulsa el proyecto Pasaporte digital del queso;enabled
+Gestión del ciclo de vida del empleado;support;;Contratación, incorporación, desarrollo y salida de empleados en todas las entidades;Cuatro países, cuatro marcos de legislación laboral — Workday HCM;enabled
+Gestión de servicios de TI;support;;Gestión de incidentes, gestión de cambios y solicitudes de servicio;Basado en ServiceNow, cubre todas las entidades;enabled
+Desarrollo de nuevos quesos;core;;Cartera de I+D de nuevas variedades de queso e innovación de producto;Prioridad actual: alternativas vegetales al queso y NFT de quesos madurados;enabled

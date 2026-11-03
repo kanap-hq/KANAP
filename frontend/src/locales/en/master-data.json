@@ -937,9 +937,9 @@
     "newBusinessProcess": "New business process",
     "businessProcessFallback": "Business process",
     "loadError": "Failed to load business process.",
-    "manageCategories": "Manage categories",
     "columns": {
-      "categories": "Categories",
+      "type": "Type",
+      "parent": "Parent process",
       "processOwner": "Process owner"
     },
     "export": "Export business processes",
@@ -960,7 +960,8 @@
     },
     "fields": {
       "descriptionPlaceholder": "e.g., From customer order to payment received",
-      "categories": "Categories",
+      "type": "Type",
+      "parent": "Parent process",
       "processOwner": "Process owner",
       "itOwner": "IT owner",
       "notesPlaceholder": "e.g., Link to the process map",
@@ -968,19 +969,14 @@
       "nameTaken": "Another business process already has this name.",
       "lifecycle": "Lifecycle"
     },
-    "categoryManager": {
-      "title": "Manage business process categories",
-      "description": "Rename, activate/deactivate, or delete categories. Categories in use cannot be deleted. Changes are only saved when you click Save.",
-      "newCategory": "New category",
-      "loadingCategories": "Loading categories…",
-      "noCategories": "No categories found.",
-      "nameEmpty": "Name cannot be empty",
-      "deleteConfirm": "Delete this category? This cannot be undone.",
-      "newCategoryPrompt": "New category name",
-      "failedToLoad": "Failed to load categories",
-      "failedToDelete": "Failed to delete category",
-      "failedToCreate": "Failed to create category",
-      "failedToUpdate": "Failed to update category"
+    "types": {
+      "management": "Management",
+      "core": "Core",
+      "support": "Support"
+    },
+    "placeholders": {
+      "topLevel": "Top level",
+      "noProcessFound": "No process found"
     },
     "deleteWarning_one": "This cannot be undone. Requests linked to this process stay, without the link.",
     "delete": {
