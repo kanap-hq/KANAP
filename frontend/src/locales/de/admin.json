@@ -561,6 +561,7 @@
       "code": "Code",
       "kind": "Typ",
       "parent_id": "Übergeordnete Gruppe",
+      "process_type": "Prozesstyp",
       "accountNature": "Verwendet für",
       "costCenterOwner": "Budgetverantwortlicher",
       "summary": "Zusammenfassung",

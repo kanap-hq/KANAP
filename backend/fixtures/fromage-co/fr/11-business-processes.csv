@@ -1,13 +1,13 @@
-name;categories;description;notes;status
-Gestion de la production fromagère;Production;Fabrication fromagère de bout en bout, de la réception du lait au conditionnement;Couvre les trois sites de production;enabled
-Affinage et maturation des fromages;Production;Surveillance et pilotage des caves d'affinage, dont la température et l'humidité;Critique pour la qualité des produits — à l'origine du projet CaveGuard IoT;enabled
-Contrôle qualité et certification;Qualité;Contrôles qualité des produits, certification AOP/DOP et audits de conformité;Obligatoire pour tous les produits exportés;enabled
-De la commande à l'encaissement;Ventes;Prise de commande, exécution, facturation et encaissement;Comprend les canaux B2B, B2C (La Boutique) et la distribution américaine;enabled
-De l'achat au paiement;Finance;Demande d'achat, commande fournisseur, réception des marchandises et paiement;Géré dans SAP pour le siège, dans Sage pour les entités NL et IT;enabled
-Consolidation financière;Finance;Consolidation mensuelle et trimestrielle des quatre entités juridiques;Multidevise (EUR + USD), conforme IFRS;enabled
-Gestion de la supply chain;Logistique;Approvisionnement en matières premières, logistique de la chaîne du froid et distribution internationale;Sous température dirigée de bout en bout, logistique d'importation américaine comprise;enabled
-Gestion de la relation client;Ventes;Gestion des prospects, engagement et fidélisation des clients;B2B via Salesforce, D2C via La Boutique, États-Unis en vente directe;enabled
-Conformité réglementaire;Qualité;Réglementation sanitaire des aliments, exigences de traçabilité et conformité UE/FDA;Réglementations européenne et américaine sur l'importation alimentaire — à l'origine du projet Passeport numérique du fromage;enabled
-Gestion du cycle de vie des salariés;RH;Recrutement, intégration, développement et départ des salariés dans toutes les entités;Quatre pays, quatre droits du travail — Workday HCM;enabled
-Gestion des services informatiques;Informatique;Gestion des incidents, gestion des changements et demandes de service;Basé sur ServiceNow, couvre toutes les entités;enabled
-Développement de nouveaux fromages;R&D;Portefeuille R&D de nouvelles variétés de fromages et d'innovations produits;Priorités actuelles : alternatives végétales au fromage et NFT de fromages affinés;enabled
+name;process_type;parent_name;description;notes;status
+Gestion de la production fromagère;core;;Fabrication fromagère de bout en bout, de la réception du lait au conditionnement;Couvre les trois sites de production;enabled
+Affinage et maturation des fromages;core;Gestion de la production fromagère;Surveillance et pilotage des caves d'affinage, dont la température et l'humidité;Critique pour la qualité des produits — à l'origine du projet CaveGuard IoT;enabled
+Contrôle qualité et certification;core;Gestion de la production fromagère;Contrôles qualité des produits, certification AOP/DOP et audits de conformité;Obligatoire pour tous les produits exportés;enabled
+De la commande à l'encaissement;core;;Prise de commande, exécution, facturation et encaissement;Comprend les canaux B2B, B2C (La Boutique) et la distribution américaine;enabled
+De l'achat au paiement;support;;Demande d'achat, commande fournisseur, réception des marchandises et paiement;Géré dans SAP pour le siège, dans Sage pour les entités NL et IT;enabled
+Consolidation financière;management;;Consolidation mensuelle et trimestrielle des quatre entités juridiques;Multidevise (EUR + USD), conforme IFRS;enabled
+Gestion de la supply chain;core;;Approvisionnement en matières premières, logistique de la chaîne du froid et distribution internationale;Sous température dirigée de bout en bout, logistique d'importation américaine comprise;enabled
+Gestion de la relation client;core;;Gestion des prospects, engagement et fidélisation des clients;B2B via Salesforce, D2C via La Boutique, États-Unis en vente directe;enabled
+Conformité réglementaire;management;;Réglementation sanitaire des aliments, exigences de traçabilité et conformité UE/FDA;Réglementations européenne et américaine sur l'importation alimentaire — à l'origine du projet Passeport numérique du fromage;enabled
+Gestion du cycle de vie des salariés;support;;Recrutement, intégration, développement et départ des salariés dans toutes les entités;Quatre pays, quatre droits du travail — Workday HCM;enabled
+Gestion des services informatiques;support;;Gestion des incidents, gestion des changements et demandes de service;Basé sur ServiceNow, couvre toutes les entités;enabled
+Développement de nouveaux fromages;core;;Portefeuille R&D de nouvelles variétés de fromages et d'innovations produits;Priorités actuelles : alternatives végétales au fromage et NFT de fromages affinés;enabled

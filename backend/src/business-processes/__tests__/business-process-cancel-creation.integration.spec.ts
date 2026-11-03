@@ -19,8 +19,6 @@ import {
   type CreationSeed,
 } from '../../common/creation/__tests__/creation-cancel.fixtures';
 import { BusinessProcess } from '../business-process.entity';
-import { BusinessProcessCategory } from '../business-process-category.entity';
-import { BusinessProcessCategoryLink } from '../business-process-category-link.entity';
 import { BusinessProcessesController } from '../business-processes.controller';
 import { BusinessProcessesDeleteService } from '../business-processes-delete.service';
 import { BusinessProcessesService } from '../business-processes.service';
@@ -28,7 +26,7 @@ import { User } from '../../users/user.entity';
 
 // Cancel of a business process being created (lot V7 of the creation frame): `POST
 // /business-processes` hands the creator a token; `GET :id/creation` counts what was written since
-// the creation (fields, application links, and categories, which the history does not show);
+// the creation (fields and application links);
 // `DELETE :id/creation` deletes the process for its creator at the create level (member), the
 // application links made meanwhile removed first. Another person's token, another process's, a
 // missing or an expired one is refused with `CREATION_CANCEL_EXPIRED`, and so is the cancel of a
@@ -39,8 +37,6 @@ function controllerFor(runner: QueryRunner) {
   const audit = new AuditService(manager.getRepository(AuditLog));
   const svc = new BusinessProcessesService(
     manager.getRepository(BusinessProcess),
-    manager.getRepository(BusinessProcessCategory),
-    manager.getRepository(BusinessProcessCategoryLink),
     manager.getRepository(User),
     audit,
   );
@@ -79,12 +75,8 @@ async function testCreatorCancelsTheCreation() {
     const fresh = await controller.creationChanges(created.id, created.creation_token, asCreator);
     assert.deepEqual(fresh, { changes: { fields: 0, children: {} } }, 'nothing written since the creation');
 
-    // A description, a category and an application link: what the confirmation lists.
-    const [category] = await runner.query(
-      `INSERT INTO business_process_categories (tenant_id, name, is_active) VALUES ($1, 'Finance', true) RETURNING id`,
-      [tenantId],
-    );
-    await controller.update(created.id, { description: 'From order to payment.', category_ids: [category.id] }, asCreator);
+    // A description, a type and an application link: what the confirmation lists.
+    await controller.update(created.id, { description: 'From order to payment.', process_type: 'core' }, asCreator);
     const [application] = await runner.query(
       `INSERT INTO applications (tenant_id, name) VALUES ($1, $2) RETURNING id`,
       [tenantId, `CRM ${randomUUID().slice(0, 8)}`],
@@ -98,7 +90,7 @@ async function testCreatorCancelsTheCreation() {
       before: null, after: { application_id: application.id }, userId: creatorId,
     }, { manager: runner.manager });
     const edited = await controller.creationChanges(created.id, created.creation_token, asCreator);
-    assert.deepEqual(edited, { changes: { fields: 2, children: { application: 1 } } }, 'the description, the categories, one application link');
+    assert.deepEqual(edited, { changes: { fields: 2, children: { application: 1 } } }, 'the description, the type, one application link');
 
     // Another person's token for this process, another process's token, none, an expired one: refused.
     await refusedAsExpired(controller.creationChanges(created.id, created.creation_token, req(seed, otherId, runner)), 'other user, preflight');

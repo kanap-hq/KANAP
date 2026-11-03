@@ -1,12 +1,9 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BusinessProcess } from './business-process.entity';
-import { BusinessProcessCategory } from './business-process-category.entity';
-import { BusinessProcessCategoryLink } from './business-process-category-link.entity';
 import { BusinessProcessesService } from './business-processes.service';
-import { BusinessProcessesController, BusinessProcessCategoriesController } from './business-processes.controller';
+import { BusinessProcessesController } from './business-processes.controller';
 import { BusinessProcessesDeleteService } from './business-processes-delete.service';
-import { BusinessProcessCategoriesService } from './business-process-categories.service';
 import { AuditModule } from '../audit/audit.module';
 import { PermissionsModule } from '../permissions/permissions.module';
 import { UsersModule } from '../users/users.module';
@@ -16,14 +13,14 @@ import { BusinessProcessApplicationsController } from './business-process-applic
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([BusinessProcess, BusinessProcessCategory, BusinessProcessCategoryLink, User]),
+    TypeOrmModule.forFeature([BusinessProcess, User]),
     AuditModule,
     PermissionsModule,
     forwardRef(() => UsersModule),
     TechnologiesModule,
   ],
-  controllers: [BusinessProcessesController, BusinessProcessCategoriesController, BusinessProcessApplicationsController],
-  providers: [BusinessProcessesService, BusinessProcessesDeleteService, BusinessProcessCategoriesService],
-  exports: [BusinessProcessesService, BusinessProcessCategoriesService],
+  controllers: [BusinessProcessesController, BusinessProcessApplicationsController],
+  providers: [BusinessProcessesService, BusinessProcessesDeleteService],
+  exports: [BusinessProcessesService],
 })
 export class BusinessProcessesModule {}

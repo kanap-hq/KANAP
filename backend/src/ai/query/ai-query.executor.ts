@@ -1111,8 +1111,10 @@ export class AiQueryExecutor {
       updated_at: row.updated_at ?? null,
       metadata: {
         owner: scalar(row.owner_name),
-        primary_category: scalar(row.primary_category_name),
-        categories: scalar(Array.isArray(row.categories) ? row.categories.map((item: any) => item.name).join(', ') : null),
+        process_type: scalar(row.process_type),
+        parent: scalar(row.parent_name ?? row.parent?.name),
+        path: scalar(row.path),
+        sub_processes: scalar(Array.isArray(row.children) ? row.children.map((item: any) => item.name).join(', ') || null : null),
         is_default: row.is_default == null ? null : Boolean(row.is_default),
       },
     });

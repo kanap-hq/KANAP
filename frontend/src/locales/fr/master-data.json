@@ -945,9 +945,9 @@
     "newBusinessProcess": "Nouveau processus métier",
     "businessProcessFallback": "Processus métier",
     "loadError": "Échec du chargement du processus métier.",
-    "manageCategories": "Gérer les catégories",
     "columns": {
-      "categories": "Catégories",
+      "type": "Type",
+      "parent": "Processus parent",
       "processOwner": "Responsable du processus"
     },
     "export": "Exporter les processus métier",
@@ -968,7 +968,8 @@
     },
     "fields": {
       "descriptionPlaceholder": "ex. De la commande client à l’encaissement",
-      "categories": "Catégories",
+      "type": "Type",
+      "parent": "Processus parent",
       "processOwner": "Responsable du processus",
       "itOwner": "Responsable IT",
       "notesPlaceholder": "ex. Lien vers la cartographie du processus",
@@ -976,19 +977,14 @@
       "nameTaken": "Un autre processus métier porte déjà ce nom.",
       "lifecycle": "Cycle de vie"
     },
-    "categoryManager": {
-      "title": "Gérer les catégories de processus métier",
-      "description": "Renommez, activez/désactivez ou supprimez des catégories. Les catégories en cours d'utilisation ne peuvent pas être supprimées. Les modifications ne sont enregistrées que lorsque vous cliquez sur Enregistrer.",
-      "newCategory": "Nouvelle catégorie",
-      "loadingCategories": "Chargement des catégories…",
-      "noCategories": "Aucune catégorie trouvée.",
-      "nameEmpty": "Le nom ne peut pas être vide",
-      "deleteConfirm": "Supprimer cette catégorie ? Cette action est irréversible.",
-      "newCategoryPrompt": "Nom de la nouvelle catégorie",
-      "failedToLoad": "Échec du chargement des catégories",
-      "failedToDelete": "Échec de la suppression de la catégorie",
-      "failedToCreate": "Échec de la création de la catégorie",
-      "failedToUpdate": "Échec de la mise à jour de la catégorie"
+    "types": {
+      "management": "Pilotage",
+      "core": "Réalisation",
+      "support": "Support"
+    },
+    "placeholders": {
+      "topLevel": "Premier niveau",
+      "noProcessFound": "Aucun processus trouvé"
     },
     "deleteWarning_one": "Cette action est irréversible. Les demandes liées à ce processus sont conservées, sans ce lien.",
     "delete": {

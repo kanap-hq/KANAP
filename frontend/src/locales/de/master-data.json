@@ -945,9 +945,9 @@
     "newBusinessProcess": "Neuer Geschäftsprozess",
     "businessProcessFallback": "Geschäftsprozess",
     "loadError": "Fehler beim Laden des Geschäftsprozesses.",
-    "manageCategories": "Kategorien verwalten",
     "columns": {
-      "categories": "Kategorien",
+      "type": "Typ",
+      "parent": "Übergeordneter Prozess",
       "processOwner": "Prozessverantwortlicher"
     },
     "export": "Geschäftsprozesse exportieren",
@@ -968,7 +968,8 @@
     },
     "fields": {
       "descriptionPlaceholder": "z. B. Vom Kundenauftrag bis zum Zahlungseingang",
-      "categories": "Kategorien",
+      "type": "Typ",
+      "parent": "Übergeordneter Prozess",
       "processOwner": "Prozessverantwortlicher",
       "itOwner": "IT-Verantwortlicher",
       "notesPlaceholder": "z. B. Link zur Prozesslandkarte",
@@ -976,19 +977,14 @@
       "nameTaken": "Ein anderer Geschäftsprozess hat bereits diesen Namen.",
       "lifecycle": "Lebenszyklus"
     },
-    "categoryManager": {
-      "title": "Geschäftsprozess-Kategorien verwalten",
-      "description": "Umbenennen, Aktivieren/Deaktivieren oder Löschen von Kategorien. Verwendete Kategorien können nicht gelöscht werden. Änderungen werden erst beim Klick auf Speichern übernommen.",
-      "newCategory": "Neue Kategorie",
-      "loadingCategories": "Kategorien werden geladen…",
-      "noCategories": "Keine Kategorien gefunden.",
-      "nameEmpty": "Der Name darf nicht leer sein",
-      "deleteConfirm": "Diese Kategorie löschen? Dies kann nicht rückgängig gemacht werden.",
-      "newCategoryPrompt": "Name der neuen Kategorie",
-      "failedToLoad": "Fehler beim Laden der Kategorien",
-      "failedToDelete": "Fehler beim Löschen der Kategorie",
-      "failedToCreate": "Fehler beim Erstellen der Kategorie",
-      "failedToUpdate": "Fehler beim Aktualisieren der Kategorie"
+    "types": {
+      "management": "Führungsprozess",
+      "core": "Kernprozess",
+      "support": "Unterstützungsprozess"
+    },
+    "placeholders": {
+      "topLevel": "Oberste Ebene",
+      "noProcessFound": "Kein Prozess gefunden"
     },
     "deleteWarning_one": "Dies kann nicht rückgängig gemacht werden. Anfragen, die mit diesem Prozess verknüpft sind, bleiben ohne die Verknüpfung erhalten.",
     "delete": {

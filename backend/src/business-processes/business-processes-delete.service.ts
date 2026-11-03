@@ -7,11 +7,17 @@ import { BaseDeleteService } from '../common/base-delete.service';
 import { BulkDeleteResult, DeleteOptions } from '../common/delete.types';
 import { checkIds, RecordInUseException, refusalDetails, refusalsFrom, type DeleteRefusal, type UsageCount } from '../common/record-in-use';
 import { withSavepoint } from '../common/savepoint.util';
+import { lockBusinessProcessTree } from './business-process-tree';
 
-/** The applications and interfaces that name each of `ids`: their links would go with the process. */
-async function processUsages(manager: EntityManager, ids: string[]): Promise<Map<string, UsageCount[]>> {
-  const rows: Array<{ id: string; applications: number; interfaces: number }> = ids.length === 0 ? [] : await manager.query(
+/**
+ * What holds each of `ids`: its sub-processes, then the applications and interfaces that name it
+ * (their links would go with the process).
+ */
+async function processUsages(manager: EntityManager, ids: string[]): Promise<Map<string, { children: number; usages: UsageCount[] }>> {
+  const rows: Array<{ id: string; children: number; applications: number; interfaces: number }> = ids.length === 0 ? [] : await manager.query(
     `SELECT bp.id::text AS id,
+            (SELECT count(*)::int FROM business_processes c
+              WHERE c.tenant_id = bp.tenant_id AND c.parent_id = bp.id) AS children,
             (SELECT count(DISTINCT abp.application_id)::int FROM application_business_processes abp
               WHERE abp.tenant_id = bp.tenant_id AND abp.business_process_id = bp.id) AS applications,
             (SELECT count(*)::int FROM interfaces i
@@ -24,14 +30,23 @@ async function processUsages(manager: EntityManager, ids: string[]): Promise<Map
     const usages: UsageCount[] = [];
     if (row.applications > 0) usages.push({ type: 'applications', total: row.applications });
     if (row.interfaces > 0) usages.push({ type: 'interfaces', total: row.interfaces });
-    return [row.id, usages];
+    return [row.id, { children: row.children, usages }];
   }));
 }
 
-/** The refusal of a process's delete (`BUSINESS_PROCESS_IN_USE`: applications and interfaces counted, disable it instead), or null. */
-function processRefusal(name: string, usages: UsageCount[] | undefined): RecordInUseException | null {
-  if (!usages || usages.length === 0) return null;
-  return new RecordInUseException('BUSINESS_PROCESS_IN_USE', 'business process', name, usages);
+/**
+ * The refusal of a process's delete, or null: `BUSINESS_PROCESS_HAS_SUB_PROCESSES` while
+ * sub-processes sit under it (move or delete them first), else `BUSINESS_PROCESS_IN_USE`
+ * (applications and interfaces counted, disable it instead).
+ */
+function processRefusal(name: string, held: { children: number; usages: UsageCount[] } | undefined): RecordInUseException | null {
+  if (!held) return null;
+  if (held.children > 0) {
+    return new RecordInUseException('BUSINESS_PROCESS_HAS_SUB_PROCESSES', 'business process', name, [{ type: 'sub_processes', total: held.children }],
+      `Cannot delete business process "${name}": it has sub-processes. Move or delete them first.`);
+  }
+  if (held.usages.length === 0) return null;
+  return new RecordInUseException('BUSINESS_PROCESS_IN_USE', 'business process', name, held.usages);
 }
 
 @Injectable()
@@ -55,6 +70,8 @@ export class BusinessProcessesDeleteService extends BaseDeleteService<BusinessPr
   override async delete(id: string, opts?: DeleteOptions): Promise<void> {
     const manager = opts?.manager ?? this.repository.manager;
     const repo = this.getRepo(manager);
+    // Under the tree lock, no sub-process can be created or moved under it between the count and the delete.
+    await lockBusinessProcessTree(manager);
     const existing = await repo.findOne({ where: { id } as any });
 
     if (!existing) {

@@ -945,9 +945,9 @@
     "newBusinessProcess": "Nuevo proceso de negocio",
     "businessProcessFallback": "Proceso de negocio",
     "loadError": "Error al cargar el proceso de negocio.",
-    "manageCategories": "Gestionar categorías",
     "columns": {
-      "categories": "Categorías",
+      "type": "Tipo",
+      "parent": "Proceso padre",
       "processOwner": "Responsable del proceso"
     },
     "export": "Exportar procesos de negocio",
@@ -968,7 +968,8 @@
     },
     "fields": {
       "descriptionPlaceholder": "p. ej., Del pedido del cliente al cobro",
-      "categories": "Categorías",
+      "type": "Tipo",
+      "parent": "Proceso padre",
       "processOwner": "Responsable del proceso",
       "itOwner": "Responsable IT",
       "notesPlaceholder": "p. ej., Enlace al mapa del proceso",
@@ -976,19 +977,14 @@
       "nameTaken": "Otro proceso de negocio ya tiene este nombre.",
       "lifecycle": "Ciclo de vida"
     },
-    "categoryManager": {
-      "title": "Gestionar categorías de procesos de negocio",
-      "description": "Renombre, active/desactive o elimine categorías. Las categorías en uso no pueden eliminarse. Los cambios solo se guardan al hacer clic en Guardar.",
-      "newCategory": "Nueva categoría",
-      "loadingCategories": "Cargando categorías…",
-      "noCategories": "No se encontraron categorías.",
-      "nameEmpty": "El nombre no puede estar vacío",
-      "deleteConfirm": "¿Eliminar esta categoría? Esta acción no se puede deshacer.",
-      "newCategoryPrompt": "Nombre de la nueva categoría",
-      "failedToLoad": "Error al cargar las categorías",
-      "failedToDelete": "Error al eliminar la categoría",
-      "failedToCreate": "Error al crear la categoría",
-      "failedToUpdate": "Error al actualizar la categoría"
+    "types": {
+      "management": "Estratégico",
+      "core": "Operativo",
+      "support": "Apoyo"
+    },
+    "placeholders": {
+      "topLevel": "Nivel superior",
+      "noProcessFound": "No se encontró ningún proceso"
     },
     "deleteWarning_one": "Esta acción no se puede deshacer. Las solicitudes vinculadas a este proceso se conservan, sin el vínculo.",
     "delete": {

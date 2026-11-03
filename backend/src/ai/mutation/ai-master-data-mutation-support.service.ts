@@ -324,6 +324,23 @@ const ENTITY_CONFIG: Record<AiMasterDataEntityType, EntityConfig> = {
         relationTarget: 'users',
         aliases: ['it_owner', 'it_owner_user'],
       },
+      // ISO 9001: management (pilotage), core (réalisation), support.
+      process_type: {
+        label: 'Type',
+        kind: 'enum',
+        nullable: true,
+        enumValues: ['management', 'core', 'support'],
+        enumCase: 'lower',
+        aliases: ['type'],
+      },
+      // The parent process (name); the service refuses a cycle, as on screen.
+      parent_id: {
+        label: 'Parent process',
+        kind: 'relation',
+        nullable: true,
+        relationTarget: 'business_processes',
+        aliases: ['parent', 'parent_process'],
+      },
       status: { label: 'Status', kind: 'status' },
       disabled_at: { label: 'Disabled At', kind: 'date', nullable: true },
     },

@@ -30,8 +30,6 @@ import { AnalyticsCategoriesService } from '../../../analytics/analytics-categor
 import { AnalyticsCategoriesCsvService } from '../../../analytics/analytics-categories-csv.service';
 import { BusinessProcessesService } from '../../../business-processes/business-processes.service';
 import { BusinessProcess } from '../../../business-processes/business-process.entity';
-import { BusinessProcessCategory } from '../../../business-processes/business-process-category.entity';
-import { BusinessProcessCategoryLink } from '../../../business-processes/business-process-category-link.entity';
 import { CompaniesService } from '../../../companies/companies.service';
 import { CompanyMetricsService } from '../../../companies/company-metrics.service';
 import { Company } from '../../../companies/company.entity';
@@ -179,8 +177,7 @@ async function testMasterDataLists(runner: QueryRunner, tenantId: string, checke
   const analyticsService = new AnalyticsCategoriesService(manager.getRepository(AnalyticsCategory), audit);
   const analytics = new AnalyticsCategoriesCsvService(analyticsService);
   const processes = new BusinessProcessesService(
-    manager.getRepository(BusinessProcess), manager.getRepository(BusinessProcessCategory),
-    manager.getRepository(BusinessProcessCategoryLink), manager.getRepository(User), audit,
+    manager.getRepository(BusinessProcess), manager.getRepository(User), audit,
   );
   const companies = new CompaniesService(undefined as any, audit, new CompanyMetricsService(undefined as any, audit, { assertNotFrozen: async () => undefined } as any));
   const contacts = new ContactsService(undefined as any, undefined as any, undefined as any, undefined as any, audit);

@@ -45,7 +45,7 @@ void runSpecs('duplicate name refusals', [
   ['business processes: create and rename refuse a name in any case', async () => {
     await inRolledBackTransaction(async (runner) => {
       const svc = new BusinessProcessesService(
-        runner.manager.getRepository(BusinessProcess), undefined as any, undefined as any, undefined as any, captureAudit() as any,
+        runner.manager.getRepository(BusinessProcess), undefined as any, captureAudit() as any,
       );
       const tenantId = await seedTenant(runner, 'bp-duplicate');
       await one(runner, `INSERT INTO business_processes (tenant_id, name) VALUES ($1, 'Order to cash') RETURNING id`, [tenantId]);

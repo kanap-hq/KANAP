@@ -415,6 +415,10 @@ function enumerationLabel(field: string, code: string, context: AuditValueContex
   if (field === 'kind' && context.table === 'cost_centers') {
     return screenLabel(context, `auditLogs.values.costCenterKind.${code}`);
   }
+  // A process's ISO 9001 type, as its properties panel names it.
+  if (field === 'process_type' && context.table === 'business_processes') {
+    return screenLabel(context, `master-data:businessProcesses.types.${code}`);
+  }
   if (field === 'kind' && context.table === 'assets') {
     return screenLabel(context, `auditLogs.values.assetKind.${code}`);
   }

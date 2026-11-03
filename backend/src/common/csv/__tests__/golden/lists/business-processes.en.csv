@@ -1,4 +1,5 @@
-﻿name,categories,description,notes,status
-Order to cash,Finance;Sales; ops,"Line; ""quoted""
+﻿name,process_type,parent_name,description,notes,status
+Order to cash,core,Sales; ops,"Line; ""quoted""
 second, line","'=HYPERLINK(""http://x"")",enabled
-Procure to pay,,,,disabled
+Procure to pay,support,,,,disabled
+Sales; ops,core,,,,enabled

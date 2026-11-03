@@ -17,7 +17,6 @@ import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTa
 import { STATUS_DISABLED, STATUS_ENABLED, normalizeStatus, type StatusValue } from '../../constants/status';
 import { getApiErrorMessage, isDuplicateError } from '../../utils/apiErrorMessage';
 import { getDotColor } from '../../utils/statusColors';
-import BusinessProcessCategoryManagerDialog from './BusinessProcessCategoryManagerDialog';
 import BusinessProcessApplicationsSection from './BusinessProcessApplicationsSection';
 import {
   BusinessProcessOverview,
@@ -96,7 +95,6 @@ export default function BusinessProcessWorkspacePage() {
   const [saveError, setSaveError] = React.useState<string | null>(null);
   // A refusal of the name typed in the header (a name another process has).
   const [titleError, setTitleError] = React.useState<string | null>(null);
-  const [categoryManagerOpen, setCategoryManagerOpen] = React.useState(false);
   React.useEffect(() => {
     setSaveError(null);
     setTitleError(null);
@@ -126,16 +124,16 @@ export default function BusinessProcessWorkspacePage() {
     if (body.name !== undefined) setTitleError(null);
     const run = async (): Promise<boolean> => {
       try {
-        const res = await api.patch<Omit<BusinessProcess, 'categories'>>(`/business-processes/${recordId}`, body);
+        const res = await api.patch<BusinessProcess>(`/business-processes/${recordId}`, body);
         queryClient.setQueryData<BusinessProcess>(['business-processes', recordId], (prev) => ({
           ...(prev ?? EMPTY_BUSINESS_PROCESS),
           ...res.data,
-          // The update answers the row alone: the categories are the ones just sent, named by the picker.
-          categories: body.category_ids
-            ? body.category_ids.map((categoryId) => prev?.categories.find((c) => c.id === categoryId) ?? { id: categoryId, name: '', is_active: true })
-            : prev?.categories ?? [],
         }));
-        void queryClient.invalidateQueries({ queryKey: ['business-processes'], predicate: (q) => q.queryKey[1] !== recordId });
+        // The update answers the row alone: a new parent is named by the detail, read again.
+        void queryClient.invalidateQueries({
+          queryKey: ['business-processes'],
+          predicate: (q) => q.queryKey[1] !== recordId || body.parent_id !== undefined,
+        });
         return true;
       } catch (e) {
         if (currentIdRef.current !== recordId) return false;
@@ -183,7 +181,7 @@ export default function BusinessProcessWorkspacePage() {
     setTitleError(null);
     setSaveError(null);
     try {
-      const res = await api.post<Omit<BusinessProcess, 'categories'> & { creation_token: string }>('/business-processes', { name });
+      const res = await api.post<BusinessProcess & { creation_token: string }>('/business-processes', { name });
       const { creation_token: token, ...created } = res.data;
       void queryClient.invalidateQueries({ queryKey: ['business-processes'], refetchType: 'none' });
       if (newCreate.titleSettled()) {
@@ -192,7 +190,7 @@ export default function BusinessProcessWorkspacePage() {
       }
       creation.startCreation({ recordId: created.id, token, returnTo: creationReturn });
       // The page keeps its header while the process loads again.
-      queryClient.setQueryData<BusinessProcess>(['business-processes', created.id], { ...created, categories: [] });
+      queryClient.setQueryData<BusinessProcess>(['business-processes', created.id], { ...EMPTY_BUSINESS_PROCESS, ...created });
       navigate(withContext(`${LIST_PATH}/${created.id}/overview`), { replace: true });
     } catch (err) {
       newCreate.titleSettled();
@@ -266,14 +264,13 @@ export default function BusinessProcessWorkspacePage() {
 
   const properties = isCreate ? (
     <CreationPreview>
-      <BusinessProcessProperties process={EMPTY_BUSINESS_PROCESS} disabled={false} onPatch={ignore} onManageCategories={ignore} />
+      <BusinessProcessProperties process={EMPTY_BUSINESS_PROCESS} disabled={false} onPatch={ignore} />
     </CreationPreview>
   ) : process ? (
     <BusinessProcessProperties
       process={process}
       disabled={disabled}
       onPatch={onPatch}
-      onManageCategories={() => setCategoryManagerOpen(true)}
     />
   ) : undefined;
 
@@ -389,14 +386,6 @@ export default function BusinessProcessWorkspacePage() {
           </WorkspaceTabBoundary>
         )}
       </PortfolioDetailWorkspaceShell>
-      <BusinessProcessCategoryManagerDialog
-        open={categoryManagerOpen}
-        onClose={() => setCategoryManagerOpen(false)}
-        onUpdated={() => {
-          // Category names and states are read again where shown.
-          void queryClient.invalidateQueries({ queryKey: ['business-processes', id] });
-        }}
-      />
     </Box>
   );
 }
