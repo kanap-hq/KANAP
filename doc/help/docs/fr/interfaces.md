@@ -6,18 +6,20 @@ Les Interfaces documentent les flux de données logiques entre vos applications.
 
 Rendez-vous dans **Cartographie SI > Interfaces** pour voir votre registre d'intégration. Cliquez sur **Ajouter une interface** pour créer une nouvelle entrée, ou ouvrez-en une existante pour la modifier.
 
-Pour créer une interface, remplissez le formulaire **Créer l'interface** de l'onglet Vue d'ensemble :
+**Ajouter une interface** ouvre la page de l'interface sur l'onglet **Flux**, où se trouvent ses champs obligatoires :
 
-- **Nom** (obligatoire) : Un nom descriptif pour l'intégration
-- **Code d'interface** : Un code court facultatif, choisi par vous (ex. : `ERP-ORDERS-SYNC`)
-- **Processus métier** : Le processus métier que l'interface soutient
-- **Application source** et **Application cible** (obligatoires)
-- **Catégorie de données** (obligatoire) : Le type de données transférées
-- **Type de route** : Direct ou Via middleware
+- Le titre : un nom descriptif pour l'intégration
+- **Application source** et **Application cible**, dans l'onglet **Flux**
+- **Catégorie de données**, dans le panneau des propriétés : le type de données transférées
 
-Cliquez sur **Créer** dans l'en-tête. KANAP attribue sa référence à l'interface (`INT-4`), et les autres onglets (Flux, Environnements, Mappage des données, Relations, Historique) deviennent disponibles.
+Vous pouvez remplir le titre, les onglets **Vue d'ensemble** et **Flux** et le panneau des propriétés. Rien n'est enregistré avant que vous cliquiez sur **Créer**. **Environnements**, **Mappage des données**, **Relations** et **Historique** s'ouvrent une fois l'interface créée.
 
 **Conseil** : Définissez tôt le **Type de route**. Il contrôle quels legs sont générés automatiquement et ce qui apparaît dans l'onglet Flux et la matrice Environnements.
+
+### Créer ou annuler { #cancelling-a-creation }
+
+- **Créer** vérifie le titre, l'application source, l'application cible et la catégorie de données. Un message nomme ceux qui manquent, et le titre ou le premier champ manquant prend le focus. Quand tout y est, KANAP crée l'interface avec tout ce qu'elle contient et lui attribue sa référence (`INT-4`). Vous revenez à votre point de départ
+- **Annuler**, la flèche de retour ou Échap dans le titre partent sans rien enregistrer. Quand le brouillon contient quelque chose, une confirmation est demandée avant de l'abandonner. Un lien du menu demande la même chose
 
 ---
 
@@ -100,7 +102,7 @@ Les modifications de champs dans le panneau latéral sont enregistrées automati
 
 ### Vue d'ensemble
 
-Une fois l'interface enregistrée, l'onglet Vue d'ensemble contient la **Spécification**, un document texte enrichi managé où vous décrivez l'interface de bout en bout : contexte métier, périmètre, contrat, exemples. C'est le document narratif principal de l'interface.
+L'onglet Vue d'ensemble contient la **Spécification**, un document texte enrichi managé où vous décrivez l'interface de bout en bout : contexte métier, périmètre, contrat, exemples. C'est le document narratif principal de l'interface.
 
 **Conseil** : Utilisez cet onglet comme votre source unique de vérité pour la prose. Les règles de mappage et les legs techniques vivent dans les onglets dédiés ci-dessous ; gardez ce document focalisé sur l'intention, le périmètre et le résumé lisible.
 

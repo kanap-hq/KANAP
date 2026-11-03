@@ -6,18 +6,20 @@ Interfaces document the logical data flows between your applications. Each inter
 
 Navigate to **IT Landscape > Interfaces** to see your integration registry. Click **Add interface** to create a new entry, or open an existing one to edit it.
 
-To create an interface, fill the **Create interface** form on the Overview tab:
+**Add interface** opens the interface page on the **Flow** tab, where its required fields are:
 
-- **Name** (required): A descriptive name for the integration
-- **Interface code**: An optional short code of your own (e.g., `ERP-ORDERS-SYNC`)
-- **Business process**: The business process the interface supports
-- **Source application** and **Target application** (required)
-- **Data category** (required): The type of data being transferred
-- **Route type**: Direct or Via middleware
+- The title: a descriptive name for the integration
+- **Source application** and **Target application**, on the **Flow** tab
+- **Data category**, in the properties panel: the type of data being transferred
 
-Click **Create** in the header. KANAP assigns the interface its reference (`INT-4`), and the other tabs (Flow, Environments, Data mapping, Relations, History) become available.
+You can fill the title, the **Overview** and **Flow** tabs and the properties panel. Nothing is saved until you click **Create**. **Environments**, **Data mapping**, **Relations** and **History** open once the interface is created.
 
 **Tip**: Set the **Route type** early. It controls which legs are generated automatically and what shows up on the Flow tab and the Environments matrix.
+
+### Creating or cancelling { #cancelling-a-creation }
+
+- **Create** checks the title, the source application, the target application and the data category. A message names the missing ones, and the title or the first missing field gets the focus. When everything is there, KANAP creates the interface with all it holds and assigns its reference (`INT-4`). You go back to where you started
+- **Cancel**, the back arrow, or Escape on the title leaves without saving. When the draft holds something, a confirmation asks before it is discarded. A link in the menu asks the same
 
 ---
 
@@ -100,7 +102,7 @@ Field changes in the side panel are saved automatically, so you can update prope
 
 ### Overview
 
-Once the interface is saved, the Overview tab holds the **Specification**, a managed rich-text document where you describe the interface end to end: business context, scope, contract, examples. It is the primary narrative document for the interface.
+The Overview tab holds the **Specification**, a managed rich-text document where you describe the interface end to end: business context, scope, contract, examples. It is the primary narrative document for the interface.
 
 **Tip**: Use this tab as your single source of truth for prose. Mapping rules and technical legs live in the dedicated tabs below; keep this document focused on intent, scope, and the human-readable summary.
 

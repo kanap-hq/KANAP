@@ -4,16 +4,24 @@ Assets document your infrastructure inventory: physical servers, virtual machine
 
 ## Getting started
 
-Navigate to **IT Landscape > Assets** to see your asset inventory. Click **Add asset** to create your first entry.
+Navigate to **IT Landscape > Assets** to see your asset inventory. To create an asset:
+
+1. Click **Add asset**, then **Add asset** or **Add cluster**. The asset page opens with an empty title in the header. The rest of the page is dimmed.
+2. Type the name of the asset, up to 200 characters.
+3. Press Enter, or click outside the title. KANAP creates the asset at once. Its reference (`AST-12`) shows and all tabs open.
+
+The new asset is a virtual machine in the Prod environment, with the lifecycle Active. When your asset types have no virtual machine, it takes the first type of the list. **Add cluster** creates it with the **Cluster** switch on. Each field then saves on its own, so you can change the type or the environment right away.
 
 **Required fields**:
 - **Name**: The asset name or hostname, up to 200 characters
-- **Asset type**: Web server, Virtual machine, Physical server, Container, etc. (configurable in **IT Landscape > Settings**). No type is preselected: **Create** stays unavailable until you choose one
-- **Location**: Where the asset is hosted (determines provider, hosting type, and country)
+- **Asset type**: Web server, Virtual machine, Physical server, Container, etc. (configurable in **IT Landscape > Settings**)
+- **Location**: Where the asset is hosted (determines provider, hosting type, and country). **Create** asks for it
 
 **Strongly recommended**:
 - **Lifecycle**: Current status (Active, Deprecated, Retired, etc.)
 - **Environment**: Which environment this asset belongs to (Prod, Pre-prod, QA, Test, Dev, Sandbox)
+
+Press Escape on the empty title to leave without creating anything. A refused name shows under the title.
 
 **Unique names**: two assets cannot share a name or an FQDN. Letter case and spaces at either end do not count. KANAP refuses the duplicate and names the asset that already has it (`AST-12`). Duplicates recorded earlier stay editable as long as you leave that value unchanged.
 
@@ -23,6 +31,15 @@ Navigate to **IT Landscape > Assets** to see your asset inventory. Click **Add a
 - View: `infrastructure:reader`
 - Create / edit: `infrastructure:member`
 - Import / Export / Delete: `infrastructure:admin`
+
+### Creating or cancelling { #cancelling-a-creation }
+
+While the asset is being created, its header shows **Create** and **Cancel** in place of the close button. They stay until you leave the asset.
+
+- **Create** checks that the asset has a location. Without one, a message names the missing location and the **Location** field of the properties drawer gets the focus. The asset stays open. With a location, KANAP keeps the asset and closes it. You go back to where you started
+- **Cancel** deletes the asset. If you entered more than the name, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete assets
+
+Leaving the asset another way (the back arrow, the menu, another asset) while it has no location asks what to do. **Complete it** keeps you on the asset, on the **Location** field. **Delete it** deletes the asset.
 
 ---
 
@@ -144,7 +161,7 @@ Click any row to open the workspace. The workspace has a **header** with quick m
 
 An address that names no asset opens an **Asset not found** page, with a link back to the list.
 
-The tabs are **Overview**, **Operations**, **Network**, **Hardware** (physical asset types only), **Dependencies**, **Relations** and **History** (the changes made to the asset, see [Record history](record-history.md)). When you create an asset, **Overview** and **Network** are open. The other tabs open once you click **Create**.
+The tabs are **Overview**, **Operations**, **Network**, **Hardware** (physical asset types only), **Dependencies**, **Relations** and **History** (the changes made to the asset, see [Record history](record-history.md)). A new asset shows only its title. All tabs open once the title creates the asset.
 
 ### Header
 
@@ -168,7 +185,7 @@ The drawer shows the asset's identity card on every tab. Edits save automaticall
 - **Administration zone**: The zone of your administration model the asset belongs to, for example Tier 0 for a domain controller and the hypervisor that runs it. Choose from the zones configured in **IT Landscape > Settings**, or **No zone**. The asset then appears in that zone on the [Administration zones](administration-view.md) page
 
 **Location**:
-- **Location** (required): every asset has one, whether it comes from the screen, an import or the assistant. When the location does not exist yet, type its name and choose **+ Create location "…"**: give its hosting type, and the new location goes into the field. This needs `locations:member`
+- **Location** (required): **Create** asks for it on a new asset. An asset created by an import or the assistant needs it at once. When the location does not exist yet, type its name and choose **+ Create location "…"**: give its hosting type, and the new location goes into the field. This needs `locations:member`
 - **Sub-location** (when the location has sub-locations defined)
 - **Hosting type**, **Operating company** or **Cloud provider**, **Country**, **City**: read-only, derived from the location. They follow when you change the location
 
@@ -184,8 +201,6 @@ The drawer shows the asset's identity card on every tab. Edits save automaticall
 The Overview tab is the asset's home page.
 
 **Netbox**: on an asset linked to Netbox, a line at the top shows when it was last synchronised, with **Open in Netbox**. It also says when the object is no longer in Netbox, when its Netbox status needs attention, and when the asset is **Managed by Netbox**. See [Netbox synchronisation](netbox.md).
-
-**Basics** (when you create an asset): **Name**, **Asset type**, **Location** and **Environment**.
 
 **Description**: A rich-text description of the asset. Autosaves as you edit.
 
@@ -274,12 +289,12 @@ What only comes from the host the asset or its members run in, such as the ESXi 
 
 ### Network { #network }
 
-The Network tab holds the asset's network identity, its IP addresses and its connections. It is open when you create an asset. If the host name is malformed when you click **Create**, the tab opens on the error.
+The Network tab holds the asset's network identity, its IP addresses and its connections.
 
 On an asset managed by Netbox, a line at the top says that Netbox fills in the fields it provides and that the others are yours to complete.
 
 **Identity**:
-- **Hostname**: The asset's network hostname. Automatically pre-filled from the asset name on creation; you can override it at any time. Required when a domain is selected. It accepts letters, digits, hyphens and dots, with each part between dots limited to 63 characters, so a name such as `DL3.ROBOT-15MS.IE2000` is valid as it stands.
+- **Hostname**: The asset's network hostname. Derived from the title when the asset is created. You can change it at any time. Required when a domain is selected. It accepts letters, digits, hyphens and dots, with each part between dots limited to 63 characters, so a name such as `DL3.ROBOT-15MS.IE2000` is valid as it stands.
 - **Domain**: The Active Directory or DNS domain the asset belongs to. Choose from domains configured in **IT Landscape > Settings**. System options include "Workgroup" (standalone) and "N/A" (not applicable).
 - **FQDN**: Fully Qualified Domain Name, automatically computed from hostname and domain DNS suffix. Read-only.
 - **Aliases**: Additional DNS names or aliases for this asset. Type and press Enter to add.

@@ -6,18 +6,20 @@ Las interfaces documentan los flujos lógicos de datos entre sus aplicaciones. C
 
 Navegue a **Panorama IT > Interfaces** para ver su registro de integraciones. Haga clic en **Añadir interfaz** para crear una nueva entrada, o abra una existente para editarla.
 
-Para crear una interfaz, rellene el formulario **Crear interfaz** de la pestaña Vista general:
+**Añadir interfaz** abre la página de la interfaz en la pestaña **Flujo**, donde están sus campos obligatorios:
 
-- **Nombre** (obligatorio): Un nombre descriptivo para la integración
-- **Código de interfaz**: Un código corto propio y opcional (p. ej., `ERP-ORDERS-SYNC`)
-- **Proceso de negocio**: El proceso de negocio que la interfaz respalda
-- **Aplicación de origen** y **Aplicación de destino** (obligatorias)
-- **Categoría de datos** (obligatoria): El tipo de datos transferidos
-- **Tipo de ruta**: Directo o Vía middleware
+- El título: un nombre descriptivo para la integración
+- **Aplicación de origen** y **Aplicación de destino**, en la pestaña **Flujo**
+- **Categoría de datos**, en el panel de propiedades: el tipo de datos transferidos
 
-Haga clic en **Crear** en la cabecera. KANAP asigna a la interfaz su referencia (`INT-4`), y las demás pestañas (Flujo, Entornos, Mapeo de datos, Relaciones, Historial) quedan disponibles.
+Puede rellenar el título, las pestañas **Vista general** y **Flujo** y el panel de propiedades. No se guarda nada hasta que haga clic en **Crear**. **Entornos**, **Mapeo de datos**, **Relaciones** e **Historial** se abren una vez creada la interfaz.
 
 **Consejo**: Defina pronto el **Tipo de ruta**. Controla qué tramos se generan automáticamente y qué aparece en la pestaña Flujo y en la matriz de Entornos.
+
+### Crear o cancelar { #cancelling-a-creation }
+
+- **Crear** comprueba el título, la aplicación de origen, la aplicación de destino y la categoría de datos. Un mensaje indica los que faltan, y el título o el primer campo que falta recibe el foco. Cuando está todo, KANAP crea la interfaz con todo lo que contiene y le asigna su referencia (`INT-4`). Vuelve al punto de partida
+- **Cancelar**, la flecha de retroceso o Escape en el título salen sin guardar. Cuando el borrador contiene algo, una confirmación pregunta antes de descartarlo. Un enlace del menú pregunta lo mismo
 
 ---
 
@@ -100,7 +102,7 @@ Los cambios en los campos del panel lateral se guardan automáticamente, de modo
 
 ### Vista general
 
-Una vez guardada la interfaz, la pestaña Vista general contiene la **Especificación**, un documento de texto enriquecido gestionado donde describe la interfaz de principio a fin: contexto de negocio, alcance, contrato, ejemplos. Es el documento narrativo principal de la interfaz.
+La pestaña Vista general contiene la **Especificación**, un documento de texto enriquecido gestionado donde describe la interfaz de principio a fin: contexto de negocio, alcance, contrato, ejemplos. Es el documento narrativo principal de la interfaz.
 
 **Consejo**: Use esta pestaña como su única fuente de verdad para la prosa. Las reglas de mapeo y los tramos técnicos viven en las pestañas dedicadas a continuación; mantenga este documento centrado en la intención, el alcance y el resumen legible para humanos.
 

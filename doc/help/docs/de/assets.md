@@ -4,16 +4,24 @@ Assets dokumentieren Ihr Infrastrukturinventar: physische Server, virtuelle Masc
 
 ## Erste Schritte
 
-Navigieren Sie zu **IT-Landschaft > Assets**, um Ihr Asset-Inventar zu sehen. Klicken Sie auf **Asset hinzufügen**, um Ihren ersten Eintrag zu erstellen.
+Navigieren Sie zu **IT-Landschaft > Assets**, um Ihr Asset-Inventar zu sehen. So erstellen Sie ein Asset:
+
+1. Klicken Sie auf **Asset hinzufügen**, dann auf **Asset hinzufügen** oder **Cluster hinzufügen**. Die Seite des Assets öffnet sich mit einem leeren Titel in der Kopfzeile. Der Rest der Seite ist abgeblendet.
+2. Geben Sie den Namen des Assets ein, höchstens 200 Zeichen.
+3. Drücken Sie die Eingabetaste oder klicken Sie außerhalb des Titels. KANAP erstellt das Asset sofort. Seine Referenz (`AST-12`) erscheint und alle Reiter öffnen sich.
+
+Das neue Asset ist eine virtuelle Maschine in der Umgebung Prod, mit dem Lebenszyklus Aktiv. Haben Ihre Asset-Typen keine virtuelle Maschine, erhält es den ersten Typ der Liste. **Cluster hinzufügen** erstellt es mit eingeschaltetem Schalter **Cluster**. Danach speichert jedes Feld für sich, sodass Sie Typ oder Umgebung sofort ändern können.
 
 **Pflichtfelder**:
 - **Name**: Der Asset-Name oder Hostname, höchstens 200 Zeichen
-- **Asset-Typ**: Webserver, virtuelle Maschine, physischer Server, Container usw. (konfigurierbar in **IT-Landschaft > Einstellungen**). Kein Typ ist vorausgewählt: **Erstellen** bleibt nicht verfügbar, bis Sie einen wählen
-- **Standort**: Wo das Asset gehostet wird (bestimmt Anbieter, Hosting-Typ und Land)
+- **Asset-Typ**: Webserver, virtuelle Maschine, physischer Server, Container usw. (konfigurierbar in **IT-Landschaft > Einstellungen**)
+- **Standort**: Wo das Asset gehostet wird (bestimmt Anbieter, Hosting-Typ und Land). **Erstellen** verlangt ihn
 
 **Dringend empfohlen**:
 - **Lebenszyklus**: Aktueller Status (Aktiv, Veraltet, Außer Betrieb usw.)
 - **Umgebung**: Zu welcher Umgebung dieses Asset gehört (Prod, Pre-prod, QA, Test, Dev, Sandbox)
+
+Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erstellen. Ein abgelehnter Name erscheint unter dem Titel.
 
 **Eindeutige Namen**: Zwei Assets können weder denselben Namen noch denselben FQDN haben. Groß- und Kleinschreibung sowie Leerzeichen am Anfang oder Ende zählen nicht. KANAP lehnt das Duplikat ab und nennt das Asset, das den Wert bereits hat (`AST-12`). Früher erfasste Duplikate bleiben bearbeitbar, solange Sie diesen Wert nicht ändern.
 
@@ -23,6 +31,15 @@ Navigieren Sie zu **IT-Landschaft > Assets**, um Ihr Asset-Inventar zu sehen. Kl
 - Anzeigen: `infrastructure:reader`
 - Erstellen / Bearbeiten: `infrastructure:member`
 - Importieren / Exportieren / Löschen: `infrastructure:admin`
+
+### Erstellen oder abbrechen { #cancelling-a-creation }
+
+Solange das Asset erstellt wird, zeigt seine Kopfzeile **Erstellen** und **Abbrechen** anstelle der Schaltfläche zum Schließen. Beide bleiben, bis Sie das Asset verlassen.
+
+- **Erstellen** prüft, ob das Asset einen Standort hat. Ohne Standort nennt eine Meldung den fehlenden Standort, und das Feld **Standort** der Eigenschaftsleiste erhält den Fokus. Das Asset bleibt geöffnet. Mit Standort behält KANAP das Asset und schließt es. Sie kehren dorthin zurück, wo Sie begonnen haben
+- **Abbrechen** löscht das Asset. Wenn Sie mehr als den Namen eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Assets abbrechen
+
+Verlassen Sie das Asset auf andere Weise (Zurück-Pfeil, Menü, ein anderes Asset), solange es keinen Standort hat, fragt KANAP nach. **Vervollständigen** lässt Sie auf dem Asset, im Feld **Standort**. **Löschen** löscht das Asset.
 
 ---
 
@@ -144,7 +161,7 @@ Klicken Sie auf eine Zeile, um den Arbeitsbereich zu öffnen. Der Arbeitsbereich
 
 Eine Adresse, die kein Asset bezeichnet, öffnet eine Seite **Asset nicht gefunden** mit einem Link zurück zur Liste.
 
-Die Reiter sind **Übersicht**, **Betrieb**, **Netzwerk**, **Hardware** (nur physische Asset-Typen), **Abhängigkeiten**, **Beziehungen** und **Verlauf** (die Änderungen am Asset, siehe [Verlauf der Datensätze](record-history.md)). Wenn Sie ein Asset erstellen, sind **Übersicht** und **Netzwerk** geöffnet. Die anderen Reiter öffnen sich, sobald Sie auf **Erstellen** klicken.
+Die Reiter sind **Übersicht**, **Betrieb**, **Netzwerk**, **Hardware** (nur physische Asset-Typen), **Abhängigkeiten**, **Beziehungen** und **Verlauf** (die Änderungen am Asset, siehe [Verlauf der Datensätze](record-history.md)). Ein neues Asset zeigt nur seinen Titel. Alle Reiter öffnen sich, sobald der Titel das Asset erstellt.
 
 ### Kopfzeile
 
@@ -168,7 +185,7 @@ Die Leiste zeigt die Identitätskarte des Assets in jedem Reiter. Bearbeitungen 
 - **Administrationszone**: Die Zone Ihres Administrationsmodells, zu der das Asset gehört, zum Beispiel Tier 0 für einen Domänencontroller und den Hypervisor, auf dem er läuft. Wählen Sie aus den in **IT-Landschaft > Einstellungen** konfigurierten Zonen oder **Keine Zone**. Das Asset erscheint dann in dieser Zone auf der Seite [Administrationszonen](administration-view.md)
 
 **Standort**:
-- **Standort** (erforderlich): Jedes Asset hat einen, ob es über den Bildschirm, einen Import oder den Assistenten angelegt wird. Gibt es den Standort noch nicht, geben Sie seinen Namen ein und wählen Sie **+ Standort „…“ anlegen**: Geben Sie die Hosting-Art an, und der neue Standort wird ins Feld übernommen. Dafür ist `locations:member` nötig
+- **Standort** (erforderlich): **Erstellen** verlangt ihn bei einem neuen Asset. Ein Asset, das ein Import oder der Assistent anlegt, braucht ihn sofort. Gibt es den Standort noch nicht, geben Sie seinen Namen ein und wählen Sie **+ Standort „…“ anlegen**: Geben Sie die Hosting-Art an, und der neue Standort wird ins Feld übernommen. Dafür ist `locations:member` nötig
 - **Unterstandort** (wenn der Standort definierte Unterstandorte hat)
 - **Hosting-Typ**, **Betreiberunternehmen** oder **Cloud-Anbieter**, **Land**, **Stadt**: schreibgeschützt, vom Standort abgeleitet. Sie folgen, wenn Sie den Standort ändern
 
@@ -184,8 +201,6 @@ Die Leiste zeigt die Identitätskarte des Assets in jedem Reiter. Bearbeitungen 
 Der Reiter Übersicht ist die Startseite des Assets.
 
 **Netbox**: Bei einem mit Netbox verknüpften Asset zeigt eine Zeile oben, wann es zuletzt synchronisiert wurde, mit **In Netbox öffnen**. Sie meldet auch, wenn das Objekt nicht mehr in Netbox ist, wenn sein Netbox-Status Aufmerksamkeit verlangt und wenn das Asset den Vermerk **Wird von Netbox verwaltet** trägt. Siehe [Netbox-Synchronisierung](netbox.md).
-
-**Grunddaten** (wenn Sie ein Asset erstellen): **Name**, **Asset-Typ**, **Standort** und **Umgebung**.
 
 **Beschreibung**: Eine Rich-Text-Beschreibung des Assets. Speichert automatisch beim Bearbeiten.
 
@@ -274,12 +289,12 @@ Was nur vom Host kommt, in dem das Asset oder seine Mitglieder laufen, etwa das 
 
 ### Netzwerk { #network }
 
-Der Reiter Netzwerk enthält die Netzwerkidentität des Assets, seine IP-Adressen und seine Verbindungen. Er ist geöffnet, wenn Sie ein Asset erstellen. Ist der Hostname beim Klick auf **Erstellen** fehlerhaft, öffnet sich der Reiter auf dem Fehler.
+Der Reiter Netzwerk enthält die Netzwerkidentität des Assets, seine IP-Adressen und seine Verbindungen.
 
 Bei einem von Netbox verwalteten Asset sagt eine Zeile oben, dass Netbox die Felder füllt, die es liefert, und dass Sie die übrigen selbst ausfüllen.
 
 **Identität**:
-- **Hostname**: Der Netzwerk-Hostname des Assets. Wird bei der Erstellung automatisch aus dem Asset-Namen vorausgefüllt; Sie können ihn jederzeit überschreiben. Erforderlich, wenn eine Domäne ausgewählt ist. Erlaubt sind Buchstaben, Ziffern, Bindestriche und Punkte, wobei jeder Teil zwischen zwei Punkten höchstens 63 Zeichen lang ist. Ein Name wie `DL3.ROBOT-15MS.IE2000` ist also so gültig.
+- **Hostname**: Der Netzwerk-Hostname des Assets. Wird beim Erstellen des Assets aus dem Titel abgeleitet. Sie können ihn jederzeit ändern. Erforderlich, wenn eine Domäne ausgewählt ist. Erlaubt sind Buchstaben, Ziffern, Bindestriche und Punkte, wobei jeder Teil zwischen zwei Punkten höchstens 63 Zeichen lang ist. Ein Name wie `DL3.ROBOT-15MS.IE2000` ist also so gültig.
 - **Domäne**: Die Active Directory- oder DNS-Domäne, zu der das Asset gehört. Wählen Sie aus den in **IT-Landschaft > Einstellungen** konfigurierten Domänen. Systemoptionen umfassen „Workgroup“ (eigenständig) und „N/A“ (nicht zutreffend).
 - **FQDN**: Fully Qualified Domain Name, automatisch aus Hostname und DNS-Suffix der Domäne berechnet. Schreibgeschützt.
 - **Aliase**: Zusätzliche DNS-Namen oder Aliase für dieses Asset. Tippen und Enter drücken zum Hinzufügen.

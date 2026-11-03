@@ -4,17 +4,29 @@ Connections document the infrastructure-level network paths between servers and 
 
 ## Getting started
 
-Navigate to **IT Landscape > Connections** to see your connection registry. Click **Add connection** to create your first entry.
+Navigate to **IT Landscape > Connections** to see your connection registry. To create a connection:
 
-**Required fields**:
-  - **Name**: A descriptive name
+1. Click **Add connection**. The connection page opens with an empty title in the header. The rest of the page is dimmed.
+2. Type a descriptive name.
+3. Press Enter, or click outside the title. KANAP creates the connection at once, server to server, without protocols or endpoints. Its reference (`CONN-12`) shows and all tabs open.
+
+Each field then saves on its own. A connection needs:
   - **Topology**: Server to server or Multi-server
-  - **Endpoints**: A source and a destination (Server to server), or at least two servers (Multi-server)
+  - **Endpoints**: A source and a destination for Server to server (each a server, a cluster or an entity), or at least two servers for Multi-server
   - **Protocols**: At least one network protocol
 
-KANAP gives each connection a reference, such as `CONN-12`.
+Press Escape on the empty title to leave without creating anything.
 
 **Tip**: Connections can be linked to interface bindings to show which infrastructure supports each application integration.
+
+### Creating or cancelling { #cancelling-a-creation }
+
+While the connection is being created, its header shows **Create** and **Cancel**. They stay until you leave the connection.
+
+- **Create** checks that the connection has at least one protocol and both endpoints, or two servers for a multi-server connection. A message names what is missing, and the first missing field gets the focus. When nothing is missing, KANAP keeps the connection and closes it. You go back to where you started
+- **Cancel** deletes the connection. If you entered more than the name, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete connections
+
+Leaving the connection another way while something is missing asks what to do. **Complete it** keeps you on the connection, on the first missing field. **Delete it** deletes the connection.
 
 ---
 
@@ -97,7 +109,7 @@ Click any row to open the workspace. It has three tabs: **Overview**, **Path** a
 
 ### Path
 
-The Path tab documents the network path of the connection, hop by hop: reverse proxies, firewalls, load balancers. Create the connection first to add hops.
+The Path tab documents the network path of the connection, hop by hop: reverse proxies, firewalls, load balancers.
 
 Each hop has:
 
