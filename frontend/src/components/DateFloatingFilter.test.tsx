@@ -74,13 +74,12 @@ describe('DateFloatingFilter', () => {
     expect(api.setFilterModel).toHaveBeenCalledWith({ has_fte: { filterType: 'set', values: ['yes'] } });
     expect(screen.queryByRole('button', { name: 'Clear filter' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Filter End of validity' })).toHaveTextContent('');
-    expect(screen.getByTestId('FilterListIcon')).toBeInTheDocument();
   });
 
-  it('without a filter: the filter icon, no clear button', () => {
+  it('without a filter: an empty box, no icon of its own (the grid draws the filter button), no clear button', () => {
     setup({});
     expect(screen.getByRole('button', { name: 'Filter End of validity' })).toHaveTextContent('');
-    expect(screen.getByTestId('FilterListIcon')).toBeInTheDocument();
+    expect(screen.queryByTestId('FilterListIcon')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Clear filter' })).toBeNull();
   });
 });
