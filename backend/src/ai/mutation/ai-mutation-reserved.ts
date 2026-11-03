@@ -8,8 +8,8 @@ import { isReservedDimensionValueWrite } from '../../data-access/reserved-operat
  *   charts of accounts, business processes): create and update;
  * - dimension values (analytics categories): create and update, as on the dimension page
  *   (`isReservedDimensionValueWrite` without a dimension: open values come from a line only);
- * - suppliers and shared contacts: update, and a supplier's contacts; creating one stays allowed.
- * - deleting a contact: its delete routes are reserved too.
+ * - deleting a contact: its delete routes are reserved too (suppliers and contacts are otherwise
+ *   common data, created and edited as the role allows).
  * - deleting a budget line: `DELETE /budget-lines/bulk` and `POST /budget-lines/delete-check`
  *   carry `@ReservedToUnscopedDataAccess`, for both natures of the one family.
  * Lines, contracts, tasks, documents, locations, connections, interfaces and the other records
@@ -17,7 +17,6 @@ import { isReservedDimensionValueWrite } from '../../data-access/reserved-operat
  */
 
 const ORGANISATION = new Set(['companies', 'departments', 'accounts', 'chart_of_accounts', 'business_processes']);
-const SHARED_RECORDS = new Set(['suppliers', 'contacts']);
 const RESERVED_DELETES = new Set(['contacts', 'budget_lines']);
 
 /** Whether this write tool on this entity type is reserved to unscoped persons. */
@@ -27,12 +26,7 @@ export function isReservedAiMutation(toolName: string, entityType: unknown): boo
     case 'create_master_data_record':
       return ORGANISATION.has(type) || (type === 'analytics_categories' && isReservedDimensionValueWrite());
     case 'update_master_data_record':
-      return ORGANISATION.has(type)
-        || SHARED_RECORDS.has(type)
-        || (type === 'analytics_categories' && isReservedDimensionValueWrite());
-    case 'update_entity_relations':
-      // The contacts of a supplier (as `suppliers/:id/contacts`).
-      return type === 'suppliers';
+      return ORGANISATION.has(type) || (type === 'analytics_categories' && isReservedDimensionValueWrite());
     case 'delete_record':
       // The contact and budget line delete routes, reserved as their screens are.
       return RESERVED_DELETES.has(type);

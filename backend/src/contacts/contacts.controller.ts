@@ -83,7 +83,6 @@ export class ContactsController {
     return cancelCreation('contacts', id, body?.token, ctx, () => this.svc.delete(id, { manager: ctx.manager, tenantId: ctx.tenantId, userId: ctx.userId || null }));
   }
 
-  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('contacts', 'member')
   @Patch(':id')

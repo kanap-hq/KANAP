@@ -277,7 +277,7 @@ const RESERVED_SAMPLES: Array<[string, Method, string, boolean]> = [
   ['dimensions', 'POST', 'analytics-axes', false],
   ['closed-list dimension values', 'POST', 'analytics-categories', false],
   ['business processes', 'DELETE', `business-processes/${ID}`, false],
-  ['supplier update', 'PATCH', `suppliers/${ID}`, false],
+  ['supplier delete', 'DELETE', `suppliers/${ID}`, false],
   ['contact delete', 'DELETE', `contacts/${ID}`, false],
   ['agent screens', 'GET', 'ai/admin/control-plane/agents', true],
   ['AI settings', 'GET', 'ai/settings', true],
@@ -290,6 +290,9 @@ const RESERVED_SAMPLES: Array<[string, Method, string, boolean]> = [
 const ALLOWED_SAMPLES: Array<[string, Method, string]> = [
   ['companies list', 'GET', 'companies'],
   ['supplier creation', 'POST', 'suppliers'],
+  ['supplier update', 'PATCH', `suppliers/${ID}`],
+  ['contact update', 'PATCH', `contacts/${ID}`],
+  ['supplier contact link', 'POST', `suppliers/${ID}/contacts`],
   ['line update', 'PATCH', `spend-items/${ID}`],
   ['own MCP keys', 'GET', 'ai/keys'],
 ];

@@ -217,7 +217,7 @@ Even when their roles allow it, a limited person cannot:
 - delete a line or a contract;
 - manage people: users, roles, data access, the audit log;
 - edit organisation data: companies, departments, cost centers, accounts and charts of accounts, business processes, the dimensions themselves and the values of dimensions without open values;
-- edit or delete a supplier or a shared contact (they can create one, as their role allows);
+- delete a supplier or a shared contact (they create and edit them as their role allows);
 - import suppliers, contacts, contracts or tasks;
 - use the AI agents screens;
 - change the contract settings, the branding and the scheduled tasks.

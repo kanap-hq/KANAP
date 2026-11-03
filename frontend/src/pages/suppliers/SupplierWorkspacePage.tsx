@@ -84,9 +84,10 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const { hasLevel } = useAuth();
-  // Changing or deleting a shared supplier is reserved to people with access to all data (spec §2.7).
+  // A supplier is common to every data scope: editing it follows the role; deleting one is reserved to
+  // people with access to all data.
   const dataAccessLimited = useDataAccessLimited();
-  const canEdit = hasLevel('suppliers', 'manager') && !dataAccessLimited;
+  const canEdit = hasLevel('suppliers', 'manager');
   const canDelete = hasLevel('suppliers', 'admin') && !dataAccessLimited;
   const withContext = useListContext();
   const isCreate = id === 'new';

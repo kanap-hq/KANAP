@@ -12,7 +12,7 @@
  * copy, bulk delete); delete of a line or a contract;
  * persons (users, roles, audit log); organisation data (companies, departments, cost centres,
  * accounts and charts of accounts, business processes, dimensions and the values of closed-list
- * dimensions); updates and deletes of suppliers and shared contacts; the supplier, contact,
+ * dimensions); deletes of suppliers and shared contacts; the supplier, contact,
  * contract and generic task CSV imports (they update existing records by a non-unique key); agent
  * screens; the AI
  * administration sites classified `reserved` in `data-access-paths.inventory.ts`. A delete check
@@ -45,6 +45,7 @@ const SHARE = 'sends a link to a visible record (notifications, lot 4)';
 const TASK_WRITE = 'a write on one task or its elements: the task policies apply, and the pre-checks of lot 3 (tasks/task-data-access.ts)';
 const TASK_DELETE = 'task delete: allowed to who may modify the task\'s line or contract (assertTaskDeletable)';
 const CREATE_SHARED = 'creating a supplier or a contact stays allowed (spec §2.7)';
+const EDIT_SHARED = 'suppliers and contacts are data common to every scope: editing them follows the role (2026-11-03, amends spec §2.7)';
 const CREATION_CANCEL = 'cancel of a record being created, by its creator with its creation token (that record only), while nobody else wrote on it: it removes only what that person just created';
 const CREATION_CHANGES = 'the preflight of the cancel of a record being created (read), with its creation token';
 const OWN_PROFILE = 'the person\'s own profile';
@@ -283,24 +284,27 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
   {
     file: 'suppliers/suppliers.controller.ts',
     controller: 'SuppliersController',
-    reserved: ['attachContact', 'bulkDelete', 'delete', 'deleteCheck', 'detachContact', 'import', 'update'],
+    reserved: ['bulkDelete', 'delete', 'deleteCheck', 'import'],
     allowed: {
+      attachContact: EDIT_SHARED, // POST :id/contacts
       cancelCreation: CREATION_CANCEL, // DELETE :id/creation
       create: CREATE_SHARED, // POST (root)
       creationChanges: CREATION_CHANGES, // GET :id/creation
+      detachContact: EDIT_SHARED, // DELETE :id/contacts/:linkId
       export: EXPORT, // GET export
       get: READ, // GET :id
       list: READ, // GET (root)
       listContacts: READ, // GET :id/contacts
       listIds: READ, // GET ids
       lookup: LOOKUP, // GET lookup
+      update: EDIT_SHARED, // PATCH :id
       usages: READ, // GET :id/usages
     },
   },
   {
     file: 'contacts/contacts.controller.ts',
     controller: 'ContactsController',
-    reserved: ['bulkDelete', 'import', 'remove', 'update'],
+    reserved: ['bulkDelete', 'import', 'remove'],
     allowed: {
       cancelCreation: CREATION_CANCEL, // DELETE :id/creation
       create: CREATE_SHARED, // POST (root)
@@ -308,6 +312,7 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
       export: EXPORT, // GET export
       get: READ, // GET :id
       list: READ, // GET (root)
+      update: EDIT_SHARED, // PATCH :id
       usages: READ, // GET :id/usages
     },
   },

@@ -87,9 +87,10 @@ function ContactEditor({ id }: { id: string }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { hasLevel } = useAuth();
-  // Changing or deleting a shared contact is reserved to people with access to all data (spec §2.7).
+  // A contact is common to every data scope: editing it follows the role; deleting one is reserved to
+  // people with access to all data.
   const dataAccessLimited = useDataAccessLimited();
-  const canEdit = hasLevel('contacts', 'manager') && !dataAccessLimited;
+  const canEdit = hasLevel('contacts', 'manager');
   const canDelete = hasLevel('contacts', 'admin') && !dataAccessLimited;
   const withContext = useListContext();
   const roleOptions = useContactRoleOptions();

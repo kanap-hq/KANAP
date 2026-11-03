@@ -217,7 +217,7 @@ Auch wenn ihre Rollen es erlauben, kann eine begrenzte Person nicht:
 - eine Zeile oder einen Vertrag löschen;
 - Personen verwalten: Benutzer, Rollen, Datenzugriff, Audit-Protokoll;
 - Organisationsdaten bearbeiten: Unternehmen, Abteilungen, Kostenstellen, Konten und Kontenpläne, Geschäftsprozesse, die Dimensionen selbst und die Werte von Dimensionen ohne offene Werte;
-- einen Lieferanten oder einen gemeinsamen Kontakt bearbeiten oder löschen (sie kann welche anlegen, wie ihre Rolle es erlaubt);
+- einen Lieferanten oder einen gemeinsamen Kontakt löschen (sie legt welche an und bearbeitet sie, wie ihre Rolle es erlaubt);
 - Lieferanten, Kontakte, Verträge oder Aufgaben importieren;
 - die Bildschirme der KI-Agenten verwenden;
 - die Vertragseinstellungen, das Branding und die geplanten Aufgaben ändern.
