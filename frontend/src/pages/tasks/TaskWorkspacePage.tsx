@@ -1343,8 +1343,10 @@ export default function TaskWorkspacePage() {
       }
       creation.startCreation({ recordId: created.id, token, returnTo: creationReturn });
       const reference = created.item_number ? formatItemRef('task', created.item_number) : created.id;
-      // The page keeps its header while the full task loads; the linked records come with it.
-      queryClient.setQueryData(['tasks', reference], {
+      // The create answers with the row alone (no names of its linked records): the page opens on
+      // the task as read, or on that row with what the new page knew if the read fails.
+      const full = await api.get<TaskData>(`/tasks/${created.id}`).then((r) => r.data).catch(() => null);
+      queryClient.setQueryData(['tasks', reference], full || {
         ...created,
         application_ids: null,
         asset_ids: null,
