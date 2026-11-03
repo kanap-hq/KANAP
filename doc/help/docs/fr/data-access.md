@@ -217,7 +217,7 @@ Même si ses rôles le permettent, une personne limitée ne peut pas :
 - supprimer une ligne ou un contrat ;
 - gérer les personnes : utilisateurs, rôles, accès aux données, journal d'audit ;
 - modifier les données d'organisation : sociétés, départements, centres de coûts, comptes et plans de comptes, processus métier, les dimensions elles-mêmes et les valeurs des dimensions sans valeurs ouvertes ;
-- modifier ou supprimer un fournisseur ou un contact partagé (elle peut en créer, selon son rôle) ;
+- supprimer un fournisseur ou un contact partagé (elle en crée et en modifie selon son rôle) ;
 - importer des fournisseurs, des contacts, des contrats ou des tâches ;
 - utiliser les écrans des agents IA ;
 - modifier les réglages des contrats, la personnalisation et les tâches planifiées.

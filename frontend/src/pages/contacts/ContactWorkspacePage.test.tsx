@@ -9,7 +9,7 @@ import { createAppTheme } from '../../config/ThemeContext';
 import { KanapDialogProvider } from '../../components/design';
 
 const navigateMock = vi.hoisted(() => vi.fn());
-const auth = vi.hoisted(() => ({ canEdit: true, canAdmin: true }));
+const auth = vi.hoisted(() => ({ canEdit: true, canAdmin: true, limited: false }));
 // A stable `t`: a new one on each render would loop the effects.
 const t = vi.hoisted(() => (key: string, options?: Record<string, unknown>) => (
   options?.field ? `${key}:${String(options.field)}` : key
@@ -24,7 +24,11 @@ vi.mock('react-router-dom', async (importOriginal) => ({
   useNavigate: () => navigateMock,
 }));
 vi.mock('../../auth/AuthContext', () => ({
-  useAuth: () => ({ hasLevel: (_resource: string, level: string) => auth.canEdit && (level !== 'admin' || auth.canAdmin), profile: { id: 'user-1' } }),
+  useAuth: () => ({
+    hasLevel: (_resource: string, level: string) => auth.canEdit && (level !== 'admin' || auth.canAdmin),
+    profile: { id: 'user-1' },
+    dataAccess: auth.limited ? { available: true, mode: 'limited', nodes: [], modules: ['budget'] } : null,
+  }),
 }));
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
 // The shared history: the header button must hand it the contact's table and identifier.
@@ -325,6 +329,17 @@ describe('ContactWorkspacePage', () => {
     renderAt('/master-data/contacts/c-1/overview');
     expect(await screen.findByText('contacts.metadata.typeMissing')).toBeInTheDocument();
     expect(screen.getByText('contacts.messages.typeRequired')).toBeInTheDocument();
+  });
+
+  it('lets an admin whose data access is limited edit the contact, without deleting it', async () => {
+    auth.limited = true;
+    try {
+      renderAt('/master-data/contacts/c-1/overview');
+      expect(await screen.findByLabelText('contacts.fields.email')).toBeEnabled();
+      expect(screen.queryByRole('button', { name: 'common:buttons.delete' })).toBeNull();
+    } finally {
+      auth.limited = false;
+    }
   });
 
   it('shows the page read-only without manager access', async () => {

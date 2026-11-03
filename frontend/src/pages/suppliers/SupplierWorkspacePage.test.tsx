@@ -296,12 +296,13 @@ describe('SupplierWorkspacePage', () => {
     expect(String(body.disabled_at)).toMatch(/^2099-12-31T|^2100-01-01T/);
   });
 
-  it('shows the page read-only to a manager whose data access is limited (shared supplier)', async () => {
+  it('lets an admin whose data access is limited edit the supplier, without deleting it', async () => {
     auth.limited = true;
     try {
       renderAt('/master-data/suppliers/s-1/overview');
-      expect(await screen.findByLabelText('suppliers.fields.erpSupplierId')).toBeDisabled();
-      expect(screen.getByLabelText('suppliers.fields.notes')).toBeDisabled();
+      expect(await screen.findByLabelText('suppliers.fields.erpSupplierId')).toBeEnabled();
+      expect(screen.getByLabelText('suppliers.fields.notes')).toBeEnabled();
+      expect(screen.queryByRole('button', { name: 'common:buttons.delete' })).toBeNull();
     } finally {
       auth.limited = false;
     }
@@ -477,6 +478,21 @@ describe('SupplierWorkspacePage', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/home'));
     expect(mocked.delete).toHaveBeenCalledTimes(1);
+  });
+
+  it('lets a person whose data access is limited fill in the supplier they are creating, then Create or Cancel it', async () => {
+    auth.limited = true;
+    setCreation(creationKey('suppliers', 's-1'), { token: 'token-1', returnTo: '/home' });
+    try {
+      renderAt('/master-data/suppliers/s-1/overview');
+      expect(await screen.findByLabelText('suppliers.fields.erpSupplierId')).toBeEnabled();
+      expect(screen.getByLabelText('suppliers.fields.notes')).toBeEnabled();
+      expect(screen.getByRole('button', { name: 'common:buttons.create' })).toBeEnabled();
+      expect(screen.getByRole('button', { name: 'common:buttons.cancel' })).toBeEnabled();
+    } finally {
+      auth.limited = false;
+      clearCreation(creationKey('suppliers', 's-1'));
+    }
   });
 
   it('shows a missing or taken name under the header title and gives it the focus', async () => {

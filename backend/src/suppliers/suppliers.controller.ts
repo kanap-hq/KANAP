@@ -93,7 +93,6 @@ export class SuppliersController {
   cancelCreation(@Param('id', new ParseUUIDPipe()) id: string, @Body() body: { token?: string }, @Tenant() ctx: TenantRequest) {
     return cancelCreation('suppliers', id, body?.token, ctx, () => this.deleteSvc.delete(id, { manager: ctx.manager, userId: ctx.userId || null }));
   }
-  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('suppliers', 'member')
   @Patch(':id')
@@ -170,7 +169,6 @@ export class SuppliersController {
     return this.links.listForSupplier(id, { manager: req?.queryRunner?.manager, tenantId: req.tenant.id });
   }
 
-  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('suppliers', 'member')
   @Post(':id/contacts')
@@ -186,7 +184,6 @@ export class SuppliersController {
     );
   }
 
-  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('suppliers', 'member')
   @Delete(':id/contacts/:linkId')

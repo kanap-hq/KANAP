@@ -217,7 +217,7 @@ Aunque sus roles lo permitan, una persona limitada no puede:
 - eliminar una línea o un contrato;
 - gestionar personas: usuarios, roles, acceso a los datos, registro de auditoría;
 - modificar los datos de organización: empresas, departamentos, centros de coste, cuentas y planes de cuentas, procesos de negocio, las propias dimensiones y los valores de las dimensiones sin valores abiertos;
-- modificar o eliminar un proveedor o un contacto compartido (puede crearlos, según su rol);
+- eliminar un proveedor o un contacto compartido (los crea y los modifica según su rol);
 - importar proveedores, contactos, contratos o tareas;
 - usar las pantallas de los agentes de IA;
 - cambiar la configuración de los contratos, la personalización y las tareas programadas.
