@@ -1,16 +1,13 @@
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Stack, TextField, Typography } from '@mui/material';
 import { CreationActions, useCreationLeave, useCreationTitle } from '../../components/workspace/creation';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/AuthContext';
 import { useDataAccessAdmin } from '../../auth/dataAccess';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
-import { PropertyRow, useKanapDialogs } from '../../components/design';
-import CostCenterSelect from '../../components/fields/CostCenterSelect';
-import CompanySelect from '../../components/fields/CompanySelect';
-import UserSelect from '../../components/fields/UserSelect';
+import { useKanapDialogs } from '../../components/design';
 import { COST_CENTER_TREE_QUERY_KEY, useCostCenterTree } from '../../hooks/useCostCenterTree';
 import { useCostCenterNav } from '../../hooks/useCostCenterNav';
 import { useFieldDraft } from '../../hooks/useFieldDraft';
@@ -24,11 +21,10 @@ import {
   type CostCenterPatch,
 } from '../../services/costCenters';
 import { STATUS_DISABLED, deriveStatusFromDisabledAt } from '../../constants/status';
-import { drawerFieldValueSx, drawerMenuItemSx, drawerSelectSx, longFormSurfaceFieldSx } from '../../theme/formSx';
+import { longFormSurfaceFieldSx } from '../../theme/formSx';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
-import CostCenterPropertiesDrawer, { ErrorLine } from './CostCenterPropertiesDrawer';
+import CostCenterPropertiesDrawer from './CostCenterPropertiesDrawer';
 import {
-  COST_CENTER_KINDS,
   costCenterDeleteBlock,
   costCenterUsageLine,
   refusalField,
@@ -49,6 +45,13 @@ type TabKey = 'overview' | 'access';
 const TAB_KEYS: TabKey[] = ['overview', 'access'];
 
 type FieldErrors = Partial<Record<CostCenterField, string>>;
+
+/** What a new cost center starts from. */
+const NEW_COST_CENTER: CostCenterDetail = {
+  id: '', code: '', name: '', kind: 'cost_center', parent_id: null, company_id: null, company_name: null,
+  owner_user_id: null, owner_name: null, status: 'enabled', disabled_at: null, sort_order: 0, depth: 0,
+  path: '', path_ids: [], parent_code: null, parent_name: null, description: null, opex_count: 0, capex_count: 0,
+};
 
 export default function CostCenterWorkspacePage() {
   const { t } = useTranslation(['master-data', 'common']);
@@ -71,11 +74,15 @@ export default function CostCenterWorkspacePage() {
   const canDelete = hasLevel('cost_centers', 'admin');
 
   const detailKey = React.useMemo(() => ['cost-centers', 'detail', id] as const, [id]);
-  const { data, error: loadError } = useQuery({
+  const { data: stored, error: loadError } = useQuery({
     queryKey: detailKey,
     queryFn: () => getCostCenter(id),
     enabled: !isCreate && !!id,
   });
+  // The new page is the cost center's own page on a draft: the fields write here, Create sends it.
+  const [draft, setDraft] = React.useState<CostCenterDetail>(NEW_COST_CENTER);
+  const draftRef = React.useRef(draft);
+  const data = isCreate ? draft : stored;
 
   const [errors, setErrors] = React.useState<FieldErrors>({});
   const [pageError, setPageError] = React.useState<string | null>(null);
@@ -130,6 +137,12 @@ export default function CostCenterWorkspacePage() {
 
   const patch = React.useCallback(
     (body: CostCenterPatch, field: CostCenterField): Promise<boolean> => {
+      if (isCreate) {
+        setErrors((prev) => ({ ...prev, [field]: undefined }));
+        draftRef.current = { ...draftRef.current, ...body };
+        setDraft(draftRef.current);
+        return Promise.resolve(true);
+      }
       const recordId = data?.id;
       if (!recordId || !canEdit) return Promise.resolve(false);
       setErrors((prev) => ({ ...prev, [field]: undefined }));
@@ -152,7 +165,7 @@ export default function CostCenterWorkspacePage() {
       chainRef.current = result.catch(() => undefined);
       return result;
     },
-    [afterWrite, canEdit, data?.id, queryClient, t],
+    [afterWrite, canEdit, data?.id, isCreate, queryClient, t],
   );
 
   const effectiveKind: CostCenterKind | undefined = pendingKind ?? data?.kind;
@@ -160,6 +173,11 @@ export default function CostCenterWorkspacePage() {
   const handleKindChange = (next: CostCenterKind) => {
     if (!data) return;
     setErrors((prev) => ({ ...prev, kind: undefined, company_id: undefined }));
+    // A draft takes the type alone; Create asks for the company of a cost center.
+    if (isCreate) {
+      void patch(next === 'group' ? { kind: next, company_id: null } : { kind: next }, 'kind');
+      return;
+    }
     if (next === data.kind) {
       setPendingKind(null);
       return;
@@ -175,7 +193,7 @@ export default function CostCenterWorkspacePage() {
 
   const handleCompanyChange = async (companyId: string | null) => {
     if (!data || !companyId) return;
-    if (pendingKind === 'cost_center') {
+    if (pendingKind === 'cost_center' && !isCreate) {
       const ok = await patch({ kind: 'cost_center', company_id: companyId }, 'company_id');
       if (ok) setPendingKind(null);
       return;
@@ -221,13 +239,55 @@ export default function CostCenterWorkspacePage() {
   const deleteBlock = data ? costCenterDeleteBlock(t, usage, childCount) : null;
   const disabled = !canEdit;
 
-  const actions = !isCreate && canDelete && data ? (
+  // Create sends the draft with the header's name, then goes back where the creation started.
+  const leave = useCreationLeave(handleClose);
+  const title = useCreationTitle({ requiredMessage: t('costCenters.messages.nameRequired'), onCancel: leave });
+  const [creating, setCreating] = React.useState(false);
+  const handleCreate = async () => {
+    if (!canEdit || creating) return;
+    const name = title.require();
+    const form = draftRef.current;
+    const nextErrors: FieldErrors = {};
+    if (!form.code) nextErrors.code = t('costCenters.messages.codeRequired');
+    if (form.kind === 'cost_center' && !form.company_id) nextErrors.company_id = t('costCenters.messages.companyRequired');
+    setErrors((prev) => ({ ...prev, ...nextErrors }));
+    if (!name || Object.keys(nextErrors).length > 0) return;
+    setCreating(true);
+    setPageError(null);
+    try {
+      await createCostCenter({
+        code: form.code,
+        name,
+        kind: form.kind,
+        parent_id: form.parent_id,
+        company_id: form.kind === 'cost_center' ? form.company_id : null,
+        owner_user_id: form.owner_user_id,
+        description: form.description,
+        status: form.status,
+        disabled_at: form.disabled_at,
+      });
+      void queryClient.invalidateQueries({ queryKey: ['cost-centers'] });
+      afterWrite();
+      leave();
+    } catch (e) {
+      const message = getApiErrorMessage(e, t, t('costCenters.messages.createFailed'));
+      const field = refusalField(e);
+      // A refusal goes under the field it names when the page shows that field.
+      if (field === 'name') title.refuse(message);
+      else if (field && CREATE_FIELDS.has(field) && !(field === 'company_id' && form.kind !== 'cost_center')) {
+        setErrors((prev) => ({ ...prev, [field]: message }));
+      } else setPageError(message);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const actions = isCreate ? (
+    <CreationActions onCreate={() => void handleCreate()} onCancel={leave} busy={!canEdit || creating} />
+  ) : canDelete && data ? (
     <DeleteIconButton onClick={() => void handleDelete()} disabled={deleting || !!deleteBlock} />
   ) : undefined;
 
-  if (isCreate) {
-    return <CostCenterCreate onClose={handleClose} canCreate={canEdit} />;
-  }
 
   return (
     <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
@@ -240,21 +300,24 @@ export default function CostCenterWorkspacePage() {
         activeTab={tab}
         tabs={[
           { key: 'overview', label: t('shared.labels.overview') },
-          ...(canAdminDataAccess ? [{ key: 'access', label: t('shared.labels.access') }] : []),
+          ...(canAdminDataAccess ? [{ key: 'access', label: t('shared.labels.access'), disabled: isCreate }] : []),
         ]}
         onTabChange={(next) => goTo(id, next as TabKey)}
         drawerStorageKey="kanap.costCenters.drawerOpen"
         backLabel={t('costCenters.title')}
-        onBack={handleClose}
-        itemReference={data?.code ?? null}
-        onCopyReference={data?.code ? () => { void navigator.clipboard?.writeText(data.code); } : undefined}
-        title={data?.name ?? ''}
-        titleFallback={t('costCenters.fallback')}
-        canEditTitle={canEdit && !!data}
-        onTitleSave={(next) => {
-          if (data && next !== data.name) void patch({ name: next }, 'name');
-        }}
-        nav={nav.total > 0 ? {
+        onBack={isCreate ? leave : handleClose}
+        itemReference={isCreate ? null : data?.code ?? null}
+        onCopyReference={!isCreate && data?.code ? () => { void navigator.clipboard?.writeText(data.code); } : undefined}
+        {...(isCreate ? title.shellProps : {
+          title: data?.name ?? '',
+          canEditTitle: canEdit && !!data,
+          onTitleSave: (next: string) => {
+            if (data && next !== data.name) void patch({ name: next }, 'name');
+          },
+        })}
+        titleFallback={isCreate ? t('costCenters.newCostCenter') : t('costCenters.fallback')}
+        isCreate={isCreate}
+        nav={!isCreate && nav.total > 0 ? {
           currentIndex: nav.index + 1,
           totalCount: nav.total,
           hasPrev: nav.hasPrev,
@@ -265,7 +328,7 @@ export default function CostCenterWorkspacePage() {
           nextLabel: t('costCenters.next'),
         } : undefined}
         actions={actions}
-        history={id ? { table: 'cost_centers', recordId: id } : undefined}
+        history={id && !isCreate ? { table: 'cost_centers', recordId: id } : undefined}
         properties={data && effectiveKind ? (
           <CostCenterPropertiesDrawer
             key={data.id}
@@ -296,7 +359,7 @@ export default function CostCenterWorkspacePage() {
       >
         {data && tab === 'overview' && (
           <Stack spacing={2.5} sx={{ maxWidth: 900 }}>
-            {(canDelete ? deleteBlock ?? usage : usage) && (
+            {!isCreate && (canDelete ? deleteBlock ?? usage : usage) && (
               <Typography data-testid="cost-center-usage" sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
                 {canDelete ? deleteBlock ?? usage : usage}
               </Typography>
@@ -359,186 +422,6 @@ function DescriptionField({
         sx={longFormSurfaceFieldSx}
         inputProps={{ 'aria-label': t('costCenters.fields.description') }}
       />
-    </Box>
-  );
-}
-
-type CreateForm = {
-  code: string;
-  kind: CostCenterKind;
-  parent_id: string | null;
-  company_id: string | null;
-  owner_user_id: string | null;
-  description: string;
-};
-
-const EMPTY_FORM: CreateForm = {
-  code: '',
-  kind: 'cost_center',
-  parent_id: null,
-  company_id: null,
-  owner_user_id: null,
-  description: '',
-};
-
-function CostCenterCreate({
-  canCreate,
-  onClose,
-}: {
-  canCreate: boolean;
-  onClose: () => void;
-}) {
-  const { t } = useTranslation(['master-data', 'common']);
-  const queryClient = useQueryClient();
-  const [form, setForm] = React.useState<CreateForm>(EMPTY_FORM);
-  const [errors, setErrors] = React.useState<FieldErrors>({});
-  const [serverError, setServerError] = React.useState<string | null>(null);
-  const [submitting, setSubmitting] = React.useState(false);
-  const leave = useCreationLeave(onClose);
-  const title = useCreationTitle({ requiredMessage: t('costCenters.messages.nameRequired'), onCancel: leave });
-
-  const update = (next: Partial<CreateForm>) => setForm((prev) => ({ ...prev, ...next }));
-
-  const handleCreate = async () => {
-    if (!canCreate || submitting) return;
-    const code = form.code.trim();
-    const name = title.require();
-    const nextErrors: FieldErrors = {};
-    if (!code) nextErrors.code = t('costCenters.messages.codeRequired');
-    if (form.kind === 'cost_center' && !form.company_id) nextErrors.company_id = t('costCenters.messages.companyRequired');
-    setErrors(nextErrors);
-    if (!name || Object.keys(nextErrors).length > 0) return;
-    setSubmitting(true);
-    setServerError(null);
-    try {
-      await createCostCenter({
-        code,
-        name,
-        kind: form.kind,
-        parent_id: form.parent_id,
-        company_id: form.kind === 'cost_center' ? form.company_id : null,
-        owner_user_id: form.owner_user_id,
-        description: form.description.trim() || null,
-      });
-      void queryClient.invalidateQueries({ queryKey: ['cost-centers'] });
-      void queryClient.invalidateQueries({ queryKey: ['cost-centers-ids'] });
-      leave();
-    } catch (e) {
-      const message = getApiErrorMessage(e, t, t('costCenters.messages.createFailed'));
-      const field = refusalField(e);
-      // A refusal goes under the field it names when the form shows that field.
-      if (field === 'name') {
-        title.refuse(message);
-      } else if (field && CREATE_FIELDS.has(field) && !(field === 'company_id' && form.kind !== 'cost_center')) {
-        setErrors({ [field]: message });
-      } else {
-        setServerError(message);
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-      <PortfolioDetailWorkspaceShell
-        activeTab="overview"
-        tabs={[{ key: 'overview', label: t('shared.labels.overview') }]}
-        onTabChange={() => undefined}
-        drawerStorageKey="kanap.costCenters.drawerOpen"
-        backLabel={t('costCenters.title')}
-        onBack={leave}
-        {...title.shellProps}
-        titleFallback={t('costCenters.newCostCenter')}
-        isCreate
-        actions={<CreationActions onCreate={() => void handleCreate()} onCancel={leave} busy={!canCreate || submitting} />}
-      >
-        <Stack spacing={1.5} sx={{ maxWidth: 560 }}>
-          <PropertyRow label={t('costCenters.fields.code')} required helperText={t('costCenters.hints.code')} valueSx={{ maxWidth: 520 }}>
-            <TextField
-              value={form.code}
-              onChange={(e) => update({ code: e.target.value })}
-              variant="standard"
-              sx={drawerFieldValueSx}
-              placeholder={t('costCenters.placeholders.code')}
-              error={!!errors.code}
-              helperText={errors.code}
-              inputProps={{ 'aria-label': t('costCenters.fields.code'), autoComplete: 'off', spellCheck: false }}
-            />
-          </PropertyRow>
-          <PropertyRow label={t('costCenters.fields.type')} required valueSx={{ maxWidth: 520 }}>
-            <TextField
-              select
-              value={form.kind}
-              onChange={(e) => update({ kind: e.target.value as CostCenterKind })}
-              variant="standard"
-              sx={drawerSelectSx}
-              error={!!errors.kind}
-              helperText={errors.kind}
-              inputProps={{ 'aria-label': t('costCenters.fields.type') }}
-            >
-              {COST_CENTER_KINDS.map((value) => (
-                <MenuItem key={value} value={value} sx={drawerMenuItemSx}>
-                  {t(`costCenters.kinds.${value}`)}
-                </MenuItem>
-              ))}
-            </TextField>
-          </PropertyRow>
-          <PropertyRow label={t('costCenters.fields.parent')} valueSx={{ maxWidth: 520 }}>
-            <CostCenterSelect
-              hideLabel
-              label={t('costCenters.fields.parent')}
-              selectable="groups"
-              value={form.parent_id}
-              onChange={(parentId) => update({ parent_id: parentId })}
-              placeholder={t('costCenters.placeholders.topLevel')}
-              error={!!errors.parent_id}
-              helperText={errors.parent_id}
-              textFieldSx={drawerFieldValueSx}
-            />
-          </PropertyRow>
-          {form.kind === 'cost_center' && (
-            <PropertyRow label={t('costCenters.fields.company')} required helperText={t('costCenters.hints.company')} valueSx={{ maxWidth: 520 }}>
-              <CompanySelect
-                hideLabel
-                label={t('costCenters.fields.company')}
-                value={form.company_id}
-                onChange={(companyId) => update({ company_id: companyId })}
-                error={!!errors.company_id}
-                helperText={errors.company_id}
-                textFieldSx={drawerFieldValueSx}
-              />
-            </PropertyRow>
-          )}
-          <PropertyRow label={t('costCenters.fields.owner')} helperText={t('costCenters.hints.owner')} valueSx={{ maxWidth: 520 }}>
-            <UserSelect
-              hideLabel
-              label={t('costCenters.fields.owner')}
-              value={form.owner_user_id}
-              onChange={(userId) => update({ owner_user_id: userId })}
-              placeholder={t('costCenters.placeholders.ownerMissing')}
-              error={!!errors.owner_user_id}
-              textFieldSx={drawerFieldValueSx}
-            />
-            <ErrorLine message={errors.owner_user_id} />
-          </PropertyRow>
-          <PropertyRow label={t('costCenters.fields.description')} valueSx={{ maxWidth: 520 }}>
-            <TextField
-              value={form.description}
-              onChange={(e) => update({ description: e.target.value })}
-              multiline
-              minRows={2}
-              variant="standard"
-              sx={drawerFieldValueSx}
-              placeholder={t('costCenters.placeholders.description')}
-              error={!!errors.description}
-              helperText={errors.description}
-              inputProps={{ 'aria-label': t('costCenters.fields.description') }}
-            />
-          </PropertyRow>
-          {serverError && <Alert severity="error">{serverError}</Alert>}
-        </Stack>
-      </PortfolioDetailWorkspaceShell>
     </Box>
   );
 }

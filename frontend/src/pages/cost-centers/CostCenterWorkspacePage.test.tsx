@@ -141,6 +141,7 @@ describe('CostCenterWorkspacePage', () => {
     renderAt('/master-data/cost-centers/new/overview?sort=path%3AASC');
     expect(screen.queryByRole('button', { name: 'admin:auditLogs.history.title' })).toBeNull();
     fireEvent.change(screen.getByLabelText('costCenters.fields.code'), { target: { value: ' IT-400 ' } });
+    fireEvent.blur(screen.getByLabelText('costCenters.fields.code'));
     fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Workplace' } });
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
@@ -153,15 +154,18 @@ describe('CostCenterWorkspacePage', () => {
       company_id: 'company-2',
       owner_user_id: null,
       description: null,
+      status: 'enabled',
+      disabled_at: null,
     });
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/cost-centers?sort=path%3AASC'));
   });
 
   it('refuses to create a cost center without a company', async () => {
     renderAt('/master-data/cost-centers/new/overview');
-    // No Properties drawer on the create page.
-    expect(screen.queryByRole('complementary')).toBeNull();
+    // The cost center's own page: the code sits in its Properties drawer.
+    expect(screen.getByRole('complementary')).toContainElement(screen.getByLabelText('costCenters.fields.code'));
     fireEvent.change(screen.getByLabelText('costCenters.fields.code'), { target: { value: 'IT-400' } });
+    fireEvent.blur(screen.getByLabelText('costCenters.fields.code'));
     fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Workplace' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('costCenters.messages.companyRequired')).toBeInTheDocument();
@@ -324,6 +328,7 @@ describe('CostCenterWorkspacePage', () => {
     renderAt('/master-data/cost-centers/new/overview');
     const code = screen.getByLabelText('costCenters.fields.code');
     fireEvent.change(code, { target: { value: 'IT-400' } });
+    fireEvent.blur(code);
     fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Workplace' } });
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));

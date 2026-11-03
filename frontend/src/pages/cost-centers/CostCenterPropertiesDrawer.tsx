@@ -31,7 +31,7 @@ type Props = {
   onDisableNow: () => void;
 };
 
-export function ErrorLine({ message }: { message?: string }) {
+function ErrorLine({ message }: { message?: string }) {
   if (!message) return null;
   return (
     <Typography role="alert" sx={{ mt: '2px', fontSize: 12, lineHeight: 1.35, color: 'error.main' }}>
