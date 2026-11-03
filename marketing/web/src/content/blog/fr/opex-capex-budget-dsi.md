@@ -1,6 +1,6 @@
 ---
 title: "OPEX et CAPEX : le budget de la DSI, prêt pour le contrôle de gestion"
-description: "Fonctionnement et investissement au même endroit : la DSI construit son budget simplement, et arrive prête pour la revue avec le contrôle de gestion."
+description: "Gérer le budget de la DSI, OPEX et CAPEX au même endroit, et arriver prêt pour la revue avec le contrôle de gestion."
 date: 2026-10-17
 topic: cost
 author: Friedrich
@@ -23,7 +23,7 @@ L'**OPEX** fait fonctionner le système d'information pendant l'année : abonnem
 
 Une seconde question vient souvent se mêler à la première : run ou build ? Le run maintient les services existants, le build les crée ou les fait évoluer. Un projet de build porte souvent des deux natures : le développement capitalisé en CAPEX, la formation et la conduite du changement en OPEX. KANAP garde les deux réponses sur chaque ligne, dans deux champs distincts, mais permet leur consolidation.
 
-## Une seule liste, un seul espace de travail
+## Gérer le budget de la DSI dans une seule liste
 
 Dans KANAP, OPEX et CAPEX sont un simple champ de la ligne budgétaire. Les lignes des deux natures partagent les mêmes colonnes budgétaires (scénarii) par année, les mêmes ventilations entre sociétés et départements, les mêmes liens vers les applications, projets, contrats et fournisseurs. Le filtre de la colonne **Type** isole l'une ou l'autre en un clic.
 
@@ -58,7 +58,7 @@ La DSI y gagne un classement qui se fait en même temps que la saisie, et le con
 
 ## Les rapports : Tous, OPEX ou CAPEX
 
-Huit rapports s'ouvrent sur trois onglets, **Tous**, **OPEX** et **CAPEX** : top lignes, hausses et baisses, comparaison budgétaire, comparaison de colonnes, comptes de consolidation, dimensions analytiques, effectifs par mois et coût par ETP.
+Huit rapports s'ouvrent sur trois onglets, **Tous**, **OPEX** et **CAPEX** : top lignes, hausses et baisses, comparaison budgétaire, comparaison de colonnes, comptes de consolidation, dimensions analytiques, effectifs par mois et coût par ETP (le détail est dans [ETP, TJM : les prestataires externes dans le budget de la DSI](/fr/blog/etp-tjm-prestataires-budget-dsi)).
 
 Les filtres se combinent : centre de coûts, run ou build, et une valeur par dimension. Le CAPEX 2026 regroupé par motif, le coût d'un programme sur l'onglet **Tous**, les seuls investissements obligatoires d'une filiale : chaque vue se construit en quelques clics.
 

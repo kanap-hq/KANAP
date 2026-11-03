@@ -39,7 +39,7 @@ function renderList() {
   return render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={createAppTheme('light')}>
-        <ChatConversationList activeId={null} onSelect={vi.fn()} onNew={vi.fn()} onArchive={vi.fn()} />
+        <ChatConversationList activeId={null} onSelect={vi.fn()} onNew={vi.fn()} onDelete={vi.fn()} />
       </ThemeProvider>
     </QueryClientProvider>,
   );

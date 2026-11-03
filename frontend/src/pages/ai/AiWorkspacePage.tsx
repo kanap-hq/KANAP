@@ -229,7 +229,9 @@ export default function AiWorkspacePage() {
 
   const handleSend = useCallback(
     async (text: string) => {
-      await chat.sendMessage(text);
+      const sent = await chat.sendMessage(text);
+      // A refused attachment: the typed text goes back to the composer with the attachments.
+      if (!sent) inputRef.current?.setText(text);
       queryClient.invalidateQueries({ queryKey: ['ai-conversations'] });
     },
     [chat.sendMessage, queryClient],
@@ -246,12 +248,12 @@ export default function AiWorkspacePage() {
     [handleSend],
   );
 
-  const handleArchive = useCallback(
+  const handleDelete = useCallback(
     async (id: string) => {
       const confirmed = await dialogs.confirm({
-        title: t('conversationList.archiveConfirmTitle'),
-        message: t('conversationList.archiveConfirmMessage'),
-        confirmLabel: t('conversationList.archive'),
+        title: t('conversationList.deleteConfirmTitle'),
+        message: t('conversationList.deleteConfirmMessage'),
+        confirmLabel: t('conversationList.delete'),
         intent: 'danger',
       });
       if (!confirmed) return;
@@ -263,7 +265,7 @@ export default function AiWorkspacePage() {
         (old) => old?.filter((c) => c.id !== id),
       );
       try {
-        await aiConversationsApi.archive(id);
+        await aiConversationsApi.remove(id);
       } catch {
         queryClient.invalidateQueries({ queryKey: ['ai-conversations'] });
       }
@@ -332,6 +334,12 @@ export default function AiWorkspacePage() {
     </Typography>
   ) : null;
 
+  const errorAlert = chat.error ? (
+    <Alert severity="error" sx={{ mb: 1 }} onClose={() => {}}>
+      {chat.error}
+    </Alert>
+  ) : null;
+
   const composer = awaitsConsent ? <PlaidConsent /> : (
     <ChatInput
       ref={inputRef}
@@ -368,7 +376,7 @@ export default function AiWorkspacePage() {
             activeId={chat.conversationId}
             onSelect={handleSelect}
             onNew={handleNew}
-            onArchive={handleArchive}
+            onDelete={handleDelete}
           />
         </Box>
       )}
@@ -407,6 +415,7 @@ export default function AiWorkspacePage() {
                 />
                 <Stack spacing={1}>
                   <BuiltinUsageIndicator usage={chat.builtinUsage} />
+                  {errorAlert}
                   {composer}
                 </Stack>
               </Stack>
@@ -445,11 +454,9 @@ export default function AiWorkspacePage() {
               </Box>
             </Box>
 
-            {chat.error && (
+            {errorAlert && (
               <Box sx={{ width: '100%', maxWidth: CONTENT_MAX_WIDTH, mx: 'auto', px: 3, flexShrink: 0 }}>
-                <Alert severity="error" sx={{ mb: 1 }} onClose={() => {}}>
-                  {chat.error}
-                </Alert>
+                {errorAlert}
               </Box>
             )}
 

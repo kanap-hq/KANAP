@@ -31,6 +31,8 @@ import { WorkingDayProfilesService } from '../../working-day-profiles/working-da
 import { CsvLanguage } from '../csv-sheet';
 import { ContactsService } from '../../contacts/contacts.service';
 import { ContractsService } from '../../contracts/contracts.service';
+import { CONTRACT_CSV_HEADERS } from '../../contracts/contract-csv-headers';
+import { SUPPLIER_CSV_HEADERS } from '../../suppliers/supplier-csv-headers';
 import { BusinessProcessesService } from '../../business-processes/business-processes.service';
 import { BusinessProcess } from '../../business-processes/business-process.entity';
 import { BusinessProcessCategory } from '../../business-processes/business-process-category.entity';
@@ -110,6 +112,8 @@ type Importer = {
   /** The value the row's name column takes: the users file names a user by email. */
   key(label: string): string;
   headers(language?: CsvLanguage): Promise<string[]>;
+  /** The titles a file writes for its columns, in each language, when they are not the technical names. */
+  titles?: Readonly<Record<string, Partial<Record<CsvLanguage, string>>>>;
   base(key: string): Row;
   /** Two meaningful rows for the round trip (distinct codes and numbers). */
   samples(): Row[];
@@ -141,6 +145,12 @@ function csvCell(value: string, separator: string): string {
 }
 
 /** One file: the importer's own headers, then the rows, cells matched by header. */
+/** The technical column a header names: its title in `language`, or the column itself. */
+function columnOf(importer: Importer, header: string, language: CsvLanguage = 'en'): string {
+  const titles = importer.titles ?? {};
+  return Object.keys(titles).find((column) => titles[column][language] === header) ?? header;
+}
+
 async function fileFor(
   importer: Importer,
   rows: readonly Row[],
@@ -150,7 +160,7 @@ async function fileFor(
   const separator = options.separator ?? separatorOf(options.language);
   const lines = [
     headers.join(separator),
-    ...rows.map((row) => headers.map((header) => csvCell(row[header] ?? '', separator)).join(separator)),
+    ...rows.map((row) => headers.map((header) => csvCell(row[columnOf(importer, header, options.language)] ?? '', separator)).join(separator)),
   ];
   return `${options.bom ? '\uFEFF' : ''}${lines.join('\n')}\n`;
 }
@@ -411,6 +421,7 @@ function importers(manager: EntityManager, tenantId: string, seeds: Seeds): Impo
       wrapped: 'name',
       key: (label) => label,
       headers: async (language) => headersOf((await suppliers.exportCsv('template', { manager, language })).content, language),
+      titles: SUPPLIER_CSV_HEADERS,
       base: supplierBase,
       samples: () => [
         { ...supplierBase('Round trip supplier A', 0), status: 'enabled' },
@@ -601,6 +612,7 @@ function importers(manager: EntityManager, tenantId: string, seeds: Seeds): Impo
       wrapped: 'notes',
       key: (label) => label,
       headers: async (language) => headersOf((await contracts.exportCsv('template', { manager, language })).content, language),
+      titles: CONTRACT_CSV_HEADERS,
       base: contractBase,
       samples: () => [
         // A local start date and a decimal comma: the French way, read back unchanged.
@@ -998,7 +1010,7 @@ async function testYesNoFollowTheLanguage() {
       assert.deepEqual([seeded.ok, seeded.errors], [true, []], `${label} seed: ${JSON.stringify(seeded.errors)}`);
       const cellIn = (content: string, language: CsvLanguage) => {
         const lines = content.replace(/^﻿/, '').split('\n');
-        const index = lines[0].split(separatorOf(language)).indexOf(column);
+        const index = lines[0].split(separatorOf(language)).findIndex((header) => columnOf(importer, header, language) === column);
         const line = lines.find((entry) => entry.includes(key)) ?? '';
         return line.split(separatorOf(language))[index];
       };
@@ -1024,7 +1036,7 @@ async function testMoreCellsThanTheHeader() {
   await each('extra-cell', async (importer) => {
     const headers = await importer.headers('en');
     const cells = importer.base(importer.key(`${importer.label} extra cell`));
-    const line = [...headers.map((header) => csvCell(cells[header] ?? '', ',')), 'extra'].join(',');
+    const line = [...headers.map((header) => csvCell(cells[columnOf(importer, header)] ?? '', ',')), 'extra'].join(',');
     const result = await importer.importCsv(`${headers.join(',')}\n${line}\n`, { language: 'en' });
     assert.equal(result.ok, false, `${importer.label}: the file is refused`);
     assert.deepEqual(result.errors, [{ row: 2, message: EXTRA_CELLS, code: 'CSV_ROW_TOO_MANY_CELLS' }], `${importer.label}: ${JSON.stringify(result.errors)}`);

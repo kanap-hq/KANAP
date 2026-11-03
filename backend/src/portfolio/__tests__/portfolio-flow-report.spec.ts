@@ -26,19 +26,29 @@ function stubManager(answers: {
   openItems: Record<string, Array<Record<string, unknown>>>;
 }) {
   const calls: Call[] = [];
+  // Two queries in flight at once are the node-postgres warning
+  // (`client.query() when the client is already executing a query`).
+  let busy = 0;
   const manager = {
     query: async (sql: string, params: any[]) => {
-      calls.push({ sql, params });
-      if (sql.includes('open_tasks AS')) return answers.taskAge;
-      // The creation-age query has no table parameter: it is recognised by its open statuses.
-      if (sql.includes('GROUP BY l.status, age_days')) {
-        const first = String((params[1] ?? [])[0]);
-        return answers.createdAge[first === 'pending_review' ? 'requests' : 'projects'] ?? [];
+      if (busy > 0) throw new Error('client.query() when the client is already executing a query');
+      busy += 1;
+      try {
+        await new Promise((resolve) => setImmediate(resolve));
+        calls.push({ sql, params });
+        if (sql.includes('open_tasks AS')) return answers.taskAge;
+        // The creation-age query has no table parameter: it is recognised by its open statuses.
+        if (sql.includes('GROUP BY l.status, age_days')) {
+          const first = String((params[1] ?? [])[0]);
+          return answers.createdAge[first === 'pending_review' ? 'requests' : 'projects'] ?? [];
+        }
+        const table = String(params[1]);
+        if (sql.includes('open_items AS')) return answers.openItems[table] ?? [];
+        if (sql.includes('open_at_end AS')) return answers.periods[table] ?? [];
+        return answers.totals[table] ?? [];
+      } finally {
+        busy -= 1;
       }
-      const table = String(params[1]);
-      if (sql.includes('open_items AS')) return answers.openItems[table] ?? [];
-      if (sql.includes('open_at_end AS')) return answers.periods[table] ?? [];
-      return answers.totals[table] ?? [];
     },
   } as any;
   return { manager, calls };

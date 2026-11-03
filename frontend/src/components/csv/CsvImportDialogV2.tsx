@@ -27,6 +27,7 @@ import { CsvImportAdvancedOptions } from './CsvImportAdvancedOptions';
 import { CsvValidationResults } from './CsvValidationResults';
 import { CsvImportResult } from './csv.types';
 import { useImportFiles } from './importFiles';
+import ImportExampleButton, { type ImportExampleKey } from './ImportExampleButton';
 
 interface CsvImportDialogV2Props {
   open: boolean;
@@ -37,6 +38,8 @@ interface CsvImportDialogV2Props {
   params?: Record<string, string | number | boolean | null | undefined>;
   /** A short remark about this list's file, under the description (for example how to clear a value). */
   note?: string;
+  /** The import's example file, offered next to the template. */
+  example?: ImportExampleKey;
 }
 
 export default function CsvImportDialogV2({
@@ -47,8 +50,10 @@ export default function CsvImportDialogV2({
   onImported,
   params,
   note,
+  example,
 }: CsvImportDialogV2Props) {
   const { t, i18n } = useTranslation('common');
+  const language = screenLanguage(i18n.resolvedLanguage || i18n.language);
   const { accept, workbook } = useImportFiles();
   const {
     file,
@@ -109,7 +114,7 @@ export default function CsvImportDialogV2({
     try {
       const fd = new FormData();
       fd.append('file', file);
-      const queryParams = { ...(params ?? {}), dryRun, mode, operation };
+      const queryParams = { ...(params ?? {}), dryRun, mode, operation, language };
       const res = await api.post(`${endpoint}/import`, fd, { params: queryParams });
       const data = res.data as CsvImportResult;
       setResult(data);
@@ -134,7 +139,7 @@ export default function CsvImportDialogV2({
     setError(null);
     try {
       // The template follows the screen, as the export does.
-      const queryParams = { ...(params ?? {}), scope: 'template', language: screenLanguage(i18n.resolvedLanguage || i18n.language) };
+      const queryParams = { ...(params ?? {}), scope: 'template', language };
       const res = await api.get(`${endpoint}/export`, { params: queryParams, responseType: 'blob' });
       const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8' });
       const url = window.URL.createObjectURL(blob);
@@ -172,15 +177,17 @@ export default function CsvImportDialogV2({
               </Typography>
             )}
 
-            <Button
-              variant="text"
-              size="small"
-              startIcon={<DownloadIcon />}
-              onClick={downloadTemplate}
-              sx={{ mb: 2 }}
-            >
-              {t('csv.downloadTemplate')}
-            </Button>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: 1, mb: 2 }}>
+              <Button
+                variant="text"
+                size="small"
+                startIcon={<DownloadIcon />}
+                onClick={downloadTemplate}
+              >
+                {t('csv.downloadTemplate')}
+              </Button>
+              {example && <ImportExampleButton example={example} onError={setError} />}
+            </Box>
             <Divider sx={{ mb: 2 }} />
 
             {/* File drop zone */}

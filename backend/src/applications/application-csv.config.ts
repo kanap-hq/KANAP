@@ -1,3 +1,4 @@
+import type { CsvLanguage } from '../common/csv-sheet';
 import { catalogFromMetadata, catalogToMetadata } from '../it-ops-settings/classification-catalog';
 import { findCatalogOption, requireImportCatalogs, resolveCatalogCode } from '../it-ops-settings/catalog-resolve';
 import { APPLICATION_NAME_MAX, applicationNameKey, assertApplicationDates, codedErrorOf } from './application-rules';
@@ -11,7 +12,7 @@ import {
   CsvImportContext,
   CsvImportRow,
 } from '../common/csv';
-import { vulnerabilityCsvFields } from '../vulnerabilities/vulnerability-list-column';
+import { VULNERABILITY_CSV_HEADERS, vulnerabilityCsvFields } from '../vulnerabilities/vulnerability-list-column';
 import { assertMarkdownSize } from '../common/markdown-limits';
 import { sameStoredValues } from '../common/csv-sheet/unchanged';
 import { formatApplicationCategoryOptions, ItOpsSettings } from '../it-ops-settings/it-ops-settings.service';
@@ -199,12 +200,177 @@ function classificationReviewField(field: string): CsvFieldDefinition {
  * - Compliance: the classification panel, top to bottom
  * - Not on the workspace: status, licensing, notes, timestamps
  */
+/**
+ * The title of each column in the file's language, as the export dialog names the application fields
+ * (`csv.fields.applications` of the screen). The export and the template write it, and the import reads
+ * the titles of every language as well as the technical column.
+ */
+const APPLICATION_CSV_HEADERS: Record<string, Record<CsvLanguage, string>> = {
+  ...VULNERABILITY_CSV_HEADERS,
+  reference: { en: 'Reference', fr: 'Référence', de: 'Referenz', es: 'Referencia' },
+  name: { en: 'Name', fr: 'Nom', de: 'Name', es: 'Nombre' },
+  description: { en: 'Description', fr: 'Description', de: 'Beschreibung', es: 'Descripción' },
+  lifecycle: { en: 'Lifecycle', fr: 'Cycle de vie', de: 'Lebenszyklus', es: 'Ciclo de vida' },
+  category: { en: 'Category', fr: 'Catégorie', de: 'Kategorie', es: 'Categoría' },
+  supplier_name: { en: 'Supplier', fr: 'Fournisseur', de: 'Lieferant', es: 'Proveedor' },
+  editor: { en: 'Publisher', fr: 'Éditeur', de: 'Herausgeber', es: 'Editor' },
+  version: { en: 'Version', fr: 'Version', de: 'Version', es: 'Versión' },
+  go_live_date: { en: 'Go-live date', fr: 'Date de mise en service', de: 'Datum der Inbetriebnahme', es: 'Fecha de puesta en servicio' },
+  end_of_support_date: {
+    en: 'End-of-support date',
+    fr: 'Date de fin de support',
+    de: 'Datum des Supportendes',
+    es: 'Fecha de fin de soporte',
+  },
+  retired_date: { en: 'Retirement date', fr: 'Date de retrait', de: 'Datum der Außerbetriebnahme', es: 'Fecha de retirada' },
+  business_owner_email_1: {
+    en: 'Business owner 1 email',
+    fr: 'E-mail du responsable métier 1',
+    de: 'E-Mail Fachverantwortliche/r 1',
+    es: 'Correo del responsable de negocio 1',
+  },
+  business_owner_email_2: {
+    en: 'Business owner 2 email',
+    fr: 'E-mail du responsable métier 2',
+    de: 'E-Mail Fachverantwortliche/r 2',
+    es: 'Correo del responsable de negocio 2',
+  },
+  business_owner_email_3: {
+    en: 'Business owner 3 email',
+    fr: 'E-mail du responsable métier 3',
+    de: 'E-Mail Fachverantwortliche/r 3',
+    es: 'Correo del responsable de negocio 3',
+  },
+  business_owner_email_4: {
+    en: 'Business owner 4 email',
+    fr: 'E-mail du responsable métier 4',
+    de: 'E-Mail Fachverantwortliche/r 4',
+    es: 'Correo del responsable de negocio 4',
+  },
+  it_owner_email_1: {
+    en: 'IT owner 1 email',
+    fr: 'E-mail du responsable IT 1',
+    de: 'E-Mail IT-Verantwortliche/r 1',
+    es: 'Correo del responsable de TI 1',
+  },
+  it_owner_email_2: {
+    en: 'IT owner 2 email',
+    fr: 'E-mail du responsable IT 2',
+    de: 'E-Mail IT-Verantwortliche/r 2',
+    es: 'Correo del responsable de TI 2',
+  },
+  it_owner_email_3: {
+    en: 'IT owner 3 email',
+    fr: 'E-mail du responsable IT 3',
+    de: 'E-Mail IT-Verantwortliche/r 3',
+    es: 'Correo del responsable de TI 3',
+  },
+  it_owner_email_4: {
+    en: 'IT owner 4 email',
+    fr: 'E-mail du responsable IT 4',
+    de: 'E-Mail IT-Verantwortliche/r 4',
+    es: 'Correo del responsable de TI 4',
+  },
+  users_mode: { en: 'Users mode', fr: 'Mode de calcul des utilisateurs', de: 'Berechnung der Benutzer', es: 'Modo de cálculo de usuarios' },
+  users_year: { en: 'Users year', fr: 'Année des utilisateurs', de: 'Jahr der Benutzer', es: 'Año de los usuarios' },
+  users_override: {
+    en: 'Users count (manual)',
+    fr: 'Nombre d’utilisateurs (saisi)',
+    de: 'Anzahl Benutzer (manuell)',
+    es: 'Número de usuarios (manual)',
+  },
+  support_notes: { en: 'Support notes', fr: 'Notes de support', de: 'Support-Notizen', es: 'Notas de soporte' },
+  access_methods: { en: 'Access methods', fr: 'Modes d’accès', de: 'Zugriffsarten', es: 'Modos de acceso' },
+  external_facing: { en: 'External facing', fr: 'Exposition externe', de: 'Extern zugänglich', es: 'Acceso externo' },
+  etl_enabled: {
+    en: 'Data integration / ETL',
+    fr: 'Intégration de données / ETL',
+    de: 'Datenintegration / ETL',
+    es: 'Integración de datos / ETL',
+  },
+  is_suite: {
+    en: 'Can include other applications',
+    fr: 'Peut inclure d’autres applications',
+    de: 'Kann weitere Anwendungen enthalten',
+    es: 'Puede incluir otras aplicaciones',
+  },
+  criticality: { en: 'Business criticality', fr: 'Criticité business', de: 'Geschäftskritikalität', es: 'Criticidad de negocio' },
+  data_class: {
+    en: 'Data confidentiality',
+    fr: 'Confidentialité des données',
+    de: 'Datenvertraulichkeit',
+    es: 'Confidencialidad de los datos',
+  },
+  contains_pii: {
+    en: 'Contains personal data',
+    fr: 'Contient des données personnelles',
+    de: 'Enthält personenbezogene Daten',
+    es: 'Contiene datos personales',
+  },
+  data_residency: {
+    en: 'Data residency (country codes)',
+    fr: 'Résidence des données (codes pays)',
+    de: 'Datenresidenz (Ländercodes)',
+    es: 'Residencia de datos (códigos de país)',
+  },
+  last_dr_test: {
+    en: 'Last recovery test',
+    fr: 'Dernier test de reprise',
+    de: 'Letzter Wiederanlauftest',
+    es: 'Última prueba de recuperación',
+  },
+  status: { en: 'Status', fr: 'Statut', de: 'Status', es: 'Estado' },
+  licensing: { en: 'Licensing', fr: 'Licences', de: 'Lizenzierung', es: 'Licencias' },
+  notes: { en: 'Notes', fr: 'Notes', de: 'Notizen', es: 'Notas' },
+  created_at: { en: 'Created on', fr: 'Date de création', de: 'Erstellt am', es: 'Fecha de creación' },
+  updated_at: { en: 'Updated on', fr: 'Date de mise à jour', de: 'Aktualisiert am', es: 'Fecha de actualización' },
+  cyber_criticality: { en: 'Cyber criticality', fr: 'Criticité cyber', de: 'Cyberkritikalität', es: 'Criticidad cibernética' },
+  recovery_wave: { en: 'Recovery wave', fr: 'Vague de reprise', de: 'Wiederanlaufwelle', es: 'Ola de recuperación' },
+  rto_minutes: {
+    en: 'Recovery time objective (minutes)',
+    fr: 'Objectif de délai de reprise (minutes)',
+    de: 'Wiederanlaufzeitziel (Minuten)',
+    es: 'Objetivo de tiempo de recuperación (minutos)',
+  },
+  rpo_minutes: {
+    en: 'Recovery point objective (minutes)',
+    fr: 'Objectif de perte de données (minutes)',
+    de: 'Datenverlustziel (Minuten)',
+    es: 'Objetivo de punto de recuperación (minutos)',
+  },
+  classification_justification: {
+    en: 'Classification justification',
+    fr: 'Justification de la classification',
+    de: 'Begründung der Einstufung',
+    es: 'Justificación de la clasificación',
+  },
+  classification_revision: {
+    en: 'Classification revision',
+    fr: 'Révision de la classification',
+    de: 'Revision der Einstufung',
+    es: 'Revisión de la clasificación',
+  },
+  classification_review_state: {
+    en: 'Classification review',
+    fr: 'Revue des classifications',
+    de: 'Überprüfung der Einstufung',
+    es: 'Revisión de clasificaciones',
+  },
+  classification_reviewed_at: {
+    en: 'Classification reviewed on',
+    fr: 'Date de revue de la classification',
+    de: 'Prüfdatum der Einstufung',
+    es: 'Fecha de revisión de la clasificación',
+  },
+};
+
 export const applicationCsvConfig: CsvEntityConfig = {
   entityName: 'application',
   // The sheet of an xlsx export: the list's title on screen.
   sheetNames: { en: 'Applications', fr: 'Applications', de: 'Anwendungen', es: 'Aplicaciones' },
   tableName: 'applications',
   displayName: 'Applications',
+  headerLabels: APPLICATION_CSV_HEADERS,
   upsertKey: ['name'],
   // Same rule as the unique names: `lower(btrim(name))`.
   upsertKeyIgnoresOuterSpaces: true,
@@ -718,17 +884,16 @@ export const applicationCsvConfig: CsvEntityConfig = {
   sameAsStored: async (rows, context) => {
     const settings = await requireImportCatalogs(context);
     const ids = rows.map((row) => row.existingEntity.id);
-    const [owners, residency, users] = ids.length === 0 ? [[], [], []] : await Promise.all([
-      context.manager.query(
-        `SELECT application_id, user_id, owner_type FROM application_owners WHERE tenant_id = $1 AND application_id = ANY($2)`,
-        [context.tenantId, ids],
-      ),
-      context.manager.query(
-        `SELECT application_id, country_iso FROM application_data_residency WHERE tenant_id = $1 AND application_id = ANY($2)`,
-        [context.tenantId, ids],
-      ),
-      usersByEmail(context.manager, context.tenantId),
-    ]);
+    // One after the other: the request's single connection runs its queries in turn anyway.
+    const owners = ids.length === 0 ? [] : await context.manager.query(
+      `SELECT application_id, user_id, owner_type FROM application_owners WHERE tenant_id = $1 AND application_id = ANY($2)`,
+      [context.tenantId, ids],
+    );
+    const residency = ids.length === 0 ? [] : await context.manager.query(
+      `SELECT application_id, country_iso FROM application_data_residency WHERE tenant_id = $1 AND application_id = ANY($2)`,
+      [context.tenantId, ids],
+    );
+    const users = ids.length === 0 ? [] : await usersByEmail(context.manager, context.tenantId);
     const userByEmail = users as unknown as Map<string, string>;
     const ownersById = groupKeys(owners, (o: any) => o.application_id, (o: any) => `${o.owner_type}:${o.user_id}`);
     const residencyById = groupKeys(residency, (r: any) => r.application_id, (r: any) => String(r.country_iso).trim().toUpperCase());

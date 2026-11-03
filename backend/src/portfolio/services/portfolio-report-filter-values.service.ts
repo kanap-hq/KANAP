@@ -19,8 +19,8 @@ export class PortfolioReportFilterValuesService {
     const manager = opts.manager;
     if (!manager) throw new Error('A tenant-bound EntityManager is required');
 
-    const [projects, teams] = await Promise.all([
-      manager.query(
+    // One after the other: the request's single connection runs its queries in turn anyway.
+    const projects = await manager.query(
         `
         SELECT p.id::text AS id, p.item_number, p.name, p.status
         FROM portfolio_projects p
@@ -36,8 +36,8 @@ export class PortfolioReportFilterValuesService {
           p.item_number ASC
         `,
         [tenantId, OPEN_PROJECT_STATUSES],
-      ) as Promise<Array<{ id: string; item_number: number | string | null; name: string | null; status: string }>>,
-      manager.query(
+      ) as Array<{ id: string; item_number: number | string | null; name: string | null; status: string }>;
+    const teams = await manager.query(
         `
         SELECT t.id::text AS id, t.name
         FROM portfolio_teams t
@@ -46,8 +46,7 @@ export class PortfolioReportFilterValuesService {
         ORDER BY t.display_order ASC, t.name ASC
         `,
         [tenantId],
-      ) as Promise<Array<{ id: string; name: string | null }>>,
-    ]);
+      ) as Array<{ id: string; name: string | null }>;
 
     return {
       projects: projects.map((row) => ({

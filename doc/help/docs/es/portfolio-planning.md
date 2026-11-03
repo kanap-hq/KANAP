@@ -60,7 +60,7 @@ El Generador de hoja de ruta calcula las fechas propuestas del proyecto a partir
 
 Después de la generación, la pestaña Programación muestra las fechas propuestas del proyecto.
 
-- Los títulos de proyecto son clicables y abren la pestaña **Progreso** del proyecto.
+- Los títulos de proyecto son clicables y abren la pestaña **Esfuerzo** del proyecto.
 - Las casillas de verificación definen el alcance del escenario.
 - Un filtro de **Categoría (Vista previa)** permite filtrar la visualización Gantt de la hoja de ruta sin cambiar la programación generada.
 - Deseleccionar un proyecto regenera inmediatamente el escenario:

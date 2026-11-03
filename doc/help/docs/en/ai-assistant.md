@@ -63,30 +63,37 @@ The list contains:
 Each row shows the conversation title (or **Untitled** when none has been set yet). Hover or focus a row to reveal:
 
 - A pencil icon: **Rename** the conversation. Double-click the title to do the same thing.
-- A trash icon: **Archive** the conversation. Archived conversations disappear from the list. If you archive the conversation you currently have open, Plaid switches to a fresh empty chat.
+- A trash icon: **Delete** the conversation. The conversation and its messages are deleted. This cannot be undone. If you delete the conversation you currently have open, Plaid switches to a fresh empty chat.
 
-Search filters the list by title as you type. Renaming and archiving are saved immediately.
+Search filters the list by title as you type. Renaming and deleting are saved immediately.
 
 ## Writing a message
 
 The composer is the main control point of the workspace. It supports:
 
 - Multi-line text up to 10 visible rows before it scrolls
-- Inline image attachments (PNG, JPG, GIF, WEBP)
+- Attachments: images (PNG, JPG, GIF, WEBP) and spreadsheets (.xlsx, CSV)
 - `@`-mentions of KANAP records
 - A keyboard hint reminder ("Enter to send · Shift+Enter for new line")
 
-### Attaching images
+### Attaching images and spreadsheets
 
-You can add images in three ways:
+You can attach images (PNG, JPG, GIF, WEBP) and spreadsheets: Excel workbooks (.xlsx) and CSV files. There are three ways to add them:
 
-- Click the paperclip icon and pick files from your computer
-- Drag and drop image files onto the composer (a hint overlay confirms the drop target)
-- Paste an image directly from the clipboard
+- Click the paperclip icon (**Attach a file**) and pick files from your computer
+- Drag and drop files onto the composer (a hint overlay confirms the drop target)
+- Paste a file directly from the clipboard
 
-Each pending image appears as a thumbnail above the text. Click the small **X** on a thumbnail to remove it. There is a per-message attachment limit; once it is reached, the paperclip is disabled until you remove or send the current attachments.
+Each pending image appears as a thumbnail above the text. Each pending spreadsheet appears as a small tile with its name and size. Click the small **X** to remove one. A message holds up to 8 attachments, images and spreadsheets together. Once the limit is reached, the paperclip is disabled until you remove or send the current attachments.
 
-Images are uploaded together with your message so Plaid can describe them, compare them, or extract details.
+Images are uploaded with your message so Plaid can describe them, compare them, or extract details.
+
+KANAP reads a spreadsheet when you send the message:
+
+- A file can hold up to 5 MB and 20,000 rows. Only the first sheet of a workbook is read.
+- A file that cannot be read (damaged, empty, old .xls format, too large) is refused at once with the reason. The message is not sent.
+- Plaid receives a summary of the file: the column headers, the type of each column (text, number or date), the first ten rows and the number of rows. It can describe the file, say what each column holds and spot problems in the first rows. It cannot answer about the rows after the first ten.
+- The summary stays attached to the message for the rest of the conversation.
 
 ### Mentioning records with `@`
 

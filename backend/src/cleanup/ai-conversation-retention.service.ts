@@ -1,6 +1,8 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { DataSource, EntityManager } from 'typeorm';
 import { ScheduledTasksService } from '../admin/scheduled-tasks/scheduled-tasks.service';
+import { deleteAiConversationFiles, purgeAiConversations } from '../ai/ai-conversation-purge';
+import { StorageService } from '../common/storage/storage.service';
 import { withTenantExecution } from '../common/tenant-runner';
 
 const DEFAULT_PURGE_GRACE_DAYS = 30;
@@ -34,6 +36,7 @@ export class AiConversationRetentionService implements OnModuleInit {
   constructor(
     private readonly dataSource: DataSource,
     private readonly scheduledTasks: ScheduledTasksService,
+    private readonly storage?: StorageService,
   ) {}
 
   onModuleInit() {
@@ -45,7 +48,14 @@ export class AiConversationRetentionService implements OnModuleInit {
     });
   }
 
-  async run(opts?: { manager?: EntityManager }): Promise<AiConversationRetentionSummary> {
+  /**
+   * `storage`, when passed, deletes the purged conversations' files even though
+   * `manager` is the caller's own transaction. Production calls `run()` with
+   * neither: each tenant commits, then its files go. A caller that passes only
+   * `manager` leaves the files, so a later rollback cannot remove objects that
+   * the database rows still name.
+   */
+  async run(opts?: { manager?: EntityManager; storage?: StorageService }): Promise<AiConversationRetentionSummary> {
     const summary: AiConversationRetentionSummary = {
       tenantsProcessed: 0,
       archived: 0,
@@ -53,6 +63,8 @@ export class AiConversationRetentionService implements OnModuleInit {
       purged_messages: 0,
       errors: [],
     };
+    const fileStorage = opts?.storage ?? (opts?.manager ? undefined : this.storage);
+    let purgedFiles = 0;
 
     const tenants: Array<{ id: string }> = opts?.manager
       ? await opts.manager.query(
@@ -72,22 +84,24 @@ export class AiConversationRetentionService implements OnModuleInit {
 
     for (const tenant of tenants) {
       try {
-        const processed = opts?.manager
+        const outcome = opts?.manager
           ? await this.runForTenant(opts.manager, tenant.id, summary)
           : await withTenantExecution(this.dataSource, tenant.id, async (tenantManager) => {
             return this.runForTenant(tenantManager, tenant.id, summary);
           });
 
-        if (processed) {
+        if (outcome.processed) {
           summary.tenantsProcessed += 1;
         }
+        const files = await deleteAiConversationFiles(fileStorage, outcome.storagePaths, 'ai-conversation-retention');
+        purgedFiles += files.deleted;
       } catch (error: any) {
         summary.errors.push(`Tenant ${tenant.id}: ${error?.message || String(error)}`);
       }
     }
 
     this.logger.log(
-      `[ai-conversation-retention] Done: ${summary.tenantsProcessed} tenants, ${summary.archived} archived, ${summary.purged_conversations} purged conversations, ${summary.purged_messages} purged messages` +
+      `[ai-conversation-retention] Done: ${summary.tenantsProcessed} tenants, ${summary.archived} archived, ${summary.purged_conversations} purged conversations, ${summary.purged_messages} purged messages, ${purgedFiles} attachment files` +
         (this.purgeGraceDays ? ` (grace=${this.purgeGraceDays}d)` : ''),
     );
 
@@ -98,7 +112,7 @@ export class AiConversationRetentionService implements OnModuleInit {
     manager: EntityManager,
     tenantId: string,
     summary: AiConversationRetentionSummary,
-  ): Promise<boolean> {
+  ): Promise<{ processed: boolean; storagePaths: string[] }> {
     await manager.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
 
     const settingsRows: Array<Record<string, unknown>> = await manager.query(
@@ -113,7 +127,7 @@ export class AiConversationRetentionService implements OnModuleInit {
     );
     const retentionDays = toCount(settingsRows[0]?.conversation_retention_days);
     if (retentionDays <= 0) {
-      return false;
+      return { processed: false, storagePaths: [] };
     }
 
     const archivedRows: Array<{ id: string }> = await manager.query(
@@ -141,55 +155,14 @@ export class AiConversationRetentionService implements OnModuleInit {
       [this.purgeGraceDays, tenantId],
     );
 
-    if (purgeRows.length > 0) {
-      const purgeIds = purgeRows.map((row) => row.id);
-      const messageCountRows: Array<{ count: string }> = await manager.query(
-        `
-        SELECT COUNT(*)::bigint AS count
-        FROM ai_messages
-        WHERE tenant_id = $1
-          AND conversation_id = ANY($2::uuid[])
-        `,
-        [tenantId, purgeIds],
-      );
-
-      await manager.query(
-        `
-        DELETE FROM ai_messages
-        WHERE tenant_id = $1
-          AND conversation_id = ANY($2::uuid[])
-        `,
-        [tenantId, purgeIds],
-      );
-      // An action request reaches its conversation twice: conversation_id
-      // directly and preview_id through the previews that CASCADE with it, both
-      // SET NULL. Unlink the second path first so the DELETE does not depend on
-      // the order PostgreSQL fires the FK triggers (trigger-name order, which
-      // differs between a migrated and a pg_restore'd database).
-      await manager.query(
-        `
-        UPDATE ai_action_requests
-        SET preview_id = NULL
-        WHERE tenant_id = $1
-          AND preview_id IN (
-            SELECT id FROM ai_mutation_previews WHERE tenant_id = $1 AND conversation_id = ANY($2::uuid[])
-          )
-        `,
-        [tenantId, purgeIds],
-      );
-      await manager.query(
-        `
-        DELETE FROM ai_conversations
-        WHERE tenant_id = $1
-          AND id = ANY($2::uuid[])
-        `,
-        [tenantId, purgeIds],
-      );
-
-      summary.purged_messages += toCount(messageCountRows[0]?.count);
-      summary.purged_conversations += purgeIds.length;
+    if (purgeRows.length === 0) {
+      return { processed: true, storagePaths: [] };
     }
 
-    return true;
+    const purgeIds = purgeRows.map((row) => row.id);
+    const purged = await purgeAiConversations(manager, tenantId, purgeIds);
+    summary.purged_messages += purged.messages;
+    summary.purged_conversations += purgeIds.length;
+    return { processed: true, storagePaths: purged.storagePaths };
   }
 }

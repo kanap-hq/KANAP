@@ -21,6 +21,7 @@ import {
   CsvFieldInfo,
   CsvResolverService,
   CSV_CONTENT_TYPE,
+  csvColumnOfHeader,
 } from '../common/csv';
 import type { ExportFileFormat } from '../common/xlsx';
 import { applicationCsvConfig, csvOwnerKeys, sameKeys, usersByEmail } from './application-csv.config';
@@ -64,6 +65,10 @@ export function exportFixedLabelsIn(row: Record<string, any>, language: ExportLa
     if (label) row[field] = label;
   }
 }
+
+/** The headers of a file read again after the import, by column: a header may be a title of any language. */
+const csvColumns = (headers: Array<string | null | undefined>) =>
+  headers.map((header) => (header == null ? header : csvColumnOfHeader(applicationCsvConfig, header)));
 
 @Injectable()
 export class ApplicationsCsvService {
@@ -334,7 +339,7 @@ export class ApplicationsCsvService {
     const rows: Record<string, string>[] = [];
 
     await new Promise<void>((resolve, reject) => {
-      parseString(text, { headers: true, delimiter: csvSeparatorOf(text) ?? ';', ignoreEmpty: true })
+      parseString(text, { headers: csvColumns, delimiter: csvSeparatorOf(text) ?? ';', ignoreEmpty: true })
         .on('data', (row) => rows.push(row))
         .on('end', () => resolve())
         .on('error', (err) => reject(err));
@@ -428,7 +433,7 @@ export class ApplicationsCsvService {
     const rows: Record<string, string>[] = [];
 
     await new Promise<void>((resolve, reject) => {
-      parseString(text, { headers: true, delimiter: csvSeparatorOf(text) ?? ';', ignoreEmpty: true })
+      parseString(text, { headers: csvColumns, delimiter: csvSeparatorOf(text) ?? ';', ignoreEmpty: true })
         .on('data', (row) => rows.push(row))
         .on('end', () => resolve())
         .on('error', (err) => reject(err));

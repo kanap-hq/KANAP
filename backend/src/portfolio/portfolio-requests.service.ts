@@ -1706,10 +1706,9 @@ export class PortfolioRequestsService {
     const beforeSorted = [...beforeIds].sort();
     const afterSorted = [...afterIds].sort();
     if (JSON.stringify(beforeSorted) !== JSON.stringify(afterSorted)) {
-      const [beforeNames, afterNames] = await Promise.all([
-        this.resolveUserNamesByIds(mg, beforeSorted),
-        this.resolveUserNamesByIds(mg, afterSorted),
-      ]);
+      // One after the other: the request's single connection runs its queries in turn anyway.
+      const beforeNames = await this.resolveUserNamesByIds(mg, beforeSorted);
+      const afterNames = await this.resolveUserNamesByIds(mg, afterSorted);
       await this.logActivity(mg, {
         request_id: requestId,
         tenant_id: request.tenant_id,
@@ -1846,10 +1845,9 @@ export class PortfolioRequestsService {
     const beforeSorted = [...beforeIds].sort();
     const afterSorted = [...unique].sort();
     if (JSON.stringify(beforeSorted) !== JSON.stringify(afterSorted)) {
-      const [beforeLabels, afterLabels] = await Promise.all([
-        this.resolveApplicationLabelsByIds(mg, beforeSorted),
-        this.resolveApplicationLabelsByIds(mg, afterSorted),
-      ]);
+      // One after the other: the request's single connection runs its queries in turn anyway.
+      const beforeLabels = await this.resolveApplicationLabelsByIds(mg, beforeSorted);
+      const afterLabels = await this.resolveApplicationLabelsByIds(mg, afterSorted);
       await this.logActivity(mg, {
         request_id: requestId,
         tenant_id: request.tenant_id,
@@ -1942,10 +1940,9 @@ export class PortfolioRequestsService {
     const beforeSorted = [...beforeIds].sort();
     const afterSorted = [...unique].sort();
     if (JSON.stringify(beforeSorted) !== JSON.stringify(afterSorted)) {
-      const [beforeLabels, afterLabels] = await Promise.all([
-        this.resolveAssetLabelsByIds(mg, beforeSorted),
-        this.resolveAssetLabelsByIds(mg, afterSorted),
-      ]);
+      // One after the other: the request's single connection runs its queries in turn anyway.
+      const beforeLabels = await this.resolveAssetLabelsByIds(mg, beforeSorted);
+      const afterLabels = await this.resolveAssetLabelsByIds(mg, afterSorted);
       await this.logActivity(mg, {
         request_id: requestId,
         tenant_id: request.tenant_id,
@@ -2007,10 +2004,9 @@ export class PortfolioRequestsService {
     const beforeSorted = [...beforeIds].sort();
     const afterSorted = [...afterIds].sort();
     if (JSON.stringify(beforeSorted) !== JSON.stringify(afterSorted)) {
-      const [beforeLabels, afterLabels] = await Promise.all([
-        activityBudgetLines(mg, 'capex', beforeSorted),
-        activityBudgetLines(mg, 'capex', afterSorted),
-      ]);
+      // One after the other: the request's single connection runs its queries in turn anyway.
+      const beforeLabels = await activityBudgetLines(mg, 'capex', beforeSorted);
+      const afterLabels = await activityBudgetLines(mg, 'capex', afterSorted);
       await this.logActivity(mg, {
         request_id: requestId,
         tenant_id: request.tenant_id,
@@ -2064,10 +2060,9 @@ export class PortfolioRequestsService {
     const beforeSorted = [...beforeIds].sort();
     const afterSorted = [...afterIds].sort();
     if (JSON.stringify(beforeSorted) !== JSON.stringify(afterSorted)) {
-      const [beforeLabels, afterLabels] = await Promise.all([
-        activityBudgetLines(mg, 'opex', beforeSorted),
-        activityBudgetLines(mg, 'opex', afterSorted),
-      ]);
+      // One after the other: the request's single connection runs its queries in turn anyway.
+      const beforeLabels = await activityBudgetLines(mg, 'opex', beforeSorted);
+      const afterLabels = await activityBudgetLines(mg, 'opex', afterSorted);
       await this.logActivity(mg, {
         request_id: requestId,
         tenant_id: request.tenant_id,

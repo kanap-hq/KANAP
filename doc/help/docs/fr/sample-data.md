@@ -23,6 +23,8 @@ Le jeu décrit Fromage & Co, une fromagerie fictive :
 
 Les dates suivent l'année en cours, si bien que le budget paraît toujours à jour. Le chargement prend environ deux minutes.
 
+Le jeu se charge dans la langue de l'espace de travail : anglais, français, allemand ou espagnol (anglais pour toute autre langue). Les titres, les descriptions, les incidents et les documents sont traduits. Les noms des sociétés, des personnes, des fournisseurs et des applications restent tels quels, et quelques noms locaux des sociétés française, néerlandaise et italienne gardent leur langue. Après un effacement, un nouveau chargement se fait dans la même langue.
+
 Les utilisateurs fictifs n'ont ni mot de passe ni accès. Ils servent à donner un aspect réaliste aux responsables, aux personnes assignées et aux équipes projet. KANAP ne leur envoie aucun e-mail, et l'effacement les supprime.
 
 ## Charger les données d'exemple

@@ -8,6 +8,14 @@ KANAP aide les équipes IT et finance à gérer leur cartographie technologique,
 
 Si vous souhaitez le chemin le plus court vers la productivité, commencez par les guides de prise en main rapide avant de vous plonger dans les pages de référence complètes.
 
+## Premiers pas
+
+Dix minutes par parcours, avec l'exemple Fromage & Co ou avec vos données :
+
+- Budget IT : [découvrir avec l'exemple](first-steps/budget-example.md), [commencer avec mes données](first-steps/budget-own-data.md)
+- Cartographie du SI : [découvrir avec l'exemple](first-steps/landscape-example.md), [commencer avec mes données](first-steps/landscape-own-data.md)
+- Projets et demandes : [découvrir avec l'exemple](first-steps/portfolio-example.md), [commencer avec mes données](first-steps/portfolio-own-data.md)
+
 ## Guides de prise en main rapide
 
 - [Prise en main : vos 10 premières minutes dans KANAP](fast-track/getting-started.md): Intégration du premier jour, configuration du profil, tableau de bord et concepts clés

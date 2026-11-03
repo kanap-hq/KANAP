@@ -127,13 +127,11 @@ export class CsvResolverService {
     // Determine which entities need to be loaded
     const fkTypes = this.extractFkTypes(fieldDefs);
 
-    // Load each entity type in parallel
-    await Promise.all(
-      Array.from(fkTypes).map(async (entityType) => {
-        const entityCache = await this.loadEntityCache(tenantId, entityType, manager);
-        cache.set(entityType, entityCache);
-      }),
-    );
+    // One after the other: the request's single connection runs its queries in turn anyway.
+    for (const entityType of fkTypes) {
+      const entityCache = await this.loadEntityCache(tenantId, entityType, manager);
+      cache.set(entityType, entityCache);
+    }
 
     return cache;
   }

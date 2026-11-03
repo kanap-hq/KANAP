@@ -5,6 +5,7 @@ import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { AuditLog } from '../../audit/audit.entity';
 import { AuditService } from '../../audit/audit.service';
+import { SUPPLIER_CSV_HEADERS } from '../supplier-csv-headers';
 import { SuppliersService } from '../suppliers.service';
 
 // The suppliers file, beyond what the shared master-data layer promises
@@ -179,7 +180,7 @@ async function testDisabledAtRoundTrip() {
 
     const exported = (await suppliers.exportCsv('data', { manager: runner.manager, language: 'en' })).content.replace(/^﻿/, '');
     const lines = exported.trim().split(/\r?\n/);
-    assert.deepEqual(lines[0].split(','), HEADERS, 'disabled_at follows status');
+    assert.deepEqual(lines[0].split(','), HEADERS.map((column) => SUPPLIER_CSV_HEADERS[column as keyof typeof SUPPLIER_CSV_HEADERS].en), 'disabled_at follows status');
     assert.ok(lines.includes('Ended,,,,,,disabled,2025-06-30'), exported);
     assert.ok(lines.includes('Scheduled,,,,,,enabled,2031-12-31'), exported);
 

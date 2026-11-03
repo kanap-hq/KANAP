@@ -16,11 +16,23 @@ Jede Stammdatenseite hat **Exportieren** und **Importieren** in ihrer Symbolleis
 
 **Spalten werden über ihren Namen zugeordnet**, in beliebiger Reihenfolge, unabhängig von Groß- und Kleinschreibung, Leerzeichen und Unterstrichen. Diese Dateien sind streng: Eine Spalte, die KANAP nicht kennt, lehnt die ganze Datei ab, und die Meldung nennt in einer Zeile **Kopfzeile** die unbekannten und die fehlenden Spalten. Die Budgetdatei ist diejenige, die unbekannte Spalten ignoriert. Siehe [Ein Budget aus einer Tabellenkalkulation laden](budget-file.md).
 
+**Spaltentitel.** Die Dateien für Anwendungen, Assets, Projekte, Vorfälle, Lieferanten und Verträge benennen ihre Spalten in der Sprache Ihrer Oberfläche, zum Beispiel `Name` auf Englisch und `Nom` auf Französisch. Der Import liest diese Titel in jeder der vier Sprachen, dazu die technischen Namen, die die Seiten auflisten (`name`). Die anderen Dateien, die Budgetdatei eingeschlossen, verwenden die technischen Namen.
+
 **Excel-Arbeitsmappen.** Ein Import liest eine CSV-Datei oder eine Excel-Arbeitsmappe (`.xlsx`), mit denselben Spalten und denselben Regeln. KANAP liest nur das erste Blatt. Hat die Arbeitsmappe weitere Blätter, nennt die Prüfung das gelesene Blatt. Eine Zahl oder ein Datum, das in einer Zelle als Wert steht, wird so gelesen, wie es ist, ohne Frage nach Trennzeichen oder Tagesreihenfolge, und ein Datum mit Uhrzeit behält seine Uhrzeit. Ein Datum oder ein Betrag als Text folgt den Regeln einer CSV-Datei weiter unten. Eine alte Excel-Datei (`.xls`) wird mit einer Meldung abgelehnt: Speichern Sie sie als `.xlsx` oder CSV. Importvorlagen sind CSV-Dateien, die Excel öffnet.
 
 **Kodierung und Trennzeichen einer CSV-Datei.** Speichern Sie die Datei als UTF-8 („CSV UTF-8“ in Excel). Eine Datei, die Excel als einfache CSV in Windows-1252 gespeichert hat, lässt sich ebenfalls importieren, Umlaute eingeschlossen. Das Trennzeichen wird aus der Kopfzeile gelesen: `,`, `;` oder ein Tabulator. Der Export schreibt das Trennzeichen der Sprache, in der die Oberfläche angezeigt wird.
 
 **Andere Dateien.** Eine OpenDocument-Tabelle (`.ods`) wird abgelehnt, bevor eine Spalte gelesen wird, mit einer Meldung, die erklärt, wie man sie als CSV speichert. In LibreOffice Calc: **Datei › Speichern unter › Text CSV** oder **Excel 2007-365 (.xlsx)**. Jede andere Datei, die kein Text ist, wird ebenso abgelehnt.
+
+## Beispieldateien { #example-files }
+
+Der Importdialog für Anwendungen, Assets, Projekte, Lieferanten, Verträge und die Budgetdatei bietet **Beispiel herunterladen** an: eine Excel-Arbeitsmappe in der Sprache Ihrer Oberfläche.
+
+- Das erste Blatt enthält einige Beispiele von Fromage & Co für die meistgenutzten Spalten. Dieses Blatt liest der Import.
+- **Erweitert** zeigt die übrigen Spalten für dieselben Zeilen, wenn der Import mehr Spalten kennt, als das erste Blatt enthält. Um eine davon zu verwenden, kopieren Sie sie in das erste Blatt.
+- **Hinweise** sagt, was jede Spalte aufnimmt. Listen zeigen die Werte, die Ihr Arbeitsbereich akzeptiert, etwa seine Anwendungskategorien oder seine Analysedimensionen.
+
+Namen, Codes und E-Mail-Adressen müssen zu Datensätzen Ihres Arbeitsbereichs passen. Die Beispiele verwenden die der Beispieldaten von Fromage & Co: Ersetzen Sie sie durch Ihre eigenen, etwa den Standort eines Servers oder das Unternehmen eines Vertrags.
 
 ## Beträge, Datumsangaben und Ja oder Nein
 

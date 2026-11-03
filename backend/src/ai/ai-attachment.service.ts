@@ -13,6 +13,19 @@ import { fixMulterFilename, uploadedBytes } from '../common/upload';
 import { validateUploadedFile } from '../common/upload-validation';
 import { AiConversation } from './ai-conversation.entity';
 import { AiMessageAttachment } from './ai-message-attachment.entity';
+import { summarizeTableAttachment, TABLE_ATTACHMENT_KIND, TableSummary, tableSummaryText } from './attachments/table-attachment';
+
+/** Summaries of attached spreadsheets, by tenant and attachment: a stored file never changes. */
+const TABLE_SUMMARY_CACHE_SIZE = 50;
+const tableSummaryCache = new Map<string, TableSummary>();
+
+function cacheTableSummary(key: string, summary: TableSummary): void {
+  tableSummaryCache.delete(key);
+  tableSummaryCache.set(key, summary);
+  while (tableSummaryCache.size > TABLE_SUMMARY_CACHE_SIZE) {
+    tableSummaryCache.delete(tableSummaryCache.keys().next().value as string);
+  }
+}
 
 export type UploadAttachmentInput = {
   conversationId: string;
@@ -40,7 +53,9 @@ export class AiAttachmentService {
   }
 
   /**
-   * Upload an inline image for a Plaid chat conversation.
+   * Upload an attachment for a Plaid chat conversation: an image, sent to the model as is, or a
+   * spreadsheet (.xlsx, .csv), read here and refused at once when it cannot be read or passes a cap.
+   * The model only ever receives the spreadsheet's summary (`tableSummaryText`).
    *
    * Tenant safety:
    *   - Conversation lookup is filtered by both id AND tenant_id (defence in depth on top of RLS).
@@ -49,7 +64,7 @@ export class AiAttachmentService {
    *   - The uploader must own (created) the conversation, otherwise we 403 — this prevents an
    *     attacker who guessed a conversation_id from injecting attachments.
    */
-  async uploadInlineImage(input: UploadAttachmentInput, manager?: EntityManager): Promise<AiMessageAttachment> {
+  async uploadAttachment(input: UploadAttachmentInput, manager?: EntityManager): Promise<AiMessageAttachment> {
     if (!input.file) throw new BadRequestException('No file uploaded');
 
     const conversation = await this.getConversationRepo(manager).findOne({
@@ -73,8 +88,10 @@ export class AiAttachmentService {
         buffer: buf as Buffer,
         size: input.file.size,
       },
-      { scope: 'inline-image' },
+      { scope: 'ai-attachment' },
     );
+    const isImage = validated.mimeType.startsWith('image/');
+    const tableSummary = isImage ? null : await summarizeTableAttachment(buf as Buffer);
 
     const id = randomUUID();
     const rand = Math.random().toString(36).slice(2, 8);
@@ -109,10 +126,27 @@ export class AiAttachmentService {
       mime_type: validated.mimeType,
       size: validated.size,
       storage_path: key,
-      kind: 'image',
+      kind: isImage ? 'image' : TABLE_ATTACHMENT_KIND,
     });
 
-    return this.getAttachmentRepo(manager).save(attachment);
+    const saved = await this.getAttachmentRepo(manager).save(attachment);
+    if (tableSummary) cacheTableSummary(`${input.tenantId}:${saved.id}`, tableSummary);
+    return saved;
+  }
+
+  /**
+   * The summary of an attached spreadsheet, as the model reads it. Read from the stored file once,
+   * then from a small cache.
+   */
+  async loadTableSummaryText(attachment: AiMessageAttachment, manager?: EntityManager): Promise<string> {
+    const key = `${attachment.tenant_id}:${attachment.id}`;
+    let summary = tableSummaryCache.get(key);
+    if (!summary) {
+      const { buffer } = await this.loadAttachmentBuffer(attachment.id, attachment.tenant_id, manager);
+      summary = await summarizeTableAttachment(buffer);
+    }
+    cacheTableSummary(key, summary);
+    return tableSummaryText({ attachmentId: attachment.id, filename: attachment.original_filename, summary });
   }
 
   /**

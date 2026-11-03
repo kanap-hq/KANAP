@@ -17,7 +17,7 @@ vi.mock('react-i18next', () => ({
 vi.mock('../../api', () => ({ default: { get: vi.fn() } }));
 
 import api from '../../api';
-import RecordUsagesSection, { type Usages } from './RecordUsagesSection';
+import RecordUsagesSection, { usageHref, type UsageItem, type Usages } from './RecordUsagesSection';
 
 const mocked = api as unknown as { get: ReturnType<typeof vi.fn> };
 
@@ -33,7 +33,7 @@ const USAGES: Usages = {
         { id: 'b-2', reference: 'BL-40', name: 'Servers', nature: 'capex', status: 'enabled', active: false, roles: [] },
       ],
     },
-    { type: 'applications', total: 1, items: [{ id: 'a-1', reference: null, name: 'Outlook', status: 'active', active: true, roles: ['Account manager'] }] },
+    { type: 'applications', total: 1, items: [{ id: 'a-1', reference: 'APP-9', name: 'Outlook', status: 'active', active: true, roles: ['Account manager'] }] },
     { type: 'projects', total: 2, items: [{ id: 'p-1', reference: 'PRJ-3', name: 'Migration', status: 'planned', active: true, roles: [] }] },
   ],
 };
@@ -50,6 +50,34 @@ function renderTab(owner: 'suppliers' | 'contacts' = 'contacts', ownerName?: str
     </QueryClientProvider>,
   );
 }
+
+function usageItem(id: string, reference: string | null): UsageItem {
+  return { id, reference, name: 'Name', status: null, active: true };
+}
+
+describe('usageHref', () => {
+  const id = '3f2a0000-0000-4000-8000-000000000001';
+
+  it('opens every type by its business reference, and by the id when the reference is missing', () => {
+    expect(usageHref('suppliers', usageItem(id, null))).toBe(`/master-data/suppliers/${id}/overview`);
+    expect(usageHref('budget_lines', usageItem(id, 'BL-12'))).toBe('/ops/budget/BL-12');
+    expect(usageHref('contracts', usageItem(id, null))).toBe(`/ops/contracts/${id}`);
+    expect(usageHref('applications', usageItem(id, 'APP-12'))).toBe('/it/applications/APP-12');
+    expect(usageHref('assets', usageItem(id, 'AST-4'))).toBe('/it/assets/AST-4');
+    expect(usageHref('technologies', usageItem(id, 'TEC-4'))).toBe('/it/technologies/TEC-4');
+    expect(usageHref('locations', usageItem(id, 'LOC-2'))).toBe('/it/locations/LOC-2');
+    expect(usageHref('projects', usageItem(id, 'PRJ-3'))).toBe('/portfolio/projects/PRJ-3');
+    expect(usageHref('requests', usageItem(id, 'REQ-7'))).toBe('/portfolio/requests/REQ-7');
+
+    expect(usageHref('applications', usageItem(id, null))).toBe(`/it/applications/${id}`);
+    expect(usageHref('assets', usageItem(id, null))).toBe(`/it/assets/${id}`);
+    expect(usageHref('locations', usageItem(id, null))).toBe(`/it/locations/${id}`);
+    expect(usageHref('projects', usageItem(id, null))).toBe(`/portfolio/projects/${id}`);
+    expect(usageHref('requests', usageItem(id, null))).toBe(`/portfolio/requests/${id}`);
+    expect(usageHref('budget_lines', usageItem(id, null))).toBe(`/ops/budget/${id}`);
+    expect(usageHref('technologies', usageItem(id, null))).toBe(`/it/technologies/${id}`);
+  });
+});
 
 describe('RecordUsagesSection', () => {
   beforeEach(() => {
@@ -78,8 +106,8 @@ describe('RecordUsagesSection', () => {
     expect(line).toHaveAttribute('href', '/ops/budget/BL-12');
     expect(within(line).getByText('BL-12')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Microsoft/ })).toHaveAttribute('href', '/master-data/suppliers/s-1/overview');
-    expect(screen.getByRole('link', { name: /Outlook/ })).toHaveAttribute('href', '/it/applications/a-1');
-    expect(screen.getByRole('link', { name: /Migration/ })).toHaveAttribute('href', '/portfolio/projects/p-1');
+    expect(screen.getByRole('link', { name: /Outlook/ })).toHaveAttribute('href', '/it/applications/APP-9');
+    expect(screen.getByRole('link', { name: /Migration/ })).toHaveAttribute('href', '/portfolio/projects/PRJ-3');
   });
 
   it('shows the nature, the state, the status and the roles of each row', async () => {

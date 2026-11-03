@@ -84,8 +84,8 @@ export class PortfolioAssigneeAttentionService {
     // leaves the unassigned tasks out, so the unassigned line counts zero under it.
     const projectTeamSql = andPredicates(taskProjectTeamPredicates(params, 't', query));
 
-    const [people, unassignedRows] = await Promise.all([
-      manager.query(
+    // One after the other: the request's single connection runs its queries in turn anyway.
+    const people = await manager.query(
         `
         WITH scope AS (
           SELECT t.assignee_user_id AS user_id,
@@ -115,8 +115,8 @@ export class PortfolioAssigneeAttentionService {
         GROUP BY s.user_id, u.first_name, u.last_name, u.email, mc.item_number, mc.team_id, pt.name
         `,
         params,
-      ) as Promise<PersonRow[]>,
-      manager.query(
+      ) as PersonRow[];
+    const unassignedRows = await manager.query(
         `
         SELECT COUNT(*)::int AS open,
                COUNT(*) FILTER (WHERE t.due_date IS NOT NULL AND t.due_date < $3::date)::int AS overdue,
@@ -128,8 +128,7 @@ export class PortfolioAssigneeAttentionService {
           AND t.assignee_user_id IS NULL${projectTeamSql}
         `,
         params,
-      ) as Promise<CountsRow[]>,
-    ]);
+      ) as CountsRow[];
 
     const unassignedRow = unassignedRows[0];
     const unassigned: AttentionCounts = {

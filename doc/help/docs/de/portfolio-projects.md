@@ -15,7 +15,7 @@ Für portfolio-weite Sequenzierung und Roadmap-Arbeit verwenden Sie [Portfolio-P
 
 - `portfolio_projects:reader`: die Liste öffnen und Projekt-Arbeitsbereiche anzeigen
 - `portfolio_projects:contributor`: das verwaltete Dokument **Zweck** aktualisieren, Zeit auf dem Projekt erfassen (Projekt-Overhead-Einträge und Einträge auf Projektaufgaben) und im Reiter **Beziehungen** verknüpfte Datensätze, Links und Dateien pflegen (Abhängigkeiten erfordern `portfolio_projects:member`)
-- `portfolio_projects:member`: Projekte erstellen und Projektdaten, Status, Team, Beziehungen, Zeitleiste, Fortschritt, Aufgaben, Bewertung, Kommentare und Entscheidungen verwalten
+- `portfolio_projects:member`: Projekte erstellen und Projektdaten, Status, Team, Beziehungen, Zeitleiste, Aufwand, Aufgaben, Bewertung, Kommentare und Entscheidungen verwalten
 - `portfolio_projects:admin`: enthält die Member-Funktionen und kann auch importieren und exportieren, Prioritäts-Überschreibungen speichern und Projekt-Overhead-Zeiteinträge anderer Benutzer pflegen
 - Die Anzeige der Wissensdatenbank erfordert auch Wissensdatenbank-Zugriff
 - Das Erstellen oder Verknüpfen von eigenständigem Wissen erfordert auch eine Wissens-Erstellungsrolle
@@ -43,7 +43,7 @@ Die Projektliste ist darauf ausgelegt, zwei Fragen schnell zu beantworten: „Wo
 | **Priorität** | Berechneter Prioritätswert |
 | **Status** | Aktueller Ausführungszustand mit einem farbigen Punkt |
 | **Herkunft** | Anfrage, Schnellstart oder Legacy |
-| **Fortschritt** | Ausführungsfortschritt als Balken |
+| **Aufwand** | Ausführungsfortschritt als Balken |
 | **Quelle** | Portfolio-Quellklassifizierung |
 | **Kategorie** | Portfolio-Kategorie |
 | **Stream** | Portfolio-Stream |
@@ -97,7 +97,7 @@ Nur mit **Abbrechen** lässt sich ein Projekt löschen. Sobald Sie das Projekt v
 
 Der Projekt-Arbeitsbereich hat zwei Schichten:
 
-- Den **Hauptinhaltsbereich** für die operativen Reiter: **Zusammenfassung**, **Aufgaben**, **Zeitleiste**, **Fortschritt**, **Bewertung**, **Beziehungen**, **Wissensdatenbank** und **Verlauf** (die Änderungen am Projekt, siehe [Verlauf der Datensätze](record-history.md))
+- Den **Hauptinhaltsbereich** für die operativen Reiter: **Zusammenfassung**, **Aufgaben**, **Zeitleiste**, **Aufwand**, **Bewertung**, **Beziehungen**, **Wissensdatenbank** und **Verlauf** (die Änderungen am Projekt, siehe [Verlauf der Datensätze](record-history.md))
 - Eine persistente **Eigenschaftsleiste** am rechten Rand für Kerneigenschaften, Teamzuweisung und Quell-Anfragen
 
 Öffnen oder schließen Sie die Eigenschaftsleiste mit der vertikalen Registerkarte am rechten Rand.
@@ -154,7 +154,7 @@ Diese Zuweisungen tun mehr, als Felder auszufüllen:
 
 - sie bestimmen, was in **Meine Projekte** und **Projekte meines Teams** erscheint
 - sie speisen den Projektkontext in Zusammenfassung und Berichterstattung ein
-- sie definieren, wer für die Aufwandszuweisung im Reiter **Fortschritt** verfügbar ist
+- sie definieren, wer für die Aufwandszuweisung im Reiter **Aufwand** verfügbar ist
 
 Wenn Leiter und Mitwirkende falsch sind, ist auch Ihre Aufwandsplanung falsch.
 
@@ -213,7 +213,7 @@ Der Reiter **Aufgaben** ist die Ausführungswarteschlange des Projekts. Das Reit
 
 Dieser Reiter ist für die Verwaltung von projektbezogenen Aufgaben im Kontext, nicht für den Ersatz des vollständigen Aufgaben-Arbeitsbereichs. Das Öffnen einer Aufgabe führt Sie zu ihrem eigenen Arbeitsbereich, wo aufgabenspezifische Details und Zeiterfassung fortgesetzt werden.
 
-Aus Projektsicht ist die wichtige Konsequenz folgende: Aufgabenstatus und Aufgabenzeit sind nicht isoliert. Sie fließen zurück in Zusammenfassung und Fortschritt, sodass vernachlässigte Aufgaben das gesamte Projektbild weniger vertrauenswürdig machen.
+Aus Projektsicht ist die wichtige Konsequenz folgende: Aufgabenstatus und Aufgabenzeit sind nicht isoliert. Sie fließen zurück in Zusammenfassung und Aufwand, sodass vernachlässigte Aufgaben das gesamte Projektbild weniger vertrauenswürdig machen.
 
 ## Zeitleiste
 
@@ -259,20 +259,20 @@ Phasen-Abschluss-Meilensteine folgen der Phase, an die sie angehängt sind. Eige
 
 Nur Phasen mit verwendbaren Start- und Enddaten erscheinen sinnvoll im Gantt. Wenn die Daten vage sind, ist das Diagramm gleichermaßen vage. In der Gantt-Ansicht können Sie Phasenbalken ziehen, um Start-/Enddaten anzupassen (mit Verwaltungsberechtigung).
 
-## Fortschritt
+## Aufwand
 
-Der Reiter **Fortschritt** kombiniert Ausführungsfortschritt, Arbeitslastplanung und tatsächlichen Zeitverbrauch. Diese Kombination ist wichtig, weil ein Projekt, das 80 % Fortschritt mit 20 % verbrauchtem Aufwand meldet, nicht unbedingt effizient ist; es kann einfach schlecht geschätzt sein.
+Der Reiter **Aufwand** kombiniert Ausführungsfortschritt, Arbeitslastplanung und tatsächlichen Zeitverbrauch. Diese Kombination ist wichtig, weil ein Projekt, das 80 % Fortschritt mit 20 % verbrauchtem Aufwand meldet, nicht unbedingt effizient ist; es kann einfach schlecht geschätzt sein.
 
 ### Fortschritt und Arbeitslast
 
-- **Ausführungsfortschritt** ist das Gesamtabschluss-Signal für das Projekt
+- **Fortschritt** ist das Gesamtabschluss-Signal für das Projekt
 - **Arbeitslastverbrauch** vergleicht den tatsächlichen Aufwand mit dem geplanten Aufwand
 
 Halten Sie diese beiden Zahlen mit der Realität abgestimmt. Wenn der Fortschritt ohne entsprechenden Aufwand voranschreitet oder Aufwand ohne Lieferbewegung anwächst, sagt Ihnen die Diskrepanz normalerweise etwas Wichtiges über Umfang, Schätzung oder Berichtsdisziplin.
 
 ### Geschätzter Aufwand und Zuweisungen
 
-Der Fortschritt trennt den geschätzten Aufwand in:
+Der Reiter **Aufwand** trennt den geschätzten Aufwand in:
 
 - **IT-Aufwand**
 - **Fachbereichs-Aufwand**
@@ -292,7 +292,7 @@ Wichtige Konsequenzen:
 
 - Aufgabenzeit trägt automatisch zum tatsächlichen Projekt-Aufwand bei
 - Aufgabenzeit ist hier sichtbar, muss aber im Aufgaben-Arbeitsbereich korrigiert werden
-- Projekt-Overhead-Einträge werden vom Reiter Fortschritt aus gepflegt
+- Projekt-Overhead-Einträge werden vom Reiter Aufwand aus gepflegt
 - Mitwirkende können ihre eigenen Projekt-Overhead-Einträge pflegen
 - Administratoren können Projekt-Overhead-Einträge benutzerübergreifend pflegen
 
@@ -398,7 +398,7 @@ Verwenden Sie **Datenanreicherung**, wenn Sie exportieren, ausgewählte Felder e
 
 Importe sind für kontrollierte Massenänderungen ausgelegt:
 
-- laden Sie zuerst eine Vorlage herunter, wenn Sie die korrekte Struktur benötigen
+- laden Sie zuerst eine Vorlage herunter, wenn Sie die korrekte Struktur benötigen, oder ein Beispiel, um Beispielprojekte und die Werte jeder Spalte zu sehen ([Beispieldateien](csv-files.md#example-files))
 - validieren Sie vor dem Import
 - verwenden Sie erweiterte Optionen, um Anreicherungs- vs. Ersetzungsverhalten und Einfüge-/Aktualisierungsregeln zu wählen
 
@@ -419,6 +419,6 @@ Erneut: Das Senden eines Links gewährt keinen Zugriff. Es erspart den Leuten nu
 - Verwenden Sie die Eigenschaftsleiste für strukturelle Daten, die sichtbar bleiben sollen, während Sie arbeiten.
 - Verwenden Sie **Zusammenfassung** für die Projekterzählung, die neueste Aktivität und das übergeordnete Betriebsbild.
 - Verwenden Sie **Zeitleiste**, um die Lieferstruktur zu definieren, bevor das Aufgabenvolumen wächst.
-- Verwenden Sie **Fortschritt** regelmäßig, sonst kommt die Aufwandsabweichung als Überraschung, obwohl die Daten Sie bereits gewarnt haben.
+- Verwenden Sie **Aufwand** regelmäßig, sonst kommt die Aufwandsabweichung als Überraschung, obwohl die Daten Sie bereits gewarnt haben.
 - Verwenden Sie **Wissensdatenbank** für wiederverwendbare oder gesteuerte Dokumentation, nicht als zweite Kopie des Zweck-Briefs.
 - Verwenden Sie **Importieren** im Zweck-Editor, wenn ein Projekt-Brief bereits als Word-Dokument existiert, anstatt ihn von Hand neu zu formatieren.

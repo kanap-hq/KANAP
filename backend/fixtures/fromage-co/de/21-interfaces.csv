@@ -1,0 +1,11 @@
+interface_id;name;source_application_name;target_application_name;business_purpose;integration_route_type;data_category;lifecycle;data_class;contains_pii;middleware_application_names
+IF-FROMAGE-001;SAP -> Salesforce Sync;SAP S/4HANA;Salesforce Sales Cloud;Kundenstamm und Preise über Talend;via_middleware;transactional;active;internal;false;Talend Data Integration
+IF-FROMAGE-002;SAP -> Power BI Feed;SAP BW/4HANA;Power BI;Finanz- und Betriebs-KPIs über Talend;via_middleware;reporting;active;internal;false;Talend Data Integration
+IF-FROMAGE-003;Salesforce -> HubSpot;Salesforce Sales Cloud;HubSpot Marketing Hub;Lead-Übergabe und Kampagnenzuordnung;direct;master_data;active;internal;false;
+IF-FROMAGE-004;CheeseTrack -> SAP;CheeseTrack;SAP S/4HANA;Produktionschargen- und Rückverfolgbarkeitsdaten;direct;transactional;active;internal;false;
+IF-FROMAGE-005;CaveGuard -> Datadog;CaveGuard IoT;Datadog;Weiterleitung von IoT-Metriken für die Alarmierung;direct;reporting;active;internal;false;
+IF-FROMAGE-006;CaveGuard -> Cave Dashboard;CaveGuard IoT;Cave Monitoring Dashboard;Feed Grafana-Dashboard;direct;reporting;active;internal;false;
+IF-FROMAGE-007;Okta -> alle SaaS-Anwendungen;Okta Workforce Identity;Microsoft 365;Bereitstellung und Entzug von Benutzerkonten;direct;master_data;active;internal;false;
+IF-FROMAGE-008;Workday -> Okta;Workday HCM;Okta Workforce Identity;HR-gesteuerter Identitätslebenszyklus;direct;master_data;active;internal;false;
+IF-FROMAGE-009;Datadog -> PagerDuty;Datadog;PagerDuty;Alarmeskalation an die Rufbereitschaft;direct;control;active;internal;false;
+IF-FROMAGE-010;Talend -> Snowflake;Talend Data Integration;Snowflake;Datenfeeds Projekt Fondue;via_middleware;reporting;active;internal;false;Talend Data Integration

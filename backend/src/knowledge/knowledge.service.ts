@@ -3474,10 +3474,11 @@ export class KnowledgeService {
 
     const scopeWhere = scopeConditions.join(' AND ');
 
-    const promises: Array<Promise<[string, any[]]>> = [];
+    // One after the other: the request's single connection runs its queries in turn anyway.
+    const reads: Array<() => Promise<[string, any[]]>> = [];
 
     if (shouldReturn('status')) {
-      promises.push(
+      reads.push(() =>
         manager.query(
           `SELECT DISTINCT d.status FROM documents d WHERE ${scopeWhere} ORDER BY d.status`,
           scopeParams,
@@ -3486,7 +3487,7 @@ export class KnowledgeService {
     }
 
     if (shouldReturn('folder_name')) {
-      promises.push(
+      reads.push(() =>
         manager.query(
           `SELECT DISTINCT f.name
            FROM documents d
@@ -3503,7 +3504,7 @@ export class KnowledgeService {
       ['folder_key', KNOWLEDGE_FOLDER_KEY_SQL, 'LEFT JOIN document_folders f ON f.id = d.folder_id AND f.tenant_id = d.tenant_id'],
     ] as const) {
       if (!shouldReturn(field)) continue;
-      promises.push(
+      reads.push(() =>
         manager.query(
           `SELECT DISTINCT ${expression} AS value
            FROM documents d
@@ -3516,7 +3517,7 @@ export class KnowledgeService {
     }
 
     if (shouldReturn('template_name')) {
-      promises.push(
+      reads.push(() =>
         manager.query(
           `SELECT DISTINCT td.title AS name
            FROM documents d
@@ -3529,7 +3530,7 @@ export class KnowledgeService {
     }
 
     if (shouldReturn('document_type_name')) {
-      promises.push(
+      reads.push(() =>
         manager.query(
           `SELECT DISTINCT dt.name
            FROM documents d
@@ -3542,7 +3543,7 @@ export class KnowledgeService {
     }
 
     if (shouldReturn('library_name')) {
-      promises.push(
+      reads.push(() =>
         manager.query(
           `SELECT DISTINCT dl.name
            FROM documents d
@@ -3555,7 +3556,7 @@ export class KnowledgeService {
     }
 
     if (shouldReturn('primary_owner_name')) {
-      promises.push(
+      reads.push(() =>
         manager.query(
           `SELECT DISTINCT (SELECT COALESCE(NULLIF(trim(concat_ws(' ', u.first_name, u.last_name)), ''), u.email, c.user_id::text)
               FROM document_contributors c
@@ -3572,7 +3573,7 @@ export class KnowledgeService {
 
     // Legacy fields for backwards compat
     if (shouldReturn('folders')) {
-      promises.push(
+      reads.push(() =>
         manager.query(
           libraryId
             ? `SELECT id, name
@@ -3591,7 +3592,7 @@ export class KnowledgeService {
       );
     }
     if (shouldReturn('document_types')) {
-      promises.push(
+      reads.push(() =>
         manager.query(
           `SELECT id, name
            FROM document_types
@@ -3604,7 +3605,7 @@ export class KnowledgeService {
       );
     }
     if (shouldReturn('owners')) {
-      promises.push(
+      reads.push(() =>
         manager.query(
           `SELECT DISTINCT c.user_id AS id,
                   COALESCE(NULLIF(trim(concat_ws(' ', u.first_name, u.last_name)), ''), u.email, c.user_id::text) AS name
@@ -3617,9 +3618,9 @@ export class KnowledgeService {
       );
     }
 
-    const results = await Promise.all(promises);
     const out: Record<string, any[]> = {};
-    for (const [key, values] of results) {
+    for (const read of reads) {
+      const [key, values] = await read();
       out[key] = values;
     }
     return out;
@@ -3857,20 +3858,19 @@ export class KnowledgeService {
     streams: Array<{ id: string; name: string; category_id: string; is_active?: boolean }>;
   }> {
     const manager = this.getManager(opts);
-    const [categories, streams] = await Promise.all([
-      manager.query(
-        `SELECT id, name, is_active
-         FROM portfolio_categories
-         WHERE tenant_id = app_current_tenant()
-         ORDER BY display_order ASC, lower(name) ASC`,
-      ),
-      manager.query(
-        `SELECT id, name, category_id, is_active
-         FROM portfolio_streams
-         WHERE tenant_id = app_current_tenant()
-         ORDER BY display_order ASC, lower(name) ASC`,
-      ),
-    ]);
+    // One after the other: the request's single connection runs its queries in turn anyway.
+    const categories = await manager.query(
+      `SELECT id, name, is_active
+       FROM portfolio_categories
+       WHERE tenant_id = app_current_tenant()
+       ORDER BY display_order ASC, lower(name) ASC`,
+    );
+    const streams = await manager.query(
+      `SELECT id, name, category_id, is_active
+       FROM portfolio_streams
+       WHERE tenant_id = app_current_tenant()
+       ORDER BY display_order ASC, lower(name) ASC`,
+    );
 
     return {
       categories: categories.map((row: any) => ({
@@ -4002,93 +4002,82 @@ export class KnowledgeService {
     }
     const backlinkIncidentClause = documentIncidentVisibilitySql('d', incidentViewer, backlinkParams);
 
-    const [
-      contributors,
-      classifications,
-      relations,
-      incomingReferences,
-      attachments,
-      editLock,
-      workflow,
-      latestApprovedWorkflow,
-      integratedBinding,
-    ] = await Promise.all([
-      manager.query(
-        `SELECT c.*, COALESCE(NULLIF(trim(concat_ws(' ', u.first_name, u.last_name)), ''), u.email, c.user_id::text) AS user_name
-         FROM document_contributors c
-         LEFT JOIN users u ON u.id = c.user_id AND u.tenant_id = c.tenant_id
-         WHERE c.document_id = $1
-         ORDER BY c.is_primary DESC, c.created_at ASC`,
-        [id],
-      ),
-      manager.query(
-        `SELECT dc.*, pc.name AS category_name, ps.name AS stream_name
-         FROM document_classifications dc
-         LEFT JOIN portfolio_categories pc ON pc.id = dc.category_id AND pc.tenant_id = dc.tenant_id
-         LEFT JOIN portfolio_streams ps ON ps.id = dc.stream_id AND ps.tenant_id = dc.tenant_id
-         WHERE dc.document_id = $1
-         ORDER BY pc.name ASC, ps.name ASC`,
-        [id],
-      ),
-      Promise.all([
-        knowledgeBranch ? manager.query(
-          `SELECT da.application_id, a.name FROM document_applications da
-           JOIN applications a ON a.id = da.application_id AND a.tenant_id = da.tenant_id
-           WHERE da.document_id = $1 ORDER BY da.created_at ASC`, [id]) : [],
-        knowledgeBranch ? manager.query(
-          `SELECT das.asset_id, a.name FROM document_assets das
-           JOIN assets a ON a.id = das.asset_id AND a.tenant_id = das.tenant_id
-           WHERE das.document_id = $1 ORDER BY das.created_at ASC`, [id]) : [],
-        knowledgeBranch ? manager.query(
-          `SELECT dp.project_id, p.name, p.item_number FROM document_projects dp
-           JOIN portfolio_projects p ON p.id = dp.project_id AND p.tenant_id = dp.tenant_id
-           WHERE dp.document_id = $1 ORDER BY dp.created_at ASC`, [id]) : [],
-        knowledgeBranch ? manager.query(
-          `SELECT dr.request_id, r.name, r.item_number FROM document_requests dr
-           JOIN portfolio_requests r ON r.id = dr.request_id AND r.tenant_id = dr.tenant_id
-           WHERE dr.document_id = $1 ORDER BY dr.created_at ASC`, [id]) : [],
-        knowledgeBranch ? manager.query(
-          `SELECT dt.task_id, t.title, t.item_number FROM document_tasks dt
-           JOIN tasks t ON t.id = dt.task_id AND t.tenant_id = dt.tenant_id
-           WHERE dt.document_id = $1
-             ${relatedTaskVisibility}
-           ORDER BY dt.created_at ASC`, relatedTaskParams) : [],
-        knowledgeBranch ? manager.query(
-          `SELECT di.interface_id, i.interface_reference, i.interface_id AS interface_code, i.name
-           FROM document_interfaces di
-           JOIN interfaces i ON i.id = di.interface_id AND i.tenant_id = di.tenant_id
-           WHERE di.document_id = $1 ORDER BY di.created_at ASC`, [id]) : [],
-        incidentRelationSql
-          ? manager.query(incidentRelationSql, incidentRelationParams)
-          : Promise.resolve([]),
-      ]),
-      manager.query(
-        `SELECT r.id,
-                r.source_document_id,
-                d.item_number AS source_item_number,
-                d.title AS source_title,
-                d.status AS source_status
-         FROM document_references r
-         JOIN documents d ON d.id = r.source_document_id AND d.tenant_id = r.tenant_id
-         WHERE r.target_document_id = $1
-           ${backlinkLibraryClause}
-           ${backlinkIncidentClause}
-         ORDER BY d.updated_at DESC`,
-        backlinkParams,
-      ),
-      manager.query(
-        `SELECT *
-         FROM document_attachments
-         WHERE document_id = $1
-           AND source_field IS NULL
-         ORDER BY uploaded_at DESC`,
-        [id],
-      ),
-      this.getActiveDocumentLock(id, manager),
-      this.getActiveWorkflow(id, manager),
-      this.getLatestApprovedWorkflowSummary(id, manager),
-      this.getIntegratedBinding(id, manager),
-    ]);
+    // One after the other: the request's single connection runs its queries in turn anyway.
+    const contributors = await manager.query(
+      `SELECT c.*, COALESCE(NULLIF(trim(concat_ws(' ', u.first_name, u.last_name)), ''), u.email, c.user_id::text) AS user_name
+       FROM document_contributors c
+       LEFT JOIN users u ON u.id = c.user_id AND u.tenant_id = c.tenant_id
+       WHERE c.document_id = $1
+       ORDER BY c.is_primary DESC, c.created_at ASC`,
+      [id],
+    );
+    const classifications = await manager.query(
+      `SELECT dc.*, pc.name AS category_name, ps.name AS stream_name
+       FROM document_classifications dc
+       LEFT JOIN portfolio_categories pc ON pc.id = dc.category_id AND pc.tenant_id = dc.tenant_id
+       LEFT JOIN portfolio_streams ps ON ps.id = dc.stream_id AND ps.tenant_id = dc.tenant_id
+       WHERE dc.document_id = $1
+       ORDER BY pc.name ASC, ps.name ASC`,
+      [id],
+    );
+    const relations = [
+      knowledgeBranch ? await manager.query(
+        `SELECT da.application_id, a.name FROM document_applications da
+         JOIN applications a ON a.id = da.application_id AND a.tenant_id = da.tenant_id
+         WHERE da.document_id = $1 ORDER BY da.created_at ASC`, [id]) : [],
+      knowledgeBranch ? await manager.query(
+        `SELECT das.asset_id, a.name FROM document_assets das
+         JOIN assets a ON a.id = das.asset_id AND a.tenant_id = das.tenant_id
+         WHERE das.document_id = $1 ORDER BY das.created_at ASC`, [id]) : [],
+      knowledgeBranch ? await manager.query(
+        `SELECT dp.project_id, p.name, p.item_number FROM document_projects dp
+         JOIN portfolio_projects p ON p.id = dp.project_id AND p.tenant_id = dp.tenant_id
+         WHERE dp.document_id = $1 ORDER BY dp.created_at ASC`, [id]) : [],
+      knowledgeBranch ? await manager.query(
+        `SELECT dr.request_id, r.name, r.item_number FROM document_requests dr
+         JOIN portfolio_requests r ON r.id = dr.request_id AND r.tenant_id = dr.tenant_id
+         WHERE dr.document_id = $1 ORDER BY dr.created_at ASC`, [id]) : [],
+      knowledgeBranch ? await manager.query(
+        `SELECT dt.task_id, t.title, t.item_number FROM document_tasks dt
+         JOIN tasks t ON t.id = dt.task_id AND t.tenant_id = dt.tenant_id
+         WHERE dt.document_id = $1
+           ${relatedTaskVisibility}
+         ORDER BY dt.created_at ASC`, relatedTaskParams) : [],
+      knowledgeBranch ? await manager.query(
+        `SELECT di.interface_id, i.interface_reference, i.interface_id AS interface_code, i.name
+         FROM document_interfaces di
+         JOIN interfaces i ON i.id = di.interface_id AND i.tenant_id = di.tenant_id
+         WHERE di.document_id = $1 ORDER BY di.created_at ASC`, [id]) : [],
+      incidentRelationSql
+        ? await manager.query(incidentRelationSql, incidentRelationParams)
+        : [],
+    ];
+    const incomingReferences = await manager.query(
+      `SELECT r.id,
+              r.source_document_id,
+              d.item_number AS source_item_number,
+              d.title AS source_title,
+              d.status AS source_status
+       FROM document_references r
+       JOIN documents d ON d.id = r.source_document_id AND d.tenant_id = r.tenant_id
+       WHERE r.target_document_id = $1
+         ${backlinkLibraryClause}
+         ${backlinkIncidentClause}
+       ORDER BY d.updated_at DESC`,
+      backlinkParams,
+    );
+    const attachments = await manager.query(
+      `SELECT *
+       FROM document_attachments
+       WHERE document_id = $1
+         AND source_field IS NULL
+       ORDER BY uploaded_at DESC`,
+      [id],
+    );
+    const editLock = await this.getActiveDocumentLock(id, manager);
+    const workflow = await this.getActiveWorkflow(id, manager);
+    const latestApprovedWorkflow = await this.getLatestApprovedWorkflowSummary(id, manager);
+    const integratedBinding = await this.getIntegratedBinding(id, manager);
 
     const validationInfo = this.getValidationInfo(document, latestApprovedWorkflow);
 
@@ -5648,10 +5637,9 @@ export class KnowledgeService {
     opts?: { manager?: EntityManager; userId?: string | null } & DocumentAccessOptions,
   ) {
     const manager = this.getManager(opts);
-    const [from, to] = await Promise.all([
-      this.getVersion(idOrRef, fromVersion, { ...(opts ?? {}), manager, userId: opts?.userId || null }),
-      this.getVersion(idOrRef, toVersion, { ...(opts ?? {}), manager, userId: opts?.userId || null }),
-    ]);
+    // One after the other: the request's single connection runs its queries in turn anyway.
+    const from = await this.getVersion(idOrRef, fromVersion, { ...(opts ?? {}), manager, userId: opts?.userId || null });
+    const to = await this.getVersion(idOrRef, toVersion, { ...(opts ?? {}), manager, userId: opts?.userId || null });
 
     return {
       from,
@@ -7027,16 +7015,15 @@ export class KnowledgeService {
       sourceIdsByType.set(source.entity_type, ids);
     }
 
-    await Promise.all(
-      Array.from(sourceIdsByType.entries()).map(async ([entityType, entityIds]) => {
-        const rows = await this.listDocumentRowsForEntityIds(entityType, entityIds, manager, userId || null);
-        for (const row of rows) {
-          const bucket = rowsBySourceId.get(row.entity_id) || [];
-          bucket.push(row);
-          rowsBySourceId.set(row.entity_id, bucket);
-        }
-      }),
-    );
+    // One after the other: the request's single connection runs its queries in turn anyway.
+    for (const [entityType, entityIds] of sourceIdsByType) {
+      const rows = await this.listDocumentRowsForEntityIds(entityType, entityIds, manager, userId || null);
+      for (const row of rows) {
+        const bucket = rowsBySourceId.get(row.entity_id) || [];
+        bucket.push(row);
+        rowsBySourceId.set(row.entity_id, bucket);
+      }
+    }
 
     return rowsBySourceId;
   }
@@ -7112,55 +7099,54 @@ export class KnowledgeService {
     requestId: string,
     manager: EntityManager,
   ): Promise<EntityKnowledgeContextGroupDefinition[]> {
-    const [requestRows, projectRows, requestDependencyRows, projectDependencyRows, applicationRows, assetRows] = await Promise.all([
-      manager.query<KnowledgeContextSourceRow[]>(
+    // One after the other: the request's single connection runs its queries in turn anyway.
+    const requestRows = await manager.query<KnowledgeContextSourceRow[]>(
         `SELECT r.id AS entity_id, r.item_number, r.name, r.status
          FROM portfolio_requests r
          WHERE r.id = $1
          LIMIT 1`,
         [requestId],
-      ),
-      manager.query<KnowledgeContextSourceRow[]>(
+      );
+    const projectRows = await manager.query<KnowledgeContextSourceRow[]>(
         `SELECT p.id AS entity_id, p.item_number, p.name, p.status
          FROM portfolio_request_projects rp
          JOIN portfolio_projects p ON p.id = rp.project_id AND p.tenant_id = rp.tenant_id
          WHERE rp.request_id = $1
          ORDER BY p.name ASC`,
         [requestId],
-      ),
-      manager.query<KnowledgeContextSourceRow[]>(
+      );
+    const requestDependencyRows = await manager.query<KnowledgeContextSourceRow[]>(
         `SELECT r.id AS entity_id, r.item_number, r.name, r.status
          FROM portfolio_request_dependencies d
          JOIN portfolio_requests r ON r.id = d.depends_on_request_id AND r.tenant_id = d.tenant_id
          WHERE d.request_id = $1
          ORDER BY r.name ASC`,
         [requestId],
-      ),
-      manager.query<KnowledgeContextSourceRow[]>(
+      );
+    const projectDependencyRows = await manager.query<KnowledgeContextSourceRow[]>(
         `SELECT p.id AS entity_id, p.item_number, p.name, p.status
          FROM portfolio_request_dependencies d
          JOIN portfolio_projects p ON p.id = d.depends_on_project_id AND p.tenant_id = d.tenant_id
          WHERE d.request_id = $1
          ORDER BY p.name ASC`,
         [requestId],
-      ),
-      manager.query<KnowledgeContextSourceRow[]>(
+      );
+    const applicationRows = await manager.query<KnowledgeContextSourceRow[]>(
         `SELECT a.id AS entity_id, NULL::int AS item_number, a.sequential_id AS item_ref, a.name, NULL::text AS status
          FROM portfolio_request_applications l
          JOIN applications a ON a.id = l.application_id AND a.tenant_id = l.tenant_id
          WHERE l.request_id = $1
          ORDER BY a.name ASC`,
         [requestId],
-      ),
-      manager.query<KnowledgeContextSourceRow[]>(
+      );
+    const assetRows = await manager.query<KnowledgeContextSourceRow[]>(
         `SELECT a.id AS entity_id, NULL::int AS item_number, a.asset_reference AS item_ref, a.name, NULL::text AS status
          FROM portfolio_request_assets l
          JOIN assets a ON a.id = l.asset_id AND a.tenant_id = l.tenant_id
          WHERE l.request_id = $1
          ORDER BY a.name ASC`,
         [requestId],
-      ),
-    ]);
+      );
 
     return [
       {
@@ -7203,47 +7189,46 @@ export class KnowledgeService {
     projectId: string,
     manager: EntityManager,
   ): Promise<EntityKnowledgeContextGroupDefinition[]> {
-    const [projectRows, sourceRequestRows, dependencyRows, applicationRows, assetRows] = await Promise.all([
-      manager.query<KnowledgeContextSourceRow[]>(
+    // One after the other: the request's single connection runs its queries in turn anyway.
+    const projectRows = await manager.query<KnowledgeContextSourceRow[]>(
         `SELECT p.id AS entity_id, p.item_number, p.name, p.status
          FROM portfolio_projects p
          WHERE p.id = $1
          LIMIT 1`,
         [projectId],
-      ),
-      manager.query<KnowledgeContextSourceRow[]>(
+      );
+    const sourceRequestRows = await manager.query<KnowledgeContextSourceRow[]>(
         `SELECT r.id AS entity_id, r.item_number, r.name, r.status
          FROM portfolio_request_projects rp
          JOIN portfolio_requests r ON r.id = rp.request_id AND r.tenant_id = rp.tenant_id
          WHERE rp.project_id = $1
          ORDER BY r.name ASC`,
         [projectId],
-      ),
-      manager.query<KnowledgeContextSourceRow[]>(
+      );
+    const dependencyRows = await manager.query<KnowledgeContextSourceRow[]>(
         `SELECT p.id AS entity_id, p.item_number, p.name, p.status
          FROM portfolio_project_dependencies d
          JOIN portfolio_projects p ON p.id = d.depends_on_project_id AND p.tenant_id = d.tenant_id
          WHERE d.project_id = $1
          ORDER BY p.name ASC`,
         [projectId],
-      ),
-      manager.query<KnowledgeContextSourceRow[]>(
+      );
+    const applicationRows = await manager.query<KnowledgeContextSourceRow[]>(
         `SELECT a.id AS entity_id, NULL::int AS item_number, a.sequential_id AS item_ref, a.name, NULL::text AS status
          FROM application_projects l
          JOIN applications a ON a.id = l.application_id AND a.tenant_id = l.tenant_id
          WHERE l.project_id = $1
          ORDER BY a.name ASC`,
         [projectId],
-      ),
-      manager.query<KnowledgeContextSourceRow[]>(
+      );
+    const assetRows = await manager.query<KnowledgeContextSourceRow[]>(
         `SELECT a.id AS entity_id, NULL::int AS item_number, a.asset_reference AS item_ref, a.name, NULL::text AS status
          FROM asset_projects l
          JOIN assets a ON a.id = l.asset_id AND a.tenant_id = l.tenant_id
          WHERE l.project_id = $1
          ORDER BY a.name ASC`,
         [projectId],
-      ),
-    ]);
+      );
 
     return [
       {
@@ -7283,31 +7268,31 @@ export class KnowledgeService {
     applicationId: string,
     manager: EntityManager,
   ): Promise<EntityKnowledgeContextGroupDefinition[]> {
-    const [applicationRows, requestRows, projectRows, relatedApplicationRows, assetRows] = await Promise.all([
-      manager.query<KnowledgeContextSourceRow[]>(
+    // One after the other: the request's single connection runs its queries in turn anyway.
+    const applicationRows = await manager.query<KnowledgeContextSourceRow[]>(
         `SELECT a.id AS entity_id, NULL::int AS item_number, a.sequential_id AS item_ref, a.name, a.status
          FROM applications a
          WHERE a.id = $1
          LIMIT 1`,
         [applicationId],
-      ),
-      manager.query<KnowledgeContextSourceRow[]>(
+      );
+    const requestRows = await manager.query<KnowledgeContextSourceRow[]>(
         `SELECT r.id AS entity_id, r.item_number, r.name, r.status
          FROM portfolio_request_applications l
          JOIN portfolio_requests r ON r.id = l.request_id AND r.tenant_id = l.tenant_id
          WHERE l.application_id = $1
          ORDER BY r.name ASC`,
         [applicationId],
-      ),
-      manager.query<KnowledgeContextSourceRow[]>(
+      );
+    const projectRows = await manager.query<KnowledgeContextSourceRow[]>(
         `SELECT p.id AS entity_id, p.item_number, p.name, p.status
          FROM application_projects l
          JOIN portfolio_projects p ON p.id = l.project_id AND p.tenant_id = l.tenant_id
          WHERE l.application_id = $1
          ORDER BY p.name ASC`,
         [applicationId],
-      ),
-      manager.query<KnowledgeContextSourceRow[]>(
+      );
+    const relatedApplicationRows = await manager.query<KnowledgeContextSourceRow[]>(
         `SELECT a.id AS entity_id, NULL::int AS item_number, a.sequential_id AS item_ref, a.name, a.status
          FROM application_suites l
          JOIN applications a ON a.id = l.suite_id AND a.tenant_id = l.tenant_id
@@ -7318,8 +7303,8 @@ export class KnowledgeService {
          JOIN applications a ON a.id = l.application_id AND a.tenant_id = l.tenant_id
          WHERE l.suite_id = $1`,
         [applicationId],
-      ),
-      manager.query<KnowledgeContextSourceRow[]>(
+      );
+    const assetRows = await manager.query<KnowledgeContextSourceRow[]>(
         `SELECT a.id AS entity_id, NULL::int AS item_number, a.asset_reference AS item_ref, a.name, a.status
          FROM app_instances ai
          -- The servers the application runs on (effective: a cluster and its members in service).
@@ -7329,8 +7314,7 @@ export class KnowledgeService {
          WHERE ai.application_id = $1
          ORDER BY a.name ASC`,
         [applicationId],
-      ),
-    ]);
+      );
 
     return [
       {
@@ -7370,31 +7354,31 @@ export class KnowledgeService {
     assetId: string,
     manager: EntityManager,
   ): Promise<EntityKnowledgeContextGroupDefinition[]> {
-    const [assetRows, requestRows, projectRows, relatedAssetRows, applicationRows] = await Promise.all([
-      manager.query<KnowledgeContextSourceRow[]>(
+    // One after the other: the request's single connection runs its queries in turn anyway.
+    const assetRows = await manager.query<KnowledgeContextSourceRow[]>(
         `SELECT a.id AS entity_id, NULL::int AS item_number, a.asset_reference AS item_ref, a.name, a.status
          FROM assets a
          WHERE a.id = $1
          LIMIT 1`,
         [assetId],
-      ),
-      manager.query<KnowledgeContextSourceRow[]>(
+      );
+    const requestRows = await manager.query<KnowledgeContextSourceRow[]>(
         `SELECT r.id AS entity_id, r.item_number, r.name, r.status
          FROM portfolio_request_assets l
          JOIN portfolio_requests r ON r.id = l.request_id AND r.tenant_id = l.tenant_id
          WHERE l.asset_id = $1
          ORDER BY r.name ASC`,
         [assetId],
-      ),
-      manager.query<KnowledgeContextSourceRow[]>(
+      );
+    const projectRows = await manager.query<KnowledgeContextSourceRow[]>(
         `SELECT p.id AS entity_id, p.item_number, p.name, p.status
          FROM asset_projects l
          JOIN portfolio_projects p ON p.id = l.project_id AND p.tenant_id = l.tenant_id
          WHERE l.asset_id = $1
          ORDER BY p.name ASC`,
         [assetId],
-      ),
-      manager.query<KnowledgeContextSourceRow[]>(
+      );
+    const relatedAssetRows = await manager.query<KnowledgeContextSourceRow[]>(
         `SELECT a.id AS entity_id, NULL::int AS item_number, a.asset_reference AS item_ref, a.name, a.status
          FROM asset_relations r
          JOIN assets a ON a.id = r.related_asset_id AND a.tenant_id = r.tenant_id
@@ -7405,8 +7389,8 @@ export class KnowledgeService {
          JOIN assets a ON a.id = r.asset_id AND a.tenant_id = r.tenant_id
          WHERE r.related_asset_id = $1`,
         [assetId],
-      ),
-      manager.query<KnowledgeContextSourceRow[]>(
+      );
+    const applicationRows = await manager.query<KnowledgeContextSourceRow[]>(
         `SELECT a.id AS entity_id, NULL::int AS item_number, a.sequential_id AS item_ref, a.name, a.status
          -- The applications running on the asset (effective: a member runs what its clusters carry).
          FROM (${effectiveAssignmentsSql({ tenant: 'app_current_tenant()', assets: 'ARRAY[$1::uuid]' })}) aaa
@@ -7415,8 +7399,7 @@ export class KnowledgeService {
          WHERE aaa.asset_id = $1
          ORDER BY a.name ASC`,
         [assetId],
-      ),
-    ]);
+      );
 
     return [
       {

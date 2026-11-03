@@ -454,7 +454,7 @@ La puntuación aparece en la barra de metadatos en la parte superior del espacio
 **Contribución de tiempo**: El tiempo registrado en tareas de proyecto contribuye a los cálculos de esfuerzo real del proyecto:
 - El tiempo de categoría IT se suma al **Esfuerzo real (IT)**
 - El tiempo de categoría Negocio se suma al **Esfuerzo real (Negocio)**
-- La pestaña Progreso del proyecto muestra un desglose de Gastos generales del proyecto vs Tiempo de tareas
+- La pestaña Esfuerzo del proyecto muestra un desglose de Gastos generales del proyecto vs Tiempo de tareas
 - El Registro de tiempo unificado muestra todas las entradas de tiempo tanto de gastos generales del proyecto como de trabajo en tareas
 
 **Validación de estado**: Las tareas de proyecto no pueden marcarse como **Completado** sin registrar tiempo primero. Esto asegura un seguimiento preciso del esfuerzo del proyecto.

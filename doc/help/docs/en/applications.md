@@ -536,6 +536,7 @@ From the Applications list:
 - **Export**: Download applications to a CSV file or an Excel workbook
 - **Import**: Upload a CSV file or an Excel workbook to create or update applications
 - **Download Template** (from inside the import dialog): Get a blank CSV with correct headers
+- **Download an example** (from inside the import dialog): an Excel workbook of sample applications, with what each column takes. See [Example files](csv-files.md#example-files)
 
 **Permissions required**: `applications:admin` for import/export operations.
 
@@ -545,7 +546,7 @@ From the Applications list:
 
 **Format**: **CSV** or **Excel (.xlsx)**, chosen in the dialog and remembered in your browser. The workbook holds the same columns as the CSV on one sheet, with numbers and dates as values Excel can sort and filter. The import reads either; in a workbook, it reads the first sheet. See [CSV and Excel files](csv-files.md).
 
-**Columns**: the file starts with `id` and `reference` (`APP-12`), then the columns follow the workspace, tab by tab. The import ignores `reference`.
+**Columns**: the file starts with `id` and the reference (`APP-12`), then the columns follow the workspace, tab by tab. Their titles are in the language of your screen, and the import reads them in any language. The import ignores the reference.
 
 **Language of the values**: catalog values (category, lifecycle, criticality, cyber criticality, recovery wave, data class, access methods) and the status are written as the screen shows them, in the language of your screen: `Active` in English, `Actif` in French. A name your organization gave a value in **IT Landscape > Settings** stays as it is.
 

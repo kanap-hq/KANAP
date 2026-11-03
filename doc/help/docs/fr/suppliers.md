@@ -113,9 +113,9 @@ Cliquez sur **Nouveau** dans la liste. Renseignez le nom (obligatoire), l'ID fou
 
 L'export écrit un fichier CSV ou un classeur Excel (`.xlsx`) : choisissez sous **Format** dans la fenêtre. L'import lit l'un ou l'autre. Voir [Fichiers CSV et Excel](csv-files.md).
 
-**Exporter** télécharge les fournisseurs que la liste affiche, avec sa recherche, ses filtres et son tri. Choisissez **Tout le référentiel** dans la fenêtre pour télécharger tous les fournisseurs, activés et désactivés. La fenêtre se ferme une fois le fichier téléchargé. **Importer** relit un fichier. La fenêtre d'import propose aussi **Télécharger le modèle** : un fichier avec les seuls en-têtes. Elle indique les valeurs acceptées.
+**Exporter** télécharge les fournisseurs que la liste affiche, avec sa recherche, ses filtres et son tri. Choisissez **Tout le référentiel** dans la fenêtre pour télécharger tous les fournisseurs, activés et désactivés. La fenêtre se ferme une fois le fichier téléchargé. **Importer** relit un fichier. La fenêtre d'import propose aussi **Télécharger le modèle**, un fichier avec les seuls en-têtes, et **Télécharger un exemple** (voir [Fichiers d'exemple](csv-files.md#example-files)). Elle indique les valeurs acceptées.
 
-Les colonnes :
+Le fichier titre les colonnes dans la langue de votre écran. Le tableau donne leurs noms techniques, que l'import lit aussi :
 
 | Colonne | Contenu |
 |---|---|

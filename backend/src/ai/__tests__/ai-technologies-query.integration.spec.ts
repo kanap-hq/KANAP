@@ -24,6 +24,7 @@ import { DataSource, QueryRunner } from 'typeorm';
 //   Contributor's own applications, none (null, section absent) without the applications right.
 // - A user without the infrastructure right is refused, and sees no technology section.
 // - Another tenant's technologies are never listed, counted or read.
+// - The detail lists the technology's files (name, type, size, upload date) and never a storage path.
 // - Through the tool registry on the MCP surface, query_entities is read only.
 // The AI surface checks (tenant settings, provider) are not under test: stubbed open.
 
@@ -419,6 +420,7 @@ async function testDetail(harness: Harness, runner: QueryRunner, s: Seed) {
   const v12 = detail.data.versions.find((v: any) => v.label === '12');
   assert.deepEqual([v12.support_status, v12.support_date], ['out_of_support', '2024-11-14'], 'every version carries its state and date');
   assert.equal(detail.data.end_of_support, '2027-11-11');
+  assert.deepEqual(detail.data.attachments, [], 'a technology without files lists none');
   assert.doesNotMatch(JSON.stringify(detail.data), UUID_IN_TEXT, 'references and names only');
   const byName = await harness.executor.executeDetail(ctx(runner, s, 'full'), { entity_type: 'technologies', entity_id: 'Entra ID' });
   assert.equal(byName.data.admin_zone, 'Tier 0', 'found by name');
@@ -1075,6 +1077,48 @@ async function testVersionAndOwnerFilterValues(harness: Harness, runner: QueryRu
   assert.equal(isolated.total, 0, 'another tenant\'s version is not listed');
 }
 
+/** A file on the technology is listed by get_entity_detail, without its storage path. */
+async function testAttachments(harness: Harness, runner: QueryRunner, s: Seed) {
+  const storagePath = 'files/secret-storage/architecture.pdf';
+  const storedFilename = 'secret-stored-architecture.pdf';
+  await useTenant(runner, s.tenantId);
+  await runner.query(
+    `INSERT INTO technology_attachments
+       (tenant_id, technology_id, original_filename, stored_filename, mime_type, size, storage_path, uploaded_at)
+     VALUES ($1, $2, 'architecture.pdf', $3, 'application/pdf', 2048, $4, '2026-03-15T10:00:00.000Z')`,
+    [s.tenantId, s.tech.entra, storedFilename, storagePath],
+  );
+  await useTenant(runner, s.otherTenantId);
+  await runner.query(
+    `INSERT INTO technology_attachments
+       (tenant_id, technology_id, original_filename, stored_filename, mime_type, size, storage_path)
+     VALUES ($1, $2, 'other-tenant-only.pdf', 'other-stored.pdf', 'text/plain', 12, 'files/other-tenant/secret.pdf')`,
+    [s.otherTenantId, s.otherTechnologyId],
+  );
+  await useTenant(runner, s.tenantId);
+
+  const detail = await harness.tools.execute(ctx(runner, s, 'full'), 'get_entity_detail', {
+    entity_type: 'technologies', entity_id: 'TEC-3',
+  }) as any;
+  assert.deepEqual(detail.data.attachments, [{
+    original_filename: 'architecture.pdf',
+    mime_type: 'application/pdf',
+    size: 2048,
+    uploaded_at: '2026-03-15T10:00:00.000Z',
+  }], 'the file is listed with its name, type, size and upload date');
+  const serialized = JSON.stringify(detail.data);
+  assert.equal(serialized.includes(storagePath), false, 'no storage path');
+  assert.equal(serialized.includes(storedFilename), false, 'no stored name');
+  assert.equal(serialized.includes('other-tenant-only.pdf'), false, 'another tenant\'s file is not listed');
+  assert.doesNotMatch(serialized, UUID_IN_TEXT, 'references and names only');
+  assert.deepEqual(Object.keys(detail.data.attachments[0]).sort(), ['mime_type', 'original_filename', 'size', 'uploaded_at']);
+
+  const asReader = await harness.executor.executeDetail(ctx(runner, s, 'infraOnly'), {
+    entity_type: 'technologies', entity_id: 'TEC-3',
+  });
+  assert.equal(asReader.data.attachments[0].original_filename, 'architecture.pdf', 'the same right as the technology');
+}
+
 async function run() {
   const harness = await createHarness();
   try {
@@ -1089,6 +1133,7 @@ async function run() {
       await testApplicationScope(harness, runner, s);
       await testAggregatesAndFilterValues(harness, runner, s);
       await testDetail(harness, runner, s);
+      await testAttachments(harness, runner, s);
       await testInfrastructureRight(harness, runner, s);
       await testTenantIsolation(harness, runner, s);
       await testContexts(harness, runner, s);

@@ -1,0 +1,6 @@
+ref;name;topology;source_entity_code;destination_entity_code;protocol_codes;lifecycle;criticality;data_class;contains_pii;description;source_asset_name;destination_asset_name
+CONN-FROMAGE-001;MPLS París-Gouda;server_to_server;par_dc1;gou_dc1;tcp;active;medium;internal;false;Enlace MPLS de 100 Mbps;;
+CONN-FROMAGE-002;MPLS París-Parma;server_to_server;par_dc1;prm_site;tcp;active;medium;internal;false;Enlace MPLS de 100 Mbps;;
+CONN-FROMAGE-003;VPN París-Nueva York;server_to_server;par_dc1;nyc_off;ipsec;active;high;internal;false;VPN IPSec site-to-site;;
+CONN-FROMAGE-004;VPN París-AWS;server_to_server;par_dc1;aws_eu;ipsec;active;high;internal;false;VPN Site-to-Site de AWS;;
+CONN-FROMAGE-005;Copia de seguridad Veeam del clúster vSphere;server_to_server;;;veeam;active;high;internal;false;Veeam hace la copia de seguridad de las VM a través de los hosts del clúster;PAR-BKP-01;PAR-VSPHERE-CL01

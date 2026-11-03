@@ -57,13 +57,30 @@ function storedColumns(rows: any[] = []) {
 
 /** Answers each query with the rows of the table it reads: the hooks filter by id themselves. */
 function manager(data: Record<string, any[]>) {
+  // Two queries in flight at once are the node-postgres warning
+  // (`client.query() when the client is already executing a query`).
+  let busy = 0;
+  async function occupy<T>(work: () => T): Promise<T> {
+    if (busy > 0) throw new Error('client.query() when the client is already executing a query');
+    busy += 1;
+    try {
+      await new Promise((resolve) => setImmediate(resolve));
+      return work();
+    } finally {
+      busy -= 1;
+    }
+  }
   return {
-    query: async (sql: string, params: any[] = []) => {
+    query: (sql: string, params: any[] = []) => occupy(() => {
       if (sql.includes('information_schema.columns')) return storedColumns(data[params[0]]);
       const table = sql.match(/FROM\s+(\w+)/i)?.[1] ?? '';
       return data[table] ?? [];
-    },
-    getRepository: () => ({ create: (e: any) => e, save: async (e: any) => e }),
+    }),
+    getRepository: () => ({
+      create: (e: any) => e,
+      save: (e: any) => occupy(() => e),
+      find: () => occupy(() => []),
+    }),
   } as any;
 }
 

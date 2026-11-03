@@ -189,6 +189,7 @@ export default function SuppliersPage() {
         open={importOpen}
         onClose={() => setImportOpen(false)}
         endpoint="/suppliers"
+        example="suppliers"
         title={t("suppliers.import")}
         hint={t('suppliers.importHint')}
         onImported={() => setRefreshKey((k) => k + 1)}

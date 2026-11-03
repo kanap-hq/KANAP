@@ -10,6 +10,7 @@ import { DepartmentsModule } from './departments/departments.module';
 import { CostCentersModule } from './cost-centers/cost-centers.module';
 import { WorkingDayProfilesModule } from './working-day-profiles/working-day-profiles.module';
 import { SuppliersModule } from './suppliers/suppliers.module';
+import { ImportExamplesModule } from './import-examples/import-examples.module';
 import { AccountsModule } from './accounts/accounts.module';
 import { AuditModule } from './audit/audit.module';
 import { RecordHistoryModule } from './audit/record-history.module';
@@ -25,6 +26,7 @@ import { PublicController } from './public/public.controller';
 import { EmailModule } from './email/email.module';
 import { TrialSignup } from './public/trial-signup.entity';
 import { AdminTenantsModule } from './admin/tenants/admin-tenants.module';
+import { AdminTrialsModule } from './admin/trials/admin-trials.module';
 import { DemoDataModule } from './demo-data/demo-data.module';
 import { FreezeModule } from './freeze/freeze.module';
 import { BudgetColumnsModule } from './budget-columns/budget-columns.module';
@@ -72,7 +74,7 @@ import { ListContextsModule } from './common/list-context/list-contexts.module';
 import { apiProcessCount, clusterWorkerId } from './common/cluster/process-role';
 import { DatabaseThrottlerStorage } from './common/rate-limit-store';
 import { DataSource, DataSourceOptions } from 'typeorm';
-import { runDataAccessBeforeMigrations } from './data-access/data-access-availability';
+import { runStartupMigrations } from './common/startup-migrations';
 import { readPoolMax } from './common/db-pool-budget';
 
 @Module({
@@ -114,17 +116,15 @@ import { readPoolMax } from './common/db-pool-budget';
           },
         } as any;
       },
-      // The migrations run here rather than inside DataSource.initialize(): the data-access guard
-      // first removes the policies of a limited role the application role inherits, so no
-      // migration runs under them (data-access/data-access-availability.ts). Same run otherwise.
+      // The migrations run here rather than inside DataSource.initialize(): the role is checked
+      // and the data-access guard runs first (common/startup-migrations.ts).
       dataSourceFactory: async (options) => {
         const runMigrations = Boolean(options?.migrationsRun);
         const dataSource = new DataSource({ ...options, migrationsRun: false } as DataSourceOptions);
         await dataSource.initialize();
         if (!runMigrations) return dataSource;
         try {
-          await runDataAccessBeforeMigrations(dataSource);
-          await dataSource.runMigrations({ transaction: dataSource.options.migrationsTransactionMode });
+          await runStartupMigrations(dataSource);
         } catch (error) {
           await dataSource.destroy().catch(() => undefined);
           throw error;
@@ -142,6 +142,7 @@ import { readPoolMax } from './common/db-pool-budget';
     CostCentersModule,
     WorkingDayProfilesModule,
     SuppliersModule,
+    ImportExamplesModule,
     AccountsModule,
     SpendModule,
     AnalyticsModule,
@@ -152,6 +153,7 @@ import { readPoolMax } from './common/db-pool-budget';
     TenantsModule,
     TenantBaselineModule,
     AdminTenantsModule,
+    AdminTrialsModule,
     DemoDataModule,
     AdminCoaTemplatesModule,
     AdminOpsModule,

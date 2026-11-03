@@ -464,6 +464,8 @@ Sin una suscripción en curso (una prueba, una prueba expirada o una suscripció
 
 Durante una prueba, una etiqueta en la barra superior también muestra los días restantes, por ejemplo «Prueba: 9 días». Para los administradores de facturación, abre esta página. Pase el ratón por encima para ver la fecha de fin de la prueba. Cuando la prueba ha expirado, un banner ocupa su lugar.
 
+Cuando una prueba termina sin suscripción, el espacio de trabajo sigue disponible en solo lectura durante 30 días. Después se elimina con todos sus datos. Suscribirse antes de esa fecha conserva el espacio de trabajo tal como está.
+
 Cuando está previsto un paso a la facturación mensual, una tercera línea lo indica, por ejemplo «Pasa a mensual el 7 oct 2027.» Haga clic en **Mantener anual** en esa línea para cancelar el cambio.
 
 ### Acciones

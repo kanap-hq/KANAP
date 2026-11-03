@@ -1,0 +1,25 @@
+company_name;name;description;status;disabled_at
+Fromage & Co SA;Geschäftsleitung;Unternehmensführung und Konzernstrategie;enabled;
+Fromage & Co SA;Finanzen und Controlling;Konzernfinanzen, Buchhaltung, Controlling und Treasury;enabled;
+Fromage & Co SA;Personalwesen;Personalmanagement, Recruiting und Talententwicklung;enabled;
+Fromage & Co SA;IT & Digital;Informationstechnologie, digitale Transformation und Cybersecurity;enabled;
+Fromage & Co SA;Vertrieb und Marketing;Kommerzielle Aktivitäten, Markenführung und E-Commerce;enabled;
+Fromage & Co SA;Produktion;Käseherstellung, Reifung und Verpackung;enabled;
+Fromage & Co SA;Qualität und F&E;Qualitätssicherung, AOP-Zertifizierungen und Entwicklung neuer Käsesorten;enabled;
+Fromage & Co SA;Logistik;Lagerhaltung, Kühlkette und Konzerndistribution;enabled;
+Fromage & Co SA;Einkauf;Einkauf, Lieferantenmanagement und Vertragsverhandlung;enabled;
+Kaasmeester BV;Leitung;Lokale Leitung und Verwaltung;enabled;
+Kaasmeester BV;Finanzen;Lokale Buchhaltung und Finanzberichterstattung;enabled;
+Kaasmeester BV;Betrieb;Produktion, Qualität und Logistik;enabled;
+Kaasmeester BV;Vertrieb;Vertrieb und Kundenservice;enabled;
+Kaasmeester BV;IT;Lokale IT-Koordination und Support;enabled;
+Formaggio Supremo SRL;Direzione;Lokale Leitung;enabled;
+Formaggio Supremo SRL;Amministrazione;Finanzen und Verwaltung;enabled;
+Formaggio Supremo SRL;Produzione;Käseproduktion und Qualität;enabled;
+Formaggio Supremo SRL;Commerciale;Vertrieb und Distribution;enabled;
+Formaggio Supremo SRL;IT;Lokale IT-Koordination und Support;enabled;
+Fromage & Co Inc.;Leitung;Leitung der US-Tochtergesellschaft;enabled;
+Fromage & Co Inc.;Finanzen;Buchhaltung und Compliance USA;enabled;
+Fromage & Co Inc.;Betrieb;Lagerhaltung, Importlogistik und Distribution;enabled;
+Fromage & Co Inc.;Vertrieb;Vertrieb und Schlüsselkunden im US-Markt;enabled;
+Fromage & Co Inc.;IT;Lokaler IT-Betrieb und Helpdesk;enabled;

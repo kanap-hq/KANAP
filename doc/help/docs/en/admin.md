@@ -464,6 +464,8 @@ Without a running subscription (a trial, an expired trial or an ended subscripti
 
 During a trial, a pill in the top bar also shows the days left, for example "Trial: 9 days". For billing administrators it opens this page. Hover over it to see the trial end date. Once the trial has expired, a banner takes its place.
 
+When a trial ends without a subscription, the workspace stays readable for 30 days. It is then deleted with all its data. Subscribing before that date keeps the workspace as it is.
+
 When a switch to monthly billing is planned, a third line shows it, for example "Switches to monthly on 7 Oct 2027." Click **Keep annual** on that line to cancel the switch.
 
 ### Actions

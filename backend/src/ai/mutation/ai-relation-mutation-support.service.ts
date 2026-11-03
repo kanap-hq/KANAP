@@ -542,7 +542,10 @@ export class AiRelationMutationSupportService {
    * The audit row(s) of a relation update. The screens log a line's links under the table of the
    * line's nature (`application_capex_items` for a CAPEX line, `application_spend_items` for an
    * OPEX one): one row per nature the update changes, with the same before/after sets the screen
-   * writes. A budget line's own relation keeps its source nature (`auditTableName`).
+   * writes. A budget line's own relation keeps its source nature (`auditTableName`) and names the
+   * line as parent, as the screens do: the shared labels have no parent rule, so the line's
+   * History tab reads this parent. A relation whose source is the application carries no parent
+   * (a write may touch several lines).
    */
   private async logRelationAudit(
     context: AiExecutionContextWithManager,
@@ -556,6 +559,11 @@ export class AiRelationMutationSupportService {
     const tables = config.kind === 'simple' && config.target === 'budget_lines' && config.sourceEntity !== 'budget_lines'
       ? await this.changedLineAuditTables(context, config.table, before, after)
       : [this.auditTableName(config, sourceNature)];
+    // From the budget line, the line names itself. The shared link labels have no parent rule,
+    // so the line's History tab reads this parent (`record-history/records/spend_items.ts`).
+    const parent = config.sourceEntity === 'budget_lines'
+      ? { table: 'spend_items' as const, id: preview.target_entity_id! }
+      : undefined;
     for (const table of tables) {
       await this.audit.log(
         {
@@ -567,6 +575,7 @@ export class AiRelationMutationSupportService {
           userId: context.userId,
           source: audit.source,
           sourceRef: audit.sourceRef,
+          parent,
         },
         { manager: context.manager },
       );

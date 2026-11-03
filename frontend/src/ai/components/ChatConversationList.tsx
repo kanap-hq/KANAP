@@ -23,7 +23,7 @@ type ChatConversationListProps = {
   activeId: string | null;
   onSelect: (id: string) => void;
   onNew: () => void;
-  onArchive: (id: string) => void;
+  onDelete: (id: string) => void;
 };
 
 type DateBucket = 'today' | 'yesterday' | 'lastWeek' | 'older';
@@ -52,18 +52,18 @@ function ConversationItem({
   conversation,
   active,
   onSelect,
-  onArchive,
+  onDelete,
   onRename,
-  archiveLabel,
+  deleteLabel,
   renameLabel,
   untitledLabel,
 }: {
   conversation: ChatConversation;
   active: boolean;
   onSelect: (id: string) => void;
-  onArchive: (id: string) => void;
+  onDelete: (id: string) => void;
   onRename: (id: string, title: string) => void;
-  archiveLabel: string;
+  deleteLabel: string;
   renameLabel: string;
   untitledLabel: string;
 }) {
@@ -222,9 +222,9 @@ function ConversationItem({
             </IconButton>
             <IconButton
               size="small"
-              aria-label={archiveLabel}
-              title={archiveLabel}
-              onClick={(e) => { e.stopPropagation(); onArchive(conversation.id); }}
+              aria-label={deleteLabel}
+              title={deleteLabel}
+              onClick={(e) => { e.stopPropagation(); onDelete(conversation.id); }}
               sx={{
                 width: 22,
                 height: 22,
@@ -245,7 +245,7 @@ export default function ChatConversationList({
   activeId,
   onSelect,
   onNew,
-  onArchive,
+  onDelete,
 }: ChatConversationListProps) {
   const { t } = useTranslation(['ai']);
   const queryClient = useQueryClient();
@@ -301,7 +301,7 @@ export default function ChatConversationList({
     return buckets;
   }, [filtered]);
 
-  const archiveLabel = t('conversationList.archive');
+  const deleteLabel = t('conversationList.delete');
   const renameLabel = t('conversationList.rename');
   const untitledLabel = t('conversationList.untitled');
 
@@ -422,9 +422,9 @@ export default function ChatConversationList({
                   conversation={conv}
                   active={conv.id === activeId}
                   onSelect={onSelect}
-                  onArchive={onArchive}
+                  onDelete={onDelete}
                   onRename={(id, title) => renameMutation.mutate({ id, title })}
-                  archiveLabel={archiveLabel}
+                  deleteLabel={deleteLabel}
                   renameLabel={renameLabel}
                   untitledLabel={untitledLabel}
                 />

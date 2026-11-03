@@ -1745,7 +1745,7 @@ Response: `{ success: true }` (202-style fire-and-forget; email failures are sil
     - `projects: Array<{ id, name, status, category_id, planned_start, planned_end, actual_start, actual_end, execution_progress }>`
     - `dependencies: Array<{ id, project_id, depends_on_project_id, dependency_type }>` (only links where both ends are visible in the current project set)
     - `milestones: Array<{ id, project_id, name, target_date, status, project_name }>` (filtered to milestones with `target_date >= viewStart`)
-    - `viewStart: string` (`YYYY-MM-DD`, computed as `today - months`)
+    - `viewStart: string` (`YYYY-MM-DD`: the same day `months` months before today, or that month's last day when the day does not exist)
   - Notes:
     - Cancelled projects are excluded.
     - Returned projects include items with planned dates, plus recently completed items still inside lookback (`planned_end` or `actual_end` >= `viewStart`).
@@ -1805,7 +1805,7 @@ Response: `{ success: true }` (202-style fire-and-forget; email failures are sil
   - Same body/validation semantics as OPEX tasks (title required, description optional, unified statuses)
 
 ### Contracts CSV
-- Export `GET /contracts/export?scope=template|data`; Import `POST /contracts/import?dryRun=true|false` (a row that turns off `auto_renewal` on a contract already renewed is an error of that row; nothing is written)
+- Export `GET /contracts/export?scope=template|data`; Import `POST /contracts/import?dryRun=true|false` (a row that turns off `auto_renewal` on a contract already renewed is an error of that row; nothing is written). The headers are the titles of `language` (`CONTRACT_CSV_HEADERS`); the import also reads the other languages and the technical names
 - Headers: `name;company_name;supplier_name;start_date;duration_months;auto_renewal;notice_period_months;yearly_amount_at_signature;currency;billing_frequency;status;owner_email;notes`
 - Upsert key: composite `name + supplier_name`; references by name/email
 
@@ -1841,7 +1841,7 @@ Response: `{ success: true }` (202-style fire-and-forget; email failures are sil
 - The same check, same body and answer, for the portfolio settings lists and knowledge folders: POST `/portfolio/classification/{sources,categories,streams,task-types}/delete-check`, `/portfolio/teams/delete-check`, `/portfolio/employment-types/delete-check` [Requires: portfolio_settings:admin] (`BUILT_IN_RECORD`, `RECORD_USED_BY`, `TEAM_NOT_EMPTY`), and `/knowledge-folders/delete-check` [Requires: knowledge:member] (`KNOWLEDGE_FOLDER_HAS_SUBFOLDERS`). Each delete asks the same refusal function (`refusalsFrom`).
 
 ### Suppliers CSV (contacts columns)
-- GET `/suppliers/export?scope=template|data&language=…` and POST `/suppliers/import?dryRun=true|false&language=…&dateOrder=…&decimalMark=…` (multipart `file`). Same shared master-data contract as `/companies/import`.
+- GET `/suppliers/export?scope=template|data&language=…` and POST `/suppliers/import?dryRun=true|false&language=…&dateOrder=…&decimalMark=…` (multipart `file`). Same shared master-data contract as `/companies/import`. The headers are the titles of `language` (`SUPPLIER_CSV_HEADERS`); the import also reads the other languages and the technical names.
 - Headers: `name, erp_supplier_id, commercial_contact, technical_contact, support_contact, notes, status`. Upsert on `name`.
 - The contact columns hold one email address each. On import, the system links the supplier to contacts by email (creating contacts if needed). On export, these columns contain the primary (or first) linked contact email per role.
 
@@ -1895,6 +1895,12 @@ Response: `{ success: true }` (202-style fire-and-forget; email failures are sil
   - Allocation recipients (companies/departments): computed per version year with the same rule.
   - Manual allocation validations (company/department modes) enforce availability per fiscal year, using the same condition.
   - Example: `disabled_at = 2025-06-30` → contributes to 2025 totals; excluded from 2026.
+
+## Import examples
+
+- GET `/import-examples/{applications|assets|portfolio-projects|suppliers|contracts|budget-lines}?language=en|fr|de|es` → `.xlsx` (`Content-Disposition` names the file, for example `fournisseurs-exemple.xlsx`). Same level as the import it illustrates (`admin` on `applications`, `infrastructure`, `portfolio_projects`, `suppliers`, `contracts`, `budget`).
+- The workbook holds the first sheet the import reads (Fromage & Co rows from `backend/fixtures/import-examples/<key>.json`), an Advanced sheet with the other columns, and a Notes sheet. Catalog cells and notes use the tenant's IT Ops catalogs in the file's language; the budget example adds one empty `analytics:<code>` column per enabled dimension.
+- Headers: the titles of the file's language (`headerLabels` of the field-engine configs, `SUPPLIER_CSV_HEADERS`, `CONTRACT_CSV_HEADERS`); the budget file keeps its technical headers. No tenant record is read, so the route is not an export and writes no audit entry.
 
 ## Common Notes
 - Reference lookups (pickers, `common/lookup/`)
@@ -2132,6 +2138,18 @@ One file for both natures since lot C1b: a `nature` column (`opex`, `capex`) say
   - Body mirrors the freeze payload
   - Requires `budget_ops:admin`
 - All three endpoints return the same shape so the UI can refresh local state after each call.
+
+## Trials (Platform Admin)
+Cloud only (404 on-premise). Columns, sources and the 24-hour alert: [trial-funnel.md](trial-funnel.md).
+
+- GET `/admin/trials?state=trialing`
+  - Requires platform admin claim (`isPlatformAdmin` true) on the platform host
+  - Returns `{ items, weeks, attention }`: one item per trial sign-up with its milestones, the sign-ups of the last eight weeks with how many were activated, signed in and converted, and the number of running trials without a sign-in 24 hours after activation
+  - `state`: `awaiting_activation`, `trialing`, `ended`, `converted`, `internal`
+- PUT `/admin/trials/:tenantId/discovery-call`
+  - Body: `{ scheduled_at, status?, note? }` (`status` `booked` by default, or `cancelled`); 400 `discovery_call_invalid`, 404 when the workspace has no trial sign-up
+- DELETE `/admin/trials/:tenantId/discovery-call`
+  - Removes the call (204)
 
 ## Tenants (Platform Admin)
 - GET `/admin/tenants?page=1&limit=20&q=slug&status=active`

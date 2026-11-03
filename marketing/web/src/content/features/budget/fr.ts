@@ -61,6 +61,7 @@ const content: FeatureContent = {
       shotAlt: 'Top 10 des lignes OPEX du budget 2026, en camembert',
     },
   ],
+  series: 'opex-budget',
   more: {
     title: 'Et aussi',
     items: [

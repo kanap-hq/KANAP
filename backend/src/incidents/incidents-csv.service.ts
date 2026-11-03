@@ -355,6 +355,8 @@ export class IncidentsCsvService {
       userId?: string | null;
       isAdmin?: boolean;
       viewer?: IncidentViewer;
+      /** The file's language: the names a refusal gives to the statuses. */
+      language?: CsvLanguage;
     },
   ): Promise<CsvImportResult> {
     // The import service turns a commit failure into `ok: false` instead of

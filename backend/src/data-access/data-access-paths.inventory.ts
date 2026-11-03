@@ -67,7 +67,7 @@ export const DATA_ACCESS_PATHS: DataAccessPathEntry[] = [
 
   // Plaid and MCP: runWithContext applies the person's access.
   { file: 'ai/ai-chat.controller.ts', member: 'AiChatController', site: 'skip_tenant_transaction', class: 'applies', reason: `${RUN_WITH_CONTEXT} (the orchestrator too)` , routes: ['stream'] },
-  { file: 'ai/ai-conversations.controller.ts', member: 'AiConversationsController', site: 'skip_tenant_transaction', class: 'applies', reason: RUN_WITH_CONTEXT , routes: ['archive', 'create', 'getMessages', 'getPreviews', 'list', 'rename', 'uploadInlineAttachment', 'viewInlineAttachment'] },
+  { file: 'ai/ai-conversations.controller.ts', member: 'AiConversationsController', site: 'skip_tenant_transaction', class: 'applies', reason: RUN_WITH_CONTEXT , routes: ['create', 'getMessages', 'getPreviews', 'list', 'remove', 'rename', 'uploadInlineAttachment', 'viewInlineAttachment'] },
   { file: 'ai/ai-mcp.controller.ts', member: 'AiMcpController', site: 'skip_tenant_transaction', class: 'applies', reason: `${RUN_WITH_CONTEXT}; GET and DELETE answer 405 without the database` , routes: ['handleDelete', 'handleGet', 'handlePost', 'listAudit'] },
   { file: 'ai/ai-search.controller.ts', member: 'AiSearchController', site: 'skip_tenant_transaction', class: 'applies', reason: RUN_WITH_CONTEXT , routes: ['searchEntities'] },
 
@@ -84,6 +84,7 @@ export const DATA_ACCESS_PATHS: DataAccessPathEntry[] = [
   { file: 'ai/ai-api-keys.service.ts', member: 'logAudit', site: 'transaction_false', class: 'no_scoped_table', reason: 'writes an MCP key event to audit_log' },
   { file: 'ai/auth/mcp-api-key-auth.guard.ts', member: 'authenticate', site: 'tenant_executor_run', class: 'no_scoped_table', reason: 'guard: reads the MCP key and its person (ai_api_keys, users)' },
   { file: 'ai/auth/mcp-api-key-auth.guard.ts', member: 'recordRefusedKey', site: 'tenant_executor_run', class: 'no_scoped_table', reason: 'guard: writes a refused key to the MCP journal (ai_runs, ai_tool_executions)' },
+  { file: 'ai/auth/mcp-api-key-auth.guard.ts', member: 'recordRefusedKeyAudit', site: 'tenant_executor_run', class: 'no_scoped_table', reason: 'guard: writes a refused key to the general audit log (audit_log), after the request transaction rolled back' },
   { file: 'ai/oauth/mcp-oauth.controller.ts', member: 'McpOAuthController', site: 'skip_tenant_transaction', class: 'no_scoped_table', reason: 'MCP OAuth flow: clients, codes, grants and the person' , routes: ['authorize', 'decide', 'describe', 'revoke', 'token'] },
   { file: 'ai/oauth/mcp-oauth.controller.ts', member: 'McpOAuthMetadataController', site: 'skip_tenant_transaction', class: 'no_scoped_table', reason: 'OAuth metadata documents, no tenant table' , routes: ['authorizationServer', 'protectedResourceAtRoot', 'protectedResourceForPath'] },
   { file: 'ai/oauth/mcp-oauth.service.ts', member: 'authenticateAccessToken', site: 'tenant_executor_run', class: 'no_scoped_table', reason: 'MCP OAuth grants and the person' },
@@ -259,7 +260,11 @@ export const DATA_ACCESS_PATHS: DataAccessPathEntry[] = [
   { file: 'admin/tenants/admin-tenants.service.ts', member: 'buildTenantSummary', site: 'with_tenant', class: 'system', reason: 'platform administration: subscription summary of a tenant' },
   { file: 'admin/tenants/admin-tenants.service.ts', member: 'logTenantAction', site: 'with_tenant', class: 'system', reason: 'platform administration: audit_log entry on the tenant' },
   { file: 'admin/tenants/admin-tenants.service.ts', member: 'purgeTenantData', site: 'with_tenant', class: 'system', reason: 'platform administration: tenant deletion purges every table, budget block included' },
+  { file: 'admin/tenants/trial-workspace-expiry.service.ts', member: 'run', site: 'with_tenant', class: 'system', reason: 'daily deletion of workspaces whose trial ended without a subscription: reads the subscriptions of a tenant' },
   { file: 'admin/tenants/tenant-stats.service.ts', member: 'compute', site: 'with_tenant', class: 'system', reason: 'platform administration: row counts of a tenant, budget lines included' },
+  { file: 'admin/trials/admin-trials.service.ts', member: 'buildRow', site: 'with_tenant', class: 'system', reason: 'platform administration: the trial funnel reads the milestones of a trial workspace' },
+  { file: 'admin/trials/admin-trials.service.ts', member: 'saveDiscoveryCall', site: 'with_tenant', class: 'system', reason: 'platform administration: the discovery call of a trial workspace, set by hand' },
+  { file: 'admin/trials/admin-trials.service.ts', member: 'removeDiscoveryCall', site: 'with_tenant', class: 'system', reason: 'platform administration: removes the discovery call of a trial workspace' },
 
   // Scheduled and detached jobs, command-line scripts: no person.
   { file: 'cleanup/auth-event-retention.service.ts', member: 'run', site: 'with_tenant', class: 'system', reason: 'scheduled purge of old sign-in events, per tenant' },

@@ -15,7 +15,7 @@ For portfolio-wide sequencing and roadmap work, use [Portfolio Planning](portfol
 
 - `portfolio_projects:reader`: open the list and view project workspaces
 - `portfolio_projects:contributor`: update the managed **Purpose** document, log time on the project (project-overhead entries and project task entries), and maintain linked records, links and files on the **Relations** tab (dependencies need `portfolio_projects:member`)
-- `portfolio_projects:member`: create projects and manage project data, status, team, relations, timeline, progress, tasks, scoring, comments, and decisions
+- `portfolio_projects:member`: create projects and manage project data, status, team, relations, timeline, effort, tasks, scoring, comments, and decisions
 - `portfolio_projects:admin`: includes member capabilities and can also import and export, save priority overrides and maintain other users' project-overhead time entries
 - Knowledge viewing also requires Knowledge access
 - Creating or linking standalone knowledge also requires a Knowledge creation role
@@ -43,7 +43,7 @@ The project list is designed to answer two questions quickly: "what should I car
 | **Priority** | Calculated priority score |
 | **Status** | Current execution state with a colored dot |
 | **Origin** | Request, Fast-track, or Legacy |
-| **Progress** | Execution progress as a bar |
+| **Effort** | Execution progress as a bar |
 | **Source** | Portfolio source classification |
 | **Category** | Portfolio category |
 | **Stream** | Portfolio stream |
@@ -97,7 +97,7 @@ While the project is being created, its header shows **Create** and **Cancel**. 
 
 The project workspace has two layers:
 
-- The **main content area** for the operational tabs: **Summary**, **Tasks**, **Timeline**, **Progress**, **Scoring**, **Relations**, **Knowledge**, and **History** (the changes made to the project, see [Record history](record-history.md))
+- The **main content area** for the operational tabs: **Summary**, **Tasks**, **Timeline**, **Effort**, **Scoring**, **Relations**, **Knowledge**, and **History** (the changes made to the project, see [Record history](record-history.md))
 - A persistent **Properties** drawer on the right edge for core properties, team assignment, and source requests
 
 Open or close the Properties drawer using the vertical tab on the right edge.
@@ -154,7 +154,7 @@ These assignments do more than fill boxes:
 
 - they determine what appears in **My projects** and **My team's projects**
 - they feed project context in summary and reporting
-- they define who is available for effort allocation in the **Progress** tab
+- they define who is available for effort allocation in the **Effort** tab
 
 If leads and contributors are wrong, your effort planning will also be wrong.
 
@@ -213,7 +213,7 @@ The **Tasks** tab is the project's execution queue. The tab badge shows the numb
 
 This tab is for managing project-linked tasks in context, not for replacing the full task workspace. Opening a task takes you to its own workspace, where task-specific detail and time logging continue.
 
-From a project perspective, the important consequence is this: task status and task time are not isolated. They feed back into Summary and Progress, so neglected tasks make the whole project picture less trustworthy.
+From a project perspective, the important consequence is this: task status and task time are not isolated. They feed back into Summary and Effort, so neglected tasks make the whole project picture less trustworthy.
 
 ## Timeline
 
@@ -259,20 +259,20 @@ Above the phase list, switch between **Table** and **Gantt** views:
 
 Only phases with usable start and end dates appear meaningfully on the Gantt. If the dates are vague, the chart will be equally vague. In Gantt view, you can drag phase bars to adjust start/end dates (with manage permission).
 
-## Progress
+## Effort
 
-The **Progress** tab combines execution progress, workload planning, and actual time consumption. That combination matters because a project that reports 80% progress with 20% of the effort consumed is not necessarily efficient; it may simply be badly estimated.
+The **Effort** tab combines execution progress, workload planning, and actual time consumption. That combination matters because a project that reports 80% progress with 20% of the effort consumed is not necessarily efficient; it may simply be badly estimated.
 
 ### Progress and workload
 
-- **Execution Progress** is the overall completion signal for the project
+- **Progress** is the overall completion signal for the project
 - **Workload consumption** compares actual effort with planned effort
 
 Keep these two numbers aligned with reality. If progress advances without corresponding effort, or effort accumulates without delivery movement, the mismatch is usually telling you something important about scope, estimation, or reporting discipline.
 
 ### Estimated effort and allocations
 
-Progress separates estimated effort into:
+The **Effort** tab separates estimated effort into:
 
 - **IT effort**
 - **Business effort**
@@ -292,7 +292,7 @@ Important consequences:
 
 - task time contributes to project actual effort automatically
 - task time is visible here but must be corrected in the task workspace
-- project-overhead entries are maintained from the Progress tab
+- project-overhead entries are maintained from the Effort tab
 - contributors can maintain their own project-overhead entries
 - administrators can maintain project-overhead entries across users
 
@@ -398,7 +398,7 @@ Use **Data Enrichment** when you want to export, adjust selected fields external
 
 Imports are designed for controlled bulk changes:
 
-- download a template first when you need the correct structure
+- download a template first when you need the correct structure, or an example to see sample projects and the values each column takes ([Example files](csv-files.md#example-files))
 - validate before importing
 - use advanced options to choose enrichment vs replacement behavior and insert/update rules
 
@@ -419,6 +419,6 @@ Again, sending a link does not grant access. It only saves people from hunting f
 - Use the Properties drawer for structural data that should stay visible while you work.
 - Use **Summary** for the project narrative, latest activity, and high-level operating picture.
 - Use **Timeline** to define delivery structure before task volume grows.
-- Use **Progress** regularly, otherwise effort variance arrives as a surprise even though the data was already warning you.
+- Use **Effort** regularly, otherwise effort variance arrives as a surprise even though the data was already warning you.
 - Use **Knowledge** for reusable or governed documentation, not as a second copy of the Purpose brief.
 - Use **Import** on the Purpose editor when a project brief already exists as a Word document, rather than reformatting it by hand.

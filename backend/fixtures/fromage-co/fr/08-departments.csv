@@ -1,0 +1,25 @@
+company_name;name;description;status;disabled_at
+Fromage & Co SA;Direction générale;Direction générale et stratégie de l'entreprise;enabled;
+Fromage & Co SA;Finance et contrôle de gestion;Finance, comptabilité, contrôle de gestion et trésorerie du groupe;enabled;
+Fromage & Co SA;Ressources humaines;Gestion RH, recrutement et développement des talents;enabled;
+Fromage & Co SA;Informatique et digital;Systèmes d'information, transformation numérique et cybersécurité;enabled;
+Fromage & Co SA;Ventes et marketing;Opérations commerciales, gestion des marques et e-commerce;enabled;
+Fromage & Co SA;Production;Fabrication, affinage et conditionnement des fromages;enabled;
+Fromage & Co SA;Qualité et R&D;Assurance qualité, certifications AOP et développement de nouveaux fromages;enabled;
+Fromage & Co SA;Logistique;Entreposage, chaîne du froid et distribution du groupe;enabled;
+Fromage & Co SA;Achats;Achats, gestion des fournisseurs et négociation des contrats;enabled;
+Kaasmeester BV;Direction;Direction locale et administration;enabled;
+Kaasmeester BV;Finance;Comptabilité locale et reporting financier;enabled;
+Kaasmeester BV;Opérations;Production, qualité et logistique;enabled;
+Kaasmeester BV;Ventes;Commercial et service client;enabled;
+Kaasmeester BV;Informatique;Coordination et support informatiques locaux;enabled;
+Formaggio Supremo SRL;Direzione;Direction locale;enabled;
+Formaggio Supremo SRL;Amministrazione;Finance et administration;enabled;
+Formaggio Supremo SRL;Produzione;Production fromagère et qualité;enabled;
+Formaggio Supremo SRL;Commerciale;Ventes et distribution;enabled;
+Formaggio Supremo SRL;Informatique;Coordination et support informatiques locaux;enabled;
+Fromage & Co Inc.;Direction;Direction de la filiale américaine;enabled;
+Fromage & Co Inc.;Finance;Comptabilité et conformité US;enabled;
+Fromage & Co Inc.;Opérations;Entreposage, logistique d'importation et distribution;enabled;
+Fromage & Co Inc.;Ventes;Ventes et grands comptes du marché américain;enabled;
+Fromage & Co Inc.;Informatique;Exploitation informatique locale et support utilisateurs;enabled;

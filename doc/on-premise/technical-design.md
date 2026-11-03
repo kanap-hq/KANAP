@@ -104,7 +104,7 @@ Frontend recognizes `FEATURE_DISABLED` in the API client and does not redirect o
 
 - `isPlatformAdmin()` returns `false` unconditionally in single-tenant mode (top of function, before any allowlist/role check)
 - `PLATFORM_ADMIN_HOST` is effectively ignored since tenant resolution skips host parsing
-- Platform admin controllers (`/admin/tenants`, `/admin/coa-templates`) are guarded by `MultiTenantOnlyGuard` — return 404 in single-tenant
+- Platform admin controllers (`/admin/tenants`, `/admin/trials`, `/admin/coa-templates`) are guarded by `MultiTenantOnlyGuard` — return 404 in single-tenant
 - Platform-admin tenant row remains in the DB (same migrations everywhere) but is never routed to
 
 ## First-Boot Initialization
@@ -127,6 +127,7 @@ These return 404:
 - `POST /public/activate-trial`
 - `POST /public/request-support-invoice`
 - All `/admin/tenants/*` endpoints
+- All `/admin/trials/*` endpoints
 - All `/admin/coa-templates/*` endpoints
 
 ## Feature-Gated Endpoints
@@ -313,6 +314,7 @@ Rules:
 | `public.controller.ts` | `@Post('activate-trial')` | 404 via `throwNotAvailableInMode` |
 | `public.controller.ts` | `@Post('contact')` | 404 via `throwNotAvailableInMode` |
 | `admin-tenants.controller.ts` | `MultiTenantOnlyGuard` on `admin/tenants` | Answers 404 |
+| `admin/trials/admin-trials.controller.ts` | `MultiTenantOnlyGuard` on `admin/trials` | Answers 404 |
 | `admin-coa-templates.controller.ts` | `MultiTenantOnlyGuard` on `admin/coa-templates` | Answers 404 |
 | `admin-ops.controller.ts` | `MultiTenantOnlyGuard` on `admin/ops` | Answers 404 |
 | `ai/platform/platform-ai-admin.controller.ts` | `MultiTenantOnlyGuard` on `admin/ai` | Answers 404 |
@@ -525,7 +527,7 @@ All gates read from `useFeatures()` hook (provided by `FeaturesContext.tsx`).
 | `config.features.email` | `/forgot-password`: redirects to `/login` if email is off |
 | `config.features.billing` | `/admin/billing`, `/admin/choose-plan`: not rendered |
 | `config.features.sso` | `/admin/auth`: not rendered |
-| `!isSingleTenant` | `/admin/tenants`, `/admin/coa-templates`, `/admin/standard-accounts`, `/admin/ops-dashboard`, `/admin/platform-ai`: not rendered |
+| `!isSingleTenant` | `/admin/tenants`, `/admin/trials`, `/admin/coa-templates`, `/admin/standard-accounts`, `/admin/ops-dashboard`, `/admin/platform-ai`: not rendered |
 | `/admin/sample-data` | Always registered. The page refuses itself (`ForbiddenPage`) when the flag is off (on-premise), for a non-Administrator or on the platform host. A direct page load never falls to the catch-all |
 
 #### Navigation gating (`frontend/src/components/Layout.tsx`)

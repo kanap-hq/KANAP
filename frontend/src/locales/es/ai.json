@@ -1,8 +1,8 @@
 {
   "conversationList": {
-    "archive": "Archivar",
-    "archiveConfirmMessage": "La conversación sale de su lista. No se podrá volver a abrir.",
-    "archiveConfirmTitle": "¿Archivar esta conversación?",
+    "delete": "Eliminar",
+    "deleteConfirmMessage": "La conversación y sus mensajes se eliminan. Esta acción no se puede deshacer.",
+    "deleteConfirmTitle": "¿Eliminar esta conversación?",
     "dateGroups": {
       "lastWeek": "Últimos 7 días",
       "older": "Más antiguo",
@@ -17,15 +17,17 @@
     "untitled": "Sin título"
   },
   "errors": {
+    "attachmentRefused": "{{name}}: {{reason}}",
     "generic": "Se produjo un error.",
     "noResponseBody": "Sin cuerpo de respuesta.",
     "sendFailed": "Error al enviar el mensaje.",
     "streamBufferExceeded": "El búfer de flujo superó el tamaño máximo permitido.",
-    "streamRequestFailed": "La solicitud de flujo falló."
+    "streamRequestFailed": "La solicitud de flujo falló.",
+    "uploadFailed": "No se pudo enviar el archivo."
   },
   "input": {
-    "attach": "Adjuntar imagen",
-    "dropHint": "Suelta la imagen para adjuntar",
+    "attach": "Adjuntar un archivo",
+    "dropHint": "Suelte un archivo para adjuntarlo",
     "hintEnter": "Intro para enviar",
     "hintShiftEnter": "Mayús+Intro para nueva línea",
     "placeholder": "Pregunta a Plaid sobre tus datos KANAP…",

@@ -1,8 +1,8 @@
 {
   "conversationList": {
-    "archive": "Archivieren",
-    "archiveConfirmMessage": "Die Konversation verschwindet aus Ihrer Liste. Sie kann nicht wieder geöffnet werden.",
-    "archiveConfirmTitle": "Diese Konversation archivieren?",
+    "delete": "Löschen",
+    "deleteConfirmMessage": "Die Konversation und ihre Nachrichten werden gelöscht. Dies kann nicht rückgängig gemacht werden.",
+    "deleteConfirmTitle": "Diese Konversation löschen?",
     "dateGroups": {
       "lastWeek": "Letzte 7 Tage",
       "older": "Älter",
@@ -17,15 +17,17 @@
     "untitled": "Ohne Titel"
   },
   "errors": {
+    "attachmentRefused": "{{name}}: {{reason}}",
     "generic": "Ein Fehler ist aufgetreten.",
     "noResponseBody": "Kein Antwortinhalt.",
     "sendFailed": "Nachricht konnte nicht gesendet werden.",
     "streamBufferExceeded": "Der Stream-Puffer hat die maximal zulässige Größe überschritten.",
-    "streamRequestFailed": "Die Stream-Anfrage ist fehlgeschlagen."
+    "streamRequestFailed": "Die Stream-Anfrage ist fehlgeschlagen.",
+    "uploadFailed": "Die Datei konnte nicht gesendet werden."
   },
   "input": {
-    "attach": "Bild anhängen",
-    "dropHint": "Bild zum Anhängen ablegen",
+    "attach": "Datei anhängen",
+    "dropHint": "Datei zum Anhängen hier ablegen",
     "hintEnter": "Eingabe zum Senden",
     "hintShiftEnter": "Umschalt+Eingabe für neue Zeile",
     "placeholder": "Fragen Sie Plaid zu Ihren KANAP-Daten…",

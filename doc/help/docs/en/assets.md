@@ -408,6 +408,10 @@ The asset type, lifecycle, domain, administration zone and IP address type colum
 
 **Template download** (from Import dialog): Downloads a blank CSV with all importable field headers. Use this to prepare import files with the correct structure.
 
+**Download an example** (from Import dialog): an Excel workbook of sample servers, with what each column takes. See [Example files](csv-files.md#example-files).
+
+The export and the template title the columns in the language of your screen. The import reads the titles of any language.
+
 ### Import workflow
 
 1. **Prepare your file**: a CSV file or an Excel workbook (`.xlsx`). Save a CSV file as UTF-8. Commas or semicolons both work, and so does a file Excel saved as plain CSV (Windows-1252). Download a template to ensure correct headers. The separator, amounts, dates and yes or no of each language are in [CSV and Excel files](csv-files.md).

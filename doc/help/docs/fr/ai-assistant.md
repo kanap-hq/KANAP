@@ -63,30 +63,37 @@ La liste contient :
 Chaque ligne affiche le titre de la conversation (ou **Sans titre** si aucun n'a encore été défini). Survolez une ligne ou placez-y le focus pour faire apparaître :
 
 - Une icône crayon : **Renommer** la conversation. Double-cliquez sur le titre pour faire de même.
-- Une icône corbeille : **Archiver** la conversation. Les conversations archivées disparaissent de la liste. Si vous archivez la conversation actuellement ouverte, Plaid bascule vers un nouveau chat vide.
+- Une icône corbeille : **Supprimer** la conversation. La conversation et ses messages sont supprimés. Cette action est irréversible. Si vous supprimez la conversation actuellement ouverte, Plaid bascule vers un nouveau chat vide.
 
-La recherche filtre la liste par titre au fur et à mesure de votre saisie. Le renommage et l'archivage sont enregistrés immédiatement.
+La recherche filtre la liste par titre au fur et à mesure de votre saisie. Le renommage et la suppression sont enregistrés immédiatement.
 
 ## Rédiger un message
 
 Le composeur est le point de contrôle principal de l'espace de travail. Il prend en charge :
 
 - Le texte multiligne jusqu'à 10 lignes visibles avant défilement
-- Les pièces jointes image inline (PNG, JPG, GIF, WEBP)
+- Les pièces jointes : images (PNG, JPG, GIF, WEBP) et tableurs (.xlsx, CSV)
 - Les mentions `@` d'enregistrements KANAP
 - Un rappel de raccourci clavier (« Entrée pour envoyer · Maj+Entrée retour à la ligne »)
 
-### Joindre des images
+### Joindre des images et des tableurs
 
-Vous pouvez ajouter des images de trois manières :
+Vous pouvez joindre des images (PNG, JPG, GIF, WEBP) et des tableurs : classeurs Excel (.xlsx) et fichiers CSV. Il y a trois manières de les ajouter :
 
-- Cliquez sur l'icône trombone et sélectionnez des fichiers sur votre ordinateur
-- Glissez-déposez des fichiers image sur le composeur (une superposition indicative confirme la zone de dépôt)
-- Collez une image directement depuis le presse-papiers
+- Cliquez sur l'icône trombone (**Joindre un fichier**) et sélectionnez des fichiers sur votre ordinateur
+- Glissez-déposez des fichiers sur le composeur (une superposition indicative confirme la zone de dépôt)
+- Collez un fichier directement depuis le presse-papiers
 
-Chaque image en attente apparaît sous forme de miniature au-dessus du texte. Cliquez sur le petit **X** d'une miniature pour la retirer. Le nombre de pièces jointes par message est limité ; une fois cette limite atteinte, le trombone est désactivé jusqu'à ce que vous retiriez ou envoyiez les pièces jointes en cours.
+Chaque image en attente apparaît sous forme de miniature au-dessus du texte. Chaque tableur en attente apparaît sous forme de petite vignette avec son nom et sa taille. Cliquez sur le petit **X** pour en retirer un. Un message contient au plus 8 pièces jointes, images et tableurs confondus. Une fois cette limite atteinte, le trombone est désactivé jusqu'à ce que vous retiriez ou envoyiez les pièces jointes en cours.
 
 Les images sont importées avec votre message afin que Plaid puisse les décrire, les comparer ou en extraire des détails.
+
+KANAP lit un tableur au moment où vous envoyez le message :
+
+- Un fichier peut contenir jusqu'à 5 Mo et 20 000 lignes. Seule la première feuille d'un classeur est lue.
+- Un fichier illisible (endommagé, vide, ancien format .xls, trop volumineux) est refusé immédiatement, avec la raison. Le message n'est pas envoyé.
+- Plaid reçoit un résumé du fichier : les en-têtes de colonnes, le type de chaque colonne (texte, nombre ou date), les dix premières lignes et le nombre de lignes. Il peut décrire le fichier, dire ce que contient chaque colonne et repérer des problèmes dans les premières lignes. Il ne peut pas répondre sur les lignes au-delà des dix premières.
+- Le résumé reste attaché au message pendant toute la suite de la conversation.
 
 ### Mentionner des enregistrements avec `@`
 

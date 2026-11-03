@@ -450,7 +450,7 @@ async function testConversationRetentionPurgeInRestoredOrder(s: Seed) {
     const service = new AiConversationRetentionService({} as any, { register: () => undefined } as any);
     const summary = { tenantsProcessed: 0, archived: 0, purged_conversations: 0, purged_messages: 0, errors: [] as string[] };
     const processed = await (service as any).runForTenant(runner.manager, s.tenantId, summary);
-    assert.equal(processed, true);
+    assert.equal(processed.processed, true);
     assert.equal(summary.purged_conversations, 1);
     assert.equal(summary.purged_messages, 1);
 

@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { EntityManager, In } from 'typeorm';
 import { parseString } from '@fast-csv/parse';
+import type { CsvLanguage } from '../csv-sheet/types';
 import { parseCsvBoolean } from '../csv-sheet/boolean';
 import { knownTimeZone, readTimeZoneHeader } from '../csv-sheet/date';
 import { CsvDecodeError } from '../csv-sheet/decode';
@@ -31,6 +32,20 @@ import { uploadedBytes } from '../upload';
 /**
  * Import options
  */
+/**
+ * The column a header names: a field's technical name or its title in any language (`headerLabels`),
+ * whatever the case, the spaces and the underscores; any other header as it came. For code that
+ * reads a file's rows again after the import (`importable` aside, as the import reads them).
+ */
+export function csvColumnOfHeader(config: CsvEntityConfig, header: string): string {
+  const key = looseKey(header).normalize('NFC');
+  for (const field of config.fields) {
+    const names = [field.csvColumn, ...Object.values(config.headerLabels?.[field.csvColumn] ?? {})];
+    if (names.some((name) => name && looseKey(name).normalize('NFC') === key)) return field.csvColumn;
+  }
+  return header;
+}
+
 export interface CsvImportOptions {
   /** TypeORM EntityManager */
   manager: EntityManager;
@@ -44,6 +59,8 @@ export interface CsvImportOptions {
   viewer?: { userId: string | null; isAdmin: boolean };
   /** Effective IT Ops catalogs for code/label resolution (see CsvImportContext). */
   itOpsSettings?: import('../../it-ops-settings/it-ops-settings.service').ItOpsSettings;
+  /** The file's language (the screen's, else the user's). See CsvImportContext. */
+  language?: CsvLanguage;
 }
 
 /** What a full replace needs to know of a stored column to empty it. */
@@ -163,6 +180,7 @@ export class CsvImportService {
       itOpsSettings: opts.itOpsSettings,
       markdownBudget: markdownWorkBudget(),
       timeZones,
+      language: opts.language,
     };
 
     // Full replace empties the cells of the columns the file holds, by the stored column's rules.
@@ -339,6 +357,12 @@ export class CsvImportService {
 
     const readHeader = (header: string | null | undefined) => {
       if (header == null) return header;
+      // A whole title is read first: a translated one may end in parentheses ("Progression (%)").
+      const titled = headerAliases.get(headerKey(header));
+      if (titled) {
+        if (zonedColumns.has(titled)) zoneless.push(titled);
+        return titled;
+      }
       const named = readTimeZoneHeader(header);
       const column = headerAliases.get(headerKey(named ? named.column : header));
       if (!column) {

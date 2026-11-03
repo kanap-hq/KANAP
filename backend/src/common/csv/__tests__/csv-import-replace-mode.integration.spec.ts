@@ -121,7 +121,8 @@ async function fullExport(runner: QueryRunner, tenantId: string, config: CsvEnti
   if (fields.includes('reference')) {
     const [header, line] = content.split('\n');
     const separator = language === 'en' ? ',' : ';';
-    assert.equal(header.split(separator)[1], 'reference', `${config.entityName}: the reference follows id`);
+    const reference = config.headerLabels?.reference?.[language] ?? 'reference';
+    assert.equal(header.split(separator)[1], reference, `${config.entityName}: the reference follows id`);
     assert.match(line.split(separator)[1], /^[A-Z]+-\d+$/, `${config.entityName}: the reference is exported`);
   }
   return content;

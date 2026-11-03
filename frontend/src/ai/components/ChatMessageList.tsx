@@ -27,6 +27,7 @@ import { getPreviewStatusColorKey, getPreviewStatusDisplay, PreviewStatusDisplay
 import { getDotColor } from '../../utils/statusColors';
 import ArtifactPreviewChip from './ArtifactPreviewChip';
 import AttachmentImage from './AttachmentImage';
+import AttachmentFileChip from './AttachmentFileChip';
 import PreviewCard from './PreviewCard';
 import PlaidActivity from './PlaidActivity';
 import { useReferenceLinkPlugins } from '../utils/referenceLinks';
@@ -274,6 +275,9 @@ function MessageAttachments({ message }: { message: ChatMessage }) {
   return (
     <Stack direction="row" spacing={0.75} sx={{ mt: 1, flexWrap: 'wrap', gap: 0.75 }}>
       {attachments.map((att) => {
+        if (att.kind === 'table') {
+          return <AttachmentFileChip key={att.id} name={att.original_filename || 'file'} size={att.size} height={48} />;
+        }
         if (!att.preview_url) return null;
         const isLocalObjectUrl = att.preview_url.startsWith('blob:');
         return (

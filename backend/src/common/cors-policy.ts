@@ -1,3 +1,6 @@
+// ts-node type-checks the import graph only, so the ambient `declare module 'cors'`
+// (src/types/external.d.ts) stays invisible unless this file references it.
+/// <reference path="../types/external.d.ts" />
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
 import * as cors from 'cors';
 import {

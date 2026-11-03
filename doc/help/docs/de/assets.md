@@ -408,6 +408,10 @@ Die Spalten für Asset-Typ, Lebenszyklus, Domäne, Administrationszone und IP-Ad
 
 **Vorlage herunterladen** (aus Import-Dialog): Lädt eine leere CSV mit allen importierbaren Feld-Spaltenköpfen herunter. Verwenden Sie dies, um Importdateien mit der korrekten Struktur vorzubereiten.
 
+**Beispiel herunterladen** (aus Import-Dialog): eine Excel-Arbeitsmappe mit Beispielservern und dem, was jede Spalte aufnimmt. Siehe [Beispieldateien](csv-files.md#example-files).
+
+Der Export und die Vorlage benennen die Spalten in der Sprache Ihrer Oberfläche. Der Import liest die Titel jeder Sprache.
+
 ### Import-Workflow
 
 1. **Datei vorbereiten**: eine CSV-Datei oder eine Excel-Arbeitsmappe (`.xlsx`). Speichern Sie eine CSV-Datei als UTF-8. Kommas und Semikolons funktionieren beide, ebenso eine von Excel als einfache CSV gespeicherte Datei (Windows-1252). Laden Sie eine Vorlage herunter, um korrekte Spaltenköpfe sicherzustellen. Trennzeichen, Beträge, Datumsangaben und Ja oder Nein jeder Sprache stehen unter [CSV- und Excel-Dateien](csv-files.md).

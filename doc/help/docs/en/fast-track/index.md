@@ -167,7 +167,7 @@ See [Requests reference](../portfolio-requests.md) for all status transitions.
 
 Your new project inherits the request context, but it still needs execution setup.
 
-Go to **Portfolio > Projects** and open your newly created project. The project workspace has seven tabs (**Summary**, **Activity**, **Timeline**, **Progress**, **Tasks**, **Scoring**, and **Knowledge**) with a persistent **Project Properties** sidebar for core fields, team, and relations.
+Go to **Portfolio > Projects** and open your newly created project. The project workspace has seven tabs (**Summary**, **Activity**, **Timeline**, **Effort**, **Tasks**, **Scoring**, and **Knowledge**) with a persistent **Project Properties** sidebar for core fields, team, and relations.
 
 ### Sidebar: Assign Your People and Core Structure
 
@@ -199,11 +199,11 @@ The same sidebar also keeps **Core Properties** and **Relations** visible while 
 
 **Summary** is the project cockpit. It shows the current status, delivery window, effort consumption, team coverage, and latest activity in one pass. The **Purpose** editor is here too. If your project brief already exists as a Word document, use the **Import** button to pull the `.docx` in directly.
 
-### Progress Tab: Validate Effort and Allocations
+### Effort Tab: Validate Effort and Allocations
 
-<!-- screenshot: Progress tab showing IT Effort and Business Effort fields -->
+<!-- screenshot: Effort tab showing IT Effort and Business Effort fields -->
 
-Use **Progress** to confirm the effort that will drive delivery planning:
+Use **Effort** to confirm the effort that will drive delivery planning:
 
 - **IT Effort (MD)**: Total man-days expected from IT contributors
 - **Business Effort (MD)**: Total man-days expected from business contributors
@@ -229,9 +229,9 @@ Now the real work begins. As the project progresses, keep KANAP updated.
 
 ### Update Progress
 
-<!-- screenshot: Execution Progress slider -->
+<!-- screenshot: Progress slider -->
 
-Use the **Execution Progress** slider on the Progress tab to reflect how far along the project is. This is a simple percentage (0-100%) that feeds dashboards and reports.
+Use the **Progress** slider on the Effort tab to reflect how far along the project is. This is a simple percentage (0-100%) that feeds dashboards and reports.
 
 Move the project through statuses as work advances. In practice, most projects move from **Waiting List** or **Planned** into active execution:
 
@@ -244,7 +244,7 @@ Move the project through statuses as work advances. In practice, most projects m
 
 There are two places to log time:
 
-1. **Progress tab**: Log project-level overhead time (meetings, coordination, management)
+1. **Effort tab**: Log project-level overhead time (meetings, coordination, management)
 2. **Tasks**: Log task-specific time against individual work items
 
 <!-- screenshot: Time logging dialog -->
@@ -363,7 +363,7 @@ See [Reporting reference](../portfolio-reporting.md).
 | Import a Word document | Open request/project/task > Import button on Purpose or Description |
 | See the project pipeline | Portfolio > Planning |
 | Check team capacity | Portfolio > Planning > Capacity view, or Portfolio > Reporting > Capacity Heatmap |
-| Log time on a project | Open project > Progress tab or Tasks |
+| Log time on a project | Open project > Effort tab or Tasks |
 | Generate a roadmap | Portfolio > Planning > Roadmap Generator |
 | View reports | Portfolio > Reporting |
 | Configure scoring weights | Portfolio > Settings > Scoring Criteria |

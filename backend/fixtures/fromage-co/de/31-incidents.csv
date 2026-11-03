@@ -1,0 +1,156 @@
+ref;title;category;severity;status;confidential;started_at (Europe/Paris);detected_at (Europe/Paris);resolved_at (Europe/Paris);closed_at (Europe/Paris);reporter;owner;description;review;source_ref;personal_data_affected;authority_notification_required;authority_notified_at (Europe/Paris);notified_parties
+;Feuchtigkeitswerte von Keller B über Nacht verloren;infrastructure;major;closed;false;2026-03-14 01:20;2026-03-14 06:45;2026-03-14 09:30;2026-03-20 17:00;jacques.dubois@fromage-co.example;lucas.bernard@fromage-co.example;Das IoT-Gateway von Keller B leitete keine Sensordaten mehr weiter. CaveGuard zeigte fünf Stunden lang veraltete Werte an und löste keinen Alarm aus, sodass die Nachtschicht den Brie-Keller nicht prüfte.;"## Ausführliche Beschreibung
+
+Am 14. März 2026 um 01:20 hörte das IoT-Gateway CAVE-GW-02 von Keller B nach einem Watchdog-Fehler der Firmware auf, Sensordaten weiterzuleiten. CaveGuard zeigte weiter die letzten Werte an und löste keinen Alarm aus, sodass die fehlenden Daten unbemerkt blieben, bis die Nachtschicht den Keller um 06:45 prüfte. Das Gateway wurde neu gestartet, und ab 07:25 kamen wieder Messwerte. Der Vorfall wurde am 20. März geschlossen, nachdem die Korrekturmaßnahmen geprüft worden waren.
+
+## Auswirkungen
+
+- 18 Sensoren in Keller B sendeten von 01:20 bis 06:45 keine Daten, eine Lücke von fünf Stunden und fünfundzwanzig Minuten.
+- Die Nachtschicht hatte keinen Feuchtigkeitsverlauf für den Brie-Keller. Zwei Brie-Chargen wurden um 07:00 von Hand geprüft: Die Feuchtigkeit war auf 82% gefallen, noch innerhalb der Toleranz der Qualitätssicherung.
+- Keine Charge ging verloren, und keine Kundenlieferung war betroffen.
+
+## Grundursache
+
+Die Firmware von CAVE-GW-02 hatte keinen automatischen Neustart bei Watchdog-Fehler. CaveGuard alarmierte nur bei Schwellenwertverletzungen und nicht bei fehlenden Daten, und das Gateway war nicht in PRTG, sodass niemand die Stille meldete.
+
+## Korrekturmaßnahmen
+
+- Firmware beider Keller-Gateways auf einen Build mit automatischem Neustart bei Watchdog-Fehler aktualisiert (erledigt, 16. März 2026).
+- CaveGuard löst jetzt einen Alarm aus, wenn ein Sensor 15 Minuten lang nichts sendet (erledigt, 18. März 2026).
+- CAVE-GW-02 mit Ping und Prüfung der Datenaktualität in PRTG aufgenommen (bei Abschluss offen, Verantwortlicher Lucas Bernard).
+- Checkliste der Nachtschicht ergänzt: Zu Beginn jeder Schicht wird die Datenaktualitätsanzeige von CaveGuard geprüft (erledigt, 19. März 2026).
+
+## Erkenntnisse
+
+Das Ausbleiben von Daten zu überwachen ist ebenso wichtig wie die Überwachung der Werte. Ein Sensor, der nicht mehr sendet, bleibt für einen Schwellenwertalarm unsichtbar. Das Gateway musste außerdem in das Standard-Monitoring-Tool aufgenommen werden, zusätzlich zu CaveGuard. Der nächste IoT-Rollout enthält beide Prüfungen von Anfang an.";;false;false;;
+;Phishing-Kampagne gegen die Kreditorenbuchhaltung;security;major;closed;true;2026-04-07 08:10;2026-04-07 09:05;2026-04-07 12:30;2026-04-15 10:00;maria.casanova@fromage-co.example;lucas.bernard@fromage-co.example;"Gefälschte Lieferantenrechnungen mit einem Link auf eine geklonte Microsoft-Anmeldeseite erreichten 23 Personen in der Finanzabteilung. Ein Benutzer gab ein Passwort ein; Okta blockierte die Anmeldung beim MFA-Schritt.";"## Ausführliche Beschreibung
+
+Am 7. April 2026 um 08:10 erhielten 23 Benutzer aus der Finanzabteilung eine E-Mail, die scheinbar von einem bekannten Lieferanten stammte, mit einem Rechnungslink auf eine geklonte Microsoft-Anmeldeseite. Ein Benutzer gab um 08:42 sein Passwort ein. Okta verlangte MFA und blockierte die Anmeldung. Der Benutzer meldete die E-Mail um 09:05. Bis 12:30 sperrte die IT-Sicherheit den Absender und die Lookalike-Domain, entfernte die Nachrichten aus allen Postfächern, setzte das Passwort des Benutzers zurück und widerrief seine Sitzungen. Der Vorfall wurde am 15. April geschlossen, nachdem die Postfach- und Anmeldeprotokolle geprüft worden waren.
+
+## Auswirkungen
+
+- 23 Benutzer aus der Finanzabteilung erhielten die Phishing-E-Mail.
+- Auf der geklonten Seite wurden einmal Anmeldedaten eingegeben. MFA blockierte die Anmeldung; es wurden kein Postfachzugriff, keine Zahlungsänderung und kein Datenabfluss festgestellt.
+- Der Vorfall ist auf die Administratoren des Registers beschränkt. Der betroffene Benutzer wird in dieser Analyse nicht genannt.
+
+## Grundursache
+
+Die Lookalike-Domain stand nicht auf der Sperrliste des Mailfilters, und ihre Reputation war noch einwandfrei. Das Rechnungsthema passte zu einem echten Lieferantenprozess, daher wirkte die Nachricht gewöhnlich. MFA verhinderte die Übernahme des Kontos. Der Filter stützte sich auf die Domain-Reputation und erkannte die neu registrierte Lookalike-Domain nicht.
+
+## Korrekturmaßnahmen
+
+- Absender und Lookalike-Domain gesperrt (erledigt, 7. April 2026).
+- Phishing-Nachrichten aus allen Postfächern entfernt (erledigt, 7. April 2026).
+- Passwort des Benutzers zurückgesetzt und Sitzungen widerrufen (erledigt, 7. April 2026).
+- Erkennungsregel für ähnlich aussehende Lieferantendomains hinzugefügt (erledigt, 9. April 2026).
+- Sensibilisierungshinweis für die Finanzabteilung zur telefonischen Prüfung von Rechnungen (erledigt, 10. April 2026).
+- Phishing-Simulation zum Thema Rechnungen in die Quartalskampagne aufgenommen (offen, Verantwortlicher Lucas Bernard).
+
+## Erkenntnisse
+
+MFA machte aus einem gestohlenen Passwort eine blockierte Anmeldung. Die schnelle Meldung des Benutzers verkürzte die Reaktion. Neu registrierte Lookalike-Domains brauchen eine Erkennungsregel zusätzlich zu einer Sperrliste. Jede Änderung von Lieferantenbankdaten sollte über eine bekannte Telefonnummer geprüft werden, nicht über die Nummer in der E-Mail.";SOC-2026-0412;false;false;;
+;SAP-Monatsabschluss durch Speicherkonflikt auf dem Host verlangsamt;infrastructure;major;closed;false;2026-04-30 16:00;2026-04-30 17:20;2026-05-01 09:00;2026-05-06 11:00;maria.casanova@fromage-co.example;pierre.martin@fromage-co.example;Die Jobs des Finanzabschlusses liefen viermal langsamer als üblich. PAR-ESX-01 war nach einer Host-Wartung überbucht, mit den Servern für S/4HANA und BW auf demselben Host.;"## Ausführliche Beschreibung
+
+Am 30. April 2026 um 16:00 liefen die Jobs des Monatsabschlusses etwa viermal langsamer als üblich. Die ersten Prüfungen um 17:20 zeigten einen Speicherkonflikt auf PAR-ESX-01: Eine Host-Wartung am 29. April hatte die Produktions-VMs von S/4HANA und BW ohne Speicherreservierungsregel auf demselben Host zurückgelassen. Die BW-VM wurde auf PAR-ESX-02 verschoben, und die Abschlussjobs liefen um 19:10 wieder mit normaler Geschwindigkeit. Der Abschluss war am 1. Mai um 09:00 beendet. Der Vorfall wurde am 6. Mai geschlossen, nachdem die Finanzabteilung die Zahlen bestätigt hatte.
+
+## Auswirkungen
+
+- Die Jobs des Monatsabschlusses liefen etwa drei Stunden lang, von 16:00 bis 19:10, viermal langsamer.
+- Das Finanzteam konnte den ersten Konsolidierungslauf am 30. April nicht starten und musste bis zum Morgen des 1. Mai warten.
+- Der Abschluss wurde am 1. Mai ohne Datenverlust und ohne Doppelbuchung beendet.
+
+## Grundursache
+
+Die Wartung vom 29. April hat beide SAP-Produktions-VMs auf PAR-ESX-01 belassen und den für sie verfügbaren Speicher verringert. VMware DRS hatte keine Regel, um die beiden VMs zu trennen, und kein Alarm überwachte Speicherkonflikte auf dem Host, sodass die Abschlussjobs um Speicher konkurrierten.
+
+## Korrekturmaßnahmen
+
+- BW-VM auf PAR-ESX-02 verschoben und Speicherreservierungen auf beiden SAP-VMs geprüft (erledigt, 30. April 2026).
+- DRS-Anti-Affinitätsregel für die Produktions-VMs von S/4HANA und BW hinzugefügt (erledigt, 4. Mai 2026).
+- Speicheralarm bei 90% für die ESXi-Hosts mit SAP-Produktion hinzugefügt (erledigt, 5. Mai 2026).
+- Wartungscheckliste um eine Prüfung von Speicherreservierung und Platzierung für SAP-Hosts ergänzt (erledigt, 5. Mai 2026).
+- Kapazitätsprüfung vor jedem Monatsabschluss während der Migration SAP Cheddar (offen, Verantwortlicher Pierre Martin).
+
+## Erkenntnisse
+
+Eine Host-Wartung ist eine Änderung an der SAP-Produktionsplattform, auch wenn keine VM neu gestartet wird. Platzierung und Speicherreservierungen müssen vor dem Abschlusszeitraum geprüft werden. Eine Anti-Affinitätsregel ist eine kleine Kontrolle, die verhindert, dass eine Wartung beide Produktions-VMs auf einen Host legt. Der nächste Abschluss enthält eine Kapazitätsprüfung im Runbook.";;false;false;;
+;B2B-Portal ausgefallen: Datenbankplatte voll;application;critical;closed;false;2026-06-02 07:50;2026-06-02 08:05;2026-06-02 11:10;2026-06-12 15:00;isabelle.moreau@fromage-co.example;marc.petit@fromage-co.example;Die Händler konnten drei Stunden lang keine Bestellungen aufgeben. Der PostgreSQL-13-Server des B2B-Portals füllte seine Platte mit Write-Ahead-Logs, nachdem der Archivierungsjob fehlgeschlagen war.;"## Ausführliche Beschreibung
+
+Der WAL-Archivierungsjob auf PAR-DB-01 schlug seit sechs Tagen fehl. Die Platte lief am 2. Juni 2026 um 07:50 voll, PostgreSQL nahm keine Schreibvorgänge mehr an, und das Fromage B2B Portal war für die Händler nicht verfügbar. Die ersten Anrufe erreichten den Vertrieb um 07:50, der Vorfall wurde um 08:05 erkannt. Das Archivziel wurde um 09:20 korrigiert, der WAL-Rückstand archiviert, und die Plattenbelegung sank. Die Datenbank nahm um 10:50 wieder Schreibvorgänge an, das Portal wurde um 11:10 geöffnet. Der Vorfall wurde am 12. Juni nach der Nachbesprechung mit Vertrieb und Infrastruktur geschlossen.
+
+## Auswirkungen
+
+- Fromage B2B Portal von 07:50 bis 11:10 nicht verfügbar, drei Stunden und zwanzig Minuten.
+- Etwa 140 Bestellungen wurden telefonisch angenommen und nachträglich erfasst.
+- Keine Bestellung ging verloren, und es wurden keine Kundendaten offengelegt.
+
+## Grundursache
+
+Das Archivziel hat sich bei der SAN-Migration geändert, und niemand hat den Job überwacht. Kein Alarm überwachte die Plattenbelegung auf dem Datenbankserver, sodass ein fehlschlagender Archivierungsjob sechs Tage Zeit hatte, die Platte zu füllen.
+
+## Korrekturmaßnahmen
+
+- Archivierungsjob korrigiert und überwacht (erledigt, 2. Juni 2026).
+- Alarm bei 80% Plattenbelegung auf den Datenbankservern (erledigt, 4. Juni 2026).
+- WAL-Archivziel in die Checkliste der SAN-Migration aufgenommen (erledigt, 5. Juni 2026).
+- Upgrade von PostgreSQL 13 (ohne Support) im Rahmen der Portal-Roadmap (offen, als Korrekturaufgabe erfasst, Ziel Dezember 2026).
+
+## Erkenntnisse
+
+Backup- und Archivjobs sind Produktionsdienste: Ihr Erfolg und der belegte Plattenplatz müssen überwacht werden. Eine Infrastrukturänderung, die ein Ziel verschiebt, muss die Jobs einschließen, die dorthin schreiben. Das telefonische Notverfahren hat funktioniert, aber drei Stunden manueller Bestellungen sind ein Kostenfaktor, den die Portal-Roadmap beseitigen muss.";;false;false;;
+;Bestellbestätigungen an falsche Kunden versendet;data;major;closed;false;2026-07-09 14:00;2026-07-09 15:30;2026-07-09 16:10;2026-07-24 12:00;isabelle.moreau@fromage-co.example;marc.petit@fromage-co.example;Ein Caching-Fehler im Release des Onlineshops verschickte 214 Bestellbestätigungen mit Name, Adresse und Bestellinhalt eines anderen Kunden.;"## Ausführliche Beschreibung
+
+Ein Caching-Fehler im Release des Onlineshops, das am 9. Juli 2026 um 13:40 bereitgestellt wurde, führte dazu, dass 214 Bestellbestätigungen mit Name, Adresse und Bestellinhalt eines anderen Kunden verschickt wurden. Die ersten Meldungen erreichten den Kundenservice um 15:30. Das Release wurde um 15:45 zurückgerollt, die E-Mail-Warteschlange um 16:10 gestoppt. Die betroffenen Kunden wurden am 10. Juli per E-Mail informiert, die CNIL am 11. Juli um 10:00 benachrichtigt. Der Vorfall wurde am 24. Juli geschlossen, nachdem die Korrektur und die Meldung geprüft worden waren.
+
+## Auswirkungen
+
+- 214 Kunden erhielten eine Bestätigungs-E-Mail mit personenbezogenen Daten eines anderen Kunden: Name, Adresse und Bestellinhalt.
+- Es wurden keine Zahlungsdaten, Passwörter oder Bankdaten offengelegt.
+- Der Kundenservice bearbeitete Anrufe und E-Mails der betroffenen Kunden. Ein Missbrauch der Daten wurde nicht festgestellt.
+
+## Grundursache
+
+Der Cache-Schlüssel der Vorlage für Bestellbestätigungen enthielt im neuen Release die Kunden-ID nicht, sodass eine zwischengespeicherte Nachricht für die nächste Bestellung wiederverwendet werden konnte. Das Release hatte keinen Test mit zwei gleichzeitigen Kunden und keine Prüfung der gerenderten E-Mail vor dem Versand.
+
+## Korrekturmaßnahmen
+
+- Release zurückgerollt und E-Mail-Warteschlange gestoppt (erledigt, 9. Juli 2026).
+- Cache-Schlüssel korrigiert, sodass er Kunden- und Bestell-ID enthält (erledigt, 10. Juli 2026).
+- Regressionstest mit zwei Kunden und gemeinsamem Cache hinzugefügt (erledigt, 11. Juli 2026).
+- Prüfung der E-Mail-Darstellung in die Release-Checkliste aufgenommen (erledigt, 14. Juli 2026).
+- Betroffene Kunden informiert und CNIL benachrichtigt (erledigt, 10. und 11. Juli 2026).
+- Überprüfung des Release-Prozesses für personalisierte Inhalte (offen, Verantwortlicher Marc Petit).
+
+## Erkenntnisse
+
+Personalisierte Inhalte müssen mit mindestens zwei Identitäten getestet werden, auch wenn ein Cache beteiligt ist. Ein Cache-Schlüssel gehört zum Datenschutzdesign. Die Erkennung dauerte 90 Minuten, weil die ersten Meldungen von Kunden kamen; ein Alarm bei wiederholten Kundennamen in der E-Mail-Warteschlange würde sie verkürzen.";;true;true;2026-07-11 10:00;"CNIL; 214 betroffene Kunden am 10. Juli per E-Mail informiert"
+;Veeam-Backup-Jobs auf dem Backup-SAN schlagen fehl;infrastructure;minor;resolved;false;2026-08-18 22:00;2026-08-19 07:30;2026-08-21 18:00;;pierre.martin@fromage-co.example;pierre.martin@fromage-co.example;Drei Nächte mit fehlgeschlagenen Backup-Jobs nach zwei Plattenausfällen auf PAR-SAN-02. Das Speichersystem erreicht im Dezember 2026 sein End of Life, und unter Support sind keine Ersatzplatten mehr verfügbar.;;;false;false;;
+;CheeseTrack offline während des Failovers des SQL-Server-Clusters;infrastructure;minor;resolved;false;2026-09-12 21:05;2026-09-12 21:10;2026-09-12 21:45;;jacques.dubois@fromage-co.example;pierre.martin@fromage-co.example;Das Patchen von PAR-SQL-02 löste einen Failover aus, dem CheeseTrack nicht folgte: Seine Verbindungszeichenfolge nannte den Knoten statt des Listeners. Kühlketten-Scans wurden auf den Handgeräten zwischengespeichert und danach synchronisiert.;;;false;false;;
+;Ausfall von Microsoft Teams in Westeuropa;supplier;low;closed;false;2026-09-24 09:30;2026-09-24 09:40;2026-09-24 12:15;2026-09-25 09:00;amelie.rousseau@fromage-co.example;sophie.laurent@fromage-co.example;Störung bei Microsoft: Besprechungen und Chat waren für die meisten Benutzer fast drei Stunden lang nicht verfügbar. Auf unserer Seite war außer der Information der Benutzer nichts zu tun.;;Microsoft 365 TM891245;false;false;;
+;Laborergebnisse können nicht in QualityLab LIMS gespeichert werden;application;major;in_progress;false;2026-10-14 10:00;2026-10-14 10:20;;;catherine.blanc@fromage-co.example;sophie.laurent@fromage-co.example;Die eingebettete Datenbank SQL Server 2017 Express hat ihr Limit von 10 GB erreicht. Die Ergebnisse werden auf Papier erfasst, bis die Datenbank auf den SQL-Server-Cluster umzieht.;"## Ausführliche Beschreibung
+
+Seit dem 14. Oktober 2026 um 10:00 speichert QualityLab LIMS keine neuen Laborergebnisse mehr. Die ersten Fehler wurden um 10:20 gemeldet. Die Anwendung öffnet sich weiterhin und zeigt bestehende Ergebnisse, aber jeder Schreibvorgang schlägt fehl. Die eingebettete Datenbank SQL Server 2017 Express hat ihr Größenlimit von 10 GB erreicht. Das Qualitätsteam erfasst die Ergebnisse auf Papier, bis die Datenbank auf den SQL-Server-Cluster umgezogen ist. Der Vorfall ist noch in Bearbeitung; diese Analyse ist vorläufig.
+
+## Auswirkungen
+
+- Laborergebnisse können seit dem 14. Oktober, 10:00 Uhr, nicht in QualityLab gespeichert werden.
+- Die Ergebnisse werden auf Papier festgehalten und später erfasst. Bisher ist kein Ergebnis verloren gegangen.
+- Chargenfreigabe und Zertifikatserstellung verzögern sich um etwa einen halben Tag.
+- Das LIMS bleibt zum Lesen bestehender Ergebnisse verfügbar.
+
+## Grundursache
+
+In Untersuchung. Die eingebettete Datenbank SQL Server 2017 Express hat ihr Limit von 10 GB erreicht. Das genaue Wachstum wird noch analysiert: Ergebnishistorie, Audit-Tabellen und Anhänge sind die Hauptkandidaten. Der Umzug auf den SQL-Server-Cluster ist die dauerhafte Lösung.
+
+## Korrekturmaßnahmen
+
+- Papier-Notverfahren mit der Qualitätssicherung vereinbart; ein täglicher Abgleich prüft, dass jedes Ergebnis erfasst ist (erledigt).
+- Datenbankgröße und freier Speicher werden täglich überwacht (erledigt).
+- Umzug der QualityLab-Datenbank auf den SQL-Server-Cluster (in Arbeit, Verantwortliche Sophie Laurent, Ziel Dezember 2026).
+- Alte Ergebnisse gemäß Aufbewahrungsrichtlinie archivieren oder löschen (geplant).
+- Supportfall beim Hersteller zur Express-Grenze und zur Migration eröffnet (in Arbeit).
+
+## Erkenntnisse
+
+Eine Datenbank in der Express-Edition passt nicht zu einem LIMS mit Ergebnissen aus mehreren Jahren. Kapazitäts- und Editionsgrenzen brauchen eine monatliche Prüfung, bevor die Datenbank voll ist. Das Papier-Notverfahren funktioniert, erfordert aber einen zusätzlichen Abgleich; die Migration sollte außerhalb einer Produktionskampagne geplant werden.";;false;false;;
+;VPN zum Standort Gouda bricht ständig ab;infrastructure;minor;open;false;2026-10-19 08:00;2026-10-19 09:15;;;jan.bakker@kaasmeester.example;lucas.bernard@fromage-co.example;Das Site-to-Site-VPN zwischen GOU-FW-01 und Paris handelt seit Sonntag alle paar Minuten neu aus. Die niederländischen Benutzer empfinden Sage X3 als langsam und verlieren ihre Sitzungen.;;;false;false;;

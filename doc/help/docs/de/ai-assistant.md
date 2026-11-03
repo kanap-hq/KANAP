@@ -63,30 +63,37 @@ Die Liste enthält:
 Jede Zeile zeigt den Konversationstitel (oder **Ohne Titel**, wenn noch keiner festgelegt wurde). Fahren Sie mit der Maus über eine Zeile oder fokussieren Sie sie, um Folgendes einzublenden:
 
 - Ein Stiftsymbol: die Konversation **Umbenennen**. Ein Doppelklick auf den Titel bewirkt dasselbe.
-- Ein Papierkorbsymbol: die Konversation **Archivieren**. Archivierte Konversationen verschwinden aus der Liste. Wenn Sie die aktuell geöffnete Konversation archivieren, wechselt Plaid zu einem neuen, leeren Chat.
+- Ein Papierkorbsymbol: die Konversation **Löschen**. Die Konversation und ihre Nachrichten werden gelöscht. Dies kann nicht rückgängig gemacht werden. Wenn Sie die aktuell geöffnete Konversation löschen, wechselt Plaid zu einem neuen, leeren Chat.
 
-Die Suche filtert die Liste während der Eingabe nach Titel. Umbenennen und Archivieren werden sofort gespeichert.
+Die Suche filtert die Liste während der Eingabe nach Titel. Umbenennen und Löschen werden sofort gespeichert.
 
 ## Eine Nachricht schreiben
 
 Das Eingabefeld ist das zentrale Bedienelement des Arbeitsbereichs. Es unterstützt:
 
 - Mehrzeiligen Text mit bis zu 10 sichtbaren Zeilen, bevor gescrollt wird
-- Inline-Bildanhänge (PNG, JPG, GIF, WEBP)
+- Anhänge: Bilder (PNG, JPG, GIF, WEBP) und Tabellen (.xlsx, CSV)
 - `@`-Erwähnungen von KANAP-Datensätzen
 - Einen Tastatur-Hinweis („Eingabe zum Senden · Umschalt+Eingabe für neue Zeile“)
 
-### Bilder anhängen
+### Bilder und Tabellen anhängen
 
-Sie können Bilder auf drei Arten hinzufügen:
+Sie können Bilder (PNG, JPG, GIF, WEBP) und Tabellen anhängen: Excel-Arbeitsmappen (.xlsx) und CSV-Dateien. Es gibt drei Arten, sie hinzuzufügen:
 
-- Klicken Sie auf das Büroklammer-Symbol und wählen Sie Dateien von Ihrem Computer aus
-- Ziehen Sie Bilddateien per Drag-and-drop auf das Eingabefeld (eine eingeblendete Hilfe bestätigt das Ablageziel)
-- Fügen Sie ein Bild direkt aus der Zwischenablage ein
+- Klicken Sie auf das Büroklammer-Symbol (**Datei anhängen**) und wählen Sie Dateien von Ihrem Computer aus
+- Ziehen Sie Dateien per Drag-and-drop auf das Eingabefeld (eine eingeblendete Hilfe bestätigt das Ablageziel)
+- Fügen Sie eine Datei direkt aus der Zwischenablage ein
 
-Jedes noch nicht gesendete Bild erscheint als Miniaturansicht über dem Text. Klicken Sie auf das kleine **X** einer Miniaturansicht, um sie zu entfernen. Es gibt ein Anhang-Limit pro Nachricht; sobald es erreicht ist, ist die Büroklammer deaktiviert, bis Sie die aktuellen Anhänge entfernen oder senden.
+Jedes noch nicht gesendete Bild erscheint als Miniaturansicht über dem Text. Jede noch nicht gesendete Tabelle erscheint als kleine Kachel mit ihrem Namen und ihrer Größe. Klicken Sie auf das kleine **X**, um einen Anhang zu entfernen. Eine Nachricht enthält höchstens 8 Anhänge, Bilder und Tabellen zusammen. Sobald das Limit erreicht ist, ist die Büroklammer deaktiviert, bis Sie die aktuellen Anhänge entfernen oder senden.
 
 Bilder werden zusammen mit Ihrer Nachricht hochgeladen, damit Plaid sie beschreiben, vergleichen oder Details daraus extrahieren kann.
+
+KANAP liest eine Tabelle, wenn Sie die Nachricht senden:
+
+- Eine Datei darf bis zu 5 MB und 20.000 Zeilen umfassen. Von einer Arbeitsmappe wird nur das erste Blatt gelesen.
+- Eine Datei, die nicht gelesen werden kann (beschädigt, leer, altes .xls-Format, zu groß), wird sofort mit Angabe des Grundes abgelehnt. Die Nachricht wird nicht gesendet.
+- Plaid erhält eine Zusammenfassung der Datei: die Spaltenüberschriften, den Typ jeder Spalte (Text, Zahl oder Datum), die ersten zehn Zeilen und die Anzahl der Zeilen. Plaid kann die Datei beschreiben, sagen, was jede Spalte enthält, und Probleme in den ersten Zeilen erkennen. Zu Zeilen nach den ersten zehn kann Plaid nichts sagen.
+- Die Zusammenfassung bleibt für den Rest der Unterhaltung an die Nachricht angehängt.
 
 ### Datensätze mit `@` erwähnen
 

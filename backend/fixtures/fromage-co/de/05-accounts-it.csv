@@ -1,0 +1,15 @@
+account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status;nature
+6501;SaaS-Abonnements;Abbonamenti SaaS;Abbonamenti software cloud;2000;Software Licenses (OPEX);Recurring licenses and subscriptions;enabled;opex
+6502;Softwarelizenzen;Licenze software;Licenze perpetue e a termine;2000;Software Licenses (OPEX);Recurring licenses and subscriptions;enabled;opex
+6503;Cloud-Hosting;Hosting cloud e IaaS;Server dedicati e archiviazione oggetti;2100;Cloud & Hosting Services;IaaS/PaaS/SaaS usage and hosting;enabled;opex
+6504;Cybersecurity-Tools;Strumenti di sicurezza informatica;Protezione endpoint e IAM;2100;Cloud & Hosting Services;IaaS/PaaS/SaaS usage and hosting;enabled;opex
+6505;Daten- und Analytics-Plattformen;Piattaforme dati e analisi;Monitoraggio, BI e strumenti dati;2100;Cloud & Hosting Services;IaaS/PaaS/SaaS usage and hosting;enabled;opex
+6601;IT-Wartung und Support;Manutenzione e supporto IT;Manutenzione hardware e servizi gestiti;2300;Maintenance & Support;Software/hardware maintenance contracts;enabled;opex
+6602;Telekommunikation und Netzwerk;Telecomunicazioni e reti;WAN, LAN, internet e telefonia;2200;Telecommunications & Network;Internet, mobile, lines, VPN;enabled;opex
+6603;Rechenzentrumskosten;Costi datacenter;Colocation, energia e raffreddamento;2200;Telecommunications & Network;Internet, mobile, lines, VPN;enabled;opex
+6701;IT-Personalverstärkung;Personale esterno IT;Sviluppatori e ingegneri esterni;2400;IT Consulting & External Services;Professional services, integration, contractors;enabled;opex
+6702;IT-Beratung;Consulenza IT;Consulenza strategica e architetturale;2400;IT Consulting & External Services;Professional services, integration, contractors;enabled;opex
+6801;IT-Schulung;Formazione IT;Formazione e certificazioni professionali;2600;Training & Certification;Staff training and certifications;enabled;opex
+6802;IT-Reisen und Veranstaltungen;Viaggi e eventi IT;Viaggi, conferenze e fiere;2800;Travel & Mobility (IT Projects);Project-related travel costs;enabled;opex
+205000;Software-Assets;Immobilizzazioni immateriali — software;Immaterielle Vermögenswerte — erworbene Software und Lizenzen;1100;Intangible Assets (CAPEX);Capitalized software and rights — IAS 38;enabled;capex
+215000;IT-Ausstattung;Immobilizzazioni materiali — attrezzature IT;Sachanlagen — Server, Arbeitsplätze und Netzwerk;1000;Tangible Assets (CAPEX);Purchase of physical IT equipment — IAS 16;enabled;capex

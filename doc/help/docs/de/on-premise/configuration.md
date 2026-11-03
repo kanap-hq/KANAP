@@ -95,7 +95,7 @@ Fehlen `CORS_ORIGINS` und die Anwendungsadresse (`APP_BASE_URL`) beide und ist `
 
 Setzen Sie `APP_ENV=production`, wenn Benutzer KANAP über HTTPS erreichen, wie in der dokumentierten Einrichtung. Ist `NODE_ENV` gesetzt und `APP_ENV` nicht, liest KANAP stattdessen `NODE_ENV`.
 
-**Prüfungen beim Start.** Die API startet nicht, wenn `DEPLOYMENT_MODE` einen anderen Wert als `single-tenant`, `multi-tenant` oder ungesetzt hat, wenn `JWT_SECRET` oder `DATABASE_URL` fehlt oder leer ist, und mit `APP_ENV=production` auch nicht, wenn `APP_BASE_URL` oder `CORS_ORIGINS` fehlt. Sie verweigert außerdem den Betrieb, wenn die PostgreSQL-Rolle aus `DATABASE_URL` `SUPERUSER` oder `BYPASSRLS` ist. Diese letzte Prüfung läuft nach den Migrationen, die Migrationen sind also bereits mit dieser Rolle gelaufen, wenn die Meldung erscheint.
+**Prüfungen beim Start.** Die API startet nicht, wenn `DEPLOYMENT_MODE` einen anderen Wert als `single-tenant`, `multi-tenant` oder ungesetzt hat, wenn `JWT_SECRET` oder `DATABASE_URL` fehlt oder leer ist, und mit `APP_ENV=production` auch nicht, wenn `APP_BASE_URL` oder `CORS_ORIGINS` fehlt. Vor jeder Migration prüft sie außerdem die PostgreSQL-Rolle aus `DATABASE_URL`. Eine dedizierte Rolle mit `SUPERUSER` oder `BYPASSRLS` wird zuerst auf `NOSUPERUSER NOBYPASSRLS` geändert. Eine geschützte Rolle wie `postgres` mit einem dieser Attribute stoppt den Start, und keine Migration läuft (siehe „Erforderlich: Datenbank“ weiter unten).
 
 ## Was das API-Protokoll beim Start zeigt
 
@@ -219,7 +219,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 GRANT ALL ON SCHEMA public TO kanap;
 ```
 
-Wurde eine dedizierte Anwendungsrolle ursprünglich mit zu vielen Rechten angelegt, schränkt die erste Migration von KANAP sie auf `NOSUPERUSER NOBYPASSRLS` ein. Zeigt `DATABASE_URL` auf eine geschützte Cluster-Admin-Rolle wie `postgres`, schlägt der Start fehl, und Sie müssen auf eine dedizierte Anwendungsrolle wechseln.
+Bei jedem Start ändert KANAP die Anwendungsrolle vor den Migrationen auf `NOSUPERUSER NOBYPASSRLS`, wenn sie eines dieser Attribute hat oder wieder erhalten hat. Zeigt `DATABASE_URL` auf eine geschützte Cluster-Admin-Rolle (`postgres`, ein Name, der mit `pg_` beginnt, oder die Rolle, die den Cluster angelegt hat) mit einem dieser Attribute, stoppt der Start vor den Migrationen, und Sie müssen auf eine dedizierte Anwendungsrolle wechseln. Lehnt PostgreSQL die Änderung ab, etwa bei einer `BYPASSRLS`-Rolle ohne Superuser-Recht, stoppt der Start ebenfalls vor den Migrationen. Das Log nennt dann den Befehl `ALTER ROLE "<role>" NOSUPERUSER NOBYPASSRLS`, den Sie als PostgreSQL-Superuser ausführen.
 
 **Das Passwort in der URL.** Das Passwort ist Teil der URL. Ein Passwort, das `@ : / # ?` oder `%` enthält, macht die URL ungültig, wenn Sie diese Zeichen nicht prozentkodieren. Erzeugen Sie das Passwort stattdessen mit `openssl rand -hex 24`: Buchstaben und Ziffern brauchen keine Kodierung. Dasselbe gilt für jedes Geheimnis, das Sie in eine URL schreiben.
 
@@ -508,8 +508,8 @@ Mit `IMPORT_XLSX=false` heißen die Import-Schaltflächen **CSV importieren**, d
 |----------|-------------|---------|
 | `RATE_LIMIT_TRUST_PROXY` | Wie KANAP die Client-Adresse für seine Anmelde- und Anfragelimits ermittelt. `true`: Ein Reverse Proxy steht vor der API und sendet `X-Forwarded-For` (das nginx dieses Leitfadens). `false`: Nichts steht davor, die Adresse der Verbindung wird verwendet. `1` bis `3`: so viele Proxys hintereinander. | Nicht gesetzt bedeutet bei Single-Tenant ein vertrauenswürdiger Proxy, mit einer `[RATE-LIMIT]`-Warnung bei jedem Start. Setzen Sie den Wert ausdrücklich. |
 | `RATE_LIMIT_ENABLED` | Schalter für die Anfragebegrenzung auf Anwendungsebene | `true` |
-| `JWT_ACCESS_TOKEN_TTL` | Lebensdauer des Zugriffstokens: eine Zahl gefolgt von `s`, `m`, `h` oder `d`. Ein anderes Format ergibt 15 Minuten, und die API nennt den Wert in einer `[CONFIG]`-Warnung beim Start. | `15m` |
-| `JWT_REFRESH_TOKEN_TTL` | Lebensdauer des Aktualisierungstokens, gleiches Format. Ein anderes Format ergibt 15 Minuten, und die API nennt den Wert in einer `[CONFIG]`-Warnung beim Start. | `4h` |
+| `JWT_ACCESS_TOKEN_TTL` | Lebensdauer des Zugriffstokens: eine Zahl gefolgt von `s`, `m`, `h` oder `d`. Bei einem anderen Format bleibt der Standardwert (15 Minuten), und die API nennt den Wert in einer `[CONFIG]`-Warnung beim Start. | `15m` |
+| `JWT_REFRESH_TOKEN_TTL` | Lebensdauer des Aktualisierungstokens, gleiches Format. Bei einem anderen Format bleibt der Standardwert (4 Stunden), und die API nennt den Wert in einer `[CONFIG]`-Warnung beim Start. | `4h` |
 | `PASSWORD_RESET_TTL` | Gültigkeitsdauer eines Links zur Passwortzurücksetzung: eine Zahl von Sekunden oder eine Dauer wie `30m` oder `2h`. Ein anderer Wert gilt 1 Stunde, und die API nennt ihn in einer `[CONFIG]`-Warnung beim Start. | `1h` |
 | `LOG_LEVEL` | `debug` oder `verbose` ergänzt das Protokoll um die Details jedes Laufs eines geplanten Jobs. Jeder andere Wert ändert nichts. | *nicht gesetzt* |
 | `INTEGRATED_DOCS_AUTO_ROLLOUT` | Repariert beim Start die mit Anfragen und Projekten verknüpften Dokumente. On-Premise ausgeschaltet, sofern Sie es nicht setzen: `if-needed` führt die Reparatur nur aus, wenn die Zählungen abweichen, `always` bei jedem Start. | *aus* |

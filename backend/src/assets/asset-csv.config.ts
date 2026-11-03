@@ -1,3 +1,4 @@
+import type { CsvLanguage } from '../common/csv-sheet';
 import { assetEnvironmentCode } from './asset-environments';
 import { findCatalogOption, requireImportCatalogs, resolveCatalogCode } from '../it-ops-settings/catalog-resolve';
 import {
@@ -13,7 +14,7 @@ import { AuditService } from '../audit/audit.service';
 import { ItOpsSettings, ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
 import { TechnologyCatalogService } from '../technologies/catalog/technology-catalog.service';
 import { OperatingSystemService } from '../technologies/operating-system.service';
-import { vulnerabilityCsvFields } from '../vulnerabilities/vulnerability-list-column';
+import { VULNERABILITY_CSV_HEADERS, vulnerabilityCsvFields } from '../vulnerabilities/vulnerability-list-column';
 import { isValidHostname } from './hostname.util';
 import { isValidIpAddress } from './ip-address.util';
 import { operatingSystemLabelSql } from '../technologies/operating-system-codes';
@@ -448,10 +449,9 @@ async function assertAssetIdentityRows(rows: CsvImportRow[], context: CsvImportC
   const fqdns = new Map<CsvImportRow, string | null | undefined>();
   for (const row of rows) fqdns.set(row, rowFqdn(row, settings));
   const fqdnKeys = [...new Set([...fqdns.values()].filter((fqdn): fqdn is string => !!fqdn).map((fqdn) => assetNameKey(fqdn)))];
-  const [nameHolders, fqdnHolders] = await Promise.all([
-    assetIdentityHolders(context.manager, context.tenantId, 'name', nameKeys),
-    assetIdentityHolders(context.manager, context.tenantId, 'fqdn', fqdnKeys),
-  ]);
+  // One after the other: the request's single connection runs its queries in turn anyway.
+  const nameHolders = await assetIdentityHolders(context.manager, context.tenantId, 'name', nameKeys);
+  const fqdnHolders = await assetIdentityHolders(context.manager, context.tenantId, 'fqdn', fqdnKeys);
   const namesByKey = new Map<string, typeof nameHolders>();
   for (const holder of nameHolders) namesByKey.set(holder.key, [...(namesByKey.get(holder.key) ?? []), holder]);
   const fqdnsByKey = new Map<string, typeof fqdnHolders>();
@@ -576,12 +576,50 @@ async function recheckClusterRulesAtWrite(entities: any[], context: CsvImportCon
  *
  * Note: fqdn is computed from hostname + domain, so not included in CSV
  */
+/**
+ * The title of each column in the file's language, as the export dialog names the asset fields
+ * (`csv.fields.assets` of the screen). The export and the template write it, and the import reads
+ * the titles of every language as well as the technical column.
+ */
+const ASSET_CSV_HEADERS: Record<string, Record<CsvLanguage, string>> = {
+  ...VULNERABILITY_CSV_HEADERS,
+  reference: { en: 'Reference', fr: 'Référence', de: 'Referenz', es: 'Referencia' },
+  name: { en: 'Name', fr: 'Nom', de: 'Name', es: 'Nombre' },
+  notes: { en: 'Notes', fr: 'Notes', de: 'Notizen', es: 'Notas' },
+  kind: { en: 'Asset type', fr: 'Type d’actif', de: 'Asset-Typ', es: 'Tipo de activo' },
+  is_cluster: { en: 'Is a cluster', fr: 'Est un cluster', de: 'Ist ein Cluster', es: 'Es un clúster' },
+  environment: { en: 'Environment', fr: 'Environnement', de: 'Umgebung', es: 'Entorno' },
+  admin_zone: { en: 'Administration zone', fr: 'Zone d’administration', de: 'Administrationszone', es: 'Zona de administración' },
+  location_reference: { en: 'Location', fr: 'Site', de: 'Standort', es: 'Ubicación' },
+  status: { en: 'Lifecycle', fr: 'Cycle de vie', de: 'Lebenszyklus', es: 'Ciclo de vida' },
+  go_live_date: { en: 'Go-live date', fr: 'Date de mise en service', de: 'Inbetriebnahmedatum', es: 'Fecha de puesta en marcha' },
+  end_of_life_date: { en: 'End-of-life date', fr: 'Date de fin de vie', de: 'Datum Lebensende', es: 'Fecha de fin de vida' },
+  cluster: { en: 'Cluster membership', fr: 'Appartenance au cluster', de: 'Cluster-Mitgliedschaft', es: 'Pertenencia al clúster' },
+  operating_system: { en: 'Operating system', fr: 'Système d’exploitation', de: 'Betriebssystem', es: 'Sistema operativo' },
+  hostname: { en: 'Hostname', fr: 'Nom d’hôte', de: 'Hostname', es: 'Nombre de host' },
+  domain: { en: 'Domain', fr: 'Domaine', de: 'Domäne', es: 'Dominio' },
+  aliases: { en: 'Aliases', fr: 'Alias', de: 'Aliase', es: 'Alias' },
+  ip_1_type: { en: 'IP 1 type', fr: 'Type d’adresse IP 1', de: 'IP-Typ 1', es: 'Tipo de IP 1' },
+  ip_1_address: { en: 'IP 1 address', fr: 'Adresse IP 1', de: 'IP-Adresse 1', es: 'Dirección IP 1' },
+  ip_1_subnet_cidr: { en: 'IP 1 subnet (CIDR)', fr: 'Sous-réseau IP 1 (CIDR)', de: 'IP-Subnetz 1 (CIDR)', es: 'Subred IP 1 (CIDR)' },
+  ip_2_type: { en: 'IP 2 type', fr: 'Type d’adresse IP 2', de: 'IP-Typ 2', es: 'Tipo de IP 2' },
+  ip_2_address: { en: 'IP 2 address', fr: 'Adresse IP 2', de: 'IP-Adresse 2', es: 'Dirección IP 2' },
+  ip_2_subnet_cidr: { en: 'IP 2 subnet (CIDR)', fr: 'Sous-réseau IP 2 (CIDR)', de: 'IP-Subnetz 2 (CIDR)', es: 'Subred IP 2 (CIDR)' },
+  ip_3_type: { en: 'IP 3 type', fr: 'Type d’adresse IP 3', de: 'IP-Typ 3', es: 'Tipo de IP 3' },
+  ip_3_address: { en: 'IP 3 address', fr: 'Adresse IP 3', de: 'IP-Adresse 3', es: 'Dirección IP 3' },
+  ip_3_subnet_cidr: { en: 'IP 3 subnet (CIDR)', fr: 'Sous-réseau IP 3 (CIDR)', de: 'IP-Subnetz 3 (CIDR)', es: 'Subred IP 3 (CIDR)' },
+  ip_4_type: { en: 'IP 4 type', fr: 'Type d’adresse IP 4', de: 'IP-Typ 4', es: 'Tipo de IP 4' },
+  ip_4_address: { en: 'IP 4 address', fr: 'Adresse IP 4', de: 'IP-Adresse 4', es: 'Dirección IP 4' },
+  ip_4_subnet_cidr: { en: 'IP 4 subnet (CIDR)', fr: 'Sous-réseau IP 4 (CIDR)', de: 'IP-Subnetz 4 (CIDR)', es: 'Subred IP 4 (CIDR)' },
+};
+
 export const assetCsvConfig: CsvEntityConfig = {
   entityName: 'asset',
   // The sheet of an xlsx export: the list's title on screen.
   sheetNames: { en: 'Assets', fr: 'Actifs', de: 'Assets', es: 'Activos' },
   tableName: 'assets',
   displayName: 'Assets',
+  headerLabels: ASSET_CSV_HEADERS,
   upsertKey: ['name'],
   // Same rule as the unique names: `lower(btrim(name))`.
   upsertKeyIgnoresOuterSpaces: true,

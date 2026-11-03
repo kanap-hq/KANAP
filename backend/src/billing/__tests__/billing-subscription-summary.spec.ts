@@ -49,7 +49,10 @@ function createService(sub: Partial<Subscription>, enabledUsers: number, stripeS
       },
     }),
   };
-  const stripeConfig = { getPriceId: (_interval: string, planKey: string) => (planKey === 'max' ? 'price_max_monthly' : null) };
+  const stripeConfig = {
+    getPriceId: (_interval: string, planKey: string) => (planKey === 'max' ? 'price_max_monthly' : null),
+    isConfigured: () => true,
+  };
   const service = new BillingService(
     { manager } as any,
     {} as any,
@@ -85,6 +88,20 @@ async function testTrialHasNoEstimate() {
   assert.equal(summary.estimated_amount, null);
   assert.equal(summary.amount, null);
   assert.deepEqual(priceRequests, []);
+}
+
+async function testTrialDeletionDate() {
+  // A local trial: deleted 30 days after its end (computeTrialDeletionAt). A paid one: no date.
+  const trialEnd = new Date('2026-11-10T09:00:00.000Z');
+  const { service, manager } = createService(
+    { plan_name: 'Trial', status: SubscriptionStatus.TRIALING, trial_end: trialEnd },
+    1,
+  );
+  const summary = await service.getSubscriptionSummary({ manager: manager as any });
+  assert.equal(summary.trial_deletion_at, '2026-12-10T09:00:00.000Z');
+
+  const paid = createService({ plan_name: 'Hosted KANAP', status: SubscriptionStatus.ACTIVE, amount: 19900, currency: 'EUR' }, 1);
+  assert.equal((await paid.service.getSubscriptionSummary({ manager: paid.manager as any })).trial_deletion_at, null);
 }
 
 async function testSeatFieldsDoNotScaleTheEstimate() {
@@ -270,6 +287,7 @@ async function testLegacyTopLevelPeriodStillWorks() {
 async function run() {
   await testEstimateIsOneSubscription();
   await testTrialHasNoEstimate();
+  await testTrialDeletionDate();
   await testSeatFieldsDoNotScaleTheEstimate();
   await testStoredAmountWins();
   await testOnPremiseShowsNoAmount();

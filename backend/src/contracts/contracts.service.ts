@@ -109,6 +109,7 @@ import { assertLinesEditable, isLimitedTransaction } from '../data-access/line-w
 import { applicationParticipantCondition, type ParticipationAccessScope } from '../auth/business-contributor-scope';
 import { amountCell, dayCell, ListExportCell, ListExportFile, numberCell, writeListExport } from '../common/csv/list-export';
 import type { ExportFileFormat } from '../common/xlsx/format';
+import { CONTRACT_CSV_COLUMNS, CONTRACT_CSV_HEADERS } from './contract-csv-headers';
 
 /**
  * The session tenant as a find condition: `app_current_tenant()`, the tenant RLS checks too,
@@ -1107,19 +1108,15 @@ export class ContractsService {
     return { ok: true, added: toInsert.length, removed: Number(removed?.n ?? 0) };
   }
 
-  // Tasks (latest update pattern)
+  // Tasks. The unified service writes the single audit row, under `tasks`.
   async listTasks(contractId: string, opts?: { manager?: EntityManager }) {
     return this.unifiedTasks.listForTarget({ type: 'contract', id: contractId }, opts);
   }
-  async createTask(contractId: string, body: any, userId?: string, opts?: { manager?: EntityManager; tenantId?: string }) {
-    const saved = await this.unifiedTasks.createForTarget({ type: 'contract', id: contractId, payload: body as any }, userId, opts);
-    await this.audit.log({ table: 'contract_tasks', recordId: saved.id, action: 'create', before: null, after: saved, userId }, { manager: opts?.manager ?? this.repo.manager });
-    return saved;
+  createTask(contractId: string, body: any, userId?: string, opts?: { manager?: EntityManager; tenantId?: string }) {
+    return this.unifiedTasks.createForTarget({ type: 'contract', id: contractId, payload: body as any }, userId, opts);
   }
-  async updateTask(contractId: string, body: any & { id: string }, userId?: string, opts?: { manager?: EntityManager; tenantId?: string }) {
-    const saved = await this.unifiedTasks.updateForTarget({ type: 'contract', id: contractId, payload: body as any }, userId, opts);
-    await this.audit.log({ table: 'contract_tasks', recordId: saved.id, action: 'update', before: null, after: saved, userId }, { manager: opts?.manager ?? this.repo.manager });
-    return saved;
+  updateTask(contractId: string, body: any & { id: string }, userId?: string, opts?: { manager?: EntityManager; tenantId?: string }) {
+    return this.unifiedTasks.updateForTarget({ type: 'contract', id: contractId, payload: body as any }, userId, opts);
   }
 
   // URLs
@@ -1301,9 +1298,7 @@ export class ContractsService {
 
   // CSV
   private csvHeaders(): string[] {
-    return [
-      'name','company_name','supplier_name','cost_center','start_date','duration_months','auto_renewal','notice_period_months','yearly_amount_at_signature','currency','billing_frequency','status','owner_email','notes'
-    ];
+    return [...CONTRACT_CSV_COLUMNS];
   }
   /**
    * The contracts file in the screen's language (`common/csv-sheet`): its separator, the start
@@ -1316,7 +1311,7 @@ export class ContractsService {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(Contract);
     const language = opts?.language ?? 'en';
-    const headers = this.csvHeaders();
+    const headers = CONTRACT_CSV_COLUMNS.map((column) => CONTRACT_CSV_HEADERS[column][language]);
     const rows: ListExportCell[][] = [];
     const isoDate = (value: unknown): string => {
       if (value == null || value === '') return '';
@@ -1407,6 +1402,7 @@ export class ContractsService {
     const read = await readMasterDataFile({
       file: buf as Buffer,
       fields: this.csvHeaders(),
+      fieldLabels: CONTRACT_CSV_HEADERS,
       dateFields: ['start_date'],
       // Older files have no place column: a row without it keeps the stored place.
       optional: ['cost_center'],

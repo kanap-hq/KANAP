@@ -1,6 +1,8 @@
 /*
   Simple entrypoint for QA/Prod:
   - Waits for DB (the connection is retried while the database is not ready or goes away)
+  - Checks the database role before the migrations: a protected role stops the start-up, any other
+    role with SUPERUSER or BYPASSRLS is hardened to NOSUPERUSER NOBYPASSRLS
   - Runs TypeORM migrations programmatically using compiled DataSource; a migration that fails
     on its own exits at once with its message (never retried)
   - Optionally runs integrated-doc repair + verification
@@ -271,6 +273,10 @@ async function closeQuietly(ds, warn) {
 async function runMigrationsIfNeeded({
   env = process.env,
   loadDataSource = () => require(path.resolve(__dirname, '../dist/data-source.js')).default,
+  // Stops on a protected role and hardens any other role with SUPERUSER or BYPASSRLS, so no
+  // migration runs without row-level security (src/common/database-role-safety.ts).
+  checkDatabaseRole = (ds, logLine) => require(path.resolve(__dirname, '../dist/common/database-role-safety.js'))
+    .hardenDatabaseRoleBeforeMigrations(ds, 'entrypoint', logLine),
   // Data-scoped access: removes the policies of a limited role the application role inherits, so
   // no migration runs under them (src/data-access/data-access-availability.ts). Never throws.
   beforeMigrations = (ds) => require(path.resolve(__dirname, '../dist/data-access/data-access-availability.js'))
@@ -294,6 +300,9 @@ async function runMigrationsIfNeeded({
     try {
       log(`[entrypoint] Initializing DB (attempt ${attempt}/${maxAttempts}) ...`);
       await ds.initialize();
+      step = 'role';
+      await checkDatabaseRole(ds, log);
+      step = 'connect';
       await beforeMigrations(ds);
       log('[entrypoint] DB initialized. Running migrations...');
       step = 'migrate';
@@ -303,6 +312,12 @@ async function runMigrationsIfNeeded({
       return;
     } catch (err) {
       await closeQuietly(ds, warn);
+      if (step === 'role' && !isConnectionError(err)) {
+        error(String(err?.message || err));
+        error('[entrypoint] No migration ran.');
+        exit(1);
+        return;
+      }
       if (step === 'migrate' && !isConnectionError(err)) {
         error(`[entrypoint] A migration failed, not retried: ${err?.message || err}`);
         const statement = failedStatement(err);
@@ -312,7 +327,7 @@ async function runMigrationsIfNeeded({
         exit(1);
         return;
       }
-      const what = step === 'connect' ? 'DB not ready' : 'DB connection lost during the migrations (rolled back, nothing applied)';
+      const what = step === 'migrate' ? 'DB connection lost during the migrations (rolled back, nothing applied)' : 'DB not ready';
       if (attempt >= maxAttempts) {
         error(`[entrypoint] ${what} after ${maxAttempts} attempts: ${err?.message || err}`);
         if (env.DEBUG_MIGRATIONS) error('[entrypoint] Error details:', err);

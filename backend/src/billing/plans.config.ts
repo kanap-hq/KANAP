@@ -5,6 +5,8 @@ export type IntervalKey = 'monthly' | 'annual';
 
 export const TRIAL_PERIOD_DAYS = 14;
 export const FREEZE_GRACE_DAYS = 14;
+/** Days a workspace whose trial ended without a subscription is kept before it is deleted. */
+export const TRIAL_WORKSPACE_RETENTION_DAYS = 30;
 export const HEALTHY_STATUSES = ['active', 'trialing'] as const;
 export const BANK_TRANSFER_MIN_AMOUNT_EUR_CENTS = 100000;
 /**
@@ -21,6 +23,8 @@ export const CLOUD_SUBSCRIPTION_QUANTITY = 1;
  * `POST /admin/tenants/:id/mark-internal`. Commercial indicators leave these tenants out.
  */
 export const INTERNAL_PLAN_NAME = 'Internal';
+/** Plan name of a trial subscription, as activation writes it. Only such a plan is ever deleted at the end of a trial. */
+export const TRIAL_PLAN_NAME = 'Trial';
 
 export interface PlanPrices {
   monthly: number; // EUR cents

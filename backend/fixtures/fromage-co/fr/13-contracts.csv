@@ -1,0 +1,19 @@
+name;company_name;supplier_name;start_date;duration_months;auto_renewal;notice_period_months;yearly_amount_at_signature;currency;billing_frequency;status;owner_email;notes
+Microsoft Enterprise Agreement;Fromage & Co SA;Microsoft;2024-01-01;36;yes;3;650000;EUR;annual;enabled;thomas.berger@fromage-co.example;EA sur 3 ans — M365 E3 pour 2050+ utilisateurs + consommation Azure + GitHub Enterprise
+Maintenance et support SAP;Fromage & Co SA;SAP;2023-07-01;12;yes;6;350000;EUR;annual;enabled;sophie.laurent@fromage-co.example;Maintenance annuelle — S/4HANA + BW/4HANA + Concur
+Abonnement Salesforce;Fromage & Co SA;Salesforce;2025-03-01;12;yes;3;180000;EUR;annual;enabled;sophie.laurent@fromage-co.example;Sales Cloud + Service Cloud — 350 licences Sales + 60 licences Service
+Plateforme ServiceNow;Fromage & Co SA;ServiceNow;2025-01-01;36;yes;3;120000;EUR;annual;enabled;sophie.laurent@fromage-co.example;ITSM Standard — 15 licences agents + Customer Portal
+Workday HCM;Fromage & Co SA;Workday;2025-04-01;36;yes;6;150000;EUR;annual;enabled;sophie.laurent@fromage-co.example;Gestion des effectifs + paie + talents — déploiement mondial
+Infrastructure OVHcloud;Fromage & Co SA;OVHcloud;2024-06-01;24;no;3;85000;EUR;monthly;enabled;pierre.martin@fromage-co.example;Serveurs dédiés + stockage objet — fin de contrat juin 2026
+Okta Workforce Identity;Fromage & Co SA;Okta;2025-04-01;24;yes;3;45000;EUR;annual;enabled;lucas.bernard@fromage-co.example;SSO + MFA pour 2050+ utilisateurs dans toutes les entités
+Sophos Enterprise Agreement;Fromage & Co SA;Sophos;2025-02-01;36;yes;3;55000;EUR;annual;enabled;lucas.bernard@fromage-co.example;Intercept X Advanced pour 2050+ postes
+Broadcom VMware ELA;Fromage & Co SA;Broadcom;2024-01-01;36;yes;6;80000;EUR;annual;enabled;pierre.martin@fromage-co.example;vSphere Enterprise Plus — 6 licences CPU + vCenter
+Services IoT Schneider;Fromage & Co SA;Schneider Electric;2025-09-01;24;no;2;65000;EUR;quarterly;enabled;marc.petit@fromage-co.example;Plateforme CaveGuard IoT + maintenance des capteurs
+Abonnement Sage X3;Kaasmeester BV;Sage;2024-01-01;12;yes;3;60000;EUR;annual;enabled;jan.bakker@kaasmeester.example;X3 V12 — 40 utilisateurs nommés pour les entités NL et IT
+CheeseTrack SaaS;Fromage & Co SA;ColdChain Solutions;2025-06-01;24;yes;3;28000;EUR;annual;enabled;marc.petit@fromage-co.example;Traçabilité de la chaîne du froid — les trois sites de production
+Fortinet FortiCare;Fromage & Co SA;Fortinet;2024-09-01;36;yes;3;40000;EUR;annual;enabled;pierre.martin@fromage-co.example;FortiCare + FortiGuard pour tous les boîtiers FortiGate
+Services managés Axians;Fromage & Co SA;Axians;2024-01-01;36;yes;6;180000;EUR;monthly;enabled;sophie.laurent@fromage-co.example;Services informatiques managés — support N1/N2, supervision, gestion des correctifs
+Services informatiques managés US;Fromage & Co Inc.;Atlantic IT Solutions;2025-01-01;12;yes;2;120000;USD;monthly;enabled;mike.johnson@fromage-co.example;Support informatique US — support utilisateurs, gestion des postes, infrastructure locale
+Fromatech — équipe e-commerce;Fromage & Co SA;Fromatech Consulting;2026-01-01;12;yes;3;420000;EUR;monthly;enabled;amelie.rousseau@fromage-co.example;Centre de compétences e-commerce : product owner, DevOps et renforts, renouvellement automatique, préavis de 3 mois
+Nearshore Digital — développement;Fromage & Co SA;Nearshore Digital Lisboa;2025-04-01;24;no;3;900000;EUR;monthly;enabled;sophie.laurent@fromage-co.example;Contrat-cadre de développement nearshore, commandé par profil et à la journée
+Orange Business — WAN et mobile;Fromage & Co SA;Orange Business;2024-01-01;36;yes;6;260000;EUR;monthly;enabled;marc.petit@fromage-co.example;Réseau étendu, liens de secours et flotte mobile

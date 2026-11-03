@@ -39,9 +39,9 @@ const L8_REPORT_PHRASES = [
 /**
  * The reference data questions of Plaid L9 (carte §5), in French and in English: each is a read,
  * with the tool that answers it and the family it reads, listed among the readable families.
- * "Qui est responsable de FR-TRV-600 ?" holds a reference (TRV-600) and reads as an inspection,
- * whose tools give the node's detail and a list; a count of the lines of a cost center is the
- * `total` of query_entities on budget_lines.
+ * "Qui est responsable de FR-TRV-600 ?" holds a segment that looks like a reference (TRV-600)
+ * and reads as an inspection, whose tools give the node's detail. A count of the lines of a
+ * cost center code is a read query, so aggregate_entities is available (issue 1303).
  */
 const L9_REFERENCE_DATA_PHRASES: Array<{ prompt: string; profile: AiContextProfileName; tool: string; family: string }> = [
   { prompt: 'Qui est responsable du centre DSI-GRP ?', profile: 'read_query', tool: 'get_entity_detail', family: 'cost_centers' },
@@ -66,7 +66,7 @@ const L9_REFERENCE_DATA_PHRASES: Array<{ prompt: string; profile: AiContextProfi
   { prompt: 'How many working days in 2026 in France?', profile: 'read_query', tool: 'get_entity_detail', family: 'working_day_calendars' },
   { prompt: 'Quels calendriers existent ?', profile: 'read_query', tool: 'query_entities', family: 'working_day_calendars' },
   { prompt: 'Qui a modifié le centre FR-TRV-600 ?', profile: 'read_query', tool: 'get_record_history', family: 'cost_centers' },
-  { prompt: 'Combien de lignes sur FR-TRV-400 ?', profile: 'entity_inspection', tool: 'query_entities', family: 'budget_lines' },
+  { prompt: 'Combien de lignes sur FR-TRV-400 ?', profile: 'read_query', tool: 'aggregate_entities', family: 'budget_lines' },
   // The pages of the reference data: an inspection of the record the address names.
   { prompt: 'Qui est responsable de /master-data/cost-centers/0b0e7c4e-1111-4222-8333-944455556666 ?', profile: 'entity_inspection', tool: 'get_entity_detail', family: 'cost_centers' },
   { prompt: 'Combien de jours ouvrés en 2026 sur /master-data/working-day-calendars/0b0e7c4e-1111-4222-8333-944455556666 ?', profile: 'entity_inspection', tool: 'get_entity_detail', family: 'working_day_calendars' },
@@ -367,7 +367,7 @@ const FIXTURE_ROWS: Row[] = [
   { prompt: 'Remove the contact Jane Doe from Acme Corp', profile: 'write_master_data', mode: 'write', tools: ['update_master_data_record'] },
   { prompt: 'Add contact John Smith from Oracle', profile: 'write_master_data', mode: 'write', tools: ['update_master_data_record'] },
   { prompt: 'Change le contact principal de Fromagerie Durand', profile: 'write_master_data', mode: 'write', tools: ['update_master_data_record'] },
-  { prompt: 'Mets à jour le contact de Fournisseur Lactalis', profile: 'write_master_data', mode: 'write', tools: ['update_master_data_record'] },
+  { prompt: 'Mets à jour le contact de Fournisseur Fromagerie Dupont', profile: 'write_master_data', mode: 'write', tools: ['update_master_data_record'] },
 
   // Lot 7: the six phrases that came back to their pre-lot 5 profile. A state verb that clears a
   // task field is a task write, and a user account change is a generic write with no AI tool. A
@@ -612,6 +612,26 @@ const FIXTURE_ROWS: Row[] = [
 
   // Plaid L9: the reference data questions are reads, with the tool that answers them.
   ...L9_REFERENCE_DATA_PHRASES.map(({ prompt, profile, tool }) => ({ prompt, profile, mode: profile === 'entity_inspection' ? 'entity' as const : 'read' as const, tools: [tool] })),
+
+  // Issue 1303: a count that names a cost center by its code is a read query, in the four
+  // languages, so aggregate_entities is available. The code's segment looks like a record
+  // reference, and the inspection profile has no aggregate tool. A bare code stays an
+  // inspection. A business reference stays on its own branch.
+  { prompt: 'Combien de lignes sur FR-TRV-600 ?', profile: 'read_query', mode: 'read', tools: ['aggregate_entities'] },
+  { prompt: 'Combien de lignes budgétaires sur le centre de coûts FR-TRV-600 ?', profile: 'read_query', mode: 'read', tools: ['aggregate_entities'] },
+  { prompt: 'How many lines on FR-TRV-600?', profile: 'read_query', mode: 'read', tools: ['aggregate_entities'] },
+  { prompt: 'How many budget lines on cost center FR-TRV-600?', profile: 'read_query', mode: 'read', tools: ['aggregate_entities'] },
+  { prompt: 'Wie viele Zeilen auf FR-TRV-600?', profile: 'read_query', mode: 'read', tools: ['aggregate_entities'] },
+  { prompt: 'Wie viele Budgetzeilen hat die Kostenstelle FR-TRV-600?', profile: 'read_query', mode: 'read', tools: ['aggregate_entities'] },
+  { prompt: '¿Cuántas líneas en FR-TRV-600?', profile: 'read_query', mode: 'read', tools: ['aggregate_entities'] },
+  { prompt: '¿Cuántas líneas presupuestarias hay en el centro de coste FR-TRV-600?', profile: 'read_query', mode: 'read', tools: ['aggregate_entities'] },
+  { prompt: 'Anzahl der Zeilen auf FR-TRV-600', profile: 'read_query', mode: 'read', tools: ['aggregate_entities'] },
+  { prompt: 'Cantidad de líneas en FR-TRV-600', profile: 'read_query', mode: 'read', tools: ['aggregate_entities'] },
+  { prompt: 'Combien de lignes sur IT-300 ?', profile: 'read_query', mode: 'read', tools: ['aggregate_entities'] },
+  { prompt: 'FR-TRV-600', profile: 'entity_inspection', mode: 'entity' },
+  { prompt: 'Combien de tâches sur APP-3 ?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Combien de lignes sur APP-3 ?', profile: 'entity_inspection', mode: 'entity' },
+  { prompt: 'How many comments on FR-TRV-600?', profile: 'entity_inspection', mode: 'entity', tools: ['get_entity_comments'] },
 ];
 
 function testTheTable() {

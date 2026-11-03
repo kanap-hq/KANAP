@@ -184,10 +184,6 @@ type NormalizedFields = {
 const ENVIRONMENTS = ['prod', 'pre_prod', 'qa', 'test', 'dev', 'sandbox'] as const;
 const STATUS_STATES = ['enabled', 'disabled'] as const;
 const APPLICATION_LIFECYCLES = ['active', 'planned', 'in_development', 'retired'] as const;
-// Operational interface/connection criticality uses tenant business codes at the
-// service boundary; this legacy list remains only for their existing AI schema
-// until those mutation configs become catalog-aware.
-const CRITICALITIES = ['business_critical', 'high', 'medium', 'low'] as const;
 const USERS_MODES = ['manual', 'it_users', 'headcount'] as const;
 const PROJECT_STATUSES = ['waiting_list', 'planned', 'in_progress', 'in_testing', 'on_hold', 'done', 'cancelled'] as const;
 const PROJECT_ORIGINS = ['standard', 'fast_track', 'legacy'] as const;

@@ -92,8 +92,14 @@ plugins:
           link: /fr/
           nav_translations:
             Home: Accueil
+            "First steps": Premiers pas
+            "IT budget": Budget IT
+            "IT landscape map": Cartographie du SI
+            "Projects and requests": Projets et demandes
+            "Explore with the example": "Découvrir avec l'exemple"
+            "Start with my own data": "Commencer avec mes données"
             Fast Track: Démarrage rapide
-            "Getting Started": Premiers pas
+            "Getting Started": Prise en main
             "From Request to Delivery": "De la demande à la livraison"
             "From Application to Server": "De l'application au serveur"
             "Run, Build & Tasks": "Run, Build & Tâches"
@@ -179,6 +185,12 @@ plugins:
           link: /de/
           nav_translations:
             Home: Startseite
+            "First steps": Ihre ersten Schritte
+            "IT budget": IT-Budget
+            "IT landscape map": IT-Landkarte
+            "Projects and requests": Projekte und Anfragen
+            "Explore with the example": Mit dem Beispiel entdecken
+            "Start with my own data": Mit meinen eigenen Daten beginnen
             Fast Track: Schnellstart
             "Getting Started": Erste Schritte
             "From Request to Delivery": "Von der Anfrage zur Lieferung"
@@ -266,6 +278,12 @@ plugins:
           link: /es/
           nav_translations:
             Home: Inicio
+            "First steps": Sus primeros pasos
+            "IT budget": Presupuesto de TI
+            "IT landscape map": Mapa del SI
+            "Projects and requests": Proyectos y solicitudes
+            "Explore with the example": Descubrir con el ejemplo
+            "Start with my own data": Empezar con mis datos
             Fast Track: Inicio rápido
             "Getting Started": Primeros pasos
             "From Request to Delivery": "De la solicitud a la entrega"
@@ -351,6 +369,17 @@ plugins:
 
 nav:
   - Home: index.md
+
+  - First steps:
+    - IT budget:
+      - "Explore with the example": first-steps/budget-example.md
+      - "Start with my own data": first-steps/budget-own-data.md
+    - IT landscape map:
+      - "Explore with the example": first-steps/landscape-example.md
+      - "Start with my own data": first-steps/landscape-own-data.md
+    - Projects and requests:
+      - "Explore with the example": first-steps/portfolio-example.md
+      - "Start with my own data": first-steps/portfolio-own-data.md
 
   - Fast Track:
     - "Getting Started": fast-track/getting-started.md

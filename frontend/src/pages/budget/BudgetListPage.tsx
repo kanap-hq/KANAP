@@ -160,6 +160,7 @@ function BudgetListPageView() {
     () => natureScopeOf(parseListFilters(listFiltersOf(new URLSearchParams(location.search)))?.nature),
   );
   const Y = new Date().getFullYear();
+  const listYear = new URLSearchParams(location.search).get('year');
 
   // `serverOrder`: the options keep the server's order (a dimension's values, in the dimension's
   // order) instead of their labels' alphabetical order; blank stays last.
@@ -438,9 +439,11 @@ function BudgetListPageView() {
     } else if (colId === 'latest_task_text') {
       tab = 'overview'; // tasks now live in the overview tab
     }
+    // A cell with no year of its own opens the line on the year the list address names, if any.
+    if (!next.has('year') && listYear) next.set('year', listYear);
     const ref = item.item_number != null ? formatItemRef('budget', item.item_number) : item.id;
     return `/ops/budget/${ref}/${tab}?${next.toString()}`;
-  }, [Y, gridSearch]);
+  }, [Y, gridSearch, listYear]);
 
   const defaultAnalyticsLabel = analyticsAxes.label(analyticsAxes.defaultAxis ?? { name: null });
 

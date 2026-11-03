@@ -170,6 +170,7 @@ function createService(opts: {
     update: async () => undefined,
   };
   const stripeConfig = {
+    isConfigured: () => true,
     getPriceId: (interval: string) => opts.priceIds?.[interval] ?? 'price_max',
     getCheckoutSuccessUrl: () => 'https://fromage.kanap.test/admin/billing',
     getCheckoutCancelUrl: () => 'https://fromage.kanap.test/admin/billing',

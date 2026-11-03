@@ -155,7 +155,7 @@ Consulte la [referencia de Solicitudes](../portfolio-requests.md) para todas las
 
 Su nuevo proyecto hereda el contexto de la solicitud, pero aún necesita la configuración de ejecución.
 
-Vaya a **Portafolio > Proyectos** y abra su proyecto recién creado. El espacio de trabajo del proyecto tiene siete pestañas (**Resumen**, **Actividad**, **Cronograma**, **Progreso**, **Tareas**, **Evaluación** y **Base de conocimiento**), con una barra lateral persistente de **Propiedades del proyecto** para campos principales, equipo y relaciones.
+Vaya a **Portafolio > Proyectos** y abra su proyecto recién creado. El espacio de trabajo del proyecto tiene siete pestañas (**Resumen**, **Actividad**, **Cronograma**, **Esfuerzo**, **Tareas**, **Evaluación** y **Base de conocimiento**), con una barra lateral persistente de **Propiedades del proyecto** para campos principales, equipo y relaciones.
 
 ### Barra lateral: asigne sus personas y estructura central
 
@@ -185,9 +185,9 @@ La misma barra lateral también mantiene las **Propiedades principales** y **Rel
 
 **Resumen** es la cabina de mando del proyecto. Muestra el estado actual, ventana de entrega, consumo de esfuerzo, cobertura de equipo y última actividad en una sola pasada. El editor de **Propósito** también está aquí: si el resumen del proyecto ya existe como documento Word, use el botón **Importar** para incorporar el `.docx` directamente.
 
-### Pestaña Progreso: valide el esfuerzo y las asignaciones
+### Pestaña Esfuerzo: valide el esfuerzo y las asignaciones
 
-Use **Progreso** para confirmar el esfuerzo que impulsará la planificación de entrega:
+Use **Esfuerzo** para confirmar el esfuerzo que impulsará la planificación de entrega:
 
 - **Esfuerzo IT (MD)**: Total de días-persona esperados de los colaboradores IT
 - **Esfuerzo de negocio (MD)**: Total de días-persona esperados de los colaboradores de negocio
@@ -211,7 +211,7 @@ Ahora comienza el trabajo real. A medida que el proyecto avanza, mantenga KANAP 
 
 ### Actualice el progreso
 
-Use el deslizador de **Progreso de ejecución** en la pestaña Progreso para reflejar cuánto ha avanzado el proyecto. Es un porcentaje simple (0-100%) que alimenta paneles de control e informes.
+Use el deslizador de **Progreso** en la pestaña Esfuerzo para reflejar cuánto ha avanzado el proyecto. Es un porcentaje simple (0-100%) que alimenta paneles de control e informes.
 
 Mueva el proyecto a través de los estados a medida que avanza el trabajo. En la práctica, la mayoría de los proyectos pasan de **Lista de espera** o **Planificado** a ejecución activa:
 
@@ -224,7 +224,7 @@ Mueva el proyecto a través de los estados a medida que avanza el trabajo. En la
 
 Hay dos lugares para registrar tiempo:
 
-1. **Pestaña Progreso**: Registrar tiempo de gastos generales a nivel de proyecto (reuniones, coordinación, gestión)
+1. **Pestaña Esfuerzo**: Registrar tiempo de gastos generales a nivel de proyecto (reuniones, coordinación, gestión)
 2. **Tareas**: Registrar tiempo específico de tarea contra elementos de trabajo individuales
 
 He aquí por qué esto importa:
@@ -335,7 +335,7 @@ Consulte la [referencia de Informes](../portfolio-reporting.md).
 | Importar un documento Word | Abrir solicitud/proyecto/tarea > botón Importar en Propósito o Descripción |
 | Ver la cartera de proyectos | Portafolio > Planificación |
 | Verificar la capacidad del equipo | Portafolio > Planificación > Vista de capacidad, o Portafolio > Informes > Mapa de calor de capacidad |
-| Registrar tiempo en un proyecto | Abrir proyecto > pestaña Progreso o Tareas |
+| Registrar tiempo en un proyecto | Abrir proyecto > pestaña Esfuerzo o Tareas |
 | Generar una hoja de ruta | Portafolio > Planificación > Generador de hoja de ruta |
 | Ver informes | Portafolio > Informes |
 | Configurar pesos de evaluación | Portafolio > Configuración > Criterios de evaluación |

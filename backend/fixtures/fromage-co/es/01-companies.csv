@@ -1,0 +1,5 @@
+name;country_iso;address1;address2;postal_code;city;state;reg_number;vat_number;base_currency;status;disabled_at;notes;headcount_2025;it_users_2025;turnover_2025;headcount_2026;it_users_2026;turnover_2026;headcount_2027;it_users_2027;turnover_2027
+Fromage & Co SA;FR;12 Rue du Camembert;;75008;Paris;;812 345 678;FR81234567800;EUR;enabled;;Sede central del grupo — producción de queso, ventas, I+D y TI del grupo;1150;950;172;1200;1000;180;1250;1050;190
+Kaasmeester BV;NL;Goudsesingel 42;;2801 AB;Gouda;;KVK 87654321;NL876543210B01;EUR;enabled;;Filial neerlandesa — especialidades de Gouda y Edam;380;310;57;400;330;60;420;350;63
+Formaggio Supremo SRL;IT;Via Parmigiano 7;;43121;Parma;;IT-REA 456789;IT04567890123;EUR;enabled;;Filial italiana — producción de Parmigiano y Pecorino;285;230;42;300;245;45;315;260;48
+Fromage & Co Inc.;US;350 Fifth Avenue;Suite 4200;10118;New York;NY;EIN 84-1234567;;USD;enabled;;Filial de distribución en EE. UU. — importación y venta de quesos europeos;140;130;32;150;140;35;165;155;39

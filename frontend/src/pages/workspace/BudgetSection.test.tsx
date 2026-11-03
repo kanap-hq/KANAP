@@ -113,7 +113,7 @@ describe('BudgetSection budget snapshot', () => {
     });
   });
 
-  it.each(['light', 'dark'] as const)('renders one budget tile with three rows per year, each read from its own totals response in %s mode', async (mode) => {
+  it.each(['light', 'dark'] as const)('renders one budget tile with the total of each year, and the natures in a tooltip, in %s mode', async (mode) => {
     setBudgetColumns({ labels: TENANT_NAMES, enabled: ALL_SHOWN });
     renderPage(mode);
     const tile = await screen.findByRole('region', { name: 'dashboard.budgetSnapshot' });
@@ -123,23 +123,32 @@ describe('BudgetSection budget snapshot', () => {
     // No reporting currency in these totals: the tile does not invent one.
     expect(within(tile).queryByTestId('tile-subtitle')).not.toBeInTheDocument();
     const headers = within(tile).getAllByRole('columnheader').map((h) => h.textContent);
-    expect(headers).toEqual(['labels.year', 'ops:budget.type', 'A0', 'A1', 'A2', 'A3']);
+    expect(headers).toEqual(['labels.year', 'A0', 'A1', 'A2', 'A3']);
     const rows = within(tile).getAllByRole('row').slice(1);
     const amounts = rows.map((row) => within(row).getAllByRole('link').map((link) => link.textContent));
+    // One row per year (Y-1, Y, Y+1). The total comes from the combined response, not the sum of the natures.
     expect(amounts).toEqual([
-      ['0k', '3k', '0k', '0k'], ['0k', '2k', '0k', '0k'], ['0k', '8k', '0k', '0k'],
-      ['12k', '0k', '7k', '0k'], ['4k', '0k', '1k', '0k'], ['21k', '0k', '11k', '0k'],
-      ['0k', '0k', '0k', '9k'], ['0k', '0k', '0k', '6k'], ['0k', '0k', '0k', '18k'],
+      ['0k', '8k', '0k', '0k'],
+      ['21k', '0k', '11k', '0k'],
+      ['0k', '0k', '0k', '18k'],
     ]);
-    rows.forEach((row, index) => {
-      const scope = ['opex', 'capex', 'all'][index % 3];
-      expect(within(row).getByText(scope === 'all' ? 'ops:shared.total' : `ops:operations.scope.${scope}`)).toBeInTheDocument();
-      within(row).getAllByRole('link').forEach((link) => {
-        const url = new URL(link.getAttribute('href')!, 'http://localhost');
-        expect(url.pathname).toBe('/ops/budget');
-        expect(JSON.parse(url.searchParams.get('filters')!)).toEqual(scope === 'all' ? {} : { nature: { filterType: 'set', values: [scope] } });
-      });
+    expect(within(tile).queryByText('ops:budget.type')).not.toBeInTheDocument();
+    expect(within(tile).queryByText('ops:shared.total')).not.toBeInTheDocument();
+    const links = within(tile).getAllByRole('link');
+    links.forEach((link) => {
+      const url = new URL(link.getAttribute('href')!, 'http://localhost');
+      expect(url.pathname).toBe('/ops/budget');
+      expect(JSON.parse(url.searchParams.get('filters')!)).toEqual({});
     });
+    // Current year's budget: 21k on screen, 12k and 4k from the two nature responses.
+    const currentBudget = links.find((link) => link.textContent === '21k')!;
+    expect(currentBudget).toHaveAccessibleName('21k');
+    fireEvent.mouseOver(currentBudget);
+    const hovered = await screen.findByRole('tooltip');
+    expect(hovered.textContent).toMatch(/ops:operations\.scope\.opex\s+12k/);
+    expect(hovered.textContent).toMatch(/ops:operations\.scope\.capex\s+4k/);
+    expect(currentBudget).toHaveAccessibleName('21k');
+    expect(currentBudget).toHaveAttribute('aria-describedby', hovered.id);
     const requests = get.mock.calls.filter(([url, config]) => String(url).endsWith('/summary/totals') && !config?.params);
     expect(requests.map(([url]) => url)).toEqual([
       '/spend-items/summary/totals', '/capex-items/summary/totals', '/budget-lines/summary/totals',
@@ -154,7 +163,7 @@ describe('BudgetSection budget snapshot', () => {
     await within(tile).findByText('ops:operations.budgetColumns.budget');
     const headers = within(tile).getAllByRole('columnheader').map((h) => h.textContent);
     expect(headers).toEqual([
-      'labels.year', 'ops:budget.type',
+      'labels.year',
       'ops:operations.budgetColumns.budget',
       'ops:operations.budgetColumns.revision',
       'ops:operations.budgetColumns.followUp',
@@ -171,8 +180,14 @@ describe('BudgetSection budget snapshot', () => {
     });
     renderPage();
     const tile = await screen.findByRole('region', { name: 'dashboard.budgetSnapshot' });
-    expect(await within(tile).findByText('-4k')).toBeInTheDocument();
-    expect(within(tile).getAllByRole('row')).toHaveLength(10);
+    // The total is zero, so the column stays only because the two natures are not. Y is the middle row.
+    const rows = await within(tile).findAllByRole('row');
+    expect(rows).toHaveLength(4);
+    const link = within(rows[2]).getByRole('link', { name: '0k' });
+    fireEvent.mouseOver(link);
+    const tip = await screen.findByRole('tooltip');
+    expect(tip.textContent).toMatch(/ops:operations\.scope\.opex\s+4k/);
+    expect(tip.textContent).toMatch(/ops:operations\.scope\.capex\s+-4k/);
   });
 
   it('shows zero for missing amounts in the CAPEX totals response', async () => {
@@ -185,9 +200,12 @@ describe('BudgetSection budget snapshot', () => {
     });
     renderPage();
     const tile = await screen.findByRole('region', { name: 'dashboard.budgetSnapshot' });
-    await within(tile).findAllByText('4k');
-    const rows = within(tile).getAllByRole('row').slice(4, 7);
-    expect(rows.map((row) => within(row).getByRole('link').textContent)).toEqual(['4k', '0k', '6k']);
+    const currentYear = (await within(tile).findAllByRole('row'))[2];
+    const link = within(currentYear).getByRole('link', { name: '6k' });
+    fireEvent.mouseOver(link);
+    const tip = await screen.findByRole('tooltip');
+    expect(tip.textContent).toMatch(/ops:operations\.scope\.opex\s+4k/);
+    expect(tip.textContent).toMatch(/ops:operations\.scope\.capex\s+0k/);
   });
 
   it('names the amounts the snapshot leaves out without an exchange rate, for the years it shows', async () => {
@@ -898,7 +916,7 @@ describe('BudgetSection budget tiles', () => {
     renderPage();
     const tile = await screen.findByRole('region', { name: 'dashboard.budgetSnapshot' });
     await within(tile).findByText('A0');
-    expect(within(tile).getAllByRole('columnheader').map((header) => header.textContent)).toEqual(['labels.year', 'ops:budget.type', 'A0']);
+    expect(within(tile).getAllByRole('columnheader').map((header) => header.textContent)).toEqual(['labels.year', 'A0']);
   });
 
 });

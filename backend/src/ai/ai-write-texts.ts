@@ -1475,11 +1475,331 @@ export function isFixedPreviewError(message: string | null | undefined): boolean
   return message != null && Object.prototype.hasOwnProperty.call(FIXED_PREVIEW_ERRORS, message);
 }
 
-/** A preview error the backend writes itself, in the person's language; any other error as it is. */
+/**
+ * Screen words for the thing a drift or a missing record names (`Task`, `Budget line`, …).
+ * A name that is not here is kept: it is a reference, a dimension name or a field label.
+ * `es` carries its article, for "No se ha encontrado …".
+ */
+const PREVIEW_ERROR_THINGS: Record<string, { fr: string; de: string; es: string; plural?: boolean }> = {
+  task: { fr: 'Tâche', de: 'Aufgabe', es: 'la tarea' },
+  tasks: { fr: 'Tâches', de: 'Aufgaben', es: 'las tareas', plural: true },
+  user: { fr: 'Utilisateur', de: 'Benutzer', es: 'el usuario' },
+  users: { fr: 'Utilisateurs', de: 'Benutzer', es: 'los usuarios', plural: true },
+  'current user': { fr: 'Utilisateur actuel', de: 'Aktueller Benutzer', es: 'el usuario actual' },
+  'budget line': { fr: 'Ligne budgétaire', de: 'Budgetzeile', es: 'la línea presupuestaria' },
+  'budget lines': { fr: 'Lignes budgétaires', de: 'Budgetzeilen', es: 'las líneas presupuestarias', plural: true },
+  assignee: { fr: 'Responsable', de: 'Zuständig', es: 'el responsable' },
+  version: { fr: 'Version', de: 'Version', es: 'la versión' },
+  'financial version': { fr: 'Version budgétaire', de: 'Budgetversion', es: 'la versión presupuestaria' },
+  document: { fr: 'Document', de: 'Dokument', es: 'el documento' },
+  application: { fr: 'Application', de: 'Anwendung', es: 'la aplicación' },
+  applications: { fr: 'Applications', de: 'Anwendungen', es: 'las aplicaciones', plural: true },
+  asset: { fr: 'Actif', de: 'Asset', es: 'el activo' },
+  assets: { fr: 'Actifs', de: 'Assets', es: 'los activos', plural: true },
+  contract: { fr: 'Contrat', de: 'Vertrag', es: 'el contrato' },
+  contracts: { fr: 'Contrats', de: 'Verträge', es: 'los contratos', plural: true },
+  incident: { fr: 'Incident', de: 'Vorfall', es: 'el incidente' },
+  incidents: { fr: 'Incidents', de: 'Vorfälle', es: 'los incidentes', plural: true },
+  company: { fr: 'Société', de: 'Unternehmen', es: 'la empresa' },
+  companies: { fr: 'Sociétés', de: 'Unternehmen', es: 'las empresas', plural: true },
+  department: { fr: 'Département', de: 'Abteilung', es: 'el departamento' },
+  departments: { fr: 'Départements', de: 'Abteilungen', es: 'los departamentos', plural: true },
+  technology: { fr: 'Technologie', de: 'Technologie', es: 'la tecnología' },
+  technologies: { fr: 'Technologies', de: 'Technologien', es: 'las tecnologías', plural: true },
+  contact: { fr: 'Contact', de: 'Kontakt', es: 'el contacto' },
+  contacts: { fr: 'Contacts', de: 'Kontakte', es: 'los contactos', plural: true },
+  link: { fr: 'Lien', de: 'Link', es: 'el enlace' },
+  links: { fr: 'Liens', de: 'Links', es: 'los enlaces', plural: true },
+  'sub-location': { fr: 'Sous-site', de: 'Unterstandort', es: 'la sub-ubicación' },
+  'sub-locations': { fr: 'Sous-sites', de: 'Unterstandorte', es: 'las sub-ubicaciones', plural: true },
+  record: { fr: 'Enregistrement', de: 'Eintrag', es: 'el registro' },
+  project: { fr: 'Projet', de: 'Projekt', es: 'el proyecto' },
+  projects: { fr: 'Projets', de: 'Projekte', es: 'los proyectos', plural: true },
+  request: { fr: 'Demande', de: 'Anfrage', es: 'la solicitud' },
+  requests: { fr: 'Demandes', de: 'Anfragen', es: 'las solicitudes', plural: true },
+  location: { fr: 'Site', de: 'Standort', es: 'la ubicación' },
+  locations: { fr: 'Sites', de: 'Standorte', es: 'las ubicaciones', plural: true },
+  connection: { fr: 'Connexion', de: 'Verbindung', es: 'la conexión' },
+  connections: { fr: 'Connexions', de: 'Verbindungen', es: 'las conexiones', plural: true },
+  interface: { fr: 'Interface', de: 'Schnittstelle', es: 'la interfaz' },
+  interfaces: { fr: 'Interfaces', de: 'Schnittstellen', es: 'las interfaces', plural: true },
+  supplier: { fr: 'Fournisseur', de: 'Lieferant', es: 'el proveedor' },
+  suppliers: { fr: 'Fournisseurs', de: 'Lieferanten', es: 'los proveedores', plural: true },
+  account: { fr: 'Compte', de: 'Konto', es: 'la cuenta' },
+  accounts: { fr: 'Comptes', de: 'Konten', es: 'las cuentas', plural: true },
+  'chart of accounts': { fr: 'Plan comptable', de: 'Kontenplan', es: 'el plan de cuentas' },
+  'charts of accounts': { fr: 'Plans comptables', de: 'Kontenpläne', es: 'los planes de cuentas', plural: true },
+  'analytics category': { fr: 'Catégorie analytique', de: 'Analysekategorie', es: 'la categoría analítica' },
+  'analytics categories': { fr: 'Catégories analytiques', de: 'Analysekategorien', es: 'las categorías analíticas', plural: true },
+  'business process': { fr: 'Processus métier', de: 'Geschäftsprozess', es: 'el proceso de negocio' },
+  'business processes': { fr: 'Processus métier', de: 'Geschäftsprozesse', es: 'los procesos de negocio', plural: true },
+  'task type': { fr: 'Type de tâche', de: 'Aufgabentyp', es: 'el tipo de tarea' },
+  'project phase': { fr: 'Phase du projet', de: 'Projektphase', es: 'la fase del proyecto' },
+  owner: { fr: 'Responsable', de: 'Verantwortlicher', es: 'el responsable' },
+  owners: { fr: 'Responsables', de: 'Verantwortliche', es: 'los responsables', plural: true },
+  'support contacts': { fr: 'Contacts de support', de: 'Supportkontakte', es: 'los contactos de soporte', plural: true },
+  'portfolio source': { fr: 'Source', de: 'Quelle', es: 'el origen' },
+  'portfolio sources': { fr: 'Sources', de: 'Quellen', es: 'los orígenes', plural: true },
+  'portfolio category': { fr: 'Catégorie', de: 'Kategorie', es: 'la categoría' },
+  'portfolio categories': { fr: 'Catégories', de: 'Kategorien', es: 'las categorías', plural: true },
+  'portfolio stream': { fr: 'Filière', de: 'Stream', es: 'la línea' },
+  'portfolio streams': { fr: 'Filières', de: 'Streams', es: 'las líneas', plural: true },
+  'cluster members': { fr: 'Membres du cluster', de: 'Cluster-Mitglieder', es: 'los miembros del clúster', plural: true },
+  'asset assignments': { fr: "Affectations d'actifs", de: 'Asset-Zuordnungen', es: 'las asignaciones de activos', plural: true },
+  'asset relations': { fr: 'Relations entre actifs', de: 'Asset-Beziehungen', es: 'las relaciones entre activos', plural: true },
+  'internal contacts': { fr: 'Contacts internes', de: 'Interne Kontakte', es: 'los contactos internos', plural: true },
+  'external contacts': { fr: 'Contacts externes', de: 'Externe Kontakte', es: 'los contactos externos', plural: true },
+};
+
+function previewErrorThing(subject: string) {
+  return PREVIEW_ERROR_THINGS[subject.trim().toLowerCase()] ?? null;
+}
+
+/** The screen word when the subject is one, otherwise the subject as the message wrote it. */
+function previewErrorSubject(language: AiTranslatedWriteLanguage, subject: string): string {
+  const thing = previewErrorThing(subject);
+  if (!thing) return subject;
+  return language === 'es' ? thing.es : thing[language];
+}
+
+/** "X not found." A known thing uses the screen word; a reference or a name is kept. */
+function missingRecordText(language: AiTranslatedWriteLanguage, subject: string, name?: string): string {
+  const thing = previewErrorThing(subject);
+  const quotedName = name ? quoted(language, name) : '';
+  if (language === 'fr') {
+    const word = thing?.fr ?? subject;
+    const mark = thing?.plural ? 'introuvables' : 'introuvable';
+    return quotedName ? `${word} ${quotedName} ${mark}.` : `${word} ${mark}.`;
+  }
+  if (language === 'de') {
+    const word = thing?.de ?? subject;
+    return quotedName ? `${word} ${quotedName} nicht gefunden.` : `${word} nicht gefunden.`;
+  }
+  const word = thing?.es ?? subject;
+  const verb = thing?.plural ? 'han' : 'ha';
+  return quotedName
+    ? `No se ${verb} encontrado ${word} ${quotedName}.`
+    : `No se ${verb} encontrado ${word}.`;
+}
+
+/** "<subject> changed after the preview was created." A reference or a dimension name is kept. */
+function changedSincePreviewText(language: AiTranslatedWriteLanguage, subject: string): string {
+  const thing = previewErrorThing(subject);
+  if (language === 'fr') {
+    const word = thing?.fr ?? subject;
+    return `${word} ${thing?.plural ? 'ont' : 'a'} changé depuis l'aperçu.`;
+  }
+  if (language === 'de') {
+    const word = thing?.de ?? subject;
+    return `${word} ${thing?.plural ? 'haben' : 'hat'} sich seit der Vorschau geändert.`;
+  }
+  const word = thing ? capitalize(thing.es) : subject;
+  return `${word} ha${thing?.plural ? 'n' : ''} cambiado desde la vista previa.`;
+}
+
+/**
+ * "… of <ref> changed after the preview was created." The reference is kept as written.
+ * Spanish names the noun with its article (`Los enlaces`, `Las versiones`).
+ */
+function changedOfText(
+  language: AiTranslatedWriteLanguage,
+  ref: string,
+  words: TranslatedTexts,
+): string {
+  if (language === 'fr') return `Les ${words.fr} de ${ref} ont changé depuis l'aperçu.`;
+  if (language === 'de') return `Die ${words.de} von ${ref} haben sich seit der Vorschau geändert.`;
+  return `${words.es} de ${ref} han cambiado desde la vista previa.`;
+}
+
+/** A relation label in the sentence, with the screen word when it is a known thing. */
+function relationLabel(language: AiTranslatedWriteLanguage, subject: string): string {
+  const thing = previewErrorThing(subject);
+  if (!thing) return subject;
+  return language === 'es' ? capitalize(thing.es) : thing[language];
+}
+
+const CHANGED_AFTER = String.raw` changed after the preview was created\.`;
+
+/**
+ * Drift since the preview, and a record gone at execution. Tried after the exact table.
+ * These stay technical on the card (`isFixedPreviewError` does not see them): only the
+ * detail is translated. The stored message stays the English sentence.
+ */
+const PREVIEW_ERROR_PATTERNS: Array<{
+  pattern: RegExp;
+  render: (language: AiTranslatedWriteLanguage, match: RegExpMatchArray) => string;
+}> = [
+  {
+    pattern: new RegExp(`^Links of (.+)${CHANGED_AFTER}$`),
+    render: (language, match) => changedOfText(language, match[1], { fr: 'liens', de: 'Verknüpfungen', es: 'Los enlaces' }),
+  },
+  {
+    pattern: new RegExp(`^Links on (.+)${CHANGED_AFTER}$`),
+    render: (language, match) => (language === 'fr'
+      ? `Les liens sur ${match[1]} ont changé depuis l'aperçu.`
+      : language === 'de'
+        ? `Die Verknüpfungen an ${match[1]} haben sich seit der Vorschau geändert.`
+        : `Los enlaces en ${match[1]} han cambiado desde la vista previa.`),
+  },
+  {
+    pattern: new RegExp(`^Web links of (.+)${CHANGED_AFTER}$`),
+    render: (language, match) => changedOfText(language, match[1], { fr: 'liens web', de: 'Weblinks', es: 'Los enlaces web' }),
+  },
+  {
+    pattern: new RegExp(`^Vulnerability alerts of (.+)${CHANGED_AFTER}$`),
+    render: (language, match) => (language === 'fr'
+      ? `Les alertes de vulnérabilité de ${match[1]} ont changé depuis l'aperçu.`
+      : language === 'de'
+        ? `Die Sicherheitswarnungen von ${match[1]} haben sich seit der Vorschau geändert.`
+        : `Las alertas de vulnerabilidades de ${match[1]} han cambiado desde la vista previa.`),
+  },
+  {
+    pattern: new RegExp(`^Versions of (.+)${CHANGED_AFTER}$`),
+    render: (language, match) => changedOfText(language, match[1], { fr: 'versions', de: 'Versionen', es: 'Las versiones' }),
+  },
+  {
+    pattern: new RegExp(`^People of (.+)${CHANGED_AFTER}$`),
+    render: (language, match) => changedOfText(language, match[1], { fr: 'personnes', de: 'Personen', es: 'Las personas' }),
+  },
+  {
+    pattern: new RegExp(`^Owners of (.+)${CHANGED_AFTER}$`),
+    render: (language, match) => changedOfText(language, match[1], { fr: 'responsables', de: 'Verantwortlichen', es: 'Los responsables' }),
+  },
+  {
+    pattern: new RegExp(`^Support contacts of (.+)${CHANGED_AFTER}$`),
+    render: (language, match) => changedOfText(language, match[1], {
+      fr: 'contacts de support',
+      de: 'Supportkontakte',
+      es: 'Los contactos de soporte',
+    }),
+  },
+  {
+    pattern: new RegExp(`^Technology "(.*)"${CHANGED_AFTER}$`),
+    render: (language, match) => (language === 'fr'
+      ? `La technologie ${quoted(language, match[1])} a changé depuis l'aperçu.`
+      : language === 'de'
+        ? `Die Technologie ${quoted(language, match[1])} hat sich seit der Vorschau geändert.`
+        : `La tecnología ${quoted(language, match[1])} ha cambiado desde la vista previa.`),
+  },
+  {
+    pattern: new RegExp(`^Document (.+) relations${CHANGED_AFTER}$`),
+    render: (language, match) => {
+      const thing = previewErrorSubject(language, match[1]);
+      if (language === 'fr') return `Les relations du document (${thing}) ont changé depuis l'aperçu.`;
+      if (language === 'de') return `Die Dokumentbeziehungen (${thing}) haben sich seit der Vorschau geändert.`;
+      return `Las relaciones del documento (${thing}) han cambiado desde la vista previa.`;
+    },
+  },
+  {
+    pattern: new RegExp(`^(.+) metrics for (.+)${CHANGED_AFTER}$`),
+    render: (language, match) => {
+      const year = match[2] === 'the selected year'
+        ? { fr: "l'année sélectionnée", de: 'das ausgewählte Jahr', es: 'el año seleccionado' }[language]
+        : match[2];
+      const thing = previewErrorSubject(language, match[1]);
+      if (language === 'fr') return `Les indicateurs (${thing}) pour ${year} ont changé depuis l'aperçu.`;
+      if (language === 'de') return `Die Kennzahlen (${thing}) für ${year} haben sich seit der Vorschau geändert.`;
+      return `Los indicadores (${thing}) para ${year} han cambiado desde la vista previa.`;
+    },
+  },
+  {
+    pattern: /^Document changed after the preview was created\.$/,
+    render: (language) => (language === 'fr'
+      ? "Le document a changé depuis l'aperçu."
+      : language === 'de'
+        ? 'Das Dokument hat sich seit der Vorschau geändert.'
+        : 'El documento ha cambiado desde la vista previa.'),
+  },
+  {
+    pattern: /^Task status changed after the preview was created\.$/,
+    render: (language) => (language === 'fr'
+      ? "Le statut de la tâche a changé depuis l'aperçu."
+      : language === 'de'
+        ? 'Der Aufgabenstatus hat sich seit der Vorschau geändert.'
+        : 'El estado de la tarea ha cambiado desde la vista previa.'),
+  },
+  {
+    pattern: /^Task assignee changed after the preview was created\.$/,
+    render: (language) => (language === 'fr'
+      ? "Le responsable de la tâche a changé depuis l'aperçu."
+      : language === 'de'
+        ? 'Der Zuständige der Aufgabe hat sich seit der Vorschau geändert.'
+        : 'El responsable de la tarea ha cambiado desde la vista previa.'),
+  },
+  {
+    pattern: /^The vulnerability rows changed after the preview was created\.$/,
+    render: (language) => (language === 'fr'
+      ? "Les lignes de vulnérabilités ont changé depuis l'aperçu."
+      : language === 'de'
+        ? 'Die Schwachstellenzeilen haben sich seit der Vorschau geändert.'
+        : 'Las filas de vulnerabilidades han cambiado desde la vista previa.'),
+  },
+  {
+    pattern: /^Financial amounts changed after the preview was created\.$/,
+    render: (language) => (language === 'fr'
+      ? "Les montants financiers ont changé depuis l'aperçu."
+      : language === 'de'
+        ? 'Die Finanzbeträge haben sich seit der Vorschau geändert.'
+        : 'Los importes financieros han cambiado desde la vista previa.'),
+  },
+  {
+    pattern: /^Financial allocations changed after the preview was created\.$/,
+    render: (language) => (language === 'fr'
+      ? "Les ventilations ont changé depuis l'aperçu."
+      : language === 'de'
+        ? 'Die Zuordnungen haben sich seit der Vorschau geändert.'
+        : 'Las asignaciones han cambiado desde la vista previa.'),
+  },
+  {
+    pattern: new RegExp(`^(.+)${CHANGED_AFTER}$`),
+    render: (language, match) => changedSincePreviewText(language, match[1]),
+  },
+  {
+    pattern: /^No (.+?) found matching "(.*)"\.$/,
+    render: (language, match) => missingRecordText(language, match[1], match[2]),
+  },
+  {
+    pattern: /^(.+?) "(.*)" not found\.?$/,
+    render: (language, match) => missingRecordText(language, match[1], match[2]),
+  },
+  {
+    pattern: /^(.+): the line was not found\.$/,
+    render: (language, match) => {
+      const label = relationLabel(language, match[1]);
+      if (language === 'fr') return `${label} : la ligne est introuvable.`;
+      if (language === 'de') return `${label}: die Zeile wurde nicht gefunden.`;
+      return `${label}: no se ha encontrado la línea.`;
+    },
+  },
+  {
+    pattern: /^(.+): the asset was not found\.$/,
+    render: (language, match) => {
+      const label = relationLabel(language, match[1]);
+      if (language === 'fr') return `${label} : l'actif est introuvable.`;
+      if (language === 'de') return `${label}: das Asset wurde nicht gefunden.`;
+      return `${label}: no se ha encontrado el activo.`;
+    },
+  },
+  {
+    pattern: /^(.+) not found\.?$/,
+    render: (language, match) => missingRecordText(language, match[1]),
+  },
+];
+
+/**
+ * A preview error in the person's language. Exact sentences first, then the drift and
+ * missing-record patterns. English, and any other sentence, is returned as stored.
+ */
 export function previewErrorText(language: AiWriteLanguage, message: string | null | undefined): string | null {
   if (message == null) return null;
   if (language === 'en') return message;
-  return FIXED_PREVIEW_ERRORS[message]?.[language] ?? message;
+  const fixed = FIXED_PREVIEW_ERRORS[message]?.[language];
+  if (fixed) return fixed;
+  for (const row of PREVIEW_ERROR_PATTERNS) {
+    const match = row.pattern.exec(message);
+    if (match) return row.render(language, match);
+  }
+  return message;
 }
 
 /** The messages of a preview result when its summary is empty, by status. */

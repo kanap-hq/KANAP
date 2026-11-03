@@ -240,14 +240,13 @@ export class SpendItemsService {
     const supplierIds = ids((i) => [i.supplier_id]);
     const accountIds = ids((i) => [i.account_id]);
     const ownerIds = ids((i) => [i.owner_it_id, i.owner_business_id]);
-    const [companies, suppliers, accounts, owners, analyticsByItem] = await Promise.all([
-      companyIds.length ? mg.getRepository(Company).find({ where: { tenant_id: tenantId, id: In(companyIds) as any } as any }) : Promise.resolve([]),
-      supplierIds.length ? mg.getRepository(Supplier).find({ where: { tenant_id: tenantId, id: In(supplierIds) as any } as any }) : Promise.resolve([]),
-      accountIds.length ? mg.getRepository(Account).find({ where: { tenant_id: tenantId, id: In(accountIds) as any } as any }) : Promise.resolve([]),
-      ownerIds.length ? mg.getRepository(User).find({ where: { tenant_id: tenantId, id: In(ownerIds) as any } as any }) : Promise.resolve([]),
-      // The default dimension's value, read from the analytics links.
-      loadItemAnalyticsValues(mg, 'capex', tenantId, baseItems.map((i) => i.id)),
-    ]);
+    // One after the other: the request's single connection runs its queries in turn anyway.
+    const companies = companyIds.length ? await mg.getRepository(Company).find({ where: { tenant_id: tenantId, id: In(companyIds) as any } as any }) : [];
+    const suppliers = supplierIds.length ? await mg.getRepository(Supplier).find({ where: { tenant_id: tenantId, id: In(supplierIds) as any } as any }) : [];
+    const accounts = accountIds.length ? await mg.getRepository(Account).find({ where: { tenant_id: tenantId, id: In(accountIds) as any } as any }) : [];
+    const owners = ownerIds.length ? await mg.getRepository(User).find({ where: { tenant_id: tenantId, id: In(ownerIds) as any } as any }) : [];
+    // The default dimension's value, read from the analytics links.
+    const analyticsByItem = await loadItemAnalyticsValues(mg, 'capex', tenantId, baseItems.map((i) => i.id));
     const companyById = new Map(companies.map((c) => [c.id, c]));
     const supplierById = new Map(suppliers.map((s) => [s.id, s]));
     const accountById = new Map(accounts.map((a) => [a.id, a]));

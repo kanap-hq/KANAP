@@ -6,15 +6,25 @@ import { CsvFieldDefinition, CsvFieldType } from '../csv-field.types';
  * Mock EntityManager for testing
  */
 function createMockManager(data: Record<string, any[]>) {
+  // Two queries in flight at once are the node-postgres warning
+  // (`client.query() when the client is already executing a query`).
+  let busy = 0;
   return {
     query: async (sql: string, params: any[]) => {
-      // Extract table name from query
-      const tableMatch = sql.match(/FROM (\w+)/i);
-      const tableName = tableMatch?.[1] || '';
-      const tenantId = params[0];
+      if (busy > 0) throw new Error('client.query() when the client is already executing a query');
+      busy += 1;
+      try {
+        await new Promise((resolve) => setImmediate(resolve));
+        // Extract table name from query
+        const tableMatch = sql.match(/FROM (\w+)/i);
+        const tableName = tableMatch?.[1] || '';
+        const tenantId = params[0];
 
-      // Return mock data for the table
-      return data[tableName]?.filter((row) => row.tenant_id === tenantId) || [];
+        // Return mock data for the table
+        return data[tableName]?.filter((row) => row.tenant_id === tenantId) || [];
+      } finally {
+        busy -= 1;
+      }
     },
   } as any;
 }

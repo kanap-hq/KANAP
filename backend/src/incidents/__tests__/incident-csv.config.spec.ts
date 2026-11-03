@@ -179,16 +179,33 @@ async function testBlankReviewCellIsRecordedAsEmpty(): Promise<void> {
 
 /** A contributor cannot import a status only Reopen or Cancel may reach (§ lifecycle guard). */
 async function testContributorCannotImportStatusBackwardsOrCancelled(): Promise<void> {
-  for (const to of ['open', 'cancelled']) {
-    const row = updateStatusRow(13, 'closed', to);
-    await incidentCsvConfig.afterValidate!([row], mockContext([row.existingEntity]));
-    assert.equal(row.errors.length, 1, `${to}: one row error`);
-    assert.equal(row.errors[0].row, 2);
-    assert.equal(row.errors[0].column, 'status');
-    assert.equal(row.errors[0].code, 'CSV_INCIDENT_STATUS_RESERVED');
-    assert.deepEqual(row.errors[0].params, { reference: 'INC-13', from: 'closed', to });
-    assert.match(row.errors[0].message, /INC-13: status cannot change from "closed" to/);
+  const labels = {
+    en: { closed: 'Closed', open: 'Open', cancelled: 'Cancelled' },
+    fr: { closed: 'Clôturé', open: 'Ouvert', cancelled: 'Annulé' },
+  } as const;
+  for (const language of ['en', 'fr'] as const) {
+    for (const to of ['open', 'cancelled'] as const) {
+      const row = updateStatusRow(13, 'closed', to);
+      const context = mockContext([row.existingEntity]);
+      context.language = language;
+      await incidentCsvConfig.afterValidate!([row], context);
+      assert.equal(row.errors.length, 1, `${language} ${to}: one row error`);
+      assert.equal(row.errors[0].row, 2);
+      assert.equal(row.errors[0].column, 'status');
+      assert.equal(row.errors[0].code, 'CSV_INCIDENT_STATUS_RESERVED');
+      assert.equal(row.errors[0].params?.from, labels[language].closed, `${language} from`);
+      assert.equal(row.errors[0].params?.to, labels[language][to], `${language} to`);
+      assert.match(
+        row.errors[0].message,
+        new RegExp(`INC-13: status cannot change from "${labels[language].closed}" to "${labels[language][to]}"`),
+      );
+    }
   }
+
+  // No file language: the stored codes stay.
+  const coded = updateStatusRow(13, 'closed', 'open');
+  await incidentCsvConfig.afterValidate!([coded], mockContext([coded.existingEntity]));
+  assert.deepEqual(coded.errors[0].params, { reference: 'INC-13', from: 'closed', to: 'open' });
 }
 
 /** An administrator may import the same moves; a forward move remains open to contributors. */
@@ -226,6 +243,13 @@ async function testReservedStatusMoveIsRefusedUnderTheCommitLock(): Promise<void
   await assert.rejects(
     () => incidentCsvConfig.beforeCommit!([entity], mockContext([{ ...visibleRestrictedRow, status: 'closed' }])),
     /INC-13: status cannot change from "closed" to "open" through import/,
+  );
+
+  const frenchContext = mockContext([{ ...visibleRestrictedRow, status: 'closed' }]);
+  frenchContext.language = 'fr';
+  await assert.rejects(
+    () => incidentCsvConfig.beforeCommit!([{ ...entity }], frenchContext),
+    /INC-13: status cannot change from "Clôturé" to "Ouvert" through import/,
   );
 }
 

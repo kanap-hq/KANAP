@@ -217,10 +217,9 @@ export class UpdateDocumentRelationsAiMutationOperation implements AiMutationOpe
     await this.support.assertUpdatePreviewAllowed(context, document.document_id);
     this.support.assertRelationEditingAllowed(document);
 
-    const [resolvedRelationAdds, resolvedRelationRemovals] = await Promise.all([
-      this.support.resolveRelationTargets(context, requestedRelationAdds),
-      this.support.resolveRelationTargets(context, requestedRelationRemovals),
-    ]);
+    // One after the other: the request's single connection runs its queries in turn anyway.
+    const resolvedRelationAdds = await this.support.resolveRelationTargets(context, requestedRelationAdds);
+    const resolvedRelationRemovals = await this.support.resolveRelationTargets(context, requestedRelationRemovals);
     const relationMutation = this.support.buildRelationMutation(document.relations, {
       add: resolvedRelationAdds,
       remove: resolvedRelationRemovals,

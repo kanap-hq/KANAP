@@ -10,6 +10,7 @@ import { csvEntityOf, csvFieldLabel } from './csvLabels';
 import { CsvReportMessage, csvMessageText } from './csvMessage';
 import { AmountReading, DateReading, amountReadingOf, dateReadingOf, screenLanguage } from './readings';
 import { useImportFiles } from './importFiles';
+import ImportExampleButton, { type ImportExampleKey } from './ImportExampleButton';
 
 type ImportReport = {
   ok: boolean;
@@ -79,6 +80,7 @@ export default function CsvImportDialog({
   flexibleFormat = false,
   hint,
   hintList,
+  example,
 }: {
   // i18n handled below
   open: boolean;
@@ -99,6 +101,8 @@ export default function CsvImportDialog({
   hint?: string;
   /** The same note as a short list: one introduction, then one line per rule. */
   hintList?: { intro: string; items: string[] };
+  /** The import's example file, offered next to the template. */
+  example?: ImportExampleKey;
 }) {
   const { t, i18n } = useTranslation(['common', 'ops']);
   const language = screenLanguage(i18n.resolvedLanguage || i18n.language);
@@ -263,15 +267,17 @@ export default function CsvImportDialog({
             </Box>
           </Box>
         )}
-        <Button
-          variant="text"
-          size="small"
-          startIcon={<DownloadIcon />}
-          onClick={downloadTemplate}
-          sx={{ mb: 2 }}
-        >
-          {t('csv.downloadTemplate')}
-        </Button>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: 1, mb: 2 }}>
+          <Button
+            variant="text"
+            size="small"
+            startIcon={<DownloadIcon />}
+            onClick={downloadTemplate}
+          >
+            {t('csv.downloadTemplate')}
+          </Button>
+          {example && <ImportExampleButton example={example} onError={setRequestError} />}
+        </Box>
         <Divider sx={{ mb: 2 }} />
         <Box
           onDragOver={(e) => { e.preventDefault(); setHover(true); }}

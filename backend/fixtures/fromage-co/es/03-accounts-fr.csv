@@ -1,0 +1,16 @@
+account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status;nature
+612100;Suscripciones SaaS;Redevances et abonnements SaaS;Abonnements logiciels cloud (Microsoft 365, Salesforce, etc.);2000;Software Licenses (OPEX);Recurring licenses and subscriptions;enabled;opex
+612200;Licencias de software;Licences logiciels;Licences perpétuelles et temporaires (SAP, VMware);2000;Software Licenses (OPEX);Recurring licenses and subscriptions;enabled;opex
+613100;Alojamiento en la nube;Hébergement cloud et IaaS;Serveurs dédiés, stockage objet et PaaS (OVHcloud, AWS);2100;Cloud & Hosting Services;IaaS/PaaS/SaaS usage and hosting;enabled;opex
+613200;Herramientas de ciberseguridad;Outils de cybersécurité;Sécurité des endpoints, IAM et scanning (Sophos, Okta);2100;Cloud & Hosting Services;IaaS/PaaS/SaaS usage and hosting;enabled;opex
+613300;Plataformas de datos y analítica;Plateformes données et analytics;Monitoring, BI et outils data (Datadog, Snowflake);2100;Cloud & Hosting Services;IaaS/PaaS/SaaS usage and hosting;enabled;opex
+615100;Mantenimiento y soporte de TI;Maintenance et support informatique;Contrats de maintenance matériel, infogérance;2300;Maintenance & Support;Software/hardware maintenance contracts;enabled;opex
+616100;Telecomunicaciones y red;Télécommunications et réseaux;WAN, LAN, internet et téléphonie;2200;Telecommunications & Network;Internet, mobile, lines, VPN;enabled;opex
+616200;Costes del centro de datos;Hébergement datacenter;Colocation, énergie et refroidissement;2200;Telecommunications & Network;Internet, mobile, lines, VPN;enabled;opex
+621100;Refuerzo de personal de TI;Personnel intérimaire IT;Développeurs, ingénieurs et chefs de projet externes;2400;IT Consulting & External Services;Professional services, integration, contractors;enabled;opex
+622100;Consultoría de TI;Honoraires conseil IT;Conseil en stratégie, architecture et cybersécurité;2400;IT Consulting & External Services;Professional services, integration, contractors;enabled;opex
+622200;Servicios de desarrollo de software;Développement logiciel externalisé;Développement d'applications et intégration;2400;IT Consulting & External Services;Professional services, integration, contractors;enabled;opex
+618100;Formación y certificación de TI;Formation et certification IT;Programmes de formation et certifications professionnelles;2600;Training & Certification;Staff training and certifications;enabled;opex
+625100;Viajes y eventos de TI;Déplacements et événements IT;Déplacements, conférences et salons IT;2800;Travel & Mobility (IT Projects);Project-related travel costs;enabled;opex
+205000;Activos de software;Logiciels et licences;Immobilisations incorporelles — logiciels acquis ou développés;1100;Intangible Assets (CAPEX);Capitalized software and rights — IAS 38;enabled;capex
+218300;Equipos de TI;Matériel informatique;Immobilisations corporelles — serveurs, postes de travail et réseau;1000;Tangible Assets (CAPEX);Purchase of physical IT equipment — IAS 16;enabled;capex

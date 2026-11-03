@@ -361,15 +361,22 @@ export function buildTriageNote(
     'Ticket history considered:',
     ...timelineSummaryLines(timeline),
     '',
+    // An escalation omits candidate sources. An administrative reply keeps knowledge and web
+    // results together under its own heading: they are context the reply did not use. The
+    // synthesis fallback is the note a technician reads as "sources found", so unvalidated web
+    // results get a separate heading there and never sit under the knowledge one.
     ...(plannerOutcome?.kind === 'escalation'
       ? []
-      : [
-        plannerOutcome?.kind === 'administrative_reply'
-          ? 'Candidate sources reviewed (not used by the administrative reply; no article body copied):'
-          : 'Possible sources found (fallback mode; no article body copied):',
-        ...fallbackSourceLines(knowledgeItems, webResults, 8),
-        '',
-      ]),
+      : plannerOutcome?.kind === 'administrative_reply'
+        ? [
+          'Candidate sources reviewed (not used by the administrative reply; no article body copied):',
+          ...fallbackSourceLines(knowledgeItems, webResults, 8),
+          '',
+        ]
+        : [
+          ...synthesisFallbackSourceSections(knowledgeItems, webResults, 8),
+          '',
+        ]),
     'Technician brief:',
     technicianBrief,
     '',
@@ -502,16 +509,54 @@ export function sourceLineFromWeb(item: WebSearchResultItem): string {
   return `- ${title} (${url})`;
 }
 
+const FALLBACK_KNOWLEDGE_SOURCE_HEADING = 'Possible sources found (fallback mode; no article body copied):';
+const FALLBACK_WEB_LEAD_HEADING = 'Web leads (not validated):';
+const NO_FALLBACK_SOURCE_LINE = '- No source candidate was retrieved.';
+
+// Knowledge lines keep their place at the front of the shared cap, then web lines fill what remains.
+function limitedFallbackSourceLines(
+  knowledgeItems: KnowledgeSearchItem[],
+  webResults: WebSearchResultItem[],
+  limit: number,
+): { knowledge: string[]; web: string[] } {
+  const knowledge = knowledgeItems.map(sourceLineFromKnowledge);
+  const web = webResults.map(sourceLineFromWeb);
+  const keptKnowledge = knowledge.slice(0, limit);
+  const keptWeb = web.slice(0, Math.max(0, limit - keptKnowledge.length));
+  return { knowledge: keptKnowledge, web: keptWeb };
+}
+
 export function fallbackSourceLines(
   knowledgeItems: KnowledgeSearchItem[],
   webResults: WebSearchResultItem[],
   limit: number,
 ): string[] {
-  const lines = [
-    ...knowledgeItems.map(sourceLineFromKnowledge),
-    ...webResults.map(sourceLineFromWeb),
-  ].slice(0, limit);
-  return lines.length > 0 ? lines : ['- No source candidate was retrieved.'];
+  const { knowledge, web } = limitedFallbackSourceLines(knowledgeItems, webResults, limit);
+  const lines = [...knowledge, ...web];
+  return lines.length > 0 ? lines : [NO_FALLBACK_SOURCE_LINE];
+}
+
+// Synthesis-failure note only. Knowledge keeps the existing heading. Web results, when any
+// survive the cap, are listed under their own heading. A web-only note shows only that heading.
+// An empty retrieval still says no candidate was retrieved, under the knowledge heading.
+function synthesisFallbackSourceSections(
+  knowledgeItems: KnowledgeSearchItem[],
+  webResults: WebSearchResultItem[],
+  limit: number,
+): string[] {
+  const { knowledge, web } = limitedFallbackSourceLines(knowledgeItems, webResults, limit);
+  const sections: string[] = [];
+  if (knowledge.length > 0 || web.length === 0) {
+    sections.push(
+      FALLBACK_KNOWLEDGE_SOURCE_HEADING,
+      ...(knowledge.length > 0 ? knowledge : [NO_FALLBACK_SOURCE_LINE]),
+    );
+  }
+  if (web.length > 0) {
+    if (sections.length > 0) sections.push('');
+    sections.push(FALLBACK_WEB_LEAD_HEADING, ...web);
+  }
+  return sections;
 }
 
 export function synthesisSourceLine(source: ReplySynthesisSource): string {
