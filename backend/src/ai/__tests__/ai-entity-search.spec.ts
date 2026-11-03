@@ -423,6 +423,129 @@ async function testEntityContextsDoNotOverlapQueries() {
   assert.equal(maxBusy, 1);
 }
 
+/** Search and the application list send the classification labels the detail already sends. */
+async function testApplicationSearchAndListCarryClassificationLabels() {
+  const service = createService();
+  const tenantReads: string[] = [];
+  const codeReads: string[] = [];
+  const indexed = createContext(async (sql) => {
+    if (sql.includes('FROM tenants')) {
+      tenantReads.push(sql);
+      return [{ metadata: {} }];
+    }
+    if (sql.includes('ANY($2::uuid[])')) {
+      codeReads.push(sql);
+      return [{
+        id: 'app-1',
+        criticality: 'business_critical',
+        cyber_criticality: 'critical',
+        data_class: 'confidential',
+        recovery_wave: 'vital',
+      }];
+    }
+    if (!isIndexSearch(sql)) return [];
+    return [{
+      entity_type: 'applications',
+      entity_id: 'app-1',
+      ref_prefix: 'APP',
+      ref_number: 7,
+      label: 'Billing App',
+      summary: null,
+      status: 'enabled',
+      // As the index stores it: the business criticality code, and an older data class.
+      extra_json: {
+        item_ref: 'APP-7',
+        lifecycle: 'production',
+        criticality: 'business_critical',
+        data_class: 'internal',
+      },
+      source_updated_at: null,
+      total_count: 1,
+      score: 3,
+    }];
+  });
+
+  const searched = await service.searchAll(indexed as any, {
+    query: 'billing',
+    entity_types: ['applications'],
+    limit: 10,
+  });
+  const metadata = (searched.items[0] as any).metadata;
+  assert.equal(metadata.criticality, 'business_critical');
+  assert.equal(metadata.business_criticality_label, 'Critical');
+  assert.equal(metadata.business_criticality_rank, 4);
+  assert.equal(metadata.cyber_criticality, 'critical', 'the code the index does not store');
+  assert.equal(metadata.cyber_criticality_label, 'Critical');
+  assert.equal(metadata.cyber_criticality_rank, 4);
+  assert.equal(metadata.data_class, 'confidential', 'the code read with the labels');
+  assert.equal(metadata.data_class_label, 'Confidential');
+  assert.equal(metadata.data_class_rank, 3);
+  assert.equal(metadata.recovery_wave, 'vital');
+  assert.equal(metadata.recovery_wave_label, 'V1 — Vital activities');
+  assert.equal(metadata.recovery_wave_order, 1);
+  assert.equal(tenantReads.length, 1, 'the catalog is read once per search');
+  assert.equal(codeReads.length, 1, 'the codes are read once for the page');
+
+  await withFlag('false', async () => {
+    const legacyCatalogReads: string[] = [];
+    const legacy = createContext(async (sql) => {
+      if (sql.includes('FROM tenants')) {
+        legacyCatalogReads.push(sql);
+        return [{ metadata: {} }];
+      }
+      if (sql.includes('FROM applications a')) {
+        return [{
+          id: 'app-1',
+          item_ref: 'APP-7',
+          label: 'Billing App',
+          summary: null,
+          status: 'enabled',
+          updated_at: null,
+          lifecycle: 'production',
+          criticality: 'high',
+          cyber_criticality: 'moderate',
+          recovery_wave: 'priority',
+          rto_minutes: 60,
+          rpo_minutes: 0,
+          category: null,
+          hosting_model: null,
+          data_class: 'internal',
+          version: '1',
+          supplier_name: null,
+          business_owner_names: '',
+          it_owner_names: '',
+          total_count: 1,
+          score: 3,
+        }];
+      }
+      return [];
+    });
+    const result = await service.searchAll(legacy as any, {
+      query: 'billing',
+      entity_types: ['applications'],
+      limit: 10,
+    });
+    assert.deepEqual((result as any).failed_entity_types, []);
+    const legacyMetadata = (result.items[0] as any).metadata;
+    assert.equal(legacyMetadata.criticality, 'high');
+    assert.equal(legacyMetadata.business_criticality_label, 'High');
+    assert.equal(legacyMetadata.business_criticality_rank, 3);
+    assert.equal(legacyMetadata.cyber_criticality_label, 'Moderate');
+    assert.equal(legacyMetadata.cyber_criticality_rank, 2);
+    assert.equal(legacyMetadata.recovery_wave_label, 'V2 — Priority activities');
+    assert.equal(legacyMetadata.recovery_wave_order, 2);
+    assert.equal(legacyMetadata.data_class_label, 'Internal');
+    assert.equal(legacyCatalogReads.length, 1, 'the legacy search reads the catalog once');
+
+    const listed = await service.listEntities(legacy as any, { entity_type: 'applications' });
+    const listedMetadata = (listed.items[0] as any).metadata;
+    assert.equal(listedMetadata.business_criticality_label, 'High');
+    assert.equal(listedMetadata.cyber_criticality_label, 'Moderate');
+    assert.equal(listedMetadata.recovery_wave_order, 2);
+    assert.equal(legacyCatalogReads.length, 2, 'the list reads the catalog once, on its own call');
+  });
+}
+
 async function run() {
   await testIndexedSearchAllReadsBothBudgetNatureTypes();
   await testNoLegacyBudgetSearch();
@@ -430,6 +553,7 @@ async function run() {
   await testIndexedSearchAllAppliesParticipationScope();
   await testIndexedSearchAllAppliesDocumentLibraryAcl();
   await testIndexedRowsMapToTheBudgetLineFamily();
+  await testApplicationSearchAndListCarryClassificationLabels();
   await testIndexedRowsMapToTheBudgetLineFamily({
     criticality: 'business_custom',
     cyber_criticality: 'cyber_custom',

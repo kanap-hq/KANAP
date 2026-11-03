@@ -22,7 +22,8 @@ import { addMonthsYmd } from '../../contracts/contract-terms';
 //   `invalid_filter_value` and the accepted values, on query_entities and aggregate_entities.
 // - B9 / P4-8: in a limited transaction, budget lists and aggregates say `data_access` limited.
 // - P4-9: a missing right is refused in plain words, without its code.
-// - P3-16: the application detail gives the labels and ranks of its classifications.
+// - P3-16: the application detail gives the labels and ranks of its classifications,
+//   and so do search_all and the application list (#1306).
 // - L1 check: a contract's detail and context give the number of its current term.
 // The AI surface checks are not under test: stubbed open.
 
@@ -259,7 +260,36 @@ async function testApplicationFields(h: Harness, runner: QueryRunner, s: Seed) {
     assert.equal(detail.entity.metadata[field], list.items[0].metadata[field], `${field}: the detail as the list`);
   }
   assert.equal(detail.entity.metadata.business_criticality_rank, 4);
-  console.log('  P3 q27, P3-16: application context and detail: OK');
+  // #1306: search and the application list send the same labels and ranks as the detail.
+  const labels = ['business_criticality_label', 'business_criticality_rank', 'cyber_criticality_label', 'cyber_criticality_rank', 'recovery_wave_label', 'recovery_wave_order'];
+  const search = await h.tools.execute(full, 'search_all', { query: 'APP-8', entity_types: ['applications'] });
+  const searched = search.items.find((item: any) => item.ref === 'APP-8');
+  assert.ok(searched, 'search finds APP-8');
+  const listed = await h.entities.listEntities(full, { entity_type: 'applications' });
+  const listedApp = listed.items.find((item: any) => item.ref === 'APP-8');
+  assert.ok(listedApp, 'the list includes APP-8');
+  for (const field of labels) {
+    assert.equal(searched.metadata[field], detail.entity.metadata[field], `search ${field}`);
+    assert.equal(listedApp.metadata[field], detail.entity.metadata[field], `list ${field}`);
+  }
+  assert.equal(searched.metadata.criticality, 'business_critical');
+  assert.equal(searched.metadata.cyber_criticality, 'critical');
+  assert.equal(listedApp.metadata.cyber_criticality_label, 'Critical');
+  // The legacy per-type search, used when the index is off, sends them too.
+  const previousFlag = process.env.AI_SEARCH_INDEX_ENABLED;
+  process.env.AI_SEARCH_INDEX_ENABLED = 'false';
+  try {
+    const legacy = await h.entities.searchAll(full, { query: 'APP-8', entity_types: ['applications'], limit: 10 });
+    const legacyApp = legacy.items.find((item: any) => item.ref === 'APP-8');
+    assert.ok(legacyApp, 'legacy search finds APP-8');
+    for (const field of labels) {
+      assert.equal(legacyApp.metadata[field], detail.entity.metadata[field], `legacy search ${field}`);
+    }
+  } finally {
+    if (previousFlag === undefined) delete process.env.AI_SEARCH_INDEX_ENABLED;
+    else process.env.AI_SEARCH_INDEX_ENABLED = previousFlag;
+  }
+  console.log('  P3 q27, P3-16: application context, detail, search and list: OK');
 }
 
 async function testFilterValues(h: Harness, runner: QueryRunner, s: Seed) {
