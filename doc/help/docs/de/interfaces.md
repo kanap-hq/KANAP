@@ -6,17 +6,18 @@ Schnittstellen dokumentieren die logischen Datenflüsse zwischen Ihren Anwendung
 
 Navigieren Sie zu **IT-Landschaft > Schnittstellen**, um Ihr Integrationsverzeichnis zu sehen. Klicken Sie auf **Schnittstelle hinzufügen**, um einen neuen Eintrag zu erstellen, oder öffnen Sie einen vorhandenen, um ihn zu bearbeiten.
 
-Um eine Schnittstelle zu erstellen, benötigen Sie:
+Um eine Schnittstelle zu erstellen, füllen Sie das Formular **Schnittstelle erstellen** im Reiter Übersicht aus:
 
-- **Schnittstellen-ID**: Ein eindeutiger Kurzcode (z. B. `INT-CRM-ERP-001`)
-- **Name**: Ein beschreibender Name für die Integration
-- **Geschäftlicher Zweck**: Eine kurze Zusammenfassung, warum diese Integration existiert
-- **Quellanwendung** und **Zielanwendung**
-- **Datenkategorie**: Der Datentyp, der übertragen wird
+- **Name** (erforderlich): Ein beschreibender Name für die Integration
+- **Schnittstellencode**: Ein optionaler eigener Kurzcode (z. B. `ERP-ORDERS-SYNC`)
+- **Geschäftsprozess**: Der Geschäftsprozess, den die Schnittstelle unterstützt
+- **Quellanwendung** und **Zielanwendung** (erforderlich)
+- **Datenkategorie** (erforderlich): Der Datentyp, der übertragen wird
+- **Routentyp**: Direkt oder Über Middleware
 
-Sobald diese festgelegt sind, können Sie die Schnittstelle speichern; der Rest des Arbeitsbereichs (Fluss, Umgebungen, Datenzuordnung, Beziehungen) wird danach verfügbar.
+Klicken Sie in der Kopfzeile auf **Erstellen**. KANAP vergibt der Schnittstelle ihre Referenz (`INT-4`), und die übrigen Reiter (Fluss, Umgebungen, Datenzuordnung, Beziehungen, Verlauf) werden verfügbar.
 
-**Tipp**: Legen Sie den **Integrationsroutentyp** (Direkt oder Via Middleware) frühzeitig fest. Er steuert, welche Legs automatisch generiert werden und was im Reiter Fluss und in der Umgebungsmatrix angezeigt wird.
+**Tipp**: Legen Sie den **Routentyp** frühzeitig fest. Er steuert, welche Legs automatisch generiert werden und was im Reiter Fluss und in der Umgebungsmatrix angezeigt wird.
 
 ---
 
@@ -26,13 +27,14 @@ Das Schnittstellenraster zeigt Ihr Integrationsverzeichnis auf einen Blick.
 
 **Standardspalten**:
 
-- **Schnittstellen-ID**: Die eindeutige Kennung (klicken, um den Arbeitsbereich zu öffnen)
+- **Referenz**: Die Referenz, die KANAP vergibt (`INT-4`)
+- **Schnittstellencode**: Ihr eigener Kurzcode, sofern festgelegt
 - **Name**: Schnittstellenname
 - **Umgebungen**: Farbige Punkte, die zeigen, welche Umgebungen bereits Bindungen konfiguriert haben (z. B. PROD, QA, DEV)
-- **Quell-App** und **Ziel-App**: Die verbundenen Anwendungen
+- **Quellanwendung** und **Zielanwendung**: Die verbundenen Anwendungen
 - **Lebenszyklus**: Aktueller Status
 - **Kritikalität**: Geschäftliche Bedeutung
-- **Erstellt**: Wann der Datensatz erstellt wurde
+- **Erstellt am**: Wann der Datensatz erstellt wurde
 
 **Zusätzliche Spalten** (über die Spaltenauswahl):
 
@@ -62,36 +64,37 @@ Das Schnittstellenraster zeigt Ihr Integrationsverzeichnis auf einen Blick.
 
 ## Der Schnittstellen-Arbeitsbereich
 
-Klicken Sie auf eine Zeile, um den Arbeitsbereich zu öffnen. Der Arbeitsbereich hat ein Seitenpanel mit den Schnittstelleneigenschaften auf der linken Seite und sechs Reiter auf der rechten Seite. Der letzte, **Verlauf**, listet die Änderungen an der Schnittstelle auf (siehe [Verlauf der Datensätze](record-history.md)).
+Klicken Sie auf eine Zeile, um den Arbeitsbereich zu öffnen. Der Arbeitsbereich hat sechs Reiter. Die Schnittstelleneigenschaften stehen in einem Seitenpanel auf der rechten Seite. Der Name in der Kopfzeile lässt sich direkt dort bearbeiten. Der letzte Reiter, **Verlauf**, listet die Änderungen an der Schnittstelle auf (siehe [Verlauf der Datensätze](record-history.md)).
 
 Die Kopfzeile enthält **Löschen**, ein Papierkorbsymbol mit seinem Namen im Tooltip (`applications:admin`). Die Bestätigung verwendet dieselbe Prüfung wie **Ausgewählte löschen**. Sie sagt, dass dies nicht rückgängig gemacht werden kann. Wenn die Schnittstelle Bindungen hat, erklärt sie diese und bietet **Zugehörige Bindungen ebenfalls löschen**: das Löschen ist verfügbar, sobald diese Option aktiviert ist, die Bindungen gehen mit der Schnittstelle, und die Verbindungen bleiben erhalten. Die Liste öffnet sich danach wieder.
 
 ### Schnittstelleneigenschaften (Seitenpanel)
 
-Das Seitenpanel bleibt in jedem Reiter sichtbar und gruppiert die am häufigsten bearbeiteten Felder in drei einklappbare Bereiche:
+Das Seitenpanel bleibt in jedem Reiter sichtbar. Klicken Sie auf seinen Reiter **Eigenschaften**, um es ein- oder auszuklappen. Es enthält drei Feldgruppen:
 
-**Kerneigenschaften**:
+**Identifikation**:
 
-- **Schnittstellen-ID**, **Name**, **Geschäftlicher Zweck** (erforderlich)
+- **Referenz**: Von KANAP vergeben, schreibgeschützt
+- **Schnittstellencode**: Ihr eigener Kurzcode
 - **Geschäftsprozess**: Verknüpfung mit einem Geschäftsprozess aus den Stammdaten
-- **Lebenszyklus** und **Kritikalität**
-- **Quellanwendung** und **Zielanwendung** (erforderlich)
-- **Integrationsroutentyp**: Direkt oder Via Middleware
-- **Middleware-Anwendungen**: Nur angezeigt, wenn der Routentyp Via Middleware ist. Die Liste ist auf Anwendungen beschränkt, die als ETL/Middleware gekennzeichnet sind.
+- **Lebenszyklus**
+- **Erstellt am** und **Aktualisiert am**: Schreibgeschützte Datumsangaben
 
 **Team**:
 
-- **Business-Verantwortliche**: Geschäftliche Stakeholder, die für die Integration rechenschaftspflichtig sind
+- **Fachliche Verantwortliche**: Geschäftliche Stakeholder, die für die Integration rechenschaftspflichtig sind
 - **IT-Verantwortliche**: Technische Teammitglieder, die für die Wartung verantwortlich sind
+- **Betroffene Unternehmen**: Die Unternehmen, die von der Integration betroffen sind
 
-**Daten & Compliance**:
+**Daten und Compliance**:
 
-- **Datenkategorie**: Die Art der übertragenen Daten
-- **Datenklassifizierung**: Sensibilitätsstufe (Öffentlich, Intern, Vertraulich, Eingeschränkt)
-- **Enthält PII**: Wenn aktiviert, erscheint ein Feld **PII-Beschreibung**, sodass Sie detaillieren können, welche PII enthalten sind
-- **Datenhaltung**: Länder, durch die die Daten fließen (ISO-2-Buchstaben-Codes)
+- **Kritikalität**: Geschäftliche Bedeutung
+- **Datenkategorie** (erforderlich): Die Art der übertragenen Daten
+- **Datenklasse**: Sensibilitätsstufe
+- **Enthält PII**: Wenn eingeschaltet, erscheint ein Feld **Beschreibung der PII**, in dem Sie angeben, welche PII enthalten sind
+- **Datenresidenz**: Länder, durch die die Daten fließen
 
-Feldänderungen im Seitenpanel werden automatisch gespeichert, wenn Sie das Feld verlassen, sodass Sie Eigenschaften aus jedem Reiter aktualisieren können, ohne den Kontext zu wechseln.
+Feldänderungen im Seitenpanel werden automatisch gespeichert, sodass Sie Eigenschaften aus jedem Reiter aktualisieren können, ohne den Kontext zu wechseln. Quell- und Zielanwendung, Routentyp und Middleware legen Sie im Reiter Fluss fest.
 
 ---
 
@@ -105,9 +108,15 @@ Sobald die Schnittstelle gespeichert ist, enthält der Reiter Übersicht die **S
 
 ### Fluss
 
-Der Reiter Fluss definiert die gemeinsamen **Legs**, aus denen die Schnittstelle besteht. Legs sind Vorlagen: Sie beschreiben, was jeder Schritt allgemein tut (die gleiche Definition gilt für jede Umgebung).
+Der Reiter Fluss legt die Route der Schnittstelle fest, dann die gemeinsamen **Legs**, aus denen sie besteht.
 
-Für jeden Leg können Sie bearbeiten:
+**Logischer Fluss**:
+
+- **Quellanwendung** und **Zielanwendung** (erforderlich)
+- **Routentyp**: Direkt oder Über Middleware
+- **Middleware-Anwendungen**: Nur angezeigt, wenn der Routentyp Über Middleware ist. Die Liste ist auf Anwendungen beschränkt, die als ETL/Middleware gekennzeichnet sind.
+
+**Abschnittsvorlage**: Legs beschreiben, was jeder Schritt allgemein tut (die gleiche Definition gilt für jede Umgebung). Für jeden Leg können Sie bearbeiten:
 
 - **Leg-Typ**: Extraktion, Transformation, Laden oder Direkt (automatisch basierend auf der Integrationsroute festgelegt)
 - **Von -> Zu**: Welche Rolle jeden Schritt verarbeitet (Quell-App, Ziel-App oder Middleware)
@@ -116,33 +125,38 @@ Für jeden Leg können Sie bearbeiten:
 - **Format**: Das Datenformat (z. B. JSON, XML, CSV, Flat-File)
 - **Job-Name**: Ein optionaler Standard-Job- oder Prozessname
 
-Wenn noch keine Legs angezeigt werden, speichern Sie zuerst die Schnittstelle. Legs werden aus der **Quellanwendung**, **Zielanwendung** und dem **Integrationsroutentyp** im Seitenpanel generiert.
+Wenn noch keine Legs angezeigt werden, wählen Sie Quell- und Zielanwendung aus. Legs werden aus der **Quellanwendung**, der **Zielanwendung** und dem **Routentyp** generiert.
 
 ---
 
 ### Umgebungen
 
-Der Reiter Umgebungen verwaltet die umgebungsspezifischen Bindungen, die die Leg-Vorlagen in tatsächliche Konfigurationen umwandeln. Er präsentiert eine Matrix von Umgebungen und Legs, sodass Sie jede Kombination unabhängig konfigurieren können.
+Der Reiter Umgebungen verwaltet die umgebungsspezifischen Bindungen, die die Leg-Vorlagen in tatsächliche Konfigurationen umwandeln. Er zeigt eine Matrix mit einer Zeile pro Leg und einer Spalte pro Umgebung, sodass Sie jede Kombination unabhängig konfigurieren können.
 
-**Wie es funktioniert**:
+**Umgebungen**:
 
-- Jede Umgebung (Prod, Pre-prod, QA, Test, Dev, Sandbox oder benutzerdefiniert) kann Bindungen für jeden Leg haben
-- Umgebungen werden automatisch aus Ihren Anwendungs-Instanzen erkannt; Sie können auch benutzerdefinierte Umgebungen hinzufügen
-- Klicken Sie auf eine leere Zelle, um eine Bindung zu erstellen, oder klicken Sie auf eine vorhandene, um sie zu bearbeiten
+- **Umgebung hinzufügen** (`applications:member`) bietet die Umgebungen an, in denen Quell- und Zielanwendung (bei einer Route über Middleware auch die Middleware) alle eine Bereitstellung haben. Bereitstellungen legen Sie im Arbeitsbereich Anwendungen an.
+- Eine Umgebung erscheint in der Matrix, sobald Sie sie hinzufügen oder sobald sie eine Bindung hat.
+- Um eine Umgebung zu löschen, klicken Sie auf das Papierkorbsymbol in ihrem Spaltenkopf. Die Bestätigung nennt die Anzahl der Bindungen, die mit ihr gelöscht werden.
+- Ein Streifen über der Matrix zeigt jede Umgebung mit der Anzahl der konfigurierten Legs im Verhältnis zur Gesamtzahl, zum Beispiel `QA 2/3`. Der Punkt ist grün, wenn jeder Leg konfiguriert ist, orange, wenn einige konfiguriert sind, und grau, wenn keiner konfiguriert ist.
+
+**Zellen**: Jede Zelle zeigt den Status der Bindung sowie ihren Quell- und Zielendpunkt. Sobald Sie eine Bindung geöffnet haben, zeigt ihre Zelle auch ihre Infrastrukturverbindung: die erste, mit der Anzahl der weiteren, wenn es mehrere gibt (`+2`). Eine Bindung im Status **Aktiv** ohne Infrastrukturverbindung zeigt dann **Verbindung fehlt** in Orange. Klicken Sie auf eine leere Zelle, um eine Bindung hinzuzufügen, oder auf eine konfigurierte Zelle, um sie zu bearbeiten. Das Papierkorbsymbol in einer Zelle löscht ihre Bindung nach einer Bestätigung.
+
+**Bindungsbereich**: Ein Klick auf eine Zelle öffnet einen Bereich neben der Matrix.
+
+- Für eine neue Bindung füllen Sie die Felder aus und klicken auf **Bindung hinzufügen**. Die Auswahlfelder **Quellbereitstellung** und **Zielbereitstellung** erscheinen, wenn die Anwendung in dieser Umgebung mehr als eine Bereitstellung hat. Andernfalls wird die einzige Bereitstellung verwendet. Das Auswahlfeld **Integrationswerkzeug** erscheint bei einer Route über Middleware, wenn mehr als eine Middleware-Anwendung in der Umgebung eine Bereitstellung hat. Es ist dann erforderlich.
+- Bei einer vorhandenen Bindung wird jede Änderung sofort gespeichert. Die Kopfzeile des Bereichs zeigt an, wann die Änderung gespeichert ist.
 
 **Bindungsfelder**:
 
-- **Quell-Instanz** und **Ziel-Instanz**: Welche Anwendungs-Instanzen in dieser Umgebung verwendet werden sollen
-- **Status**: Aktiviert, Deaktiviert oder Test
-- **Quellendpunkt** und **Zielendpunkt**: Technische Endpunkte (URLs, Pfade, Queue-Namen usw.)
-- **Auslöser-Details**: Umgebungsspezifische Auslöser-Konfiguration
-- **Umgebungs-Job-Name**: Den Job-Namen der Leg-Vorlage für diese Umgebung überschreiben
+- **Status**: Die [Lebenszyklus-Status](it-ops-settings.md#lebenszyklus-status): Vorgeschlagen, Aktiv, Veraltet, Außer Betrieb sowie alle, die Ihr Administrator hinzufügt
 - **Authentifizierungsmodus**: Wie sich die Bindung authentifiziert
+- **Infrastrukturverbindung**: Die Infrastrukturverbindung aus Ihrem Verbindungsverzeichnis. So können Sie den vollständigen Pfad von der logischen Schnittstelle bis zur physischen Netzwerkverbindung nachverfolgen. Der Bereich bearbeitet eine Verbindung. Hat die Bindung mehrere, werden die weiteren als Anzahl angezeigt und bleiben unverändert.
+- **Quellendpunkt** und **Zielendpunkt**: Technische Endpunkte (URLs, Pfade, Queue-Namen usw.)
+- **Auslöserdetails**: Umgebungsspezifische Auslöser-Konfiguration
+- **Abweichender Jobname**: Ersetzt den Jobnamen der Leg-Vorlage in dieser Umgebung
 - **Monitoring-URL**: Link zu Monitoring oder Observability für diese Bindung
-- **Integrationswerkzeug-Anwendung**: Falls zutreffend, das verwendete Integrationswerkzeug
-- **Umgebungs-Notizen**: Umgebungsspezifische Notizen
-
-**Verbindungs-Verknüpfung**: Jede Bindung kann mit Infrastrukturverbindungen aus Ihrem Verbindungsverzeichnis verknüpft werden. So können Sie den vollständigen Pfad von der logischen Schnittstelle bis zur physischen Netzwerkverbindung nachverfolgen.
+- **Notizen**: Umgebungsspezifische Notizen
 
 ---
 
@@ -247,7 +261,7 @@ Verwenden Sie dies, wenn Sie eine unabhängige Kopie einer Schnittstelle wünsch
 | Mapping-Gruppen und -Regeln | Nein |
 | Anhänge | Nein |
 
-**Benennung**: Die Kopie erhält „ - copy" sowohl an den Namen als auch an die Schnittstellen-ID angehängt. Eine leere Schnittstellen-ID bleibt leer.
+**Benennung**: Die Kopie erhält „ - copy" sowohl an den Namen als auch an den Schnittstellencode angehängt. Ein leerer Schnittstellencode bleibt leer. Die Kopie erhält eine eigene Referenz.
 
 ### Versionsmigration (aus der Anwendungsversionierung)
 
@@ -269,10 +283,10 @@ Verwenden Sie dies beim Upgrade einer Anwendung auf eine neue Version, wenn Sie 
 
 ## Tipps
 
-- **Dokumentieren Sie das „Warum" zuerst**: Verwenden Sie die **Spezifikation** im Reiter Übersicht und das Feld **Geschäftlicher Zweck** im Seitenpanel, um die Absicht zu erfassen, bevor Sie sich in Legs und Bindungen vertiefen.
-- **Verwenden Sie das Seitenpanel von jedem Reiter aus**: Verantwortliche, Kritikalität, Routentyp, PII-Flag und der Rest werden sofort gespeichert, sodass Sie sie aktualisieren können, während Sie Regeln oder Bindungen überprüfen.
+- **Dokumentieren Sie das „Warum" zuerst**: Verwenden Sie die **Spezifikation** im Reiter Übersicht, um die Absicht zu erfassen, bevor Sie sich in Legs und Bindungen vertiefen.
+- **Verwenden Sie das Seitenpanel von jedem Reiter aus**: Verantwortliche, Kritikalität, PII-Flag und der Rest werden sofort gespeichert, sodass Sie sie aktualisieren können, während Sie Regeln oder Bindungen überprüfen.
 - **Eine Schnittstelle, viele Umgebungen**: Erstellen Sie keine separaten Schnittstellen für jede Umgebung. Verwenden Sie eine Schnittstelle und konfigurieren Sie jede Umgebung im Reiter Umgebungen.
 - **Gruppieren Sie Ihre Mapping-Regeln**: Bei Schnittstellen mit mehr als einer Handvoll Felder organisieren Sie die Regeln in Mapping-Gruppen (Header, Positionen, Footer usw.). Es macht Überprüfung und Auswirkungsanalyse weitaus einfacher.
-- **Halten Sie Middleware explizit**: Wenn Daten durch Middleware fließen, setzen Sie den Routentyp auf **Via Middleware** und wählen Sie die Middleware-Anwendungen aus. Die Schnittstellenkarte rendert dann den echten Datenpfad.
+- **Halten Sie Middleware explizit**: Wenn Daten durch Middleware fließen, setzen Sie den Routentyp im Reiter Fluss auf **Über Middleware** und wählen Sie die Middleware-Anwendungen aus. Die Schnittstellenkarte rendert dann den echten Datenpfad.
 - **Duplizieren Sie für ähnliche Schnittstellen**: Wenn Sie eine neue Schnittstelle erstellen, die einer vorhandenen ähnlich ist, verwenden Sie **Schnittstelle duplizieren**, um alle Einstellungen zu kopieren, und ändern Sie dann das, was anders ist. Schließen Sie optional Bindungen ein, um einen Vorsprung bei der Umgebungskonfiguration zu erhalten.
 - **Verknüpfen Sie Bindungen mit Infra-Verbindungen**: Verknüpfen Sie im Reiter Umgebungen jede Bindung mit ihrer zugrunde liegenden Infrastrukturverbindung, sodass Sie den vollständigen Pfad von der Geschäftsschnittstelle bis zur Netzwerkverbindung nachverfolgen können.

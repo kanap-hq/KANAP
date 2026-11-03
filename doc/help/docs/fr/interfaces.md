@@ -6,17 +6,18 @@ Les Interfaces documentent les flux de données logiques entre vos applications.
 
 Rendez-vous dans **Cartographie SI > Interfaces** pour voir votre registre d'intégration. Cliquez sur **Ajouter une interface** pour créer une nouvelle entrée, ou ouvrez-en une existante pour la modifier.
 
-Pour créer une interface, vous avez besoin de :
+Pour créer une interface, remplissez le formulaire **Créer l'interface** de l'onglet Vue d'ensemble :
 
-- **ID de l'interface** : Un code court unique (ex. : `INT-CRM-ERP-001`)
-- **Nom** : Un nom descriptif pour l'intégration
-- **Objectif métier** : Un court résumé de la raison d'être de cette intégration
-- **Application source** et **Application cible**
-- **Catégorie de données** : Le type de données transférées
+- **Nom** (obligatoire) : Un nom descriptif pour l'intégration
+- **Code d'interface** : Un code court facultatif, choisi par vous (ex. : `ERP-ORDERS-SYNC`)
+- **Processus métier** : Le processus métier que l'interface soutient
+- **Application source** et **Application cible** (obligatoires)
+- **Catégorie de données** (obligatoire) : Le type de données transférées
+- **Type de route** : Direct ou Via middleware
 
-Une fois ces éléments définis, vous pouvez enregistrer l'interface ; le reste de l'espace de travail (Flux, Environnements, Mappage des données, Relations) devient alors disponible.
+Cliquez sur **Créer** dans l'en-tête. KANAP attribue sa référence à l'interface (`INT-4`), et les autres onglets (Flux, Environnements, Mappage des données, Relations, Historique) deviennent disponibles.
 
-**Conseil** : Définissez tôt le **Type de route d'intégration** (Direct ou Via middleware). Il contrôle quels legs sont générés automatiquement et ce qui apparaît dans l'onglet Flux et la matrice Environnements.
+**Conseil** : Définissez tôt le **Type de route**. Il contrôle quels legs sont générés automatiquement et ce qui apparaît dans l'onglet Flux et la matrice Environnements.
 
 ---
 
@@ -26,7 +27,8 @@ La grille Interfaces affiche votre registre d'intégration en un coup d'œil.
 
 **Colonnes par défaut** :
 
-- **ID de l'interface** : L'identifiant unique (cliquez pour ouvrir l'espace de travail)
+- **Référence** : La référence attribuée par KANAP (`INT-4`)
+- **Code d'interface** : Votre propre code court, s'il est renseigné
 - **Nom** : Nom de l'interface
 - **Environnements** : Points colorés montrant quels environnements ont déjà des liaisons configurées (ex. : PROD, QA, DEV)
 - **App source** et **App cible** : Les applications connectées
@@ -62,36 +64,37 @@ La grille Interfaces affiche votre registre d'intégration en un coup d'œil.
 
 ## L'espace de travail des Interfaces
 
-Cliquez sur n'importe quelle ligne pour ouvrir l'espace de travail. L'espace de travail comporte un panneau latéral avec les propriétés de l'interface à gauche, et six onglets à droite. Le dernier, **Historique**, liste les modifications apportées à l'interface (voir [Historique des fiches](record-history.md)).
+Cliquez sur n'importe quelle ligne pour ouvrir l'espace de travail. L'espace de travail comporte six onglets, avec les propriétés de l'interface dans un panneau latéral à droite. Le nom dans l'en-tête se modifie directement. Le dernier onglet, **Historique**, liste les modifications apportées à l'interface (voir [Historique des fiches](record-history.md)).
 
 L'en-tête porte **Supprimer**, une icône corbeille avec son nom en infobulle (`applications:admin`). La confirmation utilise la même vérification que **Supprimer la sélection**. Elle indique que cette action est irréversible. Lorsque l'interface a des liaisons, elle les explique et propose **Supprimer également les liaisons associées** : la suppression est disponible une fois cette option cochée, les liaisons partent avec l'interface et les connexions sont conservées. La liste s'ouvre ensuite.
 
 ### Propriétés de l'interface (panneau latéral)
 
-Le panneau latéral reste visible sur chaque onglet et regroupe les champs les plus modifiés en trois sections rétractables :
+Le panneau latéral reste visible sur chaque onglet. Cliquez sur son onglet **Propriétés** pour le replier ou le déplier. Il regroupe ses champs en trois blocs :
 
-**Propriétés principales** :
+**Identification** :
 
-- **ID de l'interface**, **Nom**, **Objectif métier** (obligatoires)
+- **Référence** : Attribuée par KANAP, en lecture seule
+- **Code d'interface** : Votre propre code court
 - **Processus métier** : Lien vers un processus métier des données de référence
-- **Cycle de vie** et **Criticité**
-- **Application source** et **Application cible** (obligatoires)
-- **Type de route d'intégration** : Direct ou Via middleware
-- **Applications middleware** : Affiché uniquement lorsque le type de route est Via middleware. La liste est restreinte aux applications marquées comme ETL/middleware.
+- **Cycle de vie**
+- **Créé le** et **Mis à jour le** : Dates en lecture seule
 
 **Équipe** :
 
 - **Responsables métier** : Parties prenantes métier redevables de l'intégration
 - **Responsables IT** : Membres de l'équipe technique responsables de la maintenance
+- **Sociétés impactées** : Les sociétés concernées par l'intégration
 
 **Données et conformité** :
 
-- **Catégorie de données** : Le type de données transférées
-- **Classification des données** : Niveau de sensibilité (Public, Interne, Confidentiel, Restreint)
-- **Contient des PII** : Lorsque coché, un champ **Description PII** apparaît pour vous permettre de détailler quelles PII sont incluses
-- **Résidence des données** : Pays où circulent les données (codes ISO à 2 lettres)
+- **Criticité** : Importance métier
+- **Catégorie de données** (obligatoire) : Le type de données transférées
+- **Classification des données** : Niveau de sensibilité
+- **Contient des PII** : Lorsque cette option est activée, un champ **Description des PII** apparaît pour vous permettre de détailler quelles PII sont incluses
+- **Résidence des données** : Pays où circulent les données
 
-Les modifications de champs dans le panneau latéral sont enregistrées automatiquement lorsque vous quittez le champ, vous pouvez donc mettre à jour les propriétés depuis n'importe quel onglet sans changer de contexte.
+Les modifications de champs dans le panneau latéral sont enregistrées automatiquement : vous pouvez donc mettre à jour les propriétés depuis n'importe quel onglet sans changer de contexte. Les applications source et cible, le type de route et le middleware se définissent dans l'onglet Flux.
 
 ---
 
@@ -105,9 +108,15 @@ Une fois l'interface enregistrée, l'onglet Vue d'ensemble contient la **Spécif
 
 ### Flux
 
-L'onglet Flux définit les **legs** partagés qui composent l'interface. Les legs sont des modèles : ils décrivent ce que fait chaque étape en général (la même définition s'applique dans tous les environnements).
+L'onglet Flux définit la route de l'interface, puis les **legs** partagés qui la composent.
 
-Pour chaque leg, vous pouvez modifier :
+**Flux logique** :
+
+- **Application source** et **Application cible** (obligatoires)
+- **Type de route** : Direct ou Via middleware
+- **Applications middleware** : Affiché uniquement lorsque le type de route est Via middleware. La liste est restreinte aux applications marquées comme ETL/middleware.
+
+**Modèle de tronçons** : Les legs décrivent ce que fait chaque étape en général (la même définition s'applique dans tous les environnements). Pour chaque leg, vous pouvez modifier :
 
 - **Type de tronçon** : Extraction, Transformation, Chargement ou Direct (défini automatiquement en fonction de la route d'intégration)
 - **De -> Vers** : Quel rôle gère chaque étape (App source, App cible ou Middleware)
@@ -116,33 +125,38 @@ Pour chaque leg, vous pouvez modifier :
 - **Format** : Le format des données (ex. : JSON, XML, CSV, fichier plat)
 - **Nom du job** : Un nom de job ou de processus par défaut optionnel
 
-Si aucun leg n'apparaît encore, enregistrez d'abord l'interface. Les legs sont générés depuis l'**Application source**, l'**Application cible** et le **Type de route d'intégration** dans le panneau latéral.
+Si aucun leg n'apparaît encore, choisissez les applications source et cible. Les legs sont générés depuis l'**Application source**, l'**Application cible** et le **Type de route**.
 
 ---
 
 ### Environnements
 
-L'onglet Environnements gère les liaisons par environnement qui transforment les modèles de leg en configurations réelles. Il présente une matrice d'environnements et de legs, vous permettant de configurer chaque combinaison indépendamment.
+L'onglet Environnements gère les liaisons par environnement qui transforment les modèles de leg en configurations réelles. Il présente une matrice avec une ligne par leg et une colonne par environnement, pour configurer chaque combinaison indépendamment.
 
-**Comment ça fonctionne** :
+**Environnements** :
 
-- Chaque environnement (Prod, Pré-prod, QA, Test, Dev, Sandbox ou personnalisé) peut avoir des liaisons pour chaque leg
-- Les environnements sont découverts automatiquement à partir de vos instances d'applications ; vous pouvez également ajouter des environnements personnalisés
-- Cliquez sur une cellule vide pour créer une liaison, ou cliquez sur une existante pour la modifier
+- **Ajouter un environnement** (`applications:member`) propose les environnements où les applications source et cible (et le middleware, pour une route via middleware) ont toutes un déploiement. Les déploiements se créent dans l'espace de travail Applications.
+- Un environnement apparaît dans la matrice dès que vous l'ajoutez ou qu'il a une liaison.
+- Pour supprimer un environnement, cliquez sur l'icône corbeille dans l'en-tête de sa colonne. La confirmation indique le nombre de liaisons supprimées avec lui.
+- Un bandeau au-dessus de la matrice montre chaque environnement avec le nombre de legs configurés sur le total, par exemple `QA 2/3`. Le point est vert quand chaque leg est configuré, orange quand certains le sont, et gris quand aucun ne l'est.
+
+**Cellules** : Chaque cellule montre le statut de la liaison et ses points de terminaison source et cible. Une fois la liaison ouverte, sa cellule montre aussi sa connexion d'infrastructure : la première, avec le nombre des autres quand il y en a plusieurs (`+2`). Une liaison **Actif** sans connexion d'infrastructure affiche alors **Connexion manquante** en orange. Cliquez sur une cellule vide pour ajouter une liaison, ou sur une cellule configurée pour la modifier. L'icône corbeille d'une cellule supprime sa liaison, après une confirmation.
+
+**Panneau de liaison** : Un clic sur une cellule ouvre un panneau à côté de la matrice.
+
+- Pour une nouvelle liaison, remplissez les champs et cliquez sur **Ajouter une liaison**. Les sélecteurs **Déploiement source** et **Déploiement cible** apparaissent quand l'application a plusieurs déploiements dans cet environnement ; sinon, le seul déploiement est utilisé. Le sélecteur **Outil d'intégration** apparaît, et devient obligatoire, pour une route via middleware quand plusieurs applications middleware ont un déploiement dans l'environnement.
+- Pour une liaison existante, chaque modification est enregistrée au fil de l'eau. L'en-tête du panneau indique quand la modification est enregistrée.
 
 **Champs de liaison** :
 
-- **Instance source** et **Instance cible** : Quelles instances d'applications utiliser dans cet environnement
-- **Statut** : Activé, Désactivé ou En test
-- **Point de terminaison source** et **Point de terminaison cible** : Points de terminaison techniques (URL, chemins, noms de file d'attente, etc.)
-- **Détails du déclencheur** : Configuration de déclencheur spécifique à l'environnement
-- **Nom du job env.** : Remplacer le nom du job du modèle de leg pour cet environnement
+- **Statut** : Les [statuts du cycle de vie](it-ops-settings.md#statuts-du-cycle-de-vie) : Proposé, Actif, Obsolète, Retiré, plus ceux qu'ajoute votre administrateur
 - **Mode d'authentification** : Comment la liaison s'authentifie
-- **URL de monitoring** : Lien vers la supervision ou observabilité de cette liaison
-- **Application outil d'intégration** : Le cas échéant, l'outil d'intégration utilisé
-- **Notes env.** : Notes spécifiques à l'environnement
-
-**Liaison aux connexions** : Chaque liaison peut être liée à des connexions d'infrastructure de votre registre de connexions. Cela vous permet de tracer le chemin complet de l'interface logique jusqu'à la connexion réseau physique.
+- **Connexion d'infrastructure** : La connexion d'infrastructure de votre registre de connexions, pour tracer le chemin complet de l'interface logique jusqu'à la connexion réseau physique. Le panneau modifie une seule connexion. Quand la liaison en a plusieurs, les autres sont indiquées par leur nombre et restent inchangées.
+- **Point de terminaison source** et **Point de terminaison cible** : Points de terminaison techniques (URL, chemins, noms de file d'attente, etc.)
+- **Détails du déclenchement** : Configuration de déclenchement spécifique à l'environnement
+- **Nom du job spécifique** : Remplace le nom du job du modèle de leg dans cet environnement
+- **URL de supervision** : Lien vers la supervision ou l'observabilité de cette liaison
+- **Notes** : Notes propres à l'environnement
 
 ---
 
@@ -247,7 +261,7 @@ Utilisez cela lorsque vous voulez une copie indépendante d'une interface, typiq
 | Groupes et règles de mappage | Non |
 | Pièces jointes | Non |
 
-**Nommage** : La copie reçoit « - copy » ajouté à la fois au nom et à l'ID de l'interface. Un identifiant d'interface vide le reste.
+**Nommage** : La copie reçoit « - copy » ajouté à la fois au nom et au code d'interface. Un code d'interface vide le reste. La copie reçoit sa propre référence.
 
 ### Migration de version (depuis le versionnage d'application)
 
@@ -269,10 +283,10 @@ Utilisez cela lors de la mise à niveau d'une application vers une nouvelle vers
 
 ## Conseils
 
-- **Documentez d'abord le « pourquoi »** : Utilisez la **Spécification** de l'onglet Vue d'ensemble et le champ **Objectif métier** du panneau latéral pour capturer l'intention avant de plonger dans les legs et les liaisons.
-- **Utilisez le panneau latéral depuis n'importe quel onglet** : Responsables, criticité, type de route, indicateur PII et le reste persistent immédiatement, vous pouvez donc les mettre à jour pendant que vous examinez les règles ou les liaisons.
+- **Documentez d'abord le « pourquoi »** : Utilisez la **Spécification** de l'onglet Vue d'ensemble pour capturer l'intention avant de plonger dans les legs et les liaisons.
+- **Utilisez le panneau latéral depuis n'importe quel onglet** : Responsables, criticité, indicateur PII et le reste persistent immédiatement, vous pouvez donc les mettre à jour pendant que vous examinez les règles ou les liaisons.
 - **Une interface, plusieurs environnements** : Ne créez pas d'interfaces séparées pour chaque environnement : utilisez une interface et configurez chaque environnement dans l'onglet Environnements.
 - **Groupez vos règles de mappage** : Pour les interfaces ayant plus de quelques champs, organisez les règles en groupes de mappage (En-tête, Lignes d'articles, Pied de page, etc.). Cela rend la revue et l'analyse d'impact bien plus faciles.
-- **Gardez le middleware explicite** : Si les données passent par un middleware, définissez le type de route sur **Via middleware** et choisissez les applications middleware. La Carte des interfaces affichera alors le chemin de données réel.
+- **Gardez le middleware explicite** : Si les données passent par un middleware, définissez le type de route sur **Via middleware** dans l'onglet Flux et choisissez les applications middleware. La Carte des interfaces affichera alors le chemin de données réel.
 - **Dupliquez pour des interfaces similaires** : Lors de la création d'une nouvelle interface similaire à une existante, utilisez **Dupliquer l'interface** pour copier tous les paramètres, puis modifiez ce qui diffère. Incluez optionnellement les liaisons pour prendre de l'avance sur la configuration des environnements.
 - **Liez les liaisons aux connexions d'infra** : Dans l'onglet Environnements, liez chaque liaison à sa connexion d'infrastructure sous-jacente afin de pouvoir tracer le chemin complet de l'interface métier jusqu'à la connexion réseau.
