@@ -13,9 +13,15 @@ const TOKEN_DURATION = /^(\d+)(s|m|h|d)$/;
  */
 const RESET_TIMESPAN = /^(-?(?:\d+)?\.?\d+) *(milliseconds?|msecs?|ms|seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h|days?|d|weeks?|w|years?|yrs?|y)?$/i;
 
-export function parseDurationMs(duration: string): number {
+const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
+
+/**
+ * Milliseconds of a token duration. A value that is not a whole number followed by s, m, h or d
+ * returns `fallbackMs`: callers pass their family's own default (15 minutes when omitted).
+ */
+export function parseDurationMs(duration: string, fallbackMs = FIFTEEN_MINUTES_MS): number {
   const match = duration.match(TOKEN_DURATION);
-  if (!match) return 15 * 60 * 1000; // default 15 minutes
+  if (!match) return fallbackMs;
   const value = parseInt(match[1], 10);
   const unit = match[2];
   switch (unit) {
@@ -23,18 +29,19 @@ export function parseDurationMs(duration: string): number {
     case 'm': return value * 60 * 1000;
     case 'h': return value * 60 * 60 * 1000;
     case 'd': return value * 24 * 60 * 60 * 1000;
-    default: return 15 * 60 * 1000;
+    default: return fallbackMs;
   }
 }
 
-export function parseDurationSec(duration: string): number {
-  return Math.floor(parseDurationMs(duration) / 1000);
+export function parseDurationSec(duration: string, fallbackMs = FIFTEEN_MINUTES_MS): number {
+  return Math.floor(parseDurationMs(duration, fallbackMs) / 1000);
 }
 
 /**
  * Warning for an access or refresh lifetime `parseDurationMs` will not read.
  * An empty value keeps the family's own default and is not a warning. A value that does not
- * match stays 15 minutes for both families: that is what `parseDurationMs` returns.
+ * match also keeps the family's default (4 hours for the refresh token, 15 minutes for the
+ * access token): the warning names that duration.
  */
 export function tokenDurationWarning(
   name: 'JWT_ACCESS_TOKEN_TTL' | 'JWT_REFRESH_TOKEN_TTL',
@@ -42,8 +49,10 @@ export function tokenDurationWarning(
 ): string | null {
   if (raw == null || raw === '') return null;
   if (TOKEN_DURATION.test(raw)) return null;
-  const example = name === 'JWT_REFRESH_TOKEN_TTL' ? DEFAULT_REFRESH_TOKEN_TTL : DEFAULT_ACCESS_TOKEN_TTL;
-  return `[CONFIG] ${name} is ${JSON.stringify(raw)}: it is not a number followed by s, m, h or d, so the token lasts 15 minutes. Set ${name} to a duration such as ${example}.`;
+  const refresh = name === 'JWT_REFRESH_TOKEN_TTL';
+  const example = refresh ? DEFAULT_REFRESH_TOKEN_TTL : DEFAULT_ACCESS_TOKEN_TTL;
+  const lasts = refresh ? '4 hours' : '15 minutes';
+  return `[CONFIG] ${name} is ${JSON.stringify(raw)}: it is not a number followed by s, m, h or d, so the token lasts ${lasts}. Set ${name} to a duration such as ${example}.`;
 }
 
 /**

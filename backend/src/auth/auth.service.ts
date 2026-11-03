@@ -130,8 +130,9 @@ export class AuthService {
     const refreshTtl = process.env.JWT_REFRESH_TOKEN_TTL || DEFAULT_REFRESH_TOKEN_TTL;
 
     const accessExpiresInSec = parseDurationSec(accessTtl);
-    const refreshExpiresInSec = parseDurationSec(refreshTtl);
-    const refreshExpiresInMs = parseDurationMs(refreshTtl);
+    const refreshFallbackMs = parseDurationMs(DEFAULT_REFRESH_TOKEN_TTL);
+    const refreshExpiresInSec = parseDurationSec(refreshTtl, refreshFallbackMs);
+    const refreshExpiresInMs = parseDurationMs(refreshTtl, refreshFallbackMs);
 
     // Sign access token
     const payload = buildAccessTokenPayload(user);
@@ -210,8 +211,9 @@ export class AuthService {
 
     // Extend refresh token expiration (sliding window)
     const refreshTtl = process.env.JWT_REFRESH_TOKEN_TTL || DEFAULT_REFRESH_TOKEN_TTL;
-    const refreshExpiresInMs = parseDurationMs(refreshTtl);
-    const refreshExpiresInSec = parseDurationSec(refreshTtl);
+    const refreshFallbackMs = parseDurationMs(DEFAULT_REFRESH_TOKEN_TTL);
+    const refreshExpiresInMs = parseDurationMs(refreshTtl, refreshFallbackMs);
+    const refreshExpiresInSec = parseDurationSec(refreshTtl, refreshFallbackMs);
     storedToken.expires_at = new Date(Date.now() + refreshExpiresInMs);
     await repo.save(storedToken);
 
