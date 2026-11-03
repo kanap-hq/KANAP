@@ -431,7 +431,9 @@ describe('SupplierWorkspacePage', () => {
     fireEvent.change(title, { target: { value: ' Initech ' } });
     fireEvent.blur(title);
     expect(mocked.post).not.toHaveBeenCalled();
-    fireEvent.change(screen.getByLabelText('suppliers.fields.erpSupplierId'), { target: { value: 'SUP-077' } });
+    const erp = screen.getByLabelText('suppliers.fields.erpSupplierId');
+    fireEvent.change(erp, { target: { value: 'SUP-077' } });
+    fireEvent.blur(erp);
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/suppliers', {
       name: 'Initech',
@@ -464,30 +466,31 @@ describe('SupplierWorkspacePage', () => {
   it('leaves without creating on Cancel, and on Escape in the empty title', async () => {
     renderAt('/master-data/suppliers/new/overview?sort=name%3AASC');
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.cancel' }));
-    expect(navigateMock).toHaveBeenCalledWith('/master-data/suppliers?sort=name%3AASC');
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/suppliers?sort=name%3AASC'));
     navigateMock.mockClear();
     fireEvent.keyDown(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { key: 'Escape' });
-    expect(navigateMock).toHaveBeenCalledWith('/master-data/suppliers?sort=name%3AASC');
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/suppliers?sort=name%3AASC'));
     expect(mocked.post).not.toHaveBeenCalled();
   });
 
-  it('moves from the header name to the form fields with Tab', async () => {
+  it('leaves the header name with Tab without creating anything', async () => {
     const user = userEvent.setup();
     renderAt('/master-data/suppliers/new/overview');
     const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
     await user.type(title, 'Initech');
-    const expectNext = async (element: HTMLElement) => {
-      await user.tab();
-      expect(document.activeElement).toBe(element);
-    };
-    // Cancel and Create sit in the title row, then the tab bar, then the fields.
-    await expectNext(screen.getByRole('button', { name: 'common:buttons.cancel' }));
-    await expectNext(screen.getByRole('button', { name: 'common:buttons.create' }));
-    await expectNext(screen.getByRole('tab', { name: 'shared.labels.overview' }));
-    await expectNext(screen.getByLabelText('suppliers.fields.erpSupplierId'));
-    await expectNext(screen.getByLabelText('suppliers.fields.notes'));
+    await user.tab();
+    expect(title).not.toHaveFocus();
     expect(title).toHaveValue('Initech');
     expect(mocked.post).not.toHaveBeenCalled();
+  });
+
+  it('shows the supplier page itself, with the tabs that need a saved supplier greyed', () => {
+    renderAt('/master-data/suppliers/new/overview');
+    expect(screen.getByLabelText('suppliers.fields.erpSupplierId')).toBeInTheDocument();
+    expect(screen.getByLabelText('suppliers.fields.notes')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'shared.labels.contacts' })).toBeDisabled();
+    expect(screen.getByRole('tab', { name: 'shared.labels.history' })).toBeDisabled();
+    expect(mocked.get.mock.calls.some(([url]) => String(url).includes('/new'))).toBe(false);
   });
 });
 

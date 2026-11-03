@@ -16,9 +16,10 @@ import { type SupplierContactLink, newContactHref } from './supplierModel';
 export const supplierContactsKey = (supplierId: string) => ['supplier-contacts', supplierId] as const;
 
 /** The contacts linked to a supplier, refetched on each visit: a contact page may have changed them. */
-export function useSupplierContacts(supplierId: string) {
+export function useSupplierContacts(supplierId: string, enabled = true) {
   return useQuery({
     queryKey: supplierContactsKey(supplierId),
+    enabled,
     queryFn: async () => (await api.get<SupplierContactLink[]>(`/suppliers/${supplierId}/contacts`)).data,
     staleTime: 0,
     refetchOnMount: 'always',

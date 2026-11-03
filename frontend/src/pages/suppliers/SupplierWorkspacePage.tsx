@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, IconButton, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, IconButton, Stack, Typography } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import CloseIcon from '@mui/icons-material/Close';
 import api from '../../api';
@@ -12,7 +12,7 @@ import useAutosave, { useAutosaveRegistry } from '../../hooks/useAutosave';
 import { useSupplierNav } from '../../hooks/useSupplierNav';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
 import { PortfolioMetadataItem, PortfolioStatusMetadata } from '../portfolio/workspace/PortfolioMetadataBar';
-import { PropertyGroup, PropertyRow } from '../../components/design';
+import { PropertyGroup } from '../../components/design';
 import StatusLifecycleField from '../../components/fields/StatusLifecycleField';
 import {
   STATUS_DISABLED,
@@ -21,13 +21,12 @@ import {
   deriveStatusFromDisabledAt,
   normalizeStatus,
 } from '../../constants/status';
-import { drawerFieldValueSx } from '../../theme/formSx';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { getDotColor } from '../../utils/statusColors';
 import { SupplierNameTitle, SupplierNotes, SupplierTextRow } from './SupplierFields';
 import SupplierContactsTab, { useSupplierContacts } from './SupplierContactsTab';
 import RecordDeleteButton from '../../components/workspace/RecordDeleteButton';
-import { CreationActions, useCreationReturn, useCreationTitle } from '../../components/workspace/creation';
+import { CreationActions, useCreationLeave, useCreationTitle } from '../../components/workspace/creation';
 import RecordUsagesSection, { scrollToUsages, useRecordUsages } from '../../components/usages/RecordUsagesSection';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
@@ -47,6 +46,9 @@ const SAVED_LINGER_MS = 1500;
 type FieldKey = 'name' | 'erp_supplier_id' | 'notes' | 'status' | 'disabled_at';
 type FieldErrors = Partial<Record<FieldKey, string>>;
 
+/** What a new supplier starts from. */
+const NEW_SUPPLIER: Supplier = { id: '', name: '', erp_supplier_id: null, notes: null, status: STATUS_ENABLED, disabled_at: null };
+
 /** The list's sort, search, filters and scope, kept in every address of the page. */
 function useListContext() {
   const [searchParams] = useSearchParams();
@@ -65,7 +67,8 @@ export default function SupplierWorkspacePage() {
   const params = useParams();
   const location = useLocation();
   const id = String(params.id || '');
-  if (id === 'new') return <SupplierCreate />;
+  // The new page is the supplier's own page on a draft, sent by Create.
+  if (id === 'new') return <SupplierEditor key="new" id="new" tab="overview" />;
   // An address without a tab, or with a tab the page no longer has, opens the overview.
   if (!params.tab || !TAB_KEYS.includes(params.tab)) {
     return <Navigate replace to={`${SUPPLIERS_PATH}/${id}/overview${location.search}`} />;
@@ -86,6 +89,7 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
   const canEdit = hasLevel('suppliers', 'manager') && !dataAccessLimited;
   const canDelete = hasLevel('suppliers', 'admin') && !dataAccessLimited;
   const withContext = useListContext();
+  const isCreate = id === 'new';
 
   const nav = useSupplierNav({
     id,
@@ -98,13 +102,17 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
   const detailKey = React.useMemo(() => ['suppliers', id] as const, [id]);
   // Set once the supplier is deleted: the page leaves without loading it again.
   const [deleted, setDeleted] = React.useState(false);
-  const { data, error: loadError } = useQuery({
+  const { data: stored, error: loadError } = useQuery({
     queryKey: detailKey,
     queryFn: async () => (await api.get<Supplier>(`/suppliers/${id}`)).data,
-    enabled: !deleted,
+    enabled: !deleted && !isCreate,
   });
-  const { data: contactLinks } = useSupplierContacts(id);
-  const { data: usages } = useRecordUsages('suppliers', id);
+  // A new supplier: the fields write here, Create sends it.
+  const [draft, setDraft] = React.useState<Supplier>(NEW_SUPPLIER);
+  const draftRef = React.useRef(draft);
+  const data = isCreate ? draft : stored;
+  const { data: contactLinks } = useSupplierContacts(id, !isCreate);
+  const { data: usages } = useRecordUsages('suppliers', id, !isCreate);
   // The header's count asked for the "Used by" section from another tab: scroll once the overview shows it.
   const [usagesScrollPending, setUsagesScrollPending] = React.useState(false);
 
@@ -120,6 +128,12 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
    * shows under the field and the stored values come back.
    */
   const save = React.useCallback((patch: SupplierPatch, field: FieldKey, optimistic?: Partial<Supplier>): Promise<void> => {
+    if (isCreate) {
+      setErrors((prev) => ({ ...prev, [field]: undefined }));
+      draftRef.current = { ...draftRef.current, ...patch };
+      setDraft(draftRef.current);
+      return Promise.resolve();
+    }
     if (!canEdit || !queryClient.getQueryData(detailKey)) return Promise.resolve();
     setErrors((prev) => ({ ...prev, [field]: undefined }));
     if (optimistic) queryClient.setQueryData<Supplier>(detailKey, (prev) => (prev ? { ...prev, ...optimistic } : prev));
@@ -141,7 +155,7 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
     const result = chainRef.current.then(run, run);
     chainRef.current = result.catch(() => undefined);
     return result;
-  }, [canEdit, detailKey, id, queryClient, t]);
+  }, [canEdit, detailKey, id, isCreate, queryClient, t]);
 
   // The fields saved at once (name, ERP ID, status, end of validity) show Saving, then Saved, as the notes do.
   const [fieldSaves, setFieldSaves] = React.useState(0);
@@ -152,6 +166,10 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
   }, []);
 
   const saveNow = (patch: SupplierPatch, field: FieldKey, optimistic?: Partial<Supplier>) => {
+    if (isCreate) {
+      void save(patch, field, optimistic);
+      return;
+    }
     if (savedTimerRef.current != null) window.clearTimeout(savedTimerRef.current);
     setFieldSaved(false);
     setFieldSaves((n) => n + 1);
@@ -182,6 +200,31 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
     if (targetId) void go(`${SUPPLIERS_PATH}/${targetId}/${nextTab}`);
   };
 
+  // Create sends the draft with the header's name, then goes back where the creation started.
+  const leave = useCreationLeave(close);
+  const title = useCreationTitle({ requiredMessage: t('suppliers.messages.nameRequired'), onCancel: leave });
+  const [creating, setCreating] = React.useState(false);
+  const [createError, setCreateError] = React.useState<string | null>(null);
+  const handleCreate = async () => {
+    if (!canEdit || creating) return;
+    await autosave.flush();
+    const name = title.require();
+    if (!name) return;
+    setCreating(true);
+    setCreateError(null);
+    try {
+      const { erp_supplier_id, notes, status, disabled_at } = draftRef.current;
+      await api.post<Supplier>('/suppliers', { name, erp_supplier_id, notes, status, disabled_at });
+      void queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+      leave();
+    } catch (e) {
+      if (isDuplicateError(e)) title.refuse(t('suppliers.messages.nameTaken'));
+      else setCreateError(getApiErrorMessage(e, t, t('suppliers.messages.createFailed')));
+    } finally {
+      setCreating(false);
+    }
+  };
+
   React.useEffect(() => {
     if (!usagesScrollPending || tab !== 'overview' || !data) return;
     setUsagesScrollPending(false);
@@ -193,7 +236,7 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
   const enabledColor = getDotColor('success', theme.palette.mode);
   const disabledColor = getDotColor('default', theme.palette.mode);
   const statusLabel = (value: StatusValue) => (value === STATUS_DISABLED ? t('suppliers.status.disabled') : t('suppliers.status.enabled'));
-  const savingHint = autosave.status === 'saving' || autosave.status === 'pending' || fieldSaves > 0
+  const savingHint = isCreate ? null : autosave.status === 'saving' || autosave.status === 'pending' || fieldSaves > 0
     ? t('common:status.saving')
     : autosave.status === 'saved' || fieldSaved ? t('common:status.saved') : null;
 
@@ -212,6 +255,8 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
           disabled={disabled}
         />
       </PortfolioMetadataItem>
+      {!isCreate && (
+        <>
       <PortfolioMetadataItem
         label={t('suppliers.fields.contacts')}
         onClick={tab === 'contacts' ? undefined : () => goTo(id, 'contacts')}
@@ -232,6 +277,8 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
       >
         {usages ? usages.total : '…'}
       </PortfolioMetadataItem>
+        </>
+      )}
       {errors.status && (
         <Typography component="span" sx={{ fontSize: 12, color: 'error.main' }}>{errors.status}</Typography>
       )}
@@ -285,16 +332,17 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
         activeTab={tab}
         tabs={[
           { key: 'overview', label: t('shared.labels.overview') },
-          { key: 'contacts', label: t('shared.labels.contacts') },
-          { key: RECORD_HISTORY_TAB_KEY, label: t('shared.labels.history') },
+          { key: 'contacts', label: t('shared.labels.contacts'), disabled: isCreate },
+          { key: RECORD_HISTORY_TAB_KEY, label: t('shared.labels.history'), disabled: isCreate },
         ]}
         onTabChange={(next) => goTo(id, next as TabKey)}
         drawerStorageKey={DRAWER_KEY}
         backLabel={t('suppliers.title')}
-        onBack={close}
-        title={data?.name ?? ''}
-        titleFallback={t('suppliers.supplierFallback')}
-        titleEditor={data ? (
+        onBack={isCreate ? leave : close}
+        {...(isCreate ? title.shellProps : { title: data?.name ?? '' })}
+        titleFallback={isCreate ? t('suppliers.newSupplier') : t('suppliers.supplierFallback')}
+        isCreate={isCreate}
+        titleEditor={data && !isCreate ? (
           <SupplierNameTitle
             name={data.name}
             fallback={t('suppliers.supplierFallback')}
@@ -304,11 +352,11 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
           />
         ) : undefined}
         // The ERP supplier ID is the supplier's business reference (`SUP-001` in the demo data).
-        itemReference={data?.erp_supplier_id || null}
-        onCopyReference={data?.erp_supplier_id ? () => {
+        itemReference={isCreate ? null : data?.erp_supplier_id || null}
+        onCopyReference={!isCreate && data?.erp_supplier_id ? () => {
           void navigator.clipboard?.writeText(data.erp_supplier_id as string).catch(() => undefined);
         } : undefined}
-        nav={nav.total > 0 ? {
+        nav={!isCreate && nav.total > 0 ? {
           currentIndex: nav.index + 1,
           totalCount: nav.total,
           hasPrev: nav.hasPrev,
@@ -320,7 +368,9 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
         } : undefined}
         onSaveShortcut={() => { void autosave.flush(); }}
         metadata={metadata}
-        actions={(
+        actions={isCreate ? (
+          <CreationActions onCreate={() => void handleCreate()} onCancel={leave} busy={!canEdit || creating} />
+        ) : (
           <>
             {savingHint && (
               <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', alignSelf: 'center', mr: 0.5 }}>{savingHint}</Typography>
@@ -352,7 +402,8 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
               }}
               onCommit={() => { void autosave.flush(); }}
             />
-            <RecordUsagesSection owner="suppliers" id={id} ownerName={data.name} />
+            {!isCreate && <RecordUsagesSection owner="suppliers" id={id} ownerName={data.name} />}
+            {createError && <Alert severity="error">{createError}</Alert>}
           </Stack>
         )}
         {tab === 'contacts' && <SupplierContactsTab supplierId={id} canManage={canEdit} />}
@@ -363,106 +414,6 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
             </React.Suspense>
           </WorkspaceTabBoundary>
         )}
-      </PortfolioDetailWorkspaceShell>
-    </Box>
-  );
-}
-
-type CreateValues = { erp_supplier_id: string; notes: string };
-
-function SupplierCreate() {
-  const { t } = useTranslation(['master-data', 'common']);
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const { hasLevel } = useAuth();
-  const canCreate = hasLevel('suppliers', 'manager');
-  const withContext = useListContext();
-
-  const [values, setValues] = React.useState<CreateValues>({ erp_supplier_id: '', notes: '' });
-  const [serverError, setServerError] = React.useState<string | null>(null);
-  const [submitting, setSubmitting] = React.useState(false);
-  // Where the creation started: Create and Cancel go back there.
-  const creationReturn = useCreationReturn(withContext(SUPPLIERS_PATH));
-  const close = () => navigate(creationReturn);
-  const title = useCreationTitle({ requiredMessage: t('suppliers.messages.nameRequired'), onCancel: close });
-
-  const set = (field: keyof CreateValues, value: string) => {
-    setValues((prev) => ({ ...prev, [field]: value }));
-  };
-
-  // Create sends the supplier with the header's name, then goes back where the creation started.
-  const handleCreate = async () => {
-    if (!canCreate || submitting) return;
-    const name = title.require();
-    if (!name) return;
-    setSubmitting(true);
-    setServerError(null);
-    try {
-      await api.post<Supplier>('/suppliers', {
-        name,
-        erp_supplier_id: values.erp_supplier_id.trim() || null,
-        notes: values.notes.trim() || null,
-        status: STATUS_ENABLED,
-        disabled_at: null,
-      });
-      void queryClient.invalidateQueries({ queryKey: ['suppliers'] });
-      close();
-    } catch (e) {
-      if (isDuplicateError(e)) title.refuse(t('suppliers.messages.nameTaken'));
-      else setServerError(getApiErrorMessage(e, t, t('suppliers.messages.createFailed')));
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const textRow = (field: 'erp_supplier_id', label: string, placeholder: string) => (
-    <PropertyRow label={label}>
-      <TextField
-        value={values[field]}
-        onChange={(event) => set(field, event.target.value)}
-        variant="standard"
-        sx={drawerFieldValueSx}
-        placeholder={placeholder}
-        inputProps={{ 'aria-label': label, autoComplete: 'off' }}
-      />
-    </PropertyRow>
-  );
-
-  return (
-    <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-      <PortfolioDetailWorkspaceShell
-        activeTab="overview"
-        tabs={[
-          { key: 'overview', label: t('shared.labels.overview') },
-          { key: 'contacts', label: t('shared.labels.contacts'), disabled: true },
-        ]}
-        onTabChange={() => undefined}
-        drawerStorageKey={DRAWER_KEY}
-        backLabel={t('suppliers.title')}
-        onBack={close}
-        {...title.shellProps}
-        titleFallback={t('suppliers.newSupplier')}
-        isCreate
-        actions={<CreationActions onCreate={() => void handleCreate()} onCancel={close} busy={!canCreate || submitting} />}
-      >
-        <Stack spacing={3} sx={{ maxWidth: 560 }}>
-          <Box>
-            {textRow('erp_supplier_id', t('suppliers.fields.erpSupplierId'), t('suppliers.placeholders.erpSupplierId'))}
-          </Box>
-          <PropertyRow label={t('suppliers.fields.notes')} valueSx={{ maxWidth: 560 }}>
-            <TextField
-              value={values.notes}
-              onChange={(event) => set('notes', event.target.value)}
-              multiline
-              minRows={3}
-              variant="standard"
-              sx={drawerFieldValueSx}
-              placeholder={t('suppliers.placeholders.notes')}
-              inputProps={{ 'aria-label': t('suppliers.fields.notes') }}
-            />
-          </PropertyRow>
-          {serverError && <Alert severity="error">{serverError}</Alert>}
-        </Stack>
       </PortfolioDetailWorkspaceShell>
     </Box>
   );

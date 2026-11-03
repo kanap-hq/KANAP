@@ -29,9 +29,10 @@ export type UsageOwner = 'suppliers' | 'contacts';
 export const recordUsagesKey = (owner: UsageOwner, id: string) => [owner, id, 'usages'] as const;
 
 /** Where a supplier or a contact is used, refetched on each visit: other pages change it. */
-export function useRecordUsages(owner: UsageOwner, id: string) {
+export function useRecordUsages(owner: UsageOwner, id: string, enabled = true) {
   return useQuery({
     queryKey: recordUsagesKey(owner, id),
+    enabled,
     queryFn: async () => (await api.get<Usages>(`/${owner}/${id}/usages`)).data,
     staleTime: 0,
     refetchOnMount: 'always',
