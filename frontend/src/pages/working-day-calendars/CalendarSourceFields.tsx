@@ -33,7 +33,8 @@ export default function CalendarSourceFields({
   countryCode: string | null;
   regionCode: string | null;
   error?: string;
-  onChoose: (country: CalendarCountry | null, regionCode: string | null) => void;
+  /** `region`: the choice came from the region list, the source's last step. */
+  onChoose: (country: CalendarCountry | null, regionCode: string | null, from: 'country' | 'region') => void;
 }) {
   const { t } = useTranslation(['master-data']);
   const country = countryCode ? countries.find((option) => option.code === countryCode) ?? null : null;
@@ -46,7 +47,7 @@ export default function CalendarSourceFields({
           value={country}
           loading={loading}
           filterOptions={filterCountries}
-          onChange={(_event, option) => onChoose(option, null)}
+          onChange={(_event, option) => onChoose(option, null, 'country')}
           getOptionLabel={(option) => option.name}
           isOptionEqualToValue={(option, value) => option.code === value.code}
           ListboxProps={{ sx: drawerAutocompleteListboxSx }}
@@ -68,7 +69,7 @@ export default function CalendarSourceFields({
           <Select
             variant="standard"
             value={regionCode ?? ''}
-            onChange={(event) => onChoose(country, String(event.target.value) || null)}
+            onChange={(event) => onChoose(country, String(event.target.value) || null, 'region')}
             displayEmpty
             sx={pageSelectSx}
             MenuProps={compactSelectMenuProps}

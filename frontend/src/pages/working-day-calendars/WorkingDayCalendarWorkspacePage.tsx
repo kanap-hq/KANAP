@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useKanapDialogs } from '../../components/design';
 import { useAuth } from '../../auth/AuthContext';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
-import { CreationActions, useCreationLeave, useCreationTitle } from '../../components/workspace/creation';
+import { CreationActions, useCreationLeave, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
 import {
   WORKING_DAY_PROFILES_QUERY_KEY,
   useCalendarCountries,
@@ -209,14 +209,25 @@ export default function WorkingDayCalendarWorkspacePage() {
     }
   };
 
-  // Create sends the draft with the header's name, then goes back where the creation started.
+  // The draft is created once it has its name and code (a country fills both); the calendar then
+  // opens, its days and every tab available, with Create (kept, back where the creation started)
+  // and Cancel (deleted).
   const leave = useCreationLeave(handleClose);
-  const title = useCreationTitle({ requiredMessage: t('workingDayCalendars.messages.nameRequired'), onCancel: leave });
-  const [creating, setCreating] = React.useState(false);
+  const title = useCreationTitle({
+    requiredMessage: t('workingDayCalendars.messages.nameRequired'),
+    onCancel: leave,
+    onCommit: () => attemptCreation(),
+  });
+  // A country with regions waits for its region (or the whole country): both are set at creation only.
+  const awaitingRegionRef = React.useRef(false);
+  const attemptCreation = () => {
+    if (!awaitingRegionRef.current) creation.attempt();
+  };
   // The code and name the last country choice wrote: a field still holding them follows the next choice.
   const prefillRef = React.useRef<{ code: string; name: string }>({ code: '', name: '' });
 
-  const chooseSource = (nextCountry: CalendarCountry | null, regionCode: string | null) => {
+  const chooseSource = (nextCountry: CalendarCountry | null, regionCode: string | null, from: 'country' | 'region') => {
+    awaitingRegionRef.current = from === 'country' && !!nextCountry && nextCountry.regions.length > 0;
     const nextRegion = nextCountry && regionCode ? nextCountry.regions.find((option) => option.code === regionCode) ?? null : null;
     const source = {
       country_iso: nextCountry?.code ?? null,
@@ -235,40 +246,58 @@ export default function WorkingDayCalendarWorkspacePage() {
     if (follows(title.current(), previous.name)) title.fill(prefill.name);
   };
 
-  const handleCreate = async () => {
-    if (!canEdit || creating) return;
-    const name = title.require();
-    const form = draftRef.current;
-    if (!form.code) setErrors((prev) => ({ ...prev, code: t('workingDayCalendars.messages.codeRequired') }));
-    if (!name || !form.code) return;
-    setCreating(true);
-    setPageError(null);
-    try {
-      const created = await createWorkingDayProfile({
-        code: form.code,
-        name,
-        description: form.description,
-        status: form.status,
-        disabled_at: form.disabled_at,
-        ...(form.country_iso
-          ? { country_iso: form.country_iso, region_code: form.region_code }
-          : { days_by_year: form.days_by_year }),
-      });
-      void queryClient.invalidateQueries({ queryKey: ['working-day-profiles'] });
-      afterWrite();
-      // The new calendar opens in place, its days and every tab available.
-      navigate(`${WORKING_DAY_CALENDARS_PATH}/${created.id}/overview${listContext ? `?${listContext}` : ''}`, { replace: true });
-    } catch (e) {
-      const message = getApiErrorMessage(e, t, t('workingDayCalendars.messages.createFailed'));
-      const field = refusalField(e);
-      // A refusal goes under the field it names when the page shows that field.
-      if (field === 'name') title.refuse(message);
-      else if (field === 'region_code') setErrors((prev) => ({ ...prev, country_iso: message }));
-      else if (field) setErrors((prev) => ({ ...prev, [field]: message }));
-      else setPageError(message);
-    } finally {
-      setCreating(false);
+  const creation = useDraftCreation({
+    isCreate,
+    family: 'working_day_profiles',
+    apiBase: '/working-day-profiles',
+    recordId: stored?.id ?? null,
+    listPath: `${WORKING_DAY_CALENDARS_PATH}${listContext ? `?${listContext}` : ''}`,
+    recordLabel: t('workingDayCalendars.creationRecord'),
+    queryKeyPrefixes: ['working-day-profiles'],
+    ready: () => !!title.current().trim() && !!draftRef.current.code,
+    post: async () => {
+      const form = draftRef.current;
+      setPageError(null);
+      try {
+        const created = await createWorkingDayProfile({
+          code: form.code,
+          name: title.current().trim(),
+          description: form.description,
+          status: form.status,
+          disabled_at: form.disabled_at,
+          ...(form.country_iso
+            ? { country_iso: form.country_iso, region_code: form.region_code }
+            : { days_by_year: form.days_by_year }),
+        });
+        void queryClient.invalidateQueries({ queryKey: ['working-day-profiles'] });
+        afterWrite();
+        return { id: created.id, token: created.creation_token, path: `${WORKING_DAY_CALENDARS_PATH}/${created.id}/overview${listContext ? `?${listContext}` : ''}` };
+      } catch (e) {
+        const message = getApiErrorMessage(e, t, t('workingDayCalendars.messages.createFailed'));
+        const field = refusalField(e);
+        // A refusal goes under the field it names when the page shows that field.
+        if (field === 'name') title.refuse(message);
+        else if (field === 'region_code') setErrors((prev) => ({ ...prev, country_iso: message }));
+        else if (field) setErrors((prev) => ({ ...prev, [field]: message }));
+        else setPageError(message);
+        return null;
+      }
+    },
+    onError: setPageError,
+  });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  React.useEffect(() => { attemptCreation(); }, [creation.attempt, draft]);
+  const handleCreate = () => {
+    if (creation.beingCreated) {
+      creation.finishCreation();
+      return;
     }
+    if (!canEdit) return;
+    const name = title.require();
+    const { code } = draftRef.current;
+    if (!code) setErrors((prev) => ({ ...prev, code: t('workingDayCalendars.messages.codeRequired') }));
+    if (!name || !code) return;
+    void creation.createAndLeave();
   };
 
   const usage = data && !isCreate ? calendarUsageLine(t, data.opex_count ?? 0, data.capex_count ?? 0) : null;
@@ -277,8 +306,12 @@ export default function WorkingDayCalendarWorkspacePage() {
   const usageText = canDelete ? deleteBlock ?? usage : usage;
   const disabled = !canEdit;
 
-  const actions = isCreate ? (
-    <CreationActions onCreate={() => void handleCreate()} onCancel={leave} busy={!canEdit || creating} />
+  const actions = isCreate || creation.beingCreated ? (
+    <CreationActions
+      onCreate={handleCreate}
+      onCancel={isCreate ? leave : () => { void creation.cancelCreation(); }}
+      busy={!canEdit || creation.busy}
+    />
   ) : canDelete && data ? (
     <DeleteIconButton onClick={() => void handleDelete()} disabled={deleting || !!deleteBlock} />
   ) : undefined;

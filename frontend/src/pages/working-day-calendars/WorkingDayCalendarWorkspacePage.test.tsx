@@ -149,15 +149,17 @@ describe('WorkingDayCalendarWorkspacePage', () => {
     });
   });
 
-  it('creates with an explicit button and opens the new calendar', async () => {
-    mocked.createWorkingDayProfile.mockResolvedValue({ ...CALENDAR, id: 'wd-new' });
+  it('creates the calendar once it has its code and its name is committed, then opens it', async () => {
+    mocked.createWorkingDayProfile.mockResolvedValue({ ...CALENDAR, id: 'wd-new', creation_token: 'token-1' });
     renderAt('/master-data/working-day-calendars/new/overview?sort=name%3AASC');
     // The calendar's own page: the code sits in its Properties drawer.
     expect(screen.getByRole('complementary')).toContainElement(screen.getByLabelText('workingDayCalendars.fields.code'));
     fireEvent.change(screen.getByLabelText('workingDayCalendars.fields.code'), { target: { value: ' CAL-02 ' } });
     fireEvent.blur(screen.getByLabelText('workingDayCalendars.fields.code'));
-    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Contractors' } });
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    fireEvent.change(title, { target: { value: 'Contractors' } });
+    expect(mocked.createWorkingDayProfile).not.toHaveBeenCalled();
+    fireEvent.blur(title);
     await waitFor(() => expect(mocked.createWorkingDayProfile).toHaveBeenCalledWith({
       code: 'CAL-02', name: 'Contractors', description: null, status: 'enabled', disabled_at: null, days_by_year: {},
     }));
@@ -184,8 +186,8 @@ describe('WorkingDayCalendarWorkspacePage', () => {
     expect(screen.queryByRole('button', { name: 'admin:auditLogs.history.title' })).toBeNull();
   });
 
-  it('prefills code and name from a country and its region, and creates a standard calendar', async () => {
-    mocked.createWorkingDayProfile.mockResolvedValue({ ...MOSELLE, id: 'wd-new' });
+  it('prefills code and name from a country and its region, and creates the standard calendar once the region is chosen', async () => {
+    mocked.createWorkingDayProfile.mockResolvedValue({ ...MOSELLE, id: 'wd-new', creation_token: 'token-1' });
     renderAt('/master-data/working-day-calendars/new/overview');
     const country = screen.getByRole('combobox', { name: 'workingDayCalendars.fields.country' });
     await waitFor(() => expect(mocked.listCountries).toHaveBeenCalledWith('en'));
@@ -193,6 +195,8 @@ describe('WorkingDayCalendarWorkspacePage', () => {
     fireEvent.click(await screen.findByRole('option', { name: 'France' }));
     expect(screen.getByLabelText('workingDayCalendars.fields.code')).toHaveValue('FR');
     expect(screen.getByRole('textbox', { name: 'common:buttons.editTitle' })).toHaveValue('France');
+    // France has regions: the calendar waits for one, or the whole country.
+    expect(mocked.createWorkingDayProfile).not.toHaveBeenCalled();
 
     const region = screen.getByRole('combobox', { name: 'workingDayCalendars.fields.region' });
     expect(region).toHaveTextContent('workingDayCalendars.wholeCountry');
@@ -200,8 +204,6 @@ describe('WorkingDayCalendarWorkspacePage', () => {
     fireEvent.click(await screen.findByRole('option', { name: 'Moselle' }));
     expect(screen.getByLabelText('workingDayCalendars.fields.code')).toHaveValue('FR-57');
     expect(screen.getByRole('textbox', { name: 'common:buttons.editTitle' })).toHaveValue('France (Moselle)');
-
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(mocked.createWorkingDayProfile).toHaveBeenCalledWith({
       code: 'FR-57',
       name: 'France (Moselle)',

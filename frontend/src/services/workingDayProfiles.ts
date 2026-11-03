@@ -138,8 +138,9 @@ export async function listCalendarSuggestions(lang: string): Promise<CalendarSug
   return Array.isArray(res.data?.items) ? res.data.items : [];
 }
 
-export async function createWorkingDayProfile(body: WorkingDayProfileWrite): Promise<WorkingDayProfileDetail> {
-  const res = await api.post<WorkingDayProfileDetail>(WORKING_DAY_PROFILES_ENDPOINT, body);
+/** The created calendar, with the token that lets its creator cancel the creation (`DELETE :id/creation`). */
+export async function createWorkingDayProfile(body: WorkingDayProfileWrite): Promise<WorkingDayProfileDetail & { creation_token: string }> {
+  const res = await api.post<WorkingDayProfileDetail & { creation_token: string }>(WORKING_DAY_PROFILES_ENDPOINT, body);
   return res.data;
 }
 
