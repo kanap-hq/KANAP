@@ -37,6 +37,8 @@ export function PropertyRow({
 }: PropertyRowProps) {
   return (
     <Box
+      // A new record's Tab goes from its title through the required rows (`PortfolioDetailWorkspaceShell`).
+      data-required-field={required ? '' : undefined}
       sx={mergeSx(
         {
           display: 'flex',
