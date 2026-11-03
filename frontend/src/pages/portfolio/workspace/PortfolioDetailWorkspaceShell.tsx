@@ -61,6 +61,8 @@ type PortfolioDetailWorkspaceShellProps = {
   onTitleSave?: (nextTitle: string) => void;
   /** Fired on each keystroke in the title, so the page can drop a refusal the draft has answered. */
   onTitleDraftChange?: (draft: string) => void;
+  /** Tab in the title with a name typed: the name is committed, and the page moves the focus to the next field to fill. */
+  titleOnTab?: () => void;
   /** The longest title the record accepts (the input stops there). */
   titleMaxLength?: number;
   /**
@@ -72,8 +74,6 @@ type PortfolioDetailWorkspaceShellProps = {
   titleOnCancel?: () => void;
   /** Each new value moves the focus to the title (Create on an empty title). */
   titleFocusRequest?: number;
-  /** Tab in the title with a name typed: the name is committed, and the page moves the focus to the next field to fill. */
-  titleOnTab?: () => void;
   /** Omitted (e.g. on a create page), the shell draws no Properties tab and no drawer. */
   properties?: React.ReactNode;
   tabs: PortfolioDetailWorkspaceTab[];
@@ -213,11 +213,11 @@ export default function PortfolioDetailWorkspaceShell({
   onTabChange,
   onTitleSave,
   onTitleDraftChange,
+  titleOnTab,
   titleAutoEdit = false,
   titleMaxLength,
   titleOnCancel,
   titleFocusRequest,
-  titleOnTab,
   titleRequiredMessage,
   properties,
   tabs,
@@ -441,13 +441,13 @@ export default function PortfolioDetailWorkspaceShell({
                         maxLength={titleMaxLength}
                         onSave={onTitleSave}
                         onDraftChange={onTitleDraftChange}
+                        onTab={titleOnTab}
                         requiredMessage={titleRequiredMessage}
                         error={titleError}
                         autoEdit={titleAutoEdit}
                         emphasizeEmpty={titleAutoEdit}
                         onCancel={titleOnCancel}
                         focusRequest={titleFocusRequest}
-                        onTab={titleOnTab}
                       />
                     </>
                   )}
