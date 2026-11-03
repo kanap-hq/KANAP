@@ -141,7 +141,7 @@ export default function CompanyMetricsTab({ companyId, year, onYearChange, readO
   // Not disabled while a save runs (a click on the next year must land); disabled when nothing reliable is loaded.
   const disabled = readOnly || frozen || freezeLoading || isLoading || !!loadError;
   const rows: Array<{ field: MetricField; label: string; required?: boolean; placeholder?: string }> = [
-    { field: 'headcount', label: t('companies.fields.headcount'), required: true },
+    { field: 'headcount', label: t('companies.fields.headcount') },
     { field: 'it_users', label: t('companies.fields.itUsers'), placeholder: t('companies.placeholders.itUsers') },
     { field: 'turnover', label: t('companies.fields.turnover', { currency: baseCurrency }), placeholder: t('companies.placeholders.turnover') },
   ];
