@@ -16,6 +16,8 @@ import {
 } from '../../common/ag-grid-filtering';
 import { PortfolioProjectsBaseService, ServiceOpts } from './portfolio-projects-base.service';
 import { projectInvolvesUsersSql } from './portfolio-report-filters';
+import { localTodayYmd } from './portfolio-timesheet.service';
+import { timelineStart } from './portfolio-timeline-start';
 import { orderListQuery } from '../../common/list-sort';
 import { parseItemNumber } from '../../common/parse-item-number';
 
@@ -794,9 +796,8 @@ export class PortfolioProjectsListService extends PortfolioProjectsBaseService {
   ) {
     const mg = this.getManager(opts);
     const monthsBack = query.months || 3;
-
-    const startDate = new Date();
-    startDate.setMonth(startDate.getMonth() - monthsBack);
+    // A calendar day, compared as a date: the time of day must not drop the projects that end on it.
+    const startYmd = timelineStart(localTodayYmd(), monthsBack);
 
     // Note: RLS via app_current_tenant() automatically filters by tenant.
     let sql = `
@@ -810,10 +811,10 @@ export class PortfolioProjectsListService extends PortfolioProjectsBaseService {
         OR p.actual_end IS NOT NULL
       )
       AND (
-        p.planned_end >= $1 OR p.actual_end >= $1
+        p.planned_end >= $1::date OR p.actual_end >= $1::date
       )
     `;
-    const params: any[] = [startDate];
+    const params: any[] = [startYmd];
 
     if (opts?.accessScope?.userId) {
       params.push(opts.accessScope.userId);
@@ -854,9 +855,9 @@ export class PortfolioProjectsListService extends PortfolioProjectsBaseService {
            JOIN portfolio_projects p ON p.id = m.project_id
            WHERE m.project_id = ANY($1)
            AND m.target_date IS NOT NULL
-           AND m.target_date >= $2
+           AND m.target_date >= $2::date
            ORDER BY m.target_date ASC`,
-          [projectIds, startDate],
+          [projectIds, startYmd],
         )
       : [];
 
@@ -864,7 +865,7 @@ export class PortfolioProjectsListService extends PortfolioProjectsBaseService {
       projects,
       dependencies,
       milestones,
-      viewStart: startDate.toISOString().split('T')[0],
+      viewStart: startYmd,
     };
   }
 }
