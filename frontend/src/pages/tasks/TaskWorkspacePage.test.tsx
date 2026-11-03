@@ -140,10 +140,6 @@ vi.mock('../../hooks/useTaskNav', () => ({
   }),
 }));
 
-vi.mock('./components/TaskSidebar', () => ({
-  default: () => <div data-testid="task-sidebar" />,
-}));
-
 const navigateMock = vi.hoisted(() => vi.fn());
 
 vi.mock('react-router-dom', async (importOriginal) => ({
@@ -222,14 +218,6 @@ vi.mock('./components/TaskPropertiesDrawer', () => ({
   ),
 }));
 
-vi.mock('../../components/ExportButton', () => ({
-  default: () => <button type="button">Export</button>,
-}));
-
-vi.mock('../../components/ImportButton', () => ({
-  default: () => <button type="button">Import</button>,
-}));
-
 vi.mock('../../components/ShareDialog', () => ({
   default: () => null,
 }));
@@ -285,20 +273,6 @@ function createLocalStorageMock() {
       store.clear();
     }),
   };
-}
-
-function renderCreatePage() {
-  return render(
-    <ThemeProvider theme={createAppTheme('light')}>
-      <KanapDialogProvider>
-        <MemoryRouter initialEntries={['/portfolio/tasks/new/overview']}>
-          <Routes>
-            <Route path="/portfolio/tasks/:id/:tab" element={<TaskWorkspacePage />} />
-          </Routes>
-        </MemoryRouter>
-      </KanapDialogProvider>
-    </ThemeProvider>,
-  );
 }
 
 function renderEditPage(initialEntry = '/portfolio/tasks/task-1/overview') {
@@ -370,59 +344,6 @@ function makeTask(overrides: Record<string, any> = {}) {
     ...overrides,
   };
 }
-
-describe('TaskWorkspacePage create mode', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    translationMock.reset();
-    taskQueryMock.task = undefined;
-    taskQueryMock.isLoading = false;
-    taskQueryMock.refetch.mockReset();
-    taskQueryMock.refetch.mockResolvedValue(undefined);
-
-    const localStorageMock = createLocalStorageMock();
-    vi.stubGlobal('localStorage', localStorageMock);
-    Object.defineProperty(window, 'localStorage', {
-      value: localStorageMock,
-      configurable: true,
-    });
-
-    Object.defineProperty(window, 'matchMedia', {
-      writable: true,
-      value: vi.fn().mockImplementation((query: string) => ({
-        matches: false,
-        media: query,
-        onchange: null,
-        addListener: vi.fn(),
-        removeListener: vi.fn(),
-        addEventListener: vi.fn(),
-        removeEventListener: vi.fn(),
-        dispatchEvent: vi.fn(),
-      })),
-    });
-  });
-
-  it('preserves an in-progress draft when the language changes', async () => {
-    renderCreatePage();
-
-    const titlePlaceholder = 'portfolio:workspace.task.title.placeholder__0';
-    const descriptionPlaceholder = 'portfolio:workspace.task.description.placeholder__0';
-
-    const titleInput = await screen.findByPlaceholderText(titlePlaceholder);
-    // The description editor mounts after the title field: wait for it too.
-    const descriptionInput = await screen.findByPlaceholderText(descriptionPlaceholder);
-
-    fireEvent.change(titleInput, { target: { value: 'Investigate disappearing draft' } });
-    fireEvent.change(descriptionInput, { target: { value: 'The form should keep this text.' } });
-
-    act(() => {
-      translationMock.emitLanguageChange();
-    });
-
-    expect(screen.getByDisplayValue('Investigate disappearing draft')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('The form should keep this text.')).toBeInTheDocument();
-  });
-});
 
 describe('TaskWorkspacePage relation changes', () => {
   beforeEach(() => {
@@ -667,54 +588,6 @@ describe('TaskWorkspacePage unsaved close', () => {
       { description: 'Updated description' },
     ), { timeout: 4000 });
   });
-
-  async function typeCreateTitle() {
-    renderCreatePage();
-    const title = await screen.findByPlaceholderText('portfolio:workspace.task.title.placeholder__0');
-    fireEvent.change(title, { target: { value: 'Draft title' } });
-    return title;
-  }
-
-  it('closes a new task with no typed content without asking', async () => {
-    renderCreatePage();
-    await screen.findByPlaceholderText('portfolio:workspace.task.title.placeholder__0');
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.cancel__0' }));
-    expect(screen.queryByRole('dialog')).toBeNull();
-    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/portfolio/tasks'));
-  });
-
-  it('asks before Cancel leaves a new task with a title, and Stay keeps it', async () => {
-    const title = await typeCreateTitle();
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.cancel__0' }));
-    const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText('common:unsaved.leaveWithoutSaving.message__0')).toBeInTheDocument();
-    expect(within(dialog).getByRole('button', { name: 'common:unsaved.leaveWithoutSaving.confirm__0' })).toBeInTheDocument();
-    fireEvent.click(within(dialog).getByRole('button', { name: 'common:unsaved.leaveWithoutSaving.cancel__0' }));
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    expect(navigateMock).not.toHaveBeenCalled();
-    expect(title).toHaveValue('Draft title');
-  });
-
-  it('asks before the back arrow leaves a new task with a title', async () => {
-    await typeCreateTitle();
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.back__0' }));
-    const dialog = await screen.findByRole('dialog');
-    fireEvent.click(within(dialog).getByRole('button', { name: 'common:unsaved.leaveWithoutSaving.confirm__0' }));
-    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/portfolio/tasks'));
-    expect(api.post).not.toHaveBeenCalled();
-  });
-
-  it('asks the same question before a menu link leaves a new task with a title', async () => {
-    const title = await typeCreateTitle();
-    let answer!: Promise<boolean>;
-    await act(async () => { answer = confirmLeave(); });
-    const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText('common:unsaved.leaveWithoutSaving.message__0')).toBeInTheDocument();
-    fireEvent.click(within(dialog).getByRole('button', { name: 'common:unsaved.leaveWithoutSaving.cancel__0' }));
-    await expect(answer).resolves.toBe(false);
-    expect(navigateMock).not.toHaveBeenCalled();
-    expect(title).toHaveValue('Draft title');
-  });
 });
 
 describe('TaskWorkspacePage tabs', () => {
@@ -780,13 +653,5 @@ describe('TaskWorkspacePage tabs', () => {
     renderTaskAddress('/portfolio/tasks/task-1/overview?projectId=project-a&projectTab=tasks');
     fireEvent.click(await screen.findByRole('tab', { name: 'portfolio:workspace.task.tabs.history__0' }));
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/portfolio/tasks/task-1/history?projectId=project-a&projectTab=tasks'));
-  });
-
-  it('has no tab row while the task is being created', async () => {
-    taskQueryMock.task = undefined;
-    renderCreatePage();
-    await screen.findByPlaceholderText('portfolio:workspace.task.title.placeholder__0');
-    expect(screen.queryByRole('tab')).toBeNull();
-    expect(screen.queryByTestId('record-history-tab')).toBeNull();
   });
 });

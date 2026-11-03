@@ -836,21 +836,14 @@
       },
       "messages": {
         "createFailed": "Failed to create task",
-        "creating": "Creating task…",
         "deleteFailed": "Failed to delete task",
-        "documentImportAfterCreate": "Save the task before importing a document.",
-        "documentImportFailed": "Failed to import document",
-        "importPermissionRequired": "You do not have permission to import a document.",
-        "importSaveFirst": "Save this task before importing a document.",
         "invalidRelationConfiguration": "Invalid relation configuration",
-        "invalidRelationType": "Invalid related object type",
         "invalidStandaloneRelation": "Standalone tasks cannot use that relation.",
         "loadFailed": "Failed to load task",
         "loading": "Loading task…",
         "notFound": "Task not found",
         "relatedItemRequired": "Please select a related item",
         "saveFailed": "Failed to save task",
-        "titleRequired": "Title is required",
         "stillFollowing": "You still follow this task."
       },
       "sidebar": {
@@ -873,37 +866,15 @@
           "timeSpent": "Time spent",
           "viewers": "Viewers"
         },
-        "priorityOptions": {
-          "blocker": "Blocker (+10)",
-          "high": "High (+5)",
-          "low": "Low (-5)",
-          "normal": "Medium (0)",
-          "optional": "Optional (-10)"
-        },
         "sections": {
-          "classification": "Classification",
-          "context": "Context",
-          "dates": "Dates",
-          "details": "Task details",
           "knowledge": "Knowledge",
-          "people": "People",
           "time": "Time"
         },
         "values": {
           "assigneeMissing": "Assignee missing",
-          "noClassification": "No classification set.",
           "projectLevel": "Project-level",
           "requestorMissing": "Requestor missing",
-          "standaloneTask": "Standalone task",
-          "unknown": "Unknown",
-          "relatedTypes": {
-            "budget": "Budget",
-            "capex": "CAPEX",
-            "contract": "Contract",
-            "incident": "Incident",
-            "project": "Project",
-            "related": "Related"
-          }
+          "standaloneTask": "Standalone task"
         }
       },
       "workLog": {
@@ -937,6 +908,9 @@
       "tabs": {
         "overview": "Overview",
         "history": "History"
+      },
+      "creation": {
+        "record": "The task"
       }
     }
   },

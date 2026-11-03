@@ -355,7 +355,7 @@ export default function EditableTitle({
           mb: '-1px',
           width: '100%',
           '&::placeholder': { color: theme.palette.kanap.text.tertiary, opacity: 1 },
-          // The look of a task title still to give (TaskWorkspacePage `titleBarSx`), plain once a
+          // The look of a title still to give (a record being created), plain once a
           // character is typed. The box keeps its size, so the text does not move. On the dark
           // background the same blue needs about twice the strength to show.
           ...(emphasizeEmpty

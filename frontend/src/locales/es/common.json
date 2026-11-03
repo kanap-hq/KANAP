@@ -1748,7 +1748,15 @@
       "contacts_one": "{{count}} contacto",
       "contacts_other": "{{count}} contactos",
       "tasks_one": "{{count}} tarea",
-      "tasks_other": "{{count}} tareas"
+      "tasks_other": "{{count}} tareas",
+      "comments_one": "{{count}} comentario",
+      "comments_other": "{{count}} comentarios",
+      "documentVersions_one": "{{count}} versión",
+      "documentVersions_other": "{{count}} versiones",
+      "classifications_one": "{{count}} clasificación",
+      "classifications_other": "{{count}} clasificaciones",
+      "contributors_one": "{{count}} colaborador",
+      "contributors_other": "{{count}} colaboradores"
     },
     "titleRequired": "Escriba un título."
   },

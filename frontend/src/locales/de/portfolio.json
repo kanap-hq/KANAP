@@ -836,21 +836,14 @@
       },
       "messages": {
         "createFailed": "Aufgabe konnte nicht erstellt werden",
-        "creating": "Aufgabe wird erstellt…",
         "deleteFailed": "Aufgabe konnte nicht gelöscht werden",
-        "documentImportAfterCreate": "Speichern Sie die Aufgabe, bevor Sie ein Dokument importieren.",
-        "documentImportFailed": "Dokumentimport fehlgeschlagen",
-        "importPermissionRequired": "Sie haben keine Berechtigung, ein Dokument zu importieren.",
-        "importSaveFirst": "Speichern Sie diese Aufgabe, bevor Sie ein Dokument importieren.",
         "invalidRelationConfiguration": "Ungültige Beziehungskonfiguration",
-        "invalidRelationType": "Ungültiger verknüpfter Objekttyp",
         "invalidStandaloneRelation": "Eigenständige Aufgaben können diese Beziehung nicht verwenden.",
         "loadFailed": "Aufgabe konnte nicht geladen werden",
         "loading": "Aufgabe wird geladen…",
         "notFound": "Aufgabe nicht gefunden",
         "relatedItemRequired": "Bitte wählen Sie ein verknüpftes Element aus",
         "saveFailed": "Aufgabe konnte nicht gespeichert werden",
-        "titleRequired": "Titel ist erforderlich",
         "stillFollowing": "Sie folgen dieser Aufgabe weiterhin."
       },
       "sidebar": {
@@ -873,37 +866,15 @@
           "timeSpent": "Aufgewendete Zeit",
           "viewers": "Beobachter"
         },
-        "priorityOptions": {
-          "blocker": "Blocker (+10)",
-          "high": "Hoch (+5)",
-          "low": "Niedrig (-5)",
-          "normal": "Mittel (0)",
-          "optional": "Optional (-10)"
-        },
         "sections": {
-          "classification": "Klassifizierung",
-          "context": "Kontext",
-          "dates": "Daten",
-          "details": "Aufgabendetails",
           "knowledge": "Wissen",
-          "people": "Personen",
           "time": "Zeit"
         },
         "values": {
           "assigneeMissing": "Zuständiger fehlt",
-          "noClassification": "Keine Klassifizierung festgelegt.",
           "projectLevel": "Projektebene",
           "requestorMissing": "Antragsteller fehlt",
-          "standaloneTask": "Eigenständige Aufgabe",
-          "unknown": "Unbekannt",
-          "relatedTypes": {
-            "budget": "Budget",
-            "capex": "CAPEX",
-            "contract": "Vertrag",
-            "incident": "Vorfall",
-            "project": "Projekt",
-            "related": "Verknüpft"
-          }
+          "standaloneTask": "Eigenständige Aufgabe"
         }
       },
       "workLog": {
@@ -937,6 +908,9 @@
       "tabs": {
         "overview": "Übersicht",
         "history": "Verlauf"
+      },
+      "creation": {
+        "record": "Die Aufgabe"
       }
     }
   },
