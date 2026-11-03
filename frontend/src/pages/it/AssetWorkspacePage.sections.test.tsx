@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -7,7 +7,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 import { NotifyProvider } from '../../components/notify/NotifyProvider';
 import { KanapDialogProvider } from '../../components/design';
-import { confirmLeave } from '../../hooks/leaveGuard';
 import AssetWorkspacePage from './AssetWorkspacePage';
 import { invalidateTechnologyLinks } from './components/technologyLinkQueries';
 
@@ -248,17 +247,18 @@ describe('Asset workspace: section placement', () => {
 
   it('leaves support and the knowledge base out of the overview when creating an asset', async () => {
     renderAt('/it/assets/new/overview');
-    await screen.findByText('workspace.asset.overview.basics');
+    await screen.findAllByTestId('creation-preview');
     expect(screen.queryByText('support-panel')).toBeNull();
     expect(screen.queryByText('knowledge-panel')).toBeNull();
   });
 
   it('opens the creation with the Cluster switch on when the list asks for a new cluster, off otherwise', async () => {
+    // The new page shows the switch in its preview, out of reach.
     renderAt('/it/assets/new/overview?cluster=1');
-    expect(await screen.findByRole('checkbox', { name: 'workspace.asset.meta.cluster' })).toBeChecked();
+    expect(await screen.findByRole('checkbox', { name: 'workspace.asset.meta.cluster', hidden: true })).toBeChecked();
     cleanup();
     renderAt('/it/assets/new/overview');
-    expect(await screen.findByRole('checkbox', { name: 'workspace.asset.meta.cluster' })).not.toBeChecked();
+    expect(await screen.findByRole('checkbox', { name: 'workspace.asset.meta.cluster', hidden: true })).not.toBeChecked();
   });
 
   it('lists hosted applications, technologies, then vulnerabilities in the operations tab', async () => {
@@ -447,16 +447,6 @@ describe('Asset workspace: section placement', () => {
     expect(screen.queryByText('srv-fqdn')).toBeNull();
   });
 
-  it('keeps identity and IP addresses editable when creating an asset, without connections or technologies', async () => {
-    renderAt('/it/assets/new/network');
-    await screen.findByText('workspace.asset.technical.identity');
-    expect(screen.getByPlaceholderText('workspace.asset.technical.hostnamePlaceholder')).toBeEnabled();
-    expect(screen.getByText('workspace.asset.technical.ipAddresses')).toBeInTheDocument();
-    expect(screen.queryByText('workspace.asset.connections.title')).toBeNull();
-    expect(screen.queryByText('technologies-section')).toBeNull();
-    expect(currentPath()).toBe('/it/assets/new/network');
-  });
-
   it('shows a not-found screen, and no editable asset, when the reference is unknown', async () => {
     renderAt('/it/assets/AST-999/overview?q=nyc');
     expect(await screen.findByText('workspace.asset.notFound')).toBeInTheDocument();
@@ -517,24 +507,6 @@ describe('Asset workspace: section placement', () => {
       renderAt('/it/assets/asset-1/network');
       await screen.findByText('workspace.asset.technical.ipAddresses');
       expectPanelOrder();
-    });
-
-    it('shows the same rows when creating an asset', async () => {
-      renderAt('/it/assets/new/network');
-      await screen.findByText('workspace.asset.technical.ipAddresses');
-      expectPanelOrder();
-    });
-
-    it('sets the cluster state without any call when creating an asset', async () => {
-      renderAt('/it/assets/new/overview');
-      const toggle = await screen.findByRole('checkbox', { name: 'workspace.asset.meta.cluster' });
-      expect(toggle).toBeEnabled();
-      expect(toggle).not.toBeChecked();
-      fireEvent.click(toggle);
-      expect(toggle).toBeChecked();
-      expect(patch).not.toHaveBeenCalled();
-      expect(post).not.toHaveBeenCalled();
-      expect(del).not.toHaveBeenCalled();
     });
 
     it('saves at once, and removes nothing, when an asset becomes a cluster', async () => {
@@ -976,9 +948,9 @@ describe('Asset workspace: section placement', () => {
       ]));
     });
 
-    it('opens only Overview and Network when creating an asset', async () => {
+    it('opens only Overview when creating an asset', async () => {
       renderAt('/it/assets/new/overview');
-      await screen.findByText('workspace.asset.overview.basics');
+      await screen.findAllByTestId('creation-preview');
       expect(tabNames()).toEqual([
         'workspace.asset.tabs.overview',
         'workspace.asset.tabs.operations',
@@ -988,7 +960,7 @@ describe('Asset workspace: section placement', () => {
         'workspace.asset.tabs.history',
       ]);
       expect(tab('overview')).toBeEnabled();
-      expect(tab('network')).toBeEnabled();
+      expect(tab('network')).toBeDisabled();
       expect(tab('operations')).toBeDisabled();
       expect(tab('dependencies')).toBeDisabled();
       expect(tab('relations')).toBeDisabled();
@@ -1023,120 +995,9 @@ describe('Asset workspace: section placement', () => {
     });
 
     it('sends a creation on a tab it cannot open to the overview', async () => {
-      renderAt('/it/assets/new/operations');
+      renderAt('/it/assets/new/network');
       await waitFor(() => expect(currentPath()).toBe('/it/assets/new/overview'));
-      expect(await screen.findByText('workspace.asset.overview.basics')).toBeInTheDocument();
-    });
-  });
-
-  describe('creating an asset', () => {
-    const chooseAssetType = async (label = 'Virtual machine') => {
-      fireEvent.mouseDown(screen.getByPlaceholderText('workspace.asset.overview.searchAssetTypes'));
-      fireEvent.click(await screen.findByRole('option', { name: label }));
-    };
-    const startCreation = async () => {
-      renderAt('/it/assets/new/overview');
-      const name = await screen.findByPlaceholderText('workspace.asset.overview.namePlaceholder');
-      fireEvent.change(name, { target: { value: 'web 1' } });
-      fireEvent.click(screen.getAllByText('pick-location')[0]);
-      await waitFor(() => expect(get).toHaveBeenCalledWith('/locations/loc-1'));
-      await chooseAssetType();
-      fireEvent.click(screen.getByRole('tab', { name: /workspace.asset.tabs.network/ }));
-      await waitFor(() => expect(currentPath()).toBe('/it/assets/new/network'));
-      return screen.getByPlaceholderText('workspace.asset.technical.hostnamePlaceholder');
-    };
-    const create = async () => {
-      fireEvent.click(screen.getByRole('tab', { name: /workspace.asset.tabs.overview/ }));
-      await waitFor(() => expect(currentPath()).toBe('/it/assets/new/overview'));
-      const button = screen.getByRole('button', { name: 'common:buttons.create' });
-      await waitFor(() => expect(button).toBeEnabled());
-      fireEvent.click(button);
-    };
-
-    it('keeps the host name typed in the network tab and sends it from the overview', async () => {
-      post.mockResolvedValue({ data: { id: 'asset-9', asset_reference: 'AST-9' } });
-      const hostname = await startCreation();
-      fireEvent.change(hostname, { target: { value: 'web-01' } });
-      await create();
-      await waitFor(() => expect(post).toHaveBeenCalledWith('/assets', expect.objectContaining({ name: 'web 1', hostname: 'web-01' })));
-    });
-
-    it('opens the network tab when the host name is malformed', async () => {
-      const hostname = await startCreation();
-      fireEvent.change(hostname, { target: { value: 'web 01!' } });
-      await create();
-      await waitFor(() => expect(currentPath()).toBe('/it/assets/new/network'));
-      expect(screen.getAllByText('workspace.asset.technical.hostnameInvalid')).toHaveLength(1);
-      expect(screen.queryByRole('alert')).toBeNull();
-      expect(post).not.toHaveBeenCalled();
-    });
-
-    it('leaves Create disabled until an asset type is chosen', async () => {
-      renderAt('/it/assets/new/overview');
-      fireEvent.change(await screen.findByPlaceholderText('workspace.asset.overview.namePlaceholder'), { target: { value: 'web 1' } });
-      fireEvent.click(screen.getAllByText('pick-location')[0]);
-      await waitFor(() => expect(get).toHaveBeenCalledWith('/locations/loc-1'));
-      const button = screen.getByRole('button', { name: 'common:buttons.create' });
-      expect(button).toBeDisabled();
-      expect(screen.queryByDisplayValue('Virtual machine')).toBeNull();
-      await chooseAssetType();
-      await waitFor(() => expect(button).toBeEnabled());
-    });
-
-    it('clears the missing site refusal once a site is picked', async () => {
-      renderAt('/it/assets/new/overview');
-      fireEvent.change(await screen.findByPlaceholderText('workspace.asset.overview.namePlaceholder'), { target: { value: 'web 1' } });
-      await chooseAssetType();
-      // The Create button waits for the site; the save shortcut still says what is missing.
-      fireEvent.keyDown(window, { key: 's', ctrlKey: true });
-      expect(await screen.findByText('messages.locationRequired')).toBeInTheDocument();
-      fireEvent.click(screen.getAllByText('pick-location')[0]);
-      await waitFor(() => expect(screen.queryByText('messages.locationRequired')).toBeNull());
-    });
-
-    it('shows type, environment and site once, in the properties', async () => {
-      renderAt('/it/assets/new/overview');
-      await screen.findByText('workspace.asset.overview.basics');
-      expect(screen.getAllByText('workspace.asset.overview.assetType')).toHaveLength(1);
-      expect(screen.getAllByText('workspace.asset.technical.environment')).toHaveLength(1);
-      expect(screen.getAllByText('workspace.asset.overview.location')).toHaveLength(1);
-    });
-
-    it('stops a name at 200 characters, in the field and in the title', async () => {
-      renderAt('/it/assets/new/overview');
-      const field = await screen.findByPlaceholderText('workspace.asset.overview.namePlaceholder');
-      expect(field).toHaveAttribute('maxlength', '200');
-      fireEvent.change(field, { target: { value: 'n'.repeat(313) } });
-      expect(field).toHaveValue('n'.repeat(200));
-      fireEvent.click(screen.getByText('n'.repeat(200)));
-      const title = screen.getAllByRole('textbox').find((node) => node !== field && node.getAttribute('maxlength') === '200');
-      expect(title).toBeTruthy();
-    });
-
-    it('shows a host name problem under the field, and only there', async () => {
-      enumOptions.settings.domains = [{ code: 'corp', label: 'Corp', dns_suffix: 'corp.example' }];
-      const hostname = await startCreation();
-      fireEvent.change(hostname, { target: { value: 'qa c4!' } });
-      await create();
-      await waitFor(() => expect(currentPath()).toBe('/it/assets/new/network'));
-      expect(screen.getAllByText('workspace.asset.technical.hostnameInvalid')).toHaveLength(1);
-      expect(screen.queryByRole('alert')).toBeNull();
-      // The network tab remounts its field when Create sends us back to it.
-      const hostnameField = screen.getByPlaceholderText('workspace.asset.technical.hostnamePlaceholder');
-      fireEvent.change(hostnameField, { target: { value: '' } });
-      await waitFor(() => expect(screen.queryByText('workspace.asset.technical.hostnameInvalid')).toBeNull());
-      const domainLabel = screen.getByText('workspace.asset.technical.domain');
-      const domainBox = domainLabel.parentElement?.querySelector('[role="combobox"]');
-      expect(domainBox).toBeTruthy();
-      fireEvent.mouseDown(domainBox as HTMLElement);
-      fireEvent.click(await screen.findByRole('option', { name: 'Corp' }));
-      expect(screen.getAllByText('workspace.asset.technical.hostnameRequired')).toHaveLength(1);
-      expect(screen.queryByRole('alert')).toBeNull();
-      fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
-      expect(screen.getAllByText('workspace.asset.technical.hostnameRequired')).toHaveLength(1);
-      expect(screen.queryByRole('alert')).toBeNull();
-      expect(screen.queryByText('workspace.asset.technical.hostnameInvalid')).toBeNull();
-      expect(post).not.toHaveBeenCalled();
+      expect(await screen.findAllByTestId('creation-preview')).not.toHaveLength(0);
     });
   });
 
@@ -1164,8 +1025,8 @@ describe('Asset workspace: section placement', () => {
     });
 
     it('asks nothing when creating an asset', async () => {
-      renderAt('/it/assets/new/network');
-      await screen.findByText('workspace.asset.technical.ipAddresses');
+      renderAt('/it/assets/new/overview');
+      await screen.findAllByTestId('creation-preview');
       expect(screen.queryByText('pages.vulnerabilities.section.title')).toBeNull();
       expect(vulnerabilityCalls()).toBe(0);
     });
@@ -1280,55 +1141,5 @@ describe('Asset workspace: section placement', () => {
       await invalidateTechnologyLinks(queryClient);
       await waitFor(() => expect(vulnerabilityCalls()).toBe(2));
     });
-  });
-});
-
-describe('Asset creation: leaving with unsaved changes', () => {
-  beforeEach(() => {
-    get.mockReset();
-    auth.grants.infrastructure = 'member';
-    auth.grants.applications = 'member';
-    features.vulnerabilityFeed = false;
-  });
-
-  async function typeName() {
-    renderAt('/it/assets/new/overview');
-    const name = await screen.findByPlaceholderText('workspace.asset.overview.namePlaceholder');
-    fireEvent.change(name, { target: { value: 'srv-1' } });
-  }
-
-  it('names leave and stay on Back, and Stay keeps the draft', async () => {
-    await typeName();
-    fireEvent.click(screen.getByRole('button', { name: 'pages.assets.title' }));
-    const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText('common:unsaved.leaveWithoutSaving.message')).toBeInTheDocument();
-    const leave = within(dialog).getByRole('button', { name: 'common:unsaved.leaveWithoutSaving.confirm' });
-    const stay = within(dialog).getByRole('button', { name: 'common:unsaved.leaveWithoutSaving.cancel' });
-    expect(leave).toHaveClass('MuiButton-action-danger');
-    expect(within(dialog).queryByRole('button', { name: 'common:buttons.continue' })).toBeNull();
-    expect(within(dialog).queryByRole('button', { name: 'common:buttons.cancel' })).toBeNull();
-    fireEvent.click(stay);
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-    expect(currentPath()).toBe('/it/assets/new/overview');
-    expect(screen.getByPlaceholderText('workspace.asset.overview.namePlaceholder')).toHaveValue('srv-1');
-  });
-
-  it('leaves and drops the draft when the person chooses to', async () => {
-    await typeName();
-    fireEvent.click(screen.getByRole('button', { name: 'pages.assets.title' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'common:unsaved.leaveWithoutSaving.confirm' }));
-    // The list route keeps a location probe: leaving lands on it.
-    await waitFor(() => expect(currentPath()).toBe('/it/assets'));
-  });
-
-  it('asks the same question before a menu link leaves', async () => {
-    await typeName();
-    let answer!: Promise<boolean>;
-    await act(async () => { answer = confirmLeave(); });
-    const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText('common:unsaved.leaveWithoutSaving.message')).toBeInTheDocument();
-    fireEvent.click(within(dialog).getByRole('button', { name: 'common:unsaved.leaveWithoutSaving.cancel' }));
-    await expect(answer).resolves.toBe(false);
-    expect(currentPath()).toBe('/it/assets/new/overview');
   });
 });

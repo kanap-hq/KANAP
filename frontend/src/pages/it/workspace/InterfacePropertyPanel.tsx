@@ -329,18 +329,20 @@ export default function InterfacePropertyPanel({
           />
         </PropertyRow>
         <PropertyRow label={t('it:workspace.interface.fields.dataCategory')} required>
-          <EnumAutocomplete
-            label={t('it:workspace.interface.fields.dataCategory')}
-            value={data?.data_category || ''}
-            onChange={(value) => {
-              void runPersist(() => onPatch({ data_category: value }));
-            }}
-            options={dataCategoryOptions}
-            size="small"
-            hideLabel
-            textFieldSx={drawerFieldValueSx}
-            disabled={disabled}
-          />
+          <Box data-creation-field="data_category">
+            <EnumAutocomplete
+              label={t('it:workspace.interface.fields.dataCategory')}
+              value={data?.data_category || ''}
+              onChange={(value) => {
+                void runPersist(() => onPatch({ data_category: value }));
+              }}
+              options={dataCategoryOptions}
+              size="small"
+              hideLabel
+              textFieldSx={drawerFieldValueSx}
+              disabled={disabled}
+            />
+          </Box>
         </PropertyRow>
         <PropertyRow label={t('it:workspace.connection.compliance.dataClass')}>
           <EnumAutocomplete

@@ -6,6 +6,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../i18n';
 import { createAppTheme } from '../../config/ThemeContext';
+import { KanapDialogProvider } from '../../components/design';
 import ConnectionWorkspacePage from './ConnectionWorkspacePage';
 
 // A connection endpoint that is an entity shows the entity's name (the shipped "Internal Users" in
@@ -98,11 +99,13 @@ describe('ConnectionWorkspacePage endpoint and protocol names', () => {
     render(
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
       <ThemeProvider theme={createAppTheme('light')}>
+        <KanapDialogProvider>
         <MemoryRouter initialEntries={['/it/connections/c-1/overview']}>
           <Routes>
             <Route path="/it/connections/:id/:tab" element={<ConnectionWorkspacePage />} />
           </Routes>
         </MemoryRouter>
+        </KanapDialogProvider>
       </ThemeProvider>
       </QueryClientProvider>,
     );
@@ -118,11 +121,13 @@ describe('ConnectionWorkspacePage endpoint and protocol names', () => {
       render(
         <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
         <ThemeProvider theme={createAppTheme('light')}>
+          <KanapDialogProvider>
           <MemoryRouter initialEntries={['/it/connections/c-1/overview']}>
             <Routes>
               <Route path="/it/connections/:id/:tab" element={<ConnectionWorkspacePage />} />
             </Routes>
           </MemoryRouter>
+          </KanapDialogProvider>
         </ThemeProvider>
         </QueryClientProvider>,
       );
@@ -145,11 +150,13 @@ describe('ConnectionWorkspacePage endpoint and protocol names', () => {
     render(
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
       <ThemeProvider theme={createAppTheme('light')}>
+        <KanapDialogProvider>
         <MemoryRouter initialEntries={['/it/connections/c-1/overview']}>
           <Routes>
             <Route path="/it/connections/:id/:tab" element={<ConnectionWorkspacePage />} />
           </Routes>
         </MemoryRouter>
+        </KanapDialogProvider>
       </ThemeProvider>
       </QueryClientProvider>,
     );

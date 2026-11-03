@@ -1,30 +1,36 @@
 import React from 'react';
 import { Button, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
-import { KanapDialog } from '../../components/design';
+import { KanapDialog } from '../../design';
 import { missingFieldsList } from './missingFieldsList';
 
 type Options = {
-  /** The line is being created: the other answer deletes it (Cancel), instead of leaving it as it is. */
+  /**
+   * The record's words, under this key (`ops:budget.creation`): `leaveTitle`, `leaveComplete`,
+   * `leaveDelete`, `leaveAnyway` and `missing` (`{{fields}}`), so each language can agree them with
+   * the record ("La compléter", "Le compléter").
+   */
+  keys: string;
+  /** The record is being created: the other answer deletes it (Cancel), instead of leaving it as it is. */
   beingCreated: boolean;
-  /** The labels of the fields the line still needs, in screen order, with their keys. */
+  /** The labels of the fields the record still needs, in screen order, with their keys. */
   missing: () => Array<{ key: string; label: string }>;
-  /** « Complete it »: the page focuses this field (opening the properties panel). */
+  /** « Complete it »: the page focuses this field (opening its tab or panel). */
   focus: (key: string) => void;
-  /** « Delete it » of a line being created: true once deleted (its own confirmation may keep it). */
+  /** « Delete it » of a record being created: true once deleted (its own confirmation may keep it). */
   onDelete: () => Promise<boolean>;
 };
 
 type Asking = { labels: string[]; firstKey: string };
 
 /**
- * Leaving a budget line that lacks a field it needs (lot 1c): a line being created asks « Complete
- * it » (stay, focus the first missing field) or « Delete it » (the page's Cancel); a line left
- * incomplete earlier (no paying company) asks « Complete it » or « Leave anyway ». `confirm()`
- * resolves true when the move may go on. A question left unanswered (the page goes) stays.
+ * Leaving a record that lacks a field it needs (budget lines, lot 1c; assets and connections, lot 3):
+ * a record being created asks « Complete it » (stay, focus the first missing field) or « Delete it »
+ * (the page's Cancel); a record left incomplete earlier asks « Complete it » or « Leave anyway ».
+ * `confirm()` resolves true when the move may go on. A question left unanswered (the page goes) stays.
  */
-export default function useIncompleteLineLeave({ beingCreated, missing, focus, onDelete }: Options) {
-  const { t, i18n } = useTranslation(['ops']);
+export default function useIncompleteLeave({ keys, beingCreated, missing, focus, onDelete }: Options) {
+  const { t, i18n } = useTranslation(['common']);
   const latest = React.useRef({ beingCreated, missing, focus, onDelete });
   latest.current = { beingCreated, missing, focus, onDelete };
   const [asking, setAsking] = React.useState<Asking | null>(null);
@@ -72,20 +78,20 @@ export default function useIncompleteLineLeave({ beingCreated, missing, focus, o
   const dialog = asking ? (
     <KanapDialog
       open
-      title={t('budget.creation.leaveTitle')}
+      title={t(`${keys}.leaveTitle`)}
       onClose={stay}
       onSave={stay}
-      saveLabel={t('budget.creation.leaveComplete')}
+      saveLabel={t(`${keys}.leaveComplete`)}
       saveAutoFocus
       showCancel={false}
       secondaryActions={(
         <Button variant={beingCreated ? 'action-danger' : 'action'} onClick={() => { void other(); }}>
-          {beingCreated ? t('budget.creation.leaveDelete') : t('budget.creation.leaveAnyway')}
+          {beingCreated ? t(`${keys}.leaveDelete`) : t(`${keys}.leaveAnyway`)}
         </Button>
       )}
     >
       <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
-        {t('budget.creation.missing', { fields: missingFieldsList(asking.labels, i18n.resolvedLanguage || i18n.language) })}
+        {t(`${keys}.missing`, { fields: missingFieldsList(asking.labels, i18n.resolvedLanguage || i18n.language) })}
       </Typography>
     </KanapDialog>
   ) : null;

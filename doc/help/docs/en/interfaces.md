@@ -6,18 +6,26 @@ Interfaces document the logical data flows between your applications. Each inter
 
 Navigate to **IT Landscape > Interfaces** to see your integration registry. Click **Add interface** to create a new entry, or open an existing one to edit it.
 
-To create an interface, fill the **Create interface** form on the Overview tab:
+**Add interface** opens the interface page on the **Flow** tab, where its required fields are:
 
-- **Name** (required): A descriptive name for the integration
-- **Interface code**: An optional short code of your own (e.g., `ERP-ORDERS-SYNC`)
-- **Business process**: The business process the interface supports
-- **Source application** and **Target application** (required)
-- **Data category** (required): The type of data being transferred
-- **Route type**: Direct or Via middleware
+- The title: a descriptive name for the integration
+- **Source application** and **Target application**, on the **Flow** tab
+- **Data category**, in the properties panel: the type of data being transferred
 
-Click **Create** in the header. KANAP assigns the interface its reference (`INT-4`), and the other tabs (Flow, Environments, Data mapping, Relations, History) become available.
+You can fill them in any order. Nothing is saved until all four are filled. As soon as they are, KANAP creates the interface with everything the draft holds and assigns its reference (`INT-4`). The page moves to the interface, and **Environments**, **Data mapping**, **Relations** and **History** open.
 
 **Tip**: Set the **Route type** early. It controls which legs are generated automatically and what shows up on the Flow tab and the Environments matrix.
+
+### Creating or cancelling { #cancelling-a-creation }
+
+While the interface is being created, its header shows **Create** and **Cancel**. They stay until you leave the interface.
+
+- **Create** keeps the interface and takes you back to where you started. If something is still missing, a message names it, and the title or the first missing field gets the focus. If the draft is complete, KANAP creates the interface and takes you back at once
+- **Cancel** deletes the interface. If you added anything after it was created, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete interfaces
+
+Leaving the interface another way (the menu, the back arrow) keeps it: it is complete.
+
+Before the interface is created, **Cancel**, the back arrow, or Escape on the title leaves without saving. When the draft holds something, a confirmation asks before it is discarded. A link in the menu asks the same.
 
 ---
 
@@ -100,7 +108,7 @@ Field changes in the side panel are saved automatically, so you can update prope
 
 ### Overview
 
-Once the interface is saved, the Overview tab holds the **Specification**, a managed rich-text document where you describe the interface end to end: business context, scope, contract, examples. It is the primary narrative document for the interface.
+The Overview tab holds the **Specification**, a managed rich-text document where you describe the interface end to end: business context, scope, contract, examples. It is the primary narrative document for the interface.
 
 **Tip**: Use this tab as your single source of truth for prose. Mapping rules and technical legs live in the dedicated tabs below; keep this document focused on intent, scope, and the human-readable summary.
 

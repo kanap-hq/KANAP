@@ -2151,8 +2151,6 @@
         "searchAssetTypes": "Rechercher un type d'actif",
         "searchSubLocations": "Rechercher un sous-site",
         "locationContext": "Contexte du site",
-        "basics": "Informations de base",
-        "namePlaceholder": "ex. : Serveur de fichiers 01",
         "description": "Description",
         "descriptionPlaceholder": "Décrivez l'actif"
       },
@@ -2404,6 +2402,15 @@
         "via": "Via",
         "placementReplaced": "{{cluster}} remplace le lien entre {{hosts}} et {{asset}}.",
         "placementLinked": "Lien posé sur {{cluster}}."
+      },
+      "creation": {
+        "record": "L’actif",
+        "missing": "Manquant : {{fields}}",
+        "leaveTitle": "Cet actif est incomplet",
+        "leaveComplete": "Le compléter",
+        "leaveDelete": "Le supprimer",
+        "leaveAnyway": "Quitter quand même",
+        "completeFailed": "L’actif n’a pas pu être vérifié."
       }
     },
     "technology": {
@@ -2644,7 +2651,6 @@
       "createFromBinding": "Création depuis le contexte de liaison d'interface",
       "overview": {
         "connectionReference": "Référence",
-        "name": "Nom",
         "purpose": "Objectif",
         "connectionType": "Type de connexion",
         "selectSource": "Sélectionnez une entité ou un serveur source",
@@ -2739,18 +2745,8 @@
       "sourceMissing": "Source manquante",
       "destinationMissing": "Destination manquante",
       "create": {
-        "title": "Créer une connexion",
-        "namePlaceholder": "ex. : Niveau applicatif vers niveau base de données",
         "endpoints": "Endpoints",
-        "serversPlaceholder": "ex. : server1",
-        "protocolsPlaceholder": "ex. : HTTPS",
-        "description": "Description",
-        "descriptionPlaceholder": "ex. : Export nocturne du niveau applicatif vers le niveau base de données",
-        "pathAfterCreate": "Créez d'abord la connexion pour ajouter les sauts du chemin réseau.",
-        "afterCreation": "Après la création",
-        "protocolRequired": "Sélectionnez au moins un protocole.",
-        "sourceRequired": "Sélectionnez un actif ou une entité source.",
-        "destinationRequired": "Sélectionnez un actif ou une entité de destination."
+        "description": "Description"
       },
       "deleteDialog": {
         "title": "Supprimer la connexion ?",
@@ -2830,6 +2826,15 @@
         "addFailed": "Échec de l'ajout du saut",
         "removeFailed": "Échec du retrait du saut",
         "reorderFailed": "Échec du réordonnancement des sauts"
+      },
+      "creation": {
+        "record": "La connexion",
+        "missing": "Manquant : {{fields}}",
+        "leaveTitle": "Cette connexion est incomplète",
+        "leaveComplete": "La compléter",
+        "leaveDelete": "La supprimer",
+        "leaveAnyway": "Quitter quand même",
+        "completeFailed": "La connexion n’a pas pu être vérifiée."
       }
     },
     "interface": {
@@ -2860,9 +2865,11 @@
         "message": "Cette interface n'a pas encore été créée. Fermer l'espace de travail abandonnera le brouillon."
       },
       "create": {
-        "applicationsRequired": "Sélectionnez les applications source et cible.",
-        "dataCategoryRequired": "Sélectionnez une catégorie de données.",
         "noIdentifier": "L'interface a été créée, mais aucun identifiant n'a été renvoyé."
+      },
+      "creation": {
+        "missing": "Manquant : {{fields}}",
+        "record": "L'interface"
       },
       "pii": {
         "label": "PII",
@@ -2872,7 +2879,6 @@
       },
       "fields": {
         "name": "Nom",
-        "namePlaceholder": "ex. : synchronisation des articles du PLM vers l'ERP",
         "interfaceCode": "Code d'interface",
         "interfaceCodePlaceholder": "ex. : ERP-ORDERS-SYNC",
         "businessProcess": "Processus métier",
@@ -2899,7 +2905,6 @@
         "addCountries": "Ajouter des pays"
       },
       "overview": {
-        "createTitle": "Créer l'interface",
         "specification": "Spécification",
         "specificationDocument": "Document de spécification",
         "specificationPlaceholder": "Saisissez ici la spécification de l'interface."
@@ -3459,8 +3464,6 @@
     "loadServerAssignmentsFailed": "Échec du chargement des affectations",
     "createVersionFailed": "Échec de la création de la version",
     "locationRequired": "Le site est requis.",
-    "assetTypeRequired": "Le type d'actif est requis.",
-    "providerRequired": "Le fournisseur est requis.",
     "codeRequired": "Le code est requis.",
     "nameRequired": "Le nom est requis.",
     "locationNameTaken": "Un autre site porte déjà ce nom.",

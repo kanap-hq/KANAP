@@ -44,6 +44,10 @@ export const CONNECTION_ASSET_READERS: Readonly<Record<string, ConnectionAssetRe
     reason: 'Deletion guard: a stored row naming the asset keeps it, inherited rows do not.',
   },
   'src/it-ops-settings/catalog-usage.ts': { status: 'direct', reason: 'Usage of a catalog code: the stored rows name it.' },
+  'src/connections/connections.controller.ts': {
+    status: 'direct',
+    reason: 'Create on a connection being created counts the stored servers it was given, not the effective members of a cluster.',
+  },
   'src/common/tenant-isolation.inventory.ts': { status: 'direct', reason: 'Tenant isolation inventory.' },
   'src/admin/tenants/tenant-purge.inventory.ts': { status: 'direct', reason: 'Tenant purge inventory.' },
 };

@@ -188,6 +188,7 @@ export class AssetsCrudService extends AssetsBaseService {
     tenantId: string,
     userId: string | null,
     opts?: ServiceOpts,
+    creation?: { atTitle?: boolean },
   ) {
     const tenant = this.ensureTenantId(tenantId);
     const repo = this.getRepo(opts?.manager);
@@ -205,7 +206,8 @@ export class AssetsCrudService extends AssetsBaseService {
     const provider = await this.validation.resolveProvider(body.provider, tenant, opts?.manager);
     const status = await this.validation.normalizeLifecycleStatus(body.status, tenant, opts?.manager, 'active');
     const location_id = await this.resolveLocationId((body as any).location_id, tenant, opts?.manager);
-    if (!location_id) throw locationRequired();
+    // The screen creates an asset at its title (`POST /assets/creation`): its site is checked at "Create".
+    if (!location_id && !creation?.atTitle) throw locationRequired();
     const sub_location_id = await this.resolveSubLocationId((body as any).sub_location_id, location_id, tenant, opts?.manager);
     const setsOperatingSystem = Object.prototype.hasOwnProperty.call(body, 'operating_system');
     const is_cluster = body.is_cluster === undefined ? false : this.normalizeBooleanFlag((body as any).is_cluster, 'is_cluster');

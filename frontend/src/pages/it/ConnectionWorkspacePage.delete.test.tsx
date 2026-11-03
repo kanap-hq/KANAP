@@ -6,6 +6,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../i18n';
 import { createAppTheme } from '../../config/ThemeContext';
+import { KanapDialogProvider } from '../../components/design';
 import ConnectionWorkspacePage from './ConnectionWorkspacePage';
 
 const apiGet = vi.hoisted(() => vi.fn());
@@ -88,11 +89,13 @@ function renderPage() {
   return render(
     <ThemeProvider theme={createAppTheme('light')}>
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <KanapDialogProvider>
         <MemoryRouter initialEntries={['/it/connections/c-1/overview']}>
           <Routes>
             <Route path="/it/connections/:id/:tab" element={<ConnectionWorkspacePage />} />
           </Routes>
         </MemoryRouter>
+        </KanapDialogProvider>
       </QueryClientProvider>
     </ThemeProvider>,
   );

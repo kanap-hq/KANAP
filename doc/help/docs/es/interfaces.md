@@ -6,18 +6,26 @@ Las interfaces documentan los flujos lógicos de datos entre sus aplicaciones. C
 
 Navegue a **Panorama IT > Interfaces** para ver su registro de integraciones. Haga clic en **Añadir interfaz** para crear una nueva entrada, o abra una existente para editarla.
 
-Para crear una interfaz, rellene el formulario **Crear interfaz** de la pestaña Vista general:
+**Añadir interfaz** abre la página de la interfaz en la pestaña **Flujo**, donde están sus campos obligatorios:
 
-- **Nombre** (obligatorio): Un nombre descriptivo para la integración
-- **Código de interfaz**: Un código corto propio y opcional (p. ej., `ERP-ORDERS-SYNC`)
-- **Proceso de negocio**: El proceso de negocio que la interfaz respalda
-- **Aplicación de origen** y **Aplicación de destino** (obligatorias)
-- **Categoría de datos** (obligatoria): El tipo de datos transferidos
-- **Tipo de ruta**: Directo o Vía middleware
+- El título: un nombre descriptivo para la integración
+- **Aplicación de origen** y **Aplicación de destino**, en la pestaña **Flujo**
+- **Categoría de datos**, en el panel de propiedades: el tipo de datos transferidos
 
-Haga clic en **Crear** en la cabecera. KANAP asigna a la interfaz su referencia (`INT-4`), y las demás pestañas (Flujo, Entornos, Mapeo de datos, Relaciones, Historial) quedan disponibles.
+Puede rellenarlos en cualquier orden. No se guarda nada hasta que los cuatro estén rellenados. En cuanto lo están, KANAP crea la interfaz con todo lo que contiene el borrador y le asigna su referencia (`INT-4`). La página pasa a la interfaz, y **Entornos**, **Mapeo de datos**, **Relaciones** e **Historial** se abren.
 
 **Consejo**: Defina pronto el **Tipo de ruta**. Controla qué tramos se generan automáticamente y qué aparece en la pestaña Flujo y en la matriz de Entornos.
+
+### Crear o cancelar { #cancelling-a-creation }
+
+Mientras la interfaz se está creando, su encabezado muestra **Crear** y **Cancelar**. Permanecen hasta que salga de la interfaz.
+
+- **Crear** conserva la interfaz y le devuelve al punto de partida. Si todavía falta algo, un mensaje lo indica, y el título o el primer campo que falta recibe el foco. Si el borrador está completo, KANAP crea la interfaz y le devuelve al instante
+- **Cancelar** elimina la interfaz. Si añadió algo después de su creación, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar interfaces
+
+Si sale de la interfaz de otra forma (el menú, la flecha de retroceso), se conserva: está completa.
+
+Antes de que se cree la interfaz, **Cancelar**, la flecha de retroceso o Escape en el título salen sin guardar. Cuando el borrador contiene algo, una confirmación pregunta antes de descartarlo. Un enlace del menú pregunta lo mismo.
 
 ---
 
@@ -100,7 +108,7 @@ Los cambios en los campos del panel lateral se guardan automáticamente, de modo
 
 ### Vista general
 
-Una vez guardada la interfaz, la pestaña Vista general contiene la **Especificación**, un documento de texto enriquecido gestionado donde describe la interfaz de principio a fin: contexto de negocio, alcance, contrato, ejemplos. Es el documento narrativo principal de la interfaz.
+La pestaña Vista general contiene la **Especificación**, un documento de texto enriquecido gestionado donde describe la interfaz de principio a fin: contexto de negocio, alcance, contrato, ejemplos. Es el documento narrativo principal de la interfaz.
 
 **Consejo**: Use esta pestaña como su única fuente de verdad para la prosa. Las reglas de mapeo y los tramos técnicos viven en las pestañas dedicadas a continuación; mantenga este documento centrado en la intención, el alcance y el resumen legible para humanos.
 

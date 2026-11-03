@@ -61,6 +61,8 @@ type PortfolioDetailWorkspaceShellProps = {
   onTitleSave?: (nextTitle: string) => void;
   /** Fired on each keystroke in the title, so the page can drop a refusal the draft has answered. */
   onTitleDraftChange?: (draft: string) => void;
+  /** Tab in the title with a name typed: the name is committed, and the page moves the focus to the next field to fill. */
+  titleOnTab?: () => void;
   /** The longest title the record accepts (the input stops there). */
   titleMaxLength?: number;
   /**
@@ -211,6 +213,7 @@ export default function PortfolioDetailWorkspaceShell({
   onTabChange,
   onTitleSave,
   onTitleDraftChange,
+  titleOnTab,
   titleAutoEdit = false,
   titleMaxLength,
   titleOnCancel,
@@ -438,6 +441,7 @@ export default function PortfolioDetailWorkspaceShell({
                         maxLength={titleMaxLength}
                         onSave={onTitleSave}
                         onDraftChange={onTitleDraftChange}
+                        onTab={titleOnTab}
                         requiredMessage={titleRequiredMessage}
                         error={titleError}
                         autoEdit={titleAutoEdit}
