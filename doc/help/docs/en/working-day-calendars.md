@@ -80,7 +80,7 @@ Click **New**. The page of the new calendar opens, its properties panel open. Th
 4. **Description**: optional
 5. Click **Create**
 
-A new calendar is enabled, and you go back to where you started. **Cancel**, or Escape on the empty title, leaves without creating anything. A standard calendar holds the working days of every year: they show once it is created. For a custom one, enter them year by year.
+A new calendar is enabled and stays open, every tab available. **Cancel**, or Escape on the empty title, leaves without creating anything. A standard calendar holds the working days of every year: they show once it is created. For a custom one, enter them year by year.
 
 The country and region are set once, at creation. To follow another country, create another calendar.
 

@@ -116,7 +116,7 @@ The Overview tab holds the address, the registration details and the notes. The 
     - **VAT number**: VAT identification number
 - **Notes**: free-text notes
 
-**Creating a company**: **New** opens the page of the new company, its properties panel open. Type the name in the title at the top of the page, then fill in **Country**, **Base currency**, **Chart of accounts**, **City**, the other address fields, the registration fields and **Notes**. Choosing a country fills in the **Chart of accounts** for you: the country's default chart if there is one, otherwise a global chart. You can change it before you save. Click **Create** to save the company: a missing required field is marked, otherwise you go back to where you started. The other tabs become available once the company exists. **Cancel**, or Escape on the empty title, leaves without creating anything.
+**Creating a company**: **New** opens the page of the new company, its properties panel open. Type the name in the title at the top of the page, then fill in **Country**, **Base currency**, **Chart of accounts**, **City**, the other address fields, the registration fields and **Notes**. Choosing a country fills in the **Base currency** (the country's currency) and the **Chart of accounts** (the country's default chart if there is one, otherwise a global chart). You can change both before you save. Click **Create** to save the company: a missing required field is marked, otherwise the company is created and stays open, every tab available. **Cancel**, or Escape on the empty title, leaves without creating anything.
 
 ---
 
@@ -126,7 +126,7 @@ The Details tab manages **yearly metrics**. Use the year tabs at the top to swit
 
 **What you can edit**:
 
-- **Headcount** (required): total employee count for the year, must be a whole number of zero or more
+- **Headcount**: total employee count for the year, a whole number of zero or more
 - **IT users** (optional): number of IT users, must be a whole number of zero or more
 - **Turnover** (optional): revenue in millions of the company's base currency, up to 3 decimal places. The label names the currency, for example **Turnover (M USD)**
 
@@ -185,7 +185,7 @@ A company administrator (`companies:admin`) can delete a company from its page w
 
 Many parts of the app are year-aware. Companies have metrics per year:
 
-- **Headcount** (required for the year)
+- **Headcount**
 - **IT users** (optional)
 - **Turnover** (optional, in millions of the company's base currency)
 

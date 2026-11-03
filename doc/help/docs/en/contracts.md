@@ -6,7 +6,7 @@ Contracts document your vendor agreements: software licences, maintenance contra
 
 Navigate to **Budget management > Contracts** to see the list. Click **New** to create a contract (`contracts:member`).
 
-The page of the new contract opens, its properties panel open. Type the contract name in the title at the top of the page, fill in the fields, then click **Create**: a missing required field is marked, otherwise you go back to where you started. The other tabs become available once the contract exists. **Cancel**, or Escape on the empty title, leaves without creating anything.
+The page of the new contract opens, its properties panel open. Type the contract name in the title at the top of the page, fill in the fields, then click **Create**: a missing required field is marked, otherwise the contract is created and stays open, every tab available. **Cancel**, or Escape on the empty title, leaves without creating anything.
 
 **Required fields**:
 

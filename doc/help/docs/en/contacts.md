@@ -85,7 +85,7 @@ Click a row to open that page. A list shows up to 50 items and says how many the
 
 ### Creating a contact
 
-Click **New** in the list. The page of the new contact opens. Type the first and last name in the title at the top of the page, fill in the email (required) and the other fields, then click **Create**. Choosing a supplier sets the contact type to **Commercial**, which you can change before creating. You go back to where you started once the contact is created. **Cancel**, or Escape while the name is empty, leaves without creating anything.
+Click **New** in the list. The page of the new contact opens. Type the first and last name in the title at the top of the page, fill in the email (required) and the other fields, then click **Create**. Choosing a supplier sets the contact type to **Commercial**, which you can change before creating. Once created, the contact stays open; a contact created from a supplier leads back to it. **Cancel**, or Escape while the name is empty, leaves without creating anything.
 
 ---
 

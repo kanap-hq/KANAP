@@ -97,7 +97,7 @@ Click **New**. The page of the new node opens, its properties panel open. Type t
 
 The **Type** starts on **Cost center**. Choose **Group** to create a group: the **Company** field then disappears.
 
-After **Create**, you go back to where you started. **Cancel**, or Escape on the empty title, leaves without creating anything.
+After **Create**, the node is created and stays open, every tab available. **Cancel**, or Escape on the empty title, leaves without creating anything.
 
 ---
 
