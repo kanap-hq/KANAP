@@ -302,6 +302,11 @@ export interface CsvImportContext {
   timeZones?: Record<string, string>;
   /** Time budget of the rich-text cells of the file, processed in the Markdown workers (markdown-worker.ts). */
   markdownBudget?: import('../markdown-worker').MarkdownWorkBudget;
+  /**
+   * The file's language (the screen's, else the user's). A report that names a
+   * value uses it. Absent, that value stays the stored code.
+   */
+  language?: CsvLanguage;
 }
 
 /**

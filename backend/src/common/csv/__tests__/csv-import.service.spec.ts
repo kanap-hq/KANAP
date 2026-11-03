@@ -855,6 +855,23 @@ async function testFilesOfEveryLanguageLoad() {
   assert.equal(refused.ok, false, 'an unknown yes or no is refused');
 }
 
+/** The file's language reaches the row hooks, so a refusal can name values in that language. */
+async function testImportContextCarriesTheFileLanguage() {
+  const service = new CsvImportService(new CsvResolverService(), new CsvJsonValidators());
+  const config = createTestConfig();
+  let language: string | undefined;
+  config.afterValidate = async (_rows, context) => {
+    language = context.language;
+  };
+  const result = await service.import(config, createMockFile('title\nTask'), { ...defaultParams, dryRun: true }, {
+    manager: createMockManager({ tasks: [] }),
+    tenantId: 't1',
+    language: 'fr',
+  });
+  assert.equal(result.ok, true, JSON.stringify(result.errors));
+  assert.equal(language, 'fr');
+}
+
 /**
  * Date-time columns whose header names no zone are read as UTC: the report says which ones, for
  * the dry run and the import alike. A header that names its zone, an absent column and a plain
@@ -927,6 +944,7 @@ Task;16/10/2026 14:30;;;16/10/2026 15:00`;
   await testWorkbookReadsAsItsCsv();
   await testAccentedWindows1252FileStillImports();
   await testFilesOfEveryLanguageLoad();
+  await testImportContextCarriesTheFileLanguage();
   await testReplaceWithoutStoredColumnsIsRefused();
   await testTranslatedTitlesAreRead();
 
