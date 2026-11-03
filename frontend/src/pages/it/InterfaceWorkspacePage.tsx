@@ -11,7 +11,7 @@ import HubOutlinedIcon from '@mui/icons-material/HubOutlined';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
-import { KanapDialog } from '../../components/design';
+import { useKanapDialogs } from '../../components/design';
 import { type IntegratedDocumentEditorHandle } from '../../components/IntegratedDocumentEditor';
 import RecordDeleteButton from '../../components/workspace/RecordDeleteButton';
 import SendLinkButton from '../../components/workspace/SendLinkButton';
@@ -42,6 +42,9 @@ import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { carryListFilters } from '../../lib/listContext';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
+import { CreationActions, useCreationReturn } from '../../components/workspace/creation';
+import { missingFieldsList } from '../../components/workspace/creation/missingFieldsList';
+import { useLeaveGuard } from '../../hooks/leaveGuard';
 
 type WorkspaceTabKey = 'overview' | 'flow' | 'environments' | 'data-mapping' | 'relations' | typeof RECORD_HISTORY_TAB_KEY;
 type LegacyTabKey = 'specification' | 'mapping' | 'technical' | 'functional' | 'ownership' | 'compliance';
@@ -150,7 +153,8 @@ function buildCreatePayload(current: Partial<InterfaceDetail>) {
 }
 
 export default function InterfaceWorkspacePage() {
-  const { t } = useTranslation(['it', 'common']);
+  const { t, i18n } = useTranslation(['it', 'common']);
+  const dialogs = useKanapDialogs();
   const { hasLevel } = useAuth();
   const params = useParams();
   const navigate = useNavigate();
@@ -180,7 +184,6 @@ export default function InterfaceWorkspacePage() {
   const [createTitleError, setCreateTitleError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [createSubmitting, setCreateSubmitting] = React.useState(false);
-  const [discardCreateOpen, setDiscardCreateOpen] = React.useState(false);
 
   React.useEffect(() => {
     if (routeTab === 'data-mapping') {
@@ -291,8 +294,9 @@ export default function InterfaceWorkspacePage() {
       return;
     }
 
-    if (isCreate && rawRouteTab !== 'overview') {
-      navigate(`/it/interfaces/${workspaceRouteId}/overview`, { replace: true });
+    // A new interface opens on Flow, where its required fields are; the other tabs wait for Create.
+    if (isCreate && rawRouteTab !== 'overview' && rawRouteTab !== 'flow') {
+      navigate(`/it/interfaces/${workspaceRouteId}/flow`, { replace: true });
     }
   }, [isCreate, navigate, params.tab, rawRouteTab, workspaceRouteId]);
 
@@ -512,44 +516,6 @@ export default function InterfaceWorkspacePage() {
     ]);
   }, []);
 
-  const handleCreate = React.useCallback(async () => {
-    if (!canManage) return;
-    setError(null);
-    setCreateSubmitting(true);
-    try {
-      const current = getCurrentState();
-      const payload = buildCreatePayload(current);
-      if (!payload.name) {
-        setCreateTitleError(t('messages.nameRequired'));
-        return;
-      }
-      setCreateTitleError(null);
-      if (!payload.source_application_id || !payload.target_application_id) {
-        setError(t('workspace.interface.create.applicationsRequired'));
-        return;
-      }
-      if (!payload.data_category) {
-        setError(t('workspace.interface.create.dataCategoryRequired'));
-        return;
-      }
-
-      const response = await api.post<InterfaceDetail>('/interfaces', payload);
-      const newId = (response.data as any)?.id as string | undefined;
-      if (!newId) {
-        setError(t('workspace.interface.create.noIdentifier'));
-        return;
-      }
-
-      await persistAdditionalState(newId, current);
-      setCreateDirty(false);
-      navigate(`/it/interfaces/${response.data.interface_reference || newId}/overview`, { replace: true });
-    } catch (saveError: any) {
-      setError(getApiErrorMessage(saveError, t, t('messages.saveInterfaceFailed')));
-    } finally {
-      setCreateSubmitting(false);
-    }
-  }, [canManage, getCurrentState, navigate, persistAdditionalState, t]);
-
   const listContextParams = React.useMemo(() => {
     const sp = new URLSearchParams();
     const sort = searchParams.get('sort');
@@ -560,20 +526,27 @@ export default function InterfaceWorkspacePage() {
     return sp;
   }, [searchParams]);
 
-  const closeWorkspace = React.useCallback(() => {
-    if (isCreate && createDirty) {
-      setDiscardCreateOpen(true);
+  const listPath = `/it/interfaces${listContextParams.toString() ? `?${listContextParams.toString()}` : ''}`;
+  // Where the creation started: a new interface created, cancelled or left goes back there.
+  const creationReturn = useCreationReturn(listPath);
+
+  // Nothing is written before Create: leaving a draft that holds something asks first.
+  const confirmDiscard = React.useCallback(() => dialogs.confirm({
+    title: t('workspace.interface.discardDialog.title'),
+    message: t('workspace.interface.discardDialog.message'),
+    confirmLabel: t('common:buttons.discard'),
+    intent: 'danger',
+  }), [dialogs, t]);
+  useLeaveGuard(() => isCreate && createDirty, confirmDiscard);
+
+  const closeWorkspace = React.useCallback(async () => {
+    if (isCreate) {
+      if (createDirty && !(await confirmDiscard())) return;
+      navigate(creationReturn);
       return;
     }
-    const qs = listContextParams.toString();
-    navigate(`/it/interfaces${qs ? `?${qs}` : ''}`);
-  }, [createDirty, isCreate, listContextParams, navigate]);
-
-  const discardCreateAndClose = React.useCallback(() => {
-    setDiscardCreateOpen(false);
-    const qs = listContextParams.toString();
-    navigate(`/it/interfaces${qs ? `?${qs}` : ''}`);
-  }, [listContextParams, navigate]);
+    navigate(listPath);
+  }, [confirmDiscard, createDirty, creationReturn, isCreate, listPath, navigate]);
 
   const handleTabChange = React.useCallback((nextTab: string) => {
     if (nextTab === routeTab) return;
@@ -587,6 +560,71 @@ export default function InterfaceWorkspacePage() {
     navigate(`/it/interfaces/${targetId}/${routeTab}${qs ? `?${qs}` : ''}`);
   }, [navigate, routeTab, searchParams]);
 
+  const [titleFocusRequest, setTitleFocusRequest] = React.useState(0);
+  const [fieldDrawerRequest, setFieldDrawerRequest] = React.useState(0);
+  const fieldLabel = (key: string): string => {
+    if (key === 'source') return t('workspace.interface.fields.sourceApplication');
+    if (key === 'target') return t('workspace.interface.fields.targetApplication');
+    return t('workspace.interface.fields.dataCategory');
+  };
+  // The first field Create names gets the focus: source and target on Flow, the data category in the panel.
+  const focusField = (key: string) => {
+    if (key === 'data_category') setFieldDrawerRequest((n) => n + 1);
+    else if (routeTab !== 'flow') handleTabChange('flow');
+    let tries = 0;
+    const attempt = () => {
+      const input = document.querySelector<HTMLElement>(`[data-creation-field="${key}"] input`);
+      if (input) {
+        input.focus();
+        return;
+      }
+      tries += 1;
+      if (tries < 20) window.setTimeout(attempt, 25);
+    };
+    window.setTimeout(attempt, 0);
+  };
+
+  // Create writes the interface from its draft, once it has its title, both applications and its
+  // data category: the missing ones are named, and the title or the first field gets the focus.
+  const handleCreate = async () => {
+    if (!canManage || createSubmitting) return;
+    const current = getCurrentState();
+    const payload = buildCreatePayload(current);
+    const missing = [
+      !payload.source_application_id && 'source',
+      !payload.target_application_id && 'target',
+      !payload.data_category && 'data_category',
+    ].filter((key): key is string => !!key);
+    setError(missing.length > 0
+      ? t('workspace.interface.creation.missing', { fields: missingFieldsList(missing.map(fieldLabel), i18n.resolvedLanguage || i18n.language) })
+      : null);
+    if (!payload.name) {
+      setCreateTitleError(t('messages.nameRequired'));
+      setTitleFocusRequest((n) => n + 1);
+      return;
+    }
+    if (missing.length > 0) {
+      focusField(missing[0]);
+      return;
+    }
+    setCreateSubmitting(true);
+    try {
+      const response = await api.post<InterfaceDetail>('/interfaces', payload);
+      const newId = (response.data as any)?.id as string | undefined;
+      if (!newId) {
+        setError(t('workspace.interface.create.noIdentifier'));
+        return;
+      }
+      await persistAdditionalState(newId, current);
+      setCreateDirty(false);
+      navigate(creationReturn);
+    } catch (saveError: any) {
+      setError(getApiErrorMessage(saveError, t, t('messages.saveInterfaceFailed')));
+    } finally {
+      setCreateSubmitting(false);
+    }
+  };
+
   // The tab reports what it lists once open; until then the detail's own lists count.
   const [tabRelationCount, setTabRelationCount] = React.useState<{ key: string; count: number } | null>(null);
   const relationCount = tabRelationCount?.key === routeEntityKey
@@ -598,7 +636,7 @@ export default function InterfaceWorkspacePage() {
 
   const tabs: PortfolioDetailWorkspaceTab[] = React.useMemo(() => [
     { key: 'overview', label: t('workspace.interface.tabs.overview') },
-    { key: 'flow', label: t('workspace.interface.tabs.flow'), disabled: isCreate },
+    { key: 'flow', label: t('workspace.interface.tabs.flow') },
     { key: 'environments', label: t('workspace.interface.tabs.environments'), disabled: isCreate },
     { key: 'data-mapping', label: t('workspace.interface.tabs.dataMapping'), disabled: isCreate },
     { key: 'relations', label: t('workspace.interface.tabs.relations'), badge: relationCount || undefined, disabled: isCreate },
@@ -619,16 +657,6 @@ export default function InterfaceWorkspacePage() {
 
   const actions = (
     <>
-      {isCreate && (
-        <Button
-          variant="contained"
-          onClick={() => void handleCreate()}
-          disabled={createSubmitting || !canManage}
-          size="small"
-        >
-          {t('common:buttons.create')}
-        </Button>
-      )}
       {!isCreate && current && (
         <SendLinkButton
           itemType="interface"
@@ -659,17 +687,25 @@ export default function InterfaceWorkspacePage() {
             description: t('pages.interfaces.deleteBindingsDescription'),
             apiKey: 'deleteRelatedBindings',
           }}
-          onDeleted={closeWorkspace}
+          onDeleted={() => { void closeWorkspace(); }}
         />
       )}
-      <IconButton
-        aria-label={t('common:buttons.close')}
-        title={t('common:buttons.close')}
-        onClick={closeWorkspace}
-        size="small"
-      >
-        <CloseIcon />
-      </IconButton>
+      {isCreate ? (
+        <CreationActions
+          busy={createSubmitting}
+          onCreate={() => { void handleCreate(); }}
+          onCancel={() => { void closeWorkspace(); }}
+        />
+      ) : (
+        <IconButton
+          aria-label={t('common:buttons.close')}
+          title={t('common:buttons.close')}
+          onClick={() => { void closeWorkspace(); }}
+          size="small"
+        >
+          <CloseIcon />
+        </IconButton>
+      )}
     </>
   );
 
@@ -709,7 +745,7 @@ export default function InterfaceWorkspacePage() {
         onTabChange={handleTabChange}
         drawerStorageKey="kanap.interfaces.drawerOpen"
         backLabel={t('pages.interfaces.title')}
-        onBack={closeWorkspace}
+        onBack={() => { void closeWorkspace(); }}
         itemReference={!isCreate ? current?.interface_reference || null : null}
         onCopyReference={
           !isCreate && current?.interface_reference
@@ -723,7 +759,12 @@ export default function InterfaceWorkspacePage() {
         onTitleDraftChange={isCreate ? (draft) => { if (draft.trim()) setCreateTitleError(null); } : undefined}
         titleRequiredMessage={isCreate && canManage ? t('messages.nameRequired') : undefined}
         titleError={isCreate ? createTitleError : null}
+        titleAutoEdit={isCreate && canManage}
+        titleOnCancel={isCreate ? () => { void closeWorkspace(); } : undefined}
+        titleFocusRequest={titleFocusRequest}
         isCreate={isCreate}
+        forceDrawerOpen={isCreate}
+        drawerOpenRequest={fieldDrawerRequest}
         metadata={metadata}
         actions={actions}
         nav={!isCreate && current && nav.total > 0 ? {
@@ -762,7 +803,7 @@ export default function InterfaceWorkspacePage() {
           />
         )}
 
-        {routeTab === 'flow' && !isCreate && (
+        {routeTab === 'flow' && (
           <InterfaceFlowTab
             canManage={canManage}
             data={current}
@@ -822,17 +863,6 @@ export default function InterfaceWorkspacePage() {
         )}
       </PortfolioDetailWorkspaceShell>
 
-      <KanapDialog
-        open={discardCreateOpen}
-        title={t('workspace.interface.discardDialog.title')}
-        onClose={() => setDiscardCreateOpen(false)}
-        saveLabel={t('common:buttons.discard')}
-        onSave={discardCreateAndClose}
-      >
-        <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
-          {t('workspace.interface.discardDialog.message')}
-        </Typography>
-      </KanapDialog>
     </Box>
   );
 }

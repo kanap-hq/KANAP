@@ -161,26 +161,30 @@ export default function InterfaceFlowTab({
         <SectionHeader>{t('it:workspace.interface.flow.logicalFlow')}</SectionHeader>
         <Stack spacing={1.25}>
           <PropertyRow label={t('it:workspace.interface.fields.sourceApplication')} required valueSx={{ maxWidth: 560 }}>
-            <ApplicationSelect
-              value={data?.source_application_id || null}
-              onChange={(value) => void onPatch({ source_application_id: value || '' })}
-              hideLabel
-              label={t('it:workspace.interface.fields.sourceApplication')}
-              textFieldSx={drawerFieldValueSx}
-              placeholder={t('it:workspace.interface.fields.selectSource')}
-              disabled={disabled}
-            />
+            <Box data-creation-field="source">
+              <ApplicationSelect
+                value={data?.source_application_id || null}
+                onChange={(value) => void onPatch({ source_application_id: value || '' })}
+                hideLabel
+                label={t('it:workspace.interface.fields.sourceApplication')}
+                textFieldSx={drawerFieldValueSx}
+                placeholder={t('it:workspace.interface.fields.selectSource')}
+                disabled={disabled}
+              />
+            </Box>
           </PropertyRow>
           <PropertyRow label={t('it:workspace.interface.fields.targetApplication')} required valueSx={{ maxWidth: 560 }}>
-            <ApplicationSelect
-              value={data?.target_application_id || null}
-              onChange={(value) => void onPatch({ target_application_id: value || '' })}
-              hideLabel
-              label={t('it:workspace.interface.fields.targetApplication')}
-              textFieldSx={drawerFieldValueSx}
-              placeholder={t('it:workspace.interface.fields.selectTarget')}
-              disabled={disabled}
-            />
+            <Box data-creation-field="target">
+              <ApplicationSelect
+                value={data?.target_application_id || null}
+                onChange={(value) => void onPatch({ target_application_id: value || '' })}
+                hideLabel
+                label={t('it:workspace.interface.fields.targetApplication')}
+                textFieldSx={drawerFieldValueSx}
+                placeholder={t('it:workspace.interface.fields.selectTarget')}
+                disabled={disabled}
+              />
+            </Box>
           </PropertyRow>
           <PropertyRow label={t('it:workspace.interface.fields.routeType')} valueSx={{ maxWidth: 280 }}>
             <TextField

@@ -2865,9 +2865,10 @@
         "message": "This interface has not been created yet. Closing the workspace will discard the draft."
       },
       "create": {
-        "applicationsRequired": "Select source and target applications.",
-        "dataCategoryRequired": "Select a data category.",
         "noIdentifier": "The interface was created, but no identifier was returned."
+      },
+      "creation": {
+        "missing": "Missing: {{fields}}"
       },
       "pii": {
         "label": "PII",
@@ -2877,7 +2878,6 @@
       },
       "fields": {
         "name": "Name",
-        "namePlaceholder": "e.g., PLM to ERP item master sync",
         "interfaceCode": "Interface code",
         "interfaceCodePlaceholder": "e.g., ERP-ORDERS-SYNC",
         "businessProcess": "Business process",
@@ -2904,7 +2904,6 @@
         "addCountries": "Add countries"
       },
       "overview": {
-        "createTitle": "Create interface",
         "specification": "Specification",
         "specificationDocument": "Specification document",
         "specificationPlaceholder": "Capture the managed interface specification here."

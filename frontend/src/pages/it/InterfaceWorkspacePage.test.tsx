@@ -29,11 +29,23 @@ vi.mock('../../hooks/useModuleItemNav', () => ({
 }));
 vi.mock('../workspace/hooks/useRecentlyViewed', () => ({ useRecentlyViewed: () => ({ addToRecent: vi.fn() }) }));
 vi.mock('./components/InterfaceBindingsMatrix', () => ({ default: () => null }));
-vi.mock('./workspace/InterfaceFlowTab', () => ({ default: () => null }));
+// The draft's fields: each button fills one, as the real pickers would.
+vi.mock('./workspace/InterfaceFlowTab', () => ({
+  default: ({ onPatch }: { onPatch: (patch: Record<string, unknown>) => Promise<void> }) => (
+    <div data-testid="flow-tab">
+      <button type="button" onClick={() => void onPatch({ source_application_id: 'app-1' })}>pick source</button>
+      <button type="button" onClick={() => void onPatch({ target_application_id: 'app-2' })}>pick target</button>
+    </div>
+  ),
+}));
 vi.mock('./workspace/InterfaceMappingTab', () => ({ default: () => null }));
 vi.mock('./workspace/InterfaceMetadataBar', () => ({ default: () => null }));
 vi.mock('./workspace/InterfaceOverviewTab', () => ({ default: () => null }));
-vi.mock('./workspace/InterfacePropertyPanel', () => ({ default: () => null }));
+vi.mock('./workspace/InterfacePropertyPanel', () => ({
+  default: ({ onPatch }: { onPatch: (patch: Record<string, unknown>) => Promise<void> }) => (
+    <button type="button" onClick={() => void onPatch({ data_category: 'orders' })}>pick category</button>
+  ),
+}));
 vi.mock('./workspace/InterfaceRelationsTab', () => ({ default: () => null }));
 // The shell is covered elsewhere; this stub shows what the page hands it.
 vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
@@ -41,10 +53,16 @@ vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
     <div>
       <nav>{props.tabs.map((tab: any) => <span key={tab.key}>{tab.label}</span>)}</nav>
       <h1>{props.title || props.titleFallback}</h1>
-      <input aria-label="title" defaultValue={props.title} onChange={(event) => props.onTitleDraftChange?.(event.target.value)} />
+      <input
+        aria-label="title"
+        defaultValue={props.title}
+        onChange={(event) => props.onTitleDraftChange?.(event.target.value)}
+        onBlur={(event) => props.onTitleSave?.(event.target.value)}
+      />
       {props.titleError ? <div role="alert">{props.titleError}</div> : null}
       <div>{props.actions}</div>
       <div data-testid="workspace-notices">{props.notices}</div>
+      <aside>{props.properties}</aside>
       <main>{props.children}</main>
     </div>
   ),
@@ -72,11 +90,13 @@ describe('InterfaceWorkspacePage (create)', () => {
     await i18n.changeLanguage(c.lang);
     render(
       <ThemeProvider theme={createAppTheme('light')}>
-        <MemoryRouter initialEntries={['/it/interfaces/new/overview']}>
-          <Routes>
-            <Route path="/it/interfaces/:id/:tab" element={<InterfaceWorkspacePage />} />
-          </Routes>
-        </MemoryRouter>
+        <KanapDialogProvider>
+          <MemoryRouter initialEntries={['/it/interfaces/new/overview']}>
+            <Routes>
+              <Route path="/it/interfaces/:id/:tab" element={<InterfaceWorkspacePage />} />
+            </Routes>
+          </MemoryRouter>
+        </KanapDialogProvider>
       </ThemeProvider>,
     );
 
@@ -91,27 +111,114 @@ describe('InterfaceWorkspacePage (create)', () => {
     await i18n.changeLanguage('en');
     render(
       <ThemeProvider theme={createAppTheme('light')}>
-        <MemoryRouter initialEntries={['/it/interfaces/new/overview']}>
-          <Routes>
-            <Route path="/it/interfaces/:id/:tab" element={<InterfaceWorkspacePage />} />
-          </Routes>
-        </MemoryRouter>
+        <KanapDialogProvider>
+          <MemoryRouter initialEntries={['/it/interfaces/new/overview']}>
+            <Routes>
+              <Route path="/it/interfaces/:id/:tab" element={<InterfaceWorkspacePage />} />
+            </Routes>
+          </MemoryRouter>
+        </KanapDialogProvider>
       </ThemeProvider>,
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Name is required.');
+    expect(await screen.findByText('Name is required.')).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('title'), { target: { value: 'Billing to ledger' } });
-    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByText('Name is required.')).toBeNull();
 
     fireEvent.change(screen.getByLabelText('title'), { target: { value: ' ' } });
-    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByText('Name is required.')).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Name is required.');
+    expect(await screen.findByText('Name is required.')).toBeInTheDocument();
     expect(post).not.toHaveBeenCalled();
     expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
+  });
+});
+
+function renderNew(path = '/it/interfaces/new/flow') {
+  return render(
+    <ThemeProvider theme={createAppTheme('light')}>
+      <KanapDialogProvider>
+        <MemoryRouter initialEntries={[{ pathname: path, state: { returnTo: '/start' } }]}>
+          <Where />
+          <Routes>
+            <Route path="/start" element={<div />} />
+            <Route path="/it/interfaces" element={<div />} />
+            <Route path="/it/interfaces/:id/:tab" element={<InterfaceWorkspacePage />} />
+          </Routes>
+        </MemoryRouter>
+      </KanapDialogProvider>
+    </ThemeProvider>,
+  );
+}
+
+describe('InterfaceWorkspacePage (draft)', () => {
+  beforeEach(async () => {
+    auth.admin = true;
+    await i18n.changeLanguage('en');
+    post.mockReset();
+    get.mockReset();
+    get.mockResolvedValue({ data: { items: [] } });
+  });
+
+  afterEach(async () => {
+    cleanup();
+    await i18n.changeLanguage('en');
+  });
+
+  it('opens a new interface on Flow', async () => {
+    renderNew('/it/interfaces/new/environments');
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/it/interfaces/new/flow'));
+    expect(screen.getByTestId('flow-tab')).toBeInTheDocument();
+  });
+
+  it('names what the draft lacks on Create and writes nothing', async () => {
+    renderNew();
+    const title = await screen.findByLabelText('title');
+    fireEvent.change(title, { target: { value: 'Orders sync' } });
+    fireEvent.blur(title);
+    fireEvent.click(screen.getByRole('button', { name: 'pick source' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    expect((await screen.findByTestId('workspace-notices')).textContent).toBe('Missing: target application, data category');
+    expect(post).not.toHaveBeenCalled();
+  });
+
+  it('creates the interface from its draft on Create and goes back where the creation started', async () => {
+    post.mockResolvedValue({ data: { id: 'int-9', interface_reference: 'INT-9' } });
+    renderNew();
+    const title = await screen.findByLabelText('title');
+    fireEvent.change(title, { target: { value: 'Orders sync' } });
+    fireEvent.blur(title);
+    fireEvent.click(screen.getByRole('button', { name: 'pick source' }));
+    fireEvent.click(screen.getByRole('button', { name: 'pick target' }));
+    fireEvent.click(screen.getByRole('button', { name: 'pick category' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/start'));
+    expect(post).toHaveBeenCalledWith('/interfaces', expect.objectContaining({
+      name: 'Orders sync',
+      source_application_id: 'app-1',
+      target_application_id: 'app-2',
+      data_category: 'orders',
+    }));
+    expect(post).toHaveBeenCalledWith('/interfaces/int-9/links/bulk-replace', { links: [] });
+  });
+
+  it('asks before Cancel drops a draft that holds something, and leaves an empty one at once', async () => {
+    renderNew();
+    fireEvent.click(await screen.findByRole('button', { name: 'pick source' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Discard' }));
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/start'));
+    expect(post).not.toHaveBeenCalled();
+
+    cleanup();
+    renderNew();
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/start'));
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 });
 

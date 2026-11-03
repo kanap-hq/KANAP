@@ -2865,9 +2865,10 @@
         "message": "Esta interfaz aún no se ha creado. Al cerrar el espacio de trabajo se descartará el borrador."
       },
       "create": {
-        "applicationsRequired": "Seleccione las aplicaciones de origen y destino.",
-        "dataCategoryRequired": "Seleccione una categoría de datos.",
         "noIdentifier": "La interfaz se creó, pero no se devolvió ningún identificador."
+      },
+      "creation": {
+        "missing": "Falta: {{fields}}"
       },
       "pii": {
         "label": "PII",
@@ -2877,7 +2878,6 @@
       },
       "fields": {
         "name": "Nombre",
-        "namePlaceholder": "p. ej., sincronización de artículos del PLM al ERP",
         "interfaceCode": "Código de interfaz",
         "interfaceCodePlaceholder": "p. ej., ERP-ORDERS-SYNC",
         "businessProcess": "Proceso de negocio",
@@ -2904,7 +2904,6 @@
         "addCountries": "Añadir países"
       },
       "overview": {
-        "createTitle": "Crear interfaz",
         "specification": "Especificación",
         "specificationDocument": "Documento de especificación",
         "specificationPlaceholder": "Registre aquí la especificación de la interfaz."

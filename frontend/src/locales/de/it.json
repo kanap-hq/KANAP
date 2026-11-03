@@ -2865,9 +2865,10 @@
         "message": "Diese Schnittstelle wurde noch nicht erstellt. Beim Schließen des Arbeitsbereichs wird der Entwurf verworfen."
       },
       "create": {
-        "applicationsRequired": "Wählen Sie Quell- und Zielanwendung aus.",
-        "dataCategoryRequired": "Wählen Sie eine Datenkategorie aus.",
         "noIdentifier": "Die Schnittstelle wurde erstellt, aber es wurde keine Kennung zurückgegeben."
+      },
+      "creation": {
+        "missing": "Fehlt: {{fields}}"
       },
       "pii": {
         "label": "PII",
@@ -2877,7 +2878,6 @@
       },
       "fields": {
         "name": "Name",
-        "namePlaceholder": "z. B. Artikelstamm-Synchronisierung PLM zu ERP",
         "interfaceCode": "Schnittstellencode",
         "interfaceCodePlaceholder": "z. B. ERP-ORDERS-SYNC",
         "businessProcess": "Geschäftsprozess",
@@ -2904,7 +2904,6 @@
         "addCountries": "Länder hinzufügen"
       },
       "overview": {
-        "createTitle": "Schnittstelle erstellen",
         "specification": "Spezifikation",
         "specificationDocument": "Spezifikationsdokument",
         "specificationPlaceholder": "Erfassen Sie hier die Spezifikation der Schnittstelle."
