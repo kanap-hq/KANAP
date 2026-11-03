@@ -2,7 +2,8 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, Button, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
+import { CreationActions, useCreationLeave, useCreationTitle } from '../../components/workspace/creation';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
 import { useAccountNav } from '../../hooks/useAccountNav';
@@ -235,10 +236,6 @@ export default function AccountWorkspacePage() {
         consolidationChart={consolidationChart}
         preselectedCoaId={coaId}
         onClose={handleClose}
-        onCreated={(newId) => {
-          const query = searchParams.toString();
-          navigate(`${ACCOUNT_PATH}/${newId}/overview${query ? `?${query}` : ''}`);
-        }}
       />
     );
   }
@@ -582,7 +579,6 @@ type CreateValues = {
   /** Undefined until the user picks a chart: the list's chart is preselected meanwhile. */
   coa_id: string | null | undefined;
   account_number: string;
-  account_name: string;
   native_name: string;
   description: string;
   consolidation_account_number: number | null;
@@ -592,7 +588,6 @@ type CreateValues = {
 const EMPTY_CREATE: CreateValues = {
   coa_id: undefined,
   account_number: '',
-  account_name: '',
   native_name: '',
   description: '',
   consolidation_account_number: null,
@@ -606,7 +601,6 @@ function AccountCreate({
   consolidationChart,
   preselectedCoaId,
   onClose,
-  onCreated,
 }: {
   canCreate: boolean;
   coas: CoaListItem[];
@@ -614,7 +608,6 @@ function AccountCreate({
   consolidationChart: CoaListItem | undefined;
   preselectedCoaId: string | null;
   onClose: () => void;
-  onCreated: (id: string) => void;
 }) {
   const { t } = useTranslation(['master-data', 'common']);
   const queryClient = useQueryClient();
@@ -622,6 +615,8 @@ function AccountCreate({
   const [errors, setErrors] = React.useState<FieldErrors>({});
   const [serverError, setServerError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
+  const leave = useCreationLeave(onClose);
+  const title = useCreationTitle({ requiredMessage: t('accounts.messages.nameRequired'), onCancel: leave });
 
   const preselected = preselectedCoaId && coas.some((coa) => coa.id === preselectedCoaId) ? preselectedCoaId : null;
   const coaId = values.coa_id === undefined ? preselected : values.coa_id;
@@ -632,18 +627,17 @@ function AccountCreate({
 
   const handleCreate = async () => {
     if (!canCreate || submitting) return;
-    const name = values.account_name.trim();
+    const name = title.require();
     const number = parseAccountNumber(values.account_number);
     const nextErrors: FieldErrors = {};
     if (!coaId) nextErrors.coa_id = t('accounts.messages.chartRequired');
     if (number == null) nextErrors.account_number = t('accounts.messages.numberInvalid', { max: ACCOUNT_NUMBER_MAX_DIGITS });
-    if (!name) nextErrors.account_name = t('accounts.messages.nameRequired');
     setErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0) return;
+    if (!name || Object.keys(nextErrors).length > 0) return;
     setSubmitting(true);
     setServerError(null);
     try {
-      const res = await api.post<Account>('/accounts', {
+      await api.post<Account>('/accounts', {
         coa_id: coaId,
         account_number: number,
         account_name: name,
@@ -657,13 +651,14 @@ function AccountCreate({
       void queryClient.invalidateQueries({ queryKey: ['accounts'] });
       void queryClient.invalidateQueries({ queryKey: ['accounts-ids'] });
       void queryClient.invalidateQueries({ queryKey: COA_LIST_QUERY_KEY });
-      onCreated(res.data.id);
+      leave();
     } catch (e) {
       const message = getApiErrorMessage(e, t, t('accounts.messages.createFailed'));
       // The form checks everything else first: a 400 that names no field is the number already
       // used in the chosen chart.
       const field = accountRefusalField(e) ?? (httpStatus(e) === 400 ? 'account_number' : null);
-      if (field && field !== 'disabled_at') setErrors({ [field]: message });
+      if (field === 'account_name') title.refuse(message);
+      else if (field && field !== 'disabled_at') setErrors({ [field]: message });
       else setServerError(message);
     } finally {
       setSubmitting(false);
@@ -678,15 +673,11 @@ function AccountCreate({
         onTabChange={() => undefined}
         drawerStorageKey="kanap.accounts.drawerOpen"
         backLabel={t('coa.title')}
-        onBack={onClose}
-        title={values.account_name}
+        onBack={leave}
+        {...title.shellProps}
         titleFallback={t('accounts.newAccount')}
         isCreate
-        actions={(
-          <Button variant="contained" size="small" onClick={() => void handleCreate()} disabled={!canCreate || submitting}>
-            {t('accounts.actions.create')}
-          </Button>
-        )}
+        actions={<CreationActions onCreate={() => void handleCreate()} onCancel={leave} busy={!canCreate || submitting} />}
       >
         <Stack spacing={1.5} sx={{ maxWidth: 560 }}>
           <PropertyRow label={t('accounts.fields.chartOfAccounts')} required valueSx={{ maxWidth: 520 }}>
@@ -713,19 +704,6 @@ function AccountCreate({
                 autoComplete: 'off',
                 spellCheck: false,
               }}
-            />
-          </PropertyRow>
-          <PropertyRow label={t('accounts.fields.accountName')} required valueSx={{ maxWidth: 520 }}>
-            <TextField
-              value={values.account_name}
-              onChange={(e) => set('account_name', e.target.value)}
-              variant="standard"
-              fullWidth
-              sx={drawerFieldValueSx}
-              placeholder={t('accounts.placeholders.accountName')}
-              error={!!errors.account_name}
-              helperText={errors.account_name}
-              inputProps={{ 'aria-label': t('accounts.fields.accountName'), autoComplete: 'off' }}
             />
           </PropertyRow>
           <PropertyRow label={t('accounts.fields.nature')} valueSx={{ maxWidth: 520 }}>

@@ -509,24 +509,24 @@ describe('AccountWorkspacePage', () => {
     expect(navigateMock).toHaveBeenCalledWith('/master-data/accounts/acc-2/overview?selected=coa-fr&consolidation=unmapped');
   });
 
-  it('validates and creates with an explicit action, the chart preselected from the list', async () => {
+  it('validates and creates on Create with the header name, the chart preselected from the list', async () => {
     mocked.post.mockResolvedValue({ data: { ...ACCOUNT, id: 'acc-new' } });
     renderAt('/master-data/accounts/new/overview?selected=coa-fr&coaId=coa-fr&consolidation=unmapped');
     expect(screen.queryByRole('button', { name: 'admin:auditLogs.history.title' })).toBeNull();
     expect(screen.queryByRole('complementary')).toBeNull();
     const chart = screen.getByRole('combobox', { name: 'accounts.fields.chartOfAccounts' });
     await waitFor(() => expect(chart).toHaveTextContent('PCG · French chart'));
-    fireEvent.click(screen.getByRole('button', { name: 'accounts.actions.create' }));
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('accounts.messages.numberInvalid')).toBeInTheDocument();
     expect(screen.getByText('accounts.messages.nameRequired')).toBeInTheDocument();
     expect(mocked.post).not.toHaveBeenCalled();
 
     fireEvent.change(screen.getByLabelText('accounts.fields.accountNumber'), { target: { value: ' 606300 ' } });
-    fireEvent.change(screen.getByLabelText('accounts.fields.accountName'), { target: { value: 'Telecom' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Telecom' } });
     fireEvent.change(screen.getByLabelText('accounts.fields.nativeName'), { target: { value: 'Télécoms' } });
     const listbox = await openConsolidation();
     fireEvent.click(within(listbox).getByRole('option', { name: '1200 · Software' }));
-    fireEvent.click(screen.getByRole('button', { name: 'accounts.actions.create' }));
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/accounts', {
       coa_id: 'coa-fr',
       account_number: 606300,
@@ -539,7 +539,7 @@ describe('AccountWorkspacePage', () => {
       disabled_at: null,
     }));
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith(
-      '/master-data/accounts/acc-new/overview?selected=coa-fr&coaId=coa-fr&consolidation=unmapped',
+      '/master-data/coa?selected=coa-fr&coaId=coa-fr&consolidation=unmapped',
     ));
   });
 
@@ -550,8 +550,8 @@ describe('AccountWorkspacePage', () => {
     renderAt('/master-data/accounts/new/overview?selected=coa-fr');
     await waitFor(() => expect(screen.getByRole('combobox', { name: 'accounts.fields.chartOfAccounts' })).toHaveTextContent('PCG · French chart'));
     fireEvent.change(screen.getByLabelText('accounts.fields.accountNumber'), { target: { value: '606100' } });
-    fireEvent.change(screen.getByLabelText('accounts.fields.accountName'), { target: { value: 'Duplicate' } });
-    fireEvent.click(screen.getByRole('button', { name: 'accounts.actions.create' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Duplicate' } });
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText(/already exists/)).toBeInTheDocument();
     expect(screen.getByLabelText('accounts.fields.accountNumber')).toHaveAttribute('aria-invalid', 'true');
     expect(navigateMock).not.toHaveBeenCalled();
@@ -563,9 +563,9 @@ describe('AccountWorkspacePage', () => {
     await waitFor(() => expect(screen.getByRole('combobox', { name: 'accounts.fields.chartOfAccounts' })).toHaveTextContent('PCG · French chart'));
     expect(natureSelect()).toHaveTextContent('master-data:shared.lineTypeUsage.both');
     fireEvent.change(screen.getByLabelText('accounts.fields.accountNumber'), { target: { value: '218300' } });
-    fireEvent.change(screen.getByLabelText('accounts.fields.accountName'), { target: { value: 'IT hardware' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'IT hardware' } });
     await pickNature('master-data:shared.lineTypeUsage.capex');
-    fireEvent.click(screen.getByRole('button', { name: 'accounts.actions.create' }));
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/accounts', expect.objectContaining({
       account_number: 218300, account_name: 'IT hardware', nature: 'capex',
     })));
@@ -574,8 +574,8 @@ describe('AccountWorkspacePage', () => {
   it('asks for a chart when the list gave none', async () => {
     renderAt('/master-data/accounts/new/overview');
     fireEvent.change(screen.getByLabelText('accounts.fields.accountNumber'), { target: { value: '1' } });
-    fireEvent.change(screen.getByLabelText('accounts.fields.accountName'), { target: { value: 'Cash' } });
-    fireEvent.click(screen.getByRole('button', { name: 'accounts.actions.create' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Cash' } });
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('accounts.messages.chartRequired')).toBeInTheDocument();
     expect(mocked.post).not.toHaveBeenCalled();
   });

@@ -110,7 +110,7 @@ describe('DepartmentWorkspacePage', () => {
     history.unmount();
 
     renderAt('/master-data/departments/new/overview');
-    expect(await screen.findByText('departments.newDepartment')).toBeInTheDocument();
+    expect(await screen.findByPlaceholderText('departments.newDepartment')).toBeInTheDocument();
     expect(screen.queryByRole('tab', { name: 'shared.labels.history' })).toBeNull();
   });
 
@@ -170,14 +170,14 @@ describe('DepartmentWorkspacePage', () => {
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
-  it('says another department has the name, under the name field, when a create is refused as a duplicate', async () => {
+  it('says another department has the name, under the header title, when a create is refused as a duplicate', async () => {
     mocked.post.mockRejectedValueOnce({ response: { status: 409, data: { code: 'duplicate', message: 'Taken.' } } });
     renderAt('/master-data/departments/new/overview');
-    fireEvent.change(screen.getByLabelText('departments.fields.name'), { target: { value: 'legal' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'legal' } });
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('departments.messages.nameTaken')).toBeInTheDocument();
-    expect(screen.getByLabelText('departments.fields.name')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByRole('textbox', { name: 'common:buttons.editTitle' })).toHaveFocus();
     expect(navigateMock).not.toHaveBeenCalled();
   });
 
@@ -215,15 +215,15 @@ describe('DepartmentWorkspacePage', () => {
     expect(mocked.patch).toHaveBeenCalledTimes(2);
   });
 
-  it('creates with an explicit button', async () => {
+  it('creates on Create with the header name, then goes back to the list', async () => {
     mocked.post.mockResolvedValue({ data: { ...DEPARTMENT, id: 'dep-new' } });
     renderAt('/master-data/departments/new/overview?year=2026');
     expect(screen.queryByRole('complementary')).toBeNull();
-    fireEvent.change(screen.getByLabelText('departments.fields.name'), { target: { value: 'Legal' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Legal' } });
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/departments', { name: 'Legal', company_id: 'company-2', description: null }));
-    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/departments/dep-new/overview?year=2026'));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/departments?year=2026'));
   });
 
   it('changes year on a click made while the headcount save is still running', async () => {

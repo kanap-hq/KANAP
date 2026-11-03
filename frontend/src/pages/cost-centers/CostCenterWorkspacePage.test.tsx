@@ -136,12 +136,12 @@ describe('CostCenterWorkspacePage', () => {
     expect(screen.queryByRole('tab')).toBeNull();
   });
 
-  it('creates with an explicit button and opens the new node', async () => {
+  it('creates on Create with the header name, then goes back to the list', async () => {
     mocked.createCostCenter.mockResolvedValue({ ...NODE, id: 'cc-new' });
     renderAt('/master-data/cost-centers/new/overview?sort=path%3AASC');
     expect(screen.queryByRole('button', { name: 'admin:auditLogs.history.title' })).toBeNull();
     fireEvent.change(screen.getByLabelText('costCenters.fields.code'), { target: { value: ' IT-400 ' } });
-    fireEvent.change(screen.getByLabelText('costCenters.fields.name'), { target: { value: 'Workplace' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Workplace' } });
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(mocked.createCostCenter).toHaveBeenCalledTimes(1));
@@ -154,7 +154,7 @@ describe('CostCenterWorkspacePage', () => {
       owner_user_id: null,
       description: null,
     });
-    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/cost-centers/cc-new/overview?sort=path%3AASC'));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/cost-centers?sort=path%3AASC'));
   });
 
   it('refuses to create a cost center without a company', async () => {
@@ -162,7 +162,7 @@ describe('CostCenterWorkspacePage', () => {
     // No Properties drawer on the create page.
     expect(screen.queryByRole('complementary')).toBeNull();
     fireEvent.change(screen.getByLabelText('costCenters.fields.code'), { target: { value: 'IT-400' } });
-    fireEvent.change(screen.getByLabelText('costCenters.fields.name'), { target: { value: 'Workplace' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Workplace' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('costCenters.messages.companyRequired')).toBeInTheDocument();
     expect(mocked.createCostCenter).not.toHaveBeenCalled();
@@ -324,7 +324,7 @@ describe('CostCenterWorkspacePage', () => {
     renderAt('/master-data/cost-centers/new/overview');
     const code = screen.getByLabelText('costCenters.fields.code');
     fireEvent.change(code, { target: { value: 'IT-400' } });
-    fireEvent.change(screen.getByLabelText('costCenters.fields.name'), { target: { value: 'Workplace' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Workplace' } });
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     const message = await screen.findByText('A cost center with code IT-400 already exists.');

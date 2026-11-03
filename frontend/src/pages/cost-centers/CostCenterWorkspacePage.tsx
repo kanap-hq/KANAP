@@ -1,7 +1,8 @@
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, Button, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import { CreationActions, useCreationLeave, useCreationTitle } from '../../components/workspace/creation';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/AuthContext';
 import { useDataAccessAdmin } from '../../auth/dataAccess';
@@ -225,7 +226,7 @@ export default function CostCenterWorkspacePage() {
   ) : undefined;
 
   if (isCreate) {
-    return <CostCenterCreate onClose={handleClose} onCreated={(newId) => goTo(newId)} canCreate={canEdit} />;
+    return <CostCenterCreate onClose={handleClose} canCreate={canEdit} />;
   }
 
   return (
@@ -364,7 +365,6 @@ function DescriptionField({
 
 type CreateForm = {
   code: string;
-  name: string;
   kind: CostCenterKind;
   parent_id: string | null;
   company_id: string | null;
@@ -374,7 +374,6 @@ type CreateForm = {
 
 const EMPTY_FORM: CreateForm = {
   code: '',
-  name: '',
   kind: 'cost_center',
   parent_id: null,
   company_id: null,
@@ -385,11 +384,9 @@ const EMPTY_FORM: CreateForm = {
 function CostCenterCreate({
   canCreate,
   onClose,
-  onCreated,
 }: {
   canCreate: boolean;
   onClose: () => void;
-  onCreated: (id: string) => void;
 }) {
   const { t } = useTranslation(['master-data', 'common']);
   const queryClient = useQueryClient();
@@ -397,23 +394,24 @@ function CostCenterCreate({
   const [errors, setErrors] = React.useState<FieldErrors>({});
   const [serverError, setServerError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
+  const leave = useCreationLeave(onClose);
+  const title = useCreationTitle({ requiredMessage: t('costCenters.messages.nameRequired'), onCancel: leave });
 
   const update = (next: Partial<CreateForm>) => setForm((prev) => ({ ...prev, ...next }));
 
   const handleCreate = async () => {
     if (!canCreate || submitting) return;
     const code = form.code.trim();
-    const name = form.name.trim();
+    const name = title.require();
     const nextErrors: FieldErrors = {};
     if (!code) nextErrors.code = t('costCenters.messages.codeRequired');
-    if (!name) nextErrors.name = t('costCenters.messages.nameRequired');
     if (form.kind === 'cost_center' && !form.company_id) nextErrors.company_id = t('costCenters.messages.companyRequired');
     setErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0) return;
+    if (!name || Object.keys(nextErrors).length > 0) return;
     setSubmitting(true);
     setServerError(null);
     try {
-      const saved = await createCostCenter({
+      await createCostCenter({
         code,
         name,
         kind: form.kind,
@@ -424,12 +422,14 @@ function CostCenterCreate({
       });
       void queryClient.invalidateQueries({ queryKey: ['cost-centers'] });
       void queryClient.invalidateQueries({ queryKey: ['cost-centers-ids'] });
-      onCreated(saved.id);
+      leave();
     } catch (e) {
       const message = getApiErrorMessage(e, t, t('costCenters.messages.createFailed'));
       const field = refusalField(e);
       // A refusal goes under the field it names when the form shows that field.
-      if (field && CREATE_FIELDS.has(field) && !(field === 'company_id' && form.kind !== 'cost_center')) {
+      if (field === 'name') {
+        title.refuse(message);
+      } else if (field && CREATE_FIELDS.has(field) && !(field === 'company_id' && form.kind !== 'cost_center')) {
         setErrors({ [field]: message });
       } else {
         setServerError(message);
@@ -447,15 +447,11 @@ function CostCenterCreate({
         onTabChange={() => undefined}
         drawerStorageKey="kanap.costCenters.drawerOpen"
         backLabel={t('costCenters.title')}
-        onBack={onClose}
-        title={form.name}
+        onBack={leave}
+        {...title.shellProps}
         titleFallback={t('costCenters.newCostCenter')}
         isCreate
-        actions={(
-          <Button variant="contained" size="small" onClick={() => void handleCreate()} disabled={!canCreate || submitting}>
-            {t('common:buttons.create')}
-          </Button>
-        )}
+        actions={<CreationActions onCreate={() => void handleCreate()} onCancel={leave} busy={!canCreate || submitting} />}
       >
         <Stack spacing={1.5} sx={{ maxWidth: 560 }}>
           <PropertyRow label={t('costCenters.fields.code')} required helperText={t('costCenters.hints.code')} valueSx={{ maxWidth: 520 }}>
@@ -468,18 +464,6 @@ function CostCenterCreate({
               error={!!errors.code}
               helperText={errors.code}
               inputProps={{ 'aria-label': t('costCenters.fields.code'), autoComplete: 'off', spellCheck: false }}
-            />
-          </PropertyRow>
-          <PropertyRow label={t('costCenters.fields.name')} required valueSx={{ maxWidth: 520 }}>
-            <TextField
-              value={form.name}
-              onChange={(e) => update({ name: e.target.value })}
-              variant="standard"
-              sx={drawerFieldValueSx}
-              placeholder={t('costCenters.placeholders.name')}
-              error={!!errors.name}
-              helperText={errors.name}
-              inputProps={{ 'aria-label': t('costCenters.fields.name'), autoComplete: 'off' }}
             />
           </PropertyRow>
           <PropertyRow label={t('costCenters.fields.type')} required valueSx={{ maxWidth: 520 }}>

@@ -2,7 +2,8 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, Button, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Stack, TextField, Typography } from '@mui/material';
+import { CreationActions, useCreationLeave, useCreationTitle } from '../../components/workspace/creation';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
 import { useDepartmentNav } from '../../hooks/useDepartmentNav';
@@ -151,7 +152,6 @@ export default function DepartmentWorkspacePage() {
       <DepartmentCreate
         canCreate={canEdit}
         onClose={handleClose}
-        onCreated={(newId) => goTo(newId, 'overview')}
       />
     );
   }
@@ -314,15 +314,14 @@ function DescriptionField({
 function DepartmentCreate({
   canCreate,
   onClose,
-  onCreated,
 }: {
   canCreate: boolean;
   onClose: () => void;
-  onCreated: (id: string) => void;
 }) {
   const { t } = useTranslation(['master-data', 'common']);
   const queryClient = useQueryClient();
-  const [name, setName] = React.useState('');
+  const leave = useCreationLeave(onClose);
+  const title = useCreationTitle({ requiredMessage: t('departments.messages.nameRequired'), onCancel: leave });
   const [companyId, setCompanyId] = React.useState<string | null>(null);
   const [description, setDescription] = React.useState('');
   const [errors, setErrors] = React.useState<FieldErrors>({});
@@ -331,27 +330,27 @@ function DepartmentCreate({
 
   const handleCreate = async () => {
     if (!canCreate || submitting) return;
-    const trimmed = name.trim();
+    const trimmed = title.require();
     const nextErrors: FieldErrors = {};
-    if (!trimmed) nextErrors.name = t('departments.messages.nameRequired');
     if (!companyId) nextErrors.company_id = t('departments.messages.companyRequired');
     setErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0) return;
+    if (!trimmed || Object.keys(nextErrors).length > 0) return;
     setSubmitting(true);
     setServerError(null);
     try {
-      const res = await api.post<Department>('/departments', {
+      await api.post<Department>('/departments', {
         name: trimmed,
         company_id: companyId,
         description: description.trim() || null,
       });
       void queryClient.invalidateQueries({ queryKey: ['departments'] });
-      onCreated(res.data.id);
+      leave();
     } catch (e) {
       const message = getApiErrorMessage(e, t, t('departments.messages.createFailed'));
       const field = departmentRefusalField(e);
-      if (isDuplicateError(e)) setErrors({ name: t('departments.messages.nameTaken') });
-      else if (field === 'name' || field === 'company_id' || field === 'description') setErrors({ [field]: message });
+      if (isDuplicateError(e)) title.refuse(t('departments.messages.nameTaken'));
+      else if (field === 'name') title.refuse(message);
+      else if (field === 'company_id' || field === 'description') setErrors({ [field]: message });
       else setServerError(message);
     } finally {
       setSubmitting(false);
@@ -369,30 +368,13 @@ function DepartmentCreate({
         onTabChange={() => undefined}
         drawerStorageKey="kanap.departments.drawerOpen"
         backLabel={t('departments.title')}
-        onBack={onClose}
-        title={name}
+        onBack={leave}
+        {...title.shellProps}
         titleFallback={t('departments.newDepartment')}
         isCreate
-        actions={(
-          <Button variant="contained" size="small" onClick={() => void handleCreate()} disabled={!canCreate || submitting}>
-            {t('common:buttons.create')}
-          </Button>
-        )}
+        actions={<CreationActions onCreate={() => void handleCreate()} onCancel={leave} busy={!canCreate || submitting} />}
       >
         <Stack spacing={1.5} sx={{ maxWidth: 560 }}>
-          <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>{t('departments.detailsTabHint')}</Typography>
-          <PropertyRow label={t('departments.fields.name')} required valueSx={{ maxWidth: 520 }}>
-            <TextField
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              variant="standard"
-              sx={drawerFieldValueSx}
-              placeholder={t('departments.placeholders.name')}
-              error={!!errors.name}
-              helperText={errors.name}
-              inputProps={{ 'aria-label': t('departments.fields.name'), autoComplete: 'off' }}
-            />
-          </PropertyRow>
           <PropertyRow label={t('departments.fields.company')} required valueSx={{ maxWidth: 520 }}>
             <CompanySelect
               hideLabel
