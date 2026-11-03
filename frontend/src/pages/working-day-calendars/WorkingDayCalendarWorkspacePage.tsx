@@ -180,7 +180,7 @@ export default function WorkingDayCalendarWorkspacePage() {
   const disabled = !canEdit;
 
   if (isCreate) {
-    return <WorkingDayCalendarCreate onClose={handleClose} onCreated={(newId) => goTo(newId)} canCreate={canEdit} />;
+    return <WorkingDayCalendarCreate onClose={handleClose} canCreate={canEdit} />;
   }
 
   const actions = canDelete && data ? (

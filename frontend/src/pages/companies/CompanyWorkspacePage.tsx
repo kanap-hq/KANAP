@@ -2,7 +2,8 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, Button, FormHelperText, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, FormHelperText, Stack, TextField, Typography } from '@mui/material';
+import { CreationActions, useCreationLeave, useCreationTitle } from '../../components/workspace/creation';
 import { useTheme } from '@mui/material/styles';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
@@ -285,7 +286,6 @@ export default function CompanyWorkspacePage() {
       <CompanyCreate
         canCreate={canEdit}
         onClose={handleClose}
-        onCreated={(newId) => goTo(newId, 'overview')}
       />
     );
   }
@@ -696,14 +696,12 @@ function NotesField({
 }
 
 type CreateValues = {
-  name: string;
   country_iso: string;
   base_currency: string;
   coa_id: string | null;
 } & Record<TextKey, string>;
 
 const EMPTY_CREATE: CreateValues = {
-  name: '',
   country_iso: '',
   base_currency: '',
   coa_id: null,
@@ -720,14 +718,14 @@ const EMPTY_CREATE: CreateValues = {
 function CompanyCreate({
   canCreate,
   onClose,
-  onCreated,
 }: {
   canCreate: boolean;
   onClose: () => void;
-  onCreated: (id: string) => void;
 }) {
   const { t } = useTranslation(['master-data', 'common']);
   const queryClient = useQueryClient();
+  const leave = useCreationLeave(onClose);
+  const title = useCreationTitle({ requiredMessage: t('companies.messages.nameRequired'), onCancel: leave });
   const { coas } = useCoaList();
   const sections = useOptionalSections();
   const [values, setValues] = React.useState<CreateValues>(EMPTY_CREATE);
@@ -756,20 +754,19 @@ function CompanyCreate({
 
   const handleCreate = async () => {
     if (!canCreate || submitting) return;
-    const name = values.name.trim();
+    const name = title.require();
     const city = values.city.trim();
     const nextErrors: FieldErrors = {};
-    if (!name) nextErrors.name = t('companies.messages.nameRequired');
     if (!values.country_iso) nextErrors.country_iso = t('companies.messages.countryRequired');
     if (!values.base_currency) nextErrors.base_currency = t('companies.messages.currencyRequired');
     if (!city) nextErrors.city = t('companies.messages.cityRequired');
     setErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0) return;
+    if (!name || Object.keys(nextErrors).length > 0) return;
     setSubmitting(true);
     setServerError(null);
     const optional = (value: string) => value.trim() || null;
     try {
-      const res = await api.post<Company>('/companies', {
+      await api.post<Company>('/companies', {
         name,
         coa_id: values.coa_id,
         country_iso: values.country_iso,
@@ -786,11 +783,11 @@ function CompanyCreate({
         notes: optional(values.notes),
       });
       void queryClient.invalidateQueries({ queryKey: ['companies'] });
-      onCreated(res.data.id);
+      leave();
     } catch (e) {
       const message = getApiErrorMessage(e, t, t('companies.messages.createFailed'));
       const field = isDuplicateError(e) ? 'name' : companyRefusalField(e);
-      if (field === 'name' && isDuplicateError(e)) setErrors({ name: t('companies.messages.nameTaken') });
+      if (field === 'name') title.refuse(isDuplicateError(e) ? t('companies.messages.nameTaken') : message);
       else if (field && field !== 'disabled_at') setErrors({ [field]: message });
       else setServerError(message);
     } finally {
@@ -825,31 +822,14 @@ function CompanyCreate({
         onTabChange={() => undefined}
         drawerStorageKey="kanap.companies.drawerOpen"
         backLabel={t('companies.title')}
-        onBack={onClose}
-        title={values.name}
+        onBack={leave}
+        {...title.shellProps}
         titleFallback={t('companies.newCompany')}
         isCreate
-        actions={(
-          <Button variant="contained" size="small" onClick={() => void handleCreate()} disabled={!canCreate || submitting}>
-            {t('common:buttons.create')}
-          </Button>
-        )}
+        actions={<CreationActions onCreate={() => void handleCreate()} onCancel={leave} busy={!canCreate || submitting} />}
       >
         <Stack spacing={3} sx={{ maxWidth: 560 }}>
           <Box>
-            <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', mb: 1.5 }}>{t('companies.detailsTabHint')}</Typography>
-            <PropertyRow label={t('companies.fields.name')} required valueSx={{ maxWidth: 520 }}>
-              <TextField
-                value={values.name}
-                onChange={(e) => set('name', e.target.value)}
-                variant="standard"
-                sx={drawerFieldValueSx}
-                placeholder={t('companies.placeholders.name')}
-                error={!!errors.name}
-                helperText={errors.name}
-                inputProps={{ 'aria-label': t('companies.fields.name'), autoComplete: 'off' }}
-              />
-            </PropertyRow>
             <Box sx={twoColumnsSx}>
               <PropertyRow label={t('companies.fields.country')} required>
                 <CountryField value={values.country_iso} onChange={changeCountry} clearable error={errors.country_iso} />

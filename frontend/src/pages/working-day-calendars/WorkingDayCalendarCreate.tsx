@@ -1,9 +1,10 @@
 import React from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Alert, Autocomplete, Box, Button, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Autocomplete, Box, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
 import { createFilterOptions } from '@mui/material/Autocomplete';
 import { useTranslation } from 'react-i18next';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
+import { CreationActions, useCreationLeave, useCreationTitle } from '../../components/workspace/creation';
 import { PropertyRow } from '../../components/design';
 import { useCalendarCountries } from '../../hooks/useWorkingDayProfiles';
 import { createWorkingDayProfile, type CalendarCountry } from '../../services/workingDayProfiles';
@@ -36,13 +37,12 @@ const REFUSAL_TO_FIELD: Partial<Record<WorkingDayCalendarField, CreateField>> = 
 
 type CreateForm = {
   code: string;
-  name: string;
   description: string;
   country: string | null;
   region: string | null;
 };
 
-const EMPTY_FORM: CreateForm = { code: '', name: '', description: '', country: null, region: null };
+const EMPTY_FORM: CreateForm = { code: '', description: '', country: null, region: null };
 
 // Typed search matches the country's name or its two-letter code.
 const filterCountries = createFilterOptions<CalendarCountry>({ stringify: (option) => `${option.name} ${option.code}` });
@@ -50,16 +50,15 @@ const filterCountries = createFilterOptions<CalendarCountry>({ stringify: (optio
 /**
  * The create page of a calendar. With a country (and a region when the country has some), the
  * calendar is a standard one: its working days follow the public holidays, and code and name are
- * prefilled. Without, it is a custom calendar whose years are entered by hand.
+ * prefilled (the name in the header title). Without, it is a custom calendar whose years are
+ * entered by hand.
  */
 export default function WorkingDayCalendarCreate({
   canCreate,
   onClose,
-  onCreated,
 }: {
   canCreate: boolean;
   onClose: () => void;
-  onCreated: (id: string) => void;
 }) {
   const { t } = useTranslation(['master-data', 'common']);
   const queryClient = useQueryClient();
@@ -68,6 +67,8 @@ export default function WorkingDayCalendarCreate({
   const [errors, setErrors] = React.useState<FieldErrors>({});
   const [serverError, setServerError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
+  const leave = useCreationLeave(onClose);
+  const title = useCreationTitle({ requiredMessage: t('workingDayCalendars.messages.nameRequired'), onCancel: leave });
   // The code and name the last country choice wrote: a field still holding them follows the next choice.
   const prefillRef = React.useRef<{ code: string; name: string }>({ code: '', name: '' });
 
@@ -109,24 +110,23 @@ export default function WorkingDayCalendarCreate({
       country: nextCountry?.code ?? null,
       region: nextRegion?.code ?? null,
       code: follows(prev.code, previous.code) ? prefill.code : prev.code,
-      name: follows(prev.name, previous.name) ? prefill.name : prev.name,
     }));
+    if (follows(title.current(), previous.name)) title.fill(prefill.name);
     setErrors((prev) => ({ ...prev, country: undefined }));
   };
 
   const handleCreate = async () => {
     if (!canCreate || submitting) return;
     const code = form.code.trim();
-    const name = form.name.trim();
+    const name = title.require();
     const nextErrors: FieldErrors = {};
     if (!code) nextErrors.code = t('workingDayCalendars.messages.codeRequired');
-    if (!name) nextErrors.name = t('workingDayCalendars.messages.nameRequired');
     setErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0) return;
+    if (!name || Object.keys(nextErrors).length > 0) return;
     setSubmitting(true);
     setServerError(null);
     try {
-      const saved = await createWorkingDayProfile({
+      await createWorkingDayProfile({
         code,
         name,
         description: form.description.trim() || null,
@@ -134,13 +134,14 @@ export default function WorkingDayCalendarCreate({
       });
       void queryClient.invalidateQueries({ queryKey: ['working-day-profiles'] });
       void queryClient.invalidateQueries({ queryKey: ['working-day-profiles-ids'] });
-      onCreated(saved.id);
+      leave();
     } catch (e) {
       const message = getApiErrorMessage(e, t, t('workingDayCalendars.messages.createFailed'));
       const refused = refusalField(e);
       const field = refused ? REFUSAL_TO_FIELD[refused] : undefined;
       // A refusal goes under the field it names when the form shows that field.
-      if (field) setErrors({ [field]: message });
+      if (field === 'name') title.refuse(message);
+      else if (field) setErrors({ [field]: message });
       else setServerError(message);
     } finally {
       setSubmitting(false);
@@ -155,15 +156,11 @@ export default function WorkingDayCalendarCreate({
         onTabChange={() => undefined}
         drawerStorageKey="kanap.workingDayCalendars.drawerOpen"
         backLabel={t('workingDayCalendars.title')}
-        onBack={onClose}
-        title={form.name}
+        onBack={leave}
+        {...title.shellProps}
         titleFallback={t('workingDayCalendars.newCalendar')}
         isCreate
-        actions={(
-          <Button variant="contained" size="small" onClick={() => void handleCreate()} disabled={!canCreate || submitting}>
-            {t('common:buttons.create')}
-          </Button>
-        )}
+        actions={<CreationActions onCreate={() => void handleCreate()} onCancel={leave} busy={!canCreate || submitting} />}
       >
         <Stack spacing={1.5} sx={{ maxWidth: 560 }}>
           <PropertyRow label={t('workingDayCalendars.fields.country')} helperText={t('workingDayCalendars.hints.country')} valueSx={{ maxWidth: 520 }}>
@@ -217,18 +214,6 @@ export default function WorkingDayCalendarCreate({
               error={!!errors.code}
               helperText={errors.code}
               inputProps={{ 'aria-label': t('workingDayCalendars.fields.code'), autoComplete: 'off', spellCheck: false }}
-            />
-          </PropertyRow>
-          <PropertyRow label={t('workingDayCalendars.fields.name')} required valueSx={{ maxWidth: 520 }}>
-            <TextField
-              value={form.name}
-              onChange={(e) => update({ name: e.target.value })}
-              variant="standard"
-              sx={drawerFieldValueSx}
-              placeholder={t('workingDayCalendars.placeholders.name')}
-              error={!!errors.name}
-              helperText={errors.name}
-              inputProps={{ 'aria-label': t('workingDayCalendars.fields.name'), autoComplete: 'off' }}
             />
           </PropertyRow>
           <PropertyRow label={t('workingDayCalendars.fields.description')} valueSx={{ maxWidth: 520 }}>

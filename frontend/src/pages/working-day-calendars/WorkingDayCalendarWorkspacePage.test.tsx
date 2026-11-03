@@ -155,10 +155,10 @@ describe('WorkingDayCalendarWorkspacePage', () => {
     // No Properties drawer on the create page.
     expect(screen.queryByRole('complementary')).toBeNull();
     fireEvent.change(screen.getByLabelText('workingDayCalendars.fields.code'), { target: { value: ' CAL-02 ' } });
-    fireEvent.change(screen.getByLabelText('workingDayCalendars.fields.name'), { target: { value: 'Contractors' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Contractors' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(mocked.createWorkingDayProfile).toHaveBeenCalledWith({ code: 'CAL-02', name: 'Contractors', description: null }));
-    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/working-day-calendars/wd-new/overview?sort=name%3AASC'));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/working-day-calendars?sort=name%3AASC'));
   });
 
   it('reads the calendar with its names in the UI language, and no year route for a custom calendar', async () => {
@@ -189,7 +189,7 @@ describe('WorkingDayCalendarWorkspacePage', () => {
     fireEvent.change(country, { target: { value: 'fra' } });
     fireEvent.click(await screen.findByRole('option', { name: 'France' }));
     expect(screen.getByLabelText('workingDayCalendars.fields.code')).toHaveValue('FR');
-    expect(screen.getByLabelText('workingDayCalendars.fields.name')).toHaveValue('France');
+    expect(screen.getByRole('textbox', { name: 'common:buttons.editTitle' })).toHaveValue('France');
     expect(screen.getByTestId('working-day-calendar-create-hint')).toHaveTextContent('workingDayCalendars.createHintStandard source=France');
 
     const region = screen.getByRole('combobox', { name: 'workingDayCalendars.fields.region' });
@@ -197,7 +197,7 @@ describe('WorkingDayCalendarWorkspacePage', () => {
     fireEvent.mouseDown(region);
     fireEvent.click(await screen.findByRole('option', { name: 'Moselle' }));
     expect(screen.getByLabelText('workingDayCalendars.fields.code')).toHaveValue('FR-57');
-    expect(screen.getByLabelText('workingDayCalendars.fields.name')).toHaveValue('France (Moselle)');
+    expect(screen.getByRole('textbox', { name: 'common:buttons.editTitle' })).toHaveValue('France (Moselle)');
 
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(mocked.createWorkingDayProfile).toHaveBeenCalledWith({
@@ -207,7 +207,7 @@ describe('WorkingDayCalendarWorkspacePage', () => {
       country_iso: 'FR',
       region_code: '57',
     }));
-    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/working-day-calendars/wd-new/overview'));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/working-day-calendars'));
   });
 
   it('keeps a code or name typed by the user when the country changes, and offers no region when there is none', async () => {
@@ -216,11 +216,11 @@ describe('WorkingDayCalendarWorkspacePage', () => {
     await waitFor(() => expect(mocked.listCountries).toHaveBeenCalled());
     fireEvent.change(country, { target: { value: 'Fr' } });
     fireEvent.click(await screen.findByRole('option', { name: 'France' }));
-    fireEvent.change(screen.getByLabelText('workingDayCalendars.fields.name'), { target: { value: 'Paris staff' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Paris staff' } });
     fireEvent.change(country, { target: { value: 'NL' } });
     fireEvent.click(await screen.findByRole('option', { name: 'Netherlands' }));
     expect(screen.getByLabelText('workingDayCalendars.fields.code')).toHaveValue('NL');
-    expect(screen.getByLabelText('workingDayCalendars.fields.name')).toHaveValue('Paris staff');
+    expect(screen.getByRole('textbox', { name: 'common:buttons.editTitle' })).toHaveValue('Paris staff');
     expect(screen.queryByRole('combobox', { name: 'workingDayCalendars.fields.region' })).toBeNull();
   });
 
