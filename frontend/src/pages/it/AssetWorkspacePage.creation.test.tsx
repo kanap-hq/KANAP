@@ -225,6 +225,17 @@ describe('Asset creation at the title', () => {
     expect(location()).toBe('/it/assets/AST-7/overview');
   });
 
+  it('creates the asset on Tab out of the title and puts the focus on its site', async () => {
+    renderPage(['/start']);
+    fireEvent.click(await screen.findByRole('button', { name: 'new asset' }));
+    const input = await screen.findByRole('textbox', { name: TITLE });
+    fireEvent.change(input, { target: { value: 'Web 1' } });
+    fireEvent.keyDown(input, { key: 'Tab' });
+    await waitFor(() => expect(location()).toBe('/it/assets/AST-7/overview'));
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'site' })).toHaveFocus());
+    expect(mocked.post).toHaveBeenCalledTimes(1);
+  });
+
   it('names the missing site on Create, focuses it and stays', async () => {
     await createAsset();
     mocked.post.mockRejectedValueOnce({

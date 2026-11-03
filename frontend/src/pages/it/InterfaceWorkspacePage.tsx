@@ -819,6 +819,7 @@ export default function InterfaceWorkspacePage() {
         titleError={isCreate ? createTitleError : null}
         titleAutoEdit={isCreate && canManage}
         titleOnCancel={isCreate ? () => { void closeWorkspace(); } : undefined}
+        titleOnTab={isCreate ? () => focusField('source') : undefined}
         titleFocusRequest={titleFocusRequest}
         isCreate={isCreate}
         forceDrawerOpen={isCreate}
@@ -867,6 +868,7 @@ export default function InterfaceWorkspacePage() {
             data={current}
             onPatch={persistPatch}
             onReplaceLegs={persistLegs}
+            onRequiredTab={isCreate ? (field) => focusField(field === 'source' ? 'target' : 'data_category') : undefined}
           />
         )}
 

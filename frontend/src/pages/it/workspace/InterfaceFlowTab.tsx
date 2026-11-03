@@ -32,6 +32,8 @@ type Props = {
   data: InterfaceDetail | null;
   onPatch: (patch: Partial<InterfaceDetail>) => Promise<void>;
   onReplaceLegs: (legs: InterfaceLeg[]) => Promise<void>;
+  /** Tab in an application of a new interface: the page moves the focus to the next required field. */
+  onRequiredTab?: (field: 'source' | 'target') => void;
 };
 
 function SectionHeader({ children }: { children: React.ReactNode }) {
@@ -74,11 +76,17 @@ export default function InterfaceFlowTab({
   data,
   onPatch,
   onReplaceLegs,
+  onRequiredTab,
 }: Props) {
   const { t } = useTranslation(['it', 'common']);
   const { byField } = useItOpsEnumOptions();
   const disabled = !canManage;
   const legs = React.useMemo(() => (data?.legs || []) as InterfaceLeg[], [data?.legs]);
+  const requiredTab = (field: 'source' | 'target') => (event: React.KeyboardEvent) => {
+    if (event.key !== 'Tab' || event.shiftKey || !onRequiredTab) return;
+    event.preventDefault();
+    onRequiredTab(field);
+  };
 
   const { data: etlAppsData, isLoading: loadingEtlApps } = useQuery({
     queryKey: ['applications', 'select', 'etl-middleware'],
@@ -161,7 +169,7 @@ export default function InterfaceFlowTab({
         <SectionHeader>{t('it:workspace.interface.flow.logicalFlow')}</SectionHeader>
         <Stack spacing={1.25}>
           <PropertyRow label={t('it:workspace.interface.fields.sourceApplication')} required valueSx={{ maxWidth: 560 }}>
-            <Box data-creation-field="source">
+            <Box data-creation-field="source" onKeyDown={requiredTab('source')}>
               <ApplicationSelect
                 value={data?.source_application_id || null}
                 onChange={(value) => void onPatch({ source_application_id: value || '' })}
@@ -174,7 +182,7 @@ export default function InterfaceFlowTab({
             </Box>
           </PropertyRow>
           <PropertyRow label={t('it:workspace.interface.fields.targetApplication')} required valueSx={{ maxWidth: 560 }}>
-            <Box data-creation-field="target">
+            <Box data-creation-field="target" onKeyDown={requiredTab('target')}>
               <ApplicationSelect
                 value={data?.target_application_id || null}
                 onChange={(value) => void onPatch({ target_application_id: value || '' })}

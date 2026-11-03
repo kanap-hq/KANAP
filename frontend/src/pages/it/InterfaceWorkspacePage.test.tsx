@@ -32,10 +32,14 @@ vi.mock('../workspace/hooks/useRecentlyViewed', () => ({ useRecentlyViewed: () =
 vi.mock('./components/InterfaceBindingsMatrix', () => ({ default: () => null }));
 // The draft's fields: each button fills one, as the real pickers would.
 vi.mock('./workspace/InterfaceFlowTab', () => ({
-  default: ({ onPatch }: { onPatch: (patch: Record<string, unknown>) => Promise<void> }) => (
+  default: ({ onPatch, onRequiredTab }: { onPatch: (patch: Record<string, unknown>) => Promise<void>; onRequiredTab?: (field: string) => void }) => (
     <div data-testid="flow-tab">
+      <div data-creation-field="source"><input aria-label="source" /></div>
+      <div data-creation-field="target"><input aria-label="target" /></div>
       <button type="button" onClick={() => void onPatch({ source_application_id: 'app-1' })}>pick source</button>
       <button type="button" onClick={() => void onPatch({ target_application_id: 'app-2' })}>pick target</button>
+      <button type="button" onClick={() => onRequiredTab?.('source')}>tab from source</button>
+      <button type="button" onClick={() => onRequiredTab?.('target')}>tab from target</button>
     </div>
   ),
 }));
@@ -44,7 +48,10 @@ vi.mock('./workspace/InterfaceMetadataBar', () => ({ default: () => null }));
 vi.mock('./workspace/InterfaceOverviewTab', () => ({ default: () => null }));
 vi.mock('./workspace/InterfacePropertyPanel', () => ({
   default: ({ onPatch }: { onPatch: (patch: Record<string, unknown>) => Promise<void> }) => (
-    <button type="button" onClick={() => void onPatch({ data_category: 'orders' })}>pick category</button>
+    <>
+      <div data-creation-field="data_category"><input aria-label="data category" /></div>
+      <button type="button" onClick={() => void onPatch({ data_category: 'orders' })}>pick category</button>
+    </>
   ),
 }));
 vi.mock('./workspace/InterfaceRelationsTab', () => ({ default: () => null }));
@@ -59,6 +66,11 @@ vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
         defaultValue={props.title}
         onChange={(event) => props.onTitleDraftChange?.(event.target.value)}
         onBlur={(event) => props.onTitleSave?.(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key !== 'Tab' || !props.titleOnTab) return;
+          props.onTitleSave?.((event.target as HTMLInputElement).value);
+          props.titleOnTab();
+        }}
       />
       {props.titleError ? <div role="alert">{props.titleError}</div> : null}
       <div>{props.actions}</div>
@@ -247,6 +259,19 @@ describe('InterfaceWorkspacePage (draft)', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Cancel' }));
     await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/start'));
     expect(del).toHaveBeenCalledWith('/interfaces/int-9/creation', { data: { token: 'tok-9' } });
+  });
+
+  it('moves Tab from the title to the source, then to the target and the data category', async () => {
+    renderNew();
+    const title = await screen.findByLabelText('title');
+    fireEvent.change(title, { target: { value: 'Orders sync' } });
+    fireEvent.keyDown(title, { key: 'Tab' });
+    await waitFor(() => expect(screen.getByLabelText('source')).toHaveFocus());
+    fireEvent.click(screen.getByRole('button', { name: 'tab from source' }));
+    await waitFor(() => expect(screen.getByLabelText('target')).toHaveFocus());
+    fireEvent.click(screen.getByRole('button', { name: 'tab from target' }));
+    await waitFor(() => expect(screen.getByLabelText('data category')).toHaveFocus());
+    expect(post).not.toHaveBeenCalled();
   });
 
   it('creates nothing while a required field is missing', async () => {

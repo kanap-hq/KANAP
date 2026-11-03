@@ -1621,6 +1621,8 @@ function AssetWorkspaceRoute() {
   // lifecycle as shown, no site yet), and the page moves to it with Create and Cancel. Create clicked
   // meanwhile checks it there.
   const creatingRef = React.useRef(false);
+  // Tab out of the title: the site, the field the asset still needs, gets the focus once it is created.
+  const siteAfterCreateRef = React.useRef(false);
   const createAsset = async (assetName: string) => {
     if (creatingRef.current) return;
     creatingRef.current = true;
@@ -1638,13 +1640,18 @@ function AssetWorkspaceRoute() {
       });
       const { creation_token: token, ...created } = res.data;
       const check = newCreate.titleSettled();
+      const focusSite = siteAfterCreateRef.current;
+      siteAfterCreateRef.current = false;
       creation.startCreation({ recordId: created.id, token, returnTo: creationReturn });
       navigate(`/it/assets/${created.asset_reference || created.id}/overview`, {
         replace: true,
-        state: check ? { ...(routerLocation.state as object | null), creationCheck: true } : routerLocation.state,
+        state: check || focusSite
+          ? { ...(routerLocation.state as object | null), ...(check ? { creationCheck: true } : {}), ...(focusSite ? { focusSite: true } : {}) }
+          : routerLocation.state,
       });
     } catch (e) {
       newCreate.titleSettled();
+      siteAfterCreateRef.current = false;
       setTitleError(getApiErrorMessage(e, t, t('messages.saveAssetFailed')));
     } finally {
       creatingRef.current = false;
@@ -1688,6 +1695,13 @@ function AssetWorkspaceRoute() {
     if (!creationCheckRef.current || !data || !creation.beingCreated) return;
     creationCheckRef.current = false;
     void createAction();
+  });
+  // Tab out of the title: the site gets the focus once the asset is on screen.
+  const focusSiteRef = React.useRef((routerLocation.state as { focusSite?: boolean } | null)?.focusSite === true);
+  React.useEffect(() => {
+    if (!focusSiteRef.current || !data || !creation.beingCreated || creationCheckRef.current) return;
+    focusSiteRef.current = false;
+    focusField('location');
   });
 
   // Cancel on an asset being created deletes it (`useRecordCreation`), once its description is saved.
@@ -2206,6 +2220,7 @@ function AssetWorkspaceRoute() {
         titleAutoEdit={isCreate}
         titleOnCancel={isCreate ? () => { void handleClose(); } : undefined}
         titleFocusRequest={newCreate.focusRequest}
+        titleOnTab={isCreate ? () => { siteAfterCreateRef.current = true; } : undefined}
         isCreate={isCreate}
         forceDrawerOpen={isCreate}
         drawerOpenRequest={fieldDrawerRequest}
