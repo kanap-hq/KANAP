@@ -15,6 +15,8 @@ type Props = {
   initialNotes: string;
   canManage: boolean;
   onNotesSaved?: (next: string) => void;
+  /** A new site: the notes go to its draft, and what needs a saved site stays hidden. */
+  onNotesDraft?: (next: string) => void;
   onSubLocationsCountChange?: (count: number) => void;
   subItemsAnchorRef?: React.RefObject<HTMLDivElement>;
 };
@@ -26,6 +28,7 @@ export default function LocationOverviewTab({
   initialNotes,
   canManage,
   onNotesSaved,
+  onNotesDraft,
   onSubLocationsCountChange,
   subItemsAnchorRef,
 }: Props) {
@@ -69,6 +72,10 @@ export default function LocationOverviewTab({
   const handleNotesChange = (value: string) => {
     setNotes(value);
     latestRef.current = value;
+    if (onNotesDraft) {
+      onNotesDraft(value);
+      return;
+    }
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       void persist(latestRef.current);
@@ -124,17 +131,21 @@ export default function LocationOverviewTab({
         </React.Suspense>
       </Box>
 
-      <Box ref={subItemsAnchorRef}>
-        <LocationSubItemsTable
-          locationId={locationId}
-          canManage={canManage}
-          onCountChange={onSubLocationsCountChange}
-        />
-      </Box>
+      {!onNotesDraft && (
+        <>
+          <Box ref={subItemsAnchorRef}>
+            <LocationSubItemsTable
+              locationId={locationId}
+              canManage={canManage}
+              onCountChange={onSubLocationsCountChange}
+            />
+          </Box>
 
-      <Box>
-        <EntityKnowledgePanel entityType="locations" entityId={locationId} canCreate={canManage} />
-      </Box>
+          <Box>
+            <EntityKnowledgePanel entityType="locations" entityId={locationId} canCreate={canManage} />
+          </Box>
+        </>
+      )}
     </Box>
   );
 }

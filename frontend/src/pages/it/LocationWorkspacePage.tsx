@@ -4,9 +4,7 @@ import {
   Alert,
   Box,
   Link as MuiLink,
-  MenuItem,
   Stack,
-  TextField,
   Typography,
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
@@ -17,7 +15,6 @@ import PortfolioDetailWorkspaceShell, {
 } from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
 import KanapDialog from '../../components/design/KanapDialog';
 import { useKanapDialogs } from '../../components/design';
-import { PropertyRow } from '../../components/design/PropertyRow';
 import SendLinkButton from '../../components/workspace/SendLinkButton';
 import LocationPropertiesDrawer from './workspace/LocationPropertiesDrawer';
 import LocationMetadataBar from './workspace/LocationMetadataBar';
@@ -26,7 +23,6 @@ import LocationContactsTab from './workspace/LocationContactsTab';
 import LocationRelationsTab from './workspace/LocationRelationsTab';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import { useLocationItemNav } from '../../hooks/useModuleItemNav';
-import { drawerSelectSx, drawerMenuItemSx } from '../../theme/formSx';
 import { getApiErrorMessage, isDuplicateError } from '../../utils/apiErrorMessage';
 import { deleteFailureReason } from '../../utils/deleteRefusal';
 import { useLocale } from '../../i18n/useLocale';
@@ -56,6 +52,20 @@ type LocationRecord = {
 
 type HostingCategory = 'on_prem' | 'cloud';
 
+// A new site: the record page on a draft that Create posts.
+const NEW_LOCATION: LocationRecord = {
+  id: '',
+  location_reference: '',
+  name: '',
+  hosting_type: '',
+  operating_company_id: null,
+  country_iso: null,
+  city: null,
+  provider: null,
+  region: null,
+  additional_info: null,
+};
+
 const TAB_KEYS: TabKey[] = ['overview', 'contacts', 'relations', RECORD_HISTORY_TAB_KEY];
 
 // The History tab loads with its tab; a failed chunk shows a retry button in its place.
@@ -63,6 +73,12 @@ const historyTab = retryableLazy(() => import('../../components/history/RecordHi
 const HistoryTab = historyTab.Component;
 
 export default function LocationWorkspacePage() {
+  const { id } = useParams();
+  // A new site is a page of its own: nothing of a site seen before stays in its draft.
+  return <LocationEditor key={id === 'new' ? 'new' : 'record'} />;
+}
+
+function LocationEditor() {
   const { t } = useTranslation(['it', 'common', 'errors']);
   const locale = useLocale();
   const dialogs = useKanapDialogs();
@@ -82,7 +98,7 @@ export default function LocationWorkspacePage() {
   const { settings, byField } = useItOpsEnumOptions();
   const hostingOptions = byField.hostingType || [];
 
-  const [data, setData] = React.useState<LocationRecord | null>(null);
+  const [data, setData] = React.useState<LocationRecord | null>(isCreate ? NEW_LOCATION : null);
   const [loading, setLoading] = React.useState(!isCreate);
   const [error, setError] = React.useState<string | null>(null);
   // HTTP status of the last failed read. Null once a location is on screen.
@@ -97,8 +113,6 @@ export default function LocationWorkspacePage() {
   const [deleting, setDeleting] = React.useState(false);
   const [pendingHostingType, setPendingHostingType] = React.useState<string | null>(null);
 
-  // Create state
-  const [createHostingType, setCreateHostingType] = React.useState<string>('');
   const [createSubmitting, setCreateSubmitting] = React.useState(false);
   const [createError, setCreateError] = React.useState<string | null>(null);
 
@@ -131,10 +145,10 @@ export default function LocationWorkspacePage() {
   );
 
   React.useEffect(() => {
-    if (isCreate && !createHostingType && hostingOptions.length > 0) {
-      setCreateHostingType(hostingOptions[0].code);
+    if (isCreate && hostingOptions.length > 0) {
+      setData((prev) => (prev && !prev.hosting_type ? { ...prev, hosting_type: hostingOptions[0].code } : prev));
     }
-  }, [isCreate, createHostingType, hostingOptions]);
+  }, [isCreate, hostingOptions]);
 
   const load = React.useCallback(async () => {
     if (isCreate || !routeId) return;
@@ -196,6 +210,11 @@ export default function LocationWorkspacePage() {
 
   const patchLocation = React.useCallback(
     async (patch: Partial<LocationRecord>) => {
+      if (isCreate) {
+        setCreateError(null);
+        setData((prev) => (prev ? { ...prev, ...patch } : prev));
+        return;
+      }
       if (!locationId) return;
       setSaving(true);
       if ('name' in patch) setNameError(null);
@@ -213,7 +232,7 @@ export default function LocationWorkspacePage() {
         setSaving(false);
       }
     },
-    [load, locationId, t],
+    [isCreate, load, locationId, t],
   );
 
   const listContextParams = React.useMemo(() => {
@@ -258,13 +277,13 @@ export default function LocationWorkspacePage() {
       if (!data || next === data.hosting_type) return;
       const prevCategory = getHostingCategory(data.hosting_type);
       const nextCategory = getHostingCategory(next);
-      if (prevCategory !== nextCategory) {
+      if (prevCategory !== nextCategory && !isCreate) {
         setPendingHostingType(next);
         return;
       }
       void patchLocation({ hosting_type: next });
     },
-    [data, getHostingCategory, patchLocation],
+    [data, getHostingCategory, isCreate, patchLocation],
   );
 
   const handleConfirmHostingBascule = React.useCallback(async () => {
@@ -334,20 +353,18 @@ export default function LocationWorkspacePage() {
   );
 
   const handleCreate = async () => {
-    if (!canManage) return;
+    if (!canManage || !data) return;
     const name = creationTitle.require();
     if (!name) return;
-    if (!createHostingType) {
+    if (!data.hosting_type) {
       setCreateError(t('messages.hostingTypeRequired'));
       return;
     }
     setCreateSubmitting(true);
     setCreateError(null);
+    const { id: _id, location_reference: _reference, ...fields } = data;
     try {
-      await api.post('/locations', {
-        name,
-        hosting_type: createHostingType,
-      });
+      await api.post('/locations', { ...fields, name });
       leaveCreation();
     } catch (e: any) {
       if (isDuplicateError(e)) creationTitle.refuse(t('messages.locationNameTaken'));
@@ -556,6 +573,8 @@ export default function LocationWorkspacePage() {
         })}
         titleFallback={isCreate ? t('workspace.location.newTitle') : t('workspace.location.untitled')}
         isCreate={isCreate}
+        // A new record's required fields sit in the drawer: it stays open.
+        forceDrawerOpen={isCreate}
         nav={!isCreate && total > 0 ? {
           currentIndex: index + 1,
           totalCount: total,
@@ -571,24 +590,14 @@ export default function LocationWorkspacePage() {
         properties={drawerProperties}
       >
         {isCreate ? (
-          <Stack spacing={1.5} sx={{ maxWidth: 560 }}>
-            <PropertyRow label={t('pages.locations.columns.hostingType')} required valueSx={{ maxWidth: 520 }}>
-              <TextField
-                select
-                value={createHostingType}
-                onChange={(e) => setCreateHostingType(e.target.value)}
-                size="small"
-                variant="standard"
-                sx={drawerSelectSx}
-              >
-                {hostingOptions.map((opt) => (
-                  <MenuItem key={opt.code} value={opt.code} sx={drawerMenuItemSx}>
-                    {opt.deprecated ? t('common.deprecatedOption', { label: opt.label }) : opt.label}
-                  </MenuItem>
-                ))}
-              </TextField>
-            </PropertyRow>
+          <Stack spacing={1.5}>
             {createError && <Alert severity="error">{createError}</Alert>}
+            <LocationOverviewTab
+              locationId=""
+              initialNotes=""
+              canManage={canManage}
+              onNotesDraft={(next) => { void patchLocation({ additional_info: next.trim() ? next : null }); }}
+            />
           </Stack>
         ) : !data ? null : (
           <>

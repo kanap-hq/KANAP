@@ -103,13 +103,24 @@ describe('LocationWorkspacePage name refusals', () => {
     expect(navigateMock).not.toHaveBeenCalled();
   });
 
-  it('creates the site on Create with the header name, then goes back to the list', async () => {
+  it('creates the site on Create with the header name and the drawer fields, then goes back to the list', async () => {
     mocked.post.mockResolvedValueOnce({ data: { id: 'loc-new', location_reference: 'LOC-9', name: 'Lyon DC' } });
     renderAt('/it/locations/new/overview');
     expect(screen.queryByPlaceholderText('workspace.location.namePlaceholder')).toBeNull();
     fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: ' Lyon DC ' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
-    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/locations', expect.objectContaining({ name: 'Lyon DC' })));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/locations', {
+      name: 'Lyon DC',
+      hosting_type: 'on_prem',
+      operating_company_id: null,
+      country_iso: null,
+      city: null,
+      provider: null,
+      region: null,
+      additional_info: null,
+    }));
+    // The new site reads nothing: no id to read with.
+    expect(mocked.get).not.toHaveBeenCalled();
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/it/locations'));
   });
 
