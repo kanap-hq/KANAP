@@ -72,7 +72,7 @@ Click any cell to open the workspace.
 
 ## Creating a calendar
 
-Click **New**, then:
+Click **New**. The page of the new calendar opens, its properties panel open. Then:
 
 1. **Country** (optional): type to search, by name or by two-letter code. With a country, the calendar is standard
 2. **Region**: shown when the country has regions, for example the German states or the French departments with their own holidays. Keep **Whole country**, or pick a region
@@ -80,7 +80,7 @@ Click **New**, then:
 4. **Description**: optional
 5. Click **Create**
 
-A new calendar is enabled, and you go back to where you started. **Cancel**, or Escape on the empty title, leaves without creating anything. A standard calendar already holds the working days of every year. For a custom one, enter them year by year.
+A new calendar is enabled, and you go back to where you started. **Cancel**, or Escape on the empty title, leaves without creating anything. A standard calendar holds the working days of every year: they show once it is created. For a custom one, enter them year by year.
 
 The country and region are set once, at creation. To follow another country, create another calendar.
 

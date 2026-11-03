@@ -4,7 +4,7 @@ Locations document where your IT infrastructure is hosted: data centers, cloud r
 
 ## Getting started
 
-Navigate to **IT Landscape -> Locations** to open the location registry. Click **Add Location** to create a new entry. Type the name in the title at the top of the page, choose the **Hosting Type**, then click **Create**: you go back to where you started. **Cancel**, or Escape on the empty title, leaves without creating anything.
+Navigate to **IT Landscape -> Locations** to open the location registry. Click **Add Location** to create a new entry: the page of the new location opens, its properties panel open. Type the name in the title at the top of the page, choose the **Hosting Type** and the other fields, then click **Create**: you go back to where you started. **Cancel**, or Escape on the empty title, leaves without creating anything.
 
 **Required fields**:
 - **Code**: A unique short identifier (e.g., `DC-EU-WEST`, `AWS-US-EAST-1`)

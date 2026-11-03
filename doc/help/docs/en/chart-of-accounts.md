@@ -152,7 +152,7 @@ The **Consolidation** section holds one field, **Consolidation account**. It is 
 
 ### Creating an account
 
-**New account** on the list opens a short form with the chart you were viewing already selected. Type the account name in the title at the top of the page, fill in the chart and the account number, plus the optional fields, then click **Create**. You go back to where you started. Once created, the account saves automatically whenever you change it. **Cancel**, or Escape on the empty title, leaves without creating anything.
+**New account** on the list opens the page of the new account, its properties panel open, with the chart you were viewing already selected. Type the account name in the title at the top of the page, fill in the chart and the account number, plus the optional fields, then click **Create**. A missing or invalid field is marked then. You go back to where you started. Once created, the account saves automatically whenever you change it. **Cancel**, or Escape on the empty title, leaves without creating anything.
 
 ## Setting up Charts of Accounts
 

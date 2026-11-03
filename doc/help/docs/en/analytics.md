@@ -127,7 +127,7 @@ Click any cell to open the value's workspace.
 
 ### Creating a dimension
 
-Click **New** in the selector bar. Type the name in the title at the top of the page, fill in the fields, then click **Create**. You go back to where you started. A new dimension is enabled. **Cancel**, or Escape on the empty title, leaves without creating anything.
+Click **New** in the selector bar. The page of the new dimension opens, its properties panel open. Type the name in the title at the top of the page, fill in the fields, then click **Create**. You go back to where you started. A new dimension is enabled. **Cancel**, or Escape on the empty title, leaves without creating anything.
 
 - The name is required.
 - **Code** is proposed from the name: lowercase, accents removed, spaces replaced by `-`. You can change it before you create the dimension.
@@ -242,7 +242,7 @@ To keep the values on the lines instead, disable the dimension.
 
 ### Creating a value
 
-Click **New value**. The **Dimension** field starts on the dimension selected on the page and offers the enabled dimensions only. Type the name in the title at the top of the page, and a **Description** if you like. **Used for** starts on **OPEX and CAPEX**: change it if the value suits one kind of line only. Then click **Create**. You go back to where you started. A new value is enabled. **Cancel**, or Escape on the empty title, leaves without creating anything.
+Click **New value**. The page of the new value opens, its properties panel open. The **Dimension** field starts on the dimension selected on the page and offers the enabled dimensions only. Type the name in the title at the top of the page, and a **Description** if you like. **Used for** starts on **OPEX and CAPEX**: change it if the value suits one kind of line only. Then click **Create**. You go back to where you started. A new value is enabled. **Cancel**, or Escape on the empty title, leaves without creating anything.
 
 ### The value workspace
 
