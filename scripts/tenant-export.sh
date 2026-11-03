@@ -321,6 +321,7 @@ TENANT_TABLES=(
   technology_vulnerabilities
   tenant_onboarding
   trial_discovery_calls
+  trial_mails
   user_dashboard_config
   user_data_access_nodes
   user_notification_preferences

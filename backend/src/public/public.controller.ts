@@ -17,6 +17,7 @@ import { AuthService } from '../auth/auth.service';
 import { RateLimitGuard } from '../common/rate-limit.guard';
 import { RATE_LIMITS } from '../common/rate-limit';
 import { clientAddress } from '../common/client-address';
+import { enrollTrialMails } from '../email/trial-mails/trial-mails.service';
 import { withTenant } from '../common/tenant-runner';
 import { TurnstileService } from './turnstile.service';
 import { Subscription, SubscriptionStatus } from '../billing/subscription.entity';
@@ -611,6 +612,7 @@ export class PublicController {
         seat_limit: null, // unlimited during trial
         active_seats: 0,
       });
+      await enrollTrialMails(runner.manager, tenant.id);
 
       await runner.commitTransaction();
     } catch (error) {

@@ -8,6 +8,7 @@ import { Tenant } from '../tenants/tenant.entity';
 import { withTenant } from '../common/tenant-runner';
 import { getEnvMode, isDevelopmentEnv } from '../common/env';
 import { EmailService } from '../email/email.service';
+import { TrialMailsService } from '../email/trial-mails/trial-mails.service';
 import { AuditService } from '../audit/audit.service';
 import {
   PLANS,
@@ -30,6 +31,7 @@ export class StripeWebhookService implements OnModuleInit {
     private readonly dataSource: DataSource,
     private readonly audit: AuditService,
     @Optional() private readonly emailService?: EmailService,
+    @Optional() private readonly trialMails?: TrialMailsService,
   ) {}
 
   onModuleInit(): void {
@@ -147,6 +149,8 @@ export class StripeWebhookService implements OnModuleInit {
       this.logger.error(`Failed to apply Stripe event for tenant ${tenant.id}: ${(error as Error).message}`);
       throw error;
     }
+    // A first subscription confirmed: the thank-you goes now (not awaited, never rejects).
+    void this.trialMails?.onSubscriptionChanged(tenant.id);
   }
 
   /**

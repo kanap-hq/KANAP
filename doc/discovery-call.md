@@ -21,7 +21,7 @@ All three are empty by default and ignored in `single-tenant` mode. A URL that i
 - `last_step`: the end screen of the first five steps (home page tile);
 - `about`: after the days left in the trial, in **About KANAP** (a link in the line).
 
-Each click posts `POST /api/discovery-call/clicks { placement }` (signed-in user, 204), which writes the audit entry `trial.discovery_call_clicked { placement }`. The placements `mail_j0`, `mail_j5`, `mail_j12` and `trial_end` are accepted for the links of the trial e-mails, which record their clicks through `DiscoveryCallService.recordClick` without a user (`source = 'system'`).
+Each click posts `POST /api/discovery-call/clicks { placement }` (signed-in user, 204), which writes the audit entry `trial.discovery_call_clicked { placement }`. The placements `mail_j0`, `mail_j5`, `mail_j12` and `trial_end` are accepted for the links of the trial e-mails, which record their clicks through `DiscoveryCallService.recordClick` without a user (`source = 'system'`): the e-mails link to `GET /api/trial-mails/call?t=&from=` (`doc/trial-mails.md`), which counts the click and redirects to the booking page. J0 and J+5 carry the link.
 
 ## Storage
 

@@ -12,9 +12,10 @@ import { StripeClientService, StripeConfigService } from './stripe';
 import { StripeWebhookService } from './stripe-webhook.service';
 import { StripeWebhookController } from './stripe-webhook.controller';
 import { AuditModule } from '../audit/audit.module';
+import { TrialMailsModule } from '../email/trial-mails/trial-mails.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Subscription, User, Tenant]), PermissionsModule, forwardRef(() => UsersModule), EmailModule, AuditModule],
+  imports: [TypeOrmModule.forFeature([Subscription, User, Tenant]), PermissionsModule, forwardRef(() => UsersModule), EmailModule, AuditModule, TrialMailsModule],
   providers: [BillingService, StripeConfigService, StripeClientService, StripeWebhookService],
   controllers: [BillingController, StripeWebhookController],
   exports: [BillingService, StripeClientService, StripeConfigService, StripeWebhookService],
