@@ -53,14 +53,16 @@
     "params": {},
     "filters": {
       "name": "text",
-      "primary_category_name": "text",
+      "process_type": "set",
+      "parent_name": "set",
       "owner_name": "text",
       "status": "set",
       "updated_at": "date"
     },
     "fields": [
       "name",
-      "primary_category_name",
+      "process_type",
+      "parent_name",
       "status",
       "updated_at"
     ]

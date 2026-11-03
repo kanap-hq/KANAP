@@ -1,4 +1,5 @@
-import { ArrayUnique, IsArray, IsOptional, IsString } from 'class-validator';
+import { IsIn, IsOptional, IsString } from 'class-validator';
+import { BUSINESS_PROCESS_TYPES } from '../business-process-tree';
 import { StatusLifecycleDto } from '../../common/dto/status-lifecycle.dto';
 
 export class BusinessProcessUpsertDto extends StatusLifecycleDto {
@@ -23,8 +24,10 @@ export class BusinessProcessUpsertDto extends StatusLifecycleDto {
   it_owner_user_id?: string | null;
 
   @IsOptional()
-  @IsArray()
-  @ArrayUnique()
-  @IsString({ each: true })
-  category_ids?: string[] | null;
+  @IsIn(BUSINESS_PROCESS_TYPES)
+  process_type?: string | null;
+
+  @IsOptional()
+  @IsString()
+  parent_id?: string | null;
 }

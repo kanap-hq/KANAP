@@ -2,7 +2,8 @@ import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import PageHeader from '../components/PageHeader';
 import ServerDataGrid, { EnhancedColDef, StatusScope, type ListRequest } from '../components/ServerDataGrid';
-import { Button, Stack } from '@mui/material';
+import { Box, Button, Stack } from '@mui/material';
+import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import CsvExportDialog from '../components/csv/CsvExportDialog';
 import CsvImportDialog from '../components/csv/CsvImportDialog';
@@ -12,7 +13,9 @@ import { useAuth } from '../auth/AuthContext';
 import { LinkCellRenderer } from '../components/grid/renderers';
 import { useLocale } from '../i18n/useLocale';
 import { formatShortDateTime } from '../lib/dateFormat';
-import BusinessProcessCategoryManagerDialog from './business-processes/BusinessProcessCategoryManagerDialog';
+import CheckboxSetFilter, { type CheckboxSetFilterOption } from '../components/CheckboxSetFilter';
+import CheckboxSetFloatingFilter from '../components/CheckboxSetFloatingFilter';
+import { BUSINESS_PROCESS_TYPES, fetchBusinessProcessTree, type BusinessProcessType } from '../hooks/useBusinessProcessTree';
 import ForbiddenPage from './ForbiddenPage';
 import { statusColumnProps } from '../components/grid/statusColumn';
 import { ImportLabel } from '../components/csv/importFiles';
@@ -28,14 +31,26 @@ type BusinessProcessRow = {
   status: string;
   disabled_at?: string | null;
   updated_at?: string;
-  categories?: Array<{ id: string; name: string; is_active: boolean }>;
-  primary_category_name?: string | null;
+  process_type?: BusinessProcessType | null;
+  parent_name?: string | null;
+  depth?: number;
 };
+
+const DEFAULT_SORT = 'path:ASC';
+
+function uniqueSorted(values: Array<string | null | undefined>): CheckboxSetFilterOption[] {
+  const set = new Set<string>();
+  for (const value of values) if (value) set.add(value);
+  return [...set]
+    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
+    .map((value) => ({ value, label: value }));
+}
 
 export default function BusinessProcessesPage() {
   const { t } = useTranslation(['master-data', 'common']);
   const locale = useLocale();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { hasLevel } = useAuth();
 
   if (!hasLevel('business_processes', 'reader')) {
@@ -47,14 +62,14 @@ export default function BusinessProcessesPage() {
   // The list on screen: the CSV export follows it.
   const [listRequest, setListRequest] = useState<ListRequest | null>(null);
   const [importOpen, setImportOpen] = useState(false);
-  const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
+  const [sortedByPath, setSortedByPath] = useState(true);
   const [selectedRows, setSelectedRows] = useState<BusinessProcessRow[]>([]);
   const gridApiRef = useRef<any>(null);
 
   const lastQueryRef = useRef<{ sort: string; q: string; filters: any; statusScope?: StatusScope } | null>(null);
   const buildWorkspaceSearch = useCallback(() => {
     const sp = new URLSearchParams();
-    const sort = lastQueryRef.current?.sort || 'primary_category_name:ASC';
+    const sort = lastQueryRef.current?.sort || DEFAULT_SORT;
     const q = lastQueryRef.current?.q || '';
     const filters = lastQueryRef.current?.filters || {};
     if (sort) sp.set('sort', sort);
@@ -77,19 +92,41 @@ export default function BusinessProcessesPage() {
         headerName: t('shared.columns.name'),
         flex: 1,
         required: true,
+        // Sorted by path, the name is indented by its depth in the tree.
+        cellRenderer: (params: any) => (
+          <Box sx={{ pl: sortedByPath ? Number(params.data?.depth ?? 0) * 2 : 0, minWidth: 0, width: '100%' }}>
+            <LinkCellRenderer {...params} linkType="internal" getHref={getBusinessProcessHref} onNavigate={(href) => navigate(href)} />
+          </Box>
+        ),
+      },
+      {
+        field: 'process_type',
+        headerName: t('businessProcesses.columns.type'),
+        width: 170,
+        valueFormatter: (p: any) => (p.value ? t(`businessProcesses.types.${p.value}`) : ''),
+        filter: CheckboxSetFilter,
+        floatingFilterComponent: CheckboxSetFloatingFilter,
+        filterParams: {
+          values: BUSINESS_PROCESS_TYPES.map((value) => ({ value, label: t(`businessProcesses.types.${value}`) })),
+          searchable: false,
+        },
         cellRenderer: (params: any) => (
           <LinkCellRenderer {...params} linkType="internal" getHref={getBusinessProcessHref} onNavigate={(href) => navigate(href)} />
         ),
       },
       {
-        field: 'primary_category_name',
-        headerName: t('businessProcesses.columns.categories'),
-        flex: 1,
-        valueFormatter: (p: any) => {
-          const cats: Array<{ name: string }> = Array.isArray(p.data?.categories) ? p.data.categories : [];
-          if (!cats.length) return '';
-          const names = cats.map((c) => c.name);
-          return names.join(', ');
+        field: 'parent_name',
+        headerName: t('businessProcesses.columns.parent'),
+        width: 220,
+        filter: CheckboxSetFilter,
+        floatingFilterComponent: CheckboxSetFloatingFilter,
+        filterParams: {
+          // The processes that have sub-processes.
+          getValues: async () => {
+            const nodes = await fetchBusinessProcessTree(queryClient);
+            const parents = new Set(nodes.map((node) => node.parent_id));
+            return uniqueSorted(nodes.filter((node) => parents.has(node.id)).map((node) => node.name));
+          },
         },
         cellRenderer: (params: any) => (
           <LinkCellRenderer {...params} linkType="internal" getHref={getBusinessProcessHref} onNavigate={(href) => navigate(href)} />
@@ -126,12 +163,11 @@ export default function BusinessProcessesPage() {
         defaultHidden: true,
       },
     ],
-    [getBusinessProcessHref, locale, navigate, t],
+    [getBusinessProcessHref, locale, navigate, queryClient, sortedByPath, t],
   );
 
   const canCreate = hasLevel('business_processes', 'manager');
   const canAdmin = hasLevel('business_processes', 'admin');
-  const canManageCategories = hasLevel('business_processes', 'manager');
 
   const actions = (
     <Stack direction="row" spacing={1}>
@@ -144,11 +180,6 @@ export default function BusinessProcessesPage() {
           }}
         >
           {t('shared.labels.new')}
-        </Button>
-      )}
-      {canManageCategories && (
-        <Button variant="action" onClick={() => setCategoryManagerOpen(true)}>
-          {t('businessProcesses.manageCategories')}
         </Button>
       )}
       {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}><ImportLabel csv={t('shared.labels.importCsv')} /></Button>}
@@ -186,7 +217,7 @@ export default function BusinessProcessesPage() {
         queryKey="business-processes"
         getRowId={(row) => row.id}
         enableSearch
-        defaultSort={{ field: 'primary_category_name', direction: 'ASC' }}
+        defaultSort={{ field: 'path', direction: 'ASC' }}
         refreshKey={refreshKey}
         columnPreferencesKey="business-processes"
         enableColumnChooser
@@ -201,6 +232,7 @@ export default function BusinessProcessesPage() {
         onQueryStateChange={(state) => {
           const scope = state.statusScope ?? 'enabled';
           lastQueryRef.current = { sort: state.sort, q: state.q || '', filters: state.filterModel || {}, statusScope: scope };
+          setSortedByPath(!state.sort || state.sort.startsWith('path:'));
         }}
       />
       <CsvExportDialog listRequest={listRequest} entity="businessProcesses"
@@ -217,11 +249,6 @@ export default function BusinessProcessesPage() {
         title={t("businessProcesses.import")}
         onImported={() => setRefreshKey((k) => k + 1)}
         flexibleFormat
-      />
-      <BusinessProcessCategoryManagerDialog
-        open={categoryManagerOpen}
-        onClose={() => setCategoryManagerOpen(false)}
-        onUpdated={() => setRefreshKey((k) => k + 1)}
       />
     </>
   );

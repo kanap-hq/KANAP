@@ -235,9 +235,7 @@ export const TENANT_PURGE_TABLES = [
   'currency_rate_sets',
   'capex_items',
   'capex_item_analytics_values',
-  'business_process_category_links',
   'business_processes',
-  'business_process_categories',
   // After the line values (a line value references a value by (tenant, value, dimension) ON DELETE RESTRICT)
   'analytics_categories',
   // After the values (a value references its dimension ON DELETE RESTRICT)

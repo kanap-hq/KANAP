@@ -106,7 +106,7 @@ async function testAllWithStatusColumnFilter() {
     const lists: Array<[Lister, { enabled: string; disabled: string }]> = [
       [{ label: 'companies', ...bind(new CompaniesService(undefined as any, audit, undefined as any)) }, ids.companies],
       [{ label: 'departments', ...bind(new DepartmentsService(undefined as any, undefined as any, audit)) }, ids.departments],
-      [{ label: 'business processes', ...bind(new BusinessProcessesService(undefined as any, undefined as any, undefined as any, undefined as any, audit)) }, ids.processes],
+      [{ label: 'business processes', ...bind(new BusinessProcessesService(undefined as any, undefined as any, audit)) }, ids.processes],
       [{ label: 'suppliers', ...bind(new SuppliersService(undefined as any, audit)) }, ids.suppliers],
       [{ label: 'accounts', ...bind(new AccountsService(undefined as any, audit)) }, ids.accounts],
     ];

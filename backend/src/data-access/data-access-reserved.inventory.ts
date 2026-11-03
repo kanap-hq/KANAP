@@ -241,14 +241,7 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
       list: READ, // GET (root)
       listIds: READ, // GET ids
       lookup: LOOKUP, // GET lookup
-    },
-  },
-  {
-    file: 'business-processes/business-processes.controller.ts',
-    controller: 'BusinessProcessCategoriesController',
-    reserved: ['create', 'delete', 'update'],
-    allowed: {
-      list: READ, // GET (root)
+      tree: READ, // GET tree
     },
   },
   {

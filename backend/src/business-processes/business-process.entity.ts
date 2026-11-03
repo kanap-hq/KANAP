@@ -24,6 +24,14 @@ export class BusinessProcess {
   @Column('text', { nullable: true })
   notes!: string | null;
 
+  /** The ISO 9001 type: management, core or support (`business-process-tree.ts`). */
+  @Column('text', { nullable: true })
+  process_type!: string | null;
+
+  /** The parent process, in the same tenant; null at the top of the tree. */
+  @Column('uuid', { nullable: true })
+  parent_id!: string | null;
+
   @Column({
     type: 'enum',
     enum: StatusState,

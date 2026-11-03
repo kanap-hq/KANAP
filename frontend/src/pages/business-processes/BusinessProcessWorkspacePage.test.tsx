@@ -42,20 +42,19 @@ vi.mock('../../components/fields/UserSelect', () => ({
     <button type="button" disabled={disabled} onClick={() => onChange('user-2')}>{`pick ${label}`}</button>
   ),
 }));
-vi.mock('../../components/fields/BusinessProcessCategoryMultiSelect', () => ({
-  default: ({ onChange, disabled }: { onChange: (ids: string[]) => void; disabled?: boolean }) => (
-    <button type="button" disabled={disabled} onClick={() => onChange(['cat-1'])}>pick categories</button>
+vi.mock('../../components/fields/BusinessProcessParentSelect', () => ({
+  default: ({ onChange, disabled, processId }: { onChange: (id: string | null) => void; disabled?: boolean; processId?: string | null }) => (
+    <button type="button" disabled={disabled} onClick={() => onChange('bp-2')}>{`pick parent of ${processId ?? 'none'}`}</button>
   ),
 }));
 vi.mock('./BusinessProcessApplicationsSection', () => ({ default: () => <div data-testid="applications-section" /> }));
-vi.mock('./BusinessProcessCategoryManagerDialog', () => ({ default: () => null }));
 vi.mock('../../components/history/RecordHistoryTab', () => ({ default: () => <div data-testid="record-history" /> }));
 
 const mocked = vi.mocked(api);
 const TITLE = 'common:buttons.editTitle';
 const PROCESS = {
   id: 'bp-1', name: 'Order-to-Cash', description: null, notes: null, status: 'enabled', disabled_at: null,
-  owner_user_id: null, it_owner_user_id: null, categories: [],
+  owner_user_id: null, it_owner_user_id: null, process_type: null, parent_id: null, parent: null,
 };
 const CREATED = { ...PROCESS, id: 'bp-new', name: 'Procure-to-Pay', creation_token: 'token-1' };
 
@@ -150,15 +149,18 @@ describe('Business process record', () => {
     expect(mocked.patch).toHaveBeenCalledTimes(1);
   });
 
-  it('saves the owners and the categories as they are picked, and the status alone from the header', async () => {
+  it('saves the owners, the type and the parent as they are picked, and the status alone from the header', async () => {
     renderPage(['/master-data/business-processes/bp-1/overview']);
     await openRecord();
     fireEvent.click(screen.getByRole('button', { name: 'pick businessProcesses.fields.processOwner' }));
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/business-processes/bp-1', { owner_user_id: 'user-2' }));
     fireEvent.click(screen.getByRole('button', { name: 'pick businessProcesses.fields.itOwner' }));
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/business-processes/bp-1', { it_owner_user_id: 'user-2' }));
-    fireEvent.click(screen.getByRole('button', { name: 'pick categories' }));
-    await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/business-processes/bp-1', { category_ids: ['cat-1'] }));
+    fireEvent.click(screen.getByRole('button', { name: 'pick parent of bp-1' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/business-processes/bp-1', { parent_id: 'bp-2' }));
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'businessProcesses.fields.type' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'businessProcesses.types.core' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/business-processes/bp-1', { process_type: 'core' }));
 
     // Disabling sends the status alone: the server sets the end of validity from its own clock.
     fireEvent.click(screen.getByRole('button', { name: 'common:statuses.enabled' }));

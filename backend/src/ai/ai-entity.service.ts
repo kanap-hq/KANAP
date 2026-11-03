@@ -505,7 +505,7 @@ const SEARCH_INDEX_METADATA_KEYS: Partial<Record<AiSearchEntityType, string[]>> 
     'lifecycle', 'criticality', 'cyber_criticality', 'recovery_wave', 'rto_minutes', 'rpo_minutes', 'category', 'hosting_model', 'data_class',
     'version', 'supplier', 'business_owner', 'it_owner',
   ],
-  business_processes: ['primary_category'],
+  business_processes: ['process_type'],
   companies: ['base_currency'],
   connections: ['source', 'destination'],
   contacts: ['supplier'],
@@ -1756,32 +1756,23 @@ export class AiEntityService {
       `SELECT bp.id,
               NULL::int AS item_number,
               bp.name AS label,
-              COALESCE(NULLIF(bp.description, ''), NULLIF(bp.notes, ''), bpc.name) AS summary,
+              COALESCE(NULLIF(bp.description, ''), NULLIF(bp.notes, '')) AS summary,
               bp.status,
               bp.updated_at,
-              bpc.name AS primary_category_name,
+              bp.process_type,
               COUNT(*) OVER()::int AS total_count,
               CASE
                 WHEN bp.name ILIKE $1 THEN 3
-                WHEN COALESCE(bpc.name, '') ILIKE $1 THEN 2
                 ELSE 1
               END AS score
        FROM business_processes bp
-       LEFT JOIN LATERAL (
-         SELECT c.name
-         FROM business_process_category_links l
-         JOIN business_process_categories c ON c.id = l.category_id AND c.tenant_id = bp.tenant_id
-         WHERE l.process_id = bp.id AND l.tenant_id = bp.tenant_id
-         ORDER BY c.name ASC
-         LIMIT 1
-       ) bpc ON TRUE
        WHERE bp.tenant_id = $2
          AND (
            bp.name ILIKE $1
            OR COALESCE(bp.description, '') ILIKE $1
            OR COALESCE(bp.notes, '') ILIKE $1
            OR COALESCE(bp.status::text, '') ILIKE $1
-           OR COALESCE(bpc.name, '') ILIKE $1
+           OR COALESCE(bp.process_type, '') ILIKE $1
          )
        ORDER BY score DESC, bp.updated_at DESC, bp.name ASC
        LIMIT $3`,
@@ -1793,7 +1784,7 @@ export class AiEntityService {
         ...toSummary('business_processes', {
           ...row,
           metadata: {
-            primary_category: row.primary_category_name ?? null,
+            process_type: row.process_type ?? null,
           },
         }, row.summary),
         _score: row.score ?? 1,

@@ -233,6 +233,10 @@ export function historyFieldLabel(field: string, t: Translate, table?: string): 
   if (field === 'owner_user_id' && table === 'cost_centers') {
     return t('auditLogs.fields.costCenterOwner', { defaultValue: 'Budget holder' });
   }
+  // A process's parent is its parent process, as its properties panel names it (elsewhere "Parent group").
+  if (field === 'parent_id' && table === 'business_processes') {
+    return t('master-data:businessProcesses.fields.parent', { defaultValue: 'Parent process' });
+  }
   // The task screen names its creator the requestor.
   if (field === 'creator_id' && table === 'tasks') {
     return t('portfolio:workspace.task.sidebar.fields.requestor', { defaultValue: 'Requestor' });

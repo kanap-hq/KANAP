@@ -10,7 +10,7 @@ export function useBusinessProcessNav(params: BusinessProcessNavParams): ModuleI
   return useModuleItemNav(params, {
     endpoint: '/business-processes/ids',
     queryKey: 'business-processes-ids',
-    defaultSort: 'primary_category_name:ASC',
+    defaultSort: 'path:ASC',
   });
 }
 

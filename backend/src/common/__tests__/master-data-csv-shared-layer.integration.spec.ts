@@ -35,8 +35,6 @@ import { CONTRACT_CSV_HEADERS } from '../../contracts/contract-csv-headers';
 import { SUPPLIER_CSV_HEADERS } from '../../suppliers/supplier-csv-headers';
 import { BusinessProcessesService } from '../../business-processes/business-processes.service';
 import { BusinessProcess } from '../../business-processes/business-process.entity';
-import { BusinessProcessCategory } from '../../business-processes/business-process-category.entity';
-import { BusinessProcessCategoryLink } from '../../business-processes/business-process-category-link.entity';
 import { withImportXlsx } from './import-xlsx-flag';
 import { hasLibreOffice, throughLibreOffice, workbookOfCsv } from './workbook-of-csv';
 
@@ -305,14 +303,13 @@ function importers(manager: EntityManager, tenantId: string, seeds: Seeds): Impo
 
   const processes = new BusinessProcessesService(
     manager.getRepository(BusinessProcess),
-    manager.getRepository(BusinessProcessCategory),
-    manager.getRepository(BusinessProcessCategoryLink),
     manager.getRepository(User),
     audit,
   );
   const processBase = (key: string): Row => ({
     name: key,
-    categories: '',
+    process_type: '',
+    parent_name: '',
     description: 'Shared layer process',
     notes: '',
   });
@@ -648,7 +645,7 @@ function importers(manager: EntityManager, tenantId: string, seeds: Seeds): Impo
       headers: async (language) => headersOf((await processes.exportCsv('template', { manager, language })).content, language),
       base: processBase,
       samples: () => [
-        { ...processBase('Round trip process A'), categories: 'Finance;Sales', status: 'enabled' },
+        { ...processBase('Round trip process A'), process_type: 'core', status: 'enabled' },
         { ...processBase('Round trip process B'), notes: 'Retired', status: 'disabled' },
       ],
       broken: (key) => ({ ...processBase(key), name: '' }),
@@ -661,11 +658,9 @@ function importers(manager: EntityManager, tenantId: string, seeds: Seeds): Impo
       exportCsv: async (language) => (await processes.exportCsv('data', { manager, language })).content,
       snapshot: (runner, id) =>
         runner.query(
-          `SELECT p.name, p.description, p.notes, p.status::text AS status, p.disabled_at,
-                  (SELECT string_agg(c.name, ';' ORDER BY c.name)
-                     FROM business_process_category_links l JOIN business_process_categories c ON c.id = l.category_id
-                    WHERE l.process_id = p.id) AS categories
-             FROM business_processes p WHERE p.tenant_id = $1 ORDER BY p.name`,
+          `SELECT p.name, p.process_type, par.name AS parent_name, p.description, p.notes, p.status::text AS status, p.disabled_at
+             FROM business_processes p LEFT JOIN business_processes par ON par.id = p.parent_id
+            WHERE p.tenant_id = $1 ORDER BY p.name`,
           [id],
         ),
     },

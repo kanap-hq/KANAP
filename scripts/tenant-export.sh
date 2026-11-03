@@ -158,8 +158,6 @@ TENANT_TABLES=(
   asset_technologies
   assets
   audit_log
-  business_process_categories
-  business_process_category_links
   business_processes
   # The capex_* tables (and application_capex_items, asset_capex_items, contract_capex_items,
   # portfolio_project_capex, portfolio_request_capex) are dormant since lot Z1: the CAPEX lines are in

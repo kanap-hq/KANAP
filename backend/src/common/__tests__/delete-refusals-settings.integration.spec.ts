@@ -7,7 +7,6 @@ import dataSource from '../../data-source';
 import { AppInstancesService } from '../../app-instances/app-instances.service';
 import { Application } from '../../applications/application.entity';
 import { ApplicationsDeleteService } from '../../applications/applications-delete.service';
-import { BusinessProcessCategoriesService } from '../../business-processes/business-process-categories.service';
 import { InterfacesCrudService } from '../../interfaces/services/interfaces-crud.service';
 import { KnowledgeService } from '../../knowledge/knowledge.service';
 import { PortfolioClassificationService } from '../../portfolio/portfolio-classification.service';
@@ -192,14 +191,6 @@ async function testRolesAndProcessCategories() {
     await expectRefusal(runner, () => roles.deleteRole(builtIn, req), 'ROLE_BUILT_IN', [], /^Cannot delete built-in role "Reader"/);
     await expectRefusal(runner, () => roles.deleteRole(role, req), 'ROLE_IN_USE', [{ type: 'users', total: 1 }], /with users assigned/);
 
-    const categories = new BusinessProcessCategoriesService(null as any, null as any, noAudit);
-    const category = await one(runner, `INSERT INTO business_process_categories (tenant_id, name) VALUES ($1, 'Finance') RETURNING id`, [t]);
-    for (const name of ['Close', 'Pay']) {
-      const process = await one(runner, `INSERT INTO business_processes (tenant_id, name) VALUES ($1, $2) RETURNING id`, [t, name]);
-      await runner.query(`INSERT INTO business_process_category_links (tenant_id, process_id, category_id) VALUES ($1, $2, $3)`, [t, process, category]);
-    }
-    await expectRefusal(runner, () => categories.delete(category, null, { manager: m }), 'RECORD_USED_BY',
-      [{ type: 'business_processes', total: 2 }], /used by one or more business processes/);
   });
 }
 

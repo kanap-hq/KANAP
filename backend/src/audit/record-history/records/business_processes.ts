@@ -28,7 +28,7 @@ export const businessProcessesRecord = {
   exclusions: [],
 } as const satisfies RecordHistoryRecord;
 
-/** A business process, as its page shows it; the category names are a payload snapshot. */
+/** A business process, as its page shows it; older rows carry the category names of before 26.11. */
 const BUSINESS_PROCESS_FIELDS: HistoryFields = {
   name: shown(),
   description: shown(),
@@ -38,7 +38,9 @@ const BUSINESS_PROCESS_FIELDS: HistoryFields = {
   is_default: shown(),
   owner_user_id: shown('user'),
   it_owner_user_id: shown('user'),
-  categories: hidden('category links, never a column of the process; the category page reads them'),
+  process_type: shown(),
+  parent_id: shown('business_process'),
+  categories: hidden('category names of the rows written before 26.11, when categories were removed'),
   id: hidden('identity'),
   tenant_id: hidden('tenancy'),
   created_at: hidden('timestamp'),

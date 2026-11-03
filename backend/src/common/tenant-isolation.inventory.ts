@@ -70,8 +70,6 @@ export const TENANT_SCOPED_TABLES = [
   'asset_technologies',
   'assets',
   'audit_log',
-  'business_process_categories',
-  'business_process_category_links',
   'business_processes',
   'capex_allocations',
   'capex_amounts',

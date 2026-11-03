@@ -157,7 +157,7 @@ export const DATA_ACCESS_FUNCTIONS: Array<{ name: string; cls: DataAccessFunctio
     'companies', 'connections', 'contacts', 'contracts', 'departments', 'documents', 'incident_review_binding',
     'incident_review_document', 'incidents', 'interfaces', 'locations', 'portfolio_projects',
     'portfolio_requests', 'spend_items', 'suppliers', 'tasks', 'technologies', 'users',
-    'link_application_owners', 'link_business_process_category_links', 'link_connection_protocols',
+    'link_application_owners', 'link_connection_protocols',
     'link_contract_spend_items', 'link_location_sub_items', 'link_portfolio_project_team',
     'link_portfolio_request_team', 'link_portfolio_team_member_configs',
   ].map((name) => ({ name: `search_index_sync_${name}`, cls: 'definer' as const, reason: 'search index family: trigger' })),

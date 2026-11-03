@@ -6,6 +6,7 @@ import dataSource from '../../data-source';
 import { Technologies1854190000000 } from '../../migrations/1854190000000-technologies';
 import { Vulnerabilities1854260000000 } from '../../migrations/1854260000000-vulnerabilities';
 import { TechnologySupport1854270000000 } from '../../migrations/1854270000000-technology-support';
+import { BusinessProcessTypeAndParent1856170000000 } from '../../migrations/1856170000000-business-process-type-and-parent';
 import { ApplicationItemLinksTenantKeys1853690000000 as Migration } from '../../migrations/1853690000000-application-item-links-tenant-keys';
 import { BudgetLinePredecessor1854000000000 } from '../../migrations/1854000000000-budget-line-predecessor';
 
@@ -104,10 +105,11 @@ async function inRolledBackTransaction(fn: (runner: QueryRunner) => Promise<void
  * down(), after the down() of the later migrations whose keys need this one's `(tenant_id, id)` keys of
  * spend_items and applications (1854000000000, a line's predecessor; 1854190000000, the technology
  * links, after 1854260000000 whose vulnerabilities name technology versions and 1854270000000 whose
- * support contacts name technologies): migrations are undone
- * newest first.
+ * support contacts name technologies; 1856170000000, whose parent key on business_processes needs
+ * the key 1854190000000 added): migrations are undone newest first.
  */
 async function downFromHere(runner: QueryRunner): Promise<void> {
+  await new BusinessProcessTypeAndParent1856170000000().down(runner);
   await new TechnologySupport1854270000000().down(runner);
   await new Vulnerabilities1854260000000().down(runner);
   await new Technologies1854190000000().down(runner);

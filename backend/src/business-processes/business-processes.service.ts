@@ -2,10 +2,8 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, In, Repository, SelectQueryBuilder } from 'typeorm';
 import { BusinessProcess } from './business-process.entity';
-import { BusinessProcessCategory } from './business-process-category.entity';
-import { BusinessProcessCategoryLink } from './business-process-category-link.entity';
 import { parseExportPagination, parsePagination, MAX_EXPORT_LIMIT } from '../common/pagination';
-import { orderListQuery } from '../common/list-sort';
+import { orderListQuery, textSortKey } from '../common/list-sort';
 import { applyStatusFilter, extractStatusFilterFromAgModel } from '../common/status-filter';
 import { compileAgFilterCondition, createParamNameGenerator, type FilterTargetConfig } from '../common/ag-grid-filtering';
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
@@ -28,44 +26,67 @@ import { sameStoredValues } from '../common/csv-sheet/unchanged';
 import { uploadedBytes } from '../common/upload';
 import { ListExportCell, ListExportFile, writeListExport } from '../common/csv/list-export';
 import type { ExportFileFormat } from '../common/xlsx/format';
+import {
+  assertBusinessProcessParent,
+  buildBusinessProcessTree,
+  BUSINESS_PROCESS_TYPES,
+  businessProcessDepthSql,
+  businessProcessParentNameSql,
+  businessProcessPathSql,
+  businessProcessRefusal,
+  businessProcessTreeSortSql,
+  isBusinessProcessType,
+  lockBusinessProcessTree,
+  type BusinessProcessTreeNode,
+} from './business-process-tree';
 
-/**
- * True when re-importing a CSV row over the stored process writes nothing (`importCsv`): the
- * description, notes and lifecycle it sets are stored, and its categories are exactly the linked
- * ones. A category the file names that does not exist yet (the import would create it), or whose
- * name matches several categories, makes the row an update.
- */
-function importRowUnchanged(
-  stored: BusinessProcess,
-  body: BusinessProcessUpsertDto,
-  categoryNames: string[],
-  categoryIdsByName: Map<string, string[]>,
-  linkedCategoryIds: Set<string>,
-  now: Date,
-): boolean {
-  const lifecycle = resolveLifecycleState({ currentDisabledAt: stored.disabled_at ?? null, nextStatus: body.status, nowFactory: () => now });
-  const values = { description: body.description, notes: body.notes, status: lifecycle.status, disabled_at: lifecycle.disabled_at };
-  if (!sameStoredValues(stored as unknown as Record<string, unknown>, values)) return false;
-  const wanted = new Set<string>();
-  for (const name of categoryNames) {
-    const ids = categoryIdsByName.get(name.toLowerCase());
-    if (!ids || ids.length !== 1) return false;
-    wanted.add(ids[0]);
+/** A type code, or null when blank; an unknown code is refused. */
+function normalizeProcessType(value: unknown): string | null {
+  if (value == null || value === '') return null;
+  if (isBusinessProcessType(value)) return value;
+  throw new BadRequestException({
+    code: 'BUSINESS_PROCESS_TYPE_INVALID',
+    message: `Unknown business process type '${String(value)}'. Use ${BUSINESS_PROCESS_TYPES.join(', ')}.`,
+    field: 'process_type',
+    params: { value: String(value) },
+  });
+}
+
+/** A parent id, or null when blank. */
+function normalizeParentId(value: unknown): string | null {
+  if (value == null) return null;
+  const id = String(value).trim();
+  if (!id) return null;
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+    throw businessProcessRefusal('BUSINESS_PROCESS_PARENT_NOT_FOUND', 'Parent business process not found.');
   }
-  return wanted.size === linkedCategoryIds.size && [...wanted].every((id) => linkedCategoryIds.has(id));
+  return id;
 }
 
 /**
- * The list's column filters compiled by the shared compiler. The categories column shows every
- * category of the process, by name; the owner column the owner's name, else the e-mail.
+ * True when re-importing a CSV row over the stored process writes nothing (`importCsv`): the
+ * description, notes, type, parent and lifecycle it sets are stored.
+ */
+function importRowUnchanged(stored: BusinessProcess, body: BusinessProcessUpsertDto, now: Date): boolean {
+  const lifecycle = resolveLifecycleState({ currentDisabledAt: stored.disabled_at ?? null, nextStatus: body.status, nowFactory: () => now });
+  const values = {
+    description: body.description,
+    notes: body.notes,
+    process_type: body.process_type ?? null,
+    parent_id: body.parent_id ?? null,
+    status: lifecycle.status,
+    disabled_at: lifecycle.disabled_at,
+  };
+  return sameStoredValues(stored as unknown as Record<string, unknown>, values);
+}
+
+/**
+ * The list's column filters compiled by the shared compiler: the type (its code), the parent by
+ * name (null at the top), the owner's name, else the e-mail.
  */
 const BUSINESS_PROCESS_FILTER_TARGETS: Record<string, FilterTargetConfig> = {
-  primary_category_name: {
-    expression: `(SELECT string_agg(cat.name, ', ' ORDER BY cat.name)
-      FROM business_process_category_links link
-      JOIN business_process_categories cat ON cat.id = link.category_id AND cat.tenant_id = link.tenant_id
-      WHERE link.process_id = bp.id AND link.tenant_id = bp.tenant_id)`,
-  },
+  process_type: { expression: 'bp.process_type' },
+  parent_name: { expression: businessProcessParentNameSql('bp') },
   owner_name: {
     expression: `(SELECT COALESCE(NULLIF(concat_ws(' ', NULLIF(btrim(u.first_name), ''), NULLIF(btrim(u.last_name), '')), ''), u.email)
       FROM users u WHERE u.id = bp.owner_user_id AND u.tenant_id = bp.tenant_id)`,
@@ -77,22 +98,12 @@ const BUSINESS_PROCESS_FILTER_TARGETS: Record<string, FilterTargetConfig> = {
 export class BusinessProcessesService {
   constructor(
     @InjectRepository(BusinessProcess) private readonly repo: Repository<BusinessProcess>,
-    @InjectRepository(BusinessProcessCategory) private readonly categoriesRepo: Repository<BusinessProcessCategory>,
-    @InjectRepository(BusinessProcessCategoryLink) private readonly linksRepo: Repository<BusinessProcessCategoryLink>,
     @InjectRepository(User) private readonly usersRepo: Repository<User>,
     private readonly audit: AuditService,
   ) {}
 
   private getRepo(manager?: EntityManager) {
     return manager ? manager.getRepository(BusinessProcess) : this.repo;
-  }
-
-  private getCategoriesRepo(manager?: EntityManager) {
-    return manager ? manager.getRepository(BusinessProcessCategory) : this.categoriesRepo;
-  }
-
-  private getLinksRepo(manager?: EntityManager) {
-    return manager ? manager.getRepository(BusinessProcessCategoryLink) : this.linksRepo;
   }
 
   private getUsersRepo(manager?: EntityManager) {
@@ -135,39 +146,43 @@ export class BusinessProcessesService {
     const items = await qb.skip(skip).take(limit).getMany();
     const ids = items.map((i) => i.id);
 
-    const categoriesByProcess = await this.loadCategoriesForProcesses(ids, opts);
+    const treeById = await this.loadTreeFields(ids, opts);
     const ownerNamesById = await this.loadOwnerNames(items, opts);
 
     const shaped = items.map((bp) => ({
       ...bp,
-      categories: categoriesByProcess.get(bp.id) ?? [],
-      primary_category_name: (categoriesByProcess.get(bp.id) ?? [])[0]?.name ?? null,
+      ...(treeById.get(bp.id) ?? { parent_name: null, path: bp.name, depth: 0 }),
       owner_name: bp.owner_user_id ? ownerNamesById.get(bp.owner_user_id) ?? null : null,
     }));
 
     return { items: shaped, total, page, limit };
   }
 
-  /** The column filters of the list: the name (contains) and the primary category (set). */
-  /** The list order: name, status, dates or the first active category (then the name); text alphabetically; then the id. */
+  /**
+   * The list order: name, status, type, parent, dates, or the path in the tree (each process
+   * right after its parent); text alphabetically; then the id.
+   */
   private async orderList(qb: SelectQueryBuilder<BusinessProcess>, sort: { field: string; direction: string }) {
-    const field = ['name', 'status', 'updated_at', 'created_at', 'primary_category_name'].includes(sort.field) ? sort.field : 'name';
-    if (field === 'primary_category_name') {
-      const firstCategory = `COALESCE(
-          (
-            SELECT MIN(c2.name)
-            FROM business_process_category_links l2
-            JOIN business_process_categories c2 ON c2.id = l2.category_id
-            WHERE l2.process_id = bp.id AND c2.is_active = true
-          ),
-          ''
-        )`;
-      await orderListQuery(qb, firstCategory, sort.direction, { text: true, idExpr: 'bp.id', thenByText: 'bp.name' });
+    const field = ['name', 'status', 'updated_at', 'created_at', 'process_type', 'parent_name', 'path'].includes(sort.field) ? sort.field : 'name';
+    if (field === 'path') {
+      const textKey = await textSortKey((qb as any).queryRunner?.manager ?? qb.connection.manager);
+      await orderListQuery(qb, businessProcessTreeSortSql('bp', textKey), sort.direction, { text: false, idExpr: 'bp.id' });
+    } else if (field === 'parent_name') {
+      await orderListQuery(qb, `COALESCE(${businessProcessParentNameSql('bp')}, '')`, sort.direction, { text: true, idExpr: 'bp.id', thenByText: 'bp.name' });
+    } else if (field === 'process_type') {
+      // The ISO order (management, core, support), then the processes without a type.
+      const rank = `CASE bp.process_type ${BUSINESS_PROCESS_TYPES.map((type, index) => `WHEN '${type}' THEN ${index}`).join(' ')} ELSE ${BUSINESS_PROCESS_TYPES.length} END`;
+      await orderListQuery(qb, rank, sort.direction, { text: false, idExpr: 'bp.id', thenByText: 'bp.name' });
     } else {
       await orderListQuery(qb, `bp.${field}`, sort.direction, { text: field === 'name', idExpr: 'bp.id' });
     }
   }
 
+  /**
+   * The column filters of the list: the name (contains), and the shared compiler for the type,
+   * the parent, the owner and the last change. `under` (the assistant) keeps every process below
+   * the named ones, at every level, the named ones left out.
+   */
   private applyListFilters(qb: SelectQueryBuilder<BusinessProcess>, filters: any) {
     if (!filters || typeof filters !== 'object') return;
     const nameFilter = filters.name;
@@ -177,28 +192,24 @@ export class BusinessProcessesService {
         qb.andWhere('bp.name ILIKE :filterName', { filterName: `%${value.trim()}%` });
       }
     }
-    // The primary category is the first linked category by name, as the list shows it; null is a
-    // process without a category.
-    const categoryFilter = filters.primary_category_name;
-    if (categoryFilter && categoryFilter.filterType === 'set' && Array.isArray(categoryFilter.values)) {
-      const names = categoryFilter.values.filter((value: unknown) => typeof value === 'string');
-      const withNull = categoryFilter.values.some((value: unknown) => value === null);
-      const primary = `(SELECT MIN(cat.name) FROM business_process_category_links link
-          JOIN business_process_categories cat ON cat.id = link.category_id AND cat.tenant_id = link.tenant_id
-         WHERE link.process_id = bp.id AND link.tenant_id = bp.tenant_id)`;
-      const clauses = [
-        ...(names.length ? [`${primary} IN (:...primaryCategoryNames)`] : []),
-        ...(withNull ? [`${primary} IS NULL`] : []),
-      ];
-      qb.andWhere(clauses.length ? `(${clauses.join(' OR ')})` : '1=0', { primaryCategoryNames: names });
+    const under = filters.under;
+    if (under && typeof under === 'object') {
+      const raw = Array.isArray(under.values) ? under.values : [under.filter ?? under.value];
+      const names = raw.filter((value: unknown): value is string => typeof value === 'string' && value.trim() !== '').map((value: string) => value.trim().toLowerCase());
+      qb.andWhere(names.length === 0 ? '1=0' : `bp.id IN (
+        WITH RECURSIVE down AS (
+          SELECT c.id, 0 AS hop FROM business_processes c
+            JOIN business_processes top ON top.id = c.parent_id AND top.tenant_id = c.tenant_id
+           WHERE c.tenant_id = app_current_tenant() AND lower(top.name) IN (:...underNames)
+          UNION ALL
+          SELECT c.id, down.hop + 1 FROM business_processes c JOIN down ON c.parent_id = down.id
+           WHERE c.tenant_id = app_current_tenant() AND down.hop < 100)
+        SELECT id FROM down)`, { underNames: names });
     }
-    // The text filters of the other columns, on what each column shows: the categories by name,
-    // the owner's name, the day of the last change.
     const nextParam = createParamNameGenerator('bp_filter_');
     for (const [field, target] of Object.entries(BUSINESS_PROCESS_FILTER_TARGETS)) {
       const model = filters[field];
-      // The primary category's set filter is read above.
-      if (!model || typeof model !== 'object' || (field === 'primary_category_name' && model.filterType === 'set')) continue;
+      if (!model || typeof model !== 'object') continue;
       const compiled = compileAgFilterCondition(model, target, nextParam);
       if (compiled) qb.andWhere(`(${compiled.sql})`, compiled.params);
     }
@@ -246,35 +257,50 @@ export class BusinessProcessesService {
     const repo = this.getRepo(opts?.manager);
     const found = await repo.findOne({ where: { id } });
     if (!found) throw new NotFoundException('Business process not found');
-
-    const categoriesByProcess = await this.loadCategoriesForProcesses([id], opts);
-    const categories = categoriesByProcess.get(id) ?? [];
-    return { ...found, categories };
+    const tree = (await this.loadTreeFields([id], opts)).get(id);
+    const mg = opts?.manager ?? this.repo.manager;
+    const children: Array<{ id: string; name: string; status: string; disabled_at: Date | null }> = await mg.query(
+      `SELECT id::text AS id, name, status::text AS status, disabled_at FROM business_processes
+        WHERE tenant_id = app_current_tenant() AND parent_id = $1 ORDER BY lower(name), id`,
+      [id],
+    );
+    return {
+      ...found,
+      parent: found.parent_id && tree?.parent_name != null ? { id: found.parent_id, name: tree.parent_name } : null,
+      path: tree?.path ?? found.name,
+      depth: tree?.depth ?? 0,
+      children: children.map((child) => ({ id: child.id, name: child.name, status: deriveStatusFromDisabledAt(child.disabled_at ?? null) })),
+    };
   }
 
-  private async loadCategoriesForProcesses(
-    processIds: string[],
+  /** Every process of the tenant as a tree, siblings by name, with depth and path. */
+  async tree(opts?: { manager?: EntityManager }): Promise<{ items: BusinessProcessTreeNode[] }> {
+    const mg = opts?.manager ?? this.repo.manager;
+    const rows = await mg.query(
+      `SELECT id::text AS id, name, parent_id::text AS parent_id, process_type, status::text AS status, disabled_at
+         FROM business_processes WHERE tenant_id = app_current_tenant()`,
+    );
+    return {
+      items: buildBusinessProcessTree(rows).map((node) => ({ ...node, status: deriveStatusFromDisabledAt(node.disabled_at) })),
+    };
+  }
+
+  /** The parent's name, the path and the depth of each of `ids`, one query. */
+  private async loadTreeFields(
+    ids: string[],
     opts?: { manager?: EntityManager },
-  ): Promise<Map<string, Array<{ id: string; name: string; is_active: boolean }>>> {
-    const map = new Map<string, Array<{ id: string; name: string; is_active: boolean }>>();
-    if (!processIds.length) return map;
-
-    const linksRepo = this.getLinksRepo(opts?.manager);
-    const qb = linksRepo
-      .createQueryBuilder('link')
-      .leftJoinAndSelect('link.category', 'cat')
-      .where('link.process_id IN (:...ids)', { ids: processIds });
-
-    const links = await qb.getMany();
-    for (const link of links) {
-      if (!link.category) continue;
-      const arr = map.get(link.process_id) ?? [];
-      arr.push({ id: link.category.id, name: link.category.name, is_active: link.category.is_active });
-      map.set(link.process_id, arr);
-    }
-    for (const [key, value] of map.entries()) {
-      value.sort((a, b) => a.name.localeCompare(b.name));
-      map.set(key, value);
+  ): Promise<Map<string, { parent_name: string | null; path: string; depth: number }>> {
+    const map = new Map<string, { parent_name: string | null; path: string; depth: number }>();
+    if (ids.length === 0) return map;
+    const mg = opts?.manager ?? this.repo.manager;
+    const rows: Array<{ id: string; parent_name: string | null; path: string; depth: number }> = await mg.query(
+      `SELECT bp.id::text AS id, ${businessProcessParentNameSql('bp')} AS parent_name, ${businessProcessPathSql('bp')} AS path,
+              ${businessProcessDepthSql('bp')}::int AS depth
+         FROM business_processes bp WHERE bp.tenant_id = app_current_tenant() AND bp.id = ANY($1::uuid[])`,
+      [ids],
+    );
+    for (const row of rows) {
+      map.set(row.id, { parent_name: row.parent_name, path: row.path, depth: Number(row.depth) || 0 });
     }
     return map;
   }
@@ -314,18 +340,23 @@ export class BusinessProcessesService {
     if (duplicate) throw duplicateNameException('Another business process already has this name.');
 
     const lifecycle = resolveLifecycleState({ nextStatus: body.status, nextDisabledAt: body.disabled_at });
+    const parentId = normalizeParentId(body.parent_id);
+    if (parentId) {
+      await lockBusinessProcessTree(repo.manager);
+      await assertBusinessProcessParent(repo.manager, { id: null, name: rawName }, parentId);
+    }
     const entity = repo.create({
       name: rawName,
       description: (body.description ?? '').toString().trim() || null,
       owner_user_id: body.owner_user_id ?? null,
       it_owner_user_id: body.it_owner_user_id ?? null,
       notes: (body.notes ?? '').toString().trim() || null,
+      process_type: normalizeProcessType(body.process_type),
+      parent_id: parentId,
       status: lifecycle.status,
       disabled_at: lifecycle.disabled_at,
     });
     const saved = await repo.save(entity);
-
-    await this.syncCategories(saved.id, body.category_ids ?? [], opts);
 
     await this.audit.log(
       {
@@ -345,7 +376,12 @@ export class BusinessProcessesService {
 
   async update(id: string, body: BusinessProcessUpsertDto, userId?: string | null, opts?: { manager?: EntityManager; audit?: AuditSourceOptions }) {
     const repo = this.getRepo(opts?.manager);
-    const existing = await this.get(id, opts);
+    const mgr = opts?.manager ?? repo.manager;
+    // Every update takes the tree lock before it reads the row: the save writes back every column it
+    // read, the parent included, so a parent read before a concurrent move would undo that move unchecked.
+    await lockBusinessProcessTree(mgr);
+    // The stored row alone: the tree fields of `get` are not columns.
+    const { parent: _parent, path: _path, depth: _depth, children: _children, ...existing } = await this.get(id, opts);
     const before = { ...existing };
 
     if (body.name !== undefined) {
@@ -385,11 +421,17 @@ export class BusinessProcessesService {
     (existing as any).status = lifecycle.status;
     (existing as any).disabled_at = lifecycle.disabled_at;
 
-    if (Array.isArray(body.category_ids)) {
-      await this.syncCategories(id, body.category_ids, opts);
+    if (body.process_type !== undefined) {
+      (existing as any).process_type = normalizeProcessType(body.process_type);
     }
 
-    const mgr = opts?.manager ?? repo.manager;
+    if (body.parent_id !== undefined) {
+      const parentId = normalizeParentId(body.parent_id);
+      if (parentId !== (before.parent_id ?? null)) {
+        await assertBusinessProcessParent(mgr, { id, name: (existing as any).name }, parentId);
+      }
+      (existing as any).parent_id = parentId;
+    }
     const saved = await mgr.getRepository(BusinessProcess).save(existing as any);
     await this.audit.log(
       {
@@ -407,41 +449,8 @@ export class BusinessProcessesService {
     return saved;
   }
 
-  private async syncCategories(id: string, categoryIds: string[], opts?: { manager?: EntityManager }) {
-    const mg = opts?.manager ?? this.repo.manager;
-    const linkRepo = this.getLinksRepo(mg);
-    const categoryRepo = this.getCategoriesRepo(mg);
-
-    const uniqueIds = Array.from(new Set((categoryIds ?? []).filter((v) => !!v)));
-    if (uniqueIds.length > 0) {
-      const existingCategories = await categoryRepo.find({ where: { id: In(uniqueIds) as any } });
-      const foundIds = new Set(existingCategories.map((c) => c.id));
-      const missing = uniqueIds.filter((id) => !foundIds.has(id));
-      if (missing.length > 0) {
-        throw new BadRequestException('One or more categories do not exist or are not accessible');
-      }
-    }
-
-    const existingLinks = await linkRepo.find({ where: { process_id: id } });
-    const existingIds = new Set(existingLinks.map((l) => l.category_id));
-    const nextIds = new Set(uniqueIds);
-
-    for (const link of existingLinks) {
-      if (!nextIds.has(link.category_id)) {
-        await linkRepo.delete({ id: link.id });
-      }
-    }
-
-    for (const categoryId of nextIds) {
-      if (!existingIds.has(categoryId)) {
-        const link = linkRepo.create({ process_id: id, category_id: categoryId });
-        await linkRepo.save(link);
-      }
-    }
-  }
-
   private csvHeaders(): string[] {
-    return ['name', 'categories', 'description', 'notes', 'status'];
+    return ['name', 'process_type', 'parent_name', 'description', 'notes', 'status'];
   }
 
   /**
@@ -459,12 +468,10 @@ export class BusinessProcessesService {
       const query = opts?.listQuery ?? { page: 1, limit: MAX_EXPORT_LIMIT, sort: 'name:ASC', includeDisabled: '1' };
       const { items } = await this.list(query, { manager: opts?.manager, exportAll: true });
       for (const p of items as any[]) {
-        const categoryNames = Array.isArray(p.categories)
-          ? (p.categories as any[]).map((c) => c.name).join(';')
-          : '';
         rows.push([
           p.name ?? '',
-          categoryNames,
+          p.process_type ?? '',
+          p.parent_name ?? '',
           p.description ?? '',
           p.notes ?? '',
           deriveStatusFromDisabledAt(p.disabled_at ?? null),
@@ -523,8 +530,9 @@ export class BusinessProcessesService {
       line: number;
       body: BusinessProcessUpsertDto;
       status: StatusState | null;
-      categoryNames: string[];
+      parentName: string;
     }> = [];
+    const lineByName = new Map<string, number>();
 
     for (const row of rows) {
       const line = row.line;
@@ -535,49 +543,82 @@ export class BusinessProcessesService {
       }
       const name = cellOf(row, 'name');
       const rawStatus = cellOf(row, 'status').toLowerCase();
+      const rawType = cellOf(row, 'process_type').toLowerCase();
       if (!name) errors.push(rowError(line, 'name', 'CSV_VALUE_REQUIRED', 'Name is required'));
       if (rawStatus && rawStatus !== 'enabled' && rawStatus !== 'disabled') {
         errors.push(rowError(line, 'status', 'CSV_ENUM_INVALID', `Invalid status '${rawStatus}'. Use 'enabled' or 'disabled'.`, { value: rawStatus, allowed: 'enabled, disabled' }));
+      }
+      if (rawType && !isBusinessProcessType(rawType)) {
+        const allowed = BUSINESS_PROCESS_TYPES.join(', ');
+        errors.push(rowError(line, 'process_type', 'CSV_ENUM_INVALID', `Invalid type '${rawType}'. Use ${allowed}.`, { value: rawType, allowed }));
+      }
+      if (name) {
+        const firstLine = lineByName.get(name.toLowerCase());
+        if (firstLine) {
+          errors.push(rowError(line, 'name', 'CSV_DUPLICATE_KEY', `Name ${name} is already used on row ${firstLine}.`, { columns: 'name', firstRow: firstLine }));
+        } else lineByName.set(name.toLowerCase(), line);
       }
       const body: BusinessProcessUpsertDto = {
         name,
         description: cellOf(row, 'description') || null,
         notes: cellOf(row, 'notes') || null,
+        process_type: rawType || null,
       };
-      const categoryNames = cellOf(row, 'categories')
-        .split(';')
-        .map((v) => v.trim())
-        .filter((v) => !!v);
       const status = rawStatus === 'disabled' ? StatusState.DISABLED : rawStatus === 'enabled' ? StatusState.ENABLED : null;
-      normalized.push({ line, body, status, categoryNames });
+      normalized.push({ line, body, status, parentName: cellOf(row, 'parent_name') });
+    }
+
+    const manager = opts?.manager ?? this.repo.manager;
+    const repo = this.getRepo(manager);
+
+    // Parents: a name of the file first, then a stored process. The tree lock is held from here to
+    // the last write, so the stored tree checked below is the one the rows are written into.
+    await lockBusinessProcessTree(manager);
+    const stored = await repo.createQueryBuilder('bp').where('bp.tenant_id = app_current_tenant()').getMany();
+    const storedByName = new Map(stored.map((row) => [row.name.toLowerCase(), row]));
+    const storedById = new Map(stored.map((row) => [row.id, row]));
+    for (const item of normalized) {
+      const key = item.parentName.toLowerCase();
+      if (item.parentName && !lineByName.has(key) && !storedByName.has(key)) {
+        errors.push(rowError(item.line, 'parent_name', 'CSV_REFERENCE_NOT_FOUND', `Unknown parent process '${item.parentName}'.`, { value: item.parentName }));
+      }
+    }
+    // The tree after the import, by lower-case name: a row's parent replaces the stored one.
+    const parentOf = new Map<string, string | null>();
+    for (const row of stored) {
+      const parent = row.parent_id ? storedById.get(row.parent_id) : undefined;
+      parentOf.set(row.name.toLowerCase(), parent ? parent.name.toLowerCase() : null);
+    }
+    for (const item of normalized) parentOf.set((item.body.name as string).toLowerCase(), item.parentName ? item.parentName.toLowerCase() : null);
+    {
+      for (const item of normalized) {
+        const self = (item.body.name as string).toLowerCase();
+        let current = parentOf.get(self) ?? null;
+        for (let hop = 0; current && hop <= parentOf.size; hop += 1) {
+          if (current === self) {
+            errors.push(hop === 0
+              ? rowError(item.line, 'parent_name', 'CSV_BUSINESS_PROCESS_OWN_PARENT', 'A business process cannot be its own parent.')
+              : rowError(item.line, 'parent_name', 'CSV_BUSINESS_PROCESS_PARENT_INSIDE', `${item.body.name} cannot move under ${item.parentName}, which is inside it.`, { name: item.body.name as string, parent: item.parentName }));
+            break;
+          }
+          current = parentOf.get(current) ?? null;
+        }
+      }
     }
 
     if (errors.length > 0) {
       return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, unchanged: 0, errors, ...report };
     }
 
-    const uniqueMap = new Map<string, (typeof normalized)[number]>();
-    for (const item of normalized) {
-      const key = JSON.stringify([item.body, item.status, item.categoryNames]);
-      if (!uniqueMap.has(key)) uniqueMap.set(key, item);
-    }
-    const unique = Array.from(uniqueMap.values());
-
-    const manager = opts?.manager ?? this.repo.manager;
-    const repo = this.getRepo(manager);
-    const categoriesRepo = this.getCategoriesRepo(manager);
-
-    // A row identical to the stored process, categories included, counts as unchanged and is not
-    // written: no audit line, no new `updated_at`. Categories and links are read once.
-    // A row matches the process of the same name whatever its case ("order to cash" updates
-    // "Order to cash"): the stored spelling stays, and the report says which process it matched.
+    // A row identical to the stored process counts as unchanged and is not written: no audit
+    // line, no new `updated_at`. A row matches the process of the same name whatever its case
+    // ("order to cash" updates "Order to cash"): the stored spelling stays, and the report says
+    // which process it matched.
     const warnings: ImportReportError[] = [];
-    const found: Array<{ item: (typeof unique)[number]; existing: BusinessProcess | null }> = [];
-    for (const fileItem of unique) {
+    const found: Array<{ item: (typeof normalized)[number]; existing: BusinessProcess | null }> = [];
+    for (const fileItem of normalized) {
       const name = fileItem.body.name as string;
-      const existing = await repo.createQueryBuilder('bp')
-        .where('bp.tenant_id = app_current_tenant() AND lower(bp.name) = lower(:name)', { name })
-        .getOne();
+      const existing = storedByName.get(name.toLowerCase()) ?? null;
       const warning = existing ? nameMatchedWarning(fileItem.line, 'name', name, existing.name) : null;
       if (warning) warnings.push(warning);
       // The status the row writes: on an update, only one that differs from the current one
@@ -585,36 +626,17 @@ export class BusinessProcessesService {
       const status = existing
         ? (fileItem.status && fileItem.status !== deriveStatusFromDisabledAt(existing.disabled_at ?? null) ? fileItem.status : undefined)
         : (fileItem.status ?? StatusState.ENABLED);
-      const body = { ...fileItem.body, name: existing ? existing.name : name, ...(status ? { status } : {}) };
+      const parentId = fileItem.parentName ? storedByName.get(fileItem.parentName.toLowerCase())?.id ?? null : null;
+      const body = { ...fileItem.body, name: existing ? existing.name : name, parent_id: parentId, ...(status ? { status } : {}) };
       found.push({ item: { ...fileItem, body }, existing });
     }
-    const existingIds = found.flatMap(({ existing }) => (existing ? [existing.id] : []));
-    const categoryIdsByName = new Map<string, string[]>();
-    const linkedByProcess = new Map<string, Set<string>>();
-    if (existingIds.length > 0) {
-      const categories: Array<{ id: string; name: string }> = await manager.query(
-        `SELECT id, name FROM business_process_categories WHERE tenant_id = app_current_tenant()`,
-      );
-      for (const category of categories) {
-        const key = category.name.toLowerCase();
-        categoryIdsByName.set(key, [...(categoryIdsByName.get(key) ?? []), category.id]);
-      }
-      const links: Array<{ process_id: string; category_id: string }> = await manager.query(
-        `SELECT process_id, category_id FROM business_process_category_links
-          WHERE tenant_id = app_current_tenant() AND process_id = ANY($1)`,
-        [existingIds],
-      );
-      for (const link of links) {
-        const set = linkedByProcess.get(link.process_id) ?? new Set<string>();
-        set.add(link.category_id);
-        linkedByProcess.set(link.process_id, set);
-      }
-    }
     const now = new Date();
-    const toWrite: Array<{ item: (typeof unique)[number]; existing: BusinessProcess | null }> = [];
+    const toWrite: Array<{ item: (typeof normalized)[number]; existing: BusinessProcess | null }> = [];
     for (const { item, existing } of found) {
+      // A parent that is a new row of the file has no id yet: the row is written.
+      const parentPending = !!item.parentName && !storedByName.has(item.parentName.toLowerCase());
       if (!existing) inserted += 1;
-      else if (importRowUnchanged(existing, item.body, item.categoryNames, categoryIdsByName, linkedByProcess.get(existing.id) ?? new Set(), now)) {
+      else if (!parentPending && importRowUnchanged(existing, item.body, now)) {
         unchanged += 1;
         continue;
       } else updated += 1;
@@ -625,32 +647,31 @@ export class BusinessProcessesService {
       return { ok: true, dryRun: true, total: rows.length, inserted, updated, unchanged, errors: [], warnings, ...report };
     }
 
+    // Rows by their depth in the tree after the import, top first: when a row is written, every
+    // process above it already has its final parent, so the check of create and update sees the
+    // final chain above the row (the stored tree alone could still hold the row above its parent).
+    const depthOf = (name: string): number => {
+      let depth = 0;
+      for (let current = parentOf.get(name) ?? null; current && depth <= parentOf.size; current = parentOf.get(current) ?? null) depth += 1;
+      return depth;
+    };
+    const writeOrder = toWrite
+      .map((entry, index) => ({ entry, index, depth: depthOf((entry.item.body.name as string).toLowerCase()) }))
+      .sort((a, b) => a.depth - b.depth || a.index - b.index)
+      .map(({ entry }) => entry);
+
     let processed = 0;
-
-    for (const { item, existing } of toWrite) {
-      const categoryIds: string[] = [];
-      for (const catNameRaw of item.categoryNames) {
-        const catName = catNameRaw.trim();
-        if (!catName) continue;
-        let category = await categoriesRepo
-          .createQueryBuilder('cat')
-          .where('LOWER(cat.name) = LOWER(:name)', { name: catName })
-          .getOne();
-        if (!category) {
-          category = await categoriesRepo.save(
-            categoriesRepo.create({ name: catName, is_active: true, is_default: false }),
-          );
-        }
-        if (!categoryIds.includes(category.id)) categoryIds.push(category.id);
-      }
-
+    const idByName = new Map(stored.map((row) => [row.name.toLowerCase(), row.id]));
+    for (const { item, existing } of writeOrder) {
+      const parentId = item.parentName ? idByName.get(item.parentName.toLowerCase()) ?? null : null;
+      const body = { ...item.body, parent_id: parentId };
       if (existing) {
-        await this.update(existing.id, { ...item.body, category_ids: categoryIds }, userId ?? null, { manager });
-        processed += 1;
+        await this.update(existing.id, body, userId ?? null, { manager });
       } else {
-        await this.create({ ...item.body, category_ids: categoryIds }, userId ?? null, { manager });
-        processed += 1;
+        const created = await this.create(body, userId ?? null, { manager });
+        idByName.set(created.name.toLowerCase(), created.id);
       }
+      processed += 1;
     }
 
     return { ok: true, dryRun: false, total: rows.length, inserted, updated, unchanged, processed, errors: [], warnings, ...report };

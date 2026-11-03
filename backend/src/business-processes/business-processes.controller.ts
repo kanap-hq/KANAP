@@ -28,8 +28,6 @@ import { BusinessProcessUpsertDto } from './dto/business-process.dto';
 import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { csvImportMulterOptions } from '../common/upload';
-import { BusinessProcessCategoriesService } from './business-process-categories.service';
-import { BusinessProcessCategoryUpsertDto } from './dto/business-process-category.dto';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 import { csvExportFormat } from '../common/csv/csv-export.service';
@@ -57,6 +55,14 @@ export class BusinessProcessesController {
   @Get('ids')
   listIds(@Query() query: any, @Req() req: any) {
     return this.svc.listIds(query, { manager: req?.queryRunner?.manager });
+  }
+
+  /** Every process as a tree (siblings by name), with depth and path: the parent picker reads it. */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('business_processes', 'reader')
+  @Get('tree')
+  tree(@Req() req: any) {
+    return this.svc.tree({ manager: req?.queryRunner?.manager });
   }
 
   // Picker search (`q`) and hydration of chosen values (`ids`); see common/lookup.
@@ -116,8 +122,7 @@ export class BusinessProcessesController {
 
   /**
    * Before Cancel: what was written on the process and its application links since its creation
-   * (its history's audit rows). Its categories, which the history does not show, count as one
-   * field once set. Nothing is written.
+   * (its history's audit rows). Nothing is written.
    */
   @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
@@ -130,12 +135,7 @@ export class BusinessProcessesController {
     const found = await manager.query('SELECT 1 FROM business_processes WHERE id = $1 AND tenant_id = $2', [id, tenantId]);
     if (!found.length) throw new NotFoundException('Business process not found');
     await assertCreatorAloneSinceCreation(manager, tenantId, 'business_processes', id, req?.user?.sub ?? '');
-    const changes = await countChangesSinceCreation(manager, tenantId, 'business_processes', id);
-    const [{ total }] = await manager.query(
-      'SELECT count(*)::int AS total FROM business_process_category_links WHERE tenant_id = $1 AND process_id = $2',
-      [tenantId, id],
-    );
-    return { changes: total > 0 ? { ...changes, fields: changes.fields + 1 } : changes };
+    return { changes: await countChangesSinceCreation(manager, tenantId, 'business_processes', id) };
   }
 
   /**
@@ -215,42 +215,5 @@ export class BusinessProcessesController {
       },
       { manager: req?.queryRunner?.manager },
     );
-  }
-}
-
-@UseGuards(JwtAuthGuard)
-@Controller('business-process-categories')
-export class BusinessProcessCategoriesController {
-  constructor(private readonly svc: BusinessProcessCategoriesService) {}
-
-  @UseGuards(PermissionGuard)
-  @RequireLevel('business_processes', 'reader')
-  @Get()
-  list(@Query() query: any, @Req() req: any) {
-    return this.svc.list(query, { manager: req?.queryRunner?.manager });
-  }
-
-  @ReservedToUnscopedDataAccess()
-  @UseGuards(PermissionGuard)
-  @RequireLevel('business_processes', 'member')
-  @Post()
-  create(@Body() body: { name: string } | BusinessProcessCategoryUpsertDto, @Req() req: any) {
-    return this.svc.create(body, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
-  }
-
-  @ReservedToUnscopedDataAccess()
-  @UseGuards(PermissionGuard)
-  @RequireLevel('business_processes', 'member')
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() body: BusinessProcessCategoryUpsertDto, @Req() req: any) {
-    return this.svc.update(id, body, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
-  }
-
-  @ReservedToUnscopedDataAccess()
-  @UseGuards(PermissionGuard)
-  @RequireLevel('business_processes', 'admin')
-  @Delete(':id')
-  delete(@Param('id') id: string, @Req() req: any) {
-    return this.svc.delete(id, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
   }
 }
