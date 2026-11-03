@@ -1738,7 +1738,7 @@ Response: `{ success: true }` (202-style fire-and-forget; email failures are sil
     - `projects: Array<{ id, name, status, category_id, planned_start, planned_end, actual_start, actual_end, execution_progress }>`
     - `dependencies: Array<{ id, project_id, depends_on_project_id, dependency_type }>` (only links where both ends are visible in the current project set)
     - `milestones: Array<{ id, project_id, name, target_date, status, project_name }>` (filtered to milestones with `target_date >= viewStart`)
-    - `viewStart: string` (`YYYY-MM-DD`, computed as `today - months`)
+    - `viewStart: string` (`YYYY-MM-DD`: the same day `months` months before today, or that month's last day when the day does not exist)
   - Notes:
     - Cancelled projects are excluded.
     - Returned projects include items with planned dates, plus recently completed items still inside lookback (`planned_end` or `actual_end` >= `viewStart`).
