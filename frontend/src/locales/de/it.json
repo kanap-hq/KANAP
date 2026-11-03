@@ -2868,7 +2868,8 @@
         "noIdentifier": "Die Schnittstelle wurde erstellt, aber es wurde keine Kennung zurückgegeben."
       },
       "creation": {
-        "missing": "Fehlt: {{fields}}"
+        "missing": "Fehlt: {{fields}}",
+        "record": "Die Schnittstelle"
       },
       "pii": {
         "label": "PII",

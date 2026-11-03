@@ -2868,7 +2868,8 @@
         "noIdentifier": "La interfaz se creó, pero no se devolvió ningún identificador."
       },
       "creation": {
-        "missing": "Falta: {{fields}}"
+        "missing": "Falta: {{fields}}",
+        "record": "La interfaz"
       },
       "pii": {
         "label": "PII",

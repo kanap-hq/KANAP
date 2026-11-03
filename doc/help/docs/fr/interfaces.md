@@ -12,14 +12,20 @@ Rendez-vous dans **Cartographie SI > Interfaces** pour voir votre registre d'int
 - **Application source** et **Application cible**, dans l'onglet **Flux**
 - **Catégorie de données**, dans le panneau des propriétés : le type de données transférées
 
-Vous pouvez remplir le titre, les onglets **Vue d'ensemble** et **Flux** et le panneau des propriétés. Rien n'est enregistré avant que vous cliquiez sur **Créer**. **Environnements**, **Mappage des données**, **Relations** et **Historique** s'ouvrent une fois l'interface créée.
+Vous pouvez les remplir dans l'ordre de votre choix. Rien n'est enregistré tant que les quatre ne sont pas remplis. Dès qu'ils le sont, KANAP crée l'interface avec tout ce que contient le brouillon et lui attribue sa référence (`INT-4`). La page passe à l'interface, et **Environnements**, **Mappage des données**, **Relations** et **Historique** s'ouvrent.
 
 **Conseil** : Définissez tôt le **Type de route**. Il contrôle quels legs sont générés automatiquement et ce qui apparaît dans l'onglet Flux et la matrice Environnements.
 
 ### Créer ou annuler { #cancelling-a-creation }
 
-- **Créer** vérifie le titre, l'application source, l'application cible et la catégorie de données. Un message nomme ceux qui manquent, et le titre ou le premier champ manquant prend le focus. Quand tout y est, KANAP crée l'interface avec tout ce qu'elle contient et lui attribue sa référence (`INT-4`). Vous revenez à votre point de départ
-- **Annuler**, la flèche de retour ou Échap dans le titre partent sans rien enregistrer. Quand le brouillon contient quelque chose, une confirmation est demandée avant de l'abandonner. Un lien du menu demande la même chose
+Tant que l'interface est en cours de création, son en-tête affiche **Créer** et **Annuler**. Ils restent jusqu'à ce que vous quittiez l'interface.
+
+- **Créer** conserve l'interface et vous ramène à votre point de départ. S'il manque encore quelque chose, un message le nomme, et le titre ou le premier champ manquant prend le focus. Si le brouillon est complet, KANAP crée l'interface et vous ramène aussitôt
+- **Annuler** supprime l'interface. Si vous avez ajouté quelque chose après sa création, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des interfaces
+
+Si vous quittez l'interface autrement (le menu, la flèche de retour), elle est conservée : elle est complète.
+
+Avant la création de l'interface, **Annuler**, la flèche de retour ou Échap dans le titre partent sans rien enregistrer. Quand le brouillon contient quelque chose, une confirmation est demandée avant de l'abandonner. Un lien du menu demande la même chose.
 
 ---
 

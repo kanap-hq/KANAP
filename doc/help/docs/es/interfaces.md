@@ -12,14 +12,20 @@ Navegue a **Panorama IT > Interfaces** para ver su registro de integraciones. Ha
 - **Aplicación de origen** y **Aplicación de destino**, en la pestaña **Flujo**
 - **Categoría de datos**, en el panel de propiedades: el tipo de datos transferidos
 
-Puede rellenar el título, las pestañas **Vista general** y **Flujo** y el panel de propiedades. No se guarda nada hasta que haga clic en **Crear**. **Entornos**, **Mapeo de datos**, **Relaciones** e **Historial** se abren una vez creada la interfaz.
+Puede rellenarlos en cualquier orden. No se guarda nada hasta que los cuatro estén rellenados. En cuanto lo están, KANAP crea la interfaz con todo lo que contiene el borrador y le asigna su referencia (`INT-4`). La página pasa a la interfaz, y **Entornos**, **Mapeo de datos**, **Relaciones** e **Historial** se abren.
 
 **Consejo**: Defina pronto el **Tipo de ruta**. Controla qué tramos se generan automáticamente y qué aparece en la pestaña Flujo y en la matriz de Entornos.
 
 ### Crear o cancelar { #cancelling-a-creation }
 
-- **Crear** comprueba el título, la aplicación de origen, la aplicación de destino y la categoría de datos. Un mensaje indica los que faltan, y el título o el primer campo que falta recibe el foco. Cuando está todo, KANAP crea la interfaz con todo lo que contiene y le asigna su referencia (`INT-4`). Vuelve al punto de partida
-- **Cancelar**, la flecha de retroceso o Escape en el título salen sin guardar. Cuando el borrador contiene algo, una confirmación pregunta antes de descartarlo. Un enlace del menú pregunta lo mismo
+Mientras la interfaz se está creando, su encabezado muestra **Crear** y **Cancelar**. Permanecen hasta que salga de la interfaz.
+
+- **Crear** conserva la interfaz y le devuelve al punto de partida. Si todavía falta algo, un mensaje lo indica, y el título o el primer campo que falta recibe el foco. Si el borrador está completo, KANAP crea la interfaz y le devuelve al instante
+- **Cancelar** elimina la interfaz. Si añadió algo después de su creación, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar interfaces
+
+Si sale de la interfaz de otra forma (el menú, la flecha de retroceso), se conserva: está completa.
+
+Antes de que se cree la interfaz, **Cancelar**, la flecha de retroceso o Escape en el título salen sin guardar. Cuando el borrador contiene algo, una confirmación pregunta antes de descartarlo. Un enlace del menú pregunta lo mismo.
 
 ---
 

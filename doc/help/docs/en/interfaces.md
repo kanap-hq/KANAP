@@ -12,14 +12,20 @@ Navigate to **IT Landscape > Interfaces** to see your integration registry. Clic
 - **Source application** and **Target application**, on the **Flow** tab
 - **Data category**, in the properties panel: the type of data being transferred
 
-You can fill the title, the **Overview** and **Flow** tabs and the properties panel. Nothing is saved until you click **Create**. **Environments**, **Data mapping**, **Relations** and **History** open once the interface is created.
+You can fill them in any order. Nothing is saved until all four are filled. As soon as they are, KANAP creates the interface with everything the draft holds and assigns its reference (`INT-4`). The page moves to the interface, and **Environments**, **Data mapping**, **Relations** and **History** open.
 
 **Tip**: Set the **Route type** early. It controls which legs are generated automatically and what shows up on the Flow tab and the Environments matrix.
 
 ### Creating or cancelling { #cancelling-a-creation }
 
-- **Create** checks the title, the source application, the target application and the data category. A message names the missing ones, and the title or the first missing field gets the focus. When everything is there, KANAP creates the interface with all it holds and assigns its reference (`INT-4`). You go back to where you started
-- **Cancel**, the back arrow, or Escape on the title leaves without saving. When the draft holds something, a confirmation asks before it is discarded. A link in the menu asks the same
+While the interface is being created, its header shows **Create** and **Cancel**. They stay until you leave the interface.
+
+- **Create** keeps the interface and takes you back to where you started. If something is still missing, a message names it, and the title or the first missing field gets the focus. If the draft is complete, KANAP creates the interface and takes you back at once
+- **Cancel** deletes the interface. If you added anything after it was created, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete interfaces
+
+Leaving the interface another way (the menu, the back arrow) keeps it: it is complete.
+
+Before the interface is created, **Cancel**, the back arrow, or Escape on the title leaves without saving. When the draft holds something, a confirmation asks before it is discarded. A link in the menu asks the same.
 
 ---
 

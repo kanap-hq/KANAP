@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../i18n';
 import { createAppTheme } from '../../config/ThemeContext';
 import { KanapDialogProvider } from '../../components/design';
+import { resetCreationStore } from '../../components/workspace/creation/creationStore';
 import InterfaceWorkspacePage from './InterfaceWorkspacePage';
 
 const post = vi.fn();
@@ -75,6 +76,22 @@ const CASES = [
   { lang: 'es', texts: ['Vista general', 'Flujo', 'Entornos', 'Mapeo de datos', 'Relaciones', 'Nueva interfaz'], create: 'Crear', nameRequired: 'El nombre es obligatorio.' },
 ];
 
+function renderCreate() {
+  return render(
+    <QueryClientProvider client={new QueryClient()}>
+      <ThemeProvider theme={createAppTheme('light')}>
+        <KanapDialogProvider>
+          <MemoryRouter initialEntries={['/it/interfaces/new/overview']}>
+            <Routes>
+              <Route path="/it/interfaces/:id/:tab" element={<InterfaceWorkspacePage />} />
+            </Routes>
+          </MemoryRouter>
+        </KanapDialogProvider>
+      </ThemeProvider>
+    </QueryClientProvider>,
+  );
+}
+
 describe('InterfaceWorkspacePage (create)', () => {
   beforeEach(() => {
     auth.admin = true;
@@ -88,17 +105,7 @@ describe('InterfaceWorkspacePage (create)', () => {
 
   it.each(CASES)('shows the tabs and the name check in $lang', async (c) => {
     await i18n.changeLanguage(c.lang);
-    render(
-      <ThemeProvider theme={createAppTheme('light')}>
-        <KanapDialogProvider>
-          <MemoryRouter initialEntries={['/it/interfaces/new/overview']}>
-            <Routes>
-              <Route path="/it/interfaces/:id/:tab" element={<InterfaceWorkspacePage />} />
-            </Routes>
-          </MemoryRouter>
-        </KanapDialogProvider>
-      </ThemeProvider>,
-    );
+    renderCreate();
 
     for (const text of c.texts) expect(screen.getByText(text)).toBeInTheDocument();
 
@@ -109,17 +116,7 @@ describe('InterfaceWorkspacePage (create)', () => {
 
   it('drops the name error while the header title is typed', async () => {
     await i18n.changeLanguage('en');
-    render(
-      <ThemeProvider theme={createAppTheme('light')}>
-        <KanapDialogProvider>
-          <MemoryRouter initialEntries={['/it/interfaces/new/overview']}>
-            <Routes>
-              <Route path="/it/interfaces/:id/:tab" element={<InterfaceWorkspacePage />} />
-            </Routes>
-          </MemoryRouter>
-        </KanapDialogProvider>
-      </ThemeProvider>,
-    );
+    renderCreate();
 
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
     expect(await screen.findByText('Name is required.')).toBeInTheDocument();
@@ -139,19 +136,33 @@ describe('InterfaceWorkspacePage (create)', () => {
 
 function renderNew(path = '/it/interfaces/new/flow') {
   return render(
-    <ThemeProvider theme={createAppTheme('light')}>
-      <KanapDialogProvider>
-        <MemoryRouter initialEntries={[{ pathname: path, state: { returnTo: '/start' } }]}>
-          <Where />
-          <Routes>
-            <Route path="/start" element={<div />} />
-            <Route path="/it/interfaces" element={<div />} />
-            <Route path="/it/interfaces/:id/:tab" element={<InterfaceWorkspacePage />} />
-          </Routes>
-        </MemoryRouter>
-      </KanapDialogProvider>
-    </ThemeProvider>,
+    <QueryClientProvider client={new QueryClient()}>
+      <ThemeProvider theme={createAppTheme('light')}>
+        <KanapDialogProvider>
+          <MemoryRouter initialEntries={[{ pathname: path, state: { returnTo: '/start' } }]}>
+            <Where />
+            <Routes>
+              <Route path="/start" element={<div />} />
+              <Route path="/it/interfaces" element={<div />} />
+              <Route path="/it/interfaces/:id/:tab" element={<InterfaceWorkspacePage />} />
+            </Routes>
+          </MemoryRouter>
+        </KanapDialogProvider>
+      </ThemeProvider>
+    </QueryClientProvider>,
   );
+}
+
+const CREATED = { id: 'int-9', interface_reference: 'INT-9', creation_token: 'tok-9' };
+
+/** Fills the draft: the title, then the applications and the data category. */
+async function fillDraft(options: { category?: boolean } = {}) {
+  const title = await screen.findByLabelText('title');
+  fireEvent.change(title, { target: { value: 'Orders sync' } });
+  fireEvent.blur(title);
+  fireEvent.click(screen.getByRole('button', { name: 'pick source' }));
+  fireEvent.click(screen.getByRole('button', { name: 'pick target' }));
+  if (options.category !== false) fireEvent.click(screen.getByRole('button', { name: 'pick category' }));
 }
 
 describe('InterfaceWorkspacePage (draft)', () => {
@@ -160,7 +171,17 @@ describe('InterfaceWorkspacePage (draft)', () => {
     await i18n.changeLanguage('en');
     post.mockReset();
     get.mockReset();
-    get.mockResolvedValue({ data: { items: [] } });
+    del.mockReset();
+    resetCreationStore();
+    post.mockImplementation(async (url: string) => (url === '/interfaces' ? { data: CREATED } : { data: {} }));
+    get.mockImplementation(async (url: string) => {
+      if (url === '/interfaces/INT-9' || url === '/interfaces/int-9') {
+        return { data: { ...INTERFACE, id: 'int-9', interface_reference: 'INT-9', data_category: 'orders' } };
+      }
+      if (url === '/interfaces/int-9/creation') return { data: { changes: { fields: 0, children: {} } } };
+      return { data: { items: [] } };
+    });
+    del.mockResolvedValue({ data: undefined });
   });
 
   afterEach(async () => {
@@ -185,24 +206,55 @@ describe('InterfaceWorkspacePage (draft)', () => {
     expect(post).not.toHaveBeenCalled();
   });
 
-  it('creates the interface from its draft on Create and goes back where the creation started', async () => {
-    post.mockResolvedValue({ data: { id: 'int-9', interface_reference: 'INT-9' } });
+  it('creates the interface once its required fields are filled, and opens it with Create and Cancel', async () => {
     renderNew();
-    const title = await screen.findByLabelText('title');
-    fireEvent.change(title, { target: { value: 'Orders sync' } });
-    fireEvent.blur(title);
-    fireEvent.click(screen.getByRole('button', { name: 'pick source' }));
-    fireEvent.click(screen.getByRole('button', { name: 'pick target' }));
-    fireEvent.click(screen.getByRole('button', { name: 'pick category' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
-    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/start'));
+    await fillDraft();
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/it/interfaces/INT-9/flow'));
+    expect(post).toHaveBeenCalledTimes(1);
     expect(post).toHaveBeenCalledWith('/interfaces', expect.objectContaining({
       name: 'Orders sync',
       source_application_id: 'app-1',
       target_application_id: 'app-2',
       data_category: 'orders',
     }));
-    expect(post).toHaveBeenCalledWith('/interfaces/int-9/links/bulk-replace', { links: [] });
+    expect(await screen.findByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
+
+    // Create ends the creation: back where it started, the interface kept.
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/start'));
+    expect(del).not.toHaveBeenCalled();
+  });
+
+  it('creates the interface on Create while its title is committed, and goes back where the creation started', async () => {
+    renderNew();
+    fireEvent.click(await screen.findByRole('button', { name: 'pick source' }));
+    fireEvent.click(screen.getByRole('button', { name: 'pick target' }));
+    fireEvent.click(screen.getByRole('button', { name: 'pick category' }));
+    const title = screen.getByLabelText('title');
+    fireEvent.change(title, { target: { value: 'Orders sync' } });
+    // In a browser the click's mousedown blurs the title first, which commits it.
+    fireEvent.blur(title);
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/start'));
+    expect(post).toHaveBeenCalledTimes(1);
+  });
+
+  it('deletes the interface on Cancel once created, and goes back where the creation started', async () => {
+    renderNew();
+    await fillDraft();
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/it/interfaces/INT-9/flow'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/start'));
+    expect(del).toHaveBeenCalledWith('/interfaces/int-9/creation', { data: { token: 'tok-9' } });
+  });
+
+  it('creates nothing while a required field is missing', async () => {
+    renderNew();
+    await fillDraft({ category: false });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(post).not.toHaveBeenCalled();
+    expect(screen.getByTestId('where')).toHaveTextContent('/it/interfaces/new/flow');
   });
 
   it('asks before Cancel drops a draft that holds something, and leaves an empty one at once', async () => {

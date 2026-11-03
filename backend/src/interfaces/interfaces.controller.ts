@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  NotFoundException,
   Param,
   Patch,
   Post,
@@ -40,6 +41,14 @@ import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import { ShareRateLimit } from '../notifications/share-rate-limit';
 import { resolveBusinessContributorScopeForUser } from '../auth/business-contributor-scope';
 import { interfaceRelationKindOrThrow } from './interface-relations';
+import { creationCancelExpired, issueCreationToken, verifyCreationToken } from '../common/creation/creation-token';
+import {
+  assertCreatorAloneSinceCreation,
+  countChangesSinceCreation,
+  countEditedManagedDocuments,
+  withChildCount,
+  type CreationChanges,
+} from '../common/creation/creation-changes';
 
 @UseGuards(JwtAuthGuard)
 @Controller('interfaces')
@@ -388,14 +397,76 @@ export class InterfacesController {
     return this.svc.listLegs(id, { manager: ctx.manager });
   }
 
+  /**
+   * Creates the interface and hands its creator a creation token (`common/creation`), which opens
+   * "Cancel" (`DELETE :id/creation`) for this record and this person only. The screen creates it
+   * once its draft has its title, both applications and its data category.
+   */
   @UseGuards(PermissionGuard)
   @RequireLevel('applications', 'member')
   @Post()
-  create(
+  async create(
     @Body() body: CreateInterfaceInput,
     @Tenant() ctx: TenantRequest,
   ) {
-    return this.svc.create(body as Record<string, unknown>, ctx.tenantId, ctx.userId || null, { manager: ctx.manager });
+    const created = await this.svc.create(body as Record<string, unknown>, ctx.tenantId, ctx.userId || null, { manager: ctx.manager });
+    const creation_token = issueCreationToken({ tenantId: ctx.tenantId, family: 'interfaces', recordId: created.id, userId: ctx.userId });
+    return Object.assign(created, { creation_token });
+  }
+
+  /** The token of `POST /interfaces` for this record, tenant and person, still valid; a 403 otherwise. */
+  private assertCreationToken(id: string, token: unknown, ctx: TenantRequest): void {
+    if (!verifyCreationToken(token, { tenantId: ctx.tenantId, family: 'interfaces', recordId: String(id ?? ''), userId: ctx.userId })) {
+      throw creationCancelExpired();
+    }
+  }
+
+  /**
+   * Before "Cancel": what was written on the interface and its children since its creation (its
+   * history's audit rows), its edited specification and its attachments. Nothing is written.
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('applications', 'member')
+  @Get(':id/creation')
+  async creationChanges(
+    @Param('id') id: string,
+    @Query('token') token: string,
+    @Tenant() ctx: TenantRequest,
+  ): Promise<{ changes: CreationChanges }> {
+    this.assertCreationToken(id, token, ctx);
+    const manager = ctx.manager;
+    if (!manager) throw requestContextMissing('Request context is missing');
+    const found = await manager.query('SELECT 1 FROM interfaces WHERE id = $1 AND tenant_id = $2', [id, ctx.tenantId]);
+    if (!found.length) throw new NotFoundException('Interface not found');
+    await assertCreatorAloneSinceCreation(manager, ctx.tenantId, 'interfaces', id, ctx.userId);
+    let changes = await countChangesSinceCreation(manager, ctx.tenantId, 'interfaces', id);
+    changes = withChildCount(changes, 'document', await countEditedManagedDocuments(manager, ctx.tenantId, 'interfaces', id));
+    const [{ total }] = await manager.query(
+      'SELECT count(*)::int AS total FROM interface_attachments WHERE tenant_id = $1 AND interface_id = $2',
+      [ctx.tenantId, id],
+    );
+    return { changes: withChildCount(changes, 'attachment', total) };
+  }
+
+  /**
+   * "Cancel" of an interface being created: its creator deletes it with its token, even without the
+   * delete right (admin), while nobody else has written on it (403 `CREATION_CANCEL_EXPIRED`
+   * otherwise, checked under its lock). Same delete as `DELETE :id`, with the bindings the creator
+   * added meanwhile.
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('applications', 'member')
+  @Delete(':id/creation')
+  async cancelCreation(
+    @Param('id') id: string,
+    @Body() body: { token?: string },
+    @Tenant() ctx: TenantRequest,
+  ): Promise<void> {
+    this.assertCreationToken(id, body?.token, ctx);
+    const manager = ctx.manager;
+    if (!manager) throw requestContextMissing('Request context is missing');
+    await assertCreatorAloneSinceCreation(manager, ctx.tenantId, 'interfaces', id, ctx.userId, { lock: true });
+    await this.svc.delete(id, ctx.userId || null, { manager, deleteRelatedBindings: true });
   }
 
   @UseGuards(PermissionGuard)

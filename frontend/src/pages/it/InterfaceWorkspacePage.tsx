@@ -42,7 +42,7 @@ import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { carryListFilters } from '../../lib/listContext';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
-import { CreationActions, useCreationReturn } from '../../components/workspace/creation';
+import { CreationActions, useCreationReturn, useRecordCreation } from '../../components/workspace/creation';
 import { missingFieldsList } from '../../components/workspace/creation/missingFieldsList';
 import { useLeaveGuard } from '../../hooks/leaveGuard';
 
@@ -173,6 +173,8 @@ export default function InterfaceWorkspacePage() {
     : LEGACY_ROUTE_MAP[rawRouteTab as LegacyTabKey] || 'overview';
 
   const [createForm, setCreateForm] = React.useState<Partial<InterfaceDetail>>(createInitialForm);
+  // The draft as last written, read by Create and the creation in the same event as a title commit.
+  const createFormRef = React.useRef<Partial<InterfaceDetail>>(createForm);
   const [data, setData] = React.useState<InterfaceDetail | null>(null);
   const dataRef = React.useRef<InterfaceDetail | null>(null);
   const specificationEditorRef = React.useRef<IntegratedDocumentEditorHandle>(null);
@@ -183,7 +185,8 @@ export default function InterfaceWorkspacePage() {
   const [error, setError] = React.useState<string | null>(null);
   const [createTitleError, setCreateTitleError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
-  const [createSubmitting, setCreateSubmitting] = React.useState(false);
+  // The draft is being written (`createInterface`).
+  const creatingRef = React.useRef(false);
 
   React.useEffect(() => {
     if (routeTab === 'data-mapping') {
@@ -193,7 +196,8 @@ export default function InterfaceWorkspacePage() {
 
   const replaceCurrent = React.useCallback((next: Partial<InterfaceDetail> | InterfaceDetail | null) => {
     if (isCreate) {
-      setCreateForm((next || createInitialForm()) as Partial<InterfaceDetail>);
+      createFormRef.current = (next || createInitialForm()) as Partial<InterfaceDetail>;
+      setCreateForm(createFormRef.current);
       return;
     }
     dataRef.current = (next || null) as InterfaceDetail | null;
@@ -205,7 +209,8 @@ export default function InterfaceWorkspacePage() {
     options?: { markCreateDirty?: boolean },
   ) => {
     if (isCreate) {
-      setCreateForm((prev) => updater((prev || {}) as Partial<InterfaceDetail>));
+      createFormRef.current = updater((createFormRef.current || {}) as Partial<InterfaceDetail>);
+      setCreateForm(createFormRef.current);
       if (options?.markCreateDirty) {
         setCreateDirty(true);
       }
@@ -504,15 +509,21 @@ export default function InterfaceWorkspacePage() {
         url: normalizeUrl(item.url),
       }));
 
+    const owners = ((current.owners || []) as InterfaceOwner[])
+      .filter((owner) => owner.user_id)
+      .map((owner) => ({ user_id: owner.user_id, owner_type: owner.owner_type }));
+
+    // A new interface has none of these: only the lists the draft filled are written.
     await Promise.all([
-      api.post(`/interfaces/${interfaceId}/companies/bulk-replace`, { company_ids: companies }),
-      api.post(`/interfaces/${interfaceId}/dependencies/bulk-replace`, {
+      owners.length > 0 && api.post(`/interfaces/${interfaceId}/owners/bulk-replace`, { owners }),
+      companies.length > 0 && api.post(`/interfaces/${interfaceId}/companies/bulk-replace`, { company_ids: companies }),
+      (upstreamIds.length > 0 || downstreamIds.length > 0) && api.post(`/interfaces/${interfaceId}/dependencies/bulk-replace`, {
         upstream_ids: upstreamIds,
         downstream_ids: downstreamIds,
       }),
-      api.post(`/interfaces/${interfaceId}/key-identifiers/bulk-replace`, { items: keyIdentifiers }),
-      api.post(`/interfaces/${interfaceId}/data-residency/bulk-replace`, { countries }),
-      api.post(`/interfaces/${interfaceId}/links/bulk-replace`, { links }),
+      keyIdentifiers.length > 0 && api.post(`/interfaces/${interfaceId}/key-identifiers/bulk-replace`, { items: keyIdentifiers }),
+      countries.length > 0 && api.post(`/interfaces/${interfaceId}/data-residency/bulk-replace`, { countries }),
+      links.length > 0 && api.post(`/interfaces/${interfaceId}/links/bulk-replace`, { links }),
     ]);
   }, []);
 
@@ -529,6 +540,15 @@ export default function InterfaceWorkspacePage() {
   const listPath = `/it/interfaces${listContextParams.toString() ? `?${listContextParams.toString()}` : ''}`;
   // Where the creation started: a new interface created, cancelled or left goes back there.
   const creationReturn = useCreationReturn(listPath);
+  const creation = useRecordCreation({
+    family: 'interfaces',
+    apiBase: '/interfaces',
+    recordId: isCreate ? null : data?.id ?? null,
+    listPath,
+    recordLabel: t('workspace.interface.creation.record'),
+    queryKeyPrefixes: ['interfaces'],
+    onError: setError,
+  });
 
   // Nothing is written before Create: leaving a draft that holds something asks first.
   const confirmDiscard = React.useCallback(() => dialogs.confirm({
@@ -541,6 +561,8 @@ export default function InterfaceWorkspacePage() {
 
   const closeWorkspace = React.useCallback(async () => {
     if (isCreate) {
+      // The draft is being written: the page moves to the interface, where Cancel deletes it.
+      if (creatingRef.current) return;
       if (createDirty && !(await confirmDiscard())) return;
       navigate(creationReturn);
       return;
@@ -584,21 +606,71 @@ export default function InterfaceWorkspacePage() {
     window.setTimeout(attempt, 0);
   };
 
-  // Create writes the interface from its draft, once it has its title, both applications and its
-  // data category: the missing ones are named, and the title or the first field gets the focus.
-  const handleCreate = async () => {
-    if (!canManage || createSubmitting) return;
-    const current = getCurrentState();
-    const payload = buildCreatePayload(current);
-    const missing = [
-      !payload.source_application_id && 'source',
-      !payload.target_application_id && 'target',
-      !payload.data_category && 'data_category',
-    ].filter((key): key is string => !!key);
+  // What the interface still needs, in screen order: both applications and its data category (the
+  // title is checked on its own).
+  const missingOf = (state: Partial<InterfaceDetail>) => [
+    !state.source_application_id && 'source',
+    !state.target_application_id && 'target',
+    !state.data_category && 'data_category',
+  ].filter((key): key is string => !!key);
+  const isComplete = (state: Partial<InterfaceDetail>) => !!String(state.name || '').trim() && missingOf(state).length === 0;
+
+  // The draft creates the interface once it has its title, both applications and its data category:
+  // the page moves to it, every tab open, with Create and Cancel. Create on the draft creates it and
+  // goes back where the creation started.
+  const finishAfterRef = React.useRef(false);
+  const createInterface = async (finish: boolean) => {
+    if (creatingRef.current) {
+      if (finish) finishAfterRef.current = true;
+      return;
+    }
+    creatingRef.current = true;
+    finishAfterRef.current = finish;
+    setError(null);
+    const draft = createFormRef.current;
+    try {
+      const response = await api.post<InterfaceDetail & { creation_token: string }>('/interfaces', buildCreatePayload(draft));
+      const { creation_token: token, ...created } = response.data;
+      if (!created?.id) {
+        setError(t('workspace.interface.create.noIdentifier'));
+        return;
+      }
+      await persistAdditionalState(created.id, draft);
+      setCreateDirty(false);
+      replaceCurrent(createInitialForm());
+      if (finishAfterRef.current) {
+        navigate(creationReturn);
+        return;
+      }
+      creation.startCreation({ recordId: created.id, token, returnTo: creationReturn });
+      const qs = searchParams.toString();
+      navigate(`/it/interfaces/${created.interface_reference || created.id}/${routeTab}${qs ? `?${qs}` : ''}`, { replace: true });
+    } catch (saveError: any) {
+      setError(getApiErrorMessage(saveError, t, t('messages.saveInterfaceFailed')));
+    } finally {
+      creatingRef.current = false;
+    }
+  };
+
+  // A refused creation is not tried again until the draft changes.
+  const triedFormRef = React.useRef<Partial<InterfaceDetail> | null>(null);
+  React.useEffect(() => {
+    if (!isCreate || !canManage || triedFormRef.current === createForm || !isComplete(createForm)) return;
+    triedFormRef.current = createForm;
+    void createInterface(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canManage, createForm, isCreate]);
+
+  // Create names what is missing and focuses the title or the first field; on a complete draft it
+  // creates the interface, on an interface being created it ends the creation.
+  const handleCreate = () => {
+    if (!canManage || creation.cancelling) return;
+    const state = isCreate ? createFormRef.current : getCurrentState();
+    const missing = missingOf(state);
     setError(missing.length > 0
       ? t('workspace.interface.creation.missing', { fields: missingFieldsList(missing.map(fieldLabel), i18n.resolvedLanguage || i18n.language) })
       : null);
-    if (!payload.name) {
+    if (!String(state.name || '').trim()) {
       setCreateTitleError(t('messages.nameRequired'));
       setTitleFocusRequest((n) => n + 1);
       return;
@@ -607,22 +679,8 @@ export default function InterfaceWorkspacePage() {
       focusField(missing[0]);
       return;
     }
-    setCreateSubmitting(true);
-    try {
-      const response = await api.post<InterfaceDetail>('/interfaces', payload);
-      const newId = (response.data as any)?.id as string | undefined;
-      if (!newId) {
-        setError(t('workspace.interface.create.noIdentifier'));
-        return;
-      }
-      await persistAdditionalState(newId, current);
-      setCreateDirty(false);
-      navigate(creationReturn);
-    } catch (saveError: any) {
-      setError(getApiErrorMessage(saveError, t, t('messages.saveInterfaceFailed')));
-    } finally {
-      setCreateSubmitting(false);
-    }
+    if (isCreate) void createInterface(true);
+    else creation.finishCreation();
   };
 
   // The tab reports what it lists once open; until then the detail's own lists count.
@@ -675,7 +733,7 @@ export default function InterfaceWorkspacePage() {
           {t('workspace.interface.viewInMap')}
         </Button>
       )}
-      {!isCreate && current && canDelete && (
+      {!isCreate && !creation.beingCreated && current && canDelete && (
         <RecordDeleteButton
           base="/interfaces"
           id={current.id}
@@ -690,11 +748,11 @@ export default function InterfaceWorkspacePage() {
           onDeleted={() => { void closeWorkspace(); }}
         />
       )}
-      {isCreate ? (
+      {isCreate || creation.beingCreated ? (
         <CreationActions
-          busy={createSubmitting}
-          onCreate={() => { void handleCreate(); }}
-          onCancel={() => { void closeWorkspace(); }}
+          busy={creation.cancelling}
+          onCreate={handleCreate}
+          onCancel={() => { void (isCreate ? closeWorkspace() : creation.cancelCreation()); }}
         />
       ) : (
         <IconButton

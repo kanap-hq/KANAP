@@ -12,14 +12,20 @@ Navigieren Sie zu **IT-Landschaft > Schnittstellen**, um Ihr Integrationsverzeic
 - **Quellanwendung** und **Zielanwendung**, im Reiter **Fluss**
 - **Datenkategorie**, im Seitenpanel: der Datentyp, der übertragen wird
 
-Sie können den Titel, die Reiter **Übersicht** und **Fluss** und das Seitenpanel ausfüllen. Nichts wird gespeichert, bevor Sie auf **Erstellen** klicken. **Umgebungen**, **Datenzuordnung**, **Beziehungen** und **Verlauf** öffnen sich, sobald die Schnittstelle erstellt ist.
+Sie können sie in beliebiger Reihenfolge ausfüllen. Nichts wird gespeichert, solange nicht alle vier ausgefüllt sind. Sobald sie es sind, erstellt KANAP die Schnittstelle mit allem, was der Entwurf enthält, und vergibt ihre Referenz (`INT-4`). Die Seite wechselt zur Schnittstelle, und **Umgebungen**, **Datenzuordnung**, **Beziehungen** und **Verlauf** öffnen sich.
 
 **Tipp**: Legen Sie den **Routentyp** frühzeitig fest. Er steuert, welche Legs automatisch generiert werden und was im Reiter Fluss und in der Umgebungsmatrix angezeigt wird.
 
 ### Erstellen oder abbrechen { #cancelling-a-creation }
 
-- **Erstellen** prüft den Titel, die Quellanwendung, die Zielanwendung und die Datenkategorie. Eine Meldung nennt, was fehlt, und der Titel oder das erste fehlende Feld erhält den Fokus. Ist alles da, erstellt KANAP die Schnittstelle mit allem, was sie enthält, und vergibt ihre Referenz (`INT-4`). Sie kehren dorthin zurück, wo Sie begonnen haben
-- **Abbrechen**, der Zurück-Pfeil oder Escape im Titel verlassen die Seite, ohne zu speichern. Enthält der Entwurf etwas, fragt eine Bestätigung, bevor er verworfen wird. Ein Link im Menü fragt ebenso
+Solange die Schnittstelle erstellt wird, zeigt ihre Kopfzeile **Erstellen** und **Abbrechen**. Beide bleiben, bis Sie die Schnittstelle verlassen.
+
+- **Erstellen** behält die Schnittstelle und bringt Sie dorthin zurück, wo Sie begonnen haben. Fehlt noch etwas, nennt eine Meldung es, und der Titel oder das erste fehlende Feld erhält den Fokus. Ist der Entwurf vollständig, erstellt KANAP die Schnittstelle und bringt Sie sofort zurück
+- **Abbrechen** löscht die Schnittstelle. Wenn Sie nach ihrer Erstellung etwas hinzugefügt haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Schnittstellen abbrechen
+
+Verlassen Sie die Schnittstelle auf andere Weise (über das Menü oder den Zurück-Pfeil), bleibt sie erhalten: Sie ist vollständig.
+
+Bevor die Schnittstelle erstellt ist, verlassen **Abbrechen**, der Zurück-Pfeil oder Escape im Titel die Seite, ohne zu speichern. Enthält der Entwurf etwas, fragt eine Bestätigung, bevor er verworfen wird. Ein Link im Menü fragt ebenso.
 
 ---
 
