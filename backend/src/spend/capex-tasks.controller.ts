@@ -5,6 +5,7 @@ import { RequireLevel } from '../auth/require-level.decorator';
 import { TasksUnifiedService } from '../tasks/tasks-unified.service';
 import { resolveToUuid } from '../common/resolve-item-id';
 import { EntityManager } from 'typeorm';
+import { withTaskCreationToken } from '../tasks/task-creation';
 
 @UseGuards(JwtAuthGuard)
 @Controller('capex-items/:id/tasks')
@@ -30,7 +31,9 @@ export class CapexTasksController {
   async create(@Param('id') idOrRef: string, @Body() body: any, @Req() req: any) {
     const manager = req?.queryRunner?.manager as EntityManager;
     const itemId = await this.resolveItemId(idOrRef, manager);
-    return this.unified.createForTarget({ type: 'capex_item', id: itemId, payload: body }, req.user?.sub ?? null, { manager, tenantId: req?.tenant?.id });
+    const created = await this.unified.createForTarget({ type: 'capex_item', id: itemId, payload: body }, req.user?.sub ?? null, { manager, tenantId: req?.tenant?.id });
+    // The token of "Cancel" of a task being created (`tasks/task-creation.ts`).
+    return withTaskCreationToken(created, { tenantId: req?.tenant?.id ?? '', userId: req?.user?.sub ?? '' });
   }
 
   // PATCH expects body.id of the task to update

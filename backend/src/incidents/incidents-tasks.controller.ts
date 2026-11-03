@@ -6,6 +6,7 @@ import { RequireLevel } from '../auth/require-level.decorator';
 import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
 import { resolveToUuid } from '../common/resolve-item-id';
 import { TasksUnifiedService } from '../tasks/tasks-unified.service';
+import { withTaskCreationToken } from '../tasks/task-creation';
 import { IncidentsService } from './services';
 import { incidentViewerFromContext } from './incident-visibility';
 
@@ -41,10 +42,12 @@ export class IncidentsTasksController {
       tenantId: ctx.tenantId,
       viewer: incidentViewerFromContext(ctx),
     });
-    return this.unified.createForTarget({ type: 'incident', id, payload: body }, ctx.userId || undefined, {
+    const created = await this.unified.createForTarget({ type: 'incident', id, payload: body }, ctx.userId || undefined, {
       manager: ctx.manager,
       tenantId: ctx.tenantId,
     });
+    // The token of "Cancel" of a task being created (`tasks/task-creation.ts`).
+    return withTaskCreationToken(created, { tenantId: ctx.tenantId, userId: ctx.userId || '' });
   }
 
   // PATCH expects body.id of the task to update
