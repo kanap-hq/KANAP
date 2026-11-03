@@ -20,10 +20,11 @@ function entry(
   kind: string,
   content: string,
   times: { occurred_at?: string; created_at?: string } = {},
+  changedFields: Record<string, { from: unknown; to: unknown }> | null = null,
 ) {
   const occurredAt = times.occurred_at ?? '2026-10-16T08:00:00.000Z';
   return {
-    id, kind, content, changed_fields: null, author_id: null, author_name: null,
+    id, kind, content, changed_fields: changedFields, author_id: null, author_name: null,
     occurred_at: occurredAt, created_at: times.created_at ?? occurredAt,
   };
 }
@@ -65,6 +66,73 @@ describe('IncidentJournalTab system entries', () => {
     expect(screen.getByText('Revue d’incident importée')).toBeInTheDocument();
     // A note someone typed stays as written.
     expect(screen.getAllByText('Incident logged')).toHaveLength(1);
+  });
+});
+
+// Link changes are stored as an English sentence. The tab rebuilds them from changed_fields
+// (added = to minus from, removed = from minus to). An old row with no snapshot keeps its sentence.
+describe('IncidentJournalTab link changes', () => {
+  afterEach(async () => {
+    await i18n.changeLanguage('en');
+  });
+
+  it('shows link changes in the reader language', async () => {
+    await i18n.changeLanguage('fr');
+    listEntries.mockResolvedValue([
+      entry('e1', 'link_change', 'Technologies linked: TEC-18.', {}, {
+        technologies: { from: [], to: ['TEC-18'] },
+      }),
+      entry('e2', 'link_change', 'Assets unlinked: AST-2, AST-9.', {}, {
+        assets: { from: ['AST-1', 'AST-2', 'AST-9'], to: ['AST-1'] },
+      }),
+      entry('e3', 'link_change', 'Applications linked: APP-4. Applications unlinked: APP-1.', {}, {
+        applications: { from: ['APP-1'], to: ['APP-4'] },
+      }),
+      entry('e4', 'link_change', 'Application APP-7 converted to technology TEC-3.', {}, {
+        applications: { from: ['APP-7'], to: [] },
+        technologies: { from: [], to: ['TEC-3'] },
+      }),
+      entry('e5', 'link_change', 'Technologies linked: TEC-1.'),
+      entry('e6', 'link_change', 'Technologies linked: TEC-OLD.', {}, {
+        technologies: { from: 'TEC-OLD', to: [] },
+      }),
+    ]);
+    renderTab();
+
+    // getByText collapses a no-break space before comparing, so the French colon would miss.
+    const asWritten = { normalizer: (text: string) => text };
+    expect(await screen.findByText('Technologies liées\u00a0: TEC-18.', asWritten)).toBeInTheDocument();
+    expect(screen.queryByText('Technologies linked: TEC-18.')).not.toBeInTheDocument();
+    expect(screen.getByText('Actifs déliés\u00a0: AST-2, AST-9.', asWritten)).toBeInTheDocument();
+
+    const linked = screen.getByText('Applications liées\u00a0: APP-4.', asWritten);
+    const unlinked = screen.getByText('Applications déliées\u00a0: APP-1.', asWritten);
+    expect(linked.compareDocumentPosition(unlinked) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    // A conversion is the unlinked application and the linked technology, in that order.
+    const convertedApp = screen.getByText('Applications déliées\u00a0: APP-7.', asWritten);
+    const convertedTech = screen.getByText('Technologies liées\u00a0: TEC-3.', asWritten);
+    expect(convertedApp.compareDocumentPosition(convertedTech) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByText('Application APP-7 converted to technology TEC-3.')).not.toBeInTheDocument();
+
+    // No snapshot, or a snapshot that is not two lists of references: the stored sentence stays.
+    expect(screen.getByText('Technologies linked: TEC-1.')).toBeInTheDocument();
+    expect(screen.getByText('Technologies linked: TEC-OLD.')).toBeInTheDocument();
+  });
+
+  it.each([
+    ['de', 'Technologien verknüpft: TEC-18.'],
+    ['es', 'Tecnologías vinculadas: TEC-18.'],
+  ])('shows a technology link in %s', async (language, expected) => {
+    await i18n.changeLanguage(language);
+    listEntries.mockResolvedValue([
+      entry('e1', 'link_change', 'Technologies linked: TEC-18.', {}, {
+        technologies: { from: [], to: ['TEC-18'] },
+      }),
+    ]);
+    renderTab();
+    expect(await screen.findByText(expected)).toBeInTheDocument();
+    expect(screen.queryByText('Technologies linked: TEC-18.')).not.toBeInTheDocument();
   });
 });
 

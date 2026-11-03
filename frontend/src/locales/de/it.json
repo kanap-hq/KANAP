@@ -1664,6 +1664,20 @@
           "importedFromCsv": "Aus CSV importiert",
           "reviewImportedFromCsv": "Vorfallanalyse aus CSV importiert",
           "reviewImported": "Vorfallanalyse importiert"
+        },
+        "linkChanges": {
+          "assets": {
+            "linked": "Assets verknüpft: {{refs}}.",
+            "unlinked": "Assets getrennt: {{refs}}."
+          },
+          "applications": {
+            "linked": "Anwendungen verknüpft: {{refs}}.",
+            "unlinked": "Anwendungen getrennt: {{refs}}."
+          },
+          "technologies": {
+            "linked": "Technologien verknüpft: {{refs}}.",
+            "unlinked": "Technologien getrennt: {{refs}}."
+          }
         }
       },
       "drawer": {
