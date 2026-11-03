@@ -46,6 +46,11 @@ interface FlatSpread {
   period: { start: string; end: string };
   totals: Partial<Record<AmountMeasure, bigint>>;
   fte: Partial<Record<AmountMeasure, string | null>>;
+  /**
+   * The yearly total already stored for each measure of `totals`. Null when the
+   * version is new: the history then names only the total the file set.
+   */
+  beforeTotals: Partial<Record<AmountMeasure, bigint>> | null;
 }
 
 export interface BudgetFileImportOk {
@@ -557,11 +562,13 @@ async function writeYear(
   if (period) {
     const totals: Partial<Record<AmountMeasure, bigint>> = {};
     const fte: Partial<Record<AmountMeasure, string | null>> = {};
+    const beforeTotals: Partial<Record<AmountMeasure, bigint>> | null = version ? {} : null;
     for (const amount of amounts) {
       totals[amount.measure] = amount.cents;
       fte[amount.measure] = rounds.find((round) => round.measure === amount.measure)?.fte ?? null;
+      if (beforeTotals && version) beforeTotals[amount.measure] = storedYearTotal(version, amount.measure);
     }
-    return { wrote: false, flat: { nature: ctx.scope, itemId, versionId: ctx.version.id, year, period, totals, fte } };
+    return { wrote: false, flat: { nature: ctx.scope, itemId, versionId: ctx.version.id, year, period, totals, fte, beforeTotals } };
   }
   let wrote = false;
   const annual = new Map<string, { period: { start: string; end: string }; totals: Partial<Record<AmountMeasure, string>> }>();
@@ -630,6 +637,38 @@ async function writeYear(
     }
   }
   return { wrote, flat: null };
+}
+
+/** The stored yearly total of one measure, as the preflight compares a yearly cell (`yearSum`). */
+function storedYearTotal(
+  version: { months: Record<AmountMeasure, Array<{ cents: bigint | null }>> },
+  measure: AmountMeasure,
+): bigint {
+  return version.months[measure].reduce((sum, month) => sum + (month.cents ?? 0n), 0n);
+}
+
+/**
+ * Totals the history tab shows for one flat spread. An existing version carries
+ * `before.totals`; a new version has no before. A measure whose yearly total
+ * did not move is left out of both sides, and a spread that moves nothing is
+ * left out of the audit.
+ */
+function flatAmountAudit(
+  flat: FlatSpread,
+  measures: readonly AmountMeasure[],
+): { before: { totals: Partial<Record<AmountMeasure, string>> } | null; totals: Partial<Record<AmountMeasure, string>> } | null {
+  const totals: Partial<Record<AmountMeasure, string>> = {};
+  const beforeTotals: Partial<Record<AmountMeasure, string>> = {};
+  for (const measure of measures) {
+    const next = flat.totals[measure];
+    if (next === undefined) continue;
+    const stored = flat.beforeTotals?.[measure];
+    if (stored !== undefined && stored === next) continue;
+    totals[measure] = formatCents(next);
+    if (stored !== undefined) beforeTotals[measure] = formatCents(stored);
+  }
+  if (Object.keys(totals).length === 0) return null;
+  return { before: flat.beforeTotals == null ? null : { totals: beforeTotals }, totals };
 }
 
 /** Flat yearly spreads, one statement per measure set. Versions are locked in id order first (per nature). */
@@ -702,28 +741,29 @@ async function writeFlatSpreads(
         fte: fields.fte,
       });
     }
-    audits.push(
-      {
+    const amountsAudit = flatAmountAudit(flat, measures);
+    if (amountsAudit) {
+      audits.push({
         table: auditLabel(flat.nature, 'amounts'),
         recordId: flat.versionId,
         action: 'update',
-        before: null,
+        before: amountsAudit.before,
         after: {
           source: 'budget_file',
           year: flat.year,
-          totals: Object.fromEntries(measures.map((measure) => [measure, formatCents(flat.totals[measure] as bigint)])),
+          totals: amountsAudit.totals,
         },
         // The version names the line; a budget-file load writes the audit rows itself, in one statement.
         parent: { table: 'spend_items', id: flat.itemId },
-      },
-      {
-        table: auditLabel(flat.nature, 'items'),
-        recordId: flat.itemId,
-        action: 'update',
-        before: null,
-        after: { operation: 'budget_file_import', year: flat.year, source: 'budget_file' },
-      },
-    );
+      });
+    }
+    audits.push({
+      table: auditLabel(flat.nature, 'items'),
+      recordId: flat.itemId,
+      action: 'update',
+      before: null,
+      after: { operation: 'budget_file_import', year: flat.year, source: 'budget_file' },
+    });
   }
 
   for (const group of groups.values()) await insertAmountRows(input, group.measures, group.rows);
