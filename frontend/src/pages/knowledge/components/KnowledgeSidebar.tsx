@@ -622,7 +622,9 @@ const KnowledgeSidebar = React.memo(function KnowledgeSidebar({
                         size="small"
                         options={mergedContributorOptions}
                         disableClearable
-                        value={getContributorValue(contributorAssignments.owner_user_id) || undefined}
+                        // Controlled from the first render: an owner found once the options
+                        // arrive (a document just created) shows, where `undefined` would not.
+                        value={(getContributorValue(contributorAssignments.owner_user_id) ?? null) as ContributorOption}
                         onChange={(_, value) => onContributorAssignmentsChange({
                           ...contributorAssignments,
                           owner_user_id: value?.id || null,
