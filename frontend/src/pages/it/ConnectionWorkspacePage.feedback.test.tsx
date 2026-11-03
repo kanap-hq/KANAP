@@ -6,6 +6,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../i18n';
 import { createAppTheme } from '../../config/ThemeContext';
+import { KanapDialogProvider } from '../../components/design';
 import { NotifyProvider } from '../../components/notify/NotifyProvider';
 import ConnectionWorkspacePage from './ConnectionWorkspacePage';
 
@@ -95,11 +96,13 @@ function renderPage(route = '/it/connections/c-1/overview') {
     <ThemeProvider theme={createAppTheme('light')}>
       <NotifyProvider>
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <KanapDialogProvider>
         <MemoryRouter initialEntries={[route]}>
           <Routes>
             <Route path="/it/connections/:id/:tab" element={<ConnectionWorkspacePage />} />
           </Routes>
         </MemoryRouter>
+        </KanapDialogProvider>
       </QueryClientProvider>
       </NotifyProvider>
     </ThemeProvider>,
@@ -136,21 +139,6 @@ describe('ConnectionWorkspacePage: connection refusals and absorbed members', ()
     apiPatch.mockRejectedValue({ response: { status: 400, data: { code: 'connection_same_endpoint' } } });
     await chooseDestination();
     expect(await screen.findByText(text)).toBeInTheDocument();
-  });
-
-  it('shows the create refusal above the form, where the Create button is', async () => {
-    apiPost.mockRejectedValue({ response: { status: 400, data: { code: 'connection_same_endpoint' } } });
-    renderPage('/it/connections/new/overview');
-    fireEvent.change(await screen.findByPlaceholderText('e.g., App tier to DB tier'), { target: { value: 'Same endpoint' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Source' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Destination' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
-
-    const alert = await screen.findByRole('alert');
-    expect(alert.textContent).toContain('The source and the destination are the same asset.');
-    // The refusal is in the shell's notice slot, under the title, and stays out of the form.
-    expect(screen.getByTestId('workspace-notices')).toContainElement(alert);
-    expect(alert.closest('main')).toBeNull();
   });
 
   it('names the members the server left out of the list', async () => {

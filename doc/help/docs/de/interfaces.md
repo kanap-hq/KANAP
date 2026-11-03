@@ -6,18 +6,26 @@ Schnittstellen dokumentieren die logischen Datenflüsse zwischen Ihren Anwendung
 
 Navigieren Sie zu **IT-Landschaft > Schnittstellen**, um Ihr Integrationsverzeichnis zu sehen. Klicken Sie auf **Schnittstelle hinzufügen**, um einen neuen Eintrag zu erstellen, oder öffnen Sie einen vorhandenen, um ihn zu bearbeiten.
 
-Um eine Schnittstelle zu erstellen, füllen Sie das Formular **Schnittstelle erstellen** im Reiter Übersicht aus:
+**Schnittstelle hinzufügen** öffnet die Seite der Schnittstelle im Reiter **Fluss**, wo ihre Pflichtfelder stehen:
 
-- **Name** (erforderlich): Ein beschreibender Name für die Integration
-- **Schnittstellencode**: Ein optionaler eigener Kurzcode (z. B. `ERP-ORDERS-SYNC`)
-- **Geschäftsprozess**: Der Geschäftsprozess, den die Schnittstelle unterstützt
-- **Quellanwendung** und **Zielanwendung** (erforderlich)
-- **Datenkategorie** (erforderlich): Der Datentyp, der übertragen wird
-- **Routentyp**: Direkt oder Über Middleware
+- Der Titel: ein beschreibender Name für die Integration
+- **Quellanwendung** und **Zielanwendung**, im Reiter **Fluss**
+- **Datenkategorie**, im Seitenpanel: der Datentyp, der übertragen wird
 
-Klicken Sie in der Kopfzeile auf **Erstellen**. KANAP vergibt der Schnittstelle ihre Referenz (`INT-4`), und die übrigen Reiter (Fluss, Umgebungen, Datenzuordnung, Beziehungen, Verlauf) werden verfügbar.
+Sie können sie in beliebiger Reihenfolge ausfüllen. Nichts wird gespeichert, solange nicht alle vier ausgefüllt sind. Sobald sie es sind, erstellt KANAP die Schnittstelle mit allem, was der Entwurf enthält, und vergibt ihre Referenz (`INT-4`). Die Seite wechselt zur Schnittstelle, und **Umgebungen**, **Datenzuordnung**, **Beziehungen** und **Verlauf** öffnen sich.
 
 **Tipp**: Legen Sie den **Routentyp** frühzeitig fest. Er steuert, welche Legs automatisch generiert werden und was im Reiter Fluss und in der Umgebungsmatrix angezeigt wird.
+
+### Erstellen oder abbrechen { #cancelling-a-creation }
+
+Solange die Schnittstelle erstellt wird, zeigt ihre Kopfzeile **Erstellen** und **Abbrechen**. Beide bleiben, bis Sie die Schnittstelle verlassen.
+
+- **Erstellen** behält die Schnittstelle und bringt Sie dorthin zurück, wo Sie begonnen haben. Fehlt noch etwas, nennt eine Meldung es, und der Titel oder das erste fehlende Feld erhält den Fokus. Ist der Entwurf vollständig, erstellt KANAP die Schnittstelle und bringt Sie sofort zurück
+- **Abbrechen** löscht die Schnittstelle. Wenn Sie nach ihrer Erstellung etwas hinzugefügt haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Schnittstellen abbrechen
+
+Verlassen Sie die Schnittstelle auf andere Weise (über das Menü oder den Zurück-Pfeil), bleibt sie erhalten: Sie ist vollständig.
+
+Bevor die Schnittstelle erstellt ist, verlassen **Abbrechen**, der Zurück-Pfeil oder Escape im Titel die Seite, ohne zu speichern. Enthält der Entwurf etwas, fragt eine Bestätigung, bevor er verworfen wird. Ein Link im Menü fragt ebenso.
 
 ---
 
@@ -100,7 +108,7 @@ Feldänderungen im Seitenpanel werden automatisch gespeichert, sodass Sie Eigens
 
 ### Übersicht
 
-Sobald die Schnittstelle gespeichert ist, enthält der Reiter Übersicht die **Spezifikation**, ein verwaltetes Rich-Text-Dokument, in dem Sie die Schnittstelle End-to-End beschreiben: geschäftlicher Kontext, Umfang, Vertrag, Beispiele. Es ist das primäre narrative Dokument für die Schnittstelle.
+Der Reiter Übersicht enthält die **Spezifikation**, ein verwaltetes Rich-Text-Dokument, in dem Sie die Schnittstelle End-to-End beschreiben: geschäftlicher Kontext, Umfang, Vertrag, Beispiele. Es ist das primäre narrative Dokument für die Schnittstelle.
 
 **Tipp**: Verwenden Sie diesen Reiter als Ihre einzige Quelle der Wahrheit für Prosa. Mapping-Regeln und technische Legs leben in den dedizierten Reitern unten; halten Sie dieses Dokument auf Absicht, Umfang und die für Menschen lesbare Zusammenfassung fokussiert.
 

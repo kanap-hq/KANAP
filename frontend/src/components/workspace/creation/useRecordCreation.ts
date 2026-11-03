@@ -50,6 +50,8 @@ const KIND_WORDS: Record<string, string> = {
   version: 'versions',
   contact: 'contacts',
   task: 'tasks',
+  protocol: 'protocols',
+  leg: 'hops',
   comment: 'comments',
   document_version: 'documentVersions',
   classification: 'classifications',

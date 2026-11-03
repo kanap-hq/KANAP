@@ -4,17 +4,29 @@ Las Conexiones documentan las rutas de red a nivel de infraestructura entre serv
 
 ## Primeros pasos
 
-Navegue a **Panorama IT > Conexiones** para ver su registro de conexiones. Haga clic en **Añadir conexión** para crear su primera entrada.
+Navegue a **Panorama IT > Conexiones** para ver su registro de conexiones. Para crear una conexión:
 
-**Campos obligatorios**:
-  - **Nombre**: Un nombre descriptivo
+1. Haga clic en **Añadir conexión**. La página de la conexión se abre con un título vacío en el encabezado. El resto de la página aparece atenuado.
+2. Escriba un nombre descriptivo.
+3. Pulse Intro o haga clic fuera del título. KANAP crea la conexión de inmediato, de servidor a servidor, sin protocolos ni endpoints. Su referencia (`CONN-12`) aparece y se abren todas las pestañas.
+
+Después, cada campo se guarda por sí solo. Una conexión necesita:
   - **Topología**: Servidor a servidor o Multi-servidor
-  - **Endpoints**: Un origen y un destino (Servidor a servidor), o al menos dos servidores (Multi-servidor)
+  - **Endpoints**: Un origen y un destino para Servidor a servidor (cada uno un servidor, un clúster o una entidad), o al menos dos servidores para Multi-servidor
   - **Protocolos**: Al menos un protocolo de red
 
-KANAP da a cada conexión una referencia, por ejemplo `CONN-12`.
+Pulse Escape en el título vacío para salir sin crear nada.
 
 **Consejo**: Las conexiones pueden vincularse a enlaces de interfaz para mostrar qué infraestructura soporta cada integración de aplicaciones.
+
+### Crear o cancelar { #cancelling-a-creation }
+
+Mientras la conexión se está creando, su encabezado muestra **Crear** y **Cancelar**. Permanecen hasta que salga de la conexión.
+
+- **Crear** comprueba que la conexión tenga al menos un protocolo y sus dos endpoints, o dos servidores en una conexión multi-servidor. Un mensaje indica lo que falta, y el primer campo que falta recibe el foco. Cuando no falta nada, KANAP conserva la conexión y la cierra. Vuelve al punto de partida
+- **Cancelar** elimina la conexión. Si introdujo algo más que el nombre, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar conexiones
+
+Si sale de la conexión de otra forma mientras falta algo, KANAP le pregunta qué hacer. **Completarla** le deja en la conexión, en el primer campo que falta. **Eliminarla** elimina la conexión.
 
 ---
 
@@ -97,7 +109,7 @@ Haga clic en una fila para abrir el espacio de trabajo. Tiene tres pestañas: **
 
 ### Ruta
 
-La pestaña Ruta documenta la ruta de red de la conexión, salto a salto: proxies inversos, cortafuegos, balanceadores de carga. Cree primero la conexión para añadir saltos.
+La pestaña Ruta documenta la ruta de red de la conexión, salto a salto: proxies inversos, cortafuegos, balanceadores de carga.
 
 Cada salto tiene:
 

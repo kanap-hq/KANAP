@@ -2151,8 +2151,6 @@
         "searchAssetTypes": "Search asset types",
         "searchSubLocations": "Search sub-locations",
         "locationContext": "Location context",
-        "basics": "Basics",
-        "namePlaceholder": "e.g., File server 01",
         "description": "Description",
         "descriptionPlaceholder": "Describe the asset"
       },
@@ -2404,6 +2402,15 @@
         "via": "Via",
         "placementReplaced": "{{cluster}} replaces the link between {{hosts}} and {{asset}}.",
         "placementLinked": "Link placed on {{cluster}}."
+      },
+      "creation": {
+        "record": "The asset",
+        "missing": "Missing: {{fields}}",
+        "leaveTitle": "This asset is incomplete",
+        "leaveComplete": "Complete it",
+        "leaveDelete": "Delete it",
+        "leaveAnyway": "Leave anyway",
+        "completeFailed": "The asset could not be checked."
       }
     },
     "technology": {
@@ -2644,7 +2651,6 @@
       "createFromBinding": "Creating from interface binding context",
       "overview": {
         "connectionReference": "Reference",
-        "name": "Name",
         "purpose": "Purpose",
         "connectionType": "Connection type",
         "selectSource": "Select a source entity or server",
@@ -2739,18 +2745,8 @@
       "sourceMissing": "Source missing",
       "destinationMissing": "Destination missing",
       "create": {
-        "title": "Create connection",
-        "namePlaceholder": "e.g., App tier to DB tier",
         "endpoints": "Endpoints",
-        "serversPlaceholder": "e.g., server1",
-        "protocolsPlaceholder": "e.g., HTTPS",
-        "description": "Description",
-        "descriptionPlaceholder": "e.g., Nightly export from the app tier to the DB tier",
-        "pathAfterCreate": "Create the connection first to add network path hops.",
-        "afterCreation": "After creation",
-        "protocolRequired": "Select at least one protocol.",
-        "sourceRequired": "Select a source asset or entity.",
-        "destinationRequired": "Select a destination asset or entity."
+        "description": "Description"
       },
       "deleteDialog": {
         "title": "Delete connection?",
@@ -2830,6 +2826,15 @@
         "addFailed": "Failed to add hop",
         "removeFailed": "Failed to remove hop",
         "reorderFailed": "Failed to reorder hops"
+      },
+      "creation": {
+        "record": "The connection",
+        "missing": "Missing: {{fields}}",
+        "leaveTitle": "This connection is incomplete",
+        "leaveComplete": "Complete it",
+        "leaveDelete": "Delete it",
+        "leaveAnyway": "Leave anyway",
+        "completeFailed": "The connection could not be checked."
       }
     },
     "interface": {
@@ -2860,9 +2865,11 @@
         "message": "This interface has not been created yet. Closing the workspace will discard the draft."
       },
       "create": {
-        "applicationsRequired": "Select source and target applications.",
-        "dataCategoryRequired": "Select a data category.",
         "noIdentifier": "The interface was created, but no identifier was returned."
+      },
+      "creation": {
+        "missing": "Missing: {{fields}}",
+        "record": "The interface"
       },
       "pii": {
         "label": "PII",
@@ -2872,7 +2879,6 @@
       },
       "fields": {
         "name": "Name",
-        "namePlaceholder": "e.g., PLM to ERP item master sync",
         "interfaceCode": "Interface code",
         "interfaceCodePlaceholder": "e.g., ERP-ORDERS-SYNC",
         "businessProcess": "Business process",
@@ -2899,7 +2905,6 @@
         "addCountries": "Add countries"
       },
       "overview": {
-        "createTitle": "Create interface",
         "specification": "Specification",
         "specificationDocument": "Specification document",
         "specificationPlaceholder": "Capture the managed interface specification here."
@@ -3460,8 +3465,6 @@
     "loadServerAssignmentsFailed": "Failed to load assignments",
     "createVersionFailed": "Failed to create version",
     "locationRequired": "Location is required.",
-    "assetTypeRequired": "Asset type is required.",
-    "providerRequired": "Provider is required.",
     "codeRequired": "Code is required.",
     "nameRequired": "Name is required.",
     "locationNameTaken": "Another location already has this name.",

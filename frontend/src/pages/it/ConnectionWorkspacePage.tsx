@@ -1,10 +1,8 @@
-import useApplicationClassificationCatalog from '../../hooks/useApplicationClassificationCatalog';
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Alert, Autocomplete, Box, Button, Chip, MenuItem, Stack, Switch, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Stack, Typography } from '@mui/material';
 import HubOutlinedIcon from '@mui/icons-material/HubOutlined';
 import { useTranslation } from 'react-i18next';
-import type { TFunction } from 'i18next';
 import api from '../../api';
 import { useNotify } from '../../components/notify/NotifyProvider';
 import { useAuth } from '../../auth/AuthContext';
@@ -12,18 +10,14 @@ import PortfolioDetailWorkspaceShell, {
   type PortfolioDetailWorkspaceTab,
 } from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
 import KanapDialog from '../../components/design/KanapDialog';
-import { PropertyGroup, PropertyRow } from '../../components/design/PropertyRow';
 import SendLinkButton from '../../components/workspace/SendLinkButton';
 import ConnectionMetadataBar from './workspace/ConnectionMetadataBar';
 import ConnectionPropertiesDrawer from './workspace/ConnectionPropertiesDrawer';
 import ConnectionOverviewTab, { type ConnectionProtocol } from './workspace/ConnectionOverviewTab';
 import ConnectionPathTab from './workspace/ConnectionPathTab';
-import ConnectionEndpointPicker, { type EndpointValue } from './workspace/ConnectionEndpointPicker';
-import ConnectionServersPicker from './workspace/ConnectionServersPicker';
 import useClusterConnectionQuestion from './components/useClusterConnectionQuestion';
 import { useConnectionItemNav } from '../../hooks/useModuleItemNav';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
-import { drawerSelectSx, drawerMenuItemSx, drawerFieldValueSx, longFormSurfaceFieldSx } from '../../theme/formSx';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import type { ConnectionPathHop } from './workspace/ConnectionPathSection';
 import type { ServerOption } from '../../components/fields/serverOptionRender';
@@ -33,6 +27,10 @@ import DeleteIconButton from '../../components/workspace/DeleteIconButton';
 import { connectionDeleteMessage } from './connectionDeleteMessage';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
+import { CreationActions, CreationPreview, useCreationReturn, useNewRecordCreate, useRecordCreation } from '../../components/workspace/creation';
+import useIncompleteLeave from '../../components/workspace/creation/useIncompleteLeave';
+import { missingFieldsList } from '../../components/workspace/creation/missingFieldsList';
+import { useLeaveGuard } from '../../hooks/leaveGuard';
 
 type TabKey = 'overview' | 'path' | typeof RECORD_HISTORY_TAB_KEY;
 const TAB_KEYS: TabKey[] = ['overview', 'path', RECORD_HISTORY_TAB_KEY];
@@ -59,23 +57,7 @@ type LinkedInterfaceRow = {
   interface_contains_pii?: boolean;
 };
 
-type ConnectionTypeOption = { code: string; label: string };
-
 type AbsorbedAsset = { asset_id: string; name: string; cluster_id: string; cluster_name: string };
-
-type CreateConnectionForm = {
-  name: string;
-  description: string;
-  topology: 'server_to_server' | 'multi_server';
-  source: EndpointValue;
-  destination: EndpointValue;
-  servers: ServerOption[];
-  protocolCodes: string[];
-  lifecycle: string;
-  criticality: string;
-  dataClass: string;
-  containsPii: boolean;
-};
 
 type ConnectionDetail = {
   id: string;
@@ -108,65 +90,58 @@ type ConnectionDetail = {
 };
 
 
-function SectionHeader({ children }: { children: React.ReactNode }) {
-  return (
-    <Typography
-      component="h2"
-      sx={(theme) => ({
-        m: 0,
-        mb: 1,
-        fontSize: 14,
-        fontWeight: 500,
-        lineHeight: 1.4,
-        color: theme.palette.kanap.text.primary,
-      })}
-    >
-      {children}
-    </Typography>
-  );
-}
-
-function createInitialForm(): CreateConnectionForm {
-  return {
-    name: '',
-    description: '',
-    topology: 'server_to_server',
-    source: { asset_id: null, entity_code: null },
-    destination: { asset_id: null, entity_code: null },
-    servers: [],
-    protocolCodes: [],
-    lifecycle: 'active',
-    criticality: '',
-    dataClass: '',
-    containsPii: false,
-  };
-}
-
-function hasEndpoint(value: EndpointValue): boolean {
-  return !!value.asset_id || !!value.entity_code;
-}
-
-function getCreateValidationMessage(form: CreateConnectionForm, t: TFunction): string | null {
-  if (!form.name.trim()) return t('messages.nameRequired');
-  if (form.protocolCodes.length === 0) return t('workspace.connection.create.protocolRequired');
-  if (form.topology === 'server_to_server') {
-    if (!hasEndpoint(form.source)) return t('workspace.connection.create.sourceRequired');
-    if (!hasEndpoint(form.destination)) return t('workspace.connection.create.destinationRequired');
-    return null;
+/** What a connection needs before its creation ends (`connection-creation.ts` on the server), in screen order. */
+function missingOf(connection: ConnectionDetail | null): string[] {
+  if (!connection) return [];
+  const fields: string[] = [];
+  if ((connection.protocol_codes || []).length === 0) fields.push('protocols');
+  if (connection.topology === 'multi_server') {
+    if ((connection.servers || []).length < 2) fields.push('servers');
+  } else {
+    if (!connection.source_asset_id && !connection.source_entity_code) fields.push('source');
+    if (!connection.destination_asset_id && !connection.destination_entity_code) fields.push('destination');
   }
-  if (form.servers.length < 2) return t('workspace.connection.overview.selectTwoServers');
-  return null;
+  return fields;
 }
+
+/** The connection a new page shows dimmed under its title: the one the title will create. */
+const DRAFT_CONNECTION: ConnectionDetail = {
+  id: '',
+  connection_reference: '',
+  name: '',
+  description: null,
+  topology: 'server_to_server',
+  source_asset_id: null,
+  source_entity_code: null,
+  destination_asset_id: null,
+  destination_entity_code: null,
+  source_server: null,
+  destination_server: null,
+  servers: [],
+  protocol_codes: [],
+  protocols: [],
+  lifecycle: 'active',
+  criticality: '',
+  data_class: '',
+  contains_pii: false,
+  risk_mode: 'manual',
+  effective_criticality: '',
+  effective_data_class: '',
+  effective_contains_pii: false,
+  derived_interface_count: 0,
+  created_at: '',
+  updated_at: '',
+};
+
+const ignoreDraft = () => undefined;
 
 export default function ConnectionWorkspacePage() {
-  const { data: classificationCatalog } = useApplicationClassificationCatalog();
-  const { t } = useTranslation(['it', 'common']);
-  const CRITICALITIES = [{ code: '', label: t('common:selects.notSet') }, ...(classificationCatalog?.businessCriticalityLevels || [])];
+  const { t, i18n } = useTranslation(['it', 'common']);
   const { hasLevel } = useAuth();
   const navigate = useNavigate();
   const params = useParams();
   const [searchParams] = useSearchParams();
-  const { settings, byField, labelFor } = useItOpsEnumOptions();
+  const { labelFor } = useItOpsEnumOptions();
   const routeId = String(params.id || '');
   const isCreate = routeId === 'new';
   const isConnectionReferenceRoute = /^CONN-\d+(?:-.+)?$/i.test(routeId);
@@ -188,10 +163,11 @@ export default function ConnectionWorkspacePage() {
   const [deleting, setDeleting] = React.useState(false);
   const [pendingTopology, setPendingTopology] = React.useState<'server_to_server' | 'multi_server' | null>(null);
 
-  const [createForm, setCreateForm] = React.useState<CreateConnectionForm>(() => createInitialForm());
-  const [createSubmitting, setCreateSubmitting] = React.useState(false);
-  const [createError, setCreateError] = React.useState<string | null>(null);
-  const [createTitleError, setCreateTitleError] = React.useState<string | null>(null);
+  // A refusal of the name typed on a new connection.
+  const [titleError, setTitleError] = React.useState<string | null>(null);
+  const creatingRef = React.useRef(false);
+  const newCreate = useNewRecordCreate({ setTitleError, requiredMessage: t('messages.nameRequired') });
+  const descriptionFlushRef = React.useRef<(() => Promise<void>) | null>(null);
   const notify = useNotify();
   const notifyAbsorbed = React.useCallback((items: AbsorbedAsset[] | undefined) => {
     if (!items?.length) return;
@@ -206,54 +182,6 @@ export default function ConnectionWorkspacePage() {
   }, [notify, t]);
   const { choose, questionDialog } = useClusterConnectionQuestion();
 
-  const lifecycleOptions = byField.lifecycleStatus || [];
-  const dataClassOptions = byField.dataClass || [];
-  const connectionTypes: ConnectionTypeOption[] = React.useMemo(
-    () => (settings?.connectionTypes || []).map((ct: any) => ({
-      code: ct.code,
-      label: ct.label || ct.code,
-    })),
-    [settings?.connectionTypes],
-  );
-
-  React.useEffect(() => {
-    setCreateForm((prev) => {
-      const nextProtocols = prev.protocolCodes.filter((code) => (
-        connectionTypes.length === 0 || connectionTypes.some((ct) => ct.code === code)
-      ));
-      if (nextProtocols.length === 0 && connectionTypes.length > 0) {
-        const preferred = connectionTypes.find((ct) => ct.code === 'https') || connectionTypes[0];
-        nextProtocols.push(preferred.code);
-      }
-
-      const lifecycleIsValid = lifecycleOptions.some((option) => option.code === prev.lifecycle);
-      const dataClassIsValid = dataClassOptions.some((option) => option.code === prev.dataClass);
-      const nextLifecycle = lifecycleIsValid
-        ? prev.lifecycle
-        : lifecycleOptions.find((option) => option.code === 'active')?.code || lifecycleOptions[0]?.code || prev.lifecycle;
-      const nextDataClass = prev.dataClass;
-
-      if (
-        nextProtocols.join('|') === prev.protocolCodes.join('|') &&
-        nextLifecycle === prev.lifecycle &&
-        nextDataClass === prev.dataClass
-      ) {
-        return prev;
-      }
-      return {
-        ...prev,
-        protocolCodes: nextProtocols,
-        lifecycle: nextLifecycle,
-        dataClass: nextDataClass,
-      };
-    });
-  }, [connectionTypes, dataClassOptions, lifecycleOptions]);
-
-  const patchCreateForm = React.useCallback((patch: Partial<CreateConnectionForm>) => {
-    setCreateForm((prev) => ({ ...prev, ...patch }));
-    setCreateError(null);
-    if (patch.name !== undefined && patch.name.trim()) setCreateTitleError(null);
-  }, []);
   const connectionId = React.useMemo(() => {
     if (isCreate) return '';
     if (data?.id) return data.id;
@@ -363,10 +291,72 @@ export default function ConnectionWorkspacePage() {
     return sp;
   }, [searchParams]);
 
-  const handleClose = React.useCallback(() => {
+  const listPath = React.useMemo(() => {
     const qs = listContextParams.toString();
-    navigate(`/it/connections${qs ? `?${qs}` : ''}`);
-  }, [listContextParams, navigate]);
+    return `/it/connections${qs ? `?${qs}` : ''}`;
+  }, [listContextParams]);
+  // Where the creation started: a new connection left empty, cancelled or created goes back there.
+  const creationReturn = useCreationReturn(listPath);
+  const creation = useRecordCreation({
+    family: 'connections',
+    apiBase: '/connections',
+    recordId: isCreate ? null : data?.id ?? null,
+    listPath,
+    recordLabel: t('workspace.connection.creation.record'),
+    queryKeyPrefixes: ['connections'],
+    onError: setError,
+  });
+
+  // The fields a connection being created still lacks, named in the reader's language.
+  const fieldLabel = React.useCallback((key: string): string => {
+    if (key === 'protocols') return t('workspace.connection.overview.protocols');
+    if (key === 'source') return t('workspace.connection.layers.source');
+    if (key === 'destination') return t('workspace.connection.layers.destination');
+    if (key === 'servers') return t('pages.connections.columns.servers');
+    return key;
+  }, [t]);
+  const dataRef = React.useRef(data);
+  dataRef.current = data;
+  const focusField = React.useCallback((key: string) => {
+    if (validTab !== 'overview') navigate(`/it/connections/${workspaceRouteId}/overview${searchParams.toString() ? `?${searchParams.toString()}` : ''}`);
+    let tries = 0;
+    const attempt = () => {
+      const input = document.querySelector<HTMLElement>(`[data-creation-field="${key}"] input, [data-creation-field="${key}"] [role="combobox"]`);
+      if (input) {
+        input.focus();
+        return;
+      }
+      tries += 1;
+      if (tries < 20) window.setTimeout(attempt, 25);
+    };
+    window.setTimeout(attempt, 0);
+  }, [navigate, searchParams, validTab, workspaceRouteId]);
+  const incompleteLeave = useIncompleteLeave({
+    keys: 'it:workspace.connection.creation',
+    beingCreated: creation.beingCreated,
+    missing: () => missingOf(dataRef.current).map((key) => ({ key, label: fieldLabel(key) })),
+    focus: focusField,
+    onDelete: () => creation.cancelCreation({ leave: false }),
+  });
+  // Leaving a connection being created that still lacks a field asks first: complete it, or delete it.
+  const leaveAsks = React.useCallback(
+    () => creation.beingCreated && missingOf(dataRef.current).length > 0,
+    [creation.beingCreated],
+  );
+  const leaveConnection = React.useCallback(
+    () => (leaveAsks() ? incompleteLeave.confirm() : Promise.resolve(true)),
+    [incompleteLeave, leaveAsks],
+  );
+  useLeaveGuard(leaveAsks, leaveConnection);
+
+  const handleClose = React.useCallback(async () => {
+    if (isCreate) {
+      navigate(creationReturn);
+      return;
+    }
+    if (!(await leaveConnection())) return;
+    navigate(listPath);
+  }, [creationReturn, isCreate, leaveConnection, listPath, navigate]);
 
   const handleTabChange = React.useCallback(
     (nextTab: string) => {
@@ -378,19 +368,18 @@ export default function ConnectionWorkspacePage() {
     [navigate, searchParams, validTab, workspaceRouteId],
   );
 
-  const handleTitleSave = React.useCallback(
-    (next: string) => {
-      const trimmed = next.trim();
-      if (!trimmed) return;
-      if (isCreate) {
-        patchCreateForm({ name: trimmed });
-        return;
-      }
-      if (!data || trimmed === data.name) return;
-      void patchConnection({ name: trimmed });
-    },
-    [data, isCreate, patchConnection, patchCreateForm],
-  );
+  // A plain function: the create it calls is declared further down, with this render's creation.
+  const handleTitleSave = (next: string) => {
+    const trimmed = next.trim();
+    if (!trimmed) return;
+    if (isCreate) {
+      newCreate.titleSent();
+      void createConnection(trimmed);
+      return;
+    }
+    if (!data || trimmed === data.name) return;
+    void patchConnection({ name: trimmed });
+  };
 
   const handleTopologyChange = React.useCallback(
     (next: 'server_to_server' | 'multi_server') => {
@@ -433,16 +422,10 @@ export default function ConnectionWorkspacePage() {
     ) => {
       let endpoint = { asset_id: next.asset_id, entity_code: next.entity_code };
       if (asset) {
-        const opposite = side === 'source'
-          ? (isCreate ? createForm.destination.asset_id : data?.destination_asset_id)
-          : (isCreate ? createForm.source.asset_id : data?.source_asset_id);
+        const opposite = side === 'source' ? data?.destination_asset_id : data?.source_asset_id;
         const target = await choose(asset, opposite ? [opposite] : []);
         if (!target) return;
         endpoint = { asset_id: target.id, entity_code: null };
-      }
-      if (isCreate) {
-        patchCreateForm(side === 'source' ? { source: endpoint } : { destination: endpoint });
-        return;
       }
       if (side === 'source') {
         void patchConnection({
@@ -456,16 +439,7 @@ export default function ConnectionWorkspacePage() {
         });
       }
     },
-    [
-      choose,
-      createForm.destination.asset_id,
-      createForm.source.asset_id,
-      data?.destination_asset_id,
-      data?.source_asset_id,
-      isCreate,
-      patchConnection,
-      patchCreateForm,
-    ],
+    [choose, data?.destination_asset_id, data?.source_asset_id, patchConnection],
   );
 
   // A cluster absorbs the member it covers: the added id becomes the cluster's, once, before the write.
@@ -497,14 +471,6 @@ export default function ConnectionWorkspacePage() {
       void patchConnection({ servers: resolved.map((server) => server.id) }, { servers: resolved });
     },
     [data?.servers, patchConnection, resolveServerList],
-  );
-
-  const handleCreateServersChange = React.useCallback(
-    async (next: ServerOption[]) => {
-      const resolved = await resolveServerList(next, createForm.servers);
-      patchCreateForm({ servers: resolved });
-    },
-    [createForm.servers, patchCreateForm, resolveServerList],
   );
 
   const handleProtocolsChange = React.useCallback(
@@ -563,52 +529,80 @@ export default function ConnectionWorkspacePage() {
     [data, patchConnection],
   );
 
-  const handleCreate = async () => {
-    if (!canManage) return;
-    if (!createForm.name.trim()) {
-      setCreateTitleError(t('messages.nameRequired'));
-      setCreateError(null);
-      return;
-    }
-    setCreateTitleError(null);
-    const validationMessage = getCreateValidationMessage(createForm, t);
-    if (validationMessage) {
-      setCreateError(validationMessage);
-      return;
-    }
-    setCreateSubmitting(true);
-    setCreateError(null);
+  // The name committed in the header creates the connection at once (server to server, no protocol
+  // nor end yet); the page moves to it, every tab open, with Create and Cancel. Create clicked
+  // meanwhile checks it there.
+  const creationCheckRef = React.useRef(false);
+  const createConnection = async (name: string) => {
+    if (creatingRef.current) return;
+    creatingRef.current = true;
+    setTitleError(null);
+    setError(null);
     try {
-      const res = await api.post<ConnectionDetail & { absorbed?: AbsorbedAsset[] }>('/connections', {
-        name: createForm.name.trim(),
-        description: createForm.description.trim() || null,
-        topology: createForm.topology,
-        lifecycle: createForm.lifecycle,
-        protocol_codes: createForm.protocolCodes,
-        criticality: createForm.criticality || null,
-        data_class: createForm.dataClass || null,
-        contains_pii: createForm.containsPii,
-        risk_mode: 'manual',
-        ...(createForm.topology === 'server_to_server'
-          ? {
-              source_asset_id: createForm.source.asset_id,
-              source_entity_code: createForm.source.entity_code,
-              destination_asset_id: createForm.destination.asset_id,
-              destination_entity_code: createForm.destination.entity_code,
-            }
-          : {
-              servers: createForm.servers.map((server) => server.id),
-            }),
-      });
-      const { absorbed: absorbedItems, ...saved } = res.data;
-      notifyAbsorbed(absorbedItems);
-      const targetTab = validTab === 'path' ? 'path' : 'overview';
-      navigate(`/it/connections/${saved.connection_reference || saved.id}/${targetTab}`, { replace: true });
-    } catch (e: any) {
-      setCreateError(getApiErrorMessage(e, t, t('messages.saveConnectionFailed')));
+      const res = await api.post<ConnectionDetail & { creation_token: string }>('/connections/creation', { name });
+      const { creation_token: token, ...created } = res.data;
+      const check = newCreate.titleSettled();
+      creation.startCreation({ recordId: created.id, token, returnTo: creationReturn });
+      // The page keeps its header while the full connection loads.
+      setData({ ...DRAFT_CONNECTION, ...created });
+      setLegs([]);
+      navigate(`/it/connections/${created.connection_reference || created.id}/overview`, { replace: true });
+      creationCheckRef.current = check;
+    } catch (e) {
+      newCreate.titleSettled();
+      setTitleError(getApiErrorMessage(e, t, t('messages.saveConnectionFailed')));
     } finally {
-      setCreateSubmitting(false);
+      creatingRef.current = false;
     }
+  };
+
+  // Create: on the new page, the title is the only field; on a connection being created, what is
+  // still being typed is saved, then the server checks what the connection needs. Missing fields are
+  // named once and the first one gets the focus; otherwise the connection is kept and closed.
+  const [completing, setCompleting] = React.useState(false);
+  const createAction = async () => {
+    if (isCreate) {
+      newCreate.create(titleError);
+      return;
+    }
+    const token = creation.token;
+    if (!data?.id || !token || completing) return;
+    await descriptionFlushRef.current?.();
+    setCompleting(true);
+    setError(null);
+    try {
+      await api.post(`/connections/${data.id}/creation/complete`, { token });
+      creation.finishCreation();
+    } catch (e) {
+      const answer = (e as { response?: { data?: { code?: unknown; params?: { fields?: unknown } } } })?.response?.data;
+      const fields = answer?.code === 'CREATION_INCOMPLETE' && Array.isArray(answer.params?.fields) ? answer.params.fields.map(String) : null;
+      if (fields && fields.length > 0) {
+        setError(t('workspace.connection.creation.missing', { fields: missingFieldsList(fields.map(fieldLabel), i18n.resolvedLanguage || i18n.language) }));
+        focusField(fields[0]);
+      } else {
+        setError(getApiErrorMessage(e, t, t('workspace.connection.creation.completeFailed')));
+      }
+    } finally {
+      setCompleting(false);
+    }
+  };
+
+  // Create clicked while the title created the connection: the check runs once it is on screen.
+  React.useEffect(() => {
+    if (!creationCheckRef.current || !data?.id || !creation.beingCreated) return;
+    creationCheckRef.current = false;
+    void createAction();
+  });
+
+  // Cancel on a connection being created: what is still being typed is saved first, so the
+  // confirmation counts it, then the connection is deleted (`useRecordCreation`).
+  const cancelAction = async () => {
+    if (isCreate) {
+      navigate(creationReturn);
+      return;
+    }
+    await descriptionFlushRef.current?.();
+    await creation.cancelCreation();
   };
 
   const handleDelete = async () => {
@@ -639,21 +633,20 @@ export default function ConnectionWorkspacePage() {
     : navState;
 
   const goToConnection = React.useCallback(
-    (targetId: string | null) => {
+    async (targetId: string | null) => {
       if (!targetId) return;
+      if (!(await leaveConnection())) return;
       const qs = searchParams.toString();
       navigate(`/it/connections/${targetId}/${validTab}${qs ? `?${qs}` : ''}`);
     },
-    [navigate, searchParams, validTab],
+    [leaveConnection, navigate, searchParams, validTab],
   );
 
   const workspaceTabs: PortfolioDetailWorkspaceTab[] = [
     { key: 'overview', label: t('workspace.connection.tabs.overview') },
-    { key: 'path', label: t('workspace.connection.tabs.path'), badge: legs.length || undefined },
+    { key: 'path', label: t('workspace.connection.tabs.path'), badge: legs.length || undefined, disabled: isCreate },
     { key: RECORD_HISTORY_TAB_KEY, label: t('workspace.connection.tabs.history'), disabled: isCreate },
   ];
-
-  const title = isCreate ? createForm.name : data?.name || '';
 
   const assetMap = React.useMemo(() => {
     const map: Record<string, ServerOption> = {};
@@ -665,7 +658,7 @@ export default function ConnectionWorkspacePage() {
   }, [data]);
 
   const endpointsLabel = (() => {
-    if (!data) return t('workspace.connection.endpointsMissing');
+    if (!data || isCreate) return t('workspace.connection.endpointsMissing');
     if (data.topology === 'server_to_server') {
       const fmt = (assetId: string | null, entityCode: string | null, asset: ServerOption | null) => {
         if (assetId && asset) return asset.asset_reference || asset.name;
@@ -681,125 +674,29 @@ export default function ConnectionWorkspacePage() {
     return count > 0 ? t('workspace.connection.serverCount', { count }) : t('workspace.connection.noServers');
   })();
 
-  const selectedCreateProtocols = React.useMemo(
-    () => createForm.protocolCodes.map((code) => (
-      connectionTypes.find((ct) => ct.code === code) || { code, label: code }
-    )),
-    [connectionTypes, createForm.protocolCodes],
-  );
+  // A new page shows the connection its title will create, dimmed; a created one, itself.
+  const shown = isCreate ? DRAFT_CONNECTION : data;
+  const protocolsOf = (connection: ConnectionDetail) =>
+    connection.protocols ?? (connection.protocol_codes || []).map((code) => ({ code, port_override: null }));
 
-  const createDrawerProperties = isCreate ? (
-    <>
-      <PropertyGroup>
-        <PropertyRow label={t('workspace.connection.overview.lifecycle')}>
-          <TextField
-            select
-            value={createForm.lifecycle || ''}
-            onChange={(e) => patchCreateForm({ lifecycle: e.target.value })}
-            variant="standard"
-            sx={drawerSelectSx}
-            disabled={!canManage || createSubmitting}
-          >
-            {lifecycleOptions.length === 0 && createForm.lifecycle && (
-              <MenuItem value={createForm.lifecycle} sx={drawerMenuItemSx}>
-                {createForm.lifecycle}
-              </MenuItem>
-            )}
-            {lifecycleOptions.map((opt) => (
-              <MenuItem key={opt.code} value={opt.code} sx={drawerMenuItemSx}>
-                {opt.deprecated ? t('common.deprecatedOption', { label: opt.label }) : opt.label}
-              </MenuItem>
-            ))}
-          </TextField>
-        </PropertyRow>
-        <PropertyRow label={t('pages.connections.columns.topology')}>
-          <TextField
-            select
-            value={createForm.topology}
-            onChange={(e) => patchCreateForm({ topology: e.target.value as 'server_to_server' | 'multi_server' })}
-            variant="standard"
-            sx={drawerSelectSx}
-            disabled={!canManage || createSubmitting}
-          >
-            <MenuItem value="server_to_server" sx={drawerMenuItemSx}>{t('enums.topology.serverToServer')}</MenuItem>
-            <MenuItem value="multi_server" sx={drawerMenuItemSx}>{t('enums.topology.multiServer')}</MenuItem>
-          </TextField>
-        </PropertyRow>
-      </PropertyGroup>
-
-      <PropertyGroup>
-        <PropertyRow label={t('workspace.connection.compliance.riskMode')}>
-          <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{t('enums.riskMode.manual')}</Typography>
-        </PropertyRow>
-        <PropertyRow label={t('workspace.connection.compliance.criticality')}>
-          <TextField
-            select
-            value={createForm.criticality}
-            onChange={(e) => patchCreateForm({ criticality: e.target.value })}
-            variant="standard"
-            sx={drawerSelectSx}
-            disabled={!canManage || createSubmitting}
-          >
-            {CRITICALITIES.map((opt) => (
-              <MenuItem key={opt.code} value={opt.code} sx={drawerMenuItemSx}>{opt.label}</MenuItem>
-            ))}
-          </TextField>
-        </PropertyRow>
-        <PropertyRow label={t('workspace.connection.compliance.dataClass')}>
-          <TextField
-            select
-            value={createForm.dataClass || ''}
-            onChange={(e) => patchCreateForm({ dataClass: e.target.value })}
-            variant="standard"
-            sx={drawerSelectSx}
-            disabled={!canManage || createSubmitting}
-          >
-            {dataClassOptions.length === 0 && createForm.dataClass && (
-              <MenuItem value={createForm.dataClass} sx={drawerMenuItemSx}>
-                {createForm.dataClass}
-              </MenuItem>
-            )}
-            {dataClassOptions.map((opt) => (
-              <MenuItem key={opt.code} value={opt.code} sx={drawerMenuItemSx}>{opt.label}</MenuItem>
-            ))}
-          </TextField>
-        </PropertyRow>
-        <PropertyRow label={t('workspace.connection.compliance.containsPii')}>
-          <Switch
-            size="small"
-            checked={createForm.containsPii}
-            onChange={(e) => patchCreateForm({ containsPii: e.target.checked })}
-            disabled={!canManage || createSubmitting}
-          />
-        </PropertyRow>
-      </PropertyGroup>
-
-      <PropertyGroup>
-        <PropertyRow label={t('pages.connections.columns.created')}>
-          <Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary' }}>{t('workspace.connection.create.afterCreation')}</Typography>
-        </PropertyRow>
-      </PropertyGroup>
-    </>
-  ) : null;
-
-  const drawerProperties = isCreate ? createDrawerProperties : data ? (
+  const drawerProperties = shown ? (
     <ConnectionPropertiesDrawer
-      lifecycle={data.lifecycle}
-      topology={data.topology}
+      lifecycle={shown.lifecycle}
+      topology={shown.topology}
       topologyDisabled={legs.length > 0}
-      riskMode={data.risk_mode}
-      criticality={data.criticality}
-      dataClass={data.data_class}
-      containsPii={data.contains_pii}
-      effectiveCriticality={data.effective_criticality}
-      effectiveDataClass={data.effective_data_class}
-      effectiveContainsPii={data.effective_contains_pii}
-      derivedInterfaceCount={data.derived_interface_count || 0}
-      classificationIncomplete={!!data.classification_incomplete}
+      riskMode={shown.risk_mode}
+      criticality={shown.criticality}
+      dataClass={shown.data_class}
+      containsPii={shown.contains_pii}
+      effectiveCriticality={shown.effective_criticality}
+      effectiveDataClass={shown.effective_data_class}
+      effectiveContainsPii={shown.effective_contains_pii}
+      derivedInterfaceCount={shown.derived_interface_count || 0}
+      classificationIncomplete={!!shown.classification_incomplete}
       derivedAvailable={linkedInterfaces.length > 0}
-      createdAt={data.created_at}
-      updatedAt={data.updated_at}
-      disabled={!canManage || saving}
+      createdAt={shown.created_at}
+      updatedAt={shown.updated_at}
+      disabled={isCreate || !canManage || saving}
       onLifecycleChange={handleLifecycleChange}
       onTopologyChange={handleTopologyChange}
       onRiskModeChange={handleRiskModeChange}
@@ -809,39 +706,32 @@ export default function ConnectionWorkspacePage() {
     />
   ) : null;
 
-  const metadata = !isCreate && data ? (
+  const metadataBar = shown ? (
     <ConnectionMetadataBar
-      lifecycle={data.lifecycle}
-      topology={data.topology}
+      lifecycle={shown.lifecycle}
+      topology={shown.topology}
       topologyDisabled={legs.length > 0}
-      criticality={data.criticality}
-      effectiveCriticality={data.effective_criticality}
-      riskMode={data.risk_mode}
-      derivedInterfaceCount={data.derived_interface_count || 0}
-      classificationIncomplete={!!data.classification_incomplete}
-      protocolCodes={data.protocol_codes}
-      protocolLabels={data.protocol_codes}
+      criticality={shown.criticality}
+      effectiveCriticality={shown.effective_criticality}
+      riskMode={shown.risk_mode}
+      derivedInterfaceCount={shown.derived_interface_count || 0}
+      classificationIncomplete={!!shown.classification_incomplete}
+      protocolCodes={shown.protocol_codes}
+      protocolLabels={shown.protocol_codes}
       endpointsLabel={endpointsLabel}
-      disabled={!canManage || saving}
+      disabled={isCreate || !canManage || saving}
       onLifecycleChange={handleLifecycleChange}
       onTopologyChange={handleTopologyChange}
       onCriticalityChange={handleCriticalityChange}
       onProtocolCodesChange={handleProtocolsChange}
     />
   ) : undefined;
+  const metadata = isCreate ? (
+    <CreationPreview sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 'inherit' }}>{metadataBar}</CreationPreview>
+  ) : metadataBar;
 
   const actions = (
     <>
-      {isCreate && (
-        <Button
-          variant="contained"
-          onClick={() => void handleCreate()}
-          disabled={createSubmitting || !canManage}
-          size="small"
-        >
-          {t('common:buttons.create')}
-        </Button>
-      )}
       {!isCreate && data && (
         <>
           <Button
@@ -860,186 +750,99 @@ export default function ConnectionWorkspacePage() {
           />
         </>
       )}
-      {!isCreate && canDelete && (
+      {!isCreate && !creation.beingCreated && canDelete && (
         <DeleteIconButton onClick={() => setDeleteDialogOpen(true)} disabled={deleting} />
       )}
+      {(isCreate || creation.beingCreated) && (
+        <CreationActions
+          busy={creation.cancelling || completing}
+          onCreate={() => { void createAction(); }}
+          onCancel={() => { void cancelAction(); }}
+        />
+      )}
     </>
+  );
+
+  const overview = (connection: ConnectionDetail) => (
+    <ConnectionOverviewTab
+      connectionId={connection.id}
+      topology={connection.topology}
+      initialDescription={connection.description || ''}
+      canManage={canManage}
+      source={{ asset_id: connection.source_asset_id, entity_code: connection.source_entity_code }}
+      destination={{ asset_id: connection.destination_asset_id, entity_code: connection.destination_entity_code }}
+      multiServerIds={(connection.servers || []).map((server) => server.id)}
+      assetMap={assetMap}
+      protocols={protocolsOf(connection)}
+      riskMode={connection.risk_mode}
+      linkedInterfaces={linkedInterfaces}
+      linkedInterfacesLoading={linkedInterfacesLoading}
+      linkedInterfacesError={linkedInterfacesError}
+      derivedInterfaceCount={connection.derived_interface_count || 0}
+      descriptionFlushRef={connection.id ? descriptionFlushRef : undefined}
+      onDescriptionSaved={(next) => setData((prev) => prev ? { ...prev, description: next } : prev)}
+      onEndpointChange={connection.id ? handleEndpointChange : ignoreDraft}
+      onMultiServerChange={connection.id ? handleMultiServerChange : ignoreDraft}
+      onProtocolsChange={connection.id ? handleProtocolsRichChange : ignoreDraft}
+      onLinkedInterfacesChanged={connection.id ? handleLinkedInterfacesChanged : ignoreDraft}
+    />
   );
 
   return (
     <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
       <PortfolioDetailWorkspaceShell
-        notices={(error || createError) ? (
-          <Alert
-            severity="error"
-            onClose={() => { setError(null); setCreateError(null); }}
-          >
-            {error || createError}
+        notices={error ? (
+          <Alert severity="error" onClose={() => setError(null)}>
+            {error}
           </Alert>
         ) : undefined}
-        activeTab={validTab}
+        activeTab={isCreate ? 'overview' : validTab}
         tabs={workspaceTabs}
         onTabChange={handleTabChange}
         drawerStorageKey="kanap.connections.drawerOpen"
         backLabel={t('pages.connections.title')}
-        onBack={handleClose}
+        onBack={() => { void handleClose(); }}
         itemReference={!isCreate ? data?.connection_reference || null : null}
         onCopyReference={
           !isCreate && data?.connection_reference
             ? () => { void navigator.clipboard?.writeText(data.connection_reference); }
             : undefined
         }
-        title={title}
+        title={isCreate ? '' : data?.name || ''}
         titleFallback={isCreate ? t('workspace.connection.newTitle') : t('workspace.connection.untitled')}
         canEditTitle={canManage}
         onTitleSave={handleTitleSave}
-        onTitleDraftChange={isCreate ? (draft) => { if (draft.trim()) setCreateTitleError(null); } : undefined}
-        titleRequiredMessage={isCreate && canManage ? t('messages.nameRequired') : undefined}
-        titleError={isCreate ? createTitleError : null}
+        onTitleDraftChange={isCreate ? () => setTitleError(null) : undefined}
+        titleRequiredMessage={t('messages.nameRequired')}
+        titleError={isCreate ? titleError : undefined}
+        titleAutoEdit={isCreate}
+        titleOnCancel={isCreate ? () => { void handleClose(); } : undefined}
+        titleFocusRequest={newCreate.focusRequest}
         isCreate={isCreate}
+        forceDrawerOpen={isCreate}
         nav={!isCreate && total > 0 ? {
           currentIndex: index + 1,
           totalCount: total,
           hasPrev,
           hasNext,
-          onPrev: () => goToConnection(prevId),
-          onNext: () => goToConnection(nextId),
+          onPrev: () => { void goToConnection(prevId); },
+          onNext: () => { void goToConnection(nextId); },
           previousLabel: t('workspace.connection.previous'),
           nextLabel: t('workspace.connection.next'),
         } : undefined}
         metadata={metadata}
         actions={actions}
-        properties={drawerProperties}
+        properties={isCreate ? <CreationPreview>{drawerProperties}</CreationPreview> : drawerProperties}
       >
-        {isCreate && validTab === 'path' ? (
-          <Box sx={{ maxWidth: 760 }}>
-            <SectionHeader>{t('workspace.connection.tabs.path')}</SectionHeader>
-            <Alert severity="info" sx={{ fontSize: 13 }}>
-              {t('workspace.connection.create.pathAfterCreate')}
-            </Alert>
-          </Box>
-        ) : isCreate ? (
-          <Box sx={{ maxWidth: 760, display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <Box>
-              <SectionHeader>{t('workspace.connection.create.title')}</SectionHeader>
-              <Stack spacing={1.25}>
-                <PropertyRow label={t('workspace.connection.overview.name')} required valueSx={{ maxWidth: 560 }}>
-                  <TextField
-                    value={createForm.name}
-                    onChange={(e) => patchCreateForm({ name: e.target.value })}
-                    placeholder={t('workspace.connection.create.namePlaceholder')}
-                    required
-                    size="small"
-                    variant="standard"
-                    sx={drawerFieldValueSx}
-                    disabled={!canManage || createSubmitting}
-                  />
-                </PropertyRow>
-                <PropertyRow label={t('pages.connections.columns.topology')} required valueSx={{ maxWidth: 360 }}>
-                  <TextField
-                    select
-                    value={createForm.topology}
-                    onChange={(e) => patchCreateForm({ topology: e.target.value as 'server_to_server' | 'multi_server' })}
-                    size="small"
-                    variant="standard"
-                    sx={drawerSelectSx}
-                    disabled={!canManage || createSubmitting}
-                  >
-                    <MenuItem value="server_to_server" sx={drawerMenuItemSx}>{t('enums.topology.serverToServer')}</MenuItem>
-                    <MenuItem value="multi_server" sx={drawerMenuItemSx}>{t('enums.topology.multiServer')}</MenuItem>
-                  </TextField>
-                </PropertyRow>
-              </Stack>
-            </Box>
-
-            <Box>
-              <SectionHeader>{t('workspace.connection.create.endpoints')}</SectionHeader>
-              {createForm.topology === 'server_to_server' ? (
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' }, gap: 2.5 }}>
-                  <ConnectionEndpointPicker
-                    label={t('workspace.connection.layers.source')}
-                    value={createForm.source}
-                    disabled={!canManage || createSubmitting}
-                    onChange={(next, asset) => void handleEndpointChange('source', next, asset)}
-                  />
-                  <ConnectionEndpointPicker
-                    label={t('workspace.connection.layers.destination')}
-                    value={createForm.destination}
-                    disabled={!canManage || createSubmitting}
-                    onChange={(next, asset) => void handleEndpointChange('destination', next, asset)}
-                  />
-                </Box>
-              ) : (
-                <Box sx={{ maxWidth: 640 }}>
-                  <PropertyRow
-                    label={t('pages.connections.columns.servers')}
-                    required
-                    valueSx={{ maxWidth: 640 }}
-                  >
-                    <ConnectionServersPicker
-                      value={createForm.servers}
-                      onChange={(next) => void handleCreateServersChange(next)}
-                      disabled={!canManage || createSubmitting}
-                      placeholder={t('workspace.connection.create.serversPlaceholder')}
-                    />
-                  </PropertyRow>
-                </Box>
-              )}
-            </Box>
-
-            <Box>
-              <SectionHeader>{t('workspace.connection.overview.protocols')}</SectionHeader>
-              <PropertyRow label={t('workspace.connection.overview.protocols')} required valueSx={{ maxWidth: 640 }}>
-                <Autocomplete
-                  size="small"
-                  multiple
-                  disabled={!canManage || createSubmitting}
-                  options={connectionTypes}
-                  getOptionLabel={(opt) => opt.label}
-                  isOptionEqualToValue={(opt, val) => opt.code === val.code}
-                  value={selectedCreateProtocols}
-                  onChange={(_, val) => patchCreateForm({ protocolCodes: val.map((v) => v.code) })}
-                  renderTags={(value, getTagProps) =>
-                    value.map((opt, index) => (
-                      <Chip {...getTagProps({ index })} key={opt.code} label={opt.label} size="small" />
-                    ))
-                  }
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      variant="standard"
-                      placeholder={t('workspace.connection.create.protocolsPlaceholder')}
-                      sx={drawerFieldValueSx}
-                    />
-                  )}
-                />
-              </PropertyRow>
-            </Box>
-
-            <Box>
-              <SectionHeader>{t('workspace.connection.create.description')}</SectionHeader>
-              <TextField
-                value={createForm.description}
-                onChange={(e) => patchCreateForm({ description: e.target.value })}
-                placeholder={t('workspace.connection.create.descriptionPlaceholder')}
-                variant="standard"
-                multiline
-                minRows={4}
-                maxRows={12}
-                sx={longFormSurfaceFieldSx}
-                disabled={!canManage || createSubmitting}
-              />
-            </Box>
-          </Box>
+        {isCreate ? (
+          <CreationPreview>{overview(DRAFT_CONNECTION)}</CreationPreview>
         ) : !data ? null : validTab === 'path' ? (
           <ConnectionPathTab
             connectionId={data.id}
             hops={legs}
             canManage={canManage}
             defaultProtocolCodes={data.protocol_codes || []}
-            protocols={
-              data.protocols ?? (data.protocol_codes || []).map((code) => ({ code, port_override: null }))
-            }
+            protocols={protocolsOf(data)}
             sourceIsCluster={!!data.source_server?.is_cluster}
             destinationIsCluster={!!data.destination_server?.is_cluster}
             sourceLabel={(() => {
@@ -1062,34 +865,11 @@ export default function ConnectionWorkspacePage() {
               <HistoryTab table="connections" recordId={data.id} />
             </React.Suspense>
           </WorkspaceTabBoundary>
-        ) : (
-          <ConnectionOverviewTab
-            connectionId={data.id}
-            topology={data.topology}
-            initialDescription={data.description || ''}
-            canManage={canManage}
-            source={{ asset_id: data.source_asset_id, entity_code: data.source_entity_code }}
-            destination={{ asset_id: data.destination_asset_id, entity_code: data.destination_entity_code }}
-            multiServerIds={(data.servers || []).map((s) => s.id)}
-            assetMap={assetMap}
-            protocols={
-              data.protocols ?? (data.protocol_codes || []).map((code) => ({ code, port_override: null }))
-            }
-            riskMode={data.risk_mode}
-            linkedInterfaces={linkedInterfaces}
-            linkedInterfacesLoading={linkedInterfacesLoading}
-            linkedInterfacesError={linkedInterfacesError}
-            derivedInterfaceCount={data.derived_interface_count || 0}
-            onDescriptionSaved={(next) => setData((prev) => prev ? { ...prev, description: next } : prev)}
-            onEndpointChange={handleEndpointChange}
-            onMultiServerChange={handleMultiServerChange}
-            onProtocolsChange={handleProtocolsRichChange}
-            onLinkedInterfacesChanged={handleLinkedInterfacesChanged}
-          />
-        )}
+        ) : overview(data)}
       </PortfolioDetailWorkspaceShell>
 
       {questionDialog}
+      {incompleteLeave.dialog}
 
       <KanapDialog
         open={deleteDialogOpen}

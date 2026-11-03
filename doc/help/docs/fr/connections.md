@@ -4,17 +4,29 @@ Les connexions documentent les chemins réseau de niveau infrastructure entre le
 
 ## Premiers pas
 
-Naviguez vers **Cartographie SI > Connexions** pour voir votre registre de connexions. Cliquez sur **Ajouter une connexion** pour créer votre première entrée.
+Naviguez vers **Cartographie SI > Connexions** pour voir votre registre de connexions. Pour créer une connexion :
 
-**Champs obligatoires** :
-  - **Nom** : Un nom descriptif
+1. Cliquez sur **Ajouter une connexion**. La page de la connexion s'ouvre avec un titre vide dans l'en-tête. Le reste de la page est grisé.
+2. Saisissez un nom descriptif.
+3. Appuyez sur Entrée, ou cliquez hors du titre. KANAP crée la connexion aussitôt, de serveur à serveur, sans protocole ni endpoints. Sa référence (`CONN-12`) s'affiche et tous les onglets s'ouvrent.
+
+Chaque champ s'enregistre ensuite de lui-même. Une connexion a besoin de :
   - **Topologie** : Serveur à serveur ou Multi-serveur
-  - **Endpoints** : Une source et une destination (Serveur à serveur), ou au moins deux serveurs (Multi-serveur)
+  - **Endpoints** : Une source et une destination pour Serveur à serveur (chacune un serveur, un cluster ou une entité), ou au moins deux serveurs pour Multi-serveur
   - **Protocoles** : Au moins un protocole réseau
 
-KANAP donne à chaque connexion une référence, par exemple `CONN-12`.
+Appuyez sur Échap dans le titre vide pour partir sans rien créer.
 
 **Conseil** : Les connexions peuvent être liées aux liaisons d'interfaces pour montrer quelle infrastructure supporte chaque intégration applicative.
+
+### Créer ou annuler { #cancelling-a-creation }
+
+Tant que la connexion est en cours de création, son en-tête affiche **Créer** et **Annuler**. Ils restent jusqu'à ce que vous quittiez la connexion.
+
+- **Créer** vérifie que la connexion a au moins un protocole et ses deux endpoints, ou deux serveurs pour une connexion multi-serveur. Un message nomme ce qui manque, et le premier champ manquant prend le focus. Quand rien ne manque, KANAP conserve la connexion et la ferme. Vous revenez à votre point de départ
+- **Annuler** supprime la connexion. Si vous avez saisi plus que le nom, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des connexions
+
+Si vous quittez la connexion autrement alors qu'il manque quelque chose, KANAP vous demande quoi faire. **La compléter** vous garde sur la connexion, sur le premier champ manquant. **La supprimer** supprime la connexion.
 
 ---
 
@@ -97,7 +109,7 @@ Cliquez sur une ligne pour ouvrir l'espace de travail. Il a trois onglets : **Vu
 
 ### Chemin
 
-L'onglet Chemin documente le chemin réseau de la connexion, saut par saut : proxys inverses, pare-feu, répartiteurs de charge. Créez d'abord la connexion pour ajouter des sauts.
+L'onglet Chemin documente le chemin réseau de la connexion, saut par saut : proxys inverses, pare-feu, répartiteurs de charge.
 
 Chaque saut a :
 

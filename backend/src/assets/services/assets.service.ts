@@ -66,6 +66,11 @@ export class AssetsService {
     return this.crudService.create(body, tenantId, userId, opts);
   }
 
+  /** The screen's creation at the title: the fields of `POST /assets` but the site, checked at "Create". */
+  createAtTitle(body: Partial<Asset>, tenantId: string, userId: string | null, opts?: ServiceOpts) {
+    return this.crudService.create(body, tenantId, userId, opts, { atTitle: true });
+  }
+
   update(id: string, body: Partial<Asset>, tenantId: string, userId: string | null, opts?: ServiceOpts) {
     return this.crudService.update(id, body, tenantId, userId, opts);
   }

@@ -2151,8 +2151,6 @@
         "searchAssetTypes": "Buscar tipos de activo",
         "searchSubLocations": "Buscar sub-ubicaciones",
         "locationContext": "Contexto de la ubicación",
-        "basics": "Datos básicos",
-        "namePlaceholder": "p. ej., Servidor de archivos 01",
         "description": "Descripción",
         "descriptionPlaceholder": "Describa el activo"
       },
@@ -2404,6 +2402,15 @@
         "via": "Vía",
         "placementReplaced": "{{cluster}} sustituye el vínculo entre {{hosts}} y {{asset}}.",
         "placementLinked": "Vínculo colocado en {{cluster}}."
+      },
+      "creation": {
+        "record": "El activo",
+        "missing": "Falta: {{fields}}",
+        "leaveTitle": "Este activo está incompleto",
+        "leaveComplete": "Completarlo",
+        "leaveDelete": "Eliminarlo",
+        "leaveAnyway": "Salir de todos modos",
+        "completeFailed": "No se pudo comprobar el activo."
       }
     },
     "technology": {
@@ -2644,7 +2651,6 @@
       "createFromBinding": "Creación desde el contexto de enlace de interfaz",
       "overview": {
         "connectionReference": "Referencia",
-        "name": "Nombre",
         "purpose": "Propósito",
         "connectionType": "Tipo de conexión",
         "selectSource": "Seleccione una entidad o servidor de origen",
@@ -2739,18 +2745,8 @@
       "sourceMissing": "Falta el origen",
       "destinationMissing": "Falta el destino",
       "create": {
-        "title": "Crear conexión",
-        "namePlaceholder": "p. ej., Capa de aplicación a capa de base de datos",
         "endpoints": "Endpoints",
-        "serversPlaceholder": "p. ej., server1",
-        "protocolsPlaceholder": "p. ej., HTTPS",
-        "description": "Descripción",
-        "descriptionPlaceholder": "p. ej., Exportación nocturna de la capa de aplicación a la capa de base de datos",
-        "pathAfterCreate": "Cree primero la conexión para añadir saltos a la ruta de red.",
-        "afterCreation": "Tras la creación",
-        "protocolRequired": "Seleccione al menos un protocolo.",
-        "sourceRequired": "Seleccione un activo o una entidad de origen.",
-        "destinationRequired": "Seleccione un activo o una entidad de destino."
+        "description": "Descripción"
       },
       "deleteDialog": {
         "title": "¿Eliminar la conexión?",
@@ -2830,6 +2826,15 @@
         "addFailed": "No se pudo añadir el salto",
         "removeFailed": "No se pudo quitar el salto",
         "reorderFailed": "No se pudieron reordenar los saltos"
+      },
+      "creation": {
+        "record": "La conexión",
+        "missing": "Falta: {{fields}}",
+        "leaveTitle": "Esta conexión está incompleta",
+        "leaveComplete": "Completarla",
+        "leaveDelete": "Eliminarla",
+        "leaveAnyway": "Salir de todos modos",
+        "completeFailed": "No se pudo comprobar la conexión."
       }
     },
     "interface": {
@@ -2860,9 +2865,11 @@
         "message": "Esta interfaz aún no se ha creado. Al cerrar el espacio de trabajo se descartará el borrador."
       },
       "create": {
-        "applicationsRequired": "Seleccione las aplicaciones de origen y destino.",
-        "dataCategoryRequired": "Seleccione una categoría de datos.",
         "noIdentifier": "La interfaz se creó, pero no se devolvió ningún identificador."
+      },
+      "creation": {
+        "missing": "Falta: {{fields}}",
+        "record": "La interfaz"
       },
       "pii": {
         "label": "PII",
@@ -2872,7 +2879,6 @@
       },
       "fields": {
         "name": "Nombre",
-        "namePlaceholder": "p. ej., sincronización de artículos del PLM al ERP",
         "interfaceCode": "Código de interfaz",
         "interfaceCodePlaceholder": "p. ej., ERP-ORDERS-SYNC",
         "businessProcess": "Proceso de negocio",
@@ -2899,7 +2905,6 @@
         "addCountries": "Añadir países"
       },
       "overview": {
-        "createTitle": "Crear interfaz",
         "specification": "Especificación",
         "specificationDocument": "Documento de especificación",
         "specificationPlaceholder": "Registre aquí la especificación de la interfaz."
@@ -3460,8 +3465,6 @@
     "loadServerAssignmentsFailed": "Error al cargar las asignaciones",
     "createVersionFailed": "Error al crear la versión",
     "locationRequired": "La ubicación es obligatoria.",
-    "assetTypeRequired": "El tipo de activo es obligatorio.",
-    "providerRequired": "El proveedor es obligatorio.",
     "codeRequired": "El código es obligatorio.",
     "nameRequired": "El nombre es obligatorio.",
     "locationNameTaken": "Otra ubicación ya tiene este nombre.",

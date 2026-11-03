@@ -1,5 +1,5 @@
 import React from 'react';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -9,7 +9,7 @@ import InterfaceFlowTab from './InterfaceFlowTab';
 
 vi.mock('../../../api', () => ({ default: { get: vi.fn(() => Promise.resolve({ data: { items: [] } })) } }));
 vi.mock('../../../hooks/useItOpsEnumOptions', () => ({ default: () => ({ byField: {}, labelFor: (_field: string, code?: string | null) => code || '' }) }));
-vi.mock('../../../components/fields/ApplicationSelect', () => ({ default: () => null }));
+vi.mock('../../../components/fields/ApplicationSelect', () => ({ default: ({ label }: { label: string }) => <input aria-label={label} /> }));
 
 const leg = (id: string, leg_type: string) => ({
   id, leg_type, from_role: 'source', to_role: 'target', trigger_type: '', integration_pattern: '', data_format: '', job_name: '', order_index: 0,
@@ -38,5 +38,26 @@ describe('InterfaceFlowTab steps', () => {
     expect(screen.getByText('Extraction')).toBeInTheDocument();
     expect(screen.getByText('Chargement')).toBeInTheDocument();
     expect(screen.queryByText('EXTRACT')).toBeNull();
+  });
+
+  it('hands Tab in the source or the target to the page, Shift+Tab to the browser', () => {
+    const onRequiredTab = vi.fn();
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <InterfaceFlowTab
+            canManage
+            data={{ legs: [] } as never}
+            onPatch={async () => undefined}
+            onReplaceLegs={async () => undefined}
+            onRequiredTab={onRequiredTab}
+          />
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+    fireEvent.keyDown(screen.getByLabelText('Source application'), { key: 'Tab' });
+    fireEvent.keyDown(screen.getByLabelText('Target application'), { key: 'Tab' });
+    fireEvent.keyDown(screen.getByLabelText('Target application'), { key: 'Tab', shiftKey: true });
+    expect(onRequiredTab.mock.calls).toEqual([['source'], ['target']]);
   });
 });

@@ -334,7 +334,7 @@ export default function InterfacesPage() {
   const actions = (
     <Stack direction="row" spacing={1}>
       {canCreate && (
-        <Button variant="action-primary" onClick={() => navigate('/it/interfaces/new/overview')}>
+        <Button variant="action-primary" onClick={() => navigate('/it/interfaces/new/flow')}>
           {t('pages.interfaces.addInterface')}
         </Button>
       )}

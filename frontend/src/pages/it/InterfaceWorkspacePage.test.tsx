@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../i18n';
 import { createAppTheme } from '../../config/ThemeContext';
 import { KanapDialogProvider } from '../../components/design';
+import { resetCreationStore } from '../../components/workspace/creation/creationStore';
 import InterfaceWorkspacePage from './InterfaceWorkspacePage';
 
 const post = vi.fn();
@@ -29,11 +30,30 @@ vi.mock('../../hooks/useModuleItemNav', () => ({
 }));
 vi.mock('../workspace/hooks/useRecentlyViewed', () => ({ useRecentlyViewed: () => ({ addToRecent: vi.fn() }) }));
 vi.mock('./components/InterfaceBindingsMatrix', () => ({ default: () => null }));
-vi.mock('./workspace/InterfaceFlowTab', () => ({ default: () => null }));
+// The draft's fields: each button fills one, as the real pickers would.
+vi.mock('./workspace/InterfaceFlowTab', () => ({
+  default: ({ onPatch, onRequiredTab }: { onPatch: (patch: Record<string, unknown>) => Promise<void>; onRequiredTab?: (field: string) => void }) => (
+    <div data-testid="flow-tab">
+      <div data-creation-field="source"><input aria-label="source" /></div>
+      <div data-creation-field="target"><input aria-label="target" /></div>
+      <button type="button" onClick={() => void onPatch({ source_application_id: 'app-1' })}>pick source</button>
+      <button type="button" onClick={() => void onPatch({ target_application_id: 'app-2' })}>pick target</button>
+      <button type="button" onClick={() => onRequiredTab?.('source')}>tab from source</button>
+      <button type="button" onClick={() => onRequiredTab?.('target')}>tab from target</button>
+    </div>
+  ),
+}));
 vi.mock('./workspace/InterfaceMappingTab', () => ({ default: () => null }));
 vi.mock('./workspace/InterfaceMetadataBar', () => ({ default: () => null }));
 vi.mock('./workspace/InterfaceOverviewTab', () => ({ default: () => null }));
-vi.mock('./workspace/InterfacePropertyPanel', () => ({ default: () => null }));
+vi.mock('./workspace/InterfacePropertyPanel', () => ({
+  default: ({ onPatch }: { onPatch: (patch: Record<string, unknown>) => Promise<void> }) => (
+    <>
+      <div data-creation-field="data_category"><input aria-label="data category" /></div>
+      <button type="button" onClick={() => void onPatch({ data_category: 'orders' })}>pick category</button>
+    </>
+  ),
+}));
 vi.mock('./workspace/InterfaceRelationsTab', () => ({ default: () => null }));
 // The shell is covered elsewhere; this stub shows what the page hands it.
 vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
@@ -41,10 +61,21 @@ vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
     <div>
       <nav>{props.tabs.map((tab: any) => <span key={tab.key}>{tab.label}</span>)}</nav>
       <h1>{props.title || props.titleFallback}</h1>
-      <input aria-label="title" defaultValue={props.title} onChange={(event) => props.onTitleDraftChange?.(event.target.value)} />
+      <input
+        aria-label="title"
+        defaultValue={props.title}
+        onChange={(event) => props.onTitleDraftChange?.(event.target.value)}
+        onBlur={(event) => props.onTitleSave?.(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key !== 'Tab' || !props.titleOnTab) return;
+          props.onTitleSave?.((event.target as HTMLInputElement).value);
+          props.titleOnTab();
+        }}
+      />
       {props.titleError ? <div role="alert">{props.titleError}</div> : null}
       <div>{props.actions}</div>
       <div data-testid="workspace-notices">{props.notices}</div>
+      <aside>{props.properties}</aside>
       <main>{props.children}</main>
     </div>
   ),
@@ -56,6 +87,22 @@ const CASES = [
   { lang: 'de', texts: ['Übersicht', 'Fluss', 'Umgebungen', 'Datenzuordnung', 'Beziehungen', 'Neue Schnittstelle'], create: 'Erstellen', nameRequired: 'Name ist erforderlich.' },
   { lang: 'es', texts: ['Vista general', 'Flujo', 'Entornos', 'Mapeo de datos', 'Relaciones', 'Nueva interfaz'], create: 'Crear', nameRequired: 'El nombre es obligatorio.' },
 ];
+
+function renderCreate() {
+  return render(
+    <QueryClientProvider client={new QueryClient()}>
+      <ThemeProvider theme={createAppTheme('light')}>
+        <KanapDialogProvider>
+          <MemoryRouter initialEntries={['/it/interfaces/new/overview']}>
+            <Routes>
+              <Route path="/it/interfaces/:id/:tab" element={<InterfaceWorkspacePage />} />
+            </Routes>
+          </MemoryRouter>
+        </KanapDialogProvider>
+      </ThemeProvider>
+    </QueryClientProvider>,
+  );
+}
 
 describe('InterfaceWorkspacePage (create)', () => {
   beforeEach(() => {
@@ -70,15 +117,7 @@ describe('InterfaceWorkspacePage (create)', () => {
 
   it.each(CASES)('shows the tabs and the name check in $lang', async (c) => {
     await i18n.changeLanguage(c.lang);
-    render(
-      <ThemeProvider theme={createAppTheme('light')}>
-        <MemoryRouter initialEntries={['/it/interfaces/new/overview']}>
-          <Routes>
-            <Route path="/it/interfaces/:id/:tab" element={<InterfaceWorkspacePage />} />
-          </Routes>
-        </MemoryRouter>
-      </ThemeProvider>,
-    );
+    renderCreate();
 
     for (const text of c.texts) expect(screen.getByText(text)).toBeInTheDocument();
 
@@ -89,29 +128,174 @@ describe('InterfaceWorkspacePage (create)', () => {
 
   it('drops the name error while the header title is typed', async () => {
     await i18n.changeLanguage('en');
-    render(
-      <ThemeProvider theme={createAppTheme('light')}>
-        <MemoryRouter initialEntries={['/it/interfaces/new/overview']}>
-          <Routes>
-            <Route path="/it/interfaces/:id/:tab" element={<InterfaceWorkspacePage />} />
-          </Routes>
-        </MemoryRouter>
-      </ThemeProvider>,
-    );
+    renderCreate();
 
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Name is required.');
+    expect(await screen.findByText('Name is required.')).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('title'), { target: { value: 'Billing to ledger' } });
-    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByText('Name is required.')).toBeNull();
 
     fireEvent.change(screen.getByLabelText('title'), { target: { value: ' ' } });
-    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByText('Name is required.')).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Name is required.');
+    expect(await screen.findByText('Name is required.')).toBeInTheDocument();
     expect(post).not.toHaveBeenCalled();
     expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
+  });
+});
+
+function renderNew(path = '/it/interfaces/new/flow') {
+  return render(
+    <QueryClientProvider client={new QueryClient()}>
+      <ThemeProvider theme={createAppTheme('light')}>
+        <KanapDialogProvider>
+          <MemoryRouter initialEntries={[{ pathname: path, state: { returnTo: '/start' } }]}>
+            <Where />
+            <Routes>
+              <Route path="/start" element={<div />} />
+              <Route path="/it/interfaces" element={<div />} />
+              <Route path="/it/interfaces/:id/:tab" element={<InterfaceWorkspacePage />} />
+            </Routes>
+          </MemoryRouter>
+        </KanapDialogProvider>
+      </ThemeProvider>
+    </QueryClientProvider>,
+  );
+}
+
+const CREATED = { id: 'int-9', interface_reference: 'INT-9', creation_token: 'tok-9' };
+
+/** Fills the draft: the title, then the applications and the data category. */
+async function fillDraft(options: { category?: boolean } = {}) {
+  const title = await screen.findByLabelText('title');
+  fireEvent.change(title, { target: { value: 'Orders sync' } });
+  fireEvent.blur(title);
+  fireEvent.click(screen.getByRole('button', { name: 'pick source' }));
+  fireEvent.click(screen.getByRole('button', { name: 'pick target' }));
+  if (options.category !== false) fireEvent.click(screen.getByRole('button', { name: 'pick category' }));
+}
+
+describe('InterfaceWorkspacePage (draft)', () => {
+  beforeEach(async () => {
+    auth.admin = true;
+    await i18n.changeLanguage('en');
+    post.mockReset();
+    get.mockReset();
+    del.mockReset();
+    resetCreationStore();
+    post.mockImplementation(async (url: string) => (url === '/interfaces' ? { data: CREATED } : { data: {} }));
+    get.mockImplementation(async (url: string) => {
+      if (url === '/interfaces/INT-9' || url === '/interfaces/int-9') {
+        return { data: { ...INTERFACE, id: 'int-9', interface_reference: 'INT-9', data_category: 'orders' } };
+      }
+      if (url === '/interfaces/int-9/creation') return { data: { changes: { fields: 0, children: {} } } };
+      return { data: { items: [] } };
+    });
+    del.mockResolvedValue({ data: undefined });
+  });
+
+  afterEach(async () => {
+    cleanup();
+    await i18n.changeLanguage('en');
+  });
+
+  it('opens a new interface on Flow', async () => {
+    renderNew('/it/interfaces/new/environments');
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/it/interfaces/new/flow'));
+    expect(screen.getByTestId('flow-tab')).toBeInTheDocument();
+  });
+
+  it('names what the draft lacks on Create and writes nothing', async () => {
+    renderNew();
+    const title = await screen.findByLabelText('title');
+    fireEvent.change(title, { target: { value: 'Orders sync' } });
+    fireEvent.blur(title);
+    fireEvent.click(screen.getByRole('button', { name: 'pick source' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    expect((await screen.findByTestId('workspace-notices')).textContent).toBe('Missing: target application, data category');
+    expect(post).not.toHaveBeenCalled();
+  });
+
+  it('creates the interface once its required fields are filled, and opens it with Create and Cancel', async () => {
+    renderNew();
+    await fillDraft();
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/it/interfaces/INT-9/flow'));
+    expect(post).toHaveBeenCalledTimes(1);
+    expect(post).toHaveBeenCalledWith('/interfaces', expect.objectContaining({
+      name: 'Orders sync',
+      source_application_id: 'app-1',
+      target_application_id: 'app-2',
+      data_category: 'orders',
+    }));
+    expect(await screen.findByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
+
+    // Create ends the creation: back where it started, the interface kept.
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/start'));
+    expect(del).not.toHaveBeenCalled();
+  });
+
+  it('creates the interface on Create while its title is committed, and goes back where the creation started', async () => {
+    renderNew();
+    fireEvent.click(await screen.findByRole('button', { name: 'pick source' }));
+    fireEvent.click(screen.getByRole('button', { name: 'pick target' }));
+    fireEvent.click(screen.getByRole('button', { name: 'pick category' }));
+    const title = screen.getByLabelText('title');
+    fireEvent.change(title, { target: { value: 'Orders sync' } });
+    // In a browser the click's mousedown blurs the title first, which commits it.
+    fireEvent.blur(title);
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/start'));
+    expect(post).toHaveBeenCalledTimes(1);
+  });
+
+  it('deletes the interface on Cancel once created, and goes back where the creation started', async () => {
+    renderNew();
+    await fillDraft();
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/it/interfaces/INT-9/flow'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/start'));
+    expect(del).toHaveBeenCalledWith('/interfaces/int-9/creation', { data: { token: 'tok-9' } });
+  });
+
+  it('moves Tab from the title to the source, then to the target and the data category', async () => {
+    renderNew();
+    const title = await screen.findByLabelText('title');
+    fireEvent.change(title, { target: { value: 'Orders sync' } });
+    fireEvent.keyDown(title, { key: 'Tab' });
+    await waitFor(() => expect(screen.getByLabelText('source')).toHaveFocus());
+    fireEvent.click(screen.getByRole('button', { name: 'tab from source' }));
+    await waitFor(() => expect(screen.getByLabelText('target')).toHaveFocus());
+    fireEvent.click(screen.getByRole('button', { name: 'tab from target' }));
+    await waitFor(() => expect(screen.getByLabelText('data category')).toHaveFocus());
+    expect(post).not.toHaveBeenCalled();
+  });
+
+  it('creates nothing while a required field is missing', async () => {
+    renderNew();
+    await fillDraft({ category: false });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(post).not.toHaveBeenCalled();
+    expect(screen.getByTestId('where')).toHaveTextContent('/it/interfaces/new/flow');
+  });
+
+  it('asks before Cancel drops a draft that holds something, and leaves an empty one at once', async () => {
+    renderNew();
+    fireEvent.click(await screen.findByRole('button', { name: 'pick source' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Discard' }));
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/start'));
+    expect(post).not.toHaveBeenCalled();
+
+    cleanup();
+    renderNew();
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/start'));
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 });
 

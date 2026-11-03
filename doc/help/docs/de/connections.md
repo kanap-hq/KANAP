@@ -4,17 +4,29 @@ Verbindungen dokumentieren die Netzwerkpfade auf Infrastrukturebene zwischen Ser
 
 ## Erste Schritte
 
-Navigieren Sie zu **IT-Landschaft > Verbindungen**, um Ihr Verbindungsverzeichnis zu sehen. Klicken Sie auf **Verbindung hinzufügen**, um Ihren ersten Eintrag zu erstellen.
+Navigieren Sie zu **IT-Landschaft > Verbindungen**, um Ihr Verbindungsverzeichnis zu sehen. So erstellen Sie eine Verbindung:
 
-**Pflichtfelder**:
-  - **Name**: Ein beschreibender Name
+1. Klicken Sie auf **Verbindung hinzufügen**. Die Seite der Verbindung öffnet sich mit einem leeren Titel in der Kopfzeile. Der Rest der Seite ist abgeblendet.
+2. Geben Sie einen beschreibenden Namen ein.
+3. Drücken Sie die Eingabetaste oder klicken Sie außerhalb des Titels. KANAP erstellt die Verbindung sofort, als Server zu Server, ohne Protokolle und Endpunkte. Ihre Referenz (`CONN-12`) erscheint und alle Reiter öffnen sich.
+
+Danach speichert jedes Feld für sich. Eine Verbindung braucht:
   - **Topologie**: Server zu Server oder Multi-Server
-  - **Endpunkte**: Eine Quelle und ein Ziel (Server zu Server) oder mindestens zwei Server (Multi-Server)
+  - **Endpunkte**: Eine Quelle und ein Ziel für Server zu Server (jeweils ein Server, ein Cluster oder eine Entität) oder mindestens zwei Server für Multi-Server
   - **Protokolle**: Mindestens ein Netzwerkprotokoll
 
-KANAP gibt jeder Verbindung eine Referenz, zum Beispiel `CONN-12`.
+Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erstellen.
 
 **Tipp**: Verbindungen können mit Schnittstellen-Bindungen verknüpft werden, um zu zeigen, welche Infrastruktur jede Anwendungsintegration unterstützt.
+
+### Erstellen oder abbrechen { #cancelling-a-creation }
+
+Solange die Verbindung erstellt wird, zeigt ihre Kopfzeile **Erstellen** und **Abbrechen**. Beide bleiben, bis Sie die Verbindung verlassen.
+
+- **Erstellen** prüft, ob die Verbindung mindestens ein Protokoll und beide Endpunkte hat, oder zwei Server bei einer Multi-Server-Verbindung. Eine Meldung nennt, was fehlt, und das erste fehlende Feld erhält den Fokus. Fehlt nichts, behält KANAP die Verbindung und schließt sie. Sie kehren dorthin zurück, wo Sie begonnen haben
+- **Abbrechen** löscht die Verbindung. Wenn Sie mehr als den Namen eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Verbindungen abbrechen
+
+Verlassen Sie die Verbindung auf andere Weise, solange etwas fehlt, fragt KANAP nach. **Vervollständigen** lässt Sie auf der Verbindung, im ersten fehlenden Feld. **Löschen** löscht die Verbindung.
 
 ---
 
@@ -97,7 +109,7 @@ Klicken Sie auf eine Zeile, um den Arbeitsbereich zu öffnen. Er hat drei Reiter
 
 ### Pfad
 
-Der Reiter Pfad dokumentiert den Netzwerkpfad der Verbindung, Hop für Hop: Reverse Proxys, Firewalls, Load Balancer. Erstellen Sie zuerst die Verbindung, um Hops hinzuzufügen.
+Der Reiter Pfad dokumentiert den Netzwerkpfad der Verbindung, Hop für Hop: Reverse Proxys, Firewalls, Load Balancer.
 
 Jeder Hop hat:
 

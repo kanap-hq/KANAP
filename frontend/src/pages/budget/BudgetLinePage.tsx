@@ -41,7 +41,7 @@ import {
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
 import SendLinkButton from '../../components/workspace/SendLinkButton';
 import RecordDeleteButton from '../../components/workspace/RecordDeleteButton';
-import { missingFieldsList } from './missingFieldsList';
+import { missingFieldsList } from '../../components/workspace/creation/missingFieldsList';
 import ChangeTypeDialog, { type ChangeTypeResult } from '../../components/finance/ChangeTypeDialog';
 import LineLineage, { type LineageLine } from '../../components/finance/LineLineage';
 import { budgetLinePath, openLineAfterTypeChange } from '../../components/finance/changeTypeNavigation';
@@ -49,7 +49,7 @@ import { invalidateBudgetLists } from '../../components/finance/budgetFile';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
 import BudgetMetadataBar from './workspace/BudgetMetadataBar';
 import BudgetPropertiesDrawer, { LINE_FIELD_ATTR, RunBuild } from './workspace/BudgetPropertiesDrawer';
-import useIncompleteLineLeave from './useIncompleteLineLeave';
+import useIncompleteLeave from '../../components/workspace/creation/useIncompleteLeave';
 import { CreationActions, CreationPreview, useCreationReturn, useNewRecordCreate, useRecordCreation } from '../../components/workspace/creation';
 import type { BudgetTabHandle } from '../../components/finance/BudgetTab';
 import type { AllocationsTabHandle } from '../../components/finance/AllocationsTab';
@@ -838,7 +838,8 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     };
     window.setTimeout(attempt, 0);
   }, []);
-  const incompleteLeave = useIncompleteLineLeave({
+  const incompleteLeave = useIncompleteLeave({
+    keys: 'ops:budget.creation',
     beingCreated: creation.beingCreated,
     missing: () => missingNow().map((key) => ({ key, label: fieldLabel(key) })),
     focus: focusLineField,

@@ -4,16 +4,24 @@ Les Actifs documentent votre inventaire d'infrastructure : serveurs physiques, m
 
 ## Premiers pas
 
-Rendez-vous dans **Cartographie SI > Actifs** pour voir votre inventaire d'actifs. Cliquez sur **Ajouter un actif** pour créer votre première entrée.
+Rendez-vous dans **Cartographie SI > Actifs** pour voir votre inventaire d'actifs. Pour créer un actif :
+
+1. Cliquez sur **Ajouter un actif**, puis sur **Ajouter un actif** ou **Ajouter un cluster**. La page de l'actif s'ouvre avec un titre vide dans l'en-tête. Le reste de la page est grisé.
+2. Saisissez le nom de l'actif, de 200 caractères au plus.
+3. Appuyez sur Entrée, ou cliquez hors du titre. KANAP crée l'actif aussitôt. Sa référence (`AST-12`) s'affiche et tous les onglets s'ouvrent.
+
+Le nouvel actif est une machine virtuelle de l'environnement Prod, au cycle de vie Actif. Si vos types d'actifs ne comptent pas de machine virtuelle, il prend le premier type de la liste. **Ajouter un cluster** le crée avec l'interrupteur **Cluster** activé. Chaque champ s'enregistre ensuite de lui-même : vous pouvez changer le type ou l'environnement tout de suite.
 
 **Champs obligatoires** :
 - **Nom** : Le nom de l'actif ou son nom d'hôte, 200 caractères au plus
-- **Type d'actif** : Serveur web, Machine virtuelle, Serveur physique, Conteneur, etc. (configurable dans **Cartographie SI > Paramètres**). Aucun type n'est présélectionné : **Créer** reste indisponible tant que vous n'en avez pas choisi un
-- **Site** : Où l'actif est hébergé (détermine le fournisseur, le type d'hébergement et le pays)
+- **Type d'actif** : Serveur web, Machine virtuelle, Serveur physique, Conteneur, etc. (configurable dans **Cartographie SI > Paramètres**)
+- **Site** : Où l'actif est hébergé (détermine le fournisseur, le type d'hébergement et le pays). **Créer** le demande
 
 **Fortement recommandé** :
 - **Cycle de vie** : Statut actuel (Actif, Obsolète, Retiré, etc.)
 - **Environnement** : À quel environnement cet actif appartient (Prod, Pré-prod, QA, Test, Dev, Sandbox)
+
+Appuyez sur Échap dans le titre vide pour partir sans rien créer. Un nom refusé s'affiche sous le titre.
 
 **Noms uniques** : deux actifs ne peuvent pas avoir le même nom ni le même FQDN. La casse et les espaces en début ou en fin ne comptent pas. KANAP refuse le doublon et nomme l'actif qui porte déjà la valeur (`AST-12`). Les doublons enregistrés auparavant restent modifiables tant que vous ne changez pas cette valeur.
 
@@ -23,6 +31,15 @@ Rendez-vous dans **Cartographie SI > Actifs** pour voir votre inventaire d'actif
 - Consultation : `infrastructure:reader`
 - Création / modification : `infrastructure:member`
 - Import / Export / Suppression : `infrastructure:admin`
+
+### Créer ou annuler { #cancelling-a-creation }
+
+Tant que l'actif est en cours de création, son en-tête affiche **Créer** et **Annuler** à la place du bouton de fermeture. Ils restent jusqu'à ce que vous quittiez l'actif.
+
+- **Créer** vérifie que l'actif a un site. Sans site, un message nomme le site manquant et le champ **Site** du tiroir des propriétés prend le focus. L'actif reste ouvert. Avec un site, KANAP conserve l'actif et le ferme. Vous revenez à votre point de départ
+- **Annuler** supprime l'actif. Si vous avez saisi plus que le nom, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des actifs
+
+Si vous quittez l'actif autrement (la flèche de retour, le menu, un autre actif) alors qu'il n'a pas de site, KANAP vous demande quoi faire. **Le compléter** vous garde sur l'actif, sur le champ **Site**. **Le supprimer** supprime l'actif.
 
 ---
 
@@ -144,7 +161,7 @@ Cliquez sur n'importe quelle ligne pour ouvrir l'espace de travail. L'espace de 
 
 Une adresse qui ne désigne aucun actif ouvre une page **Actif introuvable**, avec un lien de retour à la liste.
 
-Les onglets sont **Vue d'ensemble**, **Exploitation**, **Réseau**, **Matériel** (types d'actifs physiques uniquement), **Dépendances**, **Relations** et **Historique** (les modifications apportées à l'actif, voir [Historique des fiches](record-history.md)). À la création d'un actif, **Vue d'ensemble** et **Réseau** sont ouverts. Les autres onglets s'ouvrent dès que vous cliquez sur **Créer**.
+Les onglets sont **Vue d'ensemble**, **Exploitation**, **Réseau**, **Matériel** (types d'actifs physiques uniquement), **Dépendances**, **Relations** et **Historique** (les modifications apportées à l'actif, voir [Historique des fiches](record-history.md)). Un nouvel actif n'affiche que son titre. Tous les onglets s'ouvrent dès que le titre crée l'actif.
 
 ### En-tête
 
@@ -168,7 +185,7 @@ Le tiroir affiche la carte d'identité de l'actif sur chaque onglet. Les modific
 - **Zone d'administration** : La zone de votre modèle d'administration à laquelle appartient l'actif, par exemple le Tier 0 pour un contrôleur de domaine et l'hyperviseur qui le fait tourner. Choisissez parmi les zones configurées dans **Cartographie SI > Paramètres**, ou **Sans zone**. L'actif apparaît alors dans cette zone sur la page [Zones d'administration](administration-view.md)
 
 **Site** :
-- **Site** (obligatoire) : chaque actif en a un, qu'il vienne de l'écran, d'un import ou de l'assistant. Quand le site n'existe pas encore, tapez son nom et choisissez **+ Créer le site « … »** : indiquez son type d'hébergement, et le nouveau site se place dans le champ. Il faut `locations:member`
+- **Site** (obligatoire) : **Créer** le demande sur un nouvel actif. Un actif créé par un import ou par l'assistant en a besoin dès sa création. Quand le site n'existe pas encore, tapez son nom et choisissez **+ Créer le site « … »** : indiquez son type d'hébergement, et le nouveau site se place dans le champ. Il faut `locations:member`
 - **Sous-site** (lorsque le site a des sous-sites définis)
 - **Type d'hébergement**, **Société exploitante** ou **Fournisseur cloud**, **Pays**, **Ville** : en lecture seule, dérivés du site. Ils suivent quand vous changez de site
 
@@ -184,8 +201,6 @@ Le tiroir affiche la carte d'identité de l'actif sur chaque onglet. Les modific
 L'onglet Vue d'ensemble est la page d'accueil de l'actif.
 
 **Netbox** : sur un actif lié à Netbox, une ligne en haut indique la date de la dernière synchronisation, avec **Ouvrir dans Netbox**. Elle signale aussi quand l'objet n'est plus dans Netbox, quand son statut Netbox demande votre attention et quand l'actif est **Géré par Netbox**. Voir [Synchronisation Netbox](netbox.md).
-
-**Informations de base** (à la création d'un actif) : **Nom**, **Type d'actif**, **Site** et **Environnement**.
 
 **Description** : Une description en texte enrichi de l'actif. Sauvegarde automatiquement au fur et à mesure que vous éditez.
 
@@ -274,12 +289,12 @@ Ce qui vient seulement de l'hôte dans lequel tournent l'actif ou ses membres, c
 
 ### Réseau { #network }
 
-L'onglet Réseau regroupe l'identité réseau de l'actif, ses adresses IP et ses connexions. Il est ouvert à la création d'un actif. Si le nom d'hôte est mal formé quand vous cliquez sur **Créer**, l'onglet s'ouvre sur l'erreur.
+L'onglet Réseau regroupe l'identité réseau de l'actif, ses adresses IP et ses connexions.
 
 Sur un actif géré par Netbox, une ligne en haut indique que Netbox remplit les champs qu'il fournit et que les autres sont à compléter par vous.
 
 **Identité** :
-- **Nom d'hôte** : Le nom d'hôte réseau de l'actif. Pré-rempli automatiquement à partir du nom de l'actif lors de la création ; vous pouvez le remplacer à tout moment. Obligatoire lorsqu'un domaine est sélectionné. Il accepte les lettres, les chiffres, les traits d'union et les points, chaque partie entre deux points étant limitée à 63 caractères : un nom comme `DL3.ROBOT-15MS.IE2000` est donc valide tel quel.
+- **Nom d'hôte** : Le nom d'hôte réseau de l'actif. Dérivé du titre à la création de l'actif. Vous pouvez le changer à tout moment. Obligatoire lorsqu'un domaine est sélectionné. Il accepte les lettres, les chiffres, les traits d'union et les points, chaque partie entre deux points étant limitée à 63 caractères : un nom comme `DL3.ROBOT-15MS.IE2000` est donc valide tel quel.
 - **Domaine** : Le domaine Active Directory ou DNS auquel l'actif appartient. Choisissez parmi les domaines configurés dans **Cartographie SI > Paramètres**. Les options système incluent « Workgroup » (autonome) et « N/A » (non applicable).
 - **FQDN** : Fully Qualified Domain Name, calculé automatiquement à partir du nom d'hôte et du suffixe DNS du domaine. Lecture seule.
 - **Alias** : Noms DNS ou alias supplémentaires pour cet actif. Tapez et appuyez sur Entrée pour ajouter.

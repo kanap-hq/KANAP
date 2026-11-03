@@ -4,16 +4,24 @@ Los activos documentan el inventario de su infraestructura: servidores físicos,
 
 ## Primeros pasos
 
-Navegue a **Panorama IT > Activos** para ver su inventario de activos. Haga clic en **Añadir activo** para crear su primera entrada.
+Navegue a **Panorama IT > Activos** para ver su inventario de activos. Para crear un activo:
+
+1. Haga clic en **Añadir activo** y luego en **Añadir activo** o **Añadir clúster**. La página del activo se abre con un título vacío en el encabezado. El resto de la página aparece atenuado.
+2. Escriba el nombre del activo, de 200 caracteres como máximo.
+3. Pulse Intro o haga clic fuera del título. KANAP crea el activo de inmediato. Su referencia (`AST-12`) aparece y se abren todas las pestañas.
+
+El nuevo activo es una máquina virtual del entorno Prod, con el ciclo de vida Activo. Si sus tipos de activos no tienen máquina virtual, toma el primer tipo de la lista. **Añadir clúster** lo crea con el conmutador **Clúster** activado. Después, cada campo se guarda por sí solo, así que puede cambiar el tipo o el entorno enseguida.
 
 **Campos obligatorios**:
 - **Nombre**: El nombre del activo o su nombre de host, 200 caracteres como máximo
-- **Tipo de activo**: Servidor web, Máquina virtual, Servidor físico, Contenedor, etc. (configurable en **Panorama IT > Configuración**). No hay ningún tipo preseleccionado: **Crear** no está disponible hasta que elija uno
-- **Ubicación**: Dónde se aloja el activo (determina el proveedor, el tipo de alojamiento y el país)
+- **Tipo de activo**: Servidor web, Máquina virtual, Servidor físico, Contenedor, etc. (configurable en **Panorama IT > Configuración**)
+- **Ubicación**: Dónde se aloja el activo (determina el proveedor, el tipo de alojamiento y el país). **Crear** la pide
 
 **Muy recomendados**:
 - **Ciclo de vida**: Estado actual (Activo, Obsoleto, Retirado, etc.)
 - **Entorno**: A qué entorno pertenece este activo (Prod, Pre-prod, QA, Test, Dev, Sandbox)
+
+Pulse Escape en el título vacío para salir sin crear nada. Un nombre rechazado se muestra bajo el título.
 
 **Nombres únicos**: dos activos no pueden tener el mismo nombre ni el mismo FQDN. Las mayúsculas y los espacios al principio o al final no cuentan. KANAP rechaza el duplicado e indica el activo que ya tiene el valor (`AST-12`). Los duplicados registrados antes siguen siendo editables mientras no cambie ese valor.
 
@@ -23,6 +31,15 @@ Navegue a **Panorama IT > Activos** para ver su inventario de activos. Haga clic
 - Ver: `infrastructure:reader`
 - Crear / editar: `infrastructure:member`
 - Importar / Exportar / Eliminar: `infrastructure:admin`
+
+### Crear o cancelar { #cancelling-a-creation }
+
+Mientras el activo se está creando, su encabezado muestra **Crear** y **Cancelar** en lugar del botón de cierre. Permanecen hasta que salga del activo.
+
+- **Crear** comprueba que el activo tenga una ubicación. Sin ella, un mensaje indica la ubicación que falta y el campo **Ubicación** del panel de propiedades recibe el foco. El activo sigue abierto. Con una ubicación, KANAP conserva el activo y lo cierra. Vuelve al punto de partida
+- **Cancelar** elimina el activo. Si introdujo algo más que el nombre, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar activos
+
+Si sale del activo de otra forma (la flecha de retroceso, el menú, otro activo) mientras no tiene ubicación, KANAP le pregunta qué hacer. **Completarlo** le deja en el activo, en el campo **Ubicación**. **Eliminarlo** elimina el activo.
 
 ---
 
@@ -144,7 +161,7 @@ Haga clic en cualquier fila para abrir el espacio de trabajo. El espacio de trab
 
 Una dirección que no designa ningún activo abre una página **Activo no encontrado**, con un enlace para volver a la lista.
 
-Las pestañas son **Vista general**, **Operaciones**, **Red**, **Hardware** (solo para tipos de activos físicos), **Dependencias**, **Relaciones** e **Historial** (los cambios hechos en el activo, vea [Historial de los registros](record-history.md)). Al crear un activo, **Vista general** y **Red** están abiertas. Las demás pestañas se abren en cuanto hace clic en **Crear**.
+Las pestañas son **Vista general**, **Operaciones**, **Red**, **Hardware** (solo para tipos de activos físicos), **Dependencias**, **Relaciones** e **Historial** (los cambios hechos en el activo, vea [Historial de los registros](record-history.md)). Un activo nuevo solo muestra su título. Todas las pestañas se abren en cuanto el título crea el activo.
 
 ### Encabezado
 
@@ -168,7 +185,7 @@ El panel muestra la tarjeta de identidad del activo en cada pestaña. Las edicio
 - **Zona de administración**: La zona de su modelo de administración a la que pertenece el activo, por ejemplo el Tier 0 para un controlador de dominio y el hipervisor que lo ejecuta. Elija entre las zonas configuradas en **Panorama IT > Configuración**, o **Sin zona**. El activo aparece entonces en esa zona en la página [Zonas de administración](administration-view.md)
 
 **Ubicación**:
-- **Ubicación** (obligatorio): cada activo tiene una, venga de la pantalla, de una importación o del asistente. Si la ubicación aún no existe, escriba su nombre y elija **+ Crear la ubicación «…»**: indique su tipo de alojamiento y la nueva ubicación pasa al campo. Requiere `locations:member`
+- **Ubicación** (obligatorio): **Crear** la pide en un activo nuevo. Un activo creado por una importación o por el asistente la necesita de inmediato. Si la ubicación aún no existe, escriba su nombre y elija **+ Crear la ubicación «…»**: indique su tipo de alojamiento y la nueva ubicación pasa al campo. Requiere `locations:member`
 - **Sub-ubicación** (cuando la ubicación tiene sub-ubicaciones definidas)
 - **Tipo de alojamiento**, **Empresa operadora** o **Proveedor cloud**, **País**, **Ciudad**: de solo lectura, derivados de la ubicación. Se actualizan cuando cambia la ubicación
 
@@ -184,8 +201,6 @@ El panel muestra la tarjeta de identidad del activo en cada pestaña. Las edicio
 La pestaña Vista general es la página de inicio del activo.
 
 **Netbox**: en un activo vinculado a Netbox, una línea en la parte superior indica cuándo se sincronizó por última vez, con **Abrir en Netbox**. También indica cuando el objeto ya no está en Netbox, cuando su estado en Netbox requiere atención y cuando el activo está **Gestionado por Netbox**. Consulte [Sincronización con Netbox](netbox.md).
-
-**Datos básicos** (al crear un activo): **Nombre**, **Tipo de activo**, **Ubicación** y **Entorno**.
 
 **Descripción**: Una descripción enriquecida del activo. Se guarda automáticamente mientras edita.
 
@@ -274,12 +289,12 @@ Lo que solo viene del host en el que se ejecutan el activo o sus miembros, como 
 
 ### Red { #network }
 
-La pestaña Red reúne la identidad de red del activo, sus direcciones IP y sus conexiones. Está abierta al crear un activo. Si el nombre de host no es válido al hacer clic en **Crear**, la pestaña se abre sobre el error.
+La pestaña Red reúne la identidad de red del activo, sus direcciones IP y sus conexiones.
 
 En un activo gestionado por Netbox, una línea en la parte superior indica que Netbox rellena los campos que proporciona y que los demás quedan a su cargo.
 
 **Identidad**:
-- **Nombre de host**: El nombre de host de red del activo. Se rellena previamente desde el nombre del activo en la creación; puede sobrescribirlo en cualquier momento. Obligatorio cuando se selecciona un dominio. Admite letras, dígitos, guiones y puntos, y cada parte entre puntos puede tener 63 caracteres como máximo, de modo que un nombre como `DL3.ROBOT-15MS.IE2000` es válido tal cual.
+- **Nombre de host**: El nombre de host de red del activo. Se deriva del título al crear el activo. Puede cambiarlo en cualquier momento. Obligatorio cuando se selecciona un dominio. Admite letras, dígitos, guiones y puntos, y cada parte entre puntos puede tener 63 caracteres como máximo, de modo que un nombre como `DL3.ROBOT-15MS.IE2000` es válido tal cual.
 - **Dominio**: El dominio Active Directory o DNS al que pertenece el activo. Elija entre los dominios configurados en **Panorama IT > Configuración**. Las opciones del sistema incluyen "Workgroup" (independiente) y "N/A" (no aplicable).
 - **FQDN**: Nombre de Dominio Completamente Cualificado, calculado automáticamente desde el nombre de host y el sufijo DNS del dominio. Solo lectura.
 - **Alias**: Nombres DNS o alias adicionales para este activo. Escriba y pulse Enter para añadir.

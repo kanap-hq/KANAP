@@ -2151,8 +2151,6 @@
         "searchAssetTypes": "Asset-Typen suchen",
         "searchSubLocations": "Unterstandorte suchen",
         "locationContext": "Standortkontext",
-        "basics": "Grunddaten",
-        "namePlaceholder": "z. B. Dateiserver 01",
         "description": "Beschreibung",
         "descriptionPlaceholder": "Beschreiben Sie das Asset"
       },
@@ -2404,6 +2402,15 @@
         "via": "Über",
         "placementReplaced": "{{cluster}} ersetzt die Verknüpfung zwischen {{hosts}} und {{asset}}.",
         "placementLinked": "Verknüpfung auf {{cluster}} gelegt."
+      },
+      "creation": {
+        "record": "Das Asset",
+        "missing": "Fehlt: {{fields}}",
+        "leaveTitle": "Dieses Asset ist unvollständig",
+        "leaveComplete": "Vervollständigen",
+        "leaveDelete": "Löschen",
+        "leaveAnyway": "Trotzdem verlassen",
+        "completeFailed": "Das Asset konnte nicht geprüft werden."
       }
     },
     "technology": {
@@ -2644,7 +2651,6 @@
       "createFromBinding": "Erstellung aus Schnittstellen-Bindungskontext",
       "overview": {
         "connectionReference": "Referenz",
-        "name": "Name",
         "purpose": "Zweck",
         "connectionType": "Verbindungstyp",
         "selectSource": "Quellentität oder -server auswählen",
@@ -2739,18 +2745,8 @@
       "sourceMissing": "Quelle fehlt",
       "destinationMissing": "Ziel fehlt",
       "create": {
-        "title": "Verbindung erstellen",
-        "namePlaceholder": "z. B. App-Schicht zu DB-Schicht",
         "endpoints": "Endpunkte",
-        "serversPlaceholder": "z. B. server1",
-        "protocolsPlaceholder": "z. B. HTTPS",
-        "description": "Beschreibung",
-        "descriptionPlaceholder": "z. B. Nächtlicher Export von der App-Schicht zur DB-Schicht",
-        "pathAfterCreate": "Erstellen Sie zuerst die Verbindung, um Hops zum Netzwerkpfad hinzuzufügen.",
-        "afterCreation": "Nach dem Erstellen",
-        "protocolRequired": "Wählen Sie mindestens ein Protokoll aus.",
-        "sourceRequired": "Wählen Sie ein Quell-Asset oder eine Quellentität aus.",
-        "destinationRequired": "Wählen Sie ein Ziel-Asset oder eine Zielentität aus."
+        "description": "Beschreibung"
       },
       "deleteDialog": {
         "title": "Verbindung löschen?",
@@ -2830,6 +2826,15 @@
         "addFailed": "Hop konnte nicht hinzugefügt werden",
         "removeFailed": "Hop konnte nicht entfernt werden",
         "reorderFailed": "Hops konnten nicht neu angeordnet werden"
+      },
+      "creation": {
+        "record": "Die Verbindung",
+        "missing": "Fehlt: {{fields}}",
+        "leaveTitle": "Diese Verbindung ist unvollständig",
+        "leaveComplete": "Vervollständigen",
+        "leaveDelete": "Löschen",
+        "leaveAnyway": "Trotzdem verlassen",
+        "completeFailed": "Die Verbindung konnte nicht geprüft werden."
       }
     },
     "interface": {
@@ -2860,9 +2865,11 @@
         "message": "Diese Schnittstelle wurde noch nicht erstellt. Beim Schließen des Arbeitsbereichs wird der Entwurf verworfen."
       },
       "create": {
-        "applicationsRequired": "Wählen Sie Quell- und Zielanwendung aus.",
-        "dataCategoryRequired": "Wählen Sie eine Datenkategorie aus.",
         "noIdentifier": "Die Schnittstelle wurde erstellt, aber es wurde keine Kennung zurückgegeben."
+      },
+      "creation": {
+        "missing": "Fehlt: {{fields}}",
+        "record": "Die Schnittstelle"
       },
       "pii": {
         "label": "PII",
@@ -2872,7 +2879,6 @@
       },
       "fields": {
         "name": "Name",
-        "namePlaceholder": "z. B. Artikelstamm-Synchronisierung PLM zu ERP",
         "interfaceCode": "Schnittstellencode",
         "interfaceCodePlaceholder": "z. B. ERP-ORDERS-SYNC",
         "businessProcess": "Geschäftsprozess",
@@ -2899,7 +2905,6 @@
         "addCountries": "Länder hinzufügen"
       },
       "overview": {
-        "createTitle": "Schnittstelle erstellen",
         "specification": "Spezifikation",
         "specificationDocument": "Spezifikationsdokument",
         "specificationPlaceholder": "Erfassen Sie hier die Spezifikation der Schnittstelle."
@@ -3460,8 +3465,6 @@
     "loadServerAssignmentsFailed": "Fehler beim Laden der Zuordnungen",
     "createVersionFailed": "Fehler beim Erstellen der Version",
     "locationRequired": "Standort ist erforderlich.",
-    "assetTypeRequired": "Asset-Typ ist erforderlich.",
-    "providerRequired": "Anbieter ist erforderlich.",
     "codeRequired": "Code ist erforderlich.",
     "nameRequired": "Name ist erforderlich.",
     "locationNameTaken": "Ein anderer Standort hat bereits diesen Namen.",
