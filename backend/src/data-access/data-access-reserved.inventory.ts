@@ -234,7 +234,7 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
   {
     file: 'business-processes/business-processes.controller.ts',
     controller: 'BusinessProcessesController',
-    reserved: ['bulkDelete', 'create', 'delete', 'deleteCheck', 'import', 'update'],
+    reserved: ['bulkDelete', 'cancelCreation', 'create', 'creationChanges', 'delete', 'deleteCheck', 'import', 'update'],
     allowed: {
       export: EXPORT, // GET export
       get: READ, // GET :id

@@ -91,6 +91,29 @@ export class BusinessProcessesDeleteService extends BaseDeleteService<BusinessPr
     }
   }
 
+  /**
+   * The delete of a process being created (`DELETE /business-processes/:id/creation`, its creator
+   * alone since its creation): the application links made meanwhile are removed first, each
+   * audited as an unlink, so they do not refuse the delete; then the usual delete.
+   */
+  async deleteBeingCreated(id: string, opts: { manager: EntityManager; userId: string | null }): Promise<void> {
+    const removed: Array<{ application_id: string }> = await opts.manager.query(
+      `WITH removed AS (
+         DELETE FROM application_business_processes
+          WHERE tenant_id = app_current_tenant() AND business_process_id = $1
+         RETURNING application_id)
+       SELECT application_id::text AS application_id FROM removed`,
+      [id],
+    );
+    for (const link of removed) {
+      await this.audit.log({
+        table: 'application_business_processes', recordId: id, action: 'update',
+        before: { application_id: link.application_id }, after: null, userId: opts.userId,
+      }, { manager: opts.manager });
+    }
+    await this.delete(id, opts);
+  }
+
   /** The check before a delete (`POST /business-processes/delete-check`): which of `ids` would be refused, and why. Nothing is written. */
   async deleteCheck(ids: unknown[], opts?: { manager?: EntityManager }): Promise<{ refused: DeleteRefusal[] }> {
     const manager = opts?.manager ?? this.repository.manager;

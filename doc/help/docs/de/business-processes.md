@@ -43,7 +43,7 @@ Die Liste zeigt alle Geschäftsprozesse Ihres Mandanten.
 
 **Aktionen** (Symbolleiste oben rechts):
 
-- **Neu** (`business_processes:member`): einen neuen Geschäftsprozess erstellen.
+- **Neu** (`business_processes:member`): einen neuen Geschäftsprozess erstellen. Siehe [Einen Geschäftsprozess erstellen](#creating-a-business-process).
 - **Kategorien verwalten** (`business_processes:member`): den Dialog zur Kategorieverwaltung öffnen.
 - **Importieren** (Admin): Prozesse aus einer CSV-Datei oder Excel-Arbeitsmappe massenimportieren.
 - **Exportieren** (Admin): die Prozesse der Liste, oder alle Prozesse, in eine CSV-Datei oder Excel-Arbeitsmappe exportieren.
@@ -51,45 +51,60 @@ Die Liste zeigt alle Geschäftsprozesse Ihres Mandanten.
 
 ---
 
+## Einen Geschäftsprozess erstellen { #creating-a-business-process }
+
+1. Klicken Sie in der Liste auf **Neu**. Die Seite des Prozesses öffnet sich mit einem leeren Titel in der Kopfzeile. Der Rest der Seite ist abgeblendet.
+2. Geben Sie den Namen des Prozesses ein, am besten mit seinem Kurzcode (z. B. „Order-to-Cash (O2C)“).
+3. Drücken Sie die Eingabetaste oder klicken Sie außerhalb des Titels. KANAP erstellt den Prozess sofort, aktiviert, und alle Reiter öffnen sich.
+
+Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erstellen. Zwei Prozesse können nicht denselben Namen tragen, unabhängig von Groß- und Kleinschreibung: Ein bereits verwendeter Name wird abgelehnt, mit einer Meldung unter dem Titel.
+
+Solange der Prozess erstellt wird, zeigt seine Kopfzeile **Erstellen** und **Abbrechen**. Beide bleiben, bis Sie den Prozess verlassen.
+
+- **Erstellen** behält den Prozess und schließt ihn. Sie kehren dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm. Bei leerem Titel schließt sich nichts, und der Titel verlangt einen.
+- **Abbrechen** schließt, ohne etwas zu behalten. Ein bereits erstellter Prozess wird gelöscht, mit den Verknüpfungen zu Anwendungen, die Sie hinzugefügt haben. Wenn Sie mehr als den Namen eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Prozessen abbrechen.
+
+Verlassen Sie den Prozess auf andere Weise, bleibt er bestehen.
+
+---
+
 ## Der Geschäftsprozess-Arbeitsbereich
 
-Klicken Sie auf eine beliebige Zeile in der Liste (oder die Schaltfläche **Neu**), um den Arbeitsbereich zu öffnen. Die Schaltfläche **Verlauf** in der Kopfzeile öffnet den Verlauf des Prozesses in einem Seitenbereich. Siehe [Verlauf der Datensätze](record-history.md).
+Klicken Sie auf eine beliebige Zeile in der Liste, um den Arbeitsbereich zu öffnen. Jede Änderung wird von selbst gespeichert: eine Liste oder ein Auswahlfeld, sobald Sie einen Wert wählen, ein Text, sobald Sie ihn verlassen. **Gespeichert** erscheint kurz in der Kopfzeile.
 
-Der Arbeitsbereich hat einen einzelnen **Übersichts**-Tab auf der linken Seite und eine Symbolleiste am oberen Rand:
+Die Kopfzeile enthält:
 
-- **Zurück / Weiter**: zwischen Prozessen in der aktuellen Listenreihenfolge wechseln.
-- **Zurücksetzen**: nicht gespeicherte Änderungen verwerfen.
-- **Speichern**: Änderungen speichern.
+- **Geschäftsprozesse** (Zurück-Pfeil): zur Liste zurückkehren, Filter und Sortierung bleiben erhalten.
+- Den **Namen**: Klicken Sie darauf, um den Prozess umzubenennen.
+- Die Pfeile **vorheriger / nächster**: zwischen Prozessen in der aktuellen Listenreihenfolge wechseln.
+- **Status**: **Aktiviert** oder **Deaktiviert**. Aktivierte Prozesse erscheinen in Auswahlfeldern in der gesamten App. Deaktivieren Sie einen Prozess, um ihn stillzulegen ohne zu löschen, damit historische Referenzen erhalten bleiben.
 - **Löschen** (Papierkorb-Symbol, Admin): den Prozess löschen und zur Liste zurückkehren. Ein Prozess, den Anwendungen oder Schnittstellen verwenden, kann nicht gelöscht werden: Die Meldung zählt sie auf. Deaktivieren Sie ihn stattdessen.
-- **Schließen** (X-Symbol): zur Liste zurückkehren, Filter und Sortierung beibehalten.
 
-Wenn Sie mit nicht gespeicherten Änderungen navigieren, werden Sie aufgefordert, zu speichern oder zu verwerfen.
+Ohne `business_processes:member` öffnet sich die Seite nur zum Lesen.
+
+### Eigenschaften
+
+Die Eigenschaftsleiste auf der rechten Seite enthält:
+
+- **Kategorien**: eine oder mehrere Kategorien. Wählen Sie bestehende Kategorien, erstellen Sie eine mit **Neue Kategorie** oder öffnen Sie den Dialog zur Kategorieverwaltung mit **Kategorien bearbeiten**.
+- **Prozessverantwortlicher**: der für den Prozess letztlich verantwortliche Benutzer. Wird in der Liste angezeigt.
+- **IT-Verantwortlicher**: der Benutzer, der für die IT-Systeme und Werkzeuge verantwortlich ist, die den Prozess unterstützen.
+- **Lebenszyklus**: der Statusschalter und das Datum **Ende der Gültigkeit**. Ein Prozess, dessen Gültigkeit abgelaufen ist, ist deaktiviert.
 
 ### Übersicht
 
-Der Übersichts-Tab ist in drei Abschnitte gegliedert.
+- **Beschreibung**: was der Prozess umfasst, am besten von seinem Start- bis zu seinem Endpunkt (z. B. „Von der Kundenbestellung über Lieferung und Rechnungsstellung bis zum Zahlungseingang“).
+- **Notizen**: interne Informationen wie Links zu Prozesskarten, Verfahren, Bereichsnotizen oder Verbesserungsplänen.
 
-**Grunddaten**
+### Beziehungen
 
-- **Name** (Pflicht): verwenden Sie einen klaren Namen einschließlich des Kurzcodes, z. B. „Order-to-Cash (O2C)" oder „Hire-to-Retire (H2R)".
-- **Beschreibung**: eine kurze Zusammenfassung, was der Prozess umfasst. Eine gute Beschreibung erfasst die Start- und Endpunkte (z. B. „Von der Kundenbestellung über Lieferung, Rechnungsstellung bis zum Zahlungseingang.").
-- **Statusschalter**: seine Beschriftung zeigt den aktuellen Zustand (**Aktiviert** oder **Deaktiviert**). Aktivierte Prozesse erscheinen in Auswahlfeldern in der gesamten App. Deaktivieren Sie einen Prozess, um ihn stillzulegen ohne zu löschen, damit historische Referenzen erhalten bleiben.
+Der Abschnitt **Anwendungen** listet die Anwendungen, die den Prozess unterstützen, mit Referenz, Kritikalität und IT-Verantwortlichem. **Hinzufügen** öffnet eine Suche; eine Verknüpfung wird sofort gespeichert. Fahren Sie über eine Zeile und klicken Sie auf ihr Kreuz, um die Verknüpfung zu lösen. Die Anwendung zeigt dieselbe Verknüpfung im Abschnitt **Geschäftsprozesse** ihres Reiters Beziehungen.
 
-**Klassifizierung**
+Zum Ändern der Verknüpfungen benötigen Sie `business_processes:member`. Der Reiter erscheint nur, wenn Sie Anwendungen lesen dürfen. Ein Business Contributor sieht und verknüpft nur die Anwendungen in seinem Bereich.
 
-- **Kategorien** (Mehrfachauswahl): weisen Sie eine oder mehrere Kategorien zu. Sie können aus bestehenden Kategorien wählen, eine neue inline mit **Neue Kategorie** erstellen oder auf **Kategorien bearbeiten** klicken, um den vollständigen Dialog zur Kategorieverwaltung zu öffnen.
-- **Prozessverantwortlicher**: der für den Prozess letztlich verantwortliche Benutzer. Wird im Listen-Grid angezeigt und steht für künftige Benachrichtigungen und Genehmigungen zur Verfügung.
-- **IT-Verantwortlicher**: der für die IT-Systeme und Werkzeuge verantwortliche Benutzer, die diesen Prozess unterstützen.
+### Verlauf
 
-**Details**
-
-- **Notizen**: Freitextfeld für interne Informationen wie Links zu Prozesskarten, SOPs, Bereichsnotizen oder Verbesserungsplänen.
-
-**Anwendungen**
-
-Unter den Details listet der Abschnitt **Anwendungen** die Anwendungen, die den Prozess unterstützen, mit Referenz, Kritikalität und IT-Verantwortlichem. **Hinzufügen** öffnet eine Suche; eine Verknüpfung wird sofort gespeichert, ohne **Speichern**. Fahren Sie über eine Zeile und klicken Sie auf ihr Kreuz, um die Verknüpfung zu lösen. Die Anwendung zeigt dieselbe Verknüpfung im Abschnitt **Geschäftsprozesse** ihres Reiters Beziehungen.
-
-Zum Ändern der Verknüpfungen benötigen Sie `business_processes:member`. Der Abschnitt erscheint nur, wenn Sie Anwendungen lesen dürfen. Ein Business Contributor sieht und verknüpft nur die Anwendungen in seinem Bereich.
+Die Änderungen am Prozess und an seinen Verknüpfungen zu Anwendungen. Siehe [Verlauf der Datensätze](record-history.md).
 
 ---
 
@@ -98,7 +113,7 @@ Zum Ändern der Verknüpfungen benötigen Sie `business_processes:member`. Der A
 Kategorien werden über alle Geschäftsprozesse hinweg geteilt. Sie können sie von zwei Stellen aus verwalten:
 
 1. Auf der Listenseite klicken Sie auf **Kategorien verwalten**.
-2. Im Arbeitsbereich, unter dem Feld **Kategorien**, klicken Sie auf **Kategorien bearbeiten**.
+2. Im Arbeitsbereich, unter dem Feld **Kategorien** der Eigenschaftsleiste, klicken Sie auf **Kategorien bearbeiten**.
 
 Beide öffnen den Dialog **Geschäftsprozess-Kategorien verwalten**.
 

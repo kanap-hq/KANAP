@@ -1009,14 +1009,17 @@ A tenant classifies its budget lines along analytics dimensions (`analytics_axes
     - Validates unique name (per tenant, case-insensitive).
     - Applies lifecycle using `status`/`disabled_at`.
     - Syncs category links to the provided `category_ids`.
-  - Permissions: `business_processes:manager`.
+  - Returns the process plus `creation_token`, as `POST /applications` (below in this file: the creation routes).
+  - Permissions: `business_processes:member`.
+
+- GET `/business-processes/:id/creation?token=` and DELETE `/business-processes/:id/creation` with `{ token }` (`business_processes:member`, reserved to unscoped data access): the creation routes, with the token rules and the `CREATION_CANCEL_EXPIRED` refusal of the applications. `changes` counts the history of the process (fields, `application` links), plus one field when it holds categories (the history does not show them). The cancel removes the application links first (one audit row on `application_business_processes` per link, as an unlink), then deletes the process as `DELETE /business-processes/:id` does, without its admin level: an interface that names the process still refuses it (`BUSINESS_PROCESS_IN_USE`).
 
 - PATCH `/business-processes/:id`
   - Body: partial `BusinessProcessUpsertDto`.
   - Behavior:
     - Allows renaming (with uniqueness check).
     - Allows updating description/notes/owners/lifecycle and category links.
-  - Permissions: `business_processes:manager`.
+  - Permissions: `business_processes:member`.
 
 - DELETE `/business-processes/bulk`
   - Body: `{ ids: string[] }`.
