@@ -21,7 +21,6 @@ import { useRequestPipeline } from '../../../common/request-pipeline';
 import { createRequestTenancyMiddleware } from '../../../common/tenancy/request-tenancy.middleware';
 import { DiscoveryCallService } from '../../../discovery-call/discovery-call.service';
 import type { SendEmailOptions } from '../../email.types';
-import { signTrialMailLink } from '../trial-mail-links';
 import { TrialMailsController } from '../trial-mails.controller';
 import { TrialMailsService } from '../trial-mails.service';
 
@@ -32,8 +31,9 @@ import { TrialMailsService } from '../trial-mails.service';
 // - the thank-you once at the first Stripe subscription; nothing more of the trial sequence after
 //   it; nothing at all for a workspace created before the trial e-mails (no row);
 // - a failed send lifts its stamp; nothing at all while e-mail sending is off;
-// - over HTTP: the unsubscribe page, its confirmation (and the audit entry) that stops the
-//   sequence, the counted redirect to the discovery call, 404 on a bad token.
+// - over HTTP, after the server's secrets changed: the unsubscribe page, its confirmation (and
+//   the audit entry) that stops the sequence, 404 on a bad token; the counted redirect to the
+//   discovery call, which a bad token still reaches, uncounted.
 // @database-spec: opens the data-source and boots Nest, so run-ci-tests.js runs it on a database lane.
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -325,8 +325,12 @@ async function testLinksOverHttp() {
   try {
     t = await createActivatedTenant(svc, { tag: 'tm-http', orgName: 'Trial Links', signup: true, language: 'de' });
     await choose(t.tenantId, 'budget', 'example');
-    const unsubscribe = `/trial-mails/unsubscribe?t=${encodeURIComponent(signTrialMailLink(t.tenantId, 'unsubscribe'))}`;
-    await withEnv(ENV, async () => {
+    const state = await readState(t.tenantId);
+    assert.match(state.link_token, /^[0-9a-f]{64}$/, 'a random secret per workspace');
+    const token = `${t.tenantId}.${state.link_token}`;
+    const unsubscribe = `/trial-mails/unsubscribe?t=${encodeURIComponent(token)}`;
+    // The server's secrets changed since the e-mail left: the link still works.
+    await withEnv({ ...ENV, JWT_SECRET: 'rotated-after-the-e-mail' }, async () => {
       const page = await request(served, 'GET', unsubscribe);
       assert.equal(page.status, 200);
       assert.ok(page.body.includes('Trial Links') && page.body.includes('<form method="post"'), 'a page that asks to confirm');
@@ -345,23 +349,26 @@ async function testLinksOverHttp() {
       await trialMails.onSubscriptionChanged(t!.tenantId, new Date(start.getTime() + 60_000));
       assert.equal(email.to(t!.ownerEmail).length, 0, 'unsubscribed: no trial e-mail');
 
-      const callToken = encodeURIComponent(signTrialMailLink(t!.tenantId, 'mail_j0'));
-      const redirect = await request(served, 'GET', `/trial-mails/call?t=${callToken}`);
+      const redirect = await request(served, 'GET', `/trial-mails/call?t=${encodeURIComponent(token)}&from=mail_j0`);
       assert.deepEqual([redirect.status, redirect.location], [302, BOOKING_URL]);
+      // A token that cannot be read still leads to the booking page, without a count.
+      for (const path of ['/trial-mails/call?t=bad&from=mail_j0', `/trial-mails/call?t=${encodeURIComponent(token)}&from=hero`]) {
+        const other = await request(served, 'GET', path);
+        assert.deepEqual([other.status, other.location], [302, BOOKING_URL], path);
+      }
       const clicks = (await trialAudit(t!.tenantId)).filter((entry: any) => entry.action === 'trial.discovery_call_clicked');
       assert.deepEqual(clicks.map((entry: any) => [entry.after_json?.placement, entry.source]), [['mail_j0', 'system']]);
 
       for (const path of [
         '/trial-mails/unsubscribe?t=bad',
-        `/trial-mails/unsubscribe?t=${callToken}`,
-        `/trial-mails/call?t=${encodeURIComponent(signTrialMailLink(t!.tenantId, 'unsubscribe'))}`,
+        `/trial-mails/unsubscribe?t=${t!.tenantId}.${'0'.repeat(64)}`,
+        `/trial-mails/unsubscribe?t=${'0'.repeat(8)}-0000-4000-8000-${'0'.repeat(12)}.${state.link_token}`,
       ]) {
         assert.equal((await request(served, 'GET', path)).status, 404, path);
       }
     });
     await withEnv({ ...ENV, DISCOVERY_CALL_URL: undefined, DISCOVERY_CALL_FALLBACK_EMAIL: undefined }, async () => {
-      const token = encodeURIComponent(signTrialMailLink(t!.tenantId, 'mail_j5'));
-      assert.equal((await request(served, 'GET', `/trial-mails/call?t=${token}`)).status, 404, 'no booking page');
+      assert.equal((await request(served, 'GET', `/trial-mails/call?t=${encodeURIComponent(token)}&from=mail_j5`)).status, 404, 'no booking page');
     });
   } finally {
     await served.close();

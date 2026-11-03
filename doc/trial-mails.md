@@ -42,15 +42,15 @@ A mail is stamped before it is sent, in its own transaction, so two processes ne
 
 ## Links
 
-Signed, never expiring, on the workspace's address (`https://<slug>.kanap.net/api/trial-mails/...`). A token is `<tenant>.<purpose>.<HMAC-SHA256>` under the `trial-mail` family key (`TRIAL_MAIL_LINK_SECRET`, else derived from `JWT_SECRET`, `auth/token-secret.util.ts`). Changing the key breaks the links of the e-mails already sent.
+Never expiring, on the workspace's address (`https://<slug>.kanap.net/api/trial-mails/...`). A token is `<tenant>.<secret>`: `trial_mails.link_token`, 32 random bytes drawn by the database for each workspace, compared in constant time. No server key is involved: a link keeps working as long as the workspace exists, whatever secret of the server is changed.
 
 | Route | Effect |
 |---|---|
 | `GET /trial-mails/unsubscribe?t=` | A page in the workspace's language that asks to confirm. Opening it changes nothing (link scanners open links). |
 | `POST /trial-mails/unsubscribe?t=` | Unsubscribes the workspace from the trial e-mails: the page's button, and the one-click unsubscribe of mail clients (`List-Unsubscribe` and `List-Unsubscribe-Post` headers, RFC 8058). Writes `trial.mails_unsubscribed` once (`table_name = 'trial'`, `source = 'system'`). |
-| `GET /trial-mails/call?t=` | Counts the click (`trial.discovery_call_clicked { placement }`, `mail_j0` or `mail_j5`), then redirects to `DISCOVERY_CALL_URL` (or `mailto:` the fallback address). 404 when neither is set. |
+| `GET /trial-mails/call?t=&from=` | Counts the click when the token is valid (`trial.discovery_call_clicked { placement }`, `from` = `mail_j0` or `mail_j5`), then redirects to `DISCOVERY_CALL_URL` (or `mailto:` the fallback address), valid token or not. 404 only when neither is set. |
 
-A bad token is a 404. Without a booking page or a fallback address, J0 has no call paragraph or button and J+5 no call link.
+A bad token on the unsubscribe routes is a 404. Without a booking page or a fallback address, J0 has no call paragraph or button and J+5 no call link.
 
 ## Deliverability
 

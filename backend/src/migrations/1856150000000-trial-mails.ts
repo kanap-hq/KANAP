@@ -4,10 +4,14 @@ const LOG_PREFIX = '[Migration] Trial mails:';
 
 /**
  * The trial e-mails of a workspace (`doc/trial-mails.md`): one row per tenant, created when the
- * scheduler first sees the trial, with when each e-mail was sent (J0, J+5, J+12, the end-of-trial
+ * trial is activated, with when each e-mail was sent (J0, J+5, J+12, the end-of-trial
  * notice, the thank-you at the first subscription), when the first sign-in was seen (J0 goes one
  * hour later when no path was chosen) and when the person unsubscribed. A stamp is set before the
  * e-mail goes out, so a milestone is sent at most once per tenant, whichever process runs it.
+ *
+ * `link_token` is the random secret of the e-mails' links (unsubscribe, discovery call), drawn by
+ * the database for each row. Stored rather than derived from a server key: a link keeps working
+ * whatever key is changed, as long as the workspace exists.
  *
  * `tenants.metadata` cannot hold it: the tenant reset and the platform administration rewrite that
  * column whole.
@@ -30,9 +34,13 @@ export class TrialMails1856150000000 implements MigrationInterface {
         ended_sent_at timestamptz NULL,
         thanks_sent_at timestamptz NULL,
         unsubscribed_at timestamptz NULL,
+        link_token text NOT NULL DEFAULT encode(gen_random_bytes(32), 'hex'),
         created_at timestamptz NOT NULL DEFAULT now(),
         updated_at timestamptz NOT NULL DEFAULT now()
       )`);
+
+    // A table created by an earlier version of this migration (development databases).
+    await queryRunner.query(`ALTER TABLE trial_mails ADD COLUMN IF NOT EXISTS link_token text NOT NULL DEFAULT encode(gen_random_bytes(32), 'hex')`);
 
     await queryRunner.query(`ALTER TABLE trial_mails ENABLE ROW LEVEL SECURITY`);
     await queryRunner.query(`ALTER TABLE trial_mails FORCE ROW LEVEL SECURITY`);

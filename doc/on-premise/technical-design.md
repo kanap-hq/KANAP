@@ -241,7 +241,6 @@ service reads the same rules).
 | MCP OAuth authorization code | `purpose: 'kanap:v1:mcp-oauth-code'` | `MCP_OAUTH_CODE_SECRET`, else derived | `McpOAuthService` (token endpoint) |
 | MCP OAuth access token | `purpose: 'kanap:v1:mcp-access'` | `MCP_ACCESS_TOKEN_SECRET`, else derived | `McpApiKeyAuthGuard` (MCP endpoint only) |
 | Creation token (HMAC, not a JWT) | label `kanap:v1:creation`, signs tenant, family, record, creator, issue time | `CREATION_TOKEN_SECRET`, else derived | `verifyCreationToken` (`DELETE /applications/:id/creation`) |
-| Trial e-mail link (HMAC, not a JWT, cloud only) | label `kanap:v1:trial-mail`, signs tenant and purpose (unsubscribe or a discovery call placement) | `TRIAL_MAIL_LINK_SECRET`, else derived | `verifyTrialMailLink` (`/trial-mails/unsubscribe`, `/trial-mails/call`) |
 
 Rules:
 

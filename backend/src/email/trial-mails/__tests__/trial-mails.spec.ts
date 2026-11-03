@@ -13,7 +13,7 @@ import {
   frenchSpacing,
 } from '../trial-mail-templates';
 import { getEmailStrings } from '../../../i18n/email-i18n';
-import { signTrialMailLink, trialMailLinkUrl, verifyTrialMailLink } from '../trial-mail-links';
+import { parseTrialMailLinkToken, sameLinkToken, trialMailLinkToken, trialMailLinkUrl } from '../trial-mail-links';
 
 const escapeForHtml = (text: string) => text.replace(/&/g, '&amp;').replace(/'/g, '&#039;');
 
@@ -23,7 +23,7 @@ const escapeForHtml = (text: string) => text.replace(/&/g, '&amp;').replace(/'/g
 //   when no deletion is planned;
 // - the templates in the four languages: every placeholder filled, the variants, one button at
 //   most (none on J+5), the unsubscribe footer except on the thank-you, French typography;
-// - the signed links: valid, tampered, another purpose, another key.
+// - the link tokens: their shape, the constant-time comparison with the stored secret, the addresses.
 
 const DAY = 24 * 60 * 60 * 1000;
 const START = new Date('2026-11-02T09:00:00Z');
@@ -167,21 +167,22 @@ function testFrenchTypography() {
   assert.ok(!allMails('en').j0Angle.text.includes(' '));
 }
 
-function testSignedLinks() {
-  const env = { JWT_SECRET: 'trial-mail-spec-secret' } as NodeJS.ProcessEnv;
+function testLinkTokens() {
   const tenant = '6f1c2b0e-4d8a-4b3e-9a51-2f0f2b6c9d10';
-  const token = signTrialMailLink(tenant, 'unsubscribe', env);
-  assert.deepEqual(verifyTrialMailLink(token, env), { tenantId: tenant, purpose: 'unsubscribe' });
-  assert.deepEqual(verifyTrialMailLink(signTrialMailLink(tenant, 'mail_j5', env), env), { tenantId: tenant, purpose: 'mail_j5' });
-  // Another tenant, another purpose, a tampered signature, another key: refused.
-  const [, purpose, signature] = token.split('.');
-  assert.equal(verifyTrialMailLink(`${tenant.replace('6f1c', '6f1d')}.${purpose}.${signature}`, env), null);
-  assert.equal(verifyTrialMailLink(`${tenant}.mail_j0.${signature}`, env), null);
-  assert.equal(verifyTrialMailLink(`${tenant}.${purpose}.${signature.slice(0, -2)}AA`, env), null);
-  assert.equal(verifyTrialMailLink(token, { ...env, TRIAL_MAIL_LINK_SECRET: 'dedicated' } as NodeJS.ProcessEnv), null);
-  assert.equal(verifyTrialMailLink(`${tenant}.anything.${signature}`, env), null);
-  for (const bad of [undefined, 42, '', 'x'.repeat(300), 'not.a.token']) assert.equal(verifyTrialMailLink(bad, env), null);
-  assert.equal(trialMailLinkUrl('https://acme.kanap.test/', 'call', 'a.b.c'), 'https://acme.kanap.test/api/trial-mails/call?t=a.b.c');
+  const secret = 'a'.repeat(32) + '0123456789abcdef'.repeat(2);
+  const token = trialMailLinkToken(tenant.toUpperCase(), secret);
+  assert.equal(token, `${tenant}.${secret}`);
+  assert.deepEqual(parseTrialMailLinkToken(token), { tenantId: tenant, linkToken: secret });
+  assert.deepEqual(parseTrialMailLinkToken(` ${token.toUpperCase()} `), { tenantId: tenant, linkToken: secret }, 'case and spaces from a mail client');
+  for (const bad of [undefined, 42, '', 'x'.repeat(300), 'not.a.token', `${tenant}.${secret.slice(1)}`, `${tenant}.${secret}g`, `nope.${secret}`]) {
+    assert.equal(parseTrialMailLinkToken(bad), null, String(bad).slice(0, 20));
+  }
+  // The secret is compared with the stored one: another secret, or none stored, is refused.
+  assert.ok(sameLinkToken(secret, secret));
+  assert.ok(!sameLinkToken(secret, `${secret.slice(0, -1)}0`));
+  assert.ok(!sameLinkToken(secret, null));
+  assert.equal(trialMailLinkUrl('https://acme.kanap.test/', 'unsubscribe', 'a.b'), 'https://acme.kanap.test/api/trial-mails/unsubscribe?t=a.b');
+  assert.equal(trialMailLinkUrl('https://acme.kanap.test', 'call', 'a.b', { from: 'mail_j0' }), 'https://acme.kanap.test/api/trial-mails/call?t=a.b&from=mail_j0');
 }
 
 function run() {
@@ -191,7 +192,7 @@ function run() {
   testEveryMailInEveryLanguage();
   testVariants();
   testFrenchTypography();
-  testSignedLinks();
+  testLinkTokens();
   // eslint-disable-next-line no-console
   console.log('trial-mails.spec: OK (7 cases)');
 }

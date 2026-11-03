@@ -27,7 +27,6 @@ export const TOKEN_SECRET_LABEL = {
   'mcp-oauth-code': `${TOKEN_SECRET_LABEL_PREFIX}mcp-oauth-code`,
   'mcp-access': `${TOKEN_SECRET_LABEL_PREFIX}mcp-access`,
   creation: `${TOKEN_SECRET_LABEL_PREFIX}creation`,
-  'trial-mail': `${TOKEN_SECRET_LABEL_PREFIX}trial-mail`,
 } as const;
 
 export type DerivedTokenFamily = keyof typeof TOKEN_SECRET_LABEL;
@@ -41,12 +40,11 @@ export const TOKEN_FAMILY_ENV: Record<TokenFamily, string> = {
   'mcp-oauth-code': 'MCP_OAUTH_CODE_SECRET',
   'mcp-access': 'MCP_ACCESS_TOKEN_SECRET',
   creation: 'CREATION_TOKEN_SECRET',
-  'trial-mail': 'TRIAL_MAIL_LINK_SECRET',
 };
 
 export type TokenSecretSource = 'dedicated-key' | 'derived-key' | 'jwt-secret';
 
-export const TOKEN_FAMILIES: TokenFamily[] = ['password-reset', 'provisioning', 'entra-state', 'mcp-oauth-code', 'mcp-access', 'creation', 'trial-mail'];
+export const TOKEN_FAMILIES: TokenFamily[] = ['password-reset', 'provisioning', 'entra-state', 'mcp-oauth-code', 'mcp-access', 'creation'];
 
 /**
  * Derive a family key from `JWT_SECRET` with a distinct, stable HMAC label (RFC 2104 PRF).
@@ -110,11 +108,6 @@ export function getMcpAccessTokenSecret(env: NodeJS.ProcessEnv = process.env): s
 /** Signing key of the token that lets a record's creator cancel its creation (common/creation). */
 export function getCreationTokenSecret(env: NodeJS.ProcessEnv = process.env): string {
   return resolveFamilySecret('creation', env).secret;
-}
-
-/** Signing key of the unsubscribe and discovery call links of the trial e-mails (email/trial-mails). */
-export function getTrialMailLinkSecret(env: NodeJS.ProcessEnv = process.env): string {
-  return resolveFamilySecret('trial-mail', env).secret;
 }
 
 export type TokenSecretPolicyEntry = {

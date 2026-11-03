@@ -37,7 +37,7 @@ import {
   type TrialCallLink,
   type TrialMode,
 } from './trial-mail-templates';
-import { signTrialMailLink, trialMailLinkUrl } from './trial-mail-links';
+import { parseTrialMailLinkToken, sameLinkToken, trialMailLinkToken, trialMailLinkUrl } from './trial-mail-links';
 
 /** Friedrich, who signs the trial e-mails, sends J+5 and gets the replies of the others. */
 export const TRIAL_MAIL_FOUNDER_ADDRESS = 'fried@kanap.net';
@@ -72,6 +72,8 @@ type TenantFacts = {
   mode: TrialMode | null;
   trialEnd: Date | null;
   deletionAt: Date | null;
+  /** The secret of the e-mail's links (`trial_mails.link_token`). */
+  linkToken: string;
   call: { timing: ReturnType<typeof discoveryCallTiming>; date: Date | null };
 };
 
@@ -294,6 +296,7 @@ export class TrialMailsService implements OnModuleInit {
       mode,
       trialEnd: subscription.trial_end ? new Date(subscription.trial_end) : null,
       deletionAt,
+      linkToken: state.link_token as unknown as string,
       call: {
         timing: discoveryCallTiming(call, now),
         date: call?.scheduled_at ? new Date(call.scheduled_at) : null,
@@ -302,12 +305,12 @@ export class TrialMailsService implements OnModuleInit {
   }
 
   /** The discovery call link of a mail, counted on the way (`/trial-mails/call`); null without a booking page or address. */
-  private callLink(appUrl: string, tenantId: string, milestone: TrialMailMilestone): TrialCallLink {
+  private callLink(appUrl: string, token: string, milestone: TrialMailMilestone): TrialCallLink {
     const placement = CALL_PLACEMENT[milestone];
     const { url, fallbackEmail } = discoveryCallConfig();
     if (!placement || (!url && !fallbackEmail)) return null;
     return {
-      url: trialMailLinkUrl(appUrl, 'call', signTrialMailLink(tenantId, placement)),
+      url: trialMailLinkUrl(appUrl, 'call', token, { from: placement }),
       display: url ? displayUrl(url) : fallbackEmail,
     };
   }
@@ -320,8 +323,9 @@ export class TrialMailsService implements OnModuleInit {
       workspace: row.name,
       appUrl,
     };
-    const unsubscribeUrl = trialMailLinkUrl(appUrl, 'unsubscribe', signTrialMailLink(row.id, 'unsubscribe'));
-    const call = this.callLink(appUrl, row.id, facts.milestone);
+    const token = trialMailLinkToken(row.id, facts.linkToken);
+    const unsubscribeUrl = trialMailLinkUrl(appUrl, 'unsubscribe', token);
+    const call = this.callLink(appUrl, token, facts.milestone);
     let content: EmailContent;
     switch (facts.milestone) {
       case 'j0':
@@ -355,17 +359,34 @@ export class TrialMailsService implements OnModuleInit {
     };
   }
 
+  /**
+   * The workspace a link token names, when its secret is the one stored in `trial_mails`; null
+   * otherwise (a malformed token, an unknown or deleted workspace, another secret).
+   */
+  async linkTenant(token: unknown): Promise<string | null> {
+    const parsed = parseTrialMailLinkToken(token);
+    if (!parsed) return null;
+    const [tenant] = await this.dataSource.query(`SELECT 1 FROM tenants WHERE id = $1 AND deleted_at IS NULL`, [parsed.tenantId]);
+    if (!tenant) return null;
+    const stored = await withTenant(this.dataSource, parsed.tenantId, async (manager) => {
+      const [row]: Array<{ link_token: string }> = await manager.query(`SELECT link_token FROM trial_mails WHERE tenant_id = $1`, [parsed.tenantId]);
+      return row?.link_token ?? null;
+    });
+    return sameLinkToken(parsed.linkToken, stored) ? parsed.tenantId : null;
+  }
+
   /** Unsubscribes the workspace from the trial e-mails (the thank-you stays). Idempotent. */
   async unsubscribe(tenantId: string): Promise<void> {
     await withTenant(this.dataSource, tenantId, async (manager) => {
-      const rows: unknown[] = await manager.query(
-        `INSERT INTO trial_mails (tenant_id, unsubscribed_at) VALUES ($1, now())
-         ON CONFLICT (tenant_id) DO UPDATE SET unsubscribed_at = now(), updated_at = now()
-           WHERE trial_mails.unsubscribed_at IS NULL
-         RETURNING 1`,
+      const [{ changed }]: Array<{ changed: number }> = await manager.query(
+        `WITH changed AS (
+           UPDATE trial_mails SET unsubscribed_at = now(), updated_at = now()
+            WHERE tenant_id = $1 AND unsubscribed_at IS NULL
+           RETURNING 1)
+         SELECT count(*)::int AS changed FROM changed`,
         [tenantId],
       );
-      if (rows.length === 0) return;
+      if (changed === 0) return;
       await writeAuditLog(manager, {
         table: DISCOVERY_CALL_AUDIT_TABLE,
         recordId: tenantId,

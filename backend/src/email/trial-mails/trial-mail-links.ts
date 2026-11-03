@@ -1,43 +1,35 @@
-import { createHmac, timingSafeEqual } from 'crypto';
-import { getTrialMailLinkSecret } from '../../auth/token-secret.util';
-import { isDiscoveryCallPlacement, type DiscoveryCallPlacement } from '../../discovery-call/discovery-call.service';
+import { timingSafeEqual } from 'crypto';
 
 /**
- * The signed links of the trial e-mails: unsubscribe, and the discovery call with its placement.
- * A token is `<tenant>.<purpose>.<signature>`: an HMAC-SHA256, under the `trial-mail` family key
- * (`auth/token-secret.util.ts`), of the tenant and the purpose. Nothing is stored and a token never
- * expires: an unsubscribe link must work as long as the e-mail is read.
+ * The links of the trial e-mails: unsubscribe, and the discovery call. A token is
+ * `<tenant>.<link_token>`, the random secret stored in the workspace's `trial_mails` row. No
+ * server key is involved and a token never expires: an unsubscribe link works as long as the
+ * workspace exists, whatever key is changed.
  */
 
-export type TrialMailLinkPurpose = 'unsubscribe' | DiscoveryCallPlacement;
+const TOKEN = /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.([0-9a-f]{64})$/;
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-function sign(tenantId: string, purpose: string, env: NodeJS.ProcessEnv): Buffer {
-  return createHmac('sha256', getTrialMailLinkSecret(env)).update(['kanap-trial-mail', tenantId.toLowerCase(), purpose].join('\n'), 'utf8').digest();
+export function trialMailLinkToken(tenantId: string, linkToken: string): string {
+  return `${tenantId.toLowerCase()}.${linkToken}`;
 }
 
-export function signTrialMailLink(tenantId: string, purpose: TrialMailLinkPurpose, env: NodeJS.ProcessEnv = process.env): string {
-  return `${tenantId.toLowerCase()}.${purpose}.${sign(tenantId, purpose, env).toString('base64url')}`;
+/** The tenant and the secret a token names, null when it is not shaped like one. Never throws. */
+export function parseTrialMailLinkToken(token: unknown): { tenantId: string; linkToken: string } | null {
+  if (typeof token !== 'string') return null;
+  const match = TOKEN.exec(token.trim().toLowerCase());
+  return match ? { tenantId: match[1], linkToken: match[2] } : null;
 }
 
-/** The tenant and purpose of a valid token, null otherwise. Never throws on a bad token. */
-export function verifyTrialMailLink(
-  token: unknown,
-  env: NodeJS.ProcessEnv = process.env,
-): { tenantId: string; purpose: TrialMailLinkPurpose } | null {
-  if (typeof token !== 'string' || token.length > 200) return null;
-  const match = /^([0-9a-fA-F-]{36})\.([a-z0-9_]{1,32})\.([A-Za-z0-9_-]{43})$/.exec(token);
-  if (!match || !UUID.test(match[1])) return null;
-  const [, tenantId, purpose, signature] = match;
-  if (purpose !== 'unsubscribe' && !isDiscoveryCallPlacement(purpose)) return null;
-  const given = Buffer.from(signature, 'base64url');
-  const expected = sign(tenantId, purpose, env);
-  if (given.length !== expected.length || !timingSafeEqual(given, expected)) return null;
-  return { tenantId: tenantId.toLowerCase(), purpose: purpose as TrialMailLinkPurpose };
+/** Whether a given secret is the stored one, in constant time. */
+export function sameLinkToken(given: string, stored: string | null | undefined): boolean {
+  if (!stored) return false;
+  const a = Buffer.from(given, 'utf8');
+  const b = Buffer.from(stored, 'utf8');
+  return a.length === b.length && timingSafeEqual(a, b);
 }
 
 /** The address of a link: the workspace's own, through the web server's `/api`. */
-export function trialMailLinkUrl(appUrl: string, route: 'unsubscribe' | 'call', token: string): string {
-  return `${appUrl.replace(/\/$/, '')}/api/trial-mails/${route}?t=${encodeURIComponent(token)}`;
+export function trialMailLinkUrl(appUrl: string, route: 'unsubscribe' | 'call', token: string, query: Record<string, string> = {}): string {
+  const params = new URLSearchParams({ t: token, ...query });
+  return `${appUrl.replace(/\/$/, '')}/api/trial-mails/${route}?${params.toString()}`;
 }
