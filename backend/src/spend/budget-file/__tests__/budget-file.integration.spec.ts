@@ -284,11 +284,15 @@ async function testGroupedMatchesPayload(
   });
   assert.equal('updated' in loaded && loaded.updated, 1);
   const [amountAudit] = await runner.query(
-    `SELECT before_json FROM audit_log
+    `SELECT before_json, after_json FROM audit_log
       WHERE tenant_id = $1 AND table_name = 'spend_amounts' AND record_id = $2`,
     [tenantId, grouped.versionId],
   );
-  assert.equal(amountAudit.before_json, null, 'a stored partial period with no costed lines takes the grouped path');
+  // The grouped path writes yearly totals, not the month rows of writeAmountsPayload.
+  // Twelve months of 100 make a stored yearly total of 1200; the file sets 2400.
+  assert.equal(Array.isArray(amountAudit.after_json), false, 'a stored partial period with no costed lines takes the grouped path');
+  assert.equal(amountAudit.after_json?.totals?.planned, '2400');
+  assert.deepEqual(amountAudit.before_json, { totals: { planned: '1200' } }, 'the grouped path records the stored yearly total');
 
   const version = { id: payload.versionId, tenant_id: tenantId, budget_year: year };
   const written = await writeAmountsPayload(
@@ -1427,11 +1431,14 @@ async function main() {
     );
     assert.deepEqual([round.method, round.spread_profile_name], ['spread', 'flat']);
     const [amountAudit] = await runner.query(
-      `SELECT record_id::text AS record_id, source FROM audit_log WHERE tenant_id = $1 AND table_name = 'spend_amounts'`,
+      `SELECT record_id::text AS record_id, source, before_json, after_json
+         FROM audit_log WHERE tenant_id = $1 AND table_name = 'spend_amounts'`,
       [tenantId],
     );
     assert.equal(amountAudit.record_id, versionId);
     assert.equal(amountAudit.source, 'budget_file');
+    assert.equal(amountAudit.before_json?.totals?.planned, '100', 'an existing line records the stored yearly total');
+    assert.equal(amountAudit.after_json?.totals?.planned, '200');
     const [operation] = await runner.query(
       `SELECT after_json->>'operation' AS operation, after_json->>'year' AS year, source
          FROM audit_log WHERE tenant_id = $1 AND table_name = 'spend_items' AND after_json->>'operation' IS NOT NULL`,
@@ -1467,10 +1474,17 @@ async function main() {
     assert.equal(yearPreflight.ok, true, JSON.stringify(yearPreflight.errors));
     await service.importFile('opex', Buffer.from(yearFile), yearPreflight.snapshot, caller, options, loadDeps);
     const [yearVersion] = await runner.query(
-      `SELECT input_grain::text AS input_grain FROM spend_versions WHERE tenant_id = $1 AND spend_item_id = $2`,
+      `SELECT id::text AS id, input_grain::text AS input_grain FROM spend_versions WHERE tenant_id = $1 AND spend_item_id = $2`,
       [tenantId, yearItem],
     );
     assert.equal(yearVersion.input_grain, 'annual');
+    const [yearAudit] = await runner.query(
+      `SELECT before_json, after_json FROM audit_log
+        WHERE tenant_id = $1 AND table_name = 'spend_amounts' AND record_id = $2`,
+      [tenantId, yearVersion.id],
+    );
+    assert.equal(yearAudit.before_json, null, 'a new version keeps no before');
+    assert.equal(yearAudit.after_json?.totals?.planned, '12');
 
     await assert.rejects(
       () => service.importFile('opex', Buffer.from(exported.content.replace('100.00', '200.00')), report.snapshot, caller, options, loadDeps),
