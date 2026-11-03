@@ -30,7 +30,7 @@ import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations
 import { csvExportFormat } from '../common/csv/csv-export.service';
 import { parseExportFormat } from '../common/xlsx/format';
 import { csvExportBody } from '../common/csv/send-csv-export';
-import { cancelCreation, readCreationChanges, withCreationToken } from '../common/creation/creation-routes';
+import { readCreationChanges, withCreationToken } from '../common/creation/creation-routes';
 
 /**
  * The list's `covered_application` filter, for a reader of the applications only (a Business
@@ -198,12 +198,13 @@ export class ContractsController {
     return readCreationChanges('contracts', id, token, ctx);
   }
 
-  // Cancel: the creator deletes the contract they just created, with its token, without the delete right.
+  // Cancel: the creator deletes the contract they just created, with its token, without the delete
+  // right, a limited data access included. The service checks the token itself, before its delete window.
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'member')
   @Delete(':id/creation')
-  cancelCreation(@Param('id', new ParseUUIDPipe()) id: string, @Body() body: { token?: string }, @Tenant() ctx: TenantRequest) {
-    return cancelCreation('contracts', id, body?.token, ctx, () => this.deleteSvc.delete(id, { manager: ctx.manager, userId: ctx.userId || null }));
+  async cancelCreation(@Param('id', new ParseUUIDPipe()) id: string, @Body() body: { token?: string }, @Tenant() ctx: TenantRequest): Promise<void> {
+    await this.deleteSvc.cancelCreation(id, body?.token, ctx);
   }
 
   @UseGuards(PermissionGuard)

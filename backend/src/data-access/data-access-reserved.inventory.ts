@@ -497,7 +497,7 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
       bulkReplaceBudgetLines: CONTRACT_WRITE, // POST :id/budget-lines/bulk-replace
       bulkReplaceCapex: CONTRACT_WRITE, // POST :id/capex-items/bulk-replace
       bulkReplaceTechnologies: CONTRACT_WRITE, // POST :id/technologies/bulk-replace
-      cancelCreation: CREATION_CANCEL, // DELETE :id/creation
+      cancelCreation: 'cancel of a contract being created, by its creator with its creation token (that contract only): the service checks the token itself, locks the contract under the policies, refuses a contract another person wrote on, then a limited person\'s delete runs in withCreatorCancelAccess, for the person whose access applies only', // DELETE :id/creation
       compliance: READ, // GET :id/compliance
       create: CONTRACT_WRITE, // POST (root)
       createTask: CONTRACT_WRITE, // POST :id/tasks

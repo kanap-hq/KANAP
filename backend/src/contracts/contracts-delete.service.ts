@@ -12,6 +12,11 @@ import { englishList, RecordInUseException, refusalDetails, type DeleteRefusal }
 import { BUDGET_NATURES, naturesAnd } from '../spend/budget-nature';
 import { currentTenantId, deleteBlobs, deleteItemTasks, unreferencedPaths } from '../spend/item-delete-cleanup';
 import { UserTimeAggregateService } from '../portfolio/services/user-time-aggregate.service';
+import type { TenantRequest } from '../common/decorators/tenant.decorator';
+import { requestContextMissing } from '../auth/module-right-required';
+import { assertCreationToken } from '../common/creation/creation-routes';
+import { assertCreatorAloneSinceCreation } from '../common/creation/creation-changes';
+import { withCreatorCancelAccess } from '../data-access/creator-cancel-access';
 
 /**
  * What deleting contracts removes, for the confirmation: the linked objects that lose their link
@@ -147,6 +152,32 @@ export class ContractsDeleteService extends BaseDeleteService<Contract> {
   override async delete(id: string, opts?: DeleteOptions): Promise<void> {
     const manager = opts?.manager ?? this.repository.manager;
     const paths = await this.deleteOne(id, manager, opts?.userId ?? null, opts?.skipAudit);
+    await deleteBlobs(this.storage, paths, this.logger);
+  }
+
+  /**
+   * The screen's "Cancel" of a contract being created: its creator deletes it with its creation
+   * token, through the same delete (refusals, links, tasks, audit entry). The delete of a contract
+   * is reserved to unscoped persons (spec §2.7); as for a budget line being created
+   * (`BudgetLinesService.cancelCreation`), its creator may still take it back. Called by its route
+   * only (`data-access-inventory.spec.ts`).
+   * - The token is checked first, against the request's tenant and person (403
+   *   `CREATION_CANCEL_EXPIRED`).
+   * - The contract is locked FOR UPDATE under the person's access: a contract hidden from them, or
+   *   one they may no longer modify, is 404. Under that lock, a contract another person wrote on is
+   *   refused with `CREATION_CANCEL_EXPIRED`.
+   * - A limited person's delete then runs in `withCreatorCancelAccess`, for this contract only; its
+   *   attachment files go once the window is closed and the person's access is back.
+   */
+  async cancelCreation(id: string, token: unknown, ctx: TenantRequest): Promise<void> {
+    const manager = ctx.manager;
+    if (!manager) throw requestContextMissing('Request context is missing');
+    const userId = ctx.userId || '';
+    assertCreationToken('contracts', id, token, ctx);
+    const locked = await manager.query(`SELECT id FROM contracts WHERE tenant_id = $1 AND id = $2 FOR UPDATE`, [ctx.tenantId, id]);
+    if (locked.length === 0) throw new NotFoundException('Contract not found.');
+    await assertCreatorAloneSinceCreation(manager, ctx.tenantId, 'contracts', id, userId);
+    const paths = await withCreatorCancelAccess(manager, userId, (windowManager) => this.deleteOne(id, windowManager, userId));
     await deleteBlobs(this.storage, paths, this.logger);
   }
 

@@ -18,7 +18,8 @@ function managerOf(ctx: TenantRequest) {
   return ctx.manager;
 }
 
-function assertCreationToken(table: string, id: string, token: unknown, ctx: TenantRequest): void {
+/** 403 `CREATION_CANCEL_EXPIRED` unless `token` is this person's for this record. */
+export function assertCreationToken(table: string, id: string, token: unknown, ctx: TenantRequest): void {
   if (!verifyCreationToken(token, { tenantId: ctx.tenantId, family: table, recordId: String(id ?? ''), userId: ctx.userId })) {
     throw creationCancelExpired();
   }
