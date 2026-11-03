@@ -109,7 +109,114 @@ async function testRelationTitleNamesTheReferenceOnce() {
   console.log('  relation reference label: OK');
 }
 
-testRelationTitleNamesTheReferenceOnce().catch((error) => {
+/**
+ * A link written by Plaid from the budget line names the line as parent, as the screens do, so
+ * the line's History tab shows it. The same link written from the application carries no parent:
+ * one write may touch several lines (`record-history/records/spend_items.ts`).
+ */
+async function testRelationAuditParentsTheBudgetLine() {
+  const line = await runRelation({
+    id: 'preview-line',
+    target_entity_type: 'budget_lines',
+    target_entity_id: LINE_ID,
+    relation: 'applications',
+    next: [{
+      key: APP_ID,
+      label: 'APP-36 - CheeseTrack',
+      payload: { application_id: APP_ID },
+    }],
+  });
+  assert.equal(line.audited.length, 1);
+  assert.equal(line.audited[0].table, 'application_spend_items');
+  assert.equal(line.audited[0].recordId, LINE_ID);
+  assert.deepEqual(line.audited[0].parent, { table: 'spend_items', id: LINE_ID });
+
+  const application = await runRelation({
+    id: 'preview-app',
+    target_entity_type: 'applications',
+    target_entity_id: APP_ID,
+    relation: 'budget_lines',
+    next: [{
+      key: LINE_ID,
+      label: 'BL-7 - Licences',
+      payload: { spend_item_id: LINE_ID },
+    }],
+  });
+  assert.equal(application.audited.length, 1);
+  assert.equal(application.audited[0].table, 'application_spend_items');
+  assert.equal(application.audited[0].recordId, APP_ID);
+  assert.equal(application.audited[0].parent, undefined);
+  console.log('  relation audit parent: OK');
+}
+
+type AuditedRelation = {
+  table: string;
+  recordId?: string;
+  parent?: { table: string; id: string };
+};
+
+async function runRelation(input: {
+  id: string;
+  target_entity_type: string;
+  target_entity_id: string;
+  relation: string;
+  next: Array<{ key: string; label: string; payload: Record<string, unknown> }>;
+}): Promise<{ audited: AuditedRelation[] }> {
+  const audited: AuditedRelation[] = [];
+  const queries: string[] = [];
+  const manager = {
+    query: async (sql: string) => {
+      const text = sql.replace(/\s+/g, ' ').trim();
+      queries.push(text);
+      if (/FROM\s+users\b|FROM\s+user_roles\b|assigned_roles/.test(text)) return [];
+      if (/FOR NO KEY UPDATE/.test(text)) return [{ ok: 1 }];
+      if (/SELECT DISTINCT nature FROM spend_items/.test(text)) return [{ nature: 'opex' }];
+      if (/SELECT \* FROM spend_items/.test(text)) {
+        return [{ id: LINE_ID, item_number: 7, product_name: 'Licences', nature: 'opex' }];
+      }
+      return [];
+    },
+  };
+  const service = new AiRelationMutationSupportService(
+    { log: async (entry: AuditedRelation) => { audited.push(entry); } } as any,
+    null as any,
+    null as any,
+    null as any,
+  );
+  const context: AiExecutionContextWithManager = {
+    tenantId: TENANT_ID,
+    userId: USER_ID,
+    isPlatformHost: false,
+    surface: 'chat',
+    authMethod: 'jwt',
+    conversationId: 'conv-1',
+    manager: manager as any,
+  };
+  try {
+    await service.executePreview(context, {
+      id: input.id,
+      target_entity_type: input.target_entity_type,
+      target_entity_id: input.target_entity_id,
+      mutation_input: {
+        entity_type: input.target_entity_type,
+        relation: input.relation,
+        next_items: input.next,
+      },
+      current_values: { items: [] },
+    } as any);
+  } catch (error) {
+    const detail = queries.map((query) => `  ${query}`).join('\n');
+    throw new Error(`${error instanceof Error ? error.message : String(error)}\nqueries:\n${detail}`);
+  }
+  return { audited };
+}
+
+async function main(): Promise<void> {
+  await testRelationTitleNamesTheReferenceOnce();
+  await testRelationAuditParentsTheBudgetLine();
+}
+
+main().catch((error) => {
   console.error(error);
   process.exit(1);
 });
