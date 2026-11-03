@@ -799,6 +799,8 @@ export class AiEntityService {
       params,
     );
 
+    // Once for the call: the labels and ranks the application detail already sends.
+    const catalog = rows.length > 0 ? await readClassificationCatalog(context) : null;
     return {
       items: rows.map((row: any) => ({
         ...toSummary('applications', {
@@ -817,6 +819,7 @@ export class AiEntityService {
             supplier: row.supplier_name ?? null,
             business_owner: row.business_owner_names || null,
             it_owner: row.it_owner_names || null,
+            ...(catalog ? classificationLabels(row, catalog) : {}),
           },
         }, row.summary),
         _score: row.score ?? 1,
@@ -1994,6 +1997,8 @@ export class AiEntityService {
        ORDER BY a.name ASC`,
       params,
     );
+    // Once for the call: the labels and ranks the application detail already sends.
+    const catalog = rows.length > 0 ? await readClassificationCatalog(context) : null;
     return rows.map((row) => ({
       ...toSummary('applications', row),
       metadata: {
@@ -2009,6 +2014,7 @@ export class AiEntityService {
         version: row.version ?? null,
         supplier: row.supplier_name ?? null,
         it_owner: row.it_owner_names ?? null,
+        ...(catalog ? classificationLabels(row, catalog) : {}),
       },
     }));
   }
@@ -2279,7 +2285,10 @@ export class AiEntityService {
     const scored = rows.map((row) => this.searchIndexRowToSummary(row));
     // The reference data joins the first page, at its rank among the index's rows.
     const page = offset === 0 ? mergeByScore(scored, hits.items).slice(0, limit) : scored;
-    const items = await this.withUserLookupOnly(context, page.map(({ _score, ...item }) => item));
+    const items = await this.attachApplicationClassification(
+      context,
+      await this.withUserLookupOnly(context, page.map(({ _score, ...item }) => item)),
+    );
     const total = indexTotal + hits.total;
     const truncated = offset + items.length < total;
 
@@ -2520,6 +2529,50 @@ export class AiEntityService {
    */
   private async usersAdminView(context: AiExecutionContextWithManager): Promise<boolean> {
     return this.policy.canReadEntityType(context, 'data_access', context.manager);
+  }
+
+  /**
+   * Labels and ranks of the four classifications, as the application detail gives them.
+   * The search index stores the business criticality code. The four codes are read once
+   * for the applications of this page, and the catalog once per call.
+   */
+  private async attachApplicationClassification<T extends AiEntitySummaryDto>(
+    context: AiExecutionContextWithManager,
+    items: T[],
+  ): Promise<T[]> {
+    const ids = [...new Set(items.filter((item) => item.type === 'applications').map((item) => item.id))];
+    if (ids.length === 0) return items;
+    const catalog = await readClassificationCatalog(context);
+    const rows = await context.manager.query<Array<{
+      id: string;
+      criticality: string | null;
+      cyber_criticality: string | null;
+      data_class: string | null;
+      recovery_wave: string | null;
+    }>>(
+      `SELECT id, criticality, cyber_criticality, data_class, recovery_wave
+       FROM applications
+       WHERE tenant_id = $1
+         AND id = ANY($2::uuid[])`,
+      [context.tenantId, ids],
+    );
+    const byId = new Map(rows.map((row) => [row.id, row]));
+    return items.map((item) => {
+      if (item.type !== 'applications') return item;
+      const source = byId.get(item.id);
+      if (!source) return item;
+      return {
+        ...item,
+        metadata: {
+          ...(item.metadata ?? {}),
+          criticality: source.criticality ?? null,
+          cyber_criticality: source.cyber_criticality ?? null,
+          data_class: source.data_class ?? null,
+          recovery_wave: source.recovery_wave ?? null,
+          ...classificationLabels(source, catalog),
+        },
+      };
+    });
   }
 
   private searchIndexRowToSummary(row: any): AiEntitySummaryDto & { _score: number } {
@@ -2809,7 +2862,10 @@ export class AiEntityService {
         0,
       );
       return {
-        items: await this.withUserLookupOnly(context, rows.map((row) => this.searchIndexRowToSummary(row))),
+        items: await this.attachApplicationClassification(
+          context,
+          await this.withUserLookupOnly(context, rows.map((row) => this.searchIndexRowToSummary(row))),
+        ),
         total,
       };
     }
