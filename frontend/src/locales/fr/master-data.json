@@ -952,11 +952,6 @@
     },
     "export": "Exporter les processus métier",
     "import": "Importer les processus métier",
-    "sections": {
-      "basicInfo": "Informations de base",
-      "classification": "Classification",
-      "details": "Détails"
-    },
     "applications": {
       "title": "Applications",
       "empty": "Aucune application liée.",
@@ -972,18 +967,14 @@
       }
     },
     "fields": {
-      "nameHelper": "Utilisez un nom clair incluant le code, ex. Order-to-Cash (O2C)",
-      "descriptionPlaceholder": "Description courte du processus",
-      "statusHelper": "Désactivez pour rendre ce processus inactif",
+      "descriptionPlaceholder": "ex. De la commande client à l’encaissement",
       "categories": "Catégories",
-      "categoriesHelper": "Attribuez une ou plusieurs catégories",
       "processOwner": "Responsable du processus",
-      "processOwnerHelper": "Utilisateur responsable en dernier ressort du processus",
       "itOwner": "Responsable IT",
-      "itOwnerHelper": "Contact IT responsable des outils / systèmes supportant ce processus",
-      "notesPlaceholder": "Notes internes, liens vers les procédures ou les cartographies de processus",
+      "notesPlaceholder": "ex. Lien vers la cartographie du processus",
       "nameRequired": "Le nom est requis",
-      "nameTaken": "Un autre processus métier porte déjà ce nom."
+      "nameTaken": "Un autre processus métier porte déjà ce nom.",
+      "lifecycle": "Cycle de vie"
     },
     "categoryManager": {
       "title": "Gérer les catégories de processus métier",
@@ -1011,6 +1002,12 @@
     "deleteWarning_other": "Cette action est irréversible. Les demandes liées à ces processus sont conservées, sans ce lien.",
     "messages": {
       "deleteFailed": "Échec de la suppression du processus métier."
+    },
+    "tabs": {
+      "relations": "Relations"
+    },
+    "creation": {
+      "record": "Le processus métier"
     }
   },
   "admin": {

@@ -952,11 +952,6 @@
     },
     "export": "Exportar procesos de negocio",
     "import": "Importar procesos de negocio",
-    "sections": {
-      "basicInfo": "Información básica",
-      "classification": "Clasificación",
-      "details": "Detalles"
-    },
     "applications": {
       "title": "Aplicaciones",
       "empty": "Ninguna aplicación vinculada.",
@@ -972,18 +967,14 @@
       }
     },
     "fields": {
-      "nameHelper": "Utilice un nombre claro incluyendo el código, ej. Order-to-Cash (O2C)",
-      "descriptionPlaceholder": "Descripción breve del proceso",
-      "statusHelper": "Desactive para deshabilitar este proceso",
+      "descriptionPlaceholder": "p. ej., Del pedido del cliente al cobro",
       "categories": "Categorías",
-      "categoriesHelper": "Asigne una o más categorías",
       "processOwner": "Responsable del proceso",
-      "processOwnerHelper": "Usuario responsable final del proceso",
       "itOwner": "Responsable IT",
-      "itOwnerHelper": "Contacto IT responsable de las herramientas / sistemas que soportan este proceso",
-      "notesPlaceholder": "Notas internas, enlaces a SOPs o mapas de procesos",
+      "notesPlaceholder": "p. ej., Enlace al mapa del proceso",
       "nameRequired": "El nombre es obligatorio",
-      "nameTaken": "Otro proceso de negocio ya tiene este nombre."
+      "nameTaken": "Otro proceso de negocio ya tiene este nombre.",
+      "lifecycle": "Ciclo de vida"
     },
     "categoryManager": {
       "title": "Gestionar categorías de procesos de negocio",
@@ -1011,6 +1002,12 @@
     "deleteWarning_other": "Esta acción no se puede deshacer. Las solicitudes vinculadas a estos procesos se conservan, sin el vínculo.",
     "messages": {
       "deleteFailed": "Error al eliminar el proceso de negocio."
+    },
+    "tabs": {
+      "relations": "Relaciones"
+    },
+    "creation": {
+      "record": "El proceso de negocio"
     }
   },
   "admin": {

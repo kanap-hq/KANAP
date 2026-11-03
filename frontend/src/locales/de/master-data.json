@@ -952,11 +952,6 @@
     },
     "export": "Geschäftsprozesse exportieren",
     "import": "Geschäftsprozesse importieren",
-    "sections": {
-      "basicInfo": "Basisinformationen",
-      "classification": "Klassifizierung",
-      "details": "Details"
-    },
     "applications": {
       "title": "Anwendungen",
       "empty": "Keine Anwendung verknüpft.",
@@ -972,18 +967,14 @@
       }
     },
     "fields": {
-      "nameHelper": "Verwenden Sie einen klaren Namen inkl. Code, z. B. Order-to-Cash (O2C)",
-      "descriptionPlaceholder": "Kurzbeschreibung des Prozesses",
-      "statusHelper": "Deaktivieren, um diesen Prozess zu sperren",
+      "descriptionPlaceholder": "z. B. Vom Kundenauftrag bis zum Zahlungseingang",
       "categories": "Kategorien",
-      "categoriesHelper": "Weisen Sie eine oder mehrere Kategorien zu",
       "processOwner": "Prozessverantwortlicher",
-      "processOwnerHelper": "Benutzer, der letztendlich für den Prozess verantwortlich ist",
       "itOwner": "IT-Verantwortlicher",
-      "itOwnerHelper": "IT-Kontakt, verantwortlich für Tools / Systeme, die diesen Prozess unterstützen",
-      "notesPlaceholder": "Interne Notizen, Links zu SOPs oder Prozesslandkarten",
+      "notesPlaceholder": "z. B. Link zur Prozesslandkarte",
       "nameRequired": "Name ist erforderlich",
-      "nameTaken": "Ein anderer Geschäftsprozess hat bereits diesen Namen."
+      "nameTaken": "Ein anderer Geschäftsprozess hat bereits diesen Namen.",
+      "lifecycle": "Lebenszyklus"
     },
     "categoryManager": {
       "title": "Geschäftsprozess-Kategorien verwalten",
@@ -1011,6 +1002,12 @@
     "deleteWarning_other": "Dies kann nicht rückgängig gemacht werden. Anfragen, die mit diesen Prozessen verknüpft sind, bleiben ohne die Verknüpfung erhalten.",
     "messages": {
       "deleteFailed": "Der Geschäftsprozess konnte nicht gelöscht werden."
+    },
+    "tabs": {
+      "relations": "Beziehungen"
+    },
+    "creation": {
+      "record": "Der Geschäftsprozess"
     }
   },
   "admin": {
