@@ -1,8 +1,8 @@
 {
   "conversationList": {
-    "archive": "Archivieren",
-    "archiveConfirmMessage": "Die Konversation verschwindet aus Ihrer Liste. Sie kann nicht wieder geöffnet werden.",
-    "archiveConfirmTitle": "Diese Konversation archivieren?",
+    "delete": "Löschen",
+    "deleteConfirmMessage": "Die Konversation und ihre Nachrichten werden gelöscht. Dies kann nicht rückgängig gemacht werden.",
+    "deleteConfirmTitle": "Diese Konversation löschen?",
     "dateGroups": {
       "lastWeek": "Letzte 7 Tage",
       "older": "Älter",

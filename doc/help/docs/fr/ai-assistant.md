@@ -63,9 +63,9 @@ La liste contient :
 Chaque ligne affiche le titre de la conversation (ou **Sans titre** si aucun n'a encore été défini). Survolez une ligne ou placez-y le focus pour faire apparaître :
 
 - Une icône crayon : **Renommer** la conversation. Double-cliquez sur le titre pour faire de même.
-- Une icône corbeille : **Archiver** la conversation. Les conversations archivées disparaissent de la liste. Si vous archivez la conversation actuellement ouverte, Plaid bascule vers un nouveau chat vide.
+- Une icône corbeille : **Supprimer** la conversation. La conversation et ses messages sont supprimés. Cette action est irréversible. Si vous supprimez la conversation actuellement ouverte, Plaid bascule vers un nouveau chat vide.
 
-La recherche filtre la liste par titre au fur et à mesure de votre saisie. Le renommage et l'archivage sont enregistrés immédiatement.
+La recherche filtre la liste par titre au fur et à mesure de votre saisie. Le renommage et la suppression sont enregistrés immédiatement.
 
 ## Rédiger un message
 

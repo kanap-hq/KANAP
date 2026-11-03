@@ -63,9 +63,9 @@ Die Liste enthält:
 Jede Zeile zeigt den Konversationstitel (oder **Ohne Titel**, wenn noch keiner festgelegt wurde). Fahren Sie mit der Maus über eine Zeile oder fokussieren Sie sie, um Folgendes einzublenden:
 
 - Ein Stiftsymbol: die Konversation **Umbenennen**. Ein Doppelklick auf den Titel bewirkt dasselbe.
-- Ein Papierkorbsymbol: die Konversation **Archivieren**. Archivierte Konversationen verschwinden aus der Liste. Wenn Sie die aktuell geöffnete Konversation archivieren, wechselt Plaid zu einem neuen, leeren Chat.
+- Ein Papierkorbsymbol: die Konversation **Löschen**. Die Konversation und ihre Nachrichten werden gelöscht. Dies kann nicht rückgängig gemacht werden. Wenn Sie die aktuell geöffnete Konversation löschen, wechselt Plaid zu einem neuen, leeren Chat.
 
-Die Suche filtert die Liste während der Eingabe nach Titel. Umbenennen und Archivieren werden sofort gespeichert.
+Die Suche filtert die Liste während der Eingabe nach Titel. Umbenennen und Löschen werden sofort gespeichert.
 
 ## Eine Nachricht schreiben
 
