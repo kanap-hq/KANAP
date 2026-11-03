@@ -58,6 +58,20 @@ describe('CsvImportDialogV2', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Insufficient permission');
   });
 
+  it('sends the screen language with the file', async () => {
+    post.mockResolvedValueOnce({
+      data: { ok: true, dryRun: true, total: 0, inserted: 0, updated: 0, skipped: 0, errors: [], warnings: [] },
+    });
+    renderDialog();
+    fireEvent.click(screen.getByRole('button', { name: 'buttons.validate' }));
+    expect(await screen.findByRole('button', { name: 'buttons.import' })).toBeInTheDocument();
+    expect(post).toHaveBeenCalledWith(
+      '/portfolio/projects/import',
+      expect.any(FormData),
+      { params: expect.objectContaining({ language: 'en', dryRun: true }) },
+    );
+  });
+
   it('names the workflow presets and the validate step buttons through i18n', async () => {
     post.mockResolvedValueOnce({
       data: {

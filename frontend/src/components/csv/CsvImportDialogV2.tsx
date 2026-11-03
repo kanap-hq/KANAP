@@ -53,6 +53,7 @@ export default function CsvImportDialogV2({
   example,
 }: CsvImportDialogV2Props) {
   const { t, i18n } = useTranslation('common');
+  const language = screenLanguage(i18n.resolvedLanguage || i18n.language);
   const { accept, workbook } = useImportFiles();
   const {
     file,
@@ -113,7 +114,7 @@ export default function CsvImportDialogV2({
     try {
       const fd = new FormData();
       fd.append('file', file);
-      const queryParams = { ...(params ?? {}), dryRun, mode, operation };
+      const queryParams = { ...(params ?? {}), dryRun, mode, operation, language };
       const res = await api.post(`${endpoint}/import`, fd, { params: queryParams });
       const data = res.data as CsvImportResult;
       setResult(data);
@@ -138,7 +139,7 @@ export default function CsvImportDialogV2({
     setError(null);
     try {
       // The template follows the screen, as the export does.
-      const queryParams = { ...(params ?? {}), scope: 'template', language: screenLanguage(i18n.resolvedLanguage || i18n.language) };
+      const queryParams = { ...(params ?? {}), scope: 'template', language };
       const res = await api.get(`${endpoint}/export`, { params: queryParams, responseType: 'blob' });
       const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8' });
       const url = window.URL.createObjectURL(blob);
