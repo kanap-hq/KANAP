@@ -9,7 +9,6 @@ Navegue a **Panorama IT > Ubicaciones** para abrir el registro de ubicaciones. H
 Mientras la ubicación se está creando, el encabezado muestra **Crear** y **Cancelar** hasta que salga de la página. **Crear** conserva la ubicación y le lleva de vuelta al punto de partida: la lista o la pantalla anterior. Si aún falta un campo obligatorio, se marca en su lugar. **Cancelar** sale sin conservar nada. En una ubicación ya creada, la elimina. Si introdujo algo más que lo necesario para crearla, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar ubicaciones. Si sale de la página de otra forma, la ubicación se conserva.
 
 **Campos obligatorios**:
-- **Código**: Un identificador corto único (p. ej., `DC-EU-WEST`, `AWS-US-EAST-1`)
 - **Nombre**: Un nombre descriptivo para mostrar
 - **Tipo de alojamiento**: El tipo de instalación: centro de datos propio, colocación, región en la nube, etc.
 

@@ -9,7 +9,6 @@ Navigate to **IT Landscape -> Locations** to open the location registry. Click *
 While the location is being created, the header shows **Create** and **Cancel** until you leave it. **Create** keeps the location and takes you back to where you started: the list or the previous screen. If a required field is still missing, it is marked instead. **Cancel** leaves without keeping anything, and deletes the location if it was already created. If you entered more than what created it, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete locations. Leaving the location any other way keeps it.
 
 **Required fields**:
-- **Code**: A unique short identifier (e.g., `DC-EU-WEST`, `AWS-US-EAST-1`)
 - **Name**: A descriptive display name
 - **Hosting Type**: The kind of facility: on-premises data center, colocation, cloud region, etc.
 

@@ -9,7 +9,6 @@ Navigieren Sie zu **IT-Landschaft > Standorte**, um das Standortverzeichnis zu �
 Solange der Standort erstellt wird, zeigt die Kopfzeile **Erstellen** und **Abbrechen**, bis Sie die Seite verlassen. **Erstellen** behält den Standort und bringt Sie dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm. Fehlt noch ein Pflichtfeld, wird es stattdessen markiert. **Abbrechen** verlässt die Seite, ohne etwas zu behalten. Ein bereits erstellter Standort wird dabei gelöscht. Wenn Sie mehr als die Angaben zur Erstellung eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Standorten abbrechen. Verlassen Sie die Seite auf andere Weise, bleibt der Standort bestehen.
 
 **Pflichtfelder**:
-- **Code**: Ein eindeutiger Kurzidentifikator (z. B. `DC-EU-WEST`, `AWS-US-EAST-1`)
 - **Name**: Ein beschreibender Anzeigename
 - **Hosting-Typ**: Die Art der Einrichtung: eigenes Rechenzentrum, Colocation, Cloud-Region usw.
 

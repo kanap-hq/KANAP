@@ -9,7 +9,6 @@ Naviguez vers **Cartographie SI > Sites** pour ouvrir le registre des sites. Cli
 Tant que le site est en cours de création, l'en-tête affiche **Créer** et **Annuler** jusqu'à ce que vous quittiez la page. **Créer** conserve le site et vous ramène à votre point de départ : la liste ou l'écran précédent. S'il manque encore un champ obligatoire, il est signalé à la place. **Annuler** part sans rien conserver. Sur un site déjà créé, il le supprime. Si vous avez saisi plus que le nécessaire à la création, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des sites. Si vous quittez la page autrement, le site est conservé.
 
 **Champs obligatoires** :
-- **Code** : Un identifiant court unique (par ex., `DC-EU-WEST`, `AWS-US-EAST-1`)
 - **Nom** : Un nom d'affichage descriptif
 - **Type d'hébergement** : Le type d'installation (centre de données on-premise, colocation, région cloud, etc.)
 
