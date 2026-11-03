@@ -1791,8 +1791,10 @@ export default function KnowledgeWorkspacePage() {
       }
       creation.startCreation({ recordId: created.id, token, returnTo: creationReturn });
       const itemRef = created.item_ref || `DOC-${created.item_number}`;
-      // The page keeps the document while it is read again.
+      // The page keeps the document while it is read again: the create answers with the row
+      // alone, without its owner, relations and classifications.
       qc.setQueryData(['knowledge', itemRef], created);
+      void qc.invalidateQueries({ queryKey: ['knowledge', itemRef], exact: true });
       const sp = new URLSearchParams();
       if (workspaceLibrarySlug) sp.set('library', workspaceLibrarySlug);
       sp.set('allLibraries', '0');
