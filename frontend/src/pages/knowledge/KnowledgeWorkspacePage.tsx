@@ -1743,6 +1743,14 @@ export default function KnowledgeWorkspacePage() {
   const newCreate = useNewRecordCreate({ setTitleError, requiredMessage: t('common:creation.titleRequired') });
   // The title committed before the library, the default type and the template were read.
   const [pendingTitle, setPendingTitle] = React.useState<string | null>(null);
+  // Tab from the title of a new document: the text gets the focus once the document is created.
+  const contentFocusPendingRef = React.useRef(false);
+  // The editor takes the focus once it is enabled (it waits while the lock is being taken).
+  React.useEffect(() => {
+    if (isCreate || !contentFocusPendingRef.current) return;
+    contentFocusPendingRef.current = false;
+    setContentFocusNonce((n) => n + 1);
+  }, [isCreate]);
   const creatingRef = React.useRef(false);
   const createDefaultsReady = isCreate
     && librariesStatus !== 'pending'
@@ -2159,6 +2167,11 @@ export default function KnowledgeWorkspacePage() {
                         return;
                       }
                       handleTitleSave(value);
+                    }}
+                    onTab={() => {
+                      // Tab goes on to the text: at once on a document, once created on a new one.
+                      if (isCreate) contentFocusPendingRef.current = true;
+                      else setContentFocusNonce((n) => n + 1);
                     }}
                     typography={DOCUMENT_TITLE_TYPOGRAPHY}
                   />
