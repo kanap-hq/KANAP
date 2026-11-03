@@ -39,6 +39,7 @@ import { TENANT_PURGE_ATTACHMENT_TABLES, TENANT_PURGE_TABLES } from '../tenant-p
 import { TenantResetService } from '../tenant-reset.service';
 import { TenantStatsService } from '../tenant-stats.service';
 import { SeedLanguage } from '../../../analytics/recommended-dimensions.seed';
+import { enrollTrialMails } from '../../../email/trial-mails/trial-mails.service';
 
 // Shared by the tenant reset and tenant purge specs (not a spec itself: the runner only picks up
 // *.spec.ts files). The services under test open their own connections, so the tenants are
@@ -207,6 +208,7 @@ export async function createActivatedTenant(
       seat_limit: null,
       active_seats: 0,
     });
+    await enrollTrialMails(manager, tenant.id);
     return { tenantId: tenant.id, ownerId: owner.id };
   });
   await inTenant(created.tenantId, (manager) =>
