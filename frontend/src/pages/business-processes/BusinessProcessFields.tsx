@@ -116,6 +116,7 @@ export function BusinessProcessProperties({ process, disabled, onPatch, onManage
         <PropertyRow label={t('businessProcesses.fields.categories')}>
           <BusinessProcessCategoryMultiSelect
             hideLabel
+            label={t('businessProcesses.fields.categories')}
             value={process.categories.map((category) => category.id)}
             onChange={(category_ids) => onPatch({ category_ids })}
             disabled={disabled}
