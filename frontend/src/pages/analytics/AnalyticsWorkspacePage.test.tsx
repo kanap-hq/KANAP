@@ -369,7 +369,6 @@ describe('AnalyticsWorkspacePage', () => {
   it('creates in the page dimension and posts it', async () => {
     mocked.createAnalyticsValue.mockResolvedValue({ ...VALUE, id: 'v-new' });
     renderAt('/master-data/analytics/new/overview?axis=ax-nature&sort=name%3AASC');
-    expect(screen.queryByRole('complementary')).toBeNull();
     const dimension = screen.getByLabelText('analytics.fields.dimension');
     expect(within(dimension.parentElement as HTMLElement).getByRole('combobox')).toHaveTextContent('Nature');
     fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: ' Hardware ' } });
@@ -379,6 +378,8 @@ describe('AnalyticsWorkspacePage', () => {
       name: 'Hardware',
       description: null,
       applies_to: null,
+      status: 'enabled',
+      disabled_at: null,
     }));
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/analytics?sort=name%3AASC&axis=ax-nature'));
   });
@@ -410,6 +411,8 @@ describe('AnalyticsWorkspacePage', () => {
       name: 'Leasing',
       description: null,
       applies_to: 'capex',
+      status: 'enabled',
+      disabled_at: null,
     }));
   });
 
