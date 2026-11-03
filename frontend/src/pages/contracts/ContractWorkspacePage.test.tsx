@@ -718,10 +718,21 @@ describe('ContractWorkspacePage', () => {
     const create = await screen.findByRole('button', { name: 'common:buttons.create' });
     fireEvent.click(create);
     expect(await screen.findByText('contracts.messages.nameRequired')).toBeInTheDocument();
+    // The name is typed in the header title, which gets the focus; the form has no name field.
+    expect(screen.getByRole('textbox', { name: 'common:buttons.editTitle' })).toHaveFocus();
+    expect(screen.queryByLabelText('contracts.fields.name')).toBeNull();
     expect(screen.getByText('contracts.messages.durationRequired')).toBeInTheDocument();
     expect(mocked.post).not.toHaveBeenCalled();
     // The other tabs wait for the contract.
     expect(screen.getByRole('tab', { name: 'contracts.tabs.budget' })).toBeDisabled();
     expect(within(document.body).queryByText('contracts.deadlines.title')).toBeNull();
+  });
+
+  it('leaves a new contract on Cancel, with nothing created', async () => {
+    renderAt('/ops/contracts/new/overview');
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.cancel' }));
+    expect(navigateMock).toHaveBeenCalledWith('/ops/contracts');
+    expect(screen.queryByRole('button', { name: 'common:buttons.close' })).toBeNull();
+    expect(mocked.post).not.toHaveBeenCalled();
   });
 });

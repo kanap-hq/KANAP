@@ -1,7 +1,8 @@
 import React from 'react';
 import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, Button, IconButton, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, IconButton, Stack, TextField, Typography } from '@mui/material';
+import { CreationActions, useCreationLeave, useCreationTitle } from '../../components/workspace/creation';
 import { useTheme } from '@mui/material/styles';
 import CloseIcon from '@mui/icons-material/Close';
 import { useTranslation } from 'react-i18next';
@@ -527,7 +528,6 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
 // ----- Create: one form with the real fields, one button -----
 
 type CreateValues = {
-  name: string;
   supplier_id: string;
   company_id: string;
   cost_center_id: string;
@@ -541,7 +541,7 @@ type CreateValues = {
   billing_frequency: BillingFrequency;
 };
 
-type CreateField = 'name' | 'supplier_id' | 'company_id' | 'start_date' | 'duration' | 'notice' | 'amount' | 'currency';
+type CreateField = 'supplier_id' | 'company_id' | 'start_date' | 'duration' | 'notice' | 'amount' | 'currency';
 
 const twoColumnsSx = {
   display: 'grid',
@@ -560,7 +560,7 @@ function ContractCreate() {
   const { withContext } = useListContext();
   const defaultCurrency = useDefaultContractCurrency();
   const [values, setValues] = React.useState<CreateValues>({
-    name: '', supplier_id: '', company_id: '', cost_center_id: '', owner_user_id: null, start_date: '', duration: '', notice: '',
+    supplier_id: '', company_id: '', cost_center_id: '', owner_user_id: null, start_date: '', duration: '', notice: '',
     auto_renewal: true, amount: '', currency: '', billing_frequency: 'annual',
   });
   // A limited person sees only the companies and places the server would accept (spec §2.3).
@@ -569,6 +569,8 @@ function ContractCreate() {
   const [serverError, setServerError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
   const currency = values.currency || defaultCurrency || '';
+  const leave = useCreationLeave(() => navigate(withContext(LIST_PATH)));
+  const title = useCreationTitle({ requiredMessage: t('contracts.messages.nameRequired'), onCancel: leave });
 
   const set = <K extends keyof CreateValues>(field: K, value: CreateValues[K]) => {
     setValues((prev) => ({ ...prev, [field]: value }));
@@ -577,12 +579,11 @@ function ContractCreate() {
 
   const handleCreate = async () => {
     if (!canCreate || submitting) return;
-    const name = values.name.trim();
+    const name = title.require();
     const duration = parseMonths(values.duration);
     const notice = values.notice.trim() ? parseMonths(values.notice) : 0;
     const amount = values.amount.trim() ? parseAmount(values.amount) : 0;
     const next: Partial<Record<CreateField, string>> = {};
-    if (!name) next.name = t('contracts.messages.nameRequired');
     if (!values.supplier_id) next.supplier_id = t('contracts.messages.supplierRequired');
     if (!values.company_id) next.company_id = t('contracts.messages.companyRequired');
     if (!values.start_date) next.start_date = t('contracts.messages.startRequired');
@@ -591,11 +592,11 @@ function ContractCreate() {
     if (amount === null) next.amount = t('contracts.messages.invalidAmount');
     if (!currency) next.currency = t('contracts.messages.currencyRequired');
     setErrors(next);
-    if (Object.keys(next).length > 0) return;
+    if (!name || Object.keys(next).length > 0) return;
     setSubmitting(true);
     setServerError(null);
     try {
-      const res = await api.post<{ id: string }>('/contracts', {
+      await api.post<{ id: string }>('/contracts', {
         name,
         supplier_id: values.supplier_id,
         company_id: values.company_id,
@@ -610,7 +611,7 @@ function ContractCreate() {
         billing_frequency: values.billing_frequency,
       });
       void queryClient.invalidateQueries({ queryKey: ['contracts-ids'] });
-      navigate(withContext(`${LIST_PATH}/${res.data.id}/overview`));
+      leave();
     } catch (e) {
       setServerError(getApiErrorMessage(e, t, t('contracts.messages.createFailed')));
     } finally {
@@ -632,31 +633,14 @@ function ContractCreate() {
         onTabChange={() => undefined}
         drawerStorageKey={DRAWER_KEY}
         backLabel={t('contracts.title')}
-        onBack={() => navigate(withContext(LIST_PATH))}
-        title={values.name}
+        onBack={leave}
+        {...title.shellProps}
         titleFallback={t('contracts.workspace.newContract')}
         isCreate
         onSaveShortcut={() => { void handleCreate(); }}
-        actions={(
-          <Button variant="contained" size="small" onClick={() => void handleCreate()} disabled={!canCreate || submitting}>
-            {t('common:buttons.create')}
-          </Button>
-        )}
+        actions={<CreationActions onCreate={() => void handleCreate()} onCancel={leave} busy={!canCreate || submitting} />}
       >
         <Stack spacing={3} sx={{ pt: 1, maxWidth: 720 }}>
-          <PropertyRow label={t('contracts.fields.name')} required valueSx={{ maxWidth: 680 }}>
-            <TextField
-              value={values.name}
-              onChange={(e) => set('name', e.target.value)}
-              variant="standard"
-              fullWidth
-              sx={drawerFieldValueSx}
-              placeholder={t('contracts.placeholders.name')}
-              error={!!errors.name}
-              helperText={errors.name}
-              inputProps={{ 'aria-label': t('contracts.fields.name'), autoComplete: 'off' }}
-            />
-          </PropertyRow>
           <Box>
             <Typography sx={{ fontSize: 12, fontWeight: 500, color: 'kanap.text.tertiary', mb: 1 }}>{t('contracts.sections.parties')}</Typography>
             <Box sx={twoColumnsSx}>
