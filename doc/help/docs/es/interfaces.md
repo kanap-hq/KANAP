@@ -6,17 +6,18 @@ Las interfaces documentan los flujos lógicos de datos entre sus aplicaciones. C
 
 Navegue a **Panorama IT > Interfaces** para ver su registro de integraciones. Haga clic en **Añadir interfaz** para crear una nueva entrada, o abra una existente para editarla.
 
-Para crear una interfaz necesita:
+Para crear una interfaz, rellene el formulario **Crear interfaz** de la pestaña Vista general:
 
-- **ID de interfaz**: Un código corto único (p. ej., `INT-CRM-ERP-001`)
-- **Nombre**: Un nombre descriptivo para la integración
-- **Propósito de negocio**: Un breve resumen de por qué existe esta integración
-- **Aplicación de origen** y **Aplicación de destino**
-- **Categoría de datos**: El tipo de datos transferidos
+- **Nombre** (obligatorio): Un nombre descriptivo para la integración
+- **Código de interfaz**: Un código corto propio y opcional (p. ej., `ERP-ORDERS-SYNC`)
+- **Proceso de negocio**: El proceso de negocio que la interfaz respalda
+- **Aplicación de origen** y **Aplicación de destino** (obligatorias)
+- **Categoría de datos** (obligatoria): El tipo de datos transferidos
+- **Tipo de ruta**: Directo o Vía middleware
 
-Una vez establecidos estos, puede guardar la interfaz; el resto del espacio de trabajo (Flujo, Entornos, Mapeo de datos, Relaciones) queda disponible a continuación.
+Haga clic en **Crear** en la cabecera. KANAP asigna a la interfaz su referencia (`INT-4`), y las demás pestañas (Flujo, Entornos, Mapeo de datos, Relaciones, Historial) quedan disponibles.
 
-**Consejo**: Defina pronto el **Tipo de ruta de integración** (Directa o Vía middleware). Controla qué tramos se generan automáticamente y qué aparece en la pestaña Flujo y en la matriz de Entornos.
+**Consejo**: Defina pronto el **Tipo de ruta**. Controla qué tramos se generan automáticamente y qué aparece en la pestaña Flujo y en la matriz de Entornos.
 
 ---
 
@@ -26,7 +27,8 @@ La cuadrícula de Interfaces muestra su registro de integraciones de un vistazo.
 
 **Columnas predeterminadas**:
 
-- **ID de interfaz**: El identificador único (haga clic para abrir el espacio de trabajo)
+- **Referencia**: La referencia que asigna KANAP (`INT-4`)
+- **Código de interfaz**: Su propio código corto, si lo ha definido
 - **Nombre**: Nombre de la interfaz
 - **Entornos**: Puntos de colores que muestran qué entornos ya tienen enlaces configurados (p. ej., PROD, QA, DEV)
 - **App de origen** y **App de destino**: Las aplicaciones conectadas
@@ -62,36 +64,37 @@ La cuadrícula de Interfaces muestra su registro de integraciones de un vistazo.
 
 ## El espacio de trabajo de Interfaces
 
-Haga clic en cualquier fila para abrir el espacio de trabajo. El espacio de trabajo tiene un panel lateral con las propiedades de la interfaz a la izquierda y seis pestañas a la derecha. La última, **Historial**, lista los cambios hechos en la interfaz (vea [Historial de los registros](record-history.md)).
+Haga clic en cualquier fila para abrir el espacio de trabajo. El espacio de trabajo tiene seis pestañas, con las propiedades de la interfaz en un panel lateral a la derecha. El nombre de la cabecera se puede editar en el mismo lugar. La última, **Historial**, lista los cambios hechos en la interfaz (vea [Historial de los registros](record-history.md)).
 
 La cabecera lleva **Eliminar**, un icono de papelera con su nombre en una información emergente (`applications:admin`). La confirmación usa la misma comprobación que **Eliminar seleccionadas**. Indica que esta acción no se puede deshacer. Cuando la interfaz tiene enlaces, los explica y ofrece **Eliminar también los enlaces relacionados**: la eliminación está disponible una vez marcada esa opción, los enlaces se van con la interfaz y las conexiones se conservan. La lista se abre de nuevo después.
 
 ### Propiedades de la interfaz (panel lateral)
 
-El panel lateral permanece visible en cada pestaña y agrupa los campos más editados en tres secciones plegables:
+El panel lateral permanece visible en cada pestaña. Haga clic en su pestaña **Propiedades** para plegarlo o desplegarlo. Contiene tres grupos de campos:
 
-**Propiedades principales**:
+**Identificación**:
 
-- **ID de interfaz**, **Nombre**, **Propósito de negocio** (obligatorio)
+- **Referencia**: Asignada por KANAP, de solo lectura
+- **Código de interfaz**: Su propio código corto
 - **Proceso de negocio**: Vínculo a un proceso de negocio de los datos maestros
-- **Ciclo de vida** y **Criticidad**
-- **Aplicación de origen** y **Aplicación de destino** (obligatorio)
-- **Tipo de ruta de integración**: Directa o Vía middleware
-- **Aplicaciones middleware**: Solo se muestra cuando el tipo de ruta es Vía middleware. La lista se restringe a las aplicaciones marcadas como ETL/middleware.
+- **Ciclo de vida**
+- **Creado el** y **Actualizado el**: Fechas de solo lectura
 
 **Equipo**:
 
 - **Responsables de negocio**: Partes interesadas del negocio responsables de la integración
-- **Responsables IT**: Miembros del equipo técnico responsables del mantenimiento
+- **Responsables de IT**: Miembros del equipo técnico responsables del mantenimiento
+- **Empresas afectadas**: Las empresas a las que afecta la integración
 
 **Datos y conformidad**:
 
-- **Categoría de datos**: El tipo de datos transferidos
-- **Clasificación de datos**: Nivel de sensibilidad (Público, Interno, Confidencial, Restringido)
-- **Contiene PII**: Cuando está marcado, aparece un campo **Descripción PII** para que pueda detallar qué PII está incluido
-- **Residencia de datos**: Países por donde fluyen los datos (códigos ISO de 2 letras)
+- **Criticidad**: Importancia para el negocio
+- **Categoría de datos** (obligatoria): El tipo de datos transferidos
+- **Clasificación de datos**: Nivel de sensibilidad
+- **Contiene PII**: Cuando está activado, aparece un campo **Descripción de PII** para que pueda detallar qué PII está incluido
+- **Residencia de los datos**: Países por donde fluyen los datos
 
-Los cambios en los campos del panel lateral se guardan automáticamente al salir del campo, de modo que puede actualizar propiedades desde cualquier pestaña sin cambiar de contexto.
+Los cambios en los campos del panel lateral se guardan automáticamente, de modo que puede actualizar propiedades desde cualquier pestaña sin cambiar de contexto. Las aplicaciones de origen y destino, el tipo de ruta y el middleware se definen en la pestaña Flujo.
 
 ---
 
@@ -105,9 +108,15 @@ Una vez guardada la interfaz, la pestaña Vista general contiene la **Especifica
 
 ### Flujo
 
-La pestaña Flujo define los **tramos** compartidos que componen la interfaz. Los tramos son plantillas: describen lo que hace cada paso en general (la misma definición se aplica en todos los entornos).
+La pestaña Flujo define la ruta de la interfaz y, después, los **tramos** compartidos que la componen.
 
-Para cada tramo puede editar:
+**Flujo lógico**:
+
+- **Aplicación de origen** y **Aplicación de destino** (obligatorias)
+- **Tipo de ruta**: Directo o Vía middleware
+- **Aplicaciones middleware**: Solo se muestra cuando el tipo de ruta es Vía middleware. La lista se restringe a las aplicaciones marcadas como ETL/middleware.
+
+**Plantilla de tramos**: Los tramos describen lo que hace cada paso en general (la misma definición se aplica en todos los entornos). Para cada tramo puede editar:
 
 - **Tipo de tramo**: Extracción, Transformación, Carga o Directo (definido automáticamente según la ruta de integración)
 - **De -> A**: Qué rol maneja cada paso (App de origen, App de destino o Middleware)
@@ -116,33 +125,38 @@ Para cada tramo puede editar:
 - **Formato**: El formato de datos (p. ej., JSON, XML, CSV, archivo plano)
 - **Nombre de trabajo**: Un nombre opcional de trabajo o proceso predeterminado
 
-Si aún no aparecen tramos, guarde primero la interfaz. Los tramos se generan a partir de **Aplicación de origen**, **Aplicación de destino** y **Tipo de ruta de integración** del panel lateral.
+Si aún no aparecen tramos, seleccione las aplicaciones de origen y destino. Los tramos se generan a partir de **Aplicación de origen**, **Aplicación de destino** y **Tipo de ruta**.
 
 ---
 
 ### Entornos
 
-La pestaña Entornos gestiona los enlaces por entorno que convierten las plantillas de tramos en configuraciones reales. Presenta una matriz de entornos y tramos, permitiéndole configurar cada combinación de forma independiente.
+La pestaña Entornos gestiona los enlaces por entorno que convierten las plantillas de tramos en configuraciones reales. Presenta una matriz con una fila por tramo y una columna por entorno, para que pueda configurar cada combinación de forma independiente.
 
-**Cómo funciona**:
+**Entornos**:
 
-- Cada entorno (Prod, Pre-prod, QA, Test, Dev, Sandbox o personalizado) puede tener enlaces para cada tramo
-- Los entornos se descubren automáticamente desde sus instancias de aplicación; también puede añadir entornos personalizados
-- Haga clic en una celda vacía para crear un enlace, o haga clic en uno existente para editarlo
+- **Añadir entorno** (`applications:member`) ofrece los entornos donde las aplicaciones de origen y destino (y el middleware, en una ruta vía middleware) tienen todas un despliegue. Los despliegues se crean en el espacio de trabajo Aplicaciones.
+- Un entorno aparece en la matriz cuando usted lo añade o cuando tiene un enlace.
+- Para eliminar un entorno, haga clic en el icono de papelera de la cabecera de su columna. La confirmación indica el número de enlaces que se eliminan con él.
+- Una banda encima de la matriz muestra cada entorno con el número de tramos configurados sobre el total, por ejemplo `QA 2/3`. El punto es verde cuando todos los tramos están configurados, naranja cuando lo están algunos y gris cuando no lo está ninguno.
+
+**Celdas**: Cada celda muestra el estado del enlace y sus puntos de conexión de origen y destino. Una vez abierto un enlace, su celda muestra también su conexión de infraestructura: la primera, con el número de las demás cuando hay más (`+2`). Un enlace **Activo** sin conexión de infraestructura muestra entonces **Falta la conexión** en naranja. Haga clic en una celda vacía para añadir un enlace, o en una celda configurada para editarlo. El icono de papelera de una celda elimina su enlace, tras una confirmación.
+
+**Panel del enlace**: Al hacer clic en una celda se abre un panel junto a la matriz.
+
+- Para un enlace nuevo, rellene los campos y haga clic en **Añadir enlace**. Los selectores **Despliegue de origen** y **Despliegue de destino** aparecen cuando la aplicación tiene más de un despliegue en ese entorno. Si no, se usa el único despliegue. El selector **Herramienta de integración** aparece, y es obligatorio, en una ruta vía middleware cuando más de una aplicación middleware tiene un despliegue en el entorno.
+- Para un enlace existente, cada cambio se guarda sobre la marcha. La cabecera del panel indica cuándo se ha guardado el cambio.
 
 **Campos del enlace**:
 
-- **Instancia de origen** e **Instancia de destino**: Qué instancias de aplicación usar en este entorno
-- **Estado**: Habilitado, Deshabilitado o En pruebas
-- **Punto final de origen** y **Punto final de destino**: Puntos finales técnicos (URLs, rutas, nombres de cola, etc.)
-- **Detalles del disparador**: Configuración del disparador específica del entorno
-- **Nombre de trabajo del entorno**: Sobrescribir el nombre de trabajo de la plantilla de tramo para este entorno
+- **Estado**: Los [estados del ciclo de vida](it-ops-settings.md#estados-del-ciclo-de-vida): Propuesto, Activo, Obsoleto, Retirado, más los que añada su administrador
 - **Modo de autenticación**: Cómo autentica el enlace
-- **URL de monitoreo**: Enlace a la monitorización u observabilidad de este enlace
-- **Aplicación de herramienta de integración**: Si aplica, la herramienta de integración utilizada
-- **Notas del entorno**: Notas específicas del entorno
-
-**Vinculación de conexiones**: Cada enlace puede vincularse a conexiones de infraestructura de su registro de conexiones. Esto le permite trazar la ruta completa desde la interfaz lógica hasta la conexión de red física.
+- **Conexión de infraestructura**: La conexión de infraestructura de su registro de conexiones, para que pueda trazar la ruta completa desde la interfaz lógica hasta la conexión de red física. El panel edita una conexión. Cuando el enlace tiene más, las demás se indican con un número y se mantienen sin cambios.
+- **Punto de conexión de origen** y **Punto de conexión de destino**: Puntos de conexión técnicos (URLs, rutas, nombres de cola, etc.)
+- **Detalles del disparador**: Configuración del disparador específica del entorno
+- **Nombre de job específico**: Sustituye el nombre de trabajo de la plantilla de tramo en este entorno
+- **URL de supervisión**: Enlace a la supervisión u observabilidad de este enlace
+- **Notas**: Notas específicas del entorno
 
 ---
 
@@ -247,7 +261,7 @@ Use esto cuando desee una copia independiente de una interfaz, típicamente para
 | Grupos y reglas de mapeo | No |
 | Adjuntos | No |
 
-**Nomenclatura**: La copia recibe " - copia" añadido tanto al nombre como al ID de interfaz. Un ID de interfaz vacío permanece vacío.
+**Nomenclatura**: La copia recibe " - copia" añadido tanto al nombre como al código de interfaz. Un código de interfaz vacío permanece vacío. La copia recibe su propia referencia.
 
 ### Migración de versión (desde el versionado de aplicaciones)
 
@@ -269,10 +283,10 @@ Use esto al actualizar una aplicación a una nueva versión y necesite migrar in
 
 ## Consejos
 
-- **Documente primero el "por qué"**: Use la **Especificación** de la pestaña Vista general y el campo **Propósito de negocio** del panel lateral para capturar la intención antes de sumergirse en tramos y enlaces.
-- **Use el panel lateral desde cualquier pestaña**: Responsables, criticidad, tipo de ruta, indicador PII y el resto persisten inmediatamente, de modo que puede actualizarlos mientras revisa reglas o enlaces.
+- **Documente primero el "por qué"**: Use la **Especificación** de la pestaña Vista general para capturar la intención antes de sumergirse en tramos y enlaces.
+- **Use el panel lateral desde cualquier pestaña**: Responsables, criticidad, indicador PII y el resto persisten inmediatamente, de modo que puede actualizarlos mientras revisa reglas o enlaces.
 - **Una interfaz, muchos entornos**: No cree interfaces separadas para cada entorno. Use una interfaz y configure cada entorno en la pestaña Entornos.
 - **Agrupe sus reglas de mapeo**: Para interfaces con más de un puñado de campos, organice las reglas en grupos de mapeo (Cabecera, Líneas de detalle, Pie, etc.). Hace que la revisión y el análisis de impacto sean mucho más fáciles.
-- **Mantenga el middleware explícito**: Si los datos fluyen a través de middleware, defina el tipo de ruta como **Vía middleware** y elija las aplicaciones middleware. El Mapa de interfaces renderizará entonces la ruta de datos real.
+- **Mantenga el middleware explícito**: Si los datos fluyen a través de middleware, defina el tipo de ruta como **Vía middleware** en la pestaña Flujo y elija las aplicaciones middleware. El Mapa de interfaces renderizará entonces la ruta de datos real.
 - **Duplique para interfaces similares**: Al crear una nueva interfaz que es similar a una existente, use **Duplicar interfaz** para copiar todas las configuraciones, luego modifique lo que sea diferente. Opcionalmente incluya enlaces para obtener una ventaja en la configuración del entorno.
 - **Vincule enlaces a conexiones de infra**: En la pestaña Entornos, vincule cada enlace a su conexión de infraestructura subyacente para que pueda trazar la ruta completa desde la interfaz de negocio hasta la conexión de red.
