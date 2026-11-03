@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import * as assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+import { NotFoundException } from '@nestjs/common';
 import { Application } from '../../applications/application.entity';
 import { ApplicationsListService } from '../../applications/services/applications-list.service';
 import { Asset } from '../../assets/asset.entity';
@@ -46,7 +47,11 @@ import { SuppliersService } from '../../suppliers/suppliers.service';
 import { User } from '../../users/user.entity';
 import { UsersService } from '../../users/users.service';
 import { AiAdminOverviewService } from '../ai-admin-overview.service';
+import { AiConversation } from '../ai-conversation.entity';
+import { AiConversationService } from '../ai-conversation.service';
+import { AiConversationsController } from '../ai-conversations.controller';
 import { AiEntityService } from '../ai-entity.service';
+import { AiMessage } from '../ai-message.entity';
 import { AiToolRegistry } from '../ai-tool.registry';
 import { AiRecordHistoryService } from '../ai-record-history.service';
 import { RecordHistoryService } from '../../audit/record-history.service';
@@ -4640,6 +4645,10 @@ async function testAiConversationRetentionArchivesAndPurgesOldConversations() {
          ($5, $2, $3, 'assistant', 'Stay fresh', '{"input_tokens":1,"output_tokens":2}'::jsonb, now() - interval '1 day')`,
       [archiveConversationId, tenantA, tenantAUser, purgeConversationId, freshConversationId],
     );
+    const purgeAttachmentPath = `files/${tenantA}/ai/conversations/${purgeConversationId}/purge.txt`;
+    const archiveAttachmentPath = `files/${tenantA}/ai/conversations/${archiveConversationId}/keep.txt`;
+    await insertConversationAttachment(runner, tenantA, purgeConversationId, purgeAttachmentPath);
+    await insertConversationAttachment(runner, tenantA, archiveConversationId, archiveAttachmentPath);
 
     await setCurrentTenant(runner, tenantB);
     await runner.query(
@@ -4652,7 +4661,11 @@ async function testAiConversationRetentionArchivesAndPurgesOldConversations() {
       dataSource,
       { register: () => undefined } as any,
     );
-    const summary = await service.run({ manager: runner.manager });
+    const deletedFiles: string[] = [];
+    const summary = await service.run({
+      manager: runner.manager,
+      storage: { deleteObject: async (key: string) => { deletedFiles.push(key); } } as any,
+    });
 
     assert.equal(summary.tenantsProcessed, 1);
     assert.ok(summary.archived >= 1);
@@ -4693,6 +4706,10 @@ async function testAiConversationRetentionArchivesAndPurgesOldConversations() {
       [purgeConversationId],
     );
     assert.equal(purgeMessageRows.length, 0);
+    assert.equal(await attachmentCount(runner, purgeConversationId), 0);
+    assert.equal(deletedFiles.includes(purgeAttachmentPath), true);
+    assert.equal(await attachmentCount(runner, archiveConversationId), 1);
+    assert.equal(deletedFiles.includes(archiveAttachmentPath), false);
 
     const freshRows = await runner.query(
       `SELECT archived_at
@@ -4719,6 +4736,153 @@ async function testAiConversationRetentionArchivesAndPurgesOldConversations() {
   }
 }
 
+async function insertConversationAttachment(
+  runner: any,
+  tenantId: string,
+  conversationId: string,
+  storagePath: string,
+) {
+  await runner.query(
+    `INSERT INTO ai_message_attachments (
+       tenant_id, conversation_id, message_id, original_filename, stored_filename,
+       mime_type, size, storage_path, kind
+     )
+     SELECT m.tenant_id, m.conversation_id, m.id, 'note.txt', 'note.txt', 'text/plain', 4, $3, 'image'
+     FROM ai_messages m
+     WHERE m.tenant_id = $2 AND m.conversation_id = $1`,
+    [conversationId, tenantId, storagePath],
+  );
+}
+
+async function attachmentCount(runner: any, conversationId: string): Promise<number> {
+  const rows = await runner.query(
+    `SELECT count(*)::int AS count FROM ai_message_attachments WHERE conversation_id = $1`,
+    [conversationId],
+  );
+  return Number(rows[0]?.count ?? 0);
+}
+
+async function conversationRowCounts(runner: any, conversationId: string) {
+  const conversations = await runner.query(
+    `SELECT count(*)::int AS count FROM ai_conversations WHERE id = $1`,
+    [conversationId],
+  );
+  const messages = await runner.query(
+    `SELECT count(*)::int AS count FROM ai_messages WHERE conversation_id = $1`,
+    [conversationId],
+  );
+  return {
+    conversations: Number(conversations[0]?.count ?? 0),
+    messages: Number(messages[0]?.count ?? 0),
+    attachments: await attachmentCount(runner, conversationId),
+  };
+}
+
+function deleteRequest(tenantId: string, userId: string) {
+  return { tenant: { id: tenantId }, user: { sub: userId }, isPlatformHost: false };
+}
+
+function conversationDeleteController(runner: any, deleted: string[]) {
+  const conversations = new AiConversationService(
+    runner.manager.getRepository(AiConversation),
+    runner.manager.getRepository(AiMessage),
+  );
+  return new AiConversationsController(
+    {
+      runWithContext: async (context: any, fn: (ctx: any) => Promise<unknown>) => (
+        fn({ ...context, manager: runner.manager })
+      ),
+    } as any,
+    { assertSurfaceAccess: async () => undefined } as any,
+    conversations,
+    {} as any,
+    {} as any,
+    { deleteObject: async (key: string) => { deleted.push(key); } } as any,
+  );
+}
+
+async function seedDeletableConversation(
+  runner: any,
+  tenantId: string,
+  userId: string,
+  conversationId: string,
+  storagePath: string,
+  title: string,
+) {
+  await setCurrentTenant(runner, tenantId);
+  await runner.query(
+    `INSERT INTO ai_conversations (id, tenant_id, user_id, title, provider, model, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, 'openai', 'gpt-4o-mini', now(), now())`,
+    [conversationId, tenantId, userId, title],
+  );
+  await runner.query(
+    `INSERT INTO ai_messages (conversation_id, tenant_id, user_id, role, content)
+     VALUES ($1, $2, $3, 'user', 'with an attachment')`,
+    [conversationId, tenantId, userId],
+  );
+  await insertConversationAttachment(runner, tenantId, conversationId, storagePath);
+}
+
+async function testDeleteConversationRemovesRowsAndRefusesOthers() {
+  const runner = dataSource.createQueryRunner();
+  await runner.connect();
+  await runner.startTransaction();
+
+  const tenantA = randomUUID();
+  const tenantB = randomUUID();
+  const ownerId = randomUUID();
+  const otherUserId = randomUUID();
+  const tenantBUserId = randomUUID();
+  const ownConversationId = randomUUID();
+  const otherConversationId = randomUUID();
+  const tenantBConversationId = randomUUID();
+  const ownPath = `files/${tenantA}/ai/conversations/${ownConversationId}/shot.png`;
+  const otherPath = `files/${tenantA}/ai/conversations/${otherConversationId}/shot.png`;
+  const tenantBPath = `files/${tenantB}/ai/conversations/${tenantBConversationId}/shot.png`;
+  const kept = { conversations: 1, messages: 1, attachments: 1 };
+  const gone = { conversations: 0, messages: 0, attachments: 0 };
+
+  try {
+    await seedTenant(runner, tenantA, `ai-delete-a-${tenantA.slice(0, 8)}`, 'AI Delete Tenant A');
+    await seedTenant(runner, tenantB, `ai-delete-b-${tenantB.slice(0, 8)}`, 'AI Delete Tenant B');
+    const roleA = await seedRole(runner, tenantA, 'AI Administrator');
+    const roleB = await seedRole(runner, tenantB, 'Member');
+    await seedUser(runner, tenantA, ownerId, `delete-owner-${tenantA.slice(0, 8)}@example.com`, roleA);
+    await seedUser(runner, tenantA, otherUserId, `delete-other-${tenantA.slice(0, 8)}@example.com`, roleA);
+    await seedUser(runner, tenantB, tenantBUserId, `delete-b-${tenantB.slice(0, 8)}@example.com`, roleB);
+    await seedDeletableConversation(runner, tenantA, ownerId, ownConversationId, ownPath, 'Mine');
+    await seedDeletableConversation(runner, tenantA, otherUserId, otherConversationId, otherPath, 'Theirs');
+    await seedDeletableConversation(runner, tenantB, tenantBUserId, tenantBConversationId, tenantBPath, 'Tenant B');
+
+    const deleted: string[] = [];
+    const controller = conversationDeleteController(runner, deleted);
+
+    await setCurrentTenant(runner, tenantA);
+    const result = await controller.remove(ownConversationId, deleteRequest(tenantA, ownerId));
+    assert.deepEqual(result, { success: true });
+    assert.deepEqual(await conversationRowCounts(runner, ownConversationId), gone);
+    assert.deepEqual(deleted, [ownPath]);
+
+    await assert.rejects(
+      () => controller.remove(otherConversationId, deleteRequest(tenantA, ownerId)),
+      (error: unknown) => error instanceof NotFoundException,
+    );
+    assert.deepEqual(await conversationRowCounts(runner, otherConversationId), kept);
+    assert.deepEqual(deleted, [ownPath]);
+
+    await assert.rejects(
+      () => controller.remove(tenantBConversationId, deleteRequest(tenantA, ownerId)),
+      (error: unknown) => error instanceof NotFoundException,
+    );
+    await setCurrentTenant(runner, tenantB);
+    assert.deepEqual(await conversationRowCounts(runner, tenantBConversationId), kept);
+    assert.deepEqual(deleted, [ownPath]);
+  } finally {
+    await runner.rollbackTransaction();
+    await runner.release();
+  }
+}
+
 async function run() {
   await dataSource.initialize();
   try {
@@ -4739,6 +4903,7 @@ async function run() {
     await testAiAdminOverviewAggregatesUsageAndIsTenantScoped();
     await testAiAdminOverviewChatCostsReadRecordedCostsAndMergeModels();
     await testAiConversationRetentionArchivesAndPurgesOldConversations();
+    await testDeleteConversationRemovesRowsAndRefusesOthers();
     await testAiToolRegistryIsolationCoverageTracksRegisteredTools();
   } finally {
     await dataSource.destroy();

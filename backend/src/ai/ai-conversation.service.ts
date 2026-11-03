@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, IsNull, Not, Repository } from 'typeorm';
+import { purgeAiConversations } from './ai-conversation-purge';
 import { AiConversation } from './ai-conversation.entity';
 import { AiMessage } from './ai-message.entity';
 import { USAGE_ONLY_MESSAGE_ROLE } from './ai-message-usage.util';
@@ -236,12 +237,18 @@ export class AiConversationService {
     return toUsage(row);
   }
 
-  async archiveConversation(
+  /**
+   * Deletes one conversation the person owns, with its messages. Returns the
+   * storage keys of its attachments: the caller removes the files after the
+   * transaction commits. Another person's conversation, or another tenant's,
+   * is refused and left as it is.
+   */
+  async deleteConversation(
     id: string,
     tenantId: string,
     userId: string,
     opts?: { manager?: EntityManager },
-  ) {
+  ): Promise<string[]> {
     const repo = this.getConversationRepo(opts?.manager);
     const conversation = await repo.findOne({
       where: {
@@ -253,8 +260,8 @@ export class AiConversationService {
     if (!conversation) {
       throw new NotFoundException('AI conversation not found.');
     }
-    conversation.archived_at = new Date();
-    return repo.save(conversation);
+    const purged = await purgeAiConversations(opts?.manager ?? repo.manager, tenantId, [id]);
+    return purged.storagePaths;
   }
 
   async renameConversation(

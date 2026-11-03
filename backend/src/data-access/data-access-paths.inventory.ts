@@ -67,7 +67,7 @@ export const DATA_ACCESS_PATHS: DataAccessPathEntry[] = [
 
   // Plaid and MCP: runWithContext applies the person's access.
   { file: 'ai/ai-chat.controller.ts', member: 'AiChatController', site: 'skip_tenant_transaction', class: 'applies', reason: `${RUN_WITH_CONTEXT} (the orchestrator too)` , routes: ['stream'] },
-  { file: 'ai/ai-conversations.controller.ts', member: 'AiConversationsController', site: 'skip_tenant_transaction', class: 'applies', reason: RUN_WITH_CONTEXT , routes: ['archive', 'create', 'getMessages', 'getPreviews', 'list', 'rename', 'uploadInlineAttachment', 'viewInlineAttachment'] },
+  { file: 'ai/ai-conversations.controller.ts', member: 'AiConversationsController', site: 'skip_tenant_transaction', class: 'applies', reason: RUN_WITH_CONTEXT , routes: ['create', 'getMessages', 'getPreviews', 'list', 'remove', 'rename', 'uploadInlineAttachment', 'viewInlineAttachment'] },
   { file: 'ai/ai-mcp.controller.ts', member: 'AiMcpController', site: 'skip_tenant_transaction', class: 'applies', reason: `${RUN_WITH_CONTEXT}; GET and DELETE answer 405 without the database` , routes: ['handleDelete', 'handleGet', 'handlePost', 'listAudit'] },
   { file: 'ai/ai-search.controller.ts', member: 'AiSearchController', site: 'skip_tenant_transaction', class: 'applies', reason: RUN_WITH_CONTEXT , routes: ['searchEntities'] },
 

@@ -1,6 +1,6 @@
 import * as assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
-import { BadRequestException, ForbiddenException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { AiAdminOverviewController } from '../ai-admin-overview.controller';
 import { AiApiKeysController } from '../ai-api-keys.controller';
 import { AiCapabilitiesController } from '../ai-capabilities.controller';
@@ -186,7 +186,7 @@ async function testControllersBuildPlatformAwareContexts() {
     aiApiKeyId: null,
   });
 
-  const conversations = new AiConversationsController({} as any, {} as any, {} as any, {} as any, {} as any);
+  const conversations = new AiConversationsController({} as any, {} as any, {} as any, {} as any, {} as any, {} as any);
   assertBaseContext((conversations as any).buildContext(req), {
     surface: 'chat',
     authMethod: 'jwt',
@@ -699,6 +699,7 @@ async function testConversationsControllerReturnsMessagesWithConversationUsage()
     {
       listAttachmentsForMessages: async () => [],
     } as any,
+    {} as any,
   );
 
   const result = await controller.getMessages('conv-1', createRequest({ isPlatformHost: false }) as any);
@@ -724,6 +725,62 @@ async function testConversationsControllerReturnsMessagesWithConversationUsage()
   });
 }
 
+async function testConversationsControllerDeletesTheConversationAndItsFiles() {
+  const deleted: string[] = [];
+  let sawManager = false;
+  const controller = new AiConversationsController(
+    {
+      runWithContext: async (context: any, fn: (ctx: any) => Promise<unknown>) => {
+        assert.equal(context.tenantId, TEST_TENANT_ID);
+        assert.equal(context.userId, 'user-1');
+        return fn({ ...context, manager: { tag: 'manager' } });
+      },
+    } as any,
+    { assertSurfaceAccess: async () => undefined } as any,
+    {
+      deleteConversation: async (id: string, tenantId: string, userId: string, opts: any) => {
+        assert.equal(id, 'conv-1');
+        assert.equal(tenantId, TEST_TENANT_ID);
+        assert.equal(userId, 'user-1');
+        sawManager = opts?.manager?.tag === 'manager';
+        return ['files/tenant/ai/conversations/conv-1/a.png'];
+      },
+    } as any,
+    {} as any,
+    {} as any,
+    { deleteObject: async (key: string) => { deleted.push(key); } } as any,
+  );
+
+  const result = await controller.remove('conv-1', createRequest({ isPlatformHost: false }) as any);
+  assert.deepEqual(result, { success: true });
+  assert.equal(sawManager, true);
+  assert.deepEqual(deleted, ['files/tenant/ai/conversations/conv-1/a.png']);
+}
+
+async function testConversationsControllerLeavesFilesWhenTheDeleteIsRefused() {
+  const deleted: string[] = [];
+  const controller = new AiConversationsController(
+    {
+      runWithContext: async (_context: any, fn: (ctx: any) => Promise<unknown>) => fn({ manager: {} }),
+    } as any,
+    { assertSurfaceAccess: async () => undefined } as any,
+    {
+      deleteConversation: async () => {
+        throw new NotFoundException('AI conversation not found.');
+      },
+    } as any,
+    {} as any,
+    {} as any,
+    { deleteObject: async (key: string) => { deleted.push(key); } } as any,
+  );
+
+  await assert.rejects(
+    () => controller.remove('conv-2', createRequest() as any),
+    (error: unknown) => error instanceof NotFoundException,
+  );
+  assert.deepEqual(deleted, []);
+}
+
 async function run() {
   await testControllersBuildPlatformAwareContexts();
   await testControllersRejectMissingTenantContext();
@@ -743,6 +800,8 @@ async function run() {
   await testAdminOverviewControllerRejectsMissingTenantContext();
   await testMcpPostRefusesAnInvalidKeyPolicyWithItsCode();
   await testConversationsControllerReturnsMessagesWithConversationUsage();
+  await testConversationsControllerDeletesTheConversationAndItsFiles();
+  await testConversationsControllerLeavesFilesWhenTheDeleteIsRefused();
 }
 
 void run();
