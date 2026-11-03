@@ -80,7 +80,7 @@ Klicken Sie auf **Neu**. Die Seite des neuen Kalenders öffnet sich mit geöffne
 4. **Beschreibung**: optional
 5. Klicken Sie auf **Erstellen**
 
-Ein neuer Kalender ist aktiviert, und Sie kehren dorthin zurück, wo Sie begonnen haben. **Abbrechen** oder Escape im leeren Titel verlässt die Seite, ohne etwas zu erstellen. Ein Standardkalender enthält die Arbeitstage jedes Jahres: Sie werden angezeigt, sobald er erstellt ist. Bei einem individuellen Kalender geben Sie sie Jahr für Jahr ein.
+Ein neuer Kalender ist aktiviert und bleibt geöffnet, mit allen Reitern. **Abbrechen** oder Escape im leeren Titel verlässt die Seite, ohne etwas zu erstellen. Ein Standardkalender enthält die Arbeitstage jedes Jahres: Sie werden angezeigt, sobald er erstellt ist. Bei einem individuellen Kalender geben Sie sie Jahr für Jahr ein.
 
 Land und Region werden einmal festgelegt, beim Anlegen. Um einem anderen Land zu folgen, legen Sie einen weiteren Kalender an.
 

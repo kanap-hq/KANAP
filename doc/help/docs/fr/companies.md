@@ -116,7 +116,7 @@ L'onglet Vue d'ensemble contient l'adresse, les informations d'immatriculation e
     - **Numéro de TVA** : numéro d'identification TVA
 - **Notes** : notes en texte libre
 
-**Créer une société** : **Nouveau** ouvre la page de la nouvelle société, son panneau des propriétés ouvert. Saisissez le nom dans le titre en haut de la page, puis renseignez **Pays**, **Devise de base**, **Plan comptable**, **Ville**, les autres champs d'adresse, les champs d'immatriculation et **Notes**. Le choix d'un pays renseigne le **Plan comptable** à votre place : le plan par défaut du pays s'il en existe un, sinon un plan global. Vous pouvez le modifier avant d'enregistrer. Cliquez sur **Créer** pour enregistrer la société : un champ obligatoire manquant est signalé, sinon vous revenez à votre point de départ. Les autres onglets deviennent disponibles une fois la société créée. **Annuler**, ou Échap dans le titre vide, part sans rien créer.
+**Créer une société** : **Nouveau** ouvre la page de la nouvelle société, son panneau des propriétés ouvert. Saisissez le nom dans le titre en haut de la page, puis renseignez **Pays**, **Devise de base**, **Plan comptable**, **Ville**, les autres champs d'adresse, les champs d'immatriculation et **Notes**. Le choix d'un pays renseigne la **Devise de base** (la devise du pays) et le **Plan comptable** (le plan par défaut du pays s'il en existe un, sinon un plan global). Vous pouvez modifier les deux avant d'enregistrer. Cliquez sur **Créer** pour enregistrer la société : un champ obligatoire manquant est signalé, sinon la société est créée et reste ouverte, tous ses onglets disponibles. **Annuler**, ou Échap dans le titre vide, part sans rien créer.
 
 ---
 
@@ -126,7 +126,7 @@ L'onglet Détails gère les **métriques annuelles**. Utilisez les onglets d'ann
 
 **Ce que vous pouvez modifier** :
 
-- **Effectif** (obligatoire) : nombre total d'employés pour l'année, doit être un nombre entier de zéro ou plus
+- **Effectif** : nombre total d'employés pour l'année, un nombre entier de zéro ou plus
 - **Utilisateurs IT** (optionnel) : nombre d'utilisateurs IT, doit être un nombre entier de zéro ou plus
 - **Chiffre d'affaires** (optionnel) : chiffre d'affaires en millions de la devise de base de la société, jusqu'à 3 décimales. Le libellé nomme la devise, par exemple **Chiffre d'affaires (M USD)**
 
@@ -185,7 +185,7 @@ Un administrateur des sociétés (`companies:admin`) peut supprimer une sociét�
 
 De nombreuses parties de l'application sont sensibles à l'année. Les sociétés ont des métriques par année :
 
-- **Effectif** (obligatoire pour l'année)
+- **Effectif**
 - **Utilisateurs IT** (optionnel)
 - **Chiffre d'affaires** (optionnel, en millions de la devise de base de la société)
 

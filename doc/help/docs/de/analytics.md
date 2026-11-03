@@ -127,7 +127,7 @@ Klicken Sie auf eine beliebige Zelle, um den Arbeitsbereich des Werts zu öffnen
 
 ### Eine Dimension erstellen
 
-Klicken Sie in der Auswahlleiste auf **Neu**. Die Seite der neuen Dimension öffnet sich mit geöffnetem Eigenschaftenbereich. Geben Sie den Namen im Titel oben auf der Seite ein, füllen Sie die Felder aus und klicken Sie dann auf **Erstellen**. Sie kehren dorthin zurück, wo Sie begonnen haben. Eine neue Dimension ist aktiviert. **Abbrechen** oder Escape im leeren Titel verlässt die Seite, ohne etwas zu erstellen.
+Klicken Sie in der Auswahlleiste auf **Neu**. Die Seite der neuen Dimension öffnet sich mit geöffnetem Eigenschaftenbereich. Geben Sie den Namen im Titel oben auf der Seite ein, füllen Sie die Felder aus und klicken Sie dann auf **Erstellen**. Eine neue Dimension ist aktiviert und bleibt geöffnet, mit allen Reitern. **Abbrechen** oder Escape im leeren Titel verlässt die Seite, ohne etwas zu erstellen.
 
 - Der Name ist Pflicht.
 - **Code** wird aus dem Namen vorgeschlagen: Kleinbuchstaben, ohne Akzente, Leerzeichen durch `-` ersetzt. Sie können ihn ändern, bevor Sie die Dimension erstellen.
@@ -242,7 +242,7 @@ Um die Werte stattdessen auf den Zeilen zu behalten, deaktivieren Sie die Dimens
 
 ### Einen Wert erstellen
 
-Klicken Sie auf **Neuer Wert**. Die Seite des neuen Werts öffnet sich mit geöffnetem Eigenschaftenbereich. Das Feld **Dimension** steht zunächst auf der Dimension, die auf der Seite ausgewählt ist, und bietet nur aktivierte Dimensionen an. Geben Sie den Namen im Titel oben auf der Seite ein und bei Bedarf eine **Beschreibung**. **Verwendet für** steht zunächst auf **OPEX und CAPEX**: Ändern Sie es, wenn der Wert nur zu einer Zeilenart passt. Klicken Sie dann auf **Erstellen**. Sie kehren dorthin zurück, wo Sie begonnen haben. Ein neuer Wert ist aktiviert. **Abbrechen** oder Escape im leeren Titel verlässt die Seite, ohne etwas zu erstellen.
+Klicken Sie auf **Neuer Wert**. Die Seite des neuen Werts öffnet sich mit geöffnetem Eigenschaftenbereich. Das Feld **Dimension** steht zunächst auf der Dimension, die auf der Seite ausgewählt ist, und bietet nur aktivierte Dimensionen an. Geben Sie den Namen im Titel oben auf der Seite ein und bei Bedarf eine **Beschreibung**. **Verwendet für** steht zunächst auf **OPEX und CAPEX**: Ändern Sie es, wenn der Wert nur zu einer Zeilenart passt. Klicken Sie dann auf **Erstellen**. Ein neuer Wert ist aktiviert und bleibt geöffnet, mit allen Reitern. **Abbrechen** oder Escape im leeren Titel verlässt die Seite, ohne etwas zu erstellen.
 
 ### Der Werte-Arbeitsbereich
 

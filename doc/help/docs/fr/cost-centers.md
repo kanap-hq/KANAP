@@ -97,7 +97,7 @@ Cliquez sur **Nouveau**. La page du nouvel élément s'ouvre, son panneau des pr
 
 Le **Type** commence sur **Centre de coûts**. Choisissez **Groupe** pour créer un groupe : le champ **Société** disparaît alors.
 
-Après **Créer**, vous revenez à votre point de départ. **Annuler**, ou Échap dans le titre vide, part sans rien créer.
+Après **Créer**, l'élément est créé et reste ouvert, tous ses onglets disponibles. **Annuler**, ou Échap dans le titre vide, part sans rien créer.
 
 ---
 

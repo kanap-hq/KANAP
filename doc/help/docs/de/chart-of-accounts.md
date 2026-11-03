@@ -152,7 +152,7 @@ Der Abschnitt **Konsolidierung** enthält ein einziges Feld, **Konsolidierungsko
 
 ### Ein Konto erstellen
 
-**Neues Konto** in der Liste öffnet die Seite des neuen Kontos mit geöffnetem Eigenschaftenbereich, in der der Kontenplan, den Sie gerade angesehen haben, bereits ausgewählt ist. Geben Sie den Kontonamen im Titel oben auf der Seite ein, füllen Sie Kontenplan und Kontonummer sowie die optionalen Felder aus und klicken Sie auf **Erstellen**. Ein fehlendes oder ungültiges Feld wird dann markiert. Sie kehren dorthin zurück, wo Sie begonnen haben. Danach wird das Konto bei jeder Änderung automatisch gespeichert. **Abbrechen** oder Escape im leeren Titel verlässt die Seite, ohne etwas zu erstellen.
+**Neues Konto** in der Liste öffnet die Seite des neuen Kontos mit geöffnetem Eigenschaftenbereich, in der der Kontenplan, den Sie gerade angesehen haben, bereits ausgewählt ist. Geben Sie den Kontonamen im Titel oben auf der Seite ein, füllen Sie Kontenplan und Kontonummer sowie die optionalen Felder aus und klicken Sie auf **Erstellen**. Ein fehlendes oder ungültiges Feld wird dann markiert; andernfalls wird das Konto erstellt und bleibt geöffnet. Danach wird das Konto bei jeder Änderung automatisch gespeichert. **Abbrechen** oder Escape im leeren Titel verlässt die Seite, ohne etwas zu erstellen.
 
 ## Kontenpläne einrichten
 

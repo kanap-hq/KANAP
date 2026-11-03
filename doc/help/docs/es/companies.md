@@ -116,7 +116,7 @@ La pestaña Visión general contiene la dirección, los datos de registro y las 
     - **Número de IVA**: número de identificación de IVA
 - **Notas**: notas de texto libre
 
-**Crear una empresa**: **Nuevo** abre la página de la empresa nueva, con su panel de propiedades abierto. Escriba el nombre en el título de la parte superior de la página y después rellene **País**, **Moneda base**, **Plan de cuentas**, **Ciudad**, los demás campos de dirección, los campos de registro y **Notas**. Al elegir un país se rellena el **Plan de cuentas** por usted: el plan predeterminado del país si existe, y si no un plan global. Puede cambiarlo antes de guardar. Haga clic en **Crear** para guardar la empresa: se marca un campo obligatorio que falte y, si no, vuelve al punto de partida. Las demás pestañas están disponibles una vez creada la empresa. **Cancelar**, o Escape en el título vacío, sale sin crear nada.
+**Crear una empresa**: **Nuevo** abre la página de la empresa nueva, con su panel de propiedades abierto. Escriba el nombre en el título de la parte superior de la página y después rellene **País**, **Moneda base**, **Plan de cuentas**, **Ciudad**, los demás campos de dirección, los campos de registro y **Notas**. Al elegir un país se rellenan por usted la **Moneda base** (la moneda del país) y el **Plan de cuentas** (el plan predeterminado del país si existe, y si no un plan global). Puede cambiar ambos antes de guardar. Haga clic en **Crear** para guardar la empresa: se marca un campo obligatorio que falte y, si no, la empresa se crea y permanece abierta, con todas sus pestañas disponibles. **Cancelar**, o Escape en el título vacío, sale sin crear nada.
 
 ---
 
@@ -126,7 +126,7 @@ La pestaña Detalles gestiona las **métricas anuales**. Use las pestañas de a�
 
 **Qué puede editar**:
 
-- **Plantilla** (obligatorio): número total de empleados del año, debe ser un número entero de 0 o más
+- **Plantilla**: número total de empleados del año, un número entero de 0 o más
 - **Usuarios IT** (opcional): número de usuarios IT, debe ser un número entero de 0 o más
 - **Facturación** (opcional): facturación en millones de la moneda base de la empresa, hasta 3 decimales. La etiqueta nombra la moneda, por ejemplo **Facturación (M USD)**
 
@@ -185,7 +185,7 @@ Un administrador de empresas (`companies:admin`) puede eliminar una empresa desd
 
 Muchas partes de la aplicación son conscientes del año. Las empresas tienen métricas por año:
 
-- **Plantilla** (obligatorio para el año)
+- **Plantilla**
 - **Usuarios IT** (opcional)
 - **Facturación** (opcional, en millones de la moneda base de la empresa)
 

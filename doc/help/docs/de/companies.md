@@ -116,7 +116,7 @@ Der Übersichts-Tab enthält die Adresse, die Registrierungsangaben und die Noti
     - **USt-IdNr.**: Umsatzsteuer-Identifikationsnummer
 - **Notizen**: Freitextnotizen
 
-**Ein Unternehmen erstellen**: **Neu** öffnet die Seite des neuen Unternehmens mit geöffnetem Eigenschaftenbereich. Geben Sie den Namen im Titel oben auf der Seite ein und füllen Sie dann **Land**, **Basiswährung**, **Kontenplan**, **Stadt**, die übrigen Adressfelder, die Registrierungsfelder und **Notizen** aus. Mit der Wahl eines Landes wird der **Kontenplan** für Sie ausgefüllt: der Standard-Kontenplan des Landes, falls vorhanden, sonst ein globaler Kontenplan. Sie können ihn vor dem Speichern ändern. Klicken Sie auf **Erstellen**, um das Unternehmen zu speichern: Ein fehlendes Pflichtfeld wird markiert, sonst kehren Sie dorthin zurück, wo Sie begonnen haben. Die anderen Reiter sind verfügbar, sobald das Unternehmen existiert. **Abbrechen** oder Escape im leeren Titel verlässt die Seite, ohne etwas zu erstellen.
+**Ein Unternehmen erstellen**: **Neu** öffnet die Seite des neuen Unternehmens mit geöffnetem Eigenschaftenbereich. Geben Sie den Namen im Titel oben auf der Seite ein und füllen Sie dann **Land**, **Basiswährung**, **Kontenplan**, **Stadt**, die übrigen Adressfelder, die Registrierungsfelder und **Notizen** aus. Mit der Wahl eines Landes werden die **Basiswährung** (die Währung des Landes) und der **Kontenplan** (der Standard-Kontenplan des Landes, falls vorhanden, sonst ein globaler Kontenplan) für Sie ausgefüllt. Sie können beide vor dem Speichern ändern. Klicken Sie auf **Erstellen**, um das Unternehmen zu speichern: Ein fehlendes Pflichtfeld wird markiert, sonst wird das Unternehmen erstellt und bleibt geöffnet, mit allen Reitern. **Abbrechen** oder Escape im leeren Titel verlässt die Seite, ohne etwas zu erstellen.
 
 ---
 
@@ -126,7 +126,7 @@ Der Details-Tab verwaltet die **Jahreskennzahlen**. Wechseln Sie mit den Jahres-
 
 **Was Sie bearbeiten können**:
 
-- **Mitarbeiterzahl** (Pflicht): Gesamtzahl der Beschäftigten im Jahr, muss eine ganze Zahl von 0 oder mehr sein
+- **Mitarbeiterzahl**: Gesamtzahl der Beschäftigten im Jahr, eine ganze Zahl von 0 oder mehr
 - **IT-Benutzer** (optional): Anzahl der IT-Benutzer, muss eine ganze Zahl von 0 oder mehr sein
 - **Umsatz** (optional): Umsatz in Millionen der Basiswährung des Unternehmens, bis zu 3 Dezimalstellen. Die Beschriftung nennt die Währung, zum Beispiel **Umsatz (Mio. USD)**
 
@@ -185,7 +185,7 @@ Ein Unternehmensadministrator (`companies:admin`) kann ein Unternehmen auf seine
 
 Viele Bereiche der App sind jahresbezogen. Unternehmen haben Kennzahlen pro Jahr:
 
-- **Mitarbeiterzahl** (Pflicht für das Jahr)
+- **Mitarbeiterzahl**
 - **IT-Benutzer** (optional)
 - **Umsatz** (optional, in Millionen der Basiswährung des Unternehmens)
 

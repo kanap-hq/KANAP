@@ -97,7 +97,7 @@ Klicken Sie auf **Neu**. Die Seite des neuen Elements öffnet sich mit geöffnet
 
 Der **Typ** steht zunächst auf **Kostenstelle**. Wählen Sie **Gruppe**, um eine Gruppe zu erstellen: Das Feld **Unternehmen** verschwindet dann.
 
-Nach **Erstellen** kehren Sie dorthin zurück, wo Sie begonnen haben. **Abbrechen** oder Escape im leeren Titel verlässt die Seite, ohne etwas zu erstellen.
+Nach **Erstellen** wird das Element erstellt und bleibt geöffnet, mit allen Reitern. **Abbrechen** oder Escape im leeren Titel verlässt die Seite, ohne etwas zu erstellen.
 
 ---
 

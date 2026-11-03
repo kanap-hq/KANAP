@@ -80,7 +80,7 @@ Cliquez sur **Nouveau**. La page du nouveau calendrier s'ouvre, son panneau des 
 4. **Description** : facultative
 5. Cliquez sur **Créer**
 
-Un nouveau calendrier est activé, et vous revenez à votre point de départ. **Annuler**, ou Échap dans le titre vide, part sans rien créer. Un calendrier standard contient les jours ouvrés de chaque année : ils s'affichent une fois le calendrier créé. Pour un calendrier personnalisé, saisissez-les année par année.
+Un nouveau calendrier est activé et reste ouvert, tous ses onglets disponibles. **Annuler**, ou Échap dans le titre vide, part sans rien créer. Un calendrier standard contient les jours ouvrés de chaque année : ils s'affichent une fois le calendrier créé. Pour un calendrier personnalisé, saisissez-les année par année.
 
 Le pays et la région se définissent une seule fois, à la création. Pour suivre un autre pays, créez un autre calendrier.
 

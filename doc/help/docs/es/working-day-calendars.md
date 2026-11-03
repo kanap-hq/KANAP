@@ -80,7 +80,7 @@ Haga clic en **Nuevo**. Se abre la página del calendario nuevo, con su panel de
 4. **Descripción**: opcional
 5. Haga clic en **Crear**
 
-Un calendario nuevo está activado, y vuelve al punto de partida. **Cancelar**, o Escape en el título vacío, sale sin crear nada. Un calendario estándar contiene los días laborables de todos los años: se muestran una vez creado. En uno personalizado, introdúzcalos año por año.
+Un calendario nuevo está activado y permanece abierto, con todas sus pestañas disponibles. **Cancelar**, o Escape en el título vacío, sale sin crear nada. Un calendario estándar contiene los días laborables de todos los años: se muestran una vez creado. En uno personalizado, introdúzcalos año por año.
 
 El país y la región se definen una sola vez, al crear el calendario. Para seguir otro país, cree otro calendario.
 

@@ -97,7 +97,7 @@ Haga clic en **Nuevo**. Se abre la página del elemento nuevo, con su panel de p
 
 El **Tipo** empieza en **Centro de coste**. Elija **Grupo** para crear un grupo: el campo **Empresa** desaparece entonces.
 
-Tras **Crear**, vuelve al punto de partida. **Cancelar**, o Escape en el título vacío, sale sin crear nada.
+Tras **Crear**, el elemento se crea y permanece abierto, con todas sus pestañas disponibles. **Cancelar**, o Escape en el título vacío, sale sin crear nada.
 
 ---
 

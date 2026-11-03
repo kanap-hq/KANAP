@@ -4,7 +4,7 @@ Les sites documentent l'emplacement de votre infrastructure IT : centres de donn
 
 ## Premiers pas
 
-Naviguez vers **Cartographie SI > Sites** pour ouvrir le registre des sites. Cliquez sur **Ajouter un site** pour créer une nouvelle entrée : la page du nouveau site s'ouvre, son panneau des propriétés ouvert. Saisissez le nom dans le titre en haut de la page, choisissez le **Type d'hébergement** et les autres champs, puis cliquez sur **Créer** : vous revenez à votre point de départ. **Annuler**, ou Échap dans le titre vide, part sans rien créer.
+Naviguez vers **Cartographie SI > Sites** pour ouvrir le registre des sites. Cliquez sur **Ajouter un site** pour créer une nouvelle entrée : la page du nouveau site s'ouvre, son panneau des propriétés ouvert. Saisissez le nom dans le titre en haut de la page, choisissez le **Type d'hébergement** et les autres champs, puis cliquez sur **Créer** : le site est créé et reste ouvert, tous ses onglets disponibles. **Annuler**, ou Échap dans le titre vide, part sans rien créer.
 
 **Champs obligatoires** :
 - **Code** : Un identifiant court unique (par ex., `DC-EU-WEST`, `AWS-US-EAST-1`)

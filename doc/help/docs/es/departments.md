@@ -68,7 +68,7 @@ La pestaña Visión general contiene la descripción. Los demás campos están e
 - **Descripción**: Descripción de texto libre
 - **Ciclo de vida**: el interruptor de estado, cuya etiqueta muestra el estado actual (**Activado** o **Desactivado**), y la fecha de **Fin de validez**. Deje la fecha en blanco para que el departamento permanezca activo indefinidamente, o fije una fecha futura para programar su fin. Pasar a **Desactivado** fija el fin de validez en este momento: la desactivación es inmediata. Mientras haya una fecha futura, el interruptor muestra **Activo hasta el** y esa fecha
 
-**Crear un departamento**: **Nuevo** abre la página del departamento nuevo, con su panel de propiedades abierto. Escriba el nombre en el título de la parte superior de la página, elija la **Empresa** y añada una **Descripción** si lo desea. Haga clic en **Crear** para guardarlo: vuelve al punto de partida. **Cancelar**, o Escape en el título vacío, sale sin crear nada.
+**Crear un departamento**: **Nuevo** abre la página del departamento nuevo, con su panel de propiedades abierto. Escriba el nombre en el título de la parte superior de la página, elija la **Empresa** y añada una **Descripción** si lo desea. Haga clic en **Crear** para guardarlo: el departamento permanece abierto, con todas sus pestañas disponibles. **Cancelar**, o Escape en el título vacío, sale sin crear nada.
 
 ---
 

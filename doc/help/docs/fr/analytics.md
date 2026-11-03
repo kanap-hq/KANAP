@@ -127,7 +127,7 @@ Cliquez sur n'importe quelle cellule pour ouvrir l'espace de travail de la valeu
 
 ### Créer une dimension
 
-Cliquez sur **Nouveau** dans la barre de sélection. La page de la nouvelle dimension s'ouvre, son panneau des propriétés ouvert. Saisissez le nom dans le titre en haut de la page, remplissez les champs, puis cliquez sur **Créer**. Vous revenez à votre point de départ. Une nouvelle dimension est activée. **Annuler**, ou Échap dans le titre vide, part sans rien créer.
+Cliquez sur **Nouveau** dans la barre de sélection. La page de la nouvelle dimension s'ouvre, son panneau des propriétés ouvert. Saisissez le nom dans le titre en haut de la page, remplissez les champs, puis cliquez sur **Créer**. Une nouvelle dimension est activée et reste ouverte, tous ses onglets disponibles. **Annuler**, ou Échap dans le titre vide, part sans rien créer.
 
 - Le nom est obligatoire.
 - Le **Code** est proposé à partir du nom : en minuscules, sans accents, les espaces remplacés par `-`. Vous pouvez le modifier avant de créer la dimension.
@@ -242,7 +242,7 @@ Pour conserver plutôt les valeurs sur les lignes, désactivez la dimension.
 
 ### Créer une valeur
 
-Cliquez sur **Nouvelle valeur**. La page de la nouvelle valeur s'ouvre, son panneau des propriétés ouvert. Le champ **Dimension** commence sur la dimension sélectionnée sur la page et ne propose que les dimensions activées. Saisissez le nom dans le titre en haut de la page, et une **Description** si vous le souhaitez. **Utilisé pour** commence sur **OPEX et CAPEX** : changez-le si la valeur ne convient qu'à un type de ligne. Cliquez ensuite sur **Créer**. Vous revenez à votre point de départ. Une nouvelle valeur est activée. **Annuler**, ou Échap dans le titre vide, part sans rien créer.
+Cliquez sur **Nouvelle valeur**. La page de la nouvelle valeur s'ouvre, son panneau des propriétés ouvert. Le champ **Dimension** commence sur la dimension sélectionnée sur la page et ne propose que les dimensions activées. Saisissez le nom dans le titre en haut de la page, et une **Description** si vous le souhaitez. **Utilisé pour** commence sur **OPEX et CAPEX** : changez-le si la valeur ne convient qu'à un type de ligne. Cliquez ensuite sur **Créer**. Une nouvelle valeur est activée et reste ouverte, tous ses onglets disponibles. **Annuler**, ou Échap dans le titre vide, part sans rien créer.
 
 ### L'espace de travail de la valeur
 

@@ -68,7 +68,7 @@ Der Übersichts-Tab enthält die Beschreibung. Die übrigen Felder befinden sich
 - **Beschreibung**: Freitext-Beschreibung
 - **Lebenszyklus**: der Statusschalter, dessen Beschriftung den aktuellen Zustand zeigt (**Aktiviert** oder **Deaktiviert**), und das Datum **Ende der Gültigkeit**. Lassen Sie das Datum leer, damit die Abteilung unbegrenzt aktiv bleibt, oder setzen Sie ein zukünftiges Datum, um ihr Ende zu planen. Ein Wechsel auf **Deaktiviert** setzt das Ende der Gültigkeit auf jetzt: Die Deaktivierung gilt sofort. Solange ein zukünftiges Datum gesetzt ist, zeigt der Schalter **Aktiv bis** und dieses Datum
 
-**Eine Abteilung erstellen**: **Neu** öffnet die Seite der neuen Abteilung mit geöffnetem Eigenschaftenbereich. Geben Sie den Namen im Titel oben auf der Seite ein, wählen Sie das **Unternehmen** und fügen Sie bei Bedarf eine **Beschreibung** hinzu. Klicken Sie auf **Erstellen**, um sie zu speichern: Sie kehren dorthin zurück, wo Sie begonnen haben. **Abbrechen** oder Escape im leeren Titel verlässt die Seite, ohne etwas zu erstellen.
+**Eine Abteilung erstellen**: **Neu** öffnet die Seite der neuen Abteilung mit geöffnetem Eigenschaftenbereich. Geben Sie den Namen im Titel oben auf der Seite ein, wählen Sie das **Unternehmen** und fügen Sie bei Bedarf eine **Beschreibung** hinzu. Klicken Sie auf **Erstellen**, um sie zu speichern: Die Abteilung bleibt geöffnet, mit allen Reitern. **Abbrechen** oder Escape im leeren Titel verlässt die Seite, ohne etwas zu erstellen.
 
 ---
 
