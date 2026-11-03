@@ -55,6 +55,13 @@ type Account = {
   disabled_at: string | null;
 };
 
+/** What a new account starts from; its chart comes from the page it was opened on. */
+const NEW_ACCOUNT: Account = {
+  id: '', coa_id: null, account_number: '', account_name: '', native_name: null, description: null,
+  consolidation_account_number: null, consolidation_account_name: null, consolidation_account_description: null,
+  nature: null, status: STATUS_ENABLED, disabled_at: null,
+};
+
 type TextKey = 'native_name' | 'description';
 /** Fields typed in place and saved on blur: a revert must reach the server even mid-save. */
 type TypedField = TextKey | 'account_name' | 'account_number';
@@ -117,11 +124,17 @@ export default function AccountWorkspacePage() {
   if (nav.total > 0) lastNavRef.current = { id, nav };
   const shownNav = nav.total > 0 ? nav : (lastNavRef.current?.id === id ? lastNavRef.current.nav : null);
 
-  const { data, error: loadError } = useQuery({
+  const { data: stored, error: loadError } = useQuery({
     queryKey: ['accounts', id],
     queryFn: async () => (await api.get<Account>(`/accounts/${id}`)).data,
     enabled: !isCreate && !!id,
   });
+  // The new page is the account's own page on a draft: the fields write here, Create sends it.
+  const [draft, setDraft] = React.useState<Account>(NEW_ACCOUNT);
+  const draftRef = React.useRef(draft);
+  const preselectedCoaId = coaId && coas.some((coa) => coa.id === coaId) ? coaId : null;
+  const newCoaId = draft.coa_id ?? preselectedCoaId;
+  const data = isCreate ? { ...draft, coa_id: newCoaId } : stored;
 
   const [errors, setErrors] = React.useState<FieldErrors>({});
   const [pageError, setPageError] = React.useState<string | null>(null);
@@ -166,6 +179,12 @@ export default function AccountWorkspacePage() {
 
   const patch = React.useCallback(
     (body: Partial<Account>, field: AccountField): Promise<void> => {
+      if (isCreate) {
+        setErrors((prev) => ({ ...prev, [field]: undefined }));
+        draftRef.current = { ...draftRef.current, ...body };
+        setDraft(draftRef.current);
+        return Promise.resolve();
+      }
       const recordId = data?.id;
       if (!recordId || !canEdit) return Promise.resolve();
       setErrors((prev) => ({ ...prev, [field]: undefined }));
@@ -187,7 +206,7 @@ export default function AccountWorkspacePage() {
       chainRef.current = result.catch(() => undefined);
       return result;
     },
-    [afterWrite, canEdit, data?.id, queryClient, t],
+    [afterWrite, canEdit, data?.id, isCreate, queryClient, t],
   );
 
   // The last value sent per field while its writes are in flight (keyed by account and field):
@@ -219,6 +238,11 @@ export default function AccountWorkspacePage() {
 
   const commitNumber = (raw: string) => {
     if (!data) return;
+    // A new account's number is checked on Create.
+    if (isCreate) {
+      void patch({ account_number: raw.trim() }, 'account_number');
+      return;
+    }
     const next = parseAccountNumber(raw);
     if (next == null) {
       setErrors((prev) => ({ ...prev, account_number: t('accounts.messages.numberInvalid', { max: ACCOUNT_NUMBER_MAX_DIGITS }) }));
@@ -227,21 +251,51 @@ export default function AccountWorkspacePage() {
     commitTyped('account_number', next, Number(data.account_number));
   };
 
-  if (isCreate) {
-    return (
-      <AccountCreate
-        canCreate={canEdit}
-        coas={coas}
-        coasLoaded={!coasLoading}
-        consolidationChart={consolidationChart}
-        preselectedCoaId={coaId}
-        onClose={handleClose}
-      />
-    );
-  }
+  // Create sends the draft with the header's name, then goes back where the creation started.
+  const leave = useCreationLeave(handleClose);
+  const title = useCreationTitle({ requiredMessage: t('accounts.messages.nameRequired'), onCancel: leave });
+  const [creating, setCreating] = React.useState(false);
+  const handleCreate = async () => {
+    if (!canEdit || creating) return;
+    const name = title.require();
+    const values = draftRef.current;
+    const number = parseAccountNumber(String(values.account_number));
+    const nextErrors: FieldErrors = {};
+    if (!newCoaId) nextErrors.coa_id = t('accounts.messages.chartRequired');
+    if (number == null) nextErrors.account_number = t('accounts.messages.numberInvalid', { max: ACCOUNT_NUMBER_MAX_DIGITS });
+    setErrors((prev) => ({ ...prev, ...nextErrors }));
+    if (!name || Object.keys(nextErrors).length > 0) return;
+    setCreating(true);
+    setPageError(null);
+    try {
+      await api.post<Account>('/accounts', {
+        coa_id: newCoaId,
+        account_number: number,
+        account_name: name,
+        native_name: values.native_name,
+        description: values.description,
+        consolidation_account_number: values.consolidation_account_number,
+        nature: values.nature,
+        status: values.status,
+        disabled_at: values.disabled_at,
+      });
+      afterWrite([newCoaId]);
+      leave();
+    } catch (e) {
+      const message = getApiErrorMessage(e, t, t('accounts.messages.createFailed'));
+      // The page checks everything else first: a 400 that names no field is the number already
+      // used in the chosen chart.
+      const field = accountRefusalField(e) ?? (httpStatus(e) === 400 ? 'account_number' : null);
+      if (field === 'account_name') title.refuse(message);
+      else if (field) setErrors((prev) => ({ ...prev, [field]: message }));
+      else setPageError(message);
+    } finally {
+      setCreating(false);
+    }
+  };
 
   const disabled = !canEdit;
-  const reference = data ? String(data.account_number) : null;
+  const reference = data && !isCreate ? String(data.account_number) : null;
 
   const properties = data ? (
     <>
@@ -274,7 +328,7 @@ export default function AccountWorkspacePage() {
               if (next !== parseAccountNature(data.nature)) void patch({ nature: next }, 'nature');
             }}
           />
-          <NatureConflictNote accountId={data.id} nature={parseAccountNature(data.nature)} lineCounts={data.line_counts} />
+          {!isCreate && <NatureConflictNote accountId={data.id} nature={parseAccountNature(data.nature)} lineCounts={data.line_counts} />}
         </PropertyRow>
       </PropertyGroup>
       <PropertyGroup>
@@ -315,16 +369,22 @@ export default function AccountWorkspacePage() {
         onTabChange={() => undefined}
         drawerStorageKey="kanap.accounts.drawerOpen"
         backLabel={t('coa.title')}
-        onBack={handleClose}
+        onBack={isCreate ? leave : handleClose}
         itemReference={reference}
         onCopyReference={reference ? () => { void navigator.clipboard?.writeText(reference); } : undefined}
-        title={data?.account_name ?? ''}
-        titleFallback={t('accounts.accountFallback')}
-        canEditTitle={canEdit && !!data}
-        onTitleSave={(next) => {
-          if (data) commitTyped('account_name', next, data.account_name);
-        }}
-        nav={shownNav ? {
+        {...(isCreate ? title.shellProps : {
+          title: data?.account_name ?? '',
+          canEditTitle: canEdit && !!data,
+          onTitleSave: (next: string) => {
+            if (data) commitTyped('account_name', next, data.account_name);
+          },
+        })}
+        titleFallback={isCreate ? t('accounts.newAccount') : t('accounts.accountFallback')}
+        isCreate={isCreate}
+        actions={isCreate ? (
+          <CreationActions onCreate={() => void handleCreate()} onCancel={leave} busy={!canEdit || creating} />
+        ) : undefined}
+        nav={!isCreate && shownNav ? {
           currentIndex: shownNav.index + 1,
           totalCount: shownNav.total,
           hasPrev: shownNav.hasPrev,
@@ -335,7 +395,7 @@ export default function AccountWorkspacePage() {
           nextLabel: t('accounts.next'),
         } : undefined}
         properties={properties}
-        history={id ? { table: 'accounts', recordId: id } : undefined}
+        history={id && !isCreate ? { table: 'accounts', recordId: id } : undefined}
       >
         {data && (
           // Keyed by account: drafts start afresh on the next record.
@@ -575,185 +635,3 @@ function DescriptionField({
   );
 }
 
-type CreateValues = {
-  /** Undefined until the user picks a chart: the list's chart is preselected meanwhile. */
-  coa_id: string | null | undefined;
-  account_number: string;
-  native_name: string;
-  description: string;
-  consolidation_account_number: number | null;
-  nature: AccountNature | null;
-};
-
-const EMPTY_CREATE: CreateValues = {
-  coa_id: undefined,
-  account_number: '',
-  native_name: '',
-  description: '',
-  consolidation_account_number: null,
-  nature: null,
-};
-
-function AccountCreate({
-  canCreate,
-  coas,
-  coasLoaded,
-  consolidationChart,
-  preselectedCoaId,
-  onClose,
-}: {
-  canCreate: boolean;
-  coas: CoaListItem[];
-  coasLoaded: boolean;
-  consolidationChart: CoaListItem | undefined;
-  preselectedCoaId: string | null;
-  onClose: () => void;
-}) {
-  const { t } = useTranslation(['master-data', 'common']);
-  const queryClient = useQueryClient();
-  const [values, setValues] = React.useState<CreateValues>(EMPTY_CREATE);
-  const [errors, setErrors] = React.useState<FieldErrors>({});
-  const [serverError, setServerError] = React.useState<string | null>(null);
-  const [submitting, setSubmitting] = React.useState(false);
-  const leave = useCreationLeave(onClose);
-  const title = useCreationTitle({ requiredMessage: t('accounts.messages.nameRequired'), onCancel: leave });
-
-  const preselected = preselectedCoaId && coas.some((coa) => coa.id === preselectedCoaId) ? preselectedCoaId : null;
-  const coaId = values.coa_id === undefined ? preselected : values.coa_id;
-
-  const set = <K extends keyof CreateValues>(field: K, value: CreateValues[K]) => {
-    setValues((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleCreate = async () => {
-    if (!canCreate || submitting) return;
-    const name = title.require();
-    const number = parseAccountNumber(values.account_number);
-    const nextErrors: FieldErrors = {};
-    if (!coaId) nextErrors.coa_id = t('accounts.messages.chartRequired');
-    if (number == null) nextErrors.account_number = t('accounts.messages.numberInvalid', { max: ACCOUNT_NUMBER_MAX_DIGITS });
-    setErrors(nextErrors);
-    if (!name || Object.keys(nextErrors).length > 0) return;
-    setSubmitting(true);
-    setServerError(null);
-    try {
-      await api.post<Account>('/accounts', {
-        coa_id: coaId,
-        account_number: number,
-        account_name: name,
-        native_name: values.native_name.trim() || null,
-        description: values.description.trim() || null,
-        consolidation_account_number: values.consolidation_account_number,
-        nature: values.nature,
-        status: STATUS_ENABLED,
-        disabled_at: null,
-      });
-      void queryClient.invalidateQueries({ queryKey: ['accounts'] });
-      void queryClient.invalidateQueries({ queryKey: ['accounts-ids'] });
-      void queryClient.invalidateQueries({ queryKey: COA_LIST_QUERY_KEY });
-      leave();
-    } catch (e) {
-      const message = getApiErrorMessage(e, t, t('accounts.messages.createFailed'));
-      // The form checks everything else first: a 400 that names no field is the number already
-      // used in the chosen chart.
-      const field = accountRefusalField(e) ?? (httpStatus(e) === 400 ? 'account_number' : null);
-      if (field === 'account_name') title.refuse(message);
-      else if (field && field !== 'disabled_at') setErrors({ [field]: message });
-      else setServerError(message);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-      <PortfolioDetailWorkspaceShell
-        activeTab="overview"
-        tabs={[{ key: 'overview', label: t('shared.labels.overview') }]}
-        onTabChange={() => undefined}
-        drawerStorageKey="kanap.accounts.drawerOpen"
-        backLabel={t('coa.title')}
-        onBack={leave}
-        {...title.shellProps}
-        titleFallback={t('accounts.newAccount')}
-        isCreate
-        actions={<CreationActions onCreate={() => void handleCreate()} onCancel={leave} busy={!canCreate || submitting} />}
-      >
-        <Stack spacing={1.5} sx={{ maxWidth: 560 }}>
-          <PropertyRow label={t('accounts.fields.chartOfAccounts')} required valueSx={{ maxWidth: 520 }}>
-            <ChartSelect
-              coas={coas}
-              value={coaId}
-              error={errors.coa_id}
-              onChange={(next) => set('coa_id', next)}
-            />
-          </PropertyRow>
-          <PropertyRow label={t('accounts.fields.accountNumber')} required valueSx={{ maxWidth: 520 }}>
-            <TextField
-              value={values.account_number}
-              onChange={(e) => set('account_number', e.target.value)}
-              variant="standard"
-              fullWidth
-              sx={drawerFieldValueSx}
-              placeholder={t('accounts.placeholders.accountNumber')}
-              error={!!errors.account_number}
-              helperText={errors.account_number}
-              inputProps={{
-                'aria-label': t('accounts.fields.accountNumber'),
-                inputMode: 'numeric',
-                autoComplete: 'off',
-                spellCheck: false,
-              }}
-            />
-          </PropertyRow>
-          <PropertyRow label={t('accounts.fields.nature')} valueSx={{ maxWidth: 520 }}>
-            <LineTypeUsageSelect
-              value={values.nature}
-              label={t('accounts.fields.nature')}
-              error={errors.nature}
-              onChange={(next) => set('nature', next)}
-            />
-          </PropertyRow>
-          <PropertyRow label={t('accounts.fields.nativeName')} valueSx={{ maxWidth: 520 }}>
-            <TextField
-              value={values.native_name}
-              onChange={(e) => set('native_name', e.target.value)}
-              variant="standard"
-              fullWidth
-              sx={drawerFieldValueSx}
-              placeholder={t('accounts.placeholders.nativeName')}
-              inputProps={{ 'aria-label': t('accounts.fields.nativeName'), autoComplete: 'off' }}
-            />
-          </PropertyRow>
-          <PropertyRow label={t('accounts.fields.description')} valueSx={{ maxWidth: 520 }}>
-            <TextField
-              value={values.description}
-              onChange={(e) => set('description', e.target.value)}
-              multiline
-              minRows={2}
-              variant="standard"
-              fullWidth
-              sx={drawerFieldValueSx}
-              placeholder={t('accounts.placeholders.description')}
-              inputProps={{ 'aria-label': t('accounts.fields.description') }}
-            />
-          </PropertyRow>
-          <PropertyRow label={t('accounts.fields.consolidationAccount')} valueSx={{ maxWidth: 520 }}>
-            <ConsolidationAccountField
-              value={values.consolidation_account_number}
-              storedName={null}
-              storedDescription={null}
-              chart={consolidationChart}
-              chartsLoaded={coasLoaded}
-              disabled={false}
-              error={errors.consolidation_account_number}
-              label={t('accounts.fields.consolidationAccount')}
-              onChange={(next) => set('consolidation_account_number', next)}
-            />
-          </PropertyRow>
-          {serverError && <Alert severity="error">{serverError}</Alert>}
-        </Stack>
-      </PortfolioDetailWorkspaceShell>
-    </Box>
-  );
-}
