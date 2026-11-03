@@ -22,7 +22,8 @@ export type ContractFormValues = {
   cost_center_id: string;
   owner_user_id: string | null;
   start_date: string;
-  duration_months: number;
+  /** Empty on a new contract until the person types it. */
+  duration_months: number | null;
   notice_period_months: number;
   auto_renewal: boolean;
   yearly_amount_at_signature: number;
@@ -34,8 +35,14 @@ export type ContractFormValues = {
   updated_at: string | null;
 };
 
+/** The required fields a new contract lacks, when Create is clicked. */
+export type ContractFieldErrors = Partial<Record<'supplier_id' | 'company_id' | 'start_date' | 'duration_months' | 'currency', string>>;
+
 type Props = {
   values: ContractFormValues;
+  /** A new contract: no creation or update dates yet. */
+  isCreate?: boolean;
+  errors?: ContractFieldErrors;
   names: { supplier: string | null; company: string | null; owner: string | null };
   disabled: boolean;
   /** Saved at once: pickers, dates, selects. */
@@ -54,8 +61,12 @@ const hideInnerLabelSx = {
 
 const twoColumnsSx = { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', columnGap: '10px' } as const;
 
+const errorLine = (message: string | undefined) => (
+  message ? <Box component="span" sx={{ color: 'error.main' }}>{message}</Box> : undefined
+);
+
 /** The contract's properties panel: parties, duration, amount, lifecycle. Every field saves itself. */
-export default function ContractPropertiesDrawer({ values, names, disabled, onPatch, onTyped, onCommit }: Props) {
+export default function ContractPropertiesDrawer({ values, isCreate = false, errors = {}, names, disabled, onPatch, onTyped, onCommit }: Props) {
   const { t } = useTranslation(['ops', 'common']);
   const locale = useLocale();
   const placement = useContractPlacementFilter(values.company_id || null, values.cost_center_id || null);
@@ -77,6 +88,8 @@ export default function ContractPropertiesDrawer({ values, names, disabled, onPa
               onChange={(next) => { if (next && next !== values.supplier_id) onPatch({ supplier_id: next }); }}
               disabled={disabled}
               required
+              error={!!errors.supplier_id}
+              helperText={errors.supplier_id}
               selectedOption={values.supplier_id && names.supplier ? { id: values.supplier_id, name: names.supplier, erp_supplier_id: null, status: 'enabled' } : null}
             />
           </Box>
@@ -91,6 +104,8 @@ export default function ContractPropertiesDrawer({ values, names, disabled, onPa
               allowedCompanyIds={placement?.companyIds}
               disabled={disabled}
               required
+              error={!!errors.company_id}
+              helperText={errors.company_id}
               disableClearable
               selectedOption={values.company_id && names.company ? { id: values.company_id, name: names.company } : null}
             />
@@ -135,11 +150,13 @@ export default function ContractPropertiesDrawer({ values, names, disabled, onPa
               onChangeYmd={(next) => { if (next && next !== values.start_date) onPatch({ start_date: next }); }}
               disabled={disabled}
               required
+              error={!!errors.start_date}
+              helperText={errors.start_date}
             />
           </Box>
         </PropertyRow>
         <Box sx={twoColumnsSx}>
-          <PropertyRow label={t('contracts.fields.durationMonths')}>
+          <PropertyRow label={t('contracts.fields.durationMonths')} required helperText={errorLine(errors.duration_months)}>
             <NumberField
               kind="months"
               value={values.duration_months}
@@ -182,7 +199,7 @@ export default function ContractPropertiesDrawer({ values, names, disabled, onPa
           />
         </PropertyRow>
         <Box sx={twoColumnsSx}>
-          <PropertyRow label={t('contracts.fields.currency')}>
+          <PropertyRow label={t('contracts.fields.currency')} required helperText={errorLine(errors.currency)}>
             <CurrencyField
               value={values.currency}
               onChange={(next) => { if (next !== values.currency) onPatch({ currency: next }); }}
@@ -223,6 +240,7 @@ export default function ContractPropertiesDrawer({ values, names, disabled, onPa
             disabledAtHelperText={t('contracts.fields.endOfValidityHint')}
           />
         </Box>
+        {!isCreate && (
         <Box sx={twoColumnsSx}>
           <PropertyRow label={t('contracts.fields.created')}>
             <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{formatShortDate(values.created_at, locale, { year: 'always', empty: '-' })}</Typography>
@@ -231,6 +249,7 @@ export default function ContractPropertiesDrawer({ values, names, disabled, onPa
             <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{formatShortDate(values.updated_at, locale, { year: 'always', empty: '-' })}</Typography>
           </PropertyRow>
         </Box>
+        )}
       </PropertyGroup>
     </>
   );

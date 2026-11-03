@@ -434,11 +434,6 @@
       "relations": "Relations",
       "history": "Historique"
     },
-    "sections": {
-      "parties": "Parties",
-      "duration": "Durée",
-      "amount": "Montant"
-    },
     "fields": {
       "name": "Nom du contrat",
       "supplier": "Fournisseur",
@@ -475,9 +470,6 @@
       "editInProperties": "Modifier dans le panneau Propriétés"
     },
     "placeholders": {
-      "durationMonths": "Ex. : 12",
-      "noticeMonths": "Ex. : 3",
-      "yearlyAmount": "Ex. : 12000",
       "notes": "Ex. : conditions de renouvellement, interlocuteur commercial"
     },
     "messages": {

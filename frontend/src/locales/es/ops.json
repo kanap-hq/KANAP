@@ -434,11 +434,6 @@
       "relations": "Relaciones",
       "history": "Historial"
     },
-    "sections": {
-      "parties": "Partes",
-      "duration": "Duración",
-      "amount": "Importe"
-    },
     "fields": {
       "name": "Nombre del contrato",
       "supplier": "Proveedor",
@@ -475,9 +470,6 @@
       "editInProperties": "Editar en el panel de propiedades"
     },
     "placeholders": {
-      "durationMonths": "p. ej., 12",
-      "noticeMonths": "p. ej., 3",
-      "yearlyAmount": "p. ej., 12000",
       "notes": "p. ej., condiciones de renovación, contacto comercial"
     },
     "messages": {

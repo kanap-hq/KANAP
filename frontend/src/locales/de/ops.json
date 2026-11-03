@@ -434,11 +434,6 @@
       "relations": "Verknüpfungen",
       "history": "Verlauf"
     },
-    "sections": {
-      "parties": "Parteien",
-      "duration": "Laufzeit",
-      "amount": "Betrag"
-    },
     "fields": {
       "name": "Vertragsname",
       "supplier": "Lieferant",
@@ -475,9 +470,6 @@
       "editInProperties": "Im Eigenschaftenbereich bearbeiten"
     },
     "placeholders": {
-      "durationMonths": "z. B. 12",
-      "noticeMonths": "z. B. 3",
-      "yearlyAmount": "z. B. 12000",
       "notes": "z. B. Verlängerungsbedingungen, Ansprechpartner im Vertrieb"
     },
     "messages": {
