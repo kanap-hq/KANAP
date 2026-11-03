@@ -111,8 +111,8 @@ export function recordingStorage() {
   };
 }
 
-/** The real managed-document services (provisioning, delete), on the spec's transaction. */
-export function managedDocumentServices(manager: EntityManager) {
+/** The real Knowledge service on the spec's transaction; `audit` writes its audit rows (none by default). */
+export function knowledgeServiceFor(manager: EntityManager, audit: unknown = { log: async () => undefined }) {
   const permissions = new PermissionsService(manager.getRepository(UserPageRole), manager.getRepository(RolePermission));
   const users: any = {
     findById: async (id: string, opts?: any) => (opts?.manager ?? manager).getRepository(User).findOne({ where: { id }, relations: ['role'] }),
@@ -136,7 +136,7 @@ export function managedDocumentServices(manager: EntityManager) {
     manager.getRepository(DocumentRequest),
     manager.getRepository(DocumentTask),
     new ItemNumberService() as any,
-    { log: async () => undefined } as any,
+    audit as any,
     {} as any,
     {} as any,
     recordingStorage() as any,
@@ -147,6 +147,12 @@ export function managedDocumentServices(manager: EntityManager) {
     {} as any,
     { notifyShare: async () => undefined } as any,
   );
+  return { knowledge, permissions };
+}
+
+/** The real managed-document services (provisioning, delete), on the spec's transaction. */
+export function managedDocumentServices(manager: EntityManager) {
+  const { knowledge, permissions } = knowledgeServiceFor(manager);
   const importService: any = { convertToMarkdown: async () => ({ markdown: '', images: [], warnings: [], omittedTargets: [] }) };
   return new IntegratedDocumentsService(manager.getRepository(IntegratedDocumentBinding), knowledge, permissions, importService);
 }

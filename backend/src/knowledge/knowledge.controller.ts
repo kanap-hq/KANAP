@@ -17,7 +17,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
 import { Response } from 'express';
-import { DataSource } from 'typeorm';
+import { DataSource, EntityManager } from 'typeorm';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { Public } from '../auth/public.decorator';
@@ -38,6 +38,8 @@ import { InlineImageResolverService } from './inline-image-resolver.service';
 import { KnowledgeRelationsService } from './knowledge-relations.service';
 import { KnowledgeWorkflowService } from './knowledge-workflow.service';
 import { LongRunningRequest, OUTSIDE_WORK_TIMEOUTS } from '../common/request-db-timeouts';
+import { assertCreatorAloneSinceCreation, type CreationChanges } from '../common/creation/creation-changes';
+import { assertDocumentCreationToken, documentCreationChanges, withDocumentCreationToken } from './document-creation';
 
 @UseGuards(JwtAuthGuard)
 @Controller('knowledge')
@@ -171,8 +173,10 @@ export class KnowledgeController {
   @UseGuards(PermissionGuard)
   @RequireLevel('knowledge', 'member')
   @Post()
-  create(@Body() body: any, @Tenant() ctx: TenantRequest) {
-    return this.docs.create(body, ctx.tenantId, ctx.userId || null, { manager: ctx.manager });
+  async create(@Body() body: any, @Tenant() ctx: TenantRequest) {
+    const created = await this.docs.create(body, ctx.tenantId, ctx.userId || null, { manager: ctx.manager });
+    // The token of "Cancel" of a document being created (`document-creation.ts`).
+    return withDocumentCreationToken(created, { tenantId: ctx.tenantId, userId: ctx.userId || '' });
   }
 
   // What a delete of `ids` would refuse, asked before the confirmation.
@@ -234,6 +238,46 @@ export class KnowledgeController {
     @Tenant() ctx: TenantRequest,
   ) {
     return this.docs.update(idOrRef, body, ctx.userId || '', lockToken, { manager: ctx.manager });
+  }
+
+  /**
+   * Before "Cancel" of a document being created (`document-creation.ts`): what was written on it
+   * since its creation, for its creator with the token of `POST /knowledge`. Nothing is written.
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('knowledge', 'member')
+  @Get(':idOrRef/creation')
+  async creationChanges(
+    @Param('idOrRef') idOrRef: string,
+    @Query('token') token: string,
+    @Tenant() ctx: TenantRequest,
+  ): Promise<{ changes: CreationChanges }> {
+    const manager = ctx.manager as EntityManager;
+    const id = await this.docs.resolveDocumentId(idOrRef, manager);
+    assertDocumentCreationToken(id, token, { tenantId: ctx.tenantId, userId: ctx.userId || '' });
+    await assertCreatorAloneSinceCreation(manager, ctx.tenantId, 'documents', id, ctx.userId || '');
+    return { changes: await documentCreationChanges(manager, ctx.tenantId, id) };
+  }
+
+  /**
+   * "Cancel" of a document being created: its creator deletes it with its token, without the
+   * delete right (knowledge admin), while nobody else has written on it (403
+   * `CREATION_CANCEL_EXPIRED` otherwise, read under its lock). Same delete as `DELETE :idOrRef`
+   * (library write rule, managed document refusal, audit); the creator's edit lock goes with it.
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('knowledge', 'member')
+  @Delete(':idOrRef/creation')
+  async cancelCreation(
+    @Param('idOrRef') idOrRef: string,
+    @Body() body: { token?: string },
+    @Tenant() ctx: TenantRequest,
+  ): Promise<void> {
+    const manager = ctx.manager as EntityManager;
+    const id = await this.docs.resolveDocumentId(idOrRef, manager);
+    assertDocumentCreationToken(id, body?.token, { tenantId: ctx.tenantId, userId: ctx.userId || '' });
+    await assertCreatorAloneSinceCreation(manager, ctx.tenantId, 'documents', id, ctx.userId || '', { lock: true });
+    await this.docs.remove(id, ctx.userId || null, { manager });
   }
 
   @UseGuards(PermissionGuard)

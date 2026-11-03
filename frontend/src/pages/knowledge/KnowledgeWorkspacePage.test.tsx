@@ -85,6 +85,16 @@ function renderWorkspace(queryClient: QueryClient) {
   return render(workspaceTree(queryClient));
 }
 
+const EDIT_TITLE = 'common:buttons.editTitle';
+
+/** Opens the title, types `value` and commits it with Enter. */
+async function commitTitle(value: string) {
+  fireEvent.click(await screen.findByRole('button', { name: EDIT_TITLE }));
+  const input = screen.getByRole('textbox', { name: EDIT_TITLE });
+  fireEvent.change(input, { target: { value } });
+  fireEvent.keyDown(input, { key: 'Enter' });
+}
+
 describe('classifyKnowledgeLoadError', () => {
   it('separates a lost/absent document from a transient failure', () => {
     expect(classifyKnowledgeLoadError(null)).toBeNull();
@@ -343,13 +353,13 @@ describe('KnowledgeWorkspacePage — autosave', () => {
       const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, retryDelay: 0 } } });
       renderWorkspace(queryClient);
       fireEvent.click(await screen.findByText('workspace.actions.edit'));
-      const title = await screen.findByDisplayValue('Runbook');
+      await screen.findByText('workspace.actions.done');
       const saves = () => vi.mocked(api.patch).mock.calls.filter(([url]) => url === DOC_URL);
       vi.mocked(api.patch).mockRejectedValueOnce(Object.assign(new Error('Request failed'), {
         response: { status: 400, data: { code: 'MARKDOWN_TOO_COMPLEX', message: 'content_markdown is too complex.' } },
       }));
 
-      fireEvent.change(title, { target: { value: 'Runbook, refused' } });
+      await commitTitle('Runbook, refused');
       for (let second = 0; second < 10; second += 1) {
         // eslint-disable-next-line no-await-in-loop
         await act(async () => {
@@ -359,7 +369,7 @@ describe('KnowledgeWorkspacePage — autosave', () => {
       // Sent once: the same document is not sent again on every autosave delay.
       expect(saves()).toHaveLength(1);
 
-      fireEvent.change(title, { target: { value: 'Runbook, changed' } });
+      await commitTitle('Runbook, changed');
       for (let second = 0; second < 3; second += 1) {
         // eslint-disable-next-line no-await-in-loop
         await act(async () => {
@@ -371,6 +381,61 @@ describe('KnowledgeWorkspacePage — autosave', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe('KnowledgeWorkspacePage — title', () => {
+  const documentRow = (overrides: Record<string, unknown> = {}) => ({
+    id: 'doc-9',
+    item_number: 9,
+    title: 'Runbook',
+    content_markdown: 'Body',
+    revision: 1,
+    can_write: true,
+    edit_lock: null,
+    ...overrides,
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(api.post).mockImplementation(async (url: string) => (
+      url === '/knowledge/DOC-9/locks'
+        ? { data: { lock_token: 'tok-1', expires_at: '2099-01-01T00:00:00Z' } } as any
+        : { data: {} } as any
+    ));
+    vi.mocked(api.delete).mockResolvedValue({ data: {} } as any);
+    vi.mocked(api.patch).mockImplementation(async (_url: string, body: any) => ({ data: documentRow({ title: body.title, revision: 2 }) }) as any);
+  });
+
+  it('saves a committed title with the lock, in edit mode', async () => {
+    vi.mocked(api.get).mockImplementation(async (url: string) => (
+      url === DOC_URL ? { data: documentRow() } as any : { data: [] } as any
+    ));
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, retryDelay: 0 } } });
+    renderWorkspace(queryClient);
+    // Not editing: the title is shown, not offered for edit.
+    expect(await screen.findByText('Runbook')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: EDIT_TITLE })).toBeNull();
+
+    fireEvent.click(await screen.findByText('workspace.actions.edit'));
+    await commitTitle('Runbook v2');
+    await waitFor(() => expect(api.patch).toHaveBeenCalledWith(
+      DOC_URL,
+      expect.objectContaining({ title: 'Runbook v2', revision: 1, save_mode: 'autosave' }),
+      { headers: { 'X-Lock-Token': 'tok-1' } },
+    ), { timeout: 4000 });
+  });
+
+  it('shows the title read-only without the right to write the document', async () => {
+    vi.mocked(api.get).mockImplementation(async (url: string) => (
+      url === DOC_URL ? { data: documentRow({ can_write: false }) } as any : { data: [] } as any
+    ));
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, retryDelay: 0 } } });
+    renderWorkspace(queryClient);
+    expect(await screen.findByText('Runbook')).toBeTruthy();
+    expect(screen.queryByText('workspace.actions.edit')).toBeNull();
+    expect(screen.queryByRole('button', { name: EDIT_TITLE })).toBeNull();
+    expect(screen.queryByRole('textbox', { name: EDIT_TITLE })).toBeNull();
   });
 });
 

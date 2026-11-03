@@ -352,9 +352,6 @@
         "waiting": "Wartend",
         "you": "Sie"
       }
-    },
-    "messages": {
-      "saveFirstAll": "Speichern Sie das Dokument zuerst, um Mitwirkende, Workflow, Klassifizierung, Beziehungen und Versionen zu verwalten."
     }
   },
   "statuses": {
@@ -502,6 +499,9 @@
       "loadFailedTitle": "Dieses Dokument konnte nicht geladen werden",
       "loadFailedBody": "Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
       "backToLibrary": "Zurück zur Bibliothek"
+    },
+    "creation": {
+      "record": "Das Dokument"
     }
   },
   "delete": {

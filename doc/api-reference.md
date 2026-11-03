@@ -248,6 +248,13 @@ Cloud only (404 on-premise). Details, storage and audit events: [discovery-call.
 - POST `/discovery-call/clicks` with `{ placement }` (signed-in user, `204`): records a click on **Book a discovery call**
 - POST `/discovery-call/calcom`: the Cal.com booking webhook, public, signed with `DISCOVERY_CALL_WEBHOOK_SECRET` (`x-cal-signature-256`)
 
+## Trial e-mails
+Cloud only (404 on-premise). The links of the trial e-mails, public, with the workspace's link token (`?t=`, a bad token is a `404` on the unsubscribe routes). Details: [trial-mails.md](trial-mails.md).
+
+- GET `/trial-mails/unsubscribe?t=` → an HTML page that asks to confirm; changes nothing
+- POST `/trial-mails/unsubscribe?t=` → unsubscribes the workspace from the trial e-mails (the page's button and the one-click unsubscribe of mail clients), HTML page, `200`
+- GET `/trial-mails/call?t=&from=` → records the click when the token is valid (`trial.discovery_call_clicked`, placement `from`), then redirects (`302`) to the booking page in every case; `404` without one
+
 ## Billing
 - GET `/billing/subscription` → `{ plan_name, seat_limit, seats_used }`
 - POST `/billing/portal` → `{ url }`
@@ -554,6 +561,8 @@ Validation/behavior:
   - Assets [Requires: infrastructure:member]: the screen creates an asset at its title with POST `/assets/creation` (`name`, `kind`, `environment`, `provider`, `status`, `is_cluster`, `hostname`; every other key is dropped, the site included), which returns the asset with its `asset_reference` plus `creation_token`. The asset is created without a site; POST `/assets` keeps the site required (`asset_location_required`), and an update still refuses to clear a site the asset holds. POST `/assets/:id/creation/complete` with `{ token }` → `{ ok: true }`, or `400` `CREATION_INCOMPLETE` with `params.fields: ['location']` while the asset has no site. `GET /assets/:id/creation?token=` counts the history of the asset (`assets` inventory), with `document` (managed documents whose content changed) and `attachment`. `DELETE /assets/:id/creation` with `{ token }` locks the asset FOR UPDATE, refuses with 403 `CREATION_CANCEL_EXPIRED` an asset another person wrote on, then deletes it as `DELETE /assets/:id` does, without its admin level.
   - Connections [Requires: infrastructure:member]: POST `/connections/creation` with `{ name }` creates a server-to-server connection without protocol nor end and returns it with its `connection_reference` plus `creation_token`. While a connection lacks a protocol, an end (an asset or an entity) or, for a multi-server connection, two servers, an update may leave it lacking (`connections/connection-creation.ts`); once it has them all, every update keeps them, and POST `/connections` keeps its full rules. POST `/connections/:id/creation/complete` with `{ token }` → `{ ok: true }`, or `400` `CREATION_INCOMPLETE` with `params.fields` in screen order: `protocols`, then `source` and `destination`, or `servers`. `GET /connections/:id/creation?token=` counts the history of the connection (`connections` inventory), with `protocol` the protocols written. `DELETE /connections/:id/creation` with `{ token }` locks the connection, refuses with 403 `CREATION_CANCEL_EXPIRED` a connection another person wrote on, then deletes it as `DELETE /connections/:id` does, without its admin level.
   - Interfaces have no creation route: the screen fills a draft and writes it with POST `/interfaces` on Create.
+  - Tasks [Requires: tasks:member]: every create route of a task (`POST /tasks/standalone`, `/portfolio/projects/:id/tasks`, `/spend-items/:id/tasks`, `/capex-items/:id/tasks`, `/contracts/:id/tasks`, `/incidents/:id/tasks`) returns the task plus `creation_token` (one family, `tasks`); `GET /tasks/:id/creation?token=` and `DELETE /tasks/:id/creation` with `{ token }` serve them all (`tasks/task-creation.ts`). A project task also has the pair under its project, `GET` and `DELETE /portfolio/projects/:id/tasks/:taskId/creation` [Requires: portfolio_projects:contributor], which checks the token first, then the project and the task under the person's access (a task of another project: 400). `changes` counts the history of the task (`tasks` inventory: fields, description, applications, assets), with `attachment` and `time_entry` as they stand and `comment` the comments and decisions of its activity feed. The delete is `DELETE /tasks/:id`'s (`TasksDeleteService.delete`: the refusal of a task a request came from, 409 `TASK_REQUEST_ORIGIN`, its history and audit entry), without its admin level. A person whose data access is limited cancels under the limited role: the `tasks` DELETE policy and `assertTaskDeletable` let them delete a task whose line or contract they may modify, which they could to create it. The project's "task created" activity stays.
+  - Documents [Requires: knowledge:member]: `POST /knowledge` returns the document plus `creation_token` (family `documents`); `GET /knowledge/:idOrRef/creation?token=` and `DELETE /knowledge/:idOrRef/creation` with `{ token }` take the uuid or `DOC-n` (`knowledge/document-creation.ts`). `changes` counts the history of the document (`documents` inventory: its fields, the body included, without `revision` and `current_version_number`, which move with every save), with `attachment` as they stand, `comment` the comments of its activity, and the versions (`document_version`), relations (`relation`), classifications (`classification`) and contributors (`contributor`) written after the creation: the template's content, the relations of the address and the owner given at the creation are no change. The delete is `DELETE /knowledge/:idOrRef`'s (`KnowledgeService.remove`: the library's write rule, the refusal of a managed document, the audit entry), without its admin level. It reads no edit lock, so the creator's own lock does not stand in the way; the lock row goes with the document.
 - PATCH `/applications/:id` → partial update of the fields above.
 - DELETE `/applications/:id` → 409 `APPLICATION_HAS_INTERFACES` (with `usages`) while the application is the source or target of an interface, and DELETE `/applications/bulk` lists it as a failed item with the same code; otherwise deletes it with its deployments and its links (owners, audience, links, attachments, data residency).
 - POST `/applications/delete-check` with `{ ids: string[] }` [Requires: applications:admin] → `{ refused: Array<{ id, name, code, usages }>, removes: Array<{ type, total }> }`: the applications that are the source or target of an interface (`APPLICATION_HAS_INTERFACES`, `usages: [{ type: 'interfaces', total }]`), which both deletes refuse, and the deployments the others take with them (`removes: [{ type: 'app_instances', total }]`). Nothing is written.
@@ -1005,14 +1014,17 @@ A tenant classifies its budget lines along analytics dimensions (`analytics_axes
     - Validates unique name (per tenant, case-insensitive).
     - Applies lifecycle using `status`/`disabled_at`.
     - Syncs category links to the provided `category_ids`.
-  - Permissions: `business_processes:manager`.
+  - Returns the process plus `creation_token`, as `POST /applications` (below in this file: the creation routes).
+  - Permissions: `business_processes:member`.
+
+- GET `/business-processes/:id/creation?token=` and DELETE `/business-processes/:id/creation` with `{ token }` (`business_processes:member`, reserved to unscoped data access): the creation routes, with the token rules and the `CREATION_CANCEL_EXPIRED` refusal of the applications. `changes` counts the history of the process (fields, `application` links), plus one field when it holds categories (the history does not show them). The cancel removes the application links first (one audit row on `application_business_processes` per link, as an unlink), then deletes the process as `DELETE /business-processes/:id` does, without its admin level: an interface that names the process still refuses it (`BUSINESS_PROCESS_IN_USE`).
 
 - PATCH `/business-processes/:id`
   - Body: partial `BusinessProcessUpsertDto`.
   - Behavior:
     - Allows renaming (with uniqueness check).
     - Allows updating description/notes/owners/lifecycle and category links.
-  - Permissions: `business_processes:manager`.
+  - Permissions: `business_processes:member`.
 
 - DELETE `/business-processes/bulk`
   - Body: `{ ids: string[] }`.
@@ -1778,6 +1790,8 @@ Response: `{ success: true }` (202-style fire-and-forget; email failures are sil
   - Body: `{ title: string, description?: string, status?: string, priority_level?: string, start_date?: string, due_date?: string, assignee_user_id?: string, task_type_id?: string, source_id?: string, category_id?: string, stream_id?: string, company_id?: string }`
   - `title` is required and cannot be empty
   - Classification fields (`source_id`, `category_id`, `stream_id`, `company_id`) reference portfolio classification entities
+  - Returns the task plus `creation_token`, as every task create route does
+- GET `/tasks/:id/creation?token=` and DELETE `/tasks/:id/creation` with `{ token }` — what was written since the creation, and its cancel by its creator **[Requires: tasks:member]**; see the creation routes under [Applications (IT Landscape)](#applications-it-landscape)
 
 ### OPEX Task Management
 - GET `/spend-items/:id/tasks` → list tasks for specific OPEX item (sorted by creation date DESC) **[Requires: tasks:reader]**

@@ -352,9 +352,6 @@
         "waiting": "En attente",
         "you": "Vous"
       }
-    },
-    "messages": {
-      "saveFirstAll": "Enregistrez d’abord le document pour gérer les contributeurs, le workflow, la classification, les relations et les versions."
     }
   },
   "statuses": {
@@ -502,6 +499,9 @@
       "loadFailedTitle": "Ce document n'a pas pu être chargé",
       "loadFailedBody": "Vérifiez votre connexion, puis réessayez.",
       "backToLibrary": "Retour à la bibliothèque"
+    },
+    "creation": {
+      "record": "Le document"
     }
   },
   "delete": {

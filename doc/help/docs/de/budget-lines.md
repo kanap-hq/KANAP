@@ -246,7 +246,7 @@ Ersetzt die Zeile eine andere, oder wurde sie nach einer Typänderung ab einem s
 
 - Listet alle mit dieser Zeile verknüpften Aufgaben mit den Spalten **Titel**, **Status**, **Priorität**, **Fälligkeitsdatum** und **Aktionen**. Der Titel des Bereichs zeigt die Anzahl der Aufgaben
 - Filter **Status**: Alle (Standard), Aktiv (nicht erledigt), Offen, In Bearbeitung, Ausstehend, Im Test, Erledigt oder Abgebrochen. Die Zurücksetzen-Schaltfläche löscht ihn
-- Klicken Sie auf **Aufgabe hinzufügen**, um eine neue, bereits mit dieser Zeile verknüpfte Aufgabe zu öffnen. Titel, Beschreibung, Priorität, Zuständigen und Fälligkeitsdatum füllen Sie im Aufgaben-Arbeitsbereich aus
+- Klicken Sie auf **Aufgabe hinzufügen**, um eine neue, bereits mit dieser Zeile verknüpfte Aufgabe zu öffnen. Geben Sie den Titel ein und drücken Sie die Eingabetaste, um sie zu erstellen. Füllen Sie dann Beschreibung, Priorität, Zuständigen und Fälligkeitsdatum aus
 - Mit dem Öffnen-Symbol gehen Sie zu einer Aufgabe, mit dem Löschsymbol löschen Sie sie (nach Bestätigung)
 - Aufgaben haben eigene Berechtigungen (`tasks:member` zum Erstellen und Bearbeiten). Die Stufe Mitglied auf Budget allein berechtigt nicht zum Bearbeiten von Aufgaben; wenden Sie sich an Ihren Administrator, wenn Sie keine Aufgaben erstellen können
 - Aufgaben können auch unter **Portfolio > Aufgaben** angezeigt und verwaltet werden, wo alle Aufgaben Ihrer Organisation erscheinen

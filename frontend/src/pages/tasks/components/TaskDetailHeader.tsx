@@ -18,6 +18,7 @@ import type { TaskCrumb } from '../taskWorkspaceOrigin';
 import DeleteIconButton from '../../../components/workspace/DeleteIconButton';
 import WorkspaceTabs, { type WorkspaceTab } from '../../portfolio/workspace/WorkspaceTabs';
 import EditableTitle from '../../../components/workspace/EditableTitle';
+import { CreationPreview } from '../../../components/workspace/creation';
 
 function isModifiedClick(event: React.MouseEvent) {
   return event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0;
@@ -30,7 +31,7 @@ interface TaskDetailHeaderProps {
   title: string;
   status: TaskStatus;
   priorityLevel: PriorityLevel;
-  priorityScore: number;
+  priorityScore: number | null;
   assigneeUserId: string | null;
   assigneeName: string | null;
   dueDate: string | null;
@@ -71,6 +72,17 @@ interface TaskDetailHeaderProps {
   tabs: WorkspaceTab[];
   activeTab: string;
   onTabChange: (nextTab: string) => void;
+
+  // Creation at the title (the new page, and the task while it is being created)
+  /** Create and Cancel: shown in place of the record actions, the close button and the previous/next chip. */
+  creationActions?: React.ReactNode;
+  /** The new page: the title opens for typing, and the metadata bar is the draft's, dimmed. */
+  titleToGive?: boolean;
+  titleError?: string | null;
+  titleFocusRequest?: number;
+  onTitleDraftChange?: (draft: string) => void;
+  /** Escape in the empty title of the new page. */
+  onTitleCancel?: () => void;
 }
 
 /* ------------------------------------------------------------------ */
@@ -114,10 +126,32 @@ export default function TaskDetailHeader({
   tabs,
   activeTab,
   onTabChange,
+  creationActions,
+  titleToGive = false,
+  titleError,
+  titleFocusRequest,
+  onTitleDraftChange,
+  onTitleCancel,
 }: TaskDetailHeaderProps) {
   const { t } = useTranslation(['portfolio', 'common']);
   const originCrumb = crumbs.find((crumb) => crumb.key === 'origin');
   const parentCrumb = crumbs.find((crumb) => crumb.key === 'parent');
+  const metadataBar = (
+    <TaskMetadataBar
+      status={status}
+      priorityLevel={priorityLevel}
+      priorityScore={priorityScore}
+      assigneeUserId={assigneeUserId}
+      assigneeName={assigneeName}
+      dueDate={dueDate}
+      readOnly={!canManage}
+      isProjectTask={isProjectTask}
+      onPatch={onMetadataPatch}
+      projectId={projectId}
+      projectName={projectName}
+      onNavigateToProject={onNavigateToProject}
+    />
+  );
 
   return (
     <Box sx={{ flexShrink: 0 }}>
@@ -194,14 +228,16 @@ export default function TaskDetailHeader({
           )}
         </Box>
         <Box sx={{ justifySelf: 'center', display: 'flex', alignItems: 'center' }}>
-          <TaskNavChip
-            currentIndex={currentIndex + 1}
-            totalCount={totalCount}
-            onPrev={onPrev}
-            onNext={onNext}
-            hasPrev={hasPrev}
-            hasNext={hasNext}
-          />
+          {!creationActions && (
+            <TaskNavChip
+              currentIndex={currentIndex + 1}
+              totalCount={totalCount}
+              onPrev={onPrev}
+              onNext={onNext}
+              hasPrev={hasPrev}
+              hasNext={hasNext}
+            />
+          )}
         </Box>
       </Box>
 
@@ -231,64 +267,61 @@ export default function TaskDetailHeader({
               )}
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <EditableTitle
-                  value={title}
-                  fallback={t('portfolio:workspace.task.title.untitled')}
+                  value={titleToGive ? '' : title}
+                  fallback={titleToGive ? t('portfolio:workspace.task.title.placeholder') : t('portfolio:workspace.task.title.untitled')}
                   canEdit={canManage}
+                  autoEdit={titleToGive}
+                  emphasizeEmpty={titleToGive}
+                  error={titleError}
+                  focusRequest={titleFocusRequest}
+                  onDraftChange={onTitleDraftChange}
+                  onCancel={onTitleCancel}
                   onSave={(next) => {
-                    onTitleChange(next);
+                    if (!titleToGive) onTitleChange(next);
                     onTitleSave(next);
                   }}
                 />
               </Box>
             </Box>
 
-            {/* Metadata bar */}
-            <TaskMetadataBar
-              status={status}
-              priorityLevel={priorityLevel}
-              priorityScore={priorityScore}
-              assigneeUserId={assigneeUserId}
-              assigneeName={assigneeName}
-              dueDate={dueDate}
-              readOnly={!canManage}
-              isProjectTask={isProjectTask}
-              onPatch={onMetadataPatch}
-              projectId={projectId}
-              projectName={projectName}
-              onNavigateToProject={onNavigateToProject}
-            />
+            {/* Metadata bar: the draft's on the new page, out of reach until the title creates the task */}
+            {titleToGive ? <CreationPreview>{metadataBar}</CreationPreview> : metadataBar}
           </Box>
 
           {/* Actions bar */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: taskDetailTokens.actionPills.gap, flexShrink: 0, mt: '7px' }}>
-            <SendLinkButton
-              itemType="task"
-              itemId={taskId}
-              itemName={title || t('portfolio:workspace.task.title.untitled')}
-              itemNumber={itemNumber}
-            />
+            {creationActions ?? (
+              <>
+                <SendLinkButton
+                  itemType="task"
+                  itemId={taskId}
+                  itemName={title || t('portfolio:workspace.task.title.untitled')}
+                  itemNumber={itemNumber}
+                />
 
-            <Button
-              variant="action"
-              onClick={onConvertToRequest}
-              disabled={!canConvertToRequest || hasConvertedRequest}
-              title={convertDisabledTitle}
-            >
-              {t('portfolio:actions.convertToRequest')}
-            </Button>
+                <Button
+                  variant="action"
+                  onClick={onConvertToRequest}
+                  disabled={!canConvertToRequest || hasConvertedRequest}
+                  title={convertDisabledTitle}
+                >
+                  {t('portfolio:actions.convertToRequest')}
+                </Button>
 
-            {canDelete && (
-              <DeleteIconButton onClick={onDelete} />
+                {canDelete && (
+                  <DeleteIconButton onClick={onDelete} />
+                )}
+
+                <IconButton
+                  onClick={onClose}
+                  size="small"
+                  aria-label={t('common:buttons.close')}
+                  sx={(theme) => ({ color: theme.palette.kanap.text.tertiary, ml: '4px' })}
+                >
+                  <CloseIcon sx={{ fontSize: 18 }} />
+                </IconButton>
+              </>
             )}
-
-            <IconButton
-              onClick={onClose}
-              size="small"
-              aria-label={t('common:buttons.close')}
-              sx={(theme) => ({ color: theme.palette.kanap.text.tertiary, ml: '4px' })}
-            >
-              <CloseIcon sx={{ fontSize: 18 }} />
-            </IconButton>
           </Box>
         </Box>
 

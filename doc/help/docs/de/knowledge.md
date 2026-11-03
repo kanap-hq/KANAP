@@ -173,6 +173,8 @@ Neue Artikel können auf zwei Arten beginnen:
 
 Wenn Sie aus einer Vorlage erstellen, wird der Vorlageninhalt in das neue Dokument kopiert. Ab diesem Zeitpunkt ist der neue Artikel unabhängig. Eine spätere Aktualisierung der Vorlage schreibt vorhandene Dokumente nicht neu.
 
+Ein neues Dokument öffnet sich mit seinem Titel zur Eingabe in der Kopfzeile. Drücken Sie die Eingabetaste, um das Dokument zu erstellen, oder die Tabulatortaste, um es zu erstellen und direkt mit dem Text zu beginnen. Es öffnet sich im Bearbeitungsmodus, mit Editor, **Importieren** und Seitenleiste. Klicken Sie auf **Erstellen**, um es zu behalten: Sie kehren dorthin zurück, wo Sie begonnen haben, oder zur Bibliothek. Klicken Sie stattdessen auf **Abbrechen**, um es zu löschen. KANAP fragt zuerst nach, wenn Sie mehr als den Titel eingegeben haben. Bei jedem Dokument im Bearbeitungsmodus klicken Sie auf den Titel in der Kopfzeile, um ihn zu ändern.
+
 Der Dokumenten-Arbeitsbereich hält das Schreiben in der Mitte und die Governance in der Seitenleiste.
 
 Kerneigenschaften umfassen:
@@ -183,7 +185,7 @@ Kerneigenschaften umfassen:
 - **Basiert auf Vorlage**: die Vorlagenherkunft, falls relevant
 - **Zusammenfassung**: eine kurze Beschreibung für den Kontext
 
-Nach dem ersten Speichern wird das vollständige Dokumenten-Governance-Modell verfügbar. Dann können Sie Mitwirkende, Klassifizierungen, Beziehungen, Kommentare und Versionshistorie gegen eine stabile Dokumentreferenz verwalten.
+Sobald das Dokument erstellt ist, wird das vollständige Dokumenten-Governance-Modell verfügbar. Dann können Sie Mitwirkende, Klassifizierungen, Beziehungen, Kommentare und Versionshistorie gegen eine stabile Dokumentreferenz verwalten.
 
 ### Status und was er bedeutet
 
@@ -212,22 +214,21 @@ So funktioniert es:
 Dies vermeidet stille Überschreibungen, was hervorragend für die Dokumentintegrität ist und weniger hervorragend, wenn zwei Personen beide dachten, sie hätten „nur eine schnelle Anpassung."
 
 Während Sie bearbeiten:
-- Änderungen werden manuell mit **Speichern** gespeichert
-- Ungespeicherte Inhalte werden auch periodisch automatisch gespeichert, während Ihre Sperre aktiv ist
-- **Verwerfen** kehrt zum letzten gespeicherten Zustand zurück
+- Änderungen werden ein paar Sekunden nach dem Aufhören mit dem Tippen automatisch gespeichert, solange Ihre Sperre aktiv ist
+- **Fertig** speichert Ausstehendes, gibt die Sperre frei und beendet den Bearbeitungsmodus
 
 Der Arbeitsbereich unterstützt auch das Inline-Hochladen von Bildern innerhalb des Markdown-Inhaltsbereichs, sodass Screenshots und Diagramme mit dem Artikel leben können, anstatt in einem mysteriösen Ordner auf dem Desktop von jemandem. Wenn Sie ein Bild von einer externen URL einfügen oder referenzieren, wird das Bild automatisch importiert und im Dokument gespeichert, sodass es verfügbar bleibt, selbst wenn die ursprüngliche URL offline geht.
 
 ## Ein Word-Dokument importieren
 
-Sie können ein Word-Dokument (`.docx`) in einen vorhandenen Wissensartikel importieren. Die Schaltfläche **Importieren** erscheint in der Arbeitsbereichs-Symbolleiste, sobald das Dokument mindestens einmal gespeichert wurde und Sie sich im Bearbeitungsmodus befinden.
+Sie können ein Word-Dokument (`.docx`) in einen vorhandenen Wissensartikel importieren. Die Schaltfläche **Importieren** erscheint in der Arbeitsbereichs-Symbolleiste, wenn Sie sich im Bearbeitungsmodus befinden. Bei einem neuen Dokument ist sie verfügbar, sobald der Titel eingegeben ist.
 
 So funktioniert es:
 
 - Klicken Sie auf **Importieren** und wählen Sie eine `.docx`-Datei von Ihrem Computer.
 - Wenn der Artikel bereits Inhalt hat, fragt ein Bestätigungsdialog, ob Sie ihn ersetzen möchten. Die Auswahl von **Fortfahren** überschreibt das aktuelle Markdown mit dem importierten Inhalt.
 - Der Word-Inhalt wird in Markdown konvertiert und in den Editor geladen. In der Word-Datei eingebettete Bilder werden extrahiert und als Inline-Anhänge gespeichert, sodass Sie sie nicht manuell erneut hochladen müssen.
-- Nach dem Import sind Ihre Änderungen ungespeichert. Verwenden Sie **Speichern**, um den importierten Inhalt zu persistieren.
+- Der importierte Inhalt wird automatisch gespeichert, wie jede andere Änderung.
 
 Wenn der Import auf einen Sperrkonflikt (jemand anderes hat die Sperre erworben) oder eine abgelaufene Sperre stößt, endet der Bearbeitungsmodus und eine entsprechende Meldung wird angezeigt. Wechseln Sie erneut in den Bearbeitungsmodus und versuchen Sie es erneut.
 

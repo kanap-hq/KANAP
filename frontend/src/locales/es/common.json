@@ -1752,7 +1752,15 @@
       "protocols_one": "{{count}} protocolo",
       "protocols_other": "{{count}} protocolos",
       "hops_one": "{{count}} salto",
-      "hops_other": "{{count}} saltos"
+      "hops_other": "{{count}} saltos",
+      "comments_one": "{{count}} comentario",
+      "comments_other": "{{count}} comentarios",
+      "documentVersions_one": "{{count}} versión",
+      "documentVersions_other": "{{count}} versiones",
+      "classifications_one": "{{count}} clasificación",
+      "classifications_other": "{{count}} clasificaciones",
+      "contributors_one": "{{count}} colaborador",
+      "contributors_other": "{{count}} colaboradores"
     },
     "titleRequired": "Escriba un título."
   },

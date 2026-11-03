@@ -267,6 +267,8 @@ function buildToneBadge(label: string, tone: EmailTone): string {
 /**
  * Shared email wrapper.
  * Returns { html, attachments } — the logo is always included as a CID inline attachment.
+ * `footer` (the trial e-mails): a line under "Powered by KANAP", and a link that takes the place of
+ * the notification preferences link (the unsubscribe link).
  */
 export function emailWrapper(
   body: string,
@@ -274,14 +276,20 @@ export function emailWrapper(
     preferencesUrl?: string;
     branding?: EmailBranding;
     locale?: string;
+    footer?: { note?: string; link?: ActionButton };
   },
 ): EmailWrapperResult {
   const branding = options?.branding ?? getDefaultEmailBranding();
   const strings = getEmailStrings(options?.locale);
   const pc = getPrimaryColor(branding);
   const hasLogo = branding.logoBuffer.length > 0;
-  const preferencesLink = options?.preferencesUrl
-    ? `<a href="${escapeHtml(options.preferencesUrl)}" style="color:${pc};text-decoration:none;font-size:11px;line-height:16px;">${escapeHtml(strings.common.footer.managePreferencesLink)}</a>`
+  const footerLink = options?.footer?.link
+    ?? (options?.preferencesUrl ? { label: strings.common.footer.managePreferencesLink, url: options.preferencesUrl } : null);
+  const preferencesLink = footerLink
+    ? `<a href="${escapeHtml(footerLink.url)}" style="color:${pc};text-decoration:none;font-size:11px;line-height:16px;">${escapeHtml(footerLink.label)}</a>`
+    : '';
+  const footerNote = options?.footer?.note
+    ? `<tr><td colspan="2" style="padding-top:8px;font-size:11px;line-height:16px;color:${EMAIL_TOKENS.textTertiary};">${escapeHtml(options.footer.note)}</td></tr>`
     : '';
 
   const html = `<!DOCTYPE html>
@@ -314,6 +322,7 @@ ${body}
 <td align="left" style="padding-top:16px;font-size:11px;line-height:16px;color:${EMAIL_TOKENS.textTertiary};">${escapeHtml(strings.common.footer.poweredBy)}</td>
 <td align="right" style="padding-top:16px;font-size:11px;line-height:16px;">${preferencesLink}</td>
 </tr>
+${footerNote}
 </table>
 </td></tr>
 </table>

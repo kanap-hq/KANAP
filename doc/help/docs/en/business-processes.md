@@ -43,7 +43,7 @@ The list shows all business processes for your tenant.
 
 **Actions** (top-right toolbar):
 
-- **New** (`business_processes:member`): create a new business process.
+- **New** (`business_processes:member`): create a new business process. See [Creating a business process](#creating-a-business-process).
 - **Manage Categories** (`business_processes:member`): open the category management dialog.
 - **Import** (Admin): bulk-import processes from a CSV file or an Excel workbook.
 - **Export** (Admin): export the processes the list shows, or all processes, to a CSV file or an Excel workbook.
@@ -51,45 +51,60 @@ The list shows all business processes for your tenant.
 
 ---
 
+## Creating a business process { #creating-a-business-process }
+
+1. Click **New** on the list. The process page opens with an empty title in the header. The rest of the page is dimmed.
+2. Type the process name, ideally with its short code (e.g. "Order-to-Cash (O2C)").
+3. Press Enter, or click outside the title. KANAP creates the process at once, enabled, and all tabs open.
+
+Press Escape on the empty title to leave without creating anything. Two processes cannot share a name, whatever the case: a name already used is refused, with a message under the title.
+
+While the process is being created, its header shows **Create** and **Cancel**. They stay until you leave the process.
+
+- **Create** keeps the process and closes it. You go back to where you started: the list or the previous screen. With an empty title, nothing closes and the title asks for one.
+- **Cancel** closes without keeping anything. On a process already created, it deletes it, with the application links you added. If you entered more than the name, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete processes.
+
+Leaving the process any other way keeps it.
+
+---
+
 ## The Business Process workspace
 
-Click any row in the list (or the **New** button) to open the workspace. The **History** button in the header opens the process's history in a side panel. See [Record history](record-history.md).
+Click any row in the list to open the workspace. Every change saves on its own: a list or a picker when you choose a value, a text when you leave it. **Saved** shows briefly in the header.
 
-The workspace has a single **Overview** tab on the left, and a toolbar across the top:
+The header holds:
 
-- **Prev / Next**: step through processes in the current list order.
-- **Reset**: discard unsaved changes.
-- **Save**: persist changes.
+- **Business processes** (back arrow): return to the list, keeping your filters and sort.
+- The **name**: click it to rename the process.
+- The **previous / next** arrows: step through processes in the current list order.
+- **Status**: **Enabled** or **Disabled**. Enabled processes appear in selectors across the app. Disable a process to retire it without deleting it, so historical references stay intact.
 - **Delete** (trash icon, Admin): delete the process and return to the list. A process that applications or interfaces use cannot be deleted: the message counts them. Disable it instead.
-- **Close** (X icon): return to the list, keeping your filters and sort intact.
 
-If you navigate away with unsaved changes, you will be prompted to save or discard them.
+Without `business_processes:member`, the page opens read only.
+
+### Properties
+
+The properties drawer on the right holds:
+
+- **Categories**: one or more categories. Pick existing ones, create one with **New category**, or open the category management dialog with **Edit categories**.
+- **Process owner**: the user ultimately responsible for the process. Shown in the list.
+- **IT owner**: the user responsible for the IT systems and tools that support the process.
+- **Lifecycle**: the status switch and the end of validity date. A process whose end of validity has passed is disabled.
 
 ### Overview
 
-The Overview tab is organized into three sections.
+- **Description**: what the process covers, ideally from its start to its end point (e.g. "From customer order through delivery, invoicing and payment received").
+- **Notes**: internal information such as links to process maps, procedures, scope notes or improvement plans.
 
-**Basic info**
+### Relations
 
-- **Name** (required): use a clear name including the short code, e.g. "Order-to-Cash (O2C)" or "Hire-to-Retire (H2R)".
-- **Description**: a short summary of what the process covers. A good description captures the start and end points (e.g. "From customer order through delivery, invoicing, and payment received.").
-- **Status switch**: labelled with the current state (**Enabled** or **Disabled**). Enabled processes appear in selectors across the app. Disable a process to retire it without deleting it, so historical references stay intact.
+The **Applications** section lists the applications that support the process, with their reference, criticality and IT owner. **Add** opens a search; a link saves at once. Hover a row and click its cross to unlink it. The application shows the same link in the **Business processes** section of its Relations tab.
 
-**Classification**
+You need `business_processes:member` to change the links. The tab appears only if you can read applications. A Business Contributor sees and links only the applications in their scope.
 
-- **Categories** (multi-select): assign one or more categories. You can pick from existing categories, create a new one inline with **New category**, or click **Edit categories** to open the full category management dialog.
-- **Process Owner**: the user ultimately responsible for the process. Shown in the list grid and available for future notifications and approvals.
-- **IT Owner**: the user responsible for the IT systems and tools that support this process.
+### History
 
-**Details**
-
-- **Notes**: free-form field for internal information such as links to process maps, SOPs, scope notes, or improvement plans.
-
-**Applications**
-
-Below the details, the **Applications** section lists the applications that support the process, with their reference, criticality and IT owner. **Add** opens a search; a link saves at once, without **Save**. Hover a row and click its cross to unlink it. The application shows the same link in the **Business processes** section of its Relations tab.
-
-You need `business_processes:member` to change the links. The section appears only if you can read applications. A Business Contributor sees and links only the applications in their scope.
+The changes made to the process and its application links. See [Record history](record-history.md).
 
 ---
 
@@ -98,7 +113,7 @@ You need `business_processes:member` to change the links. The section appears on
 Categories are shared across all business processes. You can manage them from two places:
 
 1. On the list page, click **Manage Categories**.
-2. In the workspace, under the **Categories** field, click **Edit categories**.
+2. In the workspace, under the **Categories** field of the properties drawer, click **Edit categories**.
 
 Both open the **Manage Business Process Categories** dialog.
 

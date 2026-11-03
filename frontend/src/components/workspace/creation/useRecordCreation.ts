@@ -52,6 +52,10 @@ const KIND_WORDS: Record<string, string> = {
   task: 'tasks',
   protocol: 'protocols',
   leg: 'hops',
+  comment: 'comments',
+  document_version: 'documentVersions',
+  classification: 'classifications',
+  contributor: 'contributors',
 };
 
 /** "2 fields, 1 relation": what the person added since the creation, in a few words. */

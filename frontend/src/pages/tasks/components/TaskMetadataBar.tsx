@@ -22,7 +22,8 @@ import { StatusDot } from '../../../components/design';
 interface TaskMetadataBarProps {
   status: TaskStatus;
   priorityLevel: PriorityLevel;
-  priorityScore: number;
+  /** Shown for a project task; none on a task still to create. */
+  priorityScore: number | null;
   assigneeUserId: string | null;
   assigneeName: string | null;
   dueDate: string | null;
@@ -116,7 +117,7 @@ function PriorityChip({ priority, readOnly, onPatch }: { priority: PriorityLevel
 /*  ScoreChip                                                         */
 /* ================================================================== */
 
-function ScoreChip({ score, isProjectTask }: { score: number; isProjectTask?: boolean }) {
+function ScoreChip({ score, isProjectTask }: { score: number | null; isProjectTask?: boolean }) {
   const { t } = useTranslation('portfolio');
   const theme = useTheme();
   const mode = theme.palette.mode;

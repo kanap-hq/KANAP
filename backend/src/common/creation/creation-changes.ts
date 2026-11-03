@@ -14,7 +14,8 @@ import { creationCancelExpired } from './creation-token';
  * own labels and its declared children, through `auditPageQuery`), newer than the record's
  * `create` row:
  * - `fields`: the distinct fields of the record that an update changed, among those its history
- *   shows (a hidden field such as a timestamp is no change of the person);
+ *   shows (a hidden field such as a timestamp is no change of the person), less `ignoreFields`
+ *   (a counter every save moves, beside the field the save changed);
  * - `children`: the child rows, by the child kind of the inventory (`instance`, `link`, `owner`...).
  */
 
@@ -49,6 +50,7 @@ export async function countChangesSinceCreation(
   tenantId: string,
   table: string,
   recordId: string,
+  options: { ignoreFields?: readonly string[] } = {},
 ): Promise<CreationChanges> {
   const entry = recordHistoryEntry(table);
   if (!entry) throw new Error(`No record history entry for ${table}`);
@@ -66,7 +68,9 @@ export async function countChangesSinceCreation(
   for (const row of after) {
     if (isOwn(row)) {
       if (row.action === 'update') {
-        for (const field of shownFieldChanges(row.table_name, row.before_json, row.after_json)) fields.add(field);
+        for (const field of shownFieldChanges(row.table_name, row.before_json, row.after_json)) {
+          if (!options.ignoreFields?.includes(field)) fields.add(field);
+        }
       } else {
         // A disable or a restore of the record itself: its status changed.
         fields.add('status');

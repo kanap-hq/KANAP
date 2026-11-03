@@ -7,11 +7,9 @@ import {
   IconButton,
   Link as MLink,
   Stack,
-  TextField,
   Typography,
 } from '@mui/material';
-import { alpha, useTheme } from '@mui/material/styles';
-import SaveIcon from '@mui/icons-material/Save';
+import { useTheme } from '@mui/material/styles';
 import EditIcon from '@mui/icons-material/Edit';
 import HistoryIcon from '@mui/icons-material/History';
 import CheckIcon from '@mui/icons-material/Check';
@@ -25,7 +23,6 @@ import ExportButton from '../../components/ExportButton';
 import ImportButton from '../../components/ImportButton';
 import SendLinkButton from '../../components/workspace/SendLinkButton';
 import { StatusDot } from '../../components/design';
-import { fieldResetSx } from '../../theme/formSx';
 import { importDocument as importMarkdownDocument, type ImportDocumentResult } from '../../api/endpoints/import';
 import { useAuth } from '../../auth/AuthContext';
 import { useLocale } from '../../i18n/useLocale';
@@ -45,6 +42,8 @@ import { normalizeMarkdownForRichTextEditor } from '../../lib/markdownEditorNorm
 import { releaseLockKeepalive } from '../../lib/releaseLockKeepalive';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
 import { classifyKnowledgeLoadError } from './knowledgeLoadError';
+import EditableTitle from '../../components/workspace/EditableTitle';
+import { CreationActions, CreationPreview, useCreationReturn, useNewRecordCreate, useRecordCreation } from '../../components/workspace/creation';
 
 const MarkdownEditor = React.lazy(() => import('../../components/MarkdownEditor'));
 
@@ -180,6 +179,15 @@ const STATUS_LABELS: Record<string, string> = {
   obsolete: 'Obsolete',
 };
 const SIDEBAR_STORAGE_KEY = 'kanap.knowledge.sidebarOpen';
+
+/** The document title keeps the size of the former title field. */
+const DOCUMENT_TITLE_TYPOGRAPHY = { fontSize: '1.5rem', fontWeight: 500, lineHeight: 1.334 } as const;
+
+/** On the new page, the editor and the sidebar of the document to come, dimmed (`CreationPreview`). */
+function CreationFrame({ dimmed, children }: { dimmed: boolean; children: React.ReactNode }) {
+  if (!dimmed) return <>{children}</>;
+  return <CreationPreview sx={{ height: '100%' }}>{children}</CreationPreview>;
+}
 
 function MarkdownEditorLoadingFallback({ minRows }: { minRows: number }) {
   return (
@@ -369,7 +377,7 @@ export default function KnowledgeWorkspacePage() {
   );
 
   // Fetch template document content when creating from a template
-  const { data: templateDoc } = useQuery({
+  const { data: templateDoc, status: templateStatus } = useQuery({
     queryKey: ['knowledge', templateDocumentIdParam],
     queryFn: async () => (await api.get(`/knowledge/${templateDocumentIdParam}`)).data,
     enabled: isCreate && !!templateDocumentIdParam,
@@ -454,12 +462,12 @@ export default function KnowledgeWorkspacePage() {
     enabled: !isCreate && sidebarOpen,
   });
 
-  const { data: libraries = [] } = useQuery({
+  const { data: libraries = [], status: librariesStatus } = useQuery({
     queryKey: ['knowledge-libraries'],
     queryFn: async () => (await api.get('/knowledge-libraries')).data as DocumentLibrary[],
   });
 
-  const { data: documentTypes = [] } = useQuery({
+  const { data: documentTypes = [], status: documentTypesStatus } = useQuery({
     queryKey: ['knowledge-types'],
     queryFn: async () => (await api.get('/knowledge-types')).data as KnowledgeDocumentTypeOption[],
   });
@@ -891,28 +899,6 @@ export default function KnowledgeWorkspacePage() {
   // Save mutation
   const saveMutation = useMutation({
     mutationFn: async (mode: 'manual' | 'autosave') => {
-      if (isCreate) {
-        if (!workspaceLibraryId || !activeCreateLibrary?.can_write) {
-          throw new Error(t('workspace.messages.noDestinationLibrary'));
-        }
-        const createRelationPayload = buildRelationPayload(relationSelections);
-        const contentMarkdown = normalizeMarkdownForRichTextEditor(contentDraftRef.current);
-        const payload = {
-          title: form.title,
-          summary: form.summary,
-          content_markdown: contentMarkdown,
-          status: form.status,
-          folder_id: form.folder_id || null,
-          library_id: workspaceLibraryId,
-          document_type_id: form.document_type_id || null,
-          template_document_id: form.template_document_id || null,
-          relations: createRelationPayload,
-          ...(profile?.id ? { owner_user_id: profile.id } : {}),
-        };
-        const res = await api.post('/knowledge', payload);
-        return { mode, data: res.data, created: true };
-      }
-
       sentFormRef.current = form;
       const contentMarkdown = normalizeMarkdownForRichTextEditor(contentDraftRef.current);
       const payload = {
@@ -929,7 +915,7 @@ export default function KnowledgeWorkspacePage() {
       const res = await api.patch(`/knowledge/${id}`, payload, {
         headers: lockToken ? { 'X-Lock-Token': lockToken } : undefined,
       });
-      return { mode, data: res.data, created: false };
+      return { mode, data: res.data };
     },
     onSuccess: async (result) => {
       transientAutosaveFailuresRef.current = 0;
@@ -937,30 +923,6 @@ export default function KnowledgeWorkspacePage() {
       refusedFormRef.current = null;
       setError(null);
       setDirty(false);
-      if (result.created) {
-        const newId = result.data?.id;
-        const itemRef = result.data?.item_ref || `DOC-${result.data?.item_number}`;
-
-        // Acquire lock on the newly-created document so the user stays in
-        // edit mode with a valid lock (the component instance is reused by
-        // React Router, so editMode=true persists across the navigation).
-        if (newId) {
-          try {
-            const lockRes = await api.post(`/knowledge/${newId}/locks`);
-            setLockToken(lockRes.data?.lock_token || null);
-            setLockExpiresAt(lockRes.data?.expires_at || null);
-          } catch {
-            // Lock failed — user can re-enter edit mode manually
-          }
-        }
-
-        const sp = new URLSearchParams();
-        if (workspaceLibrarySlug) sp.set('library', workspaceLibrarySlug);
-        sp.set('allLibraries', '0');
-        const qs = sp.toString();
-        navigate(`/knowledge/${itemRef}${qs ? `?${qs}` : ''}`, { replace: true });
-        return;
-      }
       const savedContentMarkdown = String(result.data?.content_markdown ?? contentDraftRef.current ?? '');
       contentDraftRef.current = savedContentMarkdown;
       setContentHasText(!!savedContentMarkdown.trim());
@@ -1347,8 +1309,9 @@ export default function KnowledgeWorkspacePage() {
     setDirty(true);
   }, []);
 
-  const handleTitleChange = React.useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('title', e.target.value),
+  // A committed title goes through the save of the form: the autosave, under the lock.
+  const handleTitleSave = React.useCallback(
+    (value: string) => handleFormChange('title', value),
     [handleFormChange],
   );
 
@@ -1673,48 +1636,37 @@ export default function KnowledgeWorkspacePage() {
     commentMutation.mutate();
   }, [commentMutation.mutate]);
 
-  const handleDoneEditing = React.useCallback(async () => {
-    if (doneEditingPending) return;
-    setDoneEditingPending(true);
-    try {
-      if (dirty) {
-        await saveMutation.mutateAsync('autosave');
-      }
+  // What is still pending on the document: its form, relations, classifications and contributors.
+  const flushWorkspace = React.useCallback(async () => {
+    if (dirty) {
+      await saveMutation.mutateAsync('autosave');
+    }
 
-      if (relationsDirty) {
-        const version = relationsSaveVersionRef.current;
-        relationsAutosaveAttemptedVersionRef.current = version;
-        await saveRelationsMutation.mutateAsync({
-          selections: cloneRelationSelections(relationSelections),
-          version,
-        });
-      }
+    if (relationsDirty) {
+      const version = relationsSaveVersionRef.current;
+      relationsAutosaveAttemptedVersionRef.current = version;
+      await saveRelationsMutation.mutateAsync({
+        selections: cloneRelationSelections(relationSelections),
+        version,
+      });
+    }
 
-      if (classificationsDirty) {
-        const version = classificationsSaveVersionRef.current;
-        classificationsAutosaveAttemptedVersionRef.current = version;
-        await saveClassificationsMutation.mutateAsync({
-          rows: classificationRows.map((row) => ({ ...row })),
-          version,
-        });
-      }
+    if (classificationsDirty) {
+      const version = classificationsSaveVersionRef.current;
+      classificationsAutosaveAttemptedVersionRef.current = version;
+      await saveClassificationsMutation.mutateAsync({
+        rows: classificationRows.map((row) => ({ ...row })),
+        version,
+      });
+    }
 
-      if (contributorsDirty) {
-        const version = contributorsSaveVersionRef.current;
-        contributorsAutosaveAttemptedVersionRef.current = version;
-        await saveContributorsMutation.mutateAsync({
-          assignments: cloneContributorAssignments(contributorAssignments),
-          version,
-        });
-      }
-
-      setEditMode(false);
-      await releaseLock();
-      setError(null);
-    } catch {
-      // Individual mutations surface errors and edit mode remains active.
-    } finally {
-      setDoneEditingPending(false);
+    if (contributorsDirty) {
+      const version = contributorsSaveVersionRef.current;
+      contributorsAutosaveAttemptedVersionRef.current = version;
+      await saveContributorsMutation.mutateAsync({
+        assignments: cloneContributorAssignments(contributorAssignments),
+        version,
+      });
     }
   }, [
     classificationRows,
@@ -1724,15 +1676,31 @@ export default function KnowledgeWorkspacePage() {
     contributorAssignments,
     contributorsDirty,
     dirty,
-    doneEditingPending,
     relationSelections,
     relationsDirty,
-    releaseLock,
     saveClassificationsMutation,
     saveContributorsMutation,
     saveMutation,
     saveRelationsMutation,
   ]);
+
+  // Done: what is pending is saved, then the lock is released. `then` runs after that: Create of a
+  // document being created closes it.
+  const handleDoneEditing = React.useCallback(async (then?: () => void) => {
+    if (doneEditingPending) return;
+    setDoneEditingPending(true);
+    try {
+      await flushWorkspace();
+      setEditMode(false);
+      await releaseLock();
+      setError(null);
+      then?.();
+    } catch {
+      // Individual mutations surface errors and edit mode remains active.
+    } finally {
+      setDoneEditingPending(false);
+    }
+  }, [doneEditingPending, flushWorkspace, releaseLock]);
 
   const handleCreateVersion = React.useCallback(async () => {
     try {
@@ -1756,6 +1724,153 @@ export default function KnowledgeWorkspacePage() {
   const handleRequestWorkflowChanges = React.useCallback((comment: string) => (
     requestChangesWorkflowMutation.mutateAsync(comment)
   ), [requestChangesWorkflowMutation.mutateAsync]);
+
+  const libraryListUrl = `/knowledge?library=${encodeURIComponent(workspaceLibrarySlug || '')}&allLibraries=0`;
+
+  // Creation at the title: the new page creates the document when its title is committed, then the
+  // document shows Create and Cancel until the person leaves it.
+  const creationReturn = useCreationReturn(libraryListUrl);
+  const creation = useRecordCreation({
+    family: 'documents',
+    apiBase: '/knowledge',
+    recordId: !isCreate && doc?.id ? String(doc.id) : null,
+    listPath: libraryListUrl,
+    recordLabel: t('workspace.creation.record'),
+    queryKeyPrefixes: ['knowledge'],
+    onError: setError,
+  });
+  const [titleError, setTitleError] = React.useState<string | null>(null);
+  const newCreate = useNewRecordCreate({ setTitleError, requiredMessage: t('common:creation.titleRequired') });
+  // The title committed before the library, the default type and the template were read.
+  const [pendingTitle, setPendingTitle] = React.useState<string | null>(null);
+  // Tab from the title of a new document: the text gets the focus once the document is created.
+  const contentFocusPendingRef = React.useRef(false);
+  // The editor takes the focus once it is enabled (it waits while the lock is being taken).
+  React.useEffect(() => {
+    if (isCreate || !contentFocusPendingRef.current) return;
+    contentFocusPendingRef.current = false;
+    setContentFocusNonce((n) => n + 1);
+  }, [isCreate]);
+  const creatingRef = React.useRef(false);
+  const createDefaultsReady = isCreate
+    && librariesStatus !== 'pending'
+    && documentTypesStatus !== 'pending'
+    && (!templateDocumentIdParam || templateStatus !== 'pending');
+
+  // The title creates the document with what the former Save sent (the template's content and
+  // type, the folder, the relations of the address, the person as owner), then takes its lock and
+  // moves to it, still in edit mode (React Router keeps this instance), or closes it, kept, when
+  // Create was clicked meanwhile.
+  const createDocument = React.useCallback(async (value: string) => {
+    if (creatingRef.current) return;
+    creatingRef.current = true;
+    setTitleError(null);
+    setError(null);
+    try {
+      if (!workspaceLibraryId || !activeCreateLibrary?.can_write) {
+        newCreate.titleSettled();
+        setTitleError(t('workspace.messages.noDestinationLibrary'));
+        return;
+      }
+      const payload = {
+        title: value,
+        summary: form.summary,
+        content_markdown: normalizeMarkdownForRichTextEditor(contentDraftRef.current || templateDoc?.content_markdown || ''),
+        status: form.status,
+        folder_id: form.folder_id || null,
+        library_id: workspaceLibraryId,
+        document_type_id: form.document_type_id || templateDoc?.document_type_id || defaultDocumentTypeId || null,
+        template_document_id: form.template_document_id || null,
+        relations: buildRelationPayload(relationSelections),
+        ...(profile?.id ? { owner_user_id: profile.id } : {}),
+      };
+      const res = await api.post('/knowledge', payload);
+      const { creation_token: token, ...created } = res.data || {};
+      if (newCreate.titleSettled()) {
+        navigate(creationReturn, { replace: true });
+        return;
+      }
+      try {
+        const lockRes = await api.post(`/knowledge/${created.id}/locks`);
+        setLockToken(lockRes.data?.lock_token || null);
+        setLockExpiresAt(lockRes.data?.expires_at || null);
+      } catch {
+        // No lock: the person can enter edit mode again by hand.
+      }
+      creation.startCreation({ recordId: created.id, token, returnTo: creationReturn });
+      const itemRef = created.item_ref || `DOC-${created.item_number}`;
+      // The create answers with the row alone, without its owner, relations and classifications:
+      // the page opens on the document as read, its first state (the row if the read fails).
+      const full = await api.get(`/knowledge/${created.id}`).then((r) => r.data).catch(() => null);
+      qc.setQueryData(['knowledge', itemRef], full || created);
+      const sp = new URLSearchParams();
+      if (workspaceLibrarySlug) sp.set('library', workspaceLibrarySlug);
+      sp.set('allLibraries', '0');
+      navigate(`/knowledge/${itemRef}?${sp.toString()}`, { replace: true });
+    } catch (err) {
+      newCreate.titleSettled();
+      setTitleError(getDocumentSaveErrorMessage(err, t, t('workspace.messages.saveFailed')));
+    } finally {
+      creatingRef.current = false;
+    }
+  }, [
+    activeCreateLibrary?.can_write,
+    buildRelationPayload,
+    creation,
+    creationReturn,
+    defaultDocumentTypeId,
+    form.document_type_id,
+    form.folder_id,
+    form.status,
+    form.summary,
+    form.template_document_id,
+    navigate,
+    newCreate,
+    profile?.id,
+    qc,
+    relationSelections,
+    setLockToken,
+    t,
+    templateDoc?.content_markdown,
+    templateDoc?.document_type_id,
+    workspaceLibraryId,
+    workspaceLibrarySlug,
+  ]);
+
+  React.useEffect(() => {
+    if (!isCreate || pendingTitle === null || !createDefaultsReady) return;
+    setPendingTitle(null);
+    void createDocument(pendingTitle);
+  }, [createDefaultsReady, createDocument, isCreate, pendingTitle]);
+
+  // Create: on the new page, the title is the only field; on the document being created, what is
+  // pending is saved and the lock released, as Done does, then the document is kept and closed.
+  const createAction = React.useCallback(() => {
+    if (isCreate) {
+      newCreate.create(titleError);
+      return;
+    }
+    void handleDoneEditing(() => creation.finishCreation());
+  }, [creation, handleDoneEditing, isCreate, newCreate, titleError]);
+
+  // Cancel: the new page is left; the document being created is deleted (its lock goes with it),
+  // after a confirmation when more than its title was given, counted once what is pending is saved.
+  const cancelAction = React.useCallback(async () => {
+    if (isCreate) {
+      navigate(creationReturn);
+      return;
+    }
+    try {
+      await flushWorkspace();
+    } catch {
+      // Cancelled all the same: what could not be saved goes with the document.
+    }
+    // The lock is not released on the way out of a deleted document; kept if the person keeps it.
+    const heldToken = lockTokenRef.current;
+    lockTokenRef.current = null;
+    const deleted = await creation.cancelCreation();
+    if (!deleted && lockTokenRef.current === null) lockTokenRef.current = heldToken;
+  }, [creation, creationReturn, flushWorkspace, isCreate, navigate]);
 
   const classificationCategories = React.useMemo(
     () => (classificationData?.categories || []).filter((row) => row?.is_active !== false),
@@ -1807,34 +1922,10 @@ export default function KnowledgeWorkspacePage() {
     );
   }
 
-  const isTitleMissing = !form.title?.trim();
-  const titleBarSx = {
-    px: '6px',
-    py: '3px',
-    mx: '-6px',
-    my: '-3px',
-    borderRadius: '4px',
-    border: 1,
-    borderColor: isTitleMissing
-      ? alpha(theme.palette.info.main, 0.25)
-      : 'transparent',
-    bgcolor: isTitleMissing
-      ? alpha(theme.palette.info.main, 0.08)
-      : 'transparent',
-    transition: 'border-color 120ms ease, background-color 120ms ease',
-    '&:hover': {
-      bgcolor: theme.palette.kanap.bg.composer,
-    },
-    '&:focus-within': {
-      bgcolor: 'transparent',
-    },
-  } as const;
-
   const libraryName = knowledgeLibraryName(
     t,
     isCreate ? activeCreateLibrary : { slug: doc?.library_slug, name: doc?.library_name },
   );
-  const libraryListUrl = `/knowledge?library=${encodeURIComponent(workspaceLibrarySlug || '')}&allLibraries=0`;
   const workflow = doc?.workflow || null;
   const workflowActive = !!workflow?.is_active;
   const isValidatedCurrentRevision = !!doc?.is_validated_current_revision;
@@ -1856,6 +1947,7 @@ export default function KnowledgeWorkspacePage() {
     : null;
   const canApproveWorkflow = !!currentWorkflowParticipant && currentWorkflowParticipant.decision === 'pending';
   const canRequestReview = !isCreate
+    && !creation.beingCreated
     && canManageDocument
     && !isManagedIntegratedDocument
     && !workflowActive
@@ -1864,6 +1956,7 @@ export default function KnowledgeWorkspacePage() {
     && hasWorkflowAssignments
     && !['archived', 'obsolete'].includes(String(form.status || '').toLowerCase());
   const canCreateVersion = !isCreate
+    && !creation.beingCreated
     && canEditContent
     && !isManagedIntegratedDocument
     && !workflowActive
@@ -1922,7 +2015,7 @@ export default function KnowledgeWorkspacePage() {
               {t('workspace.actions.requestReview')}
             </Button>
           )}
-          {!isCreate && !workflowActive && !editMode && canManageDocument && (
+          {!isCreate && !creation.beingCreated && !workflowActive && !editMode && canManageDocument && (
             <Button variant="action" size="small" startIcon={<EditIcon />} onClick={() => { void startEdit(); }}>
               {isLockedByAnotherUser ? t('workspace.actions.retryLock') : t('workspace.actions.edit')}
             </Button>
@@ -1965,23 +2058,19 @@ export default function KnowledgeWorkspacePage() {
             disabled={!contentHasText}
             getContent={getCurrentContentMarkdown}
           />
-          {canManageDocument && !workflowActive && isCreate && (
-            <Button
-              variant="contained"
-              size="small"
-              startIcon={<SaveIcon />}
-              disabled={workspaceReadOnly || saveMutation.isPending}
-              onClick={() => saveMutation.mutate('manual')}
-            >
-              {t('common:buttons.save')}
-            </Button>
+          {(isCreate ? canManageDocumentGlobal : creation.beingCreated) && (
+            <CreationActions
+              busy={creation.cancelling || doneEditingPending}
+              onCreate={createAction}
+              onCancel={() => { void cancelAction(); }}
+            />
           )}
-          {!isCreate && !workflowActive && editMode && canManageDocument && (
+          {!isCreate && !creation.beingCreated && !workflowActive && editMode && canManageDocument && (
             <Button
               variant="action"
               size="small"
               startIcon={<CheckIcon />}
-              onClick={handleDoneEditing}
+              onClick={() => { void handleDoneEditing(); }}
               disabled={workspaceSavePending}
             >
               {t('workspace.actions.done')}
@@ -2059,34 +2148,33 @@ export default function KnowledgeWorkspacePage() {
           >
             <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
               <Stack spacing={1} sx={{ mb: 2, flexShrink: 0 }}>
-                <Box sx={{ ...titleBarSx, minWidth: 0 }}>
-                  {canEditContent && !isManagedIntegratedDocument ? (
-                    <TextField
-                      value={String(form.title || '')}
-                      onChange={handleTitleChange}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Tab' && !e.shiftKey) {
-                          e.preventDefault();
-                          setContentFocusNonce((n) => n + 1);
-                        }
-                      }}
-                      variant="standard"
-                      fullWidth
-                      placeholder={t('workspace.fields.titlePlaceholder')}
-                      sx={fieldResetSx}
-                      InputProps={{
-                        sx: {
-                          fontSize: '1.5rem',
-                          fontWeight: 500,
-                          color: 'kanap.text.primary',
-                        },
-                      }}
-                    />
-                  ) : (
-                    <Typography variant="h5" sx={{ fontWeight: 500, py: 0.4 }}>
-                      {displayTitle || t('workspace.values.untitled')}
-                    </Typography>
-                  )}
+                <Box sx={{ minWidth: 0 }}>
+                  <EditableTitle
+                    value={isCreate ? '' : displayTitle}
+                    fallback={isCreate ? t('workspace.fields.titlePlaceholder') : t('workspace.values.untitled')}
+                    canEdit={isCreate ? canManageDocumentGlobal : canEditContent && !isManagedIntegratedDocument}
+                    autoEdit={isCreate}
+                    emphasizeEmpty={isCreate}
+                    error={isCreate ? titleError : undefined}
+                    focusRequest={newCreate.focusRequest}
+                    onDraftChange={isCreate ? () => setTitleError(null) : undefined}
+                    onCancel={isCreate ? () => { void cancelAction(); } : undefined}
+                    onSave={(value) => {
+                      if (isCreate) {
+                        setTitleError(null);
+                        newCreate.titleSent();
+                        setPendingTitle(value);
+                        return;
+                      }
+                      handleTitleSave(value);
+                    }}
+                    onTab={() => {
+                      // Tab goes on to the text: at once on a document, once created on a new one.
+                      if (isCreate) contentFocusPendingRef.current = true;
+                      else setContentFocusNonce((n) => n + 1);
+                    }}
+                    typography={DOCUMENT_TITLE_TYPOGRAPHY}
+                  />
                 </Box>
                 {showTitleMeta && (
                   <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
@@ -2127,6 +2215,7 @@ export default function KnowledgeWorkspacePage() {
               </Stack>
 
               <Box ref={editorHostRef} sx={{ flex: 1, minHeight: 0 }}>
+                <CreationFrame dimmed={isCreate}>
                 <React.Suspense fallback={<MarkdownEditorLoadingFallback minRows={editorRows} />}>
                   <MarkdownEditor
                     key={`${activeEditorDocumentId}:${contentResetNonce}`}
@@ -2145,6 +2234,7 @@ export default function KnowledgeWorkspacePage() {
                     surface
                   />
                 </React.Suspense>
+                </CreationFrame>
               </Box>
             </Box>
           </Box>
@@ -2162,6 +2252,7 @@ export default function KnowledgeWorkspacePage() {
               ml: 0,
             }}
           >
+            <CreationFrame dimmed={isCreate}>
             <KnowledgeSidebar
               doc={doc}
               form={sidebarForm}
@@ -2206,6 +2297,7 @@ export default function KnowledgeWorkspacePage() {
               onPostComment={handlePostComment}
               postingComment={commentMutation.isPending}
             />
+            </CreationFrame>
           </Box>
         )}
       </Stack>

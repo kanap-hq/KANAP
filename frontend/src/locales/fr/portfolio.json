@@ -836,21 +836,14 @@
       },
       "messages": {
         "createFailed": "Échec de la création de la tâche",
-        "creating": "Création de la tâche…",
         "deleteFailed": "Échec de la suppression de la tâche",
-        "documentImportAfterCreate": "Enregistrez la tâche avant d'importer un document.",
-        "documentImportFailed": "Échec de l'importation du document",
-        "importPermissionRequired": "Vous n'avez pas la permission d'importer un document.",
-        "importSaveFirst": "Enregistrez cette tâche avant d'importer un document.",
         "invalidRelationConfiguration": "Configuration de relation invalide",
-        "invalidRelationType": "Type d'objet lié invalide",
         "invalidStandaloneRelation": "Les tâches autonomes ne peuvent pas utiliser cette relation.",
         "loadFailed": "Échec du chargement de la tâche",
         "loading": "Chargement de la tâche…",
         "notFound": "Tâche introuvable",
         "relatedItemRequired": "Veuillez sélectionner un élément lié",
         "saveFailed": "Échec de l'enregistrement de la tâche",
-        "titleRequired": "Le titre est obligatoire",
         "stillFollowing": "Vous suivez toujours cette tâche."
       },
       "sidebar": {
@@ -873,37 +866,15 @@
           "timeSpent": "Temps passé",
           "viewers": "Observateurs"
         },
-        "priorityOptions": {
-          "blocker": "Bloquant (+10)",
-          "high": "Haute (+5)",
-          "low": "Basse (-5)",
-          "normal": "Moyenne (0)",
-          "optional": "Optionnelle (-10)"
-        },
         "sections": {
-          "classification": "Classification",
-          "context": "Contexte",
-          "dates": "Dates",
-          "details": "Détails de la tâche",
           "knowledge": "Connaissances",
-          "people": "Personnes",
           "time": "Temps"
         },
         "values": {
           "assigneeMissing": "Assigné manquant",
-          "noClassification": "Aucune classification définie.",
           "projectLevel": "Niveau projet",
           "requestorMissing": "Demandeur manquant",
-          "standaloneTask": "Tâche autonome",
-          "unknown": "Inconnu",
-          "relatedTypes": {
-            "budget": "Budget",
-            "capex": "CAPEX",
-            "contract": "Contrat",
-            "incident": "Incident",
-            "project": "Projet",
-            "related": "Lié"
-          }
+          "standaloneTask": "Tâche autonome"
         }
       },
       "workLog": {
@@ -937,6 +908,9 @@
       "tabs": {
         "overview": "Vue d'ensemble",
         "history": "Historique"
+      },
+      "creation": {
+        "record": "La tâche"
       }
     }
   },

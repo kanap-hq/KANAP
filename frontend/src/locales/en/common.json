@@ -1752,7 +1752,15 @@
       "protocols_one": "{{count}} protocol",
       "protocols_other": "{{count}} protocols",
       "hops_one": "{{count}} hop",
-      "hops_other": "{{count}} hops"
+      "hops_other": "{{count}} hops",
+      "comments_one": "{{count}} comment",
+      "comments_other": "{{count}} comments",
+      "documentVersions_one": "{{count}} version",
+      "documentVersions_other": "{{count}} versions",
+      "classifications_one": "{{count}} classification",
+      "classifications_other": "{{count}} classifications",
+      "contributors_one": "{{count}} contributor",
+      "contributors_other": "{{count}} contributors"
     },
     "titleRequired": "Enter a title."
   },

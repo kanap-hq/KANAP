@@ -8,29 +8,32 @@ Navigieren Sie zu **Portfolio > Aufgaben**, um alle Aufgaben in Ihrer Organisati
 
 ### Eine neue Aufgabe erstellen
 
-Wenn Sie auf **Neu** klicken, öffnet sich der vollständige Aufgaben-Arbeitsbereich. So erstellen Sie eine Aufgabe:
+Wenn Sie auf **Neu** klicken, öffnet sich die Aufgabenseite mit einem leeren Titel in ihrer Kopfzeile, hellblau dargestellt. Der Rest der Seite ist abgeblendet, bis die Aufgabe existiert. So erstellen Sie eine Aufgabe:
 
-1. **Geben Sie den Titel ein** (erforderlich):
-   - Geben Sie den Aufgabentitel in das Textfeld oben ein
+1. **Geben Sie den Titel ein** (erforderlich), in der Kopfzeile.
 
-2. **Wählen Sie den Kontext**:
-   - **Eigenständige Aufgabe** (Standard): Lassen Sie „Verknüpft mit" als **Eigenständig**
-   - **Verknüpfte Aufgabe**: Wählen Sie **Projekt**, **OPEX**, **Vertrag** oder **CAPEX** und wählen Sie das spezifische Element
+2. **Drücken Sie die Eingabetaste**, oder verlassen Sie das Feld. KANAP erstellt die Aufgabe sofort, mit diesen Standardwerten:
+   - **Status**: **Offen**
+   - **Priorität**: **Normal**
+   - **Verantwortlicher** und **Antragsteller**: Sie
+   - **Aufgabentyp**: der Standardtyp, wenn einer festgelegt ist
+   - **Verknüpft mit**: der Datensatz, von dem aus Sie begonnen haben, und seine Phase, wenn Sie von einer Phase aus begonnen haben. Eine von der Aufgabenseite aus begonnene Aufgabe ist eigenständig
+   - **Klassifizierung** (eigenständige und Projektaufgaben): Bei Projektaufgaben stammen **Quelle**, **Kategorie**, **Stream** und **Unternehmen** aus dem übergeordneten Projekt. Für eigenständige Aufgaben werden die Standardklassifizierungswerte Ihrer Organisation verwendet, wenn vorhanden
 
-3. **Füllen Sie optionale Details aus**:
-   - **Aufgabentyp**: Wählen Sie eine Kategorie für die Arbeit (z. B. Aufgabe, Bug, Problem, Vorfall). Standardmäßig „Aufgabe", wenn verfügbar
+3. **Füllen Sie die Details aus**. Alle Reiter und Felder sind nun verfügbar, mit der Eigenschaftsleiste rechts:
+   - **Verknüpft mit**: Behalten Sie **Eigenständig** bei, oder wählen Sie **Projekt**, **OPEX**, **Vertrag** oder **CAPEX** und dann das spezifische Element
+   - **Aufgabentyp**: Eine Kategorie für die Arbeit (z. B. Aufgabe, Bug, Problem, Vorfall)
    - **Labels**: Freie Stichwörter, zum Beispiel dringend oder Nachverfolgung. Geben Sie eines ein und drücken Sie die Eingabetaste
    - **Beschreibung**: Fügen Sie detaillierte Informationen mit dem Markdown-Editor hinzu (unterstützt Formatierung, Listen, Links, Bilder)
    - **Phase**: Wählen Sie für Projektaufgaben eine Phase oder lassen Sie sie als „Projektebene"
-   - **Klassifizierung** (eigenständige und Projektaufgaben): Legen Sie **Quelle**, **Kategorie**, **Stream** und **Unternehmen** fest. Für Projektaufgaben werden diese vom übergeordneten Projekt vorbelegt. Für eigenständige Aufgaben werden die Standardklassifizierungswerte Ihrer Organisation vorausgefüllt, wenn verfügbar
-   - **Status**: Standardmäßig **Offen**
-   - **Priorität**: Standardmäßig **Normal**
    - **Daten**: Start- und Fälligkeitsdaten festlegen
-   - **Verantwortlicher**: Standardmäßig Sie; bei Bedarf ändern
+   - **Verantwortlicher**, **Status**, **Priorität**: Bei Bedarf ändern
 
-4. Klicken Sie auf **Erstellen**, wenn bereit (aktiviert, sobald der Titel festgelegt ist). Sie können auch **Strg+S** (oder **Cmd+S** auf Mac) drücken
+4. Klicken Sie auf **Erstellen**, um die Aufgabe zu behalten. Sie kehren dorthin zurück, wo Sie begonnen haben: Eine im Reiter **Aufgaben** eines Projekts begonnene Aufgabe kehrt zu diesem Reiter zurück. Klicken Sie stattdessen auf **Abbrechen**, um die Aufgabe zu löschen. KANAP fragt zuerst nach, wenn Sie mehr als den Titel eingegeben haben.
 
-**Tipp**: Sie können Bilder direkt in die Beschreibung einfügen. Sie werden automatisch in den Speicher hochgeladen, wenn Sie die Aufgabe erstellen.
+**Escape** im leeren Titel wirkt wie **Abbrechen**. Wenn Sie die Aufgabe auf andere Weise verlassen, bleibt sie erhalten.
+
+**Tipp**: Sie können Bilder direkt in die Beschreibung einfügen. Sie werden automatisch hochgeladen.
 
 **Hinweis**: Aufgaben können auch innerhalb anderer Arbeitsbereiche erstellt werden (OPEX-Zeilen, Verträge, CAPEX-Zeilen, Portfolio-Projekte), in denen die Beziehung vorab ausgewählt ist.
 
@@ -146,7 +149,7 @@ Unter der Symbolleiste zeigt der Titelblock:
 
 Der Tab **Übersicht** enthält den Inhalt der Aufgabe.
 
-**Beschreibung**: Ein Markdown-Editor, der Formatierung, Listen, Links, Codeblöcke und Bilder unterstützt. Sie können Bilder direkt einfügen; sie werden automatisch hochgeladen. Das Drücken von **Tab** im Titelfeld springt in den Beschreibungseditor. Die Beschreibung wird ein paar Sekunden nach dem Aufhören mit dem Tippen automatisch gespeichert; die Kopfzeile zeigt jedes Mal kurz **Gespeichert** an.
+**Beschreibung**: Ein Markdown-Editor, der Formatierung, Listen, Links, Codeblöcke und Bilder unterstützt. Sie können Bilder direkt einfügen; sie werden automatisch hochgeladen. Die Beschreibung wird ein paar Sekunden nach dem Aufhören mit dem Tippen automatisch gespeichert; die Kopfzeile zeigt jedes Mal kurz **Gespeichert** an.
 
 **Anhänge**: Ziehen Sie Dateien per Drag-and-Drop auf die Beschreibung oder verwenden Sie den Upload-Bereich, wenn er erscheint. Hochgeladene Dateien erscheinen als Chips unter der Beschreibung. Klicken Sie auf einen Chip zum Herunterladen; klicken Sie auf die **x**-Schaltfläche zum Löschen (erfordert Bearbeitungsberechtigung). Maximal 20 MB pro Datei.
 
@@ -403,9 +406,9 @@ Eigenständige Aufgaben sind unabhängige Arbeitsobjekte, die nicht mit einem be
 ### Eigenständige Aufgaben erstellen
 
 1. Klicken Sie auf **Neu** auf der Aufgabenseite
-2. Lassen Sie das Dropdown **Verknüpft mit** als **Eigenständig**
+2. Geben Sie den Titel ein und drücken Sie die Eingabetaste: Die Aufgabe wird als eigenständige Aufgabe erstellt
 3. Die Eigenschaftsleiste zeigt „Eigenständige Aufgabe" in der Gruppe Kontext
-4. Füllen Sie Titel, Beschreibung und andere Details aus
+4. Füllen Sie Beschreibung und andere Details aus
 5. Klicken Sie auf **Erstellen**
 
 ### Klassifizierungsfelder
@@ -731,8 +734,7 @@ Wenn der Fokus nicht auf einem Eingabefeld liegt, können Sie verwenden:
 - **K** oder **→**: Nächste Aufgabe in der aktuellen Liste
 - **P**: Eigenschaftsleiste umschalten
 - **Escape**: Schließen und zur Liste zurückkehren
-- **Strg+S** / **Cmd+S**: Speichern (oder Erstellen, im Erstellungsmodus)
-- **Tab** vom Titelfeld: Direkt in den Beschreibungseditor springen
+- **Strg+S** / **Cmd+S**: Speichern
 
 ---
 

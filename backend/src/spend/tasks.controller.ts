@@ -55,6 +55,13 @@ import { PermissionLevel } from '../permissions/permissions.service';
 import { PermissionsService } from '../permissions/permissions.service';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { incidentViewerFromRequest, resolveIncidentViewer, taskIncidentVisibilitySql } from '../incidents/incident-visibility';
+import { assertTaskCreationToken, cancelTaskCreation, taskCreationChanges, withTaskCreationToken } from '../tasks/task-creation';
+import type { CreationChanges } from '../common/creation/creation-changes';
+
+/** The tenant and the person of the request, for a creation token. */
+function creationSubject(req: any) {
+  return { tenantId: req?.tenant?.id ?? '', userId: req?.user?.sub ?? '' };
+}
 
 /**
  * What a task may name of its linked records: the modules the caller reads, and a Business
@@ -324,11 +331,37 @@ export class TasksController {
     if (!body?.title || !body.title.toString().trim()) {
       throw new BadRequestException('title is required');
     }
-    return this.unified.createForTarget(
+    const created = await this.unified.createForTarget(
       { type: null, id: null, payload: body },
       req.user?.sub ?? null,
       { manager: req?.queryRunner?.manager, tenantId: req?.tenant?.id },
     );
+    return withTaskCreationToken(created, creationSubject(req));
+  }
+
+  /**
+   * Before "Cancel" of a task being created (`task-creation.ts`): what was written on it since its
+   * creation. The token of its create route, for this person, comes first. Nothing is written.
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('tasks', 'member')
+  @Get(':id/creation')
+  async creationChanges(@Param('id') id: string, @Query('token') token: string, @Req() req: any): Promise<{ changes: CreationChanges }> {
+    assertTaskCreationToken(id, token, creationSubject(req));
+    return { changes: await taskCreationChanges(req?.queryRunner?.manager, creationSubject(req), id) };
+  }
+
+  /**
+   * "Cancel" of a task being created: its creator deletes it with the token of its create route,
+   * without the delete right (tasks admin), while nobody else has written on it. Same delete as
+   * `DELETE /tasks/bulk` for one task (refusals, data access, history, audit).
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('tasks', 'member')
+  @Delete(':id/creation')
+  async cancelCreation(@Param('id') id: string, @Body() body: { token?: string }, @Req() req: any): Promise<void> {
+    assertTaskCreationToken(id, body?.token, creationSubject(req));
+    await cancelTaskCreation(req?.queryRunner?.manager, this.deleteSvc, creationSubject(req), id);
   }
 
   @UseGuards(PermissionGuard)

@@ -76,9 +76,11 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
     reserved: ['importCsv'],
     allowed: {
       bulkDelete: TASK_DELETE, // DELETE bulk
+      cancelCreation: `cancel of a task being created, by its creator with its creation token (that task only): ${TASK_DELETE}; no window outside the limited role`, // DELETE :id/creation
       createActivity: TASK_WRITE, // POST :id/activities
       createStandalone: TASK_WRITE, // POST standalone
       createTimeEntry: TASK_WRITE, // POST :id/time-entries
+      creationChanges: 'the preflight of the cancel of a task being created (read), with its creation token', // GET :id/creation
       deleteAttachmentStatic: TASK_WRITE, // PATCH attachments/:attachmentId/delete
       deleteCheck: TASK_DELETE, // POST delete-check
       deleteTimeEntry: TASK_WRITE, // DELETE :id/time-entries/:entryId
@@ -234,7 +236,7 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
   {
     file: 'business-processes/business-processes.controller.ts',
     controller: 'BusinessProcessesController',
-    reserved: ['bulkDelete', 'create', 'delete', 'deleteCheck', 'import', 'update'],
+    reserved: ['bulkDelete', 'cancelCreation', 'create', 'creationChanges', 'delete', 'deleteCheck', 'import', 'update'],
     allowed: {
       export: EXPORT, // GET export
       get: READ, // GET :id
