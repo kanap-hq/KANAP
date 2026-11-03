@@ -8,6 +8,9 @@ import { ScheduledTasksService } from '../../admin/scheduled-tasks/scheduled-tas
 import { writeAuditLog } from '../../audit/audit.service';
 import { tenantSeedLanguage } from '../../analytics/recommended-dimensions.seed';
 import { discoveryCallConfig } from '../../discovery-call/discovery-call.config';
+import { StripeConfigService } from '../../billing/stripe/stripe.config';
+import { Subscription, SubscriptionStatus } from '../../billing/subscription.entity';
+import { computeTrialDeletionAt } from '../../billing/subscription-freeze.util';
 import {
   DISCOVERY_CALL_AUDIT_TABLE,
   DiscoveryCallService,
@@ -20,7 +23,6 @@ import {
   TRIAL_MAIL_SENT_COLUMN,
   TRIAL_MAIL_MILESTONES,
   dueTrialMail,
-  trialDeletionDate,
   type TrialMailMilestone,
 } from './trial-mail-schedule';
 import {
@@ -58,12 +60,18 @@ type TrialTenantRow = {
 
 type StateRow = Record<string, Date | null>;
 
+type SubscriptionRow = Pick<
+  Subscription,
+  'trial_end' | 'plan_name' | 'stripe_subscription_id' | 'latest_invoice_id' | 'current_period_end' | 'canceled_at'
+> & { status: string | null };
+
 type TenantFacts = {
   milestone: TrialMailMilestone;
   recipient: { email: string; firstName: string | null };
   angle: TrialAngle | null;
   mode: TrialMode | null;
   trialEnd: Date | null;
+  deletionAt: Date | null;
   call: { timing: ReturnType<typeof discoveryCallTiming>; date: Date | null };
 };
 
@@ -103,6 +111,7 @@ export class TrialMailsService implements OnModuleInit {
     private readonly email: EmailService,
     private readonly scheduledTasks: ScheduledTasksService,
     private readonly discoveryCall: DiscoveryCallService,
+    private readonly stripeConfig: StripeConfigService,
   ) {}
 
   onModuleInit() {
@@ -113,6 +122,11 @@ export class TrialMailsService implements OnModuleInit {
       defaultCron: '*/10 * * * *',
       handler: () => this.run(),
     });
+  }
+
+  /** The trial lock and the deletion apply (`computeTrialDeletionAt`): cloud with Stripe configured. */
+  private billingEnforced(): boolean {
+    return !Features.SINGLE_TENANT && this.stripeConfig.isConfigured();
   }
 
   /** Why nothing can be sent now, or null. */
@@ -227,8 +241,8 @@ export class TrialMailsService implements OnModuleInit {
    * that subscribed before this scheduler existed) has no row and gets nothing.
    */
   private async readFacts(manager: EntityManager, row: TrialTenantRow, now: Date): Promise<TenantFacts | null> {
-    const [subscription]: Array<{ status: string | null; trial_end: Date | null; stripe_subscription_id: string | null }> = await manager.query(
-      `SELECT status::text AS status, trial_end, stripe_subscription_id
+    const [subscription]: SubscriptionRow[] = await manager.query(
+      `SELECT status::text AS status, trial_end, plan_name, stripe_subscription_id, latest_invoice_id, current_period_end, canceled_at
          FROM subscriptions WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 1`,
       [row.id],
     );
@@ -258,10 +272,12 @@ export class TrialMailsService implements OnModuleInit {
     const mode = choice?.mode === 'example' || choice?.mode === 'own_data' ? choice.mode : null;
 
     const subscribed = subscription.status === 'active' && !!subscription.stripe_subscription_id;
+    const deletionAt = computeTrialDeletionAt(subscription as SubscriptionRow & { status: SubscriptionStatus }, this.billingEnforced());
     const milestone = dueTrialMail({
       subscription: trialing ? 'trialing' : (subscribed ? 'subscribed' : 'other'),
       trialStart: new Date(row.activated_at),
       trialEnd: subscription.trial_end ? new Date(subscription.trial_end) : null,
+      deletionAt,
       choiceMade: !!angle && !!mode,
       firstLoginAt: firstLoginAt ? new Date(firstLoginAt) : null,
       sent: new Set(TRIAL_MAIL_MILESTONES.filter((key) => state[TRIAL_MAIL_SENT_COLUMN[key]])),
@@ -277,6 +293,7 @@ export class TrialMailsService implements OnModuleInit {
       angle,
       mode,
       trialEnd: subscription.trial_end ? new Date(subscription.trial_end) : null,
+      deletionAt,
       call: {
         timing: discoveryCallTiming(call, now),
         date: call?.scheduled_at ? new Date(call.scheduled_at) : null,
@@ -317,7 +334,7 @@ export class TrialMailsService implements OnModuleInit {
         content = buildTrialEndingEmail({ ...common, trialEnd: facts.trialEnd!, marketingUrl: marketingUrl(), unsubscribeUrl });
         break;
       case 'ended':
-        content = buildTrialEndedEmail({ ...common, deletionDate: trialDeletionDate(facts.trialEnd!), unsubscribeUrl });
+        content = buildTrialEndedEmail({ ...common, deletionDate: facts.deletionAt!, unsubscribeUrl });
         break;
       case 'thanks':
         content = buildTrialThanksEmail(common);

@@ -37,19 +37,17 @@ export const TRIAL_MAIL_J12_BEFORE_END_MS = 2 * DAY_MS;
 /** The notice is not sent in the last week before the deletion. */
 export const TRIAL_MAIL_ENDED_LAST_CALL_MS = 7 * DAY_MS;
 
-/** Days between the end of a trial without subscription and the deletion of the workspace. */
-export const TRIAL_DELETION_DELAY_DAYS = 30;
-
-/** The date a trial workspace is deleted when it does not subscribe: the end of the trial plus thirty days. */
-export function trialDeletionDate(trialEnd: Date): Date {
-  return new Date(trialEnd.getTime() + TRIAL_DELETION_DELAY_DAYS * DAY_MS);
-}
-
 export type TrialMailFacts = {
   /** `trialing`; `subscribed` is an active Stripe subscription; anything else sends nothing. */
   subscription: 'trialing' | 'subscribed' | 'other';
   trialStart: Date;
   trialEnd: Date | null;
+  /**
+   * When the workspace is deleted if it does not subscribe (`computeTrialDeletionAt`, E1); null
+   * when no deletion is planned (billing not enforced, a plan set by hand): J+12 and the notice
+   * announce the deletion, so they are not sent.
+   */
+  deletionAt: Date | null;
   /** The path (angle) and the mode are both chosen. */
   choiceMade: boolean;
   firstLoginAt: Date | null;
@@ -64,10 +62,10 @@ export function dueTrialMail(facts: TrialMailFacts, now: Date): TrialMailMilesto
 
   const end = facts.trialEnd.getTime();
   let due: TrialMailMilestone | null;
-  if (at >= end) {
-    due = at < trialDeletionDate(facts.trialEnd).getTime() - TRIAL_MAIL_ENDED_LAST_CALL_MS ? 'ended' : null;
-  } else if (at >= end - TRIAL_MAIL_J12_BEFORE_END_MS) {
-    due = 'j12';
+  if (at >= end - TRIAL_MAIL_J12_BEFORE_END_MS) {
+    if (!facts.deletionAt) due = null;
+    else if (at < end) due = 'j12';
+    else due = at < facts.deletionAt.getTime() - TRIAL_MAIL_ENDED_LAST_CALL_MS ? 'ended' : null;
   } else if (at >= facts.trialStart.getTime() + TRIAL_MAIL_J5_AFTER_MS) {
     due = 'j5';
   } else {

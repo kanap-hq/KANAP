@@ -3,7 +3,6 @@ import {
   TrialMailFacts,
   TrialMailMilestone,
   dueTrialMail,
-  trialDeletionDate,
 } from '../trial-mail-schedule';
 import {
   buildTrialEndedEmail,
@@ -20,7 +19,8 @@ const escapeForHtml = (text: string) => text.replace(/&/g, '&amp;').replace(/'/g
 
 // The trial e-mails (`doc/trial-mails.md`) without a database:
 // - the schedule: each mail at its time, never one already sent, never a missed one late, nothing
-//   after the subscription but the thank-you, nothing after the unsubscription;
+//   after the subscription but the thank-you, nothing after the unsubscription, no J+12 or notice
+//   when no deletion is planned;
 // - the templates in the four languages: every placeholder filled, the variants, one button at
 //   most (none on J+5), the unsubscribe footer except on the thank-you, French typography;
 // - the signed links: valid, tampered, another purpose, another key.
@@ -35,6 +35,7 @@ function facts(over: Partial<TrialMailFacts> = {}): TrialMailFacts {
     subscription: 'trialing',
     trialStart: START,
     trialEnd: END,
+    deletionAt: new Date(END.getTime() + 30 * DAY),
     choiceMade: false,
     firstLoginAt: null,
     sent: new Set<TrialMailMilestone>(),
@@ -65,9 +66,14 @@ function testEachMailAtItsTimeAndNeverLate() {
   assert.equal(dueTrialMail(facts(all), at(14 + 22.9)), 'ended');
   assert.equal(dueTrialMail(facts(all), at(14 + 23)), null);
   // A trial extended by the platform administrator moves J+12 with its end.
-  assert.equal(dueTrialMail(facts({ ...all, trialEnd: at(30), sent: new Set(['j0', 'j5']) }), at(13)), null);
-  assert.equal(dueTrialMail(facts({ ...all, trialEnd: at(30), sent: new Set(['j0', 'j5']) }), at(28)), 'j12');
-  assert.equal(trialDeletionDate(END).toISOString(), at(44).toISOString());
+  const extended = { ...all, trialEnd: at(30), deletionAt: at(60), sent: new Set<TrialMailMilestone>(['j0', 'j5']) };
+  assert.equal(dueTrialMail(facts(extended), at(13)), null);
+  assert.equal(dueTrialMail(facts(extended), at(28)), 'j12');
+  // No deletion planned (billing not enforced, a plan set by hand): J+5 still, no J+12 or notice.
+  const kept = { ...all, deletionAt: null, sent: new Set<TrialMailMilestone>(['j0']) };
+  assert.equal(dueTrialMail(facts(kept), at(5)), 'j5');
+  assert.equal(dueTrialMail(facts(kept), at(12)), null);
+  assert.equal(dueTrialMail(facts(kept), at(15)), null);
 }
 
 function testSubscriptionAndUnsubscription() {

@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { StripeConfigService } from '../../billing/stripe/stripe.config';
 import { DiscoveryCallModule } from '../../discovery-call/discovery-call.module';
 import { EmailModule } from '../email.module';
 import { TrialMailsController } from './trial-mails.controller';
@@ -8,7 +9,9 @@ import { TrialMailsService } from './trial-mails.service';
 @Module({
   imports: [EmailModule, DiscoveryCallModule],
   controllers: [TrialMailsController],
-  providers: [TrialMailsService],
+  // StripeConfigService reads the environment only; provided here, as PermissionsModule does,
+  // because BillingModule imports this module (the webhook's thank-you).
+  providers: [TrialMailsService, StripeConfigService],
   exports: [TrialMailsService],
 })
 export class TrialMailsModule {}

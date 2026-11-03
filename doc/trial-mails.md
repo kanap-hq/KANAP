@@ -16,7 +16,7 @@ Code: `backend/src/email/trial-mails/`. Texts: `trialMails` in `backend/src/i18n
 
 The trial sequence stops at the subscription: a subscribed workspace gets the thank-you, once, and nothing else. No e-mail reads what the person did in the workspace: the only inputs are the trial dates, the path and mode chosen (`tenant_onboarding`), the discovery call (`DiscoveryCallService`, `doc/discovery-call.md`) and the sign-up person.
 
-A mail goes out only while it still makes sense: J0 before J+5 is due, J+5 before J+12, J+12 before the end, the notice until a week before the deletion. A workspace seen late in its trial (a deploy, an outage, sending switched off) gets the current mail, never the ones it missed. The deletion date is the end of the trial plus thirty days (`trialDeletionDate`).
+A mail goes out only while it still makes sense: J0 before J+5 is due, J+5 before J+12, J+12 before the end, the notice until a week before the deletion. A workspace seen late in its trial (a deploy, an outage, sending switched off) gets the current mail, never the ones it missed. The deletion date is the one of the trial workspace expiry (`computeTrialDeletionAt`, `billing/subscription-freeze.util.ts`): the end of the trial plus thirty days. J+12 and the notice announce it, so they go out only when a deletion is planned: not when billing is not enforced (Stripe not configured) or when a platform administrator set a plan by hand.
 
 The recipient is the person of the trial sign-up (`trial_signups.email`), the workspace's first administrator, while that user is `enabled`. The language is the workspace's (`tenants.metadata.language`). Dates are written in the language, as days of the Europe/Paris calendar.
 

@@ -52,9 +52,11 @@ class RecordingEmail {
   }
 }
 
-function service(email = new RecordingEmail()) {
+function service(email = new RecordingEmail(), billingEnforced = true) {
   const scheduledTasks = { register: () => undefined };
-  return { email, trialMails: new TrialMailsService(dataSource, email as any, scheduledTasks as any, new DiscoveryCallService(dataSource)) };
+  // Billing enforced (Stripe configured): the trial is locked at its end and deleted thirty days later.
+  const stripeConfig = { isConfigured: () => billingEnforced };
+  return { email, trialMails: new TrialMailsService(dataSource, email as any, scheduledTasks as any, new DiscoveryCallService(dataSource), stripeConfig as any) };
 }
 
 async function withEnv<T>(values: Record<string, string | undefined>, fn: () => Promise<T>): Promise<T> {
@@ -175,6 +177,11 @@ async function testFollowUpEndingAndNotice() {
       assert.equal(followUp.from, 'Friedrich <fried@kanap.net>', 'J+5 leaves from Friedrich');
       assert.equal(followUp.replyTo, undefined);
       assert.ok(!followUp.text!.includes('/api/trial-mails/call'), 'no call link when one is booked');
+
+      // Billing not enforced: no deletion planned, so no J+12 announcing it.
+      const unbilled = service(new RecordingEmail(), false);
+      await unbilled.trialMails.onSubscriptionChanged(t!.tenantId, new Date(end.getTime() - DAY));
+      assert.equal(unbilled.email.sent.length, 0, 'no J+12 without a planned deletion');
 
       await trialMails.onSubscriptionChanged(t!.tenantId, new Date(end.getTime() - DAY));
       assert.equal(email.to(t!.ownerEmail)[1]?.subject, 'Votre essai se termine dans deux jours');
