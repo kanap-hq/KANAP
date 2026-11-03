@@ -406,7 +406,8 @@ describe('AnalyticsDimensionWorkspacePage', () => {
   it('creates on Create with the header name and the code proposed from it, with no position (the server places it last)', async () => {
     mocked.createAnalyticsAxis.mockResolvedValue({ ...NATURE, id: 'ax-new' });
     renderAt('/master-data/analytics/dimensions/new/overview');
-    expect(screen.queryByRole('complementary')).toBeNull();
+    // The dimension's own page: the code sits in its Properties drawer.
+    expect(screen.getByRole('complementary')).toContainElement(screen.getByLabelText('analytics.fields.code'));
     fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Nature de coût' } });
     expect(screen.getByLabelText('analytics.fields.code')).toHaveValue('nature-de-cout');
     expect(screen.queryByLabelText('analytics.fields.order')).toBeNull();
@@ -417,6 +418,9 @@ describe('AnalyticsDimensionWorkspacePage', () => {
       description: null,
       applies_to: null,
       required: false,
+      open_values: false,
+      status: 'enabled',
+      disabled_at: null,
     }));
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/analytics'));
   });
@@ -615,7 +619,9 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     });
     renderAt('/master-data/analytics/dimensions/new/overview');
     const code = screen.getByLabelText('analytics.fields.code');
+    fireEvent.focus(code);
     fireEvent.change(code, { target: { value: 'nature' } });
+    fireEvent.blur(code);
     fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Cost nature' } });
     expect(code).toHaveValue('nature');
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
