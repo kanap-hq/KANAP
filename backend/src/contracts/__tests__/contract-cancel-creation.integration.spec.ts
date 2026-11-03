@@ -25,7 +25,9 @@ import { ContractsDeleteService } from '../contracts-delete.service';
 //   that delete only, the limited role and mode back afterwards, the attachment files removed only
 //   then, the delete audited under them;
 // - a contract they may not modify (outside their scope) is not found, and stays, even with a valid
-//   token: the lock runs under their access, before the window.
+//   token: the lock runs under their access, before the window;
+// - a contract another person chose as the contract of a budget line the limited person may not
+//   modify is refused (`CREATION_CANCEL_EXPIRED`): the line keeps its contract.
 
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'contract-cancel-creation-spec-secret';
 
@@ -122,6 +124,13 @@ async function testLimitedPerson() {
     await setTenant(runner, s.tenantId);
     // Outside their scope, made before their access applies, with a token of theirs all the same.
     const outside = await created(runner, s, s.limitedId, 'Outside', s.otherCompanyId);
+    // In their scope, chosen by another person as the contract of a line outside it.
+    const named = await created(runner, s, s.limitedId, 'Named elsewhere');
+    const [line] = await runner.query(
+      `INSERT INTO spend_items (tenant_id, nature, item_number, product_name, currency, effective_start, paying_company_id, contract_id)
+       VALUES ($1, 'opex', 990001, 'Elsewhere', 'EUR', $2, $3, $4) RETURNING id`,
+      [s.tenantId, TODAY, s.otherCompanyId, named.id],
+    );
     const { controller, removed } = services(runner);
     const asLimited = ctx(s, s.limitedId, runner);
     // Rolled back to at the end: the owner's role comes back with it, to read what stayed.
@@ -152,6 +161,12 @@ async function testLimitedPerson() {
     assert.equal(await contractCount(runner, s, kept.id), 1, 'the other contract stays');
     assert.deepEqual(await deletionAuthors(runner, s.tenantId, 'contracts', contract.id), [s.limitedId], 'audited under its creator');
 
+    // A line outside their scope names one of their contracts (another person chose it): the cancel,
+    // which would clear it, is refused, and the line keeps its contract.
+    await refusedAsExpired(controller.cancelCreation(named.id, { token: named.token }, asLimited), 'a line outside their scope names it');
+    assert.equal(await contractCount(runner, s, named.id), 1, 'the contract named by the line stays');
+    assert.deepEqual(await runner.query(`SELECT current_setting('role', true) AS role`), [{ role: 'kanap_data_limited' }], 'the limited role is back after the refusal');
+
     // A contract they may not modify is not found, before the window: it stays.
     await assert.rejects(controller.cancelCreation(outside.id, { token: outside.token }, asLimited), NotFoundException);
     const [after] = await runner.query(`SELECT current_setting('role', true) AS role`);
@@ -159,6 +174,8 @@ async function testLimitedPerson() {
     await runner.query('ROLLBACK TO SAVEPOINT before_access');
     assert.equal(await contractCount(runner, s, outside.id), 1, 'the contract outside their scope stays');
     assert.deepEqual(await deletionAuthors(runner, s.tenantId, 'contracts', outside.id), [], 'and no delete is recorded');
+    const [lineAfter] = await runner.query(`SELECT contract_id FROM spend_items WHERE tenant_id = $1 AND id = $2`, [s.tenantId, line.id]);
+    assert.equal(lineAfter.contract_id, named.id, 'the line outside their scope keeps its contract');
   });
 }
 

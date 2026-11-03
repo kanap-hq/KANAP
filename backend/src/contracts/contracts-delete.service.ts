@@ -15,6 +15,7 @@ import { UserTimeAggregateService } from '../portfolio/services/user-time-aggreg
 import type { TenantRequest } from '../common/decorators/tenant.decorator';
 import { requestContextMissing } from '../auth/module-right-required';
 import { assertCreationToken } from '../common/creation/creation-routes';
+import { creationCancelExpired } from '../common/creation/creation-token';
 import { assertCreatorAloneSinceCreation } from '../common/creation/creation-changes';
 import { withCreatorCancelAccess } from '../data-access/creator-cancel-access';
 
@@ -167,7 +168,9 @@ export class ContractsDeleteService extends BaseDeleteService<Contract> {
    *   one they may no longer modify, is 404. Under that lock, a contract another person wrote on is
    *   refused with `CREATION_CANCEL_EXPIRED`.
    * - A limited person's delete then runs in `withCreatorCancelAccess`, for this contract only; its
-   *   attachment files go once the window is closed and the person's access is back.
+   *   attachment files go once the window is closed and the person's access is back. In the window,
+   *   a budget line they may not modify that names the contract (another person chose it as the
+   *   line's contract) stops the cancel with `CREATION_CANCEL_EXPIRED`: the delete would clear it.
    */
   async cancelCreation(id: string, token: unknown, ctx: TenantRequest): Promise<void> {
     const manager = ctx.manager;
@@ -177,7 +180,16 @@ export class ContractsDeleteService extends BaseDeleteService<Contract> {
     const locked = await manager.query(`SELECT id FROM contracts WHERE tenant_id = $1 AND id = $2 FOR UPDATE`, [ctx.tenantId, id]);
     if (locked.length === 0) throw new NotFoundException('Contract not found.');
     await assertCreatorAloneSinceCreation(manager, ctx.tenantId, 'contracts', id, userId);
-    const paths = await withCreatorCancelAccess(manager, userId, (windowManager) => this.deleteOne(id, windowManager, userId));
+    const paths = await withCreatorCancelAccess(manager, userId, async (windowManager) => {
+      const [{ others }]: Array<{ others: number }> = await windowManager.query(
+        `SELECT count(*)::int AS others FROM spend_items i
+          WHERE i.tenant_id = $1 AND i.contract_id = $2${LINE_NATURES}
+            AND NOT data_access_line_editable(i.paying_company_id, i.cost_center_id, i.owner_it_id, i.owner_business_id)`,
+        [ctx.tenantId, id],
+      );
+      if (others > 0) throw creationCancelExpired();
+      return this.deleteOne(id, windowManager, userId);
+    });
     await deleteBlobs(this.storage, paths, this.logger);
   }
 
