@@ -116,7 +116,9 @@ L'onglet Vue d'ensemble contient l'adresse, les informations d'immatriculation e
     - **Numéro de TVA** : numéro d'identification TVA
 - **Notes** : notes en texte libre
 
-**Créer une société** : **Nouveau** ouvre un formulaire unique avec le nom, **Pays**, **Devise de base**, **Plan comptable**, **Ville**, les autres champs d'adresse, les champs d'immatriculation et **Notes**. Le choix d'un pays renseigne le **Plan comptable** à votre place : le plan par défaut du pays s'il en existe un, sinon un plan global. Vous pouvez le modifier avant d'enregistrer. Cliquez sur **Créer** pour enregistrer la société. L'onglet **Détails** devient disponible après la création de la société.
+**Créer une société** : **Nouveau** ouvre la page de la nouvelle société, son panneau des propriétés ouvert. Saisissez le nom dans le titre en haut de la page, puis renseignez **Pays** et **Ville**. Le choix d'un pays renseigne la **Devise de base** (la devise du pays) et le **Plan comptable** (le plan par défaut du pays s'il en existe un, sinon un plan global). La société est créée dès que son nom, **Pays**, **Devise de base** et **Ville** sont renseignés. Tous ses onglets deviennent alors disponibles, et les autres champs s'enregistrent automatiquement. Appuyez sur Échap dans le titre vide pour partir sans rien créer.
+
+Tant que la société est en cours de création, l'en-tête affiche **Créer** et **Annuler** jusqu'à ce que vous quittiez la page. **Créer** conserve la société et vous ramène à votre point de départ : la liste ou l'écran précédent. S'il manque encore un champ obligatoire, il est signalé à la place. **Annuler** part sans rien conserver. Sur une société déjà créée, il la supprime. Si vous avez saisi plus que le nécessaire à la création, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des sociétés. Si vous quittez la page autrement, la société est conservée.
 
 ---
 
@@ -126,7 +128,7 @@ L'onglet Détails gère les **métriques annuelles**. Utilisez les onglets d'ann
 
 **Ce que vous pouvez modifier** :
 
-- **Effectif** (obligatoire) : nombre total d'employés pour l'année, doit être un nombre entier de zéro ou plus
+- **Effectif** : nombre total d'employés pour l'année, un nombre entier de zéro ou plus
 - **Utilisateurs IT** (optionnel) : nombre d'utilisateurs IT, doit être un nombre entier de zéro ou plus
 - **Chiffre d'affaires** (optionnel) : chiffre d'affaires en millions de la devise de base de la société, jusqu'à 3 décimales. Le libellé nomme la devise, par exemple **Chiffre d'affaires (M USD)**
 
@@ -185,7 +187,7 @@ Un administrateur des sociétés (`companies:admin`) peut supprimer une sociét�
 
 De nombreuses parties de l'application sont sensibles à l'année. Les sociétés ont des métriques par année :
 
-- **Effectif** (obligatoire pour l'année)
+- **Effectif**
 - **Utilisateurs IT** (optionnel)
 - **Chiffre d'affaires** (optionnel, en millions de la devise de base de la société)
 

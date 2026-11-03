@@ -86,7 +86,6 @@
     "entity": "société",
     "newCompany": "Nouvelle société",
     "companyFallback": "Société",
-    "detailsTabHint": "L'onglet Détails devient disponible après la création de la société.",
     "loadError": "Échec du chargement de la société.",
     "columns": {
       "city": "Ville",
@@ -137,7 +136,6 @@
       "registration": "Immatriculation"
     },
     "placeholders": {
-      "name": "ex. Société holding",
       "country": "ex. France",
       "baseCurrency": "ex. EUR",
       "chartOfAccounts": "ex. COA-FR",
@@ -176,14 +174,14 @@
       "title_other": "Supprimer les {{count}} sociétés sélectionnées",
       "keptDone_one": "{{count}} société conservée",
       "keptDone_other": "{{count}} sociétés conservées"
-    }
+    },
+    "creationRecord": "La société"
   },
   "departments": {
     "title": "Départements",
     "entity": "département",
     "newDepartment": "Nouveau département",
     "departmentFallback": "Département",
-    "detailsTabHint": "L'onglet Détails devient disponible après la création du département.",
     "loadError": "Échec du chargement du département.",
     "selectCompanyFirst": "Sélectionnez d'abord une société",
     "columns": {
@@ -203,7 +201,6 @@
       "lifecycle": "Cycle de vie"
     },
     "placeholders": {
-      "name": "ex. Finance",
       "description": "ex. Comptabilité et paie"
     },
     "headcountHint": "Enregistré pour l'année sélectionnée quand vous quittez le champ.",
@@ -223,7 +220,8 @@
       "kept_other": "{{count}} départements ne peuvent pas être supprimés et sont conservés :",
       "deleted_one": "{{count}} département supprimé",
       "deleted_other": "{{count}} départements supprimés"
-    }
+    },
+    "creationRecord": "Le département"
   },
   "costCenters": {
     "title": "Centres de coûts",
@@ -264,7 +262,6 @@
     },
     "placeholders": {
       "code": "ex. CC-100",
-      "name": "ex. Infrastructure",
       "description": "ex. Serveurs, réseau et outils du poste de travail",
       "topLevel": "Premier niveau",
       "ownerMissing": "Responsable budgétaire manquant"
@@ -299,7 +296,8 @@
       "kept_other": "{{count}} centres de coûts ne peuvent pas être supprimés et sont conservés :",
       "deleted_one": "{{count}} centre de coûts supprimé",
       "deleted_other": "{{count}} centres de coûts supprimés"
-    }
+    },
+    "creationRecord": "Le centre de coûts"
   },
   "workingDayCalendars": {
     "title": "Calendriers de jours ouvrés",
@@ -310,8 +308,6 @@
     "import": "Importer les calendriers",
     "previous": "Calendrier précédent",
     "next": "Calendrier suivant",
-    "createHint": "Une fois le calendrier créé, saisissez les jours ouvrés de chaque année.",
-    "createHintStandard": "Les jours ouvrés de chaque année suivent les jours fériés de {{source}}. Vous pourrez ensuite modifier n'importe quel mois.",
     "wholeCountry": "Tout le pays",
     "yearsAll": "Toutes les années",
     "yearsAllEdited": "Toutes les années, modifications en {{years}}",
@@ -340,7 +336,6 @@
     "placeholders": {
       "country": "ex. France",
       "code": "ex. CAL-01",
-      "name": "ex. Personnel du siège",
       "description": "ex. Jours ouvrés des salariés, jours fériés exclus",
       "days": "ex. 20"
     },
@@ -402,14 +397,14 @@
       "kept_other": "{{count}} calendriers ne peuvent pas être supprimés et sont conservés :",
       "deleted_one": "{{count}} calendrier supprimé",
       "deleted_other": "{{count}} calendriers supprimés"
-    }
+    },
+    "creationRecord": "Le calendrier"
   },
   "suppliers": {
     "title": "Fournisseurs",
     "newSupplier": "Nouveau fournisseur",
     "empty": "Aucun fournisseur pour l'instant.",
     "supplierFallback": "Fournisseur",
-    "contactsTabHint": "L'onglet Contacts devient disponible après la création du fournisseur.",
     "loadError": "Échec du chargement du fournisseur.",
     "columns": {
       "erpSupplierId": "ID fournisseur ERP"
@@ -469,7 +464,8 @@
       "kept_other": "{{count}} fournisseurs sont encore utilisés et sont conservés. Désactivez-les plutôt :",
       "deleted_one": "{{count}} fournisseur supprimé",
       "deleted_other": "{{count}} fournisseurs supprimés"
-    }
+    },
+    "creationRecord": "Le fournisseur"
   },
   "contacts": {
     "title": "Contacts",
@@ -509,8 +505,6 @@
     },
     "placeholders": {
       "email": "ex. nom@exemple.com",
-      "firstName": "ex. Alex",
-      "lastName": "ex. Martin",
       "jobTitle": "ex. Responsable de compte",
       "supplier": "ex. Fournisseur A",
       "contactType": "Choisissez un type",
@@ -548,7 +542,8 @@
       "deleted_other": "{{count}} contacts supprimés",
       "title_one": "Supprimer le contact sélectionné",
       "title_other": "Supprimer les {{count}} contacts sélectionnés"
-    }
+    },
+    "creationRecord": "Le contact"
   },
   "coa": {
     "title": "Plans comptables",
@@ -691,9 +686,6 @@
     "loadError": "Échec du chargement du compte.",
     "previous": "Compte précédent",
     "next": "Compte suivant",
-    "actions": {
-      "create": "Créer le compte"
-    },
     "sections": {
       "consolidation": "Consolidation"
     },
@@ -715,7 +707,6 @@
     "placeholders": {
       "chartOfAccounts": "ex. COA-FR",
       "accountNumber": "ex. 6200",
-      "accountName": "ex. Abonnements logiciels",
       "nativeName": "ex. Logiciels SaaS",
       "description": "ex. Licences SaaS et abonnements cloud"
     },
@@ -739,7 +730,8 @@
       "chartRequired": "Choisissez un plan comptable.",
       "numberInvalid": "Saisissez un nombre entier supérieur à zéro, de {{max}} chiffres au plus.",
       "nameRequired": "Saisissez un nom."
-    }
+    },
+    "creationRecord": "Le compte"
   },
   "analytics": {
     "title": "Dimensions analytiques",
@@ -812,10 +804,8 @@
       "openValues": "Toute personne qui peut modifier une ligne peut ajouter une valeur, depuis la ligne ou le fichier budget."
     },
     "placeholders": {
-      "dimensionName": "ex. Nature",
       "dimensionCode": "ex. nature",
       "dimensionDescription": "ex. Le type de dépense",
-      "valueName": "ex. Licences",
       "valueDescription": "ex. Abonnements logiciels et support"
     },
     "usage": {
@@ -937,7 +927,9 @@
       "failed": "Les dimensions n'ont pas pu être ajoutées.",
       "loadFailed": "Les dimensions recommandées n'ont pas pu être chargées."
     },
-    "addValue": "Ajouter « {{value}} »"
+    "addValue": "Ajouter « {{value}} »",
+    "valueCreationRecord": "La valeur",
+    "dimensionCreationRecord": "La dimension"
   },
   "businessProcesses": {
     "title": "Processus métier",

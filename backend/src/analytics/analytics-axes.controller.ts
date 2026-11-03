@@ -9,6 +9,7 @@ import { isForced } from './analytics-forced-delete';
 import { ANALYTICS_READERS, analyticsContext } from './analytics-categories.controller';
 import { AnalyticsAxisCreateDto, AnalyticsAxisReorderDto, AnalyticsAxisUpdateDto, AnalyticsRecommendedDimensionsDto } from './dto/analytics.dto';
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
+import { cancelCreation, readCreationChanges, withCreationToken } from '../common/creation/creation-routes';
 
 @UseGuards(JwtAuthGuard, PermissionGuard)
 @Controller('analytics-axes')
@@ -52,8 +53,24 @@ export class AnalyticsAxesController {
   @ReservedToUnscopedDataAccess()
   @RequireLevel('analytics', 'member')
   @Post()
-  create(@Body() body: AnalyticsAxisCreateDto, @Tenant() ctx: TenantRequest) {
-    return this.svc.create(body, analyticsContext(ctx));
+  async create(@Body() body: AnalyticsAxisCreateDto, @Tenant() ctx: TenantRequest) {
+    return withCreationToken('analytics_axes', await this.svc.create(body, analyticsContext(ctx)), ctx);
+  }
+
+  // Before Cancel of the dimension (with the values added meanwhile) being created: what was written on it since (common/creation).
+  @ReservedToUnscopedDataAccess()
+  @RequireLevel('analytics', 'member')
+  @Get(':id/creation')
+  creationChanges(@Param('id', new ParseUUIDPipe()) id: string, @Query('token') token: string, @Tenant() ctx: TenantRequest) {
+    return readCreationChanges('analytics_axes', id, token, ctx);
+  }
+
+  // Cancel: the creator deletes the dimension (with the values added meanwhile) they just created, with its token, without the delete right.
+  @ReservedToUnscopedDataAccess()
+  @RequireLevel('analytics', 'member')
+  @Delete(':id/creation')
+  cancelCreation(@Param('id', new ParseUUIDPipe()) id: string, @Body() body: { token?: string }, @Tenant() ctx: TenantRequest) {
+    return cancelCreation('analytics_axes', id, body?.token, ctx, () => this.svc.delete(id, analyticsContext(ctx), { force: true }));
   }
 
   @ReservedToUnscopedDataAccess()

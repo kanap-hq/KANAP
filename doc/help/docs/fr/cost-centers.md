@@ -93,11 +93,11 @@ Cliquez sur n'importe quelle cellule pour ouvrir l'espace de travail.
 
 ## Créer un centre de coûts
 
-Cliquez sur **Nouveau**. Remplissez les champs, puis cliquez sur **Créer**. Un nouvel élément est activé.
+Cliquez sur **Nouveau**. La page du nouvel élément s'ouvre, son panneau des propriétés ouvert. Saisissez le nom dans le titre en haut de la page et renseignez le **Code**. Le **Type** commence sur **Centre de coûts**, qui demande aussi une **Société**. Choisissez **Groupe** pour créer un groupe : le champ **Société** disparaît alors.
 
-Le **Type** commence sur **Centre de coûts**. Choisissez **Groupe** pour créer un groupe : le champ **Société** disparaît alors.
+L'élément est créé, activé, dès qu'il a son nom, son **Code** et, pour un centre de coûts, sa **Société**. Tous ses onglets deviennent alors disponibles, et les autres champs s'enregistrent automatiquement. Appuyez sur Échap dans le titre vide pour partir sans rien créer.
 
-Après **Créer**, l'espace de travail du nouvel élément s'ouvre.
+Tant que l'élément est en cours de création, l'en-tête affiche **Créer** et **Annuler** jusqu'à ce que vous quittiez la page. **Créer** conserve l'élément et vous ramène à votre point de départ : la liste ou l'écran précédent. S'il manque encore un champ obligatoire, il est signalé à la place. **Annuler** part sans rien conserver. Sur un élément déjà créé, il le supprime. Si vous avez saisi plus que le nécessaire à la création, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des centres de coûts. Si vous quittez la page autrement, l'élément est conservé.
 
 ---
 

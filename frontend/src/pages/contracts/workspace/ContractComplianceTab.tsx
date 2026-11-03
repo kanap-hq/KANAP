@@ -23,10 +23,11 @@ import {
 } from '../contractCompliance';
 
 /** The compliance register of a contract: read by the page for its tab badge, shared with the tab. */
-export function useContractCompliance(contractId: string) {
+export function useContractCompliance(contractId: string, enabled = true) {
   return useQuery({
     queryKey: contractComplianceKey(contractId),
     queryFn: async () => (await api.get<ContractCompliance>(`/contracts/${contractId}/compliance`)).data,
+    enabled,
   });
 }
 

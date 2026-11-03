@@ -3206,7 +3206,8 @@
         "deleteAnyway": "Supprimer quand même"
       },
       "createOption": "+ Créer le site « {{name}} »",
-      "createNew": "+ Nouveau site"
+      "createNew": "+ Nouveau site",
+      "creationRecord": "Le site"
     }
   },
   "components": {

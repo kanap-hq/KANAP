@@ -86,7 +86,6 @@
     "entity": "company",
     "newCompany": "New company",
     "companyFallback": "Company",
-    "detailsTabHint": "The details tab becomes available after you create the company.",
     "loadError": "Failed to load company.",
     "columns": {
       "city": "City",
@@ -137,7 +136,6 @@
       "registration": "Registration"
     },
     "placeholders": {
-      "name": "e.g., Holding company",
       "country": "e.g., France",
       "baseCurrency": "e.g., EUR",
       "chartOfAccounts": "e.g., COA-FR",
@@ -176,14 +174,14 @@
       "title_other": "Delete the {{count}} selected companies",
       "keptDone_one": "{{count}} company kept",
       "keptDone_other": "{{count}} companies kept"
-    }
+    },
+    "creationRecord": "The company"
   },
   "departments": {
     "title": "Departments",
     "entity": "department",
     "newDepartment": "New department",
     "departmentFallback": "Department",
-    "detailsTabHint": "The details tab becomes available after you create the department.",
     "loadError": "Failed to load department.",
     "selectCompanyFirst": "Select a company first",
     "columns": {
@@ -203,7 +201,6 @@
       "lifecycle": "Lifecycle"
     },
     "placeholders": {
-      "name": "e.g., Finance",
       "description": "e.g., Accounting and payroll"
     },
     "headcountHint": "Saved for the selected year when you leave the field.",
@@ -223,7 +220,8 @@
       "kept_other": "{{count}} departments cannot be deleted and are kept:",
       "deleted_one": "{{count}} department deleted",
       "deleted_other": "{{count}} departments deleted"
-    }
+    },
+    "creationRecord": "The department"
   },
   "costCenters": {
     "title": "Cost centers",
@@ -264,7 +262,6 @@
     },
     "placeholders": {
       "code": "e.g., CC-100",
-      "name": "e.g., Infrastructure",
       "description": "e.g., Servers, network and workplace tools",
       "topLevel": "Top level",
       "ownerMissing": "Budget holder missing"
@@ -299,7 +296,8 @@
       "kept_other": "{{count}} cost centers cannot be deleted and are kept:",
       "deleted_one": "{{count}} cost center deleted",
       "deleted_other": "{{count}} cost centers deleted"
-    }
+    },
+    "creationRecord": "The cost center"
   },
   "workingDayCalendars": {
     "title": "Working-day calendars",
@@ -310,8 +308,6 @@
     "import": "Import calendars",
     "previous": "Previous calendar",
     "next": "Next calendar",
-    "createHint": "Once the calendar is created, enter the working days of each year.",
-    "createHintStandard": "The working days of every year follow the public holidays of {{source}}. You can change any month afterwards.",
     "wholeCountry": "Whole country",
     "yearsAll": "All years",
     "yearsAllEdited": "All years, {{years}} edited",
@@ -340,7 +336,6 @@
     "placeholders": {
       "country": "e.g., France",
       "code": "e.g., CAL-01",
-      "name": "e.g., Head office staff",
       "description": "e.g., Working days of salaried staff, public holidays excluded",
       "days": "e.g., 20"
     },
@@ -402,14 +397,14 @@
       "kept_other": "{{count}} calendars cannot be deleted and are kept:",
       "deleted_one": "{{count}} calendar deleted",
       "deleted_other": "{{count}} calendars deleted"
-    }
+    },
+    "creationRecord": "The calendar"
   },
   "suppliers": {
     "title": "Suppliers",
     "newSupplier": "New supplier",
     "empty": "No suppliers yet.",
     "supplierFallback": "Supplier",
-    "contactsTabHint": "The contacts tab becomes available after you create the supplier.",
     "loadError": "Failed to load supplier.",
     "columns": {
       "erpSupplierId": "ERP supplier ID"
@@ -469,7 +464,8 @@
       "kept_other": "{{count}} suppliers are still in use and are kept. Disable them instead:",
       "deleted_one": "{{count}} supplier deleted",
       "deleted_other": "{{count}} suppliers deleted"
-    }
+    },
+    "creationRecord": "The supplier"
   },
   "contacts": {
     "title": "Contacts",
@@ -509,8 +505,6 @@
     },
     "placeholders": {
       "email": "e.g., name@example.com",
-      "firstName": "e.g., Alex",
-      "lastName": "e.g., Martin",
       "jobTitle": "e.g., Account manager",
       "supplier": "e.g., Supplier A",
       "contactType": "Choose a type",
@@ -548,7 +542,8 @@
       "deleted_other": "{{count}} contacts deleted",
       "title_one": "Delete the selected contact",
       "title_other": "Delete the {{count}} selected contacts"
-    }
+    },
+    "creationRecord": "The contact"
   },
   "coa": {
     "title": "Charts of accounts",
@@ -691,9 +686,6 @@
     "loadError": "Failed to load account.",
     "previous": "Previous account",
     "next": "Next account",
-    "actions": {
-      "create": "Create account"
-    },
     "sections": {
       "consolidation": "Consolidation"
     },
@@ -715,7 +707,6 @@
     "placeholders": {
       "chartOfAccounts": "e.g., COA-FR",
       "accountNumber": "e.g., 6200",
-      "accountName": "e.g., Software subscriptions",
       "nativeName": "e.g., Logiciels SaaS",
       "description": "e.g., SaaS licences and cloud subscriptions"
     },
@@ -739,7 +730,8 @@
       "chartRequired": "Choose a chart of accounts.",
       "numberInvalid": "Enter a whole number greater than zero, with at most {{max}} digits.",
       "nameRequired": "Enter a name."
-    }
+    },
+    "creationRecord": "The account"
   },
   "analytics": {
     "title": "Analytics dimensions",
@@ -812,10 +804,8 @@
       "openValues": "Anyone who can edit a line can add a value, from the line or the budget file."
     },
     "placeholders": {
-      "dimensionName": "e.g., Nature",
       "dimensionCode": "e.g., nature",
       "dimensionDescription": "e.g., The kind of expense",
-      "valueName": "e.g., Licenses",
       "valueDescription": "e.g., Software subscriptions and support"
     },
     "usage": {
@@ -937,7 +927,9 @@
       "failed": "The dimensions could not be added.",
       "loadFailed": "The recommended dimensions could not be loaded."
     },
-    "addValue": "Add “{{value}}”"
+    "addValue": "Add “{{value}}”",
+    "valueCreationRecord": "The value",
+    "dimensionCreationRecord": "The dimension"
   },
   "businessProcesses": {
     "title": "Business processes",

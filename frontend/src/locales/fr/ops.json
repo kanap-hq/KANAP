@@ -425,7 +425,8 @@
       "newContract": "Nouveau contrat",
       "contract": "Contrat",
       "previous": "Contrat précédent",
-      "next": "Contrat suivant"
+      "next": "Contrat suivant",
+      "creationRecord": "Le contrat"
     },
     "tabs": {
       "overview": "Vue d'ensemble",
@@ -433,11 +434,6 @@
       "compliance": "Conformité",
       "relations": "Relations",
       "history": "Historique"
-    },
-    "sections": {
-      "parties": "Parties",
-      "duration": "Durée",
-      "amount": "Montant"
     },
     "fields": {
       "name": "Nom du contrat",
@@ -475,10 +471,6 @@
       "editInProperties": "Modifier dans le panneau Propriétés"
     },
     "placeholders": {
-      "name": "Ex. : Contrat de maintenance",
-      "durationMonths": "Ex. : 12",
-      "noticeMonths": "Ex. : 3",
-      "yearlyAmount": "Ex. : 12000",
       "notes": "Ex. : conditions de renouvellement, interlocuteur commercial"
     },
     "messages": {

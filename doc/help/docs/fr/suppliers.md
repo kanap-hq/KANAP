@@ -105,7 +105,9 @@ Consultez cette section avant de désactiver ou de supprimer un fournisseur. Un 
 
 ### Créer un fournisseur
 
-Cliquez sur **Nouveau** dans la liste. Renseignez le nom (obligatoire), l'ID fournisseur ERP et les notes, puis cliquez sur **Créer**. Le fournisseur est créé activé et sa fiche s'ouvre, avec l'onglet **Contacts** disponible.
+Cliquez sur **Nouveau** dans la liste. La page du nouveau fournisseur s'ouvre. Saisissez le nom dans le titre en haut de la page, puis appuyez sur Entrée ou cliquez hors du titre. Le fournisseur est créé aussitôt, activé, et tous ses onglets deviennent disponibles. L'ID fournisseur ERP et les notes s'enregistrent ensuite automatiquement. Appuyez sur Échap dans le titre vide pour partir sans rien créer.
+
+Tant que le fournisseur est en cours de création, l'en-tête affiche **Créer** et **Annuler** jusqu'à ce que vous quittiez la page. **Créer** conserve le fournisseur et vous ramène à votre point de départ : la liste ou l'écran précédent. Avec un titre vide, le titre demande un nom à la place. **Annuler** part sans rien conserver. Sur un fournisseur déjà créé, il le supprime. Si vous avez saisi plus que le nom, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des fournisseurs. Si vous quittez la page autrement, le fournisseur est conservé.
 
 ---
 

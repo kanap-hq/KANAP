@@ -92,8 +92,9 @@ export async function getCostCenter(id: string): Promise<CostCenterDetail> {
   return res.data;
 }
 
-export async function createCostCenter(body: CostCenterWrite): Promise<CostCenterDetail> {
-  const res = await api.post<CostCenterDetail>(COST_CENTERS_ENDPOINT, body);
+/** The created node, with the token that lets its creator cancel the creation (`DELETE :id/creation`). */
+export async function createCostCenter(body: CostCenterWrite): Promise<CostCenterDetail & { creation_token: string }> {
+  const res = await api.post<CostCenterDetail & { creation_token: string }>(COST_CENTERS_ENDPOINT, body);
   return res.data;
 }
 

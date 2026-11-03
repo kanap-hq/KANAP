@@ -2,21 +2,22 @@ import { EntityManager } from 'typeorm';
 import { applyDataAccess } from './data-access';
 
 /**
- * Data-scoped access: "Cancel" of a budget line being created, for its creator when their access
- * is limited (`DELETE /budget-lines/:id/creation`, `budget-line-creation.ts`).
+ * Data-scoped access: "Cancel" of a budget line or a contract being created, for its creator when
+ * their access is limited (`DELETE /budget-lines/:id/creation`, `budget-line-creation.ts`;
+ * `DELETE /contracts/:id/creation`, `ContractsDeleteService.cancelCreation`).
  *
- * The delete of a line is reserved to unscoped persons (spec §2.7): the DELETE policy of
- * `spend_items` is `false` for `kanap_data_limited`, and so are the deletes of its children. The
- * person who has just created a line in their scope may still take it back, with the creation token
- * of that line (tenant, family, line and person, 24 h). `withCreatorCancelAccess` is the window of
- * that one delete, the only write run outside the limited role (inventory:
- * `data-access-inventory.spec.ts`, which checks its single caller):
- * - the caller has checked the token and locked the line FOR UPDATE under the limited role (the
- *   UPDATE policy: a line the person may no longer modify is refused before the window);
+ * The delete of a line or a contract is reserved to unscoped persons (spec §2.7): the DELETE policy
+ * of `spend_items` and of `contracts` is `false` for `kanap_data_limited`, and so are the deletes of
+ * their children. The person who has just created one in their scope may still take it back, with
+ * its creation token (tenant, family, record and person, 24 h). `withCreatorCancelAccess` is the
+ * window of that one delete, the only write run outside the limited role (inventory:
+ * `data-access-inventory.spec.ts`, which checks its two callers):
+ * - the caller has checked the token and locked the record FOR UPDATE under the limited role (the
+ *   UPDATE policy: a record the person may no longer modify is refused before the window);
  * - the access applied to the transaction is the person's (`app.da_user`, set by
  *   `data_access_apply`, equals `userId`): a window for anyone else throws before leaving the role;
  * - the window opens a savepoint and leaves the limited role (`RESET ROLE`), runs `run` (the delete
- *   of that line, its children and its audit entry), releases the savepoint, then applies the
+ *   of that record, its children and its audit entry), releases the savepoint, then applies the
  *   person's access again (`applyDataAccess`, which takes the limited role back) and checks that the
  *   mode is `limited` again; anything else throws, and the request's transaction rolls back with
  *   the delete;

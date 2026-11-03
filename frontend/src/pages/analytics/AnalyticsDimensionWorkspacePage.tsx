@@ -1,7 +1,8 @@
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, Button, Stack, Switch, TextField, Typography } from '@mui/material';
+import { Alert, Box, Stack, Switch, TextField, Typography } from '@mui/material';
+import { CreationActions, useCreationLeave, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/AuthContext';
 import { isDataAccessLimited } from '../../auth/dataAccess';
@@ -50,6 +51,11 @@ type FieldErrors = Partial<Record<AnalyticsField, string>>;
 type PatchSource = AnalyticsField | 'title';
 
 const DRAWER_KEY = 'kanap.analyticsDimensions.drawerOpen';
+/** What a new dimension starts from. */
+const NEW_DIMENSION: AnalyticsAxisDetail = {
+  id: '', code: '', name: '', description: null, sort_order: 0, is_default: false, applies_to: null, required: false,
+  open_values: false, status: 'enabled', disabled_at: null, value_count: 0, opex_count: 0, capex_count: 0,
+};
 
 export default function AnalyticsDimensionWorkspacePage() {
   const { t } = useTranslation(['master-data', 'common']);
@@ -68,13 +74,21 @@ export default function AnalyticsDimensionWorkspacePage() {
   const canSetOpenValues = canEdit && !isDataAccessLimited(dataAccess);
 
   const detailKey = React.useMemo(() => [...ANALYTICS_AXIS_DETAIL_KEY, id], [id]);
-  const { data, error: loadError } = useQuery({
+  const { data: stored, error: loadError } = useQuery({
     queryKey: detailKey,
     queryFn: () => getAnalyticsAxis(id),
     enabled: !isCreate && !!id,
     // The admin fills the lines without a value in the list tab: coming back shows the new count.
     refetchOnWindowFocus: true,
   });
+  // The new page is the dimension's own page on a draft: the fields write here, Create sends it.
+  const [draft, setDraft] = React.useState<AnalyticsAxisDetail>(NEW_DIMENSION);
+  const draftRef = React.useRef(draft);
+  // The code follows the name typed in the header until the user types one.
+  const [newName, setNewName] = React.useState('');
+  const [codeTouched, setCodeTouched] = React.useState(false);
+  const newCode = codeTouched ? draft.code : proposeDimensionCode(newName);
+  const data = isCreate ? { ...draft, name: newName, code: newCode } : stored;
 
   const [errors, setErrors] = React.useState<FieldErrors>({});
   const [pageError, setPageError] = React.useState<string | null>(null);
@@ -106,6 +120,13 @@ export default function AnalyticsDimensionWorkspacePage() {
 
   const patch = React.useCallback(
     (body: AnalyticsAxisPatch, source: PatchSource): Promise<boolean> => {
+      if (isCreate) {
+        if (source !== 'title') setErrors((prev) => ({ ...prev, [source]: undefined }));
+        if (body.code !== undefined) setCodeTouched(true);
+        draftRef.current = { ...draftRef.current, ...body };
+        setDraft(draftRef.current);
+        return Promise.resolve(true);
+      }
       const recordId = data?.id;
       if (!recordId || !canEdit) return Promise.resolve(false);
       if (source !== 'title') setErrors((prev) => ({ ...prev, [source]: undefined }));
@@ -135,7 +156,7 @@ export default function AnalyticsDimensionWorkspacePage() {
       chainRef.current = result.catch(() => undefined);
       return result;
     },
-    [canEdit, data?.id, queryClient, t],
+    [canEdit, data?.id, isCreate, queryClient, t],
   );
 
   /** `force`: the values go too, and the lines lose their value on it (the confirmation said so). */
@@ -166,9 +187,71 @@ export default function AnalyticsDimensionWorkspacePage() {
     }
   };
 
-  if (isCreate) {
-    return <DimensionCreate canCreate={canEdit} onClose={handleClose} onCreated={goTo} />;
-  }
+  // The draft is created once it has its name and a valid code (proposed from the name); the
+  // dimension then opens, every tab available, with Create (kept, back where the creation started)
+  // and Cancel (deleted, with the values added meanwhile).
+  const leave = useCreationLeave(handleClose);
+  const title = useCreationTitle({
+    requiredMessage: t('analytics.messages.nameRequired'),
+    onCancel: leave,
+    onChange: setNewName,
+    onCommit: () => creation.attempt(),
+  });
+  const codeError = (code: string) => {
+    if (!code) return t('analytics.messages.codeRequired');
+    if (!DIMENSION_CODE_PATTERN.test(code)) return t('analytics.messages.codeInvalid');
+    return undefined;
+  };
+  const creation = useDraftCreation({
+    isCreate,
+    family: 'analytics_axes',
+    apiBase: '/analytics-axes',
+    recordId: stored?.id ?? null,
+    listPath: ANALYTICS_LIST_PATH,
+    recordLabel: t('analytics.dimensionCreationRecord'),
+    queryKeyPrefixes: ['analytics'],
+    ready: () => !!title.current().trim() && !codeError(newCode.trim()),
+    post: async () => {
+      const form = draftRef.current;
+      setPageError(null);
+      try {
+        const created = await createAnalyticsAxis({
+          code: newCode.trim(),
+          name: title.current().trim(),
+          description: form.description,
+          applies_to: form.applies_to,
+          required: form.required,
+          ...(canSetOpenValues ? { open_values: !!form.open_values } : {}),
+          status: form.status,
+          disabled_at: form.disabled_at,
+        });
+        void queryClient.invalidateQueries({ queryKey: ANALYTICS_AXES_QUERY_KEY, exact: true });
+        return { id: created.id, token: created.creation_token, path: `${ANALYTICS_DIMENSIONS_PATH}/${created.id}/overview` };
+      } catch (e) {
+        const message = getApiErrorMessage(e, t, t('analytics.messages.dimensionCreateFailed'));
+        const field = analyticsRefusalField(e);
+        if (field === 'name') title.refuse(message);
+        else if (field) setErrors((prev) => ({ ...prev, [field]: message }));
+        else setPageError(message);
+        return null;
+      }
+    },
+    onError: setPageError,
+  });
+  // Not on each keystroke of the name: the code it proposes is read when the name is committed.
+  React.useEffect(() => { creation.attempt(); }, [creation.attempt, draft]);
+  const handleCreate = () => {
+    if (creation.beingCreated) {
+      creation.finishCreation();
+      return;
+    }
+    if (!canEdit) return;
+    const name = title.require();
+    const error = codeError(newCode.trim());
+    if (error) setErrors((prev) => ({ ...prev, code: error }));
+    if (!name || error) return;
+    void creation.createAndLeave();
+  };
 
   const isDefault = !!data?.is_default;
   const disabled = !canEdit;
@@ -182,7 +265,13 @@ export default function AnalyticsDimensionWorkspacePage() {
   }) : null;
 
   // The default dimension is never deleted: no button, its reason sits under the lifecycle.
-  const actions = canDelete && data && !isDefault ? (
+  const actions = isCreate || creation.beingCreated ? (
+    <CreationActions
+      onCreate={handleCreate}
+      onCancel={isCreate ? leave : () => { void creation.cancelCreation(); }}
+      busy={!canEdit || creation.busy}
+    />
+  ) : canDelete && data && !isDefault ? (
     <DeleteIconButton onClick={() => setConfirmOpen(true)} disabled={deleting} />
   ) : undefined;
 
@@ -199,15 +288,20 @@ export default function AnalyticsDimensionWorkspacePage() {
         onTabChange={() => undefined}
         drawerStorageKey={DRAWER_KEY}
         backLabel={t('analytics.title')}
-        onBack={handleClose}
-        // The default dimension without a name shows its translated label, like every other screen.
-        title={data ? axes.label(data) : ''}
-        titleFallback={t('analytics.dimensionFallback')}
-        canEditTitle={canEdit && !!data}
-        onTitleSave={(next) => {
-          if (data && next !== data.name) void patch({ name: next }, 'title');
-        }}
-        nav={nav.total > 0 ? {
+        onBack={isCreate ? leave : handleClose}
+        {...(isCreate ? title.shellProps : {
+          // The default dimension without a name shows its translated label, like every other screen.
+          title: data ? axes.label(data) : '',
+          canEditTitle: canEdit && !!data,
+          onTitleSave: (next: string) => {
+            if (data && next !== data.name) void patch({ name: next }, 'title');
+          },
+        })}
+        titleFallback={isCreate ? t('analytics.newDimension') : t('analytics.dimensionFallback')}
+        isCreate={isCreate}
+        // A new record's required fields sit in the drawer: it stays open.
+        forceDrawerOpen={isCreate}
+        nav={!isCreate && nav.total > 0 ? {
           currentIndex: nav.index + 1,
           totalCount: nav.total,
           hasPrev: nav.hasPrev,
@@ -218,7 +312,7 @@ export default function AnalyticsDimensionWorkspacePage() {
           nextLabel: t('analytics.nextDimension'),
         } : undefined}
         actions={actions}
-        history={data ? { table: 'analytics_axes', recordId: data.id } : undefined}
+        history={data && !isCreate ? { table: 'analytics_axes', recordId: data.id } : undefined}
         properties={data ? (
           <DimensionProperties
             key={data.id}
@@ -244,7 +338,7 @@ export default function AnalyticsDimensionWorkspacePage() {
       >
         {data && (
           <Stack spacing={2.5} sx={{ maxWidth: 900 }}>
-            <Box>
+            {!isCreate && <Box>
               <Typography data-testid="analytics-dimension-usage" sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
                 {valueCount > 0 ? (
                   <>
@@ -262,7 +356,7 @@ export default function AnalyticsDimensionWorkspacePage() {
                   </>
                 ) : t('analytics.usage.noValues')}
               </Typography>
-            </Box>
+            </Box>}
             <AnalyticsDescriptionField
               key={data.id}
               value={data.description ?? ''}
@@ -372,30 +466,32 @@ function DimensionProperties({
   return (
     <>
       <PropertyGroup>
-        <PropertyRow
-          label={t('analytics.fields.name')}
-          required={!axis.is_default}
-          helperText={axis.is_default ? t('analytics.hints.nameDefault', { label: defaultLabel }) : undefined}
-        >
-          <TextField
-            value={name}
-            onChange={(event) => nameDraft.setDraft(event.target.value)}
-            onFocus={nameDraft.onFocus}
-            onBlur={commitName}
-            onKeyDown={blurOnEnter}
-            variant="standard"
-            sx={drawerFieldValueSx}
-            placeholder={axis.is_default ? defaultLabel : t('analytics.placeholders.dimensionName')}
-            disabled={disabled}
-            error={!!errors.name}
-            helperText={errors.name}
-            inputProps={{ 'aria-label': t('analytics.fields.name'), autoComplete: 'off' }}
-          />
-        </PropertyRow>
+        {/* The name is the header title; the default dimension keeps this field, which may be emptied for the translated label. */}
+        {axis.is_default && (
+          <PropertyRow
+            label={t('analytics.fields.name')}
+            helperText={t('analytics.hints.nameDefault', { label: defaultLabel })}
+          >
+            <TextField
+              value={name}
+              onChange={(event) => nameDraft.setDraft(event.target.value)}
+              onFocus={nameDraft.onFocus}
+              onBlur={commitName}
+              onKeyDown={blurOnEnter}
+              variant="standard"
+              sx={drawerFieldValueSx}
+              placeholder={defaultLabel}
+              disabled={disabled}
+              error={!!errors.name}
+              helperText={errors.name}
+              inputProps={{ 'aria-label': t('analytics.fields.name'), autoComplete: 'off' }}
+            />
+          </PropertyRow>
+        )}
         <PropertyRow
           label={t('analytics.fields.code')}
           required
-          helperText={t(axis.is_default ? 'analytics.hints.codeDefault' : 'analytics.hints.code', { code: axis.code })}
+          helperText={t(axis.is_default ? 'analytics.hints.codeDefault' : axis.id ? 'analytics.hints.code' : 'analytics.hints.codeCreate', { code: axis.code })}
         >
           <TextField
             value={code}
@@ -557,156 +653,5 @@ function RequiredNotes({ axis }: { axis: AnalyticsAxisDetail }) {
         <LineTypeUsageConflictNote testId="analytics-dimension-required-unusable">{unusable}</LineTypeUsageConflictNote>
       )}
     </>
-  );
-}
-
-type CreateForm = {
-  name: string;
-  code: string;
-  description: string;
-  /** Null: OPEX and CAPEX lines. */
-  appliesTo: LineType | null;
-  required: boolean;
-};
-
-const EMPTY_FORM: CreateForm = { name: '', code: '', description: '', appliesTo: null, required: false };
-
-function DimensionCreate({
-  canCreate,
-  onClose,
-  onCreated,
-}: {
-  canCreate: boolean;
-  onClose: () => void;
-  onCreated: (id: string) => void;
-}) {
-  const { t } = useTranslation(['master-data', 'common']);
-  const queryClient = useQueryClient();
-  const [form, setForm] = React.useState<CreateForm>(EMPTY_FORM);
-  // The code follows the name until the user types one.
-  const [codeTouched, setCodeTouched] = React.useState(false);
-  const [errors, setErrors] = React.useState<FieldErrors>({});
-  const [serverError, setServerError] = React.useState<string | null>(null);
-  const [submitting, setSubmitting] = React.useState(false);
-
-  const code = codeTouched ? form.code : proposeDimensionCode(form.name);
-
-  const update = (next: Partial<CreateForm>) => setForm((prev) => ({ ...prev, ...next }));
-
-  const handleCreate = async () => {
-    if (!canCreate || submitting) return;
-    const name = form.name.trim();
-    const trimmedCode = code.trim();
-    const nextErrors: FieldErrors = {};
-    if (!name) nextErrors.name = t('analytics.messages.nameRequired');
-    if (!trimmedCode) nextErrors.code = t('analytics.messages.codeRequired');
-    else if (!DIMENSION_CODE_PATTERN.test(trimmedCode)) nextErrors.code = t('analytics.messages.codeInvalid');
-    setErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0) return;
-    setSubmitting(true);
-    setServerError(null);
-    try {
-      const saved = await createAnalyticsAxis({
-        code: trimmedCode,
-        name,
-        description: form.description.trim() || null,
-        applies_to: form.appliesTo,
-        required: form.required,
-      });
-      void queryClient.invalidateQueries({ queryKey: ANALYTICS_AXES_QUERY_KEY, exact: true });
-      onCreated(saved.id);
-    } catch (e) {
-      const message = getApiErrorMessage(e, t, t('analytics.messages.dimensionCreateFailed'));
-      const field = analyticsRefusalField(e);
-      if (field === 'name' || field === 'code' || field === 'description' || field === 'applies_to' || field === 'required') {
-        setErrors({ [field]: message });
-      } else {
-        setServerError(message);
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-      <PortfolioDetailWorkspaceShell
-        activeTab="overview"
-        tabs={[{ key: 'overview', label: t('shared.labels.overview') }]}
-        onTabChange={() => undefined}
-        drawerStorageKey={DRAWER_KEY}
-        backLabel={t('analytics.title')}
-        onBack={onClose}
-        title={form.name}
-        titleFallback={t('analytics.newDimension')}
-        isCreate
-        actions={(
-          <Button variant="contained" size="small" onClick={() => void handleCreate()} disabled={!canCreate || submitting}>
-            {t('common:buttons.create')}
-          </Button>
-        )}
-      >
-        <Stack spacing={1.5} sx={{ maxWidth: 560 }}>
-          <PropertyRow label={t('analytics.fields.name')} required valueSx={{ maxWidth: 520 }}>
-            <TextField
-              value={form.name}
-              onChange={(e) => update({ name: e.target.value })}
-              variant="standard"
-              sx={drawerFieldValueSx}
-              placeholder={t('analytics.placeholders.dimensionName')}
-              error={!!errors.name}
-              helperText={errors.name}
-              inputProps={{ 'aria-label': t('analytics.fields.name'), autoComplete: 'off' }}
-            />
-          </PropertyRow>
-          <PropertyRow label={t('analytics.fields.code')} required helperText={t('analytics.hints.codeCreate')} valueSx={{ maxWidth: 520 }}>
-            <TextField
-              value={code}
-              onChange={(e) => {
-                setCodeTouched(true);
-                update({ code: e.target.value });
-              }}
-              variant="standard"
-              sx={drawerFieldValueSx}
-              placeholder={t('analytics.placeholders.dimensionCode')}
-              error={!!errors.code}
-              helperText={errors.code}
-              inputProps={{ 'aria-label': t('analytics.fields.code'), autoComplete: 'off', spellCheck: false }}
-            />
-          </PropertyRow>
-          <PropertyRow label={t('shared.lineTypeUsage.label')} valueSx={{ maxWidth: 520 }}>
-            <LineTypeUsageSelect
-              value={form.appliesTo}
-              label={t('shared.lineTypeUsage.label')}
-              error={errors.applies_to}
-              onChange={(next) => update({ appliesTo: next })}
-            />
-          </PropertyRow>
-          <PropertyRow label={t('analytics.fields.required')} valueSx={{ maxWidth: 520 }}>
-            <SettingSwitch
-              label={t('analytics.fields.required')}
-              checked={form.required}
-              error={errors.required}
-              onChange={(next) => update({ required: next })}
-            />
-          </PropertyRow>
-          <PropertyRow label={t('analytics.fields.description')} valueSx={{ maxWidth: 520 }}>
-            <TextField
-              value={form.description}
-              onChange={(e) => update({ description: e.target.value })}
-              multiline
-              minRows={2}
-              variant="standard"
-              sx={drawerFieldValueSx}
-              placeholder={t('analytics.placeholders.dimensionDescription')}
-              error={!!errors.description}
-              helperText={errors.description}
-              inputProps={{ 'aria-label': t('analytics.fields.description') }}
-            />
-          </PropertyRow>
-          {serverError && <Alert severity="error">{serverError}</Alert>}
-        </Stack>
-      </PortfolioDetailWorkspaceShell>
-    </Box>
   );
 }

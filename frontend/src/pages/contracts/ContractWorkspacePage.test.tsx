@@ -713,15 +713,37 @@ describe('ContractWorkspacePage', () => {
     expect(screen.queryByRole('button', { name: 'common:buttons.delete' })).toBeNull();
   });
 
-  it('creates a contract with the real fields only', async () => {
+  it('shows the contract page itself for a new contract, and Create marks what is missing', async () => {
     renderAt('/ops/contracts/new/overview');
     const create = await screen.findByRole('button', { name: 'common:buttons.create' });
     fireEvent.click(create);
     expect(await screen.findByText('contracts.messages.nameRequired')).toBeInTheDocument();
+    // The name is typed in the header title, which gets the focus; the form has no name field.
+    expect(screen.getByRole('textbox', { name: 'common:buttons.editTitle' })).toHaveFocus();
+    expect(screen.queryByLabelText('contracts.fields.name')).toBeNull();
+    expect(screen.getByText('contracts.messages.supplierRequired')).toBeInTheDocument();
+    expect(screen.getByText('contracts.messages.companyRequired')).toBeInTheDocument();
+    expect(screen.getByText('contracts.messages.startRequired')).toBeInTheDocument();
     expect(screen.getByText('contracts.messages.durationRequired')).toBeInTheDocument();
     expect(mocked.post).not.toHaveBeenCalled();
-    // The other tabs wait for the contract.
+    // The fields sit in the open drawer, as on a contract; typing one clears its mark.
+    const drawer = screen.getByRole('complementary');
+    const duration = within(drawer).getByRole('textbox', { name: 'contracts.fields.durationMonths' });
+    fireEvent.change(duration, { target: { value: '36' } });
+    fireEvent.blur(duration);
+    expect(screen.queryByText('contracts.messages.durationRequired')).toBeNull();
+    // The other tabs wait for the contract; the deadlines read as on a contract without a start.
     expect(screen.getByRole('tab', { name: 'contracts.tabs.budget' })).toBeDisabled();
-    expect(within(document.body).queryByText('contracts.deadlines.title')).toBeNull();
+    expect(screen.getByText('contracts.deadlines.noStart')).toBeInTheDocument();
+    // Nothing is read for a contract that does not exist yet.
+    expect(mocked.get.mock.calls.map(([url]) => url).filter((url) => String(url).startsWith('/contracts/'))).toEqual([]);
+  });
+
+  it('leaves a new contract on Cancel, with nothing created', async () => {
+    renderAt('/ops/contracts/new/overview');
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.cancel' }));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/ops/contracts'));
+    expect(screen.queryByRole('button', { name: 'common:buttons.close' })).toBeNull();
+    expect(mocked.post).not.toHaveBeenCalled();
   });
 });

@@ -146,15 +146,15 @@ describe('CompanyWorkspacePage', () => {
     expect(screen.getByRole('tab', { name: 'shared.labels.history' })).toBeInTheDocument();
   });
 
-  it('opens the History tab with the company history, and never in creation', async () => {
+  it('opens the History tab with the company history, greyed in creation', async () => {
     const history = renderAt('/master-data/companies/co-1/history');
     expect(await screen.findByText('companies:co-1')).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'shared.labels.history' })).toHaveAttribute('aria-selected', 'true');
     history.unmount();
 
     renderAt('/master-data/companies/new/overview');
-    expect(await screen.findByText('companies.newCompany')).toBeInTheDocument();
-    expect(screen.queryByRole('tab', { name: 'shared.labels.history' })).toBeNull();
+    expect(await screen.findByPlaceholderText('companies.newCompany')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'shared.labels.history' })).toBeDisabled();
   });
 
   it('opens the Access tab for an unscoped user administrator', async () => {
@@ -370,16 +370,15 @@ describe('CompanyWorkspacePage', () => {
     expect(screen.getByText('companies.messages.currencyRequired')).toBeInTheDocument();
     expect(screen.getByText('companies.messages.cityRequired')).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText('companies.fields.name'), { target: { value: 'Acme' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Acme' } });
     expect(screen.queryByText('companies.messages.nameRequired')).toBeNull();
     expect(screen.getByText('companies.messages.countryRequired')).toBeInTheDocument();
 
+    // The country brings its currency: both marks go.
     await pickOption('companies.fields.country', 'Germ', 'Germany (DE)');
     expect(screen.queryByText('companies.messages.countryRequired')).toBeNull();
-    expect(screen.getByText('companies.messages.currencyRequired')).toBeInTheDocument();
-
-    await pickOption('companies.fields.baseCurrency', 'Euro', 'EUR · Euro');
     expect(screen.queryByText('companies.messages.currencyRequired')).toBeNull();
+    expect(screen.getByLabelText('companies.fields.baseCurrency')).toHaveValue('EUR · Euro');
     expect(screen.getByText('companies.messages.cityRequired')).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('companies.fields.city'), { target: { value: 'Berlin' } });
@@ -387,10 +386,11 @@ describe('CompanyWorkspacePage', () => {
     expect(mocked.post).not.toHaveBeenCalled();
   });
 
-  it('validates and creates with an explicit button, the chart preselected from the country', async () => {
-    mocked.post.mockResolvedValue({ data: { ...COMPANY, id: 'co-new' } });
+  it('names what is missing on Create, then creates the company once complete, the chart preselected from the country', async () => {
+    mocked.post.mockResolvedValue({ data: { ...COMPANY, id: 'co-new', creation_token: 'token-1' } });
     renderAt('/master-data/companies/new/overview?year=2026');
-    expect(screen.queryByRole('complementary')).toBeNull();
+    // The company's own page: country and currency sit in its Properties drawer.
+    expect(screen.getByRole('complementary')).toContainElement(screen.getByLabelText('companies.fields.country'));
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('companies.messages.nameRequired')).toBeInTheDocument();
     expect(screen.getByText('companies.messages.countryRequired')).toBeInTheDocument();
@@ -399,13 +399,16 @@ describe('CompanyWorkspacePage', () => {
     expect(mocked.post).not.toHaveBeenCalled();
 
     await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/chart-of-accounts', expect.anything()));
-    fireEvent.change(screen.getByLabelText('companies.fields.name'), { target: { value: 'Acme Germany' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Acme Germany' } });
     await pickOption('companies.fields.country', 'Germ', 'Germany (DE)');
     await waitFor(() => expect(screen.getByLabelText('companies.fields.chartOfAccounts')).toHaveValue('COA-DE · German chart'));
     await pickOption('companies.fields.baseCurrency', 'Euro', 'EUR · Euro');
-    fireEvent.change(screen.getByLabelText('companies.fields.city'), { target: { value: 'Berlin' } });
     fireEvent.change(screen.getByLabelText('companies.fields.vatNumber'), { target: { value: 'DE123' } });
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    fireEvent.blur(screen.getByLabelText('companies.fields.vatNumber'));
+    expect(mocked.post).not.toHaveBeenCalled();
+    // The city is the last field the company needs.
+    fireEvent.change(screen.getByLabelText('companies.fields.city'), { target: { value: 'Berlin' } });
+    fireEvent.blur(screen.getByLabelText('companies.fields.city'));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/companies', {
       name: 'Acme Germany',
       coa_id: 'coa-de',
@@ -422,34 +425,36 @@ describe('CompanyWorkspacePage', () => {
       disabled_at: null,
       notes: null,
     }));
-    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/companies/co-new/overview?year=2026'));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/companies/co-new/overview?year=2026', { replace: true }));
   });
 
-  it('says another company has the name, under the name field, when a create is refused as a duplicate', async () => {
+  it('says another company has the name, under the header title, when a create is refused as a duplicate', async () => {
     mocked.post.mockRejectedValueOnce({ response: { status: 409, data: { code: 'duplicate', message: 'Another company already has this name.' } } });
     renderAt('/master-data/companies/new/overview');
-    fireEvent.change(screen.getByLabelText('companies.fields.name'), { target: { value: 'acme' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'acme' } });
     await pickOption('companies.fields.country', 'Fran', 'France (FR)');
     await pickOption('companies.fields.baseCurrency', 'Euro', 'EUR · Euro');
     fireEvent.change(screen.getByLabelText('companies.fields.city'), { target: { value: 'Paris' } });
+    fireEvent.blur(screen.getByLabelText('companies.fields.city'));
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('companies.messages.nameTaken')).toBeInTheDocument();
-    expect(screen.getByLabelText('companies.fields.name')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByRole('textbox', { name: 'common:buttons.editTitle' })).toHaveFocus();
     expect(navigateMock).not.toHaveBeenCalled();
-    fireEvent.change(screen.getByLabelText('companies.fields.name'), { target: { value: 'acme 2' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'acme 2' } });
     expect(screen.queryByText('companies.messages.nameTaken')).toBeNull();
   });
 
   it('shows a create refusal under the field the body names', async () => {
     mocked.post.mockRejectedValueOnce({ response: { data: { message: 'Name already used.', field: 'name' } } });
     renderAt('/master-data/companies/new/overview');
-    fireEvent.change(screen.getByLabelText('companies.fields.name'), { target: { value: 'Acme' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Acme' } });
     await pickOption('companies.fields.country', 'Fran', 'France (FR)');
     await pickOption('companies.fields.baseCurrency', 'Euro', 'EUR · Euro');
     fireEvent.change(screen.getByLabelText('companies.fields.city'), { target: { value: 'Paris' } });
+    fireEvent.blur(screen.getByLabelText('companies.fields.city'));
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('Name already used.')).toBeInTheDocument();
-    expect(screen.getByLabelText('companies.fields.name')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByRole('textbox', { name: 'common:buttons.editTitle' })).toHaveFocus();
     expect(navigateMock).not.toHaveBeenCalled();
   });
 

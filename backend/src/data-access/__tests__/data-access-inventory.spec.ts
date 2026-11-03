@@ -87,7 +87,7 @@ const APPLY_CALLS: Record<string, number> = {
   'knowledge/knowledge.service.ts': 2,
   // The admin preview: the target's proposed access, then the caller's again (spec §8).
   'data-access/data-access-admin.service.ts': 2,
-  // The creator's cancel of a line being created: the person's access again after its delete window.
+  // The creator's cancel of a line or a contract being created: the person's access again after its delete window.
   'data-access/creator-cancel-access.ts': 1,
 };
 
@@ -131,21 +131,24 @@ const ROLE_CHANGE_ALLOWED = new Set([
   'src/data-access/data-access-availability.ts',
   // withFullDataAccess leaves the limited role for one read-only window (spec §6.6).
   'src/data-access/full-data-access.ts',
-  // withCreatorCancelAccess leaves it for the delete of one line being created, by its creator.
+  // withCreatorCancelAccess leaves it for the delete of one line or contract being created, by its creator.
   'src/data-access/creator-cancel-access.ts',
 ]);
 
-/** `withCreatorCancelAccess(` calls per file, outside its definition: the cancel of a line being created only. */
+/** `withCreatorCancelAccess(` calls per file, outside its definition: the cancel of a line or a contract being created only. */
 const CREATOR_CANCEL_CALLS: Record<string, number> = {
+  'contracts/contracts-delete.service.ts': 1,
   'spend/budget-lines.service.ts': 1,
 };
 const CREATOR_CANCEL_IMPORT = /(?:\bfrom|\brequire\s*\(|\bimport\s*\()\s*['"`][^'"`]*\/creator-cancel-access(?:\.[jt]s)?['"`]/;
 
 /**
- * Calls of `BudgetLinesService.cancelCreation` (the member that opens the window), by property
- * access or by name: its route only, `DELETE /budget-lines/:id/creation`.
+ * Calls of `BudgetLinesService.cancelCreation` and `ContractsDeleteService.cancelCreation` (the
+ * members that open the window), by property access or by name: their routes only,
+ * `DELETE /budget-lines/:id/creation` and `DELETE /contracts/:id/creation`.
  */
 const CANCEL_CREATION_CALLS: Record<string, number> = {
+  'contracts/contracts.controller.ts': 1,
   'spend/budget-lines.controller.ts': 1,
 };
 const CANCEL_CREATION_CALL = /\.\s*cancelCreation\b|\[\s*['"`]cancelCreation['"`]\s*\]/;
@@ -200,20 +203,20 @@ function testRoleChanges(): void {
     const n = count(code, /\bwithCreatorCancelAccess\s*(?:<[^()]*>)?\s*\(/) - count(code, /\bfunction\s+withCreatorCancelAccess\s*(?:<[^()]*>)?\s*\(/);
     if (n) cancelCalls[rel] = n;
   }
-  assert.deepEqual(cancelCalls, CREATOR_CANCEL_CALLS, 'withCreatorCancelAccess is called from the cancel of a line being created only');
+  assert.deepEqual(cancelCalls, CREATOR_CANCEL_CALLS, 'withCreatorCancelAccess is called from the cancel of a line or a contract being created only');
   const cancelImporters = sourceFiles().filter((rel) => {
     if (rel === 'data-access/creator-cancel-access.ts' || rel.startsWith('migrations/')) return false;
     return CREATOR_CANCEL_IMPORT.test(codeOf(fs.readFileSync(path.join(SRC, rel), 'utf8')));
   });
-  assert.deepEqual(cancelImporters, Object.keys(CREATOR_CANCEL_CALLS).sort(), 'creator-cancel-access is imported by the budget lines service only');
+  assert.deepEqual(cancelImporters, Object.keys(CREATOR_CANCEL_CALLS).sort(), 'creator-cancel-access is imported by the budget lines service and the contracts delete service only');
   const cancelCreationCalls: Record<string, number> = {};
   for (const rel of sourceFiles()) {
     if (rel.startsWith('migrations/')) continue;
     const n = count(codeOf(fs.readFileSync(path.join(SRC, rel), 'utf8')), CANCEL_CREATION_CALL);
     if (n) cancelCreationCalls[rel] = n;
   }
-  assert.deepEqual(cancelCreationCalls, CANCEL_CREATION_CALLS, 'BudgetLinesService.cancelCreation is called from its route only');
-  console.log('  role changes, withFullDataAccess called and imported from the chargeback report and the contract coverage only, withCreatorCancelAccess from the cancel of a line being created only, cancelCreation from its route only: OK');
+  assert.deepEqual(cancelCreationCalls, CANCEL_CREATION_CALLS, 'the cancelCreation of the budget lines and of the contracts is called from its route only');
+  console.log('  role changes, withFullDataAccess called and imported from the chargeback report and the contract coverage only, withCreatorCancelAccess from the cancel of a line or a contract being created only, cancelCreation from its route only: OK');
 }
 
 // ---------------------------------------------------------------------------------------------

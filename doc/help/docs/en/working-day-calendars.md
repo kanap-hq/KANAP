@@ -72,15 +72,16 @@ Click any cell to open the workspace.
 
 ## Creating a calendar
 
-Click **New**, then:
+Click **New**. The page of the new calendar opens, its properties panel open. Then:
 
 1. **Country** (optional): type to search, by name or by two-letter code. With a country, the calendar is standard
 2. **Region**: shown when the country has regions, for example the German states or the French departments with their own holidays. Keep **Whole country**, or pick a region
-3. **Code** and **Name**: choosing a country fills them, for example `FR-57` and "France (Département Moselle)". Change them if you wish
+3. **Code** and name: choosing a country fills them, the name in the title at the top of the page, for example `FR-57` and "France (Département Moselle)". Change them if you wish
 4. **Description**: optional
-5. Click **Create**
 
-A new calendar is enabled, and its workspace opens. A standard calendar already holds the working days of every year. For a custom one, enter them year by year.
+The calendar is created, enabled, as soon as it has its name and **Code**. When the country has regions, it waits until you keep **Whole country** or pick a region. Every tab then becomes available. A standard calendar holds the working days of every year: they show once it is created. For a custom one, enter them year by year. Press Escape on the empty title to leave without creating anything.
+
+While the calendar is being created, the header shows **Create** and **Cancel** until you leave it. **Create** keeps the calendar and takes you back to where you started: the list or the previous screen. If a required field is still missing, it is marked instead. **Cancel** leaves without keeping anything, and deletes the calendar if it was already created. If you entered more than what created it, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete calendars. Leaving the calendar any other way keeps it.
 
 The country and region are set once, at creation. To follow another country, create another calendar.
 

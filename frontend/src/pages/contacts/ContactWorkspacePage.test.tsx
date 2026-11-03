@@ -367,22 +367,30 @@ describe('ContactWorkspacePage create', () => {
     expect(screen.queryByRole('button', { name: 'admin:auditLogs.history.title' })).toBeNull();
   });
 
-  it('creates a contact from a supplier with its type, then goes back to the supplier', async () => {
+  it('creates a contact from a supplier with its type once it has its email, then opens it with the way back to the supplier', async () => {
     renderAt('/master-data/contacts/new/overview?supplier_id=s-1&supplier_role=technical&returnTo=/master-data/suppliers/s-1/contacts');
     expect(screen.getByTestId('supplier-select')).toHaveAttribute('data-value', 's-1');
     expect(screen.getByTestId('supplier-select')).toHaveAttribute('data-disabled', 'true');
-    fireEvent.change(screen.getByLabelText('contacts.fields.email'), { target: { value: 'sam@example.com' } });
+    // The names alone create nothing: the email is the contact's key.
     fireEvent.change(screen.getByLabelText('contacts.fields.firstName'), { target: { value: 'Sam' } });
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    fireEvent.change(screen.getByLabelText('contacts.fields.lastName'), { target: { value: 'Stone' } });
+    fireEvent.blur(screen.getByLabelText('contacts.fields.lastName'));
+    expect(mocked.post).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText('contacts.fields.email'), { target: { value: 'sam@example.com' } });
+    fireEvent.blur(screen.getByLabelText('contacts.fields.email'));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
     expect(mocked.post.mock.calls[0][1]).toMatchObject({
       email: 'sam@example.com',
       first_name: 'Sam',
+      last_name: 'Stone',
       supplier_id: 's-1',
       supplier_role: 'technical',
       active: true,
     });
-    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/suppliers/s-1/contacts'));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith(
+      '/master-data/contacts/c-9/overview?returnTo=%2Fmaster-data%2Fsuppliers%2Fs-1%2Fcontacts',
+      { replace: true },
+    ));
   });
 
   it('names the suppliers on the way back when it opened from a supplier', async () => {
@@ -395,28 +403,53 @@ describe('ContactWorkspacePage create', () => {
 
   it('gives a supplier chosen on the form the default type', async () => {
     renderAt('/master-data/contacts/new/overview?sort=last_name%3AASC');
-    fireEvent.change(screen.getByLabelText('contacts.fields.email'), { target: { value: 'sam@example.com' } });
     fireEvent.click(screen.getByRole('button', { name: 'pick supplier' }));
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    fireEvent.change(screen.getByLabelText('contacts.fields.email'), { target: { value: 'sam@example.com' } });
+    fireEvent.blur(screen.getByLabelText('contacts.fields.email'));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
     expect(mocked.post.mock.calls[0][1]).toMatchObject({ supplier_id: 's-2', supplier_role: 'commercial' });
-    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/contacts?sort=last_name%3AASC'));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/contacts/c-9/overview?sort=last_name%3AASC', { replace: true }));
   });
 
   it('shows the errors on their fields and creates nothing', async () => {
     renderAt('/master-data/contacts/new/overview');
     fireEvent.change(screen.getByLabelText('contacts.fields.email'), { target: { value: 'sam' } });
+    fireEvent.blur(screen.getByLabelText('contacts.fields.email'));
     fireEvent.change(screen.getByLabelText('contacts.fields.mobile'), { target: { value: '12' } });
+    fireEvent.blur(screen.getByLabelText('contacts.fields.mobile'));
+    // Nothing is checked before Create.
+    expect(screen.queryByText('master-data:contacts.messages.emailInvalid')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('master-data:contacts.messages.emailInvalid')).toBeInTheDocument();
     expect(screen.getByText('master-data:contacts.messages.phoneInvalid')).toBeInTheDocument();
     expect(mocked.post).not.toHaveBeenCalled();
-    // A corrected field loses its error at once.
+    // A corrected field loses its error once it is left, as on a saved contact.
     fireEvent.change(screen.getByLabelText('contacts.fields.email'), { target: { value: 'sam@example.com' } });
+    fireEvent.blur(screen.getByLabelText('contacts.fields.email'));
     expect(screen.queryByText('master-data:contacts.messages.emailInvalid')).toBeNull();
   });
 
-  it('moves through the fields with Tab, a type chosen from its menu included, up to Create', async () => {
+  it('opens with first and last name to type in the header, and no name fields in the form', () => {
+    renderAt('/master-data/contacts/new/overview');
+    // One first name and one last name, in the title: the form has none.
+    expect(screen.getAllByLabelText('contacts.fields.firstName')).toHaveLength(1);
+    expect(screen.getAllByLabelText('contacts.fields.lastName')).toHaveLength(1);
+    expect(screen.getByLabelText('contacts.fields.firstName')).toHaveFocus();
+    expect(screen.getByLabelText('contacts.fields.firstName')).toHaveAttribute('placeholder', 'contacts.fields.firstName');
+    expect(screen.queryByRole('button', { name: 'common:buttons.close' })).toBeNull();
+  });
+
+  it('leaves without creating on Cancel, and on Escape with no name typed', () => {
+    renderAt('/master-data/contacts/new/overview?sort=last_name%3AASC');
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.cancel' }));
+    expect(navigateMock).toHaveBeenCalledWith('/master-data/contacts?sort=last_name%3AASC');
+    navigateMock.mockClear();
+    fireEvent.keyDown(screen.getByLabelText('contacts.fields.firstName'), { key: 'Escape' });
+    expect(navigateMock).toHaveBeenCalledWith('/master-data/contacts?sort=last_name%3AASC');
+    expect(mocked.post).not.toHaveBeenCalled();
+  });
+
+  it('moves through the header name and the fields with Tab, a type chosen from its menu included', async () => {
     const user = userEvent.setup();
     renderAt('/master-data/contacts/new/overview');
     fireEvent.click(screen.getByRole('button', { name: 'pick supplier' }));
@@ -427,29 +460,20 @@ describe('ContactWorkspacePage create', () => {
       expect(document.activeElement).toBe(element);
     };
     await expectNext(screen.getByLabelText('contacts.fields.lastName'));
-    await expectNext(screen.getByLabelText('contacts.fields.email'));
-    await expectNext(screen.getByLabelText('contacts.fields.jobTitle'));
-    await expectNext(screen.getByLabelText('contacts.fields.supplier'));
+    // The fields sit in the contact's Properties drawer, as on a saved contact.
     const type = screen.getByRole('combobox', { name: 'contacts.fields.contactType' });
-    await expectNext(type);
+    type.focus();
     // A choice made in the menu gives the focus back to the field, so Tab goes on from there.
     await user.keyboard('{Enter}');
     await user.click(await screen.findByRole('option', { name: 'contacts.roles.technical' }));
     await waitFor(() => expect(document.activeElement).toBe(type));
+    await expectNext(screen.getByLabelText('contacts.fields.email'));
+    await expectNext(screen.getByLabelText('contacts.fields.jobTitle'));
     await expectNext(screen.getByLabelText('contacts.fields.dialCodeOf:contacts.fields.phone'));
     await expectNext(screen.getByLabelText('contacts.fields.phone'));
     await expectNext(screen.getByLabelText('contacts.fields.dialCodeOf:contacts.fields.mobile'));
     await expectNext(screen.getByLabelText('contacts.fields.mobile'));
     await expectNext(screen.getByLabelText('companies.fields.country'));
-    await expectNext(screen.getByLabelText('contacts.fields.notes'));
-    // Create sits in the title row, above the fields, as on every create page of the shell: after
-    // the last field the focus leaves the page (the browser's own controls), then starts again at
-    // the top of the page: back link, Create.
-    await expectNext(document.body);
-    await expectNext(within(screen.getByRole('banner')).getByRole('button', { name: 'contacts.title' }));
-    await expectNext(screen.getByRole('button', { name: 'common:buttons.create' }));
-    await expectNext(screen.getByRole('button', { name: 'common:buttons.close' }));
-    await expectNext(firstName);
   });
 
   it('ignores a return address outside the app', async () => {

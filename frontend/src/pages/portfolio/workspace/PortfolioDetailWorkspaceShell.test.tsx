@@ -18,6 +18,7 @@ vi.mock('../../../components/history/RecordHistory', () => ({
 
 import PortfolioDetailWorkspaceShell from './PortfolioDetailWorkspaceShell';
 import DateEUField from '../../../components/fields/DateEUField';
+import { PropertyRow } from '../../../components/design/PropertyRow';
 
 function renderShell(extra: Partial<React.ComponentProps<typeof PortfolioDetailWorkspaceShell>> = {}) {
   return render(
@@ -428,5 +429,46 @@ describe('PortfolioDetailWorkspaceShell history', () => {
     expect(screen.queryByText('cost_centers:cc-1:1')).toBeNull();
     fireEvent.click(button);
     expect(screen.getByText('cost_centers:cc-1:2')).toBeInTheDocument();
+  });
+
+  it('takes Tab from the title of a new record through its required fields, then on as usual', () => {
+    renderShell({
+      isCreate: true,
+      title: '',
+      canEditTitle: true,
+      titleAutoEdit: true,
+      onTitleDraftChange: () => undefined,
+      properties: (
+        <div>
+          <PropertyRow label="Optional"><input aria-label="optional" /></PropertyRow>
+          <PropertyRow label="Company" required><input aria-label="company" /></PropertyRow>
+          <PropertyRow label="Locked" required><input aria-label="locked" disabled /></PropertyRow>
+          <PropertyRow label="Start" required><input aria-label="start" /><button type="button">pick</button></PropertyRow>
+        </div>
+      ),
+    });
+    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    const company = screen.getByLabelText('company');
+    const start = screen.getByLabelText('start');
+    title.focus();
+    fireEvent.keyDown(title, { key: 'Tab' });
+    expect(company).toHaveFocus();
+    // A required field that cannot be changed is skipped.
+    fireEvent.keyDown(company, { key: 'Tab' });
+    expect(start).toHaveFocus();
+    fireEvent.keyDown(start, { key: 'Tab', shiftKey: true });
+    expect(company).toHaveFocus();
+    fireEvent.keyDown(company, { key: 'Tab', shiftKey: true });
+    expect(title).toHaveFocus();
+    // From the last required field, Tab is the browser's own.
+    start.focus();
+    expect(fireEvent.keyDown(start, { key: 'Tab' })).toBe(true);
+  });
+
+  it('leaves Tab alone on a saved record', () => {
+    renderShell({ properties: <PropertyRow label="Company" required><input aria-label="company" /></PropertyRow> });
+    const company = screen.getByLabelText('company');
+    company.focus();
+    expect(fireEvent.keyDown(company, { key: 'Tab' })).toBe(true);
   });
 });

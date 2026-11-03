@@ -86,7 +86,6 @@
     "entity": "empresa",
     "newCompany": "Nueva empresa",
     "companyFallback": "Empresa",
-    "detailsTabHint": "La pestaña Detalles estará disponible después de crear la empresa.",
     "loadError": "Error al cargar la empresa.",
     "columns": {
       "city": "Ciudad",
@@ -137,7 +136,6 @@
       "registration": "Registro"
     },
     "placeholders": {
-      "name": "p. ej., Sociedad holding",
       "country": "p. ej., Francia",
       "baseCurrency": "p. ej., EUR",
       "chartOfAccounts": "p. ej., COA-FR",
@@ -176,14 +174,14 @@
       "title_other": "Eliminar las {{count}} empresas seleccionadas",
       "keptDone_one": "{{count}} empresa conservada",
       "keptDone_other": "{{count}} empresas conservadas"
-    }
+    },
+    "creationRecord": "La empresa"
   },
   "departments": {
     "title": "Departamentos",
     "entity": "departamento",
     "newDepartment": "Nuevo departamento",
     "departmentFallback": "Departamento",
-    "detailsTabHint": "La pestaña Detalles estará disponible después de crear el departamento.",
     "loadError": "Error al cargar el departamento.",
     "selectCompanyFirst": "Seleccione primero una empresa",
     "columns": {
@@ -203,7 +201,6 @@
       "lifecycle": "Ciclo de vida"
     },
     "placeholders": {
-      "name": "p. ej., Finanzas",
       "description": "p. ej., Contabilidad y nóminas"
     },
     "headcountHint": "Se guarda para el año seleccionado al salir del campo.",
@@ -223,7 +220,8 @@
       "kept_other": "{{count}} departamentos no se pueden eliminar y se conservan:",
       "deleted_one": "{{count}} departamento eliminado",
       "deleted_other": "{{count}} departamentos eliminados"
-    }
+    },
+    "creationRecord": "El departamento"
   },
   "costCenters": {
     "title": "Centros de coste",
@@ -264,7 +262,6 @@
     },
     "placeholders": {
       "code": "p. ej., CC-100",
-      "name": "p. ej., Infraestructura",
       "description": "p. ej., Servidores, red y herramientas de puesto de trabajo",
       "topLevel": "Nivel superior",
       "ownerMissing": "Falta el responsable del presupuesto"
@@ -299,7 +296,8 @@
       "kept_other": "{{count}} centros de coste no se pueden eliminar y se conservan:",
       "deleted_one": "{{count}} centro de coste eliminado",
       "deleted_other": "{{count}} centros de coste eliminados"
-    }
+    },
+    "creationRecord": "El centro de coste"
   },
   "workingDayCalendars": {
     "title": "Calendarios laborales",
@@ -310,8 +308,6 @@
     "import": "Importar calendarios",
     "previous": "Calendario anterior",
     "next": "Calendario siguiente",
-    "createHint": "Una vez creado el calendario, introduzca los días laborables de cada año.",
-    "createHintStandard": "Los días laborables de cada año siguen los festivos de {{source}}. Después puede cambiar cualquier mes.",
     "wholeCountry": "Todo el país",
     "yearsAll": "Todos los años",
     "yearsAllEdited": "Todos los años, cambios en {{years}}",
@@ -340,7 +336,6 @@
     "placeholders": {
       "country": "p. ej., Francia",
       "code": "p. ej., CAL-01",
-      "name": "p. ej., Personal de la sede",
       "description": "p. ej., Días laborables del personal asalariado, sin festivos",
       "days": "p. ej., 20"
     },
@@ -402,14 +397,14 @@
       "kept_other": "{{count}} calendarios no se pueden eliminar y se conservan:",
       "deleted_one": "{{count}} calendario eliminado",
       "deleted_other": "{{count}} calendarios eliminados"
-    }
+    },
+    "creationRecord": "El calendario"
   },
   "suppliers": {
     "title": "Proveedores",
     "newSupplier": "Nuevo proveedor",
     "empty": "Todavía no hay proveedores.",
     "supplierFallback": "Proveedor",
-    "contactsTabHint": "La pestaña Contactos estará disponible después de crear el proveedor.",
     "loadError": "Error al cargar el proveedor.",
     "columns": {
       "erpSupplierId": "ID de proveedor ERP"
@@ -469,7 +464,8 @@
       "kept_other": "{{count}} proveedores siguen en uso y se conservan. Desactívelos en su lugar:",
       "deleted_one": "{{count}} proveedor eliminado",
       "deleted_other": "{{count}} proveedores eliminados"
-    }
+    },
+    "creationRecord": "El proveedor"
   },
   "contacts": {
     "title": "Contactos",
@@ -509,8 +505,6 @@
     },
     "placeholders": {
       "email": "p. ej., nombre@ejemplo.com",
-      "firstName": "p. ej., Alex",
-      "lastName": "p. ej., Martín",
       "jobTitle": "p. ej., Responsable de cuenta",
       "supplier": "p. ej., Proveedor A",
       "contactType": "Elija un tipo",
@@ -548,7 +542,8 @@
       "deleted_other": "{{count}} contactos eliminados",
       "title_one": "Eliminar el contacto seleccionado",
       "title_other": "Eliminar los {{count}} contactos seleccionados"
-    }
+    },
+    "creationRecord": "El contacto"
   },
   "coa": {
     "title": "Planes de cuentas",
@@ -691,9 +686,6 @@
     "loadError": "Error al cargar la cuenta.",
     "previous": "Cuenta anterior",
     "next": "Cuenta siguiente",
-    "actions": {
-      "create": "Crear cuenta"
-    },
     "sections": {
       "consolidation": "Consolidación"
     },
@@ -715,7 +707,6 @@
     "placeholders": {
       "chartOfAccounts": "p. ej., COA-FR",
       "accountNumber": "p. ej., 6200",
-      "accountName": "p. ej., Suscripciones de software",
       "nativeName": "p. ej., Logiciels SaaS",
       "description": "p. ej., Licencias SaaS y suscripciones en la nube"
     },
@@ -739,7 +730,8 @@
       "chartRequired": "Elija un plan de cuentas.",
       "numberInvalid": "Introduzca un número entero mayor que cero, de {{max}} dígitos como máximo.",
       "nameRequired": "Introduzca un nombre."
-    }
+    },
+    "creationRecord": "La cuenta"
   },
   "analytics": {
     "title": "Dimensiones analíticas",
@@ -812,10 +804,8 @@
       "openValues": "Cualquier persona que pueda editar una línea puede añadir un valor, desde la línea o el archivo de presupuesto."
     },
     "placeholders": {
-      "dimensionName": "p. ej., Naturaleza",
       "dimensionCode": "p. ej., naturaleza",
       "dimensionDescription": "p. ej., El tipo de gasto",
-      "valueName": "p. ej., Licencias",
       "valueDescription": "p. ej., Suscripciones de software y soporte"
     },
     "usage": {
@@ -937,7 +927,9 @@
       "failed": "No se han podido añadir las dimensiones.",
       "loadFailed": "No se han podido cargar las dimensiones recomendadas."
     },
-    "addValue": "Añadir «{{value}}»"
+    "addValue": "Añadir «{{value}}»",
+    "valueCreationRecord": "El valor",
+    "dimensionCreationRecord": "La dimensión"
   },
   "businessProcesses": {
     "title": "Procesos de negocio",

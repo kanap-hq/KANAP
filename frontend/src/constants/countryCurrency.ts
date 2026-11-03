@@ -1,0 +1,168 @@
+/** The currency of each country (ISO 3166-1 alpha-2 to ISO 4217), one line per currency. */
+const COUNTRY_CURRENCY_DATA = `
+EUR|AD AT AX BE BL CY DE EE ES FI FR GF GP GR HR IE IT LT LU LV MC ME MF MQ MT NL PM PT RE SI SK SM TF VA YT
+USD|AS BQ EC FM GU IO MH MP PR PW SV TC TL UM US VG VI
+XOF|BF BJ CI GW ML NE SN TG
+XAF|CF CG CM GA GQ TD
+XCD|AG AI DM GD KN LC MS VC
+XPF|NC PF WF
+AUD|AU CC CX HM KI NF NR TV
+NZD|CK NU NZ PN TK
+NOK|BV NO SJ
+DKK|DK FO GL
+GBP|GB GG GS IM JE
+CHF|CH LI
+ANG|CW SX
+MAD|EH MA
+ILS|IL PS
+AED|AE
+AFN|AF
+ALL|AL
+AMD|AM
+AOA|AO
+ARS|AR
+AWG|AW
+AZN|AZ
+BAM|BA
+BBD|BB
+BDT|BD
+BGN|BG
+BHD|BH
+BIF|BI
+BMD|BM
+BND|BN
+BOB|BO
+BRL|BR
+BSD|BS
+BTN|BT
+BWP|BW
+BYN|BY
+BZD|BZ
+CAD|CA
+CDF|CD
+CLP|CL
+CNY|CN
+COP|CO
+CRC|CR
+CUP|CU
+CVE|CV
+CZK|CZ
+DJF|DJ
+DOP|DO
+DZD|DZ
+EGP|EG
+ERN|ER
+ETB|ET
+FJD|FJ
+FKP|FK
+GEL|GE
+GHS|GH
+GIP|GI
+GMD|GM
+GNF|GN
+GTQ|GT
+GYD|GY
+HKD|HK
+HNL|HN
+HTG|HT
+HUF|HU
+IDR|ID
+INR|IN
+IQD|IQ
+IRR|IR
+ISK|IS
+JMD|JM
+JOD|JO
+JPY|JP
+KES|KE
+KGS|KG
+KHR|KH
+KMF|KM
+KRW|KR
+KWD|KW
+KYD|KY
+KZT|KZ
+LAK|LA
+LBP|LB
+LKR|LK
+LRD|LR
+LSL|LS
+LYD|LY
+MDL|MD
+MGA|MG
+MKD|MK
+MMK|MM
+MNT|MN
+MOP|MO
+MRU|MR
+MUR|MU
+MVR|MV
+MWK|MW
+MXN|MX
+MYR|MY
+MZN|MZ
+NAD|NA
+NGN|NG
+NIO|NI
+NPR|NP
+OMR|OM
+PAB|PA
+PEN|PE
+PGK|PG
+PHP|PH
+PKR|PK
+PLN|PL
+PYG|PY
+QAR|QA
+RON|RO
+RSD|RS
+RUB|RU
+RWF|RW
+SAR|SA
+SBD|SB
+SCR|SC
+SDG|SD
+SEK|SE
+SGD|SG
+SHP|SH
+SLE|SL
+SOS|SO
+SRD|SR
+SSP|SS
+STN|ST
+SYP|SY
+SZL|SZ
+THB|TH
+TJS|TJ
+TMT|TM
+TND|TN
+TOP|TO
+TRY|TR
+TTD|TT
+TWD|TW
+TZS|TZ
+UAH|UA
+UGX|UG
+UYU|UY
+UZS|UZ
+VES|VE
+VND|VN
+VUV|VU
+WST|WS
+YER|YE
+ZAR|ZA
+ZMW|ZM
+ZWL|ZW
+`;
+
+const COUNTRY_CURRENCY = new Map<string, string>(
+  COUNTRY_CURRENCY_DATA.trim().split('\n').flatMap((line) => {
+    const [currency, countries] = line.split('|');
+    return countries.split(' ').map((country) => [country, currency] as [string, string]);
+  }),
+);
+
+/** The currency a country uses, or null (none offered: Antarctica, North Korea). */
+export function currencyForCountry(country: string | null | undefined): string | null {
+  return country ? COUNTRY_CURRENCY.get(country.toUpperCase()) ?? null : null;
+}

@@ -127,13 +127,14 @@ Cliquez sur n'importe quelle cellule pour ouvrir l'espace de travail de la valeu
 
 ### Créer une dimension
 
-Cliquez sur **Nouveau** dans la barre de sélection, remplissez les champs, puis cliquez sur **Créer**. L'espace de travail de la nouvelle dimension s'ouvre. Une nouvelle dimension est activée.
+Cliquez sur **Nouveau** dans la barre de sélection. La page de la nouvelle dimension s'ouvre, son panneau des propriétés ouvert. Saisissez le nom dans le titre en haut de la page. La dimension est créée, activée, dès qu'elle a son nom et son **Code**. Tous ses onglets deviennent alors disponibles, et les autres champs s'enregistrent automatiquement. Appuyez sur Échap dans le titre vide pour partir sans rien créer.
 
-- Le **Nom** est obligatoire.
-- Le **Code** est proposé à partir du nom : en minuscules, sans accents, les espaces remplacés par `-`. Vous pouvez le modifier avant de créer la dimension.
+- Le **Code** est proposé à partir du nom : en minuscules, sans accents, les espaces remplacés par `-`. Vous pouvez le modifier.
 - **Utilisé pour** démarre sur **OPEX et CAPEX**. Voir [Dimensions OPEX ou CAPEX](#dimensions-opex-ou-capex).
 - **Obligatoire** démarre désactivé. Voir [Dimensions obligatoires](#dimensions-obligatoires).
 - La **Description** est facultative.
+
+Tant que la dimension est en cours de création, l'en-tête affiche **Créer** et **Annuler** jusqu'à ce que vous quittiez la page. **Créer** conserve la dimension et vous ramène à votre point de départ : la liste ou l'écran précédent. S'il manque encore un champ obligatoire, il est signalé à la place. **Annuler** part sans rien conserver. Sur une dimension déjà créée, il la supprime. Si vous avez saisi plus que le nécessaire à la création, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des dimensions. Si vous quittez la page autrement, la dimension est conservée.
 
 Une nouvelle dimension se place en dernier dans l'ordre des dimensions. Revenez ensuite à la page pour ajouter ses valeurs.
 
@@ -242,7 +243,9 @@ Pour conserver plutôt les valeurs sur les lignes, désactivez la dimension.
 
 ### Créer une valeur
 
-Cliquez sur **Nouvelle valeur**. Le champ **Dimension** commence sur la dimension sélectionnée sur la page et ne propose que les dimensions activées. Saisissez le **Nom**, et une **Description** si vous le souhaitez. **Utilisé pour** commence sur **OPEX et CAPEX** : changez-le si la valeur ne convient qu'à un type de ligne. Cliquez ensuite sur **Créer**. L'espace de travail de la nouvelle valeur s'ouvre. Une nouvelle valeur est activée.
+Cliquez sur **Nouvelle valeur**. La page de la nouvelle valeur s'ouvre, son panneau des propriétés ouvert. Le champ **Dimension** commence sur la dimension sélectionnée sur la page et ne propose que les dimensions activées. Saisissez le nom dans le titre en haut de la page. La valeur est créée, activée, dès qu'elle a son nom et sa **Dimension**. La dimension se définit une seule fois, à la création. Tous ses onglets deviennent alors disponibles, et les autres champs s'enregistrent automatiquement : une **Description** si vous le souhaitez, et **Utilisé pour**, qui commence sur **OPEX et CAPEX** (changez-le si la valeur ne convient qu'à un type de ligne). Appuyez sur Échap dans le titre vide pour partir sans rien créer.
+
+Tant que la valeur est en cours de création, l'en-tête affiche **Créer** et **Annuler** jusqu'à ce que vous quittiez la page. **Créer** conserve la valeur et vous ramène à votre point de départ : la liste ou l'écran précédent. S'il manque encore un champ obligatoire, il est signalé à la place. **Annuler** part sans rien conserver. Sur une valeur déjà créée, il la supprime. Si vous avez saisi plus que le nécessaire à la création, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des valeurs. Si vous quittez la page autrement, la valeur est conservée.
 
 ### L'espace de travail de la valeur
 

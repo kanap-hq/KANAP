@@ -1,6 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
@@ -57,6 +58,7 @@ const duplicate = { response: { status: 409, data: { code: 'duplicate', message:
 function renderAt(path: string) {
   return render(
     <ThemeProvider theme={createAppTheme('light')}>
+      <QueryClientProvider client={new QueryClient()}>
       <KanapDialogProvider>
         <MemoryRouter initialEntries={[path]}>
           <Routes>
@@ -64,6 +66,7 @@ function renderAt(path: string) {
           </Routes>
         </MemoryRouter>
       </KanapDialogProvider>
+      </QueryClientProvider>
     </ThemeProvider>,
   );
 }
@@ -91,15 +94,49 @@ describe('LocationWorkspacePage name refusals', () => {
     expect(await screen.findByText('Paris DC')).toBeInTheDocument();
   });
 
-  it('says another location has the name, under the name field, when a create is a duplicate', async () => {
+  it('says another location has the name, under the header title, when a create is a duplicate', async () => {
     mocked.post.mockRejectedValueOnce(duplicate);
     renderAt('/it/locations/new/overview');
-    fireEvent.change(screen.getByPlaceholderText('workspace.location.namePlaceholder'), { target: { value: 'paris dc' } });
-    fireEvent.click(screen.getByRole('button', { name: /create/i }));
+    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    fireEvent.change(title, { target: { value: 'paris dc' } });
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('messages.locationNameTaken')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('workspace.location.namePlaceholder')).toHaveAttribute('aria-invalid', 'true');
+    expect(title).toHaveFocus();
     expect(screen.queryByRole('alert')).toBeNull();
     expect(navigateMock).not.toHaveBeenCalled();
+  });
+
+  it('creates the site with the drawer fields once its name is committed, then opens it', async () => {
+    mocked.post.mockResolvedValueOnce({ data: { id: 'loc-new', location_reference: 'LOC-9', name: 'Lyon DC', creation_token: 'token-1' } });
+    renderAt('/it/locations/new/overview');
+    expect(screen.queryByPlaceholderText('workspace.location.namePlaceholder')).toBeNull();
+    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    fireEvent.change(title, { target: { value: ' Lyon DC ' } });
+    expect(mocked.post).not.toHaveBeenCalled();
+    fireEvent.blur(title);
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/locations', {
+      name: 'Lyon DC',
+      hosting_type: 'on_prem',
+      operating_company_id: null,
+      country_iso: null,
+      city: null,
+      provider: null,
+      region: null,
+      additional_info: null,
+    }));
+    // The new site reads nothing: no id to read with.
+    expect(mocked.get).not.toHaveBeenCalled();
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/it/locations/LOC-9/overview', { replace: true }));
+  });
+
+  it('asks for the name on Create with an empty title, and leaves on Cancel', async () => {
+    renderAt('/it/locations/new/overview');
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    expect(await screen.findByText('messages.nameRequired')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'common:buttons.editTitle' })).toHaveFocus();
+    expect(mocked.post).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.cancel' }));
+    expect(navigateMock).toHaveBeenCalledWith('/it/locations');
   });
 });
 

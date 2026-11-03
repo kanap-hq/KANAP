@@ -93,11 +93,11 @@ Haga clic en cualquier celda para abrir el espacio de trabajo.
 
 ## Crear un centro de coste
 
-Haga clic en **Nuevo**. Complete los campos y haga clic en **Crear**. Un elemento nuevo está activado.
+Haga clic en **Nuevo**. Se abre la página del elemento nuevo, con su panel de propiedades abierto. Escriba el nombre en el título de la parte superior de la página y rellene el **Código**. El **Tipo** empieza en **Centro de coste**, que también necesita una **Empresa**. Elija **Grupo** para crear un grupo: el campo **Empresa** desaparece entonces.
 
-El **Tipo** empieza en **Centro de coste**. Elija **Grupo** para crear un grupo: el campo **Empresa** desaparece entonces.
+El elemento se crea, activado, en cuanto tiene su nombre, su **Código** y, para un centro de coste, su **Empresa**. Todas sus pestañas quedan entonces disponibles, y los demás campos se guardan automáticamente. Pulse Escape en el título vacío para salir sin crear nada.
 
-Tras **Crear**, se abre el espacio de trabajo del nuevo elemento.
+Mientras el elemento se está creando, el encabezado muestra **Crear** y **Cancelar** hasta que salga de la página. **Crear** conserva el elemento y le lleva de vuelta al punto de partida: la lista o la pantalla anterior. Si aún falta un campo obligatorio, se marca en su lugar. **Cancelar** sale sin conservar nada. En un elemento ya creado, lo elimina. Si introdujo algo más que lo necesario para crearlo, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar centros de coste. Si sale de la página de otra forma, el elemento se conserva.
 
 ---
 

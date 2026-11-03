@@ -93,11 +93,11 @@ Klicken Sie auf eine beliebige Zelle, um den Arbeitsbereich zu öffnen.
 
 ## Eine Kostenstelle erstellen
 
-Klicken Sie auf **Neu**. Füllen Sie die Felder aus und klicken Sie dann auf **Erstellen**. Ein neues Element ist aktiviert.
+Klicken Sie auf **Neu**. Die Seite des neuen Elements öffnet sich mit geöffnetem Eigenschaftenbereich. Geben Sie den Namen im Titel oben auf der Seite ein und füllen Sie den **Code** aus. Der **Typ** steht zunächst auf **Kostenstelle**, die auch ein **Unternehmen** braucht. Wählen Sie **Gruppe**, um eine Gruppe zu erstellen: Das Feld **Unternehmen** verschwindet dann.
 
-Der **Typ** steht zunächst auf **Kostenstelle**. Wählen Sie **Gruppe**, um eine Gruppe zu erstellen: Das Feld **Unternehmen** verschwindet dann.
+Das Element wird aktiviert erstellt, sobald es seinen Namen, seinen **Code** und, bei einer Kostenstelle, sein **Unternehmen** hat. Dann werden alle Reiter verfügbar, und die übrigen Felder werden automatisch gespeichert. Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erstellen.
 
-Nach **Erstellen** öffnet sich der Arbeitsbereich des neuen Elements.
+Solange das Element erstellt wird, zeigt die Kopfzeile **Erstellen** und **Abbrechen**, bis Sie die Seite verlassen. **Erstellen** behält das Element und bringt Sie dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm. Fehlt noch ein Pflichtfeld, wird es stattdessen markiert. **Abbrechen** verlässt die Seite, ohne etwas zu behalten. Ein bereits erstelltes Element wird dabei gelöscht. Wenn Sie mehr als die Angaben zur Erstellung eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Kostenstellen abbrechen. Verlassen Sie die Seite auf andere Weise, bleibt das Element bestehen.
 
 ---
 

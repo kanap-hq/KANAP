@@ -16,6 +16,7 @@ import { readContactUsages } from './contact-usages';
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 import { csvExportFormat } from '../common/csv/csv-export.service';
 import { csvExportBody } from '../common/csv/send-csv-export';
+import { cancelCreation, readCreationChanges, withCreationToken } from '../common/creation/creation-routes';
 
 @UseGuards(JwtAuthGuard)
 @Controller('contacts')
@@ -62,8 +63,24 @@ export class ContactsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('contacts', 'member')
   @Post()
-  create(@Body() body: ContactUpsertDto, @Req() req: any) {
-    return this.svc.create(body, { manager: req?.queryRunner?.manager, tenantId: req.tenant.id, userId: req.user?.sub ?? null });
+  async create(@Body() body: ContactUpsertDto, @Req() req: any, @Tenant() ctx: TenantRequest) {
+    return withCreationToken('contacts', await this.svc.create(body, { manager: req?.queryRunner?.manager, tenantId: req.tenant.id, userId: req.user?.sub ?? null }), ctx);
+  }
+
+  // Before Cancel of the contact being created: what was written on it since (common/creation).
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contacts', 'member')
+  @Get(':id/creation')
+  creationChanges(@Param('id', new ParseUUIDPipe()) id: string, @Query('token') token: string, @Tenant() ctx: TenantRequest) {
+    return readCreationChanges('contacts', id, token, ctx);
+  }
+
+  // Cancel: the creator deletes the contact they just created, with its token, without the delete right.
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contacts', 'member')
+  @Delete(':id/creation')
+  cancelCreation(@Param('id', new ParseUUIDPipe()) id: string, @Body() body: { token?: string }, @Tenant() ctx: TenantRequest) {
+    return cancelCreation('contacts', id, body?.token, ctx, () => this.svc.delete(id, { manager: ctx.manager, tenantId: ctx.tenantId, userId: ctx.userId || null }));
   }
 
   @ReservedToUnscopedDataAccess()

@@ -1,5 +1,5 @@
 import { exportListQuery } from '../common/pagination';
-import { Body, Controller, Get, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors, Delete } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors, Delete, ParseUUIDPipe } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ContractsService } from './contracts.service';
 import { Response } from 'express';
@@ -30,6 +30,7 @@ import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations
 import { csvExportFormat } from '../common/csv/csv-export.service';
 import { parseExportFormat } from '../common/xlsx/format';
 import { csvExportBody } from '../common/csv/send-csv-export';
+import { readCreationChanges, withCreationToken } from '../common/creation/creation-routes';
 
 /**
  * The list's `covered_application` filter, for a reader of the applications only (a Business
@@ -185,7 +186,26 @@ export class ContractsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'member')
   @Post()
-  create(@Body() body: ContractUpsertDto, @Req() req: any) { return this.svc.create(body, req.user?.sub ?? null, { manager: req?.queryRunner?.manager }); }
+  async create(@Body() body: ContractUpsertDto, @Req() req: any, @Tenant() ctx: TenantRequest) {
+    return withCreationToken('contracts', await this.svc.create(body, req.user?.sub ?? null, { manager: req?.queryRunner?.manager }), ctx);
+  }
+
+  // Before Cancel of the contract being created: what was written on it since (common/creation).
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'member')
+  @Get(':id/creation')
+  creationChanges(@Param('id', new ParseUUIDPipe()) id: string, @Query('token') token: string, @Tenant() ctx: TenantRequest) {
+    return readCreationChanges('contracts', id, token, ctx);
+  }
+
+  // Cancel: the creator deletes the contract they just created, with its token, without the delete
+  // right, a limited data access included. The service checks the token itself, before its delete window.
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'member')
+  @Delete(':id/creation')
+  async cancelCreation(@Param('id', new ParseUUIDPipe()) id: string, @Body() body: { token?: string }, @Tenant() ctx: TenantRequest): Promise<void> {
+    await this.deleteSvc.cancelCreation(id, body?.token, ctx);
+  }
 
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'member')

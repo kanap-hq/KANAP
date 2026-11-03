@@ -74,6 +74,8 @@ type PortfolioDetailWorkspaceShellProps = {
   titleOnCancel?: () => void;
   /** Each new value moves the focus to the title (Create on an empty title). */
   titleFocusRequest?: number;
+  /** Each new seed puts its value in the title being typed (`EditableTitle` `draftSeed`). */
+  titleDraftSeed?: { value: string; n: number };
   /** Omitted (e.g. on a create page), the shell draws no Properties tab and no drawer. */
   properties?: React.ReactNode;
   tabs: PortfolioDetailWorkspaceTab[];
@@ -125,6 +127,36 @@ const OPEN_OVERLAY_SELECTOR = [
   '.MuiPopover-root:not(.MuiModal-hidden)', '.MuiModal-root:not(.MuiModal-hidden)',
   '.MuiPopper-root:not(.MuiTooltip-popper)', '[role="dialog"]', '[role="listbox"]', '[role="menu"]',
 ].join(',');
+
+// The fields a person types or chooses in: inputs, selects, editors (not the buttons beside them).
+const ENTRY_FIELDS = 'input:not([type="hidden"]):not([disabled]):not([tabindex="-1"]):not([aria-hidden="true"]), textarea:not([disabled]), [role="combobox"]:not([aria-disabled="true"]):not([tabindex="-1"]), [contenteditable="true"]';
+
+function entryFields(stop: HTMLElement): HTMLElement[] {
+  return Array.from(new Set(stop.querySelectorAll<HTMLElement>(ENTRY_FIELDS)));
+}
+
+/**
+ * A new record: Tab goes from the title to each required field in turn (Shift+Tab back), then on
+ * as usual from the last one. A stop with several fields (first and last name) is crossed first.
+ */
+function followRequiredFields(event: React.KeyboardEvent<HTMLElement>) {
+  if (event.key !== 'Tab' || event.altKey || event.ctrlKey || event.metaKey || event.defaultPrevented) return;
+  const root = event.currentTarget;
+  const title = root.querySelector<HTMLElement>('[data-creation-title]');
+  const stops = [title, ...Array.from(root.querySelectorAll<HTMLElement>('[data-required-field]'))]
+    .filter((stop): stop is HTMLElement => !!stop && entryFields(stop).length > 0);
+  const target = event.target as HTMLElement;
+  const index = stops.findIndex((stop) => stop.contains(target));
+  if (index < 0) return;
+  const inner = entryFields(stops[index]);
+  const edge = event.shiftKey ? inner[0] : inner[inner.length - 1];
+  if (!edge || !(edge === target || edge.contains(target))) return;
+  const next = stops[index + (event.shiftKey ? -1 : 1)];
+  if (!next) return;
+  const fields = entryFields(next);
+  event.preventDefault();
+  (event.shiftKey ? fields[fields.length - 1] : fields[0]).focus();
+}
 
 function isInsideWidget(target: EventTarget | null) {
   return target instanceof Element && !!target.closest(WIDGET_SELECTOR);
@@ -218,6 +250,7 @@ export default function PortfolioDetailWorkspaceShell({
   titleMaxLength,
   titleOnCancel,
   titleFocusRequest,
+  titleDraftSeed,
   titleRequiredMessage,
   properties,
   tabs,
@@ -337,7 +370,10 @@ export default function PortfolioDetailWorkspaceShell({
   }, [forceDrawerOpen, isCreate, nav, onBack, onSaveShortcut]);
 
   return (
-    <Box sx={{ height: '100%', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+    <Box
+      sx={{ height: '100%', minWidth: 0, display: 'flex', flexDirection: 'column' }}
+      onKeyDownCapture={isCreate ? followRequiredFields : undefined}
+    >
       <Box sx={{ flexShrink: 0, minWidth: 0 }}>
         <Box
           component="header"
@@ -431,7 +467,7 @@ export default function PortfolioDetailWorkspaceShell({
                     {itemReference}
                   </Box>
                 )}
-                <Box sx={{ flex: 1, minWidth: isCompact ? '100%' : 0, overflowWrap: 'anywhere' }}>
+                <Box data-creation-title="" sx={{ flex: 1, minWidth: isCompact ? '100%' : 0, overflowWrap: 'anywhere' }}>
                   {titleEditor ?? (
                     <>
                       <EditableTitle
@@ -448,6 +484,7 @@ export default function PortfolioDetailWorkspaceShell({
                         emphasizeEmpty={titleAutoEdit}
                         onCancel={titleOnCancel}
                         focusRequest={titleFocusRequest}
+                        draftSeed={titleDraftSeed}
                       />
                     </>
                   )}

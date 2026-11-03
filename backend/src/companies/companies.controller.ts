@@ -1,5 +1,5 @@
 import { exportListQuery } from '../common/pagination';
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Res, UseGuards, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Res, UseGuards, UploadedFile, UseInterceptors, ParseUUIDPipe } from '@nestjs/common';
 import { CompaniesService } from './companies.service';
 import { parseCompanyYear } from './company-year';
 import { CompaniesDeleteService } from './companies-delete.service';
@@ -20,6 +20,7 @@ import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-ti
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 import { csvExportFormat } from '../common/csv/csv-export.service';
 import { csvExportBody } from '../common/csv/send-csv-export';
+import { cancelCreation, readCreationChanges, withCreationToken } from '../common/creation/creation-routes';
 
 @UseGuards(JwtAuthGuard)
 @Controller('companies')
@@ -94,8 +95,26 @@ export class CompaniesController {
   @UseGuards(PermissionGuard)
   @RequireLevel('companies', 'member')
   @Post()
-  create(@Body() body: CompanyUpsertDto, @Tenant() ctx: TenantRequest) {
-    return this.svc.create(body, ctx.userId || undefined, { manager: ctx.manager });
+  async create(@Body() body: CompanyUpsertDto, @Tenant() ctx: TenantRequest) {
+    return withCreationToken('companies', await this.svc.create(body, ctx.userId || undefined, { manager: ctx.manager }), ctx);
+  }
+
+  // Before Cancel of the company being created: what was written on it since (common/creation).
+  @ReservedToUnscopedDataAccess()
+  @UseGuards(PermissionGuard)
+  @RequireLevel('companies', 'member')
+  @Get(':id/creation')
+  creationChanges(@Param('id', new ParseUUIDPipe()) id: string, @Query('token') token: string, @Tenant() ctx: TenantRequest) {
+    return readCreationChanges('companies', id, token, ctx);
+  }
+
+  // Cancel: the creator deletes the company they just created, with its token, without the delete right.
+  @ReservedToUnscopedDataAccess()
+  @UseGuards(PermissionGuard)
+  @RequireLevel('companies', 'member')
+  @Delete(':id/creation')
+  cancelCreation(@Param('id', new ParseUUIDPipe()) id: string, @Body() body: { token?: string }, @Tenant() ctx: TenantRequest) {
+    return cancelCreation('companies', id, body?.token, ctx, () => this.deleteSvc.delete(id, { manager: ctx.manager, userId: ctx.userId || null }));
   }
 
   @ReservedToUnscopedDataAccess()

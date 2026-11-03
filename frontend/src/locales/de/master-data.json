@@ -86,7 +86,6 @@
     "entity": "Unternehmen",
     "newCompany": "Neues Unternehmen",
     "companyFallback": "Unternehmen",
-    "detailsTabHint": "Der Tab Details wird nach dem Erstellen des Unternehmens verfügbar.",
     "loadError": "Fehler beim Laden des Unternehmens.",
     "columns": {
       "city": "Stadt",
@@ -137,7 +136,6 @@
       "registration": "Registrierung"
     },
     "placeholders": {
-      "name": "z. B. Holdinggesellschaft",
       "country": "z. B. Frankreich",
       "baseCurrency": "z. B. EUR",
       "chartOfAccounts": "z. B. COA-FR",
@@ -176,14 +174,14 @@
       "title_other": "{{count}} ausgewählte Unternehmen löschen",
       "keptDone_one": "{{count}} Unternehmen behalten",
       "keptDone_other": "{{count}} Unternehmen behalten"
-    }
+    },
+    "creationRecord": "Das Unternehmen"
   },
   "departments": {
     "title": "Abteilungen",
     "entity": "Abteilung",
     "newDepartment": "Neue Abteilung",
     "departmentFallback": "Abteilung",
-    "detailsTabHint": "Der Tab Details wird nach dem Erstellen der Abteilung verfügbar.",
     "loadError": "Fehler beim Laden der Abteilung.",
     "selectCompanyFirst": "Wählen Sie zuerst ein Unternehmen",
     "columns": {
@@ -203,7 +201,6 @@
       "lifecycle": "Lebenszyklus"
     },
     "placeholders": {
-      "name": "z. B. Finanzen",
       "description": "z. B. Buchhaltung und Lohnabrechnung"
     },
     "headcountHint": "Wird für das ausgewählte Jahr gespeichert, wenn Sie das Feld verlassen.",
@@ -223,7 +220,8 @@
       "kept_other": "{{count}} Abteilungen können nicht gelöscht werden und bleiben erhalten:",
       "deleted_one": "{{count}} Abteilung gelöscht",
       "deleted_other": "{{count}} Abteilungen gelöscht"
-    }
+    },
+    "creationRecord": "Die Abteilung"
   },
   "costCenters": {
     "title": "Kostenstellen",
@@ -264,7 +262,6 @@
     },
     "placeholders": {
       "code": "z. B. CC-100",
-      "name": "z. B. Infrastruktur",
       "description": "z. B. Server, Netzwerk und Arbeitsplatz-Tools",
       "topLevel": "Oberste Ebene",
       "ownerMissing": "Budgetverantwortlicher fehlt"
@@ -299,7 +296,8 @@
       "kept_other": "{{count}} Kostenstellen können nicht gelöscht werden und bleiben erhalten:",
       "deleted_one": "{{count}} Kostenstelle gelöscht",
       "deleted_other": "{{count}} Kostenstellen gelöscht"
-    }
+    },
+    "creationRecord": "Die Kostenstelle"
   },
   "workingDayCalendars": {
     "title": "Arbeitstagekalender",
@@ -310,8 +308,6 @@
     "import": "Kalender importieren",
     "previous": "Vorheriger Kalender",
     "next": "Nächster Kalender",
-    "createHint": "Sobald der Kalender angelegt ist, geben Sie die Arbeitstage jedes Jahres ein.",
-    "createHintStandard": "Die Arbeitstage jedes Jahres folgen den Feiertagen von {{source}}. Sie können danach jeden Monat ändern.",
     "wholeCountry": "Ganzes Land",
     "yearsAll": "Alle Jahre",
     "yearsAllEdited": "Alle Jahre, {{years}} geändert",
@@ -340,7 +336,6 @@
     "placeholders": {
       "country": "z. B. Frankreich",
       "code": "z. B. CAL-01",
-      "name": "z. B. Mitarbeitende am Hauptsitz",
       "description": "z. B. Arbeitstage der Angestellten, ohne Feiertage",
       "days": "z. B. 20"
     },
@@ -402,14 +397,14 @@
       "kept_other": "{{count}} Kalender können nicht gelöscht werden und bleiben erhalten:",
       "deleted_one": "{{count}} Kalender gelöscht",
       "deleted_other": "{{count}} Kalender gelöscht"
-    }
+    },
+    "creationRecord": "Der Kalender"
   },
   "suppliers": {
     "title": "Lieferanten",
     "newSupplier": "Neuer Lieferant",
     "empty": "Noch keine Lieferanten.",
     "supplierFallback": "Lieferant",
-    "contactsTabHint": "Der Tab Kontakte wird nach dem Erstellen des Lieferanten verfügbar.",
     "loadError": "Fehler beim Laden des Lieferanten.",
     "columns": {
       "erpSupplierId": "ERP-Lieferanten-ID"
@@ -469,7 +464,8 @@
       "kept_other": "{{count}} Lieferanten werden noch verwendet und bleiben erhalten. Deaktivieren Sie sie stattdessen:",
       "deleted_one": "{{count}} Lieferant gelöscht",
       "deleted_other": "{{count}} Lieferanten gelöscht"
-    }
+    },
+    "creationRecord": "Der Lieferant"
   },
   "contacts": {
     "title": "Kontakte",
@@ -509,8 +505,6 @@
     },
     "placeholders": {
       "email": "z. B. name@beispiel.de",
-      "firstName": "z. B. Alex",
-      "lastName": "z. B. Martin",
       "jobTitle": "z. B. Kundenbetreuer",
       "supplier": "z. B. Lieferant A",
       "contactType": "Typ auswählen",
@@ -548,7 +542,8 @@
       "deleted_other": "{{count}} Kontakte gelöscht",
       "title_one": "Ausgewählten Kontakt löschen",
       "title_other": "{{count}} ausgewählte Kontakte löschen"
-    }
+    },
+    "creationRecord": "Der Kontakt"
   },
   "coa": {
     "title": "Kontenpläne",
@@ -691,9 +686,6 @@
     "loadError": "Fehler beim Laden des Kontos.",
     "previous": "Vorheriges Konto",
     "next": "Nächstes Konto",
-    "actions": {
-      "create": "Konto erstellen"
-    },
     "sections": {
       "consolidation": "Konsolidierung"
     },
@@ -715,7 +707,6 @@
     "placeholders": {
       "chartOfAccounts": "z. B. COA-FR",
       "accountNumber": "z. B. 6200",
-      "accountName": "z. B. Software-Abonnements",
       "nativeName": "z. B. Logiciels SaaS",
       "description": "z. B. SaaS-Lizenzen und Cloud-Abonnements"
     },
@@ -739,7 +730,8 @@
       "chartRequired": "Wählen Sie einen Kontenplan.",
       "numberInvalid": "Geben Sie eine ganze Zahl größer als null mit höchstens {{max}} Ziffern ein.",
       "nameRequired": "Geben Sie einen Namen ein."
-    }
+    },
+    "creationRecord": "Das Konto"
   },
   "analytics": {
     "title": "Analysedimensionen",
@@ -812,10 +804,8 @@
       "openValues": "Jede Person, die eine Zeile bearbeiten kann, kann einen Wert hinzufügen, über die Zeile oder die Budgetdatei."
     },
     "placeholders": {
-      "dimensionName": "z. B. Kostenart",
       "dimensionCode": "z. B. kostenart",
       "dimensionDescription": "z. B. Die Art der Ausgabe",
-      "valueName": "z. B. Lizenzen",
       "valueDescription": "z. B. Softwareabonnements und Support"
     },
     "usage": {
@@ -937,7 +927,9 @@
       "failed": "Die Dimensionen konnten nicht hinzugefügt werden.",
       "loadFailed": "Die empfohlenen Dimensionen konnten nicht geladen werden."
     },
-    "addValue": "„{{value}}“ hinzufügen"
+    "addValue": "„{{value}}“ hinzufügen",
+    "valueCreationRecord": "Der Wert",
+    "dimensionCreationRecord": "Die Dimension"
   },
   "businessProcesses": {
     "title": "Geschäftsprozesse",

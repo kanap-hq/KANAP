@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
+import { KanapDialogProvider } from '../../components/design';
 import { STATUS_SCOPE_PARAM } from '../../utils/statusScopeParams';
 import type { AnalyticsAxisDetail, AnalyticsValueDetail } from '../../services/analytics';
 
@@ -103,6 +104,7 @@ function renderAt(path: string, queryClient = new QueryClient({ defaultOptions: 
   return render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={createAppTheme('light')}>
+        <KanapDialogProvider>
         <MemoryRouter initialEntries={[path]}>
           <Link to="/master-data/analytics/v-2/overview?axis=ax-nature">go to v-2</Link>
           <Routes>
@@ -110,6 +112,7 @@ function renderAt(path: string, queryClient = new QueryClient({ defaultOptions: 
             <Route path="/master-data/analytics/:id/:tab" element={<AnalyticsWorkspacePage />} />
           </Routes>
         </MemoryRouter>
+        </KanapDialogProvider>
       </ThemeProvider>
     </QueryClientProvider>,
   );
@@ -366,21 +369,24 @@ describe('AnalyticsWorkspacePage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('A value named Hardware already exists in Nature.');
   });
 
-  it('creates in the page dimension and posts it', async () => {
-    mocked.createAnalyticsValue.mockResolvedValue({ ...VALUE, id: 'v-new' });
+  it('creates the value in the page dimension once its name is committed, then opens it', async () => {
+    mocked.createAnalyticsValue.mockResolvedValue({ ...VALUE, id: 'v-new', creation_token: 'token-1' });
     renderAt('/master-data/analytics/new/overview?axis=ax-nature&sort=name%3AASC');
-    expect(screen.queryByRole('complementary')).toBeNull();
     const dimension = screen.getByLabelText('analytics.fields.dimension');
     expect(within(dimension.parentElement as HTMLElement).getByRole('combobox')).toHaveTextContent('Nature');
-    fireEvent.change(screen.getByLabelText('analytics.fields.name'), { target: { value: ' Hardware ' } });
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    fireEvent.change(title, { target: { value: ' Hardware ' } });
+    fireEvent.blur(title);
     await waitFor(() => expect(mocked.createAnalyticsValue).toHaveBeenCalledWith({
       axis_id: 'ax-nature',
       name: 'Hardware',
       description: null,
       applies_to: null,
+      status: 'enabled',
+      disabled_at: null,
     }));
-    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/analytics/v-new/overview?sort=name%3AASC&axis=ax-nature'));
+    // The new value opens in place, in the list's context.
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/analytics/v-new/overview?sort=name%3AASC&axis=ax-nature', { replace: true }));
   });
 
   it('offers enabled dimensions only, and falls back to the default for a disabled one', async () => {
@@ -393,7 +399,7 @@ describe('AnalyticsWorkspacePage', () => {
     const options = await screen.findAllByRole('option');
     expect(options.map((o) => o.textContent)).toEqual(['Analytics dimension', 'Nature']);
     fireEvent.click(options[1]);
-    fireEvent.change(screen.getByLabelText('analytics.fields.name'), { target: { value: 'Hardware' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Hardware' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(mocked.createAnalyticsValue).toHaveBeenCalledWith(expect.objectContaining({ axis_id: 'ax-nature' })));
   });
@@ -403,13 +409,15 @@ describe('AnalyticsWorkspacePage', () => {
     renderAt('/master-data/analytics/new/overview?axis=ax-nature');
     expect(usageSelect()).toHaveTextContent('master-data:shared.lineTypeUsage.both');
     await pickUsage('master-data:shared.lineTypeUsage.capex');
-    fireEvent.change(screen.getByLabelText('analytics.fields.name'), { target: { value: 'Leasing' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Leasing' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(mocked.createAnalyticsValue).toHaveBeenCalledWith({
       axis_id: 'ax-nature',
       name: 'Leasing',
       description: null,
       applies_to: 'capex',
+      status: 'enabled',
+      disabled_at: null,
     }));
   });
 
@@ -434,7 +442,7 @@ describe('AnalyticsWorkspacePage', () => {
     expect(within(listbox).getByRole('option', { name: 'master-data:shared.lineTypeUsage.capex' })).not.toHaveAttribute('aria-disabled');
     expect(within(listbox).getByRole('option', { name: 'master-data:shared.lineTypeUsage.both' })).not.toHaveAttribute('aria-disabled');
     fireEvent.keyDown(listbox, { key: 'Escape' });
-    fireEvent.change(screen.getByLabelText('analytics.fields.name'), { target: { value: 'Leasing' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Leasing' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(mocked.createAnalyticsValue).toHaveBeenCalledWith(expect.objectContaining({ axis_id: 'ax-nature', applies_to: null })));
     // A refusal on the field shows under it.

@@ -2,7 +2,8 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, Button, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Stack, TextField, Typography } from '@mui/material';
+import { CreationActions, useCreationLeave, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
 import { useDepartmentNav } from '../../hooks/useDepartmentNav';
@@ -11,7 +12,7 @@ import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetai
 import { PropertyGroup, PropertyRow } from '../../components/design';
 import CompanySelect from '../../components/fields/CompanySelect';
 import StatusLifecycleField from '../../components/fields/StatusLifecycleField';
-import { STATUS_DISABLED, deriveStatusFromDisabledAt, normalizeStatus } from '../../constants/status';
+import { STATUS_DISABLED, STATUS_ENABLED, deriveStatusFromDisabledAt, normalizeStatus } from '../../constants/status';
 import { drawerFieldValueSx, longFormSurfaceFieldSx } from '../../theme/formSx';
 import { getApiErrorMessage, isDuplicateError } from '../../utils/apiErrorMessage';
 import RecordDeleteButton from '../../components/workspace/RecordDeleteButton';
@@ -38,6 +39,9 @@ type Department = {
 
 type DepartmentField = 'name' | 'company_id' | 'description' | 'disabled_at';
 type FieldErrors = Partial<Record<DepartmentField, string>>;
+
+/** What a new department starts from. */
+const NEW_DEPARTMENT: Department = { id: '', name: '', company_id: '', description: null, status: STATUS_ENABLED, disabled_at: null };
 
 const DEPARTMENT_FIELDS: ReadonlySet<string> = new Set<DepartmentField>(['name', 'company_id', 'description', 'disabled_at']);
 
@@ -81,11 +85,15 @@ export default function DepartmentWorkspacePage() {
   const detailKey = React.useMemo(() => ['departments', id] as const, [id]);
   // Set once the department is deleted: the page leaves without loading it again.
   const [deletedId, setDeletedId] = React.useState<string | null>(null);
-  const { data, error: loadError } = useQuery({
+  const { data: stored, error: loadError } = useQuery({
     queryKey: detailKey,
     queryFn: async () => (await api.get<Department>(`/departments/${id}`)).data,
     enabled: !isCreate && !!id && deletedId !== id,
   });
+  // The new page is the department's own page on a draft: the fields write here, Create sends it.
+  const [draft, setDraft] = React.useState<Department>(NEW_DEPARTMENT);
+  const draftRef = React.useRef(draft);
+  const data = isCreate ? draft : stored;
 
   const [errors, setErrors] = React.useState<FieldErrors>({});
   // Autosave never blocks the fields: writes queue one after the other, so a response never
@@ -115,6 +123,12 @@ export default function DepartmentWorkspacePage() {
 
   const patch = React.useCallback(
     (body: Partial<Department>, field: DepartmentField): Promise<void> => {
+      if (isCreate) {
+        setErrors((prev) => ({ ...prev, [field]: undefined }));
+        draftRef.current = { ...draftRef.current, ...body };
+        setDraft(draftRef.current);
+        return Promise.resolve();
+      }
       const recordId = data?.id;
       if (!recordId || !canEdit) return Promise.resolve();
       setErrors((prev) => ({ ...prev, [field]: undefined }));
@@ -137,7 +151,7 @@ export default function DepartmentWorkspacePage() {
       chainRef.current = result.catch(() => undefined);
       return result;
     },
-    [canEdit, data?.id, queryClient, t],
+    [canEdit, data?.id, isCreate, queryClient, t],
   );
 
   const setYear = (next: number) => {
@@ -146,21 +160,64 @@ export default function DepartmentWorkspacePage() {
     setSearchParams(sp, { replace: true });
   };
 
-  if (isCreate) {
-    return (
-      <DepartmentCreate
-        canCreate={canEdit}
-        onClose={handleClose}
-        onCreated={(newId) => goTo(newId, 'overview')}
-      />
-    );
-  }
+  // The draft is created once it has its name and company; the department then opens, every tab
+  // available, with Create (kept, back where the creation started) and Cancel (deleted).
+  const leave = useCreationLeave(handleClose);
+  const title = useCreationTitle({
+    requiredMessage: t('departments.messages.nameRequired'),
+    onCancel: leave,
+    onCommit: () => creation.attempt(),
+  });
+  const [createError, setCreateError] = React.useState<string | null>(null);
+  const creation = useDraftCreation({
+    isCreate,
+    family: 'departments',
+    apiBase: '/departments',
+    recordId: stored?.id ?? null,
+    listPath: withContext(LIST_PATH),
+    recordLabel: t('departments.creationRecord'),
+    queryKeyPrefixes: ['departments'],
+    ready: () => !!title.current().trim() && !!draftRef.current.company_id,
+    post: async () => {
+      setCreateError(null);
+      try {
+        const { company_id, description, status, disabled_at } = draftRef.current;
+        const { data: created } = await api.post<Department & { creation_token: string }>('/departments', {
+          name: title.current().trim(), company_id, description, status, disabled_at,
+        });
+        void queryClient.invalidateQueries({ queryKey: ['departments'] });
+        return { id: created.id, token: created.creation_token, path: withContext(`${LIST_PATH}/${created.id}/overview`) };
+      } catch (e) {
+        const message = getApiErrorMessage(e, t, t('departments.messages.createFailed'));
+        const field = departmentRefusalField(e);
+        if (isDuplicateError(e)) title.refuse(t('departments.messages.nameTaken'));
+        else if (field === 'name') title.refuse(message);
+        else if (field) setErrors((prev) => ({ ...prev, [field]: message }));
+        else setCreateError(message);
+        return null;
+      }
+    },
+    onError: setCreateError,
+  });
+  React.useEffect(() => { creation.attempt(); }, [creation.attempt, draft]);
+  const handleCreate = () => {
+    if (creation.beingCreated) {
+      creation.finishCreation();
+      return;
+    }
+    if (!canEdit) return;
+    const name = title.require();
+    const { company_id } = draftRef.current;
+    if (!company_id) setErrors((prev) => ({ ...prev, company_id: t('departments.messages.companyRequired') }));
+    if (!name || !company_id) return;
+    void creation.createAndLeave();
+  };
 
   const disabled = !canEdit;
   const tabs = [
     { key: 'overview', label: t('shared.labels.overview') },
-    { key: 'details', label: t('shared.labels.details') },
-    { key: RECORD_HISTORY_TAB_KEY, label: t('shared.labels.history') },
+    { key: 'details', label: t('shared.labels.details'), disabled: isCreate },
+    { key: RECORD_HISTORY_TAB_KEY, label: t('shared.labels.history'), disabled: isCreate },
   ];
 
   const properties = data ? (
@@ -169,7 +226,7 @@ export default function DepartmentWorkspacePage() {
         <CompanySelect
           hideLabel
           label={t('departments.fields.company')}
-          value={data.company_id}
+          value={data.company_id || null}
           onChange={(companyId) => {
             if (companyId && companyId !== data.company_id) void patch({ company_id: companyId }, 'company_id');
           }}
@@ -212,15 +269,20 @@ export default function DepartmentWorkspacePage() {
         onTabChange={(next) => goTo(id, next as TabKey)}
         drawerStorageKey="kanap.departments.drawerOpen"
         backLabel={t('departments.title')}
-        onBack={handleClose}
-        title={data?.name ?? ''}
-        titleFallback={t('departments.departmentFallback')}
-        titleError={errors.name}
-        canEditTitle={canEdit && !!data}
-        onTitleSave={(next) => {
-          if (data && next !== data.name) void patch({ name: next }, 'name');
-        }}
-        nav={nav.total > 0 ? {
+        onBack={isCreate ? leave : handleClose}
+        {...(isCreate ? title.shellProps : {
+          title: data?.name ?? '',
+          titleError: errors.name,
+          canEditTitle: canEdit && !!data,
+          onTitleSave: (next: string) => {
+            if (data && next !== data.name) void patch({ name: next }, 'name');
+          },
+        })}
+        titleFallback={isCreate ? t('departments.newDepartment') : t('departments.departmentFallback')}
+        isCreate={isCreate}
+        // A new record's required fields sit in the drawer: it stays open.
+        forceDrawerOpen={isCreate}
+        nav={!isCreate && nav.total > 0 ? {
           currentIndex: nav.index + 1,
           totalCount: nav.total,
           hasPrev: nav.hasPrev,
@@ -230,7 +292,13 @@ export default function DepartmentWorkspacePage() {
           previousLabel: t('departments.previous'),
           nextLabel: t('departments.next'),
         } : undefined}
-        actions={data && canDelete ? (
+        actions={isCreate || creation.beingCreated ? (
+          <CreationActions
+            onCreate={handleCreate}
+            onCancel={isCreate ? leave : () => { void creation.cancelCreation(); }}
+            busy={!canEdit || creation.busy}
+          />
+        ) : data && canDelete ? (
           <RecordDeleteButton
             base="/departments"
             id={data.id}
@@ -242,13 +310,16 @@ export default function DepartmentWorkspacePage() {
         properties={properties}
       >
         {data && tab === 'overview' && (
-          <DescriptionField
-            key={data.id}
-            value={data.description ?? ''}
-            disabled={disabled}
-            error={errors.description}
-            onCommit={(description) => void patch({ description }, 'description')}
-          />
+          <Stack spacing={3}>
+            <DescriptionField
+              key={data.id}
+              value={data.description ?? ''}
+              disabled={disabled}
+              error={errors.description}
+              onCommit={(description) => void patch({ description }, 'description')}
+            />
+            {createError && <Alert severity="error" sx={{ maxWidth: 900 }}>{createError}</Alert>}
+          </Stack>
         )}
         {data && tab === 'details' && (
           <DepartmentHeadcountTab
@@ -307,120 +378,6 @@ function DescriptionField({
         sx={longFormSurfaceFieldSx}
         inputProps={{ 'aria-label': t('departments.fields.description') }}
       />
-    </Box>
-  );
-}
-
-function DepartmentCreate({
-  canCreate,
-  onClose,
-  onCreated,
-}: {
-  canCreate: boolean;
-  onClose: () => void;
-  onCreated: (id: string) => void;
-}) {
-  const { t } = useTranslation(['master-data', 'common']);
-  const queryClient = useQueryClient();
-  const [name, setName] = React.useState('');
-  const [companyId, setCompanyId] = React.useState<string | null>(null);
-  const [description, setDescription] = React.useState('');
-  const [errors, setErrors] = React.useState<FieldErrors>({});
-  const [serverError, setServerError] = React.useState<string | null>(null);
-  const [submitting, setSubmitting] = React.useState(false);
-
-  const handleCreate = async () => {
-    if (!canCreate || submitting) return;
-    const trimmed = name.trim();
-    const nextErrors: FieldErrors = {};
-    if (!trimmed) nextErrors.name = t('departments.messages.nameRequired');
-    if (!companyId) nextErrors.company_id = t('departments.messages.companyRequired');
-    setErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0) return;
-    setSubmitting(true);
-    setServerError(null);
-    try {
-      const res = await api.post<Department>('/departments', {
-        name: trimmed,
-        company_id: companyId,
-        description: description.trim() || null,
-      });
-      void queryClient.invalidateQueries({ queryKey: ['departments'] });
-      onCreated(res.data.id);
-    } catch (e) {
-      const message = getApiErrorMessage(e, t, t('departments.messages.createFailed'));
-      const field = departmentRefusalField(e);
-      if (isDuplicateError(e)) setErrors({ name: t('departments.messages.nameTaken') });
-      else if (field === 'name' || field === 'company_id' || field === 'description') setErrors({ [field]: message });
-      else setServerError(message);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-      <PortfolioDetailWorkspaceShell
-        activeTab="overview"
-        tabs={[
-          { key: 'overview', label: t('shared.labels.overview') },
-          { key: 'details', label: t('shared.labels.details'), disabled: true },
-        ]}
-        onTabChange={() => undefined}
-        drawerStorageKey="kanap.departments.drawerOpen"
-        backLabel={t('departments.title')}
-        onBack={onClose}
-        title={name}
-        titleFallback={t('departments.newDepartment')}
-        isCreate
-        actions={(
-          <Button variant="contained" size="small" onClick={() => void handleCreate()} disabled={!canCreate || submitting}>
-            {t('common:buttons.create')}
-          </Button>
-        )}
-      >
-        <Stack spacing={1.5} sx={{ maxWidth: 560 }}>
-          <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>{t('departments.detailsTabHint')}</Typography>
-          <PropertyRow label={t('departments.fields.name')} required valueSx={{ maxWidth: 520 }}>
-            <TextField
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              variant="standard"
-              sx={drawerFieldValueSx}
-              placeholder={t('departments.placeholders.name')}
-              error={!!errors.name}
-              helperText={errors.name}
-              inputProps={{ 'aria-label': t('departments.fields.name'), autoComplete: 'off' }}
-            />
-          </PropertyRow>
-          <PropertyRow label={t('departments.fields.company')} required valueSx={{ maxWidth: 520 }}>
-            <CompanySelect
-              hideLabel
-              label={t('departments.fields.company')}
-              value={companyId}
-              onChange={setCompanyId}
-              error={!!errors.company_id}
-              helperText={errors.company_id}
-              textFieldSx={drawerFieldValueSx}
-            />
-          </PropertyRow>
-          <PropertyRow label={t('departments.fields.description')} valueSx={{ maxWidth: 520 }}>
-            <TextField
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              multiline
-              minRows={2}
-              variant="standard"
-              sx={drawerFieldValueSx}
-              placeholder={t('departments.placeholders.description')}
-              error={!!errors.description}
-              helperText={errors.description}
-              inputProps={{ 'aria-label': t('departments.fields.description') }}
-            />
-          </PropertyRow>
-          {serverError && <Alert severity="error">{serverError}</Alert>}
-        </Stack>
-      </PortfolioDetailWorkspaceShell>
     </Box>
   );
 }

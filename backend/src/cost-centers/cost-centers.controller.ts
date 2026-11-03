@@ -33,6 +33,7 @@ import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-ti
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 import { csvExportFormat } from '../common/csv/csv-export.service';
 import { csvExportBody } from '../common/csv/send-csv-export';
+import { cancelCreation, readCreationChanges, withCreationToken } from '../common/creation/creation-routes';
 
 function context(ctx: TenantRequest): CostCenterContext {
   if (!ctx.manager) throw new InternalServerErrorException('Missing request transaction.');
@@ -115,8 +116,24 @@ export class CostCentersController {
   @ReservedToUnscopedDataAccess()
   @RequireLevel('cost_centers', 'member')
   @Post()
-  create(@Body() body: CostCenterCreateDto, @Tenant() ctx: TenantRequest) {
-    return this.svc.create(body, context(ctx));
+  async create(@Body() body: CostCenterCreateDto, @Tenant() ctx: TenantRequest) {
+    return withCreationToken('cost_centers', await this.svc.create(body, context(ctx)), ctx);
+  }
+
+  // Before Cancel of the node being created: what was written on it since (common/creation).
+  @ReservedToUnscopedDataAccess()
+  @RequireLevel('cost_centers', 'member')
+  @Get(':id/creation')
+  creationChanges(@Param('id', new ParseUUIDPipe()) id: string, @Query('token') token: string, @Tenant() ctx: TenantRequest) {
+    return readCreationChanges('cost_centers', id, token, ctx);
+  }
+
+  // Cancel: the creator deletes the node they just created, with its token, without the delete right.
+  @ReservedToUnscopedDataAccess()
+  @RequireLevel('cost_centers', 'member')
+  @Delete(':id/creation')
+  cancelCreation(@Param('id', new ParseUUIDPipe()) id: string, @Body() body: { token?: string }, @Tenant() ctx: TenantRequest) {
+    return cancelCreation('cost_centers', id, body?.token, ctx, () => this.deleteSvc.delete(id, context(ctx)));
   }
 
   @ReservedToUnscopedDataAccess()

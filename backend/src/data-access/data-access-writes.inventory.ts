@@ -65,6 +65,7 @@ const LINE_LOCK = 'under the line lock (lockBudgetLine): 403 when the line is re
 const VERSION_LOCK = 'under the version lock (lockBudgetVersions, through lockVersion or lockVersionWithLine): 403 when the line is read only';
 const OWN_LINE_LOCK = 'the line locked FOR NO KEY UPDATE first; no row: assertLinesEditable gives the 403 of a read-only line, else 404';
 const LINE_DELETE = 'delete of a line: reserved (spec §2.7); the creator of a line being created cancels it with its token (the cancelCreation of the budget lines service, through deleteRowsOf: token checked, line locked under the policies, withCreatorCancelAccess for that line only)';
+const CONTRACT_DELETE = 'delete of a contract: reserved (spec §2.7); the creator of a contract being created cancels it with its token (the cancelCreation of the contracts delete service: token checked, contract locked under the policies, withCreatorCancelAccess for that contract only)';
 const BUDGET_FILE = 'budget file load: rows planned with the line rules (budget-file/access.ts); a refused write rolls the load back (409)';
 const ACTIVITIES = 'portfolio_activities has no data-access policy (data-access-tables.inventory.ts); the task is read first under the policies (404 when hidden)';
 const TASK_ELEMENT = 'assertTaskModifiable (data_access_task_modifiable, the policy of the task elements) before the write';
@@ -123,7 +124,7 @@ export const DATA_ACCESS_WRITES: DataAccessWriteEntry[] = [
   { file: 'contracts/contract-renewal.service.ts', member: 'writeRenewal', count: 1, handling: 'pre_check', reason: 'the renewal actions check assertContractsEditable before this UPDATE' },
   { file: 'contracts/contract-settings.controller.ts', member: 'update', count: 1, handling: 'reserved', reason: 'contract settings (contract-settings.controller, reserved)' },
   { file: 'contracts/contract-settings.service.ts', member: 'update', count: 1, handling: 'reserved', reason: 'contract settings are tenant settings (spec §2.7)' },
-  { file: 'contracts/contracts-delete.service.ts', member: 'deleteOne', count: 4, handling: 'reserved', reason: 'delete of a contract: reserved (spec §2.7)' },
+  { file: 'contracts/contracts-delete.service.ts', member: 'deleteOne', count: 4, handling: 'reserved', reason: CONTRACT_DELETE },
   { file: 'contracts/contracts.controller.ts', member: 'delete', count: 1, handling: 'reserved', reason: 'delete of a contract: reserved (spec §2.7)' },
   { file: 'contracts/contracts.controller.ts', member: 'update', count: 1, handling: 'delegates', reason: 'ContractsService.update (editable, placement)' },
   { file: 'contracts/contracts.service.ts', member: 'bulkReplaceContractsForCapexItem', count: 2, handling: 'visible_links', reason: 'line to contracts: the line is checked editable, the contract ids read under the policies (a hidden one is not found), the stored links read through contracts, DELETE ... USING contracts so the hidden links stay' },

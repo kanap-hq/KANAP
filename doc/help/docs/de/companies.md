@@ -116,7 +116,9 @@ Der Übersichts-Tab enthält die Adresse, die Registrierungsangaben und die Noti
     - **USt-IdNr.**: Umsatzsteuer-Identifikationsnummer
 - **Notizen**: Freitextnotizen
 
-**Ein Unternehmen erstellen**: **Neu** öffnet ein einziges Formular mit dem Namen, **Land**, **Basiswährung**, **Kontenplan**, **Stadt**, den übrigen Adressfeldern, den Registrierungsfeldern und **Notizen**. Mit der Wahl eines Landes wird der **Kontenplan** für Sie ausgefüllt: der Standard-Kontenplan des Landes, falls vorhanden, sonst ein globaler Kontenplan. Sie können ihn vor dem Speichern ändern. Klicken Sie auf **Erstellen**, um das Unternehmen zu speichern. Der Tab **Details** steht nach dem Erstellen des Unternehmens zur Verfügung.
+**Ein Unternehmen erstellen**: **Neu** öffnet die Seite des neuen Unternehmens mit geöffnetem Eigenschaftenbereich. Geben Sie den Namen im Titel oben auf der Seite ein und füllen Sie dann **Land** und **Stadt** aus. Mit der Wahl eines Landes werden die **Basiswährung** (die Währung des Landes) und der **Kontenplan** (der Standard-Kontenplan des Landes, falls vorhanden, sonst ein globaler Kontenplan) für Sie ausgefüllt. Das Unternehmen wird erstellt, sobald Name, **Land**, **Basiswährung** und **Stadt** angegeben sind. Dann werden alle Reiter verfügbar, und die übrigen Felder werden automatisch gespeichert. Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erstellen.
+
+Solange das Unternehmen erstellt wird, zeigt die Kopfzeile **Erstellen** und **Abbrechen**, bis Sie die Seite verlassen. **Erstellen** behält das Unternehmen und bringt Sie dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm. Fehlt noch ein Pflichtfeld, wird es stattdessen markiert. **Abbrechen** verlässt die Seite, ohne etwas zu behalten. Ein bereits erstelltes Unternehmen wird dabei gelöscht. Wenn Sie mehr als die Angaben zur Erstellung eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Unternehmen abbrechen. Verlassen Sie die Seite auf andere Weise, bleibt das Unternehmen bestehen.
 
 ---
 
@@ -126,7 +128,7 @@ Der Details-Tab verwaltet die **Jahreskennzahlen**. Wechseln Sie mit den Jahres-
 
 **Was Sie bearbeiten können**:
 
-- **Mitarbeiterzahl** (Pflicht): Gesamtzahl der Beschäftigten im Jahr, muss eine ganze Zahl von 0 oder mehr sein
+- **Mitarbeiterzahl**: Gesamtzahl der Beschäftigten im Jahr, eine ganze Zahl von 0 oder mehr
 - **IT-Benutzer** (optional): Anzahl der IT-Benutzer, muss eine ganze Zahl von 0 oder mehr sein
 - **Umsatz** (optional): Umsatz in Millionen der Basiswährung des Unternehmens, bis zu 3 Dezimalstellen. Die Beschriftung nennt die Währung, zum Beispiel **Umsatz (Mio. USD)**
 
@@ -185,7 +187,7 @@ Ein Unternehmensadministrator (`companies:admin`) kann ein Unternehmen auf seine
 
 Viele Bereiche der App sind jahresbezogen. Unternehmen haben Kennzahlen pro Jahr:
 
-- **Mitarbeiterzahl** (Pflicht für das Jahr)
+- **Mitarbeiterzahl**
 - **IT-Benutzer** (optional)
 - **Umsatz** (optional, in Millionen der Basiswährung des Unternehmens)
 

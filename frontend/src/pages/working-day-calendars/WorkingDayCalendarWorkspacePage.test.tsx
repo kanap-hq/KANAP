@@ -149,16 +149,21 @@ describe('WorkingDayCalendarWorkspacePage', () => {
     });
   });
 
-  it('creates with an explicit button and opens the new calendar', async () => {
-    mocked.createWorkingDayProfile.mockResolvedValue({ ...CALENDAR, id: 'wd-new' });
+  it('creates the calendar once it has its code and its name is committed, then opens it', async () => {
+    mocked.createWorkingDayProfile.mockResolvedValue({ ...CALENDAR, id: 'wd-new', creation_token: 'token-1' });
     renderAt('/master-data/working-day-calendars/new/overview?sort=name%3AASC');
-    // No Properties drawer on the create page.
-    expect(screen.queryByRole('complementary')).toBeNull();
+    // The calendar's own page: the code sits in its Properties drawer.
+    expect(screen.getByRole('complementary')).toContainElement(screen.getByLabelText('workingDayCalendars.fields.code'));
     fireEvent.change(screen.getByLabelText('workingDayCalendars.fields.code'), { target: { value: ' CAL-02 ' } });
-    fireEvent.change(screen.getByLabelText('workingDayCalendars.fields.name'), { target: { value: 'Contractors' } });
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
-    await waitFor(() => expect(mocked.createWorkingDayProfile).toHaveBeenCalledWith({ code: 'CAL-02', name: 'Contractors', description: null }));
-    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/working-day-calendars/wd-new/overview?sort=name%3AASC'));
+    fireEvent.blur(screen.getByLabelText('workingDayCalendars.fields.code'));
+    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    fireEvent.change(title, { target: { value: 'Contractors' } });
+    expect(mocked.createWorkingDayProfile).not.toHaveBeenCalled();
+    fireEvent.blur(title);
+    await waitFor(() => expect(mocked.createWorkingDayProfile).toHaveBeenCalledWith({
+      code: 'CAL-02', name: 'Contractors', description: null, status: 'enabled', disabled_at: null, days_by_year: {},
+    }));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/working-day-calendars/wd-new/overview?sort=name%3AASC', { replace: true }));
   });
 
   it('reads the calendar with its names in the UI language, and no year route for a custom calendar', async () => {
@@ -181,33 +186,34 @@ describe('WorkingDayCalendarWorkspacePage', () => {
     expect(screen.queryByRole('button', { name: 'admin:auditLogs.history.title' })).toBeNull();
   });
 
-  it('prefills code and name from a country and its region, and creates a standard calendar', async () => {
-    mocked.createWorkingDayProfile.mockResolvedValue({ ...MOSELLE, id: 'wd-new' });
+  it('prefills code and name from a country and its region, and creates the standard calendar once the region is chosen', async () => {
+    mocked.createWorkingDayProfile.mockResolvedValue({ ...MOSELLE, id: 'wd-new', creation_token: 'token-1' });
     renderAt('/master-data/working-day-calendars/new/overview');
     const country = screen.getByRole('combobox', { name: 'workingDayCalendars.fields.country' });
     await waitFor(() => expect(mocked.listCountries).toHaveBeenCalledWith('en'));
     fireEvent.change(country, { target: { value: 'fra' } });
     fireEvent.click(await screen.findByRole('option', { name: 'France' }));
     expect(screen.getByLabelText('workingDayCalendars.fields.code')).toHaveValue('FR');
-    expect(screen.getByLabelText('workingDayCalendars.fields.name')).toHaveValue('France');
-    expect(screen.getByTestId('working-day-calendar-create-hint')).toHaveTextContent('workingDayCalendars.createHintStandard source=France');
+    expect(screen.getByRole('textbox', { name: 'common:buttons.editTitle' })).toHaveValue('France');
+    // France has regions: the calendar waits for one, or the whole country.
+    expect(mocked.createWorkingDayProfile).not.toHaveBeenCalled();
 
     const region = screen.getByRole('combobox', { name: 'workingDayCalendars.fields.region' });
     expect(region).toHaveTextContent('workingDayCalendars.wholeCountry');
     fireEvent.mouseDown(region);
     fireEvent.click(await screen.findByRole('option', { name: 'Moselle' }));
     expect(screen.getByLabelText('workingDayCalendars.fields.code')).toHaveValue('FR-57');
-    expect(screen.getByLabelText('workingDayCalendars.fields.name')).toHaveValue('France (Moselle)');
-
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    expect(screen.getByRole('textbox', { name: 'common:buttons.editTitle' })).toHaveValue('France (Moselle)');
     await waitFor(() => expect(mocked.createWorkingDayProfile).toHaveBeenCalledWith({
       code: 'FR-57',
       name: 'France (Moselle)',
       description: null,
+      status: 'enabled',
+      disabled_at: null,
       country_iso: 'FR',
       region_code: '57',
     }));
-    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/working-day-calendars/wd-new/overview'));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/working-day-calendars/wd-new/overview', { replace: true }));
   });
 
   it('keeps a code or name typed by the user when the country changes, and offers no region when there is none', async () => {
@@ -216,11 +222,11 @@ describe('WorkingDayCalendarWorkspacePage', () => {
     await waitFor(() => expect(mocked.listCountries).toHaveBeenCalled());
     fireEvent.change(country, { target: { value: 'Fr' } });
     fireEvent.click(await screen.findByRole('option', { name: 'France' }));
-    fireEvent.change(screen.getByLabelText('workingDayCalendars.fields.name'), { target: { value: 'Paris staff' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Paris staff' } });
     fireEvent.change(country, { target: { value: 'NL' } });
     fireEvent.click(await screen.findByRole('option', { name: 'Netherlands' }));
     expect(screen.getByLabelText('workingDayCalendars.fields.code')).toHaveValue('NL');
-    expect(screen.getByLabelText('workingDayCalendars.fields.name')).toHaveValue('Paris staff');
+    expect(screen.getByRole('textbox', { name: 'common:buttons.editTitle' })).toHaveValue('Paris staff');
     expect(screen.queryByRole('combobox', { name: 'workingDayCalendars.fields.region' })).toBeNull();
   });
 

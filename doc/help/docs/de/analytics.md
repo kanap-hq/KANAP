@@ -127,13 +127,14 @@ Klicken Sie auf eine beliebige Zelle, um den Arbeitsbereich des Werts zu öffnen
 
 ### Eine Dimension erstellen
 
-Klicken Sie in der Auswahlleiste auf **Neu**, füllen Sie die Felder aus und klicken Sie dann auf **Erstellen**. Der Arbeitsbereich der neuen Dimension öffnet sich. Eine neue Dimension ist aktiviert.
+Klicken Sie in der Auswahlleiste auf **Neu**. Die Seite der neuen Dimension öffnet sich mit geöffnetem Eigenschaftenbereich. Geben Sie den Namen im Titel oben auf der Seite ein. Die Dimension wird aktiviert erstellt, sobald sie ihren Namen und ihren **Code** hat. Dann werden alle Reiter verfügbar, und die übrigen Felder werden automatisch gespeichert. Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erstellen.
 
-- **Name** ist Pflicht.
-- **Code** wird aus dem Namen vorgeschlagen: Kleinbuchstaben, ohne Akzente, Leerzeichen durch `-` ersetzt. Sie können ihn ändern, bevor Sie die Dimension erstellen.
+- **Code** wird aus dem Namen vorgeschlagen: Kleinbuchstaben, ohne Akzente, Leerzeichen durch `-` ersetzt. Sie können ihn ändern.
 - **Verwendet für** beginnt mit **OPEX und CAPEX**. Siehe [OPEX- oder CAPEX-Dimensionen](#opex-oder-capex-dimensionen).
 - **Erforderlich** ist zu Beginn ausgeschaltet. Siehe [Erforderliche Dimensionen](#erforderliche-dimensionen).
 - **Beschreibung** ist optional.
+
+Solange die Dimension erstellt wird, zeigt die Kopfzeile **Erstellen** und **Abbrechen**, bis Sie die Seite verlassen. **Erstellen** behält die Dimension und bringt Sie dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm. Fehlt noch ein Pflichtfeld, wird es stattdessen markiert. **Abbrechen** verlässt die Seite, ohne etwas zu behalten. Eine bereits erstellte Dimension wird dabei gelöscht. Wenn Sie mehr als die Angaben zur Erstellung eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Dimensionen abbrechen. Verlassen Sie die Seite auf andere Weise, bleibt die Dimension bestehen.
 
 Eine neue Dimension kommt in der Reihenfolge der Dimensionen an die letzte Stelle. Kehren Sie dann zur Seite zurück, um ihre Werte hinzuzufügen.
 
@@ -242,7 +243,9 @@ Um die Werte stattdessen auf den Zeilen zu behalten, deaktivieren Sie die Dimens
 
 ### Einen Wert erstellen
 
-Klicken Sie auf **Neuer Wert**. Das Feld **Dimension** steht zunächst auf der Dimension, die auf der Seite ausgewählt ist, und bietet nur aktivierte Dimensionen an. Füllen Sie **Name** und bei Bedarf **Beschreibung** aus. **Verwendet für** steht zunächst auf **OPEX und CAPEX**: Ändern Sie es, wenn der Wert nur zu einer Zeilenart passt. Klicken Sie dann auf **Erstellen**. Der Arbeitsbereich des neuen Werts öffnet sich. Ein neuer Wert ist aktiviert.
+Klicken Sie auf **Neuer Wert**. Die Seite des neuen Werts öffnet sich mit geöffnetem Eigenschaftenbereich. Das Feld **Dimension** steht zunächst auf der Dimension, die auf der Seite ausgewählt ist, und bietet nur aktivierte Dimensionen an. Geben Sie den Namen im Titel oben auf der Seite ein. Der Wert wird aktiviert erstellt, sobald er seinen Namen und seine **Dimension** hat. Die Dimension wird einmal festgelegt, beim Anlegen. Dann werden alle Reiter verfügbar, und die übrigen Felder werden automatisch gespeichert: bei Bedarf eine **Beschreibung**, und **Verwendet für**, das zunächst auf **OPEX und CAPEX** steht (ändern Sie es, wenn der Wert nur zu einer Zeilenart passt). Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erstellen.
+
+Solange der Wert erstellt wird, zeigt die Kopfzeile **Erstellen** und **Abbrechen**, bis Sie die Seite verlassen. **Erstellen** behält den Wert und bringt Sie dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm. Fehlt noch ein Pflichtfeld, wird es stattdessen markiert. **Abbrechen** verlässt die Seite, ohne etwas zu behalten. Ein bereits erstellter Wert wird dabei gelöscht. Wenn Sie mehr als die Angaben zur Erstellung eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Werten abbrechen. Verlassen Sie die Seite auf andere Weise, bleibt der Wert bestehen.
 
 ### Der Werte-Arbeitsbereich
 

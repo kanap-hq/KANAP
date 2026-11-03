@@ -35,6 +35,7 @@ import { WorkingDayProfileContext, WorkingDayProfilesService } from './working-d
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { csvExportFormat } from '../common/csv/csv-export.service';
 import { csvExportBody } from '../common/csv/send-csv-export';
+import { cancelCreation, readCreationChanges, withCreationToken } from '../common/creation/creation-routes';
 
 function context(ctx: TenantRequest): WorkingDayProfileContext {
   if (!ctx.manager) throw new InternalServerErrorException('Missing request transaction.');
@@ -119,8 +120,22 @@ export class WorkingDayProfilesController {
 
   @RequireLevel('working_day_profiles', 'member')
   @Post()
-  create(@Body() body: WorkingDayProfileCreateDto, @Query('lang') lang: string | undefined, @Tenant() ctx: TenantRequest) {
-    return this.svc.create(body, context(ctx), lang);
+  async create(@Body() body: WorkingDayProfileCreateDto, @Query('lang') lang: string | undefined, @Tenant() ctx: TenantRequest) {
+    return withCreationToken('working_day_profiles', await this.svc.create(body, context(ctx), lang), ctx);
+  }
+
+  // Before Cancel of the calendar being created: what was written on it since (common/creation).
+  @RequireLevel('working_day_profiles', 'member')
+  @Get(':id/creation')
+  creationChanges(@Param('id', new ParseUUIDPipe()) id: string, @Query('token') token: string, @Tenant() ctx: TenantRequest) {
+    return readCreationChanges('working_day_profiles', id, token, ctx);
+  }
+
+  // Cancel: the creator deletes the calendar they just created, with its token, without the delete right.
+  @RequireLevel('working_day_profiles', 'member')
+  @Delete(':id/creation')
+  cancelCreation(@Param('id', new ParseUUIDPipe()) id: string, @Body() body: { token?: string }, @Tenant() ctx: TenantRequest) {
+    return cancelCreation('working_day_profiles', id, body?.token, ctx, () => this.deleteSvc.delete(id, context(ctx)));
   }
 
   @RequireLevel('working_day_profiles', 'member')

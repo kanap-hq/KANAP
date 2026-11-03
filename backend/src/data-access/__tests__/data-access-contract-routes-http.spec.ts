@@ -46,6 +46,9 @@ import { DATA_ACCESS_RESERVED_MESSAGE } from '../reserved-operations';
 import { LIMITED_ROLE, PgClient, APP_URL, connect, roleExists } from './data-access-test-helpers';
 import { ContractSeed, seedContracts } from './data-access-contract-seed';
 
+// Creating a contract hands back its creation token, signed from the JWT secret.
+process.env.JWT_SECRET ||= 'data-access-contract-routes-secret';
+
 /**
  * Data-scoped access, lot 5 run 5B (planning/data-scoped-access/spec.md §2.3, §3.3, §4.3, §5.4,
  * §6.4, §6.7, §6.8, §7.7, §10.1): the contract writes over HTTP, through the real tenant

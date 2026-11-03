@@ -6,11 +6,13 @@ Los contratos documentan sus acuerdos con proveedores: licencias de software, co
 
 Vaya a **Gestión presupuestaria > Contratos** para ver la lista. Haga clic en **Nuevo** para crear un contrato (`contracts:member`).
 
-La página se abre con un único formulario. Rellénelo y haga clic en **Crear**.
+Se abre la página del contrato nuevo, con su panel de propiedades abierto. Escriba el nombre del contrato en el título de la parte superior de la página y rellene los campos obligatorios de abajo. El contrato se crea en cuanto están todos indicados, y todas sus pestañas quedan disponibles. Pulse Escape en el título vacío para salir sin crear nada.
+
+Mientras el contrato se está creando, el encabezado muestra **Crear** y **Cancelar** hasta que salga de la página. **Crear** conserva el contrato y le lleva de vuelta al punto de partida: la lista o la pantalla anterior. Si aún falta un campo obligatorio, se marca en su lugar. **Cancelar** sale sin conservar nada. En un contrato ya creado, lo elimina. Si introdujo algo más que lo necesario para crearlo, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar contratos. Si sale de la página de otra forma, el contrato se conserva. **Ctrl+S** en un contrato nuevo funciona como **Crear**.
 
 **Campos obligatorios**:
 
-- **Nombre del contrato**: un nombre fácil de reconocer
+- **Nombre**, en el título: un nombre fácil de reconocer
 - **Proveedor** y **Empresa contratante**: quién presta el servicio y cuál de sus empresas firmó
 - **Inicio**: el primer día del contrato
 - **Duración (meses)**: la duración de un periodo, al menos un mes
