@@ -105,7 +105,9 @@ Consulte esta sección antes de desactivar o eliminar un proveedor. Un proveedor
 
 ### Crear un proveedor
 
-Haga clic en **Nuevo** en la lista. Se abre la página del proveedor nuevo. Escriba el nombre en el título de la parte superior de la página, rellene el ID de proveedor ERP y las notas, y luego haga clic en **Crear**. El proveedor se crea activado y permanece abierto, con todas sus pestañas disponibles. **Cancelar**, o Escape en el título vacío, sale sin crear nada.
+Haga clic en **Nuevo** en la lista. Se abre la página del proveedor nuevo. Escriba el nombre en el título de la parte superior de la página y pulse Intro o haga clic fuera del título. El proveedor se crea al momento, activado, y todas sus pestañas quedan disponibles. El ID de proveedor ERP y las notas se guardan después automáticamente. Pulse Escape en el título vacío para salir sin crear nada.
+
+Mientras el proveedor se está creando, el encabezado muestra **Crear** y **Cancelar** hasta que salga de la página. **Crear** conserva el proveedor y le lleva de vuelta al punto de partida: la lista o la pantalla anterior. Con el título vacío, el título pide un nombre en su lugar. **Cancelar** sale sin conservar nada. En un proveedor ya creado, lo elimina. Si introdujo algo más que el nombre, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar proveedores. Si sale de la página de otra forma, el proveedor se conserva.
 
 ---
 

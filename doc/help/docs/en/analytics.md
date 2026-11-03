@@ -127,13 +127,14 @@ Click any cell to open the value's workspace.
 
 ### Creating a dimension
 
-Click **New** in the selector bar. The page of the new dimension opens, its properties panel open. Type the name in the title at the top of the page, fill in the fields, then click **Create**. A new dimension is enabled and stays open, every tab available. **Cancel**, or Escape on the empty title, leaves without creating anything.
+Click **New** in the selector bar. The page of the new dimension opens, its properties panel open. Type the name in the title at the top of the page. The dimension is created, enabled, as soon as it has its name and **Code**. Every tab then becomes available, and the other fields save automatically. Press Escape on the empty title to leave without creating anything.
 
-- The name is required.
-- **Code** is proposed from the name: lowercase, accents removed, spaces replaced by `-`. You can change it before you create the dimension.
+- **Code** is proposed from the name: lowercase, accents removed, spaces replaced by `-`. You can change it.
 - **Used for** starts on **OPEX and CAPEX**. See [OPEX or CAPEX dimensions](#opex-or-capex-dimensions).
 - **Required** starts off. See [Required dimensions](#required-dimensions).
 - **Description** is optional.
+
+While the dimension is being created, the header shows **Create** and **Cancel** until you leave it. **Create** keeps the dimension and takes you back to where you started: the list or the previous screen. If a required field is still missing, it is marked instead. **Cancel** leaves without keeping anything, and deletes the dimension if it was already created. If you entered more than what created it, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete dimensions. Leaving the dimension any other way keeps it.
 
 A new dimension goes last in the order of the dimensions. Then go back to the page to add its values.
 
@@ -242,7 +243,9 @@ To keep the values on the lines instead, disable the dimension.
 
 ### Creating a value
 
-Click **New value**. The page of the new value opens, its properties panel open. The **Dimension** field starts on the dimension selected on the page and offers the enabled dimensions only. Type the name in the title at the top of the page, and a **Description** if you like. **Used for** starts on **OPEX and CAPEX**: change it if the value suits one kind of line only. Then click **Create**. A new value is enabled and stays open, every tab available. **Cancel**, or Escape on the empty title, leaves without creating anything.
+Click **New value**. The page of the new value opens, its properties panel open. The **Dimension** field starts on the dimension selected on the page and offers the enabled dimensions only. Type the name in the title at the top of the page. The value is created, enabled, as soon as it has its name and **Dimension**. The dimension is set once, at creation. Every tab then becomes available, and the other fields save automatically: a **Description** if you like, and **Used for**, which starts on **OPEX and CAPEX** (change it if the value suits one kind of line only). Press Escape on the empty title to leave without creating anything.
+
+While the value is being created, the header shows **Create** and **Cancel** until you leave it. **Create** keeps the value and takes you back to where you started: the list or the previous screen. If a required field is still missing, it is marked instead. **Cancel** leaves without keeping anything, and deletes the value if it was already created. If you entered more than what created it, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete values. Leaving the value any other way keeps it.
 
 ### The value workspace
 

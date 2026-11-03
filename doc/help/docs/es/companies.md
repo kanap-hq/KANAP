@@ -116,7 +116,9 @@ La pestaña Visión general contiene la dirección, los datos de registro y las 
     - **Número de IVA**: número de identificación de IVA
 - **Notas**: notas de texto libre
 
-**Crear una empresa**: **Nuevo** abre la página de la empresa nueva, con su panel de propiedades abierto. Escriba el nombre en el título de la parte superior de la página y después rellene **País**, **Moneda base**, **Plan de cuentas**, **Ciudad**, los demás campos de dirección, los campos de registro y **Notas**. Al elegir un país se rellenan por usted la **Moneda base** (la moneda del país) y el **Plan de cuentas** (el plan predeterminado del país si existe, y si no un plan global). Puede cambiar ambos antes de guardar. Haga clic en **Crear** para guardar la empresa: se marca un campo obligatorio que falte y, si no, la empresa se crea y permanece abierta, con todas sus pestañas disponibles. **Cancelar**, o Escape en el título vacío, sale sin crear nada.
+**Crear una empresa**: **Nuevo** abre la página de la empresa nueva, con su panel de propiedades abierto. Escriba el nombre en el título de la parte superior de la página y después rellene **País** y **Ciudad**. Al elegir un país se rellenan por usted la **Moneda base** (la moneda del país) y el **Plan de cuentas** (el plan predeterminado del país si existe, y si no un plan global). La empresa se crea en cuanto tiene su nombre, **País**, **Moneda base** y **Ciudad**. Todas sus pestañas quedan entonces disponibles, y los demás campos se guardan automáticamente. Pulse Escape en el título vacío para salir sin crear nada.
+
+Mientras la empresa se está creando, el encabezado muestra **Crear** y **Cancelar** hasta que salga de la página. **Crear** conserva la empresa y le lleva de vuelta al punto de partida: la lista o la pantalla anterior. Si aún falta un campo obligatorio, se marca en su lugar. **Cancelar** sale sin conservar nada. En una empresa ya creada, la elimina. Si introdujo algo más que lo necesario para crearla, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar empresas. Si sale de la página de otra forma, la empresa se conserva.
 
 ---
 

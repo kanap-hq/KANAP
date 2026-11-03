@@ -6,7 +6,9 @@ Les contrats décrivent vos accords avec les fournisseurs : licences logicielles
 
 Rendez-vous dans **Gestion budgétaire > Contrats** pour voir la liste. Cliquez sur **Nouveau** pour créer un contrat (`contracts:member`).
 
-La page du nouveau contrat s'ouvre, son panneau des propriétés ouvert. Saisissez le nom du contrat dans le titre en haut de la page, remplissez les champs, puis cliquez sur **Créer** : un champ obligatoire manquant est signalé, sinon le contrat est créé et reste ouvert, tous ses onglets disponibles. **Annuler**, ou Échap dans le titre vide, part sans rien créer.
+La page du nouveau contrat s'ouvre, son panneau des propriétés ouvert. Saisissez le nom du contrat dans le titre en haut de la page et remplissez les champs obligatoires ci-dessous. Le contrat est créé dès qu'ils sont tous renseignés, et tous ses onglets deviennent disponibles. Appuyez sur Échap dans le titre vide pour partir sans rien créer.
+
+Tant que le contrat est en cours de création, l'en-tête affiche **Créer** et **Annuler** jusqu'à ce que vous quittiez la page. **Créer** conserve le contrat et vous ramène à votre point de départ : la liste ou l'écran précédent. S'il manque encore un champ obligatoire, il est signalé à la place. **Annuler** part sans rien conserver. Sur un contrat déjà créé, il le supprime. Si vous avez saisi plus que le nécessaire à la création, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des contrats. Si vous quittez la page autrement, le contrat est conservé. **Ctrl+S** sur un nouveau contrat agit comme **Créer**.
 
 **Champs obligatoires** :
 

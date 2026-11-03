@@ -68,7 +68,9 @@ La pestaña Visión general contiene la descripción. Los demás campos están e
 - **Descripción**: Descripción de texto libre
 - **Ciclo de vida**: el interruptor de estado, cuya etiqueta muestra el estado actual (**Activado** o **Desactivado**), y la fecha de **Fin de validez**. Deje la fecha en blanco para que el departamento permanezca activo indefinidamente, o fije una fecha futura para programar su fin. Pasar a **Desactivado** fija el fin de validez en este momento: la desactivación es inmediata. Mientras haya una fecha futura, el interruptor muestra **Activo hasta el** y esa fecha
 
-**Crear un departamento**: **Nuevo** abre la página del departamento nuevo, con su panel de propiedades abierto. Escriba el nombre en el título de la parte superior de la página, elija la **Empresa** y añada una **Descripción** si lo desea. Haga clic en **Crear** para guardarlo: el departamento permanece abierto, con todas sus pestañas disponibles. **Cancelar**, o Escape en el título vacío, sale sin crear nada.
+**Crear un departamento**: **Nuevo** abre la página del departamento nuevo, con su panel de propiedades abierto. Escriba el nombre en el título de la parte superior de la página y elija la **Empresa**. El departamento se crea en cuanto tiene ambos, y todas sus pestañas quedan disponibles. Una **Descripción** se guarda después automáticamente. Pulse Escape en el título vacío para salir sin crear nada.
+
+Mientras el departamento se está creando, el encabezado muestra **Crear** y **Cancelar** hasta que salga de la página. **Crear** conserva el departamento y le lleva de vuelta al punto de partida: la lista o la pantalla anterior. Si aún falta un campo obligatorio, se marca en su lugar. **Cancelar** sale sin conservar nada. En un departamento ya creado, lo elimina. Si introdujo algo más que lo necesario para crearlo, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar departamentos. Si sale de la página de otra forma, el departamento se conserva.
 
 ---
 

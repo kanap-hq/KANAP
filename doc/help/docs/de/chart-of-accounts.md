@@ -152,7 +152,9 @@ Der Abschnitt **Konsolidierung** enthält ein einziges Feld, **Konsolidierungsko
 
 ### Ein Konto erstellen
 
-**Neues Konto** in der Liste öffnet die Seite des neuen Kontos mit geöffnetem Eigenschaftenbereich, in der der Kontenplan, den Sie gerade angesehen haben, bereits ausgewählt ist. Geben Sie den Kontonamen im Titel oben auf der Seite ein, füllen Sie Kontenplan und Kontonummer sowie die optionalen Felder aus und klicken Sie auf **Erstellen**. Ein fehlendes oder ungültiges Feld wird dann markiert; andernfalls wird das Konto erstellt und bleibt geöffnet. Danach wird das Konto bei jeder Änderung automatisch gespeichert. **Abbrechen** oder Escape im leeren Titel verlässt die Seite, ohne etwas zu erstellen.
+**Neues Konto** in der Liste öffnet die Seite des neuen Kontos mit geöffnetem Eigenschaftenbereich, in der der Kontenplan, den Sie gerade angesehen haben, bereits ausgewählt ist. Geben Sie den Kontonamen im Titel oben auf der Seite ein und füllen Sie die **Kontonummer** aus. Das Konto wird erstellt, sobald es seinen Namen, seinen **Kontenplan** und eine gültige **Kontonummer** hat. Eine ungültige Nummer wird markiert, wenn Sie das Feld verlassen. Dann werden alle Reiter verfügbar, und das Konto wird bei jeder Änderung automatisch gespeichert. Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erstellen.
+
+Solange das Konto erstellt wird, zeigt die Kopfzeile **Erstellen** und **Abbrechen**, bis Sie die Seite verlassen. **Erstellen** behält das Konto und bringt Sie dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm. Fehlt noch ein Pflichtfeld, wird es stattdessen markiert. **Abbrechen** verlässt die Seite, ohne etwas zu behalten. Ein bereits erstelltes Konto wird dabei gelöscht. Wenn Sie mehr als die Angaben zur Erstellung eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Konten abbrechen. Verlassen Sie die Seite auf andere Weise, bleibt das Konto bestehen.
 
 ## Kontenpläne einrichten
 

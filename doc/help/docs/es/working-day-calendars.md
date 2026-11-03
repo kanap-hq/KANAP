@@ -78,9 +78,10 @@ Haga clic en **Nuevo**. Se abre la página del calendario nuevo, con su panel de
 2. **Región**: se muestra cuando el país tiene regiones, por ejemplo los estados alemanes o los departamentos franceses con sus propios festivos. Conserve **Todo el país** o elija una región
 3. **Código** y nombre: al elegir un país se rellenan, el nombre en el título de la parte superior de la página, por ejemplo `FR-57` y "Francia (Département Moselle)". Cámbielos si lo desea
 4. **Descripción**: opcional
-5. Haga clic en **Crear**
 
-Un calendario nuevo está activado y permanece abierto, con todas sus pestañas disponibles. **Cancelar**, o Escape en el título vacío, sale sin crear nada. Un calendario estándar contiene los días laborables de todos los años: se muestran una vez creado. En uno personalizado, introdúzcalos año por año.
+El calendario se crea, activado, en cuanto tiene su nombre y su **Código**. Si el país tiene regiones, espera a que conserve **Todo el país** o elija una región. Todas sus pestañas quedan entonces disponibles. Un calendario estándar contiene los días laborables de todos los años: se muestran una vez creado. En uno personalizado, introdúzcalos año por año. Pulse Escape en el título vacío para salir sin crear nada.
+
+Mientras el calendario se está creando, el encabezado muestra **Crear** y **Cancelar** hasta que salga de la página. **Crear** conserva el calendario y le lleva de vuelta al punto de partida: la lista o la pantalla anterior. Si aún falta un campo obligatorio, se marca en su lugar. **Cancelar** sale sin conservar nada. En un calendario ya creado, lo elimina. Si introdujo algo más que lo necesario para crearlo, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar calendarios. Si sale de la página de otra forma, el calendario se conserva.
 
 El país y la región se definen una sola vez, al crear el calendario. Para seguir otro país, cree otro calendario.
 

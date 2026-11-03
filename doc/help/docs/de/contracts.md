@@ -6,7 +6,9 @@ Verträge dokumentieren Ihre Vereinbarungen mit Lieferanten: Softwarelizenzen, W
 
 Öffnen Sie **Budgetverwaltung > Verträge**, um die Liste zu sehen. Klicken Sie auf **Neu**, um einen Vertrag anzulegen (`contracts:member`).
 
-Die Seite des neuen Vertrags öffnet sich mit geöffnetem Eigenschaftenbereich. Geben Sie den Vertragsnamen im Titel oben auf der Seite ein, füllen Sie die Felder aus und klicken Sie dann auf **Erstellen**: Ein fehlendes Pflichtfeld wird markiert, sonst wird der Vertrag erstellt und bleibt geöffnet, mit allen Reitern. **Abbrechen** oder Escape im leeren Titel verlässt die Seite, ohne etwas zu erstellen.
+Die Seite des neuen Vertrags öffnet sich mit geöffnetem Eigenschaftenbereich. Geben Sie den Vertragsnamen im Titel oben auf der Seite ein und füllen Sie die unten genannten Pflichtfelder aus. Der Vertrag wird erstellt, sobald alle angegeben sind, und alle Reiter werden verfügbar. Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erstellen.
+
+Solange der Vertrag erstellt wird, zeigt die Kopfzeile **Erstellen** und **Abbrechen**, bis Sie die Seite verlassen. **Erstellen** behält den Vertrag und bringt Sie dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm. Fehlt noch ein Pflichtfeld, wird es stattdessen markiert. **Abbrechen** verlässt die Seite, ohne etwas zu behalten. Ein bereits erstellter Vertrag wird dabei gelöscht. Wenn Sie mehr als die Angaben zur Erstellung eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Verträgen abbrechen. Verlassen Sie die Seite auf andere Weise, bleibt der Vertrag bestehen. **Strg+S** wirkt bei einem neuen Vertrag wie **Erstellen**.
 
 **Pflichtfelder**:
 

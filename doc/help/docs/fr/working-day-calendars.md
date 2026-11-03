@@ -78,9 +78,10 @@ Cliquez sur **Nouveau**. La page du nouveau calendrier s'ouvre, son panneau des 
 2. **Région** : affichée lorsque le pays a des régions, par exemple les Länder allemands ou les départements français qui ont leurs propres jours fériés. Gardez **Tout le pays**, ou choisissez une région
 3. **Code** et nom : le choix d'un pays les remplit, le nom dans le titre en haut de la page, par exemple `FR-57` et « France (Département Moselle) ». Modifiez-les si vous le souhaitez
 4. **Description** : facultative
-5. Cliquez sur **Créer**
 
-Un nouveau calendrier est activé et reste ouvert, tous ses onglets disponibles. **Annuler**, ou Échap dans le titre vide, part sans rien créer. Un calendrier standard contient les jours ouvrés de chaque année : ils s'affichent une fois le calendrier créé. Pour un calendrier personnalisé, saisissez-les année par année.
+Le calendrier est créé, activé, dès qu'il a son nom et son **Code**. Quand le pays a des régions, il attend que vous gardiez **Tout le pays** ou choisissiez une région. Tous ses onglets deviennent alors disponibles. Un calendrier standard contient les jours ouvrés de chaque année : ils s'affichent une fois le calendrier créé. Pour un calendrier personnalisé, saisissez-les année par année. Appuyez sur Échap dans le titre vide pour partir sans rien créer.
+
+Tant que le calendrier est en cours de création, l'en-tête affiche **Créer** et **Annuler** jusqu'à ce que vous quittiez la page. **Créer** conserve le calendrier et vous ramène à votre point de départ : la liste ou l'écran précédent. S'il manque encore un champ obligatoire, il est signalé à la place. **Annuler** part sans rien conserver. Sur un calendrier déjà créé, il le supprime. Si vous avez saisi plus que le nécessaire à la création, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des calendriers. Si vous quittez la page autrement, le calendrier est conservé.
 
 Le pays et la région se définissent une seule fois, à la création. Pour suivre un autre pays, créez un autre calendrier.
 

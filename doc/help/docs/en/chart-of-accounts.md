@@ -152,7 +152,9 @@ The **Consolidation** section holds one field, **Consolidation account**. It is 
 
 ### Creating an account
 
-**New account** on the list opens the page of the new account, its properties panel open, with the chart you were viewing already selected. Type the account name in the title at the top of the page, fill in the chart and the account number, plus the optional fields, then click **Create**. A missing or invalid field is marked then; otherwise the account is created and stays open. Once created, the account saves automatically whenever you change it. **Cancel**, or Escape on the empty title, leaves without creating anything.
+**New account** on the list opens the page of the new account, its properties panel open, with the chart you were viewing already selected. Type the account name in the title at the top of the page and fill in the **Account number**. The account is created as soon as it has its name, its **Chart of accounts** and a valid **Account number**. An invalid number is marked when you leave the field. Every tab then becomes available, and the account saves automatically whenever you change it. Press Escape on the empty title to leave without creating anything.
+
+While the account is being created, the header shows **Create** and **Cancel** until you leave it. **Create** keeps the account and takes you back to where you started: the list or the previous screen. If a required field is still missing, it is marked instead. **Cancel** leaves without keeping anything, and deletes the account if it was already created. If you entered more than what created it, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete accounts. Leaving the account any other way keeps it.
 
 ## Setting up Charts of Accounts
 

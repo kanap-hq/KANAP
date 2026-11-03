@@ -105,7 +105,9 @@ Check this section before you disable or delete a supplier. A supplier still use
 
 ### Creating a supplier
 
-Click **New** in the list. The page of the new supplier opens. Type the name in the title at the top of the page, fill in the ERP supplier ID and the notes, then click **Create**. The supplier is created enabled and stays open, every tab available. **Cancel**, or Escape on the empty title, leaves without creating anything.
+Click **New** in the list. The page of the new supplier opens. Type the name in the title at the top of the page, then press Enter or click outside the title. The supplier is created at once, enabled, and every tab becomes available. The ERP supplier ID and the notes then save automatically. Press Escape on the empty title to leave without creating anything.
+
+While the supplier is being created, the header shows **Create** and **Cancel** until you leave it. **Create** keeps the supplier and takes you back to where you started: the list or the previous screen. With an empty title, the title asks for a name instead. **Cancel** leaves without keeping anything, and deletes the supplier if it was already created. If you entered more than the name, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete suppliers. Leaving the supplier any other way keeps it.
 
 ---
 

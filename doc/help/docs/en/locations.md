@@ -4,7 +4,9 @@ Locations document where your IT infrastructure is hosted: data centers, cloud r
 
 ## Getting started
 
-Navigate to **IT Landscape -> Locations** to open the location registry. Click **Add Location** to create a new entry: the page of the new location opens, its properties panel open. Type the name in the title at the top of the page, choose the **Hosting Type** and the other fields, then click **Create**: the location is created and stays open, every tab available. **Cancel**, or Escape on the empty title, leaves without creating anything.
+Navigate to **IT Landscape -> Locations** to open the location registry. Click **Add Location** to create a new entry: the page of the new location opens, its properties panel open. Type the name in the title at the top of the page. The location is created as soon as it has its name and **Hosting Type**, which starts on the first type of the list. Every tab then becomes available, and the other fields save automatically. Press Escape on the empty title to leave without creating anything.
+
+While the location is being created, the header shows **Create** and **Cancel** until you leave it. **Create** keeps the location and takes you back to where you started: the list or the previous screen. If a required field is still missing, it is marked instead. **Cancel** leaves without keeping anything, and deletes the location if it was already created. If you entered more than what created it, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete locations. Leaving the location any other way keeps it.
 
 **Required fields**:
 - **Code**: A unique short identifier (e.g., `DC-EU-WEST`, `AWS-US-EAST-1`)

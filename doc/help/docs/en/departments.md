@@ -68,7 +68,9 @@ The Overview tab holds the description. The other fields are in the header and t
 - **Description**: Free-text description
 - **Lifecycle**: the status switch, labelled with the current state (**Enabled** or **Disabled**), and the **End of validity** date. Leave the date blank to keep the department active indefinitely, or set a future date to schedule its end. Switching the department to **Disabled** ends its validity now: it is disabled at once. While a future date is set, the switch reads **Active until** and that date
 
-**Creating a department**: **New** opens the page of the new department, its properties panel open. Type the name in the title at the top of the page, choose the **Company** and add a **Description** if you like. Click **Create** to save it: the department stays open, every tab available. **Cancel**, or Escape on the empty title, leaves without creating anything.
+**Creating a department**: **New** opens the page of the new department, its properties panel open. Type the name in the title at the top of the page and choose the **Company**. The department is created as soon as both are given, and every tab becomes available. A **Description** then saves automatically. Press Escape on the empty title to leave without creating anything.
+
+While the department is being created, the header shows **Create** and **Cancel** until you leave it. **Create** keeps the department and takes you back to where you started: the list or the previous screen. If a required field is still missing, it is marked instead. **Cancel** leaves without keeping anything, and deletes the department if it was already created. If you entered more than what created it, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete departments. Leaving the department any other way keeps it.
 
 ---
 

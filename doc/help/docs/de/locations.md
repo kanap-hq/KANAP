@@ -4,7 +4,9 @@ Standorte dokumentieren, wo Ihre IT-Infrastruktur gehostet wird: Rechenzentren, 
 
 ## Erste Schritte
 
-Navigieren Sie zu **IT-Landschaft > Standorte**, um das Standortverzeichnis zu öffnen. Klicken Sie auf **Standort hinzufügen**, um einen neuen Eintrag zu erstellen: Die Seite des neuen Standorts öffnet sich mit geöffnetem Eigenschaftenbereich. Geben Sie den Namen im Titel oben auf der Seite ein, wählen Sie den **Hosting-Typ**, füllen Sie die weiteren Felder aus und klicken Sie auf **Erstellen**: Der Standort wird erstellt und bleibt geöffnet, mit allen Reitern. **Abbrechen** oder Escape im leeren Titel verlässt die Seite, ohne etwas zu erstellen.
+Navigieren Sie zu **IT-Landschaft > Standorte**, um das Standortverzeichnis zu öffnen. Klicken Sie auf **Standort hinzufügen**, um einen neuen Eintrag zu erstellen: Die Seite des neuen Standorts öffnet sich mit geöffnetem Eigenschaftenbereich. Geben Sie den Namen im Titel oben auf der Seite ein. Der Standort wird erstellt, sobald er seinen Namen und seinen **Hosting-Typ** hat, der zunächst auf dem ersten Typ der Liste steht. Dann werden alle Reiter verfügbar, und die übrigen Felder werden automatisch gespeichert. Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erstellen.
+
+Solange der Standort erstellt wird, zeigt die Kopfzeile **Erstellen** und **Abbrechen**, bis Sie die Seite verlassen. **Erstellen** behält den Standort und bringt Sie dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm. Fehlt noch ein Pflichtfeld, wird es stattdessen markiert. **Abbrechen** verlässt die Seite, ohne etwas zu behalten. Ein bereits erstellter Standort wird dabei gelöscht. Wenn Sie mehr als die Angaben zur Erstellung eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Standorten abbrechen. Verlassen Sie die Seite auf andere Weise, bleibt der Standort bestehen.
 
 **Pflichtfelder**:
 - **Code**: Ein eindeutiger Kurzidentifikator (z. B. `DC-EU-WEST`, `AWS-US-EAST-1`)

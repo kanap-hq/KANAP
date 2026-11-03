@@ -116,7 +116,9 @@ The Overview tab holds the address, the registration details and the notes. The 
     - **VAT number**: VAT identification number
 - **Notes**: free-text notes
 
-**Creating a company**: **New** opens the page of the new company, its properties panel open. Type the name in the title at the top of the page, then fill in **Country**, **Base currency**, **Chart of accounts**, **City**, the other address fields, the registration fields and **Notes**. Choosing a country fills in the **Base currency** (the country's currency) and the **Chart of accounts** (the country's default chart if there is one, otherwise a global chart). You can change both before you save. Click **Create** to save the company: a missing required field is marked, otherwise the company is created and stays open, every tab available. **Cancel**, or Escape on the empty title, leaves without creating anything.
+**Creating a company**: **New** opens the page of the new company, its properties panel open. Type the name in the title at the top of the page, then fill in **Country** and **City**. Choosing a country fills in the **Base currency** (the country's currency) and the **Chart of accounts** (the country's default chart if there is one, otherwise a global chart). The company is created as soon as its name, **Country**, **Base currency** and **City** are given. Every tab then becomes available, and the other fields save automatically. Press Escape on the empty title to leave without creating anything.
+
+While the company is being created, the header shows **Create** and **Cancel** until you leave it. **Create** keeps the company and takes you back to where you started: the list or the previous screen. If a required field is still missing, it is marked instead. **Cancel** leaves without keeping anything, and deletes the company if it was already created. If you entered more than what created it, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete companies. Leaving the company any other way keeps it.
 
 ---
 

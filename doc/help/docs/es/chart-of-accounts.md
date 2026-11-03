@@ -152,7 +152,9 @@ La sección **Consolidación** contiene un único campo, **Cuenta de consolidaci
 
 ### Crear una cuenta
 
-**Nueva cuenta** en la lista abre la página de la cuenta nueva, con su panel de propiedades abierto y el plan que estaba consultando ya seleccionado. Escriba el nombre de la cuenta en el título de la parte superior de la página, rellene el plan y el número de cuenta, además de los campos opcionales, y haga clic en **Crear**. Entonces se marca un campo que falte o no sea válido; si no, la cuenta se crea y permanece abierta. Una vez creada, la cuenta se guarda automáticamente con cada cambio. **Cancelar**, o Escape en el título vacío, sale sin crear nada.
+**Nueva cuenta** en la lista abre la página de la cuenta nueva, con su panel de propiedades abierto y el plan que estaba consultando ya seleccionado. Escriba el nombre de la cuenta en el título de la parte superior de la página y rellene el **Número de cuenta**. La cuenta se crea en cuanto tiene su nombre, su **Plan de cuentas** y un **Número de cuenta** válido. Un número no válido se marca al salir del campo. Todas sus pestañas quedan entonces disponibles, y la cuenta se guarda automáticamente con cada cambio. Pulse Escape en el título vacío para salir sin crear nada.
+
+Mientras la cuenta se está creando, el encabezado muestra **Crear** y **Cancelar** hasta que salga de la página. **Crear** conserva la cuenta y le lleva de vuelta al punto de partida: la lista o la pantalla anterior. Si aún falta un campo obligatorio, se marca en su lugar. **Cancelar** sale sin conservar nada. En una cuenta ya creada, la elimina. Si introdujo algo más que lo necesario para crearla, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar cuentas. Si sale de la página de otra forma, la cuenta se conserva.
 
 ## Configurar Planes de cuentas
 

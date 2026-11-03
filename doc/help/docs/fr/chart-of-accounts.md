@@ -152,7 +152,9 @@ La section **Consolidation** contient un seul champ, **Compte de consolidation**
 
 ### Créer un compte
 
-**Nouveau compte** dans la liste ouvre la page du nouveau compte, son panneau des propriétés ouvert, avec le plan que vous consultiez déjà sélectionné. Saisissez le nom du compte dans le titre en haut de la page, renseignez le plan et le numéro de compte, ainsi que les champs facultatifs, puis cliquez sur **Créer**. Un champ manquant ou invalide est alors signalé ; sinon le compte est créé et reste ouvert. Une fois créé, le compte s'enregistre automatiquement à chaque modification. **Annuler**, ou Échap dans le titre vide, part sans rien créer.
+**Nouveau compte** dans la liste ouvre la page du nouveau compte, son panneau des propriétés ouvert, avec le plan que vous consultiez déjà sélectionné. Saisissez le nom du compte dans le titre en haut de la page et renseignez le **Numéro de compte**. Le compte est créé dès qu'il a son nom, son **Plan comptable** et un **Numéro de compte** valide. Un numéro invalide est signalé quand vous quittez le champ. Tous ses onglets deviennent alors disponibles, et le compte s'enregistre automatiquement à chaque modification. Appuyez sur Échap dans le titre vide pour partir sans rien créer.
+
+Tant que le compte est en cours de création, l'en-tête affiche **Créer** et **Annuler** jusqu'à ce que vous quittiez la page. **Créer** conserve le compte et vous ramène à votre point de départ : la liste ou l'écran précédent. S'il manque encore un champ obligatoire, il est signalé à la place. **Annuler** part sans rien conserver. Sur un compte déjà créé, il le supprime. Si vous avez saisi plus que le nécessaire à la création, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des comptes. Si vous quittez la page autrement, le compte est conservé.
 
 ## Configurer les plans comptables
 

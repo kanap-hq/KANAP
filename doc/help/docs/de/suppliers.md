@@ -105,7 +105,9 @@ Prüfen Sie diesen Abschnitt, bevor Sie einen Lieferanten deaktivieren oder lös
 
 ### Einen Lieferanten erstellen
 
-Klicken Sie in der Liste auf **Neu**. Die Seite des neuen Lieferanten öffnet sich. Geben Sie den Namen im Titel oben auf der Seite ein, dann die ERP-Lieferanten-ID und die Notizen, und klicken Sie auf **Erstellen**. Der Lieferant wird aktiviert angelegt und bleibt geöffnet, mit allen Reitern. **Abbrechen** oder Escape im leeren Titel verlässt die Seite, ohne etwas zu erstellen.
+Klicken Sie in der Liste auf **Neu**. Die Seite des neuen Lieferanten öffnet sich. Geben Sie den Namen im Titel oben auf der Seite ein und drücken Sie dann Enter, oder klicken Sie außerhalb des Titels. Der Lieferant wird sofort aktiviert angelegt, und alle Reiter werden verfügbar. ERP-Lieferanten-ID und Notizen werden danach automatisch gespeichert. Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erstellen.
+
+Solange der Lieferant erstellt wird, zeigt die Kopfzeile **Erstellen** und **Abbrechen**, bis Sie die Seite verlassen. **Erstellen** behält den Lieferanten und bringt Sie dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm. Bei leerem Titel verlangt der Titel stattdessen einen Namen. **Abbrechen** verlässt die Seite, ohne etwas zu behalten. Ein bereits erstellter Lieferant wird dabei gelöscht. Wenn Sie mehr als den Namen eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Lieferanten abbrechen. Verlassen Sie die Seite auf andere Weise, bleibt der Lieferant bestehen.
 
 ---
 

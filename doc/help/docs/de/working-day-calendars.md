@@ -78,9 +78,10 @@ Klicken Sie auf **Neu**. Die Seite des neuen Kalenders öffnet sich mit geöffne
 2. **Region**: erscheint, wenn das Land Regionen hat, zum Beispiel die deutschen Bundesländer oder die französischen Départements mit eigenen Feiertagen. Behalten Sie **Ganzes Land** oder wählen Sie eine Region
 3. **Code** und Name: Die Wahl eines Landes füllt sie aus, den Namen im Titel oben auf der Seite, zum Beispiel `FR-57` und „Frankreich (Département Moselle)“. Ändern Sie sie bei Bedarf
 4. **Beschreibung**: optional
-5. Klicken Sie auf **Erstellen**
 
-Ein neuer Kalender ist aktiviert und bleibt geöffnet, mit allen Reitern. **Abbrechen** oder Escape im leeren Titel verlässt die Seite, ohne etwas zu erstellen. Ein Standardkalender enthält die Arbeitstage jedes Jahres: Sie werden angezeigt, sobald er erstellt ist. Bei einem individuellen Kalender geben Sie sie Jahr für Jahr ein.
+Der Kalender wird aktiviert erstellt, sobald er seinen Namen und seinen **Code** hat. Hat das Land Regionen, wartet er, bis Sie **Ganzes Land** behalten oder eine Region wählen. Dann werden alle Reiter verfügbar. Ein Standardkalender enthält die Arbeitstage jedes Jahres: Sie werden angezeigt, sobald er erstellt ist. Bei einem individuellen Kalender geben Sie sie Jahr für Jahr ein. Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erstellen.
+
+Solange der Kalender erstellt wird, zeigt die Kopfzeile **Erstellen** und **Abbrechen**, bis Sie die Seite verlassen. **Erstellen** behält den Kalender und bringt Sie dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm. Fehlt noch ein Pflichtfeld, wird es stattdessen markiert. **Abbrechen** verlässt die Seite, ohne etwas zu behalten. Ein bereits erstellter Kalender wird dabei gelöscht. Wenn Sie mehr als die Angaben zur Erstellung eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Kalendern abbrechen. Verlassen Sie die Seite auf andere Weise, bleibt der Kalender bestehen.
 
 Land und Region werden einmal festgelegt, beim Anlegen. Um einem anderen Land zu folgen, legen Sie einen weiteren Kalender an.
 

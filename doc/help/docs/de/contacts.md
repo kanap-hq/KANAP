@@ -85,7 +85,9 @@ Klicken Sie auf eine Zeile, um die zugehörige Seite zu öffnen. Eine Liste zeig
 
 ### Einen Kontakt erstellen
 
-Klicken Sie in der Liste auf **Neu**. Die Seite des neuen Kontakts öffnet sich. Geben Sie Vor- und Nachnamen im Titel oben auf der Seite ein, dann die E-Mail (Pflichtfeld) und die weiteren Felder, und klicken Sie auf **Erstellen**. Die Wahl eines Lieferanten setzt den Kontakttyp auf **Vertrieb**, den Sie vor dem Erstellen ändern können. Nach dem Erstellen bleibt der Kontakt geöffnet; ein Kontakt, der von einem Lieferanten aus erstellt wurde, führt zu diesem Lieferanten zurück. **Abbrechen** oder Escape, solange der Name leer ist, verlässt die Seite, ohne etwas zu erstellen.
+Klicken Sie in der Liste auf **Neu**. Die Seite des neuen Kontakts öffnet sich. Geben Sie Vor- und Nachnamen nebeneinander in der Kopfzeile ein, dann die E-Mail. Der Kontakt wird erstellt, wenn Sie das E-Mail-Feld mit einer gültigen E-Mail verlassen. Auch die Telefonnummern müssen gültig sein. Die Wahl eines Lieferanten setzt den Kontakttyp auf **Vertrieb**, den Sie ändern können. Ein Kontakt mit Lieferant braucht einen Typ. Dann werden alle Reiter verfügbar, und die übrigen Felder werden automatisch gespeichert. Drücken Sie Escape, solange der Name leer ist, um die Seite zu verlassen, ohne etwas zu erstellen.
+
+Solange der Kontakt erstellt wird, zeigt die Kopfzeile **Erstellen** und **Abbrechen**, bis Sie die Seite verlassen. **Erstellen** behält den Kontakt und bringt Sie dorthin zurück, wo Sie begonnen haben: zur Liste, zum vorherigen Bildschirm oder zum Lieferanten, von dem aus Sie begonnen haben. Fehlt noch ein Pflichtfeld, wird es stattdessen markiert. **Abbrechen** verlässt die Seite, ohne etwas zu behalten. Ein bereits erstellter Kontakt wird dabei gelöscht. Wenn Sie mehr als die Angaben zur Erstellung eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Kontakten abbrechen. Verlassen Sie die Seite auf andere Weise, bleibt der Kontakt bestehen.
 
 ---
 

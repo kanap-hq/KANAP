@@ -127,13 +127,14 @@ Haga clic en cualquier celda para abrir el espacio de trabajo del valor.
 
 ### Crear una dimensión
 
-Haga clic en **Nuevo** en la barra de selección. Se abre la página de la dimensión nueva, con su panel de propiedades abierto. Escriba el nombre en el título de la parte superior de la página, complete los campos y haga clic en **Crear**. Una dimensión nueva está activada y permanece abierta, con todas sus pestañas disponibles. **Cancelar**, o Escape en el título vacío, sale sin crear nada.
+Haga clic en **Nuevo** en la barra de selección. Se abre la página de la dimensión nueva, con su panel de propiedades abierto. Escriba el nombre en el título de la parte superior de la página. La dimensión se crea, activada, en cuanto tiene su nombre y su **Código**. Todas sus pestañas quedan entonces disponibles, y los demás campos se guardan automáticamente. Pulse Escape en el título vacío para salir sin crear nada.
 
-- El nombre es obligatorio.
-- **Código** se propone a partir del nombre: en minúsculas, sin acentos y con los espacios sustituidos por `-`. Puede cambiarlo antes de crear la dimensión.
+- **Código** se propone a partir del nombre: en minúsculas, sin acentos y con los espacios sustituidos por `-`. Puede cambiarlo.
 - **Usada para** empieza en **OPEX y CAPEX**. Consulte [Dimensiones OPEX o CAPEX](#dimensiones-opex-o-capex).
 - **Obligatoria** empieza desactivado. Consulte [Dimensiones obligatorias](#dimensiones-obligatorias).
 - **Descripción** es opcional.
+
+Mientras la dimensión se está creando, el encabezado muestra **Crear** y **Cancelar** hasta que salga de la página. **Crear** conserva la dimensión y le lleva de vuelta al punto de partida: la lista o la pantalla anterior. Si aún falta un campo obligatorio, se marca en su lugar. **Cancelar** sale sin conservar nada. En una dimensión ya creada, la elimina. Si introdujo algo más que lo necesario para crearla, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar dimensiones. Si sale de la página de otra forma, la dimensión se conserva.
 
 Una dimensión nueva se coloca la última en el orden de las dimensiones. Después vuelva a la página para añadir sus valores.
 
@@ -242,7 +243,9 @@ Para conservar los valores en las líneas, desactive la dimensión en su lugar.
 
 ### Crear un valor
 
-Haga clic en **Nuevo valor**. Se abre la página del valor nuevo, con su panel de propiedades abierto. El campo **Dimensión** empieza en la dimensión seleccionada en la página y solo ofrece las dimensiones activadas. Escriba el nombre en el título de la parte superior de la página y, si lo desea, una **Descripción**. **Usada para** empieza en **OPEX y CAPEX**: cámbielo si el valor solo sirve para un tipo de línea. Después haga clic en **Crear**. Un valor nuevo está activado y permanece abierto, con todas sus pestañas disponibles. **Cancelar**, o Escape en el título vacío, sale sin crear nada.
+Haga clic en **Nuevo valor**. Se abre la página del valor nuevo, con su panel de propiedades abierto. El campo **Dimensión** empieza en la dimensión seleccionada en la página y solo ofrece las dimensiones activadas. Escriba el nombre en el título de la parte superior de la página. El valor se crea, activado, en cuanto tiene su nombre y su **Dimensión**. La dimensión se define una sola vez, al crear el valor. Todas sus pestañas quedan entonces disponibles, y los demás campos se guardan automáticamente: una **Descripción** si lo desea, y **Usada para**, que empieza en **OPEX y CAPEX** (cámbielo si el valor solo sirve para un tipo de línea). Pulse Escape en el título vacío para salir sin crear nada.
+
+Mientras el valor se está creando, el encabezado muestra **Crear** y **Cancelar** hasta que salga de la página. **Crear** conserva el valor y le lleva de vuelta al punto de partida: la lista o la pantalla anterior. Si aún falta un campo obligatorio, se marca en su lugar. **Cancelar** sale sin conservar nada. En un valor ya creado, lo elimina. Si introdujo algo más que lo necesario para crearlo, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar valores. Si sale de la página de otra forma, el valor se conserva.
 
 ### El espacio de trabajo del valor
 
