@@ -86,7 +86,6 @@
     "entity": "Unternehmen",
     "newCompany": "Neues Unternehmen",
     "companyFallback": "Unternehmen",
-    "detailsTabHint": "Der Tab Details wird nach dem Erstellen des Unternehmens verfügbar.",
     "loadError": "Fehler beim Laden des Unternehmens.",
     "columns": {
       "city": "Stadt",
@@ -137,7 +136,6 @@
       "registration": "Registrierung"
     },
     "placeholders": {
-      "name": "z. B. Holdinggesellschaft",
       "country": "z. B. Frankreich",
       "baseCurrency": "z. B. EUR",
       "chartOfAccounts": "z. B. COA-FR",
@@ -183,7 +181,6 @@
     "entity": "Abteilung",
     "newDepartment": "Neue Abteilung",
     "departmentFallback": "Abteilung",
-    "detailsTabHint": "Der Tab Details wird nach dem Erstellen der Abteilung verfügbar.",
     "loadError": "Fehler beim Laden der Abteilung.",
     "selectCompanyFirst": "Wählen Sie zuerst ein Unternehmen",
     "columns": {
@@ -203,7 +200,6 @@
       "lifecycle": "Lebenszyklus"
     },
     "placeholders": {
-      "name": "z. B. Finanzen",
       "description": "z. B. Buchhaltung und Lohnabrechnung"
     },
     "headcountHint": "Wird für das ausgewählte Jahr gespeichert, wenn Sie das Feld verlassen.",
@@ -264,7 +260,6 @@
     },
     "placeholders": {
       "code": "z. B. CC-100",
-      "name": "z. B. Infrastruktur",
       "description": "z. B. Server, Netzwerk und Arbeitsplatz-Tools",
       "topLevel": "Oberste Ebene",
       "ownerMissing": "Budgetverantwortlicher fehlt"
@@ -340,7 +335,6 @@
     "placeholders": {
       "country": "z. B. Frankreich",
       "code": "z. B. CAL-01",
-      "name": "z. B. Mitarbeitende am Hauptsitz",
       "description": "z. B. Arbeitstage der Angestellten, ohne Feiertage",
       "days": "z. B. 20"
     },
@@ -409,7 +403,6 @@
     "newSupplier": "Neuer Lieferant",
     "empty": "Noch keine Lieferanten.",
     "supplierFallback": "Lieferant",
-    "contactsTabHint": "Der Tab Kontakte wird nach dem Erstellen des Lieferanten verfügbar.",
     "loadError": "Fehler beim Laden des Lieferanten.",
     "columns": {
       "erpSupplierId": "ERP-Lieferanten-ID"
@@ -509,8 +502,6 @@
     },
     "placeholders": {
       "email": "z. B. name@beispiel.de",
-      "firstName": "z. B. Alex",
-      "lastName": "z. B. Martin",
       "jobTitle": "z. B. Kundenbetreuer",
       "supplier": "z. B. Lieferant A",
       "contactType": "Typ auswählen",
@@ -691,9 +682,6 @@
     "loadError": "Fehler beim Laden des Kontos.",
     "previous": "Vorheriges Konto",
     "next": "Nächstes Konto",
-    "actions": {
-      "create": "Konto erstellen"
-    },
     "sections": {
       "consolidation": "Konsolidierung"
     },
@@ -715,7 +703,6 @@
     "placeholders": {
       "chartOfAccounts": "z. B. COA-FR",
       "accountNumber": "z. B. 6200",
-      "accountName": "z. B. Software-Abonnements",
       "nativeName": "z. B. Logiciels SaaS",
       "description": "z. B. SaaS-Lizenzen und Cloud-Abonnements"
     },
@@ -812,10 +799,8 @@
       "openValues": "Jede Person, die eine Zeile bearbeiten kann, kann einen Wert hinzufügen, über die Zeile oder die Budgetdatei."
     },
     "placeholders": {
-      "dimensionName": "z. B. Kostenart",
       "dimensionCode": "z. B. kostenart",
       "dimensionDescription": "z. B. Die Art der Ausgabe",
-      "valueName": "z. B. Lizenzen",
       "valueDescription": "z. B. Softwareabonnements und Support"
     },
     "usage": {

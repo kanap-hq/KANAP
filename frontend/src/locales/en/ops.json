@@ -475,7 +475,6 @@
       "editInProperties": "Edit in the properties panel"
     },
     "placeholders": {
-      "name": "e.g., Maintenance agreement",
       "durationMonths": "e.g., 12",
       "noticeMonths": "e.g., 3",
       "yearlyAmount": "e.g., 12000",

@@ -475,7 +475,6 @@
       "editInProperties": "Im Eigenschaftenbereich bearbeiten"
     },
     "placeholders": {
-      "name": "z. B. Wartungsvertrag",
       "durationMonths": "z. B. 12",
       "noticeMonths": "z. B. 3",
       "yearlyAmount": "z. B. 12000",

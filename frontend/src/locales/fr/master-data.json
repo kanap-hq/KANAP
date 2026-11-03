@@ -86,7 +86,6 @@
     "entity": "société",
     "newCompany": "Nouvelle société",
     "companyFallback": "Société",
-    "detailsTabHint": "L'onglet Détails devient disponible après la création de la société.",
     "loadError": "Échec du chargement de la société.",
     "columns": {
       "city": "Ville",
@@ -137,7 +136,6 @@
       "registration": "Immatriculation"
     },
     "placeholders": {
-      "name": "ex. Société holding",
       "country": "ex. France",
       "baseCurrency": "ex. EUR",
       "chartOfAccounts": "ex. COA-FR",
@@ -183,7 +181,6 @@
     "entity": "département",
     "newDepartment": "Nouveau département",
     "departmentFallback": "Département",
-    "detailsTabHint": "L'onglet Détails devient disponible après la création du département.",
     "loadError": "Échec du chargement du département.",
     "selectCompanyFirst": "Sélectionnez d'abord une société",
     "columns": {
@@ -203,7 +200,6 @@
       "lifecycle": "Cycle de vie"
     },
     "placeholders": {
-      "name": "ex. Finance",
       "description": "ex. Comptabilité et paie"
     },
     "headcountHint": "Enregistré pour l'année sélectionnée quand vous quittez le champ.",
@@ -264,7 +260,6 @@
     },
     "placeholders": {
       "code": "ex. CC-100",
-      "name": "ex. Infrastructure",
       "description": "ex. Serveurs, réseau et outils du poste de travail",
       "topLevel": "Premier niveau",
       "ownerMissing": "Responsable budgétaire manquant"
@@ -340,7 +335,6 @@
     "placeholders": {
       "country": "ex. France",
       "code": "ex. CAL-01",
-      "name": "ex. Personnel du siège",
       "description": "ex. Jours ouvrés des salariés, jours fériés exclus",
       "days": "ex. 20"
     },
@@ -409,7 +403,6 @@
     "newSupplier": "Nouveau fournisseur",
     "empty": "Aucun fournisseur pour l'instant.",
     "supplierFallback": "Fournisseur",
-    "contactsTabHint": "L'onglet Contacts devient disponible après la création du fournisseur.",
     "loadError": "Échec du chargement du fournisseur.",
     "columns": {
       "erpSupplierId": "ID fournisseur ERP"
@@ -509,8 +502,6 @@
     },
     "placeholders": {
       "email": "ex. nom@exemple.com",
-      "firstName": "ex. Alex",
-      "lastName": "ex. Martin",
       "jobTitle": "ex. Responsable de compte",
       "supplier": "ex. Fournisseur A",
       "contactType": "Choisissez un type",
@@ -691,9 +682,6 @@
     "loadError": "Échec du chargement du compte.",
     "previous": "Compte précédent",
     "next": "Compte suivant",
-    "actions": {
-      "create": "Créer le compte"
-    },
     "sections": {
       "consolidation": "Consolidation"
     },
@@ -715,7 +703,6 @@
     "placeholders": {
       "chartOfAccounts": "ex. COA-FR",
       "accountNumber": "ex. 6200",
-      "accountName": "ex. Abonnements logiciels",
       "nativeName": "ex. Logiciels SaaS",
       "description": "ex. Licences SaaS et abonnements cloud"
     },
@@ -812,10 +799,8 @@
       "openValues": "Toute personne qui peut modifier une ligne peut ajouter une valeur, depuis la ligne ou le fichier budget."
     },
     "placeholders": {
-      "dimensionName": "ex. Nature",
       "dimensionCode": "ex. nature",
       "dimensionDescription": "ex. Le type de dépense",
-      "valueName": "ex. Licences",
       "valueDescription": "ex. Abonnements logiciels et support"
     },
     "usage": {

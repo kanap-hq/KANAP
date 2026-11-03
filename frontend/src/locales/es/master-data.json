@@ -86,7 +86,6 @@
     "entity": "empresa",
     "newCompany": "Nueva empresa",
     "companyFallback": "Empresa",
-    "detailsTabHint": "La pestaña Detalles estará disponible después de crear la empresa.",
     "loadError": "Error al cargar la empresa.",
     "columns": {
       "city": "Ciudad",
@@ -137,7 +136,6 @@
       "registration": "Registro"
     },
     "placeholders": {
-      "name": "p. ej., Sociedad holding",
       "country": "p. ej., Francia",
       "baseCurrency": "p. ej., EUR",
       "chartOfAccounts": "p. ej., COA-FR",
@@ -183,7 +181,6 @@
     "entity": "departamento",
     "newDepartment": "Nuevo departamento",
     "departmentFallback": "Departamento",
-    "detailsTabHint": "La pestaña Detalles estará disponible después de crear el departamento.",
     "loadError": "Error al cargar el departamento.",
     "selectCompanyFirst": "Seleccione primero una empresa",
     "columns": {
@@ -203,7 +200,6 @@
       "lifecycle": "Ciclo de vida"
     },
     "placeholders": {
-      "name": "p. ej., Finanzas",
       "description": "p. ej., Contabilidad y nóminas"
     },
     "headcountHint": "Se guarda para el año seleccionado al salir del campo.",
@@ -264,7 +260,6 @@
     },
     "placeholders": {
       "code": "p. ej., CC-100",
-      "name": "p. ej., Infraestructura",
       "description": "p. ej., Servidores, red y herramientas de puesto de trabajo",
       "topLevel": "Nivel superior",
       "ownerMissing": "Falta el responsable del presupuesto"
@@ -340,7 +335,6 @@
     "placeholders": {
       "country": "p. ej., Francia",
       "code": "p. ej., CAL-01",
-      "name": "p. ej., Personal de la sede",
       "description": "p. ej., Días laborables del personal asalariado, sin festivos",
       "days": "p. ej., 20"
     },
@@ -409,7 +403,6 @@
     "newSupplier": "Nuevo proveedor",
     "empty": "Todavía no hay proveedores.",
     "supplierFallback": "Proveedor",
-    "contactsTabHint": "La pestaña Contactos estará disponible después de crear el proveedor.",
     "loadError": "Error al cargar el proveedor.",
     "columns": {
       "erpSupplierId": "ID de proveedor ERP"
@@ -509,8 +502,6 @@
     },
     "placeholders": {
       "email": "p. ej., nombre@ejemplo.com",
-      "firstName": "p. ej., Alex",
-      "lastName": "p. ej., Martín",
       "jobTitle": "p. ej., Responsable de cuenta",
       "supplier": "p. ej., Proveedor A",
       "contactType": "Elija un tipo",
@@ -691,9 +682,6 @@
     "loadError": "Error al cargar la cuenta.",
     "previous": "Cuenta anterior",
     "next": "Cuenta siguiente",
-    "actions": {
-      "create": "Crear cuenta"
-    },
     "sections": {
       "consolidation": "Consolidación"
     },
@@ -715,7 +703,6 @@
     "placeholders": {
       "chartOfAccounts": "p. ej., COA-FR",
       "accountNumber": "p. ej., 6200",
-      "accountName": "p. ej., Suscripciones de software",
       "nativeName": "p. ej., Logiciels SaaS",
       "description": "p. ej., Licencias SaaS y suscripciones en la nube"
     },
@@ -812,10 +799,8 @@
       "openValues": "Cualquier persona que pueda editar una línea puede añadir un valor, desde la línea o el archivo de presupuesto."
     },
     "placeholders": {
-      "dimensionName": "p. ej., Naturaleza",
       "dimensionCode": "p. ej., naturaleza",
       "dimensionDescription": "p. ej., El tipo de gasto",
-      "valueName": "p. ej., Licencias",
       "valueDescription": "p. ej., Suscripciones de software y soporte"
     },
     "usage": {

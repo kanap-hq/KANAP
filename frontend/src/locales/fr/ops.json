@@ -475,7 +475,6 @@
       "editInProperties": "Modifier dans le panneau Propriétés"
     },
     "placeholders": {
-      "name": "Ex. : Contrat de maintenance",
       "durationMonths": "Ex. : 12",
       "noticeMonths": "Ex. : 3",
       "yearlyAmount": "Ex. : 12000",

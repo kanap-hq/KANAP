@@ -86,7 +86,6 @@
     "entity": "company",
     "newCompany": "New company",
     "companyFallback": "Company",
-    "detailsTabHint": "The details tab becomes available after you create the company.",
     "loadError": "Failed to load company.",
     "columns": {
       "city": "City",
@@ -137,7 +136,6 @@
       "registration": "Registration"
     },
     "placeholders": {
-      "name": "e.g., Holding company",
       "country": "e.g., France",
       "baseCurrency": "e.g., EUR",
       "chartOfAccounts": "e.g., COA-FR",
@@ -183,7 +181,6 @@
     "entity": "department",
     "newDepartment": "New department",
     "departmentFallback": "Department",
-    "detailsTabHint": "The details tab becomes available after you create the department.",
     "loadError": "Failed to load department.",
     "selectCompanyFirst": "Select a company first",
     "columns": {
@@ -203,7 +200,6 @@
       "lifecycle": "Lifecycle"
     },
     "placeholders": {
-      "name": "e.g., Finance",
       "description": "e.g., Accounting and payroll"
     },
     "headcountHint": "Saved for the selected year when you leave the field.",
@@ -264,7 +260,6 @@
     },
     "placeholders": {
       "code": "e.g., CC-100",
-      "name": "e.g., Infrastructure",
       "description": "e.g., Servers, network and workplace tools",
       "topLevel": "Top level",
       "ownerMissing": "Budget holder missing"
@@ -340,7 +335,6 @@
     "placeholders": {
       "country": "e.g., France",
       "code": "e.g., CAL-01",
-      "name": "e.g., Head office staff",
       "description": "e.g., Working days of salaried staff, public holidays excluded",
       "days": "e.g., 20"
     },
@@ -409,7 +403,6 @@
     "newSupplier": "New supplier",
     "empty": "No suppliers yet.",
     "supplierFallback": "Supplier",
-    "contactsTabHint": "The contacts tab becomes available after you create the supplier.",
     "loadError": "Failed to load supplier.",
     "columns": {
       "erpSupplierId": "ERP supplier ID"
@@ -509,8 +502,6 @@
     },
     "placeholders": {
       "email": "e.g., name@example.com",
-      "firstName": "e.g., Alex",
-      "lastName": "e.g., Martin",
       "jobTitle": "e.g., Account manager",
       "supplier": "e.g., Supplier A",
       "contactType": "Choose a type",
@@ -691,9 +682,6 @@
     "loadError": "Failed to load account.",
     "previous": "Previous account",
     "next": "Next account",
-    "actions": {
-      "create": "Create account"
-    },
     "sections": {
       "consolidation": "Consolidation"
     },
@@ -715,7 +703,6 @@
     "placeholders": {
       "chartOfAccounts": "e.g., COA-FR",
       "accountNumber": "e.g., 6200",
-      "accountName": "e.g., Software subscriptions",
       "nativeName": "e.g., Logiciels SaaS",
       "description": "e.g., SaaS licences and cloud subscriptions"
     },
@@ -812,10 +799,8 @@
       "openValues": "Anyone who can edit a line can add a value, from the line or the budget file."
     },
     "placeholders": {
-      "dimensionName": "e.g., Nature",
       "dimensionCode": "e.g., nature",
       "dimensionDescription": "e.g., The kind of expense",
-      "valueName": "e.g., Licenses",
       "valueDescription": "e.g., Software subscriptions and support"
     },
     "usage": {
