@@ -246,7 +246,7 @@ When the line replaces another one, or was replaced from a later year after a ty
 
 - Lists every task linked to this line, with **Title**, **Status**, **Priority**, **Due date**, and **Actions** columns. The panel title shows the number of tasks
 - **Status** filter: All (default), Active (not done), Open, In progress, Pending, In testing, Done, or Cancelled. The clear button resets it
-- Click **Add task** to open a new task already linked to this line. Fill in the title, description, priority, assignee, and due date in the task workspace
+- Click **Add task** to open a new task already linked to this line. Type the title and press Enter to create it, then fill in the description, priority, assignee, and due date
 - Use the open icon to go to a task, and the delete icon to delete it (you confirm first)
 - Tasks have their own permissions (`tasks:member` to create and edit). Member access on Budget does not grant task editing rights on its own; check with your admin if you cannot create tasks
 - Tasks can also be viewed and managed from **Portfolio > Tasks**, which shows all tasks across your organization

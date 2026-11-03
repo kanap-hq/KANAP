@@ -346,6 +346,16 @@ The "Book a discovery call" button of trial workspaces, its click events and the
 | `config/config.controller.ts` | `discoveryCall` | `{ url, fallbackEmail }` from `discoveryCallConfig()` in `@Get('public')` |
 | `frontend/src/components/BookDiscoveryCallButton.tsx` | `useDiscoveryCall()` | Hidden on-premise, without a running trial, for a platform administrator, and when both values are empty |
 
+#### Trial e-mails (cloud only, `!Features.SINGLE_TENANT`)
+
+The e-mails of trial workspaces and the thank-you at the first subscription (`doc/trial-mails.md`). On-premise nothing is scheduled and the link routes answer 404.
+
+| File | What | Behavior |
+|------|------|----------|
+| `email/trial-mails/trial-mails.service.ts` | `onModuleInit()` | The task `send-trial-mails` is not registered when `SINGLE_TENANT` |
+| `email/trial-mails/trial-mails.service.ts` | `run()`, `onSubscriptionChanged()` | Nothing read or sent when `SINGLE_TENANT` (summary `not available on-premise`) |
+| `email/trial-mails/trial-mails.controller.ts` | `MultiTenantOnlyGuard` on `trial-mails` | 404 |
+
 #### Microsoft Entra (`Features.ENTRA_SSO`)
 
 Optional in both modes: true when `ENTRA_CLIENT_ID` is configured. Per-tenant activation lives on `tenants.sso_provider` / `sso_enabled`; everything below is inert for tenants without Entra.

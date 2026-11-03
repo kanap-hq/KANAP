@@ -173,6 +173,8 @@ Los nuevos artículos pueden empezar de dos formas:
 
 Cuando crea desde una plantilla, el contenido de la plantilla se copia en el nuevo documento. A partir de ese momento, el nuevo artículo es independiente. Actualizar la plantilla más tarde no reescribe los documentos existentes.
 
+Un documento nuevo se abre con su título por escribir en el encabezado. Pulse Intro para crear el documento, o Tab para crearlo y empezar a escribir su texto. Se abre en modo de edición, con el editor, **Importar** y el panel lateral disponibles. Haga clic en **Crear** para conservarlo: vuelve al lugar donde empezó, o a la biblioteca. Haga clic en **Cancelar** para eliminarlo en su lugar. KANAP pide confirmación primero cuando ha introducido más que el título. En cualquier documento en modo de edición, haga clic en el título del encabezado para cambiarlo.
+
 El espacio de trabajo del documento mantiene la escritura en el centro y la gobernanza en la barra lateral.
 
 Las propiedades principales incluyen:
@@ -183,7 +185,7 @@ Las propiedades principales incluyen:
 - **Basado en plantilla**: el linaje de la plantilla, cuando sea relevante
 - **Resumen**: una breve descripción para contexto
 
-Después del primer guardado, el modelo completo de gobernanza del documento queda disponible. Es entonces cuando puede gestionar colaboradores, clasificaciones, relaciones, comentarios e historial de versiones contra una referencia de documento estable.
+Una vez creado el documento, el modelo completo de gobernanza del documento queda disponible. Es entonces cuando puede gestionar colaboradores, clasificaciones, relaciones, comentarios e historial de versiones contra una referencia de documento estable.
 
 ### Estado y qué significa
 
@@ -212,22 +214,21 @@ Cómo funciona:
 Esto evita las sobrescrituras silenciosas, lo cual es excelente para la integridad del documento y menos excelente si dos personas pensaban que solo iban a hacer "un pequeño retoque".
 
 Mientras edita:
-- los cambios se guardan manualmente con **Guardar**
-- el contenido sin guardar también se autoguarda periódicamente mientras su bloqueo está activo
-- **Descartar** vuelve al último estado guardado
+- los cambios se guardan automáticamente un par de segundos después de que deje de escribir, mientras su bloqueo está activo
+- **Listo** guarda lo pendiente, libera el bloqueo y sale del modo de edición
 
 El espacio de trabajo también admite la subida de imágenes en línea dentro del área de contenido markdown, de modo que las capturas de pantalla y los diagramas pueden vivir con el artículo en lugar de en una carpeta misteriosa en el escritorio de alguien. Cuando pega o hace referencia a una imagen desde una URL externa, la imagen se importa automáticamente y se almacena dentro del documento, de modo que sigue estando disponible incluso si la URL original se cae.
 
 ## Importar un documento Word
 
-Puede importar un documento Word (`.docx`) a un artículo existente de la Base de conocimiento. El botón **Importar** aparece en la barra de herramientas del espacio de trabajo una vez que el documento se ha guardado al menos una vez y está en modo de edición.
+Puede importar un documento Word (`.docx`) a un artículo existente de la Base de conocimiento. El botón **Importar** aparece en la barra de herramientas del espacio de trabajo cuando está en modo de edición. En un documento nuevo, está disponible en cuanto se introduce el título.
 
 Cómo funciona:
 
 - Haga clic en **Importar** y seleccione un archivo `.docx` de su ordenador.
 - Si el artículo ya tiene contenido, un diálogo de confirmación pregunta si desea reemplazarlo. Elegir **Continuar** sobrescribe el markdown actual con el contenido importado.
 - El contenido de Word se convierte a markdown y se carga en el editor. Las imágenes incrustadas en el archivo Word se extraen y se almacenan como adjuntos en línea, de modo que no tiene que volver a subirlas manualmente.
-- Después de la importación, sus cambios están sin guardar. Use **Guardar** para persistir el contenido importado.
+- El contenido importado se guarda automáticamente, como cualquier otro cambio.
 
 Si la importación encuentra un conflicto de bloqueo (alguien más adquirió el bloqueo) o un bloqueo expirado, el modo de edición termina y se muestra un mensaje apropiado. Vuelva a entrar en modo de edición e inténtelo de nuevo.
 

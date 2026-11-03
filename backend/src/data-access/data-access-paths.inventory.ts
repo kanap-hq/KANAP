@@ -228,6 +228,10 @@ export const DATA_ACCESS_PATHS: DataAccessPathEntry[] = [
   { file: 'billing/stripe-webhook.service.ts', member: 'lookupTenant', site: 'with_tenant', class: 'system', reason: 'Stripe webhook: finds the tenant of a subscription (subscriptions)' },
   { file: 'billing/stripe-webhook.service.ts', member: 'applyEventToTenant', site: 'with_tenant', class: 'system', reason: 'Stripe webhook: updates the subscription (subscriptions)' },
   { file: 'discovery-call/discovery-call.service.ts', member: 'applyCalcomEvent', site: 'with_tenant', class: 'system', reason: 'Cal.com webhook: records the discovery call of a trial workspace (trial_discovery_calls, audit_log)' },
+  { file: 'email/trial-mails/trial-mails.service.ts', member: 'sendDue', site: 'with_tenant', class: 'system', count: 3, reason: 'trial e-mails scheduler and Stripe webhook: reads the trial facts, stamps the e-mail before sending it and lifts the stamp when the send fails (trial_mails)' },
+  { file: 'email/trial-mails/trial-mails.service.ts', member: 'linkTenant', site: 'with_tenant', class: 'system', reason: 'links of the trial e-mails, without a session: reads the workspace link token to check it (trial_mails)' },
+  { file: 'email/trial-mails/trial-mails.service.ts', member: 'unsubscribe', site: 'with_tenant', class: 'system', reason: 'signed unsubscribe link of the trial e-mails, without a session (trial_mails, audit_log)' },
+  { file: 'email/trial-mails/trial-mails.service.ts', member: 'recordCallClick', site: 'with_tenant', class: 'system', reason: 'signed discovery call link of the trial e-mails, without a session: counts the click (audit_log)' },
   { file: 'ai/platform/ai-builtin-usage.service.ts', member: 'reserveMessageDetached', site: 'with_tenant', class: 'no_scoped_table', reason: 'Plaid built-in model message counter (AI usage tables)' },
   { file: 'ai/platform/ai-builtin-usage.service.ts', member: 'getUsageForAllTenants', site: 'with_tenant', class: 'system', reason: 'platform administration: built-in model usage per tenant (AI usage tables)' },
 

@@ -8,29 +8,32 @@ Navigate to **Portfolio > Tasks** to see all tasks across your organization. Cli
 
 ### Creating a new task
 
-When you click **New**, the full task workspace opens. To create a task:
+When you click **New**, the task page opens with an empty title in its header, shown in light blue. The rest of the page is dimmed until the task exists. To create a task:
 
-1. **Enter the title** (required):
-   - Type the task title in the text field at the top
+1. **Type the title** (required) in the header.
 
-2. **Choose context**:
-   - **Standalone task** (default): Keep "Related To" as **Standalone**
-   - **Linked task**: Select **Project**, **OPEX**, **Contract**, or **CAPEX**, then pick the specific item
+2. **Press Enter**, or leave the field. KANAP creates the task at once, with these defaults:
+   - **Status**: **Open**
+   - **Priority**: **Normal**
+   - **Assignee** and **Requestor**: you
+   - **Task type**: the default type, when one is set
+   - **Related to**: the record you started from, and its phase when you started from a phase. A task started from the Tasks page is standalone
+   - **Classification** (standalone and project tasks): for project tasks, **Source**, **Category**, **Stream**, and **Company** come from the parent project. For standalone tasks, your organization's default classification values are used when available
 
-3. **Fill in optional details**:
-   - **Task Type**: Select a category for the work (e.g., Task, Bug, Problem, Incident). Defaults to "Task" when available
+3. **Fill in the details**. Every tab and field is now available, with the Properties drawer on the right:
+   - **Related to**: Keep **Standalone**, or select **Project**, **OPEX**, **Contract**, or **CAPEX**, then pick the specific item
+   - **Task type**: A category for the work (e.g., Task, Bug, Problem, Incident)
    - **Labels**: Free tags, for example urgent or follow-up. Type one and press Enter
    - **Description**: Add detailed information using the markdown editor (supports formatting, lists, links, images)
    - **Phase**: For project tasks, select a phase or leave as "Project-level"
-   - **Classification** (standalone and project tasks): Set **Source**, **Category**, **Stream**, and **Company**. For project tasks, these default from the parent project. For standalone tasks, your organization's default classification values are pre-filled when available
-   - **Status**: Defaults to **Open**
-   - **Priority**: Defaults to **Normal**
    - **Dates**: Set start and due dates
-   - **Assignee**: Defaults to you; change if needed
+   - **Assignee**, **Status**, **Priority**: Change them if needed
 
-4. Click **Create** when ready (enabled once title is set). You can also press **Ctrl+S** (or **Cmd+S** on Mac)
+4. Click **Create** to keep the task. You return to where you started: a task started from a project's **Tasks** tab returns to that tab. Click **Cancel** to delete the task instead. KANAP asks first when you entered more than the title.
 
-**Tip**: You can paste images directly into the description. They are uploaded to storage automatically when you create the task.
+Pressing **Escape** on the empty title works as **Cancel**. Leaving the task any other way keeps it.
+
+**Tip**: You can paste images directly into the description. They upload automatically.
 
 **Note**: Tasks can also be created from within other workspaces (OPEX lines, Contracts, CAPEX lines, Portfolio Projects) where the relation is pre-selected.
 
@@ -146,7 +149,7 @@ Below the toolbar, the title block shows:
 
 The **Overview** tab holds the task content.
 
-**Description**: A markdown editor that supports formatting, lists, links, code blocks, and images. You can paste images directly; they upload automatically. Pressing **Tab** from the title field jumps into the description editor. The description autosaves a couple of seconds after you stop typing; the header shows **Saved** briefly each time it persists.
+**Description**: A markdown editor that supports formatting, lists, links, code blocks, and images. You can paste images directly; they upload automatically. The description autosaves a couple of seconds after you stop typing; the header shows **Saved** briefly each time it persists.
 
 **Attachments**: Drag and drop files onto the description, or use the upload area when it appears. Uploaded files appear as chips below the description. Click a chip to download; click the **x** button to delete (requires edit permission). Maximum 20 MB per file.
 
@@ -403,9 +406,9 @@ Standalone tasks are independent work items not linked to any specific project, 
 ### Creating standalone tasks
 
 1. Click **New** in the Tasks page
-2. Leave the **Related To** dropdown as **Standalone**
-3. The Properties drawer shows "Standalone Task" in the Context group
-4. Fill in the title, description, and other details
+2. Type the title and press Enter: the task is created as standalone
+3. The Properties drawer shows "Standalone task" in the Context group
+4. Fill in the description and other details
 5. Click **Create**
 
 ### Classification fields
@@ -731,8 +734,7 @@ When the focus is not on an input field, you can use:
 - **K** or **→**: Next task in the current list
 - **P**: Toggle the Properties drawer
 - **Escape**: Close and return to the list
-- **Ctrl+S** / **Cmd+S**: Save (or create, in create mode)
-- **Tab** from the title field: Jump straight into the description editor
+- **Ctrl+S** / **Cmd+S**: Save
 
 ---
 

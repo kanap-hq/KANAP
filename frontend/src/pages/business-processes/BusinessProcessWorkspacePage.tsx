@@ -1,255 +1,400 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { Alert, Box, Button, Divider, IconButton, Stack, Tab, Tabs, Typography } from '@mui/material';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Alert, Box, IconButton, Typography } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import CloseIcon from '@mui/icons-material/Close';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
 import { useBusinessProcessNav } from '../../hooks/useBusinessProcessNav';
-import BusinessProcessOverviewEditor, { BusinessProcessOverviewEditorHandle } from './editors/BusinessProcessOverviewEditor';
-import BusinessProcessCreateEditor, { BusinessProcessCreateEditorHandle } from './editors/BusinessProcessCreateEditor';
+import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
+import { PortfolioMetadataItem, PortfolioStatusMetadata } from '../portfolio/workspace/PortfolioMetadataBar';
+import RecordDeleteButton from '../../components/workspace/RecordDeleteButton';
+import { CreationActions, CreationPreview, useCreationReturn, useNewRecordCreate, useRecordCreation } from '../../components/workspace/creation';
+import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
+import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
+import { STATUS_DISABLED, STATUS_ENABLED, normalizeStatus, type StatusValue } from '../../constants/status';
+import { getApiErrorMessage, isDuplicateError } from '../../utils/apiErrorMessage';
+import { getDotColor } from '../../utils/statusColors';
 import BusinessProcessCategoryManagerDialog from './BusinessProcessCategoryManagerDialog';
 import BusinessProcessApplicationsSection from './BusinessProcessApplicationsSection';
-import { unsavedConfirm, useKanapDialogs } from '../../components/design';
-import RecordDeleteButton from '../../components/workspace/RecordDeleteButton';
-import RecordHistoryButton from '../../components/history/RecordHistoryButton';
+import {
+  BusinessProcessOverview,
+  BusinessProcessProperties,
+  EMPTY_BUSINESS_PROCESS,
+  type BusinessProcess,
+  type BusinessProcessPatch,
+} from './BusinessProcessFields';
 
-type TabKey = 'overview';
+type TabKey = 'overview' | 'relations' | typeof RECORD_HISTORY_TAB_KEY;
+const TAB_KEYS: TabKey[] = ['overview', 'relations', RECORD_HISTORY_TAB_KEY];
 
-const tabs: Array<{ key: TabKey; labelKey: string }> = [
-  { key: 'overview', labelKey: 'shared.labels.overview' },
-];
+// The History tab loads its code when opened; a failed load shows a retry in its place.
+const historyTab = retryableLazy(() => import('../../components/history/RecordHistoryTab'));
+const HistoryTab = historyTab.Component;
+const LIST_PATH = '/master-data/business-processes';
+/** How long Saved stays after a field is saved. */
+const SAVED_LINGER_MS = 1500;
+
+/**
+ * The preview of a new process (`CreationPreview`) is out of reach: its handlers never run, and
+ * its fields are drawn as they will be (not disabled), only dimmed.
+ */
+const ignore = () => undefined;
 
 export default function BusinessProcessWorkspacePage() {
-  const navigate = useNavigate();
   const { t } = useTranslation(['master-data', 'common']);
-  const dialogs = useKanapDialogs();
+  const theme = useTheme();
+  const navigate = useNavigate();
   const params = useParams();
   const [searchParams] = useSearchParams();
+  const queryClient = useQueryClient();
   const { hasLevel } = useAuth();
 
-  const idParam = String(params.id || '');
-  const isCreate = idParam === 'new';
-  const id = idParam;
-  const routeTab = (params.tab as TabKey) || 'overview';
+  const id = String(params.id || '');
+  const isCreate = id === 'new';
+  const canEdit = hasLevel('business_processes', 'member');
+  const canDelete = hasLevel('business_processes', 'admin');
+  // The applications of a process show to who reads applications: the Relations tab holds them.
+  const canReadApplications = hasLevel('applications', 'reader');
+  const rawTab = (params.tab as TabKey) || 'overview';
+  const tab: TabKey = TAB_KEYS.includes(rawTab)
+    && !(isCreate && rawTab !== 'overview')
+    && (rawTab !== 'relations' || canReadApplications)
+    ? rawTab
+    : 'overview';
 
-  const sort = searchParams.get('sort');
-  const q = searchParams.get('q');
-  const filters = searchParams.get('filters');
-  const statusScope = searchParams.get('scope');
+  const listContext = React.useMemo(() => {
+    const sp = new URLSearchParams();
+    for (const key of ['sort', 'q', 'filters', 'scope']) {
+      const value = searchParams.get(key);
+      if (value) sp.set(key, value);
+    }
+    return sp.toString();
+  }, [searchParams]);
+  const withContext = React.useCallback((path: string) => `${path}${listContext ? `?${listContext}` : ''}`, [listContext]);
+  const listPath = withContext(LIST_PATH);
 
-  const nav = useBusinessProcessNav({ id, sort, q, filters, statusScope });
-  const { total, index, hasPrev, hasNext, prevId, nextId } = isCreate
-    ? { total: 0, index: 0, hasPrev: false, hasNext: false, prevId: null, nextId: null }
-    : nav;
-
-  // Set once the process is deleted: the page leaves without loading it again.
-  const [deletedId, setDeletedId] = React.useState<string | null>(null);
-  const { data, error } = useQuery({
-    queryKey: ['business-processes', id],
-    queryFn: async () => {
-      const res = await api.get(`/business-processes/${id}`);
-      return res.data;
-    },
-    enabled: !isCreate && deletedId !== id,
+  const nav = useBusinessProcessNav({
+    id,
+    sort: searchParams.get('sort'),
+    q: searchParams.get('q'),
+    filters: searchParams.get('filters'),
+    statusScope: searchParams.get('scope'),
   });
 
-  const overviewRef = React.useRef<BusinessProcessOverviewEditorHandle>(null);
-  const createRef = React.useRef<BusinessProcessCreateEditorHandle>(null);
+  // Once deleted, the process is never loaded again, even while the page waits for the list.
+  const [deletedId, setDeletedId] = React.useState<string | null>(null);
+  const { data, error: loadError } = useQuery({
+    queryKey: ['business-processes', id],
+    queryFn: async () => (await api.get<BusinessProcess>(`/business-processes/${id}`)).data,
+    enabled: !isCreate && !!id && deletedId !== id,
+  });
+  const process = data && data.id === id ? data : undefined;
+
+  const [saveError, setSaveError] = React.useState<string | null>(null);
+  // A refusal of the name typed in the header (a name another process has).
+  const [titleError, setTitleError] = React.useState<string | null>(null);
   const [categoryManagerOpen, setCategoryManagerOpen] = React.useState(false);
+  React.useEffect(() => {
+    setSaveError(null);
+    setTitleError(null);
+  }, [id]);
 
-  const [dirty, setDirty] = React.useState(false);
-  const updateDirty = React.useCallback((d: boolean) => setDirty(d), []);
+  // Autosave never blocks the fields: writes queue one after the other, so a response never
+  // overwrites a newer one, and results for a record the user has left are dropped.
+  const chainRef = React.useRef<Promise<boolean>>(Promise.resolve(true));
+  const currentIdRef = React.useRef(id);
+  currentIdRef.current = id;
 
-  const handleSave = async () => {
-    try {
-      if (routeTab === 'overview') {
-        if (isCreate) {
-          const newId = await createRef.current?.save();
-          if (newId) {
-            const sp = new URLSearchParams(searchParams);
-            navigate(`/master-data/business-processes/${newId}/overview?${sp.toString()}`);
-          }
-        } else {
-          await overviewRef.current?.save();
-        }
-      }
-      setDirty(false);
-    } catch {
-      // child editors handle their own errors
-    }
-  };
+  // Fields show Saving, then Saved. A refused save does not.
+  const [fieldSaves, setFieldSaves] = React.useState(0);
+  const [fieldSaved, setFieldSaved] = React.useState(false);
+  const savedTimerRef = React.useRef<number | null>(null);
+  React.useEffect(() => () => {
+    if (savedTimerRef.current != null) window.clearTimeout(savedTimerRef.current);
+  }, []);
 
-  const handleReset = () => {
-    if (routeTab === 'overview') {
-      if (isCreate) createRef.current?.reset();
-      else overviewRef.current?.reset();
-    }
-    setDirty(false);
-  };
-
-  // Previous/next keep the two answers from #825. Close also offers Stay.
-  const confirmDirtyLeave = async (withStay = false): Promise<boolean> => {
-    if (!dirty) return true;
-    const labels = unsavedConfirm(t, 'saveAndLeave');
-    const outcome = withStay
-      ? await dialogs.confirmOutcome({ ...labels, stayLabel: t('common:unsaved.leaveWithoutSaving.cancel') })
-      : ((await dialogs.confirm(labels)) ? 'confirm' : 'cancel');
-    if (outcome === 'stay') return false;
-    if (outcome === 'confirm') {
+  const patch = React.useCallback((body: BusinessProcessPatch): Promise<boolean> => {
+    const recordId = process?.id;
+    if (!recordId || !canEdit) return Promise.resolve(false);
+    if (savedTimerRef.current != null) window.clearTimeout(savedTimerRef.current);
+    setFieldSaved(false);
+    setFieldSaves((n) => n + 1);
+    setSaveError(null);
+    if (body.name !== undefined) setTitleError(null);
+    const run = async (): Promise<boolean> => {
       try {
-        await handleSave();
-      } catch {
+        const res = await api.patch<Omit<BusinessProcess, 'categories'>>(`/business-processes/${recordId}`, body);
+        queryClient.setQueryData<BusinessProcess>(['business-processes', recordId], (prev) => ({
+          ...(prev ?? EMPTY_BUSINESS_PROCESS),
+          ...res.data,
+          // The update answers the row alone: the categories are the ones just sent, named by the picker.
+          categories: body.category_ids
+            ? body.category_ids.map((categoryId) => prev?.categories.find((c) => c.id === categoryId) ?? { id: categoryId, name: '', is_active: true })
+            : prev?.categories ?? [],
+        }));
+        void queryClient.invalidateQueries({ queryKey: ['business-processes'], predicate: (q) => q.queryKey[1] !== recordId });
+        return true;
+      } catch (e) {
+        if (currentIdRef.current !== recordId) return false;
+        if (body.name !== undefined) {
+          setTitleError(isDuplicateError(e) ? t('businessProcesses.fields.nameTaken') : getApiErrorMessage(e, t, t('shared.messages.failedToSave', { entity: t('businessProcesses.entity') })));
+        } else {
+          setSaveError(getApiErrorMessage(e, t, t('shared.messages.failedToSave', { entity: t('businessProcesses.entity') })));
+        }
         return false;
       }
-    } else {
-      handleReset();
-    }
-    return true;
-  };
+    };
+    const result = chainRef.current.then(run, run);
+    chainRef.current = result;
+    void result.then((saved) => {
+      if (!saved) return;
+      setFieldSaved(true);
+      savedTimerRef.current = window.setTimeout(() => {
+        savedTimerRef.current = null;
+        setFieldSaved(false);
+      }, SAVED_LINGER_MS);
+    }).finally(() => setFieldSaves((n) => n - 1));
+    return result;
+  }, [canEdit, process?.id, queryClient, t]);
+  const onPatch = React.useCallback((body: BusinessProcessPatch) => { void patch(body); }, [patch]);
 
-  const confirmAndNavigate = async (targetId: string | null) => {
-    if (!targetId) return;
-    if (!(await confirmDirtyLeave())) return;
-    navigate(`/master-data/business-processes/${targetId}/${routeTab}?${searchParams.toString()}`);
-  };
+  // Where the creation started: a new process left empty, or cancelled, goes back there.
+  const creationReturn = useCreationReturn(listPath);
+  const creation = useRecordCreation({
+    family: 'business-processes',
+    apiBase: '/business-processes',
+    recordId: !isCreate ? process?.id ?? null : null,
+    listPath,
+    recordLabel: t('businessProcesses.creation.record'),
+    queryKeyPrefixes: ['business-processes'],
+    onError: setSaveError,
+  });
+  const newCreate = useNewRecordCreate({ setTitleError, requiredMessage: t('businessProcesses.fields.nameRequired') });
+  const creatingRef = React.useRef(false);
 
-  const handlePrev = () => {
-    void confirmAndNavigate(prevId);
-  };
-  const handleNext = () => {
-    void confirmAndNavigate(nextId);
-  };
-
-  const onTabChange = async (_: React.SyntheticEvent, nextValue: TabKey) => {
-    if (isCreate && nextValue !== 'overview') return;
-    if (dirty) {
-      const proceed = await dialogs.confirm(unsavedConfirm(t, 'saveAndSwitch'));
-      if (proceed) {
-        void handleSave().then(() =>
-          navigate(`/master-data/business-processes/${id}/${nextValue}?${searchParams.toString()}`),
-        );
+  // The name committed in the header creates the process at once, enabled; the page moves to it,
+  // every tab open, with Create and Cancel (or closes it, kept, when Create was clicked meanwhile).
+  const createProcess = React.useCallback(async (name: string) => {
+    if (creatingRef.current) return;
+    creatingRef.current = true;
+    setTitleError(null);
+    setSaveError(null);
+    try {
+      const res = await api.post<Omit<BusinessProcess, 'categories'> & { creation_token: string }>('/business-processes', { name });
+      const { creation_token: token, ...created } = res.data;
+      void queryClient.invalidateQueries({ queryKey: ['business-processes'], refetchType: 'none' });
+      if (newCreate.titleSettled()) {
+        navigate(creationReturn, { replace: true });
         return;
-      } else {
-        handleReset();
       }
+      creation.startCreation({ recordId: created.id, token, returnTo: creationReturn });
+      // The page keeps its header while the process loads again.
+      queryClient.setQueryData<BusinessProcess>(['business-processes', created.id], { ...created, categories: [] });
+      navigate(withContext(`${LIST_PATH}/${created.id}/overview`), { replace: true });
+    } catch (err) {
+      newCreate.titleSettled();
+      setTitleError(isDuplicateError(err)
+        ? t('businessProcesses.fields.nameTaken')
+        : getApiErrorMessage(err, t, t('shared.messages.failedToCreate', { entity: t('businessProcesses.entity') })));
+    } finally {
+      creatingRef.current = false;
     }
-    navigate(`/master-data/business-processes/${id}/${nextValue}?${searchParams.toString()}`);
+  }, [creation, creationReturn, navigate, newCreate, queryClient, t, withContext]);
+
+  const close = () => navigate(isCreate ? creationReturn : listPath);
+  const goTo = (targetId: string | null, nextTab: TabKey = tab) => {
+    if (targetId) navigate(withContext(`${LIST_PATH}/${targetId}/${nextTab}`));
   };
 
-  const canManage = hasLevel('business_processes', 'manager');
-  const canDelete = hasLevel('business_processes', 'admin');
-  const saveDisabled = !dirty || !canManage;
-
-  const listContextParams = React.useMemo(() => {
-    const sp = new URLSearchParams();
-    if (sort) sp.set('sort', sort);
-    if (q) sp.set('q', q);
-    if (filters) sp.set('filters', filters);
-    return sp;
-  }, [filters, q, sort]);
-  const closeToList = () => {
-    const qs = listContextParams.toString();
-    navigate(`/master-data/business-processes${qs ? `?${qs}` : ''}`);
+  // Create: on the new page, the title is the only field; on a process being created, the field
+  // still being typed has left (the click took the focus) and its save is awaited, then the
+  // process is kept and closed.
+  const createAction = async () => {
+    if (isCreate) {
+      newCreate.create(titleError);
+      return;
+    }
+    if (!(await chainRef.current)) return;
+    creation.finishCreation();
+  };
+  // Cancel counts what was written: a field still being typed is saved first.
+  const cancelAction = async () => {
+    if (isCreate) {
+      close();
+      return;
+    }
+    await chainRef.current;
+    await creation.cancelCreation();
   };
 
-  const handleClose = async () => {
-    if (!(await confirmDirtyLeave(true))) return;
-    closeToList();
+  const disabled = !canEdit;
+  const tabs = [
+    { key: 'overview', label: t('shared.labels.overview') },
+    ...(canReadApplications ? [{ key: 'relations', label: t('businessProcesses.tabs.relations'), disabled: isCreate }] : []),
+    { key: RECORD_HISTORY_TAB_KEY, label: t('shared.labels.history'), disabled: isCreate },
+  ];
+
+  // The header shows the status: the menu disables at once (end of validity now, set by the
+  // server) or enables again (no end of validity).
+  const shown = isCreate ? EMPTY_BUSINESS_PROCESS : process;
+  const status = normalizeStatus(shown?.status);
+  const enabledColor = getDotColor('success', theme.palette.mode);
+  const disabledColor = getDotColor('default', theme.palette.mode);
+  const statusLabel = (value: StatusValue) => (value === STATUS_DISABLED ? t('common:statuses.disabled') : t('common:statuses.enabled'));
+  const changeStatus = (next: StatusValue) => {
+    if (!process || next === status) return;
+    onPatch(next === STATUS_DISABLED ? { status: STATUS_DISABLED } : { status: STATUS_ENABLED, disabled_at: null });
   };
+  const statusItem = shown ? (
+    <PortfolioMetadataItem label={t('shared.fields.status')}>
+      <PortfolioStatusMetadata
+        value={status}
+        label={statusLabel(status)}
+        color={status === STATUS_DISABLED ? disabledColor : enabledColor}
+        options={[
+          { value: STATUS_ENABLED, label: statusLabel(STATUS_ENABLED), color: enabledColor },
+          { value: STATUS_DISABLED, label: statusLabel(STATUS_DISABLED), color: disabledColor },
+        ]}
+        onChange={(value) => changeStatus(value as StatusValue)}
+        disabled={disabled || isCreate}
+      />
+    </PortfolioMetadataItem>
+  ) : undefined;
+
+  const properties = isCreate ? (
+    <CreationPreview>
+      <BusinessProcessProperties process={EMPTY_BUSINESS_PROCESS} disabled={false} onPatch={ignore} onManageCategories={ignore} />
+    </CreationPreview>
+  ) : process ? (
+    <BusinessProcessProperties
+      process={process}
+      disabled={disabled}
+      onPatch={onPatch}
+      onManageCategories={() => setCategoryManagerOpen(true)}
+    />
+  ) : undefined;
+
+  const beingCreated = isCreate || creation.beingCreated;
+  const notices = (loadError || saveError) ? (
+    <>
+      {!!loadError && <Alert severity="error">{t('businessProcesses.loadError')}</Alert>}
+      {!!saveError && <Alert severity="error">{saveError}</Alert>}
+    </>
+  ) : undefined;
 
   return (
-    <Box sx={{ p: 2 }}>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-        <Stack>
-          <Typography variant="h6">
-            {isCreate ? t('businessProcesses.newBusinessProcess') : data?.name || t('businessProcesses.businessProcessFallback')}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {!isCreate && total > 0 ? t('shared.workspace.itemCountOf', { entity: t('businessProcesses.businessProcessFallback'), current: index + 1, total }) : ''}
-          </Typography>
-        </Stack>
-        <Stack direction="row" spacing={1} alignItems="center">
-          <Button onClick={handlePrev} disabled={!hasPrev}>
-            {t('shared.labels.prev')}
-          </Button>
-          <Button onClick={handleReset} disabled={!dirty}>
-            {t('common:buttons.reset')}
-          </Button>
-          <Button variant="contained" onClick={() => void handleSave()} disabled={saveDisabled}>
-            {t('common:buttons.save')}
-          </Button>
-          <Button onClick={handleNext} disabled={!hasNext}>
-            {t('shared.labels.next')}
-          </Button>
-          {!isCreate && data && (
-            <RecordHistoryButton table="business_processes" recordId={data.id} />
-          )}
-          {!isCreate && data && canDelete && (
-            <RecordDeleteButton
-              base="/business-processes"
-              id={data.id}
-              name={data.name}
-              deleteFailed="businessProcesses.messages.deleteFailed"
-              confirmMessage={t('businessProcesses.deleteWarning', { count: 1 })}
-              onDeleted={() => { setDeletedId(data.id); closeToList(); }}
-            />
-          )}
-          <IconButton
-            aria-label={t('common:buttons.close')}
-            title={t('common:buttons.close')}
-            onClick={() => { void handleClose(); }}
-          >
-            <CloseIcon />
-          </IconButton>
-        </Stack>
-      </Stack>
-
-      {!!error && <Alert severity="error">{t('businessProcesses.loadError')}</Alert>}
-
-      <Divider sx={{ mb: 2 }} />
-
-      <Box sx={{ display: 'flex', minHeight: 420 }}>
-        <Tabs
-          orientation="vertical"
-          value={routeTab}
-          onChange={(_, value) => onTabChange(null as any, value as TabKey)}
-          sx={{ borderRight: 1, borderColor: 'divider', minWidth: 160 }}
-        >
-          {tabs.map((tab) => (
-            <Tab key={tab.key} label={t(tab.labelKey)} value={tab.key} disabled={isCreate && tab.key !== 'overview'} />
-          ))}
-        </Tabs>
-
-        <Box sx={{ flex: 1, pl: 3 }}>
-          {routeTab === 'overview' && (
-            isCreate ? (
-              <BusinessProcessCreateEditor
-                ref={createRef}
-                onDirtyChange={updateDirty}
-                onManageCategoriesClick={() => setCategoryManagerOpen(true)}
+    <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+      <PortfolioDetailWorkspaceShell
+        notices={notices}
+        activeTab={tab}
+        tabs={tabs}
+        onTabChange={(next) => goTo(id, next as TabKey)}
+        drawerStorageKey="kanap.businessProcesses.drawerOpen"
+        backLabel={t('businessProcesses.title')}
+        onBack={close}
+        title={isCreate ? '' : process?.name ?? ''}
+        titleFallback={isCreate ? t('businessProcesses.newBusinessProcess') : t('businessProcesses.businessProcessFallback')}
+        canEditTitle={canEdit}
+        readOnly={!isCreate && !!process && !canEdit}
+        onTitleSave={(value) => {
+          if (isCreate) {
+            newCreate.titleSent();
+            void createProcess(value);
+            return;
+          }
+          if (value !== process?.name) void patch({ name: value });
+        }}
+        onTitleDraftChange={() => setTitleError(null)}
+        titleError={titleError}
+        titleAutoEdit={isCreate}
+        titleOnCancel={isCreate ? close : undefined}
+        titleFocusRequest={newCreate.focusRequest}
+        titleRequiredMessage={t('businessProcesses.fields.nameRequired')}
+        isCreate={isCreate}
+        forceDrawerOpen={isCreate}
+        nav={!isCreate && nav.total > 0 ? {
+          currentIndex: nav.index + 1,
+          totalCount: nav.total,
+          hasPrev: nav.hasPrev,
+          hasNext: nav.hasNext,
+          onPrev: () => goTo(nav.prevId),
+          onNext: () => goTo(nav.nextId),
+          previousLabel: t('shared.labels.prev'),
+          nextLabel: t('shared.labels.next'),
+        } : undefined}
+        // Every field saves itself; on the new page the title is the only one.
+        onSaveShortcut={ignore}
+        metadata={isCreate ? (
+          <CreationPreview sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 'inherit' }}>
+            {statusItem}
+          </CreationPreview>
+        ) : statusItem}
+        actions={(
+          <>
+            {(fieldSaves > 0 || fieldSaved) && (
+              <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', alignSelf: 'center' }}>
+                {fieldSaves > 0 ? t('common:status.saving') : t('common:status.saved')}
+              </Typography>
+            )}
+            {!beingCreated && process && canDelete && (
+              <RecordDeleteButton
+                base="/business-processes"
+                id={process.id}
+                name={process.name}
+                deleteFailed="businessProcesses.messages.deleteFailed"
+                confirmMessage={t('businessProcesses.deleteWarning', { count: 1 })}
+                onDeleted={() => { setDeletedId(process.id); navigate(listPath); }}
+              />
+            )}
+            {beingCreated ? (
+              <CreationActions
+                busy={creation.cancelling}
+                onCreate={() => { void createAction(); }}
+                onCancel={() => { void cancelAction(); }}
               />
             ) : (
-              <Stack spacing={4}>
-                <BusinessProcessOverviewEditor
-                  ref={overviewRef}
-                  id={id}
-                  onDirtyChange={updateDirty}
-                  readOnly={!canManage}
-                  onManageCategoriesClick={() => setCategoryManagerOpen(true)}
-                />
-                <BusinessProcessApplicationsSection id={id} />
-              </Stack>
-            )
-          )}
-        </Box>
-      </Box>
+              <IconButton
+                aria-label={t('common:buttons.close')}
+                title={t('common:buttons.close')}
+                onClick={close}
+                size="small"
+              >
+                <CloseIcon />
+              </IconButton>
+            )}
+          </>
+        )}
+        properties={properties}
+      >
+        {isCreate && (
+          <CreationPreview>
+            <BusinessProcessOverview process={EMPTY_BUSINESS_PROCESS} disabled={false} onPatch={ignore} />
+          </CreationPreview>
+        )}
+        {process && tab === 'overview' && (
+          // Keyed by process: drafts start afresh on the next record.
+          <BusinessProcessOverview key={process.id} process={process} disabled={disabled} onPatch={onPatch} />
+        )}
+        {process && tab === 'relations' && canReadApplications && (
+          <BusinessProcessApplicationsSection id={process.id} />
+        )}
+        {process && tab === RECORD_HISTORY_TAB_KEY && (
+          <WorkspaceTabBoundary resetKey={tab} onRetry={() => historyTab.retry()}>
+            <React.Suspense fallback={null}>
+              <HistoryTab table="business_processes" recordId={process.id} />
+            </React.Suspense>
+          </WorkspaceTabBoundary>
+        )}
+      </PortfolioDetailWorkspaceShell>
       <BusinessProcessCategoryManagerDialog
         open={categoryManagerOpen}
         onClose={() => setCategoryManagerOpen(false)}
         onUpdated={() => {
-          // Category changes are picked up via react-query in selectors
+          // Category names and states are read again where shown.
+          void queryClient.invalidateQueries({ queryKey: ['business-processes', id] });
         }}
       />
     </Box>

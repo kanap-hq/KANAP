@@ -836,21 +836,14 @@
       },
       "messages": {
         "createFailed": "Error al crear la tarea",
-        "creating": "Creando tarea…",
         "deleteFailed": "Error al eliminar la tarea",
-        "documentImportAfterCreate": "Guarde la tarea antes de importar un documento.",
-        "documentImportFailed": "Error al importar el documento",
-        "importPermissionRequired": "No tiene permiso para importar un documento.",
-        "importSaveFirst": "Guarde esta tarea antes de importar un documento.",
         "invalidRelationConfiguration": "Configuración de relación no válida",
-        "invalidRelationType": "Tipo de objeto relacionado no válido",
         "invalidStandaloneRelation": "Las tareas independientes no pueden usar esa relación.",
         "loadFailed": "Error al cargar la tarea",
         "loading": "Cargando tarea…",
         "notFound": "Tarea no encontrada",
         "relatedItemRequired": "Seleccione un elemento relacionado",
         "saveFailed": "Error al guardar la tarea",
-        "titleRequired": "El título es obligatorio",
         "stillFollowing": "Todavía sigue esta tarea."
       },
       "sidebar": {
@@ -873,37 +866,15 @@
           "timeSpent": "Tiempo dedicado",
           "viewers": "Observadores"
         },
-        "priorityOptions": {
-          "blocker": "Bloqueante (+10)",
-          "high": "Alta (+5)",
-          "low": "Baja (-5)",
-          "normal": "Media (0)",
-          "optional": "Opcional (-10)"
-        },
         "sections": {
-          "classification": "Clasificación",
-          "context": "Contexto",
-          "dates": "Fechas",
-          "details": "Detalles de la tarea",
           "knowledge": "Conocimiento",
-          "people": "Personas",
           "time": "Tiempo"
         },
         "values": {
           "assigneeMissing": "Falta asignado",
-          "noClassification": "Sin clasificación definida.",
           "projectLevel": "Nivel de proyecto",
           "requestorMissing": "Falta solicitante",
-          "standaloneTask": "Tarea independiente",
-          "unknown": "Desconocido",
-          "relatedTypes": {
-            "budget": "Presupuesto",
-            "capex": "CAPEX",
-            "contract": "Contrato",
-            "incident": "Incidente",
-            "project": "Proyecto",
-            "related": "Relacionado"
-          }
+          "standaloneTask": "Tarea independiente"
         }
       },
       "workLog": {
@@ -937,6 +908,9 @@
       "tabs": {
         "overview": "Vista general",
         "history": "Historial"
+      },
+      "creation": {
+        "record": "La tarea"
       }
     }
   },

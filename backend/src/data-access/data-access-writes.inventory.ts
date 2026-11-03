@@ -148,6 +148,7 @@ export const DATA_ACCESS_WRITES: DataAccessWriteEntry[] = [
   { file: 'tasks/task-attachments.service.ts', member: 'deleteAttachment', count: 1, handling: 'pre_check', reason: `${TASK_ELEMENT}, before the stored file is deleted` },
   { file: 'tasks/task-attachments.service.ts', member: 'uploadAttachment', count: 1, handling: 'pre_check', reason: `${TASK_ELEMENT}, before the file is stored` },
   { file: 'tasks/task-column-write.ts', member: 'writeTaskColumns', count: 1, handling: 'row_count', reason: 'assertTaskWritten; the services check with prepareTaskWrite first (read only, handover)' },
+  { file: 'tasks/task-creation.ts', member: 'cancelTaskCreation', count: 1, handling: 'delegates', reason: 'cancel of a task being created by its creator (token checked by the route, task locked FOR UPDATE under the policies): TasksDeleteService.delete, which checks assertTaskDeletable; no window outside the limited role' },
   { file: 'tasks/task-delete-cleanup.ts', member: 'deleteTaskActivities', count: 1, handling: 'pre_check', reason: 'TasksDeleteService.delete checks assertTaskDeletable first; deleteItemTasks is reserved' },
   { file: 'tasks/task-time-entries.service.ts', member: 'create', count: 1, handling: 'pre_check', reason: TASK_ELEMENT },
   { file: 'tasks/task-time-entries.service.ts', member: 'delete', count: 1, handling: 'pre_check', reason: TASK_ELEMENT },

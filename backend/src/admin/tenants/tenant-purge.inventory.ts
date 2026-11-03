@@ -258,6 +258,7 @@ export const TENANT_PURGE_TABLES = [
   'onboarding_dismissals',
   'tenant_onboarding',
   'trial_discovery_calls',
+  'trial_mails',
   'user_notification_preferences',
   'refresh_tokens',
   'password_reset_tokens',

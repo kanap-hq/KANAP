@@ -1,10 +1,13 @@
 import {
-  BadRequestException, Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Req, UseGuards,
+  BadRequestException, Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query, Req, UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireLevel } from '../auth/require-level.decorator';
 import { TasksUnifiedService } from '../tasks/tasks-unified.service';
+import { TasksDeleteService } from '../tasks/tasks-delete.service';
+import { assertTaskCreationToken, cancelTaskCreation, taskCreationChanges, withTaskCreationToken } from '../tasks/task-creation';
+import type { CreationChanges } from '../common/creation/creation-changes';
 import { TaskTimeEntriesService } from '../tasks/task-time-entries.service';
 import { TaskActivitiesService, ActivityBodyDto } from '../tasks/task-activities.service';
 import { Task } from '../tasks/task.entity';
@@ -22,7 +25,13 @@ export class PortfolioProjectTasksController {
     private readonly timeEntriesSvc: TaskTimeEntriesService,
     private readonly activitiesSvc: TaskActivitiesService,
     private readonly projectsSvc: PortfolioProjectsService,
+    private readonly deleteSvc: TasksDeleteService,
   ) {}
+
+  /** The tenant and the person of the request, for a creation token. */
+  private creationSubject(req: any) {
+    return { tenantId: req?.tenant?.id ?? '', userId: req?.user?.sub ?? '' };
+  }
 
   private resolveProjectId(idOrRef: string, req: any): Promise<string> {
     return resolveToUuid(idOrRef, 'project', req?.queryRunner?.manager);
@@ -142,11 +151,13 @@ export class PortfolioProjectTasksController {
     @Req() req: any,
   ) {
     const projectId = await this.resolveProjectForAccess(projectIdOrRef, req, 'contributor');
-    return this.tasksSvc.createForTarget(
+    const created = await this.tasksSvc.createForTarget(
       { type: 'project', id: projectId, payload: body },
       req.user?.sub ?? null,
       { manager: req?.queryRunner?.manager, tenantId: req?.tenant?.id },
     );
+    // The token of "Cancel" of a task being created (`tasks/task-creation.ts`).
+    return withTaskCreationToken(created, this.creationSubject(req));
   }
 
   // ==================== PROJECT TIME SUMMARY ====================
@@ -195,6 +206,46 @@ export class PortfolioProjectTasksController {
       req.user?.sub ?? null,
       { manager: req?.queryRunner?.manager, tenantId },
     );
+  }
+
+  /**
+   * Before "Cancel" of a project task being created, at the right that created it: what was
+   * written on it since its creation (`tasks/task-creation.ts`). Token first, then the project and
+   * the task's place in it. Nothing is written.
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('portfolio_projects', 'contributor')
+  @Get(':taskId/creation')
+  async creationChanges(
+    @Param('projectId') projectIdOrRef: string,
+    @Param('taskId') taskId: string,
+    @Query('token') token: string,
+    @Req() req: any,
+  ): Promise<{ changes: CreationChanges }> {
+    assertTaskCreationToken(taskId, token, this.creationSubject(req));
+    const projectId = await this.resolveProjectForAccess(projectIdOrRef, req, 'contributor');
+    await this.resolveProjectTaskForAccess(projectId, taskId, req);
+    return { changes: await taskCreationChanges(req?.queryRunner?.manager, this.creationSubject(req), taskId) };
+  }
+
+  /**
+   * "Cancel" of a project task being created: its creator deletes it with its token, at the right
+   * that created it (portfolio_projects contributor), the task of this project only. Same delete as
+   * `DELETE /tasks/bulk` for one task.
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('portfolio_projects', 'contributor')
+  @Delete(':taskId/creation')
+  async cancelCreation(
+    @Param('projectId') projectIdOrRef: string,
+    @Param('taskId') taskId: string,
+    @Body() body: { token?: string },
+    @Req() req: any,
+  ): Promise<void> {
+    assertTaskCreationToken(taskId, body?.token, this.creationSubject(req));
+    const projectId = await this.resolveProjectForAccess(projectIdOrRef, req, 'contributor');
+    await this.resolveProjectTaskForAccess(projectId, taskId, req);
+    await cancelTaskCreation(req?.queryRunner?.manager, this.deleteSvc, this.creationSubject(req), taskId);
   }
 
   // ==================== TIME ENTRIES ====================

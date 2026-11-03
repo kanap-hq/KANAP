@@ -54,6 +54,9 @@ import { realSummaryDeps } from './oracle/oracle-deps';
 import { itemService, seedCompany, seedCostCenter, seedUser } from './cost-center.fixtures';
 import { assert, captureAudit, amountsService, inRolledBackTransaction, period, runSpecs, setTenant } from './round-inputs.fixtures';
 
+// A task created through a line's route carries a creation token, signed with the JWT secret.
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'budget-line-foreign-nature-spec-secret';
+
 // A line of nature `capex` stored in `spend_items` (where every CAPEX line lives since lot Z1),
 // inserted by raw SQL with every child the OPEX module knows: a version with months, an
 // allocation, an analytics value, a website link, a contact, an attachment, links to an

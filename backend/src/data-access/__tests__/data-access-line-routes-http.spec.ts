@@ -60,6 +60,9 @@ import { Seed, seed } from './data-access-line-seed';
  * Needs the role kanap_data_limited (CI installs it); skipped without it, failed in CI.
  */
 
+// The task create routes hand a creation token, signed under the JWT key.
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'data-access-line-routes-spec-secret';
+
 const dataSource = new DataSource({ ...(appDataSource.options as any), poolSize: 3 });
 let client: PgClient;
 let s: Seed;

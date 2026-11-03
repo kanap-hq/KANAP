@@ -92,6 +92,8 @@ import aboutEs from './about/es';
 
 import legalEn from './legal/en';
 import legalFr from './legal/fr';
+import legalDe from './legal/de';
+import legalEs from './legal/es';
 
 import type { HomeContent } from './home/types';
 import type { OfferContent } from './offer/types';
@@ -232,7 +234,7 @@ export function getContactContent(locale: Locale): ContactContent {
   return CONTACT[locale] ?? CONTACT[DEFAULT_LOCALE];
 }
 
-const LEGAL: Partial<Record<Locale, LegalContent>> = { en: legalEn, fr: legalFr };
+const LEGAL: Partial<Record<Locale, LegalContent>> = { en: legalEn, fr: legalFr, de: legalDe, es: legalEs };
 export function getLegalContent(locale: Locale): LegalContent {
   return LEGAL[locale] ?? LEGAL[DEFAULT_LOCALE]!;
 }
