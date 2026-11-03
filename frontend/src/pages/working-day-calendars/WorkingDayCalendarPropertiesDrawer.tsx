@@ -16,6 +16,8 @@ type Props = {
   onDisabledAtChange: (disabledAt: string | null) => void;
   /** Switched off: disable now, on the server's clock (the status alone). */
   onDisableNow: () => void;
+  /** A new calendar: its country and region, chosen here once (`CalendarSourceFields`). */
+  sourceFields?: React.ReactNode;
 };
 
 export default function WorkingDayCalendarPropertiesDrawer({
@@ -25,6 +27,7 @@ export default function WorkingDayCalendarPropertiesDrawer({
   onCodeCommit,
   onDisabledAtChange,
   onDisableNow,
+  sourceFields,
 }: Props) {
   const { t } = useTranslation(['master-data', 'common']);
   const source = calendarSourceLabel(calendar);
@@ -64,7 +67,8 @@ export default function WorkingDayCalendarPropertiesDrawer({
             inputProps={{ 'aria-label': t('workingDayCalendars.fields.code'), autoComplete: 'off', spellCheck: false }}
           />
         </PropertyRow>
-        {source && (
+        {sourceFields}
+        {!sourceFields && source && (
           // Set at creation and never changed: plain text, not a field.
           <PropertyRow label={t('workingDayCalendars.fields.source')} helperText={t('workingDayCalendars.hints.source')}>
             <Typography data-testid="working-day-calendar-source" sx={{ fontSize: 13, lineHeight: 1.4, color: 'kanap.text.primary' }}>

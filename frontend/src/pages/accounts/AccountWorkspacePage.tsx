@@ -381,6 +381,8 @@ export default function AccountWorkspacePage() {
         })}
         titleFallback={isCreate ? t('accounts.newAccount') : t('accounts.accountFallback')}
         isCreate={isCreate}
+        // A new record's required fields sit in the drawer: it stays open.
+        forceDrawerOpen={isCreate}
         actions={isCreate ? (
           <CreationActions onCreate={() => void handleCreate()} onCancel={leave} busy={!canEdit || creating} />
         ) : undefined}

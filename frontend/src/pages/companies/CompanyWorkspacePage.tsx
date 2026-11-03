@@ -458,6 +458,8 @@ export default function CompanyWorkspacePage() {
         {...(isCreate ? title.shellProps : { title: data?.name ?? '' })}
         titleFallback={isCreate ? t('companies.newCompany') : t('companies.companyFallback')}
         isCreate={isCreate}
+        // A new record's required fields sit in the drawer: it stays open.
+        forceDrawerOpen={isCreate}
         titleEditor={data && !isCreate ? (
           <CompanyNameTitle
             key={data.id}

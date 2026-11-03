@@ -305,8 +305,6 @@
     "import": "Kalender importieren",
     "previous": "Vorheriger Kalender",
     "next": "Nächster Kalender",
-    "createHint": "Sobald der Kalender angelegt ist, geben Sie die Arbeitstage jedes Jahres ein.",
-    "createHintStandard": "Die Arbeitstage jedes Jahres folgen den Feiertagen von {{source}}. Sie können danach jeden Monat ändern.",
     "wholeCountry": "Ganzes Land",
     "yearsAll": "Alle Jahre",
     "yearsAllEdited": "Alle Jahre, {{years}} geändert",

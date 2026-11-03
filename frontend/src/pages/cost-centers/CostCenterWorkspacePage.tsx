@@ -317,6 +317,8 @@ export default function CostCenterWorkspacePage() {
         })}
         titleFallback={isCreate ? t('costCenters.newCostCenter') : t('costCenters.fallback')}
         isCreate={isCreate}
+        // A new record's required fields sit in the drawer: it stays open.
+        forceDrawerOpen={isCreate}
         nav={!isCreate && nav.total > 0 ? {
           currentIndex: nav.index + 1,
           totalCount: nav.total,

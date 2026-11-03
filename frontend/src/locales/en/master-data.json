@@ -305,8 +305,6 @@
     "import": "Import calendars",
     "previous": "Previous calendar",
     "next": "Next calendar",
-    "createHint": "Once the calendar is created, enter the working days of each year.",
-    "createHintStandard": "The working days of every year follow the public holidays of {{source}}. You can change any month afterwards.",
     "wholeCountry": "Whole country",
     "yearsAll": "All years",
     "yearsAllEdited": "All years, {{years}} edited",

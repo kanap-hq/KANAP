@@ -342,6 +342,8 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
         {...(isCreate ? title.shellProps : { title: data?.name ?? '' })}
         titleFallback={isCreate ? t('suppliers.newSupplier') : t('suppliers.supplierFallback')}
         isCreate={isCreate}
+        // A new record's required fields sit in the drawer: it stays open.
+        forceDrawerOpen={isCreate}
         titleEditor={data && !isCreate ? (
           <SupplierNameTitle
             name={data.name}

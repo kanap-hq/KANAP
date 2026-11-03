@@ -305,8 +305,6 @@
     "import": "Importar calendarios",
     "previous": "Calendario anterior",
     "next": "Calendario siguiente",
-    "createHint": "Una vez creado el calendario, introduzca los días laborables de cada año.",
-    "createHintStandard": "Los días laborables de cada año siguen los festivos de {{source}}. Después puede cambiar cualquier mes.",
     "wholeCountry": "Todo el país",
     "yearsAll": "Todos los años",
     "yearsAllEdited": "Todos los años, cambios en {{years}}",

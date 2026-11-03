@@ -263,10 +263,7 @@ function ContactEditor({ id }: { id: string }) {
     if (invalidMobile) nextErrors.mobile = invalidMobile;
     if (values.supplier_id && !values.supplier_role) nextErrors.supplier_role = t('contacts.messages.typeRequired');
     setErrors((prev) => ({ ...prev, ...nextErrors }));
-    if (Object.keys(nextErrors).length > 0) {
-      setDrawerOpenRequest((n) => n + 1);
-      return;
-    }
+    if (Object.keys(nextErrors).length > 0) return;
     setCreating(true);
     setPageError(null);
     try {
@@ -489,6 +486,8 @@ function ContactEditor({ id }: { id: string }) {
         title={isCreate ? '' : name ?? ''}
         titleFallback={isCreate ? t('contacts.newContact') : t('contacts.contactFallback')}
         isCreate={isCreate}
+        // A new record's required fields sit in the drawer: it stays open.
+        forceDrawerOpen={isCreate}
         titleEditor={isCreate ? (
           <ContactNameDraft
             firstName={draft.first_name ?? ''}

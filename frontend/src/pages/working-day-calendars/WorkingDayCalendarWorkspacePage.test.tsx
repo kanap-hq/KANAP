@@ -152,12 +152,15 @@ describe('WorkingDayCalendarWorkspacePage', () => {
   it('creates with an explicit button and opens the new calendar', async () => {
     mocked.createWorkingDayProfile.mockResolvedValue({ ...CALENDAR, id: 'wd-new' });
     renderAt('/master-data/working-day-calendars/new/overview?sort=name%3AASC');
-    // No Properties drawer on the create page.
-    expect(screen.queryByRole('complementary')).toBeNull();
+    // The calendar's own page: the code sits in its Properties drawer.
+    expect(screen.getByRole('complementary')).toContainElement(screen.getByLabelText('workingDayCalendars.fields.code'));
     fireEvent.change(screen.getByLabelText('workingDayCalendars.fields.code'), { target: { value: ' CAL-02 ' } });
+    fireEvent.blur(screen.getByLabelText('workingDayCalendars.fields.code'));
     fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Contractors' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
-    await waitFor(() => expect(mocked.createWorkingDayProfile).toHaveBeenCalledWith({ code: 'CAL-02', name: 'Contractors', description: null }));
+    await waitFor(() => expect(mocked.createWorkingDayProfile).toHaveBeenCalledWith({
+      code: 'CAL-02', name: 'Contractors', description: null, status: 'enabled', disabled_at: null, days_by_year: {},
+    }));
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/working-day-calendars?sort=name%3AASC'));
   });
 
@@ -190,7 +193,6 @@ describe('WorkingDayCalendarWorkspacePage', () => {
     fireEvent.click(await screen.findByRole('option', { name: 'France' }));
     expect(screen.getByLabelText('workingDayCalendars.fields.code')).toHaveValue('FR');
     expect(screen.getByRole('textbox', { name: 'common:buttons.editTitle' })).toHaveValue('France');
-    expect(screen.getByTestId('working-day-calendar-create-hint')).toHaveTextContent('workingDayCalendars.createHintStandard source=France');
 
     const region = screen.getByRole('combobox', { name: 'workingDayCalendars.fields.region' });
     expect(region).toHaveTextContent('workingDayCalendars.wholeCountry');
@@ -204,6 +206,8 @@ describe('WorkingDayCalendarWorkspacePage', () => {
       code: 'FR-57',
       name: 'France (Moselle)',
       description: null,
+      status: 'enabled',
+      disabled_at: null,
       country_iso: 'FR',
       region_code: '57',
     }));

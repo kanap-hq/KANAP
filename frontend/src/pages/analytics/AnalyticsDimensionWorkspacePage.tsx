@@ -269,6 +269,8 @@ export default function AnalyticsDimensionWorkspacePage() {
         })}
         titleFallback={isCreate ? t('analytics.newDimension') : t('analytics.dimensionFallback')}
         isCreate={isCreate}
+        // A new record's required fields sit in the drawer: it stays open.
+        forceDrawerOpen={isCreate}
         nav={!isCreate && nav.total > 0 ? {
           currentIndex: nav.index + 1,
           totalCount: nav.total,
