@@ -769,7 +769,7 @@ async function testIncidentHiddenBetweenPreviewAndApprovalFails(harness: Harness
       [seed.tenantId, seed.incidents.open, seed.otherId],
     );
     const failed = await approveFailingPreview(harness, ctx, preview);
-    assert.match(String(failed.error_message), /Incident not found/);
+    assert.match(String(failed.error_message), /Incident introuvable/);
     const [row] = await runner.query(`SELECT description FROM incidents WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, seed.incidents.open]);
     assert.notEqual(row.description, 'Written before the change');
   });
@@ -865,7 +865,7 @@ async function testDriftIsRefused(harness: Harness) {
     });
     await runner.query(`UPDATE incidents SET title = 'Changed elsewhere' WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, seed.incidents.open]);
     const failed = await approveFailingPreview(harness, ctx, preview);
-    assert.match(String(failed.error_message), /Title changed after the preview was created/);
+    assert.match(String(failed.error_message), /Title a changé depuis l'aperçu/);
     const [row] = await runner.query(`SELECT title FROM incidents WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, seed.incidents.open]);
     assert.equal(row.title, 'Changed elsewhere', 'nothing of the preview is written');
   });
@@ -882,7 +882,7 @@ async function testIncidentStateDriftIsRefused(harness: Harness) {
       [seed.tenantId, seed.incidents.open],
     );
     const failed = await approveFailingPreview(harness, ctx, preview);
-    assert.match(String(failed.error_message), /INC-4 changed after the preview was created/);
+    assert.match(String(failed.error_message), /INC-4 a changé depuis l'aperçu/);
     const [row] = await runner.query(
       `SELECT status FROM incidents WHERE tenant_id = $1 AND id = $2`,
       [seed.tenantId, seed.incidents.open],
@@ -903,7 +903,7 @@ async function testConfidentialityDriftIsRefused(harness: Harness) {
       [seed.tenantId, seed.incidents.ownConfidential],
     );
     const failed = await approveFailingPreview(harness, ctx, preview);
-    assert.match(String(failed.error_message), /INC-8 changed after the preview was created/);
+    assert.match(String(failed.error_message), /INC-8 a changé depuis l'aperçu/);
     assert.equal(failed.status, 'failed');
     const [row] = await runner.query(
       `SELECT confidential FROM incidents WHERE tenant_id = $1 AND id = $2`,
@@ -959,7 +959,7 @@ async function testDriftWaitsForTheIncidentRowLock(harness: Harness) {
       assert.equal(stateFailed.status, 'failed', 'the refused state write is not executed');
       assert.match(
         String(stateFailed.error_message),
-        /INC-4 changed after the preview was created/,
+        /INC-4 a changé depuis l'aperçu/,
         'the locked read sees the status the other connection committed',
       );
       const stateAudits = await execution.query(
@@ -1008,7 +1008,7 @@ async function testDriftWaitsForTheIncidentRowLock(harness: Harness) {
       assert.equal(confidentialityFailed.status, 'failed', 'the refused confidentiality write is not executed');
       assert.match(
         String(confidentialityFailed.error_message),
-        /INC-8 changed after the preview was created/,
+        /INC-8 a changé depuis l'aperçu/,
         'the locked read sees the flag the other connection committed',
       );
       const confidentialityAudits = await execution.query(
@@ -1767,7 +1767,7 @@ async function testLinkDriftIsRefused(harness: Harness) {
     const failed = await approveFailingPreview(harness, ctx, preview);
     assert.equal(
       failed.error_message,
-      'Links on INC-4 changed after the preview was created.',
+      "Les liens sur INC-4 ont changé depuis l'aperçu.",
       'the 409 conflict is relayed',
     );
     const links = await runner.query(
