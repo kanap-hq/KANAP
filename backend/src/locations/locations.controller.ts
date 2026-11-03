@@ -10,6 +10,7 @@ import {
   Req,
   UseGuards,
   BadRequestException,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
@@ -24,6 +25,7 @@ import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
 import { buildRelationsAccess } from '../common/relations/relations-access';
 import { moduleRightRequired } from '../auth/module-right-required';
 import { LOCATION_RELATION_READS, type LocationRelationsContext } from './location-relations';
+import { cancelCreation, readCreationChanges, withCreationToken } from '../common/creation/creation-routes';
 
 @UseGuards(JwtAuthGuard)
 @Controller('locations')
@@ -91,9 +93,25 @@ export class LocationsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('locations', 'member')
   @Post()
-  create(@Body() body: any, @Req() req: any) {
+  async create(@Body() body: any, @Req() req: any, @Tenant() ctx: TenantRequest) {
     const tenantId = this.requireTenantId(req);
-    return this.svc.create(body, tenantId, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+    return withCreationToken('locations', await this.svc.create(body, tenantId, req.user?.sub ?? null, { manager: req?.queryRunner?.manager }), ctx);
+  }
+
+  // Before Cancel of the site being created: what was written on it since (common/creation).
+  @UseGuards(PermissionGuard)
+  @RequireLevel('locations', 'member')
+  @Get(':id/creation')
+  creationChanges(@Param('id', new ParseUUIDPipe()) id: string, @Query('token') token: string, @Tenant() ctx: TenantRequest) {
+    return readCreationChanges('locations', id, token, ctx);
+  }
+
+  // Cancel: the creator deletes the site they just created, with its token, without the delete right.
+  @UseGuards(PermissionGuard)
+  @RequireLevel('locations', 'member')
+  @Delete(':id/creation')
+  cancelCreation(@Param('id', new ParseUUIDPipe()) id: string, @Body() body: { token?: string }, @Tenant() ctx: TenantRequest) {
+    return cancelCreation('locations', id, body?.token, ctx, () => this.svc.delete(id, ctx.userId || null, { manager: ctx.manager }));
   }
 
   @UseGuards(PermissionGuard)

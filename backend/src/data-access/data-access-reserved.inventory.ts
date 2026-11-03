@@ -45,6 +45,8 @@ const SHARE = 'sends a link to a visible record (notifications, lot 4)';
 const TASK_WRITE = 'a write on one task or its elements: the task policies apply, and the pre-checks of lot 3 (tasks/task-data-access.ts)';
 const TASK_DELETE = 'task delete: allowed to who may modify the task\'s line or contract (assertTaskDeletable)';
 const CREATE_SHARED = 'creating a supplier or a contact stays allowed (spec §2.7)';
+const CREATION_CANCEL = 'cancel of a record being created, by its creator with its creation token (that record only), while nobody else wrote on it: it removes only what that person just created';
+const CREATION_CHANGES = 'the preflight of the cancel of a record being created (read), with its creation token';
 const OWN_PROFILE = 'the person\'s own profile';
 const OWN_MCP_KEY = 'the person\'s own MCP key';
 const MODEL_CONFIGS_LIST = 'the model configurations (no budget data); their writes are reserved';
@@ -152,7 +154,7 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
   {
     file: 'companies/companies.controller.ts',
     controller: 'CompaniesController',
-    reserved: ['bulkDelete', 'create', 'delete', 'deleteCheck', 'import', 'update'],
+    reserved: ['bulkDelete', 'cancelCreation', 'create', 'creationChanges', 'delete', 'deleteCheck', 'import', 'update'],
     allowed: {
       export: EXPORT, // GET export
       get: READ, // GET :id
@@ -175,7 +177,7 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
   {
     file: 'departments/departments.controller.ts',
     controller: 'DepartmentsController',
-    reserved: ['bulkDelete', 'create', 'delete', 'deleteCheck', 'import', 'update'],
+    reserved: ['bulkDelete', 'cancelCreation', 'create', 'creationChanges', 'delete', 'deleteCheck', 'import', 'update'],
     allowed: {
       export: EXPORT, // GET export
       get: READ, // GET :id
@@ -196,7 +198,7 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
   {
     file: 'cost-centers/cost-centers.controller.ts',
     controller: 'CostCentersController',
-    reserved: ['bulkDelete', 'create', 'delete', 'deleteCheck', 'import', 'update'],
+    reserved: ['bulkDelete', 'cancelCreation', 'create', 'creationChanges', 'delete', 'deleteCheck', 'import', 'update'],
     allowed: {
       export: EXPORT, // GET export
       get: READ, // GET :id
@@ -209,7 +211,7 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
   {
     file: 'accounts/accounts.controller.ts',
     controller: 'AccountsController',
-    reserved: ['bulkDelete', 'create', 'delete', 'deleteCheck', 'import', 'update'],
+    reserved: ['bulkDelete', 'cancelCreation', 'create', 'creationChanges', 'delete', 'deleteCheck', 'import', 'update'],
     allowed: {
       export: EXPORT, // GET export
       get: READ, // GET :id
@@ -264,7 +266,7 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
   {
     file: 'analytics/analytics-axes.controller.ts',
     controller: 'AnalyticsAxesController',
-    reserved: ['addRecommended', 'create', 'delete', 'reorder', 'update'],
+    reserved: ['addRecommended', 'cancelCreation', 'create', 'creationChanges', 'delete', 'reorder', 'update'],
     allowed: {
       get: READ, // GET :id
       list: READ, // GET (root)
@@ -274,7 +276,7 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
   {
     file: 'analytics/analytics-categories.controller.ts',
     controller: 'AnalyticsCategoriesController',
-    reserved: ['bulkDelete', 'create', 'delete', 'deleteCheck', 'import', 'reorder', 'update'],
+    reserved: ['bulkDelete', 'cancelCreation', 'create', 'creationChanges', 'delete', 'deleteCheck', 'import', 'reorder', 'update'],
     allowed: {
       // POST from-line
       createFromLine: 'the line picker: values of an open dimension only, for a person who may modify the line (spec §3.5); a closed list answers 403',
@@ -290,7 +292,9 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
     controller: 'SuppliersController',
     reserved: ['attachContact', 'bulkDelete', 'delete', 'deleteCheck', 'detachContact', 'import', 'update'],
     allowed: {
+      cancelCreation: CREATION_CANCEL, // DELETE :id/creation
       create: CREATE_SHARED, // POST (root)
+      creationChanges: CREATION_CHANGES, // GET :id/creation
       export: EXPORT, // GET export
       get: READ, // GET :id
       list: READ, // GET (root)
@@ -305,7 +309,9 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
     controller: 'ContactsController',
     reserved: ['bulkDelete', 'import', 'remove', 'update'],
     allowed: {
+      cancelCreation: CREATION_CANCEL, // DELETE :id/creation
       create: CREATE_SHARED, // POST (root)
+      creationChanges: CREATION_CHANGES, // GET :id/creation
       export: EXPORT, // GET export
       get: READ, // GET :id
       list: READ, // GET (root)
@@ -491,10 +497,12 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
       bulkReplaceBudgetLines: CONTRACT_WRITE, // POST :id/budget-lines/bulk-replace
       bulkReplaceCapex: CONTRACT_WRITE, // POST :id/capex-items/bulk-replace
       bulkReplaceTechnologies: CONTRACT_WRITE, // POST :id/technologies/bulk-replace
+      cancelCreation: CREATION_CANCEL, // DELETE :id/creation
       compliance: READ, // GET :id/compliance
       create: CONTRACT_WRITE, // POST (root)
       createTask: CONTRACT_WRITE, // POST :id/tasks
       createUrl: CONTRACT_WRITE, // POST :id/links
+      creationChanges: CREATION_CHANGES, // GET :id/creation
       deleteAttachment: CONTRACT_WRITE, // PATCH attachments/:attachmentId/delete
       deleteUrl: CONTRACT_WRITE, // DELETE :id/links/:linkId
       detachContact: CONTRACT_WRITE, // DELETE :id/contacts/:linkId

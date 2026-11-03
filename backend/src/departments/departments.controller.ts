@@ -1,5 +1,5 @@
 import { exportListQuery } from '../common/pagination';
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Res, UploadedFile, UseGuards, UseInterceptors, ParseUUIDPipe } from '@nestjs/common';
 import { DepartmentsService } from './departments.service';
 import { DepartmentsDeleteService } from './departments-delete.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -18,6 +18,7 @@ import { languageOf, parseDateOrder, parseDecimalMark } from '../common/csv-shee
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 import { csvExportFormat } from '../common/csv/csv-export.service';
 import { csvExportBody } from '../common/csv/send-csv-export';
+import { cancelCreation, readCreationChanges, withCreationToken } from '../common/creation/creation-routes';
 
 @UseGuards(JwtAuthGuard)
 @Controller('departments')
@@ -79,7 +80,27 @@ export class DepartmentsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('departments', 'member')
   @Post()
-  create(@Body() body: DepartmentUpsertDto, @Tenant() ctx: TenantRequest) { return this.svc.create(body, ctx.userId || undefined, { manager: ctx.manager }); }
+  async create(@Body() body: DepartmentUpsertDto, @Tenant() ctx: TenantRequest) {
+    return withCreationToken('departments', await this.svc.create(body, ctx.userId || undefined, { manager: ctx.manager }), ctx);
+  }
+
+  // Before Cancel of the department being created: what was written on it since (common/creation).
+  @ReservedToUnscopedDataAccess()
+  @UseGuards(PermissionGuard)
+  @RequireLevel('departments', 'member')
+  @Get(':id/creation')
+  creationChanges(@Param('id', new ParseUUIDPipe()) id: string, @Query('token') token: string, @Tenant() ctx: TenantRequest) {
+    return readCreationChanges('departments', id, token, ctx);
+  }
+
+  // Cancel: the creator deletes the department they just created, with its token, without the delete right.
+  @ReservedToUnscopedDataAccess()
+  @UseGuards(PermissionGuard)
+  @RequireLevel('departments', 'member')
+  @Delete(':id/creation')
+  cancelCreation(@Param('id', new ParseUUIDPipe()) id: string, @Body() body: { token?: string }, @Tenant() ctx: TenantRequest) {
+    return cancelCreation('departments', id, body?.token, ctx, () => this.deleteSvc.delete(id, { manager: ctx.manager, userId: ctx.userId || null }));
+  }
 
   @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)

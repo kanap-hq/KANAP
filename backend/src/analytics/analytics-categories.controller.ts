@@ -40,6 +40,7 @@ import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-ti
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 import { csvExportFormat } from '../common/csv/csv-export.service';
 import { csvExportBody } from '../common/csv/send-csv-export';
+import { cancelCreation, readCreationChanges, withCreationToken } from '../common/creation/creation-routes';
 
 export function analyticsContext(ctx: TenantRequest): AnalyticsContext {
   if (!ctx.manager) throw new InternalServerErrorException('Missing request transaction.');
@@ -129,9 +130,25 @@ export class AnalyticsCategoriesController {
   @ReservedToUnscopedDataAccess()
   @RequireLevel('analytics', 'member')
   @Post()
-  create(@Body() body: AnalyticsCategoryCreateDto, @Tenant() ctx: TenantRequest) {
+  async create(@Body() body: AnalyticsCategoryCreateDto, @Tenant() ctx: TenantRequest) {
     const context = analyticsContext(ctx);
-    return this.svc.create(body, context.userId, context);
+    return withCreationToken('analytics_categories', await this.svc.create(body, context.userId, context), ctx);
+  }
+
+  // Before Cancel of the value being created: what was written on it since (common/creation).
+  @ReservedToUnscopedDataAccess()
+  @RequireLevel('analytics', 'member')
+  @Get(':id/creation')
+  creationChanges(@Param('id', new ParseUUIDPipe()) id: string, @Query('token') token: string, @Tenant() ctx: TenantRequest) {
+    return readCreationChanges('analytics_categories', id, token, ctx);
+  }
+
+  // Cancel: the creator deletes the value they just created, with its token, without the delete right.
+  @ReservedToUnscopedDataAccess()
+  @RequireLevel('analytics', 'member')
+  @Delete(':id/creation')
+  cancelCreation(@Param('id', new ParseUUIDPipe()) id: string, @Body() body: { token?: string }, @Tenant() ctx: TenantRequest) {
+    return cancelCreation('analytics_categories', id, body?.token, ctx, () => this.svc.delete(id, analyticsContext(ctx).userId, analyticsContext(ctx)));
   }
 
   @ReservedToUnscopedDataAccess()

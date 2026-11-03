@@ -1,5 +1,5 @@
 import { exportListQuery } from '../common/pagination';
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Res, UseGuards, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Res, UseGuards, UploadedFile, UseInterceptors, ParseUUIDPipe } from '@nestjs/common';
 import { AccountsService } from './accounts.service';
 import { AccountsDeleteService } from './accounts-delete.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -18,6 +18,7 @@ import { languageOf, parseDateOrder, parseDecimalMark } from '../common/csv-shee
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 import { csvExportFormat } from '../common/csv/csv-export.service';
 import { csvExportBody } from '../common/csv/send-csv-export';
+import { cancelCreation, readCreationChanges, withCreationToken } from '../common/creation/creation-routes';
 
 @UseGuards(JwtAuthGuard)
 @Controller('accounts')
@@ -72,10 +73,28 @@ export class AccountsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('accounts', 'member')
   @Post()
-  create(@Body() body: AccountUpsertDto, @Query('coaId') coaId: string | undefined, @Tenant() ctx: TenantRequest) {
+  async create(@Body() body: AccountUpsertDto, @Query('coaId') coaId: string | undefined, @Tenant() ctx: TenantRequest) {
     const payload = { ...body } as AccountUpsertDto;
     if (!payload.coa_id && coaId) (payload as any).coa_id = coaId;
-    return this.svc.create(payload, ctx.userId || undefined, { manager: ctx.manager });
+    return withCreationToken('accounts', await this.svc.create(payload, ctx.userId || undefined, { manager: ctx.manager }), ctx);
+  }
+
+  // Before Cancel of the account being created: what was written on it since (common/creation).
+  @ReservedToUnscopedDataAccess()
+  @UseGuards(PermissionGuard)
+  @RequireLevel('accounts', 'member')
+  @Get(':id/creation')
+  creationChanges(@Param('id', new ParseUUIDPipe()) id: string, @Query('token') token: string, @Tenant() ctx: TenantRequest) {
+    return readCreationChanges('accounts', id, token, ctx);
+  }
+
+  // Cancel: the creator deletes the account they just created, with its token, without the delete right.
+  @ReservedToUnscopedDataAccess()
+  @UseGuards(PermissionGuard)
+  @RequireLevel('accounts', 'member')
+  @Delete(':id/creation')
+  cancelCreation(@Param('id', new ParseUUIDPipe()) id: string, @Body() body: { token?: string }, @Tenant() ctx: TenantRequest) {
+    return cancelCreation('accounts', id, body?.token, ctx, () => this.deleteSvc.delete(id, { manager: ctx.manager, userId: ctx.userId || null }));
   }
   @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)

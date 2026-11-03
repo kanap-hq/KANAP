@@ -20,6 +20,7 @@ import { readSupplierUsages } from './supplier-usages';
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 import { csvExportFormat } from '../common/csv/csv-export.service';
 import { csvExportBody } from '../common/csv/send-csv-export';
+import { cancelCreation, readCreationChanges, withCreationToken } from '../common/creation/creation-routes';
 
 @UseGuards(JwtAuthGuard)
 @Controller('suppliers')
@@ -73,7 +74,25 @@ export class SuppliersController {
   @UseGuards(PermissionGuard)
   @RequireLevel('suppliers', 'member')
   @Post()
-  create(@Body() body: SupplierUpsertDto, @Req() req: any) { return this.svc.create(body, req.user?.sub ?? null, { manager: req?.queryRunner?.manager }); }
+  async create(@Body() body: SupplierUpsertDto, @Req() req: any, @Tenant() ctx: TenantRequest) {
+    return withCreationToken('suppliers', await this.svc.create(body, req.user?.sub ?? null, { manager: req?.queryRunner?.manager }), ctx);
+  }
+
+  // Before Cancel of the supplier being created: what was written on it since (common/creation).
+  @UseGuards(PermissionGuard)
+  @RequireLevel('suppliers', 'member')
+  @Get(':id/creation')
+  creationChanges(@Param('id', new ParseUUIDPipe()) id: string, @Query('token') token: string, @Tenant() ctx: TenantRequest) {
+    return readCreationChanges('suppliers', id, token, ctx);
+  }
+
+  // Cancel: the creator deletes the supplier they just created, with its token, without the delete right.
+  @UseGuards(PermissionGuard)
+  @RequireLevel('suppliers', 'member')
+  @Delete(':id/creation')
+  cancelCreation(@Param('id', new ParseUUIDPipe()) id: string, @Body() body: { token?: string }, @Tenant() ctx: TenantRequest) {
+    return cancelCreation('suppliers', id, body?.token, ctx, () => this.deleteSvc.delete(id, { manager: ctx.manager, userId: ctx.userId || null }));
+  }
   @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('suppliers', 'member')
