@@ -40,6 +40,8 @@ import { TasksController } from '../../spend/tasks.controller';
 import { SuppliersController } from '../../suppliers/suppliers.controller';
 import { TechnologiesController } from '../../technologies/technologies.controller';
 import { VulnerabilitiesController } from '../../vulnerabilities/vulnerabilities.controller';
+import { AI_IMPORT_ACCESS, AI_IMPORT_KEYS } from '../import/ai-import-access';
+import { AI_IMPORT_ROUTES } from './ai-import-routes';
 
 /**
  * Lot D11: each Plaid write needs the level of the screen route that makes the same change.
@@ -181,6 +183,12 @@ const TABLE: Record<AiMutationWriteToolName, Record<string, Row>> = {
     interfaces: { resource: 'applications', level: 'admin', route: [InterfacesController, 'bulkDelete'] },
     documents: { resource: 'knowledge', level: 'admin', route: [KnowledgeController, 'remove'] },
   },
+  // The column mapping of a file needs what the import route of its import needs (lot I2).
+  prepare_import_mapping: Object.fromEntries(AI_IMPORT_KEYS.map((key) => [key, {
+    resource: AI_IMPORT_ACCESS[key].resource,
+    level: AI_IMPORT_ACCESS[key].level,
+    route: AI_IMPORT_ROUTES[key],
+  } satisfies Row])),
 };
 
 function routeGuard([controller, method]: [Controller, string]): RequireLevelMeta {
@@ -243,6 +251,7 @@ function testOnlyTheContributorRowsAreBelowMember() {
   assert.deepEqual(contributorRows.sort(), [
     'add_incident_note:incidents',
     'create_business_record:incidents',
+    'prepare_import_mapping:incidents',
     'update_business_record:incidents',
     'update_business_record:projects',
     'update_entity_relations:projects',

@@ -234,6 +234,7 @@ export class AiMutationPreviewService {
       status: preview.status,
       target: presentation.target,
       changes: presentation.changes,
+      ...(presentation.importMapping ? { import_mapping: presentation.importMapping } : {}),
       requires_confirmation: preview.status === 'pending',
       actions: preview.status === 'pending'
         ? ['approve', 'reject'] as Array<'approve' | 'reject'>
@@ -838,7 +839,10 @@ export class AiMutationPreviewService {
 
       seenKeys.add(stepKey);
       operationSignatures.set(operationSignature, stepKey);
-      const supported = this.operations.isSupportedToolName(toolName);
+      // A column mapping is called on its own: its tool keeps the card's file cells from the model,
+      // a plan's output would not (`MODEL_HIDDEN_OUTPUT_FIELDS`).
+      const standalone = toolName === 'prepare_import_mapping';
+      const supported = this.operations.isSupportedToolName(toolName) && !standalone;
       const step = await stepRepo.save(stepRepo.create({
         tenant_id: context.tenantId,
         conversation_id: context.conversationId ?? null,
@@ -851,7 +855,9 @@ export class AiMutationPreviewService {
         depends_on: dependsOn,
         preview_id: null,
         status: supported ? 'waiting_dependency' : 'failed',
-        error_message: supported ? null : `Unsupported mutation tool ${toolName}.`,
+        error_message: supported ? null : standalone
+          ? 'prepare_import_mapping is called on its own, outside a plan.'
+          : `Unsupported mutation tool ${toolName}.`,
         created_at: now,
         updated_at: now,
       }));

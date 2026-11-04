@@ -65,6 +65,18 @@ export function writePreviewMissingText(language: AiWriteLanguage): string {
 // Preview summaries
 // ---------------------------------------------------------------------------------------------
 
+/** After an approved column mapping (lot I2): the mapping is recorded, the file is not imported. */
+const IMPORT_MAPPING_NOTHING_IMPORTED: Texts = {
+  en: 'Nothing has been imported yet.',
+  fr: "Rien n'est encore importé.",
+  de: 'Es wurde noch nichts importiert.',
+  es: 'Todavía no se ha importado nada.',
+};
+
+export function importMappingNothingImportedText(language: AiWriteLanguage): string {
+  return IMPORT_MAPPING_NOTHING_IMPORTED[language];
+}
+
 /** The status words of the preview card (`ai:previewStatuses`), written before the action. */
 const STATUS_WORDS: Record<AiTranslatedWriteLanguage, Record<'executed' | 'rejected' | 'expired' | 'failed', string>> = {
   fr: { executed: 'Appliqué', rejected: 'Rejeté', expired: 'Expiré', failed: 'Échec' },
@@ -144,6 +156,13 @@ export const writeActionText = {
         const ticket = p.provider ? `ticket n.º ${p.ticketId} de ${p.provider}` : `ticket de GLPI n.º ${p.ticketId}`;
         return `importación del ${ticket} como tarea ${p.subject}${p.on ? ` en ${p.on}` : ''}`;
       }
+    }
+  },
+  importMapping(language: AiTranslatedWriteLanguage, filename: string, list: string): string {
+    switch (language) {
+      case 'fr': return `correspondance de ${quoted(language, filename)} avec l'import ${list}`;
+      case 'de': return `Zuordnung von ${quoted(language, filename)} zum Import ${list}`;
+      case 'es': return `correspondencia de ${quoted(language, filename)} con la importación ${list}`;
     }
   },
   addTaskComment(language: AiTranslatedWriteLanguage, ref: string): string {

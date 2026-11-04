@@ -3,6 +3,7 @@ import { AiMutationPreview } from '../ai-mutation-preview.entity';
 import { AiWriteLanguage } from '../ai-write-texts';
 import {
   AiExecutionContextWithManager,
+  AiImportMappingPreviewDto,
   AiMutationPreviewChangeDto,
   AiMutationPreviewDto,
   AiMutationWriteToolName,
@@ -20,6 +21,8 @@ export type AiMutationPreviewPresentation = {
   target: AiMutationPreviewDto['target'];
   changes: Record<string, AiMutationPreviewChangeDto>;
   summary: string;
+  /** The column mapping of an import (`prepare_import_mapping`). */
+  importMapping?: AiImportMappingPreviewDto;
 };
 
 export interface AiMutationOperation<TInput = unknown> {

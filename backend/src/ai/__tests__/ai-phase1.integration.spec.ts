@@ -2221,6 +2221,8 @@ function buildToolIsolationCases(
     case 'update_document_relations':
     case 'prepare_mutation_plan':
     case 'undo_preview':
+    case 'prepare_import_mapping':
+    case 'describe_import_template':
       return [];
 
     default: {

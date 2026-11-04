@@ -204,7 +204,7 @@ function toolActivityPhase(toolName: string): ChatActivityPhase {
   ].includes(toolName)) {
     return 'searching_entities';
   }
-  if (['get_entity_detail', 'get_entity_context', 'get_entity_comments', 'get_record_history'].includes(toolName)) {
+  if (['get_entity_detail', 'get_entity_context', 'get_entity_comments', 'get_record_history', 'describe_import_template'].includes(toolName)) {
     return 'reading_context';
   }
   if (toolName === 'search_knowledge' || toolName === 'list_help_topics') return 'searching_knowledge';
@@ -213,6 +213,7 @@ function toolActivityPhase(toolName: string): ChatActivityPhase {
   if (
     toolName === 'undo_preview'
     || toolName === 'prepare_mutation_plan'
+    || toolName === 'prepare_import_mapping'
     || toolName.startsWith('create_')
     || toolName.startsWith('update_')
     || toolName.startsWith('add_')

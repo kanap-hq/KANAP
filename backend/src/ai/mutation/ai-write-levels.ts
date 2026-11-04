@@ -3,6 +3,7 @@ import { resolveBusinessContributorScopeForUser } from '../../auth/business-cont
 import { PermissionLevel } from '../../permissions/permissions.service';
 import { AiExecutionContextWithManager } from '../ai.types';
 import { participantConditionForAiEntity, ParticipationScopedAiEntityType } from '../query/ai-query-scope.util';
+import { AI_IMPORT_ACCESS, aiImportAccess } from '../import/ai-import-access';
 
 /**
  * The level each Plaid write needs: the level of the screen route that makes the same change
@@ -64,6 +65,8 @@ export function aiWriteLevel(toolName: string, family: unknown): PermissionLevel
   const normalized = String(family ?? '').trim();
   if (ADMIN_WRITE_TOOLS.has(toolName)) return 'admin';
   if (toolName === 'delete_record') return DELETE_RECORD_FAMILIES[normalized]?.level ?? 'admin';
+  // The column mapping of an import needs what its import route needs; the family is the import.
+  if (toolName === 'prepare_import_mapping') return aiImportAccess(normalized)?.level ?? 'admin';
   return CONTRIBUTOR_WRITE_FAMILIES[toolName]?.includes(normalized) ? 'contributor' : 'member';
 }
 
@@ -124,6 +127,11 @@ export function aiRelationTargetRequirement(
 ): { resource: string; level: PermissionLevel } | null {
   // The relation as the relation writes read it (`getRelationConfig`).
   const key = String(relation ?? '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+  if (toolName === 'prepare_import_mapping') {
+    // The application links import reads the applications it names, as its route does.
+    const alsoReads = aiImportAccess(family)?.alsoReads;
+    return alsoReads ? { resource: alsoReads, level: 'reader' } : null;
+  }
   if (toolName === 'update_technology_links') {
     // A technology link to an application needs the application read, as the technology's
     // Applications tab does; the servers stay under the infrastructure write.
@@ -168,6 +176,19 @@ export function aiWriteRequirements(
 ): Array<{ resource: string; level: PermissionLevel }> {
   if (ADMIN_WRITE_TOOLS.has(toolName)) {
     return resources.map((resource) => ({ resource, level: 'admin' as PermissionLevel }));
+  }
+  if (toolName === 'prepare_import_mapping') {
+    // Offered to a person who may run one of the imports, at the level of its route.
+    const seen = new Set<string>();
+    return Object.values(AI_IMPORT_ACCESS)
+      .filter((access) => resources.includes(access.resource))
+      .map((access) => ({ resource: access.resource, level: access.level }))
+      .filter((requirement) => {
+        const key = `${requirement.resource}:${requirement.level}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
   }
   if (toolName === 'delete_record') {
     return resources.map((resource) => DELETE_RECORD_FAMILIES[resource]

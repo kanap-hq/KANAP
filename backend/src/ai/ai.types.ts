@@ -31,7 +31,8 @@ export type AiMutationWriteToolName =
   | 'change_incident_state'
   | 'set_incident_confidentiality'
   | 'add_task_comment'
-  | 'delete_record';
+  | 'delete_record'
+  | 'prepare_import_mapping';
 export type AiToolCategory = 'discovery' | 'authoritative' | 'inspection' | 'mutation';
 export type AiToolName =
   | 'search_all'
@@ -49,6 +50,7 @@ export type AiToolName =
   | 'list_help_topics'
   | 'read_help_section'
   | 'web_search'
+  | 'describe_import_template'
   | AiMutationWriteToolName
   | 'update_task_assignees'
   | 'prepare_mutation_plan'
@@ -464,6 +466,52 @@ export type AiPreviewRelationItem = {
 /** The list of the application classification catalog a level belongs to. */
 export type AiPreviewClassificationCatalog = 'businessCriticalityLevels' | 'cyberCriticalityLevels' | 'dataClasses' | 'recoveryWaves';
 
+/** How the columns of an attached spreadsheet map to an import's template, shown on the preview card. */
+export type AiImportMappingPreviewDto = {
+  /** The import, by its key (`applications`, `budget_lines`, ...). */
+  import_key: string;
+  filename: string;
+  /** Data rows of the file. */
+  row_count: number;
+  /** The template's columns that receive a value, in the template's order. */
+  columns: Array<{
+    column: string;
+    /** The column's title in the person's language. */
+    title: string;
+    required: boolean;
+    kind: string;
+    /** The column of the file it is read from (1-based), or null for a value given for every row. */
+    source: { position: number; header: string | null } | null;
+    /** The value written in every row, when the column comes from no column of the file. */
+    value: string | null;
+    confidence: 'high' | 'medium' | 'low';
+    /** Data rows with a value in the source column. */
+    filled: number;
+    /** Of those, the values the import will not read as they are. */
+    unread: number;
+    /** The date order or decimal mark the column was read with. */
+    read_as: string | null;
+    note: string | null;
+  }>;
+  /** Some values the import will not read, by column. Shown to the person only: they are not sent to the model. */
+  unread_values: Record<string, string[]>;
+  /** Why a column reads no cell at all, by column: its dates use both orders, or its numbers both decimal marks. */
+  read_errors: Record<string, 'mixed-date-orders' | 'mixed-decimal-marks'>;
+  /** Required columns of the template no column of the file fills. */
+  missing_required: Array<{ column: string; title: string }>;
+  /** Columns of the file the mapping does not use. */
+  unplaced: Array<{ position: number; header: string | null }>;
+  /** What the mapping supposes, in the person's words. */
+  assumptions: string[];
+  /**
+   * The first rows as the template will hold them, by template column; `unread` marks the cells the
+   * import will not read, shown as the file writes them. Shown to the person only.
+   */
+  sample: { columns: string[]; rows: string[][]; unread: boolean[][] };
+  /** Rows a required column leaves blank or unread: the import will refuse them. */
+  rows_missing_required: number;
+};
+
 export type AiMutationPreviewDto = {
   preview_id: string;
   tool_name: AiMutationWriteToolName;
@@ -475,6 +523,8 @@ export type AiMutationPreviewDto = {
     title: string | null;
   };
   changes: Record<string, AiMutationPreviewChangeDto>;
+  /** The column mapping of an import, for the `prepare_import_mapping` card. */
+  import_mapping?: AiImportMappingPreviewDto;
   requires_confirmation: boolean;
   actions: Array<'approve' | 'reject'>;
   summary: string;

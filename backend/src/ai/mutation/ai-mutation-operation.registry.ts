@@ -8,6 +8,7 @@ import { CreateBusinessRecordAiMutationOperation } from './operations/create-bus
 import { CreateMasterDataRecordAiMutationOperation } from './operations/create-master-data-record.ai-mutation-operation';
 import { CreateTaskAiMutationOperation } from './operations/create-task.ai-mutation-operation';
 import { DeleteRecordAiMutationOperation } from './operations/delete-record.ai-mutation-operation';
+import { PrepareImportMappingAiMutationOperation } from './operations/prepare-import-mapping.ai-mutation-operation';
 import { ImportGlpiTicketAiMutationOperation, ImportTicketAiMutationOperation } from './operations/import-glpi-ticket.ai-mutation-operation';
 import { SetIncidentConfidentialityAiMutationOperation } from './operations/set-incident-confidentiality.ai-mutation-operation';
 import { UpdateDocumentContentAiMutationOperation } from './operations/update-document-content.ai-mutation-operation';
@@ -63,6 +64,8 @@ export class AiMutationOperationRegistry {
     deleteRecord: DeleteRecordAiMutationOperation,
     @Optional()
     importTicket?: ImportTicketAiMutationOperation,
+    @Optional()
+    prepareImportMapping?: PrepareImportMappingAiMutationOperation,
   ) {
     for (const operation of [
       ...(importTicket ? [importTicket] : []),
@@ -93,6 +96,7 @@ export class AiMutationOperationRegistry {
       setIncidentConfidentiality,
       addTaskComment,
       deleteRecord,
+      ...(prepareImportMapping ? [prepareImportMapping] : []),
     ]) {
       this.operations.set(operation.toolName, operation);
     }

@@ -920,4 +920,53 @@ describe('PreviewCard in French', () => {
     expect(screen.getByText(refusal)).toBeInTheDocument();
     expect(screen.queryByText("La modification n'a pas été faite.")).not.toBeInTheDocument();
   });
+
+  it('shows the column mapping of an attached spreadsheet, in French', () => {
+    renderCard(preview({
+      tool_name: 'prepare_import_mapping',
+      target: { entity_type: 'imports', entity_id: null, ref: null, title: 'Applications · export appli.csv' },
+      summary: "Correspondance de « export appli.csv » avec l'import Applications.",
+      import_mapping: {
+        import_key: 'applications',
+        filename: 'export appli.csv',
+        row_count: 3,
+        columns: [
+          { column: 'name', title: 'Nom', required: true, kind: 'text', source: { position: 1, header: 'Appli' }, value: null, confidence: 'high', filled: 2, unread: 0, read_as: null, note: null },
+          { column: 'lifecycle', title: 'Cycle de vie', required: false, kind: 'catalog', source: { position: 2, header: 'Etat' }, value: null, confidence: 'medium', filled: 3, unread: 1, read_as: null, note: 'Etat lu comme cycle de vie' },
+          { column: 'go_live_date', title: 'Mise en service', required: false, kind: 'date', source: { position: 3, header: 'Mise en service' }, value: null, confidence: 'low', filled: 3, unread: 0, read_as: 'day-first', note: null },
+          { column: 'end_of_support_date', title: 'Fin de support', required: false, kind: 'date', source: { position: 5, header: 'Fin' }, value: null, confidence: 'low', filled: 2, unread: 2, read_as: null, note: null },
+          { column: 'category', title: 'Catégorie', required: false, kind: 'catalog', source: null, value: 'Métier', confidence: 'low', filled: 3, unread: 0, read_as: null, note: null },
+        ],
+        unread_values: { lifecycle: ['En prod'] },
+        read_errors: { end_of_support_date: 'mixed-date-orders' },
+        missing_required: [],
+        unplaced: [{ position: 4, header: 'Commentaire interne' }],
+        assumptions: ['Une ligne par application.'],
+        sample: {
+          columns: ['name', 'lifecycle', 'go_live_date', 'end_of_support_date', 'category'],
+          rows: [['CheeseTrack', 'Actif', '2024-04-03', '', 'Métier'], ['CaveGuard', 'En prod', '2025-11-25', '', 'Métier']],
+          unread: [[false, false, false, false, false], [false, true, false, false, false]],
+        },
+        rows_missing_required: 1,
+      },
+    }));
+
+    expect(screen.getByText('Applications · export appli.csv')).toBeInTheDocument();
+    for (const text of ['Colonne', 'Dans le fichier', 'Confiance', 'Valeurs', 'Appli', 'Etat lu comme cycle de vie', 'Moyenne', 'Jour en premier']) {
+      expect(screen.getByText(text)).toBeInTheDocument();
+    }
+    // What the import will not read, and why a whole column reads nothing.
+    expect(screen.getByText('1 non lue')).toBeInTheDocument();
+    expect(screen.getByText('(En prod)')).toBeInTheDocument();
+    expect(screen.getByText('Dates écrites jour en premier et mois en premier')).toBeInTheDocument();
+    expect(screen.getByText(/^Même valeur sur chaque ligne\s: Métier$/)).toBeInTheDocument();
+    expect(screen.getByText("1 ligne n'a pas de valeur obligatoire.")).toBeInTheDocument();
+    expect(screen.getByText(/^Non utilisées\s: Commentaire interne$/)).toBeInTheDocument();
+    expect(screen.getByText('Une ligne par application.')).toBeInTheDocument();
+    // The first rows: a date as on the screens, a value not read as the file writes it.
+    expect(screen.getByText('Premières lignes')).toBeInTheDocument();
+    expect(screen.getByText('3 avr. 2024')).toBeInTheDocument();
+    expect(screen.getAllByText('En prod').length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: 'Approuver' })).toBeInTheDocument();
+  });
 });

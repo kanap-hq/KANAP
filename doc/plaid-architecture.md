@@ -892,6 +892,9 @@ Live write-preview coverage includes:
   budget line, project, request, document, and location links
 - financial plan writes for budget line versions, amounts, and allocations
 - GLPI ticket import into a KANAP task
+- the column mapping of an attached spreadsheet onto an import's template
+  (`prepare_import_mapping`, after `describe_import_template`), which records
+  the mapping and imports nothing
 - single-record deletes (`delete_record`) of a task, contact, location,
   document, budget line, connection or interface, at the level of that
   family's delete route (`ai-write-levels.ts`); one pending delete per
@@ -1011,6 +1014,24 @@ detail that showed the stored type shows `budget_line` to the model. The delete
 card keeps the L3 labels ("Deleted tasks", "Links to …", "The linked records
 stay.") for both natures.
 
+The import mapping (`backend/src/ai/import/`) covers every import that has a
+route: `AI_IMPORT_ACCESS` gives each one the module, the level and the
+reservation to unscoped persons of its route (a spec compares them with the
+route guards), and `ai-import-targets.ts` its template columns, taken from the
+CSV configuration of the import where it has one. `describe_import_template`
+gives the model the columns, the codes and the workspace's catalog entries.
+`prepare_import_mapping` takes the attachment id from the `<attached_table>`
+summary and one entry per template column (file column or one value for every
+row, confidence, date order, decimal mark, file values mapped to codes, note);
+the server reads the whole file again by its attachment id, converts every row
+with the CSV readers of the imports (dates, numbers, yes/no, codes and catalog
+entries by code or by name in the four languages) and returns, per column, the
+values read and not read. The card shows the first rows and the values not
+read; the model receives the counts only (`MODEL_HIDDEN_OUTPUT_FIELDS` hides
+`unread_values` and `sample`), so no file cell reaches it beyond the summary.
+The tool is refused inside a mutation plan, whose output is not redacted.
+Approving checks the attachment again and writes nothing.
+
 Writes go through existing domain services where practical, so normal validation,
 workflow rules, side effects, and audit logging still apply. AI-originated domain
 audit rows use `source: ai_chat` and the preview ID as `sourceRef`.
@@ -1054,6 +1075,8 @@ Current MCP behavior is deliberately read-only:
   for a connection, the host of its redirect URI (`oauth_redirect_host`), as do
   the keys of `facets`
 - revoking a key or a connection already revoked changes nothing
+- `describe_import_template` stays in the chat: it serves the mapping of a
+  spreadsheet attached to a conversation, and MCP has no attachments
 
 Read-write MCP is roadmap. It needs an explicit approval protocol rather than
 reusing chat approval cards.

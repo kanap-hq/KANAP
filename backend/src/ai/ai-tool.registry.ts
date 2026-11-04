@@ -30,6 +30,9 @@ import { resolveConfiguredAppBaseUrl } from '../common/url';
 import { AI_PAGE_URL_NOTE, withAiPageUrls } from './ai-page-urls';
 import { AI_UNREAD_FAMILIES_SENTENCE, type AiScreenLanguage, readAiScreenLanguage, unreadFamiliesReachOf, unreadFamilyLines } from './ai-unread-families';
 import { AiHelpManualService, HELP_SECTION_MAX_CHARS } from './ai-help-manual.service';
+import { AiImportMappingService } from './import/ai-import-mapping.service';
+import { AI_IMPORT_KEYS } from './import/ai-import-access';
+import { personWriteLanguage } from './ai-write-texts';
 import {
   AI_CONTEXT_ENTITY_TYPES,
   AI_DETAIL_ENTITY_TYPES,
@@ -116,6 +119,10 @@ const ReadHelpSectionInputSchema = z.object({
   section: z.string().trim().min(1).max(300).optional()
     .describe('Optional section title as list_help_topics writes it (Relations, or Parent › Child when a title repeats). Without it, the whole page.'),
   language: z.enum(['en', 'fr', 'de', 'es']).optional().describe(HELP_LANGUAGE_DESCRIPTION),
+});
+
+const DescribeImportTemplateInputSchema = z.object({
+  entity_type: z.enum(AI_IMPORT_KEYS).describe('The import whose template to describe.'),
 });
 
 const AiFilterValueSchema = z.union([
@@ -380,6 +387,7 @@ export class AiToolRegistry {
     @Optional() private readonly itOpsSettings?: ItOpsSettingsService,
     @Optional() private readonly recordHistory?: AiRecordHistoryService,
     @Optional() private readonly helpManual?: AiHelpManualService,
+    @Optional() private readonly importMapping?: AiImportMappingService,
   ) {
     this.definitions = new Map<AiToolName, AiToolDefinition<any, any>>([
       [
@@ -684,6 +692,26 @@ export class AiToolRegistry {
         },
       ],
       [
+        'describe_import_template',
+        {
+          name: 'describe_import_template',
+          category: 'inspection',
+          description: 'Describes the template of one KANAP import, for a spreadsheet the user attached: what a row is and how it matches a stored record (`about`), '
+            + 'then each column in the template\'s order with its title in the user\'s language, whether it is required, its kind '
+            + '(text, date, number, boolean, codes, catalog, reference, email), what it takes (`takes`), its `codes` or the workspace\'s catalog `entries`. '
+            + 'prepare_import_mapping maps the file onto these columns. Refused when the user may not run that import.',
+          inputSchema: DescribeImportTemplateInputSchema,
+          inputSummary: fieldDescriptions(DescribeImportTemplateInputSchema),
+          surfaces: ['chat'],
+          readOnly: true,
+          execute: async (context, input) => this.importMapping!.describeTemplate(
+            context,
+            input.entity_type,
+            await personWriteLanguage(context.manager, context.tenantId, context.userId),
+          ),
+        },
+      ],
+      [
         'prepare_mutation_plan',
         {
           name: 'prepare_mutation_plan',
@@ -905,6 +933,8 @@ export class AiToolRegistry {
         return this.helpManual?.available() === true;
       case 'prepare_mutation_plan':
         return avail.writableMutationToolNames.size > 0;
+      case 'describe_import_template':
+        return !!this.importMapping && avail.writableMutationToolNames.has('prepare_import_mapping');
       case 'update_task_assignees':
         return avail.writableMutationToolNames.has('update_task_assignee');
       case 'undo_preview':

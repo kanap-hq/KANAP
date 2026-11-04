@@ -334,6 +334,41 @@
         "it_users": "IT users",
         "manual": "Manual"
       }
+    },
+    "importMapping": {
+      "column": "Column",
+      "fromFile": "From the file",
+      "confidence": "Confidence",
+      "read": "Values",
+      "columnAt": "Column {{position}}",
+      "everyRow": "Same value on every row: {{value}}",
+      "allRows": "Every row",
+      "confidenceLevels": {
+        "high": "High",
+        "medium": "Medium",
+        "low": "Low"
+      },
+      "filled": "{{filled}} of {{rows}}",
+      "unread_one": "{{count}} not read",
+      "unread_other": "{{count}} not read",
+      "readAs": {
+        "day-first": "Day first",
+        "month-first": "Month first",
+        "decimal-comma": "Decimal comma",
+        "decimal-point": "Decimal point"
+      },
+      "missingRequired": "Required and not found in the file: {{columns}}",
+      "rowsMissingRequired_one": "{{count}} row lacks a required value.",
+      "rowsMissingRequired_other": "{{count}} rows lack a required value.",
+      "unplaced": "Not used: {{columns}}",
+      "assumptions": "Assumptions",
+      "firstRows": "First rows",
+      "yes": "Yes",
+      "no": "No",
+      "readErrors": {
+        "mixed-date-orders": "Dates written day first and month first",
+        "mixed-decimal-marks": "Numbers written with a decimal comma and a decimal point"
+      }
     }
   },
   "previewStatuses": {

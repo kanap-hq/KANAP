@@ -167,6 +167,8 @@ import { CreateDocumentAiMutationOperation } from './mutation/operations/create-
 import { CreateMasterDataRecordAiMutationOperation } from './mutation/operations/create-master-data-record.ai-mutation-operation';
 import { CreateTaskAiMutationOperation } from './mutation/operations/create-task.ai-mutation-operation';
 import { DeleteRecordAiMutationOperation } from './mutation/operations/delete-record.ai-mutation-operation';
+import { PrepareImportMappingAiMutationOperation } from './mutation/operations/prepare-import-mapping.ai-mutation-operation';
+import { AiImportMappingService } from './import/ai-import-mapping.service';
 import { ImportGlpiTicketAiMutationOperation, ImportTicketAiMutationOperation } from './mutation/operations/import-glpi-ticket.ai-mutation-operation';
 import { SetIncidentConfidentialityAiMutationOperation } from './mutation/operations/set-incident-confidentiality.ai-mutation-operation';
 import { UpdateDocumentContentAiMutationOperation } from './mutation/operations/update-document-content.ai-mutation-operation';
@@ -322,6 +324,8 @@ import { AiHelpManualService } from './ai-help-manual.service';
     CreateDocumentAiMutationOperation,
     CreateTaskAiMutationOperation,
     DeleteRecordAiMutationOperation,
+    AiImportMappingService,
+    PrepareImportMappingAiMutationOperation,
     CreateMasterDataRecordAiMutationOperation,
     WriteFinancialPlanAiMutationOperation,
     UpdateDocumentContentAiMutationOperation,
