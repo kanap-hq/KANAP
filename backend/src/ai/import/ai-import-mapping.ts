@@ -95,6 +95,11 @@ function headerOf(grid: TableGrid, position: number): string | null {
   return isBlank(cell) ? null : clip(sheetCellText(cell!));
 }
 
+/** The model's own words on the card, on one line: the input schema bounds their length. */
+function oneLine(value: string): string {
+  return value.replace(/\s+/g, ' ').trim();
+}
+
 /** A converted value as the card writes it: a catalog entry by its name, the rest as the template holds it. */
 function displayValue(column: AiImportTemplateColumn, value: string): string {
   if (!column.displayName) return value;
@@ -130,7 +135,7 @@ export function buildImportMapping(
   for (const column of mapped) {
     const entry = entries.get(column.column)!;
     const hints = { dateOrder: entry.date_order, decimalMark: entry.decimal_mark, values: entry.values };
-    const note = entry.note ? clip(entry.note) : null;
+    const note = entry.note ? oneLine(entry.note) || null : null;
 
     if (entry.source === undefined || entry.source === null) {
       // A value for every row: it must be one the column takes.
@@ -209,7 +214,7 @@ export function buildImportMapping(
         .filter((column) => column.required && !entries.has(column.column))
         .map((column) => ({ column: column.column, title: column.title })),
       unplaced,
-      assumptions: request.assumptions.map((assumption) => clip(assumption)).filter((assumption) => assumption !== ''),
+      assumptions: request.assumptions.map(oneLine).filter((assumption) => assumption !== ''),
       sample: { columns: mapped.map((column) => column.column), rows: sampleRows, unread: sampleUnread },
       rows_missing_required: rowLacksRequired.filter(Boolean).length,
     },

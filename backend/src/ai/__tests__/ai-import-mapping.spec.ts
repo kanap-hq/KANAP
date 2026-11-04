@@ -346,16 +346,19 @@ const MESSY_CSV = [
   ';Retiré;30/06/2019;sans nom;',
 ].join('\n');
 
+const LONG_NOTE = 'Etat lu comme cycle de vie : En prod et Actif valent Actif, Retiré vaut Retiré, le reste reste à confirmer.';
+const LONG_ASSUMPTION = "Une ligne par application, rapprochée par son nom : une application du même nom est mise à jour au lieu d'être créée.";
+
 async function testMessyFile() {
   const { previews, context, manager } = createImport({ [FILE]: { csv: MESSY_CSV, filename: 'export appli.csv' } }, { applications: 'admin' }, { locale: 'fr' });
   const columns = [
     { column: 'name', source: 1, confidence: 'high' as const },
-    { column: 'lifecycle', source: 2, confidence: 'medium' as const, note: 'Etat lu comme cycle de vie' },
+    { column: 'lifecycle', source: 2, confidence: 'medium' as const, note: LONG_NOTE },
     { column: 'go_live_date', source: 3, confidence: 'medium' as const },
     { column: 'category', value: 'Line of business', confidence: 'low' as const },
   ];
   let dto = await previews.createPreview(context, 'prepare_import_mapping', {
-    attachment_id: FILE, entity_type: 'applications', columns, assumptions: ['Une ligne par application.'],
+    attachment_id: FILE, entity_type: 'applications', columns, assumptions: [LONG_ASSUMPTION],
   });
   let mapping = dto.import_mapping!;
   const lifecycle = mapping.columns.find((column) => column.column === 'lifecycle')!;
@@ -364,7 +367,8 @@ async function testMessyFile() {
   assert.equal(lifecycle.filled, 3);
   assert.equal(lifecycle.unread, 1);
   assert.deepEqual(mapping.unread_values.lifecycle, ['En prod']);
-  assert.equal(lifecycle.note, 'Etat lu comme cycle de vie');
+  // The model's own words reach the card whole (the input schema bounds them), unlike file cells.
+  assert.equal(lifecycle.note, LONG_NOTE);
   const goLive = mapping.columns.find((column) => column.column === 'go_live_date')!;
   assert.equal(goLive.read_as, 'day-first');
   assert.equal(goLive.unread, 0);
@@ -376,7 +380,7 @@ async function testMessyFile() {
   // The file's unused column, and the row without a name.
   assert.deepEqual(mapping.unplaced, [{ position: 4, header: 'Commentaire interne' }]);
   assert.equal(mapping.rows_missing_required, 1);
-  assert.deepEqual(mapping.assumptions, ['Une ligne par application.']);
+  assert.deepEqual(mapping.assumptions, [LONG_ASSUMPTION]);
   assert.equal(dto.summary, 'Correspondance de « export appli.csv » avec l\'import Applications.');
   // The person says what "En prod" stands for: the corrected mapping reads every value.
   dto = await previews.createPreview(context, 'prepare_import_mapping', {
