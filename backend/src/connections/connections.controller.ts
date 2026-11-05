@@ -6,10 +6,11 @@ import { ConnectionsService } from './services';
 import { KnowledgeService } from '../knowledge/knowledge.service';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import { ShareRateLimit } from '../notifications/share-rate-limit';
-import { creationCancelExpired, issueCreationToken, verifyCreationToken } from '../common/creation/creation-token';
-import { assertCreatorAloneSinceCreation, countChangesSinceCreation, withChildCount, type CreationChanges } from '../common/creation/creation-changes';
+import { assertCreationToken, cancelCreation, creationContextOf, readCreationChanges, withCreationToken } from '../common/creation/creation-routes';
+import { withChildCount, type CreationChanges } from '../common/creation/creation-changes';
 import { creationIncomplete } from '../common/creation/creation-incomplete';
 import { CONNECTION_FIELD_NAMES, missingConnectionFields, type ConnectionCompleteness } from './connection-creation';
+import type { EntityManager } from 'typeorm';
 
 @UseGuards(JwtAuthGuard)
 @Controller('connections')
@@ -219,35 +220,25 @@ export class ConnectionsController {
       'SELECT connection_reference FROM connections WHERE id = $1 AND tenant_id = $2',
       [created.id, tenantId],
     );
-    const creation_token = issueCreationToken({ tenantId, family: 'connections', recordId: created.id, userId });
-    return { ...created, connection_reference: row?.connection_reference ?? created.connection_reference, creation_token };
-  }
-
-  /** The token of `POST creation` for this connection, tenant and person, still valid; a 403 otherwise. */
-  private assertCreationToken(id: string, token: unknown, req: any): void {
-    if (!verifyCreationToken(token, { tenantId: req?.tenant?.id ?? '', family: 'connections', recordId: String(id ?? ''), userId: req?.user?.sub ?? '' })) {
-      throw creationCancelExpired();
-    }
+    return withCreationToken('connections', { ...created, connection_reference: row?.connection_reference ?? created.connection_reference }, { tenantId, userId });
   }
 
   /** Before "Cancel": what was written on the connection since its creation, its protocols counted. Nothing is written. */
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'member')
   @Get(':id/creation')
-  async creationChanges(@Param('id') id: string, @Query('token') token: string, @Req() req: any): Promise<{ changes: CreationChanges }> {
-    this.assertCreationToken(id, token, req);
-    const manager = req?.queryRunner?.manager;
-    const tenantId: string = req?.tenant?.id ?? '';
-    const found = await manager.query('SELECT 1 FROM connections WHERE id = $1 AND tenant_id = $2', [id, tenantId]);
-    if (!found.length) throw new NotFoundException('Connection not found');
-    await assertCreatorAloneSinceCreation(manager, tenantId, 'connections', id, req?.user?.sub ?? '');
-    const changes = await countChangesSinceCreation(manager, tenantId, 'connections', id);
-    // Protocols have no history of their own: what the connection holds is what would go.
-    const [{ total }] = await manager.query(
-      'SELECT count(*)::int AS total FROM connection_protocols WHERE tenant_id = $1 AND connection_id = $2',
-      [tenantId, id],
-    );
-    return { changes: withChildCount(changes, 'protocol', total) };
+  creationChanges(@Param('id') id: string, @Query('token') token: string, @Req() req: any): Promise<{ changes: CreationChanges }> {
+    const ctx = creationContextOf(req);
+    return readCreationChanges('connections', id, token, ctx, {
+      // Protocols have no history of their own: what the connection holds is what would go.
+      extra: async (changes, manager) => {
+        const [{ total }] = await manager.query(
+          'SELECT count(*)::int AS total FROM connection_protocols WHERE tenant_id = $1 AND connection_id = $2',
+          [ctx.tenantId, id],
+        );
+        return withChildCount(changes, 'protocol', total);
+      },
+    });
   }
 
   /**
@@ -259,15 +250,15 @@ export class ConnectionsController {
   @Post(':id/creation/complete')
   @HttpCode(200)
   async completeCreation(@Param('id') id: string, @Body() body: { token?: string }, @Req() req: any): Promise<{ ok: true }> {
-    this.assertCreationToken(id, body?.token, req);
-    const manager = req?.queryRunner?.manager;
-    const [row]: Array<Omit<ConnectionCompleteness, 'protocolCount' | 'serverCount'> & { protocol_count: number; server_count: number }> = await manager.query(
+    const ctx = creationContextOf(req);
+    assertCreationToken('connections', id, body?.token, ctx);
+    const [row]: Array<Omit<ConnectionCompleteness, 'protocolCount' | 'serverCount'> & { protocol_count: number; server_count: number }> = await (ctx.manager as EntityManager).query(
       `SELECT c.topology, c.source_asset_id, c.source_entity_code, c.destination_asset_id, c.destination_entity_code,
               (SELECT count(*)::int FROM connection_protocols p WHERE p.tenant_id = c.tenant_id AND p.connection_id = c.id) AS protocol_count,
               (SELECT count(*)::int FROM connection_servers s WHERE s.tenant_id = c.tenant_id AND s.connection_id = c.id) AS server_count
          FROM connections c
         WHERE c.id = $1 AND c.tenant_id = $2`,
-      [id, req?.tenant?.id ?? ''],
+      [id, ctx.tenantId],
     );
     if (!row) throw new NotFoundException('Connection not found');
     const missing = missingConnectionFields({ ...row, protocolCount: row.protocol_count, serverCount: row.server_count });
@@ -283,11 +274,9 @@ export class ConnectionsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'member')
   @Delete(':id/creation')
-  async cancelCreation(@Param('id') id: string, @Body() body: { token?: string }, @Req() req: any): Promise<void> {
-    this.assertCreationToken(id, body?.token, req);
-    const manager = req?.queryRunner?.manager;
-    await assertCreatorAloneSinceCreation(manager, req?.tenant?.id ?? '', 'connections', id, req?.user?.sub ?? '', { lock: true });
-    await this.svc.delete(id, req.user?.sub ?? null, { manager });
+  cancelCreation(@Param('id') id: string, @Body() body: { token?: string }, @Req() req: any): Promise<void> {
+    const ctx = creationContextOf(req);
+    return cancelCreation('connections', id, body?.token, ctx, (manager) => this.svc.delete(id, ctx.userId || null, { manager }));
   }
 
   @UseGuards(PermissionGuard)

@@ -2,7 +2,7 @@ import { linkedReadsFromContext } from '../common/relations/linked-reads';
 import { assertApplicationsInScope, idsInScope } from './portfolio-linked-reads';
 import { languageOf } from '../common/csv-sheet';
 import {
-  Body, Controller, Delete, Get, NotFoundException, Param, ParseUUIDPipe, Patch, Post, Query, Req, Res,
+  Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query, Req, Res,
   UploadedFile, UseGuards, UseInterceptors,
 } from '@nestjs/common';
 import { requestContextMissing, codedForbidden, moduleRightRequired } from '../auth/module-right-required';
@@ -38,14 +38,8 @@ import { REFRESH_TOKEN_COOKIE_NAME, parseCookieValue } from '../auth/auth-cookie
 import { resolveBusinessContributorScope, taskParticipantCondition } from '../auth/business-contributor-scope';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { buildRelationsAccess, hasLevel } from '../common/relations/relations-access';
-import { creationCancelExpired, issueCreationToken, verifyCreationToken } from '../common/creation/creation-token';
-import {
-  assertCreatorAloneSinceCreation,
-  countChangesSinceCreation,
-  countEditedManagedDocuments,
-  withChildCount,
-  type CreationChanges,
-} from '../common/creation/creation-changes';
+import { cancelCreation, creationContextOf, readCreationChanges, withCreationToken } from '../common/creation/creation-routes';
+import { countEditedManagedDocuments, withChildCount, type CreationChanges } from '../common/creation/creation-changes';
 import {
   PortfolioRelationsService,
   REQUEST_RELATION_READS,
@@ -611,14 +605,7 @@ export class PortfolioRequestsController {
     const created = await this.svc.create(body, tenantId, req.user?.sub ?? null, {
       manager: req?.queryRunner?.manager,
     });
-    const creation_token = issueCreationToken({ tenantId, family: 'requests', recordId: created.id, userId: req.user?.sub ?? '' });
-    return Object.assign(created, { creation_token });
-  }
-
-  /** The token of `POST /portfolio/requests` for this record, tenant and person, still valid; a 403 otherwise. */
-  private assertCreationToken(id: string, token: unknown, req: any): void {
-    const subject = { tenantId: req?.tenant?.id ?? '', family: 'requests', recordId: String(id ?? ''), userId: req?.user?.sub ?? '' };
-    if (!verifyCreationToken(token, subject)) throw creationCancelExpired();
+    return withCreationToken('portfolio_requests', created, { tenantId, userId: req.user?.sub ?? '' });
   }
 
   /**
@@ -629,24 +616,22 @@ export class PortfolioRequestsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('portfolio_requests', 'member')
   @Get(':id/creation')
-  async creationChanges(
+  creationChanges(
     @Param('id') id: string,
     @Query('token') token: string,
     @Req() req: any,
   ): Promise<{ changes: CreationChanges }> {
-    this.assertCreationToken(id, token, req);
-    const manager = req?.queryRunner?.manager;
-    const tenantId = req?.tenant?.id ?? '';
-    const found = await manager.query('SELECT 1 FROM portfolio_requests WHERE id = $1 AND tenant_id = $2', [id, tenantId]);
-    if (!found.length) throw new NotFoundException('Request not found');
-    await assertCreatorAloneSinceCreation(manager, tenantId, 'portfolio_requests', id, req?.user?.sub ?? '');
-    let changes = await countChangesSinceCreation(manager, tenantId, 'portfolio_requests', id);
-    changes = withChildCount(changes, 'document', await countEditedManagedDocuments(manager, tenantId, 'requests', id));
-    const [{ total }] = await manager.query(
-      'SELECT count(*)::int AS total FROM portfolio_request_attachments WHERE tenant_id = $1 AND request_id = $2',
-      [tenantId, id],
-    );
-    return { changes: withChildCount(changes, 'attachment', total) };
+    const ctx = creationContextOf(req);
+    return readCreationChanges('portfolio_requests', id, token, ctx, {
+      extra: async (changes, manager) => {
+        changes = withChildCount(changes, 'document', await countEditedManagedDocuments(manager, ctx.tenantId, 'requests', id));
+        const [{ total }] = await manager.query(
+          'SELECT count(*)::int AS total FROM portfolio_request_attachments WHERE tenant_id = $1 AND request_id = $2',
+          [ctx.tenantId, id],
+        );
+        return withChildCount(changes, 'attachment', total);
+      },
+    });
   }
 
   /**
@@ -658,11 +643,9 @@ export class PortfolioRequestsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('portfolio_requests', 'member')
   @Delete(':id/creation')
-  async cancelCreation(@Param('id') id: string, @Body() body: { token?: string }, @Req() req: any): Promise<void> {
-    this.assertCreationToken(id, body?.token, req);
-    const manager = req?.queryRunner?.manager;
-    await assertCreatorAloneSinceCreation(manager, req?.tenant?.id ?? '', 'portfolio_requests', id, req?.user?.sub ?? '', { lock: true });
-    await this.svc.delete(id, req.user?.sub ?? null, { manager });
+  cancelCreation(@Param('id') id: string, @Body() body: { token?: string }, @Req() req: any): Promise<void> {
+    const ctx = creationContextOf(req);
+    return cancelCreation('portfolio_requests', id, body?.token, ctx, (manager) => this.svc.delete(id, ctx.userId || null, { manager }));
   }
 
   @UseGuards(PermissionGuard)

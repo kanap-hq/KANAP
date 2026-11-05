@@ -1067,7 +1067,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
       creation.finishCreation();
     } catch (e) {
       const answer = (e as { response?: { data?: { code?: unknown; params?: { fields?: unknown } } } })?.response?.data;
-      const fields = answer?.code === 'BUDGET_LINE_INCOMPLETE' && Array.isArray(answer.params?.fields) ? answer.params.fields.map(String) : null;
+      const fields = answer?.code === 'CREATION_INCOMPLETE' && Array.isArray(answer.params?.fields) ? answer.params.fields.map(String) : null;
       if (fields && fields.length > 0) {
         setMissingFields(new Set(fields));
         setSaveError(t('budget.creation.missing', { fields: missingFieldsList(fields.map(fieldLabel), locale) }));

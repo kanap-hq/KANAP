@@ -5,7 +5,7 @@ import { RequireLevel } from '../auth/require-level.decorator';
 import { SpendTasksService } from './spend-tasks.service';
 import { resolveToUuid } from '../common/resolve-item-id';
 import { EntityManager } from 'typeorm';
-import { withTaskCreationToken } from '../tasks/task-creation';
+import { creationContextOf, withCreationToken } from '../common/creation/creation-routes';
 
 @UseGuards(JwtAuthGuard)
 @Controller('spend-items/:id/tasks')
@@ -33,7 +33,7 @@ export class SpendTasksController {
     const itemId = await this.resolveItemId(idOrRef, manager);
     const created = await this.svc.createForItem(itemId, body, req.user?.sub ?? null, { manager, tenantId: req?.tenant?.id });
     // The token of "Cancel" of a task being created (`tasks/task-creation.ts`).
-    return withTaskCreationToken(created, { tenantId: req?.tenant?.id ?? '', userId: req?.user?.sub ?? '' });
+    return withCreationToken('tasks', created, creationContextOf(req));
   }
 
   // PATCH expects body.id of the task to update

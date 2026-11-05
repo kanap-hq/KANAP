@@ -23,14 +23,9 @@ import { resolveBusinessContributorScopeForUser } from '../auth/business-contrib
 import { hasLevel } from '../technologies/technologies.controller';
 import { requireManager } from '../technologies/technology-rows';
 import { AssetImpactService } from './services/asset-impact.service';
-import { creationCancelExpired, issueCreationToken, verifyCreationToken } from '../common/creation/creation-token';
-import {
-  assertCreatorAloneSinceCreation,
-  countChangesSinceCreation,
-  countEditedManagedDocuments,
-  withChildCount,
-  type CreationChanges,
-} from '../common/creation/creation-changes';
+import type { EntityManager } from 'typeorm';
+import { assertCreationToken, cancelCreation, creationContextOf, readCreationChanges, withCreationToken } from '../common/creation/creation-routes';
+import { countEditedManagedDocuments, withChildCount, type CreationChanges } from '../common/creation/creation-changes';
 import { creationIncomplete } from '../common/creation/creation-incomplete';
 import { buildRelationsAccess } from '../common/relations/relations-access';
 import { canReadResource } from '../common/record-usages';
@@ -627,15 +622,8 @@ export class AssetsController {
       'SELECT asset_reference FROM assets WHERE id = $1 AND tenant_id = $2',
       [created.id, tenantId],
     );
-    const creation_token = issueCreationToken({ tenantId, family: 'assets', recordId: created.id, userId });
-    return Object.assign(created, { asset_reference: row?.asset_reference ?? created.asset_reference ?? null, creation_token });
-  }
-
-  /** The token of `POST creation` for this asset, tenant and person, still valid; a 403 otherwise. */
-  private assertCreationToken(id: string, token: unknown, req: any): void {
-    if (!verifyCreationToken(token, { tenantId: req?.tenant?.id ?? '', family: 'assets', recordId: String(id ?? ''), userId: req?.user?.sub ?? '' })) {
-      throw creationCancelExpired();
-    }
+    Object.assign(created, { asset_reference: row?.asset_reference ?? created.asset_reference ?? null });
+    return withCreationToken('assets', created, { tenantId, userId });
   }
 
   /**
@@ -645,20 +633,18 @@ export class AssetsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'member')
   @Get(':id/creation')
-  async creationChanges(@Param('id') id: string, @Query('token') token: string, @Req() req: any): Promise<{ changes: CreationChanges }> {
-    this.assertCreationToken(id, token, req);
-    const manager = req?.queryRunner?.manager;
-    const tenantId: string = req?.tenant?.id ?? '';
-    const found = await manager.query('SELECT 1 FROM assets WHERE id = $1 AND tenant_id = $2', [id, tenantId]);
-    if (!found.length) throw new NotFoundException('Asset not found');
-    await assertCreatorAloneSinceCreation(manager, tenantId, 'assets', id, req?.user?.sub ?? '');
-    let changes = await countChangesSinceCreation(manager, tenantId, 'assets', id);
-    changes = withChildCount(changes, 'document', await countEditedManagedDocuments(manager, tenantId, 'assets', id));
-    const [{ total }] = await manager.query(
-      'SELECT count(*)::int AS total FROM asset_attachments WHERE tenant_id = $1 AND asset_id = $2',
-      [tenantId, id],
-    );
-    return { changes: withChildCount(changes, 'attachment', total) };
+  creationChanges(@Param('id') id: string, @Query('token') token: string, @Req() req: any): Promise<{ changes: CreationChanges }> {
+    const ctx = creationContextOf(req);
+    return readCreationChanges('assets', id, token, ctx, {
+      extra: async (changes, manager) => {
+        changes = withChildCount(changes, 'document', await countEditedManagedDocuments(manager, ctx.tenantId, 'assets', id));
+        const [{ total }] = await manager.query(
+          'SELECT count(*)::int AS total FROM asset_attachments WHERE tenant_id = $1 AND asset_id = $2',
+          [ctx.tenantId, id],
+        );
+        return withChildCount(changes, 'attachment', total);
+      },
+    });
   }
 
   /** "Create" of an asset being created: 400 `CREATION_INCOMPLETE` (`params.fields`: `location`) while it has no site. */
@@ -667,11 +653,11 @@ export class AssetsController {
   @Post(':id/creation/complete')
   @HttpCode(200)
   async completeCreation(@Param('id') id: string, @Body() body: { token?: string }, @Req() req: any): Promise<{ ok: true }> {
-    this.assertCreationToken(id, body?.token, req);
-    const manager = req?.queryRunner?.manager;
-    const [row]: Array<{ location_id: string | null }> = await manager.query(
+    const ctx = creationContextOf(req);
+    assertCreationToken('assets', id, body?.token, ctx);
+    const [row]: Array<{ location_id: string | null }> = await (ctx.manager as EntityManager).query(
       'SELECT location_id FROM assets WHERE id = $1 AND tenant_id = $2',
-      [id, req?.tenant?.id ?? ''],
+      [id, ctx.tenantId],
     );
     if (!row) throw new NotFoundException('Asset not found');
     if (!row.location_id) throw creationIncomplete(['location'], ['site']);
@@ -686,12 +672,9 @@ export class AssetsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'member')
   @Delete(':id/creation')
-  async cancelCreation(@Param('id') id: string, @Body() body: { token?: string }, @Req() req: any): Promise<void> {
-    this.assertCreationToken(id, body?.token, req);
-    const manager = req?.queryRunner?.manager;
-    const tenantId: string = req?.tenant?.id ?? '';
-    await assertCreatorAloneSinceCreation(manager, tenantId, 'assets', id, req?.user?.sub ?? '', { lock: true });
-    await this.deleteSvc.deleteAsset(id, tenantId, req.user?.sub ?? null, { manager });
+  cancelCreation(@Param('id') id: string, @Body() body: { token?: string }, @Req() req: any): Promise<void> {
+    const ctx = creationContextOf(req);
+    return cancelCreation('assets', id, body?.token, ctx, (manager) => this.deleteSvc.deleteAsset(id, ctx.tenantId, ctx.userId || null, { manager }));
   }
 
   @UseGuards(PermissionGuard)

@@ -23,7 +23,7 @@ import { inRolledBackTransaction, runSpecs, seedTenant, setTenant } from './roun
 // - `POST /budget-lines/creation` creates it from the title, with no paying company and no required
 //   dimension, and hands its creator a token; `POST /budget-lines` still refuses a line without company;
 // - an update leaves a company-less line without company, and may never clear the company a line holds;
-// - `POST :id/creation/complete` refuses (`BUDGET_LINE_INCOMPLETE`, `params.fields`) while the line
+// - `POST :id/creation/complete` refuses (`CREATION_INCOMPLETE`, `params.fields`) while the line
 //   lacks its company, its account or a required dimension, then succeeds;
 // - `GET :id/creation` counts what was written since; `DELETE :id/creation` deletes the line for its
 //   creator at the member level; another person, another line's token, none or an expired one is
@@ -119,10 +119,10 @@ async function incompleteFields(promise: Promise<unknown>): Promise<string[]> {
     await promise;
   } catch (err: any) {
     const body = err?.getResponse?.();
-    assert.equal(body?.code, 'BUDGET_LINE_INCOMPLETE', `incomplete expected, got ${err?.message}`);
+    assert.equal(body?.code, 'CREATION_INCOMPLETE', `incomplete expected, got ${err?.message}`);
     return body.params.fields;
   }
-  throw new Error('expected BUDGET_LINE_INCOMPLETE');
+  throw new Error('expected CREATION_INCOMPLETE');
 }
 
 function testRoutesNeedTheMemberLevel() {
@@ -169,7 +169,7 @@ async function testTitleCreationCompleteAndCancel() {
       ['account', `dimension:${s.axisId}`],
     );
     await svc.update(created.id, { account_id: s.accountId, analytics_values: { [s.axisId]: s.categoryId } }, s.creatorId, { manager: runner.manager });
-    assert.deepEqual(await controller.completeCreation(created.id, { token: created.creation_token }, asCreator), { complete: true });
+    assert.deepEqual(await controller.completeCreation(created.id, { token: created.creation_token }, asCreator), { ok: true });
     // A company on another chart than the account: the account is no longer valid.
     await runner.query(`UPDATE spend_items SET paying_company_id = $2 WHERE id = $1`, [created.id, s.otherCompanyId]);
     assert.deepEqual(await incompleteFields(controller.completeCreation(created.id, { token: created.creation_token }, asCreator)), ['account']);
@@ -189,7 +189,7 @@ async function testTitleCreationCompleteAndCancel() {
     await refusedAsExpired(controller.cancelCreation(created.id, {}, asCreator), 'no token');
     await refusedAsExpired(controller.cancelCreation(`BL-${created.item_number}`, { token: created.creation_token }, asCreator), 'a reference');
     const expired = issueCreationToken(
-      { tenantId: s.tenantId, family: 'budget-lines', recordId: created.id, userId: s.creatorId },
+      { tenantId: s.tenantId, family: 'spend_items', recordId: created.id, userId: s.creatorId },
       { now: Date.now() - 25 * 60 * 60 * 1000 },
     );
     await refusedAsExpired(controller.cancelCreation(created.id, { token: expired }, asCreator), 'expired token');
@@ -262,7 +262,7 @@ async function testLimitedPerson() {
     assert.deepEqual(await deletionAuthors(runner, s.tenantId, 'spend_items', created.id), [s.limitedId], 'audited under its creator');
 
     // Another person's token for this line is refused before anything.
-    const foreign = issueCreationToken({ tenantId: s.tenantId, family: 'budget-lines', recordId: kept.id, userId: s.creatorId });
+    const foreign = issueCreationToken({ tenantId: s.tenantId, family: 'spend_items', recordId: kept.id, userId: s.creatorId });
     await refusedAsExpired(controller.cancelCreation(kept.id, { token: foreign }, asLimited), 'another person\'s token');
 
     // The window is the person's own: for anyone else than the one whose access applies, it throws

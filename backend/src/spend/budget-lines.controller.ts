@@ -28,8 +28,8 @@ import { SpendBudgetOperationsService } from './spend-budget-operations.service'
 import type { BudgetOperationScope, CopyBudgetOperation } from './budget-copy';
 import type { BudgetColumn } from './amounts-write.util';
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
-import { issueCreationToken } from '../common/creation/creation-token';
-import { assertBudgetLineCreationToken, BUDGET_LINE_CREATION_FAMILY } from './budget-line-creation';
+import { assertCreationToken, withCreationToken } from '../common/creation/creation-routes';
+import { BUDGET_LINE_CREATION } from './budget-line-creation';
 
 @UseGuards(JwtAuthGuard)
 @Controller('budget-lines')
@@ -266,15 +266,7 @@ export class BudgetLinesController {
   @Post('creation')
   async createAtTitle(@Body() body: unknown, @Tenant() ctx: TenantRequest) {
     const created = await this.svc.createAtTitle(body, ctx.userId || undefined, { manager: ctx.manager as EntityManager });
-    const creation_token = issueCreationToken({
-      tenantId: ctx.tenantId, family: BUDGET_LINE_CREATION_FAMILY, recordId: String(created.id), userId: ctx.userId || '',
-    });
-    return Object.assign(created, { creation_token });
-  }
-
-  /** The token of `POST creation` for this line (its uuid), tenant and person, still valid; a 403 otherwise. */
-  private assertCreationToken(id: string, token: unknown, ctx: TenantRequest): void {
-    assertBudgetLineCreationToken(id, token, { tenantId: ctx.tenantId, userId: ctx.userId || '' });
+    return withCreationToken(BUDGET_LINE_CREATION, created, ctx);
   }
 
   /** Before "Cancel": what was written on the line and its children since its creation. Nothing is written. */
@@ -282,17 +274,17 @@ export class BudgetLinesController {
   @RequireLevel('budget', 'member')
   @Get(':id/creation')
   async creationChanges(@Param('id') id: string, @Query('token') token: string, @Tenant() ctx: TenantRequest) {
-    this.assertCreationToken(id, token, ctx);
+    assertCreationToken(BUDGET_LINE_CREATION, id, token, ctx);
     return this.svc.creationChanges(id, ctx.userId || '', { manager: ctx.manager as EntityManager });
   }
 
-  /** "Create" of a line being created: 400 `BUDGET_LINE_INCOMPLETE` (`params.fields`) while it lacks a field it needs. */
+  /** "Create" of a line being created: 400 `CREATION_INCOMPLETE` (`params.fields`) while it lacks a field it needs. */
   @UseGuards(PermissionGuard)
   @RequireLevel('budget', 'member')
   @Post(':id/creation/complete')
   @HttpCode(200)
   async completeCreation(@Param('id') id: string, @Body() body: { token?: string }, @Tenant() ctx: TenantRequest) {
-    this.assertCreationToken(id, body?.token, ctx);
+    assertCreationToken(BUDGET_LINE_CREATION, id, body?.token, ctx);
     return this.svc.completeCreation(id, { manager: ctx.manager as EntityManager });
   }
 

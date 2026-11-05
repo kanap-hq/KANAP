@@ -25,12 +25,11 @@ import { assertContractRelationRead, contractRelationKindOrThrow, contractRelati
 import { languageOf, parseDateOrder, parseDecimalMark } from '../common/csv-sheet';
 import type { ComplianceItemPatch } from './contract-compliance';
 import { ContractsDeleteService } from './contracts-delete.service';
-import { withTaskCreationToken } from '../tasks/task-creation';
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 import { csvExportFormat } from '../common/csv/csv-export.service';
 import { parseExportFormat } from '../common/xlsx/format';
 import { csvExportBody } from '../common/csv/send-csv-export';
-import { readCreationChanges, withCreationToken } from '../common/creation/creation-routes';
+import { creationContextOf, readCreationChanges, withCreationToken } from '../common/creation/creation-routes';
 
 /**
  * The list's `covered_application` filter, for a reader of the applications only (a Business
@@ -413,7 +412,7 @@ export class ContractsController {
   async createTask(@Param('id') id: string, @Body() body: any, @Req() req: any) {
     const created = await this.svc.createTask(id, body, req.user?.sub ?? null, { manager: req?.queryRunner?.manager, tenantId: req?.tenant?.id });
     // The token of "Cancel" of a task being created (`tasks/task-creation.ts`).
-    return withTaskCreationToken(created, { tenantId: req?.tenant?.id ?? '', userId: req?.user?.sub ?? '' });
+    return withCreationToken('tasks', created, creationContextOf(req));
   }
 
   @UseGuards(PermissionGuard)

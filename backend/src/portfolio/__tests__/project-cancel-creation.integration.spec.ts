@@ -127,7 +127,7 @@ async function testCreatorCancelsTheCreation() {
     await refusedAsExpired(controller.cancelCreation(created.id, { token: other.creation_token }, asCreator), 'other project');
     await refusedAsExpired(controller.cancelCreation(created.id, {}, asCreator), 'no token');
     const expired = issueCreationToken(
-      { tenantId, family: 'projects', recordId: created.id, userId: creatorId },
+      { tenantId, family: 'portfolio_projects', recordId: created.id, userId: creatorId },
       { now: Date.now() - 25 * 60 * 60 * 1000 },
     );
     await refusedAsExpired(controller.cancelCreation(created.id, { token: expired }, asCreator), 'expired token');

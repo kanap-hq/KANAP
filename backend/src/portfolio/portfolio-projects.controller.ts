@@ -1,6 +1,6 @@
 import { languageOf } from '../common/csv-sheet';
 import {
-  Body, Controller, Delete, Get, NotFoundException, Param, ParseUUIDPipe, Patch, Post, Query, Req, Res,
+  Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query, Req, Res,
   UploadedFile, UseGuards, UseInterceptors,
 } from '@nestjs/common';
 import { moduleRightRequired, requestContextMissing } from '../auth/module-right-required';
@@ -42,14 +42,8 @@ import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-ti
 import { buildRelationsAccess, hasLevel } from '../common/relations/relations-access';
 import { linkedReadsFromContext } from '../common/relations/linked-reads';
 import { assertApplicationsInScope, idsInScope, PortfolioLinkedReads } from './portfolio-linked-reads';
-import { creationCancelExpired, issueCreationToken, verifyCreationToken } from '../common/creation/creation-token';
-import {
-  assertCreatorAloneSinceCreation,
-  countChangesSinceCreation,
-  countEditedManagedDocuments,
-  withChildCount,
-  type CreationChanges,
-} from '../common/creation/creation-changes';
+import { cancelCreation, readCreationChanges, withCreationToken } from '../common/creation/creation-routes';
+import { countEditedManagedDocuments, withChildCount, type CreationChanges } from '../common/creation/creation-changes';
 import { PortfolioProjectCreationService } from './services/portfolio-project-creation.service';
 import {
   PortfolioRelationsService,
@@ -597,15 +591,7 @@ export class PortfolioProjectsController {
     const created = await this.svc.create(body as Record<string, unknown>, ctx.tenantId, ctx.userId || null, {
       manager: ctx.manager,
     });
-    const creation_token = issueCreationToken({ tenantId: ctx.tenantId, family: 'projects', recordId: created.id, userId: ctx.userId });
-    return Object.assign(created, { creation_token });
-  }
-
-  /** The token of `POST /portfolio/projects` for this record, tenant and person, still valid; a 403 otherwise. */
-  private assertCreationToken(id: string, token: unknown, ctx: TenantRequest): void {
-    if (!verifyCreationToken(token, { tenantId: ctx.tenantId, family: 'projects', recordId: String(id ?? ''), userId: ctx.userId })) {
-      throw creationCancelExpired();
-    }
+    return withCreationToken('portfolio_projects', created, ctx);
   }
 
   /**
@@ -616,25 +602,23 @@ export class PortfolioProjectsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('portfolio_projects', 'member')
   @Get(':id/creation')
-  async creationChanges(
+  creationChanges(
     @Param('id') id: string,
     @Query('token') token: string,
     @Tenant() ctx: TenantRequest,
   ): Promise<{ changes: CreationChanges }> {
-    this.assertCreationToken(id, token, ctx);
-    const manager = this.requireManager(ctx);
-    const [counts]: Array<{ found: number; attachments: number; time_entries: number }> = await manager.query(
-      `SELECT (SELECT count(*)::int FROM portfolio_projects WHERE tenant_id = $1 AND id = $2) AS found,
-              (SELECT count(*)::int FROM portfolio_project_attachments WHERE tenant_id = $1 AND project_id = $2) AS attachments,
-              (SELECT count(*)::int FROM portfolio_project_time_entries WHERE tenant_id = $1 AND project_id = $2) AS time_entries`,
-      [ctx.tenantId, id],
-    );
-    if (!counts?.found) throw new NotFoundException('Project not found');
-    await assertCreatorAloneSinceCreation(manager, ctx.tenantId, 'portfolio_projects', id, ctx.userId);
-    let changes = await countChangesSinceCreation(manager, ctx.tenantId, 'portfolio_projects', id);
-    changes = withChildCount(changes, 'document', await countEditedManagedDocuments(manager, ctx.tenantId, 'projects', id));
-    changes = withChildCount(changes, 'attachment', counts.attachments);
-    return { changes: withChildCount(changes, 'time_entry', counts.time_entries) };
+    return readCreationChanges('portfolio_projects', id, token, ctx, {
+      extra: async (changes, manager) => {
+        const [counts]: Array<{ attachments: number; time_entries: number }> = await manager.query(
+          `SELECT (SELECT count(*)::int FROM portfolio_project_attachments WHERE tenant_id = $1 AND project_id = $2) AS attachments,
+                  (SELECT count(*)::int FROM portfolio_project_time_entries WHERE tenant_id = $1 AND project_id = $2) AS time_entries`,
+          [ctx.tenantId, id],
+        );
+        changes = withChildCount(changes, 'document', await countEditedManagedDocuments(manager, ctx.tenantId, 'projects', id));
+        changes = withChildCount(changes, 'attachment', counts.attachments);
+        return withChildCount(changes, 'time_entry', counts.time_entries);
+      },
+    });
   }
 
   /**
@@ -646,15 +630,12 @@ export class PortfolioProjectsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('portfolio_projects', 'member')
   @Delete(':id/creation')
-  async cancelCreation(
+  cancelCreation(
     @Param('id') id: string,
     @Body() body: { token?: string },
     @Tenant() ctx: TenantRequest,
   ): Promise<void> {
-    this.assertCreationToken(id, body?.token, ctx);
-    const manager = this.requireManager(ctx);
-    await assertCreatorAloneSinceCreation(manager, ctx.tenantId, 'portfolio_projects', id, ctx.userId, { lock: true });
-    await this.creationSvc.deleteCreated(id, ctx.tenantId, ctx.userId || null, manager);
+    return cancelCreation('portfolio_projects', id, body?.token, ctx, (manager) => this.creationSvc.deleteCreated(id, ctx.tenantId, ctx.userId || null, manager));
   }
 
   @UseGuards(PermissionGuard)

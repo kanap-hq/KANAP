@@ -6,7 +6,8 @@ import { PermissionGuard } from '../auth/permission.guard';
 import { RequireLevel } from '../auth/require-level.decorator';
 import { TasksUnifiedService } from '../tasks/tasks-unified.service';
 import { TasksDeleteService } from '../tasks/tasks-delete.service';
-import { assertTaskCreationToken, cancelTaskCreation, taskCreationChanges, withTaskCreationToken } from '../tasks/task-creation';
+import { cancelTaskCreation, readTaskCreationChanges } from '../tasks/task-creation';
+import { creationContextOf, withCreationToken } from '../common/creation/creation-routes';
 import type { CreationChanges } from '../common/creation/creation-changes';
 import { TaskTimeEntriesService } from '../tasks/task-time-entries.service';
 import { TaskActivitiesService, ActivityBodyDto } from '../tasks/task-activities.service';
@@ -27,11 +28,6 @@ export class PortfolioProjectTasksController {
     private readonly projectsSvc: PortfolioProjectsService,
     private readonly deleteSvc: TasksDeleteService,
   ) {}
-
-  /** The tenant and the person of the request, for a creation token. */
-  private creationSubject(req: any) {
-    return { tenantId: req?.tenant?.id ?? '', userId: req?.user?.sub ?? '' };
-  }
 
   private resolveProjectId(idOrRef: string, req: any): Promise<string> {
     return resolveToUuid(idOrRef, 'project', req?.queryRunner?.manager);
@@ -157,7 +153,7 @@ export class PortfolioProjectTasksController {
       { manager: req?.queryRunner?.manager, tenantId: req?.tenant?.id },
     );
     // The token of "Cancel" of a task being created (`tasks/task-creation.ts`).
-    return withTaskCreationToken(created, this.creationSubject(req));
+    return withCreationToken('tasks', created, creationContextOf(req));
   }
 
   // ==================== PROJECT TIME SUMMARY ====================
@@ -222,10 +218,9 @@ export class PortfolioProjectTasksController {
     @Query('token') token: string,
     @Req() req: any,
   ): Promise<{ changes: CreationChanges }> {
-    assertTaskCreationToken(taskId, token, this.creationSubject(req));
     const projectId = await this.resolveProjectForAccess(projectIdOrRef, req, 'contributor');
     await this.resolveProjectTaskForAccess(projectId, taskId, req);
-    return { changes: await taskCreationChanges(req?.queryRunner?.manager, this.creationSubject(req), taskId) };
+    return readTaskCreationChanges(taskId, token, creationContextOf(req));
   }
 
   /**
@@ -242,10 +237,9 @@ export class PortfolioProjectTasksController {
     @Body() body: { token?: string },
     @Req() req: any,
   ): Promise<void> {
-    assertTaskCreationToken(taskId, body?.token, this.creationSubject(req));
     const projectId = await this.resolveProjectForAccess(projectIdOrRef, req, 'contributor');
     await this.resolveProjectTaskForAccess(projectId, taskId, req);
-    await cancelTaskCreation(req?.queryRunner?.manager, this.deleteSvc, this.creationSubject(req), taskId);
+    await cancelTaskCreation(this.deleteSvc, taskId, body?.token, creationContextOf(req));
   }
 
   // ==================== TIME ENTRIES ====================
