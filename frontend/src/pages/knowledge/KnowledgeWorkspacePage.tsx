@@ -43,7 +43,7 @@ import { releaseLockKeepalive } from '../../lib/releaseLockKeepalive';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
 import { classifyKnowledgeLoadError } from './knowledgeLoadError';
 import EditableTitle from '../../components/workspace/EditableTitle';
-import { CreationActions, CreationPreview, useCreationReturn, useNewRecordCreate, useRecordCreation } from '../../components/workspace/creation';
+import { CreationActions, CreationPreview, useCreationReturn, useRecordCreation, useTitleCreation } from '../../components/workspace/creation';
 
 const MarkdownEditor = React.lazy(() => import('../../components/MarkdownEditor'));
 
@@ -207,6 +207,10 @@ function MarkdownEditorLoadingFallback({ minRows }: { minRows: number }) {
     </Box>
   );
 }
+
+
+/** The new document has no library it may be written in: its title says so. */
+const NO_DESTINATION_LIBRARY = new Error('No destination library');
 
 export default function KnowledgeWorkspacePage() {
   const theme = useTheme();
@@ -1739,10 +1743,6 @@ export default function KnowledgeWorkspacePage() {
     queryKeyPrefixes: ['knowledge'],
     onError: setError,
   });
-  const [titleError, setTitleError] = React.useState<string | null>(null);
-  const newCreate = useNewRecordCreate({ setTitleError, requiredMessage: t('common:creation.titleRequired') });
-  // The title committed before the library, the default type and the template were read.
-  const [pendingTitle, setPendingTitle] = React.useState<string | null>(null);
   // Tab from the title of a new document: the text gets the focus once the document is created.
   const contentFocusPendingRef = React.useRef(false);
   // The editor takes the focus once it is enabled (it waits while the lock is being taken).
@@ -1751,7 +1751,7 @@ export default function KnowledgeWorkspacePage() {
     contentFocusPendingRef.current = false;
     setContentFocusNonce((n) => n + 1);
   }, [isCreate]);
-  const creatingRef = React.useRef(false);
+  // The title committed before the library, the default type and the template were read waits for them.
   const createDefaultsReady = isCreate
     && librariesStatus !== 'pending'
     && documentTypesStatus !== 'pending'
@@ -1761,17 +1761,12 @@ export default function KnowledgeWorkspacePage() {
   // type, the folder, the relations of the address, the person as owner), then takes its lock and
   // moves to it, still in edit mode (React Router keeps this instance), or closes it, kept, when
   // Create was clicked meanwhile.
-  const createDocument = React.useCallback(async (value: string) => {
-    if (creatingRef.current) return;
-    creatingRef.current = true;
-    setTitleError(null);
-    setError(null);
-    try {
-      if (!workspaceLibraryId || !activeCreateLibrary?.can_write) {
-        newCreate.titleSettled();
-        setTitleError(t('workspace.messages.noDestinationLibrary'));
-        return;
-      }
+  const titleCreation = useTitleCreation<{ id: string; item_ref?: string; item_number?: number }>({
+    isCreate,
+    requiredMessage: t('common:creation.titleRequired'),
+    ready: createDefaultsReady,
+    post: async (value) => {
+      if (!workspaceLibraryId || !activeCreateLibrary?.can_write) throw NO_DESTINATION_LIBRARY;
       const payload = {
         title: value,
         summary: form.summary,
@@ -1784,9 +1779,10 @@ export default function KnowledgeWorkspacePage() {
         relations: buildRelationPayload(relationSelections),
         ...(profile?.id ? { owner_user_id: profile.id } : {}),
       };
-      const res = await api.post('/knowledge', payload);
-      const { creation_token: token, ...created } = res.data || {};
-      if (newCreate.titleSettled()) {
+      return (await api.post('/knowledge', payload)).data || {};
+    },
+    onCreated: async (created, token, finish) => {
+      if (finish) {
         navigate(creationReturn, { replace: true });
         return;
       }
@@ -1807,51 +1803,22 @@ export default function KnowledgeWorkspacePage() {
       if (workspaceLibrarySlug) sp.set('library', workspaceLibrarySlug);
       sp.set('allLibraries', '0');
       navigate(`/knowledge/${itemRef}?${sp.toString()}`, { replace: true });
-    } catch (err) {
-      newCreate.titleSettled();
-      setTitleError(getDocumentSaveErrorMessage(err, t, t('workspace.messages.saveFailed')));
-    } finally {
-      creatingRef.current = false;
-    }
-  }, [
-    activeCreateLibrary?.can_write,
-    buildRelationPayload,
-    creation,
-    creationReturn,
-    defaultDocumentTypeId,
-    form.document_type_id,
-    form.folder_id,
-    form.status,
-    form.summary,
-    form.template_document_id,
-    navigate,
-    newCreate,
-    profile?.id,
-    qc,
-    relationSelections,
-    setLockToken,
-    t,
-    templateDoc?.content_markdown,
-    templateDoc?.document_type_id,
-    workspaceLibraryId,
-    workspaceLibrarySlug,
-  ]);
-
-  React.useEffect(() => {
-    if (!isCreate || pendingTitle === null || !createDefaultsReady) return;
-    setPendingTitle(null);
-    void createDocument(pendingTitle);
-  }, [createDefaultsReady, createDocument, isCreate, pendingTitle]);
+    },
+    errorMessage: (err) => (err === NO_DESTINATION_LIBRARY
+      ? t('workspace.messages.noDestinationLibrary')
+      : getDocumentSaveErrorMessage(err, t, t('workspace.messages.saveFailed'))),
+    onStart: () => setError(null),
+  });
 
   // Create: on the new page, the title is the only field; on the document being created, what is
   // pending is saved and the lock released, as Done does, then the document is kept and closed.
   const createAction = React.useCallback(() => {
     if (isCreate) {
-      newCreate.create(titleError);
+      titleCreation.create();
       return;
     }
     void handleDoneEditing(() => creation.finishCreation());
-  }, [creation, handleDoneEditing, isCreate, newCreate, titleError]);
+  }, [creation, handleDoneEditing, isCreate, titleCreation]);
 
   // Cancel: the new page is left; the document being created is deleted (its lock goes with it),
   // after a confirmation when more than its title was given, counted once what is pending is saved.
@@ -2155,15 +2122,13 @@ export default function KnowledgeWorkspacePage() {
                     canEdit={isCreate ? canManageDocumentGlobal : canEditContent && !isManagedIntegratedDocument}
                     autoEdit={isCreate}
                     emphasizeEmpty={isCreate}
-                    error={isCreate ? titleError : undefined}
-                    focusRequest={newCreate.focusRequest}
-                    onDraftChange={isCreate ? () => setTitleError(null) : undefined}
+                    error={isCreate ? titleCreation.titleError : undefined}
+                    focusRequest={titleCreation.focusRequest}
+                    onDraftChange={isCreate ? () => titleCreation.setTitleError(null) : undefined}
                     onCancel={isCreate ? () => { void cancelAction(); } : undefined}
                     onSave={(value) => {
                       if (isCreate) {
-                        setTitleError(null);
-                        newCreate.titleSent();
-                        setPendingTitle(value);
+                        titleCreation.commit(value);
                         return;
                       }
                       handleTitleSave(value);

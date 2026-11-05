@@ -27,7 +27,7 @@ import DeleteIconButton from '../../components/workspace/DeleteIconButton';
 import { connectionDeleteMessage } from './connectionDeleteMessage';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
-import { CreationActions, CreationPreview, useCreationReturn, useNewRecordCreate, useRecordCreation } from '../../components/workspace/creation';
+import { CreationActions, CreationPreview, useCreationReturn, useRecordCreation, useTitleCreation } from '../../components/workspace/creation';
 import useIncompleteLeave from '../../components/workspace/creation/useIncompleteLeave';
 import { missingFieldsList } from '../../components/workspace/creation/missingFieldsList';
 import { useLeaveGuard } from '../../hooks/leaveGuard';
@@ -163,10 +163,6 @@ export default function ConnectionWorkspacePage() {
   const [deleting, setDeleting] = React.useState(false);
   const [pendingTopology, setPendingTopology] = React.useState<'server_to_server' | 'multi_server' | null>(null);
 
-  // A refusal of the name typed on a new connection.
-  const [titleError, setTitleError] = React.useState<string | null>(null);
-  const creatingRef = React.useRef(false);
-  const newCreate = useNewRecordCreate({ setTitleError, requiredMessage: t('messages.nameRequired') });
   const descriptionFlushRef = React.useRef<(() => Promise<void>) | null>(null);
   const notify = useNotify();
   const notifyAbsorbed = React.useCallback((items: AbsorbedAsset[] | undefined) => {
@@ -368,13 +364,12 @@ export default function ConnectionWorkspacePage() {
     [navigate, searchParams, validTab, workspaceRouteId],
   );
 
-  // A plain function: the create it calls is declared further down, with this render's creation.
+  // A plain function: the create it calls is declared further down.
   const handleTitleSave = (next: string) => {
     const trimmed = next.trim();
     if (!trimmed) return;
     if (isCreate) {
-      newCreate.titleSent();
-      void createConnection(trimmed);
+      titleCreation.commit(trimmed);
       return;
     }
     if (!data || trimmed === data.name) return;
@@ -533,28 +528,21 @@ export default function ConnectionWorkspacePage() {
   // nor end yet); the page moves to it, every tab open, with Create and Cancel. Create clicked
   // meanwhile checks it there.
   const creationCheckRef = React.useRef(false);
-  const createConnection = async (name: string) => {
-    if (creatingRef.current) return;
-    creatingRef.current = true;
-    setTitleError(null);
-    setError(null);
-    try {
-      const res = await api.post<ConnectionDetail & { creation_token: string }>('/connections/creation', { name });
-      const { creation_token: token, ...created } = res.data;
-      const check = newCreate.titleSettled();
+  const titleCreation = useTitleCreation<ConnectionDetail>({
+    isCreate,
+    requiredMessage: t('messages.nameRequired'),
+    post: async (name) => (await api.post<ConnectionDetail & { creation_token: string }>('/connections/creation', { name })).data,
+    onCreated: (created, token, check) => {
       creation.startCreation({ recordId: created.id, token, returnTo: creationReturn });
       // The page keeps its header while the full connection loads.
       setData({ ...DRAFT_CONNECTION, ...created });
       setLegs([]);
       navigate(`/it/connections/${created.connection_reference || created.id}/overview`, { replace: true });
       creationCheckRef.current = check;
-    } catch (e) {
-      newCreate.titleSettled();
-      setTitleError(getApiErrorMessage(e, t, t('messages.saveConnectionFailed')));
-    } finally {
-      creatingRef.current = false;
-    }
-  };
+    },
+    errorMessage: (e) => getApiErrorMessage(e, t, t('messages.saveConnectionFailed')),
+    onStart: () => setError(null),
+  });
 
   // Create: on the new page, the title is the only field; on a connection being created, what is
   // still being typed is saved, then the server checks what the connection needs. Missing fields are
@@ -562,7 +550,7 @@ export default function ConnectionWorkspacePage() {
   const [completing, setCompleting] = React.useState(false);
   const createAction = async () => {
     if (isCreate) {
-      newCreate.create(titleError);
+      titleCreation.create();
       return;
     }
     const token = creation.token;
@@ -812,12 +800,12 @@ export default function ConnectionWorkspacePage() {
         titleFallback={isCreate ? t('workspace.connection.newTitle') : t('workspace.connection.untitled')}
         canEditTitle={canManage}
         onTitleSave={handleTitleSave}
-        onTitleDraftChange={isCreate ? () => setTitleError(null) : undefined}
+        onTitleDraftChange={isCreate ? () => titleCreation.setTitleError(null) : undefined}
         titleRequiredMessage={t('messages.nameRequired')}
-        titleError={isCreate ? titleError : undefined}
+        titleError={isCreate ? titleCreation.titleError : undefined}
         titleAutoEdit={isCreate}
         titleOnCancel={isCreate ? () => { void handleClose(); } : undefined}
-        titleFocusRequest={newCreate.focusRequest}
+        titleFocusRequest={titleCreation.focusRequest}
         isCreate={isCreate}
         forceDrawerOpen={isCreate}
         nav={!isCreate && total > 0 ? {

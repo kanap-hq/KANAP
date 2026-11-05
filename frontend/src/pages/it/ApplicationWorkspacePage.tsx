@@ -71,7 +71,7 @@ import { useLocale } from '../../i18n/useLocale';
 import ApplicationClassificationPanel, { HelpLabel, HelpTip, type RecoveryDependency } from './components/ApplicationClassificationPanel';
 import ApplicationCriticalityMetadata from './components/ApplicationCriticalityMetadata';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
-import { CreationActions, CreationPreview, useCreationReturn, useNewRecordCreate, useRecordCreation } from '../../components/workspace/creation';
+import { CreationActions, CreationPreview, useCreationReturn, useRecordCreation, useTitleCreation } from '../../components/workspace/creation';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 
@@ -1466,10 +1466,6 @@ export default function ApplicationWorkspacePage() {
   const overviewEditorRef = React.useRef<IntegratedDocumentEditorHandle>(null);
   const previewEditorRef = React.useRef<IntegratedDocumentEditorHandle>(null);
   const [versionDialogOpen, setVersionDialogOpen] = React.useState(false);
-  // A refusal of the name typed on a new application (a name another application has).
-  const [titleError, setTitleError] = React.useState<string | null>(null);
-  const creatingRef = React.useRef(false);
-  const newCreate = useNewRecordCreate({ setTitleError, requiredMessage: t('messages.nameRequired') });
   const [error, setError] = React.useState<string | null>(null);
   const feedbackRef = React.useRef<ReturnType<typeof useApplicationFeedback>>({ error: () => undefined, undo: () => undefined, info: () => undefined });
 
@@ -1617,20 +1613,17 @@ export default function ApplicationWorkspacePage() {
   // The name committed in the header creates the application at once (category and lifecycle
   // take the server defaults); the page moves to it, every tab open, with Create and Cancel (or
   // closes it, kept, when Create was clicked meanwhile).
-  const createApplication = React.useCallback(async (name: string) => {
-    if (creatingRef.current) return;
-    creatingRef.current = true;
-    setTitleError(null);
-    setError(null);
-    try {
-      // The created row: no child list yet (owners, audience, deployments).
-      const res = await api.post<Partial<ApplicationDetail> & { id: string; name: string; creation_token: string }>('/applications', { name });
-      const { creation_token: token, ...created } = res.data;
-      if (newCreate.titleSettled()) {
-        void queryClient.invalidateQueries({
-          predicate: (query) => ['applications', 'app-filter-values'].some((key) => String(query.queryKey[0]).startsWith(key)),
-          refetchType: 'none',
-        });
+  const titleCreation = useTitleCreation<Partial<ApplicationDetail> & { id: string; name: string }>({
+    isCreate,
+    requiredMessage: t('messages.nameRequired'),
+    // The created row: no child list yet (owners, audience, deployments).
+    post: async (name) => (await api.post<Partial<ApplicationDetail> & { id: string; name: string; creation_token: string }>('/applications', { name })).data,
+    onCreated: (created, token, finish) => {
+      void queryClient.invalidateQueries({
+        predicate: (query) => ['applications', 'app-filter-values'].some((key) => String(query.queryKey[0]).startsWith(key)),
+        refetchType: 'none',
+      });
+      if (finish) {
         navigate(creationReturn, { replace: true });
         return;
       }
@@ -1641,24 +1634,17 @@ export default function ApplicationWorkspacePage() {
         owners: [], companies: [], departments: [], data_residency: [], access_methods: [], links: [], attachments: [], deployments: [],
         ...created,
       } as ApplicationDetail);
-      void queryClient.invalidateQueries({
-        predicate: (query) => ['applications', 'app-filter-values'].some((key) => String(query.queryKey[0]).startsWith(key)),
-        refetchType: 'none',
-      });
       navigate(canonicalPathFor(target, 'overview'), { replace: true });
-    } catch (err) {
-      newCreate.titleSettled();
-      setTitleError(getApiErrorMessage(err, t, t('messages.createApplicationFailed')));
-    } finally {
-      creatingRef.current = false;
-    }
-  }, [canonicalPathFor, creation, creationReturn, navigate, newCreate, queryClient, t]);
+    },
+    errorMessage: (err) => getApiErrorMessage(err, t, t('messages.createApplicationFailed')),
+    onStart: () => setError(null),
+  });
 
   // Create: on the new page, the title is the only field; on an application being created, what is
   // still being typed is saved, then the application is kept and closed.
   const createAction = React.useCallback(async () => {
     if (isCreate) {
-      newCreate.create(titleError);
+      titleCreation.create();
       return;
     }
     if (overviewEditorRef.current && !(await overviewEditorRef.current.save())) return;
@@ -1669,7 +1655,7 @@ export default function ApplicationWorkspacePage() {
     }
     if (classificationSaveFailed.current) return;
     creation.finishCreation();
-  }, [creation, isCreate, newCreate, titleError]);
+  }, [creation, isCreate, titleCreation]);
 
   const copyReference = React.useCallback(async (reference: string) => {
     try {
@@ -1759,17 +1745,16 @@ export default function ApplicationWorkspacePage() {
         readOnly={!isCreate && !canManage}
         onTitleSave={(value) => {
           if (isCreate) {
-            newCreate.titleSent();
-            void createApplication(value);
+            titleCreation.commit(value);
             return;
           }
           void patchApplication({ name: value });
         }}
-        onTitleDraftChange={isCreate ? () => setTitleError(null) : undefined}
-        titleError={isCreate ? titleError : undefined}
+        onTitleDraftChange={isCreate ? () => titleCreation.setTitleError(null) : undefined}
+        titleError={isCreate ? titleCreation.titleError : undefined}
         titleAutoEdit={isCreate}
         titleOnCancel={isCreate ? closeWorkspace : undefined}
-        titleFocusRequest={newCreate.focusRequest}
+        titleFocusRequest={titleCreation.focusRequest}
         titleRequiredMessage={t('messages.nameRequired')}
         titleMaxLength={APPLICATION_NAME_MAX}
         isCreate={isCreate}

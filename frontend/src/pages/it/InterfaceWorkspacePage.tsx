@@ -42,7 +42,7 @@ import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { carryListFilters } from '../../lib/listContext';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
-import { CreationActions, useCreationReturn, useRecordCreation } from '../../components/workspace/creation';
+import { CreationActions, useCreationReturn, useDraftCreation } from '../../components/workspace/creation';
 import { missingFieldsList } from '../../components/workspace/creation/missingFieldsList';
 import { useLeaveGuard } from '../../hooks/leaveGuard';
 
@@ -185,8 +185,6 @@ export default function InterfaceWorkspacePage() {
   const [error, setError] = React.useState<string | null>(null);
   const [createTitleError, setCreateTitleError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
-  // The draft is being written (`createInterface`).
-  const creatingRef = React.useRef(false);
 
   React.useEffect(() => {
     if (routeTab === 'data-mapping') {
@@ -540,14 +538,40 @@ export default function InterfaceWorkspacePage() {
   const listPath = `/it/interfaces${listContextParams.toString() ? `?${listContextParams.toString()}` : ''}`;
   // Where the creation started: a new interface created, cancelled or left goes back there.
   const creationReturn = useCreationReturn(listPath);
-  const creation = useRecordCreation({
+  // The draft creates the interface once it has its title, both applications and its data category:
+  // the page moves to it, every tab open, with Create and Cancel. Create on the draft creates it and
+  // goes back where the creation started.
+  const creation = useDraftCreation({
+    isCreate,
     family: 'interfaces',
     apiBase: '/interfaces',
-    recordId: isCreate ? null : data?.id ?? null,
+    recordId: data?.id ?? null,
     listPath,
+    returnTo: creationReturn,
     recordLabel: t('workspace.interface.creation.record'),
     queryKeyPrefixes: ['interfaces'],
     onError: setError,
+    ready: () => isComplete(createFormRef.current),
+    post: async () => {
+      setError(null);
+      const draft = createFormRef.current;
+      try {
+        const response = await api.post<InterfaceDetail & { creation_token: string }>('/interfaces', buildCreatePayload(draft));
+        const { creation_token: token, ...created } = response.data;
+        if (!created?.id) {
+          setError(t('workspace.interface.create.noIdentifier'));
+          return null;
+        }
+        await persistAdditionalState(created.id, draft);
+        setCreateDirty(false);
+        replaceCurrent(createInitialForm());
+        const qs = searchParams.toString();
+        return { id: created.id, token, path: `/it/interfaces/${created.interface_reference || created.id}/${routeTab}${qs ? `?${qs}` : ''}` };
+      } catch (saveError: any) {
+        setError(getApiErrorMessage(saveError, t, t('messages.saveInterfaceFailed')));
+        return null;
+      }
+    },
   });
 
   // Nothing is written before Create: leaving a draft that holds something asks first.
@@ -562,13 +586,13 @@ export default function InterfaceWorkspacePage() {
   const closeWorkspace = React.useCallback(async () => {
     if (isCreate) {
       // The draft is being written: the page moves to the interface, where Cancel deletes it.
-      if (creatingRef.current) return;
+      if (creation.busy) return;
       if (createDirty && !(await confirmDiscard())) return;
       navigate(creationReturn);
       return;
     }
     navigate(listPath);
-  }, [confirmDiscard, createDirty, creationReturn, isCreate, listPath, navigate]);
+  }, [confirmDiscard, createDirty, creation.busy, creationReturn, isCreate, listPath, navigate]);
 
   const handleTabChange = React.useCallback((nextTab: string) => {
     if (nextTab === routeTab) return;
@@ -615,49 +639,12 @@ export default function InterfaceWorkspacePage() {
   ].filter((key): key is string => !!key);
   const isComplete = (state: Partial<InterfaceDetail>) => !!String(state.name || '').trim() && missingOf(state).length === 0;
 
-  // The draft creates the interface once it has its title, both applications and its data category:
-  // the page moves to it, every tab open, with Create and Cancel. Create on the draft creates it and
-  // goes back where the creation started.
-  const finishAfterRef = React.useRef(false);
-  const createInterface = async (finish: boolean) => {
-    if (creatingRef.current) {
-      if (finish) finishAfterRef.current = true;
-      return;
-    }
-    creatingRef.current = true;
-    finishAfterRef.current = finish;
-    setError(null);
-    const draft = createFormRef.current;
-    try {
-      const response = await api.post<InterfaceDetail & { creation_token: string }>('/interfaces', buildCreatePayload(draft));
-      const { creation_token: token, ...created } = response.data;
-      if (!created?.id) {
-        setError(t('workspace.interface.create.noIdentifier'));
-        return;
-      }
-      await persistAdditionalState(created.id, draft);
-      setCreateDirty(false);
-      replaceCurrent(createInitialForm());
-      if (finishAfterRef.current) {
-        navigate(creationReturn);
-        return;
-      }
-      creation.startCreation({ recordId: created.id, token, returnTo: creationReturn });
-      const qs = searchParams.toString();
-      navigate(`/it/interfaces/${created.interface_reference || created.id}/${routeTab}${qs ? `?${qs}` : ''}`, { replace: true });
-    } catch (saveError: any) {
-      setError(getApiErrorMessage(saveError, t, t('messages.saveInterfaceFailed')));
-    } finally {
-      creatingRef.current = false;
-    }
-  };
-
   // A refused creation is not tried again until the draft changes.
   const triedFormRef = React.useRef<Partial<InterfaceDetail> | null>(null);
   React.useEffect(() => {
     if (!isCreate || !canManage || triedFormRef.current === createForm || !isComplete(createForm)) return;
     triedFormRef.current = createForm;
-    void createInterface(false);
+    creation.attempt();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canManage, createForm, isCreate]);
 
@@ -679,7 +666,7 @@ export default function InterfaceWorkspacePage() {
       focusField(missing[0]);
       return;
     }
-    if (isCreate) void createInterface(true);
+    if (isCreate) void creation.createAndLeave();
     else creation.finishCreation();
   };
 

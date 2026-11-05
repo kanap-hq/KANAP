@@ -52,7 +52,7 @@ import { KanapDialog, unsavedConfirm, useKanapDialogs } from '../../components/d
 import { carryListFilters } from '../../lib/listContext';
 import DeleteIconButton from '../../components/workspace/DeleteIconButton';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
-import { CreationActions, CreationPreview, useCreationReturn, useNewRecordCreate, useRecordCreation } from '../../components/workspace/creation';
+import { CreationActions, CreationPreview, useCreationReturn, useRecordCreation, useTitleCreation } from '../../components/workspace/creation';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 
 type TabKey = 'summary' | 'analysis' | 'scoring' | 'relations' | 'knowledge' | typeof RECORD_HISTORY_TAB_KEY;
@@ -862,26 +862,17 @@ export default function RequestWorkspacePage() {
     if (purposeEditorRef.current?.isDirty() && !(await purposeEditorRef.current.save())) return;
     await creation.cancelCreation();
   }, [creation]);
-  // A refusal of the name typed on a new request.
-  const [titleError, setTitleError] = React.useState<string | null>(null);
-  const newCreate = useNewRecordCreate({ setTitleError, requiredMessage: t('common:creation.titleRequired') });
-  // The name committed before the classification defaults were read: created once they are.
-  const [pendingName, setPendingName] = React.useState<string | null>(null);
-  const creatingRef = React.useRef(false);
-
   // The name committed in the header creates the request at once, with the classification
-  // defaults the form would have sent; the page moves to it, every tab open, with Create and
-  // Cancel (or closes it, kept, when Create was clicked meanwhile).
-  const createRequest = React.useCallback(async (name: string) => {
-    if (creatingRef.current) return;
-    creatingRef.current = true;
-    setTitleError(null);
-    setSaveError(null);
-    try {
-      const res = await api.post('/portfolio/requests', { ...withClassificationDefaults(form), name });
-      const { creation_token: token, ...created } = res.data;
-      if (newCreate.titleSettled()) {
-        void queryClient.invalidateQueries({ queryKey: ['portfolio-requests'], refetchType: 'none' });
+  // defaults the form would have sent (once they are read); the page moves to it, every tab open,
+  // with Create and Cancel (or closes it, kept, when Create was clicked meanwhile).
+  const titleCreation = useTitleCreation<{ id: string; item_number: number }>({
+    isCreate,
+    requiredMessage: t('common:creation.titleRequired'),
+    ready: classificationReady,
+    post: async (name) => (await api.post('/portfolio/requests', { ...withClassificationDefaults(form), name })).data,
+    onCreated: (created, token, finish) => {
+      void queryClient.invalidateQueries({ queryKey: ['portfolio-requests'], refetchType: 'none' });
+      if (finish) {
         navigate(creationReturn, { replace: true });
         return;
       }
@@ -889,22 +880,12 @@ export default function RequestWorkspacePage() {
       const reference = formatItemRef('request', created.item_number);
       // The page keeps its header while the full request loads.
       queryClient.setQueryData(['portfolio-request', reference, getRequestWorkspaceInclude('summary')], { activities: [], ...created });
-      void queryClient.invalidateQueries({ queryKey: ['portfolio-requests'], refetchType: 'none' });
       const qs = searchParams.toString();
       navigate(`/portfolio/requests/${reference}/summary${qs ? `?${qs}` : ''}`, { replace: true });
-    } catch (err) {
-      newCreate.titleSettled();
-      setTitleError(getApiErrorMessage(err, t, t('portfolio:workspace.request.messages.saveFailed')));
-    } finally {
-      creatingRef.current = false;
-    }
-  }, [creation, creationReturn, form, navigate, newCreate, queryClient, searchParams, t, withClassificationDefaults]);
-
-  React.useEffect(() => {
-    if (!isCreate || pendingName === null || !classificationReady) return;
-    setPendingName(null);
-    void createRequest(pendingName);
-  }, [classificationReady, createRequest, isCreate, pendingName]);
+    },
+    errorMessage: (err) => getApiErrorMessage(err, t, t('portfolio:workspace.request.messages.saveFailed')),
+    onStart: () => setSaveError(null),
+  });
 
   const closeWorkspace = React.useCallback(async () => {
     // A new request left before it has a name goes back where the creation started.
@@ -928,13 +909,13 @@ export default function RequestWorkspacePage() {
   // being typed is saved, then the request is kept and closed.
   const createAction = React.useCallback(async () => {
     if (isCreate) {
-      newCreate.create(titleError);
+      titleCreation.create();
       return;
     }
     if (purposeEditorRef.current?.isDirty() && !(await purposeEditorRef.current.save())) return;
     if (hasUnsavedChanges && !(await handleSave())) return;
     creation.finishCreation();
-  }, [creation, handleSave, hasUnsavedChanges, isCreate, newCreate, titleError]);
+  }, [creation, handleSave, hasUnsavedChanges, isCreate, titleCreation]);
 
   const statusLabel = form?.status ? getRequestStatusLabel(t, form.status) : '';
   const statusColor = (REQUEST_STATUS_COLORS[form?.status] || 'default') as 'default' | 'primary' | 'success' | 'error' | 'warning' | 'info';
@@ -1030,18 +1011,16 @@ export default function RequestWorkspacePage() {
         canEditTitle={isCreate || (canManage && form?.status !== 'converted')}
         onTitleSave={(value) => {
           if (isCreate) {
-            setTitleError(null);
-            newCreate.titleSent();
-            setPendingName(value);
+            titleCreation.commit(value);
             return;
           }
           void persistPanelPatch({ name: value });
         }}
-        onTitleDraftChange={isCreate ? () => setTitleError(null) : undefined}
-        titleError={isCreate ? titleError : undefined}
+        onTitleDraftChange={isCreate ? () => titleCreation.setTitleError(null) : undefined}
+        titleError={isCreate ? titleCreation.titleError : undefined}
         titleAutoEdit={isCreate}
         titleOnCancel={isCreate ? () => { void closeWorkspace(); } : undefined}
-        titleFocusRequest={newCreate.focusRequest}
+        titleFocusRequest={titleCreation.focusRequest}
         isCreate={isCreate}
         nav={!isCreate && total > 0 ? {
           currentIndex: index + 1,

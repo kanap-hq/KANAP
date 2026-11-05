@@ -86,6 +86,8 @@ export default function useDraftCreation({ isCreate, ready, post, returnTo: know
   return {
     beingCreated: creation.beingCreated,
     busy: writing || creation.cancelling,
+    /** Cancel is running (a Create clicked while the draft is written still counts). */
+    cancelling: creation.cancelling,
     attempt,
     createAndLeave,
     finishCreation: creation.finishCreation,

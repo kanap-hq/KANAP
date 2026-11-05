@@ -71,7 +71,7 @@ import { isValidHostname, sanitizeHostname } from '../../utils/hostname';
 import { KanapDialog, PropertyGroup, PropertyRow, useKanapDialogs } from '../../components/design';
 import { useLeaveGuard } from '../../hooks/leaveGuard';
 import type { SxProps, Theme } from '@mui/material/styles';
-import { CreationActions, CreationPreview, useCreationReturn, useNewRecordCreate, useRecordCreation } from '../../components/workspace/creation';
+import { CreationActions, CreationPreview, useCreationReturn, useRecordCreation, useTitleCreation } from '../../components/workspace/creation';
 import useIncompleteLeave from '../../components/workspace/creation/useIncompleteLeave';
 import { missingFieldsList } from '../../components/workspace/creation/missingFieldsList';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
@@ -1565,8 +1565,6 @@ function AssetWorkspaceRoute() {
     queryKeyPrefixes: ['assets'],
     onError: setError,
   });
-  const [titleError, setTitleError] = React.useState<string | null>(null);
-  const newCreate = useNewRecordCreate({ setTitleError, requiredMessage: t('messages.nameRequired') });
   // The site, the one field an asset being created still needs, sits in the properties panel.
   const [fieldDrawerRequest, setFieldDrawerRequest] = React.useState(0);
   const focusField = React.useCallback((key: string) => {
@@ -1620,26 +1618,21 @@ function AssetWorkspaceRoute() {
   // The name committed in the header creates the asset at once (its type, environment, provider and
   // lifecycle as shown, no site yet), and the page moves to it with Create and Cancel. Create clicked
   // meanwhile checks it there.
-  const creatingRef = React.useRef(false);
   // Tab out of the title: the site, the field the asset still needs, gets the focus once it is created.
   const siteAfterCreateRef = React.useRef(false);
-  const createAsset = async (assetName: string) => {
-    if (creatingRef.current) return;
-    creatingRef.current = true;
-    setTitleError(null);
-    setError(null);
-    try {
-      const res = await api.post<AssetRecord & { creation_token: string }>('/assets/creation', {
-        name: assetName,
-        kind,
-        environment,
-        provider,
-        status,
-        is_cluster: isCluster,
-        hostname: sanitizeHostname(assetName) || null,
-      });
-      const { creation_token: token, ...created } = res.data;
-      const check = newCreate.titleSettled();
+  const titleCreation = useTitleCreation<AssetRecord>({
+    isCreate,
+    requiredMessage: t('messages.nameRequired'),
+    post: async (assetName) => (await api.post<AssetRecord & { creation_token: string }>('/assets/creation', {
+      name: assetName,
+      kind,
+      environment,
+      provider,
+      status,
+      is_cluster: isCluster,
+      hostname: sanitizeHostname(assetName) || null,
+    })).data,
+    onCreated: (created, token, check) => {
       const focusSite = siteAfterCreateRef.current;
       siteAfterCreateRef.current = false;
       creation.startCreation({ recordId: created.id, token, returnTo: creationReturn });
@@ -1649,21 +1642,20 @@ function AssetWorkspaceRoute() {
           ? { ...(routerLocation.state as object | null), ...(check ? { creationCheck: true } : {}), ...(focusSite ? { focusSite: true } : {}) }
           : routerLocation.state,
       });
-    } catch (e) {
-      newCreate.titleSettled();
+    },
+    errorMessage: (e) => {
       siteAfterCreateRef.current = false;
-      setTitleError(getApiErrorMessage(e, t, t('messages.saveAssetFailed')));
-    } finally {
-      creatingRef.current = false;
-    }
-  };
+      return getApiErrorMessage(e, t, t('messages.saveAssetFailed'));
+    },
+    onStart: () => setError(null),
+  });
 
   // Create on an asset being created: the server checks its site. Without one, the site is named
   // and gets the focus; otherwise the asset is kept and closed.
   const [completing, setCompleting] = React.useState(false);
   const createAction = async () => {
     if (isCreate) {
-      newCreate.create(titleError);
+      titleCreation.create();
       return;
     }
     const token = creation.token;
@@ -2207,19 +2199,18 @@ function AssetWorkspaceRoute() {
           const next = value.trim().slice(0, ASSET_NAME_MAX);
           if (!next) return;
           if (isCreate) {
-            newCreate.titleSent();
-            void createAsset(next);
+            titleCreation.commit(next);
             return;
           }
           setName(next);
           savePatch({ name: next });
         }}
-        onTitleDraftChange={isCreate ? () => setTitleError(null) : undefined}
+        onTitleDraftChange={isCreate ? () => titleCreation.setTitleError(null) : undefined}
         titleRequiredMessage={t('messages.nameRequired')}
-        titleError={isCreate ? titleError : undefined}
+        titleError={isCreate ? titleCreation.titleError : undefined}
         titleAutoEdit={isCreate}
         titleOnCancel={isCreate ? () => { void handleClose(); } : undefined}
-        titleFocusRequest={newCreate.focusRequest}
+        titleFocusRequest={titleCreation.focusRequest}
         titleOnTab={isCreate ? () => { siteAfterCreateRef.current = true; } : undefined}
         isCreate={isCreate}
         forceDrawerOpen={isCreate}

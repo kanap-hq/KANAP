@@ -32,7 +32,7 @@ import { buildInlineImageUrl, resolveInlineImageTenantSlug } from '../../utils/i
 import ConvertToRequestDialog from './components/ConvertToRequestDialog';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
-import { CreationActions, CreationPreview, useCreationReturn, useNewRecordCreate, useRecordCreation } from '../../components/workspace/creation';
+import { CreationActions, CreationPreview, useCreationReturn, useRecordCreation, useTitleCreation } from '../../components/workspace/creation';
 import { TASK_STATUS_OPTIONS } from './task.constants';
 import type { TaskStatus } from './task.constants';
 import { useTranslation } from 'react-i18next';
@@ -1245,11 +1245,6 @@ export default function TaskWorkspacePage() {
     queryKeyPrefixes: ['tasks', 'project-tasks'],
     onError: setError,
   });
-  const [titleError, setTitleError] = React.useState<string | null>(null);
-  const newCreate = useNewRecordCreate({ setTitleError, requiredMessage: t('common:creation.titleRequired') });
-  // The title committed before the defaults were read: created once they are.
-  const [pendingTitle, setPendingTitle] = React.useState<string | null>(null);
-  const creatingRef = React.useRef(false);
 
   // The task as the new page shows it, dimmed: the defaults it will be created with.
   const createDraft = React.useMemo<TaskData | null>(() => (isCreate ? {
@@ -1294,13 +1289,13 @@ export default function TaskWorkspacePage() {
 
   // The title creates the task through the route of its relation, with the defaults the creation
   // form sent with only a title; the page moves to it, every tab open, with Create and Cancel (or
-  // closes it, kept, when Create was clicked meanwhile).
-  const createTask = React.useCallback(async (value: string) => {
-    if (creatingRef.current) return;
-    creatingRef.current = true;
-    setTitleError(null);
-    setError(null);
-    try {
+  // closes it, kept, when Create was clicked meanwhile). A title committed before the defaults are
+  // read waits for them.
+  const titleCreation = useTitleCreation<TaskData>({
+    isCreate,
+    requiredMessage: t('common:creation.titleRequired'),
+    ready: createDefaultsReady,
+    post: async (value) => {
       const relation = createRelation;
       const withClassification = !relation.type || relation.type === 'project';
       const payload: Record<string, unknown> = {
@@ -1331,13 +1326,15 @@ export default function TaskWorkspacePage() {
         };
         endpoint = routes[relation.type];
       }
-      const res = await api.post<TaskData & { creation_token: string }>(endpoint, payload);
-      const { creation_token: token, ...created } = res.data;
+      return (await api.post<TaskData & { creation_token: string }>(endpoint, payload)).data;
+    },
+    onCreated: async (created, token, finish) => {
+      const relation = createRelation;
       void queryClient.invalidateQueries({ queryKey: ['tasks'] });
       if (relation.type === 'project' && relation.id) {
         void queryClient.invalidateQueries({ queryKey: ['project-tasks', relation.id] });
       }
-      if (newCreate.titleSettled()) {
+      if (finish) {
         navigate(creationReturn, { replace: true });
         return;
       }
@@ -1356,19 +1353,10 @@ export default function TaskWorkspacePage() {
       });
       const qs = cleanedSearchParams.toString();
       navigate(`/portfolio/tasks/${reference}/overview${qs ? `?${qs}` : ''}`, { replace: true });
-    } catch (err) {
-      newCreate.titleSettled();
-      setTitleError(getApiErrorMessage(err, t, t('portfolio:workspace.task.messages.createFailed')));
-    } finally {
-      creatingRef.current = false;
-    }
-  }, [cleanedSearchParams, createClassification, createRelation, creation, creationReturn, defaultTaskTypeId, form, navigate, newCreate, queryClient, t]);
-
-  React.useEffect(() => {
-    if (!isCreate || pendingTitle === null || !createDefaultsReady) return;
-    setPendingTitle(null);
-    void createTask(pendingTitle);
-  }, [createDefaultsReady, createTask, isCreate, pendingTitle]);
+    },
+    errorMessage: (err) => getApiErrorMessage(err, t, t('portfolio:workspace.task.messages.createFailed')),
+    onStart: () => setError(null),
+  });
 
   // What is still being typed or queued on the task being created: saved before Create and Cancel.
   const flushCreatedTask = React.useCallback(async () => {
@@ -1386,14 +1374,14 @@ export default function TaskWorkspacePage() {
   // being typed is saved, then the task is kept and closed.
   const createAction = React.useCallback(async () => {
     if (isCreate) {
-      newCreate.create(titleError);
+      titleCreation.create();
       return;
     }
     await flushCreatedTask();
     dirtyRef.current = false;
     setDirty(false);
     creation.finishCreation();
-  }, [creation, flushCreatedTask, isCreate, newCreate, titleError]);
+  }, [creation, flushCreatedTask, isCreate, titleCreation]);
 
   // Cancel: the new page is left; the task being created is deleted, after a confirmation when more
   // than its title was given (counted once what is still typed is saved).
@@ -1643,9 +1631,7 @@ export default function TaskWorkspacePage() {
         onTitleChange={(v) => { setTitle(v); setDirty(true); }}
         onTitleSave={(value) => {
           if (isCreate) {
-            setTitleError(null);
-            newCreate.titleSent();
-            setPendingTitle(value);
+            titleCreation.commit(value);
             return;
           }
           void handleTitleSave(value);
@@ -1679,9 +1665,9 @@ export default function TaskWorkspacePage() {
           />
         ) : undefined}
         titleToGive={isCreate}
-        titleError={isCreate ? titleError : undefined}
-        titleFocusRequest={newCreate.focusRequest}
-        onTitleDraftChange={isCreate ? () => setTitleError(null) : undefined}
+        titleError={isCreate ? titleCreation.titleError : undefined}
+        titleFocusRequest={titleCreation.focusRequest}
+        onTitleDraftChange={isCreate ? () => titleCreation.setTitleError(null) : undefined}
         onTitleCancel={isCreate ? () => { void cancelAction(); } : undefined}
       />
 
