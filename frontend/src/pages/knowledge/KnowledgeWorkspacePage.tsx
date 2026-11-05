@@ -2028,6 +2028,7 @@ export default function KnowledgeWorkspacePage() {
           {(isCreate ? canManageDocumentGlobal : creation.beingCreated) && (
             <CreationActions
               busy={creation.cancelling || doneEditingPending}
+              writing={titleCreation.writing}
               onCreate={createAction}
               onCancel={() => { void cancelAction(); }}
             />

@@ -549,7 +549,8 @@ function LocationEditor() {
         <CreationActions
           onCreate={handleCreate}
           onCancel={isCreate ? leaveCreation : () => { void creation.cancelCreation(); }}
-          busy={creation.busy || !canManage}
+          busy={creation.cancelling || !canManage}
+          writing={creation.writing}
         />
       )}
       {!isCreate && data && (

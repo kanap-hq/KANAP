@@ -50,7 +50,7 @@ import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/
 import BudgetMetadataBar from './workspace/BudgetMetadataBar';
 import BudgetPropertiesDrawer, { LINE_FIELD_ATTR, RunBuild } from './workspace/BudgetPropertiesDrawer';
 import useIncompleteLeave from '../../components/workspace/creation/useIncompleteLeave';
-import { CreationActions, CreationPreview, useCreationReturn, useRecordCreation, useTitleCreation } from '../../components/workspace/creation';
+import { CreationActions, CreationPreview, focusWhenMounted, useCreationReturn, useRecordCreation, useTitleCreation } from '../../components/workspace/creation';
 import type { BudgetTabHandle } from '../../components/finance/BudgetTab';
 import type { AllocationsTabHandle } from '../../components/finance/AllocationsTab';
 import { namesInSentence, useHeldChoices } from '../../components/finance/heldChoices';
@@ -826,17 +826,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     const selector = key.startsWith('dimension:')
       ? `[${ANALYTICS_AXIS_FIELD_ATTR}="${key.slice('dimension:'.length)}"] input`
       : `[${LINE_FIELD_ATTR}="${key}"] input`;
-    let tries = 0;
-    const attempt = () => {
-      const input = rootRef.current?.querySelector<HTMLElement>(selector);
-      if (input) {
-        input.focus();
-        return;
-      }
-      tries += 1;
-      if (tries < 20) window.setTimeout(attempt, 25);
-    };
-    window.setTimeout(attempt, 0);
+    focusWhenMounted(() => rootRef.current?.querySelector<HTMLElement>(selector));
   }, []);
   const incompleteLeave = useIncompleteLeave({
     keys: 'ops:budget.creation',
@@ -1036,37 +1026,28 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
   // Create on a line being created: what is still being typed is saved, then the server checks the
   // fields the line needs. Missing ones are named once, marked, and the first one gets the focus;
   // otherwise the line is kept and closed.
-  const [completing, setCompleting] = React.useState(false);
   const [missingFields, setMissingFields] = React.useState<ReadonlySet<string>>(() => new Set());
   const createAction = React.useCallback(async () => {
     if (isCreate) {
       titleCreation.create();
       return;
     }
-    const token = creation.token;
-    if (!uuid || !token || completing) return;
+    if (!uuid || !creation.token || creation.completing) return;
     if (!(await flushAll())) return;
-    setCompleting(true);
     setSaveError(null);
     try {
-      await api.post(`/budget-lines/${uuid}/creation/complete`, { token });
-      setMissingFields(new Set());
-      invalidateBudgetLists(queryClient);
-      creation.finishCreation();
-    } catch (e) {
-      const answer = (e as { response?: { data?: { code?: unknown; params?: { fields?: unknown } } } })?.response?.data;
-      const fields = answer?.code === 'CREATION_INCOMPLETE' && Array.isArray(answer.params?.fields) ? answer.params.fields.map(String) : null;
-      if (fields && fields.length > 0) {
-        setMissingFields(new Set(fields));
+      const fields = await creation.completeCreation();
+      setMissingFields(new Set(fields ?? []));
+      if (fields) {
         setSaveError(t('budget.creation.missing', { fields: missingFieldsList(fields.map(fieldLabel), locale) }));
         focusLineField(fields[0]);
       } else {
-        setSaveError(getApiErrorMessage(e, t, t('budget.creation.completeFailed')));
+        invalidateBudgetLists(queryClient);
       }
-    } finally {
-      setCompleting(false);
+    } catch (e) {
+      setSaveError(getApiErrorMessage(e, t, t('budget.creation.completeFailed')));
     }
-  }, [completing, creation, fieldLabel, flushAll, focusLineField, isCreate, queryClient, t, titleCreation, uuid]);
+  }, [creation, fieldLabel, flushAll, focusLineField, isCreate, queryClient, t, titleCreation, uuid]);
   // Cancel on a line being created: what is still being typed is saved first, so the confirmation
   // counts it, then the line is deleted (`useRecordCreation`).
   const cancelLine = React.useCallback(async () => {
@@ -1267,7 +1248,8 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
             )}
             {isCreate || creation.beingCreated ? (
               <CreationActions
-                busy={creation.cancelling || completing}
+                busy={creation.cancelling || creation.completing}
+                writing={titleCreation.writing}
                 onCreate={() => { void createAction(); }}
                 onCancel={() => { if (isCreate) void closeWorkspace(); else void cancelLine(); }}
               />

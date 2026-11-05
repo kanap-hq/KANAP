@@ -397,7 +397,8 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
           <CreationActions
             onCreate={() => void handleCreate()}
             onCancel={isCreate ? leave : () => { void creation.cancelCreation(); }}
-            busy={!canEdit || creation.busy}
+            busy={!canEdit || creation.cancelling}
+            writing={creation.writing}
           />
         ) : (
           <>

@@ -29,12 +29,13 @@ type Options<C> = {
  *
  * The hook holds the title's error (`titleError`, `setTitleError` for a page's own message such as
  * a place to give first) and its focus requests (`focusRequest`); `pending` is true while a
- * committed title waits for `ready`.
+ * committed title waits for `ready`; `writing` while the record is written (`CreationActions`).
  */
 export default function useTitleCreation<C>({ isCreate, requiredMessage, ready = true, post, onCreated, errorMessage, onStart }: Options<C>) {
   const [titleError, setTitleError] = React.useState<string | null>(null);
   const [focusRequest, setFocusRequest] = React.useState(0);
   const [pendingName, setPendingName] = React.useState<string | null>(null);
+  const [writing, setWriting] = React.useState(false);
   const latest = React.useRef({ ready, post, onCreated, errorMessage, onStart });
   latest.current = { ready, post, onCreated, errorMessage, onStart };
   // The title is committed (a write is coming or under way); Create was clicked meanwhile.
@@ -45,6 +46,7 @@ export default function useTitleCreation<C>({ isCreate, requiredMessage, ready =
   const write = React.useCallback(async (name: string) => {
     if (running.current) return;
     running.current = true;
+    setWriting(true);
     setTitleError(null);
     latest.current.onStart?.();
     try {
@@ -59,6 +61,7 @@ export default function useTitleCreation<C>({ isCreate, requiredMessage, ready =
       setTitleError(latest.current.errorMessage(err));
     } finally {
       running.current = false;
+      setWriting(false);
     }
   }, []);
 
@@ -84,5 +87,5 @@ export default function useTitleCreation<C>({ isCreate, requiredMessage, ready =
     setFocusRequest((n) => n + 1);
   }, [requiredMessage]);
 
-  return { titleError, setTitleError, focusRequest, pending: pendingName !== null, commit, create };
+  return { titleError, setTitleError, focusRequest, pending: pendingName !== null, writing, commit, create };
 }

@@ -1149,6 +1149,7 @@ export default function RequestWorkspacePage() {
             {isCreate || creation.beingCreated ? (
               <CreationActions
                 busy={creation.cancelling}
+                writing={titleCreation.writing}
                 onCreate={() => { void createAction(); }}
                 onCancel={() => { if (isCreate) void closeWorkspace(); else void cancelCreation(); }}
               />

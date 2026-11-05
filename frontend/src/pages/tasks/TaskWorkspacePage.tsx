@@ -1660,6 +1660,7 @@ export default function TaskWorkspacePage() {
         creationActions={creating ? (
           <CreationActions
             busy={creation.cancelling}
+            writing={titleCreation.writing}
             onCreate={() => { void createAction(); }}
             onCancel={() => { void cancelAction(); }}
           />

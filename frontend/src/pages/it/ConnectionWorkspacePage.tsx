@@ -27,7 +27,7 @@ import DeleteIconButton from '../../components/workspace/DeleteIconButton';
 import { connectionDeleteMessage } from './connectionDeleteMessage';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
-import { CreationActions, CreationPreview, useCreationReturn, useRecordCreation, useTitleCreation } from '../../components/workspace/creation';
+import { CreationActions, CreationPreview, focusWhenMounted, useCreationReturn, useRecordCreation, useTitleCreation } from '../../components/workspace/creation';
 import useIncompleteLeave from '../../components/workspace/creation/useIncompleteLeave';
 import { missingFieldsList } from '../../components/workspace/creation/missingFieldsList';
 import { useLeaveGuard } from '../../hooks/leaveGuard';
@@ -315,17 +315,7 @@ export default function ConnectionWorkspacePage() {
   dataRef.current = data;
   const focusField = React.useCallback((key: string) => {
     if (validTab !== 'overview') navigate(`/it/connections/${workspaceRouteId}/overview${searchParams.toString() ? `?${searchParams.toString()}` : ''}`);
-    let tries = 0;
-    const attempt = () => {
-      const input = document.querySelector<HTMLElement>(`[data-creation-field="${key}"] input, [data-creation-field="${key}"] [role="combobox"]`);
-      if (input) {
-        input.focus();
-        return;
-      }
-      tries += 1;
-      if (tries < 20) window.setTimeout(attempt, 25);
-    };
-    window.setTimeout(attempt, 0);
+    focusWhenMounted(() => document.querySelector<HTMLElement>(`[data-creation-field="${key}"] input, [data-creation-field="${key}"] [role="combobox"]`));
   }, [navigate, searchParams, validTab, workspaceRouteId]);
   const incompleteLeave = useIncompleteLeave({
     keys: 'it:workspace.connection.creation',
@@ -547,31 +537,22 @@ export default function ConnectionWorkspacePage() {
   // Create: on the new page, the title is the only field; on a connection being created, what is
   // still being typed is saved, then the server checks what the connection needs. Missing fields are
   // named once and the first one gets the focus; otherwise the connection is kept and closed.
-  const [completing, setCompleting] = React.useState(false);
   const createAction = async () => {
     if (isCreate) {
       titleCreation.create();
       return;
     }
-    const token = creation.token;
-    if (!data?.id || !token || completing) return;
+    if (!data?.id || !creation.token || creation.completing) return;
     await descriptionFlushRef.current?.();
-    setCompleting(true);
     setError(null);
     try {
-      await api.post(`/connections/${data.id}/creation/complete`, { token });
-      creation.finishCreation();
-    } catch (e) {
-      const answer = (e as { response?: { data?: { code?: unknown; params?: { fields?: unknown } } } })?.response?.data;
-      const fields = answer?.code === 'CREATION_INCOMPLETE' && Array.isArray(answer.params?.fields) ? answer.params.fields.map(String) : null;
-      if (fields && fields.length > 0) {
+      const fields = await creation.completeCreation();
+      if (fields) {
         setError(t('workspace.connection.creation.missing', { fields: missingFieldsList(fields.map(fieldLabel), i18n.resolvedLanguage || i18n.language) }));
         focusField(fields[0]);
-      } else {
-        setError(getApiErrorMessage(e, t, t('workspace.connection.creation.completeFailed')));
       }
-    } finally {
-      setCompleting(false);
+    } catch (e) {
+      setError(getApiErrorMessage(e, t, t('workspace.connection.creation.completeFailed')));
     }
   };
 
@@ -743,7 +724,8 @@ export default function ConnectionWorkspacePage() {
       )}
       {(isCreate || creation.beingCreated) && (
         <CreationActions
-          busy={creation.cancelling || completing}
+          busy={creation.cancelling || creation.completing}
+          writing={titleCreation.writing}
           onCreate={() => { void createAction(); }}
           onCancel={() => { void cancelAction(); }}
         />

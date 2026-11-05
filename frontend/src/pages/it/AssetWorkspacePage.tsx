@@ -71,7 +71,7 @@ import { isValidHostname, sanitizeHostname } from '../../utils/hostname';
 import { KanapDialog, PropertyGroup, PropertyRow, useKanapDialogs } from '../../components/design';
 import { useLeaveGuard } from '../../hooks/leaveGuard';
 import type { SxProps, Theme } from '@mui/material/styles';
-import { CreationActions, CreationPreview, useCreationReturn, useRecordCreation, useTitleCreation } from '../../components/workspace/creation';
+import { CreationActions, CreationPreview, focusWhenMounted, useCreationReturn, useRecordCreation, useTitleCreation } from '../../components/workspace/creation';
 import useIncompleteLeave from '../../components/workspace/creation/useIncompleteLeave';
 import { missingFieldsList } from '../../components/workspace/creation/missingFieldsList';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
@@ -1569,17 +1569,7 @@ function AssetWorkspaceRoute() {
   const [fieldDrawerRequest, setFieldDrawerRequest] = React.useState(0);
   const focusField = React.useCallback((key: string) => {
     setFieldDrawerRequest((n) => n + 1);
-    let tries = 0;
-    const attempt = () => {
-      const input = document.querySelector<HTMLElement>(`[data-creation-field="${key}"] input`);
-      if (input) {
-        input.focus();
-        return;
-      }
-      tries += 1;
-      if (tries < 20) window.setTimeout(attempt, 25);
-    };
-    window.setTimeout(attempt, 0);
+    focusWhenMounted(() => document.querySelector<HTMLElement>(`[data-creation-field="${key}"] input`));
   }, []);
   const locationIdRef = React.useRef(locationId);
   locationIdRef.current = locationId;
@@ -1652,33 +1642,23 @@ function AssetWorkspaceRoute() {
 
   // Create on an asset being created: the server checks its site. Without one, the site is named
   // and gets the focus; otherwise the asset is kept and closed.
-  const [completing, setCompleting] = React.useState(false);
   const createAction = async () => {
     if (isCreate) {
       titleCreation.create();
       return;
     }
-    const token = creation.token;
-    const assetId = dataRef.current?.id;
-    if (!assetId || !token || completing) return;
+    if (!dataRef.current?.id || !creation.token || creation.completing) return;
     await flushNotes();
-    setCompleting(true);
     setError(null);
     try {
-      await api.post(`/assets/${assetId}/creation/complete`, { token });
-      creation.finishCreation();
-    } catch (e) {
-      const answer = (e as { response?: { data?: { code?: unknown; params?: { fields?: unknown } } } })?.response?.data;
-      const fields = answer?.code === 'CREATION_INCOMPLETE' && Array.isArray(answer.params?.fields) ? answer.params.fields.map(String) : null;
-      if (fields && fields.length > 0) {
+      const fields = await creation.completeCreation();
+      if (fields) {
         const labels = fields.map((key) => (key === 'location' ? t('workspace.asset.overview.location') : key));
         setValidationError('locationRequired', t('workspace.asset.creation.missing', { fields: missingFieldsList(labels, i18n.resolvedLanguage || i18n.language) }));
         focusField(fields[0]);
-      } else {
-        setError(getApiErrorMessage(e, t, t('workspace.asset.creation.completeFailed')));
       }
-    } finally {
-      setCompleting(false);
+    } catch (e) {
+      setError(getApiErrorMessage(e, t, t('workspace.asset.creation.completeFailed')));
     }
   };
   // Create clicked while the title created the asset: the check runs once the asset is on screen.
@@ -1862,7 +1842,8 @@ function AssetWorkspaceRoute() {
       )}
       {isCreate || creation.beingCreated ? (
         <CreationActions
-          busy={creation.cancelling || completing}
+          busy={creation.cancelling || creation.completing}
+          writing={titleCreation.writing}
           onCreate={() => { void createAction(); }}
           onCancel={() => { void cancelAction(); }}
         />

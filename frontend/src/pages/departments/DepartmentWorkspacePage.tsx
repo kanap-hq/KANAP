@@ -296,7 +296,8 @@ export default function DepartmentWorkspacePage() {
           <CreationActions
             onCreate={handleCreate}
             onCancel={isCreate ? leave : () => { void creation.cancelCreation(); }}
-            busy={!canEdit || creation.busy}
+            busy={!canEdit || creation.cancelling}
+            writing={creation.writing}
           />
         ) : data && canDelete ? (
           <RecordDeleteButton

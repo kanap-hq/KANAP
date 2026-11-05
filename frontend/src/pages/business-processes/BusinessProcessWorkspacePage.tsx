@@ -339,6 +339,7 @@ export default function BusinessProcessWorkspacePage() {
             {beingCreated ? (
               <CreationActions
                 busy={creation.cancelling}
+                writing={titleCreation.writing}
                 onCreate={() => { void createAction(); }}
                 onCancel={() => { void cancelAction(); }}
               />

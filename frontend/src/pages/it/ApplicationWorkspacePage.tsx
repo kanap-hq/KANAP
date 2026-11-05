@@ -1851,6 +1851,7 @@ export default function ApplicationWorkspacePage() {
             {isCreate || creation.beingCreated ? (
               <CreationActions
                 busy={creation.cancelling}
+                writing={titleCreation.writing}
                 onCreate={() => { void createAction(); }}
                 onCancel={() => { if (isCreate) closeWorkspace(); else void creation.cancelCreation(); }}
               />

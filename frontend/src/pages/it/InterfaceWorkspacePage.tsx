@@ -42,7 +42,7 @@ import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { carryListFilters } from '../../lib/listContext';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
-import { CreationActions, useCreationReturn, useDraftCreation } from '../../components/workspace/creation';
+import { CreationActions, focusWhenMounted, useCreationReturn, useDraftCreation } from '../../components/workspace/creation';
 import { missingFieldsList } from '../../components/workspace/creation/missingFieldsList';
 import { useLeaveGuard } from '../../hooks/leaveGuard';
 
@@ -586,13 +586,13 @@ export default function InterfaceWorkspacePage() {
   const closeWorkspace = React.useCallback(async () => {
     if (isCreate) {
       // The draft is being written: the page moves to the interface, where Cancel deletes it.
-      if (creation.busy) return;
+      if (creation.writing) return;
       if (createDirty && !(await confirmDiscard())) return;
       navigate(creationReturn);
       return;
     }
     navigate(listPath);
-  }, [confirmDiscard, createDirty, creation.busy, creationReturn, isCreate, listPath, navigate]);
+  }, [confirmDiscard, createDirty, creation.writing, creationReturn, isCreate, listPath, navigate]);
 
   const handleTabChange = React.useCallback((nextTab: string) => {
     if (nextTab === routeTab) return;
@@ -617,17 +617,7 @@ export default function InterfaceWorkspacePage() {
   const focusField = (key: string) => {
     if (key === 'data_category') setFieldDrawerRequest((n) => n + 1);
     else if (routeTab !== 'flow') handleTabChange('flow');
-    let tries = 0;
-    const attempt = () => {
-      const input = document.querySelector<HTMLElement>(`[data-creation-field="${key}"] input`);
-      if (input) {
-        input.focus();
-        return;
-      }
-      tries += 1;
-      if (tries < 20) window.setTimeout(attempt, 25);
-    };
-    window.setTimeout(attempt, 0);
+    focusWhenMounted(() => document.querySelector<HTMLElement>(`[data-creation-field="${key}"] input`));
   };
 
   // What the interface still needs, in screen order: both applications and its data category (the
@@ -738,6 +728,7 @@ export default function InterfaceWorkspacePage() {
       {isCreate || creation.beingCreated ? (
         <CreationActions
           busy={creation.cancelling}
+          writing={creation.writing}
           onCreate={handleCreate}
           onCancel={() => { void (isCreate ? closeWorkspace() : creation.cancelCreation()); }}
         />

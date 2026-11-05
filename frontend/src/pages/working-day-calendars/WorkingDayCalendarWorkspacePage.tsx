@@ -310,7 +310,8 @@ export default function WorkingDayCalendarWorkspacePage() {
     <CreationActions
       onCreate={handleCreate}
       onCancel={isCreate ? leave : () => { void creation.cancelCreation(); }}
-      busy={!canEdit || creation.busy}
+      busy={!canEdit || creation.cancelling}
+      writing={creation.writing}
     />
   ) : canDelete && data ? (
     <DeleteIconButton onClick={() => void handleDelete()} disabled={deleting || !!deleteBlock} />

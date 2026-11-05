@@ -1054,6 +1054,7 @@ export default function ProjectWorkspacePage() {
             {isCreate || creation.beingCreated ? (
               <CreationActions
                 busy={creation.cancelling}
+                writing={titleCreation.writing}
                 onCreate={() => { void createAction(); }}
                 onCancel={() => { if (isCreate) void closeWorkspace(); else void cancelCreation(); }}
               />
