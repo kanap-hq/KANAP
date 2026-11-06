@@ -974,6 +974,9 @@
       "core": "Operativo",
       "support": "Apoyo"
     },
+    "filters": {
+      "noType": "Sin tipo"
+    },
     "placeholders": {
       "topLevel": "Nivel superior",
       "noProcessFound": "No se encontró ningún proceso"

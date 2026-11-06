@@ -207,7 +207,7 @@ Endpoints: `/business-processes/export` and `/business-processes/import` (admin)
 
 - **Search index**: the entry holds the name, status, type, description and notes (`extra_json.process_type`). The trigger that followed the category links is gone.
 - **Record history**: `process_type` and `parent_id` are shown fields (`parent_id` names the parent). Rows written before 26.11 may carry category names; they are hidden.
-- **Assistant read side** (registry `business-processes.registry.ts`): filters and groups on `status`, `name`, `process_type` and `parent`; sorts also on `path`; the filter `under` gives every process below a named one at all levels. Rows and details carry `process_type`, `parent`, `path` and `sub_processes`.
+- **Assistant read side** (registry `business-processes.registry.ts`): filters and groups on `status`, `name`, `process_type` (`management`, `core`, `support`, or `null` for no type) and `parent`; sorts also on `path`; the filter `under` gives every process below a named one at all levels. Rows and details carry `process_type`, `parent`, `path` and `sub_processes`.
 - **Assistant write side** (create and update of master data, under approval): `process_type` and `parent_id` (the parent by name). The service applies the same tree refusals as the screen.
 - **Inventories**: `business_process_categories` and `business_process_category_links` are gone from the tenant isolation inventory, the purge inventory and `scripts/tenant-export.sh`.
 

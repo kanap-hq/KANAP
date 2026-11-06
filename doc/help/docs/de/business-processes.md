@@ -40,7 +40,7 @@ Die Liste zeigt alle Geschäftsprozesse Ihres Mandanten.
 
 - Die Schnellsuche filtert über alle sichtbaren Spalten.
 - Mit dem Umschalter **Anzeigen: Alle / Aktiv / Deaktiviert** über der Liste wählen Sie, welche Prozesse angezeigt werden. Standardmäßig zeigt die Liste aktivierte Prozesse.
-- **Typ** und **Übergeordneter Prozess** verwenden Kontrollkästchen-Filter. Der Filter des übergeordneten Prozesses listet die Prozesse, die Teilprozesse haben.
+- **Typ** und **Übergeordneter Prozess** verwenden Kontrollkästchen-Filter. Der Typfilter bietet Führungsprozess, Kernprozess, Unterstützungsprozess und Ohne Typ (Prozesse ohne Typ). Der Filter des übergeordneten Prozesses listet die Prozesse, die Teilprozesse haben.
 - Die Liste öffnet sich in der Baumreihenfolge: Auf jeden Prozess folgen seine Teilprozesse. Klicken Sie auf eine Spaltenüberschrift, um stattdessen nach dieser Spalte zu sortieren. Die Einrückung erscheint nur in der Baumreihenfolge.
 
 **Aktionen** (Symbolleiste oben rechts):

@@ -9,6 +9,7 @@ import { companiesRegistry } from '../query/registries/companies.registry';
 import { applicationsRegistry } from '../query/registries/applications.registry';
 import { exchangeRatesRegistry } from '../query/registries/exchange-rates.registry';
 import { workingDayCalendarsRegistry } from '../query/registries/working-day-calendars.registry';
+import { businessProcessesRegistry } from '../query/registries/business-processes.registry';
 import { invalidFilterResult } from '../query/ai-filter-description.util';
 
 /**
@@ -192,6 +193,16 @@ function testApplicationLifecycleExcludeOnly() {
   assert.deepEqual(adapted.ignored, ['criticality']);
 }
 
+function testBusinessProcessTypeIncludesNoType() {
+  const alone = adaptFilters(businessProcessesRegistry, { process_type: [null] } as any);
+  assert.deepEqual(alone.filters, { process_type: { filterType: 'set', values: [null] } }, 'no type alone');
+  assert.deepEqual(alone.applied, ['process_type']);
+  assert.deepEqual(alone.ignored, []);
+  const withCore = adaptFilters(businessProcessesRegistry, { process_type: [null, 'core'] } as any);
+  assert.deepEqual(withCore.filters, { process_type: { filterType: 'set', values: [null, 'core'] } }, 'no type with a code');
+  assert.deepEqual(withCore.applied, ['process_type']);
+}
+
 function testBlankableDateFilter() {
   const adapted = adaptFilters(applicationsRegistry, { last_dr_test: [null] } as any);
   assert.deepEqual(adapted.filters, { last_dr_test: { filterType: 'date', type: 'blank' } });
@@ -208,6 +219,7 @@ function run() {
   testBareNumberIsEq();
   testExcludeSetFilter();
   testApplicationLifecycleExcludeOnly();
+  testBusinessProcessTypeIncludesNoType();
   testBlankableDateFilter();
   testSetFilterAdaptation();
   testStringToSetFilterAdaptation();

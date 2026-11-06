@@ -40,7 +40,7 @@ La lista muestra todos los procesos de negocio de su espacio de trabajo.
 
 - La búsqueda rápida filtra en todas las columnas visibles.
 - Use el selector **Mostrar: Todos / Activos / Desactivados** sobre la lista para elegir qué procesos aparecen. La lista muestra por defecto los procesos activados.
-- **Tipo** y **Proceso padre** usan filtros con casillas. El filtro del padre lista los procesos que tienen subprocesos.
+- **Tipo** y **Proceso padre** usan filtros con casillas. El filtro de tipo ofrece Estratégico, Operativo, Apoyo y Sin tipo (procesos cuyo tipo está vacío). El filtro del padre lista los procesos que tienen subprocesos.
 - La lista se abre en el orden del árbol: cada proceso va seguido de sus subprocesos. Haga clic en un encabezado de columna para ordenar por esa columna. El sangrado solo aparece en el orden del árbol.
 
 **Acciones** (barra de herramientas superior derecha):

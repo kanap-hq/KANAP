@@ -974,6 +974,9 @@
       "core": "Kernprozess",
       "support": "Unterstützungsprozess"
     },
+    "filters": {
+      "noType": "Ohne Typ"
+    },
     "placeholders": {
       "topLevel": "Oberste Ebene",
       "noProcessFound": "Kein Prozess gefunden"
