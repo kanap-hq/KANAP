@@ -48,7 +48,7 @@ La lista muestra todos los procesos de negocio de su espacio de trabajo.
 - **Nuevo** (`business_processes:member`): crear un nuevo proceso de negocio. Consulte [Crear un proceso de negocio](#creating-a-business-process).
 - **Importar** (Admin): importación masiva de procesos desde un archivo CSV o un libro de Excel.
 - **Exportar** (Admin): exportar los procesos que muestra la lista, o todos los procesos, a un archivo CSV o un libro de Excel.
-- **Eliminar seleccionados** (Admin): eliminar una o más filas seleccionadas. Un proceso que usan aplicaciones o interfaces no se puede eliminar: desactívelo en su lugar. Un proceso que tiene subprocesos tampoco se puede eliminar: muévalos o elimínelos primero. Antes de eliminar nada, la confirmación lista los procesos que se conservan, con el motivo. Las solicitudes vinculadas a un proceso eliminado se conservan, sin el vínculo.
+- **Eliminar seleccionados** (Admin): eliminar una o más filas seleccionadas. Los subprocesos se eliminan antes que su proceso padre, de modo que seleccionar un proceso junto con todos sus subprocesos elimina toda la rama. Un proceso que usan aplicaciones o interfaces no se puede eliminar: desactívelo en su lugar. Ese proceso conserva su proceso padre cuando ambos estaban seleccionados. Un proceso que todavía tiene un subproceso fuera de la selección no se puede eliminar: muévalo o elimínelo primero. Antes de eliminar nada, la confirmación lista los procesos que se conservan, con el motivo. Las solicitudes vinculadas a un proceso eliminado se conservan, sin el vínculo.
 
 ---
 
