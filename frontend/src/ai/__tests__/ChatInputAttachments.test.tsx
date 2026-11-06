@@ -59,6 +59,33 @@ describe.each(['light', 'dark'] as const)('spreadsheets attached to Plaid in %s 
     expect(onRemoveAttachment).toHaveBeenCalledWith('local-1');
   });
 
+  it('leaves send disabled for an attachment alone and enables it with text', () => {
+    const onSend = vi.fn();
+    const pending: PendingAttachment = {
+      localId: 'local-1',
+      file: new File(['x'], 'apps.xlsx', { type: XLSX_TYPE }),
+      kind: 'table',
+      previewUrl: '',
+    };
+    renderInput(mode, { pendingAttachments: [pending], onSend });
+    const send = screen.getByRole('button', { name: 'Send' });
+    const field = screen.getByPlaceholderText(/Ask Plaid/);
+
+    expect(send).toBeDisabled();
+    fireEvent.click(send);
+    fireEvent.keyDown(field, { key: 'Enter', code: 'Enter' });
+    expect(onSend).not.toHaveBeenCalled();
+
+    fireEvent.change(field, { target: { value: '   ' } });
+    expect(send).toBeDisabled();
+
+    fireEvent.change(field, { target: { value: 'Here is the file' } });
+    expect(send).toBeEnabled();
+    fireEvent.click(send);
+    expect(onSend).toHaveBeenCalledTimes(1);
+    expect(onSend).toHaveBeenCalledWith('Here is the file');
+  });
+
   it('shows a sent spreadsheet by its name in the message', () => {
     render(
       <ThemeProvider theme={createAppTheme(mode)}>
