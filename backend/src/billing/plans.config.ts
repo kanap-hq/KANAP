@@ -4,6 +4,22 @@ export type PlanKey = 'max';
 export type IntervalKey = 'monthly' | 'annual';
 
 export const TRIAL_PERIOD_DAYS = 14;
+
+/**
+ * When a trial started at `signupAt` ends: 23:59:59.999 UTC on the day
+ * `TRIAL_PERIOD_DAYS` after the sign-up's UTC day. The days left round up, so
+ * the last day counts in full whatever the hour of sign-up. Admin extensions
+ * and the Stripe subscription keep the instant they write themselves.
+ */
+export function trialEndFromSignup(signupAt: Date): Date {
+  return new Date(Date.UTC(
+    signupAt.getUTCFullYear(),
+    signupAt.getUTCMonth(),
+    signupAt.getUTCDate() + TRIAL_PERIOD_DAYS,
+    23, 59, 59, 999,
+  ));
+}
+
 export const FREEZE_GRACE_DAYS = 14;
 /** Days a workspace whose trial ended without a subscription is kept before it is deleted. */
 export const TRIAL_WORKSPACE_RETENTION_DAYS = 30;

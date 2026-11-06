@@ -21,7 +21,7 @@ import { enrollTrialMails } from '../email/trial-mails/trial-mails.service';
 import { withTenant } from '../common/tenant-runner';
 import { TurnstileService } from './turnstile.service';
 import { Subscription, SubscriptionStatus } from '../billing/subscription.entity';
-import { INVOICE_PAYMENT_TERM_DAYS, TRIAL_PERIOD_DAYS } from '../billing/plans.config';
+import { INVOICE_PAYMENT_TERM_DAYS, trialEndFromSignup } from '../billing/plans.config';
 import { StripeClientService, ensureInvoiceA4 } from '../billing/stripe';
 import {
   euVatTaxIdValue,
@@ -597,17 +597,19 @@ export class PublicController {
       await this.baseline.adoptStartingTechnologies(runner.manager, tenant.id, language);
       await this.baseline.seedStartingClassification(runner.manager, tenant.id, language);
 
+      const signedUpAt = new Date();
       await runner.manager.getRepository(TrialSignup).update(signup.id, {
-        activated_at: new Date(),
+        activated_at: signedUpAt,
         token_hash: null,
         expires_at: null,
       });
 
-      // Create trial subscription (local only, no Stripe)
+      // Create trial subscription (local only, no Stripe). The end is the last
+      // instant of the day, 14 days after the sign-up day.
       await runner.manager.getRepository(Subscription).save({
         tenant_id: tenant.id,
         status: SubscriptionStatus.TRIALING,
-        trial_end: new Date(Date.now() + TRIAL_PERIOD_DAYS * 86400000),
+        trial_end: trialEndFromSignup(signedUpAt),
         plan_name: 'Trial',
         seat_limit: null, // unlimited during trial
         active_seats: 0,

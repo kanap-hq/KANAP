@@ -15,6 +15,7 @@ import {
   Services,
 } from '../../admin/tenants/__tests__/tenant-reset-test-helpers';
 import { accessTokenVerifyKey } from '../../auth/jwt-key';
+import { TRIAL_PERIOD_DAYS } from '../../billing/plans.config';
 import { backgroundWorkCount, waitForBackgroundWork } from '../../common/background-work';
 import { allocateItemNumbers } from '../../common/item-number.service';
 import { Features } from '../../config/features';
@@ -26,6 +27,7 @@ import { TrialSignup } from '../trial-signup.entity';
 // answers as before, then the sample data loads in the background, with every check of a manual
 // load (empty workspace included). Real activation, real DemoDataService and tenant reset on the
 // spec database; the loader process and the e-mails are doubles.
+// - the trial ends at 23:59:59.999 UTC, 14 days after the sign-up day;
 // - the loader gets the tenant's host, its starting company and a token of the new administrator;
 // - the sample data comes in the browser's language (`fr` for a French browser), recorded in the
 //   state and given to the loader; any other language gives `en`;
@@ -190,6 +192,33 @@ const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function settle() {
   assert.equal(await waitForBackgroundWork(Date.now() + 60_000), 0, 'the background work ended');
+}
+
+// The trial ends at 23:59:59.999 UTC, 14 days after the sign-up day. The days left
+// still round up, so the last day counts in full whatever the hour of sign-up.
+async function testTrialEndsAtEndOfSignupDay() {
+  const svc = buildServices();
+  const h = harness(svc);
+  let a: Activated | undefined;
+  try {
+    a = await activate(svc, h.service);
+    const [signup] = await dataSource.query(`SELECT activated_at FROM trial_signups WHERE slug = $1`, [a.slug]);
+    const [sub] = await inTenant(a.tenantId, (m) =>
+      m.query(`SELECT trial_end FROM subscriptions WHERE tenant_id = $1`, [a!.tenantId]));
+    const start = new Date(signup.activated_at);
+    const end = new Date(sub.trial_end);
+    assert.equal(end.getUTCHours(), 23);
+    assert.equal(end.getUTCMinutes(), 59);
+    assert.equal(end.getUTCSeconds(), 59);
+    assert.equal(end.getUTCMilliseconds(), 999);
+    const startDay = Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate());
+    const endDay = Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate());
+    assert.equal((endDay - startDay) / 86_400_000, TRIAL_PERIOD_DAYS);
+    assert.equal(end.toISOString(), new Date(endDay + 86_400_000 - 1).toISOString());
+  } finally {
+    await h.finishAll();
+    await cleanupActivated([a]);
+  }
 }
 
 // The activation answers as before; the load then runs for the new administrator, on the
@@ -669,6 +698,7 @@ async function testStartupResumeSkippedWhenSingleTenant() {
 }
 
 runSpecs('trial-provision.integration.spec', [
+  testTrialEndsAtEndOfSignupDay,
   testActivationLoadsSampleData,
   testLanguageIsRecorded,
   testCapacityRetries,
