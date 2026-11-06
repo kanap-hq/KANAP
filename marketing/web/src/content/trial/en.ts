@@ -58,7 +58,7 @@ const content: TrialContent = {
     lead: 'We\'ve sent an activation link to the address you provided. Click it to finish creating your workspace.',
     whatNext: 'What happens next',
     steps: [
-      'Open your inbox, subject line "Activate your KANAP workspace".',
+      'Open your inbox, subject line "Confirm your KANAP workspace".',
       'Click the link. We\'ll create your workspace in a few seconds.',
       'Set your admin password. Log in, invite your team, start.',
     ],
