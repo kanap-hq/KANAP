@@ -40,7 +40,7 @@ La liste affiche tous les processus métier de votre tenant.
 
 - La recherche rapide filtre sur toutes les colonnes visibles.
 - Utilisez le bouton bascule **Afficher : Tous / Activés / Désactivés** au-dessus de la liste pour choisir les processus affichés. Par défaut, la liste affiche les processus activés.
-- **Type** et **Processus parent** utilisent des filtres à cases à cocher. Le filtre du parent liste les processus qui ont des sous-processus.
+- **Type** et **Processus parent** utilisent des filtres à cases à cocher. Le filtre du type propose Pilotage, Réalisation, Support et Sans type (processus dont le type est vide). Le filtre du parent liste les processus qui ont des sous-processus.
 - La liste s'ouvre dans l'ordre de l'arborescence : chaque processus est suivi de ses sous-processus. Cliquez sur un en-tête de colonne pour trier par cette colonne. Le décalage ne s'affiche que dans l'ordre de l'arborescence.
 
 **Actions** (barre d'outils en haut à droite) :

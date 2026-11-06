@@ -974,6 +974,9 @@
       "core": "Réalisation",
       "support": "Support"
     },
+    "filters": {
+      "noType": "Sans type"
+    },
     "placeholders": {
       "topLevel": "Premier niveau",
       "noProcessFound": "Aucun processus trouvé"

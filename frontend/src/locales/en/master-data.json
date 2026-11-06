@@ -974,6 +974,9 @@
       "core": "Core",
       "support": "Support"
     },
+    "filters": {
+      "noType": "No type"
+    },
     "placeholders": {
       "topLevel": "Top level",
       "noProcessFound": "No process found"

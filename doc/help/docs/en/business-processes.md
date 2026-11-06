@@ -40,7 +40,7 @@ The list shows all business processes for your tenant.
 
 - Quick search filters across all visible columns.
 - Use the **Show: All / Enabled / Disabled** toggle above the list to choose which processes appear. The list shows enabled processes by default.
-- **Type** and **Parent process** use checkbox filters. The parent filter lists the processes that have sub-processes.
+- **Type** and **Parent process** use checkbox filters. The type filter offers Management, Core, Support and No type (processes with an empty type). The parent filter lists the processes that have sub-processes.
 - The list opens in tree order: each process is followed by its sub-processes. Click a column header to sort by that column instead. The indentation shows only in tree order.
 
 **Actions** (top-right toolbar):

@@ -987,7 +987,7 @@ A tenant classifies its budget lines along analytics dimensions (`analytics_axes
 
 - GET `/business-processes`
   - Query params: `page`, `limit`, `sort`, `q`, `filters`.
-  - Filters: AG Grid filters on `name`, `status`, `process_type` (set), `parent_name` (set), `owner_name`, `updated_at`; `under` (text, the assistant) keeps every process below the named ones, at any depth; `q` matches name/description/notes.
+  - Filters: AG Grid filters on `name`, `status`, `process_type` (set; a null value keeps the processes with no type, alone or with the codes), `parent_name` (set), `owner_name`, `updated_at`; `under` (text, the assistant) keeps every process below the named ones, at any depth; `q` matches name/description/notes.
   - Sort: `name`, `status`, `process_type` (in the ISO order), `parent_name`, `path` (the screen's default: the tree order), `created_at`, `updated_at`.
   - Returns list shape: `{ items: BusinessProcessRow[], total, page, limit }`.
   - `BusinessProcessRow` includes:

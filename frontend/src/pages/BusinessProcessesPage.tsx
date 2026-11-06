@@ -107,7 +107,11 @@ export default function BusinessProcessesPage() {
         filter: CheckboxSetFilter,
         floatingFilterComponent: CheckboxSetFloatingFilter,
         filterParams: {
-          values: BUSINESS_PROCESS_TYPES.map((value) => ({ value, label: t(`businessProcesses.types.${value}`) })),
+          // "No type" is a null value: the shared compiler turns it into IS NULL, alone or with the codes.
+          values: [
+            ...BUSINESS_PROCESS_TYPES.map((value) => ({ value, label: t(`businessProcesses.types.${value}`) })),
+            { value: null, label: t('businessProcesses.filters.noType') },
+          ],
           searchable: false,
         },
         cellRenderer: (params: any) => (
