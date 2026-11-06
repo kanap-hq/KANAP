@@ -784,7 +784,7 @@
       "title": "Ubicaciones",
       "addLocation": "Añadir ubicación",
       "columns": {
-        "code": "Código",
+        "reference": "Referencia",
         "name": "Nombre",
         "hostingType": "Tipo de alojamiento",
         "providerCompany": "Proveedor / Empresa",

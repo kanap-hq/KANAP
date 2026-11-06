@@ -784,7 +784,7 @@
       "title": "Standorte",
       "addLocation": "Standort hinzufügen",
       "columns": {
-        "code": "Code",
+        "reference": "Referenz",
         "name": "Name",
         "hostingType": "Hosting-Typ",
         "providerCompany": "Anbieter / Unternehmen",

@@ -25,7 +25,7 @@ While the location is being created, the header shows **Create** and **Cancel** 
 The list gives you a searchable overview of every registered location.
 
 **Default columns**:
-- **Code**: Location code (click to open the workspace)
+- **Reference**: The reference KANAP assigns (`LOC-4`). Click it to open the workspace.
 - **Name**: Display name
 - **Hosting Type**: On-prem, colocation, public cloud, etc.
 - **Provider / Company**: Cloud provider for cloud-type locations, or operating company for on-prem locations
@@ -36,7 +36,7 @@ The list gives you a searchable overview of every registered location.
 
 **Filtering**:
 - Quick search: Free-text search across all rows
-- Column filters: Text filters on Code, Name, and City; set filter on Hosting Type
+- Column filters: Text filters on Reference, Name, and City; set filter on Hosting Type
 
 **Actions**:
 - **Add Location**: Create a new location (requires `locations:member`)
@@ -54,7 +54,6 @@ Click any row to open the workspace. It has four tabs: **Overview**, **Contacts 
 The Overview tab captures identity and geographic information, split into two sections, plus a sub-locations panel.
 
 **Basic information**:
-- **Code**: Unique identifier (required)
 - **Name**: Display name (required)
 - **Hosting Type**: Category of facility (required). Hosting types are configurable in **IT Landscape -> Settings**.
 
@@ -158,7 +157,7 @@ Hosting types are configurable in **IT Landscape -> Settings**. Each type belong
 
 ## Tips
 
-- **Be consistent with codes**: A clear naming convention makes locations easy to identify at a glance and keeps filters useful.
+- **Be consistent with names**: A clear naming convention makes locations easy to identify at a glance and keeps filters useful.
 - **Use sub-locations for granularity**: If a data center has multiple rooms or racks, model them as sub-locations rather than separate locations. This keeps the list clean while still tracking physical placement.
 - **Track cloud regions individually**: Create one location per cloud region you use, not just one per provider.
 - **Link assets to locations**: This enables geographic reporting, DR planning, and quick impact analysis during outages.

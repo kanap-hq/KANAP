@@ -25,7 +25,7 @@ Mientras la ubicación se está creando, el encabezado muestra **Crear** y **Can
 La lista le ofrece una vista general con búsqueda de cada ubicación registrada.
 
 **Columnas predeterminadas**:
-- **Código**: Código de ubicación (haga clic para abrir el espacio de trabajo)
+- **Referencia**: La referencia que asigna KANAP (`LOC-4`). Haga clic en ella para abrir el espacio de trabajo.
 - **Nombre**: Nombre para mostrar
 - **Tipo de alojamiento**: Propio, colocación, nube pública, etc.
 - **Proveedor / Empresa**: Proveedor de nube para ubicaciones de tipo nube, o empresa operadora para ubicaciones propias
@@ -36,7 +36,7 @@ La lista le ofrece una vista general con búsqueda de cada ubicación registrada
 
 **Filtrado**:
 - Búsqueda rápida: Búsqueda de texto libre en todas las filas
-- Filtros de columna: Filtros de texto en Código, Nombre y Ciudad; filtro de conjunto en Tipo de alojamiento
+- Filtros de columna: Filtros de texto en Referencia, Nombre y Ciudad; filtro de conjunto en Tipo de alojamiento
 
 **Acciones**:
 - **Añadir ubicación**: Crear una nueva ubicación (requiere `locations:member`)
@@ -54,7 +54,6 @@ Haga clic en cualquier fila para abrir el espacio de trabajo. Tiene cuatro pesta
 La pestaña Vista general captura información de identidad y geográfica, dividida en dos secciones, más un panel de sub-ubicaciones.
 
 **Información básica**:
-- **Código**: Identificador único (obligatorio)
 - **Nombre**: Nombre para mostrar (obligatorio)
 - **Tipo de alojamiento**: Categoría de instalación (obligatorio). Los tipos de alojamiento son configurables en **Panorama IT > Configuración**.
 
@@ -158,7 +157,7 @@ Los tipos de alojamiento son configurables en **Panorama IT > Configuración**. 
 
 ## Consejos
 
-- **Sea consistente con los códigos**: Una convención de nomenclatura clara hace que las ubicaciones sean fáciles de identificar de un vistazo y mantiene los filtros útiles.
+- **Sea consistente con los nombres**: Una convención de nomenclatura clara hace que las ubicaciones sean fáciles de identificar de un vistazo y mantiene los filtros útiles.
 - **Use sub-ubicaciones para granularidad**: Si un centro de datos tiene múltiples salas o racks, modélelos como sub-ubicaciones en lugar de ubicaciones separadas. Esto mantiene la lista limpia mientras sigue rastreando la ubicación física.
 - **Rastree regiones en la nube individualmente**: Cree una ubicación por región en la nube que use, no solo una por proveedor.
 - **Vincule activos a ubicaciones**: Esto permite informes geográficos, planificación de recuperación ante desastres y análisis rápido de impacto durante incidentes.

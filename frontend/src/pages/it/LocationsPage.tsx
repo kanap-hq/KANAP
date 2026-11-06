@@ -82,7 +82,7 @@ export default function LocationsPage() {
 
   const columns: EnhancedColDef<LocationRow>[] = [
     {
-      headerName: t('pages.locations.columns.code'),
+      headerName: t('pages.locations.columns.reference'),
       field: 'location_reference',
       minWidth: 110,
       filter: 'agTextColumnFilter',
