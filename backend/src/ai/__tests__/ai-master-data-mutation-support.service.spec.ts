@@ -11,6 +11,10 @@ const CREATED_COMPANY_ID = '22222222-2222-4222-8222-222222222222';
 const DEPARTMENT_ID = '66666666-6666-4666-8666-666666666666';
 const CREATED_DEPARTMENT_ID = '77777777-7777-4777-8777-777777777777';
 const LOCATION_ID = '88888888-8888-4888-8888-888888888888';
+const PROCESS_PRODUCTION_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa01';
+const PROCESS_AGING_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa02';
+const PROCESS_CAVES_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa03';
+const PROCESS_SALES_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa04';
 
 function createHarness() {
   const calls: any = {
@@ -148,6 +152,15 @@ function createHarness() {
     },
   };
 
+  // Production › Aging › Caves, and Sales at the top. The chain walk is what the cycle check reads.
+  const processes = [
+    { id: PROCESS_PRODUCTION_ID, tenant_id: TENANT_ID, name: 'Production', parent_id: null, status: 'enabled' },
+    { id: PROCESS_AGING_ID, tenant_id: TENANT_ID, name: 'Aging', parent_id: PROCESS_PRODUCTION_ID, status: 'enabled' },
+    { id: PROCESS_CAVES_ID, tenant_id: TENANT_ID, name: 'Caves', parent_id: PROCESS_AGING_ID, status: 'enabled' },
+    { id: PROCESS_SALES_ID, tenant_id: TENANT_ID, name: 'Sales', parent_id: null, status: 'enabled' },
+  ];
+  const processById = new Map(processes.map((row) => [row.id, row]));
+
   const manager = {
     query: async (sql: string, params: unknown[]) => {
       if (sql.includes('FROM companies') && String(params[1]).toLowerCase() === 'acme') {
@@ -159,14 +172,37 @@ function createHarness() {
       if (sql.includes('FROM locations') && String(params[1]).toLowerCase() === 'loc-1') {
         return [{ id: LOCATION_ID, location_reference: 'LOC-1', name: 'LOC-1 - Paris DC', hosting_type: 'cloud' }];
       }
+      if (sql.includes('WITH RECURSIVE') && sql.includes('business_processes')) {
+        const chain: Array<{ id: string; name: string }> = [];
+        const seen = new Set<string>();
+        let current = processById.get(String(params[0]));
+        while (current && !seen.has(current.id)) {
+          seen.add(current.id);
+          chain.push({ id: current.id, name: current.name });
+          current = current.parent_id ? processById.get(current.parent_id) : undefined;
+        }
+        return chain;
+      }
+      if (sql.includes('FROM business_processes') && sql.includes('LOWER(name)')) {
+        const name = String(params[1]).toLowerCase();
+        return processes.filter((row) => row.name.toLowerCase() === name).map((row) => ({ ...row }));
+      }
       return [];
+    },
+  };
+
+  const businessProcesses = {
+    get: async (id: string) => {
+      const row = processById.get(id);
+      if (!row) throw new Error(`Business process not found: ${id}`);
+      return { ...row };
     },
   };
 
   const service = new AiMasterDataMutationSupportService(
     {} as any,
     {} as any,
-    {} as any,
+    businessProcesses as any,
     {} as any,
     companies as any,
     companyMetrics as any,
@@ -554,6 +590,42 @@ async function testDepartmentMetricUpdateRequiresExistingMetricRow() {
   );
 }
 
+async function testBusinessProcessParentCycleIsRefusedAtPreview() {
+  const { service, context } = createHarness();
+  // Production › Aging › Caves: Production cannot move under Caves.
+  await assert.rejects(
+    () => service.prepareUpdatePreview(context, {
+      entity_type: 'business_processes',
+      ref: 'Production',
+      fields: { parent: 'Caves' },
+    }),
+    (error: unknown) => {
+      assert.ok(error instanceof BadRequestException);
+      const body = error.getResponse() as { code?: string; message?: string; params?: { name: string; parent: string } };
+      assert.equal(body.code, 'BUSINESS_PROCESS_PARENT_CYCLE');
+      assert.equal(body.message, 'Production cannot move under Caves, which is inside it.');
+      assert.equal(error.message, body.message);
+      assert.deepEqual(body.params, { name: 'Production', parent: 'Caves' });
+      return true;
+    },
+  );
+}
+
+async function testBusinessProcessValidParentPreviewIsAccepted() {
+  const { service, context } = createHarness();
+  // Sales is not inside Aging, so Aging may move under it.
+  const prepared = await service.prepareUpdatePreview(context, {
+    entity_type: 'business_processes',
+    ref: 'Aging',
+    fields: { parent: 'Sales' },
+  });
+
+  assert.equal(prepared.targetEntityId, PROCESS_AGING_ID);
+  assert.deepEqual(prepared.mutationInput.fields, { parent_id: PROCESS_SALES_ID });
+  assert.equal((prepared.mutationInput.display_values as any).parent_id, 'Sales');
+  assert.deepEqual(prepared.currentValues?.values, { parent_id: PROCESS_PRODUCTION_ID });
+}
+
 async function testLocationLabelNamesTheReferenceOnce() {
   const { service, context } = createHarness();
   // The location name already carries its reference: the label does not add it a second time.
@@ -576,6 +648,8 @@ async function main() {
   await testExecuteCreateCanSeedDepartmentMetricsWithPreviewAudit();
   await testPrepareExecuteAndReverseDepartmentMetricUpdate();
   await testDepartmentMetricUpdateRequiresExistingMetricRow();
+  await testBusinessProcessParentCycleIsRefusedAtPreview();
+  await testBusinessProcessValidParentPreviewIsAccepted();
 }
 
 main().catch((error) => {

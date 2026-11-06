@@ -12,6 +12,7 @@ import {
 } from '../../analytics/analytics-axes.util';
 import { AxisAppliesTo } from '../../analytics/analytics-axis.entity';
 import { AuditSourceOptions } from '../../audit/audit.service';
+import { assertBusinessProcessParent } from '../../business-processes/business-process-tree';
 import { BusinessProcessesService } from '../../business-processes/business-processes.service';
 import { CompanyMetricsService } from '../../companies/company-metrics.service';
 import { CompaniesService } from '../../companies/companies.service';
@@ -1230,6 +1231,13 @@ export class AiMasterDataMutationSupportService {
     opts: { sourcePreviewId: string | null },
   ): Promise<AiPreparedMutationPreview> {
     const normalized = await this.normalizeFields(context, entityType, rawFields, 'update', target.row);
+    if (entityType === 'business_processes' && Object.prototype.hasOwnProperty.call(normalized.fields, 'parent_id')) {
+      // Same cycle check as the update, so the preview refuses it before approval.
+      const name = textOrNull(
+        Object.prototype.hasOwnProperty.call(normalized.fields, 'name') ? normalized.fields.name : target.row.name,
+      ) ?? '';
+      await assertBusinessProcessParent(context.manager, { id: target.id, name }, textOrNull(normalized.fields.parent_id));
+    }
     if (entityType === 'contacts' && normalized.fields.supplier_role) {
       const nextSupplierId = Object.prototype.hasOwnProperty.call(normalized.fields, 'supplier_id')
         ? normalized.fields.supplier_id
