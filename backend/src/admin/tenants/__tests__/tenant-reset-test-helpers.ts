@@ -13,7 +13,7 @@ import { PasswordResetToken } from '../../../auth/password-reset-token.entity';
 import { RefreshToken } from '../../../auth/refresh-token.entity';
 import { AuthService } from '../../../auth/auth.service';
 import { Subscription, SubscriptionStatus } from '../../../billing/subscription.entity';
-import { TRIAL_PERIOD_DAYS } from '../../../billing/plans.config';
+import { trialEndFromSignup } from '../../../billing/plans.config';
 import { allocateItemNumbers } from '../../../common/item-number.service';
 import { TENANT_SCOPED_TABLES } from '../../../common/tenant-isolation.inventory';
 import { Company } from '../../../companies/company.entity';
@@ -203,7 +203,7 @@ export async function createActivatedTenant(
     await manager.getRepository(Subscription).save({
       tenant_id: tenant.id,
       status: SubscriptionStatus.TRIALING,
-      trial_end: new Date(Date.now() + TRIAL_PERIOD_DAYS * 86400000),
+      trial_end: trialEndFromSignup(new Date()),
       plan_name: 'Trial',
       seat_limit: null,
       active_seats: 0,
