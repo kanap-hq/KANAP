@@ -23,7 +23,7 @@ import { AiMutationPreview } from './ai-mutation-preview.entity';
 import { AiPolicyService, isRightRefusalMessage } from './ai-policy.service';
 import { LEGACY_GLPI_TICKETING_PROVIDER_KEY } from './control-plane/providers/provider-constants';
 import { AiMutationOperationRegistry } from './mutation/ai-mutation-operation.registry';
-import { AiMutationPreviewPresentation, AiPreparedMutationPreview } from './mutation/ai-mutation-operation.types';
+import { AiMutationOperation, AiMutationPreviewPresentation, AiPreparedMutationPreview } from './mutation/ai-mutation-operation.types';
 import { dataAccessRefusalMessage, mapDatabaseError } from '../common/filters/database-error.mapping';
 import { assertUnscopedDataAccess } from '../data-access/reserved-operations';
 import { assertLinesEditable } from '../data-access/line-write-checks';
@@ -712,8 +712,36 @@ export class AiMutationPreviewService {
       error_message: null,
       created_at: now,
     }));
+    await this.expireReplacedPreviews(context, operation, preview);
 
     return this.toPreviewDto(preview, await this.languageOf(context));
+  }
+
+  /** Expires the person's pending previews in the conversation that `preview` replaces (a new mapping of the same file). */
+  private async expireReplacedPreviews<TInput>(
+    context: AiExecutionContextWithManager,
+    operation: AiMutationOperation<TInput>,
+    preview: AiMutationPreview,
+  ): Promise<void> {
+    if (!context.conversationId || !operation.replacesPendingPreview) {
+      return;
+    }
+    const repo = this.getRepo(context.manager);
+    const pending = await repo.find({
+      where: {
+        tenant_id: context.tenantId,
+        conversation_id: context.conversationId,
+        user_id: context.userId,
+        tool_name: operation.toolName,
+        status: 'pending',
+      },
+    });
+    const replaced = pending
+      .filter((candidate) => candidate.id !== preview.id && operation.replacesPendingPreview!(candidate, preview))
+      .map((candidate) => candidate.id);
+    if (replaced.length > 0) {
+      await repo.update({ tenant_id: context.tenantId, id: In(replaced), status: 'pending' }, { status: 'expired' });
+    }
   }
 
   private async createPreviewForPlanStep(

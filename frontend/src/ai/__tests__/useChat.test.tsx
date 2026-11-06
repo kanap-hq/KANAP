@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useChat } from '../useChat';
 import { aiConversationsApi, streamChat } from '../aiApi';
+import type { AiMutationPreview } from '../aiTypes';
 
 let capturedSignal: AbortSignal | null = null;
 
@@ -552,5 +553,45 @@ describe('useChat', () => {
     ]);
     expect(result.current.conversationUsage).toEqual({ input_tokens: 11, output_tokens: 6 });
     expect(result.current.lastRequestUsage).toEqual({ input_tokens: 1, output_tokens: 1 });
+  });
+
+  it('shows a card the turn replaced as expired once the answer ends', async () => {
+    const mapping = (id: string): AiMutationPreview => ({
+      preview_id: id,
+      tool_name: 'prepare_import_mapping',
+      status: 'pending',
+      target: { entity_type: 'applications', entity_id: null, ref: null, title: 'Applications · apps.csv' },
+      changes: {},
+      requires_confirmation: true,
+      actions: ['approve', 'reject'],
+      summary: 'Map "apps.csv" onto the Applications import.',
+      error_message: null,
+      conversation_id: 'conversation-1',
+      created_at: '2026-11-06T10:00:00.000Z',
+      expires_at: '2026-11-06T10:10:00.000Z',
+      approved_at: null,
+      rejected_at: null,
+      executed_at: null,
+    });
+    vi.mocked(streamChat).mockImplementation(async function* () {
+      yield { type: 'conversation', id: 'conversation-1', title: 'Import' };
+      yield { type: 'preview' as const, ...mapping('preview-1') };
+      yield { type: 'preview' as const, ...mapping('preview-2') };
+      yield { type: 'done', usage: { input_tokens: 1, output_tokens: 1 } };
+    });
+    vi.mocked(aiConversationsApi.getMessages).mockResolvedValue({ messages: [], conversation_usage: { input_tokens: 1, output_tokens: 1 } });
+    // The second mapping of the same file replaced the first on the server.
+    vi.mocked(aiConversationsApi.getPreviews).mockResolvedValue([{ ...mapping('preview-1'), status: 'expired' }, mapping('preview-2')]);
+
+    const { result } = renderHook(() => useChat());
+    await act(async () => {
+      await result.current.sendMessage('Prepare the import of this file.');
+    });
+
+    expect(aiConversationsApi.getPreviews).toHaveBeenCalledWith('conversation-1');
+    expect(result.current.previews.map((preview) => [preview.preview_id, preview.status])).toEqual([
+      ['preview-1', 'expired'],
+      ['preview-2', 'pending'],
+    ]);
   });
 });

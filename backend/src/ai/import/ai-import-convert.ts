@@ -1,5 +1,6 @@
 import { CsvDateOrder, CsvLanguage, DecimalMark, parseCsvAmount, parseCsvBoolean, parseCsvDateCell, resolveAmountConvention, resolveDateOrder } from '../../common/csv-sheet';
 import { sheetCellText, SheetCell } from '../../common/csv-sheet/read';
+import { catalogAliases } from '../../it-ops-settings/catalog-codes';
 import { findCatalogOption, type CatalogOptionLike } from '../../it-ops-settings/catalog-resolve';
 import { isBlank } from '../attachments/table-attachment';
 
@@ -59,6 +60,18 @@ function cellText(cell: SheetCell | undefined): string {
 
 function valueKey(value: string): string {
   return value.normalize('NFKC').trim().toLowerCase();
+}
+
+/** A name set apart from its accents, the way exports often write capitals (`Elevee` for `Élevée`). */
+function accentFreeKey(value: string): string {
+  return valueKey(value).normalize('NFD').replace(/\p{M}/gu, '');
+}
+
+/** The one code whose names match `named` once accents are set aside: null when none or several do. */
+function accentFreeCode(named: string, names: ReadonlyArray<readonly [string, ReadonlyArray<string>]>): string | null {
+  const key = accentFreeKey(named);
+  const codes = new Set(names.filter(([, list]) => list.some((name) => accentFreeKey(name) === key)).map(([code]) => code));
+  return codes.size === 1 ? [...codes][0] : null;
 }
 
 /** The model's value map, its keys compared without case or outer spaces. */
@@ -128,7 +141,9 @@ export function columnReader(
       }
       return readerOf((raw) => {
         const named = map.get(valueKey(raw)) ?? raw;
-        return codes.find((code) => valueKey(code) === valueKey(named)) ?? byLabel.get(valueKey(named)) ?? null;
+        return codes.find((code) => valueKey(code) === valueKey(named))
+          ?? byLabel.get(valueKey(named))
+          ?? accentFreeCode(named, codes.map((code) => [code, [code, ...(rule.codeLabels?.[code] ?? [])]]));
       }, rule.multi === true);
     }
     case 'catalog': {
@@ -137,11 +152,13 @@ export function columnReader(
       return readerOf((raw) => {
         const named = map.get(valueKey(raw)) ?? raw;
         try {
-          return findCatalogOption(named, options)?.code ?? null;
+          const option = findCatalogOption(named, options);
+          if (option) return option.code;
         } catch {
           // A name that several entries carry is not a guess.
           return null;
         }
+        return accentFreeCode(named, options.map((option) => [option.code, [...catalogAliases(option), ...(option.shippedLabels ?? [])]]));
       }, rule.multi === true);
     }
     case 'email':

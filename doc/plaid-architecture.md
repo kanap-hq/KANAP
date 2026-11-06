@@ -1025,12 +1025,16 @@ summary and one entry per template column (file column or one value for every
 row, confidence, date order, decimal mark, file values mapped to codes, note);
 the server reads the whole file again by its attachment id, converts every row
 with the CSV readers of the imports (dates, numbers, yes/no, codes and catalog
-entries by code or by name in the four languages) and returns, per column, the
-values read and not read. The card shows the first rows and the values not
+entries by code or by name in the four languages, a name written without its
+accents when it names one entry only) and returns, per column, the values read
+and not read. The card shows the first rows and the values not
 read; the model receives the counts only (`MODEL_HIDDEN_OUTPUT_FIELDS` hides
 `unread_values` and `sample`), so no file cell reaches it beyond the summary.
 The tool is refused inside a mutation plan, whose output is not redacted.
-Approving checks the attachment again and writes nothing.
+A new mapping of the same file expires the pending card of that file
+(`replacesPendingPreview`), so the person has one card to approve; the chat
+reloads the cards at the end of each answer. Approving checks the attachment
+again and writes nothing.
 
 Writes go through existing domain services where practical, so normal validation,
 workflow rules, side effects, and audit logging still apply. AI-originated domain

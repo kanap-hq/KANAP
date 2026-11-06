@@ -80,6 +80,7 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
       + 'call `describe_import_template` for the import it fits, then `prepare_import_mapping` with the attachment id and the mapping. '
       + 'Map a column only when its header or its first rows say what it holds; say what you supposed in `note` or `assumptions`, '
       + 'and name the file columns you leave out. When the card shows values not read, ask the user what they stand for and call again with `values`. '
+      + 'A new card for the same file replaces the pending one, so the person always has a single card to approve. '
       + 'Approving the card records the mapping and imports nothing: the import itself is not run from the chat yet. Say so, and do not offer to run it.',
   };
 
@@ -113,6 +114,11 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
       },
       currentValues: { import_mapping: mapping },
     };
+  }
+
+  /** A new mapping of the same file replaces the pending one: the person has one card to approve. */
+  replacesPendingPreview(pending: AiMutationPreview, replacement: AiMutationPreview): boolean {
+    return pending.mutation_input?.attachment_id === replacement.mutation_input?.attachment_id;
   }
 
   presentPreview(preview: AiMutationPreview, language: AiWriteLanguage = 'en'): AiMutationPreviewPresentation {

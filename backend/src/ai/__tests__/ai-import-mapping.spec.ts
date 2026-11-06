@@ -176,8 +176,8 @@ function testConversions() {
   assert.deepEqual(results.map((r) => r.status === 'converted' ? r.value : r.status), ['true', 'false', 'unread']);
   // A fixed list reads its codes, their names in any language, and the mapping's value map.
   const status = { kind: 'codes' as const, codes: ['enabled', 'disabled'], codeLabels: { enabled: ['Enabled', 'Activé'], disabled: ['Disabled', 'Désactivé'] } };
-  ({ results } = read(status, ['enabled', 'Désactivé', 'Actif'], { values: { actif: 'enabled' } }));
-  assert.deepEqual(results.map((r) => r.status === 'converted' ? r.value : r.status), ['enabled', 'disabled', 'enabled']);
+  ({ results } = read(status, ['enabled', 'Désactivé', 'Actif', 'DESACTIVE'], { values: { actif: 'enabled' } }));
+  assert.deepEqual(results.map((r) => r.status === 'converted' ? r.value : r.status), ['enabled', 'disabled', 'enabled', 'disabled']);
   // A catalog reads the workspace's names and the shipped names; a name two entries carry is not a guess.
   const lifecycle = {
     kind: 'catalog' as const,
@@ -187,14 +187,21 @@ function testConversions() {
       { code: 'retired', label: 'Retired', shippedLabels: ['Retired', 'Retiré'] },
       { code: 'twin_a', label: 'Twin' },
       { code: 'twin_b', label: 'twin' },
+      { code: 'high', label: 'Élevée' },
+      { code: 'summary_a', label: 'Résumé' },
+      { code: 'summary_b', label: 'Resumé' },
     ],
   };
-  ({ results } = read(lifecycle, ['Actif', 'retiré; Active', 'Twin', 'En prod']));
+  // A name written without its accents reads as the one entry it can name ("Elevee" is "Élevée"), not two.
+  ({ results } = read(lifecycle, ['Actif', 'retiré; Active', 'Twin', 'En prod', 'Elevée', 'RETIRE', 'Resume']));
   assert.deepEqual(results, [
     { status: 'converted', value: 'active' },
     { status: 'converted', value: 'retired, active' },
     { status: 'unread', raw: 'Twin' },
     { status: 'unread', raw: 'En prod' },
+    { status: 'converted', value: 'high' },
+    { status: 'converted', value: 'retired' },
+    { status: 'unread', raw: 'Resume' },
   ]);
   console.log('  conversions: OK');
 }
@@ -219,6 +226,12 @@ function createManager(options: { limited?: boolean; locale?: string } = {}) {
   const previews: any[] = [];
   const previewRepo = {
     find: async () => previews.filter((preview) => preview.status === 'pending'),
+    update: async (criteria: any, values: any) => {
+      const ids: string[] = criteria.id?.value ?? [criteria.id];
+      for (const preview of previews) {
+        if (ids.includes(preview.id) && preview.status === criteria.status) Object.assign(preview, values);
+      }
+    },
     findOne: async ({ where }: any) => previews.find((preview) => preview.id === where.id) ?? null,
     count: async () => previews.filter((preview) => preview.status === 'pending').length,
     create: (payload: any) => ({ id: `preview-${previews.length + 1}`, ...payload }),
@@ -349,8 +362,13 @@ const MESSY_CSV = [
 const LONG_NOTE = 'Etat lu comme cycle de vie : En prod et Actif valent Actif, Retiré vaut Retiré, le reste reste à confirmer.';
 const LONG_ASSUMPTION = "Une ligne par application, rapprochée par son nom : une application du même nom est mise à jour au lieu d'être créée.";
 
+const OTHER_FILE = '22222222-2222-4222-8222-222222222222';
+
 async function testMessyFile() {
-  const { previews, context, manager } = createImport({ [FILE]: { csv: MESSY_CSV, filename: 'export appli.csv' } }, { applications: 'admin' }, { locale: 'fr' });
+  const { previews, context, manager } = createImport({
+    [FILE]: { csv: MESSY_CSV, filename: 'export appli.csv' },
+    [OTHER_FILE]: { csv: CLEAN_CSV, filename: 'apps.csv' },
+  }, { applications: 'admin' }, { locale: 'fr' });
   const columns = [
     { column: 'name', source: 1, confidence: 'high' as const },
     { column: 'lifecycle', source: 2, confidence: 'medium' as const, note: LONG_NOTE },
@@ -392,6 +410,13 @@ async function testMessyFile() {
   assert.equal(mapping.columns.find((column) => column.column === 'lifecycle')!.unread, 0);
   assert.equal(mapping.unread_values.lifecycle, undefined);
   assert.equal(manager.previews.length, 2, 'the correction is a new card');
+  // It replaces the pending card of the same file: the person has one card to approve.
+  assert.deepEqual(manager.previews.map((preview) => preview.status), ['expired', 'pending']);
+  // The mapping of another file leaves it pending.
+  await previews.createPreview(context, 'prepare_import_mapping', {
+    attachment_id: OTHER_FILE, entity_type: 'applications', columns: [{ column: 'name', source: 1, confidence: 'high' }],
+  });
+  assert.deepEqual(manager.previews.map((preview) => preview.status), ['expired', 'pending', 'pending']);
   console.log('  messy file: OK');
 }
 
