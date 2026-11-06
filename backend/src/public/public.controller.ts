@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, InternalServerErrorException, Logger, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, GoneException, InternalServerErrorException, Logger, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { Features } from '../config/features';
 import { throwNotAvailableInMode } from '../common/feature-gates';
 import { Throttle } from '@nestjs/throttler';
@@ -553,8 +553,10 @@ export class PublicController {
     const signup = await this.trialSignups.findOne({ where: { token_hash: hash } });
     if (!signup) throw new BadRequestException('invalid or expired token');
     if (signup.activated_at) throw new BadRequestException('token already used');
+    // An unused link past its date is the only case that answers 410. The activation
+    // page shows the expired screen on that status, and the failed screen otherwise.
     if (signup.expires_at && signup.expires_at.getTime() < Date.now()) {
-      throw new BadRequestException('token expired');
+      throw new GoneException('token expired');
     }
     // The new tenant's address, from the configuration (common/url.ts), before anything is written.
     const tenantUrl = resolveTenantAppBaseUrl(req, signup.slug);

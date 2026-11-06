@@ -100,7 +100,7 @@ Built in phases: `/changelog`, `/security`, `/on-premise`. Confirmed in chat.
 **Why:** Better conversion UX, clearer mental model.
 
 ### A-18. Activation handoff unchanged
-**Decision:** After workspace is created, `/trial/activate` redirects to `{tenant_url}/reset-password#{token}?from=trial` — same as the current flow.
+**Decision:** After workspace is created, `/trial/activate` redirects to `{tenant_url}/reset-password#token={token}`.
 **Why:** Backend contract unchanged.
 
 ---
