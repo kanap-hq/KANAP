@@ -9,7 +9,9 @@ import { assert, inRolledBackTransaction, runSpecs, seedTenant } from '../../spe
 // The process tree, against a real database, each test in a transaction that is rolled back: a
 // process takes a parent and a type; a process under itself, under an unknown parent or under
 // one of its own sub-processes is refused with its code; the tree and the list come out in path
-// order; `under` keeps the whole subtree; a process with sub-processes cannot be deleted.
+// order; `under` keeps the whole subtree; a process with sub-processes cannot be deleted on its
+// own. A selection that holds every deletable sub-process deletes the parent with them, deepest
+// first. A sub-process that is in use keeps its parent refused.
 
 const noAudit = { log: async () => undefined } as unknown as AuditService;
 
@@ -107,9 +109,80 @@ async function testTreeListAndDelete() {
   });
 }
 
+async function processNames(runner: { query: (sql: string) => Promise<Array<{ name: string }>> }): Promise<string[]> {
+  const rows = await runner.query(`SELECT name FROM business_processes WHERE tenant_id = app_current_tenant() ORDER BY name`);
+  return rows.map((row) => row.name);
+}
+
+async function testDeleteSelectionWithChildren() {
+  await inRolledBackTransaction(async (runner) => {
+    await seedTenant(runner, 'bp-delete-branch');
+    const svc = service();
+    const opts = { manager: runner.manager };
+    const production: any = await svc.create({ name: 'Production' } as any, null, opts);
+    const quality: any = await svc.create({ name: 'Quality', parent_id: production.id } as any, null, opts);
+    const audits: any = await svc.create({ name: 'Audits', parent_id: quality.id } as any, null, opts);
+    const aging: any = await svc.create({ name: 'Aging', parent_id: production.id } as any, null, opts);
+    await svc.create({ name: 'Billing' } as any, null, opts);
+
+    const deleteSvc = new BusinessProcessesDeleteService(runner.manager.getRepository(BusinessProcess), noAudit);
+    // The parent is first, as the list hands the selection over in tree order.
+    const selected = [production.id, quality.id, aging.id, audits.id];
+    const before = await processNames(runner);
+    const check = await deleteSvc.deleteCheck(selected, opts);
+    assert.deepEqual(check.refused, [], 'every sub-process is selected, so the parent is deleted with them');
+    assert.deepEqual(await processNames(runner), before, 'the check deletes nothing');
+
+    const result = await deleteSvc.bulkDelete(selected, null, opts);
+    assert.deepEqual(result.deleted, [audits.id, quality.id, aging.id, production.id], 'deepest first');
+    assert.deepEqual(result.failed, []);
+    assert.deepEqual(await processNames(runner), ['Billing']);
+  });
+
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, 'bp-delete-held');
+    const svc = service();
+    const opts = { manager: runner.manager };
+    const production: any = await svc.create({ name: 'Production' } as any, null, opts);
+    const quality: any = await svc.create({ name: 'Quality', parent_id: production.id } as any, null, opts);
+    const audits: any = await svc.create({ name: 'Audits', parent_id: quality.id } as any, null, opts);
+    const aging: any = await svc.create({ name: 'Aging', parent_id: production.id } as any, null, opts);
+    const [application] = await runner.query(
+      `INSERT INTO applications (tenant_id, name, sequential_id) VALUES ($1, 'ERP', 'APP-1') RETURNING id::text AS id`,
+      [tenantId],
+    );
+    await runner.query(
+      `INSERT INTO application_business_processes (tenant_id, application_id, business_process_id) VALUES ($1, $2, $3)`,
+      [tenantId, application.id, audits.id],
+    );
+
+    const deleteSvc = new BusinessProcessesDeleteService(runner.manager.getRepository(BusinessProcess), noAudit);
+    const selected = [production.id, quality.id, audits.id, aging.id];
+    const check = await deleteSvc.deleteCheck(selected, opts);
+    assert.deepEqual(check.refused, [
+      { id: production.id.toLowerCase(), name: 'Production', code: 'BUSINESS_PROCESS_HAS_SUB_PROCESSES', usages: [{ type: 'sub_processes', total: 1 }] },
+      { id: quality.id.toLowerCase(), name: 'Quality', code: 'BUSINESS_PROCESS_HAS_SUB_PROCESSES', usages: [{ type: 'sub_processes', total: 1 }] },
+      { id: audits.id.toLowerCase(), name: 'Audits', code: 'BUSINESS_PROCESS_IN_USE', usages: [{ type: 'applications', total: 1 }] },
+    ]);
+    assert.deepEqual(await processNames(runner), ['Aging', 'Audits', 'Production', 'Quality'], 'the check deletes nothing');
+
+    const result = await deleteSvc.bulkDelete(selected, null, opts);
+    assert.deepEqual(result.deleted, [aging.id]);
+    const failed = new Map(result.failed.map((item) => [item.id, item]));
+    assert.equal(failed.get(audits.id)?.code, 'BUSINESS_PROCESS_IN_USE');
+    assert.deepEqual(failed.get(audits.id)?.usages, [{ type: 'applications', total: 1 }]);
+    assert.equal(failed.get(quality.id)?.code, 'BUSINESS_PROCESS_HAS_SUB_PROCESSES');
+    assert.deepEqual(failed.get(quality.id)?.usages, [{ type: 'sub_processes', total: 1 }]);
+    assert.equal(failed.get(production.id)?.code, 'BUSINESS_PROCESS_HAS_SUB_PROCESSES');
+    assert.deepEqual(failed.get(production.id)?.usages, [{ type: 'sub_processes', total: 1 }]);
+    assert.deepEqual(await processNames(runner), ['Audits', 'Production', 'Quality']);
+  });
+}
+
 void runSpecs('business-process-tree.integration.spec', [
   ['testParentRules', testParentRules],
   ['testTreeListAndDelete', testTreeListAndDelete],
+  ['testDeleteSelectionWithChildren', testDeleteSelectionWithChildren],
 ]);
 
 // `dataSource` is imported so the CI runner schedules this spec on the database lane.

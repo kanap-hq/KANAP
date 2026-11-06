@@ -7,31 +7,122 @@ import { BaseDeleteService } from '../common/base-delete.service';
 import { BulkDeleteResult, DeleteOptions } from '../common/delete.types';
 import { checkIds, RecordInUseException, refusalDetails, refusalsFrom, type DeleteRefusal, type UsageCount } from '../common/record-in-use';
 import { withSavepoint } from '../common/savepoint.util';
-import { lockBusinessProcessTree } from './business-process-tree';
+import { businessProcessDepthSql, lockBusinessProcessTree } from './business-process-tree';
+
+/** One process of a selection, with what can hold its delete. */
+type ProcessHold = {
+  id: string;
+  name: string;
+  depth: number;
+  /** Direct sub-processes whose id is outside the selection. */
+  outsideChildren: number;
+  /** Direct sub-processes that are in the selection. */
+  selectedChildren: string[];
+  applications: number;
+  interfaces: number;
+};
+
+function usageCounts(hold: { applications: number; interfaces: number }): UsageCount[] {
+  const usages: UsageCount[] = [];
+  if (hold.applications > 0) usages.push({ type: 'applications', total: hold.applications });
+  if (hold.interfaces > 0) usages.push({ type: 'interfaces', total: hold.interfaces });
+  return usages;
+}
 
 /**
- * What holds each of `ids`: its sub-processes, then the applications and interfaces that name it
- * (their links would go with the process).
+ * What holds each process of `selection`: its direct sub-processes outside the selection, its
+ * direct sub-processes inside it, and the applications and interfaces that name it. `selectionRefusals`
+ * counts a selected sub-process only when that sub-process is refused itself.
  */
-async function processUsages(manager: EntityManager, ids: string[]): Promise<Map<string, { children: number; usages: UsageCount[] }>> {
-  const rows: Array<{ id: string; children: number; applications: number; interfaces: number }> = ids.length === 0 ? [] : await manager.query(
+async function loadSelectionHolds(manager: EntityManager, selection: readonly string[]): Promise<Map<string, ProcessHold>> {
+  const rows: Array<{
+    id: string;
+    name: string;
+    parent_id: string | null;
+    depth: number | string;
+    outside_children: number | string;
+    applications: number | string;
+    interfaces: number | string;
+  }> = selection.length === 0 ? [] : await manager.query(
     `SELECT bp.id::text AS id,
+            bp.name,
+            bp.parent_id::text AS parent_id,
+            ${businessProcessDepthSql('bp')}::int AS depth,
             (SELECT count(*)::int FROM business_processes c
-              WHERE c.tenant_id = bp.tenant_id AND c.parent_id = bp.id) AS children,
+              WHERE c.tenant_id = bp.tenant_id AND c.parent_id = bp.id
+                AND NOT (c.id = ANY($1::uuid[]))) AS outside_children,
             (SELECT count(DISTINCT abp.application_id)::int FROM application_business_processes abp
               WHERE abp.tenant_id = bp.tenant_id AND abp.business_process_id = bp.id) AS applications,
             (SELECT count(*)::int FROM interfaces i
               WHERE i.tenant_id = bp.tenant_id AND i.business_process_id = bp.id) AS interfaces
        FROM business_processes bp
       WHERE bp.tenant_id = app_current_tenant() AND bp.id = ANY($1::uuid[])`,
-    [ids],
+    [selection],
   );
+  const selected = new Set(selection.map((id) => id.toLowerCase()));
+  const selectedChildren = new Map<string, string[]>();
+  for (const row of rows) {
+    const id = row.id.toLowerCase();
+    const parentId = row.parent_id?.toLowerCase() ?? null;
+    if (parentId && selected.has(parentId)) {
+      selectedChildren.set(parentId, [...(selectedChildren.get(parentId) ?? []), id]);
+    }
+  }
   return new Map(rows.map((row) => {
-    const usages: UsageCount[] = [];
-    if (row.applications > 0) usages.push({ type: 'applications', total: row.applications });
-    if (row.interfaces > 0) usages.push({ type: 'interfaces', total: row.interfaces });
-    return [row.id, { children: row.children, usages }];
+    const id = row.id.toLowerCase();
+    return [id, {
+      id,
+      name: row.name,
+      depth: Number(row.depth) || 0,
+      outsideChildren: Number(row.outside_children) || 0,
+      selectedChildren: selectedChildren.get(id) ?? [],
+      applications: Number(row.applications) || 0,
+      interfaces: Number(row.interfaces) || 0,
+    }];
   }));
+}
+
+/**
+ * The refusals of deleting `ids` together, walked deepest first. A sub-process counts when it is
+ * outside the selection or refused itself, so a parent whose every sub-process is selected and
+ * deleted is not refused. Nothing is written.
+ */
+function selectionRefusals(holds: Map<string, ProcessHold>, ids: readonly string[]): Map<string, RecordInUseException> {
+  const refused = new Map<string, RecordInUseException>();
+  const ordered = ids
+    .map((id, index) => ({ id: id.toLowerCase(), index, depth: holds.get(id.toLowerCase())?.depth ?? -1 }))
+    .sort((a, b) => b.depth - a.depth || a.index - b.index);
+  for (const { id } of ordered) {
+    const hold = holds.get(id);
+    if (!hold) continue;
+    const refusedChildren = hold.selectedChildren.filter((childId) => refused.has(childId)).length;
+    const refusal = processRefusal(hold.name, { children: hold.outsideChildren + refusedChildren, usages: usageCounts(hold) });
+    if (refusal) refused.set(id, refusal);
+  }
+  return refused;
+}
+
+/**
+ * Deeper processes first, then in the order asked. The parent key is `ON DELETE NO ACTION`, so a
+ * parent selected with its sub-processes can be deleted only once those sub-processes are gone.
+ * Unknown ids sort last and keep their place among themselves.
+ */
+async function deleteOrder(manager: EntityManager, ids: readonly string[]): Promise<string[]> {
+  const valid = checkIds(ids);
+  const depth = new Map<string, number>();
+  if (valid.length > 0) {
+    const rows: Array<{ id: string; depth: number | string }> = await manager.query(
+      `SELECT bp.id::text AS id, ${businessProcessDepthSql('bp')}::int AS depth
+         FROM business_processes bp
+        WHERE bp.tenant_id = app_current_tenant() AND bp.id = ANY($1::uuid[])`,
+      [valid],
+    );
+    for (const row of rows) depth.set(row.id.toLowerCase(), Number(row.depth) || 0);
+  }
+  return ids
+    .map((id, index) => ({ id, index, depth: depth.get(String(id).toLowerCase()) ?? -1 }))
+    .sort((a, b) => b.depth - a.depth || a.index - b.index)
+    .map((entry) => entry.id);
 }
 
 /**
@@ -78,8 +169,10 @@ export class BusinessProcessesDeleteService extends BaseDeleteService<BusinessPr
       throw new NotFoundException('Business process not found');
     }
 
-    // The links to applications and interfaces would go with the process: counted first, for the refusal.
-    const refusal = processRefusal(existing.name, (await processUsages(manager, [id])).get(id));
+    // One id: every sub-process counts. The bulk delete has already removed the sub-processes the
+    // selection deletes (deepest first), so what remains is exactly what the selection's check counts.
+    const holds = await loadSelectionHolds(manager, [existing.id]);
+    const refusal = selectionRefusals(holds, [existing.id]).get(existing.id.toLowerCase()) ?? null;
     if (refusal) throw refusal;
     try {
       await repo.delete({ id } as any);
@@ -131,28 +224,31 @@ export class BusinessProcessesDeleteService extends BaseDeleteService<BusinessPr
     await this.delete(id, opts);
   }
 
-  /** The check before a delete (`POST /business-processes/delete-check`): which of `ids` would be refused, and why. Nothing is written. */
+  /**
+   * The check before a delete (`POST /business-processes/delete-check`): which of `ids` the bulk
+   * delete would refuse, and why. A sub-process counts when it is outside the selection or refused
+   * itself, the same rule as the delete. Nothing is written.
+   */
   async deleteCheck(ids: unknown[], opts?: { manager?: EntityManager }): Promise<{ refused: DeleteRefusal[] }> {
     const manager = opts?.manager ?? this.repository.manager;
     const wanted = checkIds(ids);
     if (wanted.length === 0) return { refused: [] };
-    const rows: Array<{ id: string; name: string }> = await manager.query(
-      `SELECT id::text AS id, name FROM business_processes WHERE tenant_id = app_current_tenant() AND id = ANY($1::uuid[])`,
-      [wanted],
-    );
-    const usages = await processUsages(manager, wanted);
-    return refusalsFrom(wanted, rows, (row) => row.name, async (row) => processRefusal(row.name, usages.get(row.id)));
+    const holds = await loadSelectionHolds(manager, wanted);
+    const refusals = selectionRefusals(holds, wanted);
+    return refusalsFrom(wanted, [...holds.values()], (row) => row.name, async (row) => refusals.get(row.id) ?? null);
   }
 
   /**
-   * Bulk delete multiple business processes
+   * Deletes each process under its own savepoint, so a refusal leaves the others deleted and the
+   * transaction usable. Deeper processes go first: a parent and its sub-processes selected together
+   * are deleted together. A sub-process that stays keeps its parent refused.
    */
   async bulkDelete(ids: string[], userId: string | null, opts?: { manager?: EntityManager }): Promise<BulkDeleteResult> {
     const manager = opts?.manager ?? this.repository.manager;
     const repo = this.getRepo(manager);
     const result: BulkDeleteResult = { deleted: [], failed: [] };
 
-    for (const id of ids) {
+    for (const id of await deleteOrder(manager, ids)) {
       try {
         await withSavepoint(manager, () => this.delete(id, { manager, userId }));
         result.deleted.push(id);

@@ -2912,7 +2912,7 @@
       "flow": {
         "logicalFlow": "Logischer Fluss",
         "legTemplate": "Abschnittsvorlage",
-        "noLegs": "Noch keine Abschnitte definiert. Wählen Sie Quell- und Zielanwendung und speichern Sie dann die Route der Schnittstelle.",
+        "noLegs": "Noch keine Abschnitte. Sie erscheinen, sobald die Quellanwendung und die Zielanwendung festgelegt sind.",
         "leg": "Abschnitt",
         "fromTo": "Von / nach",
         "triggerType": "Auslösertyp",

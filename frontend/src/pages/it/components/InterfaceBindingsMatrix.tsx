@@ -223,6 +223,56 @@ function connectionOptionFromLink(link: BindingConnection): ConnectionOption {
   };
 }
 
+type InterfaceConnectionLinkItem = {
+  id: string;
+  binding_id: string;
+  connection: {
+    id: string;
+    connection_reference?: string | null;
+    name?: string | null;
+    topology?: string | null;
+    lifecycle?: string | null;
+    criticality?: string | null;
+    data_class?: string | null;
+    contains_pii?: boolean | null;
+  };
+};
+
+function bindingConnectionFromInterfaceLink(item: InterfaceConnectionLinkItem): BindingConnection {
+  const connection = item.connection;
+  return {
+    id: item.id,
+    interface_binding_id: item.binding_id,
+    connection_id: connection.id,
+    notes: null,
+    connection: {
+      id: connection.id,
+      connection_reference: connection.connection_reference || '',
+      name: connection.name || '',
+      topology: connection.topology as BindingConnection['connection']['topology'],
+      lifecycle: connection.lifecycle || '',
+      criticality: connection.criticality || '',
+      data_class: connection.data_class || '',
+      contains_pii: Boolean(connection.contains_pii),
+    },
+  };
+}
+
+function groupConnectionLinksByBinding(
+  bindings: Array<{ id: string }>,
+  items: InterfaceConnectionLinkItem[],
+): Record<string, BindingConnection[]> {
+  const grouped: Record<string, BindingConnection[]> = {};
+  for (const binding of bindings) grouped[binding.id] = [];
+  for (const item of items) {
+    if (!item?.binding_id || !item.connection?.id) continue;
+    const list = grouped[item.binding_id] ?? [];
+    list.push(bindingConnectionFromInterfaceLink(item));
+    grouped[item.binding_id] = list;
+  }
+  return grouped;
+}
+
 const panelFormGridSx = {
   display: 'grid',
   gridTemplateColumns: '1fr',
@@ -289,11 +339,14 @@ export default function InterfaceBindingsMatrix({
     setLoading(true);
     setError(null);
     try {
-      const [bindingsRes, ...instanceRes] = await Promise.all([
+      const [bindingsRes, linksRes, ...instanceRes] = await Promise.all([
         api.get<{ items: BindingRow[] }>(`/interfaces/${interfaceId}/bindings`),
+        api.get<{ items: InterfaceConnectionLinkItem[] }>(`/interfaces/${interfaceId}/connection-links`),
         ...appIds.map((appId) => api.get<AppInstanceOption[]>(`/applications/${appId}/instances`).then((r) => r.data as any)),
       ]);
-      setBindings((bindingsRes.data?.items || []) as BindingRow[]);
+      const nextBindings = (bindingsRes.data?.items || []) as BindingRow[];
+      setBindings(nextBindings);
+      setLinksByBindingId(groupConnectionLinksByBinding(nextBindings, linksRes.data?.items || []));
       const nextInstances: Record<string, AppInstanceOption[]> = {};
       appIds.forEach((appId, idx) => {
         const list = instanceRes[idx] || [];
@@ -557,9 +610,7 @@ export default function InterfaceBindingsMatrix({
     setBindingConnectionSearch('');
     autosaveRequestRef.current += 1;
     setAutosaveStatus('idle');
-    if (loadedLinks === undefined) {
-      void loadLinksForBinding(binding.id);
-    }
+    void loadLinksForBinding(binding.id);
     setDialogState({
       mode: 'edit',
       environment: env,
@@ -853,9 +904,6 @@ export default function InterfaceBindingsMatrix({
   const openBindingCell = (env: string, leg: InterfaceLeg, binding: BindingRow | undefined) => {
     if (binding) {
       openEdit(env, leg, binding);
-      if (linksByBindingId[binding.id] === undefined) {
-        void loadLinksForBinding(binding.id);
-      }
       return;
     }
     if (canManage) openCreate(env, leg);

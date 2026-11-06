@@ -48,7 +48,7 @@ Die Liste zeigt alle Geschäftsprozesse Ihres Mandanten.
 - **Neu** (`business_processes:member`): einen neuen Geschäftsprozess erstellen. Siehe [Einen Geschäftsprozess erstellen](#creating-a-business-process).
 - **Importieren** (Admin): Prozesse aus einer CSV-Datei oder Excel-Arbeitsmappe massenimportieren.
 - **Exportieren** (Admin): die Prozesse der Liste, oder alle Prozesse, in eine CSV-Datei oder Excel-Arbeitsmappe exportieren.
-- **Ausgewählte löschen** (Admin): eine oder mehrere ausgewählte Zeilen löschen. Ein Prozess, den Anwendungen oder Schnittstellen verwenden, kann nicht gelöscht werden: Deaktivieren Sie ihn stattdessen. Ein Prozess mit Teilprozessen kann ebenfalls nicht gelöscht werden: Verschieben oder löschen Sie diese zuerst. Bevor etwas gelöscht wird, listet die Bestätigung die behaltenen Prozesse mit dem Grund auf. Anfragen, die mit einem gelöschten Prozess verknüpft sind, bleiben ohne die Verknüpfung erhalten.
+- **Ausgewählte löschen** (Admin): eine oder mehrere ausgewählte Zeilen löschen. Teilprozesse werden vor ihrem übergeordneten Prozess gelöscht, sodass die Auswahl eines Prozesses zusammen mit allen seinen Teilprozessen den ganzen Zweig löscht. Ein Prozess, den Anwendungen oder Schnittstellen verwenden, kann nicht gelöscht werden: Deaktivieren Sie ihn stattdessen. Dieser Prozess behält seinen übergeordneten Prozess, wenn beide ausgewählt waren. Ein Prozess, der noch einen Teilprozess außerhalb der Auswahl hat, kann nicht gelöscht werden: Verschieben oder löschen Sie ihn zuerst. Bevor etwas gelöscht wird, listet die Bestätigung die behaltenen Prozesse mit dem Grund auf. Anfragen, die mit einem gelöschten Prozess verknüpft sind, bleiben ohne die Verknüpfung erhalten.
 
 ---
 

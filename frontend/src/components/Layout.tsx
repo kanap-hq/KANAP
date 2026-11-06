@@ -759,11 +759,17 @@ export default function Layout() {
           </Box>
         )}
         {config.features.billing && <SubscriptionBanner />}
+        {/* While another page loads, the one on screen stays visible but out of reach (no
+            pointer, no keyboard): a click on it would act on a page about to leave. The
+            scroller itself carries it, as a wrapper would come between it and the page root. */}
         <Box
           ref={pageScrollerRef}
           className="kanap-app-scroll"
           tabIndex={-1}
+          aria-busy={pagePending || undefined}
+          {...(pagePending ? ({ inert: '' } as React.HTMLAttributes<HTMLDivElement>) : {})}
           sx={{
+            pointerEvents: pagePending ? 'none' : undefined,
             flex: 1,
             minHeight: 0,
             overflow: 'auto',

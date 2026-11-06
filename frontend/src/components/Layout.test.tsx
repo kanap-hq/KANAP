@@ -1,10 +1,11 @@
 import React from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { Link, MemoryRouter, Route, Routes } from 'react-router-dom';
+import { Link, MemoryRouter, Route, Routes, createRoutesFromChildren } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import Layout from './Layout';
 import { registerLeaveGuard } from '../hooks/leaveGuard';
+import { DeferredPageLocation } from '../lib/deferredPage';
 
 vi.mock('react-i18next', async () => {
   // One stable `t`: keys render as themselves.
@@ -159,6 +160,54 @@ describe('Layout page scroller', () => {
 
     expect(scroller.scrollTop).toBe(0);
     expect(document.activeElement).toBe(screen.getByTestId('column'));
+  });
+});
+
+describe('Layout while another page loads', () => {
+  it('keeps the page on screen out of reach until the next page is ready', async () => {
+    let showNext: () => void = () => undefined;
+    const loadNext = new Promise<{ default: React.ComponentType }>((resolve) => {
+      showNext = () => resolve({ default: () => <div data-testid="next-page">next</div> });
+    });
+    const NextPage = React.lazy(() => loadNext);
+    const routeChildren = (
+      <Route element={<Layout />}>
+        <Route
+          path="/ops/opex"
+          element={<div data-testid="page"><Link to="/ops/next">go</Link></div>}
+        />
+        <Route path="/ops/next" element={<NextPage />} />
+      </Route>
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const { container } = render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={['/ops/opex']} useTransitions={false}>
+          <React.Suspense fallback={<div data-testid="spinner" />}>
+            <DeferredPageLocation routes={createRoutesFromChildren(routeChildren)}>
+              <Routes>{routeChildren}</Routes>
+            </DeferredPageLocation>
+          </React.Suspense>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    const scroller = container.querySelector('.kanap-app-scroll') as HTMLElement;
+    expect(scroller).not.toHaveAttribute('inert');
+    expect(getComputedStyle(scroller).pointerEvents).not.toBe('none');
+
+    fireEvent.click(screen.getByRole('link', { name: 'go' }));
+    // The old page stays on screen, but takes no pointer and no keyboard.
+    expect(screen.getByTestId('page')).toBeInTheDocument();
+    expect(scroller).toHaveAttribute('inert', '');
+    expect(scroller).toHaveAttribute('aria-busy', 'true');
+    expect(getComputedStyle(scroller).pointerEvents).toBe('none');
+
+    await act(async () => { showNext(); await loadNext; });
+    expect(await screen.findByTestId('next-page')).toBeInTheDocument();
+    expect(screen.queryByTestId('page')).toBeNull();
+    expect(scroller).not.toHaveAttribute('inert');
+    expect(scroller).not.toHaveAttribute('aria-busy');
+    expect(getComputedStyle(scroller).pointerEvents).not.toBe('none');
   });
 });
 

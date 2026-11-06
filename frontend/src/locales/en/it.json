@@ -2912,7 +2912,7 @@
       "flow": {
         "logicalFlow": "Logical flow",
         "legTemplate": "Leg template",
-        "noLegs": "No legs defined yet. Select source and target applications, then save the interface route.",
+        "noLegs": "No legs yet. They appear once the source and target applications are set.",
         "leg": "Leg",
         "fromTo": "From / to",
         "triggerType": "Trigger type",
