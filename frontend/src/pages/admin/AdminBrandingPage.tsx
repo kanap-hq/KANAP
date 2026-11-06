@@ -138,7 +138,8 @@ function HeaderPreview({ label, logoAlt, dark = false, logoUrl, showLogo }: Head
         borderColor: dark ? 'rgba(255,255,255,0.16)' : 'divider',
       }}
     >
-      <Typography variant="caption" sx={{ color: dark ? 'rgba(255,255,255,0.76)' : 'text.secondary' }}>
+      {/* Fixed colours: each preview keeps its own background whatever the page's mode. */}
+      <Typography variant="caption" sx={{ color: dark ? 'rgba(255,255,255,0.76)' : 'rgba(17,24,39,0.64)' }}>
         {label}
       </Typography>
       <Box sx={{ minHeight: 42, mt: 0.5, display: 'flex', alignItems: 'center' }}>
