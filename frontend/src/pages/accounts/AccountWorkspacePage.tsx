@@ -421,7 +421,8 @@ export default function AccountWorkspacePage() {
           <CreationActions
             onCreate={handleCreate}
             onCancel={isCreate ? leave : () => { void creation.cancelCreation(); }}
-            busy={!canEdit || creation.busy}
+            busy={!canEdit || creation.cancelling}
+            writing={creation.writing}
           />
         ) : undefined}
         nav={!isCreate && shownNav ? {

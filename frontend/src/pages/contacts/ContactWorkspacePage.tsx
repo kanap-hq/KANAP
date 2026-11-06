@@ -550,7 +550,8 @@ function ContactEditor({ id }: { id: string }) {
           <CreationActions
             onCreate={() => void handleCreate()}
             onCancel={isCreate ? leaveCreation : () => { void creation.cancelCreation(); }}
-            busy={!canEdit || creation.busy}
+            busy={!canEdit || creation.cancelling}
+            writing={creation.writing}
           />
         ) : (
           <>

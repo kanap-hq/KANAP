@@ -518,7 +518,8 @@ export default function CompanyWorkspacePage() {
           <CreationActions
             onCreate={handleCreate}
             onCancel={isCreate ? leave : () => { void creation.cancelCreation(); }}
-            busy={!canEdit || creation.busy}
+            busy={!canEdit || creation.cancelling}
+            writing={creation.writing}
           />
         ) : (fieldSaves > 0 || fieldSaved || (data && canDelete)) ? (
           <>

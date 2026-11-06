@@ -20,12 +20,12 @@ import { budgetLineContractConsistency } from '../contracts/contract-line-match'
 import { CapexItemsService, SpendItemsService } from './spend-items.service';
 import { hiddenCategoryLineCounts } from '../data-access/hidden-links';
 import { withCreatorCancelAccess } from '../data-access/creator-cancel-access';
-import { countChangesSinceCreation, withChildCount, type CreationChanges } from '../common/creation/creation-changes';
-import { assertCreatorAloneSinceCreation } from '../common/creation/creation-changes';
+import { assertCreatorAloneSinceCreation, countChangesSinceCreation, withChildCount, type CreationChanges } from '../common/creation/creation-changes';
 import { creationCancelExpired } from '../common/creation/creation-token';
+import { assertCreationToken } from '../common/creation/creation-routes';
+import { creationIncomplete } from '../common/creation/creation-incomplete';
 import {
-  assertBudgetLineCreationToken,
-  budgetLineIncomplete,
+  BUDGET_LINE_CREATION,
   creationBody,
   hasSuccessorLine,
   missingCreationFields,
@@ -117,13 +117,13 @@ export class BudgetLinesService {
     return { changes: withChildCount(changes, 'attachment', total) };
   }
 
-  /** The screen's "Create": 400 `BUDGET_LINE_INCOMPLETE` while the line lacks a field it needs. */
-  async completeCreation(id: string, opts: { manager: EntityManager }): Promise<{ complete: true }> {
+  /** The screen's "Create": 400 `CREATION_INCOMPLETE` while the line lacks a field it needs. */
+  async completeCreation(id: string, opts: { manager: EntityManager }): Promise<{ ok: true }> {
     const tenantId = await summaryTenantId(opts.manager);
     const missing = await missingCreationFields(opts.manager, tenantId, id);
     if (!missing) throw new NotFoundException('Budget line not found');
-    if (missing.fields.length > 0) throw budgetLineIncomplete(missing.fields, missing.names);
-    return { complete: true };
+    if (missing.fields.length > 0) throw creationIncomplete(missing.fields, missing.names);
+    return { ok: true };
   }
 
   /**
@@ -140,7 +140,7 @@ export class BudgetLinesService {
    */
   async cancelCreation(id: string, token: unknown, userId: string, opts: { manager: EntityManager }): Promise<void> {
     const tenantId = await summaryTenantId(opts.manager);
-    assertBudgetLineCreationToken(id, token, { tenantId, userId });
+    assertCreationToken(BUDGET_LINE_CREATION, id, token, { tenantId, userId });
     const line = await resolveBudgetLine(id, opts.manager);
     if (!(await lockBudgetLine(opts.manager, line.nature, tenantId, line.id, 'update'))) {
       throw new NotFoundException('Budget line not found');

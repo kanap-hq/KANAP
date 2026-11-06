@@ -55,13 +55,9 @@ import { PermissionLevel } from '../permissions/permissions.service';
 import { PermissionsService } from '../permissions/permissions.service';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { incidentViewerFromRequest, resolveIncidentViewer, taskIncidentVisibilitySql } from '../incidents/incident-visibility';
-import { assertTaskCreationToken, cancelTaskCreation, taskCreationChanges, withTaskCreationToken } from '../tasks/task-creation';
+import { cancelTaskCreation, readTaskCreationChanges } from '../tasks/task-creation';
+import { creationContextOf, withCreationToken } from '../common/creation/creation-routes';
 import type { CreationChanges } from '../common/creation/creation-changes';
-
-/** The tenant and the person of the request, for a creation token. */
-function creationSubject(req: any) {
-  return { tenantId: req?.tenant?.id ?? '', userId: req?.user?.sub ?? '' };
-}
 
 /**
  * What a task may name of its linked records: the modules the caller reads, and a Business
@@ -336,7 +332,7 @@ export class TasksController {
       req.user?.sub ?? null,
       { manager: req?.queryRunner?.manager, tenantId: req?.tenant?.id },
     );
-    return withTaskCreationToken(created, creationSubject(req));
+    return withCreationToken('tasks', created, creationContextOf(req));
   }
 
   /**
@@ -346,9 +342,8 @@ export class TasksController {
   @UseGuards(PermissionGuard)
   @RequireLevel('tasks', 'member')
   @Get(':id/creation')
-  async creationChanges(@Param('id') id: string, @Query('token') token: string, @Req() req: any): Promise<{ changes: CreationChanges }> {
-    assertTaskCreationToken(id, token, creationSubject(req));
-    return { changes: await taskCreationChanges(req?.queryRunner?.manager, creationSubject(req), id) };
+  creationChanges(@Param('id') id: string, @Query('token') token: string, @Req() req: any): Promise<{ changes: CreationChanges }> {
+    return readTaskCreationChanges(id, token, creationContextOf(req));
   }
 
   /**
@@ -359,9 +354,8 @@ export class TasksController {
   @UseGuards(PermissionGuard)
   @RequireLevel('tasks', 'member')
   @Delete(':id/creation')
-  async cancelCreation(@Param('id') id: string, @Body() body: { token?: string }, @Req() req: any): Promise<void> {
-    assertTaskCreationToken(id, body?.token, creationSubject(req));
-    await cancelTaskCreation(req?.queryRunner?.manager, this.deleteSvc, creationSubject(req), id);
+  cancelCreation(@Param('id') id: string, @Body() body: { token?: string }, @Req() req: any): Promise<void> {
+    return cancelTaskCreation(this.deleteSvc, id, body?.token, creationContextOf(req));
   }
 
   @UseGuards(PermissionGuard)

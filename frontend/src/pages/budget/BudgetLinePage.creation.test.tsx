@@ -108,7 +108,7 @@ function renderPage(entries: string[], options: Options = {}) {
     if (url === '/budget-lines/creation') return { data: created } as never;
     if (url === `/budget-lines/${ITEM_ID}/creation/complete`) {
       if (options.incomplete) {
-        throw { response: { status: 400, data: { code: 'BUDGET_LINE_INCOMPLETE', message: 'Missing', params: { fields: options.incomplete } } } };
+        throw { response: { status: 400, data: { code: 'CREATION_INCOMPLETE', message: 'Missing', params: { fields: options.incomplete } } } };
       }
       return { data: { complete: true } } as never;
     }

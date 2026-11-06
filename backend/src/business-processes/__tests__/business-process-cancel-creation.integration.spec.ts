@@ -98,7 +98,7 @@ async function testCreatorCancelsTheCreation() {
     await refusedAsExpired(controller.cancelCreation(created.id, { token: other.creation_token }, asCreator), 'other process');
     await refusedAsExpired(controller.cancelCreation(created.id, {}, asCreator), 'no token');
     const expired = issueCreationToken(
-      { tenantId, family: 'business-processes', recordId: created.id, userId: creatorId },
+      { tenantId, family: 'business_processes', recordId: created.id, userId: creatorId },
       { now: Date.now() - 25 * 60 * 60 * 1000 },
     );
     await refusedAsExpired(controller.cancelCreation(created.id, { token: expired }, asCreator), 'expired token');

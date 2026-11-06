@@ -6,7 +6,7 @@ import { RequireLevel } from '../auth/require-level.decorator';
 import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
 import { resolveToUuid } from '../common/resolve-item-id';
 import { TasksUnifiedService } from '../tasks/tasks-unified.service';
-import { withTaskCreationToken } from '../tasks/task-creation';
+import { withCreationToken } from '../common/creation/creation-routes';
 import { IncidentsService } from './services';
 import { incidentViewerFromContext } from './incident-visibility';
 
@@ -47,7 +47,7 @@ export class IncidentsTasksController {
       tenantId: ctx.tenantId,
     });
     // The token of "Cancel" of a task being created (`tasks/task-creation.ts`).
-    return withTaskCreationToken(created, { tenantId: ctx.tenantId, userId: ctx.userId || '' });
+    return withCreationToken('tasks', created, ctx);
   }
 
   // PATCH expects body.id of the task to update

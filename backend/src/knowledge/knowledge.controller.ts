@@ -38,8 +38,9 @@ import { InlineImageResolverService } from './inline-image-resolver.service';
 import { KnowledgeRelationsService } from './knowledge-relations.service';
 import { KnowledgeWorkflowService } from './knowledge-workflow.service';
 import { LongRunningRequest, OUTSIDE_WORK_TIMEOUTS } from '../common/request-db-timeouts';
-import { assertCreatorAloneSinceCreation, type CreationChanges } from '../common/creation/creation-changes';
-import { assertDocumentCreationToken, documentCreationChanges, withDocumentCreationToken } from './document-creation';
+import type { CreationChanges } from '../common/creation/creation-changes';
+import { readDocumentCreationChanges } from './document-creation';
+import { cancelCreation, withCreationToken } from '../common/creation/creation-routes';
 
 @UseGuards(JwtAuthGuard)
 @Controller('knowledge')
@@ -176,7 +177,7 @@ export class KnowledgeController {
   async create(@Body() body: any, @Tenant() ctx: TenantRequest) {
     const created = await this.docs.create(body, ctx.tenantId, ctx.userId || null, { manager: ctx.manager });
     // The token of "Cancel" of a document being created (`document-creation.ts`).
-    return withDocumentCreationToken(created, { tenantId: ctx.tenantId, userId: ctx.userId || '' });
+    return withCreationToken('documents', created, ctx);
   }
 
   // What a delete of `ids` would refuse, asked before the confirmation.
@@ -252,11 +253,8 @@ export class KnowledgeController {
     @Query('token') token: string,
     @Tenant() ctx: TenantRequest,
   ): Promise<{ changes: CreationChanges }> {
-    const manager = ctx.manager as EntityManager;
-    const id = await this.docs.resolveDocumentId(idOrRef, manager);
-    assertDocumentCreationToken(id, token, { tenantId: ctx.tenantId, userId: ctx.userId || '' });
-    await assertCreatorAloneSinceCreation(manager, ctx.tenantId, 'documents', id, ctx.userId || '');
-    return { changes: await documentCreationChanges(manager, ctx.tenantId, id) };
+    const id = await this.docs.resolveDocumentId(idOrRef, ctx.manager as EntityManager);
+    return readDocumentCreationChanges(id, token, ctx);
   }
 
   /**
@@ -273,11 +271,8 @@ export class KnowledgeController {
     @Body() body: { token?: string },
     @Tenant() ctx: TenantRequest,
   ): Promise<void> {
-    const manager = ctx.manager as EntityManager;
-    const id = await this.docs.resolveDocumentId(idOrRef, manager);
-    assertDocumentCreationToken(id, body?.token, { tenantId: ctx.tenantId, userId: ctx.userId || '' });
-    await assertCreatorAloneSinceCreation(manager, ctx.tenantId, 'documents', id, ctx.userId || '', { lock: true });
-    await this.docs.remove(id, ctx.userId || null, { manager });
+    const id = await this.docs.resolveDocumentId(idOrRef, ctx.manager as EntityManager);
+    await cancelCreation('documents', id, body?.token, ctx, (manager) => this.docs.remove(id, ctx.userId || null, { manager }));
   }
 
   @UseGuards(PermissionGuard)

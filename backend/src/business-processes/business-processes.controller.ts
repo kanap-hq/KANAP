@@ -5,7 +5,6 @@ import {
   Controller,
   Delete,
   Get,
-  NotFoundException,
   Param,
   Patch,
   Post,
@@ -32,8 +31,8 @@ import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-ti
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 import { csvExportFormat } from '../common/csv/csv-export.service';
 import { csvExportBody } from '../common/csv/send-csv-export';
-import { creationCancelExpired, issueCreationToken, verifyCreationToken } from '../common/creation/creation-token';
-import { assertCreatorAloneSinceCreation, countChangesSinceCreation, type CreationChanges } from '../common/creation/creation-changes';
+import { cancelCreation, creationContextOf, readCreationChanges, withCreationToken } from '../common/creation/creation-routes';
+import type { CreationChanges } from '../common/creation/creation-changes';
 
 @UseGuards(JwtAuthGuard)
 @Controller('business-processes')
@@ -110,14 +109,7 @@ export class BusinessProcessesController {
   @Post()
   async create(@Body() body: BusinessProcessUpsertDto, @Req() req: any) {
     const created = await this.svc.create(body, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
-    const creation_token = issueCreationToken({ tenantId: req?.tenant?.id ?? '', family: 'business-processes', recordId: created.id, userId: req.user?.sub ?? '' });
-    return Object.assign(created, { creation_token });
-  }
-
-  /** The token of `POST /business-processes` for this record, tenant and person, still valid; a 403 otherwise. */
-  private assertCreationToken(id: string, token: unknown, req: any): void {
-    const subject = { tenantId: req?.tenant?.id ?? '', family: 'business-processes', recordId: String(id ?? ''), userId: req?.user?.sub ?? '' };
-    if (!verifyCreationToken(token, subject)) throw creationCancelExpired();
+    return withCreationToken('business_processes', created, { tenantId: req?.tenant?.id ?? '', userId: req.user?.sub ?? '' });
   }
 
   /**
@@ -128,14 +120,9 @@ export class BusinessProcessesController {
   @UseGuards(PermissionGuard)
   @RequireLevel('business_processes', 'member')
   @Get(':id/creation')
-  async creationChanges(@Param('id') id: string, @Query('token') token: string, @Req() req: any): Promise<{ changes: CreationChanges }> {
-    this.assertCreationToken(id, token, req);
-    const manager = req?.queryRunner?.manager;
-    const tenantId = req?.tenant?.id ?? '';
-    const found = await manager.query('SELECT 1 FROM business_processes WHERE id = $1 AND tenant_id = $2', [id, tenantId]);
-    if (!found.length) throw new NotFoundException('Business process not found');
-    await assertCreatorAloneSinceCreation(manager, tenantId, 'business_processes', id, req?.user?.sub ?? '');
-    return { changes: await countChangesSinceCreation(manager, tenantId, 'business_processes', id) };
+  creationChanges(@Param('id') id: string, @Query('token') token: string, @Req() req: any): Promise<{ changes: CreationChanges }> {
+    const ctx = creationContextOf(req);
+    return readCreationChanges('business_processes', id, token, ctx);
   }
 
   /**
@@ -148,11 +135,9 @@ export class BusinessProcessesController {
   @UseGuards(PermissionGuard)
   @RequireLevel('business_processes', 'member')
   @Delete(':id/creation')
-  async cancelCreation(@Param('id') id: string, @Body() body: { token?: string }, @Req() req: any): Promise<void> {
-    this.assertCreationToken(id, body?.token, req);
-    const manager = req?.queryRunner?.manager;
-    await assertCreatorAloneSinceCreation(manager, req?.tenant?.id ?? '', 'business_processes', id, req?.user?.sub ?? '', { lock: true });
-    await this.deleteSvc.deleteBeingCreated(id, { manager, userId: req.user?.sub ?? null });
+  cancelCreation(@Param('id') id: string, @Body() body: { token?: string }, @Req() req: any): Promise<void> {
+    const ctx = creationContextOf(req);
+    return cancelCreation('business_processes', id, body?.token, ctx, (manager) => this.deleteSvc.deleteBeingCreated(id, { manager, userId: ctx.userId || null }));
   }
 
   @ReservedToUnscopedDataAccess()

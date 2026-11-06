@@ -52,7 +52,7 @@ import {
 } from './workspace/incidentWorkspace';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
-import { CreationActions, CreationPreview, useCreationReturn, useNewRecordCreate, useRecordCreation } from '../../components/workspace/creation';
+import { CreationActions, CreationPreview, useCreationReturn, useRecordCreation, useTitleCreation } from '../../components/workspace/creation';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 
 const TAB_KEYS = ['overview', 'journal', 'relations', 'documents', RECORD_HISTORY_TAB_KEY] as const;
@@ -136,10 +136,6 @@ export function IncidentWorkspacePage() {
     notified_parties: null,
     confidential: false,
   }), [profile?.id, routeId]);
-  // A refusal of the title typed on a new incident.
-  const [titleError, setTitleError] = React.useState<string | null>(null);
-  const creatingRef = React.useRef(false);
-  const newCreate = useNewRecordCreate({ setTitleError, requiredMessage: t('common:creation.titleRequired') });
   const [exportingPdf, setExportingPdf] = React.useState(false);
   // The incident review is an integrated document: its draft lives in the
   // editor, so every controlled transition has to drain it through this handle.
@@ -360,6 +356,35 @@ export function IncidentWorkspacePage() {
     queryKeyPrefixes: ['incidents'],
     onError: setError,
   });
+  // The title committed in the header creates the incident at once, with the defaults of
+  // `draftValues`; the page moves to it, every tab open, with Create and Cancel (or closes it,
+  // kept, when Create was clicked meanwhile). It is not confidential, so its creator always keeps
+  // access to it.
+  const titleCreation = useTitleCreation<Incident>({
+    isCreate,
+    requiredMessage: t('common:creation.titleRequired'),
+    post: (title) => incidentsApi.create({
+      title,
+      severity: 'minor',
+      status: draftValues.status,
+      detected_at: new Date().toISOString(),
+      reporter_user_id: draftValues.reporter_user_id,
+    }),
+    onCreated: (saved, token, finish) => {
+      void queryClient.invalidateQueries({ queryKey: ['incidents-ids'] });
+      if (finish) {
+        navigate(creationReturn, { replace: true });
+        return;
+      }
+      creation.startCreation({ recordId: saved.id, token, returnTo: creationReturn });
+      const savedRef = formatItemRef('incident', saved.item_number);
+      queryClient.setQueryData<Incident>(['incident', savedRef], saved);
+      const qs = listContextParams.toString();
+      navigate(`/it/incidents/${savedRef}/overview${qs ? `?${qs}` : ''}`, { replace: true });
+    },
+    errorMessage: (e) => getApiErrorMessage(e, t, t('workspace.incident.messages.createFailed')),
+    onStart: () => setError(null),
+  });
 
   const handleClose = React.useCallback(async () => {
     // A new incident left before it has a title goes back where the creation started.
@@ -381,12 +406,12 @@ export function IncidentWorkspacePage() {
   // still being typed is saved, then the incident is kept and closed.
   const createAction = React.useCallback(async () => {
     if (isCreate) {
-      newCreate.create(titleError);
+      titleCreation.create();
       return;
     }
     if (!(await flushAll())) return;
     creation.finishCreation();
-  }, [creation, flushAll, isCreate, newCreate, titleError]);
+  }, [creation, flushAll, isCreate, titleCreation]);
 
   const handleTabChange = React.useCallback(async (nextTab: string) => {
     if (nextTab === validTab) return;
@@ -410,53 +435,16 @@ export function IncidentWorkspacePage() {
     navigate(`/it/incidents/${target}/${validTab}${qs ? `?${qs}` : ''}`);
   }, [flushAll, navigate, searchParams, validTab]);
 
-  // The title committed in the header creates the incident at once, with the defaults of
-  // `draftValues`; the page moves to it, every tab open, with Create and Cancel (or closes it,
-  // kept, when Create was clicked meanwhile). It is not confidential, so its creator always keeps
-  // access to it.
-  const createIncident = React.useCallback(async (title: string) => {
-    if (!canEdit || creatingRef.current) return;
-    creatingRef.current = true;
-    setTitleError(null);
-    setError(null);
-    try {
-      const { creation_token: token, ...saved } = await incidentsApi.create({
-        title,
-        severity: 'minor',
-        status: draftValues.status,
-        detected_at: new Date().toISOString(),
-        reporter_user_id: draftValues.reporter_user_id,
-      });
-      if (newCreate.titleSettled()) {
-        void queryClient.invalidateQueries({ queryKey: ['incidents-ids'] });
-        navigate(creationReturn, { replace: true });
-        return;
-      }
-      creation.startCreation({ recordId: saved.id, token, returnTo: creationReturn });
-      void queryClient.invalidateQueries({ queryKey: ['incidents-ids'] });
-      const savedRef = formatItemRef('incident', saved.item_number);
-      queryClient.setQueryData<Incident>(['incident', savedRef], saved);
-      const qs = listContextParams.toString();
-      navigate(`/it/incidents/${savedRef}/overview${qs ? `?${qs}` : ''}`, { replace: true });
-    } catch (e) {
-      newCreate.titleSettled();
-      setTitleError(getApiErrorMessage(e, t, t('workspace.incident.messages.createFailed')));
-    } finally {
-      creatingRef.current = false;
-    }
-  }, [canEdit, creation, creationReturn, draftValues, listContextParams, navigate, newCreate, queryClient, t]);
-
   const handleTitleSave = React.useCallback((next: string) => {
     const trimmed = next.trim();
     if (!trimmed) return;
     if (isCreate) {
-      newCreate.titleSent();
-      void createIncident(trimmed);
+      if (canEdit) titleCreation.commit(trimmed);
       return;
     }
     if (!data || trimmed === data.title) return;
     void patchNow({ title: trimmed });
-  }, [createIncident, data, isCreate, newCreate, patchNow]);
+  }, [canEdit, data, isCreate, patchNow, titleCreation]);
 
   const handleConfidentiality = React.useCallback(async (confidential: boolean) => {
     if (!data || stale) return;
@@ -678,6 +666,7 @@ export function IncidentWorkspacePage() {
       {((isCreate && canEdit) || creation.beingCreated) && (
         <CreationActions
           busy={creation.cancelling}
+          writing={titleCreation.writing}
           onCreate={() => { void createAction(); }}
           onCancel={() => { if (isCreate) void handleClose(); else void cancelCreation(); }}
         />
@@ -747,11 +736,11 @@ export function IncidentWorkspacePage() {
         titleFallback={isCreate ? t('workspace.incident.newTitle') : t('workspace.incident.untitled')}
         canEditTitle={isCreate ? canEdit : editable}
         onTitleSave={handleTitleSave}
-        onTitleDraftChange={isCreate ? () => setTitleError(null) : undefined}
-        titleError={isCreate ? titleError : null}
+        onTitleDraftChange={isCreate ? () => titleCreation.setTitleError(null) : undefined}
+        titleError={isCreate ? titleCreation.titleError : null}
         titleAutoEdit={isCreate}
         titleOnCancel={isCreate ? () => { void handleClose(); } : undefined}
-        titleFocusRequest={newCreate.focusRequest}
+        titleFocusRequest={titleCreation.focusRequest}
         isCreate={isCreate}
         forceDrawerOpen={isCreate}
         onSaveShortcut={() => { if (!isCreate) void flushAll(); }}

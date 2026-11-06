@@ -47,7 +47,7 @@ import { portfolioLinksKey, usePortfolioRelationsBadge } from './workspace/portf
 import { unsavedConfirm, useKanapDialogs } from '../../components/design';
 import { carryListFilters } from '../../lib/listContext';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
-import { CreationActions, CreationPreview, useCreationReturn, useNewRecordCreate, useRecordCreation } from '../../components/workspace/creation';
+import { CreationActions, CreationPreview, useCreationReturn, useRecordCreation, useTitleCreation } from '../../components/workspace/creation';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 
 type TabKey = 'summary' | 'tasks' | 'timeline' | 'effort' | 'scoring' | 'relations' | 'knowledge' | typeof RECORD_HISTORY_TAB_KEY;
@@ -819,26 +819,17 @@ export default function ProjectWorkspacePage() {
     if (purposeEditorRef.current?.isDirty() && !(await purposeEditorRef.current.save())) return;
     await creation.cancelCreation();
   }, [creation]);
-  // A refusal of the name typed on a new project.
-  const [titleError, setTitleError] = React.useState<string | null>(null);
-  const newCreate = useNewRecordCreate({ setTitleError, requiredMessage: t('common:creation.titleRequired') });
-  // The name committed before the classification defaults were read: created once they are.
-  const [pendingName, setPendingName] = React.useState<string | null>(null);
-  const creatingRef = React.useRef(false);
-
-  // The name committed in the header creates the project at once (fast track), with the
-  // classification defaults the form would have sent; the page moves to it, every tab open,
+  // The name committed in the header creates the project at once, with the classification
+  // defaults the form would have sent (once they are read); the page moves to it, every tab open,
   // with Create and Cancel (or closes it, kept, when Create was clicked meanwhile).
-  const createProject = React.useCallback(async (name: string) => {
-    if (creatingRef.current) return;
-    creatingRef.current = true;
-    setTitleError(null);
-    setSaveError(null);
-    try {
-      const res = await api.post('/portfolio/projects', { ...withClassificationDefaults(form), origin: 'fast_track', name });
-      const { creation_token: token, ...created } = res.data;
-      if (newCreate.titleSettled()) {
-        void queryClient.invalidateQueries({ queryKey: ['portfolio-projects'], refetchType: 'none' });
+  const titleCreation = useTitleCreation<{ id: string; item_number: number }>({
+    isCreate,
+    requiredMessage: t('common:creation.titleRequired'),
+    ready: classificationReady,
+    post: async (name) => (await api.post('/portfolio/projects', { ...withClassificationDefaults(form), origin: 'fast_track', name })).data,
+    onCreated: (created, token, finish) => {
+      void queryClient.invalidateQueries({ queryKey: ['portfolio-projects'], refetchType: 'none' });
+      if (finish) {
         navigate(creationReturn, { replace: true });
         return;
       }
@@ -846,22 +837,12 @@ export default function ProjectWorkspacePage() {
       const reference = formatItemRef('project', created.item_number);
       // The page keeps its header while the full project loads.
       queryClient.setQueryData(['portfolio-project', reference, getProjectWorkspaceInclude('summary')], { activities: [], ...created });
-      void queryClient.invalidateQueries({ queryKey: ['portfolio-projects'], refetchType: 'none' });
       const qs = searchParams.toString();
       navigate(`/portfolio/projects/${reference}/summary${qs ? `?${qs}` : ''}`, { replace: true });
-    } catch (err) {
-      newCreate.titleSettled();
-      setTitleError(getApiErrorMessage(err, t, t('portfolio:workspace.project.messages.saveFailed')));
-    } finally {
-      creatingRef.current = false;
-    }
-  }, [creation, creationReturn, form, navigate, newCreate, queryClient, searchParams, t, withClassificationDefaults]);
-
-  React.useEffect(() => {
-    if (!isCreate || pendingName === null || !classificationReady) return;
-    setPendingName(null);
-    void createProject(pendingName);
-  }, [classificationReady, createProject, isCreate, pendingName]);
+    },
+    errorMessage: (err) => getApiErrorMessage(err, t, t('portfolio:workspace.project.messages.saveFailed')),
+    onStart: () => setSaveError(null),
+  });
 
   const closeWorkspace = React.useCallback(async () => {
     // A new project left before it has a name goes back where the creation started.
@@ -885,13 +866,13 @@ export default function ProjectWorkspacePage() {
   // being typed is saved, then the project is kept and closed.
   const createAction = React.useCallback(async () => {
     if (isCreate) {
-      newCreate.create(titleError);
+      titleCreation.create();
       return;
     }
     if (purposeEditorRef.current?.isDirty() && !(await purposeEditorRef.current.save())) return;
     if (hasUnsavedChanges && !(await handleSave())) return;
     creation.finishCreation();
-  }, [creation, handleSave, hasUnsavedChanges, isCreate, newCreate, titleError]);
+  }, [creation, handleSave, hasUnsavedChanges, isCreate, titleCreation]);
 
   const statusLabel = form?.status ? getProjectStatusLabel(t, form.status) : '';
   const statusColor = (PROJECT_STATUS_COLORS[form?.status] || 'default') as 'default' | 'primary' | 'secondary' | 'success' | 'error' | 'warning' | 'info';
@@ -954,18 +935,16 @@ export default function ProjectWorkspacePage() {
         canEditTitle={isCreate || canManage}
         onTitleSave={(value) => {
           if (isCreate) {
-            setTitleError(null);
-            newCreate.titleSent();
-            setPendingName(value);
+            titleCreation.commit(value);
             return;
           }
           void persistPanelPatch({ name: value });
         }}
-        onTitleDraftChange={isCreate ? () => setTitleError(null) : undefined}
-        titleError={isCreate ? titleError : undefined}
+        onTitleDraftChange={isCreate ? () => titleCreation.setTitleError(null) : undefined}
+        titleError={isCreate ? titleCreation.titleError : undefined}
         titleAutoEdit={isCreate}
         titleOnCancel={isCreate ? () => { void closeWorkspace(); } : undefined}
-        titleFocusRequest={newCreate.focusRequest}
+        titleFocusRequest={titleCreation.focusRequest}
         isCreate={isCreate}
         nav={!isCreate && total > 0 ? {
           currentIndex: index + 1,
@@ -1075,6 +1054,7 @@ export default function ProjectWorkspacePage() {
             {isCreate || creation.beingCreated ? (
               <CreationActions
                 busy={creation.cancelling}
+                writing={titleCreation.writing}
                 onCreate={() => { void createAction(); }}
                 onCancel={() => { if (isCreate) void closeWorkspace(); else void cancelCreation(); }}
               />

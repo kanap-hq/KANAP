@@ -27,7 +27,7 @@ import DeleteIconButton from '../../components/workspace/DeleteIconButton';
 import { connectionDeleteMessage } from './connectionDeleteMessage';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
-import { CreationActions, CreationPreview, useCreationReturn, useNewRecordCreate, useRecordCreation } from '../../components/workspace/creation';
+import { CreationActions, CreationPreview, focusWhenMounted, useCreationReturn, useRecordCreation, useTitleCreation } from '../../components/workspace/creation';
 import useIncompleteLeave from '../../components/workspace/creation/useIncompleteLeave';
 import { missingFieldsList } from '../../components/workspace/creation/missingFieldsList';
 import { useLeaveGuard } from '../../hooks/leaveGuard';
@@ -163,10 +163,6 @@ export default function ConnectionWorkspacePage() {
   const [deleting, setDeleting] = React.useState(false);
   const [pendingTopology, setPendingTopology] = React.useState<'server_to_server' | 'multi_server' | null>(null);
 
-  // A refusal of the name typed on a new connection.
-  const [titleError, setTitleError] = React.useState<string | null>(null);
-  const creatingRef = React.useRef(false);
-  const newCreate = useNewRecordCreate({ setTitleError, requiredMessage: t('messages.nameRequired') });
   const descriptionFlushRef = React.useRef<(() => Promise<void>) | null>(null);
   const notify = useNotify();
   const notifyAbsorbed = React.useCallback((items: AbsorbedAsset[] | undefined) => {
@@ -319,17 +315,7 @@ export default function ConnectionWorkspacePage() {
   dataRef.current = data;
   const focusField = React.useCallback((key: string) => {
     if (validTab !== 'overview') navigate(`/it/connections/${workspaceRouteId}/overview${searchParams.toString() ? `?${searchParams.toString()}` : ''}`);
-    let tries = 0;
-    const attempt = () => {
-      const input = document.querySelector<HTMLElement>(`[data-creation-field="${key}"] input, [data-creation-field="${key}"] [role="combobox"]`);
-      if (input) {
-        input.focus();
-        return;
-      }
-      tries += 1;
-      if (tries < 20) window.setTimeout(attempt, 25);
-    };
-    window.setTimeout(attempt, 0);
+    focusWhenMounted(() => document.querySelector<HTMLElement>(`[data-creation-field="${key}"] input, [data-creation-field="${key}"] [role="combobox"]`));
   }, [navigate, searchParams, validTab, workspaceRouteId]);
   const incompleteLeave = useIncompleteLeave({
     keys: 'it:workspace.connection.creation',
@@ -368,13 +354,12 @@ export default function ConnectionWorkspacePage() {
     [navigate, searchParams, validTab, workspaceRouteId],
   );
 
-  // A plain function: the create it calls is declared further down, with this render's creation.
+  // A plain function: the create it calls is declared further down.
   const handleTitleSave = (next: string) => {
     const trimmed = next.trim();
     if (!trimmed) return;
     if (isCreate) {
-      newCreate.titleSent();
-      void createConnection(trimmed);
+      titleCreation.commit(trimmed);
       return;
     }
     if (!data || trimmed === data.name) return;
@@ -533,57 +518,41 @@ export default function ConnectionWorkspacePage() {
   // nor end yet); the page moves to it, every tab open, with Create and Cancel. Create clicked
   // meanwhile checks it there.
   const creationCheckRef = React.useRef(false);
-  const createConnection = async (name: string) => {
-    if (creatingRef.current) return;
-    creatingRef.current = true;
-    setTitleError(null);
-    setError(null);
-    try {
-      const res = await api.post<ConnectionDetail & { creation_token: string }>('/connections/creation', { name });
-      const { creation_token: token, ...created } = res.data;
-      const check = newCreate.titleSettled();
+  const titleCreation = useTitleCreation<ConnectionDetail>({
+    isCreate,
+    requiredMessage: t('messages.nameRequired'),
+    post: async (name) => (await api.post<ConnectionDetail & { creation_token: string }>('/connections/creation', { name })).data,
+    onCreated: (created, token, check) => {
       creation.startCreation({ recordId: created.id, token, returnTo: creationReturn });
       // The page keeps its header while the full connection loads.
       setData({ ...DRAFT_CONNECTION, ...created });
       setLegs([]);
       navigate(`/it/connections/${created.connection_reference || created.id}/overview`, { replace: true });
       creationCheckRef.current = check;
-    } catch (e) {
-      newCreate.titleSettled();
-      setTitleError(getApiErrorMessage(e, t, t('messages.saveConnectionFailed')));
-    } finally {
-      creatingRef.current = false;
-    }
-  };
+    },
+    errorMessage: (e) => getApiErrorMessage(e, t, t('messages.saveConnectionFailed')),
+    onStart: () => setError(null),
+  });
 
   // Create: on the new page, the title is the only field; on a connection being created, what is
   // still being typed is saved, then the server checks what the connection needs. Missing fields are
   // named once and the first one gets the focus; otherwise the connection is kept and closed.
-  const [completing, setCompleting] = React.useState(false);
   const createAction = async () => {
     if (isCreate) {
-      newCreate.create(titleError);
+      titleCreation.create();
       return;
     }
-    const token = creation.token;
-    if (!data?.id || !token || completing) return;
+    if (!data?.id || !creation.token || creation.completing) return;
     await descriptionFlushRef.current?.();
-    setCompleting(true);
     setError(null);
     try {
-      await api.post(`/connections/${data.id}/creation/complete`, { token });
-      creation.finishCreation();
-    } catch (e) {
-      const answer = (e as { response?: { data?: { code?: unknown; params?: { fields?: unknown } } } })?.response?.data;
-      const fields = answer?.code === 'CREATION_INCOMPLETE' && Array.isArray(answer.params?.fields) ? answer.params.fields.map(String) : null;
-      if (fields && fields.length > 0) {
+      const fields = await creation.completeCreation();
+      if (fields) {
         setError(t('workspace.connection.creation.missing', { fields: missingFieldsList(fields.map(fieldLabel), i18n.resolvedLanguage || i18n.language) }));
         focusField(fields[0]);
-      } else {
-        setError(getApiErrorMessage(e, t, t('workspace.connection.creation.completeFailed')));
       }
-    } finally {
-      setCompleting(false);
+    } catch (e) {
+      setError(getApiErrorMessage(e, t, t('workspace.connection.creation.completeFailed')));
     }
   };
 
@@ -755,7 +724,8 @@ export default function ConnectionWorkspacePage() {
       )}
       {(isCreate || creation.beingCreated) && (
         <CreationActions
-          busy={creation.cancelling || completing}
+          busy={creation.cancelling || creation.completing}
+          writing={titleCreation.writing}
           onCreate={() => { void createAction(); }}
           onCancel={() => { void cancelAction(); }}
         />
@@ -812,12 +782,12 @@ export default function ConnectionWorkspacePage() {
         titleFallback={isCreate ? t('workspace.connection.newTitle') : t('workspace.connection.untitled')}
         canEditTitle={canManage}
         onTitleSave={handleTitleSave}
-        onTitleDraftChange={isCreate ? () => setTitleError(null) : undefined}
+        onTitleDraftChange={isCreate ? () => titleCreation.setTitleError(null) : undefined}
         titleRequiredMessage={t('messages.nameRequired')}
-        titleError={isCreate ? titleError : undefined}
+        titleError={isCreate ? titleCreation.titleError : undefined}
         titleAutoEdit={isCreate}
         titleOnCancel={isCreate ? () => { void handleClose(); } : undefined}
-        titleFocusRequest={newCreate.focusRequest}
+        titleFocusRequest={titleCreation.focusRequest}
         isCreate={isCreate}
         forceDrawerOpen={isCreate}
         nav={!isCreate && total > 0 ? {

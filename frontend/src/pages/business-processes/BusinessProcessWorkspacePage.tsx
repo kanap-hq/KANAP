@@ -11,7 +11,7 @@ import { useBusinessProcessNav } from '../../hooks/useBusinessProcessNav';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
 import { PortfolioMetadataItem, PortfolioStatusMetadata } from '../portfolio/workspace/PortfolioMetadataBar';
 import RecordDeleteButton from '../../components/workspace/RecordDeleteButton';
-import { CreationActions, CreationPreview, useCreationReturn, useNewRecordCreate, useRecordCreation } from '../../components/workspace/creation';
+import { CreationActions, CreationPreview, useCreationReturn, useRecordCreation, useTitleCreation } from '../../components/workspace/creation';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 import { STATUS_DISABLED, STATUS_ENABLED, normalizeStatus, type StatusValue } from '../../constants/status';
@@ -93,7 +93,7 @@ export default function BusinessProcessWorkspacePage() {
   const process = data && data.id === id ? data : undefined;
 
   const [saveError, setSaveError] = React.useState<string | null>(null);
-  // A refusal of the name typed in the header (a name another process has).
+  // A refusal of the name given to a process in the header (a name another process has).
   const [titleError, setTitleError] = React.useState<string | null>(null);
   React.useEffect(() => {
     setSaveError(null);
@@ -170,21 +170,15 @@ export default function BusinessProcessWorkspacePage() {
     queryKeyPrefixes: ['business-processes'],
     onError: setSaveError,
   });
-  const newCreate = useNewRecordCreate({ setTitleError, requiredMessage: t('businessProcesses.fields.nameRequired') });
-  const creatingRef = React.useRef(false);
-
   // The name committed in the header creates the process at once, enabled; the page moves to it,
   // every tab open, with Create and Cancel (or closes it, kept, when Create was clicked meanwhile).
-  const createProcess = React.useCallback(async (name: string) => {
-    if (creatingRef.current) return;
-    creatingRef.current = true;
-    setTitleError(null);
-    setSaveError(null);
-    try {
-      const res = await api.post<BusinessProcess & { creation_token: string }>('/business-processes', { name });
-      const { creation_token: token, ...created } = res.data;
+  const titleCreation = useTitleCreation<BusinessProcess>({
+    isCreate,
+    requiredMessage: t('businessProcesses.fields.nameRequired'),
+    post: async (name) => (await api.post<BusinessProcess & { creation_token: string }>('/business-processes', { name })).data,
+    onCreated: (created, token, finish) => {
       void queryClient.invalidateQueries({ queryKey: ['business-processes'], refetchType: 'none' });
-      if (newCreate.titleSettled()) {
+      if (finish) {
         navigate(creationReturn, { replace: true });
         return;
       }
@@ -192,15 +186,12 @@ export default function BusinessProcessWorkspacePage() {
       // The page keeps its header while the process loads again.
       queryClient.setQueryData<BusinessProcess>(['business-processes', created.id], { ...EMPTY_BUSINESS_PROCESS, ...created });
       navigate(withContext(`${LIST_PATH}/${created.id}/overview`), { replace: true });
-    } catch (err) {
-      newCreate.titleSettled();
-      setTitleError(isDuplicateError(err)
-        ? t('businessProcesses.fields.nameTaken')
-        : getApiErrorMessage(err, t, t('shared.messages.failedToCreate', { entity: t('businessProcesses.entity') })));
-    } finally {
-      creatingRef.current = false;
-    }
-  }, [creation, creationReturn, navigate, newCreate, queryClient, t, withContext]);
+    },
+    errorMessage: (err) => (isDuplicateError(err)
+      ? t('businessProcesses.fields.nameTaken')
+      : getApiErrorMessage(err, t, t('shared.messages.failedToCreate', { entity: t('businessProcesses.entity') }))),
+    onStart: () => setSaveError(null),
+  });
 
   const close = () => navigate(isCreate ? creationReturn : listPath);
   const goTo = (targetId: string | null, nextTab: TabKey = tab) => {
@@ -212,7 +203,7 @@ export default function BusinessProcessWorkspacePage() {
   // process is kept and closed.
   const createAction = async () => {
     if (isCreate) {
-      newCreate.create(titleError);
+      titleCreation.create();
       return;
     }
     if (!(await chainRef.current)) return;
@@ -298,17 +289,16 @@ export default function BusinessProcessWorkspacePage() {
         readOnly={!isCreate && !!process && !canEdit}
         onTitleSave={(value) => {
           if (isCreate) {
-            newCreate.titleSent();
-            void createProcess(value);
+            titleCreation.commit(value);
             return;
           }
           if (value !== process?.name) void patch({ name: value });
         }}
-        onTitleDraftChange={() => setTitleError(null)}
-        titleError={titleError}
+        onTitleDraftChange={() => (isCreate ? titleCreation.setTitleError(null) : setTitleError(null))}
+        titleError={isCreate ? titleCreation.titleError : titleError}
         titleAutoEdit={isCreate}
         titleOnCancel={isCreate ? close : undefined}
-        titleFocusRequest={newCreate.focusRequest}
+        titleFocusRequest={titleCreation.focusRequest}
         titleRequiredMessage={t('businessProcesses.fields.nameRequired')}
         isCreate={isCreate}
         forceDrawerOpen={isCreate}
@@ -349,6 +339,7 @@ export default function BusinessProcessWorkspacePage() {
             {beingCreated ? (
               <CreationActions
                 busy={creation.cancelling}
+                writing={titleCreation.writing}
                 onCreate={() => { void createAction(); }}
                 onCancel={() => { void cancelAction(); }}
               />

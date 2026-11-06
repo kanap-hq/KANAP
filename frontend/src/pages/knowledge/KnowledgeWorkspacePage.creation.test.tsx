@@ -251,6 +251,32 @@ describe('Document creation at the title', () => {
     expect(mocked.post.mock.calls.filter(([url]) => url === '/knowledge')).toHaveLength(1);
   });
 
+  it('waits for the autosave on its way before the save of Create, with the revision it answered', async () => {
+    renderPage(['/start']);
+    fireEvent.click(await screen.findByRole('button', { name: 'new document' }));
+    await createRunbook();
+    // The server refuses a save of an older revision; the first save is held on its way.
+    let revision = 1;
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    mocked.patch.mockImplementation(async (_url: string, body: any) => {
+      if (revision === 1) await held;
+      if (body.revision !== revision) throw { response: { status: 409, data: { message: 'Document revision conflict' } } };
+      revision += 1;
+      return { data: { ...detail, ...body, revision } } as never;
+    });
+    fireEvent.change(await screen.findByLabelText('Document body'), { target: { value: 'Heat the sugar' } });
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1), { timeout: 4000 });
+    fireEvent.change(screen.getByLabelText('Document body'), { target: { value: 'Heat the sugar. Stop at the colour.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(mocked.patch).toHaveBeenCalledTimes(1);
+    release();
+    await waitFor(() => expect(location()).toBe('/start'));
+    expect(mocked.patch).toHaveBeenCalledTimes(2);
+    expect(mocked.patch.mock.calls[1][1]).toEqual(expect.objectContaining({ revision: 2, content_markdown: 'Heat the sugar. Stop at the colour.' }));
+  }, 10000);
+
   it('shows the error under the empty title on Create, nothing created', async () => {
     renderPage(['/knowledge/new?library=runbooks']);
     await screen.findByRole('textbox', { name: TITLE });

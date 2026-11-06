@@ -3,7 +3,6 @@ import { EntityManager } from 'typeorm';
 import { ANALYTICS_LINK_TABLES, loadAnalyticsAxes } from '../analytics/analytics-axes.util';
 import { dimensionPhrase, missingRequiredDimensions } from './item-analytics.util';
 import { isLimitedTransaction } from '../data-access/line-write-checks';
-import { creationCancelExpired, verifyCreationToken } from '../common/creation/creation-token';
 import type { BudgetNature } from './budget-nature';
 import { readSuccessor } from './budget-line-lineage';
 
@@ -15,30 +14,19 @@ import { readSuccessor } from './budget-line-lineage';
  *   no required dimension yet. Every other route keeps the full rules (the API create, the budget
  *   file, the type change, the assistant).
  * - `POST /budget-lines/:id/creation/complete` (the screen's "Create") checks what a line needs
- *   (`missingCreationFields`); a line lacking any of it is refused with `BUDGET_LINE_INCOMPLETE` and
+ *   (`missingCreationFields`); a line lacking any of it is refused with `CREATION_INCOMPLETE` and
  *   the fields by stable key, which the screen names, marks and focuses.
  * - The creation token of `common/creation` opens the preflight and "Cancel" (`GET` and
  *   `DELETE :id/creation`) for the creator, on that line only, while nobody else has written on it
  *   and no line continues it (403 `CREATION_CANCEL_EXPIRED` otherwise).
  */
 
-/** The family of the creation token of a budget line. */
-export const BUDGET_LINE_CREATION_FAMILY = 'budget-lines';
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 /**
- * The creation token of `POST /budget-lines/creation` for this line (its uuid), tenant and person,
- * still valid; 403 `CREATION_CANCEL_EXPIRED` otherwise. The routes check it, and "Cancel"
+ * The family of the creation token of a budget line (`common/creation/creation-routes.ts`): its table
+ * in the history inventory. The routes check the token, and "Cancel"
  * (`BudgetLinesService.cancelCreation`) checks it again itself before its delete window.
  */
-export function assertBudgetLineCreationToken(id: unknown, token: unknown, subject: { tenantId: string; userId: string }): void {
-  const recordId = String(id ?? '');
-  const valid = UUID.test(recordId) && verifyCreationToken(token, {
-    tenantId: subject.tenantId, family: BUDGET_LINE_CREATION_FAMILY, recordId, userId: subject.userId,
-  });
-  if (!valid) throw creationCancelExpired();
-}
+export const BUDGET_LINE_CREATION = 'spend_items';
 
 /**
  * Whether another line continues this one (`spend_items.predecessor_id`, a type change): "Cancel"
@@ -137,13 +125,3 @@ export async function missingCreationFields(
   return { nature: line.nature, fields, names };
 }
 
-/** 400 `BUDGET_LINE_INCOMPLETE`: the line lacks these fields; `params.fields` holds their stable keys. */
-export function budgetLineIncomplete(fields: CreationField[], names: string[]): BadRequestException {
-  return new BadRequestException({
-    statusCode: 400,
-    error: 'Bad Request',
-    code: 'BUDGET_LINE_INCOMPLETE',
-    message: `Missing: ${names.join(', ')}.`,
-    params: { fields },
-  });
-}

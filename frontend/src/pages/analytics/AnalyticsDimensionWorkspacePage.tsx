@@ -269,7 +269,8 @@ export default function AnalyticsDimensionWorkspacePage() {
     <CreationActions
       onCreate={handleCreate}
       onCancel={isCreate ? leave : () => { void creation.cancelCreation(); }}
-      busy={!canEdit || creation.busy}
+      busy={!canEdit || creation.cancelling}
+      writing={creation.writing}
     />
   ) : canDelete && data && !isDefault ? (
     <DeleteIconButton onClick={() => setConfirmOpen(true)} disabled={deleting} />

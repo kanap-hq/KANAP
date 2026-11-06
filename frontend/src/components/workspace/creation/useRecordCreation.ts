@@ -80,7 +80,8 @@ export function creationChangeCount(changes: CreationChanges): number {
  * The creation of a record created at its title (lot 1a): `startCreation` keeps the token of the
  * create route and the starting address; `beingCreated` holds while the person stays on that
  * record, which then shows Create and Cancel (`CreationActions`). `finishCreation` (Create) ends
- * the creation and goes back where it started, the record kept; `cancelCreation` (Cancel) deletes
+ * the creation and goes back where it started, the record kept (`completeCreation` first asks the
+ * server whether the record is complete, for the families that check it); `cancelCreation` (Cancel) deletes
  * it, after a confirmation when more than the title was given, and goes back there too, unless
  * `{ leave: false }` (a leave already on its way elsewhere). Leaving the record otherwise (another
  * record on this page, or another page) ends the creation: the record stays.
@@ -105,6 +106,7 @@ export default function useRecordCreation({
     () => undefined,
   );
   const [cancelling, setCancelling] = React.useState(false);
+  const [completing, setCompleting] = React.useState(false);
 
   // Leaving the record ends its creation: the page goes, or shows another record.
   React.useEffect(() => {
@@ -122,6 +124,29 @@ export default function useRecordCreation({
     if (key) clearCreation(key);
     navigate(current?.returnTo || listPath);
   }, [key, listPath, navigate]);
+
+  /**
+   * Create on a family the server checks (`POST <apiBase>/:id/creation/complete`): the creation ends
+   * as `finishCreation` and null comes back, or the keys of the fields still missing
+   * (`CREATION_INCOMPLETE`). Any other refusal throws.
+   */
+  const completeCreation = React.useCallback(async (): Promise<string[] | null> => {
+    const current = key ? getCreation(key) : undefined;
+    if (!recordId || !current || completing) return null;
+    setCompleting(true);
+    try {
+      await api.post(`${apiBase}/${recordId}/creation/complete`, { token: current.token });
+    } catch (err) {
+      const answer = (err as { response?: { data?: { code?: unknown; params?: { fields?: unknown } } } })?.response?.data;
+      const fields = answer?.code === 'CREATION_INCOMPLETE' && Array.isArray(answer.params?.fields) ? answer.params.fields.map(String) : [];
+      if (fields.length > 0) return fields;
+      throw err;
+    } finally {
+      setCompleting(false);
+    }
+    finishCreation();
+    return null;
+  }, [apiBase, completing, finishCreation, key, recordId]);
 
   /** True once the record is deleted; false when the person kept it, or the cancel was refused. */
   const cancelCreation = React.useCallback(async (options?: { leave?: boolean }): Promise<boolean> => {
@@ -161,5 +186,5 @@ export default function useRecordCreation({
     }
   }, [apiBase, cancelling, dialogs, key, listPath, navigate, onError, queryClient, queryKeyPrefixes, recordId, recordLabel, t]);
 
-  return { beingCreated: !!entry, token: entry?.token ?? null, cancelling, startCreation, finishCreation, cancelCreation };
+  return { beingCreated: !!entry, token: entry?.token ?? null, cancelling, completing, startCreation, finishCreation, completeCreation, cancelCreation };
 }

@@ -50,7 +50,7 @@ import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/
 import BudgetMetadataBar from './workspace/BudgetMetadataBar';
 import BudgetPropertiesDrawer, { LINE_FIELD_ATTR, RunBuild } from './workspace/BudgetPropertiesDrawer';
 import useIncompleteLeave from '../../components/workspace/creation/useIncompleteLeave';
-import { CreationActions, CreationPreview, useCreationReturn, useNewRecordCreate, useRecordCreation } from '../../components/workspace/creation';
+import { CreationActions, CreationPreview, focusWhenMounted, useCreationReturn, useRecordCreation, useTitleCreation } from '../../components/workspace/creation';
 import type { BudgetTabHandle } from '../../components/finance/BudgetTab';
 import type { AllocationsTabHandle } from '../../components/finance/AllocationsTab';
 import { namesInSentence, useHeldChoices } from '../../components/finance/heldChoices';
@@ -826,17 +826,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     const selector = key.startsWith('dimension:')
       ? `[${ANALYTICS_AXIS_FIELD_ATTR}="${key.slice('dimension:'.length)}"] input`
       : `[${LINE_FIELD_ATTR}="${key}"] input`;
-    let tries = 0;
-    const attempt = () => {
-      const input = rootRef.current?.querySelector<HTMLElement>(selector);
-      if (input) {
-        input.focus();
-        return;
-      }
-      tries += 1;
-      if (tries < 20) window.setTimeout(attempt, 25);
-    };
-    window.setTimeout(attempt, 0);
+    focusWhenMounted(() => rootRef.current?.querySelector<HTMLElement>(selector));
   }, []);
   const incompleteLeave = useIncompleteLeave({
     keys: 'ops:budget.creation',
@@ -992,32 +982,29 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
   }, [costCenterElsewhere, form.account_id, form.paying_company_id, patchNow]);
 
   // ----- The title creates the line; Create and Cancel (lot 1c) -----
-  const [titleError, setTitleError] = React.useState<string | null>(null);
-  const newCreate = useNewRecordCreate({ setTitleError, requiredMessage: t('common:creation.titleRequired') });
-  // The title committed before the currency and the person's place were known: created once they are.
-  const [pendingName, setPendingName] = React.useState<string | null>(null);
-  const creatingRef = React.useRef(false);
   // Create was clicked while the title created the line: its check runs once the line shows.
   const createAfterOpenRef = React.useRef(false);
 
   // The title creates the line at once with the defaults (the tenant's currency, today, the type of
   // the address) and, for a person with limited access, its place; the page moves to it, every tab
   // open, with Create and Cancel.
-  const createLine = React.useCallback(async (name: string) => {
-    if (creatingRef.current) return;
-    creatingRef.current = true;
-    setTitleError(null);
-    setSaveError(null);
-    try {
+  // A title committed before the currency and the person's place were known waits for them.
+  const titleCreation = useTitleCreation<{ id: string; nature?: string; reference?: string; item_number: number }>({
+    isCreate,
+    requiredMessage: t('common:creation.titleRequired'),
+    ready: placementDefault.ready && !currencyLoading && placementReady,
+    post: async (name) => {
       const place = placementAsked
         ? { paying_company_id: toNull(placementDraft.paying_company_id), cost_center_id: toNull(placementDraft.cost_center_id) }
         : placementDefault.companyId ? { paying_company_id: placementDefault.companyId } : {};
       const res = await api.post('/budget-lines/creation', {
         nature, product_name: name, currency: defaultSpendCurrency, effective_start: todayYmd(), ...place,
       });
-      const { creation_token: token, ...created } = res.data ?? {};
+      return res.data ?? {};
+    },
+    onCreated: (created, token, finish) => {
       const lineReference = (created.reference || formatItemRef('budget', created.item_number)) as string;
-      if (newCreate.titleSettled()) createAfterOpenRef.current = true;
+      if (finish) createAfterOpenRef.current = true;
       creation.startCreation({ recordId: created.id, token, returnTo: creationReturn });
       // The page keeps its header while it moves to the line: no wait on the resolve and the detail.
       queryClient.setQueryData(['budget-line-resolve', lineReference], { id: created.id, nature: created.nature ?? nature, reference: lineReference });
@@ -1026,59 +1013,41 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
       const sp = buildListContextParams();
       sp.delete('nature');
       navigate(`/ops/budget/${lineReference}/overview?${sp.toString()}`, { replace: true });
-    } catch (e) {
-      newCreate.titleSettled();
-      setTitleError(getApiErrorMessage(e, t, t(config.createFailed)));
-    } finally {
-      creatingRef.current = false;
-    }
-  }, [buildListContextParams, config.createFailed, creation, creationReturn, defaultSpendCurrency, nature, navigate, newCreate, placementAsked, placementDefault.companyId, placementDraft, queryClient, t]);
-
+    },
+    errorMessage: (e) => getApiErrorMessage(e, t, t(config.createFailed)),
+    onStart: () => setSaveError(null),
+  });
+  const setTitleError = titleCreation.setTitleError;
+  // The place first: the title waits, and says so.
   React.useEffect(() => {
-    if (!isCreate || pendingName === null || !placementDefault.ready || currencyLoading) return;
-    // The place first: the title waits, and says so.
-    if (!placementReady) {
-      setTitleError(t('budget.creation.placeFirst'));
-      return;
-    }
-    setPendingName(null);
-    void createLine(pendingName);
-  }, [createLine, currencyLoading, isCreate, pendingName, placementDefault.ready, placementReady, t]);
+    if (titleCreation.pending && placementDefault.ready && !currencyLoading && !placementReady) setTitleError(t('budget.creation.placeFirst'));
+  }, [currencyLoading, placementDefault.ready, placementReady, setTitleError, t, titleCreation.pending]);
 
   // Create on a line being created: what is still being typed is saved, then the server checks the
   // fields the line needs. Missing ones are named once, marked, and the first one gets the focus;
   // otherwise the line is kept and closed.
-  const [completing, setCompleting] = React.useState(false);
   const [missingFields, setMissingFields] = React.useState<ReadonlySet<string>>(() => new Set());
   const createAction = React.useCallback(async () => {
     if (isCreate) {
-      newCreate.create(titleError);
+      titleCreation.create();
       return;
     }
-    const token = creation.token;
-    if (!uuid || !token || completing) return;
+    if (!uuid || !creation.token || creation.completing) return;
     if (!(await flushAll())) return;
-    setCompleting(true);
     setSaveError(null);
     try {
-      await api.post(`/budget-lines/${uuid}/creation/complete`, { token });
-      setMissingFields(new Set());
-      invalidateBudgetLists(queryClient);
-      creation.finishCreation();
-    } catch (e) {
-      const answer = (e as { response?: { data?: { code?: unknown; params?: { fields?: unknown } } } })?.response?.data;
-      const fields = answer?.code === 'BUDGET_LINE_INCOMPLETE' && Array.isArray(answer.params?.fields) ? answer.params.fields.map(String) : null;
-      if (fields && fields.length > 0) {
-        setMissingFields(new Set(fields));
+      const fields = await creation.completeCreation();
+      setMissingFields(new Set(fields ?? []));
+      if (fields) {
         setSaveError(t('budget.creation.missing', { fields: missingFieldsList(fields.map(fieldLabel), locale) }));
         focusLineField(fields[0]);
       } else {
-        setSaveError(getApiErrorMessage(e, t, t('budget.creation.completeFailed')));
+        invalidateBudgetLists(queryClient);
       }
-    } finally {
-      setCompleting(false);
+    } catch (e) {
+      setSaveError(getApiErrorMessage(e, t, t('budget.creation.completeFailed')));
     }
-  }, [completing, creation, fieldLabel, flushAll, focusLineField, isCreate, newCreate, queryClient, t, titleError, uuid]);
+  }, [creation, fieldLabel, flushAll, focusLineField, isCreate, queryClient, t, titleCreation, uuid]);
   // Cancel on a line being created: what is still being typed is saved first, so the confirmation
   // counts it, then the line is deleted (`useRecordCreation`).
   const cancelLine = React.useCallback(async () => {
@@ -1179,18 +1148,16 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
         canEditTitle={canEdit}
         onTitleSave={(value) => {
           if (isCreate) {
-            setTitleError(null);
-            newCreate.titleSent();
-            setPendingName(value);
+            titleCreation.commit(value);
           } else {
             void patchNow({ product_name: value });
           }
         }}
         onTitleDraftChange={isCreate ? () => setTitleError(null) : undefined}
-        titleError={isCreate ? titleError : undefined}
+        titleError={isCreate ? titleCreation.titleError : undefined}
         titleAutoEdit={isCreate}
         titleOnCancel={isCreate ? () => { void closeWorkspace(); } : undefined}
-        titleFocusRequest={newCreate.focusRequest}
+        titleFocusRequest={titleCreation.focusRequest}
         isCreate={isCreate}
         forceDrawerOpen={isCreate}
         drawerOpenRequest={requiredLeave.drawerOpenRequest + fieldDrawerRequest}
@@ -1281,7 +1248,8 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
             )}
             {isCreate || creation.beingCreated ? (
               <CreationActions
-                busy={creation.cancelling || completing}
+                busy={creation.cancelling || creation.completing}
+                writing={titleCreation.writing}
                 onCreate={() => { void createAction(); }}
                 onCancel={() => { if (isCreate) void closeWorkspace(); else void cancelLine(); }}
               />
