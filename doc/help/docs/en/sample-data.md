@@ -23,7 +23,7 @@ The set describes Fromage & Co, a fictional cheese maker:
 
 Dates follow the current year, so the budget always looks up to date. Loading takes about two minutes.
 
-The set loads in the workspace's language: English, French, German or Spanish (English for any other language). Titles, descriptions, incidents and documents are translated. The names of companies, people, suppliers and applications stay as they are, and a few local names of the French, Dutch and Italian companies keep their own language. After an erase, a new load comes in the same language.
+The set loads in the workspace's language: English, French, German or Spanish (English for any other language). Titles, descriptions, task labels, incidents and documents are translated. Asset types added by the set are named in that language. The names of companies, people, suppliers and applications stay as they are, and a few local names of the French, Dutch and Italian companies keep their own language. After an erase, a new load comes in the same language.
 
 The fictional users have no password and no access. They exist so that owners, assignees and project teams look realistic. KANAP sends them no e-mail, and the erase step removes them.
 

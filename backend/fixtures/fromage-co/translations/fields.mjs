@@ -9,8 +9,9 @@
 //
 // Not listed on purpose: the `analytics:*` columns of the budget files and 27-analytics-values.csv
 // (fixture-dimensions.mjs names those values in the tenant's seed language), the consolidation
-// columns of the charts of accounts (the API derives them from the group chart), the asset kinds
-// (matched against the IT operations settings), and the task labels (keywords).
+// columns of the charts of accounts (the API derives them from the group chart), and the asset
+// kinds (the file names them in English so the runner can match the IT operations settings; the
+// kinds the fixture adds are named in the dataset language through t() in the runner).
 
 /** The languages the data set is generated in, besides English. */
 export const TRANSLATED_LANGUAGES = ['fr', 'de', 'es'];
@@ -40,8 +41,8 @@ export const TRANSLATED_COLUMNS = {
     'current_situation', 'expected_benefits', 'risks',
   ],
   '18-assets.csv': ['notes'],
-  '19-tasks.csv': ['title', 'description', 'related_object_name'],
-  '19b-incident-tasks.csv': ['title', 'description'],
+  '19-tasks.csv': ['title', 'description', 'related_object_name', 'labels'],
+  '19b-incident-tasks.csv': ['title', 'description', 'labels'],
   '20-app-instances.csv': ['notes'],
   '21-interfaces.csv': ['name', 'business_purpose'],
   '22-interface-bindings.csv': ['trigger_details', 'env_notes'],
