@@ -179,7 +179,7 @@ async function testCreatedAtTitleThenCompleted() {
     await crud.update(created.id, { destination_asset_id: db }, tenantId, creatorId, opts);
     assert.deepEqual(await complete(), { ok: true });
 
-    // Complete, it stays complete (`source_asset_id: null` alone falls back to `source_server_id`).
+    // Complete, a source cleared to nothing is refused, so the connection stays complete.
     await assert.rejects(
       crud.update(created.id, { source_asset_id: null, source_server_id: null, source_entity_code: null }, tenantId, creatorId, opts),
       /source: select an asset or an entity/,
