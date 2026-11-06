@@ -1639,7 +1639,7 @@
           "hint": {
             "budget": "Invite your colleagues by creating their user accounts. Use the Authentication menu to set up SSO with Entra ID.",
             "cartography": "Invite an application or asset owner.",
-            "portfolio": "Add yourself as a contributor: team, project availability. No team yet? Create one in Settings › Teams."
+            "portfolio": "Add yourself as a contributor and set your project availability."
           }
         },
         "map_application": {

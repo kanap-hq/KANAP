@@ -47,9 +47,9 @@ These are the five steps of the **Your first five steps** tile on the home page,
 
 **Portfolio > Contributors**, your own profile, opened by the step
 
-**What to do.** Set your team and your **Project availability**. No team yet? Create one in **Portfolio > Settings**, **Teams** tab.
+**What to do.** Set your **Project availability**.
 
-**What you see.** The portfolio plans with contributors: their team and the days per month they give to projects feed the capacity reports.
+**What you see.** The days per month you give to projects feed the capacity reports.
 
 ## Next
 

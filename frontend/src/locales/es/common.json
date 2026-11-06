@@ -1639,7 +1639,7 @@
           "hint": {
             "budget": "Invite a sus colegas creando sus cuentas de usuario. Use el menú Autenticación para configurar el SSO con Entra ID.",
             "cartography": "Invite a un responsable de aplicación o de activo.",
-            "portfolio": "Añádase como colaborador: equipo, disponibilidad para proyectos. ¿Aún no hay equipo? Créelo en Configuración › Equipos."
+            "portfolio": "Añádase como colaborador e indique su disponibilidad para proyectos."
           }
         },
         "map_application": {

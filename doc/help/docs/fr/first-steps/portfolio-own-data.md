@@ -47,9 +47,9 @@ Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le
 
 **Portefeuille > Contributeurs**, votre propre fiche, ouverte par le pas
 
-**Le geste.** Renseignez votre équipe et votre **Disponibilité projet**. Pas encore d'équipe ? Créez-la dans **Portefeuille > Paramètres**, onglet **Équipes**.
+**Le geste.** Renseignez votre **Disponibilité projet**.
 
-**Ce que vous lisez.** Le portefeuille se planifie avec les contributeurs : leur équipe et les jours par mois qu'ils consacrent aux projets alimentent les rapports de capacité.
+**Ce que vous lisez.** Les jours par mois que vous consacrez aux projets alimentent les rapports de capacité.
 
 ## Et ensuite
 

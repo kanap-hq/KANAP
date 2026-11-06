@@ -47,9 +47,9 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 
 **Portfolio > Mitwirkende**, Ihr eigenes Profil, vom Schritt geöffnet
 
-**Was Sie tun.** Tragen Sie Ihr Team und Ihre **Projektverfügbarkeit** ein. Noch kein Team? Legen Sie es unter **Portfolio > Einstellungen**, Reiter **Teams**, an.
+**Was Sie tun.** Tragen Sie Ihre **Projektverfügbarkeit** ein.
 
-**Was Sie sehen.** Das Portfolio plant mit den Mitwirkenden: Ihr Team und die Tage pro Monat, die sie Projekten widmen, speisen die Kapazitätsberichte.
+**Was Sie sehen.** Die Tage pro Monat, die Sie Projekten widmen, speisen die Kapazitätsberichte.
 
 ## Wie es weitergeht
 
