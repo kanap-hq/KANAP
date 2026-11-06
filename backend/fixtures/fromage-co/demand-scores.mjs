@@ -1,60 +1,32 @@
-// Scores three Fromage demands on the tenant's default criteria. The criterion
+// Scores the Fromage demands on the tenant's default criteria. The criterion
 // and value ids are created per tenant, so the fixture names them and the
-// runner resolves the ids after the requests import. The labels are the
-// English ones seeded by PortfolioCriteriaService.seedDefaultCriteria. A
-// tenant that changed that set is left unscored.
+// runner resolves the ids after the requests import. Names and labels are the
+// ones seeded by PortfolioCriteriaService.seedDefaultCriteria, in the workspace
+// seed language (default-criteria.labels.json). A tenant that changed that set
+// is left unscored.
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const SEED_LANGUAGES = ['en', 'fr', 'de', 'es'];
+const SEED = JSON.parse(readFileSync(
+  path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../src/portfolio/default-criteria.labels.json'),
+  'utf8',
+));
+
+/** The default criteria in one seed language, in seed order. English for any other language. */
+export function criteriaForLanguage(language) {
+  const lang = SEED_LANGUAGES.includes(language) ? language : 'en';
+  return SEED.criteria.map((criterion) => ({
+    name: criterion.name[lang],
+    inverted: criterion.inverted === true,
+    weight: criterion.weight,
+    values: criterion.values.map((value) => value.label[lang]),
+  }));
+}
 
 /** The eight default criteria, in seed order, with the direction the score uses. */
-export const DEFAULT_CRITERIA = [
-  {
-    name: 'Business value',
-    inverted: false,
-    weight: 1,
-    values: ['0-10k€', '10-50k€', '50-200k€', '200-500k€', '>500k€', 'Mandatory'],
-  },
-  {
-    name: 'Strategic alignment',
-    inverted: false,
-    weight: 1,
-    values: ['Low', 'Medium', 'High', 'Top'],
-  },
-  {
-    name: 'Project costs',
-    inverted: true,
-    weight: 1,
-    values: ['No direct cost', '0-10k€', '10-50k€', '50-200k€', '200-500k€', '>500k€'],
-  },
-  {
-    name: 'ROI',
-    inverted: false,
-    weight: 1,
-    values: ['Not quantifiable', '>10y', '5-10y', '2-5y', '1-2y', '<1y'],
-  },
-  {
-    name: 'Risk level',
-    inverted: true,
-    weight: 1,
-    values: ['Negligible', 'Low', 'Medium', 'High', 'Top'],
-  },
-  {
-    name: 'Urgency',
-    inverted: false,
-    weight: 1,
-    values: ['Low', 'Medium', 'High', 'Critical'],
-  },
-  {
-    name: 'Time estimation IT',
-    inverted: true,
-    weight: 1,
-    values: ['0-10 MD', '10-20 MD', '20-50 MD', '>50 MD'],
-  },
-  {
-    name: 'Time estimation Business',
-    inverted: true,
-    weight: 1,
-    values: ['0-10 MD', '10-20 MD', '20-50 MD', '>50 MD'],
-  },
-];
+export const DEFAULT_CRITERIA = criteriaForLanguage('en');
 
 /**
  * Every demand of 17-portfolio-requests.csv. The labels are positions on
@@ -133,11 +105,11 @@ function asMap(value) {
   return {};
 }
 
-/** Why `criteria` is not the default English set, or null when it is. Disabled criteria are ignored. */
-export function defaultCriteriaReason(criteria) {
+/** Why `criteria` is not `expected`, or null when it matches. Disabled criteria are ignored. */
+function reasonAgainst(criteria, expected) {
   const enabled = (criteria ?? []).filter((criterion) => criterion?.enabled !== false);
-  if (enabled.length !== DEFAULT_CRITERIA.length) {
-    return `the tenant has ${enabled.length} enabled criteria and the default set has ${DEFAULT_CRITERIA.length}`;
+  if (enabled.length !== expected.length) {
+    return `the tenant has ${enabled.length} enabled criteria and the default set has ${expected.length}`;
   }
   const byName = new Map();
   for (const criterion of enabled) {
@@ -145,17 +117,28 @@ export function defaultCriteriaReason(criteria) {
     if (byName.has(name)) return `criterion '${name}' is duplicated`;
     byName.set(name, criterion);
   }
-  for (const expected of DEFAULT_CRITERIA) {
-    const criterion = byName.get(expected.name);
-    if (!criterion) return `criterion '${expected.name}' is missing`;
-    if ((criterion.inverted === true) !== expected.inverted) return `criterion '${expected.name}' has a different direction`;
-    if (Number(criterion.weight) !== expected.weight) return `criterion '${expected.name}' has a different weight`;
+  for (const item of expected) {
+    const criterion = byName.get(item.name);
+    if (!criterion) return `criterion '${item.name}' is missing`;
+    if ((criterion.inverted === true) !== item.inverted) return `criterion '${item.name}' has a different direction`;
+    if (Number(criterion.weight) !== item.weight) return `criterion '${item.name}' has a different weight`;
     const labels = orderedValues(criterion).map((value) => String(value?.label ?? '').trim());
-    if (labels.length !== expected.values.length || labels.some((label, index) => label !== expected.values[index])) {
-      return `criterion '${expected.name}' has different values`;
+    if (labels.length !== item.values.length || labels.some((label, index) => label !== item.values[index])) {
+      return `criterion '${item.name}' has different values`;
     }
   }
   return null;
+}
+
+/** The seed language `criteria` matches, or null. */
+function seedLanguageOf(criteria) {
+  return SEED_LANGUAGES.find((language) => reasonAgainst(criteria, criteriaForLanguage(language)) === null) ?? null;
+}
+
+/** Why `criteria` is not the default set in any seed language, or null when it is. Disabled criteria are ignored. */
+export function defaultCriteriaReason(criteria) {
+  if (seedLanguageOf(criteria)) return null;
+  return reasonAgainst(criteria, DEFAULT_CRITERIA);
 }
 
 /**
@@ -202,10 +185,10 @@ export function sameCriteriaValues(stored, next) {
 
 /**
  * Resolves DEMAND_SCORES against the tenant's criteria and demands.
- * `skipped` is set when the criteria are not the default English ones: the
- * caller then changes nothing. A demand the tenant does not hold is named in
- * `missing` and the others are still scored. `translate` gives a demand's
- * name in the language of the data set (the names below are English).
+ * `skipped` is set when the criteria are not the default set in any seed
+ * language: the caller then changes nothing. A demand the tenant does not hold
+ * is named in `missing` and the others are still scored. `translate` gives a
+ * demand's name in the language of the data set (the names below are English).
  *
  * @returns {{
  *   skipped: boolean,
@@ -215,9 +198,11 @@ export function sameCriteriaValues(stored, next) {
  * }}
  */
 export function planDemandScores(criteria, requests, translate = (text) => text) {
-  const reason = defaultCriteriaReason(criteria);
-  if (reason) return { skipped: true, reason, missing: [], assignments: [] };
+  const language = seedLanguageOf(criteria);
+  if (!language) return { skipped: true, reason: defaultCriteriaReason(criteria), missing: [], assignments: [] };
 
+  const local = criteriaForLanguage(language);
+  const byEnglishName = new Map(DEFAULT_CRITERIA.map((item, index) => [item.name, local[index]]));
   const byName = new Map(
     (criteria ?? [])
       .filter((criterion) => criterion?.enabled !== false)
@@ -234,8 +219,11 @@ export function planDemandScores(criteria, requests, translate = (text) => text)
     }
     const criteriaValues = {};
     for (const [criterionName, label] of Object.entries(demand.values)) {
-      const criterion = byName.get(criterionName);
-      const value = orderedValues(criterion).find((item) => String(item?.label ?? '').trim() === label);
+      const expected = byEnglishName.get(criterionName);
+      const valueIndex = DEFAULT_CRITERIA.find((item) => item.name === criterionName)?.values.indexOf(label) ?? -1;
+      const localLabel = expected?.values[valueIndex];
+      const criterion = byName.get(expected?.name);
+      const value = orderedValues(criterion).find((item) => String(item?.label ?? '').trim() === localLabel);
       if (!criterion?.id || !value?.id) {
         return {
           skipped: true,

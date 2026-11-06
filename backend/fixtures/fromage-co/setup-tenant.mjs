@@ -972,10 +972,10 @@ async function importCsv(name, route, extraQuery = '') {
 }
 
 /**
- * Fills the default English criteria of every demand, so the list shows distinct scores.
- * The criterion ids belong to the tenant: they are resolved by name and label. A tenant
- * whose criteria are not that set is left as it is. A demand that already holds these
- * values is left as it is, so a re-run changes nothing.
+ * Fills the default criteria of every demand, in the workspace language, so the list
+ * shows distinct scores. The criterion ids belong to the tenant: they are resolved by
+ * name and label. A tenant whose criteria are not that set is left as it is. A demand
+ * that already holds these values is left as it is, so a re-run changes nothing.
  */
 async function scoreRequests() {
   const payload = await apiGet('/portfolio/criteria');
