@@ -40,6 +40,21 @@ const CONNECTION = {
   criticality: 'business_critical',
 };
 
+const INTERFACE_LINK = {
+  id: 'link-1',
+  binding_id: 'bind-1',
+  connection: {
+    id: CONNECTION.id,
+    connection_reference: CONNECTION.connection_reference,
+    name: CONNECTION.name,
+    topology: CONNECTION.topology,
+    lifecycle: CONNECTION.lifecycle,
+    criticality: CONNECTION.criticality,
+    data_class: 'internal',
+    contains_pii: false,
+  },
+};
+
 const BINDING = {
   id: 'bind-1',
   interface_id: 'iface-1',
@@ -67,14 +82,31 @@ const BINDING = {
 type RenderOptions = {
   canManage?: boolean;
   bindings?: typeof BINDING[];
+  connectionLinks?: typeof INTERFACE_LINK[];
 };
+
+function bindingLinksPayload(bindingId: string, connectionLinks: typeof INTERFACE_LINK[]) {
+  return connectionLinks
+    .filter((link) => link.binding_id === bindingId)
+    .map((link) => ({
+      id: link.id,
+      interface_binding_id: link.binding_id,
+      connection_id: link.connection.id,
+      notes: null,
+      connection: link.connection,
+    }));
+}
 
 function renderMatrix({
   canManage = true,
   bindings = [],
+  connectionLinks = [INTERFACE_LINK],
 }: RenderOptions = {}) {
   get.mockImplementation(async (url: string) => {
     if (url === '/interfaces/iface-1/bindings') return { data: { items: bindings } };
+    if (url === '/interfaces/iface-1/connection-links') return { data: { items: connectionLinks } };
+    const bindingLinks = /^\/interface-bindings\/([^/]+)\/connection-links$/.exec(url);
+    if (bindingLinks) return { data: { items: bindingLinksPayload(bindingLinks[1], connectionLinks) } };
     if (url === '/applications/app-src/instances') {
       return { data: [{ id: 'inst-src', application_id: 'app-src', environment: 'prod' }] };
     }
@@ -135,6 +167,35 @@ describe('InterfaceBindingsMatrix connection picker', () => {
   afterEach(async () => {
     cleanup();
     await i18n.changeLanguage('en');
+  });
+
+  it('shows each cell connection and the missing-connection warning before a cell is opened', async () => {
+    renderMatrix({
+      bindings: [
+        BINDING,
+        {
+          ...BINDING,
+          id: 'bind-2',
+          environment: 'dev',
+        },
+      ],
+      connectionLinks: [INTERFACE_LINK],
+    });
+
+    expect(await screen.findByText('CNX-4 · Facturation')).toBeInTheDocument();
+    expect(screen.getByText('Connexion manquante')).toBeInTheDocument();
+    expect(screen.getByText("Aucune connexion d'infrastructure liée")).toBeInTheDocument();
+    expect(screen.getByText('Actif')).toBeInTheDocument();
+    expect(get).toHaveBeenCalledWith('/interfaces/iface-1/connection-links');
+    expect(get.mock.calls.some(([url]) => String(url).startsWith('/interface-bindings/'))).toBe(false);
+
+    const linkedCell = screen.getByText('CNX-4 · Facturation').closest('[role="button"]');
+    if (!linkedCell) throw new Error('Linked cell is not a button');
+    fireEvent.click(linkedCell);
+    await waitFor(() => {
+      expect(get).toHaveBeenCalledWith('/interface-bindings/bind-1/connection-links');
+    });
+    expect(get).not.toHaveBeenCalledWith('/interface-bindings/bind-2/connection-links');
   });
 
   it('shows topology, lifecycle and criticality by their labels', async () => {
