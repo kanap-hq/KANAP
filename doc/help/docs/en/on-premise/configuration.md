@@ -146,7 +146,9 @@ The number of migrations changes from version to version. On later starts it is 
 |------|---------|
 | `[entrypoint] Migrations complete (N executed).` | The database is up to date. N is the number of migrations that ran at this start. |
 | `[VERSION] KANAP <version>` | Informational. The version the API runs, the same as the `version` field of `/api/config/public`. |
-| `[entrypoint] DB not ready or migration failed (attempt N): ... Retrying` | The API cannot reach or use the database. It tries 30 times, 2 seconds apart, then stops. Check `DATABASE_URL`, the PostgreSQL rules and `sslmode` (see [Required: database](#required-database)). |
+| `[entrypoint] DB not ready (attempt N): ... Retrying in 2000ms...` | The API cannot reach the database. It tries 30 times, 2 seconds apart, then stops with `[entrypoint] DB not ready after 30 attempts: ...`. Check `DATABASE_URL`, the PostgreSQL rules and `sslmode` (see [Required: database](#required-database)). |
+| `[entrypoint] DATABASE_URL resolves to ... PostgreSQL role ...`, then `[entrypoint] No migration ran.` | The application role has `SUPERUSER` or `BYPASSRLS` and KANAP could not remove them. Start-up stopped before the migrations. Follow the message (see the role rules in [Required: database](#required-database)). |
+| `[entrypoint] A migration failed, not retried: ...` | The next line, `[entrypoint] Failed statement: ...`, shows the SQL statement that failed. The pending migrations were rolled back: the database is as before this start. Fix the cause or deploy the previous version. |
 | `[ENV] run mode: ...` | Always printed. Shows the mode the API runs in: `development`, `production` or `unspecified`. |
 | `[ENV] APP_ENV is not set: production rules apply to links, browser origins and platform administration. Set APP_ENV=production (or development on a workstation).` | Printed in unspecified mode (the message shows the value when `APP_ENV` is set to something else). Set `APP_ENV=production` if users reach KANAP over HTTPS. |
 | `[CONFIG] APP_BASE_URL is not set: ...` | Password reset and invitation emails, notification links and sign-in redirects are refused. Set `APP_BASE_URL`. |
