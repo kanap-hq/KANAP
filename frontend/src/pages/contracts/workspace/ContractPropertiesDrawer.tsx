@@ -237,7 +237,6 @@ export default function ContractPropertiesDrawer({ values, isCreate = false, err
             statusLabel={t('opex.status.enabled')}
             statusOffLabel={t('opex.status.disabled')}
             disabledAtLabel={t('contracts.fields.endOfValidity')}
-            disabledAtHelperText={t('contracts.fields.endOfValidityHint')}
           />
         </Box>
         {!isCreate && (

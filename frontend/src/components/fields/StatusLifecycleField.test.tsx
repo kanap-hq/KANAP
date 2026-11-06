@@ -258,7 +258,7 @@ describe('StatusLifecycleField', () => {
       expect(screen.queryByText(message)).not.toBeInTheDocument();
       fireEvent.blur(input);
       expect(screen.queryByText(message)).not.toBeInTheDocument();
-      expect(screen.getByText('Leave blank to keep active indefinitely.')).toBeInTheDocument();
+      expect(screen.queryByText('Leave blank to keep active indefinitely.')).not.toBeInTheDocument();
       expect(onDisabledAtChange).toHaveBeenCalledTimes(1);
     });
 
@@ -402,12 +402,18 @@ describe('StatusLifecycleField', () => {
       await i18n.changeLanguage('en');
     });
 
-    it('labels the date field, its hint and the calendar button when no props are given', () => {
+    it('labels the date field and the calendar button, with no sentence under the date', () => {
       renderField({ status: STATUS_ENABLED });
       expect(screen.getByText('End of validity')).toBeInTheDocument();
-      expect(screen.getByText('Leave blank to keep active indefinitely.')).toBeInTheDocument();
+      expect(screen.queryByText('Leave blank to keep active indefinitely.')).not.toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Open calendar' })).toBeInTheDocument();
       expect(screen.queryByText('Disabled At')).not.toBeInTheDocument();
+    });
+
+    it('shows the disabled reason the caller passes, and marks the date invalid', () => {
+      renderField({ status: STATUS_ENABLED, disabledAtError: true, disabledAtHelperText: 'Choose a later date' });
+      expect(screen.getByText('Choose a later date')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText(i18n.t('common:labels.datePlaceholder'))).toHaveAttribute('aria-invalid', 'true');
     });
 
     it('keeps the label and hint given by the caller', () => {
@@ -421,7 +427,7 @@ describe('StatusLifecycleField', () => {
       await i18n.changeLanguage('fr');
       renderField({ status: STATUS_ENABLED });
       expect(screen.getByText('Fin de validité')).toBeInTheDocument();
-      expect(screen.getByText('Laisser vide pour rester actif indéfiniment.')).toBeInTheDocument();
+      expect(screen.queryByText('Laisser vide pour rester actif indéfiniment.')).not.toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Ouvrir le calendrier' })).toBeInTheDocument();
     });
   });

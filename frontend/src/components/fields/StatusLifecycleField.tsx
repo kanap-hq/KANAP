@@ -219,12 +219,13 @@ const StatusLifecycleField: React.FC<StatusLifecycleFieldProps> = ({
     onStatusChange(deriveStatusFromDisabledAt(iso));
   };
 
-  // The caller's error and its text win; otherwise an invalid blurred text shows its message, over
-  // the caller's hint (budget lines and contracts pass one).
+  // The caller's error text wins (the disabled reason). Otherwise an invalid blurred text shows
+  // its message, over a helper the caller passed. At rest the date stands alone: an empty end
+  // date already means there is no end.
   const ownError = invalid && !focused;
   const shownHelperText = disabledAtError && disabledAtHelperText
     ? disabledAtHelperText
-    : ownError ? t('labels.dateInvalid') : disabledAtHelperText ?? t('lifecycleField.endOfValidityHint');
+    : ownError ? t('labels.dateInvalid') : disabledAtHelperText || undefined;
 
   return (
     <Stack spacing={1.5} alignItems="flex-start">

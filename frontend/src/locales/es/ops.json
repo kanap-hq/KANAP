@@ -138,7 +138,6 @@
       "notes": "Notas",
       "notesPlaceholder": "p. ej., renovación negociada en el T3",
       "endOfValidity": "Fin de validez",
-      "endOfValidityHint": "Dejar en blanco para permanecer activo indefinidamente.",
       "costCenter": "Centro de coste",
       "costCenterCompanyHint": "Este centro de coste pertenece a {{company}}.",
       "runBuild": "Run o build"
@@ -307,7 +306,6 @@
       "effectiveStart": "Inicio de vigencia",
       "lifecycle": "Ciclo de vida",
       "endOfValidity": "Fin de validez",
-      "endOfValidityHint": "Dejar en blanco para permanecer activo indefinidamente.",
       "created": "Creado el",
       "updated": "Actualizado el",
       "notes": "Notas",
@@ -453,7 +451,6 @@
       "billingFrequency": "Facturación",
       "lifecycle": "Ciclo de vida",
       "endOfValidity": "Fin de validez",
-      "endOfValidityHint": "Déjelo en blanco para mantener el contrato activo.",
       "created": "Creado el",
       "updated": "Actualizado el",
       "notes": "Notas"

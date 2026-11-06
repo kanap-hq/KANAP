@@ -138,7 +138,6 @@
       "notes": "Notizen",
       "notesPlaceholder": "z. B. Verlängerung im Q3 verhandelt",
       "endOfValidity": "Ende der Gültigkeit",
-      "endOfValidityHint": "Leer lassen, um unbegrenzt aktiv zu bleiben.",
       "costCenter": "Kostenstelle",
       "costCenterCompanyHint": "Diese Kostenstelle gehört zu {{company}}.",
       "runBuild": "Run oder Build"
@@ -307,7 +306,6 @@
       "effectiveStart": "Beginn der Gültigkeit",
       "lifecycle": "Lebenszyklus",
       "endOfValidity": "Ende der Gültigkeit",
-      "endOfValidityHint": "Leer lassen, um unbegrenzt aktiv zu bleiben.",
       "created": "Erstellt am",
       "updated": "Aktualisiert am",
       "notes": "Notizen",
@@ -453,7 +451,6 @@
       "billingFrequency": "Abrechnung",
       "lifecycle": "Lebenszyklus",
       "endOfValidity": "Ende der Gültigkeit",
-      "endOfValidityHint": "Leer lassen, damit der Vertrag aktiv bleibt.",
       "created": "Erstellt am",
       "updated": "Aktualisiert am",
       "notes": "Notizen"

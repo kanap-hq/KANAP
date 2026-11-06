@@ -1198,7 +1198,6 @@
   },
   "lifecycleField": {
     "endOfValidity": "Fin de validité",
-    "endOfValidityHint": "Laisser vide pour rester actif indéfiniment.",
     "activeUntil": "Actif jusqu'au {{date}}"
   },
   "unsaved": {
