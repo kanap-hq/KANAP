@@ -466,6 +466,8 @@ Während einer Testphase zeigt zusätzlich ein Etikett in der oberen Leiste die 
 
 Endet eine Testphase ohne Abonnement, bleibt der Arbeitsbereich 30 Tage lang lesbar. Danach wird er mit allen Daten gelöscht. Schließen Sie vor diesem Datum ein Abonnement ab, bleibt der Arbeitsbereich unverändert erhalten.
 
+Im Cloud-Dienst erhält die Person, die die Testphase gestartet hat, während der Testphase einige E-Mails von KANAP und ein Dankeschön, sobald der Arbeitsbereich ein Abonnement abschließt. Jede E-Mail der Testphase endet mit einem Link, der die folgenden mit einem Klick abbestellt. Das Dankeschön wird in jedem Fall gesendet.
+
 Ist ein Wechsel zur monatlichen Abrechnung geplant, zeigt ihn eine dritte Zeile an, zum Beispiel „Wechselt am 7. Okt. 2027 zu monatlich.“ Klicken Sie in dieser Zeile auf **Jährlich beibehalten**, um den Wechsel abzubrechen.
 
 ### Aktionen

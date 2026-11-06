@@ -466,6 +466,8 @@ Pendant un essai, une pastille dans la barre du haut indique aussi les jours res
 
 Lorsqu'un essai se termine sans abonnement, l'espace de travail reste consultable pendant 30 jours. Il est ensuite supprimé avec toutes ses données. Un abonnement souscrit avant cette date conserve l'espace de travail tel quel.
 
+Sur le service cloud, la personne qui a démarré l'essai reçoit quelques e-mails de KANAP pendant l'essai, puis un remerciement quand l'espace de travail souscrit un abonnement. Chaque e-mail d'essai se termine par un lien qui arrête les suivants en un clic. Le remerciement est envoyé dans tous les cas.
+
 Lorsqu'un passage à la facturation mensuelle est prévu, une troisième ligne l'indique, par exemple « Passe en mensuel le 7 oct. 2027. » Cliquez sur **Rester en annuel** sur cette ligne pour annuler ce passage.
 
 ### Actions
