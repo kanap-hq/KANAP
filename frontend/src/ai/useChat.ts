@@ -896,6 +896,20 @@ export function useChat() {
         // Nothing reached Plaid: the message leaves the list, the attachments stay in the composer.
         setError(err.message);
         setMessages((prev) => prev.filter((m) => m.id !== userMsgId && m.id !== assistantId));
+        // This send created the conversation only to hold the upload. Remove it and
+        // return to a new conversation so a refusal does not leave an empty entry.
+        // The typed text is put back by the workspace. A delete error is swallowed:
+        // the list refresh still runs.
+        if (conversationId === null && activeConversationId) {
+          const createdId = activeConversationId;
+          conversationIdRef.current = null;
+          setConversationId(null);
+          try {
+            await aiConversationsApi.remove(createdId);
+          } catch {
+            // Ignore: the conversation list is refreshed by the workspace either way.
+          }
+        }
         return false;
       }
       if (err.name === 'AbortError') {
