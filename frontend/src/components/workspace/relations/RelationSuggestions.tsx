@@ -50,7 +50,9 @@ export default function RelationSuggestions<T extends RelationSuggestion>({
     {
       key: 'via',
       header: t('workspace.application.relations.columns.via'),
-      width: 200,
+      // Wraps inside 140px, like a technology's servers, so the phrase stays readable in a narrow frame.
+      width: 140,
+      wrap: true,
       hideOrder: 1,
       render: (row) => (
         <Box component="span" sx={{ color: 'kanap.text.secondary' }}>
