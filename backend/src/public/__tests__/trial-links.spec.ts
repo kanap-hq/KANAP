@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import * as assert from 'node:assert/strict';
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, GoneException } from '@nestjs/common';
 import { PublicController } from '../public.controller';
 import { Features } from '../../config/features';
 import { validateStartupEnv } from '../../common/env';
@@ -51,8 +51,11 @@ function signupBody(slug: string, email: string) {
   return { org: 'Acme IT', slug, email, country_iso: 'FR', captchaToken: 'captcha-token' };
 }
 
+/** How the stored sign-up looks when activation is attempted. */
+type ActivationSignup = 'pending' | 'missing' | 'used' | 'expired';
+
 /** A controller on fakes that records every write and every email. */
-function buildController() {
+function buildController(signupState: ActivationSignup = 'pending') {
   const writes: string[] = [];
   const sent: Array<{ to: string; text: string }> = [];
   const pendingSignup = {
@@ -61,11 +64,17 @@ function buildController() {
     org_name: 'Acme IT',
     email: 'owner@example.invalid',
     country_iso: 'FR',
-    activated_at: null,
-    expires_at: new Date(Date.now() + 60 * 60 * 1000),
+    activated_at: signupState === 'used' ? new Date('2026-01-01T00:00:00Z') : null,
+    // A used sign-up is also past its date, so a check that looks at the date
+    // first would answer 410. Activation must keep that case a bad request.
+    expires_at: signupState === 'pending'
+      ? new Date(Date.now() + 60 * 60 * 1000)
+      : new Date(Date.now() - 60 * 1000),
   };
   const trialSignups = {
-    findOne: async (options: any) => (options?.where?.token_hash ? { ...pendingSignup } : null),
+    findOne: async (options: any) => (
+      signupState !== 'missing' && options?.where?.token_hash ? { ...pendingSignup } : null
+    ),
     create: (row: any) => ({ ...row }),
     save: async (row: any) => {
       writes.push('trial signup');
@@ -210,6 +219,38 @@ async function testTenantAddressFromConfiguration() {
   assert.equal(await activatedTenantUrl({ APP_ENV: 'development' }, request('lvh.me')), 'http://acme.lvh.me');
 }
 
+async function testExpiredSignupIsGone() {
+  await withConfig(PROD_CLOUD, async () => {
+    const { controller, writes } = buildController('expired');
+    await assert.rejects(controller.activateTrial({ token: 'activation-token' }, UNKNOWN_HOST), (error: unknown) => {
+      assert.ok(error instanceof GoneException);
+      assert.equal(error.getStatus(), 410);
+      assert.match(error.message, /^token expired$/);
+      return true;
+    });
+    assert.deepEqual(writes, [], 'an expired link creates nothing');
+  });
+}
+
+async function testUnknownAndUsedSignupsStayBadRequest() {
+  const cases = [
+    { state: 'missing' as const, message: /^invalid or expired token$/ },
+    { state: 'used' as const, message: /^token already used$/ },
+  ];
+  for (const { state, message } of cases) {
+    await withConfig(PROD_CLOUD, async () => {
+      const { controller, writes } = buildController(state);
+      await assert.rejects(controller.activateTrial({ token: 'activation-token' }, UNKNOWN_HOST), (error: unknown) => {
+        assert.ok(error instanceof BadRequestException);
+        assert.equal(error.getStatus(), 400);
+        assert.match(error.message, message);
+        return true;
+      });
+      assert.deepEqual(writes, [], 'nothing is created');
+    });
+  }
+}
+
 async function testTenantAddressNotConfigured() {
   await withConfig({ MARKETING_BASE_URL: 'https://www.example.test' }, async () => {
     const { controller, writes } = buildController();
@@ -241,6 +282,8 @@ async function main() {
   await testConfiguredMarketingAddress();
   await testDevelopmentFollowsOnlyALocalHost();
   await testTenantAddressFromConfiguration();
+  await testExpiredSignupIsGone();
+  await testUnknownAndUsedSignupsStayBadRequest();
   await testTenantAddressNotConfigured();
   console.log('trial-links.spec: ok');
 }
