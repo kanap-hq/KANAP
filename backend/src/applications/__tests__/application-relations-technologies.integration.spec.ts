@@ -90,7 +90,7 @@ async function testTechnologiesDeclaredAndHostedMerged() {
     assert.equal(tomcat.version_unknown, true);
     assert.deepEqual(tomcat.via.map((v) => v.asset_id), [seed.servers.etl1]);
 
-    assert.deepEqual(res.processes, [{ id: seed.processes.linked, name: 'Order to cash', status: 'enabled', owner_name: 'Claire Dubois' }]);
+    assert.deepEqual(res.processes, [{ id: seed.processes.linked, name: 'Order to cash', path: 'Order to cash', status: 'enabled', owner_name: 'Claire Dubois' }]);
   });
 }
 

@@ -1,5 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
+import { businessProcessPathSql } from '../../business-processes/business-process-tree';
 import { ICU_COLLATION } from '../list-engine/sql-fragments';
 import { ACTIVE_BY_DISABLED_AT, Bind, LookupRequest, LookupSpec, parseLookupRequest, runLookup } from './reference-lookup';
 
@@ -137,10 +138,16 @@ export const ANALYTICS_VALUE_LOOKUP: LookupSpec = {
   offered: ACTIVE_BY_DISABLED_AT,
 };
 
+/** Names from the top of the tree ("Production › Aging"). Searched, so a parent's name finds the child. */
+const BUSINESS_PROCESS_PATH = businessProcessPathSql('t');
+
 export const BUSINESS_PROCESS_LOOKUP: LookupSpec = {
   table: 'business_processes',
-  columns: { id: 't.id', name: 't.name', status: 't.status' },
+  columns: { id: 't.id', name: 't.name', path: BUSINESS_PROCESS_PATH, status: 't.status' },
   label: 't.name',
+  // A path that starts with the text ranks with the names that start with it.
+  prefixes: [BUSINESS_PROCESS_PATH],
+  search: [BUSINESS_PROCESS_PATH],
   offered: ACTIVE_BY_DISABLED_AT,
 };
 

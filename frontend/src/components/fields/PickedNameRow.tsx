@@ -10,6 +10,8 @@ type Props = {
   href?: string;
   /** Shown faded (a disabled object stays listed). */
   muted?: boolean;
+  /** The path, when the name is a sub-process. */
+  title?: string;
   /** Hover-revealed removal, absent for readers. */
   onRemove?: () => void;
   removeLabel?: string;
@@ -21,7 +23,7 @@ type Props = {
  * processes): a 26px line, the height of a panel field, and a small cross revealed on hover and
  * on keyboard focus, as the remove action of the relations tables.
  */
-export default function PickedNameRow({ children, href, muted = false, onRemove, removeLabel, removeDisabled }: Props) {
+export default function PickedNameRow({ children, href, muted = false, title, onRemove, removeLabel, removeDisabled }: Props) {
   return (
     <Box
       sx={(theme) => ({
@@ -42,6 +44,7 @@ export default function PickedNameRow({ children, href, muted = false, onRemove,
       <Box
         component={href ? RouterLink : 'span'}
         {...(href ? { to: href } : {})}
+        title={title}
         sx={{
           flex: 1,
           minWidth: 0,

@@ -134,7 +134,7 @@ export type RelatedTechnology = {
   via: Array<{ asset_id: string; asset_name: string | null; host_name: string | null }>;
   declarations: Array<{ link_id: string; technology_version_id: string | null; version_label: string | null }>;
 };
-export type RelatedProcess = { id: string; name: string; status: string | null; owner_name: string | null };
+export type RelatedProcess = { id: string; name: string; path: string; status: string | null; owner_name: string | null };
 export type ApplicationRelations = {
   year: number;
   budget_column: { key: string; label: string };
@@ -240,7 +240,13 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
     const deploymentServers = ctx.access.technologies ? await this.technologyLinks.deploymentServersOfApplication(app.id, linkOpts) : null;
     const processes = ctx.access.processes
       ? ((await this.technologyLinks.processesOfApplication(app.id, linkOpts)).items as any[])
-        .map((row): RelatedProcess => ({ id: row.id, name: row.name, status: row.status ?? null, owner_name: row.owner_name ?? null }))
+        .map((row): RelatedProcess => ({
+          id: row.id,
+          name: row.name,
+          path: row.path || row.name,
+          status: row.status ?? null,
+          owner_name: row.owner_name ?? null,
+        }))
       : null;
     const incidents = ctx.access.incidents
       ? await listRelatedIncidents(mg, tenantId, { table: 'incident_applications', column: 'application_id' }, app.id, ctx.incidentViewer)

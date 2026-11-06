@@ -95,6 +95,8 @@ export type BusinessProcessRow = {
   name: string;
   status: string | null;
   owner_name: string | null;
+  /** Names from the top of the tree, when the relations payload carries them. */
+  path?: string | null;
 };
 
 /** A row the shared sections can link and unlink. */

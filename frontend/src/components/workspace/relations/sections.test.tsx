@@ -4,8 +4,8 @@ import type { TFunction } from 'i18next';
 import { describe, expect, it, vi } from 'vitest';
 import { formatAmount } from '../../../i18n/formatters';
 import api from '../../../api';
-import { assetsSection, budgetLinesSection, contractsSection, searchRelationItems } from './sections';
-import type { BudgetLineRow, ContractRow } from './types';
+import { assetsSection, budgetLinesSection, contractsSection, processesSection, searchRelationItems } from './sections';
+import type { BudgetLineRow, BusinessProcessRow, ContractRow } from './types';
 
 vi.mock('../../../api', () => ({ default: { get: vi.fn() } }));
 
@@ -106,6 +106,30 @@ describe('asset relation picker', () => {
       { id: 'a-2', label: 'vm-a', ref: 'AST-2', hint: 'workspace.application.relations.memberOfCluster(CL01)' },
       { id: 'a-3', label: 'plain', ref: 'AST-3' },
     ]);
+  });
+});
+
+describe('business process picker', () => {
+  const linked: BusinessProcessRow = {
+    id: 'bp-1', name: 'Aging', status: 'enabled', owner_name: null, path: 'Production › Aging',
+  };
+
+  it('offers the path in the list and keeps the name, with the path, on the linked row', async () => {
+    vi.mocked(api.get).mockResolvedValue({
+      data: { items: [
+        { id: 'bp-1', name: 'Aging', path: 'Production › Aging' },
+        { id: 'bp-2', name: 'Production', path: 'Production' },
+      ] },
+    } as never);
+    const section = processesSection({ t, rows: [linked] });
+    expect(await section.search('')).toEqual([
+      { id: 'bp-1', label: 'Production › Aging' },
+      { id: 'bp-2', label: 'Production' },
+    ]);
+    expect(section.label(linked)).toBe('Aging');
+    const name = section.columns.find((column) => column.key === 'name');
+    render(<>{name!.render(linked)}</>);
+    expect(screen.getByText('Aging')).toHaveAttribute('title', 'Production › Aging');
   });
 });
 

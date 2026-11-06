@@ -282,7 +282,7 @@ async function testPayload() {
     ]);
     assert.match(seed.assets.alpha.reference, /^AST-\d+$/);
     assert.deepEqual(res.processes, [
-      { id: seed.processes.linked, name: 'Order to cash', status: 'enabled', owner_name: 'Claire Dubois' },
+      { id: seed.processes.linked, name: 'Order to cash', path: 'Order to cash', status: 'enabled', owner_name: 'Claire Dubois' },
     ]);
     assert.deepEqual(res.resulting_projects, [
       { id: seed.projects.alpha.id, item_number: 3, name: 'Alpha project', status: 'in_progress' },
@@ -406,7 +406,7 @@ async function testLinksActivityAndAudit() {
     assert.equal(audit.entries.length, 2);
     const shown = await http.getRelations(seed.requestId, req(runner, seed, READ));
     assert.deepEqual(shown.processes, [
-      { id: seed.processes.free, name: 'Procure to pay', status: 'enabled', owner_name: null },
+      { id: seed.processes.free, name: 'Procure to pay', path: 'Procure to pay', status: 'enabled', owner_name: null },
     ]);
   });
 }

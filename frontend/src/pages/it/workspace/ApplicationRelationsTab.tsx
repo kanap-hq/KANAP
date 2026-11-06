@@ -49,7 +49,7 @@ export type TechnologyRow = {
 };
 /** A server the application is deployed on, in service, with the environments and roles it has there. */
 export type DeploymentServer = { asset_id: string; name: string; asset_reference: string | null; environments: string[]; roles: string[] };
-export type ProcessRow = { id: string; name: string; status: string | null; owner_name: string | null };
+export type ProcessRow = { id: string; name: string; status: string | null; owner_name: string | null; path?: string | null };
 type Suggestion = {
   type: 'budget_line' | 'contract' | 'project';
   id: string;

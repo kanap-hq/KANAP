@@ -1,4 +1,5 @@
 import type { EntityManager } from 'typeorm';
+import { businessProcessPathSql } from '../../business-processes/business-process-tree';
 import {
   ParticipationAccessScope,
   applicationParticipantCondition,
@@ -101,6 +102,8 @@ export type RelatedTechnology = {
 export type RelatedBusinessProcess = {
   id: string;
   name: string;
+  /** Names from the top of the tree ("Production › Aging"). The name alone at the top. */
+  path: string;
   status: string | null;
   owner_name: string | null;
 };
@@ -342,16 +345,16 @@ export async function listRelatedBusinessProcesses(
   ownerId: string,
 ): Promise<RelatedBusinessProcess[]> {
   const rows: RelatedBusinessProcess[] = await mg.query(
-    `SELECT p.id, p.name, p.status::text AS status,
+    `SELECT bp.id, bp.name, ${businessProcessPathSql('bp')} AS path, bp.status::text AS status,
             NULLIF(btrim(concat_ws(' ', u.first_name, u.last_name)), '') AS owner_name
        FROM ${t.links} l
-       JOIN business_processes p ON p.id = l.${t.target} AND p.tenant_id = l.tenant_id
-       LEFT JOIN users u ON u.id = p.owner_user_id AND u.tenant_id = p.tenant_id
+       JOIN business_processes bp ON bp.id = l.${t.target} AND bp.tenant_id = l.tenant_id
+       LEFT JOIN users u ON u.id = bp.owner_user_id AND u.tenant_id = bp.tenant_id
       WHERE l.tenant_id = $1 AND l.${t.owner} = $2
-      ORDER BY lower(p.name), p.id`,
+      ORDER BY lower(bp.name), bp.id`,
     [tenantId, ownerId],
   );
-  return rows.map((row) => ({ ...row, status: row.status ?? null, owner_name: row.owner_name ?? null }));
+  return rows.map((row) => ({ ...row, path: row.path || row.name, status: row.status ?? null, owner_name: row.owner_name ?? null }));
 }
 
 const PORTFOLIO_PEERS = {

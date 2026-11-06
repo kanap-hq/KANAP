@@ -5,11 +5,9 @@ import { useTranslation } from 'react-i18next';
 import { useLookupPicker } from '../../hooks/useLookupPicker';
 import { FieldLabel } from '../design';
 import { drawerAutocompleteListboxSx } from '../../theme/formSx';
+import { businessProcessOptionLabel, businessProcessPathTitle, type BusinessProcessLookupOption } from './businessProcessOption';
 
-type BusinessProcessOption = {
-  id: string;
-  name: string;
-};
+type BusinessProcessOption = BusinessProcessLookupOption;
 
 type BusinessProcessSelectProps = {
   label?: string;
@@ -66,7 +64,7 @@ const BusinessProcessSelect = React.forwardRef<HTMLInputElement, BusinessProcess
       getOptionLabel={(option) => picker.label(option, (o) => o.name ?? '')}
       renderOption={(props, option) => (
         <li {...props} key={option.id}>
-          {option.name}
+          {businessProcessOptionLabel(option)}
         </li>
       )}
       renderInput={(params) => (
@@ -80,6 +78,7 @@ const BusinessProcessSelect = React.forwardRef<HTMLInputElement, BusinessProcess
             assignRef((params.inputProps as any)?.ref, node);
             assignRef(ref, node ?? null);
           }}
+          inputProps={{ ...params.inputProps, title: businessProcessPathTitle(selectedOption) }}
           InputProps={{
             ...params.InputProps,
             endAdornment: (

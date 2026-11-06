@@ -7,6 +7,7 @@ import { KnowledgeService } from '../../../knowledge/knowledge.service';
 import { LOOKUP_MAX_IDS, parseLookupIds, parseLookupRequest, runLookup } from '../reference-lookup';
 import { displayName } from '../../display-name';
 import {
+  BUSINESS_PROCESS_LOOKUP,
   lookupAccounts,
   lookupAnalyticsValues,
   lookupContracts,
@@ -368,6 +369,38 @@ async function testValueAppliesTo() {
   console.log('ok - value applies_to: the values a line type may choose, ids unfiltered');
 }
 
+async function testBusinessProcessPath() {
+  await withTenant(async (runner, tenantId) => {
+    const one = async (name: string, parentId: string | null) => (await runner.query(
+      `INSERT INTO business_processes (tenant_id, name, parent_id) VALUES ($1, $2, $3) RETURNING id`,
+      [tenantId, name, parentId],
+    ))[0].id as string;
+    const production = await one('Production', null);
+    const aging = await one('Aging', production);
+    await one('Caves', aging);
+    const call = { manager: runner.manager, tenantId };
+    const byName = await lookupReference(call, BUSINESS_PROCESS_LOOKUP, { q: 'aging' });
+    assert.deepEqual(
+      byName.items.map((row: any) => [row.name, row.path]),
+      [['Aging', 'Production › Aging'], ['Caves', 'Production › Aging › Caves']],
+      'a name match and a path match both return the path; the name that starts with the text ranks first',
+    );
+    const byParent = await lookupReference(call, BUSINESS_PROCESS_LOOKUP, { q: 'production' });
+    assert.deepEqual(
+      byParent.items.map((row: any) => row.path).sort(),
+      ['Production', 'Production › Aging', 'Production › Aging › Caves'],
+      'part of a parent name finds the parent and the processes under it',
+    );
+    const hydrated = await lookupReference(call, BUSINESS_PROCESS_LOOKUP, { ids: aging });
+    assert.deepEqual(
+      hydrated.items.map((row: any) => [row.name, row.path]),
+      [['Aging', 'Production › Aging']],
+      'ids return the path too',
+    );
+  });
+  console.log('ok - business process lookup returns the path and finds a child by its parent');
+}
+
 async function main() {
   await dataSource.initialize();
   try {
@@ -382,6 +415,7 @@ async function main() {
     await testScopes();
     await testAccountNature();
     await testValueAppliesTo();
+    await testBusinessProcessPath();
     console.log('reference-lookup.integration.spec: ok');
   } finally {
     await dataSource.destroy();
