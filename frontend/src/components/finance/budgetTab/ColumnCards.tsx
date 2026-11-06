@@ -15,8 +15,8 @@ const multilineTooltip = { tooltip: { sx: { whiteSpace: 'pre-line' } } } as cons
 /**
  * How a column is built, in short lines: how its amounts were produced ("Spread flat", "Quantity
  * and price · 1 line · 0.40 FTE", "Copied from Budget 2025 +2%", "Edited by hand"), then its period
- * ("9 months, April to December") or its date ("On 10 February 2026"). A column with nothing yet says so; a column whose line has no
- * month in the year says that. Hover lists the column's lines.
+ * ("9 months, April to December") or its date ("On 10 February 2026"). A column with nothing yet shows its zero alone; a column
+ * whose line has no month in the year says that. Hover lists the column's lines.
  */
 export function ColumnHowText({ tab, col, testId }: { tab: BudgetTabState; col: AmountCol; testId?: string }) {
   const { t, locale, year, loaded, recordFor, periodFor, roundInputs, storedAmounts, isEmptyColumn, labelFor } = tab;
@@ -47,7 +47,7 @@ export function ColumnHowText({ tab, col, testId }: { tab: BudgetTabState; col: 
     <Tooltip title={linesText(t, locale, record)} componentsProps={multilineTooltip} describeChild>
       {/* How the column was produced, then its period: one line each, never run together. */}
       <Box component="span" data-testid={testId} sx={{ display: 'block', fontSize: 12, color: 'kanap.text.tertiary', lineHeight: 1.4, minWidth: 0 }}>
-        {!text ? t('budgetTab.noMonthInItemDates', { year }) : empty ? t('budgetTab.notEntered') : (
+        {!text ? t('budgetTab.noMonthInItemDates', { year }) : empty ? null : (
           <>
             {chip}
             <Box component="span" sx={{ display: 'block' }}>{text}</Box>

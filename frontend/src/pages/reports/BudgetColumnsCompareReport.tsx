@@ -140,7 +140,6 @@ export default function BudgetColumnsCompareReport() {
       busy={busy}
       fxMissing={report.data?.fxMissing}
       title={t("reports.budgetColumnsCompare.title")}
-      subtitle={t("reports.budgetColumnsCompare.subtitle")}
       filters={(
         <>
           <ItemScopeTabs allowAll value={itemType} onChange={setItemType} />

@@ -3,10 +3,13 @@ import { Box } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
 import { drawerFieldValueSx } from '../../theme/formSx';
 import { FieldLabel } from './FieldLabel';
+import InfoHint from '../workspace/InfoHint';
 
 type PropertyRowProps = {
   children: React.ReactNode;
   helperText?: React.ReactNode;
+  /** One sentence the person reads once, in a tooltip beside the label, in place of a help line. */
+  hint?: string;
   label: React.ReactNode;
   labelSx?: SxProps<Theme>;
   required?: boolean;
@@ -29,6 +32,7 @@ function mergeSx(...items: Array<SxProps<Theme> | undefined>): SxProps<Theme> {
 export function PropertyRow({
   children,
   helperText,
+  hint,
   label,
   labelSx,
   required = false,
@@ -49,9 +53,18 @@ export function PropertyRow({
         sx,
       )}
     >
-      <FieldLabel required={required} sx={labelSx}>
-        {label}
-      </FieldLabel>
+      {hint ? (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <FieldLabel required={required} sx={labelSx}>
+            {label}
+          </FieldLabel>
+          <InfoHint text={hint} />
+        </Box>
+      ) : (
+        <FieldLabel required={required} sx={labelSx}>
+          {label}
+        </FieldLabel>
+      )}
       <Box
         sx={mergeSx(
           drawerFieldValueSx,

@@ -38,6 +38,7 @@ import { allocationWarningKey, allocationWarningText, amountFxMissingOf, isAmoun
 import { useAuth } from '../../auth/AuthContext';
 import { chargebackCompanyIds } from '../../auth/dataAccess';
 import { formatItemRef } from '../../utils/item-ref';
+import InfoHint from '../../components/workspace/InfoHint';
 
 function baseFormatNumber(value: number | null | undefined, locale: string): string {
   const n = Number(value ?? 0);
@@ -442,7 +443,6 @@ export default function CompanyChargebackReport() {
     <ReportLayout
       title={t("reports.companyChargeback.title")}
       fxMissing={isReady ? amountFxMissing : undefined}
-      subtitle={t("reports.companyChargeback.subtitle")}
       filters={(
         <>
           <ItemScopeTabs allowAll value={scope} onChange={setScope} />
@@ -592,10 +592,10 @@ export default function CompanyChargebackReport() {
         {isReady && showDepartments && departments.length > 0 && (
           <Stack spacing={2} direction={{ xs: 'column', xl: 'row' }} alignItems={{ xs: 'stretch', xl: 'flex-start' }}>
             <Paper variant="outlined" sx={{ p: 2, flex: 1 }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>{t("reports.companyChargeback.departmentTotals")}</Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                {t("reports.companyChargeback.departmentTotalsDescription")}
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1.5 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{t("reports.companyChargeback.departmentTotals")}</Typography>
+                <InfoHint text={t("reports.companyChargeback.departmentTotalsDescription")} />
+              </Box>
               <ReportGrid
                 rowData={departments}
                 columnDefs={departmentColumns}
@@ -604,10 +604,7 @@ export default function CompanyChargebackReport() {
               />
             </Paper>
             <Paper variant="outlined" sx={{ p: 2, flex: 1 }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>{t("reports.companyChargeback.departmentDistribution")}</Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                {t("reports.companyChargeback.departmentDistributionDescription")}
-              </Typography>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1.5 }}>{t("reports.companyChargeback.departmentDistribution")}</Typography>
               {chartOptions ? (
                 <ChartCard ref={chartRef} title={t('reports.shared.chart')} options={chartOptions} height={horizontalBarChartHeight(chartData.length)} />
               ) : (
@@ -626,10 +623,7 @@ export default function CompanyChargebackReport() {
 
         {isReady && showItems && (
           <Paper variant="outlined" sx={{ p: 2 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>{t("reports.companyChargeback.chargebackItems")}</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              {t("reports.companyChargeback.chargebackItemsDescription")}
-            </Typography>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1.5 }}>{t("reports.companyChargeback.chargebackItems")}</Typography>
             {items.length > 0 ? (
               <ReportGrid
                 rowData={items}
@@ -646,10 +640,10 @@ export default function CompanyChargebackReport() {
 
         {isReady && showIntercompany && (
           <Paper variant="outlined" sx={{ p: 2 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>{t("reports.companyChargeback.flowsTitle")}</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              {t("reports.companyChargeback.flowsDescription")}
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1.5 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{t("reports.companyChargeback.flowsTitle")}</Typography>
+              <InfoHint text={t("reports.companyChargeback.flowsDescription")} />
+            </Box>
             {intercompanyRows.length > 0 ? (
               <ReportGrid
                 rowData={intercompanyRows}
@@ -666,10 +660,10 @@ export default function CompanyChargebackReport() {
 
         {isReady && showKpis && (
           <Paper variant="outlined" sx={{ p: 2 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>{t("reports.companyChargeback.kpisTitle")}</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              {t("reports.companyChargeback.kpisDescription")}
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1.5 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{t("reports.companyChargeback.kpisTitle")}</Typography>
+              <InfoHint text={t("reports.companyChargeback.kpisDescription")} />
+            </Box>
             <Box sx={{ overflowX: 'auto' }}>
               <Table size="small" sx={{ minWidth: 720 }}>
                 <TableHead>

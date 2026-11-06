@@ -60,9 +60,6 @@ export default function BudgetOperationsLandingPage() {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       <PageHeader title={t('operations.title')} />
-      <Typography variant="body1" sx={{ color: 'text.secondary' }}>
-        {t('operations.subtitle')}
-      </Typography>
       {visibleSections.map((section) => (
         <Box key={section.key} component="section" aria-labelledby={`ops-section-${section.key}`} sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1 }}>
           <Typography id={`ops-section-${section.key}`} component="h2" sx={sectionTitleSx}>

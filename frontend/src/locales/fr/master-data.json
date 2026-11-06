@@ -1001,7 +1001,6 @@
   "admin": {
     "copy": {
       "title": "Copier les indicateurs annuels",
-      "subtitle": "Copiez les indicateurs des sociétés et des départements entre les années avec un aperçu en simulation",
       "sourceYear": "Année source",
       "destinationYear": "Année de destination",
       "dataSources": "Sources de données",

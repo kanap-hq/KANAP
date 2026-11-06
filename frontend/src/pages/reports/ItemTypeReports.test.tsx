@@ -131,14 +131,14 @@ describe('Top items report', () => {
     expect(await screen.findByText('Capex growth')).toBeInTheDocument();
     expect(within(screen.getByTestId('grid')).getByText('Capex cut')).toBeInTheDocument();
     expect(calledUrls()).toContain(CAPEX_AGGREGATE);
-    expect(screen.getByTestId('subtitle').textContent).toContain('"type":"operations.scope.capex"');
+    // The title stands alone; the chart title names the type.
+    expect(screen.getByTestId('subtitle').textContent).toBe('');
     expect(screen.getByTestId('chart-title').textContent).toContain('"type":"operations.scope.capex"');
   });
 
   it('on All asks the sentences written for both types', async () => {
     renderReport(<TopOpexReport />, '/report?scope=all');
     expect(await screen.findByText('Opex line')).toBeInTheDocument();
-    expect(screen.getByTestId('subtitle').textContent).toContain('"context":"all"');
     expect(screen.getByTestId('chart-title').textContent).toContain('"context":"all"');
   });
 
@@ -170,7 +170,6 @@ describe('Top increase / decrease report', () => {
     await waitFor(() => expect(screen.getByTestId('grid').textContent).toContain('Capex growth'));
     expect(screen.getByTestId('grid').textContent).not.toContain('Capex cut');
     expect(calledUrls()).not.toContain(OPEX_AGGREGATE);
-    expect(screen.getByTestId('subtitle').textContent).toContain('"type":"operations.scope.capex"');
     expect(screen.getByTestId('chart-title').textContent).toContain('"type":"operations.scope.capex"');
 
     fireEvent.click(screen.getByRole('tab', { name: 'reports.opexDelta.decreases' }));
@@ -183,7 +182,7 @@ describe.each([
   ['Consolidation', ConsolidationReport],
   ['Analytics', AnalyticsCategoryReport],
 ])('%s report', (_name, Report) => {
-  it('switches to CAPEX data with the type in the subtitle and chart title', async () => {
+  it('switches to CAPEX data with the type in the chart title', async () => {
     renderReport(<Report />);
     await waitFor(() => expect(calledUrls()).toContain(OPEX_AGGREGATE));
     expect(screen.getByTestId('chart-title').textContent).toContain('"type":"operations.scope.opex"');
@@ -192,7 +191,6 @@ describe.each([
 
     await waitFor(() => expect(calledUrls()).toContain(CAPEX_AGGREGATE));
     await waitFor(() => expect(screen.getByTestId('chart-title').textContent).toContain('"type":"operations.scope.capex"'));
-    expect(screen.getByTestId('subtitle').textContent).toContain('"type":"operations.scope.capex"');
   });
 
   it('opens on CAPEX from ?scope=capex', async () => {

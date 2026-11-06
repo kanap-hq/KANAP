@@ -323,9 +323,6 @@ export default function CurrencySettingsPage() {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       <PageHeader title={t(`${C}.title`)} />
-      <Typography variant="body1" sx={{ color: 'text.secondary', maxWidth: 720 }}>
-        {t(`${C}.subtitle`)}
-      </Typography>
       {!canEdit && <Alert severity="info" sx={{ maxWidth: 720 }}>{t('operations.budgetAdminOnly')}</Alert>}
       {isError && <Alert severity="error">{t(`${C}.loadError`)}</Alert>}
       {successMessage && <Alert severity="success">{successMessage}</Alert>}
@@ -334,7 +331,7 @@ export default function CurrencySettingsPage() {
       {syncError && <Alert severity="error">{syncError}</Alert>}
       <Paper variant="outlined" component="form" onSubmit={handleSubmit} noValidate sx={{ p: 2, maxWidth: 640 }}>
         <Stack spacing={1}>
-          <PropertyRow label={t(`${C}.reportingCurrency`)} helperText={t(`${C}.reportingCurrencyHelp`)} required>
+          <PropertyRow label={t(`${C}.reportingCurrency`)} hint={t(`${C}.reportingCurrencyHelp`)} required>
             <TextField
               variant="standard"
               value={reportingCurrency}
@@ -347,7 +344,7 @@ export default function CurrencySettingsPage() {
               sx={{ width: 120 }}
             />
           </PropertyRow>
-          <PropertyRow label={t(`${C}.defaultOpexCurrency`)} helperText={t(`${C}.defaultOpexCurrencyHelp`)} required>
+          <PropertyRow label={t(`${C}.defaultOpexCurrency`)} hint={t(`${C}.defaultOpexCurrencyHelp`)} required>
             <TextField
               variant="standard"
               value={defaultSpendCurrency}
@@ -360,7 +357,7 @@ export default function CurrencySettingsPage() {
               sx={{ width: 120 }}
             />
           </PropertyRow>
-          <PropertyRow label={t(`${C}.defaultCapexCurrency`)} helperText={t(`${C}.defaultCapexCurrencyHelp`)} required>
+          <PropertyRow label={t(`${C}.defaultCapexCurrency`)} hint={t(`${C}.defaultCapexCurrencyHelp`)} required>
             <TextField
               variant="standard"
               value={defaultCapexCurrency}
@@ -373,7 +370,7 @@ export default function CurrencySettingsPage() {
               sx={{ width: 120 }}
             />
           </PropertyRow>
-          <PropertyRow label={t(`${C}.allowedCurrencies`)} helperText={t(`${C}.allowedCurrenciesHelp`)}>
+          <PropertyRow label={t(`${C}.allowedCurrencies`)}>
             <TextField
               variant="standard"
               value={allowedCurrencies}

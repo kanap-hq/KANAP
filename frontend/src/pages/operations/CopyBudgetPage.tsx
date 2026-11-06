@@ -483,7 +483,6 @@ export default function CopyBudgetPage() {
   return (
     <ReportLayout
       title={t('operations.copyBudget.title')}
-      subtitle={t('operations.copyBudget.subtitle')}
       filters={
         <>
           <ItemScopeTabs level="admin" allowAll value={scope} onChange={setScope} disabled={isProcessing} />

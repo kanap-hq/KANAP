@@ -1001,7 +1001,6 @@
   "admin": {
     "copy": {
       "title": "Copiar indicadores anuales",
-      "subtitle": "Copie los indicadores de empresas y departamentos entre años con una vista previa de simulación",
       "sourceYear": "Año de origen",
       "destinationYear": "Año de destino",
       "dataSources": "Fuentes de datos",
