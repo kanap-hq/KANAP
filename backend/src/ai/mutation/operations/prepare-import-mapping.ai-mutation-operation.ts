@@ -81,7 +81,7 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
       + 'Map a column only when its header or its first rows say what it holds; say what you supposed in `note` or `assumptions`, '
       + 'and name the file columns you leave out. When the card shows values not read, ask the user what they stand for and call again with `values`. '
       + 'A new card for the same file replaces the pending one, so the person always has a single card to approve. '
-      + 'Approving the card records the mapping and imports nothing: the import itself is not run from the chat yet. Say so, and do not offer to run it.',
+      + 'Approving the card records the mapping and imports nothing: no import runs from a mapping yet, in the chat or elsewhere. Say so, and do not offer to run it or point to another way of running it.',
   };
 
   constructor(private readonly mapping: AiImportMappingService) {}
