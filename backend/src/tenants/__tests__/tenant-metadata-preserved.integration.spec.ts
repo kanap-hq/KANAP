@@ -322,7 +322,7 @@ async function testBrandingKeyMerge() {
       { buffer: PNG_1X1, originalname: 'logo.png', mimetype: 'image/png', size: PNG_1X1.length } as any,
       req,
     );
-    assert.deepEqual(uploaded, { ok: true, has_logo: true, logo_version: 1, use_logo_in_dark: true });
+    assert.deepEqual(uploaded, { ok: true, has_logo: true, has_dark_logo: false, logo_version: 1, use_logo_in_dark: true });
     let stored = await assertConcurrentKept(runner, tenantId, 'upload logo');
     assert.equal(stored.branding.logo_storage_path, `files/${tenantId}/branding/logo.png`);
     assert.equal(stored.branding.logo_version, 1);
@@ -340,7 +340,7 @@ async function testBrandingKeyMerge() {
     // what was saved during the storage call (a colour, the dark-mode flag) stays.
     await runner.query(`UPDATE tenants SET metadata = '{}'::jsonb, branding = branding || '{"logo_version":7}'::jsonb WHERE id = $1`, [tenantId]);
     const deleted = await controller.deleteLogo(req);
-    assert.deepEqual(deleted, { ok: true, has_logo: false, logo_version: 8, use_logo_in_dark: false });
+    assert.deepEqual(deleted, { ok: true, has_logo: false, has_dark_logo: false, logo_version: 8, use_logo_in_dark: false });
     stored = await assertConcurrentKept(runner, tenantId, 'delete logo');
     assert.equal('logo_storage_path' in stored.branding, false);
     assert.deepEqual([stored.branding.primary_color_light, stored.branding.use_logo_in_dark], ['#ABCDEF', false]);

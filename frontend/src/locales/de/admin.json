@@ -1761,17 +1761,20 @@
       "organizationName": "Name der Organisation",
       "organizationNameHelper": "Erscheint beim Logo, im Fenster Info, auf der Einwilligungsseite und für den Assistenten. Die Adresse des Arbeitsbereichs bleibt unverändert.",
       "organizationNamePlaceholder": "z. B. Northwind",
-      "showLogoInDark": "Logo im Dunkelmodus anzeigen"
+      "useLightLogoInDark": "Logo des Hellmodus verwenden"
     },
     "logo": {
       "alt": "Logo-Vorschau",
-      "description": "Laden Sie ein Logo für die App-Kopfzeile und die Anmeldeseite hoch. Beste Ergebnisse: Transparentes PNG, JPG, GIF oder WEBP mit breitem Format.",
+      "darkAlt": "Vorschau des Logos für den Dunkelmodus",
+      "description": "Logos für die App-Kopfzeile und die Anmeldeseite, eines pro Modus. Beste Ergebnisse: transparentes PNG, JPG, GIF oder WEBP mit breitem Format. Das Logo für den Dunkelmodus ist optional.",
       "previews": {
         "dark": "Vorschau dunkle Kopfzeile",
         "darkHidden": "Vorschau dunkle Kopfzeile (Logo ausgeblendet)",
         "light": "Vorschau helle Kopfzeile"
       },
       "title": "Logo",
+      "uploadDark": "Logo für den Dunkelmodus",
+      "uploadLight": "Logo für den Hellmodus",
       "version": "Logo-Version: {{count}}"
     },
     "messages": {

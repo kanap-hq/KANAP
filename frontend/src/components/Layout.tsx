@@ -52,6 +52,7 @@ import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined';
 import LightModeOutlinedIcon from '@mui/icons-material/LightModeOutlined';
 import BrightnessAutoIcon from '@mui/icons-material/BrightnessAuto';
 import { useTenant } from '../tenant/TenantContext';
+import { headerLogoUrl } from '../tenant/headerLogo';
 import { useFeatures } from '../config/FeaturesContext';
 import { useThemeMode } from '../config/ThemeContext';
 import { getDocUrl } from '../utils/docUrls';
@@ -156,7 +157,8 @@ export default function Layout() {
   const accountLabel = formatUserName(profile);
   const accountEmail = String(profile?.email ?? '').trim();
   const dataAccessLimited = useDataAccessLimited();
-  const { isPlatformHost, tenantName, logoUrl, useLogoInDark } = useTenant();
+  const tenant = useTenant();
+  const { isPlatformHost, tenantName } = tenant;
   const { config } = useFeatures();
   const { mode, resolvedMode, setMode } = useThemeMode();
   const aiCapabilities = useAiCapabilities();
@@ -389,7 +391,8 @@ export default function Layout() {
     : mode === 'light'
       ? <LightModeOutlinedIcon />
       : <BrightnessAutoIcon />;
-  const showHeaderLogo = !!logoUrl && (resolvedMode !== 'dark' || useLogoInDark);
+  const logoUrl = headerLogoUrl(tenant, resolvedMode);
+  const showHeaderLogo = !!logoUrl;
 
   // Block initial render until AI capabilities resolve, so workspace/admin
   // gating doesn't decide on `undefined` data and hide Plaid tabs. Placed

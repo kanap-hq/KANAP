@@ -1761,17 +1761,20 @@
       "organizationName": "Organization name",
       "organizationNameHelper": "Shown with the logo, in About, on the consent page, and to the assistant. The workspace address stays as it is.",
       "organizationNamePlaceholder": "e.g., Northwind",
-      "showLogoInDark": "Show logo in dark mode"
+      "useLightLogoInDark": "Use the light mode logo"
     },
     "logo": {
       "alt": "Logo preview",
-      "description": "Upload one logo for the app header and login page. Best results: transparent PNG, JPG, GIF, or WEBP with a wide ratio.",
+      "darkAlt": "Dark mode logo preview",
+      "description": "Logos for the app header and the sign-in page, one per mode. Best results: transparent PNG, JPG, GIF or WEBP with a wide ratio. The dark mode logo is optional.",
       "previews": {
         "dark": "Dark header preview",
         "darkHidden": "Dark header preview (logo hidden)",
         "light": "Light header preview"
       },
       "title": "Logo",
+      "uploadDark": "Dark mode logo",
+      "uploadLight": "Light mode logo",
       "version": "Logo version: {{count}}"
     },
     "messages": {

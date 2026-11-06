@@ -7,6 +7,7 @@ import {
   NotFoundException,
   Patch,
   Post,
+  Query,
   Req,
   UploadedFile,
   UseGuards,
@@ -22,7 +23,7 @@ import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { PermissionGuard } from '../../auth/permission.guard';
 import { RequireLevel } from '../../auth/require-level.decorator';
 import { TenantsService } from '../../tenants/tenants.service';
-import { Tenant, TenantBranding } from '../../tenants/tenant.entity';
+import { brandingLogoPaths, Tenant, TenantBranding } from '../../tenants/tenant.entity';
 import { StorageService } from '../../common/storage/storage.service';
 import { fixMulterFilename, inlineImageMulterOptions } from '../../common/upload';
 import { validateUploadedFile } from '../../common/upload-validation';
@@ -30,6 +31,21 @@ import { ReservedToUnscopedDataAccess } from '../../data-access/reserved-operati
 
 /** Display name only. The slug is the workspace address and is never written here. */
 const ORGANIZATION_NAME_MAX = 120;
+
+type LogoVariant = 'light' | 'dark';
+
+/** Where each logo is recorded in `branding` and stored under the tenant's files. */
+const LOGO_VARIANTS: Record<LogoVariant, { field: 'logo_storage_path' | 'logo_dark_storage_path'; fileName: string }> = {
+  light: { field: 'logo_storage_path', fileName: 'logo' },
+  dark: { field: 'logo_dark_storage_path', fileName: 'logo-dark' },
+};
+
+/** No variant is the light-mode logo, as before the dark one existed. */
+function parseLogoVariant(value: unknown): LogoVariant {
+  if (value === undefined || value === '' || value === 'light') return 'light';
+  if (value === 'dark') return 'dark';
+  throw new BadRequestException('Logo variant must be light or dark');
+}
 
 class UpdateBrandingSettingsDto {
   @IsOptional()
@@ -73,9 +89,7 @@ export class AdminBrandingController {
     const branding = this.normalizeBranding(tenant.branding);
     return {
       name: tenant.name,
-      has_logo: !!branding.logo_storage_path,
-      logo_version: branding.logo_version,
-      use_logo_in_dark: branding.use_logo_in_dark,
+      ...this.logoState(branding),
       primary_color_light: branding.primary_color_light ?? null,
       primary_color_dark: branding.primary_color_dark ?? null,
     };
@@ -87,7 +101,9 @@ export class AdminBrandingController {
   async uploadLogo(
     @UploadedFile() file: Express.Multer.File,
     @Req() req: any,
+    @Query('variant') variantParam?: string,
   ) {
+    const { field, fileName } = LOGO_VARIANTS[parseLogoVariant(variantParam)];
     const manager = req?.queryRunner?.manager;
     const tenant = await this.getTenantFromRequest(req, manager);
     if (!file) throw new BadRequestException('No file uploaded');
@@ -101,7 +117,7 @@ export class AdminBrandingController {
       size: file.size,
     }, { scope: 'inline-image' });
 
-    const key = path.posix.join('files', tenant.id, 'branding', `logo${validated.extension || '.png'}`);
+    const key = path.posix.join('files', tenant.id, 'branding', `${fileName}${validated.extension || '.png'}`);
     await this.storage.putObject({
       key,
       body: buf,
@@ -111,7 +127,7 @@ export class AdminBrandingController {
     });
 
     const branding = this.normalizeBranding(tenant.branding);
-    const oldPath = branding.logo_storage_path;
+    const oldPath = branding[field];
     if (oldPath && oldPath !== key) {
       try {
         await this.storage.deleteObject(oldPath);
@@ -123,42 +139,34 @@ export class AdminBrandingController {
     // Merged after the storage calls, from the stored branding: a colour saved
     // meanwhile is kept.
     const stored = this.normalizeBranding(
-      await this.tenants.mergeBranding(tenant.id, { set: { logo_storage_path: key }, bumpLogoVersion: true }, { manager }),
+      await this.tenants.mergeBranding(tenant.id, { set: { [field]: key }, bumpLogoVersion: true }, { manager }),
     );
 
-    return {
-      ok: true,
-      has_logo: true,
-      logo_version: stored.logo_version,
-      use_logo_in_dark: stored.use_logo_in_dark,
-    };
+    return { ok: true, ...this.logoState(stored) };
   }
 
   @Delete('logo')
   @RequireLevel('users', 'admin')
-  async deleteLogo(@Req() req: any) {
+  async deleteLogo(@Req() req: any, @Query('variant') variantParam?: string) {
+    const { field } = LOGO_VARIANTS[parseLogoVariant(variantParam)];
     const manager = req?.queryRunner?.manager;
     const tenant = await this.getTenantFromRequest(req, manager);
     const branding = this.normalizeBranding(tenant.branding);
 
-    if (branding.logo_storage_path) {
+    const oldPath = branding[field];
+    if (oldPath) {
       try {
-        await this.storage.deleteObject(branding.logo_storage_path);
+        await this.storage.deleteObject(oldPath);
       } catch {
         // Ignore delete failures to keep endpoint idempotent.
       }
     }
 
     const stored = this.normalizeBranding(
-      await this.tenants.mergeBranding(tenant.id, { unset: ['logo_storage_path'], bumpLogoVersion: true }, { manager }),
+      await this.tenants.mergeBranding(tenant.id, { unset: [field], bumpLogoVersion: true }, { manager }),
     );
 
-    return {
-      ok: true,
-      has_logo: false,
-      logo_version: stored.logo_version,
-      use_logo_in_dark: stored.use_logo_in_dark,
-    };
+    return { ok: true, ...this.logoState(stored) };
   }
 
   @Patch('settings')
@@ -198,9 +206,7 @@ export class AdminBrandingController {
     return {
       ok: true,
       name: current.name,
-      has_logo: !!branding.logo_storage_path,
-      logo_version: branding.logo_version,
-      use_logo_in_dark: branding.use_logo_in_dark,
+      ...this.logoState(branding),
       primary_color_light: branding.primary_color_light ?? null,
       primary_color_dark: branding.primary_color_dark ?? null,
     };
@@ -211,11 +217,9 @@ export class AdminBrandingController {
   async reset(@Req() req: any) {
     const manager = req?.queryRunner?.manager;
     const tenant = await this.getTenantFromRequest(req, manager);
-    const branding = this.normalizeBranding(tenant.branding);
-
-    if (branding.logo_storage_path) {
+    for (const logoPath of brandingLogoPaths(tenant.branding)) {
       try {
-        await this.storage.deleteObject(branding.logo_storage_path);
+        await this.storage.deleteObject(logoPath);
       } catch {
         // Ignore delete failures to keep reset resilient.
       }
@@ -225,7 +229,7 @@ export class AdminBrandingController {
       await this.tenants.mergeBranding(
         tenant.id,
         {
-          unset: ['logo_storage_path'],
+          unset: ['logo_storage_path', 'logo_dark_storage_path'],
           set: { use_logo_in_dark: true, primary_color_light: null, primary_color_dark: null },
           bumpLogoVersion: true,
         },
@@ -235,11 +239,18 @@ export class AdminBrandingController {
 
     return {
       ok: true,
-      has_logo: false,
-      logo_version: stored.logo_version,
-      use_logo_in_dark: true,
+      ...this.logoState(stored),
       primary_color_light: null,
       primary_color_dark: null,
+    };
+  }
+
+  private logoState(branding: TenantBranding) {
+    return {
+      has_logo: !!branding.logo_storage_path,
+      has_dark_logo: !!branding.logo_dark_storage_path,
+      logo_version: branding.logo_version,
+      use_logo_in_dark: branding.use_logo_in_dark,
     };
   }
 
@@ -264,6 +275,7 @@ export class AdminBrandingController {
 
     return {
       logo_storage_path: typeof source.logo_storage_path === 'string' ? source.logo_storage_path : undefined,
+      logo_dark_storage_path: typeof source.logo_dark_storage_path === 'string' ? source.logo_dark_storage_path : undefined,
       logo_version: Number.isFinite(logoVersion) && logoVersion >= 0 ? logoVersion : 0,
       use_logo_in_dark: source.use_logo_in_dark !== false,
       primary_color_light: this.normalizeHexOrNull(source.primary_color_light),

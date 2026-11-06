@@ -22,6 +22,7 @@ La página tiene tres tarjetas: **Nombre de la organización**, **Logotipo** y *
 - **Logotipo**
   - Aparece en la barra superior de la app (cuando ha iniciado sesión)
   - Aparece en el encabezado de la página de inicio de sesión
+  - Un segundo logotipo opcional para el modo oscuro
 - **Colores principales**
   - Un color principal para el **modo claro**
   - Un color principal para el **modo oscuro**
@@ -32,7 +33,7 @@ La página tiene tres tarjetas: **Nombre de la organización**, **Logotipo** y *
 1. Escriba el nombre.
 2. Haga clic en **Guardar cambios**.
 
-**Restablecer a valores predeterminados** deja el nombre como está. Quita el logotipo y los colores personalizados.
+**Restablecer a valores predeterminados** deja el nombre como está. Quita los logotipos y los colores personalizados.
 
 ## Configuración del logotipo
 
@@ -49,14 +50,16 @@ La página tiene tres tarjetas: **Nombre de la organización**, **Logotipo** y *
 
 ### Cómo configurarlo
 
-1. Haga clic en **Subir logotipo** y elija su archivo.
-2. Use las vistas previas integradas del encabezado **Claro** y **Oscuro** para validar la apariencia.
-3. Active **Mostrar logotipo en modo oscuro** si desea volver al texto de marca predeterminado en el tema oscuro.
-4. Haga clic en **Guardar cambios** para publicar.
+La tarjeta muestra una vista previa del encabezado claro y otra del encabezado oscuro, cada una con sus botones **Subir logo** y **Eliminar logo**.
 
-Para eliminar el logotipo actual, haga clic en **Eliminar logotipo**.
+1. Bajo la vista previa clara, haga clic en **Subir logo** y elija su archivo.
+2. Si su logotipo se lee mal sobre un fondo oscuro (texto oscuro, por ejemplo), suba una segunda versión bajo la vista previa oscura.
+3. Sin logotipo para el modo oscuro, **Usar el logo del modo claro** decide lo que muestra el modo oscuro: el logotipo del modo claro cuando está activado, el texto de marca predeterminado cuando está desactivado.
+4. Compruebe ambas vistas previas y haga clic en **Guardar cambios** para publicar.
 
-Cuando no hay logotipo establecido, o cuando **Mostrar logotipo en modo oscuro** está desactivado, KANAP recurre a su texto de marca predeterminado en el tema correspondiente.
+Para eliminar un logotipo, haga clic en **Eliminar logo** bajo su vista previa. El otro logotipo se mantiene.
+
+El modo oscuro muestra el logotipo del modo oscuro cuando existe. El modo claro muestra siempre el logotipo del modo claro, o el texto de marca predeterminado si no hay ninguno. Los correos electrónicos usan siempre el logotipo del modo claro, ya que su fondo es claro.
 
 ## Configuración del color principal
 
@@ -84,15 +87,15 @@ La advertencia es informativa (aún puede guardar), pero el contraste bajo suele
 
 Tres acciones en la parte inferior de la página controlan la persistencia:
 
-- **Guardar cambios**: confirma el nombre de la organización, la subida del logotipo seleccionado y los valores de color. Deshabilitado mientras no haya cambios pendientes, mientras el nombre esté vacío o supere los 120 caracteres, o mientras una entrada hexadecimal sea inválida.
+- **Guardar cambios**: confirma el nombre de la organización, los logotipos seleccionados y los valores de color. Deshabilitado mientras no haya cambios pendientes, mientras el nombre esté vacío o supere los 120 caracteres, o mientras una entrada hexadecimal sea inválida.
 - **Descartar**: revierte cualquier edición sin guardar en la página (no afecta a lo que ya está guardado).
-- **Restablecer a valores predeterminados**: elimina el logotipo guardado y borra todos los colores personalizados. El nombre de la organización permanece. Pide confirmación antes de ejecutarse.
+- **Restablecer a valores predeterminados**: elimina los dos logotipos guardados y borra todos los colores personalizados. El nombre de la organización permanece. Pide confirmación antes de ejecutarse.
 
-Una pequeña leyenda debajo de las acciones muestra el contador de **versión del logotipo**, que se incrementa cada vez que se sube el logotipo. Esto es principalmente una indicación de que las cachés del navegador se actualizarán.
+Una pequeña leyenda debajo de las acciones muestra el contador de **versión del logotipo**, que se incrementa cada vez que se sube o se elimina un logotipo. Esto es principalmente una indicación de que las cachés del navegador se actualizarán.
 
 ## Consejos
 
 - **Pruebe en ambos temas**: cambie entre tema claro y oscuro antes de guardar: el mismo color de marca rara vez funciona en ambos modos.
 - **Prefiera un fondo transparente**: los logotipos simples con fondo transparente proporcionan la representación más limpia del encabezado, especialmente en modo oscuro.
-- **Use Restablecer de forma deliberada**: elimina tanto el logotipo como todos los colores personalizados de una sola vez. Úselo cuando empiece de nuevo, no como un "deshacer" para un único cambio. Para eso está **Descartar**.
+- **Use Restablecer de forma deliberada**: elimina tanto los logotipos como todos los colores personalizados de una sola vez. Úselo cuando empiece de nuevo, no como un "deshacer" para un único cambio. Para eso está **Descartar**.
 - **Los colores de marca son para acentos**: KANAP utiliza el color principal en barras de la app, botones principales y enlaces. Elija algo que se lea limpiamente en tamaño de botón, no solo en un sitio de marketing.

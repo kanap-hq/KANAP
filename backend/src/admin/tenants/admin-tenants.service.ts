@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntityManager, Repository } from 'typeorm';
-import { Tenant, TenantBranding, TenantStatus } from '../../tenants/tenant.entity';
+import { brandingLogoPaths, Tenant, TenantBranding, TenantStatus } from '../../tenants/tenant.entity';
 import { parsePagination } from '../../common/pagination';
 import { TenantStatsService } from './tenant-stats.service';
 import { BillingService } from '../../billing/billing.service';
@@ -424,13 +424,11 @@ export class AdminTenantsService {
     if (!purged) return null;
     const { report, storagePaths } = purged;
 
-    // Storage objects go once their rows are gone for good. The branding logo lives on
-    // tenants.branding (no tenant_id column), so it is cleaned explicitly.
-    const brandingLogoPath = typeof (branding as any)?.logo_storage_path === 'string'
-      ? (branding as any).logo_storage_path as string
-      : null;
-    const logo = brandingLogoPath
-      ? await deleteStorageObjects(this.storage, [brandingLogoPath], 'tenant purge')
+    // Storage objects go once their rows are gone for good. The branding logos live on
+    // tenants.branding (no tenant_id column), so they are cleaned explicitly.
+    const logoPaths = brandingLogoPaths(branding);
+    const logo = logoPaths.length > 0
+      ? await deleteStorageObjects(this.storage, logoPaths, 'tenant purge')
       : { deleted: 0, failed: 0 };
     await deleteStorageObjects(this.storage, storagePaths, 'tenant purge');
 

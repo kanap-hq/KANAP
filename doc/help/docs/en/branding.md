@@ -22,6 +22,7 @@ The page has three cards: **Organization name**, **Logo** and **Primary colors**
 - **Logo**
   - Appears in the top app bar (when logged in)
   - Appears on the login page header
+  - An optional second logo for dark mode
 - **Primary colors**
   - One primary color for **light mode**
   - One primary color for **dark mode**
@@ -32,7 +33,7 @@ The page has three cards: **Organization name**, **Logo** and **Primary colors**
 1. Type the name.
 2. Click **Save Changes**.
 
-**Reset to Default** leaves the name as it is. It removes the logo and the custom colors only.
+**Reset to Default** leaves the name as it is. It removes the logos and the custom colors only.
 
 ## Logo setup
 
@@ -49,14 +50,16 @@ The page has three cards: **Organization name**, **Logo** and **Primary colors**
 
 ### How to set it
 
-1. Click **Upload Logo** and choose your file.
-2. Use the built-in **Light** and **Dark** header previews to validate appearance.
-3. Toggle **Show logo in dark mode** if you want to fall back to the default text branding in dark theme.
-4. Click **Save Changes** to publish.
+The card shows a light header preview and a dark header preview, each with its own **Upload Logo** and **Remove Logo** buttons.
 
-To remove the current logo, click **Remove Logo**.
+1. Under the light preview, click **Upload Logo** and choose your file.
+2. If your logo does not read well on a dark background (dark text, for example), upload a second version under the dark preview.
+3. Without a dark mode logo, **Use the light mode logo** decides what dark mode shows: the light mode logo when it is on, the default text branding when it is off.
+4. Check both previews, then click **Save Changes** to publish.
 
-When no logo is set, or when **Show logo in dark mode** is off, KANAP falls back to its default text branding in the relevant theme.
+To remove a logo, click **Remove Logo** under its preview. The other logo stays.
+
+Dark mode shows the dark mode logo when there is one. Light mode always shows the light mode logo, or the default text branding when there is none. E-mails always use the light mode logo, since their background is light.
 
 ## Primary color setup
 
@@ -84,15 +87,15 @@ The warning is informational (you can still save), but low contrast usually mean
 
 Three actions at the bottom of the page control persistence:
 
-- **Save Changes**: commits the organization name, the selected logo upload and the color values. Disabled while there are no pending changes, while the name is empty or longer than 120 characters, or while a hex input is invalid.
+- **Save Changes**: commits the organization name, the selected logos and the color values. Disabled while there are no pending changes, while the name is empty or longer than 120 characters, or while a hex input is invalid.
 - **Discard**: rolls back any unsaved edits on the page (does not affect what is already saved).
-- **Reset to Default**: removes the saved logo and clears all custom colors. The organization name stays. Asks for confirmation before running.
+- **Reset to Default**: removes both saved logos and clears all custom colors. The organization name stays. Asks for confirmation before running.
 
-A small caption below the actions shows the **logo version** counter, which increments each time the logo is uploaded. This is mainly a hint that browser caches will refresh.
+A small caption below the actions shows the **logo version** counter, which increments each time a logo is uploaded or removed. This is mainly a hint that browser caches will refresh.
 
 ## Tips
 
 - **Test in both themes**: switch between light and dark theme before saving. The same brand color rarely works in both modes.
 - **Prefer a transparent background**: simple logos with transparent backgrounds give the cleanest header rendering, especially in dark mode.
-- **Use Reset deliberately**: it removes both the logo and all custom colors in one step. Use it when starting over, not as an "undo" for a single change. That is what **Discard** is for.
+- **Use Reset deliberately**: it removes both logos and all custom colors in one step. Use it when starting over, not as an "undo" for a single change. That is what **Discard** is for.
 - **Brand colors are for accents**: KANAP uses the primary color on app bars, primary buttons, and links. Pick something that reads cleanly at button size, not just on a marketing site.

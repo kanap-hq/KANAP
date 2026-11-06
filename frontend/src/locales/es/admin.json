@@ -1761,17 +1761,20 @@
       "organizationName": "Nombre de la organización",
       "organizationNameHelper": "Se muestra con el logotipo, en Acerca de, en la página de consentimiento y para el asistente. La dirección del espacio de trabajo sigue igual.",
       "organizationNamePlaceholder": "p. ej., Northwind",
-      "showLogoInDark": "Mostrar logo en modo oscuro"
+      "useLightLogoInDark": "Usar el logo del modo claro"
     },
     "logo": {
       "alt": "Vista previa del logo",
-      "description": "Suba un logo para el encabezado de la aplicación y la página de inicio de sesión. Mejores resultados: PNG transparente, JPG, GIF o WEBP con formato ancho.",
+      "darkAlt": "Vista previa del logo del modo oscuro",
+      "description": "Logos del encabezado de la aplicación y de la página de inicio de sesión, uno por modo. Mejores resultados: PNG transparente, JPG, GIF o WEBP con formato ancho. El logo del modo oscuro es opcional.",
       "previews": {
         "dark": "Vista previa encabezado oscuro",
         "darkHidden": "Vista previa encabezado oscuro (logo oculto)",
         "light": "Vista previa encabezado claro"
       },
       "title": "Logo",
+      "uploadDark": "Logo del modo oscuro",
+      "uploadLight": "Logo del modo claro",
       "version": "Versión del logo: {{count}}"
     },
     "messages": {

@@ -22,6 +22,7 @@ Die Seite hat drei Karten: **Name der Organisation**, **Logo** und **Primärfarb
 - **Logo**
   - Erscheint in der oberen App-Leiste (wenn angemeldet)
   - Erscheint in der Kopfzeile der Anmeldeseite
+  - Ein optionales zweites Logo für den Dunkelmodus
 - **Primärfarben**
   - Eine Primärfarbe für den **Light-Modus**
   - Eine Primärfarbe für den **Dark-Modus**
@@ -32,7 +33,7 @@ Die Seite hat drei Karten: **Name der Organisation**, **Logo** und **Primärfarb
 1. Geben Sie den Namen ein.
 2. Klicken Sie auf **Änderungen speichern**.
 
-**Auf Standard zurücksetzen** lässt den Namen unverändert. Die Aktion entfernt das Logo und die benutzerdefinierten Farben.
+**Auf Standard zurücksetzen** lässt den Namen unverändert. Die Aktion entfernt die Logos und die benutzerdefinierten Farben.
 
 ## Logo-Einrichtung
 
@@ -49,14 +50,16 @@ Die Seite hat drei Karten: **Name der Organisation**, **Logo** und **Primärfarb
 
 ### So legen Sie es fest
 
-1. Klicken Sie auf **Logo hochladen** und wählen Sie Ihre Datei aus.
-2. Verwenden Sie die integrierten **Light**- und **Dark**-Kopfzeilenvorschauen, um das Erscheinungsbild zu validieren.
-3. Schalten Sie **Logo im Dark-Modus anzeigen** um, wenn Sie im dunklen Theme auf das Standard-Text-Branding zurückgreifen möchten.
-4. Klicken Sie auf **Änderungen speichern**, um zu veröffentlichen.
+Die Karte zeigt eine helle und eine dunkle Kopfzeilenvorschau, jede mit eigenen Schaltflächen **Logo hochladen** und **Logo entfernen**.
 
-Um das aktuelle Logo zu entfernen, klicken Sie auf **Logo entfernen**.
+1. Klicken Sie unter der hellen Vorschau auf **Logo hochladen** und wählen Sie Ihre Datei aus.
+2. Wenn Ihr Logo auf dunklem Hintergrund schlecht lesbar ist (zum Beispiel dunkler Text), laden Sie unter der dunklen Vorschau eine zweite Version hoch.
+3. Ohne Logo für den Dunkelmodus bestimmt **Logo des Hellmodus verwenden**, was der Dunkelmodus zeigt: das Logo des Hellmodus, wenn es aktiviert ist, das Standard-Text-Branding, wenn es deaktiviert ist.
+4. Prüfen Sie beide Vorschauen und klicken Sie dann auf **Änderungen speichern**, um zu veröffentlichen.
 
-Wenn kein Logo festgelegt ist oder wenn **Logo im Dark-Modus anzeigen** deaktiviert ist, greift KANAP im jeweiligen Theme auf sein Standard-Text-Branding zurück.
+Um ein Logo zu entfernen, klicken Sie unter seiner Vorschau auf **Logo entfernen**. Das andere Logo bleibt.
+
+Der Dunkelmodus zeigt das Logo für den Dunkelmodus, wenn es eines gibt. Der Hellmodus zeigt immer das Logo des Hellmodus oder, wenn keines vorhanden ist, das Standard-Text-Branding. E-Mails verwenden immer das Logo des Hellmodus, da ihr Hintergrund hell ist.
 
 ## Einrichtung der Primärfarbe
 
@@ -84,15 +87,15 @@ Die Warnung ist informativ (Sie können trotzdem speichern), aber niedriger Kont
 
 Drei Aktionen am unteren Rand der Seite steuern die Persistenz:
 
-- **Änderungen speichern**: Speichert den Namen der Organisation, den ausgewählten Logo-Upload und die Farbwerte. Deaktiviert, wenn keine ausstehenden Änderungen vorliegen, der Name leer ist oder länger als 120 Zeichen ist, oder eine Hex-Eingabe ungültig ist.
+- **Änderungen speichern**: Speichert den Namen der Organisation, die ausgewählten Logos und die Farbwerte. Deaktiviert, wenn keine ausstehenden Änderungen vorliegen, der Name leer ist oder länger als 120 Zeichen ist, oder eine Hex-Eingabe ungültig ist.
 - **Verwerfen**: Setzt nicht gespeicherte Bearbeitungen auf der Seite zurück (betrifft nicht das, was bereits gespeichert ist).
-- **Auf Standard zurücksetzen**: Entfernt das gespeicherte Logo und löscht alle benutzerdefinierten Farben. Der Name der Organisation bleibt. Fragt vor der Ausführung um Bestätigung.
+- **Auf Standard zurücksetzen**: Entfernt beide gespeicherten Logos und löscht alle benutzerdefinierten Farben. Der Name der Organisation bleibt. Fragt vor der Ausführung um Bestätigung.
 
-Eine kleine Beschriftung unter den Aktionen zeigt den Zähler **Logo-Version** an, der bei jedem Hochladen des Logos erhöht wird. Dies ist hauptsächlich ein Hinweis darauf, dass Browser-Caches aktualisiert werden.
+Eine kleine Beschriftung unter den Aktionen zeigt den Zähler **Logo-Version** an, der bei jedem Hochladen oder Entfernen eines Logos erhöht wird. Dies ist hauptsächlich ein Hinweis darauf, dass Browser-Caches aktualisiert werden.
 
 ## Tipps
 
 - **In beiden Themes testen**: Wechseln Sie vor dem Speichern zwischen Light- und Dark-Theme. Die gleiche Markenfarbe funktioniert selten in beiden Modi.
 - **Transparenten Hintergrund bevorzugen**: Einfache Logos mit transparentem Hintergrund ergeben die sauberste Kopfzeilen-Darstellung, besonders im Dark-Modus.
-- **Verwenden Sie Zurücksetzen bewusst**: Es entfernt sowohl das Logo als auch alle benutzerdefinierten Farben in einem Schritt. Verwenden Sie es, wenn Sie neu beginnen, nicht als „Rückgängig" für eine einzelne Änderung. Dafür ist **Verwerfen**.
+- **Verwenden Sie Zurücksetzen bewusst**: Es entfernt sowohl die Logos als auch alle benutzerdefinierten Farben in einem Schritt. Verwenden Sie es, wenn Sie neu beginnen, nicht als „Rückgängig" für eine einzelne Änderung. Dafür ist **Verwerfen**.
 - **Markenfarben sind für Akzente**: KANAP verwendet die Primärfarbe in App-Leisten, primären Schaltflächen und Links. Wählen Sie etwas, das in Schaltflächengröße sauber lesbar ist, nicht nur auf einer Marketing-Website.

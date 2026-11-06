@@ -5,6 +5,7 @@ import { StorageService } from '../common/storage/storage.service';
 import { extractInlineImageUrls } from '../common/content-image-urls';
 import { isStoragePathReferencedInAnyTable, ATTACHMENT_TABLES } from '../common/storage-path-refs';
 import { releaseOrphanedManagedDocuments } from '../knowledge/integrated-document-orphans';
+import { brandingLogoPaths, TenantBranding } from '../tenants/tenant.entity';
 
 const DRY_RUN = (process.env.ATTACHMENT_CLEANUP_DRY_RUN || '').toLowerCase() === 'true';
 
@@ -267,13 +268,13 @@ export class OrphanedAttachmentCleanupService implements OnModuleInit {
           }
         }
 
-        // Also check branding logo path
-        const brandingRows: Array<{ logo_path: string | null }> = await mg.query(
-          `SELECT branding->>'logo_storage_path' as logo_path FROM tenants WHERE id = $1`,
+        // Also keep the branding logos
+        const brandingRows: Array<{ branding: TenantBranding | null }> = await mg.query(
+          `SELECT branding FROM tenants WHERE id = $1`,
           [tenant.id],
         );
-        if (brandingRows[0]?.logo_path) {
-          knownPaths.add(brandingRows[0].logo_path);
+        for (const logoPath of brandingLogoPaths(brandingRows[0]?.branding)) {
+          knownPaths.add(logoPath);
         }
 
         // List all S3 objects under this tenant's prefix

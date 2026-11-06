@@ -6,6 +6,7 @@ import { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useThemeMode } from '../config/ThemeContext';
 import { useTenant } from '../tenant/TenantContext';
+import { headerLogoUrl } from '../tenant/headerLogo';
 
 interface AuthFrameProps {
   children: ReactNode;
@@ -14,7 +15,8 @@ interface AuthFrameProps {
 export default function AuthFrame({ children }: AuthFrameProps) {
   const { t } = useTranslation(['nav', 'settings']);
   const { mode, resolvedMode, setMode } = useThemeMode();
-  const { logoUrl, tenantName, useLogoInDark } = useTenant();
+  const tenant = useTenant();
+  const { tenantName } = tenant;
 
   const themeModeLabel = t(`settings:appearance.${mode === 'system' ? 'system' : mode === 'dark' ? 'dark' : 'light'}`);
   const themeModeIcon = mode === 'dark'
@@ -22,7 +24,8 @@ export default function AuthFrame({ children }: AuthFrameProps) {
     : mode === 'light'
       ? <LightModeOutlinedIcon />
       : <BrightnessAutoIcon />;
-  const showLogo = !!logoUrl && (resolvedMode !== 'dark' || useLogoInDark);
+  const logoUrl = headerLogoUrl(tenant, resolvedMode);
+  const showLogo = !!logoUrl;
 
   return (
     <Box

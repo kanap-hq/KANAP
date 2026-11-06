@@ -22,6 +22,7 @@ La page comporte trois cartes : **Nom de l'organisation**, **Logo** et **Couleur
 - **Logo**
   - Apparaît dans la barre supérieure de l'application (lorsque connecté)
   - Apparaît dans l'en-tête de la page de connexion
+  - Un second logo facultatif pour le mode sombre
 - **Couleurs principales**
   - Une couleur principale pour le **mode clair**
   - Une couleur principale pour le **mode sombre**
@@ -32,7 +33,7 @@ La page comporte trois cartes : **Nom de l'organisation**, **Logo** et **Couleur
 1. Saisissez le nom.
 2. Cliquez sur **Enregistrer les modifications**.
 
-**Réinitialiser par défaut** laisse le nom tel quel. Cette action retire le logo et les couleurs personnalisées.
+**Réinitialiser par défaut** laisse le nom tel quel. Cette action retire les logos et les couleurs personnalisées.
 
 ## Configuration du logo
 
@@ -49,14 +50,16 @@ La page comporte trois cartes : **Nom de l'organisation**, **Logo** et **Couleur
 
 ### Comment le définir
 
-1. Cliquez sur **Téléverser le logo** et choisissez votre fichier.
-2. Utilisez les aperçus d'en-tête **Clair** et **Sombre** intégrés pour valider l'apparence.
-3. Basculez **Afficher le logo en mode sombre** si vous souhaitez revenir à l'identité texte par défaut en thème sombre.
-4. Cliquez sur **Enregistrer les modifications** pour publier.
+La carte montre un aperçu d'en-tête clair et un aperçu d'en-tête sombre, chacun avec ses boutons **Téléverser le logo** et **Supprimer le logo**.
 
-Pour supprimer le logo actuel, cliquez sur **Supprimer le logo**.
+1. Sous l'aperçu clair, cliquez sur **Téléverser le logo** et choisissez votre fichier.
+2. Si votre logo se lit mal sur un fond sombre (texte foncé, par exemple), téléversez une seconde version sous l'aperçu sombre.
+3. Sans logo pour le mode sombre, **Utiliser le logo du mode clair** décide de ce qu'affiche le mode sombre : le logo du mode clair quand il est activé, l'identité texte par défaut quand il est désactivé.
+4. Vérifiez les deux aperçus, puis cliquez sur **Enregistrer les modifications** pour publier.
 
-Lorsqu'aucun logo n'est défini, ou lorsque **Afficher le logo en mode sombre** est désactivé, KANAP revient à son identité texte par défaut dans le thème concerné.
+Pour supprimer un logo, cliquez sur **Supprimer le logo** sous son aperçu. L'autre logo reste.
+
+Le mode sombre affiche le logo du mode sombre quand il existe. Le mode clair affiche toujours le logo du mode clair, ou l'identité texte par défaut s'il n'y en a pas. Les e-mails utilisent toujours le logo du mode clair, car leur fond est clair.
 
 ## Configuration des couleurs principales
 
@@ -84,15 +87,15 @@ L'avertissement est informatif (vous pouvez quand même enregistrer), mais un fa
 
 Trois actions au bas de la page contrôlent la persistance :
 
-- **Enregistrer les modifications** : enregistre le nom de l'organisation, le téléversement du logo sélectionné et les valeurs de couleur. Désactivé tant qu'il n'y a pas de modifications en attente, que le nom est vide ou dépasse 120 caractères, ou qu'une saisie hexadécimale est invalide.
+- **Enregistrer les modifications** : enregistre le nom de l'organisation, les logos sélectionnés et les valeurs de couleur. Désactivé tant qu'il n'y a pas de modifications en attente, que le nom est vide ou dépasse 120 caractères, ou qu'une saisie hexadécimale est invalide.
 - **Annuler** : annule toute modification non enregistrée sur la page (n'affecte pas ce qui est déjà enregistré).
-- **Réinitialiser par défaut** : supprime le logo enregistré et efface toutes les couleurs personnalisées. Le nom de l'organisation reste. Demande confirmation avant exécution.
+- **Réinitialiser par défaut** : supprime les deux logos enregistrés et efface toutes les couleurs personnalisées. Le nom de l'organisation reste. Demande confirmation avant exécution.
 
-Une petite légende sous les actions affiche le compteur de **version du logo**, qui s'incrémente à chaque téléversement du logo. C'est principalement une indication que les caches du navigateur seront rafraîchis.
+Une petite légende sous les actions affiche le compteur de **version du logo**, qui s'incrémente à chaque téléversement ou suppression d'un logo. C'est principalement une indication que les caches du navigateur seront rafraîchis.
 
 ## Conseils
 
 - **Testez dans les deux thèmes** : basculez entre les thèmes clair et sombre avant d'enregistrer : la même couleur de marque fonctionne rarement dans les deux modes.
 - **Préférez un fond transparent** : les logos simples avec des fonds transparents donnent le rendu d'en-tête le plus propre, en particulier en mode sombre.
-- **Utilisez Réinitialiser délibérément** : cela supprime à la fois le logo et toutes les couleurs personnalisées en une seule étape. Utilisez-le pour repartir à zéro, pas comme « annulation » d'un seul changement. C'est à cela que sert **Annuler**.
+- **Utilisez Réinitialiser délibérément** : cela supprime à la fois les logos et toutes les couleurs personnalisées en une seule étape. Utilisez-le pour repartir à zéro, pas comme « annulation » d'un seul changement. C'est à cela que sert **Annuler**.
 - **Les couleurs de marque sont pour les accents** : KANAP utilise la couleur principale sur les barres d'application, les boutons principaux et les liens. Choisissez quelque chose qui se lit clairement à la taille d'un bouton, pas seulement sur un site marketing.
