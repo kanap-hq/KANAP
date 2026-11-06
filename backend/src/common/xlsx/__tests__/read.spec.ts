@@ -386,7 +386,7 @@ function writerRoundTrip() {
   assert.equal(grid.sheetCount, 1);
   assert.deepEqual(grid.rows, [
     ['kanap_token', 'account', 'end_of_validity', 'budget_2027', 'days', 'share', 'old', 'empty', 'formula'].map(text),
-    [text('k1.fr.0123456789abcdef'), text('01100'), date('2027-12-31'), number('-1234.50'), number('3.25'), number('0.125'), text('01/05/1899'), EMPTY, text("'=1+1")],
+    [text('k1.fr.0123456789abcdef'), text('01100'), date('2027-12-31'), number('-1234.50'), number('3.25'), { kind: 'number', value: '0.125', percent: true }, text('01/05/1899'), EMPTY, text("'=1+1")],
     [text('0042'), text('  leading spaces'), date('1900-03-01'), number('12345678901234567.89'), number('7'), EMPTY, EMPTY, EMPTY, text('é ü 中 😀')],
   ]);
 

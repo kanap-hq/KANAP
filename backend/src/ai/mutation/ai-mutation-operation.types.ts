@@ -3,6 +3,7 @@ import { AiMutationPreview } from '../ai-mutation-preview.entity';
 import { AiWriteLanguage } from '../ai-write-texts';
 import {
   AiExecutionContextWithManager,
+  AiImportMappingPreviewDto,
   AiMutationPreviewChangeDto,
   AiMutationPreviewDto,
   AiMutationWriteToolName,
@@ -20,6 +21,8 @@ export type AiMutationPreviewPresentation = {
   target: AiMutationPreviewDto['target'];
   changes: Record<string, AiMutationPreviewChangeDto>;
   summary: string;
+  /** The column mapping of an import (`prepare_import_mapping`). */
+  importMapping?: AiImportMappingPreviewDto;
 };
 
 export interface AiMutationOperation<TInput = unknown> {
@@ -46,6 +49,9 @@ export interface AiMutationOperation<TInput = unknown> {
     context: AiExecutionContextWithManager,
     input: TInput,
   ): Promise<AiPreparedMutationPreview>;
+
+  /** Whether `replacement` replaces the person's `pending` preview of this tool in the conversation: the pending one then expires. */
+  replacesPendingPreview?(pending: AiMutationPreview, replacement: AiMutationPreview): boolean;
 
   /** The card of a preview: its summary in the person's language (English when not given). */
   presentPreview(preview: AiMutationPreview, language?: AiWriteLanguage): AiMutationPreviewPresentation;

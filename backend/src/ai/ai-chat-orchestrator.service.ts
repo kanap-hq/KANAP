@@ -1483,6 +1483,10 @@ export class AiChatOrchestratorService {
     if (params.previewResults.length === 0) {
       return false;
     }
+    // An approved import mapping leaves nothing to prepare: no import runs from it yet (lot I3).
+    if (params.previewResults.every((preview) => preview.tool_name === 'prepare_import_mapping')) {
+      return false;
+    }
 
     const contextualHistory = params.history.filter((message) => (
       message.role !== 'user' || !this.parseApprovalAction(message.content)

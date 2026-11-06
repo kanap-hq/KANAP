@@ -334,6 +334,41 @@
         "it_users": "Utilisateurs IT",
         "manual": "Manuel"
       }
+    },
+    "importMapping": {
+      "column": "Colonne",
+      "fromFile": "Dans le fichier",
+      "confidence": "Confiance",
+      "read": "Valeurs",
+      "columnAt": "Colonne {{position}}",
+      "everyRow": "Même valeur sur chaque ligne : {{value}}",
+      "allRows": "Toutes les lignes",
+      "confidenceLevels": {
+        "high": "Élevée",
+        "medium": "Moyenne",
+        "low": "Faible"
+      },
+      "filled": "{{filled}} sur {{rows}}",
+      "unread_one": "{{count}} non lue",
+      "unread_other": "{{count}} non lues",
+      "readAs": {
+        "day-first": "Jour en premier",
+        "month-first": "Mois en premier",
+        "decimal-comma": "Virgule décimale",
+        "decimal-point": "Point décimal"
+      },
+      "missingRequired": "Obligatoires et absentes du fichier : {{columns}}",
+      "rowsMissingRequired_one": "{{count}} ligne n'a pas de valeur obligatoire.",
+      "rowsMissingRequired_other": "{{count}} lignes n'ont pas de valeur obligatoire.",
+      "unplaced": "Non utilisées : {{columns}}",
+      "assumptions": "Suppositions",
+      "firstRows": "Premières lignes",
+      "yes": "Oui",
+      "no": "Non",
+      "readErrors": {
+        "mixed-date-orders": "Dates écrites jour en premier et mois en premier",
+        "mixed-decimal-marks": "Nombres écrits avec une virgule et avec un point décimal"
+      }
     }
   },
   "previewStatuses": {

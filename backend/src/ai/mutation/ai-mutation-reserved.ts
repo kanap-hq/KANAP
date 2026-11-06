@@ -1,4 +1,5 @@
 import { isReservedDimensionValueWrite } from '../../data-access/reserved-operations';
+import { aiImportAccess } from '../import/ai-import-access';
 
 /**
  * Plaid's writes that are operations reserved to unscoped persons (planning/data-scoped-access/spec.md
@@ -12,6 +13,8 @@ import { isReservedDimensionValueWrite } from '../../data-access/reserved-operat
  *   common data, created and edited as the role allows).
  * - deleting a budget line: `DELETE /budget-lines/bulk` and `POST /budget-lines/delete-check`
  *   carry `@ReservedToUnscopedDataAccess`, for both natures of the one family.
+ * - the column mapping of an import whose import route is reserved (tasks, contracts, suppliers,
+ *   contacts and the organisation data, `ai/import/ai-import-access.ts`).
  * Lines, contracts, tasks, documents, locations, connections, interfaces and the other records
  * follow the person's access.
  */
@@ -30,6 +33,9 @@ export function isReservedAiMutation(toolName: string, entityType: unknown): boo
     case 'delete_record':
       // The contact and budget line delete routes, reserved as their screens are.
       return RESERVED_DELETES.has(type);
+    case 'prepare_import_mapping':
+      // An import whose route is reserved (`AI_IMPORT_ACCESS`): the type is the import's key.
+      return aiImportAccess(type)?.reservedToUnscoped === true;
     default:
       return false;
   }

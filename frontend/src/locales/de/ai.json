@@ -334,6 +334,41 @@
         "it_users": "IT-Benutzer",
         "manual": "Manuell"
       }
+    },
+    "importMapping": {
+      "column": "Spalte",
+      "fromFile": "Aus der Datei",
+      "confidence": "Sicherheit",
+      "read": "Werte",
+      "columnAt": "Spalte {{position}}",
+      "everyRow": "Gleicher Wert in jeder Zeile: {{value}}",
+      "allRows": "Alle Zeilen",
+      "confidenceLevels": {
+        "high": "Hoch",
+        "medium": "Mittel",
+        "low": "Niedrig"
+      },
+      "filled": "{{filled}} von {{rows}}",
+      "unread_one": "{{count}} nicht gelesen",
+      "unread_other": "{{count}} nicht gelesen",
+      "readAs": {
+        "day-first": "Tag zuerst",
+        "month-first": "Monat zuerst",
+        "decimal-comma": "Dezimalkomma",
+        "decimal-point": "Dezimalpunkt"
+      },
+      "missingRequired": "Pflichtspalten, die in der Datei fehlen: {{columns}}",
+      "rowsMissingRequired_one": "{{count}} Zeile ohne Pflichtwert.",
+      "rowsMissingRequired_other": "{{count}} Zeilen ohne Pflichtwert.",
+      "unplaced": "Nicht verwendet: {{columns}}",
+      "assumptions": "Annahmen",
+      "firstRows": "Erste Zeilen",
+      "yes": "Ja",
+      "no": "Nein",
+      "readErrors": {
+        "mixed-date-orders": "Datumsangaben mit Tag zuerst und mit Monat zuerst",
+        "mixed-decimal-marks": "Zahlen mit Dezimalkomma und mit Dezimalpunkt"
+      }
     }
   },
   "previewStatuses": {

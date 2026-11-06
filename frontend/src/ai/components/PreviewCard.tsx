@@ -13,6 +13,7 @@ import { getDotColor } from '../../utils/statusColors';
 import { getPreviewStatusColorKey, getPreviewStatusDisplay } from '../utils/previewStatus';
 import { getPreviewTitle } from '../utils/previewClassification';
 import { usePreviewChangeLabels } from './previewChangeLabels';
+import ImportMappingPreview from './ImportMappingPreview';
 
 const LINKED_MARKDOWN_IMAGE_RE = /\[\s*!\[[^\]]*]\(\s*<?[^)\s>]+>?[\s\S]*?\)\s*]\(\s*<?[^)\s>]+>?[\s\S]*?\)/g;
 const MARKDOWN_IMAGE_RE = /!\[[^\]]*]\(\s*<?[^)\s>]+>?[\s\S]*?\)/g;
@@ -215,6 +216,9 @@ function PreviewCard({
           </Typography>
         </Stack>
 
+        {preview.import_mapping && <ImportMappingPreview mapping={preview.import_mapping} />}
+
+        {Object.keys(preview.changes).length > 0 && (
         <Stack spacing={1.25}>
           {Object.entries(preview.changes).map(([field, change]) => {
             // A list value reads as on the screens, budget amounts as on the budget screens, a classification level
@@ -307,6 +311,7 @@ function PreviewCard({
             );
           })}
         </Stack>
+        )}
 
         {/* A failure of the service reads as a sentence in the person's language, its message as the detail. */}
         {preview.error_message && preview.error_is_technical ? (

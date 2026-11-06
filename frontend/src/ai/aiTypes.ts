@@ -26,7 +26,8 @@ export type AiMutationWriteToolName =
   | 'change_incident_state'
   | 'set_incident_confidentiality'
   | 'add_task_comment'
-  | 'delete_record';
+  | 'delete_record'
+  | 'prepare_import_mapping';
 
 export type AiMutationPreviewStatus =
   | 'pending'
@@ -58,6 +59,35 @@ export type AiPreviewRelationItem = {
   environment?: string | null;
   /** The cluster that contains the asset, for a host link a cluster's write replaces. */
   host?: string | null;
+};
+
+/** How the columns of an attached spreadsheet map to an import's template (`prepare_import_mapping`). */
+export type AiImportMapping = {
+  import_key: string;
+  filename: string;
+  row_count: number;
+  columns: Array<{
+    column: string;
+    title: string;
+    required: boolean;
+    kind: string;
+    source: { position: number; header: string | null } | null;
+    value: string | null;
+    confidence: 'high' | 'medium' | 'low';
+    filled: number;
+    unread: number;
+    /** `day-first`, `month-first`, `decimal-comma` or `decimal-point`. */
+    read_as: string | null;
+    note: string | null;
+  }>;
+  /** Some values the import will not read, by column; shown here only. */
+  unread_values?: Record<string, string[]>;
+  read_errors?: Record<string, 'mixed-date-orders' | 'mixed-decimal-marks'>;
+  missing_required: Array<{ column: string; title: string }>;
+  unplaced: Array<{ position: number; header: string | null }>;
+  assumptions: string[];
+  sample: { columns: string[]; rows: string[][]; unread?: boolean[][] };
+  rows_missing_required: number;
 };
 
 export type AiMutationPreview = {
@@ -92,6 +122,8 @@ export type AiMutationPreview = {
   error_message: string | null;
   /** A failure of the service: the card says the change was not made, with `error_message` as its detail. */
   error_is_technical?: boolean;
+  /** The column mapping of an import (`prepare_import_mapping`), drawn in place of the changes. */
+  import_mapping?: AiImportMapping;
   conversation_id: string | null;
   created_at: string;
   expires_at: string | null;

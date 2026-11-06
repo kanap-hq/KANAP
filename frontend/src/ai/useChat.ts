@@ -955,14 +955,19 @@ export function useChat() {
       }
       // Refresh messages from the server so optimistic local ids (`local-N-…`) get
       // swapped for real DB UUIDs. That way the next edit/regenerate click can target
-      // the right message via truncate_from_message_id.
+      // the right message via truncate_from_message_id. The cards are refreshed too:
+      // one the turn replaced (a new mapping of the same file) no longer offers approval.
       const finalConvId = conversationIdRef.current;
       if (finalConvId && generation === streamGenerationRef.current) {
         try {
-          const refreshed = await aiConversationsApi.getMessages(finalConvId);
+          const [refreshed, refreshedPreviews] = await Promise.all([
+            aiConversationsApi.getMessages(finalConvId),
+            aiConversationsApi.getPreviews(finalConvId),
+          ]);
           if (conversationIdRef.current === finalConvId) {
             const rebuilt = rebuildMessagesFromStored(refreshed.messages, finalConvId);
             setMessages((current) => carryAssistantTransient(current, rebuilt));
+            setPreviews(refreshedPreviews);
             setConversationUsage(normalizeConversationUsage(refreshed.conversation_usage));
             setLastRequestUsage(findLastUsage(refreshed.messages));
           }

@@ -892,6 +892,9 @@ Live write-preview coverage includes:
   budget line, project, request, document, and location links
 - financial plan writes for budget line versions, amounts, and allocations
 - GLPI ticket import into a KANAP task
+- the column mapping of an attached spreadsheet onto an import's template
+  (`prepare_import_mapping`, after `describe_import_template`), which records
+  the mapping and imports nothing
 - single-record deletes (`delete_record`) of a task, contact, location,
   document, budget line, connection or interface, at the level of that
   family's delete route (`ai-write-levels.ts`); one pending delete per
@@ -1011,6 +1014,37 @@ detail that showed the stored type shows `budget_line` to the model. The delete
 card keeps the L3 labels ("Deleted tasks", "Links to …", "The linked records
 stay.") for both natures.
 
+The import mapping (`backend/src/ai/import/`) covers every import that has a
+route: `AI_IMPORT_ACCESS` gives each one the module, the level and the
+reservation to unscoped persons of its route (a spec compares them with the
+route guards), and `ai-import-targets.ts` its template columns, taken from the
+CSV configuration of the import where it has one. `describe_import_template`
+gives the model the columns, the codes and the workspace's catalog entries.
+`prepare_import_mapping` takes the attachment id from the `<attached_table>`
+summary and one entry per template column (file column or one value for every
+row, confidence, date order, decimal mark, file values mapped to the values
+they stand for, note); the server reads the whole file again by its attachment
+id, converts every row with the CSV readers of the imports and returns, per
+column, the values read and not read. It reads dates (also with the month's
+name, `28/Oct/26`, `3 janvier 2027`), dates and times (`YYYY-MM-DD HH:MM`, for
+the incident import's date-time columns), numbers, percentages (a workbook
+cell shown as 45% holds 0.45 and reads as 45), yes/no, codes and catalog
+entries by code or by name in the four languages (a name written without its
+accents when it names one entry only), and countries by code or name. The
+value map applies to every kind of column, and `""` leaves a cell blank. Names
+of other records (a company, a server, a person) are copied as written: the
+import checks them when it runs. Rows above the header that hold only a title
+or a date in their first columns are left out of the table (I1's reader). A
+template column without its own title takes one from `ai-import-titles.ts`. An
+approved mapping ends the turn: Plaid does not continue after it. The card
+shows the first rows and the values not read; the model receives the counts only (`MODEL_HIDDEN_OUTPUT_FIELDS` hides
+`unread_values` and `sample`), so no file cell reaches it beyond the summary.
+The tool is refused inside a mutation plan, whose output is not redacted.
+A new mapping of the same file expires the pending card of that file
+(`replacesPendingPreview`), so the person has one card to approve; the chat
+reloads the cards at the end of each answer. Approving checks the attachment
+again and writes nothing.
+
 Writes go through existing domain services where practical, so normal validation,
 workflow rules, side effects, and audit logging still apply. AI-originated domain
 audit rows use `source: ai_chat` and the preview ID as `sourceRef`.
@@ -1054,6 +1088,8 @@ Current MCP behavior is deliberately read-only:
   for a connection, the host of its redirect URI (`oauth_redirect_host`), as do
   the keys of `facets`
 - revoking a key or a connection already revoked changes nothing
+- `describe_import_template` stays in the chat: it serves the mapping of a
+  spreadsheet attached to a conversation, and MCP has no attachments
 
 Read-write MCP is roadmap. It needs an explicit approval protocol rather than
 reusing chat approval cards.

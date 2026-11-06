@@ -334,6 +334,41 @@
         "it_users": "Usuarios IT",
         "manual": "Manual"
       }
+    },
+    "importMapping": {
+      "column": "Columna",
+      "fromFile": "En el archivo",
+      "confidence": "Confianza",
+      "read": "Valores",
+      "columnAt": "Columna {{position}}",
+      "everyRow": "Mismo valor en cada fila: {{value}}",
+      "allRows": "Todas las filas",
+      "confidenceLevels": {
+        "high": "Alta",
+        "medium": "Media",
+        "low": "Baja"
+      },
+      "filled": "{{filled}} de {{rows}}",
+      "unread_one": "{{count}} no leído",
+      "unread_other": "{{count}} no leídos",
+      "readAs": {
+        "day-first": "Día primero",
+        "month-first": "Mes primero",
+        "decimal-comma": "Coma decimal",
+        "decimal-point": "Punto decimal"
+      },
+      "missingRequired": "Obligatorias y ausentes del archivo: {{columns}}",
+      "rowsMissingRequired_one": "{{count}} fila sin valor obligatorio.",
+      "rowsMissingRequired_other": "{{count}} filas sin valor obligatorio.",
+      "unplaced": "No utilizadas: {{columns}}",
+      "assumptions": "Suposiciones",
+      "firstRows": "Primeras filas",
+      "yes": "Sí",
+      "no": "No",
+      "readErrors": {
+        "mixed-date-orders": "Fechas escritas con el día primero y con el mes primero",
+        "mixed-decimal-marks": "Números escritos con coma decimal y con punto decimal"
+      }
     }
   },
   "previewStatuses": {

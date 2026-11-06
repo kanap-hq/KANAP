@@ -181,6 +181,12 @@ const RELATION_WRITE_TOOLS: AiToolName[] = [
   'undo_preview',
 ];
 
+/** The import of an attached spreadsheet: its template, then its column mapping. */
+const IMPORT_WRITE_TOOLS: AiToolName[] = [
+  'describe_import_template',
+  'prepare_import_mapping',
+];
+
 function uniqueToolNames(groups: AiToolName[][]): AiToolName[] {
   const seen = new Set<AiToolName>();
   const result: AiToolName[] = [];
@@ -203,6 +209,7 @@ const GENERAL_WRITE_TOOLS = uniqueToolNames([
   MASTER_DATA_WRITE_TOOLS,
   FINANCIAL_WRITE_TOOLS,
   RELATION_WRITE_TOOLS,
+  IMPORT_WRITE_TOOLS,
 ]);
 
 function buildProfile(
@@ -410,6 +417,11 @@ function withWebCapability(profile: AiContextProfile, needsWeb: boolean): AiCont
     includeWebGuidelines: true,
   };
 }
+
+/** The import verbs of the four languages, accents already removed. */
+const FILE_IMPORT_RE = /\b(?:import|imports|importe|importes|importer|importez|importons|importing|importiere|importieren|importa|importar)\b/;
+const TICKET_IMPORT_RE = /\b(?:ticket|tickets|glpi)\b/;
+const HOW_TO_RE = /\b(?:comment|how|wie|como)\b/;
 
 const SOCIAL_MESSAGE_RE = /^(hi|hello|hey|bonjour|bonsoir|salut|merci|thanks|thank you|ca va|ça va|help|aide)[\s!.?]*$/i;
 
@@ -1000,6 +1012,12 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
 
   // Undoing the last mutation is a write of its own: "Undo that", "Annule l'aperçu".
   if (UNDO_REQUEST_RE.test(text)) {
+    return { profile: withWebCapability(PROFILES.write_general, needsWeb), explicitIntent: true };
+  }
+
+  // A spreadsheet import: "Importe ce fichier", "Import these servers", "Importiere die Datei",
+  // "Importa el archivo". A ticket import stays a task write, and "how do I import" a question.
+  if (FILE_IMPORT_RE.test(text) && !TICKET_IMPORT_RE.test(text) && !HOW_TO_RE.test(text)) {
     return { profile: withWebCapability(PROFILES.write_general, needsWeb), explicitIntent: true };
   }
 

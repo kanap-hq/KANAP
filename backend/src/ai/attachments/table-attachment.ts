@@ -1,6 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { parse } from 'csv-parse/sync';
 import { csvSeparatorOf, sheetCellText, SheetCell, XLSX_BLANK_ROW_MARGIN } from '../../common/csv-sheet/read';
+import { Decimal } from '../../common/decimal';
 import { CsvDecodeError, decodeCsv } from '../../common/csv-sheet/decode';
 import { CSV_ROW_CAP } from '../../common/csv-sheet/types';
 import { denormalizeCsvFormulaValue } from '../../common/csv/csv-export.service';
@@ -65,13 +66,7 @@ export function isWorkbookBytes(buffer: Buffer): boolean {
  * holds no header, or passes a cap.
  */
 export async function summarizeTableAttachment(buffer: Buffer): Promise<TableSummary> {
-  if (buffer.length > TABLE_ATTACHMENT_MAX_BYTES) {
-    throw refusal('AI_TABLE_TOO_LARGE', `This file is larger than ${TABLE_ATTACHMENT_MAX_BYTES / (1024 * 1024)} MB.`, {
-      max: TABLE_ATTACHMENT_MAX_BYTES / (1024 * 1024),
-    });
-  }
-  const grid = isWorkbookBytes(buffer) ? await readWorkbook(buffer) : readCsvText(buffer);
-  return summarizeGrid(grid);
+  return summarizeTable(await readTableAttachment(buffer));
 }
 
 interface Grid {
@@ -79,6 +74,64 @@ interface Grid {
   sheetName: string | null;
   sheetCount: number;
   rows: SheetCell[][];
+}
+
+/** An attached spreadsheet as read: its header cells and its data rows, blank rows left out. */
+export interface TableGrid {
+  format: 'csv' | 'xlsx';
+  sheetName: string | null;
+  sheetCount: number;
+  /** The header row, one cell per column. */
+  header: SheetCell[];
+  /** The data rows below the header; a text cell is trimmed and blank when empty. */
+  rows: SheetCell[][];
+  /** Columns: up to the last one with a value in any row. */
+  width: number;
+}
+
+/**
+ * Reads an attached spreadsheet whole, as the summary reads it. The tools of the import lots convert
+ * its cells server side: none of them leaves for the model.
+ */
+export async function readTableAttachment(buffer: Buffer): Promise<TableGrid> {
+  if (buffer.length > TABLE_ATTACHMENT_MAX_BYTES) {
+    throw refusal('AI_TABLE_TOO_LARGE', `This file is larger than ${TABLE_ATTACHMENT_MAX_BYTES / (1024 * 1024)} MB.`, {
+      max: TABLE_ATTACHMENT_MAX_BYTES / (1024 * 1024),
+    });
+  }
+  const grid = isWorkbookBytes(buffer) ? await readWorkbook(buffer) : readCsvText(buffer);
+  const read = grid.rows.map((row) => row.map(cleanCell)).filter((row) => !row.every(isBlank));
+  if (read.length === 0) throw refusal('CSV_FILE_EMPTY', 'The file is empty.');
+  const rows = read.slice(titleRowCount(read));
+  const [header, ...data] = rows;
+  if (data.length > TABLE_ATTACHMENT_MAX_ROWS) throw tooManyRows();
+
+  let width = 0;
+  for (const row of rows) {
+    let end = row.length;
+    while (end > 0 && isBlank(row[end - 1])) end -= 1;
+    width = Math.max(width, end);
+  }
+  return { format: grid.format, sheetName: grid.sheetName, sheetCount: grid.sheetCount, header, rows: data, width };
+}
+
+/** Rows a sheet may hold above its header: a title, an export date. */
+const TITLE_ROWS_MAX = 5;
+
+function filledCount(row: SheetCell[]): number {
+  return row.filter((cell) => !isBlank(cell)).length;
+}
+
+/**
+ * Rows above the header that are not part of the table: a title or an export date written over it,
+ * values in its first two columns only, where the table fills more than twice as many columns.
+ */
+function titleRowCount(rows: SheetCell[][]): number {
+  const width = rows.slice(0, TITLE_ROWS_MAX + TABLE_SUMMARY_SAMPLE_ROWS).reduce((widest, row) => Math.max(widest, filledCount(row)), 0);
+  const isTitle = (row: SheetCell[]) => row.slice(2).every(isBlank) && filledCount(row) * 2 < width;
+  let count = 0;
+  while (count < Math.min(TITLE_ROWS_MAX, rows.length - 1) && isTitle(rows[count])) count += 1;
+  return count;
 }
 
 async function readWorkbook(buffer: Buffer): Promise<Grid> {
@@ -128,23 +181,12 @@ function cleanCell(cell: SheetCell): SheetCell {
   return value === '' ? { kind: 'empty' } : { kind: 'text', value };
 }
 
-function isBlank(cell: SheetCell | undefined): boolean {
+export function isBlank(cell: SheetCell | undefined): boolean {
   return !cell || cell.kind === 'empty';
 }
 
-function summarizeGrid(grid: Grid): TableSummary {
-  const rows = grid.rows.map((row) => row.map(cleanCell)).filter((row) => !row.every(isBlank));
-  if (rows.length === 0) throw refusal('CSV_FILE_EMPTY', 'The file is empty.');
-  const [headerRow, ...data] = rows;
-  if (data.length > TABLE_ATTACHMENT_MAX_ROWS) throw tooManyRows();
-
-  let width = 0;
-  for (const row of rows) {
-    let end = row.length;
-    while (end > 0 && isBlank(row[end - 1])) end -= 1;
-    width = Math.max(width, end);
-  }
-
+function summarizeTable(grid: TableGrid): TableSummary {
+  const { header: headerRow, rows: data, width } = grid;
   const columns: TableColumnSummary[] = [];
   for (let index = 0; index < width; index += 1) {
     const header = headerRow[index];
@@ -185,7 +227,7 @@ const DATE_TEXT = /^(?:\d{4}-\d{1,2}-\d{1,2}(?:[ T]\d{1,2}:\d{2}(?::\d{2})?)?|\d
  * The type a cell reads as. A CSV file holds text only: a number or a date written in it, in any of the
  * usual notations, reads as one, so a column of amounts is a number column whichever file it came in.
  */
-function cellType(cell: SheetCell): TableColumnType {
+export function cellType(cell: SheetCell): TableColumnType {
   if (cell.kind === 'number') return 'number';
   if (cell.kind === 'date') return 'date';
   if (cell.kind !== 'text') return 'empty';
@@ -194,14 +236,16 @@ function cellType(cell: SheetCell): TableColumnType {
   return 'text';
 }
 
-function sampleText(cell: SheetCell | undefined): string {
+/** A cell as the sheet shows it: a day with its time, a percentage with its sign (0.45 shown as 45%). */
+export function sampleText(cell: SheetCell | undefined): string {
   if (!cell || cell.kind === 'empty') return '';
   if (cell.kind === 'date' && cell.time) return `${cell.iso} ${cell.time}`;
+  if (cell.kind === 'number' && cell.percent) return `${Decimal.from(cell.value).mul(100).toString()}%`;
   return clip(sheetCellText(cell));
 }
 
 /** One line of text, shortened, that cannot close the summary's markers. */
-function clip(value: string): string {
+export function clip(value: string): string {
   const flat = value.replace(/\s+/g, ' ').replace(/<(\/?)attached_table/gi, '‹$1attached_table').trim();
   return flat.length > TABLE_SUMMARY_MAX_CELL_LENGTH ? `${flat.slice(0, TABLE_SUMMARY_MAX_CELL_LENGTH - 1)}…` : flat;
 }

@@ -328,6 +328,15 @@ function toCapabilitySurface(surface: string): CapabilitySurface {
   throw new BadRequestException(`Unsupported capability surface: ${surface}`);
 }
 
+/**
+ * Output fields of a tool the model never receives: the user's card shows them, from the handler's
+ * own output. The column mapping of an import holds cells of the person's file that its summary did
+ * not show (lot I2 of the Plaid import: no file data reaches the model beyond the summary).
+ */
+export const MODEL_HIDDEN_OUTPUT_FIELDS: Readonly<Record<string, readonly string[]>> = {
+  prepare_import_mapping: ['/import_mapping/unread_values', '/import_mapping/sample'],
+};
+
 function compatibilityContract(
   tool: AiToolListItemDto,
   inputSchema: Record<string, unknown>,
@@ -362,7 +371,7 @@ function compatibilityContract(
     idempotency: { mode: tool.read_only ? 'idempotent' : 'non_idempotent', key_fields: tool.read_only ? ['input'] : undefined },
     rollback: { supported: tool.write_preview?.reversible === true },
     cost: { estimated_unit_cost: null, metered: false },
-    redaction_policy: { fields: [] },
+    redaction_policy: { fields: [...(MODEL_HIDDEN_OUTPUT_FIELDS[tool.name] ?? [])] },
     mcp_exposure: { enabled: mcpEnabled, read_only: mcpEnabled },
     live_test_safety: tool.read_only ? 'live_read' : 'live_write_gated',
     compatibility: { ai_tool_name: tool.name },
