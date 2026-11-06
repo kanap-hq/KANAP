@@ -213,7 +213,7 @@ describe('BudgetPropertiesDrawer end of validity', () => {
     renderDrawer({ mode: 'create', disabledAt: null, onDisabledAtChange });
 
     expect(screen.getByText('opex.fields.endOfValidity')).toBeTruthy();
-    expect(screen.getByText('opex.fields.endOfValidityHint')).toBeTruthy();
+    expect(screen.queryByText('opex.fields.endOfValidityHint')).toBeNull();
     expect(screen.queryByText('opex.fields.effectiveEnd')).toBeNull();
 
     // Two date fields in the dates group: effective start, then end of validity.
@@ -248,6 +248,7 @@ describe('BudgetPropertiesDrawer end of validity', () => {
     renderDrawer({ mode: 'edit', disabledAt: null, onDisabledAtChange: noop, onDisableNow: noop });
 
     expect(screen.getAllByText('opex.fields.endOfValidity')).toHaveLength(1);
+    expect(screen.queryByText('opex.fields.endOfValidityHint')).toBeNull();
     expect(screen.queryByText('opex.fields.effectiveEnd')).toBeNull();
   });
 

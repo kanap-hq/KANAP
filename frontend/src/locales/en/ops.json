@@ -63,7 +63,6 @@
       "notes": "Notes",
       "notesPlaceholder": "e.g., renewal negotiated in Q3",
       "endOfValidity": "End of validity",
-      "endOfValidityHint": "Leave blank to keep active indefinitely.",
       "costCenter": "Cost center",
       "costCenterCompanyHint": "This cost center belongs to {{company}}.",
       "runBuild": "Run or build"
@@ -307,7 +306,6 @@
       "effectiveStart": "Effective start",
       "lifecycle": "Lifecycle",
       "endOfValidity": "End of validity",
-      "endOfValidityHint": "Leave blank to keep active indefinitely.",
       "created": "Created on",
       "updated": "Updated on",
       "notes": "Notes",
@@ -453,7 +451,6 @@
       "billingFrequency": "Billing",
       "lifecycle": "Lifecycle",
       "endOfValidity": "End of validity",
-      "endOfValidityHint": "Leave blank to keep the contract active.",
       "created": "Created on",
       "updated": "Updated on",
       "notes": "Notes"

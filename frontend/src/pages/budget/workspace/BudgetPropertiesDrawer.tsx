@@ -308,7 +308,7 @@ export default function BudgetPropertiesDrawer({
           </Box>
         </PropertyRow>
         {mode === 'create' && onDisabledAtChange && (
-          <PropertyRow label={t('opex.fields.endOfValidity')} helperText={t('opex.fields.endOfValidityHint')}>
+          <PropertyRow label={t('opex.fields.endOfValidity')}>
             <Box sx={hideInnerLabelSx}>
               <DateEUField
                 label=""
@@ -367,7 +367,6 @@ export default function BudgetPropertiesDrawer({
               statusLabel={t('opex.status.enabled')}
               statusOffLabel={t('opex.status.disabled')}
               disabledAtLabel={t('opex.fields.endOfValidity')}
-              disabledAtHelperText={t('opex.fields.endOfValidityHint')}
             />
           </Box>
         </PropertyGroup>

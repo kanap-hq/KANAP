@@ -138,7 +138,6 @@
       "notes": "Notes",
       "notesPlaceholder": "ex. renouvellement négocié au T3",
       "endOfValidity": "Fin de validité",
-      "endOfValidityHint": "Laisser vide pour rester actif indéfiniment.",
       "costCenter": "Centre de coûts",
       "costCenterCompanyHint": "Ce centre de coûts appartient à {{company}}.",
       "runBuild": "Run ou build"
@@ -307,7 +306,6 @@
       "effectiveStart": "Début d'effet",
       "lifecycle": "Cycle de vie",
       "endOfValidity": "Fin de validité",
-      "endOfValidityHint": "Laisser vide pour rester actif indéfiniment.",
       "created": "Créé le",
       "updated": "Mis à jour le",
       "notes": "Notes",
@@ -453,7 +451,6 @@
       "billingFrequency": "Facturation",
       "lifecycle": "Cycle de vie",
       "endOfValidity": "Fin de validité",
-      "endOfValidityHint": "Laisser vide pour garder le contrat actif.",
       "created": "Créé le",
       "updated": "Mis à jour le",
       "notes": "Notes"
