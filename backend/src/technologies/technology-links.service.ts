@@ -4,6 +4,7 @@ import type { EntityManager } from 'typeorm';
 import { effectiveAssignmentsSql } from '../app-asset-assignments/effective-assignments';
 import { AuditService, type AuditEntry, type AuditSourceOptions } from '../audit/audit.service';
 import { applicationParticipantCondition, type ParticipationAccessScope } from '../auth/business-contributor-scope';
+import { businessProcessPathSql } from '../business-processes/business-process-tree';
 import { languageOf, type CsvLanguage } from '../common/csv-sheet';
 import { writeListExport, type ListExportFile } from '../common/csv/list-export';
 import type { ExportFileFormat } from '../common/xlsx/format';
@@ -672,13 +673,13 @@ export class TechnologyLinksService {
     const { manager: mg, tenantId } = opts;
     const appId = await this.readApplicationId(mg, tenantId, applicationId);
     const items = await mg.query(
-      `SELECT p.id, p.name, p.status::text AS status,
+      `SELECT bp.id, bp.name, ${businessProcessPathSql('bp')} AS path, bp.status::text AS status,
               NULLIF(btrim(concat_ws(' ', u.first_name, u.last_name)), '') AS owner_name, l.created_at
          FROM application_business_processes l
-         JOIN business_processes p ON p.id = l.business_process_id AND p.tenant_id = l.tenant_id
-         LEFT JOIN users u ON u.id = p.owner_user_id AND u.tenant_id = p.tenant_id
+         JOIN business_processes bp ON bp.id = l.business_process_id AND bp.tenant_id = l.tenant_id
+         LEFT JOIN users u ON u.id = bp.owner_user_id AND u.tenant_id = bp.tenant_id
         WHERE l.tenant_id = $1 AND l.application_id = $2
-        ORDER BY lower(p.name), p.id`,
+        ORDER BY lower(bp.name), bp.id`,
       [tenantId, appId],
     );
     return { items };

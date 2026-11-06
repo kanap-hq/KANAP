@@ -22,7 +22,10 @@ function upChainSql(alias: string): string {
        WHERE q.tenant_id = ${alias}.tenant_id AND up.hop < 100)`;
 }
 
-/** The path of `bp` from the top of the tree, names joined by ` › ` ("Production › Aging"), for display. */
+/**
+ * The path of `alias` from the top of the tree, names joined by ` › ` ("Production › Aging"), for display.
+ * `alias` must not be `p`, `q` or `up`: the walk uses those names, and a clash reads every process of the tenant.
+ */
 export function businessProcessPathSql(alias: string): string {
   return `(${upChainSql(alias)}
     SELECT string_agg(up.name, '${BUSINESS_PROCESS_PATH_SEPARATOR}' ORDER BY up.hop DESC) FROM up)`;

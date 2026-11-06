@@ -102,7 +102,7 @@ Code: `backend/src/business-processes/business-process-tree.ts`.
 - **Reader (`business_processes:reader`)**
   - `GET /business-processes`, `/business-processes/ids`, `/business-processes/tree`, `/business-processes/:id`
   - `GET /business-processes/:id/applications` (the list is empty without `applications:reader`)
-  - Pickers on other pages use `GET /business-processes/lookup`, open to the roles that pick a process.
+  - Pickers on other pages use `GET /business-processes/lookup`, open to the roles that pick a process. Each option is the path (`Parent › Child`, searched, so a parent's name finds the child). The chosen value keeps the name, with the path as a tooltip.
 
 - **Member (`business_processes:member`)**
   - All reader capabilities, plus:
