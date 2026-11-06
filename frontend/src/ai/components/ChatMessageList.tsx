@@ -518,8 +518,11 @@ function PreviewBatch({
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   useEffect(() => {
-    if (!selectedId || !previews.some((preview) => preview.preview_id === selectedId)) {
-      setSelectedId(previews.find((preview) => preview.status === 'pending')?.preview_id || previews[0]?.preview_id || null);
+    const current = previews.find((preview) => preview.preview_id === selectedId);
+    // A card that expires (a newer card replaced it) gives way to a pending one.
+    const pending = previews.find((preview) => preview.status === 'pending');
+    if (!current || (current.status === 'expired' && pending)) {
+      setSelectedId(pending?.preview_id || previews[0]?.preview_id || null);
     }
   }, [previews, selectedId]);
 

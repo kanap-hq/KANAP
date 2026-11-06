@@ -99,8 +99,9 @@ export async function readTableAttachment(buffer: Buffer): Promise<TableGrid> {
     });
   }
   const grid = isWorkbookBytes(buffer) ? await readWorkbook(buffer) : readCsvText(buffer);
-  const rows = grid.rows.map((row) => row.map(cleanCell)).filter((row) => !row.every(isBlank));
-  if (rows.length === 0) throw refusal('CSV_FILE_EMPTY', 'The file is empty.');
+  const read = grid.rows.map((row) => row.map(cleanCell)).filter((row) => !row.every(isBlank));
+  if (read.length === 0) throw refusal('CSV_FILE_EMPTY', 'The file is empty.');
+  const rows = read.slice(titleRowCount(read));
   const [header, ...data] = rows;
   if (data.length > TABLE_ATTACHMENT_MAX_ROWS) throw tooManyRows();
 
@@ -111,6 +112,25 @@ export async function readTableAttachment(buffer: Buffer): Promise<TableGrid> {
     width = Math.max(width, end);
   }
   return { format: grid.format, sheetName: grid.sheetName, sheetCount: grid.sheetCount, header, rows: data, width };
+}
+
+/** Rows a sheet may hold above its header: a title, an export date. */
+const TITLE_ROWS_MAX = 5;
+
+function filledCount(row: SheetCell[]): number {
+  return row.filter((cell) => !isBlank(cell)).length;
+}
+
+/**
+ * Rows above the header that are not part of the table: a title or an export date written over it,
+ * values in its first two columns only, where the table fills more than twice as many columns.
+ */
+function titleRowCount(rows: SheetCell[][]): number {
+  const width = rows.slice(0, TITLE_ROWS_MAX + TABLE_SUMMARY_SAMPLE_ROWS).reduce((widest, row) => Math.max(widest, filledCount(row)), 0);
+  const isTitle = (row: SheetCell[]) => row.slice(2).every(isBlank) && filledCount(row) * 2 < width;
+  let count = 0;
+  while (count < Math.min(TITLE_ROWS_MAX, rows.length - 1) && isTitle(rows[count])) count += 1;
+  return count;
 }
 
 async function readWorkbook(buffer: Buffer): Promise<Grid> {

@@ -174,6 +174,15 @@ export default function AiWorkspacePage() {
     setArtifactPanelOpen(true);
   }, [allPreviews, latestPreviewGroup, latestPreviewGroupKey]);
 
+  // A card that expires (a newer card replaced it) gives way to the pending card of its group.
+  useEffect(() => {
+    if (!selectedArtifactId) return;
+    if (allPreviews.find((preview) => preview.preview_id === selectedArtifactId)?.status !== 'expired') return;
+    const group = previewGroups.find((item) => item.previewIds.includes(selectedArtifactId));
+    const next = group ? pickPreviewForGroup(allPreviews, group.previewIds) : null;
+    if (next?.status === 'pending') setSelectedArtifactId(next.preview_id);
+  }, [allPreviews, previewGroups, selectedArtifactId]);
+
   useEffect(() => {
     try {
       window.localStorage.setItem(ARTIFACT_OPEN_STORAGE_KEY, artifactPanelOpen ? '1' : '0');

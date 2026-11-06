@@ -698,7 +698,7 @@ export class AiToolRegistry {
           category: 'inspection',
           description: 'Describes the template of one KANAP import, for a spreadsheet the user attached: what a row is and how it matches a stored record (`about`), '
             + 'then each column in the template\'s order with its title in the user\'s language, whether it is required, its kind '
-            + '(text, date, number, boolean, codes, catalog, reference, email), what it takes (`takes`), its `codes` or the workspace\'s catalog `entries`. '
+            + '(text, date, datetime, number, boolean, codes, catalog, country, reference, email), what it takes (`takes`), its `codes` or the workspace\'s catalog `entries`. '
             + 'prepare_import_mapping maps the file onto these columns. Refused when the user may not run that import.',
           inputSchema: DescribeImportTemplateInputSchema,
           inputSummary: fieldDescriptions(DescribeImportTemplateInputSchema),

@@ -28,7 +28,8 @@ const ColumnMappingSchema = z.object({
   decimal_mark: z.enum([',', '.']).optional()
     .describe('For a number column written as text, when the first rows show the decimal mark. Else the file settles it.'),
   values: z.record(z.string(), z.string().trim().max(200)).optional()
-    .describe('A value of the file and the code or catalog name it stands for, for the values names do not settle ({"Prod": "Production"}).'),
+    .describe('A value of the file and the value it stands for, for the values the column does not read by itself: a code or catalog name '
+      + '({"Prod": "Production"}), a number ({"3 months": "3"}), a person\'s e-mail, a name as the workspace writes it; "" leaves the cell blank.'),
   note: z.string().trim().max(200).nullable().optional()
     .describe('What you supposed for this column, in the person\'s language, when it is not obvious.'),
 });
@@ -60,14 +61,14 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
   readonly description = 'Create a preview of how a spreadsheet the user attached maps onto the template of a KANAP import: '
     + 'one entry per template column, with the file column it reads (or one value for every row) and your confidence. '
     + 'Call describe_import_template first for the template\'s columns. The server reads the whole file, converts every row '
-    + '(dates, numbers, yes/no, codes and catalog names by name) and returns, per column, the values read and not read; '
+    + '(dates and times, numbers, yes/no, codes, catalog names and countries by name) and returns, per column, the values read and not read; '
     + 'the card shows the user the first rows and the values it could not read. To correct the mapping, call it again with the corrected mapping. '
     + 'Requires explicit user approval. Approving records the mapping: nothing is imported yet.';
   readonly inputSchema = PrepareImportMappingInputSchema;
   readonly inputSummary = {
     attachment_id: 'The id of the attached spreadsheet, from its `<attached_table id="...">` summary.',
     entity_type: `The import the file fills: ${AI_IMPORT_KEYS.join(', ')}.`,
-    columns: 'One entry per template column the file fills: column, source (file column position) or value (for every row), confidence, and optionally date_order, decimal_mark, values (file value to code or catalog name) and note.',
+    columns: 'One entry per template column the file fills: column, source (file column position) or value (for every row), confidence, and optionally date_order, decimal_mark, values (file value to the value it stands for) and note.',
     assumptions: 'What the mapping supposes about the whole file, in the user\'s language.',
   };
   readonly businessResource = 'applications';
@@ -80,6 +81,8 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
       + 'call `describe_import_template` for the import it fits, then `prepare_import_mapping` with the attachment id and the mapping. '
       + 'Map a column only when its header or its first rows say what it holds; say what you supposed in `note` or `assumptions`, '
       + 'and name the file columns you leave out. When the card shows values not read, ask the user what they stand for and call again with `values`. '
+      + 'References to other records (a company, a supplier, a server, a person) are copied as written: the import checks them when it runs, '
+      + 'and neither you nor the card has checked them. '
       + 'A new card for the same file closes the pending one at once: it can no longer be approved, so do not warn the person about it. '
       + 'Approving the card records the mapping and imports nothing: no import runs from a mapping yet, in the chat or elsewhere. Say so, and do not offer to run it or point to another way of running it.',
   };

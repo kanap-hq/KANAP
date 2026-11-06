@@ -94,9 +94,9 @@ vi.mock('../../ai/components/ChatMessageList', () => ({
 }));
 
 vi.mock('../../ai/components/ArtifactPanel', () => ({
-  default: ({ previews, open }: { previews: AiMutationPreview[]; open: boolean }) => (
+  default: ({ previews, open, selectedId }: { previews: AiMutationPreview[]; open: boolean; selectedId: string | null }) => (
     previews.length > 0 ? (
-      <div data-testid="artifact-panel" data-open={String(open)}>
+      <div data-testid="artifact-panel" data-open={String(open)} data-selected={selectedId ?? ''}>
         {previews.map((preview) => (
           <span key={preview.preview_id}>{preview.preview_id}</span>
         ))}
@@ -518,6 +518,23 @@ describe('AiWorkspacePage', () => {
       expect(screen.getByTestId('artifact-panel')).toHaveTextContent('preview-2');
       expect(screen.getByTestId('artifact-panel')).not.toHaveTextContent('preview-stale');
     });
+  });
+
+  it('moves the artifact panel to the card that replaced an expired one', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+    const first = makeMarkdownPreview('mapping-1', 'First mapping '.repeat(80));
+    const second = makeMarkdownPreview('mapping-2', 'Corrected mapping '.repeat(80));
+    chatState.messages = [{ id: 'msg-1', role: 'assistant', content: 'Mapping ready', previewIds: ['mapping-1', 'mapping-2'] }];
+    chatState.previews = [first, second];
+
+    const view = renderPage(client);
+    await waitFor(() => expect(screen.getByTestId('artifact-panel')).toHaveAttribute('data-selected', 'mapping-1'));
+
+    // The answer ends: the chat reloads the cards, and the first one has expired.
+    chatState.previews = [{ ...first, status: 'expired' }, second];
+    view.rerender(pageTree(client));
+
+    await waitFor(() => expect(screen.getByTestId('artifact-panel')).toHaveAttribute('data-selected', 'mapping-2'));
   });
 
   it('optimistically deletes the active conversation and clears it from the query cache', async () => {

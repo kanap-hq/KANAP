@@ -36,9 +36,10 @@ import { isReservedAiMutation } from '../mutation/ai-mutation-reserved';
 import { aiRelationTargetRequirement, aiWriteLevel, aiWriteRequirements } from '../mutation/ai-write-levels';
 import { PrepareImportMappingAiMutationOperation } from '../mutation/operations/prepare-import-mapping.ai-mutation-operation';
 import { AI_IMPORT_ACCESS, AI_IMPORT_KEYS, AI_IMPORT_RESOURCES, AiImportKey } from '../import/ai-import-access';
-import { AI_IMPORT_TARGETS } from '../import/ai-import-targets';
+import { AI_IMPORT_TARGETS, importColumnTitle } from '../import/ai-import-targets';
 import { columnReader } from '../import/ai-import-convert';
 import { AiImportMappingService } from '../import/ai-import-mapping.service';
+import { AiChatOrchestratorService } from '../ai-chat-orchestrator.service';
 import { selectAiContextProfile } from '../ai-context-profile';
 import { AI_IMPORT_ROUTES } from './ai-import-routes';
 
@@ -127,9 +128,21 @@ async function testTemplatesAreTheColumnsTheImportsRead() {
       if (column.kind === 'codes') assert.ok(column.codes?.length, `${key}.${column.column}: its codes`);
       if (column.kind === 'catalog') assert.ok(column.catalog, `${key}.${column.column}: its catalog`);
     }
-    // A title in every language, for the card.
+    // A title in every language, for the card: the list's name, and each column's own title.
     for (const name of AI_IMPORT_TARGETS[key].names ? Object.values(AI_IMPORT_TARGETS[key].names) : []) assert.ok(name);
+    for (const column of columns) {
+      for (const language of ['en', 'fr', 'de', 'es'] as const) {
+        assert.notEqual(importColumnTitle(column, language), column.column, `${key}.${column.column}: a title in ${language}`);
+      }
+    }
   }
+  const budget = await AI_IMPORT_TARGETS.budget_lines.columns(ctx);
+  assert.equal(importColumnTitle(budget.find((column) => column.column === 'analytics:it_tower')!, 'fr'), 'IT tower');
+  assert.equal(importColumnTitle(budget.find((column) => column.column === `landing_${year}`)!, 'fr'), `Atterrissage prévu ${year}`);
+  const tasks = await AI_IMPORT_TARGETS.tasks.columns(ctx);
+  assert.equal(importColumnTitle(tasks.find((column) => column.column === 'viewer_email_2')!, 'de'), 'E-Mail Beobachter 2');
+  const calendars = await AI_IMPORT_TARGETS.working_day_calendars.columns(ctx);
+  assert.equal(importColumnTitle(calendars.find((column) => column.column === 'aug')!, 'fr'), 'Août');
   // The identity columns stay out: the person's file has no KANAP id or reference.
   const applications = (await AI_IMPORT_TARGETS.applications.columns(ctx)).map((column) => column.column);
   assert.ok(!applications.includes('id') && !applications.includes('reference'));
@@ -204,6 +217,56 @@ function testConversions() {
     { status: 'unread', raw: 'Resume' },
   ]);
   console.log('  conversions: OK');
+}
+
+function testConversionsOfRealExports() {
+  // The value map reads any column: a name for a reference, a number, an e-mail; "" leaves the cell blank.
+  let { results } = read({ kind: 'reference' }, ['Paris DC', 'Lyon'], { values: { 'Paris DC': 'PAR-DC1' } });
+  assert.deepEqual(results, [{ status: 'converted', value: 'PAR-DC1' }, { status: 'converted', value: 'Lyon' }]);
+  ({ results } = read({ kind: 'number' }, ['3 months', '30 days', '6', 'soon'], { values: { '3 months': '3', '30 days': '1' } }));
+  assert.deepEqual(results, [
+    { status: 'converted', value: '3' },
+    { status: 'converted', value: '1' },
+    { status: 'converted', value: '6' },
+    { status: 'unread', raw: 'soon' },
+  ]);
+  ({ results } = read({ kind: 'email' }, ['Mercier Hugo'], { values: { 'mercier hugo': 'hugo.mercier@fromage-co.com' } }));
+  assert.deepEqual(results, [{ status: 'converted', value: 'hugo.mercier@fromage-co.com' }]);
+  ({ results } = read({ kind: 'codes', codes: ['opex', 'capex'] }, ['OPEX', 'Les deux'], { values: { 'Les deux': '' } }));
+  assert.deepEqual(results, [{ status: 'converted', value: 'opex' }, { status: 'blank' }]);
+  // A value the map turns into one the column still cannot read is unread as the file writes it.
+  ({ results } = read({ kind: 'date' }, ['TBD'], { values: { TBD: 'later' } }));
+  assert.deepEqual(results, [{ status: 'unread', raw: 'TBD' }]);
+
+  // Dates with the month's name, as Jira and French exports write them.
+  ({ results } = read({ kind: 'date' }, ['15/Nov/26', '3 janvier 2027', 'Nov 5, 2026', '15. Dezember 2026', '28/Oct/26 9:41 AM']));
+  assert.deepEqual(results.map((r) => r.status === 'converted' ? r.value : r.status), ['2026-11-15', '2027-01-03', '2026-11-05', '2026-12-15', '2026-10-28']);
+
+  // A date and time keeps its time: GLPI's 02-10-2026 07:48, Jira's 2:10 PM, a time stamp, a day alone.
+  ({ results } = read({ kind: 'datetime' }, ['02-10-2026 07:48', '25-12-2026 18:05:30', '4/Nov/26 2:10 PM', '2026-10-06T09:15:00Z', '26-10-2026']));
+  assert.deepEqual(results.map((r) => r.status === 'converted' ? r.value : r.status), [
+    '2026-10-02 07:48', '2026-12-25 18:05:30', '2026-11-04 14:10', '2026-10-06T09:15:00.000Z', '2026-10-26',
+  ]);
+  const fromWorkbook = columnReader({ kind: 'datetime' }, [{ kind: 'date', iso: '2026-10-02', time: '07:48:00' }], {}, 'fr');
+  assert.deepEqual(fromWorkbook.read({ kind: 'date', iso: '2026-10-02', time: '07:48:00' }), { status: 'converted', value: '2026-10-02 07:48' });
+
+  // A percentage: a cell shown as 45% holds 0.45, the import takes 45. A plain number stays itself.
+  const progress = [{ kind: 'number' as const, value: '0.45', percent: true as const }, { kind: 'number' as const, value: '60' }, text('80 %')];
+  const percent = columnReader({ kind: 'number', percent: true }, progress, {}, 'fr');
+  assert.deepEqual(progress.map((cell) => percent.read(cell)), [
+    { status: 'converted', value: '45' },
+    { status: 'converted', value: '60' },
+    { status: 'converted', value: '80' },
+  ]);
+  const share = columnReader({ kind: 'number' }, [progress[0]], {}, 'fr');
+  assert.deepEqual(share.read(progress[0]), { status: 'converted', value: '0.45' });
+
+  // A country by its code or its name in four languages; a list of them.
+  ({ results } = read({ kind: 'country' }, ['France', 'Pays-Bas', 'Niederlande', 'Países Bajos', 'UK', 'de', 'Atlantis']));
+  assert.deepEqual(results.map((r) => r.status === 'converted' ? r.value : r.status), ['FR', 'NL', 'NL', 'NL', 'GB', 'DE', 'unread']);
+  ({ results } = read({ kind: 'country', multi: true }, ['France; Allemagne', 'EU'], { values: { EU: 'FR, DE, IT' } }));
+  assert.deepEqual(results, [{ status: 'converted', value: 'FR, DE' }, { status: 'converted', value: 'FR, DE, IT' }]);
+  console.log('  conversions of real exports: OK');
 }
 
 // --- The mapping on three files --------------------------------------------------------------
@@ -535,6 +598,22 @@ function testAFileImportIsAWrite() {
   console.log('  a file import is a write: OK');
 }
 
+function testApprovalEndsTheTurn() {
+  // An approved mapping leaves Plaid nothing to prepare: it does not answer again after the approval.
+  const orchestrator = Object.create(AiChatOrchestratorService.prototype) as any;
+  const continuesAfter = (toolName: string) => orchestrator.shouldContinueAfterPreviewAction({
+    action: 'approve',
+    history: [{ role: 'user', content: 'Importe ces sociétés puis crée leurs départements' }],
+    existingPreviews: [],
+    previewResults: [{ tool_name: toolName, status: 'executed' }],
+    followUpPreviews: [],
+  });
+  assert.equal(continuesAfter('prepare_import_mapping'), false);
+  // Another approved change of the same request goes on to the next step.
+  assert.equal(continuesAfter('create_company'), true);
+  console.log('  an approved mapping ends the turn: OK');
+}
+
 async function run() {
   const originalFeature = Features.AI_CHAT_ENABLED;
   Features.AI_CHAT_ENABLED = true;
@@ -542,12 +621,14 @@ async function run() {
     testAccessMatchesTheImportRoutes();
     await testTemplatesAreTheColumnsTheImportsRead();
     testConversions();
+    testConversionsOfRealExports();
     await testCleanFile();
     await testMessyFile();
     await testUnknownColumns();
     await testRights();
     await testApprovalImportsNothingAndTheModelSeesNoCell();
     testAFileImportIsAWrite();
+    testApprovalEndsTheTurn();
   } finally {
     Features.AI_CHAT_ENABLED = originalFeature;
   }

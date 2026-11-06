@@ -50,6 +50,7 @@ function templateColumn(spec: AiImportColumnSpec, settings: ItOpsSettings | null
     required: spec.required === true,
     kind: spec.kind,
     multi: spec.multi === true,
+    percent: spec.percent === true,
   };
   if (spec.kind === 'catalog' && spec.catalog && settings) {
     const list = spec.catalog;

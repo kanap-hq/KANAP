@@ -17,8 +17,9 @@ import { CALENDAR_MONTH_HEADERS, WORKING_DAY_PROFILE_CSV_HEADERS } from '../../w
 import { APPLICATION_LINK_CSV_HEADERS, ASSET_LINK_CSV_HEADERS } from '../../technologies/technology-links-csv.service';
 import { BUSINESS_PROCESS_TYPES } from '../../business-processes/business-process-tree';
 import { detailColumns, EXPORT_ONLY_COLUMNS } from '../../spend/budget-file/columns';
-import { loadAnalyticsAxes } from '../../analytics/analytics-axes.util';
+import { DEFAULT_ANALYTICS_AXIS_LABELS, loadAnalyticsAxes } from '../../analytics/analytics-axes.util';
 import type { AiImportColumnKind } from './ai-import-convert';
+import { defaultColumnTitle } from './ai-import-titles';
 import { AI_IMPORT_ACCESS, type AiImportAccess, type AiImportKey } from './ai-import-access';
 
 export { AI_IMPORT_KEYS, type AiImportKey } from './ai-import-access';
@@ -30,8 +31,8 @@ export { AI_IMPORT_KEYS, type AiImportKey } from './ai-import-access';
  * the incident journal, which only the sample data loads.
  *
  * A column says how its cells convert (`kind`): the catalogs are the workspace's IT catalogs, read by
- * name in any language; a reference names another record (a supplier, a location) and is checked by
- * the import's own validation.
+ * name in any language; a country is read by its code or its name; a reference names another record
+ * (a supplier, a location, a person) and is checked by the import's own validation when it runs.
  */
 
 /** The workspace IT catalogs a column reads by name (`ItOpsSettings`). */
@@ -46,6 +47,8 @@ export interface AiImportColumnSpec {
   codes?: readonly string[];
   catalog?: AiImportCatalog;
   multi?: boolean;
+  /** A number that is a percentage, 0 to 100. */
+  percent?: boolean;
   /** The name of each code in each language: read as the code, shown on the card. */
   labels?: Readonly<Record<CsvLanguage, Readonly<Record<string, string>>>>;
   /** What the column takes, for the model, when its name does not say it. */
@@ -78,6 +81,9 @@ const date = (column: string, required = false): AiImportColumnSpec => ({ column
 const number = (column: string, hint?: string): AiImportColumnSpec => ({ column, kind: 'number', hint });
 const email = (column: string, hint = 'the e-mail of a person of the workspace'): AiImportColumnSpec => ({ column, kind: 'email', hint });
 const reference = (column: string, hint: string, required = false): AiImportColumnSpec => ({ column, kind: 'reference', hint, required });
+const country = (column: string, required = false): AiImportColumnSpec => ({ column, kind: 'country', required });
+/** A person the incident import finds by e-mail or by name. */
+const PERSON = 'a person of the workspace, by e-mail or by "First Last" name';
 
 /** Identity columns a person's own file never holds (a KANAP id or reference): left to the template. */
 const IDENTITY_COLUMNS = new Set(['id', 'ref', 'reference', 'item_number', 'kanap_token']);
@@ -113,7 +119,7 @@ function fromCsvConfig(config: CsvEntityConfig, overrides: Record<string, Partia
       required: field.required === true,
       ...(field.enumValues?.length ? { codes: field.enumValues } : {}),
       ...(isStatusList(field.enumValues) ? { labels: STATUS_LABELS } : {}),
-      ...(field.zonedDateTime ? { kind: 'text' as const, hint: 'a date and time, UTC unless the file names a zone' } : {}),
+      ...(field.zonedDateTime ? { kind: 'datetime' as const } : {}),
       titles: config.headerLabels?.[field.csvColumn],
       ...overrides[field.csvColumn],
     }));
@@ -150,7 +156,7 @@ export const AI_IMPORT_TARGETS: Record<AiImportKey, AiImportTarget> = {
       supplier_name: { hint: 'a supplier by name' },
       rto_minutes: { kind: 'number', hint: 'minutes' },
       rpo_minutes: { kind: 'number', hint: 'minutes' },
-      data_residency: { kind: 'text', hint: 'two-letter country codes separated by commas' },
+      data_residency: { kind: 'country', multi: true },
       ...owners('business_owner_email'),
       ...owners('it_owner_email'),
     }),
@@ -178,7 +184,7 @@ export const AI_IMPORT_TARGETS: Record<AiImportKey, AiImportTarget> = {
     ...AI_IMPORT_ACCESS.portfolio_projects,
     about: 'One row per project, matched to a stored one by its name.',
     columns: () => fromCsvConfig(portfolioProjectCsvConfig, {
-      execution_progress: { hint: 'percent, 0 to 100' },
+      execution_progress: { percent: true, hint: 'percent, 0 to 100' },
       estimated_effort_it: { hint: 'man-days' },
       estimated_effort_business: { hint: 'man-days' },
       baseline_effort_it: { hint: 'man-days' },
@@ -211,8 +217,8 @@ export const AI_IMPORT_TARGETS: Record<AiImportKey, AiImportTarget> = {
     about: 'One row per incident; every row creates a new incident.',
     columns: () => fromCsvConfig(incidentCsvConfig, {
       category: catalog('incidentCategories'),
-      reporter: { kind: 'email' },
-      owner: { kind: 'email' },
+      reporter: { kind: 'reference', hint: PERSON },
+      owner: { kind: 'reference', hint: PERSON },
     }),
   },
   budget_lines: {
@@ -242,9 +248,14 @@ export const AI_IMPORT_TARGETS: Record<AiImportKey, AiImportTarget> = {
       };
       const columns = detailColumns(dimensions)
         .filter((column) => !IDENTITY_COLUMNS.has(column) && !EXPORT_ONLY_COLUMNS.has(column))
-        .map((column) => specs[column] ?? (column.startsWith('analytics:')
-          ? reference(column, 'a value of that analytics dimension, by name')
-          : text(column)));
+        .map((column) => {
+          if (specs[column]) return specs[column];
+          if (!column.startsWith('analytics:')) return text(column);
+          // The dimension's name, or the default dimension's label in each language while it has none.
+          const name = axes.find((entry) => `analytics:${entry.code}` === column)?.name?.trim();
+          const [en, fr, de, es] = name ? [name, name, name, name] : DEFAULT_ANALYTICS_AXIS_LABELS;
+          return { ...reference(column, 'a value of that analytics dimension, by name'), titles: { en, fr, de, es } };
+        });
       for (const year of nearYears()) {
         for (const amount of BUDGET_AMOUNT_COLUMNS) columns.push(number(`${amount.names[0]}_${year}`, 'an amount of the year'));
       }
@@ -296,7 +307,7 @@ export const AI_IMPORT_TARGETS: Record<AiImportKey, AiImportTarget> = {
     columns: () => [
       text('first_name'), text('last_name'), text('job_title'),
       { column: 'email', kind: 'email', required: true },
-      text('phone'), text('mobile'), text('country', 'a two-letter country code'), text('notes'),
+      text('phone'), text('mobile'), country('country'), text('notes'),
       { column: 'active', kind: 'boolean' },
     ],
   },
@@ -307,7 +318,7 @@ export const AI_IMPORT_TARGETS: Record<AiImportKey, AiImportTarget> = {
     about: 'One row per company, matched to a stored one by its name. A year of metrics needs its three columns: '
       + 'headcount_<year>, it_users_<year> and turnover_<year> (millions).',
     columns: () => [
-      text('name', undefined, true), text('country_iso', 'a two-letter country code', true),
+      text('name', undefined, true), country('country_iso', true),
       text('address1'), text('address2'), text('postal_code'), text('city', undefined, true), text('state'),
       text('reg_number'), text('vat_number'), text('base_currency', 'a three-letter currency code', true),
       status, disabledAt, text('notes'),
@@ -363,7 +374,7 @@ export const AI_IMPORT_TARGETS: Record<AiImportKey, AiImportTarget> = {
       name: text('name', undefined, true),
       status,
       disabled_at: disabledAt,
-      applies_to: { column: 'applies_to', kind: 'codes', codes: ['opex', 'capex'] } as AiImportColumnSpec,
+      applies_to: { column: 'applies_to', kind: 'codes', codes: ['opex', 'capex'], hint: 'blank for both OPEX and CAPEX' } as AiImportColumnSpec,
     } as Record<string, AiImportColumnSpec>)[column] ?? text(column)),
   },
   business_processes: {
@@ -386,7 +397,7 @@ export const AI_IMPORT_TARGETS: Record<AiImportKey, AiImportTarget> = {
     columns: () => WORKING_DAY_PROFILE_CSV_HEADERS.map((column) => (({
       code: text('code', undefined, true),
       name: text('name', undefined, true),
-      country: text('country', 'a two-letter country code'),
+      country: country('country'),
       status,
       disabled_at: disabledAt,
       year: number('year', 'a year, needed when the months are filled'),
@@ -424,5 +435,5 @@ export const AI_IMPORT_TARGETS: Record<AiImportKey, AiImportTarget> = {
 
 /** The column's title in the language, else the template's own header. */
 export function importColumnTitle(spec: AiImportColumnSpec, language: CsvLanguage): string {
-  return spec.titles?.[language] ?? spec.titles?.en ?? spec.column;
+  return spec.titles?.[language] ?? defaultColumnTitle(spec.column, language) ?? spec.titles?.en ?? spec.column;
 }

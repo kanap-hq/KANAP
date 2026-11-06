@@ -105,6 +105,17 @@ async function wideFile() {
   assert.match(text, /first 60 columns/);
 }
 
+async function titleAboveTheHeader() {
+  // A finance export: a title and an update date over the table, then the header on its fourth row.
+  const csv = 'Référentiel des centres de coûts;;;\nMis à jour le 01/11/2026;;;\n;;;\nCode;Niveau;Libellé;Actif\nDSI-GRP;Regroupement;DSI;Oui\n';
+  const summary = await summarizeTableAttachment(Buffer.from(csv, 'utf8'));
+  assert.deepEqual(summary.columns.map((column) => column.header), ['Code', 'Niveau', 'Libellé', 'Actif']);
+  assert.equal(summary.rowCount, 1);
+  // A header that leaves columns unnamed is still the header.
+  const sparse = await summarizeTableAttachment(Buffer.from('Name,,,,,Cost\nCRM,a,b,c,d,800\n', 'utf8'));
+  assert.deepEqual(sparse.columns.map((column) => column.header), ['Name', null, null, null, null, 'Cost']);
+}
+
 async function refusals() {
   await refusedWith(Buffer.from('\n ; ;\n', 'utf8'), 'CSV_FILE_EMPTY');
   await refusedWith(Buffer.from([0x00, 0x01, 0x02, 0x03, 0x41]), 'CSV_FILE_NOT_TEXT');
@@ -128,6 +139,7 @@ async function run() {
   await semicolonCsvInWindows1252();
   await mixedAndLongCells();
   await wideFile();
+  await titleAboveTheHeader();
   await refusals();
   console.log('table-attachment.spec.ts: ok');
 }

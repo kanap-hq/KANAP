@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, Stack, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import type { AiImportMapping } from '../aiTypes';
-import { formatShortDate } from '../../lib/dateFormat';
+import { formatShortDate, formatShortDateTime } from '../../lib/dateFormat';
 
 type ImportMappingPreviewProps = {
   mapping: AiImportMapping;
@@ -58,6 +58,12 @@ function ImportMappingPreview({ mapping }: ImportMappingPreviewProps) {
     if (!value) return '';
     const kind = kindOf.get(column);
     if (kind === 'date') return formatShortDate(value, locale, { year: 'always' }) || value;
+    // A day and time as the file writes it, `2026-10-02 07:48`: shown as written, in no other time zone.
+    if (kind === 'datetime') {
+      return /[ T]\d/.test(value)
+        ? formatShortDateTime(value.replace(' ', 'T'), locale) || value
+        : formatShortDate(value, locale, { year: 'always' }) || value;
+    }
     if (kind === 'boolean') {
       if (value === 'true') return t('ai:previewCard.importMapping.yes');
       if (value === 'false') return t('ai:previewCard.importMapping.no');

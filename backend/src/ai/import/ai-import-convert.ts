@@ -1,16 +1,21 @@
+import { Decimal } from '../../common/decimal';
 import { CsvDateOrder, CsvLanguage, DecimalMark, parseCsvAmount, parseCsvBoolean, parseCsvDateCell, resolveAmountConvention, resolveDateOrder } from '../../common/csv-sheet';
 import { sheetCellText, SheetCell } from '../../common/csv-sheet/read';
 import { catalogAliases } from '../../it-ops-settings/catalog-codes';
 import { findCatalogOption, type CatalogOptionLike } from '../../it-ops-settings/catalog-resolve';
 import { isBlank } from '../attachments/table-attachment';
+import { countryCode } from './ai-import-countries';
+import { parseNamedMonthDate } from './ai-import-dates';
 
 /**
  * How one column of an import reads a cell. The mapping converts a cell of the person's file to the
- * value the import's template expects: a day as `YYYY-MM-DD`, a number with a decimal point, yes or no
- * as `true` or `false`, a code of a fixed list, the code of a workspace catalog entry. The other kinds
- * are copied as they are: the import's own validation checks them (a supplier named, an e-mail known).
+ * value the import's template expects: a day as `YYYY-MM-DD`, a day and time as `YYYY-MM-DD HH:MM`, a
+ * number with a decimal point, yes or no as `true` or `false`, a code of a fixed list, the code of a
+ * workspace catalog entry, a country's two-letter code. The other kinds are copied as they are: the
+ * import's own validation checks them (a supplier named, an e-mail known).
  */
-export type AiImportColumnKind = 'text' | 'date' | 'number' | 'boolean' | 'codes' | 'catalog' | 'reference' | 'email';
+export type AiImportColumnKind =
+  | 'text' | 'date' | 'datetime' | 'number' | 'boolean' | 'codes' | 'catalog' | 'country' | 'reference' | 'email';
 
 export interface AiImportColumnRule {
   kind: AiImportColumnKind;
@@ -22,6 +27,8 @@ export interface AiImportColumnRule {
   options?: readonly CatalogOptionLike[];
   /** Several values in one cell, separated by commas or semicolons. */
   multi?: boolean;
+  /** A number column that holds a percentage, 0 to 100: a cell shown as a percentage (0.45 as 45%) reads as 45. */
+  percent?: boolean;
 }
 
 /** What the mapping says of a column, beyond its source. */
@@ -30,7 +37,7 @@ export interface AiImportColumnHints {
   dateOrder?: CsvDateOrder;
   /** The decimal mark of the numbers written as text. Read from the column when not given. */
   decimalMark?: DecimalMark;
-  /** A value of the file and the code or catalog name it stands for, for the values the names do not settle. */
+  /** A value of the file and the value it stands for (a code, a name, a number, an e-mail; blank for none). */
   values?: Record<string, string>;
 }
 
@@ -79,36 +86,89 @@ function valueMap(values: Record<string, string> | undefined): Map<string, strin
   return new Map(Object.entries(values ?? {}).map(([from, to]) => [valueKey(from), String(to).trim()]));
 }
 
-/** A column reader: the conversion of every cell of one column of the file to its template value. */
+/** The cell the model's value map puts in place of a cell: the value it stands for, a blank for ''. */
+function mappedCell(cell: SheetCell | undefined, map: Map<string, string>): SheetCell | undefined {
+  if (map.size === 0 || isBlank(cell)) return cell;
+  const to = map.get(valueKey(cellText(cell)));
+  if (to === undefined) return cell;
+  return to === '' ? { kind: 'empty' } : { kind: 'text', value: to };
+}
+
+/**
+ * A column reader: the conversion of every cell of one column of the file to its template value. The
+ * model's value map applies first, to the whole cell, and to each item of a list cell.
+ */
 export function columnReader(
   rule: AiImportColumnRule,
   cells: ReadonlyArray<SheetCell | undefined>,
   hints: AiImportColumnHints,
   language: CsvLanguage,
 ): AiImportColumnReader {
+  const map = valueMap(hints.values);
+  const reader = cellReader(rule, cells.map((cell) => mappedCell(cell, map)), hints, language, map);
+  if (map.size === 0) return reader;
+  return {
+    ...reader,
+    read: (cell) => {
+      const result = reader.read(mappedCell(cell, map));
+      return result.status === 'unread' ? { status: 'unread', raw: cellText(cell) } : result;
+    },
+  };
+}
+
+/** A day and time as the imports read it: `YYYY-MM-DD HH:MM`, the seconds when there are some. */
+function dayAndTime(isoDate: string, time: string | null | undefined): string {
+  if (!time) return isoDate;
+  return `${isoDate} ${time.endsWith(':00') ? time.slice(0, 5) : time}`;
+}
+
+/** A date column, or a date and time column (`withTime`): the date order is settled on the whole column. */
+function dateReader(texts: string[], hints: AiImportColumnHints, language: CsvLanguage, withTime: boolean): AiImportColumnReader {
+  // The order the file shows wins over the one the mapping supposed.
+  let decision = resolveDateOrder(texts, language, hints.dateOrder);
+  if (decision.error && hints.dateOrder) decision = resolveDateOrder(texts, language);
+  if (decision.error) return unreadable('mixed-date-orders');
+  const order = decision.order;
+  return {
+    settled: order ? { dateOrder: order } : {},
+    error: null,
+    read: (cell) => {
+      if (isBlank(cell)) return { status: 'blank' };
+      if (cell!.kind === 'date') return { status: 'converted', value: withTime ? dayAndTime(cell!.iso, cell!.time) : cell!.iso };
+      const raw = cellText(cell);
+      if (raw === '') return { status: 'blank' };
+      const parsed = parseCsvDateCell(raw, order);
+      if (parsed.ok && parsed.value.kind === 'date') {
+        return { status: 'converted', value: withTime ? dayAndTime(parsed.value.isoDate, parsed.value.time) : parsed.value.isoDate };
+      }
+      if (parsed.ok && parsed.value.kind === 'instant') {
+        return { status: 'converted', value: withTime ? parsed.value.iso : parsed.value.iso.slice(0, 10) };
+      }
+      const named = parseNamedMonthDate(raw);
+      if (named) return { status: 'converted', value: withTime ? dayAndTime(named.isoDate, named.time) : named.isoDate };
+      return { status: 'unread', raw };
+    },
+  };
+}
+
+/** A percentage shown as such (0.45 in a cell formatted 45%), as the number from 0 to 100 the import takes. */
+function hundredfold(value: string): string {
+  return Decimal.from(value).mul(100).toString();
+}
+
+function cellReader(
+  rule: AiImportColumnRule,
+  cells: ReadonlyArray<SheetCell | undefined>,
+  hints: AiImportColumnHints,
+  language: CsvLanguage,
+  map: Map<string, string>,
+): AiImportColumnReader {
   const texts = cells.filter((cell) => cell?.kind === 'text').map((cell) => cellText(cell));
   switch (rule.kind) {
-    case 'date': {
-      // The order the file shows wins over the one the mapping supposed.
-      let decision = resolveDateOrder(texts, language, hints.dateOrder);
-      if (decision.error && hints.dateOrder) decision = resolveDateOrder(texts, language);
-      if (decision.error) return unreadable('mixed-date-orders');
-      const order = decision.order;
-      return {
-        settled: order ? { dateOrder: order } : {},
-        error: null,
-        read: (cell) => {
-          if (isBlank(cell)) return { status: 'blank' };
-          if (cell!.kind === 'date') return { status: 'converted', value: cell!.iso };
-          const raw = cellText(cell);
-          if (raw === '') return { status: 'blank' };
-          const parsed = parseCsvDateCell(raw, order);
-          if (parsed.ok && parsed.value.kind === 'date') return { status: 'converted', value: parsed.value.isoDate };
-          if (parsed.ok && parsed.value.kind === 'instant') return { status: 'converted', value: parsed.value.iso.slice(0, 10) };
-          return { status: 'unread', raw };
-        },
-      };
-    }
+    case 'date':
+      return dateReader(texts, hints, language, false);
+    case 'datetime':
+      return dateReader(texts, hints, language, true);
     case 'number': {
       let decision = resolveAmountConvention(texts, language, hints.decimalMark);
       if (decision.error && hints.decimalMark) decision = resolveAmountConvention(texts, language);
@@ -119,10 +179,13 @@ export function columnReader(
         error: null,
         read: (cell) => {
           if (isBlank(cell)) return { status: 'blank' };
-          if (cell!.kind === 'number') return { status: 'converted', value: cell!.value };
+          if (cell!.kind === 'number') {
+            return { status: 'converted', value: rule.percent && cell!.percent ? hundredfold(cell!.value) : cell!.value };
+          }
           const raw = cellText(cell);
           if (raw === '') return { status: 'blank' };
-          const parsed = parseCsvAmount(raw, mark);
+          // A percentage written as text (`45 %`) is the number before its sign.
+          const parsed = parseCsvAmount(rule.percent ? raw.replace(/\s*%$/, '') : raw, mark);
           return parsed.kind === 'value' ? { status: 'converted', value: parsed.decimal.toString() } : { status: 'unread', raw };
         },
       };
@@ -131,26 +194,20 @@ export function columnReader(
       return readerOf((raw) => {
         const parsed = parseCsvBoolean(raw);
         return parsed === true ? 'true' : parsed === false ? 'false' : null;
-      }, false);
+      }, false, map);
     case 'codes': {
-      const map = valueMap(hints.values);
       const codes = rule.codes ?? [];
       const byLabel = new Map<string, string>();
       for (const [code, labels] of Object.entries(rule.codeLabels ?? {})) {
         for (const label of labels) byLabel.set(valueKey(label), code);
       }
-      return readerOf((raw) => {
-        const named = map.get(valueKey(raw)) ?? raw;
-        return codes.find((code) => valueKey(code) === valueKey(named))
-          ?? byLabel.get(valueKey(named))
-          ?? accentFreeCode(named, codes.map((code) => [code, [code, ...(rule.codeLabels?.[code] ?? [])]]));
-      }, rule.multi === true);
+      return readerOf((named) => codes.find((code) => valueKey(code) === valueKey(named))
+        ?? byLabel.get(valueKey(named))
+        ?? accentFreeCode(named, codes.map((code) => [code, [code, ...(rule.codeLabels?.[code] ?? [])]])), rule.multi === true, map);
     }
     case 'catalog': {
-      const map = valueMap(hints.values);
       const options = [...(rule.options ?? [])];
-      return readerOf((raw) => {
-        const named = map.get(valueKey(raw)) ?? raw;
+      return readerOf((named) => {
         try {
           const option = findCatalogOption(named, options);
           if (option) return option.code;
@@ -159,14 +216,16 @@ export function columnReader(
           return null;
         }
         return accentFreeCode(named, options.map((option) => [option.code, [...catalogAliases(option), ...(option.shippedLabels ?? [])]]));
-      }, rule.multi === true);
+      }, rule.multi === true, map);
     }
+    case 'country':
+      return readerOf(countryCode, rule.multi === true, map);
     case 'email':
-      return readerOf((raw) => (EMAIL.test(raw) ? raw : null), false);
+      return readerOf((raw) => (EMAIL.test(raw) ? raw : null), false, map);
     case 'text':
     case 'reference':
     default:
-      return readerOf((raw) => raw, false);
+      return readerOf((raw) => raw, false, map);
   }
 }
 
@@ -178,8 +237,11 @@ function unreadable(error: AiImportColumnReadError): AiImportColumnReader {
   };
 }
 
-/** A reader converting each value of a cell (each item of a list cell) with `convert`, null when it cannot. */
-function readerOf(convert: (raw: string) => string | null, multi: boolean): AiImportColumnReader {
+/**
+ * A reader converting each value of a cell (each item of a list cell, as the value map names it) with
+ * `convert`, null when it cannot.
+ */
+function readerOf(convert: (raw: string) => string | null, multi: boolean, map: Map<string, string>): AiImportColumnReader {
   return {
     settled: {},
     error: null,
@@ -187,7 +249,10 @@ function readerOf(convert: (raw: string) => string | null, multi: boolean): AiIm
       if (isBlank(cell)) return { status: 'blank' };
       const raw = cellText(cell);
       if (raw === '') return { status: 'blank' };
-      const items = multi ? raw.split(LIST_SEPARATOR).filter((item) => item !== '') : [raw];
+      const items = multi
+        ? raw.split(LIST_SEPARATOR).map((item) => map.get(valueKey(item)) ?? item).filter((item) => item !== '')
+        : [raw];
+      if (items.length === 0) return { status: 'blank' };
       const converted: string[] = [];
       for (const item of items) {
         const value = convert(item);

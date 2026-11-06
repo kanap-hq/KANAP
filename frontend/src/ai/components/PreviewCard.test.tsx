@@ -969,4 +969,29 @@ describe('PreviewCard in French', () => {
     expect(screen.getAllByText('En prod').length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: 'Approuver' })).toBeInTheDocument();
   });
+
+  it('shows a date and time of the mapping as the file writes it', () => {
+    renderCard(preview({
+      tool_name: 'prepare_import_mapping',
+      target: { entity_type: 'imports', entity_id: null, ref: null, title: 'Incidents · glpi.csv' },
+      summary: "Correspondance de « glpi.csv » avec l'import Incidents.",
+      import_mapping: {
+        import_key: 'incidents',
+        filename: 'glpi.csv',
+        row_count: 1,
+        columns: [
+          { column: 'detected_at', title: 'Détecté le', required: false, kind: 'datetime', source: { position: 4, header: "Date d'ouverture" }, value: null, confidence: 'high', filled: 1, unread: 0, read_as: 'day-first', note: null },
+        ],
+        unread_values: {},
+        read_errors: {},
+        missing_required: [],
+        unplaced: [],
+        assumptions: [],
+        sample: { columns: ['detected_at'], rows: [['2026-10-02 07:48']], unread: [[false]] },
+        rows_missing_required: 0,
+      },
+    }));
+
+    expect(screen.getByText('2 oct. 2026, 07:48')).toBeInTheDocument();
+  });
 });

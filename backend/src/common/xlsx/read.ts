@@ -15,13 +15,14 @@ import { ArchiveLimitError, BoundedArchive, openBoundedArchive } from '../archiv
  */
 
 /**
- * One cell. `number` keeps the text of `<v>` exactly as the file holds it. A date is a calendar day
- * (`iso`, `YYYY-MM-DD`), plus `time` (`HH:MM:SS`, rounded to the second, no time zone: the wall-clock
- * time Excel shows) when its format shows a time or its serial has a time of day.
+ * One cell. `number` keeps the text of `<v>` exactly as the file holds it, and `percent` when its format
+ * shows it as a percentage (0.45 shown as 45%). A date is a calendar day (`iso`, `YYYY-MM-DD`), plus
+ * `time` (`HH:MM:SS`, rounded to the second, no time zone: the wall-clock time Excel shows) when its
+ * format shows a time or its serial has a time of day.
  */
 export type XlsxReadCell =
   | { kind: 'text'; value: string }
-  | { kind: 'number'; value: string }
+  | { kind: 'number'; value: string; percent?: true }
   | { kind: 'date'; iso: string; time?: string }
   | { kind: 'empty' };
 
@@ -548,9 +549,11 @@ function parseRelationships(data: Buffer, limits: XlsxReadLimits): Relationship[
 const BUILTIN_DATE_FORMATS = new Set([14, 15, 16, 17, 18, 19, 20, 21, 22, 45, 46, 47]);
 /** Those of them that show a time of day. */
 const BUILTIN_TIME_FORMATS = new Set([18, 19, 20, 21, 22, 45, 46, 47]);
+/** Built-in number formats that show a percentage. */
+const BUILTIN_PERCENT_FORMATS = new Set([9, 10]);
 
-/** How a cell style shows a number: as itself, as a day, or as a day with a time of day. */
-type DateStyle = 'none' | 'date' | 'dateTime';
+/** How a cell style shows a number: as itself, as a percentage, as a day, or as a day with a time of day. */
+type DateStyle = 'none' | 'percent' | 'date' | 'dateTime';
 
 /**
  * Whether a custom number format shows a date: a `d`, `m` or `y` outside quotes, escapes and brackets.
@@ -589,7 +592,12 @@ function plainFormatText(code: string): string | null {
   return plain;
 }
 
-/** For each `cellXfs` entry (the `s` of a cell), whether its number format shows a date, and a time. */
+/** Whether a custom number format shows a percentage: a `%` outside quotes, escapes and brackets. */
+function isPercentFormatCode(code: string): boolean {
+  return plainFormatText(code)?.includes('%') === true;
+}
+
+/** For each `cellXfs` entry (the `s` of a cell), whether its number format shows a date, and a time, or a percentage. */
 function parseStyles(data: Buffer, limits: XlsxReadLimits): DateStyle[] {
   const customFormats = new Map<number, string>();
   const formatOfStyle: number[] = [];
@@ -620,8 +628,10 @@ function parseStyles(data: Buffer, limits: XlsxReadLimits): DateStyle[] {
   }, limits);
   return formatOfStyle.map((id): DateStyle => {
     const custom = customFormats.get(id);
-    if (custom !== undefined) return isDateTimeFormatCode(custom) ? 'dateTime' : isDateFormatCode(custom) ? 'date' : 'none';
-    return BUILTIN_TIME_FORMATS.has(id) ? 'dateTime' : BUILTIN_DATE_FORMATS.has(id) ? 'date' : 'none';
+    if (custom !== undefined) {
+      return isDateTimeFormatCode(custom) ? 'dateTime' : isDateFormatCode(custom) ? 'date' : isPercentFormatCode(custom) ? 'percent' : 'none';
+    }
+    return BUILTIN_TIME_FORMATS.has(id) ? 'dateTime' : BUILTIN_DATE_FORMATS.has(id) ? 'date' : BUILTIN_PERCENT_FORMATS.has(id) ? 'percent' : 'none';
   });
 }
 
@@ -801,11 +811,11 @@ function sheetHandlers(context: SheetContext): { handlers: TagHandlers; rows: ()
         const text = value.trim();
         if (!NUMBER_TEXT.test(text)) throw invalid();
         const style = dateStyles[cellStyle] ?? 'none';
-        if (style !== 'none') {
+        if (style === 'date' || style === 'dateTime') {
           const day = serialToDateTime(Number(text), date1904, style === 'dateTime');
           if (day) return { kind: 'date', ...day };
         }
-        return { kind: 'number', value: text };
+        return style === 'percent' ? { kind: 'number', value: text, percent: true } : { kind: 'number', value: text };
       }
       default:
         throw invalid();
