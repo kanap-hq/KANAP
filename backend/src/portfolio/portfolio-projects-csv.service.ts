@@ -187,6 +187,8 @@ export class PortfolioProjectsCsvService {
       manager: EntityManager;
       tenantId: string;
       userId?: string | null;
+      /** The screen language: a missing column is named by its title in this language. */
+      language?: CsvLanguage;
     },
   ): Promise<CsvImportResult> {
     return this.importSvc.import(this.buildCsvConfig(), file, params, opts);

@@ -11,6 +11,7 @@ import {
 import { minimalXls, minimalXlsx } from '../../csv-sheet/__tests__/office-files';
 import { withImportXlsx } from '../../__tests__/import-xlsx-flag';
 import { workbookOfCsv } from '../../__tests__/workbook-of-csv';
+import { applicationCsvConfig } from '../../../applications/application-csv.config';
 
 /**
  * Create a mock file from CSV content
@@ -913,6 +914,110 @@ Task;16/10/2026 14:30;;;16/10/2026 15:00`;
   assert.deepEqual(zoneless(named), [], 'every date-time names its zone');
 }
 
+/**
+ * A missing required column is named by its title in the screen language. A column with no title
+ * in that language keeps its key. Without a language, every column keeps its key.
+ */
+async function testMissingColumnsAreNamedInTheScreenLanguage() {
+  const service = new CsvImportService(new CsvResolverService(), new CsvJsonValidators());
+  const config: CsvEntityConfig = {
+    ...createTestConfig(),
+    fields: [
+      { csvColumn: 'title', entityProperty: 'title', type: CsvFieldType.STRING, required: true },
+      { csvColumn: 'code', entityProperty: 'code', type: CsvFieldType.STRING, required: true },
+    ],
+    headerLabels: { title: { fr: 'Titre', en: 'Title' } },
+  };
+  const csv = 'description\nTexte';
+  const missing = async (language?: 'en' | 'fr') => {
+    const result = await service.import(config, createMockFile(csv), { ...defaultParams, dryRun: true }, {
+      manager: createMockManager({ tasks: [] }),
+      tenantId: 't1',
+      language,
+    });
+    assert.equal(result.ok, false, JSON.stringify(result.errors));
+    assert.equal(result.errors.length, 1);
+    return result.errors[0];
+  };
+
+  const french = await missing('fr');
+  assert.equal(french.code, 'CSV_HEADER_MISSING_COLUMNS');
+  assert.equal(french.params?.missing, 'Titre, code');
+  assert.equal(french.message, 'Missing required columns: Titre, code');
+
+  const english = await missing('en');
+  assert.equal(english.params?.missing, 'Title, code');
+  assert.equal(english.message, 'Missing required columns: Title, code');
+
+  const unnamed = await missing();
+  assert.equal(unnamed.params?.missing, 'title, code');
+
+  // The applications file: a French import that omits the required name column says « Nom ».
+  const applications = await service.import(
+    applicationCsvConfig,
+    createMockFile('description\nTexte'),
+    { ...defaultParams, dryRun: true },
+    { manager: createMockManager({}), tenantId: 't1', language: 'fr' },
+  );
+  assert.equal(applications.ok, false);
+  assert.deepEqual(
+    applications.errors.map((error) => ({ code: error.code, message: error.message, params: error.params })),
+    [{
+      code: 'CSV_HEADER_MISSING_COLUMNS',
+      message: 'Missing required columns: Nom',
+      params: { missing: 'Nom' },
+    }],
+  );
+}
+
+/** A date-time the report names uses the same title. A column with none keeps its key. */
+async function testTimeZoneColumnsAreNamedInTheScreenLanguage() {
+  const service = new CsvImportService(new CsvResolverService(), new CsvJsonValidators());
+  const config: CsvEntityConfig = {
+    ...createTestConfig(),
+    fields: [
+      { csvColumn: 'title', entityProperty: 'title', type: CsvFieldType.STRING, required: true },
+      { csvColumn: 'started_at', entityProperty: 'started_at', type: CsvFieldType.STRING, zonedDateTime: true },
+      { csvColumn: 'detected_at', entityProperty: 'detected_at', type: CsvFieldType.STRING, zonedDateTime: true },
+    ],
+    headerLabels: { title: { fr: 'Titre' }, started_at: { fr: 'Début' } },
+  };
+  const opts = {
+    manager: createMockManager({ tasks: [] }),
+    tenantId: 't1',
+    language: 'fr' as const,
+  };
+
+  const zoneless = await service.import(
+    config,
+    createMockFile('Titre;Début;detected_at\nTâche;;'),
+    { ...defaultParams, dryRun: true },
+    opts,
+  );
+  assert.equal(zoneless.ok, true, JSON.stringify(zoneless.errors));
+  assert.deepEqual(
+    zoneless.warnings.filter((warning) => warning.code === 'CSV_HEADER_ZONELESS_DATE_TIMES').map((warning) => warning.params),
+    [{ columns: 'Début, detected_at', example: 'Début' }],
+  );
+  assert.match(
+    zoneless.warnings.find((warning) => warning.code === 'CSV_HEADER_ZONELESS_DATE_TIMES')?.message ?? '',
+    /Début, detected_at$/,
+  );
+
+  const unknown = await service.import(
+    config,
+    createMockFile('Titre;Début (Mars/Olympus)\nTâche;'),
+    { ...defaultParams, dryRun: true },
+    opts,
+  );
+  assert.equal(unknown.ok, false);
+  assert.deepEqual(
+    unknown.errors.map((error) => ({ column: error.column, code: error.code, params: error.params })),
+    [{ column: 'Début', code: 'CSV_HEADER_UNKNOWN_TIME_ZONE', params: { column: 'Début', zone: 'Mars/Olympus' } }],
+  );
+  assert.match(unknown.errors[0].message, /Unknown time zone in the Début column: "Mars\/Olympus"/);
+}
+
 // ===== Run tests =====
 
 (async () => {
@@ -931,6 +1036,8 @@ Task;16/10/2026 14:30;;;16/10/2026 15:00`;
   await testUpdateOnlyOperationSkipsInserts();
   await testInsertOnlyOperationSkipsUpdates();
   await testMissingHeaderError();
+  await testMissingColumnsAreNamedInTheScreenLanguage();
+  await testTimeZoneColumnsAreNamedInTheScreenLanguage();
   await testUnknownColumnsAreAWarning();
   await testZonelessDateTimesAreAWarning();
   await testRowMessagesCarryCodes();

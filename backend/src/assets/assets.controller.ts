@@ -125,9 +125,12 @@ export class AssetsController {
     @Query('dryRun') dryRun: string = 'true',
     @Query('mode') mode: 'replace' | 'enrich' = 'enrich',
     @Query('operation') operation: 'upsert' | 'update_only' | 'insert_only' = 'upsert',
+    @Query('language') languageRaw: string | undefined,
     @Req() req: any,
   ) {
     const tenantId = req?.tenant?.id ?? '';
+    // The screen's language (the user's own when the screen sends none), as the export.
+    const language = await languageOf(req?.queryRunner?.manager, tenantId, req.user?.sub ?? null, languageRaw);
     return this.csvSvc.import(
       file,
       {
@@ -139,6 +142,7 @@ export class AssetsController {
         manager: req?.queryRunner?.manager,
         tenantId,
         userId: req.user?.sub,
+        language,
       },
     );
   }
