@@ -445,7 +445,7 @@ Requests are evaluated against a configurable set of criteria. Each criterion us
 
 #### Default Criteria
 
-The following criteria are pre-loaded for all tenants. Each can be enabled, disabled, edited, or removed. Additional criteria can be created.
+The following criteria are pre-loaded for a new workspace, with names and value labels in its seed language (English, French, German or Spanish). The English wording is below. Amount and duration labels keep their figures. Each criterion can be enabled, disabled, edited, or removed. Additional criteria can be created.
 
 | Criterion                | Scale (display order)                                    | Inverted |
 | ------------------------ | -------------------------------------------------------- | -------- |
