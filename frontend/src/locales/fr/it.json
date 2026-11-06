@@ -2912,7 +2912,7 @@
       "flow": {
         "logicalFlow": "Flux logique",
         "legTemplate": "Modèle de tronçons",
-        "noLegs": "Aucun tronçon défini. Choisissez les applications source et cible, puis enregistrez la route de l'interface.",
+        "noLegs": "Aucun tronçon pour le moment. Ils apparaissent une fois les applications source et cible définies.",
         "leg": "Tronçon",
         "fromTo": "De / vers",
         "triggerType": "Type de déclencheur",
