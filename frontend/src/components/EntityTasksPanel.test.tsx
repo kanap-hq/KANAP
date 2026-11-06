@@ -6,6 +6,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../config/ThemeContext';
 import i18n from '../i18n';
+import { formatShortDate } from '../lib/dateFormat';
 import EntityTasksPanel from './EntityTasksPanel';
 
 const auth = vi.hoisted(() => ({ tasksMember: false, tasksAdmin: false }));
@@ -38,8 +39,8 @@ const TASK = {
   phase_id: null,
 };
 
-function renderPanel() {
-  get.mockResolvedValue({ data: [TASK] });
+function renderPanel(overrides: { due_date?: string | null } = {}) {
+  get.mockResolvedValue({ data: [{ ...TASK, ...overrides }] });
   render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
       <ThemeProvider theme={createAppTheme('light')}>
@@ -96,5 +97,16 @@ describe('EntityTasksPanel task creation', () => {
 
     expect(await screen.findByText('Relire le contrat')).toBeInTheDocument();
     expect(screen.getByTitle('Delete task')).toBeInTheDocument();
+  });
+
+  it('renders a due date in the short French format', async () => {
+    await i18n.changeLanguage('fr');
+    const dueDate = '2026-04-30';
+    renderPanel({ due_date: dueDate });
+
+    const frenchDate = formatShortDate(dueDate, 'fr', { empty: '-' });
+    expect(frenchDate).toMatch(/avr/i);
+    expect(await screen.findByText(frenchDate)).toBeInTheDocument();
+    expect(screen.queryByText('4/30/2026')).toBeNull();
   });
 });
