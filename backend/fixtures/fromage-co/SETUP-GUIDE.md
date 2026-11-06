@@ -268,7 +268,7 @@ language (`KANAP_DEMO_LANGUAGE`), so a trial loads in the language of the
 browser that activated it, and a load after a reset in the same language.
 
 The English files are the source. `translations/fields.mjs` lists the columns
-each file translates (titles, descriptions, notes, incidents, the names of
+each file translates (titles, descriptions, notes, task labels, incidents, the names of
 budget lines, projects, departments and contracts) and the documents of
 `docs/`; everything else stays as written: codes, amounts, dates, e-mail
 addresses, the names of companies, people, suppliers, applications and assets.
@@ -276,9 +276,10 @@ addresses, the names of companies, people, suppliers, applications and assets.
 (a cell, a Markdown block, a text of the runner) and its translation.
 `tools/translate-dataset.mjs` builds `fr/`, `de/` and `es/` from both; the
 runner reads a file there when its language has one. The runner's own texts
-(classification, locations, phases, teams, the agent, the Service Desk Docs
-titles) and every English name it looks up go through `t('…')`, the same
-memory, so a name it looks up is the name the set holds.
+(classification, locations, phases, teams, the asset types the set adds, the
+agent, the Service Desk Docs titles) and every English name it looks up go
+through `t('…')`, the same memory, so a name it looks up is the name the set
+holds.
 
 After a change to an English file (`tools/generate-budget.mjs` included), to
 a `t('…')` text or to `fields.mjs`:

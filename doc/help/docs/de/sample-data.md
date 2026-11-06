@@ -23,7 +23,7 @@ Der Datensatz beschreibt Fromage & Co, einen fiktiven Käsehersteller:
 
 Die Daten richten sich nach dem laufenden Jahr, sodass das Budget immer aktuell wirkt. Das Laden dauert etwa zwei Minuten.
 
-Der Datensatz wird in der Sprache des Arbeitsbereichs geladen: Englisch, Französisch, Deutsch oder Spanisch (Englisch für jede andere Sprache). Titel, Beschreibungen, Vorfälle und Dokumente sind übersetzt. Die Namen von Unternehmen, Personen, Lieferanten und Anwendungen bleiben unverändert, und einige lokale Namen der französischen, niederländischen und italienischen Unternehmen behalten ihre eigene Sprache. Nach dem Löschen erfolgt ein neues Laden in derselben Sprache.
+Der Datensatz wird in der Sprache des Arbeitsbereichs geladen: Englisch, Französisch, Deutsch oder Spanisch (Englisch für jede andere Sprache). Titel, Beschreibungen, Labels der Aufgaben, Vorfälle und Dokumente sind übersetzt. Asset-Typen, die der Datensatz hinzufügt, sind in dieser Sprache benannt. Die Namen von Unternehmen, Personen, Lieferanten und Anwendungen bleiben unverändert, und einige lokale Namen der französischen, niederländischen und italienischen Unternehmen behalten ihre eigene Sprache. Nach dem Löschen erfolgt ein neues Laden in derselben Sprache.
 
 Die fiktiven Benutzer haben weder ein Passwort noch Zugriff. Sie sorgen dafür, dass Verantwortliche, Zuständige und Projektteams realistisch aussehen. KANAP sendet ihnen keine E-Mails, und das Löschen entfernt sie.
 

@@ -23,7 +23,7 @@ El conjunto describe Fromage & Co, una quesería ficticia:
 
 Las fechas siguen el año en curso, de modo que el presupuesto siempre parece actualizado. La carga tarda unos dos minutos.
 
-El conjunto se carga en el idioma del espacio de trabajo: inglés, francés, alemán o español (inglés para cualquier otro idioma). Los títulos, las descripciones, los incidentes y los documentos están traducidos. Los nombres de empresas, personas, proveedores y aplicaciones no cambian, y algunos nombres locales de las empresas francesa, neerlandesa e italiana conservan su propio idioma. Tras un borrado, una nueva carga se hace en el mismo idioma.
+El conjunto se carga en el idioma del espacio de trabajo: inglés, francés, alemán o español (inglés para cualquier otro idioma). Los títulos, las descripciones, las etiquetas de las tareas, los incidentes y los documentos están traducidos. Los tipos de activo que añade el conjunto se nombran en ese idioma. Los nombres de empresas, personas, proveedores y aplicaciones no cambian, y algunos nombres locales de las empresas francesa, neerlandesa e italiana conservan su propio idioma. Tras un borrado, una nueva carga se hace en el mismo idioma.
 
 Los usuarios ficticios no tienen contraseña ni acceso. Sirven para que los responsables, las personas asignadas y los equipos de proyecto resulten realistas. KANAP no les envía ningún correo, y el borrado los elimina.
 

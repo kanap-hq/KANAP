@@ -581,6 +581,17 @@ async function ensureSampleExchangeRates() {
   else ok('Exchange rates cover USD for the sample years');
 }
 
+// Asset types the data set adds on top of the shipped catalog. 18-assets.csv names them in English
+// (the kind column is a match key). The label stored on the tenant is in the dataset language.
+const FIXTURE_ASSET_KINDS = [
+  { code: 'storage', english: 'Storage', label: t('Storage') },
+  { code: 'network_switch', english: 'Network Switch', label: t('Network Switch') },
+  { code: 'iot_gateway', english: 'IoT Gateway', label: t('IoT Gateway') },
+  { code: 'edge_node', english: 'Edge Node', label: t('Edge Node') },
+  { code: 'cloud_instance', english: 'Cloud Instance', label: t('Cloud Instance') },
+  { code: 'cloud_database', english: 'Cloud Database', label: t('Cloud Database') },
+];
+
 async function setupSettings() {
   info('Configuring base settings');
   await apiPatch('/currency/settings', {
@@ -598,14 +609,7 @@ async function setupSettings() {
     return [...map.values()];
   };
   await apiPatch('/it-ops/settings', {
-    serverKinds: mergeByCode(current.serverKinds, [
-      { code: 'storage', label: 'Storage' },
-      { code: 'network_switch', label: 'Network Switch' },
-      { code: 'iot_gateway', label: 'IoT Gateway' },
-      { code: 'edge_node', label: 'Edge Node' },
-      { code: 'cloud_instance', label: 'Cloud Instance' },
-      { code: 'cloud_database', label: 'Cloud Database' },
-    ]),
+    serverKinds: mergeByCode(current.serverKinds, FIXTURE_ASSET_KINDS.map(({ code, label }) => ({ code, label }))),
     domains: mergeByCode(current.domains, [
       { code: 'fromage-co-local', label: 'fromage-co.local', dns_suffix: 'fromage-co.local' },
       { code: 'kaasmeester-local', label: 'kaasmeester.local', dns_suffix: 'kaasmeester.local' },
@@ -1251,6 +1255,8 @@ async function ensureAssets(locationIdByFixtureCode) {
     return map;
   };
   const kindCodes = codeByLabel(settings.serverKinds);
+  // The file still says "Network Switch" when the stored label is the dataset's translation.
+  for (const item of FIXTURE_ASSET_KINDS) kindCodes.set(lower(item.english), item.code);
   const locations = await getAll('/locations?limit=500');
   const locationById = new Map(locations.map((item) => [item.id, item]));
   const existingAssets = await getAll('/assets?limit=1000');
