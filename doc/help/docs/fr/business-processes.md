@@ -48,7 +48,7 @@ La liste affiche tous les processus métier de votre tenant.
 - **Nouveau** (`business_processes:member`) : créer un nouveau processus métier. Voir [Créer un processus métier](#creating-a-business-process).
 - **Importer** (Admin) : import en masse de processus depuis un fichier CSV ou un classeur Excel.
 - **Exporter** (Admin) : exporter les processus que la liste affiche, ou tous les processus, dans un fichier CSV ou un classeur Excel.
-- **Supprimer la sélection** (Admin) : supprimer une ou plusieurs lignes sélectionnées. Un processus utilisé par des applications ou des interfaces ne peut pas être supprimé : désactivez-le plutôt. Un processus qui a des sous-processus ne peut pas non plus être supprimé : déplacez-les ou supprimez-les d'abord. Avant toute suppression, la confirmation liste les processus conservés, avec la raison. Les demandes liées à un processus supprimé sont conservées, sans ce lien.
+- **Supprimer la sélection** (Admin) : supprimer une ou plusieurs lignes sélectionnées. Les sous-processus sont supprimés avant leur parent, donc sélectionner un processus avec tous ses sous-processus supprime toute la branche. Un processus utilisé par des applications ou des interfaces ne peut pas être supprimé : désactivez-le plutôt. Ce processus conserve son parent lorsque les deux étaient sélectionnés. Un processus qui a encore un sous-processus hors de la sélection ne peut pas être supprimé : déplacez-le ou supprimez-le d'abord. Avant toute suppression, la confirmation liste les processus conservés, avec la raison. Les demandes liées à un processus supprimé sont conservées, sans ce lien.
 
 ---
 

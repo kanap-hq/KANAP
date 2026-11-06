@@ -1030,11 +1030,11 @@ A tenant classifies its budget lines along analytics dimensions (`analytics_axes
   - Body: `{ ids: string[] }`.
   - Returns: `{ deleted: string[], failed: { id, name, reason }[] }`.
   - Behavior:
-    - Uses a dedicated delete service; FKs or usage conflicts are reported per item.
+    - Deletes deepest first. A sub-process counts against its parent when it is outside the selection or refused itself, so a parent selected with every deletable sub-process is deleted with them. A refused sub-process keeps its parent. Each id is its own savepoint: a refusal is reported on that item and the others still go.
   - Permissions: `business_processes:admin`.
 
 - DELETE `/business-processes/:id`
-  - Deletes a single process; mirrors bulk behavior. A process with sub-processes is refused (`BUSINESS_PROCESS_HAS_SUB_PROCESSES`, usages `[{ type: 'sub_processes', total }]`), before the applications and interfaces check (`BUSINESS_PROCESS_IN_USE`); `POST /business-processes/delete-check` reports both.
+  - Deletes a single process. A process that still has a sub-process is refused (`BUSINESS_PROCESS_HAS_SUB_PROCESSES`, usages `[{ type: 'sub_processes', total }]`), before the applications and interfaces check (`BUSINESS_PROCESS_IN_USE`). `POST /business-processes/delete-check` uses the same rule on the whole selection: a sub-process in the selection counts only when it is refused itself.
   - Permissions: `business_processes:admin`.
 
 ### Applications of a process

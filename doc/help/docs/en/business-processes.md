@@ -48,7 +48,7 @@ The list shows all business processes for your tenant.
 - **New** (`business_processes:member`): create a new business process. See [Creating a business process](#creating-a-business-process).
 - **Import** (Admin): bulk-import processes from a CSV file or an Excel workbook.
 - **Export** (Admin): export the processes the list shows, or all processes, to a CSV file or an Excel workbook.
-- **Delete Selected** (Admin): delete one or more selected rows. A process that applications or interfaces use cannot be deleted: disable it instead. A process that has sub-processes cannot be deleted either: move or delete them first. Before anything is deleted, the confirmation lists the processes kept, with the reason. Requests linked to a deleted process stay, without the link.
+- **Delete Selected** (Admin): delete one or more selected rows. Sub-processes are deleted before their parent, so selecting a process together with every sub-process deletes the whole branch. A process that applications or interfaces use cannot be deleted: disable it instead. That process keeps its parent when both were selected. A process that still has a sub-process outside the selection cannot be deleted: move or delete it first. Before anything is deleted, the confirmation lists the processes kept, with the reason. Requests linked to a deleted process stay, without the link.
 
 ---
 

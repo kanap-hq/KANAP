@@ -81,7 +81,7 @@ Code: `backend/src/business-processes/business-process-tree.ts`.
 - A process cannot be its own parent (`BUSINESS_PROCESS_OWN_PARENT`).
 - A process cannot move under one of its own sub-processes (`BUSINESS_PROCESS_PARENT_CYCLE`, with the two names). The service walks up from the new parent in the stored tree.
 - Create, update and CSV import take a per-tenant advisory lock (`business-process-tree:<tenant>`) before checking, so two moves cannot make a cycle together.
-- Deleting a process that has sub-processes is refused (`BUSINESS_PROCESS_HAS_SUB_PROCESSES`); the foreign key is `NO ACTION` as a second guard.
+- Deleting a process that still has a sub-process is refused (`BUSINESS_PROCESS_HAS_SUB_PROCESSES`). A bulk delete counts a sub-process only when it is outside the selection or refused itself, and deletes deepest first (`businessProcessDepthSql`), so a parent selected with every deletable sub-process is deleted with them. A refused sub-process keeps its parent. The foreign key is `ON DELETE NO ACTION`, so the parent statement needs its sub-processes gone.
 - The path of a process is the names from the top joined by ` › `. The SQL helper stops after 100 steps, so a cycle (never written by the service) cannot loop. A process whose parent is missing is shown as a root.
 
 ### Ownership fields
@@ -148,7 +148,7 @@ Component: `frontend/src/pages/BusinessProcessesPage.tsx`
 - Actions (top-right):
   - `New` (member): opens the new process page.
   - `Import` (admin) and `Export` (admin): the export follows the list (search, filters, scope, sort) or the whole register.
-  - `Delete selected` (admin): asks `POST /business-processes/delete-check` first, then `DELETE /business-processes/bulk`. A process used by applications or interfaces, or that has sub-processes, is refused with the reason.
+  - `Delete selected` (admin): asks `POST /business-processes/delete-check` first, then `DELETE /business-processes/bulk`. The check and the delete count a sub-process only when it is outside the selection or refused itself, and the delete removes the deepest processes first. A process used by applications or interfaces is refused, and so is its parent when that process stays. A process that still has a sub-process outside the selection is refused with the reason.
 - Navigation context: `sort`, `q`, `filters` and `scope` are carried in the URL to the workspace, so Close and prev/next stay on the same list.
 
 ### Workspace
@@ -222,7 +222,7 @@ Business Processes are reused where end-to-end processes matter: applications (`
 3. **Type.** `process_type` is a property of the process alone. Do not derive it from the parent.
 4. **Ownership.** Use `owner_user_id` and `it_owner_user_id` to route tasks, approvals and notifications. Edit ownership in the Business Process workspace only.
 5. **Lifecycle.** Honor `status`/`disabled_at`: disabled processes are not offered for new items; existing links stay visible and may show an inactive marker.
-6. **Delete.** A process used by applications or interfaces cannot be deleted (`BUSINESS_PROCESS_IN_USE`): disable it. A process with sub-processes cannot be deleted either (`BUSINESS_PROCESS_HAS_SUB_PROCESSES`): move or delete them first. Requests linked to a deleted process keep existing without the link.
+6. **Delete.** A process used by applications or interfaces cannot be deleted (`BUSINESS_PROCESS_IN_USE`): disable it. A bulk delete that includes every deletable sub-process deletes the parent with them. A sub-process that stays keeps its parent (`BUSINESS_PROCESS_HAS_SUB_PROCESSES`). A single delete of a process that still has sub-processes is refused the same way: move or delete them first. Requests linked to a deleted process keep existing without the link.
 
 ### When NOT to use Business Processes
 
