@@ -131,6 +131,65 @@ async function run() {
     assert.equal(loopedUpdate.status, 400);
     assert.equal(loopedUpdate.code, 'connection_same_endpoint');
 
+    // A present `source_asset_id: null` clears the asset. Alone, a complete side is refused.
+    const clearedSource = await refusal(() => update(plain.id, { source_asset_id: null }));
+    assert.equal(clearedSource.status, 400);
+    assert.match(clearedSource.message, /source: select an asset or an entity/);
+    const clearedDestination = await refusal(() => update(plain.id, { destination_asset_id: null }));
+    assert.equal(clearedDestination.status, 400);
+    assert.match(clearedDestination.message, /destination: select an asset or an entity/);
+    const [kept] = await runner.query(
+      `SELECT source_asset_id, destination_asset_id FROM connections WHERE id = $1`,
+      [plain.id],
+    );
+    assert.equal(kept.source_asset_id, member);
+    assert.equal(kept.destination_asset_id, other);
+
+    // `null` with an entity switches the side. A legacy id in the same body does not keep the asset.
+    const switchedSource = await update(plain.id, {
+      source_asset_id: null,
+      source_server_id: member,
+      source_entity_code: 'dmz',
+    });
+    assert.equal(switchedSource.source_asset_id, null);
+    assert.equal(switchedSource.source_entity_code, 'dmz');
+    assert.equal(switchedSource.destination_asset_id, other);
+    const switchedDestination = await update(plain.id, {
+      destination_asset_id: null,
+      destination_server_id: other,
+      destination_entity_code: 'dmz',
+    });
+    assert.equal(switchedDestination.destination_asset_id, null);
+    assert.equal(switchedDestination.destination_entity_code, 'dmz');
+    assert.equal(switchedDestination.source_asset_id, null);
+    assert.equal(switchedDestination.source_entity_code, 'dmz');
+
+    // The legacy key still applies when the new one is absent, at creation and on update.
+    const viaLegacy = await create({
+      name: 'Legacy keys',
+      topology: 'server_to_server',
+      protocols: ['https'],
+      source_server_id: member,
+      destination_server_id: other,
+    });
+    assert.equal(viaLegacy.source_asset_id, member);
+    assert.equal(viaLegacy.destination_asset_id, other);
+    const movedByLegacy = await update(viaLegacy.id, { destination_server_id: cluster });
+    assert.equal(movedByLegacy.source_asset_id, member);
+    assert.equal(movedByLegacy.destination_asset_id, cluster);
+
+    // At creation, a present null does not fall through to the legacy key.
+    const nullBeatsLegacy = await refusal(() => create({
+      name: 'Null asset',
+      topology: 'server_to_server',
+      protocols: ['https'],
+      source_asset_id: null,
+      source_server_id: member,
+      destination_asset_id: other,
+    }));
+    assert.equal(nullBeatsLegacy.status, 400);
+    assert.match(nullBeatsLegacy.message, /source: select an asset or an entity/);
+
     // An old looped connection still renames: its couple did not change.
     const [legacyLoop] = await runner.query(
       `INSERT INTO connections (tenant_id, name, topology, source_asset_id, destination_asset_id, lifecycle)

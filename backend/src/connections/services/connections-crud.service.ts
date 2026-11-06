@@ -25,6 +25,19 @@ import {
 } from '../connection-cluster-rules';
 
 /**
+ * Asset of one side. A present `source_asset_id` or `destination_asset_id` wins,
+ * and `null` clears that asset. The legacy `*_server_id` is read only when the new key is absent.
+ */
+function connectionSideAssetId(body: object, side: 'source' | 'destination'): unknown {
+  const record = body as Record<string, unknown>;
+  const assetKey = `${side}_asset_id`;
+  if (Object.prototype.hasOwnProperty.call(record, assetKey)) return record[assetKey];
+  const legacyKey = `${side}_server_id`;
+  if (Object.prototype.hasOwnProperty.call(record, legacyKey)) return record[legacyKey];
+  return undefined;
+}
+
+/**
  * Service for core CRUD operations on connections.
  */
 @Injectable()
@@ -177,9 +190,8 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
         await this.validateEntityCode(eid as string, tenant, mg);
         return { asset: null, entity: eid };
       };
-      // Accept both asset_id and server_id for backwards compatibility
-      const src = await normalizeSide(body.source_asset_id ?? body.source_server_id, body.source_entity_code, 'source');
-      const dst = await normalizeSide(body.destination_asset_id ?? body.destination_server_id, body.destination_entity_code, 'destination');
+      const src = await normalizeSide(connectionSideAssetId(body, 'source'), body.source_entity_code, 'source');
+      const dst = await normalizeSide(connectionSideAssetId(body, 'destination'), body.destination_entity_code, 'destination');
       if (src.asset && src.asset === dst.asset) throw connectionSameEndpointRefusal();
       source_asset_id = src.asset;
       source_entity_code = src.entity;
@@ -369,16 +381,15 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
         await this.validateEntityCode(candidateEntity as string, tenant, mg);
         return { asset: null, entity: candidateEntity };
       };
-      // Accept both asset_id and server_id for backwards compatibility
       const src = await normalizeSide(
-        body.source_asset_id ?? body.source_server_id,
+        connectionSideAssetId(body, 'source'),
         body.source_entity_code,
         source_asset_id,
         source_entity_code,
-        'source'
+        'source',
       );
       const dst = await normalizeSide(
-        body.destination_asset_id ?? body.destination_server_id,
+        connectionSideAssetId(body, 'destination'),
         body.destination_entity_code,
         destination_asset_id,
         destination_entity_code,
