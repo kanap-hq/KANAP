@@ -2912,7 +2912,7 @@
       "flow": {
         "logicalFlow": "Flujo lógico",
         "legTemplate": "Plantilla de tramos",
-        "noLegs": "Aún no hay tramos definidos. Seleccione las aplicaciones de origen y destino y guarde la ruta de la interfaz.",
+        "noLegs": "Aún no hay tramos. Aparecen en cuanto se definen las aplicaciones de origen y destino.",
         "leg": "Tramo",
         "fromTo": "De / a",
         "triggerType": "Tipo de disparador",

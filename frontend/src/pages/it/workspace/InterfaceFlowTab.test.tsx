@@ -40,6 +40,34 @@ describe('InterfaceFlowTab steps', () => {
     expect(screen.queryByText('EXTRACT')).toBeNull();
   });
 
+  it('says legs appear once the source and target applications are set', async () => {
+    const empty = (
+      <QueryClientProvider client={new QueryClient()}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <InterfaceFlowTab
+            canManage={false}
+            data={{ legs: [] } as never}
+            onPatch={async () => undefined}
+            onReplaceLegs={async () => undefined}
+          />
+        </ThemeProvider>
+      </QueryClientProvider>
+    );
+    const texts: Record<string, string> = {
+      en: 'No legs yet. They appear once the source and target applications are set.',
+      fr: 'Aucun tronçon pour le moment. Ils apparaissent une fois les applications source et cible définies.',
+      de: 'Noch keine Abschnitte. Sie erscheinen, sobald die Quellanwendung und die Zielanwendung festgelegt sind.',
+      es: 'Aún no hay tramos. Aparecen en cuanto se definen las aplicaciones de origen y destino.',
+    };
+    for (const [language, text] of Object.entries(texts)) {
+      await i18n.changeLanguage(language);
+      const view = render(empty);
+      expect(screen.getByText(text)).toBeInTheDocument();
+      expect(screen.queryByText(/save the interface route|enregistrez la route|Route der Schnittstelle|ruta de la interfaz/i)).toBeNull();
+      view.unmount();
+    }
+  });
+
   it('hands Tab in the source or the target to the page, Shift+Tab to the browser', () => {
     const onRequiredTab = vi.fn();
     render(
