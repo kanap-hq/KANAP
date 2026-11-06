@@ -12,6 +12,7 @@ import { formatShortDate } from '../../../lib/dateFormat';
 import { isIncidentLocked } from '../../../pages/it/workspace/incidentWorkspace';
 import { buildItemPath, formatItemRef } from '../../../utils/item-ref';
 import { getDotColor, INCIDENT_SEVERITY_COLORS } from '../../../utils/statusColors';
+import { businessProcessOptionLabel, businessProcessPathTitle } from '../../fields/businessProcessOption';
 import type { RelationOption } from '../RelationAddPicker';
 import { RelationRef, type RelationsColumn } from '../RelationsTable';
 import { DASH, PAGE, pathOf, refOf, relationDate } from './helpers';
@@ -551,15 +552,22 @@ export function processesSection({
     label: (row) => row.name,
     muted: (row) => row.status === 'disabled',
     columns: [
-      { key: 'name', header: columnsT(t, 'name'), render: (row) => row.name },
+      {
+        key: 'name',
+        header: columnsT(t, 'name'),
+        render: (row) => {
+          const title = businessProcessPathTitle(row);
+          return title ? <span title={title}>{row.name}</span> : row.name;
+        },
+      },
       { key: 'owner', header: columnsT(t, 'owner'), width: 180, hideOrder: 1, render: (row) => row.owner_name || DASH },
     ],
     search: async (q, signal) => {
-      const res = await api.get<{ items: Array<{ id: string; name: string }> }>('/business-processes/lookup', {
+      const res = await api.get<{ items: Array<{ id: string; name: string; path?: string | null }> }>('/business-processes/lookup', {
         params: { limit: PAGE, ...(q ? { q } : {}) },
         signal,
       });
-      return (res.data?.items || []).map((row) => ({ id: row.id, label: row.name }));
+      return (res.data?.items || []).map((row) => ({ id: row.id, label: businessProcessOptionLabel(row) }));
     },
   };
 }

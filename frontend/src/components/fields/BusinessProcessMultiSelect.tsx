@@ -5,12 +5,9 @@ import { useTranslation } from 'react-i18next';
 import { useLookupPicker } from '../../hooks/useLookupPicker';
 import { FieldLabel } from '../design';
 import { drawerAutocompleteListboxSx } from '../../theme/formSx';
+import { businessProcessOptionLabel, businessProcessPathTitle, type BusinessProcessLookupOption } from './businessProcessOption';
 
-type BusinessProcess = {
-  id: string;
-  name: string;
-  status: string;
-};
+type BusinessProcess = BusinessProcessLookupOption;
 
 type Props = {
   value: string[];
@@ -52,12 +49,18 @@ export default function BusinessProcessMultiSelect({
         onChange(newValue.map((opt) => opt.id));
       }}
       getOptionLabel={(option) => picker.label(option, (o) => o.name ?? '')}
+      renderOption={(props, option) => (
+        <li {...props} key={option.id}>
+          {businessProcessOptionLabel(option)}
+        </li>
+      )}
       renderTags={(tagValue, getTagProps) =>
         tagValue.map((option, index) => (
           <Chip
             {...getTagProps({ index })}
             key={option.id}
             label={picker.label(option, (o) => o.name ?? '')}
+            title={businessProcessPathTitle(option)}
             size="small"
           />
         ))

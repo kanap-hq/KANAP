@@ -19,14 +19,19 @@ const RANK: Record<string, number> = { reader: 1, contributor: 2, manager: 3, ad
 vi.mock('../../../auth/AuthContext', () => ({
   useAuth: () => ({ hasLevel: (resource: string, level: string) => (RANK[auth.levels[resource] ?? ''] ?? 0) >= RANK[level] }),
 }));
-const picker = { options: [{ id: 'bp-1', name: 'Order to cash' }, { id: 'bp-2', name: 'Procure to pay' }] };
+const picker = {
+  options: [
+    { id: 'bp-1', name: 'Order to cash' },
+    { id: 'bp-2', name: 'Procure to pay' },
+  ] as Array<{ id: string; name: string; path?: string }>,
+};
 vi.mock('../../../hooks/useLookupPicker', () => ({
   useLookupPicker: () => ({ options: picker.options, searching: false, loading: false, autocomplete: {} }),
 }));
 
 const mocked = vi.mocked(api);
 
-function relations(processes: Array<{ id: string; name: string; status: string | null; owner_name: string | null }> | null) {
+function relations(processes: Array<{ id: string; name: string; status: string | null; owner_name: string | null; path?: string | null }> | null) {
   return {
     year: 2026, budget_column: { key: 'planned', label: 'Budget' }, budget_lines: [], contracts: [], projects: [], requests: [], tasks: [],
     technologies: [], deployment_servers: [], processes, incidents: [], suggestions: [], also: { assets: 0, interfaces: 0, documents: 0 },
@@ -66,6 +71,10 @@ beforeEach(() => {
   mocked.get.mockReset();
   mocked.post.mockReset();
   mocked.delete.mockReset();
+  picker.options = [
+    { id: 'bp-1', name: 'Order to cash' },
+    { id: 'bp-2', name: 'Procure to pay' },
+  ];
   auth.levels = { applications: 'manager', business_processes: 'manager' };
 });
 
@@ -76,6 +85,18 @@ describe('ApplicationProcessesField', () => {
     expect(screen.getByTestId('location').textContent).toBe('/master-data/business-processes/bp-1/overview');
     expect(screen.getByText('Record to report')).toBeTruthy();
     expect(screen.getByText('workspace.application.ownership.businessProcesses')).toBeTruthy();
+  });
+
+  it('shows a sub-process by its path in the list and by its name, with the path, once chosen', async () => {
+    picker.options = [{ id: 'bp-2', name: 'Aging', path: 'Production › Aging' }];
+    renderField([{ id: 'bp-1', name: 'Aging', status: 'enabled', owner_name: null, path: 'Sales › Aging' }]);
+    const chosen = await screen.findByText('Aging');
+    expect(chosen).toHaveAttribute('title', 'Sales › Aging');
+    const input = screen.getByRole('combobox', { name: 'workspace.application.ownership.businessProcesses' });
+    fireEvent.mouseDown(input);
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    expect(await screen.findByRole('option', { name: 'Production › Aging' })).toBeTruthy();
+    expect(screen.queryByRole('option', { name: 'Aging' })).toBeNull();
   });
 
   it('adds a process found by the server search, without the linked ones, and saves it at once', async () => {

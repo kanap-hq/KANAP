@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import api from '../../../api';
 import { useAuth } from '../../../auth/AuthContext';
 import { PropertyRow } from '../../../components/design';
+import { businessProcessOptionLabel, businessProcessPathTitle } from '../../../components/fields/businessProcessOption';
 import PickedNameRow from '../../../components/fields/PickedNameRow';
 import { useLookupPicker } from '../../../hooks/useLookupPicker';
 import { drawerAutocompleteListboxSx } from '../../../theme/formSx';
@@ -13,7 +14,7 @@ import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { useApplicationFeedback } from '../applicationFeedback';
 import { applicationRelationsKey, fetchApplicationRelations, type ApplicationRelationsData } from '../workspace/ApplicationRelationsTab';
 
-type ProcessOption = { id: string; name: string; status?: string | null };
+type ProcessOption = { id: string; name: string; status?: string | null; path?: string | null };
 
 type Props = {
   applicationId: string;
@@ -112,6 +113,7 @@ export default function ApplicationProcessesField({ applicationId, canManage, te
                 key={row.id}
                 href={`/master-data/business-processes/${row.id}/overview`}
                 muted={row.status === 'disabled'}
+                title={businessProcessPathTitle(row)}
                 onRemove={editable ? () => { void remove(row.id); } : undefined}
                 removeLabel={t('workspace.application.relations.remove', { name: row.name })}
               >
@@ -124,7 +126,7 @@ export default function ApplicationProcessesField({ applicationId, canManage, te
           <Autocomplete
             {...picker.autocomplete}
             options={options}
-            getOptionLabel={(option) => option.name}
+            getOptionLabel={(option) => businessProcessOptionLabel(option)}
             value={null}
             onChange={(_, option) => { void add(option); }}
             renderInput={(params) => (
