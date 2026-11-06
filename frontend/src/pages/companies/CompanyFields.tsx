@@ -30,6 +30,14 @@ function codeLabel(option: CodeOption) {
   return option.name === option.code ? option.code : `${option.name} (${option.code})`;
 }
 
+/**
+ * `autoSelect` commits the highlighted row when the field is left. An empty box highlights the
+ * first option, so leaving it must not turn a cleared field into that option.
+ */
+function blurOnEmptyInput(event: React.SyntheticEvent, reason: string): boolean {
+  return reason === 'blur' && event.target instanceof HTMLInputElement && event.target.value.trim() === '';
+}
+
 function CodeAutocomplete({
   options,
   value,
@@ -60,10 +68,16 @@ function CodeAutocomplete({
     <Autocomplete<CodeOption, false, boolean, false>
       options={options}
       value={selected}
-      onChange={(_event, option) => onChange(option?.code ?? '')}
+      onChange={(event, option, reason) => {
+        if (blurOnEmptyInput(event, reason)) return;
+        onChange(option?.code ?? '');
+      }}
       getOptionLabel={optionLabel}
       filterOptions={filterOptions ? (listed, state) => filterOptions(listed, state.inputValue) : undefined}
       isOptionEqualToValue={(a, b) => a.code === b.code}
+      // The first match stays highlighted, so Enter chooses it and Tab keeps it.
+      autoHighlight
+      autoSelect
       disableClearable={!clearable}
       disabled={disabled}
       ListboxProps={{ sx: drawerAutocompleteListboxSx }}
@@ -143,9 +157,15 @@ export function CoaField({
     <Autocomplete<CoaListItem, false, boolean, false>
       options={options}
       value={selected}
-      onChange={(_event, option) => onChange(option?.id ?? null)}
+      onChange={(event, option, reason) => {
+        if (blurOnEmptyInput(event, reason)) return;
+        onChange(option?.id ?? null);
+      }}
       getOptionLabel={(option) => `${option.code} · ${option.name}`}
       isOptionEqualToValue={(a, b) => a.id === b.id}
+      // The first match stays highlighted, so Enter chooses it and Tab keeps it.
+      autoHighlight
+      autoSelect
       disableClearable={!clearable}
       disabled={disabled}
       ListboxProps={{ sx: drawerAutocompleteListboxSx }}
