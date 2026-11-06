@@ -749,5 +749,5 @@ Wenn der Fokus nicht auf einem Eingabefeld liegt, können Sie verwenden:
   - **Verwenden Sie Priorität klug**: Reservieren Sie **Blocker** für tatsächlich blockierende Probleme.
   - **Verwenden Sie Single-Submit-Updates**: Kombinieren Sie im Reiter Kommentare Kommentar + Status + Zeit in einer Aktion, um Historie und Benachrichtigungen abgestimmt zu halten.
   - **Dokumente importieren**: Verwenden Sie die Schaltfläche **Importieren**, um `.docx`-Dateien als Beschreibungsinhalt einzubringen, anstatt zu kopieren und einzufügen.
-  - **Tastenkombination**: Drücken Sie **Strg+S** (oder **Cmd+S** auf Mac), um schnell zu speichern, ohne nach der Speichern-Schaltfläche greifen zu müssen.
+  - **Tastenkombination**: Drücken Sie **Strg+S** (oder **Cmd+S** auf Mac), um ausstehende Änderungen sofort zu speichern, zum Beispiel eine gerade eingegebene Beschreibung.
   - **Wissensartikel verknüpfen**: Verwenden Sie die Wissens-Gruppe in der Eigenschaftsleiste, um relevante Dokumentation mit Ihren Aufgaben zu verbinden.

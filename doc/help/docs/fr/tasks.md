@@ -749,5 +749,5 @@ Lorsque le focus n'est pas sur un champ de saisie, vous pouvez utiliser :
   - **Utilisez la priorité judicieusement** : Réservez **Bloquant** aux problèmes véritablement bloquants.
   - **Utilisez des mises à jour en une seule soumission** : Dans l'onglet Commentaires, combinez commentaire + statut + temps en une seule action pour garder l'historique et les notifications alignés.
   - **Importez des documents** : Utilisez le bouton **Importer** pour importer des fichiers `.docx` comme contenu de description au lieu de copier-coller.
-  - **Raccourci clavier** : Appuyez sur **Ctrl+S** (ou **Cmd+S** sur Mac) pour enregistrer rapidement sans atteindre le bouton Enregistrer.
+  - **Raccourci clavier** : Appuyez sur **Ctrl+S** (ou **Cmd+S** sur Mac) pour enregistrer aussitôt les modifications en attente, par exemple une description que vous venez de saisir.
   - **Liez des articles de connaissances** : Utilisez le groupe Connaissances dans le tiroir Propriétés pour connecter de la documentation pertinente à vos tâches.

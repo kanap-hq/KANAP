@@ -68,7 +68,7 @@ During the trial, the tile also offers **Book a discovery call**: a 30-minute vi
 |---|---|---|
 | IT budget | The overview, A budget line, A report, A question for Plaid, Your data | Your company, Your budget lines, A linked contract, Your first report, A colleague |
 | IT landscape map | The application list, An application record, The servers, Technologies, end of support and vulnerabilities, Your data | Your locations, Your applications, Your technologies, Your servers, A colleague |
-| Projects and requests | A request and its score, The project born from the request, Tasks, The reports, Your data | Your first request, Your project, The first tasks, The project's budget, A colleague |
+| Projects and requests | A request and its score, The project born from the request, Tasks, The reports, Your data | Your first request, Your project, The first tasks, The project's budget, Your contributor profile |
 
 ### The home page follows your path
 

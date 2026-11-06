@@ -749,5 +749,5 @@ When the focus is not on an input field, you can use:
   - **Use priority wisely**: Reserve **Blocker** for genuinely blocking issues.
   - **Use single-submit updates**: In the Comments tab, combine comment + status + time in one action to keep history and notifications aligned.
   - **Import documents**: Use the **Import** button to pull in `.docx` files as description content instead of copy-pasting.
-  - **Keyboard shortcut**: Press **Ctrl+S** (or **Cmd+S** on Mac) to save quickly without reaching for the Save button.
+  - **Keyboard shortcut**: Press **Ctrl+S** (or **Cmd+S** on Mac) to save pending changes at once, for instance a description you have just typed.
   - **Link knowledge articles**: Use the Knowledge group in the Properties drawer to connect relevant documentation to your tasks.
