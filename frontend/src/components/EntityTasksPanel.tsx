@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import api from '../api';
 import { useAuth } from '../auth/AuthContext';
 import { useLocale } from '../i18n/useLocale';
+import { formatShortDate } from '../lib/dateFormat';
 import { TASK_STATUS_COLORS, TASK_STATUS_LABELS } from '../pages/tasks/task.constants';
 import { getApiErrorMessage } from '../utils/apiErrorMessage';
 import { getDotColor, PRIORITY_COLORS } from '../utils/statusColors';
@@ -260,7 +261,7 @@ export default function EntityTasksPanel({ entityType, entityId, phases = [], di
                   </TableCell>
                 )}
                 <TableCell>
-                  {task.due_date ? new Date(task.due_date).toLocaleDateString(locale) : '-'}
+                  {formatShortDate(task.due_date, locale, { empty: '-' })}
                 </TableCell>
                 <TableCell align="right">
                   <IconButton
