@@ -8,9 +8,11 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseCsv } from '../../../scripts/lib/fixture-csv.mjs';
+import { datasetTranslator } from '../translations/translate.mjs';
 import {
   DEFAULT_CRITERIA,
   DEMAND_SCORES,
+  criteriaForLanguage,
   demandScore,
   planDemandScores,
   sameCriteriaValues,
@@ -83,7 +85,7 @@ test('the four demands score about 64, 44, 26 and 38, and a second plan is the s
   assert.equal(sameCriteriaValues(JSON.stringify(cave.criteria_values), cave.criteria_values), true);
 });
 
-test('criteria that are not the default English set are skipped', () => {
+test('criteria that match no seed language are skipped', () => {
   const renamed = planDemandScores(criteriaFromDefaults({ rename: { index: 1, name: 'Alignement stratégique' } }), REQUESTS);
   assert.equal(renamed.skipped, true);
   assert.equal(renamed.assignments.length, 0);
@@ -98,6 +100,35 @@ test('criteria that are not the default English set are skipped', () => {
     disabledExtra: { id: 'old', name: 'Retired', inverted: false, weight: 1, values: [{ id: 'v', label: 'A', position: 0 }, { id: 'w', label: 'B', position: 1 }] },
   }), REQUESTS);
   assert.equal(withDisabled.skipped, false, 'a disabled criterion stays out of the score');
+});
+
+test('a non-English data set resolves the same scores', () => {
+  for (const language of ['fr', 'de', 'es']) {
+    const translate = datasetTranslator(language);
+    const criteria = criteriaForLanguage(language).map((criterion, index) => ({
+      id: `c-${index}`,
+      name: criterion.name,
+      enabled: true,
+      inverted: criterion.inverted,
+      weight: '1.00',
+      values: criterion.values.map((label, position) => ({
+        id: `c-${index}-v-${position}`,
+        label,
+        position,
+      })),
+    }));
+    const requests = REQUESTS.map((request) => ({ ...request, name: translate(request.name) }));
+    assert.notEqual(requests[0].name, REQUESTS[0].name, `${language} translates the demand name`);
+    assert.notEqual(criteria[0].name, 'Business value', `${language} names the first criterion`);
+
+    const plan = planDemandScores(criteria, requests, translate);
+    assert.equal(plan.skipped, false, language);
+    assert.deepEqual(plan.missing, [], language);
+    const scores = plan.assignments.map((assignment) => demandScore(criteria, assignment.criteria_values));
+    assert.deepEqual(scores, [63.75, 43.96, 26.46, 37.92], language);
+    assert.equal(plan.assignments[0].criteria_values['c-0'], 'c-0-v-3', `${language} business value 200-500k€`);
+    assert.equal(plan.assignments[0].criteria_values['c-1'], 'c-1-v-3', `${language} strategy top`);
+  }
 });
 
 test('a missing demand is reported and the others are still scored', () => {

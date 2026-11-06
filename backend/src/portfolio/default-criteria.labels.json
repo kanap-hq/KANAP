@@ -1,0 +1,101 @@
+{
+  "criteria": [
+    {
+      "name": { "en": "Business value", "fr": "Valeur métier", "de": "Geschäftswert", "es": "Valor de negocio" },
+      "inverted": false,
+      "weight": 1,
+      "values": [
+        { "label": { "en": "0-10k€", "fr": "0-10k€", "de": "0-10k€", "es": "0-10k€" } },
+        { "label": { "en": "10-50k€", "fr": "10-50k€", "de": "10-50k€", "es": "10-50k€" } },
+        { "label": { "en": "50-200k€", "fr": "50-200k€", "de": "50-200k€", "es": "50-200k€" } },
+        { "label": { "en": "200-500k€", "fr": "200-500k€", "de": "200-500k€", "es": "200-500k€" } },
+        { "label": { "en": ">500k€", "fr": ">500k€", "de": ">500k€", "es": ">500k€" } },
+        { "label": { "en": "Mandatory", "fr": "Obligatoire", "de": "Obligatorisch", "es": "Obligatorio" }, "triggers_mandatory_bypass": true }
+      ]
+    },
+    {
+      "name": { "en": "Strategic alignment", "fr": "Alignement stratégique", "de": "Strategische Ausrichtung", "es": "Alineación estratégica" },
+      "inverted": false,
+      "weight": 1,
+      "values": [
+        { "label": { "en": "Low", "fr": "Faible", "de": "Niedrig", "es": "Bajo" } },
+        { "label": { "en": "Medium", "fr": "Moyen", "de": "Mittel", "es": "Medio" } },
+        { "label": { "en": "High", "fr": "Élevé", "de": "Hoch", "es": "Alto" } },
+        { "label": { "en": "Top", "fr": "Très élevé", "de": "Sehr hoch", "es": "Muy alto" } }
+      ]
+    },
+    {
+      "name": { "en": "Project costs", "fr": "Coûts du projet", "de": "Projektkosten", "es": "Costes del proyecto" },
+      "inverted": true,
+      "weight": 1,
+      "values": [
+        { "label": { "en": "No direct cost", "fr": "Sans coût direct", "de": "Keine direkten Kosten", "es": "Sin coste directo" } },
+        { "label": { "en": "0-10k€", "fr": "0-10k€", "de": "0-10k€", "es": "0-10k€" } },
+        { "label": { "en": "10-50k€", "fr": "10-50k€", "de": "10-50k€", "es": "10-50k€" } },
+        { "label": { "en": "50-200k€", "fr": "50-200k€", "de": "50-200k€", "es": "50-200k€" } },
+        { "label": { "en": "200-500k€", "fr": "200-500k€", "de": "200-500k€", "es": "200-500k€" } },
+        { "label": { "en": ">500k€", "fr": ">500k€", "de": ">500k€", "es": ">500k€" } }
+      ]
+    },
+    {
+      "name": { "en": "ROI", "fr": "ROI", "de": "ROI", "es": "ROI" },
+      "inverted": false,
+      "weight": 1,
+      "values": [
+        { "label": { "en": "Not quantifiable", "fr": "Non quantifiable", "de": "Nicht quantifizierbar", "es": "No cuantificable" } },
+        { "label": { "en": ">10y", "fr": ">10 ans", "de": ">10 Jahre", "es": ">10 años" } },
+        { "label": { "en": "5-10y", "fr": "5-10 ans", "de": "5-10 Jahre", "es": "5-10 años" } },
+        { "label": { "en": "2-5y", "fr": "2-5 ans", "de": "2-5 Jahre", "es": "2-5 años" } },
+        { "label": { "en": "1-2y", "fr": "1-2 ans", "de": "1-2 Jahre", "es": "1-2 años" } },
+        { "label": { "en": "<1y", "fr": "<1 an", "de": "<1 Jahr", "es": "<1 año" } }
+      ]
+    },
+    {
+      "name": { "en": "Risk level", "fr": "Niveau de risque", "de": "Risikoniveau", "es": "Nivel de riesgo" },
+      "inverted": true,
+      "weight": 1,
+      "values": [
+        { "label": { "en": "Negligible", "fr": "Négligeable", "de": "Vernachlässigbar", "es": "Insignificante" } },
+        { "label": { "en": "Low", "fr": "Faible", "de": "Niedrig", "es": "Bajo" } },
+        { "label": { "en": "Medium", "fr": "Moyen", "de": "Mittel", "es": "Medio" } },
+        { "label": { "en": "High", "fr": "Élevé", "de": "Hoch", "es": "Alto" } },
+        { "label": { "en": "Top", "fr": "Très élevé", "de": "Sehr hoch", "es": "Muy alto" } }
+      ]
+    },
+    {
+      "name": { "en": "Urgency", "fr": "Urgence", "de": "Dringlichkeit", "es": "Urgencia" },
+      "inverted": false,
+      "weight": 1,
+      "values": [
+        { "label": { "en": "Low", "fr": "Faible", "de": "Niedrig", "es": "Bajo" } },
+        { "label": { "en": "Medium", "fr": "Moyen", "de": "Mittel", "es": "Medio" } },
+        { "label": { "en": "High", "fr": "Élevé", "de": "Hoch", "es": "Alto" } },
+        { "label": { "en": "Critical", "fr": "Critique", "de": "Kritisch", "es": "Crítico" } }
+      ]
+    },
+    {
+      "name": { "en": "Time estimation IT", "fr": "Estimation de temps IT", "de": "Zeitschätzung IT", "es": "Estimación de tiempo IT" },
+      "system_key": "time_estimation_it",
+      "inverted": true,
+      "weight": 1,
+      "values": [
+        { "label": { "en": "0-10 MD", "fr": "0-10 JH", "de": "0-10 PT", "es": "0-10 DP" } },
+        { "label": { "en": "10-20 MD", "fr": "10-20 JH", "de": "10-20 PT", "es": "10-20 DP" } },
+        { "label": { "en": "20-50 MD", "fr": "20-50 JH", "de": "20-50 PT", "es": "20-50 DP" } },
+        { "label": { "en": ">50 MD", "fr": ">50 JH", "de": ">50 PT", "es": ">50 DP" } }
+      ]
+    },
+    {
+      "name": { "en": "Time estimation Business", "fr": "Estimation de temps métier", "de": "Zeitschätzung Fachbereich", "es": "Estimación de tiempo de negocio" },
+      "system_key": "time_estimation_business",
+      "inverted": true,
+      "weight": 1,
+      "values": [
+        { "label": { "en": "0-10 MD", "fr": "0-10 JH", "de": "0-10 PT", "es": "0-10 DP" } },
+        { "label": { "en": "10-20 MD", "fr": "10-20 JH", "de": "10-20 PT", "es": "10-20 DP" } },
+        { "label": { "en": "20-50 MD", "fr": "20-50 JH", "de": "20-50 PT", "es": "20-50 DP" } },
+        { "label": { "en": ">50 MD", "fr": ">50 JH", "de": ">50 PT", "es": ">50 DP" } }
+      ]
+    }
+  ]
+}

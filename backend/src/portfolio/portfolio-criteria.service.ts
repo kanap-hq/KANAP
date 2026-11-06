@@ -15,6 +15,8 @@ import {
   listChangedCriteria,
 } from './utils/activity-labels';
 import { detectChanges, FieldConfig } from '../common/change-detection';
+import { tenantSeedLanguage } from '../analytics/recommended-dimensions.seed';
+import { defaultCriteriaIn } from './default-criteria.seed';
 
 // `numeric` columns come back from Postgres as strings, so the score and the
 // override value are compared (and recorded) as numbers: a plain `!==` would
@@ -1313,119 +1315,16 @@ export class PortfolioCriteriaService {
   // ==================== DEFAULT CRITERIA SEEDING ====================
 
   /**
-   * Seed default evaluation criteria for a new tenant.
+   * Seed default evaluation criteria for a new tenant, in its seed language.
    * Based on specification section 4.5 "Default Criteria".
    */
   private async seedDefaultCriteria(tenantId: string, mg: EntityManager) {
     const criteriaRepo = mg.getRepository(PortfolioCriterion);
     const valuesRepo = mg.getRepository(PortfolioCriterionValue);
 
-    // Default criteria per spec section 4.5
-    const defaultCriteria: Array<{
-      name: string;
-      system_key?: string;
-      inverted: boolean;
-      weight: number;
-      values: Array<{ label: string; triggers_mandatory_bypass?: boolean }>;
-    }> = [
-      {
-        name: 'Business value',
-        inverted: false,
-        weight: 1,
-        values: [
-          { label: '0-10k€' },
-          { label: '10-50k€' },
-          { label: '50-200k€' },
-          { label: '200-500k€' },
-          { label: '>500k€' },
-          { label: 'Mandatory', triggers_mandatory_bypass: true },
-        ],
-      },
-      {
-        name: 'Strategic alignment',
-        inverted: false,
-        weight: 1,
-        values: [
-          { label: 'Low' },
-          { label: 'Medium' },
-          { label: 'High' },
-          { label: 'Top' },
-        ],
-      },
-      {
-        name: 'Project costs',
-        inverted: true,
-        weight: 1,
-        values: [
-          { label: 'No direct cost' },
-          { label: '0-10k€' },
-          { label: '10-50k€' },
-          { label: '50-200k€' },
-          { label: '200-500k€' },
-          { label: '>500k€' },
-        ],
-      },
-      {
-        name: 'ROI',
-        inverted: false,
-        weight: 1,
-        values: [
-          { label: 'Not quantifiable' },
-          { label: '>10y' },
-          { label: '5-10y' },
-          { label: '2-5y' },
-          { label: '1-2y' },
-          { label: '<1y' },
-        ],
-      },
-      {
-        name: 'Risk level',
-        inverted: true,
-        weight: 1,
-        values: [
-          { label: 'Negligible' },
-          { label: 'Low' },
-          { label: 'Medium' },
-          { label: 'High' },
-          { label: 'Top' },
-        ],
-      },
-      {
-        name: 'Urgency',
-        inverted: false,
-        weight: 1,
-        values: [
-          { label: 'Low' },
-          { label: 'Medium' },
-          { label: 'High' },
-          { label: 'Critical' },
-        ],
-      },
-      {
-        name: 'Time estimation IT',
-        system_key: 'time_estimation_it',
-        inverted: true,
-        weight: 1,
-        values: [
-          { label: '0-10 MD' },
-          { label: '10-20 MD' },
-          { label: '20-50 MD' },
-          { label: '>50 MD' },
-        ],
-      },
-      {
-        name: 'Time estimation Business',
-        system_key: 'time_estimation_business',
-        inverted: true,
-        weight: 1,
-        values: [
-          { label: '0-10 MD' },
-          { label: '10-20 MD' },
-          { label: '20-50 MD' },
-          { label: '>50 MD' },
-        ],
-      },
-    ];
+    // Named in the workspace seed language (`metadata.language`), English when absent.
+    const [tenant] = await mg.query(`SELECT metadata FROM tenants WHERE id = $1`, [tenantId]);
+    const defaultCriteria = defaultCriteriaIn(tenantSeedLanguage(tenant?.metadata));
 
     for (let i = 0; i < defaultCriteria.length; i++) {
       const def = defaultCriteria[i];
