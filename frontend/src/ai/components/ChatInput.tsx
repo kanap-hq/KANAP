@@ -216,7 +216,8 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
 
     const handleSend = () => {
       const text = value.trim();
-      if ((!text && !hasPending) || disabled) return;
+      // A file alone is not a message: the server treats an empty text as regenerate.
+      if (!text || disabled) return;
       onSend(expandMentions(text));
       setValue('');
       setMentionState(null);
@@ -361,7 +362,7 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       [acceptFiles],
     );
 
-    const canSend = !disabled && (value.trim().length > 0 || hasPending);
+    const canSend = !disabled && value.trim().length > 0;
     const canAddMore = attachmentsEnabled && !disabled && attachmentSlotsRemaining > 0;
 
     return (
