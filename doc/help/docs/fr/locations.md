@@ -25,7 +25,7 @@ Tant que le site est en cours de création, l'en-tête affiche **Créer** et **A
 La liste vous donne un aperçu consultable de chaque site enregistré.
 
 **Colonnes par défaut** :
-- **Code** : Code du site (cliquez pour ouvrir l'espace de travail)
+- **Référence** : La référence attribuée par KANAP (`LOC-4`). Cliquez dessus pour ouvrir l'espace de travail.
 - **Nom** : Nom d'affichage
 - **Type d'hébergement** : On-premise, colocation, cloud public, etc.
 - **Fournisseur / Société** : Fournisseur cloud pour les sites de type cloud, ou société exploitante pour les sites on-premise
@@ -36,7 +36,7 @@ La liste vous donne un aperçu consultable de chaque site enregistré.
 
 **Filtrage** :
 - Recherche rapide : Recherche en texte libre sur toutes les lignes
-- Filtres de colonnes : Filtres texte sur Code, Nom et Ville ; filtre d'ensemble sur Type d'hébergement
+- Filtres de colonnes : Filtres texte sur Référence, Nom et Ville ; filtre d'ensemble sur Type d'hébergement
 
 **Actions** :
 - **Ajouter un site** : Créer un nouveau site (nécessite `locations:member`)
@@ -54,7 +54,6 @@ Cliquez sur n'importe quelle ligne pour ouvrir l'espace de travail. Il comporte 
 L'onglet Vue d'ensemble capture les informations d'identité et de géographie, divisées en deux sections, plus un panneau de sous-sites.
 
 **Informations de base** :
-- **Code** : Identifiant unique (obligatoire)
 - **Nom** : Nom d'affichage (obligatoire)
 - **Type d'hébergement** : Catégorie d'installation (obligatoire). Les types d'hébergement sont configurables dans **Cartographie SI > Paramètres**.
 
@@ -158,7 +157,7 @@ Les types d'hébergement sont configurables dans **Cartographie SI > Paramètres
 
 ## Conseils
 
-- **Soyez cohérent avec les codes** : Une convention de nommage claire rend les sites faciles à identifier d'un coup d'œil et garde les filtres utiles.
+- **Soyez cohérent avec les noms** : Une convention de nommage claire rend les sites faciles à identifier d'un coup d'œil et garde les filtres utiles.
 - **Utilisez les sous-sites pour la granularité** : Si un centre de données a plusieurs salles ou racks, modélisez-les comme des sous-sites plutôt que des sites séparés. Cela garde la liste propre tout en suivant le placement physique.
 - **Suivez les régions cloud individuellement** : Créez un site par région cloud que vous utilisez, pas juste un par fournisseur.
 - **Liez les actifs aux sites** : Cela permet le reporting géographique, la planification de DR et l'analyse d'impact rapide lors des pannes.

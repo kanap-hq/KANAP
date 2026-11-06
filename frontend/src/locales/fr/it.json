@@ -784,7 +784,7 @@
       "title": "Sites",
       "addLocation": "Ajouter un site",
       "columns": {
-        "code": "Code",
+        "reference": "Référence",
         "name": "Nom",
         "hostingType": "Type d'hébergement",
         "providerCompany": "Fournisseur / Société",

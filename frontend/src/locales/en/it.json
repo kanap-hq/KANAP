@@ -784,7 +784,7 @@
       "title": "Locations",
       "addLocation": "Add location",
       "columns": {
-        "code": "Code",
+        "reference": "Reference",
         "name": "Name",
         "hostingType": "Hosting type",
         "providerCompany": "Provider / company",

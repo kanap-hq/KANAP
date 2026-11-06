@@ -25,7 +25,7 @@ Solange der Standort erstellt wird, zeigt die Kopfzeile **Erstellen** und **Abbr
 Die Liste gibt Ihnen einen durchsuchbaren Überblick über jeden registrierten Standort.
 
 **Standardspalten**:
-- **Code**: Standortcode (klicken, um den Arbeitsbereich zu öffnen)
+- **Referenz**: Die von KANAP vergebene Referenz (`LOC-4`). Klicken Sie darauf, um den Arbeitsbereich zu öffnen.
 - **Name**: Anzeigename
 - **Hosting-Typ**: On-prem, Colocation, Public Cloud usw.
 - **Anbieter / Unternehmen**: Cloud-Anbieter für Cloud-Typ-Standorte oder Betreiberunternehmen für On-prem-Standorte
@@ -36,7 +36,7 @@ Die Liste gibt Ihnen einen durchsuchbaren Überblick über jeden registrierten S
 
 **Filterung**:
 - Schnellsuche: Freitextsuche über alle Zeilen
-- Spaltenfilter: Textfilter für Code, Name und Stadt; Set-Filter für Hosting-Typ
+- Spaltenfilter: Textfilter für Referenz, Name und Stadt; Set-Filter für Hosting-Typ
 
 **Aktionen**:
 - **Standort hinzufügen**: Einen neuen Standort erstellen (erfordert `locations:member`)
@@ -54,7 +54,6 @@ Klicken Sie auf eine Zeile, um den Arbeitsbereich zu öffnen. Er hat vier Reiter
 Der Reiter Übersicht erfasst Identitäts- und geografische Informationen, aufgeteilt in zwei Abschnitte, plus ein Unter-Standorte-Panel.
 
 **Grundinformationen**:
-- **Code**: Eindeutiger Identifikator (erforderlich)
 - **Name**: Anzeigename (erforderlich)
 - **Hosting-Typ**: Kategorie der Einrichtung (erforderlich). Hosting-Typen sind in **IT-Landschaft > Einstellungen** konfigurierbar.
 
@@ -158,7 +157,7 @@ Hosting-Typen sind in **IT-Landschaft > Einstellungen** konfigurierbar. Jeder Ty
 
 ## Tipps
 
-- **Seien Sie konsistent mit Codes**: Eine klare Namenskonvention macht Standorte auf einen Blick erkennbar und hält Filter nützlich.
+- **Seien Sie konsistent mit Namen**: Eine klare Namenskonvention macht Standorte auf einen Blick erkennbar und hält Filter nützlich.
 - **Verwenden Sie Unter-Standorte für Granularität**: Wenn ein Rechenzentrum mehrere Räume oder Racks hat, modellieren Sie diese als Unter-Standorte statt als separate Standorte. Dies hält die Liste sauber und verfolgt dennoch die physische Platzierung.
 - **Verfolgen Sie Cloud-Regionen einzeln**: Erstellen Sie einen Standort pro verwendeter Cloud-Region, nicht nur einen pro Anbieter.
 - **Verknüpfen Sie Assets mit Standorten**: Dies ermöglicht geografische Berichte, DR-Planung und schnelle Auswirkungsanalyse bei Ausfällen.
