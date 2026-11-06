@@ -68,7 +68,7 @@ Während der Testphase bietet die Kachel außerdem **Kennenlerngespräch vereinb
 |---|---|---|
 | IT-Budget | Die Übersicht, Eine Budgetzeile, Ein Bericht, Eine Frage an Plaid, Ihre Daten | Ihr Unternehmen, Ihre Budgetzeilen, Ein verknüpfter Vertrag, Ihr erster Bericht, Eine Kollegin, ein Kollege |
 | IT-Landkarte | Die Anwendungsliste, Ein Anwendungsdatensatz, Die Server, Technologien, Supportende und Schwachstellen, Ihre Daten | Ihre Standorte, Ihre Anwendungen, Ihre Technologien, Ihre Server, Eine Kollegin, ein Kollege |
-| Projekte und Anfragen | Eine Anfrage und ihre Bewertung, Das aus der Anfrage entstandene Projekt, Die Aufgaben, Die Berichte, Ihre Daten | Ihre erste Anfrage, Ihr Projekt, Die ersten Aufgaben, Das Budget des Projekts, Eine Kollegin, ein Kollege |
+| Projekte und Anfragen | Eine Anfrage und ihre Bewertung, Das aus der Anfrage entstandene Projekt, Die Aufgaben, Die Berichte, Ihre Daten | Ihre erste Anfrage, Ihr Projekt, Die ersten Aufgaben, Das Budget des Projekts, Ihr Mitwirkendenprofil |
 
 ### Die Startseite folgt Ihrem Pfad
 
