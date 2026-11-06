@@ -466,6 +466,8 @@ During a trial, a pill in the top bar also shows the days left, for example "Tri
 
 When a trial ends without a subscription, the workspace stays readable for 30 days. It is then deleted with all its data. Subscribing before that date keeps the workspace as it is.
 
+On the cloud service, the person who started the trial receives a few e-mails from KANAP during the trial, and a thank-you when the workspace subscribes. Each trial e-mail ends with a link that stops the next ones in one click. The thank-you is sent in any case.
+
 When a switch to monthly billing is planned, a third line shows it, for example "Switches to monthly on 7 Oct 2027." Click **Keep annual** on that line to cancel the switch.
 
 ### Actions

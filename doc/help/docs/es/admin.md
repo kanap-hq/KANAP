@@ -466,6 +466,8 @@ Durante una prueba, una etiqueta en la barra superior también muestra los días
 
 Cuando una prueba termina sin suscripción, el espacio de trabajo sigue disponible en solo lectura durante 30 días. Después se elimina con todos sus datos. Suscribirse antes de esa fecha conserva el espacio de trabajo tal como está.
 
+En el servicio en la nube, la persona que inició la prueba recibe algunos correos electrónicos de KANAP durante la prueba, y un agradecimiento cuando el espacio de trabajo se suscribe. Cada correo electrónico de la prueba termina con un enlace que detiene los siguientes con un clic. El agradecimiento se envía en cualquier caso.
+
 Cuando está previsto un paso a la facturación mensual, una tercera línea lo indica, por ejemplo «Pasa a mensual el 7 oct 2027.» Haga clic en **Mantener anual** en esa línea para cancelar el cambio.
 
 ### Acciones
