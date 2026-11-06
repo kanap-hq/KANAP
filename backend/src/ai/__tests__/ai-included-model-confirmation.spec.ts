@@ -944,6 +944,22 @@ async function testCapabilitiesNameTheConfirmation() {
     const notConfigured = await createPolicy(noPlatform, permissions).getCapabilities(READER_CONTEXT, noPlatform.manager);
     assert.deepEqual(notConfigured.surfaces.chat.reasons, ['provider_not_ready']);
     assert.equal(notConfigured.builtin_confirmation_needed, false);
+
+    // No settings row yet: the same chat answer as the default row (chat off, included
+    // model waiting). The read writes nothing, so opening the assistant does not depend
+    // on someone having opened Admin › Plaid first.
+    const absentWorkspace = workspace({ settings: null });
+    const absent = createStack(absentWorkspace);
+    const absentCapabilities = await createPolicy(absent, permissions).getCapabilities(READER_CONTEXT, absent.manager);
+    const storedDefault = createStack(workspace());
+    const storedCapabilities = await createPolicy(storedDefault, permissions).getCapabilities(READER_CONTEXT, storedDefault.manager);
+    assert.deepEqual(absentCapabilities.surfaces.chat, storedCapabilities.surfaces.chat);
+    assert.deepEqual(absentCapabilities.surfaces.chat.reasons, ['tenant_disabled', 'builtin_not_accepted']);
+    assert.equal(absentCapabilities.surfaces.chat.provider_ready, false);
+    assert.equal(absentCapabilities.builtin_confirmation_needed, true);
+    assert.equal(absentCapabilities.builtin_confirmation_needed, storedCapabilities.builtin_confirmation_needed);
+    assert.equal(absentWorkspace.settings, null);
+    assert.equal(absentWorkspace.saves, 0);
   });
 }
 

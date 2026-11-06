@@ -216,7 +216,10 @@ export class AiSettingsService {
   }
 
   /** The assistant's model readiness, checked against this settings row's confirmation of the included model. */
-  async getProviderReadiness(settings: AiSettings, manager?: EntityManager): Promise<AiModelReadiness> {
+  async getProviderReadiness(
+    settings: Pick<AiSettings, 'tenant_id' | 'chat_model_config_id' | 'builtin_accepted_key'>,
+    manager?: EntityManager,
+  ): Promise<AiModelReadiness> {
     return this.modelResolver.readiness(
       settings.tenant_id,
       settings.chat_model_config_id ?? null,

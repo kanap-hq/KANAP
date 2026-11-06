@@ -505,7 +505,15 @@ export class AiPolicyService {
     });
     const tenantActive = !!tenant && tenant.status === TenantStatus.ACTIVE;
     const settings = tenant ? await this.aiSettings.find(context.tenantId, { manager }) : null;
-    const readiness = settings ? await this.aiSettings.getProviderReadiness(settings, manager) : null;
+    // A missing row is the unsaved default: no model assignment, the included model
+    // not confirmed. Readiness comes from that shape; this read does not create the row.
+    const readiness = tenant
+      ? await this.aiSettings.getProviderReadiness(settings ?? {
+        tenant_id: context.tenantId,
+        chat_model_config_id: null,
+        builtin_accepted_key: null,
+      }, manager)
+      : null;
     const providerReady = readiness ? readiness.errors.length === 0 : false;
     // The included model waits for an administrator's confirmation: named apart so
     // the assistant can say so instead of a generic message.
