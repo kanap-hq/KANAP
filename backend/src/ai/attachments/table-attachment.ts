@@ -1,6 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { parse } from 'csv-parse/sync';
 import { csvSeparatorOf, sheetCellText, SheetCell, XLSX_BLANK_ROW_MARGIN } from '../../common/csv-sheet/read';
+import { Decimal } from '../../common/decimal';
 import { CsvDecodeError, decodeCsv } from '../../common/csv-sheet/decode';
 import { CSV_ROW_CAP } from '../../common/csv-sheet/types';
 import { denormalizeCsvFormulaValue } from '../../common/csv/csv-export.service';
@@ -235,9 +236,11 @@ export function cellType(cell: SheetCell): TableColumnType {
   return 'text';
 }
 
+/** A cell as the sheet shows it: a day with its time, a percentage with its sign (0.45 shown as 45%). */
 export function sampleText(cell: SheetCell | undefined): string {
   if (!cell || cell.kind === 'empty') return '';
   if (cell.kind === 'date' && cell.time) return `${cell.iso} ${cell.time}`;
+  if (cell.kind === 'number' && cell.percent) return `${Decimal.from(cell.value).mul(100).toString()}%`;
   return clip(sheetCellText(cell));
 }
 

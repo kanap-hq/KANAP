@@ -184,7 +184,7 @@ export const AI_IMPORT_TARGETS: Record<AiImportKey, AiImportTarget> = {
     ...AI_IMPORT_ACCESS.portfolio_projects,
     about: 'One row per project, matched to a stored one by its name.',
     columns: () => fromCsvConfig(portfolioProjectCsvConfig, {
-      execution_progress: { percent: true, hint: 'percent, 0 to 100' },
+      execution_progress: { percent: true, hint: 'percent, 0 to 100; a cell shown as a percentage (45%) reads as 45' },
       estimated_effort_it: { hint: 'man-days' },
       estimated_effort_business: { hint: 'man-days' },
       baseline_effort_it: { hint: 'man-days' },

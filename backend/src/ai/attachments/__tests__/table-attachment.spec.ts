@@ -116,6 +116,17 @@ async function titleAboveTheHeader() {
   assert.deepEqual(sparse.columns.map((column) => column.header), ['Name', null, null, null, null, 'Cost']);
 }
 
+async function percentCells() {
+  // A progress column formatted as a percentage: the summary writes it as the sheet shows it.
+  const buffer = writeXlsx({
+    language: 'fr',
+    sheets: [{ name: 'Projets', headers: ['Projet', 'Avancement'], rows: [['Refonte CRM', { kind: 'percent', value: 0.45 }], ['Paie', { kind: 'percent', value: 1 }]] }],
+  });
+  const summary = await summarizeTableAttachment(buffer);
+  assert.equal(summary.columns[1].type, 'number');
+  assert.deepEqual(summary.sampleRows, [['Refonte CRM', '45%'], ['Paie', '100%']]);
+}
+
 async function refusals() {
   await refusedWith(Buffer.from('\n ; ;\n', 'utf8'), 'CSV_FILE_EMPTY');
   await refusedWith(Buffer.from([0x00, 0x01, 0x02, 0x03, 0x41]), 'CSV_FILE_NOT_TEXT');
@@ -140,6 +151,7 @@ async function run() {
   await mixedAndLongCells();
   await wideFile();
   await titleAboveTheHeader();
+  await percentCells();
   await refusals();
   console.log('table-attachment.spec.ts: ok');
 }
