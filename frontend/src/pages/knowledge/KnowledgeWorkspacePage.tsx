@@ -899,10 +899,15 @@ export default function KnowledgeWorkspacePage() {
   // modification instead of sending it again.
   const sentFormRef = React.useRef<any>(null);
   const refusedFormRef = React.useRef<any>(null);
+  // Saves go one at a time, each with the revision the previous one answered: a save asked while
+  // another is on its way (Create or Done during an autosave) would carry the same revision and be
+  // refused as a conflict.
+  const saveQueueRef = React.useRef<Promise<unknown>>(Promise.resolve());
+  const savedRevisionRef = React.useRef<{ id: string | undefined; revision: number } | null>(null);
 
   // Save mutation
   const saveMutation = useMutation({
-    mutationFn: async (mode: 'manual' | 'autosave') => {
+    mutationFn: (mode: 'manual' | 'autosave') => {
       sentFormRef.current = form;
       const contentMarkdown = normalizeMarkdownForRichTextEditor(contentDraftRef.current);
       const payload = {
@@ -916,10 +921,17 @@ export default function KnowledgeWorkspacePage() {
         revision: form.revision,
         save_mode: mode,
       };
-      const res = await api.patch(`/knowledge/${id}`, payload, {
-        headers: lockToken ? { 'X-Lock-Token': lockToken } : undefined,
+      const save = saveQueueRef.current.catch(() => undefined).then(async () => {
+        const saved = savedRevisionRef.current;
+        const revision = saved?.id === id ? Math.max(Number(payload.revision), saved.revision) : payload.revision;
+        const res = await api.patch(`/knowledge/${id}`, { ...payload, revision }, {
+          headers: lockToken ? { 'X-Lock-Token': lockToken } : undefined,
+        });
+        if (res.data?.revision != null) savedRevisionRef.current = { id, revision: Number(res.data.revision) };
+        return { mode, data: res.data };
       });
-      return { mode, data: res.data };
+      saveQueueRef.current = save;
+      return save;
     },
     onSuccess: async (result) => {
       transientAutosaveFailuresRef.current = 0;
