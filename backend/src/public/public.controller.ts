@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, GoneException, InternalServerErrorException, Logger, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, GoneException, InternalServerErrorException, Logger, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
 import { Features } from '../config/features';
 import { throwNotAvailableInMode } from '../common/feature-gates';
 import { Throttle } from '@nestjs/throttler';
@@ -251,11 +251,13 @@ export class PublicController {
     if (tenant?.id) {
       const detail = await this.tenants.findById(tenant.id);
       const branding = this.normalizeBrandingPayload(detail?.branding);
+      const hasLogo = !!branding.logo_storage_path || !!branding.logo_dark_storage_path;
       return {
         slug: tenant.slug,
         name: detail?.name ?? tenant.slug,
         logoPath: branding.logo_storage_path ? '/public/branding/logo' : null,
-        logoVersion: branding.logo_storage_path ? branding.logo_version : null,
+        darkLogoPath: branding.logo_dark_storage_path ? '/public/branding/logo?variant=dark' : null,
+        logoVersion: hasLogo ? branding.logo_version : null,
         useLogoInDark: branding.use_logo_in_dark,
         primaryColorLight: branding.primary_color_light,
         primaryColorDark: branding.primary_color_dark,
@@ -264,8 +266,13 @@ export class PublicController {
     return { marketing: true };
   }
 
+  /** The light-mode logo, or the dark-mode one with `variant=dark`. */
   @Get('branding/logo')
-  async serveBrandingLogo(@Req() req: any, @Res() res: Response): Promise<void> {
+  async serveBrandingLogo(
+    @Req() req: any,
+    @Res() res: Response,
+    @Query('variant') variant?: string,
+  ): Promise<void> {
     if (req?.isPlatformHost) {
       res.status(404).send('Not found');
       return;
@@ -279,13 +286,14 @@ export class PublicController {
 
     const tenant = await this.tenants.findById(tenantMeta.id);
     const branding = this.normalizeBrandingPayload(tenant?.branding);
-    if (!branding.logo_storage_path) {
+    const logoPath = variant === 'dark' ? branding.logo_dark_storage_path : branding.logo_storage_path;
+    if (!logoPath) {
       res.status(404).send('Not found');
       return;
     }
 
     try {
-      const obj = await this.storage.getObjectStream(branding.logo_storage_path);
+      const obj = await this.storage.getObjectStream(logoPath);
       res.setHeader('Content-Type', obj.contentType || 'application/octet-stream');
       if (obj.contentLength != null) {
         res.setHeader('Content-Length', String(obj.contentLength));
@@ -877,6 +885,7 @@ export class PublicController {
 
   private normalizeBrandingPayload(raw: Record<string, any> | null | undefined): {
     logo_storage_path?: string;
+    logo_dark_storage_path?: string;
     logo_version: number;
     use_logo_in_dark: boolean;
     primary_color_light: string | null;
@@ -886,6 +895,7 @@ export class PublicController {
     const logoVersion = Number(source.logo_version);
     return {
       logo_storage_path: typeof source.logo_storage_path === 'string' ? source.logo_storage_path : undefined,
+      logo_dark_storage_path: typeof source.logo_dark_storage_path === 'string' ? source.logo_dark_storage_path : undefined,
       logo_version: Number.isFinite(logoVersion) && logoVersion >= 0 ? logoVersion : 0,
       use_logo_in_dark: source.use_logo_in_dark !== false,
       primary_color_light: typeof source.primary_color_light === 'string' ? source.primary_color_light : null,

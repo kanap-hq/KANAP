@@ -28,9 +28,12 @@ import { PropertyRow, useKanapDialogs } from '../../components/design';
 
 const ORGANIZATION_NAME_MAX = 120;
 
+type LogoVariant = 'light' | 'dark';
+
 type BrandingSettings = {
   name: string;
   has_logo: boolean;
+  has_dark_logo: boolean;
   logo_version: number;
   use_logo_in_dark: boolean;
   primary_color_light: string | null;
@@ -108,6 +111,7 @@ function normalizeSettings(data: any): BrandingSettings {
   return {
     name: typeof data?.name === 'string' ? data.name : '',
     has_logo: !!data?.has_logo,
+    has_dark_logo: !!data?.has_dark_logo,
     logo_version: Number.isFinite(logoVersion) && logoVersion >= 0 ? logoVersion : 0,
     use_logo_in_dark: data?.use_logo_in_dark !== false,
     primary_color_light: normalizeServerHex(data?.primary_color_light),
@@ -134,7 +138,8 @@ function HeaderPreview({ label, logoAlt, dark = false, logoUrl, showLogo }: Head
         borderColor: dark ? 'rgba(255,255,255,0.16)' : 'divider',
       }}
     >
-      <Typography variant="caption" sx={{ color: dark ? 'rgba(255,255,255,0.76)' : 'text.secondary' }}>
+      {/* Fixed colours: each preview keeps its own background whatever the page's mode. */}
+      <Typography variant="caption" sx={{ color: dark ? 'rgba(255,255,255,0.76)' : 'rgba(17,24,39,0.64)' }}>
         {label}
       </Typography>
       <Box sx={{ minHeight: 42, mt: 0.5, display: 'flex', alignItems: 'center' }}>
@@ -158,12 +163,13 @@ export default function AdminBrandingPage() {
   const {
     isPlatformHost,
     logoUrl,
+    darkLogoUrl,
     refreshTenantInfo,
   } = useTenant();
 
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
-  const [deletingLogo, setDeletingLogo] = React.useState(false);
+  const [deletingLogo, setDeletingLogo] = React.useState<LogoVariant | null>(null);
   const [resetting, setResetting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<string | null>(null);
@@ -174,8 +180,8 @@ export default function AdminBrandingPage() {
     primaryColorLight: '',
     primaryColorDark: '',
   });
-  const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
-  const [selectedFileUrl, setSelectedFileUrl] = React.useState<string | null>(null);
+  const [selectedFiles, setSelectedFiles] = React.useState<Record<LogoVariant, File | null>>({ light: null, dark: null });
+  const [selectedFileUrls, setSelectedFileUrls] = React.useState<Record<LogoVariant, string | null>>({ light: null, dark: null });
   const lightColorInputRef = React.useRef<HTMLInputElement | null>(null);
   const darkColorInputRef = React.useRef<HTMLInputElement | null>(null);
 
@@ -186,7 +192,7 @@ export default function AdminBrandingPage() {
       const normalized = normalizeSettings(res.data);
       setSettings(normalized);
       setForm(toFormState(normalized));
-      setSelectedFile(null);
+      setSelectedFiles({ light: null, dark: null });
       setError(null);
     } catch (e: any) {
       setError(getApiErrorMessage(e, t, t('branding.messages.loadFailed')));
@@ -200,14 +206,16 @@ export default function AdminBrandingPage() {
   }, [loadSettings]);
 
   React.useEffect(() => {
-    if (!selectedFile) {
-      setSelectedFileUrl(null);
-      return;
-    }
-    const next = URL.createObjectURL(selectedFile);
-    setSelectedFileUrl(next);
-    return () => URL.revokeObjectURL(next);
-  }, [selectedFile]);
+    const next: Record<LogoVariant, string | null> = {
+      light: selectedFiles.light ? URL.createObjectURL(selectedFiles.light) : null,
+      dark: selectedFiles.dark ? URL.createObjectURL(selectedFiles.dark) : null,
+    };
+    setSelectedFileUrls(next);
+    return () => {
+      if (next.light) URL.revokeObjectURL(next.light);
+      if (next.dark) URL.revokeObjectURL(next.dark);
+    };
+  }, [selectedFiles]);
 
   if (isPlatformHost || !hasLevel('users', 'admin')) {
     return <ForbiddenPage />;
@@ -224,7 +232,8 @@ export default function AdminBrandingPage() {
 
   const nameDirty = !!settings && nameValidation.normalized !== settings.name.trim();
   const isDirty = !!settings && (
-    !!selectedFile
+    !!selectedFiles.light
+    || !!selectedFiles.dark
     || nameDirty
     || form.useLogoInDark !== settings.use_logo_in_dark
     || currentLight !== baseLight
@@ -233,7 +242,10 @@ export default function AdminBrandingPage() {
 
   const isInputInvalid = !!nameValidation.error || !!lightValidation.error || !!darkValidation.error;
   const canSubmit = !!settings && isDirty && !isInputInvalid && !saving && !deletingLogo && !resetting;
-  const previewLogoUrl = selectedFileUrl || logoUrl;
+  const previewLogoUrl = selectedFileUrls.light || logoUrl;
+  const previewDarkOwnUrl = selectedFileUrls.dark || darkLogoUrl;
+  // Dark mode takes its own logo, else the light one when the switch allows it.
+  const previewDarkUrl = previewDarkOwnUrl || (form.useLogoInDark ? previewLogoUrl : null);
 
   const effectiveLightColor = lightValidation.normalized || darkValidation.normalized;
   const effectiveDarkColor = darkValidation.normalized || lightValidation.normalized;
@@ -262,7 +274,7 @@ export default function AdminBrandingPage() {
   const handleDiscard = () => {
     if (!settings) return;
     setForm(toFormState(settings));
-    setSelectedFile(null);
+    setSelectedFiles({ light: null, dark: null });
     setError(null);
     setSuccess(null);
   };
@@ -276,11 +288,14 @@ export default function AdminBrandingPage() {
     try {
       let changed = false;
 
-      if (selectedFile) {
+      for (const variant of ['light', 'dark'] as const) {
+        const file = selectedFiles[variant];
+        if (!file) continue;
         const fd = new FormData();
-        fd.append('file', selectedFile);
+        fd.append('file', file);
         await api.post('/admin/branding/logo', fd, {
           headers: { 'Content-Type': 'multipart/form-data' },
+          params: variant === 'dark' ? { variant } : undefined,
         });
         changed = true;
       }
@@ -322,13 +337,14 @@ export default function AdminBrandingPage() {
     }
   };
 
-  const handleDeleteLogo = async () => {
-    if (!settings || (!settings.has_logo && !selectedFile)) return;
-    setDeletingLogo(true);
+  const handleDeleteLogo = async (variant: LogoVariant) => {
+    const stored = variant === 'dark' ? settings?.has_dark_logo : settings?.has_logo;
+    if (!settings || (!stored && !selectedFiles[variant])) return;
+    setDeletingLogo(variant);
     setError(null);
     setSuccess(null);
     try {
-      await api.delete('/admin/branding/logo');
+      await api.delete('/admin/branding/logo', { params: variant === 'dark' ? { variant } : undefined });
       await Promise.all([
         loadSettings({ silent: true }),
         refreshTenantInfo(),
@@ -337,7 +353,7 @@ export default function AdminBrandingPage() {
     } catch (e: any) {
       setError(getApiErrorMessage(e, t, t('branding.messages.removeLogoFailed')));
     } finally {
-      setDeletingLogo(false);
+      setDeletingLogo(null);
     }
   };
 
@@ -365,6 +381,49 @@ export default function AdminBrandingPage() {
     } finally {
       setResetting(false);
     }
+  };
+
+  const renderLogoActions = (variant: LogoVariant) => {
+    const selected = selectedFiles[variant];
+    const stored = variant === 'dark' ? settings?.has_dark_logo : settings?.has_logo;
+    return (
+      <>
+        <Stack direction="row" spacing={1.5} sx={{ flexWrap: 'wrap', rowGap: 1 }}>
+          <Button
+            variant="contained"
+            component="label"
+            disabled={saving || !!deletingLogo || resetting}
+          >
+            {selected ? t('branding.actions.replaceSelectedFile') : t('branding.actions.uploadLogo')}
+            <input
+              hidden
+              type="file"
+              accept="image/png,image/jpeg,image/gif,image/webp"
+              aria-label={variant === 'dark' ? t('branding.logo.uploadDark') : t('branding.logo.uploadLight')}
+              onChange={(event) => {
+                const file = event.target.files?.[0] ?? null;
+                setSelectedFiles((prev) => ({ ...prev, [variant]: file }));
+                setSuccess(null);
+                setError(null);
+              }}
+            />
+          </Button>
+          <Button
+            variant="outlined"
+            color="error"
+            onClick={() => void handleDeleteLogo(variant)}
+            disabled={!!deletingLogo || saving || resetting || (!stored && !selected)}
+          >
+            {deletingLogo === variant ? t('branding.actions.removingLogo') : t('branding.actions.removeLogo')}
+          </Button>
+        </Stack>
+        {selected && (
+          <Alert severity="info">
+            {t('branding.messages.selectedFile', { name: selected.name })}
+          </Alert>
+        )}
+      </>
+    );
   };
 
   return (
@@ -400,7 +459,7 @@ export default function AdminBrandingPage() {
                   placeholder={t('branding.fields.organizationNamePlaceholder')}
                   error={!!nameValidation.error}
                   helperText={nameValidation.error || undefined}
-                  disabled={saving || deletingLogo || resetting}
+                  disabled={saving || !!deletingLogo || resetting}
                   inputProps={{
                     'aria-label': t('branding.fields.organizationName'),
                     'aria-required': true,
@@ -419,66 +478,38 @@ export default function AdminBrandingPage() {
                 </Typography>
 
                 <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-                  <HeaderPreview
-                    label={t('branding.logo.previews.light')}
-                    logoAlt={t('branding.logo.alt')}
-                    logoUrl={previewLogoUrl}
-                    showLogo={!!previewLogoUrl}
-                  />
-                  <HeaderPreview
-                    label={form.useLogoInDark ? t('branding.logo.previews.dark') : t('branding.logo.previews.darkHidden')}
-                    logoAlt={t('branding.logo.alt')}
-                    dark
-                    logoUrl={previewLogoUrl}
-                    showLogo={!!previewLogoUrl && form.useLogoInDark}
-                  />
-                </Stack>
-
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                  <Button
-                    variant="contained"
-                    component="label"
-                    disabled={saving || deletingLogo || resetting}
-                  >
-                    {selectedFile ? t('branding.actions.replaceSelectedFile') : t('branding.actions.uploadLogo')}
-                    <input
-                      hidden
-                      type="file"
-                      accept="image/png,image/jpeg,image/gif,image/webp"
-                      onChange={(event) => {
-                        const file = event.target.files?.[0] ?? null;
-                        setSelectedFile(file);
-                        setSuccess(null);
-                        setError(null);
-                      }}
+                  <Stack spacing={1.5} sx={{ flex: 1, minWidth: 0 }}>
+                    <HeaderPreview
+                      label={t('branding.logo.previews.light')}
+                      logoAlt={t('branding.logo.alt')}
+                      logoUrl={previewLogoUrl}
+                      showLogo={!!previewLogoUrl}
                     />
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    color="error"
-                    onClick={handleDeleteLogo}
-                    disabled={deletingLogo || saving || resetting || (!settings?.has_logo && !selectedFile)}
-                  >
-                    {deletingLogo ? t('branding.actions.removingLogo') : t('branding.actions.removeLogo')}
-                  </Button>
-                </Stack>
-
-                {selectedFile && (
-                  <Alert severity="info">
-                    {t('branding.messages.selectedFile', { name: selectedFile.name })}
-                  </Alert>
-                )}
-
-                <FormControlLabel
-                  control={(
-                    <Switch
-                      checked={form.useLogoInDark}
-                      onChange={(event) => setForm((prev) => ({ ...prev, useLogoInDark: event.target.checked }))}
-                      disabled={saving || deletingLogo || resetting}
+                    {renderLogoActions('light')}
+                  </Stack>
+                  <Stack spacing={1.5} sx={{ flex: 1, minWidth: 0 }}>
+                    <HeaderPreview
+                      label={previewDarkUrl ? t('branding.logo.previews.dark') : t('branding.logo.previews.darkHidden')}
+                      logoAlt={t('branding.logo.darkAlt')}
+                      dark
+                      logoUrl={previewDarkUrl}
+                      showLogo={!!previewDarkUrl}
                     />
-                  )}
-                  label={t('branding.fields.showLogoInDark')}
-                />
+                    {renderLogoActions('dark')}
+                    {!previewDarkOwnUrl && (
+                      <FormControlLabel
+                        control={(
+                          <Switch
+                            checked={form.useLogoInDark}
+                            onChange={(event) => setForm((prev) => ({ ...prev, useLogoInDark: event.target.checked }))}
+                            disabled={saving || !!deletingLogo || resetting}
+                          />
+                        )}
+                        label={t('branding.fields.useLightLogoInDark')}
+                      />
+                    )}
+                  </Stack>
+                </Stack>
               </Stack>
             </CardContent>
           </Card>
@@ -501,7 +532,7 @@ export default function AdminBrandingPage() {
                       onChange={(event) => setForm((prev) => ({ ...prev, primaryColorLight: event.target.value }))}
                       error={!!lightValidation.error}
                       helperText={lightValidation.error || t('branding.colors.lightHelper')}
-                      disabled={saving || deletingLogo || resetting}
+                      disabled={saving || !!deletingLogo || resetting}
                     />
                     <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1, position: 'relative' }}>
                       <Typography variant="caption" color="text.secondary">{t('branding.colors.swatch')}</Typography>
@@ -527,7 +558,7 @@ export default function AdminBrandingPage() {
                           <IconButton
                             size="small"
                             onClick={() => lightColorInputRef.current?.click()}
-                            disabled={saving || deletingLogo || resetting}
+                            disabled={saving || !!deletingLogo || resetting}
                           >
                             <ColorLensIcon fontSize="small" />
                           </IconButton>
@@ -541,7 +572,7 @@ export default function AdminBrandingPage() {
                             component="button"
                             type="button"
                             onClick={() => setForm((prev) => ({ ...prev, primaryColorLight: color }))}
-                            disabled={saving || deletingLogo || resetting}
+                            disabled={saving || !!deletingLogo || resetting}
                             sx={{
                               width: 20,
                               height: 20,
@@ -559,7 +590,7 @@ export default function AdminBrandingPage() {
                         size="small"
                         variant="text"
                         onClick={() => setForm((prev) => ({ ...prev, primaryColorLight: '' }))}
-                        disabled={saving || deletingLogo || resetting}
+                        disabled={saving || !!deletingLogo || resetting}
                       >
                         {t('branding.actions.clear')}
                       </Button>
@@ -575,7 +606,7 @@ export default function AdminBrandingPage() {
                       onChange={(event) => setForm((prev) => ({ ...prev, primaryColorDark: event.target.value }))}
                       error={!!darkValidation.error}
                       helperText={darkValidation.error || t('branding.colors.darkHelper')}
-                      disabled={saving || deletingLogo || resetting}
+                      disabled={saving || !!deletingLogo || resetting}
                     />
                     <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1, position: 'relative' }}>
                       <Typography variant="caption" color="text.secondary">{t('branding.colors.swatch')}</Typography>
@@ -601,7 +632,7 @@ export default function AdminBrandingPage() {
                           <IconButton
                             size="small"
                             onClick={() => darkColorInputRef.current?.click()}
-                            disabled={saving || deletingLogo || resetting}
+                            disabled={saving || !!deletingLogo || resetting}
                           >
                             <ColorLensIcon fontSize="small" />
                           </IconButton>
@@ -615,7 +646,7 @@ export default function AdminBrandingPage() {
                             component="button"
                             type="button"
                             onClick={() => setForm((prev) => ({ ...prev, primaryColorDark: color }))}
-                            disabled={saving || deletingLogo || resetting}
+                            disabled={saving || !!deletingLogo || resetting}
                             sx={{
                               width: 20,
                               height: 20,
@@ -633,7 +664,7 @@ export default function AdminBrandingPage() {
                         size="small"
                         variant="text"
                         onClick={() => setForm((prev) => ({ ...prev, primaryColorDark: '' }))}
-                        disabled={saving || deletingLogo || resetting}
+                        disabled={saving || !!deletingLogo || resetting}
                       >
                         {t('branding.actions.clear')}
                       </Button>
@@ -665,10 +696,10 @@ export default function AdminBrandingPage() {
               <Button variant="contained" onClick={handleSave} disabled={!canSubmit}>
                 {saving ? t('common:status.saving') : t('common:buttons.saveChanges')}
               </Button>
-              <Button variant="outlined" onClick={handleDiscard} disabled={!isDirty || saving || deletingLogo || resetting}>
+              <Button variant="outlined" onClick={handleDiscard} disabled={!isDirty || saving || !!deletingLogo || resetting}>
                 {t('branding.actions.discard')}
               </Button>
-              <Button variant="text" color="warning" onClick={handleReset} disabled={saving || deletingLogo || resetting}>
+              <Button variant="text" color="warning" onClick={handleReset} disabled={saving || !!deletingLogo || resetting}>
                 {resetting ? t('branding.actions.resetting') : t('branding.actions.resetToDefault')}
               </Button>
             </Stack>

@@ -9,11 +9,20 @@ export enum TenantStatus {
 
 export type TenantBranding = {
   logo_storage_path?: string;
+  /** Logo shown in dark mode, when the tenant has one. */
+  logo_dark_storage_path?: string;
   logo_version?: number;
   use_logo_in_dark?: boolean;
   primary_color_light?: string | null;
   primary_color_dark?: string | null;
 };
+
+/** Every stored logo of a tenant's branding: what a purge deletes and the orphan cleanup keeps. */
+export function brandingLogoPaths(branding: TenantBranding | Record<string, any> | null | undefined): string[] {
+  if (!branding || typeof branding !== 'object') return [];
+  return [branding.logo_storage_path, branding.logo_dark_storage_path]
+    .filter((value): value is string => typeof value === 'string' && value.length > 0);
+}
 
 @Entity('tenants')
 export class Tenant {

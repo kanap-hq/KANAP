@@ -37,6 +37,8 @@ export type TenantContextValue = {
   tenantSlug: string | null;
   tenantName: string | null;
   logoUrl: string | null;
+  /** The logo for dark mode, when the tenant has one. */
+  darkLogoUrl: string | null;
   useLogoInDark: boolean;
   primaryColorLight: string | null;
   primaryColorDark: string | null;
@@ -53,6 +55,7 @@ type State =
     slug: string | null;
     name: string | null;
     logoPath: string | null;
+    darkLogoPath: string | null;
     logoVersion: number;
     useLogoInDark: boolean;
     primaryColorLight: string | null;
@@ -82,6 +85,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
         slug: data.slug ?? null,
         name: data.name ?? null,
         logoPath: typeof data.logoPath === 'string' ? data.logoPath : null,
+        darkLogoPath: typeof data.darkLogoPath === 'string' ? data.darkLogoPath : null,
         logoVersion: normalizeLogoVersion(data.logoVersion),
         useLogoInDark: data.useLogoInDark !== false,
         primaryColorLight: normalizeHex(data.primaryColorLight),
@@ -98,6 +102,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
         slug: null,
         name: null,
         logoPath: null,
+        darkLogoPath: null,
         logoVersion: 0,
         useLogoInDark: true,
         primaryColorLight: null,
@@ -118,6 +123,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
         tenantSlug: null,
         tenantName: null,
         logoUrl: null,
+        darkLogoUrl: null,
         useLogoInDark: true,
         primaryColorLight: null,
         primaryColorDark: null,
@@ -125,14 +131,15 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       };
     }
     if (state.status === 'ready') {
-      const logoUrl = state.logoPath
-        ? `${apiBase}${state.logoPath}${state.logoPath.includes('?') ? '&' : '?'}v=${state.logoVersion}`
-        : null;
+      const toUrl = (logoPath: string | null) => (logoPath
+        ? `${apiBase}${logoPath}${logoPath.includes('?') ? '&' : '?'}v=${state.logoVersion}`
+        : null);
       return {
         isPlatformHost: false,
         tenantSlug: state.slug,
         tenantName: state.name,
-        logoUrl,
+        logoUrl: toUrl(state.logoPath),
+        darkLogoUrl: toUrl(state.darkLogoPath),
         useLogoInDark: state.useLogoInDark,
         primaryColorLight: state.primaryColorLight,
         primaryColorDark: state.primaryColorDark,
@@ -144,6 +151,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       tenantSlug: null,
       tenantName: null,
       logoUrl: null,
+      darkLogoUrl: null,
       useLogoInDark: true,
       primaryColorLight: null,
       primaryColorDark: null,
