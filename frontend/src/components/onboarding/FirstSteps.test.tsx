@@ -276,6 +276,26 @@ describe('StepHint', () => {
     expect(done('own_invite')).toBeTruthy();
   });
 
+  it('describes project availability on your own contributor profile, without a team', async () => {
+    env.server = createFakeOnboardingServer({ angle: 'portfolio', mode: 'own_data' });
+    renderAt('/portfolio/contributors/me?step=own_invite', page);
+    const hint = await screen.findByRole('dialog', { name: 'Your contributor profile' });
+    expect(hint).toHaveTextContent('Add yourself as a contributor and set your project availability.');
+    expect(hint.textContent).not.toMatch(/team/i);
+
+    const expected: Record<string, string> = {
+      fr: 'Ajoutez-vous comme contributeur et indiquez votre disponibilité projet.',
+      de: 'Tragen Sie sich als Mitwirkende oder Mitwirkender ein und geben Sie Ihre Projektverfügbarkeit an.',
+      es: 'Añádase como colaborador e indique su disponibilidad para proyectos.',
+    };
+    for (const [lng, text] of Object.entries(expected)) {
+      await i18n.changeLanguage(lng);
+      expect(i18n.t('onboarding.firstSteps.steps.own_invite.hint.portfolio')).toBe(text);
+      expect(i18n.t('onboarding.firstSteps.steps.own_invite.hint.portfolio')).not.toMatch(/équipe|Team|equipo/i);
+    }
+    await i18n.changeLanguage('en');
+  });
+
   it('ignores a step that is not in the current path', async () => {
     env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'example' });
     renderAt('/it/applications?step=map_application', page);

@@ -47,9 +47,9 @@ Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de in
 
 **Portafolio > Colaboradores**, su propio perfil, abierto por el paso
 
-**Qué hacer.** Indique su equipo y su **Disponibilidad para proyectos**. ¿Aún no hay equipo? Créelo en **Portafolio > Configuración**, pestaña **Equipos**.
+**Qué hacer.** Indique su **Disponibilidad para proyectos**.
 
-**Qué ve.** El portafolio se planifica con los colaboradores: su equipo y los días al mes que dedican a proyectos alimentan los informes de capacidad.
+**Qué ve.** Los días al mes que dedica a proyectos alimentan los informes de capacidad.
 
 ## Y después
 
