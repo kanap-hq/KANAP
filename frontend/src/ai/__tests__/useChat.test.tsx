@@ -38,6 +38,7 @@ vi.mock('../aiApi', () => ({
     getMessages: vi.fn(),
     getPreviews: vi.fn(),
     create: vi.fn(),
+    remove: vi.fn(),
     uploadInlineAttachment: vi.fn(),
     buildAttachmentUrl: vi.fn((conversationId: string, id: string) => `/ai/conversations/${conversationId}/attachments/${id}/inline`),
   },
@@ -51,6 +52,7 @@ describe('useChat', () => {
 
   it('keeps the message out of the conversation when an attached file is refused', async () => {
     vi.mocked(aiConversationsApi.create).mockResolvedValue({ id: 'conv-1' } as any);
+    vi.mocked(aiConversationsApi.remove).mockResolvedValue(undefined as any);
     vi.mocked(aiConversationsApi.uploadInlineAttachment).mockRejectedValue({
       response: { status: 400, data: { code: 'XLSX_OLD_FORMAT', message: 'This is an old Excel file (.xls).' } },
     });
@@ -69,8 +71,67 @@ describe('useChat', () => {
 
     expect(sent).toBe(false);
     expect(streamChat).not.toHaveBeenCalled();
+    expect(aiConversationsApi.remove).toHaveBeenCalledWith('conv-1');
+    expect(result.current.conversationId).toBeNull();
     expect(result.current.messages).toEqual([]);
     expect(result.current.error).toMatch(/^old\.xlsx/);
+    expect(result.current.pendingAttachments).toHaveLength(1);
+  });
+
+  it('still returns to a new conversation when deleting the refused upload conversation fails', async () => {
+    vi.mocked(aiConversationsApi.create).mockResolvedValue({ id: 'conv-1' } as any);
+    vi.mocked(aiConversationsApi.remove).mockRejectedValue(new Error('delete failed'));
+    vi.mocked(aiConversationsApi.uploadInlineAttachment).mockRejectedValue({
+      response: { status: 400, data: { code: 'XLSX_OLD_FORMAT', message: 'This is an old Excel file (.xls).' } },
+    });
+
+    const { result } = renderHook(() => useChat());
+    act(() => {
+      result.current.addPendingFiles([new File(['x'], 'old.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })]);
+    });
+
+    let sent: boolean | undefined;
+    await act(async () => {
+      sent = await result.current.sendMessage('Read this file.');
+    });
+
+    expect(sent).toBe(false);
+    expect(aiConversationsApi.remove).toHaveBeenCalledWith('conv-1');
+    expect(result.current.conversationId).toBeNull();
+    expect(result.current.messages).toEqual([]);
+    expect(result.current.pendingAttachments).toHaveLength(1);
+  });
+
+  it('keeps an existing conversation when a later attachment is refused', async () => {
+    vi.mocked(aiConversationsApi.getMessages).mockResolvedValue({
+      messages: [{ id: 'msg-1', role: 'user', content: 'Earlier question' }],
+      conversation_usage: { input_tokens: 1, output_tokens: 0 },
+    });
+    vi.mocked(aiConversationsApi.getPreviews).mockResolvedValue([]);
+    vi.mocked(aiConversationsApi.uploadInlineAttachment).mockRejectedValue({
+      response: { status: 400, data: { code: 'XLSX_OLD_FORMAT', message: 'This is an old Excel file (.xls).' } },
+    });
+
+    const { result } = renderHook(() => useChat());
+    await act(async () => {
+      await result.current.loadConversation('conversation-1');
+    });
+    act(() => {
+      result.current.addPendingFiles([new File(['x'], 'old.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })]);
+    });
+
+    let sent: boolean | undefined;
+    await act(async () => {
+      sent = await result.current.sendMessage('Read this file.');
+    });
+
+    expect(sent).toBe(false);
+    expect(aiConversationsApi.create).not.toHaveBeenCalled();
+    expect(aiConversationsApi.remove).not.toHaveBeenCalled();
+    expect(result.current.conversationId).toBe('conversation-1');
+    expect(result.current.messages).toEqual([
+      { id: 'msg-1', role: 'user', content: 'Earlier question', hidden: false },
+    ]);
     expect(result.current.pendingAttachments).toHaveLength(1);
   });
 
