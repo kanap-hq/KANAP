@@ -749,5 +749,5 @@ Cuando el foco no está en un campo de entrada, puede usar:
   - **Use la prioridad con criterio**: Reserve **Bloqueante** para problemas que genuinamente bloquean.
   - **Use actualizaciones de envío único**: En la pestaña Comentarios, combine comentario + estado + tiempo en una sola acción para mantener el historial y las notificaciones alineados.
   - **Importe documentos**: Use el botón **Importar** para traer archivos `.docx` como contenido de descripción en lugar de copiar y pegar.
-  - **Atajo de teclado**: Pulse **Ctrl+S** (o **Cmd+S** en Mac) para guardar rápidamente sin buscar el botón Guardar.
+  - **Atajo de teclado**: Pulse **Ctrl+S** (o **Cmd+S** en Mac) para guardar al instante los cambios pendientes, por ejemplo una descripción que acaba de escribir.
   - **Vincule artículos de la base de conocimiento**: Use el grupo Conocimiento del panel de Propiedades para conectar documentación relevante a sus tareas.
