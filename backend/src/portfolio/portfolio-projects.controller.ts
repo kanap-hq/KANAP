@@ -241,8 +241,11 @@ export class PortfolioProjectsController {
     @Query('dryRun') dryRun: string = 'true',
     @Query('mode') mode: 'replace' | 'enrich' = 'enrich',
     @Query('operation') operation: 'upsert' | 'update_only' | 'insert_only' = 'upsert',
+    @Query('language') languageRaw: string | undefined,
     @Tenant() ctx: TenantRequest,
   ) {
+    // The screen's language (the user's own when the screen sends none), as the export.
+    const language = await languageOf(this.requireManager(ctx), ctx.tenantId, ctx.userId ?? null, languageRaw);
     return this.csvSvc.import(
       file,
       {
@@ -254,6 +257,7 @@ export class PortfolioProjectsController {
         manager: this.requireManager(ctx),
         tenantId: ctx.tenantId,
         userId: ctx.userId,
+        language,
       },
     );
   }

@@ -132,7 +132,7 @@ export class CsvImportService {
     opts: CsvImportOptions,
   ): Promise<CsvImportResult> {
     // Decode and parse CSV
-    const { rows, headerErrors, headerWarnings, timeZones, firstSheetOnly } = await this.parseCsv(config, file);
+    const { rows, headerErrors, headerWarnings, timeZones, firstSheetOnly } = await this.parseCsv(config, file, opts.language);
     // A workbook of several sheets: the report says which one was read, on every outcome.
     if (firstSheetOnly !== undefined) {
       headerWarnings.push({
@@ -302,6 +302,7 @@ export class CsvImportService {
   private async parseCsv(
     config: CsvEntityConfig,
     file: Express.Multer.File,
+    language?: CsvLanguage,
   ): Promise<{
     rows: Record<string, string>[];
     headerErrors: CsvImportError[];
@@ -331,6 +332,10 @@ export class CsvImportService {
 
     // Get expected headers for importable fields
     const expectedHeaders = this.getExpectedHeaders(config);
+    // A report names a column by its title in the screen language, as the example file does.
+    // A column with no title in that language keeps its technical key.
+    const columnTitle = (column: string): string =>
+      (language ? config.headerLabels?.[column]?.[language] : undefined) ?? column;
 
     // A date-time column may name the zone of its cells after its name (`detected_at
     // (Europe/Paris)`, as the export writes it): the row is read by the plain name, and the
@@ -382,12 +387,13 @@ export class CsvImportService {
       if (zone) {
         timeZones[column] = zone;
       } else {
+        const namedColumn = columnTitle(column);
         headerErrors.push({
           row: 0,
-          column,
-          message: `Unknown time zone in the ${column} column: "${named.zone}". Use a zone such as Europe/Paris or UTC.`,
+          column: namedColumn,
+          message: `Unknown time zone in the ${namedColumn} column: "${named.zone}". Use a zone such as Europe/Paris or UTC.`,
           code: 'CSV_HEADER_UNKNOWN_TIME_ZONE',
-          params: { column, zone: named.zone },
+          params: { column: namedColumn, zone: named.zone },
         });
       }
       return column;
@@ -403,8 +409,10 @@ export class CsvImportService {
         trim: true,
       })
         .on('headers', (headers: string[]) => {
-          // Validate headers
-          const missing = expectedHeaders.required.filter((h) => !headers.includes(h));
+          // Validate headers. The file is matched on the technical key; the report names the title.
+          const missing = expectedHeaders.required
+            .filter((header) => !headers.includes(header))
+            .map(columnTitle);
           const extra = headers.filter(
             (h) => !expectedHeaders.all.has(h) && !h.startsWith('_'),
           );
@@ -419,11 +427,12 @@ export class CsvImportService {
           }
 
           if (zoneless.length > 0) {
+            const columns = zoneless.map(columnTitle);
             headerWarnings.push({
               row: 0,
-              message: `Times without a time zone, read as UTC: ${zoneless.join(', ')}`,
+              message: `Times without a time zone, read as UTC: ${columns.join(', ')}`,
               code: 'CSV_HEADER_ZONELESS_DATE_TIMES',
-              params: { columns: zoneless.join(', '), example: zoneless[0] },
+              params: { columns: columns.join(', '), example: columns[0] },
             });
           }
 

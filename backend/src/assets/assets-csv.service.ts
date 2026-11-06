@@ -164,6 +164,8 @@ export class AssetsCsvService {
       manager: EntityManager;
       tenantId: string;
       userId?: string | null;
+      /** The screen language: a missing column is named by its title in this language. */
+      language?: CsvLanguage;
     },
   ): Promise<CsvImportResult> {
     return opts.manager.transaction(async (manager) => {
