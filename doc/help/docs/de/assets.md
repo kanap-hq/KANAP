@@ -36,7 +36,7 @@ Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu er
 
 Solange das Asset erstellt wird, zeigt seine Kopfzeile **Erstellen** und **Abbrechen** anstelle der Schaltfläche zum Schließen. Beide bleiben, bis Sie das Asset verlassen.
 
-- **Erstellen** prüft, ob das Asset einen Standort hat. Ohne Standort nennt eine Meldung den fehlenden Standort, und das Feld **Standort** der Eigenschaftsleiste erhält den Fokus. Das Asset bleibt geöffnet. Mit Standort behält KANAP das Asset und schließt es. Sie kehren dorthin zurück, wo Sie begonnen haben
+- **Erstellen** prüft, ob das Asset einen Standort hat. Ohne Standort nennt eine Meldung den fehlenden Standort, und das Feld **Standort** des Eigenschaftenbereichs erhält den Fokus. Das Asset bleibt geöffnet. Mit Standort behält KANAP das Asset und schließt es. Sie kehren dorthin zurück, wo Sie begonnen haben
 - **Abbrechen** löscht das Asset. Wenn Sie mehr als den Namen eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Assets abbrechen
 
 Verlassen Sie das Asset auf andere Weise (Zurück-Pfeil, Menü, ein anderes Asset), solange es keinen Standort hat, fragt KANAP nach. **Vervollständigen** lässt Sie auf dem Asset, im Feld **Standort**. **Löschen** löscht das Asset.
@@ -111,7 +111,7 @@ Assets können in Cluster organisiert werden:
 - **Reguläres Asset**: Eine einzelne Infrastruktur-Instanz
 - **Cluster**: Eine Gruppe von Assets, die als eine einzige logische Einheit fungiert
 
-Um einen Cluster anzulegen, wählen Sie **Cluster hinzufügen** im Menü **Asset hinzufügen**, oder schalten Sie den Schalter **Cluster** in der Eigenschaftsleiste eines Assets ein. Eine Verbindung auf einem Cluster gilt für seine Mitglieder: siehe [Verbindungen auf einem Cluster](connections.md#connections-on-a-cluster).
+Um einen Cluster anzulegen, wählen Sie **Cluster hinzufügen** im Menü **Asset hinzufügen**, oder schalten Sie den Schalter **Cluster** im Eigenschaftenbereich eines Assets ein. Eine Verbindung auf einem Cluster gilt für seine Mitglieder: siehe [Verbindungen auf einem Cluster](connections.md#connections-on-a-cluster).
 
 ### Anwendungen auf einem Cluster { #applications-on-a-cluster }
 
@@ -157,7 +157,7 @@ Bevor Sie ein Asset löschen, sagt die Bestätigung, was mit ihm verschwindet: d
 
 ## Der Assets-Arbeitsbereich
 
-Klicken Sie auf eine Zeile, um den Arbeitsbereich zu öffnen. Der Arbeitsbereich hat eine **Kopfzeile** mit schnellen Metadaten, eine **Eigenschaftsleiste** auf der rechten Seite (die Identitätskarte des Assets, immer sichtbar) und einen **Inhaltsbereich** in der Mitte, der mit jedem Reiter wechselt.
+Klicken Sie auf eine Zeile, um den Arbeitsbereich zu öffnen. Der Arbeitsbereich hat eine **Kopfzeile** mit schnellen Metadaten, einen **Eigenschaftenbereich** auf der rechten Seite (die Identitätskarte des Assets, immer sichtbar) und einen **Inhaltsbereich** in der Mitte, der mit jedem Reiter wechselt.
 
 Eine Adresse, die kein Asset bezeichnet, öffnet eine Seite **Asset nicht gefunden** mit einem Link zurück zur Liste.
 
@@ -168,15 +168,15 @@ Die Reiter sind **Übersicht**, **Betrieb**, **Netzwerk**, **Hardware** (nur phy
 Die Kopfzeile zeigt:
 - **Asset-Name** (an Ort und Stelle bearbeitbar)
 - **Asset-Referenz** (z. B. `AST-123`): kopierbare Kennung
-- **Lebenszyklus**-Chip (auch über die Eigenschaftsleiste bearbeitbar)
+- **Lebenszyklus**-Chip (auch über den Eigenschaftenbereich bearbeitbar)
 - **Schwerwiegende Schwachstellen**, zum Beispiel „3 schwerwiegend“: die noch zu prüfenden kritischen oder hohen Schwachstellen des Assets, in der Farbe der höchsten. Ein Warnsymbol folgt, wenn einige als ausgenutzt bekannt sind. Ein Klick öffnet die Seite [Schwachstellen](vulnerabilities.md), gefiltert auf das Asset. Nur angezeigt, wenn das Asset welche hat
 - **Teilen**: Einen teilbaren Link zu diesem Arbeitsbereich kopieren
 - **Löschen**, ein Papierkorbsymbol mit seinem Namen im Tooltip (`infrastructure:admin`). Bei einem Asset, das noch verwendet wird, erscheint der Grund vor jeder Bestätigung
 - **Vorherige / Nächste** (z. B. „3 von 47"): Durch die gefilterte Liste navigieren, ohne dorthin zurückzukehren
 
-### Eigenschaftsleiste (rechtes Panel)
+### Eigenschaftenbereich (rechtes Panel)
 
-Die Leiste zeigt die Identitätskarte des Assets in jedem Reiter. Bearbeitungen werden automatisch gespeichert. Die Felder bilden drei Gruppen.
+Der Bereich zeigt die Identitätskarte des Assets in jedem Reiter. Bearbeitungen werden automatisch gespeichert. Die Felder bilden drei Gruppen.
 
 **Typ und Zone**:
 - **Asset-Typ** (erforderlich)

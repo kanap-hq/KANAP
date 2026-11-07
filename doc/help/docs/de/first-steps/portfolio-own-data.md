@@ -23,7 +23,7 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 
 **Das Projekt Ihrer Anfrage**, vom Schritt geöffnet
 
-**Was Sie tun.** Ergänzen Sie im Eigenschaften-Panel die Verantwortlichen und das Projektteam und öffnen Sie dann die Reiter **Zeitstrahl** und **Aufwand**.
+**Was Sie tun.** Ergänzen Sie im Eigenschaftenbereich die Verantwortlichen und das Projektteam und öffnen Sie dann die Reiter **Zeitstrahl** und **Aufwand**.
 
 **Was Sie sehen.** Das Projekt behält unter **Beziehungen** die Anfrage, aus der es stammt. **Zeitstrahl** enthält seine Phasen, die Sie aus einer Phasenvorlage anlegen können. **Aufwand** stellt seinen Fortschritt dem geplanten und verbrauchten Aufwand gegenüber.
 

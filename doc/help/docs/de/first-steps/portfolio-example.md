@@ -27,9 +27,9 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 
 ![Das aus der Anfrage entstandene Projekt](images/portfolio-example-2.webp)
 
-**Was Sie tun.** Lesen Sie das Eigenschaften-Panel und öffnen Sie dann die Reiter **Zeitstrahl**, **Aufwand** und **Beziehungen**.
+**Was Sie tun.** Lesen Sie den Eigenschaftenbereich und öffnen Sie dann die Reiter **Zeitstrahl**, **Aufwand** und **Beziehungen**.
 
-**Was Sie sehen.** Das Eigenschaften-Panel nennt die Verantwortlichen und das Projektteam. **Zeitstrahl** ordnet die Phasen an. **Aufwand** stellt den Fortschritt dem geplanten und verbrauchten Aufwand gegenüber. **Beziehungen** zeigt die Anfrage, aus der das Projekt stammt, seine Anwendungen und seine Budgetzeilen.
+**Was Sie sehen.** Der Eigenschaftenbereich nennt die Verantwortlichen und das Projektteam. **Zeitstrahl** ordnet die Phasen an. **Aufwand** stellt den Fortschritt dem geplanten und verbrauchten Aufwand gegenüber. **Beziehungen** zeigt die Anfrage, aus der das Projekt stammt, seine Anwendungen und seine Budgetzeilen.
 
 ## 3. Die Aufgaben
 

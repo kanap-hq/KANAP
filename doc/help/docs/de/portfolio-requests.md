@@ -72,11 +72,11 @@ Das Standardraster hebt die Felder hervor, die während der Erfassung und Überp
 Der Arbeitsbereich verwendet ein Split-Modell:
 
 - Der Hauptbereich enthält die operativen Reiter: **Zusammenfassung**, **Analyse**, **Bewertung**, **Beziehungen**, **Wissensdatenbank** und **Verlauf** (die Änderungen an der Anfrage, siehe [Verlauf der Datensätze](record-history.md)).
-- Eine persistente **Eigenschaftsleiste** am rechten Rand enthält stabile Anfragen-Metadaten, Teamzuweisung und resultierende Projekte. Öffnen oder schließen Sie sie mit der vertikalen Registerkarte am rechten Rand.
+- Ein persistenter **Eigenschaftenbereich** am rechten Rand enthält stabile Anfragen-Metadaten, Teamzuweisung und resultierende Projekte. Öffnen oder schließen Sie ihn mit der vertikalen Registerkarte am rechten Rand.
 
 Dies ist wichtig, weil nicht alles auf die gleiche Weise gespeichert wird:
 
-- Änderungen in der **Eigenschaftsleiste** werden sofort angewendet.
+- Änderungen im **Eigenschaftenbereich** werden sofort angewendet.
 - Änderungen in **Zusammenfassung**, **Analyse** und **Bewertung** sind Arbeitsbereich-Bearbeitungen und verwenden **Speichern** / **Zurücksetzen**.
 - Die verwalteten Dokumente **Zweck** und **Risiken & Mitigationen** verwenden ebenfalls den Arbeitsbereich-Speicher-Fluss.
 
@@ -96,7 +96,7 @@ Die Arbeitsbereichs-Kopfzeile gibt Ihnen operativen Kontext, ohne die Seite zu v
 2. Geben Sie den Namen der Anfrage ein.
 3. Drücken Sie die Eingabetaste oder klicken Sie außerhalb des Titels. KANAP erstellt die Anfrage sofort, mit dem Status **Prüfung ausstehend** und Ihnen als Anforderer. Ihre Referenz (`REQ-42`) erscheint und alle Reiter öffnen sich.
 
-Füllen Sie dann die Eigenschaftsleiste und den **Zweck** aus. Der Name wird nur in der Kopfzeile bearbeitet. Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erstellen.
+Füllen Sie dann den Eigenschaftenbereich und den **Zweck** aus. Der Name wird nur in der Kopfzeile bearbeitet. Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erstellen.
 
 ### Erstellen oder abbrechen { #cancelling-a-creation }
 
@@ -107,9 +107,9 @@ Solange die Anfrage erstellt wird, zeigt ihre Kopfzeile **Erstellen** und **Abbr
 
 Verlassen Sie die Anfrage auf andere Weise, bleibt sie bestehen. Ein Administrator kann sie dann mit **Löschen** löschen. Die Referenz einer abgebrochenen Anfrage wird nicht wiederverwendet.
 
-### Eigenschaftsleiste
+### Eigenschaftenbereich
 
-Behandeln Sie die Leiste als das strukturelle Rückgrat der Anfrage. Sie enthält drei Gruppen.
+Behandeln Sie den Bereich als das strukturelle Rückgrat der Anfrage. Er enthält drei Gruppen.
 
 #### Kerneigenschaften
 
@@ -144,7 +144,7 @@ Eine schreibgeschützte Liste der Projekte, die nach der Konvertierung aus diese
 
 Dieselben Projekte erscheinen auch im Reiter **Beziehungen**, zusammen mit den Abhängigkeiten, den verknüpften Budgetzeilen, Anwendungen, Assets und Geschäftsprozessen sowie den Links und Dateien der Anfrage.
 
-Ältere Lesezeichen können noch auf `overview`, `team` oder `relations` verweisen. Der aktuelle Arbeitsbereich platziert diesen Inhalt unter **Zusammenfassung**, der Eigenschaftsleiste und dem Reiter **Beziehungen**.
+Ältere Lesezeichen können noch auf `overview`, `team` oder `relations` verweisen. Der aktuelle Arbeitsbereich platziert diesen Inhalt unter **Zusammenfassung**, dem Eigenschaftenbereich und dem Reiter **Beziehungen**.
 
 ## Zusammenfassung
 

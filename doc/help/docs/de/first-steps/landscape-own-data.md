@@ -26,7 +26,7 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 **Was Sie tun.** Importieren Sie die Liste Ihrer Anwendungen, oder legen Sie sie einzeln an.
 
 - **Eine Datei importieren.** Klicken Sie auf **Importieren**, dann auf **Beispiel herunterladen**: eine Mappe mit einigen Anwendungen und dem, was jede Spalte aufnimmt. Tragen Sie Ihre ein und **importieren** Sie die Datei.
-- **Eine Anwendung anlegen.** Klicken Sie auf **Neue Anwendung**, geben Sie ihren Namen im Titel ein und drücken Sie die Eingabetaste. Füllen Sie das Eigenschaften-Panel aus und klicken Sie dann auf **Erstellen**. **Abbrechen** verwirft sie.
+- **Eine Anwendung anlegen.** Klicken Sie auf **Neue Anwendung**, geben Sie ihren Namen im Titel ein und drücken Sie die Eingabetaste. Füllen Sie den Eigenschaftenbereich aus und klicken Sie dann auf **Erstellen**. **Abbrechen** verwirft sie.
 
 **Was Sie sehen.** Ein Datensatz je Anwendung. Ergänzen Sie bei den wichtigsten zuerst die Kritikalität und das Feld **IT-Verantwortliche**.
 

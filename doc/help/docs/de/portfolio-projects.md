@@ -78,9 +78,9 @@ Die direkte Projekterstellung ist für Arbeit gedacht, die ohne separate Anfrage
 2. Geben Sie den Namen des Projekts ein.
 3. Drücken Sie die Eingabetaste oder klicken Sie außerhalb des Titels. KANAP erstellt das Projekt sofort, mit der Herkunft **Fast-track**. Seine Referenz (`PRJ-12`) erscheint und alle Reiter öffnen sich.
 
-Füllen Sie dann die Eigenschaftsleiste und den **Zweck** aus. Der Name wird nur in der Kopfzeile bearbeitet. Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erstellen.
+Füllen Sie dann den Eigenschaftenbereich und den **Zweck** aus. Der Name wird nur in der Kopfzeile bearbeitet. Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erstellen.
 
-Ein so erstelltes Projekt kann in der Eigenschaftsleiste zwischen **Fast-track** und **Altbestand** wechseln. Ein aus einer Anfrage umgewandeltes Projekt behält die Herkunft **Anfrage** und seine Quellverknüpfung.
+Ein so erstelltes Projekt kann im Eigenschaftenbereich zwischen **Fast-track** und **Altbestand** wechseln. Ein aus einer Anfrage umgewandeltes Projekt behält die Herkunft **Anfrage** und seine Quellverknüpfung.
 
 Verwenden Sie **Fast-track** für Arbeit, die wirklich direkt in die Lieferung eingeführt wird. Verwenden Sie **Altbestand** für Arbeit, die bereits außerhalb der normalen Erfassungshistorie existiert. Diese Unterscheidung wirkt sich auf die Berichterstattung aus und macht spätere Portfolio-Analysen weitaus weniger verwirrend.
 
@@ -98,11 +98,11 @@ Nur mit **Abbrechen** lässt sich ein Projekt löschen. Sobald Sie das Projekt v
 Der Projekt-Arbeitsbereich hat zwei Schichten:
 
 - Den **Hauptinhaltsbereich** für die operativen Reiter: **Zusammenfassung**, **Aufgaben**, **Zeitleiste**, **Aufwand**, **Bewertung**, **Beziehungen**, **Wissensdatenbank** und **Verlauf** (die Änderungen am Projekt, siehe [Verlauf der Datensätze](record-history.md))
-- Eine persistente **Eigenschaftsleiste** am rechten Rand für Kerneigenschaften, Teamzuweisung und Quell-Anfragen
+- Einen persistenten **Eigenschaftenbereich** am rechten Rand für Kerneigenschaften, Teamzuweisung und Quell-Anfragen
 
-Öffnen oder schließen Sie die Eigenschaftsleiste mit der vertikalen Registerkarte am rechten Rand.
+Öffnen oder schließen Sie den Eigenschaftenbereich mit der vertikalen Registerkarte am rechten Rand.
 
-Bei vorhandenen Projekten verhält sich die Eigenschaftsleiste wie ein Live-Eigenschafts-Panel: Änderungen dort werden sofort gespeichert. Der Hauptreiterinhalt folgt dem üblichen **Speichern**- / **Zurücksetzen**-Workflow, wenn dieser Reiter Entwurfsänderungen enthält. Wenn Sie Reiter wechseln oder zum vorherigen oder nächsten Projekt mit ungespeicherten Arbeitsbereichsänderungen wechseln, fragt KANAP, ob zuerst gespeichert werden soll.
+Bei vorhandenen Projekten werden Änderungen im Eigenschaftenbereich sofort gespeichert. Der Hauptreiterinhalt folgt dem üblichen **Speichern**- / **Zurücksetzen**-Workflow, wenn dieser Reiter Entwurfsänderungen enthält. Wenn Sie Reiter wechseln oder zum vorherigen oder nächsten Projekt mit ungespeicherten Arbeitsbereichsänderungen wechseln, fragt KANAP, ob zuerst gespeichert werden soll.
 
 ## Kopfzeile und Metadaten
 
@@ -128,9 +128,9 @@ Der Workflow ist absichtlich kontrolliert:
 - **Pausiert** kann zu **Warteliste**, **Geplant** oder **In Bearbeitung** zurückkehren oder **Storniert** werden
 - **Erledigt** und **Storniert** sind Endzustände
 
-## Eigenschaftsleiste
+## Eigenschaftenbereich
 
-Behandeln Sie die Eigenschaftsleiste als die persistente Identitätskarte des Projekts. Sie ist in drei Bereiche gruppiert.
+Behandeln Sie den Eigenschaftenbereich als die persistente Identitätskarte des Projekts. Er ist in drei Gruppen gegliedert.
 
 ### Kerneigenschaften
 
@@ -144,7 +144,7 @@ Diese Felder treiben Berichterstattung, Planung, Filterung und den standardmäß
 
 ### Team
 
-Die Teamzuweisung lebt in der Leiste, sodass sie verfügbar bleibt, während Sie an Zeitplan, Aufwand oder Aufgaben arbeiten.
+Die Teamzuweisung lebt im Eigenschaftenbereich, sodass sie verfügbar bleibt, während Sie an Zeitplan, Aufwand oder Aufgaben arbeiten.
 
 - **Fachbereichssponsor** / **IT-Sponsor** erfassen die Verantwortlichkeit auf Führungsebene
 - **Fachbereichsleiter** / **IT-Leiter** identifizieren die tägliche Führung
@@ -166,7 +166,7 @@ Dieselben Anfragen erscheinen auch im Reiter **Beziehungen**, zusammen mit den A
 
 ## Zusammenfassung
 
-Der Reiter **Zusammenfassung** ist das Cockpit des Projekts. Er soll den aktuellen Zustand des Projekts in einem Durchgang beantworten, nicht jedes Feld in der Leiste duplizieren.
+Der Reiter **Zusammenfassung** ist das Cockpit des Projekts. Er soll den aktuellen Zustand des Projekts in einem Durchgang beantworten, nicht jedes Feld im Eigenschaftenbereich duplizieren.
 
 ### Zweck
 
@@ -224,7 +224,7 @@ Der Reiter **Zeitleiste** ist der Ort, an dem die Lieferstruktur explizit wird.
 Der untere Teil des Reiters zeigt drei Zeilen:
 
 - **Tatsächlich**: Daten, die durch Ausführungsereignisse erfasst werden (wann das Projekt zu In Bearbeitung wechselte und wann es Erledigt erreichte). Schreibgeschützt im Arbeitsbereich.
-- **Geplant**: Das beabsichtigte Lieferzeitfenster. Bearbeiten Sie diese in der Eigenschaftsleiste.
+- **Geplant**: Das beabsichtigte Lieferzeitfenster. Bearbeiten Sie diese im Eigenschaftenbereich.
 - **Baseline**: Ein Snapshot der geplanten Daten, der erfasst wurde, als das Projekt zu **In Bearbeitung** wechselte. Abweichungen gegenüber der Baseline werden als `N Tage spät` oder `N Tage früh` angezeigt.
 
 ### Phasen
@@ -277,7 +277,7 @@ Der Reiter **Aufwand** trennt den geschätzten Aufwand in:
 - **IT-Aufwand**
 - **Fachbereichs-Aufwand**
 
-Jede Seite kann auf den entsprechenden Leiter und die Mitwirkenden verteilt werden. Zuweisungen hängen vom Team ab, das in der Eigenschaftsleiste konfiguriert ist, sodass Teamänderungen auch hier Planungskonsequenzen haben.
+Jede Seite kann auf den entsprechenden Leiter und die Mitwirkenden verteilt werden. Zuweisungen hängen vom Team ab, das im Eigenschaftenbereich konfiguriert ist, sodass Teamänderungen auch hier Planungskonsequenzen haben.
 
 ### Tatsächlicher Aufwand und Zeitprotokoll
 
@@ -416,7 +416,7 @@ Erneut: Das Senden eines Links gewährt keinen Zugriff. Es erspart den Leuten nu
 
 ## Praktische Anleitung
 
-- Verwenden Sie die Eigenschaftsleiste für strukturelle Daten, die sichtbar bleiben sollen, während Sie arbeiten.
+- Verwenden Sie den Eigenschaftenbereich für strukturelle Daten, die sichtbar bleiben sollen, während Sie arbeiten.
 - Verwenden Sie **Zusammenfassung** für die Projekterzählung, die neueste Aktivität und das übergeordnete Betriebsbild.
 - Verwenden Sie **Zeitleiste**, um die Lieferstruktur zu definieren, bevor das Aufgabenvolumen wächst.
 - Verwenden Sie **Aufwand** regelmäßig, sonst kommt die Aufwandsabweichung als Überraschung, obwohl die Daten Sie bereits gewarnt haben.

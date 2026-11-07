@@ -43,7 +43,7 @@ Gehen Sie zu **IT-Landschaft > Anwendungen** und klicken Sie auf **Neue Anwendun
 
 Geben Sie den Namen in den Titel ein, zum Beispiel `Salesforce CRM`, und drücken Sie die Eingabetaste. Ihre Anwendung ist jetzt im Register, und ihre sechs Tabs öffnen sich für die detaillierte Dokumentation: **Übersicht**, **Bereitstellungen**, **Schnittstellen**, **Betrieb**, **Compliance** und **Beziehungen**.
 
-Füllen Sie dann das Wesentliche in der Kopfzeile und der Eigenschaftsleiste aus:
+Füllen Sie dann das Wesentliche in der Kopfzeile und im Eigenschaftenbereich aus:
 
 | Feld | Was eingeben | Beispiel |
 |------|-------------|---------|

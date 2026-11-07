@@ -27,9 +27,9 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 
 ![Ein Anwendungsdatensatz](images/landscape-example-2.webp)
 
-**Was Sie tun.** Lesen Sie das Eigenschaften-Panel und öffnen Sie dann die Reiter **Bereitstellungen**, **Schnittstellen**, **Betrieb** und **Beziehungen**.
+**Was Sie tun.** Lesen Sie den Eigenschaftenbereich und öffnen Sie dann die Reiter **Bereitstellungen**, **Schnittstellen**, **Betrieb** und **Beziehungen**.
 
-**Was Sie sehen.** Das Eigenschaften-Panel nennt den Hersteller, die Daten ihres Lebenszyklus und die Verantwortlichen. **Bereitstellungen** zeigt einen Block je Umgebung mit den Servern, auf denen sie läuft. **Schnittstellen** listet die eingehenden und ausgehenden Datenflüsse. **Betrieb** listet die Technologien, von denen die Anwendung abhängt, mit ihrem Supportende. **Beziehungen** verbindet sie mit Budgetzeilen, Verträgen und Projekten.
+**Was Sie sehen.** Der Eigenschaftenbereich nennt den Hersteller, die Daten ihres Lebenszyklus und die Verantwortlichen. **Bereitstellungen** zeigt einen Block je Umgebung mit den Servern, auf denen sie läuft. **Schnittstellen** listet die eingehenden und ausgehenden Datenflüsse. **Betrieb** listet die Technologien, von denen die Anwendung abhängt, mit ihrem Supportende. **Beziehungen** verbindet sie mit Budgetzeilen, Verträgen und Projekten.
 
 ## 3. Die Server
 
