@@ -10,7 +10,6 @@ import {
   Paper,
   Radio,
   RadioGroup,
-  Stack,
   Table,
   TableBody,
   TableCell,
@@ -50,8 +49,6 @@ export interface EnumEditorColumn<T extends EnumItem> {
 }
 
 export interface EnumEditorProps<T extends EnumItem> {
-  title: string;
-  description: string;
   items: T[];
   onChange: (items: T[]) => void;
   columns?: EnumEditorColumn<T>[];
@@ -136,8 +133,6 @@ const buildDefaultColumns = <T extends EnumItem>(t: TFunction, placeholder?: str
  * Supports virtual scrolling for large lists and customizable columns.
  */
 export function EnumEditor<T extends EnumItem>({
-  title,
-  description,
   items,
   onChange,
   columns,
@@ -269,14 +264,6 @@ export function EnumEditor<T extends EnumItem>({
 
   return (
     <Paper variant="outlined" sx={{ p: 2 }}>
-      <Stack spacing={1} sx={{ mb: 1 }}>
-        <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
-          {title}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          {description}
-        </Typography>
-      </Stack>
       <TableContainer ref={containerRef as any} onScroll={onScroll} sx={{ maxHeight }}>
         <Table size="small" stickyHeader={useVirtual}>
           <TableHead>
@@ -437,8 +424,6 @@ export function HostingTypeEditor({ namePlaceholder, ...props }: HostingTypeEdit
   const columns = React.useMemo(() => buildHostingTypeColumns(t, namePlaceholder), [namePlaceholder, t]);
   return (
     <EnumEditor<HostingTypeItem>
-      title={t('enumEditor.hostingTypes.title')}
-      description={t('enumEditor.hostingTypes.description')}
       columns={columns}
       addButtonLabel={t('enumEditor.hostingTypes.add')}
       emptyMessage={t('enumEditor.hostingTypes.empty')}
@@ -477,8 +462,6 @@ export function AssetKindEditor({ namePlaceholder, ...props }: AssetKindEditorPr
   const columns = React.useMemo(() => buildAssetKindColumns(t, namePlaceholder), [namePlaceholder, t]);
   return (
     <EnumEditor<AssetKindItem>
-      title={t('enumEditor.assetTypes.title')}
-      description={t('enumEditor.assetTypes.description')}
       columns={columns}
       addButtonLabel={t('enumEditor.assetTypes.add')}
       emptyMessage={t('enumEditor.assetTypes.empty')}
@@ -536,8 +519,6 @@ export function ServerRoleEditor({ namePlaceholder, ...props }: ServerRoleEditor
   const columns = React.useMemo(() => buildTieredColumns<ServerRoleItem>(t, 'center', namePlaceholder), [namePlaceholder, t]);
   return (
     <EnumEditor<ServerRoleItem>
-      title={t('enumEditor.serverRoles.title')}
-      description={t('enumEditor.serverRoles.description')}
       columns={columns}
       addButtonLabel={t('enumEditor.serverRoles.add')}
       emptyMessage={t('enumEditor.serverRoles.empty')}
@@ -553,8 +534,6 @@ export function EntityEditor({ namePlaceholder, ...props }: EntityEditorProps) {
   const columns = React.useMemo(() => buildTieredColumns<EntityItem>(t, 'top', namePlaceholder), [namePlaceholder, t]);
   return (
     <EnumEditor<EntityItem>
-      title={t('enumEditor.entities.title')}
-      description={t('enumEditor.entities.description')}
       columns={columns}
       addButtonLabel={t('enumEditor.entities.add')}
       emptyMessage={t('enumEditor.entities.empty')}

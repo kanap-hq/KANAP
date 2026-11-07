@@ -10,10 +10,13 @@ import {
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import InfoHint from '../workspace/InfoHint';
 
 export interface SettingsSectionProps {
   title: string;
   description?: string;
+  /** What the list is for, when its rows do not say it: one sentence in a tooltip beside the title. */
+  hint?: string;
   children: React.ReactNode;
   defaultExpanded?: boolean;
   actions?: React.ReactNode;
@@ -28,6 +31,7 @@ export interface SettingsSectionProps {
 export function SettingsSection({
   title,
   description,
+  hint,
   children,
   defaultExpanded = false,
   actions,
@@ -59,7 +63,10 @@ export function SettingsSection({
       <AccordionSummary expandIcon={<ExpandMoreIcon />}>
         <Stack direction="row" alignItems="center" sx={{ flex: 1, pr: 2 }}>
           <Stack spacing={0.25} sx={{ flex: 1 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>{title}</Typography>
+            <Stack direction="row" alignItems="center" spacing={0.5}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>{title}</Typography>
+              {hint && <InfoHint text={hint} />}
+            </Stack>
             {description && (
               <Typography variant="caption" color="text.secondary">{description}</Typography>
             )}
@@ -136,7 +143,6 @@ export function SettingsControls({
 
 export interface SettingsGroupProps {
   title: string;
-  subtitle?: string;
   children: React.ReactNode;
   showDivider?: boolean;
 }
@@ -146,7 +152,6 @@ export interface SettingsGroupProps {
  */
 export function SettingsGroup({
   title,
-  subtitle,
   children,
   showDivider = true,
 }: SettingsGroupProps) {
@@ -159,9 +164,6 @@ export function SettingsGroup({
         >
           {title}
         </Typography>
-        {subtitle && (
-          <Typography variant="body2" color="text.secondary">{subtitle}</Typography>
-        )}
       </Stack>
       {showDivider && <Box sx={{ borderBottom: 1, borderColor: 'divider' }} />}
       <Stack spacing={1.5}>{children}</Stack>

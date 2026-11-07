@@ -39,7 +39,7 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { environmentLabel } from '../../../utils/applicationEnvironments';
-import { interfaceRouteIntro, legTypeLabel } from '../../../utils/interfaceLegType';
+import { legTypeLabel } from '../../../utils/interfaceLegType';
 const ENVIRONMENTS = ['prod', 'pre_prod', 'qa', 'test', 'dev', 'sandbox'] as const;
 
 type InterfaceLeg = {
@@ -1595,14 +1595,6 @@ export default function InterfaceBindingsMatrix({
       >
         <Stack>
           <Typography variant="h6">{t('it:workspace.interface.bindings.title')}</Typography>
-          <Typography variant="body2" color="text.secondary">
-            {t('it:workspace.interface.bindings.intro')}
-          </Typography>
-          {interfaceRouteIntro(t, integrationRouteType) && (
-            <Typography variant="body2" color="text.secondary">
-              {interfaceRouteIntro(t, integrationRouteType)}
-            </Typography>
-          )}
         </Stack>
         {canManage && (
           <Stack direction="row" spacing={1}>

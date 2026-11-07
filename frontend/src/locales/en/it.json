@@ -343,8 +343,6 @@
     },
     "endOfSupport": {
       "title": "End of support",
-      "subtitle": "What has reached or reaches its end of support by {{date}}, and what it touches.",
-      "subtitleGaps": "The missing data that keeps this report from answering. Open a row to complete the record.",
       "tabs": {
         "label": "Report view",
         "deadlines": "Deadlines",
@@ -855,7 +853,6 @@
       "noZones": "No administration zones defined yet.",
       "openSettings": "Define them in the IT settings",
       "noZone": "No zone",
-      "filterZonesHint": "Choose a zone to filter the asset list.",
       "filterZone": "Show the assets in {{name}}.",
       "unknownZone": "Unknown zone ({{code}})",
       "kindCount": "{{kind}}: {{count}}",
@@ -971,8 +968,6 @@
     "interfaceMap": {
       "title": "Interface map",
       "infraServices": "Infrastructure services",
-      "businessView": "Business view: logical interfaces between applications.",
-      "technicalView": "Technical view: routes expanded through middleware and ETL applications.",
       "showMiddleware": "Show middleware",
       "building": "Building interface map for {{env}}…",
       "loadFailed": "Failed to load interface map",
@@ -1013,26 +1008,21 @@
         "lists": "Lists",
         "netbox": "Netbox"
       },
-      "description": "Configure reusable lists for data classification, server catalog, and interface protocols used across the IT landscape workspace.",
       "loadFailed": "Failed to load IT landscape settings.",
       "updateSuccess": "IT landscape settings updated successfully",
       "updateFailed": "Failed to update settings",
       "groups": {
         "locations": {
-          "title": "Locations",
-          "subtitle": "Lists used when creating or editing locations."
+          "title": "Locations"
         },
         "serversConnections": {
-          "title": "Servers & connections",
-          "subtitle": "Lists used for servers, connections, and related risk/endpoint data."
+          "title": "Servers & connections"
         },
         "appsInterfaces": {
-          "title": "Apps, services & interfaces",
-          "subtitle": "Lists used across applications, app instances, interfaces, and bindings."
+          "title": "Apps, services & interfaces"
         },
         "incidents": {
-          "title": "Incidents",
-          "subtitle": "Lists used by the incident register."
+          "title": "Incidents"
         }
       },
       "lists": {
@@ -1045,43 +1035,42 @@
         },
         "accessMethods": {
           "title": "Access methods",
-          "description": "Methods by which users access applications (e.g., Web, Mobile, VDI).",
           "usage": "Applications / Access method selector"
         },
         "applicationCategories": {
           "title": "Application categories",
-          "description": "Categories that describe the primary purpose of each application or service.",
           "usage": "Applications / Category selector"
         },
         "networkSegments": {
           "title": "Network zones",
-          "description": "Network zones used to categorize subnets and describe connectivity.",
           "usage": "Subnets / Network zone selector"
         },
         "entities": {
           "title": "Entities",
+          "description": "Endpoints used in connections and maps. The graph tier sets their default placement on the map.",
           "usage": "Connections / Endpoints"
         },
         "ipAddressTypes": {
           "title": "IP address types",
-          "description": "Types of IP addresses for assets.",
           "usage": "Assets / IP addresses"
         },
         "serverKinds": {
           "title": "Asset types",
+          "description": "Logical types for servers and infrastructure assets. Physical assets can track hardware and support information.",
           "usage": "Servers / Overview & create"
         },
         "serverRoles": {
           "title": "Server roles",
+          "description": "Roles assigned to servers when linking app instances. The graph tier sets their placement on the connection map.",
           "usage": "Servers / App link"
         },
         "hostingTypes": {
           "title": "Hosting types",
+          "description": "Where locations and technologies are hosted (e.g., on-prem, colocation, public cloud, SaaS). Each type is on premises or in the cloud: a technology on premises is expected on servers.",
           "usage": "Locations and technologies / Create & edit"
         },
         "serverProviders": {
           "title": "Cloud providers",
-          "description": "Cloud providers used by servers and locations.",
           "usage": "Locations / Create & edit"
         },
         "lifecycleStates": {
@@ -1091,47 +1080,38 @@
         },
         "interfaceProtocols": {
           "title": "Interface protocols",
-          "description": "Supported protocols for interface bindings between applications.",
           "usage": "Interface bindings / Transport"
         },
         "interfaceDataCategories": {
           "title": "Interface data categories",
-          "description": "Business data categories for interfaces.",
           "usage": "Interfaces / Data profile"
         },
         "interfaceTriggerTypes": {
           "title": "Interface trigger types",
-          "description": "Trigger types for interface legs.",
           "usage": "Interface legs / Trigger"
         },
         "interfacePatterns": {
           "title": "Integration patterns",
-          "description": "Integration patterns used by interface legs.",
           "usage": "Interface legs / Pattern"
         },
         "interfaceFormats": {
           "title": "Interface data formats",
-          "description": "Data formats for interface legs.",
           "usage": "Interface legs / Payload format"
         },
         "interfaceAuthModes": {
           "title": "Interface authentication modes",
-          "description": "Authentication modes for interface legs and bindings.",
           "usage": "Interface bindings / Authentication"
         },
         "incidentCategories": {
           "title": "Incident categories",
-          "description": "Categories used to classify entries in the incident register.",
           "usage": "Incidents / Category selector"
         },
         "connectionTypes": {
           "title": "Connection types",
-          "description": "Two-level catalog (category and entry) with typical ports.",
           "usage": "Connections / Protocol selector"
         },
         "subnets": {
           "title": "Subnets",
-          "description": "Define network subnets with VLAN assignments. Each subnet belongs to a network zone.",
           "usage": "Assets / Network information"
         },
         "technologyFamilies": {
@@ -1793,9 +1773,7 @@
         "usersValue": "Users: {{value}}",
         "usersNoDepartmentHeadcount": "No headcount is recorded for these departments.",
         "businessProcesses": "Business processes",
-        "addBusinessProcess": "Add a business process…",
-        "audienceWholeCompany": "Whole company. Choose departments to narrow the audience.",
-        "audienceDepartmentsOnly": "Only the selected departments. Clear them to include the whole company."
+        "addBusinessProcess": "Add a business process…"
       },
       "technical": {
         "title": "Technical information",
@@ -1870,7 +1848,7 @@
         "removeFailed": "Failed to remove deployment",
         "saveAssignmentFailed": "Failed to save server",
         "removeAssignmentFailed": "Failed to remove server",
-        "baseUrlHelp": "The address people open to reach this deployment, for example https://app.example.com."
+        "baseUrlPlaceholder": "e.g., https://app.example.com"
       },
       "relations": {
         "noChildApps": "No child applications linked yet.",
@@ -3103,9 +3081,6 @@
         "autosaveFailed": "Autosave failed",
         "closePanel": "Close binding panel",
         "title": "Environments and bindings",
-        "intro": "For each environment, set which deployments are connected on each leg of the interface.",
-        "routeViaMiddleware": "Route type: via middleware. Legs: {{legs}}.",
-        "routeDirect": "Route type: direct. A single leg between source and target.",
         "addEnvironment": "Add environment",
         "loadingBindings": "Loading bindings…",
         "noEnvironments": "No environments defined yet. Click \"Add environment\" to document bindings. Each environment needs application deployments, created in the Applications workspace, before you can add bindings.",

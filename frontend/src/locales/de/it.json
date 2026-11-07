@@ -343,8 +343,6 @@
     },
     "endOfSupport": {
       "title": "Supportende",
-      "subtitle": "Was sein Supportende bis zum {{date}} erreicht hat oder erreicht, und was davon betroffen ist.",
-      "subtitleGaps": "Die fehlenden Daten, die diesen Bericht unvollständig machen. Öffnen Sie eine Zeile, um den Datensatz zu ergänzen.",
       "tabs": {
         "label": "Berichtsansicht",
         "deadlines": "Fristen",
@@ -855,7 +853,6 @@
       "noZones": "Noch keine Administrationszonen definiert.",
       "openSettings": "In den IT-Einstellungen definieren",
       "noZone": "Keine Zone",
-      "filterZonesHint": "Wählen Sie eine Zone, um die Asset-Liste zu filtern.",
       "filterZone": "Assets in {{name}} anzeigen.",
       "unknownZone": "Unbekannte Zone ({{code}})",
       "kindCount": "{{kind}}: {{count}}",
@@ -971,8 +968,6 @@
     "interfaceMap": {
       "title": "Schnittstellenkarte",
       "infraServices": "Infrastrukturdienste",
-      "businessView": "Fachliche Sicht: logische Schnittstellen zwischen Anwendungen.",
-      "technicalView": "Technische Sicht: Routen über Middleware- und ETL-Anwendungen aufgelöst.",
       "showMiddleware": "Middleware anzeigen",
       "building": "Schnittstellenkarte für {{env}} wird erstellt…",
       "loadFailed": "Schnittstellenkarte konnte nicht geladen werden",
@@ -1013,26 +1008,21 @@
         "lists": "Listen",
         "netbox": "Netbox"
       },
-      "description": "Konfigurieren Sie wiederverwendbare Listen für Datenklassifizierung, Serverkatalog und Schnittstellenprotokolle in der IT-Landschaft.",
       "loadFailed": "Fehler beim Laden der IT-Landschaft-Einstellungen.",
       "updateSuccess": "IT-Landschaft-Einstellungen erfolgreich aktualisiert",
       "updateFailed": "Fehler beim Aktualisieren der Einstellungen",
       "groups": {
         "locations": {
-          "title": "Standorte",
-          "subtitle": "Listen für die Erstellung oder Bearbeitung von Standorten."
+          "title": "Standorte"
         },
         "serversConnections": {
-          "title": "Server und Verbindungen",
-          "subtitle": "Listen für Server, Verbindungen und zugehörige Risiko-/Endpoint-Daten."
+          "title": "Server und Verbindungen"
         },
         "appsInterfaces": {
-          "title": "Anwendungen, Services und Schnittstellen",
-          "subtitle": "Listen für Anwendungen, Anwendungsinstanzen, Schnittstellen und Bindungen."
+          "title": "Anwendungen, Services und Schnittstellen"
         },
         "incidents": {
-          "title": "Vorfälle",
-          "subtitle": "Listen für das Vorfallsregister."
+          "title": "Vorfälle"
         }
       },
       "lists": {
@@ -1045,43 +1035,42 @@
         },
         "accessMethods": {
           "title": "Zugriffsmethoden",
-          "description": "Methoden, mit denen Benutzer auf Anwendungen zugreifen (z. B. Web, mobil, VDI).",
           "usage": "Anwendungen / Auswahl der Zugriffsmethode"
         },
         "applicationCategories": {
           "title": "Anwendungskategorien",
-          "description": "Kategorien, die den Hauptzweck jeder Anwendung oder jedes Service beschreiben.",
           "usage": "Anwendungen / Kategorieauswahl"
         },
         "networkSegments": {
           "title": "Netzwerkzonen",
-          "description": "Netzwerkzonen zur Einordnung von Subnetzen und zur Beschreibung der Konnektivität.",
           "usage": "Subnetze / Auswahl der Netzwerkzone"
         },
         "entities": {
           "title": "Entitäten",
+          "description": "Endpunkte in Verbindungen und Karten. Die Graph-Ebene bestimmt ihre Standardposition auf der Karte.",
           "usage": "Verbindungen / Endpunkte"
         },
         "ipAddressTypes": {
           "title": "IP-Adresstypen",
-          "description": "Typen von IP-Adressen für Assets.",
           "usage": "Assets / IP-Adressen"
         },
         "serverKinds": {
           "title": "Asset-Typen",
+          "description": "Logische Typen für Server und Infrastruktur-Assets. Physische Assets können Hardware- und Support-Informationen erfassen.",
           "usage": "Server / Übersicht und Erstellung"
         },
         "serverRoles": {
           "title": "Serverrollen",
+          "description": "Rollen, die Servern beim Verknüpfen von Anwendungsinstanzen zugewiesen werden. Die Graph-Ebene bestimmt ihre Position auf der Verbindungskarte.",
           "usage": "Server / Anwendungsverknüpfung"
         },
         "hostingTypes": {
           "title": "Hosting-Typen",
+          "description": "Wo Standorte und Technologien gehostet werden (z. B. On-Premises, Colocation, Public Cloud, SaaS). Jeder Typ ist On-Premises oder in der Cloud: Eine On-Premises-Technologie wird auf Servern erwartet.",
           "usage": "Standorte und Technologien / Erstellen und Bearbeiten"
         },
         "serverProviders": {
           "title": "Cloud-Anbieter",
-          "description": "Cloud-Anbieter, die von Servern und Standorten verwendet werden.",
           "usage": "Standorte / Erstellen und Bearbeiten"
         },
         "lifecycleStates": {
@@ -1091,47 +1080,38 @@
         },
         "interfaceProtocols": {
           "title": "Schnittstellenprotokolle",
-          "description": "Unterstützte Protokolle für Schnittstellen-Bindungen zwischen Anwendungen.",
           "usage": "Schnittstellen-Bindungen / Transport"
         },
         "interfaceDataCategories": {
           "title": "Datenkategorien für Schnittstellen",
-          "description": "Geschäftsdatenkategorien für Schnittstellen.",
           "usage": "Schnittstellen / Datenprofil"
         },
         "interfaceTriggerTypes": {
           "title": "Auslösertypen für Schnittstellen",
-          "description": "Auslösertypen für Schnittstellenabschnitte.",
           "usage": "Schnittstellenabschnitte / Auslöser"
         },
         "interfacePatterns": {
           "title": "Integrationsmuster",
-          "description": "Integrationsmuster, die von Schnittstellenabschnitten verwendet werden.",
           "usage": "Schnittstellenabschnitte / Muster"
         },
         "interfaceFormats": {
           "title": "Datenformate für Schnittstellen",
-          "description": "Datenformate für Schnittstellenabschnitte.",
           "usage": "Schnittstellenabschnitte / Datenformat"
         },
         "interfaceAuthModes": {
           "title": "Authentifizierungsmodi für Schnittstellen",
-          "description": "Authentifizierungsmodi für Schnittstellenabschnitte und -bindungen.",
           "usage": "Schnittstellen-Bindungen / Authentifizierung"
         },
         "incidentCategories": {
           "title": "Vorfallkategorien",
-          "description": "Kategorien zur Einordnung der Einträge im Vorfallsregister.",
           "usage": "Vorfälle / Kategorieauswahl"
         },
         "connectionTypes": {
           "title": "Verbindungstypen",
-          "description": "Zweistufiger Katalog (Kategorie und Eintrag) mit typischen Ports.",
           "usage": "Verbindungen / Protokollauswahl"
         },
         "subnets": {
           "title": "Subnetze",
-          "description": "Definieren Sie Subnetze mit VLAN-Zuordnung. Jedes Subnetz gehört zu einer Netzwerkzone.",
           "usage": "Assets / Netzwerkinformationen"
         },
         "technologyFamilies": {
@@ -1793,9 +1773,7 @@
         "usersValue": "Benutzer: {{value}}",
         "usersNoDepartmentHeadcount": "Für diese Abteilungen ist keine Mitarbeiterzahl erfasst.",
         "businessProcesses": "Geschäftsprozesse",
-        "addBusinessProcess": "Geschäftsprozess hinzufügen…",
-        "audienceWholeCompany": "Gesamte Gesellschaft. Wählen Sie Abteilungen, um die Zielgruppe einzugrenzen.",
-        "audienceDepartmentsOnly": "Nur die gewählten Abteilungen. Entfernen Sie sie, um die gesamte Gesellschaft einzuschließen."
+        "addBusinessProcess": "Geschäftsprozess hinzufügen…"
       },
       "technical": {
         "title": "Technische Informationen",
@@ -1870,7 +1848,7 @@
         "removeFailed": "Fehler beim Entfernen der Bereitstellung",
         "saveAssignmentFailed": "Fehler beim Speichern des Servers",
         "removeAssignmentFailed": "Fehler beim Entfernen des Servers",
-        "baseUrlHelp": "Die Adresse, unter der diese Bereitstellung erreichbar ist, zum Beispiel https://app.example.com."
+        "baseUrlPlaceholder": "z. B. https://app.example.com"
       },
       "relations": {
         "noChildApps": "Noch keine untergeordneten Anwendungen verknüpft.",
@@ -3103,9 +3081,6 @@
         "autosaveFailed": "Automatisches Speichern fehlgeschlagen",
         "closePanel": "Bindungsbereich schließen",
         "title": "Umgebungen und Bindungen",
-        "intro": "Legen Sie für jede Umgebung fest, welche Bereitstellungen in jedem Abschnitt der Schnittstelle verbunden sind.",
-        "routeViaMiddleware": "Routentyp: über Middleware. Abschnitte: {{legs}}.",
-        "routeDirect": "Routentyp: direkt. Ein einziger Abschnitt zwischen Quelle und Ziel.",
         "addEnvironment": "Umgebung hinzufügen",
         "loadingBindings": "Bindungen werden geladen…",
         "noEnvironments": "Noch keine Umgebungen definiert. Klicken Sie auf „Umgebung hinzufügen“, um Bindungen zu dokumentieren. Jede Umgebung benötigt Anwendungsbereitstellungen, die im Bereich Anwendungen angelegt werden, bevor Sie Bindungen hinzufügen können.",

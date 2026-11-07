@@ -25,7 +25,7 @@ function renderEditor(props: Partial<React.ComponentProps<typeof EnumEditor>> = 
   render(
     <MemoryRouter>
       <ThemeProvider theme={createAppTheme('light')}>
-        <EnumEditor title="Categories" description="" items={items} onChange={onChange} usageList="applicationCategories" hideAddButton {...props} />
+        <EnumEditor items={items} onChange={onChange} usageList="applicationCategories" hideAddButton {...props} />
       </ThemeProvider>
     </MemoryRouter>,
   );

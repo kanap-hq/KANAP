@@ -1104,26 +1104,18 @@
     "translationsHelp": "Deje un campo vacío para usar la traducción automática cuando exista; de lo contrario, el texto base.",
     "shownAs": "Se muestra: {{value}}",
     "hostingTypes": {
-      "title": "Tipos de alojamiento",
-      "description": "Dónde se alojan las ubicaciones y las tecnologías (p. ej., on-premise, colocation, nube pública, SaaS). Cada tipo es local o en la nube: una tecnología local se espera en servidores.",
       "add": "Añadir tipo de alojamiento",
       "empty": "No hay tipos de alojamiento definidos."
     },
     "assetTypes": {
-      "title": "Tipos de activo",
-      "description": "Tipos lógicos de servidores y activos de infraestructura. Los activos físicos pueden registrar información de hardware y soporte.",
       "add": "Añadir tipo de activo",
       "empty": "No hay tipos de activo definidos."
     },
     "serverRoles": {
-      "title": "Roles de servidor",
-      "description": "Roles asignados a los servidores al vincular instancias de aplicación. El nivel del grafo define su posición en el mapa de conexiones.",
       "add": "Añadir rol de servidor",
       "empty": "No hay roles de servidor definidos."
     },
     "entities": {
-      "title": "Entidades",
-      "description": "Endpoints utilizados en conexiones y mapas. El nivel del grafo define su posición predeterminada en el mapa.",
       "add": "Añadir entidad",
       "empty": "No hay entidades definidas."
     },

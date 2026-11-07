@@ -169,7 +169,7 @@ Changing the family or the hosting type of a technology later leaves its setting
 
 #### Versions from the catalog
 
-A version that comes from the catalog shows **Catalog** next to its label, and a technology adopted from the catalog says "Versions and dates kept up to date from the catalog" under its versions. KANAP checks the catalog every day in the cloud. On an on-premise installation, each KANAP version brings its catalog at start, unless your administrator [turns on the daily check](on-premise/configuration.md#optional-technology-catalog).
+A version that comes from the catalog shows **Catalog** next to its label, and a technology adopted from the catalog shows an information icon beside **Versions** that says its versions and dates are kept up to date from the catalog. KANAP checks the catalog every day in the cloud. On an on-premise installation, each KANAP version brings its catalog at start, unless your administrator [turns on the daily check](on-premise/configuration.md#optional-technology-catalog).
 
 The dates come from two sources. Most products take them from endoflife.date. For the products endoflife.date does not cover, such as Cisco NX-OS, Juniper Junos or Dell PowerStore, KANAP reads the dates on the publisher's official pages. Each KANAP version brings these dates up to date.
 

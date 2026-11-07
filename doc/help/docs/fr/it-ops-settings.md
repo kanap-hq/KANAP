@@ -24,14 +24,14 @@ La page compte deux onglets :
 
 Dans l'onglet **Listes**, l'éditeur **Classifications et continuité** se trouve en haut. En dessous, les listes sont regroupées en quatre sections repliables :
 
-1. **Sites**: Listes utilisées lors de la création ou de la modification des sites.
-2. **Serveurs et connexions**: Listes utilisées pour les serveurs, les connexions et les données de risque/endpoint associées.
-3. **Applications, services et interfaces**: Listes utilisées pour les applications, les instances d'application, les interfaces et les liaisons.
-4. **Incidents**: Listes utilisées par le registre des incidents.
+1. **Sites**
+2. **Serveurs et connexions**
+3. **Applications, services et interfaces**
+4. **Incidents**
 
 Les listes des technologies sont dans deux sections : **Familles de technologies** et **Zones d'administration** sous **Serveurs et connexions**, **Types d'hébergement** sous **Sites**. Les autres écrans appellent cette page les réglages IT.
 
-Dans une section, les listes sont triées par nom. Chaque liste apparaît comme un panneau extensible, avec une courte indication de l'endroit où ses valeurs sont utilisées (par exemple, *Applications / Choix de la catégorie*). Cliquez sur un en-tête de panneau pour le développer et voir les valeurs. Le contenu de chaque section ne se charge que lorsque vous la développez pour la première fois, ce qui maintient la rapidité de la page même avec de nombreuses listes.
+Dans une section, les listes sont triées par nom. Chaque liste apparaît comme un panneau extensible, avec une courte indication de l'endroit où ses valeurs sont utilisées (par exemple, *Applications / Choix de la catégorie*). Quand les valeurs ne disent pas à quoi sert une liste, une icône d'information à côté de son nom le dit au survol. Cliquez sur un en-tête de panneau pour le développer et voir les valeurs. Le contenu de chaque section ne se charge que lorsque vous la développez pour la première fois, ce qui maintient la rapidité de la page même avec de nombreuses listes.
 
 ### Contrôles de l'éditeur
 

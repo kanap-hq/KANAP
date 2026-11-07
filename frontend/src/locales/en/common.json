@@ -1104,26 +1104,18 @@
     "translationsHelp": "Leave a field empty to use the automatic translation when one exists, otherwise the base text.",
     "shownAs": "Shown: {{value}}",
     "hostingTypes": {
-      "title": "Hosting types",
-      "description": "Where locations and technologies are hosted (e.g., on-prem, colocation, public cloud, SaaS). Each type is on premises or in the cloud: a technology on premises is expected on servers.",
       "add": "Add hosting type",
       "empty": "No hosting types defined."
     },
     "assetTypes": {
-      "title": "Asset types",
-      "description": "Logical types for servers and infrastructure assets. Physical assets can track hardware and support information.",
       "add": "Add asset type",
       "empty": "No asset types defined."
     },
     "serverRoles": {
-      "title": "Server roles",
-      "description": "Roles assigned to servers when linking app instances. The graph tier sets their placement on the connection map.",
       "add": "Add server role",
       "empty": "No server roles defined."
     },
     "entities": {
-      "title": "Entities",
-      "description": "Endpoints used in connections and maps. The graph tier sets their default placement on the map.",
       "add": "Add entity",
       "empty": "No entities defined."
     },

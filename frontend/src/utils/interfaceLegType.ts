@@ -14,15 +14,3 @@ export function routeTypeLabel(t: TFunction, routeType: string | null | undefine
   const key = ROUTE_TYPE_KEYS[routeType];
   return key ? t(`it:enums.routeType.${key}`) : routeType;
 }
-
-const MIDDLEWARE_LEGS = ['extract', 'transform', 'load'] as const;
-
-/** The sentence above the bindings matrix: the route type and its legs, named like the matrix rows. */
-export function interfaceRouteIntro(t: TFunction, routeType: string | null | undefined): string {
-  if (routeType === 'via_middleware') {
-    const legs = MIDDLEWARE_LEGS.map((leg) => legTypeLabel(t, leg)).join(', ');
-    return t('it:workspace.interface.bindings.routeViaMiddleware', { legs });
-  }
-  if (routeType === 'direct') return t('it:workspace.interface.bindings.routeDirect');
-  return '';
-}

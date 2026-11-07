@@ -6,7 +6,7 @@ Ouvrez-le depuis **Cartographie SI > Fins de support**, dans le groupe **Exploit
 
 ## Échéances
 
-La vue **Échéances** montre une ligne par élément dont le support est fini, ou finit dans l'horizon. Le sous-titre donne le dernier jour couvert par l'horizon.
+La vue **Échéances** montre une ligne par élément dont le support est fini, ou finit dans l'horizon.
 
 Ce que le rapport surveille :
 

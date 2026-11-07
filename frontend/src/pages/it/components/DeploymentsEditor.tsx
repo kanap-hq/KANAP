@@ -645,11 +645,9 @@ export default function DeploymentsEditor({
               onChange={(event) => setDeploymentDraft((prev) => ({ ...prev, base_url: event.target.value }))}
               variant="standard"
               fullWidth
+              placeholder={t('workspace.application.deployments.baseUrlPlaceholder')}
               sx={drawerFieldValueSx}
             />
-            <Typography sx={(muiTheme) => ({ mt: 0.5, fontSize: 12, color: muiTheme.palette.kanap.text.tertiary })}>
-              {t('workspace.application.deployments.baseUrlHelp')}
-            </Typography>
           </PropertyRow>
           <PropertyRow
             label={t('components.instances.ssoEnabled')}

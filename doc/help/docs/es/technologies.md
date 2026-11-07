@@ -169,7 +169,7 @@ Cambiar más tarde la familia o el tipo de alojamiento de una tecnología deja s
 
 #### Versiones del catálogo
 
-Una versión que procede del catálogo muestra **Catálogo** junto a su etiqueta, y una tecnología adoptada desde el catálogo indica «Versiones y fechas mantenidas al día desde el catálogo» bajo sus versiones. KANAP consulta el catálogo cada día en la nube. En una instalación local, cada versión de KANAP trae su catálogo al arrancar, salvo que su administrador [active la comprobación diaria](on-premise/configuration.md#optional-technology-catalog).
+Una versión que procede del catálogo muestra **Catálogo** junto a su etiqueta, y una tecnología adoptada desde el catálogo muestra junto a **Versiones** un icono de información que indica que sus versiones y fechas se mantienen al día desde el catálogo. KANAP consulta el catálogo cada día en la nube. En una instalación local, cada versión de KANAP trae su catálogo al arrancar, salvo que su administrador [active la comprobación diaria](on-premise/configuration.md#optional-technology-catalog).
 
 Las fechas proceden de dos fuentes. La mayoría de los productos las toman de endoflife.date. Para los productos que endoflife.date no cubre, como Cisco NX-OS, Juniper Junos o Dell PowerStore, KANAP toma las fechas de las páginas oficiales del editor. Cada versión de KANAP pone al día estas fechas.
 

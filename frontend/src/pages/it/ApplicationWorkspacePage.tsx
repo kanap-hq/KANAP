@@ -616,13 +616,6 @@ function ApplicationProperties({
                   hideLabel
                   textFieldSx={drawerFieldValueSx}
                 />
-                {row.company_id && (
-                  <Typography sx={(theme) => ({ fontSize: 11, color: theme.palette.kanap.text.tertiary, mt: 0.25 })}>
-                    {row.department_ids.length > 0
-                      ? t('workspace.application.ownership.audienceDepartmentsOnly')
-                      : t('workspace.application.ownership.audienceWholeCompany')}
-                  </Typography>
-                )}
               </Box>
               {canManage && (
                 <IconButton

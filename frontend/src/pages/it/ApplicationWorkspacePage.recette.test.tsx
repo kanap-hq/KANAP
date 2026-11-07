@@ -33,9 +33,9 @@ const departmentField = vi.hoisted(() => ({ mounts: 0 }));
 vi.mock('../../components/fields/DepartmentMultiSelect', async () => {
   const { useEffect } = await import('react');
   return {
-    default: function DepartmentField({ onChange }: { onChange: (ids: string[]) => void }) {
+    default: function DepartmentField({ value, onChange }: { value: string[]; onChange: (ids: string[]) => void }) {
       useEffect(() => { departmentField.mounts += 1; }, []);
-      return <button type="button" onClick={() => onChange(['d-1'])}>pick department</button>;
+      return <button type="button" data-value={value.join(',')} onClick={() => onChange(['d-1'])}>pick department</button>;
     },
   };
 });
@@ -183,7 +183,7 @@ describe('Application workspace, recette C1a', () => {
     const mountsBefore = departmentField.mounts;
     fireEvent.click(pick);
     await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/departments/d-1'));
-    await waitFor(() => expect(screen.getByText('workspace.application.ownership.audienceDepartmentsOnly')).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'pick department' }).getAttribute('data-value')).toBe('d-1'));
     expect(departmentField.mounts).toBe(mountsBefore);
   });
 

@@ -242,6 +242,10 @@ const enumSections: EnumSectionConfig[] = [
 const listTitleKey = (id: ListId) => `pages.settings.lists.${id}.title`;
 const listDescriptionKey = (id: ListId) => `pages.settings.lists.${id}.description`;
 const listUsageKey = (id: ListId) => `pages.settings.lists.${id}.usage`;
+/** Lists whose purpose the rows do not show: their description goes in a tooltip beside the title. */
+const HINTED_LISTS: ReadonlySet<ListId> = new Set<ListId>([
+  'adminZones', 'domains', 'entities', 'hostingTypes', 'lifecycleStates', 'serverKinds', 'serverRoles', 'technologyFamilies',
+]);
 
 function TranslateButton({ label, onClick }: { label: string; onClick: () => void }) {
   const { t } = useTranslation('common');
@@ -321,12 +325,6 @@ const ConnectionTypesEditor = React.memo(function ConnectionTypesEditor({
 
   return (
     <Paper variant="outlined" sx={{ p: 2 }}>
-      <Stack spacing={0.5} sx={{ mb: 1 }}>
-        <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>{t(listTitleKey('connectionTypes'))}</Typography>
-        <Typography variant="body2" color="text.secondary">
-          {t(listDescriptionKey('connectionTypes'))}
-        </Typography>
-      </Stack>
       <TableContainer ref={containerRef as any} onScroll={onScroll} sx={{ maxHeight }}>
         <Table size="small" stickyHeader={useVirtual}>
           <TableHead>
@@ -442,12 +440,6 @@ const SubnetsEditor = React.memo(function SubnetsEditor({
 
   return (
     <Paper variant="outlined" sx={{ p: 2 }}>
-      <Stack spacing={0.5} sx={{ mb: 1 }}>
-        <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>{t(listTitleKey('subnets'))}</Typography>
-        <Typography variant="body2" color="text.secondary">
-          {t(listDescriptionKey('subnets'))}
-        </Typography>
-      </Stack>
       <TableContainer ref={containerRef as any} onScroll={onScroll} sx={{ maxHeight }}>
         <Table size="small" stickyHeader={useVirtual}>
           <TableHead>
@@ -603,12 +595,6 @@ export const DomainsEditor = React.memo(function DomainsEditor({ items, onChange
 
   return (
     <Paper variant="outlined" sx={{ p: 2 }}>
-      <Stack spacing={0.5} sx={{ mb: 1 }}>
-        <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>{t(listTitleKey('domains'))}</Typography>
-        <Typography variant="body2" color="text.secondary">
-          {t(listDescriptionKey('domains'))}
-        </Typography>
-      </Stack>
       <TableContainer ref={containerRef as any} onScroll={onScroll} sx={{ maxHeight }}>
         <Table size="small" stickyHeader={useVirtual}>
           <TableHead>
@@ -836,11 +822,7 @@ export const AdminZonesEditor = React.memo(function AdminZonesEditor({ items, on
 
   return (
     <Paper variant="outlined" sx={{ p: 2 }}>
-      <Stack spacing={0.5} sx={{ mb: 1 }}>
-        <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>{t(listTitleKey('adminZones'))}</Typography>
-        <Typography variant="body2" color="text.secondary">{t('pages.settings.lists.adminZones.orderHint')}</Typography>
-        <Typography variant="body2" color="text.secondary">{t(listDescriptionKey('adminZones'))}</Typography>
-      </Stack>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{t('pages.settings.lists.adminZones.orderHint')}</Typography>
       <TableContainer>
         {readOnly ? zoneTable : (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -1012,6 +994,7 @@ export function autosaveBlocked(state: SettingsState, id: ListId): boolean {
 
 function ItSettingsLists() {
   const { t } = useTranslation(['it', 'common']);
+  const listHint = (id: ListId) => (HINTED_LISTS.has(id) ? t(listDescriptionKey(id)) : undefined);
   const { hasLevel } = useAuth();
   const readOnly = !hasLevel('settings', 'admin');
   const queryClient = useQueryClient();
@@ -1121,9 +1104,6 @@ function ItSettingsLists() {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <Typography variant="body1" color="text.secondary">
-        {t('pages.settings.description')}
-      </Typography>
       {isError && <Alert severity="error">{t('pages.settings.loadFailed')}</Alert>}
       {state.successMessage && <Alert severity="success">{state.successMessage}</Alert>}
       {errorMessage && <Alert severity="error">{errorMessage}</Alert>}
@@ -1140,7 +1120,7 @@ function ItSettingsLists() {
             .sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }));
 
           return (
-            <SettingsGroup key={groupId} title={t(`pages.settings.groups.${groupId}.title`)} subtitle={t(`pages.settings.groups.${groupId}.subtitle`)} showDivider={groupIndex > 0}>
+            <SettingsGroup key={groupId} title={t(`pages.settings.groups.${groupId}.title`)} showDivider={groupIndex > 0}>
               {groupSections.map((section) => {
                 if (section.id === 'connectionTypes') {
                   return (
@@ -1171,7 +1151,7 @@ function ItSettingsLists() {
                 }
                 if (section.id === 'domains') {
                   return (
-                    <SettingsSection key={section.id} title={section.title} description={t(listUsageKey('domains'))}>
+                    <SettingsSection key={section.id} title={section.title} description={t(listUsageKey('domains'))} hint={listHint('domains')}>
                       <SettingsControls
                         onAdd={() => dispatch({ type: 'setDomains', items: [{ code: '', label: '', dns_suffix: '', deprecated: false, system: false, localId: makeLocalId('domain') }, ...state.domains] })}
                         saving={state.pending === 'domains' && submitting}
@@ -1191,7 +1171,7 @@ function ItSettingsLists() {
                 const namePlaceholder = exampleKey ? t(`pages.settings.placeholders.${exampleKey}`) : undefined;
 
                 return (
-                  <SettingsSection key={enumSection.id} title={enumSection.title} description={t(listUsageKey(enumSection.id))}>
+                  <SettingsSection key={enumSection.id} title={enumSection.title} description={t(listUsageKey(enumSection.id))} hint={listHint(enumSection.id)}>
                     <SettingsControls
                       onAdd={() => dispatch({ type: 'setEnum', id: enumSection.id, items: [{ ...makeEmptyEnumRow(enumSection.id), localId: makeLocalId(enumSection.id) }, ...items] })}
                       saving={saving}
@@ -1209,7 +1189,7 @@ function ItSettingsLists() {
                     ) : enumSection.kind === 'entity' ? (
                       <EntityEditor items={items as EntityItem[]} onChange={(next) => dispatch({ type: 'setEnum', id: enumSection.id, items: withLocalIds(next, enumSection.id) })} hideAddButton namePlaceholder={namePlaceholder} {...editorGuards(enumSection.id)} />
                     ) : (
-                      <EnumEditor title={enumSection.title} description={t(listDescriptionKey(enumSection.id))} items={items} onChange={(next) => dispatch({ type: 'setEnum', id: enumSection.id, items: withLocalIds(next, enumSection.id) })} hideAddButton namePlaceholder={namePlaceholder} forbidComma={enumSection.id === 'accessMethods'} {...editorGuards(enumSection.id)} />
+                      <EnumEditor items={items} onChange={(next) => dispatch({ type: 'setEnum', id: enumSection.id, items: withLocalIds(next, enumSection.id) })} hideAddButton namePlaceholder={namePlaceholder} forbidComma={enumSection.id === 'accessMethods'} {...editorGuards(enumSection.id)} />
                     )}
                   </SettingsSection>
                 );

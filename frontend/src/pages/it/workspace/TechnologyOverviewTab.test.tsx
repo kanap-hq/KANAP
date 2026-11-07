@@ -60,7 +60,7 @@ const ALERT_VERSIONS = {
 describe('TechnologyOverviewTab', () => {
   it('says the versions follow the catalog and marks the versions that come from it', () => {
     renderTab();
-    expect(screen.getByText('Versions and dates kept up to date from the catalog')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Versions and dates kept up to date from the catalog' })).toBeInTheDocument();
     const table = screen.getByRole('table', { name: 'Versions' });
     const rows = within(table).getAllByRole('row');
     const catalogRow = rows.find((row) => within(row).queryByText('19'))!;
@@ -71,7 +71,7 @@ describe('TechnologyOverviewTab', () => {
 
   it('shows no catalog line for a technology typed by hand', () => {
     renderTab({ ...TECHNOLOGY, catalog_key: null, versions: [{ ...TECHNOLOGY.versions[1] }] });
-    expect(screen.queryByText('Versions and dates kept up to date from the catalog')).not.toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: 'Versions and dates kept up to date from the catalog' })).not.toBeInTheDocument();
     expect(screen.queryByText('Catalog')).not.toBeInTheDocument();
   });
 
@@ -156,7 +156,7 @@ describe('TechnologyOverviewTab', () => {
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
     expect(screen.getByText(/publishes vulnerabilities per package/)).toBeInTheDocument();
-    expect(screen.getByText('Versions and dates kept up to date from the catalog')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Versions and dates kept up to date from the catalog' })).toBeInTheDocument();
   });
 
   it('names an unknown tracker from the editor, and a known one despite a trailing slash', () => {

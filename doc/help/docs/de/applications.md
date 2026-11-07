@@ -182,7 +182,7 @@ Wenn Sie einen Verantwortlichen, einen Geschäftsprozess, eine Suite oder einen 
 
 **Zielgruppe**:
 - Fügen Sie Zeilen für **Unternehmen / Abteilungen** hinzu, um aufzuzeichnen, wer diese Anwendung nutzt. Wählen Sie ein Unternehmen aus und schränken Sie optional auf bestimmte Abteilungen ein.
-- Eine Zeile unter der Zielgruppe sagt, was sie abdeckt. Ohne ausgewählte Abteilung ist die Zielgruppe das ganze Unternehmen. Mit ausgewählten Abteilungen sind es nur diese Abteilungen: Entfernen Sie sie, um wieder das ganze Unternehmen einzubeziehen.
+- Ohne ausgewählte Abteilung ist die Zielgruppe das ganze Unternehmen (das Feld zeigt **Alle Abteilungen**). Mit ausgewählten Abteilungen sind es nur diese Abteilungen: Entfernen Sie sie, um wieder das ganze Unternehmen einzubeziehen.
 - Eine Live-Zählung der **Benutzer** wird angezeigt.
 - **Berechnungsmethode**: **Abgeleitet** (aus der Zielgruppe basierend auf Stammdaten-Metriken IT-Benutzer / Mitarbeiterzahl berechnet) oder **Manuell** (eine einzelne Überschreibungszahl, die Sie eingeben).
 
