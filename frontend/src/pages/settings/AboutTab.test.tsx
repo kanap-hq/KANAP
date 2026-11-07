@@ -9,11 +9,13 @@ import SettingsPage from './SettingsPage';
 vi.mock('../../components/onboarding/AboutOnboardingLine', () => ({ default: () => null }));
 vi.mock('react-i18next', async () => {
   const { default: settings } = await import('../../locales/en/settings.json');
-  // One stable `t` that renders the English text of settings keys, with interpolation; other keys render as themselves.
+  const { PRODUCT_NAME } = await import('../../config/product');
+  // One stable `t` that renders the English text of settings keys, with interpolation (`{{product}}` is a
+  // default variable of the app's i18n); other keys render as themselves.
   const t = (key: string, options?: Record<string, string>) => {
     const value = key.split('.').reduce<unknown>((node, part) => (node as Record<string, unknown> | undefined)?.[part], settings);
     if (typeof value !== 'string') return key;
-    return value.replace(/\{\{(\w+)\}\}/g, (_, name: string) => options?.[name] ?? '');
+    return value.replace(/\{\{(\w+)\}\}/g, (_, name: string) => options?.[name] ?? (name === 'product' ? PRODUCT_NAME : ''));
   };
   return { useTranslation: () => ({ t, i18n: { language: 'en' } }) };
 });
