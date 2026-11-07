@@ -92,7 +92,7 @@
     }
   },
   "about": {
-    "title": "Acerca de KANAP",
+    "title": "Acerca de {{product}}",
     "version": "Versión {{version}}",
     "deploymentCloud": "Implementación: nube",
     "deploymentOnPremise": "Implementación: local",

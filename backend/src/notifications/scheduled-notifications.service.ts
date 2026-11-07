@@ -13,7 +13,8 @@ import { buildWeeklyReviewEmail } from './notification-templates';
 import { APP_URL_NOT_CONFIGURED_MESSAGE, resolveConfiguredAppBaseUrl, resolveNotificationBaseUrl } from '../common/url';
 import { ACTIVE_TASK_STATUSES } from '../tasks/task.entity';
 import { StorageService } from '../common/storage/storage.service';
-import { type EmailBranding, resolveEmailBranding, getDefaultEmailBranding } from '../email/email-branding';
+import { type EmailBranding, loadTenantEmailBranding } from '../email/email-branding';
+import { workspaceEmailSender } from '../email/email-config';
 import { ScheduledTasksService } from '../admin/scheduled-tasks/scheduled-tasks.service';
 import { resolveEmailLocale } from '../i18n/email-i18n';
 import { calendarDaysUntil, isExpiryReminderDay, utcDateYmd } from './expiry-reminder-schedule';
@@ -111,17 +112,7 @@ export class ScheduledNotificationsService implements OnModuleInit {
   }
 
   private async resolveBranding(tenantId: string): Promise<EmailBranding> {
-    try {
-      const rows = await this.dataSource.query(
-        `SELECT branding FROM tenants WHERE id = $1`,
-        [tenantId],
-      );
-      const raw = rows[0]?.branding;
-      return await resolveEmailBranding(raw, this.storage);
-    } catch (error) {
-      this.logger.warn(`Failed to resolve email branding for tenant ${tenantId}: ${error}`);
-      return getDefaultEmailBranding();
-    }
+    return loadTenantEmailBranding((sql, values) => this.dataSource.query(sql, values), this.storage, tenantId);
   }
 
   // ============================================
@@ -844,12 +835,14 @@ export class ScheduledNotificationsService implements OnModuleInit {
     });
 
     try {
+      const from = workspaceEmailSender(branding.organisationName);
       await this.emailService.send({
         to: user.email,
         subject: content.subject,
         html: content.html,
         text: content.text,
         attachments: content.attachments,
+        ...(from ? { from } : {}),
       });
       return true;
     } catch (error) {

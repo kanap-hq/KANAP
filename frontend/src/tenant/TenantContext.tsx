@@ -2,6 +2,8 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 import { Box, CircularProgress, Paper, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import api from '../api';
+import { PRODUCT_NAME } from '../config/product';
+import { setWorkspaceTitle } from './workspaceTitle';
 
 const DEFAULT_MARKETING_URL = 'https://www.kanap.net';
 const DEFAULT_API_BASE = '/api';
@@ -36,6 +38,11 @@ export type TenantContextValue = {
   isPlatformHost: boolean;
   tenantSlug: string | null;
   tenantName: string | null;
+  /**
+   * The name that identifies the workspace (header, sign-in, tab title): its organisation name,
+   * else the product name.
+   */
+  organisationName: string;
   logoUrl: string | null;
   /** The logo for dark mode, when the tenant has one. */
   darkLogoUrl: string | null;
@@ -54,6 +61,7 @@ type State =
     status: 'ready';
     slug: string | null;
     name: string | null;
+    displayName: string | null;
     logoPath: string | null;
     darkLogoPath: string | null;
     logoVersion: number;
@@ -84,6 +92,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
         status: 'ready',
         slug: data.slug ?? null,
         name: data.name ?? null,
+        displayName: typeof data.displayName === 'string' && data.displayName.trim() ? data.displayName.trim() : null,
         logoPath: typeof data.logoPath === 'string' ? data.logoPath : null,
         darkLogoPath: typeof data.darkLogoPath === 'string' ? data.darkLogoPath : null,
         logoVersion: normalizeLogoVersion(data.logoVersion),
@@ -101,6 +110,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
         status: 'ready',
         slug: null,
         name: null,
+        displayName: null,
         logoPath: null,
         darkLogoPath: null,
         logoVersion: 0,
@@ -122,6 +132,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
         isPlatformHost: true,
         tenantSlug: null,
         tenantName: null,
+        organisationName: PRODUCT_NAME,
         logoUrl: null,
         darkLogoUrl: null,
         useLogoInDark: true,
@@ -138,6 +149,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
         isPlatformHost: false,
         tenantSlug: state.slug,
         tenantName: state.name,
+        organisationName: state.displayName ?? PRODUCT_NAME,
         logoUrl: toUrl(state.logoPath),
         darkLogoUrl: toUrl(state.darkLogoPath),
         useLogoInDark: state.useLogoInDark,
@@ -150,6 +162,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       isPlatformHost: false,
       tenantSlug: null,
       tenantName: null,
+      organisationName: PRODUCT_NAME,
       logoUrl: null,
       darkLogoUrl: null,
       useLogoInDark: true,
@@ -171,6 +184,10 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       cancelled = true;
     };
   }, [loadTenantInfo]);
+
+  useEffect(() => {
+    setWorkspaceTitle(value.organisationName);
+  }, [value.organisationName]);
 
   useEffect(() => {
     if (state.status === 'missing') {

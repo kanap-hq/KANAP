@@ -28,6 +28,7 @@ import { checkPoolBudget, poolMaxFloorWarning, readPoolMax } from './common/db-p
 import { DemoDataService } from './demo-data/demo-data.service';
 import { applyHttpMiddleware, applyTenancyAndPipeline } from './http-app';
 import { runDataAccessStartup } from './data-access/data-access-availability';
+import { DEFAULT_ORGANISATION_NAME } from './config/product';
 
 /**
  * Environment checks (common/env.ts): throws where the API refuses to start (a DEPLOYMENT_MODE
@@ -125,7 +126,7 @@ async function bootstrap() {
     // Single-tenant auto-provisioning: create tenant + admin + subscription on first boot
     if (Features.SINGLE_TENANT) {
       const slug = (process.env.DEFAULT_TENANT_SLUG || 'default').trim();
-      const name = (process.env.DEFAULT_TENANT_NAME || 'My Organization').trim();
+      const name = (process.env.DEFAULT_TENANT_NAME || DEFAULT_ORGANISATION_NAME).trim();
       // The language of the recommended dimensions the tenant starts with (en, fr, de, es).
       const language = defaultTenantLanguage();
 

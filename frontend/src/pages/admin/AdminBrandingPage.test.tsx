@@ -82,7 +82,7 @@ describe('AdminBrandingPage organisation name', () => {
 
   it('saves the organisation name and refreshes the header', async () => {
     renderPage();
-    const field = await screen.findByRole('textbox', { name: 'Organization name' });
+    const field = await screen.findByRole('textbox', { name: 'Workspace name' });
     expect(field).toHaveValue('Acme');
     expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
 
@@ -98,7 +98,7 @@ describe('AdminBrandingPage organisation name', () => {
 
   it('refuses an empty name before saving', async () => {
     renderPage();
-    const field = await screen.findByRole('textbox', { name: 'Organization name' });
+    const field = await screen.findByRole('textbox', { name: 'Workspace name' });
     fireEvent.change(field, { target: { value: '   ' } });
     expect(screen.getByText('Use 1 to 120 characters.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
@@ -133,7 +133,7 @@ describe('AdminBrandingPage dark mode logo', () => {
 
   it('uploads a dark mode logo on its own, and drops the switch once there is one', async () => {
     renderPage();
-    await screen.findByRole('textbox', { name: 'Organization name' });
+    await screen.findByRole('textbox', { name: 'Workspace name' });
     expect(screen.getByRole('checkbox', { name: 'Use the light mode logo' })).toBeChecked();
 
     const file = new File(['logo'], 'dark.png', { type: 'image/png' });
@@ -153,7 +153,7 @@ describe('AdminBrandingPage dark mode logo', () => {
   it('removes only the dark mode logo', async () => {
     stored = { has_logo: true, has_dark_logo: true };
     renderPage();
-    await screen.findByRole('textbox', { name: 'Organization name' });
+    await screen.findByRole('textbox', { name: 'Workspace name' });
     const removeButtons = screen.getAllByRole('button', { name: 'Remove logo' });
     expect(removeButtons).toHaveLength(2);
 

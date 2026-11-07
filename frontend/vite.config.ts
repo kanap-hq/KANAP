@@ -1,12 +1,17 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { PRODUCT_NAME } from './src/config/product';
 
 /** Matches the modules of the listed packages under node_modules, with either path separator. */
 const packages = (...names: string[]) =>
   new RegExp(`[\\\\/]node_modules[\\\\/](${names.map((name) => name.replace('/', '[\\\\/]')).join('|')})[\\\\/]`);
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    // index.html names the product before the app loads and sets the workspace's own title.
+    { name: 'product-name', transformIndexHtml: (html) => html.replaceAll('%PRODUCT_NAME%', PRODUCT_NAME) },
+  ],
   build: {
     rolldownOptions: {
       output: {

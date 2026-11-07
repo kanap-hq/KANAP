@@ -6,6 +6,7 @@ import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.serv
 import { isIncidentReviewSystemTemplate } from '../../knowledge/integrated-document.constants';
 import { incidentRef } from './incidents-base.service';
 import { IncidentRecordOpts, IncidentRecordService } from './incident-record.service';
+import { PRODUCT_NAME } from '../../config/product';
 
 export const REPORT_LANGS = ['en', 'fr', 'de', 'es'] as const;
 export type ReportLang = (typeof REPORT_LANGS)[number];
@@ -191,7 +192,7 @@ const LABELS: Record<ReportLang, ReportLabels> = {
     filename: 'File name',
     size: 'Size',
     uploaded: 'Uploaded',
-    generatedOn: 'Generated on {date} by KANAP',
+    generatedOn: `Generated on {date} by ${PRODUCT_NAME}`,
   },
   fr: {
     severity: { critical: 'Critique', major: 'Majeure', minor: 'Mineure', low: 'Faible' },
@@ -253,7 +254,7 @@ const LABELS: Record<ReportLang, ReportLabels> = {
     filename: 'Nom du fichier',
     size: 'Taille',
     uploaded: 'Téléversé le',
-    generatedOn: 'Généré le {date} par KANAP',
+    generatedOn: `Généré le {date} par ${PRODUCT_NAME}`,
   },
   de: {
     severity: { critical: 'Kritisch', major: 'Hoch', minor: 'Mittel', low: 'Niedrig' },
@@ -315,7 +316,7 @@ const LABELS: Record<ReportLang, ReportLabels> = {
     filename: 'Dateiname',
     size: 'Größe',
     uploaded: 'Hochgeladen',
-    generatedOn: 'Erzeugt am {date} von KANAP',
+    generatedOn: `Erzeugt am {date} von ${PRODUCT_NAME}`,
   },
   es: {
     severity: { critical: 'Crítica', major: 'Alta', minor: 'Media', low: 'Baja' },
@@ -377,7 +378,7 @@ const LABELS: Record<ReportLang, ReportLabels> = {
     filename: 'Nombre de archivo',
     size: 'Tamaño',
     uploaded: 'Subido',
-    generatedOn: 'Generado el {date} por KANAP',
+    generatedOn: `Generado el {date} por ${PRODUCT_NAME}`,
   },
 };
 

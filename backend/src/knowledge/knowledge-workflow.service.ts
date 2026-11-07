@@ -153,12 +153,12 @@ export class KnowledgeWorkflowService {
       document.id,
       [workflow.requested_by, actedByUserId],
     );
-    await this.knowledge.sendWorkflowEmail(recipients, (locale) => buildKnowledgeWorkflowApprovedEmail({
+    await this.knowledge.sendWorkflowEmail(recipients, (locale, branding) => buildKnowledgeWorkflowApprovedEmail({
       documentRef: `DOC-${document.item_number}`,
       documentTitle: document.title,
       documentUrl,
-      locale,
-    }));
+      branding,      locale,
+    }), document.tenant_id);
   }
 
   async requestWorkflowReview(
@@ -258,14 +258,14 @@ export class KnowledgeWorkflowService {
     const requesterName = await this.knowledge.getUserDisplayName(userId, manager);
     const stage = workflowStatus === 'pending_review' ? 'reviewer' : 'approver';
     const recipients = await this.knowledge.getWorkflowParticipantEmails(manager, savedWorkflow.id, stage);
-    await this.knowledge.sendWorkflowEmail(recipients, (locale) => buildKnowledgeWorkflowRequestedEmail({
+    await this.knowledge.sendWorkflowEmail(recipients, (locale, branding) => buildKnowledgeWorkflowRequestedEmail({
       documentRef: `DOC-${document.item_number}`,
       documentTitle: document.title,
       documentUrl,
       requesterName,
       stage: stage === 'reviewer' ? 'review' : 'approval',
-      locale,
-    }));
+      branding,      locale,
+    }), document.tenant_id);
 
     return this.knowledge.get(documentId, { manager, userId });
   }
@@ -348,14 +348,14 @@ export class KnowledgeWorkflowService {
         const documentUrl = this.knowledge.buildKnowledgeDocumentUrl(appBaseUrl, document.item_number);
         const actorName = await this.knowledge.getUserDisplayName(userId, manager);
         const recipients = await this.knowledge.getWorkflowParticipantEmails(manager, workflow.id, 'approver');
-        await this.knowledge.sendWorkflowEmail(recipients, (locale) => buildKnowledgeWorkflowRequestedEmail({
+        await this.knowledge.sendWorkflowEmail(recipients, (locale, branding) => buildKnowledgeWorkflowRequestedEmail({
           documentRef: `DOC-${document.item_number}`,
           documentTitle: document.title,
           documentUrl,
           requesterName: actorName,
           stage: 'approval',
-          locale,
-        }));
+          branding,          locale,
+        }), document.tenant_id);
         return this.knowledge.get(documentId, { manager, userId });
       }
     }
@@ -427,14 +427,14 @@ export class KnowledgeWorkflowService {
       document.id,
       [workflow.requested_by],
     );
-    await this.knowledge.sendWorkflowEmail(recipients, (locale) => buildKnowledgeWorkflowChangesRequestedEmail({
+    await this.knowledge.sendWorkflowEmail(recipients, (locale, branding) => buildKnowledgeWorkflowChangesRequestedEmail({
       documentRef: `DOC-${document.item_number}`,
       documentTitle: document.title,
       documentUrl,
       actorName,
       comment,
-      locale,
-    }));
+      branding,      locale,
+    }), document.tenant_id);
 
     return this.knowledge.get(documentId, { manager, userId });
   }
@@ -508,13 +508,13 @@ export class KnowledgeWorkflowService {
 
     const documentUrl = this.knowledge.buildKnowledgeDocumentUrl(appBaseUrl, document.item_number);
     const actorName = await this.knowledge.getUserDisplayName(userId, manager);
-    await this.knowledge.sendWorkflowEmail(Array.from(recipients.values()), (locale) => buildKnowledgeWorkflowCancelledEmail({
+    await this.knowledge.sendWorkflowEmail(Array.from(recipients.values()), (locale, branding) => buildKnowledgeWorkflowCancelledEmail({
       documentRef: `DOC-${document.item_number}`,
       documentTitle: document.title,
       documentUrl,
       actorName,
-      locale,
-    }));
+      branding,      locale,
+    }), document.tenant_id);
 
     return this.knowledge.get(documentId, { manager, userId });
   }

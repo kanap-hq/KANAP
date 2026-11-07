@@ -38,6 +38,7 @@ import type { TaskStatus } from './task.constants';
 import { useTranslation } from 'react-i18next';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { useTenant } from '../../tenant/TenantContext';
+import { useRecordTitle } from '../../tenant/workspaceTitle';
 import { unsavedConfirm, useKanapDialogs } from '../../components/design';
 import {
   PROJECT_ORIGIN_TABS,
@@ -297,16 +298,7 @@ export default function TaskWorkspacePage() {
   }, [taskMatchesCurrentRoute, task?.id, task?.title, task?.item_number, addToRecent]);
 
   // Browser tab title
-  React.useEffect(() => {
-    if (taskMatchesCurrentRoute && task?.item_number && task?.title) {
-      document.title = t('portfolio:workspace.task.browserTitle', {
-        ref: `T-${task.item_number}`,
-        title: task.title,
-        name: task.title,
-      });
-    }
-    return () => { document.title = 'KANAP'; };
-  }, [taskMatchesCurrentRoute, task?.item_number, task?.title, t]);
+  useRecordTitle(taskMatchesCurrentRoute && task?.item_number && task?.title ? `T-${task.item_number} ${task.title}` : null);
 
   // Swap UUID with item ref in URL bar
   React.useEffect(() => {

@@ -1737,7 +1737,7 @@
     "colors": {
       "darkHelper": "Utilizado en modo oscuro. Si está vacío, se reutiliza el color del modo claro.",
       "darkModePrimary": "Color primario modo oscuro",
-      "description": "Establezca un color para el modo claro y otro para el modo oscuro. Deje vacío para mantener los valores predeterminados de KANAP.",
+      "description": "Establezca un color para el modo claro y otro para el modo oscuro. Deje vacío para mantener los colores predeterminados.",
       "lightHelper": "Utilizado para la barra de la aplicación, botones principales y enlaces en modo claro.",
       "lightModePrimary": "Color primario modo claro",
       "lowDarkContrast": "El contraste en modo oscuro es bajo ({{ratio}}:1 vs. texto {{tone}}{{fallback}}). ",
@@ -1754,8 +1754,8 @@
       "reset": "¿Restablecer la personalización a la configuración predeterminada de KANAP? Se eliminarán el logo y los colores personalizados."
     },
     "fields": {
-      "organizationName": "Nombre de la organización",
-      "organizationNameHelper": "Se muestra con el logotipo, en Acerca de, en la página de consentimiento y para el asistente. La dirección del espacio de trabajo sigue igual.",
+      "organizationName": "Nombre del espacio de trabajo",
+      "organizationNameHelper": "Se muestra en el encabezado cuando no hay logotipo, en la pestaña del navegador, en los correos electrónicos y cuando se conecta una herramienta de IA. La dirección del espacio de trabajo sigue igual.",
       "organizationNamePlaceholder": "p. ej., Northwind",
       "useLightLogoInDark": "Usar el logo del modo claro"
     },

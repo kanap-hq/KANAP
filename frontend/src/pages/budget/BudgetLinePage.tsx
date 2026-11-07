@@ -66,6 +66,7 @@ import type { ItemAnalyticsValue } from '../../services/analytics';
 import type { CostCenterNode } from '../../services/costCenters';
 import { useCostCenterNode } from '../../hooks/useCostCenterTree';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
+import { useRecordTitle } from '../../tenant/workspaceTitle';
 
 /** The list this workspace belongs to (its saved list contexts). */
 
@@ -1072,12 +1073,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     : [];
 
   const reference = data?.item_number ? formatItemRef('budget', data.item_number) : null;
-  React.useEffect(() => {
-    if (!isCreate && !stale && reference && data?.product_name) {
-      document.title = `${reference} · ${data.product_name} | KANAP`;
-    }
-    return () => { document.title = 'KANAP'; };
-  }, [isCreate, stale, reference, data?.product_name]);
+  useRecordTitle(!isCreate && !stale && reference && data?.product_name ? `${reference} · ${data.product_name}` : null);
   const { addToRecent } = useRecentlyViewed();
   React.useEffect(() => {
     if (!isCreate && !stale && data?.id && data?.product_name) addToRecent(config.taskType, data.id, data.product_name, reference || undefined);

@@ -379,6 +379,7 @@ export class AuthController {
         to: input.to,
         resetUrl,
         expiresInMinutes: this.auth.getPasswordResetExpirationMinutes(),
+        tenantId,
         locale: input.locale,
       });
     } catch (error) {

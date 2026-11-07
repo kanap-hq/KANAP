@@ -1,6 +1,6 @@
 # Personnalisation
 
-Utilisez la page Personnalisation pour appliquer l'identité de votre entreprise dans KANAP. Vous y définissez le nom de l'organisation, le logo et les couleurs principales, et le changement est visible pour chaque utilisateur de votre tenant lors du prochain rechargement de la page.
+Utilisez la page Personnalisation pour appliquer l'identité de votre entreprise dans KANAP. Vous y définissez le nom de l'espace de travail, le logo et les couleurs principales, et le changement est visible pour chaque utilisateur de votre tenant lors du prochain rechargement de la page.
 
 ## Où la trouver
 
@@ -13,10 +13,10 @@ Les modifications s'appliquent uniquement à votre tenant courant.
 
 ## Ce que vous pouvez personnaliser
 
-La page comporte trois cartes : **Nom de l'organisation**, **Logo** et **Couleurs principales**. Le logo et les couleurs sont optionnels. Sans rien défini, KANAP affiche son en-tête texte-et-icône par défaut et les couleurs de thème par défaut.
+La page comporte trois cartes : **Nom de l'espace de travail**, **Logo** et **Couleurs principales**. Le logo et les couleurs sont optionnels. Sans logo, l'en-tête affiche le nom de l'espace de travail. Sans couleurs personnalisées, KANAP utilise les couleurs de thème par défaut.
 
-- **Nom de l'organisation**
-  - Le nom affiché avec le logo, dans la fenêtre À propos, sur la page de consentement et pour l'assistant
+- **Nom de l'espace de travail**
+  - Identifie votre espace de travail dans l'en-tête, l'onglet du navigateur, les e-mails et les outils d'IA (voir [Où le nom de l'espace de travail apparaît](#ou-le-nom-de-lespace-de-travail-apparait))
   - De 1 à 120 caractères
   - L'adresse de l'espace de travail reste la même
 - **Logo**
@@ -28,12 +28,22 @@ La page comporte trois cartes : **Nom de l'organisation**, **Logo** et **Couleur
   - Une couleur principale pour le **mode sombre**
   - Utilisée par la barre d'application, les boutons principaux et les liens
 
-## Nom de l'organisation
+## Nom de l'espace de travail
 
 1. Saisissez le nom.
 2. Cliquez sur **Enregistrer les modifications**.
 
 **Réinitialiser par défaut** laisse le nom tel quel. Cette action retire les logos et les couleurs personnalisées.
+
+## Où le nom de l'espace de travail apparaît
+
+- **En-tête de l'application et page de connexion** : le nom s'affiche quand il n'y a pas de logo.
+- **Onglet du navigateur** : le titre de l'onglet est le nom. Une page de projet, de demande, de tâche ou de ligne budgétaire affiche d'abord l'enregistrement, par exemple `PRJ-3 Nouvel ERP | Acme`.
+- **Application installée** : quand quelqu'un installe KANAP sur un téléphone ou un ordinateur, l'application prend le nom.
+- **E-mails** : l'en-tête affiche le nom en l'absence de logo. Les objets des e-mails de réinitialisation du mot de passe, d'invitation, de revue hebdomadaire et de réinitialisation de l'espace de travail portent le nom, par exemple « Réinitialisez votre mot de passe Acme ». Le bouton de la revue hebdomadaire indique « Ouvrir Acme ». Dans le cloud, le nom de l'expéditeur est « Acme via KANAP ». Sur site, l'expéditeur est celui défini dans l'installation (`SMTP_FROM`).
+- **Outils d'IA** : quand un outil d'IA (Claude, ChatGPT ou d'autres) se connecte par le serveur MCP, la page d'autorisation affiche le nom, et l'outil l'affiche comme nom du serveur.
+
+Sans nom défini, ou avec le nom par défaut sur site « My Organization », ces emplacements affichent « KANAP ».
 
 ## Configuration du logo
 
@@ -54,12 +64,12 @@ La carte montre un aperçu d'en-tête clair et un aperçu d'en-tête sombre, cha
 
 1. Sous l'aperçu clair, cliquez sur **Téléverser le logo** et choisissez votre fichier.
 2. Si votre logo se lit mal sur un fond sombre (texte foncé, par exemple), téléversez une seconde version sous l'aperçu sombre.
-3. Sans logo pour le mode sombre, **Utiliser le logo du mode clair** décide de ce qu'affiche le mode sombre : le logo du mode clair quand il est activé, l'identité texte par défaut quand il est désactivé.
+3. Sans logo pour le mode sombre, **Utiliser le logo du mode clair** décide de ce qu'affiche le mode sombre : le logo du mode clair quand il est activé, le nom de l'espace de travail en texte quand il est désactivé.
 4. Vérifiez les deux aperçus, puis cliquez sur **Enregistrer les modifications** pour publier.
 
 Pour supprimer un logo, cliquez sur **Supprimer le logo** sous son aperçu. L'autre logo reste.
 
-Le mode sombre affiche le logo du mode sombre quand il existe. Le mode clair affiche toujours le logo du mode clair, ou l'identité texte par défaut s'il n'y en a pas. Les e-mails utilisent toujours le logo du mode clair, car leur fond est clair.
+Le mode sombre affiche le logo du mode sombre quand il existe. Le mode clair affiche toujours le logo du mode clair, ou le nom de l'espace de travail en texte s'il n'y en a pas. Les e-mails utilisent toujours le logo du mode clair, car leur fond est clair.
 
 ## Configuration des couleurs principales
 
@@ -87,9 +97,9 @@ L'avertissement est informatif (vous pouvez quand même enregistrer), mais un fa
 
 Trois actions au bas de la page contrôlent la persistance :
 
-- **Enregistrer les modifications** : enregistre le nom de l'organisation, les logos sélectionnés et les valeurs de couleur. Désactivé tant qu'il n'y a pas de modifications en attente, que le nom est vide ou dépasse 120 caractères, ou qu'une saisie hexadécimale est invalide.
+- **Enregistrer les modifications** : enregistre le nom de l'espace de travail, les logos sélectionnés et les valeurs de couleur. Désactivé tant qu'il n'y a pas de modifications en attente, que le nom est vide ou dépasse 120 caractères, ou qu'une saisie hexadécimale est invalide.
 - **Annuler** : annule toute modification non enregistrée sur la page (n'affecte pas ce qui est déjà enregistré).
-- **Réinitialiser par défaut** : supprime les deux logos enregistrés et efface toutes les couleurs personnalisées. Le nom de l'organisation reste. Demande confirmation avant exécution.
+- **Réinitialiser par défaut** : supprime les deux logos enregistrés et efface toutes les couleurs personnalisées. Le nom de l'espace de travail reste. Demande confirmation avant exécution.
 
 Une petite légende sous les actions affiche le compteur de **version du logo**, qui s'incrémente à chaque téléversement ou suppression d'un logo. C'est principalement une indication que les caches du navigateur seront rafraîchis.
 

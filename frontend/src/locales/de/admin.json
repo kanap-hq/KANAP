@@ -1737,7 +1737,7 @@
     "colors": {
       "darkHelper": "Wird im Dunkelmodus verwendet. Wenn leer, wird die Hellmodus-Farbe wiederverwendet.",
       "darkModePrimary": "Primärfarbe Dunkelmodus",
-      "description": "Legen Sie eine Farbe für den Hellmodus und eine für den Dunkelmodus fest. Leer lassen, um die KANAP-Standardwerte beizubehalten.",
+      "description": "Legen Sie eine Farbe für den Hellmodus und eine für den Dunkelmodus fest. Leer lassen, um die Standardfarben beizubehalten.",
       "lightHelper": "Wird für die App-Leiste, Primärschaltflächen und Links im Hellmodus verwendet.",
       "lightModePrimary": "Primärfarbe Hellmodus",
       "lowDarkContrast": "Dunkelmodus-Kontrast ist niedrig ({{ratio}}:1 vs. {{tone}} Text{{fallback}}). ",
@@ -1754,8 +1754,8 @@
       "reset": "Branding auf KANAP-Standardeinstellungen zurücksetzen? Logo und benutzerdefinierte Farben werden entfernt."
     },
     "fields": {
-      "organizationName": "Name der Organisation",
-      "organizationNameHelper": "Erscheint beim Logo, im Fenster Info, auf der Einwilligungsseite und für den Assistenten. Die Adresse des Arbeitsbereichs bleibt unverändert.",
+      "organizationName": "Name des Arbeitsbereichs",
+      "organizationNameHelper": "Erscheint in der Kopfzeile, wenn kein Logo vorhanden ist, im Browser-Tab, in E-Mails und wenn sich ein KI-Werkzeug verbindet. Die Adresse des Arbeitsbereichs bleibt unverändert.",
       "organizationNamePlaceholder": "z. B. Northwind",
       "useLightLogoInDark": "Logo des Hellmodus verwenden"
     },

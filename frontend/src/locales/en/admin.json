@@ -1737,7 +1737,7 @@
     "colors": {
       "darkHelper": "Used in dark mode. If empty, light mode color is reused.",
       "darkModePrimary": "Dark mode primary",
-      "description": "Set one color for light mode and one for dark mode. Leave blank to keep Kanap defaults.",
+      "description": "Set one color for light mode and one for dark mode. Leave blank to keep the default colors.",
       "lightHelper": "Used for app bar, primary buttons, and links in light mode.",
       "lightModePrimary": "Light mode primary",
       "lowDarkContrast": "Dark mode contrast is low ({{ratio}}:1 vs {{tone}} text{{fallback}}). ",
@@ -1754,8 +1754,8 @@
       "reset": "Reset branding to default kanap settings? This removes logo and custom colors."
     },
     "fields": {
-      "organizationName": "Organization name",
-      "organizationNameHelper": "Shown with the logo, in About, on the consent page, and to the assistant. The workspace address stays as it is.",
+      "organizationName": "Workspace name",
+      "organizationNameHelper": "Shown in the header when there is no logo, in the browser tab, in e-mails, and when an AI tool connects. The workspace address stays as it is.",
       "organizationNamePlaceholder": "e.g., Northwind",
       "useLightLogoInDark": "Use the light mode logo"
     },

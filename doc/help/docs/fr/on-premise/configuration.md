@@ -25,7 +25,7 @@ docker compose -f infra/compose.onprem.yml up -d api
 | Variable              | Requis   | Défaut            | Description                                                     |
 | --------------------- | -------- | ----------------- | --------------------------------------------------------------- |
 | `DEFAULT_TENANT_SLUG` | Non      | `default`         | Identifiant interne du tenant (compatible URL, en minuscules)   |
-| `DEFAULT_TENANT_NAME` | Non      | `My Organization` | Le nom de votre organisation : le texte alternatif du logo, et le nom qu'utilise l'assistant IA |
+| `DEFAULT_TENANT_NAME` | Non      | `My Organization` | Le nom initial de l'espace de travail, affiché dans l'en-tête, l'onglet du navigateur et les e-mails ([où il apparaît](../branding.md#ou-le-nom-de-lespace-de-travail-apparait)) |
 | `DEFAULT_TENANT_LANGUAGE` | Non | `en` | La langue des dimensions analytiques de départ de l'espace de travail : `en`, `fr`, `de` ou `es` |
 
 Au premier démarrage, KANAP crée un tenant avec ces valeurs. Les valeurs par défaut conviennent à la plupart des déploiements. Une nouvelle installation reçoit aussi le plan comptable IFRS par défaut, défini comme plan par défaut et plan de consolidation (la mise à jour d'une installation existante ne l'ajoute pas).
@@ -33,7 +33,7 @@ Au premier démarrage, KANAP crée un tenant avec ces valeurs. Les valeurs par d
 Définissez-les avant le premier démarrage :
 
 - Modifier `DEFAULT_TENANT_SLUG` par la suite fait créer à KANAP un second espace de travail, vide, et c'est celui-là qui est servi. Le premier espace de travail reste dans la base de données, hors d'atteinte.
-- Modifier `DEFAULT_TENANT_NAME` par la suite n'a aucun effet. Un administrateur renomme l'organisation dans **Administration → Personnalisation**. L'adresse de l'espace de travail reste la même.
+- Modifier `DEFAULT_TENANT_NAME` par la suite n'a aucun effet. Un administrateur modifie le nom de l'espace de travail dans **Administration → Personnalisation**. L'adresse de l'espace de travail reste la même.
 - Modifier `DEFAULT_TENANT_LANGUAGE` par la suite n'a aucun effet : les dimensions gardent leurs noms. Vous pouvez les renommer dans **Données de référence > Dimensions analytiques**.
 
 Pour donner à KANAP l'apparence de votre organisation, définissez son nom, son logo et ses couleurs dans **Administration → Personnalisation**.

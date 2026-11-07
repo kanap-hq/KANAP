@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { useThemeMode } from '../config/ThemeContext';
 import { useTenant } from '../tenant/TenantContext';
 import { headerLogoUrl } from '../tenant/headerLogo';
+import { PRODUCT_NAME } from '../config/product';
 
 interface AuthFrameProps {
   children: ReactNode;
@@ -16,7 +17,7 @@ export default function AuthFrame({ children }: AuthFrameProps) {
   const { t } = useTranslation(['nav', 'settings']);
   const { mode, resolvedMode, setMode } = useThemeMode();
   const tenant = useTenant();
-  const { tenantName } = tenant;
+  const { organisationName } = tenant;
 
   const themeModeLabel = t(`settings:appearance.${mode === 'system' ? 'system' : mode === 'dark' ? 'dark' : 'light'}`);
   const themeModeIcon = mode === 'dark'
@@ -45,26 +46,26 @@ export default function AuthFrame({ children }: AuthFrameProps) {
             justifyContent: 'space-between',
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
             {showLogo ? (
               <Box
                 component="img"
                 src={logoUrl || undefined}
-                alt={tenantName || 'Logo'}
+                alt={organisationName}
                 sx={{ height: 32, maxWidth: 140, objectFit: 'contain' }}
               />
             ) : (
-              <Box
-                component="img"
-                src="/icon-192.png"
-                alt="KANAP"
-                sx={{ width: 32, height: 32 }}
-              />
-            )}
-            {!showLogo && (
-              <Typography variant="h6" fontWeight={500} color="inherit">
-                KANAP
-              </Typography>
+              <>
+                <Box
+                  component="img"
+                  src="/icon-192.png"
+                  alt={PRODUCT_NAME}
+                  sx={{ width: 32, height: 32, flexShrink: 0 }}
+                />
+                <Typography variant="h6" fontWeight={500} color="inherit" noWrap title={organisationName}>
+                  {organisationName}
+                </Typography>
+              </>
             )}
           </Box>
 

@@ -19,13 +19,14 @@ Metadata
 The app is configured as a Progressive Web App for a native-like experience when installed on desktop or mobile devices.
 
 **Key files:**
-- `frontend/public/manifest.json` - Web app manifest with `display: standalone` to hide the browser address bar
+- `GET /api/public/manifest.webmanifest` - Web app manifest served by the API per workspace (`backend/src/public/web-app-manifest.ts`): the installed app takes the organisation name, with `display: standalone` to hide the browser address bar
 - `frontend/index.html` - Meta tags for theme color, iOS support, and manifest link
+- `frontend/src/tenant/workspaceTitle.ts` - The tab title and the iOS app name follow the organisation name (`setWorkspaceTitle`); record pages title themselves `<record> | <organisation>` (`useRecordTitle`)
 - `frontend/public/icon-192.png`, `icon-512.png`, `apple-touch-icon.png` - App icons
 
 **Manifest settings:**
 - `display: standalone` - Launches without browser UI (address bar hidden)
-- `theme_color: #1976d2` - Status bar color matching MUI primary blue
+- `theme_color: #1A6B7A` - Status bar color matching the default primary color
 - `background_color: #ffffff` - Splash screen background
 - `orientation: any` - Supports portrait and landscape
 

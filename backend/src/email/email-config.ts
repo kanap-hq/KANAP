@@ -1,7 +1,8 @@
 import { parseDeploymentMode } from '../common/deployment-mode';
 import { parseBoolean } from '../common/env';
+import { PRODUCT_NAME } from '../config/product';
 
-const DEFAULT_RESEND_FROM = 'KANAP <no-reply@kanap.net>';
+const DEFAULT_RESEND_FROM = `${PRODUCT_NAME} <no-reply@kanap.net>`;
 
 function readTrimmedEnv(name: string): string | null {
   const value = process.env[name];
@@ -66,6 +67,30 @@ export function readResendApiKey(): string | null {
 
 export function readResendFromEmail(): string {
   return readTrimmedEnv('RESEND_FROM_EMAIL') ?? DEFAULT_RESEND_FROM;
+}
+
+/** The address of a sender written `Name <address>` or as a bare address. */
+function senderAddress(from: string): string | null {
+  const bracketed = from.match(/<([^<>\s]+@[^<>\s]+)>\s*$/);
+  if (bracketed) return bracketed[1];
+  const bare = from.trim();
+  return /^[^\s<>"]+@[^\s<>"]+$/.test(bare) ? bare : null;
+}
+
+/**
+ * The sender of a workspace's e-mails in the cloud: "<Organisation> via <product>", on the
+ * configured address. Undefined (the default sender) on-premise, where the installer chose
+ * `SMTP_FROM`, and when the workspace has no organisation name. The name is a tenant's text: control
+ * characters are dropped and it is quoted, so that it cannot add a header or another address.
+ */
+export function workspaceEmailSender(organisationName: string | null | undefined): string | undefined {
+  if (isSingleTenantEmailDeployment()) return undefined;
+  const name = String(organisationName ?? '').replace(/[\u0000-\u001f\u007f]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 64);
+  if (!name) return undefined;
+  const address = senderAddress(readResendFromEmail());
+  if (!address) return undefined;
+  const displayName = `${name} via ${PRODUCT_NAME}`.replace(/[\\"]/g, '\\$&');
+  return `"${displayName}" <${address}>`;
 }
 
 export function readSmtpConfig(): SmtpConfig | null {
