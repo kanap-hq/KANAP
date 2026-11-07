@@ -30,9 +30,6 @@ export default function ReportsLandingPage() {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       <PageHeader title={t("reports.landing.title")} />
-      <Typography variant="body1" sx={{ color: 'text.secondary' }}>
-        {t("reports.landing.description")}
-      </Typography>
       <Grid container spacing={2}>
         {cards.map((c) => (
           <Grid key={c.to} item xs={12} sm={6} md={4} lg={3}>

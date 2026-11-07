@@ -206,9 +206,6 @@ export default function AllocationDefaultPage() {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       <PageHeader title={t('operations.allocationDefault.title')} />
-      <Typography variant="body1" sx={{ color: 'text.secondary' }}>
-        {t('operations.allocationDefault.subtitle')}
-      </Typography>
 
       {!canManage && <Alert severity="info">{t('operations.allocationDefault.noPermission')}</Alert>}
       {isError && <Alert severity="error">{t('operations.allocationDefault.loadError')}</Alert>}
@@ -245,10 +242,7 @@ export default function AllocationDefaultPage() {
             </Select>
           </PropertyRow>
 
-          <PropertyRow
-            label={t('operations.allocationDefault.mode')}
-            helperText={mode === 'manual_company' ? t('operations.allocationDefault.modeManualHelp') : undefined}
-          >
+          <PropertyRow label={t('operations.allocationDefault.mode')}>
             {canManage ? (
               <Select
                 variant="standard"
@@ -411,10 +405,6 @@ export default function AllocationDefaultPage() {
           )}
         </Paper>
       )}
-
-      <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', maxWidth: 720 }}>
-        {t('operations.allocationDefault.scopeNote')}
-      </Typography>
     </Box>
   );
 }

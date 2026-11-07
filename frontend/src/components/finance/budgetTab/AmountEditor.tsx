@@ -1,12 +1,12 @@
 import React from 'react';
-import { Box, FormControlLabel, MenuItem, Radio, RadioGroup, TextField, Tooltip, Typography } from '@mui/material';
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import { Box, FormControlLabel, MenuItem, Radio, RadioGroup, TextField, Typography } from '@mui/material';
 import FormattedNumberField from '../../inputs/FormattedNumberField';
 import { FieldLabel } from '../../design';
 import DateEUField from '../../fields/DateEUField';
+import InfoHint from '../../workspace/InfoHint';
 import { drawerMenuItemSx, drawerSelectSx, selectKeepsFocus } from '../../../theme/formSx';
 import { PanelField, PanelPeriod } from '../LinesPanel';
-import { centsToDecimal, dateProblem, dateResultText, formatMoney, monthsText, periodMonths, spreadResultText, toCents, zeroedMonthsText } from '../roundPeriod';
+import { dateProblem, monthsText, periodMonths, zeroedMonthsText } from '../roundPeriod';
 import type { AmountWhen, BudgetTabState } from './useBudgetTab';
 
 const captionSx = { fontSize: 12, color: 'kanap.text.tertiary', lineHeight: 1.4 } as const;
@@ -15,8 +15,8 @@ const WHEN_LABEL: Record<AmountWhen, string> = { year: 'budgetTab.wholeYear', ra
 /**
  * "Amount": one yearly amount, when it is consumed (the whole year, a period of it, or at a date
  * whose month takes it all) and how it is spread over the months that count (flat or 4-4-5; no
- * distribution at a date). A sentence says what it gives, counting the months. Every change saves
- * at once: the amount on leaving the field or on Enter, the rest on change.
+ * distribution at a date). The column card above says what it gives; below, only the notes that
+ * apply. Every change saves at once: the amount on leaving the field or on Enter, the rest on change.
  */
 export default function AmountEditor({ tab, i18nPrefix, disabled }: { tab: BudgetTabState; i18nPrefix: string; disabled: boolean }) {
   const {
@@ -25,14 +25,9 @@ export default function AmountEditor({ tab, i18nPrefix, disabled }: { tab: Budge
     onSpreadSingleDateChange, spreadProblem, spreadActive, spreadBeyondItem, periodChange,
   } = tab;
   const atDate = spreadKind === 'date';
-  const amount = Number(spreadAmount || 0);
-  const amountText = amount ? formatMoney(centsToDecimal(toCents(amount))) : '';
-  const result = spreadProblem ? ''
-    : atDate ? dateResultText(t, locale, amountText, spreadPeriod.start)
-      : spreadResultText(t, locale, amountText, spreadProfile, spreadActive);
   // No period at all: the line's dates leave no month of the year, and the column has none of its own.
   const noPeriod = spreadPeriod.start === '' && spreadPeriod.end === '';
-  // At a date the sentence already names the one month that takes the amount.
+  // At a date its one month takes the amount: no other month to name.
   const zeroedText = spreadProblem || atDate ? '' : zeroedMonthsText(t, locale, spreadActive);
   const monthsOf = (period: { start: string; end: string }) => monthsText(t, locale, periodMonths(year, period.start, period.end));
   const storedText = periodChange ? monthsOf(periodChange.stored) : '';
@@ -79,6 +74,8 @@ export default function AmountEditor({ tab, i18nPrefix, disabled }: { tab: Budge
           <PanelPeriod>
             <DateEUField label={t('budgetTab.from')} valueYmd={spreadPeriod.start} onChangeYmd={(v) => onSpreadDateChange('start', v)} disabled={disabled} size="small" sx={{ width: 150 }} />
             <DateEUField label={t('budgetTab.to')} valueYmd={spreadPeriod.end} onChangeYmd={(v) => onSpreadDateChange('end', v)} disabled={disabled} size="small" sx={{ width: 150 }} />
+            {/* The 15th rule, one hover away. */}
+            <Box sx={{ display: 'flex', pb: '6px' }}><InfoHint text={t('budgetTab.convention')} /></Box>
           </PanelPeriod>
         )}
         {atDate && (
@@ -102,19 +99,8 @@ export default function AmountEditor({ tab, i18nPrefix, disabled }: { tab: Budge
         </PanelField>}
       </Box>
 
-      {/* What the amount gives, then only the notes that apply: a whole-year period shows none. */}
+      {/* Only the notes that apply: a whole-year period shows none. */}
       <Box data-testid="spread-notes">
-        {result && (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            <Typography data-testid="spread-result" sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{result}</Typography>
-            {/* The 15th rule, one hover away (a date has its own month). */}
-            {!atDate && (
-              <Tooltip title={t('budgetTab.convention')}>
-                <InfoOutlinedIcon tabIndex={0} aria-label={t('budgetTab.convention')} sx={{ fontSize: 13, color: 'kanap.text.tertiary' }} />
-              </Tooltip>
-            )}
-          </Box>
-        )}
         {noPeriod ? (
           <Typography sx={{ ...captionSx, color: 'kanap.text.secondary' }}>{t('budgetTab.noMonthInItemDates', { year })}</Typography>
         ) : spreadProblem && (

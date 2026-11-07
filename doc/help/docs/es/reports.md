@@ -36,7 +36,7 @@ La página principal muestra una tarjeta para cada informe disponible con una br
 
 - El informe se abre en **Todo**: las líneas OPEX y CAPEX juntas. **OPEX** o **CAPEX** conserva las líneas de ese tipo. Las tres opciones requieren acceso de lectura a las líneas presupuestarias (`budget:reader`). Sin ese acceso, las pestañas aparecen desactivadas.
 - La dirección de la página conserva el tipo elegido (`?scope=all`, `?scope=opex` o `?scope=capex`), de modo que un enlace guardado o compartido se abre en el mismo tipo.
-- El subtítulo y el título del gráfico indican el tipo, de modo que una impresión o un PNG exportado muestra qué líneas cubre.
+- El título del gráfico indica el tipo, de modo que una impresión o un PNG exportado muestra qué líneas cubre.
 - Cambiar de tipo borra las líneas que excluyó.
 
 Los dos informes de contracargo tienen las mismas pestañas **Todo**, **OPEX** y **CAPEX**, y se abren en **OPEX**. Consulte [Contracargo global](#contracargo-global).
@@ -421,7 +421,7 @@ Vea datos presupuestarios agrupados por los valores de una dimensión analítica
 - **Excluir valores**: Autocompletado de selección múltiple para excluir valores concretos de la dimensión elegida. Ofrece los valores que se usan para el tipo de línea elegido, además de los que tienen las líneas del informe. La lista empieza por "Sin asignar": al elegirlo se excluyen las líneas sin valor en la dimensión. Cambiar el tipo de línea o la dimensión borra esta selección
 - **Centro de coste**, **Run o build**, **Líneas** y los filtros de dimensiones analíticas: Consulte [Filtros de centro de coste, de Run o build y de dimensiones analíticas](#filtros-de-centro-de-coste-de-run-o-build-y-de-dimensiones-analiticas)
 
-El subtítulo, el título del gráfico y la primera columna de la tabla indican la dimensión elegida, por ejemplo "OPEX por Nature". La dirección de la página también conserva las dos casillas, de modo que un enlace compartido se abre con el mismo detalle y el mismo reparto.
+El título del gráfico y la primera columna de la tabla indican la dimensión elegida, por ejemplo "OPEX por Nature". La dirección de la página también conserva las dos casillas, de modo que un enlace compartido se abre con el mismo detalle y el mismo reparto.
 
 ### Qué verá
 

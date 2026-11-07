@@ -505,7 +505,7 @@ describe('BudgetTab columns and cards', () => {
     expect(editor()).toHaveTextContent('Révision 9+3 2026');
     expect(within(editor()).getByTestId('period-line-planned')).toHaveTextContent('Spread flat');
     // Spread flat over the whole year: the table is folded, and opens on demand.
-    expect(screen.getByTestId('result-folded')).toHaveTextContent('The column is spread flat over the whole year');
+    expect(screen.queryByTestId('monthly-result')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Show the detail' }));
     expect(Array.from(container.querySelectorAll('thead th')).map((th) => th.textContent)).toEqual(['opex.budget.month', 'Révision 9+3']);
     // One column: nothing to compare with.
@@ -536,8 +536,8 @@ describe('BudgetTab columns and cards', () => {
     expect(captionLines('committed')).toEqual(['Copied from Budget 2025 +2%', '12 months, January to December']);
     expect(captionLines('actual')).toEqual(['Edited by hand', '6 months, July to December']);
     expect(captionLines('expected_landing')).toEqual(['Quantity and price · 1 line · 0.40 FTE', '10 months, March to December']);
-    // Forecast holds nothing yet.
-    expect(periodLine('forecast')).toHaveTextContent(/^Not entered yet$/);
+    // Forecast holds nothing yet: its zero says it, nothing under it.
+    expect(periodLine('forecast')).toHaveTextContent(/^$/);
   });
 
   it('a column computed from lines shows them in its card tooltip', async () => {
@@ -622,7 +622,8 @@ describe('BudgetTab amount', () => {
     await waitForAmounts();
 
     // The period starts from the line's dates; an empty column has no stored period to compare with.
-    expect(screen.getByTestId('spread-result')).toHaveTextContent('Enter an amount: it will be spread flat from April to December (9 months).');
+    // The card says what the amount gives: no sentence under the fields.
+    expect(screen.queryByTestId('spread-result')).toBeNull();
     expect(screen.queryByTestId('stored-period')).toBeNull();
     typeAmount('12000');
     await waitFor(() => expect(bulkCalls()).toHaveLength(1));
@@ -631,14 +632,12 @@ describe('BudgetTab amount', () => {
     });
     // Only the column typed says what it started from.
     expect(bulkCalls()[0][1].base).toEqual({ columns: { planned: { months: Array.from({ length: 12 }, () => '0.00') } } });
-    expect(screen.getByTestId('spread-result')).toHaveTextContent('12 000 spread flat from April to December (9 months).');
     await waitFor(() => expect(amountLoads()).toBe(2));
 
     fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Distribution' }));
     fireEvent.click(await screen.findByRole('option', { name: 'opex.budget.profile445' }));
     await waitFor(() => expect(bulkCalls()).toHaveLength(2));
     expect(bulkCalls()[1][1]).toMatchObject({ totals: { planned: '12000.00' }, spread_profile_name: '4-4-5', period_start: '2026-04-01' });
-    expect(screen.getByTestId('spread-result')).toHaveTextContent('12 000 spread 4-4-5 from April to December (9 months).');
     // Leaving the amount unchanged writes nothing more; nothing is written on the shared version.
     fireEvent.blur(amountField());
     await settle();
@@ -766,7 +765,6 @@ describe('BudgetTab amount', () => {
     expect(within(editor()).queryAllByPlaceholderText('labels.datePlaceholder')).toHaveLength(0);
     await waitFor(() => expect(bulkCalls()).toHaveLength(1));
     expect(written(bulkCalls()[0][1])).toMatchObject({ totals: { planned: '500.00' }, period_start: '2026-01-01', period_end: '2026-12-31' });
-    expect(screen.getByTestId('spread-result')).toHaveTextContent('500 spread flat from January to December (12 months).');
     expect(screen.getByText("The period goes beyond the line's dates.")).toBeInTheDocument();
     // A period again: From and To come back on the period shown, nothing is written.
     fireEvent.click(screen.getByRole('radio', { name: 'A period' }));
@@ -2658,7 +2656,6 @@ describe('BudgetTab at a date', () => {
     typeDate(dateFields()[0], '10/02/2026');
     await waitFor(() => expect(bulkCalls()).toHaveLength(2));
     expect(written(lastBulk())).toEqual({ kind: 'annual', year: YEAR, totals: { planned: '12000.00' }, period_start: '2026-02-10', period_end: '2026-02-10' });
-    expect(screen.getByTestId('spread-result')).toHaveTextContent(/^12 000 on .*10.*2026, all in February\.$/);
     // The month of the date says it all: no zeroed months, no 15th rule.
     expect(screen.getByTestId('spread-notes')).not.toHaveTextContent('will be set to zero');
     expect(screen.queryByLabelText('A month counts when the period covers its 15th.')).toBeNull();
@@ -2679,7 +2676,6 @@ describe('BudgetTab at a date', () => {
     expect(captionLines('planned')).toEqual([expect.stringMatching(/^On .*10.*2026$/)]);
     expect(within(editor()).getByRole('radio', { name: 'At a date' })).toBeChecked();
     expect(dateFields()[0]).toHaveValue('10 Feb 2026');
-    expect(screen.getByTestId('spread-result')).toHaveTextContent(/^40 000 on .*, all in February\.$/);
     // Kept as stored, never moved into the line's dates: the existing warning says it.
     expect(screen.getByText("The period goes beyond the line's dates.")).toBeInTheDocument();
     expect(screen.queryByTestId('stored-period')).toBeNull();
@@ -3265,7 +3261,7 @@ describe('BudgetTab table kept open (fix round 2)', () => {
 });
 
 describe('BudgetTab column empty with a record of zeros (fix round 2)', () => {
-  it('reads « Not entered yet », offers « Start from », folds the table, and the copy goes over its base', async () => {
+  it('shows its zero alone, offers « Start from », folds the table, and the copy goes over its base', async () => {
     // A copy or a seed left Revision « spread flat » over the year, at zero.
     const state = setupApi({ monthValues: { committed: '0' }, roundInputs: COLUMNS.map((c) => wholeYearFlat(c)) });
     routePosts(async (body) => {
@@ -3274,8 +3270,8 @@ describe('BudgetTab column empty with a record of zeros (fix round 2)', () => {
     });
     renderTab();
     await waitForAmounts();
-    expect(periodLine('committed')).toHaveTextContent(/^Not entered yet$/);
-    expect(screen.getByTestId('result-folded')).toHaveTextContent('All columns are spread flat over the whole year');
+    expect(periodLine('committed')).toHaveTextContent(/^$/);
+    expect(screen.queryByTestId('monthly-result')).toBeNull();
 
     pick('committed');
     const start = screen.getByTestId('start-from');
@@ -3293,7 +3289,7 @@ describe('BudgetTab column empty with a record of zeros (fix round 2)', () => {
     setupApi({ monthValues: { committed: '0' }, roundInputs: [linesRecord([storedLine()], { measure: 'committed' })] });
     renderTab();
     await waitForAmounts();
-    expect(periodLine('committed')).not.toHaveTextContent('Not entered yet');
+    expect(periodLine('committed')).toHaveTextContent('Quantity and price');
     pick('committed');
     expect(screen.queryByTestId('start-from')).toBeNull();
   });
@@ -3336,7 +3332,6 @@ describe('BudgetTab folded result', () => {
     setupApi({ roundInputs: COLUMNS.map((c) => wholeYearFlat(c)) });
     renderTab();
     await waitForAmounts();
-    expect(screen.getByTestId('result-folded')).toHaveTextContent('All columns are spread flat over the whole year: the monthly detail adds nothing.');
     expect(screen.queryByTestId('monthly-result')).toBeNull();
     expect(screen.queryByRole('combobox', { name: 'Difference with' })).toBeNull();
     showDetail();
@@ -3346,11 +3341,12 @@ describe('BudgetTab folded result', () => {
     expect(screen.queryByTestId('monthly-result')).toBeNull();
   });
 
-  it('an empty line is folded too, with its own sentence', async () => {
+  it('an empty line is folded too', async () => {
     setupApi({ empty: true });
     renderTab();
     await waitForAmounts();
-    expect(screen.getByTestId('result-folded')).toHaveTextContent('No amount yet: the monthly detail adds nothing.');
+    expect(screen.queryByTestId('monthly-result')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Show the detail' })).toBeInTheDocument();
   });
 
   it.each([
@@ -3361,12 +3357,11 @@ describe('BudgetTab folded result', () => {
     ['lines kept as a reference', record({ measure: 'committed', period_start: '2026-01-01', lines: [storedLine()], fte: '0.40' })],
     ['months typed by hand', record({ measure: 'committed', period_start: '2026-01-01', method: 'manual' })],
     ['amounts with no record', null],
-  ])('folded with no sentence when a column has %s; the detail opens on demand', async (_, committed) => {
+  ])('folded when a column has %s; the detail opens on demand', async (_, committed) => {
     const others = COLUMNS.filter((c) => c !== 'committed').map((c) => wholeYearFlat(c));
     setupApi({ roundInputs: committed ? [...others, committed] : others });
     renderTab();
     await waitForAmounts();
-    expect(screen.queryByTestId('result-folded')).toBeNull();
     expect(screen.queryByTestId('monthly-result')).toBeNull();
     showDetail();
     expect(screen.getByTestId('monthly-result')).toBeInTheDocument();

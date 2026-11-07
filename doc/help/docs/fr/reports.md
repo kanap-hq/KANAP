@@ -36,7 +36,7 @@ La page d'accueil affiche une carte par rapport disponible avec une courte descr
 
 - Le rapport s'ouvre sur **Tous** : les lignes OPEX et CAPEX ensemble. **OPEX** ou **CAPEX** garde les lignes de ce type. Les trois demandent l'accès en lecture aux lignes budgétaires (`budget:reader`). Sans cet accès, les onglets sont désactivés.
 - L'adresse de la page conserve le type choisi (`?scope=all`, `?scope=opex` ou `?scope=capex`) : un lien enregistré en favori ou partagé s'ouvre sur le même type.
-- Le sous-titre et le titre du graphique nomment le type : une impression ou un PNG exporté indique les lignes couvertes.
+- Le titre du graphique nomme le type : une impression ou un PNG exporté indique les lignes couvertes.
 - Changer de type efface les lignes budgétaires que vous avez exclues.
 
 Les deux rapports de refacturation ont les mêmes onglets **Tout**, **OPEX** et **CAPEX**, et s'ouvrent sur **OPEX**. Voir [Refacturation globale](#refacturation-globale).
@@ -421,7 +421,7 @@ Consultez les données budgétaires regroupées par les valeurs d'une dimension 
 - **Exclure des valeurs** : Autocomplétion multi-sélection pour exclure des valeurs précises de la dimension choisie. Elle propose les valeurs utilisées pour le type de ligne choisi, plus celles que portent les lignes du rapport. La liste commence par « Non affecté » : le choisir exclut les lignes sans valeur sur la dimension. Changer le type de ligne ou la dimension la vide
 - **Centre de coûts**, **Run ou build**, **Lignes** et les filtres de dimensions analytiques : Voir [Filtres par centre de coûts, run ou build et dimensions analytiques](#filtres-par-centre-de-couts-run-ou-build-et-dimensions-analytiques)
 
-Le sous-titre, le titre du graphique et la première colonne du tableau nomment la dimension choisie, par exemple « OPEX par Nature ». L'adresse de la page conserve aussi les deux cases : un lien partagé s'ouvre avec le même détail et la même répartition.
+Le titre du graphique et la première colonne du tableau nomment la dimension choisie, par exemple « OPEX par Nature ». L'adresse de la page conserve aussi les deux cases : un lien partagé s'ouvre avec le même détail et la même répartition.
 
 ### Ce que vous verrez
 

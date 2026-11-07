@@ -191,7 +191,6 @@ export default function BudgetColumnResetPage() {
   return (
     <ReportLayout
       title={t('operations.columnReset.title')}
-      subtitle={t('operations.columnReset.subtitle')}
       filters={
         <>
           <ItemScopeTabs level="admin" allowAll value={scope} onChange={(next) => { setScope(next); setClearResult(null); }} />

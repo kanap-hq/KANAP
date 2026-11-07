@@ -303,7 +303,7 @@ Der Budget-Tab enthält die Beträge der Zeile, Jahr für Jahr und Spalte für S
     - **Ist-Werte**: Tatsächliche Ausgaben, so wie sie im Jahresverlauf erfasst werden
     - **Erwarteter Endwert**: Ihre beste Schätzung des Werts zum Jahresende
 - Ein Budgetadministrator kann die Spalten umbenennen, einige ausblenden und die Standardspalte unter **Budgetverwaltung > Administration > Budgetspalten** wählen (siehe [Budgetspalten](budget-operations.md#budgetspalten)). Eine ausgeblendete Spalte behält ihre Beträge
-- Jede angezeigte Spalte hat unter den Jahres-Tabs eine Karte: ihren Namen, ihre Summe für das Jahr, die Herkunft ihrer Beträge und ihren Zeitraum, zum Beispiel „Gleichmäßig verteilt“ und „9 Monate, April bis Dezember“. Eine leere Spalte zeigt „Noch nicht erfasst“. Bewegen Sie den Mauszeiger über eine Karte, um ihre Zeilen unter Menge und Preis zu sehen
+- Jede angezeigte Spalte hat unter den Jahres-Tabs eine Karte: ihren Namen, ihre Summe für das Jahr, die Herkunft ihrer Beträge und ihren Zeitraum, zum Beispiel „Gleichmäßig verteilt“ und „9 Monate, April bis Dezember“. Eine leere Spalte zeigt nur ihre Null. Bewegen Sie den Mauszeiger über eine Karte, um ihre Zeilen unter Menge und Preis zu sehen
 - Klicken Sie auf eine Karte, um an dieser Spalte zu arbeiten. Der Tab öffnet sich auf der ersten angezeigten Spalte, die nicht eingefroren ist
 - Bei nur einer angezeigten Spalte gibt es keine Karten: Der Editor zeigt die Spalte direkt
 
@@ -336,7 +336,7 @@ Bei einer leeren Spalte wechselt ein Klick auf einen Tab sofort. Bei einer Spalt
 - **Jahresbetrag**: die Summe der Spalte für das Jahr
 - **Wann**: **Ganzes Jahr**, **Ein Zeitraum** mit den Daten **Von** und **Bis**, oder **An einem Datum** mit einem einzigen **Datum**
 - **Verteilung**: **Gleichmäßig** oder **4-4-5**. An einem Datum gibt es keine Verteilung: Der Monat des Datums erhält den ganzen Betrag
-- Ein Satz sagt, was Sie erhalten, zum Beispiel „120.000 von April bis Dezember (9 Monate) gleichmäßig verteilt.“ oder „5.000 am 10. Februar 2026, ganz im Februar.“ Bewegen Sie den Mauszeiger über das Info-Symbol daneben, um die Regel des 15. zu lesen
+- Die Karte der Spalte sagt, was Sie erhalten, zum Beispiel „Gleichmäßig verteilt“ und „9 Monate, April bis Dezember“ oder „Am 10. Februar 2026“. Bei **Ein Zeitraum** bewegen Sie den Mauszeiger über das Info-Symbol neben den Daten, um die Regel des 15. zu lesen
 - Fallen Monate des Jahres außerhalb des Zeitraums, nennt ein Hinweis, welche auf null gesetzt werden, zum Beispiel „Januar bis März werden auf null gesetzt.“
 - Eine Warnung erscheint, wenn der Zeitraum über die Daten der Zeile hinausgeht. Der Betrag wird trotzdem gespeichert
 - Solange ein Datum fehlt oder kein Monat zählt, nennt ein roter Hinweis den Grund, und nichts wird gespeichert. Lassen die Daten der Zeile keinen Monat im Jahr übrig, zeigt der Editor „Kein Monat von 2026 liegt innerhalb der Daten der Zeile.“ Wählen Sie **Ein Zeitraum**, um die Daten selbst festzulegen
@@ -375,7 +375,7 @@ Bei einer leeren Spalte wechselt ein Klick auf einen Tab sofort. Bei einer Spalt
 - Unter dem Editor zeigt **Ergebnis pro Monat** das Jahr Monat für Monat für jede angezeigte Spalte, in der Währung der Zeile, mit einer Zwischensumme pro Quartal (**Q1** bis **Q4**) und einer Zeile **Gesamt**. Die aktive Spalte ist hervorgehoben
 - Ab zwei Spalten gibt eine letzte Zeile die Abweichung jeder Spalte zu einer von ihnen an, zum Beispiel „+12.000 (+1,8 %)“. Wählen Sie diese Spalte unter **Abweichung zu** über der Tabelle. Sie beginnt bei der Standardspalte
 - Die Tabelle ist standardmäßig zugeklappt. **Details anzeigen** öffnet sie, **Details ausblenden** klappt sie wieder zu. Ihre Wahl gilt, solange Sie auf der Zeile bleiben
-- Zugeklappt zeigt der Abschnitt seinen Titel und **Details anzeigen**. Solange jede Spalte leer oder ein gleichmäßig über das ganze Jahr verteilter Betrag ist, nennt ein Satz den Grund, zum Beispiel „Alle Spalten sind linear über das ganze Jahr verteilt: Die Monatswerte zeigen nichts Neues.“
+- Zugeklappt zeigt der Abschnitt seinen Titel und **Details anzeigen**
 - Die Tabelle öffnet sich von selbst, solange die aktive Spalte pro Monat erfasst wird oder eine Spalte auf Ihre Wahl wartet
 
 **Zurück zu den Werten beim Öffnen**:

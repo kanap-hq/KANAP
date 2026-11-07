@@ -16,8 +16,8 @@ const typedKeys = Object.entries((en as { reports: Strings }).reports).flatMap((
 
 describe('report sentences on All', () => {
   it('finds the sentences naming the type', () => {
-    expect(typedKeys).toContain('topOpex.subtitle');
-    expect(typedKeys).toContain('costPerFte.subtitle');
+    expect(typedKeys).toContain('topOpex.chartTitle');
+    expect(typedKeys).toContain('costPerFte.chartTitle');
   });
 
   it.each(Object.keys(locales))('%s has a sentence for both types, without the type label', (lang) => {
@@ -36,12 +36,11 @@ describe('report sentences on All', () => {
     const i18n = i18next.createInstance();
     await i18n.init({ lng: 'en', resources: { en: { ops: en } }, defaultNS: 'ops', interpolation: { escapeValue: false } });
     const t = i18n.t.bind(i18n);
-    expect(t('reports.topOpex.subtitle', { type: 'All', context: 'all', metric: 'Budget' })).toBe('Largest budget lines by selected year (Budget)');
-    expect(t('reports.costPerFte.subtitle', { type: 'All', context: 'all', group: 'cost center' })).toBe('Yearly cost of one FTE or average daily rate, by cost center');
+    expect(t('reports.costPerFte.chartTitle', { type: 'All', context: 'all', group: 'cost center' })).toBe('Cost per FTE by cost center');
     expect(t('reports.topOpex.chartTitle', { type: 'All', context: 'all', count: 10, metric: 'Budget', year: 2025 })).toBe('Top 10 lines · Budget 2025');
     expect(t('reports.topOpex.pieShareSubtitle', { count: 10, metric: 'Budget' })).toBe('Share of the top 10 (Budget)');
     expect(t('reports.topOpex.shareSubtitle', { metric: 'Budget' })).toBe('Share of annual total (Budget)');
-    expect(t('reports.topOpex.subtitle', { type: 'OPEX', context: 'opex', metric: 'Budget' })).toBe('Largest OPEX lines by selected year (Budget)');
+    expect(t('reports.costPerFte.chartTitle', { type: 'OPEX', context: 'opex', group: 'cost center' })).toBe('OPEX cost per FTE by cost center');
     expect(t('reports.budgetColumnsCompare.selectionsSubtitle', { type: 'OPEX', context: 'opex', count: 1 })).toBe('OPEX: 1 selection');
     expect(t('reports.budgetColumnsCompare.selectionsSubtitle', { type: 'All', context: 'all', count: 2 })).toBe('OPEX and CAPEX: 2 selections');
   });
