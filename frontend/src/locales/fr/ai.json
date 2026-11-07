@@ -202,7 +202,7 @@
       "classification_review_state": "Revue de la classification",
       "access_warning": "Accès",
       "cancel_warning": "Annulation",
-      "catalog_adoption": "Catalogue KANAP",
+      "catalog_adoption": "Catalogue {{product}}",
       "closure_warning": "Clôture",
       "coa_id": "Plan comptable",
       "content": "Contenu",

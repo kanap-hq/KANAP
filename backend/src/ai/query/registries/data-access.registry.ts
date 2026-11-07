@@ -43,7 +43,7 @@ export const dataAccessRegistry: AiEntityFilterRegistry = {
       ai: 'node',
       grid: 'node',
       type: 'text',
-      description: 'The node as the screen names it: the company name, or `CODE name` of a cost center or group. "deleted node" when its company or cost center no longer exists. A part of it matches. It names the node given to the person, not what it covers by inheritance: who sees a company, through a node on it or on one of its cost centers, is in get_entity_detail on companies (data_access). The inheritance of a cost center (its groups, its company, all) is on its Access tab in KANAP. Grouping counts rows, so a person with several nodes counts in each of their groups: see `distinct_count` and `distinct_total` for persons.',
+      description: 'The node as the screen names it: the company name, or `CODE name` of a cost center or group. "deleted node" when its company or cost center no longer exists. A part of it matches. It names the node given to the person, not what it covers by inheritance: who sees a company, through a node on it or on one of its cost centers, is in get_entity_detail on companies (data_access). The inheritance of a cost center (its groups, its company, all) is on its Access tab. Grouping counts rows, so a person with several nodes counts in each of their groups: see `distinct_count` and `distinct_total` for persons.',
       sortable: true,
       groupable: true,
     },

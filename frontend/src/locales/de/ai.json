@@ -202,7 +202,7 @@
       "classification_review_state": "Review der Klassifizierung",
       "access_warning": "Zugriff",
       "cancel_warning": "Annullierung",
-      "catalog_adoption": "KANAP-Katalog",
+      "catalog_adoption": "{{product}}-Katalog",
       "closure_warning": "Sperre",
       "coa_id": "Kontenplan",
       "content": "Inhalt",

@@ -202,7 +202,7 @@
       "classification_review_state": "Classification review",
       "access_warning": "Access",
       "cancel_warning": "Cancellation",
-      "catalog_adoption": "KANAP catalog",
+      "catalog_adoption": "{{product}} catalog",
       "closure_warning": "Closure",
       "coa_id": "Chart of accounts",
       "content": "Content",

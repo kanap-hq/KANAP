@@ -1306,7 +1306,7 @@ export class NetboxSyncService {
     const counts: NetboxSyncCounts = { ...plan.counts, create: 0, update: 0, unchanged: 0, error: 0, deferred: 0 };
     const warnings: NetboxNotice[] = fetched.complete ? [] : [netboxNotice('fetch_incomplete')];
     if (!fetched.complete) {
-      this.logger.warn(`Netbox returned more pages than KANAP reads for tenant ${tenantId}; the inventory is partial.`);
+      this.logger.warn(`Netbox returned more pages than one run reads for tenant ${tenantId}; the inventory is partial.`);
     }
     if (plan.subLocationsAvailable === false) {
       warnings.push(netboxNotice('locations_unavailable'));

@@ -9,6 +9,7 @@ import {
 } from '../audit/record-history.service';
 import { resolveBudgetLine, resolveToUuid } from '../common/resolve-item-id';
 import { BUDGET_LINE_TABLE } from '../spend/budget-nature';
+import { PRODUCT_NAME } from '../config/product';
 import { entityNotFound, isUuid } from './ai-entity-reference.util';
 import { AiPolicyService, missingRightMessage } from './ai-policy.service';
 import { AiQueryExecutor } from './query/ai-query.executor';
@@ -63,12 +64,12 @@ export const AI_RECORD_HISTORY_FAMILY_WORDS = AI_RECORD_HISTORY_ENTITY_TYPES.map
 
 /** The refusal of a family whose records have no History tab, with the families that have one. */
 export function noRecordHistoryMessage(entityType: string): string {
-  return `This record has no history in KANAP: ${familyWords(String(entityType))} have no History tab. `
+  return `This record has no history in ${PRODUCT_NAME}: ${familyWords(String(entityType))} have no History tab. `
     + `The records with a history are: ${AI_RECORD_HISTORY_FAMILY_WORDS}.`;
 }
 
 /** What the entries are, said with every page. */
-export const AI_RECORD_HISTORY_NOTE = 'These are the entries of the record\'s History tab in KANAP, newest first, and nothing more: '
+export const AI_RECORD_HISTORY_NOTE = 'These are the entries of the record\'s History tab, newest first, and nothing more: '
   + 'an update with no visible change is left out, and a reference the person may not read is given as hidden '
   + '(deleted when the record no longer exists). next_cursor reads the older entries.';
 

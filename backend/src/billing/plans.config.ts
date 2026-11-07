@@ -1,3 +1,4 @@
+import { PRODUCT_NAME } from '../config/product';
 import { StripeConfigService } from './stripe/stripe.config';
 
 export type PlanKey = 'max';
@@ -56,7 +57,7 @@ export interface PlanDef {
 }
 
 export const PLANS: Record<PlanKey, PlanDef> = {
-  max: { key: 'max', displayName: 'Hosted KANAP', seatLimit: null, invoiceEligible: true, prices: { monthly: 24900, annual: 249000 } },
+  max: { key: 'max', displayName: `Hosted ${PRODUCT_NAME}`, seatLimit: null, invoiceEligible: true, prices: { monthly: 24900, annual: 249000 } },
 };
 
 /** Map new env-var price IDs back to a PlanKey. */
@@ -71,11 +72,21 @@ export function resolvePlanKeyFromPriceId(priceId: string): PlanKey | null {
   return null;
 }
 
-/** Map a stored plan name (display name or plan key) back to a PlanKey. */
+/** Plan name stored by versions before the product name became a constant (`subscriptions.plan_name`). */
+const LEGACY_PLAN_NAMES: Record<string, PlanKey> = { 'hosted kanap': 'max' };
+
+/**
+ * Map a stored plan name (display name, legacy display name or plan key) back to a PlanKey. A
+ * subscription keeps the display name of the version that wrote it: the current and the legacy
+ * names both resolve, so a product rename needs no data migration.
+ */
 export function resolvePlanKeyFromLegacyName(name: string | null | undefined): PlanKey | null {
   if (!name) return null;
   const lower = name.toLowerCase().trim();
-  if (lower === 'hosted kanap') return 'max';
+  if (lower in LEGACY_PLAN_NAMES) return LEGACY_PLAN_NAMES[lower];
+  for (const plan of Object.values(PLANS)) {
+    if (plan.displayName.toLowerCase() === lower) return plan.key;
+  }
   // Direct match
   if (lower in PLANS) return lower as PlanKey;
   return null;
@@ -87,6 +98,15 @@ export function getPriceId(config: StripeConfigService, interval: IntervalKey, p
 
 export function toPlanDisplayName(planKey: PlanKey): string {
   return PLANS[planKey]?.displayName ?? planKey;
+}
+
+/**
+ * The plan name people see for a stored `subscriptions.plan_name`: the current display name of its
+ * plan when it resolves to one, else the stored text (Trial, On-Prem, Internal, a Stripe nickname).
+ */
+export function planNameForDisplay(name: string | null | undefined): string | null {
+  const planKey = resolvePlanKeyFromLegacyName(name);
+  return planKey ? toPlanDisplayName(planKey) : (name ?? null);
 }
 
 export function isBankTransferEligibleAmount(amountCents: number): boolean {

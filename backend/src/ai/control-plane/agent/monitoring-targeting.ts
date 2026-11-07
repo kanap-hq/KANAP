@@ -65,7 +65,7 @@ const SEVERITY_LADDER = MONITORING_SEVERITY_VALUES as readonly string[];
 // local-filter only.
 const PUSHED_DOWN_REASON = 'Translated to the bound monitoring provider\'s alert scope and re-checked locally after the bounded fetch.';
 const LOCAL_FILTER_REASON = 'Applied after a bounded provider fetch.';
-const CONTROL_PLANE_REASON = 'Resolved from KANAP target state, not provider search.';
+const CONTROL_PLANE_REASON = 'Resolved from the workspace target state, not provider search.';
 
 function stringValue(value: unknown): string | null {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;

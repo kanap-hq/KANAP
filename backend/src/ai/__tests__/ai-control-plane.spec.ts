@@ -14200,7 +14200,7 @@ function testSynthesisPromptPrefersInternalKnowledgeSources() {
     profile: null,
   }) as any;
   const rules = (payload.rules as string[]).join('\n');
-  assert.match(rules, /Prefer relevant KANAP knowledge sources over web sources/);
+  assert.match(rules, /Prefer relevant knowledge sources over web sources/);
   assert.match(rules, /do not treat a low search rank as off-topic/i);
   // Fix 2 (regression #36): the reply must integrate the actual content of the sources, not just
   // point to "see the knowledge base".

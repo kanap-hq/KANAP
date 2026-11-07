@@ -1,6 +1,7 @@
 import { resolvePlannerClassificationProposal } from '../providers/ticket-classification';
 import { randomUUID } from 'node:crypto';
 import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { PRODUCT_NAME } from '../../../config/product';
 import { FindOptionsWhere, In, ObjectLiteral, SelectQueryBuilder } from 'typeorm';
 import { Features } from '../../../config/features';
 import { decodeNumericHtmlEntities } from '../../../common/html-entities';
@@ -3653,7 +3654,7 @@ export class AiAgentControlService {
       throw new BadRequestException('Mock diagnostic did not create an AI run.');
     }
     const noteBody = trimmedString(input.note_body) ?? [
-      '[KANAP mock triage]',
+      `[${PRODUCT_NAME} mock triage]`,
       `Alert: ${alertId}`,
       `Ticket: ${ticketId}`,
       `Run: ${runId}`,
@@ -6401,10 +6402,10 @@ export class AiAgentControlService {
       recommendation_type: options.recommendationType ?? TICKETING_TRIAGE_RUN_OPTIONS.recommendationType,
       status: anyActionEligible ? 'proposed' : 'skipped',
       summary: anyActionEligible
-        ? `Prepare ${expectedActionLabels.join(' and ')} with the related KANAP knowledge and ticket history context.`
+        ? `Prepare ${expectedActionLabels.join(' and ')} with the related knowledge and ticket history context.`
         : 'Do not prepare a ticketing action; the action planner/builders found no eligible action for this run.',
       rationale: anyActionEligible
-        ? 'The workflow read the ticket history, searched the KANAP knowledge base, authorized the instruction-driven plan for owned actions, and kept non-owned deterministic builders unchanged.'
+        ? 'The workflow read the ticket history, searched the knowledge base, authorized the instruction-driven plan for owned actions, and kept non-owned deterministic builders unchanged.'
         : 'The workflow read the ticket history and no owned planner action or non-owned deterministic builder produced an eligible proposal.',
       confidence: knowledgeItems.length > 0 ? 0.72 : 0.46,
       proposed_action_class: 'ticket_triage_followups',

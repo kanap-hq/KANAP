@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { PRODUCT_NAME } from '../../../config/product';
 import { AiExecutionContextWithManager } from '../../ai.types';
 import { CapabilityContract, CapabilityContractSchema, CapabilityExecutionContext } from '../capability/capability-contract';
 import { AiExternalMcpServer } from '../entities/ai-external-mcp-server.entity';
@@ -292,7 +293,7 @@ export class AiExternalMcpBridgeService {
     const capabilityVersion = input.capabilityVersion?.trim() || '1.0.0';
     const schemaVersion = input.schemaVersion?.trim() || capabilityVersion;
     if (input.mcpExposureEnabled) {
-      throw codedForbidden('AGENT_NOT_AVAILABLE_YET', 'External MCP tools are not re-exported through KANAP MCP in Phase 7.');
+      throw codedForbidden('AGENT_NOT_AVAILABLE_YET', `External MCP tools are not re-exported through ${PRODUCT_NAME} MCP in Phase 7.`);
     }
     this.assertNoPlaintextSecrets(input.metadata, 'metadata');
 
@@ -589,7 +590,7 @@ export class AiExternalMcpBridgeService {
       throw codedForbidden('AGENT_NOT_AVAILABLE_YET', 'External MCP bridge only supports read-only effect in Phase 7.');
     }
     if (snapshot.mcp_exposure_enabled) {
-      throw codedForbidden('AGENT_NOT_AVAILABLE_YET', 'External MCP bridge tools are not exposed through KANAP MCP in Phase 7.');
+      throw codedForbidden('AGENT_NOT_AVAILABLE_YET', `External MCP bridge tools are not exposed through ${PRODUCT_NAME} MCP in Phase 7.`);
     }
     const schemaHash = this.schemaHash(snapshot.input_schema_json);
     if (schemaHash !== snapshot.input_schema_hash || this.schemaHash(contract.input_schema) !== snapshot.input_schema_hash) {
