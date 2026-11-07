@@ -210,9 +210,6 @@ export default function ProfileTab() {
             <Typography variant="subtitle2" gutterBottom>
               {t('settings:profile.sections.portfolioContributor')}
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              {t('settings:profile.messages.portfolioDescription')}
-            </Typography>
             <Box>
               <Link
                 component={RouterLink}

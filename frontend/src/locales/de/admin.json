@@ -27,7 +27,6 @@
     "fields": {
       "conversationRetentionDays": "Aufbewahrung von Gesprächen (Tage)",
       "keyMaxLifetimeDays": "Max. Lebensdauer des Schlüssels (Tage)",
-      "keyMaxLifetimeHelper": "Leer lassen für keine Ablaufbegrenzung",
       "label": "Bezeichnung",
       "labelPlaceholder": "z. B. Desktop MCP-Client"
     },
@@ -175,10 +174,7 @@
       },
       "hints": {
         "apiKey": "Erstellen Sie einen in PRTG unter Setup → API-Schlüssel. Lesezugriff genügt.",
-        "apiKeyExisting": "Ein API-Schlüssel ist bereits gespeichert. Leer lassen, um ihn zu behalten.",
-        "requestTimeout": "Wie lange KANAP pro Anfrage auf eine Antwort von PRTG wartet (5–120 Sekunden). Erhöhen Sie den Wert, wenn Alarmprüfungen auf einem großen oder langsamen PRTG-Server mit Timeouts fehlschlagen. Leer lassen für den Standard (30).",
-        "baseUrl": "Die Adresse Ihrer PRTG-Weboberfläche, z. B. https://prtg.example.com",
-        "timezone": "Die Zeitzone, in der Ihr PRTG-Server läuft, damit Alarmzeitstempel korrekt gelesen werden."
+        "requestTimeout": "5 bis 120 Sekunden. Standard: 30."
       },
       "messages": {
         "loadFailed": "Die Monitoring-Integration konnte nicht geladen werden.",
@@ -2194,7 +2190,6 @@
       "contactLocked": "Kontaktrollen werden vom System für die Verzeichnissichtbarkeit verwaltet und können nicht geändert werden.",
       "duplicated": "Rolle dupliziert.",
       "permissionsSaved": "Rollenberechtigungen gespeichert.",
-      "setAccessLevels": "Legen Sie die Zugriffsebenen pro Ressource für diese Rolle fest.",
       "deleteFailed": "Die Rolle konnte nicht gelöscht werden."
     },
     "resources": {
@@ -2581,7 +2576,6 @@
   },
   "aiModels": {
     "title": "KI-Modelle",
-    "subtitle": "Die für Ihre Organisation verfügbaren KI-Modelle. Weisen Sie sie Plaid oder einzelnen Agenten zu; ohne spezifische Zuweisung wird das Standardmodell verwendet.",
     "sectionTitle": "Modelle",
     "new": "Neues Modell",
     "empty": "Noch kein KI-Modell konfiguriert. Fügen Sie Ihr erstes Modell hinzu, um Plaid und die Agenten zu betreiben.",
@@ -2681,7 +2675,6 @@
   },
   "aiUsage": {
     "title": "Nutzung & Kosten",
-    "subtitle": "Wie stark Ihre Organisation die KI-Funktionen nutzt. Die Kosten sind nach Modell und Agent aufgeschlüsselt.",
     "costs": {
       "title": "Kosten",
       "totalMonth": "Gesamt in diesem Monat",
@@ -2719,10 +2712,9 @@
         "requestTimeout": "30"
       },
       "hints": {
-        "baseUrl": "Die Adresse, mit der Sie Netbox im Browser öffnen.",
         "apiToken": "Öffnen Sie in Netbox oben rechts das Benutzermenü und dann API tokens. Ein Token mit Leserechten genügt.",
         "apiTokenExisting": "Ein Token ist bereits gespeichert. Lassen Sie das Feld leer, um es zu behalten.",
-        "requestTimeout": "Wartezeit auf Netbox, zwischen 5 und 120 Sekunden. Für 30 Sekunden leer lassen.",
+        "requestTimeout": "5 bis 120 Sekunden. Standard: 30.",
         "insecureTls": "Nur bei einem selbst signierten oder internen Zertifikat verwenden, dem Sie vertrauen. Die Verbindung bleibt verschlüsselt, das Zertifikat wird aber nicht mehr geprüft.",
         "autoSync": "Läuft stündlich und wendet die Änderungen selbstständig an. Sie startet nach der ersten Synchronisierung, die Sie selbst anwenden.",
         "defaultEnvironment": "Gilt für die beim Import angelegten Assets. Danach wird sie nie geändert."

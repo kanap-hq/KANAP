@@ -27,7 +27,6 @@
     "fields": {
       "conversationRetentionDays": "Conservation des conversations (jours)",
       "keyMaxLifetimeDays": "Durée de vie maximale de la clé (jours)",
-      "keyMaxLifetimeHelper": "Laissez vide pour aucune limite d'expiration",
       "label": "Libellé",
       "labelPlaceholder": "Ex. : Client MCP de bureau"
     },
@@ -175,10 +174,7 @@
       },
       "hints": {
         "apiKey": "Créez-en une dans PRTG sous Configuration → Clés API. Un accès en lecture seule suffit.",
-        "apiKeyExisting": "Une clé API est déjà enregistrée. Laissez vide pour la conserver.",
-        "requestTimeout": "Durée pendant laquelle KANAP attend la réponse de PRTG à chaque requête (5–120 secondes). Augmentez-la si les vérifications d'alertes échouent en timeout sur un serveur PRTG volumineux ou lent. Laissez vide pour la valeur par défaut (30).",
-        "baseUrl": "L'adresse de l'interface web de votre PRTG, p. ex. https://prtg.example.com",
-        "timezone": "Le fuseau horaire dans lequel fonctionne votre serveur PRTG, pour lire correctement l'horodatage des alertes."
+        "requestTimeout": "De 5 à 120 secondes. Par défaut : 30."
       },
       "messages": {
         "loadFailed": "Impossible de charger l'intégration de supervision.",
@@ -2194,7 +2190,6 @@
       "contactLocked": "Les rôles de contact sont gérés par le système pour la visibilité de l'annuaire et ne peuvent pas être modifiés.",
       "duplicated": "Rôle dupliqué.",
       "permissionsSaved": "Autorisations du rôle enregistrées.",
-      "setAccessLevels": "Définissez les niveaux d'accès par ressource pour ce rôle.",
       "deleteFailed": "Le rôle n’a pas pu être supprimé."
     },
     "resources": {
@@ -2581,7 +2576,6 @@
   },
   "aiModels": {
     "title": "Modèles IA",
-    "subtitle": "Les modèles IA disponibles pour votre organisation. Assignez-les à Plaid ou à des agents ; le modèle par défaut est utilisé quand rien de spécifique n'est assigné.",
     "sectionTitle": "Modèles",
     "new": "Nouveau modèle",
     "empty": "Aucun modèle IA configuré pour l'instant. Ajoutez votre premier modèle pour alimenter Plaid et les agents.",
@@ -2681,7 +2675,6 @@
   },
   "aiUsage": {
     "title": "Utilisation & coûts",
-    "subtitle": "L'utilisation des fonctions IA par votre organisation. Les coûts sont ventilés par modèle et par agent.",
     "costs": {
       "title": "Coûts",
       "totalMonth": "Total ce mois-ci",
@@ -2719,10 +2712,9 @@
         "requestTimeout": "30"
       },
       "hints": {
-        "baseUrl": "L'adresse que vous utilisez pour ouvrir Netbox dans un navigateur.",
         "apiToken": "Dans Netbox, ouvrez le menu utilisateur en haut à droite, puis API tokens. Un jeton en lecture seule suffit.",
         "apiTokenExisting": "Un jeton est déjà enregistré. Laissez ce champ vide pour le conserver.",
-        "requestTimeout": "Temps d'attente avant d'abandonner, entre 5 et 120 secondes. Laissez vide pour utiliser 30.",
+        "requestTimeout": "De 5 à 120 secondes. Par défaut : 30.",
         "insecureTls": "À utiliser uniquement avec un certificat auto-signé ou interne auquel vous faites confiance. La connexion reste chiffrée, mais le certificat n'est plus vérifié.",
         "autoSync": "S'exécute toutes les heures et applique les changements automatiquement. Elle démarre après la première synchronisation que vous appliquez vous-même.",
         "defaultEnvironment": "Appliqué aux actifs créés par l'import. Il n'est jamais modifié ensuite."

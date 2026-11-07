@@ -27,7 +27,6 @@
     "fields": {
       "conversationRetentionDays": "Conversation retention (days)",
       "keyMaxLifetimeDays": "Key max lifetime (days)",
-      "keyMaxLifetimeHelper": "Leave empty for no expiration limit",
       "label": "Label",
       "labelPlaceholder": "e.g., desktop MCP client"
     },
@@ -175,10 +174,7 @@
       },
       "hints": {
         "apiKey": "Create one in PRTG under Setup → API keys. Read-only access is enough.",
-        "apiKeyExisting": "An API key is already saved. Leave blank to keep it.",
-        "requestTimeout": "How long KANAP waits for PRTG to answer each request (5 to 120 seconds). Increase this if alert checks fail with timeouts on a large or slow PRTG server. Leave blank for the default (30).",
-        "baseUrl": "The address of your PRTG web interface, e.g. https://prtg.example.com",
-        "timezone": "The time zone your PRTG server runs in, so alert timestamps are read correctly."
+        "requestTimeout": "5 to 120 seconds. Default: 30."
       },
       "messages": {
         "loadFailed": "Could not load the monitoring integration.",
@@ -2194,7 +2190,6 @@
       "contactLocked": "Contact roles are system-managed for directory visibility and cannot be modified.",
       "duplicated": "Role duplicated.",
       "permissionsSaved": "Role permissions saved.",
-      "setAccessLevels": "Set per-resource access levels for this role.",
       "deleteFailed": "The role could not be deleted."
     },
     "resources": {
@@ -2581,7 +2576,6 @@
   },
   "aiModels": {
     "title": "AI models",
-    "subtitle": "The AI models available to your organization. Assign them to Plaid or to individual agents; the default model is used when nothing specific is assigned.",
     "sectionTitle": "Models",
     "new": "New model",
     "empty": "No AI model configured yet. Add your first model to power Plaid and the agents.",
@@ -2681,7 +2675,6 @@
   },
   "aiUsage": {
     "title": "Usage & costs",
-    "subtitle": "How much your organization uses the AI features. Costs are broken down by model and by agent.",
     "costs": {
       "title": "Costs",
       "totalMonth": "Total this month",
@@ -2719,10 +2712,9 @@
         "requestTimeout": "30"
       },
       "hints": {
-        "baseUrl": "The address you use to open Netbox in a browser.",
         "apiToken": "In Netbox, open the user menu at the top right, then API tokens. A read-only token is enough.",
         "apiTokenExisting": "A token is already saved. Leave this field empty to keep it.",
-        "requestTimeout": "How long to wait for Netbox before giving up, between 5 and 120 seconds. Leave empty to use 30.",
+        "requestTimeout": "5 to 120 seconds. Default: 30.",
         "insecureTls": "Use this only for a self-signed or internal certificate you trust. The connection stays encrypted, but the certificate is no longer checked.",
         "autoSync": "Runs every hour and applies the changes on its own. It starts after the first synchronisation you apply yourself.",
         "defaultEnvironment": "Applied to the assets created by the import. It is never changed afterwards."

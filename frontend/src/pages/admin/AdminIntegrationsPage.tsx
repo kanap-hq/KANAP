@@ -7,14 +7,12 @@ import {
   CardContent,
   CircularProgress,
   FormControlLabel,
-  IconButton,
   Stack,
   Switch,
   TextField,
-  Tooltip,
   Typography,
 } from '@mui/material';
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import InfoHint from '../../components/workspace/InfoHint';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import PageHeader from '../../components/PageHeader';
@@ -198,20 +196,8 @@ export default function AdminIntegrationsPage() {
                 <Stack spacing={2.5}>
                   <Stack direction="row" spacing={1} alignItems="center">
                     <Typography variant="h6">{t('aiAdmin.glpi.title')}</Typography>
-                    <Tooltip title={t('aiAdmin.glpi.tooltips.plaidRequired')}>
-                      <IconButton
-                        size="small"
-                        aria-label={t('aiAdmin.glpi.tooltips.plaidRequired')}
-                        sx={{ p: 0.25 }}
-                      >
-                        <InfoOutlinedIcon fontSize="inherit" />
-                      </IconButton>
-                    </Tooltip>
+                    <InfoHint text={`${t('aiAdmin.glpi.description')} ${t('aiAdmin.glpi.tooltips.plaidRequired')}`} />
                   </Stack>
-
-                  <Typography variant="body2" color="text.secondary">
-                    {t('aiAdmin.glpi.description')}
-                  </Typography>
 
                   <FormControlLabel
                     control={(
