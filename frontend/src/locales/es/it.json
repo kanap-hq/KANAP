@@ -1440,7 +1440,7 @@
         "reservedRoles": {
           "virtualMachines": "Máquinas virtuales"
         },
-        "subLocationsHint": "Dentro de un sitio con correspondencia, las ubicaciones de Netbox de primer nivel se convierten en sub-ubicaciones, y el equipo situado más abajo queda en la de encima.",
+        "subLocationsHint": "Dentro de un sitio con correspondencia, las ubicaciones de Netbox de primer nivel se convierten en sub-ubicaciones, y el equipo situado más abajo permanece en la ubicación superior.",
         "clusters": "Clústeres",
         "clustersHint": "Las máquinas virtuales se unen al clúster de KANAP elegido; no se elimina nada.",
         "clustersUnavailable": "Netbox no devolvió sus clústeres, así que aquí no se pueden vincular máquinas virtuales a un clúster. Compruebe que el token de API puede leer los clústeres.",

@@ -1440,7 +1440,7 @@
         "reservedRoles": {
           "virtualMachines": "Virtuelle Maschinen"
         },
-        "subLocationsHint": "Innerhalb eines zugeordneten Standorts werden die übergeordneten Netbox-Locations zu Unterstandorten, und ein tiefer platziertes Gerät bleibt dem darüberliegenden zugeordnet.",
+        "subLocationsHint": "Innerhalb eines zugeordneten Standorts werden die übergeordneten Netbox-Locations zu Unterstandorten, und ein tiefer platziertes Gerät bleibt dem darüberliegenden Unterstandort zugeordnet.",
         "clusters": "Cluster",
         "clustersHint": "Virtuelle Maschinen werden dem gewählten KANAP-Cluster hinzugefügt; nichts wird entfernt.",
         "clustersUnavailable": "Netbox hat seine Cluster nicht zurückgegeben, daher können virtuelle Maschinen hier keinem Cluster zugewiesen werden. Prüfen Sie, ob das API-Token Cluster lesen darf.",
