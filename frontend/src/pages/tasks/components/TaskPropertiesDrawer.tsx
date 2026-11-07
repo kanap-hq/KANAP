@@ -432,7 +432,7 @@ export default function TaskPropertiesDrawer({
   /* ---- Mobile: full-width bottom panel ---- */
   if (isMobile) {
     return (
-      <Box sx={{ width: '100%', borderTop: `1px solid ${theme.palette.kanap.border.default}`, bgcolor: theme.palette.kanap.bg.drawer, overflow: 'auto', maxHeight: '60vh' }}>
+      <Box data-creation-panel="properties" sx={{ width: '100%', borderTop: `1px solid ${theme.palette.kanap.border.default}`, bgcolor: theme.palette.kanap.bg.drawer, overflow: 'auto', maxHeight: '60vh' }}>
         {drawerBody}
       </Box>
     );
@@ -444,6 +444,7 @@ export default function TaskPropertiesDrawer({
   return (
     <Box
       component="aside"
+      data-creation-panel="properties"
       sx={{
         width: taskDetailTokens.drawer.panelWidth,
         mt: `${panelTopOffset}px`,

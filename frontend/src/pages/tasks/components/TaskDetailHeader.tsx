@@ -83,6 +83,8 @@ interface TaskDetailHeaderProps {
   onTitleDraftChange?: (draft: string) => void;
   /** Escape in the empty title of the new page. */
   onTitleCancel?: () => void;
+  /** Tab in the title with a name typed: the name is committed, and the page moves the focus on. */
+  titleOnTab?: () => void;
 }
 
 /* ------------------------------------------------------------------ */
@@ -132,6 +134,7 @@ export default function TaskDetailHeader({
   titleFocusRequest,
   onTitleDraftChange,
   onTitleCancel,
+  titleOnTab,
 }: TaskDetailHeaderProps) {
   const { t } = useTranslation(['portfolio', 'common']);
   const originCrumb = crumbs.find((crumb) => crumb.key === 'origin');
@@ -265,7 +268,7 @@ export default function TaskDetailHeader({
                   T-{itemNumber}
                 </Box>
               )}
-              <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Box data-creation-title="" sx={{ flex: 1, minWidth: 0 }}>
                 <EditableTitle
                   value={titleToGive ? '' : title}
                   fallback={titleToGive ? t('portfolio:workspace.task.title.placeholder') : t('portfolio:workspace.task.title.untitled')}
@@ -276,6 +279,7 @@ export default function TaskDetailHeader({
                   focusRequest={titleFocusRequest}
                   onDraftChange={onTitleDraftChange}
                   onCancel={onTitleCancel}
+                  onTab={titleOnTab}
                   onSave={(next) => {
                     if (!titleToGive) onTitleChange(next);
                     onTitleSave(next);
