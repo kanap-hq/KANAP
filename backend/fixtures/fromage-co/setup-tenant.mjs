@@ -50,6 +50,7 @@ import { fileURLToPath } from 'node:url';
 import { buildLinesFile, buildMonthlyFile, loadBudgetFile } from '../../scripts/lib/budget-file.mjs';
 import { DATASET_YEAR, parseCsv, shiftCsvText, shiftIsoDate } from '../../scripts/lib/fixture-csv.mjs';
 import { createHttpClient } from '../../scripts/lib/http-client.mjs';
+import { listAllPages as paginatedList } from '../../scripts/lib/list-all-pages.mjs';
 import { analyticsValuesText, fixtureDimensions, resolveFixtureLanguage, withFixtureDimensionValues } from './fixture-dimensions.mjs';
 import { planDemandScores, sameCriteriaValues } from './demand-scores.mjs';
 import { rewriteIncidentTaskLinks } from './incident-task-links.mjs';
@@ -793,14 +794,8 @@ async function ensureAnalyticsAxes(language) {
   }
 }
 
-async function listAllPages(route) {
-  const all = [];
-  for (let offset = 0; ; offset += 200) {
-    const page = items(await apiGet(`${route}${route.includes('?') ? '&' : '?'}limit=200&offset=${offset}`));
-    all.push(...page);
-    if (page.length < 200) return all;
-  }
-}
+// Every page of a list (`page` and `limit`, with a page cap). See list-all-pages.mjs.
+const listAllPages = paginatedList(apiGet);
 
 async function budgetItemIndex() {
   // Items whose end of validity has passed list as disabled: fetch both.
