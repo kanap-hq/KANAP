@@ -71,7 +71,9 @@ function armCreationFieldFocus(): void {
 function focusFromTitle(root: ParentNode, el: HTMLElement): void {
   const active = document.activeElement;
   const title = root.querySelector('[data-creation-title]');
-  const atTitle = !active || active === document.body || active === document.documentElement || !!title?.contains(active);
+  // Layout hands focus to the page scroller after a navigation: that is not a choice of the person.
+  const atScroller = active instanceof HTMLElement && (active.hasAttribute('data-primary-scroll') || active.classList.contains('kanap-app-scroll'));
+  const atTitle = !active || active === document.body || active === document.documentElement || atScroller || !!title?.contains(active);
   if (atTitle && active !== el) el.focus();
 }
 
