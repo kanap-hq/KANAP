@@ -7,7 +7,6 @@ import * as argon2 from 'argon2';
 import { AddressInfo } from 'node:net';
 import { INestApplication } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { SchedulerRegistry } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { DataSource } from 'typeorm';
 import dataSource from '../../data-source';
@@ -52,8 +51,6 @@ async function serve(workerId: number): Promise<Served> {
   applyHttpMiddleware(app);
   applyTenancyAndPipeline(app, app.get(DataSource));
   await app.listen(0, '127.0.0.1');
-  // No scheduled job runs during the spec.
-  app.get(SchedulerRegistry).getCronJobs().forEach((job) => job.stop());
   return { app, port: (app.getHttpServer().address() as AddressInfo).port };
 }
 
