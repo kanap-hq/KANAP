@@ -132,7 +132,7 @@ function plan(objects: ReturnType<typeof vm>[], assets: ExistingAsset[], cluster
   assert.deepEqual(moved.warnings.map((notice) => [notice.code, notice.params]), [
     ['cluster_other_present', { name: 'par-app-01', value: 'GOU-VSPHERE-CL01' }],
   ]);
-  assert.match(moved.warnings[0].text, /"par-app-01" in GOU-VSPHERE-CL01/);
+  assert.match(moved.warnings[0].text, /"par-app-01" is also placed in GOU-VSPHERE-CL01/);
 
   // Both: nothing added, the other one still pointed out.
   const both = planClusterAttachment(machine, 'vm-1', context({ 7: PARIS }, {
