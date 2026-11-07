@@ -909,7 +909,7 @@
       "defaultCapexCurrencyHelp": "Rellena previamente la moneda al crear nuevas líneas CAPEX",
       "allowedCurrencies": "Monedas permitidas",
       "forceFxSync": "Forzar sincronización de tipos de cambio",
-      "fxRatesTitle": "Últimas capturas de tipos de cambio (por ejercicio fiscal, base moneda de reporting del espacio de trabajo)",
+      "fxRatesTitle": "Últimas capturas de tipos de cambio",
       "loadingRates": "Cargando tipos de cambio…",
       "loadRatesError": "No se pudo cargar el historial de tipos de cambio.",
       "noRatesYet": "Aún no hay capturas de tipos de cambio.",

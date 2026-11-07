@@ -116,8 +116,9 @@ type SyncNotice =
   | { completed: false };
 
 /**
- * The sync result sits in a reserved slot, so the matrix does not jump when the alert appears.
- * Editors always have the slot; readers have no sync button and no gap.
+ * Editors keep this region mounted so a result can be announced. It takes no
+ * room while empty, and the table moves down once a result appears.
+ * Readers have no sync button and no slot.
  */
 function SyncResult({ notice }: { notice: SyncNotice | null }) {
   const { t } = useTranslation(['ops']);
@@ -126,7 +127,7 @@ function SyncResult({ notice }: { notice: SyncNotice | null }) {
     ? notice.stillMissing.map((pair) => `${pair.currency} ${pair.year}`).join(', ')
     : '';
   return (
-    <Box data-testid="sync-result" aria-live="polite" sx={{ minHeight: 96 }}>
+    <Box data-testid="sync-result" aria-live="polite" sx={{ '&:empty': { display: 'none' } }}>
       {notice?.completed === true && notice.failed && (
         <Alert severity="warning">
           <Box>{t(`${C}.syncSourceUnreachable`)}</Box>

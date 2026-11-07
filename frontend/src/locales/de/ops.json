@@ -909,7 +909,7 @@
       "defaultCapexCurrencyHelp": "Füllt die Währung beim Erstellen neuer CAPEX-Zeilen vor",
       "allowedCurrencies": "Erlaubte Währungen",
       "forceFxSync": "Wechselkurssynchronisierung erzwingen",
-      "fxRatesTitle": "Neueste Wechselkurs-Snapshots (pro Geschäftsjahr, Basis Reporting-Währung des Arbeitsbereichs)",
+      "fxRatesTitle": "Neueste Wechselkurs-Snapshots",
       "loadingRates": "Wechselkurse werden geladen…",
       "loadRatesError": "Wechselkurshistorie konnte nicht geladen werden.",
       "noRatesYet": "Noch keine Wechselkurs-Snapshots vorhanden.",

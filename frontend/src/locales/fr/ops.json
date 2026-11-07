@@ -909,7 +909,7 @@
       "defaultCapexCurrencyHelp": "Pré-renseigne la devise lors de la création de nouvelles lignes CAPEX",
       "allowedCurrencies": "Devises autorisées",
       "forceFxSync": "Forcer la synchronisation des taux de change",
-      "fxRatesTitle": "Dernières captures de taux de change (par exercice fiscal, base devise de reporting de l'espace de travail)",
+      "fxRatesTitle": "Dernières captures de taux de change",
       "loadingRates": "Chargement des taux de change…",
       "loadRatesError": "Impossible de charger l'historique des taux de change.",
       "noRatesYet": "Aucune capture de taux de change disponible.",
