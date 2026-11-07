@@ -5,13 +5,18 @@ import { backendPath } from './backend-root';
 
 /**
  * The helpers of the demo data loader (`backend/scripts/lib/*.mjs`: budget file conversion, the
- * fixture's year shift, the HTTP client) are plain ES modules tested with `node --test`. This
+ * fixture's year shift, the HTTP client, page-by-page listing) are plain ES modules tested with `node --test`. This
  * spec runs those tests, so CI runs them with the backend specs.
  */
 
 const TEST_DIR = backendPath('scripts', 'lib', '__tests__');
 const files = fs.readdirSync(TEST_DIR).filter((name) => name.endsWith('.test.mjs')).sort();
-assert.deepEqual(files, ['budget-file.test.mjs', 'fixture-csv.test.mjs', 'http-client.test.mjs']);
+assert.deepEqual(files, [
+  'budget-file.test.mjs',
+  'fixture-csv.test.mjs',
+  'http-client.test.mjs',
+  'list-all-pages.test.mjs',
+]);
 
 const run = spawnSync(process.execPath, ['--test', ...files.map((name) => `${TEST_DIR}/${name}`)], {
   encoding: 'utf8',
