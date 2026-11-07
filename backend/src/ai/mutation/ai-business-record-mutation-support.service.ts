@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { validate as isUuid } from 'uuid';
+import { PRODUCT_NAME } from '../../config/product';
 import { ApplicationsService } from '../../applications/services/applications.service';
 import { AssetsService } from '../../assets/services/assets.service';
 import { AuditService } from '../../audit/audit.service';
@@ -1786,7 +1787,7 @@ export class AiBusinessRecordMutationSupportService {
         .slice(0, 5);
       if (closest.length > 0) {
         throw new BadRequestException(
-          `No exact KANAP catalog entry for "${name}". Closest entries: ${closest.map((item) => item.name).join(', ')}. `
+          `No exact ${PRODUCT_NAME} catalog entry for "${name}". Closest entries: ${closest.map((item) => item.name).join(', ')}. `
           + 'Choose one of them, or ask for a free entry with from_catalog: false.',
         );
       }
@@ -1982,18 +1983,18 @@ export class AiBusinessRecordMutationSupportService {
       case 'pending':
         summary = action === 'create'
           ? (adoptionKind === 'adoption'
-            ? `Adopt technology "${adoptionTitle}" from the KANAP catalog.`
+            ? `Adopt technology "${adoptionTitle}" from the ${PRODUCT_NAME} catalog.`
             : adoptionKind === 'completion'
-              ? `Complete technology "${adoptionTitle}" with the KANAP catalog.`
+              ? `Complete technology "${adoptionTitle}" with the ${PRODUCT_NAME} catalog.`
               : `Create ${config.labelSingular} "${title}".`)
           : `Update ${config.labelSingular} "${title}": ${labelList}.`;
         break;
       case 'executed':
         summary = action === 'create'
           ? (adoptionKind === 'adoption'
-            ? `Adopted technology "${adoptionTitle}" from the KANAP catalog.`
+            ? `Adopted technology "${adoptionTitle}" from the ${PRODUCT_NAME} catalog.`
             : adoptionKind === 'completion'
-              ? `Completed technology "${adoptionTitle}" with the KANAP catalog.`
+              ? `Completed technology "${adoptionTitle}" with the ${PRODUCT_NAME} catalog.`
               : `Created ${config.labelSingular} "${title}".`)
           : `Updated ${config.labelSingular} "${title}".`;
         break;
@@ -2027,7 +2028,7 @@ export class AiBusinessRecordMutationSupportService {
         ? adoption.completes as Record<string, unknown>
         : null;
       changes.catalog_adoption = {
-        label: { en: 'KANAP catalog', fr: 'Catalogue KANAP', de: 'KANAP-Katalog', es: 'Catálogo KANAP' }[language],
+        label: { en: `${PRODUCT_NAME} catalog`, fr: `Catalogue ${PRODUCT_NAME}`, de: `${PRODUCT_NAME}-Katalog`, es: `Catálogo ${PRODUCT_NAME}` }[language],
         from: null,
         to: technologyAdoptionCardText(language, {
           family: String(adoption.family ?? ''),

@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { PRODUCT_NAME } from '../../../config/product';
 import { AiExecutionContextWithManager } from '../../ai.types';
 import { CapabilityExecutionContext, CapabilityExecutionResult, CapabilitySurface } from '../capability/capability-contract';
 import { AiCapabilityDispatcherService } from '../dispatcher/ai-capability-dispatcher.service';
@@ -106,11 +107,11 @@ function actionRequestIdFromPrepareOutput(output: unknown): string | null {
 
 function deterministicInternalNote(recommendation: AiRecommendation, evidenceCount: number): string {
   return [
-    '[KANAP TRIAGE PROPOSAL]',
+    `[${PRODUCT_NAME} TRIAGE PROPOSAL]`,
     `Recommendation: ${recommendation.summary}`,
     recommendation.rationale ? `Rationale: ${recommendation.rationale}` : null,
     `Evidence references: ${evidenceCount}`,
-    'No external action has been executed. This internal note was prepared by KANAP and requires human approval before posting.',
+    `No external action has been executed. This internal note was prepared by ${PRODUCT_NAME} and requires human approval before posting.`,
   ].filter((line): line is string => !!line).join('\n');
 }
 

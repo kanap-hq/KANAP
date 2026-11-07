@@ -187,8 +187,8 @@ export const de: EmailStrings = {
     ssoUserProvisioned: {
       subject: 'Neuer Benutzer wartet auf Zugriff',
       heading: 'Ein neuer Benutzer wartet auf Zugriff',
-      bodyHtml: '<strong>{{userName}}</strong> ({{userEmail}}) hat sich mit Microsoft Entra angemeldet und wurde automatisch hinzugefügt. Diese Person kann KANAP erst verwenden, wenn Sie ihr eine Rolle zuweisen.',
-      text: '{{userName}} ({{userEmail}}) hat sich mit Microsoft Entra angemeldet und wurde automatisch hinzugefügt. Diese Person kann KANAP erst verwenden, wenn Sie ihr eine Rolle zuweisen. Benutzer verwalten: {{url}}',
+      bodyHtml: '<strong>{{userName}}</strong> ({{userEmail}}) hat sich mit Microsoft Entra angemeldet und wurde automatisch hinzugefügt. Diese Person hat keinen Zugriff, bis Sie ihr eine Rolle zuweisen.',
+      text: '{{userName}} ({{userEmail}}) hat sich mit Microsoft Entra angemeldet und wurde automatisch hinzugefügt. Diese Person hat keinen Zugriff, bis Sie ihr eine Rolle zuweisen. Benutzer verwalten: {{url}}',
       cta: 'Benutzerverwaltung öffnen',
     },
     activation: {

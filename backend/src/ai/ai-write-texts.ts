@@ -1,4 +1,5 @@
 import type { EntityManager } from 'typeorm';
+import { PRODUCT_NAME } from '../config/product';
 
 /**
  * The sentences the backend writes itself around a write, in the person's language: the stops of
@@ -234,9 +235,9 @@ export const writeActionText = {
   /** A technology adopted from the KANAP catalog: the record comes from the catalog, not typed. */
   adoptTechnology(language: AiTranslatedWriteLanguage, subject: string): string {
     switch (language) {
-      case 'fr': return `adoption de ${quoted(language, subject)} depuis le catalogue KANAP`;
-      case 'de': return `${quoted(language, subject)} aus dem KANAP-Katalog übernehmen`;
-      case 'es': return `adopción de ${quoted(language, subject)} del catálogo KANAP`;
+      case 'fr': return `adoption de ${quoted(language, subject)} depuis le catalogue ${PRODUCT_NAME}`;
+      case 'de': return `${quoted(language, subject)} aus dem ${PRODUCT_NAME}-Katalog übernehmen`;
+      case 'es': return `adopción de ${quoted(language, subject)} del catálogo ${PRODUCT_NAME}`;
     }
   },
   /** The links of a technology to its applications and servers. */
@@ -560,10 +561,10 @@ export function technologyAdoptionCardText(language: AiWriteLanguage, adoption: 
   const separator = language === 'fr' ? ' : ' : ': ';
   if (adoption.completes) {
     const heading = {
-      en: `Completes ${adoption.completes.reference} with the KANAP catalog`,
-      fr: `Complète ${adoption.completes.reference} avec le catalogue KANAP`,
-      de: `Ergänzt ${adoption.completes.reference} aus dem KANAP-Katalog`,
-      es: `Completa ${adoption.completes.reference} con el catálogo KANAP`,
+      en: `Completes ${adoption.completes.reference} with the ${PRODUCT_NAME} catalog`,
+      fr: `Complète ${adoption.completes.reference} avec le catalogue ${PRODUCT_NAME}`,
+      de: `Ergänzt ${adoption.completes.reference} aus dem ${PRODUCT_NAME}-Katalog`,
+      es: `Completa ${adoption.completes.reference} con el catálogo ${PRODUCT_NAME}`,
     }[language];
     const keyLabel = { en: 'Catalog key', fr: 'Clé de catalogue', de: 'Katalogschlüssel', es: 'Clave de catálogo' }[language];
     const missingLabel = { en: 'missing versions', fr: 'versions manquantes', de: 'fehlende Versionen', es: 'versiones que faltan' }[language];
@@ -582,10 +583,10 @@ export function technologyAdoptionCardText(language: AiWriteLanguage, adoption: 
     return [`**${heading}**`, ...lines].join('\n');
   }
   const heading = {
-    en: 'Adopted from the KANAP catalog',
-    fr: 'Adoptée du catalogue KANAP',
-    de: 'Aus dem KANAP-Katalog übernommen',
-    es: 'Adoptada del catálogo KANAP',
+    en: `Adopted from the ${PRODUCT_NAME} catalog`,
+    fr: `Adoptée du catalogue ${PRODUCT_NAME}`,
+    de: `Aus dem ${PRODUCT_NAME}-Katalog übernommen`,
+    es: `Adoptada del catálogo ${PRODUCT_NAME}`,
   }[language];
   return [`**${heading}**`, `- ${versions}, ${range}`].join('\n');
 }
@@ -615,7 +616,7 @@ export function technologyVersionEditCardText(
   const newVersion = { en: 'new version', fr: 'nouvelle version', de: 'neue Version', es: 'nueva versión' }[language];
   const notesUpdated = { en: 'notes updated', fr: 'notes mises à jour', de: 'Notizen aktualisiert', es: 'notas actualizadas' }[language];
   const notesCleared = { en: 'notes cleared', fr: 'notes effacées', de: 'Notizen gelöscht', es: 'notas borradas' }[language];
-  const catalog = { en: 'from the KANAP catalog', fr: 'du catalogue KANAP', de: 'aus dem KANAP-Katalog', es: 'del catálogo KANAP' }[language];
+  const catalog = { en: `from the ${PRODUCT_NAME} catalog`, fr: `du catalogue ${PRODUCT_NAME}`, de: `aus dem ${PRODUCT_NAME}-Katalog`, es: `del catálogo ${PRODUCT_NAME}` }[language];
   const lines: string[] = [];
   for (const add of edit.add) {
     const end = add.end ? `${endOfSupport} ${add.end}` : noDate;

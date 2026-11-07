@@ -2,6 +2,7 @@ import type { EntityManager } from 'typeorm';
 import type { AdminNodeView, DataAccessAdminService } from '../../data-access/data-access-admin.service';
 import type { DataAccessMissing } from '../../data-access/data-access-availability';
 import { compareText, dateMatch, paged, setMatch, textMatch } from './ai-support.query';
+import { PRODUCT_NAME } from '../../config/product';
 
 /**
  * Admin › Data access as the screen shows it, for the assistant and the MCP server: the family
@@ -31,7 +32,7 @@ export const AI_DATA_ACCESS_NO_NODE_NOTE = 'No node: sees no budget or contract 
 /** What the mode limits, and who is never listed. */
 export const AI_DATA_ACCESS_COVERAGE_NOTE = 'Data access limits the budget and the contracts only: the other modules (applications, infrastructure, projects, tasks and the others) are not limited by it. People holding the Administrator role see all data and are never listed.';
 /** The screen's alert when the function is not ready on the database. */
-export const AI_DATA_ACCESS_UNAVAILABLE_NOTE = 'Limiting data access needs a one-time step on the database, done by the person who runs KANAP. Until it is done, a person in limited access is refused everywhere.';
+export const AI_DATA_ACCESS_UNAVAILABLE_NOTE = `Limiting data access needs a one-time step on the database, done by the person who runs ${PRODUCT_NAME}. Until it is done, a person in limited access is refused everywhere.`;
 
 /** What makes the function unavailable, in the screen's words (`admin:dataAccess.missingParts`). */
 const MISSING_WORDS: Record<DataAccessMissing, string> = {

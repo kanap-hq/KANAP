@@ -1,3 +1,4 @@
+import { PRODUCT_NAME } from '../../../config/product';
 import { decodeHtmlEntities, decodeNumericHtmlEntities, HTML_TEXT_ENTITIES } from '../../../common/html-entities';
 import { isRecord } from '../../../common/object-guards';
 import { TICKETING_INTERNAL_NOTE_ADD_APPROVED_CAPABILITY, TICKETING_PUBLIC_REPLY_ADD_APPROVED_CAPABILITY } from '../capability/capability-contract';
@@ -192,11 +193,25 @@ export function latestExecutedAction(actions: AiActionRequest[], capabilityName:
     .sort((left, right) => (actionConversationTime(right, notes) ?? 0) - (actionConversationTime(left, notes) ?? 0))[0] ?? null;
 }
 
+/** The header and the closing line of a triage note the agent posts in a ticket. */
+export const TRIAGE_NOTE_HEADER = `[${PRODUCT_NAME} triage proposal]`;
+export const TRIAGE_NOTE_FOOTER = `No external change has been made. This note was prepared by ${PRODUCT_NAME} and requires human approval before posting.`;
+
+/**
+ * Marks of a body the agent wrote. The literals are those of tickets written before the product
+ * name became a constant: they stay recognised after a rename, as the current marks are.
+ */
+const AGENT_BODY_MARKS = [
+  '[kanap triage proposal]',
+  'this note was prepared by kanap',
+  `[${PRODUCT_NAME} triage proposal]`.toLocaleLowerCase(),
+  `this note was prepared by ${PRODUCT_NAME}`.toLocaleLowerCase(),
+  'prepared by the agent control center',
+];
+
 export function isKanapMarkedBody(value: string): boolean {
   const normalized = normalizeTimelineBody(value).toLocaleLowerCase();
-  return normalized.includes('[kanap triage proposal]')
-    || normalized.includes('this note was prepared by kanap')
-    || normalized.includes('prepared by the agent control center');
+  return AGENT_BODY_MARKS.some((mark) => normalized.includes(mark));
 }
 
 export function buildTicketTimeline(
@@ -325,7 +340,7 @@ export function timelineSummaryLines(timeline: TicketTimelineEntry[]): string[] 
   return timeline.slice(-8).map((entry) => {
     const at = entry.createdAt ? entry.createdAt.slice(0, 19).replace('T', ' ') : 'initial ticket';
     const actor = entry.actor === 'kanap_agent'
-      ? 'KANAP agent'
+      ? `${PRODUCT_NAME} agent`
       : entry.actor === 'requester_candidate'
         ? 'requester/public user'
         : 'support/internal';
@@ -353,7 +368,7 @@ export function buildTriageNote(
         : 'The agent escalated this ticket internally; no requester reply was prepared.'))
     : 'AI reply synthesis was unavailable or skipped. Review the possible sources above and complete the requester answer manually before approving.';
   return renderProviderBody([
-    '[KANAP triage proposal]',
+    TRIAGE_NOTE_HEADER,
     `Ticket #${ticket.id} - ${ticket.title}`,
     ticket.status ? `Status: ${ticket.status}` : null,
     ticket.priority ? `Priority: ${ticket.priority}` : null,
@@ -380,7 +395,7 @@ export function buildTriageNote(
     'Technician brief:',
     technicianBrief,
     '',
-    'No external change has been made. This note was prepared by KANAP and requires human approval before posting.',
+    TRIAGE_NOTE_FOOTER,
   ], MAX_INTERNAL_NOTE_CHARS);
 }
 
@@ -632,7 +647,7 @@ export function renderSynthesizedTriageNote(
     ? sanitizeForProvider(synthesis.requester_reply, MAX_INTERNAL_RECOMMENDED_REPLY_CHARS)
     : 'No reliable source-grounded answer was produced; the requester reply will ask a technician to follow up.';
   return renderProviderBody([
-    '[KANAP triage proposal]',
+    TRIAGE_NOTE_HEADER,
     `Ticket #${ticket.id} - ${ticket.title}`,
     ticket.status ? `Status: ${ticket.status}` : null,
     ticket.priority ? `Priority: ${ticket.priority}` : null,
@@ -655,7 +670,7 @@ export function renderSynthesizedTriageNote(
     synthesis.needs_human_review ? 'Uncertainty: technician confirmation is recommended before approval.' : null,
     synthesis.fallback_reason ? `Synthesis validation note: ${synthesis.fallback_reason}.` : null,
     '',
-    'No external change has been made. This note was prepared by KANAP and requires human approval before posting.',
+    TRIAGE_NOTE_FOOTER,
   ], MAX_INTERNAL_NOTE_CHARS);
 }
 

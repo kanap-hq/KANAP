@@ -129,7 +129,7 @@ Una columna ausente conserva todos los valores guardados de esa columna. Un arch
 |---|---|
 | **Errores** | Las filas que la carga rechaza, por fila del archivo con la columna cuando la conoce. Un archivo con un solo error no carga nada |
 | **Cambios** | Las líneas que se crearán, las que se actualizarán y las que el archivo deja tal como están |
-| **Modificadas en KANAP desde la exportación** | Las líneas que alguien modificó después de su exportación, con quién y cuándo. Cargar el archivo escribe sus valores sobre esos cambios |
+| **Modificadas desde la exportación** | Las líneas que alguien modificó después de su exportación, con quién y cuándo. Cargar el archivo escribe sus valores sobre esos cambios |
 | **Advertencias** | Una fila que se parece a otra línea, un `company_name` distinto de la empresa del centro de coste de la fila, un importe que hace que una columna deje de seguir sus líneas de cálculo, columnas y celdas que el archivo ignora |
 | **Creados por la carga** | Los proveedores y los valores de dimensión que la carga añadiría |
 

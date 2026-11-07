@@ -37,7 +37,7 @@
   },
   "appearance": {
     "title": "Darstellung",
-    "description": "Wählen Sie, wie Kanap in diesem Browser aussehen soll.",
+    "description": "Wählen Sie das Erscheinungsbild in diesem Browser.",
     "light": "Hell",
     "dark": "Dunkel",
     "system": "System",
@@ -118,7 +118,7 @@
   },
   "connectedApps": {
     "title": "Verbundene Anwendungen",
-    "subtitle": "Diese Anwendungen können Ihre KANAP-Daten mit Ihren Zugriffsrechten lesen.",
+    "subtitle": "Diese Anwendungen können Ihre Daten mit Ihren Zugriffsrechten lesen.",
     "empty": "Keine verbundenen Anwendungen.",
     "howTo": "So verbinden Sie Claude",
     "connectedOn": "Verbunden am {{date}}",
@@ -128,7 +128,7 @@
     "disconnect": "Trennen",
     "confirm": {
       "title": "{{client}} trennen?",
-      "body": "{{client}} verliert sofort den Zugriff auf Ihre KANAP-Daten. Um die Anwendung wieder zu nutzen, verbinden Sie sie dort erneut."
+      "body": "{{client}} verliert sofort den Zugriff auf Ihre Daten. Um die Anwendung wieder zu nutzen, verbinden Sie sie dort erneut."
     },
     "apiKeys": "API-Schlüssel",
     "loadFailed": "Ihre verbundenen Anwendungen konnten nicht geladen werden.",
@@ -136,7 +136,7 @@
     "revoke": "Widerrufen",
     "revokeConfirm": {
       "title": "{{key}} widerrufen?",
-      "body": "Alle Clients, die {{key}} verwenden, verlieren sofort den Zugriff auf Ihre KANAP-Daten. Dies kann nicht rückgängig gemacht werden."
+      "body": "Alle Clients, die {{key}} verwenden, verlieren sofort den Zugriff auf Ihre Daten. Dies kann nicht rückgängig gemacht werden."
     },
     "revokeFailed": "Dieser Schlüssel konnte nicht widerrufen werden."
   }

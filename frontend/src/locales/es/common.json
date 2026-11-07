@@ -1540,7 +1540,7 @@
   },
   "onboarding": {
     "choice": {
-      "angleTitle": "¿Qué le trae a KANAP?",
+      "angleTitle": "¿Qué le trae a {{product}}?",
       "modeTitle": "¿Cómo quiere empezar?",
       "justLooking": "Solo estoy mirando",
       "erasesExample": "El ejemplo se borra.",
@@ -1636,7 +1636,7 @@
         },
         "map_application": {
           "title": "Una ficha de aplicación",
-          "hint": "Esta es la ficha de una aplicación. Explore el panel de propiedades y las distintas pestañas para descubrir todas las facetas de este objeto clave de KANAP."
+          "hint": "Esta es la ficha de una aplicación. Explore el panel de propiedades y las distintas pestañas para descubrir todas las facetas de este objeto clave."
         },
         "map_technologies": {
           "title": "Tecnologías, fin de soporte y vulnerabilidades",
@@ -1652,11 +1652,11 @@
         },
         "own_applications": {
           "title": "Sus aplicaciones",
-          "hint": "Importe la lista de sus aplicaciones y luego compleméntelas, o créelas directamente en KANAP."
+          "hint": "Importe la lista de sus aplicaciones y luego compleméntelas, o créelas una a una."
         },
         "own_technologies": {
           "title": "Sus tecnologías",
-          "hint": "Active tecnologías y vincúlelas a sus aplicaciones. KANAP se encarga del resto."
+          "hint": "Active tecnologías y vincúlelas a sus aplicaciones. {{product}} se encarga del resto."
         },
         "own_assets": {
           "title": "Sus servidores",

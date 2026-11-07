@@ -260,7 +260,7 @@ export class KanapEntityContextResolver {
         assetMatch: 'disabled',
         lookupsUsed: 0,
         sources,
-        notes: ['KANAP data enrichment is turned off for this agent.'],
+        notes: ['Workspace data enrichment is turned off for this agent.'],
       };
     }
     if (!input.kanapData.domains.assets) {
@@ -268,7 +268,7 @@ export class KanapEntityContextResolver {
         assetMatch: 'disabled',
         lookupsUsed: 0,
         sources,
-        notes: ['Asset lookups are turned off for this agent; the alert was not correlated with KANAP data.'],
+        notes: ['Asset lookups are turned off for this agent; the alert was not correlated with workspace data.'],
       };
     }
     const deviceName = (input.alert.deviceName ?? '').trim();
@@ -277,7 +277,7 @@ export class KanapEntityContextResolver {
         assetMatch: 'unmatched',
         lookupsUsed: 0,
         sources,
-        notes: ['The alert does not carry a device name; no KANAP asset correlation is possible.'],
+        notes: ['The alert does not carry a device name; no asset correlation is possible.'],
       };
     }
 
@@ -323,7 +323,7 @@ export class KanapEntityContextResolver {
       matched = survivors[0];
     } else if (survivors.length === 0) {
       // CMDB-drift signal: the device exists in the monitoring tool but not in KANAP.
-      notes.push(`No KANAP asset matches device "${deviceName}" by name, hostname or FQDN.`);
+      notes.push(`No asset matches device "${deviceName}" by name, hostname or FQDN.`);
       return { assetMatch: 'unmatched', lookupsUsed: state.lookupsUsed, sources, notes };
     } else {
       // 2. Several exact-name survivors: the device IP is the only accepted tiebreak.
@@ -346,7 +346,7 @@ export class KanapEntityContextResolver {
         }
       }
       if (!matched) {
-        notes.push(`Several KANAP assets match device "${deviceName}" and no single IP confirmation was possible; no asset context was used.`);
+        notes.push(`Several assets match device "${deviceName}" and no single IP confirmation was possible; no asset context was used.`);
         return { assetMatch: 'ambiguous', lookupsUsed: state.lookupsUsed, sources, notes };
       }
     }
@@ -453,7 +453,7 @@ export class KanapEntityContextResolver {
   ): Promise<{ status: 'ok'; output: unknown } | { status: 'skipped' }> {
     if (state.lookupsUsed >= state.budget) {
       if (!state.budgetNoted) {
-        state.notes.push(`Entity lookup budget reached (${state.budget}); remaining KANAP context lookups were skipped.`);
+        state.notes.push(`Entity lookup budget reached (${state.budget}); remaining entity context lookups were skipped.`);
         state.budgetNoted = true;
       }
       return { status: 'skipped' };

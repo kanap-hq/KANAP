@@ -186,8 +186,8 @@ export const en = {
     ssoUserProvisioned: {
       subject: 'New user waiting for access',
       heading: 'A new user is waiting for access',
-      bodyHtml: '<strong>{{userName}}</strong> ({{userEmail}}) signed in with Microsoft Entra and was added automatically. This person cannot use KANAP until you assign them a role.',
-      text: '{{userName}} ({{userEmail}}) signed in with Microsoft Entra and was added automatically. This person cannot use KANAP until you assign them a role. Manage users: {{url}}',
+      bodyHtml: '<strong>{{userName}}</strong> ({{userEmail}}) signed in with Microsoft Entra and was added automatically. This person has no access until you assign them a role.',
+      text: '{{userName}} ({{userEmail}}) signed in with Microsoft Entra and was added automatically. This person has no access until you assign them a role. Manage users: {{url}}',
       cta: 'Open user management',
     },
     activation: {

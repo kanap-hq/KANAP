@@ -1,5 +1,6 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { QueryRunnerAlreadyReleasedError, QueryRunnerProviderAlreadyReleasedError } from 'typeorm';
+import { PRODUCT_NAME } from '../../config/product';
 
 /**
  * PostgreSQL errors that a concurrent write can cause, answered as a clean HTTP
@@ -64,7 +65,7 @@ const MESSAGES: Record<DatabaseErrorCode, string> = {
   in_use: 'This change would remove something that is still used elsewhere, so it was not saved.',
   retry: 'Another change to the same data was saved at the same moment, so this one did not go through. Please try again.',
   busy: 'This data is busy with another operation. Please try again in a few seconds.',
-  DATA_ACCESS_UNAVAILABLE: 'Data access is temporarily unavailable. Contact the person who runs KANAP.',
+  DATA_ACCESS_UNAVAILABLE: `Data access is temporarily unavailable. Contact the person who runs ${PRODUCT_NAME}.`,
   DATA_ACCESS_LIMITED: DATA_ACCESS_LIMITED_MESSAGE,
   INVALID_TOKEN: 'Invalid token',
 };

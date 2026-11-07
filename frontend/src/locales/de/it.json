@@ -557,7 +557,7 @@
         "seeAll": "Alles auf der Seite Schwachstellen ansehen",
         "notInstalledList_one": "Nicht installiert: {{versions}}",
         "notInstalledList_other": "Nicht installiert: {{versions}}",
-        "notInstalledHint": "KANAP sucht nur nach Schwachstellen von Versionen, die auf einem Server installiert oder von einer Anwendung deklariert sind.",
+        "notInstalledHint": "Schwachstellen werden nur für Versionen gesucht, die auf einem Server installiert oder von einer Anwendung deklariert sind.",
         "columns": {
           "openHint": "{{severity}}: noch zu prüfende CVE. Die Summe zählt alle Status.",
           "total": "Gesamt"
@@ -1271,7 +1271,7 @@
         "columns": {
           "netboxName": "Netbox-Name",
           "type": "Typ",
-          "asset": "KANAP-Asset",
+          "asset": "Asset",
           "message": "Meldung",
           "lastSeen": "Zuletzt gesehen",
           "actions": "Aktionen"
@@ -1351,7 +1351,7 @@
           "noResults": "Kein Asset gefunden."
         },
         "hints": {
-          "created": "Kein KANAP-Asset passt zu diesen Objekten. Falls eines bereits unter anderem Namen existiert, verknüpfen Sie es, um ein Duplikat zu vermeiden.",
+          "created": "Kein Asset passt zu diesen Objekten. Falls eines bereits unter anderem Namen existiert, verknüpfen Sie es, um ein Duplikat zu vermeiden.",
           "updated": "Noch ist nichts geändert. Diese Werte werden geschrieben, wenn Sie auf Anwenden klicken."
         },
         "matchedBy": {
@@ -1403,12 +1403,12 @@
           "netboxRole": "Netbox-Rolle",
           "netboxSite": "Netbox-Standort",
           "objects": "Objekte",
-          "assetType": "KANAP-Asset-Typ",
+          "assetType": "Asset-Typ",
           "netboxPlatform": "Netbox-Plattform",
-          "location": "KANAP-Standort",
+          "location": "Standort",
           "operatingSystem": "Technologie",
           "netboxCluster": "Netbox-Cluster",
-          "kanapCluster": "KANAP-Cluster"
+          "kanapCluster": "Cluster"
         },
         "counts": {
           "devices_one": "{{count}} Gerät",
@@ -1422,7 +1422,7 @@
         },
         "subLocationsHint": "Innerhalb eines zugeordneten Standorts werden die übergeordneten Netbox-Locations zu Unterstandorten, und ein tiefer platziertes Gerät bleibt dem darüberliegenden Unterstandort zugeordnet.",
         "clusters": "Cluster",
-        "clustersHint": "Virtuelle Maschinen werden dem gewählten KANAP-Cluster hinzugefügt; nichts wird entfernt.",
+        "clustersHint": "Virtuelle Maschinen werden dem gewählten Cluster hinzugefügt; nichts wird entfernt.",
         "clustersUnavailable": "Netbox hat seine Cluster nicht zurückgegeben, daher können virtuelle Maschinen hier keinem Cluster zugewiesen werden. Prüfen Sie, ob das API-Token Cluster lesen darf.",
         "noClusters": "Netbox listet keinen Cluster, daher gibt es hier nichts zuzuordnen.",
         "noCluster": "Keine Zuordnung",
@@ -1477,7 +1477,7 @@
         "validation_failed": "Dieses Objekt wurde abgelehnt:",
         "os_ambiguous": "Das Betriebssystem „{{value}}“ passt zu mehreren Einträgen in Ihrem Katalog, der Wert blieb unverändert.",
         "os_cluster_with_members": "Dieses Asset ist ein Cluster mit Mitgliedern, daher wurde das Betriebssystem „{{value}}“ ausgelassen.",
-        "status_not_mapped": "Der Netbox-Status „{{value}}“ hat keine Entsprechung in KANAP, der Lebenszyklus blieb unverändert.",
+        "status_not_mapped": "Der Netbox-Status „{{value}}“ hat keine Entsprechung, der Lebenszyklus blieb unverändert.",
         "lifecycle_not_in_catalog": "Der Lebenszyklus „{{value}}“ steht nicht in Ihrem Katalog, der Wert blieb unverändert.",
         "no_ip_address_type": "In den IT-Einstellungen ist kein IP-Adresstyp eingerichtet, die Adresse wurde nicht importiert.",
         "netbox_status_attention": "Netbox meldet dieses Objekt als {{status}}.",
@@ -1485,9 +1485,9 @@
         "similar_name_candidates": "Ein Asset hat einen ähnlichen Namen. Entscheiden Sie, ob es dasselbe Gerät ist.",
         "sub_location_name_taken": "Ein Unterstandort mit dem Namen „{{value}}“ existiert an diesem Standort bereits für eine andere Netbox-Location. Der Unterstandort wurde unverändert gelassen.",
         "locations_unavailable": "Netbox hat seine Locations nicht zurückgegeben. Die Unterstandorte wurden in diesem Lauf nicht verändert.",
-        "cluster_not_mapped": "Der Netbox-Cluster „{{value}}“ ist keinem KANAP-Cluster zugeordnet, daher wurden seine virtuellen Maschinen keinem Cluster zugewiesen.",
+        "cluster_not_mapped": "Der Netbox-Cluster „{{value}}“ ist keinem Cluster zugeordnet, daher wurden seine virtuellen Maschinen keinem Cluster zugewiesen.",
         "cluster_match_invalid": "Der Netbox-Cluster „{{value}}“ ist einem Asset zugeordnet, das gelöscht, ausgemustert oder kein Cluster mehr ist, daher wurden seine virtuellen Maschinen ihm nicht zugewiesen.",
-        "cluster_other_present": "KANAP ordnet die virtuelle Maschine „{{name}}“ auch {{value}} zu. Diese Beziehung wurde beibehalten: Entfernen Sie sie manuell, wenn sie veraltet ist."
+        "cluster_other_present": "Die virtuelle Maschine „{{name}}“ ist auch {{value}} zugeordnet. Diese Beziehung wurde beibehalten: Entfernen Sie sie manuell, wenn sie veraltet ist."
       },
       "previewNotices": {
         "os_not_in_catalog": "Das Betriebssystem „{{value}}“ steht nicht in Ihrem Katalog, der Wert wird unverändert bleiben.",
@@ -1498,14 +1498,14 @@
         "subnet_not_in_catalog": "Das Subnetz {{value}} steht nicht in Ihrem Katalog, die Adresse wird ohne es gespeichert.",
         "fetch_incomplete": "Netbox hat mehr Seiten geliefert als erwartet. Einige Objekte werden nicht geprüft.",
         "os_ambiguous": "Das Betriebssystem „{{value}}“ passt zu mehreren Einträgen in Ihrem Katalog, der Wert wird unverändert bleiben.",
-        "status_not_mapped": "Der Netbox-Status „{{value}}“ hat keine Entsprechung in KANAP, der Lebenszyklus wird unverändert bleiben.",
+        "status_not_mapped": "Der Netbox-Status „{{value}}“ hat keine Entsprechung, der Lebenszyklus wird unverändert bleiben.",
         "lifecycle_not_in_catalog": "Der Lebenszyklus „{{value}}“ steht nicht in Ihrem Katalog, der Wert wird unverändert bleiben.",
         "no_ip_address_type": "In den IT-Einstellungen ist kein IP-Adresstyp eingerichtet, die Adresse wird nicht importiert.",
         "sub_location_name_taken": "Ein Unterstandort mit dem Namen „{{value}}“ existiert an diesem Standort bereits für eine andere Netbox-Location. Der Unterstandort wird unverändert bleiben.",
         "locations_unavailable": "Netbox hat seine Locations nicht zurückgegeben. Die Unterstandorte werden unverändert bleiben.",
-        "cluster_not_mapped": "Der Netbox-Cluster „{{value}}“ ist keinem KANAP-Cluster zugeordnet, daher werden seine virtuellen Maschinen keinem Cluster zugewiesen.",
+        "cluster_not_mapped": "Der Netbox-Cluster „{{value}}“ ist keinem Cluster zugeordnet, daher werden seine virtuellen Maschinen keinem Cluster zugewiesen.",
         "cluster_match_invalid": "Der Netbox-Cluster „{{value}}“ ist einem Asset zugeordnet, das gelöscht, ausgemustert oder kein Cluster mehr ist, daher werden seine virtuellen Maschinen ihm nicht zugewiesen.",
-        "cluster_other_present": "KANAP ordnet die virtuelle Maschine „{{name}}“ auch {{value}} zu. Diese Beziehung wird beibehalten: Entfernen Sie sie manuell, wenn sie veraltet ist."
+        "cluster_other_present": "Die virtuelle Maschine „{{name}}“ ist auch {{value}} zugeordnet. Diese Beziehung wird beibehalten: Entfernen Sie sie manuell, wenn sie veraltet ist."
       },
       "netboxStatus": {
         "active": "Aktiv",
@@ -2490,7 +2490,7 @@
         "catalogNote": "Versionen und Daten werden aus dem Katalog aktuell gehalten",
         "dateSource": "Quelle: <editor>{{editor}}</editor>, geprüft am {{date}}",
         "noPlannedEnd": "Kein Ende vom Hersteller geplant",
-        "securityTrackerNote": "Dieser Anbieter veröffentlicht Schwachstellen pro Paket. KANAP verfolgt den Support jeder Version. Die Betroffenheit einzelner Pakete steht in seinem Tracker: <tracker>{{name}}</tracker>",
+        "securityTrackerNote": "Dieser Anbieter veröffentlicht Schwachstellen pro Paket. Der Support wird für jede Version verfolgt. Die Betroffenheit einzelner Pakete steht in seinem Tracker: <tracker>{{name}}</tracker>",
         "securityTrackerOf": "Sicherheitstracker von {{editor}}",
         "securityTracker": "Sicherheitstracker",
         "trackers": {

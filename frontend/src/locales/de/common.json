@@ -1540,7 +1540,7 @@
   },
   "onboarding": {
     "choice": {
-      "angleTitle": "Was führt Sie zu KANAP?",
+      "angleTitle": "Was führt Sie zu {{product}}?",
       "modeTitle": "Wie möchten Sie beginnen?",
       "justLooking": "Ich schaue mich um",
       "erasesExample": "Das Beispiel wird gelöscht.",
@@ -1636,7 +1636,7 @@
         },
         "map_application": {
           "title": "Ein Anwendungsdatensatz",
-          "hint": "Hier ist der Datensatz einer Anwendung. Erkunden Sie den Eigenschaftenbereich und die Reiter, um alle Facetten dieses zentralen KANAP-Objekts zu entdecken."
+          "hint": "Hier ist der Datensatz einer Anwendung. Erkunden Sie den Eigenschaftenbereich und die Reiter, um alle Facetten dieses zentralen Objekts zu entdecken."
         },
         "map_technologies": {
           "title": "Technologien, Supportende und Schwachstellen",
@@ -1652,11 +1652,11 @@
         },
         "own_applications": {
           "title": "Ihre Anwendungen",
-          "hint": "Importieren Sie die Liste Ihrer Anwendungen und ergänzen Sie sie anschließend, oder legen Sie sie direkt in KANAP an."
+          "hint": "Importieren Sie die Liste Ihrer Anwendungen und ergänzen Sie sie anschließend, oder legen Sie sie einzeln an."
         },
         "own_technologies": {
           "title": "Ihre Technologien",
-          "hint": "Aktivieren Sie Technologien und verknüpfen Sie sie mit Ihren Anwendungen. Um den Rest kümmert sich KANAP."
+          "hint": "Aktivieren Sie Technologien und verknüpfen Sie sie mit Ihren Anwendungen. Um den Rest kümmert sich {{product}}."
         },
         "own_assets": {
           "title": "Ihre Server",

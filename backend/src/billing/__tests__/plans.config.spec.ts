@@ -2,10 +2,12 @@ import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { backendPath } from '../../common/__tests__/backend-root';
+import { PRODUCT_NAME } from '../../config/product';
 import {
   INVOICE_PAYMENT_TERM_DAYS,
   PLANS,
   isBankTransferEligible,
+  planNameForDisplay,
   resolvePlanKeyFromLegacyName,
   resolvePlanKeyFromPriceId,
   toPlanDisplayName,
@@ -31,6 +33,21 @@ function testLegacyNameResolution() {
   assert.equal(resolvePlanKeyFromLegacyName('Starter'), null);
   assert.equal(resolvePlanKeyFromLegacyName(null), null);
   assert.equal(toPlanDisplayName('max'), 'Hosted KANAP');
+  // The current display name, built from the product name, resolves as the stored legacy one does.
+  assert.equal(toPlanDisplayName('max'), `Hosted ${PRODUCT_NAME}`);
+  assert.equal(resolvePlanKeyFromLegacyName(`Hosted ${PRODUCT_NAME}`), 'max');
+  assert.equal(resolvePlanKeyFromLegacyName(`  hosted ${PRODUCT_NAME.toLowerCase()} `), 'max');
+}
+
+function testStoredPlanNameShowsTheCurrentName() {
+  // A subscription stored under the legacy name shows the current one: no data migration on a rename.
+  assert.equal(planNameForDisplay('Hosted KANAP'), `Hosted ${PRODUCT_NAME}`);
+  assert.equal(planNameForDisplay('max'), `Hosted ${PRODUCT_NAME}`);
+  // Names that are no sellable plan stay as stored.
+  assert.equal(planNameForDisplay('Trial'), 'Trial');
+  assert.equal(planNameForDisplay('On-Prem'), 'On-Prem');
+  assert.equal(planNameForDisplay('Internal'), 'Internal');
+  assert.equal(planNameForDisplay(null), null);
 }
 
 function testPriceIdResolution() {
@@ -78,6 +95,7 @@ function testInvoicePaymentTerm() {
 
 function run() {
   testSingleSellablePlan();
+  testStoredPlanNameShowsTheCurrentName();
   testLegacyNameResolution();
   testPriceIdResolution();
   testBankTransferEligibility();

@@ -28,8 +28,8 @@ export const NETBOX_ERROR_CODES = [
 export type NetboxErrorCode = (typeof NETBOX_ERROR_CODES)[number];
 
 export const NETBOX_ERROR_MESSAGES: Record<NetboxErrorCode, string> = {
-  netbox_unreachable: 'KANAP could not reach the Netbox server.',
-  netbox_dns: 'KANAP could not find the Netbox server from its address.',
+  netbox_unreachable: 'The Netbox server could not be reached.',
+  netbox_dns: 'The Netbox server could not be found from its address.',
   netbox_private_host: 'This address points at a private network. Use the public address of the Netbox server.',
   netbox_timeout: 'The Netbox server did not answer in time.',
   netbox_auth: 'Netbox rejected the API token. Check that it was copied in full and that it can read the inventory.',
@@ -38,7 +38,7 @@ export const NETBOX_ERROR_MESSAGES: Record<NetboxErrorCode, string> = {
   netbox_timeout_invalid: 'The request timeout must be a whole number of seconds between 5 and 120, or empty to use the default.',
   netbox_token_missing: 'No Netbox API token is saved yet. Add one in Netbox under your profile, API tokens, then paste it here.',
   netbox_tls: 'The Netbox certificate could not be verified. Turn on Ignore certificate errors only if you trust this server.',
-  netbox_invalid_response: 'The Netbox server returned an answer KANAP could not read. Check that the address points at Netbox.',
+  netbox_invalid_response: 'The Netbox server returned an answer that could not be read. Check that the address points at Netbox.',
   netbox_rate_limited: 'Netbox is refusing more requests for the moment. Try again in a few minutes.',
   netbox_token_unreadable: 'The saved Netbox token cannot be read on this server. Enter the token again and save.',
   netbox_sync_failed: 'The synchronisation could not finish. Check the Netbox connection, then try again.',

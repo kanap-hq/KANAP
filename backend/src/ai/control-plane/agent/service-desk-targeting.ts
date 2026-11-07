@@ -204,7 +204,7 @@ export function resolveTargetingPredicates(predicates: ServiceDeskTargetPredicat
       return {
         predicate,
         resolution: 'control_plane_resolved',
-        reason: 'Resolved from KANAP target state, not provider search.',
+        reason: 'Resolved from the workspace target state, not provider search.',
       };
     }
     if (PUSHED_DOWN_FIELDS.has(predicate.field)) {

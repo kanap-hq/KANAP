@@ -47,10 +47,10 @@ Ouvrez **Administration > Intégrations**, puis la carte **Inventaire Netbox**.
 
 Dans l'onglet **Netbox**, ouvrez **Correspondances**. Quatre tableaux s'y trouvent. Les deux premiers déterminent tout le périmètre de l'import.
 
-- **Rôles Netbox > Type d'actif KANAP**. Chaque rôle d'équipement connu de Netbox reçoit un type d'actif, ou **Ne pas importer**.
-- **Sites Netbox > Site KANAP**. Chaque site Netbox reçoit l'un de vos sites, ou **Ne pas importer**.
+- **Rôles Netbox > Type d'actif**. Chaque rôle d'équipement connu de Netbox reçoit un type d'actif, ou **Ne pas importer**.
+- **Sites Netbox > Site**. Chaque site Netbox reçoit l'un de vos sites, ou **Ne pas importer**.
 
-Tout ce qui reste sur **Ne pas importer** est laissé de côté : ces objets ne sont jamais créés, jamais mis à jour, jamais signalés comme absents. C'est ainsi que vous gardez les bandeaux de prises, les panneaux de brassage ou un site de laboratoire hors de KANAP tout en important les serveurs qui les entourent.
+Tout ce qui reste sur **Ne pas importer** est laissé de côté : ces objets ne sont jamais créés, jamais mis à jour, jamais signalés comme absents. C'est ainsi que vous écartez les bandeaux de prises, les panneaux de brassage ou un site de laboratoire tout en important les serveurs qui les entourent.
 
 Une ligne supplémentaire figure parmi les rôles : **Machines virtuelles**. Toutes les machines virtuelles de Netbox passent par cette seule ligne, quel que soit le rôle que Netbox leur donne : une décision couvre l'ensemble. Une machine virtuelle prend le site de son cluster lorsqu'elle n'en porte pas elle-même.
 
@@ -60,27 +60,27 @@ Mettre un site en correspondance fait aussi passer ses emplacements Netbox en so
 
 ### Systèmes d'exploitation
 
-Le troisième tableau met chaque plateforme Netbox en correspondance avec une technologie. Netbox dit « Debian 12 » là où KANAP a la technologie Debian avec sa version « 12 (Bookworm) » : c'est ici que les deux sont rapprochés. Chaque ligne indique combien d'objets utilisent cette plateforme.
+Le troisième tableau met chaque plateforme Netbox en correspondance avec une technologie. Netbox dit « Debian 12 » là où vos technologies ont Debian avec sa version « 12 (Bookworm) » : c'est ici que les deux sont rapprochés. Chaque ligne indique combien d'objets utilisent cette plateforme.
 
 La liste propose vos technologies de la famille **Système d'exploitation**, seules et avec chacune de leurs versions, puis les systèmes d'exploitation du catalogue des technologies que vous n'avez pas encore ajoutés. La valeur retenue est le nom de la technologie, avec sa version quand vous en choisissez une. À l'exécution suivante, KANAP enregistre cette technologie et cette version comme système d'exploitation du serveur, et ajoute à vos technologies une entrée du catalogue quand vous en avez choisi une.
 
 Les lignes sont préremplies quand KANAP voit la réponse : le même nom, ou le seul choix dont le nom commence par le nom de la plateforme. « Debian 12 » suggère « Debian 12 (Bookworm) ». Comme pour les autres tableaux, une suggestion ne compte qu'une fois **Enregistrer les correspondances** cliqué.
 
-Ce tableau n'est pas un filtre. Une plateforme laissée sur **Aucune correspondance** n'écarte jamais rien de l'import. L'équipement entre et son système d'exploitation reste exactement tel qu'il est dans KANAP. Mettez la plateforme en correspondance plus tard et l'exécution suivante renseigne le champ.
+Ce tableau n'est pas un filtre. Une plateforme laissée sur **Aucune correspondance** n'écarte jamais rien de l'import. L'équipement entre et son système d'exploitation reste exactement tel qu'il est. Mettez la plateforme en correspondance plus tard et l'exécution suivante renseigne le champ.
 
 Netbox accorde les droits de lecture par type d'objet : un jeton autorisé à lire les équipements, les rôles et les sites peut malgré tout se voir refuser les plateformes. Les rôles et les sites continuent de fonctionner et l'import n'est pas affecté. Seule cette section reste vide, et elle en dit la raison.
 
 ### Clusters { #clusters }
 
-La section **Clusters** associe chaque cluster Netbox à un cluster KANAP : un actif marqué comme cluster et en service. Chaque ligne indique combien de machines virtuelles le cluster Netbox contient. Un cluster KANAP du même nom est suggéré et, comme ailleurs, une suggestion ne compte qu'une fois que vous appuyez sur **Enregistrer les correspondances**.
+La section **Clusters** associe chaque cluster Netbox à un cluster de votre espace de travail : un actif marqué comme cluster et en service. Chaque ligne indique combien de machines virtuelles le cluster Netbox contient. Un cluster du même nom est suggéré et, comme ailleurs, une suggestion ne compte qu'une fois que vous appuyez sur **Enregistrer les correspondances**.
 
-À la synchronisation suivante, chaque machine virtuelle d'un cluster associé est ajoutée aux relations **Contient** de son cluster KANAP. Une technologie installée sur le cluster atteint alors la machine et les applications qu'elle héberge. Une machine dont seul le cluster change apparaît sous **À mettre à jour**, avec une ligne **Cluster**. Une machine créée par la synchronisation rejoint son cluster tout de suite.
+À la synchronisation suivante, chaque machine virtuelle d'un cluster associé est ajoutée aux relations **Contient** du cluster correspondant. Une technologie installée sur le cluster atteint alors la machine et les applications qu'elle héberge. Une machine dont seul le cluster change apparaît sous **À mettre à jour**, avec une ligne **Cluster**. Une machine créée par la synchronisation rejoint son cluster tout de suite.
 
 Quand un hôte membre du cluster associé contient aujourd'hui la machine, la rattacher au cluster remplace le lien de l'hôte. L'aperçu le montre sur la ligne de la machine, avec une ligne **Placement** de l'hôte vers le cluster. Voir [Machines virtuelles sur un cluster](assets.md#virtual-machines-on-a-cluster).
 
 Hors ce cas, l'import ne fait qu'ajouter :
 
-- Une machine déjà présente dans un autre cluster KANAP y reste. L'aperçu le signale sur la ligne de la machine, pour que vous puissiez retirer cette relation à la main si elle est périmée.
+- Une machine déjà présente dans un autre cluster y reste. L'aperçu le signale sur la ligne de la machine, pour que vous puissiez retirer cette relation à la main si elle est périmée.
 - Modifier une correspondance ajoute les machines au nouveau cluster et les garde dans l'ancien.
 - Une machine que vous retirez de son cluster y revient à la synchronisation suivante, tant qu'elle se trouve dans ce cluster Netbox et que la correspondance existe. Pour la retirer définitivement, supprimez d'abord la correspondance, puis la relation.
 
@@ -97,7 +97,7 @@ Cliquez sur **Synchroniser maintenant**. KANAP lit Netbox et affiche **Vérifier
 L'aperçu est regroupé ainsi :
 
 - **Sous-sites** : les lignes partagées que l'exécution crée, adopte ou renomme, listées une fois chacune avec le site auquel elles appartiennent et le nombre d'équipements qui s'y retrouvent. Renommer un emplacement Netbox apparaît ici comme une seule ligne, et non comme un déplacement de chaque actif.
-- **À créer** : les objets sans équivalent dans KANAP. Ils seront créés.
+- **À créer** : les objets sans équivalent dans votre espace de travail. Ils seront créés.
 - **À mettre à jour** : les objets rapprochés d'un actif existant qui diffère. Rien n'est encore modifié, les valeurs sont écrites quand vous appliquez. Chacun liste les champs qui changent, champ par champ, sous la forme `avant → après`.
 - **À décider** : les objets que KANAP ne tranchera pas seul. Rien ne leur arrive tant que vous ne les traitez pas, ici ou plus tard sur la page.
 - **Ignorés** : les objets hors périmètre, comptés par raison (rôle sans correspondance, site sans correspondance, sans nom dans Netbox, ignoré par vous). Les 20 premiers objets de chaque raison sont nommés, puis le nombre des autres.
@@ -149,7 +149,7 @@ Deux règles complètent le dispositif :
 
 ## Les champs gérés par Netbox
 
-| Gérés par Netbox | Qui restent à vous dans KANAP |
+| Gérés par Netbox | Qui restent à vous |
 |------------------|-------------------------------|
 | Nom | Environnement |
 | Nom d'hôte et domaine | Notes et description |
@@ -162,7 +162,7 @@ Deux règles complètent le dispositif :
 | Site | |
 | Sous-site | |
 
-Sur un actif lié à Netbox, un champ géré porte la mention **Géré par Netbox** et n'est pas modifiable dans KANAP. Modifiez-le dans Netbox : l'exécution suivante le reprend. Tout le reste de la fiche reste modifiable comme d'habitude.
+Sur un actif lié à Netbox, un champ géré porte la mention **Géré par Netbox** et n'est pas modifiable. Modifiez-le dans Netbox : l'exécution suivante le reprend. Tout le reste de la fiche reste modifiable comme d'habitude.
 
 **Seuls les champs que Netbox renseigne réellement pour cet objet sont verrouillés.** Netbox n'a pas la notion de domaine, un équipement n'a souvent pas de plateforme, et il n'a parfois pas d'adresse principale. Ces champs restent à vous de compléter, et comme une synchronisation n'écrit jamais une valeur vide, ce que vous y saisissez n'est jamais écrasé. La fiche de l'actif le dit en une ligne : « Netbox renseigne les champs qu'il fournit. Les autres sont à vous de compléter. »
 
@@ -172,9 +172,9 @@ La fiche de l'actif porte aussi une ligne **Source** : la date de la dernière s
 
 ### Règles à connaître
 
-**Une valeur vide dans Netbox n'efface jamais une valeur KANAP.** Si Netbox n'a pas de numéro de série et que KANAP en a un, le numéro de série est conservé. Seule une valeur réellement présente dans Netbox est écrite.
+**Une valeur vide dans Netbox n'efface jamais une valeur existante.** Si Netbox n'a pas de numéro de série et que l'actif en a un, le numéro de série est conservé. Seule une valeur réellement présente dans Netbox est écrite.
 
-**Les modifications manuelles sont corrigées.** Chaque exécution compare aux valeurs réelles de l'actif : un champ géré modifié autrement dans KANAP est remis en ligne à l'exécution suivante.
+**Les modifications manuelles sont corrigées.** Chaque exécution compare aux valeurs réelles de l'actif : un champ géré modifié autrement est remis en ligne à l'exécution suivante.
 
 **Un point n'est un domaine que si vous le dites.** Un nom Netbox est découpé en nom d'hôte et domaine lorsqu'il se termine par un suffixe DNS de votre liste de domaines, dans **Cartographie SI > Paramètres**. Le suffixe le plus long l'emporte : un nom terminé par `corp.example.com` prend ce domaine plutôt que `example.com`. Tout le reste n'est qu'un nom : `dl3.robot-15ms.ie2000` devient le nom d'hôte tel quel, points compris, et le domaine n'est pas touché. Rien n'est signalé, car il n'y a rien d'anormal. Pour faire reconnaître un suffixe, ajoutez le domaine dans les paramètres : l'exécution suivante découpe le nom d'elle-même.
 
@@ -184,7 +184,7 @@ Les actifs importés avant cette règle, dont le nom d'hôte avait été coupé 
 
 **Le cycle de vie suit un tableau fixe.**
 
-| Statut Netbox | Cycle de vie KANAP |
+| Statut Netbox | Cycle de vie |
 |---------------|--------------------|
 | Planned, Staged, Inventory | Proposé |
 | Active, Offline, Failed, Paused | Actif |
@@ -195,7 +195,7 @@ Les actifs importés avant cette règle, dont le nom d'hôte avait été coupé 
 
 Une synchronisation ne passe jamais un actif en **Retiré**. Retirer un équipement est une décision qui vous revient, depuis la liste **Absents de Netbox**.
 
-**L'environnement est posé une seule fois.** Les nouveaux actifs reçoivent l'environnement choisi sur la carte d'intégration. Les exécutions suivantes n'y touchent plus : vous pouvez le corriger dans KANAP, il reste corrigé.
+**L'environnement est posé une seule fois.** Les nouveaux actifs reçoivent l'environnement choisi sur la carte d'intégration. Les exécutions suivantes n'y touchent plus : vous pouvez le corriger, il reste corrigé.
 
 **Les valeurs inconnues de KANAP sont ignorées, jamais inventées.** Un statut de cycle de vie sans équivalent, ou un système d'exploitation sans correspondance dans **Correspondances** et sans technologie de ce nom dans la famille **Système d'exploitation** ni dans le catalogue, reste inchangé et fait l'objet d'un avertissement. Mettez la plateforme en correspondance, ou ajoutez la technologie, puis relancez. Une adresse principale en IPv6 est laissée de côté de la même manière, avec le message « L'adresse principale est une adresse IPv6, qui n'est pas encore importée. »
 
@@ -203,11 +203,11 @@ Une synchronisation ne passe jamais un actif en **Retiré**. Retirer un équipem
 
 **Un sous-site créé à la main est adopté, pas dupliqué.** Quand un emplacement Netbox porte le même nom qu'un sous-site que vous utilisez déjà sur ce site, KANAP relie les deux : votre ligne garde son identité, prend l'orthographe de Netbox, et porte la mention **Netbox** à partir de là. Vos actifs restent où ils sont.
 
-**Rien n'est jamais supprimé.** Un emplacement retiré de Netbox laisse son sous-site en place, avec les actifs qui le portent. Un sous-site lié à Netbox reste modifiable : renommez-le ou supprimez-le dans KANAP, et l'exécution suivante le remet en ligne, en le recréant si un actif en a encore besoin.
+**Rien n'est jamais supprimé.** Un emplacement retiré de Netbox laisse son sous-site en place, avec les actifs qui le portent. Un sous-site lié à Netbox reste modifiable : renommez-le ou supprimez-le, et l'exécution suivante le remet en ligne, en le recréant si un actif en a encore besoin.
 
 **Un équipement sans emplacement conserve son sous-site.** Seul un emplacement réellement présent dans Netbox est écrit, la même règle que pour tout autre champ géré. Les machines virtuelles n'en reçoivent jamais : une machine virtuelle Netbox ne porte aucun emplacement.
 
-**Deux emplacements de même nom sur un même site.** Netbox accepte « Local technique » et « local technique » côte à côte, KANAP non. Le premier importé l'emporte, et l'autre est signalé par un avertissement. Il en va de même quand deux sites Netbox sont mis en correspondance avec le même site KANAP et portent tous deux un emplacement de même nom.
+**Deux emplacements de même nom sur un même site.** Netbox accepte « Local technique » et « local technique » côte à côte, KANAP non. Le premier importé l'emporte, et l'autre est signalé par un avertissement. Il en va de même quand deux sites Netbox sont mis en correspondance avec le même site et portent tous deux un emplacement de même nom.
 
 **Si Netbox ne renvoie pas ses emplacements**, l'exécution se poursuit avec les équipements et laisse tous les sous-sites intacts, avec une note en ce sens dans l'aperçu. Une affectation partielle serait pire que pas d'affectation du tout.
 
@@ -239,7 +239,7 @@ L'onglet **Netbox** de **Cartographie SI > Paramètres** est l'endroit où tout 
 
 En dessous, l'onglet **Objets** liste tous les objets Netbox du périmètre, filtrés par état.
 
-La colonne **Type** affiche le type d'actif KANAP de l'actif lié, « Serveur physique » ou « Machine virtuelle » plutôt que le mot « Équipement » pour tout. Un objet qui n'a pas encore d'actif affiche son type Netbox en gris, car c'est tout ce qu'il y a à en dire pour l'instant. À côté des filtres d'état, un champ de recherche restreint la liste. Il porte sur le nom Netbox, le nom de l'actif et sa référence, et la liste suit le champ peu après que vous arrêtez de taper.
+La colonne **Type** affiche le type d'actif de l'actif lié, « Serveur physique » ou « Machine virtuelle » plutôt que le mot « Équipement » pour tout. Un objet qui n'a pas encore d'actif affiche son type Netbox en gris, car c'est tout ce qu'il y a à en dire pour l'instant. À côté des filtres d'état, un champ de recherche restreint la liste. Il porte sur le nom Netbox, le nom de l'actif et sa référence, et la liste suit le champ peu après que vous arrêtez de taper.
 
 | État | Ce que cela signifie | Ce que vous pouvez faire |
 |------|----------------------|--------------------------|
@@ -249,7 +249,7 @@ La colonne **Type** affiche le type d'actif KANAP de l'actif lié, « Serveur ph
 | **Ignorés** | Vous avez demandé à KANAP de laisser cet objet de côté. Chaque exécution le saute. | **Ne plus ignorer** le remet dans la liste. Quand la fiche ne contient rien à décider, elle est supprimée et l'objet est réexaminé à la prochaine synchronisation. |
 | **Liés** | L'objet et l'actif sont rapprochés et à jour. | Ouvrez l'un ou l'autre depuis la ligne. |
 
-Chaque ligne renvoie à l'objet dans Netbox et à l'actif dans KANAP, avec sa référence `AST-`.
+Chaque ligne renvoie à l'objet dans Netbox et à l'actif, avec sa référence `AST-`.
 
 Lier ou créer depuis cette page applique aussitôt les valeurs Netbox. Seul cet objet est relu dans Netbox, l'action reste donc rapide sur un gros inventaire. Les messages et les avertissements s'affichent dans votre langue.
 
@@ -283,7 +283,7 @@ La tuile reste discrète quand il n'y a rien à faire : une ligne indiquant que 
 | Un actif se retrouve avec le nom Netbox complet comme nom d'hôte | Le nom ne se termine pas par un suffixe DNS de votre liste de domaines, KANAP le garde donc tel quel. C'est le résultat attendu pour un nom dont les points font partie du nom. S'il s'agit bien d'un domaine, ajoutez-le dans **Cartographie SI > Paramètres** et relancez. |
 | L'exécution a échoué après quelques objets | Dix objets consécutifs n'ont pas pu être enregistrés, l'exécution s'est donc arrêtée. La cause est en général la même pour tous, et les détails figurent dans le journal du serveur. |
 | « Netbox a renvoyé plus de pages que prévu. Certains objets n'ont pas été examinés. » | L'inventaire est plus grand que ce qu'une exécution lit. Ce qui a été lu est appliqué, et rien n'est marqué absent. Restreignez le périmètre dans **Correspondances** pour que l'exécution couvre ce qui compte pour vous. |
-| Un sous-site signale que son nom est déjà utilisé | Deux emplacements Netbox de ce site portent le même nom, ou deux sites mis en correspondance pointent vers le même site KANAP et portent chacun un emplacement de ce nom. Renommez l'un des deux dans Netbox, ou fusionnez-les là-bas. Les équipements sont importés dans tous les cas, sans sous-site. |
+| Un sous-site signale que son nom est déjà utilisé | Deux emplacements Netbox de ce site portent le même nom, ou deux sites mis en correspondance pointent vers le même site et portent chacun un emplacement de ce nom. Renommez l'un des deux dans Netbox, ou fusionnez-les là-bas. Les équipements sont importés dans tous les cas, sans sous-site. |
 | « Netbox n'a pas renvoyé ses clusters » | Le jeton d'API ne peut pas lire les clusters. Accordez-lui la permission sur `virtualization.cluster` dans Netbox, ou laissez-le ainsi : les équipements s'importent toujours, seul le rattachement des machines virtuelles à leur cluster est hors de portée. |
 | Une machine virtuelle n'a pas été rattachée à son cluster | Son cluster Netbox n'a pas de correspondance dans **Correspondances > Clusters**, ou la correspondance désigne un actif retiré ou qui n'est plus un cluster. Corrigez la correspondance, puis relancez la synchronisation. |
 | « Netbox n'a pas renvoyé ses emplacements » | Le jeton d'API ne peut pas lire les emplacements. Accordez-lui la permission sur `dcim.location` dans Netbox, ou laissez-le ainsi : l'import des équipements n'est pas affecté. |
@@ -295,6 +295,6 @@ La tuile reste discrète quand il n'y a rien à faire : une ligne indiquant que 
 - **Les correspondances d'abord, la synchronisation ensuite.** Les correspondances définissent le périmètre. Commencez par les rôles et les sites dont vous êtes sûr, lancez une exécution, puis élargissez.
 - **Déclarez d'abord vos suffixes DNS.** Un nom Netbox n'est découpé en nom d'hôte et domaine que s'il se termine par un suffixe présent dans **Cartographie SI > Paramètres**. Ajoutez les domaines que vous utilisez avant la première exécution, et les noms arrivent déjà découpés.
 - **Lisez l'aperçu de la première exécution.** C'est la seule où tous les rapprochements sont nouveaux, donc la seule qui mérite une lecture ligne à ligne.
-- **Équipements renommés : vérifiez la liste À créer.** Tout ce que vous y reconnaissez est sur le point d'être dupliqué. Liez-le à son actif dans l'aperçu, ou renseignez son numéro de série ou son nom d'hôte dans KANAP et rouvrez l'aperçu.
+- **Équipements renommés : vérifiez la liste À créer.** Tout ce que vous y reconnaissez est sur le point d'être dupliqué. Liez-le à son actif dans l'aperçu, ou renseignez son numéro de série ou son nom d'hôte sur cet actif et rouvrez l'aperçu.
 - **Renseignez les numéros de série.** C'est le rapprochement le plus solide. Les actifs qui portent un numéro de série survivent aux renommages des deux côtés sans jamais atterrir dans **À décider**.
 - **Attendez avant d'activer l'exécution horaire.** Deux exécutions manuelles propres d'affilée, la seconde n'annonçant aucun changement, signifient que les correspondances et les rapprochements sont justes.

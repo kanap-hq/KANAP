@@ -129,7 +129,7 @@ An absent column keeps every stored value of that column. A file holding only `i
 |---|---|
 | **Errors** | The rows the load refuses, by line of the file with the column when it knows it. A file with one error loads nothing |
 | **Changes** | The lines to create, the lines to update and the lines the file leaves as they are |
-| **Changed in KANAP since the export** | The lines someone changed after your export, with who and when. Loading the file writes your values over those changes |
+| **Changed since the export** | The lines someone changed after your export, with who and when. Loading the file writes your values over those changes |
 | **Warnings** | A row that looks like another line, a `company_name` other than the company of the row's cost center, an amount that stops a column following its calculation lines, columns and cells the file ignores |
 | **Created by the load** | The suppliers and the dimension values the load would add |
 

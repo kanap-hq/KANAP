@@ -168,11 +168,11 @@ El nombre del agente y su descripción breve viven en el título del espacio, no
 
 De dónde saca el agente sus datos:
 
-- **Buscar en el conocimiento de KANAP**: cuando está activado, el agente recurre a sus [bibliotecas de conocimiento](knowledge.md) y las cita en las respuestas. Con esto desactivado, el agente responde con el conocimiento propio del modelo (y de la web, si está activada).
+- **Buscar en la base de conocimiento**: cuando está activado, el agente recurre a sus [bibliotecas de conocimiento](knowledge.md) y las cita en las respuestas. Con esto desactivado, el agente responde con el conocimiento propio del modelo (y de la web, si está activada).
 - **Buscar en todas las bibliotecas disponibles**, o desactívelo para elegir **Bibliotecas** concretas: el agente busca entonces solo en esas, dentro de las que puede acceder. Los nombres de las bibliotecas provienen de la sección de Conocimiento.
-- **Buscar en la web**: permite que el agente también consulte la web pública; el conocimiento de KANAP siempre tiene prioridad y los resultados web se citan. Este interruptor solo está disponible si la búsqueda web está habilitada para toda la plataforma. Cuando no lo está, el interruptor aparece deshabilitado y una nota le remite a su administrador; consulte [Configuración de Plaid](ai-settings.md).
+- **Buscar en la web**: permite que el agente también consulte la web pública; la base de conocimiento siempre tiene prioridad y los resultados web se citan. Este interruptor solo está disponible si la búsqueda web está habilitada para toda la plataforma. Cuando no lo está, el interruptor aparece deshabilitado y una nota le remite a su administrador; consulte [Configuración de Plaid](ai-settings.md).
 
-Los agentes de supervisión tienen aquí **Buscar en los datos de KANAP** en su lugar, que permite al agente consultar su propio inventario de TI (**Aplicaciones**, **Activos**, **Interfaces**, **Conexiones**, **Ubicaciones**) para añadir contexto de negocio a un diagnóstico.
+Los agentes de supervisión tienen aquí **Buscar en su inventario** en su lugar, que permite al agente consultar su propio inventario de TI (**Aplicaciones**, **Activos**, **Interfaces**, **Conexiones**, **Ubicaciones**) para añadir contexto de negocio a un diagnóstico.
 
 ### Ajustes operativos
 

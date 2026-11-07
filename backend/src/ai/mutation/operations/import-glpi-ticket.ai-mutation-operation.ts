@@ -590,7 +590,7 @@ const ImportTicketInputSchema = z.object({
 
 abstract class BaseImportTicketAiMutationOperation<TInput extends LegacyImportTicketInput | ImportTicketInput> implements AiMutationOperation<TInput> {
   readonly toolName: AiMutationWriteToolName = 'import_glpi_ticket';
-  readonly description: string = 'Deprecated compatibility tool for importing one GLPI ticket into one KANAP task. Prefer import_ticket with provider_key `glpi` for new previews.';
+  readonly description: string = 'Deprecated compatibility tool for importing one GLPI ticket into one task. Prefer import_ticket with provider_key `glpi` for new previews.';
   readonly inputSchema: z.ZodTypeAny = LegacyImportTicketInputSchema;
   readonly inputSummary: Record<string, string> = {
     ticket_id: 'GLPI ticket numeric identifier.',
@@ -1241,7 +1241,7 @@ export class ImportGlpiTicketAiMutationOperation extends BaseImportTicketAiMutat
 @Injectable()
 export class ImportTicketAiMutationOperation extends BaseImportTicketAiMutationOperation<ImportTicketInput> implements AiMutationOperation<ImportTicketInput> {
   readonly toolName: AiMutationWriteToolName = 'import_ticket';
-  readonly description: string = 'Create a preview to import one ticket from a configured ticketing provider into one KANAP task. Requires explicit user approval before execution.';
+  readonly description: string = 'Create a preview to import one ticket from a configured ticketing provider into one task. Requires explicit user approval before execution.';
   readonly inputSchema: z.ZodTypeAny = ImportTicketInputSchema;
   readonly inputSummary: Record<string, string> = {
     provider_key: 'Configured ticketing provider key.',

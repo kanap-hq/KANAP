@@ -365,7 +365,7 @@ export class NetboxConfigService {
     if (input.default_environment !== undefined) {
       const value = String(textOrNull(input.default_environment) ?? '').toLowerCase();
       if (!ENVIRONMENTS.includes(value as (typeof ENVIRONMENTS)[number])) {
-        throw new BadRequestException(`"${input.default_environment}" is not one of the environments KANAP knows.`);
+        throw new BadRequestException(`"${input.default_environment}" is not a known environment.`);
       }
       metadata.default_environment = value;
     }

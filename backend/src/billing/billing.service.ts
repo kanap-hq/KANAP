@@ -25,6 +25,7 @@ import {
   getPriceId,
   isBankTransferEligible,
   resolvePlanKeyFromPriceId,
+  planNameForDisplay,
   resolvePlanKeyFromLegacyName,
   toPlanDisplayName,
   type PlanKey,
@@ -220,7 +221,8 @@ export class BillingService {
       : (sub.next_payment_at ? sub.next_payment_at.toISOString() : paymentDueAt);
 
     return {
-      plan_name: sub.plan_name,
+      // The current name of the plan: a subscription keeps the name of the version that stored it.
+      plan_name: planNameForDisplay(sub.plan_name),
       seat_limit: sub.seat_limit,
       seats_used,
       subscription_type: sub.subscription_type,

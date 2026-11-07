@@ -286,7 +286,7 @@ Cuando el inicio de sesión único está conectado, una persona que inicia sesi�
 
 Una cuenta nueva empieza con el rol de sistema **Contacto** y sin permisos. La persona ve una página que dice:
 
-> Su cuenta aún no tiene acceso a KANAP. Pida a su administrador que le conceda acceso.
+> Su cuenta aún no tiene acceso. Pida a su administrador que le conceda acceso.
 
 Los administradores reciben un correo cuando esto ocurre. Para dar acceso a la persona, abra **Administración > Usuarios**, búsquela con el estado **Acceso pendiente** y asígnele un rol.
 

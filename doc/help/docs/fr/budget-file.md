@@ -129,7 +129,7 @@ Une colonne absente conserve toutes les valeurs enregistrées de cette colonne. 
 |---|---|
 | **Erreurs** | Les lignes que le chargement refuse, par ligne du fichier avec la colonne lorsqu'elle est connue. Un fichier avec une seule erreur ne charge rien |
 | **Modifications** | Les lignes budgétaires à créer, les lignes budgétaires à mettre à jour et les lignes budgétaires que le fichier laisse telles quelles |
-| **Modifiés dans KANAP depuis l'export** | Les lignes budgétaires modifiées par quelqu'un après votre export, avec qui et quand. Charger le fichier écrit vos valeurs à la place de ces modifications |
+| **Modifiés depuis l'export** | Les lignes budgétaires modifiées par quelqu'un après votre export, avec qui et quand. Charger le fichier écrit vos valeurs à la place de ces modifications |
 | **Avertissements** | Une ligne du fichier qui ressemble à une autre ligne budgétaire, un `company_name` différent de la société du centre de coûts de la ligne, un montant qui fait cesser une colonne de suivre ses lignes de calcul, des colonnes et des cellules que le fichier ignore |
 | **Créés par le chargement** | Les fournisseurs et les valeurs de dimension que le chargement ajouterait |
 

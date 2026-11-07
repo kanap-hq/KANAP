@@ -189,7 +189,7 @@ async function testUnreadFamilies(h: Harness, runner: QueryRunner, s: Seed) {
   assert.match(code.no_match_note, /may exist/);
   const named = await h.tools.execute(full, 'search_all', { query: 'centre de coûts FR-TRV-600' });
   assert.equal(named.not_read_here[0].family, 'cost centers');
-  assert.match(named.not_read_here[0].note, /^KANAP has cost centers; this server does not read them for this person\. They are on the screen named, in the person's language, en: Master data › Cost centers; fr: Données de référence › Centres de coûts;/);
+  assert.match(named.not_read_here[0].note, /^The workspace has cost centers; this server does not read them for this person\. They are on the screen named, in the person's language, en: Master data › Cost centers; fr: Données de référence › Centres de coûts;/);
   assert.match(named.not_read_here[0].note, /for a person with the Cost centers right, which this person's role does not give/);
 
   // A French profile: the screens as the French menus name them (P2 q10b, q12, q20).

@@ -226,7 +226,7 @@ describe('AdminAiPage', () => {
     fireEvent.click(revokeKey);
     let dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText('Revoke Laptop?')).toBeInTheDocument();
-    expect(within(dialog).getByText(/loses access to KANAP at once/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/loses its access at once/)).toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(api.delete).not.toHaveBeenCalled();

@@ -2003,7 +2003,7 @@ async function testReferenceDataFamiliesAreDescribed() {
   const history = registry.listRegisteredTools().find((tool) => tool.name === 'get_record_history')!.description;
   assert.match(history, /cost centers/);
   assert.match(history, /working-day calendars/);
-  assert.match(history, /The other families have no History tab in KANAP, so no history here\./);
+  assert.match(history, /The other families have no History tab, so no history here\./);
   assert.doesNotMatch(history, /applications, contracts, projects, requests, tasks, incidents, users and more/);
 }
 

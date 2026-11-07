@@ -1793,7 +1793,7 @@ export class AiQueryExecutor {
         via_type: entry.via.type,
         access: entry.access,
       })),
-      note: 'Only people in limited access are listed: everyone else sees the whole company. full: a node on all data or on this company; partial: a node on a cost center or group that covers a part of it. Who has a node on one cost center: query_entities on data_access filtered on node_code; what a cost center inherits is on its Access tab in KANAP.',
+      note: 'Only people in limited access are listed: everyone else sees the whole company. full: a node on all data or on this company; partial: a node on a cost center or group that covers a part of it. Who has a node on one cost center: query_entities on data_access filtered on node_code; what a cost center inherits is on its Access tab.',
       coverage_note: AI_DATA_ACCESS_COVERAGE_NOTE,
     };
   }

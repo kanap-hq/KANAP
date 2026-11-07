@@ -168,11 +168,11 @@ The agent's name and short description live on the workspace title, not in this 
 
 Where the agent gets its facts:
 
-- **Search KANAP knowledge**: when on, the agent draws on your [Knowledge libraries](knowledge.md) and cites them in replies. With it off, the agent answers from the model's own knowledge (and the web, if that's on).
+- **Search the knowledge base**: when on, the agent draws on your [Knowledge libraries](knowledge.md) and cites them in replies. With it off, the agent answers from the model's own knowledge (and the web, if that's on).
 - **Search all available libraries**, or turn it off to pick specific **Libraries**. The agent then searches only those, within what it's allowed to access. Library names come from the Knowledge section.
-- **Search the web**: lets the agent also consult the public web; KANAP knowledge always takes precedence and web results are cited. This switch is only available if web search is enabled for the whole platform. When it isn't, the switch is disabled and a note points you to your administrator (see [Plaid Settings](ai-settings.md)).
+- **Search the web**: lets the agent also consult the public web; the knowledge base always takes precedence and web results are cited. This switch is only available if web search is enabled for the whole platform. When it isn't, the switch is disabled and a note points you to your administrator (see [Plaid Settings](ai-settings.md)).
 
-Monitoring agents get **Search KANAP data** here instead, which lets the agent look up your own IT inventory (**Applications**, **Assets**, **Interfaces**, **Connections**, **Locations**) to add business context to a diagnosis.
+Monitoring agents get **Search your inventory** here instead, which lets the agent look up your own IT inventory (**Applications**, **Assets**, **Interfaces**, **Connections**, **Locations**) to add business context to a diagnosis.
 
 ### Operating settings
 

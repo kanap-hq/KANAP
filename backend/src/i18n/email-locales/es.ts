@@ -187,8 +187,8 @@ export const es: EmailStrings = {
     ssoUserProvisioned: {
       subject: 'Nuevo usuario en espera de acceso',
       heading: 'Un nuevo usuario espera acceso',
-      bodyHtml: '<strong>{{userName}}</strong> ({{userEmail}}) inició sesión con Microsoft Entra y se añadió automáticamente. Esta persona no podrá usar KANAP hasta que le asigne un rol.',
-      text: '{{userName}} ({{userEmail}}) inició sesión con Microsoft Entra y se añadió automáticamente. Esta persona no podrá usar KANAP hasta que le asigne un rol. Gestionar usuarios: {{url}}',
+      bodyHtml: '<strong>{{userName}}</strong> ({{userEmail}}) inició sesión con Microsoft Entra y se añadió automáticamente. Esta persona no tendrá acceso hasta que le asigne un rol.',
+      text: '{{userName}} ({{userEmail}}) inició sesión con Microsoft Entra y se añadió automáticamente. Esta persona no tendrá acceso hasta que le asigne un rol. Gestionar usuarios: {{url}}',
       cta: 'Abrir la gestión de usuarios',
     },
     activation: {
