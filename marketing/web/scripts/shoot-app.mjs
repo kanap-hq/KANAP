@@ -1062,6 +1062,57 @@ const PAGES = {
       await hideDevBadge(page);
     },
   },
+  // End-of-support article (2026-11-09): the Deadlines view at a 24-month horizon, all types. Read-only.
+  'end-of-support-deadlines-2026-11-07': {
+    frame: 1280,
+    path: '/it/technologies/end-of-support?horizon=24',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForSelector('main table tbody tr', { timeout: 60000 });
+      await sleep(1500);
+      await hideDevBadge(page);
+    },
+  },
+  // End-of-support article (2026-11-09): the same view with one row unfolded (its servers and applications). Read-only.
+  'end-of-support-impact-2026-11-07': {
+    frame: 1280,
+    path: '/it/technologies/end-of-support?horizon=24',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForSelector('main table tbody tr', { timeout: 60000 });
+      await sleep(1500);
+      const want = process.env.EOS_ROW || 'SUSE Linux Enterprise Server';
+      const ok = await page.evaluate((want) => {
+        const row = [...document.querySelectorAll('main table tbody tr.row')].find((r) => r.innerText.replace(/\s+/g, ' ').includes(want));
+        if (!row) return false;
+        row.click();
+        return true;
+      }, want);
+      if (!ok) console.warn(`row "${want}" not found`);
+      await sleep(1200);
+      await hideDevBadge(page);
+    },
+  },
+  // End-of-support article (2026-11-09): the Missing data view. Read-only.
+  'end-of-support-missing-data-2026-11-07': {
+    frame: 1280,
+    path: '/it/technologies/end-of-support?view=gaps',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForSelector('main table tbody tr', { timeout: 60000 });
+      await sleep(1500);
+      // Leftover QA machines on the dev tenant (test, v3-*) are not part of the Fromage fixture.
+      await page.evaluate(() => {
+        for (const tr of document.querySelectorAll('main table tbody tr')) {
+          if (/^(test|v3-)/.test(tr.cells[1]?.innerText.trim() || '')) tr.remove();
+        }
+        // The dev workspace name was changed by a test on 2026-11-07; keep the header as on the other shots.
+        const walker = document.createTreeWalker(document.querySelector('header') || document.body, NodeFilter.SHOW_TEXT);
+        for (let n; (n = walker.nextNode());) if (n.nodeValue.trim() === 'Fromaaage') n.nodeValue = 'KANAP';
+      });
+      await hideDevBadge(page);
+    },
+  },
   // Vulnerabilities article (2026-10-24): "Why this row" in the side panel of a Tomcat CVE found by both sources. Read-only.
   'vulnerabilities-why-this-row-2026-10-24': {
     path: '/it/vulnerabilities',
