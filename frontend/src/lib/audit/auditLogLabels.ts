@@ -2,7 +2,7 @@ import { foldText } from '../../utils/foldText';
 
 /**
  * Plain-language labels of the audit log: the tables it names (`auditLogs.tableNames.<table>`)
- * and its sign-in, session and export rows (backend `audit/security-events.ts`). The codes stay
+ * and its sign-in, session, export and import rows (backend `audit/security-events.ts`). The codes stay
  * as stored; the page shows these labels (`admin` namespace, `auditLogs.*`), and an unknown code
  * shows as it is. Every audited table has a label (auditTableNames.test.ts).
  */
@@ -11,8 +11,10 @@ import { foldText } from '../../utils/foldText';
 export const AUTH_EVENT_TABLE = 'auth';
 /** `table_name` of exports. */
 export const EXPORT_EVENT_TABLE = 'export';
+/** `table_name` of the imports Plaid runs from a file attached to the chat. */
+export const IMPORT_EVENT_TABLE = 'import';
 
-/** The actions of sign-in, session and export rows (`auditLogs.actions.<action>`). */
+/** The actions of sign-in, session, export and import rows (`auditLogs.actions.<action>`). */
 export const AUDIT_EVENT_ACTIONS = [
   'login',
   'login_failed',
@@ -24,6 +26,7 @@ export const AUDIT_EVENT_ACTIONS = [
   'sso_login_failed',
   'mcp_connection_refused',
   'export',
+  'import',
 ] as const;
 
 /** Why a sign-in or session request was refused, or how a sign-in was made (`source_ref` of `auth` rows). */
@@ -105,6 +108,38 @@ export const EXPORT_RESOURCE_KEYS: Readonly<Record<string, string>> = {
   'working-day-profiles': 'workingDayCalendars',
 };
 
+/**
+ * The list an import row filled (`after_json.list`, the import of backend `ai/import/ai-import-access.ts`),
+ * to the label key of its export (`auditLogs.exportResources.<key>`): the same list.
+ */
+export const IMPORT_LIST_KEYS: Readonly<Record<string, string>> = {
+  applications: 'applications',
+  assets: 'assets',
+  portfolio_projects: 'projects',
+  portfolio_requests: 'requests',
+  tasks: 'tasks',
+  incidents: 'incidents',
+  budget_lines: 'budgetFile',
+  contracts: 'contracts',
+  suppliers: 'suppliers',
+  contacts: 'contacts',
+  companies: 'companies',
+  departments: 'departments',
+  cost_centers: 'costCenters',
+  accounts: 'accounts',
+  analytics_categories: 'analyticsCategories',
+  business_processes: 'businessProcesses',
+  working_day_calendars: 'workingDayCalendars',
+  technology_asset_links: 'technologyServerLinks',
+  technology_application_links: 'technologyApplicationLinks',
+};
+
+/** The label key of an import row's list, or null for a list without one. */
+export function importListKey(list: unknown): string | null {
+  if (typeof list !== 'string') return null;
+  return Object.prototype.hasOwnProperty.call(IMPORT_LIST_KEYS, list) ? IMPORT_LIST_KEYS[list] : null;
+}
+
 /** The label key of an export row's resource, or null for a resource without one. */
 export function exportResourceKey(resource: unknown): string | null {
   if (typeof resource !== 'string') return null;
@@ -165,12 +200,16 @@ export function auditUserLabel(row: AuditRowLike | null | undefined, t: Translat
   return t('auditLogs.sources.system');
 }
 
-/** The table cell: what an export exported, else the table's label. */
+/** The table cell: what an export exported or an import filled, else the table's label. */
 export function auditTableLabel(row: AuditRowLike | null | undefined, t: Translate): string {
   const table = String(row?.table_name || '');
   if (table === EXPORT_EVENT_TABLE) {
     const key = exportResourceKey(row?.after_json?.resource);
     return key ? t(`auditLogs.exportResources.${key}`) : t(`auditLogs.tableNames.${EXPORT_EVENT_TABLE}`);
+  }
+  if (table === IMPORT_EVENT_TABLE) {
+    const key = importListKey(row?.after_json?.list);
+    return key ? t(`auditLogs.exportResources.${key}`) : t(`auditLogs.tableNames.${IMPORT_EVENT_TABLE}`);
   }
   return auditTableFilterLabel(table, t);
 }

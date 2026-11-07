@@ -369,6 +369,10 @@
         "mixed-date-orders": "Dates écrites jour en premier et mois en premier",
         "mixed-decimal-marks": "Nombres écrits avec une virgule et avec un point décimal"
       }
+    },
+    "importRun": {
+      "check": "Vérification de l'import",
+      "result": "Import"
     }
   },
   "previewStatuses": {

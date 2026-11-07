@@ -18,11 +18,17 @@ import type { AuditEntry } from './audit.service';
  *   sends) (export-events.interceptor.ts): every route whose path ends with
  *   `/export`, and the other routes that send a file the server produces, marked
  *   `@ExportRoute()`. Never the request body.
+ * - imports run by Plaid from a file attached to the chat: `table_name = 'import'`,
+ *   `action = 'import'`, `source = 'ai_chat'`, the approved preview in `source_ref`, the person in
+ *   `user_id`, and `after_json = { list, filename, rows, inserted, updated, unchanged }` (`list`:
+ *   the import, `applications`). The records keep the rows their import writes.
  */
 
 export const AUTH_EVENT_TABLE = 'auth';
 export const EXPORT_EVENT_TABLE = 'export';
 export const EXPORT_EVENT_ACTION = 'export';
+export const IMPORT_EVENT_TABLE = 'import';
+export const IMPORT_EVENT_ACTION = 'import';
 
 /** Sign-in and session events are deleted from the audit log after this many days. */
 export const AUTH_EVENT_RETENTION_DAYS = 365;

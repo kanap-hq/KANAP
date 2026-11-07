@@ -13,6 +13,6 @@ import { WorkingDayProfilesService } from './working-day-profiles.service';
   imports: [TypeOrmModule.forFeature([WorkingDayProfile]), AuditModule, PermissionsModule, forwardRef(() => UsersModule)],
   providers: [WorkingDayProfilesService, WorkingDayProfilesDeleteService, WorkingDayProfilesCsvService],
   controllers: [WorkingDayProfilesController],
-  exports: [WorkingDayProfilesService],
+  exports: [WorkingDayProfilesService, WorkingDayProfilesCsvService],
 })
 export class WorkingDayProfilesModule {}

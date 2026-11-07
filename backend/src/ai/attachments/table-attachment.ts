@@ -74,6 +74,8 @@ interface Grid {
   sheetName: string | null;
   sheetCount: number;
   rows: SheetCell[][];
+  /** The line of the file each row is on: the spreadsheet row, or the CSV line the record ends on. */
+  lines: number[];
 }
 
 /** An attached spreadsheet as read: its header cells and its data rows, blank rows left out. */
@@ -85,6 +87,8 @@ export interface TableGrid {
   header: SheetCell[];
   /** The data rows below the header; a text cell is trimmed and blank when empty. */
   rows: SheetCell[][];
+  /** The line of the person's file each data row is on, as their spreadsheet numbers it. */
+  lines: number[];
   /** Columns: up to the last one with a value in any row. */
   width: number;
 }
@@ -100,9 +104,12 @@ export async function readTableAttachment(buffer: Buffer): Promise<TableGrid> {
     });
   }
   const grid = isWorkbookBytes(buffer) ? await readWorkbook(buffer) : readCsvText(buffer);
-  const read = grid.rows.map((row) => row.map(cleanCell)).filter((row) => !row.every(isBlank));
+  const read = grid.rows
+    .map((row, index) => ({ cells: row.map(cleanCell), line: grid.lines[index] }))
+    .filter((row) => !row.cells.every(isBlank));
   if (read.length === 0) throw refusal('CSV_FILE_EMPTY', 'The file is empty.');
-  const rows = read.slice(titleRowCount(read));
+  const kept = read.slice(titleRowCount(read.map((row) => row.cells)));
+  const rows = kept.map((row) => row.cells);
   const [header, ...data] = rows;
   if (data.length > TABLE_ATTACHMENT_MAX_ROWS) throw tooManyRows();
 
@@ -112,7 +119,10 @@ export async function readTableAttachment(buffer: Buffer): Promise<TableGrid> {
     while (end > 0 && isBlank(row[end - 1])) end -= 1;
     width = Math.max(width, end);
   }
-  return { format: grid.format, sheetName: grid.sheetName, sheetCount: grid.sheetCount, header, rows: data, width };
+  return {
+    format: grid.format, sheetName: grid.sheetName, sheetCount: grid.sheetCount,
+    header, rows: data, lines: kept.slice(1).map((row) => row.line), width,
+  };
 }
 
 /** Rows a sheet may hold above its header: a title, an export date. */
@@ -137,7 +147,7 @@ function titleRowCount(rows: SheetCell[][]): number {
 async function readWorkbook(buffer: Buffer): Promise<Grid> {
   try {
     const grid = await readXlsxGridAsync(buffer, { maxValueRows: TABLE_ATTACHMENT_MAX_ROWS + 1 + XLSX_BLANK_ROW_MARGIN });
-    return { format: 'xlsx', sheetName: grid.sheetName, sheetCount: grid.sheetCount, rows: grid.rows };
+    return { format: 'xlsx', sheetName: grid.sheetName, sheetCount: grid.sheetCount, rows: grid.rows, lines: grid.rows.map((_, index) => index + 1) };
   } catch (error) {
     if (!(error instanceof XlsxReadError)) throw error;
     if (error.limit === 'maxValueRows') throw tooManyRows();
@@ -154,18 +164,24 @@ function readCsvText(buffer: Buffer): Grid {
     throw error;
   }
   if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
-  let records: string[][];
+  // A CRLF is one line, as the imports read it: csv-parse counts a CR inside a quoted cell as its own line.
+  text = text.replace(/\r\n?/g, '\n');
+  let records: Array<{ record: string[]; info: { lines: number } }>;
   try {
     records = parse(text, {
       delimiter: csvSeparatorOf(text) ?? ',',
       relax_column_count: true,
       skip_empty_lines: true,
-    });
+      info: true,
+    }) as unknown as Array<{ record: string[]; info: { lines: number } }>;
   } catch {
     throw refusal('AI_TABLE_UNREADABLE', 'This file could not be read as CSV.');
   }
-  const rows = records.map((record) => record.map((value): SheetCell => ({ kind: 'text', value: String(value ?? '') })));
-  return { format: 'csv', sheetName: null, sheetCount: 1, rows };
+  const rows = records.map(({ record }) => record.map((value): SheetCell => ({ kind: 'text', value: String(value ?? '') })));
+  // The line a record starts on, as the import's own messages number it: `info.lines` is the line it
+  // ends on, after the line breaks of its quoted cells.
+  const lines = records.map(({ record, info }) => info.lines - record.reduce((breaks, value) => breaks + (String(value ?? '').match(/\n/g)?.length ?? 0), 0));
+  return { format: 'csv', sheetName: null, sheetCount: 1, rows, lines };
 }
 
 function tooManyRows(): BadRequestException {

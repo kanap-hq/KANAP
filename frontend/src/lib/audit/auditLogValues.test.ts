@@ -432,6 +432,12 @@ describe('formatAuditValue', () => {
     expect(frenchParameters.title).toBe(costCenterId);
   });
 
+  it('names the list an import filled, in the reader language', () => {
+    expect(formatAuditValue('budget_lines', 'list', context({ table: 'import' })).text).toBe('Budget file');
+    expect(formatAuditValue('suppliers', 'list', context({ locale: 'fr', t: tFr, table: 'import' })).text).toBe('Fournisseurs');
+    expect(formatAuditValue('not-a-list', 'list', context({ table: 'import' })).text).toBe('not-a-list');
+  });
+
   it('leaves an unknown export resource as stored, and a query on another table as JSON', () => {
     expect(formatAuditValue('not-a-resource', 'resource', context({ table: 'export' })).text).toBe('not-a-resource');
     expect(formatAuditValue('pdf', 'format', context({ table: 'export' })).text).toBe('pdf');

@@ -369,6 +369,10 @@
         "mixed-date-orders": "Fechas escritas con el día primero y con el mes primero",
         "mixed-decimal-marks": "Números escritos con coma decimal y con punto decimal"
       }
+    },
+    "importRun": {
+      "check": "Comprobación de la importación",
+      "result": "Importación"
     }
   },
   "previewStatuses": {

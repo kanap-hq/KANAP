@@ -169,6 +169,9 @@ import { CreateTaskAiMutationOperation } from './mutation/operations/create-task
 import { DeleteRecordAiMutationOperation } from './mutation/operations/delete-record.ai-mutation-operation';
 import { PrepareImportMappingAiMutationOperation } from './mutation/operations/prepare-import-mapping.ai-mutation-operation';
 import { AiImportMappingService } from './import/ai-import-mapping.service';
+import { AiImportRunnerService } from './import/ai-import-runner.service';
+import { BudgetFileModule } from '../spend/budget-file/budget-file.module';
+import { FreezeModule } from '../freeze/freeze.module';
 import { ImportGlpiTicketAiMutationOperation, ImportTicketAiMutationOperation } from './mutation/operations/import-glpi-ticket.ai-mutation-operation';
 import { SetIncidentConfidentialityAiMutationOperation } from './mutation/operations/set-incident-confidentiality.ai-mutation-operation';
 import { UpdateDocumentContentAiMutationOperation } from './mutation/operations/update-document-content.ai-mutation-operation';
@@ -274,6 +277,9 @@ import { AiHelpManualService } from './ai-help-manual.service';
     CostCentersModule,
     // Master data › Working-day calendars, read by the working_day_calendars family (Plaid L9).
     WorkingDayProfilesModule,
+    // The budget file import and the freeze check of the imports Plaid runs (Plaid import, lot I3).
+    BudgetFileModule,
+    FreezeModule,
   ],
   controllers: [
     AiCapabilitiesController,
@@ -325,6 +331,7 @@ import { AiHelpManualService } from './ai-help-manual.service';
     CreateTaskAiMutationOperation,
     DeleteRecordAiMutationOperation,
     AiImportMappingService,
+    AiImportRunnerService,
     PrepareImportMappingAiMutationOperation,
     CreateMasterDataRecordAiMutationOperation,
     WriteFinancialPlanAiMutationOperation,

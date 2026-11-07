@@ -299,6 +299,7 @@
       "delete": "Supprimer",
       "disable": "Désactiver",
       "export": "Export",
+      "import": "Import",
       "login": "Connexion",
       "login_failed": "Échec de connexion",
       "logout": "Déconnexion",
@@ -776,7 +777,12 @@
       "origin_task_id": "Créée depuis la tâche",
       "target_date": "Date cible",
       "phase_status": "Statut",
-      "milestone_status": "Statut"
+      "milestone_status": "Statut",
+      "list": "Liste",
+      "filename": "Fichier",
+      "inserted": "Créées",
+      "updated": "Mises à jour",
+      "unchanged": "Inchangées"
     },
     "history": {
       "empty": "Aucun historique",
@@ -1328,6 +1334,7 @@
       "documents": "Documents",
       "expiry_reminders": "Rappels d'échéance envoyés",
       "export": "Export",
+      "import": "Import",
       "incident_attachments": "Pièces jointes d'incident",
       "incident_technologies": "Technologies d'incident",
       "incidents": "Incidents",

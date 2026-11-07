@@ -39,15 +39,21 @@ import { AI_IMPORT_ACCESS, AI_IMPORT_KEYS, AI_IMPORT_RESOURCES, AiImportKey } fr
 import { AI_IMPORT_TARGETS, importColumnTitle } from '../import/ai-import-targets';
 import { columnReader } from '../import/ai-import-convert';
 import { AiImportMappingService } from '../import/ai-import-mapping.service';
+import { AiImportRunnerService, budgetBilan, personLine, rowsBilan } from '../import/ai-import-runner.service';
 import { AiChatOrchestratorService } from '../ai-chat-orchestrator.service';
+import { readTableAttachment } from '../attachments/table-attachment';
+import { AuditLog } from '../../audit/audit.entity';
+import type { AiImportRunDto } from '../ai.types';
 import { selectAiContextProfile } from '../ai-context-profile';
 import { AI_IMPORT_ROUTES } from './ai-import-routes';
 
 /**
- * Lot I2 of the Plaid import: the column mapping of an attached spreadsheet onto an import's
- * template. Rights of every import as its route, the template as the import reads it, the cell
- * conversions, three files (clean, messy, unknown columns), the rights on the preview path
- * (contributor, reader refused, limited person), and what the model receives.
+ * Lots I2 and I3 of the Plaid import: the column mapping of an attached spreadsheet onto an
+ * import's template, and the import's check and load of the file it builds. Rights of every import
+ * as its route, the template as the import reads it, the cell conversions, three files (clean,
+ * messy, unknown columns), the rights on the preview path (contributor, reader refused, limited
+ * person), the approval that runs the import, and what the model receives. The imports themselves
+ * are stubbed here: ai-import-run.integration.spec.ts runs them on the database.
  */
 
 const TENANT = 'tenant-1';
@@ -287,6 +293,7 @@ type StubFile = { csv: string; filename: string; kind?: string; conversationId?:
 
 function createManager(options: { limited?: boolean; locale?: string } = {}) {
   const previews: any[] = [];
+  const audits: any[] = [];
   const previewRepo = {
     find: async () => previews.filter((preview) => preview.status === 'pending'),
     update: async (criteria: any, values: any) => {
@@ -310,6 +317,7 @@ function createManager(options: { limited?: boolean; locale?: string } = {}) {
   };
   const manager = {
     previews,
+    audits,
     query: async (sql: string) => {
       if (/app\.da_mode|data_access_mode/.test(sql)) return [{ limited: options.limited === true }];
       if (/SELECT locale FROM users/.test(sql)) return [{ locale: options.locale ?? 'en' }];
@@ -321,6 +329,7 @@ function createManager(options: { limited?: boolean; locale?: string } = {}) {
       if (entity === UserRole) return { find: async () => [] };
       if (entity === Tenant) return { findOne: async () => ({ id: TENANT, status: TenantStatus.ACTIVE }) };
       if (entity === Subscription) return { findOne: async () => null };
+      if (entity === AuditLog) return { insert: async (row: any) => { audits.push(row); return { identifiers: [{ id: `audit-${audits.length}` }] }; } };
       throw new Error(`Unexpected repository request: ${String(entity)}`);
     },
   };
@@ -343,7 +352,22 @@ function createPolicy(permissions: Record<string, string>) {
   );
 }
 
-function createImport(files: Record<string, StubFile>, permissions: Record<string, string> = { applications: 'admin' }, options: { limited?: boolean; locale?: string } = {}) {
+type ImportRun = { key: string; dryRun: boolean; lines: number[]; language: string; file: Buffer };
+
+/** What a stubbed import answers: every row created, or the answer the test gives. */
+function importAnswer(run: ImportRun, rows: number, answer?: (run: ImportRun) => Partial<AiImportRunDto>): AiImportRunDto {
+  return {
+    ok: true, dry_run: run.dryRun, total: rows, inserted: rows, updated: 0, unchanged: 0, skipped: 0,
+    error_count: 0, warning_count: 0, issues: [], report: { kind: 'rows', errors: [], warnings: [] },
+    ...(answer ? answer(run) : {}),
+  };
+}
+
+function createImport(
+  files: Record<string, StubFile>,
+  permissions: Record<string, string> = { applications: 'admin' },
+  options: { limited?: boolean; locale?: string; answer?: (run: ImportRun) => Partial<AiImportRunDto> } = {},
+) {
   const attachments = {
     assertAndLoadAttachments: async (ids: string[], ctx: { conversationId: string }) => ids.map((id) => {
       const file = files[id];
@@ -355,7 +379,15 @@ function createImport(files: Record<string, StubFile>, permissions: Record<strin
     loadAttachmentBuffer: async (id: string) => ({ attachment: { id }, buffer: Buffer.from(files[id].csv, 'utf8') }),
   };
   const policy = createPolicy(permissions);
-  const mapping = new AiImportMappingService(attachments as any, { getSettings: async () => SETTINGS } as any, policy);
+  const runs: ImportRun[] = [];
+  const runner = {
+    run: async (key: string, file: Buffer, call: { dryRun: boolean; language: string; lines: number[] }) => {
+      const run = { key, file, ...call };
+      runs.push(run);
+      return importAnswer(run, call.lines.length, options.answer);
+    },
+  } as unknown as AiImportRunnerService;
+  const mapping = new AiImportMappingService(attachments as any, { getSettings: async () => SETTINGS } as any, policy, runner);
   const operation = new PrepareImportMappingAiMutationOperation(mapping);
   const registry = {
     getOperation: (name: string) => {
@@ -372,7 +404,7 @@ function createImport(files: Record<string, StubFile>, permissions: Record<strin
     tenantId: TENANT, userId: USER, isPlatformHost: false, surface: 'chat' as const, authMethod: 'jwt' as const,
     conversationId: 'conv-1', manager: manager as any,
   };
-  return { mapping, operation, previews, context, manager };
+  return { mapping, operation, previews, context, manager, runs };
 }
 
 const CLEAN_CSV = [
@@ -383,7 +415,7 @@ const CLEAN_CSV = [
 ].join('\n');
 
 async function testCleanFile() {
-  const { previews, context } = createImport({ [FILE]: { csv: CLEAN_CSV, filename: 'apps.csv' } });
+  const { previews, context, runs } = createImport({ [FILE]: { csv: CLEAN_CSV, filename: 'apps.csv' } });
   const dto = await previews.createPreview(context, 'prepare_import_mapping', {
     attachment_id: FILE,
     entity_type: 'applications',
@@ -410,7 +442,20 @@ async function testCleanFile() {
   assert.equal(mapping.sample.rows[0][index('lifecycle')], 'Active');
   assert.equal(mapping.sample.rows[0][index('go_live_date')], '2024-03-01');
   assert.equal(mapping.sample.rows[1][index('external_facing')], 'false');
-  assert.equal(dto.summary, 'Map "apps.csv" onto the Applications import.');
+  assert.equal(dto.summary, 'Import "apps.csv" into the Applications list.');
+  // The import checked the file built in its template's format: technical headers, one row per row
+  // of the person's file, a date as a date, a catalog value by its code.
+  assert.equal(runs.length, 1);
+  assert.deepEqual({ key: runs[0].key, dryRun: runs[0].dryRun, lines: runs[0].lines }, { key: 'applications', dryRun: true, lines: [2, 3, 4] });
+  const built = await readTableAttachment(runs[0].file);
+  assert.equal(built.format, 'xlsx');
+  const firstRow = Object.fromEntries(built.header.map((cell, at) => [(cell as { value: string }).value, built.rows[0][at]]));
+  assert.deepEqual(firstRow, {
+    name: text('CheeseTrack'), description: text('Tracks the cheese'), lifecycle: text('active'),
+    go_live_date: { kind: 'date', iso: '2024-03-01' }, criticality: text('business_critical'), external_facing: text('true'),
+  });
+  assert.equal(mapping.validation?.ok, true);
+  assert.equal(mapping.validation?.dry_run, true);
   console.log('  clean file: OK');
 }
 
@@ -462,7 +507,7 @@ async function testMessyFile() {
   assert.deepEqual(mapping.unplaced, [{ position: 4, header: 'Commentaire interne' }]);
   assert.equal(mapping.rows_missing_required, 1);
   assert.deepEqual(mapping.assumptions, [LONG_ASSUMPTION]);
-  assert.equal(dto.summary, 'Correspondance de « export appli.csv » avec l\'import Applications.');
+  assert.equal(dto.summary, 'Import de « export appli.csv » dans la liste Applications.');
   // The person says what "En prod" stands for: the corrected mapping reads every value.
   dto = await previews.createPreview(context, 'prepare_import_mapping', {
     attachment_id: FILE,
@@ -561,28 +606,138 @@ async function testRights() {
 
 // --- Approval and what the model receives ----------------------------------------------------
 
-async function testApprovalImportsNothingAndTheModelSeesNoCell() {
-  const { previews, context, manager } = createImport({ [FILE]: { csv: MESSY_CSV, filename: 'export appli.csv' } }, { applications: 'admin' }, { locale: 'fr' });
+async function testApprovalRunsTheImportAndTheModelSeesNoCell() {
+  const { previews, context, manager, runs } = createImport({ [FILE]: { csv: MESSY_CSV, filename: 'export appli.csv' } }, { applications: 'admin' }, {
+    locale: 'fr',
+    // The check finds one unread lifecycle; the import itself creates two applications and updates one.
+    answer: (run) => (run.dryRun
+      ? { warning_count: 1, issues: [{ level: 'warning', code: 'unknown_value', column: 'lifecycle', count: 1 }], report: {
+        kind: 'rows', errors: [], warnings: [{ row: 4, column: 'lifecycle', message: 'Unknown lifecycle "En prod"', code: 'unknown_value' }],
+      } }
+      : { inserted: 2, updated: 1 }),
+  });
   const dto = await previews.createPreview(context, 'prepare_import_mapping', {
     attachment_id: FILE,
     entity_type: 'applications',
     columns: [{ column: 'name', source: 1, confidence: 'high' }, { column: 'lifecycle', source: 2, confidence: 'high' }],
   });
+  // The rows of the person's file: the blank line 3 is no row.
+  assert.deepEqual(runs[0].lines, [2, 4, 5]);
+  // The unread "En prod" goes to the import as the person wrote it: the import refuses it with its own message.
+  const built = await readTableAttachment(runs[0].file);
+  assert.deepEqual(built.rows.map((row) => row[1]), [text('active'), text('En prod'), text('retired')]);
+  assert.equal(manager.audits.length, 0, 'the check writes nothing');
+
   const approved = await previews.executePreview(context, dto.preview_id);
   assert.equal(approved.status, 'executed');
-  assert.equal(approved.summary, 'Appliqué : correspondance de « export appli.csv » avec l\'import Applications. Rien n\'est encore importé.');
-  assert.ok(approved.import_mapping, 'the card keeps the mapping');
-  assert.equal(manager.previews.length, 1, 'nothing written but the card');
+  assert.equal(approved.summary, 'Appliqué : import de « export appli.csv » dans la liste Applications. Créées : 2, mises à jour : 1.');
+  assert.deepEqual(runs.map((run) => run.dryRun), [true, false], 'the approval loads the same file');
+  assert.equal(runs[1].language, 'fr');
+  assert.equal(approved.import_mapping!.result!.inserted, 2);
+  assert.equal(approved.import_mapping!.validation!.warning_count, 1, 'the card keeps the check');
+  // The audit log records the import as made through Plaid, with the card as its reference.
+  assert.equal(manager.audits.length, 1);
+  assert.deepEqual(
+    (({ table_name, action, source, source_ref, user_id, after_json }) => ({ table_name, action, source, source_ref, user_id, after_json }))(manager.audits[0]),
+    {
+      table_name: 'import', action: 'import', source: 'ai_chat', source_ref: dto.preview_id, user_id: USER,
+      after_json: { list: 'applications', filename: 'export appli.csv', rows: 3, inserted: 2, updated: 1, unchanged: 0 },
+    },
+  );
 
-  // The model receives the counts, never the cells beyond the summary nor the card's first rows.
+  // The model receives the counts, never the cells beyond the summary, the card's first rows nor the import's messages.
   const hidden = MODEL_HIDDEN_OUTPUT_FIELDS.prepare_import_mapping;
-  const forModel = new AiEvidenceService({} as any).redact(dto, [...hidden]) as any;
-  assert.equal(forModel.import_mapping.unread_values, '[REDACTED]');
-  assert.equal(forModel.import_mapping.sample, '[REDACTED]');
-  assert.equal(forModel.import_mapping.columns.length, dto.import_mapping!.columns.length);
-  assert.equal(forModel.import_mapping.columns[1].unread, 1);
+  for (const shown of [dto, approved]) {
+    const forModel = new AiEvidenceService({} as any).redact(shown, [...hidden]) as any;
+    assert.equal(forModel.import_mapping.unread_values, '[REDACTED]');
+    assert.equal(forModel.import_mapping.sample, '[REDACTED]');
+    assert.equal(forModel.import_mapping.validation.report, '[REDACTED]');
+    assert.equal(forModel.import_mapping.columns.length, dto.import_mapping!.columns.length);
+    assert.equal(forModel.import_mapping.columns[1].unread, 1);
+    assert.deepEqual(forModel.import_mapping.validation.issues, [{ level: 'warning', code: 'unknown_value', column: 'lifecycle', count: 1 }]);
+    assert.ok(!JSON.stringify(forModel).includes('En prod'), 'no cell of the file');
+  }
+  const forModel = new AiEvidenceService({} as any).redact(approved, [...hidden]) as any;
+  assert.equal(forModel.import_mapping.result.report, '[REDACTED]');
+  assert.equal(forModel.import_mapping.result.inserted, 2);
   assert.deepEqual(dto.import_mapping!.unread_values.lifecycle, ['En prod'], 'the card keeps them');
-  console.log('  approval imports nothing, the model sees no cell: OK');
+  console.log('  approval runs the import, the model sees no cell: OK');
+}
+
+async function testARefusedFileIsNotImported() {
+  const refusal: Partial<AiImportRunDto> = {
+    ok: false, inserted: 0, error_count: 1, issues: [{ level: 'error', code: 'required', column: 'name', count: 1 }],
+    report: { kind: 'rows', errors: [{ row: 3, column: 'name', message: 'Name is required', code: 'required' }], warnings: [] },
+  };
+  // The check refuses the file: the card cannot be approved, and the server refuses it too.
+  const refused = createImport({ [FILE]: { csv: CLEAN_CSV, filename: 'apps.csv' } }, { applications: 'admin' }, { answer: () => refusal });
+  const dto = await refused.previews.createPreview(refused.context, 'prepare_import_mapping', {
+    attachment_id: FILE, entity_type: 'applications', columns: [{ column: 'name', source: 1, confidence: 'high' }],
+  });
+  assert.equal(dto.status, 'pending');
+  assert.equal(dto.import_mapping!.validation!.ok, false);
+  const failed = await refused.previews.executePreview(refused.context, dto.preview_id);
+  assert.equal(failed.status, 'failed');
+  assert.match(failed.error_message ?? '', /The import refused this file, so nothing was imported/);
+  assert.deepEqual(refused.runs.map((run) => run.dryRun), [true], 'no load is tried');
+  assert.equal(refused.manager.audits.length, 0);
+
+  // The check passed, but the import refuses the file at approval (the data changed meanwhile).
+  const changed = createImport({ [FILE]: { csv: CLEAN_CSV, filename: 'apps.csv' } }, { applications: 'admin' }, {
+    locale: 'de', answer: (run) => (run.dryRun ? {} : refusal),
+  });
+  const card = await changed.previews.createPreview(changed.context, 'prepare_import_mapping', {
+    attachment_id: FILE, entity_type: 'applications', columns: [{ column: 'name', source: 1, confidence: 'high' }],
+  });
+  const late = await changed.previews.executePreview(changed.context, card.preview_id);
+  assert.equal(late.status, 'failed');
+  assert.equal(late.error_message, 'Der Import hat diese Datei abgelehnt, daher wurde nichts importiert. Korrigieren Sie die Zuordnung oder die Datei und bereiten Sie den Import erneut vor.');
+  assert.equal(late.import_mapping!.result ?? null, null, 'no result on a refused import');
+  assert.equal(changed.manager.audits.length, 0);
+  console.log('  a refused file is not imported: OK');
+}
+
+function testBilanOnThePersonsLines() {
+  // The built file: header on line 1, then the person's rows, which sat on lines 3, 5 and 9.
+  const lines = [3, 5, 9];
+  assert.deepEqual([0, 1, 2, 3, 4, 5].map((row) => personLine(row, lines)), [0, 0, 3, 5, 9, 5]);
+  const rows = rowsBilan({
+    ok: false, total: 3, inserted: 2,
+    errors: [
+      { row: 3, column: 'lifecycle', message: 'Unknown lifecycle "En prod"', code: 'lifecycle_invalid' },
+      { row: 4, column: 'lifecycle', message: 'Unknown lifecycle "Prod"', code: 'lifecycle_invalid' },
+      { row: 0, message: 'Only the first sheet was read.', code: 'XLSX_FIRST_SHEET_ONLY' },
+    ],
+  }, true, lines);
+  assert.equal(rows.ok, false);
+  assert.deepEqual(rows.report.kind === 'rows' && rows.report.errors.map((error) => error.row), [5, 9, 0]);
+  assert.deepEqual(rows.issues, [
+    { level: 'error', code: 'lifecycle_invalid', column: 'lifecycle', count: 2 },
+    { level: 'error', code: 'XLSX_FIRST_SHEET_ONLY', column: null, count: 1 },
+  ]);
+  // The budget file: its check as its dialog shows it, on the person's lines, without the snapshot.
+  const budget = budgetBilan({
+    ok: false,
+    snapshot: { secret: true },
+    errors: [{ line: 2, column: 'account_number', message: 'Unknown account 7000' }],
+    errorCount: 1,
+    missing: [{ type: 'supplier', count: 2 }],
+    changes: { created: 3, updated: 0, unchanged: 0 },
+    warnings: { duplicates: [{ line: 4 }] },
+  }, true, lines);
+  assert.equal(budget.ok, false);
+  assert.equal(budget.inserted, 3);
+  assert.equal(budget.error_count, 3);
+  assert.equal(budget.warning_count, 1);
+  assert.deepEqual(budget.issues, [
+    { level: 'error', code: null, column: 'account_number', count: 1 },
+    { level: 'error', code: 'missing_supplier', column: null, count: 2 },
+  ]);
+  const file = budget.report.kind === 'budget_file' ? budget.report.file as any : null;
+  assert.equal(file.snapshot, undefined);
+  assert.equal(file.errors[0].line, 3);
+  assert.equal(file.warnings.duplicates[0].line, 9);
+  console.log('  bilan on the person\'s lines, tallied for the model: OK');
 }
 
 function testAFileImportIsAWrite() {
@@ -599,7 +754,7 @@ function testAFileImportIsAWrite() {
 }
 
 function testApprovalEndsTheTurn() {
-  // An approved mapping leaves Plaid nothing to prepare: it does not answer again after the approval.
+  // An approved import leaves Plaid nothing to prepare: it does not answer again after the approval.
   const orchestrator = Object.create(AiChatOrchestratorService.prototype) as any;
   const continuesAfter = (toolName: string) => orchestrator.shouldContinueAfterPreviewAction({
     action: 'approve',
@@ -611,7 +766,7 @@ function testApprovalEndsTheTurn() {
   assert.equal(continuesAfter('prepare_import_mapping'), false);
   // Another approved change of the same request goes on to the next step.
   assert.equal(continuesAfter('create_company'), true);
-  console.log('  an approved mapping ends the turn: OK');
+  console.log('  an approved import ends the turn: OK');
 }
 
 async function run() {
@@ -626,7 +781,9 @@ async function run() {
     await testMessyFile();
     await testUnknownColumns();
     await testRights();
-    await testApprovalImportsNothingAndTheModelSeesNoCell();
+    await testApprovalRunsTheImportAndTheModelSeesNoCell();
+    await testARefusedFileIsNotImported();
+    testBilanOnThePersonsLines();
     testAFileImportIsAWrite();
     testApprovalEndsTheTurn();
   } finally {

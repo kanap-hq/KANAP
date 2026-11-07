@@ -1483,7 +1483,7 @@ export class AiChatOrchestratorService {
     if (params.previewResults.length === 0) {
       return false;
     }
-    // An approved import mapping leaves nothing to prepare: no import runs from it yet (lot I3).
+    // An approved import leaves nothing to prepare: its card shows what the import did.
     if (params.previewResults.every((preview) => preview.tool_name === 'prepare_import_mapping')) {
       return false;
     }

@@ -369,6 +369,10 @@
         "mixed-date-orders": "Datumsangaben mit Tag zuerst und mit Monat zuerst",
         "mixed-decimal-marks": "Zahlen mit Dezimalkomma und mit Dezimalpunkt"
       }
+    },
+    "importRun": {
+      "check": "Prüfung des Imports",
+      "result": "Import"
     }
   },
   "previewStatuses": {

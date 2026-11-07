@@ -299,6 +299,7 @@
       "delete": "Eliminar",
       "disable": "Deshabilitar",
       "export": "Exportación",
+      "import": "Importación",
       "login": "Inicio de sesión",
       "login_failed": "Inicio de sesión fallido",
       "logout": "Cierre de sesión",
@@ -776,7 +777,12 @@
       "origin_task_id": "Creada a partir de la tarea",
       "target_date": "Fecha objetivo",
       "phase_status": "Estado",
-      "milestone_status": "Estado"
+      "milestone_status": "Estado",
+      "list": "Lista",
+      "filename": "Archivo",
+      "inserted": "Creados",
+      "updated": "Actualizados",
+      "unchanged": "Sin cambios"
     },
     "history": {
       "empty": "Todavía no hay historial",
@@ -1328,6 +1334,7 @@
       "documents": "Documentos",
       "expiry_reminders": "Recordatorios de vencimiento enviados",
       "export": "Exportación",
+      "import": "Importación",
       "incident_attachments": "Adjuntos de incidente",
       "incident_technologies": "Tecnologías de incidentes",
       "incidents": "Incidentes",

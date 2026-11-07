@@ -340,7 +340,8 @@ function PreviewCard({
             <Button
               size="small"
               variant="contained"
-              disabled={disabled}
+              // An import whose check refuses the file cannot run: the card says why.
+              disabled={disabled || preview.import_mapping?.validation?.ok === false}
               onClick={() => onApprove(preview.preview_id)}
             >
               {t('ai:previewCard.approve')}

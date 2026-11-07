@@ -65,16 +65,22 @@ export function writePreviewMissingText(language: AiWriteLanguage): string {
 // Preview summaries
 // ---------------------------------------------------------------------------------------------
 
-/** After an approved column mapping (lot I2): the mapping is recorded, the file is not imported. */
-const IMPORT_MAPPING_NOTHING_IMPORTED: Texts = {
-  en: 'Nothing has been imported yet.',
-  fr: "Rien n'est encore importé.",
-  de: 'Es wurde noch nichts importiert.',
-  es: 'Todavía no se ha importado nada.',
+/** The counts of an import (lot I3 of the Plaid import), as rows of the file: created, updated, unchanged. */
+const IMPORT_COUNT_LABELS: Record<AiWriteLanguage, { inserted: string; updated: string; unchanged: string; nothing: string }> = {
+  en: { inserted: 'Created', updated: 'updated', unchanged: 'unchanged', nothing: 'Nothing has changed.' },
+  fr: { inserted: 'Créées', updated: 'mises à jour', unchanged: 'inchangées', nothing: "Rien n'a changé." },
+  de: { inserted: 'Erstellt', updated: 'aktualisiert', unchanged: 'unverändert', nothing: 'Es hat sich nichts geändert.' },
+  es: { inserted: 'Creadas', updated: 'actualizadas', unchanged: 'sin cambios', nothing: 'No ha cambiado nada.' },
 };
 
-export function importMappingNothingImportedText(language: AiWriteLanguage): string {
-  return IMPORT_MAPPING_NOTHING_IMPORTED[language];
+/** "Created: 12, updated: 3." The counts that are not zero, in order; the first one capitalised. */
+export function importCountsText(language: AiWriteLanguage, counts: { inserted: number; updated: number; unchanged: number }): string {
+  const labels = IMPORT_COUNT_LABELS[language];
+  const colon = language === 'fr' ? ' : ' : ': ';
+  const parts = (['inserted', 'updated', 'unchanged'] as const)
+    .filter((key) => counts[key] > 0)
+    .map((key) => `${labels[key]}${colon}${counts[key]}`);
+  return parts.length === 0 ? labels.nothing : `${capitalize(parts.join(', '))}.`;
 }
 
 /** The status words of the preview card (`ai:previewStatuses`), written before the action. */
@@ -158,11 +164,11 @@ export const writeActionText = {
       }
     }
   },
-  importMapping(language: AiTranslatedWriteLanguage, filename: string, list: string): string {
+  importFile(language: AiTranslatedWriteLanguage, filename: string, list: string): string {
     switch (language) {
-      case 'fr': return `correspondance de ${quoted(language, filename)} avec l'import ${list}`;
-      case 'de': return `Zuordnung von ${quoted(language, filename)} zum Import ${list}`;
-      case 'es': return `correspondencia de ${quoted(language, filename)} con la importación ${list}`;
+      case 'fr': return `import de ${quoted(language, filename)} dans la liste ${list}`;
+      case 'de': return `Import von ${quoted(language, filename)} in die Liste ${list}`;
+      case 'es': return `importación de ${quoted(language, filename)} en la lista ${list}`;
     }
   },
   addTaskComment(language: AiTranslatedWriteLanguage, ref: string): string {
@@ -1471,7 +1477,16 @@ export const PREVIEW_DATA_BUSY_MESSAGE =
 export const PREVIEW_INCIDENT_REVIEW_LOCKED_MESSAGE =
   'The incident review is being edited by someone else, so nothing was changed. Try again once that edit is saved or its lock is released.';
 
+/** An import of an attached file that its check or its load refused: no row was written (lot I3). */
+export const PREVIEW_IMPORT_REFUSED_MESSAGE =
+  'The import refused this file, so nothing was imported. Correct the mapping or the file, then prepare the import again.';
+
 const FIXED_PREVIEW_ERRORS: Record<string, TranslatedTexts> = {
+  [PREVIEW_IMPORT_REFUSED_MESSAGE]: {
+    fr: "L'import a refusé ce fichier : rien n'a été importé. Corrigez la correspondance ou le fichier, puis préparez l'import de nouveau.",
+    de: 'Der Import hat diese Datei abgelehnt, daher wurde nichts importiert. Korrigieren Sie die Zuordnung oder die Datei und bereiten Sie den Import erneut vor.',
+    es: 'La importación rechazó este archivo, así que no se ha importado nada. Corrija la correspondencia o el archivo y vuelva a preparar la importación.',
+  },
   [PREVIEW_EXPIRED_MESSAGE]: {
     fr: "L'aperçu a expiré avant l'approbation.",
     de: 'Die Vorschau ist vor der Genehmigung abgelaufen.',

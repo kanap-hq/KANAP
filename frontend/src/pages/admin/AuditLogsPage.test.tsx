@@ -15,6 +15,7 @@ import {
   AUDIT_EVENT_ACTIONS,
   AUTH_EVENT_REASONS,
   EXPORT_RESOURCE_KEYS,
+  IMPORT_LIST_KEYS,
   auditReasonLabel,
   auditTableLabel,
   auditTablesMatchingSearch,
@@ -183,6 +184,10 @@ describe('AuditLogsPage', () => {
     expect(auditReasonLabel({ table_name: 'auth', source_ref: 'unknown_user' }, t)).toBe('No account with this address');
     expect(auditReasonLabel({ table_name: 'suppliers', source_ref: 'import-7' }, t)).toBe('import-7');
     expect(auditTableLabel({ table_name: 'export', after_json: { resource: 'something-new' } }, t)).toBe('Export');
+    // An import Plaid ran: the list it filled, as its export names it.
+    expect(column('table_name').valueFormatter({ data: { table_name: 'import', after_json: { list: 'technology_asset_links' } } })).toBe('Servers and technologies');
+    expect(auditTableLabel({ table_name: 'import', after_json: { list: 'something-new' } }, t)).toBe('Import');
+    expect(column('action').filterParams.labelFormatter('import')).toBe('Import');
     expect(auditUserLabel({ table_name: 'auth', user_id: null }, t)).toBe('Unknown account');
   });
 
@@ -641,7 +646,8 @@ describe('AuditLogsPage', () => {
       ...AUDIT_EVENT_ACTIONS.map((action) => `actions.${action}`),
       ...AUTH_EVENT_REASONS.map((reason) => `reasons.${reason}`),
       ...Object.values(EXPORT_RESOURCE_KEYS).map((key) => `exportResources.${key}`),
-      'values.unknownAccount', 'tableNames.auth', 'tableNames.export',
+      ...Object.values(IMPORT_LIST_KEYS).map((key) => `exportResources.${key}`),
+      'values.unknownAccount', 'tableNames.auth', 'tableNames.export', 'tableNames.import',
       'export.failed', 'export.tooMany', 'export.truncated',
       'details.reason', 'details.exported',
     ];

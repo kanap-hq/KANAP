@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, Stack, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import type { AiImportMapping } from '../aiTypes';
+import ImportRunReport from './ImportRunReport';
 import { formatShortDate, formatShortDateTime } from '../../lib/dateFormat';
 
 type ImportMappingPreviewProps = {
@@ -38,7 +39,8 @@ const sectionLabelSx = {
  * The column mapping of an attached spreadsheet onto an import's template, on Plaid's preview card:
  * each template column with the file's column it reads (or the value given for every row), the
  * confidence of the match and how many values read; then what is missing, what the file holds that
- * is not used, what was supposed, and the first rows as the template will hold them.
+ * is not used, what was supposed, and the first rows as the template will hold them. Last, the
+ * import's check of the file, or what the import did once the card is approved.
  */
 function ImportMappingPreview({ mapping }: ImportMappingPreviewProps) {
   const { t, i18n } = useTranslation(['ai']);
@@ -225,6 +227,8 @@ function ImportMappingPreview({ mapping }: ImportMappingPreviewProps) {
           </Box>
         </Stack>
       )}
+
+      {(mapping.result ?? mapping.validation) && <ImportRunReport run={(mapping.result ?? mapping.validation)!} titles={titleOf} />}
     </Stack>
   );
 }

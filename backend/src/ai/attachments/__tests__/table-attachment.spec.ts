@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { BadRequestException } from '@nestjs/common';
 import { writeXlsx } from '../../../common/xlsx';
 import {
+  readTableAttachment,
   summarizeTableAttachment,
   TABLE_ATTACHMENT_MAX_BYTES,
   TABLE_ATTACHMENT_MAX_ROWS,
@@ -146,8 +147,20 @@ async function refusals() {
   await refusedWith(longWorkbook, 'AI_TABLE_TOO_MANY_ROWS');
 }
 
+/** The line of the person's file each data row is on, for the import's messages (lot I3). */
+async function linesOfThePersonsFile() {
+  const csv = 'Export du 3 mars;;\r\nAppli;Etat;Commentaire\r\nCheeseTrack;Actif;"deux\r\nlignes"\r\n;;\r\n\r\nCaveGuard;Prévu;\r\n';
+  const grid = await readTableAttachment(Buffer.from(csv, 'utf8'));
+  assert.deepEqual(grid.rows.map((row) => row[0]), [{ kind: 'text', value: 'CheeseTrack' }, { kind: 'text', value: 'CaveGuard' }]);
+  // The title on line 1, the header on line 2; the second row is on line 7, after a cell over two lines, a row of blank cells and an empty line.
+  assert.deepEqual(grid.lines, [3, 7]);
+  const book = writeXlsx({ language: 'en', sheets: [{ name: 'S', headers: ['Appli', 'Etat'], rows: [['CheeseTrack', 'Actif'], [null, null], ['CaveGuard', 'Prévu']] }] });
+  assert.deepEqual((await readTableAttachment(book)).lines, [2, 4]);
+}
+
 async function run() {
   await workbook();
+  await linesOfThePersonsFile();
   await semicolonCsvInWindows1252();
   await mixedAndLongCells();
   await wideFile();

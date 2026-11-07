@@ -510,6 +510,43 @@ export type AiImportMappingPreviewDto = {
   sample: { columns: string[]; rows: string[][]; unread: boolean[][] };
   /** Rows a required column leaves blank or unread: the import will refuse them. */
   rows_missing_required: number;
+  /** The import's own check of the file the mapping builds (its dry run), when the card was prepared. */
+  validation?: AiImportRunDto | null;
+  /** The import itself, once the card is approved. */
+  result?: AiImportRunDto | null;
+};
+
+/** A message of an import's report: its row is the line of the person's file (0 for the file itself). */
+export type AiImportReportMessage = {
+  row: number;
+  column?: string;
+  message: string;
+  /** The code the interface translates, with the values its sentence names, as on the import's screen. */
+  code?: string;
+  params?: Record<string, string | number>;
+};
+
+/**
+ * What an import reported on the file Plaid built: its check (dry run) or the import. The counts and
+ * `issues` reach the model; `report` holds the messages, which quote cells of the file, for the card only.
+ */
+export type AiImportRunDto = {
+  ok: boolean;
+  dry_run: boolean;
+  total: number;
+  inserted: number;
+  updated: number;
+  unchanged: number;
+  skipped: number;
+  error_count: number;
+  warning_count: number;
+  /** How many messages of each code and column the report holds. */
+  issues: Array<{ level: 'error' | 'warning'; code: string | null; column: string | null; count: number }>;
+  report:
+    /** The messages of a row import, the first ones, as its dialog lists them. */
+    | { kind: 'rows'; errors: AiImportReportMessage[]; warnings: AiImportReportMessage[] }
+    /** The budget file's check, as its dialog shows it (`BudgetFileReport` without its snapshot). */
+    | { kind: 'budget_file'; file: Record<string, unknown> | null };
 };
 
 export type AiMutationPreviewDto = {

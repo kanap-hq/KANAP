@@ -334,7 +334,13 @@ function toCapabilitySurface(surface: string): CapabilitySurface {
  * not show (lot I2 of the Plaid import: no file data reaches the model beyond the summary).
  */
 export const MODEL_HIDDEN_OUTPUT_FIELDS: Readonly<Record<string, readonly string[]>> = {
-  prepare_import_mapping: ['/import_mapping/unread_values', '/import_mapping/sample'],
+  // The card's first rows, the values not read and the import's messages quote cells of the file.
+  prepare_import_mapping: [
+    '/import_mapping/unread_values',
+    '/import_mapping/sample',
+    '/import_mapping/validation/report',
+    '/import_mapping/result/report',
+  ],
 };
 
 function compatibilityContract(

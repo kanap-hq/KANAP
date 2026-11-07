@@ -54,6 +54,6 @@ import { EndOfSupportService } from './reports/end-of-support.service';
     EndOfSupportService,
     ApplicationConversionService,
   ],
-  exports: [TechnologiesService, TechnologyLinksService, OperatingSystemService, TechnologyReachService, TechnologyCatalogService, TechnologyCpeEventsModule, CveNamesService, EndOfSupportService],
+  exports: [TechnologiesService, TechnologyLinksService, TechnologyLinksCsvService, OperatingSystemService, TechnologyReachService, TechnologyCatalogService, TechnologyCpeEventsModule, CveNamesService, EndOfSupportService],
 })
 export class TechnologiesModule {}

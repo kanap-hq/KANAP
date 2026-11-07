@@ -46,6 +46,17 @@ export const AI_IMPORT_ACCESS: Readonly<Record<AiImportKey, AiImportAccess>> = {
 };
 
 /** The rights of an import named by its key, null for an unknown one. */
+/**
+ * The imports that replace every value of a record they update, a blank cell clearing it, and read
+ * every column of their template: the master data imports and the technology links. The other imports
+ * run in the screen's "merge" mode, where a blank cell keeps the stored value.
+ */
+export const AI_IMPORT_WHOLE_ROWS: ReadonlySet<AiImportKey> = new Set<AiImportKey>([
+  'contracts', 'suppliers', 'contacts', 'companies', 'departments', 'cost_centers', 'accounts',
+  'analytics_categories', 'business_processes', 'working_day_calendars',
+  'technology_asset_links', 'technology_application_links',
+]);
+
 export function aiImportAccess(key: unknown): AiImportAccess | null {
   const normalized = String(key ?? '').trim();
   return Object.prototype.hasOwnProperty.call(AI_IMPORT_ACCESS, normalized) ? AI_IMPORT_ACCESS[normalized as AiImportKey] : null;

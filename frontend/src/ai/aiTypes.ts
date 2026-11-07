@@ -1,3 +1,6 @@
+import type { CsvReportMessage } from '../components/csv/csvMessage';
+import type { BudgetFileReport } from '../components/finance/budgetFile';
+
 export type AiMutationWriteToolName =
   | 'import_ticket'
   | 'import_glpi_ticket'
@@ -88,6 +91,29 @@ export type AiImportMapping = {
   assumptions: string[];
   sample: { columns: string[]; rows: string[][]; unread?: boolean[][] };
   rows_missing_required: number;
+  /** The import's check of the file built from the mapping (its dry run): approving runs the import. */
+  validation?: AiImportRun | null;
+  /** What the import did, once the card is approved. */
+  result?: AiImportRun | null;
+};
+
+/** A message of an import's report, on the line of the person's file (0 for the file itself). */
+export type AiImportReportMessage = CsvReportMessage;
+
+/** What an import reported on the file Plaid built: its check (`dry_run`) or the import itself. */
+export type AiImportRun = {
+  ok: boolean;
+  dry_run: boolean;
+  total: number;
+  inserted: number;
+  updated: number;
+  unchanged: number;
+  skipped: number;
+  error_count: number;
+  warning_count: number;
+  report:
+    | { kind: 'rows'; errors: AiImportReportMessage[]; warnings: AiImportReportMessage[] }
+    | { kind: 'budget_file'; file: BudgetFileReport | null };
 };
 
 export type AiMutationPreview = {

@@ -471,5 +471,7 @@
     "assets": "actifs",
     "connections": "connexions",
     "incidents": "incidents"
-  }
+  },
+  "AI_IMPORT_CLEARS_COLUMNS_one": "{{count}} ligne met à jour une fiche existante, et cet import remplace toutes ses valeurs : le fichier n'a pas de colonne pour {{columns}}, dont les valeurs seraient effacées. Faites correspondre ces colonnes, ou ne gardez que les nouvelles fiches dans le fichier.",
+  "AI_IMPORT_CLEARS_COLUMNS_other": "{{count}} lignes mettent à jour des fiches existantes, et cet import remplace toutes leurs valeurs : le fichier n'a pas de colonne pour {{columns}}, dont les valeurs seraient effacées. Faites correspondre ces colonnes, ou ne gardez que les nouvelles fiches dans le fichier."
 }

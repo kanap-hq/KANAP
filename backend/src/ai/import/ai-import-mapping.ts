@@ -45,9 +45,22 @@ export interface AiImportMappingRequest {
   assumptions: string[];
 }
 
-/** A conversion of the whole file, kept to build the import file in the next lot. */
+/**
+ * A cell of the file the import reads: the value as the template holds it, or the person's own text
+ * when the mapping could not read it (`unread`), which the import then refuses with its own message.
+ */
+export type AiImportFileCell = string | { unread: string };
+
+/** The file the import reads: the template columns the mapping fills, one row per data row of the person's file. */
+export interface AiImportFileContent {
+  columns: Array<{ column: string; kind: AiImportColumnKind }>;
+  rows: AiImportFileCell[][];
+}
+
+/** A conversion of the whole file: the card's preview, and the rows of the file the import reads. */
 export interface AiImportMappingResult {
   preview: AiImportMappingPreviewDto;
+  file: AiImportFileContent;
 }
 
 function refusal(message: string): BadRequestException {
@@ -131,6 +144,7 @@ export function buildImportMapping(
   const sampleRows: string[][] = Array.from({ length: sampleCount }, () => []);
   const sampleUnread: boolean[][] = Array.from({ length: sampleCount }, () => []);
   const rowLacksRequired = new Array<boolean>(grid.rows.length).fill(false);
+  const fileRows: AiImportFileCell[][] = grid.rows.map(() => []);
 
   for (const column of mapped) {
     const entry = entries.get(column.column)!;
@@ -154,6 +168,7 @@ export function buildImportMapping(
         sampleRows[index].push(shown);
         sampleUnread[index].push(false);
       }
+      for (const row of fileRows) row.push(result.value);
       continue;
     }
 
@@ -172,6 +187,7 @@ export function buildImportMapping(
         if (examples.length < IMPORT_MAPPING_UNREAD_EXAMPLES && !examples.includes(example)) examples.push(example);
       }
       if (column.required && result.status !== 'converted') rowLacksRequired[index] = true;
+      fileRows[index].push(result.status === 'converted' ? result.value : result.status === 'unread' ? { unread: result.raw } : '');
       return result;
     });
     if (examples.length > 0) unreadValues[column.column] = examples;
@@ -218,6 +234,7 @@ export function buildImportMapping(
       sample: { columns: mapped.map((column) => column.column), rows: sampleRows, unread: sampleUnread },
       rows_missing_required: rowLacksRequired.filter(Boolean).length,
     },
+    file: { columns: mapped.map((column) => ({ column: column.column, kind: column.kind })), rows: fileRows },
   };
 }
 
