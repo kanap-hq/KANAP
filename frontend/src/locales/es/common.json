@@ -482,7 +482,8 @@
         "incident": "Incidente",
         "location": "Ubicación",
         "document": "Documento",
-        "company": "Empresa"
+        "company": "Empresa",
+        "businessProcess": "Proceso de negocio"
       },
       "myTimeTitle": "Mi tiempo",
       "newRequestsTitle": "Nuevas solicitudes",

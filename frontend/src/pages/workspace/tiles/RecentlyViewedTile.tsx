@@ -21,6 +21,7 @@ import ReportProblemIcon from '@mui/icons-material/ReportProblem';
 import PlaceIcon from '@mui/icons-material/Place';
 import ArticleIcon from '@mui/icons-material/Article';
 import BusinessIcon from '@mui/icons-material/Business';
+import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import { useRecentlyViewed, ENTITY_TYPE_CONFIG, RecentEntityType } from '../hooks/useRecentlyViewed';
 import { useAuth } from '../../../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -50,6 +51,7 @@ const ICON_COMPONENTS: Record<string, typeof FolderOpenIcon> = {
   Place: PlaceIcon,
   Article: ArticleIcon,
   Business: BusinessIcon,
+  AccountTree: AccountTreeIcon,
 };
 
 const MAX_TILE_ITEMS = 10;

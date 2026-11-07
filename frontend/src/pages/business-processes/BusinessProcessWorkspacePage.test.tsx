@@ -24,6 +24,10 @@ const translation = {
 };
 vi.mock('react-i18next', () => ({ useTranslation: () => translation, initReactI18next: { type: '3rdParty', init: () => undefined } }));
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
+const addToRecent = vi.hoisted(() => vi.fn());
+vi.mock('../workspace/hooks/useRecentlyViewed', () => ({
+  useRecentlyViewed: () => ({ items: [], addToRecent, clearRecent: vi.fn() }),
+}));
 vi.mock('../../hooks/useBusinessProcessNav', () => ({
   useBusinessProcessNav: () => ({ total: 0, index: 0, hasPrev: false, hasNext: false, prevId: null, nextId: null }),
 }));
@@ -149,6 +153,12 @@ describe('Business process record', () => {
     expect(mocked.patch).toHaveBeenCalledTimes(1);
   });
 
+  it('remembers the process in recently viewed', async () => {
+    renderPage(['/master-data/business-processes/bp-1/overview']);
+    await openRecord();
+    await waitFor(() => expect(addToRecent).toHaveBeenCalledWith('business_process', 'bp-1', 'Order-to-Cash'));
+  });
+
   it('saves the owners, the type and the parent as they are picked, and the status alone from the header', async () => {
     renderPage(['/master-data/business-processes/bp-1/overview']);
     await openRecord();
@@ -236,6 +246,7 @@ describe('Business process creation at the title', () => {
     const urls = mocked.get.mock.calls.map(([url]) => String(url));
     expect(urls.filter((url) => /undefined|null|\/\/|^\/business-processes\/new\b/.test(url))).toEqual([]);
     expect(mocked.post).not.toHaveBeenCalled();
+    expect(addToRecent).not.toHaveBeenCalled();
   });
 
   it('creates the process when the title is committed, then opens every tab', async () => {
