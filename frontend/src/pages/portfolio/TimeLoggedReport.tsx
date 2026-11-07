@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Alert, Box, Stack, Tab, Table, TableBody, TableCell, TableHead, TableRow, Tabs, Typography, useTheme } from '@mui/material';
+import InfoHint from '../../components/workspace/InfoHint';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -364,7 +365,6 @@ export default function TimeLoggedReport() {
   return (
     <ReportLayout
       title={t('reports.timeLogged.title')}
-      subtitle={t('reports.timeLogged.subtitle')}
       tableExport={data ? {
         url: '/portfolio/reports/time-logged/export',
         params: { months, tz: viewerTimeZone(), projectIds: projectParam, teamIds: teamParam },
@@ -413,12 +413,12 @@ export default function TimeLoggedReport() {
           <ChartCard ref={chartRef} title={t('reports.timeLogged.chart.title')} options={chartOptions} height={300} />
 
           <Box sx={SECTION_SX}>
-            <Typography component="h2" sx={{ fontSize: 16, fontWeight: 500, color: 'kanap.text.primary' }}>
-              {t('reports.timeLogged.table.title')}
-            </Typography>
-            <Typography sx={{ fontSize: 12, fontWeight: 400, color: 'kanap.text.tertiary', mb: 1 }}>
-              {t('reports.timeLogged.table.hint')}
-            </Typography>
+            <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', mb: 1 }}>
+              <Typography component="h2" sx={{ fontSize: 16, fontWeight: 500, color: 'kanap.text.primary' }}>
+                {t('reports.timeLogged.table.title')}
+              </Typography>
+              <InfoHint text={t('reports.timeLogged.table.hint')} />
+            </Stack>
             {data.teams.length === 0 ? (
               <Typography sx={{ fontSize: 13, fontWeight: 400, color: 'kanap.text.secondary' }}>
                 {t('reports.timeLogged.empty')}

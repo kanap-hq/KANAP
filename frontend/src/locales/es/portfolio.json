@@ -1392,7 +1392,6 @@
   },
   "reports": {
     "title": "Reportes del portafolio",
-    "subtitle": "Explore los reportes del portafolio centrados en la capacidad, el esfuerzo y las tendencias de estado.",
     "sections": {
       "past": "Lo que ha pasado",
       "current": "Lo que está en curso",
@@ -1449,7 +1448,6 @@
     },
     "byAssignee": {
       "title": "Puntos de atención por colaborador",
-      "subtitle": "Dónde está el trabajo abierto, equipo por equipo y persona por persona, con lo que está atrasado y lo que ya no avanza.",
       "columns": {
         "assignee": "Responsable",
         "open": "Abiertas",
@@ -1477,7 +1475,6 @@
     },
     "upcoming": {
       "title": "Próximamente",
-      "subtitle": "Lo que vence pronto y lo que lleva demasiado tiempo esperando; cada cifra abre la lista correspondiente.",
       "sections": {
         "tasks": "Tareas que vencen",
         "projectEnds": "Finales de proyecto previstos",
@@ -1557,7 +1554,6 @@
     },
     "capacityHeatmap": {
       "title": "Mapa de calor de capacidad",
-      "subtitle": "Esfuerzo esperado frente a la capacidad de los colaboradores y equipos",
       "filters": {
         "teams": "Equipos",
         "allTeams": "Todos los equipos",
@@ -1630,7 +1626,6 @@
     },
     "weekly": {
       "title": "Balance del periodo",
-      "subtitle": "Solicitudes, proyectos y tareas del periodo: lo que se creó, se modificó y se cerró.",
       "filters": {
         "startDate": "Fecha de inicio",
         "endDate": "Fecha de fin",
@@ -1724,7 +1719,6 @@
     },
     "flow": {
       "title": "Flujo y antigüedad",
-      "subtitle": "Lo que entra y lo que sale, cuánto tiempo lleva esperando el trabajo abierto donde está y cuánto tarda un cierre.",
       "filters": {
         "tasks": "Tareas",
         "requestsProjects": "Solicitudes y proyectos",
@@ -1873,7 +1867,6 @@
     },
     "timeLogged": {
       "title": "Tiempo registrado",
-      "subtitle": "Días registrados mes a mes, en proyectos o en otro trabajo, por equipo y por persona.",
       "horizon": "Periodo",
       "monthOption_one": "{{count}} mes",
       "monthOption_other": "{{count}} meses",
@@ -2571,7 +2564,6 @@
     },
     "skills": {
       "empty": "Aún no hay competencias configuradas. Use «Cargar valores predeterminados» para cargar competencias estándar, o añada competencias manualmente.",
-      "description": "Las competencias se utilizan para definir las áreas de experiencia de los miembros del equipo. Configure las competencias relevantes para su organización.",
       "dialog": {
         "editTitle": "Editar competencia",
         "createTitle": "Crear competencia",
@@ -2587,7 +2579,6 @@
     },
     "phaseTemplates": {
       "empty": "Aún no hay plantillas de fase configuradas. Las plantillas se crearán automáticamente en el primer acceso.",
-      "description": "Las plantillas de fase definen las fases e hitos estándar para los proyectos. Aplique una plantilla al configurar el cronograma de un nuevo proyecto.",
       "chips": {
         "phaseCount_one": "{{count}} fase",
         "phaseCount_other": "{{count}} fases"
@@ -2611,7 +2602,6 @@
       }
     },
     "classification": {
-      "description": "Configure los orígenes, categorías y líneas para clasificar las solicitudes y los proyectos.",
       "sections": {
         "sources": "Orígenes",
         "categoriesAndStreams": "Categorías y líneas",
@@ -2659,7 +2649,6 @@
     },
     "teams": {
       "empty": "Aún no hay equipos configurados. Use «Cargar valores predeterminados» para cargar equipos estándar, o añada equipos manualmente.",
-      "description": "Los equipos son grupos organizacionales a los que pertenecen los colaboradores. Asigne colaboradores a equipos para organizarlos por departamento o función.",
       "memberCount_one": "{{count}} miembro",
       "memberCount_other": "{{count}} miembros",
       "dialog": {
@@ -2674,7 +2663,6 @@
     },
     "employmentTypes": {
       "empty": "Aún no hay tipos de contrato. Use «Cargar valores predeterminados» para cargar Interno, Externo, Aprendiz y Otro, o añada los suyos.",
-      "description": "Los tipos de contrato describen cómo trabaja cada colaborador con usted: empleado, proveedor o aprendiz, por ejemplo. Cada colaborador empieza como Interno; cámbielo en su ficha.",
       "usageCount_one": "{{count}} colaborador",
       "usageCount_other": "{{count}} colaboradores",
       "dialog": {

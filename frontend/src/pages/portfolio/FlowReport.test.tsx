@@ -551,7 +551,7 @@ describe('FlowReport', { timeout: 20_000 }, () => {
 
     expect(screen.getByText('By status')).toBeTruthy();
     expect(
-      screen.getByText('How many open items sit in each status, and how many have been there for a long time.'),
+      screen.getByLabelText('How many open items sit in each status, and how many have been there for a long time.'),
     ).toBeTruthy();
     expect(screen.getByText('Tasks by status')).toBeTruthy();
     expect(screen.getByText('Requests by status')).toBeTruthy();

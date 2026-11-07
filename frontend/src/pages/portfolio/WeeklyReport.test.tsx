@@ -586,11 +586,11 @@ describe('WeeklyReport by person', () => {
     await waitFor(() => expect(screen.getByText('Operations')).toBeTruthy());
     const call = get.mock.calls.find(([url]: any[]) => url === '/portfolio/reports/weekly');
     expect(call?.[1]?.params?.groupBy).toBe('person');
-    // Its own report: its own title and subtitle, the ones of its hub card.
+    // Its own report: its own title, the one of its hub card, and no subtitle.
     expect(screen.getAllByText('Activity by person')).toHaveLength(1);
     expect(
-      screen.getByText('Tasks each person created, changed and closed over a period, with the days they logged.'),
-    ).toBeTruthy();
+      screen.queryByText('Tasks each person created, changed and closed over a period, with the days they logged.'),
+    ).toBeNull();
     expect(window.localStorage.getItem('kanap.portfolioReports.weeklyGroupBy')).toBeNull();
   });
 

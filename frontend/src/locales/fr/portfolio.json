@@ -1392,7 +1392,6 @@
   },
   "reports": {
     "title": "Reporting du portefeuille",
-    "subtitle": "Explorez les rapports du portefeuille axés sur la capacité, la charge de travail et les tendances de statut.",
     "sections": {
       "past": "Ce qui s'est passé",
       "current": "Ce qui est en cours",
@@ -1449,7 +1448,6 @@
     },
     "byAssignee": {
       "title": "Points d'attention par contributeur",
-      "subtitle": "Où se trouve le travail ouvert, équipe par équipe et personne par personne, avec ce qui est en retard et ce qui n'avance plus.",
       "columns": {
         "assignee": "Responsable",
         "open": "Ouvertes",
@@ -1477,7 +1475,6 @@
     },
     "upcoming": {
       "title": "À venir",
-      "subtitle": "Ce qui arrive bientôt et ce qui attend depuis trop longtemps, chaque chiffre ouvrant la liste correspondante.",
       "sections": {
         "tasks": "Tâches à échéance",
         "projectEnds": "Fins de projet prévues",
@@ -1557,7 +1554,6 @@
     },
     "capacityHeatmap": {
       "title": "Planning de capacité",
-      "subtitle": "Charge attendue par rapport à la capacité des contributeurs et des équipes",
       "filters": {
         "teams": "Équipes",
         "allTeams": "Toutes les équipes",
@@ -1630,7 +1626,6 @@
     },
     "weekly": {
       "title": "Bilan de la période",
-      "subtitle": "Demandes, projets et tâches sur la période : ce qui a été créé, modifié et clôturé.",
       "filters": {
         "startDate": "Date de début",
         "endDate": "Date de fin",
@@ -1724,7 +1719,6 @@
     },
     "flow": {
       "title": "Flux et ancienneté",
-      "subtitle": "Ce qui entre et ce qui sort, depuis combien de temps le travail ouvert attend là où il est, et le temps que prend une clôture.",
       "filters": {
         "tasks": "Tâches",
         "requestsProjects": "Demandes et projets",
@@ -1873,7 +1867,6 @@
     },
     "timeLogged": {
       "title": "Temps saisi",
-      "subtitle": "Les jours saisis mois après mois, sur des projets ou sur un autre travail, par équipe et par personne.",
       "horizon": "Période",
       "monthOption_one": "{{count}} mois",
       "monthOption_other": "{{count}} mois",
@@ -2571,7 +2564,6 @@
     },
     "skills": {
       "empty": "Aucune compétence configurée pour le moment. Utilisez « Initialiser les valeurs par défaut » pour charger les compétences standard, ou ajoutez des compétences manuellement.",
-      "description": "Les compétences sont utilisées pour définir les domaines d'expertise des membres d'équipe. Configurez les compétences pertinentes pour votre organisation.",
       "dialog": {
         "editTitle": "Modifier la compétence",
         "createTitle": "Créer une compétence",
@@ -2587,7 +2579,6 @@
     },
     "phaseTemplates": {
       "empty": "Aucun modèle de phase configuré pour le moment. Les modèles seront automatiquement initialisés lors du premier accès.",
-      "description": "Les modèles de phase définissent les phases et jalons standards pour les projets. Appliquez un modèle lors de la configuration de la chronologie d'un nouveau projet.",
       "chips": {
         "phaseCount_one": "{{count}} phase",
         "phaseCount_other": "{{count}} phases"
@@ -2611,7 +2602,6 @@
       }
     },
     "classification": {
-      "description": "Configurez les sources, catégories et filières pour classifier les demandes et les projets.",
       "sections": {
         "sources": "Sources",
         "categoriesAndStreams": "Catégories et filières",
@@ -2659,7 +2649,6 @@
     },
     "teams": {
       "empty": "Aucune équipe configurée pour le moment. Utilisez « Initialiser les valeurs par défaut » pour charger les équipes standard, ou ajoutez des équipes manuellement.",
-      "description": "Les équipes sont des groupes organisationnels auxquels les contributeurs appartiennent. Affectez les contributeurs à des équipes pour les organiser par département ou fonction.",
       "memberCount_one": "{{count}} membre",
       "memberCount_other": "{{count}} membres",
       "dialog": {
@@ -2674,7 +2663,6 @@
     },
     "employmentTypes": {
       "empty": "Aucun type de contrat pour le moment. Utilisez « Initialiser les valeurs par défaut » pour charger Interne, Externe, Apprenti et Autre, ou ajoutez les vôtres.",
-      "description": "Les types de contrat décrivent la façon dont un contributeur travaille avec vous : salarié, prestataire ou apprenti, par exemple. Chaque contributeur démarre en Interne ; modifiez-le sur sa fiche.",
       "usageCount_one": "{{count}} contributeur",
       "usageCount_other": "{{count}} contributeurs",
       "dialog": {
