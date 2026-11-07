@@ -1741,7 +1741,7 @@
     "colors": {
       "darkHelper": "Utilizado en modo oscuro. Si está vacío, se reutiliza el color del modo claro.",
       "darkModePrimary": "Color primario modo oscuro",
-      "description": "Establezca un color para el modo claro y otro para el modo oscuro. Deje vacío para mantener los valores predeterminados de KANAP.",
+      "description": "Establezca un color para el modo claro y otro para el modo oscuro. Deje vacío para mantener los colores predeterminados.",
       "lightHelper": "Utilizado para la barra de la aplicación, botones principales y enlaces en modo claro.",
       "lightModePrimary": "Color primario modo claro",
       "lowDarkContrast": "El contraste en modo oscuro es bajo ({{ratio}}:1 vs. texto {{tone}}{{fallback}}). ",

@@ -1741,7 +1741,7 @@
     "colors": {
       "darkHelper": "Utilisé en mode sombre. Si vide, la couleur du mode clair est réutilisée.",
       "darkModePrimary": "Couleur primaire mode sombre",
-      "description": "Définissez une couleur pour le mode clair et une pour le mode sombre. Laissez vide pour conserver les valeurs par défaut de KANAP.",
+      "description": "Définissez une couleur pour le mode clair et une pour le mode sombre. Laissez vide pour garder les couleurs par défaut.",
       "lightHelper": "Utilisée pour la barre d'application, les boutons principaux et les liens en mode clair.",
       "lightModePrimary": "Couleur primaire mode clair",
       "lowDarkContrast": "Le contraste en mode sombre est faible ({{ratio}}:1 vs texte {{tone}}{{fallback}}). ",
