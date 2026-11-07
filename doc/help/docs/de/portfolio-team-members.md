@@ -120,7 +120,7 @@ Der Arbeitsbereich hat drei Reiter, **Allgemein**, **Fähigkeiten** und **Erfass
 
 Jede Änderung wird automatisch gespeichert. Ein kurzer Hinweis „Speichern… / Gespeichert“ erscheint neben den Metadaten der Kopfzeile, während eine Änderung geschrieben wird.
 
-### Eigenschaften-Panel
+### Eigenschaftenbereich
 
 **Position**
 Die Position der Person, dieselbe, die überall dort erscheint, wo sie in KANAP auftaucht: im Organigramm, in ihrem Benutzerdatensatz, in ihrem Profil. Es ist keine Bezeichnung nur für das Portfolio: Wer sie hier ändert, ändert sie überall. Tippen Sie sie ein und klicken Sie daneben, um zu speichern.
@@ -155,7 +155,7 @@ Legen Sie die Klassifizierungswerte fest, die bei neuen Aufgaben, Anfragen und P
 
 Wenn ein Mitwirkender eine neue Aufgabe, Anfrage oder ein neues Projekt erstellt, werden diese Standards verwendet, um die Klassifizierungsfelder automatisch vorzubelegen. Die Änderung der **Kategorie** löscht den **Stream**, wenn der aktuelle Stream nicht zur neu ausgewählten Kategorie gehört.
 
-**Tipp**: Sie können Ihre eigenen Standards auch über **Einstellungen > Profil** erreichen; dort öffnet sich Ihr Mitwirkenden-Profil mit sichtbarem Eigenschaften-Panel.
+**Tipp**: Sie können Ihre eigenen Standards auch über **Einstellungen > Profil** erreichen; dort öffnet sich Ihr Mitwirkenden-Profil mit sichtbarem Eigenschaftenbereich.
 
 ### Allgemein
 

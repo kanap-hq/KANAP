@@ -210,7 +210,7 @@ Ein Aufgabentyp, den Aufgaben noch verwenden, kann nicht gelöscht werden. KANAP
 
 ## Vertragsarten
 
-Vertragsarten halten fest, wie jeder Mitwirkende mit Ihnen zusammenarbeitet. Sie erscheinen als Dropdown im Eigenschaften-Panel jedes Mitwirkenden und als Filter auf der Mitwirkenden-Seite. Jeder Mitwirkende beginnt als Intern.
+Vertragsarten halten fest, wie jeder Mitwirkende mit Ihnen zusammenarbeitet. Sie erscheinen als Dropdown im Eigenschaftenbereich jedes Mitwirkenden und als Filter auf der Mitwirkenden-Seite. Jeder Mitwirkende beginnt als Intern.
 
 Vier Arten werden mit jedem Arbeitsbereich angelegt:
 

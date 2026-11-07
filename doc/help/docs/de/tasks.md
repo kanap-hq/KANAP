@@ -20,7 +20,7 @@ Wenn Sie auf **Neu** klicken, öffnet sich die Aufgabenseite mit einem leeren Ti
    - **Verknüpft mit**: der Datensatz, von dem aus Sie begonnen haben, und seine Phase, wenn Sie von einer Phase aus begonnen haben. Eine von der Aufgabenseite aus begonnene Aufgabe ist eigenständig
    - **Klassifizierung** (eigenständige und Projektaufgaben): Bei Projektaufgaben stammen **Quelle**, **Kategorie**, **Stream** und **Unternehmen** aus dem übergeordneten Projekt. Für eigenständige Aufgaben werden die Standardklassifizierungswerte Ihrer Organisation verwendet, wenn vorhanden
 
-3. **Füllen Sie die Details aus**. Alle Reiter und Felder sind nun verfügbar, mit der Eigenschaftsleiste rechts:
+3. **Füllen Sie die Details aus**. Alle Reiter und Felder sind nun verfügbar, mit dem Eigenschaftenbereich rechts:
    - **Verknüpft mit**: Behalten Sie **Eigenständig** bei, oder wählen Sie **Projekt**, **OPEX**, **Vertrag** oder **CAPEX** und dann das spezifische Element
    - **Aufgabentyp**: Eine Kategorie für die Arbeit (z. B. Aufgabe, Bug, Problem, Vorfall)
    - **Labels**: Freie Stichwörter, zum Beispiel dringend oder Nachverfolgung. Geben Sie eines ein und drücken Sie die Eingabetaste
@@ -126,7 +126,7 @@ Das Aufgaben-Raster zeigt alle Aufgaben in Ihrer Organisation.
 
 ## Der Aufgaben-Arbeitsbereich
 
-Klicken Sie auf eine Zeile, um den Aufgaben-Arbeitsbereich zu öffnen. Der Arbeitsbereich platziert den Aufgabeninhalt (Beschreibung, Anhänge, Aktivität) in der Mitte und zeigt eine **Eigenschaftsleiste** am rechten Rand, die Sie ein- oder ausblenden können.
+Klicken Sie auf eine Zeile, um den Aufgaben-Arbeitsbereich zu öffnen. Der Arbeitsbereich platziert den Aufgabeninhalt (Beschreibung, Anhänge, Aktivität) in der Mitte und zeigt einen **Eigenschaftenbereich** am rechten Rand, den Sie ein- oder ausblenden können.
 
 ### Kopfzeilen-Symbolleiste
 
@@ -157,9 +157,9 @@ Der Tab **Übersicht** enthält den Inhalt der Aufgabe.
   - **Kommentare**: Ein einheitliches Aktivitätsformular (Kommentar + optionale Statusänderung + optionales Zeitprotokoll in einer Übermittlung) plus der Kommentarverlauf. Ein Kommentar, der zusammen mit einer Statusänderung geschrieben wurde, zeigt diese Änderung
   - **Zeitprotokoll**: Zeiteinträge (nur für eigenständige und Projektaufgaben verfügbar)
 
-### Eigenschaftsleiste
+### Eigenschaftenbereich
 
-Die Leiste ist einklappbar (klicken Sie auf die vertikale Registerkarte **Eigenschaften** am rechten Rand zum Öffnen oder Schließen; drücken Sie **P** als Tastenkürzel). Ihre Breite und der Öffnungszustand werden lokal gespeichert. Die Leiste enthält vier Gruppen, getrennt durch Trennlinien:
+Der Bereich ist einklappbar (klicken Sie auf die vertikale Registerkarte **Eigenschaften** am rechten Rand zum Öffnen oder Schließen; drücken Sie **P** als Tastenkürzel). Seine Breite und der Öffnungszustand werden lokal gespeichert. Der Bereich enthält vier Gruppen, getrennt durch Trennlinien:
 
 **Kontext**:
   - **Verknüpft mit**: Eigenständig, Projekt, OPEX, Vertrag oder CAPEX. Sie können den Typ ändern und ein neues Element auswählen; beim Speichern wendet KANAP alle damit verbundenen Nebeneffekte an (siehe [Aufgaben-Kontext ändern](#aufgaben-kontext-andern))
@@ -185,7 +185,7 @@ Die Leiste ist einklappbar (klicken Sie auf die vertikale Registerkarte **Eigens
   - **Assets**: Hardware-/Cloud-Assets, auf die sich diese Aufgabe bezieht
   - **Wissensdatenbank**: Verknüpfte Wissensdokumente und ein Schnellzugriff zum Erstellen neuer (erfordert `knowledge:member` für die Erstellung)
 
-**Hinweis**: Das Bearbeiten von Feldern in der Leiste speichert sofort. Es gibt keine Speichern-Schaltfläche an der Leiste.
+**Hinweis**: Das Bearbeiten von Feldern im Bereich speichert sofort. Es gibt dort keine Speichern-Schaltfläche.
 
 ### Aufgaben-Kontext ändern
 
@@ -233,7 +233,7 @@ Eigenständige Aufgaben und Projektaufgaben unterstützen detaillierte Zeiterfas
 
 ### Zeit erfassen
 
-1. Klicken Sie auf **+ Zeit erfassen** in der Eigenschaftsleiste (Gruppe Verfolgung) oder öffnen Sie den Reiter **Zeitprotokoll** im Aktivitätsbereich
+1. Klicken Sie auf **+ Zeit erfassen** im Eigenschaftenbereich (Gruppe Verfolgung) oder öffnen Sie den Reiter **Zeitprotokoll** im Aktivitätsbereich
 2. Wählen Sie die **Kategorie**: IT oder Business (bestimmt, wie die Zeit zum Projektaufwand beiträgt)
 3. Geben Sie das Datum ein, an dem die Arbeit ausgeführt wurde
 4. Geben Sie die Zeit als Tage und/oder Stunden ein
@@ -321,11 +321,11 @@ Die Schaltfläche „Exportieren" ist nur aktiviert, wenn die Beschreibung Inhal
   - Nur Zeitprotokoll
   - Kommentar + Status + Zeit zusammen
 - Für Projektaufgaben erfordert das Setzen des Status auf **Erledigt** protokollierte Zeit (vorhandene + neu hinzugefügte)
-- Das Status-Dropdown in der Eigenschaftsleiste funktioniert weiterhin unabhängig, wenn Sie diesen Fluss bevorzugen
+- Das Status-Dropdown im Eigenschaftenbereich funktioniert weiterhin unabhängig, wenn Sie diesen Fluss bevorzugen
 
 ### Verlauf anzeigen
 
-Der Tab **Verlauf**, der letzte Tab der Aufgabe, listet die Änderungen an der Aufgabe auf (siehe [Verlauf der Datensätze](record-history.md)). Die **Eigenschaftsleiste** bleibt dort verfügbar. Der Verlauf zeigt:
+Der Tab **Verlauf**, der letzte Tab der Aufgabe, listet die Änderungen an der Aufgabe auf (siehe [Verlauf der Datensätze](record-history.md)). Der **Eigenschaftenbereich** bleibt dort verfügbar. Der Verlauf zeigt:
   - Statusänderungen
   - Feldänderungen
   - Verknüpfungen und Anhänge
@@ -349,16 +349,16 @@ Wenn Aufgaben-Benachrichtigungen aktiviert sind, können Status- und Kommentar-U
 
 ## Anwendungen und Assets verknüpfen
 
-Aufgaben können mit einer oder mehreren **Anwendungen** (Apps & Dienste) und **Assets** (Hardware- oder Cloud-Ressourcen) verknüpft werden. Die Verknüpfungen leben in der Gruppe **Verfolgung** der Eigenschaftsleiste.
+Aufgaben können mit einer oder mehreren **Anwendungen** (Apps & Dienste) und **Assets** (Hardware- oder Cloud-Ressourcen) verknüpft werden. Die Verknüpfungen leben in der Gruppe **Verfolgung** des Eigenschaftenbereichs.
 
 - Verwenden Sie **Anwendungen**, um Arbeit zu kennzeichnen, die bestimmte Apps in Ihrer IT-Landschaft betrifft (z. B. eine Bereitstellung, eine Konfigurationsänderung, einen auf diese App beschränkten Vorfall)
 - Verwenden Sie **Assets** für Arbeit, die auf bestimmte Server, Geräte oder Cloud-Assets beschränkt ist
 
-Verknüpfungen sind bidirektional: Aus dem verknüpften Anwendungs- oder Asset-Arbeitsbereich erscheint die Aufgabe in der **Aufgaben**-Beziehung in der Eigenschaftsleiste dieses Arbeitsbereichs. Dies macht es einfach, von „Was ist mit dieser App/diesem Asset los?" zur tatsächlich laufenden Arbeit zu wechseln.
+Verknüpfungen sind bidirektional: Aus dem verknüpften Anwendungs- oder Asset-Arbeitsbereich erscheint die Aufgabe in der **Aufgaben**-Beziehung im Eigenschaftenbereich dieses Arbeitsbereichs. Dies macht es einfach, von „Was ist mit dieser App/diesem Asset los?" zur tatsächlich laufenden Arbeit zu wechseln.
 
 **Tipp**: Reservieren Sie diese Verknüpfungen für Aufgaben, bei denen es operativ um die App oder das Asset geht, nicht für jede Aufgabe, die eine im Vorbeigehen erwähnt. Andernfalls wird die Beziehung zu Rauschen statt zu einem Signal.
 
-Sie sehen jeden verknüpften Datensatz nur, wenn Sie sein Modul lesen dürfen: Anwendungen erfordern die Anwendungen, Assets die Infrastruktur. Dasselbe gilt für den Datensatz, zu dem eine Aufgabe gehört: Ein Projekt erfordert die Projekte, eine Budgetzeile das Budget, ein Vertrag die Verträge, ein Vorfall die Vorfälle. Andernfalls fehlt das Feld in der Eigenschaftsleiste, in der Liste und in Plaid, und die Aufgabe behält ihre Verknüpfung. Ein Business Contributor sieht außerdem das Projekt, seine Phase, den aus der Aufgabe erstellten Antrag und die Anwendungen nur, wenn er daran beteiligt ist: Eine einzige Anwendung außerhalb seiner Beteiligung blendet das Feld **Anwendungen** aus.
+Sie sehen jeden verknüpften Datensatz nur, wenn Sie sein Modul lesen dürfen: Anwendungen erfordern die Anwendungen, Assets die Infrastruktur. Dasselbe gilt für den Datensatz, zu dem eine Aufgabe gehört: Ein Projekt erfordert die Projekte, eine Budgetzeile das Budget, ein Vertrag die Verträge, ein Vorfall die Vorfälle. Andernfalls fehlt das Feld im Eigenschaftenbereich, in der Liste und in Plaid, und die Aufgabe behält ihre Verknüpfung. Ein Business Contributor sieht außerdem das Projekt, seine Phase, den aus der Aufgabe erstellten Antrag und die Anwendungen nur, wenn er daran beteiligt ist: Eine einzige Anwendung außerhalb seiner Beteiligung blendet das Feld **Anwendungen** aus.
 
 ---
 
@@ -407,7 +407,7 @@ Eigenständige Aufgaben sind unabhängige Arbeitsobjekte, die nicht mit einem be
 
 1. Klicken Sie auf **Neu** auf der Aufgabenseite
 2. Geben Sie den Titel ein und drücken Sie die Eingabetaste: Die Aufgabe wird als eigenständige Aufgabe erstellt
-3. Die Eigenschaftsleiste zeigt „Eigenständige Aufgabe" in der Gruppe Kontext
+3. Der Eigenschaftenbereich zeigt „Eigenständige Aufgabe" in der Gruppe Kontext
 4. Füllen Sie Beschreibung und andere Details aus
 5. Klicken Sie auf **Erstellen**
 
@@ -420,7 +420,7 @@ Eigenständige Aufgaben und Projektaufgaben haben bearbeitbare Klassifizierungsf
 - **Stream**: Der spezifische Stream innerhalb der Kategorie (gefiltert nach ausgewählter Kategorie)
 - **Unternehmen**: Das Unternehmen, auf das sich diese Arbeit bezieht
 
-Diese Felder erscheinen in der Gruppe **Klassifizierung** der Eigenschaftsleiste und können jederzeit bearbeitet werden. Beim Erstellen einer neuen eigenständigen Aufgabe werden die Standardklassifizierungswerte Ihrer Organisation automatisch vorausgefüllt, falls konfiguriert.
+Diese Felder erscheinen in der Gruppe **Klassifizierung** des Eigenschaftenbereichs und können jederzeit bearbeitet werden. Beim Erstellen einer neuen eigenständigen Aufgabe werden die Standardklassifizierungswerte Ihrer Organisation automatisch vorausgefüllt, falls konfiguriert.
 
 Für **Projektaufgaben** wird die Klassifizierung beim Erstellen der Aufgabe vom übergeordneten Projekt vorbelegt, kann aber unabhängig geändert werden. Dies erlaubt zum Beispiel, dass eine Infrastrukturaufgabe innerhalb eines Geschäftsprojekts existiert oder eine Compliance-Aufgabe innerhalb eines IT-Projekts. Wenn die Klassifizierung einer Aufgabe nicht ausdrücklich festgelegt ist, erbt sie die Klassifizierung des Projekts und zeigt sie an.
 
@@ -630,7 +630,7 @@ Diese Felder sind im **Vollständigen Export** für Berichtszwecke enthalten, ab
   - **Maximal 4 Betrachter/Verantwortliche**: Aufgaben unterstützen bis zu 4 Betrachter-E-Mails und 4 Verantwortlichen-E-Mails in einer Datei
   - **Klassifizierung nur für eigenständige und Projektaufgaben**: Quelle, Kategorie, Stream und Unternehmen können auf eigenständigen und Projektaufgaben festgelegt werden (nicht auf OPEX-, Vertrags- oder CAPEX-Aufgaben)
   - **Phase erfordert Projekt**: Phasenzuweisung funktioniert nur für Projektaufgaben
-  - **Anwendungs-/Asset-Verknüpfungen nicht in CSV**: Verwenden Sie die Eigenschaftsleiste des Arbeitsbereichs, um Aufgaben mit Anwendungen und Assets zu verknüpfen
+  - **Anwendungs-/Asset-Verknüpfungen nicht in CSV**: Verwenden Sie den Eigenschaftenbereich des Arbeitsbereichs, um Aufgaben mit Anwendungen und Assets zu verknüpfen
   - **Kommentare nicht enthalten**: Aufgabenkommentare und -historie müssen im Arbeitsbereich verwaltet werden
   - **Zeitprotokoll nicht enthalten**: Zeiteinträge müssen im Arbeitsbereich protokolliert werden
   - **Anhänge nicht enthalten**: Datei-Anhänge erfordern Arbeitsbereich-Verwaltung
@@ -732,7 +732,7 @@ Wenn der Fokus nicht auf einem Eingabefeld liegt, können Sie verwenden:
 
 - **J** oder **←**: Vorherige Aufgabe in der aktuellen Liste
 - **K** oder **→**: Nächste Aufgabe in der aktuellen Liste
-- **P**: Eigenschaftsleiste umschalten
+- **P**: Eigenschaftenbereich umschalten
 - **Escape**: Schließen und zur Liste zurückkehren
 - **Strg+S** / **Cmd+S**: Speichern
 
@@ -745,9 +745,9 @@ Wenn der Fokus nicht auf einem Eingabefeld liegt, können Sie verwenden:
   - **Erfassen Sie Zeit regelmäßig**: Zeiterfassung hilft bei zukünftigen Projektschätzungen.
   - **Nach Status filtern**: Der Standardfilter zeigt nur aktive Status (`Offen`, `In Bearbeitung`, `Wartend`, `In Test`). Schließen Sie `Erledigt` und `Storniert` ein, wenn Sie historische Aufgaben überprüfen.
   - **Aus dem Kontext erstellen**: Das Erstellen von Aufgaben aus Arbeitsbereichen heraus (Projekt, OPEX, Vertrag, CAPEX) verknüpft sie automatisch.
-  - **Apps und Assets verknüpfen**: Verwenden Sie die Felder **Anwendungen** und **Assets** in der Eigenschaftsleiste, wenn eine Aufgabe operativ um eine bestimmte App oder ein Asset geht. Die Verknüpfung erscheint auch im Arbeitsbereich der verbundenen Entität.
+  - **Apps und Assets verknüpfen**: Verwenden Sie die Felder **Anwendungen** und **Assets** im Eigenschaftenbereich, wenn eine Aufgabe operativ um eine bestimmte App oder ein Asset geht. Die Verknüpfung erscheint auch im Arbeitsbereich der verbundenen Entität.
   - **Verwenden Sie Priorität klug**: Reservieren Sie **Blocker** für tatsächlich blockierende Probleme.
   - **Verwenden Sie Single-Submit-Updates**: Kombinieren Sie im Reiter Kommentare Kommentar + Status + Zeit in einer Aktion, um Historie und Benachrichtigungen abgestimmt zu halten.
   - **Dokumente importieren**: Verwenden Sie die Schaltfläche **Importieren**, um `.docx`-Dateien als Beschreibungsinhalt einzubringen, anstatt zu kopieren und einzufügen.
   - **Tastenkombination**: Drücken Sie **Strg+S** (oder **Cmd+S** auf Mac), um ausstehende Änderungen sofort zu speichern, zum Beispiel eine gerade eingegebene Beschreibung.
-  - **Wissensartikel verknüpfen**: Verwenden Sie die Wissens-Gruppe in der Eigenschaftsleiste, um relevante Dokumentation mit Ihren Aufgaben zu verbinden.
+  - **Wissensartikel verknüpfen**: Verwenden Sie die Wissens-Gruppe im Eigenschaftenbereich, um relevante Dokumentation mit Ihren Aufgaben zu verbinden.

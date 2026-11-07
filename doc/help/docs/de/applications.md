@@ -42,7 +42,7 @@ Navigieren Sie zu **IT-Landschaft > Anwendungen**, um Ihre Liste zu sehen. So er
 2. Geben Sie den Namen der Anwendung oder des Dienstes ein, höchstens 200 Zeichen. Siehe [Eindeutige Namen](#unique-names).
 3. Drücken Sie die Eingabetaste oder klicken Sie außerhalb des Titels. KANAP erstellt die Anwendung sofort. Ihre Referenz (`APP-12`) erscheint und alle Reiter öffnen sich.
 
-Die neue Anwendung ist **Aktiv**, in der Standardkategorie. Ändern Sie beides in der Kopfzeile und der Eigenschaftsleiste, dann füllen Sie den Rest aus:
+Die neue Anwendung ist **Aktiv**, in der Standardkategorie. Ändern Sie beides in der Kopfzeile und im Eigenschaftenbereich, dann füllen Sie den Rest aus:
 
 - **Kategorie**: der Hauptzweck dieser Anwendung (siehe Kategorien oben)
 - **Lebenszyklus**: Aktiv, Vorgeschlagen, Veraltet, Außer Betrieb oder ein in den Einstellungen definierter benutzerdefinierter Code
@@ -85,7 +85,7 @@ Anwendungen, die schon vor dieser Regel denselben Namen trugen, bleiben bearbeit
 Das Anwendungsraster bietet eine umfassende Ansicht Ihres Anwendungsportfolios.
 
 **Oberer Bereichsfilter (Anzeigen)**:
-- **Meine Anwendungen**: zeigt Apps, bei denen Sie in der Eigenschaftsleiste als **Business-Verantwortlicher** oder **IT-Verantwortlicher** gelistet sind. Mehrfach-Verantwortliche werden unterstützt.
+- **Meine Anwendungen**: zeigt Apps, bei denen Sie im Eigenschaftenbereich als **Business-Verantwortlicher** oder **IT-Verantwortlicher** gelistet sind. Mehrfach-Verantwortliche werden unterstützt.
 - **Anwendungen meines Teams**: zeigt Apps, bei denen ein Mitglied Ihres Portfolio-Teams als Business-Verantwortlicher oder IT-Verantwortlicher gelistet ist. Ihre eigene Verantwortlichkeit ist in diesem Bereich ebenfalls enthalten. Deaktiviert, wenn Sie keinem Portfolio-Team zugewiesen sind.
 - **Alle Anwendungen** (Standard): zeigt das vollständige Anwendungsraster mit dem standardmäßigen Lebenszyklus-Filterverhalten.
 - Ihre Auswahl wird sitzungsübergreifend gespeichert: bei Rückkehr zur Seite wird Ihre letzte Wahl wiederhergestellt.
@@ -138,7 +138,7 @@ Eine Zelle ohne Wert zeigt einen Strich.
 
 ## Der Anwendungs-Arbeitsbereich
 
-Klicken Sie auf eine Zeile, um den Arbeitsbereich zu öffnen. Der Arbeitsbereich hat eine **Kopfzeile** mit schnellen Metadaten, eine **Eigenschaftsleiste** auf der rechten Seite (die Identitätskarte der Anwendung, immer sichtbar) und einen **Inhaltsbereich** in der Mitte, der mit jedem Reiter wechselt.
+Klicken Sie auf eine Zeile, um den Arbeitsbereich zu öffnen. Der Arbeitsbereich hat eine **Kopfzeile** mit schnellen Metadaten, einen **Eigenschaftenbereich** auf der rechten Seite (die Identitätskarte der Anwendung, immer sichtbar) und einen **Inhaltsbereich** in der Mitte, der mit jedem Reiter wechselt.
 
 Die Reiter sind **Übersicht**, **Bereitstellungen**, **Schnittstellen**, **Betrieb**, **Compliance**, **Beziehungen** und **Verlauf** (die Änderungen an der Anwendung, siehe [Verlauf der Datensätze](record-history.md)).
 
@@ -159,9 +159,9 @@ Die Kopfzeile zeigt:
 - **Löschen**, ein Papierkorbsymbol mit seinem Namen im Tooltip (`applications:admin`): eine Anwendung mit Schnittstellen erhält die Ablehnung und den Grund, nur mit Schließen. Sonst nennt die Bestätigung die Anwendung und zählt die Bereitstellungen, die mit ihr gelöscht werden, zusammen mit ihren Verknüpfungen zu anderen Einträgen
 - **Vorherige / Nächste**: Durch die gefilterte Liste navigieren, ohne zum Raster zurückzukehren
 
-### Eigenschaftsleiste (rechtes Panel)
+### Eigenschaftenbereich (rechtes Panel)
 
-Die Leiste ist die Identitätskarte der Anwendung. Sie wird in jedem Reiter angezeigt und wird inline bearbeitet: Änderungen werden automatisch gespeichert.
+Der Bereich ist die Identitätskarte der Anwendung. Er wird in jedem Reiter angezeigt und wird inline bearbeitet: Änderungen werden automatisch gespeichert.
 
 **Identität**:
 - **Kategorie**, **Lieferant**, **Herausgeber**
@@ -336,7 +336,7 @@ Zwei dezente Hinweise können erscheinen: Daten auf der höchsten Vertraulichkei
 
 ### Beziehungen
 
-Der Reiter Beziehungen zeigt, womit diese Anwendung verknüpft ist: ihre Budgetzeilen, Verträge, Projekte, Anfragen, Aufgaben und Vorfälle, jeweils in einer eigenen Tabelle, danach ihre Links und Dateien. Die Technologien stehen im Reiter [Betrieb](#operations), die Geschäftsprozesse in der [Eigenschaftsleiste](#eigenschaftsleiste-rechtes-panel). Klicken Sie auf eine Zeile, um den Datensatz zu öffnen. Das Reiter-Badge zählt die verknüpften Budgetzeilen, Verträge, Projekte, Anfragen und Vorfälle sowie die Links und Dateien. Aufgaben werden nicht gezählt.
+Der Reiter Beziehungen zeigt, womit diese Anwendung verknüpft ist: ihre Budgetzeilen, Verträge, Projekte, Anfragen, Aufgaben und Vorfälle, jeweils in einer eigenen Tabelle, danach ihre Links und Dateien. Die Technologien stehen im Reiter [Betrieb](#operations), die Geschäftsprozesse im [Eigenschaftenbereich](#eigenschaftenbereich-rechtes-panel). Klicken Sie auf eine Zeile, um den Datensatz zu öffnen. Das Reiter-Badge zählt die verknüpften Budgetzeilen, Verträge, Projekte, Anfragen und Vorfälle sowie die Links und Dateien. Aufgaben werden nicht gezählt.
 
 **Komponenten** (nur wenn „Kann Unteranwendungen haben" aktiviert ist): eine Tabelle, die die Unteranwendungen dieser Suite mit ihrem Lebenszyklus und ihrer Kritikalität auflistet. Klicken Sie auf eine Zeile, um den Arbeitsbereich der Unteranwendung zu öffnen.
 
@@ -401,12 +401,12 @@ KANAP bietet **zwei Wege zur Verwaltung von Anwendungsversionen**, je nachdem, w
 
 | Ansatz | Am besten für | Was passiert |
 |----------|----------|--------------|
-| **Einfach** | Die meisten Anwendungen | Versionsfelder in der Eigenschaftsleiste aktualisieren: gleicher Datensatz, neue Versionsnummer |
+| **Einfach** | Die meisten Anwendungen | Versionsfelder im Eigenschaftenbereich aktualisieren: gleicher Datensatz, neue Versionsnummer |
 | **Erweitert** | Große Migrationen | **Neue Version** verwenden, um einen neuen Anwendungsdatensatz mit Versionsnachverfolgung zu erstellen: alte und neue Versionen parallel betreiben |
 
 ### Einfache Versionsverfolgung (In-Place-Updates)
 
-Für die meisten Anwendungen (bei denen Sie upgraden und die alte Version einfach verschwindet) aktualisieren Sie **Version**, **Go-Live**, **Support-Ende** und **Außerbetriebnahmedatum** in der Eigenschaftsleiste. Der Versions-Chip in der Kopfzeile und die **Go-Live**-Metadaten spiegeln Ihre Einstellungen wider.
+Für die meisten Anwendungen (bei denen Sie upgraden und die alte Version einfach verschwindet) aktualisieren Sie **Version**, **Go-Live**, **Support-Ende** und **Außerbetriebnahmedatum** im Eigenschaftenbereich. Der Versions-Chip in der Kopfzeile und die **Go-Live**-Metadaten spiegeln Ihre Einstellungen wider.
 
 Dieser Ansatz hält alles in einem einzigen Datensatz. Wenn Sie ein Upgrade durchführen, aktualisieren Sie die Versionsfelder und Sie sind fertig. Der Reiter **Verlauf** bewahrt die früheren Werte.
 
@@ -428,7 +428,7 @@ Die neue Version wird als separate Anwendung erstellt mit:
 - Kopierten Daten basierend auf Ihren Auswahlen
 - Duplizierten Schnittstellen, die auf die neue Version verweisen
 
-Nach dem Erstellen nennt eine Meldung die Referenz der neuen Version. Die beiden Anwendungen sind dann in der Eigenschaftsleiste über **Vorherige Version** und **Nächste Version** miteinander verknüpft.
+Nach dem Erstellen nennt eine Meldung die Referenz der neuen Version. Die beiden Anwendungen sind dann im Eigenschaftenbereich über **Vorherige Version** und **Nächste Version** miteinander verknüpft.
 
 Klassifizierungs- und Kontinuitätswerte werden kopiert, die neue Version beginnt jedoch mit einem zurückgesetzten Review und ohne kopierten letzten Wiederherstellungstest.
 
@@ -740,7 +740,7 @@ Fragen Sie zum Beispiel: „Füge CheeseTrack und seinen Servern PostgreSQL 16 h
 - **Suites zum Gruppieren verwenden**: Aktivieren Sie „Kann Unteranwendungen haben" im Reiter Betrieb, um eine Anwendung als Suite zu markieren, die verwandte Komponenten gruppiert (z. B. SAP-Module unter einer SAP-Suite).
 - **Frühzeitig mit Ausgaben verknüpfen**: Verbinden Sie OPEX, CAPEX und Verträge im Reiter Beziehungen, um das vollständige Kostenbild für jede Anwendung zu sehen.
 - **Bereitstellungen aktuell halten**: Der Reiter Bereitstellungen steuert die Umgebungs-Chips in der Liste. Halten Sie ihn für genaue Sichtbarkeit aktuell.
-- **Dokumentieren Sie die Zielgruppe**: Legen Sie Unternehmens- und Abteilungs-Zielgruppen in der Eigenschaftsleiste fest; die Benutzeranzahl wird dann automatisch abgeleitet und in Berichten verwendet.
+- **Dokumentieren Sie die Zielgruppe**: Legen Sie Unternehmens- und Abteilungs-Zielgruppen im Eigenschaftenbereich fest; die Benutzeranzahl wird dann automatisch abgeleitet und in Berichten verwendet.
 - **Kategorie-Filterung nutzen**: Verwenden Sie den Kategorie-Spaltenfilter, um sich auf bestimmte Anwendungstypen zu konzentrieren (z. B. nur Line-of-business-Apps anzeigen oder Produktivitätswerkzeuge ausschließen).
 - **Wissensdatenbank frühzeitig anhängen**: Verknüpfen Sie Runbooks und Architekturdokumente im Reiter Übersicht, damit das Team weiß, wo es bei Vorfällen nachschlagen muss.
 - **Aufgaben von beiden Seiten verknüpfen**: Fügen Sie eine Aufgabe unter Beziehungen > Aufgaben hinzu oder setzen Sie das Feld App / Dienst auf der Aufgabe selbst; beide zeigen dieselbe Verknüpfung.
