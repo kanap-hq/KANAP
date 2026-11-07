@@ -7,8 +7,10 @@ import { Tenant, TenantStatus } from '../../tenants/tenant.entity';
 import { UserRole } from '../../users/user-role.entity';
 import { Subscription } from '../../billing/subscription.entity';
 import { CsvEntityConfig } from '../../common/csv/csv-field.types';
+import { assertLocaleLabels } from '../../common/report-export/__tests__/locale-labels';
 import { applicationCsvConfig } from '../../applications/application-csv.config';
 import { assetCsvConfig } from '../../assets/asset-csv.config';
+import { ASSET_ENVIRONMENT_LABELS } from '../../assets/asset-environments';
 import { portfolioProjectCsvConfig } from '../../portfolio/portfolio-project-csv.config';
 import { portfolioRequestCsvConfig } from '../../portfolio/portfolio-request-csv.config';
 import { taskCsvConfig } from '../../tasks/task-csv.config';
@@ -36,7 +38,8 @@ import { isReservedAiMutation } from '../mutation/ai-mutation-reserved';
 import { aiRelationTargetRequirement, aiWriteLevel, aiWriteRequirements } from '../mutation/ai-write-levels';
 import { PrepareImportMappingAiMutationOperation } from '../mutation/operations/prepare-import-mapping.ai-mutation-operation';
 import { AI_IMPORT_ACCESS, AI_IMPORT_KEYS, AI_IMPORT_RESOURCES, AiImportKey } from '../import/ai-import-access';
-import { AI_IMPORT_TARGETS, importColumnTitle } from '../import/ai-import-targets';
+import { AI_IMPORT_CODE_LISTS, BUDGET_NATURE_LABELS, LINE_USAGE_LABELS, RUN_BUILD_LABELS } from '../import/ai-import-code-labels';
+import { AI_IMPORT_TARGETS, STATUS_LABELS, importColumnTitle } from '../import/ai-import-targets';
 import { columnReader } from '../import/ai-import-convert';
 import { AiImportMappingService } from '../import/ai-import-mapping.service';
 import { AiChatOrchestratorService } from '../ai-chat-orchestrator.service';
@@ -147,6 +150,53 @@ async function testTemplatesAreTheColumnsTheImportsRead() {
   const applications = (await AI_IMPORT_TARGETS.applications.columns(ctx)).map((column) => column.column);
   assert.ok(!applications.includes('id') && !applications.includes('reference'));
   console.log('  templates are the columns the imports read: OK');
+}
+
+const AXIS = { id: 'a', code: 'it_tower', name: 'IT tower', status: 'enabled', is_default: false, applies_to: null, required: false, open_values: false, disabled_at: null, sort_order: 1 };
+
+/** The words of every fixed list equal the screen's locale string, and no two codes share a name. */
+function testCodeLabelsMatchTheScreens() {
+  for (const list of AI_IMPORT_CODE_LISTS) {
+    const keys = Object.fromEntries(Object.keys(list.labels.en).map((code) => [code, `${list.path}.${code}`]));
+    assertLocaleLabels(list.namespace, keys, list.labels);
+    const owner = new Map<string, string>();
+    for (const names of Object.values(list.labels)) {
+      for (const [code, label] of Object.entries(names)) {
+        const key = label.normalize('NFKC').trim().toLowerCase();
+        const previous = owner.get(key);
+        assert.ok(!previous || previous === code, `${list.path}: "${label}" names ${previous} and ${code}`);
+        owner.set(key, code);
+      }
+    }
+  }
+  console.log('  fixed list labels match the screens: OK');
+}
+
+/** Every codes column of every import shows a screen name for each of its codes. */
+async function testEveryFixedListIsNamed() {
+  const known = new Set<unknown>([...AI_IMPORT_CODE_LISTS.map((list) => list.labels), STATUS_LABELS, ASSET_ENVIRONMENT_LABELS]);
+  const ctx = { manager: { query: async () => [AXIS] } as any, tenantId: TENANT };
+  for (const key of AI_IMPORT_KEYS) {
+    for (const column of await AI_IMPORT_TARGETS[key].columns(ctx)) {
+      if (column.kind !== 'codes') continue;
+      assert.ok(known.has(column.labels), `${key}.${column.column}: labels from a screen list`);
+      for (const language of ['en', 'fr', 'de', 'es'] as const) {
+        for (const code of column.codes ?? []) {
+          assert.equal(typeof column.labels?.[language]?.[code], 'string', `${key}.${column.column} ${language} ${code}`);
+          assert.notEqual(column.labels?.[language]?.[code], '', `${key}.${column.column} ${language} ${code}`);
+        }
+      }
+    }
+  }
+  // The same codes name different things: a budget line is OPEX, an account is used for OPEX only.
+  const budget = await AI_IMPORT_TARGETS.budget_lines.columns(ctx);
+  const accounts = await AI_IMPORT_TARGETS.accounts.columns(ctx);
+  const analytics = await AI_IMPORT_TARGETS.analytics_categories.columns(ctx);
+  assert.equal(budget.find((column) => column.column === 'nature')!.labels, BUDGET_NATURE_LABELS);
+  assert.equal(budget.find((column) => column.column === 'run_build')!.labels, RUN_BUILD_LABELS);
+  assert.equal(accounts.find((column) => column.column === 'nature')!.labels, LINE_USAGE_LABELS);
+  assert.equal(analytics.find((column) => column.column === 'applies_to')!.labels, LINE_USAGE_LABELS);
+  console.log('  every fixed list is named: OK');
 }
 
 // --- Cell conversion -------------------------------------------------------------------------
@@ -483,6 +533,44 @@ async function testMessyFile() {
   console.log('  messy file: OK');
 }
 
+const TASKS_CSV = [
+  'Titre;Statut;Priorité',
+  'Relire le cahier;En cours;Bloquant',
+  'Contrôler la cave;In Bearbeitung;Blocker',
+].join('\n');
+
+/** A French task file: the screen's names are read as the codes and shown in the person's language. */
+async function testAFrenchTaskFileShowsLabels() {
+  const { previews, context } = createImport(
+    { [FILE]: { csv: TASKS_CSV, filename: 'taches.csv' } },
+    { tasks: 'admin' },
+    { locale: 'fr' },
+  );
+  const dto = await previews.createPreview(context, 'prepare_import_mapping', {
+    attachment_id: FILE,
+    entity_type: 'tasks',
+    columns: [
+      { column: 'title', source: 1, confidence: 'high' },
+      { column: 'status', source: 2, confidence: 'high' },
+      { column: 'priority_level', source: 3, confidence: 'high' },
+    ],
+  });
+  const mapping = dto.import_mapping!;
+  const status = mapping.columns.find((column) => column.column === 'status')!;
+  const priority = mapping.columns.find((column) => column.column === 'priority_level')!;
+  assert.equal(status.unread, 0, 'En cours and In Bearbeitung read as a status');
+  assert.equal(priority.unread, 0, 'Bloquant and Blocker read as a priority');
+  assert.equal(mapping.unread_values.status, undefined);
+  assert.equal(mapping.unread_values.priority_level, undefined);
+  const index = (column: string) => mapping.sample.columns.indexOf(column);
+  // The German name is stored as the code and shown in French, so the sample is not the cell echoed.
+  assert.equal(mapping.sample.rows[0][index('status')], 'En cours');
+  assert.equal(mapping.sample.rows[0][index('priority_level')], 'Bloquant');
+  assert.equal(mapping.sample.rows[1][index('status')], 'En cours');
+  assert.equal(mapping.sample.rows[1][index('priority_level')], 'Bloquant');
+  console.log('  a French task file: En cours, Bloquant: OK');
+}
+
 async function rejects(promise: Promise<unknown>, pattern: RegExp, what: string) {
   await assert.rejects(promise, (error: any) => {
     const message = String(error?.response?.message ?? error?.message ?? error);
@@ -620,10 +708,13 @@ async function run() {
   try {
     testAccessMatchesTheImportRoutes();
     await testTemplatesAreTheColumnsTheImportsRead();
+    testCodeLabelsMatchTheScreens();
+    await testEveryFixedListIsNamed();
     testConversions();
     testConversionsOfRealExports();
     await testCleanFile();
     await testMessyFile();
+    await testAFrenchTaskFileShowsLabels();
     await testUnknownColumns();
     await testRights();
     await testApprovalImportsNothingAndTheModelSeesNoCell();
