@@ -430,34 +430,6 @@ export function monthSpanText(t: TFunction, locale: string, months: number[]): s
   });
 }
 
-/**
- * What an amount at a date gives: "40 000 on 10 February 2026, all in February.", or, before an
- * amount is typed, "Enter an amount: it will go in February." Empty for a date outside the year.
- */
-export function dateResultText(t: TFunction, locale: string, amount: string, date: string): string {
-  const months = periodMonths(Number(date.slice(0, 4)), date, date);
-  if (months.length === 0) return '';
-  const month = monthName(locale, months[0]);
-  return amount
-    ? t('budgetTab.result.atDate', { amount, date: longDate(locale, date), month })
-    : t('budgetTab.result.enterDate', { month });
-}
-
-/**
- * What a spread gives, in one sentence that counts the months: "120 000 spread flat from April to
- * December (9 months).", or, before an amount is typed, "Enter an amount: it will be spread flat
- * from April to December (9 months)." `amount` is already formatted; empty when none is typed.
- * Empty when no month counts (the period problem says why).
- */
-export function spreadResultText(t: TFunction, locale: string, amount: string, profile: 'flat' | '4-4-5', months: number[]): string {
-  const span = monthSpanText(t, locale, months);
-  if (!span) return '';
-  const shape = profile === '4-4-5' ? '445' : 'Flat';
-  return amount
-    ? t(`budgetTab.result.spread${shape}`, { amount, span })
-    : t(`budgetTab.result.enter${shape}`, { span });
-}
-
 /** "January to March will be set to zero." Empty when every month counts. */
 export function zeroedMonthsText(t: TFunction, locale: string, active: number[]): string {
   const zeroed = Array.from({ length: 12 }, (_, i) => i + 1).filter((m) => !active.includes(m));

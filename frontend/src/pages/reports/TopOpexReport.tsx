@@ -211,7 +211,6 @@ export default function TopOpexReport() {
       busy={busy}
       fxMissing={report.data?.fxMissing}
       title={t("reports.topOpex.title")}
-      subtitle={t('reports.topOpex.subtitle', { type: scopeLabel, context: scope, metric: metricLabel })}
       filters={(
         <Box sx={{
           display: 'flex',

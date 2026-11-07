@@ -1004,7 +1004,6 @@
   "admin": {
     "copy": {
       "title": "Jahreskennzahlen kopieren",
-      "subtitle": "Kopieren Sie Unternehmens- und Abteilungskennzahlen zwischen Jahren mit einer Vorschau im Testlauf",
       "sourceYear": "Quelljahr",
       "destinationYear": "Zieljahr",
       "dataSources": "Datenquellen",

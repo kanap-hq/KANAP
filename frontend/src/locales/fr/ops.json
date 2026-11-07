@@ -100,7 +100,6 @@
       "total": "Total",
       "mustSum100": "Les pourcentages manuels doivent totaliser 100 %.",
       "addRow": "Ajouter une ligne",
-      "autoDistributeInfo": "Le reliquat est réparti automatiquement entre les sociétés actives selon la méthode sélectionnée. Aucune sélection manuelle requise.",
       "totalAutoHint": "(<= 100 % autorisé ; reliquat réparti automatiquement)",
       "totalManualHint": "(aperçu uniquement : les totaux enregistrés utilisent les métriques en temps réel)",
       "failedToLoad": "Impossible de charger les ventilations",
@@ -267,7 +266,6 @@
       "total": "Total",
       "mustSum100": "Les pourcentages manuels doivent totaliser 100 %.",
       "addRow": "Ajouter une ligne",
-      "autoDistributeInfo": "Le reliquat est réparti automatiquement entre les sociétés actives selon la méthode sélectionnée. Aucune sélection manuelle requise.",
       "totalAutoHint": "(<= 100 % autorisé ; reliquat réparti automatiquement)",
       "totalManualHint": "(aperçu uniquement : les totaux enregistrés utilisent les métriques en temps réel)",
       "failedToLoad": "Impossible de charger les ventilations",
@@ -708,7 +706,6 @@
   },
   "operations": {
     "title": "Administration",
-    "subtitle": "Outils puissants pour gérer et transformer vos données budgétaires sur différentes années et colonnes.",
     "sections": {
       "settings": "Paramètres",
       "operations": "Opérations"
@@ -733,12 +730,10 @@
     },
     "allocationDefault": {
       "title": "Méthode de ventilation par défaut",
-      "subtitle": "Choisissez comment les coûts sont répartis entre sociétés par défaut, pour chaque exercice.",
       "year": "Exercice",
       "mode": "Sociétés",
       "modeAuto": "Toutes les sociétés actives",
       "modeManual": "Sociétés sélectionnées",
-      "modeManualHelp": "L'inducteur s'applique uniquement aux sociétés sélectionnées.",
       "companies": "Sociétés",
       "companiesSelected": "{{count}} sociétés sélectionnées",
       "companiesSelected_one": "{{count}} société sélectionnée",
@@ -754,7 +749,6 @@
       "standardNote": "Méthode standard : aucune personnalisation pour cette année.",
       "overriddenNote": "Configurée pour votre organisation. Méthode standard : {{method}}.",
       "resetToStandard": "Revenir à la méthode standard",
-      "scopeNote": "La méthode est résolue au moment du calcul des ventilations : soit à partir de l'effectif, des utilisateurs IT ou du chiffre d'affaires de chaque société active pour l'année, soit à partir de l'inducteur des sociétés sélectionnées pour le défaut. La modifier recalcule toutes les lignes restées en méthode par défaut ; les ventilations manuelles conservent leurs pourcentages.",
       "loadError": "Impossible de charger la méthode de ventilation par défaut.",
       "saveError": "Impossible d'enregistrer la méthode de ventilation par défaut.",
       "noPermission": "Vous devez disposer des droits d'administration budgétaire pour modifier la méthode par défaut. Le réglage actuel reste visible.",
@@ -780,7 +774,6 @@
     },
     "columnReset": {
       "title": "Réinitialiser une colonne budgétaire",
-      "subtitle": "Effacer une colonne pour une année, sur toutes les lignes, en OPEX ou en CAPEX : ses douze mois et sa période de répartition.",
       "year": "Année",
       "budgetColumn": "Colonne budgétaire",
       "processing": "Traitement…",
@@ -811,7 +804,6 @@
     },
     "copyBudget": {
       "title": "Copier les colonnes budgétaires",
-      "subtitle": "Copier les montants d'une colonne vers une autre, et les ventilations d'une année vers une autre, pour toutes les lignes, en OPEX ou en CAPEX.",
       "sourceYear": "Année source",
       "destinationYear": "Année de destination",
       "amounts": "Montants",
@@ -905,7 +897,6 @@
     },
     "currency": {
       "title": "Paramètres de devise",
-      "subtitle": "Configurez les devises de reporting et par défaut utilisées dans les workflows OPEX et CAPEX. Toutes les valeurs sont enregistrées sous forme de codes ISO à trois lettres.",
       "loadError": "Impossible de charger les paramètres de devise actuels.",
       "saveSuccess": "Paramètres de devise mis à jour avec succès",
       "failedToRefreshFx": "Impossible d'actualiser les taux de change",
@@ -917,7 +908,6 @@
       "defaultCapexCurrency": "Devise CAPEX par défaut",
       "defaultCapexCurrencyHelp": "Pré-renseigne la devise lors de la création de nouvelles lignes CAPEX",
       "allowedCurrencies": "Devises autorisées",
-      "allowedCurrenciesHelp": "Liste optionnelle séparée par des virgules (ex. EUR, USD, GBP)",
       "forceFxSync": "Forcer la synchronisation des taux de change",
       "fxRatesTitle": "Dernières captures de taux de change (par exercice fiscal, base devise de reporting de l'espace de travail)",
       "loadingRates": "Chargement des taux de change…",
@@ -1107,7 +1097,6 @@
     "budgetAdminOnly": "Vous devez disposer des droits d'administrateur budgétaire pour utiliser cette page.",
     "budgetColumnsSettings": {
       "title": "Colonnes budgétaires",
-      "subtitle": "Nommez les colonnes de votre budget, choisissez celles que tout le monde voit et celle dont partent les rapports et les listes.",
       "loadError": "Les réglages des colonnes n'ont pas pu être chargés.",
       "column": "Colonne",
       "name": "Nom",
@@ -1119,7 +1108,6 @@
       "followsOf": "{{column}} suit la répartition et les lignes",
       "defaultOf": "Faire de {{column}} la colonne par défaut",
       "inFiles": "Dans les fichiers : {{name}}",
-      "nameHint": "Laissez un nom vide pour utiliser le nom standard.",
       "helpHidden": "Les colonnes masquées gardent leurs montants et acceptent toujours les imports et les gels.",
       "helpDefault": "La colonne par défaut est présélectionnée dans les rapports et trie les listes et le tableau de bord. La geler fige les taux de change de l'année.",
       "helpFollows": "Cochée d'office dans « Utiliser aussi pour d'autres colonnes » de l'onglet Budget.",
@@ -1252,7 +1240,6 @@
   "reports": {
     "landing": {
       "title": "Reporting",
-      "description": "Explorez les rapports préconfigurés. Chaque rapport comprend un tableau récapitulatif et un graphique, avec des options d'export.",
       "cards": {
         "globalChargeback": {
           "title": "Refacturation globale",
@@ -1434,15 +1421,12 @@
     },
     "globalChargeback": {
       "title": "Refacturation globale",
-      "subtitle": "Ventilations de refacturation globale, totaux par société et KPI",
       "overallTotal": "Total global",
       "companies": "Sociétés",
       "detailedLines": "Lignes détaillées",
       "kpiCoverage": "Couverture KPI",
       "companyTotalsTitle": "Totaux globaux par société",
-      "companyTotalsDescription": "Montant consolidé de refacturation par société.",
       "distributionTitle": "Répartition de la refacturation",
-      "distributionDescription": "Histogramme horizontal reflétant les totaux du tableau.",
       "detailedTitle": "Ventilations détaillées",
       "detailedDescription": "Ventilation par société et département avec sous-totaux par société. Les lignes intitulées « Coûts communs » représentent les coûts résiduels de la société sans affectation de département.",
       "globalTotal": "Total global",
@@ -1462,17 +1446,14 @@
     },
     "companyChargeback": {
       "title": "Refacturation par société",
-      "subtitle": "Ventilation détaillée de la refacturation par société, départements, lignes et KPI",
       "selectCompanyTitle": "Sélectionnez une société pour explorer les détails de refacturation",
       "selectCompanyDescription": "Choisissez une société, une année et une colonne budgétaire pour générer la vue détaillée de refacturation. Les totaux par département, les ventilations détaillées et les KPI apparaîtront après l'exécution du rapport.",
       "selectCompany": "Sélectionnez une société",
       "departmentTotals": "Totaux par département",
       "departmentTotalsDescription": "Refacturation consolidée par département. « Coûts communs » agrège les ventilations sans département spécifique.",
       "departmentDistribution": "Répartition par département",
-      "departmentDistributionDescription": "Histogramme horizontal reflétant les totaux du tableau.",
       "noDepartmentAllocations": "Aucune ventilation par département pour la configuration sélectionnée.",
       "chargebackItems": "Lignes de refacturation",
-      "chargebackItemsDescription": "Dépenses détaillées contribuant à la refacturation de la société, incluant la méthode de ventilation et la part du montant total.",
       "noChargebackItems": "Aucune ligne de refacturation pour la configuration sélectionnée.",
       "flowsTitle": "Flux interentreprises",
       "flowsDescription": "Sociétés partenaires avec créances (vous avez payé pour elles), dettes (elles ont payé pour vous), et le total net. Autoconsommation exclue.",
@@ -1490,8 +1471,6 @@
     },
     "topOpex": {
       "title": "Top lignes",
-      "subtitle": "Plus grosses lignes {{type}} par année sélectionnée ({{metric}})",
-      "subtitle_all": "Plus grosses lignes budgétaires par année sélectionnée ({{metric}})",
       "topTotal": "Total top {{count}}",
       "totalMetric": "{{metric}}, total",
       "ofFilteredMetric": "{{pct}} % du total filtré",
@@ -1503,8 +1482,6 @@
     },
     "opexDelta": {
       "title": "Top hausse / baisse",
-      "subtitle": "Plus grandes variations {{type}} vs année précédente",
-      "subtitle_all": "Plus grandes variations budgétaires vs année précédente",
       "sourceColumn": "Colonne source",
       "destinationColumn": "Colonne de destination",
       "increase": "Hausse",
@@ -1544,12 +1521,10 @@
       "directionToggle": "Hausse ou baisse"
     },
     "budgetTrendOpex": {
-      "title": "Comparaison budgétaire",
-      "subtitle": "Comparer les métriques sélectionnées sur une plage d'années"
+      "title": "Comparaison budgétaire"
     },
     "budgetColumnsCompare": {
       "title": "Comparaison de colonnes budgétaires",
-      "subtitle": "Comparer jusqu’à dix colonnes budgétaires",
       "yearGroupingSubtitle": "{{type}} : regroupement par année",
       "yearGroupingSubtitle_all": "OPEX et CAPEX : regroupement par année",
       "selectionsSubtitle_one": "{{type}} : {{count}} sélection",
@@ -1560,8 +1535,6 @@
     },
     "consolidation": {
       "title": "Budget par compte de consolidation",
-      "subtitle": "Totaux {{type}} regroupés par compte de consolidation ; camembert pour une seule année, courbe pour une plage pluriannuelle",
-      "subtitle_all": "Totaux OPEX et CAPEX regroupés par compte de consolidation ; camembert pour une seule année, courbe pour une plage pluriannuelle",
       "chartTitleSingle": "{{type}} par compte de consolidation · {{year}}",
       "chartTitleSingle_all": "OPEX et CAPEX par compte de consolidation · {{year}}",
       "chartTitleRange": "{{type}} par compte de consolidation · {{start}} à {{end}}",
@@ -1574,8 +1547,6 @@
     },
     "analyticsCategory": {
       "title": "Budget par dimension analytique",
-      "subtitle": "Totaux {{type}} regroupés par {{dimension}} ; camembert pour une seule année, courbe pour une plage pluriannuelle",
-      "subtitle_all": "Totaux OPEX et CAPEX regroupés par {{dimension}} ; camembert pour une seule année, courbe pour une plage pluriannuelle",
       "chartTitleSingle": "{{type}} par {{dimension}} · {{year}}",
       "chartTitleSingle_all": "OPEX et CAPEX par {{dimension}} · {{year}}",
       "chartTitleRange": "{{type}} par {{dimension}} · {{start}} à {{end}}",
@@ -1602,8 +1573,6 @@
     },
     "staffing": {
       "title": "Effectifs par mois",
-      "subtitle": "ETP mensuels {{type}} par {{group}}",
-      "subtitle_all": "ETP mensuels par {{group}}",
       "chartTitle": "Effectifs {{type}} par {{group}}, {{column}} {{year}}",
       "chartTitle_all": "Effectifs par {{group}}, {{column}} {{year}}",
       "groupBy": "Regrouper par",
@@ -1631,8 +1600,6 @@
     },
     "costPerFte": {
       "title": "Coût par ETP",
-      "subtitle": "Coût annuel {{type}} d'un ETP ou TJM, par {{group}}",
-      "subtitle_all": "Coût annuel d'un ETP ou TJM, par {{group}}",
       "chartTitle": "Coût par ETP {{type}} par {{group}}",
       "chartTitle_all": "Coût par ETP par {{group}}",
       "rateChartTitle": "TJM {{type}} par {{group}}",
@@ -1780,7 +1747,6 @@
       "yearChange_other": "Une autre personne a modifié les colonnes {{columns}} pendant que vous les modifiiez, et vous n'avez pas choisi quelles valeurs garder. Changer d'année quand même et perdre vos valeurs dans ces colonnes, ou rester et choisir.",
       "yearChangeConfirm": "Changer d'année"
     },
-    "notEntered": "Pas encore saisi",
     "columns": "Colonnes du budget",
     "card": {
       "frozen": "Gelée",
@@ -1804,20 +1770,11 @@
       "single": "en {{month}}"
     },
     "result": {
-      "spreadFlat": "{{amount}} répartis linéairement {{span}}.",
-      "spread445": "{{amount}} répartis en 4-4-5 {{span}}.",
-      "enterFlat": "Saisissez un montant : il sera réparti linéairement {{span}}.",
-      "enter445": "Saisissez un montant : il sera réparti en 4-4-5 {{span}}.",
       "title": "Résultat par mois",
       "quarter": "T{{n}}",
       "cellHint": "Saisir par mois",
-      "atDate": "{{amount}} le {{date}}, portés sur {{month}}.",
-      "enterDate": "Saisissez un montant : il ira en {{month}}.",
       "show": "Afficher le détail",
       "hide": "Masquer le détail",
-      "folded_one": "La colonne est répartie linéairement sur l'année : le détail mensuel n'apprend rien de plus.",
-      "folded_other": "Toutes les colonnes sont réparties linéairement sur l'année : le détail mensuel n'apprend rien de plus.",
-      "foldedEmpty": "Aucun montant pour l'instant : le détail mensuel n'apprend rien de plus.",
       "differenceWith": "Écart avec",
       "differenceRow": "Écart avec {{column}}"
     },

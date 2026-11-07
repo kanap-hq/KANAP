@@ -100,7 +100,6 @@
       "total": "Gesamt",
       "mustSum100": "Manuelle Prozentsätze müssen in Summe 100 % ergeben.",
       "addRow": "Zeile hinzufügen",
-      "autoDistributeInfo": "Der Rest wird automatisch auf aktive Unternehmen basierend auf der gewählten Methode verteilt. Keine manuelle Auswahl erforderlich.",
       "totalAutoHint": "(<= 100 % erlaubt; Rest automatisch verteilt)",
       "totalManualHint": "(nur Vorschau; gespeicherte Totale verwenden Live-Metriken)",
       "failedToLoad": "Zuordnungen konnten nicht geladen werden",
@@ -267,7 +266,6 @@
       "total": "Gesamt",
       "mustSum100": "Manuelle Prozentsätze müssen in Summe 100 % ergeben.",
       "addRow": "Zeile hinzufügen",
-      "autoDistributeInfo": "Der Rest wird automatisch auf aktive Unternehmen basierend auf der gewählten Methode verteilt. Keine manuelle Auswahl erforderlich.",
       "totalAutoHint": "(<= 100 % erlaubt; Rest automatisch verteilt)",
       "totalManualHint": "(nur Vorschau; gespeicherte Totale verwenden Live-Metriken)",
       "failedToLoad": "Zuordnungen konnten nicht geladen werden",
@@ -708,7 +706,6 @@
   },
   "operations": {
     "title": "Administration",
-    "subtitle": "Leistungsstarke Werkzeuge zur Verwaltung und Transformation Ihrer Budgetdaten über verschiedene Jahre und Spalten hinweg.",
     "sections": {
       "settings": "Einstellungen",
       "operations": "Vorgänge"
@@ -733,12 +730,10 @@
     },
     "allocationDefault": {
       "title": "Standard-Zuordnungsmethode",
-      "subtitle": "Legen Sie fest, wie Kosten standardmäßig je Geschäftsjahr zwischen Unternehmen zugeordnet werden.",
       "year": "Geschäftsjahr",
       "mode": "Unternehmen",
       "modeAuto": "Alle aktiven Unternehmen",
       "modeManual": "Ausgewählte Unternehmen",
-      "modeManualHelp": "Der Treiber wird nur auf die ausgewählten Unternehmen angewendet.",
       "companies": "Unternehmen",
       "companiesSelected": "{{count}} Unternehmen ausgewählt",
       "companiesSelected_one": "{{count}} Unternehmen ausgewählt",
@@ -754,7 +749,6 @@
       "standardNote": "Standardmethode. Für dieses Jahr ist keine Abweichung konfiguriert.",
       "overriddenNote": "Für Ihre Organisation konfiguriert. Standardmethode: {{method}}.",
       "resetToStandard": "Standardmethode verwenden",
-      "scopeNote": "Die Methode wird bei der Berechnung der Zuordnungen aufgelöst: entweder aus Mitarbeiterzahl, IT-Benutzern oder Umsatz jedes für das Jahr aktiven Unternehmens oder aus dem Treiberwert der für die Standardeinstellung ausgewählten Unternehmen. Eine Änderung berechnet alle Zeilen neu, die auf der Standardmethode stehen; manuelle Zuordnungen behalten ihre Prozentsätze.",
       "loadError": "Die Standard-Zuordnungsmethode konnte nicht geladen werden.",
       "saveError": "Die Standard-Zuordnungsmethode konnte nicht gespeichert werden.",
       "noPermission": "Zum Ändern der Standardmethode sind Budget-Administrationsrechte erforderlich. Die aktuelle Einstellung bleibt sichtbar.",
@@ -780,7 +774,6 @@
     },
     "columnReset": {
       "title": "Budgetspalte zurücksetzen",
-      "subtitle": "Eine Spalte für ein Jahr leeren, für alle Zeilen, OPEX oder CAPEX: ihre zwölf Monate und ihren Verteilungszeitraum.",
       "year": "Jahr",
       "budgetColumn": "Budgetspalte",
       "processing": "Wird verarbeitet…",
@@ -811,7 +804,6 @@
     },
     "copyBudget": {
       "title": "Budgetspalten kopieren",
-      "subtitle": "Beträge von einer Spalte in eine andere und Zuordnungen von einem Jahr in ein anderes kopieren, für alle Zeilen, OPEX oder CAPEX.",
       "sourceYear": "Quelljahr",
       "destinationYear": "Zieljahr",
       "amounts": "Beträge",
@@ -905,7 +897,6 @@
     },
     "currency": {
       "title": "Währungseinstellungen",
-      "subtitle": "Konfigurieren Sie die Reporting- und Standardwährungen für OPEX- und CAPEX-Workflows. Alle Werte werden als dreistellige ISO-Codes gespeichert.",
       "loadError": "Aktuelle Währungseinstellungen konnten nicht geladen werden.",
       "saveSuccess": "Währungseinstellungen erfolgreich aktualisiert",
       "failedToRefreshFx": "Wechselkurse konnten nicht aktualisiert werden",
@@ -917,7 +908,6 @@
       "defaultCapexCurrency": "Standard-CAPEX-Währung",
       "defaultCapexCurrencyHelp": "Füllt die Währung beim Erstellen neuer CAPEX-Zeilen vor",
       "allowedCurrencies": "Erlaubte Währungen",
-      "allowedCurrenciesHelp": "Optionale kommagetrennte Liste (z. B. EUR, USD, GBP)",
       "forceFxSync": "Wechselkurssynchronisierung erzwingen",
       "fxRatesTitle": "Neueste Wechselkurs-Snapshots (pro Geschäftsjahr, Basis Reporting-Währung des Arbeitsbereichs)",
       "loadingRates": "Wechselkurse werden geladen…",
@@ -1106,7 +1096,6 @@
     "budgetAdminOnly": "Sie benötigen Budgetadministrator-Rechte, um diese Seite zu verwenden.",
     "budgetColumnsSettings": {
       "title": "Budgetspalten",
-      "subtitle": "Benennen Sie die Spalten Ihres Budgets, wählen Sie, welche alle sehen und von welcher Berichte und Listen ausgehen.",
       "loadError": "Die Spalteneinstellungen konnten nicht geladen werden.",
       "column": "Spalte",
       "name": "Name",
@@ -1118,7 +1107,6 @@
       "followsOf": "{{column}} folgt Verteilung und Zeilen",
       "defaultOf": "{{column}} zur Standardspalte machen",
       "inFiles": "In Dateien: {{name}}",
-      "nameHint": "Lassen Sie einen Namen leer, um den Standardnamen zu verwenden.",
       "helpHidden": "Ausgeblendete Spalten behalten ihre Beträge und nehmen weiterhin Importe und Einfrierungen an.",
       "helpDefault": "Die Standardspalte ist in Berichten vorausgewählt und sortiert die Listen und das Dashboard. Wird sie eingefroren, werden die Wechselkurse des Jahres festgeschrieben.",
       "helpFollows": "Auf der Registerkarte Budget unter „Auch für andere Spalten verwenden“ standardmäßig angehakt.",
@@ -1251,7 +1239,6 @@
   "reports": {
     "landing": {
       "title": "Berichtswesen",
-      "description": "Erkunden Sie vorkonfigurierte Berichte. Jeder Bericht enthält eine Zusammenfassungstabelle und ein Diagramm mit Exportoptionen.",
       "cards": {
         "globalChargeback": {
           "title": "Globale Leistungsverrechnung",
@@ -1433,15 +1420,12 @@
     },
     "globalChargeback": {
       "title": "Globale Leistungsverrechnung",
-      "subtitle": "Globale Leistungsverrechnung, Unternehmenstotale und KPIs",
       "overallTotal": "Gesamtsumme",
       "companies": "Unternehmen",
       "detailedLines": "Detailzeilen",
       "kpiCoverage": "KPI-Abdeckung",
       "companyTotalsTitle": "Globale Unternehmenstotale",
-      "companyTotalsDescription": "Konsolidierter Leistungsverrechnungsbetrag pro Unternehmen.",
       "distributionTitle": "Verteilung der Leistungsverrechnung",
-      "distributionDescription": "Horizontales Balkendiagramm, das die Tabellentotale widerspiegelt.",
       "detailedTitle": "Detaillierte Zuordnungen",
       "detailedDescription": "Zuordnung pro Unternehmen und Abteilung mit Zwischensummen pro Unternehmen. Zeilen mit der Bezeichnung \"Gemeinkosten\" stellen verbleibende Unternehmenskosten ohne Abteilungszuordnung dar.",
       "globalTotal": "Gesamtsumme",
@@ -1461,17 +1445,14 @@
     },
     "companyChargeback": {
       "title": "Leistungsverrechnung pro Unternehmen",
-      "subtitle": "Detaillierte Leistungsverrechnung pro Unternehmen über Abteilungen, Zeilen und KPIs",
       "selectCompanyTitle": "Wählen Sie ein Unternehmen, um Leistungsverrechnungsdetails zu erkunden",
       "selectCompanyDescription": "Wählen Sie ein Unternehmen, ein Jahr und eine Budgetspalte, um die detaillierte Leistungsverrechnungsansicht zu generieren. Abteilungstotale, detaillierte Zuordnungen und KPIs erscheinen nach Ausführung des Berichts.",
       "selectCompany": "Unternehmen auswählen",
       "departmentTotals": "Abteilungstotale",
       "departmentTotalsDescription": "Konsolidierte Leistungsverrechnung pro Abteilung. \"Gemeinkosten\" fasst Zuordnungen ohne bestimmte Abteilung zusammen.",
       "departmentDistribution": "Abteilungsverteilung",
-      "departmentDistributionDescription": "Horizontales Balkendiagramm, das die Tabellentotale widerspiegelt.",
       "noDepartmentAllocations": "Keine Zuordnungen auf Abteilungsebene für die ausgewählte Konfiguration.",
       "chargebackItems": "Leistungsverrechnungszeilen",
-      "chargebackItemsDescription": "Detaillierte Ausgaben, die zur Leistungsverrechnung des Unternehmens beitragen, einschließlich Zuordnungsmethode und Anteil am Gesamtbetrag.",
       "noChargebackItems": "Keine Leistungsverrechnungszeilen für die ausgewählte Konfiguration.",
       "flowsTitle": "Unternehmensübergreifende Flüsse",
       "flowsDescription": "Partnerunternehmen mit Forderungen (Sie haben für sie bezahlt), Verbindlichkeiten (sie haben für Sie bezahlt) und dem Nettobetrag. Eigenverbrauch ausgeschlossen.",
@@ -1489,8 +1470,6 @@
     },
     "topOpex": {
       "title": "Top-Zeilen",
-      "subtitle": "Größte {{type}}-Zeilen nach ausgewähltem Jahr ({{metric}})",
-      "subtitle_all": "Größte Budgetzeilen nach ausgewähltem Jahr ({{metric}})",
       "topTotal": "Top {{count}} gesamt",
       "totalMetric": "{{metric}}, gesamt",
       "ofFilteredMetric": "{{pct}} % der gefilterten Summe",
@@ -1502,8 +1481,6 @@
     },
     "opexDelta": {
       "title": "Top Anstieg / Rückgang",
-      "subtitle": "Größte {{type}}-Veränderungen vs. Vorjahr",
-      "subtitle_all": "Größte Budgetveränderungen vs. Vorjahr",
       "sourceColumn": "Quellspalte",
       "destinationColumn": "Zielspalte",
       "increase": "Anstieg",
@@ -1543,12 +1520,10 @@
       "directionToggle": "Anstieg oder Rückgang"
     },
     "budgetTrendOpex": {
-      "title": "Budgetvergleich",
-      "subtitle": "Ausgewählte Metriken über einen Jahresbereich vergleichen"
+      "title": "Budgetvergleich"
     },
     "budgetColumnsCompare": {
       "title": "Budgetspaltenvergleich",
-      "subtitle": "Bis zu zehn Budgetspalten vergleichen",
       "yearGroupingSubtitle": "{{type}}: Jahresgruppierung",
       "yearGroupingSubtitle_all": "OPEX und CAPEX: Jahresgruppierung",
       "selectionsSubtitle_one": "{{type}}: {{count}} Auswahl",
@@ -1559,8 +1534,6 @@
     },
     "consolidation": {
       "title": "Budget nach Konsolidierungskonto",
-      "subtitle": "{{type}}-Totale nach Konsolidierungskonto gruppiert; Kreisdiagramm für ein einzelnes Jahr, Liniendiagramm für mehrere Jahre",
-      "subtitle_all": "OPEX- und CAPEX-Totale nach Konsolidierungskonto gruppiert; Kreisdiagramm für ein einzelnes Jahr, Liniendiagramm für mehrere Jahre",
       "chartTitleSingle": "{{type}} nach Konsolidierungskonto · {{year}}",
       "chartTitleSingle_all": "OPEX und CAPEX nach Konsolidierungskonto · {{year}}",
       "chartTitleRange": "{{type}} nach Konsolidierungskonto · {{start}} bis {{end}}",
@@ -1573,8 +1546,6 @@
     },
     "analyticsCategory": {
       "title": "Budget nach Analysedimension",
-      "subtitle": "{{type}}-Totale nach {{dimension}} gruppiert; Kreisdiagramm für ein einzelnes Jahr, Liniendiagramm für mehrere Jahre",
-      "subtitle_all": "OPEX- und CAPEX-Totale nach {{dimension}} gruppiert; Kreisdiagramm für ein einzelnes Jahr, Liniendiagramm für mehrere Jahre",
       "chartTitleSingle": "{{type}} nach {{dimension}} · {{year}}",
       "chartTitleSingle_all": "OPEX und CAPEX nach {{dimension}} · {{year}}",
       "chartTitleRange": "{{type}} nach {{dimension}} · {{start}} bis {{end}}",
@@ -1601,8 +1572,6 @@
     },
     "staffing": {
       "title": "Personal nach Monat",
-      "subtitle": "Monatliche {{type}}-VZÄ nach {{group}}",
-      "subtitle_all": "Monatliche VZÄ nach {{group}}",
       "chartTitle": "{{type}}-Personal nach {{group}}, {{column}} {{year}}",
       "chartTitle_all": "Personal nach {{group}}, {{column}} {{year}}",
       "groupBy": "Gruppieren nach",
@@ -1630,8 +1599,6 @@
     },
     "costPerFte": {
       "title": "Kosten pro VZÄ",
-      "subtitle": "Jährliche {{type}}-Kosten eines VZÄ oder durchschnittlicher Tagessatz, nach {{group}}",
-      "subtitle_all": "Jährliche Kosten eines VZÄ oder durchschnittlicher Tagessatz, nach {{group}}",
       "chartTitle": "{{type}}-Kosten pro VZÄ nach {{group}}",
       "chartTitle_all": "Kosten pro VZÄ nach {{group}}",
       "rateChartTitle": "{{type}}-Tagessatz nach {{group}}",
@@ -1779,7 +1746,6 @@
       "yearChange_other": "Eine andere Person hat die Spalten {{columns}} geändert, während Sie sie bearbeitet haben, und Sie haben noch nicht gewählt, welche Werte bleiben. Trotzdem das Jahr wechseln und Ihre Werte in diesen Spalten verlieren, oder bleiben und wählen.",
       "yearChangeConfirm": "Jahr wechseln"
     },
-    "notEntered": "Noch nicht erfasst",
     "columns": "Budgetspalten",
     "card": {
       "frozen": "Eingefroren",
@@ -1803,20 +1769,11 @@
       "single": "im {{month}}"
     },
     "result": {
-      "spreadFlat": "{{amount}} {{span}} gleichmäßig verteilt.",
-      "spread445": "{{amount}} {{span}} nach 4-4-5 verteilt.",
-      "enterFlat": "Geben Sie einen Betrag ein: Er wird {{span}} gleichmäßig verteilt.",
-      "enter445": "Geben Sie einen Betrag ein: Er wird {{span}} nach 4-4-5 verteilt.",
       "title": "Ergebnis pro Monat",
       "quarter": "Q{{n}}",
       "cellHint": "Pro Monat erfassen",
-      "atDate": "{{amount}} am {{date}}, ganz im {{month}}.",
-      "enterDate": "Geben Sie einen Betrag ein: Er fällt in den {{month}}.",
       "show": "Details anzeigen",
       "hide": "Details ausblenden",
-      "folded_one": "Die Spalte ist linear über das ganze Jahr verteilt: Die Monatswerte zeigen nichts Neues.",
-      "folded_other": "Alle Spalten sind linear über das ganze Jahr verteilt: Die Monatswerte zeigen nichts Neues.",
-      "foldedEmpty": "Noch kein Betrag: Die Monatswerte zeigen nichts Neues.",
       "differenceWith": "Abweichung zu",
       "differenceRow": "Abweichung zu {{column}}"
     },

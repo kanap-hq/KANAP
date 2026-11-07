@@ -26,7 +26,8 @@ paragraph that repeats its title), remove the duplicate.
 
 - **Field help lines** (`PropertyRow helperText`, `FormHelperText`): only for a constraint the
   person must know before typing (a format the server enforces, a value that cannot change after
-  creation). Anything else goes to the label, the placeholder or an `InfoHint` beside the label.
+  creation). Anything else goes to the label, the placeholder or an `InfoHint` beside the label
+  (`PropertyRow hint`).
   Validation messages are not help text: they appear on error and leave once fixed.
 - **Page subtitles and section intros**: none by default. A list or report page shows its title
   only (`PageHeader`, `ReportLayout`); a section explains itself through its rows.

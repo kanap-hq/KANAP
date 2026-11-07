@@ -280,7 +280,6 @@ export default function MasterDataCopyPage() {
   return (
     <ReportLayout
       title={t('admin.copy.title')}
-      subtitle={t('admin.copy.subtitle')}
       filters={
         <>
           <TextField

@@ -100,7 +100,6 @@
       "total": "Total",
       "mustSum100": "Los porcentajes manuales deben sumar 100 %.",
       "addRow": "Añadir fila",
-      "autoDistributeInfo": "El remanente se distribuye automáticamente entre las empresas activas según el método seleccionado. No se requiere selección manual.",
       "totalAutoHint": "(<= 100 % permitido; remanente distribuido automáticamente)",
       "totalManualHint": "(solo vista previa: los totales guardados usan métricas en tiempo real)",
       "failedToLoad": "No se pudieron cargar las asignaciones",
@@ -267,7 +266,6 @@
       "total": "Total",
       "mustSum100": "Los porcentajes manuales deben sumar 100 %.",
       "addRow": "Añadir fila",
-      "autoDistributeInfo": "El remanente se distribuye automáticamente entre las empresas activas según el método seleccionado. No se requiere selección manual.",
       "totalAutoHint": "(<= 100 % permitido; remanente distribuido automáticamente)",
       "totalManualHint": "(solo vista previa: los totales guardados usan métricas en tiempo real)",
       "failedToLoad": "No se pudieron cargar las asignaciones",
@@ -708,7 +706,6 @@
   },
   "operations": {
     "title": "Administración",
-    "subtitle": "Herramientas potentes para gestionar y transformar sus datos presupuestarios en diferentes años y columnas.",
     "sections": {
       "settings": "Configuración",
       "operations": "Operaciones"
@@ -733,12 +730,10 @@
     },
     "allocationDefault": {
       "title": "Método de asignación por defecto",
-      "subtitle": "Elija cómo se asignan los costes entre sociedades por defecto, en cada ejercicio.",
       "year": "Ejercicio",
       "mode": "Sociedades",
       "modeAuto": "Todas las sociedades activas",
       "modeManual": "Sociedades seleccionadas",
-      "modeManualHelp": "El generador se aplica únicamente a las sociedades seleccionadas.",
       "companies": "Sociedades",
       "companiesSelected": "{{count}} sociedades seleccionadas",
       "companiesSelected_one": "{{count}} sociedad seleccionada",
@@ -754,7 +749,6 @@
       "standardNote": "Método estándar: no hay personalización configurada para este año.",
       "overriddenNote": "Configurado para su organización. Método estándar: {{method}}.",
       "resetToStandard": "Volver al método estándar",
-      "scopeNote": "El método se resuelve al calcular las asignaciones: a partir de la plantilla, los usuarios IT o la facturación de cada sociedad activa del año, o del generador de las sociedades seleccionadas para el valor por defecto. Al cambiarlo se recalculan todas las líneas que siguen con el método por defecto; las asignaciones manuales conservan sus porcentajes.",
       "loadError": "No se pudo cargar el método de asignación por defecto.",
       "saveError": "No se pudo guardar el método de asignación por defecto.",
       "noPermission": "Necesita permisos de administración presupuestaria para cambiar el método por defecto. La configuración actual sigue visible.",
@@ -780,7 +774,6 @@
     },
     "columnReset": {
       "title": "Restablecer columna presupuestaria",
-      "subtitle": "Borrar una columna de un año, en todas las líneas, en OPEX o CAPEX: sus doce meses y su periodo de reparto.",
       "year": "Año",
       "budgetColumn": "Columna presupuestaria",
       "processing": "Procesando…",
@@ -811,7 +804,6 @@
     },
     "copyBudget": {
       "title": "Copiar columnas presupuestarias",
-      "subtitle": "Copiar los importes de una columna a otra, y las asignaciones de un año a otro, para todas las líneas, en OPEX o CAPEX.",
       "sourceYear": "Año de origen",
       "destinationYear": "Año de destino",
       "amounts": "Importes",
@@ -905,7 +897,6 @@
     },
     "currency": {
       "title": "Configuración de moneda",
-      "subtitle": "Configure las monedas de reporting y predeterminadas utilizadas en los flujos OPEX y CAPEX. Todos los valores se guardan como códigos ISO de tres letras.",
       "loadError": "No se pudo cargar la configuración de moneda actual.",
       "saveSuccess": "Configuración de moneda actualizada correctamente",
       "failedToRefreshFx": "No se pudieron actualizar los tipos de cambio",
@@ -917,7 +908,6 @@
       "defaultCapexCurrency": "Moneda CAPEX predeterminada",
       "defaultCapexCurrencyHelp": "Rellena previamente la moneda al crear nuevas líneas CAPEX",
       "allowedCurrencies": "Monedas permitidas",
-      "allowedCurrenciesHelp": "Lista opcional separada por comas (p. ej., EUR, USD, GBP)",
       "forceFxSync": "Forzar sincronización de tipos de cambio",
       "fxRatesTitle": "Últimas capturas de tipos de cambio (por ejercicio fiscal, base moneda de reporting del espacio de trabajo)",
       "loadingRates": "Cargando tipos de cambio…",
@@ -1106,7 +1096,6 @@
     "budgetAdminOnly": "Necesita derechos de administrador de presupuesto para usar esta página.",
     "budgetColumnsSettings": {
       "title": "Columnas presupuestarias",
-      "subtitle": "Dé nombre a las columnas de su presupuesto, elija cuáles ve todo el mundo y de cuál parten los informes y las listas.",
       "loadError": "No se pudo cargar la configuración de las columnas.",
       "column": "Columna",
       "name": "Nombre",
@@ -1118,7 +1107,6 @@
       "followsOf": "{{column}} sigue el reparto y las líneas",
       "defaultOf": "Hacer de {{column}} la columna por defecto",
       "inFiles": "En los archivos: {{name}}",
-      "nameHint": "Deje un nombre vacío para usar el nombre estándar.",
       "helpHidden": "Las columnas ocultas conservan sus importes y siguen aceptando importaciones y congelaciones.",
       "helpDefault": "La columna por defecto está preseleccionada en los informes y ordena las listas y el panel. Congelarla fija los tipos de cambio del año.",
       "helpFollows": "Marcada por defecto en «Usar también para otras columnas» de la pestaña Presupuesto.",
@@ -1251,7 +1239,6 @@
   "reports": {
     "landing": {
       "title": "Informes",
-      "description": "Explore informes preconfigurados. Cada informe incluye una tabla resumen y un gráfico, con opciones de exportación.",
       "cards": {
         "globalChargeback": {
           "title": "Contracargo global",
@@ -1433,15 +1420,12 @@
     },
     "globalChargeback": {
       "title": "Contracargo global",
-      "subtitle": "Asignaciones de contracargo global, totales por empresa y KPI",
       "overallTotal": "Total general",
       "companies": "Empresas",
       "detailedLines": "Líneas detalladas",
       "kpiCoverage": "Cobertura de KPI",
       "companyTotalsTitle": "Totales globales por empresa",
-      "companyTotalsDescription": "Importe consolidado de contracargo por empresa.",
       "distributionTitle": "Distribución del contracargo",
-      "distributionDescription": "Gráfico de barras horizontal que refleja los totales de la tabla.",
       "detailedTitle": "Asignaciones detalladas",
       "detailedDescription": "Asignación por empresa y departamento con subtotales por empresa. Las filas etiquetadas \"Costes comunes\" representan costes residuales de la empresa sin asignación de departamento.",
       "globalTotal": "Total global",
@@ -1461,17 +1445,14 @@
     },
     "companyChargeback": {
       "title": "Contracargo por empresa",
-      "subtitle": "Asignación detallada de contracargo por empresa en departamentos, líneas y KPI",
       "selectCompanyTitle": "Seleccione una empresa para explorar los detalles del contracargo",
       "selectCompanyDescription": "Elija una empresa, un año y una columna presupuestaria para generar la vista detallada de contracargo. Los totales por departamento, las asignaciones detalladas y los KPI aparecerán una vez ejecutado el informe.",
       "selectCompany": "Seleccione una empresa",
       "departmentTotals": "Totales por departamento",
       "departmentTotalsDescription": "Contracargo consolidado por departamento. \"Costes comunes\" agrupa asignaciones sin departamento específico.",
       "departmentDistribution": "Distribución por departamento",
-      "departmentDistributionDescription": "Gráfico de barras horizontal que refleja los totales de la tabla.",
       "noDepartmentAllocations": "No hay asignaciones a nivel de departamento para la configuración seleccionada.",
       "chargebackItems": "Líneas de contracargo",
-      "chargebackItemsDescription": "Gasto detallado que contribuye al contracargo de la empresa, incluyendo el método de asignación y la participación del importe total.",
       "noChargebackItems": "No hay líneas de contracargo para la configuración seleccionada.",
       "flowsTitle": "Flujos interempresariales",
       "flowsDescription": "Empresas asociadas con cuentas por cobrar (usted pagó por ellas), cuentas por pagar (ellas pagaron por usted) y el total neto. Se excluye el autoconsumo.",
@@ -1489,8 +1470,6 @@
     },
     "topOpex": {
       "title": "Top líneas",
-      "subtitle": "Mayores líneas {{type}} por año seleccionado ({{metric}})",
-      "subtitle_all": "Mayores líneas presupuestarias por año seleccionado ({{metric}})",
       "topTotal": "Total top {{count}}",
       "totalMetric": "{{metric}}, total",
       "ofFilteredMetric": "{{pct}} % del total filtrado",
@@ -1502,8 +1481,6 @@
     },
     "opexDelta": {
       "title": "Top aumento / disminución",
-      "subtitle": "Mayores variaciones {{type}} vs. año anterior",
-      "subtitle_all": "Mayores variaciones presupuestarias vs. año anterior",
       "sourceColumn": "Columna de origen",
       "destinationColumn": "Columna de destino",
       "increase": "Aumento",
@@ -1543,12 +1520,10 @@
       "directionToggle": "Aumento o disminución"
     },
     "budgetTrendOpex": {
-      "title": "Comparación presupuestaria",
-      "subtitle": "Comparar métricas seleccionadas en un rango de años"
+      "title": "Comparación presupuestaria"
     },
     "budgetColumnsCompare": {
       "title": "Comparación de columnas presupuestarias",
-      "subtitle": "Comparar hasta diez columnas presupuestarias",
       "yearGroupingSubtitle": "{{type}}: agrupación por año",
       "yearGroupingSubtitle_all": "OPEX y CAPEX: agrupación por año",
       "selectionsSubtitle_one": "{{type}}: {{count}} selección",
@@ -1559,8 +1534,6 @@
     },
     "consolidation": {
       "title": "Presupuesto por cuenta de consolidación",
-      "subtitle": "Totales {{type}} agrupados por cuenta de consolidación; circular para un solo año, lineal para rango plurianual",
-      "subtitle_all": "Totales OPEX y CAPEX agrupados por cuenta de consolidación; circular para un solo año, lineal para rango plurianual",
       "chartTitleSingle": "{{type}} por cuenta de consolidación · {{year}}",
       "chartTitleSingle_all": "OPEX y CAPEX por cuenta de consolidación · {{year}}",
       "chartTitleRange": "{{type}} por cuenta de consolidación · {{start}} a {{end}}",
@@ -1573,8 +1546,6 @@
     },
     "analyticsCategory": {
       "title": "Presupuesto por dimensión analítica",
-      "subtitle": "Totales {{type}} agrupados por {{dimension}}; circular para un solo año, lineal para rango plurianual",
-      "subtitle_all": "Totales OPEX y CAPEX agrupados por {{dimension}}; circular para un solo año, lineal para rango plurianual",
       "chartTitleSingle": "{{type}} por {{dimension}} · {{year}}",
       "chartTitleSingle_all": "OPEX y CAPEX por {{dimension}} · {{year}}",
       "chartTitleRange": "{{type}} por {{dimension}} · {{start}} a {{end}}",
@@ -1601,8 +1572,6 @@
     },
     "staffing": {
       "title": "Plantilla por mes",
-      "subtitle": "ETC mensuales {{type}} por {{group}}",
-      "subtitle_all": "ETC mensuales por {{group}}",
       "chartTitle": "Plantilla {{type}} por {{group}}, {{column}} {{year}}",
       "chartTitle_all": "Plantilla por {{group}}, {{column}} {{year}}",
       "groupBy": "Agrupar por",
@@ -1630,8 +1599,6 @@
     },
     "costPerFte": {
       "title": "Coste por ETC",
-      "subtitle": "Coste anual {{type}} de un ETC o tarifa diaria media, por {{group}}",
-      "subtitle_all": "Coste anual de un ETC o tarifa diaria media, por {{group}}",
       "chartTitle": "Coste por ETC {{type}} por {{group}}",
       "chartTitle_all": "Coste por ETC por {{group}}",
       "rateChartTitle": "Tarifa diaria {{type}} por {{group}}",
@@ -1779,7 +1746,6 @@
       "yearChange_other": "Otra persona modificó las columnas {{columns}} mientras usted las editaba, y no ha elegido qué valores conservar. Cambiar de año de todos modos y perder sus valores en estas columnas, o quedarse y elegir.",
       "yearChangeConfirm": "Cambiar de año"
     },
-    "notEntered": "Aún sin introducir",
     "columns": "Columnas del presupuesto",
     "card": {
       "frozen": "Congelada",
@@ -1803,20 +1769,11 @@
       "single": "en {{month}}"
     },
     "result": {
-      "spreadFlat": "{{amount}} repartidos de forma uniforme {{span}}.",
-      "spread445": "{{amount}} repartidos en 4-4-5 {{span}}.",
-      "enterFlat": "Introduzca un importe: se repartirá de forma uniforme {{span}}.",
-      "enter445": "Introduzca un importe: se repartirá en 4-4-5 {{span}}.",
       "title": "Resultado por mes",
       "quarter": "T{{n}}",
       "cellHint": "Introducir por mes",
-      "atDate": "{{amount}} el {{date}}, todo en {{month}}.",
-      "enterDate": "Introduzca un importe: irá a {{month}}.",
       "show": "Mostrar el detalle",
       "hide": "Ocultar el detalle",
-      "folded_one": "La columna se reparte de forma lineal en todo el año: el detalle mensual no aporta nada más.",
-      "folded_other": "Todas las columnas se reparten de forma lineal en todo el año: el detalle mensual no aporta nada más.",
-      "foldedEmpty": "Todavía no hay importes: el detalle mensual no aporta nada más.",
       "differenceWith": "Diferencia con",
       "differenceRow": "Diferencia con {{column}}"
     },

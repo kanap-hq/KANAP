@@ -303,7 +303,7 @@ The Budget tab holds the amounts of the line, year by year and column by column.
     - **Actuals**: Actual spend, as it is recorded during the year
     - **Expected landing**: Your best estimate of the year-end figure
 - A budget administrator can rename the columns, hide some and choose the default column in **Budget management > Administration > Budget columns** (see [Budget columns](budget-operations.md#budget-columns)). A hidden column keeps its amounts
-- Each shown column has a card under the year tabs: its name, its total for the year, how its amounts were produced and its period, for example "Spread flat" and "9 months, April to December". A column with nothing in it reads "Not entered yet". Hover a card to see its quantity and price lines
+- Each shown column has a card under the year tabs: its name, its total for the year, how its amounts were produced and its period, for example "Spread flat" and "9 months, April to December". A column with nothing in it shows its zero alone. Hover a card to see its quantity and price lines
 - Click a card to work on that column. The tab opens on the first shown column that is not frozen
 - With a single shown column, there are no cards: the editor shows the column directly
 
@@ -336,7 +336,7 @@ On an empty column, a click on a tab switches at once. On a column with amounts,
 - **Annual amount**: the total of the column for the year
 - **When**: **Whole year**, **A period** with **From** and **To** dates, or **At a date** with a single **Date**
 - **Distribution**: **Flat** or **4-4-5**. At a date there is no distribution: the month of the date takes the whole amount
-- A sentence says what you get, for example "120,000 spread flat from April to December (9 months)." or "5,000 on 10 February 2026, all in February." Hover the info icon next to it to read the 15th rule
+- The card of the column says what you get, for example "Spread flat" and "9 months, April to December", or "On 10 February 2026". With **A period**, hover the info icon next to the dates to read the 15th rule
 - When some months of the year fall outside the period, a note says which ones will be set to zero, for example "January to March will be set to zero."
 - A warning appears when the period goes beyond the line's dates. The amount is still saved
 - While a date is missing or no month counts, a note in red says why and nothing is saved. When the line's dates leave no month in the year, the editor reads "No month of 2026 is within the line's dates." Choose **A period** to set the dates yourself
@@ -375,7 +375,7 @@ On an empty column, a click on a tab switches at once. On a column with amounts,
 - Under the editor, **Monthly result** shows the year month by month for every shown column, in the line's currency, with a subtotal per quarter (**Q1** to **Q4**) and a **Total** row. The active column is highlighted
 - With two columns or more, a last row gives the difference of each column with one of them, for example "+12,000 (+1.8%)". Pick that column in **Difference with** above the table. It starts on the default column
 - The table is folded by default. **Show the detail** opens it and **Hide the detail** folds it again. Your choice holds while you stay on the line
-- Folded, the section shows its title and **Show the detail**. While every column is empty, or an amount spread flat over the whole year, a sentence adds why, for example "All columns are spread flat over the whole year: the monthly detail adds nothing."
+- Folded, the section shows its title and **Show the detail**
 - The table opens by itself while the active column is typed by month or a column waits for your choice
 
 **Back to the opening values**:

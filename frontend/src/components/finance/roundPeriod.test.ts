@@ -17,7 +17,6 @@ import {
   columnLabel,
   columnPeriod,
   columnPeriodProblem,
-  dateResultText,
   dayChangeText,
   isOneDay,
   longDate,
@@ -37,7 +36,6 @@ import {
   periodForEdit,
   periodProblem,
   periodText,
-  spreadResultText,
   suggestedPeriod,
   toCents,
   zeroedMonthsText,
@@ -174,23 +172,21 @@ describe('texts', () => {
 
   it('counts the months a spread keeps, with the French elision before a vowel', () => {
     const april = [4, 5, 6, 7, 8, 9, 10, 11, 12];
-    expect(spreadResultText(fr(), 'fr', '120 000', 'flat', april)).toBe("120 000 répartis linéairement d'avril à décembre (9 mois).");
-    expect(spreadResultText(fr(), 'fr', '120 000', 'flat', [8, 9, 10])).toBe("120 000 répartis linéairement d'août à octobre (3 mois).");
-    expect(spreadResultText(fr(), 'fr', '120 000', '4-4-5', [10, 11, 12])).toBe("120 000 répartis en 4-4-5 d'octobre à décembre (3 mois).");
+    expect(monthSpanText(fr(), 'fr', april)).toBe("d'avril à décembre (9 mois)");
+    expect(monthSpanText(fr(), 'fr', [8, 9, 10])).toBe("d'août à octobre (3 mois)");
+    expect(monthSpanText(fr(), 'fr', [10, 11, 12])).toBe("d'octobre à décembre (3 mois)");
     // No elision before a consonant.
-    expect(spreadResultText(fr(), 'fr', '120 000', 'flat', activeMonths(2026, null, null))).toBe('120 000 répartis linéairement de janvier à décembre (12 mois).');
-    expect(spreadResultText(fr(), 'fr', '', 'flat', april)).toBe("Saisissez un montant : il sera réparti linéairement d'avril à décembre (9 mois).");
-    expect(spreadResultText(en(), 'en', '120 000', 'flat', april)).toBe('120 000 spread flat from April to December (9 months).');
-    expect(spreadResultText(en(), 'en', '', '4-4-5', april)).toBe('Enter an amount: it will be spread 4-4-5 from April to December (9 months).');
-    expect(spreadResultText(en(), 'en', '500', 'flat', [4])).toBe('500 spread flat in April.');
+    expect(monthSpanText(fr(), 'fr', activeMonths(2026, null, null))).toBe('de janvier à décembre (12 mois)');
+    expect(monthSpanText(en(), 'en', april)).toBe('from April to December (9 months)');
+    expect(monthSpanText(en(), 'en', [4])).toBe('in April');
     expect(monthSpanText(fr(), 'fr', [4])).toBe('en avril');
     // The question before an amount names the same months.
     expect(fr()('budgetTab.switch.toAmountSpan', { amount: '12 500', span: monthSpanText(fr(), 'fr', [8, 9, 10, 11, 12]) }))
       .toBe("Passer en saisie par montant ? Le total actuel (12 500) devient le montant, réparti linéairement d'août à décembre (5 mois).");
     expect(fr()('budgetTab.storedPeriod', { stored: monthsText(fr(), 'fr', activeMonths(2026, null, null)), proposed: monthsText(fr(), 'fr', april) }))
       .toBe("Période enregistrée : janvier à décembre. L'enregistrement utilisera avril à décembre, selon les dates de la ligne.");
-    // No month: no sentence (the period problem says why).
-    expect(spreadResultText(en(), 'en', '500', 'flat', [])).toBe('');
+    // No month: no words (the period problem says why).
+    expect(monthSpanText(en(), 'en', [])).toBe('');
   });
 
   it('lists the months that will be set to zero', () => {
@@ -445,11 +441,7 @@ describe('an amount at a date (lot F2)', () => {
     expect(longDate('en-GB', '2026-04-01')).toBe('1 April 2026');
   });
 
-  it('the sentence of an amount at a date names its month', () => {
-    expect(dateResultText(fr(), 'fr', '40 000', '2026-02-10')).toBe('40 000 le 10 février 2026, portés sur février.');
-    expect(dateResultText(fr(), 'fr', '', '2026-08-03')).toBe('Saisissez un montant : il ira en août.');
-    expect(dateResultText(en(), 'en-GB', '40 000', '2026-02-10')).toBe('40 000 on 10 February 2026, all in February.');
-    expect(dateResultText(en(), 'en', '', '2026-02-10')).toBe('Enter an amount: it will go in February.');
+  it('an amount at a date says its date', () => {
     expect(fr()('budgetTab.atDate', { date: longDate('fr', '2026-02-10') })).toBe('Le 10 février 2026');
   });
 
