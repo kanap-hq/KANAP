@@ -126,9 +126,6 @@ export default function ReportsPage() {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       <PageHeader title={t('reports.title')} />
-      <Typography sx={{ fontSize: 13, fontWeight: 400, color: 'kanap.text.secondary' }}>
-        {t('reports.subtitle')}
-      </Typography>
       {/*
         One header row: steering and to classify side by side, each as wide as its own figures.
         Both strips hold a few short rows, so sharing the page width would only stretch them

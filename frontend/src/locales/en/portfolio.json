@@ -1392,7 +1392,6 @@
   },
   "reports": {
     "title": "Portfolio reporting",
-    "subtitle": "Explore portfolio reports focused on capacity, workload, and portfolio status trends.",
     "sections": {
       "past": "What happened",
       "current": "What is in progress",
@@ -1449,7 +1448,6 @@
     },
     "byAssignee": {
       "title": "Attention by contributor",
-      "subtitle": "Where the open work sits, team by team and person by person, with what is late and what has not moved.",
       "columns": {
         "assignee": "Assignee",
         "open": "Open",
@@ -1477,7 +1475,6 @@
     },
     "upcoming": {
       "title": "Upcoming",
-      "subtitle": "What falls due soon and what has been waiting too long, each figure opening the matching list.",
       "sections": {
         "tasks": "Tasks due",
         "projectEnds": "Planned project ends",
@@ -1557,7 +1554,6 @@
     },
     "capacityHeatmap": {
       "title": "Capacity heatmap",
-      "subtitle": "Expected workload vs capacity for contributors and teams",
       "filters": {
         "teams": "Teams",
         "allTeams": "All teams",
@@ -1630,7 +1626,6 @@
     },
     "weekly": {
       "title": "Period review",
-      "subtitle": "Requests, projects and tasks over the period: what was created, modified and closed.",
       "filters": {
         "startDate": "Start date",
         "endDate": "End date",
@@ -1724,7 +1719,6 @@
     },
     "flow": {
       "title": "Flow and age",
-      "subtitle": "What comes in and goes out, how long the open work has been sitting where it sits, and how long a closing takes.",
       "filters": {
         "tasks": "Tasks",
         "requestsProjects": "Requests and projects",
@@ -1873,7 +1867,6 @@
     },
     "timeLogged": {
       "title": "Time logged",
-      "subtitle": "Days logged month after month, on projects or on other work, team by team and person by person.",
       "horizon": "Period",
       "monthOption_one": "{{count}} month",
       "monthOption_other": "{{count}} months",
@@ -2571,7 +2564,6 @@
     },
     "skills": {
       "empty": "No skills configured yet. Use Seed defaults to populate with standard skills, or add skills manually.",
-      "description": "Skills are used to define team member expertise areas. Configure the skills that are relevant to your organization.",
       "dialog": {
         "editTitle": "Edit skill",
         "createTitle": "Create skill",
@@ -2587,7 +2579,6 @@
     },
     "phaseTemplates": {
       "empty": "No phase templates configured yet. Templates will be automatically seeded when first accessed.",
-      "description": "Phase templates define the standard phases and milestones for projects. Apply a template when setting up a new project's timeline.",
       "chips": {
         "phaseCount_one": "{{count}} phase",
         "phaseCount_other": "{{count}} phases"
@@ -2611,7 +2602,6 @@
       }
     },
     "classification": {
-      "description": "Configure sources, categories, and streams for classifying requests and projects.",
       "sections": {
         "sources": "Sources",
         "categoriesAndStreams": "Categories & streams",
@@ -2659,7 +2649,6 @@
     },
     "teams": {
       "empty": "No teams configured yet. Use Seed defaults to populate with standard teams, or add teams manually.",
-      "description": "Teams are organizational groups that contributors belong to. Assign contributors to teams to organize them by department or function.",
       "memberCount_one": "{{count}} member",
       "memberCount_other": "{{count}} members",
       "dialog": {
@@ -2674,7 +2663,6 @@
     },
     "employmentTypes": {
       "empty": "No contract types yet. Use Seed defaults for Internal, External, Apprentice and Other, or add your own.",
-      "description": "Contract types describe how a contributor works with you, for example as an employee, a contractor or an apprentice. Every contributor starts as Internal; change it on their profile.",
       "usageCount_one": "{{count}} contributor",
       "usageCount_other": "{{count}} contributors",
       "dialog": {
