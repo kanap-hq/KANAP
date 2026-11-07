@@ -287,7 +287,7 @@ describe('TechnologyVulnerabilitiesSection', () => {
     expect(Boolean(line.compareDocumentPosition(all) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
     fireEvent.mouseOver(line);
     expect((await screen.findByRole('tooltip')).textContent).toBe(
-      'KANAP only looks for vulnerabilities of versions installed on a server or declared by an application.',
+      'Vulnerabilities are only looked up for versions installed on a server or declared by an application.',
     );
   });
 
@@ -306,20 +306,20 @@ describe('TechnologyVulnerabilitiesSection', () => {
     const section = (tree: unknown) => (tree as { pages: { vulnerabilities: { section: Section } } }).pages.vulnerabilities.section;
     expect(section(en)).toMatchObject({
       notInstalledList_other: 'Not installed: {{versions}}',
-      notInstalledHint: 'KANAP only looks for vulnerabilities of versions installed on a server or declared by an application.',
+      notInstalledHint: 'Vulnerabilities are only looked up for versions installed on a server or declared by an application.',
     });
     expect(section(fr)).toMatchObject({
       notInstalledList_one: 'Non installée : {{versions}}',
       notInstalledList_other: 'Non installées : {{versions}}',
-      notInstalledHint: 'KANAP ne recherche les vulnérabilités que des versions installées sur un serveur ou déclarées par une application.',
+      notInstalledHint: 'Les vulnérabilités ne sont recherchées que pour les versions installées sur un serveur ou déclarées par une application.',
     });
     expect(section(de)).toMatchObject({
       notInstalledList_other: 'Nicht installiert: {{versions}}',
-      notInstalledHint: 'KANAP sucht nur nach Schwachstellen von Versionen, die auf einem Server installiert oder von einer Anwendung deklariert sind.',
+      notInstalledHint: 'Schwachstellen werden nur für Versionen gesucht, die auf einem Server installiert oder von einer Anwendung deklariert sind.',
     });
     expect(section(es)).toMatchObject({
       notInstalledList_other: 'No instaladas: {{versions}}',
-      notInstalledHint: 'KANAP solo busca vulnerabilidades de las versiones instaladas en un servidor o declaradas por una aplicación.',
+      notInstalledHint: 'Solo se buscan vulnerabilidades de las versiones instaladas en un servidor o declaradas por una aplicación.',
     });
   });
 });

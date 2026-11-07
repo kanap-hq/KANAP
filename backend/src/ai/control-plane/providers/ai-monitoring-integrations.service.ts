@@ -335,7 +335,7 @@ export class AiMonitoringIntegrationsService {
       // else gets a fixed plain-language message so no URL/token can leak.
       const message = error instanceof PrtgApiError
         ? sanitizePrtgText(error.message)
-        : 'PRTG did not respond. Check the server address and that the PRTG web server is reachable from KANAP.';
+        : 'PRTG did not respond. Check the server address and that the PRTG web server is reachable.';
       return { ok: false, message };
     }
   }

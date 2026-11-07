@@ -7,6 +7,7 @@ import type { DiscoveryCallPlacement } from '../../discovery-call/discovery-call
 import { getEmailStrings, interpolate } from '../../i18n/email-i18n';
 import { frenchSpacing } from './trial-mail-templates';
 import { TrialMailsService } from './trial-mails.service';
+import { PRODUCT_NAME } from '../../config/product';
 
 /** The placements of the call links in the e-mails. */
 const MAIL_PLACEMENTS = new Set<string>(['mail_j0', 'mail_j5']);
@@ -19,7 +20,7 @@ function escapeHtml(text: string): string {
 function page(locale: string, title: string, message: string, form?: { action: string; label: string }): string {
   const spaced = (text: string) => escapeHtml(locale === 'fr' ? frenchSpacing(text) : text);
   return `<!DOCTYPE html>
-<html lang="${escapeHtml(locale)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="robots" content="noindex"><title>${spaced(title)} · KANAP</title></head>
+<html lang="${escapeHtml(locale)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="robots" content="noindex"><title>${spaced(title)} · ${PRODUCT_NAME}</title></head>
 <body style="margin:0;padding:48px 16px;background:#FAFAFA;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:#111827;">
 <main style="max-width:480px;margin:0 auto;background:#FFFFFF;border:1px solid #D1D5DB;border-radius:10px;padding:28px 32px;">
 <h1 style="margin:0 0 12px 0;font-size:20px;line-height:28px;font-weight:600;">${spaced(title)}</h1>

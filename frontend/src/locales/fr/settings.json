@@ -37,7 +37,7 @@
   },
   "appearance": {
     "title": "Apparence",
-    "description": "Choisissez l'apparence de Kanap dans ce navigateur.",
+    "description": "Choisissez l'apparence dans ce navigateur.",
     "light": "Clair",
     "dark": "Sombre",
     "system": "Système",
@@ -118,7 +118,7 @@
   },
   "connectedApps": {
     "title": "Applications connectées",
-    "subtitle": "Ces applications peuvent lire vos données KANAP avec vos droits d'accès.",
+    "subtitle": "Ces applications peuvent lire vos données avec vos droits d'accès.",
     "empty": "Aucune application connectée.",
     "howTo": "Comment connecter Claude",
     "connectedOn": "Connectée le {{date}}",
@@ -128,7 +128,7 @@
     "disconnect": "Déconnecter",
     "confirm": {
       "title": "Déconnecter {{client}} ?",
-      "body": "{{client}} perd immédiatement l'accès à vos données KANAP. Pour l'utiliser à nouveau, reconnectez-la depuis l'application."
+      "body": "{{client}} perd immédiatement l'accès à vos données. Pour l'utiliser à nouveau, reconnectez-la depuis l'application."
     },
     "apiKeys": "Clés API",
     "loadFailed": "Impossible de charger vos applications connectées.",
@@ -136,7 +136,7 @@
     "revoke": "Révoquer",
     "revokeConfirm": {
       "title": "Révoquer {{key}} ?",
-      "body": "Tous les clients qui utilisent {{key}} perdent immédiatement l'accès à vos données KANAP. Cette action est définitive."
+      "body": "Tous les clients qui utilisent {{key}} perdent immédiatement l'accès à vos données. Cette action est définitive."
     },
     "revokeFailed": "Impossible de révoquer cette clé."
   }

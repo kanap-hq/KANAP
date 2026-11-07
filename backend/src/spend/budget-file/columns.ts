@@ -3,6 +3,7 @@ import { BUDGET_AMOUNT_COLUMNS, CsvDateOrder, CsvLanguage, CsvReadSchema, Decima
 import { looseKey } from '../../common/csv-sheet/text';
 import { BudgetFileDetail } from './types';
 import { parseToken } from './token';
+import { PRODUCT_NAME } from '../../config/product';
 
 /**
  * The old files this engine refuses as a whole. Headers are compared with the
@@ -15,7 +16,7 @@ const OLD_HEADER_KEYS = new Set([
 ]);
 
 export const OLD_BUDGET_FILE_MESSAGE =
-  'This file comes from an earlier version of KANAP. Export a fresh file from this list, copy your changes into it, and import it again.';
+  `This file comes from an earlier version of ${PRODUCT_NAME}. Export a fresh file from this list, copy your changes into it, and import it again.`;
 
 /**
  * The columns of the three CAPEX criteria before lot C1. A file with all three is a CAPEX file

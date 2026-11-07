@@ -84,11 +84,11 @@ const TEXTS: Record<NetboxNoticeCode, (params: Record<string, string>) => string
   hostname_invalid: (p) =>
     `"${p.value}" cannot be used as a host name, so the host name was left unchanged.`,
   status_not_mapped: (p) =>
-    `The Netbox status "${p.value}" has no equivalent in KANAP, so the status was left unchanged.`,
+    `The Netbox status "${p.value}" has no equivalent, so the status was left unchanged.`,
   lifecycle_not_in_catalog: (p) =>
     `The lifecycle "${p.value}" is not in the IT settings, so the status was left unchanged.`,
   ipv6_skipped: () =>
-    'The primary address is IPv6, which KANAP does not record yet, so it was left out.',
+    'The primary address is IPv6, which is not recorded yet, so it was left out.',
   ip_conflict_skipped: (p) =>
     `The address ${p.value} is already used by another asset, so it was left out.`,
   subnet_not_in_catalog: (p) =>
@@ -100,17 +100,17 @@ const TEXTS: Record<NetboxNoticeCode, (params: Record<string, string>) => string
   locations_unavailable: () =>
     'Netbox did not return its locations, so sub-locations were left unchanged in this run.',
   cluster_not_mapped: (p) =>
-    `The Netbox cluster "${p.value}" is not matched with a KANAP cluster, so its virtual machines were not attached to one.`,
+    `The Netbox cluster "${p.value}" is not matched with a cluster, so its virtual machines were not attached to one.`,
   cluster_match_invalid: (p) =>
     `The Netbox cluster "${p.value}" is matched with an asset that is deleted, retired or no longer a cluster, so its virtual machines were not attached to it.`,
   cluster_other_present: (p) =>
-    `KANAP also places the virtual machine "${p.name}" in ${p.value}. That relation was kept: remove it by hand if it is out of date.`,
+    `The virtual machine "${p.name}" is also placed in ${p.value}. That relation was kept: remove it by hand if it is out of date.`,
   fetch_incomplete: () =>
-    'Netbox returned more pages than KANAP reads in one run, so the objects beyond them were not looked at.',
+    'Netbox returned more pages than one run reads, so the objects beyond them were not looked at.',
   save_failed: () =>
-    'KANAP could not save this object. The technical details are in the server log.',
+    'This object could not be saved. The technical details are in the server log.',
   validation_failed: (p) =>
-    `KANAP refused to save this object: ${p.detail}`,
+    `This object was refused: ${p.detail}`,
 };
 
 const CODES = new Set(Object.keys(TEXTS));

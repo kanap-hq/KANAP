@@ -322,7 +322,7 @@ describe('NetboxSyncPage', () => {
     expect(screen.getByText('AST-9')).toBeInTheDocument();
   });
 
-  it('shows the KANAP asset type of a linked object, not the Netbox object type', async () => {
+  it('shows the asset type of a linked object, not the Netbox object type', async () => {
     renderPage('/it/settings?tab=netbox&state=linked');
 
     expect(await screen.findByText('par-nas-01')).toBeInTheDocument();
@@ -569,9 +569,9 @@ describe('NetboxSyncPage', () => {
     await openMappings(MAPPING_OPTIONS_WITH_CLUSTERS);
 
     expect(await screen.findByText('Clusters')).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: 'Virtual machines join the chosen KANAP cluster; nothing is removed.' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Virtual machines join the chosen cluster; nothing is removed.' })).toBeInTheDocument();
     expect(screen.getByText('Netbox cluster')).toBeInTheDocument();
-    expect(screen.getByText('KANAP cluster')).toBeInTheDocument();
+    expect(screen.getByText('Cluster')).toBeInTheDocument();
     expect(screen.getByText('4 virtual machines')).toBeInTheDocument();
     expect(screen.getByText('PAR-VSPHERE-CL01')).toBeInTheDocument();
     expect(screen.getByText('GOU-VSPHERE-CL01')).toBeInTheDocument();
@@ -603,7 +603,7 @@ describe('NetboxSyncPage', () => {
     expect(screen.queryByText(/top-level Netbox locations become sub-locations here/)).not.toBeInTheDocument();
 
     expect(screen.getByRole('img', {
-      name: 'Virtual machines join the chosen KANAP cluster; nothing is removed.',
+      name: 'Virtual machines join the chosen cluster; nothing is removed.',
     })).toBeInTheDocument();
     expect(screen.queryByText(/comes back at the next run/)).not.toBeInTheDocument();
     expect(screen.queryByText(/A cluster left without a match/)).not.toBeInTheDocument();
@@ -712,10 +712,10 @@ describe('NetboxSyncPage', () => {
     expect(screen.getByText('new-app-01')).toBeInTheDocument();
     expect(screen.getByText(/^Cluster: .+ → GOU-VSPHERE-CL01$/)).toBeInTheDocument();
     expect(screen.getByText(
-      'The Netbox cluster "Parma vSphere" is not matched with a KANAP cluster, so its virtual machines will not be attached to one.',
+      'The Netbox cluster "Parma vSphere" is not matched with a cluster, so its virtual machines will not be attached to one.',
     )).toBeInTheDocument();
     expect(screen.getByText(
-      'KANAP also places the virtual machine "par-app-01" in GOU-VSPHERE-CL01. That relation will be kept: remove it by hand if it is out of date.',
+      'The virtual machine "par-app-01" is also placed in GOU-VSPHERE-CL01. That relation will be kept: remove it by hand if it is out of date.',
     )).toBeInTheDocument();
   });
 
@@ -793,7 +793,7 @@ describe('NetboxSyncPage', () => {
 
     await openPreview();
 
-    expect(await screen.findByText('KANAP could not reach the Netbox server.')).toBeInTheDocument();
+    expect(await screen.findByText('The Netbox server could not be reached.')).toBeInTheDocument();
     expect(screen.queryByText(/ECONNREFUSED/)).not.toBeInTheDocument();
     expect(screen.queryByText(/172\.18/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Nothing to create or update/)).not.toBeInTheDocument();

@@ -86,8 +86,8 @@ const TLS_ERROR_CODES = new Set([
   'UNABLE_TO_VERIFY_LEAF_SIGNATURE',
 ]);
 
-const TLS_MESSAGE = 'KANAP does not trust the certificate of the Netbox server. '
-  + 'Install a certificate KANAP trusts, or turn on "Ignore certificate" for this connection.';
+const TLS_MESSAGE = 'The certificate of the Netbox server is not trusted. '
+  + 'Install a trusted certificate, or turn on "Ignore certificate" for this connection.';
 
 function textOrNull(value: unknown): string | null {
   if (value == null) return null;
@@ -443,9 +443,9 @@ export class NetboxClient {
         + sanitizeNetboxText(String(error?.message || error || 'request failed'), connection.token),
       );
       if (code === 'ENOTFOUND' || code === 'EAI_AGAIN') {
-        throw new NetboxApiError('dns', 'KANAP could not find the Netbox server from its address.');
+        throw new NetboxApiError('dns', 'The Netbox server could not be found from its address.');
       }
-      throw new NetboxApiError('provider_unavailable', 'KANAP could not reach the Netbox server.', true);
+      throw new NetboxApiError('provider_unavailable', 'The Netbox server could not be reached.', true);
     }
 
     if (response.status >= 300 && response.status < 400) {

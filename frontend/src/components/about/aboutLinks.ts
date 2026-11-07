@@ -1,3 +1,4 @@
+import { COMPANY_NAME, PRODUCT_NAME } from '../../config/product';
 import { RELEASES_URL } from '../../utils/docUrls';
 
 export const SITE_URL = 'https://kanap.net';
@@ -32,7 +33,7 @@ export type SupportInfo = {
 /** The facts a support agent asks for first. Not translated: support reads English. */
 export function buildSupportInfo(info: SupportInfo): string {
   return [
-    `KANAP version: ${info.version}`,
+    `${PRODUCT_NAME} version: ${info.version}`,
     `Workspace: ${info.workspace || 'unknown'}`,
     `Deployment: ${info.deploymentMode === 'single-tenant' ? 'on-premise' : 'cloud'}`,
     `Browser: ${info.userAgent || 'unknown'}`,
@@ -40,7 +41,7 @@ export function buildSupportInfo(info: SupportInfo): string {
 }
 
 export function buildSupportMailto(info: SupportInfo): string {
-  const subject = info.workspace ? `KANAP support: ${info.workspace}` : 'KANAP support';
+  const subject = info.workspace ? `${COMPANY_NAME} support: ${info.workspace}` : `${COMPANY_NAME} support`;
   const body = `\n\n---\n${buildSupportInfo(info)}`;
   return `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }

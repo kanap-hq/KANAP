@@ -30,7 +30,7 @@
     "dropHint": "Datei zum Anhängen hier ablegen",
     "hintEnter": "Eingabe zum Senden",
     "hintShiftEnter": "Umschalt+Eingabe für neue Zeile",
-    "placeholder": "Fragen Sie Plaid zu Ihren KANAP-Daten…",
+    "placeholder": "Fragen Sie Plaid…",
     "removeAttachment": "Anhang entfernen",
     "send": "Senden",
     "stop": "Generierung stoppen"
@@ -381,8 +381,8 @@
   },
   "previewBatch": {
     "approveAll": "Alle genehmigen",
-    "confirmBody_one": "KANAP wendet die genehmigte Vorschau separat an. Teilfehler bleiben im Vorschau-Status sichtbar.",
-    "confirmBody_other": "KANAP wendet jede genehmigte Vorschau separat an. Teilfehler bleiben in den Vorschau-Status sichtbar.",
+    "confirmBody_one": "Die genehmigte Vorschau wird separat angewendet. Teilfehler bleiben im Vorschau-Status sichtbar.",
+    "confirmBody_other": "Jede genehmigte Vorschau wird separat angewendet. Teilfehler bleiben in den Vorschau-Status sichtbar.",
     "confirmTitle_one": "{{count}} Vorschau genehmigen?",
     "confirmTitle_other": "{{count}} Vorschauen genehmigen?",
     "more_one": "{{count}} weitere Vorschau",

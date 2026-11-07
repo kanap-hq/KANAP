@@ -30,7 +30,7 @@
     "dropHint": "Suelte un archivo para adjuntarlo",
     "hintEnter": "Intro para enviar",
     "hintShiftEnter": "Mayús+Intro para nueva línea",
-    "placeholder": "Pregunta a Plaid sobre tus datos KANAP…",
+    "placeholder": "Pregunta a Plaid…",
     "removeAttachment": "Quitar adjunto",
     "send": "Enviar",
     "stop": "Detener la generación"
@@ -381,8 +381,8 @@
   },
   "previewBatch": {
     "approveAll": "Aprobar todas",
-    "confirmBody_one": "KANAP aplicará la vista previa aprobada por separado. Los fallos parciales seguirán visibles en el estado de la vista previa.",
-    "confirmBody_other": "KANAP aplicará cada vista previa aprobada por separado. Los fallos parciales seguirán visibles en los estados de las vistas previas.",
+    "confirmBody_one": "La vista previa aprobada se aplica por separado. Los fallos parciales seguirán visibles en el estado de la vista previa.",
+    "confirmBody_other": "Cada vista previa aprobada se aplica por separado. Los fallos parciales seguirán visibles en los estados de las vistas previas.",
     "confirmTitle_one": "¿Aprobar {{count}} vista previa?",
     "confirmTitle_other": "¿Aprobar {{count}} vistas previas?",
     "more_one": "{{count}} vista previa más",

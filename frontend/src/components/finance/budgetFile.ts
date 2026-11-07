@@ -1,6 +1,7 @@
 import type { QueryClient } from '@tanstack/react-query';
 import type { AxiosResponse } from 'axios';
 import api from '../../api';
+import { PRODUCT_NAME } from '../../config/product';
 import { withListContext } from '../../lib/listContext';
 import { statusScopeParams } from '../../utils/statusScopeParams';
 import type { AmountReading, DateReading, ScreenLanguage } from '../csv/readings';
@@ -163,7 +164,7 @@ export type BudgetFileLoad = {
 /** `budget-file/import-file.ts` PREFLIGHT_STALE. */
 export const STALE_SENTENCE = 'Some lines changed since the preflight. Run the preflight again.';
 /** `budget-file/columns.ts`, the one message of a file in an old layout. */
-export const OLD_LAYOUT_SENTENCE = 'This file comes from an earlier version of KANAP. Export a fresh file from this list, copy your changes into it, and import it again.';
+export const OLD_LAYOUT_SENTENCE = `This file comes from an earlier version of ${PRODUCT_NAME}. Export a fresh file from this list, copy your changes into it, and import it again.`;
 /** `common/csv-sheet/decode.ts` CSV_DECODE_MESSAGES: a file that is not CSV text, by the code the interface translates. */
 export const DECODE_SENTENCE_CODES: Record<string, string> = {
   'This file is not UTF-8 or Windows-1252.': 'CSV_ENCODING_UNSUPPORTED',
