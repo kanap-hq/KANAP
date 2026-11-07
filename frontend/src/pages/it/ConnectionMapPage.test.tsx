@@ -109,6 +109,8 @@ describe('ConnectionMapPage server picker', () => {
       fireEvent.mouseDown(screen.getByRole('combobox', { name: 'pages.connectionMap.servers' }));
       expect(await screen.findByRole('option', { name: 'QA-VM1' })).toBeTruthy();
       expect(warned(errors)).not.toContain('validateDOMNesting');
+      // React reports the attribute once per load, on the first render of this filter.
+      expect(warned(errors)).not.toContain('notched');
     } finally {
       errors.mockRestore();
     }
