@@ -1,3 +1,4 @@
+import { StrictMode } from 'react';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
@@ -118,6 +119,10 @@ function renderPage(
     changes?: { fields: number; children: Record<string, number> };
     relation?: { type: string | null; id: string | null; name: string | null };
     taskTypes?: Promise<unknown>;
+    /** Holds the project read until the test releases it, or rejects it. */
+    projectRead?: Promise<typeof PROJECT> | 'error';
+    /** Strict mode cancels the init effect and runs it again, as on dev. */
+    strict?: boolean;
   } = {},
 ) {
   const changes = options.changes ?? { fields: 0, children: {} };
@@ -126,7 +131,10 @@ function renderPage(
     if (url === '/portfolio/classification/task-types') {
       return { data: await (options.taskTypes ?? Promise.resolve([{ id: 'type-task', code: 'task', name: 'Task', is_active: true }])) } as never;
     }
-    if (url === '/portfolio/projects/project-a') return { data: PROJECT } as never;
+    if (url === '/portfolio/projects/project-a') {
+      if (options.projectRead === 'error') throw new Error('forbidden');
+      return { data: options.projectRead ? await options.projectRead : PROJECT } as never;
+    }
     if (url === '/budget-lines/line-1') return { data: { id: 'line-1', item_number: 4, product_name: 'Cheese cellar' } } as never;
     if (url === '/tasks/T-9' || url === '/tasks/task-new') return { data: detail(relation) } as never;
     if (url.endsWith('/task-new/creation')) return { data: { changes } } as never;
@@ -136,7 +144,7 @@ function renderPage(
   mocked.post.mockImplementation(async () => ({ data: created }) as never);
   mocked.patch.mockResolvedValue({ data: {} } as never);
   mocked.delete.mockResolvedValue({ data: undefined } as never);
-  return render(
+  const tree = (
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
       <ThemeProvider theme={createAppTheme('light')}>
         <KanapDialogProvider>
@@ -152,8 +160,9 @@ function renderPage(
           </MemoryRouter>
         </KanapDialogProvider>
       </ThemeProvider>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  return render(options.strict ? <StrictMode>{tree}</StrictMode> : tree);
 }
 
 function location() {
@@ -269,6 +278,25 @@ describe('Task creation at the title', () => {
     await waitFor(() => expect(location()).toBe('/portfolio/projects/project-a/tasks'));
     expect(mocked.get).toHaveBeenCalledWith('/portfolio/projects/project-a/tasks/task-new/creation', { params: { token: 'token-1' } });
     expect(mocked.delete).toHaveBeenCalledWith('/portfolio/projects/project-a/tasks/task-new/creation', { data: { token: 'token-1' } });
+  });
+
+  it('shows the project name in the preview when its read answers after a re-render', async () => {
+    let release: (project: typeof PROJECT) => void = () => undefined;
+    const projectRead = new Promise<typeof PROJECT>((resolve) => { release = resolve; });
+    renderPage(['/portfolio/tasks/new/overview?projectId=project-a&projectTab=tasks'], {
+      strict: true,
+      projectRead,
+    });
+    // The init effect has been cancelled by the strict re-render; the read is still pending.
+    await waitFor(() => expect(screen.getByTestId('task-properties')).toHaveTextContent('related:portfolio:context.project'));
+    release(PROJECT);
+    await waitFor(() => expect(screen.getByTestId('task-properties')).toHaveTextContent('related:Project A'));
+  });
+
+  it('shows the type label in the preview when the project cannot be read', async () => {
+    renderPage(['/portfolio/tasks/new/overview?projectId=project-a&projectTab=tasks'], { projectRead: 'error' });
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/portfolio/projects/project-a'));
+    await waitFor(() => expect(screen.getByTestId('task-properties')).toHaveTextContent('related:portfolio:context.project'));
   });
 
   it('creates a task of a budget line on its route, without a classification', async () => {

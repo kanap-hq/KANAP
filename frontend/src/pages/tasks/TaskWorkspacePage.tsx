@@ -565,31 +565,25 @@ export default function TaskWorkspacePage() {
     if (createInitKeyRef.current === createContextKey) return;
     createInitKeyRef.current = createContextKey;
 
-    let cancelled = false;
-    const finishInitialization = () => {
-      if (!cancelled) {
-        setInitialized(true);
-      }
-    };
     setInitialized(false);
 
-    // Seed the related-object context synchronously from the URL so the load-bearing
-    // { type, id } can't be lost to an async race (the GET below only enriches the name).
+    // Seed type and id from the URL. The display name is derived at render from the origin
+    // query: seeding the type label here stuck when this effect was cancelled before its read.
     let seedRelation: { type: RelatedObjectType | null; id: string | null; name: string | null } = {
       type: null,
       id: null,
       name: null,
     };
     if (originProjectId) {
-      seedRelation = { type: 'project', id: originProjectId, name: t('portfolio:context.project') };
+      seedRelation = { type: 'project', id: originProjectId, name: null };
     } else if (createSpendItemId) {
-      seedRelation = { type: 'spend_item', id: createSpendItemId, name: t('portfolio:context.spend_item') };
+      seedRelation = { type: 'spend_item', id: createSpendItemId, name: null };
     } else if (createCapexItemId) {
-      seedRelation = { type: 'capex_item', id: createCapexItemId, name: t('portfolio:context.capex_item') };
+      seedRelation = { type: 'capex_item', id: createCapexItemId, name: null };
     } else if (createContractId) {
-      seedRelation = { type: 'contract', id: createContractId, name: t('portfolio:context.contract') };
+      seedRelation = { type: 'contract', id: createContractId, name: null };
     } else if (createIncidentId) {
-      seedRelation = { type: 'incident', id: createIncidentId, name: t('portfolio:context.incident') };
+      seedRelation = { type: 'incident', id: createIncidentId, name: null };
     }
     setCreateRelation(seedRelation);
     setDirty(false);
@@ -613,40 +607,7 @@ export default function TaskWorkspacePage() {
     setTitle('');
     setDescription('');
     resetClassificationTouched();
-
-    // Enrich the seeded relation's display name without ever downgrading its type/id.
-    const enrichName = (type: RelatedObjectType, name: string | null | undefined) => {
-      if (cancelled || !name) return;
-      setCreateRelation((prev) => (prev.type === type ? { ...prev, name } : prev));
-    };
-
-    if (originProjectId) {
-      api.get<{ id: string; name: string }>(`/portfolio/projects/${originProjectId}`)
-        .then((res) => enrichName('project', res.data.name))
-        .catch(() => {});
-    } else if (createSpendItemId) {
-      api.get<BudgetLineLabel>(`/budget-lines/${createSpendItemId}`)
-        .then((res) => enrichName('spend_item', budgetLineLabel(res.data)))
-        .catch(() => {});
-    } else if (createCapexItemId) {
-      api.get<BudgetLineLabel>(`/budget-lines/${createCapexItemId}`)
-        .then((res) => enrichName('capex_item', budgetLineLabel(res.data)))
-        .catch(() => {});
-    } else if (createContractId) {
-      api.get<{ id: string; name: string }>(`/contracts/${createContractId}`)
-        .then((res) => enrichName('contract', res.data.name))
-        .catch(() => {});
-    } else if (createIncidentId) {
-      api.get<{ id: string; item_number: number; title: string }>(`/incidents/${createIncidentId}`)
-        .then((res) => enrichName('incident', formatIncidentName(res.data.item_number, res.data.title)))
-        .catch(() => {});
-    }
-
-    finishInitialization();
-
-    return () => {
-      cancelled = true;
-    };
+    setInitialized(true);
   }, [
     createContextKey,
     profile?.id,
@@ -657,7 +618,6 @@ export default function TaskWorkspacePage() {
     createIncidentId,
     createPhaseId,
     resetClassificationTouched,
-    t,
   ]);
 
   // Auto-focus on comment composer disabled — toolbar loads on user click via hideToolbarUntilFocus
@@ -1239,6 +1199,12 @@ export default function TaskWorkspacePage() {
     onError: setError,
   });
 
+  // The real name when the origin query has it. The type label stands in only when that name
+  // cannot be read (the query failed, or it has not answered yet).
+  const createRelationPreviewName = createRelation.name
+    ?? fetchedOriginName
+    ?? (createRelation.type ? t(`portfolio:context.${createRelation.type}`) : null);
+
   // The task as the new page shows it, dimmed: the defaults it will be created with.
   const createDraft = React.useMemo<TaskData | null>(() => (isCreate ? {
     id: '',
@@ -1265,7 +1231,7 @@ export default function TaskWorkspacePage() {
     assets: [],
     related_object_type: createRelation.type as TaskData['related_object_type'],
     related_object_id: createRelation.id,
-    related_object_name: createRelation.name,
+    related_object_name: createRelationPreviewName,
     phase_id: form.phase_id ?? null,
     phase_name: null,
     source_id: createClassification.source_id ?? null,
@@ -1278,7 +1244,7 @@ export default function TaskWorkspacePage() {
     company_name: null,
     created_at: '',
     updated_at: '',
-  } : null), [createClassification, createRelation, defaultTaskTypeId, form, isCreate]);
+  } : null), [createClassification, createRelation, createRelationPreviewName, defaultTaskTypeId, form, isCreate]);
 
   // The title creates the task through the route of its relation, with the defaults the creation
   // form sent with only a title; the page moves to it, every tab open, with Create and Cancel (or
@@ -1342,7 +1308,7 @@ export default function TaskWorkspacePage() {
         asset_ids: null,
         applications: null,
         assets: null,
-        related_object_name: relation.name,
+        related_object_name: createRelationPreviewName,
       });
       const qs = cleanedSearchParams.toString();
       navigate(`/portfolio/tasks/${reference}/overview${qs ? `?${qs}` : ''}`, { replace: true });
