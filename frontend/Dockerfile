@@ -3,7 +3,7 @@
 
 # Build stage
 # node:24-alpine, index digest pinned on 2026-10-23 (later digests: Dependabot)
-FROM node:24-alpine@sha256:06d7adf3e0ef61a13f1d28682726366f97a15aa1888c934d3ecec86c33918b53 AS builder
+FROM node:24-alpine@sha256:8a32c8cf649a49915a66e81e7a609223c708d0adabf288ee3f4077d765542f85 AS builder
 WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN apk add --no-cache libc6-compat && npm ci
