@@ -319,7 +319,6 @@ function GapsTable({ rows }: { rows: GapRow[] }) {
  */
 export default function EndOfSupportReportPage() {
   const { t } = useTranslation('it');
-  const locale = useLocale();
   const { hasLevel } = useAuth();
   const allowed = hasLevel('infrastructure', 'reader');
   const [params, setParams] = useSearchParams();
@@ -358,14 +357,9 @@ export default function EndOfSupportReportPage() {
 
   const active = view === 'deadlines' ? deadlines : gaps;
 
-  const subtitle = view === 'gaps'
-    ? t('pages.endOfSupport.subtitleGaps')
-    : t('pages.endOfSupport.subtitle', { date: deadlines.data ? formatShortDate(deadlines.data.until, locale, { year: 'always' }) : '…' });
-
   return (
     <ReportLayout
       title={t('pages.endOfSupport.title')}
-      subtitle={subtitle}
       busy={active.isFetching}
       tableExport={{
         url: `${ENDPOINT}/export`,

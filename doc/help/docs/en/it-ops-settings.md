@@ -24,14 +24,14 @@ The page has two tabs:
 
 On the **Lists** tab, the **Classifications and continuity** editor sits at the top. Below it, lists are grouped into four collapsible sections:
 
-1. **Locations**: Lists used when creating or editing locations.
-2. **Servers & connections**: Lists used for servers, connections, and related risk/endpoint data.
-3. **Apps, services & interfaces**: Lists used across applications, app instances, interfaces, and bindings.
-4. **Incidents**: Lists used by the incident register.
+1. **Locations**
+2. **Servers & connections**
+3. **Apps, services & interfaces**
+4. **Incidents**
 
 The lists of the technologies are in two sections: **Technology families** and **Administration zones** under **Servers & connections**, **Hosting types** under **Locations**.
 
-Within a section, lists are sorted by name. Each list appears as an expandable panel with a short hint that says where its values are used (for example, *Applications / Category selector*). Click a panel header to expand it and see the values. Only one section loads its content when you first expand it, which keeps the page fast even when you have many lists.
+Within a section, lists are sorted by name. Each list appears as an expandable panel with a short hint that says where its values are used (for example, *Applications / Category selector*). When the values alone do not say what a list is for, an information icon beside its name says it on hover. Click a panel header to expand it and see the values. Only one section loads its content when you first expand it, which keeps the page fast even when you have many lists.
 
 ### Editor controls
 

@@ -6,7 +6,7 @@ El informe Fin de soporte lista lo que ha llegado, o llega pronto, al fin de su 
 
 ## Vencimientos
 
-La vista **Vencimientos** muestra una fila por elemento cuyo soporte ha terminado, o termina dentro del horizonte. El subtítulo indica el último día que cubre el horizonte.
+La vista **Vencimientos** muestra una fila por elemento cuyo soporte ha terminado, o termina dentro del horizonte.
 
 Lo que vigila el informe:
 

@@ -68,7 +68,7 @@ describe('IT settings tabs', () => {
     expect(screen.getByRole('heading', { name: 'IT landscape settings' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Lists', selected: true })).toBeInTheDocument();
     expect(screen.queryByRole('tab', { name: 'Netbox' })).not.toBeInTheDocument();
-    expect(screen.getByText(/Configure reusable lists/)).toBeInTheDocument();
+    expect(screen.getByText('Servers & connections')).toBeInTheDocument();
     expect(screen.queryByText('netbox panel')).not.toBeInTheDocument();
     expect(params().get('tab')).toBeNull();
   });
@@ -81,7 +81,7 @@ describe('IT settings tabs', () => {
     expect(screen.getByRole('tab', { name: 'Netbox', selected: true })).toBeInTheDocument();
     expect(screen.queryByRole('tab', { name: 'Lists' })).not.toBeInTheDocument();
     expect(screen.getByText('netbox panel')).toBeInTheDocument();
-    expect(screen.queryByText(/Configure reusable lists/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Servers & connections')).not.toBeInTheDocument();
     await waitFor(() => expect(params().get('tab')).toBe('netbox'));
     expect(params().get('state')).toBe('missing');
   });
@@ -97,7 +97,7 @@ describe('IT settings tabs', () => {
 
     fireEvent.click(screen.getByRole('tab', { name: 'Lists' }));
     expect(screen.getByRole('tab', { name: 'Lists', selected: true })).toBeInTheDocument();
-    expect(screen.getByText(/Configure reusable lists/)).toBeInTheDocument();
+    expect(screen.getByText('Servers & connections')).toBeInTheDocument();
     expect(screen.queryByText('netbox panel')).not.toBeInTheDocument();
     await waitFor(() => expect(params().has('tab')).toBe(false));
     expect(params().get('state')).toBe('linked');

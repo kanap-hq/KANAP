@@ -343,8 +343,6 @@
     },
     "endOfSupport": {
       "title": "Fin de soporte",
-      "subtitle": "Lo que ha llegado o llega al fin de soporte antes del {{date}}, y lo que afecta.",
-      "subtitleGaps": "Los datos que faltan para que este informe responda. Abra una fila para completar la ficha.",
       "tabs": {
         "label": "Vista del informe",
         "deadlines": "Vencimientos",
@@ -855,7 +853,6 @@
       "noZones": "Todavía no hay zonas de administración definidas.",
       "openSettings": "Definirlas en los ajustes de TI",
       "noZone": "Sin zona",
-      "filterZonesHint": "Elija una zona para filtrar la lista de activos.",
       "filterZone": "Mostrar los activos de {{name}}.",
       "unknownZone": "Zona desconocida ({{code}})",
       "kindCount": "{{kind}}: {{count}}",
@@ -971,8 +968,6 @@
     "interfaceMap": {
       "title": "Mapa de interfaces",
       "infraServices": "Servicios de infraestructura",
-      "businessView": "Vista de negocio: interfaces lógicas entre aplicaciones.",
-      "technicalView": "Vista técnica: rutas desplegadas a través de middleware y aplicaciones ETL.",
       "showMiddleware": "Mostrar middleware",
       "building": "Creando el mapa de interfaces para {{env}}…",
       "loadFailed": "No se pudo cargar el mapa de interfaces",
@@ -1013,26 +1008,21 @@
         "lists": "Listas",
         "netbox": "Netbox"
       },
-      "description": "Configure listas reutilizables para clasificación de datos, catálogo de servidores y protocolos de interfaz utilizados en el espacio Panorama IT.",
       "loadFailed": "Error al cargar la configuración del panorama IT.",
       "updateSuccess": "Configuración del panorama IT actualizada correctamente",
       "updateFailed": "Error al actualizar la configuración",
       "groups": {
         "locations": {
-          "title": "Ubicaciones",
-          "subtitle": "Listas utilizadas al crear o editar ubicaciones."
+          "title": "Ubicaciones"
         },
         "serversConnections": {
-          "title": "Servidores y conexiones",
-          "subtitle": "Listas utilizadas para servidores, conexiones y datos de riesgo/endpoint relacionados."
+          "title": "Servidores y conexiones"
         },
         "appsInterfaces": {
-          "title": "Aplicaciones, servicios e interfaces",
-          "subtitle": "Listas utilizadas en aplicaciones, instancias de aplicación, interfaces y enlaces."
+          "title": "Aplicaciones, servicios e interfaces"
         },
         "incidents": {
-          "title": "Incidentes",
-          "subtitle": "Listas utilizadas por el registro de incidentes."
+          "title": "Incidentes"
         }
       },
       "lists": {
@@ -1045,43 +1035,42 @@
         },
         "accessMethods": {
           "title": "Métodos de acceso",
-          "description": "Métodos con los que los usuarios acceden a las aplicaciones (p. ej., web, móvil, VDI).",
           "usage": "Aplicaciones / Selector de método de acceso"
         },
         "applicationCategories": {
           "title": "Categorías de aplicación",
-          "description": "Categorías que describen el propósito principal de cada aplicación o servicio.",
           "usage": "Aplicaciones / Selector de categoría"
         },
         "networkSegments": {
           "title": "Zonas de red",
-          "description": "Zonas de red utilizadas para clasificar las subredes y describir la conectividad.",
           "usage": "Subredes / Selector de zona de red"
         },
         "entities": {
           "title": "Entidades",
+          "description": "Endpoints utilizados en conexiones y mapas. El nivel del grafo define su posición predeterminada en el mapa.",
           "usage": "Conexiones / Endpoints"
         },
         "ipAddressTypes": {
           "title": "Tipos de dirección IP",
-          "description": "Tipos de direcciones IP de los activos.",
           "usage": "Activos / Direcciones IP"
         },
         "serverKinds": {
           "title": "Tipos de activo",
+          "description": "Tipos lógicos de servidores y activos de infraestructura. Los activos físicos pueden registrar información de hardware y soporte.",
           "usage": "Servidores / Resumen y creación"
         },
         "serverRoles": {
           "title": "Roles de servidor",
+          "description": "Roles asignados a los servidores al vincular instancias de aplicación. El nivel del grafo define su posición en el mapa de conexiones.",
           "usage": "Servidores / Vínculo con aplicaciones"
         },
         "hostingTypes": {
           "title": "Tipos de alojamiento",
+          "description": "Dónde se alojan las ubicaciones y las tecnologías (p. ej., on-premise, colocation, nube pública, SaaS). Cada tipo es local o en la nube: una tecnología local se espera en servidores.",
           "usage": "Ubicaciones y tecnologías / Creación y edición"
         },
         "serverProviders": {
           "title": "Proveedores cloud",
-          "description": "Proveedores cloud utilizados por los servidores y las ubicaciones.",
           "usage": "Ubicaciones / Creación y edición"
         },
         "lifecycleStates": {
@@ -1091,47 +1080,38 @@
         },
         "interfaceProtocols": {
           "title": "Protocolos de interfaz",
-          "description": "Protocolos admitidos para los enlaces de interfaz entre aplicaciones.",
           "usage": "Enlaces de interfaz / Transporte"
         },
         "interfaceDataCategories": {
           "title": "Categorías de datos de interfaz",
-          "description": "Categorías de datos de negocio de las interfaces.",
           "usage": "Interfaces / Perfil de datos"
         },
         "interfaceTriggerTypes": {
           "title": "Tipos de disparador de interfaz",
-          "description": "Tipos de disparador de los segmentos de interfaz.",
           "usage": "Segmentos de interfaz / Disparador"
         },
         "interfacePatterns": {
           "title": "Patrones de integración",
-          "description": "Patrones de integración utilizados por los segmentos de interfaz.",
           "usage": "Segmentos de interfaz / Patrón"
         },
         "interfaceFormats": {
           "title": "Formatos de datos de interfaz",
-          "description": "Formatos de datos de los segmentos de interfaz.",
           "usage": "Segmentos de interfaz / Formato de datos"
         },
         "interfaceAuthModes": {
           "title": "Modos de autenticación de interfaz",
-          "description": "Modos de autenticación de los segmentos y enlaces de interfaz.",
           "usage": "Enlaces de interfaz / Autenticación"
         },
         "incidentCategories": {
           "title": "Categorías de incidente",
-          "description": "Categorías utilizadas para clasificar las entradas del registro de incidentes.",
           "usage": "Incidentes / Selector de categoría"
         },
         "connectionTypes": {
           "title": "Tipos de conexión",
-          "description": "Catálogo de dos niveles (categoría y entrada) con los puertos típicos.",
           "usage": "Conexiones / Selector de protocolo"
         },
         "subnets": {
           "title": "Subredes",
-          "description": "Defina las subredes con su VLAN. Cada subred pertenece a una zona de red.",
           "usage": "Activos / Información de red"
         },
         "technologyFamilies": {
@@ -1793,9 +1773,7 @@
         "usersValue": "Usuarios: {{value}}",
         "usersNoDepartmentHeadcount": "No hay plantilla registrada para estos departamentos.",
         "businessProcesses": "Procesos de negocio",
-        "addBusinessProcess": "Añadir un proceso de negocio…",
-        "audienceWholeCompany": "Toda la sociedad. Elija departamentos para acotar la audiencia.",
-        "audienceDepartmentsOnly": "Solo los departamentos elegidos. Quítelos para incluir toda la sociedad."
+        "addBusinessProcess": "Añadir un proceso de negocio…"
       },
       "technical": {
         "title": "Información técnica",
@@ -1870,7 +1848,7 @@
         "removeFailed": "Error al eliminar el despliegue",
         "saveAssignmentFailed": "Error al guardar el servidor",
         "removeAssignmentFailed": "Error al quitar el servidor",
-        "baseUrlHelp": "La dirección que se abre para acceder a este despliegue, por ejemplo https://app.example.com."
+        "baseUrlPlaceholder": "p. ej., https://app.example.com"
       },
       "relations": {
         "noChildApps": "Todavía no hay aplicaciones secundarias vinculadas.",
@@ -3103,9 +3081,6 @@
         "autosaveFailed": "Error al guardar automáticamente",
         "closePanel": "Cerrar el panel de enlace",
         "title": "Entornos y enlaces",
-        "intro": "Para cada entorno, configure qué despliegues se conectan en cada tramo de la interfaz.",
-        "routeViaMiddleware": "Tipo de ruta: a través de middleware. Tramos: {{legs}}.",
-        "routeDirect": "Tipo de ruta: directa. Un único tramo entre origen y destino.",
         "addEnvironment": "Añadir entorno",
         "loadingBindings": "Cargando enlaces…",
         "noEnvironments": "Todavía no hay entornos definidos. Haga clic en «Añadir entorno» para documentar los enlaces. Cada entorno necesita despliegues de aplicación, creados en el espacio Aplicaciones, antes de poder añadir enlaces.",

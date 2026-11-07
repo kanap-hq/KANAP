@@ -24,14 +24,14 @@ Die Seite hat zwei Tabs:
 
 Im Tab **Listen** steht der Editor **Einstufungen und Kontinuität** oben. Darunter sind die Listen in vier zusammenklappbare Abschnitte gruppiert:
 
-1. **Standorte**: Listen für die Erstellung oder Bearbeitung von Standorten.
-2. **Server und Verbindungen**: Listen für Server, Verbindungen und zugehörige Risiko-/Endpoint-Daten.
-3. **Anwendungen, Services und Schnittstellen**: Listen für Anwendungen, Anwendungsinstanzen, Schnittstellen und Bindungen.
-4. **Vorfälle**: Listen für das Vorfallsregister.
+1. **Standorte**
+2. **Server und Verbindungen**
+3. **Anwendungen, Services und Schnittstellen**
+4. **Vorfälle**
 
 Die Listen der Technologien stehen in zwei Abschnitten: **Technologiefamilien** und **Administrationszonen** unter **Server und Verbindungen**, **Hosting-Typen** unter **Standorte**. Andere Seiten nennen diese Seite die IT-Einstellungen.
 
-Innerhalb eines Abschnitts sind die Listen nach Namen sortiert. Jede Liste erscheint als aufklappbares Panel mit einem kurzen Hinweis, wo ihre Werte verwendet werden (zum Beispiel *Anwendungen / Kategorieauswahl*). Klicken Sie auf die Kopfzeile eines Panels, um es aufzuklappen und die Werte zu sehen. Ein Abschnitt lädt seinen Inhalt erst beim ersten Aufklappen. So bleibt die Seite auch bei vielen Listen schnell.
+Innerhalb eines Abschnitts sind die Listen nach Namen sortiert. Jede Liste erscheint als aufklappbares Panel mit einem kurzen Hinweis, wo ihre Werte verwendet werden (zum Beispiel *Anwendungen / Kategorieauswahl*). Wenn die Werte allein nicht zeigen, wofür eine Liste dient, sagt es ein Informationssymbol neben ihrem Namen beim Überfahren mit der Maus. Klicken Sie auf die Kopfzeile eines Panels, um es aufzuklappen und die Werte zu sehen. Ein Abschnitt lädt seinen Inhalt erst beim ersten Aufklappen. So bleibt die Seite auch bei vielen Listen schnell.
 
 ### Editor-Steuerungen
 

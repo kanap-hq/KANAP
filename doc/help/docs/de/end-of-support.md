@@ -6,7 +6,7 @@ Der Bericht Supportende listet, was das Ende seines Supports erreicht hat oder b
 
 ## Fristen
 
-Die Ansicht **Fristen** zeigt eine Zeile pro Element, dessen Support beendet ist oder innerhalb des Zeitraums endet. Der Untertitel nennt den letzten Tag, den der Zeitraum abdeckt.
+Die Ansicht **Fristen** zeigt eine Zeile pro Element, dessen Support beendet ist oder innerhalb des Zeitraums endet.
 
 Was der Bericht überwacht:
 

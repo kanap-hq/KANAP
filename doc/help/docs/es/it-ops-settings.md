@@ -24,14 +24,14 @@ La página tiene dos pestañas:
 
 En la pestaña **Listas**, el editor **Clasificaciones y continuidad** está en la parte superior. Debajo, las listas se agrupan en cuatro secciones plegables:
 
-1. **Ubicaciones**: Listas utilizadas al crear o editar ubicaciones.
-2. **Servidores y conexiones**: Listas utilizadas para servidores, conexiones y datos de riesgo/endpoint relacionados.
-3. **Aplicaciones, servicios e interfaces**: Listas utilizadas en aplicaciones, instancias de aplicación, interfaces y enlaces.
-4. **Incidentes**: Listas utilizadas por el registro de incidentes.
+1. **Ubicaciones**
+2. **Servidores y conexiones**
+3. **Aplicaciones, servicios e interfaces**
+4. **Incidentes**
 
 Las listas de las tecnologías están en dos secciones: **Familias de tecnologías** y **Zonas de administración** en **Servidores y conexiones**, **Tipos de alojamiento** en **Ubicaciones**. Otras pantallas llaman a esta página los ajustes de TI.
 
-Dentro de una sección, las listas se ordenan por nombre. Cada lista aparece como un panel expandible con una breve indicación de dónde se usan sus valores (por ejemplo, *Aplicaciones / Selector de categoría*). Haga clic en el encabezado de un panel para expandirlo y ver los valores. Solo una sección carga su contenido cuando la expande por primera vez, lo que mantiene la página rápida incluso cuando tiene muchas listas.
+Dentro de una sección, las listas se ordenan por nombre. Cada lista aparece como un panel expandible con una breve indicación de dónde se usan sus valores (por ejemplo, *Aplicaciones / Selector de categoría*). Cuando los valores no dicen para qué sirve una lista, un icono de información junto a su nombre lo indica al pasar el ratón. Haga clic en el encabezado de un panel para expandirlo y ver los valores. Solo una sección carga su contenido cuando la expande por primera vez, lo que mantiene la página rápida incluso cuando tiene muchas listas.
 
 ### Controles del editor
 

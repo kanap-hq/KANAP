@@ -169,7 +169,7 @@ Changer plus tard la famille ou le type d'hébergement d'une technologie laisse 
 
 #### Versions issues du catalogue
 
-Une version issue du catalogue affiche **Catalogue** à côté de son libellé, et une technologie adoptée depuis le catalogue indique « Versions et dates tenues à jour depuis le catalogue » sous ses versions. KANAP consulte le catalogue chaque jour dans le cloud. Sur une installation sur site, chaque version de KANAP apporte son catalogue au démarrage, sauf si votre administrateur [active la consultation quotidienne](on-premise/configuration.md#optional-technology-catalog).
+Une version issue du catalogue affiche **Catalogue** à côté de son libellé, et une technologie adoptée depuis le catalogue affiche à côté de **Versions** une icône d'information qui indique que ses versions et leurs dates sont tenues à jour depuis le catalogue. KANAP consulte le catalogue chaque jour dans le cloud. Sur une installation sur site, chaque version de KANAP apporte son catalogue au démarrage, sauf si votre administrateur [active la consultation quotidienne](on-premise/configuration.md#optional-technology-catalog).
 
 Les dates viennent de deux sources. La plupart des produits les tiennent d'endoflife.date. Pour les produits qu'endoflife.date ne couvre pas, comme Cisco NX-OS, Juniper Junos ou Dell PowerStore, KANAP relève les dates sur les pages officielles de l'éditeur. Chaque version de KANAP met ces dates à jour.
 

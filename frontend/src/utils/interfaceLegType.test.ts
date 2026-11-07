@@ -1,6 +1,6 @@
 import i18next, { type i18n as I18n } from 'i18next';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { interfaceRouteIntro, legTypeLabel, routeTypeLabel } from './interfaceLegType';
+import { legTypeLabel, routeTypeLabel } from './interfaceLegType';
 
 const LANGUAGES = ['en', 'fr', 'de', 'es'] as const;
 
@@ -28,18 +28,16 @@ describe('interface route and leg labels', () => {
     expect(routeTypeLabel(i18n.fr.t, 'other')).toBe('other');
   });
 
-  it('lists the middleware legs with the labels of the bindings matrix', () => {
-    expect(interfaceRouteIntro(i18n.fr.t, 'via_middleware'))
-      .toBe('Type de route : via middleware. Tronçons : Extraction, Transformation, Chargement.');
-    expect(interfaceRouteIntro(i18n.en.t, 'via_middleware'))
-      .toBe('Route type: via middleware. Legs: Extract, Transform, Load.');
+  it('names the legs with the labels of the bindings matrix', () => {
+    expect(legTypeLabel(i18n.fr.t, 'extract')).toBe('Extraction');
+    expect(legTypeLabel(i18n.en.t, 'transform')).toBe('Transform');
     expect(legTypeLabel(i18n.es.t, 'load')).toBe('Carga');
   });
 
   it('never shows a raw leg code in any language', () => {
     for (const language of LANGUAGES) {
-      for (const route of ['via_middleware', 'direct']) {
-        expect(interfaceRouteIntro(i18n[language].t, route)).not.toMatch(/EXTRACT|TRANSFORM|LOAD|DIRECT/);
+      for (const leg of ['extract', 'transform', 'load', 'direct']) {
+        expect(legTypeLabel(i18n[language].t, leg)).not.toMatch(/EXTRACT|TRANSFORM|LOAD|DIRECT|^extract$|^transform$|^load$|^direct$/);
       }
     }
   });

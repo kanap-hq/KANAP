@@ -182,7 +182,7 @@ Al quitar un responsable, un proceso de negocio, una suite o un contacto de sopo
 
 **Audiencia**:
 - Añada filas de **Empresa / Departamentos** para registrar quién usa esta aplicación. Elija una empresa y opcionalmente restrinja a departamentos específicos.
-- Una línea bajo la audiencia indica lo que abarca. Sin ningún departamento elegido, la audiencia es toda la empresa. Con departamentos elegidos, se limita a esos departamentos: quítelos para volver a incluir toda la empresa.
+- Sin ningún departamento elegido, la audiencia es toda la empresa (el campo muestra **Todos los departamentos**). Con departamentos elegidos, se limita a esos departamentos: quítelos para volver a incluir toda la empresa.
 - Se muestra un conteo de **Usuarios** en vivo.
 - **Método de cálculo**: **Derivado** (calculado automáticamente a partir de la audiencia basándose en las métricas de Usuarios IT / Plantilla de los datos maestros) o **Manual** (un único número de sustitución que usted introduce).
 

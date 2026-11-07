@@ -187,7 +187,7 @@ export default function IncidentPropertiesDrawer({
         </PropertyRow>
         <PropertyRow
           label={t('workspace.incident.drawer.restrictAccess')}
-          helperText={t('workspace.incident.drawer.restrictAccessHint')}
+          hint={t('workspace.incident.drawer.restrictAccessHint')}
         >
           <Switch
             size="small"
@@ -255,7 +255,7 @@ export default function IncidentPropertiesDrawer({
       <PropertyGroup>
         <PropertyRow
           label={t('workspace.incident.drawer.sourceRef')}
-          helperText={t('workspace.incident.drawer.sourceRefHint')}
+          hint={t('workspace.incident.drawer.sourceRefHint')}
         >
           <DrawerTextField
             value={values.source_ref}

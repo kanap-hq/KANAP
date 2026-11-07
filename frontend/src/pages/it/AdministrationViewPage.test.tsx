@@ -242,7 +242,6 @@ describe('AdministrationViewPage', () => {
     renderPage();
     const band = await screen.findByRole('group', { name: 'Administration zones' });
     const rows = within(band).getAllByRole('button');
-    expect(screen.getByText('Choose a zone to filter the asset list.')).toBeTruthy();
     expect(rows.map((row) => row.textContent)).toEqual([
       'Niveau 0Identity coreAdministrator groupDomain adminsVirtual machine: 3, Physical server: 1·2 applications·1 directory service',
       'Tier 1No asset in this zone.',

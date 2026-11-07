@@ -45,6 +45,7 @@ import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { formatSupportDate, supportStateColor, supportStateOf, type SupportState } from '../../../utils/supportState';
 import { EditorField } from '../components/TechnologyCreateDialog';
 import TechnologyCveNames, { type TechnologyCveName } from './TechnologyCveNames';
+import InfoHint from '../../../components/workspace/InfoHint';
 
 /** Where KANAP read the dates of a maintained version, while the stored dates still match the catalog. */
 export type CatalogDateSource = {
@@ -118,12 +119,13 @@ export type TechnologyPatch = Partial<Pick<TechnologyDetail,
 export const CPE_PRODUCT_PATTERN = /^[aoh]:(?:[a-z0-9._\-~%!]|\\[^a-z0-9\s]){1,100}:(?:[a-z0-9._\-~%!]|\\[^a-z0-9\s]){1,100}$/;
 export const CPE_DICTIONARY_URL = 'https://nvd.nist.gov/products/cpe/search';
 
-function SectionLabel({ children, action }: { children: React.ReactNode; action?: React.ReactNode }) {
+function SectionLabel({ children, action, hint }: { children: React.ReactNode; action?: React.ReactNode; hint?: string }) {
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
       <Typography component="h2" sx={(theme) => ({ m: 0, fontSize: 14, fontWeight: 500, lineHeight: 1.4, color: theme.palette.kanap.text.primary })}>
         {children}
       </Typography>
+      {hint && <InfoHint text={hint} />}
       <Box sx={{ flex: 1 }} />
       {action}
     </Box>
@@ -837,6 +839,7 @@ function VersionsTable({ technology, canManage, onChanged, onError, unmatched, o
   return (
     <Box id={TECHNOLOGY_VERSIONS_ANCHOR}>
       <SectionLabel
+        hint={technology.catalog_key ? t('workspace.technology.versions.catalogNote') : undefined}
         action={(technologySwitch || (canManage && editing !== 'new')) ? (
           <Stack direction="row" spacing={1} alignItems="center">
             {technologySwitch}
@@ -974,11 +977,6 @@ function VersionsTable({ technology, canManage, onChanged, onError, unmatched, o
           {editing === 'new' && editRow('new')}
         </TableBody>
       </Table>
-      {technology.catalog_key && (
-        <Typography sx={(th) => ({ mt: 0.75, fontSize: 12, color: th.palette.kanap.text.tertiary })}>
-          {t('workspace.technology.versions.catalogNote')}
-        </Typography>
-      )}
       {technology.catalog_security_tracker && (
         <Typography sx={(th) => ({ mt: 0.75, fontSize: 12, lineHeight: 1.4, color: th.palette.kanap.text.tertiary })}>
           <Trans

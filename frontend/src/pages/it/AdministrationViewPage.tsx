@@ -584,7 +584,6 @@ function ZoneBand({ summary, selected, onSelect }: {
   };
   return (
     <Box>
-      <Typography sx={{ fontSize: 12, ...quietSx, mb: 0.75 }}>{t('pages.administrationView.filterZonesHint')}</Typography>
       <Box
         role="group"
         aria-label={t('pages.administrationView.zones')}
@@ -747,8 +746,7 @@ function DirectoriesSection({ zoneName }: { zoneName: (code: string | null) => s
           ? <RelationsTable columns={serviceColumns} rows={services} rowKey={(row) => row.id} rowHref={(row) => `/it/technologies/${row.id}`} ariaLabel={t('pages.administrationView.attributes.directoryServices')} />
           : <RelationsEmpty>{t('pages.administrationView.noDirectories')}</RelationsEmpty>}
       </RelationsSection>
-      <RelationsSection title={t('pages.administrationView.domains')} count={domainCount}>
-        <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary', mb: 1 }}>{t('pages.administrationView.domainsHint')}</Typography>
+      <RelationsSection title={t('pages.administrationView.domains')} count={domainCount} hint={t('pages.administrationView.domainsHint')}>
         {domainCount === 0 && <RelationsEmpty>{t('pages.administrationView.noDomains')}</RelationsEmpty>}
         <Stack spacing={1.5}>
           {forests.filter((group) => group.domains.length > 0).map((group) => (

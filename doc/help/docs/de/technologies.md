@@ -169,7 +169,7 @@ Eine spätere Änderung der Familie oder des Hosting-Typs lässt die Einstellung
 
 #### Versionen aus dem Katalog
 
-Eine Version aus dem Katalog zeigt **Katalog** neben ihrer Bezeichnung, und eine aus dem Katalog übernommene Technologie zeigt unter ihren Versionen „Versionen und Daten werden aus dem Katalog aktuell gehalten“. In der Cloud prüft KANAP den Katalog täglich. Bei einer On-Premise-Installation bringt jede KANAP-Version ihren Katalog beim Start mit, sofern Ihr Administrator nicht [die tägliche Prüfung einschaltet](on-premise/configuration.md#optional-technology-catalog).
+Eine Version aus dem Katalog zeigt **Katalog** neben ihrer Bezeichnung, und eine aus dem Katalog übernommene Technologie zeigt neben **Versionen** ein Informationssymbol, das angibt, dass ihre Versionen und Daten aus dem Katalog aktuell gehalten werden. In der Cloud prüft KANAP den Katalog täglich. Bei einer On-Premise-Installation bringt jede KANAP-Version ihren Katalog beim Start mit, sofern Ihr Administrator nicht [die tägliche Prüfung einschaltet](on-premise/configuration.md#optional-technology-catalog).
 
 Die Daten stammen aus zwei Quellen. Die meisten Produkte beziehen sie von endoflife.date. Für die Produkte, die endoflife.date nicht abdeckt, etwa Cisco NX-OS, Juniper Junos oder Dell PowerStore, erhebt KANAP die Daten auf den offiziellen Seiten des Herstellers. Jede KANAP-Version bringt diese Daten auf den neuesten Stand.
 

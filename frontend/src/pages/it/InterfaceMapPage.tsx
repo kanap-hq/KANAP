@@ -474,10 +474,6 @@ export default function InterfaceMapPage() {
     return data.bindings.filter((b) => b.interface_id === selectedLink.interfaceDbId);
   }, [data?.bindings, selectedLink]);
 
-  const viewDescription = viewMode === 'business'
-    ? t('pages.interfaceMap.businessView')
-    : t('pages.interfaceMap.technicalView');
-
   React.useEffect(() => {
     let cancelled = false;
     if (!selectedLink) {
@@ -648,9 +644,6 @@ export default function InterfaceMapPage() {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
       <PageHeader title={t('pages.interfaceMap.title')} actions={headerActions} />
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        {viewDescription}
-      </Typography>
       {isLoading && (
         <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Stack spacing={2} alignItems="center">

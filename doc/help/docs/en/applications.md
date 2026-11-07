@@ -182,7 +182,7 @@ Removing an owner, a business process, a suite or a support contact shows a mess
 
 **Audience**:
 - Add **Company / Departments** rows to record who uses this application. Pick a company and optionally restrict to specific departments.
-- A line under the audience says what it covers. With no department chosen, the audience is the whole company. With departments chosen, it is only those departments: clear them to include the whole company again.
+- With no department chosen, the audience is the whole company (the field shows **All departments**). With departments chosen, it is only those departments: clear them to include the whole company again.
 - A live **Users** count is shown.
 - **Calculation method**: **Derived** (computed from the audience based on master-data IT Users / Headcount metrics) or **Manual** (a single override number you type in).
 

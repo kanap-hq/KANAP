@@ -182,7 +182,7 @@ Le retrait d'un responsable, d'un processus métier, d'une suite ou d'un contact
 
 **Audience** :
 - Ajoutez des lignes **Société / Départements** pour enregistrer qui utilise cette application. Choisissez une société et limitez optionnellement à des départements spécifiques.
-- Une ligne sous l'audience indique ce qu'elle couvre. Sans département choisi, l'audience est toute la société. Avec des départements choisis, elle se limite à ces départements : retirez-les pour inclure de nouveau toute la société.
+- Sans département choisi, l'audience est toute la société (le champ affiche **Tous les départements**). Avec des départements choisis, elle se limite à ces départements : retirez-les pour inclure de nouveau toute la société.
 - Un nombre d'**Utilisateurs** en direct est affiché.
 - **Méthode de calcul** : **Dérivé** (calculé à partir de l'audience basé sur les métriques Utilisateurs IT / Effectif des données de référence) ou **Manuel** (un seul nombre de remplacement que vous saisissez).
 

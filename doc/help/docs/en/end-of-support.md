@@ -6,7 +6,7 @@ Open it from **IT Landscape > End of support**, in the **Operations** group. You
 
 ## Deadlines
 
-The **Deadlines** view shows one row per item whose support has ended, or ends within the horizon. The subtitle gives the last day the horizon covers.
+The **Deadlines** view shows one row per item whose support has ended, or ends within the horizon.
 
 What the report watches:
 

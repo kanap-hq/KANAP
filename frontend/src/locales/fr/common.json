@@ -1104,26 +1104,18 @@
     "translationsHelp": "Laissez un champ vide pour utiliser la traduction automatique quand elle existe, sinon le texte de base.",
     "shownAs": "Affiché : {{value}}",
     "hostingTypes": {
-      "title": "Types d'hébergement",
-      "description": "Où sont hébergés les sites et les technologies (ex. : sur site, colocation, cloud public, SaaS). Chaque type est sur site ou dans le cloud : une technologie sur site est attendue sur des serveurs.",
       "add": "Ajouter un type d'hébergement",
       "empty": "Aucun type d'hébergement défini."
     },
     "assetTypes": {
-      "title": "Types d'actif",
-      "description": "Types logiques des serveurs et des actifs d'infrastructure. Les actifs physiques peuvent suivre les informations matérielles et de support.",
       "add": "Ajouter un type d'actif",
       "empty": "Aucun type d'actif défini."
     },
     "serverRoles": {
-      "title": "Rôles de serveur",
-      "description": "Rôles attribués aux serveurs lors de la liaison avec les instances d'application. Le niveau du graphe fixe leur position sur la carte des connexions.",
       "add": "Ajouter un rôle de serveur",
       "empty": "Aucun rôle de serveur défini."
     },
     "entities": {
-      "title": "Entités",
-      "description": "Endpoints utilisés dans les connexions et les cartes. Le niveau du graphe fixe leur position par défaut sur la carte.",
       "add": "Ajouter une entité",
       "empty": "Aucune entité définie."
     },

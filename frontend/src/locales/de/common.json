@@ -1104,26 +1104,18 @@
     "translationsHelp": "Lassen Sie ein Feld leer, um die automatische Übersetzung zu verwenden, wenn es eine gibt, sonst den Basistext.",
     "shownAs": "Angezeigt: {{value}}",
     "hostingTypes": {
-      "title": "Hosting-Typen",
-      "description": "Wo Standorte und Technologien gehostet werden (z. B. On-Premises, Colocation, Public Cloud, SaaS). Jeder Typ ist On-Premises oder in der Cloud: Eine On-Premises-Technologie wird auf Servern erwartet.",
       "add": "Hosting-Typ hinzufügen",
       "empty": "Keine Hosting-Typen definiert."
     },
     "assetTypes": {
-      "title": "Asset-Typen",
-      "description": "Logische Typen für Server und Infrastruktur-Assets. Physische Assets können Hardware- und Support-Informationen erfassen.",
       "add": "Asset-Typ hinzufügen",
       "empty": "Keine Asset-Typen definiert."
     },
     "serverRoles": {
-      "title": "Serverrollen",
-      "description": "Rollen, die Servern beim Verknüpfen von Anwendungsinstanzen zugewiesen werden. Die Graph-Ebene bestimmt ihre Position auf der Verbindungskarte.",
       "add": "Serverrolle hinzufügen",
       "empty": "Keine Serverrollen definiert."
     },
     "entities": {
-      "title": "Entitäten",
-      "description": "Endpunkte in Verbindungen und Karten. Die Graph-Ebene bestimmt ihre Standardposition auf der Karte.",
       "add": "Entität hinzufügen",
       "empty": "Keine Entitäten definiert."
     },
