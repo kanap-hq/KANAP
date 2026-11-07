@@ -1,4 +1,6 @@
 import * as assert from 'node:assert/strict';
+import 'reflect-metadata';
+import { HEADERS_METADATA } from '@nestjs/common/constants';
 import { PublicController } from '../public.controller';
 import { PRODUCT_NAME } from '../../config/product';
 
@@ -16,14 +18,12 @@ function controller(tenantRow: { name: string | null; branding?: unknown } | nul
 }
 
 function manifestFor(req: any): { headers: Record<string, string>; body: any } {
-  const headers: Record<string, string> = {};
-  let body = '';
-  const res = {
-    setHeader: (name: string, value: string) => { headers[name.toLowerCase()] = value; },
-    send: (text: string) => { body = text; },
-  };
-  controller(null).webAppManifest(req, res as any);
-  return { headers, body: JSON.parse(body) };
+  const declared: Array<{ name: string; value: string }> =
+    Reflect.getMetadata(HEADERS_METADATA, PublicController.prototype.webAppManifest) ?? [];
+  const headers = Object.fromEntries(declared.map(({ name, value }) => [name.toLowerCase(), value]));
+  // Nest sends the returned object as JSON and keeps the declared Content-Type.
+  const body = JSON.parse(JSON.stringify(controller(null).webAppManifest(req)));
+  return { headers, body };
 }
 
 function testManifestNamesTheWorkspace() {

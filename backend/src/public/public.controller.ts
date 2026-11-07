@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, GoneException, InternalServerErrorException, Logger, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, GoneException, Header, InternalServerErrorException, Logger, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
 import { Features } from '../config/features';
 import { throwNotAvailableInMode } from '../common/feature-gates';
 import { Throttle } from '@nestjs/throttler';
@@ -272,11 +272,11 @@ export class PublicController {
 
   /** The web app manifest: an installed app takes the workspace's organisation name. */
   @Get('manifest.webmanifest')
-  webAppManifest(@Req() req: any, @Res() res: Response): void {
+  @Header('Content-Type', 'application/manifest+json; charset=utf-8')
+  @Header('Cache-Control', 'public, max-age=300')
+  webAppManifest(@Req() req: any) {
     const tenantName = req?.isPlatformHost ? null : req?.tenant?.name ?? null;
-    res.setHeader('Content-Type', 'application/manifest+json; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=300');
-    res.send(JSON.stringify(buildWebAppManifest(tenantName)));
+    return buildWebAppManifest(tenantName);
   }
 
   /** The light-mode logo, or the dark-mode one with `variant=dark`. */
