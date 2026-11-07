@@ -1405,11 +1405,11 @@
         "placement": "Placement"
       },
       "mappings": {
-        "intro": "Only mapped roles and sites are imported. Anything left on \"Do not import\" is skipped.",
+        "intro": "Only mapped roles and sites are imported.",
         "roles": "Netbox roles",
         "sites": "Netbox sites",
         "operatingSystems": "Operating systems",
-        "operatingSystemsHint": "Choose a technology for each Netbox platform. The value stored is the technology name, with its version when you pick one. A platform left without a match does not block the import: the operating system is simply left as it is.",
+        "operatingSystemsHint": "A platform without a match is left as it is.",
         "noPlatforms": "Netbox lists no platform, so there is nothing to match here.",
         "platformsUnavailable": "Netbox did not return its platforms, so operating systems cannot be matched here. Check that the API token can read platforms.",
         "noOperatingSystem": "No match",
@@ -1440,9 +1440,9 @@
         "reservedRoles": {
           "virtualMachines": "Virtual machines"
         },
-        "subLocationsHint": "Inside a mapped site, the top-level Netbox locations become sub-locations here. Equipment placed deeper is attached to the top-level location above it.",
+        "subLocationsHint": "Inside a mapped site, top-level Netbox locations become sub-locations, and deeper equipment stays with the one above it.",
         "clusters": "Clusters",
-        "clustersHint": "Choose the KANAP cluster for each Netbox cluster. Its virtual machines are then added to that cluster, and nothing is removed: a machine already in another cluster stays there, even after you change a match. A machine you take out of its cluster comes back at the next run while it is in that Netbox cluster. A cluster left without a match does not block the import.",
+        "clustersHint": "Virtual machines join the chosen KANAP cluster; nothing is removed.",
         "clustersUnavailable": "Netbox did not return its clusters, so virtual machines cannot be attached to a cluster here. Check that the API token can read clusters.",
         "noClusters": "Netbox lists no cluster, so there is nothing to match here.",
         "noCluster": "No match",
