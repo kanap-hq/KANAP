@@ -465,7 +465,7 @@ For an existing asset, the host name and the IP addresses are checked again only
 |------------|-------------|----------|-------|
 | `id` | Asset UUID | No | For updates; leave blank for new assets |
 | `name` | Asset name | Yes | Used as unique identifier for matching |
-| `location_reference` | Location code | Yes | The **Code** of an existing location |
+| `location_reference` | Location reference | Yes | The **Reference** of an existing location (for example `LOC-4`) |
 | `kind` | Asset type | Yes | Accepts code or label (e.g., `vm` or `Virtual Machine`) |
 | `environment` | Environment | Yes | `prod`, `pre_prod`, `qa`, `test`, `dev`, `sandbox` |
 | `status` | Lifecycle status | No | Accepts code or label (e.g., `active` or `Active`) |
@@ -531,7 +531,7 @@ Some fields are computed and cannot be imported:
 ### Limitations
 
 - **Maximum 4 IP addresses**: Assets support up to 4 IP address entries in a file
-- **Location required**: Every asset must have the code of an existing location. **Preflight** reports an error on a row with an empty `location_reference` cell and refuses a file without that column
+- **Location required**: Every asset must have the reference of an existing location. **Preflight** reports an error on a row with an empty `location_reference` cell and refuses a file without that column
 - **Relations not included**: Application assignments, connections, financial links, projects, tasks, and attachments must be managed in the workspace
 
 ### Troubleshooting
@@ -546,8 +546,8 @@ Some fields are computed and cannot be imported:
 
 ```csv
 name;location_reference;kind;environment;status;hostname;domain;ip_1_type;ip_1_address
-PROD-WEB-01;NYC-DC1;Virtual Machine;prod;Active;prodweb01;corp;Host IP;10.0.1.10
-PROD-DB-01;NYC-DC1;vm;prod;active;proddb01;corp;host;10.0.1.20
+PROD-WEB-01;LOC-1;Virtual Machine;prod;Active;prodweb01;corp;Host IP;10.0.1.10
+PROD-DB-01;LOC-1;vm;prod;active;proddb01;corp;host;10.0.1.20
 ```
 
 ---

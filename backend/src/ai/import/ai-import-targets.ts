@@ -172,7 +172,7 @@ export const AI_IMPORT_TARGETS: Record<AiImportKey, AiImportTarget> = {
       admin_zone: catalog('adminZones'),
       status: catalog('lifecycleStates'),
       domain: catalog('domains'),
-      location_reference: { hint: 'the code of a location of the workspace' },
+      location_reference: { hint: 'the reference of a location of the workspace, such as LOC-1' },
       cluster: { hint: 'the names of the clusters the asset belongs to, separated by commas' },
       aliases: { hint: 'other names, separated by commas' },
       ...Object.fromEntries([1, 2, 3, 4].map((index) => [`ip_${index}_type`, catalog('ipAddressTypes')])),

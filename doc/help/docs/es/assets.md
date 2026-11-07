@@ -465,7 +465,7 @@ Para un activo existente, el nombre de host y las direcciones IP solo se vuelven
 |-------------|-------------|-------------|-------|
 | `id` | UUID del activo | No | Para actualizaciones; deje en blanco para nuevos activos |
 | `name` | Nombre del activo | Sí | Se usa como identificador único para coincidencias |
-| `location_reference` | Código de ubicación | Sí | El **Código** de una ubicación existente |
+| `location_reference` | Referencia de la ubicación | Sí | La **Referencia** de una ubicación existente (por ejemplo `LOC-4`) |
 | `kind` | Tipo de activo | Sí | Acepta código o etiqueta (p. ej., `vm` o `Virtual Machine`) |
 | `environment` | Entorno | Sí | `prod`, `pre_prod`, `qa`, `test`, `dev`, `sandbox` |
 | `status` | Estado del ciclo de vida | No | Acepta código o etiqueta (p. ej., `active` o `Active`) |
@@ -531,7 +531,7 @@ Algunos campos se calculan y no pueden importarse:
 ### Limitaciones
 
 - **Máximo 4 direcciones IP**: Los activos admiten hasta 4 entradas de direcciones IP en un archivo
-- **Ubicación obligatoria**: Cada activo debe tener el código de una ubicación existente. La **Verificación previa** señala un error en una fila con la celda `location_reference` vacía y rechaza un archivo sin esa columna
+- **Ubicación obligatoria**: Cada activo debe tener la referencia de una ubicación existente. La **Verificación previa** señala un error en una fila con la celda `location_reference` vacía y rechaza un archivo sin esa columna
 - **Relaciones no incluidas**: Las asignaciones de aplicaciones, conexiones, vínculos financieros, proyectos, tareas y adjuntos deben gestionarse en el espacio de trabajo
 
 ### Solución de problemas
@@ -546,8 +546,8 @@ Algunos campos se calculan y no pueden importarse:
 
 ```csv
 name;location_reference;kind;environment;status;hostname;domain;ip_1_type;ip_1_address
-PROD-WEB-01;NYC-DC1;Virtual Machine;prod;Active;prodweb01;corp;Host IP;10.0.1.10
-PROD-DB-01;NYC-DC1;vm;prod;active;proddb01;corp;host;10.0.1.20
+PROD-WEB-01;LOC-1;Virtual Machine;prod;Active;prodweb01;corp;Host IP;10.0.1.10
+PROD-DB-01;LOC-1;vm;prod;active;proddb01;corp;host;10.0.1.20
 ```
 
 ---
