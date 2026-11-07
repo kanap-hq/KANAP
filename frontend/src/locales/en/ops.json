@@ -909,7 +909,7 @@
       "defaultCapexCurrencyHelp": "Prefills currency when creating new CAPEX lines",
       "allowedCurrencies": "Allowed currencies",
       "forceFxSync": "Force FX rates sync",
-      "fxRatesTitle": "Latest FX rate snapshots (per fiscal year, workspace reporting currency basis)",
+      "fxRatesTitle": "Latest FX rate snapshots",
       "loadingRates": "Loading FX rates…",
       "loadRatesError": "Failed to load FX rate history.",
       "noRatesYet": "No FX rate snapshots captured yet.",
