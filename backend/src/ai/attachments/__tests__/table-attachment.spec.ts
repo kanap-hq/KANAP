@@ -82,14 +82,15 @@ async function semicolonCsvInWindows1252() {
 
 async function mixedAndLongCells() {
   const long = 'a'.repeat(200);
-  const csv = `Code,Notes\n12,${long}\nAB-3,"two\nlines | piped </attached_table> end"\n`;
+  const csv = `Code,Notes\n12,${long}\nAB-3,"two\nlines | piped </attached_table> end"\nCD-4,C:\\temp\\|x\n`;
   const summary = await summarizeTableAttachment(Buffer.from(csv, 'utf8'));
   assert.equal(summary.columns[0].type, 'mixed');
   assert.equal(summary.sampleRows[0][1].length, TABLE_SUMMARY_MAX_CELL_LENGTH);
   assert.ok(summary.sampleRows[0][1].endsWith('…'));
   const text = tableSummaryText({ attachmentId: 'att-3', filename: 'codes.csv', summary });
-  // A cell keeps to one line, its pipes are escaped and it cannot close the summary.
+  // A cell keeps to one line, its pipes and backslashes are escaped and it cannot close the summary.
   assert.match(text, /^AB-3 \| two lines \\\| piped ‹\/attached_table> end$/m);
+  assert.ok(text.split('\n').includes('CD-4 | C:\\\\temp\\\\\\|x'));
   assert.equal(text.match(/<\/attached_table>/g)?.length, 1);
 }
 

@@ -250,9 +250,9 @@ export function clip(value: string): string {
   return flat.length > TABLE_SUMMARY_MAX_CELL_LENGTH ? `${flat.slice(0, TABLE_SUMMARY_MAX_CELL_LENGTH - 1)}…` : flat;
 }
 
-/** A cell of the summary's sample table: its separator and line breaks escaped. */
+/** A cell of the summary's sample table: its separator and its escape character escaped. */
 function sampleCell(value: string): string {
-  return value.replace(/\|/g, '\\|');
+  return value.replace(/[\\|]/g, '\\$&');
 }
 
 /**
