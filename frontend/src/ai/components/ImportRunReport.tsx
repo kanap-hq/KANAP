@@ -19,6 +19,8 @@ type ImportRunReportProps = {
   run: AiImportRun;
   /** The title of each template column in the person's language, to name the column of a message. */
   titles: ReadonlyMap<string, string>;
+  /** Shown at the end of the section's label: the download of the prepared file. */
+  action?: React.ReactNode;
 };
 
 /** One message: its line of the person's file, the sentence of the import screen, then its column. */
@@ -63,7 +65,7 @@ function Messages({ title, items, total, shown, more, titles, tone }: {
  * approved one: the counts and the messages of the import screen, on the lines of the person's file.
  * The budget file's check shows as its own dialog shows it, under the card's status line.
  */
-function ImportRunReport({ run, titles }: ImportRunReportProps) {
+function ImportRunReport({ run, titles, action }: ImportRunReportProps) {
   const { t, i18n } = useTranslation(['ai', 'common']);
   const locale = i18n.resolvedLanguage || i18n.language || 'en';
   const check = run.dry_run;
@@ -88,9 +90,12 @@ function ImportRunReport({ run, titles }: ImportRunReportProps) {
 
   return (
     <Stack spacing={0.75}>
-      <Typography component="div" sx={sectionLabelSx}>
-        {check ? t('ai:previewCard.importRun.check') : t('ai:previewCard.importRun.result')}
-      </Typography>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+        <Typography component="div" sx={sectionLabelSx}>
+          {check ? t('ai:previewCard.importRun.check') : t('ai:previewCard.importRun.result')}
+        </Typography>
+        {action}
+      </Stack>
       <Typography sx={{ fontSize: 12, color: run.ok ? 'kanap.text.primary' : 'error.main' }}>
         {status}
         {counts && <Box component="span" sx={{ color: 'kanap.text.secondary' }}>{' '}{counts}</Box>}

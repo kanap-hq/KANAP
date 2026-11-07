@@ -14,6 +14,7 @@ import { getPreviewStatusColorKey, getPreviewStatusDisplay } from '../utils/prev
 import { getPreviewTitle } from '../utils/previewClassification';
 import { usePreviewChangeLabels } from './previewChangeLabels';
 import ImportMappingPreview from './ImportMappingPreview';
+import { downloadServerExport } from '../../components/csv/serverExport';
 
 const LINKED_MARKDOWN_IMAGE_RE = /\[\s*!\[[^\]]*]\(\s*<?[^)\s>]+>?[\s\S]*?\)\s*]\(\s*<?[^)\s>]+>?[\s\S]*?\)/g;
 const MARKDOWN_IMAGE_RE = /!\[[^\]]*]\(\s*<?[^)\s>]+>?[\s\S]*?\)/g;
@@ -122,7 +123,7 @@ function PreviewCard({
   onApprove,
   onReject,
 }: PreviewCardProps) {
-  const { t } = useTranslation(['ai']);
+  const { t, i18n } = useTranslation(['ai']);
   const mode = useTheme().palette.mode;
   const isPending = preview.status === 'pending';
   const pendingImagePlaceholder = t('ai:previewCard.pendingInlineImage');
@@ -216,7 +217,17 @@ function PreviewCard({
           </Typography>
         </Stack>
 
-        {preview.import_mapping && <ImportMappingPreview mapping={preview.import_mapping} />}
+        {preview.import_mapping && (
+          <ImportMappingPreview
+            mapping={preview.import_mapping}
+            onDownload={preview.conversation_id ? () => downloadServerExport({
+              url: `/ai/conversations/${preview.conversation_id}/previews/${preview.preview_id}/import-file/export`,
+              format: 'xlsx',
+              language: i18n.resolvedLanguage,
+              fileBase: 'import',
+            }) : undefined}
+          />
+        )}
 
         {Object.keys(preview.changes).length > 0 && (
         <Stack spacing={1.25}>

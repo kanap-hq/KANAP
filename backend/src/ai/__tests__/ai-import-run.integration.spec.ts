@@ -16,6 +16,7 @@ import { seedManagedDocsKnowledgeAssets } from '../../knowledge/integrated-docum
 // - The budget file: a missing account fails the check; with the account, the lines are created.
 // - Suppliers, an import of the master data family.
 // - Every import's check runs on a file of its template's required columns, and writes nothing.
+// - The file prepared for an import, downloaded from its card by the person who has it, and no one else.
 // The AI surface checks and the attachment storage are not under test: stubbed.
 
 process.env.STRIPE_SECRET_KEY = '';
@@ -201,6 +202,44 @@ async function testApplications(h: Harness, runner: QueryRunner, s: Seed) {
   console.log('  applications: checked on the person\'s lines, refused, corrected, imported, audited: OK');
 }
 
+// The file prepared for an import, downloaded from its card: the import's format, rebuilt from the
+// attachment with the card's mapping. The card is the person's: someone else's download is refused.
+async function testPreparedFile(h: Harness, runner: QueryRunner, s: Seed) {
+  const { AiImportFileController } = require('../import/ai-import-file.controller');
+  const { XLSX_CONTENT_TYPE } = require('../../common/xlsx/write');
+  const { readTableAttachment } = require('../attachments/table-attachment');
+  const controller = h.app.get(AiImportFileController);
+  const admin = ctx(runner, s, 'admin');
+  const file = attach(h, 'Parc applicatif.csv', ['Appli;Mise en service', 'Fromagerie Web;01/02/2023'].join('\n'));
+  const card = await h.previews.createPreview(admin, 'prepare_import_mapping', {
+    attachment_id: file,
+    entity_type: 'applications',
+    columns: [
+      { column: 'name', source: 1, confidence: 'high' },
+      { column: 'go_live_date', source: 2, confidence: 'high', date_order: 'day-first' },
+    ],
+  });
+  const download = async (user: UserKey) => {
+    const sent: { headers: Record<string, string>; body: Buffer | null } = { headers: {}, body: null };
+    const res = {
+      setHeader: (name: string, value: string) => { sent.headers[name] = value; },
+      end: (body: Buffer) => { sent.body = body; },
+    };
+    await controller.download(s.conversations.admin, card.preview_id, { user: { sub: s.users[user] } }, { tenantId: s.tenantId, manager: runner.manager }, res);
+    return sent;
+  };
+  const sent = await download('admin');
+  assert.equal(sent.headers['Content-Type'], XLSX_CONTENT_TYPE);
+  assert.match(decodeURIComponent(sent.headers['Content-Disposition']), /Parc applicatif-import\.xlsx/);
+  const built = await readTableAttachment(sent.body!);
+  const row = Object.fromEntries(built.header.map((cell: any, at: number) => [cell.value, built.rows[0][at]]));
+  assert.deepEqual(row, { name: { kind: 'text', value: 'Fromagerie Web' }, go_live_date: { kind: 'date', iso: '2023-02-01' } });
+  assert.equal(built.rows.length, 1);
+  // Another person of the workspace: the card is not theirs.
+  assert.match(await refusal(() => download('contributor')), /AI preview not found/);
+  console.log('  prepared file: OK');
+}
+
 async function testIncidentRights(h: Harness, runner: QueryRunner, s: Seed) {
   const template = await h.mapping.describeTemplate(ctx(runner, s, 'contributor'), 'incidents', 'en');
   const required = template.columns.filter((column: any) => column.required).map((column: any) => column.column);
@@ -358,6 +397,7 @@ async function run() {
       const s = await seed(runner);
       await testEveryImportChecks(harness, runner, s);
       await testApplications(harness, runner, s);
+      await testPreparedFile(harness, runner, s);
       await testIncidentRights(harness, runner, s);
       await testBudgetFile(harness, runner, s);
       await testSuppliers(harness, runner, s);

@@ -56,6 +56,7 @@ export const AUTH_EVENT_REASONS = [
 export const EXPORT_RESOURCE_KEYS: Readonly<Record<string, string>> = {
   accounts: 'accounts',
   'admin/coa-templates': 'coaTemplates',
+  'ai/conversations/previews/import-file': 'aiImportFile',
   'analytics-categories': 'analyticsCategories',
   applications: 'applications',
   assets: 'assets',

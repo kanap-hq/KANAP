@@ -172,6 +172,22 @@ export class AiImportMappingService {
   }
 
   /**
+   * The file a mapping builds, as the import reads it, for the person to download from the card: with
+   * the same rights as the card, converted again from the attachment, every template column of an
+   * import that reads them all included.
+   */
+  async preparedFile(
+    context: AiExecutionContextWithManager,
+    input: PrepareImportMappingInput,
+    language: CsvLanguage,
+  ): Promise<{ content: Buffer; rows: number }> {
+    const target = aiImportTarget(input.entity_type);
+    await this.assertImportRights(context, target);
+    const { converted } = await this.convert(context, target, input, language);
+    return { content: buildImportFile(converted.file, language), rows: converted.file.rows.length };
+  }
+
+  /**
    * The import of an approved mapping: the file converted again with the same mapping, then loaded by
    * the import, which checks it once more and writes nothing when it refuses a row.
    */

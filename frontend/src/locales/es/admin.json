@@ -351,6 +351,7 @@
     },
     "exportResources": {
       "accounts": "Cuentas",
+      "aiImportFile": "Archivo preparado por Plaid para una importación",
       "administrationView": "Zonas de administración",
       "analyticsCategories": "Dimensiones analíticas",
       "applications": "Aplicaciones",

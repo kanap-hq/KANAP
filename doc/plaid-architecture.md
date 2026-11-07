@@ -1070,8 +1070,14 @@ title and blank rows put back). The card shows the first rows, the values not
 read and the import's messages; the model receives the counts and, per code and
 column, the number of messages (`MODEL_HIDDEN_OUTPUT_FIELDS` hides
 `unread_values`, `sample` and the `report` of the check and of the result), so
-no file cell reaches it beyond the summary. MCP has no import: it reads, holds
-no attachment and does not read the audit log.
+no file cell reaches it beyond the summary. The card also downloads the file
+the mapping builds, as the import reads it (`GET
+/ai/conversations/:id/previews/:previewId/import-file/export`,
+`ai-import-file.controller.ts`): rebuilt from the attachment with the card's
+rights, never stored, for the person whose card it is. The route runs in the
+request's tenant transaction, unlike the other conversation routes, so the
+export interceptor records each download as an export. MCP has no import: it
+reads, holds no attachment and does not read the audit log.
 
 Writes go through existing domain services where practical, so normal validation,
 workflow rules, side effects, and audit logging still apply. AI-originated domain

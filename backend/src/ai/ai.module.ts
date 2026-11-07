@@ -168,6 +168,7 @@ import { CreateMasterDataRecordAiMutationOperation } from './mutation/operations
 import { CreateTaskAiMutationOperation } from './mutation/operations/create-task.ai-mutation-operation';
 import { DeleteRecordAiMutationOperation } from './mutation/operations/delete-record.ai-mutation-operation';
 import { PrepareImportMappingAiMutationOperation } from './mutation/operations/prepare-import-mapping.ai-mutation-operation';
+import { AiImportFileController } from './import/ai-import-file.controller';
 import { AiImportMappingService } from './import/ai-import-mapping.service';
 import { AiImportRunnerService } from './import/ai-import-runner.service';
 import { BudgetFileModule } from '../spend/budget-file/budget-file.module';
@@ -289,6 +290,7 @@ import { AiHelpManualService } from './ai-help-manual.service';
     AiAdminSearchIndexController,
     AiChatController,
     AiConversationsController,
+    AiImportFileController,
     AiApiKeysController,
     AiIntegrationsController,
     AiMcpController,

@@ -181,6 +181,7 @@ function testFileSignsAreFound() {
 const KNOWN_EXPORT_ROUTES = [
   'GET /accounts/export',
   'GET /admin/coa-templates/:id/export',
+  'GET /ai/conversations/:id/previews/:previewId/import-file/export',
   'GET /analytics-categories/export',
   'GET /applications/export',
   'GET /assets/export',

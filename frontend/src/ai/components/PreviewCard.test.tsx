@@ -1,5 +1,5 @@
 import React from 'react';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -9,6 +9,9 @@ import { AiMutationPreview } from '../aiTypes';
 import PreviewCard from './PreviewCard';
 import ArtifactPreviewChip from './ArtifactPreviewChip';
 import { getPreviewLabel } from '../utils/previewClassification';
+import { downloadServerExport } from '../../components/csv/serverExport';
+
+vi.mock('../../components/csv/serverExport', () => ({ downloadServerExport: vi.fn(async () => undefined) }));
 
 vi.mock('../../hooks/useItOpsEnumOptions', () => ({
   default: () => ({
@@ -1072,6 +1075,33 @@ describe('PreviewCard in French', () => {
     expect(screen.queryByText("Vérification de l'import")).not.toBeInTheDocument();
     expect(screen.getByText('Importation terminée avec succès.')).toBeInTheDocument();
     expect(screen.getByText('2 créées · 1 mise à jour')).toBeInTheDocument();
+  });
+
+  it('downloads the file prepared for the import from the card, and says when it fails', async () => {
+    const download = vi.mocked(downloadServerExport);
+    download.mockClear();
+    renderCard(preview({
+      tool_name: 'prepare_import_mapping',
+      target: { entity_type: 'imports', entity_id: null, ref: null, title: 'Fournisseurs · fournisseurs.xlsx' },
+      import_mapping: importMapping({
+        validation: {
+          ok: true, dry_run: true, total: 3, inserted: 3, updated: 0, unchanged: 0, skipped: 0, error_count: 0, warning_count: 0,
+          report: { kind: 'rows', errors: [], warnings: [] },
+        },
+      }),
+    }));
+    const button = screen.getByRole('button', { name: 'Télécharger le fichier préparé (.xlsx)' });
+    fireEvent.click(button);
+    await waitFor(() => expect(download).toHaveBeenCalledTimes(1));
+    expect(download.mock.calls[0][0]).toMatchObject({
+      url: '/ai/conversations/conv-1/previews/preview-1/import-file/export',
+      format: 'xlsx',
+    });
+    expect(screen.queryByText("Échec de l'exportation. Veuillez réessayer.")).not.toBeInTheDocument();
+
+    download.mockRejectedValueOnce(new Error('network'));
+    fireEvent.click(button);
+    expect(await screen.findByText("Échec de l'exportation. Veuillez réessayer.")).toBeInTheDocument();
   });
 
   it('shows the check of a budget file as its import dialog does, under the card status', () => {

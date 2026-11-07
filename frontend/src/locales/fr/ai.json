@@ -372,7 +372,8 @@
     },
     "importRun": {
       "check": "Vérification de l'import",
-      "result": "Import"
+      "result": "Import",
+      "download": "Télécharger le fichier préparé (.xlsx)"
     }
   },
   "previewStatuses": {
