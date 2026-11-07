@@ -108,7 +108,7 @@ function testFallbackSourceCapKeepsKnowledgeAheadOfWebLeads() {
   );
   assert.equal(roomForOneWeb.includes(WEB_HEADING), true);
   assert.equal(roomForOneWeb.includes(WEB_LINE), true);
-  assert.equal(roomForOneWeb.includes('https://example.test/two'), false);
+  assert.doesNotMatch(roomForOneWeb, /example\.test\/two/);
   assert.ok(roomForOneWeb.indexOf(KNOWLEDGE_HEADING) < roomForOneWeb.indexOf(WEB_HEADING));
 }
 
