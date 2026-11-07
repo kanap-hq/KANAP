@@ -1980,7 +1980,7 @@ export default function ApplicationWorkspacePage() {
         <CreateVersionDialog
           open={versionDialogOpen}
           onClose={() => setVersionDialogOpen(false)}
-          sourceApp={{ id: app.id, name: app.name, version: app.version }}
+          sourceApp={{ id: app.id, name: app.name }}
           onSuccess={(newApp) => {
             setVersionDialogOpen(false);
             feedbackRef.current.info(t('messages.versionCreated', { reference: newApp.sequential_id || newApp.name }));
