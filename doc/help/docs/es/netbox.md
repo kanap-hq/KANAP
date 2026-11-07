@@ -47,8 +47,8 @@ Vaya a **Administración > Integraciones** y abra la tarjeta **Inventario de Net
 
 En la pestaña **Netbox**, abra **Correspondencias**. Ahí hay cuatro tablas. Las dos primeras deciden todo el alcance de la importación.
 
-- **Rol de Netbox > Tipo de activo KANAP**. Cada rol de equipo que Netbox conoce recibe un tipo de activo, o **No importar**.
-- **Sitio de Netbox > Ubicación KANAP**. Cada sitio de Netbox recibe una de sus ubicaciones, o **No importar**.
+- **Rol de Netbox > Tipo de activo**. Cada rol de equipo que Netbox conoce recibe un tipo de activo, o **No importar**.
+- **Sitio de Netbox > Ubicación**. Cada sitio de Netbox recibe una de sus ubicaciones, o **No importar**.
 
 Todo lo que quede en **No importar** se omite: sus objetos no se crean nunca, no se actualizan nunca y no se señalan nunca como ausentes. Así deja fuera de KANAP las regletas, los paneles de parcheo o un sitio de laboratorio, mientras importa los servidores que están al lado.
 

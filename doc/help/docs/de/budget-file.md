@@ -129,7 +129,7 @@ Eine fehlende Spalte behält alle gespeicherten Werte dieser Spalte. Eine Datei,
 |---|---|
 | **Fehler** | Die Zeilen, die das Laden ablehnt, nach Zeile der Datei mit der Spalte, wenn sie bekannt ist. Eine Datei mit einem einzigen Fehler lädt nichts |
 | **Änderungen** | Die anzulegenden Budgetzeilen, die zu aktualisierenden Budgetzeilen und die Budgetzeilen, die die Datei unverändert lässt |
-| **Seit dem Export in KANAP geändert** | Die Budgetzeilen, die jemand nach Ihrem Export geändert hat, mit wer und wann. Das Laden der Datei schreibt Ihre Werte über diese Änderungen |
+| **Seit dem Export geändert** | Die Budgetzeilen, die jemand nach Ihrem Export geändert hat, mit wer und wann. Das Laden der Datei schreibt Ihre Werte über diese Änderungen |
 | **Warnungen** | Eine Zeile, die einer anderen Budgetzeile ähnelt, ein `company_name`, der vom Unternehmen der Kostenstelle der Zeile abweicht, ein Betrag, durch den eine Spalte ihren Berechnungszeilen nicht mehr folgt, Spalten und Zellen, die die Datei ignoriert |
 | **Beim Laden angelegt** | Die Lieferanten und Dimensionswerte, die das Laden hinzufügen würde |
 

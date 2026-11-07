@@ -47,8 +47,8 @@ Go to **Administration > Integrations** and open the **Netbox inventory** card.
 
 On the **Netbox** tab, open **Mappings**. Four tables sit there. The first two decide the whole scope of the import.
 
-- **Netbox roles > KANAP asset type**. Each device role Netbox knows about gets an asset type, or **Do not import**.
-- **Netbox sites > KANAP location**. Each Netbox site gets one of your locations, or **Do not import**.
+- **Netbox roles > Asset type**. Each device role Netbox knows about gets an asset type, or **Do not import**.
+- **Netbox sites > Location**. Each Netbox site gets one of your locations, or **Do not import**.
 
 Anything left on **Do not import** is skipped: its objects are never created, never updated, and never reported as missing. That is how you keep power strips, patch panels or a lab site out of KANAP while still importing the servers next to them.
 

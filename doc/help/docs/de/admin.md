@@ -286,7 +286,7 @@ Wenn Single Sign-On verbunden ist, erhält eine Person, die sich zum ersten Mal 
 
 Ein neues Konto startet mit der Systemrolle **Kontakt** und ohne Berechtigungen. Die Person sieht eine Seite mit dem Hinweis:
 
-> Ihr Konto hat noch keinen Zugriff auf KANAP erhalten. Bitten Sie Ihren Administrator, Ihnen Zugriff zu gewähren.
+> Ihr Konto hat noch keinen Zugriff. Bitten Sie Ihren Administrator, Ihnen Zugriff zu gewähren.
 
 Administratoren erhalten in diesem Fall eine E-Mail. Um der Person Zugriff zu geben, öffnen Sie **Administration > Benutzer**, suchen Sie sie über den Status **Zugriff ausstehend** und weisen Sie eine Rolle zu.
 

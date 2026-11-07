@@ -168,11 +168,11 @@ Name und kurze Beschreibung des Agenten stehen im Titel des Arbeitsbereichs, nic
 
 Woher der Agent seine Fakten bezieht:
 
-- **KANAP-Wissensdatenbank durchsuchen**: wenn aktiviert, greift der Agent auf Ihre [Wissensbibliotheken](knowledge.md) zurück und zitiert sie in Antworten. Wenn deaktiviert, antwortet der Agent aus dem eigenen Wissen des Modells (und aus dem Web, falls das aktiviert ist).
+- **Wissensdatenbank durchsuchen**: wenn aktiviert, greift der Agent auf Ihre [Wissensbibliotheken](knowledge.md) zurück und zitiert sie in Antworten. Wenn deaktiviert, antwortet der Agent aus dem eigenen Wissen des Modells (und aus dem Web, falls das aktiviert ist).
 - **Alle verfügbaren Bibliotheken durchsuchen**, oder deaktivieren Sie dies, um bestimmte **Bibliotheken** auszuwählen: der Agent durchsucht dann nur diese, im Rahmen seiner Zugriffsrechte. Bibliotheksnamen stammen aus dem Bereich Wissensdatenbank.
-- **Im Web suchen**: lässt den Agenten auch das öffentliche Web heranziehen; das KANAP-Wissen hat immer Vorrang und Web-Ergebnisse werden als Quelle angegeben. Dieser Schalter ist nur verfügbar, wenn die Websuche für die gesamte Plattform aktiviert ist. Wenn nicht, ist der Schalter deaktiviert und ein Hinweis verweist Sie an Ihren Administrator. Siehe [Plaid-Einstellungen](ai-settings.md).
+- **Im Web suchen**: lässt den Agenten auch das öffentliche Web heranziehen; die Wissensdatenbank hat immer Vorrang und Web-Ergebnisse werden als Quelle angegeben. Dieser Schalter ist nur verfügbar, wenn die Websuche für die gesamte Plattform aktiviert ist. Wenn nicht, ist der Schalter deaktiviert und ein Hinweis verweist Sie an Ihren Administrator. Siehe [Plaid-Einstellungen](ai-settings.md).
 
-Überwachungs-Agenten erhalten hier stattdessen **KANAP-Daten durchsuchen**. Damit kann der Agent Ihr eigenes IT-Inventar nachschlagen (**Anwendungen**, **Assets**, **Schnittstellen**, **Verbindungen**, **Standorte**), um eine Diagnose mit Geschäftskontext anzureichern.
+Überwachungs-Agenten erhalten hier stattdessen **Ihr Inventar durchsuchen**. Damit kann der Agent Ihr eigenes IT-Inventar nachschlagen (**Anwendungen**, **Assets**, **Schnittstellen**, **Verbindungen**, **Standorte**), um eine Diagnose mit Geschäftskontext anzureichern.
 
 ### Betriebseinstellungen
 

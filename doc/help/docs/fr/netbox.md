@@ -47,8 +47,8 @@ Ouvrez **Administration > Intégrations**, puis la carte **Inventaire Netbox**.
 
 Dans l'onglet **Netbox**, ouvrez **Correspondances**. Quatre tableaux s'y trouvent. Les deux premiers déterminent tout le périmètre de l'import.
 
-- **Rôles Netbox > Type d'actif KANAP**. Chaque rôle d'équipement connu de Netbox reçoit un type d'actif, ou **Ne pas importer**.
-- **Sites Netbox > Site KANAP**. Chaque site Netbox reçoit l'un de vos sites, ou **Ne pas importer**.
+- **Rôles Netbox > Type d'actif**. Chaque rôle d'équipement connu de Netbox reçoit un type d'actif, ou **Ne pas importer**.
+- **Sites Netbox > Site**. Chaque site Netbox reçoit l'un de vos sites, ou **Ne pas importer**.
 
 Tout ce qui reste sur **Ne pas importer** est laissé de côté : ces objets ne sont jamais créés, jamais mis à jour, jamais signalés comme absents. C'est ainsi que vous gardez les bandeaux de prises, les panneaux de brassage ou un site de laboratoire hors de KANAP tout en important les serveurs qui les entourent.
 

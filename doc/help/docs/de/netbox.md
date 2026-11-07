@@ -47,8 +47,8 @@ Gehen Sie zu **Administration > Integrationen** und öffnen Sie die Karte **Netb
 
 Öffnen Sie im Tab **Netbox** den Bereich **Zuordnungen**. Dort stehen vier Tabellen. Die ersten beiden bestimmen den gesamten Umfang des Imports.
 
-- **Netbox-Rolle > KANAP-Asset-Typ**. Jede Geräterolle, die Netbox kennt, erhält einen Asset-Typ oder **Nicht importieren**.
-- **Netbox-Standort > KANAP-Standort**. Jeder Netbox-Standort erhält einen Ihrer Standorte oder **Nicht importieren**.
+- **Netbox-Rolle > Asset-Typ**. Jede Geräterolle, die Netbox kennt, erhält einen Asset-Typ oder **Nicht importieren**.
+- **Netbox-Standort > Standort**. Jeder Netbox-Standort erhält einen Ihrer Standorte oder **Nicht importieren**.
 
 Alles, was auf **Nicht importieren** steht, wird übersprungen: Die zugehörigen Objekte werden nie angelegt, nie aktualisiert und nie als fehlend gemeldet. So halten Sie Steckdosenleisten, Patchpanels oder einen Laborstandort aus KANAP heraus und importieren trotzdem die Server daneben.
 

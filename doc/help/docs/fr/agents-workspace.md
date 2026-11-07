@@ -168,11 +168,11 @@ Le nom de l'agent et sa courte description vivent dans le titre de l'espace, pas
 
 D'où l'agent tire ses informations :
 
-- **Rechercher dans les connaissances KANAP** : activé, l'agent puise dans vos [bibliothèques de connaissances](knowledge.md) et les cite dans ses réponses. Désactivé, l'agent répond à partir des connaissances propres au modèle (et du web, si celui-ci est activé).
+- **Rechercher dans la base de connaissances** : activé, l'agent puise dans vos [bibliothèques de connaissances](knowledge.md) et les cite dans ses réponses. Désactivé, l'agent répond à partir des connaissances propres au modèle (et du web, si celui-ci est activé).
 - **Rechercher dans toutes les bibliothèques disponibles**, ou désactivez cette option pour choisir des **Bibliothèques** précises : l'agent ne recherche alors que dans celles-ci, dans la limite de ce à quoi il a accès. Les noms des bibliothèques proviennent de la section Base de connaissances.
-- **Rechercher sur le web** : permet à l'agent de consulter également le web public ; les connaissances KANAP restent toujours prioritaires et les résultats web sont cités. Cet interrupteur n'est disponible que si la recherche web est activée pour l'ensemble de la plateforme. Dans le cas contraire, l'interrupteur est désactivé et une note vous renvoie vers votre administrateur (voir [Paramètres Plaid](ai-settings.md)).
+- **Rechercher sur le web** : permet à l'agent de consulter également le web public ; la base de connaissances reste prioritaire et les résultats web sont cités. Cet interrupteur n'est disponible que si la recherche web est activée pour l'ensemble de la plateforme. Dans le cas contraire, l'interrupteur est désactivé et une note vous renvoie vers votre administrateur (voir [Paramètres Plaid](ai-settings.md)).
 
-Les agents de supervision disposent ici de **Rechercher dans les données KANAP** à la place, qui permet à l'agent de consulter votre propre inventaire informatique (**Applications**, **Actifs**, **Interfaces**, **Connexions**, **Sites**) pour ajouter du contexte métier à un diagnostic.
+Les agents de supervision disposent ici de **Rechercher dans votre inventaire** à la place, qui permet à l'agent de consulter votre propre inventaire informatique (**Applications**, **Actifs**, **Interfaces**, **Connexions**, **Sites**) pour ajouter du contexte métier à un diagnostic.
 
 ### Paramètres d'exploitation
 

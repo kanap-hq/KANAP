@@ -286,7 +286,7 @@ Lorsque le single sign-on est connecté, une personne qui se connecte avec Micro
 
 Un nouveau compte démarre avec le rôle système **Contact** et aucune autorisation. La personne voit une page indiquant :
 
-> Votre compte n'a pas encore reçu l'accès à KANAP. Demandez à votre administrateur de vous accorder l'accès.
+> Votre compte n'a pas encore d'accès. Demandez à votre administrateur de vous accorder l'accès.
 
 Les administrateurs reçoivent un e-mail lorsque cela se produit. Pour donner l'accès à la personne, ouvrez **Administration > Utilisateurs**, repérez-la à son statut **Accès en attente**, puis assignez-lui un rôle.
 
