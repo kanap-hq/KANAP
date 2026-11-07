@@ -71,7 +71,10 @@ test('files read across the two trees bring the other suite', (t) => {
     // The menu words of the screens the assistant names (`backend/src/ai/ai-unread-families.ts`).
     'frontend/src/locales/fr/nav.json',
     // The record history labels are checked against the backend allow-lists.
-    'frontend/src/locales/en/admin.json']) {
+    'frontend/src/locales/en/admin.json',
+    // Coded 403 messages (`coded-forbidden.inventory.spec.ts`).
+    'frontend/src/locales/en/errors.json',
+    'frontend/src/locales/de/errors.json']) {
     assert.equal(needs(t, [file]).backend, 'full', file);
   }
   assert.equal(needs(t, ['backend/fixtures/fromage-co/setup-tenant.mjs']).frontend, 'true');
