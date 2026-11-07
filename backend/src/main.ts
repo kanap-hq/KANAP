@@ -208,13 +208,16 @@ async function bootstrap() {
 
   const port = process.env.PORT || 8080;
   await app.listen(port as number);
+  // Only the served API schedules the cron jobs, in every process, never another AppModule
+  // context (scripts, specs).
+  const scheduledTasks = app.get(ScheduledTasksService);
+  scheduledTasks.startCronJobs();
 
   // Stop (graceful-shutdown.ts): the cron jobs stop at once, no new connections, the requests in
   // flight finish; then, before the pool closes and within the drain time, the work they left:
   // notification chains, running scheduled tasks (still going at the deadline: recorded as
   // interrupted), the notifications those tasks started, and the email queue.
   const schedulerRegistry = app.get(SchedulerRegistry);
-  const scheduledTasks = app.get(ScheduledTasksService);
   const emailService = app.get(EmailService);
   const demoData = app.get(DemoDataService);
   installGracefulShutdown({

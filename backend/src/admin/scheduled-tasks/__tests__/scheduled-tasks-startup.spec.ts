@@ -5,13 +5,15 @@ import { ScheduledTasksService } from '../scheduled-tasks.service';
 // `main.ts` calls `runStartupTasks()` after `listen`, never the bootstrap of an
 // AppModule context (scripts, specs). Only enabled tasks run, at most once, the
 // run is not awaited, and a failure is logged without escaping as an unhandled
-// rejection.
+// rejection. The cron jobs follow the same rule: the bootstrap registers none,
+// `main.ts` calls `startCronJobs()` after `listen`.
 
 type StoredTask = { name: string; description: string; cron_expression: string; enabled: boolean };
 
 function harness(stored: StoredTask[]) {
   const rows = new Map(stored.map((task) => [task.name, { ...task }]));
   const jobs: Array<{ stop: () => void }> = [];
+  const scheduled: string[] = [];
   const taskRepo = {
     findOne: async ({ where }: any) => rows.get(where.name) ?? null,
     findOneBy: async ({ name }: any) => rows.get(name) ?? null,
@@ -24,7 +26,7 @@ function harness(stored: StoredTask[]) {
   };
   const registry = {
     deleteCronJob: () => { throw new Error('no job'); },
-    addCronJob: (_name: string, job: { stop: () => void }) => { jobs.push(job); },
+    addCronJob: (name: string, job: { stop: () => void }) => { scheduled.push(name); jobs.push(job); },
   };
   const service = new ScheduledTasksService(taskRepo as any, {} as any, {} as any, registry as any);
   (service as any).logger = { log: () => undefined, error: () => undefined, warn: () => undefined, debug: () => undefined };
@@ -33,7 +35,7 @@ function harness(stored: StoredTask[]) {
     started.push(name);
     if (name === 'failing') throw new Error('boom');
   };
-  return { service, started, stopJobs: () => jobs.forEach((job) => job.stop()) };
+  return { service, started, scheduled, stopJobs: () => jobs.forEach((job) => job.stop()) };
 }
 
 const handler = async () => ({});
@@ -52,6 +54,26 @@ async function testStartupRunOnlyForEnabledOptIn() {
     assert.deepEqual(started, ['opt-in'], 'only the enabled task that opted in runs at startup');
     service.runStartupTasks();
     assert.deepEqual(started, ['opt-in'], 'at most once');
+  } finally {
+    stopJobs();
+  }
+}
+
+async function testCronJobsStartOnlyWhenAsked() {
+  const { service, started, scheduled, stopJobs } = harness([
+    { name: 'disabled', description: 'd', cron_expression: '0 * * * *', enabled: false },
+  ]);
+  service.register({ name: 'enabled', description: 'e', defaultCron: '0 * * * *', handler });
+  service.register({ name: 'disabled', description: 'd', defaultCron: '0 * * * *', handler });
+  service.register({ name: 'enabled-opt-in', description: 'o', defaultCron: '0 3 * * *', handler, runOnStartup: true });
+  try {
+    await service.onApplicationBootstrap();
+    assert.deepEqual(scheduled, [], 'the bootstrap alone (any AppModule context) registers no cron job');
+    service.startCronJobs();
+    assert.deepEqual(scheduled, ['enabled', 'enabled-opt-in'], 'startCronJobs schedules the enabled tasks');
+    service.startCronJobs();
+    assert.deepEqual(scheduled, ['enabled', 'enabled-opt-in'], 'at most once');
+    assert.deepEqual(started, [], 'scheduling runs nothing');
   } finally {
     stopJobs();
   }
@@ -78,6 +100,7 @@ async function testStartupFailureIsContained() {
 async function run() {
   await testStartupRunOnlyForEnabledOptIn();
   await testStartupFailureIsContained();
+  await testCronJobsStartOnlyWhenAsked();
   console.log('scheduled-tasks-startup.spec: ok');
 }
 

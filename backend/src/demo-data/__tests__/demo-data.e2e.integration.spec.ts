@@ -9,7 +9,6 @@ import { pathToFileURL } from 'node:url';
 import { AddressInfo } from 'node:net';
 import { INestApplication } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { SchedulerRegistry } from '@nestjs/schedule';
 import { DataSource } from 'typeorm';
 import dataSource from '../../data-source';
 import {
@@ -829,8 +828,6 @@ async function serve(): Promise<Served> {
   applyHttpMiddleware(app);
   applyTenancyAndPipeline(app, app.get(DataSource));
   await app.listen(0, '127.0.0.1');
-  // No scheduled job runs during the spec.
-  app.get(SchedulerRegistry).getCronJobs().forEach((job) => job.stop());
 
   const port = (app.getHttpServer().address() as AddressInfo).port;
   const demo = app.get(DemoDataService);

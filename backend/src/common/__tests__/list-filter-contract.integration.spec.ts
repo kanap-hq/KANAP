@@ -7,7 +7,6 @@ import * as http from 'node:http';
 import { AddressInfo } from 'node:net';
 import { INestApplication } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { SchedulerRegistry } from '@nestjs/schedule';
 import { DataSource } from 'typeorm';
 import { PostgresQueryRunner } from 'typeorm/driver/postgres/PostgresQueryRunner';
 import {
@@ -169,7 +168,6 @@ async function testEveryOfferedFilterReachesTheDatabase() {
   });
   applyTenancyAndPipeline(app, app.get(DataSource));
   await app.listen(0, '127.0.0.1');
-  app.get(SchedulerRegistry).getCronJobs().forEach((job) => job.stop());
   // A budget list read that finds no exchange rate starts a refresh of the year's rates in the
   // background, still inside that request: its statements, and a network call of variable length,
   // fell inside later recordings and made the same request look different (#625). The lists read

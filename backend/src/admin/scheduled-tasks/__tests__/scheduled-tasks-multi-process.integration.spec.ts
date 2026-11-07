@@ -114,6 +114,8 @@ async function testConcurrentBootstrapRegistersOnce(other: DataSource) {
   try {
     // Only this task is registered on these services: both start at once on a database without it.
     await Promise.all(services.map((svc) => svc.onApplicationBootstrap()));
+    assert.equal(regA.added.length + regB.added.length, 0, 'the bootstrap alone schedules nothing');
+    for (const svc of services) svc.startCronJobs();
     const [{ n }] = await dataSource.query(`SELECT count(*)::int AS n FROM scheduled_tasks WHERE name = $1`, [name]);
     assert.equal(n, 1, 'one row, and neither process failed on the unique name');
     assert.equal(regA.added.length + regB.added.length, 2, 'both processes scheduled it');
@@ -153,6 +155,7 @@ async function testFirstRegistrationRaceLogsNothing() {
   }) as any;
   try {
     await svc.onApplicationBootstrap();
+    svc.startCronJobs();
     assert.deepEqual(logged, [], 'no error line in the database log');
     const rows = await dataSource.query(`SELECT description FROM scheduled_tasks WHERE name = $1`, [name]);
     assert.deepEqual(rows.map((r: any) => r.description), ['other process'], 'one row, the first insert stands');
