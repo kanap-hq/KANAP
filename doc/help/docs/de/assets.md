@@ -465,7 +465,7 @@ Bei einem bestehenden Asset werden Hostname und IP-Adressen nur erneut geprüft,
 |------------|-------------|----------|-------|
 | `id` | Asset-UUID | Nein | Für Updates; bei neuen Assets leer lassen |
 | `name` | Asset-Name | Ja | Wird als eindeutige Kennung für den Abgleich verwendet |
-| `location_reference` | Standortcode | Ja | Der **Code** eines vorhandenen Standorts |
+| `location_reference` | Standortreferenz | Ja | Die **Referenz** eines vorhandenen Standorts (zum Beispiel `LOC-4`) |
 | `kind` | Asset-Typ | Ja | Akzeptiert Code oder Bezeichnung (z. B. `vm` oder `Virtual Machine`) |
 | `environment` | Umgebung | Ja | `prod`, `pre_prod`, `qa`, `test`, `dev`, `sandbox` |
 | `status` | Lebenszyklus-Status | Nein | Akzeptiert Code oder Bezeichnung (z. B. `active` oder `Active`) |
@@ -531,7 +531,7 @@ Einige Felder werden berechnet und können nicht importiert werden:
 ### Einschränkungen
 
 - **Maximal 4 IP-Adressen**: Assets unterstützen bis zu 4 IP-Adresseinträge in einer Datei
-- **Standort erforderlich**: Jedes Asset muss den Code eines vorhandenen Standorts haben. **Preflight** meldet einen Fehler in einer Zeile mit leerer `location_reference`-Zelle und lehnt eine Datei ohne diese Spalte ab
+- **Standort erforderlich**: Jedes Asset muss die Referenz eines vorhandenen Standorts haben. **Preflight** meldet einen Fehler in einer Zeile mit leerer `location_reference`-Zelle und lehnt eine Datei ohne diese Spalte ab
 - **Verknüpfungen nicht enthalten**: Anwendungszuweisungen, Verbindungen, Finanzverknüpfungen, Projekte, Aufgaben und Anhänge müssen im Arbeitsbereich verwaltet werden
 
 ### Fehlerbehebung
@@ -546,8 +546,8 @@ Einige Felder werden berechnet und können nicht importiert werden:
 
 ```csv
 name;location_reference;kind;environment;status;hostname;domain;ip_1_type;ip_1_address
-PROD-WEB-01;NYC-DC1;Virtual Machine;prod;Active;prodweb01;corp;Host IP;10.0.1.10
-PROD-DB-01;NYC-DC1;vm;prod;active;proddb01;corp;host;10.0.1.20
+PROD-WEB-01;LOC-1;Virtual Machine;prod;Active;prodweb01;corp;Host IP;10.0.1.10
+PROD-DB-01;LOC-1;vm;prod;active;proddb01;corp;host;10.0.1.20
 ```
 
 ---

@@ -465,7 +465,7 @@ Pour un actif existant, le nom d'hôte et les adresses IP ne sont revérifiés q
 |-------------|-------------|-------------|-------|
 | `id` | UUID de l'actif | Non | Pour les mises à jour ; laisser vide pour les nouveaux actifs |
 | `name` | Nom de l'actif | Oui | Utilisé comme identifiant unique pour la correspondance |
-| `location_reference` | Code du site | Oui | Le **Code** d'un site existant |
+| `location_reference` | Référence du site | Oui | La **Référence** d'un site existant (par exemple `LOC-4`) |
 | `kind` | Type d'actif | Oui | Accepte un code ou un libellé (ex. : `vm` ou `Virtual Machine`) |
 | `environment` | Environnement | Oui | `prod`, `pre_prod`, `qa`, `test`, `dev`, `sandbox` |
 | `status` | Statut de cycle de vie | Non | Accepte un code ou un libellé (ex. : `active` ou `Active`) |
@@ -531,7 +531,7 @@ Certains champs sont calculés et ne peuvent pas être importés :
 ### Limitations
 
 - **Maximum 4 adresses IP** : Les actifs prennent en charge jusqu'à 4 entrées d'adresse IP dans un fichier
-- **Site obligatoire** : Chaque actif doit avoir le code d'un site existant. La **Vérification préalable** signale une erreur sur une ligne dont la cellule `location_reference` est vide et refuse un fichier sans cette colonne
+- **Site obligatoire** : Chaque actif doit avoir la référence d'un site existant. La **Vérification préalable** signale une erreur sur une ligne dont la cellule `location_reference` est vide et refuse un fichier sans cette colonne
 - **Relations non incluses** : Les affectations d'applications, connexions, liens financiers, projets, tâches et pièces jointes doivent être gérés dans l'espace de travail
 
 ### Résolution de problèmes
@@ -546,8 +546,8 @@ Certains champs sont calculés et ne peuvent pas être importés :
 
 ```csv
 name;location_reference;kind;environment;status;hostname;domain;ip_1_type;ip_1_address
-PROD-WEB-01;NYC-DC1;Virtual Machine;prod;Active;prodweb01;corp;Host IP;10.0.1.10
-PROD-DB-01;NYC-DC1;vm;prod;active;proddb01;corp;host;10.0.1.20
+PROD-WEB-01;LOC-1;Virtual Machine;prod;Active;prodweb01;corp;Host IP;10.0.1.10
+PROD-DB-01;LOC-1;vm;prod;active;proddb01;corp;host;10.0.1.20
 ```
 
 ---
