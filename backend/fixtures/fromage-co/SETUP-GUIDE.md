@@ -406,9 +406,10 @@ first run.
 
 ## Files
 
-- `setup-tenant.mjs` — the runner (Node ≥ 20, no dependencies). It reads the
-  files through `backend/scripts/lib/fixture-csv.mjs` (year shift) and calls the
-  API through `backend/scripts/lib/http-client.mjs`.
+- `setup-tenant.mjs`: the runner (Node ≥ 20, no dependencies). It reads the
+  files through `backend/scripts/lib/fixture-csv.mjs` (year shift), calls the
+  API through `backend/scripts/lib/http-client.mjs`, and walks long lists
+  through `backend/scripts/lib/list-all-pages.mjs`.
 - `01-…25-*.csv` — the dataset (semicolon-separated, UTF-8), with
   `09b-contact-suppliers.csv` for the supplier and type of each contact.
 - `26-…30-*.csv` — the budget dataset: cost centres, dimension values,
