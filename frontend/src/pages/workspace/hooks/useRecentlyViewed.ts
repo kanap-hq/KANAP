@@ -20,7 +20,8 @@ export type RecentEntityType =
   | 'incident'
   | 'location'
   | 'document'
-  | 'company';
+  | 'company'
+  | 'business_process';
 
 export interface RecentItem {
   type: RecentEntityType;
@@ -193,5 +194,11 @@ export const ENTITY_TYPE_CONFIG: Record<
     resource: 'companies',
     icon: 'Business',
     labelKey: 'dashboard.tiles.entityTypes.company',
+  },
+  business_process: {
+    route: (id) => `/master-data/business-processes/${id}`,
+    resource: 'business_processes',
+    icon: 'AccountTree',
+    labelKey: 'dashboard.tiles.entityTypes.businessProcess',
   },
 };
