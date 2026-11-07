@@ -1,4 +1,4 @@
-import { PRODUCT_NAME } from '../../config/product';
+import { COMPANY_NAME, PRODUCT_NAME } from '../../config/product';
 import type { EmailStrings } from './en';
 
 export const es: EmailStrings = {
@@ -192,11 +192,11 @@ export const es: EmailStrings = {
       cta: 'Abrir la gestión de usuarios',
     },
     activation: {
-      subject: 'Confirme su espacio de trabajo de KANAP',
-      intro: "Gracias por su interés en KANAP. Confirme su dirección de correo electrónico para crear su espacio de trabajo: el enlace siguiente es válido durante 48 horas. Durante la creación, preparamos un ejemplo completo de empresa; al abrirlo, usted elegirá descubrirlo o empezar con sus propios datos.",
+      subject: `Confirme su espacio de trabajo de ${PRODUCT_NAME}`,
+      intro: `Gracias por su interés en ${PRODUCT_NAME}. Confirme su dirección de correo electrónico para crear su espacio de trabajo: el enlace siguiente es válido durante 48 horas. Durante la creación, preparamos un ejemplo completo de empresa; al abrirlo, usted elegirá descubrirlo o empezar con sus propios datos.`,
       copyPaste: 'Si el botón anterior no funciona, copie y pegue este enlace en su navegador:',
       expires: "Si no solicitó esta prueba, puede ignorar este mensaje.",
-      textIntro: "Gracias por su interés en KANAP. Confirme su dirección de correo electrónico para crear su espacio de trabajo: el enlace siguiente es válido durante 48 horas. Durante la creación, preparamos un ejemplo completo de empresa; al abrirlo, usted elegirá descubrirlo o empezar con sus propios datos.",
+      textIntro: `Gracias por su interés en ${PRODUCT_NAME}. Confirme su dirección de correo electrónico para crear su espacio de trabajo: el enlace siguiente es válido durante 48 horas. Durante la creación, preparamos un ejemplo completo de empresa; al abrirlo, usted elegirá descubrirlo o empezar con sus propios datos.`,
       textAction: 'Activar su espacio de trabajo: {{url}}',
     },
     passwordReset: {
@@ -239,19 +239,19 @@ export const es: EmailStrings = {
       portfolio: 'los proyectos y las solicitudes',
     },
     guideTitles: {
-      budget: 'Su presupuesto de TI en KANAP en diez minutos',
-      cartography: 'Su sistema de información en KANAP en diez minutos',
-      portfolio: 'Su cartera en KANAP en diez minutos',
+      budget: `Su presupuesto de TI en ${PRODUCT_NAME} en diez minutos`,
+      cartography: `Su sistema de información en ${PRODUCT_NAME} en diez minutos`,
+      portfolio: `Su cartera en ${PRODUCT_NAME} en diez minutos`,
     },
     billingPath: 'Administración › Facturación',
     footer: {
-      reason: 'Recibe este mensaje porque está probando KANAP.',
+      reason: `Recibe este mensaje porque está probando ${PRODUCT_NAME}.`,
       unsubscribe: 'Dejar de recibir estos mensajes',
       unsubscribeText: 'Dejar de recibir estos mensajes: {{url}}',
     },
     j0: {
-      subject: 'Le damos la bienvenida a su espacio de trabajo de KANAP',
-      ready: 'Su espacio de trabajo {{workspace}} está listo. Soy Friedrich, el fundador de KANAP. Director de sistemas de información de profesión, construí esta herramienta a partir de mis propias dificultades: archivos de Excel dispersos y una herramienta distinta para cada faceta del sistema de información.',
+      subject: `Le damos la bienvenida a su espacio de trabajo de ${PRODUCT_NAME}`,
+      ready: `Su espacio de trabajo {{workspace}} está listo. Soy Friedrich, el fundador de ${COMPANY_NAME}. Director de sistemas de información de profesión, construí esta herramienta a partir de mis propias dificultades: archivos de Excel dispersos y una herramienta distinta para cada faceta del sistema de información.`,
       angle: 'Eligió empezar por {{angle}}. Para probar por su cuenta, la lista «Sus cinco primeros pasos» de su página de inicio lleva diez minutos, y su guía detallada está aquí: {{guide}}. También puede probar los otros dos recorridos: {{other1}}, {{other2}}.',
       noAngle: 'Le propongo tres recorridos de diez minutos, para seguir por su cuenta según lo que le trae: {{budget}}, {{cartography}}, {{portfolio}}. Cada uno parte de la lista «Sus cinco primeros pasos» de su página de inicio.',
       call: 'Para hablarlo de viva voz, programe conmigo una llamada de descubrimiento de treinta minutos por videoconferencia, a la hora que le convenga. Veremos su situación y sus objetivos, y responderé a sus preguntas. Es gratuita y sin compromiso.',
@@ -270,7 +270,7 @@ export const es: EmailStrings = {
       },
       none: {
         subject: 'Cinco días de prueba: ¿cómo va?',
-        question: 'Cinco días de prueba es el momento adecuado para hacerse una pregunta: ¿responde KANAP a lo que le trajo aquí?',
+        question: `Cinco días de prueba es el momento adecuado para hacerse una pregunta: ¿responde ${PRODUCT_NAME} a lo que le trajo aquí?`,
         paths: 'Los tres recorridos de diez minutos de su página de inicio son la forma más rápida de saberlo: {{budget}}, {{cartography}}, {{portfolio}}.',
         call: 'Si prefiere hablarlo, programe una llamada de descubrimiento de treinta minutos, gratuita y sin compromiso: {{call}}.',
         available: 'Quedo a su disposición.',
@@ -283,25 +283,25 @@ export const es: EmailStrings = {
       hostedLabel: 'La versión alojada',
       hosted: '{{label}}: {{monthly}} al mes o {{annual}} al año, para activar en Administración › Facturación.',
       onPremiseLabel: 'La instalación en sus servidores',
-      onPremise: '{{label}}: KANAP es de código abierto y, por tanto, gratuito ({{install}}). Se ofrecen como opción soporte y acompañamiento en el arranque: {{offer}}.',
+      onPremise: `{{label}}: ${PRODUCT_NAME} es de código abierto y, por tanto, gratuito ({{install}}). Se ofrecen como opción soporte y acompañamiento en el arranque: {{offer}}.`,
       button: 'Activar la suscripción',
-      closing: 'Me encantaría contarle entre los usuarios de KANAP, y quedo a su disposición para cualquier pregunta.',
+      closing: `Me encantaría contarle entre los usuarios de ${PRODUCT_NAME}, y quedo a su disposición para cualquier pregunta.`,
     },
     ended: {
-      subject: 'Su prueba de KANAP ha terminado',
-      body: 'Su prueba ha terminado y su espacio de trabajo ha pasado a solo lectura. Se eliminará definitivamente el {{date}}, con todos sus datos. Hasta entonces, puede reactivar su espacio de trabajo ({{billing}}), exportar sus datos desde cada lista o instalar KANAP gratuitamente en sus servidores ({{install}}).',
-      question: 'Una última pregunta: ¿qué le faltó para continuar? No era el momento, una necesidad que KANAP no cubre, un detalle que le frenó: su respuesta, aunque sea en una línea, me ayuda mucho.',
-      thanks: 'Gracias por haber probado KANAP.',
+      subject: `Su prueba de ${PRODUCT_NAME} ha terminado`,
+      body: `Su prueba ha terminado y su espacio de trabajo ha pasado a solo lectura. Se eliminará definitivamente el {{date}}, con todos sus datos. Hasta entonces, puede reactivar su espacio de trabajo ({{billing}}), exportar sus datos desde cada lista o instalar ${PRODUCT_NAME} gratuitamente en sus servidores ({{install}}).`,
+      question: `Una última pregunta: ¿qué le faltó para continuar? No era el momento, una necesidad que ${PRODUCT_NAME} no cubre, un detalle que le frenó: su respuesta, aunque sea en una línea, me ayuda mucho.`,
+      thanks: `Gracias por haber probado ${PRODUCT_NAME}.`,
     },
     thanks: {
       subject: 'Gracias por su confianza',
       body: 'Su suscripción está registrada y su espacio de trabajo {{workspace}} está activado; todo lo que introdujo durante la prueba se conserva.',
       help: 'Gracias por su confianza. ¿Una pregunta, un problema o ganas de acelerar su puesta en marcha? Escriba a {{support}}: nuestro equipo le responde y puede acompañarle. Para todo lo demás, simplemente responda a este mensaje.',
-      button: 'Abrir KANAP',
+      button: `Abrir ${PRODUCT_NAME}`,
     },
     unsubscribe: {
       title: 'Mensajes de la prueba',
-      question: '¿Dejar de recibir los mensajes de la prueba de KANAP para el espacio de trabajo {{workspace}}?',
+      question: `¿Dejar de recibir los mensajes de la prueba de ${PRODUCT_NAME} para el espacio de trabajo {{workspace}}?`,
       confirm: 'Dejar de recibirlos',
       done: 'Hecho: ya no recibirá los mensajes de la prueba para el espacio de trabajo {{workspace}}.',
       invalid: 'Este enlace no es válido.',

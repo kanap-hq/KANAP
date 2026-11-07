@@ -1758,8 +1758,8 @@
       "reset": "Réinitialiser la personnalisation aux paramètres par défaut de KANAP ? Le logo et les couleurs personnalisées seront supprimés."
     },
     "fields": {
-      "organizationName": "Nom de l'organisation",
-      "organizationNameHelper": "Affiché avec le logo, dans À propos, sur la page de consentement et pour l'assistant. L'adresse de l'espace de travail reste la même.",
+      "organizationName": "Nom de l'espace de travail",
+      "organizationNameHelper": "Affiché dans l'en-tête quand il n'y a pas de logo, dans l'onglet du navigateur, dans les e-mails et quand un outil d'IA se connecte. L'adresse de l'espace de travail reste la même.",
       "organizationNamePlaceholder": "p. ex. Northwind",
       "useLightLogoInDark": "Utiliser le logo du mode clair"
     },

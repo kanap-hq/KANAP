@@ -1758,8 +1758,8 @@
       "reset": "Reset branding to default kanap settings? This removes logo and custom colors."
     },
     "fields": {
-      "organizationName": "Organization name",
-      "organizationNameHelper": "Shown with the logo, in About, on the consent page, and to the assistant. The workspace address stays as it is.",
+      "organizationName": "Workspace name",
+      "organizationNameHelper": "Shown in the header when there is no logo, in the browser tab, in e-mails, and when an AI tool connects. The workspace address stays as it is.",
       "organizationNamePlaceholder": "e.g., Northwind",
       "useLightLogoInDark": "Use the light mode logo"
     },

@@ -1,6 +1,6 @@
 # Branding
 
-Verwenden Sie die Branding-Seite, um Ihre Unternehmensidentität in KANAP anzuwenden. Sie legen hier den Namen der Organisation, das Logo und die Primärfarben fest, und die Änderung ist für jeden Benutzer auf Ihrem Mandanten beim nächsten Neuladen der Seite sichtbar.
+Verwenden Sie die Branding-Seite, um Ihre Unternehmensidentität in KANAP anzuwenden. Sie legen hier den Namen des Arbeitsbereichs, das Logo und die Primärfarben fest, und die Änderung ist für jeden Benutzer auf Ihrem Mandanten beim nächsten Neuladen der Seite sichtbar.
 
 ## Wo Sie es finden
 
@@ -13,10 +13,10 @@ Verwenden Sie die Branding-Seite, um Ihre Unternehmensidentität in KANAP anzuwe
 
 ## Was Sie anpassen können
 
-Die Seite hat drei Karten: **Name der Organisation**, **Logo** und **Primärfarben**. Logo und Farben sind optional. Ohne Logo zeigt die Kopfzeile den Namen der Organisation. Ohne eigene Farben verwendet KANAP die Standard-Themenfarben.
+Die Seite hat drei Karten: **Name des Arbeitsbereichs**, **Logo** und **Primärfarben**. Logo und Farben sind optional. Ohne Logo zeigt die Kopfzeile den Namen des Arbeitsbereichs. Ohne eigene Farben verwendet KANAP die Standard-Themenfarben.
 
-- **Name der Organisation**
-  - Kennzeichnet Ihren Arbeitsbereich in ganz KANAP, auch im Fenster Info und für den Assistenten (siehe [Wo der Name der Organisation erscheint](#wo-der-name-der-organisation-erscheint))
+- **Name des Arbeitsbereichs**
+  - Kennzeichnet Ihren Arbeitsbereich in der Kopfzeile, im Browser-Tab, in E-Mails und in KI-Werkzeugen (siehe [Wo der Name des Arbeitsbereichs erscheint](#wo-der-name-des-arbeitsbereichs-erscheint))
   - 1 bis 120 Zeichen
   - Die Adresse des Arbeitsbereichs bleibt unverändert
 - **Logo**
@@ -28,24 +28,22 @@ Die Seite hat drei Karten: **Name der Organisation**, **Logo** und **Primärfarb
   - Eine Primärfarbe für den **Dark-Modus**
   - Wird von der App-Leiste, primären Schaltflächen und Links verwendet
 
-## Name der Organisation
+## Name des Arbeitsbereichs
 
 1. Geben Sie den Namen ein.
 2. Klicken Sie auf **Änderungen speichern**.
 
 **Auf Standard zurücksetzen** lässt den Namen unverändert. Die Aktion entfernt die Logos und die benutzerdefinierten Farben.
 
-## Wo der Name der Organisation erscheint
+## Wo der Name des Arbeitsbereichs erscheint
 
-- **Obere App-Leiste**: Ohne Logo erscheint der Name. Mit Logo dient der Name als Alternativtext des Logos.
-- **Anmeldeseite**: Ohne Logo zeigt die Kopfzeile das KANAP-Symbol neben dem Namen.
+- **Kopfzeile der App und Anmeldeseite**: Ohne Logo erscheint der Name.
 - **Browser-Tab**: Der Titel des Tabs ist der Name. Eine Projekt-, Anfrage-, Aufgaben- oder Budgetzeilenseite zeigt zuerst den Datensatz, zum Beispiel `PRJ-3 Neues ERP | Acme`.
-- **Installierte App**: Wenn jemand KANAP zum Startbildschirm eines Telefons hinzufügt oder es im Browser als App installiert, trägt die App den Namen.
-- **E-Mails**: Die Kopfzeile zeigt das Logo oder, ohne Logo, den Namen. Die Betreffzeilen der E-Mails zum Zurücksetzen des Passworts, zur Einladung, zum wöchentlichen Rückblick und zum Zurücksetzen des Arbeitsbereichs nennen die Organisation, zum Beispiel „Setzen Sie Ihr Passwort für Acme zurück“. Die Schaltfläche des wöchentlichen Rückblicks lautet „Acme öffnen“. Die Fußzeile lautet „Bereitgestellt von KANAP“.
-- **E-Mail-Absender** (Cloud): Der Absendername lautet „Acme via KANAP“. Die Absenderadresse bleibt gleich. On-Premise ist der Absender der in der Installation festgelegte (`SMTP_FROM`).
-- **KI-Anwendungen**: Wenn Sie eine KI-Anwendung mit dem Arbeitsbereich verbinden, nennt die Einwilligungsseite die Organisation als den Ort, dessen Daten die Anwendung lesen möchte, und die Verbindung trägt den Namen.
+- **Installierte App**: Wenn jemand KANAP auf einem Telefon oder einem Computer installiert, trägt die App den Namen.
+- **E-Mails**: Ohne Logo zeigt die Kopfzeile den Namen. Die Betreffzeilen der E-Mails zum Zurücksetzen des Passworts, zur Einladung, zum wöchentlichen Rückblick und zum Zurücksetzen des Arbeitsbereichs tragen den Namen, zum Beispiel „Setzen Sie Ihr Passwort für Acme zurück“. Die Schaltfläche des wöchentlichen Rückblicks lautet „Acme öffnen“. In der Cloud lautet der Absendername „Acme via KANAP“. On-Premise ist der Absender der in der Installation festgelegte (`SMTP_FROM`).
+- **KI-Werkzeuge**: Wenn sich ein KI-Werkzeug (Claude, ChatGPT und andere) über den MCP-Server verbindet, zeigt die Autorisierungsseite den Namen, und das Werkzeug zeigt ihn als Servernamen.
 
-Ohne Namen oder mit dem On-Premise-Standardnamen „My Organization“ zeigen diese Stellen „KANAP“. Die Adresse des Arbeitsbereichs ändert sich nicht.
+Ohne Namen oder mit dem On-Premise-Standardnamen „My Organization“ zeigen diese Stellen „KANAP“.
 
 ## Logo-Einrichtung
 
@@ -66,12 +64,12 @@ Die Karte zeigt eine helle und eine dunkle Kopfzeilenvorschau, jede mit eigenen 
 
 1. Klicken Sie unter der hellen Vorschau auf **Logo hochladen** und wählen Sie Ihre Datei aus.
 2. Wenn Ihr Logo auf dunklem Hintergrund schlecht lesbar ist (zum Beispiel dunkler Text), laden Sie unter der dunklen Vorschau eine zweite Version hoch.
-3. Ohne Logo für den Dunkelmodus bestimmt **Logo des Hellmodus verwenden**, was der Dunkelmodus zeigt: das Logo des Hellmodus, wenn es aktiviert ist, den Namen der Organisation als Text, wenn es deaktiviert ist.
+3. Ohne Logo für den Dunkelmodus bestimmt **Logo des Hellmodus verwenden**, was der Dunkelmodus zeigt: das Logo des Hellmodus, wenn es aktiviert ist, den Namen des Arbeitsbereichs als Text, wenn es deaktiviert ist.
 4. Prüfen Sie beide Vorschauen und klicken Sie dann auf **Änderungen speichern**, um zu veröffentlichen.
 
 Um ein Logo zu entfernen, klicken Sie unter seiner Vorschau auf **Logo entfernen**. Das andere Logo bleibt.
 
-Der Dunkelmodus zeigt das Logo für den Dunkelmodus, wenn es eines gibt. Der Hellmodus zeigt immer das Logo des Hellmodus oder, wenn keines vorhanden ist, den Namen der Organisation als Text. E-Mails verwenden immer das Logo des Hellmodus, da ihr Hintergrund hell ist.
+Der Dunkelmodus zeigt das Logo für den Dunkelmodus, wenn es eines gibt. Der Hellmodus zeigt immer das Logo des Hellmodus oder, wenn keines vorhanden ist, den Namen des Arbeitsbereichs als Text. E-Mails verwenden immer das Logo des Hellmodus, da ihr Hintergrund hell ist.
 
 ## Einrichtung der Primärfarbe
 
@@ -99,9 +97,9 @@ Die Warnung ist informativ (Sie können trotzdem speichern), aber niedriger Kont
 
 Drei Aktionen am unteren Rand der Seite steuern die Persistenz:
 
-- **Änderungen speichern**: Speichert den Namen der Organisation, die ausgewählten Logos und die Farbwerte. Deaktiviert, wenn keine ausstehenden Änderungen vorliegen, der Name leer ist oder länger als 120 Zeichen ist, oder eine Hex-Eingabe ungültig ist.
+- **Änderungen speichern**: Speichert den Namen des Arbeitsbereichs, die ausgewählten Logos und die Farbwerte. Deaktiviert, wenn keine ausstehenden Änderungen vorliegen, der Name leer ist oder länger als 120 Zeichen ist, oder eine Hex-Eingabe ungültig ist.
 - **Verwerfen**: Setzt nicht gespeicherte Bearbeitungen auf der Seite zurück (betrifft nicht das, was bereits gespeichert ist).
-- **Auf Standard zurücksetzen**: Entfernt beide gespeicherten Logos und löscht alle benutzerdefinierten Farben. Der Name der Organisation bleibt. Fragt vor der Ausführung um Bestätigung.
+- **Auf Standard zurücksetzen**: Entfernt beide gespeicherten Logos und löscht alle benutzerdefinierten Farben. Der Name des Arbeitsbereichs bleibt. Fragt vor der Ausführung um Bestätigung.
 
 Eine kleine Beschriftung unter den Aktionen zeigt den Zähler **Logo-Version** an, der bei jedem Hochladen oder Entfernen eines Logos erhöht wird. Dies ist hauptsächlich ein Hinweis darauf, dass Browser-Caches aktualisiert werden.
 

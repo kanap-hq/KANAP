@@ -1,6 +1,6 @@
 # Branding
 
-Use the Branding page to apply your company identity across KANAP. You set the organization name, the logo and the primary colors here, and the change is visible to every user on your tenant the next time they reload the page.
+Use the Branding page to apply your company identity across KANAP. You set the workspace name, the logo and the primary colors here, and the change is visible to every user on your tenant the next time they reload the page.
 
 ## Where to find it
 
@@ -13,10 +13,10 @@ Changes apply to your current tenant only.
 
 ## What you can customize
 
-The page has three cards: **Organization name**, **Logo** and **Primary colors**. The logo and the colors are optional. Without a logo, the header shows the organization name. Without custom colors, KANAP uses its default theme colors.
+The page has three cards: **Workspace name**, **Logo** and **Primary colors**. The logo and the colors are optional. Without a logo, the header shows the workspace name. Without custom colors, KANAP uses its default theme colors.
 
-- **Organization name**
-  - Identifies your workspace across KANAP, including the About window and the assistant (see [Where the organization name appears](#where-the-organization-name-appears))
+- **Workspace name**
+  - Identifies your workspace in the header, the browser tab, e-mails and AI tools (see [Where the workspace name appears](#where-the-workspace-name-appears))
   - From 1 to 120 characters
   - The workspace address stays as it is
 - **Logo**
@@ -28,24 +28,22 @@ The page has three cards: **Organization name**, **Logo** and **Primary colors**
   - One primary color for **dark mode**
   - Used by the app bar, primary buttons, and links
 
-## Organization name
+## Workspace name
 
 1. Type the name.
 2. Click **Save Changes**.
 
 **Reset to Default** leaves the name as it is. It removes the logos and the custom colors only.
 
-## Where the organization name appears
+## Where the workspace name appears
 
-- **Top app bar**: the name shows when there is no logo. With a logo, the name is the logo's alternative text.
-- **Sign-in page**: without a logo, the header shows the KANAP icon next to the name.
+- **App header and sign-in page**: the name shows when there is no logo.
 - **Browser tab**: the tab title is the name. A project, request, task or budget line page shows the record first, for example `PRJ-3 New ERP | Acme`.
-- **Installed app**: when someone adds KANAP to a phone's home screen or installs it as an app from the browser, the app takes the name.
-- **E-mails**: the header shows the logo, or the name when there is no logo. The subjects of the password reset, invitation, weekly review and workspace reset e-mails name the organization, for example "Reset your Acme password". The weekly review button reads "Open Acme". The footer says "Powered by KANAP".
-- **E-mail sender** (cloud): the sender name reads "Acme via KANAP". The sending address stays the same. On-premise, the sender is the one set in the installation (`SMTP_FROM`).
-- **AI applications**: when you connect an AI application to the workspace, the consent page says it wants to read your data in the organization, and the connection carries the name.
+- **Installed app**: when someone installs KANAP on a phone or a desktop, the app takes the name.
+- **E-mails**: the header shows the name when there is no logo. The subjects of the password reset, invitation, weekly review and workspace reset e-mails carry the name, for example "Reset your Acme password". The weekly review button reads "Open Acme". In the cloud, the sender name reads "Acme via KANAP". On-premise, the sender is the one set in the installation (`SMTP_FROM`).
+- **AI tools**: when an AI tool (Claude, ChatGPT and others) connects through the MCP server, the authorization page shows the name, and the tool shows it as the server name.
 
-With no name set, or with the on-premise default name "My Organization", these places show "KANAP". The workspace address does not change.
+With no name set, or with the on-premise default name "My Organization", these places show "KANAP".
 
 ## Logo setup
 
@@ -66,12 +64,12 @@ The card shows a light header preview and a dark header preview, each with its o
 
 1. Under the light preview, click **Upload Logo** and choose your file.
 2. If your logo does not read well on a dark background (dark text, for example), upload a second version under the dark preview.
-3. Without a dark mode logo, **Use the light mode logo** decides what dark mode shows: the light mode logo when it is on, the organization name as text when it is off.
+3. Without a dark mode logo, **Use the light mode logo** decides what dark mode shows: the light mode logo when it is on, the workspace name as text when it is off.
 4. Check both previews, then click **Save Changes** to publish.
 
 To remove a logo, click **Remove Logo** under its preview. The other logo stays.
 
-Dark mode shows the dark mode logo when there is one. Light mode always shows the light mode logo, or the organization name as text when there is none. E-mails always use the light mode logo, since their background is light.
+Dark mode shows the dark mode logo when there is one. Light mode always shows the light mode logo, or the workspace name as text when there is none. E-mails always use the light mode logo, since their background is light.
 
 ## Primary color setup
 
@@ -99,9 +97,9 @@ The warning is informational (you can still save), but low contrast usually mean
 
 Three actions at the bottom of the page control persistence:
 
-- **Save Changes**: commits the organization name, the selected logos and the color values. Disabled while there are no pending changes, while the name is empty or longer than 120 characters, or while a hex input is invalid.
+- **Save Changes**: commits the workspace name, the selected logos and the color values. Disabled while there are no pending changes, while the name is empty or longer than 120 characters, or while a hex input is invalid.
 - **Discard**: rolls back any unsaved edits on the page (does not affect what is already saved).
-- **Reset to Default**: removes both saved logos and clears all custom colors. The organization name stays. Asks for confirmation before running.
+- **Reset to Default**: removes both saved logos and clears all custom colors. The workspace name stays. Asks for confirmation before running.
 
 A small caption below the actions shows the **logo version** counter, which increments each time a logo is uploaded or removed. This is mainly a hint that browser caches will refresh.
 

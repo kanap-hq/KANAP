@@ -1,4 +1,4 @@
-import { PRODUCT_NAME } from '../../config/product';
+import { COMPANY_NAME, PRODUCT_NAME } from '../../config/product';
 import type { EmailStrings } from './en';
 
 export const de: EmailStrings = {
@@ -192,11 +192,11 @@ export const de: EmailStrings = {
       cta: 'Benutzerverwaltung öffnen',
     },
     activation: {
-      subject: 'Bestätigen Sie Ihren KANAP-Arbeitsbereich',
-      intro: "Vielen Dank für Ihr Interesse an KANAP. Bestätigen Sie Ihre E-Mail-Adresse, um Ihren Arbeitsbereich zu erstellen: Der Link unten ist 48 Stunden gültig. Während der Erstellung bereiten wir ein vollständiges Beispielunternehmen vor; beim ersten Öffnen wählen Sie, ob Sie es erkunden oder mit Ihren eigenen Daten beginnen.",
+      subject: `Bestätigen Sie Ihren ${PRODUCT_NAME}-Arbeitsbereich`,
+      intro: `Vielen Dank für Ihr Interesse an ${PRODUCT_NAME}. Bestätigen Sie Ihre E-Mail-Adresse, um Ihren Arbeitsbereich zu erstellen: Der Link unten ist 48 Stunden gültig. Während der Erstellung bereiten wir ein vollständiges Beispielunternehmen vor; beim ersten Öffnen wählen Sie, ob Sie es erkunden oder mit Ihren eigenen Daten beginnen.`,
       copyPaste: 'Wenn die Schaltfläche oben nicht funktioniert, kopieren Sie diesen Link in Ihren Browser:',
       expires: "Wenn Sie diese Testversion nicht angefordert haben, können Sie diese Nachricht ignorieren.",
-      textIntro: "Vielen Dank für Ihr Interesse an KANAP. Bestätigen Sie Ihre E-Mail-Adresse, um Ihren Arbeitsbereich zu erstellen: Der Link unten ist 48 Stunden gültig. Während der Erstellung bereiten wir ein vollständiges Beispielunternehmen vor; beim ersten Öffnen wählen Sie, ob Sie es erkunden oder mit Ihren eigenen Daten beginnen.",
+      textIntro: `Vielen Dank für Ihr Interesse an ${PRODUCT_NAME}. Bestätigen Sie Ihre E-Mail-Adresse, um Ihren Arbeitsbereich zu erstellen: Der Link unten ist 48 Stunden gültig. Während der Erstellung bereiten wir ein vollständiges Beispielunternehmen vor; beim ersten Öffnen wählen Sie, ob Sie es erkunden oder mit Ihren eigenen Daten beginnen.`,
       textAction: 'Arbeitsbereich aktivieren: {{url}}',
     },
     passwordReset: {
@@ -239,19 +239,19 @@ export const de: EmailStrings = {
       portfolio: 'die Projekte und Anfragen',
     },
     guideTitles: {
-      budget: 'Ihr IT-Budget in KANAP in zehn Minuten',
-      cartography: 'Ihr Informationssystem in KANAP in zehn Minuten',
-      portfolio: 'Ihr Portfolio in KANAP in zehn Minuten',
+      budget: `Ihr IT-Budget in ${PRODUCT_NAME} in zehn Minuten`,
+      cartography: `Ihr Informationssystem in ${PRODUCT_NAME} in zehn Minuten`,
+      portfolio: `Ihr Portfolio in ${PRODUCT_NAME} in zehn Minuten`,
     },
     billingPath: 'Administration › Abrechnung',
     footer: {
-      reason: 'Sie erhalten diese Nachricht, weil Sie KANAP testen.',
+      reason: `Sie erhalten diese Nachricht, weil Sie ${PRODUCT_NAME} testen.`,
       unsubscribe: 'Diese Nachrichten nicht mehr erhalten',
       unsubscribeText: 'Diese Nachrichten nicht mehr erhalten: {{url}}',
     },
     j0: {
-      subject: 'Willkommen in Ihrem KANAP-Arbeitsbereich',
-      ready: 'Ihr Arbeitsbereich {{workspace}} ist bereit. Ich bin Friedrich, der Gründer von KANAP. Als IT-Leiter von Beruf habe ich dieses Werkzeug aus meinen eigenen Schwierigkeiten heraus gebaut: verstreute Excel-Dateien und ein anderes Werkzeug für jede Facette des Informationssystems.',
+      subject: `Willkommen in Ihrem ${PRODUCT_NAME}-Arbeitsbereich`,
+      ready: `Ihr Arbeitsbereich {{workspace}} ist bereit. Ich bin Friedrich, der Gründer von ${COMPANY_NAME}. Als IT-Leiter von Beruf habe ich dieses Werkzeug aus meinen eigenen Schwierigkeiten heraus gebaut: verstreute Excel-Dateien und ein anderes Werkzeug für jede Facette des Informationssystems.`,
       angle: 'Sie haben sich entschieden, mit {{angle}} zu beginnen. Zum selbstständigen Testen dauert die Liste „Ihre ersten fünf Schritte“ auf Ihrer Startseite zehn Minuten, und die ausführliche Anleitung dazu finden Sie hier: {{guide}}. Sie können auch die beiden anderen Pfade ausprobieren: {{other1}}, {{other2}}.',
       noAngle: 'Ich schlage Ihnen drei Pfade von je zehn Minuten vor, die Sie selbstständig verfolgen können, je nachdem, was Sie zu uns führt: {{budget}}, {{cartography}}, {{portfolio}}. Jeder beginnt mit der Liste „Ihre ersten fünf Schritte“ auf Ihrer Startseite.',
       call: 'Um persönlich darüber zu sprechen, vereinbaren Sie ein dreißigminütiges Kennenlerngespräch per Videokonferenz mit mir, zu einer Zeit, die Ihnen passt. Wir sehen uns Ihre Situation und Ihre Ziele an, und ich beantworte Ihre Fragen. Es ist kostenlos und unverbindlich.',
@@ -270,7 +270,7 @@ export const de: EmailStrings = {
       },
       none: {
         subject: 'Fünf Tage Testphase: Wo stehen Sie?',
-        question: 'Nach fünf Tagen Testphase ist der richtige Moment für eine Frage: Beantwortet KANAP das, was Sie zu uns geführt hat?',
+        question: `Nach fünf Tagen Testphase ist der richtige Moment für eine Frage: Beantwortet ${PRODUCT_NAME} das, was Sie zu uns geführt hat?`,
         paths: 'Die drei zehnminütigen Pfade auf Ihrer Startseite sind der kürzeste Weg, das herauszufinden: {{budget}}, {{cartography}}, {{portfolio}}.',
         call: 'Wenn Sie lieber darüber sprechen möchten, vereinbaren Sie ein dreißigminütiges Kennenlerngespräch, kostenlos und unverbindlich: {{call}}.',
         available: 'Ich stehe Ihnen gerne zur Verfügung.',
@@ -283,25 +283,25 @@ export const de: EmailStrings = {
       hostedLabel: 'Die gehostete Version',
       hosted: '{{label}}: {{monthly}} pro Monat oder {{annual}} pro Jahr, zu aktivieren unter Administration › Abrechnung.',
       onPremiseLabel: 'Die Installation bei Ihnen',
-      onPremise: '{{label}}: KANAP ist Open Source und daher kostenlos ({{install}}). Support und Begleitung beim Start sind als Option erhältlich: {{offer}}.',
+      onPremise: `{{label}}: ${PRODUCT_NAME} ist Open Source und daher kostenlos ({{install}}). Support und Begleitung beim Start sind als Option erhältlich: {{offer}}.`,
       button: 'Abonnement aktivieren',
-      closing: 'Ich würde mich freuen, Sie zu den Nutzern von KANAP zählen zu dürfen, und stehe Ihnen für alle Fragen gerne zur Verfügung.',
+      closing: `Ich würde mich freuen, Sie zu den Nutzern von ${PRODUCT_NAME} zählen zu dürfen, und stehe Ihnen für alle Fragen gerne zur Verfügung.`,
     },
     ended: {
-      subject: 'Ihre KANAP-Testphase ist abgelaufen',
-      body: 'Ihre Testphase ist abgelaufen, und Ihr Arbeitsbereich ist jetzt nur noch lesbar. Er wird am {{date}} mit allen seinen Daten endgültig gelöscht. Bis dahin können Sie Ihren Arbeitsbereich reaktivieren ({{billing}}), Ihre Daten aus jeder Liste exportieren oder KANAP kostenlos bei sich installieren ({{install}}).',
-      question: 'Eine letzte Frage: Was hat Ihnen gefehlt, um weiterzumachen? Nicht der richtige Zeitpunkt, ein Bedarf, den KANAP nicht abdeckt, ein Detail, das Sie aufgehalten hat: Ihre Antwort, auch in einer Zeile, hilft mir sehr.',
-      thanks: 'Vielen Dank, dass Sie KANAP ausprobiert haben.',
+      subject: `Ihre ${PRODUCT_NAME}-Testphase ist abgelaufen`,
+      body: `Ihre Testphase ist abgelaufen, und Ihr Arbeitsbereich ist jetzt nur noch lesbar. Er wird am {{date}} mit allen seinen Daten endgültig gelöscht. Bis dahin können Sie Ihren Arbeitsbereich reaktivieren ({{billing}}), Ihre Daten aus jeder Liste exportieren oder ${PRODUCT_NAME} kostenlos bei sich installieren ({{install}}).`,
+      question: `Eine letzte Frage: Was hat Ihnen gefehlt, um weiterzumachen? Nicht der richtige Zeitpunkt, ein Bedarf, den ${PRODUCT_NAME} nicht abdeckt, ein Detail, das Sie aufgehalten hat: Ihre Antwort, auch in einer Zeile, hilft mir sehr.`,
+      thanks: `Vielen Dank, dass Sie ${PRODUCT_NAME} ausprobiert haben.`,
     },
     thanks: {
       subject: 'Vielen Dank für Ihr Vertrauen',
       body: 'Ihr Abonnement ist erfasst und Ihr Arbeitsbereich {{workspace}} ist aktiviert; alles, was Sie während der Testphase erfasst haben, bleibt erhalten.',
       help: 'Vielen Dank für Ihr Vertrauen. Eine Frage, ein Problem oder der Wunsch, Ihren Start zu beschleunigen? Schreiben Sie an {{support}}: Unser Team antwortet Ihnen und kann Sie begleiten. Für alles andere antworten Sie einfach auf diese Nachricht.',
-      button: 'KANAP öffnen',
+      button: `${PRODUCT_NAME} öffnen`,
     },
     unsubscribe: {
       title: 'Nachrichten der Testphase',
-      question: 'Die Nachrichten der KANAP-Testphase für den Arbeitsbereich {{workspace}} nicht mehr erhalten?',
+      question: `Die Nachrichten der ${PRODUCT_NAME}-Testphase für den Arbeitsbereich {{workspace}} nicht mehr erhalten?`,
       confirm: 'Nachrichten abbestellen',
       done: 'Erledigt: Sie erhalten keine Nachrichten der Testphase für den Arbeitsbereich {{workspace}} mehr.',
       invalid: 'Dieser Link ist ungültig.',

@@ -95,7 +95,7 @@
     }
   },
   "about": {
-    "title": "Über KANAP",
+    "title": "Über {{product}}",
     "version": "Version {{version}}",
     "deploymentCloud": "Bereitstellung: Cloud",
     "deploymentOnPremise": "Bereitstellung: On-Premise",

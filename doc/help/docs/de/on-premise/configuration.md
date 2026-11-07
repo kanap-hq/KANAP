@@ -25,7 +25,7 @@ Schreiben Sie `single-tenant` oder `multi-tenant`. Lassen Sie die Variable unges
 | Variable              | Erforderlich | Standard          | Beschreibung                                                    |
 | --------------------- | -------- | ----------------- | --------------------------------------------------------------- |
 | `DEFAULT_TENANT_SLUG` | Nein     | `default`         | Interne Kennung des Mandanten (URL-tauglich, Kleinbuchstaben)   |
-| `DEFAULT_TENANT_NAME` | Nein     | `My Organization` | Der Name Ihrer Organisation: der Alternativtext des Logos und der Name, den der KI-Assistent verwendet |
+| `DEFAULT_TENANT_NAME` | Nein     | `My Organization` | Der anfängliche Name des Arbeitsbereichs, angezeigt in der Kopfzeile, im Browser-Tab und in E-Mails ([wo er erscheint](../branding.md#wo-der-name-des-arbeitsbereichs-erscheint)) |
 | `DEFAULT_TENANT_LANGUAGE` | Nein | `en` | Die Sprache der Analysedimensionen, mit denen der Arbeitsbereich startet: `en`, `fr`, `de` oder `es` |
 
 Beim ersten Start legt KANAP mit diesen Werten einen Mandanten an. Die Standardwerte passen für die meisten Bereitstellungen. Eine neue Installation erhält außerdem den Standard-IFRS-Kontenplan, eingerichtet als Standard- und Konsolidierungskontenplan (ein Upgrade einer bestehenden Installation fügt ihn nicht hinzu).
@@ -33,7 +33,7 @@ Beim ersten Start legt KANAP mit diesen Werten einen Mandanten an. Die Standardw
 Setzen Sie diese Werte vor dem ersten Start:
 
 - Eine spätere Änderung von `DEFAULT_TENANT_SLUG` lässt KANAP einen zweiten, leeren Arbeitsbereich anlegen und diesen bereitstellen. Der erste Arbeitsbereich bleibt unerreichbar in der Datenbank.
-- Eine spätere Änderung von `DEFAULT_TENANT_NAME` hat keine Wirkung. Ein Administrator benennt die Organisation unter **Administration → Branding** um. Die Adresse des Arbeitsbereichs bleibt unverändert.
+- Eine spätere Änderung von `DEFAULT_TENANT_NAME` hat keine Wirkung. Ein Administrator ändert den Namen des Arbeitsbereichs unter **Administration → Branding**. Die Adresse des Arbeitsbereichs bleibt unverändert.
 - Eine spätere Änderung von `DEFAULT_TENANT_LANGUAGE` hat keine Wirkung: Die Dimensionen behalten ihre Namen. Sie können sie unter **Stammdaten > Analysedimensionen** umbenennen.
 
 Um KANAP das Erscheinungsbild Ihrer Organisation zu geben, legen Sie unter **Administration → Branding** den Namen, das Logo und die Farben fest.

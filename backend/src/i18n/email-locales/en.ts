@@ -1,4 +1,4 @@
-import { PRODUCT_NAME } from '../../config/product';
+import { COMPANY_NAME, PRODUCT_NAME } from '../../config/product';
 
 export const en = {
   common: {
@@ -191,11 +191,11 @@ export const en = {
       cta: 'Open user management',
     },
     activation: {
-      subject: 'Confirm your KANAP workspace',
-      intro: "Thanks for your interest in KANAP. Confirm your email address to create your workspace: the link below is valid for 48 hours. While your workspace is being created, we prepare a complete sample company; when you first open it, you will choose to explore it or start with your own data.",
+      subject: `Confirm your ${PRODUCT_NAME} workspace`,
+      intro: `Thanks for your interest in ${PRODUCT_NAME}. Confirm your email address to create your workspace: the link below is valid for 48 hours. While your workspace is being created, we prepare a complete sample company; when you first open it, you will choose to explore it or start with your own data.`,
       copyPaste: 'If the button above does not work, copy and paste this link into your browser:',
       expires: "If you did not request this trial, you can ignore this message.",
-      textIntro: "Thanks for your interest in KANAP. Confirm your email address to create your workspace: the link below is valid for 48 hours. While your workspace is being created, we prepare a complete sample company; when you first open it, you will choose to explore it or start with your own data.",
+      textIntro: `Thanks for your interest in ${PRODUCT_NAME}. Confirm your email address to create your workspace: the link below is valid for 48 hours. While your workspace is being created, we prepare a complete sample company; when you first open it, you will choose to explore it or start with your own data.`,
       textAction: 'Activate your workspace: {{url}}',
     },
     passwordReset: {
@@ -240,19 +240,19 @@ export const en = {
       portfolio: 'projects and requests',
     },
     guideTitles: {
-      budget: 'Your IT budget in KANAP in ten minutes',
-      cartography: 'Your information system in KANAP in ten minutes',
-      portfolio: 'Your portfolio in KANAP in ten minutes',
+      budget: `Your IT budget in ${PRODUCT_NAME} in ten minutes`,
+      cartography: `Your information system in ${PRODUCT_NAME} in ten minutes`,
+      portfolio: `Your portfolio in ${PRODUCT_NAME} in ten minutes`,
     },
     billingPath: 'Administration › Billing',
     footer: {
-      reason: 'You are receiving this message because you are trying KANAP.',
+      reason: `You are receiving this message because you are trying ${PRODUCT_NAME}.`,
       unsubscribe: 'Stop receiving these messages',
       unsubscribeText: 'Stop receiving these messages: {{url}}',
     },
     j0: {
-      subject: 'Welcome to your KANAP workspace',
-      ready: "Your workspace {{workspace}} is ready. I'm Friedrich, the founder of KANAP. A CIO by trade, I built this tool out of my own struggles: Excel files scattered everywhere and a different tool for every facet of the information system.",
+      subject: `Welcome to your ${PRODUCT_NAME} workspace`,
+      ready: `Your workspace {{workspace}} is ready. I'm Friedrich, the founder of ${COMPANY_NAME}. A CIO by trade, I built this tool out of my own struggles: Excel files scattered everywhere and a different tool for every facet of the information system.`,
       angle: 'You chose to start with {{angle}}. To explore on your own, the "Your first five steps" list on your home page takes ten minutes, and its detailed guide is here: {{guide}}. You can also try the other two paths: {{other1}}, {{other2}}.',
       noAngle: 'I suggest three ten-minute paths to follow on your own, depending on what brings you here: {{budget}}, {{cartography}}, {{portfolio}}. Each one starts from the "Your first five steps" list on your home page.',
       call: 'To talk it over, book a thirty-minute discovery call with me by video, at a time that suits you. We will look at your situation and your goals, and I will answer your questions. It is free and with no commitment.',
@@ -271,7 +271,7 @@ export const en = {
       },
       none: {
         subject: 'Five days into your trial: where do you stand?',
-        question: 'Five days into your trial is the right time to ask yourself a question: does KANAP answer what brought you here?',
+        question: `Five days into your trial is the right time to ask yourself a question: does ${PRODUCT_NAME} answer what brought you here?`,
         paths: 'The three ten-minute paths on your home page are the quickest way to find out: {{budget}}, {{cartography}}, {{portfolio}}.',
         call: 'If you would rather talk it over, book a thirty-minute discovery call, free and with no commitment: {{call}}.',
         available: 'I remain at your disposal.',
@@ -284,25 +284,25 @@ export const en = {
       hostedLabel: 'The hosted version',
       hosted: '{{label}}: {{monthly}} per month or {{annual}} per year, to activate in Administration › Billing.',
       onPremiseLabel: 'Installing it yourself',
-      onPremise: '{{label}}: KANAP is open source, so it is free ({{install}}). Support and help getting started are offered as options: {{offer}}.',
+      onPremise: `{{label}}: ${PRODUCT_NAME} is open source, so it is free ({{install}}). Support and help getting started are offered as options: {{offer}}.`,
       button: 'Activate the subscription',
-      closing: 'I would be delighted to count you among the users of KANAP, and I remain at your disposal for any question.',
+      closing: `I would be delighted to count you among the users of ${PRODUCT_NAME}, and I remain at your disposal for any question.`,
     },
     ended: {
-      subject: 'Your KANAP trial has ended',
-      body: 'Your trial has ended and your workspace is now read-only. It will be permanently deleted on {{date}}, with all its data. Until then, you can reactivate your workspace ({{billing}}), export your data from each list, or install KANAP yourself for free ({{install}}).',
-      question: 'One last question: what was missing for you to continue? Not the right time, a need KANAP does not cover, a detail that stopped you: your answer, even in one line, helps me a lot.',
-      thanks: 'Thank you for trying KANAP.',
+      subject: `Your ${PRODUCT_NAME} trial has ended`,
+      body: `Your trial has ended and your workspace is now read-only. It will be permanently deleted on {{date}}, with all its data. Until then, you can reactivate your workspace ({{billing}}), export your data from each list, or install ${PRODUCT_NAME} yourself for free ({{install}}).`,
+      question: `One last question: what was missing for you to continue? Not the right time, a need ${PRODUCT_NAME} does not cover, a detail that stopped you: your answer, even in one line, helps me a lot.`,
+      thanks: `Thank you for trying ${PRODUCT_NAME}.`,
     },
     thanks: {
       subject: 'Thank you for your trust',
       body: 'Your subscription is recorded and your workspace {{workspace}} is active; everything you entered during the trial is kept.',
       help: 'Thank you for your trust. A question, a problem, or the wish to speed up your start? Write to {{support}}: our team will answer you and can support you. For anything else, simply reply to this message.',
-      button: 'Open KANAP',
+      button: `Open ${PRODUCT_NAME}`,
     },
     unsubscribe: {
       title: 'Trial messages',
-      question: 'Stop receiving the KANAP trial messages for the workspace {{workspace}}?',
+      question: `Stop receiving the ${PRODUCT_NAME} trial messages for the workspace {{workspace}}?`,
       confirm: 'Stop the messages',
       done: 'Done: you will no longer receive the trial messages for the workspace {{workspace}}.',
       invalid: 'This link is not valid.',
