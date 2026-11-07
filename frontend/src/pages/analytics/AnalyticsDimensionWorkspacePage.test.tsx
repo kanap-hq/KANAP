@@ -211,7 +211,7 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     mocked.getAnalyticsAxis.mockResolvedValue({ ...DEFAULT, name: 'Catégorie analytique' });
     renderAt('/master-data/analytics/dimensions/ax-default/overview');
     const name = await screen.findByLabelText('analytics.fields.name');
-    expect(screen.getByText('analytics.hints.codeDefault:default')).toBeInTheDocument();
+    expect(screen.getByLabelText('analytics.hints.codeDefault:default')).toBeInTheDocument();
     fireEvent.change(name, { target: { value: '' } });
     fireEvent.blur(name);
     await waitFor(() => expect(mocked.updateAnalyticsAxis).toHaveBeenCalledWith('ax-default', { name: null }));
@@ -223,8 +223,7 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Analytics dimension');
     const drawer = screen.getByRole('complementary');
     expect(within(drawer).getByRole('checkbox', { name: 'statuses.enabled' })).toBeDisabled();
-    expect(within(drawer).getByTestId('analytics-dimension-locked')).toHaveTextContent('analytics.hints.defaultLocked');
-    expect(screen.getAllByText('analytics.hints.defaultLocked')).toHaveLength(1);
+    expect(within(drawer).getAllByLabelText('analytics.hints.defaultLocked')).toHaveLength(1);
     // 27 OPEX lines and no CAPEX line: one link, on the default dimension's list column.
     const usage = screen.getByTestId('analytics-dimension-usage');
     expect(usage).toHaveTextContent('analytics.usage.values:15 · analytics.usage.dimensionLines:27');
@@ -250,7 +249,7 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     fireEvent.focus(code);
     fireEvent.change(code, { target: { value: 'kind-of' } });
     finishCode({ ...NATURE, code: 'kind' });
-    await waitFor(() => expect(screen.getByText('analytics.hints.code:kind')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByLabelText('analytics.hints.code:kind')).toBeInTheDocument());
     expect(code).toHaveValue('kind-of');
 
     const description = screen.getByLabelText('analytics.fields.description');
@@ -281,7 +280,7 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     await waitFor(() => expect(mocked.deleteAnalyticsAxis).toHaveBeenCalledWith('ax-nature'));
     // The dialog waits for the answer; the page moves on behind it (as prev / next would).
     fireEvent.click(screen.getByRole('link', { name: 'go to the default', hidden: true }));
-    await waitFor(() => expect(screen.getByTestId('analytics-dimension-locked')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByLabelText('analytics.hints.defaultLocked')).toBeInTheDocument());
     failDelete({ response: { status: 409, data: { message: 'Nature still has values. Delete them first.' } } });
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(screen.queryByText('Nature still has values. Delete them first.')).toBeNull();
@@ -485,13 +484,11 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     expect(usageSelect()).toHaveTextContent('master-data:shared.lineTypeUsage.both');
   });
 
-  it('keeps the default dimension on both types, with its reason', async () => {
+  it('keeps the default dimension on both types', async () => {
     renderAt('/master-data/analytics/dimensions/ax-default/overview');
     await screen.findByLabelText('analytics.fields.code');
-    const drawer = screen.getByRole('complementary');
     expect(usageSelect()).toHaveTextContent('master-data:shared.lineTypeUsage.both');
     expect(usageSelect()).toHaveAttribute('aria-disabled', 'true');
-    expect(within(drawer).getByText('analytics.hints.appliesToDefault')).toBeInTheDocument();
   });
 
   it('saves Required at once, and shows the lines without a value from the response, with a link per type', async () => {
@@ -646,7 +643,7 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     renderAt('/master-data/analytics/dimensions/ax-nature/overview');
     const openSwitch = await screen.findByRole('checkbox', { name: 'analytics.fields.openValues' });
     expect(openSwitch).not.toBeChecked();
-    expect(screen.getByText('analytics.hints.openValues')).toBeInTheDocument();
+    expect(screen.getByLabelText('analytics.hints.openValues')).toBeInTheDocument();
     fireEvent.click(openSwitch);
     await waitFor(() => expect(mocked.updateAnalyticsAxis).toHaveBeenCalledWith('ax-nature', { open_values: true }));
     await waitFor(() => expect(screen.getByRole('checkbox', { name: 'analytics.fields.openValues' })).toBeChecked());
@@ -659,7 +656,7 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     const { unmount } = renderAt('/master-data/analytics/dimensions/ax-nature/overview');
     expect(await screen.findByLabelText('analytics.fields.code')).toBeInTheDocument();
     expect(screen.queryByRole('checkbox', { name: 'analytics.fields.openValues' })).toBeNull();
-    expect(screen.queryByText('analytics.hints.openValues')).toBeNull();
+    expect(screen.queryByLabelText('analytics.hints.openValues')).toBeNull();
     unmount();
     dataAccessState.limited = false;
     levels.value = 'reader';

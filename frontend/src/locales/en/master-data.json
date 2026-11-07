@@ -46,8 +46,7 @@
       "failedToSaveMetrics": "Failed to save metrics",
       "fixValidationErrors": "Please fix validation errors before saving.",
       "readOnlyAccess": "You need manager access to edit {{entity}}.",
-      "metricsFrozen": "Metrics for {{year}} are frozen. A budget administrator can unfreeze them.",
-      "metricsYearHint": "Each value is saved for the selected year when you leave its field. Switch years to review past data."
+      "metricsFrozen": "Metrics for {{year}} are frozen. A budget administrator can unfreeze them."
     },
     "lineTypeUsage": {
       "label": "Used for",
@@ -203,7 +202,6 @@
     "placeholders": {
       "description": "e.g., Accounting and payroll"
     },
-    "headcountHint": "Saved for the selected year when you leave the field.",
     "messages": {
       "saveFailed": "Failed to save the department.",
       "createFailed": "Failed to create the department.",
@@ -256,7 +254,6 @@
       "lifecycle": "Lifecycle"
     },
     "hints": {
-      "code": "The code your finance team uses for this cost center, as in your accounting system or budget referential.",
       "company": "The legal entity that pays the costs of this cost center.",
       "owner": "The person accountable for this budget envelope at budget review."
     },
@@ -563,7 +560,6 @@
     },
     "chipBar": {
       "createFirst": "Create your first chart of accounts",
-      "accountsInChart": "Accounts are always managed inside a chart.",
       "newCoA": "New chart of accounts",
       "newChip": "New",
       "manage": "Manage charts"
@@ -753,7 +749,6 @@
     "reorder": {
       "action": "Reorder",
       "title": "Reorder values of {{name}}",
-      "hint": "Drag the values into the order lists and filters should show.",
       "loadFailed": "Failed to load the values.",
       "saveFailed": "Failed to save the order.",
       "roleDescription": "movable value",
@@ -766,7 +761,6 @@
     "reorderDimensions": {
       "action": "Reorder dimensions",
       "title": "Reorder dimensions",
-      "hint": "Drag the dimensions into the order screens, lists and the budget file should show them.",
       "loadFailed": "Failed to load the dimensions.",
       "saveFailed": "Failed to save the order.",
       "roleDescription": "movable dimension",
@@ -796,7 +790,6 @@
       "codeDefault": "Older files use the column analytics_category for this dimension; analytics:{{code}} works too.",
       "codeCreate": "Used as the column name in CSV files. Lowercase letters, digits, - or _.",
       "defaultLocked": "This dimension cannot be disabled or deleted: older files and AI questions use it.",
-      "appliesToDefault": "The default dimension applies to OPEX and CAPEX lines.",
       "valueDimensionAppliesTo": {
         "opex": "The {{dimension}} dimension is for OPEX lines only.",
         "capex": "The {{dimension}} dimension is for CAPEX lines only."
@@ -901,7 +894,6 @@
     "recommended": {
       "action": "Recommended dimensions",
       "title": "Add the recommended dimensions",
-      "subtitle": "Ready-made dimensions with their values, for OPEX and CAPEX lines. You can rename, change or delete them afterwards.",
       "dimensions": "Dimensions",
       "present": "Already present",
       "presentAs": "Already present ({{name}})",

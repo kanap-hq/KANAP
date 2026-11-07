@@ -474,7 +474,7 @@ function ValueAppliesToRow({
     ? oneOffListLink(shownConflict.scope, { [axisListColumn(axis)]: keepValues([value.name]) })
     : null;
   return (
-    <PropertyRow label={t('shared.lineTypeUsage.label')} helperText={dimensionHint}>
+    <PropertyRow label={t('shared.lineTypeUsage.label')} hint={dimensionHint ?? undefined}>
       <LineTypeUsageSelect
         value={appliesTo}
         label={t('shared.lineTypeUsage.label')}

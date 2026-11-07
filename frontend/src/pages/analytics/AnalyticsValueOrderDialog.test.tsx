@@ -88,7 +88,6 @@ describe('AnalyticsValueOrderDialog', () => {
   it('lists every value of the dimension in its order, with their marks', async () => {
     renderDialog();
     expect(screen.getByText('analytics.reorder.title:Priority')).toBeInTheDocument();
-    expect(screen.getByText('analytics.reorder.hint')).toBeInTheDocument();
     await waitFor(() => expect(rows()).toHaveLength(4));
     expect(get).toHaveBeenCalledWith('/analytics-categories', expect.objectContaining({
       params: expect.objectContaining({ axis_id: 'ax-prio', includeDisabled: '1', sort: 'sort_order:ASC', limit: 1000 }),

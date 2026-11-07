@@ -41,7 +41,7 @@ export default function CalendarSourceFields({
   const regions = country?.regions ?? [];
   return (
     <>
-      <PropertyRow label={t('workingDayCalendars.fields.country')} helperText={t('workingDayCalendars.hints.country')}>
+      <PropertyRow label={t('workingDayCalendars.fields.country')} hint={t('workingDayCalendars.hints.country')}>
         <Autocomplete<CalendarCountry, false, false, false>
           options={countries}
           value={country}

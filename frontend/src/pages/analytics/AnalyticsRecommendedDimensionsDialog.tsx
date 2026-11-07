@@ -82,7 +82,6 @@ export default function AnalyticsRecommendedDimensionsDialog({ open, onClose, on
       open={open}
       onClose={onClose}
       title={t('analytics.recommended.title')}
-      subtitle={t('analytics.recommended.subtitle')}
       onSave={onSave}
       saveLabel={t('analytics.recommended.submit')}
       saveDisabled={!data || selected.length === 0}

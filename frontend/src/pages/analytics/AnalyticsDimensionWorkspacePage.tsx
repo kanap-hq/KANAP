@@ -8,6 +8,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { isDataAccessLimited } from '../../auth/dataAccess';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
 import { KanapDialog, PropertyGroup, PropertyRow } from '../../components/design';
+import InfoHint from '../../components/workspace/InfoHint';
 import StatusLifecycleField from '../../components/fields/StatusLifecycleField';
 import { ANALYTICS_AXES_QUERY_KEY, useAnalyticsAxes } from '../../hooks/useAnalyticsAxes';
 import { useAnalyticsDimensionNav } from '../../hooks/useAnalyticsNav';
@@ -471,7 +472,7 @@ function DimensionProperties({
         {axis.is_default && (
           <PropertyRow
             label={t('analytics.fields.name')}
-            helperText={t('analytics.hints.nameDefault', { label: defaultLabel })}
+            hint={t('analytics.hints.nameDefault', { label: defaultLabel })}
           >
             <TextField
               value={name}
@@ -492,7 +493,9 @@ function DimensionProperties({
         <PropertyRow
           label={t('analytics.fields.code')}
           required
-          helperText={t(axis.is_default ? 'analytics.hints.codeDefault' : axis.id ? 'analytics.hints.code' : 'analytics.hints.codeCreate', { code: axis.code })}
+          // The format matters before typing: shown under the field in creation, in a tooltip afterwards.
+          helperText={axis.id ? undefined : t('analytics.hints.codeCreate')}
+          hint={axis.id ? t(axis.is_default ? 'analytics.hints.codeDefault' : 'analytics.hints.code', { code: axis.code }) : undefined}
         >
           <TextField
             value={code}
@@ -509,10 +512,7 @@ function DimensionProperties({
             inputProps={{ 'aria-label': t('analytics.fields.code'), autoComplete: 'off', spellCheck: false }}
           />
         </PropertyRow>
-        <PropertyRow
-          label={t('shared.lineTypeUsage.label')}
-          helperText={axis.is_default ? t('analytics.hints.appliesToDefault') : undefined}
-        >
+        <PropertyRow label={t('shared.lineTypeUsage.label')}>
           <LineTypeUsageSelect
             value={appliesTo}
             label={t('shared.lineTypeUsage.label')}
@@ -542,7 +542,7 @@ function DimensionProperties({
           {axis.required && <RequiredNotes axis={axis} />}
         </PropertyRow>
         {canSetOpenValues && (
-          <PropertyRow label={t('analytics.fields.openValues')} helperText={t('analytics.hints.openValues')}>
+          <PropertyRow label={t('analytics.fields.openValues')} hint={t('analytics.hints.openValues')}>
             <SettingSwitch
               label={t('analytics.fields.openValues')}
               checked={!!axis.open_values}
@@ -558,9 +558,12 @@ function DimensionProperties({
 
       <PropertyGroup>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, py: '5px' }}>
-          <Typography sx={{ fontSize: 12, lineHeight: 1.3, color: 'kanap.text.tertiary' }}>
-            {t('analytics.fields.lifecycle')}
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <Typography sx={{ fontSize: 12, lineHeight: 1.3, color: 'kanap.text.tertiary' }}>
+              {t('analytics.fields.lifecycle')}
+            </Typography>
+            {axis.is_default && <InfoHint text={t('analytics.hints.defaultLocked')} />}
+          </Box>
           <StatusLifecycleField
             status={normalizeStatus(axis.status)}
             // The date carries the change (the switch sets it too); the server derives the status from it.
@@ -572,11 +575,6 @@ function DimensionProperties({
             disabledAtError={!!errors.disabled_at}
             disabledAtHelperText={errors.disabled_at}
           />
-          {axis.is_default && (
-            <Typography data-testid="analytics-dimension-locked" sx={{ fontSize: 12, lineHeight: 1.35, color: 'kanap.text.tertiary' }}>
-              {t('analytics.hints.defaultLocked')}
-            </Typography>
-          )}
         </Box>
       </PropertyGroup>
     </>

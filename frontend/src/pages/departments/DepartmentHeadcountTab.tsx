@@ -98,7 +98,7 @@ export default function DepartmentHeadcountTab({ departmentId, year, onYearChang
           {getApiErrorMessage(loadError, t, t('shared.messages.failedToLoadMetrics'))}
         </Typography>
       )}
-      <PropertyRow label={t('departments.fields.headcount')} required helperText={t('departments.headcountHint')} valueSx={{ maxWidth: 200 }}>
+      <PropertyRow label={t('departments.fields.headcount')} required valueSx={{ maxWidth: 200 }}>
         <TextField
           value={draft}
           onChange={(event) => setDraft(event.target.value)}

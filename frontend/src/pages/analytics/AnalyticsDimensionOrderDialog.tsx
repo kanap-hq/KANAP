@@ -43,7 +43,6 @@ export default function AnalyticsDimensionOrderDialog({ open, onClose }: Props) 
     <SortableOrderDialog<AnalyticsAxis>
       open={open}
       title={t('analytics.reorderDimensions.title')}
-      hint={t('analytics.reorderDimensions.hint')}
       queryKey={DIMENSION_ORDER_KEY}
       load={load}
       toItem={toItem}

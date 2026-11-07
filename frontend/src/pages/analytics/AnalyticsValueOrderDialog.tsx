@@ -61,7 +61,6 @@ export default function AnalyticsValueOrderDialog({ open, axisId, axisLabel, onC
     <SortableOrderDialog<AnalyticsValue>
       open={open}
       title={t('analytics.reorder.title', { name: axisLabel })}
-      hint={t('analytics.reorder.hint')}
       queryKey={analyticsValueOrderKey(axisId)}
       load={load}
       canLoad={!!axisId}

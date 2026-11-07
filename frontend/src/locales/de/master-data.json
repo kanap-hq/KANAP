@@ -46,8 +46,7 @@
       "failedToSaveMetrics": "Fehler beim Speichern der Kennzahlen",
       "fixValidationErrors": "Bitte beheben Sie die Validierungsfehler vor dem Speichern.",
       "readOnlyAccess": "Sie benötigen Managerrechte, um {{entity}} zu bearbeiten.",
-      "metricsFrozen": "Die Kennzahlen für {{year}} sind eingefroren. Ein Budgetadministrator kann die Sperre aufheben.",
-      "metricsYearHint": "Jeder Wert wird für das ausgewählte Jahr gespeichert, wenn Sie sein Feld verlassen. Wechseln Sie das Jahr, um frühere Daten einzusehen."
+      "metricsFrozen": "Die Kennzahlen für {{year}} sind eingefroren. Ein Budgetadministrator kann die Sperre aufheben."
     },
     "lineTypeUsage": {
       "label": "Verwendet für",
@@ -203,7 +202,6 @@
     "placeholders": {
       "description": "z. B. Buchhaltung und Lohnabrechnung"
     },
-    "headcountHint": "Wird für das ausgewählte Jahr gespeichert, wenn Sie das Feld verlassen.",
     "messages": {
       "saveFailed": "Die Abteilung konnte nicht gespeichert werden.",
       "createFailed": "Die Abteilung konnte nicht erstellt werden.",
@@ -256,7 +254,6 @@
       "lifecycle": "Lebenszyklus"
     },
     "hints": {
-      "code": "Der Code, den Ihr Finanzteam für diese Kostenstelle verwendet, wie in Ihrem Buchhaltungssystem oder Ihrer Budgetstruktur.",
       "company": "Die juristische Person, die die Kosten dieser Kostenstelle trägt.",
       "owner": "Die Person, die bei der Budgetprüfung für diesen Budgetrahmen verantwortlich ist."
     },
@@ -563,7 +560,6 @@
     },
     "chipBar": {
       "createFirst": "Erstellen Sie Ihren ersten Kontenplan",
-      "accountsInChart": "Konten werden immer innerhalb eines Kontenplans verwaltet.",
       "newCoA": "Neuer Kontenplan",
       "newChip": "Neu",
       "manage": "Kontenpläne verwalten"
@@ -753,7 +749,6 @@
     "reorder": {
       "action": "Neu ordnen",
       "title": "Werte von {{name}} neu ordnen",
-      "hint": "Ziehen Sie die Werte in die Reihenfolge, in der Listen und Filter sie anzeigen sollen.",
       "loadFailed": "Die Werte konnten nicht geladen werden.",
       "saveFailed": "Die Reihenfolge konnte nicht gespeichert werden.",
       "roleDescription": "verschiebbarer Wert",
@@ -766,7 +761,6 @@
     "reorderDimensions": {
       "action": "Dimensionen neu ordnen",
       "title": "Dimensionen neu ordnen",
-      "hint": "Ziehen Sie die Dimensionen in die Reihenfolge, in der Ansichten, Listen und die Budgetdatei sie zeigen sollen.",
       "loadFailed": "Die Dimensionen konnten nicht geladen werden.",
       "saveFailed": "Die Reihenfolge konnte nicht gespeichert werden.",
       "roleDescription": "verschiebbare Dimension",
@@ -796,7 +790,6 @@
       "codeDefault": "Ältere Dateien verwenden für diese Dimension die Spalte analytics_category; analytics:{{code}} funktioniert ebenfalls.",
       "codeCreate": "Wird als Spaltenname in CSV-Dateien verwendet. Kleinbuchstaben, Ziffern, - oder _.",
       "defaultLocked": "Diese Dimension kann weder deaktiviert noch gelöscht werden: Ältere Dateien und Fragen an die KI verwenden sie.",
-      "appliesToDefault": "Die Standarddimension gilt für OPEX- und CAPEX-Zeilen.",
       "valueDimensionAppliesTo": {
         "opex": "Die Dimension {{dimension}} gilt nur für OPEX-Zeilen.",
         "capex": "Die Dimension {{dimension}} gilt nur für CAPEX-Zeilen."
@@ -901,7 +894,6 @@
     "recommended": {
       "action": "Empfohlene Dimensionen",
       "title": "Empfohlene Dimensionen hinzufügen",
-      "subtitle": "Vorgefertigte Dimensionen mit ihren Werten, für OPEX- und CAPEX-Positionen. Sie können sie danach umbenennen, ändern oder löschen.",
       "dimensions": "Dimensionen",
       "present": "Bereits vorhanden",
       "presentAs": "Bereits vorhanden ({{name}})",
