@@ -3,7 +3,7 @@ import OpenAI from 'openai';
 import { openValidatedFetch, ValidatedFetchTarget } from '../../common/pinned-fetch';
 import { AiStreamEvent, AiStreamParams, AiSystemPromptRole } from './ai-provider.types';
 import { isAbortError, StreamUsage } from './streaming.util';
-import { providerFetchOptions, toProviderError } from './provider-http.util';
+import { providerFetchOptions, toProviderError, wrapProviderErrorFetch } from './provider-http.util';
 
 const logger = new Logger('OpenAiCompatibleStream');
 
@@ -218,7 +218,7 @@ async function* streamCompletion(
     timeout: params.timeoutMs ?? 120_000,
     maxRetries: params.maxRetries ?? 2,
     ...(fetchOptions ? { fetchOptions } : {}),
-    ...(transport?.dispatcher ? { fetch: transport.fetch } : {}),
+    fetch: wrapProviderErrorFetch(transport?.fetch ?? globalThis.fetch),
   });
 
   const tools: OpenAI.ChatCompletionTool[] = params.tools.map((t) => ({
