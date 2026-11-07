@@ -131,6 +131,8 @@ async function main(): Promise<void> {
     const appModule = fs.readFileSync(backendPath('src', 'app.module.ts'), 'utf8');
     assert.ok(/await runStartupMigrations\(dataSource\);/.test(appModule), 'app.module.ts migrates through runStartupMigrations');
     assert.ok(!/\.runMigrations\(/.test(appModule), 'app.module.ts runs no migration directly');
+    assert.match(appModule, /import \{ isConnectionError \} from '\.\/common\/database-connection-error'/);
+    assert.match(appModule, /toRetry: isConnectionError/, 'only a lost connection is retried at start');
   }
 
   // 5. The API's own migration run (app.module.ts): role check, data-access guard, migrations.

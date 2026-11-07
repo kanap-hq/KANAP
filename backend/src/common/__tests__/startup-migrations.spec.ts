@@ -1,5 +1,8 @@
 import * as assert from 'node:assert/strict';
+import { defer, lastValueFrom, type Observable } from 'rxjs';
+import { QueryFailedError } from 'typeorm';
 import { backendPath } from './backend-root';
+import { isConnectionError } from '../database-connection-error';
 import { hardenDatabaseRoleBeforeMigrations } from '../database-role-safety';
 
 /**
@@ -9,7 +12,24 @@ import { hardenDatabaseRoleBeforeMigrations } from '../database-role-safety';
  * every error was retried 30 times 2 s apart, a deterministic migration failure included, which
  * kept the API down for the length of 30 failing runs before the container restarted and did it
  * all again.
+ *
+ * The API's own start uses the same classification (`database-connection-error.ts`, passed as
+ * `toRetry`). Nest would otherwise retry every error of the data source factory nine times,
+ * three seconds apart.
  */
+
+// Nest's retry of the data source factory. Not a public export: the package applies it to every
+// error of the factory unless `toRetry` returns false.
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { handleRetry } = require('@nestjs/typeorm/dist/common/typeorm.utils') as {
+  handleRetry: (
+    retryAttempts?: number,
+    retryDelay?: number,
+    dataSourceName?: string,
+    verboseRetryLog?: boolean,
+    toRetry?: (err: unknown) => boolean,
+  ) => <T>(source: Observable<T>) => Observable<T>;
+};
 
 type FakeDataSource = {
   isInitialized: boolean;
@@ -188,17 +208,86 @@ async function main(): Promise<void> {
     assert.match(lines.error[0], /^\[entrypoint\] DB connection lost during the migrations \(rolled back, nothing applied\) after 5 attempts: read ECONNRESET/);
   }
 
-  // 6. What counts as a lost connection.
-  const connection = (code: string) => entrypoint.isConnectionError(Object.assign(new Error('x'), { code }));
-  for (const code of ['ECONNRESET', 'ECONNREFUSED', '57P01', '57P03', '08006', '08001']) {
-    assert.equal(connection(code), true, `${code} is a connection error`);
+  // 6. What counts as a lost connection. The entrypoint and the API start agree on every case.
+  const migrationError = new QueryFailedError(
+    'SELECT 1',
+    [],
+    Object.assign(new Error('relation "missing" does not exist'), { code: '42P01' }),
+  );
+  const refusedRole = new Error(
+    '[migrations] DATABASE_URL resolves to protected PostgreSQL role "postgres" with SUPERUSER, BYPASSRLS.',
+  );
+  const droppedQuery = new QueryFailedError(
+    'SELECT 1',
+    [],
+    Object.assign(new Error('connection failure'), { code: '08006' }),
+  );
+  const cases: Array<{ label: string; err: unknown; connection: boolean }> = [
+    ...['ECONNRESET', 'ECONNREFUSED', '57P01', '57P03', '08006', '08001'].map((code) => ({
+      label: `${code} is a connection error`,
+      err: Object.assign(new Error('x'), { code }),
+      connection: true,
+    })),
+    { label: 'a driver error TypeORM wraps', err: { message: 'x', driverError: { code: '57P01' } }, connection: true },
+    { label: 'node-postgres without a code', err: new Error('Connection terminated unexpectedly'), connection: true },
+    { label: 'a query whose connection dropped', err: droppedQuery, connection: true },
+    ...['23505', '42P01', '22012', 'P0001'].map((code) => ({
+      label: `${code} is a migration's own failure`,
+      err: Object.assign(new Error('x'), { code }),
+      connection: false,
+    })),
+    { label: 'a migration\'s own error', err: new Error('Tenant acme: 3 CAPEX lines have no equivalent'), connection: false },
+    { label: 'a QueryFailedError 42P01', err: migrationError, connection: false },
+    { label: 'a refused database role', err: refusedRole, connection: false },
+  ];
+  for (const { label, err, connection } of cases) {
+    assert.equal(entrypoint.isConnectionError(err), connection, label);
+    assert.equal(isConnectionError(err), entrypoint.isConnectionError(err), `${label}: the API and the entrypoint agree`);
+    assert.equal(isConnectionError(err), connection, `${label} (API)`);
   }
-  assert.equal(entrypoint.isConnectionError({ message: 'x', driverError: { code: '57P01' } }), true, 'a driver error TypeORM wraps');
-  assert.equal(entrypoint.isConnectionError(new Error('Connection terminated unexpectedly')), true, 'node-postgres without a code');
-  for (const code of ['23505', '42P01', '22012', 'P0001']) {
-    assert.equal(connection(code), false, `${code} is a migration's own failure`);
+
+  // 6b. Nest retries the factory nine times unless toRetry returns false. A migration error and a
+  // refused role stop at once; a lost connection is retried. The delay here is 1 ms (Nest's own
+  // default is 3 s): the attempt count is what the start waits on. Nest logs each retry on stderr.
+  const stderrWrite = process.stderr.write;
+  process.stderr.write = (() => true) as typeof process.stderr.write;
+  try {
+    const attemptsOf = async (err: unknown, toRetry?: (error: unknown) => boolean) => {
+      let attempts = 0;
+      let thrown: unknown;
+      try {
+        await lastValueFrom(defer(() => {
+          attempts += 1;
+          return Promise.reject(err);
+        }).pipe(handleRetry(9, 1, 'default', false, toRetry)));
+      } catch (error) {
+        thrown = error;
+      }
+      return { attempts, thrown };
+    };
+
+    const bare = await attemptsOf(migrationError);
+    assert.equal(bare.attempts, 9, 'without toRetry, Nest retries a migration error nine times');
+
+    const failed = await attemptsOf(migrationError, isConnectionError);
+    assert.equal(failed.attempts, 1, 'a QueryFailedError 42P01 is not retried');
+    assert.equal(failed.thrown, migrationError, 'the migration error is the one that stops the start');
+
+    const role = await attemptsOf(refusedRole, isConnectionError);
+    assert.equal(role.attempts, 1, 'a refused database role is not retried');
+    assert.equal(role.thrown, refusedRole);
+
+    let connects = 0;
+    const up = await lastValueFrom(defer(() => {
+      connects += 1;
+      if (connects < 3) return Promise.reject(Object.assign(new Error('connect ECONNREFUSED'), { code: 'ECONNREFUSED' }));
+      return Promise.resolve('up');
+    }).pipe(handleRetry(9, 1, 'default', false, isConnectionError)));
+    assert.equal(up, 'up');
+    assert.equal(connects, 3, 'a lost connection is retried until the database answers');
+  } finally {
+    process.stderr.write = stderrWrite;
   }
-  assert.equal(entrypoint.isConnectionError(new Error('Tenant acme: 3 CAPEX lines have no equivalent')), false, 'a migration\'s own error');
 
   // 8. The data-access guard runs on the connected data source, before the migrations (an
   // application role that inherits the limited role must not migrate under its policies).
