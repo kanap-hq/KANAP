@@ -21,6 +21,15 @@ import { DEFAULT_ANALYTICS_AXIS_LABELS, loadAnalyticsAxes } from '../../analytic
 import type { AiImportColumnKind } from './ai-import-convert';
 import { defaultColumnTitle } from './ai-import-titles';
 import { AI_IMPORT_ACCESS, type AiImportAccess, type AiImportKey } from './ai-import-access';
+import {
+  BILLING_FREQUENCY_LABELS,
+  BUDGET_NATURE_LABELS,
+  COST_CENTER_KIND_LABELS,
+  LINE_USAGE_LABELS,
+  PROCESS_TYPE_LABELS,
+  RUN_BUILD_LABELS,
+  labelsForEnum,
+} from './ai-import-code-labels';
 
 export { AI_IMPORT_KEYS, type AiImportKey } from './ai-import-access';
 
@@ -68,7 +77,7 @@ export interface AiImportTarget extends AiImportAccess {
 
 const STATUS_CODES = ['enabled', 'disabled'] as const;
 /** The status as the screens name it. */
-const STATUS_LABELS: Record<CsvLanguage, Record<string, string>> = {
+export const STATUS_LABELS: Record<CsvLanguage, Record<string, string>> = {
   en: { enabled: 'Enabled', disabled: 'Disabled' },
   fr: { enabled: 'Activé', disabled: 'Désactivé' },
   de: { enabled: 'Aktiviert', disabled: 'Deaktiviert' },
@@ -113,16 +122,19 @@ function kindOfField(field: CsvFieldDefinition): AiImportColumnKind {
 function fromCsvConfig(config: CsvEntityConfig, overrides: Record<string, Partial<AiImportColumnSpec>> = {}): AiImportColumnSpec[] {
   return config.fields
     .filter((field) => field.importable !== false && !IDENTITY_COLUMNS.has(field.csvColumn) && field.type !== CsvFieldType.JSON)
-    .map((field) => ({
-      column: field.csvColumn,
-      kind: kindOfField(field),
-      required: field.required === true,
-      ...(field.enumValues?.length ? { codes: field.enumValues } : {}),
-      ...(isStatusList(field.enumValues) ? { labels: STATUS_LABELS } : {}),
-      ...(field.zonedDateTime ? { kind: 'datetime' as const } : {}),
-      titles: config.headerLabels?.[field.csvColumn],
-      ...overrides[field.csvColumn],
-    }));
+    .map((field) => {
+      const labels = isStatusList(field.enumValues) ? STATUS_LABELS : labelsForEnum(field.enumValues);
+      return {
+        column: field.csvColumn,
+        kind: kindOfField(field),
+        required: field.required === true,
+        ...(field.enumValues?.length ? { codes: field.enumValues } : {}),
+        ...(labels ? { labels } : {}),
+        ...(field.zonedDateTime ? { kind: 'datetime' as const } : {}),
+        titles: config.headerLabels?.[field.csvColumn],
+        ...overrides[field.csvColumn],
+      };
+    });
 }
 
 const catalog = (list: AiImportCatalog, multi = false): Partial<AiImportColumnSpec> => ({ kind: 'catalog', catalog: list, multi });
@@ -231,14 +243,14 @@ export const AI_IMPORT_TARGETS: Record<AiImportKey, AiImportTarget> = {
       const axes = await loadAnalyticsAxes(ctx.manager, ctx.tenantId);
       const dimensions = axes.filter((axis) => axis.status === 'enabled').map((axis) => axis.code);
       const specs: Record<string, AiImportColumnSpec> = {
-        nature: { column: 'nature', kind: 'codes', codes: ['opex', 'capex'], required: true },
+        nature: { column: 'nature', kind: 'codes', codes: ['opex', 'capex'], required: true, labels: BUDGET_NATURE_LABELS },
         name: text('name', undefined, true),
         company_name: reference('company_name', 'a company by name'),
         supplier_name: reference('supplier_name', 'a supplier by name'),
         supplier_erp_id: text('supplier_erp_id', 'the supplier\'s id in the ERP'),
         account_number: reference('account_number', 'the number of an account of the chart of accounts', true),
         cost_center_code: reference('cost_center_code', 'the code of a cost center'),
-        run_build: { column: 'run_build', kind: 'codes', codes: ['run', 'build'] },
+        run_build: { column: 'run_build', kind: 'codes', codes: ['run', 'build'], labels: RUN_BUILD_LABELS },
         owner_it_email: email('owner_it_email'),
         owner_business_email: email('owner_business_email'),
         project: reference('project', 'a project by name or reference'),
@@ -278,7 +290,7 @@ export const AI_IMPORT_TARGETS: Record<AiImportKey, AiImportTarget> = {
       notice_period_months: number('notice_period_months', 'months'),
       yearly_amount_at_signature: number('yearly_amount_at_signature', 'the yearly amount'),
       currency: text('currency', 'a three-letter currency code'),
-      billing_frequency: { column: 'billing_frequency', kind: 'codes', codes: ['monthly', 'quarterly', 'annual', 'other'] } as AiImportColumnSpec,
+      billing_frequency: { column: 'billing_frequency', kind: 'codes', codes: ['monthly', 'quarterly', 'annual', 'other'], labels: BILLING_FREQUENCY_LABELS } as AiImportColumnSpec,
       status,
       owner_email: email('owner_email'),
       notes: text('notes'),
@@ -341,7 +353,7 @@ export const AI_IMPORT_TARGETS: Record<AiImportKey, AiImportTarget> = {
     about: 'One row per cost center or group, matched to a stored one by its code.',
     columns: () => COST_CENTER_CSV_HEADERS.map((column) => ({
       code: text('code', undefined, true),
-      kind: { column: 'kind', kind: 'codes', codes: ['group', 'cost_center'], required: true } as AiImportColumnSpec,
+      kind: { column: 'kind', kind: 'codes', codes: ['group', 'cost_center'], required: true, labels: COST_CENTER_KIND_LABELS } as AiImportColumnSpec,
       name: text('name', undefined, true),
       parent_code: reference('parent_code', 'the code of the parent group'),
       company_name: reference('company_name', 'a company by name'),
@@ -361,7 +373,7 @@ export const AI_IMPORT_TARGETS: Record<AiImportKey, AiImportTarget> = {
       text('account_name', undefined, true), text('native_name'), text('description'),
       number('consolidation_account_number', 'a whole number'), text('consolidation_account_name'),
       text('consolidation_account_description'), status,
-      { column: 'nature', kind: 'codes', codes: ['opex', 'capex'] },
+      { column: 'nature', kind: 'codes', codes: ['opex', 'capex'], labels: LINE_USAGE_LABELS },
     ],
   },
   analytics_categories: {
@@ -374,7 +386,7 @@ export const AI_IMPORT_TARGETS: Record<AiImportKey, AiImportTarget> = {
       name: text('name', undefined, true),
       status,
       disabled_at: disabledAt,
-      applies_to: { column: 'applies_to', kind: 'codes', codes: ['opex', 'capex'], hint: 'blank for both OPEX and CAPEX' } as AiImportColumnSpec,
+      applies_to: { column: 'applies_to', kind: 'codes', codes: ['opex', 'capex'], labels: LINE_USAGE_LABELS, hint: 'blank for both OPEX and CAPEX' } as AiImportColumnSpec,
     } as Record<string, AiImportColumnSpec>)[column] ?? text(column)),
   },
   business_processes: {
@@ -384,7 +396,7 @@ export const AI_IMPORT_TARGETS: Record<AiImportKey, AiImportTarget> = {
     about: 'One row per business process, matched to a stored one by its name.',
     columns: () => [
       text('name', undefined, true),
-      { column: 'process_type', kind: 'codes', codes: BUSINESS_PROCESS_TYPES },
+      { column: 'process_type', kind: 'codes', codes: BUSINESS_PROCESS_TYPES, labels: PROCESS_TYPE_LABELS },
       reference('parent_name', 'the parent process by name'),
       text('description'), text('notes'), status,
     ],
