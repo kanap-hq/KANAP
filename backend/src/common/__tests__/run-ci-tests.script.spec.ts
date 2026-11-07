@@ -24,6 +24,8 @@ const runner = require(backendPath('scripts', 'run-ci-tests.js')) as {
   EXCLUSIVE_PATTERNS: RegExp[];
   failure: (result: { code: number | null; signal: string | null }) => string;
   lastLines: (output: string, count?: number) => string[];
+  specEnv: (file: string, options?: { databaseUrl?: string }) => NodeJS.ProcessEnv;
+  DEFAULT_SPEC_JWT_SECRET: string;
 };
 
 function withEnv<T>(env: Record<string, string | undefined>, fn: () => T): T {
@@ -150,7 +152,36 @@ function testFailureReport() {
   assert.deepEqual(runner.lastLines(''), ['(no output)']);
 }
 
+// Creation routes sign a token from JWT_SECRET. CI sets none, so the runner
+// gives each spec process a default. A shell or backend/.env value wins, and
+// the runner process itself keeps whatever it started with.
+function testSpecJwtSecret() {
+  const file = 'src/common/__tests__/run-ci-tests.script.spec.ts';
+  assert.ok(runner.DEFAULT_SPEC_JWT_SECRET.length >= 32, 'the default is 32 characters or more');
+  withEnv({ JWT_SECRET: undefined }, () => {
+    const env = runner.specEnv(file);
+    assert.equal(process.env.JWT_SECRET, undefined, 'the default stays on the spec process');
+    assert.equal(env.JWT_SECRET, runner.DEFAULT_SPEC_JWT_SECRET);
+  });
+  const fromEnv = 'shell-or-dotenv-jwt-secret-value';
+  withEnv({ JWT_SECRET: fromEnv }, () => {
+    assert.equal(runner.specEnv(file).JWT_SECRET, fromEnv, 'a shell or .env value wins');
+  });
+  withEnv({ JWT_SECRET: '   ' }, () => {
+    assert.equal(runner.specEnv(file).JWT_SECRET, runner.DEFAULT_SPEC_JWT_SECRET, 'a blank value counts as unset');
+  });
+  withEnv({ JWT_SECRET: undefined, DEPLOYMENT_MODE: 'multi-tenant', DATABASE_URL: 'postgres://app:app@127.0.0.1:5432/appdb' }, () => {
+    const env = runner.specEnv('src/ai/__tests__/glpi.service.spec.ts', {
+      databaseUrl: 'postgres://app:app@127.0.0.1:5432/appdb_2',
+    });
+    assert.equal(env.DEPLOYMENT_MODE, 'single-tenant');
+    assert.equal(env.DATABASE_URL, 'postgres://app:app@127.0.0.1:5432/appdb_2');
+    assert.equal(env.JWT_SECRET, runner.DEFAULT_SPEC_JWT_SECRET);
+  });
+}
+
 testDatabaseName();
+testSpecJwtSecret();
 testFailureReport();
 testRacesRefused();
 testRaceSpecPattern();

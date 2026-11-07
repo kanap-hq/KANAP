@@ -187,6 +187,7 @@ Tool-specific or private notes live in each tool's local files, never here.
   that reads source files, fixtures or scripts resolves them with `backendPath()`
   (`src/common/__tests__/backend-root.ts`), not `__dirname`: the compiled tree holds no `.ts`
   file and no fixture.
+- The runner gives each spec process a default `JWT_SECRET` of 32 characters or more when the shell and `backend/.env` leave it empty. A value in the shell or in `backend/.env` is the one the process receives.
 - CI runs the backend and frontend suites in the cloud jobs, and builds both sides in on-premise
   mode. These jobs run in the merge queue only (see "Workflow with the maintainer"); on a PR only
   the stack order warning runs. A failing spec drops the PR from the queue.
