@@ -97,7 +97,6 @@ export default function ComparisonReport() {
       busy={busy}
       fxMissing={report.data?.fxMissing}
       title={t("reports.budgetTrendOpex.title")}
-      subtitle={t("reports.budgetTrendOpex.subtitle")}
       filters={(
         <>
           <ItemScopeTabs allowAll value={scope} onChange={setScope} />

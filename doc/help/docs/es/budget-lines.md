@@ -303,7 +303,7 @@ La pestaña Presupuesto contiene los importes de la línea, año por año y colu
     - **Realizado**: El gasto real, tal como se registra durante el año
     - **Aterrizaje previsto**: Su mejor estimación de la cifra de fin de año
 - Un administrador de presupuesto puede renombrar las columnas, ocultar algunas y elegir la columna por defecto en **Gestión presupuestaria > Administración > Columnas presupuestarias** (consulte [Columnas presupuestarias](budget-operations.md#columnas-presupuestarias)). Una columna oculta conserva sus importes
-- Cada columna visible tiene una tarjeta bajo las pestañas de año: su nombre, su total del año, el origen de sus importes y su periodo, por ejemplo «Reparto uniforme» y «9 meses, abril a diciembre». Una columna vacía indica «Aún sin introducir». Pase el cursor sobre una tarjeta para ver sus líneas de cantidad y precio
+- Cada columna visible tiene una tarjeta bajo las pestañas de año: su nombre, su total del año, el origen de sus importes y su periodo, por ejemplo «Reparto uniforme» y «9 meses, abril a diciembre». Una columna vacía muestra solo su cero. Pase el cursor sobre una tarjeta para ver sus líneas de cantidad y precio
 - Haga clic en una tarjeta para trabajar en esa columna. La pestaña se abre en la primera columna visible que no está congelada
 - Con una sola columna visible no hay tarjetas: el editor muestra la columna directamente
 
@@ -336,7 +336,7 @@ En una columna vacía, un clic en una pestaña cambia de inmediato. En una colum
 - **Importe anual**: el total de la columna para el año
 - **Cuándo**: **Todo el año**, **Un periodo** con las fechas **Desde** y **Hasta**, o **En una fecha** con una sola **Fecha**
 - **Distribución**: **Uniforme** o **4-4-5**. En una fecha no hay distribución: el mes de la fecha recibe todo el importe
-- Una frase indica lo que obtiene, por ejemplo «120.000 repartidos de forma uniforme de abril a diciembre (9 meses).» o «5.000 el 10 de febrero de 2026, todo en febrero.» Pase el cursor sobre el icono de información junto a ella para leer la regla del día 15
+- La tarjeta de la columna indica lo que obtiene, por ejemplo «Reparto uniforme» y «9 meses, abril a diciembre», o «El 10 de febrero de 2026». Con **Un periodo**, pase el cursor sobre el icono de información junto a las fechas para leer la regla del día 15
 - Cuando algunos meses del año quedan fuera del periodo, una nota indica cuáles se pondrán a cero, por ejemplo «Enero a marzo se pondrán a cero.»
 - Aparece una advertencia cuando el periodo va más allá de las fechas de la línea. El importe se guarda de todos modos
 - Mientras falte una fecha o ningún mes cuente, una nota en rojo explica el motivo y no se guarda nada. Cuando las fechas de la línea no dejan ningún mes en el año, el editor indica «Ningún mes de 2026 está dentro de las fechas de la línea.» Elija **Un periodo** para fijar las fechas usted mismo
@@ -375,7 +375,7 @@ En una columna vacía, un clic en una pestaña cambia de inmediato. En una colum
 - Bajo el editor, **Resultado por mes** muestra el año mes a mes para cada columna visible, en la moneda de la línea, con un subtotal por trimestre (**T1** a **T4**) y una fila **Total**. La columna activa aparece resaltada
 - Con dos columnas o más, una última fila da la diferencia de cada columna con una de ellas, por ejemplo «+12.000 (+1,8 %)». Elija esa columna en **Diferencia con** encima de la tabla. Parte de la columna por defecto
 - La tabla está plegada por defecto. **Mostrar el detalle** la abre y **Ocultar el detalle** la vuelve a plegar. Su elección se mantiene mientras siga en la línea
-- Plegada, la sección muestra su título y **Mostrar el detalle**. Mientras cada columna esté vacía, o sea un importe repartido de forma uniforme en todo el año, una frase indica el motivo, por ejemplo «Todas las columnas se reparten de forma lineal en todo el año: el detalle mensual no aporta nada más.»
+- Plegada, la sección muestra su título y **Mostrar el detalle**
 - La tabla se abre sola mientras la columna activa se introduce por mes o una columna está pendiente de su elección
 
 **Volver a los valores de apertura**:

@@ -236,7 +236,6 @@ export default function ConsolidationReport() {
       busy={busy}
       fxMissing={report.data?.fxMissing}
       title={t("reports.consolidation.title")}
-      subtitle={t('reports.consolidation.subtitle', { type: scopeLabel, context: scope })}
       filters={(
         <>
           <ItemScopeTabs allowAll value={scope} onChange={setScope} />

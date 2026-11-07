@@ -745,9 +745,6 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
         </Box>
       </Box>
 
-      {isAuto && (
-        <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>{t(`${config.i18nPrefix}.allocations.autoDistributeInfo`)}</Typography>
-      )}
       {isManualPct && !readOnly && (
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button size="small" variant="action" onClick={splitEqually}>{t(`${config.i18nPrefix}.allocations.splitEqually`)}</Button>

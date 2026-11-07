@@ -303,7 +303,7 @@ L'onglet Budget porte les montants de la ligne, année par année et colonne par
     - **Réalisé** : La dépense réelle, telle qu'elle est enregistrée pendant l'année
     - **Atterrissage prévu** : Votre meilleure estimation du chiffre de fin d'année
 - Un administrateur budgétaire peut renommer les colonnes, en masquer certaines et choisir la colonne par défaut dans **Gestion budgétaire > Administration > Colonnes budgétaires** (voir [Colonnes budgétaires](budget-operations.md#colonnes-budgetaires)). Une colonne masquée garde ses montants
-- Chaque colonne affichée a une carte sous les onglets d'année : son nom, son total pour l'année, l'origine de ses montants et sa période, par exemple « Répartition linéaire » et « 9 mois, avril à décembre ». Une colonne vide indique « Pas encore saisi ». Survolez une carte pour voir ses lignes de quantité et prix
+- Chaque colonne affichée a une carte sous les onglets d'année : son nom, son total pour l'année, l'origine de ses montants et sa période, par exemple « Répartition linéaire » et « 9 mois, avril à décembre ». Une colonne vide affiche son zéro seul. Survolez une carte pour voir ses lignes de quantité et prix
 - Cliquez sur une carte pour travailler sur cette colonne. L'onglet s'ouvre sur la première colonne affichée qui n'est pas gelée
 - Avec une seule colonne affichée, il n'y a pas de cartes : l'éditeur montre directement la colonne
 
@@ -336,7 +336,7 @@ Sur une colonne vide, un clic sur un onglet bascule aussitôt. Sur une colonne q
 - **Montant annuel** : le total de la colonne pour l'année
 - **Quand** : **Toute l'année**, **Une période** avec les dates **Du** et **Au**, ou **À une date** avec une seule **Date**
 - **Répartition** : **Linéaire** ou **4-4-5**. À une date, il n'y a pas de répartition : le mois de la date prend tout le montant
-- Une phrase dit ce que vous obtenez, par exemple « 120 000 répartis linéairement d'avril à décembre (9 mois). » ou « 5 000 le 10 février 2026, portés sur février. » Survolez l'icône d'information à côté pour lire la règle du 15
+- La carte de la colonne dit ce que vous obtenez, par exemple « Répartition linéaire » et « 9 mois, avril à décembre », ou « Le 10 février 2026 ». Avec **Une période**, survolez l'icône d'information à côté des dates pour lire la règle du 15
 - Lorsque des mois de l'année tombent hors de la période, une remarque indique lesquels seront mis à zéro, par exemple « Janvier à mars seront mis à zéro. »
 - Un avertissement s'affiche lorsque la période dépasse les dates de la ligne. Le montant est tout de même enregistré
 - Tant qu'une date manque ou qu'aucun mois ne compte, une remarque en rouge dit pourquoi et rien n'est enregistré. Lorsque les dates de la ligne ne laissent aucun mois dans l'année, l'éditeur indique « Aucun mois de 2026 n'est compris dans les dates de la ligne. » Choisissez **Une période** pour fixer les dates vous-même
@@ -375,7 +375,7 @@ Sur une colonne vide, un clic sur un onglet bascule aussitôt. Sur une colonne q
 - Sous l'éditeur, **Résultat par mois** montre l'année mois par mois pour chaque colonne affichée, dans la devise de la ligne, avec un sous-total par trimestre (**T1** à **T4**) et une ligne **Total**. La colonne active est mise en évidence
 - Avec deux colonnes ou plus, une dernière ligne donne l'écart de chaque colonne avec l'une d'elles, par exemple « +12 000 (+1,8 %) ». Choisissez cette colonne dans **Écart avec** au-dessus du tableau. Elle part de la colonne par défaut
 - Le tableau est replié par défaut. **Afficher le détail** l'ouvre et **Masquer le détail** le replie. Votre choix tient tant que vous restez sur la ligne
-- Replié, la section affiche son titre et **Afficher le détail**. Tant que chaque colonne est vide, ou un montant réparti linéairement sur toute l'année, une phrase en donne la raison, par exemple « Toutes les colonnes sont réparties linéairement sur l'année : le détail mensuel n'apprend rien de plus. »
+- Replié, la section affiche son titre et **Afficher le détail**
 - Le tableau s'ouvre de lui-même pendant que la colonne active est saisie par mois ou qu'une colonne attend votre choix
 
 **Revenir aux valeurs d'ouverture** :
