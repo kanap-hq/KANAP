@@ -1930,10 +1930,10 @@ export class AiChatOrchestratorService {
         // The model became unavailable after the access check above (for instance, the
         // included model's confirmation was withdrawn meanwhile): refused like that check.
         if (error instanceof AiModelResolutionError) {
-          throw codedForbidden(
-            error.code === 'builtin_not_accepted' ? 'AI_INCLUDED_MODEL_NOT_ACCEPTED' : 'AI_NOT_CONFIGURED',
-            error.message,
-          );
+          if (error.code === 'builtin_not_accepted') {
+            throw codedForbidden('AI_INCLUDED_MODEL_NOT_ACCEPTED', error.message);
+          }
+          throw codedForbidden('AI_NOT_CONFIGURED', error.message);
         }
         throw error;
       }
