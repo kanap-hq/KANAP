@@ -372,15 +372,18 @@ async function testDefinerTriggers(s: Seed): Promise<void> {
   console.log('  definer trigger functions: totals and search entry recalculated over the tenant: OK');
 }
 
-/** The plan of a statement without costs: node types, relations, indexes, joins, conditions. */
+/**
+ * The plan of a statement: node type, relation, join type, filter and children.
+ * The index name and the index condition stay out. On the few rows of this spec, two indexes of
+ * spend_versions tie on cost; dropping the policies invalidates the relation cache and the planner
+ * may name the other index, with the same strategy. The root total cost is compared apart.
+ */
 function shape(node: any): any {
   return {
     t: node['Node Type'],
     r: node['Relation Name'] ?? null,
-    i: node['Index Name'] ?? null,
     j: node['Join Type'] ?? null,
     f: node['Filter'] ?? null,
-    c: node['Index Cond'] ?? null,
     p: (node.Plans ?? []).map(shape),
   };
 }
@@ -408,15 +411,49 @@ function perfStatements(s: Seed): string[] {
   ];
 }
 
-async function snapshot(s: Seed): Promise<string> {
+type UnscopedSnapshot = {
+  counts: Record<string, number>;
+  plans: unknown[];
+  /** Root total cost of each statement, in the same order as `plans`. */
+  costs: number[];
+};
+
+async function snapshot(s: Seed): Promise<UnscopedSnapshot> {
   const counts: Record<string, number> = {};
   for (const table of TABLES_2A) counts[table] = (await q(`SELECT count(*)::int AS n FROM ${table}`))[0].n;
-  const plans = [];
+  const plans: unknown[] = [];
+  const costs: number[] = [];
   for (const sql of perfStatements(s)) {
-    const rows = await q(`EXPLAIN (FORMAT JSON) ${sql}`);
-    plans.push(shape(rows[0]['QUERY PLAN'][0].Plan));
+    const plan = (await q(`EXPLAIN (FORMAT JSON) ${sql}`))[0]['QUERY PLAN'][0].Plan;
+    plans.push(shape(plan));
+    costs.push(Number(plan['Total Cost']));
   }
-  return JSON.stringify({ counts, plans });
+  return { counts, plans, costs };
+}
+
+/**
+ * Root total costs the planner still calls a tie. `compare_path_costs_fuzzily` uses
+ * STD_FUZZ_FACTOR 1.01: one cost may sit 1 % above the smaller one.
+ */
+function sameRootCost(left: number, right: number): boolean {
+  const hi = Math.max(left, right);
+  const lo = Math.min(left, right);
+  return hi <= lo * 1.01;
+}
+
+function assertSameUnscoped(actual: UnscopedSnapshot, expected: UnscopedSnapshot): void {
+  assert.deepEqual(
+    { counts: actual.counts, plans: actual.plans },
+    { counts: expected.counts, plans: expected.plans },
+    'same rows and same plans with and without the data-access policies',
+  );
+  assert.equal(actual.costs.length, expected.costs.length, 'one root cost per statement');
+  for (let i = 0; i < expected.costs.length; i++) {
+    assert.ok(
+      sameRootCost(actual.costs[i], expected.costs[i]),
+      `statement ${i + 1}: root total cost ${expected.costs[i]} with the policies, ${actual.costs[i]} without (above the 1 % tie)`,
+    );
+  }
 }
 
 async function testNothingChangesUnscoped(s: Seed): Promise<void> {
@@ -430,7 +467,7 @@ async function testNothingChangesUnscoped(s: Seed): Promise<void> {
       WHERE to_regrole($1)::oid = ANY (p.polroles)`, [LIMITED_ROLE]);
     assert.ok(policies.length > 0, 'the policies exist');
     for (const p of policies) await client.query(`DROP POLICY ${p.polname} ON ${p.relname}`);
-    assert.equal(await snapshot(s), withPolicies, 'same rows and same plans with and without the data-access policies');
+    assertSameUnscoped(await snapshot(s), withPolicies);
   } finally {
     await client.query('ROLLBACK TO SAVEPOINT data_access_no_policies');
   }
