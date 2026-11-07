@@ -29,8 +29,7 @@
     },
     "messages": {
       "saveSuccess": "Profil mis à jour avec succès",
-      "saveFailed": "Impossible d'enregistrer le profil",
-      "portfolioDescription": "Gérez votre profil contributeur, vos compétences, votre disponibilité et vos valeurs par défaut de classification."
+      "saveFailed": "Impossible d'enregistrer le profil"
     },
     "actions": {
       "viewContributorProfile": "Voir le profil contributeur"
@@ -46,7 +45,6 @@
   },
   "notifications": {
     "emailNotifications": "Notifications par e-mail",
-    "emailDescription": "Recevoir des notifications par e-mail pour les mises à jour et l'activité",
     "portfolio": {
       "title": "Notifications du portefeuille",
       "statusChanges": "Changements de statut",
@@ -60,7 +58,6 @@
       "asAssignee": "Assigné à une tâche",
       "asRequestor": "Demandeur d'une tâche",
       "asViewer": "Observateur d'une tâche",
-      "viewerHint": "Peut être fréquent, désactivé par défaut",
       "eventTypes": "Types d'événements :",
       "statusChanges": "Changements de statut",
       "comments": "Commentaires"

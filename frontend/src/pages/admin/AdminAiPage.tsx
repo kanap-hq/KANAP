@@ -46,6 +46,7 @@ import {
   type AiWebSearchTestResult,
 } from '../../ai/aiApi';
 import { PropertyRow } from '../../components/design';
+import InfoHint from '../../components/workspace/InfoHint';
 import { drawerMenuItemSx, drawerSelectSx } from '../../theme/formSx';
 import { AiApiKeyRecord } from '../../ai/aiTypes';
 import { clientDisplayName } from '../oauth/clientName';
@@ -553,12 +554,12 @@ export default function AdminAiPage() {
                       <Card variant="outlined">
                         <CardContent>
                           <Stack spacing={1.5}>
-                            <Typography variant="subtitle2">
-                              {t('aiAdmin.provider.builtinUsage.title')}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              {t('aiAdmin.provider.builtinUsage.description')}
-                            </Typography>
+                            <Stack direction="row" spacing={0.75} alignItems="center">
+                              <Typography variant="subtitle2">
+                                {t('aiAdmin.provider.builtinUsage.title')}
+                              </Typography>
+                              <InfoHint text={t('aiAdmin.provider.builtinUsage.description')} />
+                            </Stack>
                             {builtinUsageQuery.isLoading ? (
                               <Box display="flex" justifyContent="center" py={2}>
                                 <CircularProgress size={24} />
@@ -706,13 +707,7 @@ export default function AdminAiPage() {
 
                   <PropertyRow
                     label={t('aiAdmin.keys.endpoint.label')}
-                    helperText={(
-                      <>
-                        {t('aiAdmin.keys.endpoint.helper')}
-                        <br />
-                        {t('aiAdmin.keys.endpoint.connectorHint')}
-                      </>
-                    )}
+                    hint={`${t('aiAdmin.keys.endpoint.helper')} ${t('aiAdmin.keys.endpoint.connectorHint')}`}
                   >
                     <Box sx={{ maxWidth: 560 }}>
                       <CopyValue
@@ -729,7 +724,8 @@ export default function AdminAiPage() {
                     type="number"
                     value={form.mcp_key_max_lifetime_days}
                     onChange={(event) => setForm((prev) => ({ ...prev, mcp_key_max_lifetime_days: event.target.value }))}
-                    helperText={t('aiAdmin.fields.keyMaxLifetimeHelper')}
+                    placeholder={t('aiAdmin.shared.never')}
+                    InputLabelProps={{ shrink: true }}
                     sx={{ width: 240 }}
                   />
 

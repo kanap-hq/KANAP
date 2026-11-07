@@ -199,7 +199,7 @@ describe('AdminAiPage', () => {
     expect(screen.getByText('abcd1234')).toBeInTheDocument();
     // A connection has no key to show.
     expect(screen.queryByText('efgh5678')).not.toBeInTheDocument();
-    expect(screen.getByText(/add this address as a custom connector/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/add this address as a custom connector/)).toBeInTheDocument();
     adminKeys = [];
   });
 

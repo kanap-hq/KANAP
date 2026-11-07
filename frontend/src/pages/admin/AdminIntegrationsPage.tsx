@@ -198,20 +198,16 @@ export default function AdminIntegrationsPage() {
                 <Stack spacing={2.5}>
                   <Stack direction="row" spacing={1} alignItems="center">
                     <Typography variant="h6">{t('aiAdmin.glpi.title')}</Typography>
-                    <Tooltip title={t('aiAdmin.glpi.tooltips.plaidRequired')}>
+                    <Tooltip title={`${t('aiAdmin.glpi.description')} ${t('aiAdmin.glpi.tooltips.plaidRequired')}`}>
                       <IconButton
                         size="small"
-                        aria-label={t('aiAdmin.glpi.tooltips.plaidRequired')}
+                        aria-label={`${t('aiAdmin.glpi.description')} ${t('aiAdmin.glpi.tooltips.plaidRequired')}`}
                         sx={{ p: 0.25 }}
                       >
                         <InfoOutlinedIcon fontSize="inherit" />
                       </IconButton>
                     </Tooltip>
                   </Stack>
-
-                  <Typography variant="body2" color="text.secondary">
-                    {t('aiAdmin.glpi.description')}
-                  </Typography>
 
                   <FormControlLabel
                     control={(

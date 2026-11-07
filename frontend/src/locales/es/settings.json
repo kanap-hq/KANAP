@@ -29,8 +29,7 @@
     },
     "messages": {
       "saveSuccess": "Perfil actualizado correctamente",
-      "saveFailed": "No se pudo guardar el perfil",
-      "portfolioDescription": "Administre su perfil de colaborador, habilidades, disponibilidad y valores predeterminados de clasificación."
+      "saveFailed": "No se pudo guardar el perfil"
     },
     "actions": {
       "viewContributorProfile": "Ver perfil de colaborador"
@@ -46,7 +45,6 @@
   },
   "notifications": {
     "emailNotifications": "Notificaciones por correo electrónico",
-    "emailDescription": "Recibir notificaciones por correo electrónico sobre actualizaciones y actividad",
     "portfolio": {
       "title": "Notificaciones del portafolio",
       "statusChanges": "Cambios de estado",
@@ -60,7 +58,6 @@
       "asAssignee": "Asignado a una tarea",
       "asRequestor": "Solicitante de una tarea",
       "asViewer": "Observador de una tarea",
-      "viewerHint": "Puede ser frecuente (desactivado por defecto)",
       "eventTypes": "Tipos de eventos:",
       "statusChanges": "Cambios de estado",
       "comments": "Comentarios"

@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Alert,
-  Box,
   Button,
   Card,
   CardContent,
@@ -21,6 +20,7 @@ import SendIcon from '@mui/icons-material/Send';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
 import { useFeatures } from '../../config/FeaturesContext';
+import InfoHint from '../../components/workspace/InfoHint';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 
 interface WorkspaceSettings {
@@ -241,12 +241,7 @@ export default function NotificationsTab() {
               />
             }
             label={
-              <Box>
-                <Typography variant="subtitle1">{t('settings:notifications.emailNotifications')}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {t('settings:notifications.emailDescription')}
-                </Typography>
-              </Box>
+              <Typography variant="subtitle1">{t('settings:notifications.emailNotifications')}</Typography>
             }
           />
         </CardContent>
@@ -394,12 +389,7 @@ export default function NotificationsTab() {
                       />
                     }
                     label={
-                      <Stack>
-                        <Typography variant="body2">{t('settings:notifications.tasks.asViewer')}</Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {t('settings:notifications.tasks.viewerHint')}
-                        </Typography>
-                      </Stack>
+                      <Typography variant="body2">{t('settings:notifications.tasks.asViewer')}</Typography>
                     }
                   />
                   <Divider sx={{ my: 1 }} />
@@ -554,12 +544,10 @@ export default function NotificationsTab() {
                   />
                 }
                 label={
-                  <Box>
+                  <Stack direction="row" spacing={0.75} alignItems="center">
                     <Typography variant="subtitle1">{t('settings:notifications.weeklyReview.title')}</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {t('settings:notifications.weeklyReview.description')}
-                    </Typography>
-                  </Box>
+                    <InfoHint text={t('settings:notifications.weeklyReview.description')} />
+                  </Stack>
                 }
               />
               <Collapse in={prefs.weekly_review_enabled}>

@@ -29,8 +29,7 @@
     },
     "messages": {
       "saveSuccess": "Profil erfolgreich aktualisiert",
-      "saveFailed": "Profil konnte nicht gespeichert werden",
-      "portfolioDescription": "Verwalten Sie Ihr Mitwirkendenprofil, Ihre Fähigkeiten, Verfügbarkeit und Standardklassifizierungen."
+      "saveFailed": "Profil konnte nicht gespeichert werden"
     },
     "actions": {
       "viewContributorProfile": "Mitwirkendenprofil anzeigen"
@@ -46,7 +45,6 @@
   },
   "notifications": {
     "emailNotifications": "E-Mail-Benachrichtigungen",
-    "emailDescription": "E-Mail-Benachrichtigungen bei Aktualisierungen und Aktivitäten erhalten",
     "portfolio": {
       "title": "Portfolio-Benachrichtigungen",
       "statusChanges": "Statusänderungen",
@@ -60,7 +58,6 @@
       "asAssignee": "Einer Aufgabe zugewiesen bin",
       "asRequestor": "Auftraggeber einer Aufgabe bin",
       "asViewer": "Beobachter einer Aufgabe bin",
-      "viewerHint": "Kann häufig sein (standardmäßig deaktiviert)",
       "eventTypes": "Ereignistypen:",
       "statusChanges": "Statusänderungen",
       "comments": "Kommentare"

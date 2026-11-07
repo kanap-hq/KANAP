@@ -29,8 +29,7 @@
     },
     "messages": {
       "saveSuccess": "Profile updated successfully",
-      "saveFailed": "Failed to save profile",
-      "portfolioDescription": "Manage your contributor profile, skills, availability, and classification defaults."
+      "saveFailed": "Failed to save profile"
     },
     "actions": {
       "viewContributorProfile": "View contributor profile"
@@ -46,7 +45,6 @@
   },
   "notifications": {
     "emailNotifications": "Email notifications",
-    "emailDescription": "Receive email notifications for updates and activity",
     "portfolio": {
       "title": "Portfolio notifications",
       "statusChanges": "Status changes",
@@ -60,7 +58,6 @@
       "asAssignee": "Assigned to a task",
       "asRequestor": "Requestor of a task",
       "asViewer": "Viewer of a task",
-      "viewerHint": "Can be noisy - off by default",
       "eventTypes": "Event types:",
       "statusChanges": "Status changes",
       "comments": "Comments"
