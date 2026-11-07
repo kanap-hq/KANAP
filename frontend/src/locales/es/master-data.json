@@ -46,8 +46,7 @@
       "failedToSaveMetrics": "Error al guardar los indicadores",
       "fixValidationErrors": "Corrija los errores de validación antes de guardar.",
       "readOnlyAccess": "Necesita acceso de gestor para editar {{entity}}.",
-      "metricsFrozen": "Los indicadores de {{year}} están congelados. Un administrador de presupuesto puede descongelarlos.",
-      "metricsYearHint": "Cada valor se guarda para el año seleccionado al salir de su campo. Cambie de año para revisar los datos anteriores."
+      "metricsFrozen": "Los indicadores de {{year}} están congelados. Un administrador de presupuesto puede descongelarlos."
     },
     "lineTypeUsage": {
       "label": "Usada para",
@@ -203,7 +202,6 @@
     "placeholders": {
       "description": "p. ej., Contabilidad y nóminas"
     },
-    "headcountHint": "Se guarda para el año seleccionado al salir del campo.",
     "messages": {
       "saveFailed": "Error al guardar el departamento.",
       "createFailed": "Error al crear el departamento.",
@@ -256,7 +254,6 @@
       "lifecycle": "Ciclo de vida"
     },
     "hints": {
-      "code": "El código que usa su equipo de finanzas para este centro de coste, tal como figura en su sistema contable o su referencial presupuestario.",
       "company": "La entidad jurídica que paga los costes de este centro de coste.",
       "owner": "La persona responsable de esta partida presupuestaria en la revisión del presupuesto."
     },
@@ -563,7 +560,6 @@
     },
     "chipBar": {
       "createFirst": "Cree su primer plan de cuentas",
-      "accountsInChart": "Las cuentas siempre se gestionan dentro de un plan de cuentas.",
       "newCoA": "Nuevo plan de cuentas",
       "newChip": "Nuevo",
       "manage": "Gestionar planes"
@@ -753,7 +749,6 @@
     "reorder": {
       "action": "Reordenar",
       "title": "Reordenar los valores de {{name}}",
-      "hint": "Arrastre los valores al orden en que las listas y los filtros deben mostrarlos.",
       "loadFailed": "Error al cargar los valores.",
       "saveFailed": "Error al guardar el orden.",
       "roleDescription": "valor movible",
@@ -766,7 +761,6 @@
     "reorderDimensions": {
       "action": "Reordenar las dimensiones",
       "title": "Reordenar las dimensiones",
-      "hint": "Arrastre las dimensiones al orden en que las pantallas, las listas y el archivo de presupuesto deben mostrarlas.",
       "loadFailed": "Error al cargar las dimensiones.",
       "saveFailed": "Error al guardar el orden.",
       "roleDescription": "dimensión movible",
@@ -796,7 +790,6 @@
       "codeDefault": "Los archivos antiguos usan la columna analytics_category para esta dimensión; analytics:{{code}} también funciona.",
       "codeCreate": "Se usa como nombre de columna en los archivos CSV. Letras minúsculas, dígitos, - o _.",
       "defaultLocked": "Esta dimensión no se puede desactivar ni eliminar: los archivos antiguos y las preguntas a la IA la usan.",
-      "appliesToDefault": "La dimensión predeterminada se aplica a las líneas OPEX y CAPEX.",
       "valueDimensionAppliesTo": {
         "opex": "La dimensión {{dimension}} es solo para líneas OPEX.",
         "capex": "La dimensión {{dimension}} es solo para líneas CAPEX."
@@ -901,7 +894,6 @@
     "recommended": {
       "action": "Dimensiones recomendadas",
       "title": "Añadir las dimensiones recomendadas",
-      "subtitle": "Dimensiones listas para usar con sus valores, para las líneas OPEX y CAPEX. Puede cambiarles el nombre, modificarlas o eliminarlas después.",
       "dimensions": "Dimensiones",
       "present": "Ya presente",
       "presentAs": "Ya presente ({{name}})",

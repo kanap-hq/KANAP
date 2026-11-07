@@ -98,7 +98,6 @@ function SortableRow({
 type Props<T extends { id: string }> = {
   open: boolean;
   title: string;
-  hint: string;
   /** The stored order, read each time the dialog opens. */
   queryKey: QueryKey;
   load: (signal?: AbortSignal) => Promise<T[]>;
@@ -127,7 +126,6 @@ type Props<T extends { id: string }> = {
 export default function SortableOrderDialog<T extends { id: string }>({
   open,
   title,
-  hint,
   queryKey,
   load,
   canLoad = true,
@@ -231,7 +229,6 @@ export default function SortableOrderDialog<T extends { id: string }>({
     <KanapDialog
       open={open}
       title={title}
-      subtitle={hint}
       onClose={onClose}
       disableEscapeKeyDown={dragging}
       onSave={handleSave}

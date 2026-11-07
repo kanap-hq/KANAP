@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { KanapDialog, PropertyRow } from '../../components/design';
+import InfoHint from '../../components/workspace/InfoHint';
 import FormattedNumberField from '../../components/inputs/FormattedNumberField';
 import YearTabs from '../../components/navigation/YearTabs';
 import { useLocale } from '../../i18n/useLocale';
@@ -176,14 +177,16 @@ export default function WorkingDayProfileEditor({
 
   return (
     <Box data-testid="working-days">
-      <Typography sx={{ fontSize: 12, fontWeight: 500, color: 'kanap.text.tertiary', mb: 0.5 }}>
-        {t('workingDayCalendars.days.title')}
-      </Typography>
-      <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', mb: 1.5 }}>
-        {standard
-          ? t('workingDayCalendars.days.standardHint', { source: standard.source })
-          : t('workingDayCalendars.days.hint')}
-      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1.5 }}>
+        <Typography sx={{ fontSize: 12, fontWeight: 500, color: 'kanap.text.tertiary' }}>
+          {t('workingDayCalendars.days.title')}
+        </Typography>
+        <InfoHint
+          text={standard
+            ? t('workingDayCalendars.days.standardHint', { source: standard.source })
+            : t('workingDayCalendars.days.hint')}
+        />
+      </Box>
       <Box sx={{ mb: 1.5 }}>
         <YearTabs currentYear={year} availableYears={years} onYearChange={setYear} />
       </Box>

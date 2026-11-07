@@ -49,7 +49,7 @@ export default function WorkingDayCalendarPropertiesDrawer({
   return (
     <>
       <PropertyGroup>
-        <PropertyRow label={t('workingDayCalendars.fields.code')} required helperText={t('workingDayCalendars.hints.code')}>
+        <PropertyRow label={t('workingDayCalendars.fields.code')} required hint={t('workingDayCalendars.hints.code')}>
           <TextField
             value={code}
             onChange={(event) => setCode(event.target.value)}
@@ -70,7 +70,7 @@ export default function WorkingDayCalendarPropertiesDrawer({
         {sourceFields}
         {!sourceFields && source && (
           // Set at creation and never changed: plain text, not a field.
-          <PropertyRow label={t('workingDayCalendars.fields.source')} helperText={t('workingDayCalendars.hints.source')}>
+          <PropertyRow label={t('workingDayCalendars.fields.source')} hint={t('workingDayCalendars.hints.source')}>
             <Typography data-testid="working-day-calendar-source" sx={{ fontSize: 13, lineHeight: 1.4, color: 'kanap.text.primary' }}>
               {source}
             </Typography>

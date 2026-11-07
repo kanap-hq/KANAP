@@ -73,7 +73,7 @@ export default function CostCenterPropertiesDrawer({
   return (
     <>
       <PropertyGroup>
-        <PropertyRow label={t('costCenters.fields.code')} required helperText={t('costCenters.hints.code')}>
+        <PropertyRow label={t('costCenters.fields.code')} required>
           <TextField
             value={code}
             onChange={(event) => setCode(event.target.value)}
@@ -126,7 +126,7 @@ export default function CostCenterPropertiesDrawer({
           />
         </PropertyRow>
         {kind === 'cost_center' && (
-          <PropertyRow label={t('costCenters.fields.company')} required helperText={t('costCenters.hints.company')}>
+          <PropertyRow label={t('costCenters.fields.company')} required hint={t('costCenters.hints.company')}>
             <CompanySelect
               hideLabel
               label={t('costCenters.fields.company')}
@@ -140,7 +140,7 @@ export default function CostCenterPropertiesDrawer({
             />
           </PropertyRow>
         )}
-        <PropertyRow label={t('costCenters.fields.owner')} helperText={t('costCenters.hints.owner')}>
+        <PropertyRow label={t('costCenters.fields.owner')} hint={t('costCenters.hints.owner')}>
           <Box>
             <UserSelect
               hideLabel

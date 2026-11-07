@@ -196,13 +196,13 @@ describe('CostCenterWorkspacePage', () => {
     expect(code).toHaveValue('IT-100');
   });
 
-  it('explains the budget holder under its field, on the create page and in the drawer', async () => {
+  it('explains the budget holder beside its label, on the create page and in the drawer', async () => {
     const { unmount } = renderAt('/master-data/cost-centers/new/overview');
-    expect(screen.getByText('costCenters.hints.owner')).toBeInTheDocument();
+    expect(screen.getByLabelText('costCenters.hints.owner')).toBeInTheDocument();
     unmount();
     renderAt('/master-data/cost-centers/cc-1/overview');
     await screen.findByLabelText('costCenters.fields.code');
-    expect(screen.getByRole('complementary')).toContainElement(screen.getByText('costCenters.hints.owner'));
+    expect(screen.getByRole('complementary')).toContainElement(screen.getByLabelText('costCenters.hints.owner'));
   });
 
   it('names the parent group field after its own label, on the create page and in the drawer', async () => {

@@ -245,7 +245,7 @@ describe('WorkingDayProfileEditor on a standard calendar', () => {
     expect(screen.getByTestId('working-days-total')).toHaveTextContent('workingDayCalendars.days.total count=252 total=252 year=2026');
     expect(screen.queryByTestId('working-days-standard')).toBeNull();
     expect(screen.queryByRole('button', { name: 'workingDayCalendars.days.resetToStandard' })).toBeNull();
-    expect(screen.getByText('workingDayCalendars.days.standardHint source=France')).toBeInTheDocument();
+    expect(screen.getByLabelText('workingDayCalendars.days.standardHint source=France')).toBeInTheDocument();
   });
 
   it('never offers the copy from the year before nor the removal of a year', () => {
