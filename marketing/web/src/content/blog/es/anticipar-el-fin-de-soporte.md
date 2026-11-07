@@ -1,7 +1,7 @@
 ---
 title: "Anticipar el fin de soporte"
 description: "Windows Server 2012, SQL Server 2016, Ubuntu 20.04: la fecha de fin de soporte se conoce, lo que depende de ella rara vez. El informe de fin de soporte de KANAP nombra los servidores y las aplicaciones afectados, con tiempo para presupuestar la migración."
-date: 2026-11-09
+date: 2026-11-07
 topic: mapping
 features: [it-landscape]
 author: Friedrich
@@ -29,7 +29,7 @@ El informe se abre desde **Panorama IT > Fin de soporte**. Su vista Vencimientos
 
 Se elige el horizonte: 6, 12, 24 o 36 meses. Cada fila lleva un estado: sin soporte, soporte extendido, termina pronto. Lo que está retirado o ya nada utiliza no aparece.
 
-Las fechas no se introducen a mano. Vienen del catálogo de tecnologías, alimentado por endoflife.date y por las páginas de los fabricantes que KANAP consulta, y se actualizan cuando un fabricante las cambia. El artículo [Tecnologías: el vínculo entre servidores y aplicaciones](/es/blog/tecnologias-el-vinculo-entre-servidores-y-aplicaciones) explica cómo se mantiene este catálogo.
+Las fechas tienen dos fuentes. Las de las tecnologías y los sistemas operativos vienen del catálogo, alimentado por endoflife.date y por las páginas de los fabricantes que KANAP consulta: nadie las introduce, y se actualizan cuando un fabricante las cambia. Las de las aplicaciones y el hardware vienen de sus fichas: la fecha de fin de soporte introducida en la aplicación, el fin de vida o el fin del contrato de soporte introducidos en el activo. El artículo [Tecnologías: el vínculo entre servidores y aplicaciones](/es/blog/tecnologias-el-vinculo-entre-servidores-y-aplicaciones) explica cómo se mantiene este catálogo.
 
 ## Lo que afecta cada vencimiento
 
@@ -56,7 +56,7 @@ Un informe solo es tan correcto como sus datos. Un servidor sin sus tecnologías
 - un servidor o una aplicación que usa una tecnología sin indicar qué versión;
 - una máquina virtual sin host.
 
-Cada fila abre la ficha que hay que completar. Es la parte más útil para empezar, y la más honesta: muestra dónde la cartografía aún tiene huecos.
+Cada fila abre la ficha que hay que completar. Es la parte más útil para empezar: muestra dónde la cartografía aún tiene huecos.
 
 KANAP no escanea sus servidores. Sabe lo que usted ha declarado en ellos, a mano, con un archivo CSV o mediante Netbox.
 

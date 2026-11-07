@@ -1,7 +1,7 @@
 ---
 title: "Anticipating end of support"
 description: "Windows Server 2012, SQL Server 2016, Ubuntu 20.04: the end of support date is known, what depends on it rarely is. The KANAP end of support report names the servers and applications affected, early enough to budget the migration."
-date: 2026-11-09
+date: 2026-11-07
 topic: mapping
 features: [it-landscape]
 author: Friedrich
@@ -29,7 +29,7 @@ The report opens from **IT landscape > End of support**. Its Deadlines view brin
 
 You pick the horizon: 6, 12, 24 or 36 months. Each row carries a state: out of support, extended support, ends soon. What is retired, or no longer used by anything, does not appear.
 
-Dates are not typed in. They come from the technology catalog, fed by endoflife.date and by the vendor pages KANAP tracks, and they follow when a vendor moves them. The article [Technologies: the link between servers and applications](/blog/technologies-the-link-between-servers-and-applications) explains how this catalog is maintained.
+Dates come from two sources. Those of technologies and operating systems come from the catalog, fed by endoflife.date and by the vendor pages KANAP tracks: nobody types them in, and they follow when a vendor moves them. Those of applications and hardware come from your records: the end of support date entered on the application, the end of life or end of support contract entered on the asset. The article [Technologies: the link between servers and applications](/blog/technologies-the-link-between-servers-and-applications) explains how this catalog is maintained.
 
 ## What each deadline touches
 
@@ -56,7 +56,7 @@ A report is only as right as its data. A server without its technologies will ne
 - a server or an application that uses a technology without saying which version;
 - a virtual machine without a host.
 
-Each row opens the record to complete. It is the most useful part to start with, and the most honest one: it shows where the landscape still has gaps.
+Each row opens the record to complete. It is the most useful part to start with: it shows where the landscape still has gaps.
 
 KANAP does not scan your servers. It knows what you declared on them, by hand, from a CSV file or through Netbox.
 

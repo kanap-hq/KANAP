@@ -1,7 +1,7 @@
 ---
 title: "Supportende vorausplanen"
 description: "Windows Server 2012, SQL Server 2016, Ubuntu 20.04: Das Supportende ist bekannt, was davon abhängt, selten. Der Supportende-Bericht von KANAP nennt die betroffenen Server und Anwendungen, früh genug, um die Migration einzuplanen."
-date: 2026-11-09
+date: 2026-11-07
 topic: mapping
 features: [it-landscape]
 author: Friedrich
@@ -29,7 +29,7 @@ Der Bericht öffnet sich über **IT-Landschaft > Supportende**. Seine Ansicht Fr
 
 Sie wählen den Zeitraum: 6, 12, 24 oder 36 Monate. Jede Zeile hat einen Status: ohne Support, erweiterter Support, endet bald. Was ausgemustert ist oder von nichts mehr genutzt wird, erscheint nicht.
 
-Die Daten werden nicht erfasst. Sie stammen aus dem Technologiekatalog, gespeist von endoflife.date und von den Herstellerseiten, die KANAP auswertet, und sie ziehen nach, wenn ein Hersteller sie verschiebt. Der Artikel [Technologien: die Verbindung zwischen Servern und Anwendungen](/de/blog/technologien-die-verbindung-zwischen-servern-und-anwendungen) erklärt, wie dieser Katalog gepflegt wird.
+Die Daten haben zwei Quellen. Die der Technologien und Betriebssysteme stammen aus dem Katalog, gespeist von endoflife.date und von den Herstellerseiten, die KANAP auswertet: Niemand erfasst sie, und sie ziehen nach, wenn ein Hersteller sie verschiebt. Die der Anwendungen und der Hardware stammen aus Ihren Datensätzen: das Supportende, das in der Anwendung erfasst ist, das Lebensende oder das Ende des Supportvertrags, das im Asset erfasst ist. Der Artikel [Technologien: die Verbindung zwischen Servern und Anwendungen](/de/blog/technologien-die-verbindung-zwischen-servern-und-anwendungen) erklärt, wie dieser Katalog gepflegt wird.
 
 ## Was jede Frist betrifft
 
@@ -56,7 +56,7 @@ Ein Bericht ist nur so richtig wie seine Daten. Ein Server ohne seine Technologi
 - ein Server oder eine Anwendung, die eine Technologie nutzt, ohne die Version anzugeben;
 - eine virtuelle Maschine ohne Host.
 
-Jede Zeile öffnet den zu ergänzenden Datensatz. Für den Einstieg ist das der nützlichste Teil, und der ehrlichste: Er zeigt, wo die Kartografie noch Lücken hat.
+Jede Zeile öffnet den zu ergänzenden Datensatz. Für den Einstieg ist das der nützlichste Teil: Er zeigt, wo die Kartografie noch Lücken hat.
 
 KANAP scannt Ihre Server nicht. Es kennt, was Sie dort deklariert haben, von Hand, per CSV-Datei oder über Netbox.
 

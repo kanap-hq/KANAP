@@ -1,7 +1,7 @@
 ---
 title: "Anticiper les fins de support"
 description: "Windows Server 2012, SQL Server 2016, Ubuntu 20.04 : la date de fin de support est connue, ce qui en dépend l'est rarement. Le rapport des fins de support de KANAP nomme les serveurs et les applications touchés, assez tôt pour budgéter la migration."
-date: 2026-11-09
+date: 2026-11-07
 topic: mapping
 features: [it-landscape]
 author: Friedrich
@@ -29,7 +29,7 @@ Le rapport s'ouvre depuis **Cartographie SI > Fins de support**. Sa vue Échéan
 
 On choisit l'horizon, 6, 12, 24 ou 36 mois. Chaque ligne porte un état : hors support, support étendu, fin proche. Ce qui est retiré ou que plus rien n'utilise n'apparaît pas.
 
-Les dates ne se saisissent pas. Elles viennent du catalogue des technologies, alimenté par endoflife.date et par les pages des éditeurs que KANAP relève, et elles suivent quand un éditeur les déplace. L'article [Technologies : le lien entre serveurs et applications](/fr/blog/technologies-le-lien-entre-serveurs-et-applications) explique comment ce catalogue est tenu.
+Les dates viennent de deux sources. Celles des technologies et des systèmes d'exploitation viennent du catalogue, alimenté par endoflife.date et par les pages des éditeurs que KANAP relève : personne ne les saisit, et elles suivent quand un éditeur les déplace. Celles des applications et du matériel viennent de vos fiches : la date de fin de support saisie sur l'application, la fin de vie ou la fin du contrat de support saisie sur l'actif. L'article [Technologies : le lien entre serveurs et applications](/fr/blog/technologies-le-lien-entre-serveurs-et-applications) explique comment ce catalogue est tenu.
 
 ## Ce que touche chaque échéance
 
@@ -56,7 +56,7 @@ Un rapport n'est juste que si les données le sont. Un serveur sans ses technolo
 - un serveur ou une application qui utilise une technologie sans dire quelle version ;
 - une machine virtuelle sans hôte.
 
-Chaque ligne ouvre la fiche à compléter. C'est la partie la plus utile pour démarrer, et la plus honnête : elle montre où la cartographie a encore des trous.
+Chaque ligne ouvre la fiche à compléter. C'est la partie la plus utile pour démarrer : elle montre où la cartographie a encore des trous.
 
 KANAP ne scanne pas vos serveurs. Il sait ce que vous y avez déclaré, à la main, par un fichier CSV ou par Netbox.
 
