@@ -57,6 +57,12 @@
  *     discovered).
  * A spec can still be run alone from its source: `npx ts-node <spec>.ts`.
  *
+ * Each spec process receives JWT_SECRET. When the shell and backend/.env leave
+ * it empty, the runner sets a default of 32 characters or more, on that
+ * process only. A value already set is the one the process receives. A spec
+ * run alone with npx ts-node does not pass through here, so it keeps its own
+ * line.
+ *
  * The runner never stops a spec: it sets no time limit and sends no signal. A
  * spec that dies from a signal (SIGKILL with no output of its own) was stopped
  * from outside, by the kernel's OOM killer (`journalctl -k`, `oom_kill` in
@@ -285,12 +291,30 @@ function lastLines(output, count = 5) {
   return lines.length ? lines.slice(-count) : ['(no output)'];
 }
 
+/**
+ * Signing secret of a spec process when the shell and backend/.env leave
+ * JWT_SECRET empty. Creation routes sign a token from it, and CI sets none.
+ * 32 characters or more, the length an installation is asked to use.
+ */
+const DEFAULT_SPEC_JWT_SECRET = 'ci-runner-default-jwt-secret-v1x';
+
+/**
+ * Environment of one spec process. process.env already holds the shell and
+ * backend/.env (dotenv does not override the shell). The default JWT_SECRET
+ * is set on the copy the child receives.
+ */
+function specEnv(file, { databaseUrl } = {}) {
+  const env = { ...process.env, ...(ENV[file] || {}) };
+  if (databaseUrl) env.DATABASE_URL = databaseUrl;
+  if (!String(env.JWT_SECRET ?? '').trim()) env.JWT_SECRET = DEFAULT_SPEC_JWT_SECRET;
+  return env;
+}
+
 function runSpec(file, { databaseUrl, tag }) {
   return new Promise((resolve) => {
     const started = Date.now();
     const chunks = [];
-    const env = { ...process.env, ...(ENV[file] || {}) };
-    if (databaseUrl) env.DATABASE_URL = databaseUrl;
+    const env = specEnv(file, { databaseUrl });
     const child = spawn(process.execPath, ['--enable-source-maps', compiledPath(file)], {
       cwd: root,
       env,
@@ -454,4 +478,7 @@ if (require.main === module) {
   });
 }
 
-module.exports = { failure, lastLines, databaseName, racesRefused, RACE_SPEC, compiledPath, laneUrl, exclusiveReason, prepareLanes, EXCLUSIVE_PATTERNS, DB_PATTERN };
+module.exports = {
+  failure, lastLines, databaseName, racesRefused, RACE_SPEC, compiledPath, laneUrl, exclusiveReason, prepareLanes, EXCLUSIVE_PATTERNS, DB_PATTERN,
+  specEnv, DEFAULT_SPEC_JWT_SECRET, runSpec,
+};
