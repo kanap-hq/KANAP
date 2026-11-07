@@ -373,7 +373,7 @@
     "importRun": {
       "check": "Prüfung des Imports",
       "result": "Import",
-      "download": "Vorbereitete Datei herunterladen (.xlsx)"
+      "download": "Datei herunterladen (.xlsx)"
     }
   },
   "previewStatuses": {

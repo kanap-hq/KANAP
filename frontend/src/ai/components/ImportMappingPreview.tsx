@@ -1,6 +1,5 @@
 import React from 'react';
-import { Box, IconButton, Stack, Tooltip, Typography } from '@mui/material';
-import DownloadIcon from '@mui/icons-material/Download';
+import { Box, Stack, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import type { AiImportMapping } from '../aiTypes';
 import ImportRunReport from './ImportRunReport';
@@ -8,8 +7,6 @@ import { formatShortDate, formatShortDateTime } from '../../lib/dateFormat';
 
 type ImportMappingPreviewProps = {
   mapping: AiImportMapping;
-  /** Downloads the file prepared for the import, in the import's format. */
-  onDownload?: () => Promise<void>;
 };
 
 const cellSx = {
@@ -45,10 +42,8 @@ const sectionLabelSx = {
  * is not used, what was supposed, and the first rows as the template will hold them. Last, the
  * import's check of the file, or what the import did once the card is approved.
  */
-function ImportMappingPreview({ mapping, onDownload }: ImportMappingPreviewProps) {
-  const { t, i18n } = useTranslation(['ai', 'common']);
-  const [downloading, setDownloading] = React.useState(false);
-  const [downloadFailed, setDownloadFailed] = React.useState(false);
+function ImportMappingPreview({ mapping }: ImportMappingPreviewProps) {
+  const { t, i18n } = useTranslation(['ai']);
   const locale = i18n.resolvedLanguage || i18n.language || 'en';
   const kindOf = new Map(mapping.columns.map((column) => [column.column, column.kind]));
   const titleOf = new Map(mapping.columns.map((column) => [column.column, column.title]));
@@ -233,36 +228,7 @@ function ImportMappingPreview({ mapping, onDownload }: ImportMappingPreviewProps
         </Stack>
       )}
 
-      {(mapping.result ?? mapping.validation) && (
-        <ImportRunReport
-          run={(mapping.result ?? mapping.validation)!}
-          titles={titleOf}
-          action={onDownload && (
-            <Tooltip title={t('ai:previewCard.importRun.download')} placement="top">
-              <span>
-                <IconButton
-                  size="small"
-                  aria-label={t('ai:previewCard.importRun.download')}
-                  disabled={downloading}
-                  onClick={() => {
-                    setDownloading(true);
-                    setDownloadFailed(false);
-                    onDownload()
-                      .catch(() => setDownloadFailed(true))
-                      .finally(() => setDownloading(false));
-                  }}
-                  sx={{ width: 28, height: 28, color: 'kanap.text.tertiary' }}
-                >
-                  <DownloadIcon sx={{ fontSize: 18 }} />
-                </IconButton>
-              </span>
-            </Tooltip>
-          )}
-        />
-      )}
-      {downloadFailed && (
-        <Typography sx={{ fontSize: 12, color: 'error.main' }}>{t('common:messages.exportFailed')}</Typography>
-      )}
+      {(mapping.result ?? mapping.validation) && <ImportRunReport run={(mapping.result ?? mapping.validation)!} titles={titleOf} />}
     </Stack>
   );
 }

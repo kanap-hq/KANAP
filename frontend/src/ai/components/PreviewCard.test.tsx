@@ -1077,7 +1077,7 @@ describe('PreviewCard in French', () => {
     expect(screen.getByText('2 créées · 1 mise à jour')).toBeInTheDocument();
   });
 
-  it('downloads the file prepared for the import from the card, and says when it fails', async () => {
+  it('downloads the file prepared for the import with a button after Reject, and says when it fails', async () => {
     const download = vi.mocked(downloadServerExport);
     download.mockClear();
     renderCard(preview({
@@ -1090,7 +1090,9 @@ describe('PreviewCard in French', () => {
         },
       }),
     }));
-    const button = screen.getByRole('button', { name: 'Télécharger le fichier préparé (.xlsx)' });
+    const button = screen.getByRole('button', { name: 'Télécharger le fichier (.xlsx)' });
+    const reject = screen.getByRole('button', { name: 'Rejeter' });
+    expect(reject.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     fireEvent.click(button);
     await waitFor(() => expect(download).toHaveBeenCalledTimes(1));
     expect(download.mock.calls[0][0]).toMatchObject({
@@ -1102,6 +1104,19 @@ describe('PreviewCard in French', () => {
     download.mockRejectedValueOnce(new Error('network'));
     fireEvent.click(button);
     expect(await screen.findByText("Échec de l'exportation. Veuillez réessayer.")).toBeInTheDocument();
+    cleanup();
+
+    // Once applied, the card keeps the download alone.
+    renderCard(preview({
+      tool_name: 'prepare_import_mapping',
+      status: 'executed',
+      requires_confirmation: false,
+      actions: [],
+      target: { entity_type: 'imports', entity_id: null, ref: null, title: 'Fournisseurs · fournisseurs.xlsx' },
+      import_mapping: importMapping({}),
+    }));
+    expect(screen.getByRole('button', { name: 'Télécharger le fichier (.xlsx)' })).toBeEnabled();
+    expect(screen.queryByRole('button', { name: 'Rejeter' })).not.toBeInTheDocument();
   });
 
   it('shows the check of a budget file as its import dialog does, under the card status', () => {
