@@ -95,6 +95,20 @@ KANAP reads a spreadsheet when you send the message:
 - Plaid receives a summary of the file: the column headers, the type of each column (text, number or date), the first ten rows and the number of rows. It can describe the file, say what each column holds and spot problems in the first rows. It cannot answer about the rows after the first ten.
 - The summary stays attached to the message for the rest of the conversation.
 
+### Importing a spreadsheet
+
+Attach a spreadsheet and ask Plaid to import it into a KANAP list: applications, assets, projects, requests, tasks, incidents, budget lines, contracts, suppliers, contacts, companies, departments, cost centers, accounts, analytics dimension values, business processes, working-day calendars, or the technology links of servers and applications. Plaid matches the columns of your file to the columns of the list's import and shows a preview:
+
+- Each column of the import, with the file column it reads (or one value for every row), how sure Plaid is and how many values it read. Then the values it could not read, the file columns it leaves out, what it supposed, and the first rows as they will be imported.
+- The **Import check**: the same check as the list's own import. It counts the rows to create and to update, and lists the errors and warnings with the line numbers of your file.
+- When the check finds errors, **Approve** is unavailable. Tell Plaid what a value stands for, or correct your file and attach it again. Plaid prepares a new preview, which replaces the previous one.
+- **Approve** runs the import with your own rights, as the list's import would. You need the same right as for that import: `applications:admin` to import applications, `incidents:contributor` to import incidents. Read-only access is refused. The preview then shows what was created and updated.
+- For applications, assets, projects, requests, tasks and incidents, a blank cell keeps the value already stored on a record the file updates.
+- Contracts, suppliers, contacts, companies, departments, cost centers, accounts, analytics dimension values, business processes, working-day calendars and technology links replace every value of a record they update. When rows of the file match existing records and the file lacks some columns of the import, the check reports an error and the preview cannot be approved, because those values would be cleared. Map the missing columns, or keep only new records in the file.
+- For budget lines, every row creates a new line. The suppliers the file names must already exist: Plaid does not create them.
+- The [Audit log](admin.md#audit-log) records each import made through Plaid, with the file name and the counts, under the source **AI chat**.
+- The AI model receives only the summary of the file (headers, column types, first ten rows) and the counts of the check, with the code and the column of each error. The other cells and the messages of the import stay on the preview.
+
 ### Mentioning records with `@`
 
 Typing `@` opens the **mention picker** above the composer. It lets you reference any KANAP record you have access to, with two complementary modes:

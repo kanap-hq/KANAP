@@ -95,6 +95,20 @@ KANAP lee una hoja de cálculo cuando usted envía el mensaje:
 - Plaid recibe un resumen del archivo: los encabezados de columna, el tipo de cada columna (texto, número o fecha), las diez primeras filas y el número de filas. Puede describir el archivo, decir qué contiene cada columna y detectar problemas en las primeras filas. No puede responder sobre las filas posteriores a las diez primeras.
 - El resumen queda adjunto al mensaje durante el resto de la conversación.
 
+### Importar una hoja de cálculo
+
+Adjunte una hoja de cálculo y pida a Plaid que la importe en una lista de KANAP: aplicaciones, activos, proyectos, solicitudes, tareas, incidentes, líneas presupuestarias, contratos, proveedores, contactos, empresas, departamentos, centros de coste, cuentas, valores de dimensiones analíticas, procesos de negocio, calendarios laborales, o los vínculos de las tecnologías con los servidores y las aplicaciones. Plaid relaciona las columnas de su archivo con las columnas de la importación de la lista y muestra una vista previa:
+
+- Cada columna de la importación, con la columna del archivo que lee (o un mismo valor para todas las filas), la confianza de Plaid y cuántos valores leyó. Después, los valores que no pudo leer, las columnas del archivo que deja fuera, lo que supuso y las primeras filas tal como se importarán.
+- La **Comprobación de la importación**: la misma comprobación que la importación de la lista. Cuenta las filas que se crearán y las que se actualizarán, y lista los errores y las advertencias con los números de línea de su archivo.
+- Cuando la comprobación encuentra errores, **Aprobar** no está disponible. Diga a Plaid qué significa un valor, o corrija su archivo y adjúntelo de nuevo. Plaid prepara una nueva vista previa, que sustituye a la anterior.
+- **Aprobar** ejecuta la importación con sus propios derechos, como lo haría la importación de la lista. Necesita el mismo derecho que para esa importación: `applications:admin` para importar aplicaciones, `incidents:contributor` para importar incidentes. Un acceso de solo lectura se rechaza. La vista previa muestra después lo que se creó y se actualizó.
+- En las aplicaciones, los activos, los proyectos, las solicitudes, las tareas y los incidentes, una celda vacía conserva el valor ya guardado en un registro que el archivo actualiza.
+- Los contratos, proveedores, contactos, empresas, departamentos, centros de coste, cuentas, valores de dimensiones analíticas, procesos de negocio, calendarios laborales y vínculos de tecnologías sustituyen todos los valores de un registro que actualizan. Cuando filas del archivo corresponden a registros existentes y al archivo le faltan columnas de la importación, la comprobación señala un error y la vista previa no se puede aprobar, porque esos valores se vaciarían. Asocie las columnas que faltan, o deje en el archivo solo registros nuevos.
+- En las líneas presupuestarias, cada fila del archivo crea una nueva línea. Los proveedores que nombra el archivo deben existir ya: Plaid no los crea.
+- El [Registro de auditoría](admin.md#registro-de-auditoria) anota cada importación hecha con Plaid, con el nombre del archivo y los recuentos, bajo el origen **Chat de IA**.
+- El modelo de IA solo recibe el resumen del archivo (encabezados, tipos de columna, diez primeras filas) y los recuentos de la comprobación, con el código y la columna de cada error. Las demás celdas y los mensajes de la importación se quedan en la vista previa.
+
 ### Mencionar registros con `@`
 
 Escribir `@` abre el **selector de menciones** encima del cuadro de redacción. Le permite hacer referencia a cualquier registro de KANAP al que tenga acceso, con dos modos complementarios:

@@ -95,6 +95,20 @@ KANAP lit un tableur au moment où vous envoyez le message :
 - Plaid reçoit un résumé du fichier : les en-têtes de colonnes, le type de chaque colonne (texte, nombre ou date), les dix premières lignes et le nombre de lignes. Il peut décrire le fichier, dire ce que contient chaque colonne et repérer des problèmes dans les premières lignes. Il ne peut pas répondre sur les lignes au-delà des dix premières.
 - Le résumé reste attaché au message pendant toute la suite de la conversation.
 
+### Importer un tableur
+
+Joignez un tableur et demandez à Plaid de l'importer dans une liste KANAP : applications, actifs, projets, demandes, tâches, incidents, lignes budgétaires, contrats, fournisseurs, contacts, sociétés, départements, centres de coûts, comptes, valeurs des dimensions analytiques, processus métier, calendriers de jours ouvrés, ou liens des technologies avec les serveurs et les applications. Plaid fait correspondre les colonnes de votre fichier aux colonnes de l'import de la liste et affiche un aperçu :
+
+- Chaque colonne de l'import, avec la colonne du fichier qu'elle lit (ou une même valeur pour toutes les lignes), le degré de confiance de Plaid et le nombre de valeurs lues. Puis les valeurs qu'il n'a pas pu lire, les colonnes du fichier qu'il laisse de côté, ce qu'il a supposé et les premières lignes telles qu'elles seront importées.
+- La **Vérification de l'import** : la même vérification que l'import de la liste. Elle compte les lignes à créer et à mettre à jour, et liste les erreurs et les avertissements avec les numéros de ligne de votre fichier.
+- Quand la vérification trouve des erreurs, **Approuver** n'est pas disponible. Dites à Plaid ce que désigne une valeur, ou corrigez votre fichier et joignez-le de nouveau. Plaid prépare un nouvel aperçu, qui remplace le précédent.
+- **Approuver** lance l'import avec vos propres droits, comme le ferait l'import de la liste. Il vous faut le même droit que pour cet import : `applications:admin` pour importer des applications, `incidents:contributor` pour importer des incidents. Un accès en lecture seule est refusé. L'aperçu montre ensuite ce qui a été créé et mis à jour.
+- Pour les applications, les actifs, les projets, les demandes, les tâches et les incidents, une cellule vide conserve la valeur déjà enregistrée sur une fiche que le fichier met à jour.
+- Les contrats, fournisseurs, contacts, sociétés, départements, centres de coûts, comptes, valeurs des dimensions analytiques, processus métier, calendriers de jours ouvrés et liens des technologies remplacent toutes les valeurs d'une fiche qu'ils mettent à jour. Quand des lignes du fichier correspondent à des fiches existantes et qu'il manque au fichier des colonnes de l'import, la vérification signale une erreur et l'aperçu ne peut pas être approuvé, car ces valeurs seraient effacées. Associez les colonnes manquantes, ou ne gardez dans le fichier que de nouvelles fiches.
+- Pour les lignes budgétaires, chaque ligne du fichier crée une nouvelle ligne budgétaire. Les fournisseurs que nomme le fichier doivent déjà exister : Plaid ne les crée pas.
+- Le [Journal d'audit](admin.md#journal-daudit) enregistre chaque import fait par Plaid, avec le nom du fichier et les nombres de lignes, sous la source **Chat IA**.
+- Le modèle d'IA ne reçoit que le résumé du fichier (en-têtes, types de colonnes, dix premières lignes) et les nombres de la vérification, avec le code et la colonne de chaque erreur. Les autres cellules et les messages de l'import restent sur l'aperçu.
+
 ### Mentionner des enregistrements avec `@`
 
 La saisie de `@` ouvre le **sélecteur de mentions** au-dessus du composeur. Il vous permet de référencer n'importe quel enregistrement KANAP auquel vous avez accès, selon deux modes complémentaires :
