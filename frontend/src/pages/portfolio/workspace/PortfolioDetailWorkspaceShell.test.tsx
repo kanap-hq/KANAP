@@ -1,8 +1,10 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from '@mui/material/styles';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../../config/ThemeContext';
+import { clearCreationFieldFocus } from '../../../components/workspace/creation/creationFieldFocus';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', resolvedLanguage: 'en' } }),
@@ -21,6 +23,7 @@ import DateEUField from '../../../components/fields/DateEUField';
 import { PropertyRow } from '../../../components/design/PropertyRow';
 
 function renderShell(extra: Partial<React.ComponentProps<typeof PortfolioDetailWorkspaceShell>> = {}) {
+  const { children = <div>content</div>, ...rest } = extra;
   return render(
     <ThemeProvider theme={createAppTheme('light')}>
       <PortfolioDetailWorkspaceShell
@@ -32,9 +35,9 @@ function renderShell(extra: Partial<React.ComponentProps<typeof PortfolioDetailW
         onBack={() => undefined}
         title="Title"
         titleFallback="Untitled"
-        {...extra}
+        {...rest}
       >
-        <div>content</div>
+        {children}
       </PortfolioDetailWorkspaceShell>
     </ThemeProvider>,
   );
@@ -470,5 +473,135 @@ describe('PortfolioDetailWorkspaceShell history', () => {
     const company = screen.getByLabelText('company');
     company.focus();
     expect(fireEvent.keyDown(company, { key: 'Tab' })).toBe(true);
+  });
+});
+
+// Tab from a typed creation title skips Cancel and Create and lands on the first field.
+// Shift+Tab stays the browser's, so those buttons, which sit between the title and the fields, stay on the way back.
+describe('PortfolioDetailWorkspaceShell creation title Tab', () => {
+  afterEach(() => { clearCreationFieldFocus(); });
+
+  const actions = (
+    <>
+      <button type="button">Cancel</button>
+      <button type="button">Create</button>
+    </>
+  );
+
+  async function tabFromTitle(name: string) {
+    const user = userEvent.setup();
+    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    fireEvent.change(title, { target: { value: name } });
+    title.focus();
+    await user.tab();
+    return user;
+  }
+
+  it('lands on the first property field, ahead of the main content and of Cancel', async () => {
+    renderShell({
+      isCreate: true,
+      title: '',
+      canEditTitle: true,
+      titleAutoEdit: true,
+      actions,
+      properties: <input aria-label="category" />,
+      children: <input aria-label="notes" />,
+    });
+    await tabFromTitle('Billing');
+    await waitFor(() => expect(screen.getByLabelText('category')).toHaveFocus());
+    expect(screen.getByRole('button', { name: 'Cancel' })).not.toHaveFocus();
+  });
+
+  it('prefers a marked field over the first property field', async () => {
+    renderShell({
+      isCreate: true,
+      title: '',
+      canEditTitle: true,
+      titleAutoEdit: true,
+      actions,
+      properties: <input aria-label="category" />,
+      children: <input aria-label="source" data-creation-field="" />,
+    });
+    await tabFromTitle('Billing');
+    await waitFor(() => expect(screen.getByLabelText('source')).toHaveFocus());
+  });
+
+  it('skips a field still in the creation preview and uses the main content', async () => {
+    renderShell({
+      isCreate: true,
+      title: '',
+      canEditTitle: true,
+      titleAutoEdit: true,
+      actions,
+      properties: (
+        <div data-testid="creation-preview" {...{ inert: '' }}>
+          <input aria-label="category" />
+        </div>
+      ),
+      children: <input aria-label="description" />,
+    });
+    await tabFromTitle('Billing');
+    await waitFor(() => expect(screen.getByLabelText('description')).toHaveFocus());
+  });
+
+  it('keeps a page handler in place of the default', async () => {
+    const titleOnTab = vi.fn();
+    renderShell({
+      isCreate: true,
+      title: '',
+      canEditTitle: true,
+      titleAutoEdit: true,
+      titleOnTab,
+      actions,
+      properties: <input aria-label="category" />,
+    });
+    await tabFromTitle('Billing');
+    expect(titleOnTab).toHaveBeenCalledTimes(1);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(screen.getByLabelText('category')).not.toHaveFocus();
+  });
+
+  it('leaves Tab on a saved title to reach Cancel', async () => {
+    const user = userEvent.setup();
+    renderShell({
+      canEditTitle: true,
+      title: 'Saved',
+      actions,
+      properties: <input aria-label="category" />,
+    });
+    fireEvent.keyDown(screen.getByRole('button', { name: 'common:buttons.editTitle' }), { key: 'Enter' });
+    await user.tab();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus();
+  });
+
+  it('leaves an empty creation title to the browser, which reaches Cancel', async () => {
+    const user = userEvent.setup();
+    renderShell({
+      isCreate: true,
+      title: '',
+      canEditTitle: true,
+      titleAutoEdit: true,
+      actions,
+      properties: <input aria-label="category" />,
+    });
+    screen.getByRole('textbox', { name: 'common:buttons.editTitle' }).focus();
+    await user.tab();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus();
+  });
+
+  it('reaches Create with one Shift+Tab from a field that follows it directly', async () => {
+    renderShell({
+      isCreate: true,
+      title: '',
+      canEditTitle: true,
+      titleAutoEdit: true,
+      actions,
+      children: <input aria-label="description" />,
+    });
+    const user = await tabFromTitle('Billing');
+    const description = screen.getByLabelText('description');
+    await waitFor(() => expect(description).toHaveFocus());
+    await user.tab({ shift: true });
+    expect(screen.getByRole('button', { name: 'Create' })).toHaveFocus();
   });
 });

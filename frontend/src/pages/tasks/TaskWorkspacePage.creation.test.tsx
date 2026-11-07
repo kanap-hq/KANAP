@@ -2,11 +2,13 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 import { KanapDialogProvider } from '../../components/design';
 import NavigationTracker, { resetNavigationTracker } from '../../components/navigation/NavigationTracker';
 import { resetCreationStore } from '../../components/workspace/creation/creationStore';
+import { clearCreationFieldFocus } from '../../components/workspace/creation/creationFieldFocus';
 import api from '../../api';
 import TaskWorkspacePage from './TaskWorkspacePage';
 
@@ -43,7 +45,10 @@ vi.mock('../../utils/taskTypeLocalization', () => ({
 vi.mock('../workspace/hooks/useRecentlyViewed', () => ({ useRecentlyViewed: () => ({ addToRecent: () => undefined }) }));
 vi.mock('./components/TaskPropertiesDrawer', () => ({
   default: (props: { task: { related_object_name?: string | null } | null }) => (
-    <div data-testid="task-properties">{`related:${props.task?.related_object_name ?? ''}`}</div>
+    <aside data-creation-panel="properties" data-testid="task-properties">
+      {`related:${props.task?.related_object_name ?? ''}`}
+      <input aria-label="related to" />
+    </aside>
   ),
 }));
 vi.mock('./components/TaskActivity', () => ({ default: () => <div data-testid="task-activity" /> }));
@@ -178,6 +183,7 @@ describe('Task creation at the title', () => {
     Object.defineProperty(window, 'localStorage', { value: storage, configurable: true });
     // A person who closed the properties panel on their tasks: it still opens on a creation.
     storage.setItem('kanap.taskDetail.drawerOpen', 'false');
+    clearCreationFieldFocus();
   });
 
   it('opens with the title to type and the task to come dimmed, its properties panel open', async () => {
@@ -333,5 +339,22 @@ describe('Task creation at the title', () => {
     await waitFor(() => expect(location()).toBe('/start'));
     expect(mocked.delete).not.toHaveBeenCalled();
     expect(mocked.post).toHaveBeenCalledTimes(1);
+  });
+
+  it('sends Tab from the title to the related-to field, and Shift+Tab reaches Create', async () => {
+    const user = userEvent.setup();
+    renderPage(['/portfolio/tasks/new/overview']);
+    const input = await screen.findByRole('textbox', { name: TITLE });
+    await user.type(input, 'Order cheese');
+    await user.tab();
+    await waitFor(() => expect(location()).toBe('/portfolio/tasks/T-9/overview'));
+    const related = screen.getByRole('textbox', { name: 'related to' });
+    await waitFor(() => expect(related).toHaveFocus());
+    expect(screen.getByRole('button', { name: 'common:buttons.cancel' })).not.toHaveFocus();
+    const create = screen.getByRole('button', { name: 'common:buttons.create' });
+    for (let i = 0; i < 20 && document.activeElement !== create; i += 1) {
+      await user.tab({ shift: true });
+    }
+    expect(create).toHaveFocus();
   });
 });

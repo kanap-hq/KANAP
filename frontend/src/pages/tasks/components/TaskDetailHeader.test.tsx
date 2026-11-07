@@ -45,6 +45,9 @@ function renderHeader(crumbs: TaskCrumb[], handlers?: {
   onOriginClick?: ReturnType<typeof vi.fn<() => void>>;
   onParentClick?: ReturnType<typeof vi.fn<(href: string) => void>>;
   onTabChange?: ReturnType<typeof vi.fn<(tab: string) => void>>;
+  onTitleSave?: ReturnType<typeof vi.fn<(title: string) => void>>;
+  titleOnTab?: () => void;
+  titleToGive?: boolean;
   activeTab?: string;
 }) {
   const onOriginClick = handlers?.onOriginClick ?? vi.fn<() => void>();
@@ -77,7 +80,9 @@ function renderHeader(crumbs: TaskCrumb[], handlers?: {
         onConvertToRequest={() => undefined}
         onDelete={() => undefined}
         onTitleChange={() => undefined}
-        onTitleSave={() => undefined}
+        onTitleSave={handlers?.onTitleSave ?? (() => undefined)}
+        titleToGive={handlers?.titleToGive}
+        titleOnTab={handlers?.titleOnTab}
         onMetadataPatch={() => undefined}
         canManage
         canDelete
@@ -154,5 +159,16 @@ describe('TaskDetailHeader breadcrumbs', () => {
     expect(title).toHaveTextContent('SAP Cheddar vendor selection');
     fireEvent.keyDown(title, { key: 'Enter' });
     expect(screen.getByRole('textbox', { name: 'common:buttons.editTitle' })).toHaveValue('SAP Cheddar vendor selection');
+  });
+
+  it('commits a typed creation title on Tab and calls titleOnTab', () => {
+    const onTitleSave = vi.fn<(title: string) => void>();
+    const titleOnTab = vi.fn();
+    renderHeader([originCrumb], { titleToGive: true, onTitleSave, titleOnTab });
+    const input = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    fireEvent.change(input, { target: { value: 'Order cheese' } });
+    fireEvent.keyDown(input, { key: 'Tab' });
+    expect(onTitleSave).toHaveBeenCalledWith('Order cheese');
+    expect(titleOnTab).toHaveBeenCalledTimes(1);
   });
 });

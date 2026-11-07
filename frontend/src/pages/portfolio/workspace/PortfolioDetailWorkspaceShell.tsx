@@ -15,6 +15,7 @@ import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import { useTranslation } from 'react-i18next';
 import { MONO_FONT_FAMILY } from '../../../config/ThemeContext';
 import EditableTitle from '../../../components/workspace/EditableTitle';
+import { focusFirstCreationField, useCreationFieldFocus } from '../../../components/workspace/creation/creationFieldFocus';
 import RecordHistoryButton from '../../../components/history/RecordHistoryButton';
 import { taskDetailTokens, taskDetailTypography } from '../../tasks/theme/taskDetailTokens';
 import WorkspaceTabs, { type WorkspaceTab } from './WorkspaceTabs';
@@ -136,8 +137,10 @@ function entryFields(stop: HTMLElement): HTMLElement[] {
 }
 
 /**
- * A new record: Tab goes from the title to each required field in turn (Shift+Tab back), then on
- * as usual from the last one. A stop with several fields (first and last name) is crossed first.
+ * A new record whose title is still empty: Tab goes from the title to each required field in turn
+ * (Shift+Tab back), then on as usual from the last one. A title with a name uses `titleOnTab`
+ * instead, which lands on the first field and leaves Shift+Tab to the browser. A stop with
+ * several fields (first and last name) is crossed first.
  */
 function followRequiredFields(event: React.KeyboardEvent<HTMLElement>) {
   if (event.key !== 'Tab' || event.altKey || event.ctrlKey || event.metaKey || event.defaultPrevented) return;
@@ -282,6 +285,11 @@ export default function PortfolioDetailWorkspaceShell({
   const tabRowDrawerReserve = hasProperties && effectiveDrawerOpen && !isMobile
     ? taskDetailTokens.drawer.panelWidth + DRAWER_HANDLE_WIDTH - parseInt(taskDetailTokens.titleBlock.px, 10) + 8
     : 0;
+  const rootRef = React.useRef<HTMLDivElement>(null);
+  useCreationFieldFocus(rootRef, isCreate);
+  // No page handler: Tab from a typed title lands on the first field. Shift+Tab stays the browser's,
+  // so Create and Cancel, which sit between the title and the fields, stay on the way back.
+  const creationTitleOnTab = isCreate && !titleOnTab ? focusFirstCreationField : undefined;
 
   React.useEffect(() => {
     if (drawerOpenRequest > 0) setDrawerOpen(true);
@@ -371,6 +379,8 @@ export default function PortfolioDetailWorkspaceShell({
 
   return (
     <Box
+      ref={rootRef}
+      data-workspace-shell=""
       sx={{ height: '100%', minWidth: 0, display: 'flex', flexDirection: 'column' }}
       onKeyDownCapture={isCreate ? followRequiredFields : undefined}
     >
@@ -477,7 +487,7 @@ export default function PortfolioDetailWorkspaceShell({
                         maxLength={titleMaxLength}
                         onSave={onTitleSave}
                         onDraftChange={onTitleDraftChange}
-                        onTab={titleOnTab}
+                        onTab={titleOnTab ?? creationTitleOnTab}
                         requiredMessage={titleRequiredMessage}
                         error={titleError}
                         autoEdit={titleAutoEdit}
@@ -579,6 +589,7 @@ export default function PortfolioDetailWorkspaceShell({
         }}
       >
         <Box
+          data-creation-panel="main"
           data-primary-scroll={isMobile ? undefined : ''}
           tabIndex={isMobile ? undefined : -1}
           sx={{
@@ -658,6 +669,7 @@ export default function PortfolioDetailWorkspaceShell({
         {hasProperties && effectiveDrawerOpen && (
           <Box
             component="aside"
+            data-creation-panel="properties"
             sx={(theme) => ({
               width: isMobile ? '100%' : taskDetailTokens.drawer.panelWidth,
               mt: isMobile ? 0 : `${-drawerLift}px`,

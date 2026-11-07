@@ -33,6 +33,7 @@ import ConvertToRequestDialog from './components/ConvertToRequestDialog';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
 import { CreationActions, CreationPreview, useCreationReturn, useRecordCreation, useTitleCreation } from '../../components/workspace/creation';
+import { focusFirstCreationField, useCreationFieldFocus } from '../../components/workspace/creation/creationFieldFocus';
 import { TASK_STATUS_OPTIONS } from './task.constants';
 import type { TaskStatus } from './task.constants';
 import { useTranslation } from 'react-i18next';
@@ -1469,6 +1470,9 @@ export default function TaskWorkspacePage() {
     return () => window.removeEventListener('keydown', handler);
   }, [isCreate, hasPrev, hasNext, prevId, nextId, confirmAndNavigate, handleBack, creation.beingCreated, toggleDrawer]);
 
+  const workspaceRef = React.useRef<HTMLDivElement>(null);
+  useCreationFieldFocus(workspaceRef, isCreate);
+
   if (!isCreate && isLoading && !task) {
     return (
       <Box sx={{ p: 3 }}>
@@ -1591,7 +1595,7 @@ export default function TaskWorkspacePage() {
   ) : null;
 
   return (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Box ref={workspaceRef} data-workspace-shell="" sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <TaskDetailHeader
         taskId={task?.id ?? ''}
         itemNumber={task?.item_number ?? null}
@@ -1662,6 +1666,7 @@ export default function TaskWorkspacePage() {
         titleFocusRequest={titleCreation.focusRequest}
         onTitleDraftChange={isCreate ? () => titleCreation.setTitleError(null) : undefined}
         onTitleCancel={isCreate ? () => { void cancelAction(); } : undefined}
+        titleOnTab={isCreate ? focusFirstCreationField : undefined}
       />
 
       {error && (
@@ -1689,6 +1694,7 @@ export default function TaskWorkspacePage() {
       >
         {/* Content column — 26px right gutter for the tab to sit in */}
         <Box
+          data-creation-panel="main"
           data-primary-scroll={isMobile ? undefined : ''}
           tabIndex={isMobile ? undefined : -1}
           sx={{ flex: isMobile ? 'none' : 1, minWidth: 0, overflow: isMobile ? 'visible' : 'auto', outline: 'none', pt: '8px', pl: 3, pr: isMobile ? 3 : '29px', pb: 3 }}

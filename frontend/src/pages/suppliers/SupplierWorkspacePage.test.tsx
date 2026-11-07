@@ -56,6 +56,7 @@ vi.mock('../../components/fields/ContactSelect', () => ({
 
 import api from '../../api';
 import { clearCreation, creationKey, getCreation, setCreation } from '../../components/workspace/creation/creationStore';
+import { clearCreationFieldFocus } from '../../components/workspace/creation/creationFieldFocus';
 import SupplierWorkspacePage from './SupplierWorkspacePage';
 
 const mocked = api as unknown as {
@@ -140,6 +141,7 @@ describe('SupplierWorkspacePage', () => {
     });
     mocked.post.mockResolvedValue({ data: {} });
     mocked.delete.mockResolvedValue({ data: {} });
+    clearCreationFieldFocus();
   });
 
   it('shows the name as title, the ERP ID as reference, the status and no save button', async () => {
@@ -532,6 +534,13 @@ describe('SupplierWorkspacePage', () => {
     expect(mocked.post).not.toHaveBeenCalled();
     await user.tab();
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/suppliers', expect.objectContaining({ name: 'Initech' })));
+    const erp = screen.getByLabelText('suppliers.fields.erpSupplierId');
+    await waitFor(() => expect(erp).toHaveFocus());
+    const create = screen.getByRole('button', { name: 'common:buttons.create' });
+    for (let i = 0; i < 20 && document.activeElement !== create; i += 1) {
+      await user.tab({ shift: true });
+    }
+    expect(create).toHaveFocus();
     clearCreation(creationKey('suppliers', 's-new'));
   });
 

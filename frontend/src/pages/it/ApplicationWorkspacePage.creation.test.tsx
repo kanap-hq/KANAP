@@ -1,5 +1,6 @@
 import React from 'react';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { MemoryRouter, Route, Routes, useLocation, useNavigate, type InitialEntry } from 'react-router-dom';
@@ -8,6 +9,7 @@ import { createAppTheme } from '../../config/ThemeContext';
 import { KanapDialogProvider } from '../../components/design';
 import NavigationTracker, { resetNavigationTracker } from '../../components/navigation/NavigationTracker';
 import { resetCreationStore } from '../../components/workspace/creation/creationStore';
+import { clearCreationFieldFocus } from '../../components/workspace/creation/creationFieldFocus';
 import api from '../../api';
 import ApplicationWorkspacePage from './ApplicationWorkspacePage';
 
@@ -114,6 +116,7 @@ describe('Application creation at the title', () => {
     resetCreationStore();
     resetNavigationTracker();
     auth.admin = false;
+    clearCreationFieldFocus();
   });
 
   it('opens with the title to type, light blue while empty, and nothing else to fill', async () => {
@@ -159,6 +162,22 @@ describe('Application creation at the title', () => {
     expect(screen.queryByTestId('creation-preview')).toBeNull();
     expect(await screen.findByTestId('description-editor')).toBeTruthy();
     expect(screen.getByRole('button', { name: TITLE })).toHaveTextContent('Billing');
+  });
+
+  it('sends Tab from the title to the category, and Shift+Tab reaches Create', async () => {
+    const user = userEvent.setup();
+    renderPage(['/it/applications/new/overview']);
+    const input = await screen.findByRole('textbox', { name: TITLE });
+    await user.type(input, 'Billing');
+    await user.tab();
+    await waitFor(() => expect(location()).toBe('/it/applications/APP-7/overview'));
+    const category = within(screen.getByRole('complementary')).getAllByRole('combobox')[0];
+    await waitFor(() => expect(category).toHaveFocus());
+    const create = screen.getByRole('button', { name: 'common:buttons.create' });
+    for (let i = 0; i < 30 && document.activeElement !== create; i += 1) {
+      await user.tab({ shift: true });
+    }
+    expect(create).toHaveFocus();
   });
 
   it('creates the application when the title is committed, then opens every tab with the focus on the title', async () => {
