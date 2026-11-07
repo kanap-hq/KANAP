@@ -3108,7 +3108,7 @@
         "routeDirect": "Routentyp: direkt. Ein einziger Abschnitt zwischen Quelle und Ziel.",
         "addEnvironment": "Umgebung hinzufügen",
         "loadingBindings": "Bindungen werden geladen…",
-        "noEnvironments": "Noch keine Umgebungen definiert. Klicken Sie auf „Umgebung hinzufügen“, um Bindungen zu dokumentieren. Jede Umgebung benötigt Anwendungsbereitstellungen, die im Bereich Anwendungen angelegt werden, bevor Sie Bindungen hinzufügen können.",
+        "noEnvironments": "Noch keine Umgebungen.",
         "bindingIn": "Bindung in {{env}}",
         "noPii": "Keine PII",
         "deleteBindingMessage": "Diese Umgebungsbindung löschen. Die mit ihr verknüpften Infrastrukturverbindungen werden ebenfalls entfernt.",
@@ -3193,7 +3193,7 @@
       "subItems": {
         "title": "Unterstandorte",
         "add": "+ Unterstandort hinzufügen",
-        "empty": "Keine Unterstandorte definiert. Fügen Sie Gebäude, Räume, Racks oder andere physische Bereiche hinzu.",
+        "empty": "Keine Unterstandorte.",
         "usage": "Nutzung",
         "namePlaceholder": "z. B. Gebäude A, Raum 1, Rack 5",
         "descriptionPlaceholder": "Optionale Beschreibung",
@@ -3220,7 +3220,6 @@
         "status": "Status",
         "detected": "Erkannt"
       },
-      "empty": "Noch keine Vorfälle verknüpft. Vorfälle werden vom Vorfall selbst aus verknüpft.",
       "loadFailed": "Vorfälle konnten nicht geladen werden."
     },
     "instances": {

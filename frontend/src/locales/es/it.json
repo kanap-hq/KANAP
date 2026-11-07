@@ -3108,7 +3108,7 @@
         "routeDirect": "Tipo de ruta: directa. Un único tramo entre origen y destino.",
         "addEnvironment": "Añadir entorno",
         "loadingBindings": "Cargando enlaces…",
-        "noEnvironments": "Todavía no hay entornos definidos. Haga clic en «Añadir entorno» para documentar los enlaces. Cada entorno necesita despliegues de aplicación, creados en el espacio Aplicaciones, antes de poder añadir enlaces.",
+        "noEnvironments": "Todavía no hay entornos.",
         "bindingIn": "Enlace en {{env}}",
         "noPii": "Sin PII",
         "deleteBindingMessage": "Eliminar este enlace de entorno. También se quitarán las conexiones de infraestructura vinculadas a este enlace.",
@@ -3193,7 +3193,7 @@
       "subItems": {
         "title": "Sububicaciones",
         "add": "+ Añadir sub-ubicación",
-        "empty": "No hay sububicaciones definidas. Añada edificios, salas, racks u otras áreas físicas.",
+        "empty": "No hay sububicaciones.",
         "usage": "Uso",
         "namePlaceholder": "p. ej., Edificio A, Sala 1, Rack 5",
         "descriptionPlaceholder": "Descripción opcional",
@@ -3220,7 +3220,6 @@
         "status": "Estado",
         "detected": "Detectado"
       },
-      "empty": "Todavía no hay incidentes vinculados. Los incidentes se vinculan desde el propio incidente.",
       "loadFailed": "No se han podido cargar los incidentes."
     },
     "instances": {
