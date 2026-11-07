@@ -50,6 +50,8 @@ import { StorageService } from '../common/storage/storage.service';
 import { RemoteInlineImageImportService } from '../common/remote-inline-image-import.service';
 import { Features } from '../config/features';
 import { EmailService } from '../email/email.service';
+import type { EmailBranding } from '../email/email-branding';
+import { workspaceEmailSender } from '../email/email-config';
 import { resolveEmailLocale } from '../i18n/email-i18n';
 import type { EmailContent } from '../notifications/notification-templates';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -2308,9 +2310,12 @@ export class KnowledgeService {
 
   async sendWorkflowEmail(
     recipients: Array<{ email: string; locale?: string | null }>,
-    buildContent: (locale: string) => EmailContent,
+    buildContent: (locale: string, branding?: EmailBranding) => EmailContent,
+    tenantId?: string | null,
   ): Promise<void> {
     if (!Features.EMAIL_ENABLED) return;
+    const branding = await this.emails.tenantBranding(tenantId);
+    const from = workspaceEmailSender(branding?.organisationName);
     const localeGroups = new Map<string, Set<string>>();
 
     for (const entry of recipients) {
@@ -2325,7 +2330,7 @@ export class KnowledgeService {
     for (const [locale, emails] of localeGroups) {
       const uniqueRecipients = Array.from(emails);
       if (!uniqueRecipients.length) continue;
-      const content = buildContent(locale);
+      const content = buildContent(locale, branding);
 
       try {
         await this.emails.send({
@@ -2334,6 +2339,7 @@ export class KnowledgeService {
           html: content.html,
           text: content.text,
           attachments: content.attachments,
+          ...(from ? { from } : {}),
         });
       } catch (error) {
         this.logger.warn(`Knowledge workflow email failed for locale ${locale}: ${error instanceof Error ? error.message : String(error)}`);

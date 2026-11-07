@@ -318,7 +318,7 @@ PostgreSQL ran on its defaults (128 MB shared buffers, 4 MB work memory; the ste
 
 ### Platform Administration Channel
 - `PLATFORM_ADMIN_HOST` identifies the platform console. The middleware looks up the `platform-admin` **system tenant** and attaches it to the request, so platform admin runs with a real tenant context and RLS applies normally. `req.isPlatformHost = true` lets guards tell platform routes from tenant routes. The whole channel is multi-tenant only (`MultiTenantOnlyGuard`).
-- `/public/tenant-info` returns `{ platform: true }`, tenant metadata + branding (`slug`, `name`, `logoPath`, `logoVersion`, `useLogoInDark`, `primaryColorLight`, `primaryColorDark`), or `{ marketing: true }`, letting the SPA swap shells without a separate bundle.
+- `/public/tenant-info` returns `{ platform: true }`, tenant metadata + branding (`slug`, `name`, `displayName`, `logoPath`, `logoVersion`, `useLogoInDark`, `primaryColorLight`, `primaryColorDark`), or `{ marketing: true }`, letting the SPA swap shells without a separate bundle.
 - Branding endpoints (`/admin/branding/*`) require `users:admin` and reject platform-host requests.
 - The platform module owns tenant list and stats, plan changes, freeze/unfreeze, synchronous deletion (purge of tenant rows and S3 objects), ops monitoring (`GET /admin/ops/snapshot`: API traffic, DB health, process metrics), platform AI configuration and the scheduled tasks console.
 

@@ -1,3 +1,4 @@
+import { PRODUCT_NAME } from '../../config/product';
 import type { EmailStrings } from './en';
 
 export const fr: EmailStrings = {
@@ -6,7 +7,7 @@ export const fr: EmailStrings = {
     footer: {
       managePreferencesLink: 'Gérer les préférences de notification',
       managePreferencesText: 'Gérer les préférences de notification : {{url}}',
-      poweredBy: 'Propulsé par KANAP',
+      poweredBy: `Propulsé par ${PRODUCT_NAME}`,
     },
     itemTypes: {
       request: { label: 'Demande', lower: 'demande', view: 'Voir la demande' },
@@ -36,7 +37,7 @@ export const fr: EmailStrings = {
       greetingHelloName: 'Bonjour {{name}},',
     },
     buttons: {
-      goToKanap: 'Aller à KANAP',
+      openWorkspace: 'Ouvrir {{organisation}}',
       activateWorkspace: 'Activer mon espace de travail',
       resetPassword: 'Réinitialiser le mot de passe',
       setPassword: 'Définir votre mot de passe',
@@ -113,7 +114,7 @@ export const fr: EmailStrings = {
     vulnerabilities: {
       subject: 'Nouvelles vulnérabilités sur vos technologies ({{count}})',
       heading: 'Nouvelles vulnérabilités sur vos technologies',
-      intro: 'KANAP a trouvé des vulnérabilités sur des technologies dont vous êtes responsable IT ({{count}}) : critiques ou élevées, ou connues comme exploitées. Examinez-les et indiquez leur état.',
+      intro: `${PRODUCT_NAME} a trouvé des vulnérabilités sur des technologies dont vous êtes responsable IT ({{count}}) : critiques ou élevées, ou connues comme exploitées. Examinez-les et indiquez leur état.`,
       severities: {
         critical: 'Critique',
         high: 'Élevée',
@@ -130,7 +131,7 @@ export const fr: EmailStrings = {
       more: 'Et {{count}} autres : ouvrez la page pour toutes les voir.',
     },
     weeklyReview: {
-      subject: 'Votre revue hebdomadaire KANAP — Semaine du {{weekLabel}}',
+      subject: 'Votre revue hebdomadaire {{organisation}} — Semaine du {{weekLabel}}',
       introHtml: 'Bonjour {{userName}}, voici votre résumé pour la semaine du <strong>{{weekLabel}}</strong>.',
       introText: 'Bonjour {{userName}}, voici votre résumé pour la semaine du {{weekLabel}}.',
       empty: 'Aucune activité à signaler cette semaine. Continuez comme ça !',
@@ -199,15 +200,15 @@ export const fr: EmailStrings = {
       textAction: 'Activer votre espace de travail : {{url}}',
     },
     passwordReset: {
-      subject: 'Réinitialisez votre mot de passe KANAP',
+      subject: 'Réinitialisez votre mot de passe {{organisation}}',
       intro: 'Nous avons reçu une demande de réinitialisation du mot de passe associé à cette adresse e-mail.',
       copyPaste: 'Si le bouton ci-dessus ne fonctionne pas, copiez et collez ce lien dans votre navigateur :',
       expires: "Ce lien expirera dans environ {{minutes}} minutes. Si vous n'avez pas demandé de réinitialisation de mot de passe, vous pouvez ignorer cet e-mail.",
       textAction: 'Réinitialiser votre mot de passe : {{url}}',
     },
     userInvite: {
-      subject: 'Vous êtes invité sur KANAP',
-      intro: 'Vous avez été invité{{inviterPart}} à rejoindre KANAP{{rolePart}}.',
+      subject: 'Vous êtes invité sur {{organisation}}',
+      intro: 'Vous avez été invité{{inviterPart}} à rejoindre {{organisation}}{{rolePart}}.',
       inviterPart: ' par {{inviterEmail}}',
       rolePart: ' en tant que {{roleName}}',
       copyPaste: 'Si le bouton ci-dessus ne fonctionne pas, copiez et collez ce lien dans votre navigateur :',
@@ -217,7 +218,7 @@ export const fr: EmailStrings = {
   },
   workspace: {
     reset: {
-      subject: 'Votre espace de travail KANAP a été réinitialisé',
+      subject: 'Votre espace de travail {{organisation}} a été réinitialisé',
       heading: "L'espace de travail est revenu à son état initial",
       bodyHtml: "<strong>{{actorName}}</strong> a effacé tout le contenu de l'espace de travail <strong>{{workspaceName}}</strong> le {{date}}. L'espace de travail est revenu à son état initial. Les comptes utilisateurs et leurs rôles, l'abonnement et le journal d'audit ont été conservés.",
       text: "{{actorName}} a effacé tout le contenu de l'espace de travail {{workspaceName}} le {{date}}. L'espace de travail est revenu à son état initial. Les comptes utilisateurs et leurs rôles, l'abonnement et le journal d'audit ont été conservés. Ouvrir l'espace de travail : {{url}}",

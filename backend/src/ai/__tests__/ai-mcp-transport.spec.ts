@@ -142,6 +142,8 @@ async function testInitializeAdvertisesTools(url: string) {
   assert.deepEqual(reply.result.capabilities.tools, {});
   // The KANAP version, and what a client must know before its first call.
   assert.equal(reply.result.serverInfo.name, 'kanap-mcp');
+  // The title names the workspace the connection reads.
+  assert.equal(reply.result.serverInfo.title, 'Fromage & Co');
   assert.equal(reply.result.serverInfo.version, APP_VERSION);
   assert.notEqual(reply.result.serverInfo.version, '1.0.0');
   const instructions: string = reply.result.instructions;
@@ -183,7 +185,7 @@ async function testRefusalsSayWhy(url: string, journal: AiMcpCallRecord[]) {
     ['prepare_mutation_plan', /^This server is read only: prepare_mutation_plan changes data/, 'read_only'],
     ['create_business_record', /^This server is read only/, 'read_only'],
     ['web_search', /^Web search is turned off/, 'disabled'],
-    ['get_entity_comments', /^Your KANAP role does not allow this tool/, 'permission'],
+    ['get_entity_comments', /^Your role in this workspace does not allow this tool/, 'permission'],
   ];
   let id = 11;
   for (const [name, text, reason] of cases) {

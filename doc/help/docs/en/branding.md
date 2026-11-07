@@ -13,10 +13,10 @@ Changes apply to your current tenant only.
 
 ## What you can customize
 
-The page has three cards: **Organization name**, **Logo** and **Primary colors**. The logo and the colors are optional. With nothing set, KANAP shows its default text-and-icon header and the default theme colors.
+The page has three cards: **Organization name**, **Logo** and **Primary colors**. The logo and the colors are optional. Without a logo, the header shows the organization name. Without custom colors, KANAP uses its default theme colors.
 
 - **Organization name**
-  - The name shown with the logo, in the About window, on the consent page, and to the assistant
+  - Identifies your workspace across KANAP, including the About window and the assistant (see [Where the organization name appears](#where-the-organization-name-appears))
   - From 1 to 120 characters
   - The workspace address stays as it is
 - **Logo**
@@ -34,6 +34,18 @@ The page has three cards: **Organization name**, **Logo** and **Primary colors**
 2. Click **Save Changes**.
 
 **Reset to Default** leaves the name as it is. It removes the logos and the custom colors only.
+
+## Where the organization name appears
+
+- **Top app bar**: the name shows when there is no logo. With a logo, the name is the logo's alternative text.
+- **Sign-in page**: without a logo, the header shows the KANAP icon next to the name.
+- **Browser tab**: the tab title is the name. A project, request, task or budget line page shows the record first, for example `PRJ-3 New ERP | Acme`.
+- **Installed app**: when someone adds KANAP to a phone's home screen or installs it as an app from the browser, the app takes the name.
+- **E-mails**: the header shows the logo, or the name when there is no logo. The subjects of the password reset, invitation, weekly review and workspace reset e-mails name the organization, for example "Reset your Acme password". The weekly review button reads "Open Acme". The footer says "Powered by KANAP".
+- **E-mail sender** (cloud): the sender name reads "Acme via KANAP". The sending address stays the same. On-premise, the sender is the one set in the installation (`SMTP_FROM`).
+- **AI applications**: when you connect an AI application to the workspace, the consent page says it wants to read your data in the organization, and the connection carries the name.
+
+With no name set, or with the on-premise default name "My Organization", these places show "KANAP". The workspace address does not change.
 
 ## Logo setup
 
@@ -54,12 +66,12 @@ The card shows a light header preview and a dark header preview, each with its o
 
 1. Under the light preview, click **Upload Logo** and choose your file.
 2. If your logo does not read well on a dark background (dark text, for example), upload a second version under the dark preview.
-3. Without a dark mode logo, **Use the light mode logo** decides what dark mode shows: the light mode logo when it is on, the default text branding when it is off.
+3. Without a dark mode logo, **Use the light mode logo** decides what dark mode shows: the light mode logo when it is on, the organization name as text when it is off.
 4. Check both previews, then click **Save Changes** to publish.
 
 To remove a logo, click **Remove Logo** under its preview. The other logo stays.
 
-Dark mode shows the dark mode logo when there is one. Light mode always shows the light mode logo, or the default text branding when there is none. E-mails always use the light mode logo, since their background is light.
+Dark mode shows the dark mode logo when there is one. Light mode always shows the light mode logo, or the organization name as text when there is none. E-mails always use the light mode logo, since their background is light.
 
 ## Primary color setup
 

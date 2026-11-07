@@ -1,3 +1,4 @@
+import { PRODUCT_NAME } from '../../config/product';
 import type { EmailStrings } from './en';
 
 export const de: EmailStrings = {
@@ -6,7 +7,7 @@ export const de: EmailStrings = {
     footer: {
       managePreferencesLink: 'Benachrichtigungseinstellungen verwalten',
       managePreferencesText: 'Benachrichtigungseinstellungen verwalten: {{url}}',
-      poweredBy: 'Bereitgestellt von KANAP',
+      poweredBy: `Bereitgestellt von ${PRODUCT_NAME}`,
     },
     itemTypes: {
       request: { label: 'Anfrage', lower: 'Anfrage', view: 'Anfrage anzeigen' },
@@ -36,7 +37,7 @@ export const de: EmailStrings = {
       greetingHelloName: 'Hallo {{name}},',
     },
     buttons: {
-      goToKanap: 'Zu KANAP',
+      openWorkspace: '{{organisation}} öffnen',
       activateWorkspace: 'Arbeitsbereich aktivieren',
       resetPassword: 'Passwort zurücksetzen',
       setPassword: 'Passwort festlegen',
@@ -113,7 +114,7 @@ export const de: EmailStrings = {
     vulnerabilities: {
       subject: 'Neue Schwachstellen in Ihren Technologien ({{count}})',
       heading: 'Neue Schwachstellen in Ihren Technologien',
-      intro: 'KANAP hat Schwachstellen in Technologien gefunden, für die Sie IT-verantwortlich sind ({{count}}): kritische oder hohe, oder bekanntermaßen ausgenutzt. Prüfen Sie sie und legen Sie ihren Status fest.',
+      intro: `${PRODUCT_NAME} hat Schwachstellen in Technologien gefunden, für die Sie IT-verantwortlich sind ({{count}}): kritische oder hohe, oder bekanntermaßen ausgenutzt. Prüfen Sie sie und legen Sie ihren Status fest.`,
       severities: {
         critical: 'Kritisch',
         high: 'Hoch',
@@ -130,7 +131,7 @@ export const de: EmailStrings = {
       more: 'Und {{count}} weitere: Öffnen Sie die Seite, um alle zu sehen.',
     },
     weeklyReview: {
-      subject: 'Ihr wöchentlicher KANAP-Rückblick — Woche vom {{weekLabel}}',
+      subject: 'Ihr wöchentlicher Rückblick für {{organisation}} — Woche vom {{weekLabel}}',
       introHtml: 'Hallo {{userName}}, hier ist Ihre Zusammenfassung für die Woche vom <strong>{{weekLabel}}</strong>.',
       introText: 'Hallo {{userName}}, hier ist Ihre Zusammenfassung für die Woche vom {{weekLabel}}.',
       empty: 'Diese Woche gibt es keine Aktivitäten zu melden. Weiter so!',
@@ -199,15 +200,15 @@ export const de: EmailStrings = {
       textAction: 'Arbeitsbereich aktivieren: {{url}}',
     },
     passwordReset: {
-      subject: 'Setzen Sie Ihr KANAP-Passwort zurück',
+      subject: 'Setzen Sie Ihr Passwort für {{organisation}} zurück',
       intro: 'Wir haben eine Anfrage zum Zurücksetzen des Passworts für diese E-Mail-Adresse erhalten.',
       copyPaste: 'Wenn die Schaltfläche oben nicht funktioniert, kopieren Sie diesen Link in Ihren Browser:',
       expires: 'Dieser Link läuft in etwa {{minutes}} Minuten ab. Wenn Sie kein Passwort-Reset angefordert haben, können Sie diese E-Mail ignorieren.',
       textAction: 'Passwort zurücksetzen: {{url}}',
     },
     userInvite: {
-      subject: 'Sie wurden zu KANAP eingeladen',
-      intro: 'Sie wurden{{inviterPart}} eingeladen, KANAP{{rolePart}} beizutreten.',
+      subject: 'Sie wurden zu {{organisation}} eingeladen',
+      intro: 'Sie wurden{{inviterPart}} eingeladen, {{organisation}}{{rolePart}} beizutreten.',
       inviterPart: ' von {{inviterEmail}}',
       rolePart: ' als {{roleName}}',
       copyPaste: 'Wenn die Schaltfläche oben nicht funktioniert, kopieren Sie diesen Link in Ihren Browser:',
@@ -217,7 +218,7 @@ export const de: EmailStrings = {
   },
   workspace: {
     reset: {
-      subject: 'Ihr KANAP-Arbeitsbereich wurde zurückgesetzt',
+      subject: 'Ihr Arbeitsbereich {{organisation}} wurde zurückgesetzt',
       heading: 'Arbeitsbereich auf den Ausgangszustand zurückgesetzt',
       bodyHtml: '<strong>{{actorName}}</strong> hat am {{date}} den gesamten Inhalt des Arbeitsbereichs <strong>{{workspaceName}}</strong> gelöscht. Der Arbeitsbereich ist wieder im Ausgangszustand. Benutzerkonten und ihre Rollen, das Abonnement und das Audit-Protokoll wurden beibehalten.',
       text: '{{actorName}} hat am {{date}} den gesamten Inhalt des Arbeitsbereichs {{workspaceName}} gelöscht. Der Arbeitsbereich ist wieder im Ausgangszustand. Benutzerkonten und ihre Rollen, das Abonnement und das Audit-Protokoll wurden beibehalten. Arbeitsbereich öffnen: {{url}}',

@@ -1,10 +1,12 @@
+import { PRODUCT_NAME } from '../../config/product';
+
 export const en = {
   common: {
     htmlLang: 'en',
     footer: {
       managePreferencesLink: 'Manage notification preferences',
       managePreferencesText: 'Manage notification preferences: {{url}}',
-      poweredBy: 'Powered by KANAP',
+      poweredBy: `Powered by ${PRODUCT_NAME}`,
     },
     itemTypes: {
       request: { label: 'Request', lower: 'request', view: 'View Request' },
@@ -34,7 +36,7 @@ export const en = {
       greetingHelloName: 'Hello {{name}},',
     },
     buttons: {
-      goToKanap: 'Go to KANAP',
+      openWorkspace: 'Open {{organisation}}',
       activateWorkspace: 'Activate my workspace',
       resetPassword: 'Reset password',
       setPassword: 'Set your password',
@@ -111,7 +113,7 @@ export const en = {
     vulnerabilities: {
       subject: 'New vulnerabilities on your technologies ({{count}})',
       heading: 'New vulnerabilities on your technologies',
-      intro: 'KANAP found vulnerabilities on technologies you own for IT ({{count}}): critical or high, or known to be exploited. Review them and set their state.',
+      intro: `${PRODUCT_NAME} found vulnerabilities on technologies you own for IT ({{count}}): critical or high, or known to be exploited. Review them and set their state.`,
       severities: {
         critical: 'Critical',
         high: 'High',
@@ -128,7 +130,7 @@ export const en = {
       more: 'And {{count}} more: open the page to see them all.',
     },
     weeklyReview: {
-      subject: 'Your KANAP Weekly Review - Week of {{weekLabel}}',
+      subject: 'Your {{organisation}} Weekly Review - Week of {{weekLabel}}',
       introHtml: `Hi {{userName}}, here's your summary for the week of <strong>{{weekLabel}}</strong>.`,
       introText: `Hi {{userName}}, here's your summary for the week of {{weekLabel}}.`,
       empty: 'No activity to report this week. Keep up the good work!',
@@ -197,15 +199,15 @@ export const en = {
       textAction: 'Activate your workspace: {{url}}',
     },
     passwordReset: {
-      subject: 'Reset your KANAP password',
+      subject: 'Reset your {{organisation}} password',
       intro: 'We received a request to reset the password associated with this email address.',
       copyPaste: 'If the button above does not work, copy and paste this link into your browser:',
       expires: 'This link will expire in approximately {{minutes}} minutes. If you did not request a password reset, you can safely ignore this email.',
       textAction: 'Reset your password: {{url}}',
     },
     userInvite: {
-      subject: 'You are invited to KANAP',
-      intro: 'You have been invited{{inviterPart}} to join KANAP{{rolePart}}.',
+      subject: 'You are invited to {{organisation}}',
+      intro: 'You have been invited{{inviterPart}} to join {{organisation}}{{rolePart}}.',
       inviterPart: ' by {{inviterEmail}}',
       rolePart: ' as {{roleName}}',
       copyPaste: 'If the button above does not work, copy and paste this link into your browser:',
@@ -215,7 +217,7 @@ export const en = {
   },
   workspace: {
     reset: {
-      subject: 'Your KANAP workspace was reset',
+      subject: 'Your {{organisation}} workspace was reset',
       heading: 'Workspace reset to its starting state',
       bodyHtml: '<strong>{{actorName}}</strong> erased all the content of the workspace <strong>{{workspaceName}}</strong> on {{date}}. The workspace is back to its starting state. User accounts and their roles, the subscription and the audit log were kept.',
       text: '{{actorName}} erased all the content of the workspace {{workspaceName}} on {{date}}. The workspace is back to its starting state. User accounts and their roles, the subscription and the audit log were kept. Open the workspace: {{url}}',

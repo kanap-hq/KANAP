@@ -13,10 +13,10 @@ Los cambios se aplican únicamente a su espacio de trabajo actual.
 
 ## Qué puede personalizar
 
-La página tiene tres tarjetas: **Nombre de la organización**, **Logotipo** y **Colores principales**. El logotipo y los colores son opcionales. Si no se establece nada, KANAP muestra su encabezado de texto e icono predeterminado y los colores de tema predeterminados.
+La página tiene tres tarjetas: **Nombre de la organización**, **Logotipo** y **Colores principales**. El logotipo y los colores son opcionales. Sin logotipo, el encabezado muestra el nombre de la organización. Sin colores personalizados, KANAP usa los colores de tema predeterminados.
 
 - **Nombre de la organización**
-  - El nombre que aparece con el logotipo, en Acerca de, en la página de consentimiento y para el asistente
+  - Identifica su espacio de trabajo en todo KANAP, incluidos Acerca de y el asistente (vea [Dónde aparece el nombre de la organización](#donde-aparece-el-nombre-de-la-organizacion))
   - De 1 a 120 caracteres
   - La dirección del espacio de trabajo sigue igual
 - **Logotipo**
@@ -34,6 +34,18 @@ La página tiene tres tarjetas: **Nombre de la organización**, **Logotipo** y *
 2. Haga clic en **Guardar cambios**.
 
 **Restablecer a valores predeterminados** deja el nombre como está. Quita los logotipos y los colores personalizados.
+
+## Dónde aparece el nombre de la organización
+
+- **Barra superior**: el nombre aparece cuando no hay logotipo. Con un logotipo, el nombre es el texto alternativo del logotipo.
+- **Página de inicio de sesión**: sin logotipo, el encabezado muestra el icono de KANAP junto al nombre.
+- **Pestaña del navegador**: el título de la pestaña es el nombre. Una página de proyecto, solicitud, tarea o línea presupuestaria muestra primero el registro, por ejemplo `PRJ-3 Nuevo ERP | Acme`.
+- **Aplicación instalada**: cuando alguien añade KANAP a la pantalla de inicio de un teléfono o lo instala como aplicación desde el navegador, la aplicación toma el nombre.
+- **Correos electrónicos**: el encabezado muestra el logotipo, o el nombre si no hay logotipo. Los asuntos de los correos de restablecimiento de contraseña, invitación, revisión semanal y restablecimiento del espacio de trabajo citan la organización, por ejemplo «Restablezca su contraseña de Acme». El botón de la revisión semanal dice «Abrir Acme». El pie de página dice «Desarrollado por KANAP».
+- **Remitente de los correos** (nube): el nombre del remitente es «Acme via KANAP». La dirección de envío no cambia. En una instalación on-premise, el remitente es el definido en la instalación (`SMTP_FROM`).
+- **Aplicaciones de IA**: cuando conecta una aplicación de IA al espacio de trabajo, la página de consentimiento indica que quiere leer sus datos en la organización, y la conexión lleva el nombre.
+
+Sin nombre definido, o con el nombre predeterminado on-premise «My Organization», estos lugares muestran «KANAP». La dirección del espacio de trabajo no cambia.
 
 ## Configuración del logotipo
 
@@ -54,12 +66,12 @@ La tarjeta muestra una vista previa del encabezado claro y otra del encabezado o
 
 1. Bajo la vista previa clara, haga clic en **Subir logo** y elija su archivo.
 2. Si su logotipo se lee mal sobre un fondo oscuro (texto oscuro, por ejemplo), suba una segunda versión bajo la vista previa oscura.
-3. Sin logotipo para el modo oscuro, **Usar el logo del modo claro** decide lo que muestra el modo oscuro: el logotipo del modo claro cuando está activado, el texto de marca predeterminado cuando está desactivado.
+3. Sin logotipo para el modo oscuro, **Usar el logo del modo claro** decide lo que muestra el modo oscuro: el logotipo del modo claro cuando está activado, el nombre de la organización como texto cuando está desactivado.
 4. Compruebe ambas vistas previas y haga clic en **Guardar cambios** para publicar.
 
 Para eliminar un logotipo, haga clic en **Eliminar logo** bajo su vista previa. El otro logotipo se mantiene.
 
-El modo oscuro muestra el logotipo del modo oscuro cuando existe. El modo claro muestra siempre el logotipo del modo claro, o el texto de marca predeterminado si no hay ninguno. Los correos electrónicos usan siempre el logotipo del modo claro, ya que su fondo es claro.
+El modo oscuro muestra el logotipo del modo oscuro cuando existe. El modo claro muestra siempre el logotipo del modo claro, o el nombre de la organización como texto si no hay ninguno. Los correos electrónicos usan siempre el logotipo del modo claro, ya que su fondo es claro.
 
 ## Configuración del color principal
 

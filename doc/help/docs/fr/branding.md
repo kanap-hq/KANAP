@@ -13,10 +13,10 @@ Les modifications s'appliquent uniquement à votre tenant courant.
 
 ## Ce que vous pouvez personnaliser
 
-La page comporte trois cartes : **Nom de l'organisation**, **Logo** et **Couleurs principales**. Le logo et les couleurs sont optionnels. Sans rien défini, KANAP affiche son en-tête texte-et-icône par défaut et les couleurs de thème par défaut.
+La page comporte trois cartes : **Nom de l'organisation**, **Logo** et **Couleurs principales**. Le logo et les couleurs sont optionnels. Sans logo, l'en-tête affiche le nom de l'organisation. Sans couleurs personnalisées, KANAP utilise les couleurs de thème par défaut.
 
 - **Nom de l'organisation**
-  - Le nom affiché avec le logo, dans la fenêtre À propos, sur la page de consentement et pour l'assistant
+  - Identifie votre espace de travail dans KANAP, y compris dans la fenêtre À propos et pour l'assistant (voir [Où le nom de l'organisation apparaît](#ou-le-nom-de-lorganisation-apparait))
   - De 1 à 120 caractères
   - L'adresse de l'espace de travail reste la même
 - **Logo**
@@ -34,6 +34,18 @@ La page comporte trois cartes : **Nom de l'organisation**, **Logo** et **Couleur
 2. Cliquez sur **Enregistrer les modifications**.
 
 **Réinitialiser par défaut** laisse le nom tel quel. Cette action retire les logos et les couleurs personnalisées.
+
+## Où le nom de l'organisation apparaît
+
+- **Barre supérieure** : le nom s'affiche quand il n'y a pas de logo. Avec un logo, le nom sert de texte alternatif au logo.
+- **Page de connexion** : sans logo, l'en-tête affiche l'icône KANAP à côté du nom.
+- **Onglet du navigateur** : le titre de l'onglet est le nom. Une page de projet, de demande, de tâche ou de ligne budgétaire affiche d'abord l'enregistrement, par exemple `PRJ-3 Nouvel ERP | Acme`.
+- **Application installée** : quand quelqu'un ajoute KANAP à l'écran d'accueil d'un téléphone ou l'installe comme application depuis le navigateur, l'application prend le nom.
+- **E-mails** : l'en-tête affiche le logo, ou le nom en l'absence de logo. Les objets des e-mails de réinitialisation du mot de passe, d'invitation, de revue hebdomadaire et de réinitialisation de l'espace de travail citent l'organisation, par exemple « Réinitialisez votre mot de passe Acme ». Le bouton de la revue hebdomadaire indique « Ouvrir Acme ». Le pied de page indique « Propulsé par KANAP ».
+- **Expéditeur des e-mails** (cloud) : le nom de l'expéditeur est « Acme via KANAP ». L'adresse d'envoi reste la même. Sur site, l'expéditeur est celui défini dans l'installation (`SMTP_FROM`).
+- **Applications d'IA** : quand vous connectez une application d'IA à l'espace de travail, la page de consentement indique qu'elle souhaite lire vos données dans l'organisation, et la connexion porte le nom.
+
+Sans nom défini, ou avec le nom par défaut sur site « My Organization », ces emplacements affichent « KANAP ». L'adresse de l'espace de travail ne change pas.
 
 ## Configuration du logo
 
@@ -54,12 +66,12 @@ La carte montre un aperçu d'en-tête clair et un aperçu d'en-tête sombre, cha
 
 1. Sous l'aperçu clair, cliquez sur **Téléverser le logo** et choisissez votre fichier.
 2. Si votre logo se lit mal sur un fond sombre (texte foncé, par exemple), téléversez une seconde version sous l'aperçu sombre.
-3. Sans logo pour le mode sombre, **Utiliser le logo du mode clair** décide de ce qu'affiche le mode sombre : le logo du mode clair quand il est activé, l'identité texte par défaut quand il est désactivé.
+3. Sans logo pour le mode sombre, **Utiliser le logo du mode clair** décide de ce qu'affiche le mode sombre : le logo du mode clair quand il est activé, le nom de l'organisation en texte quand il est désactivé.
 4. Vérifiez les deux aperçus, puis cliquez sur **Enregistrer les modifications** pour publier.
 
 Pour supprimer un logo, cliquez sur **Supprimer le logo** sous son aperçu. L'autre logo reste.
 
-Le mode sombre affiche le logo du mode sombre quand il existe. Le mode clair affiche toujours le logo du mode clair, ou l'identité texte par défaut s'il n'y en a pas. Les e-mails utilisent toujours le logo du mode clair, car leur fond est clair.
+Le mode sombre affiche le logo du mode sombre quand il existe. Le mode clair affiche toujours le logo du mode clair, ou le nom de l'organisation en texte s'il n'y en a pas. Les e-mails utilisent toujours le logo du mode clair, car leur fond est clair.
 
 ## Configuration des couleurs principales
 

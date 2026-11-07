@@ -26,7 +26,7 @@ vi.mock('../../auth/AuthContext', () => ({
 }));
 
 vi.mock('../../tenant/TenantContext', () => ({
-  useTenant: () => ({ tenantName: 'Fromage & Co' }),
+  useTenant: () => ({ tenantName: 'Fromage & Co', organisationName: 'Fromage & Co' }),
 }));
 
 vi.mock('../../components/AuthFrame', () => ({
@@ -111,7 +111,8 @@ describe('OAuthAuthorizePage', () => {
     vi.mocked(api.post).mockResolvedValue({ data: { redirect_to: 'https://claude.ai/api/mcp/auth_callback?code=c1&state=st-1' } } as any);
     renderPage();
 
-    expect(await screen.findByText('auth:oauthConsent.title[Claude]')).toBeInTheDocument();
+    // The title names the workspace's organisation.
+    expect(await screen.findByText('auth:oauthConsent.title[Claude|Fromage & Co]')).toBeInTheDocument();
     expect(api.get).toHaveBeenCalledWith(`/oauth/authorize/request${query}`);
     expect(screen.getByText('claude.ai')).toBeInTheDocument();
     expect(screen.getByText('auth:oauthConsent.userInTenant[Claude Tester|Fromage & Co]')).toBeInTheDocument();
@@ -223,7 +224,7 @@ describe('OAuthAuthorizePage', () => {
     const { container } = renderPage();
 
     const title = await screen.findByRole('heading', { level: 1 });
-    const shown = (title.textContent ?? '').replace(/^auth:oauthConsent\.title\[/, '').replace(/\]$/, '');
+    const shown = (title.textContent ?? '').replace(/^auth:oauthConsent\.title\[/, '').replace(/\|Fromage & Co\]$/, '');
     expect(shown).toHaveLength(60);
     expect(shown.endsWith('…')).toBe(true);
     expect(shown.startsWith('<img src=x')).toBe(true);

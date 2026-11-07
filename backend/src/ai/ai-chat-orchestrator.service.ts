@@ -87,6 +87,7 @@ import {
   writePreviewMissingText,
   type AiWriteLanguage,
 } from './ai-write-texts';
+import { workspaceDisplayName } from '../config/product';
 
 const MAX_TOOL_ITERATIONS = parsePositiveIntEnv(process.env.AI_CHAT_MAX_TOOL_ITERATIONS, 40);
 /**
@@ -1919,7 +1920,7 @@ export class AiChatOrchestratorService {
         `SELECT name FROM tenants WHERE id = $1`,
         [ctx.tenantId],
       );
-      const tenantName = tenant?.[0]?.name || 'KANAP';
+      const tenantName = workspaceDisplayName(tenant?.[0]?.name);
       // The browser's zone, else the user's own, else UTC (the CSV exports share this rule).
       const timeZone = await timeZoneOf(ctx.manager, ctx.tenantId, ctx.userId ?? null, params.timeZone);
       let resolved: ResolvedModel;

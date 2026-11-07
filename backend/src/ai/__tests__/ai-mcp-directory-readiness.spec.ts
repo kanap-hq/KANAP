@@ -127,7 +127,7 @@ async function testRefusalExplanationsFromTheRealRegistry() {
   assert.equal(explain('get_document', deniedKey).reason, 'key_policy');
   assert.equal(explain('web_search').reason, 'disabled');
   assert.equal(explain('search_knowledge').reason, 'permission');
-  assert.match(explain('search_knowledge').message, /^Your KANAP role does not allow this tool/);
+  assert.match(explain('search_knowledge').message, /^Your role in this workspace does not allow this tool/);
 }
 
 // P3-10: the 429 says when the next request fits, as a header and in the body.

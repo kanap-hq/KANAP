@@ -13,10 +13,10 @@ Verwenden Sie die Branding-Seite, um Ihre Unternehmensidentität in KANAP anzuwe
 
 ## Was Sie anpassen können
 
-Die Seite hat drei Karten: **Name der Organisation**, **Logo** und **Primärfarben**. Logo und Farben sind optional. Ohne Festlegung zeigt KANAP seine Standard-Text-und-Symbol-Kopfzeile und die Standard-Themenfarben.
+Die Seite hat drei Karten: **Name der Organisation**, **Logo** und **Primärfarben**. Logo und Farben sind optional. Ohne Logo zeigt die Kopfzeile den Namen der Organisation. Ohne eigene Farben verwendet KANAP die Standard-Themenfarben.
 
 - **Name der Organisation**
-  - Der Name beim Logo, im Fenster Info, auf der Einwilligungsseite und für den Assistenten
+  - Kennzeichnet Ihren Arbeitsbereich in ganz KANAP, auch im Fenster Info und für den Assistenten (siehe [Wo der Name der Organisation erscheint](#wo-der-name-der-organisation-erscheint))
   - 1 bis 120 Zeichen
   - Die Adresse des Arbeitsbereichs bleibt unverändert
 - **Logo**
@@ -34,6 +34,18 @@ Die Seite hat drei Karten: **Name der Organisation**, **Logo** und **Primärfarb
 2. Klicken Sie auf **Änderungen speichern**.
 
 **Auf Standard zurücksetzen** lässt den Namen unverändert. Die Aktion entfernt die Logos und die benutzerdefinierten Farben.
+
+## Wo der Name der Organisation erscheint
+
+- **Obere App-Leiste**: Ohne Logo erscheint der Name. Mit Logo dient der Name als Alternativtext des Logos.
+- **Anmeldeseite**: Ohne Logo zeigt die Kopfzeile das KANAP-Symbol neben dem Namen.
+- **Browser-Tab**: Der Titel des Tabs ist der Name. Eine Projekt-, Anfrage-, Aufgaben- oder Budgetzeilenseite zeigt zuerst den Datensatz, zum Beispiel `PRJ-3 Neues ERP | Acme`.
+- **Installierte App**: Wenn jemand KANAP zum Startbildschirm eines Telefons hinzufügt oder es im Browser als App installiert, trägt die App den Namen.
+- **E-Mails**: Die Kopfzeile zeigt das Logo oder, ohne Logo, den Namen. Die Betreffzeilen der E-Mails zum Zurücksetzen des Passworts, zur Einladung, zum wöchentlichen Rückblick und zum Zurücksetzen des Arbeitsbereichs nennen die Organisation, zum Beispiel „Setzen Sie Ihr Passwort für Acme zurück“. Die Schaltfläche des wöchentlichen Rückblicks lautet „Acme öffnen“. Die Fußzeile lautet „Bereitgestellt von KANAP“.
+- **E-Mail-Absender** (Cloud): Der Absendername lautet „Acme via KANAP“. Die Absenderadresse bleibt gleich. On-Premise ist der Absender der in der Installation festgelegte (`SMTP_FROM`).
+- **KI-Anwendungen**: Wenn Sie eine KI-Anwendung mit dem Arbeitsbereich verbinden, nennt die Einwilligungsseite die Organisation als den Ort, dessen Daten die Anwendung lesen möchte, und die Verbindung trägt den Namen.
+
+Ohne Namen oder mit dem On-Premise-Standardnamen „My Organization“ zeigen diese Stellen „KANAP“. Die Adresse des Arbeitsbereichs ändert sich nicht.
 
 ## Logo-Einrichtung
 
@@ -54,12 +66,12 @@ Die Karte zeigt eine helle und eine dunkle Kopfzeilenvorschau, jede mit eigenen 
 
 1. Klicken Sie unter der hellen Vorschau auf **Logo hochladen** und wählen Sie Ihre Datei aus.
 2. Wenn Ihr Logo auf dunklem Hintergrund schlecht lesbar ist (zum Beispiel dunkler Text), laden Sie unter der dunklen Vorschau eine zweite Version hoch.
-3. Ohne Logo für den Dunkelmodus bestimmt **Logo des Hellmodus verwenden**, was der Dunkelmodus zeigt: das Logo des Hellmodus, wenn es aktiviert ist, das Standard-Text-Branding, wenn es deaktiviert ist.
+3. Ohne Logo für den Dunkelmodus bestimmt **Logo des Hellmodus verwenden**, was der Dunkelmodus zeigt: das Logo des Hellmodus, wenn es aktiviert ist, den Namen der Organisation als Text, wenn es deaktiviert ist.
 4. Prüfen Sie beide Vorschauen und klicken Sie dann auf **Änderungen speichern**, um zu veröffentlichen.
 
 Um ein Logo zu entfernen, klicken Sie unter seiner Vorschau auf **Logo entfernen**. Das andere Logo bleibt.
 
-Der Dunkelmodus zeigt das Logo für den Dunkelmodus, wenn es eines gibt. Der Hellmodus zeigt immer das Logo des Hellmodus oder, wenn keines vorhanden ist, das Standard-Text-Branding. E-Mails verwenden immer das Logo des Hellmodus, da ihr Hintergrund hell ist.
+Der Dunkelmodus zeigt das Logo für den Dunkelmodus, wenn es eines gibt. Der Hellmodus zeigt immer das Logo des Hellmodus oder, wenn keines vorhanden ist, den Namen der Organisation als Text. E-Mails verwenden immer das Logo des Hellmodus, da ihr Hintergrund hell ist.
 
 ## Einrichtung der Primärfarbe
 

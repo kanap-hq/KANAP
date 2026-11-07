@@ -1,3 +1,4 @@
+import { PRODUCT_NAME } from '../../config/product';
 import type { EmailStrings } from './en';
 
 export const es: EmailStrings = {
@@ -6,7 +7,7 @@ export const es: EmailStrings = {
     footer: {
       managePreferencesLink: 'Gestionar preferencias de notificación',
       managePreferencesText: 'Gestionar preferencias de notificación: {{url}}',
-      poweredBy: 'Desarrollado por KANAP',
+      poweredBy: `Desarrollado por ${PRODUCT_NAME}`,
     },
     itemTypes: {
       request: { label: 'Solicitud', lower: 'solicitud', view: 'Ver solicitud' },
@@ -36,7 +37,7 @@ export const es: EmailStrings = {
       greetingHelloName: 'Hola {{name}},',
     },
     buttons: {
-      goToKanap: 'Ir a KANAP',
+      openWorkspace: 'Abrir {{organisation}}',
       activateWorkspace: 'Activar mi espacio de trabajo',
       resetPassword: 'Restablecer contraseña',
       setPassword: 'Definir su contraseña',
@@ -113,7 +114,7 @@ export const es: EmailStrings = {
     vulnerabilities: {
       subject: 'Nuevas vulnerabilidades en sus tecnologías ({{count}})',
       heading: 'Nuevas vulnerabilidades en sus tecnologías',
-      intro: 'KANAP encontró vulnerabilidades en tecnologías de las que usted es responsable de TI ({{count}}): críticas o altas, o con explotación conocida. Revíselas e indique su estado.',
+      intro: `${PRODUCT_NAME} encontró vulnerabilidades en tecnologías de las que usted es responsable de TI ({{count}}): críticas o altas, o con explotación conocida. Revíselas e indique su estado.`,
       severities: {
         critical: 'Crítica',
         high: 'Alta',
@@ -130,7 +131,7 @@ export const es: EmailStrings = {
       more: 'Y {{count}} más: abra la página para verlas todas.',
     },
     weeklyReview: {
-      subject: 'Su revisión semanal de KANAP — Semana del {{weekLabel}}',
+      subject: 'Su revisión semanal de {{organisation}} — Semana del {{weekLabel}}',
       introHtml: 'Hola {{userName}}, aquí tiene su resumen de la semana del <strong>{{weekLabel}}</strong>.',
       introText: 'Hola {{userName}}, aquí tiene su resumen de la semana del {{weekLabel}}.',
       empty: 'No hay actividad para informar esta semana. ¡Siga así!',
@@ -199,15 +200,15 @@ export const es: EmailStrings = {
       textAction: 'Activar su espacio de trabajo: {{url}}',
     },
     passwordReset: {
-      subject: 'Restablezca su contraseña de KANAP',
+      subject: 'Restablezca su contraseña de {{organisation}}',
       intro: 'Recibimos una solicitud para restablecer la contraseña asociada a esta dirección de correo electrónico.',
       copyPaste: 'Si el botón anterior no funciona, copie y pegue este enlace en su navegador:',
       expires: 'Este enlace vencerá en aproximadamente {{minutes}} minutos. Si no solicitó un restablecimiento de contraseña, puede ignorar este correo.',
       textAction: 'Restablecer su contraseña: {{url}}',
     },
     userInvite: {
-      subject: 'Está invitado a KANAP',
-      intro: 'Ha sido invitado{{inviterPart}} a unirse a KANAP{{rolePart}}.',
+      subject: 'Está invitado a {{organisation}}',
+      intro: 'Ha sido invitado{{inviterPart}} a unirse a {{organisation}}{{rolePart}}.',
       inviterPart: ' por {{inviterEmail}}',
       rolePart: ' como {{roleName}}',
       copyPaste: 'Si el botón anterior no funciona, copie y pegue este enlace en su navegador:',
@@ -217,7 +218,7 @@ export const es: EmailStrings = {
   },
   workspace: {
     reset: {
-      subject: 'Su espacio de trabajo KANAP se ha restablecido',
+      subject: 'Su espacio de trabajo {{organisation}} se ha restablecido',
       heading: 'Espacio de trabajo restablecido a su estado inicial',
       bodyHtml: '<strong>{{actorName}}</strong> borró todo el contenido del espacio de trabajo <strong>{{workspaceName}}</strong> el {{date}}. El espacio de trabajo ha vuelto a su estado inicial. Se conservaron las cuentas de usuario y sus roles, la suscripción y el registro de auditoría.',
       text: '{{actorName}} borró todo el contenido del espacio de trabajo {{workspaceName}} el {{date}}. El espacio de trabajo ha vuelto a su estado inicial. Se conservaron las cuentas de usuario y sus roles, la suscripción y el registro de auditoría. Abrir el espacio de trabajo: {{url}}',

@@ -46,6 +46,8 @@ import { resolveEmailLocale } from '../i18n/email-i18n';
 import { resolveSeedLanguage } from '../analytics/recommended-dimensions.seed';
 import { developmentRequestOrigin, resolveTenantAppBaseUrl } from '../common/url';
 import { DemoDataService } from '../demo-data/demo-data.service';
+import { organisationName } from '../config/product';
+import { buildWebAppManifest } from './web-app-manifest';
 
 /** The answer of a trial sign-up when the address of the public website is not configured. */
 export const MARKETING_URL_NOT_CONFIGURED_MESSAGE = 'marketing URL is not configured: set MARKETING_BASE_URL';
@@ -255,6 +257,8 @@ export class PublicController {
       return {
         slug: tenant.slug,
         name: detail?.name ?? tenant.slug,
+        // The name the workspace shows (header, sign-in, tab title), null when none was chosen.
+        displayName: organisationName(detail?.name),
         logoPath: branding.logo_storage_path ? '/public/branding/logo' : null,
         darkLogoPath: branding.logo_dark_storage_path ? '/public/branding/logo?variant=dark' : null,
         logoVersion: hasLogo ? branding.logo_version : null,
@@ -264,6 +268,15 @@ export class PublicController {
       };
     }
     return { marketing: true };
+  }
+
+  /** The web app manifest: an installed app takes the workspace's organisation name. */
+  @Get('manifest.webmanifest')
+  webAppManifest(@Req() req: any, @Res() res: Response): void {
+    const tenantName = req?.isPlatformHost ? null : req?.tenant?.name ?? null;
+    res.setHeader('Content-Type', 'application/manifest+json; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=300');
+    res.send(JSON.stringify(buildWebAppManifest(tenantName)));
   }
 
   /** The light-mode logo, or the dark-mode one with `variant=dark`. */

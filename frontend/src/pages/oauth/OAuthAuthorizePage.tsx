@@ -118,7 +118,7 @@ export default function OAuthAuthorizePage() {
   const { t } = useTranslation(['auth', 'common']);
   const location = useLocation();
   const { token, isAuthenticating, profile, logout } = useAuth();
-  const { tenantName } = useTenant();
+  const { tenantName, organisationName } = useTenant();
   const [request, setRequest] = useState<AuthorizationRequest | null>(null);
   const [error, setError] = useState<PageError | null>(null);
   const [remember, setRemember] = useState(true);
@@ -262,13 +262,13 @@ export default function OAuthAuthorizePage() {
             <Typography variant="h6" component="h1" sx={{ fontWeight: 500, lineHeight: 1.3, overflowWrap: 'anywhere' }}>
               {short
                 ? t('auth:oauthConsent.continueTitle', { client: clientName })
-                : t('auth:oauthConsent.title', { client: clientName })}
+                : t('auth:oauthConsent.title', { client: clientName, organisation: organisationName })}
             </Typography>
           </Stack>
 
           {!short && (
             <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
-              {t('auth:oauthConsent.readOnly')}
+              {t('auth:oauthConsent.readOnly', { organisation: organisationName })}
             </Typography>
           )}
 

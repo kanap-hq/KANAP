@@ -158,7 +158,7 @@ export default function Layout() {
   const accountEmail = String(profile?.email ?? '').trim();
   const dataAccessLimited = useDataAccessLimited();
   const tenant = useTenant();
-  const { isPlatformHost, tenantName } = tenant;
+  const { isPlatformHost, organisationName } = tenant;
   const { config } = useFeatures();
   const { mode, resolvedMode, setMode } = useThemeMode();
   const aiCapabilities = useAiCapabilities();
@@ -453,7 +453,7 @@ export default function Layout() {
               <Box
                 component="img"
                 src={logoUrl || undefined}
-                alt={tenantName || 'Logo'}
+                alt={organisationName}
                 sx={{ height: 36, maxWidth: 140, objectFit: 'contain' }}
               />
             </Box>
@@ -462,9 +462,11 @@ export default function Layout() {
               variant="h6"
               component={Link}
               to="/"
-              sx={{ mr: { xs: 1, sm: 3 }, flexShrink: 0, textDecoration: 'none', color: 'text.primary' }}
+              noWrap
+              title={organisationName}
+              sx={{ mr: { xs: 1, sm: 3 }, flexShrink: 0, maxWidth: { xs: 140, md: 240 }, textDecoration: 'none', color: 'text.primary' }}
             >
-              KANAP
+              {organisationName}
             </Typography>
           )}
           {!isPlatformHost && visibleWorkspaces.length > 0 && (

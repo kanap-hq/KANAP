@@ -35,6 +35,7 @@ import {
 import { AiTenantExecutionService } from './execution/ai-tenant-execution.service';
 import { AiExecutionContext } from './ai.types';
 import { APP_VERSION } from '../config/version';
+import { PRODUCT_NAME, workspaceDisplayName } from '../config/product';
 
 /** A readable tool title from its name: `get_entity_detail` → "Get entity detail". */
 export function toolTitle(name: string): string {
@@ -47,7 +48,7 @@ export function toolTitle(name: string): string {
  * search, and the families it does not read (so that an empty answer is not taken for "none").
  */
 export const MCP_SERVER_INSTRUCTIONS = [
-  'KANAP MCP server. It only reads: changes are made in KANAP.',
+  `${PRODUCT_NAME} MCP server. It only reads: changes are made in ${PRODUCT_NAME}.`,
   'Calls run with the rights of the person behind the key or connection; what they cannot read is left out.',
   'To find a record, start with search_all (names, codes and references such as APP-4; cost centers, calendars and dimensions included). Call describe_entity_filters (fields) and get_filter_values (exact values) before query_entities or aggregate_entities. get_entity_detail and get_entity_context read one record.',
   'This server does not read the audit log or AI agents, and it reads roles and data access settings only for a person who administers users with access to all data: an empty answer about them is not "none". Exchange rates: query_entities on exchange_rates.',
@@ -61,7 +62,7 @@ export function mcpServerInstructions(workspace: { name: string | null; slug: st
   const label = workspace.name && workspace.slug && workspace.name !== workspace.slug
     ? `"${workspace.name}" (${workspace.slug})`
     : `"${workspace.name ?? workspace.slug}"`;
-  return [`This connection reads the KANAP workspace ${label}, and only that one.`, MCP_SERVER_INSTRUCTIONS].join('\n');
+  return [`This connection reads the ${PRODUCT_NAME} workspace ${label}, and only that one.`, MCP_SERVER_INSTRUCTIONS].join('\n');
 }
 
 /** A JSON-RPC error the MCP SDK sends with this code (it reads `code` from the thrown error). */
@@ -81,7 +82,7 @@ function reasonOfThrown(error: unknown): McpCallReason {
 
 /** What an MCP client reads when a tool fails for a reason other than its input or access. */
 export function internalToolErrorMessage(reference: string): string {
-  return `KANAP could not complete this request. This may be temporary: try again in a moment. If it keeps failing, report reference ${reference} to the KANAP administrator.`;
+  return `${PRODUCT_NAME} could not complete this request. This may be temporary: try again in a moment. If it keeps failing, report reference ${reference} to an administrator of this workspace.`;
 }
 
 @Controller('ai/mcp')
@@ -260,8 +261,11 @@ export class AiMcpController {
     });
 
     // The low-level server takes the capabilities' JSON Schemas as they are (McpServer wants Zod).
+    // The title names the workspace: a person may connect several (the product name without one).
+    // The cast: TypeScript does not see the assignment inside the callback above.
+    const workspaceName = (workspace as { name: string | null } | null)?.name ?? null;
     const server = new Server(
-      { name: 'kanap-mcp', title: 'KANAP', version: APP_VERSION },
+      { name: 'kanap-mcp', title: workspaceDisplayName(workspaceName), version: APP_VERSION },
       { capabilities: { tools: {} }, instructions: mcpServerInstructions(workspace) },
     );
 

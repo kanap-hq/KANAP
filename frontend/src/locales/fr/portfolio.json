@@ -248,7 +248,6 @@
       }
     },
     "project": {
-      "browserTitle": "{{ref}} {{name}} | Projet portefeuille",
       "actions": {
         "copyReference": "Copier la référence"
       },
@@ -575,7 +574,6 @@
       }
     },
     "request": {
-      "browserTitle": "{{ref}} {{name}} | Demande portefeuille",
       "actions": {
         "copyReference": "Copier la référence",
         "submitNewRecommendation": "Soumettre une nouvelle recommandation",
@@ -734,7 +732,6 @@
       }
     },
     "task": {
-      "browserTitle": "{{ref}} {{title}} | Tâche",
       "fields": {
         "relatedItem": "Élément lié"
       },

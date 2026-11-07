@@ -1,13 +1,17 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import {
   buildActionButtons,
   buildEmailIntro,
   buildSurfacePanel,
   buildUrlPanel,
+  emailWorkspaceName,
   emailWrapper,
 } from '../notifications/notification-templates';
 import { getEmailStrings, interpolate } from '../i18n/email-i18n';
-import { DEFAULT_EMAIL_PRIMARY_COLOR, type EmailBranding } from './email-branding';
+import { DEFAULT_EMAIL_PRIMARY_COLOR, loadTenantEmailBranding, type EmailBranding } from './email-branding';
+import { workspaceEmailSender } from './email-config';
+import { StorageService } from '../common/storage/storage.service';
 import { createEmailTransport } from './transports/email-transport.factory';
 import type {
   DeliveryError,
@@ -75,7 +79,10 @@ export class EmailService {
   private readonly RATE_LIMIT_MAX_RETRIES: number;
   private readonly RETRY_CONFIG: EmailRetryConfig;
 
-  constructor() {
+  constructor(
+    @Optional() private readonly dataSource?: DataSource,
+    @Optional() private readonly storage?: StorageService,
+  ) {
     this.transport = createEmailTransport(this.logger);
     this.emailOverride = process.env.EMAIL_OVERRIDE?.trim() || null;
     this.RATE_LIMIT_DELAY_MS = this.readPositiveIntEnv(
@@ -219,18 +226,26 @@ export class EmailService {
     await this.transport.send(resolved);
   }
 
+  /** A tenant's e-mail branding (logo, colour, organisation name); the product's without a tenant. */
+  async tenantBranding(tenantId: string | null | undefined): Promise<EmailBranding | undefined> {
+    if (!tenantId || !this.dataSource || !this.storage) return undefined;
+    return loadTenantEmailBranding((sql, values) => this.dataSource!.query(sql, values), this.storage, tenantId);
+  }
+
   async sendPasswordResetEmail(params: {
     to: string;
     resetUrl: string;
     expiresInMinutes?: number;
     branding?: EmailBranding;
+    /** The tenant whose branding and organisation name the e-mail takes, when `branding` is not given. */
+    tenantId?: string | null;
     locale?: string;
   }) {
     const strings = getEmailStrings(params.locale);
     const expires = params.expiresInMinutes ?? 60;
-    const branding = params.branding;
+    const branding = params.branding ?? await this.tenantBranding(params.tenantId);
     const pc = branding?.primaryColor ?? DEFAULT_EMAIL_PRIMARY_COLOR;
-    const subject = strings.auth.passwordReset.subject;
+    const subject = interpolate(strings.auth.passwordReset.subject, { organisation: emailWorkspaceName(branding) });
     const baseUrl = params.resetUrl.match(/^(https?:\/\/[^/]+)/)?.[1] || '';
     const preferencesUrl = baseUrl ? baseUrl + '/settings/notifications' : undefined;
     const body = `
@@ -256,7 +271,8 @@ export class EmailService {
         ? interpolate(strings.common.footer.managePreferencesText, { url: preferencesUrl })
         : null,
     ].filter(Boolean).join('\n\n');
-    await this.send({ to: params.to, subject, html: wrapper.html, text, attachments: wrapper.attachments });
+    const from = workspaceEmailSender(branding?.organisationName);
+    await this.send({ to: params.to, subject, html: wrapper.html, text, attachments: wrapper.attachments, ...(from ? { from } : {}) });
   }
 
   async sendUserInviteEmail(params: {
@@ -266,13 +282,16 @@ export class EmailService {
     roleName?: string | null;
     inviterEmail?: string | null;
     branding?: EmailBranding;
+    /** The tenant whose branding and organisation name the e-mail takes, when `branding` is not given. */
+    tenantId?: string | null;
     locale?: string;
   }) {
     const strings = getEmailStrings(params.locale);
     const expires = params.expiresInMinutes ?? 60;
-    const branding = params.branding;
+    const branding = params.branding ?? await this.tenantBranding(params.tenantId);
     const pc = branding?.primaryColor ?? DEFAULT_EMAIL_PRIMARY_COLOR;
-    const subject = strings.auth.userInvite.subject;
+    const organisation = emailWorkspaceName(branding);
+    const subject = interpolate(strings.auth.userInvite.subject, { organisation });
     const roleLine = params.roleName
       ? interpolate(strings.auth.userInvite.rolePart, {
         roleName: escapeHtml(params.roleName),
@@ -297,6 +316,7 @@ export class EmailService {
         summaryHtml: `<p style="margin:0 0 10px 0;">${strings.common.labels.greetingHello}</p><p style="margin:0;">${interpolate(strings.auth.userInvite.intro, {
           inviterPart: inviterLine,
           rolePart: roleLine,
+          organisation: escapeHtml(organisation),
         })}</p>`,
       })}
       ${buildActionButtons([{ label: strings.common.buttons.setPassword, url: params.inviteUrl }], pc)}
@@ -313,6 +333,7 @@ export class EmailService {
       interpolate(strings.auth.userInvite.intro, {
         inviterPart: inviterLineText,
         rolePart: roleLineText,
+        organisation,
       }),
       interpolate(strings.auth.userInvite.textAction, { url: params.inviteUrl }),
       interpolate(strings.auth.userInvite.expires, { minutes: expires }),
@@ -320,7 +341,8 @@ export class EmailService {
         ? interpolate(strings.common.footer.managePreferencesText, { url: preferencesUrl })
         : null,
     ].filter(Boolean).join('\n\n');
-    await this.send({ to: params.to, subject, html: wrapper.html, text, attachments: wrapper.attachments });
+    const from = workspaceEmailSender(branding?.organisationName);
+    await this.send({ to: params.to, subject, html: wrapper.html, text, attachments: wrapper.attachments, ...(from ? { from } : {}) });
   }
 
   private normalizeError(err: unknown): DeliveryError {
