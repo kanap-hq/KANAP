@@ -74,6 +74,7 @@ import { ListContextsModule } from './common/list-context/list-contexts.module';
 import { apiProcessCount, clusterWorkerId } from './common/cluster/process-role';
 import { DatabaseThrottlerStorage } from './common/rate-limit-store';
 import { DataSource, DataSourceOptions } from 'typeorm';
+import { isConnectionError } from './common/database-connection-error';
 import { runStartupMigrations } from './common/startup-migrations';
 import { readPoolMax } from './common/db-pool-budget';
 
@@ -105,6 +106,10 @@ import { readPoolMax } from './common/db-pool-budget';
           migrations: [__dirname + '/migrations/*.{ts,js}'],
           logging: ['error', 'warn'],
           applicationName: process.env.DB_APP_NAME || 'cio-api',
+          // Nest retries this factory nine times, 3 s apart. Only a lost connection is retried
+          // (common/database-connection-error.ts, the same test as scripts/migrate-and-start.js).
+          // A refused role or a failed migration stops the start at once.
+          toRetry: isConnectionError,
           extra: {
             // Per API process: with API_WORKERS > 1 the API opens up to workers × DB_POOL_MAX
             // connections (checked at start against max_connections, db-pool-budget.ts).

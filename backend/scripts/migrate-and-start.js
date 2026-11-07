@@ -243,7 +243,8 @@ const CONNECTION_ERROR_CODES = new Set(['ECONNRESET', 'ECONNREFUSED', '57P01', '
 /**
  * Whether an error is the database going away or not answering, never a migration's own failure:
  * one of the codes above (on the error or on the driver error TypeORM wraps), or node-postgres'
- * "Connection terminated unexpectedly", which carries no code.
+ * "Connection terminated unexpectedly", which carries no code. The API start uses the same test
+ * (src/common/database-connection-error.ts).
  */
 function isConnectionError(err) {
   const codes = [err?.code, err?.driverError?.code].filter((code) => code != null).map(String);
