@@ -3083,7 +3083,7 @@
         "title": "Environments and bindings",
         "addEnvironment": "Add environment",
         "loadingBindings": "Loading bindings…",
-        "noEnvironments": "No environments defined yet. Click \"Add environment\" to document bindings. Each environment needs application deployments, created in the Applications workspace, before you can add bindings.",
+        "noEnvironments": "No environments yet.",
         "bindingIn": "Binding in {{env}}",
         "noPii": "No PII",
         "deleteBindingMessage": "Delete this environment binding. Linked infra connections for this binding will also be removed.",
@@ -3168,7 +3168,7 @@
       "subItems": {
         "title": "Sub-locations",
         "add": "+ Add sub-location",
-        "empty": "No sub-locations defined. Add buildings, rooms, racks or other physical areas.",
+        "empty": "No sub-locations.",
         "usage": "Usage",
         "namePlaceholder": "e.g., Building A, Room 1, Rack 5",
         "descriptionPlaceholder": "Optional description",
@@ -3195,7 +3195,6 @@
         "status": "Status",
         "detected": "Detected"
       },
-      "empty": "No incidents linked yet. Incidents are linked from the incident itself.",
       "loadFailed": "Could not load incidents."
     },
     "instances": {

@@ -6,6 +6,10 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../../config/ThemeContext';
 import i18n from '../../../i18n';
+import en from '../../../locales/en/it.json';
+import fr from '../../../locales/fr/it.json';
+import de from '../../../locales/de/it.json';
+import es from '../../../locales/es/it.json';
 import InterfaceBindingsMatrix from './InterfaceBindingsMatrix';
 
 const get = vi.hoisted(() => vi.fn());
@@ -250,5 +254,33 @@ describe('InterfaceBindingsMatrix connection picker', () => {
     fireEvent.blur(endpoint);
     await waitFor(() => expect(patch).toHaveBeenCalledTimes(1));
     expect(screen.getByText('Modifier la liaison')).toBeInTheDocument();
+  });
+});
+
+describe('InterfaceBindingsMatrix empty environments', () => {
+  beforeEach(() => {
+    get.mockReset();
+    patch.mockReset();
+  });
+
+  afterEach(async () => {
+    cleanup();
+    await i18n.changeLanguage('en');
+  });
+
+  it('shows one line when the interface has no environments', async () => {
+    await i18n.changeLanguage('en');
+    renderMatrix();
+
+    await waitFor(() => {
+      expect(get).toHaveBeenCalledWith('/interfaces/iface-1/bindings');
+      expect(screen.getByText('No environments yet.')).toBeInTheDocument();
+    });
+    expect(screen.getByText('No environments yet.').closest('[role="alert"]')).toBeNull();
+    expect(screen.queryByText(/Click "Add environment"/)).not.toBeInTheDocument();
+    expect(en.workspace.interface.bindings.noEnvironments).toBe('No environments yet.');
+    expect(fr.workspace.interface.bindings.noEnvironments).toBe("Aucun environnement pour l'instant.");
+    expect(de.workspace.interface.bindings.noEnvironments).toBe('Noch keine Umgebungen.');
+    expect(es.workspace.interface.bindings.noEnvironments).toBe('Todavía no hay entornos.');
   });
 });

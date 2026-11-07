@@ -3083,7 +3083,7 @@
         "title": "Environnements et liaisons",
         "addEnvironment": "Ajouter un environnement",
         "loadingBindings": "Chargement des liaisons…",
-        "noEnvironments": "Aucun environnement n'est encore défini. Cliquez sur « Ajouter un environnement » pour documenter les liaisons. Chaque environnement doit avoir des déploiements d'application, créés dans l'espace Applications, avant de pouvoir ajouter des liaisons.",
+        "noEnvironments": "Aucun environnement pour l'instant.",
         "bindingIn": "Liaison en {{env}}",
         "noPii": "Pas de PII",
         "deleteBindingMessage": "Supprimer cette liaison d'environnement. Les connexions d'infrastructure liées à cette liaison seront aussi retirées.",
@@ -3168,7 +3168,7 @@
       "subItems": {
         "title": "Sous-sites",
         "add": "+ Ajouter un sous-site",
-        "empty": "Aucun sous-site défini. Ajoutez des bâtiments, des salles, des baies ou d'autres zones physiques.",
+        "empty": "Aucun sous-site.",
         "usage": "Utilisation",
         "namePlaceholder": "ex. : Bâtiment A, Salle 1, Baie 5",
         "descriptionPlaceholder": "Description facultative",
@@ -3195,7 +3195,6 @@
         "status": "Statut",
         "detected": "Détecté"
       },
-      "empty": "Aucun incident lié pour l'instant. Les incidents se lient depuis l'incident lui-même.",
       "loadFailed": "Impossible de charger les incidents."
     },
     "instances": {
