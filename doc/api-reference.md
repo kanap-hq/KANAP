@@ -2189,7 +2189,7 @@ Requires JWT authentication. All endpoints operate on the current user's prefere
 
 ### Recently viewed check
 
-POST `/dashboard/recent-items/existing` with `{ items: Array<{ type, id }> }` (at most 50) → `{ existing: Array<{ type, id }> }`: of the "Recently viewed" entries the browser holds, the records that still exist in the tenant, in one statement. Types: project, request, application, asset, interface, connection, contract, task, spend_item, capex_item, incident, location, document; others and malformed ids are left out (`dashboard/recent-items.ts`). Requires an authenticated user only.
+POST `/dashboard/recent-items/existing` with `{ items: Array<{ type, id }> }` (at most 50) → `{ existing: Array<{ type, id }> }`: of the "Recently viewed" entries the browser holds, the records that still exist in the tenant, in one statement. Types: project, request, application, asset, interface, connection, contract, company, business_process, task, spend_item, capex_item, incident, location, document; others and malformed ids are left out (`dashboard/recent-items.ts`). Requires an authenticated user only.
 
 ### Personal budget dashboard settings
 
