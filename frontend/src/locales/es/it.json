@@ -1385,11 +1385,11 @@
         "placement": "Ubicación"
       },
       "mappings": {
-        "intro": "Solo se importan los roles y los sitios con correspondencia. Todo lo que quede en «No importar» se deja fuera.",
+        "intro": "Solo se importan los roles y los sitios con correspondencia.",
         "roles": "Roles de Netbox",
         "sites": "Sitios de Netbox",
         "operatingSystems": "Sistemas operativos",
-        "operatingSystemsHint": "Elija una tecnología para cada plataforma de Netbox. El valor guardado es el nombre de la tecnología, con su versión si elige una. Una plataforma sin correspondencia no bloquea la importación: el sistema operativo se deja tal como está.",
+        "operatingSystemsHint": "Una plataforma sin correspondencia se deja tal como está.",
         "noPlatforms": "Netbox no muestra ninguna plataforma, así que aquí no hay nada que poner en correspondencia.",
         "platformsUnavailable": "Netbox no ha devuelto sus plataformas, por lo que aquí no se pueden poner en correspondencia los sistemas operativos. Compruebe que el token de API puede leer las plataformas.",
         "noOperatingSystem": "Sin correspondencia",
@@ -1420,9 +1420,9 @@
         "reservedRoles": {
           "virtualMachines": "Máquinas virtuales"
         },
-        "subLocationsHint": "Dentro de un sitio con correspondencia, las ubicaciones de Netbox de primer nivel se convierten en sub-ubicaciones aquí. Un equipo colocado más abajo se asigna a la ubicación de primer nivel situada por encima.",
+        "subLocationsHint": "Dentro de un sitio con correspondencia, las ubicaciones de Netbox de primer nivel se convierten en sub-ubicaciones, y el equipo situado más abajo permanece en la ubicación superior.",
         "clusters": "Clústeres",
-        "clustersHint": "Elija el clúster de KANAP de cada clúster de Netbox. Sus máquinas virtuales se añaden entonces a ese clúster y no se elimina nada: una máquina que ya está en otro clúster permanece en él, incluso después de cambiar una correspondencia. Una máquina que usted retire de su clúster vuelve en la siguiente ejecución mientras esté en ese clúster de Netbox. Un clúster sin correspondencia no bloquea la importación.",
+        "clustersHint": "Las máquinas virtuales se unen al clúster de KANAP elegido; no se elimina nada.",
         "clustersUnavailable": "Netbox no devolvió sus clústeres, así que aquí no se pueden vincular máquinas virtuales a un clúster. Compruebe que el token de API puede leer los clústeres.",
         "noClusters": "Netbox no lista ningún clúster, así que no hay nada que hacer corresponder aquí.",
         "noCluster": "Sin correspondencia",

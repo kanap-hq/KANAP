@@ -1385,11 +1385,11 @@
         "placement": "Placement"
       },
       "mappings": {
-        "intro": "Seuls les rôles et les sites mis en correspondance sont importés. Tout ce qui reste sur « Ne pas importer » est laissé de côté.",
+        "intro": "Seuls les rôles et les sites mis en correspondance sont importés.",
         "roles": "Rôles Netbox",
         "sites": "Sites Netbox",
         "operatingSystems": "Systèmes d'exploitation",
-        "operatingSystemsHint": "Choisissez une technologie pour chaque plateforme Netbox. La valeur enregistrée est le nom de la technologie, avec sa version si vous en choisissez une. Une plateforme laissée sans correspondance ne bloque pas l'import : le système d'exploitation est simplement laissé tel quel.",
+        "operatingSystemsHint": "Une plateforme sans correspondance est laissée telle quelle.",
         "noPlatforms": "Netbox ne liste aucune plateforme, il n'y a donc rien à mettre en correspondance ici.",
         "platformsUnavailable": "Netbox n'a pas renvoyé ses plateformes, les systèmes d'exploitation ne peuvent donc pas être mis en correspondance ici. Vérifiez que le jeton d'API peut lire les plateformes.",
         "noOperatingSystem": "Aucune correspondance",
@@ -1420,9 +1420,9 @@
         "reservedRoles": {
           "virtualMachines": "Machines virtuelles"
         },
-        "subLocationsHint": "Dans un site mis en correspondance, les emplacements Netbox de premier niveau deviennent des sous-sites ici. Un équipement placé plus bas est rattaché à l'emplacement de premier niveau au-dessus de lui.",
+        "subLocationsHint": "Dans un site mis en correspondance, les emplacements Netbox de premier niveau deviennent des sous-sites, et l'équipement placé plus bas reste rattaché à celui du dessus.",
         "clusters": "Clusters",
-        "clustersHint": "Choisissez le cluster KANAP de chaque cluster Netbox. Ses machines virtuelles sont alors ajoutées à ce cluster, et rien n'est retiré : une machine déjà dans un autre cluster y reste, même après une correspondance modifiée. Une machine que vous retirez de son cluster y revient à l'exécution suivante tant qu'elle est dans ce cluster Netbox. Un cluster laissé sans correspondance ne bloque pas l'import.",
+        "clustersHint": "Les machines virtuelles rejoignent le cluster KANAP choisi ; rien n'est retiré.",
         "clustersUnavailable": "Netbox n'a pas renvoyé ses clusters, les machines virtuelles ne peuvent donc pas être rattachées à un cluster ici. Vérifiez que le jeton d'API peut lire les clusters.",
         "noClusters": "Netbox ne liste aucun cluster, il n'y a donc rien à mettre en correspondance ici.",
         "noCluster": "Aucune correspondance",

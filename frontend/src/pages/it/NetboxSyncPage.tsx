@@ -30,6 +30,7 @@ import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { catalogDiffLabel } from '../../utils/catalogDiffLabel';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import { getDotColor } from '../../utils/statusColors';
+import InfoHint from '../../components/workspace/InfoHint';
 import AssetPickerPopover from './netbox/AssetPickerPopover';
 import {
   netboxApi,
@@ -1214,7 +1215,10 @@ function MappingsSection({ onError }: { onError: (message: string) => void }) {
       </Box>
 
       <Box>
-        <Box className="kanap-subhead">{t('pages.netbox.mappings.sites')}</Box>
+        <Stack direction="row" spacing={0.75} alignItems="center" className="kanap-subhead">
+          <Box component="span">{t('pages.netbox.mappings.sites')}</Box>
+          <InfoHint text={t('pages.netbox.mappings.subLocationsHint')} />
+        </Stack>
         <Box component="table" className="kanap-table kanap-map-table">
           <colgroup>
             <col className="name" />
@@ -1261,9 +1265,6 @@ function MappingsSection({ onError }: { onError: (message: string) => void }) {
             ))}
           </tbody>
         </Box>
-        <Typography variant="caption" color="text.secondary" component="div" sx={{ mt: 0.5 }}>
-          {t('pages.netbox.mappings.subLocationsHint')}
-        </Typography>
       </Box>
 
       <Box>
@@ -1330,10 +1331,10 @@ function MappingsSection({ onError }: { onError: (message: string) => void }) {
 
       {data.clusters ? (
         <Box>
-          <Box className="kanap-subhead">{t('pages.netbox.mappings.clusters')}</Box>
-          <Typography variant="caption" color="text.secondary" component="div" sx={{ mb: 1 }}>
-            {t('pages.netbox.mappings.clustersHint')}
-          </Typography>
+          <Stack direction="row" spacing={0.75} alignItems="center" className="kanap-subhead">
+            <Box component="span">{t('pages.netbox.mappings.clusters')}</Box>
+            <InfoHint text={t('pages.netbox.mappings.clustersHint')} />
+          </Stack>
           {data.clusters_unavailable ? (
             <Box component="span" className="kanap-muted">{t('pages.netbox.mappings.clustersUnavailable')}</Box>
           ) : clusters.length === 0 ? (

@@ -1385,11 +1385,11 @@
         "placement": "Platzierung"
       },
       "mappings": {
-        "intro": "Nur zugeordnete Rollen und Standorte werden importiert. Alles, was auf „Nicht importieren“ steht, bleibt außen vor.",
+        "intro": "Nur zugeordnete Rollen und Standorte werden importiert.",
         "roles": "Netbox-Rollen",
         "sites": "Netbox-Standorte",
         "operatingSystems": "Betriebssysteme",
-        "operatingSystemsHint": "Wählen Sie für jede Netbox-Plattform eine Technologie. Gespeichert wird der Name der Technologie, mit ihrer Version, wenn Sie eine auswählen. Eine Plattform ohne Zuordnung blockiert den Import nicht: Das Betriebssystem bleibt einfach unverändert.",
+        "operatingSystemsHint": "Eine Plattform ohne Zuordnung bleibt unverändert.",
         "noPlatforms": "Netbox führt keine Plattform, hier gibt es also nichts zuzuordnen.",
         "platformsUnavailable": "Netbox hat seine Plattformen nicht zurückgegeben, daher lassen sich hier keine Betriebssysteme zuordnen. Prüfen Sie, ob das API-Token Plattformen lesen darf.",
         "noOperatingSystem": "Keine Zuordnung",
@@ -1420,9 +1420,9 @@
         "reservedRoles": {
           "virtualMachines": "Virtuelle Maschinen"
         },
-        "subLocationsHint": "Innerhalb eines zugeordneten Standorts werden die übergeordneten Netbox-Locations hier zu Unterstandorten. Ein tiefer platziertes Gerät wird dem darüberliegenden Unterstandort der ersten Ebene zugeordnet.",
+        "subLocationsHint": "Innerhalb eines zugeordneten Standorts werden die übergeordneten Netbox-Locations zu Unterstandorten, und ein tiefer platziertes Gerät bleibt dem darüberliegenden Unterstandort zugeordnet.",
         "clusters": "Cluster",
-        "clustersHint": "Wählen Sie für jeden Netbox-Cluster den KANAP-Cluster. Seine virtuellen Maschinen werden dann diesem Cluster hinzugefügt, und nichts wird entfernt: Eine Maschine, die bereits in einem anderen Cluster ist, bleibt dort, auch nachdem Sie eine Zuordnung ändern. Eine Maschine, die Sie aus ihrem Cluster entfernen, kommt beim nächsten Lauf zurück, solange sie in diesem Netbox-Cluster ist. Ein Cluster ohne Zuordnung blockiert den Import nicht.",
+        "clustersHint": "Virtuelle Maschinen werden dem gewählten KANAP-Cluster hinzugefügt; nichts wird entfernt.",
         "clustersUnavailable": "Netbox hat seine Cluster nicht zurückgegeben, daher können virtuelle Maschinen hier keinem Cluster zugewiesen werden. Prüfen Sie, ob das API-Token Cluster lesen darf.",
         "noClusters": "Netbox listet keinen Cluster, daher gibt es hier nichts zuzuordnen.",
         "noCluster": "Keine Zuordnung",
