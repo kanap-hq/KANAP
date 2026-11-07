@@ -328,7 +328,6 @@ export default function CostPerFteReport() {
       busy={busy}
       fxMissing={report.fxMissing}
       title={t('reports.costPerFte.title')}
-      subtitle={t('reports.costPerFte.subtitle', { type: scopeLabel, context: scope, group: groupInSentence })}
       filters={(
         <>
           <ItemScopeTabs allowAll value={scope} onChange={setScope} />

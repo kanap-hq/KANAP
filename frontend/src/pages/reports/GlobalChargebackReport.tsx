@@ -34,6 +34,7 @@ import { formatCurrency as formatMoney } from '../../i18n/formatters';
 import { useTranslation } from 'react-i18next';
 import { chargebackDepartmentLabel } from '../../utils/allocationLabels';
 import { allocationWarningKey, allocationWarningText, amountFxMissingOf, isAmountFxMissingWarning, type ReportWarning } from '../../utils/allocationWarnings';
+import InfoHint from '../../components/workspace/InfoHint';
 
 function baseFormatNumber(value: number | null | undefined, locale: string): string {
   const n = Number(value ?? 0);
@@ -389,7 +390,6 @@ export default function GlobalChargebackReport() {
     <ReportLayout
       title={t("reports.globalChargeback.title")}
       fxMissing={amountFxMissing}
-      subtitle={t("reports.globalChargeback.subtitle")}
       filters={(
         <>
           <ItemScopeTabs allowAll value={scope} onChange={setScope} />
@@ -499,10 +499,7 @@ export default function GlobalChargebackReport() {
         {showCompanies && (
           <Stack spacing={2} direction={{ xs: 'column', xl: 'row' }} alignItems={{ xs: 'stretch', xl: 'flex-start' }}>
             <Paper variant="outlined" sx={{ p: 2, flex: 1 }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>{t("reports.globalChargeback.companyTotalsTitle")}</Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                {t("reports.globalChargeback.companyTotalsDescription")}
-              </Typography>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1.5 }}>{t("reports.globalChargeback.companyTotalsTitle")}</Typography>
               <ReportGrid
                 rowData={companyRows}
                 columnDefs={companyColumns}
@@ -514,10 +511,7 @@ export default function GlobalChargebackReport() {
               />
             </Paper>
             <Paper variant="outlined" sx={{ p: 2, flex: 1 }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>{t("reports.globalChargeback.distributionTitle")}</Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                {t("reports.globalChargeback.distributionDescription")}
-              </Typography>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1.5 }}>{t("reports.globalChargeback.distributionTitle")}</Typography>
               <ChartCard ref={chartRef} title={t('reports.shared.chart')} options={chartOptions} height={horizontalBarChartHeight(chartData.length)} />
             </Paper>
           </Stack>
@@ -525,10 +519,10 @@ export default function GlobalChargebackReport() {
 
         {showDetailed && (
           <Paper variant="outlined" sx={{ p: 2 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>{t("reports.globalChargeback.detailedTitle")}</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              {t("reports.globalChargeback.detailedDescription")}
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1.5 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{t("reports.globalChargeback.detailedTitle")}</Typography>
+              <InfoHint text={t("reports.globalChargeback.detailedDescription")} />
+            </Box>
             <ReportGrid
               rowData={detailedRows}
               columnDefs={detailedColumns}
@@ -544,10 +538,10 @@ export default function GlobalChargebackReport() {
 
         {showFlows && (
           <Paper variant="outlined" sx={{ p: 2 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>{t("reports.globalChargeback.flowsTitle")}</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              {t("reports.globalChargeback.flowsDescription")}
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1.5 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{t("reports.globalChargeback.flowsTitle")}</Typography>
+              <InfoHint text={t("reports.globalChargeback.flowsDescription")} />
+            </Box>
             {nettedFlows.length > 0 ? (
               <ReportGrid
                 rowData={nettedFlows}
@@ -563,10 +557,10 @@ export default function GlobalChargebackReport() {
 
         {showKpis && (
           <Paper variant="outlined" sx={{ p: 2 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>{t("reports.globalChargeback.kpisTitle")}</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              {t("reports.globalChargeback.kpisDescription")}
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1.5 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{t("reports.globalChargeback.kpisTitle")}</Typography>
+              <InfoHint text={t("reports.globalChargeback.kpisDescription")} />
+            </Box>
             <Box sx={{ overflowX: 'auto' }}>
               <Table size="small" sx={{ minWidth: 720 }}>
                 <TableHead>

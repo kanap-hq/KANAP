@@ -116,7 +116,6 @@ export function buildBudgetColumnsPatch(saved: BudgetColumnsSettings, draft: Bud
 const headSx = { textAlign: 'left', fontSize: 12, fontWeight: 500, color: 'kanap.text.tertiary', px: 1, py: 0.75, whiteSpace: 'nowrap' } as const;
 const cellSx = { px: 1, py: 0.75, fontSize: 13, color: 'kanap.text.primary', verticalAlign: 'top' } as const;
 const controlCellSx = { ...cellSx, py: 0.25 } as const;
-const helpSx = { fontSize: 12, color: 'kanap.text.tertiary', lineHeight: 1.5 } as const;
 const headInfoSx = { fontSize: 13, color: 'kanap.text.tertiary', verticalAlign: 'middle', ml: 0.5 } as const;
 
 /** A header with its explanation one hover away, the same info icon as the spread panel of the budget tab. */
@@ -198,9 +197,6 @@ export default function BudgetColumnsSettingsPage() {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       <PageHeader title={t(`${P}.title`)} />
-      <Typography variant="body1" sx={{ color: 'text.secondary', maxWidth: 720 }}>
-        {t(`${P}.subtitle`)}
-      </Typography>
 
       {!canEdit && <Alert severity="info" sx={{ maxWidth: 720 }}>{t('operations.budgetAdminOnly')}</Alert>}
 
@@ -214,7 +210,7 @@ export default function BudgetColumnsSettingsPage() {
                 <Box component="tr">
                   <Box component="th" sx={headSx}>{t(`${P}.column`)}</Box>
                   <Box component="th" sx={headSx}>{t(`${P}.name`)}</Box>
-                  <Box component="th" sx={headSx}>{t(`${P}.shown`)}</Box>
+                  <HeadWithInfo label={t(`${P}.shown`)} info={t(`${P}.helpHidden`)} />
                   <HeadWithInfo label={t(`${P}.follows`)} info={t(`${P}.helpFollows`)} />
                   <HeadWithInfo label={t(`${P}.default`)} info={t(`${P}.helpDefault`)} />
                 </Box>
@@ -288,11 +284,6 @@ export default function BudgetColumnsSettingsPage() {
               </Box>
             </Box>
           </Box>
-
-          <Stack spacing={0.5} sx={{ mt: 1.5, maxWidth: 720 }}>
-            <Typography sx={helpSx}>{t(`${P}.nameHint`)}</Typography>
-            <Typography sx={helpSx}>{t(`${P}.helpHidden`)}</Typography>
-          </Stack>
 
           {canEdit && errors.form && (
             <Typography role="alert" sx={{ fontSize: 13, color: 'error.main', mt: 1.5 }}>{errors.form}</Typography>

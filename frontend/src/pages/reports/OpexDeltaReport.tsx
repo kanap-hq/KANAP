@@ -422,7 +422,6 @@ export default function OpexDeltaReport() {
       busy={busy}
       fxMissing={report.fxMissing}
       title={t("reports.opexDelta.title")}
-      subtitle={t('reports.opexDelta.subtitle', { type: scopeLabel, context: scope })}
       filters={(
         <Box sx={{
           display: 'flex',

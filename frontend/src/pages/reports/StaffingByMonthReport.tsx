@@ -152,7 +152,6 @@ export default function StaffingByMonthReport() {
       busy={busy}
       fxMissing={report.data?.fxMissing}
       title={t('reports.staffing.title')}
-      subtitle={t('reports.staffing.subtitle', { type: scopeLabel, context: scope, group: groupInSentence })}
       filters={(
         <>
           <ItemScopeTabs allowAll value={scope} onChange={setScope} />

@@ -1004,7 +1004,6 @@
   "admin": {
     "copy": {
       "title": "Copy yearly metrics",
-      "subtitle": "Copy company and department metrics between years with a dry run preview",
       "sourceYear": "Source year",
       "destinationYear": "Destination year",
       "dataSources": "Data sources",

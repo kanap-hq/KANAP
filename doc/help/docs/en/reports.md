@@ -36,7 +36,7 @@ The landing page shows a card for each available report with a short description
 
 - The report opens on **All**: the OPEX and CAPEX lines together. **OPEX** or **CAPEX** keeps the lines of that type. All three need read access to budget lines (`budget:reader`). Without it, the tabs are disabled.
 - The page address keeps the chosen type (`?scope=all`, `?scope=opex` or `?scope=capex`), so a bookmarked or shared link opens on the same type.
-- The subtitle and the chart title name the type, so a printout or an exported PNG shows which lines it covers.
+- The chart title names the type, so a printout or an exported PNG shows which lines it covers.
 - Switching the type clears the lines you excluded.
 
 The two chargeback reports have the same **All**, **OPEX** and **CAPEX** tabs, and open on **OPEX**. See [Global chargeback](#global-chargeback).
@@ -421,7 +421,7 @@ View budget data grouped by the values of one analytics dimension. The layout mi
 - **Exclude values**: Multi-select autocomplete to exclude specific values of the chosen dimension. It offers the values used for the selected line type, plus the values the report's lines hold. The list starts with "Unassigned": choosing it leaves out the lines without a value on the dimension. Switching the line type or the dimension clears it
 - **Cost center**, **Run or build**, **Lines** and the analytics dimension filters: See [Cost center, run or build and analytics filters](#cost-center-run-or-build-and-analytics-filters)
 
-The subtitle, the chart title and the first column of the table name the chosen dimension, for example "OPEX by Nature". The page address also keeps the two boxes, so a shared link opens with the same detail and split.
+The chart title and the first column of the table name the chosen dimension, for example "OPEX by Nature". The page address also keeps the two boxes, so a shared link opens with the same detail and split.
 
 ### What you'll see
 

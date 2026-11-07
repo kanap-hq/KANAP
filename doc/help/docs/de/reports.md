@@ -36,7 +36,7 @@ Die Startseite zeigt eine Karte für jeden verfügbaren Bericht mit einer kurzen
 
 - Der Bericht öffnet sich auf **Alle**: die OPEX- und CAPEX-Zeilen zusammen. **OPEX** oder **CAPEX** behält die Zeilen dieses Typs. Alle drei erfordern Lesezugriff auf Budgetzeilen (`budget:reader`). Ohne diesen Zugriff sind die Tabs deaktiviert.
 - Die Seitenadresse behält den gewählten Typ (`?scope=all`, `?scope=opex` oder `?scope=capex`). Ein gespeicherter oder geteilter Link öffnet sich daher auf demselben Typ.
-- Untertitel und Diagrammtitel nennen den Typ. So zeigt ein Ausdruck oder ein exportiertes PNG, welche Zeilen es abdeckt.
+- Der Diagrammtitel nennt den Typ. So zeigt ein Ausdruck oder ein exportiertes PNG, welche Zeilen es abdeckt.
 - Ein Wechsel des Typs leert die ausgeschlossenen Budgetzeilen.
 
 Die beiden Leistungsverrechnungsberichte haben dieselben Registerkarten **Alle**, **OPEX** und **CAPEX** und öffnen sich auf **OPEX**. Siehe [Globale Leistungsverrechnung](#globale-leistungsverrechnung).
@@ -421,7 +421,7 @@ Zeigen Sie Budgetdaten gruppiert nach den Werten einer Analysedimension. Das Lay
 - **Werte ausschließen**: Mehrfachauswahl mit Autovervollständigung zum Ausschließen bestimmter Werte der gewählten Dimension. Die Liste bietet die Werte an, die für den gewählten Zeilentyp verwendet werden, dazu die Werte, die die Zeilen des Berichts haben. Die Liste beginnt mit „Nicht zugeordnet“: Wenn Sie diesen Eintrag wählen, entfallen die Zeilen ohne Wert in der Dimension. Ein Wechsel des Zeilentyps oder der Dimension leert die Auswahl
 - **Kostenstelle**, **Run oder Build**, **Zeilen** und die Filter nach Analysedimension: Siehe [Filter nach Kostenstelle, Run oder Build und Analysedimensionen](#filter-nach-kostenstelle-run-oder-build-und-analysedimensionen)
 
-Untertitel, Diagrammtitel und erste Tabellenspalte nennen die gewählte Dimension, zum Beispiel „OPEX nach Nature“. Die Seitenadresse speichert auch die beiden Kontrollkästchen, sodass ein geteilter Link mit demselben Detail und derselben Aufteilung öffnet.
+Diagrammtitel und erste Tabellenspalte nennen die gewählte Dimension, zum Beispiel „OPEX nach Nature“. Die Seitenadresse speichert auch die beiden Kontrollkästchen, sodass ein geteilter Link mit demselben Detail und derselben Aufteilung öffnet.
 
 ### Was Sie sehen
 

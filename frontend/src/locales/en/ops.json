@@ -133,7 +133,6 @@
       "total": "Total",
       "mustSum100": "Manual percentages must sum to 100%.",
       "addRow": "Add row",
-      "autoDistributeInfo": "Remainder auto-distributes across enabled companies based on the selected method. No manual selection required.",
       "totalAutoHint": "(<= 100% allowed; remainder auto-distributed)",
       "totalManualHint": "(preview only: saved totals use live metrics)",
       "failedToLoad": "Failed to load allocations",
@@ -267,7 +266,6 @@
       "total": "Total",
       "mustSum100": "Manual percentages must sum to 100%.",
       "addRow": "Add row",
-      "autoDistributeInfo": "Remainder auto-distributes across enabled companies based on the selected method. No manual selection required.",
       "totalAutoHint": "(<= 100% allowed; remainder auto-distributed)",
       "totalManualHint": "(preview only: saved totals use live metrics)",
       "failedToLoad": "Failed to load allocations",
@@ -708,7 +706,6 @@
   },
   "operations": {
     "title": "Administration",
-    "subtitle": "Powerful tools to manage and transform your budget data across different years and columns.",
     "sections": {
       "settings": "Settings",
       "operations": "Operations"
@@ -733,12 +730,10 @@
     },
     "allocationDefault": {
       "title": "Default allocation method",
-      "subtitle": "Choose how costs are shared across companies by default, for each fiscal year.",
       "year": "Fiscal year",
       "mode": "Companies",
       "modeAuto": "All enabled companies",
       "modeManual": "Selected companies",
-      "modeManualHelp": "The driver is applied to the selected companies only.",
       "companies": "Companies",
       "companiesSelected": "{{count}} companies selected",
       "companiesSelected_one": "{{count}} company selected",
@@ -754,7 +749,6 @@
       "standardNote": "Standard method: no override configured for this year.",
       "overriddenNote": "Configured for your organisation. Standard method: {{method}}.",
       "resetToStandard": "Use the standard method",
-      "scopeNote": "The method is resolved when allocations are computed: either from the headcount, IT users or turnover of every company enabled for the year, or from the driver value of the companies selected for the default. Changing it re-drives every line left on the default method; manual allocations keep their percentages.",
       "loadError": "Could not load the default allocation method.",
       "saveError": "Could not save the default allocation method.",
       "noPermission": "You need budget administration rights to change the default. The current setting stays visible.",
@@ -780,7 +774,6 @@
     },
     "columnReset": {
       "title": "Reset budget column",
-      "subtitle": "Clear a column for one year, on all lines, OPEX or CAPEX: its twelve months and its spread period.",
       "year": "Year",
       "budgetColumn": "Budget column",
       "processing": "Processing…",
@@ -811,7 +804,6 @@
     },
     "copyBudget": {
       "title": "Copy budget columns",
-      "subtitle": "Copy amounts from one column to another, and allocations from one year to another, for all lines, OPEX or CAPEX.",
       "sourceYear": "Source year",
       "destinationYear": "Destination year",
       "amounts": "Amounts",
@@ -905,7 +897,6 @@
     },
     "currency": {
       "title": "Currency settings",
-      "subtitle": "Configure reporting and default currencies used across OPEX and CAPEX workflows. All values are saved as three-letter ISO codes.",
       "loadError": "Failed to load current currency settings.",
       "saveSuccess": "Currency settings updated successfully",
       "failedToRefreshFx": "Failed to refresh FX rates",
@@ -917,7 +908,6 @@
       "defaultCapexCurrency": "Default CAPEX currency",
       "defaultCapexCurrencyHelp": "Prefills currency when creating new CAPEX lines",
       "allowedCurrencies": "Allowed currencies",
-      "allowedCurrenciesHelp": "Optional comma-separated list (e.g. EUR, USD, GBP)",
       "forceFxSync": "Force FX rates sync",
       "fxRatesTitle": "Latest FX rate snapshots (per fiscal year, workspace reporting currency basis)",
       "loadingRates": "Loading FX rates…",
@@ -1106,7 +1096,6 @@
     "budgetAdminOnly": "You need budget administrator rights to use this page.",
     "budgetColumnsSettings": {
       "title": "Budget columns",
-      "subtitle": "Name the columns your budget uses, choose which ones everyone sees, and which one reports and lists start from.",
       "loadError": "The column settings could not be loaded.",
       "column": "Column",
       "name": "Name",
@@ -1118,7 +1107,6 @@
       "followsOf": "{{column}} follows the spread and the lines",
       "defaultOf": "Make {{column}} the default column",
       "inFiles": "In files: {{name}}",
-      "nameHint": "Leave a name empty to use the standard name.",
       "helpHidden": "Hidden columns keep their amounts and still accept imports and freezes.",
       "helpDefault": "The default column is preselected in reports and sorts the lists and the dashboard. Freezing it fixes the year's exchange rates.",
       "helpFollows": "Ticked by default in \"Use for other columns too\" on the Budget tab.",
@@ -1251,7 +1239,6 @@
   "reports": {
     "landing": {
       "title": "Reporting",
-      "description": "Explore prebuilt reports. Each report includes a summary table and a chart, with export options.",
       "cards": {
         "globalChargeback": {
           "title": "Global chargeback",
@@ -1433,15 +1420,12 @@
     },
     "globalChargeback": {
       "title": "Global chargeback",
-      "subtitle": "Global chargeback allocations, company totals, and KPIs",
       "overallTotal": "Overall total",
       "companies": "Companies",
       "detailedLines": "Detailed lines",
       "kpiCoverage": "KPI coverage",
       "companyTotalsTitle": "Global company totals",
-      "companyTotalsDescription": "Consolidated chargeback amount per company.",
       "distributionTitle": "Chargeback distribution",
-      "distributionDescription": "Horizontal bar chart mirroring the table totals.",
       "detailedTitle": "Detailed allocations",
       "detailedDescription": "Allocation per company and department with subtotal rows per company. Rows labelled \"Common costs\" represent residual company costs without department assignment.",
       "globalTotal": "Global total",
@@ -1461,17 +1445,14 @@
     },
     "companyChargeback": {
       "title": "Company chargeback",
-      "subtitle": "Detailed chargeback allocation per company across departments, lines, and KPIs",
       "selectCompanyTitle": "Select a company to explore chargeback details",
       "selectCompanyDescription": "Choose a company, year, and budget column to generate the detailed chargeback view. Department totals, itemised allocations, and KPIs will appear once the report runs.",
       "selectCompany": "Select a company",
       "departmentTotals": "Department totals",
       "departmentTotalsDescription": "Consolidated chargeback per department. \"Common costs\" aggregates allocations without a specific department.",
       "departmentDistribution": "Department distribution",
-      "departmentDistributionDescription": "Horizontal bar chart mirroring the table totals.",
       "noDepartmentAllocations": "No department-level allocations for the selected configuration.",
       "chargebackItems": "Chargeback lines",
-      "chargebackItemsDescription": "Itemised spend contributing to the company chargeback, including the allocation method and share of the total amount.",
       "noChargebackItems": "No chargeback lines for the selected configuration.",
       "flowsTitle": "Intercompany flows",
       "flowsDescription": "Partner companies with receivables (you paid for them), payables (they paid for you), and the net total. Self-consumption excluded.",
@@ -1489,8 +1470,6 @@
     },
     "topOpex": {
       "title": "Top lines",
-      "subtitle": "Largest {{type}} lines by selected year ({{metric}})",
-      "subtitle_all": "Largest budget lines by selected year ({{metric}})",
       "topTotal": "Top {{count}} total",
       "totalMetric": "{{metric}}, total",
       "ofFilteredMetric": "{{pct}}% of the filtered total",
@@ -1502,8 +1481,6 @@
     },
     "opexDelta": {
       "title": "Top increase / decrease",
-      "subtitle": "Largest {{type}} variations vs previous year",
-      "subtitle_all": "Largest budget variations vs previous year",
       "sourceColumn": "Source column",
       "destinationColumn": "Destination column",
       "increase": "Increase",
@@ -1543,12 +1520,10 @@
       "directionToggle": "Increase or decrease"
     },
     "budgetTrendOpex": {
-      "title": "Budget comparison",
-      "subtitle": "Compare selected metrics across a year range"
+      "title": "Budget comparison"
     },
     "budgetColumnsCompare": {
       "title": "Budget column comparison",
-      "subtitle": "Compare up to ten budget columns",
       "yearGroupingSubtitle": "{{type}}: year grouping",
       "yearGroupingSubtitle_all": "OPEX and CAPEX: year grouping",
       "selectionsSubtitle_one": "{{type}}: {{count}} selection",
@@ -1559,8 +1534,6 @@
     },
     "consolidation": {
       "title": "Budget by consolidation account",
-      "subtitle": "Group {{type}} totals by consolidation account; pie for a single year, line for multi-year range",
-      "subtitle_all": "Group OPEX and CAPEX totals by consolidation account; pie for a single year, line for multi-year range",
       "chartTitleSingle": "{{type}} by consolidation account · {{year}}",
       "chartTitleSingle_all": "OPEX and CAPEX by consolidation account · {{year}}",
       "chartTitleRange": "{{type}} by consolidation account · {{start}} to {{end}}",
@@ -1573,8 +1546,6 @@
     },
     "analyticsCategory": {
       "title": "Budget by analytics dimension",
-      "subtitle": "Group {{type}} totals by {{dimension}}; pie for a single year, line for multi-year range",
-      "subtitle_all": "Group OPEX and CAPEX totals by {{dimension}}; pie for a single year, line for multi-year range",
       "chartTitleSingle": "{{type}} by {{dimension}} · {{year}}",
       "chartTitleSingle_all": "OPEX and CAPEX by {{dimension}} · {{year}}",
       "chartTitleRange": "{{type}} by {{dimension}} · {{start}} to {{end}}",
@@ -1601,8 +1572,6 @@
     },
     "staffing": {
       "title": "Staffing by month",
-      "subtitle": "Monthly {{type}} FTE by {{group}}",
-      "subtitle_all": "Monthly FTE by {{group}}",
       "chartTitle": "{{type}} staffing by {{group}}, {{column}} {{year}}",
       "chartTitle_all": "Staffing by {{group}}, {{column}} {{year}}",
       "groupBy": "Group by",
@@ -1630,8 +1599,6 @@
     },
     "costPerFte": {
       "title": "Cost per FTE",
-      "subtitle": "Yearly {{type}} cost of one FTE or average daily rate, by {{group}}",
-      "subtitle_all": "Yearly cost of one FTE or average daily rate, by {{group}}",
       "chartTitle": "{{type}} cost per FTE by {{group}}",
       "chartTitle_all": "Cost per FTE by {{group}}",
       "rateChartTitle": "{{type}} daily rate by {{group}}",
@@ -1779,7 +1746,6 @@
       "yearChange_other": "Someone else changed the {{columns}} columns while you were editing them, and you have not chosen which values to keep. Change the year anyway and lose your values in these columns, or stay and choose.",
       "yearChangeConfirm": "Change the year"
     },
-    "notEntered": "Not entered yet",
     "columns": "Budget columns",
     "card": {
       "frozen": "Frozen",
@@ -1803,20 +1769,11 @@
       "single": "in {{month}}"
     },
     "result": {
-      "spreadFlat": "{{amount}} spread flat {{span}}.",
-      "spread445": "{{amount}} spread 4-4-5 {{span}}.",
-      "enterFlat": "Enter an amount: it will be spread flat {{span}}.",
-      "enter445": "Enter an amount: it will be spread 4-4-5 {{span}}.",
       "title": "Monthly result",
       "quarter": "Q{{n}}",
       "cellHint": "Enter by month",
-      "atDate": "{{amount}} on {{date}}, all in {{month}}.",
-      "enterDate": "Enter an amount: it will go in {{month}}.",
       "show": "Show the detail",
       "hide": "Hide the detail",
-      "folded_one": "The column is spread flat over the whole year: the monthly detail adds nothing.",
-      "folded_other": "All columns are spread flat over the whole year: the monthly detail adds nothing.",
-      "foldedEmpty": "No amount yet: the monthly detail adds nothing.",
       "differenceWith": "Difference with",
       "differenceRow": "Difference with {{column}}"
     },
