@@ -349,16 +349,22 @@ function NoticeLine({ text, action, onAction, disabled }: { text: string; action
   );
 }
 
-function ReportView({
+/**
+ * The check of a budget file, as this dialog shows it. Plaid's card shows the check of the file it
+ * builds, under its own status line (`showStatus` false): it approves where this dialog loads.
+ */
+export function ReportView({
   report,
   locale,
   canCreateSuppliers,
   nothingToLoad,
+  showStatus = true,
 }: {
   report: BudgetFileReport;
   locale: string;
   canCreateSuppliers: boolean;
   nothingToLoad: boolean;
+  showStatus?: boolean;
 }) {
   const { t } = useTranslation('ops');
   const columns = useBudgetColumns();
@@ -391,9 +397,11 @@ function ReportView({
         pt: 1.5,
       })}
     >
-      <Typography sx={{ fontSize: 13, fontWeight: 500, color: 'kanap.text.primary' }}>
-        {blocking ? t(`${K}notReady`) : nothingToLoad ? t(`${K}nothingToChange`) : t(`${K}ready`)}
-      </Typography>
+      {showStatus && (
+        <Typography sx={{ fontSize: 13, fontWeight: 500, color: 'kanap.text.primary' }}>
+          {blocking ? t(`${K}notReady`) : nothingToLoad ? t(`${K}nothingToChange`) : t(`${K}ready`)}
+        </Typography>
+      )}
 
       {hasErrors && (
         <Section title={t(`${K}errorsTitle`)}>

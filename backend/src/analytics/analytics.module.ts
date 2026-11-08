@@ -20,6 +20,6 @@ import { UsersModule } from '../users/users.module';
   ],
   controllers: [AnalyticsCategoriesController, AnalyticsAxesController],
   providers: [AnalyticsCategoriesService, AnalyticsAxesService, AnalyticsCategoriesCsvService],
-  exports: [AnalyticsCategoriesService, AnalyticsAxesService],
+  exports: [AnalyticsCategoriesService, AnalyticsAxesService, AnalyticsCategoriesCsvService],
 })
 export class AnalyticsModule {}

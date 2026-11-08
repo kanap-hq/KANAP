@@ -14,6 +14,7 @@ import { getPreviewStatusColorKey, getPreviewStatusDisplay } from '../utils/prev
 import { getPreviewTitle } from '../utils/previewClassification';
 import { usePreviewChangeLabels } from './previewChangeLabels';
 import ImportMappingPreview from './ImportMappingPreview';
+import { downloadServerExport } from '../../components/csv/serverExport';
 
 const LINKED_MARKDOWN_IMAGE_RE = /\[\s*!\[[^\]]*]\(\s*<?[^)\s>]+>?[\s\S]*?\)\s*]\(\s*<?[^)\s>]+>?[\s\S]*?\)/g;
 const MARKDOWN_IMAGE_RE = /!\[[^\]]*]\(\s*<?[^)\s>]+>?[\s\S]*?\)/g;
@@ -122,9 +123,13 @@ function PreviewCard({
   onApprove,
   onReject,
 }: PreviewCardProps) {
-  const { t } = useTranslation(['ai']);
+  const { t, i18n } = useTranslation(['ai', 'common']);
   const mode = useTheme().palette.mode;
   const isPending = preview.status === 'pending';
+  // The file prepared for an import, in the import's format: downloaded whatever the card's status.
+  const canDownload = !!preview.import_mapping && !!preview.conversation_id;
+  const [downloading, setDownloading] = React.useState(false);
+  const [downloadFailed, setDownloadFailed] = React.useState(false);
   const pendingImagePlaceholder = t('ai:previewCard.pendingInlineImage');
   const statusDisplay = getPreviewStatusDisplay(preview);
   const statusColorKey = getPreviewStatusColorKey(statusDisplay);
@@ -335,26 +340,58 @@ function PreviewCard({
           </Typography>
         )}
 
-        {isPending && (
-          <Stack direction="row" spacing={1}>
-            <Button
-              size="small"
-              variant="contained"
-              disabled={disabled}
-              onClick={() => onApprove(preview.preview_id)}
-            >
-              {t('ai:previewCard.approve')}
-            </Button>
-            <Button
-              size="small"
-              variant="outlined"
-              color="inherit"
-              disabled={disabled}
-              onClick={() => onReject(preview.preview_id)}
-            >
-              {t('ai:previewCard.reject')}
-            </Button>
+        {(isPending || canDownload) && (
+          <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+            {isPending && (
+              <>
+                <Button
+                  size="small"
+                  variant="contained"
+                  // An import whose check refuses the file cannot run: the card says why.
+                  disabled={disabled || preview.import_mapping?.validation?.ok === false}
+                  onClick={() => onApprove(preview.preview_id)}
+                >
+                  {t('ai:previewCard.approve')}
+                </Button>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  color="inherit"
+                  disabled={disabled}
+                  onClick={() => onReject(preview.preview_id)}
+                >
+                  {t('ai:previewCard.reject')}
+                </Button>
+              </>
+            )}
+            {canDownload && (
+              <Button
+                size="small"
+                variant="outlined"
+                color="inherit"
+                disabled={downloading}
+                onClick={() => {
+                  setDownloading(true);
+                  setDownloadFailed(false);
+                  downloadServerExport({
+                    url: `/ai/conversations/${preview.conversation_id}/previews/${preview.preview_id}/import-file/export`,
+                    format: 'xlsx',
+                    language: i18n.resolvedLanguage,
+                    fileBase: 'import',
+                  })
+                    .catch(() => setDownloadFailed(true))
+                    .finally(() => setDownloading(false));
+                }}
+              >
+                {t('ai:previewCard.importRun.download')}
+              </Button>
+            )}
           </Stack>
+        )}
+        {downloadFailed && (
+          <Typography variant="caption" sx={{ fontSize: 12, color: 'error.main' }}>
+            {t('common:messages.exportFailed')}
+          </Typography>
         )}
       </Stack>
     </Box>

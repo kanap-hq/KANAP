@@ -90,6 +90,7 @@
   "document_versions",
   "documents",
   "export",
+  "import",
   "incident_attachments",
   "incidents",
   "interface_attachments",

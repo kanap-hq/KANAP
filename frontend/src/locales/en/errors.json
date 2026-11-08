@@ -471,5 +471,7 @@
     "assets": "assets",
     "connections": "connections",
     "incidents": "incidents"
-  }
+  },
+  "AI_IMPORT_CLEARS_COLUMNS_one": "{{count}} row updates an existing record, and this import replaces all its values: the file has no column for {{columns}}, whose values would be cleared. Map those columns, or keep only new records in the file.",
+  "AI_IMPORT_CLEARS_COLUMNS_other": "{{count}} rows update existing records, and this import replaces all their values: the file has no column for {{columns}}, whose values would be cleared. Map those columns, or keep only new records in the file."
 }

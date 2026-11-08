@@ -8,7 +8,9 @@ import {
   AUDIT_EVENT_ACTIONS as SCREEN_ACTIONS,
   AUTH_EVENT_REASONS as SCREEN_REASONS,
   EXPORT_RESOURCE_KEYS,
+  IMPORT_LIST_KEYS,
 } from '../../../../frontend/src/lib/audit/auditLogLabels';
+import { AI_IMPORT_ACCESS } from '../../ai/import/ai-import-access';
 import {
   AUTH_EVENT_ACTIONS,
   AUTH_EVENT_REASONS,
@@ -23,6 +25,7 @@ import {
   exportRoutePath,
   QUERY_AS_SENT,
   handlerRoutePaths,
+  IMPORT_EVENT_ACTION,
   isExportRoutePath,
   joinRoutePath,
   USER_AGENT_MAX_LENGTH,
@@ -178,6 +181,7 @@ function testFileSignsAreFound() {
 const KNOWN_EXPORT_ROUTES = [
   'GET /accounts/export',
   'GET /admin/coa-templates/:id/export',
+  'GET /ai/conversations/:id/previews/:previewId/import-file/export',
   'GET /analytics-categories/export',
   'GET /applications/export',
   'GET /assets/export',
@@ -560,12 +564,13 @@ async function testEventWriterNeverRejects() {
 }
 
 // The audit log page (frontend/src/lib/audit/auditLogLabels.ts, imported here) has a plain label
-// for every action, reason and exported resource the API writes.
+// for every action, reason, exported resource and imported list the API writes.
 function testTheAuditLogPageLabelsEveryEvent() {
-  assert.deepEqual([...SCREEN_ACTIONS].sort(), [...AUTH_EVENT_ACTIONS, 'export'].sort(), 'actions');
+  assert.deepEqual([...SCREEN_ACTIONS].sort(), [...AUTH_EVENT_ACTIONS, 'export', IMPORT_EVENT_ACTION].sort(), 'actions');
   assert.deepEqual([...SCREEN_REASONS].sort(), [...AUTH_EVENT_REASONS].sort(), 'reasons');
   const resources = [...new Set(KNOWN_EXPORT_ROUTES.map((route) => exportResource(route.split(' ')[1])))].sort();
   assert.deepEqual(Object.keys(EXPORT_RESOURCE_KEYS).sort(), resources, 'one label per exported resource');
+  assert.deepEqual(Object.keys(IMPORT_LIST_KEYS).sort(), Object.keys(AI_IMPORT_ACCESS).sort(), 'one label per list Plaid imports');
 }
 
 async function run() {

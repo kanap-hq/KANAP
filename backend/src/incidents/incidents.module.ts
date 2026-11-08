@@ -58,6 +58,6 @@ import { UserTimeAggregateService } from '../portfolio/services/user-time-aggreg
     IncidentJournalImportService,
     UserTimeAggregateService,
   ],
-  exports: [IncidentsService, IncidentEntriesService, IncidentRecordService, IncidentRelationsService],
+  exports: [IncidentsService, IncidentEntriesService, IncidentRecordService, IncidentRelationsService, IncidentsCsvService],
 })
 export class IncidentsModule {}

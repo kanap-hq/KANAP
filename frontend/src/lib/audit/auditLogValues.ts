@@ -3,7 +3,7 @@ import { countryNameFor } from '../../i18n/countries';
 import { frenchSpacing } from '../../i18n/formatters';
 import { formatShortDate, formatShortDateTime } from '../../lib/dateFormat';
 import { formatItemRef } from '../../utils/item-ref';
-import { EXPORT_EVENT_TABLE, exportResourceKey, type Translate } from './auditLogLabels';
+import { EXPORT_EVENT_TABLE, exportResourceKey, IMPORT_EVENT_TABLE, importListKey, type Translate } from './auditLogLabels';
 
 /**
  * The readable face of an audit entry: the field rows the detail dialog shows, the reference of
@@ -829,8 +829,12 @@ function formatExportQuery(query: Record<string, unknown>, context: AuditValueCo
   };
 }
 
-/** The resource, the file format and the parameters of an export. Null for any other field. */
+/** The resource, the file format and the parameters of an export, the list of an import. Null for any other field. */
 function formatExportValue(value: unknown, field: string, context: AuditValueContext): AuditValue | null {
+  if (context.table === IMPORT_EVENT_TABLE && field === 'list' && typeof value === 'string') {
+    const key = importListKey(value);
+    return { text: (key ? screenLabel(context, `auditLogs.exportResources.${key}`) : null) ?? (value.trim() || DASH) };
+  }
   if (context.table !== EXPORT_EVENT_TABLE) return null;
   if (field === 'resource' && typeof value === 'string') {
     const key = exportResourceKey(value);

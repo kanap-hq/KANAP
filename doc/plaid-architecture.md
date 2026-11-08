@@ -892,9 +892,9 @@ Live write-preview coverage includes:
   budget line, project, request, document, and location links
 - financial plan writes for budget line versions, amounts, and allocations
 - GLPI ticket import into a KANAP task
-- the column mapping of an attached spreadsheet onto an import's template
-  (`prepare_import_mapping`, after `describe_import_template`), which records
-  the mapping and imports nothing
+- the import of an attached spreadsheet (`prepare_import_mapping`, after
+  `describe_import_template`): the card holds the column mapping and the
+  import's check of the file, and approving it runs the import of the screens
 - single-record deletes (`delete_record`) of a task, contact, location,
   document, budget line, connection or interface, at the level of that
   family's delete route (`ai-write-levels.ts`); one pending delete per
@@ -1036,14 +1036,48 @@ of other records (a company, a server, a person) are copied as written: the
 import checks them when it runs. Rows above the header that hold only a title
 or a date in their first columns are left out of the table (I1's reader). A
 template column without its own title takes one from `ai-import-titles.ts`. An
-approved mapping ends the turn: Plaid does not continue after it. The card
-shows the first rows and the values not read; the model receives the counts only (`MODEL_HIDDEN_OUTPUT_FIELDS` hides
-`unread_values` and `sample`), so no file cell reaches it beyond the summary.
-The tool is refused inside a mutation plan, whose output is not redacted.
-A new mapping of the same file expires the pending card of that file
-(`replacesPendingPreview`), so the person has one card to approve; the chat
-reloads the cards at the end of each answer. Approving checks the attachment
-again and writes nothing.
+approved import ends the turn: Plaid does not continue after it. The tool is
+refused inside a mutation plan, whose output is not redacted. A new mapping of
+the same file expires the pending card of that file (`replacesPendingPreview`),
+so the person has one card to approve; the chat reloads the cards at the end of
+each answer.
+
+The import itself (lot I3) runs in two steps, as on the import screens, on one
+card. Preparing the card builds the file in the template's format
+(`ai-import-file.ts`): one .xlsx sheet, the template's technical headers, one
+row per data row of the person's file, the converted value of each cell (a day
+as a date cell, a number as a number cell), or the person's own text when the
+mapping did not read it, which the import then refuses with its own message.
+`AiImportRunnerService` hands it to the import service of the screen, called as
+its route calls it (the "merge" mode of the V2 imports, the person's language,
+a decimal point; the budget file's preflight, without creating suppliers), in
+the transaction of the call, which carries the person's data access: that check
+(the dry run) is stored on the card as `import_mapping.validation`. Approving
+checks the rights again, refuses a card whose check failed, builds the file
+again from the attachment and runs the import (the budget file with the
+snapshot of a new preflight); a file the import refuses then fails the card
+and the approval's savepoint undoes any write. The card keeps
+`import_mapping.result`, and one audit row records the import (`table_name =
+'import'`, `source = 'ai_chat'`, the preview in `source_ref`, `after_json` with
+the list, the file name and the counts); the records keep the audit rows of
+their import. The imports that replace every value of a record they update (the
+master data imports and the technology links, `AI_IMPORT_WHOLE_ROWS`) get every
+template column, blank when the mapping leaves it out, and a file that would
+update existing records without some of those columns is refused
+(`AI_IMPORT_CLEARS_COLUMNS`): their values would be cleared. The messages of a
+check or an import carry the line of the person's file (the grid's `lines`,
+title and blank rows put back). The card shows the first rows, the values not
+read and the import's messages; the model receives the counts and, per code and
+column, the number of messages (`MODEL_HIDDEN_OUTPUT_FIELDS` hides
+`unread_values`, `sample` and the `report` of the check and of the result), so
+no file cell reaches it beyond the summary. The card also downloads the file
+the mapping builds, as the import reads it (`GET
+/ai/conversations/:id/previews/:previewId/import-file/export`,
+`ai-import-file.controller.ts`): rebuilt from the attachment with the card's
+rights, never stored, for the person whose card it is. The route runs in the
+request's tenant transaction, unlike the other conversation routes, so the
+export interceptor records each download as an export. MCP has no import: it
+reads, holds no attachment and does not read the audit log.
 
 Writes go through existing domain services where practical, so normal validation,
 workflow rules, side effects, and audit logging still apply. AI-originated domain

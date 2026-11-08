@@ -13,6 +13,6 @@ import { CostCentersService } from './cost-centers.service';
   imports: [TypeOrmModule.forFeature([CostCenter]), AuditModule, PermissionsModule, forwardRef(() => UsersModule)],
   providers: [CostCentersService, CostCentersDeleteService, CostCentersCsvService],
   controllers: [CostCentersController],
-  exports: [CostCentersService],
+  exports: [CostCentersService, CostCentersCsvService],
 })
 export class CostCentersModule {}

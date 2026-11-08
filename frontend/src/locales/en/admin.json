@@ -295,6 +295,7 @@
       "delete": "Delete",
       "disable": "Disable",
       "export": "Export",
+      "import": "Import",
       "login": "Sign-in",
       "login_failed": "Failed sign-in",
       "logout": "Sign-out",
@@ -346,6 +347,7 @@
     },
     "exportResources": {
       "accounts": "Accounts",
+      "aiImportFile": "File prepared by Plaid for an import",
       "administrationView": "Administration zones",
       "analyticsCategories": "Analytics dimensions",
       "applications": "Applications",
@@ -772,7 +774,12 @@
       "origin_task_id": "Created from task",
       "target_date": "Target date",
       "phase_status": "Status",
-      "milestone_status": "Status"
+      "milestone_status": "Status",
+      "list": "List",
+      "filename": "File",
+      "inserted": "Created",
+      "updated": "Updated",
+      "unchanged": "Unchanged"
     },
     "history": {
       "empty": "No history yet",
@@ -1324,6 +1331,7 @@
       "documents": "Documents",
       "expiry_reminders": "Expiry reminders sent",
       "export": "Export",
+      "import": "Import",
       "incident_attachments": "Incident attachments",
       "incident_technologies": "Incident technologies",
       "incidents": "Incidents",

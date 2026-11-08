@@ -1,5 +1,5 @@
 import React from 'react';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -9,6 +9,9 @@ import { AiMutationPreview } from '../aiTypes';
 import PreviewCard from './PreviewCard';
 import ArtifactPreviewChip from './ArtifactPreviewChip';
 import { getPreviewLabel } from '../utils/previewClassification';
+import { downloadServerExport } from '../../components/csv/serverExport';
+
+vi.mock('../../components/csv/serverExport', () => ({ downloadServerExport: vi.fn(async () => undefined) }));
 
 vi.mock('../../hooks/useItOpsEnumOptions', () => ({
   default: () => ({
@@ -993,5 +996,164 @@ describe('PreviewCard in French', () => {
     }));
 
     expect(screen.getByText('2 oct. 2026, 07:48')).toBeInTheDocument();
+  });
+
+  const importMapping = (over: Partial<NonNullable<AiMutationPreview['import_mapping']>>): NonNullable<AiMutationPreview['import_mapping']> => ({
+    import_key: 'suppliers',
+    filename: 'fournisseurs.xlsx',
+    row_count: 3,
+    columns: [
+      { column: 'name', title: 'Nom', required: true, kind: 'text', source: { position: 1, header: 'Fournisseur' }, value: null, confidence: 'high', filled: 3, unread: 0, read_as: null, note: null },
+      { column: 'erp_supplier_id', title: 'ID fournisseur ERP', required: false, kind: 'text', source: { position: 2, header: 'Code' }, value: null, confidence: 'high', filled: 3, unread: 0, read_as: null, note: null },
+    ],
+    unread_values: {},
+    read_errors: {},
+    missing_required: [],
+    unplaced: [],
+    assumptions: [],
+    sample: { columns: ['name'], rows: [['Lactalis']], unread: [[false]] },
+    rows_missing_required: 0,
+    ...over,
+  });
+
+  it('shows the import check of a refused file and cannot be approved, in French', () => {
+    renderCard(preview({
+      tool_name: 'prepare_import_mapping',
+      target: { entity_type: 'imports', entity_id: null, ref: null, title: 'Fournisseurs · fournisseurs.xlsx' },
+      import_mapping: importMapping({
+        validation: {
+          ok: false, dry_run: true, total: 3, inserted: 2, updated: 1, unchanged: 0, skipped: 0, error_count: 12, warning_count: 1,
+          report: {
+            kind: 'rows',
+            errors: [
+              { row: 0, message: 'clears', code: 'AI_IMPORT_CLEARS_COLUMNS', params: { count: 1, columns: 'Notes, Statut' } },
+              { row: 6, column: 'erp_supplier_id', message: 'ERP id too long' },
+            ],
+            warnings: [{ row: 4, column: 'name', message: 'Matched "SAVENCIA" to "Savencia"' }],
+          },
+        },
+      }),
+    }));
+
+    expect(screen.getByText("Vérification de l'import")).toBeInTheDocument();
+    expect(screen.getByText(/^La validation a échoué/)).toBeInTheDocument();
+    expect(screen.getByText(/^1 ligne met à jour une fiche existante, et cet import remplace toutes ses valeurs\s: le fichier n'a pas de colonne pour Notes, Statut/)).toBeInTheDocument();
+    // A message on the line of the person's file, its column by the template's title.
+    expect(screen.getByText(/Ligne 6\s:/)).toBeInTheDocument();
+    expect(screen.getByText('(ID fournisseur ERP)')).toBeInTheDocument();
+    expect(screen.getByText('Erreurs (12)')).toBeInTheDocument();
+    expect(screen.getByText('…et 10 erreurs supplémentaires')).toBeInTheDocument();
+    expect(screen.getByText('Avertissements (1)')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Approuver' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Rejeter' })).toBeEnabled();
+  });
+
+  it('shows a passed check, then what the import did, in French', () => {
+    const passed = {
+      ok: true, dry_run: true, total: 3, inserted: 2, updated: 1, unchanged: 0, skipped: 0, error_count: 0, warning_count: 0,
+      report: { kind: 'rows' as const, errors: [], warnings: [] },
+    };
+    renderCard(preview({
+      tool_name: 'prepare_import_mapping',
+      target: { entity_type: 'imports', entity_id: null, ref: null, title: 'Fournisseurs · fournisseurs.xlsx' },
+      import_mapping: importMapping({ validation: passed }),
+    }));
+    expect(screen.getByText(/^Validation réussie\. Prêt à importer 3 lignes\./)).toBeInTheDocument();
+    expect(screen.getByText('2 à insérer · 1 à mettre à jour')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Approuver' })).toBeEnabled();
+    cleanup();
+
+    renderCard(preview({
+      tool_name: 'prepare_import_mapping',
+      status: 'executed',
+      requires_confirmation: false,
+      actions: [],
+      summary: 'Appliqué : import de « fournisseurs.xlsx » dans la liste Fournisseurs. Créées : 2, mises à jour : 1.',
+      target: { entity_type: 'imports', entity_id: null, ref: null, title: 'Fournisseurs · fournisseurs.xlsx' },
+      import_mapping: importMapping({ validation: passed, result: { ...passed, dry_run: false } }),
+    }));
+    expect(screen.queryByText("Vérification de l'import")).not.toBeInTheDocument();
+    expect(screen.getByText('Importation terminée avec succès.')).toBeInTheDocument();
+    expect(screen.getByText('2 créées · 1 mise à jour')).toBeInTheDocument();
+  });
+
+  it('downloads the file prepared for the import with a button after Reject, and says when it fails', async () => {
+    const download = vi.mocked(downloadServerExport);
+    download.mockClear();
+    renderCard(preview({
+      tool_name: 'prepare_import_mapping',
+      target: { entity_type: 'imports', entity_id: null, ref: null, title: 'Fournisseurs · fournisseurs.xlsx' },
+      import_mapping: importMapping({
+        validation: {
+          ok: true, dry_run: true, total: 3, inserted: 3, updated: 0, unchanged: 0, skipped: 0, error_count: 0, warning_count: 0,
+          report: { kind: 'rows', errors: [], warnings: [] },
+        },
+      }),
+    }));
+    const button = screen.getByRole('button', { name: 'Télécharger le fichier (.xlsx)' });
+    const reject = screen.getByRole('button', { name: 'Rejeter' });
+    expect(reject.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    fireEvent.click(button);
+    await waitFor(() => expect(download).toHaveBeenCalledTimes(1));
+    expect(download.mock.calls[0][0]).toMatchObject({
+      url: '/ai/conversations/conv-1/previews/preview-1/import-file/export',
+      format: 'xlsx',
+    });
+    expect(screen.queryByText("Échec de l'exportation. Veuillez réessayer.")).not.toBeInTheDocument();
+
+    download.mockRejectedValueOnce(new Error('network'));
+    fireEvent.click(button);
+    expect(await screen.findByText("Échec de l'exportation. Veuillez réessayer.")).toBeInTheDocument();
+    cleanup();
+
+    // Once applied, the card keeps the download alone.
+    renderCard(preview({
+      tool_name: 'prepare_import_mapping',
+      status: 'executed',
+      requires_confirmation: false,
+      actions: [],
+      target: { entity_type: 'imports', entity_id: null, ref: null, title: 'Fournisseurs · fournisseurs.xlsx' },
+      import_mapping: importMapping({}),
+    }));
+    expect(screen.getByRole('button', { name: 'Télécharger le fichier (.xlsx)' })).toBeEnabled();
+    expect(screen.queryByRole('button', { name: 'Rejeter' })).not.toBeInTheDocument();
+  });
+
+  it('shows the check of a budget file as its import dialog does, under the card status', () => {
+    renderCard(preview({
+      tool_name: 'prepare_import_mapping',
+      target: { entity_type: 'imports', entity_id: null, ref: null, title: 'Lignes budgétaires · budget.csv' },
+      import_mapping: importMapping({
+        import_key: 'budget_lines',
+        validation: {
+          ok: false, dry_run: true, total: 2, inserted: 0, updated: 0, unchanged: 0, skipped: 0, error_count: 1, warning_count: 0,
+          report: {
+            kind: 'budget_file',
+            file: {
+              ok: false,
+              notices: {},
+              fileErrors: [],
+              headerErrors: [],
+              errors: [{ line: 7, column: 'account_number', message: 'Unknown account 7000' }],
+              errorCount: 1,
+              missing: [],
+              deleted: [],
+              deletedCount: 0,
+              changes: { created: 0, updated: 0, unchanged: 0, createdLines: [], updatedLines: [] },
+              changedSinceExport: [],
+              changedSinceExportCount: 0,
+              warnings: { duplicates: [], ignoredColumns: [], supplierNames: [], ignoredCells: [] },
+              creates: { dimensionValues: [], suppliers: [] },
+              supplierMessage: null,
+            } as any,
+          },
+        },
+      }),
+    }));
+    expect(screen.getByText(/^La validation a échoué/)).toBeInTheDocument();
+    // The dialog's own status line (it loads where the card approves) is not shown.
+    expect(screen.queryByText(/^Ce fichier ne peut pas encore être chargé/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Unknown account 7000/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Approuver' })).toBeDisabled();
   });
 });

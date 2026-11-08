@@ -95,6 +95,21 @@ KANAP liest eine Tabelle, wenn Sie die Nachricht senden:
 - Plaid erhält eine Zusammenfassung der Datei: die Spaltenüberschriften, den Typ jeder Spalte (Text, Zahl oder Datum), die ersten zehn Zeilen und die Anzahl der Zeilen. Plaid kann die Datei beschreiben, sagen, was jede Spalte enthält, und Probleme in den ersten Zeilen erkennen. Zu Zeilen nach den ersten zehn kann Plaid nichts sagen.
 - Die Zusammenfassung bleibt für den Rest der Unterhaltung an die Nachricht angehängt.
 
+### Eine Tabelle importieren
+
+Hängen Sie eine Tabelle an und bitten Sie Plaid, sie in eine KANAP-Liste zu importieren: Anwendungen, Assets, Projekte, Anfragen, Aufgaben, Vorfälle, Budgetzeilen, Verträge, Lieferanten, Kontakte, Unternehmen, Abteilungen, Kostenstellen, Konten, Werte von Analysedimensionen, Geschäftsprozesse, Arbeitstagekalender oder die Verknüpfungen von Technologien mit Servern und Anwendungen. Plaid ordnet die Spalten Ihrer Datei den Spalten des Imports der Liste zu und zeigt eine Vorschau:
+
+- Jede Spalte des Imports mit der Dateispalte, die sie liest (oder einem Wert für jede Zeile), wie sicher sich Plaid ist und wie viele Werte es gelesen hat. Danach die Werte, die es nicht lesen konnte, die Dateispalten, die es nicht verwendet, seine Annahmen und die ersten Zeilen so, wie sie importiert werden.
+- Die **Prüfung des Imports**: dieselbe Prüfung wie beim Import der Liste. Sie zählt die anzulegenden und zu aktualisierenden Zeilen und listet die Fehler und Warnungen mit den Zeilennummern Ihrer Datei.
+- Findet die Prüfung Fehler, ist **Genehmigen** nicht verfügbar. Sagen Sie Plaid, wofür ein Wert steht, oder korrigieren Sie Ihre Datei und hängen Sie sie erneut an. Plaid bereitet eine neue Vorschau vor, die die vorherige ersetzt.
+- **Genehmigen** führt den Import mit Ihren eigenen Rechten aus, wie es der Import der Liste täte. Sie brauchen dasselbe Recht wie für diesen Import: `applications:admin`, um Anwendungen zu importieren, `incidents:contributor`, um Vorfälle zu importieren. Nur-Lese-Zugriff wird abgewiesen. Die Vorschau zeigt danach, was angelegt und aktualisiert wurde.
+- Bei Anwendungen, Assets, Projekten, Anfragen, Aufgaben und Vorfällen behält eine leere Zelle den Wert, der bereits auf einem Datensatz gespeichert ist, den die Datei aktualisiert.
+- Verträge, Lieferanten, Kontakte, Unternehmen, Abteilungen, Kostenstellen, Konten, Werte von Analysedimensionen, Geschäftsprozesse, Arbeitstagekalender und Technologie-Verknüpfungen ersetzen jeden Wert eines Datensatzes, den sie aktualisieren. Wenn Zeilen der Datei zu bestehenden Datensätzen passen und der Datei Spalten des Imports fehlen, meldet die Prüfung einen Fehler und die Vorschau kann nicht genehmigt werden, weil diese Werte geleert würden. Ordnen Sie die fehlenden Spalten zu, oder behalten Sie nur neue Datensätze in der Datei.
+- Die Schaltfläche **Datei herunterladen (.xlsx)** neben **Ablehnen** liefert die von Plaid vorbereitete Datei als .xlsx im Format des Imports der Liste: die Spalten des Imports, Ihre Werte so, wie der Import sie liest (Listencodes, Datumsangaben), eine Zeile je Zeile Ihrer Datei. Bei den Importen, die jeden Wert ersetzen, enthält die Datei jede Spalte des Imports, leer, wo Ihre Datei keine hatte. Ergänzen Sie die fehlenden Werte und importieren Sie die Datei mit der Schaltfläche **Importieren** der Liste. Das [Audit-Protokoll](admin.md#audit-protokoll) verzeichnet jeden Download, wie bei jedem Export.
+- Bei Budgetzeilen legt jede Zeile der Datei eine neue Budgetzeile an. Die Lieferanten, die die Datei nennt, müssen bereits existieren: Plaid legt sie nicht an.
+- Das [Audit-Protokoll](admin.md#audit-protokoll) verzeichnet jeden Import über Plaid mit dem Dateinamen und den Zeilenzahlen, unter der Quelle **KI-Chat**.
+- Das KI-Modell erhält nur die Zusammenfassung der Datei (Überschriften, Spaltentypen, erste zehn Zeilen) und die Zahlen der Prüfung, mit dem Code und der Spalte jedes Fehlers. Die übrigen Zellen und die Meldungen des Imports bleiben in der Vorschau.
+
 ### Datensätze mit `@` erwähnen
 
 Die Eingabe von `@` öffnet die **Erwähnungsauswahl** über dem Eingabefeld. Damit können Sie auf jeden KANAP-Datensatz verweisen, auf den Sie Zugriff haben: mit zwei sich ergänzenden Modi:

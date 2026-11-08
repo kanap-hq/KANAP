@@ -369,6 +369,11 @@
         "mixed-date-orders": "Dates written day first and month first",
         "mixed-decimal-marks": "Numbers written with a decimal comma and a decimal point"
       }
+    },
+    "importRun": {
+      "check": "Import check",
+      "result": "Import",
+      "download": "Download file (.xlsx)"
     }
   },
   "previewStatuses": {

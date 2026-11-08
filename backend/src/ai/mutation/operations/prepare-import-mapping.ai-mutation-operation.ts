@@ -1,17 +1,21 @@
 import { Injectable } from '@nestjs/common';
 import { z } from 'zod';
+import { writeAuditLog } from '../../../audit/audit.service';
+import { IMPORT_EVENT_ACTION, IMPORT_EVENT_TABLE } from '../../../audit/security-events';
 import { AiMutationPreview } from '../../ai-mutation-preview.entity';
 import { AiExecutionContextWithManager, AiImportMappingPreviewDto } from '../../ai.types';
 import {
   AiWriteLanguage,
-  importMappingNothingImportedText,
+  importCountsText,
   personWriteLanguage,
+  PREVIEW_IMPORT_REFUSED_MESSAGE,
   previewSummaryText,
   writeActionText,
 } from '../../ai-write-texts';
 import { AI_IMPORT_KEYS, AI_IMPORT_RESOURCES, aiImportAccess } from '../../import/ai-import-access';
 import { AiImportMappingService, aiImportTarget, PrepareImportMappingInput } from '../../import/ai-import-mapping.service';
 import { AI_IMPORT_TARGETS } from '../../import/ai-import-targets';
+import { buildAiMutationAudit } from '../ai-mutation-audit.util';
 import { AiMutationOperation, AiMutationPreviewPresentation, AiPreparedMutationPreview } from '../ai-mutation-operation.types';
 
 const ColumnMappingSchema = z.object({
@@ -50,10 +54,12 @@ function stringOf(value: unknown): string {
 }
 
 /**
- * The column mapping of an attached spreadsheet onto an import's template (lot I2 of the Plaid
- * import): the model proposes the mapping from the file's summary and the template; the server
- * reads the whole file again, converts every row and shows the result on the card. Approving
- * records the mapping and writes nothing: the import itself comes with its dry run (lot I3).
+ * The import of an attached spreadsheet, in two steps as on the import screen (lots I2 and I3 of
+ * the Plaid import). The model proposes the mapping of the file's columns onto the import's
+ * template; the server reads the whole file again, converts every row, builds the file in the
+ * template's format and has the import check it (its dry run), and the card shows the first rows,
+ * the values not read and the check. Approving runs the import on the same file, with the person's
+ * rights, and the card shows what it did.
  */
 @Injectable()
 export class PrepareImportMappingAiMutationOperation implements AiMutationOperation<PrepareImportMappingInput> {
@@ -63,7 +69,9 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
     + 'Call describe_import_template first for the template\'s columns. The server reads the whole file, converts every row '
     + '(dates and times, numbers, yes/no, codes, catalog names and countries by name) and returns, per column, the values read and not read; '
     + 'the card shows the user the first rows and the values it could not read. To correct the mapping, call it again with the corrected mapping. '
-    + 'Requires explicit user approval. Approving records the mapping: nothing is imported yet.';
+    + 'The server also has the import check the file it builds (its dry run): the result gives the counts (rows to create, update, '
+    + 'unchanged) and, per code and column, the number of errors and warnings; the card shows the person the messages. '
+    + 'Requires explicit user approval. Approving runs the import with the user\'s rights; a card whose check found errors cannot be approved.';
   readonly inputSchema = PrepareImportMappingInputSchema;
   readonly inputSummary = {
     attachment_id: 'The id of the attached spreadsheet, from its `<attached_table id="...">` summary.',
@@ -84,7 +92,13 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
       + 'References to other records (a company, a supplier, a server, a person) are copied as written: the import checks them when it runs, '
       + 'and neither you nor the card has checked them. '
       + 'A new card for the same file closes the pending one at once: it can no longer be approved, so do not warn the person about it. '
-      + 'Approving the card records the mapping and imports nothing: no import runs from a mapping yet, in the chat or elsewhere. Say so, and do not offer to run it or point to another way of running it.',
+      + 'The card also shows the import\'s check of the file. When it finds errors, the card cannot be approved: say what the errors are about '
+      + '(their columns and codes, never the cells), help the user correct the mapping or the file, and call again. '
+      + 'The imports of master data and technology links replace every value of a record they update: when the check refuses the file '
+      + 'with AI_IMPORT_CLEARS_COLUMNS, rows of the file match existing records and the template columns it lacks would be cleared; '
+      + 'offer to map those columns or to keep only the new records. '
+      + 'Approving the card runs the import, and its card then shows what was created and updated: until then nothing is imported, '
+      + 'so never say it is.',
   };
 
   constructor(private readonly mapping: AiImportMappingService) {}
@@ -131,20 +145,21 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
     const list = target?.names[language] ?? key;
     const filename = stringOf(mutation.filename);
     const mapping = (preview.current_values?.import_mapping ?? null) as AiImportMappingPreviewDto | null;
+    const counts = mapping?.result ? importCountsText(language, mapping.result) : '';
 
     let summary: string;
     if (language === 'en') {
       switch (preview.status) {
-        case 'pending': summary = `Map "${filename}" onto the ${list} import.`; break;
-        case 'executed': summary = `Mapping of "${filename}" onto the ${list} import approved. ${importMappingNothingImportedText(language)}`; break;
-        case 'rejected': summary = `Mapping of "${filename}" onto the ${list} import rejected.`; break;
-        case 'expired': summary = `Mapping of "${filename}" onto the ${list} import expired before approval.`; break;
-        case 'failed': summary = preview.error_message || `Mapping of "${filename}" onto the ${list} import failed.`; break;
+        case 'pending': summary = `Import "${filename}" into the ${list} list.`; break;
+        case 'executed': summary = `"${filename}" imported into the ${list} list.${counts ? ` ${counts}` : ''}`; break;
+        case 'rejected': summary = `Import of "${filename}" into the ${list} list rejected.`; break;
+        case 'expired': summary = `Import of "${filename}" into the ${list} list expired before approval.`; break;
+        case 'failed': summary = preview.error_message || `Import of "${filename}" into the ${list} list failed.`; break;
         default: summary = `Preview ${preview.id} ${preview.status}.`;
       }
     } else {
-      summary = previewSummaryText(language, preview.status, writeActionText.importMapping(language, filename, list), {
-        executed: [importMappingNothingImportedText(language)],
+      summary = previewSummaryText(language, preview.status, writeActionText.importFile(language, filename, list), {
+        executed: counts ? [counts] : [],
         errorMessage: preview.error_message,
       });
     }
@@ -162,15 +177,43 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
     };
   }
 
+  /**
+   * Runs the import on the file of the approved mapping, built again from the attachment (still the
+   * person's spreadsheet of this conversation). A card whose check found errors is refused, and so is
+   * a file the import refuses now: nothing is written. The card keeps what the import did, and the
+   * audit log records the import as made through Plaid.
+   */
   async executePreview(
     context: AiExecutionContextWithManager,
     preview: AiMutationPreview,
   ): Promise<void> {
-    // The mapping is recorded by the approval itself. The file must still be the person's
-    // spreadsheet of this conversation, as when the mapping was prepared.
-    await this.mapping.assertTableAttachment(
+    const mapping = (preview.current_values?.import_mapping ?? null) as AiImportMappingPreviewDto | null;
+    if (!mapping?.validation?.ok) throw new Error(PREVIEW_IMPORT_REFUSED_MESSAGE);
+    const input = preview.mutation_input as unknown as PrepareImportMappingInput;
+    const language = await personWriteLanguage(context.manager, context.tenantId, context.userId);
+    const result = await this.mapping.runImport(
       { ...context, conversationId: context.conversationId ?? preview.conversation_id ?? null },
-      stringOf(preview.mutation_input?.attachment_id),
+      input,
+      language,
     );
+    if (!result.ok) throw new Error(PREVIEW_IMPORT_REFUSED_MESSAGE);
+
+    preview.current_values = { ...preview.current_values, import_mapping: { ...mapping, result } };
+    await writeAuditLog(context.manager, {
+      table: IMPORT_EVENT_TABLE,
+      recordId: null,
+      action: IMPORT_EVENT_ACTION,
+      before: null,
+      after: {
+        list: input.entity_type,
+        filename: stringOf(preview.mutation_input?.filename),
+        rows: result.total,
+        inserted: result.inserted,
+        updated: result.updated,
+        unchanged: result.unchanged,
+      },
+      userId: context.userId,
+      ...buildAiMutationAudit(preview),
+    });
   }
 }
