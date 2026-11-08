@@ -312,8 +312,8 @@ export const fr: EmailStrings = {
       noAngle: `Pour tester en autonomie, trois parcours de dix minutes vous attendent : {{budget}}, {{cartography}}, {{portfolio}}. Choisissez-en un dans « À propos de ${PRODUCT_NAME} » : ses cinq pas s'affichent alors sur votre page d'accueil.`,
       call: `Pour en parler de vive voix, planifiez un appel découverte de trente minutes en visioconférence, à l'heure qui vous convient. Nous regarderons votre situation, vos objectifs et ce que ${PRODUCT_NAME} peut y apporter. C'est gratuit et sans engagement.`,
       button: 'Planifier un appel découverte',
-      reply: 'Vous pouvez aussi simplement répondre à ce message : je vous répondrai rapidement.',
-      replyAlone: 'Vous pouvez simplement répondre à ce message : je vous répondrai rapidement.',
+      reply: "Vous pouvez aussi simplement m'écrire en retour : je vous répondrai rapidement.",
+      replyAlone: "Vous pouvez simplement m'écrire en retour : je vous répondrai rapidement.",
     },
     j5: {
       subject: "Cinq jours d'essai : où en êtes-vous ?",
@@ -321,7 +321,7 @@ export const fr: EmailStrings = {
       angle: "Le guide « Vos cinq premiers pas » de votre page d'accueil est le moyen le plus court de le savoir. Chaque pas est détaillé dans {{guide}}.",
       noAngle: `Les trois parcours de dix minutes sont le moyen le plus court de le savoir : {{budget}}, {{cartography}}, {{portfolio}}. Choisissez-en un dans « À propos de ${PRODUCT_NAME} » : ses cinq pas s'affichent alors sur votre page d'accueil.`,
       call: 'Si vous préférez en parler, planifiez un appel découverte de trente minutes, gratuit et sans engagement : {{call}}',
-      reply: 'Vous pouvez simplement répondre à ce message : je vous répondrai rapidement.',
+      reply: "Vous pouvez simplement m'écrire en retour : je vous répondrai rapidement.",
     },
     j12: {
       subject: 'Votre essai se termine dans deux jours',
