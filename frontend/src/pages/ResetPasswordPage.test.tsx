@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import api from '../api';
 import ResetPasswordPage from './ResetPasswordPage';
@@ -92,5 +92,35 @@ describe('ResetPasswordPage titles', () => {
     renderAt('#token=link-token');
     expect(screen.getByText('auth:reset.title')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'auth:reset.submit' })).toBeInTheDocument();
+  });
+});
+
+describe('ResetPasswordPage after the password is saved', () => {
+  function LoginState() {
+    return <div data-testid="login-state">{JSON.stringify(useLocation().state)}</div>;
+  }
+
+  async function submitAt(hash: string, button: string) {
+    vi.mocked(api.post).mockResolvedValueOnce({ data: {} });
+    render(
+      <MemoryRouter initialEntries={[{ pathname: '/link', hash }]}>
+        <Routes>
+          <Route path="/link" element={<ResetPasswordPage />} />
+          <Route path="/login" element={<LoginState />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    fireEvent.change(screen.getByLabelText(/auth:reset\.newPassword/), { target: { value: 'New-password-2026' } });
+    fireEvent.change(screen.getByLabelText(/auth:reset\.confirmPassword/), { target: { value: 'New-password-2026' } });
+    fireEvent.click(screen.getByRole('button', { name: button }));
+    return (await screen.findByTestId('login-state', {}, { timeout: 3000 })).textContent;
+  }
+
+  it('says the account is ready after a first password', async () => {
+    expect(await submitAt('#token=link-token&first=1', 'auth:invite.submit')).toBe('{"inviteAccepted":true}');
+  });
+
+  it('says the password was updated after a reset', async () => {
+    expect(await submitAt('#token=link-token', 'auth:reset.submit')).toBe('{"passwordResetSuccess":true}');
   });
 });

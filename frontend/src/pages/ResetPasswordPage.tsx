@@ -25,7 +25,8 @@ export default function ResetPasswordPage() {
     return null;
   }, [hashParams]);
   // The first password of a new trial workspace (`first=1`, from its activation): nothing to reset.
-  const texts = hashParams.get('first') === '1' ? 'auth:invite' : 'auth:reset';
+  const firstPassword = hashParams.get('first') === '1';
+  const texts = firstPassword ? 'auth:invite' : 'auth:reset';
   const isSubmitting = status === 'submitting';
   const isSuccess = status === 'success';
 
@@ -44,12 +45,13 @@ export default function ResetPasswordPage() {
   useEffect(() => {
     if (isSuccess) {
       const timeout = window.setTimeout(() => {
-        navigate('/login', { replace: true, state: { passwordResetSuccess: true } });
+        // A first password leads to the sign-in page an invited person reaches: "Your account is ready."
+        navigate('/login', { replace: true, state: firstPassword ? { inviteAccepted: true } : { passwordResetSuccess: true } });
       }, 1800);
       return () => window.clearTimeout(timeout);
     }
     return undefined;
-  }, [isSuccess, navigate]);
+  }, [isSuccess, navigate, firstPassword]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
