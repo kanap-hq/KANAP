@@ -348,33 +348,22 @@ export class EmailService {
     const pc = branding?.primaryColor ?? DEFAULT_EMAIL_PRIMARY_COLOR;
     const organisation = emailWorkspaceName(branding);
     const subject = interpolate(invite.subject, { organisation });
-    const firstName = params.firstName?.trim();
+    const greeting = greetingOf(strings, params.firstName);
+    const place = branding?.organisationName ? interpolate(invite.placeWorkspace, { organisation }) : invite.placeProduct;
     const inviterName = params.inviterName?.trim();
-    const greeting = (escape: (value: string) => string) => (firstName
-      ? interpolate(strings.common.labels.greetingHelloName, { name: escape(firstName) })
-      : strings.common.labels.greetingHello);
-    const intro = (escape: (value: string) => string) => {
-      const place = branding?.organisationName
-        ? interpolate(invite.placeWorkspace, { organisation: escape(organisation) })
-        : invite.placeProduct;
-      return inviterName
-        ? interpolate(invite.intro, { inviterName: escape(inviterName), place })
-        : interpolate(invite.introNoInviter, { place });
-    };
-    const asText = (value: string) => value;
+    const intro = inviterName ? interpolate(invite.intro, { inviterName, place }) : interpolate(invite.introNoInviter, { place });
+    const button = { label: interpolate(strings.common.buttons.openWorkspace, { organisation }), url: params.signInUrl };
     const body = `
-      ${buildEmailIntro({
-        title: subject,
-        summaryHtml: `<p style="margin:0 0 10px 0;">${greeting(escapeHtml)}</p><p style="margin:0 0 10px 0;">${intro(escapeHtml)}</p><p style="margin:0;">${escapeHtml(invite.signIn)}</p>`,
-      })}
-      ${buildActionButtons([{ label: interpolate(strings.common.buttons.openWorkspace, { organisation }), url: params.signInUrl }], pc)}
+      ${buildEmailIntro({ title: subject })}
+      ${buildParagraphs([greeting, intro, invite.signIn])}
+      ${buildActionButtons([button], pc, { marginTop: 4 })}
       ${buildUrlPanel(invite.address, params.signInUrl, pc)}
     `;
     // No notification preferences link: the person has no account to set them in yet.
     const wrapper = emailWrapper(body, { branding, locale: params.locale });
     const text = [
-      greeting(asText),
-      intro(asText),
+      greeting,
+      intro,
       invite.signIn,
       interpolate(invite.textAction, { organisation, url: params.signInUrl }),
     ].join('\n\n');

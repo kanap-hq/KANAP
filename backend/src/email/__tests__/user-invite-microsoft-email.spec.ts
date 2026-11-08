@@ -49,7 +49,7 @@ async function testFrenchInvitation() {
   assert.equal(mail.to, 'julie.martin@acme.test');
   assert.equal(mail.subject, 'Invitation à rejoindre Acme & Co');
   assert.match(mail.html, /Bonjour Julie,/);
-  assert.ok(mail.html.includes(`Claire Dubois vous invite à rejoindre l'espace Acme &amp; Co sur ${PRODUCT_NAME}.`), mail.html);
+  assert.ok(mail.html.includes(`Claire Dubois vous invite à rejoindre l&#039;espace Acme &amp; Co sur ${PRODUCT_NAME}.`), mail.html);
   assert.ok(mail.html.includes('Connectez-vous avec votre compte Microsoft :'));
   assert.ok(mail.html.includes('« Se connecter avec Microsoft »'));
   assert.match(mail.html, /<a href="https:\/\/acme\.kanap\.net"[^>]*>Ouvrir Acme &amp; Co<\/a>/);
@@ -67,7 +67,7 @@ async function testWithoutNamesOrOrganisation() {
   // No first name, no inviter name, the on-premise default organisation name.
   const mail = await send({ name: 'My Organization', branding: null }, { firstName: '  ', inviterName: null, locale: 'en' });
   assert.equal(mail.subject, `Invitation to join ${PRODUCT_NAME}`);
-  assert.match(mail.html, /<p style="margin:0 0 10px 0;">Hello,<\/p>/);
+  assert.match(mail.html, /<p style="margin:0 0 14px 0;">Hello,<\/p>/);
   assert.ok(mail.html.includes(`You are invited to join ${PRODUCT_NAME}.`), 'the product, never "the KANAP workspace on KANAP"');
   assert.ok(!mail.html.includes(`workspace on ${PRODUCT_NAME}`));
 }
