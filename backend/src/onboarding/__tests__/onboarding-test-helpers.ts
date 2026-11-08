@@ -2,7 +2,13 @@ import { EventEmitter } from 'node:events';
 import { PassThrough } from 'node:stream';
 import dataSource from '../../data-source';
 import { Services } from '../../admin/tenants/__tests__/tenant-reset-test-helpers';
+import { StripeConfigService } from '../../billing/stripe/stripe.config';
 import { DemoDataService } from '../../demo-data/demo-data.service';
+import { PermissionsService } from '../../permissions/permissions.service';
+import { RolePermission } from '../../permissions/role-permission.entity';
+import { UserPageRole } from '../../permissions/user-page-role.entity';
+import { User } from '../../users/user.entity';
+import { UsersService } from '../../users/users.service';
 
 /** The loader process double: ends when the spec says so, or when it is killed. */
 export class FakeChild extends EventEmitter {
@@ -61,4 +67,19 @@ export function buildDemoData(svc: Services): DemoDataDouble {
   }) as any;
   (service as any).logger = { log: () => undefined, warn: () => undefined, error: () => undefined };
   return double;
+}
+
+/**
+ * PermissionGuard's dependencies on the spec database, for a probe module that serves
+ * OnboardingController (its showcase application route). No Stripe: no freeze check.
+ */
+export function permissionGuardProviders() {
+  return [
+    { provide: UsersService, useFactory: () => new (UsersService as any)(dataSource.getRepository(User)) },
+    {
+      provide: PermissionsService,
+      useFactory: () => new PermissionsService(dataSource.getRepository(UserPageRole), dataSource.getRepository(RolePermission)),
+    },
+    { provide: StripeConfigService, useValue: { isConfigured: () => false } },
+  ];
 }

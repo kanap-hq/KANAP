@@ -41,9 +41,9 @@ keys are stored: never rename one.
 
 ## Routes
 
-Every signed-in user of the workspace (JWT only, no module level). The request transaction
-carries the tenant. Every route answers `200` with the state after the operation, for the calling
-user.
+Every signed-in user of the workspace (JWT only, no module level), except the showcase application
+below. The request transaction carries the tenant. Every route but the showcase application
+answers `200` with the state after the operation, for the calling user.
 
 ```
 GET    /api/onboarding
@@ -85,6 +85,18 @@ Response:
   `status = 'loading'` with a stop of the load asked for (`cancel_requested_at`). The answer to a
   `PUT /choice` that started a reset or a stop says `true` even if the reset is already over;
   the interface then polls `GET`.
+
+```
+GET    /api/onboarding/showcase-application    → { item: { id, name } | null }
+```
+
+The application the cartography step `map_application` opens (applications at `reader` level,
+`403` otherwise). Among the applications the application list shows by default (not disabled,
+not retired), and only the user's own for a Business Contributor: the highest criticality rank
+of the tenant's catalog (the list's sort), then the most deployments + interfaces (source or
+target) + technologies, then name and id. The choice is the same in every workspace holding the
+same data (SAP S/4HANA in the example data). `null` when there is none: the step opens the
+application list.
 
 ### Rules
 

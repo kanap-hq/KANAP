@@ -40,9 +40,9 @@ async function topScored(path: string, filters?: Record<string, unknown>): Promi
 type Opened = { path: string; record: string | null };
 
 /**
- * Opens the record of a step (the largest budget line of the year, the first of the most critical
- * applications), named in the hint. Without a record, or when the list cannot be read, the step
- * opens the list.
+ * Opens the record of a step (the largest budget line of the year, the application the server
+ * chooses to show: most critical, then the richest record), named in the hint. Without a record,
+ * or when the list cannot be read, the step opens the list.
  */
 function useOpenRecord(stepKey: string, screen: StepScreen) {
   const navigate = useNavigate();
@@ -80,8 +80,8 @@ function useOpenRecord(stepKey: string, screen: StepScreen) {
         const project = await topScored('/portfolio/projects');
         return project ? { path: `${buildItemPath('project', portfolioRef('project', project))}/${projectTab}`, record: project.name } : null;
       }
-      const res = await api.get<{ items: Application[] }>('/applications', { params: { limit: 1, sort: 'criticality:DESC' } });
-      const application = res.data.items?.[0];
+      const res = await api.get<{ item: Application | null }>('/onboarding/showcase-application');
+      const application = res.data.item;
       return application ? { path: buildItemPath('application', application.id), record: application.name } : null;
     };
     try {

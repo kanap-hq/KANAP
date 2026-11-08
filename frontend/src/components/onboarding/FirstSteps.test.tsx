@@ -19,7 +19,7 @@ const env = vi.hoisted(() => ({
 
 vi.mock('../../api', () => ({
   default: {
-    get: (url: string, config?: unknown) => (['/budget-lines/summary', '/applications'].includes(url) || url.startsWith('/portfolio/')
+    get: (url: string, config?: unknown) => (['/budget-lines/summary', '/onboarding/showcase-application'].includes(url) || url.startsWith('/portfolio/')
       ? env.summary(config, url)
       : env.server.api.get(url)),
     put: (url: string, body?: unknown) => env.server.api.put(url, body),
@@ -97,18 +97,25 @@ describe('FirstStepsTile', () => {
     expect((asked as { params: { limit: number; sort: string } }).params).toMatchObject({ limit: 1, sort: expect.stringMatching(/:DESC$/) });
   });
 
-  it('opens the first of the most critical applications for the application step', async () => {
+  it('opens the application the server chooses for the application step', async () => {
     env.server = createFakeOnboardingServer({ angle: 'cartography', mode: 'example' });
     let asked: { url?: string; config?: unknown } = {};
     env.summary = async (config, url) => {
       asked = { url, config };
-      return { data: { items: [{ id: 'app-1', name: 'SAP S/4HANA' }] } };
+      return { data: { item: { id: 'app-1', name: 'SAP S/4HANA' } } };
     };
     renderAt('/', <FirstStepsTile />);
     fireEvent.click(await screen.findByRole('button', { name: 'An application record' }));
     await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/it/applications/app-1?step=map_application'));
-    expect(asked.url).toBe('/applications');
-    expect((asked.config as { params: unknown }).params).toEqual({ limit: 1, sort: 'criticality:DESC' });
+    expect(asked.url).toBe('/onboarding/showcase-application');
+  });
+
+  it('opens the list for the application step when the server chooses no application', async () => {
+    env.server = createFakeOnboardingServer({ angle: 'cartography', mode: 'example' });
+    env.summary = async () => ({ data: { item: null } });
+    renderAt('/', <FirstStepsTile />);
+    fireEvent.click(await screen.findByRole('button', { name: 'An application record' }));
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/it/applications?step=map_application'));
   });
 
   it('opens the list for the budget line step when there is no line', async () => {
