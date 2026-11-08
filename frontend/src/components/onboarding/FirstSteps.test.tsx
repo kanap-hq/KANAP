@@ -296,6 +296,41 @@ describe('StepHint', () => {
     await i18n.changeLanguage('en');
   });
 
+  it('follows its element when the screen replaces it, and hides while there is none', async () => {
+    env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'example' });
+    const box = { top: 200, left: 300, width: 400, height: 40, x: 300, y: 200, right: 700, bottom: 240 };
+    const rect = vi.spyOn(HTMLTextAreaElement.prototype, 'getBoundingClientRect')
+      .mockReturnValue({ ...box, toJSON: () => box } as DOMRect);
+    function Plaid() {
+      const [stage, setStage] = React.useState<'consent' | 'composer' | 'none'>('consent');
+      return (
+        <main>
+          <button type="button" onClick={() => setStage('composer')}>Accept</button>
+          <button type="button" onClick={() => setStage('none')}>Leave</button>
+          {stage === 'consent' ? <div data-plaid-composer>Turn Plaid on</div> : null}
+          {stage === 'composer' ? <textarea aria-label="Message" /> : null}
+          <StepHint />
+        </main>
+      );
+    }
+    try {
+      renderAt('/ai?step=budget_plaid', <Plaid />);
+      await screen.findByRole('dialog', { name: 'A question for Plaid' });
+
+      // Accepting replaces the acceptance box by the composer: the hint moves to the composer.
+      fireEvent.click(screen.getByRole('button', { name: 'Accept' }));
+      await waitFor(() => expect(screen.getByTestId('step-hint-outline').style.top).toBe('196px'));
+      expect(screen.getByTestId('step-hint-outline').style.left).toBe('294px');
+      expect(screen.getByRole('dialog', { name: 'A question for Plaid' })).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Leave' }));
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      expect(screen.queryByTestId('step-hint-outline')).not.toBeInTheDocument();
+    } finally {
+      rect.mockRestore();
+    }
+  });
+
   it('ignores a step that is not in the current path', async () => {
     env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'example' });
     renderAt('/it/applications?step=map_application', page);
