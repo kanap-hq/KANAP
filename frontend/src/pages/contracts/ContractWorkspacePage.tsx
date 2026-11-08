@@ -483,7 +483,7 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
           previousLabel: t('contracts.workspace.previous'),
           nextLabel: t('contracts.workspace.next'),
         } : undefined}
-        onSaveShortcut={isCreate ? () => { void handleCreate(); } : flushNow}
+        onSaveShortcut={flushNow}
         metadata={form ? (
           <>
             {!isCreate && (
@@ -572,7 +572,7 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
             {!isCreate && <EntityTasksSection entityType="contract" entityId={form.id} disabled={!editable} />}
             <Stack spacing={1.25}>
               <RelationsSectionTitle>{t('contracts.fields.notes')}</RelationsSectionTitle>
-              <Box onFocusCapture={() => { notesTouchedRef.current = true; }} data-testid="contract-notes">
+              <Box onFocusCapture={() => { notesTouchedRef.current = true; }} data-testid="contract-notes" data-creation-description="">
                 <React.Suspense fallback={null}>
                   <MarkdownEditor
                     value={form.notes}

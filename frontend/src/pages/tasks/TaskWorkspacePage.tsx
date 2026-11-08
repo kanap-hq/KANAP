@@ -33,7 +33,7 @@ import ConvertToRequestDialog from './components/ConvertToRequestDialog';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
 import { CreationActions, CreationPreview, useCreationReturn, useRecordCreation, useTitleCreation } from '../../components/workspace/creation';
-import { focusFirstCreationField, useCreationFieldFocus } from '../../components/workspace/creation/creationFieldFocus';
+import { followCreationFields, useCreationFieldFocus } from '../../components/workspace/creation/creationFieldFocus';
 import { TASK_STATUS_OPTIONS } from './task.constants';
 import type { TaskStatus } from './task.constants';
 import { useTranslation } from 'react-i18next';
@@ -1382,10 +1382,7 @@ export default function TaskWorkspacePage() {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 's') return;
       event.preventDefault();
-
-      // The new page has its title only: Ctrl+S sends nothing.
-      if (isCreate) return;
-
+      // A task being created takes it as Create (`CreationActions`).
       if (!canManageCurrentTask) return;
 
       // Cancel pending description debounce — handleSave includes description
@@ -1400,7 +1397,7 @@ export default function TaskWorkspacePage() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [canManageCurrentTask, isCreate, dirty, saving, handleSave]);
+  }, [canManageCurrentTask, dirty, saving, handleSave]);
 
   // Keyboard shortcuts: J/K/←/→ for navigation, Escape to close
   React.useEffect(() => {
@@ -1437,7 +1434,7 @@ export default function TaskWorkspacePage() {
   }, [isCreate, hasPrev, hasNext, prevId, nextId, confirmAndNavigate, handleBack, creation.beingCreated, toggleDrawer]);
 
   const workspaceRef = React.useRef<HTMLDivElement>(null);
-  useCreationFieldFocus(workspaceRef, isCreate);
+  useCreationFieldFocus(workspaceRef, `${isCreate ? 'new' : 'record'}:${activeTab}`);
 
   if (!isCreate && isLoading && !task) {
     return (
@@ -1473,7 +1470,7 @@ export default function TaskWorkspacePage() {
   const overview = (
     <>
       {/* Description */}
-      <Box sx={{ mb: contentSpacing.sectionLarge }}>
+      <Box sx={{ mb: contentSpacing.sectionLarge }} data-creation-description="">
         <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
           <Typography variant="subtitle2" fontWeight={500}>
             {t('portfolio:labels.description')}
@@ -1561,7 +1558,7 @@ export default function TaskWorkspacePage() {
   ) : null;
 
   return (
-    <Box ref={workspaceRef} data-workspace-shell="" sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Box ref={workspaceRef} data-workspace-shell="" onKeyDownCapture={followCreationFields} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <TaskDetailHeader
         taskId={task?.id ?? ''}
         itemNumber={task?.item_number ?? null}
@@ -1632,7 +1629,6 @@ export default function TaskWorkspacePage() {
         titleFocusRequest={titleCreation.focusRequest}
         onTitleDraftChange={isCreate ? () => titleCreation.setTitleError(null) : undefined}
         onTitleCancel={isCreate ? () => { void cancelAction(); } : undefined}
-        titleOnTab={isCreate ? focusFirstCreationField : undefined}
       />
 
       {error && (

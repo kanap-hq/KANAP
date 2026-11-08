@@ -268,7 +268,7 @@ export default function ConnectionOverviewTab({
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <Box>
+      <Box data-creation-description="">
         <SectionHeader
           action={
             status === 'saving' ? (

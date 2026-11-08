@@ -333,9 +333,10 @@ describe('Budget line creation at the title', () => {
     expect(mocked.post.mock.calls[0][1]).toMatchObject({ paying_company_id: 'company-2', cost_center_id: null });
   });
 
-  it('does nothing on Ctrl+S on the new page', async () => {
+  it('takes Ctrl+S as Create on the new page: the empty title is asked for', async () => {
     const input = await startNewLine();
     fireEvent.keyDown(input, { key: 's', ctrlKey: true });
+    expect(await screen.findByText('common:creation.titleRequired')).toBeTruthy();
     expect(mocked.post).not.toHaveBeenCalled();
   });
 

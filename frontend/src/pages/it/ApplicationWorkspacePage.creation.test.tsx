@@ -37,7 +37,9 @@ vi.mock('../../components/fields/TeamMemberMultiSelect', () => ({ default: () =>
 vi.mock('../ForbiddenPage', () => ({ default: () => <div data-testid="forbidden" /> }));
 const auth = vi.hoisted(() => ({ admin: false }));
 vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: (_resource: string, level: string) => auth.admin || level !== 'admin' }) }));
-vi.mock('../../components/IntegratedDocumentEditor', () => ({ default: () => <div data-testid="description-editor" /> }));
+vi.mock('../../components/IntegratedDocumentEditor', () => ({
+  default: () => <div data-testid="description-editor" aria-label="description editor" contentEditable suppressContentEditableWarning />,
+}));
 vi.mock('../../components/EntityKnowledgePanel', () => ({ default: () => <div data-testid="knowledge-panel" /> }));
 vi.mock('../../components/history/RecordHistoryTab', () => ({ default: () => <div data-testid="record-history" /> }));
 vi.mock('../../hooks/useApplicationClassificationCatalog', () => ({
@@ -164,15 +166,15 @@ describe('Application creation at the title', () => {
     expect(screen.getByRole('button', { name: TITLE })).toHaveTextContent('Billing');
   });
 
-  it('sends Tab from the title to the category, and Shift+Tab reaches Create', async () => {
+  it('sends Tab from the title to the description, and Shift+Tab reaches Create', async () => {
     const user = userEvent.setup();
     renderPage(['/it/applications/new/overview']);
     const input = await screen.findByRole('textbox', { name: TITLE });
     await user.type(input, 'Billing');
     await user.tab();
     await waitFor(() => expect(location()).toBe('/it/applications/APP-7/overview'));
-    const category = within(screen.getByRole('complementary')).getAllByRole('combobox')[0];
-    await waitFor(() => expect(category).toHaveFocus());
+    // Nothing is required: the description takes the focus once the application is open.
+    await waitFor(() => expect(screen.getByLabelText('description editor')).toHaveFocus());
     const create = screen.getByRole('button', { name: 'common:buttons.create' });
     for (let i = 0; i < 30 && document.activeElement !== create; i += 1) {
       await user.tab({ shift: true });

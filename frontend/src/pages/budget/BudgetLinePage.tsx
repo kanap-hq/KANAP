@@ -1168,7 +1168,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
           nextLabel: t('opex.workspace.next'),
         } : undefined}
         // Ctrl+S saves a line, being created or not; on the new page it does nothing.
-        onSaveShortcut={isCreate ? ignoreDraftChange : () => { void flushAll(); }}
+        onSaveShortcut={() => { void flushAll(); }}
         metadata={isCreate ? (
           // The metadata of the line to be, dimmed like the rest, so the page does not move when it is created.
           <CreationPreview sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 'inherit' }}>

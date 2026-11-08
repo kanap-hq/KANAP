@@ -124,7 +124,7 @@ describe('ContractWorkspacePage creation', () => {
 
   it('keeps Ctrl+S as Create on the new page', async () => {
     renderNew();
-    fireEvent.keyDown(window, { key: 's', ctrlKey: true });
+    fireEvent.keyDown(document.body, { key: 's', ctrlKey: true });
     expect(await screen.findByText('contracts.messages.nameRequired')).toBeInTheDocument();
     expect(mocked.post).not.toHaveBeenCalled();
   });
