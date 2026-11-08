@@ -459,6 +459,19 @@ async function testCreatedAtOrderOnSeededRows(harness: Harness, runner: QueryRun
   }
 }
 
+async function testLocationsCarryTheirReference(harness: Harness, runner: QueryRunner, seed: Seed) {
+  const ctx = context(runner, seed);
+  const { newer } = seed.rows.locations;
+  const list = await runQuery(runner, harness.executor, ctx, { entity_type: 'locations', sort: { field: 'created_at', direction: 'desc' } });
+  assert.equal(list.error, null, `locations: the list runs (${list.error})`);
+  const item = list.result.items.find((entry: any) => entry.id === newer);
+  assert.equal(item?.ref, 'LOC-2', 'a site in a list carries its LOC reference');
+  assert.equal(item?.label, 'LOC-2 · Location 2', 'and its label reads reference and name');
+  const detail = await harness.executor.executeDetail(ctx, { entity_type: 'locations', entity_id: newer });
+  assert.equal(detail.entity.ref, 'LOC-2', 'the detail of a site carries its LOC reference');
+  assert.equal(detail.entity.label, 'LOC-2 · Location 2', 'and the same label');
+}
+
 async function testUnknownSortIsReported(harness: Harness, runner: QueryRunner, seed: Seed) {
   const ctx = context(runner, seed);
   const registry = harness.registries.aiEntityRegistries.applications;
@@ -642,6 +655,7 @@ async function run() {
       await testConsolidationReadsTheAccounts(harness, runner, seed);
       await testBudgetLineGroup(harness, runner, seed);
       await testCreatedAtOrderOnSeededRows(harness, runner, seed);
+      await testLocationsCarryTheirReference(harness, runner, seed);
       await testUnknownSortIsReported(harness, runner, seed);
       await testPageSizes(harness, runner, seed);
       await testAmountsCurrency(harness, runner, seed);
