@@ -19,7 +19,7 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 
 **Was Sie tun.** Filtern, sortieren und durchsuchen Sie die Liste, zum Beispiel nach Kritikalität.
 
-**Was Sie sehen.** Alle Anwendungen des Beispiels mit ihrer Kritikalität, ihrer verantwortlichen Person und ihrem Unternehmen. Das ist das Inventar, an dem der Rest der Landkarte hängt.
+**Was Sie sehen.** Alle Anwendungen des Beispiels mit ihrer Geschäftskritikalität, ihrem Lebenszyklus und ihrem Herausgeber. Das ist das Inventar, an dem der Rest der Landkarte hängt.
 
 ## 2. Ein Anwendungsdatensatz
 

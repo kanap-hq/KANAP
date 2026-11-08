@@ -1631,7 +1631,7 @@
           "hint": {
             "budget": "Invite your colleagues by creating their user accounts. Use the Authentication menu to set up SSO with Entra ID.",
             "cartography": "Invite an application or asset owner.",
-            "portfolio": "Add yourself as a contributor and set your project availability."
+            "portfolio": "Here is your contributor profile. Set your project availability."
           }
         },
         "map_application": {
@@ -1640,7 +1640,7 @@
         },
         "map_technologies": {
           "title": "Technologies, end of support and vulnerabilities",
-          "hint": "What reaches its end of support in the coming months, the source of each date, and the CVEs that affect these technologies."
+          "hint": "What reaches its end of support within the chosen horizon, with its state. Unfold a row to see the servers and applications it touches. The CVEs are on the Vulnerabilities page."
         },
         "map_import": {
           "title": "Your data",
@@ -1680,11 +1680,11 @@
         },
         "own_project_budget": {
           "title": "The project's budget",
-          "hint": "In the Relations tab, link one or more budget lines to your project to see its costs."
+          "hint": "In the Relations tab, link one or more budget lines to your project to see its costs. A line that does not exist yet is created in Budget management > Budget lines, with New line."
         },
         "map_applications": {
           "title": "The application list",
-          "hint": "Every application of the example, with its criticality, its owner and its company. It is the inventory: filter, sort, search."
+          "hint": "Every application of the example, with its business criticality and its lifecycle. It is the inventory: filter, sort, search."
         },
         "map_assets": {
           "title": "The servers",

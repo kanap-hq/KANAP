@@ -19,7 +19,7 @@ Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le
 
 **Le geste.** Filtrez, triez et cherchez dans la liste, par exemple sur la criticité.
 
-**Ce que vous lisez.** Toutes les applications de l'exemple avec leur criticité, leur responsable et leur société. C'est l'inventaire auquel se rattache le reste de la cartographie.
+**Ce que vous lisez.** Toutes les applications de l'exemple avec leur criticité business, leur cycle de vie et leur éditeur. C'est l'inventaire auquel se rattache le reste de la cartographie.
 
 ## 2. Une fiche d'application
 

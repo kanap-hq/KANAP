@@ -19,7 +19,7 @@ Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de in
 
 **Qué hacer.** Filtre, ordene y busque en la lista, por ejemplo por criticidad.
 
-**Qué ve.** Todas las aplicaciones del ejemplo con su criticidad, su responsable y su empresa. Es el inventario del que cuelga el resto del mapa.
+**Qué ve.** Todas las aplicaciones del ejemplo con su criticidad de negocio, su ciclo de vida y su editor. Es el inventario del que cuelga el resto del mapa.
 
 ## 2. Una ficha de aplicación
 

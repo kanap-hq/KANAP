@@ -19,7 +19,7 @@ These are the five steps of the **Your first five steps** tile on the home page,
 
 **What to do.** Filter, sort and search the list, for example on criticality.
 
-**What you see.** Every application of the example with its criticality, its owner and its company. It is the inventory the rest of the map hangs on.
+**What you see.** Every application of the example with its business criticality, its lifecycle and its publisher. It is the inventory the rest of the map hangs on.
 
 ## 2. An application record
 

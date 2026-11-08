@@ -1631,7 +1631,7 @@
           "hint": {
             "budget": "Laden Sie Ihre Kolleginnen und Kollegen ein, indem Sie ihre Benutzerkonten anlegen. Über das Menü Authentifizierung richten Sie SSO mit Entra ID ein.",
             "cartography": "Laden Sie eine verantwortliche Person für eine Anwendung oder ein Asset ein.",
-            "portfolio": "Tragen Sie sich als Mitwirkende oder Mitwirkender ein und geben Sie Ihre Projektverfügbarkeit an."
+            "portfolio": "Hier ist Ihr Mitwirkendenprofil. Geben Sie Ihre Projektverfügbarkeit an."
           }
         },
         "map_application": {
@@ -1640,7 +1640,7 @@
         },
         "map_technologies": {
           "title": "Technologien, Supportende und Schwachstellen",
-          "hint": "Was in den kommenden Monaten sein Supportende erreicht, die Quelle jedes Datums und die CVEs, die diese Technologien betreffen."
+          "hint": "Was innerhalb des gewählten Zeitraums sein Supportende erreicht, mit seinem Status. Klappen Sie eine Zeile auf, um die betroffenen Server und Anwendungen zu sehen. Die CVEs stehen auf der Seite Schwachstellen."
         },
         "map_import": {
           "title": "Ihre Daten",
@@ -1680,11 +1680,11 @@
         },
         "own_project_budget": {
           "title": "Das Budget des Projekts",
-          "hint": "Verknüpfen Sie im Tab Beziehungen eine oder mehrere Budgetzeilen mit Ihrem Projekt, um seine Kosten zu sehen."
+          "hint": "Verknüpfen Sie im Tab Beziehungen eine oder mehrere Budgetzeilen mit Ihrem Projekt, um seine Kosten zu sehen. Eine Zeile, die es noch nicht gibt, legen Sie unter Budgetverwaltung > Budgetzeilen mit Neue Zeile an."
         },
         "map_applications": {
           "title": "Die Anwendungsliste",
-          "hint": "Alle Anwendungen des Beispiels mit Kritikalität, verantwortlicher Person und Unternehmen. Das ist das Inventar: filtern, sortieren, suchen."
+          "hint": "Alle Anwendungen des Beispiels mit Geschäftskritikalität und Lebenszyklus. Das ist das Inventar: filtern, sortieren, suchen."
         },
         "map_assets": {
           "title": "Die Server",
