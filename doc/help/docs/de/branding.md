@@ -40,7 +40,7 @@ Die Seite hat drei Karten: **Name des Arbeitsbereichs**, **Logo** und **Primärf
 - **Kopfzeile der App und Anmeldeseite**: Ohne Logo erscheint der Name.
 - **Browser-Tab**: Der Titel des Tabs ist der Name. Eine Projekt-, Anfrage-, Aufgaben- oder Budgetzeilenseite zeigt zuerst den Datensatz, zum Beispiel `PRJ-3 Neues ERP | Acme`.
 - **Installierte App**: Wenn jemand KANAP auf einem Telefon oder einem Computer installiert, trägt die App den Namen.
-- **E-Mails**: Ohne Logo zeigt die Kopfzeile den Namen. Die Betreffzeilen der E-Mails zum Zurücksetzen des Passworts, zur Einladung, zum wöchentlichen Rückblick und zum Zurücksetzen des Arbeitsbereichs tragen den Namen, zum Beispiel „Setzen Sie Ihr Passwort für Acme zurück“. Die Schaltfläche des wöchentlichen Rückblicks lautet „Acme öffnen“. In der Cloud lautet der Absendername „Acme via KANAP“. On-Premise ist der Absender der in der Installation festgelegte (`SMTP_FROM`).
+- **E-Mails**: Ohne Logo zeigt die Kopfzeile den Namen. Die Betreffzeilen der E-Mails zum Zurücksetzen des Passworts, zur Einladung, zum wöchentlichen Rückblick und zum Zurücksetzen des Arbeitsbereichs tragen den Namen, zum Beispiel „Passwort für Acme zurücksetzen“. Die Schaltfläche des wöchentlichen Rückblicks lautet „Acme öffnen“. In der Cloud lautet der Absendername „Acme via KANAP“. On-Premise ist der Absender der in der Installation festgelegte (`SMTP_FROM`).
 - **KI-Werkzeuge**: Wenn sich ein KI-Werkzeug (Claude, ChatGPT und andere) über den MCP-Server verbindet, zeigt die Autorisierungsseite den Namen, und das Werkzeug zeigt ihn als Servernamen.
 
 Ohne Namen oder mit dem On-Premise-Standardnamen „My Organization“ zeigen diese Stellen „KANAP“.

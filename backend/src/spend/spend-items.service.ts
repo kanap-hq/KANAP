@@ -390,7 +390,7 @@ export class SpendItemsService {
     const item = await mg.getRepository(SpendItem).findOne({ where: { id, tenant_id: tenantId, nature: this.nature }, select: ['id', 'product_name'] });
     if (!item) throw new NotFoundException(this.contract.notFound);
 
-    const senderRows = await mg.query('SELECT first_name, last_name FROM users WHERE tenant_id = $1 AND id = $2', [tenantId, userId]);
+    const senderRows = await mg.query('SELECT first_name, last_name, email FROM users WHERE tenant_id = $1 AND id = $2', [tenantId, userId]);
     const senderName = personDisplayName(senderRows[0], 'Someone');
 
     const recipientRows = userIds.length > 0
@@ -410,6 +410,7 @@ export class SpendItemsService {
         itemId: item.id,
         itemName: item.product_name,
         senderName,
+        senderEmail: senderRows[0]?.email ?? null,
         message: dto.message,
         recipients: recipientRows,
         rawEmails,

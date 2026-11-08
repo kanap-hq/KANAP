@@ -1482,7 +1482,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     if (!project) throw new NotFoundException('Project not found');
 
     const senderRows = await mg.query(
-      'SELECT first_name, last_name FROM users WHERE id = $1',
+      'SELECT first_name, last_name, email FROM users WHERE id = $1',
       [userId],
     );
     const senderName = displayName(senderRows[0], 'Someone');
@@ -1504,6 +1504,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
         itemId: projectId,
         itemName: project.name,
         senderName,
+        senderEmail: senderRows[0]?.email ?? null,
         message: dto.message,
         recipients: recipientRows,
         rawEmails,

@@ -3,12 +3,15 @@ import { DataSource } from 'typeorm';
 import {
   buildActionButtons,
   buildEmailIntro,
+  buildParagraphs,
   buildSurfacePanel,
   buildUrlPanel,
   emailWorkspaceName,
   emailWrapper,
+  formatEmailDuration,
 } from '../notifications/notification-templates';
 import { getEmailStrings, interpolate } from '../i18n/email-i18n';
+import type { EmailStrings } from '../i18n/email-locales/en';
 import { DEFAULT_EMAIL_PRIMARY_COLOR, loadTenantEmailBranding, type EmailBranding } from './email-branding';
 import { workspaceEmailSender } from './email-config';
 import { StorageService } from '../common/storage/storage.service';
@@ -47,6 +50,12 @@ export function isExampleRecipient(entry: unknown): boolean {
 /** `text` with every e-mail address replaced by `[address]`, for a log line. */
 export function maskEmailAddresses(text: string): string {
   return replaceAddressTokens(text, '[address]');
+}
+
+/** "Hello Claire," or "Hello," without a first name. */
+function greetingOf(strings: EmailStrings, firstName: string | null | undefined): string {
+  const name = firstName?.trim();
+  return name ? interpolate(strings.common.labels.greetingHelloName, { name }) : strings.common.labels.greetingHello;
 }
 
 /** How many recipient entries an e-mail names. A log line prints this count, never the addresses. */
@@ -236,41 +245,39 @@ export class EmailService {
     to: string;
     resetUrl: string;
     expiresInMinutes?: number;
+    firstName?: string | null;
     branding?: EmailBranding;
     /** The tenant whose branding and organisation name the e-mail takes, when `branding` is not given. */
     tenantId?: string | null;
     locale?: string;
   }) {
     const strings = getEmailStrings(params.locale);
-    const expires = params.expiresInMinutes ?? 60;
+    const s = strings.auth.passwordReset;
     const branding = params.branding ?? await this.tenantBranding(params.tenantId);
     const pc = branding?.primaryColor ?? DEFAULT_EMAIL_PRIMARY_COLOR;
-    const subject = interpolate(strings.auth.passwordReset.subject, { organisation: emailWorkspaceName(branding) });
-    const baseUrl = params.resetUrl.match(/^(https?:\/\/[^/]+)/)?.[1] || '';
-    const preferencesUrl = baseUrl ? baseUrl + '/settings/notifications' : undefined;
+    const subject = interpolate(s.subject, { organisation: emailWorkspaceName(branding) });
+    const greeting = greetingOf(strings, params.firstName);
+    const intro = interpolate(s.intro, { duration: formatEmailDuration(params.expiresInMinutes ?? 60, params.locale) });
+    const button = { label: strings.common.buttons.resetPassword, url: params.resetUrl };
     const body = `
-      ${buildEmailIntro({
-        title: subject,
-        summaryHtml: `<p style="margin:0 0 10px 0;">${strings.common.labels.greetingHello}</p><p style="margin:0;">${strings.auth.passwordReset.intro}</p>`,
-      })}
-      ${buildActionButtons([{ label: strings.common.buttons.resetPassword, url: params.resetUrl }], pc)}
-      ${buildUrlPanel(strings.auth.passwordReset.copyPaste, params.resetUrl, pc)}
+      ${buildEmailIntro({ title: subject })}
+      ${buildParagraphs([greeting, intro])}
+      ${buildActionButtons([button], pc, { marginTop: 4 })}
+      ${buildUrlPanel(strings.common.labels.copyLink, params.resetUrl, pc)}
       ${buildSurfacePanel({
         marginTop: 20,
         tone: 'warning',
-        contentHtml: `<p style="margin:0;">${interpolate(strings.auth.passwordReset.expires, { minutes: expires })}</p>`,
+        contentHtml: `<p style="margin:0;">${escapeHtml(s.ignore)}</p>`,
       })}
     `;
-    const wrapper = emailWrapper(body, { preferencesUrl, branding, locale: params.locale });
+    // No notification preferences link: this e-mail is not a notification.
+    const wrapper = emailWrapper(body, { branding, locale: params.locale });
     const text = [
-      strings.common.labels.greetingHello,
-      strings.auth.passwordReset.intro,
-      interpolate(strings.auth.passwordReset.textAction, { url: params.resetUrl }),
-      interpolate(strings.auth.passwordReset.expires, { minutes: expires }),
-      preferencesUrl
-        ? interpolate(strings.common.footer.managePreferencesText, { url: preferencesUrl })
-        : null,
-    ].filter(Boolean).join('\n\n');
+      greeting,
+      intro,
+      interpolate(strings.common.labels.linkText, button),
+      s.ignore,
+    ].join('\n\n');
     const from = workspaceEmailSender(branding?.organisationName);
     await this.send({ to: params.to, subject, html: wrapper.html, text, attachments: wrapper.attachments, ...(from ? { from } : {}) });
   }
@@ -279,68 +286,43 @@ export class EmailService {
     to: string;
     inviteUrl: string;
     expiresInMinutes?: number;
-    roleName?: string | null;
-    inviterEmail?: string | null;
+    firstName?: string | null;
+    /** The administrator who invites, by name. */
+    inviterName?: string | null;
     branding?: EmailBranding;
     /** The tenant whose branding and organisation name the e-mail takes, when `branding` is not given. */
     tenantId?: string | null;
     locale?: string;
   }) {
     const strings = getEmailStrings(params.locale);
-    const expires = params.expiresInMinutes ?? 60;
+    const s = strings.auth.userInvite;
     const branding = params.branding ?? await this.tenantBranding(params.tenantId);
     const pc = branding?.primaryColor ?? DEFAULT_EMAIL_PRIMARY_COLOR;
     const organisation = emailWorkspaceName(branding);
-    const subject = interpolate(strings.auth.userInvite.subject, { organisation });
-    const roleLine = params.roleName
-      ? interpolate(strings.auth.userInvite.rolePart, {
-        roleName: escapeHtml(params.roleName),
-      })
-      : '';
-    const inviterLine = params.inviterEmail
-      ? interpolate(strings.auth.userInvite.inviterPart, {
-        inviterEmail: escapeHtml(params.inviterEmail),
-      })
-      : '';
-    const roleLineText = params.roleName
-      ? interpolate(strings.auth.userInvite.rolePart, { roleName: params.roleName })
-      : '';
-    const inviterLineText = params.inviterEmail
-      ? interpolate(strings.auth.userInvite.inviterPart, { inviterEmail: params.inviterEmail })
-      : '';
-    const baseUrl = params.inviteUrl.match(/^(https?:\/\/[^/]+)/)?.[1] || '';
-    const preferencesUrl = baseUrl ? baseUrl + '/settings/notifications' : undefined;
+    const subject = interpolate(s.subject, { organisation });
+    const greeting = greetingOf(strings, params.firstName);
+    const place = branding?.organisationName ? interpolate(s.placeWorkspace, { organisation }) : s.placeProduct;
+    const inviterName = params.inviterName?.trim();
+    const intro = [
+      inviterName ? interpolate(s.intro, { inviterName, place }) : interpolate(s.introNoInviter, { place }),
+      interpolate(s.password, { duration: formatEmailDuration(params.expiresInMinutes ?? 60, params.locale) }),
+    ].join(' ');
+    const button = { label: strings.common.buttons.setPassword, url: params.inviteUrl };
     const body = `
-      ${buildEmailIntro({
-        title: subject,
-        summaryHtml: `<p style="margin:0 0 10px 0;">${strings.common.labels.greetingHello}</p><p style="margin:0;">${interpolate(strings.auth.userInvite.intro, {
-          inviterPart: inviterLine,
-          rolePart: roleLine,
-          organisation: escapeHtml(organisation),
-        })}</p>`,
-      })}
-      ${buildActionButtons([{ label: strings.common.buttons.setPassword, url: params.inviteUrl }], pc)}
-      ${buildUrlPanel(strings.auth.userInvite.copyPaste, params.inviteUrl, pc)}
-      ${buildSurfacePanel({
-        marginTop: 20,
-        tone: 'info',
-        contentHtml: `<p style="margin:0;">${interpolate(strings.auth.userInvite.expires, { minutes: expires })}</p>`,
-      })}
+      ${buildEmailIntro({ title: subject })}
+      ${buildParagraphs([greeting, intro])}
+      ${buildActionButtons([button], pc, { marginTop: 4 })}
+      ${buildUrlPanel(strings.common.labels.copyLink, params.inviteUrl, pc)}
+      <p style="margin:20px 0 14px 0;">${escapeHtml(s.signIn)}</p>
     `;
-    const wrapper = emailWrapper(body, { preferencesUrl, branding, locale: params.locale });
+    // No notification preferences link: the person has no account to set them in yet.
+    const wrapper = emailWrapper(body, { branding, locale: params.locale });
     const text = [
-      strings.common.labels.greetingHello,
-      interpolate(strings.auth.userInvite.intro, {
-        inviterPart: inviterLineText,
-        rolePart: roleLineText,
-        organisation,
-      }),
-      interpolate(strings.auth.userInvite.textAction, { url: params.inviteUrl }),
-      interpolate(strings.auth.userInvite.expires, { minutes: expires }),
-      preferencesUrl
-        ? interpolate(strings.common.footer.managePreferencesText, { url: preferencesUrl })
-        : null,
-    ].filter(Boolean).join('\n\n');
+      greeting,
+      intro,
+      interpolate(strings.common.labels.linkText, button),
+      s.signIn,
+    ].join('\n\n');
     const from = workspaceEmailSender(branding?.organisationName);
     await this.send({ to: params.to, subject, html: wrapper.html, text, attachments: wrapper.attachments, ...(from ? { from } : {}) });
   }

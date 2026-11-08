@@ -1,9 +1,8 @@
-import { buildActionButtons, buildEmailIntro, emailWrapper, type ActionButton, type EmailContent } from '../../notifications/notification-templates';
+import { buildActionButtons, buildEmailIntro, dateLanguage, emailWrapper, type ActionButton, type EmailContent } from '../../notifications/notification-templates';
 import { getEmailStrings, interpolate, resolveEmailLocale, type SupportedEmailLocale } from '../../i18n/email-i18n';
 import type { EmailStrings } from '../../i18n/email-locales/en';
 import { DEFAULT_EMAIL_PRIMARY_COLOR } from '../email-branding';
 import { PLANS } from '../../billing/plans.config';
-import type { DiscoveryCallTiming } from '../../discovery-call/discovery-call.service';
 
 /**
  * The trial e-mails (`doc/trial-mails.md`), in the style of the KANAP e-mails (`emailWrapper`):
@@ -25,22 +24,14 @@ const DATE_TIME_ZONE = 'Europe/Paris';
 const GUIDE_ANGLE: Record<TrialAngle, string> = { budget: 'budget', cartography: 'landscape', portfolio: 'portfolio' };
 const GUIDE_MODE: Record<TrialMode, string> = { example: 'example', own_data: 'own-data' };
 
-type Link = { link: ActionButton; bare?: boolean };
+/**
+ * A link in the text. The text version writes `label (address)`; `bare`: the address alone (or
+ * the label of a `mailto:` link); `line`: the address alone, on a line of its own.
+ */
+type Link = { link: ActionButton; bare?: boolean; line?: boolean };
 type Strong = { strong: string };
 type Value = string | Link | Strong;
 type Block = { text: string; values?: Record<string, Value> } | { list: Block[] } | { button: ActionButton };
-
-const NO_BREAK_SPACE = ' ';
-const NARROW_NO_BREAK_SPACE = ' ';
-
-/** French typography, as the application applies it (`frontend/src/i18n/formatters.ts`). */
-export function frenchSpacing(value: string): string {
-  return value
-    .replace(/« /g, `«${NO_BREAK_SPACE}`)
-    .replace(/ »/g, `${NO_BREAK_SPACE}»`)
-    .replace(/ :/g, `${NO_BREAK_SPACE}:`)
-    .replace(/ ([;!?])/g, `${NARROW_NO_BREAK_SPACE}$1`);
-}
 
 function escapeHtml(text: string): string {
   return text
@@ -74,7 +65,8 @@ export function offerUrl(locale: string, marketingUrl: string): string {
 }
 
 export function formatTrialDate(locale: string, date: Date): string {
-  return new Intl.DateTimeFormat(resolveEmailLocale(locale), {
+  // The same dates as the notifications: "23 November 2026" in English.
+  return new Intl.DateTimeFormat(dateLanguage(locale), {
     day: 'numeric', month: 'long', year: 'numeric', timeZone: DATE_TIME_ZONE,
   }).format(date);
 }
@@ -85,8 +77,6 @@ function formatEuros(locale: string, cents: number): string {
   }).format(cents / 100);
 }
 
-const urlLink = (url: string): Link => ({ link: { label: displayUrl(url), url } });
-
 class Letter {
   readonly locale: SupportedEmailLocale;
   readonly strings: EmailStrings;
@@ -95,11 +85,6 @@ class Letter {
   constructor(locale: string) {
     this.locale = resolveEmailLocale(locale);
     this.strings = getEmailStrings(this.locale);
-  }
-
-  /** A template of the locale: French typography applies to the text, never to the values. */
-  private template(text: string): string {
-    return this.locale === 'fr' ? frenchSpacing(text) : text;
   }
 
   paragraph(text: string, values?: Record<string, Value>): this {
@@ -122,27 +107,35 @@ class Letter {
     if ('list' in block) {
       return `<ul style="margin:0 0 14px 0;padding-left:20px;">${block.list.map((item) => `<li style="margin:0 0 6px 0;">${this.html(item)}</li>`).join('')}</ul>`;
     }
-    const html = escapeHtml(this.template(block.text)).replace(/\{\{(\w+)\}\}/g, (_, key: string) => {
+    const html = escapeHtml(block.text).replace(/\{\{(\w+)\}\}/g, (_, key: string) => {
       const value = block.values?.[key];
       if (value === undefined) return '';
       if (typeof value === 'string') return escapeHtml(value);
-      if ('strong' in value) return `<strong>${escapeHtml(this.template(value.strong))}</strong>`;
-      return `<a href="${escapeHtml(value.link.url)}" style="color:${DEFAULT_EMAIL_PRIMARY_COLOR};text-decoration:none;">${escapeHtml(this.template(value.link.label))}</a>`;
+      if ('strong' in value) return `<strong>${escapeHtml(value.strong)}</strong>`;
+      return `<a href="${escapeHtml(value.link.url)}" style="color:${DEFAULT_EMAIL_PRIMARY_COLOR};text-decoration:none;">${escapeHtml(value.link.label)}</a>`;
     });
     return html;
   }
 
   private text(block: Block): string {
-    if ('button' in block) return this.locale === 'fr' ? frenchSpacing(`${block.button.label} : ${block.button.url}`) : `${block.button.label}: ${block.button.url}`;
+    const linkText = this.strings.common.labels.linkText;
+    if ('button' in block) return interpolate(linkText, { label: block.button.label, url: block.button.url });
     if ('list' in block) return block.list.map((item) => `- ${this.text(item)}`).join('\n');
     const vars: Record<string, string> = {};
     for (const [key, value] of Object.entries(block.values ?? {})) {
       if (typeof value === 'string') vars[key] = value;
-      else if ('strong' in value) vars[key] = this.template(value.strong);
-      else if (value.bare || value.link.label === displayUrl(value.link.url)) vars[key] = value.link.url;
-      else vars[key] = `${this.template(value.link.label)} (${value.link.url})`;
+      else if ('strong' in value) vars[key] = value.strong;
+      else {
+        const { label, url } = value.link;
+        if (value.line) vars[key] = `\n${url}`;
+        else if (value.bare || label === displayUrl(url)) vars[key] = url.startsWith('mailto:') ? label : url;
+        // A link already between parentheses: no second pair around its address.
+        else if (block.text.includes(`({{${key}}})`)) vars[key] = interpolate(linkText, { label, url });
+        else vars[key] = `${label} (${url})`;
+      }
     }
-    return interpolate(this.template(block.text), vars);
+    // An address on a line of its own leaves no space at the end of the line before it.
+    return interpolate(block.text, vars).replace(/[ \u00a0\u202f]+\n/g, '\n');
   }
 
   /**
@@ -153,8 +146,8 @@ class Letter {
     const common = this.strings.common.labels;
     const t = this.strings.trialMails;
     const greeting = params.firstName
-      ? interpolate(this.template(common.greetingHelloName), { name: params.firstName })
-      : this.template(common.greetingHello);
+      ? interpolate(common.greetingHelloName, { name: params.firstName })
+      : common.greetingHello;
     // The greeting holds the person's name: a value, never a template.
     const blocks: Block[] = [
       { text: '{{greeting}}', values: { greeting } },
@@ -164,18 +157,18 @@ class Letter {
     ];
     const paragraph = (inner: string) => `<p style="margin:0 0 14px 0;">${inner}</p>`;
     const body = [
-      params.title ? buildEmailIntro({ title: this.template(params.subject) }) : '',
+      params.title ? buildEmailIntro({ title: params.subject }) : '',
       ...blocks.map((block) => ('text' in block ? paragraph(this.html(block)) : this.html(block))),
     ].join('\n');
     const footer = params.unsubscribeUrl
-      ? { note: this.template(t.footer.reason), link: { label: this.template(t.footer.unsubscribe), url: params.unsubscribeUrl } }
+      ? { note: t.footer.reason, link: { label: t.footer.unsubscribe, url: params.unsubscribeUrl } }
       : undefined;
     const wrapper = emailWrapper(body, { locale: this.locale, footer });
     const text = [
       ...blocks.map((block) => this.text(block)),
-      params.unsubscribeUrl ? `--\n${this.template(t.footer.reason)}\n${this.template(interpolate(t.footer.unsubscribeText, { url: params.unsubscribeUrl }))}` : null,
+      params.unsubscribeUrl ? `--\n${t.footer.reason}\n${interpolate(t.footer.unsubscribeText, { url: params.unsubscribeUrl })}` : null,
     ].filter(Boolean).join('\n\n');
-    return { subject: this.template(params.subject), html: wrapper.html, text, attachments: wrapper.attachments };
+    return { subject: params.subject, html: wrapper.html, text, attachments: wrapper.attachments };
   }
 }
 
@@ -210,7 +203,7 @@ export function buildTrialWelcomeEmail(params: TrialMailCommon & {
     const links = pathLinks(letter, params.mode, others);
     letter.paragraph(t.angle, {
       angle: letter.strings.trialMails.angleChosen[params.angle],
-      guide: { link: { label: letter.strings.trialMails.guideTitles[params.angle], url: trialGuideUrl(letter.locale, params.angle, params.mode) } },
+      guide: { link: { label: t.guide, url: trialGuideUrl(letter.locale, params.angle, params.mode) } },
       other1: links[others[0]],
       other2: links[others[1]],
     });
@@ -220,39 +213,25 @@ export function buildTrialWelcomeEmail(params: TrialMailCommon & {
   if (params.call) {
     letter.paragraph(t.call).button({ label: t.button, url: params.call.url });
   }
-  letter.paragraph(t.reply);
+  letter.paragraph(params.call ? t.reply : t.replyAlone);
   return letter.render({ subject: t.subject, title: true, firstName: params.firstName, unsubscribeUrl: params.unsubscribeUrl });
 }
 
-/** J+5: the personal note, by the discovery call (to come, past, none). No button. */
+/** J+5: the personal note, sent only when no discovery call is booked. No button. */
 export function buildTrialFollowUpEmail(params: TrialMailCommon & {
-  timing: DiscoveryCallTiming;
-  callDate: Date | null;
   mode: TrialMode | null;
   call: TrialCallLink;
   unsubscribeUrl: string;
 }): EmailContent {
   const letter = new Letter(params.locale);
   const t = letter.strings.trialMails.j5;
-  const date = params.callDate ? formatTrialDate(letter.locale, params.callDate) : '';
-  let subject: string;
-  if (params.timing === 'upcoming') {
-    subject = t.upcoming.subject;
-    letter.paragraph(t.upcoming.body, { date }).paragraph(t.upcoming.reply);
-  } else if (params.timing === 'past') {
-    subject = t.past.subject;
-    letter.paragraph(t.past.body, { date });
-  } else {
-    subject = t.none.subject;
-    const paths = pathLinks(letter, params.mode, TRIAL_ANGLES);
-    letter.paragraph(t.none.question);
-    letter.paragraph(params.call ? `${t.none.paths} ${t.none.call}` : t.none.paths, {
-      ...paths,
-      ...(params.call ? { call: { link: { label: params.call.display, url: params.call.url }, bare: true } } : {}),
-    });
-    letter.paragraph(t.none.available);
-  }
-  return letter.render({ subject, title: false, firstName: params.firstName, unsubscribeUrl: params.unsubscribeUrl });
+  letter.paragraph(t.question);
+  letter.paragraph(params.call ? `${t.paths} ${t.call}` : t.paths, {
+    ...pathLinks(letter, params.mode, TRIAL_ANGLES),
+    ...(params.call ? { call: { link: { label: params.call.display, url: params.call.url }, line: true } } : {}),
+  });
+  letter.paragraph(t.available);
+  return letter.render({ subject: t.subject, title: false, firstName: params.firstName, unsubscribeUrl: params.unsubscribeUrl });
 }
 
 /** J+12: the trial ends in two days, and the two ways to go on. */
@@ -274,7 +253,11 @@ export function buildTrialEndingEmail(params: TrialMailCommon & {
       },
       {
         text: t.onPremise,
-        values: { label: { strong: t.onPremiseLabel }, install: urlLink(onPremiseInstallUrl(letter.locale)), offer: urlLink(offerUrl(letter.locale, params.marketingUrl)) },
+        values: {
+          label: { strong: t.onPremiseLabel },
+          install: { link: { label: letter.strings.trialMails.installGuide, url: onPremiseInstallUrl(letter.locale) } },
+          offer: { link: { label: t.offer, url: offerUrl(letter.locale, params.marketingUrl) } },
+        },
       },
     ])
     .button({ label: t.button, url: `${params.appUrl}/admin/billing` })
@@ -293,7 +276,7 @@ export function buildTrialEndedEmail(params: TrialMailCommon & {
     .paragraph(t.ended.body, {
       date: formatTrialDate(letter.locale, params.deletionDate),
       billing: { link: { label: t.billingPath, url: `${params.appUrl}/admin/billing` }, bare: true },
-      install: urlLink(onPremiseInstallUrl(letter.locale)),
+      install: { link: { label: t.installGuide, url: onPremiseInstallUrl(letter.locale) } },
     })
     .paragraph(t.ended.question)
     .paragraph(t.ended.thanks);
@@ -308,5 +291,6 @@ export function buildTrialThanksEmail(params: TrialMailCommon): EmailContent {
     .paragraph(t.body, { workspace: params.workspace })
     .paragraph(t.help, { support: { link: { label: SUPPORT_EMAIL, url: `mailto:${SUPPORT_EMAIL}` } } })
     .button({ label: t.button, url: params.appUrl });
-  return letter.render({ subject: t.subject, title: true, firstName: params.firstName, unsubscribeUrl: null });
+  // The subject thanks the person: no title repeats it.
+  return letter.render({ subject: t.subject, title: false, firstName: params.firstName, unsubscribeUrl: null });
 }

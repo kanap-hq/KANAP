@@ -339,6 +339,7 @@ export class AuthController {
       requestDetails: { ip: clientAddress(req), headers: { 'user-agent': req?.headers?.['user-agent'] } },
       baseUrl,
       to: email,
+      firstName: user.first_name ?? null,
       // `getEmailStrings` / `resolveEmailLocale` treat null and undefined identically.
       locale: user.locale ?? undefined,
     });
@@ -361,6 +362,7 @@ export class AuthController {
     requestDetails: { ip: unknown; headers: Record<string, unknown> };
     baseUrl: string;
     to: string;
+    firstName: string | null;
     locale: string | undefined;
   }): Promise<void> {
     let reason: AuthEventReason | null = null;
@@ -379,6 +381,7 @@ export class AuthController {
         to: input.to,
         resetUrl,
         expiresInMinutes: this.auth.getPasswordResetExpirationMinutes(),
+        firstName: input.firstName,
         tenantId,
         locale: input.locale,
       });

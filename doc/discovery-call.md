@@ -38,7 +38,7 @@ Each click posts `POST /api/discovery-call/clicks { placement }` (signed-in user
 `DiscoveryCallService` is the only reader and writer, always on a manager whose transaction carries the tenant:
 
 - `read(manager, tenantId)`: the call or null;
-- `discoveryCallTiming(call, now)`: `upcoming`, `past` or `none` (no call, or cancelled), the variant of the trial e-mails;
+- `discoveryCallBooked(call)`: a call is booked, to come or past (a cancelled one counts as none); J+5 is sent only without one;
 - `saveManual(manager, tenantId, { scheduled_at, status?, note? }, userId?)`: a call set by hand, 400 `discovery_call_invalid` on a bad value;
 - `remove(manager, tenantId, userId?)`;
 - `recordClick(manager, tenantId, userId | null, placement)`.

@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { DataSource, EntityManager } from 'typeorm';
 import { Features } from '../../config/features';
+import { COMPANY_NAME } from '../../config/product';
 import { withTenant } from '../../common/tenant-runner';
 import { NeverRejects } from '../../common/never-rejects';
 import { APP_URL_NOT_CONFIGURED_MESSAGE, resolveConfiguredAppBaseUrl } from '../../common/url';
@@ -14,7 +15,7 @@ import { computeTrialDeletionAt } from '../../billing/subscription-freeze.util';
 import {
   DISCOVERY_CALL_AUDIT_TABLE,
   DiscoveryCallService,
-  discoveryCallTiming,
+  discoveryCallBooked,
   type DiscoveryCallPlacement,
 } from '../../discovery-call/discovery-call.service';
 import type { EmailContent } from '../../notifications/notification-templates';
@@ -41,7 +42,7 @@ import { parseTrialMailLinkToken, sameLinkToken, trialMailLinkToken, trialMailLi
 
 /** Friedrich, who signs the trial e-mails, sends J+5 and gets the replies of the others. */
 export const TRIAL_MAIL_FOUNDER_ADDRESS = 'fried@kanap.net';
-const TRIAL_MAIL_FOUNDER = `Friedrich <${TRIAL_MAIL_FOUNDER_ADDRESS}>`;
+export const TRIAL_MAIL_FOUNDER = `"Friedrich (${COMPANY_NAME})" <${TRIAL_MAIL_FOUNDER_ADDRESS}>`;
 /** Workspaces whose trial started longer ago are no longer looked at (trial, then 30 days, then margin). */
 const TRIAL_MAIL_HORIZON_DAYS = 90;
 const DEFAULT_MARKETING_URL = 'https://www.kanap.net';
@@ -74,7 +75,6 @@ type TenantFacts = {
   deletionAt: Date | null;
   /** The secret of the e-mail's links (`trial_mails.link_token`). */
   linkToken: string;
-  call: { timing: ReturnType<typeof discoveryCallTiming>; date: Date | null };
 };
 
 /**
@@ -284,11 +284,11 @@ export class TrialMailsService implements OnModuleInit {
       firstLoginAt: firstLoginAt ? new Date(firstLoginAt) : null,
       sent: new Set(TRIAL_MAIL_MILESTONES.filter((key) => state[TRIAL_MAIL_SENT_COLUMN[key]])),
       unsubscribed: !!state.unsubscribed_at,
+      callBooked: discoveryCallBooked(await this.discoveryCall.read(manager, row.id)),
     }, now);
     // The person of the sign-up, still a user able to sign in.
     if (!milestone || !user || user.status !== 'enabled') return null;
 
-    const call = milestone === 'j5' ? await this.discoveryCall.read(manager, row.id) : null;
     return {
       milestone,
       recipient: { email: user.email, firstName: user.first_name?.trim() || row.signup_first_name?.trim() || null },
@@ -297,10 +297,6 @@ export class TrialMailsService implements OnModuleInit {
       trialEnd: subscription.trial_end ? new Date(subscription.trial_end) : null,
       deletionAt,
       linkToken: state.link_token as unknown as string,
-      call: {
-        timing: discoveryCallTiming(call, now),
-        date: call?.scheduled_at ? new Date(call.scheduled_at) : null,
-      },
     };
   }
 
@@ -332,7 +328,7 @@ export class TrialMailsService implements OnModuleInit {
         content = buildTrialWelcomeEmail({ ...common, angle: facts.angle, mode: facts.mode, call, unsubscribeUrl });
         break;
       case 'j5':
-        content = buildTrialFollowUpEmail({ ...common, timing: facts.call.timing, callDate: facts.call.date, mode: facts.mode, call, unsubscribeUrl });
+        content = buildTrialFollowUpEmail({ ...common, mode: facts.mode, call, unsubscribeUrl });
         break;
       case 'j12':
         content = buildTrialEndingEmail({ ...common, trialEnd: facts.trialEnd!, marketingUrl: marketingUrl(), unsubscribeUrl });

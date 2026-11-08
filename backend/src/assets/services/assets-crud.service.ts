@@ -149,7 +149,7 @@ export class AssetsCrudService extends AssetsBaseService {
 
     const mg = this.getManager(opts);
     const asset = await this.ensureAsset(assetId, opts?.manager, tenantId);
-    const senderRows = await mg.query('SELECT first_name, last_name FROM users WHERE id = $1', [userId]);
+    const senderRows = await mg.query('SELECT first_name, last_name, email FROM users WHERE id = $1', [userId]);
     const senderName = displayName(senderRows[0], 'Someone');
 
     const recipientRows = userIds.length > 0
@@ -169,6 +169,7 @@ export class AssetsCrudService extends AssetsBaseService {
         itemId: asset.id,
         itemName: asset.name,
         senderName,
+        senderEmail: senderRows[0]?.email ?? null,
         message: dto.message,
         recipients: recipientRows,
         rawEmails,

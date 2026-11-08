@@ -687,7 +687,7 @@ Control which email notifications you receive.
 - **Time** (hour in your timezone)
 - **Timezone**
 
-Use the **Preview email** button to send yourself a test email and verify the format.
+Use the **Preview email** button to send yourself a test email and verify the format. A week with nothing to report sends no email, and the preview says so.
 
 All changes are saved automatically as you toggle switches or change selections.
 

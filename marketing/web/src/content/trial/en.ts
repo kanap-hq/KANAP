@@ -29,7 +29,7 @@ const content: TrialContent = {
       errorEmail: 'Enter a valid email address.',
       errorSlug: 'Only lowercase letters, numbers and hyphens.',
       captchaLabel: 'Security check',
-      privacyNote: 'Your email address is used to activate the KANAP workspace and to set up the first administrator. You will also receive 4 onboarding messages during the trial. You can unsubscribe from them at any time.',
+      privacyNote: 'Your email address is used to activate the KANAP workspace and to set up the first administrator. You will also receive up to 4 onboarding messages during the trial. You can unsubscribe from them at any time.',
     },
     countryOptions: [
       { value: 'FR', label: 'France' },
@@ -58,7 +58,7 @@ const content: TrialContent = {
     lead: 'We\'ve sent an activation link to the address you provided. Click it to finish creating your workspace.',
     whatNext: 'What happens next',
     steps: [
-      'Open your inbox, subject line "Confirm your KANAP workspace".',
+      'Open your inbox, subject line "Activate your KANAP workspace".',
       'Click the link. We\'ll create your workspace in a few seconds.',
       'Set your admin password. Log in, invite your team, start.',
     ],

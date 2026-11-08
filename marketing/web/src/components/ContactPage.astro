@@ -165,6 +165,7 @@ const c = getContactContent(locale);
         email: String(fd.get('email') ?? '').trim(),
         company: String(fd.get('company') ?? '').trim(),
         message: String(fd.get('message') ?? '').trim(),
+        language: document.documentElement.lang || undefined,
         captchaToken: captcha.enabled ? captcha.token : undefined,
       };
       if (captcha.required && !payload.captchaToken) {

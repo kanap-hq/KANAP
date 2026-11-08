@@ -163,7 +163,7 @@ export class ConnectionsService {
     if (!conn) throw new BadRequestException('Connection not found');
     const mg = opts?.manager ?? (this.crudService as any).connRepo.manager;
 
-    const senderRows = await mg.query('SELECT first_name, last_name FROM users WHERE id = $1', [userId]);
+    const senderRows = await mg.query('SELECT first_name, last_name, email FROM users WHERE id = $1', [userId]);
     const senderName = displayName(senderRows[0], 'Someone');
 
     const recipientRows = userIds.length > 0
@@ -183,6 +183,7 @@ export class ConnectionsService {
         itemId: conn.id,
         itemName: conn.name,
         senderName,
+        senderEmail: senderRows[0]?.email ?? null,
         message: dto.message,
         recipients: recipientRows,
         rawEmails,

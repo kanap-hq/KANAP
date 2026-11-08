@@ -4,7 +4,7 @@
  *
  * - J0, the welcome: once the path and the mode are chosen, or an hour after the first sign-in
  *   seen without them.
- * - J+5: five days after the trial started.
+ * - J+5: five days after the trial started, when no discovery call is booked (to come or past).
  * - J+12: two days before the trial ends (follows a trial extended by the platform administrator).
  * - The end-of-trial notice: once the trial has ended without a subscription.
  * - The thank-you: once Stripe confirms the first subscription of a workspace seen in trial.
@@ -53,6 +53,8 @@ export type TrialMailFacts = {
   firstLoginAt: Date | null;
   sent: ReadonlySet<TrialMailMilestone>;
   unsubscribed: boolean;
+  /** A discovery call is booked, to come or past: J+5 is not sent. A cancelled one counts as none. */
+  callBooked: boolean;
 };
 
 export function dueTrialMail(facts: TrialMailFacts, now: Date): TrialMailMilestone | null {
@@ -67,7 +69,7 @@ export function dueTrialMail(facts: TrialMailFacts, now: Date): TrialMailMilesto
     else if (at < end) due = 'j12';
     else due = at < facts.deletionAt.getTime() - TRIAL_MAIL_ENDED_LAST_CALL_MS ? 'ended' : null;
   } else if (at >= facts.trialStart.getTime() + TRIAL_MAIL_J5_AFTER_MS) {
-    due = 'j5';
+    due = facts.callBooked ? null : 'j5';
   } else {
     const signedInLongEnough = !!facts.firstLoginAt && at >= facts.firstLoginAt.getTime() + TRIAL_MAIL_J0_FALLBACK_MS;
     due = facts.choiceMade || signedInLongEnough ? 'j0' : null;

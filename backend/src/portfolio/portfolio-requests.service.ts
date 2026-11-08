@@ -3020,7 +3020,7 @@ export class PortfolioRequestsService {
     if (!request) throw new NotFoundException('Request not found');
 
     const senderRows = await mg.query(
-      'SELECT first_name, last_name FROM users WHERE id = $1',
+      'SELECT first_name, last_name, email FROM users WHERE id = $1',
       [userId],
     );
     const senderName = displayName(senderRows[0], 'Someone');
@@ -3042,6 +3042,7 @@ export class PortfolioRequestsService {
         itemId: requestId,
         itemName: request.name,
         senderName,
+        senderEmail: senderRows[0]?.email ?? null,
         message: dto.message,
         recipients: recipientRows,
         rawEmails,

@@ -687,7 +687,7 @@ Les **Notifications des technologies** envoient un e-mail aux responsables IT d'
 - **Heure** (dans votre fuseau horaire)
 - **Fuseau horaire**
 
-Utilisez le bouton **Aperçu de l'e-mail** pour vous envoyer un e-mail de test et vérifier le format.
+Utilisez le bouton **Aperçu de l'e-mail** pour vous envoyer un e-mail de test et vérifier le format. Une semaine sans rien à signaler n'envoie pas d'e-mail, et l'aperçu le signale.
 
 Toutes les modifications sont enregistrées automatiquement lorsque vous basculez les commutateurs ou changez les sélections.
 
