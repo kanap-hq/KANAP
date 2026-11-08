@@ -215,6 +215,16 @@ export const de: EmailStrings = {
       expires: 'Dieser Link läuft in etwa {{minutes}} Minuten ab. Danach können Sie sich mit Ihrer E-Mail-Adresse und Ihrem neuen Passwort anmelden.',
       textAction: 'Passwort festlegen: {{url}}',
     },
+    userInviteMicrosoft: {
+      subject: 'Einladung zu {{organisation}}',
+      intro: '{{inviterName}} lädt Sie ein, {{place}} beizutreten.',
+      introNoInviter: 'Sie sind eingeladen, {{place}} beizutreten.',
+      placeWorkspace: `dem Arbeitsbereich {{organisation}} auf ${PRODUCT_NAME}`,
+      placeProduct: PRODUCT_NAME,
+      signIn: 'Melden Sie sich mit Ihrem Microsoft-Konto an: Wählen Sie auf der Anmeldeseite „Mit Microsoft anmelden“.',
+      address: 'Adresse des Arbeitsbereichs:',
+      textAction: '{{organisation}} öffnen: {{url}}',
+    },
   },
   workspace: {
     reset: {

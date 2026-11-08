@@ -177,7 +177,7 @@ Once someone's data access is limited, an **Access** column shows each person's 
 |--------|---------|
 | **Enabled** | The account can sign in and use KANAP. |
 | **Disabled** | The account is kept with all its history, but cannot sign in. |
-| **Invited** | An invitation was sent and has not been accepted yet. |
+| **Invited** | An invitation was sent and the person has not signed in yet. |
 | **Pending access** | The person can sign in but has no role, so they cannot open anything. Assign a role to give them access. |
 | **Contact** | A directory entry only. The person does not sign in. |
 
@@ -192,7 +192,7 @@ Toolbar actions:
 | **New** | Create a new user | `users:admin` |
 | **Import** | Bulk import users from a CSV file or an Excel workbook | `users:admin` |
 | **Export** | Export the user list to CSV or Excel | `users:admin` |
-| **Invite** | Send login invitations to selected users | `users:admin` |
+| **Invite** | Send invitations to the selected users. See [Invitations](#invitations). | `users:admin` |
 | **Disable** | Disable the selected users. They are signed out immediately. | `users:admin` |
 | **Delete** | Remove selected users permanently. Your own account is kept: the confirmation says so before anything is deleted. To keep a user's history and block their access, disable them instead | `users:admin` |
 
@@ -204,7 +204,7 @@ Row actions, from the menu at the end of each row:
 |--------|-------------|
 | **Edit** | Open the user for editing. Clicking the row does the same. |
 | **Enable** / **Disable** | Switch the account on or off. Disabling signs the person out immediately. |
-| **Send invite** | Email a sign-in invitation. Hidden for Microsoft Entra accounts. |
+| **Send invite** | Email an invitation. See [Invitations](#invitations). Hidden for Microsoft Entra accounts. |
 | **Send password reset** | Email a password reset link. Shown for enabled local accounts only. |
 | **Data access** | Open the user on the **Data access** tab. Shown to people with access to all data, on other people's rows. |
 | **Delete** | Remove the user permanently. The records the user worked on stay, without the user. You cannot delete your own account. To block a person's access and keep the account, disable it instead. |
@@ -242,9 +242,24 @@ See [CSV and Excel files](csv-files.md) for the formats, the encoding, the separ
    - **Roles**: Assign one or more roles (determines permissions)
    - **Company** / **Department**: Organizational assignment
    - **Enabled**: Whether the user can log in
-4. Click **Save** or **Save and Invite** to send login email
+4. Click **Save**, or **Save and invite** to send the invitation as well. See [Invitations](#invitations).
 
 When you edit a user, the window has two tabs: **Identity**, with the fields above and the roles, and **Data access**, which limits the person to part of the budget and the contracts. One **Save** writes both. The **Data access** tab is shown to people with access to all data, on other people's accounts. See [Data access](data-access.md).
+
+### Invitations
+
+**Send invite**, **Invite** and **Save and invite** email the person an invitation, after a confirmation.
+
+In a workspace without Microsoft sign-in, the invitation holds a link to set a password. The link is valid for 7 days; a new invitation sends a new link.
+
+In a workspace where [Microsoft Entra ID](#microsoft-entra-id) is connected, the confirmation also asks how the person will sign in:
+
+| Choice | The invitation |
+|--------|----------------|
+| **With Microsoft** (default) | Asks the person to open the workspace and choose **Sign in with Microsoft**. It holds no password link. Their first Microsoft sign-in links the account to their Microsoft identity and enables it. |
+| **With a password** | Holds the link to set a password, valid for 7 days, as in a workspace without Microsoft sign-in. For people outside your directory, such as consultants. |
+
+The account shows **Invited** until the person's first sign-in. A password reset link, sent by **Send password reset** or from the sign-in page, stays valid for 1 hour.
 
 ### Multi-Role Assignment
 
@@ -282,7 +297,7 @@ If someone is removed from your directory, or their directory account is deactiv
 
 ### Just-in-time sign-in with Microsoft
 
-When single sign-on is connected, a person who signs in with Microsoft for the first time gets a KANAP account automatically. If an account with the same email address already exists, it is linked to their Microsoft identity instead.
+When single sign-on is connected, a person who signs in with Microsoft for the first time gets a KANAP account automatically. If an account with the same email address already exists, it is linked to their Microsoft identity instead, and an **Invited** account is enabled.
 
 A new account starts with the **Contact** system role and no permissions. The person sees a page saying:
 

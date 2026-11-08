@@ -177,7 +177,7 @@ Dès que l'accès aux données d'une personne est limité, une colonne **Accès*
 |--------|---------------|
 | **Activé** | Le compte peut se connecter et utiliser KANAP. |
 | **Désactivé** | Le compte est conservé avec tout son historique, mais ne peut pas se connecter. |
-| **Invité** | Une invitation a été envoyée et n'a pas encore été acceptée. |
+| **Invité** | Une invitation a été envoyée et la personne ne s'est pas encore connectée. |
 | **Accès en attente** | La personne peut se connecter mais n'a aucun rôle, elle ne peut donc rien ouvrir. Assignez-lui un rôle pour lui donner accès. |
 | **Contact** | Une simple entrée de répertoire. La personne ne se connecte pas. |
 
@@ -192,7 +192,7 @@ Actions de la barre d'outils :
 | **Nouveau** | Créer un nouvel utilisateur | `users:admin` |
 | **Importer** | Import en masse d'utilisateurs depuis un fichier CSV ou un classeur Excel | `users:admin` |
 | **Exporter** | Exporter la liste des utilisateurs en CSV ou Excel | `users:admin` |
-| **Inviter** | Envoyer des invitations de connexion aux utilisateurs sélectionnés | `users:admin` |
+| **Inviter** | Envoyer des invitations aux utilisateurs sélectionnés. Voir [Invitations](#invitations). | `users:admin` |
 | **Désactiver** | Désactiver les utilisateurs sélectionnés. Ils sont déconnectés immédiatement. | `users:admin` |
 | **Supprimer** | Supprimer définitivement les utilisateurs sélectionnés. Votre propre compte est conservé : la confirmation l'indique avant toute suppression. Pour garder l'historique d'un utilisateur et bloquer son accès, désactivez-le plutôt | `users:admin` |
 
@@ -204,7 +204,7 @@ Actions de ligne, depuis le menu au bout de chaque ligne :
 |--------|-------------|
 | **Modifier** | Ouvrir l'utilisateur pour le modifier. Cliquer sur la ligne fait la même chose. |
 | **Activer** / **Désactiver** | Activer ou désactiver le compte. La désactivation déconnecte la personne immédiatement. |
-| **Envoyer une invitation** | Envoyer une invitation de connexion par e-mail. Masqué pour les comptes Microsoft Entra. |
+| **Envoyer une invitation** | Envoyer une invitation par e-mail. Voir [Invitations](#invitations). Masqué pour les comptes Microsoft Entra. |
 | **Envoyer une réinitialisation de mot de passe** | Envoyer un lien de réinitialisation de mot de passe par e-mail. Affiché uniquement pour les comptes locaux activés. |
 | **Accès aux données** | Ouvre l'utilisateur sur l'onglet **Accès aux données**. Affiché aux personnes qui ont accès à toutes les données, sur les lignes des autres personnes. |
 | **Supprimer** | Supprimer définitivement l'utilisateur. Les enregistrements sur lesquels il a travaillé restent, sans lui. Vous ne pouvez pas supprimer votre propre compte. Pour bloquer l'accès d'une personne en gardant son compte, désactivez-le plutôt. |
@@ -242,9 +242,24 @@ Voir [Fichiers CSV et Excel](csv-files.md) pour les formats, l'encodage, le sép
    - **Rôles** : Assigner un ou plusieurs rôles (détermine les autorisations)
    - **Société** / **Département** : Affectation organisationnelle
    - **Activé** : Si l'utilisateur peut se connecter
-4. Cliquez sur **Enregistrer** ou **Enregistrer et inviter** pour envoyer l'e-mail de connexion
+4. Cliquez sur **Enregistrer**, ou sur **Enregistrer et inviter** pour envoyer aussi l'invitation. Voir [Invitations](#invitations).
 
 Quand vous modifiez un utilisateur, la fenêtre a deux onglets : **Identité**, avec les champs ci-dessus et les rôles, et **Accès aux données**, qui limite la personne à une partie du budget et des contrats. Un seul **Enregistrer** écrit les deux. L'onglet **Accès aux données** est affiché aux personnes qui ont accès à toutes les données, sur les comptes des autres. Voir [Accès aux données](data-access.md).
+
+### Invitations
+
+**Envoyer une invitation**, **Inviter** et **Enregistrer et inviter** envoient une invitation par e-mail à la personne, après une confirmation.
+
+Dans un espace de travail sans connexion Microsoft, l'invitation contient un lien pour définir un mot de passe. Le lien est valable 7 jours ; une nouvelle invitation envoie un nouveau lien.
+
+Dans un espace de travail où [Microsoft Entra ID](#microsoft-entra-id) est connecté, la confirmation demande aussi comment la personne se connectera :
+
+| Choix | L'invitation |
+|--------|----------------|
+| **Avec Microsoft** (par défaut) | Demande à la personne d'ouvrir l'espace de travail et de choisir **Se connecter avec Microsoft**. Elle ne contient aucun lien de mot de passe. Sa première connexion avec Microsoft lie le compte à son identité Microsoft et l'active. |
+| **Avec un mot de passe** | Contient le lien pour définir un mot de passe, valable 7 jours, comme dans un espace de travail sans connexion Microsoft. Pour les personnes extérieures à votre annuaire, comme des consultants. |
+
+Le compte affiche **Invité** jusqu'à la première connexion de la personne. Un lien de réinitialisation de mot de passe, envoyé par **Envoyer une réinitialisation de mot de passe** ou depuis la page de connexion, reste valable 1 heure.
 
 ### Assignation multi-rôles
 
@@ -282,7 +297,7 @@ Si une personne est supprimée de votre annuaire, ou si son compte d'annuaire es
 
 ### Connexion à la volée avec Microsoft
 
-Lorsque le single sign-on est connecté, une personne qui se connecte avec Microsoft pour la première fois obtient automatiquement un compte KANAP. Si un compte avec la même adresse e-mail existe déjà, il est lié à son identité Microsoft à la place.
+Lorsque le single sign-on est connecté, une personne qui se connecte avec Microsoft pour la première fois obtient automatiquement un compte KANAP. Si un compte avec la même adresse e-mail existe déjà, il est lié à son identité Microsoft à la place, et un compte **Invité** est activé.
 
 Un nouveau compte démarre avec le rôle système **Contact** et aucune autorisation. La personne voit une page indiquant :
 

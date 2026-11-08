@@ -215,6 +215,16 @@ export const es: EmailStrings = {
       expires: 'Este enlace vencerá en aproximadamente {{minutes}} minutos. Cuando termine, podrá iniciar sesión con su correo electrónico y su nueva contraseña.',
       textAction: 'Definir su contraseña: {{url}}',
     },
+    userInviteMicrosoft: {
+      subject: 'Invitación para unirse a {{organisation}}',
+      intro: '{{inviterName}} le invita a unirse {{place}}.',
+      introNoInviter: 'Está invitado a unirse {{place}}.',
+      placeWorkspace: `al espacio de trabajo {{organisation}} en ${PRODUCT_NAME}`,
+      placeProduct: `a ${PRODUCT_NAME}`,
+      signIn: 'Inicie sesión con su cuenta de Microsoft: en la página de inicio de sesión, elija «Iniciar sesión con Microsoft».',
+      address: 'Dirección del espacio de trabajo:',
+      textAction: 'Abrir {{organisation}}: {{url}}',
+    },
   },
   workspace: {
     reset: {

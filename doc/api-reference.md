@@ -65,7 +65,7 @@ Rate limiting (default enabled):
   - The link is issued and e-mailed after the response: the status and the body are the same whether the account exists and whether the e-mail goes out, and the response waits for neither. A failure is an error line in the server log (`Password reset link not created` or `Password reset e-mail not sent`, with the tenant, the account id, the transport and the error code; never the link, the token or an e-mail address) and the request's audit row carries `source_ref = email_not_sent`, as does a request for an account on a reserved `.example` domain, where nothing is sent.
 - POST `/auth/password-reset/complete` → `{ ok: true }`
   - Body: `{ token: string, password: string }`. Minimum length 8.
-  - Token expires based on `PASSWORD_RESET_TTL` (defaults to 1 hour).
+  - Token expires based on `PASSWORD_RESET_TTL` (defaults to 1 hour), or `INVITE_LINK_TTL` (defaults to 7 days) for the link of an invitation.
 
 ### Microsoft Entra SSO
 - POST `/auth/entra/setup/start` → `{ url }`
@@ -79,7 +79,7 @@ Rate limiting (default enabled):
   - Shared callback for both setup & login.
   - Mode and nonce are embedded in the signed `state` payload (`mode='setup' | 'login'`). The endpoint exchanges the auth code for tokens using the shared app registration, validates the ID token (issuer, audience, nonce, `tid`, `oid`, email), and then:
     - `mode=setup`: stores `sso_provider='entra'`, `entra_tenant_id=tid`, and metadata on the tenant, then redirects to `/admin/auth?setup=success` on the tenant host.
-    - `mode=login`: links or provisions a tenant user (by external subject first, then email), signs a short-lived handoff, and redirects to `/login/callback#handoff=...` on the tenant host.
+    - `mode=login`: links or provisions a tenant user (by external subject first, then email), enables a linked user whose status is `invited` (within the user limit), signs a short-lived handoff, and redirects to `/login/callback#handoff=...` on the tenant host.
       - Security: the handoff is passed in the URL fragment, then the SPA redeems it with the tenant host via `POST /auth/entra/session`.
 - POST `/auth/entra/session`
   - Public tenant-host endpoint used only by the Entra callback page.
@@ -1960,9 +1960,12 @@ POST  /spend-versions/v-2025/allocations/bulk-upsert []
   - Enforces the user limit only when a platform administrator has set one on the tenant's plan (`seat_limit` not null): fails with 400 when the number of `enabled` users has reached it. No limit applies by default.
 - POST `/users/:id/disable` → sets user `status='disabled'`
   - Requires: users:admin level
-- POST `/users/:id/invite` → sets user `status='invited'` (an invited user does not count toward a user limit)
+- POST `/users/:id/invite` → sets user `status='invited'` (an invited user does not count toward a user limit); an `enabled` user keeps its status
   - Requires: users:admin level
-  - Sends a Resend email with a password setup CTA pointing to `/accept-invite#token=...`. The token reuses the password-reset pipeline and automatically enables the user once a password is set.
+  - Body (optional): `{ sign_in: 'password' | 'microsoft' }`, `password` when absent. Another value: `400`.
+  - `password`: e-mails a password setup CTA pointing to `/accept-invite#token=...`. The token reuses the password-reset pipeline (same `purpose` and signing key) with its own lifetime, `INVITE_LINK_TTL` (default 7 days; reset links keep `PASSWORD_RESET_TTL`), and automatically enables the user once a password is set.
+  - `microsoft`: only in a workspace with Microsoft Entra sign-in connected (`sso_provider='entra'`, `sso_enabled`, an Entra tenant id), else `400` `Microsoft sign-in is not set up for this workspace.` E-mails a button to the workspace address and asks the person to sign in with Microsoft; no token is issued. The first Microsoft sign-in links the account (by e-mail) and enables an `invited` account.
+  - An account already linked to Entra (`external_auth_provider='entra'`) is refused (`400`) with either value.
   - The link uses the same address as password reset links (the tenant's address in multi-tenant mode). Without a configured address: `400` `application URL is not configured: set APP_BASE_URL`.
 
 ### Users CSV

@@ -26,6 +26,7 @@ import { languageOf, parseDateOrder, parseDecimalMark } from '../common/csv-shee
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 import { csvExportFormat } from '../common/csv/csv-export.service';
 import { csvExportBody } from '../common/csv/send-csv-export';
+import { parseInviteSignIn } from './invite-sign-in';
 
 function canViewUserAdministration(req: any): boolean {
   return req?.isAdmin === true || req?.permissionLevel === 'admin';
@@ -213,13 +214,15 @@ export class UsersController {
   @Post(':id/invite')
   @UseGuards(PermissionGuard)
   @RequireLevel('users', 'admin')
-  async invite(@Param('id') id: string, @Req() req: any) {
+  async invite(@Param('id') id: string, @Req() req: any, @Body() body?: { sign_in?: unknown }) {
     if (!Features.EMAIL_ENABLED) throwFeatureDisabled('email');
+    const signIn = parseInviteSignIn(body?.sign_in);
     const baseUrl = resolveAppBaseUrl(req);
     // The invitation is committed before its e-mail waits on the mail queue (see inviteUser).
     return this.svc.inviteUser(id, req.user?.sub ?? null, baseUrl, {
       manager: req?.queryRunner?.manager,
       commitThenRun: createRequestCommitThenRun(req),
+      signIn,
     });
   }
 

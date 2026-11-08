@@ -2,7 +2,7 @@
 import { resolveConfiguredAppBaseUrl } from './url';
 import { parseDeploymentMode } from './deployment-mode';
 import { PRODUCT_NAME } from '../config/product';
-import { passwordResetTtlWarning, tokenDurationWarning } from '../auth/token-ttl.util';
+import { inviteLinkTtlWarning, passwordResetTtlWarning, tokenDurationWarning } from '../auth/token-ttl.util';
 import { apiWorkersConfigWarning } from './cluster/process-role';
 
 export function requireEnv(name: string, env: NodeJS.ProcessEnv = process.env): string {
@@ -282,6 +282,7 @@ export function validateStartupEnv(
     tokenDurationWarning('JWT_ACCESS_TOKEN_TTL', env.JWT_ACCESS_TOKEN_TTL),
     tokenDurationWarning('JWT_REFRESH_TOKEN_TTL', env.JWT_REFRESH_TOKEN_TTL),
     passwordResetTtlWarning(env.PASSWORD_RESET_TTL),
+    inviteLinkTtlWarning(env.INVITE_LINK_TTL),
     apiWorkersConfigWarning(env.API_WORKERS),
     s3BucketWarning(env),
   ]) {

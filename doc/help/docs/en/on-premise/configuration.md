@@ -513,6 +513,7 @@ With `IMPORT_XLSX=false`, the import buttons read **Import CSV**, the import dia
 | `JWT_ACCESS_TOKEN_TTL` | Access token lifetime: a number followed by `s`, `m`, `h` or `d`. Another format keeps the default (15 minutes), and the API names the value in a `[CONFIG]` warning at start. | `15m` |
 | `JWT_REFRESH_TOKEN_TTL` | Refresh token lifetime, same format. Another format keeps the default (4 hours), and the API names the value in a `[CONFIG]` warning at start. | `4h` |
 | `PASSWORD_RESET_TTL` | Lifetime of a password reset link: a number of seconds or a duration such as `30m` or `2h`. Another value lasts 1 hour, and the API names it in a `[CONFIG]` warning at start. | `1h` |
+| `INVITE_LINK_TTL` | Lifetime of the link to set a password in an invitation e-mail: a number of seconds or a duration such as `72h` or `7d`. Another value lasts 7 days, and the API names it in a `[CONFIG]` warning at start. | `7d` |
 | `LOG_LEVEL` | `debug` or `verbose` adds the details of each scheduled job run to the log. Any other value changes nothing. | *unset* |
 | `INTEGRATED_DOCS_AUTO_ROLLOUT` | Repairs, at start, the documents linked to requests and projects. Off on-premise unless you set it: `if-needed` runs the repair only when the counts differ, `always` at every start. | *off* |
 | `APP_URL` | Multi-tenant (cloud) only. **Not needed on-premise**: `APP_BASE_URL` is used. | *unset* |
@@ -641,6 +642,7 @@ S3_FORCE_PATH_STYLE=false
 # JWT_ACCESS_TOKEN_TTL=15m
 # JWT_REFRESH_TOKEN_TTL=4h
 # PASSWORD_RESET_TTL=1h
+# INVITE_LINK_TTL=7d
 # RATE_LIMIT_ENABLED=true
 
 # CAPACITY (optional - see "Capacity and performance")

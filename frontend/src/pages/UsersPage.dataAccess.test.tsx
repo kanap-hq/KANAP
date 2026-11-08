@@ -10,7 +10,10 @@ import { KanapDialogProvider } from '../components/design';
 const t = vi.hoisted(() => (key: string, options?: Record<string, unknown>) => (
   options ? `${key}|${JSON.stringify(options)}` : key
 ));
-const auth = vi.hoisted(() => ({ limited: false }));
+const auth = vi.hoisted(() => ({
+  limited: false,
+  tenantAuth: null as null | { sso_provider: string; sso_enabled: boolean },
+}));
 const grid = vi.hoisted(() => ({
   props: null as null | Record<string, any>,
   row: {
@@ -39,7 +42,7 @@ vi.mock('react-i18next', () => ({
 vi.mock('../auth/AuthContext', () => ({
   useAuth: () => ({
     hasLevel: () => true,
-    tenantAuth: null,
+    tenantAuth: auth.tenantAuth,
     profile: { id: 'me' },
     dataAccess: { mode: auth.limited ? 'limited' : 'all', nodes: [] },
   }),
@@ -95,6 +98,7 @@ function renderPage() {
 beforeEach(() => {
   vi.clearAllMocks();
   auth.limited = false;
+  auth.tenantAuth = null;
   grid.props = null;
   get.mockResolvedValue({ data: { items: [] } });
   post.mockResolvedValue({ data: {} });
@@ -232,5 +236,29 @@ describe('UsersPage invitations', () => {
     fireEvent.click(within(confirmationDialog(many)).getByRole('button', { name: 'users.actions.sendInvite' }));
     await waitFor(() => expect(post).toHaveBeenCalledWith('/users/u-2/invite'));
     expect(post).toHaveBeenCalledWith('/users/u-3/invite');
+  });
+
+  it('asks how a row invitee signs in where Microsoft sign-in is on, Microsoft first', async () => {
+    auth.tenantAuth = { sso_provider: 'entra', sso_enabled: true };
+    const dialog = await openRowInvite();
+    expect(within(dialog).getByRole('radio', { name: 'users.invite.withMicrosoft' })).toBeChecked();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'users.actions.sendInvite' }));
+    await waitFor(() => expect(post).toHaveBeenCalledWith('/users/u-2/invite', { sign_in: 'microsoft' }));
+  });
+
+  it('sends the chosen sign-in with every invitation of the selection', async () => {
+    auth.tenantAuth = { sso_provider: 'entra', sso_enabled: true };
+    renderPage();
+    act(() => grid.props!.onSelectionChanged([
+      { id: 'u-2', email: 'marta@example.test' },
+      { id: 'u-3', email: 'julie.martin@example.com' },
+    ]));
+    fireEvent.click(screen.getByRole('button', { name: 'users.actions.invite|{"count":2}' }));
+    expect(await screen.findByText(many)).toBeInTheDocument();
+    const dialog = confirmationDialog(many);
+    fireEvent.click(within(dialog).getByRole('radio', { name: 'users.invite.withPassword' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'users.actions.sendInvite' }));
+    await waitFor(() => expect(post).toHaveBeenCalledWith('/users/u-2/invite', { sign_in: 'password' }));
+    expect(post).toHaveBeenCalledWith('/users/u-3/invite', { sign_in: 'password' });
   });
 });

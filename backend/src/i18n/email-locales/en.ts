@@ -214,6 +214,16 @@ export const en = {
       expires: 'This link will expire in approximately {{minutes}} minutes. Once complete, you can sign in using your email and new password.',
       textAction: 'Set your password: {{url}}',
     },
+    userInviteMicrosoft: {
+      subject: 'Invitation to join {{organisation}}',
+      intro: '{{inviterName}} invites you to join {{place}}.',
+      introNoInviter: 'You are invited to join {{place}}.',
+      placeWorkspace: `the {{organisation}} workspace on ${PRODUCT_NAME}`,
+      placeProduct: PRODUCT_NAME,
+      signIn: 'Sign in with your Microsoft account: on the sign-in page, choose "Sign in with Microsoft".',
+      address: 'Workspace address:',
+      textAction: 'Open {{organisation}}: {{url}}',
+    },
   },
   workspace: {
     reset: {

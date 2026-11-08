@@ -24,6 +24,7 @@ import CheckboxSetFloatingFilter from '../components/CheckboxSetFloatingFilter';
 import { useDataAccessLimited } from '../auth/dataAccess';
 import { userAccessColumnText } from '../components/dataAccess/dataAccess';
 import UserDialog, { type UserDialogTab } from './users/UserDialog';
+import { postInvite, useInviteConfirm, type InviteChoice } from './users/inviteConfirm';
 import { roleLabel } from '../utils/roleLabel';
 import { ImportLabel } from '../components/csv/importFiles';
 
@@ -127,21 +128,16 @@ export default function UsersPage() {
   // Seat-controlled status actions
   const enableUser = async (id: string) => { await api.post(`/users/${id}/enable`); setRefreshKey((k)=>k+1); };
   const disableUser = async (id: string) => { await api.post(`/users/${id}/disable`); setRefreshKey((k)=>k+1); };
-  const inviteUser = async (id: string) => { await api.post(`/users/${id}/invite`); setRefreshKey((k)=>k+1); };
+  const inviteUser = async (id: string, choice: NonNullable<InviteChoice>) => { await postInvite(id, choice); setRefreshKey((k)=>k+1); };
 
   const userDisplayName = (row: any) =>
     `${row?.first_name ?? ''} ${row?.last_name ?? ''}`.trim() || row?.email || '';
 
   const closeRowMenu = () => setMenuPos(null);
 
-  // One recipient is named; several are a count. Nothing is sent until this is confirmed.
-  const confirmSendInvite = (rows: Array<{ email?: string }>) => dialogs.confirm({
-    message: t('users.messages.inviteConfirm', {
-      count: rows.length,
-      ...(rows.length === 1 ? { email: rows[0]?.email ?? '' } : {}),
-    }),
-    confirmLabel: t('users.actions.sendInvite'),
-  });
+  // Nothing is sent until this is confirmed.
+  const confirmInvite = useInviteConfirm();
+  const confirmSendInvite = (rows: Array<{ email?: string }>) => confirmInvite(rows.map((row) => row.email ?? ''));
 
   const handleRowDisable = async (row: any) => {
     closeRowMenu();
@@ -159,9 +155,10 @@ export default function UsersPage() {
   };
   const handleRowInvite = async (row: any) => {
     closeRowMenu();
-    if (!(await confirmSendInvite([row]))) return;
+    const choice = await confirmSendInvite([row]);
+    if (!choice) return;
     try {
-      await inviteUser(row.id);
+      await inviteUser(row.id, choice);
       await dialogs.alert(t('users.messages.inviteSentOne', { email: row.email }));
     } catch (e: any) { await dialogs.alert(getApiErrorMessage(e, t, String(e))); }
   };
@@ -390,11 +387,12 @@ export default function UsersPage() {
 
   const handleInviteSelected = async () => {
     if (!selectedRows.length) return;
-    if (!(await confirmSendInvite(selectedRows))) return;
+    const choice = await confirmSendInvite(selectedRows);
+    if (!choice) return;
     setInviting(true);
     try {
       const results = await Promise.allSettled(
-        selectedRows.map((row) => api.post(`/users/${row.id}/invite`))
+        selectedRows.map((row) => postInvite(row.id, choice))
       );
       const success = results.filter((r) => r.status === 'fulfilled').length;
       const failed = results.length - success;

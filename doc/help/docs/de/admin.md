@@ -177,7 +177,7 @@ Sobald der Datenzugriff einer Person begrenzt ist, zeigt eine Spalte **Zugriff**
 |--------|-----------|
 | **Aktiv** | Das Konto kann sich anmelden und KANAP nutzen. |
 | **Deaktiviert** | Das Konto bleibt mit seiner gesamten Historie erhalten, kann sich aber nicht anmelden. |
-| **Eingeladen** | Eine Einladung wurde gesendet und noch nicht angenommen. |
+| **Eingeladen** | Eine Einladung wurde gesendet, und die Person hat sich noch nicht angemeldet. |
 | **Zugriff ausstehend** | Die Person kann sich anmelden, hat aber keine Rolle und kann daher nichts öffnen. Weisen Sie eine Rolle zu, um Zugriff zu geben. |
 | **Kontakt** | Nur ein Verzeichniseintrag. Die Person meldet sich nicht an. |
 
@@ -192,7 +192,7 @@ Aktionen in der Symbolleiste:
 | **Neu** | Neuen Benutzer erstellen | `users:admin` |
 | **Importieren** | Massenimport von Benutzern aus einer CSV-Datei oder Excel-Arbeitsmappe | `users:admin` |
 | **Exportieren** | Benutzerliste als CSV oder Excel exportieren | `users:admin` |
-| **Einladen** | Anmeldeeinladungen an ausgewählte Benutzer senden | `users:admin` |
+| **Einladen** | Einladungen an die ausgewählten Benutzer senden. Siehe [Einladungen](#einladungen). | `users:admin` |
 | **Deaktivieren** | Die ausgewählten Benutzer deaktivieren. Sie werden sofort abgemeldet. | `users:admin` |
 | **Löschen** | Ausgewählte Benutzer dauerhaft entfernen. Ihr eigenes Konto bleibt erhalten: Die Bestätigung nennt es vor dem Löschen. Um den Verlauf eines Benutzers zu behalten und seinen Zugang zu sperren, deaktivieren Sie ihn stattdessen | `users:admin` |
 
@@ -204,7 +204,7 @@ Zeilenaktionen über das Menü am Ende jeder Zeile:
 |--------|--------------|
 | **Bearbeiten** | Öffnet den Benutzer zur Bearbeitung. Ein Klick auf die Zeile bewirkt dasselbe. |
 | **Aktivieren** / **Deaktivieren** | Schaltet das Konto ein oder aus. Beim Deaktivieren wird die Person sofort abgemeldet. |
-| **Einladung senden** | Sendet eine Anmeldeeinladung per E-Mail. Für Microsoft Entra-Konten ausgeblendet. |
+| **Einladung senden** | Sendet eine Einladung per E-Mail. Siehe [Einladungen](#einladungen). Für Microsoft Entra-Konten ausgeblendet. |
 | **Passwort-Zurücksetzung senden** | Sendet einen Link zum Zurücksetzen des Passworts per E-Mail. Nur für aktive lokale Konten sichtbar. |
 | **Datenzugriff** | Öffnet den Benutzer auf dem Reiter **Datenzugriff**. Sichtbar für Personen mit Zugriff auf alle Daten, in den Zeilen anderer Personen. |
 | **Löschen** | Entfernt den Benutzer dauerhaft. Die Datensätze, an denen er gearbeitet hat, bleiben ohne ihn erhalten. Ihr eigenes Konto können Sie nicht löschen. Um den Zugang einer Person zu sperren und das Konto zu behalten, deaktivieren Sie es stattdessen. |
@@ -242,9 +242,24 @@ Siehe [CSV- und Excel-Dateien](csv-files.md) für die Formate, die Kodierung, da
    - **Rollen**: Eine oder mehrere Rollen zuweisen (bestimmt die Berechtigungen)
    - **Unternehmen** / **Abteilung**: Organisatorische Zuordnung
    - **Aktiviert**: Ob der Benutzer sich anmelden kann
-4. Klicken Sie auf **Speichern** oder **Speichern und einladen**, um die Anmelde-E-Mail zu senden
+4. Klicken Sie auf **Speichern** oder auf **Speichern und einladen**, um zusätzlich die Einladung zu senden. Siehe [Einladungen](#einladungen).
 
 Wenn Sie einen Benutzer bearbeiten, hat das Fenster zwei Reiter: **Identität**, mit den Feldern oben und den Rollen, und **Datenzugriff**, der die Person auf einen Teil des Budgets und der Verträge begrenzt. Ein einziges **Speichern** schreibt beide. Der Reiter **Datenzugriff** ist für Personen mit Zugriff auf alle Daten sichtbar, bei den Konten anderer. Siehe [Datenzugriff](data-access.md).
+
+### Einladungen
+
+**Einladung senden**, **Einladen** und **Speichern und einladen** senden der Person nach einer Bestätigung eine Einladung per E-Mail.
+
+In einem Arbeitsbereich ohne Microsoft-Anmeldung enthält die Einladung einen Link zum Festlegen eines Passworts. Der Link ist 7 Tage gültig; eine neue Einladung sendet einen neuen Link.
+
+In einem Arbeitsbereich, in dem [Microsoft Entra ID](#microsoft-entra-id) verbunden ist, fragt die Bestätigung außerdem, wie sich die Person anmelden wird:
+
+| Auswahl | Die Einladung |
+|--------|----------------|
+| **Mit Microsoft** (Standard) | Bittet die Person, den Arbeitsbereich zu öffnen und **Mit Microsoft anmelden** zu wählen. Sie enthält keinen Passwort-Link. Die erste Anmeldung mit Microsoft verknüpft das Konto mit ihrer Microsoft-Identität und aktiviert es. |
+| **Mit einem Passwort** | Enthält den Link zum Festlegen eines Passworts, 7 Tage gültig, wie in einem Arbeitsbereich ohne Microsoft-Anmeldung. Für Personen außerhalb Ihres Verzeichnisses, etwa Berater. |
+
+Das Konto zeigt **Eingeladen** bis zur ersten Anmeldung der Person. Ein Link zum Zurücksetzen des Passworts, gesendet über **Passwort-Zurücksetzung senden** oder von der Anmeldeseite, bleibt 1 Stunde gültig.
 
 ### Mehrfach-Rollenzuweisung
 
@@ -282,7 +297,7 @@ Wenn jemand aus Ihrem Verzeichnis entfernt wird oder sein Verzeichniskonto deakt
 
 ### Just-in-time-Anmeldung mit Microsoft
 
-Wenn Single Sign-On verbunden ist, erhält eine Person, die sich zum ersten Mal mit Microsoft anmeldet, automatisch ein KANAP-Konto. Existiert bereits ein Konto mit derselben E-Mail-Adresse, wird stattdessen dieses mit ihrer Microsoft-Identität verknüpft.
+Wenn Single Sign-On verbunden ist, erhält eine Person, die sich zum ersten Mal mit Microsoft anmeldet, automatisch ein KANAP-Konto. Existiert bereits ein Konto mit derselben E-Mail-Adresse, wird stattdessen dieses mit ihrer Microsoft-Identität verknüpft, und ein Konto mit dem Status **Eingeladen** wird aktiviert.
 
 Ein neues Konto startet mit der Systemrolle **Kontakt** und ohne Berechtigungen. Die Person sieht eine Seite mit dem Hinweis:
 

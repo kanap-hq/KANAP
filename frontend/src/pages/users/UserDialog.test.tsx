@@ -10,7 +10,12 @@ import { KanapDialogProvider } from '../../components/design';
 const t = vi.hoisted(() => (key: string, options?: Record<string, unknown>) => (
   options ? `${key}|${JSON.stringify(options)}` : key
 ));
-const auth = vi.hoisted(() => ({ admin: true, limited: false, profileId: 'someone-else' }));
+const auth = vi.hoisted(() => ({
+  admin: true,
+  limited: false,
+  profileId: 'someone-else',
+  tenantAuth: null as null | { sso_provider: string; sso_enabled: boolean },
+}));
 const get = vi.hoisted(() => vi.fn());
 const post = vi.hoisted(() => vi.fn());
 const put = vi.hoisted(() => vi.fn());
@@ -26,7 +31,7 @@ vi.mock('../../auth/AuthContext', () => ({
       resource === 'users' && level === 'admin' ? auth.admin : true
     ),
     profile: { id: auth.profileId },
-    tenantAuth: null,
+    tenantAuth: auth.tenantAuth,
     dataAccess: { mode: auth.limited ? 'limited' : 'all', nodes: [] },
   }),
 }));
@@ -134,6 +139,7 @@ beforeEach(() => {
   auth.admin = true;
   auth.limited = false;
   auth.profileId = 'someone-else';
+  auth.tenantAuth = null;
   get.mockImplementation(async (url: string) => {
     if (url === '/users/u-1') return { data: USER };
     if (url === '/users/u-1/roles') return { data: { items: [ROLE] } };
@@ -384,5 +390,34 @@ describe('UserDialog save and invite', () => {
     const urls = post.mock.calls.map((call: unknown[]) => call[0]);
     expect(urls.indexOf('/users')).toBeGreaterThanOrEqual(0);
     expect(urls.indexOf('/users')).toBeLessThan(urls.indexOf('/users/new-1/invite'));
+  });
+
+  it('asks no sign-in choice in a workspace without Microsoft sign-in', async () => {
+    const dialog = await askToInvite();
+    expect(within(dialog).queryByRole('radiogroup')).not.toBeInTheDocument();
+  });
+
+  it('invites with Microsoft by default in a workspace with Microsoft sign-in', async () => {
+    auth.tenantAuth = { sso_provider: 'entra', sso_enabled: true };
+    post.mockImplementation(async (url: string) => (
+      url === '/users' ? { data: { id: 'new-1' } } : { data: {} }
+    ));
+    const dialog = await askToInvite();
+    const choice = within(dialog).getByRole('radiogroup', { name: 'users.invite.signIn' });
+    expect(within(choice).getByRole('radio', { name: 'users.invite.withMicrosoft' })).toBeChecked();
+    expect(within(choice).getByRole('radio', { name: 'users.invite.withPassword' })).not.toBeChecked();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'users.actions.sendInvite' }));
+    await waitFor(() => expect(post).toHaveBeenCalledWith('/users/new-1/invite', { sign_in: 'microsoft' }));
+  });
+
+  it('invites with a password link when the administrator chooses it', async () => {
+    auth.tenantAuth = { sso_provider: 'entra', sso_enabled: true };
+    post.mockImplementation(async (url: string) => (
+      url === '/users' ? { data: { id: 'new-1' } } : { data: {} }
+    ));
+    const dialog = await askToInvite();
+    fireEvent.click(within(dialog).getByRole('radio', { name: 'users.invite.withPassword' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'users.actions.sendInvite' }));
+    await waitFor(() => expect(post).toHaveBeenCalledWith('/users/new-1/invite', { sign_in: 'password' }));
   });
 });

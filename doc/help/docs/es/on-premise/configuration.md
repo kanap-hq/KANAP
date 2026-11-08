@@ -513,6 +513,7 @@ Con `IMPORT_XLSX=false`, los botones de importación muestran **Importar CSV**, 
 | `JWT_ACCESS_TOKEN_TTL` | Duración del token de acceso: un número seguido de `s`, `m`, `h` o `d`. Cualquier otro formato conserva el valor predeterminado (15 minutos), y la API nombra el valor en una advertencia `[CONFIG]` al arrancar. | `15m` |
 | `JWT_REFRESH_TOKEN_TTL` | Duración del token de renovación, mismo formato. Cualquier otro formato conserva el valor predeterminado (4 horas), y la API nombra el valor en una advertencia `[CONFIG]` al arrancar. | `4h` |
 | `PASSWORD_RESET_TTL` | Duración de un enlace de restablecimiento de contraseña: un número de segundos o una duración como `30m` o `2h`. Cualquier otro valor dura 1 hora, y la API lo nombra en una advertencia `[CONFIG]` al arrancar. | `1h` |
+| `INVITE_LINK_TTL` | Duración del enlace para definir una contraseña en un correo de invitación: un número de segundos o una duración como `72h` o `7d`. Cualquier otro valor dura 7 días, y la API lo nombra en una advertencia `[CONFIG]` al arrancar. | `7d` |
 | `LOG_LEVEL` | `debug` o `verbose` añade al registro los detalles de cada ejecución de trabajo programado. Cualquier otro valor no cambia nada. | *sin definir* |
 | `INTEGRATED_DOCS_AUTO_ROLLOUT` | Repara, al arrancar, los documentos vinculados a solicitudes y proyectos. Desactivado on-premise salvo que lo defina: `if-needed` solo ejecuta la reparación cuando los recuentos difieren, `always` en cada arranque. | *desactivado* |
 | `APP_URL` | Solo multi-tenant (nube). **No se necesita on-premise**: se usa `APP_BASE_URL`. | *sin definir* |
@@ -641,6 +642,7 @@ S3_FORCE_PATH_STYLE=false
 # JWT_ACCESS_TOKEN_TTL=15m
 # JWT_REFRESH_TOKEN_TTL=4h
 # PASSWORD_RESET_TTL=1h
+# INVITE_LINK_TTL=7d
 # RATE_LIMIT_ENABLED=true
 
 # CAPACIDAD (opcional - ver "Capacidad y rendimiento")
