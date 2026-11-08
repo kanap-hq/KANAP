@@ -71,3 +71,26 @@ describe('ResetPasswordPage errors', () => {
     expect(alert).toHaveTextContent('auth:reset.serverError');
   });
 });
+
+describe('ResetPasswordPage titles', () => {
+  const renderAt = (hash: string) => render(
+    <MemoryRouter initialEntries={[{ pathname: '/link', hash }]}>
+      <Routes>
+        <Route path="/link" element={<ResetPasswordPage />} />
+      </Routes>
+    </MemoryRouter>,
+  );
+
+  it('sets the first password of a new trial workspace, from its activation', () => {
+    renderAt('#token=link-token&first=1');
+    expect(screen.getByText('auth:invite.title')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'auth:invite.submit' })).toBeInTheDocument();
+    expect(screen.queryByText('auth:reset.title')).not.toBeInTheDocument();
+  });
+
+  it('resets a password from a reset link', () => {
+    renderAt('#token=link-token');
+    expect(screen.getByText('auth:reset.title')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'auth:reset.submit' })).toBeInTheDocument();
+  });
+});

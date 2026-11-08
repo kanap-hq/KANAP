@@ -1611,7 +1611,7 @@
         },
         "own_company": {
           "title": "Su empresa",
-          "hint": "Se creó una primera empresa con el entorno. Revise los datos y complete la información, en particular la moneda y el plan de cuentas. Si es necesario, añada el suyo desde la vista «Planes de cuentas». Cree otras empresas si lo necesita."
+          "hint": "Se creó una primera empresa con el espacio de trabajo. Revise los datos y complete la información, en particular la moneda y el plan de cuentas. Si es necesario, añada el suyo desde la vista «Planes de cuentas». Cree otras empresas si lo necesita."
         },
         "own_budget_lines": {
           "title": "Sus líneas",
