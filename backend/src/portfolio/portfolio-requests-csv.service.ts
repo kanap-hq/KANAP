@@ -178,8 +178,8 @@ export class PortfolioRequestsCsvService {
       .createQueryBuilder('request')
       .where('request.tenant_id = :tenantId', { tenantId });
 
-    // Filter by status if specified
-    if (status) {
+    // Filter by status if specified (`all`, sent by the list's export, means every status)
+    if (status && status !== 'all') {
       queryBuilder = queryBuilder.andWhere('request.status = :status', { status });
     }
 

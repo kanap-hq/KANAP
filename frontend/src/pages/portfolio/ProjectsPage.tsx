@@ -474,8 +474,11 @@ export default function ProjectsPage() {
   ], [clickableCellRenderer, getProjectFilterValues, locale, originLabelMap, renderStatusCell, statusLabelMap, t]);
 
   const extraParams = useMemo(() => {
+    // The grid's status filter alone decides: without `status: 'all'` the server would still hide
+    // its default status once the person clears that filter.
     const params: Record<string, any> = {
       include: 'company,classification',
+      status: 'all',
     };
     if (projectScope === 'my' && profile?.id) {
       params.involvedUserId = profile.id;

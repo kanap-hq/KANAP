@@ -371,6 +371,17 @@ async function run() {
         compare(`projects ${sort}`, all.items.map((item: any) => item.id), idsOf(file.content));
       }
 
+      // The status filter cleared ("All"): the screen sends `status: 'all'`, which the export also hands to
+      // the CSV service; the done row is in the list and in the file. Without it, the server hides it.
+      for (const status of ['all', undefined]) {
+        const query = { ...screenQuery({}, 'alpha', 'name:ASC'), ...(status ? { status } : {}) };
+        const all = await projectsList.list({ ...query, page: 1, limit: 100 }, opts);
+        assert.equal(all.items.some((item: any) => item.status === 'done'), !!status, `projects (status ${status}): the done row`);
+        const { ids } = await projectsList.listIds({ ...dialogQuery(query), __export: true }, opts);
+        const file = await projectsCsv.export({ ...opts, language: 'fr', fields: ['id'], ids, status });
+        compare(`projects, status ${status ?? 'default'}`, all.items.map((item: any) => item.id), idsOf(file.content));
+      }
+
       const requestsService = Object.assign(Object.create(PortfolioRequestsService.prototype), { repo: manager.getRepository(PortfolioRequest) }) as PortfolioRequestsService;
       const requestsCsv = new PortfolioRequestsCsvService(manager.getRepository(PortfolioRequest), engine, importer, null as any);
       for (const sort of ['name:ASC', 'created_at:DESC']) {
@@ -379,6 +390,17 @@ async function run() {
         const { ids } = await requestsService.listIds({ ...dialogQuery(query), __export: true }, opts);
         const file = await requestsCsv.export({ ...opts, language: 'fr', fields: ['id'], ids });
         compare(`requests ${sort}`, all.items.map((item: any) => item.id), idsOf(file.content));
+      }
+
+      // The status filter cleared ("All"): the screen sends `status: 'all'`, which the export also hands to
+      // the CSV service; the converted row is in the list and in the file. Without it, the server hides it.
+      for (const status of ['all', undefined]) {
+        const query = { ...screenQuery({}, 'alpha', 'name:ASC'), ...(status ? { status } : {}) };
+        const all = await requestsService.list({ ...query, page: 1, limit: 100 }, opts);
+        assert.equal(all.items.some((item: any) => item.status === 'converted'), !!status, `requests (status ${status}): the converted row`);
+        const { ids } = await requestsService.listIds({ ...dialogQuery(query), __export: true }, opts);
+        const file = await requestsCsv.export({ ...opts, language: 'fr', fields: ['id'], ids, status });
+        compare(`requests, status ${status ?? 'default'}`, all.items.map((item: any) => item.id), idsOf(file.content));
       }
 
       const tasksService = new TasksService(dataSource);
