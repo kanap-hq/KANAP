@@ -165,10 +165,11 @@ describe('Request creation at the title', () => {
     expect(mocked.patch).not.toHaveBeenCalled();
   });
 
-  it('does nothing on Ctrl+S while the title is empty', async () => {
+  it('takes Ctrl+S as Create: the empty title is asked for, nothing created', async () => {
     renderPage(['/portfolio/requests/new/summary']);
     const input = await screen.findByRole('textbox', { name: TITLE });
     fireEvent.keyDown(input, { key: 's', ctrlKey: true });
+    expect(await screen.findByText('common:creation.titleRequired')).toBeTruthy();
     expect(mocked.post).not.toHaveBeenCalled();
   });
 

@@ -393,6 +393,15 @@ describe('PortfolioDetailWorkspaceShell Ctrl+S', () => {
 });
 
 
+describe('PortfolioDetailWorkspaceShell save shortcut', () => {
+  it('keeps the browser from saving the page on a record with no save of its own', () => {
+    renderShell({ children: <input aria-label="field" /> });
+    const press = new KeyboardEvent('keydown', { key: 's', ctrlKey: true, bubbles: true, cancelable: true });
+    fireEvent(screen.getByLabelText('field'), press);
+    expect(press.defaultPrevented).toBe(true);
+  });
+});
+
 describe('PortfolioDetailWorkspaceShell history', () => {
   it('draws the History button only when the page gives a history', () => {
     const { unmount } = renderShell({ history: { table: 'accounts', recordId: 'acc-1' } });

@@ -949,7 +949,7 @@ export default function ProjectWorkspacePage() {
           previousLabel: t('portfolio:actions.previous'),
           nextLabel: t('portfolio:actions.next'),
         } : undefined}
-        onSaveShortcut={isCreate ? ignoreDraftChange : hasUnsavedChanges ? () => { void handleSave(); } : undefined}
+        onSaveShortcut={hasUnsavedChanges ? () => { void handleSave(); } : undefined}
         metadata={isCreate ? (
           // The metadata of the project to be, dimmed like the rest, so the page does not move when it is created.
           <CreationPreview sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 'inherit' }}>

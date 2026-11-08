@@ -1382,10 +1382,7 @@ export default function TaskWorkspacePage() {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 's') return;
       event.preventDefault();
-
-      // The new page has its title only: Ctrl+S sends nothing.
-      if (isCreate) return;
-
+      // A task being created takes it as Create (`CreationActions`).
       if (!canManageCurrentTask) return;
 
       // Cancel pending description debounce — handleSave includes description
@@ -1400,7 +1397,7 @@ export default function TaskWorkspacePage() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [canManageCurrentTask, isCreate, dirty, saving, handleSave]);
+  }, [canManageCurrentTask, dirty, saving, handleSave]);
 
   // Keyboard shortcuts: J/K/←/→ for navigation, Escape to close
   React.useEffect(() => {

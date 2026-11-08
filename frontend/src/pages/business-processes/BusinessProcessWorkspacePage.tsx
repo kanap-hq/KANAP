@@ -318,8 +318,6 @@ export default function BusinessProcessWorkspacePage() {
           previousLabel: t('shared.labels.prev'),
           nextLabel: t('shared.labels.next'),
         } : undefined}
-        // Every field saves itself; on the new page the title is the only one.
-        onSaveShortcut={ignore}
         metadata={isCreate ? (
           <CreationPreview sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 'inherit' }}>
             {statusItem}

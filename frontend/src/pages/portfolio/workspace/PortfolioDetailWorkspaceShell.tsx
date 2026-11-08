@@ -57,6 +57,7 @@ type PortfolioDetailWorkspaceShellProps = {
   /** The person may read the record but not change it: a discreet "Read only" mention next to the title. */
   readOnly?: boolean;
   onCopyReference?: () => void;
+  /** Ctrl+S (Cmd+S) on a saved record. A record being created takes it as Create (`CreationActions`). */
   onSaveShortcut?: () => void;
   onTabChange: (nextTab: string) => void;
   onTitleSave?: (nextTitle: string) => void;
@@ -291,11 +292,10 @@ export default function PortfolioDetailWorkspaceShell({
 
   React.useEffect(() => {
     const handler = (event: KeyboardEvent) => {
+      // The browser's own save of the page never applies here.
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
-        if (onSaveShortcut) {
-          event.preventDefault();
-          onSaveShortcut();
-        }
+        event.preventDefault();
+        onSaveShortcut?.();
         return;
       }
 
