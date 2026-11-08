@@ -32,12 +32,15 @@ export type ContractRenewal = {
 
 export const renewalQueryKey = (contractId: string) => ['contract-renewal', contractId] as const;
 
-/** The renewal decision of a contract, shared by the box, the timeline and the renewal field's confirmation. */
+/**
+ * The renewal decision of a contract, shared by the box, the timeline and the renewal field's
+ * confirmation. Nothing is asked before the contract exists (no id while it is being created).
+ */
 export function useContractRenewal(contractId: string, enabled = true) {
   return useQuery({
     queryKey: renewalQueryKey(contractId),
     queryFn: async () => (await api.get<ContractRenewal>(`/contracts/${contractId}/renewal`)).data,
-    enabled,
+    enabled: enabled && contractId !== '',
   });
 }
 

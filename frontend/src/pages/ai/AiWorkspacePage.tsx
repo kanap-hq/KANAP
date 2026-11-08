@@ -386,6 +386,8 @@ export default function AiWorkspacePage() {
             onSelect={handleSelect}
             onNew={handleNew}
             onDelete={handleDelete}
+            // Before the acceptance the server refuses the list: nothing to ask for yet.
+            enabled={!!aiCapabilities.data && !awaitsConsent}
           />
         </Box>
       )}

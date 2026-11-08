@@ -24,6 +24,8 @@ type ChatConversationListProps = {
   onSelect: (id: string) => void;
   onNew: () => void;
   onDelete: (id: string) => void;
+  /** False while the person cannot read conversations yet (Plaid waits for its acceptance). */
+  enabled?: boolean;
 };
 
 type DateBucket = 'today' | 'yesterday' | 'lastWeek' | 'older';
@@ -246,6 +248,7 @@ export default function ChatConversationList({
   onSelect,
   onNew,
   onDelete,
+  enabled = true,
 }: ChatConversationListProps) {
   const { t } = useTranslation(['ai']);
   const queryClient = useQueryClient();
@@ -254,6 +257,7 @@ export default function ChatConversationList({
     queryKey: ['ai-conversations'],
     queryFn: () => aiConversationsApi.list({ limit: 100 }),
     staleTime: 10_000,
+    enabled,
   });
 
   const renameMutation = useMutation({
