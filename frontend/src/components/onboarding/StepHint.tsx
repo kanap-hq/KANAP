@@ -91,7 +91,10 @@ export default function StepHint() {
   const key = new URLSearchParams(location.search).get(STEP_PARAM);
   const step = key && state ? state.steps.find((candidate) => candidate.key === key) ?? null : null;
   const screen = step && state ? stepScreen(step.key, state.angle) : null;
-  const { element, rect } = useTarget(screen?.target ?? null);
+  const target = useTarget(screen?.target ?? null);
+  // Between a screen change and the next look-up, the element may have left the page already.
+  const element = target.element?.isConnected ? target.element : null;
+  const rect = element ? target.rect : null;
   const popperRef = React.useRef<PopperInstance | null>(null);
   // The bubble follows its element when the page moves it without a scroll or a resize.
   React.useEffect(() => { void popperRef.current?.update(); }, [rect]);
