@@ -1304,6 +1304,93 @@ const PAGES = {
     waitFor: 'main',
     prepare: (page) => sleep(1500),
   },
+  // Release 26.11.1: the question at the first opening of a trial workspace. Run it on a trial
+  // tenant with sample data in English (guides-en on the local stack) whose `tenant_onboarding`
+  // row was removed, with that tenant's administrator.
+  'trial-first-opening-2026-11-08': {
+    frame: 1440,
+    path: '/',
+    waitFor: '[role="dialog"]',
+    prepare: (page) => sleep(1500),
+  },
+  // Release 26.11.1: the second question of the same dialog, once the budget is chosen.
+  'trial-first-opening-start-2026-11-08': {
+    frame: 1440,
+    path: '/',
+    waitFor: '[role="dialog"]',
+    async prepare(page) {
+      const [budget] = await page.$$('xpath/.//*[@role="dialog"]//button[contains(normalize-space(.), "The IT budget")]');
+      await budget.click();
+      await sleep(2000);
+    },
+  },
+  // Release 26.11.1: the home page of a trial on the budget path with sample data (same tenant,
+  // angle budget and mode example).
+  'trial-first-steps-2026-11-08': {
+    frame: 1440,
+    path: '/',
+    waitFor: 'main',
+    prepare: waitForWidgets,
+  },
+  // Release 26.11.1: an application created at its title, still being created (Create and
+  // Cancel in the header). Leaves the application in the workspace: cancel it afterwards.
+  'create-at-title-2026-11-08': {
+    frame: 1440,
+    path: '/it/applications/new/overview',
+    waitFor: 'main',
+    async prepare(page) {
+      await sleep(2500);
+      await page.keyboard.type('Cave Climate Monitoring');
+      await page.keyboard.press('Enter');
+      await page.waitForFunction(() => !location.pathname.includes('/new/'), { timeout: 20000 }).catch(() => console.warn('still on /new'));
+      await sleep(2500);
+    },
+  },
+  // Release 26.11.1: Plaid maps an attached workbook onto the applications import
+  // (scripts/fixtures/application-inventory.xlsx, six applications in a customer's own columns).
+  'plaid-import-mapping-2026-11-08': {
+    frame: 1920,
+    path: '/ai',
+    waitFor: 'main',
+    async prepare(page) {
+      // A trial workspace asks once for the consent to the included model's provider.
+      await page.waitForFunction(() => document.querySelector('main textarea') || /I agree/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 });
+      const [consent] = await page.$$('xpath/.//main//label[contains(., "I agree")]//input[@type="checkbox"]');
+      if (consent) await consent.click();
+      await page.waitForSelector('textarea', { timeout: 30000 });
+      const input = await page.$('input[type="file"]');
+      await input.uploadFile(resolve('scripts/fixtures/application-inventory.xlsx'));
+      await page.waitForFunction(() => /application-inventory/.test(document.querySelector('main')?.innerText || ''), { timeout: 20000 });
+      await askPlaid(page, 'Import the applications of this workbook into KANAP.', () => /Approve/i.test(document.querySelector('main')?.innerText || ''));
+    },
+  },
+  // Release 26.11.1: the same card once approved, with what the import created. Run it right
+  // after plaid-import-mapping: it opens the conversation of that shot and approves its card.
+  'plaid-import-result-2026-11-08': {
+    frame: 1920,
+    path: '/ai',
+    waitFor: 'main',
+    async prepare(page) {
+      const title = 'Import the applications of this workbook into KANAP.';
+      await page.waitForSelector('textarea', { timeout: 30000 });
+      // The conversation list is open on a wide window and lists the conversation once loaded.
+      await page.waitForFunction((t) => document.body.innerText.includes(t), { timeout: 15000 }, title);
+      const [conversation] = await page.$$(`xpath/.//*[normalize-space(text())="${title}"]`);
+      await conversation.click();
+      await page.waitForFunction(() => [...document.querySelectorAll('main button')].some((b) => b.innerText.trim() === 'Approve'), { timeout: 30000 });
+      const [approve] = await page.$$('xpath/.//main//button[normalize-space(.)="Approve"]');
+      await approve.click();
+      await page.waitForFunction(() => !/Pending/.test(document.querySelector('main')?.innerText || '') && /created/i.test(document.querySelector('main')?.innerText || ''), { timeout: 120000 }).catch(() => console.warn('import result not seen'));
+      await sleep(2000);
+    },
+  },
+  // Release 26.11.1: the business process list as a tree with its ISO 9001 type (fromage fixture).
+  'business-processes-tree-2026-11-08': {
+    frame: 1440,
+    path: '/master-data/business-processes',
+    waitFor: '.ag-row',
+    prepare: (page) => sleep(1500),
+  },
 };
 PAGES['chargeback-company-2026-10-13'] = PAGES['chargeback-company'];
 
@@ -1351,22 +1438,23 @@ try {
   }
   await page.setViewport({ width: WIDTH, height: HEIGHT, deviceScaleFactor: SCALE });
 
-  // The profile language wins over localStorage: with --lang, rewrite it in the
-  // /auth/me answer for this browser only (the account itself is untouched).
-  if (LANG) {
-    await page.setRequestInterception(true);
-    page.on('request', async (req) => {
-      if (!/\/api\/auth\/me(\?|$)/.test(req.url()) || req.method() !== 'GET') return req.continue();
-      try {
-        const res = await fetch(req.url(), { headers: req.headers() });
-        const body = await res.json();
-        if (body?.profile) body.profile.locale = LANG;
-        await req.respond({ status: res.status, contentType: 'application/json', body: JSON.stringify(body) });
-      } catch {
-        await req.continue();
-      }
-    });
-  }
+  await page.setRequestInterception(true);
+  page.on('request', async (req) => {
+    // The dev stack's top bar names the build it runs (DevBuildIndicator): without its file it
+    // shows nothing.
+    if (/\/dev-build\.json(\?|$)/.test(req.url())) return req.respond({ status: 404, contentType: 'text/plain', body: '' });
+    // The profile language wins over localStorage: with --lang, rewrite it in the
+    // /auth/me answer for this browser only (the account itself is untouched).
+    if (!LANG || !/\/api\/auth\/me(\?|$)/.test(req.url()) || req.method() !== 'GET') return req.continue();
+    try {
+      const res = await fetch(req.url(), { headers: req.headers() });
+      const body = await res.json();
+      if (body?.profile) body.profile.locale = LANG;
+      await req.respond({ status: res.status, contentType: 'application/json', body: JSON.stringify(body) });
+    } catch {
+      await req.continue();
+    }
+  });
 
   if (has('inspect-fixed')) {
     await page.goto(`${BASE}/login`, { waitUntil: 'networkidle0', timeout: 30000 });
