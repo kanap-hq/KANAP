@@ -10,17 +10,16 @@ import {
   buildTrialFollowUpEmail,
   buildTrialThanksEmail,
   buildTrialWelcomeEmail,
-  frenchSpacing,
 } from '../trial-mail-templates';
-import { getEmailStrings } from '../../../i18n/email-i18n';
+import { frenchSpacing, getEmailStrings } from '../../../i18n/email-i18n';
 import { parseTrialMailLinkToken, sameLinkToken, trialMailLinkToken, trialMailLinkUrl } from '../trial-mail-links';
 
 const escapeForHtml = (text: string) => text.replace(/&/g, '&amp;').replace(/'/g, '&#039;');
 
 // The trial e-mails (`doc/trial-mails.md`) without a database:
 // - the schedule: each mail at its time, never one already sent, never a missed one late, nothing
-//   after the subscription but the thank-you, nothing after the unsubscription, no J+12 or notice
-//   when no deletion is planned;
+//   after the subscription but the thank-you, nothing after the unsubscription, no J+5 once a
+//   discovery call is booked, no J+12 or notice when no deletion is planned;
 // - the templates in the four languages: every placeholder filled, the variants, one button at
 //   most (none on J+5), the unsubscribe footer except on the thank-you, French typography;
 // - the link tokens: their shape, the constant-time comparison with the stored secret, the addresses.
@@ -40,6 +39,7 @@ function facts(over: Partial<TrialMailFacts> = {}): TrialMailFacts {
     firstLoginAt: null,
     sent: new Set<TrialMailMilestone>(),
     unsubscribed: false,
+    callBooked: false,
     ...over,
   };
 }
@@ -76,6 +76,13 @@ function testEachMailAtItsTimeAndNeverLate() {
   assert.equal(dueTrialMail(facts(kept), at(15)), null);
 }
 
+function testNoFollowUpOnceACallIsBooked() {
+  const booked = { choiceMade: true, callBooked: true, sent: new Set<TrialMailMilestone>(['j0']) };
+  assert.equal(dueTrialMail(facts(booked), at(5)), null, 'a booked call, to come or past: no J+5');
+  assert.equal(dueTrialMail(facts(booked), at(12)), 'j12', 'the rest of the sequence goes on');
+  assert.equal(dueTrialMail(facts({ ...booked, callBooked: false }), at(5)), 'j5');
+}
+
 function testSubscriptionAndUnsubscription() {
   assert.equal(dueTrialMail(facts({ subscription: 'subscribed', choiceMade: true }), at(6)), 'thanks');
   assert.equal(dueTrialMail(facts({ subscription: 'subscribed', sent: new Set(['thanks']) }), at(20)), null);
@@ -96,9 +103,8 @@ function allMails(locale: string) {
     j0Angle: buildTrialWelcomeEmail({ ...common, angle: 'cartography', mode: 'own_data', call: CALL, unsubscribeUrl: UNSUBSCRIBE }),
     j0None: buildTrialWelcomeEmail({ ...common, angle: null, mode: null, call: CALL, unsubscribeUrl: UNSUBSCRIBE }),
     j0NoCall: buildTrialWelcomeEmail({ ...common, angle: 'budget', mode: 'example', call: null, unsubscribeUrl: UNSUBSCRIBE }),
-    j5Upcoming: buildTrialFollowUpEmail({ ...common, timing: 'upcoming', callDate: new Date('2026-11-12T15:00:00Z'), mode: null, call: CALL, unsubscribeUrl: UNSUBSCRIBE }),
-    j5Past: buildTrialFollowUpEmail({ ...common, timing: 'past', callDate: new Date('2026-11-04T09:00:00Z'), mode: null, call: CALL, unsubscribeUrl: UNSUBSCRIBE }),
-    j5None: buildTrialFollowUpEmail({ ...common, timing: 'none', callDate: null, mode: 'example', call: CALL, unsubscribeUrl: UNSUBSCRIBE }),
+    j5: buildTrialFollowUpEmail({ ...common, mode: 'example', call: CALL, unsubscribeUrl: UNSUBSCRIBE }),
+    j5NoCall: buildTrialFollowUpEmail({ ...common, mode: null, call: null, unsubscribeUrl: UNSUBSCRIBE }),
     j12: buildTrialEndingEmail({ ...common, trialEnd: new Date('2026-11-16T10:00:00Z'), marketingUrl: 'https://www.kanap.test', unsubscribeUrl: UNSUBSCRIBE }),
     ended: buildTrialEndedEmail({ ...common, deletionDate: new Date('2026-12-16T10:00:00Z'), unsubscribeUrl: UNSUBSCRIBE }),
     thanks: buildTrialThanksEmail(common),
@@ -133,18 +139,19 @@ function testVariants() {
     assert.ok(!mails.j0NoCall.text.includes(CALL.url));
     // The chosen path's guide in its mode, then the two others.
     assert.ok(mails.j0Angle.text.includes('/first-steps/landscape-own-data/'), `${locale}: guide of the path`);
-    // Every path link reads as a name, the chosen guide by its title.
-    const title = getEmailStrings(locale).trialMails.guideTitles.cartography;
-    assert.ok(mails.j0Angle.html.includes(`>${escapeForHtml(locale === 'fr' ? frenchSpacing(title) : title)}</a>`), `${locale}: guide link by its title`);
+    // Every path link reads as words: the chosen guide is "its detailed guide".
+    const guide = getEmailStrings(locale).trialMails.j0.guide;
+    assert.ok(mails.j0Angle.html.includes(`>${escapeForHtml(guide)}</a>`), `${locale}: guide link by its words`);
     assert.ok(!/>https?:\/\/doc\.kanap\.net/.test(mails.j0Angle.html) && !/>doc\.kanap\.net/.test(mails.j0Angle.html), `${locale}: no address as link text`);
     assert.ok(mails.j0Angle.text.includes('/first-steps/budget-own-data/') && mails.j0Angle.text.includes('/first-steps/portfolio-own-data/'));
     assert.ok(mails.j0None.text.includes('/first-steps/budget-example/') && mails.j0None.text.includes('/first-steps/landscape-example/'));
-    for (const name of ['j5Upcoming', 'j5Past', 'j5None'] as const) {
+    for (const name of ['j5', 'j5NoCall'] as const) {
       assert.equal(buttons(mails[name].html), 0, `${locale} ${name}: a personal note has no button`);
     }
-    assert.ok(mails.j5None.text.includes(CALL.url), `${locale}: J+5 without a call offers one`);
-    assert.ok(!mails.j5Upcoming.text.includes(CALL.url) && !mails.j5Past.text.includes(CALL.url));
-    assert.notEqual(mails.j5Upcoming.subject, mails.j5Past.subject);
+    // The booking page on a line of its own, read as its short address.
+    assert.ok(mails.j5.text.includes(`\n${CALL.url}`), `${locale}: J+5 offers the call on its own line`);
+    assert.ok(mails.j5.html.includes(`>${CALL.display}</a>`), `${locale}: the call link reads as its address`);
+    assert.ok(!mails.j5NoCall.text.includes(CALL.url) && !mails.j5NoCall.html.includes(CALL.url));
     assert.ok(mails.j12.text.includes(`${APP}/admin/billing`) && mails.j12.text.includes('/on-premise/installation/'));
     assert.ok(mails.ended.text.includes('2026'), `${locale}: the deletion date`);
     assert.ok(mails.thanks.text.includes('support@kanap.net'));
@@ -152,7 +159,6 @@ function testVariants() {
   const fr = allMails('fr');
   assert.ok(fr.j12.text.includes('249 €') && fr.j12.text.includes('2 490 €'), 'French prices');
   assert.ok(fr.ended.text.includes('16 décembre 2026'));
-  assert.ok(fr.j5Upcoming.text.includes('12 novembre 2026'));
   assert.ok(allMails('en').j12.text.includes('€2,490'));
   assert.ok(allMails('de').ended.text.includes('16. Dezember 2026'));
   assert.ok(fr.j0Angle.text.includes('/fr/first-steps/') && allMails('en').j0Angle.text.includes('doc.kanap.net/first-steps/'));
@@ -161,7 +167,7 @@ function testVariants() {
 function testFrenchTypography() {
   assert.equal(frenchSpacing('« Vos pas » : oui ; non ? si !'), '« Vos pas » : oui ; non ? si !');
   const fr = allMails('fr');
-  assert.ok(fr.j5None.subject.includes(' :') && fr.j5None.subject.endsWith(' ?'));
+  assert.ok(fr.j5.subject.includes(' :') && fr.j5.subject.endsWith(' ?'));
   assert.ok(!/ [:;?!»]/.test(fr.j0Angle.text.replace(/https?:\/\/\S+/g, '')), 'no ordinary space before French punctuation');
   // English keeps its own typography.
   assert.ok(!allMails('en').j0Angle.text.includes(' '));
@@ -188,13 +194,14 @@ function testLinkTokens() {
 function run() {
   testWelcomeAfterTheChoiceOrAnHourAfterTheFirstSignIn();
   testEachMailAtItsTimeAndNeverLate();
+  testNoFollowUpOnceACallIsBooked();
   testSubscriptionAndUnsubscription();
   testEveryMailInEveryLanguage();
   testVariants();
   testFrenchTypography();
   testLinkTokens();
   // eslint-disable-next-line no-console
-  console.log('trial-mails.spec: OK (7 cases)');
+  console.log('trial-mails.spec: OK (8 cases)');
 }
 
 run();

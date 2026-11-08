@@ -40,13 +40,13 @@ function testShareEmailDropsNullNull() {
   const before = email(beforeName);
   const after = email(afterName);
 
-  assert.match(before.subject, /null null shared Document "Roadmap" with you/);
+  assert.match(before.subject, /null null shared the document Roadmap with you/);
   assert.match(before.html, /<strong>null null<\/strong> shared the document <strong>Roadmap<\/strong> with you\./);
-  assert.match(before.text, /null null shared Document "Roadmap" with you\./);
+  assert.match(before.text, /null null shared the document “Roadmap” with you\./);
 
-  assert.equal(after.subject, 'Someone shared Document "Roadmap" with you');
+  assert.equal(after.subject, 'Someone shared the document Roadmap with you');
   assert.match(after.html, /<strong>Someone<\/strong> shared the document <strong>Roadmap<\/strong> with you\./);
-  assert.match(after.text, /Someone shared Document "Roadmap" with you\./);
+  assert.match(after.text, /Someone shared the document “Roadmap” with you\./);
   assert.equal(after.html.includes('null null'), false);
   assert.equal(after.text.includes('null null'), false);
 }

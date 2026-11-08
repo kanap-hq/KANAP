@@ -40,7 +40,7 @@ The page has three cards: **Workspace name**, **Logo** and **Primary colors**. T
 - **App header and sign-in page**: the name shows when there is no logo.
 - **Browser tab**: the tab title is the name. A project, request, task or budget line page shows the record first, for example `PRJ-3 New ERP | Acme`.
 - **Installed app**: when someone installs KANAP on a phone or a desktop, the app takes the name.
-- **E-mails**: the header shows the name when there is no logo. The subjects of the password reset, invitation, weekly review and workspace reset e-mails carry the name, for example "Reset your Acme password". The weekly review button reads "Open Acme". In the cloud, the sender name reads "Acme via KANAP". On-premise, the sender is the one set in the installation (`SMTP_FROM`).
+- **E-mails**: the header shows the name when there is no logo. The subjects of the password reset, invitation, weekly review and workspace reset e-mails carry the name, for example "Reset your password on Acme". The weekly review button reads "Open Acme". In the cloud, the sender name reads "Acme via KANAP". On-premise, the sender is the one set in the installation (`SMTP_FROM`).
 - **AI tools**: when an AI tool (Claude, ChatGPT and others) connects through the MCP server, the authorization page shows the name, and the tool shows it as the server name.
 
 With no name set, or with the on-premise default name "My Organization", these places show "KANAP".

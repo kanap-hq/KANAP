@@ -26,7 +26,7 @@ import { useRequestPipeline } from '../../common/request-pipeline';
 import { createRequestTenancyMiddleware } from '../../common/tenancy/request-tenancy.middleware';
 import { discoveryCallConfig } from '../discovery-call.config';
 import { DiscoveryCallController } from '../discovery-call.controller';
-import { DiscoveryCallService, discoveryCallTiming } from '../discovery-call.service';
+import { DiscoveryCallService, discoveryCallBooked } from '../discovery-call.service';
 
 // The discovery call (`doc/discovery-call.md`) over HTTP: the real controller and service on the
 // spec database, behind the tenancy middleware, the body parsers that keep the raw body and the
@@ -153,8 +153,7 @@ async function testWebhookBookings() {
         ['2030-01-10T09:30:00.000Z', 'booked', 'calcom', 'uid-1'],
         'the booking is the workspace call, matched case-insensitively',
       );
-      assert.equal(discoveryCallTiming(row, new Date('2030-01-01')), 'upcoming');
-      assert.equal(discoveryCallTiming(row, new Date('2030-02-01')), 'past');
+      assert.equal(discoveryCallBooked(row), true);
       assert.equal(await readCall(other!.tenantId), null, 'the other workspace has no call');
 
       const moved = await webhook(served, booking('BOOKING_RESCHEDULED', 'uid-2', t!.ownerEmail, '2030-01-12T14:00:00Z', { rescheduleUid: 'uid-1' }));
@@ -170,7 +169,7 @@ async function testWebhookBookings() {
       assert.equal(cancelled.body.outcome, 'applied');
       row = await readCall(t!.tenantId);
       assert.deepEqual([row?.status, row?.scheduled_at], ['cancelled', '2030-01-12T14:00:00.000Z'], 'the cancellation keeps the date');
-      assert.equal(discoveryCallTiming(row, new Date('2030-01-01')), 'none');
+      assert.equal(discoveryCallBooked(row), false, 'a cancelled call counts as none');
 
       const audit = await auditActions(t!.tenantId);
       assert.deepEqual(audit.map((entry: any) => [entry.action, entry.source, entry.user_id]), [

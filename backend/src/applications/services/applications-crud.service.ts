@@ -147,7 +147,7 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     const app = await mg.getRepository(Application).findOne({ where: { id: appId } });
     if (!app) throw new NotFoundException('Application not found');
 
-    const senderRows = await mg.query('SELECT first_name, last_name FROM users WHERE id = $1', [userId]);
+    const senderRows = await mg.query('SELECT first_name, last_name, email FROM users WHERE id = $1', [userId]);
     const senderName = displayName(senderRows[0], 'Someone');
 
     const recipientRows = userIds.length > 0
@@ -167,6 +167,7 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
         itemId: app.id,
         itemName: app.name,
         senderName,
+        senderEmail: senderRows[0]?.email ?? null,
         message: dto.message,
         recipients: recipientRows,
         rawEmails,

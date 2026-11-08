@@ -530,7 +530,7 @@ export class LocationsService {
     const { userIds, rawEmails } = shareRecipientsOf(dto);
     const mg = opts?.manager ?? this.repo.manager;
     const location = await this.loadLocationOrThrow(locationId, opts?.manager);
-    const senderRows = await mg.query('SELECT first_name, last_name FROM users WHERE id = $1', [userId]);
+    const senderRows = await mg.query('SELECT first_name, last_name, email FROM users WHERE id = $1', [userId]);
     const senderName = displayName(senderRows[0], 'Someone');
 
     const recipientRows = userIds.length > 0
@@ -550,6 +550,7 @@ export class LocationsService {
         itemId: location.id,
         itemName: location.name,
         senderName,
+        senderEmail: senderRows[0]?.email ?? null,
         message: dto.message,
         recipients: recipientRows,
         rawEmails,

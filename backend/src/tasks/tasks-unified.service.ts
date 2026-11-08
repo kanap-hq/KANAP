@@ -1230,7 +1230,7 @@ export class TasksUnifiedService {
     if (!task) throw new NotFoundException('Task not found');
 
     const senderRows = await manager.query(
-      'SELECT first_name, last_name FROM users WHERE id = $1',
+      'SELECT first_name, last_name, email FROM users WHERE id = $1',
       [userId],
     );
     const senderName = displayName(senderRows[0], 'Someone');
@@ -1252,6 +1252,7 @@ export class TasksUnifiedService {
         itemId: taskId,
         itemName: task.title,
         senderName,
+        senderEmail: senderRows[0]?.email ?? null,
         message: dto.message,
         recipients: recipientRows,
         rawEmails,

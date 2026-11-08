@@ -29,7 +29,7 @@ const content: TrialContent = {
       errorEmail: 'Introduce una dirección de email válida.',
       errorSlug: 'Solo letras minúsculas, números y guiones.',
       captchaLabel: 'Comprobación de seguridad',
-      privacyNote: 'Tu dirección de email sirve para activar el espacio KANAP y definir el primer administrador. También recibirás 4 mensajes de acompañamiento durante la prueba. Puedes darte de baja en cualquier momento.',
+      privacyNote: 'Tu dirección de email sirve para activar el espacio KANAP y definir el primer administrador. También recibirás hasta 4 mensajes de acompañamiento durante la prueba. Puedes darte de baja en cualquier momento.',
     },
     countryOptions: [
       { value: 'ES', label: 'España' },
@@ -58,7 +58,7 @@ const content: TrialContent = {
     lead: 'Hemos enviado un enlace de activación a la dirección proporcionada. Haz clic para terminar de crear tu espacio de trabajo.',
     whatNext: 'Qué viene ahora',
     steps: [
-      'Abre tu bandeja, asunto «Confirme su espacio de trabajo de KANAP».',
+      'Abre tu bandeja, asunto «Active su espacio de KANAP».',
       'Haz clic en el enlace. Creamos tu espacio de trabajo en segundos.',
       'Define tu contraseña admin. Inicia sesión, invita al equipo y comienza.',
     ],

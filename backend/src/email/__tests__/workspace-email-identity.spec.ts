@@ -99,7 +99,7 @@ async function testPasswordResetNamesTheOrganisation() {
   await service.drain(Date.now() + 5_000);
   assert.equal(delivered.length, 1);
   const [mail] = delivered;
-  assert.equal(mail.subject, 'Reset your Acme password');
+  assert.equal(mail.subject, 'Reset your password on Acme');
   assert.equal(mail.from, `"Acme via ${PRODUCT_NAME}" <no-reply@kanap.net>`);
   // No tenant logo: the header names the organisation, and the product logo is not attached.
   assert.match(mail.html, /<span[^>]*>Acme<\/span>/);
@@ -112,9 +112,9 @@ async function testInvitationWithTenantLogo() {
   await service.sendUserInviteEmail({ to: 'bob@acme.test', inviteUrl: 'https://acme.kanap.net/accept-invite#token=x', tenantId: TENANT, locale: 'fr' });
   await service.drain(Date.now() + 5_000);
   const [mail] = delivered;
-  assert.equal(mail.subject, 'Vous êtes invité sur Acme & Co');
-  assert.match(mail.html, /rejoindre Acme &amp; Co/);
-  assert.match(mail.text ?? '', /rejoindre Acme & Co/);
+  assert.equal(mail.subject, 'Invitation à rejoindre Acme & Co');
+  assert.match(mail.html, /rejoindre l(&#0?39;|')espace Acme &amp; Co sur/);
+  assert.match(mail.text ?? '', /rejoindre l'espace Acme & Co sur/);
   assert.match(mail.html, /<img src="cid:[^"]+" alt="Acme &amp; Co"/);
   assert.equal(mail.attachments?.length, 1, 'the tenant logo is attached');
   assert.equal(occurrences(mail.html, `Propulsé par ${PRODUCT_NAME}`), 1);
@@ -125,7 +125,7 @@ async function testWithoutTenantTheProductStays() {
   await service.sendPasswordResetEmail({ to: 'alice@acme.test', resetUrl: 'https://acme.kanap.net/reset-password#token=x', locale: 'en' });
   await service.drain(Date.now() + 5_000);
   const [mail] = delivered;
-  assert.equal(mail.subject, `Reset your ${PRODUCT_NAME} password`);
+  assert.equal(mail.subject, `Reset your password on ${PRODUCT_NAME}`);
   assert.equal(mail.from, undefined, 'the default sender');
   if (getDefaultEmailBranding().logoBuffer.length > 0) {
     assert.match(mail.html, new RegExp(`<img src="cid:[^"]+" alt="${PRODUCT_NAME}"`));
@@ -134,11 +134,12 @@ async function testWithoutTenantTheProductStays() {
 
 function testNotificationTemplates() {
   const branding: EmailBranding = { ...getDefaultEmailBranding(), organisationName: 'Acme' };
-  const weekly = buildWeeklyReviewEmail({
-    userName: 'Alice',
-    weekLabel: 'Nov 2',
+  const week = {
+    firstName: 'Alice',
+    weekStart: '2026-11-02',
+    weekEnd: '2026-11-08',
     appUrl: 'https://acme.kanap.net',
-    tasksClosed: [],
+    tasksClosed: [] as Array<{ id: string; title: string }>,
     projectsWithChanges: [],
     tasksClosedOnProjects: [],
     topTasks: [],
@@ -147,8 +148,11 @@ function testNotificationTemplates() {
     newRequests: [],
     branding,
     locale: 'en',
-  });
-  assert.equal(weekly.subject, 'Your Acme Weekly Review - Week of Nov 2');
+  };
+  assert.equal(buildWeeklyReviewEmail(week), null, 'an empty week sends nothing');
+  const weekly = buildWeeklyReviewEmail({ ...week, tasksClosed: [{ id: 't1', title: 'Renew the backup licence' }] });
+  assert.ok(weekly);
+  assert.equal(weekly.subject, 'Your week from 2 to 8 November on Acme');
   assert.match(weekly.html, />Open Acme</);
   assert.match(weekly.text, /Open Acme: https:\/\/acme\.kanap\.net/);
 
@@ -161,6 +165,7 @@ function testNotificationTemplates() {
     locale: 'de',
   });
   assert.equal(reset.subject, 'Ihr Arbeitsbereich Acme wurde zurückgesetzt');
+  assert.equal(buildWorkspaceResetEmail({ actorName: 'Alice', workspaceName: 'Acme', resetAt: new Date('2026-11-07T10:00:00Z'), workspaceUrl: 'https://acme.kanap.net', branding, locale: 'en' }).subject, 'Your Acme workspace was reset');
   const unnamed = buildWorkspaceResetEmail({
     actorName: 'Alice',
     workspaceName: 'acme',

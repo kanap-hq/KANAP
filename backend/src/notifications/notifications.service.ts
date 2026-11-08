@@ -587,7 +587,12 @@ export class NotificationsService {
   /**
    * Send notification email (fire-and-forget with error logging).
    */
-  private async sendNotification(to: string, content: EmailContent, branding: EmailBranding): Promise<void> {
+  private async sendNotification(
+    to: string,
+    content: EmailContent,
+    branding: EmailBranding,
+    replyTo?: string | null,
+  ): Promise<void> {
     const from = workspaceEmailSender(branding.organisationName);
     try {
       await this.emailService.send({
@@ -597,6 +602,7 @@ export class NotificationsService {
         text: content.text,
         attachments: content.attachments,
         ...(from ? { from } : {}),
+        ...(replyTo ? { replyTo } : {}),
       });
     } catch (error) {
       this.logger.error(`Failed to send notification to ${to}: ${error}`);
@@ -1464,6 +1470,8 @@ export class NotificationsService {
     itemId: string;
     itemName: string;
     senderName: string;
+    /** A reply to the e-mail reaches the person who shared. */
+    senderEmail?: string | null;
     message?: string;
     recipients: NotificationRecipient[];
     rawEmails?: string[];
@@ -1485,7 +1493,7 @@ export class NotificationsService {
         locale,
       });
       for (const recipient of recipients) {
-        this.sendNotification(recipient.email, content, branding);
+        this.sendNotification(recipient.email, content, branding, params.senderEmail);
       }
     }
 
@@ -1500,7 +1508,7 @@ export class NotificationsService {
         locale: 'en',
       });
       for (const email of params.rawEmails ?? []) {
-        this.sendNotification(email, content, branding);
+        this.sendNotification(email, content, branding, params.senderEmail);
       }
     }
   }
