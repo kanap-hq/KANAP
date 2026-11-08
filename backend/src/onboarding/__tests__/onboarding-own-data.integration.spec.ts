@@ -50,7 +50,8 @@ import { buildDemoData, DemoDataDouble, FakeChild } from './onboarding-test-help
 // - `own_data` on a failed load already reset goes back to `idle` with no reset; after a failed
 //   reset it resets; on a load whose API process stopped it ends `idle`;
 // - `example` loads into an idle or failed workspace for an administrator only, and a refused
-//   load still writes the choice; `own_data` on an idle workspace resets nothing; on-premise
+//   load still writes the first choice, while a switch back to `example` in a workspace that
+//   holds data answers 409 `tenant_not_empty`; `own_data` on an idle workspace resets nothing; on-premise
 //   neither acts; `example` then `own_data` resets;
 // - a load at activation still waiting for a free slot gives up once `own_data` is chosen, also
 //   when it read the state before the choice (the claim checks the banner).
@@ -438,7 +439,7 @@ async function testMemberCannotEmpty() {
 
 // 4. `example` on an idle workspace: an administrator's choice starts the load (the request's
 //    host passed on); a member's choice is written and loads nothing; a refused load (workspace
-//    not empty) still writes the choice.
+//    not empty) still writes the first choice, and refuses a switch back from `own_data`.
 async function testExample() {
   const svc = buildServices();
   const served = await serve(svc);
@@ -473,6 +474,17 @@ async function testExample() {
     assert.deepEqual(refusedLoad.sample_data, { status: 'idle', step: null, error_code: null }, 'the state says nothing loads');
     assert.equal(served.demo.children.length, 1, 'no loader');
     assert.deepEqual(await modeEvents(full.tenantId), [{ after: { mode: 'example', previous: null } }]);
+
+    ok(await client(served, full).choose({ mode: 'own_data' }), 'own_data on the workspace with data');
+    const back = await client(served, full).choose({ mode: 'example' });
+    assert.equal(back.status, 409, JSON.stringify(back.body));
+    assert.equal(back.body.code, 'tenant_not_empty');
+    assert.deepEqual(await choiceRow(full.tenantId), { angle: 'budget', mode: 'own_data' }, 'the choice kept');
+    assert.equal(served.demo.children.length, 1, 'no loader');
+    assert.deepEqual((await modeEvents(full.tenantId)).map((e) => e.after), [
+      { mode: 'example', previous: null },
+      { mode: 'own_data', previous: 'example' },
+    ], 'no event for the refused switch');
   } finally {
     await served.close();
     await cleanupTenants(ids);

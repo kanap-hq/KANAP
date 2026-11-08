@@ -47,7 +47,7 @@ In einem Arbeitsbereich in der Testphase öffnet sich beim ersten Öffnen von KA
 1. **Was führt Sie zu KANAP?** **Das IT-Budget**, **Die IT-Landkarte**, **Projekte und Anfragen** oder **Ich schaue mich um**.
 2. **Wie möchten Sie beginnen?** **Mit dem vollständigen Beispiel entdecken** oder **Mit meinen eigenen Daten beginnen**.
 
-Wer mit den eigenen Daten beginnt, löscht das Beispiel. Wurden seit dem Laden des Beispiels Elemente angelegt, nennt eine Bestätigung deren Anzahl, bevor etwas gelöscht wird. Solange der Arbeitsbereich das Beispiel enthält, kann nur ein Administrator die eigenen Daten wählen.
+Wer mit den eigenen Daten beginnt, löscht das Beispiel. Wurden seit dem Laden des Beispiels Elemente angelegt, nennt eine Bestätigung deren Anzahl, bevor etwas gelöscht wird. Solange der Arbeitsbereich das Beispiel enthält, kann nur ein Administrator die eigenen Daten wählen. Das Beispiel lässt sich nur in einen leeren Arbeitsbereich laden: Sobald Ihrer Daten enthält, wird die erneute Wahl des Beispiels abgelehnt und Ihr Pfad bleibt unverändert.
 
 Während das Beispiel geladen oder der Arbeitsbereich gelöscht wird, weist eine Zeile auf der Startseite darauf hin.
 

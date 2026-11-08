@@ -42,7 +42,8 @@ import { isTenantAdministrator } from './tenant-administrator';
  * `confirm_reset` when objects were created since the load, no reset e-mail); a member's
  * `own_data` changes nothing, and is refused while sample data is there. `example` loads the
  * sample data into an empty workspace when an administrator chooses it. A refused `own_data`
- * writes nothing; a refused load still writes the choice.
+ * writes nothing; a refused load still writes the first choice, while a switch back to `example`
+ * in a workspace that holds data is refused (`tenant_not_empty`) and writes nothing.
  */
 
 export const ONBOARDING_AUDIT_TABLE = 'onboarding';
@@ -201,7 +202,7 @@ export class OnboardingService {
 
     // Before the write: a refused effect writes nothing.
     const effect = modeChanges
-      ? await this.applyMode(manager, tenantId, userId, mode!, { host: opts.host ?? '', confirmReset })
+      ? await this.applyMode(manager, tenantId, userId, mode!, { host: opts.host ?? '', confirmReset, previousMode })
       : { emptying: false };
 
     await manager.query(
@@ -239,11 +240,11 @@ export class OnboardingService {
     tenantId: string,
     userId: string,
     mode: OnboardingMode,
-    opts: { host: string; confirmReset: boolean },
+    opts: { host: string; confirmReset: boolean; previousMode: OnboardingMode | null },
   ): Promise<{ emptying: boolean }> {
     if (Features.SINGLE_TENANT || (await this.demo.isSystemTenant(tenantId))) return { emptying: false };
     if (mode === 'own_data') return this.emptyWorkspace(manager, tenantId, userId, opts.confirmReset);
-    await this.loadExample(manager, tenantId, userId, opts.host);
+    await this.loadExample(manager, tenantId, userId, opts.host, opts.previousMode !== null);
     return { emptying: false };
   }
 
@@ -323,8 +324,16 @@ export class OnboardingService {
    * or `failed` once its reset is done), in the tenant's seed language, from the request's host.
    * A refusal (workspace not empty, subscription, too many loads at once, ...) leaves the choice
    * to be written, with a warning in the server log. Another user's choice loads nothing.
+   * `switching` (a mode was chosen before): a workspace that holds data refuses the switch
+   * (`409` `tenant_not_empty`), since the example path would point at screens without it.
    */
-  private async loadExample(manager: EntityManager, tenantId: string, userId: string, host: string): Promise<void> {
+  private async loadExample(
+    manager: EntityManager,
+    tenantId: string,
+    userId: string,
+    host: string,
+    switching: boolean,
+  ): Promise<void> {
     const state = await this.demo.getStatus(tenantId);
     const empty = state.status === 'idle' || (state.status === 'failed' && state.error_code !== 'reset_failed');
     if (!empty || !(await isTenantAdministrator(manager, tenantId, userId))) return;
@@ -332,6 +341,7 @@ export class OnboardingService {
     try {
       await this.demo.loadDemoData(tenantId, { language: tenantSeedLanguage(tenant?.metadata), actorId: userId, host });
     } catch (error) {
+      if (switching && errorCode(error) === 'tenant_not_empty') throw error;
       this.logger.warn(`Sample data not loaded into tenant ${tenantId} for the onboarding choice: ${errorCode(error)}`);
     }
   }

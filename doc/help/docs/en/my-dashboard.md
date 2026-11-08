@@ -47,7 +47,7 @@ In a trial workspace, a dialog opens the first time you open KANAP. It asks one 
 1. **What brings you to KANAP?** **The IT budget**, **The IT landscape map**, **Projects and requests**, or **Just looking**.
 2. **How do you want to start?** **Explore with the complete example**, or **Start with my own data**.
 
-Starting with your own data erases the example. When items were created since the example was loaded, a confirmation gives their number before anything is erased. Only an administrator can choose your own data while the workspace holds the example.
+Starting with your own data erases the example. When items were created since the example was loaded, a confirmation gives their number before anything is erased. Only an administrator can choose your own data while the workspace holds the example. The example loads only into an empty workspace: once yours holds data, choosing the example again is refused and your path does not change.
 
 While the example loads, or while the workspace is being erased, a line on the home page says so.
 
