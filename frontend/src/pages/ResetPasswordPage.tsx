@@ -15,12 +15,17 @@ export default function ResetPasswordPage() {
   const location = useLocation();
   const navigate = useNavigate();
 
+  const hashParams = useMemo(
+    () => new URLSearchParams(location.hash.startsWith('#') ? location.hash.slice(1) : location.hash),
+    [location.hash],
+  );
   const token = useMemo(() => {
-    const hashParams = new URLSearchParams(location.hash.startsWith('#') ? location.hash.slice(1) : location.hash);
     const hashToken = hashParams.get('token');
     if (hashToken && hashToken.trim() !== '') return hashToken;
     return null;
-  }, [location.hash]);
+  }, [hashParams]);
+  // The first password of a new trial workspace (`first=1`, from its activation): nothing to reset.
+  const texts = hashParams.get('first') === '1' ? 'auth:invite' : 'auth:reset';
   const isSubmitting = status === 'submitting';
   const isSuccess = status === 'success';
 
@@ -89,10 +94,10 @@ export default function ResetPasswordPage() {
         <Stack spacing={3}>
           <Stack spacing={1}>
             <Typography variant="h5" sx={{ fontWeight: 600 }}>
-              {t('auth:reset.title')}
+              {t(`${texts}.title`)}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              {t('auth:reset.subtitle')}
+              {t(`${texts}.subtitle`)}
             </Typography>
           </Stack>
 
@@ -123,7 +128,7 @@ export default function ResetPasswordPage() {
 
           {isSuccess && (
             <Alert severity="success" role="status">
-              {t('auth:reset.successMessage')}
+              {t(`${texts}.successMessage`)}
             </Alert>
           )}
 
@@ -135,7 +140,7 @@ export default function ResetPasswordPage() {
 
           <Stack spacing={1.5}>
             <Button type="submit" variant="contained" fullWidth disabled={isSubmitting || isSuccess || !token}>
-              {isSubmitting ? t('auth:reset.submitting') : t('auth:reset.submit')}
+              {isSubmitting ? t(`${texts}.submitting`) : t(`${texts}.submit`)}
             </Button>
             <Button
               type="button"

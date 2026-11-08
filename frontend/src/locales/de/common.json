@@ -1611,7 +1611,7 @@
         },
         "own_company": {
           "title": "Ihr Unternehmen",
-          "hint": "Mit der Umgebung wurde ein erstes Unternehmen angelegt. Prüfen Sie die Daten und ergänzen Sie die Angaben, vor allem Währung und Kontenplan. Fügen Sie bei Bedarf Ihren eigenen über die Ansicht „Kontenpläne“ hinzu. Legen Sie bei Bedarf weitere Unternehmen an."
+          "hint": "Mit dem Arbeitsbereich wurde ein erstes Unternehmen angelegt. Prüfen Sie die Daten und ergänzen Sie die Angaben, vor allem Währung und Kontenplan. Fügen Sie bei Bedarf Ihren eigenen über die Ansicht „Kontenpläne“ hinzu. Legen Sie bei Bedarf weitere Unternehmen an."
         },
         "own_budget_lines": {
           "title": "Ihre Budgetzeilen",

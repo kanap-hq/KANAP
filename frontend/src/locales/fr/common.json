@@ -1611,7 +1611,7 @@
         },
         "own_company": {
           "title": "Votre société",
-          "hint": "Une première société a été créée avec l'environnement. Vérifiez les données et complétez les informations, en particulier la devise et le plan comptable. Si nécessaire, passez par la vue « Plans comptables » pour ajouter le vôtre. Créez d'autres sociétés au besoin."
+          "hint": "Une première société a été créée avec l'espace de travail. Vérifiez les données et complétez les informations, en particulier la devise et le plan comptable. Si nécessaire, passez par la vue « Plans comptables » pour ajouter le vôtre. Créez d'autres sociétés au besoin."
         },
         "own_budget_lines": {
           "title": "Vos lignes",
@@ -1619,7 +1619,7 @@
         },
         "own_contract": {
           "title": "Un contrat lié",
-          "hint": "Créez votre premier contrat et, le cas échéant, liez-le à la ligne de budget que vous venez de créer."
+          "hint": "Créez votre premier contrat et, le cas échéant, liez-le à la ligne budgétaire que vous venez de créer."
         },
         "own_report": {
           "title": "Votre premier rapport",
