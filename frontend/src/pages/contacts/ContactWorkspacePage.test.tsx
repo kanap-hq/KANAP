@@ -483,7 +483,10 @@ describe('ContactWorkspacePage create', () => {
     await user.click(await screen.findByRole('option', { name: 'contacts.roles.technical' }));
     await waitFor(() => expect(document.activeElement).toBe(type));
     await expectNext(screen.getByLabelText('contacts.fields.email'));
-    await expectNext(screen.getByLabelText('contacts.fields.jobTitle'));
+    // The last required field leads to the notes, the contact's free text.
+    await expectNext(screen.getByLabelText('contacts.fields.notes'));
+    // The other fields follow in the drawer's order.
+    screen.getByLabelText('contacts.fields.jobTitle').focus();
     await expectNext(screen.getByLabelText('contacts.fields.dialCodeOf:contacts.fields.phone'));
     await expectNext(screen.getByLabelText('contacts.fields.phone'));
     await expectNext(screen.getByLabelText('contacts.fields.dialCodeOf:contacts.fields.mobile'));

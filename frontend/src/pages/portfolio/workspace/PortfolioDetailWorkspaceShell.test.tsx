@@ -5,6 +5,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../../config/ThemeContext';
 import { clearCreationFieldFocus } from '../../../components/workspace/creation/creationFieldFocus';
+import CreationActions from '../../../components/workspace/creation/CreationActions';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', resolvedLanguage: 'en' } }),
@@ -434,40 +435,6 @@ describe('PortfolioDetailWorkspaceShell history', () => {
     expect(screen.getByText('cost_centers:cc-1:2')).toBeInTheDocument();
   });
 
-  it('takes Tab from the title of a new record through its required fields, then on as usual', () => {
-    renderShell({
-      isCreate: true,
-      title: '',
-      canEditTitle: true,
-      titleAutoEdit: true,
-      onTitleDraftChange: () => undefined,
-      properties: (
-        <div>
-          <PropertyRow label="Optional"><input aria-label="optional" /></PropertyRow>
-          <PropertyRow label="Company" required><input aria-label="company" /></PropertyRow>
-          <PropertyRow label="Locked" required><input aria-label="locked" disabled /></PropertyRow>
-          <PropertyRow label="Start" required><input aria-label="start" /><button type="button">pick</button></PropertyRow>
-        </div>
-      ),
-    });
-    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
-    const company = screen.getByLabelText('company');
-    const start = screen.getByLabelText('start');
-    title.focus();
-    fireEvent.keyDown(title, { key: 'Tab' });
-    expect(company).toHaveFocus();
-    // A required field that cannot be changed is skipped.
-    fireEvent.keyDown(company, { key: 'Tab' });
-    expect(start).toHaveFocus();
-    fireEvent.keyDown(start, { key: 'Tab', shiftKey: true });
-    expect(company).toHaveFocus();
-    fireEvent.keyDown(company, { key: 'Tab', shiftKey: true });
-    expect(title).toHaveFocus();
-    // From the last required field, Tab is the browser's own.
-    start.focus();
-    expect(fireEvent.keyDown(start, { key: 'Tab' })).toBe(true);
-  });
-
   it('leaves Tab alone on a saved record', () => {
     renderShell({ properties: <PropertyRow label="Company" required><input aria-label="company" /></PropertyRow> });
     const company = screen.getByLabelText('company');
@@ -476,17 +443,13 @@ describe('PortfolioDetailWorkspaceShell history', () => {
   });
 });
 
-// Tab from a typed creation title skips Cancel and Create and lands on the first field.
-// Shift+Tab stays the browser's, so those buttons, which sit between the title and the fields, stay on the way back.
-describe('PortfolioDetailWorkspaceShell creation title Tab', () => {
+// Tab in a record being created follows the fields to fill: the required ones still empty, then
+// the description. From the description, Shift+Tab is the browser's and reaches Create.
+describe('PortfolioDetailWorkspaceShell creation Tab', () => {
   afterEach(() => { clearCreationFieldFocus(); });
 
-  const actions = (
-    <>
-      <button type="button">Cancel</button>
-      <button type="button">Create</button>
-    </>
-  );
+  const actions = <CreationActions onCreate={() => undefined} onCancel={() => undefined} />;
+  const newRecord = { isCreate: true, title: '', canEditTitle: true, titleAutoEdit: true, actions };
 
   async function tabFromTitle(name: string) {
     const user = userEvent.setup();
@@ -497,68 +460,104 @@ describe('PortfolioDetailWorkspaceShell creation title Tab', () => {
     return user;
   }
 
-  it('lands on the first property field, ahead of the main content and of Cancel', async () => {
+  it('goes from the title to the description when nothing is required, ahead of the other fields and of Cancel', async () => {
     renderShell({
-      isCreate: true,
-      title: '',
-      canEditTitle: true,
-      titleAutoEdit: true,
-      actions,
-      properties: <input aria-label="category" />,
-      children: <input aria-label="notes" />,
+      ...newRecord,
+      properties: <PropertyRow label="Category"><input aria-label="category" /></PropertyRow>,
+      children: <textarea aria-label="description" />,
     });
     await tabFromTitle('Billing');
-    await waitFor(() => expect(screen.getByLabelText('category')).toHaveFocus());
-    expect(screen.getByRole('button', { name: 'Cancel' })).not.toHaveFocus();
+    expect(screen.getByLabelText('description')).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'common:buttons.cancel' })).not.toHaveFocus();
   });
 
-  it('prefers a marked field over the first property field', async () => {
+  it('goes through the required fields still empty, then to the description, and back through the required fields', async () => {
     renderShell({
-      isCreate: true,
-      title: '',
-      canEditTitle: true,
-      titleAutoEdit: true,
-      actions,
-      properties: <input aria-label="category" />,
-      children: <input aria-label="source" data-creation-field="" />,
-    });
-    await tabFromTitle('Billing');
-    await waitFor(() => expect(screen.getByLabelText('source')).toHaveFocus());
-  });
-
-  it('skips a field still in the creation preview and uses the main content', async () => {
-    renderShell({
-      isCreate: true,
-      title: '',
-      canEditTitle: true,
-      titleAutoEdit: true,
-      actions,
+      ...newRecord,
       properties: (
-        <div data-testid="creation-preview" {...{ inert: '' }}>
-          <input aria-label="category" />
+        <div>
+          <PropertyRow label="Optional"><input aria-label="optional" /></PropertyRow>
+          <PropertyRow label="Company" required><input aria-label="company" /></PropertyRow>
+          <PropertyRow label="Currency" required><input aria-label="currency" defaultValue="EUR" /></PropertyRow>
+          <PropertyRow label="Locked" required><input aria-label="locked" disabled /></PropertyRow>
+          <PropertyRow label="Account" required><input role="combobox" aria-label="account" disabled /></PropertyRow>
+          <PropertyRow label="Start" required><input aria-label="start" /><input aria-label="time" /><button type="button">pick</button></PropertyRow>
         </div>
       ),
-      children: <input aria-label="description" />,
+      children: <textarea aria-label="notes" />,
     });
-    await tabFromTitle('Billing');
-    await waitFor(() => expect(screen.getByLabelText('description')).toHaveFocus());
+    const user = await tabFromTitle('Billing');
+    expect(screen.getByLabelText('company')).toHaveFocus();
+    // A field with its value already (a default) and one that cannot change are passed by.
+    await user.tab();
+    expect(screen.getByLabelText('start')).toHaveFocus();
+    // A field of several inputs is crossed first.
+    await user.tab();
+    expect(screen.getByLabelText('time')).toHaveFocus();
+    await user.tab();
+    expect(screen.getByLabelText('notes')).toHaveFocus();
+    screen.getByLabelText('start').focus();
+    await user.tab({ shift: true });
+    expect(screen.getByLabelText('currency')).toHaveFocus();
+    await user.tab({ shift: true });
+    expect(screen.getByLabelText('company')).toHaveFocus();
+    await user.tab({ shift: true });
+    expect(screen.getByRole('textbox', { name: 'common:buttons.editTitle' })).toHaveFocus();
   });
 
-  it('keeps a page handler in place of the default', async () => {
-    const titleOnTab = vi.fn();
+  it('takes the description the page marks over the first free text', async () => {
     renderShell({
-      isCreate: true,
-      title: '',
-      canEditTitle: true,
-      titleAutoEdit: true,
-      titleOnTab,
-      actions,
-      properties: <input aria-label="category" />,
+      ...newRecord,
+      children: (
+        <div>
+          <textarea aria-label="comment" />
+          <div data-creation-description=""><div aria-label="summary" contentEditable suppressContentEditableWarning /></div>
+        </div>
+      ),
     });
     await tabFromTitle('Billing');
+    expect(screen.getByLabelText('summary')).toHaveFocus();
+  });
+
+  it('skips the fields still in the creation preview', async () => {
+    renderShell({
+      ...newRecord,
+      properties: (
+        <div data-testid="creation-preview" {...{ inert: '' }}>
+          <PropertyRow label="Company" required><input aria-label="company" /></PropertyRow>
+        </div>
+      ),
+      children: <textarea aria-label="description" />,
+    });
+    await tabFromTitle('Billing');
+    expect(screen.getByLabelText('description')).toHaveFocus();
+  });
+
+  it('hands Tab from the title to the page step when it has one', async () => {
+    const titleOnTab = vi.fn();
+    renderShell({ ...newRecord, titleOnTab, children: <textarea aria-label="description" /> });
+    await tabFromTitle('Billing');
     expect(titleOnTab).toHaveBeenCalledTimes(1);
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(screen.getByLabelText('category')).not.toHaveFocus();
+    expect(screen.getByLabelText('description')).not.toHaveFocus();
+  });
+
+  it('follows the required fields on a record created and still showing Create and Cancel', async () => {
+    const user = userEvent.setup();
+    renderShell({
+      title: 'Billing',
+      canEditTitle: true,
+      actions,
+      properties: (
+        <div>
+          <PropertyRow label="Company" required><input aria-label="company" /></PropertyRow>
+          <PropertyRow label="Type"><input aria-label="type" /></PropertyRow>
+          <PropertyRow label="Start" required><input aria-label="start" /></PropertyRow>
+        </div>
+      ),
+    });
+    screen.getByLabelText('company').focus();
+    await user.tab();
+    expect(screen.getByLabelText('start')).toHaveFocus();
   });
 
   it('leaves Tab on a saved title to reach Cancel', async () => {
@@ -566,7 +565,7 @@ describe('PortfolioDetailWorkspaceShell creation title Tab', () => {
     renderShell({
       canEditTitle: true,
       title: 'Saved',
-      actions,
+      actions: <><button type="button">Cancel</button><button type="button">Create</button></>,
       properties: <input aria-label="category" />,
     });
     fireEvent.keyDown(screen.getByRole('button', { name: 'common:buttons.editTitle' }), { key: 'Enter' });
@@ -574,34 +573,19 @@ describe('PortfolioDetailWorkspaceShell creation title Tab', () => {
     expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus();
   });
 
-  it('leaves an empty creation title to the browser, which reaches Cancel', async () => {
+  it('leaves an empty creation title to the browser when nothing waits, which reaches Cancel', async () => {
     const user = userEvent.setup();
-    renderShell({
-      isCreate: true,
-      title: '',
-      canEditTitle: true,
-      titleAutoEdit: true,
-      actions,
-      properties: <input aria-label="category" />,
-    });
+    renderShell({ ...newRecord, properties: <input aria-label="category" /> });
     screen.getByRole('textbox', { name: 'common:buttons.editTitle' }).focus();
     await user.tab();
-    expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'common:buttons.cancel' })).toHaveFocus();
   });
 
-  it('reaches Create with one Shift+Tab from a field that follows it directly', async () => {
-    renderShell({
-      isCreate: true,
-      title: '',
-      canEditTitle: true,
-      titleAutoEdit: true,
-      actions,
-      children: <input aria-label="description" />,
-    });
+  it('reaches Create with one Shift+Tab from a description that follows it directly', async () => {
+    renderShell({ ...newRecord, children: <textarea aria-label="description" /> });
     const user = await tabFromTitle('Billing');
-    const description = screen.getByLabelText('description');
-    await waitFor(() => expect(description).toHaveFocus());
+    expect(screen.getByLabelText('description')).toHaveFocus();
     await user.tab({ shift: true });
-    expect(screen.getByRole('button', { name: 'Create' })).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'common:buttons.create' })).toHaveFocus();
   });
 });

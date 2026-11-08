@@ -797,7 +797,8 @@ export default function InterfaceWorkspacePage() {
         titleError={isCreate ? createTitleError : null}
         titleAutoEdit={isCreate && canManage}
         titleOnCancel={isCreate ? () => { void closeWorkspace(); } : undefined}
-        titleOnTab={isCreate ? () => focusField('source') : undefined}
+        // The applications to give first sit on Flow: Tab from the title opens it, the focus follows.
+        titleOnTab={isCreate && routeTab !== 'flow' ? () => handleTabChange('flow') : undefined}
         titleFocusRequest={titleFocusRequest}
         isCreate={isCreate}
         forceDrawerOpen={isCreate}
@@ -846,7 +847,6 @@ export default function InterfaceWorkspacePage() {
             data={current}
             onPatch={persistPatch}
             onReplaceLegs={persistLegs}
-            onRequiredTab={isCreate ? (field) => focusField(field === 'source' ? 'target' : 'data_category') : undefined}
           />
         )}
 

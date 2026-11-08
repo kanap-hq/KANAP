@@ -90,7 +90,7 @@ export default function LocationOverviewTab({
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <Box>
+      <Box data-creation-description="">
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', mb: 1 }}>
           <Typography sx={{ fontSize: 12, fontWeight: 500, color: 'kanap.text.tertiary' }}>
             {t('it:common.notes')}
