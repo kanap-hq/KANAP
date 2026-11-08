@@ -220,18 +220,24 @@ export function buildTrialWelcomeEmail(params: TrialMailCommon & {
 
 /** J+5: the personal note, sent only when no discovery call is booked. No button. */
 export function buildTrialFollowUpEmail(params: TrialMailCommon & {
+  angle: TrialAngle | null;
   mode: TrialMode | null;
   call: TrialCallLink;
   unsubscribeUrl: string;
 }): EmailContent {
   const letter = new Letter(params.locale);
   const t = letter.strings.trialMails.j5;
-  letter.paragraph(t.question);
-  letter.paragraph(params.call ? `${t.paths} ${t.call}` : t.paths, {
-    ...pathLinks(letter, params.mode, TRIAL_ANGLES),
-    ...(params.call ? { call: { link: { label: params.call.display, url: params.call.url }, line: true } } : {}),
-  });
-  letter.paragraph(t.available);
+  letter.paragraph(t.question, { workspace: params.workspace });
+  if (params.angle) {
+    const guideTitle = letter.strings.trialMails.j0.guideTitles[params.angle];
+    letter.paragraph(t.angle, { guide: { link: { label: guideTitle, url: trialGuideUrl(letter.locale, params.angle, params.mode) } } });
+  } else {
+    letter.paragraph(t.noAngle, pathLinks(letter, params.mode, TRIAL_ANGLES));
+  }
+  if (params.call) {
+    letter.paragraph(t.call, { call: { link: { label: params.call.display, url: params.call.url }, line: true } });
+  }
+  letter.paragraph(t.reply);
   return letter.render({ subject: t.subject, title: false, firstName: params.firstName, unsubscribeUrl: params.unsubscribeUrl });
 }
 

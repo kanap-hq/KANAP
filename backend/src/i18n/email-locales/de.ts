@@ -315,10 +315,11 @@ export const de: EmailStrings = {
     },
     j5: {
       subject: 'Fünf Tage Testphase: Wo stehen Sie?',
-      question: `Vor fünf Tagen haben Sie Ihren ${PRODUCT_NAME}-Arbeitsbereich aktiviert. Finden Sie darin, was Sie gesucht haben?`,
-      paths: 'Die drei Pfade von zehn Minuten sind der schnellste Weg, das herauszufinden: {{budget}}, {{cartography}}, {{portfolio}}.',
+      question: 'Vor fünf Tagen haben Sie Ihren Arbeitsbereich {{workspace}} aktiviert. Finden Sie darin, was Sie gesucht haben?',
+      angle: 'Die Anleitung „Ihre ersten fünf Schritte“ auf Ihrer Startseite ist der schnellste Weg, das herauszufinden. Jeder Schritt wird auf der Seite {{guide}} ausführlich erklärt.',
+      noAngle: `Die drei Pfade von zehn Minuten sind der schnellste Weg, das herauszufinden: {{budget}}, {{cartography}}, {{portfolio}}. Wählen Sie einen davon unter „Über ${PRODUCT_NAME}“: Seine fünf Schritte erscheinen dann auf Ihrer Startseite.`,
       call: 'Wenn Sie lieber darüber sprechen möchten, vereinbaren Sie ein dreißigminütiges Kennenlerngespräch, kostenlos und unverbindlich: {{call}}',
-      available: 'Ich stehe Ihnen gerne zur Verfügung.',
+      reply: 'Sie können einfach auf diese Nachricht antworten: Ich melde mich schnell bei Ihnen.',
     },
     j12: {
       subject: 'Ihre Testphase endet in zwei Tagen',

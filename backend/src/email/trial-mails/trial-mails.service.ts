@@ -328,7 +328,7 @@ export class TrialMailsService implements OnModuleInit {
         content = buildTrialWelcomeEmail({ ...common, angle: facts.angle, mode: facts.mode, call, unsubscribeUrl });
         break;
       case 'j5':
-        content = buildTrialFollowUpEmail({ ...common, mode: facts.mode, call, unsubscribeUrl });
+        content = buildTrialFollowUpEmail({ ...common, angle: facts.angle, mode: facts.mode, call, unsubscribeUrl });
         break;
       case 'j12':
         content = buildTrialEndingEmail({ ...common, trialEnd: facts.trialEnd!, marketingUrl: marketingUrl(), unsubscribeUrl });

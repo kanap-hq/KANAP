@@ -325,10 +325,11 @@ export const en = {
     },
     j5: {
       subject: 'Five days into your trial: where do you stand?',
-      question: `It has been five days since you activated your ${PRODUCT_NAME} workspace. Are you finding what you were looking for?`,
-      paths: 'The three ten-minute paths are the quickest way to find out: {{budget}}, {{cartography}}, {{portfolio}}.',
+      question: 'It has been five days since you activated your workspace {{workspace}}. Are you finding what you were looking for?',
+      angle: 'The “Your first five steps” guide on your home page is the quickest way to find out. Each step is detailed in {{guide}}.',
+      noAngle: `The three ten-minute paths are the quickest way to find out: {{budget}}, {{cartography}}, {{portfolio}}. Choose one in “About ${PRODUCT_NAME}”: its five steps then appear on your home page.`,
       call: 'If you would rather talk it over, book a thirty-minute discovery call, free and with no commitment: {{call}}',
-      available: 'I remain at your disposal.',
+      reply: 'You can simply reply to this message: I will get back to you quickly.',
     },
     j12: {
       subject: 'Your trial ends in two days',

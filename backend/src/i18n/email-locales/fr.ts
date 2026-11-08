@@ -317,10 +317,11 @@ export const fr: EmailStrings = {
     },
     j5: {
       subject: "Cinq jours d'essai : où en êtes-vous ?",
-      question: `Cela fait cinq jours que vous avez activé votre espace de travail ${PRODUCT_NAME}. Y trouvez-vous ce que vous cherchiez ?`,
-      paths: 'Les trois parcours de dix minutes sont le moyen le plus court de le savoir : {{budget}}, {{cartography}}, {{portfolio}}.',
+      question: 'Cela fait cinq jours que vous avez activé votre espace {{workspace}}. Y trouvez-vous ce que vous cherchiez ?',
+      angle: "Le guide « Vos cinq premiers pas » de votre page d'accueil est le moyen le plus court de le savoir. Chaque pas est détaillé dans {{guide}}.",
+      noAngle: `Les trois parcours de dix minutes sont le moyen le plus court de le savoir : {{budget}}, {{cartography}}, {{portfolio}}. Choisissez-en un dans « À propos de ${PRODUCT_NAME} » : ses cinq pas s'affichent alors sur votre page d'accueil.`,
       call: 'Si vous préférez en parler, planifiez un appel découverte de trente minutes, gratuit et sans engagement : {{call}}',
-      available: 'Je reste à votre disposition.',
+      reply: 'Vous pouvez simplement répondre à ce message : je vous répondrai rapidement.',
     },
     j12: {
       subject: 'Votre essai se termine dans deux jours',
