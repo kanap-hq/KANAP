@@ -188,7 +188,8 @@
   },
   "/portfolio/requests": {
     "params": {
-      "include": "company,requestor,classification"
+      "include": "company,requestor,classification",
+      "status": "all"
     },
     "filters": {
       "item_number": "text",
@@ -221,7 +222,8 @@
   },
   "/portfolio/projects": {
     "params": {
-      "include": "company,classification"
+      "include": "company,classification",
+      "status": "all"
     },
     "filters": {
       "item_number": "text",

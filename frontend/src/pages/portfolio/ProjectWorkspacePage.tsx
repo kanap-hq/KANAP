@@ -765,12 +765,15 @@ export default function ProjectWorkspacePage() {
   const filters = searchParams.get('filters') || '';
   const involvedUserId = searchParams.get('involvedUserId') || undefined;
   const involvedTeamId = searchParams.get('involvedTeamId') || undefined;
+  // Opened from the list (it always sets its scope): its status filter alone decides, as on the list.
+  const fromList = searchParams.has('projectScope');
   const navExtraParams = React.useMemo(() => {
     const params: Record<string, string | undefined> = {};
     if (involvedUserId) params.involvedUserId = involvedUserId;
     if (involvedTeamId) params.involvedTeamId = involvedTeamId;
+    if (fromList) params.status = 'all';
     return Object.keys(params).length > 0 ? params : undefined;
-  }, [involvedUserId, involvedTeamId]);
+  }, [involvedUserId, involvedTeamId, fromList]);
   const navCurrentId = projectMatchesCurrentRoute ? data?.id || '' : '';
   const nav = useProjectNav({ id: navCurrentId, sort, q, filters, extraParams: navExtraParams });
   const { total, index, hasPrev, hasNext, prevId, nextId } = isCreate

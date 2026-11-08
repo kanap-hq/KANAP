@@ -262,6 +262,18 @@ export function setListFiltersParam(sp: URLSearchParams, endpoint: string, filte
   }
 }
 
+/**
+ * The filters of a list that has a default filter, for an address: a default column the person
+ * cleared is written `null`, so that the list reopens with it cleared instead of on its default.
+ */
+export function withClearedDefaults(filters: ListFilters | null | undefined, defaults: ListFilters): ListFilters {
+  const model: ListFilters = { ...(filters ?? {}) };
+  for (const key of Object.keys(defaults)) {
+    if (!(key in model)) model[key] = null;
+  }
+  return model;
+}
+
 /** The list filters a URL carries: its `filters`, else the filters saved under its `ctx` when known in this tab. */
 export function listFiltersOf(sp: URLSearchParams): string {
   const inline = sp.get('filters');

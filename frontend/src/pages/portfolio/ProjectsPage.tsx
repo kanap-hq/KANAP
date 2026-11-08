@@ -20,7 +20,7 @@ import { formatShortDate } from '../../lib/dateFormat';
 import { getDotColor, PROJECT_STATUS_COLORS } from '../../utils/statusColors';
 import { useTheme } from '@mui/material/styles';
 import { StatusDot } from '../../components/design';
-import { setListFiltersParam, getWithListContext } from '../../lib/listContext';
+import { setListFiltersParam, getWithListContext, withClearedDefaults } from '../../lib/listContext';
 import { useUrlFilterModel } from '../../hooks/useListContextSearch';
 import { ImportLabel } from '../../components/csv/importFiles';
 
@@ -202,7 +202,8 @@ export default function ProjectsPage() {
     const filters = lastQueryRef.current?.filters || {};
     if (sort) sp.set('sort', sort);
     if (q) sp.set('q', q);
-    setListFiltersParam(sp, '/portfolio/projects', filters);
+    // A cleared status filter travels as such: back on the list, "All" stays.
+    setListFiltersParam(sp, '/portfolio/projects', lastQueryRef.current ? withClearedDefaults(filters, defaultFilterModel) : filters);
     const scope = projectScopeRef.current;
     const profileId = profileIdRef.current;
     const hasTeamNow = hasTeamRef.current;
@@ -215,7 +216,7 @@ export default function ProjectsPage() {
       if (profileId) sp.set('involvedUserId', profileId);
     }
     return sp;
-  }, [t]);
+  }, [defaultFilterModel, t]);
 
   const projectScopeToolbar = (
     <Stack direction="row" spacing={0.5} alignItems="center">
@@ -474,8 +475,11 @@ export default function ProjectsPage() {
   ], [clickableCellRenderer, getProjectFilterValues, locale, originLabelMap, renderStatusCell, statusLabelMap, t]);
 
   const extraParams = useMemo(() => {
+    // The grid's status filter alone decides: without `status: 'all'` the server would still hide
+    // its default status once the person clears that filter.
     const params: Record<string, any> = {
       include: 'company,classification',
+      status: 'all',
     };
     if (projectScope === 'my' && profile?.id) {
       params.involvedUserId = profile.id;

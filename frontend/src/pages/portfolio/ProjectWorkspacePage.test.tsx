@@ -9,6 +9,7 @@ import { KanapDialogProvider } from '../../components/design';
 import ProjectWorkspacePage from './ProjectWorkspacePage';
 
 const get = vi.hoisted(() => vi.fn());
+const navParams = vi.hoisted(() => [] as Array<{ extraParams?: Record<string, string | undefined> }>);
 
 const stableT = (key: string) => key;
 vi.mock('react-i18next', () => ({
@@ -22,7 +23,10 @@ vi.mock('../../api', () => ({ default: { get, post: vi.fn(), patch: vi.fn(), del
 vi.mock('../../tenant/TenantContext', () => ({ useTenant: () => ({ tenantSlug: 'acme' }) }));
 vi.mock('../../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 vi.mock('../../hooks/useProjectNav', () => ({
-  useProjectNav: () => ({ total: 0, index: 0, hasPrev: false, hasNext: false, prevId: null, nextId: null }),
+  useProjectNav: (params: unknown) => {
+    navParams.push(params as { extraParams?: Record<string, string | undefined> });
+    return { total: 0, index: 0, hasPrev: false, hasNext: false, prevId: null, nextId: null };
+  },
 }));
 vi.mock('../../hooks/useClassificationDefaults', () => ({
   useClassificationDefaults: () => ({ data: null, isLoading: false }),
@@ -101,5 +105,19 @@ describe('ProjectWorkspacePage history', () => {
     const history = screen.getByRole('tab', { name: 'portfolio:labels.history' }) as HTMLButtonElement;
     expect(history.disabled).toBe(true);
     expect(screen.queryByTestId('record-history')).toBeNull();
+  });
+
+  it('asks the neighbours of every status when opened from the list, as its status filter decides', async () => {
+    navParams.length = 0;
+    renderPage('/portfolio/projects/proj-1/history?projectScope=all&sort=name%3AASC');
+    await screen.findByTestId('record-history');
+    expect(navParams[navParams.length - 1].extraParams).toEqual({ status: 'all' });
+  });
+
+  it('keeps the server default for the neighbours when opened from elsewhere', async () => {
+    navParams.length = 0;
+    renderPage('/portfolio/projects/proj-1/history');
+    await screen.findByTestId('record-history');
+    expect(navParams[navParams.length - 1].extraParams).toBeUndefined();
   });
 });
