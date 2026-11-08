@@ -106,8 +106,8 @@ vi.mock('../../ai/components/ArtifactPanel', () => ({
 }));
 
 vi.mock('../../ai/components/ChatConversationList', () => ({
-  default: ({ onSelect, onNew, onDelete }: any) => (
-    <div>
+  default: ({ onSelect, onNew, onDelete, enabled }: any) => (
+    <div data-testid="conversation-list" data-enabled={String(enabled)}>
       <button type="button" onClick={() => onNew()}>New chat</button>
       <button type="button" onClick={() => onSelect('conv-1')}>Select conversation</button>
       <button type="button" onClick={() => onDelete('conv-1')}>Delete conversation</button>
@@ -335,6 +335,8 @@ describe('AiWorkspacePage', () => {
     expect(screen.getByText('consent box')).toBeInTheDocument();
     expect(screen.getByText('workspace.empty.title')).toBeInTheDocument();
     expect(screen.queryByText('Send message')).not.toBeInTheDocument();
+    // The server refuses the conversations until the acceptance: the list asks for none.
+    expect(screen.getByTestId('conversation-list')).toHaveAttribute('data-enabled', 'false');
   });
 
   it('keeps the chat when the assistant is available', () => {
@@ -349,6 +351,7 @@ describe('AiWorkspacePage', () => {
 
     expect(screen.queryByText('consent box')).not.toBeInTheDocument();
     expect(screen.getByText('Send message')).toBeInTheDocument();
+    expect(screen.getByTestId('conversation-list')).toHaveAttribute('data-enabled', 'true');
   });
 
   it('forwards conversation selection and sends messages from the page controls', () => {

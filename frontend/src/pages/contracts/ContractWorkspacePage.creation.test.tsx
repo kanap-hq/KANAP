@@ -101,6 +101,9 @@ describe('ContractWorkspacePage creation', () => {
     const duration = within(drawer).getByRole('textbox', { name: 'contracts.fields.durationMonths' });
     fireEvent.change(duration, { target: { value: '24' } });
     expect(mocked.post).not.toHaveBeenCalled();
+    // The contract has no id yet: nothing asks for its renewal.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(mocked.get.mock.calls.filter(([url]) => String(url).includes('/renewal'))).toEqual([]);
     fireEvent.blur(duration);
 
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/contracts', {
