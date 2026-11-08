@@ -163,8 +163,10 @@ answers while it runs.
 `reset_failed`: the failed load was reset) and the user is an administrator, the sample data load
 starts (`loadDemoData`, the tenant's seed language, the request's Host header as for the
 Administration page). A refused load (workspace not empty, subscription, too many loads at
-once) still writes the choice, with one warning in the server log; `sample_data` shows the state.
-Another user's choice is written and loads nothing.
+once) still writes the first choice, with one warning in the server log; `sample_data` shows the
+state. A switch back to `example` (a mode was chosen before) in a workspace that holds data is
+refused, `409` `tenant_not_empty`, and writes nothing: the dialog shows the refusal. Another
+user's choice is written and loads nothing.
 
 `POST /steps/:key/done`: `409` `no_choice` without an angle or a mode; `400` `unknown_step` when
 the key is not in the current path. A step already done is left as it is. `DELETE` removes the
