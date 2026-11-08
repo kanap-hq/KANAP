@@ -241,12 +241,13 @@ Rate limit: `load`, `reset` and `dismiss` allow 10 calls per 10 minutes per user
 Public config: `GET /config/public` returns `features.sampleData` (`true` in multi-tenant mode, `false` in single-tenant mode). The frontend shows the navigation entry and the home banner only when it is true and the user holds the Administrator role. The route itself is always registered; the page refuses itself otherwise.
 
 ## Onboarding
-The workspace's angle and mode, and each user's first five steps. Every signed-in user of the workspace; every route answers `200` with the state for the calling user. Details, rules and audit events: [onboarding.md](onboarding.md).
+The workspace's angle and mode, and each user's first five steps. Every signed-in user of the workspace; every route but the showcase application answers `200` with the state for the calling user. Details, rules and audit events: [onboarding.md](onboarding.md).
 
 - GET `/onboarding`
 - PUT `/onboarding/choice` with `{ angle?, mode? }`
 - POST, DELETE `/onboarding/steps/:key/done`
 - POST, DELETE `/onboarding/dismiss`
+- GET `/onboarding/showcase-application`: the application the cartography step opens, `{ item: { id, name } | null }` (applications at `reader` level, `403` otherwise)
 
 ## Discovery call
 Cloud only (404 on-premise). Details, storage and audit events: [discovery-call.md](discovery-call.md).
