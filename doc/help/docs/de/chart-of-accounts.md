@@ -118,7 +118,7 @@ Klicken Sie auf eine beliebige Zeile im Konten-Grid, um den Konten-Arbeitsbereic
 ### Aufbau
 
 - **Kopfbereich**: Die Kontonummer dient als Referenz (Sie können sie dort kopieren) und der Kontoname als Titel. Klicken Sie auf den Titel, um das Konto umzubenennen. Die Pfeile **Vorheriges Konto** und **Nächstes Konto** führen durch die Konten der Liste, aus der Sie kommen, in derselben Reihenfolge und mit derselben Suche und denselben Filtern. Der Link zurück führt zu **Kontenpläne** und behält Ihre Auswahl bei.
-- **Eigenschaften-Bereich** rechts: **Kontenplan**, **Kontonummer**, **Verwendet für** und **Lebenszyklus** (der Statusschalter und das Datum **Ende der Gültigkeit**). Mit der Bereichsschaltfläche klappen Sie ihn ein oder wieder aus. Siehe [Status und Lebenszyklus](#status-und-lebenszyklus).
+- **Eigenschaftenbereich** rechts: **Kontenplan**, **Kontonummer**, **Verwendet für** und **Lebenszyklus** (der Statusschalter und das Datum **Ende der Gültigkeit**). Mit der Bereichsschaltfläche klappen Sie ihn ein oder wieder aus. Siehe [Status und Lebenszyklus](#status-und-lebenszyklus).
 - **Hauptspalte**: **Lokaler Name (Landessprache)**, **Beschreibung** und der Abschnitt **Konsolidierung**.
 
 **Änderungen werden automatisch gespeichert.** Jedes Feld wird gespeichert, sobald Sie es verlassen, und es gibt keine Schaltfläche „Speichern". Wird ein Wert abgelehnt, erscheint unter dem Feld eine Meldung. Die **Kontonummer** muss eine ganze Zahl größer als null mit höchstens 15 Ziffern sein.

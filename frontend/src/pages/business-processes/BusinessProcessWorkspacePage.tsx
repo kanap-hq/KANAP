@@ -7,6 +7,7 @@ import { useTheme } from '@mui/material/styles';
 import CloseIcon from '@mui/icons-material/Close';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
+import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { useBusinessProcessNav } from '../../hooks/useBusinessProcessNav';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
 import { PortfolioMetadataItem, PortfolioStatusMetadata } from '../portfolio/workspace/PortfolioMetadataBar';
@@ -50,6 +51,7 @@ export default function BusinessProcessWorkspacePage() {
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { hasLevel } = useAuth();
+  const { addToRecent } = useRecentlyViewed();
 
   const id = String(params.id || '');
   const isCreate = id === 'new';
@@ -91,6 +93,10 @@ export default function BusinessProcessWorkspacePage() {
     enabled: !isCreate && !!id && deletedId !== id,
   });
   const process = data && data.id === id ? data : undefined;
+
+  React.useEffect(() => {
+    if (!isCreate && process?.id && process.name) addToRecent('business_process', process.id, process.name);
+  }, [addToRecent, process?.id, process?.name, isCreate]);
 
   const [saveError, setSaveError] = React.useState<string | null>(null);
   // A refusal of the name given to a process in the header (a name another process has).

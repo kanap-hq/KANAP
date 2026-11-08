@@ -286,7 +286,7 @@ When single sign-on is connected, a person who signs in with Microsoft for the f
 
 A new account starts with the **Contact** system role and no permissions. The person sees a page saying:
 
-> Your account hasn't been given access to KANAP yet. Ask your administrator to grant you access.
+> Your account has no access yet. Ask your administrator to grant you access.
 
 Administrators receive an email when this happens. To give the person access, open **Admin > Users**, find them by their **Pending access** status, and assign a role.
 

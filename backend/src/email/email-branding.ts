@@ -1,14 +1,17 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { StorageService } from '../common/storage/storage.service';
+import { organisationName as chosenOrganisationName } from '../config/product';
 
 export interface EmailBranding {
   primaryColor: string;
   logoBuffer: Buffer;
   logoContentType: string;
   logoCid: string;
-  /** True when a tenant has their own custom logo (show "Powered by KANAP" in footer). */
-  isCustom: boolean;
+  /** True when `logoBuffer` is the tenant's own logo, false for the product logo. */
+  hasTenantLogo: boolean;
+  /** The workspace's organisation name, null when none was chosen (`config/product.ts`). */
+  organisationName?: string | null;
 }
 
 export const DEFAULT_EMAIL_PRIMARY_COLOR = '#1A6B7A';
@@ -48,20 +51,23 @@ export function getDefaultEmailBranding(): EmailBranding {
     logoBuffer: getDefaultLogo(),
     logoContentType: 'image/png',
     logoCid: LOGO_CID,
-    isCustom: false,
+    hasTenantLogo: false,
+    organisationName: null,
   };
 }
 
 /**
  * Resolve email branding for a tenant.
  * If branding has a custom logo, loads it from S3.
- * Falls back to KANAP defaults.
+ * Falls back to the product defaults. `tenantName` gives the organisation name.
  */
 export async function resolveEmailBranding(
   branding: { logo_storage_path?: string; primary_color_light?: string | null } | null | undefined,
   storage: StorageService,
+  tenantName?: string | null,
 ): Promise<EmailBranding> {
-  if (!branding) return getDefaultEmailBranding();
+  const organisationName = chosenOrganisationName(tenantName);
+  if (!branding) return { ...getDefaultEmailBranding(), organisationName };
 
   const primaryColor = branding.primary_color_light || DEFAULT_EMAIL_PRIMARY_COLOR;
 
@@ -79,7 +85,8 @@ export async function resolveEmailBranding(
           logoBuffer,
           logoContentType: obj.contentType || 'image/png',
           logoCid: LOGO_CID,
-          isCustom: true,
+          hasTenantLogo: true,
+          organisationName,
         };
       }
     } catch {
@@ -93,6 +100,26 @@ export async function resolveEmailBranding(
     logoBuffer: getDefaultLogo(),
     logoContentType: 'image/png',
     logoCid: LOGO_CID,
-    isCustom: primaryColor !== DEFAULT_EMAIL_PRIMARY_COLOR,
+    hasTenantLogo: false,
+    organisationName,
   };
+}
+
+/**
+ * The e-mail branding of a tenant: its logo, colour and organisation name. `query` runs one
+ * statement (a DataSource or an EntityManager); any failure falls back to the product defaults.
+ */
+export async function loadTenantEmailBranding(
+  query: (sql: string, params: unknown[]) => Promise<any>,
+  storage: StorageService,
+  tenantId: string,
+): Promise<EmailBranding> {
+  let tenantName: string | null = null;
+  try {
+    const rows = await query('SELECT name, branding FROM tenants WHERE id = $1', [tenantId]);
+    tenantName = rows?.[0]?.name ?? null;
+    return await resolveEmailBranding(rows?.[0]?.branding, storage, tenantName);
+  } catch {
+    return { ...getDefaultEmailBranding(), organisationName: chosenOrganisationName(tenantName) };
+  }
 }

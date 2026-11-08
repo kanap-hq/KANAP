@@ -317,7 +317,7 @@ const SCREEN_NAME_RULE = 'Quote a screen name exactly as given, never translated
  * screens, stated as facts (the read tool descriptions give no orders, `ai-tool.registry.spec.ts`).
  */
 export const AI_UNREAD_FAMILIES_SENTENCE =
-  `KANAP also holds what these tools do not read: ${AI_UNREAD_FAMILIES
+  `The workspace also holds what these tools do not read: ${AI_UNREAD_FAMILIES
     // The families read with the right of their page are families of these tools, as any other.
     .filter((entry) => !entry.readAs)
     .map((entry) => (entry.usersAdminOnly
@@ -330,7 +330,7 @@ export const AI_UNREAD_FAMILIES_SENTENCE =
 
 /** For the chat prompt: the families this person does not read, with their screens in the person's language. */
 export function unreadFamiliesSentence(language: AiScreenLanguage | null, gap?: AiAdminFamiliesGap, reach?: AiUnreadFamiliesReach): string {
-  return `KANAP also holds what these tools do not read: ${unreadFamilyLines(language, gap, reach).join('; ')}. `
+  return `The workspace also holds what these tools do not read: ${unreadFamilyLines(language, gap, reach).join('; ')}. `
     + 'A search or list without a match is no proof that such a record does not exist: say that you cannot read it and name the screen that shows it. '
     + SCREEN_NAME_RULE;
 }
@@ -359,7 +359,7 @@ export function unreadFamiliesAskedBy(
       return {
         family: entry.family,
         where,
-        note: `KANAP has ${entry.family}; ${read}. They are on ${screen}.${hint ? ` ${hint}` : ''}`,
+        note: `The workspace has ${entry.family}; ${read}. They are on ${screen}.${hint ? ` ${hint}` : ''}`,
       };
     });
 }

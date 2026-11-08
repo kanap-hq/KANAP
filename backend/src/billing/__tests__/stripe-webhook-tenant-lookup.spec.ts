@@ -1,4 +1,5 @@
 import * as assert from 'node:assert/strict';
+import { FindOperator } from 'typeorm';
 import { StripeWebhookService } from '../stripe-webhook.service';
 import { SubscriptionStatus } from '../subscription.entity';
 
@@ -10,13 +11,20 @@ import { SubscriptionStatus } from '../subscription.entity';
  *
  * The mock reproduces that RLS semantic: subscription rows are only visible to a manager
  * whose runner carries the owning tenant as `app.current_tenant`.
+ *
+ * A deleted workspace keeps its customer id. `findOne` applies `deleted_at: IsNull()`
+ * when the caller asks for it, and still returns a deleted row when it does not.
  */
 
 const TENANT_A = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const TENANT_B = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 
+function expectsLiveWorkspace(deletedAt: unknown): boolean {
+  return deletedAt instanceof FindOperator && deletedAt.type === 'isNull';
+}
+
 function createService(state: {
-  tenants: Array<{ id: string; stripe_customer_id: string | null }>;
+  tenants: Array<{ id: string; stripe_customer_id: string | null; deleted_at?: Date | null }>;
   subscriptions: Array<{ tenant_id: string; stripe_subscription_id: string }>;
 }) {
   const stats = { contextlessSubscriptionReads: 0 };
@@ -52,10 +60,11 @@ function createService(state: {
       return []; // RLS: no context, no rows
     },
     getRepository: () => ({
-      findOne: async ({ where }: { where: Record<string, string> }) =>
-        state.tenants.find((t) =>
-          where.id ? t.id === where.id : t.stripe_customer_id === where.stripe_customer_id,
-        ) ?? null,
+      findOne: async ({ where }: { where: Record<string, unknown> }) =>
+        state.tenants.find((t) => {
+          if (expectsLiveWorkspace(where.deleted_at) && t.deleted_at != null) return false;
+          return where.id ? t.id === where.id : t.stripe_customer_id === where.stripe_customer_id;
+        }) ?? null,
     }),
   };
   const svc = new StripeWebhookService({} as any, {} as any, dataSource as any, {} as any);
@@ -110,6 +119,29 @@ async function testMetadataCannotPointAtAnotherTenantsSubscription() {
   });
   const event = subscriptionEvent(TENANT_A, 'sub_b', 'cus_x');
   assert.equal(await lookup({ customerId: 'cus_x', subscriptionId: 'sub_b' }, event), null);
+}
+
+const DELETED_AT = new Date('2026-06-01T00:00:00.000Z');
+
+async function testDeletedWorkspaceIsNotResolvedByCustomer() {
+  const { lookup, stats } = createService({
+    tenants: [{ id: TENANT_A, stripe_customer_id: 'cus_live', deleted_at: DELETED_AT }],
+    subscriptions: [],
+  });
+  assert.equal(await lookup({ customerId: 'cus_live', subscriptionId: 'sub_1' }), null);
+  assert.equal(stats.contextlessSubscriptionReads, 0);
+}
+
+async function testDeletedWorkspaceIsNotResolvedByMetadataHint() {
+  // The stored customer has drifted, so only the metadata hint can reach the workspace.
+  // Deletion closes that route too: the subscription row still exists, the workspace does not.
+  const { lookup, stats } = createService({
+    tenants: [{ id: TENANT_A, stripe_customer_id: 'cus_new', deleted_at: DELETED_AT }],
+    subscriptions: [{ tenant_id: TENANT_A, stripe_subscription_id: 'sub_live' }],
+  });
+  const event = subscriptionEvent(TENANT_A, 'sub_live', 'cus_old');
+  assert.equal(await lookup({ customerId: 'cus_old', subscriptionId: 'sub_live' }, event), null);
+  assert.equal(stats.contextlessSubscriptionReads, 0);
 }
 
 async function testReadsTheHintFromAnInvoiceAndRejectsGarbage() {
@@ -350,6 +382,8 @@ async function run() {
   await testFallsBackOnMetadataWhenTheStoredCustomerHasDrifted();
   await testIgnoresASubscriptionTheTenantHasLeft();
   await testMetadataCannotPointAtAnotherTenantsSubscription();
+  await testDeletedWorkspaceIsNotResolvedByCustomer();
+  await testDeletedWorkspaceIsNotResolvedByMetadataHint();
   await testReadsTheHintFromAnInvoiceAndRejectsGarbage();
   await testCloverInvoiceResolvesItsSubscription();
   await testCloverSubscriptionUpdatedWritesThePeriods();

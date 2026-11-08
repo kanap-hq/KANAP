@@ -11,6 +11,7 @@ import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
+import InfoHint from '../../components/workspace/InfoHint';
 import {
   DndContext,
   KeyboardSensor,
@@ -762,35 +763,34 @@ export default function SettingsPage() {
             {/* Mandatory Bypass Setting */}
             <Card sx={{ mb: 3 }}>
               <CardContent>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={settings.mandatory_bypass_enabled}
-                      onChange={handleToggleBypassSetting}
-                      disabled={!canEdit}
-                    />
-                  }
-                  label={
-                    <Box>
+                <Stack direction="row" spacing={0.5} alignItems="center">
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={settings.mandatory_bypass_enabled}
+                        onChange={handleToggleBypassSetting}
+                        disabled={!canEdit}
+                      />
+                    }
+                    label={
                       <Typography variant="subtitle1">
                         {t('settings.scoring.mandatoryBypassTitle')}
                       </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {t('settings.scoring.mandatoryBypassDescription')}
-                      </Typography>
-                    </Box>
-                  }
-                />
+                    }
+                    sx={{ mr: 0 }}
+                  />
+                  <InfoHint text={t('settings.scoring.mandatoryBypassDescription')} />
+                </Stack>
               </CardContent>
             </Card>
 
             {/* Evaluation Criteria */}
-            <Typography variant="h6" sx={{ mb: 1 }}>
-              {t('settings.scoring.title')}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              {t('settings.scoring.reorderHint')}
-            </Typography>
+            <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mb: 2 }}>
+              <Typography variant="h6">
+                {t('settings.scoring.title')}
+              </Typography>
+              <InfoHint text={t('settings.scoring.reorderHint')} />
+            </Stack>
 
             {criteria.length === 0 && !loading && (
               <Alert severity="info" sx={{ mb: 2 }}>
@@ -1126,10 +1126,10 @@ function CriterionEditDialog({
 
           <Divider />
 
-          <Typography variant="subtitle2">{t('settings.scoring.dialog.scaleValues')}</Typography>
-          <Typography variant="caption" color="text.secondary">
-            {t('settings.scoring.dialog.scaleValuesDescription')}
-          </Typography>
+          <Stack direction="row" spacing={0.5} alignItems="center">
+            <Typography variant="subtitle2">{t('settings.scoring.dialog.scaleValues')}</Typography>
+            <InfoHint text={t('settings.scoring.dialog.scaleValuesDescription')} />
+          </Stack>
 
           {values.map((v, idx) => (
             <Stack key={idx} direction="row" spacing={1} alignItems="center">
@@ -1223,9 +1223,6 @@ function SkillsSection({
 
   return (
     <Stack spacing={2}>
-      <Typography variant="body2" color="text.secondary">
-        {t('settings.skills.description')}
-      </Typography>
 
       {categories.map((category) => {
         const categorySkills = skillsGrouped[category] || [];
@@ -1423,9 +1420,6 @@ function PhaseTemplatesSection({
 
   return (
     <Stack spacing={2}>
-      <Typography variant="body2" color="text.secondary">
-        {t('settings.phaseTemplates.description')}
-      </Typography>
 
       {templates.map((template) => (
         <Card key={template.id}>
@@ -1583,10 +1577,10 @@ function PhaseTemplateEditDialog({
 
           <Divider />
 
-          <Typography variant="subtitle2">{t('settings.phaseTemplates.dialog.phases')}</Typography>
-          <Typography variant="caption" color="text.secondary">
-            {t('settings.phaseTemplates.dialog.phasesDescription')}
-          </Typography>
+          <Stack direction="row" spacing={0.5} alignItems="center">
+            <Typography variant="subtitle2">{t('settings.phaseTemplates.dialog.phases')}</Typography>
+            <InfoHint text={t('settings.phaseTemplates.dialog.phasesDescription')} />
+          </Stack>
 
           {items.map((item, idx) => (
             <Stack
@@ -1713,9 +1707,6 @@ function ClassificationSection({
 
   return (
     <Stack spacing={3}>
-      <Typography variant="body2" color="text.secondary">
-        {t('settings.classification.description')}
-      </Typography>
 
       {/* Sources Section */}
       <Box>
@@ -2352,9 +2343,6 @@ function TeamsSection({
 
   return (
     <Stack spacing={2}>
-      <Typography variant="body2" color="text.secondary">
-        {t('settings.teams.description')}
-      </Typography>
 
       <Card>
         <CardContent sx={{ p: 2 }}>
@@ -2523,9 +2511,6 @@ function EmploymentTypesSection({
 
   return (
     <Stack spacing={2}>
-      <Typography variant="body2" color="text.secondary">
-        {t('settings.employmentTypes.description')}
-      </Typography>
 
       <Card>
         <CardContent sx={{ p: 2 }}>

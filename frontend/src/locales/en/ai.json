@@ -30,7 +30,7 @@
     "dropHint": "Drop a file to attach",
     "hintEnter": "Enter to send",
     "hintShiftEnter": "Shift+Enter for new line",
-    "placeholder": "Ask Plaid about your KANAP data…",
+    "placeholder": "Ask Plaid…",
     "removeAttachment": "Remove attachment",
     "send": "Send",
     "stop": "Stop generating"
@@ -202,7 +202,7 @@
       "classification_review_state": "Classification review",
       "access_warning": "Access",
       "cancel_warning": "Cancellation",
-      "catalog_adoption": "KANAP catalog",
+      "catalog_adoption": "{{product}} catalog",
       "closure_warning": "Closure",
       "coa_id": "Chart of accounts",
       "content": "Content",
@@ -386,8 +386,8 @@
   },
   "previewBatch": {
     "approveAll": "Approve all",
-    "confirmBody_one": "KANAP will apply the approved preview separately. Partial failures will remain visible in the preview status.",
-    "confirmBody_other": "KANAP will apply each approved preview separately. Partial failures will remain visible in the preview statuses.",
+    "confirmBody_one": "The approved preview is applied separately. Partial failures will remain visible in the preview status.",
+    "confirmBody_other": "Each approved preview is applied separately. Partial failures will remain visible in the preview statuses.",
     "confirmTitle_one": "Approve {{count}} preview?",
     "confirmTitle_other": "Approve {{count}} previews?",
     "more_one": "{{count}} more preview",

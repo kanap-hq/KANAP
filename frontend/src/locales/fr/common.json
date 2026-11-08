@@ -482,7 +482,8 @@
         "incident": "Incident",
         "location": "Site",
         "document": "Document",
-        "company": "Société"
+        "company": "Société",
+        "businessProcess": "Processus métier"
       },
       "myTimeTitle": "Mon temps",
       "newRequestsTitle": "Nouvelles demandes",
@@ -1635,7 +1636,7 @@
         },
         "map_application": {
           "title": "Une fiche d'application",
-          "hint": "Voici la fiche d'une application. Explorez le panneau des propriétés et les différents onglets pour découvrir toutes les facettes de cet objet clé de KANAP."
+          "hint": "Voici la fiche d'une application. Explorez le panneau des propriétés et les différents onglets pour découvrir toutes les facettes de cet objet clé."
         },
         "map_technologies": {
           "title": "Les technologies, fins de support et failles",
@@ -1651,11 +1652,11 @@
         },
         "own_applications": {
           "title": "Vos applications",
-          "hint": "Importez la liste de vos applications puis enrichissez-les, ou créez-les directement dans KANAP."
+          "hint": "Importez la liste de vos applications puis enrichissez-les, ou créez-les une par une."
         },
         "own_technologies": {
           "title": "Vos technologies",
-          "hint": "Activez des technologies et liez-les à vos applications. KANAP s'occupe du reste."
+          "hint": "Activez des technologies et liez-les à vos applications. {{product}} s'occupe du reste."
         },
         "own_assets": {
           "title": "Vos serveurs",

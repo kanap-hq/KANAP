@@ -15,6 +15,7 @@ import {
   mcpResourceUrl,
   oauthHostOf,
 } from './mcp-oauth.util';
+import { workspaceDisplayName } from '../../config/product';
 
 /** The host of a request, or 404 when the request is not on a tenant address or MCP is off. */
 function requireHost(req: any): McpOAuthHost {
@@ -43,7 +44,8 @@ export class McpOAuthMetadataController {
       authorization_servers: [host.origin],
       scopes_supported: [...MCP_OAUTH_SCOPES_SUPPORTED],
       bearer_methods_supported: ['header'],
-      resource_name: 'KANAP',
+      // The workspace the connection reads: its organisation name, else the product name.
+      resource_name: workspaceDisplayName(req?.tenant?.name),
     };
   }
 

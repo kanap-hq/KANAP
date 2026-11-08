@@ -35,9 +35,6 @@ export default function CoaChipBar({
       <Paper variant="outlined" sx={{ p: 2 }}>
         <Stack spacing={1} alignItems="flex-start">
           <Typography variant="subtitle1">{t('coa.chipBar.createFirst')}</Typography>
-          <Typography variant="body2" color="text.secondary">
-            {t('coa.chipBar.accountsInChart')}
-          </Typography>
           {canManage && (
             <Button variant="contained" startIcon={<AddIcon />} onClick={onCreate}>
               {t('coa.chipBar.newCoA')}

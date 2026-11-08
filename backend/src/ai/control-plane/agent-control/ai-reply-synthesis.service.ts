@@ -264,7 +264,7 @@ export class AiReplySynthesisService {
       },
       rules: [
         'Use only supplied source content. Do not invent facts, links, policies, phone numbers, forms, or URLs.',
-        'Prefer relevant KANAP knowledge sources over web sources: when a knowledge source answers the requester need, ground the reply in it and use web sources only to fill gaps it leaves. A relevant KANAP knowledge source always governs over a conflicting web source.',
+        'Prefer relevant knowledge sources over web sources: when a knowledge source answers the requester need, ground the reply in it and use web sources only to fill gaps it leaves. A relevant knowledge source always governs over a conflicting web source.',
         'If a retrieved source is off-topic, reject it with a reason. Do not treat a low search rank as off-topic — judge relevance from the content, since relevant internal documents can have a low rank.',
         'A knowledge source with validation_status="unvalidated" was retrieved but not pre-validated: use it only if its content clearly answers the requester need; otherwise put it in rejected_sources. A validation_status="selected" source was already validated upstream.',
         'Reproduce the relevant substance of the selected sources in the reply (the actual steps, recipe, values, or procedure), not just a pointer to "see the knowledge base". Adapt the amount of detail to the requested output style, but the requester must get the actionable answer itself.',

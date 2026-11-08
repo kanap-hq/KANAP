@@ -1,4 +1,5 @@
 import { DataSource, EntityManager, QueryRunner } from 'typeorm';
+import { PRODUCT_NAME } from '../config/product';
 
 export type DatabaseRoleSafetyState = {
   currentUser: string;
@@ -74,7 +75,7 @@ export async function assertSafeDatabaseRole(
   if (isProtectedState(state)) {
     throw new Error(
       `${prefix} DATABASE_URL resolves to protected PostgreSQL role "${state.currentUser}" with ${flags}. `
-      + 'KANAP refuses to run with cluster-admin roles because they bypass row-level security. '
+      + `${PRODUCT_NAME} refuses to run with cluster-admin roles because they bypass row-level security. `
       + 'Use a dedicated application role without SUPERUSER or BYPASSRLS.',
     );
   }
@@ -109,7 +110,7 @@ export async function hardenDatabaseRoleBeforeMigrations(
   if (isProtectedState(state)) {
     throw new Error(
       `${prefix} DATABASE_URL resolves to protected PostgreSQL role "${state.currentUser}" with ${flags}. `
-      + 'KANAP runs no migration as a cluster-admin role, because it bypasses row-level security. '
+      + `${PRODUCT_NAME} runs no migration as a cluster-admin role, because it bypasses row-level security. `
       + 'Create a dedicated application role without SUPERUSER or BYPASSRLS, point DATABASE_URL to it and restart.',
     );
   }
@@ -134,7 +135,7 @@ export async function hardenDatabaseRoleBeforeMigrations(
     // The code and the driver error stay on the error: a lost connection is retried by the entrypoint.
     throw Object.assign(new Error(
       `${prefix} DATABASE_URL resolves to PostgreSQL role "${state.currentUser}" with ${flags}, `
-      + `and KANAP could not remove these attributes (${reason || String(error)}). `
+      + `and ${PRODUCT_NAME} could not remove these attributes (${reason || String(error)}). `
       + `As a PostgreSQL superuser, run ALTER ROLE ${quoteRole(state.currentUser)} NOSUPERUSER NOBYPASSRLS and restart, `
       + 'or point DATABASE_URL to a dedicated application role without them.',
     ), { code: error?.code, driverError: error?.driverError });

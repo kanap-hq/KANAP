@@ -16,6 +16,7 @@ import { CimdFetcherService } from '../cimd-fetcher.service';
 import { McpOAuthController, McpOAuthMetadataController } from '../mcp-oauth.controller';
 import { McpOAuthService } from '../mcp-oauth.service';
 import { s256Challenge } from '../mcp-oauth.util';
+import { PRODUCT_NAME } from '../../../config/product';
 
 // The OAuth controllers inside a real Nest application: routing of the dotted /.well-known
 // paths, guards (JwtAuthGuard, the throttler and its per-tenant tracker on /token), body parsers
@@ -91,7 +92,9 @@ async function main() {
   const app = await NestFactory.create(RoutingModule, { bodyParser: false, logger: false });
   app.use((req: any, _res: any, next: any) => {
     const tenantId = HOSTS[String(req.headers.host)];
-    req.tenant = tenantId ? { id: tenantId, slug: String(req.headers.host).split('.')[0] } : null;
+    // Acme has an organisation name; beta has the on-premise default, which names no organisation.
+    const name = tenantId === TENANT_A ? 'Acme Industries' : 'My Organization';
+    req.tenant = tenantId ? { id: tenantId, slug: String(req.headers.host).split('.')[0], name } : null;
     next();
   });
   app.use(...createBodyParsers());
@@ -103,6 +106,10 @@ async function main() {
     const prm = await request('GET', '/.well-known/oauth-protected-resource/api/ai/mcp');
     assert.equal(prm.status, 200, prm.body);
     assert.equal(prm.json.resource, 'https://acme.kanap.test/api/ai/mcp');
+    // The resource is named after the workspace's organisation, else the product.
+    assert.equal(prm.json.resource_name, 'Acme Industries');
+    const betaPrm = await request('GET', '/.well-known/oauth-protected-resource', { host: 'beta.kanap.test' });
+    assert.equal(betaPrm.json.resource_name, PRODUCT_NAME);
     assert.equal((await request('GET', '/.well-known/oauth-protected-resource')).status, 200);
     const as = await request('GET', '/.well-known/oauth-authorization-server');
     assert.equal(as.json.issuer, 'https://acme.kanap.test');

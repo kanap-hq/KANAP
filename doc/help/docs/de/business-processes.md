@@ -85,7 +85,7 @@ Ohne `business_processes:member` öffnet sich die Seite nur zum Lesen.
 
 ### Eigenschaften
 
-Die Eigenschaftsleiste auf der rechten Seite enthält:
+Der Eigenschaftenbereich auf der rechten Seite enthält:
 
 - **Typ**: der Prozesstyp nach ISO 9001, optional. Ein **Führungsprozess** steuert und lenkt die Organisation. Ein **Kernprozess** schafft Wert für die Kunden. Ein **Unterstützungsprozess** stellt den anderen Prozessen Ressourcen bereit. Ein Teilprozess erbt den Typ seines übergeordneten Prozesses nicht.
 - **Übergeordneter Prozess**: der Prozess, unter dem dieser steht. Prozesse bilden einen Baum ohne Tiefenbegrenzung. Die Auswahl zeigt den Baum eingerückt und durchsucht den vollständigen Pfad. Der Prozess selbst und seine Teilprozesse werden nicht angeboten. Lassen Sie das Feld für die oberste Ebene leer. Ein Prozess kann nicht sein eigener übergeordneter Prozess sein und nicht unter einen seiner eigenen Teilprozesse verschoben werden.

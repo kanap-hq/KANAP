@@ -29,8 +29,7 @@
     },
     "messages": {
       "saveSuccess": "Profil mis à jour avec succès",
-      "saveFailed": "Impossible d'enregistrer le profil",
-      "portfolioDescription": "Gérez votre profil contributeur, vos compétences, votre disponibilité et vos valeurs par défaut de classification."
+      "saveFailed": "Impossible d'enregistrer le profil"
     },
     "actions": {
       "viewContributorProfile": "Voir le profil contributeur"
@@ -38,7 +37,7 @@
   },
   "appearance": {
     "title": "Apparence",
-    "description": "Choisissez l'apparence de Kanap dans ce navigateur.",
+    "description": "Choisissez l'apparence dans ce navigateur.",
     "light": "Clair",
     "dark": "Sombre",
     "system": "Système",
@@ -46,7 +45,6 @@
   },
   "notifications": {
     "emailNotifications": "Notifications par e-mail",
-    "emailDescription": "Recevoir des notifications par e-mail pour les mises à jour et l'activité",
     "portfolio": {
       "title": "Notifications du portefeuille",
       "statusChanges": "Changements de statut",
@@ -60,7 +58,6 @@
       "asAssignee": "Assigné à une tâche",
       "asRequestor": "Demandeur d'une tâche",
       "asViewer": "Observateur d'une tâche",
-      "viewerHint": "Peut être fréquent, désactivé par défaut",
       "eventTypes": "Types d'événements :",
       "statusChanges": "Changements de statut",
       "comments": "Commentaires"
@@ -95,7 +92,7 @@
     }
   },
   "about": {
-    "title": "À propos de KANAP",
+    "title": "À propos de {{product}}",
     "version": "Version {{version}}",
     "deploymentCloud": "Déploiement : cloud",
     "deploymentOnPremise": "Déploiement : sur site",
@@ -121,7 +118,7 @@
   },
   "connectedApps": {
     "title": "Applications connectées",
-    "subtitle": "Ces applications peuvent lire vos données KANAP avec vos droits d'accès.",
+    "subtitle": "Ces applications peuvent lire vos données avec vos droits d'accès.",
     "empty": "Aucune application connectée.",
     "howTo": "Comment connecter Claude",
     "connectedOn": "Connectée le {{date}}",
@@ -131,7 +128,7 @@
     "disconnect": "Déconnecter",
     "confirm": {
       "title": "Déconnecter {{client}} ?",
-      "body": "{{client}} perd immédiatement l'accès à vos données KANAP. Pour l'utiliser à nouveau, reconnectez-la depuis l'application."
+      "body": "{{client}} perd immédiatement l'accès à vos données. Pour l'utiliser à nouveau, reconnectez-la depuis l'application."
     },
     "apiKeys": "Clés API",
     "loadFailed": "Impossible de charger vos applications connectées.",
@@ -139,7 +136,7 @@
     "revoke": "Révoquer",
     "revokeConfirm": {
       "title": "Révoquer {{key}} ?",
-      "body": "Tous les clients qui utilisent {{key}} perdent immédiatement l'accès à vos données KANAP. Cette action est définitive."
+      "body": "Tous les clients qui utilisent {{key}} perdent immédiatement l'accès à vos données. Cette action est définitive."
     },
     "revokeFailed": "Impossible de révoquer cette clé."
   }

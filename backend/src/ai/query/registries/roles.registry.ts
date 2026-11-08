@@ -1,5 +1,6 @@
 import { AiEntityFilterRegistry } from '../ai-filter.types';
 import { AI_ROLE_TYPES } from '../ai-roles.query';
+import { PRODUCT_NAME } from '../../../config/product';
 
 /**
  * The roles of Admin › Roles, read through the screen's services (`query/ai-roles.query.ts`): one
@@ -31,7 +32,7 @@ export const rolesRegistry: AiEntityFilterRegistry = {
       ai: 'type',
       grid: 'type',
       type: 'set',
-      description: 'Kind of role, as the badge of the Roles screen: system (Administrator and Contact, managed by KANAP), built_in (shipped with KANAP, locked: duplicate it to change it) or custom (created in the workspace, editable).',
+      description: 'Kind of role, as the badge of the Roles screen: system (Administrator and Contact, managed by ' + PRODUCT_NAME + '), built_in (shipped with ' + PRODUCT_NAME + ', locked: duplicate it to change it) or custom (created in the workspace, editable).',
       values: [...AI_ROLE_TYPES],
       discoverable: true,
       sortable: true,

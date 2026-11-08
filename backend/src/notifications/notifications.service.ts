@@ -27,7 +27,8 @@ import {
   type VulnerabilityDigestItem,
 } from './notification-templates';
 import { renderCommentEmail } from '../common/markdown-worker';
-import { EmailBranding, resolveEmailBranding } from '../email/email-branding';
+import { EmailBranding, loadTenantEmailBranding } from '../email/email-branding';
+import { workspaceEmailSender } from '../email/email-config';
 import { getEmailStrings, resolveEmailLocale } from '../i18n/email-i18n';
 import { personsByReadAccess, SCOPED_TASK_OBJECT_TYPES } from '../data-access/can-read';
 
@@ -188,18 +189,7 @@ export class NotificationsService {
    * Resolve email branding for a tenant (loads logo from S3 if needed).
    */
   private async resolveBranding(tenantId: string): Promise<EmailBranding> {
-    try {
-      const rows = await this.dataSource.query(
-        `SELECT branding FROM tenants WHERE id = $1`,
-        [tenantId],
-      );
-      const raw = rows[0]?.branding;
-      return await resolveEmailBranding(raw, this.storage);
-    } catch (error) {
-      this.logger.warn(`Failed to resolve email branding for tenant ${tenantId}: ${error}`);
-      const { getDefaultEmailBranding } = await import('../email/email-branding');
-      return getDefaultEmailBranding();
-    }
+    return loadTenantEmailBranding((sql, values) => this.dataSource.query(sql, values), this.storage, tenantId);
   }
 
   /**
@@ -597,7 +587,8 @@ export class NotificationsService {
   /**
    * Send notification email (fire-and-forget with error logging).
    */
-  private async sendNotification(to: string, content: EmailContent): Promise<void> {
+  private async sendNotification(to: string, content: EmailContent, branding: EmailBranding): Promise<void> {
+    const from = workspaceEmailSender(branding.organisationName);
     try {
       await this.emailService.send({
         to,
@@ -605,6 +596,7 @@ export class NotificationsService {
         html: content.html,
         text: content.text,
         attachments: content.attachments,
+        ...(from ? { from } : {}),
       });
     } catch (error) {
       this.logger.error(`Failed to send notification to ${to}: ${error}`);
@@ -727,7 +719,7 @@ export class NotificationsService {
       });
 
       for (const recipient of recipients) {
-        this.sendNotification(recipient.email, content);
+        this.sendNotification(recipient.email, content, branding);
       }
     }
   }
@@ -888,19 +880,19 @@ export class NotificationsService {
 
       if (mergedContent) {
         for (const recipient of bucket.merged) {
-          this.sendNotification(recipient.email, mergedContent);
+          this.sendNotification(recipient.email, mergedContent, branding);
         }
       }
 
       if (statusContent) {
         for (const recipient of bucket.status) {
-          this.sendNotification(recipient.email, statusContent);
+          this.sendNotification(recipient.email, statusContent, branding);
         }
       }
 
       if (commentContent) {
         for (const recipient of bucket.comment) {
-          this.sendNotification(recipient.email, commentContent);
+          this.sendNotification(recipient.email, commentContent, branding);
         }
       }
     }
@@ -941,7 +933,7 @@ export class NotificationsService {
       locale: params.addedUser.locale ?? undefined,
     });
 
-    this.sendNotification(params.addedUser.email, content);
+    this.sendNotification(params.addedUser.email, content, branding);
   }
 
   /**
@@ -1020,7 +1012,7 @@ export class NotificationsService {
       locale: itLeadRows[0].locale ?? undefined,
     });
 
-    this.sendNotification(itLeadRows[0].email, content);
+    this.sendNotification(itLeadRows[0].email, content, branding);
   }
 
   /**
@@ -1090,7 +1082,7 @@ export class NotificationsService {
         locale,
       });
       for (const recipient of recipients) {
-        this.sendNotification(recipient.email, content);
+        this.sendNotification(recipient.email, content, branding);
       }
     }
   }
@@ -1154,7 +1146,7 @@ export class NotificationsService {
         locale,
       });
       for (const recipient of recipients) {
-        await this.sendNotification(recipient.email, content);
+        await this.sendNotification(recipient.email, content, branding);
       }
     }
   }
@@ -1225,7 +1217,7 @@ export class NotificationsService {
       content.attachments = [...(content.attachments ?? []), ...embeddedComment.attachments];
 
       for (const recipient of recipients) {
-        this.sendNotification(recipient.email, content);
+        this.sendNotification(recipient.email, content, branding);
       }
     }
   }
@@ -1267,7 +1259,7 @@ export class NotificationsService {
       locale: params.locale ?? undefined,
     });
 
-    this.sendNotification(params.assigneeEmail, content);
+    this.sendNotification(params.assigneeEmail, content, branding);
   }
 
   /**
@@ -1326,7 +1318,7 @@ export class NotificationsService {
       });
 
       for (const recipient of recipients) {
-        this.sendNotification(recipient.email, content);
+        this.sendNotification(recipient.email, content, branding);
       }
     }
   }
@@ -1459,7 +1451,7 @@ export class NotificationsService {
         branding,
         locale: resolveEmailLocale(digest.recipient.locale),
       });
-      await this.sendNotification(digest.recipient.email, content);
+      await this.sendNotification(digest.recipient.email, content, branding);
     }
   }
 
@@ -1493,7 +1485,7 @@ export class NotificationsService {
         locale,
       });
       for (const recipient of recipients) {
-        this.sendNotification(recipient.email, content);
+        this.sendNotification(recipient.email, content, branding);
       }
     }
 
@@ -1508,7 +1500,7 @@ export class NotificationsService {
         locale: 'en',
       });
       for (const email of params.rawEmails ?? []) {
-        this.sendNotification(email, content);
+        this.sendNotification(email, content, branding);
       }
     }
   }

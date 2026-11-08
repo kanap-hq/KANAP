@@ -9,9 +9,9 @@ Die Seite Administrationszonen zeigt, wer was verwaltet. Sie folgt dem Tier-Mode
 Die Seite liest, was Sie an anderer Stelle erfassen:
 
 1. Legen Sie Ihre Administrationszonen an und ergänzen Sie Ihre Domänen in **IT-Landschaft > Einstellungen**. Bringen Sie die Zonen in eine Reihenfolge: Die erste ist die sensibelste. Siehe [Administrationszonen](it-ops-settings.md#administrationszonen) und [Domänen](it-ops-settings.md#domanen).
-2. Ordnen Sie jedes Asset seiner Zone zu, hier in einem Schritt für viele Assets (siehe [Eine Zone zuordnen](#eine-zone-zuordnen)) oder mit dem Feld **Administrationszone** der Eigenschaftsleiste des Assets. Siehe [Assets](assets.md#eigenschaftsleiste-rechtes-panel).
+2. Ordnen Sie jedes Asset seiner Zone zu, hier in einem Schritt für viele Assets (siehe [Eine Zone zuordnen](#eine-zone-zuordnen)) oder mit dem Feld **Administrationszone** des Eigenschaftenbereichs des Assets. Siehe [Assets](assets.md#eigenschaftenbereich-rechtes-panel).
 3. Verknüpfen Sie die Verzeichnistechnologien, etwa Active Directory, mit den Servern, die sie tragen. Siehe [Eine Technologie mit einem Server verknüpfen](technologies.md#eine-technologie-mit-einem-server-verknupfen).
-4. Ein Verzeichnisdienst, der auf keinem Ihrer Server läuft, etwa Entra ID, erhält seine Zone aus dem Feld **Administrationszone** seines Eigenschaftenfelds. Siehe [Technologien](technologies.md#eigenschaftenfeld).
+4. Ein Verzeichnisdienst, der auf keinem Ihrer Server läuft, etwa Entra ID, erhält seine Zone aus dem Feld **Administrationszone** seines Eigenschaftenbereichs. Siehe [Technologien](technologies.md#eigenschaftenbereich).
 
 ## Warum die Zonen zählen
 

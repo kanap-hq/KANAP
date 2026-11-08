@@ -24,6 +24,7 @@ import {
   SUPPORT_EMAIL,
   supportOfferUrl,
 } from './aboutLinks';
+import { PRODUCT_NAME } from '../../config/product';
 
 const TOKEN = '[[link]]';
 
@@ -101,7 +102,7 @@ export default function AboutContent({ onNavigate }: { onNavigate?: () => void }
     <Stack spacing={2}>
       <Stack spacing={0.5}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, pb: 0.5 }}>
-          <Box component="img" src="/icon-192.png" alt="KANAP" sx={{ width: 40, height: 40, flexShrink: 0 }} />
+          <Box component="img" src="/icon-192.png" alt={PRODUCT_NAME} sx={{ width: 40, height: 40, flexShrink: 0 }} />
           <Box>
             {versionKnown && <Typography variant="body2">{t('about.version', { version: config.version })}</Typography>}
             <Typography variant="body2">

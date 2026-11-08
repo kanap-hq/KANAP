@@ -121,13 +121,15 @@ function normalizeSettings(data: any): BrandingSettings {
 
 type HeaderPreviewProps = {
   label: string;
+  /** The workspace name the header shows when there is no logo. */
+  name: string;
   logoAlt: string;
   dark?: boolean;
   logoUrl: string | null;
   showLogo: boolean;
 };
 
-function HeaderPreview({ label, logoAlt, dark = false, logoUrl, showLogo }: HeaderPreviewProps) {
+function HeaderPreview({ label, name, logoAlt, dark = false, logoUrl, showLogo }: HeaderPreviewProps) {
   return (
     <Paper
       variant="outlined"
@@ -146,8 +148,8 @@ function HeaderPreview({ label, logoAlt, dark = false, logoUrl, showLogo }: Head
         {showLogo && logoUrl ? (
           <Box component="img" src={logoUrl} alt={logoAlt} sx={{ maxHeight: 32, maxWidth: 180, objectFit: 'contain' }} />
         ) : (
-          <Typography variant="h6" sx={{ color: dark ? '#FFFFFF' : '#111827' }}>
-            KANAP
+          <Typography variant="h6" noWrap sx={{ color: dark ? '#FFFFFF' : '#111827' }}>
+            {name}
           </Typography>
         )}
       </Box>
@@ -162,6 +164,7 @@ export default function AdminBrandingPage() {
   const dialogs = useKanapDialogs();
   const {
     isPlatformHost,
+    organisationName,
     logoUrl,
     darkLogoUrl,
     refreshTenantInfo,
@@ -480,6 +483,7 @@ export default function AdminBrandingPage() {
                 <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
                   <Stack spacing={1.5} sx={{ flex: 1, minWidth: 0 }}>
                     <HeaderPreview
+                      name={organisationName}
                       label={t('branding.logo.previews.light')}
                       logoAlt={t('branding.logo.alt')}
                       logoUrl={previewLogoUrl}
@@ -489,6 +493,7 @@ export default function AdminBrandingPage() {
                   </Stack>
                   <Stack spacing={1.5} sx={{ flex: 1, minWidth: 0 }}>
                     <HeaderPreview
+                      name={organisationName}
                       label={previewDarkUrl ? t('branding.logo.previews.dark') : t('branding.logo.previews.darkHidden')}
                       logoAlt={t('branding.logo.darkAlt')}
                       dark

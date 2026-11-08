@@ -11,6 +11,7 @@ import { AiSecretCipherService } from './ai-secret-cipher.service';
 import { normalizeGlpiPathname } from './glpi/glpi-url';
 import { BuiltinProviderIdentity, PlatformAiConfigService } from './platform/platform-ai-config.service';
 import { AiProviderRegistry } from './providers/ai-provider-registry.service';
+import { PRODUCT_NAME } from '../config/product';
 
 export type AiSettingsView = {
   id: string;
@@ -424,7 +425,7 @@ export class AiSettingsService {
         if (!identity || requestedKey !== identity.key) {
           throw new BadRequestException({
             code: BUILTIN_PROVIDER_CHANGED,
-            message: 'The KANAP included model has changed. Review it and confirm again.',
+            message: `The ${PRODUCT_NAME} included model has changed. Review it and confirm again.`,
             builtin_provider: identityBody(identity),
           });
         }
@@ -457,7 +458,7 @@ export class AiSettingsService {
         if (input.chat_enabled === true) {
           throw new BadRequestException({
             code: BUILTIN_PROVIDER_CONFIRMATION_REQUIRED,
-            message: 'Confirm the KANAP included model before turning on the assistant.',
+            message: `Confirm the ${PRODUCT_NAME} included model before turning on the assistant.`,
             builtin_provider: identityBody(readiness.builtinIdentity),
           });
         }

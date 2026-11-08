@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, Logger, OnModuleInit, Optional } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { DataSource, IsNull } from 'typeorm';
 import { StripeClientService, StripeConfigService, ensureInvoiceA4 } from './stripe';
 import { Subscription, SubscriptionStatus, SubscriptionType, PaymentMode, CollectionMethod } from './subscription.entity';
 import { computePriceAmount, normaliseStripePrice } from './price.util';
@@ -220,7 +220,10 @@ export class StripeWebhookService implements OnModuleInit {
     event?: StripeEvent,
   ): Promise<Tenant | null> {
     if (identifiers.customerId) {
-      const tenant = await this.dataSource.getRepository(Tenant).findOne({ where: { stripe_customer_id: identifiers.customerId } });
+      // A deleted workspace keeps its Stripe customer id. A late event must not find it.
+      const tenant = await this.dataSource.getRepository(Tenant).findOne({
+        where: { stripe_customer_id: identifiers.customerId, deleted_at: IsNull() },
+      });
       if (tenant) return tenant;
     }
 
@@ -240,7 +243,7 @@ export class StripeWebhookService implements OnModuleInit {
         ),
       );
       if (owned.length > 0) {
-        return this.dataSource.getRepository(Tenant).findOne({ where: { id: hintedTenantId } });
+        return this.dataSource.getRepository(Tenant).findOne({ where: { id: hintedTenantId, deleted_at: IsNull() } });
       }
     }
 
@@ -430,7 +433,8 @@ export class StripeWebhookService implements OnModuleInit {
 
   private async updateTenantStripeCustomer(tenantId: string, customerId: string): Promise<void> {
     const tenantRepo = this.dataSource.getRepository(Tenant);
-    const tenant = await tenantRepo.findOne({ where: { id: tenantId } });
+    // A deleted workspace is left untouched, including its stored customer id.
+    const tenant = await tenantRepo.findOne({ where: { id: tenantId, deleted_at: IsNull() } });
     if (!tenant) return;
     if (tenant.stripe_customer_id === customerId) return;
     await tenantRepo.update({ id: tenantId }, { stripe_customer_id: customerId });

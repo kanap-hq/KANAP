@@ -103,12 +103,12 @@ describe('NetboxIntegrationCard', () => {
     await screen.findByText('Netbox inventory');
 
     fireEvent.click(screen.getByText('Test connection'));
-    expect(await screen.findByText('KANAP could not reach the Netbox server.')).toBeInTheDocument();
+    expect(await screen.findByText('The Netbox server could not be reached.')).toBeInTheDocument();
     expect(screen.queryByText(/ECONNREFUSED/)).not.toBeInTheDocument();
     expect(screen.queryByText(/172\.18/)).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('Request timeout (seconds)'), { target: { value: '1' } });
-    expect(screen.queryByText('KANAP could not reach the Netbox server.')).not.toBeInTheDocument();
+    expect(screen.queryByText('The Netbox server could not be reached.')).not.toBeInTheDocument();
 
     (apiClient.put as any).mockRejectedValueOnce({
       response: {
@@ -120,7 +120,7 @@ describe('NetboxIntegrationCard', () => {
 
     expect(await screen.findByText('The request timeout must be a whole number of seconds between 5 and 120, or empty to use the default.')).toBeInTheDocument();
     expect(screen.queryByText('raw timeout')).not.toBeInTheDocument();
-    expect(screen.queryByText('KANAP could not reach the Netbox server.')).not.toBeInTheDocument();
+    expect(screen.queryByText('The Netbox server could not be reached.')).not.toBeInTheDocument();
     expect(screen.getAllByRole('alert')).toHaveLength(1);
   });
 

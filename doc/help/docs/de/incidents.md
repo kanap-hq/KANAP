@@ -58,7 +58,7 @@ Diese Berechtigungen decken auch die Vorfallanalyse und den PDF-Export ab. Wer a
 
 Ein eingeschränkter Vorfall ist für alle unsichtbar außer den Registeradministratoren, dem Melder und dem Verantwortlichen. Auf einem Standard-Mandanten sind das Administrator und IT-Landschaft-Administrator, plus wer den Vorfall erfasst hat oder dafür verantwortlich ist. Leser und Mitwirkende, die weder Melder noch Verantwortlicher sind, sehen ihn weder in der Liste, in der Suche, im Chat noch in einem Export. Das Öffnen über die Referenz liefert dieselbe „nicht gefunden“-Antwort wie eine fehlende Nummer. Auch seine verknüpften Aufgaben bleiben ihnen verborgen: in der Aufgabenliste, in der Suche, im Dashboard, in Plaid und unter den verknüpften Objekten. Die Vorfallanalyse unterliegt derselben Einschränkung, ganz gleich, von wo aus sie erreicht wird: Wissensdatenbank, Suche, Assistent, Exporte und die darin eingefügten Bilder.
 
-**Auf Registeradministratoren beschränken** steht in der Eigenschaftenleiste unter Klassifizierung. Ein Mitwirkender kann es einschalten, solange er den Datensatz noch sieht; nur ein Administrator kann es ausschalten, auch nach dem Schließen. Die Änderung wird ins Journal geschrieben. Das Prüfprotokoll zeigt die Einträge eines eingeschränkten Vorfalls, seiner Analyse und seiner Aufgaben nur Personen, die den Vorfall sehen, und Dokument-Beziehungschips lassen seinen Titel weg. Nur die Liste „Kürzlich angesehen“, die im Browser jeder Person liegt, kann den Titel noch jemandem zeigen, der den Vorfall vor der Einschränkung geöffnet hat.
+**Auf Registeradministratoren beschränken** steht im Eigenschaftenbereich unter Klassifizierung. Ein Mitwirkender kann es einschalten, solange er den Datensatz noch sieht; nur ein Administrator kann es ausschalten, auch nach dem Schließen. Die Änderung wird ins Journal geschrieben. Das Prüfprotokoll zeigt die Einträge eines eingeschränkten Vorfalls, seiner Analyse und seiner Aufgaben nur Personen, die den Vorfall sehen, und Dokument-Beziehungschips lassen seinen Titel weg. Nur die Liste „Kürzlich angesehen“, die im Browser jeder Person liegt, kann den Titel noch jemandem zeigen, der den Vorfall vor der Einschränkung geöffnet hat.
 
 ---
 
@@ -95,7 +95,7 @@ Was Sie filtern, wird in den geöffneten Vorfall übernommen: **Zurück / Weiter
 
 ## Der Vorfalls-Arbeitsbereich
 
-Klicken Sie auf eine beliebige Zeile, um den Vorfall zu öffnen. Der Arbeitsbereich hat einen **Kopfbereich** mit der Referenz und kurzen Metadaten, eine **Eigenschaftenleiste** rechts und einen **Inhaltsbereich** in der Mitte, der mit jedem Tab wechselt.
+Klicken Sie auf eine beliebige Zeile, um den Vorfall zu öffnen. Der Arbeitsbereich hat einen **Kopfbereich** mit der Referenz und kurzen Metadaten, einen **Eigenschaftenbereich** rechts und einen **Inhaltsbereich** in der Mitte, der mit jedem Tab wechselt.
 
 Die Tabs sind **Übersicht**, **Journal**, **Beziehungen**, **Dokumente** und **Verlauf** (die Änderungen am Vorfall, siehe [Verlauf der Datensätze](record-history.md)).
 
@@ -105,9 +105,9 @@ Der Kopfbereich zeigt den Titel (direkt bearbeitbar), die Referenz `INC-N` (zum 
 
 Die Metadatenzeile darunter zeigt **Status**, **Schweregrad**, **Verantwortlicher**, **Erkannt** und, sobald der Vorfall behoben ist, die **Dauer** zwischen Erkennung und Behebung. Schweregrad, Verantwortlicher und Erkannt lassen sich direkt in dieser Zeile ändern.
 
-### Eigenschaftenleiste
+### Eigenschaftenbereich
 
-Die Leiste bleibt auf jedem Tab sichtbar und speichert während der Bearbeitung.
+Der Bereich bleibt auf jedem Tab sichtbar und speichert während der Bearbeitung.
 
 **Klassifizierung**:
 
@@ -245,7 +245,7 @@ Ein Vorfall mit Daten der behördlichen Meldung kann nicht gelöscht werden: **P
 
 ## Compliance und Prüfnachweise
 
-Zwei Schalter in der Eigenschaftenleiste tragen den regulatorischen Teil des Datensatzes:
+Zwei Schalter im Eigenschaftenbereich tragen den regulatorischen Teil des Datensatzes:
 
 - **Personenbezogene Daten betroffen**: Schalten Sie ihn ein, sobald personenbezogene Daten offengelegt, verändert oder verloren wurden. Es ist das Merkmal, nach dem Ihr Datenschutzbeauftragter filtert
 - **Meldung an Behörde erforderlich**: Schalten Sie ihn ein, wenn das Ereignis gemeldet werden muss, etwa an eine Datenschutzbehörde, eine nationale Cybersicherheitsbehörde oder einen Branchenregulierer. **Gemeldet am** hält dann fest, wann Sie gemeldet haben, und **Informierte Parteien** listet auf, wer benachrichtigt wurde: Regulierer, Versicherer, betroffene Kunden, Konzernsicherheit

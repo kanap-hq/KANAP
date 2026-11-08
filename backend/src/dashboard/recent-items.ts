@@ -23,6 +23,7 @@ const TABLES: Record<string, { table: string; where?: string }> = {
   connection: { table: 'connections' },
   contract: { table: 'contracts' },
   company: { table: 'companies' },
+  business_process: { table: 'business_processes' },
   task: { table: 'tasks' },
   spend_item: { table: 'spend_items', where: naturesAnd(null, BUDGET_NATURES) },
   capex_item: { table: 'spend_items', where: naturesAnd(null, BUDGET_NATURES) },

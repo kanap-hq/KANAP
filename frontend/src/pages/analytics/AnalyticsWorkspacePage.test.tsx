@@ -215,7 +215,7 @@ describe('AnalyticsWorkspacePage', () => {
     mocked.getAnalyticsValue.mockResolvedValue({ ...VALUE, applies_to: 'opex' });
     renderAt('/master-data/analytics/v-1/overview?axis=ax-nature');
     await findTitle();
-    expect(within(screen.getByRole('complementary')).getByText('analytics.hints.valueDimensionAppliesTo.opex:Nature')).toBeInTheDocument();
+    expect(within(screen.getByRole('complementary')).getByLabelText('analytics.hints.valueDimensionAppliesTo.opex:Nature')).toBeInTheDocument();
     // The CAPEX lines do not show the dimension: no conflict line about them.
     expect(screen.queryByTestId('analytics-value-applies-to-conflict')).toBeNull();
     expect(usageSelect()).not.toHaveAttribute('aria-disabled');
@@ -435,7 +435,7 @@ describe('AnalyticsWorkspacePage', () => {
     fireEvent.click(within(await screen.findByRole('listbox')).getByRole('option', { name: 'Nature' }));
     await waitFor(() => expect(usageSelect()).toHaveTextContent('master-data:shared.lineTypeUsage.both'));
     expect(usageSelect()).not.toHaveAttribute('aria-disabled');
-    expect(screen.getByText('analytics.hints.valueDimensionAppliesTo.capex:Nature')).toBeInTheDocument();
+    expect(screen.getByLabelText('analytics.hints.valueDimensionAppliesTo.capex:Nature')).toBeInTheDocument();
     fireEvent.mouseDown(usageSelect());
     const listbox = await screen.findByRole('listbox');
     expect(within(listbox).getByRole('option', { name: 'master-data:shared.lineTypeUsage.opex' })).toHaveAttribute('aria-disabled', 'true');

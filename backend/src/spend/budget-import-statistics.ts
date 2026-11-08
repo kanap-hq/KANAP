@@ -122,7 +122,7 @@ export async function analyzeTables(dataSource: DataSource, tables: readonly str
   }
   if (report.analysed.length) logger.log(`ANALYZE after a large import: ${report.analysed.join(', ')} (${Date.now() - started} ms)`);
   if (report.notOwned.length) {
-    logger.warn(`ANALYZE after a large import skipped ${report.notOwned.join(', ')}: the KANAP role does not own them (as their owner: ANALYZE ${report.notOwned.join(', ')}); autovacuum will analyse them`);
+    logger.warn(`ANALYZE after a large import skipped ${report.notOwned.join(', ')}: the application role does not own them (as their owner: ANALYZE ${report.notOwned.join(', ')}); autovacuum will analyse them`);
   }
   if (report.missing.length) logger.warn(`ANALYZE after a large import: no table ${report.missing.join(', ')}`);
   if (report.failed.length) logger.warn(`ANALYZE after a large import did not run for ${report.failed.join(', ')}; autovacuum will analyse them`);

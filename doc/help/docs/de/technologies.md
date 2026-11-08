@@ -107,7 +107,7 @@ Wenn Schwachstellen verfolgt werden, öffnet die Spalte **Hersteller** auch die 
 
 ## Der Technologie-Arbeitsbereich
 
-Der Arbeitsbereich hat eine Kopfzeile, ein Eigenschaftenfeld rechts und sieben Reiter: **Übersicht**, **Server**, **Anwendungen**, **Betrieb**, **Compliance**, **Beziehungen** und **Verlauf** (die Änderungen an der Technologie, siehe [Verlauf der Datensätze](record-history.md)). Die Reiter **Server**, **Anwendungen** und **Beziehungen** zeigen ihre Anzahl als Badge.
+Der Arbeitsbereich hat eine Kopfzeile, einen Eigenschaftenbereich rechts und sieben Reiter: **Übersicht**, **Server**, **Anwendungen**, **Betrieb**, **Compliance**, **Beziehungen** und **Verlauf** (die Änderungen an der Technologie, siehe [Verlauf der Datensätze](record-history.md)). Die Reiter **Server**, **Anwendungen** und **Beziehungen** zeigen ihre Anzahl als Badge.
 
 ### Kopfzeile
 
@@ -117,7 +117,7 @@ Der Arbeitsbereich hat eine Kopfzeile, ein Eigenschaftenfeld rechts und sieben R
 - **Familie**.
 - **Löschen**, ein Papierkorbsymbol (`infrastructure:admin`): Die Bestätigung nennt, was mit der Technologie gelöscht wird.
 
-### Eigenschaftenfeld
+### Eigenschaftenbereich
 
 - **Hersteller**, **Familie** und **Hosting-Typ**.
 - **Administrationszone**: nur für die Technologien der Familie **Verzeichnis und Identität** angezeigt. Sie ordnet einen Verzeichnisdienst einer Zone Ihres Administrationsmodells zu, zum Beispiel Tier 0 für Entra ID, das auf keinem Ihrer Server läuft. Die Zonen stammen aus **IT-Landschaft > Einstellungen**, und die Seite [Administrationszonen](administration-view.md) listet die Verzeichnisdienste mit ihrer Zone. Die übrigen Technologien erhalten keine Zone: Ordnen Sie stattdessen die Server zu, die sie tragen. Eine früher bei einer Technologie einer anderen Familie gesetzte Zone bleibt sichtbar, nur lesend, mit dem Hinweis, dass der Wert nicht mehr verwendet wird.

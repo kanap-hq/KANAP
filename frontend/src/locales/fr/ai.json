@@ -30,7 +30,7 @@
     "dropHint": "Déposez un fichier pour le joindre",
     "hintEnter": "Entrée pour envoyer",
     "hintShiftEnter": "Maj+Entrée retour à la ligne",
-    "placeholder": "Posez votre question à Plaid sur vos données KANAP…",
+    "placeholder": "Posez votre question à Plaid…",
     "removeAttachment": "Retirer la pièce jointe",
     "send": "Envoyer",
     "stop": "Arrêter la génération"
@@ -202,7 +202,7 @@
       "classification_review_state": "Revue de la classification",
       "access_warning": "Accès",
       "cancel_warning": "Annulation",
-      "catalog_adoption": "Catalogue KANAP",
+      "catalog_adoption": "Catalogue {{product}}",
       "closure_warning": "Clôture",
       "coa_id": "Plan comptable",
       "content": "Contenu",
@@ -386,8 +386,8 @@
   },
   "previewBatch": {
     "approveAll": "Tout approuver",
-    "confirmBody_one": "KANAP appliquera l'aperçu approuvé séparément. Les échecs partiels resteront visibles dans le statut de l'aperçu.",
-    "confirmBody_other": "KANAP appliquera chaque aperçu approuvé séparément. Les échecs partiels resteront visibles dans le statut des aperçus.",
+    "confirmBody_one": "L'aperçu approuvé est appliqué séparément. Les échecs partiels resteront visibles dans le statut de l'aperçu.",
+    "confirmBody_other": "Chaque aperçu approuvé est appliqué séparément. Les échecs partiels resteront visibles dans le statut des aperçus.",
     "confirmTitle_one": "Approuver {{count}} aperçu ?",
     "confirmTitle_other": "Approuver {{count}} aperçus ?",
     "more_one": "{{count}} aperçu supplémentaire",

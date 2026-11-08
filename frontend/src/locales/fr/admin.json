@@ -9,7 +9,7 @@
       "testing": "Test en cours…"
     },
     "dialogs": {
-      "claudeCodeHelper": "Exécutez-la dans un terminal pour connecter Claude Code à KANAP avec cette clé.",
+      "claudeCodeHelper": "Exécutez-la dans un terminal pour connecter Claude Code avec cette clé.",
       "claudeCodeLabel": "Commande Claude Code",
       "copyCommand": "Copier la commande",
       "copyKey": "Copier la clé",
@@ -27,12 +27,11 @@
     "fields": {
       "conversationRetentionDays": "Conservation des conversations (jours)",
       "keyMaxLifetimeDays": "Durée de vie maximale de la clé (jours)",
-      "keyMaxLifetimeHelper": "Laissez vide pour aucune limite d'expiration",
       "label": "Libellé",
       "labelPlaceholder": "Ex. : Client MCP de bureau"
     },
     "glpi": {
-      "description": "Configurez des identifiants GLPI propres à l'espace de travail pour que Plaid puisse importer des tickets GLPI sélectionnés en tâches KANAP après confirmation de l'utilisateur.",
+      "description": "Configurez des identifiants GLPI propres à l'espace de travail pour que Plaid puisse importer des tickets GLPI sélectionnés en tâches après confirmation de l'utilisateur.",
       "fields": {
         "appToken": "Jeton d'application",
         "enabled": "Activer l'import de tickets GLPI",
@@ -89,8 +88,8 @@
       "revokeNamed": "Révoquer {{name}}",
       "revokeConfirm": {
         "title": "Révoquer {{name}} ?",
-        "keyBody": "Tous les clients qui utilisent {{name}} perdent immédiatement l'accès à KANAP. Cette action est définitive.",
-        "connectionBody": "{{name}} perd immédiatement l'accès à KANAP. Pour l'utiliser à nouveau, son propriétaire doit la reconnecter."
+        "keyBody": "Tous les clients qui utilisent {{name}} perdent immédiatement leur accès. Cette action est définitive.",
+        "connectionBody": "{{name}} perd immédiatement son accès. Pour l'utiliser à nouveau, son propriétaire doit la reconnecter."
       }
     },
     "messages": {
@@ -154,7 +153,7 @@
       "validationErrorsTitle": "Erreurs de validation du fournisseur actuel",
       "modelSelector": {
         "label": "Modèle utilisé par Plaid",
-        "builtin": "Modèle inclus KANAP",
+        "builtin": "Modèle inclus {{product}}",
         "tenantDefault": "Modèle par défaut ({{name}})",
         "noDefault": "Aucun modèle configuré",
         "hintPrefix": "Les modèles se gèrent dans la page",
@@ -165,7 +164,7 @@
       "actions": {
         "goToAgents": "Ouvrir la page Agents"
       },
-      "description": "Connectez votre serveur de supervision PRTG pour que les agents KANAP puissent lire les alertes et l'état des capteurs de votre infrastructure.",
+      "description": "Connectez votre serveur de supervision PRTG pour que les agents puissent lire les alertes et l'état des capteurs de votre infrastructure.",
       "fields": {
         "apiKey": "Clé API",
         "baseUrl": "Adresse du serveur",
@@ -175,10 +174,7 @@
       },
       "hints": {
         "apiKey": "Créez-en une dans PRTG sous Configuration → Clés API. Un accès en lecture seule suffit.",
-        "apiKeyExisting": "Une clé API est déjà enregistrée. Laissez vide pour la conserver.",
-        "requestTimeout": "Durée pendant laquelle KANAP attend la réponse de PRTG à chaque requête (5–120 secondes). Augmentez-la si les vérifications d'alertes échouent en timeout sur un serveur PRTG volumineux ou lent. Laissez vide pour la valeur par défaut (30).",
-        "baseUrl": "L'adresse de l'interface web de votre PRTG, p. ex. https://prtg.example.com",
-        "timezone": "Le fuseau horaire dans lequel fonctionne votre serveur PRTG, pour lire correctement l'horodatage des alertes."
+        "requestTimeout": "De 5 à 120 secondes. Par défaut : 30."
       },
       "messages": {
         "loadFailed": "Impossible de charger l'intégration de supervision.",
@@ -211,7 +207,7 @@
     },
     "title": "Plaid",
     "includedModel": {
-      "status": "Modèle inclus KANAP : {{name}} (lieu de traitement : {{place}})",
+      "status": "Modèle inclus {{product}} : {{name}} (lieu de traitement : {{place}})",
       "confirmed": "Confirmé",
       "needsConfirmation": "À confirmer",
       "needed": "L'assistant et les agents l'utilisent une fois qu'un administrateur l'a confirmé.",
@@ -221,8 +217,8 @@
       "withdraw": "Retirer",
       "changed": "Le fournisseur ou son lieu de traitement a changé. Vérifiez-le et confirmez à nouveau.",
       "dialog": {
-        "title": "Utiliser le modèle inclus KANAP ?",
-        "body": "Les questions que vous posez à l'assistant et aux agents, ainsi que les données KANAP qu'ils lisent pour y répondre, sont envoyées à {{name}}. Lieu de traitement : {{place}}.",
+        "title": "Utiliser le modèle inclus {{product}} ?",
+        "body": "Les questions que vous posez à l'assistant et aux agents, ainsi que les données qu'ils lisent pour y répondre, sont envoyées à {{name}}. Lieu de traitement : {{place}}.",
         "ownModel": "Vous pouvez utiliser votre propre modèle à la place, depuis la <link />.",
         "ownModelLink": "liste des modèles IA",
         "confirmAndTurnOn": "Confirmer et activer"
@@ -1619,8 +1615,8 @@
     "title": "Authentification",
     "sync": {
       "title": "Synchronisation quotidienne de l'annuaire",
-      "description": "Chaque nuit, KANAP actualise les noms, titres, téléphones, départements et entreprises depuis Microsoft Entra, et désactive les comptes supprimés ou désactivés dans l'annuaire. Cela nécessite une approbation unique par un administrateur Microsoft Entra.",
-      "consentNeeded": "Pas encore autorisé. Un administrateur Microsoft Entra doit autoriser KANAP à lire les utilisateurs de l'annuaire.",
+      "description": "Chaque nuit, les noms, titres, téléphones, départements et entreprises sont actualisés depuis Microsoft Entra, et les comptes supprimés ou désactivés dans l'annuaire sont désactivés. Cela nécessite une approbation unique par un administrateur Microsoft Entra.",
+      "consentNeeded": "Pas encore autorisé. Un administrateur Microsoft Entra doit autoriser {{product}} à lire les utilisateurs de l'annuaire.",
       "grantAccess": "Autoriser dans Microsoft Entra",
       "lastSynced": "Dernière synchronisation {{date}} : {{synced}} comptes actualisés, {{disabled}} désactivés.",
       "error": "La dernière synchronisation a échoué : {{message}}",
@@ -1749,7 +1745,7 @@
     "colors": {
       "darkHelper": "Utilisé en mode sombre. Si vide, la couleur du mode clair est réutilisée.",
       "darkModePrimary": "Couleur primaire mode sombre",
-      "description": "Définissez une couleur pour le mode clair et une pour le mode sombre. Laissez vide pour conserver les valeurs par défaut de KANAP.",
+      "description": "Définissez une couleur pour le mode clair et une pour le mode sombre. Laissez vide pour garder les couleurs par défaut.",
       "lightHelper": "Utilisée pour la barre d'application, les boutons principaux et les liens en mode clair.",
       "lightModePrimary": "Couleur primaire mode clair",
       "lowDarkContrast": "Le contraste en mode sombre est faible ({{ratio}}:1 vs texte {{tone}}{{fallback}}). ",
@@ -1763,11 +1759,11 @@
       "usingLightFallback": ", utilise la couleur de repli du mode clair"
     },
     "confirmations": {
-      "reset": "Réinitialiser la personnalisation aux paramètres par défaut de KANAP ? Le logo et les couleurs personnalisées seront supprimés."
+      "reset": "Réinitialiser la personnalisation aux paramètres par défaut ? Le logo et les couleurs personnalisées seront supprimés."
     },
     "fields": {
-      "organizationName": "Nom de l'organisation",
-      "organizationNameHelper": "Affiché avec le logo, dans À propos, sur la page de consentement et pour l'assistant. L'adresse de l'espace de travail reste la même.",
+      "organizationName": "Nom de l'espace de travail",
+      "organizationNameHelper": "Affiché dans l'en-tête quand il n'y a pas de logo, dans l'onglet du navigateur, dans les e-mails et quand un outil d'IA se connecte. L'adresse de l'espace de travail reste la même.",
       "organizationNamePlaceholder": "p. ex. Northwind",
       "useLightLogoInDark": "Utiliser le logo du mode clair"
     },
@@ -2202,7 +2198,6 @@
       "contactLocked": "Les rôles de contact sont gérés par le système pour la visibilité de l'annuaire et ne peuvent pas être modifiés.",
       "duplicated": "Rôle dupliqué.",
       "permissionsSaved": "Autorisations du rôle enregistrées.",
-      "setAccessLevels": "Définissez les niveaux d'accès par ressource pour ce rôle.",
       "deleteFailed": "Le rôle n’a pas pu être supprimé."
     },
     "resources": {
@@ -2589,7 +2584,6 @@
   },
   "aiModels": {
     "title": "Modèles IA",
-    "subtitle": "Les modèles IA disponibles pour votre organisation. Assignez-les à Plaid ou à des agents ; le modèle par défaut est utilisé quand rien de spécifique n'est assigné.",
     "sectionTitle": "Modèles",
     "new": "Nouveau modèle",
     "empty": "Aucun modèle IA configuré pour l'instant. Ajoutez votre premier modèle pour alimenter Plaid et les agents.",
@@ -2621,7 +2615,7 @@
       "actions": "Actions"
     },
     "builtin": {
-      "name": "Modèle inclus KANAP",
+      "name": "Modèle inclus {{product}}",
       "caption": "Opéré par KANAP, inclus dans votre abonnement",
       "model": "Géré par KANAP",
       "quota": "{{used}} / {{limit}} messages inclus ce mois-ci",
@@ -2689,7 +2683,6 @@
   },
   "aiUsage": {
     "title": "Utilisation & coûts",
-    "subtitle": "L'utilisation des fonctions IA par votre organisation. Les coûts sont ventilés par modèle et par agent.",
     "costs": {
       "title": "Coûts",
       "totalMonth": "Total ce mois-ci",
@@ -2705,7 +2698,7 @@
   "integrations": {
     "netbox": {
       "title": "Inventaire Netbox",
-      "description": "Reprenez l'inventaire Netbox dans les actifs KANAP. Netbox reste la référence pour les équipements qu'il décrit.",
+      "description": "Importez l'inventaire Netbox en tant qu'actifs. Netbox reste la référence pour les équipements qu'il décrit.",
       "status": {
         "connected": "Configuré",
         "disabled": "Désactivé",
@@ -2727,10 +2720,9 @@
         "requestTimeout": "30"
       },
       "hints": {
-        "baseUrl": "L'adresse que vous utilisez pour ouvrir Netbox dans un navigateur.",
         "apiToken": "Dans Netbox, ouvrez le menu utilisateur en haut à droite, puis API tokens. Un jeton en lecture seule suffit.",
         "apiTokenExisting": "Un jeton est déjà enregistré. Laissez ce champ vide pour le conserver.",
-        "requestTimeout": "Temps d'attente avant d'abandonner, entre 5 et 120 secondes. Laissez vide pour utiliser 30.",
+        "requestTimeout": "De 5 à 120 secondes. Par défaut : 30.",
         "insecureTls": "À utiliser uniquement avec un certificat auto-signé ou interne auquel vous faites confiance. La connexion reste chiffrée, mais le certificat n'est plus vérifié.",
         "autoSync": "S'exécute toutes les heures et applique les changements automatiquement. Elle démarre après la première synchronisation que vous appliquez vous-même.",
         "defaultEnvironment": "Appliqué aux actifs créés par l'import. Il n'est jamais modifié ensuite."
@@ -2757,7 +2749,7 @@
   },
   "sampleData": {
     "title": "Données d'exemple",
-    "intro": "Découvrez KANAP avec Fromage & Co, une fromagerie fictive. Les données d'exemple se chargent dans un espace de travail vide, et s'effacent ensuite depuis cette page.",
+    "intro": "Découvrez {{product}} avec Fromage & Co, une fromagerie fictive. Les données d'exemple se chargent dans un espace de travail vide, et s'effacent ensuite depuis cette page.",
     "notEmpty": "Les données d'exemple ne se chargent que dans un espace de travail vide. Cet espace de travail contient déjà des données.",
     "blockingLead": "Voici ce qui empêche le chargement :",
     "blockingItem": "{{label}} ({{count}})",
@@ -2825,7 +2817,7 @@
     },
     "loadDialog": {
       "title": "Charger les données d'exemple",
-      "intro": "KANAP remplit cet espace de travail avec Fromage & Co, une fromagerie fictive :",
+      "intro": "Le chargement remplit cet espace de travail avec Fromage & Co, une fromagerie fictive :",
       "companies": "4 sociétés en France, aux Pays-Bas, en Italie et aux États-Unis",
       "users": "18 utilisateurs fictifs, qui ne peuvent pas se connecter",
       "landscape": "Les applications et leur cartographie : instances, interfaces et connexions",
@@ -2853,7 +2845,7 @@
       "nameLabel": "Nom de l'espace de travail"
     },
     "banner": {
-      "text": "Découvrez KANAP avec des données d'exemple.",
+      "text": "Découvrez {{product}} avec des données d'exemple.",
       "load": "Charger",
       "hide": "Masquer",
       "loading": "Chargement des données d'exemple. {{step}}.",
@@ -2908,7 +2900,7 @@
     "modified": "Modifié par {{name}} le {{date}}.",
     "confirmAll": "{{name}} verra toutes les données du budget et des contrats.",
     "administratorsSeeAll": "Les administrateurs voient toutes les données.",
-    "unavailable": "Limiter l'accès aux données demande une étape unique sur la base de données, à faire par la personne qui exploite KANAP.",
+    "unavailable": "Limiter l'accès aux données demande une étape unique sur la base de données, à faire par la personne qui exploite {{product}}.",
     "guide": "Ouvrir le guide",
     "missing": "Manque : {{items}}.",
     "missingParts": {
@@ -3010,7 +3002,7 @@
     },
     "placements": {
       "last_step": "Fin des premiers pas",
-      "about": "À propos de KANAP",
+      "about": "À propos de {{product}}",
       "mail_j0": "Mail de bienvenue",
       "mail_j5": "Mail du 5e jour",
       "mail_j12": "Mail du 12e jour",

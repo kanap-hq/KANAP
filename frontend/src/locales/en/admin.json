@@ -9,7 +9,7 @@
       "testing": "Testing…"
     },
     "dialogs": {
-      "claudeCodeHelper": "Run it in a terminal to connect Claude Code to KANAP with this key.",
+      "claudeCodeHelper": "Run it in a terminal to connect Claude Code with this key.",
       "claudeCodeLabel": "Claude Code command",
       "copyCommand": "Copy command",
       "copyKey": "Copy key",
@@ -27,12 +27,11 @@
     "fields": {
       "conversationRetentionDays": "Conversation retention (days)",
       "keyMaxLifetimeDays": "Key max lifetime (days)",
-      "keyMaxLifetimeHelper": "Leave empty for no expiration limit",
       "label": "Label",
       "labelPlaceholder": "e.g., desktop MCP client"
     },
     "glpi": {
-      "description": "Configure GLPI credentials for this workspace so Plaid can import selected GLPI tickets into KANAP tasks after user confirmation.",
+      "description": "Configure GLPI credentials for this workspace so Plaid can import selected GLPI tickets as tasks after user confirmation.",
       "fields": {
         "appToken": "App token",
         "enabled": "Enable GLPI ticket import",
@@ -89,8 +88,8 @@
       "revokeNamed": "Revoke {{name}}",
       "revokeConfirm": {
         "title": "Revoke {{name}}?",
-        "keyBody": "Every client that uses {{name}} loses access to KANAP at once. This cannot be undone.",
-        "connectionBody": "{{name}} loses access to KANAP at once. To use it again, its owner connects it again."
+        "keyBody": "Every client that uses {{name}} loses its access at once. This cannot be undone.",
+        "connectionBody": "{{name}} loses its access at once. To use it again, its owner connects it again."
       }
     },
     "messages": {
@@ -154,7 +153,7 @@
       "validationErrorsTitle": "Current provider validation errors",
       "modelSelector": {
         "label": "Model used by Plaid",
-        "builtin": "KANAP included model",
+        "builtin": "{{product}} included model",
         "tenantDefault": "Default model ({{name}})",
         "noDefault": "No model configured",
         "hintPrefix": "Models are managed on the",
@@ -165,7 +164,7 @@
       "actions": {
         "goToAgents": "Open the agents page"
       },
-      "description": "Connect your PRTG monitoring server so KANAP agents can read alerts and sensor health for your infrastructure.",
+      "description": "Connect your PRTG monitoring server so agents can read alerts and sensor health for your infrastructure.",
       "fields": {
         "apiKey": "API key",
         "baseUrl": "Server address",
@@ -175,10 +174,7 @@
       },
       "hints": {
         "apiKey": "Create one in PRTG under Setup → API keys. Read-only access is enough.",
-        "apiKeyExisting": "An API key is already saved. Leave blank to keep it.",
-        "requestTimeout": "How long KANAP waits for PRTG to answer each request (5 to 120 seconds). Increase this if alert checks fail with timeouts on a large or slow PRTG server. Leave blank for the default (30).",
-        "baseUrl": "The address of your PRTG web interface, e.g. https://prtg.example.com",
-        "timezone": "The time zone your PRTG server runs in, so alert timestamps are read correctly."
+        "requestTimeout": "5 to 120 seconds. Default: 30."
       },
       "messages": {
         "loadFailed": "Could not load the monitoring integration.",
@@ -211,7 +207,7 @@
     },
     "title": "Plaid",
     "includedModel": {
-      "status": "KANAP included model: {{name}} (processing location: {{place}})",
+      "status": "{{product}} included model: {{name}} (processing location: {{place}})",
       "confirmed": "Confirmed",
       "needsConfirmation": "Needs confirmation",
       "needed": "The assistant and agents use it once an administrator confirms it.",
@@ -221,8 +217,8 @@
       "withdraw": "Withdraw",
       "changed": "The provider or its processing location changed. Review it and confirm again.",
       "dialog": {
-        "title": "Use the KANAP included model?",
-        "body": "Questions you ask the assistant and agents, and the KANAP data they read to answer, are sent to {{name}}. Processing location: {{place}}.",
+        "title": "Use the {{product}} included model?",
+        "body": "Questions you ask the assistant and agents, and the data they read to answer, are sent to {{name}}. Processing location: {{place}}.",
         "ownModel": "You can use your own model instead from the <link />.",
         "ownModelLink": "AI models list",
         "confirmAndTurnOn": "Confirm and turn on"
@@ -1619,8 +1615,8 @@
     "title": "Authentication",
     "sync": {
       "title": "Daily directory sync",
-      "description": "Every night, KANAP refreshes names, titles, phones, departments and companies from Microsoft Entra, and disables accounts that were removed or deactivated in the directory. This requires a one-time approval by a Microsoft Entra administrator.",
-      "consentNeeded": "Not authorized yet. A Microsoft Entra administrator must grant KANAP permission to read directory users.",
+      "description": "Every night, names, titles, phones, departments and companies are refreshed from Microsoft Entra, and accounts removed or deactivated in the directory are disabled. This requires a one-time approval by a Microsoft Entra administrator.",
+      "consentNeeded": "Not authorized yet. A Microsoft Entra administrator must grant {{product}} permission to read directory users.",
       "grantAccess": "Grant access in Microsoft Entra",
       "lastSynced": "Last synced {{date}}: {{synced}} accounts refreshed, {{disabled}} disabled.",
       "error": "The last sync failed: {{message}}",
@@ -1749,7 +1745,7 @@
     "colors": {
       "darkHelper": "Used in dark mode. If empty, light mode color is reused.",
       "darkModePrimary": "Dark mode primary",
-      "description": "Set one color for light mode and one for dark mode. Leave blank to keep Kanap defaults.",
+      "description": "Set one color for light mode and one for dark mode. Leave blank to keep the default colors.",
       "lightHelper": "Used for app bar, primary buttons, and links in light mode.",
       "lightModePrimary": "Light mode primary",
       "lowDarkContrast": "Dark mode contrast is low ({{ratio}}:1 vs {{tone}} text{{fallback}}). ",
@@ -1763,11 +1759,11 @@
       "usingLightFallback": ", using light-mode fallback color"
     },
     "confirmations": {
-      "reset": "Reset branding to default kanap settings? This removes logo and custom colors."
+      "reset": "Reset branding to the default settings? This removes the logo and custom colors."
     },
     "fields": {
-      "organizationName": "Organization name",
-      "organizationNameHelper": "Shown with the logo, in About, on the consent page, and to the assistant. The workspace address stays as it is.",
+      "organizationName": "Workspace name",
+      "organizationNameHelper": "Shown in the header when there is no logo, in the browser tab, in e-mails, and when an AI tool connects. The workspace address stays as it is.",
       "organizationNamePlaceholder": "e.g., Northwind",
       "useLightLogoInDark": "Use the light mode logo"
     },
@@ -2202,7 +2198,6 @@
       "contactLocked": "Contact roles are system-managed for directory visibility and cannot be modified.",
       "duplicated": "Role duplicated.",
       "permissionsSaved": "Role permissions saved.",
-      "setAccessLevels": "Set per-resource access levels for this role.",
       "deleteFailed": "The role could not be deleted."
     },
     "resources": {
@@ -2589,7 +2584,6 @@
   },
   "aiModels": {
     "title": "AI models",
-    "subtitle": "The AI models available to your organization. Assign them to Plaid or to individual agents; the default model is used when nothing specific is assigned.",
     "sectionTitle": "Models",
     "new": "New model",
     "empty": "No AI model configured yet. Add your first model to power Plaid and the agents.",
@@ -2621,7 +2615,7 @@
       "actions": "Actions"
     },
     "builtin": {
-      "name": "KANAP included model",
+      "name": "{{product}} included model",
       "caption": "Operated by KANAP, included in your subscription",
       "model": "Managed by KANAP",
       "quota": "{{used}} / {{limit}} included messages this month",
@@ -2689,7 +2683,6 @@
   },
   "aiUsage": {
     "title": "Usage & costs",
-    "subtitle": "How much your organization uses the AI features. Costs are broken down by model and by agent.",
     "costs": {
       "title": "Costs",
       "totalMonth": "Total this month",
@@ -2705,7 +2698,7 @@
   "integrations": {
     "netbox": {
       "title": "Netbox inventory",
-      "description": "Bring your Netbox inventory into KANAP assets. Netbox stays the reference for the equipment it describes.",
+      "description": "Import your Netbox inventory as assets. Netbox stays the reference for the equipment it describes.",
       "status": {
         "connected": "Configured",
         "disabled": "Disabled",
@@ -2727,10 +2720,9 @@
         "requestTimeout": "30"
       },
       "hints": {
-        "baseUrl": "The address you use to open Netbox in a browser.",
         "apiToken": "In Netbox, open the user menu at the top right, then API tokens. A read-only token is enough.",
         "apiTokenExisting": "A token is already saved. Leave this field empty to keep it.",
-        "requestTimeout": "How long to wait for Netbox before giving up, between 5 and 120 seconds. Leave empty to use 30.",
+        "requestTimeout": "5 to 120 seconds. Default: 30.",
         "insecureTls": "Use this only for a self-signed or internal certificate you trust. The connection stays encrypted, but the certificate is no longer checked.",
         "autoSync": "Runs every hour and applies the changes on its own. It starts after the first synchronisation you apply yourself.",
         "defaultEnvironment": "Applied to the assets created by the import. It is never changed afterwards."
@@ -2757,7 +2749,7 @@
   },
   "sampleData": {
     "title": "Sample data",
-    "intro": "Explore KANAP with Fromage & Co, a fictional cheese maker. Sample data can be loaded into an empty workspace, and erased afterwards from this page.",
+    "intro": "Explore {{product}} with Fromage & Co, a fictional cheese maker. Sample data can be loaded into an empty workspace, and erased afterwards from this page.",
     "notEmpty": "Sample data can only be loaded into an empty workspace. This workspace already holds data.",
     "blockingLead": "These stand in the way:",
     "blockingItem": "{{label}} ({{count}})",
@@ -2825,7 +2817,7 @@
     },
     "loadDialog": {
       "title": "Load sample data",
-      "intro": "KANAP fills this workspace with Fromage & Co, a fictional cheese maker:",
+      "intro": "Loading fills this workspace with Fromage & Co, a fictional cheese maker:",
       "companies": "4 companies in France, the Netherlands, Italy and the United States",
       "users": "18 fictional users, who cannot sign in",
       "landscape": "Applications and their landscape: instances, interfaces and connections",
@@ -2853,7 +2845,7 @@
       "nameLabel": "Workspace name"
     },
     "banner": {
-      "text": "Discover KANAP with sample data.",
+      "text": "Discover {{product}} with sample data.",
       "load": "Load",
       "hide": "Hide",
       "loading": "Loading sample data. {{step}}.",
@@ -2908,7 +2900,7 @@
     "modified": "Modified by {{name}} on {{date}}.",
     "confirmAll": "{{name}} will see all budget and contract data.",
     "administratorsSeeAll": "Administrators see all data.",
-    "unavailable": "Limiting data access needs a one-time step on the database, done by the person who runs KANAP.",
+    "unavailable": "Limiting data access needs a one-time step on the database, done by the person who runs {{product}}.",
     "guide": "Open the guide",
     "missing": "Missing: {{items}}.",
     "missingParts": {
@@ -3010,7 +3002,7 @@
     },
     "placements": {
       "last_step": "End of the first steps",
-      "about": "About KANAP",
+      "about": "About {{product}}",
       "mail_j0": "Welcome e-mail",
       "mail_j5": "Day 5 e-mail",
       "mail_j12": "Day 12 e-mail",

@@ -5,5 +5,6 @@ export { default as useTitleCreation } from './useTitleCreation';
 export { default as useRecordCreation, describeCreationChanges, creationChangeCount, type CreationChanges } from './useRecordCreation';
 export { default as useCreationTitle } from './useCreationTitle';
 export { default as focusWhenMounted } from './focusWhenMounted';
+export { focusFirstCreationField, useCreationFieldFocus, clearCreationFieldFocus } from './creationFieldFocus';
 export { default as useCreationLeave } from './useCreationLeave';
 export { default as useDraftCreation, type DraftCreated } from './useDraftCreation';

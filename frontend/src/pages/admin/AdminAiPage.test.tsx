@@ -199,7 +199,7 @@ describe('AdminAiPage', () => {
     expect(screen.getByText('abcd1234')).toBeInTheDocument();
     // A connection has no key to show.
     expect(screen.queryByText('efgh5678')).not.toBeInTheDocument();
-    expect(screen.getByText(/add this address as a custom connector/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/add this address as a custom connector/)).toBeInTheDocument();
     adminKeys = [];
   });
 
@@ -226,7 +226,7 @@ describe('AdminAiPage', () => {
     fireEvent.click(revokeKey);
     let dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText('Revoke Laptop?')).toBeInTheDocument();
-    expect(within(dialog).getByText(/loses access to KANAP at once/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/loses its access at once/)).toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(api.delete).not.toHaveBeenCalled();

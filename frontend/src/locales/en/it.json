@@ -557,7 +557,7 @@
         "seeAll": "See everything on the Vulnerabilities page",
         "notInstalledList_one": "Not installed: {{versions}}",
         "notInstalledList_other": "Not installed: {{versions}}",
-        "notInstalledHint": "KANAP only looks for vulnerabilities of versions installed on a server or declared by an application.",
+        "notInstalledHint": "Vulnerabilities are only looked up for versions installed on a server or declared by an application.",
         "columns": {
           "openHint": "{{severity}}: CVE still to review. Total counts every state.",
           "total": "Total"
@@ -1271,7 +1271,7 @@
         "columns": {
           "netboxName": "Netbox name",
           "type": "Type",
-          "asset": "KANAP asset",
+          "asset": "Asset",
           "message": "Message",
           "lastSeen": "Last seen",
           "actions": "Actions"
@@ -1351,7 +1351,7 @@
           "noResults": "No asset found."
         },
         "hints": {
-          "created": "No KANAP asset matches these objects. If one already exists under another name, link it to avoid a duplicate.",
+          "created": "No asset matches these objects. If one already exists under another name, link it to avoid a duplicate.",
           "updated": "Nothing is changed yet. These values are written when you press Apply."
         },
         "matchedBy": {
@@ -1385,11 +1385,11 @@
         "placement": "Placement"
       },
       "mappings": {
-        "intro": "Only mapped roles and sites are imported. Anything left on \"Do not import\" is skipped.",
+        "intro": "Only mapped roles and sites are imported.",
         "roles": "Netbox roles",
         "sites": "Netbox sites",
         "operatingSystems": "Operating systems",
-        "operatingSystemsHint": "Choose a technology for each Netbox platform. The value stored is the technology name, with its version when you pick one. A platform left without a match does not block the import: the operating system is simply left as it is.",
+        "operatingSystemsHint": "A platform without a match is left as it is.",
         "noPlatforms": "Netbox lists no platform, so there is nothing to match here.",
         "platformsUnavailable": "Netbox did not return its platforms, so operating systems cannot be matched here. Check that the API token can read platforms.",
         "noOperatingSystem": "No match",
@@ -1403,12 +1403,12 @@
           "netboxRole": "Netbox role",
           "netboxSite": "Netbox site",
           "objects": "Objects",
-          "assetType": "KANAP asset type",
+          "assetType": "Asset type",
           "netboxPlatform": "Netbox platform",
-          "location": "KANAP location",
+          "location": "Location",
           "operatingSystem": "Technology",
           "netboxCluster": "Netbox cluster",
-          "kanapCluster": "KANAP cluster"
+          "kanapCluster": "Cluster"
         },
         "counts": {
           "devices_one": "{{count}} device",
@@ -1420,9 +1420,9 @@
         "reservedRoles": {
           "virtualMachines": "Virtual machines"
         },
-        "subLocationsHint": "Inside a mapped site, the top-level Netbox locations become sub-locations here. Equipment placed deeper is attached to the top-level location above it.",
+        "subLocationsHint": "Inside a mapped site, top-level Netbox locations become sub-locations, and deeper equipment stays with the one above it.",
         "clusters": "Clusters",
-        "clustersHint": "Choose the KANAP cluster for each Netbox cluster. Its virtual machines are then added to that cluster, and nothing is removed: a machine already in another cluster stays there, even after you change a match. A machine you take out of its cluster comes back at the next run while it is in that Netbox cluster. A cluster left without a match does not block the import.",
+        "clustersHint": "Virtual machines join the chosen cluster; nothing is removed.",
         "clustersUnavailable": "Netbox did not return its clusters, so virtual machines cannot be attached to a cluster here. Check that the API token can read clusters.",
         "noClusters": "Netbox lists no cluster, so there is nothing to match here.",
         "noCluster": "No match",
@@ -1477,7 +1477,7 @@
         "validation_failed": "This object was refused:",
         "os_ambiguous": "The operating system \"{{value}}\" matches more than one entry in your catalogue, so it was left unchanged.",
         "os_cluster_with_members": "This asset is a cluster with members, so the operating system \"{{value}}\" was left out.",
-        "status_not_mapped": "The Netbox status \"{{value}}\" has no equivalent in KANAP, so the lifecycle was left unchanged.",
+        "status_not_mapped": "The Netbox status \"{{value}}\" has no equivalent, so the lifecycle was left unchanged.",
         "lifecycle_not_in_catalog": "The lifecycle \"{{value}}\" is not in your catalogue, so it was left unchanged.",
         "no_ip_address_type": "No IP address type is set up in the IT settings, so the address was not imported.",
         "netbox_status_attention": "Netbox reports this object as {{status}}.",
@@ -1485,9 +1485,9 @@
         "similar_name_candidates": "An asset has a similar name. Choose whether it is the same equipment.",
         "sub_location_name_taken": "A sub-location named \"{{value}}\" already exists at this location for another Netbox location. The sub-location was left unchanged.",
         "locations_unavailable": "Netbox did not return its locations. Sub-locations were left unchanged in this run.",
-        "cluster_not_mapped": "The Netbox cluster \"{{value}}\" is not matched with a KANAP cluster, so its virtual machines were not attached to one.",
+        "cluster_not_mapped": "The Netbox cluster \"{{value}}\" is not matched with a cluster, so its virtual machines were not attached to one.",
         "cluster_match_invalid": "The Netbox cluster \"{{value}}\" is matched with an asset that is deleted, retired or no longer a cluster, so its virtual machines were not attached to it.",
-        "cluster_other_present": "KANAP also places the virtual machine \"{{name}}\" in {{value}}. That relation was kept: remove it by hand if it is out of date."
+        "cluster_other_present": "The virtual machine \"{{name}}\" is also placed in {{value}}. That relation was kept: remove it by hand if it is out of date."
       },
       "previewNotices": {
         "os_not_in_catalog": "The operating system \"{{value}}\" is not in your catalogue, so it will be left unchanged.",
@@ -1498,14 +1498,14 @@
         "subnet_not_in_catalog": "The subnet {{value}} is not in your catalogue, so the address will be saved without it.",
         "fetch_incomplete": "Netbox returned more pages than expected. Some objects will not be looked at.",
         "os_ambiguous": "The operating system \"{{value}}\" matches more than one entry in your catalogue, so it will be left unchanged.",
-        "status_not_mapped": "The Netbox status \"{{value}}\" has no equivalent in KANAP, so the lifecycle will be left unchanged.",
+        "status_not_mapped": "The Netbox status \"{{value}}\" has no equivalent, so the lifecycle will be left unchanged.",
         "lifecycle_not_in_catalog": "The lifecycle \"{{value}}\" is not in your catalogue, so it will be left unchanged.",
         "no_ip_address_type": "No IP address type is set up in the IT settings, so the address will not be imported.",
         "sub_location_name_taken": "A sub-location named \"{{value}}\" already exists at this location for another Netbox location. The sub-location will be left unchanged.",
         "locations_unavailable": "Netbox did not return its locations. Sub-locations will be left unchanged.",
-        "cluster_not_mapped": "The Netbox cluster \"{{value}}\" is not matched with a KANAP cluster, so its virtual machines will not be attached to one.",
+        "cluster_not_mapped": "The Netbox cluster \"{{value}}\" is not matched with a cluster, so its virtual machines will not be attached to one.",
         "cluster_match_invalid": "The Netbox cluster \"{{value}}\" is matched with an asset that is deleted, retired or no longer a cluster, so its virtual machines will not be attached to it.",
-        "cluster_other_present": "KANAP also places the virtual machine \"{{name}}\" in {{value}}. That relation will be kept: remove it by hand if it is out of date."
+        "cluster_other_present": "The virtual machine \"{{name}}\" is also placed in {{value}}. That relation will be kept: remove it by hand if it is out of date."
       },
       "netboxStatus": {
         "active": "Active",
@@ -2490,7 +2490,7 @@
         "catalogNote": "Versions and dates kept up to date from the catalog",
         "dateSource": "Source: <editor>{{editor}}</editor>, verified on {{date}}",
         "noPlannedEnd": "No end planned by the vendor",
-        "securityTrackerNote": "This distributor publishes vulnerabilities per package. KANAP tracks support for each version. Read the package exposure in its tracker: <tracker>{{name}}</tracker>",
+        "securityTrackerNote": "This distributor publishes vulnerabilities per package. Support is tracked for each version. Read the package exposure in its tracker: <tracker>{{name}}</tracker>",
         "securityTrackerOf": "{{editor}} security tracker",
         "securityTracker": "Security tracker",
         "trackers": {
@@ -3083,7 +3083,7 @@
         "title": "Environments and bindings",
         "addEnvironment": "Add environment",
         "loadingBindings": "Loading bindings…",
-        "noEnvironments": "No environments defined yet. Click \"Add environment\" to document bindings. Each environment needs application deployments, created in the Applications workspace, before you can add bindings.",
+        "noEnvironments": "No environments yet.",
         "bindingIn": "Binding in {{env}}",
         "noPii": "No PII",
         "deleteBindingMessage": "Delete this environment binding. Linked infra connections for this binding will also be removed.",
@@ -3168,7 +3168,7 @@
       "subItems": {
         "title": "Sub-locations",
         "add": "+ Add sub-location",
-        "empty": "No sub-locations defined. Add buildings, rooms, racks or other physical areas.",
+        "empty": "No sub-locations.",
         "usage": "Usage",
         "namePlaceholder": "e.g., Building A, Room 1, Rack 5",
         "descriptionPlaceholder": "Optional description",
@@ -3195,7 +3195,6 @@
         "status": "Status",
         "detected": "Detected"
       },
-      "empty": "No incidents linked yet. Incidents are linked from the incident itself.",
       "loadFailed": "Could not load incidents."
     },
     "instances": {
@@ -3244,13 +3243,11 @@
         "copyOptions": "Copy options",
         "interfaces": "Interfaces"
       },
-      "creatingVersionOf": "Creating a new version of:",
       "applicationName": "Application name",
       "version": "Version",
       "versionPlaceholder": "e.g., 2.0, 2024, Q1 2025",
       "goLiveDate": "Go live",
       "endOfSupportDate": "End of support",
-      "selectWhatToCopy": "Select what to copy from the source application:",
       "copyOwners": "Owners (business and IT)",
       "copyCompanies": "Companies (audience)",
       "copyDepartments": "Departments",
@@ -3261,9 +3258,8 @@
       "copyContracts": "Contracts",
       "copyInstances": "Deployments",
       "copyBindings": "Deployment bindings",
-      "bindingsHint": "Bindings connect interface legs to deployments. Environment-specific details will be cleared.",
+      "bindingsHint": "Bindings connect interface legs to deployments, and their environment-specific details are cleared.",
       "suitesNotCopied": "Not copied: suites, attachments, dates, the last recovery test and the classification review.",
-      "selectInterfaces": "Select interfaces to migrate to the new version. Selected interfaces will be duplicated and linked to the new version.",
       "loadingInterfaces": "Loading interfaces…",
       "noInterfaces": "No interfaces found for this application.",
       "selectAll": "Select all",
@@ -3277,7 +3273,7 @@
       "flowsThrough": "flows through this ETL",
       "flowsThroughAs": "{{source}} → {{target}} (flows through this ETL)",
       "asRole": "{{source}} → {{target}} (as {{role}})",
-      "middlewareHint": "Interfaces marked \"flows through this ETL\" use this application as middleware. Copying them creates new interface definitions for the upgraded ETL.",
+      "middlewareHint": "Copying an interface that flows through this ETL creates a new interface definition for the upgraded ETL.",
       "back": "Back",
       "next": "Next",
       "createVersion": "Create version",

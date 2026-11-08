@@ -1290,6 +1290,7 @@ export class UsersService {
       inviteUrl,
       expiresInMinutes: expires,
       roleName: user.role?.role_name ?? null,
+      tenantId: user.tenant_id ?? null,
       locale: user.locale ?? undefined,
     };
 

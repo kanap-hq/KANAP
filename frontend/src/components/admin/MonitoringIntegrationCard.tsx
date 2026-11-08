@@ -23,6 +23,7 @@ import {
   type AiMonitoringIntegration,
   type AiPrtgTestResult,
 } from '../../ai/aiApi';
+import InfoHint from '../workspace/InfoHint';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { getDotColor } from '../../utils/statusColors';
 
@@ -168,7 +169,10 @@ export default function MonitoringIntegrationCard() {
         ) : (
           <Stack spacing={2.5}>
             <Stack spacing={0.75}>
-              <Typography variant="h6">{t('aiAdmin.prtg.title')}</Typography>
+              <Stack direction="row" spacing={0.75} alignItems="center">
+                <Typography variant="h6">{t('aiAdmin.prtg.title')}</Typography>
+                <InfoHint text={t('aiAdmin.prtg.description')} />
+              </Stack>
               <Stack direction="row" spacing={0.75} alignItems="center">
                 <Box
                   sx={{
@@ -184,10 +188,6 @@ export default function MonitoringIntegrationCard() {
                 </Typography>
               </Stack>
             </Stack>
-
-            <Typography variant="body2" color="text.secondary">
-              {t('aiAdmin.prtg.description')}
-            </Typography>
 
             <FormControlLabel
               control={(
@@ -205,7 +205,6 @@ export default function MonitoringIntegrationCard() {
               value={form.base_url}
               onChange={(event) => setForm((prev) => ({ ...prev, base_url: event.target.value }))}
               placeholder={t('aiAdmin.prtg.placeholders.url')}
-              helperText={t('aiAdmin.prtg.hints.baseUrl')}
             />
 
             <TextField
@@ -220,11 +219,7 @@ export default function MonitoringIntegrationCard() {
                   ? t('aiAdmin.prtg.placeholders.apiKeySaved')
                   : t('aiAdmin.prtg.placeholders.enterApiKey')
               }
-              helperText={
-                hasStoredKey
-                  ? `${t('aiAdmin.prtg.hints.apiKey')} ${t('aiAdmin.prtg.hints.apiKeyExisting')}`
-                  : t('aiAdmin.prtg.hints.apiKey')
-              }
+              helperText={t('aiAdmin.prtg.hints.apiKey')}
             />
 
             <Autocomplete<string, false, true, false>
@@ -241,7 +236,6 @@ export default function MonitoringIntegrationCard() {
                   {...params}
                   size="small"
                   label={t('aiAdmin.prtg.fields.timezone')}
-                  helperText={t('aiAdmin.prtg.hints.timezone')}
                 />
               )}
             />

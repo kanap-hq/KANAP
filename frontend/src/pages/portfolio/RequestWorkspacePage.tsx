@@ -46,6 +46,7 @@ import {
 } from '../../utils/portfolioI18n';
 import { useLocale } from '../../i18n/useLocale';
 import { useTenant } from '../../tenant/TenantContext';
+import { useRecordTitle } from '../../tenant/workspaceTitle';
 import { getScoreColor } from '../tasks/theme/taskDetailTokens';
 import { portfolioLinksKey, usePortfolioRelationsBadge } from './workspace/portfolioRelations';
 import { KanapDialog, unsavedConfirm, useKanapDialogs } from '../../components/design';
@@ -182,15 +183,7 @@ export default function RequestWorkspacePage() {
   }, [data?.id, data?.name, data?.item_number, addToRecent]);
 
   // Browser tab title
-  React.useEffect(() => {
-    if (data?.item_number && data?.name) {
-      document.title = t('portfolio:workspace.request.browserTitle', {
-        ref: `REQ-${data.item_number}`,
-        name: data.name,
-      });
-    }
-    return () => { document.title = 'KANAP'; };
-  }, [data?.item_number, data?.name, t]);
+  useRecordTitle(data?.item_number && data?.name ? `REQ-${data.item_number} ${data.name}` : null);
 
   // Replace UUID in URL with human-readable ref
   React.useEffect(() => {

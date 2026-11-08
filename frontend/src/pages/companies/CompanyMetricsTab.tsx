@@ -179,7 +179,6 @@ export default function CompanyMetricsTab({ companyId, year, onYearChange, readO
           />
         ))}
       </Box>
-      <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>{t('shared.messages.metricsYearHint')}</Typography>
     </Stack>
   );
 }

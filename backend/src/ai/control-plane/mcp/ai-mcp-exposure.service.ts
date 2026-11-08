@@ -14,6 +14,7 @@ import {
   parseMcpApiKeyPolicy,
 } from './ai-mcp-access-policy';
 import { codedForbidden } from '../../../auth/module-right-required';
+import { PRODUCT_NAME } from '../../../config/product';
 
 export type McpToolRefusal = {
   reason: 'unknown_tool' | 'read_only' | 'key_policy' | 'disabled' | 'permission';
@@ -86,7 +87,7 @@ export class AiMcpExposureService {
 
   /**
    * Why a tool this key cannot run now is refused, in the words the client's model reads (MCP
-   * messages stay in English): a name KANAP does not offer through MCP, a tool that changes data, a
+   * messages stay in English): a name the server does not offer through MCP, a tool that changes data, a
    * tool outside the key's policy, web search turned off, or a tool the person may not read with.
    */
   explainRefusal(apiKey: AiMcpApiKeyContext, name: string): McpToolRefusal {
@@ -98,27 +99,27 @@ export class AiMcpExposureService {
       return {
         reason: 'read_only',
         effect: 'write',
-        message: `This server is read only: ${name} changes data in KANAP and cannot run through MCP. Make the change in the KANAP application.`,
+        message: `This server is read only: ${name} changes data in ${PRODUCT_NAME} and cannot run through MCP. Make the change in the ${PRODUCT_NAME} application.`,
       };
     }
     if (!isMcpCapabilityAllowedByPolicy(this.parsePolicy(apiKey), name)) {
       return {
         reason: 'key_policy',
         effect: 'read',
-        message: `This key does not allow this tool: ${name}. A KANAP administrator can create a key that includes it.`,
+        message: `This key does not allow this tool: ${name}. An administrator of this workspace can create a key that includes it.`,
       };
     }
     if (name === 'web_search') {
       return {
         reason: 'disabled',
         effect: 'read',
-        message: 'Web search is turned off in this KANAP workspace. A KANAP administrator can turn it on.',
+        message: 'Web search is turned off in this workspace. An administrator of this workspace can turn it on.',
       };
     }
     return {
       reason: 'permission',
       effect: 'read',
-      message: `Your KANAP role does not allow this tool: ${name} reads data you have no read access to. Ask a KANAP administrator for the read right.`,
+      message: `Your role in this workspace does not allow this tool: ${name} reads data you have no read access to. Ask an administrator of this workspace for the read right.`,
     };
   }
 

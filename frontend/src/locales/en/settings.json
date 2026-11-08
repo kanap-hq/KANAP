@@ -29,8 +29,7 @@
     },
     "messages": {
       "saveSuccess": "Profile updated successfully",
-      "saveFailed": "Failed to save profile",
-      "portfolioDescription": "Manage your contributor profile, skills, availability, and classification defaults."
+      "saveFailed": "Failed to save profile"
     },
     "actions": {
       "viewContributorProfile": "View contributor profile"
@@ -38,7 +37,7 @@
   },
   "appearance": {
     "title": "Appearance",
-    "description": "Choose how kanap should look in this browser.",
+    "description": "Choose the appearance in this browser.",
     "light": "Light",
     "dark": "Dark",
     "system": "System",
@@ -46,7 +45,6 @@
   },
   "notifications": {
     "emailNotifications": "Email notifications",
-    "emailDescription": "Receive email notifications for updates and activity",
     "portfolio": {
       "title": "Portfolio notifications",
       "statusChanges": "Status changes",
@@ -60,7 +58,6 @@
       "asAssignee": "Assigned to a task",
       "asRequestor": "Requestor of a task",
       "asViewer": "Viewer of a task",
-      "viewerHint": "Can be noisy - off by default",
       "eventTypes": "Event types:",
       "statusChanges": "Status changes",
       "comments": "Comments"
@@ -95,7 +92,7 @@
     }
   },
   "about": {
-    "title": "About KANAP",
+    "title": "About {{product}}",
     "version": "Version {{version}}",
     "deploymentCloud": "Deployment: cloud",
     "deploymentOnPremise": "Deployment: on-premise",
@@ -121,7 +118,7 @@
   },
   "connectedApps": {
     "title": "Connected applications",
-    "subtitle": "These applications can read your KANAP data with your access rights.",
+    "subtitle": "These applications can read your data with your access rights.",
     "empty": "No connected applications.",
     "howTo": "How to connect Claude",
     "connectedOn": "Connected on {{date}}",
@@ -131,7 +128,7 @@
     "disconnect": "Disconnect",
     "confirm": {
       "title": "Disconnect {{client}}?",
-      "body": "{{client}} loses access to your KANAP data at once. To use it again, connect it again from the application."
+      "body": "{{client}} loses access to your data at once. To use it again, connect it again from the application."
     },
     "apiKeys": "API keys",
     "loadFailed": "Could not load your connected applications.",
@@ -139,7 +136,7 @@
     "revoke": "Revoke",
     "revokeConfirm": {
       "title": "Revoke {{key}}?",
-      "body": "Every client that uses {{key}} loses access to your KANAP data at once. This cannot be undone."
+      "body": "Every client that uses {{key}} loses access to your data at once. This cannot be undone."
     },
     "revokeFailed": "Could not revoke this key."
   }

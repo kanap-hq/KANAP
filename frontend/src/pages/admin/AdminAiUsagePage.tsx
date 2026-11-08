@@ -74,7 +74,6 @@ export default function AdminAiUsagePage() {
   return (
     <Box sx={{ p: 2 }}>
       <PageHeader title={t('aiUsage.title')} />
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>{t('aiUsage.subtitle')}</Typography>
       {overviewQuery.isLoading ? (
         <Box display="flex" justifyContent="center" py={4}>
           <CircularProgress size={28} />

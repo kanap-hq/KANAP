@@ -6,6 +6,7 @@ import type { EmailAttachment } from '../email/email.service';
 import type { EmailBranding } from '../email/email-branding';
 import { DEFAULT_EMAIL_PRIMARY_COLOR, getDefaultEmailBranding } from '../email/email-branding';
 import { getEmailStrings, interpolate } from '../i18n/email-i18n';
+import { PRODUCT_NAME } from '../config/product';
 import type { EmailStrings } from '../i18n/email-locales/en';
 
 export interface EmailContent {
@@ -101,6 +102,11 @@ function buildOpenDocumentText(locale: string | null | undefined, url: string): 
 
 function joinTextBlocks(lines: Array<string | null | undefined>): string {
   return lines.filter((line): line is string => Boolean(line && line.trim().length > 0)).join('\n\n');
+}
+
+/** The name that identifies the workspace in an e-mail: its organisation name, else the product name. */
+export function emailWorkspaceName(branding?: EmailBranding): string {
+  return branding?.organisationName || PRODUCT_NAME;
 }
 
 function getPrimaryColor(branding?: EmailBranding): string {
@@ -266,8 +272,10 @@ function buildToneBadge(label: string, tone: EmailTone): string {
 
 /**
  * Shared email wrapper.
- * Returns { html, attachments } — the logo is always included as a CID inline attachment.
- * `footer` (the trial e-mails): a line under "Powered by KANAP", and a link that takes the place of
+ * Returns { html, attachments }; the logo the header shows is included as a CID inline attachment.
+ * The header shows the tenant's logo, else its organisation name, else the product logo; the footer
+ * says "Powered by" the product, once.
+ * `footer` (the trial e-mails): a line under "Powered by", and a link that takes the place of
  * the notification preferences link (the unsubscribe link).
  */
 export function emailWrapper(
@@ -282,7 +290,10 @@ export function emailWrapper(
   const branding = options?.branding ?? getDefaultEmailBranding();
   const strings = getEmailStrings(options?.locale);
   const pc = getPrimaryColor(branding);
-  const hasLogo = branding.logoBuffer.length > 0;
+  const organisationName = branding.organisationName ?? null;
+  // A tenant without its own logo is named in text rather than shown under the product logo.
+  const hasLogo = branding.logoBuffer.length > 0 && (branding.hasTenantLogo || !organisationName);
+  const logoAlt = branding.hasTenantLogo ? emailWorkspaceName(branding) : PRODUCT_NAME;
   const footerLink = options?.footer?.link
     ?? (options?.preferencesUrl ? { label: strings.common.footer.managePreferencesLink, url: options.preferencesUrl } : null);
   const preferencesLink = footerLink
@@ -304,10 +315,9 @@ export function emailWrapper(
 <tr>
 <td align="left" style="font-size:0;line-height:0;">
 ${hasLogo
-    ? `<img src="cid:${branding.logoCid}" alt="KANAP" height="26" style="display:block;height:26px;width:auto;max-width:180px;" />`
-    : `<span style="font-size:13px;line-height:20px;font-weight:600;color:${EMAIL_TOKENS.textPrimary};">${escapeHtml(strings.common.footer.poweredBy)}</span>`}
+    ? `<img src="cid:${branding.logoCid}" alt="${escapeHtml(logoAlt)}" height="26" style="display:block;height:26px;width:auto;max-width:180px;" />`
+    : `<span style="font-size:16px;line-height:26px;font-weight:600;color:${EMAIL_TOKENS.textPrimary};">${escapeHtml(emailWorkspaceName(branding))}</span>`}
 </td>
-<td align="right" style="font-size:11px;line-height:16px;color:${EMAIL_TOKENS.textTertiary};">${branding.isCustom ? escapeHtml(strings.common.footer.poweredBy) : '&nbsp;'}</td>
 </tr>
 </table>
 </td></tr>
@@ -1203,7 +1213,9 @@ export function buildWeeklyReviewEmail(params: {
   const pc = getPrimaryColor(branding);
   const subject = interpolate(strings.notifications.weeklyReview.subject, {
     weekLabel: params.weekLabel,
+    organisation: emailWorkspaceName(branding),
   });
+  const openWorkspace = interpolate(strings.common.buttons.openWorkspace, { organisation: emailWorkspaceName(branding) });
   const preferencesUrl = params.appUrl + '/settings/notifications';
 
   const hasContent =
@@ -1230,7 +1242,7 @@ export function buildWeeklyReviewEmail(params: {
       padding: 24,
       contentHtml: `<p style="margin:0;color:${EMAIL_TOKENS.textSecondary};">${escapeHtml(strings.notifications.weeklyReview.empty)}</p>`,
     });
-    body += buildCtaButton(params.appUrl, pc, strings.common.buttons.goToKanap);
+    body += buildCtaButton(params.appUrl, pc, openWorkspace);
     const wrapper = emailWrapper(body, { preferencesUrl, branding, locale: params.locale });
     const text = joinTextBlocks([
       interpolate(strings.notifications.weeklyReview.introText, {
@@ -1238,7 +1250,7 @@ export function buildWeeklyReviewEmail(params: {
         weekLabel: params.weekLabel,
       }),
       strings.notifications.weeklyReview.empty,
-      `${strings.common.buttons.goToKanap}: ${params.appUrl}`,
+      `${openWorkspace}: ${params.appUrl}`,
       buildManagePreferencesText(params.locale, preferencesUrl),
     ]);
     return { subject, html: wrapper.html, text, attachments: wrapper.attachments };
@@ -1340,7 +1352,7 @@ export function buildWeeklyReviewEmail(params: {
     body += buildSection(strings.notifications.weeklyReview.sections.newRequests, items);
   }
 
-  body += buildCtaButton(params.appUrl, pc, strings.common.buttons.goToKanap);
+  body += buildCtaButton(params.appUrl, pc, openWorkspace);
 
   const wrapper = emailWrapper(body, { preferencesUrl, branding, locale: params.locale });
 
@@ -1410,7 +1422,7 @@ export function buildWeeklyReviewEmail(params: {
     text += '\n';
   }
 
-  text += `${strings.common.buttons.goToKanap}: ${params.appUrl}\n\n`;
+  text += `${openWorkspace}: ${params.appUrl}\n\n`;
   text += buildManagePreferencesText(params.locale, preferencesUrl);
 
   return { subject, html: wrapper.html, text, attachments: wrapper.attachments };
@@ -1440,7 +1452,7 @@ export function buildActivationEmail(params: {
       contentHtml: `<p style="margin:0;">${interpolate(strings.auth.activation.expires, {})}</p>`,
     })}
   `;
-  // Activation emails always use KANAP default branding (no tenant yet)
+  // Activation emails always use the product's default branding (no tenant yet)
   const wrapper = emailWrapper(body, { locale: params.locale });
   const text = joinTextBlocks([
     interpolate(strings.common.labels.greetingHelloName, { name: params.greeting }),
@@ -1616,5 +1628,6 @@ export function buildWorkspaceResetEmail(params: {
       url: params.workspaceUrl,
     }),
   ]);
-  return { subject: s.subject, html: wrapper.html, text, attachments: wrapper.attachments };
+  const subject = interpolate(s.subject, { organisation: emailWorkspaceName(params.branding) });
+  return { subject, html: wrapper.html, text, attachments: wrapper.attachments };
 }

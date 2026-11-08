@@ -159,6 +159,8 @@ describe('CurrencySettingsPage', () => {
     renderPage();
 
     expect(await screen.findByText('Every currency in use has a rate.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Latest FX rate snapshots' })).toBeInTheDocument();
+    expect(screen.queryByText(/per fiscal year/)).not.toBeInTheDocument();
     expect(screen.queryByText(/exchange rates? missing/)).not.toBeInTheDocument();
   });
 
@@ -495,6 +497,10 @@ describe('CurrencySettingsPage', () => {
     await waitForSettings();
     const slot = screen.getByTestId('sync-result');
     expect(slot).toBeEmptyDOMElement();
+    expect(slot).toHaveAttribute('aria-live', 'polite');
+    // An empty result reserves no height: the region stays mounted and `:empty` hides it.
+    expect(getComputedStyle(slot).display).toBe('none');
+    expect(getComputedStyle(slot).minHeight).not.toBe('96px');
 
     const button = screen.getByRole('button', { name: 'Force FX rates sync' });
     await user.click(button);
@@ -514,6 +520,7 @@ describe('CurrencySettingsPage', () => {
     });
     expect(await within(slot).findByText('2 rates fetched.')).toBeInTheDocument();
     expect(within(slot).getByText('Still missing: ZAR 2028, XTS 2026.')).toBeInTheDocument();
+    expect(getComputedStyle(slot).display).not.toBe('none');
     await waitFor(() => expect(button).toBeEnabled());
     expect(mocked.post).toHaveBeenCalledWith('/currency/rates/refresh', {});
     await waitFor(() => expect(mocked.get.mock.calls.filter(([url]) => url === '/currency/rates').length).toBeGreaterThan(1));

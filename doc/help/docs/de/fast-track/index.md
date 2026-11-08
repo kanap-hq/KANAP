@@ -43,7 +43,7 @@ Gehen Sie zu **Portfolio > Anfragen** und klicken Sie auf **Neue Anfrage**.
 
 Geben Sie in der Kopfzeile einen klaren, prägnanten Titel für die Initiative ein und drücken Sie die Eingabetaste. Ihre Anfrage geht mit dem Status **Prüfung ausstehend** in die Pipeline, und alle ihre Reiter öffnen sich.
 
-Füllen Sie dann die Mindestangaben in der Eigenschafts-Seitenleiste aus:
+Füllen Sie dann die Mindestangaben im Eigenschaftenbereich aus:
 
 | Feld | Was eingeben |
 |------|-------------|
@@ -331,7 +331,7 @@ Siehe [Berichte-Referenz](../portfolio-reporting.md).
 | Eine neue Idee einreichen | Portfolio > Anfragen > Neue Anfrage |
 | Eine Anfrage bewerten | Anfrage öffnen > Bewertungs-Tab |
 | Machbarkeit bewerten | Anfrage öffnen > Analyse-Tab |
-| Das Projektteam festlegen | Projekt öffnen > Projekteigenschaften-Seitenleiste > Team |
+| Das Projektteam festlegen | Projekt öffnen > Eigenschaftenbereich > Team |
 | Word-Dokument importieren | Anfrage/Projekt/Aufgabe öffnen > Importieren-Schaltfläche auf Zweck oder Beschreibung |
 | Die Projekt-Pipeline sehen | Portfolio > Planung |
 | Team-Kapazität prüfen | Portfolio > Planung > Kapazitätsansicht, oder Portfolio > Berichte > Kapazitäts-Heatmap |
@@ -340,7 +340,7 @@ Siehe [Berichte-Referenz](../portfolio-reporting.md).
 | Berichte anzeigen | Portfolio > Berichte |
 | Bewertungsgewichte konfigurieren | Portfolio > Einstellungen > Bewertungskriterien |
 | Mitwirkende einrichten | Portfolio > Mitwirkende |
-| Klassifizierungs-Standardwerte festlegen | Portfolio > Mitwirkende > Profil öffnen > Eigenschaften-Panel |
+| Klassifizierungs-Standardwerte festlegen | Portfolio > Mitwirkende > Profil öffnen > Eigenschaftenbereich |
 
 ---
 

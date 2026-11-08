@@ -248,7 +248,6 @@
       }
     },
     "project": {
-      "browserTitle": "{{ref}} {{name}} | Portfolio-Projekt",
       "actions": {
         "copyReference": "Referenz kopieren"
       },
@@ -575,7 +574,6 @@
       }
     },
     "request": {
-      "browserTitle": "{{ref}} {{name}} | Portfolio-Anfrage",
       "actions": {
         "copyReference": "Referenz kopieren",
         "submitNewRecommendation": "Neue Empfehlung einreichen",
@@ -734,7 +732,6 @@
       }
     },
     "task": {
-      "browserTitle": "{{ref}} {{title}} | Aufgabe",
       "fields": {
         "relatedItem": "Verknüpftes Element"
       },
@@ -1392,7 +1389,6 @@
   },
   "reports": {
     "title": "Portfolio-Reporting",
-    "subtitle": "Entdecken Sie Portfolio-Berichte zu Kapazität, Aufwand und Statustrends.",
     "sections": {
       "past": "Was passiert ist",
       "current": "Was gerade läuft",
@@ -1449,7 +1445,6 @@
     },
     "byAssignee": {
       "title": "Handlungsbedarf nach Mitwirkenden",
-      "subtitle": "Wo die offene Arbeit liegt, Team für Team und Person für Person, mit dem, was überfällig ist und nicht mehr vorankommt.",
       "columns": {
         "assignee": "Zuständig",
         "open": "Offen",
@@ -1477,7 +1472,6 @@
     },
     "upcoming": {
       "title": "Demnächst",
-      "subtitle": "Was bald fällig ist und was zu lange wartet; jede Zahl öffnet die passende Liste.",
       "sections": {
         "tasks": "Fällige Aufgaben",
         "projectEnds": "Geplante Projektenden",
@@ -1557,7 +1551,6 @@
     },
     "capacityHeatmap": {
       "title": "Kapazitäts-Heatmap",
-      "subtitle": "Erwarteter Aufwand im Vergleich zur Kapazität von Mitwirkenden und Teams",
       "filters": {
         "teams": "Teams",
         "allTeams": "Alle Teams",
@@ -1630,7 +1623,6 @@
     },
     "weekly": {
       "title": "Periodenrückblick",
-      "subtitle": "Anfragen, Projekte und Aufgaben im Zeitraum: was erstellt, geändert und geschlossen wurde.",
       "filters": {
         "startDate": "Startdatum",
         "endDate": "Enddatum",
@@ -1724,7 +1716,6 @@
     },
     "flow": {
       "title": "Fluss und Alter",
-      "subtitle": "Was hereinkommt und was hinausgeht, wie lange die offene Arbeit dort liegt, wo sie liegt, und wie lange ein Abschluss dauert.",
       "filters": {
         "tasks": "Aufgaben",
         "requestsProjects": "Anfragen und Projekte",
@@ -1873,7 +1864,6 @@
     },
     "timeLogged": {
       "title": "Erfasste Zeit",
-      "subtitle": "Erfasste Tage Monat für Monat, für Projekte oder andere Arbeit, nach Team und nach Person.",
       "horizon": "Zeitraum",
       "monthOption_one": "{{count}} Monat",
       "monthOption_other": "{{count}} Monate",
@@ -2571,7 +2561,6 @@
     },
     "skills": {
       "empty": "Noch keine Kompetenzen konfiguriert. Verwenden Sie «Standardwerte laden», um Standardkompetenzen zu laden, oder fügen Sie Kompetenzen manuell hinzu.",
-      "description": "Kompetenzen werden verwendet, um die Fachgebiete der Teammitglieder zu definieren. Konfigurieren Sie die für Ihre Organisation relevanten Kompetenzen.",
       "dialog": {
         "editTitle": "Kompetenz bearbeiten",
         "createTitle": "Kompetenz erstellen",
@@ -2587,7 +2576,6 @@
     },
     "phaseTemplates": {
       "empty": "Noch keine Phasenvorlagen konfiguriert. Vorlagen werden beim ersten Zugriff automatisch erstellt.",
-      "description": "Phasenvorlagen definieren die Standardphasen und Meilensteine für Projekte. Wenden Sie eine Vorlage an, wenn Sie den Zeitstrahl eines neuen Projekts einrichten.",
       "chips": {
         "phaseCount_one": "{{count}} Phase",
         "phaseCount_other": "{{count}} Phasen"
@@ -2611,7 +2599,6 @@
       }
     },
     "classification": {
-      "description": "Konfigurieren Sie Quellen, Kategorien und Streams zur Klassifizierung von Anfragen und Projekten.",
       "sections": {
         "sources": "Quellen",
         "categoriesAndStreams": "Kategorien & Streams",
@@ -2659,7 +2646,6 @@
     },
     "teams": {
       "empty": "Noch keine Teams konfiguriert. Verwenden Sie «Standardwerte laden», um Standardteams zu laden, oder fügen Sie Teams manuell hinzu.",
-      "description": "Teams sind organisatorische Gruppen, denen Mitwirkende zugeordnet werden. Ordnen Sie Mitwirkende Teams zu, um sie nach Abteilung oder Funktion zu organisieren.",
       "memberCount_one": "{{count}} Mitglied",
       "memberCount_other": "{{count}} Mitglieder",
       "dialog": {
@@ -2674,7 +2660,6 @@
     },
     "employmentTypes": {
       "empty": "Noch keine Vertragsarten vorhanden. Verwenden Sie «Standardwerte laden» für Intern, Extern, Auszubildender und Sonstige, oder legen Sie eigene an.",
-      "description": "Vertragsarten beschreiben, wie ein Mitwirkender mit Ihnen zusammenarbeitet, zum Beispiel als Angestellter, Dienstleister oder Auszubildender. Jeder Mitwirkende beginnt als Intern; ändern Sie es in seinem Profil.",
       "usageCount_one": "{{count}} Mitwirkender",
       "usageCount_other": "{{count}} Mitwirkende",
       "dialog": {

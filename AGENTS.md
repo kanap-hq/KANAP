@@ -187,6 +187,7 @@ Tool-specific or private notes live in each tool's local files, never here.
   that reads source files, fixtures or scripts resolves them with `backendPath()`
   (`src/common/__tests__/backend-root.ts`), not `__dirname`: the compiled tree holds no `.ts`
   file and no fixture.
+- The runner gives each spec process a default `JWT_SECRET` of 32 characters or more when the shell and `backend/.env` leave it empty. A value in the shell or in `backend/.env` is the one the process receives.
 - CI runs the backend and frontend suites in the cloud jobs, and builds both sides in on-premise
   mode. These jobs run in the merge queue only (see "Workflow with the maintainer"); on a PR only
   the stack order warning runs. A failing spec drops the PR from the queue.
@@ -199,6 +200,8 @@ Tool-specific or private notes live in each tool's local files, never here.
   job that is not needed is skipped, which counts as passed. The script checks of
   `build (onprem)` (licenses, lockfiles, release, queue scripts, docs translation status) always run. A new
   spec that reads files outside its own tree must be added to the rules of `ci-changes.sh`.
+- The node tests of the sample data fixture (`backend/fixtures/fromage-co/__tests__/*.test.mjs`) and of
+  `backend/scripts/lib` (`backend/scripts/lib/__tests__/*.test.mjs`) run in `build (onprem)`.
 - The frontend check runs as a `frontend build` job and three `frontend tests (i/3)` shards in
   parallel (`vitest run --shard`, split by file); the `frontend (cloud)` job only gathers their
   results. To rerun one shard locally: `npm test -- --shard=2/3` in `frontend/`.

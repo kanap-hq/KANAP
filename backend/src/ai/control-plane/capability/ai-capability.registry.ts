@@ -388,7 +388,7 @@ function internalExecuteApprovedPreviewContract(): CapabilityContract {
   return CapabilityContractSchema.parse({
     name: EXECUTE_APPROVED_PREVIEW_CAPABILITY,
     version: '1.0.0',
-    description: 'Execute one or more approved KANAP mutation previews.',
+    description: 'Execute one or more approved mutation previews.',
     category: 'mutation',
     provider_kind: 'kanap_domain',
     supported_surfaces: ['internal'],
@@ -435,7 +435,7 @@ function internalKnowledgeSearchContract(): CapabilityContract {
   return CapabilityContractSchema.parse({
     name: 'search_knowledge',
     version: COMPATIBILITY_CAPABILITY_VERSION,
-    description: 'Search KANAP knowledge documents through the governed internal control-plane surface.',
+    description: 'Search knowledge documents through the governed internal control-plane surface.',
     category: 'knowledge',
     provider_kind: 'kanap_domain',
     supported_surfaces: ['internal'],
@@ -480,7 +480,7 @@ function internalKnowledgeDocumentContract(): CapabilityContract {
   return CapabilityContractSchema.parse({
     name: 'get_document',
     version: COMPATIBILITY_CAPABILITY_VERSION,
-    description: 'Read one KANAP knowledge document through the governed internal control-plane surface.',
+    description: 'Read one knowledge document through the governed internal control-plane surface.',
     category: 'knowledge',
     provider_kind: 'kanap_domain',
     supported_surfaces: ['internal'],
@@ -615,7 +615,7 @@ function internalEntityContract(input: {
 function internalEntitySearchContract(): CapabilityContract {
   return internalEntityContract({
     name: KANAP_ENTITY_SEARCH_CAPABILITY,
-    description: 'Search KANAP applications, assets, interfaces, connections or locations through the governed internal control-plane surface.',
+    description: 'Search applications, assets, interfaces, connections or locations through the governed internal control-plane surface.',
     input_schema: {
       type: 'object',
       properties: {
@@ -634,7 +634,7 @@ function internalEntitySearchContract(): CapabilityContract {
 function internalEntityDetailContract(): CapabilityContract {
   return internalEntityContract({
     name: KANAP_ENTITY_DETAIL_CAPABILITY,
-    description: 'Read one KANAP entity as a compact field projection (scalars, short lists and IP addresses; heavy linked payloads omitted) through the governed internal control-plane surface.',
+    description: 'Read one entity as a compact field projection (scalars, short lists and IP addresses; heavy linked payloads omitted) through the governed internal control-plane surface.',
     input_schema: {
       type: 'object',
       properties: {
@@ -652,7 +652,7 @@ function internalEntityDetailContract(): CapabilityContract {
 function internalEntityContextContract(): CapabilityContract {
   return internalEntityContract({
     name: KANAP_ENTITY_CONTEXT_CAPABILITY,
-    description: 'Read the relationship context (linked applications/assets, owners, knowledge) of one KANAP application or asset through the governed internal control-plane surface.',
+    description: 'Read the relationship context (linked applications/assets, owners, knowledge) of one application or asset through the governed internal control-plane surface.',
     input_schema: {
       type: 'object',
       properties: {
@@ -2489,7 +2489,7 @@ export class AiCapabilityRegistry {
     return {
       available: false,
       reasonCode: 'provider_not_configured',
-      message: 'KANAP entity data access is not configured.',
+      message: 'Entity data access is not configured.',
     };
   }
 

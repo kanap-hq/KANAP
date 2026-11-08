@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { Alert, Box, Checkbox, ListItemText, MenuItem, Stack, TextField, Typography, useTheme } from '@mui/material';
+import InfoHint from '../../components/workspace/InfoHint';
 import PrintableChart from '../../components/reports/PrintableChart';
 import { PRINT_CONTENT_WIDTH, useReportPrinting, useReportTheme } from '../../components/reports/reportPrint';
 import ReportGrid from '../../components/reports/ReportGrid';
@@ -1232,7 +1233,6 @@ export default function FlowReport() {
   return (
     <ReportLayout
       title={t('reports.flow.title')}
-      subtitle={t('reports.flow.subtitle')}
       filters={(
         <>
           <ReportFilter label={t('reports.flow.filters.tasks')} width={170}>
@@ -1486,12 +1486,12 @@ export default function FlowReport() {
 
       {/* 2b. Where the open work sits ---------------------------------- */}
       <Box sx={SECTION_SX}>
-        <Typography component="h2" sx={SECTION_TITLE_SX}>
-          {t('reports.flow.sections.byStatus')}
-        </Typography>
-        <Typography sx={{ fontSize: 13, fontWeight: 400, color: 'kanap.text.secondary', mt: -1, mb: 1.5 }}>
-          {t('reports.flow.sections.byStatusHint')}
-        </Typography>
+        <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', mb: 1.5 }}>
+          <Typography component="h2" sx={{ ...SECTION_TITLE_SX, mb: 0 }}>
+            {t('reports.flow.sections.byStatus')}
+          </Typography>
+          <InfoHint text={t('reports.flow.sections.byStatusHint')} />
+        </Stack>
 
         <Box
           sx={{

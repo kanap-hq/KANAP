@@ -20,7 +20,7 @@ process.env.SSRF_ALLOWED_HOSTS = '127.0.0.1';
 
 const RAW_BODY_MARKER = 'raw-body-text-7f3a';
 
-type Mode = 'redirect' | 'html-error' | 'json-error' | 'ok';
+type Mode = 'redirect' | 'html-error' | 'json-error' | 'mistral-capacity' | 'nested-error' | 'ok';
 
 const state: { mode: Mode; requests: string[] } = { mode: 'ok', requests: [] };
 
@@ -70,6 +70,27 @@ function startServer(): Promise<{ server: http.Server; base: string }> {
         res.writeHead(404, { 'content-type': 'application/json' });
         res.end(JSON.stringify({
           error: { message: 'The model m does not exist.', type: 'invalid_request_error' },
+          debug: RAW_BODY_MARKER,
+        }));
+        return;
+      }
+      // Mistral's capacity answer: a string message at the top level, no error key.
+      if (state.mode === 'mistral-capacity') {
+        res.writeHead(429, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({
+          message: 'Not enough capacity available for this request, please retry later.',
+          type: 'backend_out_of_capacity',
+          debug: RAW_BODY_MARKER,
+        }));
+        return;
+      }
+      // An OpenAI-shaped body keeps its own message. The top-level sentence and
+      // the marker must not replace it.
+      if (state.mode === 'nested-error') {
+        res.writeHead(429, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({
+          message: 'top level sentence that must stay hidden',
+          error: { message: 'Rate limit reached for this model.', type: 'rate_limit_error' },
           debug: RAW_BODY_MARKER,
         }));
         return;
@@ -162,6 +183,33 @@ async function testStructuredProviderMessageIsKept(base: string) {
     (error as Error).message,
     'AI provider request failed (HTTP 404): The model m does not exist.',
   );
+}
+
+async function testMistralTopLevelMessageIsKept(base: string) {
+  setSingleTenant(false);
+  reset('mistral-capacity');
+  const { error } = await collect(openaiCompatibleStream(openaiParams(base, 0)));
+  assert.ok(error instanceof Error);
+  const message = (error as Error).message;
+  assert.equal(
+    message,
+    'AI provider request failed (HTTP 429): Not enough capacity available for this request, please retry later.',
+  );
+  assert.ok(!message.includes(RAW_BODY_MARKER), 'the error must not repeat the raw body');
+  assert.ok(!message.includes('backend_out_of_capacity'));
+  assert.deepEqual(state.requests, ['/v1/chat/completions']);
+}
+
+async function testNestedErrorBodyStillReadsAsBefore(base: string) {
+  setSingleTenant(false);
+  reset('nested-error');
+  const { error } = await collect(openaiCompatibleStream(openaiParams(base, 0)));
+  assert.ok(error instanceof Error);
+  const message = (error as Error).message;
+  assert.equal(message, 'AI provider request failed (HTTP 429): Rate limit reached for this model.');
+  assert.ok(!message.includes(RAW_BODY_MARKER));
+  assert.ok(!message.includes('top level sentence that must stay hidden'));
+  assert.deepEqual(state.requests, ['/v1/chat/completions']);
 }
 
 async function testAnthropicClientFollowsTheSameRule(base: string) {
@@ -282,6 +330,8 @@ async function run() {
     await testSingleTenantRedirectIsFollowed(base);
     await testUnexpectedBodyIsNotRepeated(base);
     await testStructuredProviderMessageIsKept(base);
+    await testMistralTopLevelMessageIsKept(base);
+    await testNestedErrorBodyStillReadsAsBefore(base);
     await testAnthropicClientFollowsTheSameRule(base);
     await testProviderTestEndpointReportsTheRedirect(base);
   } finally {

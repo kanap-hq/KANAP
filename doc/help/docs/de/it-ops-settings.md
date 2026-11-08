@@ -77,7 +77,7 @@ Cloud-Anbieter, die von Servern und Standorten verwendet werden (z. B. AWS, Azur
 **Spalten**: Name, Nicht mehr anbieten
 
 **Verwendung**:
-- Assets-Arbeitsbereich → Eigenschaftsleiste → **Cloud-Anbieter** (schreibgeschützt, vom Standort abgeleitet)
+- Assets-Arbeitsbereich → Eigenschaftenbereich → **Cloud-Anbieter** (schreibgeschützt, vom Standort abgeleitet)
 - Standorte-Arbeitsbereich → Reiter Übersicht → **Cloud-Anbieter** (wenn der Hosting-Typ Cloud ist)
 
 ### Hosting-Typen
@@ -88,7 +88,7 @@ Wo Standorte und Technologien gehostet werden. Standardwerte: On-Premise, Coloca
 
 **Verwendung**:
 - Standorte-Arbeitsbereich → Reiter Übersicht → Feld **Hosting-Typ**
-- Technologie-Arbeitsbereich → Eigenschaftenfeld → **Hosting-Typ**, und das Fenster für neue Technologien. Siehe [Technologien](technologies.md#hosting-typ).
+- Technologie-Arbeitsbereich → Eigenschaftenbereich → **Hosting-Typ**, und das Fenster für neue Technologien. Siehe [Technologien](technologies.md#hosting-typ).
 
 Ein Typ, den eine Technologie nutzt, kann nicht entfernt werden: Markieren Sie ihn stattdessen als **Nicht mehr anbieten**.
 
@@ -117,8 +117,8 @@ Die Reihenfolge der Liste zählt: Die erste Zone ist die sensibelste. Ziehen Sie
 - **Administratorgruppe**: die Verzeichnisgruppe oder das Team, das die Zone verwaltet, zum Beispiel „Domänen-Admins“.
 
 **Verwendung**:
-- Assets-Arbeitsbereich → Eigenschaftsleiste → **Administrationszone**
-- Technologie-Arbeitsbereich → Eigenschaftenfeld → **Administrationszone**, für die Technologien der Familie **Verzeichnis und Identität**
+- Assets-Arbeitsbereich → Eigenschaftenbereich → **Administrationszone**
+- Technologie-Arbeitsbereich → Eigenschaftenbereich → **Administrationszone**, für die Technologien der Familie **Verzeichnis und Identität**
 - **IT-Landschaft > Administrationszonen**, die die Assets und Verzeichnisdienste jeder Zone zählt, die Kontrollpunkte ausführt und Zonen für viele Assets in einem Schritt zuordnet. Siehe [Administrationszonen](administration-view.md).
 
 Eine als **Nicht mehr anbieten** markierte Zone bleibt bei den Technologien und Assets, die ihr bereits zugeordnet sind.
@@ -130,7 +130,7 @@ Die Art jeder Technologie: Datenbank, Hypervisor, Verzeichnis und Identität usw
 **Spalten**: Name, Nicht mehr anbieten
 
 **Verwendung**:
-- Technologie-Arbeitsbereich → Kopfzeile und Eigenschaftenfeld → **Familie**, und das Fenster für neue Technologien
+- Technologie-Arbeitsbereich → Kopfzeile und Eigenschaftenbereich → **Familie**, und das Fenster für neue Technologien
 
 Die Familie **Betriebssystem** kennzeichnet die Betriebssysteme: Eine Technologie dieser Familie, die einem Server ohne Betriebssystem hinzugefügt wird, wird zu seinem Betriebssystem. Siehe [Technologien](technologies.md#betriebssysteme).
 
@@ -258,7 +258,7 @@ Logische Typen für Server und Infrastruktur-Assets (z. B. Physischer Server, Vi
 **Spalten**: Name, Physisch, Nicht mehr anbieten
 
 **Verwendung**:
-- Assets-Arbeitsbereich → Eigenschaftsleiste → Feld **Asset-Typ**
+- Assets-Arbeitsbereich → Eigenschaftenbereich → Feld **Asset-Typ**
 
 ---
 
@@ -416,7 +416,7 @@ So können Sie Ihre Taxonomie im Laufe der Zeit weiterentwickeln, ohne bestehend
 |------|-----------------|
 | **Zugriffsmethoden** | Anwendungen (Reiter Technik und Support → Zugriffsmethoden) |
 | **Anwendungskategorien** | Anwendungen (Kategorie) |
-| **Administrationszonen** | Assets (Eigenschaftsleiste → Administrationszone), Technologien der Familie Verzeichnis und Identität (Eigenschaftenfeld → Administrationszone), Seite Administrationszonen |
+| **Administrationszonen** | Assets (Eigenschaftenbereich → Administrationszone), Technologien der Familie Verzeichnis und Identität (Eigenschaftenbereich → Administrationszone), Seite Administrationszonen |
 | **Cloud-Anbieter** | Assets (Anbieter), Standorte (Cloud-Anbieter) |
 | **Verbindungstypen** | Verbindungen (Verbindungstyp) |
 | **Domänen** | Assets (Reiter Netzwerk → Domäne, FQDN), Seite Administrationszonen |
@@ -434,7 +434,7 @@ So können Sie Ihre Taxonomie im Laufe der Zeit weiterentwickeln, ohne bestehend
 | **Netzwerkzonen** | Subnetze (Netzwerkzone), Assets (automatisch aus dem Subnetz) |
 | **Subnetze** | Assets (Reiter Netzwerk → IP-Adressen → Subnetzauswahl) |
 | **Serverrollen** | Anwendungen → Reiter Server (Rolle beim Verknüpfen eines Assets mit der Anwendung), Verbindungskarte (Platzierung nach Graph-Ebene) |
-| **Asset-Typen** | Assets (Eigenschaftsleiste → Asset-Typ) |
+| **Asset-Typen** | Assets (Eigenschaftenbereich → Asset-Typ) |
 | **Technologiefamilien** | Technologien (Familie), Seite Administrationszonen (Verzeichnisdienste) |
 
 ---

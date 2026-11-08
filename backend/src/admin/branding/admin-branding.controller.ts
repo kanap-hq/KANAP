@@ -192,7 +192,7 @@ export class AdminBrandingController {
     let current = tenant;
     if (body.name !== undefined) {
       if (typeof body.name !== 'string' || body.name.length < 1 || body.name.length > ORGANIZATION_NAME_MAX) {
-        throw new BadRequestException('Organization name must be 1 to 120 characters');
+        throw new BadRequestException('Workspace name must be 1 to 120 characters');
       }
       current = await this.tenants.updateTenant(tenant.id, { name: body.name }, { manager });
     }

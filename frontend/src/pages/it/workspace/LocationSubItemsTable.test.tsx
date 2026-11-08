@@ -4,6 +4,10 @@ import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../../config/ThemeContext';
+import en from '../../../locales/en/it.json';
+import fr from '../../../locales/fr/it.json';
+import de from '../../../locales/de/it.json';
+import es from '../../../locales/es/it.json';
 
 const stableT = vi.hoisted(() => (key: string) => key);
 vi.mock('react-i18next', () => ({
@@ -110,5 +114,22 @@ describe('LocationSubItemsTable new rows', () => {
     }));
     expect(screen.getByDisplayValue('North wing')).toBeInTheDocument();
     expect(mocked.post).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('LocationSubItemsTable empty state', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocked.get.mockResolvedValue({ data: [] });
+  });
+
+  it('shows one line when the location has no sub-locations', async () => {
+    renderTable();
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/locations/loc-1/sub-items'));
+    expect(screen.getByText('it:workspace.location.subItems.empty')).toBeInTheDocument();
+    expect(en.workspace.location.subItems.empty).toBe('No sub-locations.');
+    expect(fr.workspace.location.subItems.empty).toBe('Aucun sous-site.');
+    expect(de.workspace.location.subItems.empty).toBe('Keine Unterstandorte.');
+    expect(es.workspace.location.subItems.empty).toBe('No hay sububicaciones.');
   });
 });

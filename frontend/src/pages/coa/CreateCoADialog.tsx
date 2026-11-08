@@ -240,7 +240,7 @@ export default function CreateCoADialog({
           </PropertyRow>
         )}
 
-        <PropertyRow label={t('coa.createDialog.codeLabel')} required helperText={t('coa.createDialog.codeHelp')}>
+        <PropertyRow label={t('coa.createDialog.codeLabel')} required hint={t('coa.createDialog.codeHelp')}>
           <TextField
             variant="standard"
             fullWidth

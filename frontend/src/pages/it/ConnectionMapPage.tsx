@@ -857,7 +857,6 @@ export default function ConnectionMapPage() {
         <FormControl size="small" sx={{ minWidth: 140 }} disabled={selectedAppIds.length === 0}>
           <InputLabel id="app-env-label" shrink>{t('pages.connectionMap.appEnv')}</InputLabel>
           <Select
-            notched
             displayEmpty
             labelId="app-env-label"
             multiple

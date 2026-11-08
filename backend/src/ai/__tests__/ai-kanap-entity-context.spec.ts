@@ -321,7 +321,7 @@ async function testAmbiguousWithoutIpTakesNothing() {
   assert.equal(resolution.assetMatch, 'ambiguous');
   assert.equal(resolution.asset, undefined);
   assert.deepEqual(resolution.sources, []);
-  assert.ok(resolution.notes.some((note) => note.includes('Several KANAP assets match')));
+  assert.ok(resolution.notes.some((note) => note.includes('Several assets match')));
   // No tiebreak details without an IP, and no follow-up lookups after the bail-out.
   assert.equal(calls.length, 1);
 }
@@ -341,7 +341,7 @@ async function testUnmatchedDeviceIsNoted() {
   });
   assert.equal(resolution.assetMatch, 'unmatched');
   assert.deepEqual(resolution.sources, []);
-  assert.ok(resolution.notes.some((note) => note.includes('No KANAP asset matches device "GHOST-HOST"')));
+  assert.ok(resolution.notes.some((note) => note.includes('No asset matches device "GHOST-HOST"')));
 }
 
 async function testBudgetCapStopsLookups() {

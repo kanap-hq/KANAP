@@ -100,7 +100,6 @@ describe('AnalyticsDimensionOrderDialog', () => {
   it('lists every dimension in its order, with the default, disabled and line type marks', async () => {
     renderDialog();
     expect(screen.getByText('analytics.reorderDimensions.title')).toBeInTheDocument();
-    expect(screen.getByText('analytics.reorderDimensions.hint')).toBeInTheDocument();
     await waitFor(() => expect(rows()).toHaveLength(4));
     expect(get).toHaveBeenCalledWith('/analytics-axes');
     expect(rowTexts()).toEqual(STORED_ORDER);

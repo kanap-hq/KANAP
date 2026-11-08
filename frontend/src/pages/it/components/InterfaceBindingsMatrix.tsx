@@ -1624,9 +1624,9 @@ export default function InterfaceBindingsMatrix({
         </Typography>
       )}
       {allEnvs.length === 0 && !loading && (
-        <Alert severity="info">
+        <Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary' }}>
           {t('it:workspace.interface.bindings.noEnvironments')}
-        </Alert>
+        </Typography>
       )}
       {allEnvs.length > 0 && (
         <>

@@ -94,7 +94,8 @@ Rate limiting (default enabled):
 - GET `/public/tenant-info`
   - Resolves tenant metadata for the current host.
   - Returns branding-aware tenant metadata for valid tenant hosts:
-    - `{ slug, name, logoPath, logoVersion, useLogoInDark, primaryColorLight, primaryColorDark }`
+    - `{ slug, name, displayName, logoPath, logoVersion, useLogoInDark, primaryColorLight, primaryColorDark }`
+    - `displayName` is the organisation name the workspace shows (header, sign-in, tab title), or `null` when none was chosen (empty, or the on-premise default `My Organization`): the app then shows the product name.
     - `logoPath` is a relative API path (`/public/branding/logo`) or `null`.
     - `logoVersion` is a numeric cache-busting counter or `null` when no logo exists.
     - `useLogoInDark` controls whether the tenant logo is shown on dark headers/login.
@@ -107,6 +108,10 @@ Rate limiting (default enabled):
   - Public logo stream for the current tenant (no JWT).
   - Returns `404` on platform host, unknown tenant context, or when no logo is configured.
   - Response headers include `Cache-Control: public, max-age=300`.
+
+- GET `/public/manifest.webmanifest`
+  - Web app manifest of the current workspace (no JWT), linked from `frontend/index.html`: `name` and `short_name` are the organisation name, else the product name (platform host, apex, no name chosen).
+  - `Content-Type: application/manifest+json`, `Cache-Control: public, max-age=300`.
 
 - GET `/public/captcha-config`
   - Returns current CAPTCHA client configuration for the marketing forms:
@@ -2189,7 +2194,7 @@ Requires JWT authentication. All endpoints operate on the current user's prefere
 
 ### Recently viewed check
 
-POST `/dashboard/recent-items/existing` with `{ items: Array<{ type, id }> }` (at most 50) → `{ existing: Array<{ type, id }> }`: of the "Recently viewed" entries the browser holds, the records that still exist in the tenant, in one statement. Types: project, request, application, asset, interface, connection, contract, task, spend_item, capex_item, incident, location, document; others and malformed ids are left out (`dashboard/recent-items.ts`). Requires an authenticated user only.
+POST `/dashboard/recent-items/existing` with `{ items: Array<{ type, id }> }` (at most 50) → `{ existing: Array<{ type, id }> }`: of the "Recently viewed" entries the browser holds, the records that still exist in the tenant, in one statement. Types: project, request, application, asset, interface, connection, contract, company, business_process, task, spend_item, capex_item, incident, location, document; others and malformed ids are left out (`dashboard/recent-items.ts`). Requires an authenticated user only.
 
 ### Personal budget dashboard settings
 

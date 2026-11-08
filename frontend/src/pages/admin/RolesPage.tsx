@@ -246,9 +246,11 @@ export default function RolesPage() {
                     )}
                   </Stack>
                 </Stack>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  {locked ? lockedMessage : t('roles.messages.setAccessLevels')}
-                </Typography>
+                {locked && (
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    {lockedMessage}
+                  </Typography>
+                )}
                 {!locked && (
                   <Stack spacing={2} sx={{ maxWidth: 520, mb: 2 }}>
                     <TextField size="small" label={t('roles.fields.roleName')} value={editName} onChange={(e) => setEditName(e.target.value)} disabled={!canEdit} InputLabelProps={{ shrink: true }} />

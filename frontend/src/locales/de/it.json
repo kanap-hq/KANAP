@@ -557,7 +557,7 @@
         "seeAll": "Alles auf der Seite Schwachstellen ansehen",
         "notInstalledList_one": "Nicht installiert: {{versions}}",
         "notInstalledList_other": "Nicht installiert: {{versions}}",
-        "notInstalledHint": "KANAP sucht nur nach Schwachstellen von Versionen, die auf einem Server installiert oder von einer Anwendung deklariert sind.",
+        "notInstalledHint": "Schwachstellen werden nur für Versionen gesucht, die auf einem Server installiert oder von einer Anwendung deklariert sind.",
         "columns": {
           "openHint": "{{severity}}: noch zu prüfende CVE. Die Summe zählt alle Status.",
           "total": "Gesamt"
@@ -1271,7 +1271,7 @@
         "columns": {
           "netboxName": "Netbox-Name",
           "type": "Typ",
-          "asset": "KANAP-Asset",
+          "asset": "Asset",
           "message": "Meldung",
           "lastSeen": "Zuletzt gesehen",
           "actions": "Aktionen"
@@ -1351,7 +1351,7 @@
           "noResults": "Kein Asset gefunden."
         },
         "hints": {
-          "created": "Kein KANAP-Asset passt zu diesen Objekten. Falls eines bereits unter anderem Namen existiert, verknüpfen Sie es, um ein Duplikat zu vermeiden.",
+          "created": "Kein Asset passt zu diesen Objekten. Falls eines bereits unter anderem Namen existiert, verknüpfen Sie es, um ein Duplikat zu vermeiden.",
           "updated": "Noch ist nichts geändert. Diese Werte werden geschrieben, wenn Sie auf Anwenden klicken."
         },
         "matchedBy": {
@@ -1385,11 +1385,11 @@
         "placement": "Platzierung"
       },
       "mappings": {
-        "intro": "Nur zugeordnete Rollen und Standorte werden importiert. Alles, was auf „Nicht importieren“ steht, bleibt außen vor.",
+        "intro": "Nur zugeordnete Rollen und Standorte werden importiert.",
         "roles": "Netbox-Rollen",
         "sites": "Netbox-Standorte",
         "operatingSystems": "Betriebssysteme",
-        "operatingSystemsHint": "Wählen Sie für jede Netbox-Plattform eine Technologie. Gespeichert wird der Name der Technologie, mit ihrer Version, wenn Sie eine auswählen. Eine Plattform ohne Zuordnung blockiert den Import nicht: Das Betriebssystem bleibt einfach unverändert.",
+        "operatingSystemsHint": "Eine Plattform ohne Zuordnung bleibt unverändert.",
         "noPlatforms": "Netbox führt keine Plattform, hier gibt es also nichts zuzuordnen.",
         "platformsUnavailable": "Netbox hat seine Plattformen nicht zurückgegeben, daher lassen sich hier keine Betriebssysteme zuordnen. Prüfen Sie, ob das API-Token Plattformen lesen darf.",
         "noOperatingSystem": "Keine Zuordnung",
@@ -1403,12 +1403,12 @@
           "netboxRole": "Netbox-Rolle",
           "netboxSite": "Netbox-Standort",
           "objects": "Objekte",
-          "assetType": "KANAP-Asset-Typ",
+          "assetType": "Asset-Typ",
           "netboxPlatform": "Netbox-Plattform",
-          "location": "KANAP-Standort",
+          "location": "Standort",
           "operatingSystem": "Technologie",
           "netboxCluster": "Netbox-Cluster",
-          "kanapCluster": "KANAP-Cluster"
+          "kanapCluster": "Cluster"
         },
         "counts": {
           "devices_one": "{{count}} Gerät",
@@ -1420,9 +1420,9 @@
         "reservedRoles": {
           "virtualMachines": "Virtuelle Maschinen"
         },
-        "subLocationsHint": "Innerhalb eines zugeordneten Standorts werden die übergeordneten Netbox-Locations hier zu Unterstandorten. Ein tiefer platziertes Gerät wird dem darüberliegenden Unterstandort der ersten Ebene zugeordnet.",
+        "subLocationsHint": "Innerhalb eines zugeordneten Standorts werden die übergeordneten Netbox-Locations zu Unterstandorten, und ein tiefer platziertes Gerät bleibt dem darüberliegenden Unterstandort zugeordnet.",
         "clusters": "Cluster",
-        "clustersHint": "Wählen Sie für jeden Netbox-Cluster den KANAP-Cluster. Seine virtuellen Maschinen werden dann diesem Cluster hinzugefügt, und nichts wird entfernt: Eine Maschine, die bereits in einem anderen Cluster ist, bleibt dort, auch nachdem Sie eine Zuordnung ändern. Eine Maschine, die Sie aus ihrem Cluster entfernen, kommt beim nächsten Lauf zurück, solange sie in diesem Netbox-Cluster ist. Ein Cluster ohne Zuordnung blockiert den Import nicht.",
+        "clustersHint": "Virtuelle Maschinen werden dem gewählten Cluster hinzugefügt; nichts wird entfernt.",
         "clustersUnavailable": "Netbox hat seine Cluster nicht zurückgegeben, daher können virtuelle Maschinen hier keinem Cluster zugewiesen werden. Prüfen Sie, ob das API-Token Cluster lesen darf.",
         "noClusters": "Netbox listet keinen Cluster, daher gibt es hier nichts zuzuordnen.",
         "noCluster": "Keine Zuordnung",
@@ -1477,7 +1477,7 @@
         "validation_failed": "Dieses Objekt wurde abgelehnt:",
         "os_ambiguous": "Das Betriebssystem „{{value}}“ passt zu mehreren Einträgen in Ihrem Katalog, der Wert blieb unverändert.",
         "os_cluster_with_members": "Dieses Asset ist ein Cluster mit Mitgliedern, daher wurde das Betriebssystem „{{value}}“ ausgelassen.",
-        "status_not_mapped": "Der Netbox-Status „{{value}}“ hat keine Entsprechung in KANAP, der Lebenszyklus blieb unverändert.",
+        "status_not_mapped": "Der Netbox-Status „{{value}}“ hat keine Entsprechung, der Lebenszyklus blieb unverändert.",
         "lifecycle_not_in_catalog": "Der Lebenszyklus „{{value}}“ steht nicht in Ihrem Katalog, der Wert blieb unverändert.",
         "no_ip_address_type": "In den IT-Einstellungen ist kein IP-Adresstyp eingerichtet, die Adresse wurde nicht importiert.",
         "netbox_status_attention": "Netbox meldet dieses Objekt als {{status}}.",
@@ -1485,9 +1485,9 @@
         "similar_name_candidates": "Ein Asset hat einen ähnlichen Namen. Entscheiden Sie, ob es dasselbe Gerät ist.",
         "sub_location_name_taken": "Ein Unterstandort mit dem Namen „{{value}}“ existiert an diesem Standort bereits für eine andere Netbox-Location. Der Unterstandort wurde unverändert gelassen.",
         "locations_unavailable": "Netbox hat seine Locations nicht zurückgegeben. Die Unterstandorte wurden in diesem Lauf nicht verändert.",
-        "cluster_not_mapped": "Der Netbox-Cluster „{{value}}“ ist keinem KANAP-Cluster zugeordnet, daher wurden seine virtuellen Maschinen keinem Cluster zugewiesen.",
+        "cluster_not_mapped": "Der Netbox-Cluster „{{value}}“ ist keinem Cluster zugeordnet, daher wurden seine virtuellen Maschinen keinem Cluster zugewiesen.",
         "cluster_match_invalid": "Der Netbox-Cluster „{{value}}“ ist einem Asset zugeordnet, das gelöscht, ausgemustert oder kein Cluster mehr ist, daher wurden seine virtuellen Maschinen ihm nicht zugewiesen.",
-        "cluster_other_present": "KANAP ordnet die virtuelle Maschine „{{name}}“ auch {{value}} zu. Diese Beziehung wurde beibehalten: Entfernen Sie sie manuell, wenn sie veraltet ist."
+        "cluster_other_present": "Die virtuelle Maschine „{{name}}“ ist auch {{value}} zugeordnet. Diese Beziehung wurde beibehalten: Entfernen Sie sie manuell, wenn sie veraltet ist."
       },
       "previewNotices": {
         "os_not_in_catalog": "Das Betriebssystem „{{value}}“ steht nicht in Ihrem Katalog, der Wert wird unverändert bleiben.",
@@ -1498,14 +1498,14 @@
         "subnet_not_in_catalog": "Das Subnetz {{value}} steht nicht in Ihrem Katalog, die Adresse wird ohne es gespeichert.",
         "fetch_incomplete": "Netbox hat mehr Seiten geliefert als erwartet. Einige Objekte werden nicht geprüft.",
         "os_ambiguous": "Das Betriebssystem „{{value}}“ passt zu mehreren Einträgen in Ihrem Katalog, der Wert wird unverändert bleiben.",
-        "status_not_mapped": "Der Netbox-Status „{{value}}“ hat keine Entsprechung in KANAP, der Lebenszyklus wird unverändert bleiben.",
+        "status_not_mapped": "Der Netbox-Status „{{value}}“ hat keine Entsprechung, der Lebenszyklus wird unverändert bleiben.",
         "lifecycle_not_in_catalog": "Der Lebenszyklus „{{value}}“ steht nicht in Ihrem Katalog, der Wert wird unverändert bleiben.",
         "no_ip_address_type": "In den IT-Einstellungen ist kein IP-Adresstyp eingerichtet, die Adresse wird nicht importiert.",
         "sub_location_name_taken": "Ein Unterstandort mit dem Namen „{{value}}“ existiert an diesem Standort bereits für eine andere Netbox-Location. Der Unterstandort wird unverändert bleiben.",
         "locations_unavailable": "Netbox hat seine Locations nicht zurückgegeben. Die Unterstandorte werden unverändert bleiben.",
-        "cluster_not_mapped": "Der Netbox-Cluster „{{value}}“ ist keinem KANAP-Cluster zugeordnet, daher werden seine virtuellen Maschinen keinem Cluster zugewiesen.",
+        "cluster_not_mapped": "Der Netbox-Cluster „{{value}}“ ist keinem Cluster zugeordnet, daher werden seine virtuellen Maschinen keinem Cluster zugewiesen.",
         "cluster_match_invalid": "Der Netbox-Cluster „{{value}}“ ist einem Asset zugeordnet, das gelöscht, ausgemustert oder kein Cluster mehr ist, daher werden seine virtuellen Maschinen ihm nicht zugewiesen.",
-        "cluster_other_present": "KANAP ordnet die virtuelle Maschine „{{name}}“ auch {{value}} zu. Diese Beziehung wird beibehalten: Entfernen Sie sie manuell, wenn sie veraltet ist."
+        "cluster_other_present": "Die virtuelle Maschine „{{name}}“ ist auch {{value}} zugeordnet. Diese Beziehung wird beibehalten: Entfernen Sie sie manuell, wenn sie veraltet ist."
       },
       "netboxStatus": {
         "active": "Aktiv",
@@ -2490,7 +2490,7 @@
         "catalogNote": "Versionen und Daten werden aus dem Katalog aktuell gehalten",
         "dateSource": "Quelle: <editor>{{editor}}</editor>, geprüft am {{date}}",
         "noPlannedEnd": "Kein Ende vom Hersteller geplant",
-        "securityTrackerNote": "Dieser Anbieter veröffentlicht Schwachstellen pro Paket. KANAP verfolgt den Support jeder Version. Die Betroffenheit einzelner Pakete steht in seinem Tracker: <tracker>{{name}}</tracker>",
+        "securityTrackerNote": "Dieser Anbieter veröffentlicht Schwachstellen pro Paket. Der Support wird für jede Version verfolgt. Die Betroffenheit einzelner Pakete steht in seinem Tracker: <tracker>{{name}}</tracker>",
         "securityTrackerOf": "Sicherheitstracker von {{editor}}",
         "securityTracker": "Sicherheitstracker",
         "trackers": {
@@ -3083,7 +3083,7 @@
         "title": "Umgebungen und Bindungen",
         "addEnvironment": "Umgebung hinzufügen",
         "loadingBindings": "Bindungen werden geladen…",
-        "noEnvironments": "Noch keine Umgebungen definiert. Klicken Sie auf „Umgebung hinzufügen“, um Bindungen zu dokumentieren. Jede Umgebung benötigt Anwendungsbereitstellungen, die im Bereich Anwendungen angelegt werden, bevor Sie Bindungen hinzufügen können.",
+        "noEnvironments": "Noch keine Umgebungen.",
         "bindingIn": "Bindung in {{env}}",
         "noPii": "Keine PII",
         "deleteBindingMessage": "Diese Umgebungsbindung löschen. Die mit ihr verknüpften Infrastrukturverbindungen werden ebenfalls entfernt.",
@@ -3168,7 +3168,7 @@
       "subItems": {
         "title": "Unterstandorte",
         "add": "+ Unterstandort hinzufügen",
-        "empty": "Keine Unterstandorte definiert. Fügen Sie Gebäude, Räume, Racks oder andere physische Bereiche hinzu.",
+        "empty": "Keine Unterstandorte.",
         "usage": "Nutzung",
         "namePlaceholder": "z. B. Gebäude A, Raum 1, Rack 5",
         "descriptionPlaceholder": "Optionale Beschreibung",
@@ -3195,7 +3195,6 @@
         "status": "Status",
         "detected": "Erkannt"
       },
-      "empty": "Noch keine Vorfälle verknüpft. Vorfälle werden vom Vorfall selbst aus verknüpft.",
       "loadFailed": "Vorfälle konnten nicht geladen werden."
     },
     "instances": {
@@ -3244,13 +3243,11 @@
         "copyOptions": "Kopieroptionen",
         "interfaces": "Schnittstellen"
       },
-      "creatingVersionOf": "Neue Version erstellen von:",
       "applicationName": "Anwendungsname",
       "version": "Version",
       "versionPlaceholder": "z. B. 2.0, 2024, Q1 2025",
       "goLiveDate": "Inbetriebnahme",
       "endOfSupportDate": "Ende des Supports",
-      "selectWhatToCopy": "Wählen Sie, was aus der Quellanwendung kopiert werden soll:",
       "copyOwners": "Verantwortliche (Fach und IT)",
       "copyCompanies": "Unternehmen (Zielgruppe)",
       "copyDepartments": "Abteilungen",
@@ -3261,9 +3258,8 @@
       "copyContracts": "Verträge",
       "copyInstances": "Bereitstellungen",
       "copyBindings": "Bereitstellungsbindungen",
-      "bindingsHint": "Bindungen verbinden Schnittstellenabschnitte mit Bereitstellungen. Umgebungsspezifische Details werden gelöscht.",
+      "bindingsHint": "Bindungen verbinden Schnittstellenabschnitte mit Bereitstellungen, und umgebungsspezifische Details werden gelöscht.",
       "suitesNotCopied": "Nicht kopiert: Suiten, Anhänge, Datumsangaben, der letzte Wiederherstellungstest und die Klassifizierungsprüfung.",
-      "selectInterfaces": "Wählen Sie Schnittstellen zur Migration in die neue Version. Ausgewählte Schnittstellen werden dupliziert und mit der neuen Version verknüpft.",
       "loadingInterfaces": "Schnittstellen werden geladen…",
       "noInterfaces": "Keine Schnittstellen für diese Anwendung gefunden.",
       "selectAll": "Alle auswählen",
@@ -3277,7 +3273,7 @@
       "flowsThrough": "fließt durch diesen ETL",
       "flowsThroughAs": "{{source}} → {{target}} (fließt durch diesen ETL)",
       "asRole": "{{source}} → {{target}} (als {{role}})",
-      "middlewareHint": "Schnittstellen mit der Markierung „fließt durch diesen ETL“ verwenden diese Anwendung als Middleware. Das Kopieren erstellt neue Schnittstellendefinitionen für den aktualisierten ETL.",
+      "middlewareHint": "Das Kopieren einer Schnittstelle, die durch diesen ETL fließt, erstellt eine neue Schnittstellendefinition für den aktualisierten ETL.",
       "back": "Zurück",
       "next": "Weiter",
       "createVersion": "Version erstellen",

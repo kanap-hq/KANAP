@@ -12,6 +12,7 @@ import {
   Typography,
 } from '@mui/material';
 import { tableCellTextFieldSx } from '../../../theme/formSx';
+import InfoHint from '../../../components/workspace/InfoHint';
 import TextareaAutosize from '@mui/material/TextareaAutosize';
 import { useTranslation } from 'react-i18next';
 import { getFeasibilityStatusLabel } from '../../../utils/portfolioI18n';
@@ -174,17 +175,18 @@ export default function FeasibilityReview({
 
   return (
     <Stack spacing={1.5}>
-      <Typography variant="caption" color="text.secondary">
-        {t(`editors.feasibility.hints.${getFocusHintKey(categoryName, streamName)}`)}
-      </Typography>
-
       <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
         <Table size="small">
           <TableHead>
             <TableRow sx={{ bgcolor: 'action.hover' }}>
               <TableCell sx={{ width: '36%' }}>{t('editors.feasibility.columns.dimension')}</TableCell>
               <TableCell sx={{ width: '18%' }}>{t('editors.feasibility.columns.status')}</TableCell>
-              <TableCell sx={{ width: '46%' }}>{t('editors.feasibility.columns.comment')}</TableCell>
+              <TableCell sx={{ width: '46%' }}>
+                <Stack direction="row" spacing={0.5} alignItems="center">
+                  <span>{t('editors.feasibility.columns.comment')}</span>
+                  <InfoHint text={t(`editors.feasibility.hints.${getFocusHintKey(categoryName, streamName)}`)} />
+                </Stack>
+              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -204,12 +206,12 @@ export default function FeasibilityReview({
                   }}
                 >
                   <TableCell>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                      {label}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {t(`editors.feasibility.dimensions.${key}.description`)}
-                    </Typography>
+                    <Stack direction="row" spacing={0.5} alignItems="center">
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                        {label}
+                      </Typography>
+                      <InfoHint text={t(`editors.feasibility.dimensions.${key}.description`)} />
+                    </Stack>
                   </TableCell>
                   <TableCell>
                     <Select

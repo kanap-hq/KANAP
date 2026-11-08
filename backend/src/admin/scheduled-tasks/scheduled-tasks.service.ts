@@ -40,6 +40,8 @@ export class ScheduledTasksService implements OnApplicationBootstrap {
   private readonly handlers = new Map<string, () => Promise<Record<string, any>>>();
   private readonly registrations: TaskRegistration[] = [];
   private startupTaskNames: string[] = [];
+  /** Enabled tasks seen at bootstrap, scheduled by `startCronJobs` (name → cron expression). */
+  private pendingCronJobs = new Map<string, string>();
   /** Set by `drain` at a stop: no run starts any more. */
   private stopping = false;
   /** Runs of this process: `executeTask` calls in progress, and run rows written as running. */
@@ -60,8 +62,14 @@ export class ScheduledTasksService implements OnApplicationBootstrap {
     this.handlers.set(opts.name, opts.handler);
   }
 
+  /**
+   * Registers the tasks in `scheduled_tasks` and remembers the enabled ones. Schedules nothing:
+   * any AppModule context boots this (scripts, specs), and only the served API runs the jobs
+   * (`startCronJobs`, called by `main.ts`).
+   */
   async onApplicationBootstrap() {
     const startupRuns: string[] = [];
+    const enabled = new Map<string, string>();
     for (const reg of this.registrations) {
       // Upsert: preserve user-customized cron/enabled
       const existing = await this.taskRepo.findOne({ where: { name: reg.name } });
@@ -83,13 +91,25 @@ export class ScheduledTasksService implements OnApplicationBootstrap {
 
       const task = await this.taskRepo.findOneBy({ name: reg.name });
       if (task && task.enabled) {
-        this.createCronJob(task.name, task.cron_expression);
+        enabled.set(task.name, task.cron_expression);
         if (reg.runOnStartup) startupRuns.push(task.name);
       }
     }
 
     this.startupTaskNames = startupRuns;
+    this.pendingCronJobs = enabled;
     this.logger.log(`Registered ${this.registrations.length} scheduled tasks`);
+  }
+
+  /**
+   * Creates and starts the cron jobs of the tasks enabled at bootstrap, once. Called by `main.ts`
+   * after `listen`, in every API process (they compete for each tick through `claimTick`), never
+   * by another AppModule context (scripts, specs).
+   */
+  startCronJobs(): void {
+    const jobs = this.pendingCronJobs;
+    this.pendingCronJobs = new Map();
+    for (const [name, cronExpression] of jobs) this.createCronJob(name, cronExpression);
   }
 
   /**
@@ -388,7 +408,8 @@ export class ScheduledTasksService implements OnApplicationBootstrap {
     task.updated_at = new Date();
     await this.taskRepo.save(task);
 
-    // Reschedule or stop the cron job
+    // Reschedule or stop the cron job (this decision replaces the one taken at bootstrap)
+    this.pendingCronJobs.delete(name);
     if (task.enabled && this.handlers.has(name)) {
       this.createCronJob(name, task.cron_expression);
     } else {

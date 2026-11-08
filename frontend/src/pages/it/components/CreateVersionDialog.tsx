@@ -20,6 +20,7 @@ import {
 import DateEUField from '../../../components/fields/DateEUField';
 import api from '../../../api';
 import { KanapDialog, PropertyRow } from '../../../components/design';
+import InfoHint from '../../../components/workspace/InfoHint';
 import { drawerFieldValueSx } from '../../../theme/formSx';
 
 import { useTranslation } from 'react-i18next';
@@ -38,7 +39,6 @@ interface InterfaceForMigration {
 interface SourceApp {
   id: string;
   name: string;
-  version?: string | null;
 }
 
 interface CreateVersionDialogProps {
@@ -50,10 +50,11 @@ interface CreateVersionDialogProps {
 
 export default function CreateVersionDialog({ open, onClose, sourceApp, onSuccess }: CreateVersionDialogProps) {
   const { t } = useTranslation(['it', 'common']);
-  const steps = [
-    t('components.createVersion.steps.versionDetails'),
-    t('components.createVersion.steps.copyOptions'),
-    t('components.createVersion.steps.interfaces'),
+  const copyScopeHint = `${t('components.createVersion.alwaysCopied')} ${t('components.createVersion.suitesNotCopied')}`;
+  const steps: Array<{ key: string; label: string; hint?: string }> = [
+    { key: 'details', label: t('components.createVersion.steps.versionDetails') },
+    { key: 'copy', label: t('components.createVersion.steps.copyOptions'), hint: copyScopeHint },
+    { key: 'interfaces', label: t('components.createVersion.steps.interfaces') },
   ];
   const [step, setStep] = React.useState(0);
   const [loading, setLoading] = React.useState(false);
@@ -168,6 +169,7 @@ export default function CreateVersionDialog({ open, onClose, sourceApp, onSucces
     label: string;
     disabled?: boolean;
     indent?: boolean;
+    hint?: string;
     onChange?: (checked: boolean) => void;
   }> = [
     { key: 'copyOwners', label: t('components.createVersion.copyOwners') },
@@ -191,7 +193,13 @@ export default function CreateVersionDialog({ open, onClose, sourceApp, onSucces
         copyBindings: checked ? copyOptions.copyBindings : false,
       }),
     },
-    { key: 'copyBindings', label: t('components.createVersion.copyBindings'), disabled: !copyOptions.copyInstances, indent: true },
+    {
+      key: 'copyBindings',
+      label: t('components.createVersion.copyBindings'),
+      disabled: !copyOptions.copyInstances,
+      indent: true,
+      hint: t('components.createVersion.bindingsHint'),
+    },
   ];
 
   return (
@@ -235,9 +243,16 @@ export default function CreateVersionDialog({ open, onClose, sourceApp, onSucces
             },
           })}
         >
-          {steps.map(label => (
-            <Step key={label}>
-              <StepLabel>{label}</StepLabel>
+          {steps.map((item) => (
+            <Step key={item.key}>
+              <StepLabel>
+                {item.hint ? (
+                  <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                    {item.label}
+                    <InfoHint text={item.hint} />
+                  </Box>
+                ) : item.label}
+              </StepLabel>
             </Step>
           ))}
         </Stepper>
@@ -246,10 +261,6 @@ export default function CreateVersionDialog({ open, onClose, sourceApp, onSucces
 
         {step === 0 && (
           <Stack spacing={1.35}>
-            <Typography sx={(theme) => ({ fontSize: 13, color: theme.palette.kanap.text.secondary, mb: 0.5 })}>
-              {t('components.createVersion.creatingVersionOf')} <Box component="span" sx={(theme) => ({ fontWeight: 500, color: theme.palette.kanap.text.primary })}>{sourceApp.name}</Box>
-              {sourceApp.version && ` (${sourceApp.version})`}
-            </Typography>
             <PropertyRow label={t('components.createVersion.applicationName')} required>
               <TextField
                 value={name}
@@ -293,58 +304,49 @@ export default function CreateVersionDialog({ open, onClose, sourceApp, onSucces
 
         {step === 1 && (
           <Stack spacing={1}>
-            <Typography sx={(theme) => ({ fontSize: 13, color: theme.palette.kanap.text.secondary, mb: 0.5 })}>
-              {t('components.createVersion.selectWhatToCopy')}
-            </Typography>
             {copyOptionRows.map((row) => (
               <Box
-                component="label"
                 key={row.key}
-                sx={(theme) => ({
+                sx={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px',
                   pl: row.indent ? '24px' : 0,
-                  fontSize: 13,
-                  color: row.disabled ? theme.palette.kanap.text.tertiary : theme.palette.kanap.text.primary,
-                })}
+                }}
               >
-                <input
-                  type="checkbox"
-                  checked={!!copyOptions[row.key]}
-                  disabled={row.disabled}
-                  onChange={(e) => {
-                    if (row.onChange) {
-                      row.onChange(e.target.checked);
-                    } else {
-                      setCopyOptions({ ...copyOptions, [row.key]: e.target.checked });
-                    }
-                  }}
-                  style={{ accentColor: 'var(--kanap-teal)' }}
-                />
-                {row.label}
+                <Box
+                  component="label"
+                  sx={(theme) => ({
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontSize: 13,
+                    color: row.disabled ? theme.palette.kanap.text.tertiary : theme.palette.kanap.text.primary,
+                  })}
+                >
+                  <input
+                    type="checkbox"
+                    checked={!!copyOptions[row.key]}
+                    disabled={row.disabled}
+                    onChange={(e) => {
+                      if (row.onChange) {
+                        row.onChange(e.target.checked);
+                      } else {
+                        setCopyOptions({ ...copyOptions, [row.key]: e.target.checked });
+                      }
+                    }}
+                    style={{ accentColor: 'var(--kanap-teal)' }}
+                  />
+                  {row.label}
+                </Box>
+                {row.hint ? <InfoHint text={row.hint} /> : null}
               </Box>
             ))}
-            {copyOptions.copyBindings && (
-              <Typography sx={(theme) => ({ ml: 3, fontSize: 12, color: theme.palette.kanap.text.secondary })}>
-                {t('components.createVersion.bindingsHint')}
-              </Typography>
-            )}
-            <Typography sx={(theme) => ({ mt: 1, fontSize: 12, color: theme.palette.kanap.text.secondary })}>
-              {t('components.createVersion.alwaysCopied')}
-            </Typography>
-            <Typography sx={(theme) => ({ fontSize: 12, color: theme.palette.kanap.text.secondary })}>
-              {t('components.createVersion.suitesNotCopied')}
-            </Typography>
           </Stack>
         )}
 
         {step === 2 && (
           <Stack spacing={2}>
-            <Typography sx={(theme) => ({ fontSize: 13, color: theme.palette.kanap.text.secondary })}>
-              {t('components.createVersion.selectInterfaces')}
-            </Typography>
-
             {interfacesLoading ? (
               <Stack alignItems="center" py={4}>
                 <CircularProgress size={24} />
@@ -374,6 +376,7 @@ export default function CreateVersionDialog({ open, onClose, sourceApp, onSucces
                         ? t('components.createVersion.roleTarget')
                         : t('components.createVersion.roleSource');
                     const route = { source: iface.source_app_name || '?', target: iface.target_app_name || '?' };
+                    const title = iface.name || iface.interface_reference || iface.interface_id;
                     return (
                       <ListItem key={iface.id} disablePadding>
                         <ListItemButton onClick={() => toggleInterface(iface.id)}>
@@ -386,7 +389,19 @@ export default function CreateVersionDialog({ open, onClose, sourceApp, onSucces
                             />
                           </ListItemIcon>
                           <ListItemText
-                            primary={iface.name || iface.interface_reference || iface.interface_id}
+                            primary={isMiddleware ? (
+                              <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                                {title}
+                                <Box
+                                  component="span"
+                                  onClick={(event) => event.stopPropagation()}
+                                  onMouseDown={(event) => event.stopPropagation()}
+                                  sx={{ display: 'inline-flex' }}
+                                >
+                                  <InfoHint text={t('components.createVersion.middlewareHint')} />
+                                </Box>
+                              </Box>
+                            ) : title}
                             secondary={
                               isMiddleware
                                 ? t('components.createVersion.flowsThroughAs', route)
@@ -398,11 +413,6 @@ export default function CreateVersionDialog({ open, onClose, sourceApp, onSucces
                     );
                   })}
                 </List>
-                {interfaces.some(i => i.app_role === 'via_middleware') && (
-                  <Typography sx={(theme) => ({ fontSize: 12, color: theme.palette.kanap.text.secondary })}>
-                    {t('components.createVersion.middlewareHint')}
-                  </Typography>
-                )}
               </>
             )}
           </Stack>

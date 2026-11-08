@@ -3,6 +3,7 @@ import { describeZodIssues, invalidInputMessage } from './control-plane/dispatch
 import { legacyFlattenError } from '../common/zod-error';
 import { z } from 'zod';
 import { Features } from '../config/features';
+import { PRODUCT_NAME } from '../config/product';
 import { KnowledgeService } from '../knowledge/knowledge.service';
 import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
 import { AiMutationPreviewService } from './ai-mutation-preview.service';
@@ -395,7 +396,7 @@ export class AiToolRegistry {
         {
           name: 'search_all',
           category: 'discovery',
-          description: 'Searches the readable KANAP records of every family (applications, assets, projects, requests, tasks, documents, budget lines, contracts and more) by text or by reference such as PRJ-12, and returns the matches with their reference, name and status. It also searches the cost centers, working-day calendars and analytics dimensions by code and by name (`ref` is the code; at most five of each family): an exact code or name ranks as a reference, a part of one as a name. Suited to finding a record whose family or exact name is unknown; query_entities lists, filters and counts one family. When `complete` is true and `truncated` false, the results hold every match. `failed_entity_types` lists the families that could not be searched: the results are then partial, and query_entities on those families gives the authoritative answer. `not_read_here` names the families the search words ask for that this server does not read, with the screen that shows them; without any match, `families_not_read` lists them all. The exchange rates are not searched here: query_entities on `exchange_rates` reads them, and `not_searched_here` says so when the search words ask for rates or currencies. Vulnerabilities are not searched here: query_entities on `vulnerabilities` finds a CVE by `cve_id` or `q`. The roles, their rights and the data access of people (`roles`, `role_permissions`, `data_access`) are not searched here either: query_entities reads them, for an administrator of users with access to all data. ' + AI_UNREAD_FAMILIES_SENTENCE + ` ${AI_PAGE_URL_NOTE}`,
+          description: 'Searches the readable records of every family (applications, assets, projects, requests, tasks, documents, budget lines, contracts and more) by text or by reference such as PRJ-12, and returns the matches with their reference, name and status. It also searches the cost centers, working-day calendars and analytics dimensions by code and by name (`ref` is the code; at most five of each family): an exact code or name ranks as a reference, a part of one as a name. Suited to finding a record whose family or exact name is unknown; query_entities lists, filters and counts one family. When `complete` is true and `truncated` false, the results hold every match. `failed_entity_types` lists the families that could not be searched: the results are then partial, and query_entities on those families gives the authoritative answer. `not_read_here` names the families the search words ask for that this server does not read, with the screen that shows them; without any match, `families_not_read` lists them all. The exchange rates are not searched here: query_entities on `exchange_rates` reads them, and `not_searched_here` says so when the search words ask for rates or currencies. Vulnerabilities are not searched here: query_entities on `vulnerabilities` finds a CVE by `cve_id` or `q`. The roles, their rights and the data access of people (`roles`, `role_permissions`, `data_access`) are not searched here either: query_entities reads them, for an administrator of users with access to all data. ' + AI_UNREAD_FAMILIES_SENTENCE + ` ${AI_PAGE_URL_NOTE}`,
           inputSchema: SearchAllInputSchema,
           inputSummary: fieldDescriptions(SearchAllInputSchema),
           surfaces: ['chat', 'mcp'],
@@ -408,7 +409,7 @@ export class AiToolRegistry {
         {
           name: 'describe_entity_filters',
           category: 'authoritative',
-          description: 'Describes how one entity family can be filtered and sorted: each filter field with its aliases, expected value kinds, examples and lookup hints, plus `sort_fields` (every field query_entities sorts by, created_at and updated_at included, the keys of `field_families` aside) and `default_sort`. Useful before query_entities or aggregate_entities when field names or value formats are unknown. On budget lines, `budget_columns` gives each amount column the name the answer uses: the workspace\'s own name when set, otherwise the product name in the person\'s language (`names` in en, fr, de and es when the profile sets none, the one in the language of the conversation). The answer uses that name on its own, without the English default in brackets. `field_families` lists the staff cost, staff FTE, day cost and days of every year and column once per family, and `metric_families` the cost per FTE, the day rate, the change between two columns and the FTE by month aggregate_entities computes. `families_not_read` lists what KANAP holds and these tools do not read, with the screen that shows it in the person\'s language (in four languages when their profile sets none). `fields_withheld` names each field of the family this person may not read, for lack of a right, with the reason: the field is withheld, which says nothing of its values (they are not empty). `roles`, `role_permissions` and `data_access` are described for an administrator of users with access to all data only, as their screens. ' + REFERENCE_DATA_FAMILIES_SENTENCE,
+          description: 'Describes how one entity family can be filtered and sorted: each filter field with its aliases, expected value kinds, examples and lookup hints, plus `sort_fields` (every field query_entities sorts by, created_at and updated_at included, the keys of `field_families` aside) and `default_sort`. Useful before query_entities or aggregate_entities when field names or value formats are unknown. On budget lines, `budget_columns` gives each amount column the name the answer uses: the workspace\'s own name when set, otherwise the product name in the person\'s language (`names` in en, fr, de and es when the profile sets none, the one in the language of the conversation). The answer uses that name on its own, without the English default in brackets. `field_families` lists the staff cost, staff FTE, day cost and days of every year and column once per family, and `metric_families` the cost per FTE, the day rate, the change between two columns and the FTE by month aggregate_entities computes. `families_not_read` lists what the workspace holds and these tools do not read, with the screen that shows it in the person\'s language (in four languages when their profile sets none). `fields_withheld` names each field of the family this person may not read, for lack of a right, with the reason: the field is withheld, which says nothing of its values (they are not empty). `roles`, `role_permissions` and `data_access` are described for an administrator of users with access to all data only, as their screens. ' + REFERENCE_DATA_FAMILIES_SENTENCE,
           inputSchema: DescribeEntityFiltersInputSchema,
           inputSummary: fieldDescriptions(DescribeEntityFiltersInputSchema),
           surfaces: ['chat', 'mcp'],
@@ -554,7 +555,7 @@ export class AiToolRegistry {
         {
           name: 'get_record_history',
           category: 'inspection',
-          description: `Returns the history of one record, newest first, as its History tab shows it: who did what and when (creation, each change with its before and after values, deletion), with next_cursor for older entries. The records with a history: ${AI_RECORD_HISTORY_FAMILY_WORDS}. The other families have no History tab in KANAP, so no history here.`,
+          description: `Returns the history of one record, newest first, as its History tab shows it: who did what and when (creation, each change with its before and after values, deletion), with next_cursor for older entries. The records with a history: ${AI_RECORD_HISTORY_FAMILY_WORDS}. The other families have no History tab, so no history here.`,
           inputSchema: GetRecordHistoryInputSchema,
           inputSummary: fieldDescriptions(GetRecordHistoryInputSchema),
           surfaces: ['chat', 'mcp'],
@@ -670,7 +671,7 @@ export class AiToolRegistry {
         {
           name: 'list_help_topics',
           category: 'discovery',
-          description: 'Lists the pages of the KANAP user manual, the manual of this version, with their path, title, doc.kanap.net address and sections. Without words, every page with its main sections; with words, the pages that hold them, best first, with the sections and subsections where they appear (`Parent › Child`). read_help_section reads a page or a section. The manual describes the screens, menus, buttons and steps of KANAP as they are in this version.',
+          description: 'Lists the pages of the ' + PRODUCT_NAME + ' user manual, the manual of this version, with their path, title, doc.kanap.net address and sections. Without words, every page with its main sections; with words, the pages that hold them, best first, with the sections and subsections where they appear (`Parent › Child`). read_help_section reads a page or a section. The manual describes the screens, menus, buttons and steps of ' + PRODUCT_NAME + ' as they are in this version.',
           inputSchema: ListHelpTopicsInputSchema,
           inputSummary: fieldDescriptions(ListHelpTopicsInputSchema),
           surfaces: ['chat', 'mcp'],
@@ -683,7 +684,7 @@ export class AiToolRegistry {
         {
           name: 'read_help_section',
           category: 'inspection',
-          description: `Returns one page of the KANAP user manual, or one of its sections, as Markdown text with its doc.kanap.net address (\`url\`, with the section's anchor) to give the person as the link. \`subsections\` names the sections inside it. The text holds at most ${HELP_SECTION_MAX_CHARS.toLocaleString('en-US')} characters: when \`truncated\` is true, read one of its sections. Links in the text point to doc.kanap.net.`,
+          description: `Returns one page of the ${PRODUCT_NAME} user manual, or one of its sections, as Markdown text with its doc.kanap.net address (\`url\`, with the section's anchor) to give the person as the link. \`subsections\` names the sections inside it. The text holds at most ${HELP_SECTION_MAX_CHARS.toLocaleString('en-US')} characters: when \`truncated\` is true, read one of its sections. Links in the text point to doc.kanap.net.`,
           inputSchema: ReadHelpSectionInputSchema,
           inputSummary: fieldDescriptions(ReadHelpSectionInputSchema),
           surfaces: ['chat', 'mcp'],
@@ -696,7 +697,7 @@ export class AiToolRegistry {
         {
           name: 'describe_import_template',
           category: 'inspection',
-          description: 'Describes the template of one KANAP import, for a spreadsheet the user attached: what a row is and how it matches a stored record (`about`), '
+          description: 'Describes the template of one import, for a spreadsheet the user attached: what a row is and how it matches a stored record (`about`), '
             + 'then each column in the template\'s order with its title in the user\'s language, whether it is required, its kind '
             + '(text, date, datetime, number, boolean, codes, catalog, country, reference, email), what it takes (`takes`), its `codes` or the workspace\'s catalog `entries`. '
             + 'prepare_import_mapping maps the file onto these columns. Refused when the user may not run that import.',
@@ -821,7 +822,7 @@ export class AiToolRegistry {
         {
           name: 'web_search',
           category: 'discovery',
-          description: 'Search the web for current information. Use when you need up-to-date facts, EOL dates, product details, or any information not available in the KANAP database.',
+          description: 'Search the web for current information. Use when you need up-to-date facts, EOL dates, product details, or any information not available in the ' + PRODUCT_NAME + ' database.',
           inputSchema: WebSearchInputSchema,
           inputSummary: {
             query: 'Web search query using only generic, publicly meaningful terms.',

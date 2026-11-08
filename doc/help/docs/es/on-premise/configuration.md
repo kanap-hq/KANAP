@@ -25,7 +25,7 @@ Escriba `single-tenant` o `multi-tenant`. Deje la variable sin definir para mult
 | Variable              | Obligatoria | Valor predeterminado | Descripción                                                  |
 | --------------------- | -------- | ----------------- | --------------------------------------------------------------- |
 | `DEFAULT_TENANT_SLUG` | No       | `default`         | Identificador interno del espacio de trabajo (apto para URL, en minúsculas) |
-| `DEFAULT_TENANT_NAME` | No       | `My Organization` | El nombre de su organización: el texto alternativo del logotipo y el nombre que usa el asistente de IA |
+| `DEFAULT_TENANT_NAME` | No       | `My Organization` | El nombre inicial del espacio de trabajo, que se muestra en el encabezado, la pestaña del navegador y los correos electrónicos ([dónde aparece](../branding.md#donde-aparece-el-nombre-del-espacio-de-trabajo)) |
 | `DEFAULT_TENANT_LANGUAGE` | No | `en` | El idioma de las dimensiones analíticas con las que empieza el espacio de trabajo: `en`, `fr`, `de` o `es` |
 
 En el primer arranque, KANAP crea un espacio de trabajo con estos valores. Los valores predeterminados sirven para la mayoría de los despliegues. Una instalación nueva recibe también el plan de cuentas IFRS predeterminado, definido como su plan predeterminado y de consolidación (actualizar una instalación existente no lo añade).
@@ -33,7 +33,7 @@ En el primer arranque, KANAP crea un espacio de trabajo con estos valores. Los v
 Defínalos antes del primer arranque:
 
 - Cambiar `DEFAULT_TENANT_SLUG` más tarde hace que KANAP cree un segundo espacio de trabajo vacío y sirva ese. El primer espacio de trabajo permanece en la base de datos, fuera de alcance.
-- Cambiar `DEFAULT_TENANT_NAME` más tarde no tiene ningún efecto. Un administrador cambia el nombre de la organización en **Administración → Personalización**. La dirección del espacio de trabajo sigue igual.
+- Cambiar `DEFAULT_TENANT_NAME` más tarde no tiene ningún efecto. Un administrador cambia el nombre del espacio de trabajo en **Administración → Personalización**. La dirección del espacio de trabajo sigue igual.
 - Cambiar `DEFAULT_TENANT_LANGUAGE` más tarde no tiene ningún efecto: las dimensiones conservan sus nombres. Puede cambiarles el nombre en **Datos maestros > Dimensiones analíticas**.
 
 Para dar a KANAP la imagen de su organización, defina su nombre, su logotipo y sus colores en **Administración → Personalización**.

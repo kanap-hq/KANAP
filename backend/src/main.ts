@@ -9,6 +9,7 @@ import { describeTokenPurposePolicy } from './auth/access-token.util';
 import { describeSecretPolicy } from './auth/token-secret.util';
 import { PROCESS_STARTED_AT } from './common/process-start';
 import { Features } from './config/features';
+import { PRODUCT_NAME } from './config/product';
 import { APP_VERSION } from './config/version';
 import { TenantsService } from './tenants/tenants.service';
 import { TenantBaselineService } from './tenants/tenant-baseline.service';
@@ -28,6 +29,7 @@ import { checkPoolBudget, poolMaxFloorWarning, readPoolMax } from './common/db-p
 import { DemoDataService } from './demo-data/demo-data.service';
 import { applyHttpMiddleware, applyTenancyAndPipeline } from './http-app';
 import { runDataAccessStartup } from './data-access/data-access-availability';
+import { DEFAULT_ORGANISATION_NAME } from './config/product';
 
 /**
  * Environment checks (common/env.ts): throws where the API refuses to start (a DEPLOYMENT_MODE
@@ -40,7 +42,7 @@ function checkStartupEnv() {
   const report = validateStartupEnv(process.env, { singleTenant: Features.SINGLE_TENANT });
   if (!isLeadProcess()) return;
   // eslint-disable-next-line no-console
-  console.log(`[VERSION] KANAP ${APP_VERSION}`);
+  console.log(`[VERSION] ${PRODUCT_NAME} ${APP_VERSION}`);
   // eslint-disable-next-line no-console
   console.log(`[ENV] run mode: ${report.mode}`);
   for (const warning of report.warnings) {
@@ -125,7 +127,7 @@ async function bootstrap() {
     // Single-tenant auto-provisioning: create tenant + admin + subscription on first boot
     if (Features.SINGLE_TENANT) {
       const slug = (process.env.DEFAULT_TENANT_SLUG || 'default').trim();
-      const name = (process.env.DEFAULT_TENANT_NAME || 'My Organization').trim();
+      const name = (process.env.DEFAULT_TENANT_NAME || DEFAULT_ORGANISATION_NAME).trim();
       // The language of the recommended dimensions the tenant starts with (en, fr, de, es).
       const language = defaultTenantLanguage();
 
@@ -207,13 +209,16 @@ async function bootstrap() {
 
   const port = process.env.PORT || 8080;
   await app.listen(port as number);
+  // Only the served API schedules the cron jobs, in every process, never another AppModule
+  // context (scripts, specs).
+  const scheduledTasks = app.get(ScheduledTasksService);
+  scheduledTasks.startCronJobs();
 
   // Stop (graceful-shutdown.ts): the cron jobs stop at once, no new connections, the requests in
   // flight finish; then, before the pool closes and within the drain time, the work they left:
   // notification chains, running scheduled tasks (still going at the deadline: recorded as
   // interrupted), the notifications those tasks started, and the email queue.
   const schedulerRegistry = app.get(SchedulerRegistry);
-  const scheduledTasks = app.get(ScheduledTasksService);
   const emailService = app.get(EmailService);
   const demoData = app.get(DemoDataService);
   installGracefulShutdown({

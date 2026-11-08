@@ -87,6 +87,7 @@ import {
   writePreviewMissingText,
   type AiWriteLanguage,
 } from './ai-write-texts';
+import { workspaceDisplayName } from '../config/product';
 
 const MAX_TOOL_ITERATIONS = parsePositiveIntEnv(process.env.AI_CHAT_MAX_TOOL_ITERATIONS, 40);
 /**
@@ -1919,7 +1920,7 @@ export class AiChatOrchestratorService {
         `SELECT name FROM tenants WHERE id = $1`,
         [ctx.tenantId],
       );
-      const tenantName = tenant?.[0]?.name || 'KANAP';
+      const tenantName = workspaceDisplayName(tenant?.[0]?.name);
       // The browser's zone, else the user's own, else UTC (the CSV exports share this rule).
       const timeZone = await timeZoneOf(ctx.manager, ctx.tenantId, ctx.userId ?? null, params.timeZone);
       let resolved: ResolvedModel;
@@ -1929,10 +1930,10 @@ export class AiChatOrchestratorService {
         // The model became unavailable after the access check above (for instance, the
         // included model's confirmation was withdrawn meanwhile): refused like that check.
         if (error instanceof AiModelResolutionError) {
-          throw codedForbidden(
-            error.code === 'builtin_not_accepted' ? 'AI_INCLUDED_MODEL_NOT_ACCEPTED' : 'AI_NOT_CONFIGURED',
-            error.message,
-          );
+          if (error.code === 'builtin_not_accepted') {
+            throw codedForbidden('AI_INCLUDED_MODEL_NOT_ACCEPTED', error.message);
+          }
+          throw codedForbidden('AI_NOT_CONFIGURED', error.message);
         }
         throw error;
       }

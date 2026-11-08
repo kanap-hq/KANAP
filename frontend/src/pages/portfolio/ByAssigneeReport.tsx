@@ -236,7 +236,6 @@ export default function ByAssigneeReport() {
   return (
     <ReportLayout
       title={t('reports.byAssignee.title')}
-      subtitle={t('reports.byAssignee.subtitle')}
       filters={(
         <>
           <ReportFilter label={t('reports.byAssignee.staleLabel')} width={180}>

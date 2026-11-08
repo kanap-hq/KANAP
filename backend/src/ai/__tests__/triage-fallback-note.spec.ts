@@ -1,5 +1,6 @@
 import * as assert from 'node:assert/strict';
-import { buildTriageNote } from '../control-plane/agent-control/agent-control-timeline-synthesis.util';
+import { PRODUCT_NAME } from '../../config/product';
+import { buildTriageNote, isKanapMarkedBody } from '../control-plane/agent-control/agent-control-timeline-synthesis.util';
 import type { KnowledgeSearchItem, TicketLike, WebSearchResultItem } from '../control-plane/agent-control/ai-agent-control.service';
 
 // Issue #1301: when reply synthesis fails, the fallback note must not list unvalidated web
@@ -142,3 +143,18 @@ testMixedFallbackNoteListsKnowledgeBeforeWebLeads();
 testEmptyFallbackNoteStillReportsNoCandidate();
 testFallbackSourceCapKeepsKnowledgeAheadOfWebLeads();
 testAdministrativeAndEscalationNotesDoNotGainTheWebHeading();
+
+// A ticket keeps the note the agent wrote there. A body written with the current product name and
+// one written with the legacy literals (before the name became a constant) are both the agent's.
+function testAgentMarksOfCurrentAndLegacyNotesAreRecognised() {
+  const current = buildTriageNote(ticket, [knowledge], []);
+  assert.equal(current.startsWith(`[${PRODUCT_NAME} triage proposal]`), true);
+  assert.equal(isKanapMarkedBody(current), true);
+  assert.equal(isKanapMarkedBody(`[${PRODUCT_NAME.toUpperCase()} TRIAGE PROPOSAL]\nSee above.`), true);
+  assert.equal(isKanapMarkedBody(`Done. This note was prepared by ${PRODUCT_NAME} and requires human approval before posting.`), true);
+  assert.equal(isKanapMarkedBody('[KANAP triage proposal]\nPrior internal note.'), true);
+  assert.equal(isKanapMarkedBody('No external change has been made. This note was prepared by KANAP and requires human approval.'), true);
+  assert.equal(isKanapMarkedBody('The VPN works again, thanks.'), false);
+}
+
+testAgentMarksOfCurrentAndLegacyNotesAreRecognised();

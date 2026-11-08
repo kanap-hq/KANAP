@@ -47,10 +47,10 @@ Go to **Administration > Integrations** and open the **Netbox inventory** card.
 
 On the **Netbox** tab, open **Mappings**. Four tables sit there. The first two decide the whole scope of the import.
 
-- **Netbox roles > KANAP asset type**. Each device role Netbox knows about gets an asset type, or **Do not import**.
-- **Netbox sites > KANAP location**. Each Netbox site gets one of your locations, or **Do not import**.
+- **Netbox roles > Asset type**. Each device role Netbox knows about gets an asset type, or **Do not import**.
+- **Netbox sites > Location**. Each Netbox site gets one of your locations, or **Do not import**.
 
-Anything left on **Do not import** is skipped: its objects are never created, never updated, and never reported as missing. That is how you keep power strips, patch panels or a lab site out of KANAP while still importing the servers next to them.
+Anything left on **Do not import** is skipped: its objects are never created, never updated, and never reported as missing. That is how you leave out power strips, patch panels or a lab site while still importing the servers next to them.
 
 One extra row sits with the roles: **Virtual machines**. Every virtual machine Netbox holds goes through that single row, whatever role Netbox gives it, so one decision covers the lot. A virtual machine takes its site from its cluster when it does not carry one itself.
 
@@ -60,27 +60,27 @@ Mapping a site also brings its Netbox Locations across as sub-locations of the l
 
 ### Operating systems
 
-The third table matches each Netbox platform with a technology. Netbox says "Debian 12" where KANAP holds the technology Debian with its version "12 (Bookworm)", and this is where the two are tied together. Every row shows how many objects run that platform.
+The third table matches each Netbox platform with a technology. Netbox says "Debian 12" where your technologies hold Debian with its version "12 (Bookworm)", and this is where the two are tied together. Every row shows how many objects run that platform.
 
 The list offers your technologies of the **Operating system** family, alone and with each of their versions, then the operating systems of the technology catalog you have not added yet. The value kept is the technology name, with its version when you pick one. At the next run, KANAP records that technology and version as the server's operating system, and adds a catalog entry to your technologies when you picked one.
 
 Rows are pre-filled when KANAP can see the answer: the same name, or the single choice whose name starts with the platform name. "Debian 12" suggests "Debian 12 (Bookworm)". As with the other tables, a suggestion counts only once you press **Save mappings**.
 
-This table is not a filter. A platform left on **No match** never keeps anything out of the import. The equipment comes in and its operating system is left exactly as it is in KANAP. Match the platform later and the next run fills the field.
+This table is not a filter. A platform left on **No match** never keeps anything out of the import. The equipment comes in and its operating system is left exactly as it is. Match the platform later and the next run fills the field.
 
 Netbox grants read access per object type, so a token allowed to read devices, roles and sites can still be refused the platforms. The roles and the sites keep working and the import is unaffected. Only this section is empty, and it says why.
 
 ### Clusters { #clusters }
 
-The **Clusters** section matches each Netbox cluster with a KANAP cluster: an asset marked as a cluster, in service. Each row shows how many virtual machines the Netbox cluster holds. A KANAP cluster with the same name is suggested, and as elsewhere a suggestion counts only once you press **Save mappings**.
+The **Clusters** section matches each Netbox cluster with a cluster in your workspace: an asset marked as a cluster, in service. Each row shows how many virtual machines the Netbox cluster holds. A cluster with the same name is suggested, and as elsewhere a suggestion counts only once you press **Save mappings**.
 
-At the next run, each virtual machine of a matched cluster is added to the **Contains** relations of its KANAP cluster. A technology installed on the cluster then reaches the machine and the applications hosted on it. A machine whose only change is its cluster shows under **To update**, with a **Cluster** line. A machine the run creates joins its cluster at once.
+At the next run, each virtual machine of a matched cluster is added to the **Contains** relations of the corresponding cluster. A technology installed on the cluster then reaches the machine and the applications hosted on it. A machine whose only change is its cluster shows under **To update**, with a **Cluster** line. A machine the run creates joins its cluster at once.
 
 When a member host of the matched cluster contains the machine today, attaching it to the cluster replaces the host's link. The preview shows it on the machine's row, with a **Placement** line from the host to the cluster. See [Virtual machines on a cluster](assets.md#virtual-machines-on-a-cluster).
 
 Apart from that, the import only adds:
 
-- A machine already in another KANAP cluster stays there. The preview says so on the machine's row, so you can remove that relation by hand if it is out of date.
+- A machine already in another cluster stays there. The preview says so on the machine's row, so you can remove that relation by hand if it is out of date.
 - Changing a match adds the machines to the new cluster and keeps them in the old one.
 - A machine you take out of its cluster comes back at the next run, as long as it sits in that Netbox cluster and the match exists. To take it out for good, remove the match first, then the relation.
 
@@ -97,7 +97,7 @@ Press **Synchronise now**. KANAP reads Netbox and shows **Review before applying
 The preview is grouped:
 
 - **Sub-locations**: the shared rows the run creates, adopts or renames, listed once each with the location they belong to and how many equipment end up in them. Renaming a Location in Netbox shows up here as one line, not as every asset moving.
-- **To create**: objects with no counterpart in KANAP. They will be created.
+- **To create**: objects with no counterpart in your workspace. They will be created.
 - **To update**: objects matched to an existing asset that differs. Nothing is changed yet, the values are written when you apply. Each one lists the fields that change, field by field, as `before → after`.
 - **Needs a decision**: objects KANAP will not decide on its own. Nothing happens to them until you settle them, here or later on the page.
 - **Skipped**: objects out of scope, counted by reason (role not mapped, site not mapped, no name in Netbox, ignored by you). The first 20 objects of each reason are named, then the count of the others.
@@ -149,7 +149,7 @@ Two further rules keep the result clean:
 
 ## Which fields Netbox manages
 
-| Managed by Netbox | Stays yours in KANAP |
+| Managed by Netbox | Stays yours |
 |-------------------|----------------------|
 | Name | Environment |
 | Host name and domain | Notes and description |
@@ -162,7 +162,7 @@ Two further rules keep the result clean:
 | Location | |
 | Sub-location | |
 
-On an asset that is linked to Netbox, a managed field is shown as **Managed by Netbox** and cannot be edited in KANAP. Change it in Netbox and the next run brings it over. Everything else on the asset stays editable as usual.
+On an asset that is linked to Netbox, a managed field is shown as **Managed by Netbox** and cannot be edited. Change it in Netbox and the next run brings it over. Everything else on the asset stays editable as usual.
 
 **Only the fields Netbox actually fills for that object are locked.** Netbox has no notion of a domain, a device often has no platform, and it sometimes has no primary address. Those fields stay yours to complete, and since a synchronisation never writes an empty value, what you type there is never overwritten. The asset page says it in one line: "Netbox fills in the fields it provides. The others are yours to complete."
 
@@ -172,9 +172,9 @@ The asset page also carries a **Source** line: when the last synchronisation hap
 
 ### Rules worth knowing
 
-**An empty Netbox value never erases a KANAP value.** If Netbox has no serial number and KANAP has one, the serial number is kept. Only a value Netbox actually holds is written.
+**An empty Netbox value never erases an existing value.** If Netbox has no serial number and the asset has one, the serial number is kept. Only a value Netbox actually holds is written.
 
-**Manual edits are corrected.** Each run compares against the real values on the asset, so a managed field changed in KANAP some other way is put back in line at the next run.
+**Manual edits are corrected.** Each run compares against the real values on the asset, so a managed field changed some other way is put back in line at the next run.
 
 **A dot is only a domain when you say so.** A Netbox name is split into a host name and a domain when it ends with a DNS suffix from your domain list in **IT Landscape > Settings**. The longest suffix wins, so a name ending in `corp.example.com` takes that domain rather than `example.com`. Anything else is simply a name: `dl3.robot-15ms.ie2000` becomes the host name as it stands, dots included, and the domain is left alone. Nothing is reported, because nothing is wrong. To have a suffix recognised, add the domain in the settings and the next run splits the name on its own.
 
@@ -184,7 +184,7 @@ Assets imported before this rule, whose host name was cut at the first dot, are 
 
 **Lifecycle follows a fixed table.**
 
-| Netbox status | KANAP lifecycle |
+| Netbox status | Lifecycle |
 |---------------|-----------------|
 | Planned, Staged, Inventory | Proposed |
 | Active, Offline, Failed, Paused | Active |
@@ -195,7 +195,7 @@ Assets imported before this rule, whose host name was cut at the first dot, are 
 
 A synchronisation never sets an asset to **Retired**. Retiring equipment is a decision you take, from the **Missing from Netbox** list.
 
-**Environment is set once.** New assets get the environment chosen on the integration card. Later runs never touch it, so you can correct it in KANAP and it stays corrected.
+**Environment is set once.** New assets get the environment chosen on the integration card. Later runs never touch it, so you can correct it and it stays corrected.
 
 **Values KANAP does not know are skipped, never invented.** A lifecycle status with no equivalent, or an operating system with no match in **Mappings** and no technology of that name in the **Operating system** family or the catalog, is left unchanged and reported as a warning. Match the platform, or add the technology, then run again. An IPv6 primary address is left out the same way, with the notice "The primary address is an IPv6 address, which is not imported yet."
 
@@ -203,11 +203,11 @@ A synchronisation never sets an asset to **Retired**. Retiring equipment is a de
 
 **A sub-location you created by hand is adopted, not duplicated.** When a Netbox Location has the same name as a sub-location you already use at that location, KANAP links the two: your row keeps its identity, takes the Netbox spelling, and is marked **Netbox** from then on. Your assets stay where they are.
 
-**Nothing is ever deleted.** A Location removed from Netbox leaves its sub-location in place, with the assets that carry it. A sub-location linked to Netbox stays editable: rename it or delete it in KANAP and the next run puts it back in line, creating it again if an asset still needs it.
+**Nothing is ever deleted.** A Location removed from Netbox leaves its sub-location in place, with the assets that carry it. A sub-location linked to Netbox stays editable: rename it or delete it and the next run puts it back in line, creating it again if an asset still needs it.
 
 **A device with no Location keeps its sub-location.** Only a Location Netbox actually reports is written, the same rule as every other managed field. Virtual machines never receive one: a Netbox virtual machine carries no Location.
 
-**Two Locations with the same name at one site.** Netbox allows "Local technique" and "local technique" side by side, KANAP does not. The first one imported wins, and the other is reported as a warning. The same happens when two Netbox sites are mapped to the same KANAP location and both hold a Location of the same name.
+**Two Locations with the same name at one site.** Netbox allows "Local technique" and "local technique" side by side, KANAP does not. The first one imported wins, and the other is reported as a warning. The same happens when two Netbox sites are mapped to the same location and both hold a Location of the same name.
 
 **If Netbox does not return its Locations**, the run carries on with the equipment and leaves every sub-location untouched, with a note in the preview saying so. A partial assignment would be worse than none.
 
@@ -239,7 +239,7 @@ The **Netbox** tab of **IT Landscape > Settings** is where the work happens afte
 
 Below it, the **Objects** tab lists every Netbox object in scope, filtered by state.
 
-The **Type** column reads the KANAP asset type of the linked asset, "Physical server" or "Virtual machine" rather than the word "Device" for everything. An object with no asset yet shows its Netbox type in grey, because that is all there is to say about it so far. Next to the state filters, a search field narrows the list. It matches the Netbox name, the asset name and the asset reference, and the list follows the field a moment after you stop typing.
+The **Type** column reads the asset type of the linked asset, "Physical server" or "Virtual machine" rather than the word "Device" for everything. An object with no asset yet shows its Netbox type in grey, because that is all there is to say about it so far. Next to the state filters, a search field narrows the list. It matches the Netbox name, the asset name and the asset reference, and the list follows the field a moment after you stop typing.
 
 | State | What it means | What you can do |
 |-------|---------------|-----------------|
@@ -249,7 +249,7 @@ The **Type** column reads the KANAP asset type of the linked asset, "Physical se
 | **Ignored** | You told KANAP to leave this object alone. It is skipped by every run. | **Stop ignoring** puts it back in the list. When the record holds nothing to decide, it is removed instead and the object is judged afresh at the next synchronisation. |
 | **Linked** | The object and the asset are matched and up to date. | Open either side from the row. |
 
-Each row links to the object in Netbox and to the asset in KANAP, with its `AST-` reference.
+Each row links to the object in Netbox and to the asset, with its `AST-` reference.
 
 Linking or creating from this page applies the Netbox values straight away. It reads that one object from Netbox, so it stays quick on a large inventory. Messages and warnings are shown in your own language.
 
@@ -283,7 +283,7 @@ The tile stays out of the way when there is nothing to do: one line saying the s
 | An asset ends up with the whole Netbox name as its host name | The name does not end with a DNS suffix from your domain list, so KANAP keeps it as it is. That is the expected result for a name whose dots are part of the name. If it really is a domain, add it in **IT Landscape > Settings** and run again. |
 | The run failed after a handful of objects | Ten objects in a row could not be saved, so the run stopped. The cause is usually the same for all of them, and the details are in the server log. |
 | "Netbox returned more pages than expected. Some objects were not looked at." | The inventory is larger than one run reads. What was read is applied, and nothing is marked missing. Narrow the scope in **Mappings** so the run covers what matters to you. |
-| A sub-location warns that its name is already used | Two Netbox Locations of that site share the name, or two mapped sites point at the same KANAP location and each holds a Location of that name. Rename one of them in Netbox, or merge them there. The equipment is imported either way, without a sub-location. |
+| A sub-location warns that its name is already used | Two Netbox Locations of that site share the name, or two mapped sites point at the same location and each holds a Location of that name. Rename one of them in Netbox, or merge them there. The equipment is imported either way, without a sub-location. |
 | "Netbox did not return its clusters" | The API token cannot read clusters. Give it permission on `virtualization.cluster` in Netbox, or leave it: the equipment still imports, and only the attachment of virtual machines to their cluster is out of reach. |
 | A virtual machine was not attached to its cluster | Its Netbox cluster has no match in **Mappings > Clusters**, or the match points to an asset that is retired or no longer a cluster. Fix the match, then run again. |
 | "Netbox did not return its locations" | The API token cannot read Locations. Give it permission on `dcim.location` in Netbox, or leave it: the equipment import is unaffected. |
@@ -295,6 +295,6 @@ The tile stays out of the way when there is nothing to do: one line saying the s
 - **Map first, synchronise second.** The mapping is the scope. Start with the roles and sites you are sure about, run once, and widen it afterwards.
 - **Declare your DNS suffixes first.** A Netbox name is only split into a host name and a domain when it ends with a suffix you hold in **IT Landscape > Settings**. Add the domains you use before the first run, and the names arrive already split.
 - **Read the preview on the first run.** It is the only run where every match is new, so it is the one worth reading line by line.
-- **Renamed equipment: check the To create list.** Anything you recognise there is about to be duplicated. Link it to its asset in the preview, or fill in its serial number or host name in KANAP and open the preview again.
+- **Renamed equipment: check the To create list.** Anything you recognise there is about to be duplicated. Link it to its asset in the preview, or fill in its serial number or host name on that asset and open the preview again.
 - **Fill in the serial numbers.** It is the sturdiest match there is. Assets that carry a serial number survive renames on both sides without ever landing in **To decide**.
 - **Wait before turning the hourly run on.** Two clean manual runs in a row, the second one showing nothing to change, means the mapping and the matches are right.

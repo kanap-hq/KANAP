@@ -64,7 +64,7 @@ function stringOf(value: unknown): string {
 @Injectable()
 export class PrepareImportMappingAiMutationOperation implements AiMutationOperation<PrepareImportMappingInput> {
   readonly toolName = 'prepare_import_mapping' as const;
-  readonly description = 'Create a preview of how a spreadsheet the user attached maps onto the template of a KANAP import: '
+  readonly description = 'Create a preview of how a spreadsheet the user attached maps onto the template of an import: '
     + 'one entry per template column, with the file column it reads (or one value for every row) and your confidence. '
     + 'Call describe_import_template first for the template\'s columns. The server reads the whole file, converts every row '
     + '(dates and times, numbers, yes/no, codes, catalog names and countries by name) and returns, per column, the values read and not read; '
@@ -85,7 +85,7 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
     entity_type: 'imports',
     fields: ['column_mapping'],
     reversible: false,
-    prompt_hint: 'For a spreadsheet the user attached (an `<attached_table>` in their message) that they want imported, or that fits a KANAP import: '
+    prompt_hint: 'For a spreadsheet the user attached (an `<attached_table>` in their message) that they want imported, or that fits an import: '
       + 'call `describe_import_template` for the import it fits, then `prepare_import_mapping` with the attachment id and the mapping. '
       + 'Map a column only when its header or its first rows say what it holds; say what you supposed in `note` or `assumptions`, '
       + 'and name the file columns you leave out. When the card shows values not read, ask the user what they stand for and call again with `values`. '

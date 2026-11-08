@@ -285,10 +285,10 @@ export default function ContributorPropertiesDrawer({
       </PropertyGroup>
 
       <PropertyGroup>
-        <Box sx={(theme) => ({ fontSize: 12, lineHeight: 1.4, color: theme.palette.kanap.text.tertiary, pb: '4px' })}>
-          {t('portfolio:workspace.contributor.sections.classificationDefaultsHelp')}
-        </Box>
-        <PropertyRow label={t('portfolio:workspace.contributor.fields.source')}>
+        <PropertyRow
+          label={t('portfolio:workspace.contributor.fields.source')}
+          hint={t('portfolio:workspace.contributor.sections.classificationDefaultsHelp')}
+        >
           <EnumAutocomplete
             label=""
             hideLabel

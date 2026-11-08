@@ -44,7 +44,7 @@ vi.mock('../auth/AuthContext', () => ({
 }));
 
 vi.mock('../tenant/TenantContext', () => ({
-  useTenant: () => ({ isPlatformHost: false, tenantName: 'Acme', logoUrl: null, useLogoInDark: false }),
+  useTenant: () => ({ isPlatformHost: false, tenantName: 'Acme', organisationName: 'Acme Industries', logoUrl: null, useLogoInDark: false }),
 }));
 
 vi.mock('../config/FeaturesContext', () => ({
@@ -106,6 +106,15 @@ function renderShell() {
   const view = render(shell(client));
   return { ...view, rerenderShell: () => view.rerender(shell(client)) };
 }
+
+describe('Layout header', () => {
+  it('names the workspace\'s organisation when the tenant has no logo', () => {
+    renderShell();
+    const home = screen.getByRole('link', { name: 'Acme Industries' });
+    expect(home).toHaveAttribute('href', '/');
+    expect(screen.queryByText('KANAP')).not.toBeInTheDocument();
+  });
+});
 
 describe('Layout page scroller', () => {
   it('renders the page inside the bounded scroller, not directly in <main>', () => {

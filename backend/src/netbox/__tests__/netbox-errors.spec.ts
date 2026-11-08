@@ -31,7 +31,7 @@ async function main(): Promise<void> {
   {
     const failure = netboxFailureOf(new NetboxApiError(
       'provider_unavailable',
-      'KANAP could not reach the Netbox server: connect ECONNREFUSED 172.18.0.9:8999',
+      'The Netbox server could not be reached: connect ECONNREFUSED 172.18.0.9:8999',
       true,
     ));
     assert.equal(failure.code, 'netbox_unreachable');

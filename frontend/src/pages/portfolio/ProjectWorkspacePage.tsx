@@ -40,6 +40,7 @@ import {
   getProjectStatusOptions,
 } from '../../utils/portfolioI18n';
 import { useTenant } from '../../tenant/TenantContext';
+import { useRecordTitle } from '../../tenant/workspaceTitle';
 import { useLocale } from '../../i18n/useLocale';
 import { getScoreColor } from '../tasks/theme/taskDetailTokens';
 import { fetchProjectTasksCount } from '../../utils/workspaceTabCounts';
@@ -177,15 +178,7 @@ export default function ProjectWorkspacePage() {
   }, [data?.id, data?.name, data?.item_number, addToRecent]);
 
   // Browser tab title
-  React.useEffect(() => {
-    if (data?.item_number && data?.name) {
-      document.title = t('portfolio:workspace.project.browserTitle', {
-        ref: `PRJ-${data.item_number}`,
-        name: data.name,
-      });
-    }
-    return () => { document.title = 'KANAP'; };
-  }, [data?.item_number, data?.name, t]);
+  useRecordTitle(data?.item_number && data?.name ? `PRJ-${data.item_number} ${data.name}` : null);
 
   // URL replaceState: swap UUID for human-readable ref
   React.useEffect(() => {

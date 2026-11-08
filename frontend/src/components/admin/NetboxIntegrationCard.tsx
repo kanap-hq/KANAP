@@ -29,6 +29,7 @@ import { StatusDot } from '../design';
 import { drawerMenuItemSx } from '../../theme/formSx';
 import { formatShortDateTime } from '../../lib/dateFormat';
 import { useLocale } from '../../i18n/useLocale';
+import InfoHint from '../workspace/InfoHint';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { getDotColor } from '../../utils/statusColors';
 
@@ -243,7 +244,10 @@ export default function NetboxIntegrationCard() {
         ) : (
           <Stack spacing={2.5}>
             <Stack spacing={0.75}>
-              <Typography variant="h6">{t('integrations.netbox.title')}</Typography>
+              <Stack direction="row" spacing={0.75} alignItems="center">
+                <Typography variant="h6">{t('integrations.netbox.title')}</Typography>
+                <InfoHint text={t('integrations.netbox.description')} />
+              </Stack>
               <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap" useFlexGap>
                 <StatusDot color={statusColor} />
                 <Typography sx={{ fontSize: 12, fontWeight: 500, color: statusColor }}>
@@ -262,10 +266,6 @@ export default function NetboxIntegrationCard() {
               ) : null}
             </Stack>
 
-            <Typography variant="body2" color="text.secondary">
-              {t('integrations.netbox.description')}
-            </Typography>
-
             <FormControlLabel
               control={(
                 <Switch
@@ -282,7 +282,6 @@ export default function NetboxIntegrationCard() {
               value={form.base_url}
               onChange={(event) => editForm({ base_url: event.target.value })}
               placeholder={t('integrations.netbox.placeholders.baseUrl')}
-              helperText={t('integrations.netbox.hints.baseUrl')}
             />
 
             <TextField

@@ -46,8 +46,7 @@
       "failedToSaveMetrics": "Échec de l'enregistrement des indicateurs",
       "fixValidationErrors": "Veuillez corriger les erreurs de validation avant d'enregistrer.",
       "readOnlyAccess": "Vous devez disposer d'un accès gestionnaire pour modifier {{entity}}.",
-      "metricsFrozen": "Les indicateurs pour {{year}} sont gelés. Un administrateur budgétaire peut les dégeler.",
-      "metricsYearHint": "Chaque valeur est enregistrée pour l'année sélectionnée quand vous quittez son champ. Changez d'année pour consulter les données passées."
+      "metricsFrozen": "Les indicateurs pour {{year}} sont gelés. Un administrateur budgétaire peut les dégeler."
     },
     "lineTypeUsage": {
       "label": "Utilisé pour",
@@ -203,7 +202,6 @@
     "placeholders": {
       "description": "ex. Comptabilité et paie"
     },
-    "headcountHint": "Enregistré pour l'année sélectionnée quand vous quittez le champ.",
     "messages": {
       "saveFailed": "Échec de l'enregistrement du département.",
       "createFailed": "Échec de la création du département.",
@@ -256,7 +254,6 @@
       "lifecycle": "Cycle de vie"
     },
     "hints": {
-      "code": "Le code utilisé par votre équipe finance pour ce centre de coûts, tel qu'il figure dans votre système comptable ou votre référentiel budgétaire.",
       "company": "L'entité juridique qui paie les coûts de ce centre de coûts.",
       "owner": "La personne qui répond de cette enveloppe budgétaire lors de la revue budgétaire."
     },
@@ -563,7 +560,6 @@
     },
     "chipBar": {
       "createFirst": "Créez votre premier plan comptable",
-      "accountsInChart": "Les comptes sont toujours gérés au sein d'un plan comptable.",
       "newCoA": "Nouveau plan comptable",
       "newChip": "Nouveau",
       "manage": "Gérer les plans"
@@ -753,7 +749,6 @@
     "reorder": {
       "action": "Réordonner",
       "title": "Réordonner les valeurs de {{name}}",
-      "hint": "Faites glisser les valeurs dans l'ordre où les listes et filtres doivent les proposer.",
       "loadFailed": "Impossible de charger les valeurs.",
       "saveFailed": "Impossible d'enregistrer l'ordre.",
       "roleDescription": "valeur déplaçable",
@@ -766,7 +761,6 @@
     "reorderDimensions": {
       "action": "Réordonner les dimensions",
       "title": "Réordonner les dimensions",
-      "hint": "Faites glisser les dimensions dans l'ordre où les écrans, les listes et le fichier budget doivent les présenter.",
       "loadFailed": "Impossible de charger les dimensions.",
       "saveFailed": "Impossible d'enregistrer l'ordre.",
       "roleDescription": "dimension déplaçable",
@@ -796,7 +790,6 @@
       "codeDefault": "Les anciens fichiers utilisent la colonne analytics_category pour cette dimension ; analytics:{{code}} fonctionne aussi.",
       "codeCreate": "Sert de nom de colonne dans les fichiers CSV. Lettres minuscules, chiffres, - ou _.",
       "defaultLocked": "Cette dimension ne peut être ni désactivée ni supprimée : les anciens fichiers et les questions posées à l'IA l'utilisent.",
-      "appliesToDefault": "La dimension par défaut s'applique aux lignes OPEX et CAPEX.",
       "valueDimensionAppliesTo": {
         "opex": "La dimension {{dimension}} est réservée aux lignes OPEX.",
         "capex": "La dimension {{dimension}} est réservée aux lignes CAPEX."
@@ -901,7 +894,6 @@
     "recommended": {
       "action": "Dimensions recommandées",
       "title": "Ajouter les dimensions recommandées",
-      "subtitle": "Des dimensions prêtes à l'emploi avec leurs valeurs, pour les lignes OPEX et CAPEX. Vous pourrez les renommer, les modifier ou les supprimer ensuite.",
       "dimensions": "Dimensions",
       "present": "Déjà présente",
       "presentAs": "Déjà présente ({{name}})",

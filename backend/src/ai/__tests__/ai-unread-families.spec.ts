@@ -127,7 +127,7 @@ async function testScreensInThePersonsLanguage() {
   assert.doesNotMatch(AI_UNREAD_FAMILIES_SENTENCE, /›/);
   // The reference data are families of these tools (Plaid L9): the sentence no longer lists them.
   assert.doesNotMatch(AI_UNREAD_FAMILIES_SENTENCE, /cost centers;|working-day calendars|exchange rates|analytics dimensions/);
-  assert.match(AI_UNREAD_FAMILIES_SENTENCE, /^KANAP also holds what these tools do not read: data access/);
+  assert.match(AI_UNREAD_FAMILIES_SENTENCE, /^The workspace also holds what these tools do not read: data access/);
 
   // The profile's language, read in the tenant.
   const calls: unknown[][] = [];
@@ -190,7 +190,7 @@ function testTheChargebackFollowsTheReportingRight() {
   assert.ok(other.includes(`${chargeback} (Gestion budgétaire › Rapports › Refacturation globale): The tools read it (the families chargeback and chargeback_lines) for a person with the Reporting right, which this person's role does not give.`), other.join('\n'));
   const asked = unreadFamiliesAskedBy('refacturation 2026 par société', 'fr', 'right', { reports: false })[0];
   assert.equal(asked.family, chargeback);
-  assert.match(asked.note, /^KANAP has chargeback by beneficiary company; this server does not read them for this person\. They are on the screen Gestion budgétaire › Rapports › Refacturation globale\. The tools read it \(the families chargeback and chargeback_lines\) for a person with the Reporting right, which this person's role does not give\. A budget line's allocation to companies is in get_entity_detail of the line\.$/);
+  assert.match(asked.note, /^The workspace has chargeback by beneficiary company; this server does not read them for this person\. They are on the screen Gestion budgétaire › Rapports › Refacturation globale\. The tools read it \(the families chargeback and chargeback_lines\) for a person with the Reporting right, which this person's role does not give\. A budget line's allocation to companies is in get_entity_detail of the line\.$/);
   assert.doesNotMatch(asked.note, /no tool computes the chargeback/, 'the tools do compute it');
 
   // Not known (the tool descriptions, common to everyone): the right is named.
@@ -231,7 +231,7 @@ async function testTheReferenceDataFollowTheirRights() {
   assert.ok(otherLines.some((line) => line.startsWith('analytics dimensions (Master data › Analytics dimensions): The tools read it (the family analytics_axes) for a person with the Analytics right,')));
   assert.ok(otherLines.some((line) => line.startsWith('exchange rates (Budget management › Administration › Currencies): The tools read it (the family exchange_rates) for a person with the Budget right,')));
   const asked = unreadFamiliesAskedBy('cost center FR-TRV-600', 'en', 'right', other)[0];
-  assert.match(asked.note, /^KANAP has cost centers; this server does not read them for this person\. They are on the screen Master data › Cost centers\. The tools read it \(the family cost_centers\) for a person with the Cost centers right, which this person's role does not give\./);
+  assert.match(asked.note, /^The workspace has cost centers; this server does not read them for this person\. They are on the screen Master data › Cost centers\. The tools read it \(the family cost_centers\) for a person with the Cost centers right, which this person's role does not give\./);
   // Not known: the right is named.
   assert.ok(unreadFamilyLines('en').includes('cost centers (Master data › Cost centers): The tools read it (the family cost_centers) for a person with the Cost centers right only.'));
 

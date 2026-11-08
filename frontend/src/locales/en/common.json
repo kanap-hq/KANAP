@@ -482,7 +482,8 @@
         "incident": "Incident",
         "location": "Location",
         "document": "Document",
-        "company": "Company"
+        "company": "Company",
+        "businessProcess": "Business process"
       },
       "myTimeTitle": "My time",
       "newRequestsTitle": "New requests",
@@ -1539,7 +1540,7 @@
   },
   "onboarding": {
     "choice": {
-      "angleTitle": "What brings you to KANAP?",
+      "angleTitle": "What brings you to {{product}}?",
       "modeTitle": "How do you want to start?",
       "justLooking": "Just looking",
       "erasesExample": "The example is erased.",
@@ -1635,7 +1636,7 @@
         },
         "map_application": {
           "title": "An application record",
-          "hint": "Here is an application record. Explore the properties panel and the tabs to discover every facet of this key object of KANAP."
+          "hint": "Here is an application record. Explore the properties panel and the tabs to discover every facet of this key object."
         },
         "map_technologies": {
           "title": "Technologies, end of support and vulnerabilities",
@@ -1651,11 +1652,11 @@
         },
         "own_applications": {
           "title": "Your applications",
-          "hint": "Import the list of your applications and then enrich them, or create them directly in KANAP."
+          "hint": "Import the list of your applications and then enrich them, or create them one by one."
         },
         "own_technologies": {
           "title": "Your technologies",
-          "hint": "Turn on technologies and link them to your applications. KANAP takes care of the rest."
+          "hint": "Turn on technologies and link them to your applications. {{product}} takes care of the rest."
         },
         "own_assets": {
           "title": "Your servers",

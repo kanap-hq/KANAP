@@ -49,6 +49,7 @@ import api from '../../../api';
 import { useAuth } from '../../../auth/AuthContext';
 import { KanapDialog, StatusDot } from '../../../components/design';
 import LightModeIsland from '../../../components/LightModeIsland';
+import InfoHint from '../../../components/workspace/InfoHint';
 import DateEUField from '../../../components/fields/DateEUField';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -2163,6 +2164,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                 <MenuItem value="it_only">{t('planning.roadmap.constraintScopes.itOnly')}</MenuItem>
               </Select>
             </FormControl>
+            {capacityConstraintMode === 'it_only' && <InfoHint text={t('planning.roadmap.help.itOnly')} />}
 
             <FormControl size="small" sx={{ minWidth: 180 }}>
               <InputLabel>{t('planning.roadmap.fields.parallelLimit')}</InputLabel>
@@ -2193,26 +2195,20 @@ export default function RoadmapGenerator({ onApplied }: Props) {
               <ToggleButton value="completion_focused">{t('planning.roadmap.optimization.completionFocused')}</ToggleButton>
             </ToggleButtonGroup>
 
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={includeAlreadyScheduled}
-                  onChange={(e) => setIncludeAlreadyScheduled(e.target.checked)}
-                />
-              }
-              label={t('planning.roadmap.fields.recalculateScheduled')}
-            />
+            <Stack direction="row" spacing={0.5} alignItems="center">
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={includeAlreadyScheduled}
+                    onChange={(e) => setIncludeAlreadyScheduled(e.target.checked)}
+                  />
+                }
+                label={t('planning.roadmap.fields.recalculateScheduled')}
+                sx={{ mr: 0 }}
+              />
+              <InfoHint text={t('planning.roadmap.help.recalculate')} />
+            </Stack>
           </Stack>
-
-          <Typography variant="caption" color="text.secondary">
-            {t('planning.roadmap.help.recalculate')}
-            {capacityConstraintMode === 'it_only' && (
-              <>
-                {' '}
-                {t('planning.roadmap.help.itOnly')}
-              </>
-            )}
-          </Typography>
 
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={3} alignItems={{ xs: 'stretch', md: 'center' }}>
             <Box sx={{ minWidth: 280 }}>
@@ -2410,10 +2406,8 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                     <Typography variant="body2" color="text.secondary">
                       {t('planning.roadmap.selection.selectedInGantt', { count: selectedSchedulableCount })}
                     </Typography>
+                    <InfoHint text={t('planning.roadmap.selection.excludedHelp')} />
                   </Stack>
-                  <Typography variant="caption" color="text.secondary">
-                    {t('planning.roadmap.selection.excludedHelp')}
-                  </Typography>
 
                   <Paper variant="outlined" sx={{ overflowX: 'auto' }}>
                     <Table size="small">
@@ -2623,12 +2617,12 @@ export default function RoadmapGenerator({ onApplied }: Props) {
 
                   {filteredReservationProjects.length > 0 && (
                     <Paper variant="outlined" sx={{ p: 2 }}>
-                      <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                        {t('planning.roadmap.reservations.title')}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                        {t('planning.roadmap.reservations.help')}
-                      </Typography>
+                      <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mb: 1 }}>
+                        <Typography variant="subtitle2">
+                          {t('planning.roadmap.reservations.title')}
+                        </Typography>
+                        <InfoHint text={t('planning.roadmap.reservations.help')} />
+                      </Stack>
                       <Paper variant="outlined" sx={{ overflowX: 'auto' }}>
                         <Table size="small">
                           <TableHead>
@@ -2971,9 +2965,12 @@ export default function RoadmapGenerator({ onApplied }: Props) {
               alignItems={{ xs: 'stretch', sm: 'center' }}
               sx={{ px: 1, py: 0.5 }}
             >
-              <Typography variant="subtitle2" sx={{ flex: 1, fontWeight: 500 }}>
-                {t('planning.roadmap.gantt.title')}
-              </Typography>
+              <Stack direction="row" spacing={0.5} alignItems="center" sx={{ flex: 1 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 500 }}>
+                  {t('planning.roadmap.gantt.title')}
+                </Typography>
+                <InfoHint text={`${t('planning.roadmap.gantt.legend')} ${t('planning.roadmap.gantt.dragHelp')}`} />
+              </Stack>
               <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
                 {activeGanttFocusScope && (
                   <ToggleButtonGroup
@@ -3099,12 +3096,6 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                 </Select>
               </FormControl>
             </Stack>
-            <Typography variant="caption" color="text.secondary" sx={{ px: 1, pb: 0.5, display: 'block' }}>
-              {t('planning.roadmap.gantt.legend')}
-            </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ px: 1, pb: 1, display: 'block' }}>
-              {t('planning.roadmap.gantt.dragHelp')}
-            </Typography>
             <LightModeIsland sx={{ p: 1 }}>
               <Box sx={{ height: `${ganttHeight}px` }}>
                 <PortfolioGantt

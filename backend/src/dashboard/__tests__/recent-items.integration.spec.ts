@@ -25,6 +25,9 @@ async function testExisting() {
     const goneTaskId = await one(`INSERT INTO tasks (tenant_id, item_number, title) VALUES ($1, 2, 'Gone') RETURNING id`, [tenantId]);
     await runner.query(`DELETE FROM tasks WHERE id = $1`, [goneTaskId]);
     const appId = await one(`INSERT INTO applications (tenant_id, name) VALUES ($1, 'App') RETURNING id`, [tenantId]);
+    const processId = await one(`INSERT INTO business_processes (tenant_id, name) VALUES ($1, 'Order to cash') RETURNING id`, [tenantId]);
+    const goneProcessId = await one(`INSERT INTO business_processes (tenant_id, name) VALUES ($1, 'Gone process') RETURNING id`, [tenantId]);
+    await runner.query(`DELETE FROM business_processes WHERE id = $1`, [goneProcessId]);
     const capexId = await one(
       `INSERT INTO spend_items (tenant_id, nature, product_name, ppe_type, investment_type, priority, currency, effective_start, item_number, legacy_number)
        VALUES ($1, 'capex', 'Line', 'hardware', 'replacement', 'medium', 'EUR', '2026-01-01', $2, 'CPX-1') RETURNING id`,
@@ -38,6 +41,8 @@ async function testExisting() {
       { type: 'task', id: goneTaskId },
       { type: 'application', id: appId },
       { type: 'application', id: otherApp },
+      { type: 'business_process', id: processId },
+      { type: 'business_process', id: goneProcessId },
       // A budget line stays one entry whatever its nature.
       { type: 'spend_item', id: capexId },
       { type: 'project', id: randomUUID() },
@@ -47,7 +52,7 @@ async function testExisting() {
     const { existing } = await existingRecentItems(runner.manager, tenantId, asked);
     assert.deepEqual(
       existing.map((item) => `${item.type}:${item.id}`).sort(),
-      [`application:${appId}`, `company:${companyId}`, `contract:${contractId}`, `spend_item:${capexId}`, `task:${taskId}`].sort(),
+      [`application:${appId}`, `business_process:${processId}`, `company:${companyId}`, `contract:${contractId}`, `spend_item:${capexId}`, `task:${taskId}`].sort(),
     );
 
     // The task goes with its contract: the next check no longer lists it.
