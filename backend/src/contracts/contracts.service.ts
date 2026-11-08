@@ -1926,8 +1926,8 @@ export class ContractsService {
     const mg = opts?.manager ?? this.repo.manager;
     const contract = await this.findContract(contractId, mg);
     const tenantId = contract.tenant_id;
-    const senderRows: Array<{ first_name: string | null; last_name: string | null }> = await mg.query(
-      'SELECT first_name, last_name FROM users WHERE tenant_id = $1 AND id = $2',
+    const senderRows: Array<{ first_name: string | null; last_name: string | null; email: string | null }> = await mg.query(
+      'SELECT first_name, last_name, email FROM users WHERE tenant_id = $1 AND id = $2',
       [tenantId, userId],
     );
     const senderName = displayName(senderRows[0], 'Someone');
@@ -1948,6 +1948,7 @@ export class ContractsService {
         itemId: contract.id,
         itemName: contract.name,
         senderName,
+        senderEmail: senderRows[0]?.email ?? null,
         message: dto.message,
         recipients,
         rawEmails,

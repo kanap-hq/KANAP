@@ -449,13 +449,11 @@ export class ScheduledNotificationsService implements OnModuleInit {
               this.logger.log(
                 `[WeeklyReview] Sending to ${user.email} (tz=${user.timezone}, local=${schedule.userNow.format('ddd HH:mm')}, due=${schedule.dueAt.format('ddd HH:mm')})`,
               );
-              const sent = await this.sendWeeklyReviewForUser(user, runner.manager);
-              if (sent) {
-                await this.markWeeklyReviewSent(runner.manager, user.user_id, user.tenant_id);
-                summary.sent++;
-              } else {
-                summary.skipped++;
-              }
+              const result = await this.sendWeeklyReviewForUser(user, runner.manager);
+              // An empty week sends nothing, and counts as done until the next one.
+              if (result !== 'failed') await this.markWeeklyReviewSent(runner.manager, user.user_id, user.tenant_id);
+              if (result === 'sent') summary.sent++;
+              else summary.skipped++;
             } else {
               summary.skipped++;
               if (summary.skipped <= 3) {
@@ -566,8 +564,12 @@ export class ScheduledNotificationsService implements OnModuleInit {
 
       this.logger.log(`Sending test weekly review to ${user.email}...`);
 
-      const sent = await this.sendWeeklyReviewForUser(user, runner.manager);
-      if (!sent) {
+      const result = await this.sendWeeklyReviewForUser(user, runner.manager);
+      if (result === 'empty') {
+        await runner.rollbackTransaction();
+        return { success: false, code: 'WEEKLY_REVIEW_EMPTY', message: 'Nothing to report this week: the weekly review was not sent.' };
+      }
+      if (result === 'failed') {
         await runner.rollbackTransaction();
         return { success: false, code: 'WEEKLY_REVIEW_SEND_FAILED', message: `Failed to send weekly review to ${user.email}` };
       }
@@ -658,7 +660,7 @@ export class ScheduledNotificationsService implements OnModuleInit {
       locale?: string | null;
     },
     mg: any,
-  ): Promise<boolean> {
+  ): Promise<'sent' | 'empty' | 'failed'> {
     const userId = user.user_id;
     const tenantId = user.tenant_id;
 
@@ -667,7 +669,6 @@ export class ScheduledNotificationsService implements OnModuleInit {
     const weekStart = userNow.subtract(7, 'day').startOf('day').utc().toISOString();
     const weekEnd = userNow.startOf('day').utc().toISOString();
     const emailLocale = resolveEmailLocale(user.locale);
-    const weekLabel = `${dayjs(weekStart).locale(emailLocale).format('MMMM D')} - ${dayjs(weekEnd).subtract(1, 'day').locale(emailLocale).format('MMMM D, YYYY')}`;
 
     // Set tenant context for RLS
     await mg.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
@@ -791,12 +792,12 @@ export class ScheduledNotificationsService implements OnModuleInit {
     );
 
     // Build and send email
-    const userName = [user.first_name, user.last_name].filter(Boolean).join(' ') || 'there';
     const branding = await this.resolveBranding(tenantId);
 
     const content = buildWeeklyReviewEmail({
-      userName,
-      weekLabel,
+      firstName: user.first_name?.trim() || null,
+      weekStart: userNow.subtract(7, 'day').format('YYYY-MM-DD'),
+      weekEnd: userNow.subtract(1, 'day').format('YYYY-MM-DD'),
       appUrl: await this.getTenantAppUrl(tenantId),
       tasksClosed: tasksClosed.map((t: any) => ({ id: t.id, title: t.title })),
       projectsWithChanges: projectsWithChanges.map((p: any) => ({
@@ -833,6 +834,7 @@ export class ScheduledNotificationsService implements OnModuleInit {
       branding,
       locale: emailLocale,
     });
+    if (!content) return 'empty';
 
     try {
       const from = workspaceEmailSender(branding.organisationName);
@@ -844,10 +846,10 @@ export class ScheduledNotificationsService implements OnModuleInit {
         attachments: content.attachments,
         ...(from ? { from } : {}),
       });
-      return true;
+      return 'sent';
     } catch (error) {
       this.logger.error(`Failed to send weekly review to ${user.email}: ${error}`);
-      return false;
+      return 'failed';
     }
   }
 }

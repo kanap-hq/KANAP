@@ -40,7 +40,7 @@ La page comporte trois cartes : **Nom de l'espace de travail**, **Logo** et **Co
 - **En-tête de l'application et page de connexion** : le nom s'affiche quand il n'y a pas de logo.
 - **Onglet du navigateur** : le titre de l'onglet est le nom. Une page de projet, de demande, de tâche ou de ligne budgétaire affiche d'abord l'enregistrement, par exemple `PRJ-3 Nouvel ERP | Acme`.
 - **Application installée** : quand quelqu'un installe KANAP sur un téléphone ou un ordinateur, l'application prend le nom.
-- **E-mails** : l'en-tête affiche le nom en l'absence de logo. Les objets des e-mails de réinitialisation du mot de passe, d'invitation, de revue hebdomadaire et de réinitialisation de l'espace de travail portent le nom, par exemple « Réinitialisez votre mot de passe Acme ». Le bouton de la revue hebdomadaire indique « Ouvrir Acme ». Dans le cloud, le nom de l'expéditeur est « Acme via KANAP ». Sur site, l'expéditeur est celui défini dans l'installation (`SMTP_FROM`).
+- **E-mails** : l'en-tête affiche le nom en l'absence de logo. Les objets des e-mails de réinitialisation du mot de passe, d'invitation, de revue hebdomadaire et de réinitialisation de l'espace de travail portent le nom, par exemple « Réinitialiser votre mot de passe sur Acme ». Le bouton de la revue hebdomadaire indique « Ouvrir Acme ». Dans le cloud, le nom de l'expéditeur est « Acme via KANAP ». Sur site, l'expéditeur est celui défini dans l'installation (`SMTP_FROM`).
 - **Outils d'IA** : quand un outil d'IA (Claude, ChatGPT ou d'autres) se connecte par le serveur MCP, la page d'autorisation affiche le nom, et l'outil l'affiche comme nom du serveur.
 
 Sans nom défini, ou avec le nom par défaut sur site « My Organization », ces emplacements affichent « KANAP ».

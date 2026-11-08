@@ -29,7 +29,7 @@ const content: TrialContent = {
       errorEmail: 'Geben Sie eine gültige E-Mail-Adresse ein.',
       errorSlug: 'Nur Kleinbuchstaben, Ziffern und Bindestriche.',
       captchaLabel: 'Sicherheitsprüfung',
-      privacyNote: 'Ihre E-Mail-Adresse dient dazu, den KANAP-Arbeitsbereich zu aktivieren und den ersten Administrator festzulegen. Während der Testphase erhalten Sie außerdem 4 begleitende Nachrichten. Sie können sich jederzeit davon abmelden.',
+      privacyNote: 'Ihre E-Mail-Adresse dient dazu, den KANAP-Arbeitsbereich zu aktivieren und den ersten Administrator festzulegen. Während der Testphase erhalten Sie außerdem bis zu 4 begleitende Nachrichten. Sie können sich jederzeit davon abmelden.',
     },
     countryOptions: [
       { value: 'DE', label: 'Deutschland' },
@@ -58,7 +58,7 @@ const content: TrialContent = {
     lead: 'Wir haben einen Aktivierungslink an die angegebene Adresse geschickt. Klicken Sie ihn an, um die Erstellung des Arbeitsbereichs abzuschließen.',
     whatNext: 'Wie es weitergeht',
     steps: [
-      'Posteingang öffnen, Betreff „Bestätigen Sie Ihren KANAP-Arbeitsbereich".',
+      'Posteingang öffnen, Betreff „Aktivieren Sie Ihren KANAP-Arbeitsbereich".',
       'Auf den Link klicken. Wir erstellen Ihren Arbeitsbereich in Sekunden.',
       'Admin-Passwort setzen. Einloggen, Team einladen, loslegen.',
     ],

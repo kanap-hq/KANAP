@@ -37,12 +37,9 @@ export type DiscoveryCall = {
   updated_at: string;
 };
 
-/** What the trial e-mails need: a booked call still to come, one that took place, or none. */
-export type DiscoveryCallTiming = 'upcoming' | 'past' | 'none';
-
-export function discoveryCallTiming(call: DiscoveryCall | null, now: Date = new Date()): DiscoveryCallTiming {
-  if (!call || call.status !== 'booked' || !call.scheduled_at) return 'none';
-  return new Date(call.scheduled_at).getTime() > now.getTime() ? 'upcoming' : 'past';
+/** What the trial e-mails need: a call is booked, to come or past (J+5 is then not sent). */
+export function discoveryCallBooked(call: DiscoveryCall | null): boolean {
+  return call?.status === 'booked';
 }
 
 export function isDiscoveryCallPlacement(value: unknown): value is DiscoveryCallPlacement {

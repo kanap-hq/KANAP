@@ -672,7 +672,7 @@ Las **Notificaciones de tecnologías** envían un correo a los responsables de T
 - **Hora** (hora en su zona horaria)
 - **Zona horaria**
 
-Utilice el botón **Vista previa del correo** para enviarse un correo de prueba y verificar el formato.
+Utilice el botón **Vista previa del correo** para enviarse un correo de prueba y verificar el formato. Una semana sin novedades no envía ningún correo, y la vista previa lo indica.
 
 Todos los cambios se guardan automáticamente al activar/desactivar interruptores o cambiar selecciones.
 

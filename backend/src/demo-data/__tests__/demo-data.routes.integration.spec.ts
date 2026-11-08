@@ -619,11 +619,11 @@ async function testResetEmailRecipients() {
     assert.deepEqual(sent.map((mail) => mail.to).sort(), [t.ownerEmail, ids.multiRole.email].sort(), 'the enabled Administrators only');
     const french = sent.find((mail) => mail.to === t!.ownerEmail)!;
     const english = sent.find((mail) => mail.to === ids.multiRole.email)!;
-    assert.equal(french.subject, 'Votre espace de travail Mail Org a été réinitialisé', 'in the reader’s language, with the organisation name');
+    assert.equal(french.subject, 'Votre espace Mail Org a été réinitialisé', 'in the reader’s language, with the organisation name');
     assert.equal(english.subject, 'Your Mail Org workspace was reset');
-    assert.match(english.text, /Ada Admin erased all the content of the workspace Mail Org on 7 October 2026 at 14:03 UTC/);
+    assert.match(english.text, /Ada Admin erased all the content of the workspace “Mail Org” on 7 October 2026 at 14:03 UTC/);
     assert.match(english.text, new RegExp(`https://${t.slug}\\.kanap\\.test`), 'the link to the workspace');
-    assert.match(french.text, /Ada Admin a effacé tout le contenu de l'espace de travail Mail Org le 7 octobre 2026/);
+    assert.match(french.text, /Ada Admin a effacé tout le contenu de l'espace «\u00a0Mail Org\u00a0» le 7 octobre 2026/);
   } finally {
     (Features as any).EMAIL_ENABLED = savedEmail;
     if (savedUrl === undefined) delete process.env.APP_BASE_URL;

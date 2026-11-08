@@ -29,7 +29,7 @@ const content: TrialContent = {
       errorEmail: 'Entrez une adresse email valide.',
       errorSlug: 'Uniquement lettres minuscules, chiffres et traits d\'union.',
       captchaLabel: 'Vérification de sécurité',
-      privacyNote: 'Votre adresse mail sert à activer l\'espace KANAP et définir le premier administrateur. Vous y recevrez également 4 messages d\'accompagnement pendant l\'essai ; vous pouvez vous en désinscrire à tout moment.',
+      privacyNote: 'Votre adresse mail sert à activer l\'espace KANAP et définir le premier administrateur. Vous y recevrez également jusqu\'à 4 messages d\'accompagnement pendant l\'essai ; vous pouvez vous en désinscrire à tout moment.',
     },
     countryOptions: [
       { value: 'FR', label: 'France' },
@@ -58,7 +58,7 @@ const content: TrialContent = {
     lead: 'Nous avons envoyé un lien d\'activation à l\'adresse fournie. Cliquez dessus pour finaliser la création de votre espace de travail.',
     whatNext: 'La suite',
     steps: [
-      'Ouvrez votre boîte mail, objet « Confirmez votre espace de travail KANAP ».',
+      'Ouvrez votre boîte mail, objet « Activez votre espace KANAP ».',
       'Cliquez sur le lien. Nous créons votre espace de travail en quelques secondes.',
       'Définissez votre mot de passe admin. Connectez-vous, invitez votre équipe, c\'est parti.',
     ],

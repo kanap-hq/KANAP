@@ -1,6 +1,6 @@
 # Trial e-mails
 
-A trial workspace receives four e-mails during its trial, and a thank-you at its first subscription. Texts written by Friedrich (founder), coded as they are in French and translated into English, German and Spanish. Cloud only: on-premise the task is not registered and the routes answer 404 (Feature Gate Inventory in `on-premise/technical-design.md`).
+A trial workspace receives up to four e-mails during its trial, and a thank-you at its first subscription. Texts written by Friedrich (founder), coded as they are in French and translated into English, German and Spanish. Cloud only: on-premise the task is not registered and the routes answer 404 (Feature Gate Inventory in `on-premise/technical-design.md`).
 
 Code: `backend/src/email/trial-mails/`. Texts: `trialMails` in `backend/src/i18n/email-locales/{en,fr,de,es}.ts`.
 
@@ -9,7 +9,7 @@ Code: `backend/src/email/trial-mails/`. Texts: `trialMails` in `backend/src/i18n
 | Milestone | When | Sender | Content |
 |---|---|---|---|
 | `j0` Welcome | Once the path and the mode are chosen, or an hour after the first sign-in seen without them | Application address, replies to `fried@kanap.net` | The chosen path's first-steps guide and the two other paths ("Just looking": the three paths), the discovery call, button **Book a discovery call** |
-| `j5` Personal note | Five days after the trial started | `Friedrich <fried@kanap.net>` | By the discovery call: to come (its date), past (its date), none (the three paths and a call link). No button |
+| `j5` Personal note | Five days after the trial started, only when no discovery call is booked (to come or past; a cancelled call counts as none) | `"Friedrich (KANAP)" <fried@kanap.net>` | How the trial is going, the three paths, the call link on its own line. No button |
 | `j12` Trial ends in two days | Two days before `trial_end` | Application address, replies to Friedrich | The end date, read-only for thirty days then deletion, the hosted plan (prices from `PLANS`) and installing it yourself, button **Activate the subscription** |
 | `ended` End-of-trial notice | Once `trial_end` has passed, still `trialing` | Application address, replies to Friedrich | Read-only, the deletion date, reactivate, export, install; the open question about what was missing |
 | `thanks` Thank-you | Once Stripe confirms the first subscription (`active` with a Stripe subscription) | Application address, replies to Friedrich | Subscription recorded, data kept, support address, button **Open KANAP** |
@@ -22,9 +22,9 @@ The recipient is the person of the trial sign-up (`trial_signups.email`), the wo
 
 ## Presentation
 
-The common template `emailWrapper` (`notifications/notification-templates.ts`): KANAP logo, white card, primary colour, footer "Powered by KANAP". The four trial e-mails put the unsubscribe link in the place of the notification preferences link, with the line "You are receiving this message because you are trying KANAP." The thank-you is a service e-mail and has neither. One button at most; every other link is in the text. Each e-mail has a text version. French texts follow the application's typography (`frenchSpacing`): no-break space before `:` and inside guillemets, narrow no-break space before `;`, `!`, `?`.
+The common template `emailWrapper` (`notifications/notification-templates.ts`): KANAP logo, white card, primary colour, footer "Powered by KANAP". The four trial e-mails put the unsubscribe link in the place of the notification preferences link, with the line "You are receiving this message because you started a trial of KANAP." The thank-you is a service e-mail and has neither. One button at most; every other link is in the text. Each e-mail has a text version. French texts follow the application's typography (`frenchSpacing`, `i18n/email-i18n.ts`, applied to every French e-mail text): no-break space before `:` and inside guillemets, narrow no-break space before `;`, `!`, `?`.
 
-Links read as names (the paths, the chosen guide by its title), except the installation guide and the offer page, written as addresses. Links: the first-steps guides `https://doc.kanap.net/<lang>/first-steps/<budget|landscape|portfolio>-<example|own-data>/`, the on-premise installation guide, the offer page (`MARKETING_BASE_URL/<lang>/offer`), billing (`/admin/billing` of the workspace), `support@kanap.net`.
+Links read as words (the paths, "its detailed guide" for the chosen path, the installation guide, the offer page); the discovery call link reads as its short address. The text version writes the address after the words. Links: the first-steps guides `https://doc.kanap.net/<lang>/first-steps/<budget|landscape|portfolio>-<example|own-data>/`, the on-premise installation guide, the offer page (`MARKETING_BASE_URL/<lang>/offer`), billing (`/admin/billing` of the workspace), `support@kanap.net`.
 
 ## Scheduler and storage
 
@@ -50,7 +50,7 @@ Never expiring, on the workspace's address (`https://<slug>.kanap.net/api/trial-
 | `POST /trial-mails/unsubscribe?t=` | Unsubscribes the workspace from the trial e-mails: the page's button, and the one-click unsubscribe of mail clients (`List-Unsubscribe` and `List-Unsubscribe-Post` headers, RFC 8058). Writes `trial.mails_unsubscribed` once (`table_name = 'trial'`, `source = 'system'`). |
 | `GET /trial-mails/call?t=&from=` | Counts the click when the token is valid (`trial.discovery_call_clicked { placement }`, `from` = `mail_j0` or `mail_j5`), then redirects to `DISCOVERY_CALL_URL` (or `mailto:` the fallback address), valid token or not. 404 only when neither is set. |
 
-A bad token on the unsubscribe routes is a 404. Without a booking page or a fallback address, J0 has no call paragraph or button and J+5 no call link.
+A bad token on the unsubscribe routes answers 404 with a page in the reader's language: "This link is no longer valid." Without a booking page or a fallback address, J0 has no call paragraph or button and J+5 no call link.
 
 ## Deliverability
 

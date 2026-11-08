@@ -17,7 +17,7 @@ import { AuthService } from '../auth/auth.service';
 import { RateLimitGuard } from '../common/rate-limit.guard';
 import { RATE_LIMITS } from '../common/rate-limit';
 import { clientAddress } from '../common/client-address';
-import { enrollTrialMails } from '../email/trial-mails/trial-mails.service';
+import { enrollTrialMails, TRIAL_MAIL_FOUNDER } from '../email/trial-mails/trial-mails.service';
 import { withTenant } from '../common/tenant-runner';
 import { TurnstileService } from './turnstile.service';
 import { Subscription, SubscriptionStatus } from '../billing/subscription.entity';
@@ -44,7 +44,7 @@ import {
 } from '../notifications/notification-templates';
 import { resolveEmailLocale } from '../i18n/email-i18n';
 import { resolveSeedLanguage } from '../analytics/recommended-dimensions.seed';
-import { developmentRequestOrigin, resolveTenantAppBaseUrl } from '../common/url';
+import { developmentRequestOrigin, resolveConfiguredAppBaseUrl, resolveTenantAppBaseUrl } from '../common/url';
 import { DemoDataService } from '../demo-data/demo-data.service';
 import { organisationName } from '../config/product';
 import { buildWebAppManifest } from './web-app-manifest';
@@ -74,6 +74,13 @@ export const PERSON_NAME = /^[\p{L}\p{M}][\p{L}\p{M}'â€™-]*\.?(?: [\p{L}\p{M}'â€
  * The trial sign-up form. The names are optional: the public website is
  * deployed apart from the API, and a form without them keeps working.
  */
+/** The trials page of the platform administration, for the new trial e-mail; null when unknown. */
+function platformTrialsUrl(): string | null {
+  const host = (process.env.PLATFORM_ADMIN_HOST || '').trim();
+  const base = host ? `https://${host}` : resolveConfiguredAppBaseUrl('platform-admin');
+  return base ? `${base.replace(/\/$/, '')}/admin/trials` : null;
+}
+
 export class StartTrialDto {
   @IsString()
   @MinLength(2)
@@ -139,6 +146,12 @@ export class SendContactDto {
   @IsString()
   @MinLength(10)
   message!: string;
+
+  /** The language of the site page the form was sent from. */
+  @IsString()
+  @IsOptional()
+  @MaxLength(10)
+  language?: string;
 
   @IsString()
   @IsOptional()
@@ -413,6 +426,8 @@ export class PublicController {
         html: activation.html,
         text: activation.text,
         attachments: activation.attachments,
+        // A reply reaches Friedrich, as for the trial e-mails that follow.
+        replyTo: TRIAL_MAIL_FOUNDER,
       });
     } catch (error: any) {
       if (error?.code === 'FEATURE_DISABLED') {
@@ -440,7 +455,7 @@ export class PublicController {
     const company = body.company.trim();
     const message = body.message.trim();
 
-    const content = buildContactFormEmail({ name, email, company, message });
+    const content = buildContactFormEmail({ name, email, company, message, language: body.language?.trim() || null });
     await this.emails.send({
       to: 'support@kanap.net',
       subject: content.subject,
@@ -540,9 +555,14 @@ export class PublicController {
           billingEmail: request.email,
           country,
           vatId: request.vatNumber ?? undefined,
+          invoiceId: latestInvoice?.id ?? null,
+          invoiceUrl: latestInvoice?.id
+            ? `https://dashboard.stripe.com/${latestInvoice.livemode === false ? 'test/' : ''}invoices/${latestInvoice.id}`
+            : null,
         });
         await this.emails.send({
           to: notifyEmail,
+          replyTo: request.email,
           subject: supportContent.subject,
           html: supportContent.html,
           text: supportContent.text,
@@ -656,11 +676,15 @@ export class PublicController {
       const tenantNotif = buildNewTenantNotificationEmail({
         tenantName: tenant.name,
         slug: signup.slug,
+        adminName: [signup.first_name, signup.last_name].filter(Boolean).join(' ') || null,
         email: signup.email,
+        language,
         countryIso: signup.country_iso || 'FR',
+        trialsUrl: platformTrialsUrl(),
       });
       await this.emails.send({
         to: 'admin@kanap.net',
+        replyTo: signup.email,
         subject: tenantNotif.subject,
         html: tenantNotif.html,
         text: tenantNotif.text,

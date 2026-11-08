@@ -672,7 +672,7 @@ Steuern Sie, welche E-Mail-Benachrichtigungen Sie erhalten.
 - **Uhrzeit** (Stunde in Ihrer Zeitzone)
 - **Zeitzone**
 
-Verwenden Sie die Schaltfläche **E-Mail-Vorschau**, um sich eine Test-E-Mail zu senden und das Format zu überprüfen.
+Verwenden Sie die Schaltfläche **E-Mail-Vorschau**, um sich eine Test-E-Mail zu senden und das Format zu überprüfen. Eine Woche ohne Neuigkeiten sendet keine E-Mail, und die Vorschau weist darauf hin.
 
 Alle Änderungen werden automatisch gespeichert, sobald Sie Schalter umschalten oder Auswahlen ändern.
 

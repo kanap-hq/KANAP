@@ -20,19 +20,21 @@ import { ListContextsService } from '../../../common/list-context/list-contexts.
 import { useRequestPipeline } from '../../../common/request-pipeline';
 import { createRequestTenancyMiddleware } from '../../../common/tenancy/request-tenancy.middleware';
 import { DiscoveryCallService } from '../../../discovery-call/discovery-call.service';
+import { getEmailStrings } from '../../../i18n/email-i18n';
 import type { SendEmailOptions } from '../../email.types';
 import { TrialMailsController } from '../trial-mails.controller';
-import { TrialMailsService } from '../trial-mails.service';
+import { TRIAL_MAIL_FOUNDER, TrialMailsService } from '../trial-mails.service';
 
 // The trial e-mails (`doc/trial-mails.md`) on the spec database, with a recording e-mail service:
 // - J0 after the choice of a path, once, and not again from a new process (a restart);
 // - J0 an hour after the first sign-in seen without a choice, with the three paths;
-// - J+5 from Friedrich, by the discovery call; J+12 and the end-of-trial notice at their time;
+// - J+5 from Friedrich, only without a booked discovery call; J+12 and the end-of-trial notice at
+//   their time;
 // - the thank-you once at the first Stripe subscription; nothing more of the trial sequence after
 //   it; nothing at all for a workspace created before the trial e-mails (no row);
 // - a failed send lifts its stamp; nothing at all while e-mail sending is off;
 // - over HTTP, after the server's secrets changed: the unsubscribe page, its confirmation (and
-//   the audit entry) that stops the sequence, 404 on a bad token; the counted redirect to the
+//   the audit entry) that stops the sequence, a 404 page on a bad token; the counted redirect to the
 //   discovery call, which a bad token still reaches, uncounted.
 // @database-spec: opens the data-source and boots Nest, so run-ci-tests.js runs it on a database lane.
 
@@ -115,7 +117,7 @@ async function testWelcomeOnceAfterTheChoice() {
       const [mail] = email.to(t!.ownerEmail);
       assert.equal(mail?.subject, 'Welcome to your KANAP workspace');
       assert.ok(mail.html.includes('Hello Camille,') && mail.text!.includes('/first-steps/budget-example/'));
-      assert.equal(mail.replyTo, 'Friedrich <fried@kanap.net>');
+      assert.equal(mail.replyTo, TRIAL_MAIL_FOUNDER);
       assert.equal(mail.from, undefined, 'J0 leaves from the application address');
       assert.match(mail.headers?.['List-Unsubscribe'] ?? '', /^<https:\/\/rs-tm-j0-[^/]+\.trial-mails-spec\.test\/api\/trial-mails\/unsubscribe\?t=/);
       assert.equal(mail.headers?.['List-Unsubscribe-Post'], 'List-Unsubscribe=One-Click');
@@ -166,17 +168,23 @@ async function testFollowUpEndingAndNotice() {
     t = await createActivatedTenant(svc, { tag: 'tm-seq', orgName: 'Trial Sequence', signup: true, language: 'fr' });
     const { start, end } = await trialDates(t);
     await stamp(t.tenantId, ['j0_sent_at']);
-    await inTenant(t.tenantId, (m) => new DiscoveryCallService(dataSource).save(m, t!.tenantId, {
-      scheduled_at: new Date(start.getTime() + 7 * DAY), status: 'booked', source: 'manual',
+    const saveCall = (status: 'booked' | 'cancelled') => inTenant(t!.tenantId, (m) => new DiscoveryCallService(dataSource).save(m, t!.tenantId, {
+      scheduled_at: new Date(start.getTime() + 7 * DAY), status, source: 'manual',
     }));
+    await saveCall('booked');
     await withEnv(ENV, async () => {
       const { email, trialMails } = service();
       await trialMails.onSubscriptionChanged(t!.tenantId, new Date(start.getTime() + 5 * DAY + 60_000));
+      assert.equal(email.to(t!.ownerEmail).length, 0, 'a booked call: no J+5');
+
+      // A cancelled call counts as none.
+      await saveCall('cancelled');
+      await trialMails.onSubscriptionChanged(t!.tenantId, new Date(start.getTime() + 5 * DAY + 120_000));
       const [followUp] = email.to(t!.ownerEmail);
-      assert.equal(followUp?.subject, 'Comment se passent vos tests ?', 'a call to come');
-      assert.equal(followUp.from, 'Friedrich <fried@kanap.net>', 'J+5 leaves from Friedrich');
+      assert.equal(followUp?.subject, getEmailStrings('fr').trialMails.j5.subject);
+      assert.equal(followUp.from, TRIAL_MAIL_FOUNDER, 'J+5 leaves from Friedrich');
       assert.equal(followUp.replyTo, undefined);
-      assert.ok(!followUp.text!.includes('/api/trial-mails/call'), 'no call link when one is booked');
+      assert.ok(followUp.text!.includes('/api/trial-mails/call?t='), 'the call link, counted');
 
       // Billing not enforced: no deletion planned, so no J+12 announcing it.
       const unbilled = service(new RecordingEmail(), false);
@@ -364,7 +372,9 @@ async function testLinksOverHttp() {
         `/trial-mails/unsubscribe?t=${t!.tenantId}.${'0'.repeat(64)}`,
         `/trial-mails/unsubscribe?t=${'0'.repeat(8)}-0000-4000-8000-${'0'.repeat(12)}.${state.link_token}`,
       ]) {
-        assert.equal((await request(served, 'GET', path)).status, 404, path);
+        const invalid = await request(served, 'GET', path);
+        assert.equal(invalid.status, 404, path);
+        assert.ok(invalid.body.includes(getEmailStrings('en').trialMails.unsubscribe.invalid), `${path}: a page says why`);
       }
     });
     await withEnv({ ...ENV, DISCOVERY_CALL_URL: undefined, DISCOVERY_CALL_FALLBACK_EMAIL: undefined }, async () => {

@@ -197,6 +197,8 @@ async function testWeeklyReview() {
     {} as any,
     scheduledTasks as any,
   );
+  // A week with something to tell: an empty week sends nothing.
+  (scheduled as any).weeklyReviewTasks = async () => ({ tasksClosed: [{ id: ITEM, title: 'Renew the backup licence' }], topTasks: [] });
   const summary = await scheduled.sendWeeklyReviews();
   await settle(service);
   assert.deepEqual(recipients(), [[REAL.email]], 'weekly review: only the real user is e-mailed');

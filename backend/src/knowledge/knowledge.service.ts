@@ -4158,7 +4158,7 @@ export class KnowledgeService {
       }
     }
 
-    const senderRows = await manager.query('SELECT first_name, last_name FROM users WHERE id = $1', [userId]);
+    const senderRows = await manager.query('SELECT first_name, last_name, email FROM users WHERE id = $1', [userId]);
     const senderName = displayName(senderRows[0], 'Someone');
 
     const recipientRows = userIds.length > 0
@@ -4178,6 +4178,7 @@ export class KnowledgeService {
         itemId: document.id,
         itemName: document.title || `DOC-${document.item_number}`,
         senderName,
+        senderEmail: senderRows[0]?.email ?? null,
         message: dto.message,
         recipients: recipientRows,
         rawEmails,
