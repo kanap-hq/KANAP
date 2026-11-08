@@ -1316,7 +1316,8 @@ export class UsersService {
         to: user.email,
         inviteUrl: `${normalizedBase}/accept-invite#token=${encodeURIComponent(token)}`,
         expiresInMinutes: getInviteLinkExpirationMinutes(),
-        roleName: user.role?.role_name ?? null,
+        firstName: user.first_name ?? null,
+        inviterName: await this.inviterName(repo, actorId),
         tenantId: user.tenant_id ?? null,
         locale: user.locale ?? undefined,
       };

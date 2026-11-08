@@ -89,6 +89,8 @@ async function testPasswordInvitationLastsSevenDays() {
   assert.equal(microsoftMails.length, 0);
   assert.equal(passwordMails.length, 1);
   assert.equal(passwordMails[0].expiresInMinutes, 7 * 24 * 60, 'the e-mail states the 7 days');
+  assert.equal(passwordMails[0].firstName, 'Julie', 'the e-mail greets the invitee by first name');
+  assert.equal(passwordMails[0].inviterName, 'Claire Dubois', 'the e-mail names the inviting administrator');
   const token = decodeURIComponent(passwordMails[0].inviteUrl.split('#token=')[1]);
   assert.equal(lifetimeSeconds(token), 7 * DAY_S);
   assert.equal(tokens.length, 1);
