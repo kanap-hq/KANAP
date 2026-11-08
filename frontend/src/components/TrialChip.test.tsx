@@ -37,7 +37,7 @@ const trial = (days: number | null, extra: Record<string, unknown> = {}) => ({
   status: 'trialing',
   is_subscription_healthy: true,
   trial_days_remaining: days,
-  trial_end: '2026-11-05T12:00:00.000Z',
+  trial_end: '2026-11-21T23:59:59.999Z',
   ...extra,
 });
 
@@ -69,7 +69,8 @@ describe('TrialChip', () => {
   it('describes the end date on hover without renaming the chip', () => {
     renderChip();
     expect(screen.getByText('Trial: 9 days').getAttribute('aria-label')).toBeNull();
-    expect(screen.getByText('Trial: 9 days').getAttribute('title')).toBe(`Trial ends on ${new Date('2026-11-05T12:00:00.000Z').toLocaleDateString('en')}`);
+    // The last instant of a UTC day: the day itself, as billing shows it, in every time zone.
+    expect(screen.getByText('Trial: 9 days').getAttribute('title')).toMatch(/^Trial ends on 21 Nov( 2026)?$/);
   });
 
   it('uses the singular on the last day', () => {

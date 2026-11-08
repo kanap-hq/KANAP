@@ -75,13 +75,13 @@ function sourceFiles(dir: string): string[] {
 }
 
 function testTrialEndsAtEndOfSignupDay() {
-  // 26 October, morning or evening: the trial ends at the end of 9 November (UTC).
-  const end = '2026-11-09T23:59:59.999Z';
+  // 26 October, morning or evening: the fourteenth day is 8 November, the trial ends at its end (UTC).
+  const end = '2026-11-08T23:59:59.999Z';
   assert.equal(trialEndFromSignup(new Date('2026-10-26T08:00:00.000Z')).toISOString(), end);
   assert.equal(trialEndFromSignup(new Date('2026-10-26T23:30:00.000Z')).toISOString(), end);
   // The UTC calendar, across a month and a year.
-  assert.equal(trialEndFromSignup(new Date('2026-10-31T00:00:00.000Z')).toISOString(), '2026-11-14T23:59:59.999Z');
-  assert.equal(trialEndFromSignup(new Date('2026-12-25T12:00:00.000Z')).toISOString(), '2027-01-08T23:59:59.999Z');
+  assert.equal(trialEndFromSignup(new Date('2026-10-31T00:00:00.000Z')).toISOString(), '2026-11-13T23:59:59.999Z');
+  assert.equal(trialEndFromSignup(new Date('2026-12-25T12:00:00.000Z')).toISOString(), '2027-01-07T23:59:59.999Z');
 }
 
 function testInvoicePaymentTerm() {

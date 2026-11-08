@@ -161,6 +161,12 @@ function testVariants() {
   assert.ok(fr.ended.text.includes('16 décembre 2026'));
   assert.ok(allMails('en').j12.text.includes('€2,490'));
   assert.ok(allMails('de').ended.text.includes('16. Dezember 2026'));
+  // A sign-up trial ends at the last instant of a UTC day: the mail names that day, as the app does.
+  const lastInstant = buildTrialEndingEmail({
+    locale: 'fr', firstName: 'Camille', workspace: 'Acme', appUrl: APP,
+    trialEnd: new Date('2026-11-21T23:59:59.999Z'), marketingUrl: 'https://www.kanap.test', unsubscribeUrl: UNSUBSCRIBE,
+  });
+  assert.ok(lastInstant.text.includes('21 novembre 2026') && !lastInstant.text.includes('22 novembre'), 'the UTC day of the end');
   assert.ok(fr.j0Angle.text.includes('/fr/first-steps/') && allMails('en').j0Angle.text.includes('doc.kanap.net/first-steps/'));
 }
 

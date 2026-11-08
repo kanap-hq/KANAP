@@ -27,7 +27,7 @@ import { TrialSignup } from '../trial-signup.entity';
 // answers as before, then the sample data loads in the background, with every check of a manual
 // load (empty workspace included). Real activation, real DemoDataService and tenant reset on the
 // spec database; the loader process and the e-mails are doubles.
-// - the trial ends at 23:59:59.999 UTC, 14 days after the sign-up day;
+// - the trial ends at 23:59:59.999 UTC on its fourteenth day, the sign-up day being the first;
 // - the loader gets the tenant's host, its starting company and a token of the new administrator;
 // - the sample data comes in the browser's language (`fr` for a French browser), recorded in the
 //   state and given to the loader; any other language gives `en`;
@@ -194,8 +194,8 @@ async function settle() {
   assert.equal(await waitForBackgroundWork(Date.now() + 60_000), 0, 'the background work ended');
 }
 
-// The trial ends at 23:59:59.999 UTC, 14 days after the sign-up day. The days left
-// still round up, so the last day counts in full whatever the hour of sign-up.
+// The trial ends at 23:59:59.999 UTC on its fourteenth day, the sign-up day being the
+// first. The days left round up: 14 on the sign-up day, 1 on the last, whatever the hour.
 async function testTrialEndsAtEndOfSignupDay() {
   const svc = buildServices();
   const h = harness(svc);
@@ -213,7 +213,7 @@ async function testTrialEndsAtEndOfSignupDay() {
     assert.equal(end.getUTCMilliseconds(), 999);
     const startDay = Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate());
     const endDay = Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate());
-    assert.equal((endDay - startDay) / 86_400_000, TRIAL_PERIOD_DAYS);
+    assert.equal((endDay - startDay) / 86_400_000, TRIAL_PERIOD_DAYS - 1);
     assert.equal(end.toISOString(), new Date(endDay + 86_400_000 - 1).toISOString());
   } finally {
     await h.finishAll();

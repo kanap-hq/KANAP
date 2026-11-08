@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthContext';
 import { useFeatures } from '../config/FeaturesContext';
 import { useLocale } from '../i18n/useLocale';
+import { formatShortDate } from '../lib/dateFormat';
 
 // From xl only: below that the section tabs need the room, and the account menu shows the days left.
 const chipSx = {
@@ -44,10 +45,9 @@ function useTrialDays() {
   if (days == null || days <= 0) return null;
 
   const label = t('subscription.trialChip', { count: days });
-  const trialEnd = subscription.trial_end ? new Date(subscription.trial_end) : null;
-  const tooltip = trialEnd && !Number.isNaN(trialEnd.getTime())
-    ? t('subscription.trialEndsOn', { date: trialEnd.toLocaleDateString(locale) })
-    : '';
+  // The day of the end as billing shows it: a sign-up trial ends at the last instant of a UTC day.
+  const endDate = formatShortDate(subscription.trial_end, locale);
+  const tooltip = endDate ? t('subscription.trialEndsOn', { date: endDate }) : '';
   return { label, tooltip, isBillingAdmin: !!claims?.isBillingAdmin };
 }
 
