@@ -40,7 +40,7 @@ export default function InterfaceOverviewTab({
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <Box>
+      <Box data-creation-description="">
         <SectionHeader>{t('it:workspace.interface.overview.specification')}</SectionHeader>
         <IntegratedDocumentEditor
           ref={specificationEditorRef as React.Ref<IntegratedDocumentEditorHandle>}

@@ -32,14 +32,12 @@ vi.mock('../workspace/hooks/useRecentlyViewed', () => ({ useRecentlyViewed: () =
 vi.mock('./components/InterfaceBindingsMatrix', () => ({ default: () => null }));
 // The draft's fields: each button fills one, as the real pickers would.
 vi.mock('./workspace/InterfaceFlowTab', () => ({
-  default: ({ onPatch, onRequiredTab }: { onPatch: (patch: Record<string, unknown>) => Promise<void>; onRequiredTab?: (field: string) => void }) => (
+  default: ({ onPatch }: { onPatch: (patch: Record<string, unknown>) => Promise<void> }) => (
     <div data-testid="flow-tab">
       <div data-creation-field="source"><input aria-label="source" /></div>
       <div data-creation-field="target"><input aria-label="target" /></div>
       <button type="button" onClick={() => void onPatch({ source_application_id: 'app-1' })}>pick source</button>
       <button type="button" onClick={() => void onPatch({ target_application_id: 'app-2' })}>pick target</button>
-      <button type="button" onClick={() => onRequiredTab?.('source')}>tab from source</button>
-      <button type="button" onClick={() => onRequiredTab?.('target')}>tab from target</button>
     </div>
   ),
 }));
@@ -261,16 +259,14 @@ describe('InterfaceWorkspacePage (draft)', () => {
     expect(del).toHaveBeenCalledWith('/interfaces/int-9/creation', { data: { token: 'tok-9' } });
   });
 
-  it('moves Tab from the title to the source, then to the target and the data category', async () => {
-    renderNew();
+  // The shell then moves the focus to the source (PortfolioDetailWorkspaceShell.test.tsx).
+  it('opens Flow on Tab from the title, where the applications to give first sit', async () => {
+    renderNew('/it/interfaces/new/overview');
     const title = await screen.findByLabelText('title');
     fireEvent.change(title, { target: { value: 'Orders sync' } });
     fireEvent.keyDown(title, { key: 'Tab' });
-    await waitFor(() => expect(screen.getByLabelText('source')).toHaveFocus());
-    fireEvent.click(screen.getByRole('button', { name: 'tab from source' }));
-    await waitFor(() => expect(screen.getByLabelText('target')).toHaveFocus());
-    fireEvent.click(screen.getByRole('button', { name: 'tab from target' }));
-    await waitFor(() => expect(screen.getByLabelText('data category')).toHaveFocus());
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/it/interfaces/new/flow'));
+    expect(screen.getByTestId('flow-tab')).toBeInTheDocument();
     expect(post).not.toHaveBeenCalled();
   });
 

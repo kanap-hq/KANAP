@@ -241,7 +241,7 @@ export default function EditableTitle({
   // field until the value arrives. The blur that follows an Enter does not send it twice.
   const pendingTitle = autoEdit && !value;
   const submitted = React.useRef<string | null>(null);
-  // The name was sent by Tab: the focus has gone on (`onTab`), the title does not take it back.
+  // The name was sent by Tab: the focus has gone on (`onTab`, or the record's creation), the title does not take it back.
   const tabbed = React.useRef(false);
 
   React.useEffect(() => {
@@ -377,6 +377,12 @@ export default function EditableTitle({
           if (event.key === 'Escape') {
             event.preventDefault();
             cancel();
+          }
+          // A record being created moved the focus on (`followCreationFields`): the name is committed.
+          if (event.key === 'Tab' && !event.shiftKey && event.defaultPrevented) {
+            tabbed.current = pendingTitle;
+            finish(false);
+            return;
           }
           // An empty title still to give, or required, keeps the browser's Tab: nothing to commit.
           if (event.key === 'Tab' && !event.shiftKey && onTab && (draft.trim() || (!pendingTitle && !requiredMessage))) {

@@ -55,7 +55,7 @@ vi.mock('./components/TaskPropertiesDrawer', () => ({
 vi.mock('./components/TaskActivity', () => ({ default: () => <div data-testid="task-activity" /> }));
 vi.mock('./components/TaskAttachments', () => ({ default: () => null }));
 vi.mock('./components/ConvertToRequestDialog', () => ({ default: () => null }));
-vi.mock('../../components/MarkdownEditor', () => ({ default: () => <div data-testid="task-description" /> }));
+vi.mock('../../components/MarkdownEditor', () => ({ default: () => <div data-testid="task-description" contentEditable suppressContentEditableWarning /> }));
 vi.mock('../../components/workspace/SendLinkButton', () => ({ default: () => null }));
 vi.mock('../../components/workspace/MetadataUserPicker', () => ({
   default: (props: { label: string; displayName: string | null }) => <span>{`${props.label}: ${props.displayName ?? ''}`}</span>,
@@ -369,15 +369,16 @@ describe('Task creation at the title', () => {
     expect(mocked.post).toHaveBeenCalledTimes(1);
   });
 
-  it('sends Tab from the title to the related-to field, and Shift+Tab reaches Create', async () => {
+  it('sends Tab from the title to the description, and Shift+Tab reaches Create', async () => {
     const user = userEvent.setup();
     renderPage(['/portfolio/tasks/new/overview']);
     const input = await screen.findByRole('textbox', { name: TITLE });
     await user.type(input, 'Order cheese');
     await user.tab();
     await waitFor(() => expect(location()).toBe('/portfolio/tasks/T-9/overview'));
-    const related = screen.getByRole('textbox', { name: 'related to' });
-    await waitFor(() => expect(related).toHaveFocus());
+    // Nothing is required: the description takes the focus once the task is open.
+    await waitFor(() => expect(document.activeElement?.closest('[data-creation-description]')).toBeTruthy());
+    expect(document.activeElement).toHaveAttribute('data-testid', 'task-description');
     expect(screen.getByRole('button', { name: 'common:buttons.cancel' })).not.toHaveFocus();
     const create = screen.getByRole('button', { name: 'common:buttons.create' });
     for (let i = 0; i < 20 && document.activeElement !== create; i += 1) {

@@ -67,25 +67,4 @@ describe('InterfaceFlowTab steps', () => {
       view.unmount();
     }
   });
-
-  it('hands Tab in the source or the target to the page, Shift+Tab to the browser', () => {
-    const onRequiredTab = vi.fn();
-    render(
-      <QueryClientProvider client={new QueryClient()}>
-        <ThemeProvider theme={createAppTheme('light')}>
-          <InterfaceFlowTab
-            canManage
-            data={{ legs: [] } as never}
-            onPatch={async () => undefined}
-            onReplaceLegs={async () => undefined}
-            onRequiredTab={onRequiredTab}
-          />
-        </ThemeProvider>
-      </QueryClientProvider>,
-    );
-    fireEvent.keyDown(screen.getByLabelText('Source application'), { key: 'Tab' });
-    fireEvent.keyDown(screen.getByLabelText('Target application'), { key: 'Tab' });
-    fireEvent.keyDown(screen.getByLabelText('Target application'), { key: 'Tab', shiftKey: true });
-    expect(onRequiredTab.mock.calls).toEqual([['source'], ['target']]);
-  });
 });

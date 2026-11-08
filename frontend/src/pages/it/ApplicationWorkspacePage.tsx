@@ -957,7 +957,7 @@ export function OverviewTab({
 
   return (
     <Stack spacing={3.5}>
-      <Box>
+      <Box data-creation-description="">
         <Box sx={{ mb: 1 }}>
           <SectionLabel>{t('workspace.application.overview.description')}</SectionLabel>
         </Box>

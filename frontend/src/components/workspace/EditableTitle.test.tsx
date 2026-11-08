@@ -174,6 +174,25 @@ describe('EditableTitle', () => {
     expect(screen.getByRole('button', { name: LABEL })).not.toHaveFocus();
   });
 
+  it('sends a name still to give on a Tab the record being created handled, and does not take the focus back', () => {
+    const onSave = vi.fn();
+    const handled = (event: React.KeyboardEvent) => event.preventDefault();
+    const titleIn = (value: string) => (
+      <ThemeProvider theme={createAppTheme('light')}>
+        <div onKeyDownCapture={handled}>
+          <EditableTitle value={value} fallback="New incident" canEdit autoEdit={!value} onSave={onSave} />
+        </div>
+      </ThemeProvider>
+    );
+    const { rerender } = render(titleIn(''));
+    const input = screen.getByRole('textbox');
+    fireEvent.change(input, { target: { value: 'Billing' } });
+    fireEvent.keyDown(input, { key: 'Tab' });
+    expect(onSave).toHaveBeenCalledWith('Billing');
+    rerender(titleIn('Billing'));
+    expect(screen.getByRole('button', { name: LABEL })).not.toHaveFocus();
+  });
+
   it('keeps a refusal under a name still to give, until the person types again', () => {
     const onSave = vi.fn();
     const onDraftChange = vi.fn();

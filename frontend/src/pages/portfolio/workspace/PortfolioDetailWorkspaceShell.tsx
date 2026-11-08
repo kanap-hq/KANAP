@@ -15,7 +15,7 @@ import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import { useTranslation } from 'react-i18next';
 import { MONO_FONT_FAMILY } from '../../../config/ThemeContext';
 import EditableTitle from '../../../components/workspace/EditableTitle';
-import { focusFirstCreationField, useCreationFieldFocus } from '../../../components/workspace/creation/creationFieldFocus';
+import { followCreationFields, useCreationFieldFocus } from '../../../components/workspace/creation/creationFieldFocus';
 import RecordHistoryButton from '../../../components/history/RecordHistoryButton';
 import { taskDetailTokens, taskDetailTypography } from '../../tasks/theme/taskDetailTokens';
 import WorkspaceTabs, { type WorkspaceTab } from './WorkspaceTabs';
@@ -62,7 +62,10 @@ type PortfolioDetailWorkspaceShellProps = {
   onTitleSave?: (nextTitle: string) => void;
   /** Fired on each keystroke in the title, so the page can drop a refusal the draft has answered. */
   onTitleDraftChange?: (draft: string) => void;
-  /** Tab in the title with a name typed: the name is committed, and the page moves the focus to the next field to fill. */
+  /**
+   * Tab in a new record's title with a name typed, when its first fields sit on another tab: the
+   * page opens that tab, and the focus follows there (`followCreationFields`).
+   */
   titleOnTab?: () => void;
   /** The longest title the record accepts (the input stops there). */
   titleMaxLength?: number;
@@ -128,38 +131,6 @@ const OPEN_OVERLAY_SELECTOR = [
   '.MuiPopover-root:not(.MuiModal-hidden)', '.MuiModal-root:not(.MuiModal-hidden)',
   '.MuiPopper-root:not(.MuiTooltip-popper)', '[role="dialog"]', '[role="listbox"]', '[role="menu"]',
 ].join(',');
-
-// The fields a person types or chooses in: inputs, selects, editors (not the buttons beside them).
-const ENTRY_FIELDS = 'input:not([type="hidden"]):not([disabled]):not([tabindex="-1"]):not([aria-hidden="true"]), textarea:not([disabled]), [role="combobox"]:not([aria-disabled="true"]):not([tabindex="-1"]), [contenteditable="true"]';
-
-function entryFields(stop: HTMLElement): HTMLElement[] {
-  return Array.from(new Set(stop.querySelectorAll<HTMLElement>(ENTRY_FIELDS)));
-}
-
-/**
- * A new record whose title is still empty: Tab goes from the title to each required field in turn
- * (Shift+Tab back), then on as usual from the last one. A title with a name uses `titleOnTab`
- * instead, which lands on the first field and leaves Shift+Tab to the browser. A stop with
- * several fields (first and last name) is crossed first.
- */
-function followRequiredFields(event: React.KeyboardEvent<HTMLElement>) {
-  if (event.key !== 'Tab' || event.altKey || event.ctrlKey || event.metaKey || event.defaultPrevented) return;
-  const root = event.currentTarget;
-  const title = root.querySelector<HTMLElement>('[data-creation-title]');
-  const stops = [title, ...Array.from(root.querySelectorAll<HTMLElement>('[data-required-field]'))]
-    .filter((stop): stop is HTMLElement => !!stop && entryFields(stop).length > 0);
-  const target = event.target as HTMLElement;
-  const index = stops.findIndex((stop) => stop.contains(target));
-  if (index < 0) return;
-  const inner = entryFields(stops[index]);
-  const edge = event.shiftKey ? inner[0] : inner[inner.length - 1];
-  if (!edge || !(edge === target || edge.contains(target))) return;
-  const next = stops[index + (event.shiftKey ? -1 : 1)];
-  if (!next) return;
-  const fields = entryFields(next);
-  event.preventDefault();
-  (event.shiftKey ? fields[fields.length - 1] : fields[0]).focus();
-}
 
 function isInsideWidget(target: EventTarget | null) {
   return target instanceof Element && !!target.closest(WIDGET_SELECTOR);
@@ -286,10 +257,7 @@ export default function PortfolioDetailWorkspaceShell({
     ? taskDetailTokens.drawer.panelWidth + DRAWER_HANDLE_WIDTH - parseInt(taskDetailTokens.titleBlock.px, 10) + 8
     : 0;
   const rootRef = React.useRef<HTMLDivElement>(null);
-  useCreationFieldFocus(rootRef, isCreate);
-  // No page handler: Tab from a typed title lands on the first field. Shift+Tab stays the browser's,
-  // so Create and Cancel, which sit between the title and the fields, stay on the way back.
-  const creationTitleOnTab = isCreate && !titleOnTab ? focusFirstCreationField : undefined;
+  useCreationFieldFocus(rootRef, `${isCreate ? 'new' : 'record'}:${activeTab}`);
 
   React.useEffect(() => {
     if (drawerOpenRequest > 0) setDrawerOpen(true);
@@ -382,7 +350,7 @@ export default function PortfolioDetailWorkspaceShell({
       ref={rootRef}
       data-workspace-shell=""
       sx={{ height: '100%', minWidth: 0, display: 'flex', flexDirection: 'column' }}
-      onKeyDownCapture={isCreate ? followRequiredFields : undefined}
+      onKeyDownCapture={(event) => followCreationFields(event, titleOnTab)}
     >
       <Box sx={{ flexShrink: 0, minWidth: 0 }}>
         <Box
@@ -487,7 +455,6 @@ export default function PortfolioDetailWorkspaceShell({
                         maxLength={titleMaxLength}
                         onSave={onTitleSave}
                         onDraftChange={onTitleDraftChange}
-                        onTab={titleOnTab ?? creationTitleOnTab}
                         requiredMessage={titleRequiredMessage}
                         error={titleError}
                         autoEdit={titleAutoEdit}
