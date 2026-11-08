@@ -2557,6 +2557,11 @@
       "disableSelectedResult_one": "{{count}} deaktiviert; {{failed}} fehlgeschlagen",
       "disableSelectedResult_other": "{{count}} deaktiviert; {{failed}} fehlgeschlagen"
     },
+    "invite": {
+      "signIn": "Anmeldung",
+      "withMicrosoft": "Mit Microsoft",
+      "withPassword": "Mit einem Passwort"
+    },
     "exportTitle": "Benutzer exportieren",
     "importTitle": "Benutzer importieren",
     "accountType": {

@@ -513,6 +513,7 @@ Avec `IMPORT_XLSX=false`, les boutons d'import affichent **Importer CSV**, les f
 | `JWT_ACCESS_TOKEN_TTL` | Durée de vie du jeton d'accès : un nombre suivi de `s`, `m`, `h` ou `d`. Tout autre format conserve la valeur par défaut (15 minutes), et l'API nomme la valeur dans un avertissement `[CONFIG]` au démarrage. | `15m` |
 | `JWT_REFRESH_TOKEN_TTL` | Durée de vie du jeton de rafraîchissement, même format. Tout autre format conserve la valeur par défaut (4 heures), et l'API nomme la valeur dans un avertissement `[CONFIG]` au démarrage. | `4h` |
 | `PASSWORD_RESET_TTL` | Durée de validité d'un lien de réinitialisation de mot de passe : un nombre de secondes ou une durée comme `30m` ou `2h`. Toute autre valeur dure 1 heure, et l'API la nomme dans un avertissement `[CONFIG]` au démarrage. | `1h` |
+| `INVITE_LINK_TTL` | Durée de validité du lien pour définir un mot de passe dans un e-mail d'invitation : un nombre de secondes ou une durée comme `72h` ou `7d`. Toute autre valeur dure 7 jours, et l'API la nomme dans un avertissement `[CONFIG]` au démarrage. | `7d` |
 | `LOG_LEVEL` | `debug` ou `verbose` ajoute au journal le détail de chaque exécution de tâche planifiée. Toute autre valeur ne change rien. | *non défini* |
 | `INTEGRATED_DOCS_AUTO_ROLLOUT` | Répare, au démarrage, les documents liés aux demandes et aux projets. Désactivé on-premise sauf si vous le définissez : `if-needed` lance la réparation seulement quand les comptages diffèrent, `always` à chaque démarrage. | *désactivé* |
 | `APP_URL` | Multi-tenant (cloud) uniquement. **Inutile on-premise** : c'est `APP_BASE_URL` qui est utilisé. | *non défini* |
@@ -641,6 +642,7 @@ S3_FORCE_PATH_STYLE=false
 # JWT_ACCESS_TOKEN_TTL=15m
 # JWT_REFRESH_TOKEN_TTL=4h
 # PASSWORD_RESET_TTL=1h
+# INVITE_LINK_TTL=7d
 # RATE_LIMIT_ENABLED=true
 
 # CAPACITÉ (facultatif - voir « Capacité et performance »)

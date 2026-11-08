@@ -5,7 +5,7 @@ import { resolveAppBaseUrl } from '../url';
 import { createOriginPolicy } from '../cors-policy';
 import { isPlatformAdmin } from '../../auth/platform-admin.util';
 import { isSecureRequest, setRefreshTokenCookie } from '../../auth/auth-cookie.util';
-import { getPasswordResetTtl } from '../../auth/password-reset.util';
+import { getInviteLinkTtl, getPasswordResetTtl } from '../../auth/password-reset.util';
 
 // Run mode: APP_ENV (or NODE_ENV when APP_ENV is absent) gives development, production or
 // unspecified. Only development turns on the workstation conveniences; production keeps the
@@ -248,6 +248,18 @@ function testConfigValueWarnings() {
   assert.equal(lineAbout({ PASSWORD_RESET_TTL: '30m' }, 'PASSWORD_RESET_TTL'), undefined);
   assert.equal(lineAbout({ PASSWORD_RESET_TTL: '3600' }, 'PASSWORD_RESET_TTL'), undefined);
   assert.ok(configured({ PASSWORD_RESET_TTL: 'soon', JWT_ACCESS_TOKEN_TTL: 'tomorrow', API_WORKERS: 'abc' }).warnings.every((warning) => !warning.includes('\n')));
+
+  // An invitation link has its own lifetime: 7 days, or INVITE_LINK_TTL when it reads.
+  const invite = lineAbout({ INVITE_LINK_TTL: 'soon' }, 'INVITE_LINK_TTL');
+  assert.ok(invite?.startsWith('[CONFIG]') && invite.includes('"soon"') && invite.includes('7 days'), invite);
+  assert.equal(lineAbout({ INVITE_LINK_TTL: '72h' }, 'INVITE_LINK_TTL'), undefined);
+  withEnv({ INVITE_LINK_TTL: undefined, PASSWORD_RESET_TTL: undefined }, () => {
+    assert.equal(getInviteLinkTtl(), '7d');
+    assert.equal(getPasswordResetTtl(), '1h');
+  });
+  withEnv({ INVITE_LINK_TTL: 'soon' }, () => {
+    assert.equal(getInviteLinkTtl(), '7d');
+  });
 }
 
 testModeMatrix();

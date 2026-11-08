@@ -259,6 +259,16 @@ export const es: EmailStrings = {
       password: 'Elija su contraseña para activar su cuenta; este enlace es válido durante {{duration}}.',
       signIn: 'Después iniciará sesión con su dirección de correo electrónico y esta contraseña.',
     },
+    userInviteMicrosoft: {
+      subject: 'Invitación para unirse a {{organisation}}',
+      intro: '{{inviterName}} le invita a unirse {{place}}.',
+      introNoInviter: 'Está invitado a unirse {{place}}.',
+      placeWorkspace: `al espacio de trabajo {{organisation}} en ${PRODUCT_NAME}`,
+      placeProduct: `a ${PRODUCT_NAME}`,
+      signIn: 'Inicie sesión con su cuenta de Microsoft: en la página de inicio de sesión, elija «Iniciar sesión con Microsoft».',
+      address: 'Dirección del espacio de trabajo:',
+      textAction: 'Abrir {{organisation}}: {{url}}',
+    },
   },
   workspace: {
     reset: {

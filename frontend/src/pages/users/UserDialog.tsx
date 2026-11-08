@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
 import { useDataAccessAdmin } from '../../auth/dataAccess';
-import { KanapDialog, useKanapDialogs } from '../../components/design';
+import { KanapDialog } from '../../components/design';
 import DataAccessPanel, {
   type DataAccessPanelHandle,
   type DataAccessPanelState,
@@ -17,6 +17,7 @@ import UserForm, {
   type UserFormIntent,
   type UserInput,
 } from '../forms/UserForm';
+import { postInvite, useInviteConfirm, type InviteChoice } from './inviteConfirm';
 
 export type UserDialogTab = 'identity' | 'access';
 
@@ -47,8 +48,8 @@ export default function UserDialog({
   onSaved,
 }: Props) {
   const { t } = useTranslation(['admin', 'common']);
-  const dialogs = useKanapDialogs();
   const { profile, tenantAuth } = useAuth();
+  const confirmInvite = useInviteConfirm();
   const canAdminDataAccess = useDataAccessAdmin();
   const queryClient = useQueryClient();
 
@@ -100,12 +101,10 @@ export default function UserDialog({
 
   const saveIdentity = React.useCallback(async (values: UserInput, intent: UserFormIntent): Promise<boolean> => {
     // Asked before the account is created: cancelling leaves the form as it is and sends nothing.
+    let invite: InviteChoice = null;
     if (intent === 'save-invite') {
-      const okToGo = await dialogs.confirm({
-        message: t('users.messages.inviteConfirm', { count: 1, email: values.email }),
-        confirmLabel: t('users.actions.sendInvite'),
-      });
-      if (!okToGo) return false;
+      invite = await confirmInvite([values.email]);
+      if (!invite) return false;
     }
     setIdentityError(undefined);
     const { role_ids, ...userPayload } = values;
@@ -123,9 +122,9 @@ export default function UserDialog({
             setIdentityError(new Error(getApiErrorMessage(roleErr, t, t('users.messages.rolesSaveFailed'))));
             return false;
           }
-          if (intent === 'save-invite') {
+          if (invite) {
             try {
-              await api.post(`/users/${createdId}/invite`);
+              await postInvite(createdId, invite);
             } catch (e) {
               setIdentityError(e);
               return false;
@@ -151,7 +150,7 @@ export default function UserDialog({
       );
       return false;
     }
-  }, [dialogs, mode, queryClient, t, userId]);
+  }, [confirmInvite, mode, queryClient, t, userId]);
 
   const handleSave = React.useCallback(async (intent: UserFormIntent) => {
     if (saving) return;

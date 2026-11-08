@@ -261,6 +261,16 @@ export const fr: EmailStrings = {
       password: 'Choisissez votre mot de passe pour activer votre compte ; ce lien reste valable {{duration}}.',
       signIn: 'Vous vous connecterez ensuite avec votre adresse e-mail et ce mot de passe.',
     },
+    userInviteMicrosoft: {
+      subject: 'Invitation à rejoindre {{organisation}}',
+      intro: '{{inviterName}} vous invite à rejoindre {{place}}.',
+      introNoInviter: 'Vous êtes invité à rejoindre {{place}}.',
+      placeWorkspace: `l'espace {{organisation}} sur ${PRODUCT_NAME}`,
+      placeProduct: PRODUCT_NAME,
+      signIn: 'Connectez-vous avec votre compte Microsoft\u00a0: sur la page de connexion, choisissez «\u00a0Se connecter avec Microsoft\u00a0».',
+      address: "Adresse de l'espace\u00a0:",
+      textAction: 'Ouvrir {{organisation}}\u00a0: {{url}}',
+    },
   },
   workspace: {
     reset: {

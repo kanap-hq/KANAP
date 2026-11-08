@@ -177,7 +177,7 @@ En cuanto el acceso a los datos de alguien está limitado, una columna **Acceso*
 |--------|-------------|
 | **Activado** | La cuenta puede iniciar sesión y usar KANAP. |
 | **Desactivado** | La cuenta se conserva con todo su historial, pero no puede iniciar sesión. |
-| **Invitado** | Se envió una invitación y todavía no ha sido aceptada. |
+| **Invitado** | Se envió una invitación y la persona todavía no ha iniciado sesión. |
 | **Acceso pendiente** | La persona puede iniciar sesión pero no tiene ningún rol, así que no puede abrir nada. Asígnele un rol para darle acceso. |
 | **Contacto** | Solo una entrada del directorio. La persona no inicia sesión. |
 
@@ -192,7 +192,7 @@ Acciones de la barra de herramientas:
 | **Nuevo** | Crear un nuevo usuario | `users:admin` |
 | **Importar** | Importación masiva de usuarios desde un archivo CSV o un libro de Excel | `users:admin` |
 | **Exportar** | Exportar la lista de usuarios a CSV o Excel | `users:admin` |
-| **Invitar** | Enviar invitaciones de inicio de sesión a los usuarios seleccionados | `users:admin` |
+| **Invitar** | Enviar invitaciones a los usuarios seleccionados. Consulte [Invitaciones](#invitaciones). | `users:admin` |
 | **Desactivar** | Desactivar los usuarios seleccionados. Se cierra su sesión de inmediato. | `users:admin` |
 | **Eliminar** | Eliminar permanentemente los usuarios seleccionados. Su propia cuenta se conserva: la confirmación lo indica antes de eliminar nada. Para conservar el historial de un usuario y bloquear su acceso, desactívelo en su lugar | `users:admin` |
 
@@ -204,7 +204,7 @@ Acciones de fila, desde el menú al final de cada fila:
 |--------|-------------|
 | **Editar** | Abrir el usuario para editarlo. Hacer clic en la fila tiene el mismo efecto. |
 | **Activar** / **Desactivar** | Activar o desactivar la cuenta. Al desactivarla se cierra la sesión de la persona de inmediato. |
-| **Enviar invitación** | Enviar por correo una invitación de inicio de sesión. Oculta para las cuentas de Microsoft Entra. |
+| **Enviar invitación** | Enviar por correo una invitación. Consulte [Invitaciones](#invitaciones). Oculta para las cuentas de Microsoft Entra. |
 | **Enviar restablecimiento de contraseña** | Enviar por correo un enlace de restablecimiento de contraseña. Se muestra solo para cuentas locales activadas. |
 | **Acceso a los datos** | Abre el usuario en la pestaña **Acceso a los datos**. Se muestra a las personas con acceso a todos los datos, en las filas de otras personas. |
 | **Eliminar** | Eliminar el usuario permanentemente. Los registros en los que trabajó se conservan, sin él. No puede eliminar su propia cuenta. Para bloquear el acceso de una persona y conservar la cuenta, desactívela en su lugar. |
@@ -242,9 +242,24 @@ Consulte [Archivos CSV y Excel](csv-files.md) para los formatos, la codificació
    - **Roles**: Asignar uno o más roles (determina los permisos)
    - **Empresa** / **Departamento**: Asignación organizacional
    - **Habilitado**: Si el usuario puede iniciar sesión
-4. Haga clic en **Guardar** o **Guardar e invitar** para enviar el correo de inicio de sesión
+4. Haga clic en **Guardar**, o en **Guardar e invitar** para enviar también la invitación. Consulte [Invitaciones](#invitaciones).
 
 Cuando modifica un usuario, la ventana tiene dos pestañas: **Identidad**, con los campos anteriores y los roles, y **Acceso a los datos**, que limita a la persona a una parte del presupuesto y de los contratos. Un solo **Guardar** escribe ambas. La pestaña **Acceso a los datos** se muestra a las personas con acceso a todos los datos, en las cuentas de los demás. Vea [Acceso a los datos](data-access.md).
+
+### Invitaciones
+
+**Enviar invitación**, **Invitar** y **Guardar e invitar** envían a la persona una invitación por correo, tras una confirmación.
+
+En un espacio de trabajo sin inicio de sesión con Microsoft, la invitación contiene un enlace para definir una contraseña. El enlace es válido durante 7 días; una nueva invitación envía un enlace nuevo.
+
+En un espacio de trabajo donde [Microsoft Entra ID](#microsoft-entra-id) está conectado, la confirmación también pregunta cómo iniciará sesión la persona:
+
+| Opción | La invitación |
+|--------|----------------|
+| **Con Microsoft** (predeterminado) | Pide a la persona que abra el espacio de trabajo y elija **Iniciar sesión con Microsoft**. No contiene ningún enlace de contraseña. Su primer inicio de sesión con Microsoft vincula la cuenta a su identidad de Microsoft y la activa. |
+| **Con una contraseña** | Contiene el enlace para definir una contraseña, válido durante 7 días, como en un espacio de trabajo sin inicio de sesión con Microsoft. Para personas ajenas a su directorio, como consultores. |
+
+La cuenta muestra **Invitado** hasta el primer inicio de sesión de la persona. Un enlace de restablecimiento de contraseña, enviado con **Enviar restablecimiento de contraseña** o desde la página de inicio de sesión, sigue siendo válido durante 1 hora.
 
 ### Asignación de múltiples roles
 
@@ -282,7 +297,7 @@ Si alguien es eliminado de su directorio, o su cuenta del directorio es desactiv
 
 ### Inicio de sesión inmediato con Microsoft
 
-Cuando el inicio de sesión único está conectado, una persona que inicia sesión con Microsoft por primera vez obtiene automáticamente una cuenta de KANAP. Si ya existe una cuenta con la misma dirección de correo, se vincula a su identidad de Microsoft en lugar de crear otra.
+Cuando el inicio de sesión único está conectado, una persona que inicia sesión con Microsoft por primera vez obtiene automáticamente una cuenta de KANAP. Si ya existe una cuenta con la misma dirección de correo, se vincula a su identidad de Microsoft en lugar de crear otra, y una cuenta con el estado **Invitado** se activa.
 
 Una cuenta nueva empieza con el rol de sistema **Contacto** y sin permisos. La persona ve una página que dice:
 

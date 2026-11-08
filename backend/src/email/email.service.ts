@@ -327,6 +327,50 @@ export class EmailService {
     await this.send({ to: params.to, subject, html: wrapper.html, text, attachments: wrapper.attachments, ...(from ? { from } : {}) });
   }
 
+  /**
+   * The invitation of a person who signs in with Microsoft Entra: no link to set a password, a
+   * button to the workspace address, where they choose "Sign in with Microsoft".
+   */
+  async sendUserMicrosoftInviteEmail(params: {
+    to: string;
+    /** The workspace address (the tenant's own address). */
+    signInUrl: string;
+    firstName?: string | null;
+    inviterName?: string | null;
+    branding?: EmailBranding;
+    /** The tenant whose branding and organisation name the e-mail takes, when `branding` is not given. */
+    tenantId?: string | null;
+    locale?: string;
+  }) {
+    const strings = getEmailStrings(params.locale);
+    const invite = strings.auth.userInviteMicrosoft;
+    const branding = params.branding ?? await this.tenantBranding(params.tenantId);
+    const pc = branding?.primaryColor ?? DEFAULT_EMAIL_PRIMARY_COLOR;
+    const organisation = emailWorkspaceName(branding);
+    const subject = interpolate(invite.subject, { organisation });
+    const greeting = greetingOf(strings, params.firstName);
+    const place = branding?.organisationName ? interpolate(invite.placeWorkspace, { organisation }) : invite.placeProduct;
+    const inviterName = params.inviterName?.trim();
+    const intro = inviterName ? interpolate(invite.intro, { inviterName, place }) : interpolate(invite.introNoInviter, { place });
+    const button = { label: interpolate(strings.common.buttons.openWorkspace, { organisation }), url: params.signInUrl };
+    const body = `
+      ${buildEmailIntro({ title: subject })}
+      ${buildParagraphs([greeting, intro, invite.signIn])}
+      ${buildActionButtons([button], pc, { marginTop: 4 })}
+      ${buildUrlPanel(invite.address, params.signInUrl, pc)}
+    `;
+    // No notification preferences link: the person has no account to set them in yet.
+    const wrapper = emailWrapper(body, { branding, locale: params.locale });
+    const text = [
+      greeting,
+      intro,
+      invite.signIn,
+      interpolate(invite.textAction, { organisation, url: params.signInUrl }),
+    ].join('\n\n');
+    const from = workspaceEmailSender(branding?.organisationName);
+    await this.send({ to: params.to, subject, html: wrapper.html, text, attachments: wrapper.attachments, ...(from ? { from } : {}) });
+  }
+
   private normalizeError(err: unknown): DeliveryError {
     if (err instanceof Error) return err as DeliveryError;
     if (typeof err === 'string') return new Error(err) as DeliveryError;

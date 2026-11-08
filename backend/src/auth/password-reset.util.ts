@@ -3,7 +3,7 @@ import * as jwt from 'jsonwebtoken';
 import { getPasswordResetSecret } from './token-secret.util';
 import { PASSWORD_RESET_PURPOSE } from './access-token.util';
 import { ISSUED_TOKEN_ALGORITHM } from './jwt-algorithms';
-import { parsePasswordResetTtl } from './token-ttl.util';
+import { linkTtlMinutes, parseInviteLinkTtl, parsePasswordResetTtl } from './token-ttl.util';
 
 export type PasswordResetTokenPayload = {
   purpose: typeof PASSWORD_RESET_PURPOSE;
@@ -18,28 +18,30 @@ export function getPasswordResetTtl(): StringValue | number {
   return typeof ttl === 'number' ? ttl : ttl as StringValue;
 }
 
-export function getPasswordResetExpirationMinutes() {
-  const ttl = getPasswordResetTtl();
-  if (typeof ttl === 'number') {
-    return Math.max(1, Math.round(ttl / 60));
-  }
-  const normalized = ttl.trim().toLowerCase();
-  if (normalized.endsWith('h')) {
-    const hours = Number(normalized.slice(0, -1));
-    return Number.isFinite(hours) && hours > 0 ? Math.round(hours * 60) : 60;
-  }
-  if (normalized.endsWith('m')) {
-    const minutes = Number(normalized.slice(0, -1));
-    return Number.isFinite(minutes) && minutes > 0 ? Math.round(minutes) : 60;
-  }
-  const seconds = Number(normalized);
-  if (!Number.isNaN(seconds) && seconds > 0) {
-    return Math.max(1, Math.round(seconds / 60));
-  }
-  return 60;
+/** Lifetime of an invitation link (`INVITE_LINK_TTL`, 7 days by default). */
+export function getInviteLinkTtl(): StringValue | number {
+  const ttl = parseInviteLinkTtl(process.env.INVITE_LINK_TTL);
+  return typeof ttl === 'number' ? ttl : ttl as StringValue;
 }
 
-export function createPasswordResetToken(user: { id: string; email: string; tenant_id?: string | null }, jti: string) {
+export function getPasswordResetExpirationMinutes() {
+  return linkTtlMinutes(getPasswordResetTtl());
+}
+
+export function getInviteLinkExpirationMinutes() {
+  return linkTtlMinutes(getInviteLinkTtl());
+}
+
+/**
+ * A link that sets the account's password. A reset link lasts `PASSWORD_RESET_TTL`; an invitation
+ * passes `getInviteLinkTtl()`. Both are accepted by the same route, each until its own expiry (the
+ * token's `exp` and the stored `expires_at`, both from this lifetime).
+ */
+export function createPasswordResetToken(
+  user: { id: string; email: string; tenant_id?: string | null },
+  jti: string,
+  expiresIn: StringValue | number = getPasswordResetTtl(),
+) {
   // Signing key: `PASSWORD_RESET_SECRET` when configured, otherwise a key derived from
   // `JWT_SECRET` with the `kanap:v1:password-reset` label, never `JWT_SECRET` itself: a reset
   // link is signed with a key of its own and is refused as an access token.
@@ -51,6 +53,5 @@ export function createPasswordResetToken(user: { id: string; email: string; tena
     tenant_id: user.tenant_id ?? null,
     jti,
   };
-  const expiresIn = getPasswordResetTtl();
   return jwt.sign(payload, secret, { algorithm: ISSUED_TOKEN_ALGORITHM, expiresIn });
 }

@@ -30,9 +30,15 @@ import { BillingService } from '../billing/billing.service';
 import { Company } from '../companies/company.entity';
 import { Department } from '../departments/department.entity';
 import { EmailService } from '../email/email.service';
-import { createPasswordResetToken as buildPasswordResetToken, getPasswordResetExpirationMinutes } from '../auth/password-reset.util';
+import {
+  createPasswordResetToken as buildPasswordResetToken,
+  getInviteLinkExpirationMinutes,
+  getInviteLinkTtl,
+} from '../auth/password-reset.util';
 import { PasswordResetToken } from '../auth/password-reset-token.entity';
 import { RefreshToken } from '../auth/refresh-token.entity';
+import { Tenant } from '../tenants/tenant.entity';
+import { type InviteSignIn, tenantSignsInWithEntra } from './invite-sign-in';
 import { RolePermission } from '../permissions/role-permission.entity';
 import * as crypto from 'crypto';
 import * as jwt from 'jsonwebtoken';
@@ -1240,8 +1246,11 @@ export class UsersService {
   }
 
   /**
-   * Invites a user: a password link by e-mail. The token, the status change
-   * and the audit row are written first, the e-mail goes last.
+   * Invites a user by e-mail: a link that sets the password (`signIn` 'password', the default,
+   * valid `INVITE_LINK_TTL`), or, in a workspace with Microsoft Entra sign-in, an e-mail that
+   * asks the person to sign in with Microsoft (`signIn` 'microsoft': no link, no password; the
+   * first Microsoft sign-in links the account and enables it). The token, the status change and
+   * the audit row are written first, the e-mail goes last.
    *
    * With `commitThenRun` (the HTTP route) those writes are committed and the
    * request's connection given back before the e-mail waits on the mail
@@ -1257,7 +1266,7 @@ export class UsersService {
     id: string,
     actorId?: string | null,
     baseUrl?: string,
-    opts?: { manager?: EntityManager; commitThenRun?: CommitThenRunFn },
+    opts?: { manager?: EntityManager; commitThenRun?: CommitThenRunFn; signIn?: InviteSignIn },
   ) {
     const repo = this.getRepo(opts?.manager);
     const user = await repo.findOne({ where: { id }, relations: ['role'] });
@@ -1267,6 +1276,13 @@ export class UsersService {
       throw new BadRequestException(
         'This user signs in with Microsoft Entra. Invitations and passwords are managed by the identity provider.',
       );
+    }
+    const signIn: InviteSignIn = opts?.signIn ?? 'password';
+    if (signIn === 'microsoft') {
+      const tenant = await repo.manager.getRepository(Tenant).findOne({ where: { id: user.tenant_id } });
+      if (!tenantSignsInWithEntra(tenant)) {
+        throw new BadRequestException('Microsoft sign-in is not set up for this workspace.');
+      }
     }
 
     // The caller passes the link base (the HTTP route: `resolveAppBaseUrl`, common/url.ts). No
@@ -1278,21 +1294,34 @@ export class UsersService {
     }
     const normalizedBase = resolvedBaseUrl.replace(/\/$/, '');
 
-    const token = buildPasswordResetToken(
-      { id: user.id, email: user.email, tenant_id: user.tenant_id },
-      crypto.randomBytes(16).toString('hex'),
-    );
-    await this.storePasswordResetToken(token, user, opts);
-    const expires = getPasswordResetExpirationMinutes();
-    const inviteUrl = `${normalizedBase}/accept-invite#token=${encodeURIComponent(token)}`;
-    const email = {
-      to: user.email,
-      inviteUrl,
-      expiresInMinutes: expires,
-      roleName: user.role?.role_name ?? null,
-      tenantId: user.tenant_id ?? null,
-      locale: user.locale ?? undefined,
-    };
+    let sendEmail: () => Promise<void>;
+    if (signIn === 'microsoft') {
+      const email = {
+        to: user.email,
+        signInUrl: normalizedBase,
+        firstName: user.first_name ?? null,
+        inviterName: await this.inviterName(repo, actorId),
+        tenantId: user.tenant_id ?? null,
+        locale: user.locale ?? undefined,
+      };
+      sendEmail = () => this.emailService.sendUserMicrosoftInviteEmail(email);
+    } else {
+      const token = buildPasswordResetToken(
+        { id: user.id, email: user.email, tenant_id: user.tenant_id },
+        crypto.randomBytes(16).toString('hex'),
+        getInviteLinkTtl(),
+      );
+      await this.storePasswordResetToken(token, user, opts);
+      const email = {
+        to: user.email,
+        inviteUrl: `${normalizedBase}/accept-invite#token=${encodeURIComponent(token)}`,
+        expiresInMinutes: getInviteLinkExpirationMinutes(),
+        roleName: user.role?.role_name ?? null,
+        tenantId: user.tenant_id ?? null,
+        locale: user.locale ?? undefined,
+      };
+      sendEmail = () => this.emailService.sendUserInviteEmail(email);
+    }
 
     let result: any;
     if (user.status === 'invited' || user.status === 'enabled') {
@@ -1315,13 +1344,13 @@ export class UsersService {
     }
 
     if (!opts?.commitThenRun) {
-      await this.emailService.sendUserInviteEmail(email);
+      await sendEmail();
       return result;
     }
     let sendError: unknown = null;
     await opts.commitThenRun(async () => {
       try {
-        await this.emailService.sendUserInviteEmail(email);
+        await sendEmail();
       } catch (error) {
         sendError = error;
       }
@@ -1334,9 +1363,19 @@ export class UsersService {
     return result;
   }
 
+  /** The inviting administrator as the invitation e-mail names them: first and last name, or none. */
+  private async inviterName(repo: Repository<User>, actorId?: string | null): Promise<string | null> {
+    if (!actorId) return null;
+    const actor = await repo.findOne({ where: { id: actorId } });
+    const name = `${actor?.first_name ?? ''} ${actor?.last_name ?? ''}`.trim();
+    return name || null;
+  }
+
   private async storePasswordResetToken(token: string, user: User, opts?: { manager?: EntityManager }) {
     const decoded = jwt.decode(token) as { exp?: number } | null;
-    const expiresAt = decoded?.exp ? new Date(decoded.exp * 1000) : new Date(Date.now() + 60 * 60 * 1000);
+    const expiresAt = decoded?.exp
+      ? new Date(decoded.exp * 1000)
+      : new Date(Date.now() + getInviteLinkExpirationMinutes() * 60 * 1000);
     const manager = opts?.manager ?? this.passwordResetTokens?.manager;
     if (!manager) {
       throw new BadRequestException('password reset token storage is not configured');

@@ -161,6 +161,77 @@ async function testHandleLoginCallbackRedirectsToTenantSessionHandoff() {
   ]);
 }
 
+/**
+ * An invitation ends at the first sign-in: a local account invited by e-mail (status "invited")
+ * is linked to its Microsoft identity and enabled by its first Microsoft sign-in. A disabled
+ * account is linked but stays disabled, and the session is then refused as before.
+ */
+async function testFirstMicrosoftSignInEndsTheInvitation() {
+  for (const status of ['invited', 'disabled', 'enabled']) {
+    const localUser: any = {
+      id: 'user-2',
+      email: 'julie.martin@example.com',
+      status,
+      role: { role_name: 'Reader' },
+      first_name: 'Julie',
+      last_name: 'Martin',
+      external_auth_provider: null,
+      external_subject: null,
+    };
+    const saved: any[] = [];
+    const repo = {
+      // No account carries this Microsoft identity yet: the local account is found by its e-mail.
+      findOne: async () => null,
+      save: async (value: any) => { saved.push({ ...value }); return value; },
+      createQueryBuilder: () => ({
+        leftJoinAndSelect: () => repo.createQueryBuilder(),
+        where: () => repo.createQueryBuilder(),
+        getOne: async () => localUser,
+      }),
+    };
+    const { dataSource } = createMockDataSource(repo);
+    const enabled: Array<{ id: string; manager: unknown }> = [];
+    const controller = new EntraController(
+      { signLoginHandoff: () => 'handoff-token' } as any,
+      {} as any,
+      {} as any,
+      {
+        enableUser: async (id: string, _actor: string | null, opts: { manager: unknown }) => {
+          enabled.push({ id, manager: opts.manager });
+          return { id, status: 'enabled' };
+        },
+      } as any,
+      dataSource as any,
+      { log: async () => undefined } as any,
+      { notifySsoUserProvisioned: async () => undefined } as any,
+      fakeDirectorySync([]) as any,
+      securityEvents as any,
+    );
+
+    await (controller as any).handleLoginCallback(
+      'tenant-1',
+      'alpha',
+      '/',
+      { oid: 'entra-oid-2', email: 'julie.martin@example.com' },
+      {},
+      { headers: { host: 'alpha.lvh.me' }, protocol: 'http' },
+      { cookie: () => undefined, redirect: () => undefined } as any,
+    );
+
+    const last = saved.at(-1);
+    assert.equal(last.external_auth_provider, 'entra', `${status}: linked`);
+    assert.equal(last.external_subject, 'entra-oid-2');
+    if (status === 'invited') {
+      assert.deepEqual(enabled.map((call) => call.id), ['user-2'], 'the invited account is enabled');
+      assert.ok(enabled[0].manager, 'inside the sign-in transaction');
+      assert.equal(last.status, 'enabled', 'the later save keeps it enabled');
+    } else {
+      assert.equal(enabled.length, 0, `${status}: not touched`);
+      assert.equal(last.status, status);
+    }
+  }
+}
+
 async function testCompleteLoginSessionSignsTokensOnTenantHost() {
   const existingUser = {
     id: 'user-1',
@@ -499,6 +570,7 @@ async function run() {
   // A local development host keeps the redirect on that host in development mode only
   // (common/url.ts); the other modes are covered in common/__tests__/app-links.spec.ts.
   await withEnv({ APP_ENV: 'development', NODE_ENV: undefined }, testHandleLoginCallbackRedirectsToTenantSessionHandoff);
+  await withEnv({ APP_ENV: 'development', NODE_ENV: undefined }, testFirstMicrosoftSignInEndsTheInvitation);
   await testCompleteLoginSessionSignsTokensOnTenantHost();
   await testStartSetupDoesNotSetNonceCookie();
   await testStartLoginDoesNotSetNonceCookie();

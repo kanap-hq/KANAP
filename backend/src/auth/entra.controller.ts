@@ -546,6 +546,13 @@ export class EntraController {
         jitProvisioned = true;
       }
 
+      // An invitation ends at the first sign-in: with Microsoft as with the password link, the
+      // invited account is enabled (within the subscription's seats). A disabled one stays refused.
+      if (found.status === 'invited') {
+        await this.users.enableUser(found.id, null, { manager });
+        found.status = 'enabled' as any;
+      }
+
       // Directory-owned fields: same merge rules as the scheduled sync
       // (non-empty Entra value wins, empty never clears, locale only if unset).
       await this.directorySync.applyDirectoryProfile(
