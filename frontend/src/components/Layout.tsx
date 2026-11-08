@@ -444,17 +444,20 @@ export default function Layout() {
           >
             <MenuIcon />
           </IconButton>
+          {/* The logo or the workspace name gives way to the section tabs: its large shrink
+              factor makes it take nearly all of a shortfall, down to its minimum width (the name
+              with an ellipsis), before the tabs shrink and show their scroll arrows. */}
           {showHeaderLogo ? (
             <Box
               component={Link}
               to="/"
-              sx={{ display: 'flex', alignItems: 'center', mr: { xs: 1, sm: 3 }, flexShrink: 0, textDecoration: 'none' }}
+              sx={{ display: 'flex', alignItems: 'center', mr: { xs: 1, sm: 3 }, flexShrink: 1000, minWidth: 48, textDecoration: 'none' }}
             >
               <Box
                 component="img"
                 src={logoUrl || undefined}
                 alt={organisationName}
-                sx={{ height: 36, maxWidth: 140, objectFit: 'contain' }}
+                sx={{ height: 36, maxWidth: 140, minWidth: 0, objectFit: 'contain' }}
               />
             </Box>
           ) : (
@@ -464,7 +467,7 @@ export default function Layout() {
               to="/"
               noWrap
               title={organisationName}
-              sx={{ mr: { xs: 1, sm: 3 }, flexShrink: 0, maxWidth: { xs: 140, md: 240 }, textDecoration: 'none', color: 'text.primary' }}
+              sx={{ mr: { xs: 1, sm: 3 }, flexShrink: 1000, minWidth: 48, maxWidth: { xs: 140, md: 240 }, textDecoration: 'none', color: 'text.primary' }}
             >
               {organisationName}
             </Typography>
@@ -486,7 +489,7 @@ export default function Layout() {
               scrollButtons="auto"
               allowScrollButtonsMobile
               sx={{
-                flex: 1,
+                flex: '1 1 auto',
                 minWidth: 0,
                 '& .MuiTabs-flexContainer > :first-of-type': { ml: 'auto' },
                 '& .MuiTabs-flexContainer > :last-of-type': { mr: 'auto' },
