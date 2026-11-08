@@ -20,7 +20,7 @@ const locale = getLocaleFromUrl(Astro.url);
   <PageHeader eyebrow={copy.eyebrow} title={copy.heading} lead={copy.lead} />
 
   <Section tone="default">
-    <div class="mk-trial-err">
+    <div class="mk-trial-err mk-header-column">
       <p>{copy.body}</p>
       <div class="mk-trial-err__actions">
         <a href={localePath(locale, '/trial/start')} class="mk-btn mk-btn--primary">
@@ -39,10 +39,10 @@ const locale = getLocaleFromUrl(Astro.url);
     display: flex;
     flex-direction: column;
     gap: 24px;
-    max-width: 560px;
   }
 
   .mk-trial-err p {
+    max-width: 560px;
     font-size: 14px;
     line-height: 1.65;
     color: var(--kanap-text-secondary);

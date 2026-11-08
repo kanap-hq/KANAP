@@ -136,6 +136,13 @@ pre {
   padding-inline: var(--mk-gutter);
 }
 
+/* Column of a PageHeader (820px container minus its gutters), for a section
+   whose content must line up with the page title. */
+.mk-header-column {
+  max-width: calc(820px - 2 * var(--mk-gutter));
+  margin-inline: auto;
+}
+
 .mk-prose {
   max-width: var(--mk-max-prose);
 }
