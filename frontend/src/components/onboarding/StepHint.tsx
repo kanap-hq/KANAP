@@ -26,12 +26,19 @@ const TARGETS: Record<StepTarget, Candidate[]> = {
   export: [exportButton, ...TITLE],
 };
 
+/**
+ * Drawn on the page: in the document and not in a hidden part of it, such as the screen a route
+ * change keeps hidden while the next one loads (jsdom has no `checkVisibility`).
+ */
+const isShown = (element: HTMLElement) => element.isConnected
+  && (typeof element.checkVisibility !== 'function' || element.checkVisibility());
+
 function findTarget(target: StepTarget, exportLabel: string): HTMLElement | null {
   for (const candidate of TARGETS[target]) {
     const found = typeof candidate === 'string'
-      ? document.querySelector<HTMLElement>(candidate)
+      ? Array.from(document.querySelectorAll<HTMLElement>(candidate)).find(isShown)
       : candidate(exportLabel);
-    if (found) return found;
+    if (found && isShown(found)) return found;
   }
   return null;
 }
@@ -93,7 +100,7 @@ export default function StepHint() {
   const screen = step && state ? stepScreen(step.key, state.angle) : null;
   const target = useTarget(screen?.target ?? null);
   // Between a screen change and the next look-up, the element may have left the page already.
-  const element = target.element?.isConnected ? target.element : null;
+  const element = target.element && isShown(target.element) ? target.element : null;
   const rect = element ? target.rect : null;
   const popperRef = React.useRef<PopperInstance | null>(null);
   // The bubble follows its element when the page moves it without a scroll or a resize.
