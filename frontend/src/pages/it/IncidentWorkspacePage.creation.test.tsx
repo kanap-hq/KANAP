@@ -159,12 +159,25 @@ describe('Incident creation at the title', () => {
     expect(incidents.create).not.toHaveBeenCalled();
   });
 
-  it('does nothing on Ctrl+S while the title is empty', async () => {
+  it('takes Ctrl+S as Create: the empty title is asked for, nothing created', async () => {
     renderPage(['/it/incidents/new/overview']);
     const input = await screen.findByRole('textbox', { name: TITLE });
     fireEvent.keyDown(input, { key: 's', ctrlKey: true });
+    expect(await screen.findByText('common:creation.titleRequired')).toBeTruthy();
     expect(incidents.create).not.toHaveBeenCalled();
     expect(location()).toBe('/it/incidents/new/overview');
+  });
+
+  it('takes Ctrl+S in a title still being typed as Create: the incident is created and closed', async () => {
+    renderPage(['/start']);
+    fireEvent.click(await screen.findByRole('button', { name: 'new incident' }));
+    const input = await screen.findByRole('textbox', { name: TITLE });
+    input.focus();
+    fireEvent.change(input, { target: { value: 'Mail outage' } });
+    fireEvent.keyDown(input, { key: 's', ctrlKey: true });
+    await waitFor(() => expect(location()).toBe('/start'));
+    expect(incidents.create).toHaveBeenCalledTimes(1);
+    expect(incidents.create.mock.calls[0][0]).toMatchObject({ title: 'Mail outage' });
   });
 
   it('creates the incident, severity minor, when the title is committed, then opens every tab', async () => {

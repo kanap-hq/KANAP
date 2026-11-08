@@ -483,7 +483,7 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
           previousLabel: t('contracts.workspace.previous'),
           nextLabel: t('contracts.workspace.next'),
         } : undefined}
-        onSaveShortcut={isCreate ? () => { void handleCreate(); } : flushNow}
+        onSaveShortcut={flushNow}
         metadata={form ? (
           <>
             {!isCreate && (

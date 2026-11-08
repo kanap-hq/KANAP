@@ -743,7 +743,7 @@ export function IncidentWorkspacePage() {
         titleFocusRequest={titleCreation.focusRequest}
         isCreate={isCreate}
         forceDrawerOpen={isCreate}
-        onSaveShortcut={() => { if (!isCreate) void flushAll(); }}
+        onSaveShortcut={() => { void flushAll(); }}
         // Hidden while the record is being created, so its page does not move once the title is typed.
         nav={!isCreate && !creation.beingCreated && total > 0 ? {
           currentIndex: index + 1,
