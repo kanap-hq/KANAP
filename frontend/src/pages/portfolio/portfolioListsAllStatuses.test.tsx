@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -63,6 +63,21 @@ function renderPage(page: React.ReactElement) {
   );
 }
 
+/** The filters of the address a row's link opens, once the list has asked for `filterModel`. */
+function recordLinkFilters(filterModel: Record<string, unknown>) {
+  const { onQueryStateChange, columns } = grid.props as Record<string, any>;
+  onQueryStateChange({ sort: 'name:ASC', q: '', filterModel });
+  const name = (columns as Array<Record<string, any>>).find((c) => c.field === 'name')!;
+  const { container } = render(
+    <ThemeProvider theme={createAppTheme('light')}>
+      <MemoryRouter>{name.cellRenderer({ data: { id: 'row-1', item_number: 1, name: 'One' }, value: 'One' })}</MemoryRouter>
+    </ThemeProvider>,
+  );
+  const href = within(container).getByRole('link', { name: 'One' }).getAttribute('href')!;
+  const filters = new URLSearchParams(href.split('?')[1]).get('filters');
+  return filters ? JSON.parse(filters) : null;
+}
+
 describe.each([
   { name: 'projects', page: <ProjectsPage />, endpoint: '/portfolio/projects/filter-values', hidden: 'done' },
   { name: 'requests', page: <RequestsPage />, endpoint: '/portfolio/requests/filter-values', hidden: 'converted' },
@@ -80,6 +95,17 @@ describe.each([
     const extraParams = grid.props?.extraParams;
     await column.filterParams.getValues({ context: { getQueryState: () => ({ filters: {}, extraParams }) } });
     expect(filterValuesGet).toHaveBeenCalledWith(endpoint, expect.objectContaining({ status: 'all' }));
+  });
+
+  it('opens a record with the status filter cleared, so that the list comes back on "All"', () => {
+    renderPage(page);
+    expect(recordLinkFilters({})).toEqual({ status: null });
+  });
+
+  it('opens a record with the status filter the person chose', () => {
+    renderPage(page);
+    const status = { filterType: 'set', values: [hidden] };
+    expect(recordLinkFilters({ status })).toEqual({ status });
   });
 
   it('exports the rows of the list with every status when the filter is cleared', () => {
