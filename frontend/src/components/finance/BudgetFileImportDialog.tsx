@@ -425,7 +425,7 @@ export function ReportView({
               key={`e-${error.line}-${error.column ?? ''}-${error.message}`}
               danger
               text={error.column
-                ? t(`${K}rowColumn`, { line: error.line, column: error.column, message: checkSentence(error, t) })
+                ? t(`${K}rowColumn`, { line: error.line, column: fileColumnLabel(error.column, columns, t), message: checkSentence(error, t) })
                 : t(`${K}row`, { line: error.line, message: checkSentence(error, t) })}
             />
           ))}
@@ -525,6 +525,35 @@ function missingText(item: BudgetFileReport['missing'][number], t: Translate): s
     ? `${item.examples.join(', ')} ${t(`${K}andMoreInline`, { count: extra })}`
     : item.examples.join(', ');
   return t(`${K}missing.${item.type}`, { count: item.count, examples });
+}
+
+/** The budget list's label of each file column the check can name; a column with none keeps its file name. */
+const FILE_COLUMN_LABELS: Record<string, string> = {
+  nature: 'budget.type',
+  item_number: 'opex.columns.reference',
+  name: 'opex.columns.productName',
+  description: 'opex.columns.description',
+  company_name: 'opex.columns.payingCompany',
+  supplier_name: 'opex.columns.supplier',
+  account_number: 'opex.columns.account',
+  cost_center_code: 'opex.columns.costCenter',
+  run_build: 'opex.columns.runBuild',
+  owner_it_email: 'opex.columns.itOwner',
+  owner_it_id: 'opex.columns.itOwner',
+  owner_business_email: 'opex.columns.businessOwner',
+  owner_business_id: 'opex.columns.businessOwner',
+  project: 'opex.columns.project',
+  currency: 'opex.columns.currency',
+  effective_start: 'opex.columns.effectiveStart',
+  end_of_validity: 'opex.columns.endOfValidity',
+  notes: 'opex.columns.notes',
+};
+
+/** A file column as the screen names it: `supplier_name` reads "Supplier", `budget` the amount column's label. */
+function fileColumnLabel(column: string, columns: BudgetColumns, t: Translate): string {
+  const key = FILE_COLUMN_LABELS[column];
+  if (key) return t(key);
+  return columns.all.find((entry) => entry.freezeKey === column || entry.key === column)?.label ?? column;
 }
 
 /** `BL-83 · Revision 2026: 3 calculation lines (281 280) will no longer drive these amounts.` */

@@ -339,6 +339,9 @@ describe('BudgetFileImportDialog', () => {
     const row = screen.getByText(/^operations\.budgetFile\.rowColumn:/).textContent ?? '';
     expect(row).toContain('errors:CSV_REFERENCE_NOT_FOUND');
     expect(row).toContain('\\"value\\":\\"Microsoft\\"');
+    // The column reads as the budget list names it, never by its file key.
+    expect(row).toContain('"column":"opex.columns.supplier"');
+    expect(row).not.toContain('supplier_name');
     expect(screen.getByText(/^errors:BUDGET_FILE_LOOKS_LIKE_LINE:.*"ref":"BL-3"/)).toBeInTheDocument();
   });
 
