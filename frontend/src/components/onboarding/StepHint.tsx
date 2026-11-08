@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box, Button, Paper, Popper, Typography } from '@mui/material';
+import type { Instance as PopperInstance } from '@popperjs/core';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { STEP_PARAM, stepHintKey, stepScreen, stepTitleKey, type StepLocationState, type StepTarget } from './onboardingPaths';
@@ -35,43 +36,44 @@ function findTarget(target: StepTarget, exportLabel: string): HTMLElement | null
   return null;
 }
 
-/** The element of the screen, once the page has drawn it (lazy route, data). */
-function useTargetElement(target: StepTarget | null): HTMLElement | null {
+type Target = { element: HTMLElement | null; rect: DOMRect | null };
+
+const NO_TARGET: Target = { element: null, rect: null };
+
+const sameBox = (a: DOMRect | null, b: DOMRect | null) => (a === null || b === null
+  ? a === b
+  : a.top === b.top && a.left === b.left && a.width === b.width && a.height === b.height);
+
+/**
+ * The element of the screen and its box, looked up on every tick while the hint is open: the
+ * page draws it late (lazy route, data) and may replace it (Plaid's acceptance box gives way to
+ * the composer once accepted, a screen changes under the hint). The hint hides while there is none.
+ */
+function useTarget(target: StepTarget | null): Target {
   const { t } = useTranslation('common');
   const exportLabel = t('export.button');
-  const [element, setElement] = React.useState<HTMLElement | null>(null);
+  const [found, setFound] = React.useState<Target>(NO_TARGET);
   React.useEffect(() => {
-    setElement(null);
+    setFound(NO_TARGET);
     if (!target) return undefined;
-    let tries = 0;
-    const timer = window.setInterval(() => {
-      const found = findTarget(target, exportLabel);
-      tries += 1;
-      if (found || tries > 40) {
-        window.clearInterval(timer);
-        setElement(found);
-      }
-    }, 150);
-    return () => window.clearInterval(timer);
-  }, [exportLabel, target]);
-  return element;
-}
-
-/** The target's box on screen, followed through scrolls and resizes. */
-function useRect(element: HTMLElement | null): DOMRect | null {
-  const [rect, setRect] = React.useState<DOMRect | null>(null);
-  React.useEffect(() => {
-    if (!element) { setRect(null); return undefined; }
-    const update = () => setRect(element.getBoundingClientRect());
-    update();
-    window.addEventListener('resize', update);
-    window.addEventListener('scroll', update, true);
-    return () => {
-      window.removeEventListener('resize', update);
-      window.removeEventListener('scroll', update, true);
+    const look = () => {
+      const element = findTarget(target, exportLabel);
+      const rect = element ? element.getBoundingClientRect() : null;
+      setFound((previous) => (previous.element === element && sameBox(previous.rect, rect)
+        ? previous
+        : { element, rect }));
     };
-  }, [element]);
-  return rect;
+    look();
+    const timer = window.setInterval(look, 150);
+    window.addEventListener('resize', look);
+    window.addEventListener('scroll', look, true);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('resize', look);
+      window.removeEventListener('scroll', look, true);
+    };
+  }, [exportLabel, target]);
+  return found;
 }
 
 /**
@@ -89,8 +91,10 @@ export default function StepHint() {
   const key = new URLSearchParams(location.search).get(STEP_PARAM);
   const step = key && state ? state.steps.find((candidate) => candidate.key === key) ?? null : null;
   const screen = step && state ? stepScreen(step.key, state.angle) : null;
-  const element = useTargetElement(screen?.target ?? null);
-  const rect = useRect(element);
+  const { element, rect } = useTarget(screen?.target ?? null);
+  const popperRef = React.useRef<PopperInstance | null>(null);
+  // The bubble follows its element when the page moves it without a scroll or a resize.
+  React.useEffect(() => { void popperRef.current?.update(); }, [rect]);
   const discover = state?.mode === 'example';
 
   const markedRef = React.useRef<string | null>(null);
@@ -120,12 +124,11 @@ export default function StepHint() {
       {rect ? (
         <Box
           aria-hidden
+          data-testid="step-hint-outline"
+          // The box moves with the page: inline, so that each position does not add a style rule.
+          style={{ top: rect.top - 4, left: rect.left - 6, width: rect.width + 12, height: rect.height + 8 }}
           sx={(theme) => ({
             position: 'fixed',
-            top: rect.top - 4,
-            left: rect.left - 6,
-            width: rect.width + 12,
-            height: rect.height + 8,
             borderRadius: '6px',
             outline: `2px solid ${theme.palette.primary.main}`,
             pointerEvents: 'none',
@@ -136,6 +139,7 @@ export default function StepHint() {
       <Popper
         open={!!element}
         anchorEl={element}
+        popperRef={popperRef}
         placement={screen.target === 'composer' ? 'top-start' : 'bottom-start'}
         modifiers={[{ name: 'offset', options: { offset: [0, 10] } }]}
         sx={(theme) => ({ zIndex: theme.zIndex.modal - 1 })}
