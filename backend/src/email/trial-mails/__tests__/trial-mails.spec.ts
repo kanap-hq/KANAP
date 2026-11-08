@@ -103,8 +103,8 @@ function allMails(locale: string) {
     j0Angle: buildTrialWelcomeEmail({ ...common, angle: 'cartography', mode: 'own_data', call: CALL, unsubscribeUrl: UNSUBSCRIBE }),
     j0None: buildTrialWelcomeEmail({ ...common, angle: null, mode: null, call: CALL, unsubscribeUrl: UNSUBSCRIBE }),
     j0NoCall: buildTrialWelcomeEmail({ ...common, angle: 'budget', mode: 'example', call: null, unsubscribeUrl: UNSUBSCRIBE }),
-    j5: buildTrialFollowUpEmail({ ...common, mode: 'example', call: CALL, unsubscribeUrl: UNSUBSCRIBE }),
-    j5NoCall: buildTrialFollowUpEmail({ ...common, mode: null, call: null, unsubscribeUrl: UNSUBSCRIBE }),
+    j5: buildTrialFollowUpEmail({ ...common, angle: 'portfolio', mode: 'example', call: CALL, unsubscribeUrl: UNSUBSCRIBE }),
+    j5NoCall: buildTrialFollowUpEmail({ ...common, angle: null, mode: null, call: null, unsubscribeUrl: UNSUBSCRIBE }),
     j12: buildTrialEndingEmail({ ...common, trialEnd: new Date('2026-11-16T10:00:00Z'), marketingUrl: 'https://www.kanap.test', unsubscribeUrl: UNSUBSCRIBE }),
     ended: buildTrialEndedEmail({ ...common, deletionDate: new Date('2026-12-16T10:00:00Z'), unsubscribeUrl: UNSUBSCRIBE }),
     thanks: buildTrialThanksEmail(common),
@@ -139,8 +139,8 @@ function testVariants() {
     assert.ok(!mails.j0NoCall.text.includes(CALL.url));
     // The chosen path's guide in its mode, then the two others.
     assert.ok(mails.j0Angle.text.includes('/first-steps/landscape-own-data/'), `${locale}: guide of the path`);
-    // Every path link reads as words: the chosen guide is "its detailed guide".
-    const guide = getEmailStrings(locale).trialMails.j0.guide;
+    // Every path link reads as words: the chosen guide by the title of its page.
+    const guide = getEmailStrings(locale).trialMails.j0.guideTitles.cartography;
     assert.ok(mails.j0Angle.html.includes(`>${escapeForHtml(guide)}</a>`), `${locale}: guide link by its words`);
     assert.ok(!/>https?:\/\/doc\.kanap\.net/.test(mails.j0Angle.html) && !/>doc\.kanap\.net/.test(mails.j0Angle.html), `${locale}: no address as link text`);
     assert.ok(mails.j0Angle.text.includes('/first-steps/budget-own-data/') && mails.j0Angle.text.includes('/first-steps/portfolio-own-data/'));
@@ -148,6 +148,12 @@ function testVariants() {
     for (const name of ['j5', 'j5NoCall'] as const) {
       assert.equal(buttons(mails[name].html), 0, `${locale} ${name}: a personal note has no button`);
     }
+    // J+5 names the workspace, then the chosen path's guide by its title, or the three paths.
+    assert.ok(mails.j5.text.includes('Acme <IT>'), `${locale}: J+5 names the workspace`);
+    const portfolioGuide = getEmailStrings(locale).trialMails.j0.guideTitles.portfolio;
+    assert.ok(mails.j5.html.includes(`>${escapeForHtml(portfolioGuide)}</a>`), `${locale}: J+5 links the chosen guide by its title`);
+    assert.ok(mails.j5.text.includes('/first-steps/portfolio-example/') && !mails.j5.text.includes('/first-steps/budget-example/'));
+    assert.ok(['budget', 'landscape', 'portfolio'].every((path) => mails.j5NoCall.text.includes(`/first-steps/${path}-example/`)), `${locale}: J+5 without a path offers the three`);
     // The booking page on a line of its own, read as its short address.
     assert.ok(mails.j5.text.includes(`\n${CALL.url}`), `${locale}: J+5 offers the call on its own line`);
     assert.ok(mails.j5.html.includes(`>${CALL.display}</a>`), `${locale}: the call link reads as its address`);

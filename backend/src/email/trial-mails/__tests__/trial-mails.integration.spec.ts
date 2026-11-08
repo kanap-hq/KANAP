@@ -153,7 +153,7 @@ async function testWelcomeAnHourAfterTheFirstSignIn() {
       await trialMails.onSubscriptionChanged(t!.tenantId, new Date(signIn.getTime() + 61 * 60_000));
       const [mail] = email.to(t!.ownerEmail);
       assert.equal(mail?.subject, 'Bienvenue dans votre espace KANAP', 'the language of the workspace');
-      assert.ok(mail.text!.includes('Je vous propose trois parcours') && mail.text!.includes('/fr/first-steps/portfolio-example/'));
+      assert.ok(mail.text!.includes('trois parcours de dix minutes vous attendent') && mail.text!.includes('/fr/first-steps/portfolio-example/'));
       assert.ok(mail.text!.startsWith('Bonjour,'), 'no first name: no name in the greeting');
     });
   } finally {
