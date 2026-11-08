@@ -1644,7 +1644,7 @@
         },
         "map_import": {
           "title": "Ihre Daten",
-          "hint": "Exportieren Sie die Anwendungen als csv oder Excel und importieren Sie dann Ihre eigenen mit der Vorlage. Fahren Sie mit den Technologien fort, um ihnen Supportende und Schwachstellen zuzuordnen."
+          "hint": "Exportieren Sie die Anwendungen als csv oder Excel und importieren Sie dann Ihre eigenen mit der Vorlage. Verknüpfen Sie sie danach mit ihren Technologien: Supportende und Schwachstellen liefert {{product}}."
         },
         "own_sites": {
           "title": "Ihre Standorte",

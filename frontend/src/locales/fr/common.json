@@ -1644,7 +1644,7 @@
         },
         "map_import": {
           "title": "Vos données",
-          "hint": "Exportez les applications en csv ou en Excel, puis utilisez le modèle pour importer les vôtres. Poursuivez avec les technologies pour y associer les fins de support et les vulnérabilités."
+          "hint": "Exportez les applications en csv ou en Excel, puis utilisez le modèle pour importer les vôtres. Liez-leur ensuite leurs technologies : {{product}} en tire les fins de support et les vulnérabilités."
         },
         "own_sites": {
           "title": "Vos sites",

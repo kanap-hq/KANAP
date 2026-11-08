@@ -59,7 +59,7 @@ Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de in
 
 **Qué hacer.** Haga clic en **Exportar**, elija **CSV** o **Excel (.xlsx)** y abra el archivo. Después haga clic en **Importar** y en **Descargar un ejemplo**.
 
-**Qué ve.** La exportación titula sus columnas en su idioma y la importación lee las mismas columnas: úsela como plantilla para sus propias aplicaciones. El libro de ejemplo contiene algunas aplicaciones, las demás columnas en una hoja **Avanzado** y lo que admite cada columna en una hoja **Notas**. Continúe con las tecnologías para asociarles el fin de soporte y las vulnerabilidades. **Exportar** e **Importar** se muestran a los administradores de la lista.
+**Qué ve.** La exportación titula sus columnas en su idioma y la importación lee las mismas columnas: úsela como plantilla para sus propias aplicaciones. El libro de ejemplo contiene algunas aplicaciones, las demás columnas en una hoja **Avanzado** y lo que admite cada columna en una hoja **Notas**. Vincule después cada aplicación a sus tecnologías, en su pestaña **Operaciones**: KANAP aporta el fin de soporte y las vulnerabilidades. **Exportar** e **Importar** se muestran a los administradores de la lista.
 
 Para partir de un archivo que ya mantiene, adjúntelo a un mensaje en Plaid con **Adjuntar un archivo**. Plaid lee los títulos de sus columnas, el tipo de cada columna y las diez primeras filas, y puede decir qué contiene cada columna.
 

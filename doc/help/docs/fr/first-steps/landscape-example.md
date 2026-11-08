@@ -59,7 +59,7 @@ Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le
 
 **Le geste.** Cliquez sur **Exporter**, choisissez **CSV** ou **Excel (.xlsx)** et ouvrez le fichier. Cliquez ensuite sur **Importer**, puis **Télécharger un exemple**.
 
-**Ce que vous lisez.** L'export titre ses colonnes dans votre langue et l'import lit les mêmes colonnes : servez-vous-en comme modèle pour vos propres applications. Le classeur d'exemple contient quelques applications, les autres colonnes sur une feuille **Avancé** et ce que prend chaque colonne sur une feuille **Notes**. Poursuivez avec les technologies pour y associer les fins de support et les vulnérabilités. **Exporter** et **Importer** s'affichent pour les administrateurs de la liste.
+**Ce que vous lisez.** L'export titre ses colonnes dans votre langue et l'import lit les mêmes colonnes : servez-vous-en comme modèle pour vos propres applications. Le classeur d'exemple contient quelques applications, les autres colonnes sur une feuille **Avancé** et ce que prend chaque colonne sur une feuille **Notes**. Liez ensuite chaque application à ses technologies, dans son onglet **Exploitation** : KANAP en tire les fins de support et les vulnérabilités. **Exporter** et **Importer** s'affichent pour les administrateurs de la liste.
 
 Pour partir d'un fichier que vous tenez déjà, joignez-le à un message dans Plaid avec **Joindre un fichier**. Plaid lit les titres de ses colonnes, le type de chaque colonne et les dix premières lignes, et peut dire ce que contient chaque colonne.
 

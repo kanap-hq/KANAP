@@ -1644,7 +1644,7 @@
         },
         "map_import": {
           "title": "Your data",
-          "hint": "Export the applications as csv or Excel, then use the template to import yours. Go on with the technologies to attach their end of support and vulnerabilities."
+          "hint": "Export the applications as csv or Excel, then use the template to import yours. Then link their technologies: {{product}} brings the end of support dates and vulnerabilities."
         },
         "own_sites": {
           "title": "Your locations",

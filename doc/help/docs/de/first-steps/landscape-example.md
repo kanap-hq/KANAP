@@ -59,7 +59,7 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 
 **Was Sie tun.** Klicken Sie auf **Exportieren**, wählen Sie **CSV** oder **Excel (.xlsx)** und öffnen Sie die Datei. Klicken Sie dann auf **Importieren** und **Beispiel herunterladen**.
 
-**Was Sie sehen.** Der Export beschriftet seine Spalten in Ihrer Sprache, und der Import liest dieselben Spalten: Nutzen Sie ihn als Vorlage für Ihre eigenen Anwendungen. Die Beispielmappe enthält einige Anwendungen, die übrigen Spalten auf einem Blatt **Erweitert** und auf einem Blatt **Hinweise**, was jede Spalte aufnimmt. Fahren Sie mit den Technologien fort, um Supportende und Schwachstellen zuzuordnen. **Exportieren** und **Importieren** sehen die Administratoren der Liste.
+**Was Sie sehen.** Der Export beschriftet seine Spalten in Ihrer Sprache, und der Import liest dieselben Spalten: Nutzen Sie ihn als Vorlage für Ihre eigenen Anwendungen. Die Beispielmappe enthält einige Anwendungen, die übrigen Spalten auf einem Blatt **Erweitert** und auf einem Blatt **Hinweise**, was jede Spalte aufnimmt. Verknüpfen Sie danach jede Anwendung im Reiter **Betrieb** mit ihren Technologien: Supportende und Schwachstellen liefert KANAP. **Exportieren** und **Importieren** sehen die Administratoren der Liste.
 
 Um von einer Datei auszugehen, die Sie schon führen, hängen Sie sie in Plaid mit **Datei anhängen** an eine Nachricht an. Plaid liest die Spaltenüberschriften, den Typ jeder Spalte und die ersten zehn Zeilen und kann sagen, was jede Spalte enthält.
 

@@ -1644,7 +1644,7 @@
         },
         "map_import": {
           "title": "Sus datos",
-          "hint": "Exporte las aplicaciones en csv o Excel y use la plantilla para importar las suyas. Siga con las tecnologías para asociarles el fin de soporte y las vulnerabilidades."
+          "hint": "Exporte las aplicaciones en csv o Excel y use la plantilla para importar las suyas. Vincúlelas después a sus tecnologías: {{product}} aporta el fin de soporte y las vulnerabilidades."
         },
         "own_sites": {
           "title": "Sus ubicaciones",

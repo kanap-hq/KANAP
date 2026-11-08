@@ -59,7 +59,7 @@ These are the five steps of the **Your first five steps** tile on the home page,
 
 **What to do.** Click **Export**, choose **CSV** or **Excel (.xlsx)** and open the file. Then click **Import** and **Download an example**.
 
-**What you see.** The export titles its columns in your language and the import reads the same columns: use it as a template for your own applications. The example workbook holds a few applications, the other columns on an **Advanced** sheet and what each column takes on a **Notes** sheet. Go on with the technologies to attach their end of support and vulnerabilities. **Export** and **Import** are shown to the administrators of the list.
+**What you see.** The export titles its columns in your language and the import reads the same columns: use it as a template for your own applications. The example workbook holds a few applications, the other columns on an **Advanced** sheet and what each column takes on a **Notes** sheet. Then link each application to its technologies, on its **Operations** tab: KANAP brings their end of support dates and vulnerabilities. **Export** and **Import** are shown to the administrators of the list.
 
 To start from a file you already keep, attach it to a message in Plaid with **Attach a file**. Plaid reads its column headers, the type of each column and the first ten rows, and can say what each column holds.
 
