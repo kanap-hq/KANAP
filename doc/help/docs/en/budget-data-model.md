@@ -64,7 +64,7 @@ A line lives across years: a three-year licence is one line with three budget ye
 | Number | `item_number` | Set by KANAP | `BL-12`. Empty in the file creates a line |
 | Title | `name` | Yes | The **Product name** column of the list |
 | Description | `description` | No | |
-| Paying company | `company_name` | Yes | Taken from the cost center when only the cost center is given |
+| Paying company | `company_name` | Yes | Taken from the cost center when only the cost center is given, or the workspace's only company when it has one |
 | Supplier | `supplier_name`, `supplier_erp_id` | No | |
 | Account | `account_number` | Yes | In the chart of accounts of the paying company |
 | Cost center | `cost_center_code` | No | A group is refused |

@@ -16,6 +16,7 @@ import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 import CloseIcon from '@mui/icons-material/CloseRounded';
 import { useTranslation } from 'react-i18next';
 import { AiMutationPreview } from '../aiTypes';
+import { isApprovable } from '../previewApproval';
 import { getPreviewLabel } from '../utils/previewClassification';
 import { getPreviewStatusColorKey, getPreviewStatusDisplay } from '../utils/previewStatus';
 import { getDotColor } from '../../utils/statusColors';
@@ -286,15 +287,15 @@ export default function ArtifactPanel({
     setWidth((current) => clampWidth(current + delta));
   }, []);
 
-  const pendingPreviews = previews.filter((preview) => preview.status === 'pending');
-  const showBulkApproval = pendingPreviews.length >= BULK_APPROVAL_MIN;
-  const visibleConfirmPreviews = pendingPreviews.slice(0, 6);
-  const remainingConfirmCount = Math.max(0, pendingPreviews.length - visibleConfirmPreviews.length);
+  const approvablePreviews = previews.filter(isApprovable);
+  const showBulkApproval = approvablePreviews.length >= BULK_APPROVAL_MIN;
+  const visibleConfirmPreviews = approvablePreviews.slice(0, 6);
+  const remainingConfirmCount = Math.max(0, approvablePreviews.length - visibleConfirmPreviews.length);
 
   const handleApproveAll = useCallback(() => {
     setConfirmBulkOpen(false);
-    onApproveMany(pendingPreviews.map((preview) => preview.preview_id));
-  }, [onApproveMany, pendingPreviews]);
+    onApproveMany(approvablePreviews.map((preview) => preview.preview_id));
+  }, [onApproveMany, approvablePreviews]);
 
   if (previews.length === 0) return null;
 
@@ -404,12 +405,12 @@ export default function ArtifactPanel({
             fullWidth
           >
             <DialogTitle sx={{ fontSize: 14, fontWeight: 500, color: 'kanap.text.primary' }}>
-              {t('previewBatch.confirmTitle', { count: pendingPreviews.length })}
+              {t('previewBatch.confirmTitle', { count: approvablePreviews.length })}
             </DialogTitle>
             <DialogContent>
               <Stack spacing={1}>
                 <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary', lineHeight: 1.5 }}>
-                  {t('previewBatch.confirmBody', { count: pendingPreviews.length })}
+                  {t('previewBatch.confirmBody', { count: approvablePreviews.length })}
                 </Typography>
                 <Stack spacing={0.5}>
                   {visibleConfirmPreviews.map((preview) => (
@@ -444,7 +445,7 @@ export default function ArtifactPanel({
               <Button
                 variant="action-primary"
                 onClick={handleApproveAll}
-                disabled={disabled || pendingPreviews.length === 0}
+                disabled={disabled || approvablePreviews.length === 0}
               >
                 {t('previewBatch.approveAll')}
               </Button>

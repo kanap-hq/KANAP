@@ -547,6 +547,16 @@ async function testPromptKeepsTheUserLanguageBetweenToolCalls() {
   assert.match(prompt, /including a short text written before or between tool calls/);
   const minimalPrompt = service.build({ ...baseParams, availableTools: [], contextProfile: selectAiContextProfile('salut') });
   assert.match(minimalPrompt, /write in the language of the user's last message/);
+  // The English tool results never set the language; the profile's settles a message that gives none.
+  assert.match(prompt, /The tool results are written in English: their language never decides the language of your text\./);
+  assert.doesNotMatch(prompt, /The person's profile is in/, 'no profile language, no sentence');
+  const french = service.build({
+    ...baseParams,
+    currentUser: { ...baseParams.currentUser, screenLanguage: 'fr' },
+    availableTools: [{ name: 'search_all', category: 'discovery', description: 'Search.', input_summary: {}, read_only: true, surfaces: ['chat'] }],
+    contextProfile: selectAiContextProfile('Importe ce fichier'),
+  });
+  assert.match(french, /The person's profile is in French: write in French when their messages give no other language\./);
 }
 
 

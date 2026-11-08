@@ -13,6 +13,7 @@ import {
   schemaFields,
 } from './columns';
 import { parseToken, ParsedToken } from './token';
+import type { BudgetFileSentence } from './types';
 
 export type FieldCell =
   | { kind: 'absent' }
@@ -66,7 +67,7 @@ export interface InterpretedRow {
   /** Parsed date cells. A blank, a clear and an invalid date are not here. */
   dates: Record<string, CsvParsedDate>;
   amounts: InterpretedAmount[];
-  errors: Array<{ column: string | null; message: string }>;
+  errors: Array<{ column: string | null } & BudgetFileSentence>;
 }
 
 /** A budget file as read: CSV, or the first sheet of an .xlsx workbook (`sheetName`, `sheetCount`). */
@@ -132,7 +133,7 @@ export function interpretBudgetFile(read: CsvReadResult, scope: BudgetNature): I
   const presentFields = new Set(read.columns.filter((column) => column.kind === 'field').map((column) => column.id));
   const barePrefix: ItemNumberPrefix = presentFields.has('nature') ? 'BL' : LEGACY_PREFIX[scope];
   return read.rows.map((row) => {
-    const errors = row.errors.map((error) => ({ column: error.column, message: error.message }));
+    const errors: InterpretedRow['errors'] = [...row.errors];
     const cells: Record<string, FieldCell> = {};
     for (const field of fields) {
       if (field === 'kanap_token' || EXPORT_ONLY_COLUMNS.has(field)) continue;
@@ -156,6 +157,7 @@ export function interpretBudgetFile(read: CsvReadResult, scope: BudgetNature): I
         errors.push({
           column: column.id,
           message: `${column.id} cannot be cleared. Use 0 to set an amount to zero, or leave the cell empty to keep the stored amount.`,
+          code: 'BUDGET_FILE_AMOUNT_CANNOT_BE_CLEARED',
         });
       } else if (parsed.kind === 'invalid') cell = { kind: 'invalid' };
       else {
@@ -164,10 +166,10 @@ export function interpretBudgetFile(read: CsvReadResult, scope: BudgetNature): I
         const cents = parsed.decimal.toCents();
         if (fraction.length > 2) {
           cell = { kind: 'invalid' };
-          errors.push({ column: column.id, message: `${column.id} has more than two decimals.` });
+          errors.push({ column: column.id, message: `${column.id} has more than two decimals.`, code: 'CSV_DECIMALS_TOO_MANY', params: { value: text, max: 2 } });
         } else if (cents >= CENTS_LIMIT || cents <= -CENTS_LIMIT) {
           cell = { kind: 'invalid' };
-          errors.push({ column: column.id, message: `${column.id} is too large.` });
+          errors.push({ column: column.id, message: `${column.id} is too large.`, code: 'BUDGET_FILE_AMOUNT_TOO_LARGE' });
         } else cell = { kind: 'value', cents };
       }
       return {

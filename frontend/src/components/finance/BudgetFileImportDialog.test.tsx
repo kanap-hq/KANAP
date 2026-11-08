@@ -319,6 +319,29 @@ describe('BudgetFileImportDialog', () => {
     expect(screen.getByText('operations.budgetFile.ready')).toBeInTheDocument();
   });
 
+  it('shows the errors and warnings of the check by their translation code', async () => {
+    post.mockResolvedValueOnce({ data: report({
+      ok: false,
+      errors: [{
+        line: 4, column: 'supplier_name', message: "Supplier 'Microsoft' does not exist.",
+        code: 'CSV_REFERENCE_NOT_FOUND', params: { value: 'Microsoft' },
+      }],
+      errorCount: 1,
+      warnings: {
+        duplicates: [{ line: 5, message: 'row 5 looks like BL-3', code: 'BUDGET_FILE_LOOKS_LIKE_LINE', params: { line: 5, ref: 'BL-3' } }],
+        ignoredColumns: [],
+        supplierNames: [],
+        ignoredCells: [],
+      },
+    }) });
+    renderDialog();
+    expect(await screen.findByText('operations.budgetFile.notReady')).toBeInTheDocument();
+    const row = screen.getByText(/^operations\.budgetFile\.rowColumn:/).textContent ?? '';
+    expect(row).toContain('errors:CSV_REFERENCE_NOT_FOUND');
+    expect(row).toContain('\\"value\\":\\"Microsoft\\"');
+    expect(screen.getByText(/^errors:BUDGET_FILE_LOOKS_LIKE_LINE:.*"ref":"BL-3"/)).toBeInTheDocument();
+  });
+
   it.each([
     [1, '70000.00', '70 000'],
     [3, '281280.00', '281 280'],

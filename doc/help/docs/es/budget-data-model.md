@@ -64,7 +64,7 @@ Una línea vive varios años: una licencia de tres años es una línea con tres 
 | Número | `item_number` | Lo asigna KANAP | `BL-12`. Vacío en el archivo: crea una línea |
 | Título | `name` | Sí | La columna **Nombre del producto** de la lista |
 | Descripción | `description` | No | |
-| Empresa pagadora | `company_name` | Sí | Se toma del centro de coste cuando solo se indica el centro de coste |
+| Empresa pagadora | `company_name` | Sí | Se toma del centro de coste cuando solo se indica el centro de coste, o es la única empresa del espacio de trabajo cuando solo hay una |
 | Proveedor | `supplier_name`, `supplier_erp_id` | No | |
 | Cuenta | `account_number` | Sí | En el plan de cuentas de la empresa pagadora |
 | Centro de coste | `cost_center_code` | No | Se rechaza un grupo |

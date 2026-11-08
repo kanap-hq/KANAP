@@ -89,12 +89,18 @@ export function yearsOfRange(from: number, to: number): number[] {
   return Array.from({ length: end - start + 1 }, (_, index) => start + index);
 }
 
+/**
+ * A sentence of the check: `code` is its key in the `errors` namespace, with the values it names
+ * (`params`); `message` is the server's English text, shown when there is no code.
+ */
+export type BudgetFileSentence = { message: string; code?: string; params?: Record<string, string | number> };
+
 export type BudgetFileReport = {
   ok: boolean;
   notices: { dates: string | null; amounts: string | null };
   fileErrors: string[];
   headerErrors: string[];
-  errors: Array<{ line: number; column: string | null; message: string }>;
+  errors: Array<{ line: number; column: string | null } & BudgetFileSentence>;
   errorCount: number;
   missing: Array<{ type: string; count: number; examples: string[]; where: string; message: string }>;
   deleted: Array<{ line: number; itemNumber: string }>;
@@ -115,9 +121,9 @@ export type BudgetFileReport = {
   }>;
   changedSinceExportCount: number;
   warnings: {
-    duplicates: Array<{ line: number; message: string }>;
+    duplicates: Array<{ line: number } & BudgetFileSentence>;
     ignoredColumns: string[];
-    supplierNames: Array<{ line: number; message: string }>;
+    supplierNames: Array<{ line: number } & BudgetFileSentence>;
     /** company_name of another company than the cost center's; `code` names the sentence in `errors`. */
     costCenterCompanies?: Array<{
       line: number;

@@ -264,6 +264,17 @@ const unsupportedWritesRule = (screenLanguage: AiScreenLanguage | null) =>
   + 'Prepare no preview in its place: no task recording the request, no status change, cancellation or deactivation standing in for a deletion. '
   + 'You may offer the closest change Plaid can make, in words ("I can create a task to track it if you want"); prepare it only after the user says yes.';
 
+const LANGUAGE_NAMES: Record<AiScreenLanguage, string> = { en: 'English', fr: 'French', de: 'German', es: 'Spanish' };
+
+/**
+ * The tool results are in English, and a model tends to follow them between two tool calls: the
+ * profile's language settles a turn whose last message says none (an attached file, an approval).
+ */
+const replyLanguageRule = (screenLanguage: AiScreenLanguage | null) =>
+  '- The tool results are written in English: their language never decides the language of your text.'
+  + (screenLanguage ? ` The person's profile is in ${LANGUAGE_NAMES[screenLanguage]}: write in ${LANGUAGE_NAMES[screenLanguage]} when their messages give no other language.` : '')
+  + '\n';
+
 /** What the tools cannot read, how totals are given, and the person's data access (AGENTS.md). */
 const limitsText = (screenLanguage: AiScreenLanguage | null, gap: AiAdminFamiliesGap | undefined, reach: AiUnreadFamiliesReach) => [
   'Limits of what you read:',
@@ -566,6 +577,7 @@ export class AiSystemPromptService {
       'Formatting',
       'Formatting:\n' +
       '- Write every text the user sees in the language of their last message (the language of the conversation when that message is only a reference or a "yes"), including a short text written before or between tool calls: in a French conversation, "Je relance une recherche plus large", never "Let me try a looser search".\n' +
+      replyLanguageRule(params.currentUser.screenLanguage ?? null) +
       '- Use Markdown for formatting responses.\n' +
       '- Keep responses concise and well-structured.\n' +
       '- Use tables for comparative data when appropriate.\n' +

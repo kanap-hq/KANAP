@@ -16,6 +16,7 @@ import {
   BudgetFileLinePlan,
   BudgetFileReport,
   BudgetFileScope,
+  BudgetFileSentence,
   BudgetFileSnapshotLine,
   CalculationLinesWarning,
   CatalogCostCenter,
@@ -50,6 +51,9 @@ const MISSING_LABELS: Record<string, { one: string; many: string; where: string 
 };
 
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+/** Records an error of the row's `column`: its English sentence, and the code and values the interface translates. */
+type Fail = (column: string | null, message: string, code?: string, params?: Record<string, string | number>) => void;
 
 /** The write the resolvers record beside the report. Discarded when the row fails. */
 interface LineDraft {
@@ -166,13 +170,13 @@ interface SupplierCreate {
 }
 
 interface Bag {
-  errors: Array<{ line: number; column: string | null; message: string }>;
+  errors: Array<{ line: number; column: string | null } & BudgetFileSentence>;
   missing: Map<string, Set<string>>;
   suppliers: Map<string, SupplierCreate>;
   dimensions: Map<string, Map<string, string>>;
   refusedDimensions: Map<string, Map<string, string>>;
-  duplicates: Array<{ line: number; message: string }>;
-  supplierNames: Array<{ line: number; message: string }>;
+  duplicates: Array<{ line: number } & BudgetFileSentence>;
+  supplierNames: Array<{ line: number } & BudgetFileSentence>;
   costCenterCompanies: CostCenterCompanyWarning[];
   calculationLines: CalculationLinesWarning[];
   deleted: Array<{ line: number; itemNumber: string }>;
@@ -235,14 +239,22 @@ function compared(input: PreflightInput, rows: InterpretedRow[]): { report: Budg
       const first = seen.get(key);
       if (first !== undefined) {
         const ref = row.itemNumber.ref;
-        bag.errors.push({
-          line: row.line,
-          column: 'item_number',
-          message: first.ref === ref || !matched
-            ? `item_number ${ref} already appears on line ${first.line}.`
-            : `item_number ${ref} and ${first.ref} on line ${first.line} are the same line, ${lineRef(matched.itemNumber)}.`,
-        });
-        for (const error of row.errors) bag.errors.push({ line: row.line, column: error.column, message: error.message });
+        bag.errors.push(first.ref === ref || !matched
+          ? {
+            line: row.line,
+            column: 'item_number',
+            message: `item_number ${ref} already appears on line ${first.line}.`,
+            code: 'BUDGET_FILE_LINE_TWICE',
+            params: { ref, line: first.line },
+          }
+          : {
+            line: row.line,
+            column: 'item_number',
+            message: `item_number ${ref} and ${first.ref} on line ${first.line} are the same line, ${lineRef(matched.itemNumber)}.`,
+            code: 'BUDGET_FILE_SAME_LINE_TWICE',
+            params: { ref, other: first.ref, line: first.line, item: lineRef(matched.itemNumber) },
+          });
+        for (const error of row.errors) bag.errors.push({ line: row.line, ...error });
         continue;
       }
       seen.set(key, { line: row.line, ref: row.itemNumber.ref });
@@ -260,13 +272,14 @@ function compared(input: PreflightInput, rows: InterpretedRow[]): { report: Budg
 function rowNature(
   input: PreflightInput,
   row: InterpretedRow,
-  fail: (column: string | null, message: string) => void,
+  fail: Fail,
 ): BudgetNature | null {
   const cell = row.nature;
   if (cell.kind === 'absent') return input.scope;
   if (cell.kind === 'value') return cell.nature;
-  if (cell.kind === 'invalid') fail('nature', `nature '${cell.raw}' is not a value. Use opex or capex.`);
-  else if (cell.kind === 'clear') fail('nature', 'nature cannot be cleared.');
+  if (cell.kind === 'invalid') {
+    fail('nature', `nature '${cell.raw}' is not a value. Use opex or capex.`, 'CSV_ENUM_INVALID', { value: cell.raw, allowed: 'opex, capex' });
+  } else if (cell.kind === 'clear') fail('nature', 'nature cannot be cleared.', 'BUDGET_FILE_CANNOT_BE_CLEARED');
   return null;
 }
 
@@ -278,10 +291,10 @@ function resolveRow(
   bag: Bag,
 ): void {
   const errors = [...row.errors];
-  const fail = (column: string | null, message: string) => errors.push({ column, message });
+  const fail: Fail = (column, message, code, params) => errors.push({ column, message, ...(code ? { code } : {}), ...(params ? { params } : {}) });
   const blocked = (column: string) => errors.some((error) => error.column === column);
   const flush = () => {
-    for (const error of errors) bag.errors.push({ line: row.line, column: error.column, message: error.message });
+    for (const error of errors) bag.errors.push({ line: row.line, ...error });
   };
   let creating = false;
   let live: StoredLine | null = null;
@@ -291,13 +304,16 @@ function resolveRow(
   if (row.itemNumber.kind === 'blank') {
     creating = true;
     if (row.token.kind === 'ok' || row.token.kind === 'bad') {
-      fail('kanap_token', `kanap_token '${row.token.raw}' is set but item_number is empty. Leave the token empty to add a line.`);
+      fail('kanap_token', `kanap_token '${row.token.raw}' is set but item_number is empty. Leave the token empty to add a line.`,
+        'BUDGET_FILE_TOKEN_WITHOUT_NUMBER');
     }
-    if (row.nature.kind === 'blank') fail('nature', 'nature is required.');
+    if (row.nature.kind === 'blank') fail('nature', 'nature is required.', 'CSV_VALUE_REQUIRED');
   } else if (row.itemNumber.kind === 'invalid') {
-    fail('item_number', row.itemNumber.raw === '-'
-      ? 'item_number cannot be cleared. Leave it empty to add a line.'
-      : `item_number '${row.itemNumber.raw}' is not a line number.`);
+    if (row.itemNumber.raw === '-') {
+      fail('item_number', 'item_number cannot be cleared. Leave it empty to add a line.', 'BUDGET_FILE_NUMBER_CANNOT_BE_CLEARED');
+    } else {
+      fail('item_number', `item_number '${row.itemNumber.raw}' is not a line number.`, 'BUDGET_FILE_NOT_LINE_NUMBER', { value: row.itemNumber.raw });
+    }
   } else if (!matched) {
     const ref = row.itemNumber.ref;
     if (row.token.kind === 'ok') {
@@ -305,21 +321,22 @@ function resolveRow(
       fail('item_number', noLongerAvailableMessage(ref));
       bag.deleted.push({ line: row.line, itemNumber: ref });
     } else {
-      fail('item_number', `item_number '${row.itemNumber.raw}' does not match a line.`);
+      fail('item_number', `item_number '${row.itemNumber.raw}' does not match a line.`, 'CSV_REFERENCE_NOT_FOUND', { value: row.itemNumber.raw });
     }
   } else if (nature && matched.nature !== nature) {
     // A line keeps its nature whatever the file says (changing the type is lot M, from the line).
     // Named as the file names it, with its BL number when that differs (`CPX-2 (BL-3)`).
     const own = lineRef(matched.itemNumber);
     const ref = row.itemNumber.ref === own ? own : `${row.itemNumber.ref} (${own})`;
-    fail(row.nature.kind === 'absent' ? 'item_number' : 'nature', natureChangeMessage(ref, matched.nature, nature));
+    fail(row.nature.kind === 'absent' ? 'item_number' : 'nature', natureChangeMessage(ref, matched.nature, nature),
+      'BUDGET_FILE_LINE_NATURE', { ref, nature: natureLabel(matched.nature), other: natureLabel(nature) });
     flush();
     return;
   } else {
     live = matched;
     nature = matched.nature;
   }
-  if (row.token.kind === 'bad' && row.itemNumber.kind !== 'blank') fail('kanap_token', tokenError(row.token.raw));
+  if (row.token.kind === 'bad' && row.itemNumber.kind !== 'blank') fail('kanap_token', tokenError(row.token.raw), 'BUDGET_FILE_TOKEN_INVALID');
   if (!nature) {
     // No nature to check the row against: a blank cell on a line not found, or a cell that is not a nature.
     flush();
@@ -344,13 +361,13 @@ function resolveRow(
   // center that has one (`resolveItemWrite`). Amounts alone are written without it.
   const updatesLine = Object.keys(draft.body).length > 0 || draft.analytics.length > 0 || !!draft.newSupplier;
   if (live && updatesLine && !company.id && !costCenter?.companyId && !blocked('company_name') && !blocked('cost_center_code')) {
-    fail('company_name', 'company_name is required.');
+    fail('company_name', 'company_name is required.', 'CSV_VALUE_REQUIRED');
   }
   if (input.access && (creating || live)) checkAccess(input.access, row, live, creating, changes, draft, errors.length > 0, fail);
 
   if (creating && row.fields.name?.kind === 'value') {
     const hint = duplicateHint(nature, row, supplier, input.names, newKeys);
-    if (hint) bag.duplicates.push({ line: row.line, message: hint });
+    if (hint) bag.duplicates.push({ line: row.line, ...hint });
     const key = duplicateKey(nature, row.fields.name.text, supplier);
     if (key && !newKeys.has(key)) newKeys.set(key, row.line);
   }
@@ -401,7 +418,7 @@ function checkAccess(
   changes: string[],
   draft: LineDraft,
   hasErrors: boolean,
-  fail: (column: string | null, message: string) => void,
+  fail: Fail,
 ): void {
   if (live && !access.editable.has(live.id)) {
     const ref = row.itemNumber.kind === 'number' ? row.itemNumber.ref : lineRef(live.itemNumber);
@@ -456,7 +473,7 @@ function resolveCostCenter(
   row: InterpretedRow,
   live: StoredLine | null,
   blocked: (column: string) => boolean,
-  fail: (column: string | null, message: string) => void,
+  fail: Fail,
   bag: Bag,
   changes: string[],
   draft: LineDraft,
@@ -477,20 +494,20 @@ function resolveCostCenter(
   }
   const node = findCostCenter(input.catalog.costCenters, cell.text);
   if (node.kind === 'none') {
-    fail('cost_center_code', `Cost center ${cell.text} was not found.`);
+    fail('cost_center_code', `Cost center ${cell.text} was not found.`, 'CSV_REFERENCE_NOT_FOUND', { value: cell.text });
     miss(bag, 'costCenters', cell.text);
     return null;
   }
   if (node.kind === 'ambiguous') {
-    fail('cost_center_code', `Cost center ${cell.text} matches more than one cost center.`);
+    fail('cost_center_code', `Cost center ${cell.text} matches more than one cost center.`, 'BUDGET_FILE_VALUE_AMBIGUOUS', { value: cell.text });
     return null;
   }
   if (node.center.kind !== 'cost_center') {
-    fail('cost_center_code', `${node.center.code} is a group. Choose a cost center.`);
+    fail('cost_center_code', `${node.center.code} is a group. Choose a cost center.`, 'BUDGET_FILE_COST_CENTER_GROUP', { value: node.center.code });
     return null;
   }
   if (!isActiveAt(node.center.disabledAt) && node.center.id !== (live?.costCenterId ?? null)) {
-    fail('cost_center_code', `Cost center ${node.center.code} is disabled.`);
+    fail('cost_center_code', `Cost center ${node.center.code} is disabled.`, 'BUDGET_FILE_DISABLED', { value: node.center.code });
     return null;
   }
   const changed = !!(live && node.center.id !== live.costCenterId);
@@ -506,7 +523,7 @@ function resolveCompany(
   creating: boolean,
   costCenter: { id: string | null; companyId: string | null } | null,
   blocked: (column: string) => boolean,
-  fail: (column: string | null, message: string) => void,
+  fail: Fail,
   bag: Bag,
   changes: string[],
   draft: LineDraft,
@@ -514,22 +531,22 @@ function resolveCompany(
   const cell = row.fields.company_name ?? { kind: 'absent' as const };
   if (blocked('company_name')) return { id: live?.companyId ?? null, known: false };
   if (cell.kind === 'clear') {
-    fail('company_name', 'company_name is required.');
+    fail('company_name', 'company_name is required.', 'CSV_VALUE_REQUIRED');
     return { id: null, known: false };
   }
   if (cell.kind === 'value') {
     const found = matchName(input.catalog.companies, cell.text);
     if (found.kind === 'none') {
-      fail('company_name', `Company '${cell.text}' was not found.`);
+      fail('company_name', `Company '${cell.text}' was not found.`, 'CSV_REFERENCE_NOT_FOUND', { value: cell.text });
       miss(bag, 'companies', cell.text);
       return { id: null, known: false };
     }
     if (found.kind === 'many') {
-      fail('company_name', `Company '${cell.text}' matches more than one company.`);
+      fail('company_name', `Company '${cell.text}' matches more than one company.`, 'BUDGET_FILE_VALUE_AMBIGUOUS', { value: cell.text });
       return { id: null, known: false };
     }
     if (!isActiveAt(found.row.disabledAt) && found.row.id !== (live?.companyId ?? null)) {
-      fail('company_name', `Company '${found.row.name}' is disabled.`);
+      fail('company_name', `Company '${found.row.name}' is disabled.`, 'BUDGET_FILE_DISABLED', { value: found.row.name });
       return { id: null, known: false };
     }
     const changed = !!(live && found.row.id !== live.companyId);
@@ -553,15 +570,22 @@ function resolveCompany(
     return { id: found.row.id, known: true };
   }
   if (creating) {
-    const fromCenter = costCenter?.companyId ?? null;
-    if (!fromCenter) {
-      fail('company_name', 'company_name is required.');
+    // A new line without a company: the cost center's, else the workspace's only enabled company.
+    const company = costCenter?.companyId ?? onlyCompany(input.catalog);
+    if (!company) {
+      fail('company_name', 'company_name is required.', 'CSV_VALUE_REQUIRED');
       return { id: null, known: false };
     }
-    draft.body.paying_company_id = fromCenter;
-    return { id: fromCenter, known: true };
+    draft.body.paying_company_id = company;
+    return { id: company, known: true };
   }
   return { id: live?.companyId ?? null, known: !!live?.companyId };
+}
+
+/** The workspace's enabled company when it has exactly one. */
+function onlyCompany(catalog: BudgetCatalog): string | null {
+  const enabled = catalog.companies.filter((company) => isActiveAt(company.disabledAt));
+  return enabled.length === 1 ? enabled[0].id : null;
 }
 
 function resolveAccount(
@@ -572,7 +596,7 @@ function resolveAccount(
   creating: boolean,
   company: CompanyOutcome,
   blocked: (column: string) => boolean,
-  fail: (column: string | null, message: string) => void,
+  fail: Fail,
   bag: Bag,
   changes: string[],
   draft: LineDraft,
@@ -580,16 +604,16 @@ function resolveAccount(
   const cell = row.fields.account_number ?? { kind: 'absent' as const };
   if (blocked('account_number')) return;
   if (cell.kind === 'clear') {
-    fail('account_number', 'account_number is required.');
+    fail('account_number', 'account_number is required.', 'CSV_VALUE_REQUIRED');
     return;
   }
   if (cell.kind === 'absent' || cell.kind === 'blank') {
-    if (creating) fail('account_number', 'account_number is required.');
+    if (creating) fail('account_number', 'account_number is required.', 'CSV_VALUE_REQUIRED');
     return;
   }
   const digits = cell.text.replace(/\s+/g, '');
   if (!/^\d+$/.test(digits)) {
-    fail('account_number', 'account_number must contain digits only.');
+    fail('account_number', 'account_number must contain digits only.', 'CSV_WHOLE_NUMBER_INVALID', { value: cell.text });
     return;
   }
   if (!company.known || !company.id) return;
@@ -598,24 +622,25 @@ function resolveAccount(
   const inChart = input.catalog.accounts.filter((account) => (account.coaId ?? null) === (chartId ?? null));
   const matched = matchCode(digits, inChart.map((account) => account.number));
   if (matched.kind === 'ambiguous') {
-    fail('account_number', `account_number '${digits}' matches more than one account.`);
+    fail('account_number', `account_number '${digits}' matches more than one account.`, 'BUDGET_FILE_VALUE_AMBIGUOUS', { value: digits });
     return;
   }
   if (matched.kind !== 'exact' && matched.kind !== 'stripped') {
-    fail('account_number', `Account ${digits} was not found in the company's chart of accounts.`);
+    fail('account_number', `Account ${digits} was not found in the company's chart of accounts.`, 'BUDGET_FILE_ACCOUNT_NOT_IN_CHART', { value: digits });
     miss(bag, 'accounts', digits);
     return;
   }
   const account = inChart.find((item) => item.number === matched.code);
   if (!account) return;
   if (!isActiveAt(account.disabledAt) && account.id !== (live?.accountId ?? null)) {
-    fail('account_number', `Account ${account.number} is disabled.`);
+    fail('account_number', `Account ${account.number} is disabled.`, 'BUDGET_FILE_DISABLED', { value: account.number });
     return;
   }
   // An account kept for the other type of line than this row's: refused on a new line or a new
   // account; the line's current account stays, as `resolveItemWrite` lets it.
   if (account.nature && account.nature !== nature && account.id !== (live?.accountId ?? null)) {
-    fail('account_number', `Account ${account.number} is for ${account.nature === 'capex' ? 'CAPEX' : 'OPEX'} lines only.`);
+    fail('account_number', `Account ${account.number} is for ${natureLabel(account.nature)} lines only.`,
+      'BUDGET_FILE_FOR_NATURE_ONLY', { value: account.number, nature: natureLabel(account.nature) });
     return;
   }
   const changed = !!(live && account.id !== live.accountId);
@@ -629,7 +654,7 @@ function resolveSupplier(
   live: StoredLine | null,
   creating: boolean,
   blocked: (column: string) => boolean,
-  fail: (column: string | null, message: string) => void,
+  fail: Fail,
   bag: Bag,
   changes: string[],
   draft: LineDraft,
@@ -659,15 +684,16 @@ function resolveSupplier(
   const byErp = erpText ? matchErp(input.catalog.suppliers, erpText) : null;
   const byName = nameText ? matchName(input.catalog.suppliers, nameText) : null;
   if (byErp?.kind === 'many') {
-    fail('supplier_erp_id', `Several suppliers share ERP id '${erpText}'.`);
+    fail('supplier_erp_id', `Several suppliers share ERP id '${erpText}'.`, 'BUDGET_FILE_VALUE_AMBIGUOUS', { value: erpText });
     return { id: null, createKey: null };
   }
   if (byName?.kind === 'many' && !erpText) {
-    fail('supplier_name', `Supplier '${nameText}' matches more than one supplier.`);
+    fail('supplier_name', `Supplier '${nameText}' matches more than one supplier.`, 'BUDGET_FILE_VALUE_AMBIGUOUS', { value: nameText });
     return { id: null, createKey: null };
   }
   if (byErp?.kind === 'one' && byName?.kind === 'one' && byErp.row.id !== byName.row.id) {
-    fail('supplier_name', `supplier_name '${nameText}' and supplier_erp_id '${erpText}' point to different suppliers.`);
+    fail('supplier_name', `supplier_name '${nameText}' and supplier_erp_id '${erpText}' point to different suppliers.`,
+      'BUDGET_FILE_SUPPLIER_CONFLICT', { name: nameText, erp: erpText });
     return { id: null, createKey: null };
   }
   if (byErp?.kind === 'one') {
@@ -676,10 +702,12 @@ function resolveSupplier(
       bag.supplierNames.push({
         line: row.line,
         message: `supplier_name '${nameText}' does not match the supplier for ERP id '${erpText}' (${supplier.name}).`,
+        code: 'BUDGET_FILE_SUPPLIER_NAME_DIFFERS',
+        params: { name: nameText, erp: erpText, supplier: supplier.name },
       });
     }
     if (!isActiveAt(supplier.disabledAt) && supplier.id !== (live?.supplierId ?? null)) {
-      fail('supplier_name', `Supplier '${supplier.name}' is disabled.`);
+      fail('supplier_name', `Supplier '${supplier.name}' is disabled.`, 'BUDGET_FILE_DISABLED', { value: supplier.name });
       return { id: null, createKey: null };
     }
     const changed = !!(live && supplier.id !== live.supplierId);
@@ -688,13 +716,14 @@ function resolveSupplier(
     return { id: supplier.id, createKey: null };
   }
   if (erpText && byName?.kind === 'one') {
-    fail('supplier_erp_id', `ERP id '${erpText}' is unknown and '${byName.row.name}' is already a supplier. Add the ERP id in Master data > Suppliers or leave it empty.`);
+    fail('supplier_erp_id', `ERP id '${erpText}' is unknown and '${byName.row.name}' is already a supplier. Add the ERP id in Master data > Suppliers or leave it empty.`,
+      'BUDGET_FILE_SUPPLIER_ERP_UNKNOWN', { erp: erpText, name: byName.row.name });
     return { id: null, createKey: null };
   }
   if (!erpText && byName?.kind === 'one') {
     const supplier = byName.row;
     if (!isActiveAt(supplier.disabledAt) && supplier.id !== (live?.supplierId ?? null)) {
-      fail('supplier_name', `Supplier '${supplier.name}' is disabled.`);
+      fail('supplier_name', `Supplier '${supplier.name}' is disabled.`, 'BUDGET_FILE_DISABLED', { value: supplier.name });
       return { id: null, createKey: null };
     }
     const changed = !!(live && supplier.id !== live.supplierId);
@@ -703,7 +732,7 @@ function resolveSupplier(
     return { id: supplier.id, createKey: null };
   }
   if (!nameText) {
-    fail('supplier_erp_id', `supplier_erp_id '${erpText}' does not match a supplier.`);
+    fail('supplier_erp_id', `supplier_erp_id '${erpText}' does not match a supplier.`, 'CSV_REFERENCE_NOT_FOUND', { value: erpText });
     return { id: null, createKey: null };
   }
   const createKey = `${nameText.toLowerCase()}|${erpText.toLowerCase()}`;
@@ -714,7 +743,7 @@ function resolveSupplier(
     draft.newSupplier = created;
     return { id: null, createKey };
   }
-  fail('supplier_name', `Supplier '${nameText}' does not exist.`);
+  fail('supplier_name', `Supplier '${nameText}' does not exist.`, 'CSV_REFERENCE_NOT_FOUND', { value: nameText });
   bag.suppliers.set(createKey, { name: nameText, erpId: erpText || null });
   return { id: null, createKey: null };
 }
@@ -735,7 +764,7 @@ function resolveText(
   live: StoredLine | null,
   creating: boolean,
   blocked: (column: string) => boolean,
-  fail: (column: string | null, message: string) => void,
+  fail: Fail,
   changes: string[],
   draft: LineDraft,
 ): void {
@@ -749,7 +778,7 @@ function resolveText(
     if (blocked(field.id)) continue;
     const key = field.id === 'name' ? 'product_name' : field.id;
     if (cell.kind === 'clear') {
-      if (field.required || !CLEARABLE.has(field.id)) fail(field.id, `${field.id} is required.`);
+      if (field.required || !CLEARABLE.has(field.id)) fail(field.id, `${field.id} is required.`, 'CSV_VALUE_REQUIRED');
       else if (field.stored) {
         changes.push(field.id);
         draft.body[key] = null;
@@ -757,7 +786,7 @@ function resolveText(
       continue;
     }
     if (cell.kind === 'absent' || cell.kind === 'blank') {
-      if (creating && field.required) fail(field.id, `${field.id} is required.`);
+      if (creating && field.required) fail(field.id, `${field.id} is required.`, 'CSV_VALUE_REQUIRED');
       continue;
     }
     const changed = field.stored !== cell.text;
@@ -771,7 +800,7 @@ function resolveEnums(
   live: StoredLine | null,
   creating: boolean,
   blocked: (column: string) => boolean,
-  fail: (column: string | null, message: string) => void,
+  fail: Fail,
   changes: string[],
   draft: LineDraft,
 ): void {
@@ -785,7 +814,7 @@ function resolveEnums(
     if (blocked(field.id)) continue;
     const allowed = ENUMS[field.id];
     if (cell.kind === 'clear') {
-      if (field.required) fail(field.id, `${field.id} is required.`);
+      if (field.required) fail(field.id, `${field.id} is required.`, 'CSV_VALUE_REQUIRED');
       else if (field.stored) {
         changes.push(field.id);
         draft.body[field.id] = null;
@@ -793,13 +822,13 @@ function resolveEnums(
       continue;
     }
     if (cell.kind === 'absent' || cell.kind === 'blank') {
-      if (creating && field.required) fail(field.id, `${field.id} is required.`);
+      if (creating && field.required) fail(field.id, `${field.id} is required.`, 'CSV_VALUE_REQUIRED');
       continue;
     }
     const value = cell.text.toLowerCase();
     if (!allowed.includes(value)) {
       const list = allowed.length <= 2 ? allowed.join(' or ') : allowed.join(', ');
-      fail(field.id, `${field.id} '${cell.text}' is not a value. Use ${list}.`);
+      fail(field.id, `${field.id} '${cell.text}' is not a value. Use ${list}.`, 'CSV_ENUM_INVALID', { value: cell.text, allowed: allowed.join(', ') });
       continue;
     }
     const changed = (field.stored ?? '') !== value;
@@ -814,28 +843,28 @@ function resolveCurrency(
   live: StoredLine | null,
   creating: boolean,
   blocked: (column: string) => boolean,
-  fail: (column: string | null, message: string) => void,
+  fail: Fail,
   changes: string[],
   draft: LineDraft,
 ): void {
   const cell = row.fields.currency ?? { kind: 'absent' as const };
   if (blocked('currency')) return;
   if (cell.kind === 'clear') {
-    fail('currency', 'currency is required.');
+    fail('currency', 'currency is required.', 'CSV_VALUE_REQUIRED');
     return;
   }
   if (cell.kind === 'absent' || cell.kind === 'blank') {
-    if (creating) fail('currency', 'currency is required.');
+    if (creating) fail('currency', 'currency is required.', 'CSV_VALUE_REQUIRED');
     return;
   }
   if (!/^[A-Za-z]{3}$/.test(cell.text.trim())) {
-    fail('currency', 'currency must be 3 letters.');
+    fail('currency', 'currency must be 3 letters.', 'CSV_CURRENCY_INVALID', { value: cell.text });
     return;
   }
   const code = cell.text.trim().toUpperCase();
   const allowed = input.catalog.allowedCurrencies;
   if (allowed && allowed.length > 0 && !allowed.includes(code)) {
-    fail('currency', `currency '${code}' is not allowed.`);
+    fail('currency', `currency '${code}' is not allowed.`, 'BUDGET_FILE_CURRENCY_NOT_ALLOWED', { value: code });
     return;
   }
   const changed = (live?.currency ?? '').trim().toUpperCase() !== code;
@@ -849,7 +878,7 @@ function resolveOwners(
   live: StoredLine | null,
   creating: boolean,
   blocked: (column: string) => boolean,
-  fail: (column: string | null, message: string) => void,
+  fail: Fail,
   bag: Bag,
   changes: string[],
   draft: LineDraft,
@@ -870,18 +899,18 @@ function resolveOwners(
       continue;
     }
     if (!EMAIL.test(cell.text)) {
-      fail(owner.id, `${owner.id} is invalid.`);
+      fail(owner.id, `${owner.id} is invalid.`, 'CSV_EMAIL_INVALID', { value: cell.text });
       continue;
     }
     const user = findUser(input.catalog.users, cell.text);
     if (!user) {
-      fail(owner.id, `${owner.id} '${cell.text}' was not found.`);
+      fail(owner.id, `${owner.id} '${cell.text}' was not found.`, 'CSV_REFERENCE_NOT_FOUND', { value: cell.text });
       miss(bag, 'users', cell.text);
       continue;
     }
     const current = (owner.stored ?? '').toLowerCase() === user.email.toLowerCase();
     if (user.status !== 'enabled' && !current) {
-      fail(owner.id, `${owner.id} '${cell.text}' is not an active user.`);
+      fail(owner.id, `${owner.id} '${cell.text}' is not an active user.`, 'BUDGET_FILE_USER_NOT_ACTIVE', { value: cell.text });
       continue;
     }
     if (!current) changes.push(owner.id);
@@ -895,7 +924,7 @@ function resolveProject(
   live: StoredLine | null,
   creating: boolean,
   blocked: (column: string) => boolean,
-  fail: (column: string | null, message: string) => void,
+  fail: Fail,
   bag: Bag,
   changes: string[],
   draft: LineDraft,
@@ -912,12 +941,12 @@ function resolveProject(
   }
   const parsed = parseProject(cell.text);
   if (parsed == null) {
-    fail('project', `project '${cell.text}' is not a project number.`);
+    fail('project', `project '${cell.text}' is not a project number.`, 'BUDGET_FILE_NOT_PROJECT_NUMBER', { value: cell.text });
     return;
   }
   const project = input.catalog.projects.find((item) => item.itemNumber === parsed);
   if (!project) {
-    fail('project', `project '${cell.text}' was not found.`);
+    fail('project', `project '${cell.text}' was not found.`, 'CSV_REFERENCE_NOT_FOUND', { value: cell.text });
     miss(bag, 'projects', cell.text.trim());
     return;
   }
@@ -933,7 +962,7 @@ function resolveAnalytics(
   live: StoredLine | null,
   creating: boolean,
   blocked: (column: string) => boolean,
-  fail: (column: string | null, message: string) => void,
+  fail: Fail,
   bag: Bag,
   changes: string[],
   draft: LineDraft,
@@ -946,7 +975,8 @@ function resolveAnalytics(
     if (cell.kind === 'absent' || cell.kind === 'blank') continue;
     if (dimension?.appliesTo && dimension.appliesTo !== nature) {
       // A dimension of the other nature: its column stays empty on this row (`-` too).
-      fail(column, notApplicableDimensionMessage({ name: dimension.axisName, applies_to: dimension.appliesTo }));
+      fail(column, notApplicableDimensionMessage({ name: dimension.axisName, applies_to: dimension.appliesTo }),
+        'CSV_DIMENSION_APPLIES_TO', { name: dimension.axisName || code, nature: natureLabel(dimension.appliesTo) });
       continue;
     }
     if (cell.kind === 'clear') {
@@ -959,18 +989,19 @@ function resolveAnalytics(
     if (!dimension) continue;
     const matches = dimension.values.filter((value) => value.name.trim().toLowerCase() === cell.text.toLowerCase());
     if (matches.length > 1) {
-      fail(column, `Value '${cell.text}' matches more than one value of ${code}.`);
+      fail(column, `Value '${cell.text}' matches more than one value of ${code}.`, 'BUDGET_FILE_VALUE_AMBIGUOUS', { value: cell.text });
       continue;
     }
     if (matches.length === 1) {
       const value = matches[0];
       const same = (current ?? '').toLowerCase() === value.name.toLowerCase();
       if (!isActiveAt(value.disabledAt) && !same) {
-        fail(column, `${value.name} is disabled. Pick an enabled value.`);
+        fail(column, `${value.name} is disabled. Pick an enabled value.`, 'BUDGET_FILE_DISABLED', { value: value.name });
         continue;
       }
       if (value.appliesTo && value.appliesTo !== nature && !same) {
-        fail(column, `${value.name} is for ${value.appliesTo.toUpperCase()} lines only. Pick a value for ${natureLabel(nature)} lines.`);
+        fail(column, `${value.name} is for ${value.appliesTo.toUpperCase()} lines only. Pick a value for ${natureLabel(nature)} lines.`,
+          'BUDGET_FILE_FOR_NATURE_ONLY', { value: value.name, nature: value.appliesTo.toUpperCase() });
         continue;
       }
       if (!same) changes.push(column);
@@ -984,7 +1015,7 @@ function resolveAnalytics(
         const refused = bag.refusedDimensions.get(code) ?? new Map<string, string>();
         refused.set(name.toLowerCase(), name);
         bag.refusedDimensions.set(code, refused);
-        fail(column, closedDimensionValueMessage(name, code));
+        fail(column, closedDimensionValueMessage(name, code), 'BUDGET_FILE_DIMENSION_CLOSED', { value: name, name: dimension.axisName || code });
         continue;
       }
       const listed = bag.dimensions.get(code) ?? new Map<string, string>();
@@ -1005,7 +1036,9 @@ function resolveAnalytics(
     if (blocked(column)) continue;
     const cell = row.analytics[dimension.code] ?? { kind: 'absent' as const };
     const refused = creating ? cell.kind !== 'value' : cell.kind === 'clear' && !!live?.analytics[dimension.code];
-    if (refused) fail(column, requiredDimensionMessage({ name: dimension.axisName }));
+    if (refused) {
+      fail(column, requiredDimensionMessage({ name: dimension.axisName }), 'BUDGET_FILE_DIMENSION_REQUIRED', { name: dimension.axisName || dimension.code });
+    }
   }
 }
 
@@ -1015,13 +1048,13 @@ function resolveDates(
   live: StoredLine | null,
   creating: boolean,
   blocked: (column: string) => boolean,
-  fail: (column: string | null, message: string) => void,
+  fail: Fail,
   changes: string[],
   draft: LineDraft,
 ): void {
   const start = row.fields.effective_start ?? { kind: 'absent' as const };
   if (!blocked('effective_start')) {
-    if (start.kind === 'clear') fail('effective_start', 'effective_start cannot be cleared.');
+    if (start.kind === 'clear') fail('effective_start', 'effective_start cannot be cleared.', 'BUDGET_FILE_CANNOT_BE_CLEARED');
     else if ((start.kind === 'absent' || start.kind === 'blank') && creating) {
       draft.body.effective_start = `${firstAmountYear(row) ?? input.currentYear}-01-01`;
     } else if (start.kind === 'value') {
@@ -1061,7 +1094,7 @@ function resolveAmounts(
   row: InterpretedRow,
   live: StoredLine | null,
   blocked: (column: string) => boolean,
-  fail: (column: string | null, message: string) => void,
+  fail: Fail,
   changes: string[],
   draft: LineDraft,
 ): void {
@@ -1079,7 +1112,7 @@ function resolveAmounts(
     const frozenKey = `${nature}:${amount.year}:${MEASURE_FREEZE_COLUMN[amount.measure]}`;
     if (input.catalog.frozen.includes(frozenKey)) {
       const label = input.labels[amount.column] || amount.column;
-      fail(amount.id, `${label} for ${amount.year} is frozen.`);
+      fail(amount.id, `${label} for ${amount.year} is frozen.`, 'BUDGET_FILE_FROZEN', { label, year: amount.year });
       continue;
     }
     const when = amount.month == null ? String(amount.year) : `${amount.year}-${String(amount.month).padStart(2, '0')}`;
@@ -1156,7 +1189,7 @@ function duplicateHint(
   supplier: { id: string | null; createKey: string | null },
   names: LineHint[],
   newKeys: Map<string, number>,
-): string | null {
+): BudgetFileSentence | null {
   const name = textOf(row.fields.name);
   if (!name) return null;
   const key = duplicateKey(nature, name, supplier);
@@ -1165,9 +1198,14 @@ function duplicateHint(
   const found = nature === 'opex'
     ? same.find((hint) => (hint.supplierId ?? null) === (supplier.id ?? null) && supplier.createKey == null)
     : same[0];
-  if (found) return `row ${row.line} looks like ${lineRef(found.itemNumber)}`;
+  if (found) {
+    const ref = lineRef(found.itemNumber);
+    return { message: `row ${row.line} looks like ${ref}`, code: 'BUDGET_FILE_LOOKS_LIKE_LINE', params: { line: row.line, ref } };
+  }
   const earlier = newKeys.get(key);
-  if (earlier !== undefined) return `row ${row.line} looks like row ${earlier}`;
+  if (earlier !== undefined) {
+    return { message: `row ${row.line} looks like row ${earlier}`, code: 'BUDGET_FILE_LOOKS_LIKE_ROW', params: { line: row.line, row: earlier } };
+  }
   return null;
 }
 

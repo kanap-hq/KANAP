@@ -226,6 +226,75 @@ describe('ChatMessageList', () => {
     expect(onSend).toHaveBeenCalledWith(`[APPROVE_SELECTED:${previews.map((preview) => preview.preview_id).join(',')}]`);
   });
 
+  it('leaves out of Approve all an import whose check refuses the file', () => {
+    const previews = Array.from({ length: 3 }, (_, index) => ({
+      preview_id: `${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}-${index + 1}${index + 1}${index + 1}${index + 1}-4${index + 1}${index + 1}${index + 1}-8${index + 1}${index + 1}${index + 1}-${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}`,
+      tool_name: 'update_task_assignee' as const,
+      status: 'pending' as const,
+      target: {
+        entity_type: 'tasks',
+        entity_id: `task-${index + 1}`,
+        ref: `T-${index + 1}`,
+        title: `Task ${index + 1}`,
+      },
+      changes: {
+        assignee: {
+          label: 'Assignee',
+          from: 'Paul',
+          to: 'Marie',
+          format: 'text' as const,
+        },
+      },
+      requires_confirmation: true,
+      actions: ['approve', 'reject'] as Array<'approve' | 'reject'>,
+      summary: `Reassign T-${index + 1}.`,
+      error_message: null,
+      conversation_id: 'conversation-1',
+      created_at: '2026-03-28T17:00:00.000Z',
+      expires_at: '2026-03-28T17:10:00.000Z',
+      approved_at: null,
+      rejected_at: null,
+      executed_at: null,
+    }));
+    // The third card imports a file its check refuses: it cannot be approved, alone or with the others.
+    Object.assign(previews[2], { import_mapping: { validation: { ok: false } } });
+    const onSend = vi.fn();
+
+    renderWithTheme(
+      <ChatMessageList
+        messages={[
+          {
+            id: 'assistant-1',
+            role: 'assistant',
+            content: 'I prepared the reassignment previews.',
+            toolResults: [{
+              id: 'tool-1',
+              name: 'update_task_assignees',
+              result: {
+                previews,
+                errors: [],
+                total: previews.length,
+                created: previews.length,
+                failed: 0,
+                complete: true,
+              },
+            }],
+          },
+        ]}
+        previews={previews}
+        onSend={onSend}
+      />,
+    );
+
+    expect(screen.getByText('previewBatch.title')).toBeInTheDocument();
+    expect(screen.getByText('previewBatch.approveAll')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('previewBatch.approveAll'));
+    fireEvent.click(screen.getAllByText('previewBatch.approveAll')[1]);
+
+    expect(onSend).toHaveBeenCalledWith(`[APPROVE_SELECTED:${previews.slice(0, 2).map((preview) => preview.preview_id).join(',')}]`);
+  });
+
   it('groups previews referenced by assistant previewIds without requiring inline tool results', () => {
     const previews = Array.from({ length: 2 }, (_, index) => ({
       preview_id: `${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}-${index + 1}${index + 1}${index + 1}${index + 1}-4${index + 1}${index + 1}${index + 1}-8${index + 1}${index + 1}${index + 1}-${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}`,

@@ -363,6 +363,30 @@ async function testCreateRules() {
   });
   const missing = await preflight('opex', 'item_number,name,company_name,account_number,currency\n,Widget,Other,1200,EUR\n', [], { cat });
   assert.ok(missing.missing.some((item) => item.message.startsWith('Missing: 1 company (Other): Master data > Companies')));
+  // Each error carries the code and values the interface translates.
+  assert.deepEqual(
+    missing.errors.map((error) => [error.column, error.code, error.params]),
+    [['company_name', 'CSV_REFERENCE_NOT_FOUND', { value: 'Other' }]],
+  );
+
+  // A new line without a company is paid by the workspace's only enabled company, whose chart reads the account.
+  const noCompany = 'item_number,name,account_number,currency\n,Widget,1200,EUR\n';
+  const only = await planOf('opex', noCompany, [], { cat });
+  assert.equal(only.report.ok, true, JSON.stringify(only.report.errors));
+  assert.equal(only.plans[0].body.paying_company_id, 'c1');
+  assert.equal(only.plans[0].body.account_id, 'a1');
+  const withDisabled = await planOf('opex', noCompany, [], {
+    cat: catalog({ ...cat, companies: [...cat.companies, { id: 'c2', name: 'Old', coaId: 'chart', disabledAt: '2020-01-01T00:00:00.000Z' }] }),
+  });
+  assert.equal(withDisabled.plans[0]?.body.paying_company_id, 'c1', 'a disabled company does not count');
+  const two = await preflight('opex', noCompany, [], {
+    cat: catalog({ ...cat, companies: [...cat.companies, { id: 'c2', name: 'Beta', coaId: 'chart', disabledAt: null }] }),
+  });
+  assert.deepEqual(
+    two.errors.map((error) => [error.column, error.message, error.code]),
+    [['company_name', 'company_name is required.', 'CSV_VALUE_REQUIRED']],
+    'two companies: the file names one',
+  );
   // A new CAPEX line needs the values of the CAPEX dimensions (lot C1): the dimension is named, on its column.
   const capexCat = catalog({
     ...cat,
@@ -827,8 +851,8 @@ async function testDuplicatesByNature() {
   ].join('\n'), stored, { cat });
   assert.equal(report.ok, true, JSON.stringify(report.errors));
   assert.deepEqual(report.warnings.duplicates, [
-    { line: 4, message: 'row 4 looks like BL-120' },
-    { line: 7, message: 'row 7 looks like row 6' },
+    { line: 4, message: 'row 4 looks like BL-120', code: 'BUDGET_FILE_LOOKS_LIKE_LINE', params: { line: 4, ref: 'BL-120' } },
+    { line: 7, message: 'row 7 looks like row 6', code: 'BUDGET_FILE_LOOKS_LIKE_ROW', params: { line: 7, row: 6 } },
   ]);
 }
 

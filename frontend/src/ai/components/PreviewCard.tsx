@@ -8,6 +8,7 @@ import {
 import { useTheme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 import { AiMutationPreview } from '../aiTypes';
+import { isApprovable } from '../previewApproval';
 import { MarkdownContent } from '../../components/MarkdownContent';
 import { getDotColor } from '../../utils/statusColors';
 import { getPreviewStatusColorKey, getPreviewStatusDisplay } from '../utils/previewStatus';
@@ -348,7 +349,7 @@ function PreviewCard({
                   size="small"
                   variant="contained"
                   // An import whose check refuses the file cannot run: the card says why.
-                  disabled={disabled || preview.import_mapping?.validation?.ok === false}
+                  disabled={disabled || !isApprovable(preview)}
                   onClick={() => onApprove(preview.preview_id)}
                 >
                   {t('ai:previewCard.approve')}
