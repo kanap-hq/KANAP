@@ -30,7 +30,7 @@ import { DemoDataService, readDemoState } from '../../demo-data/demo-data.servic
 import { OnboardingController } from '../onboarding.controller';
 import { ONBOARDING_PATHS } from '../onboarding-paths';
 import { OnboardingService } from '../onboarding.service';
-import { buildDemoData, DemoDataDouble, FakeChild } from './onboarding-test-helpers';
+import { buildDemoData, DemoDataDouble, FakeChild, permissionGuardProviders } from './onboarding-test-helpers';
 
 // The effect of the onboarding mode on the sample data (`PUT /onboarding/choice`), over HTTP: the
 // real controller, tenancy middleware and request pipeline, the real OnboardingService,
@@ -68,6 +68,7 @@ async function serve(svc: Services): Promise<Served> {
       OnboardingService,
       { provide: DataSource, useValue: dataSource },
       { provide: DemoDataService, useValue: demo.service },
+      ...permissionGuardProviders(),
     ],
   })
   class OnboardingOwnDataProbeModule {}

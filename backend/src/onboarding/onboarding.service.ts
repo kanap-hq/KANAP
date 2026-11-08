@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, ForbiddenException, Injectable,
 import { EntityManager } from 'typeorm';
 import { tenantSeedLanguage } from '../analytics/recommended-dimensions.seed';
 import { writeAuditLog } from '../audit/audit.service';
+import { applicationParticipantCondition, resolveBusinessContributorScopeForUser } from '../auth/business-contributor-scope';
 import { Features } from '../config/features';
 import {
   countCreatedSinceLoad,
@@ -18,6 +19,7 @@ import {
   OnboardingMode,
   onboardingPath,
 } from './onboarding-paths';
+import { classificationSqlExpressions } from '../it-ops-settings/classification-sql';
 import { isTenantAdministrator } from './tenant-administrator';
 
 /**
@@ -417,6 +419,38 @@ export class OnboardingService {
       await manager.query(`DELETE FROM onboarding_dismissals WHERE tenant_id = $1 AND user_id = $2`, [tenantId, userId]);
     }
     return this.getState(manager, tenantId, userId);
+  }
+
+  /**
+   * The application the cartography step "an application record" opens: among the applications
+   * the application list shows by default (not disabled, not retired), and that `userId` may read
+   * (a Business Contributor's own), the most critical (the list's criticality rank), then the one
+   * with the most deployments, interfaces and technologies, then by name and id. Null when there
+   * is none.
+   */
+  async showcaseApplication(
+    manager: EntityManager,
+    tenantId: string,
+    userId: string,
+  ): Promise<{ item: { id: string; name: string } | null }> {
+    const scope = await resolveBusinessContributorScopeForUser({ manager, userId, tenantId }, 'applications', 'reader');
+    const [row]: Array<{ id: string; name: string }> = await manager.query(
+      `SELECT a.id, a.name
+         FROM applications a
+        WHERE a.tenant_id = $1
+          AND (a.disabled_at IS NULL OR a.disabled_at > now())
+          AND a.lifecycle <> 'retired'
+          ${scope ? `AND ${applicationParticipantCondition('a', '$2')}` : ''}
+        ORDER BY ${classificationSqlExpressions('a').criticality_rank} DESC NULLS LAST,
+          (SELECT count(*) FROM app_instances i WHERE i.tenant_id = $1 AND i.application_id = a.id)
+          + (SELECT count(*) FROM interfaces f
+              WHERE f.tenant_id = $1 AND (f.source_application_id = a.id OR f.target_application_id = a.id))
+          + (SELECT count(*) FROM application_technologies t WHERE t.tenant_id = $1 AND t.application_id = a.id) DESC,
+          a.name, a.id
+        LIMIT 1`,
+      scope ? [tenantId, scope.userId] : [tenantId],
+    );
+    return { item: row ? { id: row.id, name: row.name } : null };
   }
 
   private async readChoice(manager: EntityManager, tenantId: string): Promise<ChoiceRow | null> {

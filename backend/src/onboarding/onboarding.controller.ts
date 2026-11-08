@@ -1,12 +1,15 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { PermissionGuard } from '../auth/permission.guard';
+import { RequireLevel } from '../auth/require-level.decorator';
 import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
 import { OnboardingService, OnboardingState } from './onboarding.service';
 
 /**
  * The onboarding of a workspace (`doc/onboarding.md`): every signed-in user of the tenant, no
  * module level (like the personal dashboard settings). The request transaction carries the
- * tenant; every route answers 200 with the state after the operation, for the calling user.
+ * tenant; every route answers 200 with the state after the operation, for the calling user,
+ * except the showcase application (applications at reader level, answers the application).
  */
 @UseGuards(JwtAuthGuard)
 @Controller('onboarding')
@@ -16,6 +19,14 @@ export class OnboardingController {
   @Get()
   get(@Tenant() ctx: TenantRequest): Promise<OnboardingState> {
     return this.onboarding.getState(ctx.manager!, ctx.tenantId, ctx.userId);
+  }
+
+  /** The application the step "an application record" opens (`OnboardingService.showcaseApplication`). */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('applications', 'reader')
+  @Get('showcase-application')
+  showcaseApplication(@Tenant() ctx: TenantRequest): Promise<{ item: { id: string; name: string } | null }> {
+    return this.onboarding.showcaseApplication(ctx.manager!, ctx.tenantId, ctx.userId);
   }
 
   /**

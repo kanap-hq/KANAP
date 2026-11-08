@@ -24,7 +24,7 @@ import { ListContextsService } from '../../common/list-context/list-contexts.ser
 import { useRequestPipeline } from '../../common/request-pipeline';
 import { createRequestTenancyMiddleware } from '../../common/tenancy/request-tenancy.middleware';
 import { DemoDataService } from '../../demo-data/demo-data.service';
-import { buildDemoData } from './onboarding-test-helpers';
+import { buildDemoData, permissionGuardProviders } from './onboarding-test-helpers';
 import { OnboardingController } from '../onboarding.controller';
 import { ONBOARDING_PATHS } from '../onboarding-paths';
 import { OnboardingService } from '../onboarding.service';
@@ -56,6 +56,7 @@ async function serve(): Promise<Served> {
       OnboardingService,
       { provide: DataSource, useValue: dataSource },
       { provide: DemoDataService, useValue: demo.service },
+      ...permissionGuardProviders(),
     ],
   })
   class OnboardingProbeModule {}
