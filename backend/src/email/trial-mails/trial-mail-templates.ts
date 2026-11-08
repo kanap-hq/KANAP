@@ -17,8 +17,11 @@ export type TrialMode = 'example' | 'own_data';
 
 const DOC_BASE_URL = 'https://doc.kanap.net';
 const SUPPORT_EMAIL = 'support@kanap.net';
-/** Dates are written as a day of the calendar of KANAP's customers. */
-const DATE_TIME_ZONE = 'Europe/Paris';
+/**
+ * A sign-up trial ends at the last instant of a UTC day (`trialEndFromSignup`), and its deletion
+ * date follows it: dates are written as that UTC day, the day the app shows.
+ */
+const DATE_TIME_ZONE = 'UTC';
 
 /** The guides of the first steps, by angle and mode (`doc/help/docs/<lang>/first-steps/`). */
 const GUIDE_ANGLE: Record<TrialAngle, string> = { budget: 'budget', cartography: 'landscape', portfolio: 'portfolio' };
@@ -65,7 +68,7 @@ export function offerUrl(locale: string, marketingUrl: string): string {
 }
 
 export function formatTrialDate(locale: string, date: Date): string {
-  // The same dates as the notifications: "23 November 2026" in English.
+  // Written like the dates of the notifications: "23 November 2026" in English.
   return new Intl.DateTimeFormat(dateLanguage(locale), {
     day: 'numeric', month: 'long', year: 'numeric', timeZone: DATE_TIME_ZONE,
   }).format(date);

@@ -197,7 +197,7 @@ async function testFollowUpEndingAndNotice() {
       await trialMails.onSubscriptionChanged(t!.tenantId, new Date(end.getTime() + 60_000));
       const notice = email.to(t!.ownerEmail)[2];
       assert.equal(notice?.subject, 'Votre essai KANAP est arrivé à son terme');
-      const deletion = new Intl.DateTimeFormat('fr', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Paris' })
+      const deletion = new Intl.DateTimeFormat('fr', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
         .format(new Date(end.getTime() + 30 * DAY));
       assert.ok(notice.text!.includes(`supprimé définitivement le ${deletion}`), 'the deletion date');
 

@@ -142,7 +142,7 @@ Rate limiting (default enabled):
   - Body: `{ token: string }`
   - Behavior (transactional):
     - Creates the tenant and an Administrator user for the submitted email.
-    - Creates a local trial subscription. It ends at 23:59:59.999 UTC on the day 14 days after the sign-up day. An extension set by a platform administrator, and a Stripe subscription, keep the instant they write.
+    - Creates a local trial subscription. It ends at 23:59:59.999 UTC on its fourteenth day, the sign-up day being the first. An extension set by a platform administrator, and a Stripe subscription, keep the instant they write.
     - Creates an initial company named from the org/slug with `country_iso` from the signup.
     - Provisions the default global CoA into the tenant if a platform template is marked `loaded_by_default`.
     - Gives the Administrator the signup's `first_name` and `last_name`.
