@@ -227,6 +227,16 @@ export interface BudgetFileSnapshotLine {
   editable?: boolean;
 }
 
+/**
+ * A sentence of the check the interface translates: `code` is its key (frontend `errors`
+ * namespace) and `params` the values it names; `message` is its English text, shown without a code.
+ */
+export interface BudgetFileSentence {
+  message: string;
+  code?: string;
+  params?: Record<string, string | number>;
+}
+
 export interface CostCenterCompanyWarning {
   line: number;
   /** Translation code of the sentence (frontend `errors` namespace); `message` is its English text. */
@@ -265,7 +275,7 @@ export interface BudgetFileReport {
   notices: { dates: string | null; amounts: string | null };
   fileErrors: string[];
   headerErrors: string[];
-  errors: Array<{ line: number; column: string | null; message: string }>;
+  errors: Array<{ line: number; column: string | null } & BudgetFileSentence>;
   errorCount: number;
   missing: Array<{ type: string; count: number; examples: string[]; where: string; message: string }>;
   deleted: Array<{ line: number; itemNumber: string }>;
@@ -291,9 +301,9 @@ export interface BudgetFileReport {
   }>;
   changedSinceExportCount: number;
   warnings: {
-    duplicates: Array<{ line: number; message: string }>;
+    duplicates: Array<{ line: number } & BudgetFileSentence>;
     ignoredColumns: string[];
-    supplierNames: Array<{ line: number; message: string }>;
+    supplierNames: Array<{ line: number } & BudgetFileSentence>;
     /** company_name names another company than the cost center's: accepted, said once per line. */
     costCenterCompanies: CostCenterCompanyWarning[];
     /** Changed amounts on columns that follow their calculation lines, the first 20. */

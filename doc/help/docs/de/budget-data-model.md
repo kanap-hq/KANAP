@@ -64,7 +64,7 @@ Eine Budgetzeile lebt über mehrere Jahre: Eine Lizenz über drei Jahre ist eine
 | Nummer | `item_number` | Von KANAP vergeben | `BL-12`. Leer in der Datei: legt eine Budgetzeile an |
 | Titel | `name` | Ja | Die Spalte **Produktname** der Liste |
 | Beschreibung | `description` | Nein | |
-| Zahlendes Unternehmen | `company_name` | Ja | Wird von der Kostenstelle übernommen, wenn nur die Kostenstelle angegeben ist |
+| Zahlendes Unternehmen | `company_name` | Ja | Wird von der Kostenstelle übernommen, wenn nur die Kostenstelle angegeben ist, oder ist das einzige Unternehmen des Arbeitsbereichs, wenn es nur eines gibt |
 | Lieferant | `supplier_name`, `supplier_erp_id` | Nein | |
 | Konto | `account_number` | Ja | Im Kontenplan des zahlenden Unternehmens |
 | Kostenstelle | `cost_center_code` | Nein | Eine Gruppe wird abgelehnt |

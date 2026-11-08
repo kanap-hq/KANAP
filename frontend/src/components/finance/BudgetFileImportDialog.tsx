@@ -23,7 +23,7 @@ import {
   preflightBudgetFile,
   screenLanguage,
 } from './budgetFile';
-import { failureText, serverSentence } from './budgetFileText';
+import { checkSentence, failureText, serverSentence } from './budgetFileText';
 import { useImportFiles } from '../csv/importFiles';
 import ImportExampleButton from '../csv/ImportExampleButton';
 
@@ -425,8 +425,8 @@ export function ReportView({
               key={`e-${error.line}-${error.column ?? ''}-${error.message}`}
               danger
               text={error.column
-                ? t(`${K}rowColumn`, { line: error.line, column: error.column, message: serverSentence(error.message, t) })
-                : t(`${K}row`, { line: error.line, message: serverSentence(error.message, t) })}
+                ? t(`${K}rowColumn`, { line: error.line, column: error.column, message: checkSentence(error, t) })
+                : t(`${K}row`, { line: error.line, message: checkSentence(error, t) })}
             />
           ))}
           {more(report.errorCount, report.errors.length) && <Line text={more(report.errorCount, report.errors.length)!} />}
@@ -467,8 +467,8 @@ export function ReportView({
 
       {hasWarnings && (
         <Section title={t(`${K}warningsTitle`)}>
-          {report.warnings.duplicates.map((warning) => <Line key={`w-${warning.line}`} text={warning.message} />)}
-          {report.warnings.supplierNames.map((warning) => <Line key={`s-${warning.line}`} text={warning.message} />)}
+          {report.warnings.duplicates.map((warning) => <Line key={`w-${warning.line}`} text={checkSentence(warning, t)} />)}
+          {report.warnings.supplierNames.map((warning) => <Line key={`s-${warning.line}`} text={checkSentence(warning, t)} />)}
           {costCenterCompanies.map((warning) => (
             <Line
               key={`cc-${warning.line}`}

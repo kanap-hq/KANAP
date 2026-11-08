@@ -64,7 +64,7 @@ Une ligne vit sur plusieurs années : une licence sur trois ans est une ligne av
 | Numéro | `item_number` | Attribué par KANAP | `BL-12`. Vide dans le fichier : crée une ligne |
 | Titre | `name` | Oui | La colonne **Nom du produit** de la liste |
 | Description | `description` | Non | |
-| Société payeuse | `company_name` | Oui | Reprise du centre de coûts quand seul le centre de coûts est donné |
+| Société payeuse | `company_name` | Oui | Reprise du centre de coûts quand seul le centre de coûts est donné, ou la seule société de l'espace de travail quand il n'en a qu'une |
 | Fournisseur | `supplier_name`, `supplier_erp_id` | Non | |
 | Compte | `account_number` | Oui | Dans le plan comptable de la société payeuse |
 | Centre de coûts | `cost_center_code` | Non | Un groupe est refusé |

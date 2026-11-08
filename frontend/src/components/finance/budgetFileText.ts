@@ -1,5 +1,5 @@
 import { dataAccessSentence } from '../../utils/apiErrorMessage';
-import { BudgetFileFailure, DECODE_SENTENCE_CODES, OLD_LAYOUT_SENTENCE, XLSX_TOO_LARGE_START } from './budgetFile';
+import { BudgetFileFailure, BudgetFileSentence, DECODE_SENTENCE_CODES, OLD_LAYOUT_SENTENCE, XLSX_TOO_LARGE_START } from './budgetFile';
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
@@ -12,6 +12,12 @@ export function serverSentence(text: string, t: Translate): string {
   if (code) return t(`errors:${code}`, { defaultValue: text });
   // A line refused for the person's data access: its sentence in the screen language.
   return dataAccessSentence(text, t) ?? text;
+}
+
+/** A sentence of the check in the screen language: by its code, else as `serverSentence` reads it. */
+export function checkSentence(sentence: BudgetFileSentence, t: Translate): string {
+  if (sentence.code) return t(`errors:${sentence.code}`, { ...sentence.params, defaultValue: sentence.message });
+  return serverSentence(sentence.message, t);
 }
 
 /** The sentence a dialog shows for a failed export, check or load. Never raw error text. */
