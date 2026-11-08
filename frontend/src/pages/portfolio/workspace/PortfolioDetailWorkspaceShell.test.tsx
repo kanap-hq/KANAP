@@ -480,6 +480,7 @@ describe('PortfolioDetailWorkspaceShell creation Tab', () => {
           <PropertyRow label="Company" required><input aria-label="company" /></PropertyRow>
           <PropertyRow label="Currency" required><input aria-label="currency" defaultValue="EUR" /></PropertyRow>
           <PropertyRow label="Locked" required><input aria-label="locked" disabled /></PropertyRow>
+          <PropertyRow label="Account" required><input role="combobox" aria-label="account" disabled /></PropertyRow>
           <PropertyRow label="Start" required><input aria-label="start" /><input aria-label="time" /><button type="button">pick</button></PropertyRow>
         </div>
       ),

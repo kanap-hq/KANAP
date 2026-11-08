@@ -72,6 +72,18 @@ describe('useCreationFieldFocus', () => {
     await waitFor(() => expect(screen.getByLabelText('description')).toHaveFocus());
   });
 
+  it('focuses a description shown read-only, which opens its editor', async () => {
+    tabFromTitle();
+    render(
+      <Record>
+        <div data-creation-panel="main">
+          <div data-creation-description=""><div role="textbox" tabIndex={0} aria-label="description">Add a description</div></div>
+        </div>
+      </Record>,
+    );
+    await waitFor(() => expect(screen.getByLabelText('description')).toHaveFocus());
+  });
+
   it('leaves the focus alone on the page the Tab was pressed on', async () => {
     const view = render(<Record page="new:overview"><div data-creation-panel="main"><textarea aria-label="description" /></div></Record>);
     tabFromTitle();

@@ -8,15 +8,17 @@ const ENTRY_FIELDS = [
   'input:not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="file"]):not([type="image"]):not([disabled]):not([tabindex="-1"]):not([aria-hidden="true"])',
   'textarea:not([disabled]):not([aria-hidden="true"])',
   'select:not([disabled])',
-  '[role="combobox"]:not([aria-disabled="true"]):not([tabindex="-1"])',
+  '[role="combobox"]:not([aria-disabled="true"]):not([tabindex="-1"]):not([disabled])',
   '[contenteditable="true"]',
+  // A document shown read-only opens its editor when it takes the focus.
+  '[role="textbox"][tabindex]:not([tabindex="-1"]):not([aria-disabled="true"])',
 ].join(', ');
 
 /** A field the creation needs: a required `PropertyRow`, or a page's own `[data-creation-field]`. */
 const REQUIRED_STOPS = '[data-required-field], [data-creation-field]';
 
 /** Free text: a text area or an editor. */
-const FREE_TEXT = 'textarea:not([disabled]):not([aria-hidden="true"]), [contenteditable="true"]';
+const FREE_TEXT = 'textarea:not([disabled]):not([aria-hidden="true"]), [contenteditable="true"], [role="textbox"][tabindex]:not([tabindex="-1"]):not([aria-disabled="true"])';
 
 /** A preview of a record created at its title is on screen but out of reach until the record exists. */
 function reachable(el: Element): boolean {
