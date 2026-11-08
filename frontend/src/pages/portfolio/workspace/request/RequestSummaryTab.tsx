@@ -31,7 +31,7 @@ export default function RequestSummaryTab({
 
   return (
     <Stack spacing={3}>
-      <Box>
+      <Box data-creation-description="">
         <IntegratedDocumentEditor
           ref={purposeEditorRef}
           collapsed={!purposeExpanded}

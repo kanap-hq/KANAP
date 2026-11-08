@@ -1,4 +1,4 @@
-import { Button } from '@mui/material';
+import { Box, Button } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 
 type Props = {
@@ -19,14 +19,15 @@ type Props = {
  */
 export default function CreationActions({ onCreate, onCancel, busy = false, writing = false }: Props) {
   const { t } = useTranslation('common');
+  // The marker tells the page's Tab it is a record being created (`followCreationFields`).
   return (
-    <>
+    <Box component="span" data-creation-actions="" sx={{ display: 'contents' }}>
       <Button variant="action" size="small" onClick={onCancel} disabled={busy || writing}>
         {t('common:buttons.cancel')}
       </Button>
       <Button variant="action-primary" size="small" onClick={onCreate} disabled={busy}>
         {t('common:buttons.create')}
       </Button>
-    </>
+    </Box>
   );
 }

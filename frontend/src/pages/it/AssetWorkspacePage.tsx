@@ -1608,8 +1608,6 @@ function AssetWorkspaceRoute() {
   // The name committed in the header creates the asset at once (its type, environment, provider and
   // lifecycle as shown, no site yet), and the page moves to it with Create and Cancel. Create clicked
   // meanwhile checks it there.
-  // Tab out of the title: the site, the field the asset still needs, gets the focus once it is created.
-  const siteAfterCreateRef = React.useRef(false);
   const titleCreation = useTitleCreation<AssetRecord>({
     isCreate,
     requiredMessage: t('messages.nameRequired'),
@@ -1623,20 +1621,13 @@ function AssetWorkspaceRoute() {
       hostname: sanitizeHostname(assetName) || null,
     })).data,
     onCreated: (created, token, check) => {
-      const focusSite = siteAfterCreateRef.current;
-      siteAfterCreateRef.current = false;
       creation.startCreation({ recordId: created.id, token, returnTo: creationReturn });
       navigate(`/it/assets/${created.asset_reference || created.id}/overview`, {
         replace: true,
-        state: check || focusSite
-          ? { ...(routerLocation.state as object | null), ...(check ? { creationCheck: true } : {}), ...(focusSite ? { focusSite: true } : {}) }
-          : routerLocation.state,
+        state: check ? { ...(routerLocation.state as object | null), creationCheck: true } : routerLocation.state,
       });
     },
-    errorMessage: (e) => {
-      siteAfterCreateRef.current = false;
-      return getApiErrorMessage(e, t, t('messages.saveAssetFailed'));
-    },
+    errorMessage: (e) => getApiErrorMessage(e, t, t('messages.saveAssetFailed')),
     onStart: () => setError(null),
   });
 
@@ -1667,13 +1658,6 @@ function AssetWorkspaceRoute() {
     if (!creationCheckRef.current || !data || !creation.beingCreated) return;
     creationCheckRef.current = false;
     void createAction();
-  });
-  // Tab out of the title: the site gets the focus once the asset is on screen.
-  const focusSiteRef = React.useRef((routerLocation.state as { focusSite?: boolean } | null)?.focusSite === true);
-  React.useEffect(() => {
-    if (!focusSiteRef.current || !data || !creation.beingCreated || creationCheckRef.current) return;
-    focusSiteRef.current = false;
-    focusField('location');
   });
 
   // Cancel on an asset being created deletes it (`useRecordCreation`), once its description is saved.
@@ -2192,9 +2176,9 @@ function AssetWorkspaceRoute() {
         titleAutoEdit={isCreate}
         titleOnCancel={isCreate ? () => { void handleClose(); } : undefined}
         titleFocusRequest={titleCreation.focusRequest}
-        titleOnTab={isCreate ? () => { siteAfterCreateRef.current = true; } : undefined}
         isCreate={isCreate}
-        forceDrawerOpen={isCreate}
+        // The site, the field an asset being created still needs, sits in the drawer: it stays open.
+        forceDrawerOpen={isCreate || creation.beingCreated}
         drawerOpenRequest={fieldDrawerRequest}
         nav={!isCreate && total > 0 ? {
           currentIndex: index + 1,
@@ -2377,7 +2361,7 @@ function AssetWorkspaceRoute() {
                   ) : null}
                 </Stack>
               ) : null}
-              <Box>
+              <Box data-creation-description="">
                 <Box sx={{ mb: 1 }}>
                   <SectionLabel>{t('workspace.asset.overview.description')}</SectionLabel>
                 </Box>

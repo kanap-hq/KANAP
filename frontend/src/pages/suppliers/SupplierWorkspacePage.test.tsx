@@ -534,8 +534,9 @@ describe('SupplierWorkspacePage', () => {
     expect(mocked.post).not.toHaveBeenCalled();
     await user.tab();
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/suppliers', expect.objectContaining({ name: 'Initech' })));
-    const erp = screen.getByLabelText('suppliers.fields.erpSupplierId');
-    await waitFor(() => expect(erp).toHaveFocus());
+    // Nothing is required: Tab goes on to the notes, the supplier's free text.
+    const notes = screen.getByLabelText('suppliers.fields.notes');
+    await waitFor(() => expect(notes).toHaveFocus());
     const create = screen.getByRole('button', { name: 'common:buttons.create' });
     for (let i = 0; i < 20 && document.activeElement !== create; i += 1) {
       await user.tab({ shift: true });
