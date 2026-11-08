@@ -198,12 +198,13 @@ export function buildTrialWelcomeEmail(params: TrialMailCommon & {
   const letter = new Letter(params.locale);
   const t = letter.strings.trialMails.j0;
   letter.paragraph(t.ready, { workspace: params.workspace });
+  letter.paragraph(t.founder);
   if (params.angle) {
     const others = TRIAL_ANGLES.filter((angle) => angle !== params.angle);
     const links = pathLinks(letter, params.mode, others);
     letter.paragraph(t.angle, {
       angle: letter.strings.trialMails.angleChosen[params.angle],
-      guide: { link: { label: t.guide, url: trialGuideUrl(letter.locale, params.angle, params.mode) } },
+      guide: { link: { label: t.guideTitles[params.angle], url: trialGuideUrl(letter.locale, params.angle, params.mode) } },
       other1: links[others[0]],
       other2: links[others[1]],
     });

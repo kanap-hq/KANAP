@@ -139,8 +139,8 @@ function testVariants() {
     assert.ok(!mails.j0NoCall.text.includes(CALL.url));
     // The chosen path's guide in its mode, then the two others.
     assert.ok(mails.j0Angle.text.includes('/first-steps/landscape-own-data/'), `${locale}: guide of the path`);
-    // Every path link reads as words: the chosen guide is "its detailed guide".
-    const guide = getEmailStrings(locale).trialMails.j0.guide;
+    // Every path link reads as words: the chosen guide by the title of its page.
+    const guide = getEmailStrings(locale).trialMails.j0.guideTitles.cartography;
     assert.ok(mails.j0Angle.html.includes(`>${escapeForHtml(guide)}</a>`), `${locale}: guide link by its words`);
     assert.ok(!/>https?:\/\/doc\.kanap\.net/.test(mails.j0Angle.html) && !/>doc\.kanap\.net/.test(mails.j0Angle.html), `${locale}: no address as link text`);
     assert.ok(mails.j0Angle.text.includes('/first-steps/budget-own-data/') && mails.j0Angle.text.includes('/first-steps/portfolio-own-data/'));

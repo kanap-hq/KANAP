@@ -283,9 +283,9 @@ export const fr: EmailStrings = {
     signOff: 'Cordialement,',
     signature: 'Friedrich',
     angleChosen: {
-      budget: 'le budget IT',
+      budget: 'la gestion du budget IT',
       cartography: 'la cartographie du SI',
-      portfolio: 'les projets et les demandes',
+      portfolio: 'le suivi des projets et des demandes',
     },
     pathNames: {
       budget: 'le budget IT',
@@ -301,14 +301,19 @@ export const fr: EmailStrings = {
     },
     j0: {
       subject: `Bienvenue dans votre espace ${PRODUCT_NAME}`,
-      ready: `Votre espace {{workspace}} est prêt. Je suis Friedrich, le fondateur de ${COMPANY_NAME}. DSI de métier, j'ai construit cet outil à partir de mes propres difficultés : des fichiers Excel éparpillés et un outil différent pour chaque facette du système d'information.`,
-      angle: 'Vous avez choisi de commencer par {{angle}}. Pour tester en autonomie, suivez la liste « Vos cinq premiers pas » de votre accueil : dix minutes, avec {{guide}}. Vous pouvez également tester les deux autres parcours : {{other1}}, {{other2}}.',
-      guide: 'son guide détaillé',
-      noAngle: `Je vous propose trois parcours de dix minutes, à suivre en autonomie selon ce qui vous amène : {{budget}}, {{cartography}}, {{portfolio}}. Pour en suivre un, choisissez-le dans « À propos de ${PRODUCT_NAME} » : ses cinq pas s'affichent alors sur votre accueil, dans « Vos cinq premiers pas ».`,
-      call: "Pour en parler de vive voix, planifiez un appel découverte de trente minutes en visioconférence avec moi, à l'heure qui vous convient. Nous regarderons votre situation et vos objectifs, et je répondrai à vos questions. C'est gratuit et sans engagement.",
+      ready: 'Votre espace {{workspace}} est prêt.',
+      founder: `Je suis Friedrich, le fondateur de ${COMPANY_NAME}. DSI de métier, j'ai construit cet outil à partir de mes propres difficultés : des fichiers Excel éparpillés un peu partout et un outil différent pour chaque facette du système d'information. ${PRODUCT_NAME} réunit tout cela dans un seul espace de travail.`,
+      angle: "C'est {{angle}} qui vous amène en premier lieu. Pour tester en autonomie, suivez le guide « Vos cinq premiers pas » de votre page d'accueil. Chaque pas est détaillé dans {{guide}}. Je vous invite également à essayer les deux autres parcours : {{other1}}, {{other2}}.",
+      guideTitles: {
+        budget: `« Votre budget IT dans ${PRODUCT_NAME} en dix minutes »`,
+        cartography: `« Votre système d'information dans ${PRODUCT_NAME} en dix minutes »`,
+        portfolio: `« Votre portefeuille dans ${PRODUCT_NAME} en dix minutes »`,
+      },
+      noAngle: `Pour tester en autonomie, trois parcours de dix minutes vous attendent : {{budget}}, {{cartography}}, {{portfolio}}. Choisissez-en un dans « À propos de ${PRODUCT_NAME} » : ses cinq pas s'affichent alors sur votre page d'accueil.`,
+      call: `Pour en parler de vive voix, planifiez un appel découverte de trente minutes en visioconférence, à l'heure qui vous convient. Nous regarderons votre situation, vos objectifs et ce que ${PRODUCT_NAME} peut y apporter. C'est gratuit et sans engagement.`,
       button: 'Planifier un appel découverte',
-      reply: 'Vous pouvez aussi simplement répondre à ce message : je lis toutes les réponses.',
-      replyAlone: 'Vous pouvez simplement répondre à ce message : je lis toutes les réponses.',
+      reply: 'Vous pouvez aussi simplement répondre à ce message : je vous répondrai rapidement.',
+      replyAlone: 'Vous pouvez simplement répondre à ce message : je vous répondrai rapidement.',
     },
     j5: {
       subject: "Cinq jours d'essai : où en êtes-vous ?",
