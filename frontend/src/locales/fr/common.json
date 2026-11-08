@@ -1631,7 +1631,7 @@
           "hint": {
             "budget": "Invitez vos collègues en créant leur compte utilisateur. Passez par le menu Authentification pour configurer le SSO avec Entra ID.",
             "cartography": "Invitez un responsable d'application ou d'actif.",
-            "portfolio": "Ajoutez-vous comme contributeur et indiquez votre disponibilité projet."
+            "portfolio": "Voici votre fiche contributeur. Indiquez votre disponibilité projet."
           }
         },
         "map_application": {
@@ -1640,11 +1640,11 @@
         },
         "map_technologies": {
           "title": "Les technologies, fins de support et failles",
-          "hint": "Ce qui arrive en fin de support dans les prochains mois, la source de chaque date, et les CVE qui touchent ces technologies."
+          "hint": "Ce qui arrive en fin de support dans l'horizon choisi, avec son état. Dépliez une ligne pour voir les serveurs et les applications qu'elle touche. Les CVE sont sur la page Vulnérabilités."
         },
         "map_import": {
           "title": "Vos données",
-          "hint": "Exportez les applications en csv ou en Excel, puis utilisez le modèle pour importer les vôtres. Poursuivez avec les technologies pour y associer les fins de support et les vulnérabilités."
+          "hint": "Exportez les applications en csv ou en Excel, puis utilisez le modèle pour importer les vôtres. Liez-leur ensuite leurs technologies : {{product}} en tire les fins de support et les vulnérabilités."
         },
         "own_sites": {
           "title": "Vos sites",
@@ -1680,11 +1680,11 @@
         },
         "own_project_budget": {
           "title": "Le budget du projet",
-          "hint": "Dans l'onglet Relations, liez une ou plusieurs lignes budgétaires à votre projet pour en voir les coûts."
+          "hint": "Dans l'onglet Relations, liez une ou plusieurs lignes budgétaires à votre projet pour en voir les coûts. Une ligne qui n'existe pas encore se crée dans Gestion budgétaire > Lignes budgétaires, avec Nouvelle ligne."
         },
         "map_applications": {
           "title": "La liste des applications",
-          "hint": "Toutes les applications de l'exemple, avec leur criticité, leur responsable et leur société. C'est l'inventaire : filtrez, triez, recherchez."
+          "hint": "Toutes les applications de l'exemple, avec leur criticité business et leur cycle de vie. C'est l'inventaire : filtrez, triez, recherchez."
         },
         "map_assets": {
           "title": "Les serveurs",

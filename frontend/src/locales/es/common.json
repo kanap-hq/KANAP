@@ -1631,7 +1631,7 @@
           "hint": {
             "budget": "Invite a sus colegas creando sus cuentas de usuario. Use el menú Autenticación para configurar el SSO con Entra ID.",
             "cartography": "Invite a un responsable de aplicación o de activo.",
-            "portfolio": "Añádase como colaborador e indique su disponibilidad para proyectos."
+            "portfolio": "Este es su perfil de colaborador. Indique su disponibilidad para proyectos."
           }
         },
         "map_application": {
@@ -1640,11 +1640,11 @@
         },
         "map_technologies": {
           "title": "Tecnologías, fin de soporte y vulnerabilidades",
-          "hint": "Lo que llega al fin de soporte en los próximos meses, la fuente de cada fecha y las CVE que afectan a estas tecnologías."
+          "hint": "Lo que llega al fin de soporte dentro del horizonte elegido, con su estado. Despliegue una fila para ver los servidores y las aplicaciones que afecta. Las CVE están en la página Vulnerabilidades."
         },
         "map_import": {
           "title": "Sus datos",
-          "hint": "Exporte las aplicaciones en csv o Excel y use la plantilla para importar las suyas. Siga con las tecnologías para asociarles el fin de soporte y las vulnerabilidades."
+          "hint": "Exporte las aplicaciones en csv o Excel y use la plantilla para importar las suyas. Vincúlelas después a sus tecnologías: {{product}} aporta el fin de soporte y las vulnerabilidades."
         },
         "own_sites": {
           "title": "Sus ubicaciones",
@@ -1680,11 +1680,11 @@
         },
         "own_project_budget": {
           "title": "El presupuesto del proyecto",
-          "hint": "En la pestaña Relaciones, vincule una o varias líneas presupuestarias a su proyecto para ver sus costes."
+          "hint": "En la pestaña Relaciones, vincule una o varias líneas presupuestarias a su proyecto para ver sus costes. Una línea que aún no existe se crea en Gestión presupuestaria > Líneas presupuestarias, con Nueva línea."
         },
         "map_applications": {
           "title": "La lista de aplicaciones",
-          "hint": "Todas las aplicaciones del ejemplo, con su criticidad, su responsable y su empresa. Es el inventario: filtre, ordene, busque."
+          "hint": "Todas las aplicaciones del ejemplo, con su criticidad de negocio y su ciclo de vida. Es el inventario: filtre, ordene, busque."
         },
         "map_assets": {
           "title": "Los servidores",
