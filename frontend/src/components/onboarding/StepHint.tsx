@@ -1,6 +1,5 @@
 import React from 'react';
 import { Box, Button, Paper, Popper, Typography } from '@mui/material';
-import type { Instance as PopperInstance } from '@popperjs/core';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { STEP_PARAM, stepHintKey, stepScreen, stepTitleKey, type StepLocationState, type StepTarget } from './onboardingPaths';
@@ -100,11 +99,10 @@ export default function StepHint() {
   const screen = step && state ? stepScreen(step.key, state.angle) : null;
   const target = useTarget(screen?.target ?? null);
   // Between a screen change and the next look-up, the element may have left the page already.
-  const element = target.element && isShown(target.element) ? target.element : null;
-  const rect = element ? target.rect : null;
-  const popperRef = React.useRef<PopperInstance | null>(null);
-  // The bubble follows its element when the page moves it without a scroll or a resize.
-  React.useEffect(() => { void popperRef.current?.update(); }, [rect]);
+  const rect = target.element && isShown(target.element) ? target.rect : null;
+  // The bubble stands on the box of the last look-up, as the outline does: a screen that replaces
+  // the element in the same render never leaves it on a node out of the page.
+  const anchor = React.useMemo(() => (rect ? { getBoundingClientRect: () => rect } : null), [rect]);
   const discover = state?.mode === 'example';
 
   const markedRef = React.useRef<string | null>(null);
@@ -147,9 +145,8 @@ export default function StepHint() {
         />
       ) : null}
       <Popper
-        open={!!element}
-        anchorEl={element}
-        popperRef={popperRef}
+        open={!!anchor}
+        anchorEl={anchor}
         placement={screen.target === 'composer' ? 'top-start' : 'bottom-start'}
         modifiers={[{ name: 'offset', options: { offset: [0, 10] } }]}
         sx={(theme) => ({ zIndex: theme.zIndex.modal - 1 })}
