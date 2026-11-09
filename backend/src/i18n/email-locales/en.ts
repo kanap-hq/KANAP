@@ -1,4 +1,4 @@
-import { COMPANY_NAME, PRODUCT_NAME } from '../../config/product';
+import { AGENT_NAME, COMPANY_NAME, PRODUCT_NAME } from '../../config/product';
 
 // The e-mail texts. In the notification sentences, `{{itemName}}`, `{{document}}`, `{{userName}}`
 // and the other names are filled in bold in the HTML and between quotes in the text version
@@ -280,7 +280,7 @@ export const en = {
   workspace: {
     reset: {
       subject: 'Your {{organisation}} workspace was reset',
-      sentence: '{{actorName}} erased all the content of the workspace {{workspaceName}} on {{date}}. The accounts and their roles, the subscription, the Plaid settings and the audit log are kept.',
+      sentence: `{{actorName}} erased all the content of the workspace {{workspaceName}} on {{date}}. The accounts and their roles, the subscription, the ${AGENT_NAME} settings and the audit log are kept.`,
       cta: 'Open the workspace',
     },
   },
