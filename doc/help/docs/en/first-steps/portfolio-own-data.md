@@ -9,7 +9,7 @@ description: The five steps of the projects and requests path on your own data, 
 
 In ten minutes, a first request is scored and converted into a project, the project has its first tasks and its budget, and your contributor profile is ready for planning. Starting with your own data erases the example: what you see at the end comes from you.
 
-These are the five steps of the **Your first five steps** tile on the home page, for the path **Projects and requests** with **Start with my own data**. Each step in the tile opens its screen with a short hint. Click **Done** in the hint, or the mark next to the step, once you have done it. See [Trial: your path and first steps](../my-dashboard.md#trial-first-steps).
+These are the five steps of the **Your first five steps** tile on the home page, for the path **Projects and requests** with **Start with my own data**. Each step in the tile opens its screen with a short hint. A step that creates something is marked done as soon as it exists in the workspace. For **Your project**, click **Done** in the hint, or the mark next to the step. See [Trial: your path and first steps](../my-dashboard.md#trial-first-steps).
 
 ## 1. Your first request
 
@@ -17,7 +17,7 @@ These are the five steps of the **Your first five steps** tile on the home page,
 
 **What to do.** Click **New request**, type its name in the title and press Enter. Answer each criterion in the **Scoring** tab. Set its status to **Approved**, then click **Convert to project** and **Create project**.
 
-**What you see.** The request exists as soon as it has a name, with the status **Pending review** and you as the requestor. The score is recomputed at each answer. The criteria and their weights are set in **Portfolio > Settings**, **Scoring criteria** tab: adapt them once, they apply to every request. After the conversion, the request shows **Converted**.
+**What you see.** The request exists as soon as it has a name, with the status **Pending review** and you as the requestor. The score is recomputed at each answer. The criteria and their weights are set in **Portfolio > Settings**, **Scoring criteria** tab: adapt them once, they apply to every request. After the conversion, the request shows **Converted** and the step is marked done.
 
 ## 2. Your project
 

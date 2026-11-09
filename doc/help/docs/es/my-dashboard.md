@@ -55,12 +55,12 @@ Si cierra el cuadro de diálogo, la elección queda pendiente en **Acerca de KAN
 
 ### Sus cinco primeros pasos
 
-Una vez elegido el recorrido, el mosaico **Sus cinco primeros pasos** aparece primero en la página de inicio. Enumera los cinco pasos del recorrido y su progreso, por ejemplo **2/5**. Cada paso abre su pantalla, donde el título de la página se resalta con una frase de explicación.
+Una vez elegido el recorrido, el mosaico **Sus cinco primeros pasos** aparece primero en la página de inicio. Enumera los cinco pasos del recorrido y su progreso, por ejemplo **2/5**. Cada paso abre su pantalla, donde el título de la página se resalta con una frase de explicación. La explicación permanece en esa pantalla y sus registros hasta que usted la cierre. Una vez hecho el paso, **Siguiente paso** abre el próximo paso pendiente (**Terminar** después del último).
 
 - Con el ejemplo, abrir un paso lo marca como hecho.
-- Con sus datos, haga clic en **Hecho** en la explicación, o en la marca junto al paso en el mosaico. La marca también deshace un paso.
+- Con sus datos, un paso que crea algo queda marcado como hecho en cuanto ese elemento existe. Para los demás pasos, haga clic en **Hecho** en la explicación, o en la marca junto al paso en el mosaico. La marca también deshace un paso, salvo uno cuyo elemento existe.
 
-Cuando los cinco pasos están hechos, el mosaico ofrece los otros dos recorridos. También ofrece **Reiniciar este recorrido**, que deshace los cinco pasos de este recorrido. El botón de cierre (**×**) oculta el mosaico. Para mostrarlo de nuevo, use **Mostrar los primeros pasos** en **Acerca de KANAP**.
+Cuando los cinco pasos están hechos, el mosaico ofrece los otros dos recorridos. En cualquier momento, **Cambiar de recorrido** en el encabezado del mosaico vuelve a abrir la pregunta del recorrido. Como con la línea de **Acerca de KANAP**, cualquiera puede usarlo mientras falta una respuesta, y después solo los administradores. El botón de cierre (**×**) oculta el mosaico. Para mostrarlo de nuevo, use **Mostrar los primeros pasos** en **Acerca de KANAP**.
 
 Durante la prueba, el mosaico también ofrece **Programar una llamada de descubrimiento**: una videollamada de 30 minutos sobre su situación y sus preguntas, reservada en la página que se abre en el momento que le convenga. El mismo enlace sigue a los días de prueba restantes en **Acerca de KANAP**.
 

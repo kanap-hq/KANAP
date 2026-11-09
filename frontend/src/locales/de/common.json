@@ -1579,12 +1579,14 @@
       "markDone": "Als erledigt markieren",
       "markUndone": "Als nicht erledigt markieren",
       "gotIt": "Verstanden",
+      "nextStep": "Nächster Schritt",
+      "finish": "Abschließen",
+      "changePath": "Pfad wechseln",
       "done": "Erledigt",
       "later": "Später",
       "end": {
         "title": "Pfad {{path}} abgeschlossen!",
-        "others": "Die beiden anderen Pfade:",
-        "restart": "Diesen Pfad neu beginnen"
+        "others": "Die beiden anderen Pfade:"
       },
       "showAgain": "Erste Schritte anzeigen",
       "steps": {
@@ -1615,7 +1617,7 @@
         },
         "own_budget_lines": {
           "title": "Ihre Budgetzeilen",
-          "hint": "Importieren Sie Ihre Budgetdatei (exportieren Sie zuerst, um die Vorlage zu erhalten) oder legen Sie Ihre erste Budgetzeile direkt an."
+          "hint": "Importieren Sie Ihre Budgetdatei (klicken Sie zuerst auf Importieren, um die Beispieldatei herunterzuladen) oder legen Sie Ihre erste Budgetzeile direkt an."
         },
         "own_contract": {
           "title": "Ein verknüpfter Vertrag",

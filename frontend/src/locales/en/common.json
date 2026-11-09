@@ -1579,12 +1579,14 @@
       "markDone": "Mark as done",
       "markUndone": "Mark as not done",
       "gotIt": "Got it",
+      "nextStep": "Next step",
+      "finish": "Finish",
+      "changePath": "Change path",
       "done": "Done",
       "later": "Later",
       "end": {
         "title": "{{path}} path complete!",
-        "others": "The other two paths:",
-        "restart": "Restart this path"
+        "others": "The other two paths:"
       },
       "showAgain": "Show the first steps",
       "steps": {
@@ -1615,7 +1617,7 @@
         },
         "own_budget_lines": {
           "title": "Your budget lines",
-          "hint": "Import your budget file (export first to get the template) or create your first budget line directly."
+          "hint": "Import your budget file (click Import first to download the example file) or create your first budget line directly."
         },
         "own_contract": {
           "title": "A linked contract",

@@ -9,7 +9,7 @@ description: Los cinco pasos del recorrido proyectos y solicitudes con sus propi
 
 En diez minutos, una primera solicitud está puntuada y convertida en proyecto, el proyecto tiene sus primeras tareas y su presupuesto, y su perfil de colaborador está listo para la planificación. Empezar con sus datos borra el ejemplo: lo que ve al final procede de usted.
 
-Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de inicio, para el recorrido **Los proyectos y las solicitudes** con **Empezar con mis datos**. Cada paso del mosaico abre su pantalla con una indicación breve. Una vez hecho el paso, haga clic en **Hecho** en la indicación, o en la marca junto al paso. Consulte [Prueba: su recorrido y sus primeros pasos](../my-dashboard.md#trial-first-steps).
+Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de inicio, para el recorrido **Los proyectos y las solicitudes** con **Empezar con mis datos**. Cada paso del mosaico abre su pantalla con una indicación breve. Un paso que crea algo queda marcado como hecho en cuanto ese elemento existe en el espacio de trabajo. Para **Su proyecto**, haga clic en **Hecho** en la indicación, o en la marca junto al paso. Consulte [Prueba: su recorrido y sus primeros pasos](../my-dashboard.md#trial-first-steps).
 
 ## 1. Su primera solicitud
 
@@ -17,7 +17,7 @@ Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de in
 
 **Qué hacer.** Haga clic en **Nueva solicitud**, escriba su nombre en el título y pulse Intro. Responda a cada criterio en la pestaña **Evaluación**. Pase su estado a **Aprobada** y haga clic en **Convertir en proyecto** y en **Crear proyecto**.
 
-**Qué ve.** La solicitud existe en cuanto tiene un nombre, con el estado **Pendiente de revisión** y usted como solicitante. La puntuación se recalcula con cada respuesta. Los criterios y sus pesos se configuran en **Portafolio > Configuración**, pestaña **Criterios de evaluación**: ajústelos una vez y valen para todas las solicitudes. Tras la conversión, la solicitud muestra **Convertida**.
+**Qué ve.** La solicitud existe en cuanto tiene un nombre, con el estado **Pendiente de revisión** y usted como solicitante. La puntuación se recalcula con cada respuesta. Los criterios y sus pesos se configuran en **Portafolio > Configuración**, pestaña **Criterios de evaluación**: ajústelos una vez y valen para todas las solicitudes. Tras la conversión, la solicitud muestra **Convertida** y el paso queda marcado como hecho.
 
 ## 2. Su proyecto
 

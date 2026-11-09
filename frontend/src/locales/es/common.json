@@ -1579,12 +1579,14 @@
       "markDone": "Marcar como hecho",
       "markUndone": "Marcar como no hecho",
       "gotIt": "Entendido",
+      "nextStep": "Siguiente paso",
+      "finish": "Terminar",
+      "changePath": "Cambiar de recorrido",
       "done": "Hecho",
       "later": "Más tarde",
       "end": {
         "title": "¡Recorrido {{path}} terminado!",
-        "others": "Los otros dos recorridos:",
-        "restart": "Reiniciar este recorrido"
+        "others": "Los otros dos recorridos:"
       },
       "showAgain": "Mostrar los primeros pasos",
       "steps": {
@@ -1615,7 +1617,7 @@
         },
         "own_budget_lines": {
           "title": "Sus líneas",
-          "hint": "Importe su archivo de presupuesto (exporte primero para obtener la plantilla) o cree directamente su primera línea presupuestaria."
+          "hint": "Importe su archivo de presupuesto (haga clic primero en Importar para descargar el archivo de ejemplo) o cree directamente su primera línea presupuestaria."
         },
         "own_contract": {
           "title": "Un contrato vinculado",

@@ -9,7 +9,7 @@ description: The five steps of the IT budget path on your own data, from your co
 
 In ten minutes, your company, your budget lines and a contract are in KANAP, your first report runs on your figures, and a colleague can read them. Starting with your own data erases the example: what you see at the end comes from you.
 
-These are the five steps of the **Your first five steps** tile on the home page, for the path **The IT budget** with **Start with my own data**. Each step in the tile opens its screen with a short hint. Click **Done** in the hint, or the mark next to the step, once you have done it. See [Trial: your path and first steps](../my-dashboard.md#trial-first-steps).
+These are the five steps of the **Your first five steps** tile on the home page, for the path **The IT budget** with **Start with my own data**. Each step in the tile opens its screen with a short hint. A step that creates something is marked done as soon as it exists in the workspace. For **Your company** and **Your first report**, click **Done** in the hint, or the mark next to the step. See [Trial: your path and first steps](../my-dashboard.md#trial-first-steps).
 
 ## 1. Your company
 
@@ -25,7 +25,7 @@ These are the five steps of the **Your first five steps** tile on the home page,
 
 **What to do.** Either import your budget file, or create a first line by hand.
 
-- **Import a file.** Click **Export** first: on an empty list, the file holds the header row alone, your template. **Import > Download an example** gives a workbook with a few sample lines and what each column takes. Fill in your lines, then **Import**.
+- **Import a file.** Click **Import**, then **Download an example**: a workbook with a few sample lines and what each column takes. Fill in your lines and import the file. On an empty list, **Export** gives the header row alone.
 - **Create a line.** Click **New line**, type its name in the title and press Enter. Fill in the **Properties** panel: paying company, account, currency. Enter the amounts in the **Budget** tab, then click **Create**. **Cancel** drops the line.
 
 **What you see.** An import checks the whole file and reports the lines to create, to update and those unchanged. A file with one error loads nothing. A line created by hand shows in the list with its amounts for the year.

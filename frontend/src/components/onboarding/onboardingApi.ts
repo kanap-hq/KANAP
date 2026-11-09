@@ -12,7 +12,8 @@ export type OnboardingState = {
   mode: OnboardingMode | null;
   chosen_at: string | null;
   can_choose: boolean;
-  steps: Array<{ key: string; done_at: string | null }>;
+  /** `automatic`: done by itself once its object exists in the workspace (own-data steps that create one). */
+  steps: Array<{ key: string; done_at: string | null; automatic: boolean }>;
   next_step: string | null;
   completed: boolean;
   dismissed_at: string | null;

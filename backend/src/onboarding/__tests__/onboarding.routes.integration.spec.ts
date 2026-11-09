@@ -42,7 +42,10 @@ import { OnboardingService } from '../onboarding.service';
 // - `sample_data` mirrors `tenants.metadata.demo`; hiding the list is per user;
 // - a member may set a field still missing; the Administrator role counts as an additional role;
 // - another workspace sees nothing; eight first choices at once give one event each; two last
-//   steps at once give one `completed`; a deleted user's rows go with them.
+//   steps at once give one `completed`; a deleted user's rows go with them;
+// - with your own data, a step that creates an object is done by itself once the object exists
+//   (`automatic` in its event), stays done while it exists, and waits while sample data is not
+//   `idle`.
 // @database-spec: opens the data-source and boots Nest, so run-ci-tests.js runs it on a database lane.
 
 type Served = { app: INestApplication; port: number; close: () => Promise<void> };
@@ -294,6 +297,8 @@ async function testChoice() {
       assert.deepEqual((await events(other.tenantId)).map((e) => [e.action, e.after, e.user_id]), [
         ['onboarding.angle_chosen', { angle: 'cartography', previous: null }, b.id],
         ['onboarding.mode_chosen', { mode: 'own_data', previous: null }, c.id],
+        // C has colleagues: their step "a colleague" is done by itself.
+        ['onboarding.step_done', { angle: 'cartography', mode: 'own_data', step_key: 'own_invite', automatic: true }, c.id],
       ]);
     } finally {
       await cleanupTenants([other.tenantId]);
@@ -667,6 +672,83 @@ async function testUserDeleted() {
   }
 }
 
+// 14. With your own data, the steps that create an object are done by themselves once it exists.
+async function testAutomaticSteps() {
+  const svc = buildServices();
+  const served = await serve();
+  let t: ActivatedTenant | undefined;
+  try {
+    t = await createActivatedTenant(svc, { tag: 'onb-auto', orgName: 'Onboarding Auto' });
+    const tenantId = t.tenantId;
+    const ownerId = t.ownerId;
+    const asOwner = client(served, t);
+    const doneKeys = (state: any) => state.steps.filter((s: any) => s.done_at).map((s: any) => s.key);
+    // One line per event, sorted: the events of one request share their date.
+    const stepEvents = async (userId: string) => (await events(tenantId))
+      .filter((e) => e.user_id === userId && ['onboarding.step_done', 'onboarding.completed'].includes(e.action))
+      .map((e) => [e.action, e.after.angle, e.after.mode, e.after.step_key ?? '-', e.after.automatic ?? false].join(' '))
+      .sort();
+
+    let state = ok(await asOwner.choose({ angle: 'budget', mode: 'own_data' }), 'own data');
+    assert.deepEqual(state.steps.map((s: any) => [s.key, s.automatic, s.done_at]), [
+      ['own_company', false, null],
+      ['own_budget_lines', true, null],
+      ['own_contract', true, null],
+      ['own_report', false, null],
+      ['own_invite', true, null],
+    ]);
+    for (const key of ['own_company', 'own_budget_lines', 'own_contract', 'own_report']) state = ok(await asOwner.done(key), `done ${key}`);
+    assert.equal(state.next_step, 'own_invite', 'alone in the workspace');
+
+    // A colleague's account: the owner's next read does the last step, which completes the path.
+    const a = await member(svc, t);
+    state = ok(await asOwner.get(), 'GET after the colleague');
+    assert.deepEqual(doneKeys(state), ONBOARDING_PATHS.budget.own_data);
+    assert.equal(state.completed, true);
+    ok(await asOwner.get(), 'GET again');
+    assert.deepEqual(await stepEvents(ownerId), [
+      'onboarding.completed budget own_data - false',
+      'onboarding.step_done budget own_data own_budget_lines false',
+      'onboarding.step_done budget own_data own_company false',
+      'onboarding.step_done budget own_data own_contract false',
+      'onboarding.step_done budget own_data own_invite true',
+      'onboarding.step_done budget own_data own_report false',
+    ], 'one event each, the automatic step marked');
+
+    // Done by its object: it stays done. Done by hand with no object: it can be undone.
+    assert.ok(doneKeys(ok(await asOwner.undo('own_invite'), 'undo own_invite')).includes('own_invite'), 'own_invite stays done');
+    assert.ok(!doneKeys(ok(await asOwner.undo('own_contract'), 'undo own_contract')).includes('own_contract'), 'no contract: undone');
+    assert.equal((await stepEvents(ownerId)).length, 6, 'nothing logged by the undo');
+
+    // Each user's own steps: the colleague's step is done at their first read (the owner is there).
+    assert.deepEqual(doneKeys(ok(await client(served, t, a.token).get(), 'colleague GET')), ['own_invite']);
+
+    // Not while sample data is in the workspace or being erased: its objects are not the user's.
+    assert.deepEqual(doneKeys(ok(await asOwner.choose({ angle: 'cartography' }), 'cartography')), ['own_invite']);
+    await inTenant(tenantId, (m) => m.query(
+      `INSERT INTO locations (tenant_id, name, hosting_type) VALUES ($1, 'Server room', 'on_premise')`, [tenantId]));
+    for (const status of ['loaded', 'resetting']) {
+      await setDemo(tenantId, { status });
+      assert.deepEqual(doneKeys(ok(await asOwner.get(), `GET, sample data ${status}`)), ['own_invite'], `nothing while ${status}`);
+    }
+    await setDemo(tenantId, { status: 'idle' });
+    assert.deepEqual(doneKeys(ok(await asOwner.get(), 'GET, sample data idle')), ['own_sites', 'own_invite']);
+
+    // Portfolio: the step is the user's own contributor profile, once saved.
+    assert.deepEqual(doneKeys(ok(await asOwner.choose({ angle: 'portfolio' }), 'portfolio')), []);
+    const addProfile = (userId: string, itemNumber: number) => inTenant(tenantId, (m) => m.query(
+      `INSERT INTO portfolio_team_member_configs (tenant_id, user_id, item_number) VALUES ($1, $2, $3)`,
+      [tenantId, userId, itemNumber]));
+    await addProfile(a.id, 1);
+    assert.deepEqual(doneKeys(ok(await asOwner.get(), 'GET, the colleague\'s profile')), [], 'another user\'s profile');
+    await addProfile(ownerId, 2);
+    assert.deepEqual(doneKeys(ok(await asOwner.get(), 'GET, the owner\'s profile')), ['own_invite']);
+  } finally {
+    await served.close();
+    await cleanupTenants([t?.tenantId]);
+  }
+}
+
 runSpecs('onboarding.routes.integration.spec', [
   testFreshWorkspace,
   testChoice,
@@ -680,6 +762,7 @@ runSpecs('onboarding.routes.integration.spec', [
   testMemberCompletesTheChoice,
   testAdditionalAdministrator,
   testUserDeleted,
+  testAutomaticSteps,
 ]).catch((error) => {
   console.error(error);
   process.exit(1);
