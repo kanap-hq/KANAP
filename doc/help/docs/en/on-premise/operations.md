@@ -35,9 +35,9 @@ docker compose -f infra/compose.onprem.yml up -d
 # its running background jobs (up to 20 s), then stops. Migrations run when the new one starts.
 ```
 
-`infra/compose.onprem.yml` names the images of the version you checked out. `pull` downloads them from `ghcr.io`, and `up -d` recreates the containers on them. If you build the images yourself (see [Build the images yourself](installation.md#build-the-images-yourself)), run the `build` and `up -d` commands of that section instead of `pull` and `up -d`.
+`infra/compose.onprem.yml` names the images of the version you checked out. `pull` downloads them from `ghcr.io`, and `up -d` recreates the containers on them. If you build the images yourself (see [Build the images yourself](installation.md#build-the-images-yourself)), run the `build` and `up -d` commands of that section instead of `pull` and `up -d`. From this version on, the images are named `kadratis-*`. The usual upgrade downloads them: there is nothing else to do. Earlier versions keep their `kanap-*` images.
 
-**First upgrade to a version with published images.** Versions up to 26.10.7 were built on the server. The procedure above is all you need to move to a later version. Once the new version runs and passes the checks of step 4, free the build cache and the old images. On a server that built Kadratis, they often take 20 GB or more, depending on how many builds it made. Add `kadratis-api-tools` to the second line if you built the maintenance tools image.
+**First upgrade to a version with published images.** Versions up to 26.10.7 were built on the server. The procedure above is all you need to move to a later version. Once the new version runs and passes the checks of step 4, free the build cache and the old images. On a server that built Kadratis, they often take 20 GB or more, depending on how many builds it made. Add `kanap-api-tools` to the second line if you built the maintenance tools image.
 
 ```bash
 docker builder prune -a
@@ -90,7 +90,7 @@ curl -sSk -w '\n' "https://${KANAP_HOST}/api/config/public"
 
 The first command prints the version of the checkout. The second one lists the images of the containers, with their version in the `TAG` column. The third one answers with a JSON document whose `version` field is the version the API reports.
 
-The published images carry a signed record of how they were built: from the version's tag, by the Kadratis repository's own workflow. With the GitHub CLI, `gh attestation verify oci://ghcr.io/kanap-hq/kadratis-api:26.10.9 -R kanap-hq/KANAP` checks it.
+The published images carry a signed record of how they were built: from the version's tag, by the Kadratis repository's own workflow. With the GitHub CLI, `gh attestation verify oci://ghcr.io/kanap-hq/kadratis-api:<version> -R kanap-hq/KANAP` checks it.
 
 **4. Check the upgrade.**
 

@@ -35,9 +35,9 @@ docker compose -f infra/compose.onprem.yml up -d
 # ses tâches de fond en cours (jusqu'à 20 s), puis s'arrête. Les migrations s'exécutent au démarrage du nouveau.
 ```
 
-`infra/compose.onprem.yml` nomme les images de la version que vous avez extraite. `pull` les télécharge depuis `ghcr.io`, et `up -d` recrée les conteneurs sur elles. Si vous construisez les images vous-même (voir [Construire les images vous-même](installation.md#build-the-images-yourself)), lancez les commandes `build` et `up -d` de cette section à la place de `pull` et `up -d`.
+`infra/compose.onprem.yml` nomme les images de la version que vous avez extraite. `pull` les télécharge depuis `ghcr.io`, et `up -d` recrée les conteneurs sur elles. Si vous construisez les images vous-même (voir [Construire les images vous-même](installation.md#build-the-images-yourself)), lancez les commandes `build` et `up -d` de cette section à la place de `pull` et `up -d`. À partir de cette version, les images s'appellent `kadratis-*`. La mise à jour habituelle les télécharge : rien d'autre à faire. Les versions antérieures gardent leurs images `kanap-*`.
 
-**Première mise à jour vers une version avec images publiées.** Les versions jusqu'à la 26.10.7 se construisaient sur le serveur. La procédure ci-dessus suffit pour passer à une version ultérieure. Une fois la nouvelle version en service et les contrôles de l'étape 4 passés, libérez le cache de build et les anciennes images. Sur un serveur qui a construit Kadratis, ils occupent souvent 20 Go ou plus, selon le nombre de builds qu'il a faits. Ajoutez `kadratis-api-tools` à la deuxième ligne si vous aviez construit l'image des outils de maintenance.
+**Première mise à jour vers une version avec images publiées.** Les versions jusqu'à la 26.10.7 se construisaient sur le serveur. La procédure ci-dessus suffit pour passer à une version ultérieure. Une fois la nouvelle version en service et les contrôles de l'étape 4 passés, libérez le cache de build et les anciennes images. Sur un serveur qui a construit Kadratis, ils occupent souvent 20 Go ou plus, selon le nombre de builds qu'il a faits. Ajoutez `kanap-api-tools` à la deuxième ligne si vous aviez construit l'image des outils de maintenance.
 
 ```bash
 docker builder prune -a
@@ -90,7 +90,7 @@ curl -sSk -w '\n' "https://${KANAP_HOST}/api/config/public"
 
 La première commande affiche la version du checkout. La deuxième liste les images des conteneurs, avec leur version dans la colonne `TAG`. La troisième répond par un document JSON dont le champ `version` est la version indiquée par l'API.
 
-Les images publiées portent une attestation signée de leur construction : à partir du tag de la version, par le workflow du dépôt Kadratis lui-même. Avec la CLI GitHub, `gh attestation verify oci://ghcr.io/kanap-hq/kadratis-api:26.10.9 -R kanap-hq/KANAP` la vérifie.
+Les images publiées portent une attestation signée de leur construction : à partir du tag de la version, par le workflow du dépôt Kadratis lui-même. Avec la CLI GitHub, `gh attestation verify oci://ghcr.io/kanap-hq/kadratis-api:<version> -R kanap-hq/KANAP` la vérifie.
 
 **4. Vérifiez la mise à jour.**
 
