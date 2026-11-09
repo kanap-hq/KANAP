@@ -261,6 +261,37 @@ describe('StepHint', () => {
     expect(hint).toHaveTextContent('You are in the record of BL-7 Microsoft Enterprise. Explore the tabs.');
   });
 
+  it('points at the tab row of a record opened from its list, which the bubble would hide under the title', async () => {
+    env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'own_data' });
+    const box = { top: 240, left: 260, width: 900, height: 40, x: 260, y: 240, right: 1160, bottom: 280 };
+    renderAt('/ops/contracts/new/overview?step=own_contract', (
+      <main>
+        <h5 className="MuiTypography-h5">New contract</h5>
+        <div role="tablist" aria-label="tabs" data-testid="tabs" />
+        <StepHint />
+      </main>
+    ));
+    screen.getByTestId('tabs').getBoundingClientRect = () => ({ ...box, toJSON: () => box }) as DOMRect;
+    await screen.findByRole('dialog', { name: 'A linked contract' });
+    await waitFor(() => expect(screen.getByTestId('step-hint-outline').style.top).toBe('236px'));
+    expect(screen.getByTestId('step-hint-outline').style.left).toBe('254px');
+  });
+
+  it('points at the title of its list, tabs or not', async () => {
+    env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'own_data' });
+    const box = { top: 60, left: 236, width: 200, height: 32, x: 236, y: 60, right: 436, bottom: 92 };
+    renderAt('/ops/reports/top-opex?step=own_report', (
+      <main>
+        <h5 className="MuiTypography-h5" data-testid="title">Top lines</h5>
+        <div role="tablist" aria-label="tabs" />
+        <StepHint />
+      </main>
+    ));
+    screen.getByTestId('title').getBoundingClientRect = () => ({ ...box, toJSON: () => box }) as DOMRect;
+    await screen.findByRole('dialog');
+    await waitFor(() => expect(screen.getByTestId('step-hint-outline').style.top).toBe('56px'));
+  });
+
   it('points at the Export button of the list for the data step', async () => {
     env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'example' });
     renderAt('/ops/budget?step=budget_import', (
@@ -347,7 +378,9 @@ describe('StepHint', () => {
     }
     try {
       renderAt('/ai?step=budget_plaid', <Plaid />);
-      await screen.findByRole('dialog', { name: 'A question for Plaid' });
+      const hint = await screen.findByRole('dialog', { name: 'A question for Plaid' });
+      // Below the acceptance box: above it, the bubble would hide the suggested questions.
+      await waitFor(() => expect(hint.closest('[data-popper-placement]')).toHaveAttribute('data-popper-placement', 'bottom-start'));
 
       // Accepting replaces the acceptance box by the composer: the hint moves to the composer.
       fireEvent.click(screen.getByRole('button', { name: 'Accept' }));

@@ -98,7 +98,10 @@ export default function StepHint() {
   const key = new URLSearchParams(location.search).get(STEP_PARAM);
   const step = key && state ? state.steps.find((candidate) => candidate.key === key) ?? null : null;
   const screen = step && state ? stepScreen(step.key, state.angle) : null;
-  const target = useTarget(screen?.target ?? null);
+  // A record opened from the list of a title step (its address goes below the list's): under the
+  // record's title, the bubble would hide its tab row, so the hint points at the tabs.
+  const onRecord = screen?.target === 'title' && location.pathname.startsWith(`${screen.to}/`);
+  const target = useTarget(screen ? (onRecord ? 'tabs' : screen.target) : null);
   // Between a screen change and the next look-up, the element may have left the page already.
   const rect = target.element && isShown(target.element) ? target.rect : null;
   // The bubble stands on the box of the last look-up, as the outline does: a screen that replaces
@@ -145,10 +148,12 @@ export default function StepHint() {
           })}
         />
       ) : null}
+      {/* Below Plaid's composer too: above it, the bubble would hide the suggested questions. It
+          goes above only when the composer sits at the bottom of the screen. */}
       <Popper
         open={!!anchor}
         anchorEl={anchor}
-        placement={screen.target === 'composer' ? 'top-start' : 'bottom-start'}
+        placement="bottom-start"
         modifiers={[{ name: 'offset', options: { offset: [0, 10] } }]}
         sx={(theme) => ({ zIndex: theme.zIndex.modal - 1 })}
       >
