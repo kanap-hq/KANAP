@@ -60,7 +60,7 @@ Une fois le parcours choisi, la tuile **Vos cinq premiers pas** vient en premier
 - Avec l'exemple, ouvrir une étape la marque comme faite.
 - Avec vos données, une étape qui crée quelque chose est marquée comme faite dès que cet élément existe. Pour les autres étapes, cliquez sur **Fait** dans l'explication, ou sur la marque à côté de l'étape dans la tuile. La marque annule aussi une étape, sauf celle dont l'élément existe.
 
-Quand les cinq étapes sont faites, la tuile propose les deux autres parcours. Elle propose aussi **Recommencer ce parcours**, qui défait les étapes de ce parcours. Avec vos données, une étape dont l'élément existe reste faite. Le bouton de fermeture (**×**) masque la tuile. Pour l'afficher de nouveau, utilisez **Afficher les premiers pas** dans **À propos de KANAP**.
+Quand les cinq étapes sont faites, la tuile propose les deux autres parcours. À tout moment, le menu de la tuile (**⋮**) propose **Recommencer ce parcours**, qui défait les étapes de ce parcours. Avec vos données, une étape dont l'élément existe reste faite. Le menu propose aussi **Changer de parcours**, qui rouvre la question du parcours. Comme pour la ligne de **À propos de KANAP**, tout le monde peut l'utiliser tant qu'une réponse manque, ensuite seuls les administrateurs. Le bouton de fermeture (**×**) masque la tuile. Pour l'afficher de nouveau, utilisez **Afficher les premiers pas** dans **À propos de KANAP**.
 
 Pendant l'essai, la tuile propose aussi **Planifier un appel découverte** : un appel vidéo de 30 minutes sur votre situation et vos questions, réservé sur la page qui s'ouvre au moment qui vous convient. Le même lien suit les jours d'essai restants dans **À propos de KANAP**.
 
