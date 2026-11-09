@@ -10,7 +10,7 @@ Ce guide vous accompagne dans la documentation d'une application et de son infra
 !!! tip "Conseil : Vous préférez un résumé sur une page ? :material-file-pdf-box:"
     Toutes les étapes clés sur une seule page A4 : imprimez-la, épinglez-la, partagez-la avec votre équipe.
 
-    [:material-download: Télécharger l'aide-mémoire (PDF)](downloads/kanap-itops-fast-track.pdf){ .md-button .md-button--primary }
+    [:material-download: Télécharger l'aide-mémoire (PDF)](downloads/kadratis-itops-fast-track.pdf){ .md-button .md-button--primary }
 
 Pour tous les détails, consultez la documentation de référence des [Applications](../applications.md) et [Actifs](../assets.md).
 

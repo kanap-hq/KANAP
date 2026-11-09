@@ -10,7 +10,7 @@ Esta guía le acompaña en la documentación de una aplicación y su infraestruc
 !!! tip "¿Prefiere un resumen en una página? :material-file-pdf-box:"
     Todos los pasos clave en una sola página A4: imprímala, cuélguela, compártala con su equipo.
 
-    [:material-download: Descargar la hoja de referencia (PDF)](downloads/kanap-itops-fast-track.pdf){ .md-button .md-button--primary }
+    [:material-download: Descargar la hoja de referencia (PDF)](downloads/kadratis-itops-fast-track.pdf){ .md-button .md-button--primary }
 
 Para más detalles, consulte las documentaciones de referencia de [Aplicaciones](../applications.md) y [Activos](../assets.md).
 

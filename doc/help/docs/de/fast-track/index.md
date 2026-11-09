@@ -10,7 +10,7 @@ Dieser Leitfaden führt Sie durch den Portfolio-Lebenszyklus: vom Einreichen Ihr
 !!! tip "Bevorzugen Sie eine einseitige Zusammenfassung? :material-file-pdf-box:"
     Alle wichtigen Schritte auf einer einzigen A4-Seite: ausdrucken, aufhängen, mit dem Team teilen.
 
-    [:material-download: Spickzettel herunterladen (PDF)](downloads/kanap-portfolio-fast-track.pdf){ .md-button .md-button--primary }
+    [:material-download: Spickzettel herunterladen (PDF)](downloads/kadratis-portfolio-fast-track.pdf){ .md-button .md-button--primary }
 
 Für vollständige Details siehe die [Portfolio-Referenzdokumentation](../portfolio-requests.md).
 

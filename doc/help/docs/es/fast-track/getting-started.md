@@ -10,7 +10,7 @@ Bienvenido a Kadratis. Esta guía le lleva por todo lo que necesita para sentirs
 !!! tip "Consejo"
     Todos los pasos clave en una sola página A4: imprímala, cuélguela, compártala con su equipo.
 
-    [:material-download: Descargar la hoja de referencia (PDF)](downloads/kanap-getting-started.pdf){ .md-button .md-button--primary }
+    [:material-download: Descargar la hoja de referencia (PDF)](downloads/kadratis-getting-started.pdf){ .md-button .md-button--primary }
 
 Para flujos de trabajo específicos por rol, consulte el [Portafolio: Inicio Rápido](index.md) y el [Panorama IT: Inicio Rápido](apps-and-assets.md).
 

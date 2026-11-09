@@ -10,7 +10,7 @@ Ce guide explique les différents types d'éléments de travail suivis dans Kadr
 !!! tip "Conseil : Vous préférez un résumé sur une page ? :material-file-pdf-box:"
     Toutes les définitions clés sur une seule page A4 : imprimez-la, épinglez-la, partagez-la avec votre équipe.
 
-    [:material-download: Télécharger l'aide-mémoire (PDF)](downloads/kanap-task-types-fast-track.pdf){ .md-button .md-button--primary }
+    [:material-download: Télécharger l'aide-mémoire (PDF)](downloads/kadratis-task-types-fast-track.pdf){ .md-button .md-button--primary }
 
 ---
 

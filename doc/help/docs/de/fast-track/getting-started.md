@@ -10,7 +10,7 @@ Willkommen bei Kadratis. Dieser Leitfaden führt Sie durch alles, was Sie brauch
 !!! tip "Bevorzugen Sie eine einseitige Zusammenfassung? :material-file-pdf-box:"
     Alle wichtigen Schritte auf einer einzigen A4-Seite: ausdrucken, aufhängen, mit dem Team teilen.
 
-    [:material-download: Spickzettel herunterladen (PDF)](downloads/kanap-getting-started.pdf){ .md-button .md-button--primary }
+    [:material-download: Spickzettel herunterladen (PDF)](downloads/kadratis-getting-started.pdf){ .md-button .md-button--primary }
 
 Für rollenspezifische Workflows siehe den [Portfolio-Schnelleinstieg](index.md) und den [IT Ops Schnelleinstieg](apps-and-assets.md).
 

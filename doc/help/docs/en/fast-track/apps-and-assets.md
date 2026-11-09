@@ -10,7 +10,7 @@ This guide walks you through documenting an application and its supporting infra
 !!! tip "Prefer a one-page summary? :material-file-pdf-box:"
     All the key steps on a single A4 page: print it, pin it, share it with your team.
 
-    [:material-download: Download the cheat sheet (PDF)](downloads/kanap-itops-fast-track.pdf){ .md-button .md-button--primary }
+    [:material-download: Download the cheat sheet (PDF)](downloads/kadratis-itops-fast-track.pdf){ .md-button .md-button--primary }
 
 For full details, see the [Applications](../applications.md) and [Assets](../assets.md) reference docs.
 

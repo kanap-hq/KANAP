@@ -10,7 +10,7 @@ Dieser Leitfaden führt Sie durch die Dokumentation einer Anwendung und ihrer un
 !!! tip "Bevorzugen Sie eine einseitige Zusammenfassung? :material-file-pdf-box:"
     Alle wichtigen Schritte auf einer einzigen A4-Seite: ausdrucken, aufhängen, mit dem Team teilen.
 
-    [:material-download: Spickzettel herunterladen (PDF)](downloads/kanap-itops-fast-track.pdf){ .md-button .md-button--primary }
+    [:material-download: Spickzettel herunterladen (PDF)](downloads/kadratis-itops-fast-track.pdf){ .md-button .md-button--primary }
 
 Für vollständige Details siehe die Referenzdokumentation zu [Anwendungen](../applications.md) und [Assets](../assets.md).
 

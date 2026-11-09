@@ -14,3 +14,22 @@
 /de/operations-dashboard/ /de/my-dashboard/ 301
 /es/operations-dashboard /es/my-dashboard/ 301
 /es/operations-dashboard/ /es/my-dashboard/ 301
+
+# The fast-track cheat sheets carry the product name Kadratis.
+# Older links and bookmarks to the former file names still open them.
+/fast-track/downloads/kanap-getting-started.pdf /fast-track/downloads/kadratis-getting-started.pdf 301
+/fast-track/downloads/kanap-itops-fast-track.pdf /fast-track/downloads/kadratis-itops-fast-track.pdf 301
+/fast-track/downloads/kanap-portfolio-fast-track.pdf /fast-track/downloads/kadratis-portfolio-fast-track.pdf 301
+/fast-track/downloads/kanap-task-types-fast-track.pdf /fast-track/downloads/kadratis-task-types-fast-track.pdf 301
+/fr/fast-track/downloads/kanap-getting-started.pdf /fr/fast-track/downloads/kadratis-getting-started.pdf 301
+/fr/fast-track/downloads/kanap-itops-fast-track.pdf /fr/fast-track/downloads/kadratis-itops-fast-track.pdf 301
+/fr/fast-track/downloads/kanap-portfolio-fast-track.pdf /fr/fast-track/downloads/kadratis-portfolio-fast-track.pdf 301
+/fr/fast-track/downloads/kanap-task-types-fast-track.pdf /fr/fast-track/downloads/kadratis-task-types-fast-track.pdf 301
+/de/fast-track/downloads/kanap-getting-started.pdf /de/fast-track/downloads/kadratis-getting-started.pdf 301
+/de/fast-track/downloads/kanap-itops-fast-track.pdf /de/fast-track/downloads/kadratis-itops-fast-track.pdf 301
+/de/fast-track/downloads/kanap-portfolio-fast-track.pdf /de/fast-track/downloads/kadratis-portfolio-fast-track.pdf 301
+/de/fast-track/downloads/kanap-task-types-fast-track.pdf /de/fast-track/downloads/kadratis-task-types-fast-track.pdf 301
+/es/fast-track/downloads/kanap-getting-started.pdf /es/fast-track/downloads/kadratis-getting-started.pdf 301
+/es/fast-track/downloads/kanap-itops-fast-track.pdf /es/fast-track/downloads/kadratis-itops-fast-track.pdf 301
+/es/fast-track/downloads/kanap-portfolio-fast-track.pdf /es/fast-track/downloads/kadratis-portfolio-fast-track.pdf 301
+/es/fast-track/downloads/kanap-task-types-fast-track.pdf /es/fast-track/downloads/kadratis-task-types-fast-track.pdf 301

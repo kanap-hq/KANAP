@@ -10,7 +10,7 @@ Esta guía explica los diferentes tipos de elementos de trabajo registrados en K
 !!! tip "¿Prefiere un resumen en una página? :material-file-pdf-box:"
     Todas las definiciones clave en una sola página A4: imprímala, cuélguela, compártala con su equipo.
 
-    [:material-download: Descargar la hoja de referencia (PDF)](downloads/kanap-task-types-fast-track.pdf){ .md-button .md-button--primary }
+    [:material-download: Descargar la hoja de referencia (PDF)](downloads/kadratis-task-types-fast-track.pdf){ .md-button .md-button--primary }
 
 ---
 

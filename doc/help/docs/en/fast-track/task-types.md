@@ -10,7 +10,7 @@ This guide explains the different types of work items tracked in Kadratis and ho
 !!! tip "Prefer a one-page summary? :material-file-pdf-box:"
     All the key definitions on a single A4 page: print it, pin it, share it with your team.
 
-    [:material-download: Download the cheat sheet (PDF)](downloads/kanap-task-types-fast-track.pdf){ .md-button .md-button--primary }
+    [:material-download: Download the cheat sheet (PDF)](downloads/kadratis-task-types-fast-track.pdf){ .md-button .md-button--primary }
 
 ---
 

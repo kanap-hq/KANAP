@@ -10,7 +10,7 @@ Esta guía le lleva por el ciclo de vida del portafolio, desde enviar su primera
 !!! tip "Consejo"
     Todos los pasos clave en una sola página A4: imprímala, cuélguela, compártala con su equipo.
 
-    [:material-download: Descargar la hoja de referencia (PDF)](downloads/kanap-portfolio-fast-track.pdf){ .md-button .md-button--primary }
+    [:material-download: Descargar la hoja de referencia (PDF)](downloads/kadratis-portfolio-fast-track.pdf){ .md-button .md-button--primary }
 
 Para los detalles completos, consulte la [documentación de referencia del portafolio](../portfolio-requests.md).
 

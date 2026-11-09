@@ -10,7 +10,7 @@ This guide walks you through the portfolio lifecycle, from submitting your first
 !!! tip "Prefer a one-page summary? :material-file-pdf-box:"
     All the key steps on a single A4 page: print it, pin it, share it with your team.
 
-    [:material-download: Download the cheat sheet (PDF)](downloads/kanap-portfolio-fast-track.pdf){ .md-button .md-button--primary }
+    [:material-download: Download the cheat sheet (PDF)](downloads/kadratis-portfolio-fast-track.pdf){ .md-button .md-button--primary }
 
 For full details, see the [Portfolio reference docs](../portfolio-requests.md).
 

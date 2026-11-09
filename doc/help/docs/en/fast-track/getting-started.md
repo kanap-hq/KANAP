@@ -10,7 +10,7 @@ Welcome to Kadratis. This guide walks you through everything you need to feel pr
 !!! tip "Prefer a one-page summary? :material-file-pdf-box:"
     All the key steps on a single A4 page: print it, pin it, share it with your team.
 
-    [:material-download: Download the cheat sheet (PDF)](downloads/kanap-getting-started.pdf){ .md-button .md-button--primary }
+    [:material-download: Download the cheat sheet (PDF)](downloads/kadratis-getting-started.pdf){ .md-button .md-button--primary }
 
 For role-specific workflows, see the [Portfolio Fast Track](index.md) and [IT Ops Fast Track](apps-and-assets.md).
 

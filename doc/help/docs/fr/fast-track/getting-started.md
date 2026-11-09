@@ -10,7 +10,7 @@ Bienvenue dans Kadratis. Ce guide vous accompagne dans tout ce dont vous avez be
 !!! tip "Conseil : Vous préférez un résumé sur une page ? :material-file-pdf-box:"
     Toutes les étapes clés sur une seule page A4 : imprimez-la, épinglez-la, partagez-la avec votre équipe.
 
-    [:material-download: Télécharger l'aide-mémoire (PDF)](downloads/kanap-getting-started.pdf){ .md-button .md-button--primary }
+    [:material-download: Télécharger l'aide-mémoire (PDF)](downloads/kadratis-getting-started.pdf){ .md-button .md-button--primary }
 
 Pour les flux de travail spécifiques à un rôle, consultez le [Fast Track Portefeuille](index.md) et le [Fast Track Cartographie SI](apps-and-assets.md).
 
