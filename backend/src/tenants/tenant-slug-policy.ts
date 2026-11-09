@@ -15,7 +15,7 @@ const RESERVED_TENANT_SLUG_LIST = [
 
 /**
  * Subdomains the cloud keeps for its environments and services (`dev.<domain>`, `qa.<domain>`,
- * mail and status hosts): reserved in multi-tenant mode only, so that the slug of a new
+ * mail and status hosts) and for the product's names: reserved in multi-tenant mode only, so that the slug of a new
  * on-premise installation (`DEFAULT_TENANT_SLUG`) is refused for no more names than before.
  */
 const RESERVED_CLOUD_SUBDOMAIN_LIST = [
@@ -28,6 +28,8 @@ const RESERVED_CLOUD_SUBDOMAIN_LIST = [
   'autodiscover',
   'status',
   'kanap',
+  'kadratis',
+  'cadratis',
 ] as const;
 
 const RESERVED_TENANT_SLUGS = new Set<string>(RESERVED_TENANT_SLUG_LIST);

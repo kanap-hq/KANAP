@@ -325,7 +325,7 @@ PostgreSQL ran on its defaults (128 MB shared buffers, 4 MB work memory; the ste
 
 **System tenant protections**
 - `platform-admin` has `is_system_tenant = true` and cannot be deleted, frozen or modified; system tenants are always excluded from the admin tenant list.
-- Reserved slugs (`tenant-slug-policy.ts`): `www`, `api`, `admin`, `billing`, `account`, `platform-admin`, `app`, `nextcloud`, `migration`, `example`; in multi-tenant mode also `dev`, `qa`, `doc`, `send`, `tenants`, `mail`, `autodiscover`, `status`, `kanap` (a tenant that already holds one keeps it).
+- Reserved slugs (`tenant-slug-policy.ts`): `www`, `api`, `admin`, `billing`, `account`, `platform-admin`, `app`, `nextcloud`, `migration`, `example`; in multi-tenant mode also `dev`, `qa`, `doc`, `send`, `tenants`, `mail`, `autodiscover`, `status`, `kanap`, `kadratis`, `cadratis` (a tenant that already holds one keeps it).
 
 ### Billing & Subscriptions (cloud)
 - `BillingModule` (`backend/src/billing/`) integrates Stripe: `GET /billing/plans|subscription|profile`, `POST /billing/checkout|change-plan|portal|request-invoice`, and `POST /stripe/webhook` (raw body). Subscription state lives on `subscriptions`, not on `tenant.status`.
