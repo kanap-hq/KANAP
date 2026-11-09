@@ -185,6 +185,7 @@ describe('FirstStepsTile', () => {
     renderAt('/', <FirstStepsTile />);
     expect(await screen.findByText('IT budget path complete!')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'IT budget' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Restart this path')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'IT landscape map' }));
     await waitFor(() => expect(screen.getByText('0/5')).toBeInTheDocument());
     expect(env.server.db.angle).toBe('cartography');
@@ -212,39 +213,11 @@ describe('FirstStepsTile', () => {
     }
   });
 
-  it('starts a finished path again by undoing its five steps', async () => {
-    env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'example' });
-    for (const key of ['budget_overview', 'budget_line', 'budget_report', 'budget_plaid', 'budget_import']) {
-      env.server.db.done.set(`budget/example/${key}`, '2026-11-02T09:20:00.000Z');
-    }
-    renderAt('/', <FirstStepsTile />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Restart this path' }));
-    await waitFor(() => expect(screen.getByText('0/5')).toBeInTheDocument());
-    expect(env.server.state().completed).toBe(false);
-    expect(screen.getByRole('link', { name: 'The overview' })).toBeInTheDocument();
-  });
-
-  it('starts the path again from its menu, a step done by its object staying done', async () => {
-    env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'own_data' });
-    env.server.db.done.set('budget/own_data/own_company', '2026-11-02T09:20:00.000Z');
-    env.server.db.objects.add('own_budget_lines');
-    renderAt('/', <FirstStepsTile />);
-    await screen.findByText('2/5');
-    fireEvent.click(screen.getByRole('button', { name: 'Path options' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Restart this path' }));
-    await waitFor(() => expect(screen.getByText('1/5')).toBeInTheDocument());
-    expect(done('own_company')).toBeNull();
-    expect(done('own_budget_lines')).toBeTruthy();
-    expect(screen.queryByRole('menuitem')).not.toBeInTheDocument();
-  });
-
-  it('changes the path from its menu', async () => {
+  it('changes the path from its header', async () => {
     env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'example' });
     renderAt('/', <FirstStepsTile />);
     await screen.findByText('0/5');
-    fireEvent.click(screen.getByRole('button', { name: 'Path options' }));
-    expect(screen.queryByRole('menuitem', { name: 'Restart this path' })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Change path' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Change path' }));
     fireEvent.click(await screen.findByRole('button', { name: 'The IT landscape map' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Explore with the complete example' }));
     await waitFor(() => expect(env.server.db.angle).toBe('cartography'));
@@ -252,11 +225,11 @@ describe('FirstStepsTile', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('has no menu for a member with nothing to start again', async () => {
+  it('leaves the path to the administrators once it is chosen', async () => {
     env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'example', administrator: false });
     renderAt('/', <FirstStepsTile />);
     await screen.findByText('0/5');
-    expect(screen.queryByRole('button', { name: 'Path options' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Change path' })).not.toBeInTheDocument();
   });
 
   it('shows nothing without a path', async () => {

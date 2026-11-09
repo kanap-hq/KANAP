@@ -1581,14 +1581,12 @@
       "gotIt": "Entendido",
       "nextStep": "Siguiente paso",
       "finish": "Terminar",
-      "pathMenu": "Opciones del recorrido",
       "changePath": "Cambiar de recorrido",
       "done": "Hecho",
       "later": "Más tarde",
       "end": {
         "title": "¡Recorrido {{path}} terminado!",
-        "others": "Los otros dos recorridos:",
-        "restart": "Reiniciar este recorrido"
+        "others": "Los otros dos recorridos:"
       },
       "showAgain": "Mostrar los primeros pasos",
       "steps": {

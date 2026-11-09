@@ -1,15 +1,14 @@
 import React from 'react';
-import { Box, IconButton, Link, Menu, MenuItem, Tooltip, Typography } from '@mui/material';
+import { Box, IconButton, Link, Tooltip, Typography } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import CloseIcon from '@mui/icons-material/Close';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
+import AltRouteIcon from '@mui/icons-material/AltRoute';
 import { Link as RouterLink } from 'react-router-dom';
-import { useMutation } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import DashboardTile from '../../pages/workspace/tiles/DashboardTile';
-import { onboardingApi, ONBOARDING_ANGLES, type OnboardingAngle, type OnboardingState } from './onboardingApi';
+import { ONBOARDING_ANGLES, type OnboardingAngle, type OnboardingState } from './onboardingApi';
 import BookDiscoveryCallButton from '../BookDiscoveryCallButton';
 import OnboardingChoiceDialog from './OnboardingChoiceDialog';
 import { stepHref, stepScreen, stepTitleKey } from './onboardingPaths';
@@ -84,68 +83,25 @@ function StepRow({ stepKey, angle, done, next, busy, onToggle }: {
   );
 }
 
-/**
- * The steps of a path are the user's own: undoing the done ones starts the path again (with your
- * own data, a step whose object exists stays done).
- */
-function useRestartPath(state: OnboardingState) {
-  const { apply } = useOnboarding();
-  return useMutation({
-    mutationFn: async () => {
-      let next: OnboardingState = state;
-      for (const step of state.steps.filter((candidate) => candidate.done_at)) {
-        next = await onboardingApi.markUndone(step.key);
-      }
-      return next;
-    },
-    onSuccess: apply,
-  });
-}
-
-/**
- * The tile's menu: start the path again while a step done by hand can be undone, and change the
- * path for whoever may (`can_choose`: an administrator once the path is chosen). Absent when it
- * would be empty.
- */
-function PathMenu({ state }: { state: OnboardingState }) {
+/** Opens the path question again, for whoever may change the path (`can_choose`). */
+function ChangePathButton({ state }: { state: OnboardingState }) {
   const { t } = useTranslation('common');
   const { apply } = useOnboarding();
-  const restart = useRestartPath(state);
-  const [anchor, setAnchor] = React.useState<HTMLElement | null>(null);
-  const [choosing, setChoosing] = React.useState(false);
-  const canRestart = state.steps.some((step) => step.done_at && !step.automatic);
-  if (!canRestart && !state.can_choose) return null;
-  const label = t('onboarding.firstSteps.pathMenu');
+  const [open, setOpen] = React.useState(false);
+  if (!state.can_choose) return null;
+  const label = t('onboarding.firstSteps.changePath');
   return (
     <>
       <Tooltip title={label}>
-        <IconButton size="small" aria-label={label} aria-haspopup="menu" onClick={(event) => setAnchor(event.currentTarget)}>
-          <MoreVertIcon sx={{ fontSize: 18 }} />
+        <IconButton size="small" aria-label={label} aria-haspopup="dialog" onClick={() => setOpen(true)}>
+          <AltRouteIcon sx={{ fontSize: 18 }} />
         </IconButton>
       </Tooltip>
-      <Menu
-        anchorEl={anchor}
-        open={!!anchor}
-        onClose={() => setAnchor(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-      >
-        {canRestart ? (
-          <MenuItem onClick={() => { setAnchor(null); restart.mutate(); }} disabled={restart.isPending}>
-            {t('onboarding.firstSteps.end.restart')}
-          </MenuItem>
-        ) : null}
-        {state.can_choose ? (
-          <MenuItem onClick={() => { setAnchor(null); setChoosing(true); }}>
-            {t('onboarding.firstSteps.changePath')}
-          </MenuItem>
-        ) : null}
-      </Menu>
       <OnboardingChoiceDialog
-        open={choosing}
+        open={open}
         state={state}
-        onClose={() => setChoosing(false)}
-        onChosen={(next) => { apply(next); setChoosing(false); }}
+        onClose={() => setOpen(false)}
+        onChosen={(next) => { apply(next); setOpen(false); }}
       />
     </>
   );
@@ -154,7 +110,6 @@ function PathMenu({ state }: { state: OnboardingState }) {
 function EndScreen({ state }: { state: OnboardingState }) {
   const { t } = useTranslation('common');
   const { choose } = useOnboardingActions();
-  const restart = useRestartPath(state);
   const others = ONBOARDING_ANGLES.filter((angle) => angle !== state.angle);
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -174,11 +129,6 @@ function EndScreen({ state }: { state: OnboardingState }) {
           </React.Fragment>
         ))}
       </Typography>
-      <Box>
-        <Link component="button" variant="body2" onClick={() => restart.mutate()} disabled={restart.isPending}>
-          {t('onboarding.firstSteps.end.restart')}
-        </Link>
-      </Box>
       <BookDiscoveryCallButton placement="last_step" sx={{ alignSelf: 'flex-start' }} />
     </Box>
   );
@@ -191,9 +141,9 @@ export function firstStepsShown(state: OnboardingState | undefined): boolean {
 
 /**
  * The first home tile while the user follows a path: its five steps with their progress, each
- * opening its screen with a hint; the next one stands out. A step's mark toggles it. Its menu
- * starts the path again or changes it. When the five are done, the tile offers the two other
- * paths. Hidden by its close button (About shows it again).
+ * opening its screen with a hint; the next one stands out. A step's mark toggles it. Its header
+ * changes the path. When the five are done, the tile offers the two other paths. Hidden by its
+ * close button (About shows it again).
  * Read again each time it shows: a step done by its object was done on another screen.
  */
 export default function FirstStepsTile() {
@@ -215,7 +165,7 @@ export default function FirstStepsTile() {
           <Typography variant="body2" color="text.secondary" sx={{ fontVariantNumeric: 'tabular-nums' }}>
             {t('onboarding.firstSteps.progress', { done: doneCount, total: steps.length })}
           </Typography>
-          <PathMenu state={state} />
+          <ChangePathButton state={state} />
           <Tooltip title={t('onboarding.firstSteps.hide')}>
             <IconButton size="small" aria-label={t('onboarding.firstSteps.hide')} onClick={() => dismiss.mutate()} disabled={dismiss.isPending}>
               <CloseIcon sx={{ fontSize: 18 }} />

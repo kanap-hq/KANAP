@@ -1581,14 +1581,12 @@
       "gotIt": "Verstanden",
       "nextStep": "Nächster Schritt",
       "finish": "Abschließen",
-      "pathMenu": "Pfadoptionen",
       "changePath": "Pfad wechseln",
       "done": "Erledigt",
       "later": "Später",
       "end": {
         "title": "Pfad {{path}} abgeschlossen!",
-        "others": "Die beiden anderen Pfade:",
-        "restart": "Diesen Pfad neu beginnen"
+        "others": "Die beiden anderen Pfade:"
       },
       "showAgain": "Erste Schritte anzeigen",
       "steps": {

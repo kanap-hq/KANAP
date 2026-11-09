@@ -218,7 +218,6 @@ workspace, whoever created it (`backend/src/onboarding/onboarding-step-evidence.
   This is the only write of `GET /onboarding`. It is skipped unless `sample_data.status` is
   `idle`: sample data being loaded, loaded or erased is not the user's.
 - Such a step stays done while its object exists: `DELETE /steps/:key/done` leaves it as it is.
-  "Restart this path" therefore restarts only the steps without an object.
 - The interface reads the state again each time the first steps tile shows. The hint of such a
   step offers "Got it" instead of "Done".
 

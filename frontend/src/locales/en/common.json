@@ -1581,14 +1581,12 @@
       "gotIt": "Got it",
       "nextStep": "Next step",
       "finish": "Finish",
-      "pathMenu": "Path options",
       "changePath": "Change path",
       "done": "Done",
       "later": "Later",
       "end": {
         "title": "{{path}} path complete!",
-        "others": "The other two paths:",
-        "restart": "Restart this path"
+        "others": "The other two paths:"
       },
       "showAgain": "Show the first steps",
       "steps": {
