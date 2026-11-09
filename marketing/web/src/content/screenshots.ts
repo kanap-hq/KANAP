@@ -1,7 +1,7 @@
 export const HOME_SCREENSHOT = '/screenshots/home-dashboard.png';
 
 export const HOME_HERO_SCREENSHOTS = {
-  main: '/screenshots/feature-plaid-query-2026-10-26.png',
+  main: '/screenshots/feature-plaid-query-2026-11-09.png',
   map: '/screenshots/it-interface-map-2026-11-09.png',
   budget: '/screenshots/budget-top-lines-2026-11-09.png',
 } as const;
@@ -10,9 +10,9 @@ export const FEATURE_HUB_SCREENSHOTS = [
   '/screenshots/budget-top-lines-2026-11-09.png',
   '/screenshots/it-interface-map-2026-11-09.png',
   '/screenshots/portfolio-capacity-2026-11-09.png',
-  '/screenshots/feature-plaid-query-2026-10-26.png',
+  '/screenshots/feature-plaid-query-2026-11-09.png',
   '/screenshots/it-applications-2026-11-09.png',
-  '/screenshots/agent-queue.png',
+  '/screenshots/agent-queue-2026-11-09.png',
 ] as const;
 
 export const FEATURE_SCREENSHOTS = {
@@ -37,8 +37,8 @@ export const FEATURE_SCREENSHOTS = {
     '/screenshots/portfolio-capacity-2026-11-09.png',
   ],
   knowledge: [
-    '/screenshots/knowledge-editor.png',
-    '/screenshots/knowledge-library.png',
+    '/screenshots/knowledge-editor-2026-11-09.png',
+    '/screenshots/knowledge-library-2026-11-09.png',
     '/screenshots/knowledge-document-2026-11-09.png',
     '/screenshots/knowledge-linked-entities-2026-11-09.png',
   ],
@@ -55,24 +55,25 @@ export const FEATURE_SCREENSHOTS = {
     '/screenshots/feature-incidents-relations-2026-11-09.png',
   ],
   ai: [
-    '/screenshots/feature-plaid-query-2026-10-26.png',
-    '/screenshots/feature-plaid-preview-2026-10-26.png',
+    '/screenshots/feature-plaid-query-2026-11-09.png',
+    '/screenshots/feature-plaid-preview-2026-11-09.png',
     '/screenshots/feature-plaid-claude-2026-10-26.png',
-    '/screenshots/feature-plaid-admin-2026-11-09.png',
+    '/screenshots/feature-plaid-admin-2026-11-09b.png',
   ],
 } as const;
 
 /**
- * Agents page screenshots (plan §8), captured from the live agent UI on the
- * Fromage & Co demo tenant (graduated-autonomy panel from a calibrated pilot
- * agent). In section order.
+ * Agents page screenshots (plan §8), captured from the live agent UI on a
+ * tenant loaded with the Fromage & Co sample data (2026-11-09): the fixture
+ * agent and its demo run, its autonomy ladder before any reviewed proposal.
+ * In section order.
  */
 export const AGENT_SCREENSHOTS: readonly (string | undefined)[] = [
-  '/screenshots/agent-autonomy.png',
-  '/screenshots/agent-proposal.png',
-  '/screenshots/agent-settings.png',
-  '/screenshots/agent-activity.png',
-  '/screenshots/agent-queue.png',
+  '/screenshots/agent-autonomy-2026-11-09.png',
+  '/screenshots/agent-proposal-2026-11-09b.png',
+  '/screenshots/agent-settings-2026-11-09.png',
+  '/screenshots/agent-activity-2026-11-09.png',
+  '/screenshots/agent-queue-2026-11-09.png',
 ];
 
 export type FeatureScreenshotSlug = keyof typeof FEATURE_SCREENSHOTS;

@@ -9,6 +9,8 @@ draft: false
 translationKey: kanap-devient-kadratis
 ---
 
+![The Kadratis home page, with Kad in the top bar](/screenshots/kadratis-home-2026-11-09.png)
+
 ## Why a new name
 
 A governance tool is expected to be serious and rigorous; yet in French, KANAP is heard first as « canap' », short for sofa. The association may raise a smile, but it can also work against you.

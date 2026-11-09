@@ -9,6 +9,8 @@ draft: false
 translationKey: kanap-devient-kadratis
 ---
 
+![La página de inicio de Kadratis, con Kad en la barra superior](/screenshots/kadratis-home-2026-11-09.png)
+
 ## Por qué un nuevo nombre
 
 De una herramienta de gobernanza se espera seriedad y rigor; pero en francés, KANAP suena sobre todo a «canap'», abreviatura de sofá. La asociación puede hacer sonreír, pero también puede resultar contraproducente.

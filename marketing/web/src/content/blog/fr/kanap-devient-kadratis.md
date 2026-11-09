@@ -9,6 +9,8 @@ draft: false
 translationKey: kanap-devient-kadratis
 ---
 
+![L'accueil de Kadratis, avec Kad dans la barre du haut](/screenshots/kadratis-home-2026-11-09.png)
+
 ## Pourquoi un nouveau nom
 
 On attend du sérieux et de la rigueur d'un outil de gouvernance ; or en français, on entend surtout « canap' », et si l'analogie peut faire sourire, elle peut aussi être contreproductive.

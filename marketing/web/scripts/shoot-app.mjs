@@ -238,6 +238,28 @@ const waitForReport = (page) =>
 // Open a contract from the list by its name (contracts have no business reference, their address carries a UUID).
 // Plaid feature page: ask Plaid a question in a fresh conversation, list of conversations folded,
 // and wait for the answer to end. Each run writes a new conversation on the tenant.
+// Scrolls the scrolling container that holds `text` so the text sits `top` px below its top edge (LinkedIn shots, 2026-10-27).
+const scrollTextTo = async (page, text, top = 12) => {
+  const r = await page.evaluate(({ text, top }) => {
+    // Text nodes whose text starts with `text`, inside a scrolling container (the sticky header is skipped).
+    const walker = document.createTreeWalker(document.querySelector('main') || document.body, NodeFilter.SHOW_TEXT);
+    const found = [];
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+      if (!(n.nodeValue || '').trim().startsWith(text)) continue;
+      let el = n.parentElement;
+      while (el && el !== document.body && el.scrollHeight <= el.clientHeight + 2) el = el.parentElement;
+      if (!el || el === document.body) continue;
+      found.push({ t: n.parentElement, el });
+    }
+    if (!found.length) return 'not found';
+    const { t, el } = found[0];
+    const delta = t.getBoundingClientRect().top - el.getBoundingClientRect().top - top;
+    el.scrollBy(0, delta);
+    return `scrolled ${Math.round(delta)} in ${el.tagName}.${el.className}`;
+  }, { text, top });
+  console.log(`scrollTextTo(${text}): ${r}`);
+};
+
 const askPlaid = async (page, question, done) => {
   await page.waitForSelector('textarea', { timeout: 30000 });
   const toggle = await page.$('main button:has(svg[data-testid="MenuIcon"])');
@@ -293,6 +315,27 @@ const openContract = async (page, name) => {
   await page.waitForFunction(() => location.pathname.includes('/overview'), { timeout: 20000 });
   await page.waitForFunction(() => /Without a decision|Deadlines/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 }).catch(() => {});
   await sleep(1000);
+};
+
+// Agents page (plan §8): the Fromage & Co fixture agent and its demo run. Opens its workspace on one tab
+// (monitor, approvals, performance, settings); the key in the address comes from the tenant.
+const AGENT_NAME = 'Fromage Service Desk Agent';
+const openAgent = async (page, tab) => {
+  await page.waitForFunction((n) => document.querySelector('main')?.innerText.includes(n), { timeout: 30000 }, AGENT_NAME);
+  const [link] = await page.$$(`xpath/.//main//*[normalize-space(text())="${AGENT_NAME}"]`);
+  await link.click();
+  await page.waitForFunction(() => /^\/agents\/(?!approvals$|activity$|shared-context$)[^/]+$/.test(location.pathname), { timeout: 20000 });
+  const url = new URL(page.url());
+  url.searchParams.set('tab', tab);
+  await page.goto(url.toString(), { waitUntil: 'domcontentloaded', timeout: 30000 });
+  // A full navigation: hide the devtools button again, as the main loop does after its own.
+  await page.evaluate(() => {
+    const style = document.createElement('style');
+    style.textContent = '.tsqd-open-btn-container{display:none!important}';
+    document.head.appendChild(style);
+  });
+  await page.waitForFunction((n) => document.querySelector('main')?.innerText.includes(n), { timeout: 30000 }, AGENT_NAME);
+  await sleep(2000);
 };
 
 const PAGES = {
@@ -355,7 +398,8 @@ const PAGES = {
     path: '/ai',
     waitFor: 'main',
     async prepare(page) {
-      await askPlaid(page, 'Move task T-30 to in progress and add the comment: Call with SAP on 5 November to discuss the 2027 price. Show me the preview first.', () => /pending/i.test(document.querySelector('main')?.innerText || ''));
+      // T-15 SAP maintenance renewal negotiation, open, on a tenant loaded from scratch (fromage-co, 2026-11-09); was T-30 on fromage.
+      await askPlaid(page, 'Move task T-15 to in progress and add the comment: Call with SAP on 18 November to discuss the 2027 price. Show me the preview first.', () => /pending/i.test(document.querySelector('main')?.innerText || ''));
 // The preview stays open in the side panel, with its fields and its pending state.
       await sleep(800);
     },
@@ -363,6 +407,121 @@ const PAGES = {
   // Plaid feature page: the Claude section uses a screenshot of Claude itself (claude.ai, taken by the maintainer).
   // Plaid feature page: Admin > Plaid, provider status, included model and its processing location, monthly usage, feature switches.
   'feature-plaid-admin': { frame: 1440, path: '/admin/ai', waitFor: 'main' },
+  // LinkedIn opening post (2026-10-27, retaken 2026-11-09 for Kadratis): budget, contract, applications, vulnerabilities and
+  // portfolio, in the post's order; the sixth image is the feature-plaid-query shot. Frames as chosen on 2026-10-27.
+  'linkedin-budget-top-opex': {
+    frame: 1920,
+    path: '/ops/reports/top-opex?scope=opex',
+    waitFor: 'main',
+    async prepare(page) {
+      await waitForReport(page);
+      await page.waitForFunction(() => document.querySelector('main')?.innerText.includes('Largest OPEX lines'), { timeout: 30000 }).catch(() => console.warn('OPEX tab not applied'));
+      await pickSelect(page, 'Chart type', 'Horizontal bar chart');
+      await hideControls(page, HIDDEN_DIMENSIONS);
+      await sleep(1500);
+    },
+  },
+  'linkedin-contract': {
+    frame: 1600,
+    path: '/ops/contracts',
+    waitFor: 'main',
+    async prepare(page) {
+      await openContract(page, 'SAP Maintenance & Support');
+    },
+  },
+  'linkedin-compliance': {
+    frame: 1600,
+    path: '/it/applications/APP-8/compliance',
+    waitFor: 'main',
+    async prepare(page) {
+      await openProperties(page);
+      await page.waitForFunction(() => document.querySelector('main')?.innerText.includes('planned in V'), { timeout: 30000 }).catch(() => console.warn('recovery wave not seen'));
+      await sleep(1000);
+      await scrollTextTo(page, 'Business criticality', 4);
+      await sleep(700);
+    },
+  },
+  'linkedin-vulnerabilities': {
+    frame: 1920,
+    path: '/it/vulnerabilities?exploited=1',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForSelector('.ag-center-cols-container .ag-row', { timeout: 60000 });
+      await page.waitForFunction(() => /Total: [\d,]+ rows/.test(document.querySelector('.ag-floating-bottom')?.textContent || ''), { timeout: 30000 }).catch(() => {});
+      await sleep(1000);
+    },
+  },
+  'linkedin-request-scoring': {
+    frame: 1440,
+    path: '/portfolio/requests/REQ-3/scoring',
+    waitFor: 'main',
+    async prepare(page) {
+      await openProperties(page);
+      await page.waitForFunction(() => /Evaluation criteria/.test(document.querySelector('main')?.innerText || '') && /Cave Climate Digital Twin/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 });
+      await sleep(1000);
+      await scrollTextTo(page, 'Business value', 0);
+      await sleep(700);
+    },
+  },
+  // Agents page, in section order: autonomy ladder (Performance tab), a proposal awaiting approval,
+  // the agent settings, the activity record, the agent's own approval queue.
+  'agent-autonomy': {
+    frame: 1280, // the section is the end of the page: at 1440 the page stops scrolling with a chart above it
+    path: '/agents',
+    waitFor: 'main',
+    async prepare(page) {
+      await openAgent(page, 'performance');
+      const [title] = await page.$$('xpath/.//main//*[normalize-space(text())="Autonomy"]');
+      if (title) await title.evaluate((n) => n.scrollIntoView({ block: 'start' })); else console.warn('Autonomy section not found');
+      await sleep(1000);
+    },
+  },
+  'agent-proposal': {
+    frame: 1440,
+    path: '/agents/approvals',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForFunction(() => /Waiting for approval/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 }).catch(() => console.warn('no proposal waiting'));
+      await sleep(1500);
+      // The section speaks of the sources the agent used: bring the first drafted reply, which ends with them, to the top.
+      await scrollTextTo(page, 'Requester reply', 16);
+      await sleep(800);
+      // The reply sits in its own scrolling box: scroll that box to its end, where the reply lists its sources.
+      await page.evaluate(() => {
+        const reply = [...document.querySelectorAll('main pre')].find((n) => /\nSources:\n/.test(n.textContent || ''));
+        let box = reply?.parentElement;
+        while (box && box.scrollHeight <= box.clientHeight + 2) box = box.parentElement;
+        if (box && box !== document.querySelector('main') && !box.contains(document.querySelector('main'))) box.scrollTop = box.scrollHeight;
+        else console.warn('reply box not found');
+      });
+      await sleep(800);
+    },
+  },
+  'agent-settings': {
+    frame: 1440, path: '/agents', waitFor: 'main', prepare: (page) => openAgent(page, 'settings') },
+  'agent-activity': {
+    frame: 1440,
+    path: '/agents/activity',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForFunction(() => /Drafted a proposal|Proposal created|Action executed/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 }).catch(() => console.warn('no activity'));
+      await sleep(1500);
+      // Kad's own write previews (the feature-plaid-preview shots) land in this timeline under a raw action key, and the
+      // fixture's mock triage leaves a "[… mock triage]" entry: neither is the agent's own run. Drops each such row
+      // (the timeline entry that holds the marker and a Trace link).
+      await page.evaluate(() => {
+        const leaves = [...document.querySelectorAll('main *')].filter((n) => !n.children.length && /kanap\.mutation|mutation preview|mock triage\]/.test(n.textContent || ''));
+        for (const leaf of leaves) {
+          let row = leaf;
+          while (row.parentElement && !(row.parentElement.children.length > 3 && /Trace/.test(row.innerText))) row = row.parentElement;
+          if (row.parentElement) row.remove();
+        }
+      });
+      await sleep(500);
+    },
+  },
+  'agent-queue': {
+    frame: 1440, path: '/agents', waitFor: 'main', prepare: (page) => openAgent(page, 'approvals') },
   // Contracts feature page: list with the 2026 commitment, budget and gap. Read-only.
   'feature-contracts-list': {
     frame: 1920,
@@ -1596,7 +1755,7 @@ const PAGES = {
       await sleep(1500);
       // The generated documents sit in the folders (Requests, Projects, Interfaces, Applications, Assets), not at the library root.
       await clickText(page, 'main *', process.env.KNOWLEDGE_FOLDER || 'Applications');
-      await page.waitForFunction(() => /APP-\d+ - /.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 }).catch(() => console.warn('no application documents'));
+      await page.waitForFunction(() => /[A-Z]{3}-\d+ - /.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 }).catch(() => console.warn('no generated documents'));
       await sleep(2000);
     },
   },
@@ -1614,10 +1773,12 @@ const PAGES = {
   },
   'knowledge-editor': {
     frame: 1440,
-    path: '/knowledge/DOC-42',
+    // Was DOC-42 (APP-48 AS/400 Order Management, one line of text) on the fromage tenant. Default: the INC-3 incident
+    // review of the fixture (headings, lists), DOC-43 on a tenant loaded from scratch (fromage-co, 2026-11-09).
+    path: `/knowledge/${process.env.KNOWLEDGE_EDIT_DOC || 'DOC-43'}`,
     waitFor: 'main',
     async prepare(page) {
-      await page.waitForFunction(() => /Legacy order processing/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 });
+      await page.waitForFunction(() => /Published/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 });
       // Edit mode is local to the page until Save: nothing is saved, the browser closes after the shot.
       await clickText(page, 'button', 'Edit');
       await page.waitForSelector('[contenteditable="true"]', { timeout: 20000 });
