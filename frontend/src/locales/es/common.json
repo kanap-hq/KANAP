@@ -1545,7 +1545,9 @@
       "justLooking": "Solo estoy mirando",
       "erasesExample": "El ejemplo se borra.",
       "confirmTitle": "¿Borrar el ejemplo?",
-      "failed": "No se ha podido guardar su respuesta."
+      "failed": "No se ha podido guardar su respuesta.",
+      "loadsAfterReset": "Los datos de ejemplo se cargan una vez vaciado el espacio de trabajo.",
+      "seeContent": "Ver lo que contiene el espacio de trabajo"
     },
     "angles": {
       "budget": "El presupuesto de TI",

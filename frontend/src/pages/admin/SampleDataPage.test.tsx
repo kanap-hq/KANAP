@@ -58,6 +58,7 @@ const BASE = {
   load_refusal: null,
   blocking: null,
   created_since_load: null,
+  can_reset: false,
   workspace_name: 'Fromage & Co',
   loaded_by_name: null,
 };
@@ -147,6 +148,16 @@ describe('SampleDataPage', () => {
     expect(await screen.findByText(/This workspace already holds data/)).toBeInTheDocument();
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Load sample data' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Erase everything and start over' })).not.toBeInTheDocument();
+  });
+
+  it('offers to erase a workspace that holds data during the trial', async () => {
+    (apiClient.get as any).mockResolvedValue({ ...BASE, can_load: false, load_refusal: 'tenant_not_empty', can_reset: true });
+    renderPage();
+
+    expect(await screen.findByText(/This workspace already holds data/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Erase everything and start over' }));
+    expect(await screen.findByRole('textbox', { name: 'Workspace name' })).toBeInTheDocument();
   });
 
   it('lists what blocks a load, with a count and a link to each list', async () => {

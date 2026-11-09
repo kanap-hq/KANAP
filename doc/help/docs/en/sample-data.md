@@ -48,11 +48,11 @@ The page follows the load step by step (for example "Step 4 of 21: charts of acc
 
 **If a load is not possible**, the page shows no **Load sample data** button. It says why:
 
-- the workspace already holds data. The page then lists each kind of object that stands in the way, with how many there are and a link to its list, for example **Applications (4)**, **Suppliers (1)**. Remove them to load the sample data, or keep working without it.
+- the workspace already holds data. The page then lists each kind of object that stands in the way, with how many there are and a link to its list, for example **Applications (4)**, **Suppliers (1)**. Remove them to load the sample data, or keep working without it. During the trial, you can also erase the workspace (see below).
 - the subscription is frozen
 - the trial has ended
 
-The home banner stays hidden in those cases. Erasing remains possible on a frozen workspace (see below).
+The home banner stays hidden in those cases. Erasing loaded sample data remains possible on a frozen workspace (see below).
 
 **If the load fails**, KANAP puts the workspace back in its starting state by itself. The status shows **Load failed** with the date, and the page gives the reason. Click **Try again** to start another load.
 
@@ -72,7 +72,12 @@ The line disappears as soon as the workspace holds data. It does not come back a
 
 ## Erase everything and start over
 
-Once sample data is loaded, the page offers **Erase everything and start over**. It is also offered after a load that failed and could not restore the starting state. It works when the subscription is frozen or the trial has expired.
+The page offers **Erase everything and start over** in two cases:
+
+- Sample data is loaded, or a load failed and could not restore the starting state. This works with any subscription, including a frozen one or an expired trial.
+- During the trial, the workspace holds data of its own and no sample data. Once the trial is over (subscribed or expired), such a workspace can no longer be erased: the page only lists what stands in the way.
+
+Once erased, the workspace is empty and the page offers **Load sample data**.
 
 **This action cannot be undone.** All the content of the workspace is erased, whether it came from the sample set or from your own work, and the workspace returns to its starting state.
 

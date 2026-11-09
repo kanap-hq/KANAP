@@ -196,7 +196,7 @@ The state lives in `tenants.metadata.demo` (no table of its own). Status values:
 
 - GET `/admin/sample-data`
   - Returns the state plus what the page needs:
-    - `{ status, step, started_at, heartbeat_at, loaded_at, loaded_by, failed_at, error_code, dismissed_at, ever_loaded_at, reset_failed_at, language, can_load, load_refusal, blocking, created_since_load, workspace_name, loaded_by_name }`
+    - `{ status, step, started_at, heartbeat_at, loaded_at, loaded_by, failed_at, error_code, dismissed_at, ever_loaded_at, reset_failed_at, language, can_load, load_refusal, blocking, created_since_load, can_reset, workspace_name, loaded_by_name }`
   - `?view=banner` returns the light view the home banner polls: no `created_since_load`, no `loaded_by_name`, and no check of the workspace content once the banner can no longer show (hidden, or sample data loaded once): `can_load` is then `false`. The page uses the full view.
   - `ever_loaded_at` is set when a load completes and is kept by a reset. The home banner never shows again once it is set.
   - `reset_failed_at` is set when a reset an Administrator asked for failed (nothing was changed). The next load or reset clears it.
@@ -206,6 +206,7 @@ The state lives in `tenants.metadata.demo` (no table of its own). Status values:
   - `can_load` is true when the status is `idle` or `failed`, the subscription is in good standing and the workspace is still in its starting state (no business data, no added configuration; what activation creates does not count).
   - `load_refusal` says why a load would be refused now (status `idle` or `failed` only): `SUBSCRIPTION_FROZEN`, `TRIAL_EXPIRED` or `tenant_not_empty`. `null` when it would not be. The page shows that reason, and no Load button.
   - `blocking` lists what stands in the way when `load_refusal` is `tenant_not_empty`: `{ table, count }` for each table, where `count` is how many rows are outside the starting state (every row of a table that must be empty; the extras where activation leaves rows, such as companies beyond the first). `null` otherwise, and always on `?view=banner`.
+  - `can_reset` is true when the status is `loaded` or `failed`, or when it is `idle` while the trial runs in a workspace that holds data (`load_refusal` `tenant_not_empty`). False on the banner view for an idle workspace whose banner can no longer show.
   - `created_since_load` counts the rows created after `loaded_at` in the business and configuration tables, the companies and the documents (every library). Users are not counted: a reset keeps real users. `null` unless `status = loaded`.
   - `loaded_by_name` is the name of the user who started the last load, or their e-mail address when they have no name.
   - `workspace_name` is the name an Administrator types to confirm a reset (the workspace slug when the name is empty).
@@ -227,7 +228,7 @@ The state lives in `tenants.metadata.demo` (no table of its own). Status values:
 
 - POST `/admin/sample-data/reset` → `202` with the `resetting` state
   - Body: `{ confirm_name: string }`, compared to `workspace_name` with surrounding spaces and case ignored. `400` `confirmation_mismatch` otherwise (also when missing).
-  - Allowed when the status is `loaded` or `failed`, and on a frozen workspace or an expired trial. `409` `demo_status_conflict` otherwise; `409` `tenant_reset_running` if another reset holds the lock.
+  - Allowed when the status is `loaded` or `failed`, whatever the subscription (frozen, trial expired, subscribed). With the status `idle`, allowed only while the trial runs (subscription `trialing`, trial end ahead) in a workspace that holds data: `403` `reset_trial_only` once the trial is over, `409` `demo_status_conflict` when the workspace is still in its starting state. `409` `demo_status_conflict` for any other status; `409` `tenant_reset_running` if another reset holds the lock. `GET` says it in advance (`can_reset`).
   - Runs `TenantResetService` in the background. It keeps real users and their roles, the subscription, the workspace name, address and logo, the Microsoft sign-in setup, the AI settings and the audit log (plus one audit entry with source reference `demo-reset`). Workspace settings (currencies, budget columns, classification catalog) go back to defaults. Storage objects are deleted after the commit.
   - While the status is `resetting`, every other write request of the workspace gets `409` `tenant_resetting` (reads, token refresh and sign-out still work).
   - After a successful reset, every enabled user with the Administrator role gets an e-mail (who, when, link to the workspace), if e-mail is enabled. A failure to send never fails the reset. The e-mail is sent by the service, also when another API process finishes a reset a stopped process left.

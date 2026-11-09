@@ -47,7 +47,7 @@ Dans un espace de travail en essai, une fenêtre s'ouvre la première fois que v
 1. **Qu'est-ce qui vous amène ?** **Le budget IT**, **La cartographie du SI**, **Les projets et les demandes** ou **Je regarde**.
 2. **Comment voulez-vous commencer ?** **Découvrir avec l'exemple complet** ou **Commencer avec mes données**.
 
-Commencer avec vos données efface l'exemple. Si des éléments ont été créés depuis le chargement de l'exemple, une confirmation en donne le nombre avant tout effacement. Seul un administrateur peut choisir ses propres données tant que l'espace de travail contient l'exemple. L'exemple ne se charge que dans un espace de travail vide : une fois que le vôtre contient des données, choisir de nouveau l'exemple est refusé et votre parcours ne change pas.
+Commencer avec vos données efface l'exemple. Si des éléments ont été créés depuis le chargement de l'exemple, une confirmation en donne le nombre avant tout effacement. Seul un administrateur peut choisir ses propres données tant que l'espace de travail contient l'exemple. L'exemple ne se charge que dans un espace de travail vide. Pendant la période d'essai, un administrateur qui choisit l'exemple alors que l'espace de travail contient des données doit d'abord l'effacer : la confirmation demande le nom de l'espace de travail et propose **Voir ce que contient l'espace de travail**. L'espace de travail est effacé, puis l'exemple se charge. Après la période d'essai, le choix est refusé et votre parcours ne change pas.
 
 Pendant le chargement de l'exemple, ou pendant l'effacement de l'espace de travail, une ligne de la page d'accueil l'indique.
 

@@ -1545,7 +1545,9 @@
       "justLooking": "Je regarde",
       "erasesExample": "L'exemple est effacé.",
       "confirmTitle": "Effacer l'exemple ?",
-      "failed": "Votre réponse n'a pas pu être enregistrée."
+      "failed": "Votre réponse n'a pas pu être enregistrée.",
+      "loadsAfterReset": "Les données d'exemple se chargent une fois l'espace de travail vidé.",
+      "seeContent": "Voir ce que contient l'espace de travail"
     },
     "angles": {
       "budget": "Le budget IT",

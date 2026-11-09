@@ -48,11 +48,11 @@ Die Seite zeigt den Ladevorgang Schritt für Schritt (zum Beispiel „Schritt 4 
 
 **Wenn das Laden nicht möglich ist**, zeigt die Seite die Schaltfläche **Beispieldaten laden** nicht an. Sie nennt den Grund:
 
-- Der Arbeitsbereich enthält bereits Daten. Die Seite listet dann jede Objektart auf, die dem Laden im Weg steht, mit ihrer Anzahl und einem Link zu ihrer Liste, zum Beispiel **Anwendungen (4)**, **Lieferanten (1)**. Entfernen Sie sie, um die Beispieldaten zu laden, oder arbeiten Sie ohne sie weiter.
+- Der Arbeitsbereich enthält bereits Daten. Die Seite listet dann jede Objektart auf, die dem Laden im Weg steht, mit ihrer Anzahl und einem Link zu ihrer Liste, zum Beispiel **Anwendungen (4)**, **Lieferanten (1)**. Entfernen Sie sie, um die Beispieldaten zu laden, oder arbeiten Sie ohne sie weiter. Während der Testphase können Sie den Arbeitsbereich auch löschen (siehe unten).
 - Das Abonnement ist eingefroren.
 - Die Testphase ist beendet.
 
-Das Banner auf der Startseite bleibt dann ausgeblendet. Das Löschen bleibt in einem eingefrorenen Arbeitsbereich möglich (siehe unten).
+Das Banner auf der Startseite bleibt dann ausgeblendet. Das Löschen geladener Beispieldaten bleibt in einem eingefrorenen Arbeitsbereich möglich (siehe unten).
 
 **Wenn das Laden fehlschlägt**, versetzt KANAP den Arbeitsbereich selbstständig in seinen Ausgangszustand zurück. Der Status zeigt **Laden fehlgeschlagen** mit dem Datum, und die Seite nennt den Grund. Klicken Sie auf **Erneut versuchen**, um einen neuen Ladevorgang zu starten.
 
@@ -72,7 +72,12 @@ Die Zeile verschwindet, sobald der Arbeitsbereich Daten enthält. Nach dem Lösc
 
 ## Alles löschen und neu beginnen
 
-Sobald Beispieldaten geladen sind, bietet die Seite **Alles löschen und neu beginnen** an. Die Aktion steht auch nach einem fehlgeschlagenen Ladevorgang zur Verfügung, der den Ausgangszustand nicht wiederherstellen konnte. Sie funktioniert auch, wenn das Abonnement eingefroren oder die Testphase abgelaufen ist.
+Die Seite bietet **Alles löschen und neu beginnen** in zwei Fällen an:
+
+- Beispieldaten sind geladen, oder ein Ladevorgang ist fehlgeschlagen und konnte den Ausgangszustand nicht wiederherstellen. Das funktioniert mit jedem Abonnement, auch wenn es eingefroren oder die Testphase abgelaufen ist.
+- Während der Testphase enthält der Arbeitsbereich eigene Daten und keine Beispieldaten. Nach dem Ende der Testphase (Abonnement abgeschlossen oder Testphase abgelaufen) lässt sich ein solcher Arbeitsbereich nicht mehr löschen: Die Seite listet nur auf, was dem Laden im Weg steht.
+
+Nach dem Löschen ist der Arbeitsbereich leer und die Seite bietet **Beispieldaten laden** an.
 
 **Diese Aktion lässt sich nicht rückgängig machen.** Der gesamte Inhalt des Arbeitsbereichs wird gelöscht, egal ob er aus dem Beispieldatensatz oder aus Ihrer eigenen Arbeit stammt, und der Arbeitsbereich kehrt in seinen Ausgangszustand zurück.
 

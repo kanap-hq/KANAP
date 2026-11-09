@@ -43,6 +43,8 @@ export type SampleDataOverview = SampleDataState & {
   /** Set when `load_refusal` is `tenant_not_empty` on the page view. Null on the banner view. */
   blocking: SampleDataBlocking[] | null;
   created_since_load: number | null;
+  /** "Erase everything" can start now: after a load, or while the trial runs in a workspace that holds data. */
+  can_reset: boolean;
   workspace_name: string;
   loaded_by_name: string | null;
 };

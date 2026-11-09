@@ -11,6 +11,7 @@ import {
   DemoErrorCode,
   DemoStatus,
   readDemoState,
+  workspaceConfirmationName,
 } from '../demo-data/demo-data.service';
 import {
   isOnboardingAngle,
@@ -45,7 +46,9 @@ import { isTenantAdministrator } from './tenant-administrator';
  * `own_data` changes nothing, and is refused while sample data is there. `example` loads the
  * sample data into an empty workspace when an administrator chooses it. A refused `own_data`
  * writes nothing; a refused load still writes the first choice, while a switch back to `example`
- * in a workspace that holds data is refused (`tenant_not_empty`) and writes nothing.
+ * in a workspace that holds data is refused (`tenant_not_empty`) and writes nothing, unless the
+ * administrator confirms the reset of the workspace during the trial (`confirm_reset` and the
+ * workspace name in `confirm_name`): the workspace is erased, then the sample data loads.
  */
 
 export const ONBOARDING_AUDIT_TABLE = 'onboarding';
@@ -145,13 +148,14 @@ export class OnboardingService {
   }
 
   /**
-   * `PUT /onboarding/choice` with `{ angle?, mode?, confirm_reset? }`. A field left out keeps its
-   * value. Any user may set a field still empty; changing a field already set takes an
-   * administrator. The tenant's row is locked, so two first answers at the same time apply one
+   * `PUT /onboarding/choice` with `{ angle?, mode?, confirm_reset?, confirm_name? }`. A field left
+   * out keeps its value. Any user may set a field still empty; changing a field already set takes
+   * an administrator. The tenant's row is locked, so two first answers at the same time apply one
    * after the other. A new mode acts on the sample data first (`applyMode`); `confirm_reset:
    * true` lets `own_data` erase objects created since the sample data load (409
-   * `sample_data_modified` otherwise). `host` is the request's Host header, which a load of the
-   * sample data needs.
+   * `sample_data_modified` otherwise), and lets a switch to `example` erase a workspace that holds
+   * data, with the workspace name typed in `confirm_name` (`loadExample`). `host` is the request's
+   * Host header, which a load of the sample data needs.
    */
   async setChoice(
     manager: EntityManager,
@@ -176,6 +180,7 @@ export class OnboardingService {
       throw new BadRequestException({ code: 'invalid_confirm_reset', message: 'confirm_reset must be true or false.' });
     }
     const confirmReset = input.confirm_reset === true;
+    const confirmName = input.confirm_name;
 
     await manager.query(
       `INSERT INTO tenant_onboarding (tenant_id) VALUES ($1) ON CONFLICT (tenant_id) DO NOTHING`,
@@ -204,7 +209,7 @@ export class OnboardingService {
 
     // Before the write: a refused effect writes nothing.
     const effect = modeChanges
-      ? await this.applyMode(manager, tenantId, userId, mode!, { host: opts.host ?? '', confirmReset, previousMode })
+      ? await this.applyMode(manager, tenantId, userId, mode!, { host: opts.host ?? '', confirmReset, confirmName, previousMode })
       : { emptying: false };
 
     await manager.query(
@@ -242,12 +247,15 @@ export class OnboardingService {
     tenantId: string,
     userId: string,
     mode: OnboardingMode,
-    opts: { host: string; confirmReset: boolean; previousMode: OnboardingMode | null },
+    opts: { host: string; confirmReset: boolean; confirmName: unknown; previousMode: OnboardingMode | null },
   ): Promise<{ emptying: boolean }> {
     if (Features.SINGLE_TENANT || (await this.demo.isSystemTenant(tenantId))) return { emptying: false };
     if (mode === 'own_data') return this.emptyWorkspace(manager, tenantId, userId, opts.confirmReset);
-    await this.loadExample(manager, tenantId, userId, opts.host, opts.previousMode !== null);
-    return { emptying: false };
+    return this.loadExample(manager, tenantId, userId, opts.host, {
+      switching: opts.previousMode !== null,
+      confirmReset: opts.confirmReset,
+      confirmName: opts.confirmName,
+    });
   }
 
   /**
@@ -326,26 +334,48 @@ export class OnboardingService {
    * or `failed` once its reset is done), in the tenant's seed language, from the request's host.
    * A refusal (workspace not empty, subscription, too many loads at once, ...) leaves the choice
    * to be written, with a warning in the server log. Another user's choice loads nothing.
-   * `switching` (a mode was chosen before): a workspace that holds data refuses the switch
-   * (`409` `tenant_not_empty`), since the example path would point at screens without it.
+   * `switching` (a mode was chosen before): a workspace that holds data refuses the switch, since
+   * the example path would point at screens without it: 409 `tenant_not_empty`, which says
+   * whether the workspace can be erased (`reset_available`: while the trial runs) and the name to
+   * type (`workspace_name`). With `confirmReset` and that name in `confirmName`, the workspace is
+   * erased (`DemoDataService.resetThenLoad`: 400 `confirmation_mismatch`, 403 `reset_trial_only`)
+   * and the sample data loads once it is empty; `emptying` is then true.
    */
   private async loadExample(
     manager: EntityManager,
     tenantId: string,
     userId: string,
     host: string,
-    switching: boolean,
-  ): Promise<void> {
+    opts: { switching: boolean; confirmReset: boolean; confirmName: unknown },
+  ): Promise<{ emptying: boolean }> {
     const state = await this.demo.getStatus(tenantId);
     const empty = state.status === 'idle' || (state.status === 'failed' && state.error_code !== 'reset_failed');
-    if (!empty || !(await isTenantAdministrator(manager, tenantId, userId))) return;
-    const [tenant]: Array<{ metadata: unknown }> = await manager.query(`SELECT metadata FROM tenants WHERE id = $1`, [tenantId]);
+    if (!empty || !(await isTenantAdministrator(manager, tenantId, userId))) return { emptying: false };
+    const [tenant]: Array<{ metadata: unknown; name: string | null; slug: string }> = await manager.query(
+      `SELECT metadata, name, slug FROM tenants WHERE id = $1`,
+      [tenantId],
+    );
+    const language = tenantSeedLanguage(tenant?.metadata);
     try {
-      await this.demo.loadDemoData(tenantId, { language: tenantSeedLanguage(tenant?.metadata), actorId: userId, host });
+      await this.demo.loadDemoData(tenantId, { language, actorId: userId, host });
     } catch (error) {
-      if (switching && errorCode(error) === 'tenant_not_empty') throw error;
-      this.logger.warn(`Sample data not loaded into tenant ${tenantId} for the onboarding choice: ${errorCode(error)}`);
+      if (!opts.switching || errorCode(error) !== 'tenant_not_empty') {
+        this.logger.warn(`Sample data not loaded into tenant ${tenantId} for the onboarding choice: ${errorCode(error)}`);
+        return { emptying: false };
+      }
+      if (opts.confirmReset) {
+        await this.demo.resetThenLoad({ tenantId, actorId: userId, confirmName: opts.confirmName, host, language });
+        return { emptying: true };
+      }
+      throw new ConflictException({
+        statusCode: 409,
+        code: 'tenant_not_empty',
+        reset_available: await this.demo.isTrialRunning(tenantId),
+        workspace_name: workspaceConfirmationName(tenant),
+        message: 'Sample data can only be loaded into a workspace that holds no data yet.',
+      });
     }
+    return { emptying: false };
   }
 
   /**

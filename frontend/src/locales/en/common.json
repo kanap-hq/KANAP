@@ -1545,7 +1545,9 @@
       "justLooking": "Just looking",
       "erasesExample": "The example is erased.",
       "confirmTitle": "Erase the example?",
-      "failed": "Your answer could not be saved."
+      "failed": "Your answer could not be saved.",
+      "loadsAfterReset": "The sample data loads once the workspace is empty.",
+      "seeContent": "See what the workspace holds"
     },
     "angles": {
       "budget": "The IT budget",

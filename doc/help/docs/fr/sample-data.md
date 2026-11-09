@@ -48,11 +48,11 @@ La page suit le chargement étape par étape (par exemple « Étape 4 sur 21 : p
 
 **Si un chargement n'est pas possible**, la page n'affiche pas le bouton **Charger les données d'exemple**. Elle en indique la raison :
 
-- l'espace de travail contient déjà des données. La page liste alors chaque type d'objet qui empêche le chargement, avec son nombre et un lien vers sa liste, par exemple **Applications (4)**, **Fournisseurs (1)**. Retirez-les pour charger les données d'exemple, ou continuez sans elles.
+- l'espace de travail contient déjà des données. La page liste alors chaque type d'objet qui empêche le chargement, avec son nombre et un lien vers sa liste, par exemple **Applications (4)**, **Fournisseurs (1)**. Retirez-les pour charger les données d'exemple, ou continuez sans elles. Pendant la période d'essai, vous pouvez aussi effacer l'espace de travail (voir ci-dessous).
 - l'abonnement est gelé
 - la période d'essai est terminée
 
-Le bandeau de la page d'accueil reste alors masqué. L'effacement reste possible sur un espace de travail gelé (voir ci-dessous).
+Le bandeau de la page d'accueil reste alors masqué. L'effacement des données d'exemple chargées reste possible sur un espace de travail gelé (voir ci-dessous).
 
 **Si le chargement échoue**, KANAP remet lui-même l'espace de travail dans son état initial. Le statut affiche **Échec du chargement** avec la date, et la page en donne la raison. Cliquez sur **Réessayer** pour lancer un nouveau chargement.
 
@@ -72,7 +72,12 @@ La ligne disparaît dès que l'espace de travail contient des données. Elle ne 
 
 ## Tout effacer et repartir de zéro
 
-Une fois les données d'exemple chargées, la page propose **Tout effacer et repartir de zéro**. Elle est aussi proposée après un chargement qui a échoué et n'a pas pu rétablir l'état initial. Elle fonctionne quand l'abonnement est gelé ou la période d'essai expirée.
+La page propose **Tout effacer et repartir de zéro** dans deux cas :
+
+- Des données d'exemple sont chargées, ou un chargement a échoué et n'a pas pu rétablir l'état initial. L'action fonctionne quel que soit l'abonnement, y compris gelé ou après l'expiration de la période d'essai.
+- Pendant la période d'essai, l'espace de travail contient ses propres données et aucune donnée d'exemple. Une fois la période d'essai terminée (abonnement souscrit ou essai expiré), un tel espace de travail ne peut plus être effacé : la page liste seulement ce qui empêche le chargement.
+
+Une fois effacé, l'espace de travail est vide et la page propose **Charger les données d'exemple**.
 
 **Cette action est irréversible.** Tout le contenu de l'espace de travail est effacé, qu'il vienne du jeu d'exemple ou de votre propre travail, et l'espace de travail revient à son état initial.
 

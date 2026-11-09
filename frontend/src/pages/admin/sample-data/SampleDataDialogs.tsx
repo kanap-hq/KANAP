@@ -97,9 +97,10 @@ export function LoadSampleDataDialog({ open, loading, error, onClose, onConfirm 
 
 /**
  * The confirmation of a reset: everything is erased for good, what is kept, and the workspace
- * name to type. "Erase everything" stays disabled until the name matches.
+ * name to type. "Erase everything" stays disabled until the name matches. `children` come under
+ * the warning (what the caller does next, where to see the content).
  */
-export function ResetWorkspaceDialog({ open, workspaceName, createdSinceLoad, resetting, error, onClose, onConfirm }: {
+export function ResetWorkspaceDialog({ open, workspaceName, createdSinceLoad, resetting, error, onClose, onConfirm, children }: {
   open: boolean;
   workspaceName: string;
   createdSinceLoad: number | null;
@@ -107,6 +108,7 @@ export function ResetWorkspaceDialog({ open, workspaceName, createdSinceLoad, re
   error: unknown;
   onClose: () => void;
   onConfirm: (typedName: string) => void;
+  children?: React.ReactNode;
 }) {
   const { t } = useTranslation(['admin', 'errors']);
   const [typed, setTyped] = React.useState('');
@@ -129,6 +131,7 @@ export function ResetWorkspaceDialog({ open, workspaceName, createdSinceLoad, re
         <Alert severity="warning" icon={<WarningAmberRoundedIcon fontSize="inherit" />} sx={irreversibleWarningSx}>
           {t('sampleData.resetDialog.warning')}
         </Alert>
+        {children}
         <Box>
           <Typography variant="body2" sx={{ mb: 0.5 }}>{t('sampleData.resetDialog.keptTitle')}</Typography>
           <Box component="ul" sx={listSx}>

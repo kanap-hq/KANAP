@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { I18nextProvider } from 'react-i18next';
+import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../i18n';
 import { createAppTheme } from '../../config/ThemeContext';
@@ -52,7 +53,9 @@ function renderWith(node: React.ReactNode) {
   return render(
     <QueryClientProvider client={client}>
       <I18nextProvider i18n={i18n}>
-        <ThemeProvider theme={createAppTheme('light')}>{node}</ThemeProvider>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <MemoryRouter>{node}</MemoryRouter>
+        </ThemeProvider>
       </I18nextProvider>
     </QueryClientProvider>,
   );
@@ -227,6 +230,42 @@ describe('AboutOnboardingLine', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Explore with the complete example' }));
     await waitFor(() => expect(screen.getByText(/Path: IT landscape map · example/)).toBeInTheDocument());
     expect(choiceCalls()).toEqual([{ angle: 'cartography' }]);
+  });
+
+  it('erases a workspace that holds data before the example, the workspace name typed', async () => {
+    env.administrator = true;
+    env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'own_data', holdsData: true });
+    renderWith(<AboutOnboardingLine />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Change' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'The IT budget' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Explore with the complete example' }));
+    await screen.findByText('Erase everything and start over');
+    const confirm = screen.getByRole('dialog');
+    expect(confirm).toHaveTextContent('The sample data loads once the workspace is empty.');
+    expect(within(confirm).getByRole('link', { name: 'See what the workspace holds' })).toHaveAttribute('href', '/admin/sample-data');
+    const erase = within(confirm).getByRole('button', { name: 'Erase everything' });
+    expect(erase).toBeDisabled();
+    fireEvent.change(within(confirm).getByRole('textbox', { name: 'Workspace name' }), { target: { value: 'acme' } });
+    fireEvent.click(erase);
+    await waitFor(() => expect(screen.getByText(/Path: IT budget · example/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(choiceCalls()).toEqual([
+      { mode: 'example' },
+      { mode: 'example', confirm_reset: true, confirm_name: 'acme' },
+    ]);
+    expect(env.server.db.sampleData.status).toBe('resetting');
+  });
+
+  it('says why the example cannot load into a workspace that holds data once the trial is over', async () => {
+    env.administrator = true;
+    env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'own_data', holdsData: true, trialRunning: false });
+    renderWith(<AboutOnboardingLine />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Change' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'The IT budget' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Explore with the complete example' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('This workspace already holds data.');
+    expect(screen.queryByText('Erase everything and start over')).not.toBeInTheDocument();
+    expect(screen.getByText(/Path: IT budget · my own data/)).toBeInTheDocument();
   });
 
   it('only shows the path to a user who may not change it', async () => {

@@ -29,7 +29,7 @@ import { AuthService } from '../auth/auth.service';
 import { DEFAULT_ACCESS_TOKEN_TTL, parseDurationMs } from '../auth/token-ttl.util';
 import { StripeConfigService } from '../billing/stripe/stripe.config';
 import { Subscription, SubscriptionStatus } from '../billing/subscription.entity';
-import { evaluateSubscriptionAccess } from '../billing/subscription-freeze.util';
+import { evaluateSubscriptionAccess, isTrialRunning } from '../billing/subscription-freeze.util';
 import { trackBackgroundWork } from '../common/background-work';
 import { NeverRejects } from '../common/never-rejects';
 import { throwNotAvailableInMode } from '../common/feature-gates';
@@ -149,6 +149,11 @@ export type DemoDataOverview = DemoDataState & {
   blocking: TenantContentCount[] | null;
   /** Objects users created since the load (`countCreatedSinceLoad`); null unless the status is `loaded`. */
   created_since_load: number | null;
+  /**
+   * "Erase everything" can start now (`startReset`): after a load, loaded or failed, and while
+   * the trial runs, in an idle workspace that holds data (`load_refusal` `tenant_not_empty`).
+   */
+  can_reset: boolean;
   /** The name an administrator types to confirm a reset. */
   workspace_name: string;
   /** Who started the last load: their name, or their email address when they have none. */
@@ -175,6 +180,9 @@ export type StartedDemoReset = {
 
 /** The code of the 400 a reset gets when the typed workspace name does not match. */
 export const CONFIRMATION_MISMATCH_CODE = 'confirmation_mismatch';
+
+/** The code of the 403 the reset of a workspace holding its own data gets once the trial is over. */
+export const RESET_TRIAL_ONLY_CODE = 'reset_trial_only';
 
 /**
  * The main business tables of a workspace, and the configuration tables an administrator fills
@@ -682,6 +690,8 @@ export class DemoDataService implements OnApplicationShutdown {
         }
       }
       const canLoad = mayLoad && !bannerOver && refusal === null;
+      const canReset = state.status === 'loaded' || state.status === 'failed'
+        || (state.status === 'idle' && refusal === 'tenant_not_empty' && (await this.trialRunning(manager, tenant.id)));
       const createdSinceLoad = !banner && state.status === 'loaded' && state.loaded_at
         ? await countCreatedSinceLoad(manager, tenant.id, state.loaded_at)
         : null;
@@ -700,6 +710,7 @@ export class DemoDataService implements OnApplicationShutdown {
         load_refusal: refusal,
         blocking,
         created_since_load: createdSinceLoad,
+        can_reset: canReset,
         workspace_name: workspaceConfirmationName(tenant),
         loaded_by_name: loadedByName,
       };
@@ -978,9 +989,12 @@ export class DemoDataService implements OnApplicationShutdown {
   }
 
   /**
-   * Erases the tenant back to its post-activation state (TenantResetService) after a load,
-   * loaded or failed, by one of its administrators; then the status is `idle` again. Allowed
-   * with a frozen subscription or an expired trial. Waits for the reset.
+   * Erases the tenant back to its post-activation state (TenantResetService), by one of its
+   * administrators; then the status is `idle` again. After a load, loaded or failed, it is
+   * allowed whatever the subscription (frozen, trial expired, subscribed). A workspace that holds
+   * its own data and no sample data (`idle`) can be erased only while the trial runs (403
+   * `reset_trial_only` after it); an idle workspace still in its starting state has nothing to
+   * erase (409). Waits for the reset.
    */
   async reset(params: { tenantId: string; actorId: string }): Promise<DemoDataState> {
     const { done } = await this.startReset(params);
@@ -1016,7 +1030,19 @@ export class DemoDataService implements OnApplicationShutdown {
       throw new ServiceUnavailableException({ code: 'demo_data_unavailable', message: 'The server is restarting. Try again in a minute.' });
     }
     const state = await this.reconcile(tenant.id, readDemoState(tenant.demo));
-    if (state.status !== 'loaded' && state.status !== 'failed') throw this.statusConflict(state.status);
+    if (state.status === 'idle') {
+      await withTenant(this.dataSource, tenant.id, async (manager) => {
+        if ((await findTenantContent(manager, tenant.id)).length === 0) throw this.statusConflict('idle');
+        if (!(await this.trialRunning(manager, tenant.id))) {
+          throw new ForbiddenException({
+            code: RESET_TRIAL_ONLY_CODE,
+            message: 'A workspace that holds your own data can only be erased during the trial.',
+          });
+        }
+      });
+    } else if (state.status !== 'loaded' && state.status !== 'failed') {
+      throw this.statusConflict(state.status);
+    }
 
     const runId = randomUUID();
     const notify = params.notify !== false;
@@ -1038,6 +1064,40 @@ export class DemoDataService implements OnApplicationShutdown {
     // Tracked, which also marks a rejection as handled until the caller awaits `done`.
     const done = trackBackgroundWork(this.runReset(tenant.id, runId, params.actorId, state, notify));
     return { state: publicState(moved), done };
+  }
+
+  /**
+   * The onboarding switch to the example in a workspace that holds data: the reset of
+   * `startReset`, with the workspace name typed (`confirmName`) and the e-mail to the
+   * administrators, then, once it has committed, the load of the sample data in `language` from
+   * `host`, in the background. Answers with the `resetting` state; a failed reset loads nothing,
+   * and a refused load leaves the workspace empty and `idle` (one warning in the server log).
+   */
+  async resetThenLoad(params: { tenantId: string; actorId: string; confirmName: unknown; host: string; language: unknown }): Promise<DemoDataState> {
+    const { state, done } = await this.startReset({
+      tenantId: params.tenantId,
+      actorId: params.actorId,
+      requireConfirmation: true,
+      confirmName: params.confirmName,
+    });
+    trackBackgroundWork((async () => {
+      try {
+        await done;
+      } catch {
+        return; // runReset logged it and restored the state.
+      }
+      try {
+        await this.loadDemoData(params.tenantId, { language: params.language, actorId: params.actorId, host: params.host });
+      } catch (error) {
+        this.logger.warn(`Sample data not loaded into tenant ${params.tenantId} after its reset: ${errorCode(error)}`);
+      }
+    })());
+    return state;
+  }
+
+  /** Whether the tenant's trial runs (`isTrialRunning` on its latest subscription). */
+  async isTrialRunning(tenantId: string): Promise<boolean> {
+    return withTenant(this.dataSource, tenantId, (manager) => this.trialRunning(manager, tenantId));
   }
 
   private async runReset(
@@ -1446,6 +1506,11 @@ export class DemoDataService implements OnApplicationShutdown {
   }
 
   /** The subscription's refusal of a load, or null (`assertSubscriptionAllowsLoad`). */
+  private async trialRunning(manager: EntityManager, tenantId: string): Promise<boolean> {
+    const subscription = await manager.getRepository(Subscription).findOne({ where: { tenant_id: tenantId }, order: { created_at: 'DESC' } });
+    return isTrialRunning(subscription, Date.now());
+  }
+
   private async subscriptionRefusal(manager: EntityManager, tenantId: string): Promise<'SUBSCRIPTION_FROZEN' | 'TRIAL_EXPIRED' | null> {
     const decision = await this.subscriptionDecision(manager, tenantId);
     return decision.allowed ? null : (decision.reason ?? 'SUBSCRIPTION_FROZEN');

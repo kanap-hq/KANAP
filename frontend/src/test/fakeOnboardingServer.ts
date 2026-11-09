@@ -26,6 +26,9 @@ export function createFakeOnboardingServer(initial: {
   administrator?: boolean;
   sampleData?: OnboardingState['sample_data'];
   createdSinceLoad?: number;
+  /** The workspace holds data of its own: a switch back to the example needs it erased. */
+  holdsData?: boolean;
+  trialRunning?: boolean;
 } = {}) {
   const db = {
     angle: initial.angle ?? null,
@@ -34,6 +37,9 @@ export function createFakeOnboardingServer(initial: {
     administrator: initial.administrator ?? true,
     sampleData: initial.sampleData ?? { status: 'idle', step: null },
     createdSinceLoad: initial.createdSinceLoad ?? 0,
+    holdsData: initial.holdsData ?? false,
+    trialRunning: initial.trialRunning ?? true,
+    workspaceName: 'Acme',
     done: new Map<string, string>(),
     dismissedAt: null as string | null,
   };
@@ -59,10 +65,19 @@ export function createFakeOnboardingServer(initial: {
 
   const holdsSample = () => db.sampleData.status === 'loaded' || db.sampleData.status === 'loading';
 
-  const choose = (body: { angle?: OnboardingAngle; mode?: OnboardingMode; confirm_reset?: boolean }) => {
+  const choose = (body: { angle?: OnboardingAngle; mode?: OnboardingMode; confirm_reset?: boolean; confirm_name?: string }) => {
     if (!body.angle && !body.mode) throw httpError(400, { code: 'choice_required' });
     const changes = (field: 'angle' | 'mode') => body[field] !== undefined && db[field] !== null && db[field] !== body[field];
     if (!db.administrator && (changes('angle') || changes('mode'))) throw httpError(403, { code: 'administrator_required' });
+    if (body.mode === 'example' && changes('mode') && db.holdsData) {
+      if (!body.confirm_reset) {
+        throw httpError(409, { code: 'tenant_not_empty', reset_available: db.trialRunning, workspace_name: db.workspaceName });
+      }
+      if ((body.confirm_name ?? '').trim().toLowerCase() !== db.workspaceName.toLowerCase()) throw httpError(400, { code: 'confirmation_mismatch' });
+      if (!db.trialRunning) throw httpError(403, { code: 'reset_trial_only' });
+      db.holdsData = false;
+      db.sampleData = { status: 'resetting', step: null };
+    }
     if (body.mode === 'own_data' && db.mode !== 'own_data') {
       if (holdsSample() && !db.administrator) throw httpError(403, { code: 'administrator_required' });
       if (db.sampleData.status === 'loaded') {
