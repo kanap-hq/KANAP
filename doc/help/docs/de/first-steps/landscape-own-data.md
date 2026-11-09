@@ -9,7 +9,7 @@ description: Die fünf Schritte des Pfads IT-Landkarte mit Ihren eigenen Daten, 
 
 In zehn Minuten sind Ihre Standorte, Ihre Anwendungen, deren Technologien und Ihre Server in KANAP, Ihre ersten Supportende-Daten erscheinen, und eine Kollegin oder ein Kollege kann die Landkarte aktuell halten. Der Beginn mit Ihren eigenen Daten löscht das Beispiel: Was Sie am Ende sehen, stammt von Ihnen.
 
-Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der Startseite, für den Pfad **Die IT-Landkarte** mit **Mit meinen eigenen Daten beginnen**. Jeder Schritt der Kachel öffnet seinen Bildschirm mit einem kurzen Hinweis. Ist der Schritt getan, klicken Sie im Hinweis auf **Erledigt** oder auf die Markierung neben dem Schritt. Siehe [Testphase: Ihr Pfad und Ihre ersten Schritte](../my-dashboard.md#trial-first-steps).
+Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der Startseite, für den Pfad **Die IT-Landkarte** mit **Mit meinen eigenen Daten beginnen**. Jeder Schritt der Kachel öffnet seinen Bildschirm mit einem kurzen Hinweis. Jeder Schritt legt etwas an und gilt als erledigt, sobald es im Arbeitsbereich existiert. Um einen übersprungenen Schritt als erledigt zu markieren, klicken Sie auf die Markierung daneben. Siehe [Testphase: Ihr Pfad und Ihre ersten Schritte](../my-dashboard.md#trial-first-steps).
 
 ## 1. Ihre Standorte
 

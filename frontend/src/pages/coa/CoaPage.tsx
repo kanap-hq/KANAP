@@ -80,6 +80,7 @@ export default function CoaPage() {
   const canManage = hasLevel('accounts', 'manager');
   const canAdmin = hasLevel('accounts', 'admin');
   const canCreateAccount = hasLevel('accounts', 'manager');
+  const openNewAccount = () => navigate(`/master-data/accounts/new/overview?${buildWorkspaceSearch().toString()}`);
 
   const selectedFromUrl = searchParams.get('selected') || searchParams.get('coaId') || '';
   const selectedCoaId = useMemo(() => {
@@ -394,10 +395,7 @@ export default function CoaPage() {
       {canCreateAccount && (
         <Button
           variant="action-primary"
-          onClick={() => {
-            const params = buildWorkspaceSearch();
-            navigate(`/master-data/accounts/new/overview?${params.toString()}`);
-          }}
+          onClick={openNewAccount}
           disabled={!selectedCoaId}
         >
           {t('coa.newAccount')}
@@ -475,6 +473,16 @@ export default function CoaPage() {
 
         {coas.length > 0 && selectedCoaId && (
           <ServerDataGrid<AccountRow>
+            emptyState={(
+              <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="center" data-testid="accounts-empty">
+                <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t('coa.emptyAccounts')}</Typography>
+                {canCreateAccount && (
+                  <Button variant="contained" size="small" onClick={openNewAccount}>
+                    {t('coa.newAccount')}
+                  </Button>
+                )}
+              </Stack>
+            )}
             onListRequestChange={setListRequest}
             // The grid keeps its status scope internally: remount it so a consolidation filter shows
             // every status ("all", as the counts of the health line do) and its reset goes back to

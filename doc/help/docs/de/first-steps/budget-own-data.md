@@ -9,7 +9,7 @@ description: Die fünf Schritte des Pfads IT-Budget mit Ihren eigenen Daten, von
 
 In zehn Minuten sind Ihr Unternehmen, Ihre Budgetzeilen und ein Vertrag in KANAP, Ihr erster Bericht läuft auf Ihren Zahlen, und eine Kollegin oder ein Kollege kann sie lesen. Der Beginn mit Ihren eigenen Daten löscht das Beispiel: Was Sie am Ende sehen, stammt von Ihnen.
 
-Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der Startseite, für den Pfad **Das IT-Budget** mit **Mit meinen eigenen Daten beginnen**. Jeder Schritt der Kachel öffnet seinen Bildschirm mit einem kurzen Hinweis. Ist der Schritt getan, klicken Sie im Hinweis auf **Erledigt** oder auf die Markierung neben dem Schritt. Siehe [Testphase: Ihr Pfad und Ihre ersten Schritte](../my-dashboard.md#trial-first-steps).
+Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der Startseite, für den Pfad **Das IT-Budget** mit **Mit meinen eigenen Daten beginnen**. Jeder Schritt der Kachel öffnet seinen Bildschirm mit einem kurzen Hinweis. Ein Schritt, der etwas anlegt, gilt als erledigt, sobald es im Arbeitsbereich existiert. Für **Ihr Unternehmen** und **Ihr erster Bericht** klicken Sie im Hinweis auf **Erledigt** oder auf die Markierung neben dem Schritt. Siehe [Testphase: Ihr Pfad und Ihre ersten Schritte](../my-dashboard.md#trial-first-steps).
 
 ## 1. Ihr Unternehmen
 
@@ -25,7 +25,7 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 
 **Was Sie tun.** Importieren Sie Ihre Budgetdatei, oder legen Sie eine erste Zeile von Hand an.
 
-- **Eine Datei importieren.** Klicken Sie zuerst auf **Exportieren**: Bei einer leeren Liste enthält die Datei nur die Kopfzeile, Ihre Vorlage. **Importieren > Beispiel herunterladen** liefert eine Mappe mit einigen Beispielzeilen und dem, was jede Spalte aufnimmt. Tragen Sie Ihre Zeilen ein, dann **Importieren**.
+- **Eine Datei importieren.** Klicken Sie auf **Importieren**, dann auf **Beispiel herunterladen**: eine Mappe mit einigen Beispielzeilen und dem, was jede Spalte aufnimmt. Tragen Sie Ihre Zeilen ein und importieren Sie die Datei. Bei einer leeren Liste liefert **Exportieren** nur die Kopfzeile.
 - **Eine Zeile anlegen.** Klicken Sie auf **Neue Zeile**, geben Sie ihren Namen im Titel ein und drücken Sie die Eingabetaste. Füllen Sie das Panel **Eigenschaften** aus: zahlendes Unternehmen, Konto, Währung. Erfassen Sie die Beträge im Reiter **Budget** und klicken Sie dann auf **Erstellen**. **Abbrechen** verwirft die Zeile.
 
 **Was Sie sehen.** Ein Import prüft die ganze Datei und meldet die Zeilen, die angelegt, geändert oder unverändert bleiben. Eine Datei mit einem Fehler lädt nichts. Eine von Hand angelegte Zeile erscheint in der Liste mit ihren Beträgen für das Jahr.

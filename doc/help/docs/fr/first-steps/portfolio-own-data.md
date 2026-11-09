@@ -9,7 +9,7 @@ description: Les cinq pas du parcours projets et demandes sur vos propres donné
 
 En dix minutes, une première demande est notée puis convertie en projet, le projet a ses premières tâches et son budget, et votre fiche contributeur est prête pour la planification. Commencer avec vos données efface l'exemple : ce que vous voyez à la fin vient de vous.
 
-Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le parcours **Les projets et les demandes** avec **Commencer avec mes données**. Chaque pas de la tuile ouvre son écran avec une courte indication. Une fois le pas fait, cliquez sur **Fait** dans l'indication, ou sur la marque à côté du pas. Voir [Essai : votre parcours et vos premiers pas](../my-dashboard.md#trial-first-steps).
+Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le parcours **Les projets et les demandes** avec **Commencer avec mes données**. Chaque pas de la tuile ouvre son écran avec une courte indication. Un pas qui crée quelque chose est marqué comme fait dès que cet élément existe dans l'espace. Pour **Votre projet**, cliquez sur **Fait** dans l'indication, ou sur la marque à côté du pas. Voir [Essai : votre parcours et vos premiers pas](../my-dashboard.md#trial-first-steps).
 
 ## 1. Votre première demande
 
@@ -17,7 +17,7 @@ Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le
 
 **Le geste.** Cliquez sur **Nouvelle demande**, tapez son nom dans le titre et appuyez sur Entrée. Répondez à chaque critère dans l'onglet **Évaluation**. Passez son statut à **Approuvé**, puis cliquez sur **Convertir en projet** et **Créer le projet**.
 
-**Ce que vous lisez.** La demande existe dès qu'elle a un nom, au statut **En attente de revue**, avec vous comme demandeur. Le score se recalcule à chaque réponse. Les critères et leurs poids se règlent dans **Portefeuille > Paramètres**, onglet **Critères d'évaluation** : adaptez-les une fois, ils valent pour toutes les demandes. Après la conversion, la demande affiche **Converti**.
+**Ce que vous lisez.** La demande existe dès qu'elle a un nom, au statut **En attente de revue**, avec vous comme demandeur. Le score se recalcule à chaque réponse. Les critères et leurs poids se règlent dans **Portefeuille > Paramètres**, onglet **Critères d'évaluation** : adaptez-les une fois, ils valent pour toutes les demandes. Après la conversion, la demande affiche **Converti** et le pas est marqué comme fait.
 
 ## 2. Votre projet
 

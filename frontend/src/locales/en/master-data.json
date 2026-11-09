@@ -174,7 +174,8 @@
       "keptDone_one": "{{count}} company kept",
       "keptDone_other": "{{count}} companies kept"
     },
-    "creationRecord": "The company"
+    "creationRecord": "The company",
+    "empty": "No companies yet."
   },
   "departments": {
     "title": "Departments",
@@ -219,7 +220,8 @@
       "deleted_one": "{{count}} department deleted",
       "deleted_other": "{{count}} departments deleted"
     },
-    "creationRecord": "The department"
+    "creationRecord": "The department",
+    "empty": "No departments yet."
   },
   "costCenters": {
     "title": "Cost centers",
@@ -540,7 +542,8 @@
       "title_one": "Delete the selected contact",
       "title_other": "Delete the {{count}} selected contacts"
     },
-    "creationRecord": "The contact"
+    "creationRecord": "The contact",
+    "empty": "No contacts yet."
   },
   "coa": {
     "title": "Charts of accounts",
@@ -673,7 +676,8 @@
       "kept_other": "{{count}} accounts cannot be deleted and are kept:",
       "deleted_one": "{{count}} account deleted",
       "deleted_other": "{{count}} accounts deleted"
-    }
+    },
+    "emptyAccounts": "No accounts yet."
   },
   "accounts": {
     "entity": "account",
@@ -921,7 +925,8 @@
     },
     "addValue": "Add “{{value}}”",
     "valueCreationRecord": "The value",
-    "dimensionCreationRecord": "The dimension"
+    "dimensionCreationRecord": "The dimension",
+    "empty": "No values yet."
   },
   "businessProcesses": {
     "title": "Business processes",
@@ -991,7 +996,8 @@
     },
     "creation": {
       "record": "The business process"
-    }
+    },
+    "empty": "No business processes yet."
   },
   "admin": {
     "copy": {

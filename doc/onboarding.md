@@ -4,7 +4,7 @@ At the first opening of a trial workspace, the user picks an angle (budget, IT l
 portfolio) and a mode (discover with the sample data, start with their own data). A list of five
 first steps then follows each user's progress through that path.
 
-Code: `backend/src/onboarding/` (service, controller, paths). Migration: `1856010000000-onboarding.ts`.
+Code: `backend/src/onboarding/` (service, controller, paths, step evidence). Migration: `1856010000000-onboarding.ts`.
 The API works the same in cloud and on-premise mode (on-premise, `sample_data.status` is `idle`
 and the mode has no effect on the workspace: see "Effect of the mode").
 
@@ -62,7 +62,10 @@ Response:
   "mode": "example",
   "chosen_at": "2026-11-02T09:14:00.000Z",
   "can_choose": false,
-  "steps": [{ "key": "budget_overview", "done_at": "2026-11-02T09:20:00.000Z" }, { "key": "budget_line", "done_at": null }],
+  "steps": [
+    { "key": "budget_overview", "done_at": "2026-11-02T09:20:00.000Z", "automatic": false },
+    { "key": "budget_line", "done_at": null, "automatic": false }
+  ],
   "next_step": "budget_line",
   "completed": false,
   "dismissed_at": null,
@@ -73,6 +76,7 @@ Response:
 
 - `steps`: the five steps of the current path, in order, each with the date this user did it in
   this path. `[]` without an angle or a mode. Steps done in another path are kept for it.
+  `automatic`: the step is done by itself once its object exists (see "Steps done by themselves").
 - `next_step`: the first step not done; `null` when all are done or there is no path.
   `completed`: the five are done.
 - `can_choose`: true while the angle or the mode is missing, so that any user can set the missing
@@ -197,6 +201,35 @@ serialized by a transaction lock on the tenant and the user.
 `POST /dismiss` hides the list for the calling user, `DELETE /dismiss` shows it again. Both are
 idempotent.
 
+### Steps done by themselves
+
+On an own-data path, a step that creates an object is done once that object exists in the
+workspace, whoever created it (`backend/src/onboarding/onboarding-step-evidence.ts`):
+
+| Step | Done when the workspace has |
+|---|---|
+| `own_budget_lines` | a budget line, OPEX or CAPEX |
+| `own_contract` | a contract |
+| `own_sites` | a location |
+| `own_applications` | an application |
+| `own_technologies` | a technology linked to an application |
+| `own_assets` | an asset |
+| `own_request` | a request converted into a project |
+| `own_tasks` | a task linked to a project |
+| `own_project_budget` | a budget line linked to a project |
+| `own_invite` (budget, IT landscape map) | another user, not disabled |
+| `own_invite` (portfolio) | the calling user's contributor profile, once saved |
+
+`own_company`, `own_report` and `own_projects` create nothing and are done by hand.
+
+- Every read of the state (`GET`, and the answer of every route) records the steps of the
+  current path whose object exists, for the calling user, with their `onboarding.step_done`.
+  This is the only write of `GET /onboarding`. It is skipped unless `sample_data.status` is
+  `idle`: sample data being loaded, loaded or erased is not the user's.
+- Such a step stays done while its object exists: `DELETE /steps/:key/done` leaves it as it is.
+- The interface reads the state again each time the first steps tile shows. The hint of such a
+  step offers "Got it" instead of "Done".
+
 ## Audit log
 
 Written in the request's transaction: `table_name = 'onboarding'`, `record_id` = the tenant id,
@@ -206,7 +239,7 @@ Written in the request's transaction: `table_name = 'onboarding'`, `record_id` =
 |---|---|---|
 | `onboarding.angle_chosen` | the angle changes (the first choice included) | `{ angle, previous }` |
 | `onboarding.mode_chosen` | the mode changes | `{ mode, previous }` |
-| `onboarding.step_done` | a step goes from not done to done | `{ angle, mode, step_key }` |
+| `onboarding.step_done` | a step goes from not done to done | `{ angle, mode, step_key }`, plus `automatic: true` when its object did it |
 | `onboarding.completed` | that step completes the path for this user, and no `onboarding.completed` exists yet for this user, angle and mode | `{ angle, mode }` |
 
 Nothing is logged for a step undone or for the list hidden or shown.

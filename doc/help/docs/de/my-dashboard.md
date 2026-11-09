@@ -55,12 +55,12 @@ Wenn Sie den Dialog schließen, wartet die Wahl unter **Über KANAP**. Die Zeile
 
 ### Ihre ersten fünf Schritte
 
-Sobald ein Pfad gewählt ist, steht die Kachel **Ihre ersten fünf Schritte** an erster Stelle der Startseite. Sie listet die fünf Schritte des Pfads und Ihren Fortschritt, zum Beispiel **2/5**. Jeder Schritt öffnet seinen Bildschirm, auf dem der Seitentitel hervorgehoben ist, mit einem erklärenden Satz.
+Sobald ein Pfad gewählt ist, steht die Kachel **Ihre ersten fünf Schritte** an erster Stelle der Startseite. Sie listet die fünf Schritte des Pfads und Ihren Fortschritt, zum Beispiel **2/5**. Jeder Schritt öffnet seinen Bildschirm, auf dem der Seitentitel hervorgehoben ist, mit einem erklärenden Satz. Die Erklärung bleibt auf diesem Bildschirm und seinen Datensätzen, bis Sie sie schließen. Ist der Schritt erledigt, öffnet **Nächster Schritt** den nächsten offenen Schritt (**Abschließen** nach dem letzten).
 
 - Mit dem Beispiel gilt ein Schritt als erledigt, sobald Sie ihn öffnen.
-- Mit Ihren eigenen Daten klicken Sie auf **Erledigt** in der Erklärung oder auf die Markierung neben dem Schritt in der Kachel. Die Markierung macht einen Schritt auch wieder rückgängig.
+- Mit Ihren eigenen Daten gilt ein Schritt, der etwas anlegt, als erledigt, sobald es existiert. Für die anderen Schritte klicken Sie auf **Erledigt** in der Erklärung oder auf die Markierung neben dem Schritt in der Kachel. Die Markierung macht einen Schritt auch wieder rückgängig, außer wenn sein Element existiert.
 
-Wenn die fünf Schritte erledigt sind, bietet die Kachel die beiden anderen Pfade an. Sie bietet auch **Diesen Pfad neu beginnen** an, womit die fünf Schritte dieses Pfads wieder als offen gelten. Die Schaltfläche zum Schließen (**×**) blendet die Kachel aus. Um sie wieder anzuzeigen, verwenden Sie **Erste Schritte anzeigen** unter **Über KANAP**.
+Wenn die fünf Schritte erledigt sind, bietet die Kachel die beiden anderen Pfade an. Jederzeit öffnet **Pfad wechseln** in der Kopfzeile der Kachel die Frage nach dem Pfad erneut. Wie bei der Zeile unter **Über KANAP** kann jede Person es nutzen, solange eine Antwort fehlt, danach nur Administratoren. Die Schaltfläche zum Schließen (**×**) blendet die Kachel aus. Um sie wieder anzuzeigen, verwenden Sie **Erste Schritte anzeigen** unter **Über KANAP**.
 
 Während der Testphase bietet die Kachel außerdem **Kennenlerngespräch vereinbaren** an: ein 30-minütiges Videogespräch über Ihre Situation und Ihre Fragen, das Sie auf der sich öffnenden Seite zu einem passenden Zeitpunkt buchen. Derselbe Link steht unter **Über KANAP** nach den verbleibenden Testtagen.
 

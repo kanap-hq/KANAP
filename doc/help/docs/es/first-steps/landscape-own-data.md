@@ -9,7 +9,7 @@ description: Los cinco pasos del recorrido mapa del SI con sus propios datos, de
 
 En diez minutos, sus ubicaciones, sus aplicaciones, sus tecnologías y sus servidores están en KANAP, aparecen sus primeras fechas de fin de soporte, y un colega puede mantener el mapa al día. Empezar con sus datos borra el ejemplo: lo que ve al final procede de usted.
 
-Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de inicio, para el recorrido **El mapa del SI** con **Empezar con mis datos**. Cada paso del mosaico abre su pantalla con una indicación breve. Una vez hecho el paso, haga clic en **Hecho** en la indicación, o en la marca junto al paso. Consulte [Prueba: su recorrido y sus primeros pasos](../my-dashboard.md#trial-first-steps).
+Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de inicio, para el recorrido **El mapa del SI** con **Empezar con mis datos**. Cada paso del mosaico abre su pantalla con una indicación breve. Cada paso crea algo y queda marcado como hecho en cuanto ese elemento existe en el espacio de trabajo. Para marcar como hecho un paso que omite, haga clic en la marca junto a él. Consulte [Prueba: su recorrido y sus primeros pasos](../my-dashboard.md#trial-first-steps).
 
 ## 1. Sus ubicaciones
 

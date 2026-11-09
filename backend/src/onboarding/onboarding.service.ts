@@ -20,6 +20,7 @@ import {
   OnboardingMode,
   onboardingPath,
 } from './onboarding-paths';
+import { stepEvidence } from './onboarding-step-evidence';
 import { classificationSqlExpressions } from '../it-ops-settings/classification-sql';
 import { isTenantAdministrator } from './tenant-administrator';
 
@@ -33,11 +34,17 @@ import { isTenantAdministrator } from './tenant-administrator';
  * `tenant_id` in each query. Every route answers with the state after the operation, for the
  * calling user (`OnboardingState`).
  *
+ * The steps of an own-data path that create an object are done by themselves once it exists in
+ * the workspace (`onboarding-step-evidence.ts`): reading the state records them, which is the
+ * only write of `GET /onboarding`. Never while sample data is in the workspace or being erased,
+ * since its objects are not the user's. Such a step cannot be undone while its object exists.
+ *
  * Audit log, read by the platform measures (no other form): `table_name = 'onboarding'`,
  * `record_id` = the tenant, actions `onboarding.angle_chosen` `{ angle, previous }`,
  * `onboarding.mode_chosen` `{ mode, previous }`, `onboarding.step_done`
- * `{ angle, mode, step_key }` and `onboarding.completed` `{ angle, mode }` (once per user, angle
- * and mode). Nothing for a step undone or for the list hidden.
+ * `{ angle, mode, step_key }` (plus `automatic: true` for a step done by its object) and
+ * `onboarding.completed` `{ angle, mode }` (once per user, angle and mode). Nothing for a step
+ * undone or for the list hidden.
  *
  * A new mode acts on the sample data (`DemoDataService`, cloud only, never on a system tenant),
  * before the choice is written: `own_data` chosen by an administrator hides the sample data
@@ -53,7 +60,12 @@ import { isTenantAdministrator } from './tenant-administrator';
 
 export const ONBOARDING_AUDIT_TABLE = 'onboarding';
 
-export type OnboardingStep = { key: string; done_at: string | null };
+export type OnboardingStep = {
+  key: string;
+  done_at: string | null;
+  /** Done by itself once its object exists in the workspace (own-data steps that create one). */
+  automatic: boolean;
+};
 
 export type OnboardingState = {
   angle: OnboardingAngle | null;
@@ -104,34 +116,40 @@ export class OnboardingService {
 
   constructor(private readonly demo: DemoDataService) {}
 
-  /** The state of the workspace's onboarding for `userId`. */
+  /**
+   * The state of the workspace's onboarding for `userId`. On an own-data path, the steps whose
+   * object exists are recorded done first, unless the sample data is not `idle` (loaded, or being
+   * loaded or erased).
+   */
   async getState(manager: EntityManager, tenantId: string, userId: string): Promise<OnboardingState> {
     const choice = await this.readChoice(manager, tenantId);
     const angle = choice?.angle ?? null;
     const mode = choice?.mode ?? null;
     const path = onboardingPath(angle, mode);
+    const [tenant]: Array<{ demo: unknown }> = await manager.query(
+      `SELECT metadata->'demo' AS demo FROM tenants WHERE id = $1`,
+      [tenantId],
+    );
+    const demo = readDemoState(tenant?.demo);
+    const automatic = new Set(angle && mode === 'own_data' ? path.filter((key) => stepEvidence(key, angle)) : []);
 
-    const doneByKey = new Map<string, string | null>();
-    if (path.length > 0) {
-      const rows: Array<{ step_key: string; done_at: Date | string }> = await manager.query(
-        `SELECT step_key, done_at FROM onboarding_steps
-          WHERE tenant_id = $1 AND user_id = $2 AND angle = $3 AND mode = $4`,
-        [tenantId, userId, angle, mode],
-      );
-      for (const row of rows) doneByKey.set(row.step_key, iso(row.done_at));
+    let doneByKey = await this.readDone(manager, tenantId, userId, angle, mode);
+    const pending = [...automatic].filter((key) => !doneByKey.has(key));
+    if (angle && mode && pending.length > 0 && demo.status === 'idle') {
+      const found = await this.stepsWithObject(manager, tenantId, userId, angle, pending);
+      if (found.length > 0) {
+        await this.lockSteps(manager, tenantId, userId);
+        await this.recordDone(manager, tenantId, userId, angle, mode, found, true);
+        doneByKey = await this.readDone(manager, tenantId, userId, angle, mode);
+      }
     }
-    const steps = path.map((key) => ({ key, done_at: doneByKey.get(key) ?? null }));
+    const steps = path.map((key) => ({ key, done_at: doneByKey.get(key) ?? null, automatic: automatic.has(key) }));
     const next = steps.find((step) => !step.done_at);
 
     const [dismissal]: Array<{ dismissed_at: Date | string }> = await manager.query(
       `SELECT dismissed_at FROM onboarding_dismissals WHERE tenant_id = $1 AND user_id = $2`,
       [tenantId, userId],
     );
-    const [tenant]: Array<{ demo: unknown }> = await manager.query(
-      `SELECT metadata->'demo' AS demo FROM tenants WHERE id = $1`,
-      [tenantId],
-    );
-    const demo = readDemoState(tenant?.demo);
 
     return {
       angle,
@@ -380,8 +398,9 @@ export class OnboardingService {
 
   /**
    * Marks a step of the current path done (`done`) or not done, for `userId`. A step already in
-   * that state is left as it is. The user's own writes are serialized (a transaction lock on the
-   * tenant and the user), so the step that completes the path is always seen as the last one.
+   * that state is left as it is, and so is an own-data step whose object exists (it would be
+   * recorded again at the next read). The user's own writes are serialized (a transaction lock on
+   * the tenant and the user), so the step that completes the path is always seen as the last one.
    */
   async setStepDone(manager: EntityManager, tenantId: string, userId: string, key: string, done: boolean): Promise<OnboardingState> {
     const choice = await this.readChoice(manager, tenantId);
@@ -395,46 +414,114 @@ export class OnboardingService {
       throw new BadRequestException({ code: 'unknown_step', message: 'This step is not part of the current path.' });
     }
 
-    await manager.query(`SELECT pg_advisory_xact_lock(hashtext($1)::bigint)`, [`onboarding:${tenantId}:${userId}`]);
-    if (!done) {
+    await this.lockSteps(manager, tenantId, userId);
+    if (done) {
+      await this.recordDone(manager, tenantId, userId, angle, mode, [key], false);
+    } else if (mode !== 'own_data' || (await this.stepsWithObject(manager, tenantId, userId, angle, [key])).length === 0) {
       await manager.query(
         `DELETE FROM onboarding_steps
           WHERE tenant_id = $1 AND user_id = $2 AND angle = $3 AND mode = $4 AND step_key = $5`,
         [tenantId, userId, angle, mode, key],
       );
-      return this.getState(manager, tenantId, userId);
-    }
-
-    const inserted: unknown[] = await manager.query(
-      `INSERT INTO onboarding_steps (tenant_id, user_id, angle, mode, step_key)
-       VALUES ($1, $2, $3, $4, $5)
-       ON CONFLICT (tenant_id, user_id, angle, mode, step_key) DO NOTHING
-       RETURNING 1`,
-      [tenantId, userId, angle, mode, key],
-    );
-    if (inserted.length > 0) {
-      await this.audit(manager, tenantId, userId, 'onboarding.step_done', { angle, mode, step_key: key });
-      const [progress]: Array<{ done: number }> = await manager.query(
-        `SELECT count(*)::int AS done FROM onboarding_steps
-          WHERE tenant_id = $1 AND user_id = $2 AND angle = $3 AND mode = $4 AND step_key = ANY($5::text[])`,
-        [tenantId, userId, angle, mode, [...path]],
-      );
-      // Only the step that completes the path looks for an earlier `onboarding.completed`.
-      if (progress && progress.done === path.length) {
-        const [previous]: Array<{ logged: boolean }> = await manager.query(
-          `SELECT EXISTS (
-             SELECT 1 FROM audit_log
-              WHERE tenant_id = $1 AND record_id = $1 AND table_name = $5 AND action = 'onboarding.completed'
-                AND user_id = $2 AND after_json->>'angle' = $3 AND after_json->>'mode' = $4
-           ) AS logged`,
-          [tenantId, userId, angle, mode, ONBOARDING_AUDIT_TABLE],
-        );
-        if (!previous?.logged) {
-          await this.audit(manager, tenantId, userId, 'onboarding.completed', { angle, mode });
-        }
-      }
     }
     return this.getState(manager, tenantId, userId);
+  }
+
+  /** The steps of the path `userId` did, with their dates; none without a path. */
+  private async readDone(
+    manager: EntityManager,
+    tenantId: string,
+    userId: string,
+    angle: OnboardingAngle | null,
+    mode: OnboardingMode | null,
+  ): Promise<Map<string, string | null>> {
+    const doneByKey = new Map<string, string | null>();
+    if (onboardingPath(angle, mode).length === 0) return doneByKey;
+    const rows: Array<{ step_key: string; done_at: Date | string }> = await manager.query(
+      `SELECT step_key, done_at FROM onboarding_steps
+        WHERE tenant_id = $1 AND user_id = $2 AND angle = $3 AND mode = $4`,
+      [tenantId, userId, angle, mode],
+    );
+    for (const row of rows) doneByKey.set(row.step_key, iso(row.done_at));
+    return doneByKey;
+  }
+
+  /** Among `keys`, the own-data steps whose object exists (`onboarding-step-evidence.ts`). */
+  private async stepsWithObject(
+    manager: EntityManager,
+    tenantId: string,
+    userId: string,
+    angle: OnboardingAngle,
+    keys: readonly string[],
+  ): Promise<string[]> {
+    const checks = keys.flatMap((key) => {
+      const condition = stepEvidence(key, angle);
+      return condition ? [{ key, condition }] : [];
+    });
+    if (checks.length === 0) return [];
+    const sql = `SELECT ${checks.map((check, index) => `${check.condition} AS found_${index}`).join(', ')}`;
+    const [row]: Array<Record<string, boolean>> = await manager.query(sql, sql.includes('$2') ? [tenantId, userId] : [tenantId]);
+    return checks.filter((_, index) => row?.[`found_${index}`] === true).map((check) => check.key);
+  }
+
+  /** Serializes the step writes of `userId` in the tenant, until the transaction ends. */
+  private async lockSteps(manager: EntityManager, tenantId: string, userId: string): Promise<void> {
+    await manager.query(`SELECT pg_advisory_xact_lock(hashtext($1)::bigint)`, [`onboarding:${tenantId}:${userId}`]);
+  }
+
+  /**
+   * Records `keys` done for `userId`, under `lockSteps`: each new one logs its `step_done`
+   * (`automatic` when its object did it), and the one that completes the path logs
+   * `onboarding.completed` unless this user already has one for this angle and mode.
+   */
+  private async recordDone(
+    manager: EntityManager,
+    tenantId: string,
+    userId: string,
+    angle: OnboardingAngle,
+    mode: OnboardingMode,
+    keys: readonly string[],
+    automatic: boolean,
+  ): Promise<void> {
+    let recorded = false;
+    for (const key of keys) {
+      const inserted: unknown[] = await manager.query(
+        `INSERT INTO onboarding_steps (tenant_id, user_id, angle, mode, step_key)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (tenant_id, user_id, angle, mode, step_key) DO NOTHING
+         RETURNING 1`,
+        [tenantId, userId, angle, mode, key],
+      );
+      if (inserted.length === 0) continue;
+      recorded = true;
+      await this.audit(manager, tenantId, userId, 'onboarding.step_done', {
+        angle,
+        mode,
+        step_key: key,
+        ...(automatic ? { automatic: true } : {}),
+      });
+    }
+    if (!recorded) return;
+
+    const path = onboardingPath(angle, mode);
+    const [progress]: Array<{ done: number }> = await manager.query(
+      `SELECT count(*)::int AS done FROM onboarding_steps
+        WHERE tenant_id = $1 AND user_id = $2 AND angle = $3 AND mode = $4 AND step_key = ANY($5::text[])`,
+      [tenantId, userId, angle, mode, [...path]],
+    );
+    // Only the step that completes the path looks for an earlier `onboarding.completed`.
+    if (!progress || progress.done !== path.length) return;
+    const [previous]: Array<{ logged: boolean }> = await manager.query(
+      `SELECT EXISTS (
+         SELECT 1 FROM audit_log
+          WHERE tenant_id = $1 AND record_id = $1 AND table_name = $5 AND action = 'onboarding.completed'
+            AND user_id = $2 AND after_json->>'angle' = $3 AND after_json->>'mode' = $4
+       ) AS logged`,
+      [tenantId, userId, angle, mode, ONBOARDING_AUDIT_TABLE],
+    );
+    if (!previous?.logged) {
+      await this.audit(manager, tenantId, userId, 'onboarding.completed', { angle, mode });
+    }
   }
 
   /** Hides (`dismissed`) or shows again the list of first steps, for `userId`. */

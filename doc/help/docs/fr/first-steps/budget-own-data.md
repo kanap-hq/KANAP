@@ -9,7 +9,7 @@ description: Les cinq pas du parcours budget IT sur vos propres données, de vot
 
 En dix minutes, votre société, vos lignes budgétaires et un contrat sont dans KANAP, votre premier rapport tourne sur vos chiffres, et un collègue peut les lire. Commencer avec vos données efface l'exemple : ce que vous voyez à la fin vient de vous.
 
-Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le parcours **Le budget IT** avec **Commencer avec mes données**. Chaque pas de la tuile ouvre son écran avec une courte indication. Une fois le pas fait, cliquez sur **Fait** dans l'indication, ou sur la marque à côté du pas. Voir [Essai : votre parcours et vos premiers pas](../my-dashboard.md#trial-first-steps).
+Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le parcours **Le budget IT** avec **Commencer avec mes données**. Chaque pas de la tuile ouvre son écran avec une courte indication. Un pas qui crée quelque chose est marqué comme fait dès que cet élément existe dans l'espace. Pour **Votre société** et **Votre premier rapport**, cliquez sur **Fait** dans l'indication, ou sur la marque à côté du pas. Voir [Essai : votre parcours et vos premiers pas](../my-dashboard.md#trial-first-steps).
 
 ## 1. Votre société
 
@@ -25,7 +25,7 @@ Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le
 
 **Le geste.** Importez votre fichier budget, ou créez une première ligne à la main.
 
-- **Importer un fichier.** Cliquez d'abord sur **Exporter** : sur une liste vide, le fichier ne contient que la ligne de titres, votre modèle. **Importer > Télécharger un exemple** donne un classeur avec quelques lignes d'exemple et ce que prend chaque colonne. Remplissez vos lignes, puis **Importer**.
+- **Importer un fichier.** Cliquez sur **Importer**, puis sur **Télécharger un exemple** : un classeur avec quelques lignes d'exemple et ce que prend chaque colonne. Remplissez vos lignes et importez le fichier. Sur une liste vide, **Exporter** donne la seule ligne de titres.
 - **Créer une ligne.** Cliquez sur **Nouvelle ligne**, tapez son nom dans le titre et appuyez sur Entrée. Remplissez le panneau **Propriétés** : société payeuse, compte, devise. Saisissez les montants dans l'onglet **Budget**, puis cliquez sur **Créer**. **Annuler** abandonne la ligne.
 
 **Ce que vous lisez.** Un import vérifie tout le fichier et annonce les lignes à créer, à mettre à jour et celles qui ne changent pas. Un fichier avec une erreur ne charge rien. Une ligne créée à la main apparaît dans la liste avec ses montants de l'année.

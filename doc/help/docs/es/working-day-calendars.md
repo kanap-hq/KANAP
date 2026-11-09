@@ -38,7 +38,7 @@ Para crear un calendario usted mismo, haga clic en **Nuevo**.
 
 ## Trabajar con la lista
 
-Cuando el espacio de trabajo aún no tiene ningún calendario, una línea bajo el título lo indica: "Un calendario indica los días laborables de cada mes, para las líneas con precio por día. Cree uno o importe un archivo."
+Cuando el espacio de trabajo aún no tiene ningún calendario y no se sugiere ninguno, el centro de la lista lo indica, junto a **Nuevo calendario**: "Un calendario indica los días laborables de cada mes, para las líneas con precio por día. Cree uno o importe un archivo."
 
 **Columnas**:
 

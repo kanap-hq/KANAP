@@ -9,7 +9,7 @@ description: Los cinco pasos del recorrido presupuesto de TI con sus propios dat
 
 En diez minutos, su empresa, sus líneas presupuestarias y un contrato están en KANAP, su primer informe funciona con sus cifras, y un colega puede leerlas. Empezar con sus datos borra el ejemplo: lo que ve al final procede de usted.
 
-Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de inicio, para el recorrido **El presupuesto de TI** con **Empezar con mis datos**. Cada paso del mosaico abre su pantalla con una indicación breve. Una vez hecho el paso, haga clic en **Hecho** en la indicación, o en la marca junto al paso. Consulte [Prueba: su recorrido y sus primeros pasos](../my-dashboard.md#trial-first-steps).
+Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de inicio, para el recorrido **El presupuesto de TI** con **Empezar con mis datos**. Cada paso del mosaico abre su pantalla con una indicación breve. Un paso que crea algo queda marcado como hecho en cuanto ese elemento existe en el espacio de trabajo. Para **Su empresa** y **Su primer informe**, haga clic en **Hecho** en la indicación, o en la marca junto al paso. Consulte [Prueba: su recorrido y sus primeros pasos](../my-dashboard.md#trial-first-steps).
 
 ## 1. Su empresa
 
@@ -25,7 +25,7 @@ Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de in
 
 **Qué hacer.** Importe su archivo de presupuesto, o cree una primera línea a mano.
 
-- **Importar un archivo.** Haga clic primero en **Exportar**: con la lista vacía, el archivo solo contiene la fila de títulos, su plantilla. **Importar > Descargar un ejemplo** da un libro con algunas líneas de ejemplo y lo que admite cada columna. Rellene sus líneas y luego **Importar**.
+- **Importar un archivo.** Haga clic en **Importar** y luego en **Descargar un ejemplo**: un libro con algunas líneas de ejemplo y lo que admite cada columna. Rellene sus líneas e importe el archivo. Con la lista vacía, **Exportar** solo da la fila de títulos.
 - **Crear una línea.** Haga clic en **Nueva línea**, escriba su nombre en el título y pulse Intro. Rellene el panel **Propiedades**: empresa pagadora, cuenta, moneda. Introduzca los importes en la pestaña **Presupuesto** y haga clic en **Crear**. **Cancelar** descarta la línea.
 
 **Qué ve.** Una importación comprueba todo el archivo e indica las líneas que se crearán, las que se actualizarán y las que no cambian. Un archivo con un error no carga nada. Una línea creada a mano aparece en la lista con sus importes del año.

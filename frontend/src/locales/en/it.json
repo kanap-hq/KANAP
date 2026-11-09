@@ -217,7 +217,8 @@
         "keptDone_other": "{{count}} assets kept",
         "keptReason_one": "Kept: {{usages}} uses it.",
         "keptReason_other": "Kept: {{usages}} use it."
-      }
+      },
+      "empty": "No assets yet."
     },
     "technologies": {
       "title": "Technologies",
@@ -339,7 +340,8 @@
         "title_other": "Delete the {{count}} selected connections"
       },
       "serverCount_one": "{{count}} server",
-      "serverCount_other": "{{count}} servers"
+      "serverCount_other": "{{count}} servers",
+      "empty": "No connections yet."
     },
     "endOfSupport": {
       "title": "End of support",
@@ -776,11 +778,13 @@
         "bindings": "Bindings"
       },
       "duplicated": "Interface duplicated as \"{{name}}\"",
-      "thisInterface": "this interface"
+      "thisInterface": "this interface",
+      "empty": "No interfaces yet."
     },
     "locations": {
       "title": "Locations",
       "addLocation": "Add location",
+      "empty": "No locations yet.",
       "columns": {
         "reference": "Reference",
         "name": "Name",

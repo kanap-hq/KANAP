@@ -9,7 +9,7 @@ description: The five steps of the IT landscape path on your own data, from your
 
 In ten minutes, your locations, your applications, their technologies and your servers are in KANAP, your first end of support dates show, and a colleague can keep the map up to date. Starting with your own data erases the example: what you see at the end comes from you.
 
-These are the five steps of the **Your first five steps** tile on the home page, for the path **The IT landscape map** with **Start with my own data**. Each step in the tile opens its screen with a short hint. Click **Done** in the hint, or the mark next to the step, once you have done it. See [Trial: your path and first steps](../my-dashboard.md#trial-first-steps).
+These are the five steps of the **Your first five steps** tile on the home page, for the path **The IT landscape map** with **Start with my own data**. Each step in the tile opens its screen with a short hint. Each step creates something and is marked done as soon as it exists in the workspace. To mark a step you skip as done, click the mark next to it. See [Trial: your path and first steps](../my-dashboard.md#trial-first-steps).
 
 ## 1. Your locations
 

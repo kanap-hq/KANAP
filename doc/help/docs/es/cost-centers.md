@@ -60,7 +60,7 @@ Navegue a **Datos maestros > Centros de coste** (en la sección **Organización*
 
 ## Trabajar con la lista
 
-Cuando el espacio de trabajo aún no tiene ningún centro de coste, una línea bajo el título lo indica: "Los centros de coste indican quién es responsable de cada línea de presupuesto. Cree uno o importe un archivo."
+Cuando el espacio de trabajo aún no tiene ningún centro de coste, el centro de la lista lo indica, junto a **Nuevo centro de coste**: "Los centros de coste indican quién es responsable de cada línea de presupuesto. Cree uno o importe un archivo."
 
 **Columnas**:
 

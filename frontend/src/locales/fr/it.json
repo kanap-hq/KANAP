@@ -217,7 +217,8 @@
         "keptDone_other": "{{count}} actifs conservés",
         "keptReason_one": "Conservé : {{usages}} l’utilise.",
         "keptReason_other": "Conservé : {{usages}} l’utilisent."
-      }
+      },
+      "empty": "Aucun actif pour l'instant."
     },
     "technologies": {
       "title": "Technologies",
@@ -339,7 +340,8 @@
         "title_other": "Supprimer les {{count}} connexions sélectionnées"
       },
       "serverCount_one": "{{count}} serveur",
-      "serverCount_other": "{{count}} serveurs"
+      "serverCount_other": "{{count}} serveurs",
+      "empty": "Aucune connexion pour l'instant."
     },
     "endOfSupport": {
       "title": "Fins de support",
@@ -776,11 +778,13 @@
         "bindings": "Liaisons"
       },
       "duplicated": "Interface dupliquée sous le nom « {{name}} »",
-      "thisInterface": "cette interface"
+      "thisInterface": "cette interface",
+      "empty": "Aucune interface pour l'instant."
     },
     "locations": {
       "title": "Sites",
       "addLocation": "Ajouter un site",
+      "empty": "Aucun site pour l'instant.",
       "columns": {
         "reference": "Référence",
         "name": "Nom",

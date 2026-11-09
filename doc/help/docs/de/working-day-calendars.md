@@ -38,7 +38,7 @@ Um selbst einen Kalender anzulegen, klicken Sie auf **Neu**.
 
 ## Mit der Liste arbeiten
 
-Solange der Arbeitsbereich noch keinen Kalender hat, weist eine Zeile unter dem Titel darauf hin: „Ein Kalender enthält die Arbeitstage jedes Monats, für Zeilen mit Preis pro Tag. Legen Sie einen an oder importieren Sie eine Datei.“
+Solange der Arbeitsbereich noch keinen Kalender hat und keiner vorgeschlagen wird, weist die Mitte der Liste darauf hin, neben **Neuer Kalender**: „Ein Kalender enthält die Arbeitstage jedes Monats, für Zeilen mit Preis pro Tag. Legen Sie einen an oder importieren Sie eine Datei.“
 
 **Spalten**:
 
