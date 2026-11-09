@@ -10,7 +10,7 @@ If you use the name in good faith and nobody could mistake you for us, you are a
 
 This policy covers:
 
-- the name **Kadratis** (French trademark application No. 5317573, filed on 6 November 2026);
+- the name **Kadratis**;
 - the name **Kadratis Cloud**, our hosted offer;
 - the **Kadratis logo**.
 
