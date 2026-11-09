@@ -781,6 +781,7 @@
     "locations": {
       "title": "Sites",
       "addLocation": "Ajouter un site",
+      "empty": "Aucun site pour l'instant.",
       "columns": {
         "reference": "Référence",
         "name": "Nom",

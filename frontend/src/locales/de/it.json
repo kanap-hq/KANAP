@@ -781,6 +781,7 @@
     "locations": {
       "title": "Standorte",
       "addLocation": "Standort hinzufügen",
+      "empty": "Noch keine Standorte.",
       "columns": {
         "reference": "Referenz",
         "name": "Name",
