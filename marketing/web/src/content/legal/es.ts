@@ -110,7 +110,7 @@ const content: LegalContent = {
   <li>Derecho a la portabilidad de los datos</li>
   <li>Derecho a retirar tu consentimiento</li>
 </ul>
-<p>Para ejercer tus derechos, puedes contactar con KANAP en <a href="mailto:support@kanap.net">support@kanap.net</a>. También tienes derecho a presentar una reclamación ante la autoridad francesa de protección de datos (Commission nationale de l'informatique et des libertés, CNIL).</p>
+<p>Para ejercer tus derechos, puedes contactar con KANAP en <a href="mailto:contact@kadratis.com">contact@kadratis.com</a>. También tienes derecho a presentar una reclamación ante la autoridad francesa de protección de datos (Commission nationale de l'informatique et des libertés, CNIL).</p>
 
 <h2>9. Transferencias internacionales de datos</h2>
 <p>La Plataforma está alojada en la Unión Europea, en Alemania. Algunos proveedores mencionados en la sección 5 pueden tratar datos personales fuera de la Unión Europea, por ejemplo Cloudflare para el tráfico de red. En ese caso, KANAP se asegura de que existan garantías adecuadas (el Marco de Privacidad de Datos UE-EE. UU. o cláusulas contractuales tipo).</p>
@@ -122,7 +122,7 @@ const content: LegalContent = {
 <h2>11. Modificaciones de la política</h2>
 <p>KANAP se reserva el derecho de modificar la presente Política en cualquier momento. Se informará a los usuarios de los cambios por cualquier medio, en particular mediante una notificación en la Plataforma o por email.</p>
 
-<p class="mk-legal__foot">Para cualquier pregunta sobre esta política de privacidad, escribe a <a href="mailto:support@kanap.net">support@kanap.net</a>.</p>
+<p class="mk-legal__foot">Para cualquier pregunta sobre esta política de privacidad, escribe a <a href="mailto:contact@kadratis.com">contact@kadratis.com</a>.</p>
 `,
   },
 };

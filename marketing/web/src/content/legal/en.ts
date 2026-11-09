@@ -107,7 +107,7 @@ const content: LegalContent = {
   <li>Right to data portability</li>
   <li>Right to withdraw consent</li>
 </ul>
-<p>To exercise your rights, you can contact KANAP at <a href="mailto:support@kanap.net">support@kanap.net</a>. You also have the right to lodge a complaint with the French Data Protection Authority (CNIL).</p>
+<p>To exercise your rights, you can contact KANAP at <a href="mailto:contact@kadratis.com">contact@kadratis.com</a>. You also have the right to lodge a complaint with the French Data Protection Authority (CNIL).</p>
 
 <h2>9. International data transfers</h2>
 <p>The Platform is hosted in the European Union, in Germany. Some providers listed in section 5 may process personal data outside the European Union, for example Cloudflare for network traffic. In that case, KANAP ensures that appropriate safeguards are in place (the EU-US Data Privacy Framework or standard contractual clauses).</p>
@@ -119,7 +119,7 @@ const content: LegalContent = {
 <h2>11. Modifications to the policy</h2>
 <p>KANAP reserves the right to modify this Policy at any time. Users will be notified of changes by any means, including a notification on the Platform or by email.</p>
 
-<p class="mk-legal__foot">For any questions regarding this privacy policy, please contact <a href="mailto:support@kanap.net">support@kanap.net</a>.</p>
+<p class="mk-legal__foot">For any questions regarding this privacy policy, please contact <a href="mailto:contact@kadratis.com">contact@kadratis.com</a>.</p>
 `,
   },
 
@@ -184,7 +184,7 @@ const content: LegalContent = {
 <h2>Article 10. Applicable law and disputes</h2>
 <p>These Terms of Use are governed by French law. Any dispute will be subject to the exclusive jurisdiction of the French courts.</p>
 
-<p class="mk-legal__foot">For any questions, please contact <a href="mailto:support@kanap.net">support@kanap.net</a>.</p>
+<p class="mk-legal__foot">For any questions, please contact <a href="mailto:contact@kadratis.com">contact@kadratis.com</a>.</p>
 `,
   },
 
@@ -278,7 +278,7 @@ Registered office: 2, rue du Finhay, 67210 Obernai, France</p>
 <p>Kadratis™ is a trademark of KANAP, filed with the French trademark office (INPI).</p>
 
 <h2>Contact</h2>
-<p>Email: <a href="mailto:support@kanap.net">support@kanap.net</a></p>
+<p>Email: <a href="mailto:contact@kadratis.com">contact@kadratis.com</a></p>
 
 <h2>Hosting</h2>
 <p>The website kadratis.com is hosted by Hetzner Online GmbH, whose registered office is located at:</p>

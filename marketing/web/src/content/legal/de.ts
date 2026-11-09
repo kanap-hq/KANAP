@@ -110,7 +110,7 @@ const content: LegalContent = {
   <li>Recht auf Datenübertragbarkeit</li>
   <li>Recht auf Widerruf Ihrer Einwilligung</li>
 </ul>
-<p>Um Ihre Rechte auszuüben, können Sie KANAP unter <a href="mailto:support@kanap.net">support@kanap.net</a> kontaktieren. Sie haben außerdem das Recht, eine Beschwerde bei der französischen Datenschutzbehörde (Commission nationale de l'informatique et des libertés, CNIL) einzureichen.</p>
+<p>Um Ihre Rechte auszuüben, können Sie KANAP unter <a href="mailto:contact@kadratis.com">contact@kadratis.com</a> kontaktieren. Sie haben außerdem das Recht, eine Beschwerde bei der französischen Datenschutzbehörde (Commission nationale de l'informatique et des libertés, CNIL) einzureichen.</p>
 
 <h2>9. Internationale Datenübermittlungen</h2>
 <p>Die Plattform wird in der Europäischen Union, in Deutschland, gehostet. Einige der in Abschnitt 5 genannten Dienstleister können personenbezogene Daten außerhalb der Europäischen Union verarbeiten, zum Beispiel Cloudflare für den Netzwerkverkehr. In diesem Fall stellt KANAP sicher, dass geeignete Garantien bestehen (der EU-US-Datenschutzrahmen oder Standardvertragsklauseln).</p>
@@ -122,7 +122,7 @@ const content: LegalContent = {
 <h2>11. Änderungen der Erklärung</h2>
 <p>KANAP behält sich das Recht vor, diese Erklärung jederzeit zu ändern. Die Benutzer werden über Änderungen auf jedem geeigneten Weg informiert, insbesondere durch eine Benachrichtigung auf der Plattform oder per E-Mail.</p>
 
-<p class="mk-legal__foot">Bei Fragen zu dieser Datenschutzerklärung wenden Sie sich an <a href="mailto:support@kanap.net">support@kanap.net</a>.</p>
+<p class="mk-legal__foot">Bei Fragen zu dieser Datenschutzerklärung wenden Sie sich an <a href="mailto:contact@kadratis.com">contact@kadratis.com</a>.</p>
 `,
   },
 };

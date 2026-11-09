@@ -107,7 +107,7 @@ const content: LegalContent = {
   <li>Droit à la portabilité des données</li>
   <li>Droit de retirer votre consentement</li>
 </ul>
-<p>Pour exercer vos droits, vous pouvez contacter KANAP à l'adresse <a href="mailto:support@kanap.net">support@kanap.net</a>. Vous disposez également du droit d'introduire une réclamation auprès de la Commission nationale de l'informatique et des libertés (CNIL).</p>
+<p>Pour exercer vos droits, vous pouvez contacter KANAP à l'adresse <a href="mailto:contact@kadratis.com">contact@kadratis.com</a>. Vous disposez également du droit d'introduire une réclamation auprès de la Commission nationale de l'informatique et des libertés (CNIL).</p>
 
 <h2>9. Transferts internationaux de données</h2>
 <p>La Plateforme est hébergée dans l'Union européenne, en Allemagne. Certains prestataires mentionnés à la section 5 peuvent traiter des données personnelles hors de l'Union européenne, par exemple Cloudflare pour le trafic réseau. Dans ce cas, KANAP s'assure que des garanties appropriées sont en place (le cadre de protection des données UE-États-Unis ou des clauses contractuelles types).</p>
@@ -119,7 +119,7 @@ const content: LegalContent = {
 <h2>11. Modifications de la politique</h2>
 <p>KANAP se réserve le droit de modifier la présente Politique à tout moment. Les utilisateurs sont informés des modifications par tout moyen, notamment par une notification sur la Plateforme ou par e-mail.</p>
 
-<p class="mk-legal__foot">Pour toute question relative à la présente politique de confidentialité, contactez <a href="mailto:support@kanap.net">support@kanap.net</a>.</p>
+<p class="mk-legal__foot">Pour toute question relative à la présente politique de confidentialité, contactez <a href="mailto:contact@kadratis.com">contact@kadratis.com</a>.</p>
 `,
   },
 
@@ -184,7 +184,7 @@ const content: LegalContent = {
 <h2>Article 10. Droit applicable et litiges</h2>
 <p>Les présentes Conditions générales d'utilisation sont régies par le droit français. Tout litige relève de la compétence exclusive des tribunaux français.</p>
 
-<p class="mk-legal__foot">Pour toute question, contactez <a href="mailto:support@kanap.net">support@kanap.net</a>.</p>
+<p class="mk-legal__foot">Pour toute question, contactez <a href="mailto:contact@kadratis.com">contact@kadratis.com</a>.</p>
 `,
   },
 
@@ -278,7 +278,7 @@ Siège social : 2, rue du Finhay, 67210 Obernai, France</p>
 <p>Kadratis™ est une marque de KANAP, déposée à l'INPI.</p>
 
 <h2>Contact</h2>
-<p>E-mail : <a href="mailto:support@kanap.net">support@kanap.net</a></p>
+<p>E-mail : <a href="mailto:contact@kadratis.com">contact@kadratis.com</a></p>
 
 <h2>Hébergement</h2>
 <p>Le site kadratis.com est hébergé par Hetzner Online GmbH, dont le siège social est situé :</p>
