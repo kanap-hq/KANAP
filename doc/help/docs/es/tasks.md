@@ -21,7 +21,7 @@ Al hacer clic en **Nuevo**, la página de la tarea se abre con un título vacío
    - **Clasificación** (tareas independientes y de proyecto): para tareas de proyecto, **Origen**, **Categoría**, **Flujo** y **Empresa** proceden del proyecto padre. Para tareas independientes, se usan los valores de clasificación predeterminados de su organización cuando existen
 
 3. **Complete los detalles**. Todas las pestañas y todos los campos están ahora disponibles, con el panel de Propiedades a la derecha:
-   - **Relacionado con**: Mantenga **Independiente**, o seleccione **Proyecto**, **OPEX**, **Contrato** o **CAPEX**, luego elija el elemento específico
+   - **Relacionado con**: Mantenga **Independiente**, o seleccione **Proyecto**, **Presupuesto** (una línea OPEX o CAPEX), **Contrato** o **Incidente**, luego elija el elemento específico
    - **Tipo de tarea**: Una categoría para el trabajo (p. ej., Tarea, Bug, Problema, Incidente)
    - **Etiquetas**: Etiquetas libres, por ejemplo urgente o seguimiento. Escriba una y pulse Intro
    - **Descripción**: Añada información detallada usando el editor markdown (admite formato, listas, enlaces, imágenes)
@@ -162,7 +162,7 @@ La pestaña **Vista general** contiene el contenido de la tarea.
 El panel es plegable (haga clic en la pestaña vertical **Propiedades** en el borde derecho para abrirlo o cerrarlo; pulse **P** como atajo). Su anchura y estado abierto se recuerdan localmente. El panel contiene cuatro grupos, separados por divisores:
 
 **Contexto**:
-  - **Relacionado con**: Independiente, Proyecto, OPEX, Contrato o CAPEX. Puede cambiar el tipo y elegir un nuevo elemento; al guardar, KANAP aplica cualquier efecto secundario relacionado (consulte [Cambiar el contexto de la tarea](#cambiar-el-contexto-de-la-tarea))
+  - **Relacionado con**: Independiente, Proyecto, Presupuesto (una línea OPEX o CAPEX), Contrato o Incidente. Puede cambiar el tipo y elegir un nuevo elemento; al guardar, KANAP aplica cualquier efecto secundario relacionado (consulte [Cambiar el contexto de la tarea](#cambiar-el-contexto-de-la-tarea))
   - **Fase** (solo tareas de proyecto): Por defecto es **Nivel de proyecto** a menos que elija una fase del proyecto
   - **Tipo de tarea**: Tarea, Bug, Problema, Incidente o cualquier tipo personalizado configurado por su administrador
   - **Etiquetas**: Etiquetas libres, por ejemplo urgente o seguimiento. Escriba una y pulse Intro. Se muestran como chips. Una persona con permiso de lectura ve los chips

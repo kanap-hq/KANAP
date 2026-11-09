@@ -21,7 +21,7 @@ Lorsque vous cliquez sur **Nouvelle**, la page de la tâche s'ouvre avec un titr
    - **Classification** (tâches autonomes et de projet) : pour les tâches de projet, **Source**, **Catégorie**, **Stream** et **Société** proviennent du projet parent. Pour les tâches autonomes, les valeurs de classification par défaut de votre organisation sont utilisées lorsqu'elles existent
 
 3. **Remplissez les détails**. Tous les onglets et tous les champs sont maintenant disponibles, avec le tiroir Propriétés à droite :
-   - **Lié à** : Gardez **Autonome**, ou sélectionnez **Projet**, **OPEX**, **Contrat** ou **CAPEX**, puis choisissez l'élément spécifique
+   - **Lié à** : Gardez **Autonome**, ou sélectionnez **Projet**, **Budget** (une ligne OPEX ou CAPEX), **Contrat** ou **Incident**, puis choisissez l'élément spécifique
    - **Type de tâche** : Une catégorie pour le travail (ex. : Tâche, Bug, Problème, Incident)
    - **Étiquettes** : Mots libres, par exemple urgent ou suivi. Saisissez-en un et appuyez sur Entrée
    - **Description** : Ajoutez des informations détaillées avec l'éditeur markdown (prend en charge formatage, listes, liens, images)
@@ -162,7 +162,7 @@ L'onglet **Vue d'ensemble** contient le contenu de la tâche.
 Le tiroir est rétractable (cliquez sur l'onglet vertical **Propriétés** sur le bord droit pour ouvrir ou fermer ; appuyez sur **P** comme raccourci). Sa largeur et son état d'ouverture sont mémorisés localement. Le tiroir contient quatre groupes, séparés par des séparateurs :
 
 **Contexte** :
-  - **Lié à** : Autonome, Projet, OPEX, Contrat ou CAPEX. Vous pouvez changer le type et choisir un nouvel élément ; à l'enregistrement, KANAP applique tous les effets secondaires associés (voir [Changer le contexte d'une tâche](#changer-le-contexte-dune-tache))
+  - **Lié à** : Autonome, Projet, Budget (une ligne OPEX ou CAPEX), Contrat ou Incident. Vous pouvez changer le type et choisir un nouvel élément ; à l'enregistrement, KANAP applique tous les effets secondaires associés (voir [Changer le contexte d'une tâche](#changer-le-contexte-dune-tache))
   - **Phase** (tâches de projet uniquement) : Par défaut sur **Niveau projet** sauf si vous choisissez une phase de projet
   - **Type de tâche** : Tâche, Bug, Problème, Incident, ou tout type personnalisé configuré par votre administrateur
   - **Étiquettes** : Mots libres, par exemple urgent ou suivi. Saisissez-en un et appuyez sur Entrée. Ils s'affichent en pastilles. Une personne en lecture voit les pastilles

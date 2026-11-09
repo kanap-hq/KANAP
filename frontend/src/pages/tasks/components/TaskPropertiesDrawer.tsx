@@ -199,7 +199,7 @@ export default function TaskPropertiesDrawer({
               relationId={task.related_object_id || null}
               relationName={task.related_object_name || null}
               onChangeType={(type) => onRelationChange({ type, id: null, name: null })}
-              onChangeId={(id, name) => onRelationChange({ type: task.related_object_type as RelatedObjectType, id, name })}
+              onChangeId={(id, name, type) => onRelationChange({ type, id, name })}
               size="small"
               hideLabel
             />

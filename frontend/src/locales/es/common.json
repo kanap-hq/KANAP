@@ -1490,9 +1490,8 @@
     "types": {
       "standalone": "Independiente",
       "project": "Proyecto",
-      "spendItem": "Presupuesto (OPEX)",
+      "budgetLine": "Presupuesto",
       "contract": "Contrato",
-      "capexItem": "CAPEX",
       "incident": "Incidente"
     },
     "item": "Elemento"

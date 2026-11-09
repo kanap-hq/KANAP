@@ -21,7 +21,7 @@ When you click **New**, the task page opens with an empty title in its header, s
    - **Classification** (standalone and project tasks): for project tasks, **Source**, **Category**, **Stream**, and **Company** come from the parent project. For standalone tasks, your organization's default classification values are used when available
 
 3. **Fill in the details**. Every tab and field is now available, with the Properties drawer on the right:
-   - **Related to**: Keep **Standalone**, or select **Project**, **OPEX**, **Contract**, or **CAPEX**, then pick the specific item
+   - **Related to**: Keep **Standalone**, or select **Project**, **Budget** (an OPEX or CAPEX line), **Contract**, or **Incident**, then pick the specific item
    - **Task type**: A category for the work (e.g., Task, Bug, Problem, Incident)
    - **Labels**: Free tags, for example urgent or follow-up. Type one and press Enter
    - **Description**: Add detailed information using the markdown editor (supports formatting, lists, links, images)
@@ -162,7 +162,7 @@ The **Overview** tab holds the task content.
 The drawer is collapsible (click the vertical **Properties** tab on the right edge to open or close it; press **P** as a shortcut). Its width and open state are remembered locally. The drawer contains four groups, separated by dividers:
 
 **Context**:
-  - **Related to**: Standalone, Project, OPEX, Contract, or CAPEX. You can change the type and pick a new item; on save, KANAP applies any related side effects (see [Changing task context](#changing-task-context))
+  - **Related to**: Standalone, Project, Budget (an OPEX or CAPEX line), Contract, or Incident. You can change the type and pick a new item; on save, KANAP applies any related side effects (see [Changing task context](#changing-task-context))
   - **Phase** (project tasks only): Defaults to **Project-level** unless you pick a project phase
   - **Task Type**: Task, Bug, Problem, Incident, or any custom type configured by your administrator
   - **Labels**: Free tags, for example urgent or follow-up. Type one and press Enter. The tags show as chips. A reader sees the chips

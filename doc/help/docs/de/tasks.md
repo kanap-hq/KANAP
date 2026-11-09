@@ -21,7 +21,7 @@ Wenn Sie auf **Neu** klicken, öffnet sich die Aufgabenseite mit einem leeren Ti
    - **Klassifizierung** (eigenständige und Projektaufgaben): Bei Projektaufgaben stammen **Quelle**, **Kategorie**, **Stream** und **Unternehmen** aus dem übergeordneten Projekt. Für eigenständige Aufgaben werden die Standardklassifizierungswerte Ihrer Organisation verwendet, wenn vorhanden
 
 3. **Füllen Sie die Details aus**. Alle Reiter und Felder sind nun verfügbar, mit dem Eigenschaftenbereich rechts:
-   - **Verknüpft mit**: Behalten Sie **Eigenständig** bei, oder wählen Sie **Projekt**, **OPEX**, **Vertrag** oder **CAPEX** und dann das spezifische Element
+   - **Verknüpft mit**: Behalten Sie **Eigenständig** bei, oder wählen Sie **Projekt**, **Budget** (eine OPEX- oder CAPEX-Zeile), **Vertrag** oder **Vorfall** und dann das spezifische Element
    - **Aufgabentyp**: Eine Kategorie für die Arbeit (z. B. Aufgabe, Bug, Problem, Vorfall)
    - **Labels**: Freie Stichwörter, zum Beispiel dringend oder Nachverfolgung. Geben Sie eines ein und drücken Sie die Eingabetaste
    - **Beschreibung**: Fügen Sie detaillierte Informationen mit dem Markdown-Editor hinzu (unterstützt Formatierung, Listen, Links, Bilder)
@@ -162,7 +162,7 @@ Der Tab **Übersicht** enthält den Inhalt der Aufgabe.
 Der Bereich ist einklappbar (klicken Sie auf die vertikale Registerkarte **Eigenschaften** am rechten Rand zum Öffnen oder Schließen; drücken Sie **P** als Tastenkürzel). Seine Breite und der Öffnungszustand werden lokal gespeichert. Der Bereich enthält vier Gruppen, getrennt durch Trennlinien:
 
 **Kontext**:
-  - **Verknüpft mit**: Eigenständig, Projekt, OPEX, Vertrag oder CAPEX. Sie können den Typ ändern und ein neues Element auswählen; beim Speichern wendet KANAP alle damit verbundenen Nebeneffekte an (siehe [Aufgaben-Kontext ändern](#aufgaben-kontext-andern))
+  - **Verknüpft mit**: Eigenständig, Projekt, Budget (eine OPEX- oder CAPEX-Zeile), Vertrag oder Vorfall. Sie können den Typ ändern und ein neues Element auswählen; beim Speichern wendet KANAP alle damit verbundenen Nebeneffekte an (siehe [Aufgaben-Kontext ändern](#aufgaben-kontext-andern))
   - **Phase** (nur Projektaufgaben): Standardmäßig **Projektebene**, es sei denn, Sie wählen eine Projektphase
   - **Aufgabentyp**: Aufgabe, Bug, Problem, Vorfall oder ein beliebiger benutzerdefinierter Typ, der von Ihrem Administrator konfiguriert wurde
   - **Labels**: Freie Stichwörter, zum Beispiel dringend oder Nachverfolgung. Geben Sie eines ein und drücken Sie die Eingabetaste. Sie erscheinen als Chips. Eine Person mit Leserecht sieht die Chips
