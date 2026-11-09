@@ -1,6 +1,6 @@
 # Business Processes
 
-Business Processes let you build and maintain a centralized catalog of your organization's core end-to-end processes, such as Order-to-Cash, Procure-to-Pay, or Hire-to-Retire. By keeping process names, types, owners and their hierarchy in one place, you create a single reference point that the rest of KANAP can link to for ownership, reporting, and audits.
+Business Processes let you build and maintain a centralized catalog of your organization's core end-to-end processes, such as Order-to-Cash, Procure-to-Pay, or Hire-to-Retire. By keeping process names, types, owners and their hierarchy in one place, you create a single reference point that the rest of Kadratis can link to for ownership, reporting, and audits.
 
 ## Getting started
 
@@ -56,7 +56,7 @@ The list shows all business processes for your tenant.
 
 1. Click **New** on the list. The process page opens with an empty title in the header. The rest of the page is dimmed.
 2. Type the process name, ideally with its short code (e.g. "Order-to-Cash (O2C)").
-3. Press Enter, or click outside the title. KANAP creates the process at once, enabled, and all tabs open.
+3. Press Enter, or click outside the title. Kadratis creates the process at once, enabled, and all tabs open.
 
 Press Escape on the empty title to leave without creating anything. Two processes cannot share a name, whatever the case: a name already used is refused, with a message under the title.
 
@@ -138,7 +138,7 @@ Click **Import** on the list page, then:
 **Matching rules**:
 
 - Rows are matched by **Name**, whatever the case. A matching name updates the existing process and keeps its stored spelling (the preflight check says which process the row matched); a new name creates a new process.
-- `parent_name` is matched by name, whatever the case: a process of the same file or one already in KANAP. When both exist, the file wins. Rows can come in any order: parents are created before their children.
+- `parent_name` is matched by name, whatever the case: a process of the same file or one already in Kadratis. When both exist, the file wins. Rows can come in any order: parents are created before their children.
 - An unknown parent name, a process under itself, or a loop is refused, with the row number.
 - The file has no end of validity column. On an update, a blank `status`, or one equal to the process's current status, keeps its end of validity. A different status applies it: `enabled` clears the end of validity, and `disabled` ends the process today unless its end of validity has already passed. A new process is enabled unless the row says `disabled`.
 

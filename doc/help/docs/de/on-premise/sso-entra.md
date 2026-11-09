@@ -1,11 +1,11 @@
 # On-Premise: Einrichtung von Microsoft Entra SSO
 
-Dieser Leitfaden erklärt, wie Sie Microsoft Entra (Azure AD) SSO für eine On-Premise-Bereitstellung von KANAP aktivieren.
+Dieser Leitfaden erklärt, wie Sie Microsoft Entra (Azure AD) SSO für eine On-Premise-Bereitstellung von Kadratis aktivieren.
 Entra SSO ist optional; wenn Sie es nicht konfigurieren, bleibt die lokale Anmeldung mit E-Mail-Adresse und Passwort verfügbar.
 
 ## Übersicht
 
-KANAP verwendet den OAuth2/OIDC-Autorisierungscode-Flow als vertraulicher Client.
+Kadratis verwendet den OAuth2/OIDC-Autorisierungscode-Flow als vertraulicher Client.
 Jeder On-Premise-Kunde **muss seine eigene Entra-Anwendung registrieren** und deren Client-ID und Secret bereitstellen.
 
 ### Was der Kunde bereitstellt
@@ -13,20 +13,20 @@ Jeder On-Premise-Kunde **muss seine eigene Entra-Anwendung registrieren** und de
 - Eine Entra-App-Registrierung **in seinem eigenen Mandanten**
 - `ENTRA_CLIENT_ID` und `ENTRA_CLIENT_SECRET`
 - `ENTRA_AUTHORITY`, das auf seinen Mandanten zeigt
-- `ENTRA_REDIRECT_URI`, passend zu seiner KANAP-URL
+- `ENTRA_REDIRECT_URI`, passend zu seiner Kadratis-URL
 
 ## Voraussetzungen
 
-- Eine HTTPS-Adresse für KANAP, die die Browser Ihrer Benutzer erreichen (Reverse Proxy vor der API). Ein interner Name funktioniert: Microsoft leitet nur den Browser des Benutzers dorthin weiter.
+- Eine HTTPS-Adresse für Kadratis, die die Browser Ihrer Benutzer erreichen (Reverse Proxy vor der API). Ein interner Name funktioniert: Microsoft leitet nur den Browser des Benutzers dorthin weiter.
 - Die Möglichkeit, in Entra eine App-Registrierung anzulegen und die Administratorzustimmung zu erteilen
-- Ausgehende Verbindungen vom KANAP-API-Container zu:
+- Ausgehende Verbindungen vom Kadratis-API-Container zu:
   - `login.microsoftonline.com` (OIDC-Metadaten, Token-Austausch, JWKS)
   - `graph.microsoft.com` (Profilanreicherung bei der Anmeldung und die tägliche Verzeichnissynchronisierung)
 
 ## Schritt 1: App-Registrierung erstellen (Entra)
 
 1. Öffnen Sie **Microsoft Entra ID → App registrations → New registration**
-2. Name: `KANAP (on-prem)`
+2. Name: `Kadratis (on-prem)`
 3. Unterstützte Kontotypen: **Single tenant** (empfohlen)
 4. Umleitungs-URI (Web): `https://<your-kanap-domain>/api/auth/entra/callback`
 5. Speichern Sie und notieren Sie:
@@ -41,7 +41,7 @@ Jeder On-Premise-Kunde **muss seine eigene Entra-Anwendung registrieren** und de
 
 ## Schritt 3: API-Berechtigungen
 
-KANAP benötigt zwei Gruppen von Berechtigungen: delegierte Berechtigungen für die interaktive Anmeldung und eine Anwendungsberechtigung für die tägliche Verzeichnissynchronisierung.
+Kadratis benötigt zwei Gruppen von Berechtigungen: delegierte Berechtigungen für die interaktive Anmeldung und eine Anwendungsberechtigung für die tägliche Verzeichnissynchronisierung.
 
 ### Delegierte Berechtigungen (Anmeldung)
 
@@ -53,12 +53,12 @@ openid profile email offline_access User.Read
 
 Fügen Sie alle fünf als **konfigurierte** Berechtigungen zur App-Registrierung hinzu:
 
-1. Öffnen Sie **App registrations → Ihre KANAP-App → API permissions**
+1. Öffnen Sie **App registrations → Ihre Kadratis-App → API permissions**
 2. **Add a permission → Microsoft Graph → Delegated permissions**
 3. Wählen Sie `openid`, `profile`, `email`, `offline_access` und `User.Read`
 4. Klicken Sie auf **Add permissions**
 
-`User.Read` erlaubt KANAP, das eigene Profil der angemeldeten Person aus Microsoft Graph zu lesen, um Name, Position, Telefonnummern, Abteilung und Unternehmen auszufüllen. Behalten Sie die Berechtigung. Sie ist eine eigenständige Berechtigung, unabhängig von `User.Read.All`. Ohne sie werden Benutzer bei jeder Anmeldung um Zustimmung gebeten, oder die Anmeldung schlägt fehl.
+`User.Read` erlaubt Kadratis, das eigene Profil der angemeldeten Person aus Microsoft Graph zu lesen, um Name, Position, Telefonnummern, Abteilung und Unternehmen auszufüllen. Behalten Sie die Berechtigung. Sie ist eine eigenständige Berechtigung, unabhängig von `User.Read.All`. Ohne sie werden Benutzer bei jeder Anmeldung um Zustimmung gebeten, oder die Anmeldung schlägt fehl.
 
 !!! warning "Fügen Sie die OIDC-Scopes hinzu, bevor Sie die Administratorzustimmung erteilen"
     Die mandantenweite Administratorzustimmung schreibt die Berechtigungen der App gemäß der Liste der **konfigurierten** Berechtigungen neu. `openid`, `profile`, `email` und `offline_access` stehen meist unter "Other permissions granted" und sind standardmäßig nicht konfiguriert. Eine mandantenweite Zustimmung würde sie daher entfernen und bestehende Anmeldungen unterbrechen. Das Azure-Portal zeigt diese Warnung selbst an. Fügen Sie die vier Scopes zuerst als konfigurierte delegierte Berechtigungen hinzu und erteilen Sie dann die Zustimmung.
@@ -71,13 +71,13 @@ Die nächtliche Verzeichnissynchronisierung läuft ohne angemeldeten Benutzer un
 2. Wählen Sie **`User.Read.All`**
 3. Klicken Sie auf **Add permissions**
 
-`User.Read.All` deckt auch den Vorgesetzten jedes Kontos ab, den KANAP in das Mitwirkendenprofil der Personen schreibt, die Mitwirkende sind. Dafür ist nichts weiter hinzuzufügen.
+`User.Read.All` deckt auch den Vorgesetzten jedes Kontos ab, den Kadratis in das Mitwirkendenprofil der Personen schreibt, die Mitwirkende sind. Dafür ist nichts weiter hinzuzufügen.
 
-Die neue Zeile zeigt jetzt den Status **Not granted** mit einer orangefarbenen Warnung. Das ist erwartet. Die Berechtigung wird nutzbar, sobald ein Microsoft Entra-Administrator die mandantenweite Zustimmung erteilt, was aus KANAP heraus in [Schritt 7](#schritt-7-die-tagliche-verzeichnissynchronisierung-autorisieren) geschieht.
+Die neue Zeile zeigt jetzt den Status **Not granted** mit einer orangefarbenen Warnung. Das ist erwartet. Die Berechtigung wird nutzbar, sobald ein Microsoft Entra-Administrator die mandantenweite Zustimmung erteilt, was aus Kadratis heraus in [Schritt 7](#schritt-7-die-tagliche-verzeichnissynchronisierung-autorisieren) geschieht.
 
 Wer was tut:
 
-- **Gehostetes KANAP**: Der Betreiber von KANAP besitzt die App-Registrierung und fügt die Berechtigung hinzu. Der Entra-Administrator des Kunden erteilt nur die Zustimmung.
+- **Gehostetes Kadratis**: KANAP betreibt den Dienst, besitzt die App-Registrierung und fügt die Berechtigung hinzu. Der Entra-Administrator des Kunden erteilt nur die Zustimmung.
 - **On-Premise**: Die eigene IT des Kunden besitzt die App-Registrierung, fügt also die Berechtigung hinzu und erteilt die Zustimmung.
 
 ### Wenn Sie keine Graph-Aufrufe bei der Anmeldung möchten
@@ -88,7 +88,7 @@ ENTRA_ENRICH_PROFILE=false
 
 Damit entfällt nur der Microsoft-Graph-Aufruf `/me` während der Anmeldung. Namen und andere Profilfelder stammen dann allein aus dem ID-Token. Die tägliche Verzeichnissynchronisierung bleibt eingeschaltet, sie verwendet ihre eigene Anwendungsberechtigung.
 
-## Schritt 4: KANAP-Umgebungsvariablen konfigurieren
+## Schritt 4: Kadratis-Umgebungsvariablen konfigurieren
 
 Setzen Sie Folgendes in Ihrer On-Premise-`.env`:
 
@@ -105,7 +105,7 @@ Hinweise:
 - `ENTRA_REDIRECT_URI` muss **genau** dem in Entra registrierten Wert entsprechen.
 - Stellen Sie sicher, dass `APP_BASE_URL` auf die genaue Adresse gesetzt ist, die Benutzer öffnen (Schema, Host und Port, wenn er nicht dem Standard entspricht). Die Weiterleitung nach der Anmeldung wird daraus gebaut. Ohne sie antwortet die Microsoft-Anmeldung mit "application URL is not configured".
 
-## Schritt 5: KANAP neu starten
+## Schritt 5: Kadratis neu starten
 
 Erstellen Sie nach der Änderung von `.env` den API-Container neu, damit er die neue Konfiguration übernimmt. Ein einfaches `restart` behält die alten Werte.
 
@@ -114,7 +114,7 @@ cd /opt/kanap
 docker compose -f infra/compose.onprem.yml up -d api
 ```
 
-## Schritt 6: Entra in KANAP verbinden
+## Schritt 6: Entra in Kadratis verbinden
 
 1. Melden Sie sich als Administrator an
 2. Gehen Sie zu **Administration → Authentifizierung**
@@ -126,29 +126,29 @@ docker compose -f infra/compose.onprem.yml up -d api
 
 Der Block **Tägliche Verzeichnissynchronisierung** erscheint unter **Administration → Authentifizierung**, sobald Entra verbunden ist. Bis ein Microsoft Entra-Administrator ihn genehmigt, zeigt der Block:
 
-> Noch nicht autorisiert. Ein Microsoft Entra-Administrator muss KANAP die Berechtigung erteilen, Verzeichnisbenutzer zu lesen.
+> Noch nicht autorisiert. Ein Microsoft Entra-Administrator muss Kadratis die Berechtigung erteilen, Verzeichnisbenutzer zu lesen.
 
 So genehmigen Sie ihn:
 
-1. Melden Sie sich bei KANAP als Administrator an, der zugleich Microsoft Entra-Administrator ist
+1. Melden Sie sich bei Kadratis als Administrator an, der zugleich Microsoft Entra-Administrator ist
 2. Gehen Sie zu **Administration → Authentifizierung → Tägliche Verzeichnissynchronisierung**
 3. Klicken Sie auf **Zugriff in Microsoft Entra gewähren**
 4. Genehmigen Sie die Anfrage auf der Zustimmungsseite von Microsoft
 
-Sie kehren zu KANAP zurück, mit der Meldung **Zugriff gewährt. Die erste Synchronisierung läuft.** Die Zeile "Noch nicht autorisiert" verschwindet.
+Sie kehren zu Kadratis zurück, mit der Meldung **Zugriff gewährt. Die erste Synchronisierung läuft.** Die Zeile "Noch nicht autorisiert" verschwindet.
 
-Sie können die Zustimmung auch im Azure-Portal erteilen, mit **Grant admin consent for &lt;tenant&gt;** auf der Seite API permissions. KANAP bemerkt das dann erst bei der nächsten Synchronisierung. Klicken Sie auf **Jetzt synchronisieren**, um sofort zu prüfen. Da KANAP sein Microsoft-Token zwischenspeichert, kann der erste Versuch direkt nach einer Zustimmung im Portal noch "nicht autorisiert" melden. Klicken Sie erneut auf **Jetzt synchronisieren**, dann gelingt es. Der nächtliche Lauf erholt sich in jedem Fall von selbst.
+Sie können die Zustimmung auch im Azure-Portal erteilen, mit **Grant admin consent for &lt;tenant&gt;** auf der Seite API permissions. Kadratis bemerkt das dann erst bei der nächsten Synchronisierung. Klicken Sie auf **Jetzt synchronisieren**, um sofort zu prüfen. Da Kadratis sein Microsoft-Token zwischenspeichert, kann der erste Versuch direkt nach einer Zustimmung im Portal noch "nicht autorisiert" melden. Klicken Sie erneut auf **Jetzt synchronisieren**, dann gelingt es. Der nächtliche Lauf erholt sich in jedem Fall von selbst.
 
 ## Die tägliche Verzeichnissynchronisierung
 
-Nach der Autorisierung kontaktiert KANAP Microsoft Graph jede Nacht um 03:00 UTC (die Uhr des API-Containers) und führt für jeden mit Entra verknüpften Benutzer Folgendes aus:
+Nach der Autorisierung kontaktiert Kadratis Microsoft Graph jede Nacht um 03:00 UTC (die Uhr des API-Containers) und führt für jeden mit Entra verknüpften Benutzer Folgendes aus:
 
 - Aktualisiert Vorname, Nachname, Position, geschäftliche Telefonnummer und Mobiltelefonnummer
-- Ordnet die Abteilung und das Unternehmen aus dem Verzeichnis **nach Namen** bestehenden KANAP-Datensätzen zu. Es wird nichts automatisch angelegt, und ein Name ohne Treffer lässt die Zuordnung unverändert.
+- Ordnet die Abteilung und das Unternehmen aus dem Verzeichnis **nach Namen** bestehenden Kadratis-Datensätzen zu. Es wird nichts automatisch angelegt, und ein Name ohne Treffer lässt die Zuordnung unverändert.
 - Setzt die Sprache der Oberfläche nur, wenn die Person keine gewählt hat
-- Deaktiviert das KANAP-Konto, wenn die Person aus dem Verzeichnis entfernt wurde oder ihr Verzeichniskonto deaktiviert ist (`accountEnabled` ist false)
+- Deaktiviert das Kadratis-Konto, wenn die Person aus dem Verzeichnis entfernt wurde oder ihr Verzeichniskonto deaktiviert ist (`accountEnabled` ist false)
 
-Leere Werte im Verzeichnis löschen niemals Daten, die bereits in KANAP stehen.
+Leere Werte im Verzeichnis löschen niemals Daten, die bereits in Kadratis stehen.
 
 Das Deaktivieren eines Kontos meldet die Person sofort ab und sperrt jede weitere Anmeldung. Ihre Daten und ihr Verlauf bleiben erhalten.
 

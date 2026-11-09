@@ -1,10 +1,10 @@
 # My Dashboard
 
-The Dashboard is your personal landing page in KANAP. It gives you a quick overview of your tasks, projects, applications and budget. You choose its tiles and their order. Tiles you do not have permission to see are hidden.
+The Dashboard is your personal landing page in Kadratis. It gives you a quick overview of your tasks, projects, applications and budget. You choose its tiles and their order. Tiles you do not have permission to see are hidden.
 
 ## Where to find it
 
-- Click the **KANAP** logo or navigate to `/`
+- Click the **Kadratis** logo or navigate to `/`
 - This is the default page after login for non-admin users.
 - No special permissions are required to view the dashboard itself, but individual tiles depend on your access rights.
 
@@ -38,20 +38,20 @@ After save, the dashboard time-summary tile refreshes automatically.
 
 ## Sample data line
 
-In a cloud workspace that is empty and has never held sample data, Administrators see one line above the tiles: "Discover KANAP with sample data." **Load** opens the sample data dialog and **Hide** removes the line for good. The line disappears once the workspace holds data and does not return after an erase. See [Sample data](sample-data.md).
+In a cloud workspace that is empty and has never held sample data, Administrators see one line above the tiles: "Discover Kadratis with sample data." **Load** opens the sample data dialog and **Hide** removes the line for good. The line disappears once the workspace holds data and does not return after an erase. See [Sample data](sample-data.md).
 
 ## Trial: your path and first steps { #trial-first-steps }
 
-In a trial workspace, a dialog opens the first time you open KANAP. It asks one question per screen:
+In a trial workspace, a dialog opens the first time you open Kadratis. It asks one question per screen:
 
-1. **What brings you to KANAP?** **The IT budget**, **The IT landscape map**, **Projects and requests**, or **Just looking**.
+1. **What brings you to Kadratis?** **The IT budget**, **The IT landscape map**, **Projects and requests**, or **Just looking**.
 2. **How do you want to start?** **Explore with the complete example**, or **Start with my own data**.
 
 Starting with your own data erases the example. When items were created since the example was loaded, a confirmation gives their number before anything is erased. Only an administrator can choose your own data while the workspace holds the example. The example loads only into an empty workspace. During the trial, an administrator who chooses the example while the workspace holds data is asked to erase it first: the confirmation asks for the workspace name and offers **See what the workspace holds**. The workspace is erased, then the example loads. After the trial, the choice is refused and your path does not change.
 
 While the example loads, or while the workspace is being erased, a line on the home page says so.
 
-If you close the dialog, the choice waits in **About KANAP**. The line **Path: … · Change** shows the chosen path (**Choose** while nothing is chosen). Anyone can change it while an answer is missing. Afterwards, only administrators can.
+If you close the dialog, the choice waits in **About Kadratis**. The line **Path: … · Change** shows the chosen path (**Choose** while nothing is chosen). Anyone can change it while an answer is missing. Afterwards, only administrators can.
 
 ### Your first five steps
 
@@ -60,13 +60,13 @@ Once a path is chosen, the **Your first five steps** tile comes first on the hom
 - With the example, opening a step marks it done.
 - With your own data, a step that creates something is marked done as soon as it exists. For the other steps, click **Done** in the guidance, or the mark next to the step in the tile. The mark also undoes a step, except one whose item exists.
 
-When the five steps are done, the tile offers the two other paths. At any time, **Change path** in the tile's header opens the path question again. As with the line in **About KANAP**, anyone can use it while an answer is missing, and afterwards only administrators. The close button (**×**) hides the tile. To show it again, use **Show the first steps** in **About KANAP**.
+When the five steps are done, the tile offers the two other paths. At any time, **Change path** in the tile's header opens the path question again. As with the line in **About Kadratis**, anyone can use it while an answer is missing, and afterwards only administrators. The close button (**×**) hides the tile. To show it again, use **Show the first steps** in **About Kadratis**.
 
-During the trial, the tile also offers **Book a discovery call**: a 30-minute video call about your situation and your questions, booked on the page that opens at a time that suits you. The same link follows the days left in your trial in **About KANAP**.
+During the trial, the tile also offers **Book a discovery call**: a 30-minute video call about your situation and your questions, booked on the page that opens at a time that suits you. The same link follows the days left in your trial in **About Kadratis**.
 
 | Path | With the example | With your own data |
 |---|---|---|
-| IT budget | The overview, A budget line, A report, A question for Plaid, Your data | Your company, Your budget lines, A linked contract, Your first report, A colleague |
+| IT budget | The overview, A budget line, A report, A question for Kad, Your data | Your company, Your budget lines, A linked contract, Your first report, A colleague |
 | IT landscape map | The application list, An application record, The servers, Technologies, end of support and vulnerabilities, Your data | Your locations, Your applications, Your technologies, Your servers, A colleague |
 | Projects and requests | A request and its score, The project born from the request, Tasks, The reports, Your data | Your first request, Your project, The first tasks, The project's budget, Your contributor profile |
 
@@ -223,7 +223,7 @@ The levels are the ones defined in the IT landscape settings; a deprecated level
 
 ### Vulnerabilities in your estate { #vulnerabilities }
 
-Shows the vulnerabilities that call for attention in your estate, under the subtitle "CVE to review on technologies in use". The counts follow [What KANAP counts](vulnerabilities.md#what-kanap-counts): vulnerabilities still to review, in the alerts. Each line opens the matching list:
+Shows the vulnerabilities that call for attention in your estate, under the subtitle "CVE to review on technologies in use". The counts follow [What Kadratis counts](vulnerabilities.md#what-kanap-counts): vulnerabilities still to review, in the alerts. Each line opens the matching list:
 
 - **Applications at the highest criticality with a critical or high CVE**, for example "2 Critical applications with a critical or high CVE": the applications at the highest business criticality level of your catalog that a critical or high vulnerability reaches. Opens the applications list filtered on that level and on **With severe vulnerabilities**. Needs `applications:reader`, and counts the applications you can read.
 - **Critical CVEs published in the last 7 days** and **in the last 30 days**, on technologies in use in the estate: installed on an asset in service or declared by an application in service. Opens the [Vulnerabilities](vulnerabilities.md) page on those vulnerabilities, with the **In use in the estate** filter.

@@ -1,11 +1,11 @@
 ---
-title: "Erste Schritte: Ihre ersten 10 Minuten in KANAP"
+title: "Erste Schritte: Ihre ersten 10 Minuten in Kadratis"
 description: Ein schneller Onboarding-Leitfaden für alle Benutzer. Dashboard, Profil, Aufgaben, Benachrichtigungen und Schlüsselkonzepte, um sich schnell zurechtzufinden.
 ---
 
-# Erste Schritte: Ihre ersten 10 Minuten in KANAP
+# Erste Schritte: Ihre ersten 10 Minuten in Kadratis
 
-Willkommen bei KANAP. Dieser Leitfaden führt Sie durch alles, was Sie brauchen, um ab dem ersten Tag produktiv zu sein, unabhängig von Ihrer Rolle. Keine Admin-Kenntnisse erforderlich, keine modulspezifischen Vertiefungen. Nur das Wesentliche, um sich wohlzufühlen.
+Willkommen bei Kadratis. Dieser Leitfaden führt Sie durch alles, was Sie brauchen, um ab dem ersten Tag produktiv zu sein, unabhängig von Ihrer Rolle. Keine Admin-Kenntnisse erforderlich, keine modulspezifischen Vertiefungen. Nur das Wesentliche, um sich wohlzufühlen.
 
 !!! tip "Bevorzugen Sie eine einseitige Zusammenfassung? :material-file-pdf-box:"
     Alle wichtigen Schritte auf einer einzigen A4-Seite: ausdrucken, aufhängen, mit dem Team teilen.
@@ -18,11 +18,11 @@ Für rollenspezifische Workflows siehe den [Portfolio-Schnelleinstieg](index.md)
 
 ## Das Gesamtbild
 
-KANAP ist um eine einfache Struktur herum organisiert. Die obere Leiste zeigt die Bereiche, auf die Sie Zugriff haben:
+Kadratis ist um eine einfache Struktur herum organisiert. Die obere Leiste zeigt die Bereiche, auf die Sie Zugriff haben:
 
 | Bereich | Was er enthält |
 |---------|----------------|
-| **Dashboard** | Ihr persönlicher Hub. Klicken Sie auf das KANAP-Logo oder navigieren Sie zu `/` |
+| **Dashboard** | Ihr persönlicher Hub. Klicken Sie auf das Kadratis-Logo oder navigieren Sie zu `/` |
 | **Portfolio** | Aufgaben, Anfragen, Projekte, Planung, Berichte, Mitwirkende |
 | **IT-Landschaft** | Anwendungen, Schnittstellen, Schnittstellenkarte, Assets, Verbindungen, Verbindungskarte, Administrationszonen, Standorte, Technologien, Vorfälle, Supportende, Schwachstellen, Einstellungen (Listen und Netbox) |
 | **Wissensdatenbank** | Dokumente und Vorlagen mit Review-Workflows |
@@ -84,10 +84,10 @@ Aktualisieren Sie Ihre persönlichen Informationen:
 - **Berufsbezeichnung**
 - **Geschäftstelefon** / **Mobiltelefon**
 
-Hat Ihr Konto noch keinen Namen, fragt KANAP nach der Anmeldung nach Ihrem Vor- und Nachnamen. **Später** blendet die Frage in diesem Browser aus.
+Hat Ihr Konto noch keinen Namen, fragt Kadratis nach der Anmeldung nach Ihrem Vor- und Nachnamen. **Später** blendet die Frage in diesem Browser aus.
 
 !!! info "SSO-Benutzer"
-    Wenn Ihre Organisation Microsoft Entra ID (SSO) verwendet, werden einige Felder automatisch synchronisiert und können in KANAP nicht bearbeitet werden.
+    Wenn Ihre Organisation Microsoft Entra ID (SSO) verwendet, werden einige Felder automatisch synchronisiert und können in Kadratis nicht bearbeitet werden.
 
 ### Benachrichtigungs-Tab
 
@@ -132,7 +132,7 @@ Sie können das Design auch schnell über die obere Leiste mit dem Design-Symbol
 
 ## Schritt 3: Bereichsfilter verstehen
 
-Dies ist das wichtigste Konzept für neue Benutzer. Jede wichtige Liste in KANAP (Aufgaben, Apps, Projekte, Anfragen) hat einen **Bereichsfilter** oben:
+Dies ist das wichtigste Konzept für neue Benutzer. Jede wichtige Liste in Kadratis (Aufgaben, Apps, Projekte, Anfragen) hat einen **Bereichsfilter** oben:
 
 | Bereich | Was er zeigt |
 |---------|--------------|
@@ -211,7 +211,7 @@ Für Projektaufgaben ist die Zeiterfassung essenziell: sie speist den Roadmap-Ge
 
 ### Aufgabe teilen
 
-Müssen Sie jemanden einbeziehen? Klicken Sie auf **Teilen** im Aufgaben-Header, um einen direkten Link per E-Mail an einen Kollegen zu senden, auch an Personen außerhalb von KANAP. Fügen Sie bei Bedarf eine persönliche Nachricht hinzu.
+Müssen Sie jemanden einbeziehen? Klicken Sie auf **Teilen** im Aufgaben-Header, um einen direkten Link per E-Mail an einen Kollegen zu senden, auch an Personen außerhalb von Kadratis. Fügen Sie bei Bedarf eine persönliche Nachricht hinzu.
 
 !!! info "Teilen funktioniert überall"
     Das ist nicht nur für Aufgaben. Sie können Links zu Projekten, Anfragen, Verträgen, Apps senden, zu jedem Arbeitsbereich-Objekt. Es ist der schnellste Weg, jemanden auf die richtige Stelle zu verweisen.
@@ -220,7 +220,7 @@ Müssen Sie jemanden einbeziehen? Klicken Sie auf **Teilen** im Aufgaben-Header,
 
 ## Schritt 5: Ihr Mitwirkenden-Profil einrichten
 
-Ihr Mitwirkenden-Profil sagt KANAP, wer Sie in Bezug auf Projektplanung sind. Es ist getrennt von Ihrem Benutzerkonto. Es geht um **Team, Verfügbarkeit und Fähigkeiten**.
+Ihr Mitwirkenden-Profil sagt Kadratis, wer Sie in Bezug auf Projektplanung sind. Es ist getrennt von Ihrem Benutzerkonto. Es geht um **Team, Verfügbarkeit und Fähigkeiten**.
 
 Navigieren Sie zu **Portfolio > Mitwirkende** und finden Sie Ihren Namen (oder bitten Sie Ihren Admin, Sie hinzuzufügen).
 
@@ -289,7 +289,7 @@ Die wöchentliche E-Mail und Echtzeit-Benachrichtigungen halten Sie auf dem Lauf
 
 | Ich möchte... | Gehe zu... |
 |---------------|------------|
-| Meinen Überblick sehen | Dashboard (KANAP-Logo klicken) |
+| Meinen Überblick sehen | Dashboard (Kadratis-Logo klicken) |
 | Schnell eine Aufgabe erstellen | Dashboard > Schaltfläche Aufgabe erstellen |
 | Schnell Zeit erfassen | Dashboard > Schaltfläche Zeit erfassen |
 | Neues Dokument starten | Dashboard > Schaltfläche Neues Dokument |
@@ -299,7 +299,7 @@ Die wöchentliche E-Mail und Echtzeit-Benachrichtigungen halten Sie auf dem Lauf
 | Benachrichtigungen einrichten | Avatar > Mein Profil > Benachrichtigungs-Tab |
 | Wöchentliche E-Mail konfigurieren | Avatar > Mein Profil > Benachrichtigungs-Tab > Wöchentliche Zusammenfassung |
 | Design ändern (Hell/Dunkel) | Avatar > Mein Profil > Erscheinungsbild-Tab |
-| Version sehen oder Hilfe erhalten | Avatar > Über KANAP |
+| Version sehen oder Hilfe erhalten | Avatar > Über Kadratis |
 | Meine Verfügbarkeit festlegen | Portfolio > Mitwirkende > Ihren Namen |
 | Meine Fähigkeiten hinzufügen | Portfolio > Mitwirkende > Ihren Namen > Fähigkeiten-Tab |
 | Einen Link teilen | Beliebigen Arbeitsbereich öffnen > Teilen |
@@ -308,4 +308,4 @@ Die wöchentliche E-Mail und Echtzeit-Benachrichtigungen halten Sie auf dem Lauf
 ---
 
 !!! success "Sie sind startklar"
-    Sie wissen jetzt, wie Sie in KANAP navigieren, Ihre Aufgaben verwalten, Ihr Profil und Benachrichtigungen konfigurieren und Ihr Mitwirkenden-Profil einrichten. Beginnen Sie jeden Morgen mit Ihrem Dashboard, halten Sie Ihre Aufgaben aktuell und erfassen Sie regelmäßig Zeit: der Rest ergibt sich von selbst.
+    Sie wissen jetzt, wie Sie in Kadratis navigieren, Ihre Aufgaben verwalten, Ihr Profil und Benachrichtigungen konfigurieren und Ihr Mitwirkenden-Profil einrichten. Beginnen Sie jeden Morgen mit Ihrem Dashboard, halten Sie Ihre Aufgaben aktuell und erfassen Sie regelmäßig Zeit: der Rest ergibt sich von selbst.

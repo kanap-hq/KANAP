@@ -8,7 +8,7 @@ Navigieren Sie zu **IT-Landschaft > Verbindungen**, um Ihr Verbindungsverzeichni
 
 1. Klicken Sie auf **Verbindung hinzufügen**. Die Seite der Verbindung öffnet sich mit einem leeren Titel in der Kopfzeile. Der Rest der Seite ist abgeblendet.
 2. Geben Sie einen beschreibenden Namen ein.
-3. Drücken Sie die Eingabetaste oder klicken Sie außerhalb des Titels. KANAP erstellt die Verbindung sofort, als Server zu Server, ohne Protokolle und Endpunkte. Ihre Referenz (`CONN-12`) erscheint und alle Reiter öffnen sich.
+3. Drücken Sie die Eingabetaste oder klicken Sie außerhalb des Titels. Kadratis erstellt die Verbindung sofort, als Server zu Server, ohne Protokolle und Endpunkte. Ihre Referenz (`CONN-12`) erscheint und alle Reiter öffnen sich.
 
 Danach speichert jedes Feld für sich. Eine Verbindung braucht:
   - **Topologie**: Server zu Server oder Multi-Server
@@ -23,10 +23,10 @@ Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu er
 
 Solange die Verbindung erstellt wird, zeigt ihre Kopfzeile **Erstellen** und **Abbrechen**. Beide bleiben, bis Sie die Verbindung verlassen.
 
-- **Erstellen** prüft, ob die Verbindung mindestens ein Protokoll und beide Endpunkte hat, oder zwei Server bei einer Multi-Server-Verbindung. Eine Meldung nennt, was fehlt, und das erste fehlende Feld erhält den Fokus. Fehlt nichts, behält KANAP die Verbindung und schließt sie. Sie kehren dorthin zurück, wo Sie begonnen haben
+- **Erstellen** prüft, ob die Verbindung mindestens ein Protokoll und beide Endpunkte hat, oder zwei Server bei einer Multi-Server-Verbindung. Eine Meldung nennt, was fehlt, und das erste fehlende Feld erhält den Fokus. Fehlt nichts, behält Kadratis die Verbindung und schließt sie. Sie kehren dorthin zurück, wo Sie begonnen haben
 - **Abbrechen** löscht die Verbindung. Wenn Sie mehr als den Namen eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Verbindungen abbrechen
 
-Verlassen Sie die Verbindung auf andere Weise, solange etwas fehlt, fragt KANAP nach. **Vervollständigen** lässt Sie auf der Verbindung, im ersten fehlenden Feld. **Löschen** löscht die Verbindung.
+Verlassen Sie die Verbindung auf andere Weise, solange etwas fehlt, fragt Kadratis nach. **Vervollständigen** lässt Sie auf der Verbindung, im ersten fehlenden Feld. **Löschen** löscht die Verbindung.
 
 ---
 
@@ -85,7 +85,7 @@ Eine Quelle, ein Ziel, ein Server einer Multi-Server-Verbindung oder das Gerät 
 
 Die Auswahlfelder kennzeichnen einen Cluster mit einem Symbol und listen seine Mitglieder unter seinem Namen.
 
-Wenn Sie einen Server wählen, der zu einem Cluster gehört, fragt KANAP **Mit dem Cluster verbinden?**. **Mit dem Cluster verbinden** setzt den Cluster auf die Verbindung, für alle seine Mitglieder. **Nur diesem Server** behält den Server. KANAP fragt nicht, wenn die andere Seite bereits dieser Cluster oder eines seiner Mitglieder ist: Die Verbindung bleibt auf dem Server.
+Wenn Sie einen Server wählen, der zu einem Cluster gehört, fragt Kadratis **Mit dem Cluster verbinden?**. **Mit dem Cluster verbinden** setzt den Cluster auf die Verbindung, für alle seine Mitglieder. **Nur diesem Server** behält den Server. Kadratis fragt nicht, wenn die andere Seite bereits dieser Cluster oder eines seiner Mitglieder ist: Die Verbindung bleibt auf dem Server.
 
 Eine Multi-Server-Liste, die einen Cluster und eines seiner Mitglieder enthält, behält nur den Cluster. Eine Meldung nennt die aus der Liste entfernten Mitglieder. Eine Liste muss mindestens zwei Server behalten.
 

@@ -1,8 +1,8 @@
 # Modèle de données du budget
 
-Cette page décrit comment KANAP organise les données budgétaires : les objets, leurs relations, les champs qui identifient un enregistrement et les fichiers qui font entrer et sortir chaque objet. Elle s'adresse aux contrôleurs de gestion et aux administrateurs du budget qui préparent un passage depuis des tableurs ou un autre outil, et à l'équipe technique qui branche un outil de BI sur une installation on-premise.
+Cette page décrit comment Kadratis organise les données budgétaires : les objets, leurs relations, les champs qui identifient un enregistrement et les fichiers qui font entrer et sortir chaque objet. Elle s'adresse aux contrôleurs de gestion et aux administrateurs du budget qui préparent un passage depuis des tableurs ou un autre outil, et à l'équipe technique qui branche un outil de BI sur une installation on-premise.
 
-Les fichiers décrits ici sont le contrat sur lequel s'appuyer. Leurs colonnes sont documentées dans ce manuel et vérifiées à l'import, et quand une disposition change, un import refuse un fichier à l'ancienne disposition et en donne la raison. Les tables de la base de données derrière eux sont internes : elles changent quand KANAP évolue. Appuyez un passage depuis un autre outil, et toute intégration, sur les fichiers.
+Les fichiers décrits ici sont le contrat sur lequel s'appuyer. Leurs colonnes sont documentées dans ce manuel et vérifiées à l'import, et quand une disposition change, un import refuse un fichier à l'ancienne disposition et en donne la raison. Les tables de la base de données derrière eux sont internes : elles changent quand Kadratis évolue. Appuyez un passage depuis un autre outil, et toute intégration, sur les fichiers.
 
 ## Les objets en un coup d'œil
 
@@ -56,12 +56,12 @@ Une ligne se lie aussi à des projets, des demandes, des applications, des actif
 
 ### Lignes OPEX et CAPEX
 
-Une ligne vit sur plusieurs années : une licence sur trois ans est une ligne avec trois années budgétaires. KANAP donne un numéro à chaque ligne budgétaire à sa création, sa référence `BL-12`, dans la même série pour l'OPEX et le CAPEX. La liste, l'espace de travail et l'adresse de la page l'affichent. Les lignes budgétaires créées avant cette série avaient aussi un numéro `OPX-12` ou `CPX-3` : les liens, les recherches et le fichier budgétaire retrouvent toujours une ligne par ce numéro. Dans un fichier sans colonne `nature`, un nombre seul garde son sens antérieur (`CPX-3` quand la liste est filtrée sur CAPEX). Voir [Références](budget-lines.md#references).
+Une ligne vit sur plusieurs années : une licence sur trois ans est une ligne avec trois années budgétaires. Kadratis donne un numéro à chaque ligne budgétaire à sa création, sa référence `BL-12`, dans la même série pour l'OPEX et le CAPEX. La liste, l'espace de travail et l'adresse de la page l'affichent. Les lignes budgétaires créées avant cette série avaient aussi un numéro `OPX-12` ou `CPX-3` : les liens, les recherches et le fichier budgétaire retrouvent toujours une ligne par ce numéro. Dans un fichier sans colonne `nature`, un nombre seul garde son sens antérieur (`CPX-3` quand la liste est filtrée sur CAPEX). Voir [Références](budget-lines.md#references).
 
 | Champ | Colonne du fichier budgétaire | Obligatoire | Remarques |
 |---|---|---|---|
 | Nature | `nature` | Oui | `opex` ou `capex`. Un fichier ne change pas la nature d'une ligne existante (voir [Changer le type d'une ligne](#changer-le-type-dune-ligne)). Un fichier sans cette colonne est lu comme des lignes OPEX, ou comme des lignes CAPEX quand la liste est filtrée sur CAPEX |
-| Numéro | `item_number` | Attribué par KANAP | `BL-12`. Vide dans le fichier : crée une ligne |
+| Numéro | `item_number` | Attribué par Kadratis | `BL-12`. Vide dans le fichier : crée une ligne |
 | Titre | `name` | Oui | La colonne **Nom du produit** de la liste |
 | Description | `description` | Non | |
 | Société payeuse | `company_name` | Oui | Reprise du centre de coûts quand seul le centre de coûts est donné, ou la seule société de l'espace de travail quand il n'en a qu'une |
@@ -167,7 +167,7 @@ Le fichier budgétaire retrouve les données de référence par des identifiants
 | Calendrier de jours ouvrés | `code`, sans tenir compte de la casse | Code, nom | Utilisé par les lignes Quantité et prix |
 | Utilisateur | `email` | E-mail | `owner_it_email`, `owner_business_email` |
 
-Les points qui comptent quand vous faites correspondre un autre outil à KANAP :
+Les points qui comptent quand vous faites correspondre un autre outil à Kadratis :
 
 - **Les sociétés** portent leur effectif, leurs utilisateurs IT et leur chiffre d'affaires par année. Le chiffre d'affaires est en millions de la devise de base de la société. Les ventilations par effectif, utilisateurs IT ou chiffre d'affaires ont besoin des indicateurs de l'année.
 - **Les comptes** appartiennent à un plan comptable, et une société utilise un plan. Un numéro de compte est un nombre entier, unique dans son plan. Le compte d'une ligne budgétaire doit exister dans le plan de sa société payeuse, et chaque compte indique s'il sert aux lignes OPEX, aux lignes CAPEX ou aux deux. Voir [Plans comptables et gestion des comptes](chart-of-accounts.md).
@@ -199,7 +199,7 @@ Chaque fichier ci-dessous s'exporte et s'importe depuis la page qui gère l'obje
 
 Le fichier budgétaire lit et écrit les montants de n'importe quelle colonne et année, en totaux annuels ou en mois, avec le détail de la ligne budgétaire sur la même ligne du fichier. C'est la porte d'entrée d'un budget préparé ailleurs et la porte de sortie vers un tableur ou un outil de BI. Un seul fichier contient les deux types de ligne, et sa colonne `nature` indique lequel. **Gestion budgétaire > Lignes budgétaires** exporte les lignes budgétaires qu'elle affiche, des deux types, et importe un fichier qui contient les deux, avec le niveau Admin sur Budget.
 
-### Faire entrer un budget dans KANAP
+### Faire entrer un budget dans Kadratis
 
 1. Faites correspondre chaque objet de votre outil actuel aux tableaux ci-dessus, et ses identifiants à la colonne **Correspondance par**.
 2. Chargez les données de référence dans l'ordre donné dans [Charger un budget complet](budget-file.md#charger-un-budget-complet).
@@ -207,19 +207,19 @@ Le fichier budgétaire lit et écrit les montants de n'importe quelle colonne et
 4. Remplissez une ligne par ligne budgétaire avec sa `nature`, en laissant `item_number` vide, avec une colonne de montant par colonne budgétaire et par année (`budget_2027`), ou par mois (`budget_2027_03`).
 5. Importez le fichier. La vérification signale les erreurs par ligne du fichier, et rien n'est écrit avant le chargement.
 
-Un jeu cohérent de fichiers d'exemple, avec une société fictive et ses données de référence, se trouve dans le [dépôt KANAP](https://github.com/kanap-hq/KANAP/tree/main/doc/samples).
+Un jeu cohérent de fichiers d'exemple, avec une société fictive et ses données de référence, se trouve dans le [dépôt Kadratis](https://github.com/kanap-hq/KANAP/tree/main/doc/samples).
 
 ## Lire les données directement
 
-Sur une installation on-premise, la base PostgreSQL vous appartient : KANAP tourne sur la base que vous fournissez. Vous pouvez la lire, la sauvegarder et y brancher des outils.
+Sur une installation on-premise, la base PostgreSQL vous appartient : Kadratis tourne sur la base que vous fournissez. Vous pouvez la lire, la sauvegarder et y brancher des outils.
 
 Avant de le faire, gardez trois points en tête.
 
-**La sécurité au niveau des lignes filtre chaque lecture.** KANAP se connecte avec un rôle applicatif dédié qui ne peut pas contourner la sécurité au niveau des lignes. Il refuse de démarrer avec un rôle superutilisateur ou un rôle qui la contourne. Chaque table qui contient vos données ne montre ses lignes qu'à une session qui a indiqué l'espace de travail qu'elle lit. Une session qui ne l'a pas indiqué obtient des résultats vides, sans erreur.
+**La sécurité au niveau des lignes filtre chaque lecture.** Kadratis se connecte avec un rôle applicatif dédié qui ne peut pas contourner la sécurité au niveau des lignes. Il refuse de démarrer avec un rôle superutilisateur ou un rôle qui la contourne. Chaque table qui contient vos données ne montre ses lignes qu'à une session qui a indiqué l'espace de travail qu'elle lit. Une session qui ne l'a pas indiqué obtient des résultats vides, sans erreur.
 
 **Les tables sont internes.** Leurs noms, leurs colonnes et leur stockage changent d'une version à l'autre, par les migrations qui s'exécutent à chaque mise à jour. Les noms de colonnes en base sont des clés de stockage et diffèrent des noms affichés à l'écran et dans les fichiers. Une requête écrite sur les tables d'aujourd'hui peut renvoyer des résultats faux ou vides après une mise à jour.
 
-**Vos objets peuvent bloquer une mise à jour.** PostgreSQL refuse de modifier ou de supprimer une colonne dont dépend une vue. Une vue créée sur les tables de KANAP peut faire échouer une mise à jour. Gardez vos requêtes dans l'outil de BI ou dans une base de reporting séparée.
+**Vos objets peuvent bloquer une mise à jour.** PostgreSQL refuse de modifier ou de supprimer une colonne dont dépend une vue. Une vue créée sur les tables de Kadratis peut faire échouer une mise à jour. Gardez vos requêtes dans l'outil de BI ou dans une base de reporting séparée.
 
 Pour un outil de BI, utilisez d'abord les exports. Le fichier budgétaire et les fichiers des données de référence portent des noms et des identifiants métier, documentés dans ce manuel.
 

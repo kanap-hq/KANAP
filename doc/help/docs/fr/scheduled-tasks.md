@@ -1,6 +1,6 @@
 # Tâches planifiées
 
-La page Tâches planifiées liste tous les jobs récurrents en arrière-plan que KANAP exécute selon une planification cron : nettoyages, synchronisations périodiques, e-mails de synthèse, application de la rétention, etc. Depuis cette page, vous pouvez mettre en pause un job, modifier sa planification, le déclencher à la demande et inspecter l'historique de chaque exécution récente.
+La page Tâches planifiées liste tous les jobs récurrents en arrière-plan que Kadratis exécute selon une planification cron : nettoyages, synchronisations périodiques, e-mails de synthèse, application de la rétention, etc. Depuis cette page, vous pouvez mettre en pause un job, modifier sa planification, le déclencher à la demande et inspecter l'historique de chaque exécution récente.
 
 ## Où la trouver
 

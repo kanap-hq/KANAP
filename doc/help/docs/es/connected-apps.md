@@ -1,6 +1,6 @@
 # Aplicaciones conectadas
 
-La pestaña **Aplicaciones conectadas** enumera las aplicaciones que pueden leer sus datos de KANAP en su nombre, como Claude, Claude Desktop, Claude Code, ChatGPT o Grok. Es donde usted ve estos accesos y los corta.
+La pestaña **Aplicaciones conectadas** enumera las aplicaciones que pueden leer sus datos de Kadratis en su nombre, como Claude, Claude Desktop, Claude Code, ChatGPT o Grok. Es donde usted ve estos accesos y los corta.
 
 ## Dónde encontrarlo
 
@@ -16,7 +16,7 @@ Cada fila muestra:
 - La fecha en que la conectó
 - La fecha y la hora en que leyó sus datos por última vez
 
-Una aplicación solo lee lo que usted ve en KANAP, dentro de sus propios derechos de acceso. No puede cambiar nada.
+Una aplicación solo lee lo que usted ve en Kadratis, dentro de sus propios derechos de acceso. No puede cambiar nada.
 
 Para cortar un acceso, haga clic en **Desconectar** y confirme. La aplicación pierde el acceso de inmediato. Para volver a usarla, conéctela de nuevo desde la aplicación. Desconectar también olvida la elección **Recordar esta aplicación** que hizo al conectarla.
 
@@ -26,4 +26,4 @@ Cuando no tiene ninguna aplicación conectada ni ninguna clave API, la pestaña 
 
 Debajo de las conexiones, la pestaña enumera sus propias claves API MCP activas, con su etiqueta, prefijo, fecha de creación, y la fecha y la hora de su último uso.
 
-Para detener una clave, haga clic en **Revocar** y confirme. Todos los clientes que usan la clave pierden el acceso de inmediato, y esto no se puede deshacer. Un administrador crea las claves en la página [Configuración de Plaid](ai-settings.md#claves-y-conexiones-mcp).
+Para detener una clave, haga clic en **Revocar** y confirme. Todos los clientes que usan la clave pierden el acceso de inmediato, y esto no se puede deshacer. Un administrador crea las claves en la página [Configuración de Kad](ai-settings.md#claves-y-conexiones-mcp).

@@ -1,6 +1,6 @@
 # Portfolio Projects
 
-Portfolio Projects are the execution workspaces for approved initiatives. They are where delivery is planned, progress is tracked, workload is measured, tasks are coordinated, and project-specific knowledge is connected back to the rest of KANAP.
+Portfolio Projects are the execution workspaces for approved initiatives. They are where delivery is planned, progress is tracked, workload is measured, tasks are coordinated, and project-specific knowledge is connected back to the rest of Kadratis.
 
 Projects usually come from approved requests, but they can also be created directly as **Fast-track** or **Legacy** projects when the request stage is not part of the process.
 
@@ -76,7 +76,7 @@ Direct project creation is for work that should enter execution without a separa
 
 1. Click **New project**. The project page opens on **Summary** with an empty title in the header. The rest of the page is dimmed.
 2. Type the name of the project.
-3. Press Enter, or click outside the title. KANAP creates the project at once, with the origin **Fast-track**. Its reference (`PRJ-12`) shows and all tabs open.
+3. Press Enter, or click outside the title. Kadratis creates the project at once, with the origin **Fast-track**. Its reference (`PRJ-12`) shows and all tabs open.
 
 Then fill in the Properties drawer and the **Purpose**. The name is edited in the header only. Press Escape on the empty title to leave without creating anything.
 
@@ -102,7 +102,7 @@ The project workspace has two layers:
 
 Open or close the Properties drawer using the vertical tab on the right edge.
 
-For existing projects, the Properties drawer behaves like a live property panel: changes there are saved immediately. The main tab content follows the usual **Save** / **Reset** workflow when that tab contains draft changes. If you switch tabs or move to the previous or next project with unsaved workspace changes, KANAP asks whether to save first.
+For existing projects, the Properties drawer behaves like a live property panel: changes there are saved immediately. The main tab content follows the usual **Save** / **Reset** workflow when that tab contains draft changes. If you switch tabs or move to the previous or next project with unsaved workspace changes, Kadratis asks whether to save first.
 
 ## Header and metadata
 
@@ -180,10 +180,10 @@ This split is deliberate. It allows narrative ownership to be broader than struc
 
 The Purpose editor includes document import and export:
 
-- **Import** accepts a `.docx` file and converts it to the internal markdown format. If the Purpose already has content, KANAP asks for confirmation before replacing it.
+- **Import** accepts a `.docx` file and converts it to the internal markdown format. If the Purpose already has content, Kadratis asks for confirmation before replacing it.
 - **Export** lets you download the current Purpose as PDF, DOCX, or ODT.
 
-These tools are useful when a project brief originates in Word or when stakeholders need a formatted copy outside KANAP.
+These tools are useful when a project brief originates in Word or when stakeholders need a formatted copy outside Kadratis.
 
 The managed Purpose document is different from the **Knowledge** tab:
 
@@ -298,7 +298,7 @@ Important consequences:
 
 ### Baseline effort
 
-When the project moves to **In Progress**, KANAP captures baseline effort values. Later changes are shown as variance against that baseline, which is useful for distinguishing normal delivery updates from quiet scope creep.
+When the project moves to **In Progress**, Kadratis captures baseline effort values. Later changes are shown as variance against that baseline, which is useful for distinguishing normal delivery updates from quiet scope creep.
 
 ## Scoring
 
@@ -374,7 +374,7 @@ Depending on your Knowledge permissions, you can:
 - unlink directly linked documents
 - open any linked or related document in Knowledge
 
-If you can open the project but do not have Knowledge viewing rights, KANAP will tell you that knowledge exists without exposing the document content. That is expected behavior, not a broken tab.
+If you can open the project but do not have Knowledge viewing rights, Kadratis will tell you that knowledge exists without exposing the document content. That is expected behavior, not a broken tab.
 
 ## CSV import and export
 
@@ -392,7 +392,7 @@ Exports support:
 - **Data Enrichment**
 - **Custom Selection**
 
-Use **Data Enrichment** when you want to export, adjust selected fields externally, and import the result back into KANAP with minimal drama.
+Use **Data Enrichment** when you want to export, adjust selected fields externally, and import the result back into Kadratis with minimal drama.
 
 ### Import
 

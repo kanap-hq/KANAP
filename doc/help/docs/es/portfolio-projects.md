@@ -1,6 +1,6 @@
 # Proyectos del portafolio
 
-Los Proyectos del portafolio son los espacios de trabajo de ejecución para las iniciativas aprobadas. Es donde se planifica la entrega, se hace seguimiento del progreso, se mide la carga de trabajo, se coordinan las tareas y se conecta el conocimiento específico del proyecto con el resto de KANAP.
+Los Proyectos del portafolio son los espacios de trabajo de ejecución para las iniciativas aprobadas. Es donde se planifica la entrega, se hace seguimiento del progreso, se mide la carga de trabajo, se coordinan las tareas y se conecta el conocimiento específico del proyecto con el resto de Kadratis.
 
 Los proyectos suelen provenir de solicitudes aprobadas, pero también pueden crearse directamente como proyectos **Fast-track** o **Legacy** cuando la etapa de solicitud no forma parte del proceso.
 
@@ -76,7 +76,7 @@ La creación directa de proyectos es para trabajo que debe entrar en ejecución 
 
 1. Haga clic en **Nuevo proyecto**. La página del proyecto se abre en **Resumen** con un título vacío en el encabezado. El resto de la página aparece atenuado.
 2. Escriba el nombre del proyecto.
-3. Pulse Intro o haga clic fuera del título. KANAP crea el proyecto de inmediato, con el origen **Fast-track**. Su referencia (`PRJ-12`) aparece y se abren todas las pestañas.
+3. Pulse Intro o haga clic fuera del título. Kadratis crea el proyecto de inmediato, con el origen **Fast-track**. Su referencia (`PRJ-12`) aparece y se abren todas las pestañas.
 
 Complete después el panel de Propiedades y el **Propósito**. El nombre solo se edita en el encabezado. Pulse Escape en el título vacío para salir sin crear nada.
 
@@ -102,7 +102,7 @@ El espacio de trabajo del proyecto tiene dos capas:
 
 Abra o cierre el panel de Propiedades usando la pestaña vertical en el borde derecho.
 
-Para proyectos existentes, el panel de Propiedades se comporta como un panel de propiedades en vivo: los cambios allí se guardan inmediatamente. El contenido de la pestaña principal sigue el flujo habitual de **Guardar** / **Restablecer** cuando esa pestaña contiene cambios en borrador. Si cambia de pestaña o pasa al proyecto anterior o siguiente con cambios sin guardar en el espacio de trabajo, KANAP pregunta si guardar primero.
+Para proyectos existentes, el panel de Propiedades se comporta como un panel de propiedades en vivo: los cambios allí se guardan inmediatamente. El contenido de la pestaña principal sigue el flujo habitual de **Guardar** / **Restablecer** cuando esa pestaña contiene cambios en borrador. Si cambia de pestaña o pasa al proyecto anterior o siguiente con cambios sin guardar en el espacio de trabajo, Kadratis pregunta si guardar primero.
 
 ## Encabezado y metadatos
 
@@ -180,10 +180,10 @@ Esta separación es deliberada. Permite que la propiedad narrativa sea más ampl
 
 El editor de Propósito incluye importación y exportación de documentos:
 
-- **Importar** acepta un archivo `.docx` y lo convierte al formato markdown interno. Si el Propósito ya tiene contenido, KANAP pide confirmación antes de reemplazarlo.
+- **Importar** acepta un archivo `.docx` y lo convierte al formato markdown interno. Si el Propósito ya tiene contenido, Kadratis pide confirmación antes de reemplazarlo.
 - **Exportar** le permite descargar el Propósito actual como PDF, DOCX u ODT.
 
-Estas herramientas son útiles cuando un resumen de proyecto se origina en Word o cuando las partes interesadas necesitan una copia con formato fuera de KANAP.
+Estas herramientas son útiles cuando un resumen de proyecto se origina en Word o cuando las partes interesadas necesitan una copia con formato fuera de Kadratis.
 
 El documento gestionado de Propósito es diferente de la pestaña **Conocimiento**:
 
@@ -298,7 +298,7 @@ Consecuencias importantes:
 
 ### Esfuerzo de línea base
 
-Cuando el proyecto pasa a **En progreso**, KANAP captura los valores de esfuerzo de línea base. Los cambios posteriores se muestran como variación contra esa línea base, lo cual es útil para distinguir las actualizaciones normales de entrega del aumento silencioso del alcance.
+Cuando el proyecto pasa a **En progreso**, Kadratis captura los valores de esfuerzo de línea base. Los cambios posteriores se muestran como variación contra esa línea base, lo cual es útil para distinguir las actualizaciones normales de entrega del aumento silencioso del alcance.
 
 ## Evaluación
 
@@ -374,7 +374,7 @@ Dependiendo de sus permisos de Base de conocimiento, puede:
 - desvincular documentos vinculados directamente
 - abrir cualquier documento vinculado o relacionado en la Base de conocimiento
 
-Si puede abrir el proyecto pero no tiene derechos de visualización de Base de conocimiento, KANAP le dirá que existe conocimiento sin exponer el contenido del documento. Ese es el comportamiento esperado, no una pestaña rota.
+Si puede abrir el proyecto pero no tiene derechos de visualización de Base de conocimiento, Kadratis le dirá que existe conocimiento sin exponer el contenido del documento. Ese es el comportamiento esperado, no una pestaña rota.
 
 ## Importación y exportación CSV
 
@@ -392,7 +392,7 @@ Las exportaciones admiten:
 - **Enriquecimiento de datos**
 - **Selección personalizada**
 
-Use **Enriquecimiento de datos** cuando desee exportar, ajustar campos seleccionados externamente y volver a importar el resultado en KANAP con el mínimo drama.
+Use **Enriquecimiento de datos** cuando desee exportar, ajustar campos seleccionados externamente y volver a importar el resultado en Kadratis con el mínimo drama.
 
 ### Importar
 

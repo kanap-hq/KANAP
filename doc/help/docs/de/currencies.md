@@ -74,7 +74,7 @@ Wenn Sie eine neue Berichtswährung speichern, öffnet sich zuerst ein Bestätig
 
 Die letzten drei Punkte erscheinen nur, wenn sie zutreffen. Klicken Sie auf **Währung ändern**, um zu speichern, oder auf **Abbrechen**, um die aktuellen Einstellungen beizubehalten.
 
-KANAP ruft dann die Kurse der neuen Währung für jedes verwendete Jahr ab: die Budgetjahre (eingefrorene eingeschlossen), die Jahre mit einem Unternehmensumsatz, die Jahre, die die Vertragsseite zeigt, sowie das laufende Kalenderjahr mit dem Vorjahr und dem Folgejahr. Die Seite wartet auf das Ergebnis und meldet es wie bei einer [erzwungenen Synchronisierung](#wechselkurssynchronisierung-erzwingen).
+Kadratis ruft dann die Kurse der neuen Währung für jedes verwendete Jahr ab: die Budgetjahre (eingefrorene eingeschlossen), die Jahre mit einem Unternehmensumsatz, die Jahre, die die Vertragsseite zeigt, sowie das laufende Kalenderjahr mit dem Vorjahr und dem Folgejahr. Die Seite wartet auf das Ergebnis und meldet es wie bei einer [erzwungenen Synchronisierung](#wechselkurssynchronisierung-erzwingen).
 
 ## Wechselkurssynchronisierung erzwingen
 
@@ -87,12 +87,12 @@ Die Schaltfläche **Wechselkurssynchronisierung erzwingen** ruft die Kurse sofor
   - Vor der Erstellung von Berichten für die Geschäftsleitung
 
 **Was passiert**:
-  - Die Schaltfläche bleibt beschäftigt, während KANAP die Kurse abruft, höchstens 20 Sekunden
+  - Die Schaltfläche bleibt beschäftigt, während Kadratis die Kurse abruft, höchstens 20 Sekunden
   - Eine Meldung über der Tabelle nennt dann das Ergebnis: die Zahl der abgerufenen Kurse, zum Beispiel **12 Kurse abgerufen.**, gefolgt von den Paaren, die noch keinen Kurs haben, zum Beispiel **Weiterhin fehlend: BRL 2026.**, oder von **Jede verwendete Währung hat einen Kurs.**
   - Wenn der Abruf keinen neuen Kurs bringt und jede verwendete Währung bereits einen Kurs hat, lautet die Meldung **Die Wechselkurse sind aktuell.** Wenn noch Paare fehlen, lautet sie **Es wurde kein neuer Kurs abgerufen.** und nennt sie.
   - Wenn die Quellen nicht geantwortet haben, sagt die Meldung das, und die bereits gespeicherten Kurse bleiben bestehen
   - Dauert der Abruf länger, lautet die Meldung **Die Synchronisierung läuft im Hintergrund weiter.** Die Tabelle und der Block der fehlenden Kurse aktualisieren sich, sobald er endet
-  - Läuft bereits eine Aktualisierung, fügt KANAP ihr Ihre Jahre hinzu, sodass keine Anfrage verloren geht
+  - Läuft bereits eine Aktualisierung, fügt Kadratis ihr Ihre Jahre hinzu, sodass keine Anfrage verloren geht
 
 **Automatische Aktualisierung**: Das System aktualisiert die Kurse außerdem alle 30 Tage automatisch, wenn sich ein Benutzer anmeldet (J-1, J, J+1). Braucht eine Liste, ein Bericht oder die Vertragsseite einen Kurs, den der Snapshot seines Jahres nicht hat (eine seither verwendete Währung oder ein Jahr ohne Snapshot), ruft das System dieses Jahr im Hintergrund ab, sobald es gelesen wird, und die nächste Anzeige verwendet den neuen Kurs. Die erzwungene Synchronisierung dient dazu, das Ergebnis sofort zu erhalten.
 
@@ -141,13 +141,13 @@ Wenn Ihre Berichtswährung EUR ist:
 
 Über der Tabelle listet ein Block jede verwendete Währung und jedes Jahr ohne Kurs auf, unter einem Titel wie **2 Wechselkurse fehlen**. Jede Zeile erklärt, dass noch keine Quelle diesen Kurs veröffentlicht und Beträge in dieser Währung daher nicht in den Summen enthalten sind, bis sie einen Kurs hat. Fehlt nichts, lautet der Block **Jede verwendete Währung hat einen Kurs.**
 
-Ein Paar gilt als verwendet, wenn eine Budgetzeile, die Zahlen eines Unternehmens oder ein Vertrag es benötigen. Für einen Vertrag sind das die Jahre, die die Vertragsseite zeigt (das laufende Jahr, die beiden folgenden und das Vorjahr, wenn das Budget Zeilen dafür hat), in denen der Vertrag läuft. Die Vertragsseite und dieser Block nennen daher dieselben fehlenden Jahre. Beim Öffnen der Seite fragt KANAP außerdem die Quellen für die Jahre der Liste erneut ab.
+Ein Paar gilt als verwendet, wenn eine Budgetzeile, die Zahlen eines Unternehmens oder ein Vertrag es benötigen. Für einen Vertrag sind das die Jahre, die die Vertragsseite zeigt (das laufende Jahr, die beiden folgenden und das Vorjahr, wenn das Budget Zeilen dafür hat), in denen der Vertrag läuft. Die Vertragsseite und dieser Block nennen daher dieselben fehlenden Jahre. Beim Öffnen der Seite fragt Kadratis außerdem die Quellen für die Jahre der Liste erneut ab.
 
 ### Manuelle Kurse
 
 Wenn keine Quelle einen Kurs veröffentlicht oder Ihre Finanzabteilung eigene Kurse verwendet, können Sie einen Kurs für eine Währung und ein Jahr eingeben.
 
-  1. Klicken Sie in der Tabelle auf die Zelle der Währung und des Jahres oder auf **Kurs eingeben** neben einer Zeile des Blocks der fehlenden Kurse. Der Link **Kurs eingeben** eines Hinweises an anderer Stelle in KANAP führt ebenfalls hierher: Er öffnet den Dialog direkt, wenn der Hinweis nur eine Währung und ein Jahr nennt, und hebt sonst den Block der fehlenden Kurse einige Sekunden hervor.
+  1. Klicken Sie in der Tabelle auf die Zelle der Währung und des Jahres oder auf **Kurs eingeben** neben einer Zeile des Blocks der fehlenden Kurse. Der Link **Kurs eingeben** eines Hinweises an anderer Stelle in Kadratis führt ebenfalls hierher: Er öffnet den Dialog direkt, wenn der Hinweis nur eine Währung und ein Jahr nennt, und hebt sonst den Block der fehlenden Kurse einige Sekunden hervor.
   2. Geben Sie im Dialog **Manueller Wechselkurs** den Kurs in Ihrer Berichtswährung für 1 Einheit der gewählten Währung ein (zum Beispiel **Kurs in EUR für 1 USD**), mit dem Dezimaltrennzeichen Ihrer Sprache. Hat das Vor- oder Folgejahr einen automatischen Kurs, zeigt das Feld ihn als Anhaltspunkt, zum Beispiel **Automatischer Kurs 2025: 0,9312**. Sonst empfiehlt es den Jahresdurchschnittskurs Ihrer Zentralbank oder Ihres Treasury.
   3. Klicken Sie auf **Speichern**. Die Zelle zeigt dann den Kurs, gefolgt von einem Sternchen (*).
 
@@ -212,18 +212,18 @@ Es wird der Live-Kassakurs von ExchangeRate-API verwendet (Fallback auf den neue
 Der Kurs des aktuellen Jahres wird als Forward-Schätzung wiederverwendet. Dies bietet Orientierung für die Budgetplanung, sollte aber überprüft werden, wenn diese Jahre näher rücken.
 
 ### Eingefrorene Jahre
-Das Einfrieren der Standard-Budgetspalte eines Jahres schreibt die Kurse dieses Jahres für den eingefrorenen Typ (OPEX oder CAPEX) fest: KANAP aktualisiert die Kurse des Jahres und behält diesen Satz dann für alle Beträge des Jahres, auch wenn neuere Kurse eintreffen. Wechselt die Berichtswährung später, behalten diese Beträge die eingefrorenen Kurse und werden dann zum Kurs der früheren Berichtswährung im selben Jahr in die neue umgerechnet. Fehlt dieser Kurs, sind sie in keiner Summe enthalten und werden wie jeder fehlende Kurs genannt: Die frühere Berichtswährung erscheint dann für dieses Jahr im Block der fehlenden Kurse, und ein manueller Kurs schließt die Lücke. Das Auftauen der Standardspalte gibt sie wieder frei. Siehe [Das Einfrieren der Standardspalte schreibt die Wechselkurse fest](budget-operations.md#das-einfrieren-der-standardspalte-schreibt-die-wechselkurse-fest).
+Das Einfrieren der Standard-Budgetspalte eines Jahres schreibt die Kurse dieses Jahres für den eingefrorenen Typ (OPEX oder CAPEX) fest: Kadratis aktualisiert die Kurse des Jahres und behält diesen Satz dann für alle Beträge des Jahres, auch wenn neuere Kurse eintreffen. Wechselt die Berichtswährung später, behalten diese Beträge die eingefrorenen Kurse und werden dann zum Kurs der früheren Berichtswährung im selben Jahr in die neue umgerechnet. Fehlt dieser Kurs, sind sie in keiner Summe enthalten und werden wie jeder fehlende Kurs genannt: Die frühere Berichtswährung erscheint dann für dieses Jahr im Block der fehlenden Kurse, und ein manueller Kurs schließt die Lücke. Das Auftauen der Standardspalte gibt sie wieder frei. Siehe [Das Einfrieren der Standardspalte schreibt die Wechselkurse fest](budget-operations.md#das-einfrieren-der-standardspalte-schreibt-die-wechselkurse-fest).
 
 **Fehlender Kurs**: Hat ein Jahr keinen Kurs für eine verwendete Währung, sind die Beträge der Budgetzeilen in dieser Währung für dieses Jahr in keiner Summe in der Berichtswährung enthalten. Das betrifft die Liste der Budgetzeilen, den Bereich Budgetverwaltung der Startseite, die Budget- und Leistungsverrechnungsberichte, die Verträge und die Reiter Beziehungen der Anwendungen und Technologien. Der Bildschirm weist dort darauf hin, wo es zählt:
 
 - Ein einzeiliger Hinweis nennt, was ausgeschlossen ist, zum Beispiel „3 Zeilen ohne Wechselkurs ausgeschlossen: USD 2026.“ Er erscheint unter den Summen der Liste der Budgetzeilen, auf den Kacheln der Übersicht, oben in jedem Budget- und Leistungsverrechnungsbericht und unter den Budgetzahlen von Verträgen, Anwendungen und Technologien. Benutzer der Budgetadministration auf Administratorebene sehen außerdem **Kurs eingeben**, das diese Seite beim fehlenden Kurs öffnet.
 - In der Zeile selbst erscheint der Betrag in seiner eigenen Währung mit einer kleinen orangefarbenen Markierung. Fahren Sie mit der Maus über die Markierung, um zum Beispiel „Kein Wechselkurs für USD im Jahr 2026: nicht in den Summen enthalten.“ zu lesen.
 
-KANAP ruft die Kurse dieses Jahres im Hintergrund ab (höchstens einmal alle sechs Stunden je Jahr), sodass die nächste Anzeige den neuen Kurs verwendet, sobald die Quelle ihn veröffentlicht. Um fehlende Kurse zu erkennen, prüfen Sie den Block der fehlenden Kurse über der FX-Kurs-Snapshot-Tabelle und führen Sie **Wechselkurssynchronisierung erzwingen** aus, um die Kurse sofort abzurufen. Ein [manueller Kurs](#manuelle-kurse) behebt das Problem umgehend.
+Kadratis ruft die Kurse dieses Jahres im Hintergrund ab (höchstens einmal alle sechs Stunden je Jahr), sodass die nächste Anzeige den neuen Kurs verwendet, sobald die Quelle ihn veröffentlicht. Um fehlende Kurse zu erkennen, prüfen Sie den Block der fehlenden Kurse über der FX-Kurs-Snapshot-Tabelle und führen Sie **Wechselkurssynchronisierung erzwingen** aus, um die Kurse sofort abzurufen. Ein [manueller Kurs](#manuelle-kurse) behebt das Problem umgehend.
 
 ## Den Assistenten fragen
 
-[Plaid](ai-assistant.md#tool-calls) liest die Währungen und Kurse dieser Seite für alle mit Leserecht auf das Budget. Fragen Sie zum Beispiel: „Wie hoch ist der USD-Kurs für 2026?“
+[Kad](ai-assistant.md#tool-calls) liest die Währungen und Kurse dieser Seite für alle mit Leserecht auf das Budget. Fragen Sie zum Beispiel: „Wie hoch ist der USD-Kurs für 2026?“
 
 ## Tipps
 

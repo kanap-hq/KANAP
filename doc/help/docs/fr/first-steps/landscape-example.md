@@ -1,13 +1,13 @@
 ---
-title: "Votre système d'information dans KANAP en dix minutes : découvrir avec l'exemple"
+title: "Votre système d'information dans Kadratis en dix minutes : découvrir avec l'exemple"
 description: Les cinq pas du parcours cartographie du SI sur l'exemple Fromage & Co, de la liste des applications aux fins de support et à votre propre fichier.
 ---
 
-# Votre système d'information dans KANAP en dix minutes
+# Votre système d'information dans Kadratis en dix minutes
 
 **Découvrir avec l'exemple** · [Commencer avec mes données](landscape-own-data.md)
 
-Fromage & Co est un groupe fromager fictif dont l'exemple est chargé dans votre espace de travail. En dix minutes sur son système d'information, vous lisez l'inventaire des applications, ouvrez une application critique, voyez où elle tourne, repérez ce qui arrive en fin de support et voyez comment votre propre fichier entre dans KANAP.
+Fromage & Co est un groupe fromager fictif dont l'exemple est chargé dans votre espace de travail. En dix minutes sur son système d'information, vous lisez l'inventaire des applications, ouvrez une application critique, voyez où elle tourne, repérez ce qui arrive en fin de support et voyez comment votre propre fichier entre dans Kadratis.
 
 Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le parcours **La cartographie du SI** avec **Découvrir avec l'exemple complet**. Chaque pas de la tuile ouvre son écran avec une courte indication, et l'ouvrir le marque comme fait. Voir [Essai : votre parcours et vos premiers pas](../my-dashboard.md#trial-first-steps).
 
@@ -49,7 +49,7 @@ Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le
 
 **Le geste.** Choisissez un **Horizon**, puis cliquez sur une ligne pour déplier les serveurs et les applications qu'elle touche. Ouvrez une technologie depuis sa ligne.
 
-**Ce que vous lisez.** Ce qui est arrivé ou arrive en fin de support dans l'horizon, avec son **État** : **Hors support**, **Support étendu** ou **Fin proche**. Sur une technologie, une version marquée **Catalogue** tient ses dates du catalogue KANAP, tenu à jour à partir des calendriers des éditeurs. **Cartographie SI > Vulnérabilités** liste les vulnérabilités publiées (CVE) qui touchent les versions que vous déclarez, avec les serveurs et les applications concernés.
+**Ce que vous lisez.** Ce qui est arrivé ou arrive en fin de support dans l'horizon, avec son **État** : **Hors support**, **Support étendu** ou **Fin proche**. Sur une technologie, une version marquée **Catalogue** tient ses dates du catalogue Kadratis, tenu à jour à partir des calendriers des éditeurs. **Cartographie SI > Vulnérabilités** liste les vulnérabilités publiées (CVE) qui touchent les versions que vous déclarez, avec les serveurs et les applications concernés.
 
 ## 5. Vos données
 
@@ -59,16 +59,16 @@ Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le
 
 **Le geste.** Cliquez sur **Exporter**, choisissez **CSV** ou **Excel (.xlsx)** et ouvrez le fichier. Cliquez ensuite sur **Importer**, puis **Télécharger un exemple**.
 
-**Ce que vous lisez.** L'export titre ses colonnes dans votre langue et l'import lit les mêmes colonnes : servez-vous-en comme modèle pour vos propres applications. Le classeur d'exemple contient quelques applications, les autres colonnes sur une feuille **Avancé** et ce que prend chaque colonne sur une feuille **Notes**. Liez ensuite chaque application à ses technologies, dans son onglet **Exploitation** : KANAP en tire les fins de support et les vulnérabilités. **Exporter** et **Importer** s'affichent pour les administrateurs de la liste.
+**Ce que vous lisez.** L'export titre ses colonnes dans votre langue et l'import lit les mêmes colonnes : servez-vous-en comme modèle pour vos propres applications. Le classeur d'exemple contient quelques applications, les autres colonnes sur une feuille **Avancé** et ce que prend chaque colonne sur une feuille **Notes**. Liez ensuite chaque application à ses technologies, dans son onglet **Exploitation** : Kadratis en tire les fins de support et les vulnérabilités. **Exporter** et **Importer** s'affichent pour les administrateurs de la liste.
 
-Pour partir d'un fichier que vous tenez déjà, joignez-le à un message dans Plaid avec **Joindre un fichier**. Plaid lit les titres de ses colonnes, le type de chaque colonne et les dix premières lignes, et peut dire ce que contient chaque colonne.
+Pour partir d'un fichier que vous tenez déjà, joignez-le à un message dans Kad avec **Joindre un fichier**. Kad lit les titres de ses colonnes, le type de chaque colonne et les dix premières lignes, et peut dire ce que contient chaque colonne.
 
 ## Et ensuite
 
-Vous avez vu l'essentiel de KANAP pour la cartographie du SI. Les deux autres parcours prennent aussi dix minutes :
+Vous avez vu l'essentiel de Kadratis pour la cartographie du SI. Les deux autres parcours prennent aussi dix minutes :
 
-- [Votre budget IT dans KANAP en dix minutes](budget-example.md)
-- [Votre portefeuille dans KANAP en dix minutes](portfolio-example.md)
+- [Votre budget IT dans Kadratis en dix minutes](budget-example.md)
+- [Votre portefeuille dans Kadratis en dix minutes](portfolio-example.md)
 
 Une fois les cinq pas faits, la tuile propose ces parcours. Pendant l'essai, elle propose aussi **Planifier un appel découverte**.
 

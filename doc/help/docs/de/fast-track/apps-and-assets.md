@@ -20,12 +20,12 @@ Für vollständige Details siehe die Referenzdokumentation zu [Anwendungen](../a
 
 ![Übersicht Anwendung zu Server](images/app-to-server-overview.png)
 
-Alles in KANAPs IT-Landschaft-Modul ist verbunden, um ein vollständiges Bild Ihrer Landschaft zu zeichnen:
+Alles in Kadratis' IT-Landschaft-Modul ist verbunden, um ein vollständiges Bild Ihrer Landschaft zu zeichnen:
 
 | Objekt | Was es repräsentiert |
 |--------|---------------------|
 | **Anwendung** | Eine Geschäftsanwendung oder ein IT-Dienst, den Sie dokumentieren möchten |
-| **Umgebung** | Wo sie läuft: Prod, QA, Dev usw. (in KANAP „Bereitstellungen" genannt) |
+| **Umgebung** | Wo sie läuft: Prod, QA, Dev usw. (in Kadratis „Bereitstellungen" genannt) |
 | **Server (Asset)** | Die Infrastruktur, die sie hostet: VMs, physische Server, Container |
 
 Die Kette ist einfach: **Anwendung → Umgebung → Server**. Am Ende dieses Leitfadens haben Sie diese Kette vollständig dokumentiert.
@@ -96,7 +96,7 @@ Die Mitglieder des IT-Teams, die für den technischen Betrieb und den Support zu
 
 ### Zielgruppe (Optional)
 
-Wählen Sie unter **Zielgruppe** das **Unternehmen** und die **Abteilungen**, die diese Anwendung nutzen. KANAP berechnet die Anzahl der Benutzer aus Ihren Stammdaten, oder Sie stellen die Berechnung auf manuell um und geben die Zahl selbst ein.
+Wählen Sie unter **Zielgruppe** das **Unternehmen** und die **Abteilungen**, die diese Anwendung nutzen. Kadratis berechnet die Anzahl der Benutzer aus Ihren Stammdaten, oder Sie stellen die Berechnung auf manuell um und geben die Zahl selbst ein.
 
 !!! warning "Warum Verantwortliche wichtig sind"
     Verantwortlichkeit macht es einfach, **die richtigen Personen zu erreichen**, wenn es darauf ankommt: geplante Wartung, Serviceunterbrechungen, Upgrade-Entscheidungen, Lizenzverlängerungen. Sie steuert auch die Filter **Meine Apps** und **Apps meines Teams** in der Hauptliste. Ohne Verantwortliche ist die App nur in der Ansicht „Alle Apps" sichtbar. Das heißt, niemand fühlt sich zuständig und niemand wird benachrichtigt.

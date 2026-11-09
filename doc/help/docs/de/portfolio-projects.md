@@ -1,6 +1,6 @@
 # Portfolio-Projekte
 
-Portfolio-Projekte sind die Ausführungs-Arbeitsbereiche für genehmigte Initiativen. Hier wird die Lieferung geplant, der Fortschritt verfolgt, die Arbeitslast gemessen, Aufgaben koordiniert und projektspezifisches Wissen mit dem Rest von KANAP verbunden.
+Portfolio-Projekte sind die Ausführungs-Arbeitsbereiche für genehmigte Initiativen. Hier wird die Lieferung geplant, der Fortschritt verfolgt, die Arbeitslast gemessen, Aufgaben koordiniert und projektspezifisches Wissen mit dem Rest von Kadratis verbunden.
 
 Projekte stammen normalerweise aus genehmigten Anfragen, können aber auch direkt als **Schnellstart**- oder **Legacy**-Projekte erstellt werden, wenn die Anfragephase nicht Teil des Prozesses ist.
 
@@ -76,7 +76,7 @@ Die direkte Projekterstellung ist für Arbeit gedacht, die ohne separate Anfrage
 
 1. Klicken Sie auf **Neues Projekt**. Die Seite des Projekts öffnet sich auf **Zusammenfassung** mit einem leeren Titel in der Kopfzeile. Der Rest der Seite ist abgeblendet.
 2. Geben Sie den Namen des Projekts ein.
-3. Drücken Sie die Eingabetaste oder klicken Sie außerhalb des Titels. KANAP erstellt das Projekt sofort, mit der Herkunft **Fast-track**. Seine Referenz (`PRJ-12`) erscheint und alle Reiter öffnen sich.
+3. Drücken Sie die Eingabetaste oder klicken Sie außerhalb des Titels. Kadratis erstellt das Projekt sofort, mit der Herkunft **Fast-track**. Seine Referenz (`PRJ-12`) erscheint und alle Reiter öffnen sich.
 
 Füllen Sie dann den Eigenschaftenbereich und den **Zweck** aus. Der Name wird nur in der Kopfzeile bearbeitet. Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erstellen.
 
@@ -102,7 +102,7 @@ Der Projekt-Arbeitsbereich hat zwei Schichten:
 
 Öffnen oder schließen Sie den Eigenschaftenbereich mit der vertikalen Registerkarte am rechten Rand.
 
-Bei vorhandenen Projekten werden Änderungen im Eigenschaftenbereich sofort gespeichert. Der Hauptreiterinhalt folgt dem üblichen **Speichern**- / **Zurücksetzen**-Workflow, wenn dieser Reiter Entwurfsänderungen enthält. Wenn Sie Reiter wechseln oder zum vorherigen oder nächsten Projekt mit ungespeicherten Arbeitsbereichsänderungen wechseln, fragt KANAP, ob zuerst gespeichert werden soll.
+Bei vorhandenen Projekten werden Änderungen im Eigenschaftenbereich sofort gespeichert. Der Hauptreiterinhalt folgt dem üblichen **Speichern**- / **Zurücksetzen**-Workflow, wenn dieser Reiter Entwurfsänderungen enthält. Wenn Sie Reiter wechseln oder zum vorherigen oder nächsten Projekt mit ungespeicherten Arbeitsbereichsänderungen wechseln, fragt Kadratis, ob zuerst gespeichert werden soll.
 
 ## Kopfzeile und Metadaten
 
@@ -180,10 +180,10 @@ Diese Aufteilung ist absichtlich. Sie erlaubt die narrative Verantwortlichkeit b
 
 Der Zweck-Editor enthält Dokumentimport und -export:
 
-- **Importieren** akzeptiert eine `.docx`-Datei und konvertiert sie in das interne Markdown-Format. Wenn der Zweck bereits Inhalt hat, fragt KANAP vor dem Ersetzen um Bestätigung.
+- **Importieren** akzeptiert eine `.docx`-Datei und konvertiert sie in das interne Markdown-Format. Wenn der Zweck bereits Inhalt hat, fragt Kadratis vor dem Ersetzen um Bestätigung.
 - **Exportieren** ermöglicht es Ihnen, den aktuellen Zweck als PDF, DOCX oder ODT herunterzuladen.
 
-Diese Werkzeuge sind nützlich, wenn ein Projekt-Brief in Word entsteht oder wenn Stakeholder eine formatierte Kopie außerhalb von KANAP benötigen.
+Diese Werkzeuge sind nützlich, wenn ein Projekt-Brief in Word entsteht oder wenn Stakeholder eine formatierte Kopie außerhalb von Kadratis benötigen.
 
 Das verwaltete Zweck-Dokument unterscheidet sich vom Reiter **Wissensdatenbank**:
 
@@ -298,7 +298,7 @@ Wichtige Konsequenzen:
 
 ### Baseline-Aufwand
 
-Wenn das Projekt zu **In Bearbeitung** wechselt, erfasst KANAP Baseline-Aufwandswerte. Spätere Änderungen werden als Abweichung gegenüber dieser Baseline angezeigt, was nützlich ist, um normale Lieferaktualisierungen vom stillen Scope-Creep zu unterscheiden.
+Wenn das Projekt zu **In Bearbeitung** wechselt, erfasst Kadratis Baseline-Aufwandswerte. Spätere Änderungen werden als Abweichung gegenüber dieser Baseline angezeigt, was nützlich ist, um normale Lieferaktualisierungen vom stillen Scope-Creep zu unterscheiden.
 
 ## Bewertung
 
@@ -374,7 +374,7 @@ Je nach Ihren Wissens-Berechtigungen können Sie:
 - direkt verknüpfte Dokumente entkoppeln
 - jedes verknüpfte oder verwandte Dokument in der Wissensdatenbank öffnen
 
-Wenn Sie das Projekt öffnen können, aber keine Wissensanzeige-Rechte haben, sagt KANAP Ihnen, dass Wissen existiert, ohne den Dokumentinhalt offenzulegen. Das ist erwartetes Verhalten, kein defekter Reiter.
+Wenn Sie das Projekt öffnen können, aber keine Wissensanzeige-Rechte haben, sagt Kadratis Ihnen, dass Wissen existiert, ohne den Dokumentinhalt offenzulegen. Das ist erwartetes Verhalten, kein defekter Reiter.
 
 ## CSV-Import und -Export
 
@@ -392,7 +392,7 @@ Exporte unterstützen:
 - **Datenanreicherung**
 - **Benutzerdefinierte Auswahl**
 
-Verwenden Sie **Datenanreicherung**, wenn Sie exportieren, ausgewählte Felder extern anpassen und das Ergebnis mit minimalem Drama wieder in KANAP importieren möchten.
+Verwenden Sie **Datenanreicherung**, wenn Sie exportieren, ausgewählte Felder extern anpassen und das Ergebnis mit minimalem Drama wieder in Kadratis importieren möchten.
 
 ### Import
 

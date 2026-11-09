@@ -1,6 +1,6 @@
 # Projets du portefeuille
 
-Les Projets du portefeuille sont les espaces de travail d'exécution pour les initiatives approuvées. C'est là que la livraison est planifiée, l'avancement est suivi, la charge est mesurée, les tâches sont coordonnées et les connaissances spécifiques au projet sont reliées au reste de KANAP.
+Les Projets du portefeuille sont les espaces de travail d'exécution pour les initiatives approuvées. C'est là que la livraison est planifiée, l'avancement est suivi, la charge est mesurée, les tâches sont coordonnées et les connaissances spécifiques au projet sont reliées au reste de Kadratis.
 
 Les projets proviennent généralement de demandes approuvées, mais ils peuvent également être créés directement comme projets **Fast-track** ou **Legacy** lorsque l'étape de demande ne fait pas partie du processus.
 
@@ -76,7 +76,7 @@ La création directe de projet est destinée au travail qui doit entrer en exéc
 
 1. Cliquez sur **Nouveau projet**. La page du projet s'ouvre sur **Synthèse** avec un titre vide dans l'en-tête. Le reste de la page est grisé.
 2. Saisissez le nom du projet.
-3. Appuyez sur Entrée, ou cliquez hors du titre. KANAP crée le projet aussitôt, avec l'origine **Fast-track**. Sa référence (`PRJ-12`) apparaît et tous les onglets s'ouvrent.
+3. Appuyez sur Entrée, ou cliquez hors du titre. Kadratis crée le projet aussitôt, avec l'origine **Fast-track**. Sa référence (`PRJ-12`) apparaît et tous les onglets s'ouvrent.
 
 Complétez ensuite le tiroir Propriétés et l'**Objectif**. Le nom se modifie uniquement dans l'en-tête. Appuyez sur Échap dans le titre vide pour partir sans rien créer.
 
@@ -102,7 +102,7 @@ L'espace de travail du projet a deux couches :
 
 Ouvrez ou fermez le tiroir Propriétés à l'aide de l'onglet vertical sur le bord droit.
 
-Pour les projets existants, le tiroir Propriétés se comporte comme un panneau de propriétés en direct : les modifications y sont enregistrées immédiatement. Le contenu de l'onglet principal suit le flux habituel **Enregistrer** / **Réinitialiser** lorsque cet onglet contient des modifications en brouillon. Si vous changez d'onglet ou passez au projet précédent ou suivant avec des modifications non enregistrées dans l'espace de travail, KANAP demande s'il faut enregistrer d'abord.
+Pour les projets existants, le tiroir Propriétés se comporte comme un panneau de propriétés en direct : les modifications y sont enregistrées immédiatement. Le contenu de l'onglet principal suit le flux habituel **Enregistrer** / **Réinitialiser** lorsque cet onglet contient des modifications en brouillon. Si vous changez d'onglet ou passez au projet précédent ou suivant avec des modifications non enregistrées dans l'espace de travail, Kadratis demande s'il faut enregistrer d'abord.
 
 ## En-tête et métadonnées
 
@@ -180,10 +180,10 @@ Cette séparation est délibérée. Elle permet à la responsabilité narrative 
 
 L'éditeur d'Objectif inclut l'import et l'export de documents :
 
-- **Importer** accepte un fichier `.docx` et le convertit au format markdown interne. Si l'Objectif a déjà du contenu, KANAP demande confirmation avant de le remplacer.
+- **Importer** accepte un fichier `.docx` et le convertit au format markdown interne. Si l'Objectif a déjà du contenu, Kadratis demande confirmation avant de le remplacer.
 - **Exporter** vous permet de télécharger l'Objectif courant en PDF, DOCX ou ODT.
 
-Ces outils sont utiles lorsqu'un brief de projet provient de Word ou que les parties prenantes ont besoin d'une copie formatée en dehors de KANAP.
+Ces outils sont utiles lorsqu'un brief de projet provient de Word ou que les parties prenantes ont besoin d'une copie formatée en dehors de Kadratis.
 
 Le document Objectif managé est différent de l'onglet **Connaissances** :
 
@@ -298,7 +298,7 @@ Conséquences importantes :
 
 ### Charge de référence
 
-Lorsque le projet passe à **En cours**, KANAP capture les valeurs de charge de référence. Les changements ultérieurs sont affichés comme variance par rapport à cette référence, ce qui est utile pour distinguer les mises à jour normales de livraison du glissement silencieux du périmètre.
+Lorsque le projet passe à **En cours**, Kadratis capture les valeurs de charge de référence. Les changements ultérieurs sont affichés comme variance par rapport à cette référence, ce qui est utile pour distinguer les mises à jour normales de livraison du glissement silencieux du périmètre.
 
 ## Évaluation
 
@@ -374,7 +374,7 @@ Selon vos autorisations Connaissances, vous pouvez :
 - délier les documents liés directement
 - ouvrir n'importe quel document lié ou associé dans la base de connaissances
 
-Si vous pouvez ouvrir le projet mais n'avez pas les droits de consultation des connaissances, KANAP vous indiquera que des connaissances existent sans exposer le contenu du document. C'est un comportement attendu, pas un onglet cassé.
+Si vous pouvez ouvrir le projet mais n'avez pas les droits de consultation des connaissances, Kadratis vous indiquera que des connaissances existent sans exposer le contenu du document. C'est un comportement attendu, pas un onglet cassé.
 
 ## Import et export CSV
 
@@ -392,7 +392,7 @@ Les exports prennent en charge :
 - **Enrichissement de données**
 - **Sélection personnalisée**
 
-Utilisez **Enrichissement de données** lorsque vous voulez exporter, ajuster des champs sélectionnés en externe et réimporter le résultat dans KANAP avec un minimum de complications.
+Utilisez **Enrichissement de données** lorsque vous voulez exporter, ajuster des champs sélectionnés en externe et réimporter le résultat dans Kadratis avec un minimum de complications.
 
 ### Import
 

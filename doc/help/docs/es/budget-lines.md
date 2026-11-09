@@ -87,7 +87,7 @@ Las líneas creadas antes de la serie única tenían además un número `OPX-12`
 - Un enlace o un marcador a una antigua página OPEX o CAPEX abre la línea
 - La búsqueda rápida de la lista encuentra una línea por su número anterior
 - El archivo de presupuesto los lee en `item_number`. Consulte [Cargar un presupuesto desde una hoja de cálculo](budget-file.md)
-- Plaid encuentra una línea por cualquiera de los dos números. Consulte [Plaid](ai-assistant.md#mencionar-registros-con)
+- Kad encuentra una línea por cualquiera de los dos números. Consulte [Kad](ai-assistant.md#mencionar-registros-con)
 
 ---
 
@@ -220,7 +220,7 @@ Haga clic en cualquier fila de la lista para abrir el espacio de trabajo. Su dir
 - Cada cambio se guarda automáticamente. La indicación **Guardando...** / **Guardado** aparece en la cabecera
 - Cambiar de pestaña, pasar a la línea anterior o siguiente, o cerrar el espacio de trabajo guarda primero los cambios pendientes. Si un guardado falla, usted se queda donde está y un mensaje explica el motivo, de modo que ningún cambio se pierde sin que lo sepa
 - **Ctrl+S** (**Cmd+S** en Mac) guarda de inmediato
-- Si un guardado no puede completarse de inmediato porque hay otro guardado en curso sobre los mismos datos, KANAP lo reintenta automáticamente
+- Si un guardado no puede completarse de inmediato porque hay otro guardado en curso sobre los mismos datos, Kadratis lo reintenta automáticamente
 - Si hay una operación de presupuesto masiva en curso (por ejemplo, una copia o un restablecimiento de columna en la Administración presupuestaria), las ediciones aquí se detienen con el mensaje «Hay otra operación de presupuesto en curso. Vuelva a intentarlo cuando haya terminado.» Vuelva a intentarlo cuando haya terminado
 
 **Edición simultánea**:
@@ -292,7 +292,7 @@ La pestaña Presupuesto contiene los importes de la línea, año por año y colu
 
 - Utilice las pestañas de año en la parte superior para alternar entre A-2, A-1, A (año actual), A+1 y A+2
 - Cada año tiene sus propios importes
-- Al cambiar de año se guardan primero sus cambios pendientes. Si una columna sigue pendiente de su elección tras el cambio de otra persona, KANAP pregunta primero: **Cambiar de año** descarta sus valores en esa columna
+- Al cambiar de año se guardan primero sus cambios pendientes. Si una columna sigue pendiente de su elección tras el cambio de otra persona, Kadratis pregunta primero: **Cambiar de año** descarta sus valores en esa columna
 
 **Columnas presupuestarias**:
 
@@ -502,7 +502,7 @@ Por ejemplo, un consultor a tiempo completo de febrero a octubre cuenta 1 ETC en
 
 - **Contado**: una columna con líneas en personas o días
 - **Cero**: una columna cuyas líneas están todas en piezas. Su ETC es 0
-- **Vacío**: una columna sin líneas, una línea sin versión para ese año o un año posterior al fin de validez de la línea. Su celda de ETC queda vacía, porque KANAP no puede saber cuántas personas paga
+- **Vacío**: una columna sin líneas, una línea sin versión para ese año o un año posterior al fin de validez de la línea. Su celda de ETC queda vacía, porque Kadratis no puede saber cuántas personas paga
 - El ETC se queda con las líneas. Tras una edición a mano, un reparto o una copia, la columna conserva el ETC de sus líneas. Una copia recalcula el ETC a partir de las líneas copiadas, con los calendarios laborales del año de destino
 
 ---
@@ -545,8 +545,8 @@ La pestaña Asignaciones distribuye el gasto de un año entre sus empresas y dep
 
 **Facturación en varias monedas**:
 
-- Cada empresa introduce su facturación en millones de su moneda base. Antes del reparto, KANAP convierte cada facturación a la moneda de reporte, a los tipos de la versión presupuestaria del año: los tipos fijados al congelar su columna por defecto, si no los tipos actuales del año. Consulte [Configuración de monedas](currencies.md)
-- Cuando una moneda no tiene tipo para el año, las empresas en esa moneda quedan fuera del reparto: no reciben ninguna parte, y las demás empresas se reparten el 100 %. Un aviso sobre la tabla nombra cada empresa excluida. KANAP obtiene el tipo que falta en segundo plano, y el reparto se corrige solo en cuanto el tipo está disponible. Un [tipo manual](currencies.md#tipos-manuales) lo corrige al momento
+- Cada empresa introduce su facturación en millones de su moneda base. Antes del reparto, Kadratis convierte cada facturación a la moneda de reporte, a los tipos de la versión presupuestaria del año: los tipos fijados al congelar su columna por defecto, si no los tipos actuales del año. Consulte [Configuración de monedas](currencies.md)
+- Cuando una moneda no tiene tipo para el año, las empresas en esa moneda quedan fuera del reparto: no reciben ninguna parte, y las demás empresas se reparten el 100 %. Un aviso sobre la tabla nombra cada empresa excluida. Kadratis obtiene el tipo que falta en segundo plano, y el reparto se corrige solo en cuanto el tipo está disponible. Un [tipo manual](currencies.md#tipos-manuales) lo corrige al momento
 - Con **Manual por empresa** y el inductor Facturación, cuando ninguna de las empresas seleccionadas tiene tipo, la asignación se rechaza con un mensaje que cita las monedas y el año. Introduzca el tipo o elija otro inductor
 
 **Cómo usarlo**:
@@ -612,7 +612,7 @@ La sección no aparece cuando la línea no tiene proveedor o no hay nada que sug
 
 ### Historial
 
-La pestaña Historial lista los cambios hechos en la línea, el más reciente arriba. Cada entrada muestra la fecha y la hora, el autor (una persona, **Sistema**, **Importación** o **Plaid para** una persona) y cada campo cambiado con su valor antes y después. Un cambio de importe indica el año, la columna y los valores antes y después.
+La pestaña Historial lista los cambios hechos en la línea, el más reciente arriba. Cada entrada muestra la fecha y la hora, el autor (una persona, **Sistema**, **Importación** o **Kad para** una persona) y cada campo cambiado con su valor antes y después. Un cambio de importe indica el año, la columna y los valores antes y después.
 
 Los cambios en los elementos de la línea también aparecen aquí: importes, dimensiones, asignaciones, enlaces, archivos adjuntos, contactos, aplicaciones, tecnologías, activos y tareas. Cualquier persona que pueda abrir la línea puede leer su historial. Un registro de un módulo que usted no puede leer aparece solo por su tipo, por ejemplo «un contrato».
 

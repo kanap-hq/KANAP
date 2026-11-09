@@ -1,11 +1,11 @@
 ---
 title: "Aufgabentypen-Schnelleinstieg: Run, Build & Aufgaben"
-description: Verstehen Sie die verschiedenen Arbeitstypen in KANAP (Incidents, Problems, Anfragen, Projekte, Bugs und Aufgaben) und wie Sie im Alltag mit Aufgaben arbeiten.
+description: Verstehen Sie die verschiedenen Arbeitstypen in Kadratis (Incidents, Problems, Anfragen, Projekte, Bugs und Aufgaben) und wie Sie im Alltag mit Aufgaben arbeiten.
 ---
 
 # Aufgabentypen-Schnelleinstieg: Run, Build & Aufgaben
 
-Dieser Leitfaden erklärt die verschiedenen Typen von Arbeitselementen in KANAP und wie man sie unterscheidet. Er behandelt den Run (den Betrieb am Laufen halten), den Build (Dinge verbessern) und die bereichsübergreifende Aufgabe, die beides verbindet. Die zweite Hälfte ist ein praktischer Spickzettel für die tägliche Arbeit mit Aufgaben.
+Dieser Leitfaden erklärt die verschiedenen Typen von Arbeitselementen in Kadratis und wie man sie unterscheidet. Er behandelt den Run (den Betrieb am Laufen halten), den Build (Dinge verbessern) und die bereichsübergreifende Aufgabe, die beides verbindet. Die zweite Hälfte ist ein praktischer Spickzettel für die tägliche Arbeit mit Aufgaben.
 
 !!! tip "Bevorzugen Sie eine einseitige Zusammenfassung? :material-file-pdf-box:"
     Alle wichtigen Definitionen auf einer einzigen A4-Seite: ausdrucken, aufhängen, mit dem Team teilen.
@@ -112,7 +112,7 @@ Ein **Defekt in einem System in der Entwicklung**.
 
 ## Bereichsübergreifend: Die Aufgabe
 
-Aufgaben sind die **atomare Arbeitseinheit** in KANAP. Sie übergreifen die Run/Build-Grenze.
+Aufgaben sind die **atomare Arbeitseinheit** in Kadratis. Sie übergreifen die Run/Build-Grenze.
 
 ### Aufgabe
 
@@ -234,7 +234,7 @@ Nicht jede Funktion ist in jedem Kontext verfügbar. Hier ist, was sich ändert:
 
 ### Klassifizierungs-Standardwerte
 
-Wenn Sie eine **eigenständige Aufgabe** erstellen, füllt KANAP Klassifizierungsfelder (Quelle, Kategorie, Stream, Unternehmen) aus den Standardeinstellungen Ihrer Organisation vor, und spart Ihnen ein paar Klicks. Für **Projektaufgaben** kommen die Klassifizierungsstandards vom übergeordneten Projekt, können aber unabhängig auf jeder Aufgabe geändert werden.
+Wenn Sie eine **eigenständige Aufgabe** erstellen, füllt Kadratis Klassifizierungsfelder (Quelle, Kategorie, Stream, Unternehmen) aus den Standardeinstellungen Ihrer Organisation vor, und spart Ihnen ein paar Klicks. Für **Projektaufgaben** kommen die Klassifizierungsstandards vom übergeordneten Projekt, können aber unabhängig auf jeder Aufgabe geändert werden.
 
 ---
 
@@ -258,7 +258,7 @@ Die Liste in diesem Leitfaden ist ein Ausgangspunkt. Passen Sie sie an die tats�
 - [Budgetzeilen](../budget-lines.md): OPEX- und CAPEX-Zeilen und ihre Aufgaben verwalten
 - [Verträge](../contracts.md): Verträge und ihre Aufgaben verwalten
 - [Portfolio-Projekte](../portfolio-projects.md): Projektumsetzung, Phasen, Aufwandsverfolgung und Projektaufgaben
-- [Erste Schritte](getting-started.md): wenn Sie neu bei KANAP sind
+- [Erste Schritte](getting-started.md): wenn Sie neu bei Kadratis sind
 
 !!! success "Sie sind startklar"
-    Sie verstehen jetzt, wie KANAP Arbeit kategorisiert und wie Sie Aufgaben im Alltag nutzen. Wenn Sie sich bei der Wahl des richtigen Arbeitselementtyps unsicher sind, fragen Sie sich: **Hält es den Betrieb am Laufen (Run) oder macht es Dinge besser (Build)?** Dann wählen Sie den passenden Typ. Für alles andere gibt es eine Aufgabe.
+    Sie verstehen jetzt, wie Kadratis Arbeit kategorisiert und wie Sie Aufgaben im Alltag nutzen. Wenn Sie sich bei der Wahl des richtigen Arbeitselementtyps unsicher sind, fragen Sie sich: **Hält es den Betrieb am Laufen (Run) oder macht es Dinge besser (Build)?** Dann wählen Sie den passenden Typ. Für alles andere gibt es eine Aufgabe.

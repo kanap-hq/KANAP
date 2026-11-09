@@ -1,6 +1,6 @@
 # Contratos
 
-Los contratos documentan sus acuerdos con proveedores: licencias de software, contratos de mantenimiento, suscripciones SaaS y contratos de servicio. KANAP fecha cada periodo de un contrato, le indica cuándo hay una decisión de renovación pendiente, compara lo que el contrato compromete con las líneas presupuestarias vinculadas y enumera las cláusulas que sus aplicaciones hacen necesarias.
+Los contratos documentan sus acuerdos con proveedores: licencias de software, contratos de mantenimiento, suscripciones SaaS y contratos de servicio. Kadratis fecha cada periodo de un contrato, le indica cuándo hay una decisión de renovación pendiente, compara lo que el contrato compromete con las líneas presupuestarias vinculadas y enumera las cláusulas que sus aplicaciones hacen necesarias.
 
 ## Primeros pasos
 
@@ -32,7 +32,7 @@ Una vez creado el contrato, cada cambio se guarda solo. No hay botón **Guardar*
 
 ## Periodos y vencimientos
 
-KANAP calcula las fechas de un contrato a partir de cuatro campos: **Inicio**, **Duración (meses)**, **Preaviso (meses)** y **Renovación tácita**, más el **Fin de validez** cuando se indica. No se almacena nada: cambie un campo y todas las fechas se ajustan.
+Kadratis calcula las fechas de un contrato a partir de cuatro campos: **Inicio**, **Duración (meses)**, **Preaviso (meses)** y **Renovación tácita**, más el **Fin de validez** cuando se indica. No se almacena nada: cambie un campo y todas las fechas se ajustan.
 
 - **Periodos**: un contrato transcurre en periodos de la duración elegida, contados desde la fecha de inicio. Un contrato que empieza el 1 de julio de 2024 por 12 meses va del 1 de julio al 30 de junio cada año.
 - **Fecha límite de rescisión**: el fin de un periodo menos el preaviso. Con 6 meses de preaviso, el contrato anterior puede rescindirse hasta el 30 de diciembre de cada año.
@@ -122,7 +122,7 @@ La fila fijada abajo dice **Total (n contratos)**. Suma los importes anuales de 
 
 El encabezado muestra el nombre del contrato (haga clic para cambiarlo), **Anterior** / **Siguiente** con la posición en la lista, y una barra con **Proveedor**, **Empresa contratante**, **Responsable** y **Estado**. El responsable y el estado se cambian ahí mismo. El proveedor y la empresa abren el panel **Propiedades**.
 
-El panel **Propiedades**, a la derecha, contiene todos los campos del contrato: las partes, **Inicio**, **Duración (meses)**, **Preaviso (meses)**, **Renovación tácita**, **Importe anual**, **Moneda**, **Facturación**, luego **Ciclo de vida** (**Estado** y **Fin de validez**), **Creado** y **Actualizado**. Ábralo o ciérrelo con su botón; KANAP recuerda su elección.
+El panel **Propiedades**, a la derecha, contiene todos los campos del contrato: las partes, **Inicio**, **Duración (meses)**, **Preaviso (meses)**, **Renovación tácita**, **Importe anual**, **Moneda**, **Facturación**, luego **Ciclo de vida** (**Estado** y **Fin de validez**), **Creado** y **Actualizado**. Ábralo o ciérrelo con su botón; Kadratis recuerda su elección.
 
 **Centro de coste o grupo** es opcional. Sitúa el contrato bajo un centro de coste o un grupo para el [acceso a los datos](data-access.md): las personas limitadas a ese nodo, o a un grupo superior, ven el contrato, igual que las limitadas a su empresa.
 
@@ -256,7 +256,7 @@ La sección no aparece cuando no hay nada que sugerir.
 
 - Los vínculos se quitan y los elementos vinculados se conservan: las líneas presupuestarias, aplicaciones, activos (también aquellos de los que es el contrato de soporte) y contactos pierden su vínculo con el contrato
 - Lo que pertenece al contrato se elimina con él: sus tareas (incluida la tarea de decisión de renovación), sitios web relevantes y adjuntos
-- Un contrato con requisitos de conformidad registrados (un estado, incluido **No aplica**, o una referencia) no se puede eliminar: KANAP indica cuántos hay registrados y propone desactivarlo en su lugar. En la lista, la confirmación nombra los contratos que se conservan, con su número, antes de eliminar nada; los demás se eliminan
+- Un contrato con requisitos de conformidad registrados (un estado, incluido **No aplica**, o una referencia) no se puede eliminar: Kadratis indica cuántos hay registrados y propone desactivarlo en su lugar. En la lista, la confirmación nombra los contratos que se conservan, con su número, antes de eliminar nada; los demás se eliminan
 - Siempre aparece primero una confirmación. Cuenta lo que pierde su vínculo y lo que también se elimina, o indica que el contrato no está vinculado a nada
 
 Para dejar de usar un contrato y conservar su historial, desactívelo en su lugar.
@@ -265,7 +265,7 @@ Para dejar de usar un contrato y conservar su historial, desactívelo en su luga
 
 ## Decisiones de renovación
 
-KANAP pide al responsable que decida cada renovación antes de que ocurra, y registra la decisión.
+Kadratis pide al responsable que decida cada renovación antes de que ocurra, y registra la decisión.
 
 ### Plazo de decisión
 
@@ -275,7 +275,7 @@ El plazo determina la situación **Por decidir**, el filtro rápido, el recuadro
 
 ### La tarea de decisión
 
-Cada día a las 07:30 UTC, KANAP crea una tarea para cada contrato que espera una decisión:
+Cada día a las 07:30 UTC, Kadratis crea una tarea para cada contrato que espera una decisión:
 
 - **Decidir la renovación de** el contrato, con vencimiento en la fecha límite de rescisión, para un contrato con renovación tácita
 - **Decidir si renovar o dejar terminar** el contrato, con vencimiento en su fin, para un contrato sin renovación
@@ -290,7 +290,7 @@ El recuadro muestra la fecha límite, los días restantes, la tarea y su asignad
 
 - **Renovar**: la renovación queda confirmada para este periodo. La tarea se cierra, el contrato sale de **Por decidir** y vuelve al plazo en la fecha límite del periodo siguiente
 - **Renegociar**: el recuadro indica **Renegociación en curso** y la tarea sigue abierta hasta la decisión final. El contrato sigue **Por decidir**
-- **Rescindir**: el recuadro muestra la fecha de fin que debe confirmar. KANAP propone el primer fin que permite el preaviso («Preaviso de 6 meses: el primer fin posible es el 30 jun. 2027.»). Puede elegir otro día, a partir de hoy y del inicio del contrato. Un día anterior al propuesto muestra un aviso naranja: el proveedor tiene que aceptarlo. El recuadro enumera las consecuencias para ese día: el compromiso del año y del siguiente, las aplicaciones que pierden este contrato y los activos que pierden su contrato de soporte, cada uno si puede leer su módulo. **Confirmar la rescisión** desactiva la renovación tácita, fija el fin de validez en ese día y cierra la tarea. El contrato indica entonces **Termina sin renovación** y su compromiso se detiene ese día
+- **Rescindir**: el recuadro muestra la fecha de fin que debe confirmar. Kadratis propone el primer fin que permite el preaviso («Preaviso de 6 meses: el primer fin posible es el 30 jun. 2027.»). Puede elegir otro día, a partir de hoy y del inicio del contrato. Un día anterior al propuesto muestra un aviso naranja: el proveedor tiene que aceptarlo. El recuadro enumera las consecuencias para ese día: el compromiso del año y del siguiente, las aplicaciones que pierden este contrato y los activos que pierden su contrato de soporte, cada uno si puede leer su módulo. **Confirmar la rescisión** desactiva la renovación tácita, fija el fin de validez en ese día y cierra la tarea. El contrato indica entonces **Termina sin renovación** y su compromiso se detiene ese día
 
 En un contrato sin renovación, el recuadro dice «Fin prevista el 31 mar. 2027 · decisión pendiente» y ofrece dos acciones:
 

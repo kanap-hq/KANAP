@@ -61,7 +61,7 @@ Vous renseignez :
 
 ## Archiver un profil
 
-L'archivage sert à retirer un profil que vous ne voulez plus voir utilisé par les agents. Avant qu'il ne prenne effet, KANAP vous avertit clairement :
+L'archivage sert à retirer un profil que vous ne voulez plus voir utilisé par les agents. Avant qu'il ne prenne effet, Kadratis vous avertit clairement :
 
 > « {name} » ne sera plus disponible pour les agents. Tout agent qui l'utilise actuellement fonctionnera sans contexte partagé jusqu'à ce que vous le pointiez vers un autre profil.
 

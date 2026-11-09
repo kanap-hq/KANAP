@@ -1,10 +1,10 @@
 # Mon tableau de bord
 
-Le Tableau de bord est votre page d'accueil personnelle dans KANAP. Il vous donne un aperçu rapide de vos tâches, projets, applications et budget. Vous choisissez ses tuiles et leur ordre. Les tuiles que vous n'avez pas l'autorisation de voir sont masquées.
+Le Tableau de bord est votre page d'accueil personnelle dans Kadratis. Il vous donne un aperçu rapide de vos tâches, projets, applications et budget. Vous choisissez ses tuiles et leur ordre. Les tuiles que vous n'avez pas l'autorisation de voir sont masquées.
 
 ## Où le trouver
 
-- Cliquez sur le logo **KANAP** ou rendez-vous sur `/`
+- Cliquez sur le logo **Kadratis** ou rendez-vous sur `/`
 - C'est la page par défaut après connexion pour les utilisateurs non administrateurs.
 - Aucune autorisation spéciale n'est requise pour consulter le tableau de bord lui-même, mais les tuiles individuelles dépendent de vos droits d'accès.
 
@@ -38,11 +38,11 @@ Après l'enregistrement, la tuile de synthèse du temps du tableau de bord se ra
 
 ## Ligne des données d'exemple
 
-Dans un espace de travail cloud vide, qui n'a jamais reçu les données d'exemple, les administrateurs voient une ligne au-dessus des tuiles : « Découvrez KANAP avec des données d'exemple. » **Charger** ouvre la fenêtre des données d'exemple et **Masquer** supprime la ligne définitivement. La ligne disparaît dès que l'espace de travail contient des données et ne revient pas après un effacement. Voir [Données d'exemple](sample-data.md).
+Dans un espace de travail cloud vide, qui n'a jamais reçu les données d'exemple, les administrateurs voient une ligne au-dessus des tuiles : « Découvrez Kadratis avec des données d'exemple. » **Charger** ouvre la fenêtre des données d'exemple et **Masquer** supprime la ligne définitivement. La ligne disparaît dès que l'espace de travail contient des données et ne revient pas après un effacement. Voir [Données d'exemple](sample-data.md).
 
 ## Essai : votre parcours et vos premiers pas { #trial-first-steps }
 
-Dans un espace de travail en essai, une fenêtre s'ouvre la première fois que vous ouvrez KANAP. Elle pose une question par écran :
+Dans un espace de travail en essai, une fenêtre s'ouvre la première fois que vous ouvrez Kadratis. Elle pose une question par écran :
 
 1. **Qu'est-ce qui vous amène ?** **Le budget IT**, **La cartographie du SI**, **Les projets et les demandes** ou **Je regarde**.
 2. **Comment voulez-vous commencer ?** **Découvrir avec l'exemple complet** ou **Commencer avec mes données**.
@@ -51,7 +51,7 @@ Commencer avec vos données efface l'exemple. Si des éléments ont été créé
 
 Pendant le chargement de l'exemple, ou pendant l'effacement de l'espace de travail, une ligne de la page d'accueil l'indique.
 
-Si vous fermez la fenêtre, le choix vous attend dans **À propos de KANAP**. La ligne **Parcours : … · Changer** affiche le parcours choisi (**Choisir** tant que rien n'est choisi). Tout le monde peut le changer tant qu'une réponse manque. Ensuite, seuls les administrateurs le peuvent.
+Si vous fermez la fenêtre, le choix vous attend dans **À propos de Kadratis**. La ligne **Parcours : … · Changer** affiche le parcours choisi (**Choisir** tant que rien n'est choisi). Tout le monde peut le changer tant qu'une réponse manque. Ensuite, seuls les administrateurs le peuvent.
 
 ### Vos cinq premiers pas
 
@@ -60,13 +60,13 @@ Une fois le parcours choisi, la tuile **Vos cinq premiers pas** vient en premier
 - Avec l'exemple, ouvrir une étape la marque comme faite.
 - Avec vos données, une étape qui crée quelque chose est marquée comme faite dès que cet élément existe. Pour les autres étapes, cliquez sur **Fait** dans l'explication, ou sur la marque à côté de l'étape dans la tuile. La marque annule aussi une étape, sauf celle dont l'élément existe.
 
-Quand les cinq étapes sont faites, la tuile propose les deux autres parcours. À tout moment, **Changer de parcours** dans l'en-tête de la tuile rouvre la question du parcours. Comme pour la ligne de **À propos de KANAP**, tout le monde peut l'utiliser tant qu'une réponse manque, ensuite seuls les administrateurs. Le bouton de fermeture (**×**) masque la tuile. Pour l'afficher de nouveau, utilisez **Afficher les premiers pas** dans **À propos de KANAP**.
+Quand les cinq étapes sont faites, la tuile propose les deux autres parcours. À tout moment, **Changer de parcours** dans l'en-tête de la tuile rouvre la question du parcours. Comme pour la ligne de **À propos de Kadratis**, tout le monde peut l'utiliser tant qu'une réponse manque, ensuite seuls les administrateurs. Le bouton de fermeture (**×**) masque la tuile. Pour l'afficher de nouveau, utilisez **Afficher les premiers pas** dans **À propos de Kadratis**.
 
-Pendant l'essai, la tuile propose aussi **Planifier un appel découverte** : un appel vidéo de 30 minutes sur votre situation et vos questions, réservé sur la page qui s'ouvre au moment qui vous convient. Le même lien suit les jours d'essai restants dans **À propos de KANAP**.
+Pendant l'essai, la tuile propose aussi **Planifier un appel découverte** : un appel vidéo de 30 minutes sur votre situation et vos questions, réservé sur la page qui s'ouvre au moment qui vous convient. Le même lien suit les jours d'essai restants dans **À propos de Kadratis**.
 
 | Parcours | Avec l'exemple | Avec vos données |
 |---|---|---|
-| Budget IT | La vue d'ensemble, Une ligne budgétaire, Un rapport, Une question à Plaid, Vos données | Votre société, Vos lignes, Un contrat lié, Votre premier rapport, Un collègue |
+| Budget IT | La vue d'ensemble, Une ligne budgétaire, Un rapport, Une question à Kad, Vos données | Votre société, Vos lignes, Un contrat lié, Votre premier rapport, Un collègue |
 | Cartographie du SI | La liste des applications, Une fiche d'application, Les serveurs, Les technologies, fins de support et failles, Vos données | Vos sites, Vos applications, Vos technologies, Vos serveurs, Un collègue |
 | Projets et demandes | Une demande et son score, Le projet issu de la demande, Les tâches, Les rapports, Vos données | Votre première demande, Votre projet, Les premières tâches, Le budget du projet, Votre fiche contributeur |
 
@@ -223,7 +223,7 @@ Les niveaux sont ceux définis dans les paramètres de la cartographie SI ; un n
 
 ### Vulnérabilités du parc { #vulnerabilities }
 
-Affiche les vulnérabilités qui demandent de l'attention dans votre parc, sous le sous-titre « CVE à traiter sur les technologies en service ». Les comptes suivent [Ce que KANAP compte](vulnerabilities.md#what-kanap-counts) : vulnérabilités encore à traiter, dans les alertes. Chaque ligne ouvre la liste correspondante :
+Affiche les vulnérabilités qui demandent de l'attention dans votre parc, sous le sous-titre « CVE à traiter sur les technologies en service ». Les comptes suivent [Ce que Kadratis compte](vulnerabilities.md#what-kanap-counts) : vulnérabilités encore à traiter, dans les alertes. Chaque ligne ouvre la liste correspondante :
 
 - **Applications de la criticité la plus haute avec une CVE critique ou élevée**, par exemple « 2 applications de criticité Critique avec une CVE critique ou élevée » : les applications au niveau de criticité business le plus haut de votre catalogue qu'une vulnérabilité critique ou élevée atteint. Ouvre la liste des applications filtrée sur ce niveau et sur **Avec des vulnérabilités graves**. Nécessite `applications:reader`, et compte les applications que vous pouvez lire.
 - **CVE critiques publiées ces 7 derniers jours** et **ces 30 derniers jours**, sur les technologies utilisées dans le parc : installées sur un actif en service ou déclarées par une application en service. Ouvre la page [Vulnérabilités](vulnerabilities.md) sur ces vulnérabilités, avec le filtre **Touchant le parc**.

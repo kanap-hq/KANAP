@@ -28,7 +28,7 @@ The default dimension has a special role:
 
 - It always applies to OPEX and CAPEX lines: its **Used for** field is locked. See [OPEX or CAPEX dimensions](#opex-or-capex-dimensions).
 - It cannot be disabled or deleted. Its workspace has no **Delete** button, and one line under **Lifecycle** says why: "This dimension cannot be disabled or deleted: older files and AI questions use it."
-- Questions to Plaid about the analytics category use it. See [Analytics dimensions in Plaid](#analytics-dimensions-in-plaid). In a budget file each dimension has its own column, the default one included: see [Load a budget from a spreadsheet](budget-file.md).
+- Questions to Kad about the analytics category use it. See [Analytics dimensions in Kad](#analytics-dimensions-in-plaid). In a budget file each dimension has its own column, the default one included: see [Load a budget from a spreadsheet](budget-file.md).
 - It stays the default dimension when you rename it, change its code or move it in the order of the dimensions.
 - Its label is reserved: no other dimension can be named "Analytics dimension", in any of the app's languages.
 
@@ -162,14 +162,14 @@ Open it with **Edit** (**Open** if you can only read) in the selector bar, with 
 
 ### Ordering dimensions
 
-The dimensions have an order, which you set. KANAP shows them in this order:
+The dimensions have an order, which you set. Kadratis shows them in this order:
 
 - in the selector bar of this page
 - in the **Properties** panel of OPEX and CAPEX lines
 - in the columns of the budget lines list
 - in the columns of the budget file
 - in the report filters and the report's dimension picker
-- in the dimensions Plaid lists
+- in the dimensions Kad lists
 
 A new dimension goes last.
 
@@ -191,7 +191,7 @@ The **Used for** field says which budget lines the dimension applies to:
 | **OPEX only** | Only OPEX lines can have a value |
 | **CAPEX only** | Only CAPEX lines can have a value |
 
-OPEX screens show the dimensions used for OPEX lines, and CAPEX screens show the dimensions used for CAPEX lines. This covers the line **Properties** panel, the list columns, filters and quick search, the dimension pickers and filters of the reports (they follow the report's **OPEX** / **CAPEX** choice) and Plaid. The budget file has a column for every enabled dimension, and each row takes values only on the dimensions of its kind of line.
+OPEX screens show the dimensions used for OPEX lines, and CAPEX screens show the dimensions used for CAPEX lines. This covers the line **Properties** panel, the list columns, filters and quick search, the dimension pickers and filters of the reports (they follow the report's **OPEX** / **CAPEX** choice) and Kad. The budget file has a column for every enabled dimension, and each row takes values only on the dimensions of its kind of line.
 
 A line keeps the value it already has on a dimension that no longer applies to its kind of line. The value is hidden everywhere and shows again if you open the dimension to that kind of line again. When your choice hides values, a note appears under the field, for example "8 CAPEX lines have a value for this dimension. They keep it, hidden while the dimension is for OPEX lines only."
 
@@ -202,13 +202,13 @@ A single value can also be limited to one kind of line. The two settings work at
 - The dimension setting decides whether the field exists on a kind of line. When the field is gone, the values the lines hold are hidden.
 - The value setting only filters the choices. The field stays, CAPEX lines no longer offer **Internal labor**, and a CAPEX line that already has it keeps it, shows it and stays editable. See [OPEX or CAPEX values](#opex-or-capex-values).
 
-The two settings must agree. A dimension cannot be set to one kind of line while some of its values are for the other kind only: KANAP refuses and names the values (up to three, then "and N more"), for example "2 values of this dimension are for CAPEX lines only (Hardware, Software). Set them to OPEX and CAPEX first."
+The two settings must agree. A dimension cannot be set to one kind of line while some of its values are for the other kind only: Kadratis refuses and names the values (up to three, then "and N more"), for example "2 values of this dimension are for CAPEX lines only (Hardware, Software). Set them to OPEX and CAPEX first."
 
 ### Required dimensions
 
-Turn on **Required** when every budget line must be classified on a dimension. KANAP then checks the lines of the kinds the dimension is used for:
+Turn on **Required** when every budget line must be classified on a dimension. Kadratis then checks the lines of the kinds the dimension is used for:
 
-- **A new line needs a value on the dimension.** A budget file, Plaid and the API do not create a line without one, with the message "The Cost pool dimension is required. Choose a value." On the budget line screen, a line exists from its title, and **Create** lists the dimension as missing until it has a value.
+- **A new line needs a value on the dimension.** A budget file, Kad and the API do not create a line without one, with the message "The Cost pool dimension is required. Choose a value." On the budget line screen, a line exists from its title, and **Create** lists the dimension as missing until it has a value.
 - **A line that holds a value cannot lose it.** You can pick another value. The field cannot be cleared.
 - **A line created before you turned the setting on keeps working.** If it has no value on the dimension, it stays editable and you can save other changes on it. Its field is marked as required. On the OPEX and CAPEX screens, leaving such a line after changing it asks you to choose a value first, with **Stay** and **Leave anyway**. Opening it without changing anything never asks.
 
@@ -266,13 +266,13 @@ Changes save on their own, as in the dimension workspace. A name refused in the 
 
 ### Ordering values
 
-The values of a dimension have an order, which you set. KANAP offers the values in this order wherever you choose or filter on them:
+The values of a dimension have an order, which you set. Kadratis offers the values in this order wherever you choose or filter on them:
 
 - the value fields of OPEX and CAPEX lines (when you type in a field, the best matches come first)
 - the dimension's checkbox filters in the budget lines list
 - the dimension filters of the reports and the **Exclude values** list of the Analytics dimensions report
 - the values export
-- the values Plaid lists
+- the values Kad lists
 
 Sorting the budget lines list on a dimension's column follows this order too, then the value name. Lines without a value come last in ascending order. Report rows keep their own order, by amount.
 
@@ -296,7 +296,7 @@ The **Used for** field of a value says which budget lines may use it:
 | **OPEX only** | Only OPEX lines can use the value |
 | **CAPEX only** | Only CAPEX lines can use the value |
 
-The field of an OPEX line offers the values for OPEX and for both. The field of a CAPEX line does the same for CAPEX. A line that already holds a value of the other kind keeps it, shows it and stays editable, like a disabled value. Choosing such a value for another line, or when you change the value of a line, is refused: in the app, in a budget file, through the API and in Plaid.
+The field of an OPEX line offers the values for OPEX and for both. The field of a CAPEX line does the same for CAPEX. A line that already holds a value of the other kind keeps it, shows it and stays editable, like a disabled value. Choosing such a value for another line, or when you change the value of a line, is refused: in the app, in a budget file, through the API and in Kad.
 
 - When the dimension is used for one kind of line only, the kind it excludes is unavailable in the field, with a line such as "The IT tower dimension is for OPEX lines only." **OPEX and CAPEX** and the dimension's own kind stay selectable. A value cannot be limited to the kind of line its dimension excludes.
 - When lines of the other kind hold the value, one line appears under the field, for example "4 CAPEX lines have this value. They keep it, but new CAPEX lines cannot choose it." Click **Show these lines** to open them in the list, in a new tab. The line stays as long as the conflict exists.
@@ -314,13 +314,13 @@ Dimensions and values each have a status (**Enabled** or **Disabled**) and an op
 
 **A disabled value**:
 
-- Cannot be picked for a line, in the app, in an imported file or through Plaid.
+- Cannot be picked for a line, in the app, in an imported file or through Kad.
 - Stays on the lines that already have it and keeps counting in reports. In the field's list it is marked **Disabled**.
 
 **A disabled dimension**:
 
 - Is not checked when it is **Required**: lines can be created without a value on it. It keeps the setting for when you enable it again.
-- Disappears from the line forms, the budget lines list, the report filters, the report's dimension picker, the OPEX and CAPEX exports and Plaid. Only the Analytics dimensions page shows it, marked **Disabled**.
+- Disappears from the line forms, the budget lines list, the report filters, the report's dimension picker, the OPEX and CAPEX exports and Kad. Only the Analytics dimensions page shows it, marked **Disabled**.
 - Keeps its values on the lines. Enable the dimension again and they show again.
 - Takes no new values. **New value** is disabled while the dimension is selected, and imported files cannot add or change its values.
 
@@ -359,17 +359,17 @@ The seven budget reports can also be narrowed to one value of a dimension, with 
 
 ---
 
-## Analytics dimensions in Plaid
+## Analytics dimensions in Kad { #analytics-dimensions-in-plaid }
 
-- Plaid can filter and group OPEX lines on every enabled dimension used for OPEX lines, and CAPEX lines on every enabled dimension used for CAPEX lines.
+- Kad can filter and group OPEX lines on every enabled dimension used for OPEX lines, and CAPEX lines on every enabled dimension used for CAPEX lines.
 - A question about the analytics category uses the default dimension, whatever its name or order.
-- Plaid's search and the `@` mentions in the chat find a budget line by the name of a value it holds on a dimension shown for its type, with or without accents.
-- Plaid can set, change or clear a line's value on any dimension when it creates or updates a budget line. Ask for example: "Set the Cost pool of BL-12 to Software". Plaid finds the value by its name within that dimension and shows the dimension and the value, before and after, in the preview. Nothing changes until you approve it.
-- Plaid follows the same rules as the app: only enabled dimensions used for the line's type, only enabled values used for the line's type, and a line keeps a value it already has.
-- When Plaid creates a line, it needs a value on each required dimension of the line's type. In a workspace created before the recommended dimensions, a CAPEX line needs **PP&E type**, **Investment type** and **Priority**.
-- Plaid knows which dimensions are required. A new line needs a value on each of them, and Plaid cannot clear the value of a required dimension. Plaid refuses a request that breaks the rule and says why, for example "Cost pool is required for spend item creation."
-- Plaid can also create a value in the dimension you name. Without a dimension, the value goes into the default dimension.
-- With read access to analytics, Plaid also reads the settings of each dimension, its number of values and the lines that use it. Ask, for example: "Which dimensions are required?"
+- Kad's search and the `@` mentions in the chat find a budget line by the name of a value it holds on a dimension shown for its type, with or without accents.
+- Kad can set, change or clear a line's value on any dimension when it creates or updates a budget line. Ask for example: "Set the Cost pool of BL-12 to Software". Kad finds the value by its name within that dimension and shows the dimension and the value, before and after, in the preview. Nothing changes until you approve it.
+- Kad follows the same rules as the app: only enabled dimensions used for the line's type, only enabled values used for the line's type, and a line keeps a value it already has.
+- When Kad creates a line, it needs a value on each required dimension of the line's type. In a workspace created before the recommended dimensions, a CAPEX line needs **PP&E type**, **Investment type** and **Priority**.
+- Kad knows which dimensions are required. A new line needs a value on each of them, and Kad cannot clear the value of a required dimension. Kad refuses a request that breaks the rule and says why, for example "Cost pool is required for spend item creation."
+- Kad can also create a value in the dimension you name. Without a dimension, the value goes into the default dimension.
+- With read access to analytics, Kad also reads the settings of each dimension, its number of values and the lines that use it. Ask, for example: "Which dimensions are required?"
 
 ---
 

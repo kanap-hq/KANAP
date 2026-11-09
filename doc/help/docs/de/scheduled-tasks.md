@@ -1,6 +1,6 @@
 # Geplante Aufgaben
 
-Die Seite Geplante Aufgaben listet jeden wiederkehrenden Hintergrundjob auf, den KANAP nach einem Cron-Zeitplan ausführt: Bereinigungen, periodische Synchronisierungen, Zusammenfassungs-E-Mails, Aufbewahrungsdurchsetzung und so weiter. Von hier aus können Sie einen Job anhalten, den Ausführungszeitpunkt ändern, ihn auf Anforderung auslösen und den Verlauf jeder kürzlichen Ausführung einsehen.
+Die Seite Geplante Aufgaben listet jeden wiederkehrenden Hintergrundjob auf, den Kadratis nach einem Cron-Zeitplan ausführt: Bereinigungen, periodische Synchronisierungen, Zusammenfassungs-E-Mails, Aufbewahrungsdurchsetzung und so weiter. Von hier aus können Sie einen Job anhalten, den Ausführungszeitpunkt ändern, ihn auf Anforderung auslösen und den Verlauf jeder kürzlichen Ausführung einsehen.
 
 ## Wo Sie es finden
 

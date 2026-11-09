@@ -1,17 +1,17 @@
 # On-premise operations
 
-The commands on this page run on the KANAP server, in `/opt/kanap` unless stated otherwise. Several of them use two shell variables. Set them once in your terminal session, with your values:
+The commands on this page run on the Kadratis server, in `/opt/kanap` unless stated otherwise. Several of them use two shell variables. Set them once in your terminal session, with your values:
 
 ```bash
-KANAP_HOST=kanap.example.internal    # the name users type to open KANAP, without https://
+KANAP_HOST=kanap.example.internal    # the name users type to open Kadratis, without https://
 ADMIN_EMAIL=admin@example.internal   # the email of an administrator account
 ```
 
-The `curl` commands on this page use `-k`. They check what KANAP answers, so they also accept a certificate the server does not trust (self-signed, or from an internal authority that is not installed on the server).
+The `curl` commands on this page use `-k`. They check what Kadratis answers, so they also accept a certificate the server does not trust (self-signed, or from an internal authority that is not installed on the server).
 
 ## Upgrade procedure
 
-KANAP publishes a new version about once a month. The `stable` branch always points to the latest published version. Every version has an entry in `CHANGELOG.md` at the root of the repository. An entry that needs something from you (a setting to change, a step to run) has "Action required" in its title.
+Kadratis publishes a new version about once a month. The `stable` branch always points to the latest published version. Every version has an entry in `CHANGELOG.md` at the root of the repository. An entry that needs something from you (a setting to change, a step to run) has "Action required" in its title.
 
 **1. Read the changelog before you pull.** Fetch the new state of `stable` and show only the entries you do not have yet. Read the entries marked "Action required" first, and do what they say. The same entries are on the GitHub releases page of the repository.
 
@@ -37,7 +37,7 @@ docker compose -f infra/compose.onprem.yml up -d
 
 `infra/compose.onprem.yml` names the images of the version you checked out. `pull` downloads them from `ghcr.io`, and `up -d` recreates the containers on them. If you build the images yourself (see [Build the images yourself](installation.md#build-the-images-yourself)), run the `build` and `up -d` commands of that section instead of `pull` and `up -d`.
 
-**First upgrade to a version with published images.** Versions up to 26.10.7 were built on the server. The procedure above is all you need to move to a later version. Once the new version runs and passes the checks of step 4, free the build cache and the old images. On a server that built KANAP, they often take 20 GB or more, depending on how many builds it made. Add `kanap-api-tools` to the second line if you built the maintenance tools image.
+**First upgrade to a version with published images.** Versions up to 26.10.7 were built on the server. The procedure above is all you need to move to a later version. Once the new version runs and passes the checks of step 4, free the build cache and the old images. On a server that built Kadratis, they often take 20 GB or more, depending on how many builds it made. Add `kadratis-api-tools` to the second line if you built the maintenance tools image.
 
 ```bash
 docker builder prune -a
@@ -90,7 +90,7 @@ curl -sSk -w '\n' "https://${KANAP_HOST}/api/config/public"
 
 The first command prints the version of the checkout. The second one lists the images of the containers, with their version in the `TAG` column. The third one answers with a JSON document whose `version` field is the version the API reports.
 
-The published images carry a signed record of how they were built: from the version's tag, by the KANAP repository's own workflow. With the GitHub CLI, `gh attestation verify oci://ghcr.io/kanap-hq/kanap-api:26.10.9 -R kanap-hq/KANAP` checks it.
+The published images carry a signed record of how they were built: from the version's tag, by the Kadratis repository's own workflow. With the GitHub CLI, `gh attestation verify oci://ghcr.io/kanap-hq/kadratis-api:26.10.9 -R kanap-hq/KANAP` checks it.
 
 **4. Check the upgrade.**
 
@@ -122,7 +122,7 @@ The last line of the output reads `0 failed`. With `KANAP_INSECURE_TLS=1`, two T
 
 **Rollback.** Migrations only go forward, so a rollback puts back the backup taken before the upgrade, under the previous version:
 
-1. Stop KANAP: `cd /opt/kanap`, then `docker compose -f infra/compose.onprem.yml down`. A rollback often starts in a new terminal, outside `/opt/kanap`.
+1. Stop Kadratis: `cd /opt/kanap`, then `docker compose -f infra/compose.onprem.yml down`. A rollback often starts in a new terminal, outside `/opt/kanap`.
 2. Check out the previous version and download its images. This needs the outbound access of an upgrade: if you closed it after the upgrade, open it first (see [Firewall rules](configuration.md#outbound-installation-and-upgrades)). Run `git checkout v<previous version>` (for example `git checkout v26.10.9`), then `docker compose -f infra/compose.onprem.yml pull`. A version up to 26.10.7 has no published images: build it as the guide of that version explains.
 3. Restore the database and the files from the `before-upgrade-...` directory of that upgrade: choose the backup, then run steps 1 to 3 of [Restore](#restore) in the same terminal. If you changed `.env` for the new version, compare it with the copy in the `config` directory of the backup. This command compares the setting names of the two files without printing their values:
 
@@ -131,16 +131,16 @@ The last line of the output reads `0 failed`. With `KANAP_INSECURE_TLS=1`, two T
     ```
 
     It lists only the names that differ. To compare the values, open both files.
-4. Start KANAP: `docker compose -f infra/compose.onprem.yml up -d --wait`.
+4. Start Kadratis: `docker compose -f infra/compose.onprem.yml up -d --wait`.
 5. Check it as in step 4 above (**Check the upgrade**). Its commands use `KANAP_HOST` and `ADMIN_EMAIL` from the top of this page: in a new terminal, set them first. The restored database holds the accounts and passwords of the backup time: a password changed since then is back to its former value, so the smoke test needs the password that was valid when the backup was taken.
 
-Check out the previous version before you start KANAP: a start with the newer version would run its migrations on the restored database again.
+Check out the previous version before you start Kadratis: a start with the newer version would run its migrations on the restored database again.
 
 After a rollback, stay on the tag of the version you rolled back to. The `git checkout stable` of the upgrade procedure (its step 3) brings the checkout back to the branch at the next upgrade. The checkout (`git describe --tags`) and the running API (`/api/config/public`, see [Which version runs](#upgrade-procedure)) must show the same version. If they differ, the next `pull` and `up -d` change the running version.
 
 ## Version support
 
-KANAP is a quickly evolving solution. Versions are published about once a month, and we recommend upgrading at least monthly.
+Kadratis is a quickly evolving solution. Versions are published about once a month, and we recommend upgrading at least monthly.
 For customers under support, an upgrade to the latest version might be requested before handling a support request.
 
 ## Backup and restore
@@ -161,7 +161,7 @@ sudo -u postgres pg_dump -Fc -f /var/backups/kanap/db-$(date +%F).dump kanap
 sudo -u postgres pg_restore --list /var/backups/kanap/db-$(date +%F).dump | head -5
 ```
 
-**Files.** The `rc` tool of the installation example copies the bucket to a directory. It uses the `kanapstore` alias that the installation defined in root's configuration. The copy mirrors the bucket: files deleted in KANAP disappear from it at the next run. The copy is made through the storage's S3 interface, so it holds the files in the clear. Protect the directory accordingly.
+**Files.** The `rc` tool of the installation example copies the bucket to a directory. It uses the `kanapstore` alias that the installation defined in root's configuration. The copy mirrors the bucket: files deleted in Kadratis disappear from it at the next run. The copy is made through the storage's S3 interface, so it holds the files in the clear. Protect the directory accordingly.
 
 ```bash
 sudo rc mirror --overwrite --remove kanapstore/kanap-files /var/backups/kanap/files
@@ -252,7 +252,7 @@ DUMP=/var/backups/kanap/db-2026-10-09.dump   # your date
 FILES=/var/backups/kanap/files
 ```
 
-**1. Restore the database.** This block stops KANAP, recreates the database owned by the application role and restores the dump. It runs nothing unless the dump file exists and `pg_restore` can read it:
+**1. Restore the database.** This block stops Kadratis, recreates the database owned by the application role and restores the dump. It runs nothing unless the dump file exists and `pg_restore` can read it:
 
 ```bash
 cd /opt/kanap
@@ -290,18 +290,18 @@ sudo -u postgres psql -d kanap -Atc "SELECT count(*) FROM pg_tables WHERE schema
 sudo -u postgres psql -d kanap -Atc "SELECT count(*) FROM pg_class WHERE relrowsecurity AND relforcerowsecurity"
 ```
 
-**4. Start KANAP.**
+**4. Start Kadratis.**
 
 ```bash
 cd /opt/kanap
 docker compose -f infra/compose.onprem.yml up -d --wait
 ```
 
-Then run the smoke test of [Check the upgrade](#upgrade-procedure) and open KANAP in a browser. Accounts and passwords are those of the backup time: sign in with the password that was valid then.
+Then run the smoke test of [Check the upgrade](#upgrade-procedure) and open Kadratis in a browser. Accounts and passwords are those of the backup time: sign in with the password that was valid then.
 
 ## Maintenance tools image
 
-The API image holds the compiled application only. A maintenance command that needs TypeScript, such as `npm run typeorm`, runs in a second image of the same version, `kanap-api-tools`. The `tools` service of `infra/compose.onprem.yml` uses it, with the same `.env`, the same access to `host.docker.internal` and the same certificate directory as the API (see [Certificates from an internal authority](configuration.md#optional-certificates-from-an-internal-authority)). `up` never starts it. The first `run` downloads the image. This example lists the migrations and whether they are applied:
+The API image holds the compiled application only. A maintenance command that needs TypeScript, such as `npm run typeorm`, runs in a second image of the same version, `kadratis-api-tools`. The `tools` service of `infra/compose.onprem.yml` uses it, with the same `.env`, the same access to `host.docker.internal` and the same certificate directory as the API (see [Certificates from an internal authority](configuration.md#optional-certificates-from-an-internal-authority)). `up` never starts it. The first `run` downloads the image. This example lists the migrations and whether they are applied:
 
 ```bash
 cd /opt/kanap
@@ -319,7 +319,7 @@ cd /opt/kanap
 PGVER=18   # 16 on Ubuntu 24.04
 # The libraries PostgreSQL already preloads (often none): the script keeps them.
 CURRENT=$(sudo -u postgres psql -XAtc 'SHOW shared_preload_libraries')
-# PostgreSQL on the same server as KANAP (add --dedicated if it has the server to itself)
+# PostgreSQL on the same server as Kadratis (add --dedicated if it has the server to itself)
 sh infra/postgres/kanap-pg-tune.sh --preload "$CURRENT" | sudo tee /etc/postgresql/${PGVER}/main/conf.d/kanap.conf >/dev/null
 sudo systemctl restart postgresql
 sudo -u postgres psql -d kanap -c 'CREATE EXTENSION IF NOT EXISTS pg_stat_statements'
@@ -332,14 +332,14 @@ Two checks before the restart, both done by the script, which writes the `shared
 - **The list of preloaded libraries.** `shared_preload_libraries` is one list, and the value in `kanap.conf` replaces the one in `postgresql.conf`. Without `--preload`, add the value of `SHOW shared_preload_libraries` in front yourself (for example `'pg_cron,pg_stat_statements'`), then remove the `#`.
 - **The library itself.** PostgreSQL does not start when a preloaded library is missing. It ships with PostgreSQL on Debian and Ubuntu; on RHEL and derivatives, install the contrib package (`postgresql16-contrib`). Check with `ls "$(pg_config --pkglibdir)/pg_stat_statements.so"`.
 
-The restart is needed once, for the memory setting and the statement statistics: plan it in a maintenance window, KANAP cannot reach its database while PostgreSQL restarts. Statements slower than 500 ms then appear in the PostgreSQL log, without their parameters (`log_parameter_max_length = 0`: they can hold personal data). `pg_stat_statements` lists the costliest statements:
+The restart is needed once, for the memory setting and the statement statistics: plan it in a maintenance window, Kadratis cannot reach its database while PostgreSQL restarts. Statements slower than 500 ms then appear in the PostgreSQL log, without their parameters (`log_parameter_max_length = 0`: they can hold personal data). `pg_stat_statements` lists the costliest statements:
 
 ```sql
 SELECT calls, round(mean_exec_time) AS avg_ms, left(query, 80) AS query
 FROM pg_stat_statements ORDER BY total_exec_time DESC LIMIT 10;
 ```
 
-KANAP's migrations also make autovacuum start earlier on the two largest tables (budget amounts). That needs no restart and no memory.
+Kadratis's migrations also make autovacuum start earlier on the two largest tables (budget amounts). That needs no restart and no memory.
 
 ## Monitoring
 
@@ -437,7 +437,7 @@ Start with the API log: `docker compose -f infra/compose.onprem.yml logs --no-lo
 | `[RATE-LIMIT] ... RATE_LIMIT_TRUST_PROXY not set` warning | `.env` | Set `RATE_LIMIT_TRUST_PROXY=true` (nginx in front) or `false` (nothing in front), then `up -d api`. See [Configuration](configuration.md#optional-advanced) |
 | Everyone shares one sign-in limit (`429` for many users) | `RATE_LIMIT_TRUST_PROXY` and the proxy | With a proxy in front, set `true` and make the proxy send `X-Forwarded-For` |
 | `[SECURITY]` warning at each start | `ADMIN_PASSWORD`, `JWT_SECRET` | Change the administrator's password in the application, or see [Password Reset](#password-reset). Use a `JWT_SECRET` of 32 characters or more |
-| `[entrypoint] No migration ran.` after a message about the PostgreSQL role | The line above it, the role in `DATABASE_URL` | The role is a cluster-admin role, or it has `SUPERUSER` or `BYPASSRLS` and KANAP could not remove them. Use a dedicated application role, or run the `ALTER ROLE` command the message gives as a PostgreSQL superuser, then `up -d api`. See [Configuration](configuration.md#required-database) |
+| `[entrypoint] No migration ran.` after a message about the PostgreSQL role | The line above it, the role in `DATABASE_URL` | The role is a cluster-admin role, or it has `SUPERUSER` or `BYPASSRLS` and Kadratis could not remove them. Use a dedicated application role, or run the `ALTER ROLE` command the message gives as a PostgreSQL superuser, then `up -d api`. See [Configuration](configuration.md#required-database) |
 | `[entrypoint] A migration failed, not retried: ...` | The message, the `[entrypoint] Failed statement: ...` line after it, the PostgreSQL version (16 or later) and its extensions | The pending migrations were rolled back: the database is as before this start. Fix the cause and run `up -d api` again, or deploy the previous version |
 | 502 from reverse proxy | `docker compose -f infra/compose.onprem.yml ps` | Ensure the api container is running on port 8080 |
 | 413 from the reverse proxy on an upload | `client_max_body_size` | Set `client_max_body_size 80m;` in the nginx file |

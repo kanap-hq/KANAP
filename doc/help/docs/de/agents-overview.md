@@ -26,14 +26,14 @@ Einige Konzepte tauchen auf jeder Seite in diesem Bereich wieder auf. Lernen Sie
 
 Zwei Agententypen sind heute durchgängig einsatzbereit: der **Helpdesk**-Agent, den der Rest dieses Bereichs beschreibt, und der Agent für **Infrastruktur-Überwachung (SRE)**, der Alarme aus einem verbundenen Überwachungstool liest und Diagnosenotizen zur Prüfung vorbereitet. Andere Typen erscheinen möglicherweise in der Liste der Agententypen, sind aber nicht startbereit.
 
-Zwei weitere KI-Oberflächen lassen sich leicht mit Agenten verwechseln, sind aber eigenständige Dinge: [Plaid](ai-assistant.md) ist der interaktive Chat-Assistent, den Sie selbst steuern, und in den [Plaid-Einstellungen](ai-settings.md) wird eben dieser Assistent konfiguriert. Die Modelle selbst liegen auf der Seite [KI-Modelle](ai-models.md); dort wird das Modell jedes Agenten festgelegt, ebenso wie der Standard der Organisation, auf den er zurückfällt.
+Zwei weitere KI-Oberflächen lassen sich leicht mit Agenten verwechseln, sind aber eigenständige Dinge: [Kad](ai-assistant.md) ist der interaktive Chat-Assistent, den Sie selbst steuern, und in den [Kad-Einstellungen](ai-settings.md) wird eben dieser Assistent konfiguriert. Die Modelle selbst liegen auf der Seite [KI-Modelle](ai-models.md); dort wird das Modell jedes Agenten festgelegt, ebenso wie der Standard der Organisation, auf den er zurückfällt.
 
 ---
 
 ## Das Flotten-Dashboard
 
 !!! note "Agenten warten auf eine Bestätigung"
-    Im gehosteten Dienst läuft ein Agent ohne eigenes Modell auf dem inklusiven KANAP-Modell, sobald ein Administrator dessen Anbieter bestätigt hat. Bis dahin steht oben auf der Seite ein Banner: *Agenten, die das inklusive KANAP-Modell verwenden, sind pausiert, bis ein Administrator es unter Administration > Plaid bestätigt.* Administratoren finden darauf die Schaltfläche **Plaid-Einstellungen öffnen**. Agenten, die an ein von Ihnen angelegtes Modell gebunden sind, arbeiten weiter. Siehe [Das inklusive KANAP-Modell bestätigen](ai-settings.md#das-inklusive-kanap-modell-bestatigen).
+    Im gehosteten Dienst läuft ein Agent ohne eigenes Modell auf dem inklusiven Kadratis-Modell, sobald ein Administrator dessen Anbieter bestätigt hat. Bis dahin steht oben auf der Seite ein Banner: *Agenten, die das inklusive Kadratis-Modell verwenden, sind pausiert, bis ein Administrator es unter Administration > Kad bestätigt.* Administratoren finden darauf die Schaltfläche **Kad-Einstellungen öffnen**. Agenten, die an ein von Ihnen angelegtes Modell gebunden sind, arbeiten weiter. Siehe [Das inklusive Kadratis-Modell bestätigen](ai-settings.md#das-inklusive-kanap-modell-bestatigen).
 
 Fünf gebündelte Kennzahlen stehen ganz oben. Sie beschreiben die gesamte Flotte, nicht einen einzelnen Agenten:
 

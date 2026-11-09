@@ -2,7 +2,7 @@
 
 Rollen legen fest, was eine Person in jedem Modul tun kann. Der Datenzugriff legt fest, auf welchem Teil des Budgets sie es tun kann. Damit verwaltet der IT-Verantwortliche einer Tochtergesellschaft deren Budget, ohne die anderen zu sehen, und ein Bereichsleiter liest die Zeilen seiner eigenen Kostenstellen.
 
-Der Datenzugriff gilt für Budgetzeilen (OPEX und CAPEX) und für Verträge sowie für alles, was sie zeigt: Listen, Summen, Berichte, Suche, Plaid, Exporte. Die anderen Module funktionieren für alle wie bisher.
+Der Datenzugriff gilt für Budgetzeilen (OPEX und CAPEX) und für Verträge sowie für alles, was sie zeigt: Listen, Summen, Berichte, Suche, Kad, Exporte. Die anderen Module funktionieren für alle wie bisher.
 
 Jede Person beginnt mit **Alle Daten**. Nichts ändert sich, solange kein Administrator jemanden begrenzt.
 
@@ -176,7 +176,7 @@ Jede Änderung des Zugriffs einer Person wird im [Audit-Protokoll](admin.md#audi
 
 ## Den Assistenten fragen
 
-[Plaid](ai-assistant.md#tool-calls) liest diese Seite und den Reiter Zugriff der Unternehmen für einen Benutzeradministrator mit Zugriff auf alle Daten. Fragen Sie zum Beispiel: „Wer ist auf Alpha Spain begrenzt?“, „Welche begrenzten Personen haben keinen Knoten?“ oder „Was sieht Marta Ruiz?“ Änderungen am Zugriff einer Person bleiben auf den hier beschriebenen Seiten.
+[Kad](ai-assistant.md#tool-calls) liest diese Seite und den Reiter Zugriff der Unternehmen für einen Benutzeradministrator mit Zugriff auf alle Daten. Fragen Sie zum Beispiel: „Wer ist auf Alpha Spain begrenzt?“, „Welche begrenzten Personen haben keinen Knoten?“ oder „Was sieht Marta Ruiz?“ Änderungen am Zugriff einer Person bleiben auf den hier beschriebenen Seiten.
 
 ## Was eine begrenzte Person sieht { #what-a-limited-person-sees }
 
@@ -192,7 +192,7 @@ Für eine begrenzte Person enthalten Budget und Verträge nur, was ihr Zugriff a
 - Ein verborgener Vertrag erscheint als „Vertrag außerhalb Ihres Zugriffs“, ohne Link.
 - Linklisten (die Zeilen eines Vertrags, einer Anwendung, eines Servers, einer Technologie, eines Projekts oder eines Antrags) zeigen die sichtbaren Links und dann eine Anzahl wie „und 3 Zeilen außerhalb Ihres Zugriffs“. Kein Name, kein Betrag.
 - Der Vertrag einer sichtbaren Zeile öffnet sich schreibgeschützt. Seine Anhänge und Dokumentlinks bleiben geschlossen, mit einer Anzahl wie „2 Anhänge, nur für Personen sichtbar, die diesen Vertrag sehen“.
-- Suche, Plaid, MCP und Exporte zeigen keine Spur eines verborgenen Elements.
+- Suche, Kad, MCP und Exporte zeigen keine Spur eines verborgenen Elements.
 
 Diese Anzahlen erscheinen für Personen, die das Budget lesen dürfen, diese Zeilen aber nicht. Eine Person ohne Budgetrecht sieht in den Bereichen von Anwendungen, Servern und Projekten keine Budgetzeilen und keine Anzahl.
 
@@ -226,8 +226,8 @@ Die Prüfungen, die zu diesen Vorgängen gehören (die Vorschauen der Auswirkung
 
 ## Wenn der Datenzugriff nicht verfügbar ist
 
-Die Begrenzung des Datenzugriffs erfordert einen einmaligen Schritt auf dem Datenbankserver. Solange er nicht erledigt ist, ist **Begrenzt auf** im Benutzerfenster ausgegraut, mit „Die Begrenzung des Datenzugriffs erfordert einen einmaligen Schritt auf der Datenbank, den die Person ausführt, die KANAP betreibt.“ und einem Link zu dieser Seite. **Administration > Datenzugriff** zeigt dieselbe Meldung mit dem, was fehlt.
+Die Begrenzung des Datenzugriffs erfordert einen einmaligen Schritt auf dem Datenbankserver. Solange er nicht erledigt ist, ist **Begrenzt auf** im Benutzerfenster ausgegraut, mit „Die Begrenzung des Datenzugriffs erfordert einen einmaligen Schritt auf der Datenbank, den die Person ausführt, die Kadratis betreibt.“ und einem Link zu dieser Seite. **Administration > Datenzugriff** zeigt dieselbe Meldung mit dem, was fehlt.
 
 On-Premise steht der Schritt im Installationsleitfaden: [Datenzugriff nach Bereich](on-premise/installation.md#optional-data-scoped-access).
 
-Wird der Schritt später rückgängig gemacht, zum Beispiel nach der Wiederherstellung einer Datenbank auf einem anderen Server, werden begrenzte Personen mit „Der Datenzugriff ist vorübergehend nicht verfügbar. Wenden Sie sich an die Person, die KANAP betreibt.“ abgewiesen. Personen mit allen Daten arbeiten weiter. Den Schritt erneut ausführen und die API neu starten bringt die begrenzten Personen zurück. Siehe [Sicherung und Wiederherstellung](on-premise/operations.md#wiederherstellen).
+Wird der Schritt später rückgängig gemacht, zum Beispiel nach der Wiederherstellung einer Datenbank auf einem anderen Server, werden begrenzte Personen mit „Der Datenzugriff ist vorübergehend nicht verfügbar. Wenden Sie sich an die Person, die Kadratis betreibt.“ abgewiesen. Personen mit allen Daten arbeiten weiter. Den Schritt erneut ausführen und die API neu starten bringt die begrenzten Personen zurück. Siehe [Sicherung und Wiederherstellung](on-premise/operations.md#wiederherstellen).

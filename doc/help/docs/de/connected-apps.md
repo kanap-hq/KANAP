@@ -1,6 +1,6 @@
 # Verbundene Apps
 
-Die Registerkarte **Verbundene Apps** listet die Anwendungen auf, die Ihre KANAP-Daten in Ihrem Namen lesen können, etwa Claude, Claude Desktop, Claude Code, ChatGPT oder Grok. Hier sehen Sie diese Zugriffe und trennen sie.
+Die Registerkarte **Verbundene Apps** listet die Anwendungen auf, die Ihre Kadratis-Daten in Ihrem Namen lesen können, etwa Claude, Claude Desktop, Claude Code, ChatGPT oder Grok. Hier sehen Sie diese Zugriffe und trennen sie.
 
 ## Wo Sie es finden
 
@@ -16,7 +16,7 @@ Jede Zeile zeigt:
 - Das Datum, an dem Sie sie verbunden haben
 - Datum und Uhrzeit, zu denen sie zuletzt Ihre Daten gelesen hat
 
-Eine Anwendung liest nur, was Sie in KANAP sehen, im Rahmen Ihrer eigenen Zugriffsrechte. Sie kann nichts ändern.
+Eine Anwendung liest nur, was Sie in Kadratis sehen, im Rahmen Ihrer eigenen Zugriffsrechte. Sie kann nichts ändern.
 
 Um einen Zugriff zu trennen, klicken Sie auf **Trennen** und bestätigen Sie. Die Anwendung verliert den Zugriff sofort. Um sie wieder zu nutzen, verbinden Sie sie in der Anwendung erneut. Das Trennen vergisst auch die Wahl **Diese Anwendung merken**, die Sie beim Verbinden getroffen haben.
 
@@ -26,4 +26,4 @@ Wenn Sie keine verbundene Anwendung und keinen API-Schlüssel haben, zeigt die R
 
 Unter den Verbindungen listet die Registerkarte Ihre eigenen aktiven MCP-API-Schlüssel auf, mit Bezeichnung, Präfix, Erstellungsdatum sowie Datum und Uhrzeit der letzten Verwendung.
 
-Um einen Schlüssel zu stoppen, klicken Sie auf **Widerrufen** und bestätigen Sie. Jeder Client, der den Schlüssel nutzt, verliert den Zugriff sofort, und dies lässt sich nicht rückgängig machen. Ein Administrator erstellt Schlüssel auf der Seite [Plaid-Einstellungen](ai-settings.md#mcp-schlussel-und-verbindungen).
+Um einen Schlüssel zu stoppen, klicken Sie auf **Widerrufen** und bestätigen Sie. Jeder Client, der den Schlüssel nutzt, verliert den Zugriff sofort, und dies lässt sich nicht rückgängig machen. Ein Administrator erstellt Schlüssel auf der Seite [Kad-Einstellungen](ai-settings.md#mcp-schlussel-und-verbindungen).

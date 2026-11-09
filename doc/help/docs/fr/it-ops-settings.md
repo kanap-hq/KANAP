@@ -44,7 +44,7 @@ Pour les longues listes (plus de 25 lignes), le tableau virtualise les lignes, a
 
 ### Les noms identifient les valeurs
 
-Vous ne voyez et ne saisissez jamais que des **noms**. KANAP génère un code interne stable à partir du nom lors du premier enregistrement d'une valeur et le conserve définitivement : renommer une valeur ne casse donc jamais les enregistrements qui l'utilisent. Ce code est visible des intégrateurs dans l'API et peut être utilisé dans les fichiers importés, mais l'export écrit les noms et l'import accepte l'un comme l'autre.
+Vous ne voyez et ne saisissez jamais que des **noms**. Kadratis génère un code interne stable à partir du nom lors du premier enregistrement d'une valeur et le conserve définitivement : renommer une valeur ne casse donc jamais les enregistrements qui l'utilisent. Ce code est visible des intégrateurs dans l'API et peut être utilisé dans les fichiers importés, mais l'export écrit les noms et l'import accepte l'un comme l'autre.
 
 Parce que les noms identifient les valeurs, quelques règles s'appliquent au sein d'une liste :
 
@@ -56,13 +56,13 @@ Une liste qui enfreint l'une de ces règles n'est pas enregistrée tant que vous
 
 ### Supprimer une valeur
 
-**Supprimer** efface une valeur que rien n'utilise. Lorsque des enregistrements référencent encore la valeur, KANAP indique combien (applications, actifs, interfaces, connexions, sites, incidents, sous-réseaux…), avec un lien vers la liste filtrée lorsqu'une liste peut être filtrée sur ce champ, et propose **Ne plus proposer** à la place : la valeur reste visible sur les enregistrements qui l'utilisent déjà et n'est plus proposée pour les nouveaux. Une valeur utilisée n'est jamais supprimée, même via l'API.
+**Supprimer** efface une valeur que rien n'utilise. Lorsque des enregistrements référencent encore la valeur, Kadratis indique combien (applications, actifs, interfaces, connexions, sites, incidents, sous-réseaux…), avec un lien vers la liste filtrée lorsqu'une liste peut être filtrée sur ce champ, et propose **Ne plus proposer** à la place : la valeur reste visible sur les enregistrements qui l'utilisent déjà et n'est plus proposée pour les nouveaux. Une valeur utilisée n'est jamais supprimée, même via l'API.
 
-Les valeurs intégrées que KANAP gère lui-même (les quatre statuts de cycle de vie, les domaines Workgroup et N/A) ne peuvent être ni modifiées ni supprimées. Les zones réseau et types d'actif par défaut peuvent être modifiés et retirés, mais pas supprimés : le serveur les recréerait.
+Les valeurs intégrées que Kadratis gère lui-même (les quatre statuts de cycle de vie, les domaines Workgroup et N/A) ne peuvent être ni modifiées ni supprimées. Les zones réseau et types d'actif par défaut peuvent être modifiés et retirés, mais pas supprimés : le serveur les recréerait.
 
 ### Traduire vos valeurs
 
-Les valeurs que vous saisissez s'affichent telles quelles dans toutes les langues. Pour les afficher dans la langue de chaque utilisateur, utilisez l'action **Traduire** sur une ligne : la boîte de dialogue présente le nom de base (et la description pour les niveaux de classification) ainsi qu'un champ par langue. Un champ laissé vide utilise la traduction automatique tant que la valeur est encore une valeur par défaut de KANAP, sinon le texte de base. L'enregistrement des traductions ne modifie jamais le texte de base, et un nom traduit peut être utilisé dans les fichiers CSV et l'API au même titre que le nom lui-même ; c'est pourquoi il ne doit pas faire doublon avec une autre valeur de la liste.
+Les valeurs que vous saisissez s'affichent telles quelles dans toutes les langues. Pour les afficher dans la langue de chaque utilisateur, utilisez l'action **Traduire** sur une ligne : la boîte de dialogue présente le nom de base (et la description pour les niveaux de classification) ainsi qu'un champ par langue. Un champ laissé vide utilise la traduction automatique tant que la valeur est encore une valeur par défaut de Kadratis, sinon le texte de base. L'enregistrement des traductions ne modifie jamais le texte de base, et un nom traduit peut être utilisé dans les fichiers CSV et l'API au même titre que le nom lui-même ; c'est pourquoi il ne doit pas faire doublon avec une autre valeur de la liste.
 
 Les éditeurs affichent et modifient toujours le texte de base ; lorsque le nom affiché diffère pour votre langue, la ligne l'indique (« Affiché : … »).
 
@@ -102,13 +102,13 @@ La catégorie détermine quels champs apparaissent lors de la modification d'un 
 
 ### Zones d'administration
 
-Les zones de votre modèle d'administration. KANAP fournit les trois tiers du modèle d'administration en tiers, une bonne pratique reconnue :
+Les zones de votre modèle d'administration. Kadratis fournit les trois tiers du modèle d'administration en tiers, une bonne pratique reconnue :
 
 - **Tier 0 (cœur de confiance)** : les annuaires comme Active Directory ou Entra ID, la PKI, les outils d'administration de l'identité, et les systèmes qui les hébergent.
 - **Tier 1 (serveurs et applications)** : les serveurs métier, les applications, les bases de données et le middleware.
 - **Tier 2 (postes de travail)** : les postes de travail et les équipements des utilisateurs.
 
-Renommez-les, ajoutez les vôtres ou retirez-les selon votre politique d'administration ou votre modèle d'accès à privilèges. Les trois tiers apparaissent tant que la liste n'a jamais été enregistrée. Une fois la liste enregistrée, même vide, KANAP ne les ajoute plus : ajoutez-les vous-même si vous en avez besoin.
+Renommez-les, ajoutez les vôtres ou retirez-les selon votre politique d'administration ou votre modèle d'accès à privilèges. Les trois tiers apparaissent tant que la liste n'a jamais été enregistrée. Une fois la liste enregistrée, même vide, Kadratis ne les ajoute plus : ajoutez-les vous-même si vous en avez besoin.
 
 L'ordre de la liste compte : la première zone est la plus sensible. Faites glisser une ligne par sa poignée pour la déplacer. Une nouvelle zone s'ajoute en haut : déplacez-la ensuite à sa place. La page [Zones d'administration](administration-view.md) affiche les zones dans cet ordre et contrôle les actifs par rapport à la première zone qui n'est pas marquée **Ne plus proposer**.
 

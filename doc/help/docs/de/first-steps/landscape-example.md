@@ -1,13 +1,13 @@
 ---
-title: "Ihre IT-Landschaft in KANAP in zehn Minuten: mit dem Beispiel entdecken"
+title: "Ihre IT-Landschaft in Kadratis in zehn Minuten: mit dem Beispiel entdecken"
 description: Die fünf Schritte des Pfads IT-Landkarte am Beispiel Fromage & Co, von der Anwendungsliste bis zum Supportende und Ihrer eigenen Datei.
 ---
 
-# Ihre IT-Landschaft in KANAP in zehn Minuten
+# Ihre IT-Landschaft in Kadratis in zehn Minuten
 
 **Mit dem Beispiel entdecken** · [Mit meinen eigenen Daten beginnen](landscape-own-data.md)
 
-Fromage & Co ist eine fiktive Käsereigruppe, deren Beispiel in Ihren Arbeitsbereich geladen ist. In zehn Minuten lesen Sie anhand ihrer IT-Landschaft das Anwendungsinventar, öffnen eine kritische Anwendung, sehen, wo sie läuft, finden, was sein Supportende erreicht, und sehen, wie Ihre eigene Datei in KANAP kommt.
+Fromage & Co ist eine fiktive Käsereigruppe, deren Beispiel in Ihren Arbeitsbereich geladen ist. In zehn Minuten lesen Sie anhand ihrer IT-Landschaft das Anwendungsinventar, öffnen eine kritische Anwendung, sehen, wo sie läuft, finden, was sein Supportende erreicht, und sehen, wie Ihre eigene Datei in Kadratis kommt.
 
 Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der Startseite, für den Pfad **Die IT-Landkarte** mit **Mit dem vollständigen Beispiel entdecken**. Jeder Schritt der Kachel öffnet seinen Bildschirm mit einem kurzen Hinweis, und das Öffnen markiert ihn als erledigt. Siehe [Testphase: Ihr Pfad und Ihre ersten Schritte](../my-dashboard.md#trial-first-steps).
 
@@ -49,7 +49,7 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 
 **Was Sie tun.** Wählen Sie einen **Zeitraum** und klicken Sie auf eine Zeile, um die betroffenen Server und Anwendungen aufzuklappen. Öffnen Sie eine Technologie aus ihrer Zeile.
 
-**Was Sie sehen.** Was sein Supportende erreicht hat oder innerhalb des Zeitraums erreicht, mit seinem **Status**: **Ohne Support**, **Erweiterter Support** oder **Endet bald**. Bei einer Technologie übernimmt eine mit **Katalog** markierte Version ihre Daten aus dem KANAP-Katalog, der nach den Kalendern der Hersteller aktuell gehalten wird. **IT-Landschaft > Schwachstellen** listet die veröffentlichten Schwachstellen (CVE), die die von Ihnen erfassten Versionen betreffen, mit den betroffenen Servern und Anwendungen.
+**Was Sie sehen.** Was sein Supportende erreicht hat oder innerhalb des Zeitraums erreicht, mit seinem **Status**: **Ohne Support**, **Erweiterter Support** oder **Endet bald**. Bei einer Technologie übernimmt eine mit **Katalog** markierte Version ihre Daten aus dem Kadratis-Katalog, der nach den Kalendern der Hersteller aktuell gehalten wird. **IT-Landschaft > Schwachstellen** listet die veröffentlichten Schwachstellen (CVE), die die von Ihnen erfassten Versionen betreffen, mit den betroffenen Servern und Anwendungen.
 
 ## 5. Ihre Daten
 
@@ -59,16 +59,16 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 
 **Was Sie tun.** Klicken Sie auf **Exportieren**, wählen Sie **CSV** oder **Excel (.xlsx)** und öffnen Sie die Datei. Klicken Sie dann auf **Importieren** und **Beispiel herunterladen**.
 
-**Was Sie sehen.** Der Export beschriftet seine Spalten in Ihrer Sprache, und der Import liest dieselben Spalten: Nutzen Sie ihn als Vorlage für Ihre eigenen Anwendungen. Die Beispielmappe enthält einige Anwendungen, die übrigen Spalten auf einem Blatt **Erweitert** und auf einem Blatt **Hinweise**, was jede Spalte aufnimmt. Verknüpfen Sie danach jede Anwendung im Reiter **Betrieb** mit ihren Technologien: Supportende und Schwachstellen liefert KANAP. **Exportieren** und **Importieren** sehen die Administratoren der Liste.
+**Was Sie sehen.** Der Export beschriftet seine Spalten in Ihrer Sprache, und der Import liest dieselben Spalten: Nutzen Sie ihn als Vorlage für Ihre eigenen Anwendungen. Die Beispielmappe enthält einige Anwendungen, die übrigen Spalten auf einem Blatt **Erweitert** und auf einem Blatt **Hinweise**, was jede Spalte aufnimmt. Verknüpfen Sie danach jede Anwendung im Reiter **Betrieb** mit ihren Technologien: Supportende und Schwachstellen liefert Kadratis. **Exportieren** und **Importieren** sehen die Administratoren der Liste.
 
-Um von einer Datei auszugehen, die Sie schon führen, hängen Sie sie in Plaid mit **Datei anhängen** an eine Nachricht an. Plaid liest die Spaltenüberschriften, den Typ jeder Spalte und die ersten zehn Zeilen und kann sagen, was jede Spalte enthält.
+Um von einer Datei auszugehen, die Sie schon führen, hängen Sie sie in Kad mit **Datei anhängen** an eine Nachricht an. Kad liest die Spaltenüberschriften, den Typ jeder Spalte und die ersten zehn Zeilen und kann sagen, was jede Spalte enthält.
 
 ## Wie es weitergeht
 
-Sie haben das Wesentliche von KANAP für die IT-Landschaft gesehen. Die beiden anderen Pfade dauern ebenfalls zehn Minuten:
+Sie haben das Wesentliche von Kadratis für die IT-Landschaft gesehen. Die beiden anderen Pfade dauern ebenfalls zehn Minuten:
 
-- [Ihr IT-Budget in KANAP in zehn Minuten](budget-example.md)
-- [Ihr Portfolio in KANAP in zehn Minuten](portfolio-example.md)
+- [Ihr IT-Budget in Kadratis in zehn Minuten](budget-example.md)
+- [Ihr Portfolio in Kadratis in zehn Minuten](portfolio-example.md)
 
 Sind die fünf Schritte erledigt, bietet die Kachel diese Pfade an. Während der Testphase bietet sie außerdem **Kennenlerngespräch vereinbaren** an.
 

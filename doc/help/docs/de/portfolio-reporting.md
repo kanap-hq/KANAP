@@ -206,7 +206,7 @@ Der Abschnitt Aufgaben umfasst nur Portfolio-Aufgaben: eigenständige Aufgaben u
 Die Liste der erstellten Projekte enthält eine Spalte **Herkunft**.
 
 - Ein aus einer Anfrage umgewandeltes Projekt zeigt diese Anfrage, zum Beispiel `REQ-12 Cave climate digital twin`. Ein Klick öffnet die Anfrage.
-- Ein Projekt ohne Anfrage zeigt, wie es ins Portfolio gekommen ist, in den Worten, die KANAP überall sonst verwendet: **Fast-track**, **Altbestand** oder **Anfrage**.
+- Ein Projekt ohne Anfrage zeigt, wie es ins Portfolio gekommen ist, in den Worten, die Kadratis überall sonst verwendet: **Fast-track**, **Altbestand** oder **Anfrage**.
 
 ### Einen Abschnitt einklappen
 

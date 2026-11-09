@@ -54,7 +54,7 @@ The most sensitive zone is the first zone of the settings that is not marked **N
 | **Less sensitive host** | The assets to raise: a host that runs an asset of a more sensitive zone (a Tier 1 host that runs a Tier 0 virtual machine, for example), or a member of a cluster in a more sensitive zone (a Tier 1 ESX host in a Tier 0 cluster, for example) |
 | **Application hosted** | The assets of the most sensitive zone that host an application in service. Review whether each application belongs there |
 
-For **Less sensitive host**, KANAP reads the **Contains** relations of the assets and the members of the clusters. What runs an asset must sit in a zone at least as sensitive. A zone marked **No longer offered** or missing from the settings is ignored. An asset without a zone interrupts the check of the chain: KANAP compares neither it nor the assets linked to it, and **Without a zone** lists it.
+For **Less sensitive host**, Kadratis reads the **Contains** relations of the assets and the members of the clusters. What runs an asset must sit in a zone at least as sensitive. A zone marked **No longer offered** or missing from the settings is ignored. An asset without a zone interrupts the check of the chain: Kadratis compares neither it nor the assets linked to it, and **Without a zone** lists it.
 
 Without any zone in the settings, only **Without a zone** shows, and the page asks you to add a zone.
 
@@ -81,7 +81,7 @@ With `infrastructure:member`, a box starts each row:
 
 Changing the search or the filters clears the choice. **Assign to a zone** opens a dialog where you pick a zone, or **No zone** to clear it. A zone marked **No longer offered** cannot be chosen. Before you confirm, the dialog counts the assets whose zone will change out of the assets chosen. One assignment covers up to 5,000 assets: narrow the filters beyond that.
 
-If assets enter the filter between the count and the confirmation, KANAP refuses the change and counts again: check the new number, then confirm. Each changed asset gets an entry in the audit log, as when you edit it.
+If assets enter the filter between the count and the confirmation, Kadratis refuses the change and counts again: check the new number, then confirm. Each changed asset gets an entry in the audit log, as when you edit it.
 
 ## Directory services and domains
 
@@ -95,7 +95,7 @@ If assets enter the filter between the count and the confirmation, KANAP refuses
 | **DNS suffix** | The suffix of its machines' names |
 | **Trusts** | The domains it has a trust with, and the direction of each one |
 | **Accounts**, **Computers** | The numbers recorded in the settings. A dash means none is recorded |
-| **Domain controllers** | How many servers KANAP deduces as controllers of the domain, then their names. Click a name to open the asset |
+| **Domain controllers** | How many servers Kadratis deduces as controllers of the domain, then their names. Click a name to open the asset |
 
 **Trusts** also lists, in grey, the trusts declared on another domain toward this one, with the direction seen from this domain: an outgoing trust of A toward B reads as incoming on B. The directions mean:
 
@@ -103,7 +103,7 @@ If assets enter the filter between the count and the confirmation, KANAP refuses
 - **Incoming**: the other domain trusts this one.
 - **Two-way**: both.
 
-**Domain controllers** are not entered by hand. KANAP takes the servers of the domain (the **Domain** field of the asset's Network tab) that are not retired and that either:
+**Domain controllers** are not entered by hand. Kadratis takes the servers of the domain (the **Domain** field of the asset's Network tab) that are not retired and that either:
 
 - carry a technology of the **Directory and identity** family that is not retired, such as Active Directory, or
 - are assigned with the **Domain controller** server role to an application in service.

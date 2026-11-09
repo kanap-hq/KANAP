@@ -64,9 +64,9 @@ Las filas sobre aplicaciones requieren el derecho de leer las aplicaciones.
 
 ## Preguntar al asistente
 
-[Plaid](ai-assistant.md) lee las dos vistas, **Vencimientos** y **Datos que faltan**, con los mismos derechos que el informe. Nombra cada elemento por su referencia (`APP-4`, `AST-12`, `TEC-3`) y lee un horizonte a la vez: 6, 12, 24 o 36 meses. Plaid lista los vencimientos 30 a la vez y puede leer las páginas siguientes; sus recuentos y totales cubren todos los vencimientos. Cuando usted no puede leer las aplicaciones, Plaid dice que dejó fuera las filas de las aplicaciones.
+[Kad](ai-assistant.md) lee las dos vistas, **Vencimientos** y **Datos que faltan**, con los mismos derechos que el informe. Nombra cada elemento por su referencia (`APP-4`, `AST-12`, `TEC-3`) y lee un horizonte a la vez: 6, 12, 24 o 36 meses. Kad lista los vencimientos 30 a la vez y puede leer las páginas siguientes; sus recuentos y totales cubren todos los vencimientos. Cuando usted no puede leer las aplicaciones, Kad dice que dejó fuera las filas de las aplicaciones.
 
-Plaid también puede añadir versiones de tecnología y corregir sus fechas de soporte, con su aprobación. El fin de soporte de una aplicación es un campo de la aplicación: Plaid lo cambia como cambia la aplicación, con los derechos de la página [Aplicaciones](applications.md).
+Kad también puede añadir versiones de tecnología y corregir sus fechas de soporte, con su aprobación. El fin de soporte de una aplicación es un campo de la aplicación: Kad lo cambia como cambia la aplicación, con los derechos de la página [Aplicaciones](applications.md).
 
 Pregunte, por ejemplo: «¿Qué aplicaciones llegan al fin de soporte en los próximos seis meses?», «Vencimientos de fin de soporte de los próximos doce meses por tipo», «¿Qué fichas hay que completar para el informe de fin de soporte?», «La versión 16 de PostgreSQL termina su soporte el 31/12/2028» o «Borra la fecha de fin del soporte extendido de la versión 14 de TEC-3».
 
@@ -74,4 +74,4 @@ Pregunte, por ejemplo: «¿Qué aplicaciones llegan al fin de soporte en los pr�
 
 - **Resuelva primero los datos que faltan**: un servidor sin sus tecnologías, o una versión sin fecha, nunca aparece en los vencimientos.
 - **Mire a 24 meses para los presupuestos**: una migración prevista para el año próximo necesita su dinero en el presupuesto de este año.
-- **Use el catálogo**: las tecnologías añadidas desde el catálogo llegan con sus fechas de fin de soporte. Proceden de endoflife.date o, para los productos que mantiene KANAP, de las páginas oficiales del editor (consulte [Versiones del catálogo](technologies.md#versiones-del-catalogo)).
+- **Use el catálogo**: las tecnologías añadidas desde el catálogo llegan con sus fechas de fin de soporte. Proceden de endoflife.date o, para los productos que mantiene Kadratis, de las páginas oficiales del editor (consulte [Versiones del catálogo](technologies.md#versiones-del-catalogo)).

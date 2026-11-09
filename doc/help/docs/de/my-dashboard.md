@@ -1,10 +1,10 @@
 # Mein Dashboard
 
-Das Dashboard ist Ihre persönliche Startseite in KANAP. Es bietet Ihnen einen schnellen Überblick über Ihre Aufgaben, Projekte, Anwendungen und Ihr Budget. Sie wählen seine Kacheln und ihre Reihenfolge. Kacheln, für die Sie keine Berechtigung haben, sind ausgeblendet.
+Das Dashboard ist Ihre persönliche Startseite in Kadratis. Es bietet Ihnen einen schnellen Überblick über Ihre Aufgaben, Projekte, Anwendungen und Ihr Budget. Sie wählen seine Kacheln und ihre Reihenfolge. Kacheln, für die Sie keine Berechtigung haben, sind ausgeblendet.
 
 ## Wo Sie es finden
 
-- Klicken Sie auf das **KANAP**-Logo oder navigieren Sie zu `/`
+- Klicken Sie auf das **Kadratis**-Logo oder navigieren Sie zu `/`
 - Dies ist die Standardseite nach der Anmeldung für Nicht-Admin-Benutzer.
 - Es sind keine besonderen Berechtigungen erforderlich, um das Dashboard selbst anzuzeigen, aber einzelne Kacheln hängen von Ihren Zugriffsrechten ab.
 
@@ -38,20 +38,20 @@ Nach dem Speichern wird die Zeitzusammenfassungs-Kachel des Dashboards automatis
 
 ## Zeile zu den Beispieldaten
 
-In einem leeren Cloud-Arbeitsbereich, in den noch nie Beispieldaten geladen wurden, sehen Administratoren über den Kacheln eine Zeile: „Entdecken Sie KANAP mit Beispieldaten.“ **Laden** öffnet den Dialog für Beispieldaten, und **Ausblenden** entfernt die Zeile dauerhaft. Die Zeile verschwindet, sobald der Arbeitsbereich Daten enthält, und kehrt nach dem Löschen nicht zurück. Siehe [Beispieldaten](sample-data.md).
+In einem leeren Cloud-Arbeitsbereich, in den noch nie Beispieldaten geladen wurden, sehen Administratoren über den Kacheln eine Zeile: „Entdecken Sie Kadratis mit Beispieldaten.“ **Laden** öffnet den Dialog für Beispieldaten, und **Ausblenden** entfernt die Zeile dauerhaft. Die Zeile verschwindet, sobald der Arbeitsbereich Daten enthält, und kehrt nach dem Löschen nicht zurück. Siehe [Beispieldaten](sample-data.md).
 
 ## Testphase: Ihr Pfad und Ihre ersten Schritte { #trial-first-steps }
 
-In einem Arbeitsbereich in der Testphase öffnet sich beim ersten Öffnen von KANAP ein Dialog. Er stellt eine Frage pro Bildschirm:
+In einem Arbeitsbereich in der Testphase öffnet sich beim ersten Öffnen von Kadratis ein Dialog. Er stellt eine Frage pro Bildschirm:
 
-1. **Was führt Sie zu KANAP?** **Das IT-Budget**, **Die IT-Landkarte**, **Projekte und Anfragen** oder **Ich schaue mich um**.
+1. **Was führt Sie zu Kadratis?** **Das IT-Budget**, **Die IT-Landkarte**, **Projekte und Anfragen** oder **Ich schaue mich um**.
 2. **Wie möchten Sie beginnen?** **Mit dem vollständigen Beispiel entdecken** oder **Mit meinen eigenen Daten beginnen**.
 
 Wer mit den eigenen Daten beginnt, löscht das Beispiel. Wurden seit dem Laden des Beispiels Elemente angelegt, nennt eine Bestätigung deren Anzahl, bevor etwas gelöscht wird. Solange der Arbeitsbereich das Beispiel enthält, kann nur ein Administrator die eigenen Daten wählen. Das Beispiel lässt sich nur in einen leeren Arbeitsbereich laden. Wählt ein Administrator während der Testphase das Beispiel, obwohl der Arbeitsbereich Daten enthält, muss er ihn zuerst löschen: Die Bestätigung fragt nach dem Namen des Arbeitsbereichs und bietet **Inhalt des Arbeitsbereichs ansehen** an. Der Arbeitsbereich wird gelöscht, dann wird das Beispiel geladen. Nach der Testphase wird die Wahl abgelehnt und Ihr Pfad bleibt unverändert.
 
 Während das Beispiel geladen oder der Arbeitsbereich gelöscht wird, weist eine Zeile auf der Startseite darauf hin.
 
-Wenn Sie den Dialog schließen, wartet die Wahl unter **Über KANAP**. Die Zeile **Pfad: … · Ändern** zeigt den gewählten Pfad (**Wählen**, solange nichts gewählt ist). Solange eine Antwort fehlt, kann jede Person ihn ändern. Danach können es nur Administratoren.
+Wenn Sie den Dialog schließen, wartet die Wahl unter **Über Kadratis**. Die Zeile **Pfad: … · Ändern** zeigt den gewählten Pfad (**Wählen**, solange nichts gewählt ist). Solange eine Antwort fehlt, kann jede Person ihn ändern. Danach können es nur Administratoren.
 
 ### Ihre ersten fünf Schritte
 
@@ -60,13 +60,13 @@ Sobald ein Pfad gewählt ist, steht die Kachel **Ihre ersten fünf Schritte** an
 - Mit dem Beispiel gilt ein Schritt als erledigt, sobald Sie ihn öffnen.
 - Mit Ihren eigenen Daten gilt ein Schritt, der etwas anlegt, als erledigt, sobald es existiert. Für die anderen Schritte klicken Sie auf **Erledigt** in der Erklärung oder auf die Markierung neben dem Schritt in der Kachel. Die Markierung macht einen Schritt auch wieder rückgängig, außer wenn sein Element existiert.
 
-Wenn die fünf Schritte erledigt sind, bietet die Kachel die beiden anderen Pfade an. Jederzeit öffnet **Pfad wechseln** in der Kopfzeile der Kachel die Frage nach dem Pfad erneut. Wie bei der Zeile unter **Über KANAP** kann jede Person es nutzen, solange eine Antwort fehlt, danach nur Administratoren. Die Schaltfläche zum Schließen (**×**) blendet die Kachel aus. Um sie wieder anzuzeigen, verwenden Sie **Erste Schritte anzeigen** unter **Über KANAP**.
+Wenn die fünf Schritte erledigt sind, bietet die Kachel die beiden anderen Pfade an. Jederzeit öffnet **Pfad wechseln** in der Kopfzeile der Kachel die Frage nach dem Pfad erneut. Wie bei der Zeile unter **Über Kadratis** kann jede Person es nutzen, solange eine Antwort fehlt, danach nur Administratoren. Die Schaltfläche zum Schließen (**×**) blendet die Kachel aus. Um sie wieder anzuzeigen, verwenden Sie **Erste Schritte anzeigen** unter **Über Kadratis**.
 
-Während der Testphase bietet die Kachel außerdem **Kennenlerngespräch vereinbaren** an: ein 30-minütiges Videogespräch über Ihre Situation und Ihre Fragen, das Sie auf der sich öffnenden Seite zu einem passenden Zeitpunkt buchen. Derselbe Link steht unter **Über KANAP** nach den verbleibenden Testtagen.
+Während der Testphase bietet die Kachel außerdem **Kennenlerngespräch vereinbaren** an: ein 30-minütiges Videogespräch über Ihre Situation und Ihre Fragen, das Sie auf der sich öffnenden Seite zu einem passenden Zeitpunkt buchen. Derselbe Link steht unter **Über Kadratis** nach den verbleibenden Testtagen.
 
 | Pfad | Mit dem Beispiel | Mit Ihren eigenen Daten |
 |---|---|---|
-| IT-Budget | Die Übersicht, Eine Budgetzeile, Ein Bericht, Eine Frage an Plaid, Ihre Daten | Ihr Unternehmen, Ihre Budgetzeilen, Ein verknüpfter Vertrag, Ihr erster Bericht, Eine Kollegin, ein Kollege |
+| IT-Budget | Die Übersicht, Eine Budgetzeile, Ein Bericht, Eine Frage an Kad, Ihre Daten | Ihr Unternehmen, Ihre Budgetzeilen, Ein verknüpfter Vertrag, Ihr erster Bericht, Eine Kollegin, ein Kollege |
 | IT-Landkarte | Die Anwendungsliste, Ein Anwendungsdatensatz, Die Server, Technologien, Supportende und Schwachstellen, Ihre Daten | Ihre Standorte, Ihre Anwendungen, Ihre Technologien, Ihre Server, Eine Kollegin, ein Kollege |
 | Projekte und Anfragen | Eine Anfrage und ihre Bewertung, Das aus der Anfrage entstandene Projekt, Die Aufgaben, Die Berichte, Ihre Daten | Ihre erste Anfrage, Ihr Projekt, Die ersten Aufgaben, Das Budget des Projekts, Ihr Mitwirkendenprofil |
 
@@ -223,7 +223,7 @@ Die Stufen sind die in den Einstellungen der IT-Landschaft definierten; eine nic
 
 ### Schwachstellen im Bestand { #vulnerabilities }
 
-Zeigt die Schwachstellen, die in Ihrem Bestand Aufmerksamkeit brauchen, unter dem Untertitel „Zu prüfende CVEs in eingesetzten Technologien“. Die Zählungen folgen [Was KANAP zählt](vulnerabilities.md#what-kanap-counts): noch zu prüfende Schwachstellen in den Warnungen. Jede Zeile öffnet die passende Liste:
+Zeigt die Schwachstellen, die in Ihrem Bestand Aufmerksamkeit brauchen, unter dem Untertitel „Zu prüfende CVEs in eingesetzten Technologien“. Die Zählungen folgen [Was Kadratis zählt](vulnerabilities.md#what-kanap-counts): noch zu prüfende Schwachstellen in den Warnungen. Jede Zeile öffnet die passende Liste:
 
 - **Anwendungen der höchsten Kritikalität mit einer kritischen oder hohen CVE**, zum Beispiel „2 Anwendungen der Kritikalität Kritisch mit einer kritischen oder hohen CVE“: die Anwendungen auf der höchsten Stufe der Geschäftskritikalität Ihres Katalogs, die eine kritische oder hohe Schwachstelle erreicht. Öffnet die Anwendungsliste, gefiltert auf diese Stufe und auf **Mit schwerwiegenden Schwachstellen**. Erfordert `applications:reader` und zählt die Anwendungen, die Sie lesen dürfen.
 - **Kritische CVEs in den letzten 7 Tagen** und **in den letzten 30 Tagen veröffentlicht**, auf Technologien im Bestand: installiert auf einem Asset in Betrieb oder deklariert von einer Anwendung in Betrieb. Öffnet die Seite [Schwachstellen](vulnerabilities.md) auf diesen Schwachstellen, mit dem Filter **Im Bestand im Einsatz**.

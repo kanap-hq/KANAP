@@ -1,6 +1,6 @@
 # On-premise deployment
 
-KANAP can be deployed on-premise in **single-tenant mode**. You provide your own PostgreSQL, S3-compatible storage, and TLS reverse proxy. KANAP handles everything else: migrations run automatically, the tenant and admin user are created on first boot. There is no user limit.
+Kadratis can be deployed on-premise in **single-tenant mode**. You provide your own PostgreSQL, S3-compatible storage, and TLS reverse proxy. Kadratis handles everything else: migrations run automatically, the tenant and admin user are created on first boot. There is no user limit.
 
 ## Guides
 
@@ -29,7 +29,7 @@ KANAP can be deployed on-premise in **single-tenant mode**. You provide your own
 
 ## Quick notes
 
-- **Versions.** KANAP publishes a version about once a month (`26.10.1` is the first). You install the `stable` branch, which always points to the latest published version, and upgrade by pulling it after reading `CHANGELOG.md`. Upgrade at least monthly. See [Operations](operations.md#upgrade-procedure).
+- **Versions.** Kadratis publishes a version about once a month (`26.10.1` is the first). You install the `stable` branch, which always points to the latest published version, and upgrade by pulling it after reading `CHANGELOG.md`. Upgrade at least monthly. See [Operations](operations.md#upgrade-procedure).
 - **Platform.** The example uses Ubuntu 26.04 LTS (Ubuntu 24.04 works). Any OS with Docker Engine 24+ and the Docker Compose plugin 2.20 or later (current releases are 5.x) is supported.
 - **Storage.** The example runs RustFS on the server. Any S3-compatible storage works, and an existing MinIO keeps working.
 - **Internal networks.** No public DNS is needed. Use a name from your company DNS (or a hosts file entry for a test) with a certificate from your internal authority. See [Name and certificate](installation.md#name-and-certificate).

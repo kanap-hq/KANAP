@@ -25,7 +25,7 @@ Solange der Standort erstellt wird, zeigt die Kopfzeile **Erstellen** und **Abbr
 Die Liste gibt Ihnen einen durchsuchbaren Überblick über jeden registrierten Standort.
 
 **Standardspalten**:
-- **Referenz**: Die von KANAP vergebene Referenz (`LOC-4`). Klicken Sie darauf, um den Arbeitsbereich zu öffnen.
+- **Referenz**: Die von Kadratis vergebene Referenz (`LOC-4`). Klicken Sie darauf, um den Arbeitsbereich zu öffnen.
 - **Name**: Anzeigename
 - **Hosting-Typ**: On-prem, Colocation, Public Cloud usw.
 - **Anbieter / Unternehmen**: Cloud-Anbieter für Cloud-Typ-Standorte oder Betreiberunternehmen für On-prem-Standorte

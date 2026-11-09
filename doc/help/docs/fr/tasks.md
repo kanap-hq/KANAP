@@ -1,6 +1,6 @@
 # Tâches
 
-Les Tâches vous aident à suivre les actions, les livrables et les lots de travail à travers vos entités KANAP. Elles servent pour les rappels de renouvellement, les relances, les contrôles de conformité, les livrables de projet et tout autre travail nécessitant un suivi.
+Les Tâches vous aident à suivre les actions, les livrables et les lots de travail à travers vos entités Kadratis. Elles servent pour les rappels de renouvellement, les relances, les contrôles de conformité, les livrables de projet et tout autre travail nécessitant un suivi.
 
 ## Premiers pas
 
@@ -12,7 +12,7 @@ Lorsque vous cliquez sur **Nouvelle**, la page de la tâche s'ouvre avec un titr
 
 1. **Saisissez le titre** (obligatoire) dans l'en-tête.
 
-2. **Appuyez sur Entrée**, ou quittez le champ. KANAP crée la tâche aussitôt, avec ces valeurs par défaut :
+2. **Appuyez sur Entrée**, ou quittez le champ. Kadratis crée la tâche aussitôt, avec ces valeurs par défaut :
    - **Statut** : **Ouverte**
    - **Priorité** : **Normale**
    - **Assignée à** et **Demandeur** : vous
@@ -29,7 +29,7 @@ Lorsque vous cliquez sur **Nouvelle**, la page de la tâche s'ouvre avec un titr
    - **Dates** : Définir les dates de début et d'échéance
    - **Assignée à**, **Statut**, **Priorité** : Modifiez-les si nécessaire
 
-4. Cliquez sur **Créer** pour garder la tâche. Vous revenez là où vous avez commencé : une tâche commencée depuis l'onglet **Tâches** d'un projet revient à cet onglet. Cliquez sur **Annuler** pour supprimer la tâche à la place. KANAP demande d'abord confirmation lorsque vous avez saisi plus que le titre.
+4. Cliquez sur **Créer** pour garder la tâche. Vous revenez là où vous avez commencé : une tâche commencée depuis l'onglet **Tâches** d'un projet revient à cet onglet. Cliquez sur **Annuler** pour supprimer la tâche à la place. Kadratis demande d'abord confirmation lorsque vous avez saisi plus que le titre.
 
 Appuyer sur **Échap** sur le titre vide équivaut à **Annuler**. Quitter la tâche de toute autre façon la conserve.
 
@@ -162,7 +162,7 @@ L'onglet **Vue d'ensemble** contient le contenu de la tâche.
 Le tiroir est rétractable (cliquez sur l'onglet vertical **Propriétés** sur le bord droit pour ouvrir ou fermer ; appuyez sur **P** comme raccourci). Sa largeur et son état d'ouverture sont mémorisés localement. Le tiroir contient quatre groupes, séparés par des séparateurs :
 
 **Contexte** :
-  - **Lié à** : Autonome, Projet, Budget (une ligne OPEX ou CAPEX), Contrat ou Incident. Vous pouvez changer le type et choisir un nouvel élément ; à l'enregistrement, KANAP applique tous les effets secondaires associés (voir [Changer le contexte d'une tâche](#changer-le-contexte-dune-tache))
+  - **Lié à** : Autonome, Projet, Budget (une ligne OPEX ou CAPEX), Contrat ou Incident. Vous pouvez changer le type et choisir un nouvel élément ; à l'enregistrement, Kadratis applique tous les effets secondaires associés (voir [Changer le contexte d'une tâche](#changer-le-contexte-dune-tache))
   - **Phase** (tâches de projet uniquement) : Par défaut sur **Niveau projet** sauf si vous choisissez une phase de projet
   - **Type de tâche** : Tâche, Bug, Problème, Incident, ou tout type personnalisé configuré par votre administrateur
   - **Étiquettes** : Mots libres, par exemple urgent ou suivi. Saisissez-en un et appuyez sur Entrée. Ils s'affichent en pastilles. Une personne en lecture voit les pastilles
@@ -189,7 +189,7 @@ Le tiroir est rétractable (cliquez sur l'onglet vertical **Propriétés** sur l
 
 ### Changer le contexte d'une tâche
 
-Lorsque vous changez le contexte d'une tâche et enregistrez, KANAP applique le changement en une seule opération (contexte plus toutes les autres modifications éditées ensemble).
+Lorsque vous changez le contexte d'une tâche et enregistrez, Kadratis applique le changement en une seule opération (contexte plus toutes les autres modifications éditées ensemble).
 
 - **Projet vers Autonome** : La phase est effacée, la classification est conservée
 - **Projet vers OPEX/Contrat/CAPEX** : La phase et la classification sont effacées
@@ -280,7 +280,7 @@ Les pièces jointes sont visibles à toute personne pouvant consulter la tâche.
 
 ## Import et export de description
 
-Le champ description prend en charge l'import et l'export de documents afin que vous puissiez travailler avec du contenu en dehors de KANAP.
+Le champ description prend en charge l'import et l'export de documents afin que vous puissiez travailler avec du contenu en dehors de Kadratis.
 
 ### Importer un document
 
@@ -358,7 +358,7 @@ Les liens sont bidirectionnels : depuis l'espace de travail de l'Application ou 
 
 **Conseil** : Réservez ces liens aux tâches qui concernent opérationnellement l'app ou l'actif, pas à chaque tâche qui mentionne l'un d'eux en passant. Sinon la relation devient du bruit au lieu d'un signal.
 
-Vous ne voyez chaque fiche liée que si vous pouvez lire son module : les applications demandent les applications, les actifs l'infrastructure. Il en va de même pour la fiche à laquelle appartient une tâche : un projet demande les projets, une ligne budgétaire le budget, un contrat les contrats, un incident les incidents. Sinon le champ est absent du tiroir, de la liste et de Plaid, et la tâche garde son lien. Un Business Contributor ne voit en outre le projet, sa phase, la demande créée à partir de la tâche et les applications que s'il y participe : une seule application hors de sa participation masque le champ **Applications**.
+Vous ne voyez chaque fiche liée que si vous pouvez lire son module : les applications demandent les applications, les actifs l'infrastructure. Il en va de même pour la fiche à laquelle appartient une tâche : un projet demande les projets, une ligne budgétaire le budget, un contrat les contrats, un incident les incidents. Sinon le champ est absent du tiroir, de la liste et de Kad, et la tâche garde son lien. Un Business Contributor ne voit en outre le projet, sa phase, la demande créée à partir de la tâche et les applications que s'il y participe : une seule application hors de sa participation masque le champ **Applications**.
 
 ---
 
@@ -384,7 +384,7 @@ Dans la **Vue d'ensemble** d'un contrat, utilisez la section **Tâches** pour :
 - « Demander des conditions mises à jour au fournisseur »
 - « Récupérer l'avenant signé »
 
-Inutile de créer vous-même les tâches de renouvellement : KANAP donne une tâche au responsable du contrat quand une décision de renouvellement est attendue. Voir [Contrats](contracts.md#decisions-de-renouvellement).
+Inutile de créer vous-même les tâches de renouvellement : Kadratis donne une tâche au responsable du contrat quand une décision de renouvellement est attendue. Voir [Contrats](contracts.md#decisions-de-renouvellement).
 
 ### Depuis les lignes CAPEX
 Dans l'espace de travail CAPEX, les tâches suivent les jalons du projet :
@@ -682,7 +682,7 @@ Vous pouvez promouvoir une tâche en demande de portefeuille lorsque le travail 
    - **Fermer la tâche d'origine après conversion** : Cochez cette option si vous voulez que le statut de la tâche soit défini sur **Terminée** automatiquement
 4. Cliquez sur **Convertir en demande**
 
-Après conversion, KANAP vous redirige vers l'espace de travail de la demande nouvellement créée.
+Après conversion, Kadratis vous redirige vers l'espace de travail de la demande nouvellement créée.
 
 ### Ce qui est reporté
 

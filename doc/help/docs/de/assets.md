@@ -8,7 +8,7 @@ Navigieren Sie zu **IT-Landschaft > Assets**, um Ihr Asset-Inventar zu sehen. So
 
 1. Klicken Sie auf **Asset hinzufügen**, dann auf **Asset hinzufügen** oder **Cluster hinzufügen**. Die Seite des Assets öffnet sich mit einem leeren Titel in der Kopfzeile. Der Rest der Seite ist abgeblendet.
 2. Geben Sie den Namen des Assets ein, höchstens 200 Zeichen.
-3. Drücken Sie die Eingabetaste oder klicken Sie außerhalb des Titels. KANAP erstellt das Asset sofort. Seine Referenz (`AST-12`) erscheint und alle Reiter öffnen sich.
+3. Drücken Sie die Eingabetaste oder klicken Sie außerhalb des Titels. Kadratis erstellt das Asset sofort. Seine Referenz (`AST-12`) erscheint und alle Reiter öffnen sich.
 
 Das neue Asset ist eine virtuelle Maschine in der Umgebung Prod, mit dem Lebenszyklus Aktiv. Haben Ihre Asset-Typen keine virtuelle Maschine, erhält es den ersten Typ der Liste. **Cluster hinzufügen** erstellt es mit eingeschaltetem Schalter **Cluster**. Danach speichert jedes Feld für sich, sodass Sie Typ oder Umgebung sofort ändern können.
 
@@ -23,7 +23,7 @@ Das neue Asset ist eine virtuelle Maschine in der Umgebung Prod, mit dem Lebensz
 
 Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erstellen. Ein abgelehnter Name erscheint unter dem Titel.
 
-**Eindeutige Namen**: Zwei Assets können weder denselben Namen noch denselben FQDN haben. Groß- und Kleinschreibung sowie Leerzeichen am Anfang oder Ende zählen nicht. KANAP lehnt das Duplikat ab und nennt das Asset, das den Wert bereits hat (`AST-12`). Früher erfasste Duplikate bleiben bearbeitbar, solange Sie diesen Wert nicht ändern.
+**Eindeutige Namen**: Zwei Assets können weder denselben Namen noch denselben FQDN haben. Groß- und Kleinschreibung sowie Leerzeichen am Anfang oder Ende zählen nicht. Kadratis lehnt das Duplikat ab und nennt das Asset, das den Wert bereits hat (`AST-12`). Früher erfasste Duplikate bleiben bearbeitbar, solange Sie diesen Wert nicht ändern.
 
 **Tipp**: Verwenden Sie konsistente Namenskonventionen, die Umgebungs- und Rolleninformationen enthalten (z. B. `prod-web-01`, `dev-db-master`). Beim Erstellen eines neuen Assets wird der Hostname automatisch aus dem eingegebenen Namen abgeleitet.
 
@@ -36,10 +36,10 @@ Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu er
 
 Solange das Asset erstellt wird, zeigt seine Kopfzeile **Erstellen** und **Abbrechen** anstelle der Schaltfläche zum Schließen. Beide bleiben, bis Sie das Asset verlassen.
 
-- **Erstellen** prüft, ob das Asset einen Standort hat. Ohne Standort nennt eine Meldung den fehlenden Standort, und das Feld **Standort** des Eigenschaftenbereichs erhält den Fokus. Das Asset bleibt geöffnet. Mit Standort behält KANAP das Asset und schließt es. Sie kehren dorthin zurück, wo Sie begonnen haben
+- **Erstellen** prüft, ob das Asset einen Standort hat. Ohne Standort nennt eine Meldung den fehlenden Standort, und das Feld **Standort** des Eigenschaftenbereichs erhält den Fokus. Das Asset bleibt geöffnet. Mit Standort behält Kadratis das Asset und schließt es. Sie kehren dorthin zurück, wo Sie begonnen haben
 - **Abbrechen** löscht das Asset. Wenn Sie mehr als den Namen eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Assets abbrechen
 
-Verlassen Sie das Asset auf andere Weise (Zurück-Pfeil, Menü, ein anderes Asset), solange es keinen Standort hat, fragt KANAP nach. **Vervollständigen** lässt Sie auf dem Asset, im Feld **Standort**. **Löschen** löscht das Asset.
+Verlassen Sie das Asset auf andere Weise (Zurück-Pfeil, Menü, ein anderes Asset), solange es keinen Standort hat, fragt Kadratis nach. **Vervollständigen** lässt Sie auf dem Asset, im Feld **Standort**. **Löschen** löscht das Asset.
 
 ---
 
@@ -91,7 +91,7 @@ Die meisten Spalten unterstützen Kontrollkästchen-Set-Filter für die schnelle
 | Administrationszone | Enthält „(Leer)“ für Assets ohne Zone |
 | Zu prüfende Schwachstellen | **Mit schwerwiegenden Schwachstellen**, **Mit Schwachstellen** oder **Ohne**. Ein außer Betrieb genommenes Asset fällt unter keinen dieser Werte |
 
-Die Sortierung nach **Zu prüfende Schwachstellen** ordnet die Assets nach ihren kritischen oder hohen Schwachstellen, dann nach ihrer Gesamtzahl. Außer Betrieb genommene Assets stehen zuletzt. Die Spalte zählt nur direkte Verknüpfungen: Eine virtuelle Maschine zählt die Schwachstellen ihres Hosts nicht. Siehe [Was KANAP zählt](vulnerabilities.md#what-kanap-counts).
+Die Sortierung nach **Zu prüfende Schwachstellen** ordnet die Assets nach ihren kritischen oder hohen Schwachstellen, dann nach ihrer Gesamtzahl. Außer Betrieb genommene Assets stehen zuletzt. Die Spalte zählt nur direkte Verknüpfungen: Eine virtuelle Maschine zählt die Schwachstellen ihres Hosts nicht. Siehe [Was Kadratis zählt](vulnerabilities.md#what-kanap-counts).
 
 **Die Schnellsuche** durchsucht Name, Referenz, Hostname, FQDN, IP-Adressen, Cluster, Standort, Unterstandort und Betriebssystem.
 
@@ -124,9 +124,9 @@ Wo zugeordnet wird, hängt vom Cluster ab:
 
 Ein Mitglied führt aus, was seinem Cluster zugeordnet ist. Ein Asset, das der Cluster enthält, läuft darin und erbt nichts.
 
-Wenn Sie eine Anwendung einem Mitglied eines Clusters zuordnen, fragt KANAP **Dem Cluster zuordnen?**: **Dem Cluster zuordnen** legt die Zuordnung für alle Mitglieder auf den Cluster, **Nur diesem Server** behält sie auf diesem Server. Die Frage nennt die Mitglieder, deren eigene Zuordnung mit derselben Umgebung und Rolle durch die des Clusters ersetzt wird. Die Zuordnung des Clusters übernimmt dann das früheste Datum **Seit** und ihre Notizen. Hostet das Mitglied die Anwendung in dieser Rolle bereits über seinen Cluster, wird nichts angelegt und eine Meldung sagt es. Eine Zuordnung über den Assistenten folgt denselben Regeln, ohne die Frage.
+Wenn Sie eine Anwendung einem Mitglied eines Clusters zuordnen, fragt Kadratis **Dem Cluster zuordnen?**: **Dem Cluster zuordnen** legt die Zuordnung für alle Mitglieder auf den Cluster, **Nur diesem Server** behält sie auf diesem Server. Die Frage nennt die Mitglieder, deren eigene Zuordnung mit derselben Umgebung und Rolle durch die des Clusters ersetzt wird. Die Zuordnung des Clusters übernimmt dann das früheste Datum **Seit** und ihre Notizen. Hostet das Mitglied die Anwendung in dieser Rolle bereits über seinen Cluster, wird nichts angelegt und eine Meldung sagt es. Eine Zuordnung über den Assistenten folgt denselben Regeln, ohne die Frage.
 
-Überall, wo KANAP liest, wo eine Anwendung läuft, zählt es die Mitglieder des Clusters: die Schwachstellen und das Support-Ende der Anwendung, ihren Hosting-Typ (ein Cluster ohne Standort übernimmt den Hosting-Typ seiner Mitglieder), die Administrationszonen, die Anwendungen eines Standorts oder eines Vertrags auf einem Server, den Assistenten und die Wissensdatenbank. In der Auswirkung eines ausgefallenen Mitglieds ist der Cluster beeinträchtigt, und seine Anwendungen laufen weiter. Siehe [Abhängigkeiten](#dependencies).
+Überall, wo Kadratis liest, wo eine Anwendung läuft, zählt es die Mitglieder des Clusters: die Schwachstellen und das Support-Ende der Anwendung, ihren Hosting-Typ (ein Cluster ohne Standort übernimmt den Hosting-Typ seiner Mitglieder), die Administrationszonen, die Anwendungen eines Standorts oder eines Vertrags auf einem Server, den Assistenten und die Wissensdatenbank. In der Auswirkung eines ausgefallenen Mitglieds ist der Cluster beeinträchtigt, und seine Anwendungen laufen weiter. Siehe [Abhängigkeiten](#dependencies).
 
 Die Mitglieder werden oben im Reiter **Betrieb** des Clusters verwaltet. Siehe [Betrieb](#operations). Die Regeln:
 
@@ -141,7 +141,7 @@ Installationen, die von einer früheren Version aktualisiert wurden, behalten ih
 
 Ein Virtualisierungscluster enthält seine virtuellen Maschinen: Fügen Sie sie im Abschnitt **Enthält** des Clusters hinzu, im Reiter **Abhängigkeiten**. Eine Maschine im Cluster kann auf jedem seiner Hosts laufen.
 
-Wenn Sie eine Beziehung **Enthält** von einem Host aus hinzufügen, der zu einem Cluster gehört, fragt KANAP **Im Cluster platzieren?**. **Im Cluster platzieren** legt die Beziehung auf den Cluster. **Nur dieser Host** behält sie auf dem Host. Dieselbe Frage kommt, wenn Sie einen solchen Host unter **Enthalten in** hinzufügen. Ein ausgemusterter Host oder Cluster löst keine Frage aus.
+Wenn Sie eine Beziehung **Enthält** von einem Host aus hinzufügen, der zu einem Cluster gehört, fragt Kadratis **Im Cluster platzieren?**. **Im Cluster platzieren** legt die Beziehung auf den Cluster. **Nur dieser Host** behält sie auf dem Host. Dieselbe Frage kommt, wenn Sie einen solchen Host unter **Enthalten in** hinzufügen. Ein ausgemusterter Host oder Cluster löst keine Frage aus.
 
 - Ein Asset im Cluster zu platzieren ersetzt die Verknüpfungen, die die Mitglieds-Hosts zu ihm hatten. Eine Meldung nennt die Hosts.
 - Ein Host kann kein Asset enthalten, das sein Cluster bereits enthält. Die Meldung nennt den Cluster.
@@ -237,7 +237,7 @@ Der Reiter Betrieb zeigt den Cluster des Assets und was darauf läuft: die Anwen
 | **Seit** | Datum, an dem der Server zugeordnet wurde |
 | **Notizen** | Freitext-Notizen |
 
-Klicken Sie auf **Zuordnung hinzufügen**, um dieses Asset einer Anwendungs-Bereitstellung zuzuordnen. Wählen Sie die Anwendung, dann ihre Bereitstellung. Hat die Anwendung in einer Umgebung noch keine Bereitstellung, legt **+ Bereitstellung … anlegen** sie zusammen mit der Zuordnung an. Wählen Sie dann die Rolle und optional Datum und Notizen. Bei einem Mitglied eines Clusters fragt KANAP zuerst, ob dem Cluster oder nur diesem Server zugeordnet wird. Siehe [Anwendungen auf einem Cluster](#applications-on-a-cluster). Der Stift am Ende einer Zeile öffnet die Anwendung: Die Zuordnung wird in ihrem Reiter **Bereitstellungen** bearbeitet. Das Papierkorbsymbol entfernt die Zuordnung nach einer Bestätigung. **Zuordnung hinzufügen** ist nicht verfügbar, solange in **IT-Landschaft > Einstellungen** keine Serverrolle eingerichtet ist. Diese Befehle erfordern `infrastructure:member` und `applications:member`. Ohne beide ist die Tabelle schreibgeschützt.
+Klicken Sie auf **Zuordnung hinzufügen**, um dieses Asset einer Anwendungs-Bereitstellung zuzuordnen. Wählen Sie die Anwendung, dann ihre Bereitstellung. Hat die Anwendung in einer Umgebung noch keine Bereitstellung, legt **+ Bereitstellung … anlegen** sie zusammen mit der Zuordnung an. Wählen Sie dann die Rolle und optional Datum und Notizen. Bei einem Mitglied eines Clusters fragt Kadratis zuerst, ob dem Cluster oder nur diesem Server zugeordnet wird. Siehe [Anwendungen auf einem Cluster](#applications-on-a-cluster). Der Stift am Ende einer Zeile öffnet die Anwendung: Die Zuordnung wird in ihrem Reiter **Bereitstellungen** bearbeitet. Das Papierkorbsymbol entfernt die Zuordnung nach einer Bestätigung. **Zuordnung hinzufügen** ist nicht verfügbar, solange in **IT-Landschaft > Einstellungen** keine Serverrolle eingerichtet ist. Diese Befehle erfordern `infrastructure:member` und `applications:member`. Ohne beide ist die Tabelle schreibgeschützt.
 
 Bei einem Mitglied zeigt eine dem Cluster zugeordnete Anwendung „über“ und den Namen des Clusters, ohne Stift und Papierkorb: Ändern Sie sie am Cluster.
 
@@ -279,11 +279,11 @@ Wenn Schwachstellen verfolgt werden, listet der letzte Abschnitt des Reiters die
 | **Krit.**, **Hoch**, **Mittel**, **Niedrig**, **N. bew.** | Eine Spalte pro Schweregrad (Kritisch, Hoch, Mittel, Niedrig, Nicht bewertet, der volle Name im Tooltip der Überschrift): die noch zu prüfenden Schwachstellen. Eine mit **Keine** bewertete Schwachstelle zählt bei **Niedrig** |
 | **Gesamt** | Die verschiedenen noch zu prüfenden Schwachstellen dieser Zeile |
 
-**Ansehen** öffnet die Seite [Schwachstellen](vulnerabilities.md), gefiltert auf das Asset und die Technologie. Wenn nichts mehr zu prüfen ist, sagt der Abschnitt es in einer Zeile. Solange KANAP ein Produkt zum ersten Mal aus der NVD liest oder den Abgleich einer Technologie ausführt, die gerade auf diesem Asset erfasst wurde, zeigt der Abschnitt „Suche nach Schwachstellen läuft…“ und füllt sich von selbst. Wenn die Suche nicht abgeschlossen werden kann, sagt der Abschnitt das. Ein außer Betrieb genommenes Asset hat keinen Abschnitt.
+**Ansehen** öffnet die Seite [Schwachstellen](vulnerabilities.md), gefiltert auf das Asset und die Technologie. Wenn nichts mehr zu prüfen ist, sagt der Abschnitt es in einer Zeile. Solange Kadratis ein Produkt zum ersten Mal aus der NVD liest oder den Abgleich einer Technologie ausführt, die gerade auf diesem Asset erfasst wurde, zeigt der Abschnitt „Suche nach Schwachstellen läuft…“ und füllt sich von selbst. Wenn die Suche nicht abgeschlossen werden kann, sagt der Abschnitt das. Ein außer Betrieb genommenes Asset hat keinen Abschnitt.
 
 Bei einem **Cluster** listet **Auf seinen Mitgliedern** getrennt die Technologien seiner Mitglieder, eine Zeile pro Technologie und Version, mit den Mitgliedern, die sie tragen, in der Spalte **Asset**. Ein Cluster zählt die Schwachstellen seiner Mitglieder in Betrieb mit seinen eigenen: die Zahl des Abschnitts, das Badge der Kopfzeile (sein Tooltip sagt „Mitglieder eingeschlossen“) und die Spalte der Liste. **Ansehen** einer Zeile öffnet die Seite auf dem Mitglied, das sie trägt.
 
-Was nur vom Host kommt, in dem das Asset oder seine Mitglieder laufen, etwa das ESXi des Hosts einer virtuellen Maschine, ist die zugrunde liegende Plattform. Es steht unter einer geschlossenen Zeile **Zugrunde liegende Plattform (n)**, die sich per Klick öffnet. Es wird weder im Abschnitt noch im Badge noch in der Spalte der Liste gezählt: Eine Schwachstelle zählt auf dem Asset, auf dem die Technologie erfasst ist. Sein **Ansehen** öffnet die Seite auf diesem Host. Siehe [Was KANAP zählt](vulnerabilities.md#what-kanap-counts).
+Was nur vom Host kommt, in dem das Asset oder seine Mitglieder laufen, etwa das ESXi des Hosts einer virtuellen Maschine, ist die zugrunde liegende Plattform. Es steht unter einer geschlossenen Zeile **Zugrunde liegende Plattform (n)**, die sich per Klick öffnet. Es wird weder im Abschnitt noch im Badge noch in der Spalte der Liste gezählt: Eine Schwachstelle zählt auf dem Asset, auf dem die Technologie erfasst ist. Sein **Ansehen** öffnet die Seite auf diesem Host. Siehe [Was Kadratis zählt](vulnerabilities.md#what-kanap-counts).
 
 ---
 
@@ -503,7 +503,7 @@ Für Felder, die in **IT-Landschaft > Einstellungen** konfiguriert sind, können
 
 Das System normalisiert Werte automatisch beim Import, sodass `Virtual Machine`, `virtual machine` und `vm` alle zum gleichen Asset-Typ aufgelöst werden. Ein Wert, der auf mehrere Einträge passt, wird abgelehnt statt erraten. Der Export schreibt für diese Spalten Namen, in der Sprache des Bildschirms, sodass eine exportierte Datei unverändert wieder importiert werden kann.
 
-**Betriebssystem**: Die Spalte `operating_system` enthält den Namen der Technologie, gefolgt von ihrer Version, so wie der Export sie schreibt (`Windows Server 2019`, `Ubuntu 24.04 LTS`). Beim Import sucht KANAP die Technologie unter Ihren Technologien, dann im Katalog, und erfasst die Version. Eine Technologie oder Version, die es nicht findet, wird angelegt: Prüfen Sie also vorher die Schreibweise. Der Wert wird zum Betriebssystem des Servers.
+**Betriebssystem**: Die Spalte `operating_system` enthält den Namen der Technologie, gefolgt von ihrer Version, so wie der Export sie schreibt (`Windows Server 2019`, `Ubuntu 24.04 LTS`). Beim Import sucht Kadratis die Technologie unter Ihren Technologien, dann im Katalog, und erfasst die Version. Eine Technologie oder Version, die es nicht findet, wird angelegt: Prüfen Sie also vorher die Schreibweise. Der Wert wird zum Betriebssystem des Servers.
 
 **Cluster-Mitgliedschaft**: Die Spalte `cluster` nennt die Cluster des Assets, durch Kommas getrennt (`ESX-PROD, SQL-CLUSTER`). Groß- und Kleinschreibung spielen keine Rolle. Der Export schreibt die Cluster, in denen das Asset Mitglied ist. Beim Import:
 

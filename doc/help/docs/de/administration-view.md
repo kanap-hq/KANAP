@@ -54,7 +54,7 @@ Die sensibelste Zone ist die erste Zone der Einstellungen, die nicht als **Nicht
 | **Weniger sensibler Host** | Die höher einzustufenden Assets: ein Host, der ein Asset einer sensibleren Zone betreibt (zum Beispiel ein Tier-1-Host mit einer virtuellen Tier-0-Maschine), oder das Mitglied eines Clusters einer sensibleren Zone (zum Beispiel ein Tier-1-ESX-Host in einem Tier-0-Cluster) |
 | **Gehostete Anwendung** | Die Assets der sensibelsten Zone, die eine Anwendung in Betrieb hosten. Prüfen Sie, ob jede Anwendung dorthin gehört |
 
-Für **Weniger sensibler Host** liest KANAP die Beziehungen **Enthält** der Assets und die Mitglieder der Cluster. Was ein Asset betreibt, muss in einer mindestens ebenso sensiblen Zone liegen. Eine Zone, die mit **Nicht mehr anbieten** markiert ist oder in den Einstellungen fehlt, wird ignoriert. Ein Asset ohne Zone unterbricht die Prüfung der Kette: KANAP vergleicht weder dieses Asset noch die mit ihm verbundenen Assets, und **Ohne Zone** listet es.
+Für **Weniger sensibler Host** liest Kadratis die Beziehungen **Enthält** der Assets und die Mitglieder der Cluster. Was ein Asset betreibt, muss in einer mindestens ebenso sensiblen Zone liegen. Eine Zone, die mit **Nicht mehr anbieten** markiert ist oder in den Einstellungen fehlt, wird ignoriert. Ein Asset ohne Zone unterbricht die Prüfung der Kette: Kadratis vergleicht weder dieses Asset noch die mit ihm verbundenen Assets, und **Ohne Zone** listet es.
 
 Ohne Zone in den Einstellungen erscheint nur **Ohne Zone**, und die Seite fordert Sie auf, eine Zone hinzuzufügen.
 
@@ -81,7 +81,7 @@ Mit `infrastructure:member` beginnt jede Zeile mit einem Kontrollkästchen:
 
 Eine Änderung der Suche oder der Filter hebt die Auswahl auf. **Einer Zone zuordnen** öffnet einen Dialog, in dem Sie eine Zone wählen, oder **Keine Zone**, um sie zu entfernen. Eine als **Nicht mehr anbieten** markierte Zone ist nicht wählbar. Vor Ihrer Bestätigung zählt der Dialog, bei wie vielen der ausgewählten Assets sich die Zone ändert. Eine Zuordnung umfasst bis zu 5.000 Assets: Grenzen Sie darüber hinaus die Filter ein.
 
-Kommen zwischen der Zählung und der Bestätigung Assets in den Filter hinzu, lehnt KANAP die Änderung ab und zählt erneut: Prüfen Sie die neue Anzahl und bestätigen Sie dann. Jedes geänderte Asset erhält einen Eintrag im Audit-Protokoll, wie bei einer Bearbeitung des Assets.
+Kommen zwischen der Zählung und der Bestätigung Assets in den Filter hinzu, lehnt Kadratis die Änderung ab und zählt erneut: Prüfen Sie die neue Anzahl und bestätigen Sie dann. Jedes geänderte Asset erhält einen Eintrag im Audit-Protokoll, wie bei einer Bearbeitung des Assets.
 
 ## Verzeichnisdienste und Domänen
 
@@ -95,7 +95,7 @@ Kommen zwischen der Zählung und der Bestätigung Assets in den Filter hinzu, le
 | **DNS-Suffix** | Das Suffix der Namen ihrer Computer |
 | **Vertrauensstellungen** | Die Domänen, mit denen sie eine Vertrauensstellung hat, und die Richtung jeder einzelnen |
 | **Konten**, **Computer** | Die in den Einstellungen erfassten Anzahlen. Ein Strich bedeutet, dass keine erfasst ist |
-| **Domänencontroller** | Wie viele Server KANAP als Controller der Domäne ableitet, dann ihre Namen. Klicken Sie auf einen Namen, um das Asset zu öffnen |
+| **Domänencontroller** | Wie viele Server Kadratis als Controller der Domäne ableitet, dann ihre Namen. Klicken Sie auf einen Namen, um das Asset zu öffnen |
 
 **Vertrauensstellungen** listet außerdem, in Grau, die Vertrauensstellungen, die bei einer anderen Domäne gegenüber dieser deklariert sind, mit der Richtung aus Sicht dieser Domäne: Eine ausgehende Vertrauensstellung von A zu B erscheint bei B als eingehend. Die Richtungen bedeuten:
 
@@ -103,7 +103,7 @@ Kommen zwischen der Zählung und der Bestätigung Assets in den Filter hinzu, le
 - **Eingehend**: Die andere Domäne vertraut dieser.
 - **Bidirektional**: beides.
 
-**Domänencontroller** werden nicht von Hand erfasst. KANAP nimmt die Server der Domäne (das Feld **Domäne** im Reiter Netzwerk des Assets), die nicht ausgemustert sind und die entweder:
+**Domänencontroller** werden nicht von Hand erfasst. Kadratis nimmt die Server der Domäne (das Feld **Domäne** im Reiter Netzwerk des Assets), die nicht ausgemustert sind und die entweder:
 
 - eine nicht ausgemusterte Technologie der Familie **Verzeichnis und Identität** tragen, etwa Active Directory, oder
 - einer Anwendung in Betrieb mit der Serverrolle **Domänencontroller** zugeordnet sind.

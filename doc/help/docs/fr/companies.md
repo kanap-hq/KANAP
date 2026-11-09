@@ -56,9 +56,9 @@ La liste affiche toutes les sociétés de votre espace de travail. Utilisez-la p
 **Valeurs des métriques** :
 
 - Une métrique jamais saisie pour l'année s'affiche **—**. Un zéro saisi s'affiche **0**
-- Les nombres suivent la langue de KANAP : virgule décimale en français, en allemand et en espagnol, point décimal en anglais
+- Les nombres suivent la langue de Kadratis : virgule décimale en français, en allemand et en espagnol, point décimal en anglais
 - Le chiffre d'affaires de chaque ligne est dans la devise de base de la société. La ligne **Total** est dans la devise de reporting : chaque chiffre d'affaires est converti aux taux de l'année. Quand la colonne budgétaire par défaut de l'année est gelée, ce sont les taux qu'elle a figés. Sinon, ce sont les taux courants (voir [Paramètres de devises](currencies.md))
-- Quand une devise n'a pas de taux pour l'année, le chiffre d'affaires des sociétés dans cette devise est exclu du total, et le total indique la devise et le nombre de sociétés exclues. KANAP récupère le taux manquant en arrière-plan. Un [taux manuel](currencies.md#taux-manuels) règle le problème tout de suite
+- Quand une devise n'a pas de taux pour l'année, le chiffre d'affaires des sociétés dans cette devise est exclu du total, et le total indique la devise et le nombre de sociétés exclues. Kadratis récupère le taux manquant en arrière-plan. Un [taux manuel](currencies.md#taux-manuels) règle le problème tout de suite
 
 **Actions** :
 
@@ -135,7 +135,7 @@ L'onglet Détails gère les **métriques annuelles**. Utilisez les onglets d'ann
 **Comment ça fonctionne** :
 
 - Chaque valeur est enregistrée pour l'année sélectionnée quand vous quittez le champ (ou appuyez sur Entrée). Une valeur non valide affiche un message sous le champ, par exemple « Saisissez un nombre entier, 0 ou plus. » Le champ reprend la valeur enregistrée, et le message reste jusqu'à ce que vous tapiez de nouveau
-- Les nombres suivent la langue de KANAP : tapez `12,5` en français, en allemand ou en espagnol, et `12.5` en anglais
+- Les nombres suivent la langue de Kadratis : tapez `12,5` en français, en allemand ou en espagnol, et `12.5` en anglais
 - Chaque année est enregistrée séparément : changer d'année charge les valeurs de cette année
 - Si les chiffres de la société pour l'année sont **gelés**, les champs sont verrouillés et un avis indique qu'un administrateur budgétaire peut les dégeler (**Gestion budgétaire > Administration > Geler les données de référence**)
 - Vous avez besoin de `companies:member` pour modifier les métriques
@@ -179,7 +179,7 @@ Utilisez la **Fin de validité** pour contrôler quand une société cesse d'êt
 
 Un administrateur des sociétés (`companies:admin`) peut supprimer une société depuis sa fiche avec **Supprimer**, ou plusieurs depuis la liste avec **Supprimer la sélection**.
 
-- KANAP vérifie d'abord. Quand quelque chose utilise la société, le dialogue dit quoi, par exemple « Cette société est utilisée par 2 départements et 14 utilisateurs. Désactivez-la plutôt que de la supprimer. », et propose seulement **Fermer**. Désactivez alors la société (voir [Statut et cycle de vie](#statut-et-cycle-de-vie))
+- Kadratis vérifie d'abord. Quand quelque chose utilise la société, le dialogue dit quoi, par exemple « Cette société est utilisée par 2 départements et 14 utilisateurs. Désactivez-la plutôt que de la supprimer. », et propose seulement **Fermer**. Désactivez alors la société (voir [Statut et cycle de vie](#statut-et-cycle-de-vie))
 - Sinon, le dialogue demande confirmation : « Cette action est irréversible. » **Supprimer** supprime la société avec ses métriques annuelles et revient à la liste
 - Une société supprimée quitte la tuile **Consultés récemment** de [Mon tableau de bord](my-dashboard.md#recemment-consultes)
 

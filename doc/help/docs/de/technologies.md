@@ -4,7 +4,7 @@ Technologien erfassen, was die IT betreibt oder abonniert, damit Anwendungen fun
 
 ## Was eine Technologie ist
 
-KANAP beschreibt Ihre Landschaft in drei Bereichen:
+Kadratis beschreibt Ihre Landschaft in drei Bereichen:
 
 | Bereich | Was er enthält | Beispiele |
 |---|---|---|
@@ -31,9 +31,9 @@ Eine Technologie umfasst ein Produkt als Ganzes. „SQL Server" steht für alle 
 
 Navigieren Sie zu **IT-Landschaft > Technologien** und klicken Sie auf **Neue Technologie**.
 
-Das Fenster öffnet sich auf dem **Katalog**: einer Liste gängiger Produkte mit einer kurzen Beschreibung, Hersteller, Familie und Hosting-Typ. Suchen Sie nach dem Namen und klicken Sie auf einen Eintrag. KANAP legt die Technologie sofort mit Hersteller, Familie, Hosting-Typ, CPE-Produktkennungen, CVE.org-Namen, ihren Versionen samt Supportende-Daten und der kurzen Beschreibung in Ihrer Sprache an und öffnet sie. Ein Eintrag bleibt angeboten, wenn eine Technologie desselben Namens von Hand erfasst wurde. Das Hinzufügen ergänzt diese Technologie, und der Eintrag weist darauf hin (Ergänzt TEC-10). Eine Suche, die einen bereits übernommenen Katalogeintrag trifft, listet ihn unter **Bereits in Ihren Technologien** mit der Referenz Ihrer Technologie auf, und ein Klick öffnet diese Technologie; solange die Suche leer ist, bleibt dieser Abschnitt ausgeblendet.
+Das Fenster öffnet sich auf dem **Katalog**: einer Liste gängiger Produkte mit einer kurzen Beschreibung, Hersteller, Familie und Hosting-Typ. Suchen Sie nach dem Namen und klicken Sie auf einen Eintrag. Kadratis legt die Technologie sofort mit Hersteller, Familie, Hosting-Typ, CPE-Produktkennungen, CVE.org-Namen, ihren Versionen samt Supportende-Daten und der kurzen Beschreibung in Ihrer Sprache an und öffnet sie. Ein Eintrag bleibt angeboten, wenn eine Technologie desselben Namens von Hand erfasst wurde. Das Hinzufügen ergänzt diese Technologie, und der Eintrag weist darauf hin (Ergänzt TEC-10). Eine Suche, die einen bereits übernommenen Katalogeintrag trifft, listet ihn unter **Bereits in Ihren Technologien** mit der Referenz Ihrer Technologie auf, und ein Klick öffnet diese Technologie; solange die Suche leer ist, bleibt dieser Abschnitt ausgeblendet.
 
-Eine aus dem Katalog übernommene Technologie bleibt aktuell: Wenn der Hersteller eine neue Version veröffentlicht oder ein Datum ändert, fügt KANAP die Version hinzu und verschiebt das Datum (siehe [Versionen aus dem Katalog](#versionen-aus-dem-katalog)).
+Eine aus dem Katalog übernommene Technologie bleibt aktuell: Wenn der Hersteller eine neue Version veröffentlicht oder ein Datum ändert, fügt Kadratis die Version hinzu und verschiebt das Datum (siehe [Versionen aus dem Katalog](#versionen-aus-dem-katalog)).
 
 Für ein Produkt, das der Katalog nicht kennt, klicken Sie auf **Eine Technologie erfassen, die nicht im Katalog steht**. Füllen Sie aus:
 
@@ -64,11 +64,11 @@ Was die beiden Supportdaten bedeuten, hängt vom Hersteller ab:
 
 Jede Technologie kann ein Betriebssystem sein: Ordnen Sie VMware ESXi oder FortiOS der Familie **Betriebssystem** zu, dann kann sie das Betriebssystem eines Hosts oder einer Firewall sein.
 
-Die Betriebssysteme des Katalogs haben CPE-Produktkennungen, und KANAP gleicht sie mit veröffentlichten Schwachstellen ab.
+Die Betriebssysteme des Katalogs haben CPE-Produktkennungen, und Kadratis gleicht sie mit veröffentlichten Schwachstellen ab.
 
-Linux-Distributionen veröffentlichen ihre Schwachstellen pro Paket. KANAP verfolgt den Support jeder Version und gleicht die Schwachstellen ab, die der Hersteller der Version zuordnet. KANAP weiß nicht, welche Pakete ein Server installiert hat und auf welchem Stand. Für die Linux-Distributionen des Katalogs führt die Versionstabelle zum Sicherheitstracker des Anbieters, in dem Sie jedes Paket prüfen können. Siehe [Versionen aus dem Katalog](#versionen-aus-dem-katalog).
+Linux-Distributionen veröffentlichen ihre Schwachstellen pro Paket. Kadratis verfolgt den Support jeder Version und gleicht die Schwachstellen ab, die der Hersteller der Version zuordnet. Kadratis weiß nicht, welche Pakete ein Server installiert hat und auf welchem Stand. Für die Linux-Distributionen des Katalogs führt die Versionstabelle zum Sicherheitstracker des Anbieters, in dem Sie jedes Paket prüfen können. Siehe [Versionen aus dem Katalog](#versionen-aus-dem-katalog).
 
-Betriebssysteme sind standardmäßig von den Warnungen zu Schwachstellen ausgeschlossen. KANAP kennt den Patchstand eines Servers nicht, daher würde ein Betriebssystem sehr viele Schwachstellen melden, die meisten davon bereits gepatcht. Das gilt für eine Technologie der Familie **Betriebssystem** und für ein aus dem Katalog übernommenes Betriebssystem, unabhängig von seiner Familie. Eine bestehende Technologie, die Sie als Betriebssystem aus dem Katalog übernehmen, wird ebenfalls ausgeschlossen. Sie können sie wieder einschließen: siehe [Warnungen zu Schwachstellen](#warnungen-zu-schwachstellen).
+Betriebssysteme sind standardmäßig von den Warnungen zu Schwachstellen ausgeschlossen. Kadratis kennt den Patchstand eines Servers nicht, daher würde ein Betriebssystem sehr viele Schwachstellen melden, die meisten davon bereits gepatcht. Das gilt für eine Technologie der Familie **Betriebssystem** und für ein aus dem Katalog übernommenes Betriebssystem, unabhängig von seiner Familie. Eine bestehende Technologie, die Sie als Betriebssystem aus dem Katalog übernehmen, wird ebenfalls ausgeschlossen. Sie können sie wieder einschließen: siehe [Warnungen zu Schwachstellen](#warnungen-zu-schwachstellen).
 
 Installationen, die von einer früheren Version aktualisiert wurden, behalten ihre Daten: Die von den Servern genutzten Betriebssysteme und die Einträge, die der früheren Betriebssystemliste der Einstellungen hinzugefügt wurden, sind zu Technologien geworden, mit ihren Versionen und Daten.
 
@@ -157,7 +157,7 @@ Der Support läuft an seinem Enddatum noch. Bei nur einem Datum ist dieses Datum
 
 Wenn Schwachstellen verfolgt werden, legt die Versionstabelle fest, welche Versionen in den Warnungen zu Schwachstellen zählen. Eine Version in den Warnungen erscheint standardmäßig auf der Seite [Schwachstellen](vulnerabilities.md), in den E-Mails und in den Zählern. Eine Version außerhalb der Warnungen wird weiter mit den Schwachstellen abgeglichen: Der Abschnitt [Schwachstellen](#schwachstellen) der Technologie zeigt sie weiterhin, und die Seite zeigt ihre Zeilen über ihren Filter **Warnungen**.
 
-- **In Schwachstellenwarnungen aufnehmen**: der Schalter in der Titelzeile **Versionen**, neben **Version hinzufügen**. Er ist die Einstellung der Technologie. Fahren Sie mit der Maus darüber für einen Hinweis: Sie gilt für die Versionen ohne eigene Einstellung, für später hinzugefügte Versionen und für die Server und Anwendungen, die keine Version angeben. Eine Änderung ersetzt die eigenen Einstellungen der Versionen; haben einige eine, fragt KANAP zuerst nach und nennt ihre Anzahl. Der Schalter erscheint auch, wenn die Technologie keine Version hat.
+- **In Schwachstellenwarnungen aufnehmen**: der Schalter in der Titelzeile **Versionen**, neben **Version hinzufügen**. Er ist die Einstellung der Technologie. Fahren Sie mit der Maus darüber für einen Hinweis: Sie gilt für die Versionen ohne eigene Einstellung, für später hinzugefügte Versionen und für die Server und Anwendungen, die keine Version angeben. Eine Änderung ersetzt die eigenen Einstellungen der Versionen; haben einige eine, fragt Kadratis zuerst nach und nennt ihre Anzahl. Der Schalter erscheint auch, wenn die Technologie keine Version hat.
 - Spalte **Warnungen**: ein Schalter pro Version, für eine Ausnahme bei einer Version. Das Informationssymbol in ihrer Kopfzeile erklärt beim Überfahren, was sie bewirkt. Ein kleiner Punkt neben dem Schalter markiert eine Version mit eigener Einstellung. Stellen Sie den Schalter auf den Wert der Technologie zurück, dann folgt die Version wieder der Technologie.
 
 Neue Technologien sind in den Warnungen, mit zwei Ausnahmen:
@@ -169,11 +169,11 @@ Eine spätere Änderung der Familie oder des Hosting-Typs lässt die Einstellung
 
 #### Versionen aus dem Katalog
 
-Eine Version aus dem Katalog zeigt **Katalog** neben ihrer Bezeichnung, und eine aus dem Katalog übernommene Technologie zeigt neben **Versionen** ein Informationssymbol, das angibt, dass ihre Versionen und Daten aus dem Katalog aktuell gehalten werden. In der Cloud prüft KANAP den Katalog täglich. Bei einer On-Premise-Installation bringt jede KANAP-Version ihren Katalog beim Start mit, sofern Ihr Administrator nicht [die tägliche Prüfung einschaltet](on-premise/configuration.md#optional-technology-catalog).
+Eine Version aus dem Katalog zeigt **Katalog** neben ihrer Bezeichnung, und eine aus dem Katalog übernommene Technologie zeigt neben **Versionen** ein Informationssymbol, das angibt, dass ihre Versionen und Daten aus dem Katalog aktuell gehalten werden. In der Cloud prüft Kadratis den Katalog täglich. Bei einer On-Premise-Installation bringt jede Kadratis-Version ihren Katalog beim Start mit, sofern Ihr Administrator nicht [die tägliche Prüfung einschaltet](on-premise/configuration.md#optional-technology-catalog).
 
-Die Daten stammen aus zwei Quellen. Die meisten Produkte beziehen sie von endoflife.date. Für die Produkte, die endoflife.date nicht abdeckt, etwa Cisco NX-OS, Juniper Junos oder Dell PowerStore, erhebt KANAP die Daten auf den offiziellen Seiten des Herstellers. Jede KANAP-Version bringt diese Daten auf den neuesten Stand.
+Die Daten stammen aus zwei Quellen. Die meisten Produkte beziehen sie von endoflife.date. Für die Produkte, die endoflife.date nicht abdeckt, etwa Cisco NX-OS, Juniper Junos oder Dell PowerStore, erhebt Kadratis die Daten auf den offiziellen Seiten des Herstellers. Jede Kadratis-Version bringt diese Daten auf den neuesten Stand.
 
-Eine Version, deren Daten KANAP erhoben hat, zeigt ihre Quelle unter ihrer Bezeichnung: „Quelle:“, den Hersteller und den Tag, an dem die Daten geprüft wurden. Der Name des Herstellers führt zur Seite, aus der die Daten stammen. Die Zeile bleibt, solange beide Enddaten dem Katalog entsprechen. Sie verschwindet, sobald Sie eines davon ändern. Wenn der Hersteller kein Supportende plant, wie bei IBM WebSphere 8.5 und 9.0, zeigen beide Supportende-Spalten „Kein Ende vom Hersteller geplant“.
+Eine Version, deren Daten Kadratis erhoben hat, zeigt ihre Quelle unter ihrer Bezeichnung: „Quelle:“, den Hersteller und den Tag, an dem die Daten geprüft wurden. Der Name des Herstellers führt zur Seite, aus der die Daten stammen. Die Zeile bleibt, solange beide Enddaten dem Katalog entsprechen. Sie verschwindet, sobald Sie eines davon ändern. Wenn der Hersteller kein Supportende plant, wie bei IBM WebSphere 8.5 und 9.0, zeigen beide Supportende-Spalten „Kein Ende vom Hersteller geplant“.
 
 Einige Produkte haben keine öffentlichen Daten: HPE Aruba Networking AOS-CX, Pure Storage Purity//FA, HPE Alletra 5000/6000 (NimbleOS), Rubrik CDM, Cohesity DataProtect und PRTG Network Monitor. Der Katalog bringt sie ohne Versionen. Erfassen Sie Ihre Versionen und deren Daten selbst.
 
@@ -183,16 +183,16 @@ Die Prüfung fügt die neuen Versionen, CPE-Produktkennungen und CVE.org-Namen d
 
 #### Schwachstellenkennungen
 
-Die Gruppe **Schwachstellenkennungen** unter den Versionen fasst die CPE-Produktkennungen und die CVE.org-Namen zusammen. Über sie findet KANAP die Schwachstellen einer Technologie.
+Die Gruppe **Schwachstellenkennungen** unter den Versionen fasst die CPE-Produktkennungen und die CVE.org-Namen zusammen. Über sie findet Kadratis die Schwachstellen einer Technologie.
 
 - **Eingeklappt**: Hat die Technologie mindestens eine Kennung, ist die Gruppe eingeklappt, mit einer Zusammenfassung in ihrer Titelzeile, zum Beispiel `2 CPE-Kennungen · 3 CVE.org-Namen`. Klicken Sie auf den Titel, um sie zu öffnen.
 - **Geöffnet**: Hat die Technologie keine, ist die Gruppe geöffnet, mit einem Warnhinweis: Für diese Technologie wird nach keiner Schwachstelle gesucht. Der Abschnitt **Versionen** weist ebenfalls darauf hin. Mit der Stufe Mitglied für die Infrastruktur öffnet **Kennung hinzufügen** neben diesem Hinweis die Gruppe.
 
-Der Abgleich erfolgt auf Ebene der Technologie. Jede Version der Technologie wird mit den Schwachstellen ihrer Kennungen verglichen, und eine Version, die Sie hinzufügen, wird sofort abgeglichen. Ohne Kennung sucht KANAP für keine Version nach Schwachstellen.
+Der Abgleich erfolgt auf Ebene der Technologie. Jede Version der Technologie wird mit den Schwachstellen ihrer Kennungen verglichen, und eine Version, die Sie hinzufügen, wird sofort abgeglichen. Ohne Kennung sucht Kadratis für keine Version nach Schwachstellen.
 
-**CPE-Produktkennungen**: die Namen, die Sicherheitsdatenbanken diesem Produkt geben, in der Form `part:vendor:product` (zum Beispiel `a:microsoft:sql_server`). KANAP gleicht sie mit den veröffentlichten Schwachstellen ab. Ein Produkt kann mehrere haben (vSphere umfasst vCenter und ESXi). Wo Sie diesen Wert finden: Suchen Sie das Produkt im [CPE-Wörterbuch des NIST](https://nvd.nist.gov/products/cpe/search) und übernehmen Sie Teil, Hersteller und Produkt. Übernehmen Sie sie so, wie die NVD sie schreibt, mit dem Backslash vor einem Zeichen: `a:veeam:veeam_backup_\&_replication`. Die meisten Katalogeinträge bringen ihre Kennungen mit, die Betriebssysteme eingeschlossen.
+**CPE-Produktkennungen**: die Namen, die Sicherheitsdatenbanken diesem Produkt geben, in der Form `part:vendor:product` (zum Beispiel `a:microsoft:sql_server`). Kadratis gleicht sie mit den veröffentlichten Schwachstellen ab. Ein Produkt kann mehrere haben (vSphere umfasst vCenter und ESXi). Wo Sie diesen Wert finden: Suchen Sie das Produkt im [CPE-Wörterbuch des NIST](https://nvd.nist.gov/products/cpe/search) und übernehmen Sie Teil, Hersteller und Produkt. Übernehmen Sie sie so, wie die NVD sie schreibt, mit dem Backslash vor einem Zeichen: `a:veeam:veeam_backup_\&_replication`. Die meisten Katalogeinträge bringen ihre Kennungen mit, die Betriebssysteme eingeschlossen.
 
-**CVE.org-Namen**: die Hersteller- und Produktnamen, so wie der Hersteller sie in seinen eigenen Schwachstelleneinträgen schreibt, zum Beispiel Hersteller `SAP_SE` und Produkt `SAP HANA Database`. KANAP gleicht sie mit der CVE.org-Liste ab, die auch Schwachstellen enthält, die die NVD nicht analysiert hat (siehe [Schwachstellen](vulnerabilities.md#wie-kanap-sie-findet)). Die Namen stehen unter den CPE-Produktkennungen und erscheinen, wenn KANAP die CVE.org-Liste liest. Jeder Name wird einzeln aufgeführt.
+**CVE.org-Namen**: die Hersteller- und Produktnamen, so wie der Hersteller sie in seinen eigenen Schwachstelleneinträgen schreibt, zum Beispiel Hersteller `SAP_SE` und Produkt `SAP HANA Database`. Kadratis gleicht sie mit der CVE.org-Liste ab, die auch Schwachstellen enthält, die die NVD nicht analysiert hat (siehe [Schwachstellen](vulnerabilities.md#wie-kanap-sie-findet)). Die Namen stehen unter den CPE-Produktkennungen und erscheinen, wenn Kadratis die CVE.org-Liste liest. Jeder Name wird einzeln aufgeführt.
 
 - **Einen Namen hinzufügen**: Geben Sie einen Teil des Produktnamens in die Suche ein. Die Liste zeigt die genauen Namen, die die Hersteller in ihren Einträgen schreiben, jeweils mit der Anzahl ihrer Schwachstellen und dem Datum der letzten. Wählen Sie einen aus, mit einer optionalen Version. Ein Name, der nicht in der Liste steht, lässt sich nicht eintippen.
 - **Vorschläge**: die Namen, die auf den Schwachstellen Ihrer CPE-Kennungen vorkommen. Jeder zeigt seine Anzahl an Schwachstellen und den Anteil dieser Schwachstellen, die ihn tragen.
@@ -241,7 +241,7 @@ Die Anwendungen, die die Technologie nutzen, eine Zeile pro Anwendung, Umgebung,
 
 Eine Anwendung erscheint auf zwei Wegen:
 
-- **Gehostet**: Eine ihrer Bereitstellungen läuft auf einem Server, der die Technologie trägt. KANAP leitet die Zeile aus den Servern ab; ändern Sie den Server oder die Bereitstellung, um sie zu ändern.
+- **Gehostet**: Eine ihrer Bereitstellungen läuft auf einem Server, der die Technologie trägt. Kadratis leitet die Zeile aus den Servern ab; ändern Sie den Server oder die Bereitstellung, um sie zu ändern.
 - **Deklariert**: Die Anwendung hängt von der Technologie ab, ohne neben ihr zu laufen, zum Beispiel eine Anwendung, deren Benutzer sich über Entra ID anmelden. Ändern Sie die Version direkt oder entfernen Sie die Deklaration. Das Entfernen zieht alle deklarierten Versionen dieser Anwendung zurück.
 
 **Hinzufügen** (`infrastructure:member`) öffnet eine Suche, in der Sie mehrere Anwendungen ankreuzen können, und fragt dann nach ihrer Version: Wählen Sie eine aus, geben Sie eine neue ein oder wählen Sie **Version unbekannt**. Alle werden mit dieser Version deklariert. Klicken Sie auf die Version einer deklarierten Zeile, um sie zu ändern. Deaktivierte Anwendungen und Bereitstellungen zählen nicht.
@@ -275,17 +275,17 @@ Eine Zusammenfassung der Schwachstellen, eine Zeile pro installierter Version de
 | Spalte | Was sie zeigt |
 |---|---|
 | **Version** | Die Version. Eine Version außerhalb der Warnungen ist ausgegraut und zeigt **Von den Warnungen ausgeschlossen**. **Version nicht erfasst (möglicherweise betroffen)** fasst die Server und Anwendungen zusammen, die keine Version angeben; diese Zeile erscheint nur, wenn es solche gibt |
-| **Server** | Wie viele Server in Betrieb diese Version selbst erfasst haben. Cluster und Server, die in einem anderen laufen, werden nicht gezählt. Siehe [Was KANAP zählt](vulnerabilities.md#what-kanap-counts) |
+| **Server** | Wie viele Server in Betrieb diese Version selbst erfasst haben. Cluster und Server, die in einem anderen laufen, werden nicht gezählt. Siehe [Was Kadratis zählt](vulnerabilities.md#what-kanap-counts) |
 | **Kritisch**, **Hoch**, **Mittel**, **Niedrig**, **Nicht bewertet** | Eine Spalte pro Schweregrad: die noch zu prüfenden Schwachstellen. Eine Schwachstelle mit dem Schweregrad **Keine** zählt bei **Niedrig**. Ein Punkt bedeutet, dass keine mehr übrig ist. Fahren Sie über eine Überschrift für einen Hinweis |
 | **Gesamt** | Die verschiedenen Schwachstellen dieser Version, alle Status zusammen |
 
 **Ansehen** öffnet die Seite [Schwachstellen](vulnerabilities.md), gefiltert auf die Version: auf ihre zu prüfenden Schwachstellen, wenn sie welche hat, sonst auf alle Status. **Alles auf der Seite Schwachstellen ansehen** unter der Tabelle öffnet die Seite für die ganze Technologie, alle Status zusammen.
 
-Versionen, die kein Server und keine Anwendung nutzt, erhalten keine Zeile. Sie werden unter der Tabelle zusammen genannt, zum Beispiel „Nicht installiert: 2016, 2017“. KANAP sucht nur nach Schwachstellen von Versionen, die auf einem Server installiert oder von einer Anwendung deklariert sind.
+Versionen, die kein Server und keine Anwendung nutzt, erhalten keine Zeile. Sie werden unter der Tabelle zusammen genannt, zum Beispiel „Nicht installiert: 2016, 2017“. Kadratis sucht nur nach Schwachstellen von Versionen, die auf einem Server installiert oder von einer Anwendung deklariert sind.
 
 Sind die Technologie oder einige ihrer Versionen außerhalb der Warnungen, sagt es eine Zeile oben im Abschnitt: **Von den Warnungen ausgeschlossen**, **Von den Warnungen ausgeschlossen, außer 2 Versionen** oder **3 Versionen von den Warnungen ausgeschlossen**. Mit der Stufe Mitglied für die Infrastruktur öffnet **Ändern** daneben die Versionstabelle im Reiter Übersicht, wo die Schalter sind. Siehe [Warnungen zu Schwachstellen](#warnungen-zu-schwachstellen).
 
-KANAP gleicht die Technologie erneut ab, sobald sich ihre Kennungen, CVE.org-Namen, Versionen, Server oder Anwendungen ändern. Nach einer neuen CPE-Produktkennung zeigt der Abschnitt „Suche nach Schwachstellen läuft…“, während KANAP dieses Produkt aus der NVD liest. Wenn dieses Lesen nicht abgeschlossen werden kann, sagt der Abschnitt das. **Aktualisieren** (`infrastructure:member`) startet den Vergleich von Hand.
+Kadratis gleicht die Technologie erneut ab, sobald sich ihre Kennungen, CVE.org-Namen, Versionen, Server oder Anwendungen ändern. Nach einer neuen CPE-Produktkennung zeigt der Abschnitt „Suche nach Schwachstellen läuft…“, während Kadratis dieses Produkt aus der NVD liest. Wenn dieses Lesen nicht abgeschlossen werden kann, sagt der Abschnitt das. **Aktualisieren** (`infrastructure:member`) startet den Vergleich von Hand.
 
 ### Beziehungen
 
@@ -379,9 +379,9 @@ Ein als Anwendung angelegter Eintrag kann in Wirklichkeit eine Technologie sein,
 
 ## Den Assistenten fragen
 
-[Plaid](ai-assistant.md) liest die Technologien mit denselben Rechten wie diese Seite, einschließlich der Dateien, die an einer Technologie hängen (Name, Typ, Größe und Datum des Hinzufügens). Fragen Sie zum Beispiel: „Wer ist für TEC-3 verantwortlich?“, „Welche Weblinks hat PostgreSQL?“, „Welche Dateien sind an TEC-3 angehängt?“, „Sind die Schwachstellenwarnungen für TEC-3 eingeschaltet?“ oder „Welche Technologien haben keinen Support mehr?“
+[Kad](ai-assistant.md) liest die Technologien mit denselben Rechten wie diese Seite, einschließlich der Dateien, die an einer Technologie hängen (Name, Typ, Größe und Datum des Hinzufügens). Fragen Sie zum Beispiel: „Wer ist für TEC-3 verantwortlich?“, „Welche Weblinks hat PostgreSQL?“, „Welche Dateien sind an TEC-3 angehängt?“, „Sind die Schwachstellenwarnungen für TEC-3 eingeschaltet?“ oder „Welche Technologien haben keinen Support mehr?“
 
-Mit der Stufe Mitglied für die Infrastruktur schreibt Plaid auch, und jede Änderung kommt als Vorschau, die Sie genehmigen:
+Mit der Stufe Mitglied für die Infrastruktur schreibt Kad auch, und jede Änderung kommt als Vorschau, die Sie genehmigen:
 
 - Einen Katalogeintrag übernehmen, eine von Hand erfasste Technologie gleichen Namens vervollständigen oder eine Technologie anlegen, die der Katalog nicht kennt.
 - Die Felder der Technologie ändern.
@@ -390,9 +390,9 @@ Mit der Stufe Mitglied für die Infrastruktur schreibt Plaid auch, und jede Änd
 - Weblinks hinzufügen, ändern oder entfernen.
 - Schwachstellenwarnungen ein- oder ausschalten, für die Technologie oder für eine Version.
 
-Plaid nennt die Familie, den Lebenszyklus und die anderen Listenwerte in Ihrer Sprache und lehnt einen Wert ab, der auf mehrere passt. Es lehnt einen Namen ab, den zwei Benutzer oder zwei Kontakte tragen, und zwei Links mit derselben Adresse. Fragen Sie zum Beispiel: „Übernimm PostgreSQL aus dem KANAP-Katalog“, „Füge TEC-3 die Version 17 hinzu“, „Füge Camille Roux als Business-Verantwortliche von PostgreSQL hinzu“, „Füge den Kontakt Oracle Support zum Support von TEC-3 hinzu“, „Füge PostgreSQL den Link zu den Versionshinweisen https://www.postgresql.org/docs/release/ hinzu“ oder „Nimm die Version 14 von TEC-3 aus den Warnungen“.
+Kad nennt die Familie, den Lebenszyklus und die anderen Listenwerte in Ihrer Sprache und lehnt einen Wert ab, der auf mehrere passt. Es lehnt einen Namen ab, den zwei Benutzer oder zwei Kontakte tragen, und zwei Links mit derselben Adresse. Fragen Sie zum Beispiel: „Übernimm PostgreSQL aus dem Kadratis-Katalog“, „Füge TEC-3 die Version 17 hinzu“, „Füge Camille Roux als Business-Verantwortliche von PostgreSQL hinzu“, „Füge den Kontakt Oracle Support zum Support von TEC-3 hinzu“, „Füge PostgreSQL den Link zu den Versionshinweisen https://www.postgresql.org/docs/release/ hinzu“ oder „Nimm die Version 14 von TEC-3 aus den Warnungen“.
 
-Einen Support-Kontakt hinzuzufügen erfordert zusätzlich das Recht, Kontakte zu lesen. Einen zu entfernen erfordert es nicht. Plaid fügt nur aktive Benutzer als Verantwortliche hinzu und entfernt einen Verantwortlichen auch dann, wenn sein Konto deaktiviert ist. Ein Kontakt ohne Namen kann nicht hinzugefügt werden: Geben Sie ihm zuerst unter Kontakte einen Namen. Wenn Plaid eine von Hand erfasste Technologie vervollständigt, ändert es nur die abweichenden Felder und hält an, wenn eines davon nach der Vorschau auf dem Bildschirm geändert wurde.
+Einen Support-Kontakt hinzuzufügen erfordert zusätzlich das Recht, Kontakte zu lesen. Einen zu entfernen erfordert es nicht. Kad fügt nur aktive Benutzer als Verantwortliche hinzu und entfernt einen Verantwortlichen auch dann, wenn sein Konto deaktiviert ist. Ein Kontakt ohne Namen kann nicht hinzugefügt werden: Geben Sie ihm zuerst unter Kontakte einen Namen. Wenn Kad eine von Hand erfasste Technologie vervollständigt, ändert es nur die abweichenden Felder und hält an, wenn eines davon nach der Vorschau auf dem Bildschirm geändert wurde.
 
 Das Löschen einer Technologie oder einer Version, Anhänge, CPE-Kennungen und CVE.org-Namen sowie der Abgleich der Schwachstellen bleiben auf dieser Seite.
 
@@ -401,5 +401,5 @@ Das Löschen einer Technologie oder einer Version, Anhänge, CPE-Kennungen und C
 - **Vom Katalog ausgehen**: Sie erhalten die Versionen und ihre Supportende-Daten, ohne sie einzutippen.
 - **Hauptversionen verfolgen**: Eine Zeile pro Hauptversion (2019, 2022) genügt, um den Support zu verfolgen.
 - **Verantwortliche benennen**: Die IT-Verantwortlichen sind die Ansprechpartner, wenn eine Version ihr Supportende erreicht. Sie erhalten auch die E-Mail über neue kritische Schwachstellen.
-- **CPE-Produktkennungen und CVE.org-Namen ausfüllen**: Ohne beides kann KANAP die Technologie nicht mit den veröffentlichten Schwachstellen abgleichen.
+- **CPE-Produktkennungen und CVE.org-Namen ausfüllen**: Ohne beides kann Kadratis die Technologie nicht mit den veröffentlichten Schwachstellen abgleichen.
 - **Die Version auf jedem Server erfassen**: Eine unbekannte Version ist potenziell von jeder Schwachstelle des Produkts betroffen.

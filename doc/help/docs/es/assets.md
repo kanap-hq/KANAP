@@ -8,7 +8,7 @@ Navegue a **Panorama IT > Activos** para ver su inventario de activos. Para crea
 
 1. Haga clic en **Añadir activo** y luego en **Añadir activo** o **Añadir clúster**. La página del activo se abre con un título vacío en el encabezado. El resto de la página aparece atenuado.
 2. Escriba el nombre del activo, de 200 caracteres como máximo.
-3. Pulse Intro o haga clic fuera del título. KANAP crea el activo de inmediato. Su referencia (`AST-12`) aparece y se abren todas las pestañas.
+3. Pulse Intro o haga clic fuera del título. Kadratis crea el activo de inmediato. Su referencia (`AST-12`) aparece y se abren todas las pestañas.
 
 El nuevo activo es una máquina virtual del entorno Prod, con el ciclo de vida Activo. Si sus tipos de activos no tienen máquina virtual, toma el primer tipo de la lista. **Añadir clúster** lo crea con el conmutador **Clúster** activado. Después, cada campo se guarda por sí solo, así que puede cambiar el tipo o el entorno enseguida.
 
@@ -23,7 +23,7 @@ El nuevo activo es una máquina virtual del entorno Prod, con el ciclo de vida A
 
 Pulse Escape en el título vacío para salir sin crear nada. Un nombre rechazado se muestra bajo el título.
 
-**Nombres únicos**: dos activos no pueden tener el mismo nombre ni el mismo FQDN. Las mayúsculas y los espacios al principio o al final no cuentan. KANAP rechaza el duplicado e indica el activo que ya tiene el valor (`AST-12`). Los duplicados registrados antes siguen siendo editables mientras no cambie ese valor.
+**Nombres únicos**: dos activos no pueden tener el mismo nombre ni el mismo FQDN. Las mayúsculas y los espacios al principio o al final no cuentan. Kadratis rechaza el duplicado e indica el activo que ya tiene el valor (`AST-12`). Los duplicados registrados antes siguen siendo editables mientras no cambie ese valor.
 
 **Consejo**: Use convenciones de nomenclatura coherentes que incluyan información de entorno y rol (p. ej., `prod-web-01`, `dev-db-master`). Al crear un nuevo activo, el nombre de host se deriva automáticamente del nombre que escriba.
 
@@ -36,10 +36,10 @@ Pulse Escape en el título vacío para salir sin crear nada. Un nombre rechazado
 
 Mientras el activo se está creando, su encabezado muestra **Crear** y **Cancelar** en lugar del botón de cierre. Permanecen hasta que salga del activo.
 
-- **Crear** comprueba que el activo tenga una ubicación. Sin ella, un mensaje indica la ubicación que falta y el campo **Ubicación** del panel de propiedades recibe el foco. El activo sigue abierto. Con una ubicación, KANAP conserva el activo y lo cierra. Vuelve al punto de partida
+- **Crear** comprueba que el activo tenga una ubicación. Sin ella, un mensaje indica la ubicación que falta y el campo **Ubicación** del panel de propiedades recibe el foco. El activo sigue abierto. Con una ubicación, Kadratis conserva el activo y lo cierra. Vuelve al punto de partida
 - **Cancelar** elimina el activo. Si introdujo algo más que el nombre, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar activos
 
-Si sale del activo de otra forma (la flecha de retroceso, el menú, otro activo) mientras no tiene ubicación, KANAP le pregunta qué hacer. **Completarlo** le deja en el activo, en el campo **Ubicación**. **Eliminarlo** elimina el activo.
+Si sale del activo de otra forma (la flecha de retroceso, el menú, otro activo) mientras no tiene ubicación, Kadratis le pregunta qué hacer. **Completarlo** le deja en el activo, en el campo **Ubicación**. **Eliminarlo** elimina el activo.
 
 ---
 
@@ -91,7 +91,7 @@ La mayoría de columnas admiten filtros de conjunto de casillas para un filtrado
 | Zona de administración | Incluye "(Vacío)" para los activos sin zona |
 | Vulnerabilidades por revisar | **Con vulnerabilidades graves**, **Con vulnerabilidades** o **Sin**. Un activo retirado no entra en ninguno de estos valores |
 
-Ordenar por **Vulnerabilidades por revisar** clasifica los activos por sus vulnerabilidades críticas o altas y luego por su total. Los activos retirados van al final. La columna solo cuenta vínculos directos: una máquina virtual no cuenta las vulnerabilidades de su host. Consulte [Lo que KANAP cuenta](vulnerabilities.md#what-kanap-counts).
+Ordenar por **Vulnerabilidades por revisar** clasifica los activos por sus vulnerabilidades críticas o altas y luego por su total. Los activos retirados van al final. La columna solo cuenta vínculos directos: una máquina virtual no cuenta las vulnerabilidades de su host. Consulte [Lo que Kadratis cuenta](vulnerabilities.md#what-kanap-counts).
 
 **La búsqueda rápida** abarca el nombre, la referencia, el nombre de host, el FQDN, las direcciones IP, el clúster, la ubicación, la sububicación y el sistema operativo.
 
@@ -124,9 +124,9 @@ Dónde asignar depende del clúster:
 
 Un miembro ejecuta lo que está asignado a su clúster. Un activo que el clúster contiene se ejecuta dentro de él y no hereda nada.
 
-Cuando asigna una aplicación a un miembro de un clúster, KANAP pregunta **¿Asignar al clúster?**: **Asignar al clúster** pone la asignación en el clúster para todos sus miembros, **Solo este servidor** la mantiene en ese servidor. La pregunta nombra a los miembros cuya asignación propia del mismo entorno y rol será sustituida por la del clúster. La asignación del clúster conserva entonces la fecha **Desde** más antigua y sus notas. Cuando el miembro ya aloja la aplicación con ese rol a través de su clúster, no se crea nada y un mensaje lo indica. Una asignación hecha con el asistente sigue las mismas reglas, sin la pregunta.
+Cuando asigna una aplicación a un miembro de un clúster, Kadratis pregunta **¿Asignar al clúster?**: **Asignar al clúster** pone la asignación en el clúster para todos sus miembros, **Solo este servidor** la mantiene en ese servidor. La pregunta nombra a los miembros cuya asignación propia del mismo entorno y rol será sustituida por la del clúster. La asignación del clúster conserva entonces la fecha **Desde** más antigua y sus notas. Cuando el miembro ya aloja la aplicación con ese rol a través de su clúster, no se crea nada y un mensaje lo indica. Una asignación hecha con el asistente sigue las mismas reglas, sin la pregunta.
 
-Allí donde KANAP lee dónde se ejecuta una aplicación, cuenta los miembros del clúster: las vulnerabilidades y el fin de soporte de la aplicación, su tipo de alojamiento (un clúster sin ubicación toma el tipo de alojamiento de sus miembros), las zonas de administración, las aplicaciones de una ubicación o de un contrato sobre un servidor, el asistente y Conocimiento. En el impacto de un miembro caído, el clúster queda degradado y sus aplicaciones siguen funcionando. Consulte [Dependencias](#dependencies).
+Allí donde Kadratis lee dónde se ejecuta una aplicación, cuenta los miembros del clúster: las vulnerabilidades y el fin de soporte de la aplicación, su tipo de alojamiento (un clúster sin ubicación toma el tipo de alojamiento de sus miembros), las zonas de administración, las aplicaciones de una ubicación o de un contrato sobre un servidor, el asistente y Conocimiento. En el impacto de un miembro caído, el clúster queda degradado y sus aplicaciones siguen funcionando. Consulte [Dependencias](#dependencies).
 
 Los miembros se gestionan en la parte superior de la pestaña **Operaciones** del clúster. Consulte [Operaciones](#operations). Las reglas:
 
@@ -141,7 +141,7 @@ Las instalaciones actualizadas desde una versión anterior conservan sus clúste
 
 Un clúster de virtualización contiene sus máquinas virtuales: añádalas a la sección **Contiene** del clúster, en su pestaña **Dependencias**. Una máquina del clúster puede ejecutarse en cualquiera de sus hosts.
 
-Cuando añade una relación **Contiene** desde un host que pertenece a un clúster, KANAP pregunta **¿Colocar en el clúster?**. **Colocar en el clúster** pone la relación en el clúster. **Solo este host** la mantiene en el host. La misma pregunta aparece cuando añade un host así en **Contenido en**. Un host o un clúster retirado no plantea la pregunta.
+Cuando añade una relación **Contiene** desde un host que pertenece a un clúster, Kadratis pregunta **¿Colocar en el clúster?**. **Colocar en el clúster** pone la relación en el clúster. **Solo este host** la mantiene en el host. La misma pregunta aparece cuando añade un host así en **Contenido en**. Un host o un clúster retirado no plantea la pregunta.
 
 - Colocar un activo en el clúster sustituye los vínculos que los hosts miembros tenían con él. Un mensaje nombra los hosts.
 - Un host no puede contener un activo que su clúster ya contiene. El mensaje nombra el clúster.
@@ -237,7 +237,7 @@ La pestaña Operaciones muestra el clúster del activo y lo que se ejecuta en é
 | **Desde** | Fecha en que se asignó el servidor |
 | **Notas** | Notas de texto libre |
 
-Haga clic en **Añadir asignación** para vincular este activo a un despliegue de aplicación. Elija la aplicación y luego su despliegue. Si la aplicación aún no tiene despliegue en un entorno, **+ Crear el despliegue …** lo crea junto con la asignación. Luego elija el rol y la fecha / notas opcionales. En un miembro de un clúster, KANAP pregunta primero si asignar el clúster o solo este servidor. Consulte [Aplicaciones en un clúster](#applications-on-a-cluster). El lápiz al final de una fila abre la aplicación: la asignación se edita en su pestaña **Despliegues**. El icono de papelera quita la asignación, tras una confirmación. **Añadir asignación** no está disponible mientras no haya ningún rol de servidor configurado en **Panorama IT > Configuración**. Estos comandos requieren `infrastructure:member` y `applications:member`. Sin ambos, la tabla es de solo lectura.
+Haga clic en **Añadir asignación** para vincular este activo a un despliegue de aplicación. Elija la aplicación y luego su despliegue. Si la aplicación aún no tiene despliegue en un entorno, **+ Crear el despliegue …** lo crea junto con la asignación. Luego elija el rol y la fecha / notas opcionales. En un miembro de un clúster, Kadratis pregunta primero si asignar el clúster o solo este servidor. Consulte [Aplicaciones en un clúster](#applications-on-a-cluster). El lápiz al final de una fila abre la aplicación: la asignación se edita en su pestaña **Despliegues**. El icono de papelera quita la asignación, tras una confirmación. **Añadir asignación** no está disponible mientras no haya ningún rol de servidor configurado en **Panorama IT > Configuración**. Estos comandos requieren `infrastructure:member` y `applications:member`. Sin ambos, la tabla es de solo lectura.
 
 En un miembro, una aplicación asignada a su clúster se muestra «vía» el nombre del clúster, sin lápiz ni papelera: modifíquela en el clúster.
 
@@ -283,7 +283,7 @@ Cuando se siguen las vulnerabilidades, la última sección de la pestaña lista 
 
 En un **clúster**, **En sus miembros** lista aparte las tecnologías de sus miembros, una línea por tecnología y versión, con los miembros que la llevan en la columna **Activo**. Un clúster cuenta las vulnerabilidades de sus miembros en servicio con las suyas: el número de la sección, la insignia del encabezado (su información emergente dice "miembros incluidos") y la columna de la lista. El **Ver** de una línea abre la página en el miembro que la lleva.
 
-Lo que solo viene del host en el que se ejecutan el activo o sus miembros, como el ESXi del host de una máquina virtual, es la plataforma subyacente. Se agrupa bajo una línea cerrada **Plataforma subyacente (n)**, que se abre con un clic. No se cuenta ni en la sección, ni en la insignia, ni en la columna de la lista: una vulnerabilidad cuenta en el activo donde la tecnología está registrada. Su **Ver** abre la página en ese host. Consulte [Lo que KANAP cuenta](vulnerabilities.md#what-kanap-counts).
+Lo que solo viene del host en el que se ejecutan el activo o sus miembros, como el ESXi del host de una máquina virtual, es la plataforma subyacente. Se agrupa bajo una línea cerrada **Plataforma subyacente (n)**, que se abre con un clic. No se cuenta ni en la sección, ni en la insignia, ni en la columna de la lista: una vulnerabilidad cuenta en el activo donde la tecnología está registrada. Su **Ver** abre la página en ese host. Consulte [Lo que Kadratis cuenta](vulnerabilities.md#what-kanap-counts).
 
 ---
 
@@ -503,7 +503,7 @@ Para campos configurados en **Panorama IT > Configuración**, puede usar tanto e
 
 El sistema normaliza automáticamente los valores durante la importación, por lo que `Virtual Machine`, `virtual machine` y `vm` se resuelven al mismo tipo de activo. Un valor que coincide con varias entradas se rechaza en lugar de adivinarse. La exportación escribe nombres en estas columnas, en el idioma de la pantalla, de modo que un archivo exportado se puede volver a importar tal cual.
 
-**Sistema operativo**: la columna `operating_system` contiene el nombre de la tecnología seguido de su versión, tal como lo escribe la exportación (`Windows Server 2019`, `Ubuntu 24.04 LTS`). Al importar, KANAP busca la tecnología entre las suyas y después en el catálogo, y registra la versión. Una tecnología o una versión que no encuentra se crea: revise antes la ortografía. El valor pasa a ser el sistema operativo del servidor.
+**Sistema operativo**: la columna `operating_system` contiene el nombre de la tecnología seguido de su versión, tal como lo escribe la exportación (`Windows Server 2019`, `Ubuntu 24.04 LTS`). Al importar, Kadratis busca la tecnología entre las suyas y después en el catálogo, y registra la versión. Una tecnología o una versión que no encuentra se crea: revise antes la ortografía. El valor pasa a ser el sistema operativo del servidor.
 
 **Pertenencia a clústeres**: la columna `cluster` nombra los clústeres del activo, separados por comas (`ESX-PROD, SQL-CLUSTER`). No distingue mayúsculas de minúsculas. La exportación escribe los clústeres de los que el activo es miembro. En la importación:
 

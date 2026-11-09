@@ -40,7 +40,7 @@ Navigate to **IT Landscape > Applications** to see your list. To create an appli
 
 1. Click **New application**. The application page opens with an empty title in the header. The rest of the page is dimmed.
 2. Type the name of the application or service, up to 200 characters. See [Unique names](#unique-names).
-3. Press Enter, or click outside the title. KANAP creates the application at once. Its reference (`APP-12`) shows and all tabs open.
+3. Press Enter, or click outside the title. Kadratis creates the application at once. Its reference (`APP-12`) shows and all tabs open.
 
 The new application is **Active**, in the default category. Change them in the header and the properties drawer, then fill in the rest:
 
@@ -92,7 +92,7 @@ The Applications grid provides a comprehensive view of your application portfoli
 
 **Default columns**:
 - **Name**: Application name, with an "Included in: {suite}" line under it for an application included in a suite
-- **Vulnerabilities to review**: the vulnerabilities still to review on the technologies the application declares or that its deployment servers have recorded, then, in orange, how many are critical or high (`5 · 2`). Empty for a disabled application or when none is left. Click it to open the [Vulnerabilities](vulnerabilities.md) page filtered on the application. Present when vulnerabilities are followed. See [What KANAP counts](vulnerabilities.md#what-kanap-counts)
+- **Vulnerabilities to review**: the vulnerabilities still to review on the technologies the application declares or that its deployment servers have recorded, then, in orange, how many are critical or high (`5 · 2`). Empty for a disabled application or when none is left. Click it to open the [Vulnerabilities](vulnerabilities.md) page filtered on the application. Present when vulnerabilities are followed. See [What Kadratis counts](vulnerabilities.md#what-kanap-counts)
 - **Category**: The application's primary purpose
 - **Environments**: Coloured chips showing active environments (Prod, Pre-prod, QA, Test, Dev, Sandbox). Hover for the base URL and lifecycle.
 - **Lifecycle**: Current status
@@ -228,7 +228,7 @@ The Deployments tab documents where the application actually runs: one block per
 | **Hosting** | Derived from the asset's location |
 | **Since** | Date the server was assigned to this deployment |
 
-Click **Add server** on the deployment header to attach an asset. The picker lists the clusters with their members under their name. The assignment of a cluster reaches its members in service: they show under the cluster's row, without actions. Change the assignment on the cluster. When you pick a member of a cluster, KANAP asks whether to assign the cluster or this server only. See [Applications on a cluster](assets.md#applications-on-a-cluster). Adding, changing or removing a server needs `applications:member` and `infrastructure:member`.
+Click **Add server** on the deployment header to attach an asset. The picker lists the clusters with their members under their name. The assignment of a cluster reaches its members in service: they show under the cluster's row, without actions. Change the assignment on the cluster. When you pick a member of a cluster, Kadratis asks whether to assign the cluster or this server only. See [Applications on a cluster](assets.md#applications-on-a-cluster). Adding, changing or removing a server needs `applications:member` and `infrastructure:member`.
 
 When the application is assigned directly to each member in service of a cluster, a line under the table names them, with a button to assign the application to the cluster (**Assign to** and its name). After a confirmation, the cluster takes the assignment and the members' own assignments are removed. The application then stays available as long as one member stands.
 
@@ -286,7 +286,7 @@ To add, change or remove a declared technology, and to record it on servers, you
 
 **See** opens the [Vulnerabilities](vulnerabilities.md) page filtered on the application and the technology. When nothing is left to review, the section says so in one line. While the first read of a product from the NVD, or the match of a technology just recorded on this application or on one of its deployment servers, is still running, the section says "Searching for vulnerabilities…" and fills in on its own. When the search cannot be completed, the section says so. A disabled application has no section.
 
-The section counts direct links only. A technology the **Technologies** section shows through the host of a virtual machine does not count here: it counts on the host. See [What KANAP counts](vulnerabilities.md#what-kanap-counts).
+The section counts direct links only. A technology the **Technologies** section shows through the host of a virtual machine does not count here: it counts on the host. See [What Kadratis counts](vulnerabilities.md#what-kanap-counts).
 
 A user who can read applications without reading the infrastructure still sees this section, the badge in the header and the list column, for the applications they can read.
 
@@ -306,7 +306,7 @@ The Compliance tab captures data protection and regulatory information.
 
 ### Classification and continuity
 
-The Compliance area also records the application's continuity and classification decisions. Missing values are shown as **Not set**; KANAP does not substitute a default level.
+The Compliance area also records the application's continuity and classification decisions. Missing values are shown as **Not set**; Kadratis does not substitute a default level.
 
 The tab is organized in four blocks, in the order of a business impact analysis.
 
@@ -321,8 +321,8 @@ The tab is organized in four blocks, in the order of a business impact analysis.
 
 **Continuity and recovery**:
 - **Recovery wave** identifies the order in which the application is restored. It does not imply a duration or severity.
-- **RTO** is the target time to restore service. **RPO** is the acceptable data-loss duration and may be zero. If the RTO reaches the maximum tolerable downtime defined on the chosen business level, KANAP shows a warning but keeps both values.
-- Under the wave, KANAP lists the interfaces that link this application to an application planned in a **later** wave ("Exchanges with CRM, planned in V3"), with a link to each interface. Both applications must be up for the flow to work; the recovery plan owner decides. Retired interfaces are ignored, and users with a restricted Business Contributor scope do not see this list.
+- **RTO** is the target time to restore service. **RPO** is the acceptable data-loss duration and may be zero. If the RTO reaches the maximum tolerable downtime defined on the chosen business level, Kadratis shows a warning but keeps both values.
+- Under the wave, Kadratis lists the interfaces that link this application to an application planned in a **later** wave ("Exchanges with CRM, planned in V3"), with a link to each interface. Both applications must be up for the flow to work; the recovery plan owner decides. Retired interfaces are ignored, and users with a restricted Business Contributor scope do not see this list.
 - **Last recovery test** records the most recent test date. A link opened from this area uses the single existing **Knowledge** section in Overview; it does not create a duplicate record. Older URL links remain available under Relations.
 
 Two discreet hints may appear: data at the highest confidentiality level combined with the lowest cyber criticality, and an application at the most critical business level without a recovery test in the last twelve months. They never block anything.
@@ -397,7 +397,7 @@ The technology keeps the name, publisher, description, notes, support notes, lif
 
 ## Version management
 
-KANAP offers **two ways to manage application versions**, depending on how your organization handles upgrades:
+Kadratis offers **two ways to manage application versions**, depending on how your organization handles upgrades:
 
 | Approach | Best for | What happens |
 |----------|----------|--------------|
@@ -465,7 +465,7 @@ During version creation, the wizard shows all interfaces where this application 
 
 ## Copying applications
 
-There are two ways to copy an application in KANAP:
+There are two ways to copy an application in Kadratis:
 
 ### Copy item (from the Applications grid)
 
@@ -726,9 +726,9 @@ Custom ERP;lob;;Moderate;Active;2018-03-20;false
 
 ## Ask the assistant
 
-[Plaid](ai-assistant.md) reads the version, go-live date, end of support date and retirement date of each application. It filters, sorts and groups the applications by these dates. Its list keeps the retired applications, while the [End of support](end-of-support.md) report keeps only those in service.
+[Kad](ai-assistant.md) reads the version, go-live date, end of support date and retirement date of each application. It filters, sorts and groups the applications by these dates. Its list keeps the retired applications, while the [End of support](end-of-support.md) report keeps only those in service.
 
-Plaid also declares a technology on an application, or removes it, with its version and, if you ask, on the application's deployment servers. This needs the right to read applications and the Member level on infrastructure. A Business Contributor does it only on the applications they take part in. Plaid does not link an operating system: set it on the server's page. Every change comes as a preview that you approve. When you ask Plaid to undo it, it puts back exactly what it changed. A version created along the way stays on the technology.
+Kad also declares a technology on an application, or removes it, with its version and, if you ask, on the application's deployment servers. This needs the right to read applications and the Member level on infrastructure. A Business Contributor does it only on the applications they take part in. Kad does not link an operating system: set it on the server's page. Every change comes as a preview that you approve. When you ask Kad to undo it, it puts back exactly what it changed. A version created along the way stays on the technology.
 
 Ask, for example: "Add PostgreSQL 16 to CheeseTrack and its servers", "Remove PostgreSQL 14 from CheeseTrack", "Which applications reach their end of support in the next six months?" or "Which applications declare PostgreSQL 14?"
 

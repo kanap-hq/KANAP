@@ -123,7 +123,7 @@ Cada cambio se guarda automáticamente. Una breve nota «Guardando… / Guardado
 ### Panel Propiedades
 
 **Puesto**
-El puesto de la persona, el mismo que aparece en todos los lugares donde figura en KANAP: el organigrama, su ficha de usuario, su perfil. No es una etiqueta propia de la cartera: cambiarlo aquí lo cambia en todas partes. Escríbalo y haga clic fuera para guardar.
+El puesto de la persona, el mismo que aparece en todos los lugares donde figura en Kadratis: el organigrama, su ficha de usuario, su perfil. No es una etiqueta propia de la cartera: cambiarlo aquí lo cambia en todas partes. Escríbalo y haga clic fuera para guardar.
 
 Siempre puede definir el suyo. Definir el de otra persona requiere el nivel **Administrador** sobre los usuarios; sin ese permiso sigue viendo el valor, pero el campo es de solo lectura.
 
@@ -135,7 +135,7 @@ Asigne este colaborador a un equipo. Los equipos son grupos organizacionales con
 **Responsable**
 La persona a la que reporta este colaborador. Haga clic en el campo, busque por nombre y elija a cualquier persona de su organización: el responsable no tiene por qué ser colaborador. Use **Borrar** para quitar el vínculo. Un colaborador no puede ser su propio responsable, y no puede elegir a alguien que ya le reporta, directamente o a través de una cadena de responsables.
 
-Cuando el responsable proviene de Microsoft Entra, el campo es de solo lectura y muestra **Desde Microsoft Entra** debajo. Cámbielo en su directorio, no aquí: la sincronización nocturna traslada el cambio. Un responsable que todavía no tiene cuenta de KANAP se omite hasta que la tenga, y mientras tanto el campo conserva su valor actual.
+Cuando el responsable proviene de Microsoft Entra, el campo es de solo lectura y muestra **Desde Microsoft Entra** debajo. Cámbielo en su directorio, no aquí: la sincronización nocturna traslada el cambio. Un responsable que todavía no tiene cuenta de Kadratis se omite hasta que la tenga, y mientras tanto el campo conserva su valor actual.
 
 Una vez definido, el nombre del responsable también aparece en el encabezado del espacio de trabajo, y al hacer clic se abre su ficha de colaborador cuando tiene una. Este campo solo es visible al editar el perfil de otro colaborador (no el suyo propio).
 

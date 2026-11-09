@@ -95,7 +95,7 @@ Les modèles de phases fournissent :
 - Des jalons optionnels liés à chaque phase
 
 **Modèles système** :
-- Modèles prédéfinis fournis par KANAP
+- Modèles prédéfinis fournis par Kadratis
 - Marqués d'une pastille « Système »
 - Peuvent être modifiés mais fournissent des valeurs par défaut sensées
 
@@ -178,7 +178,7 @@ Catégorie (par exemple, « Transformation numérique »)
 - Utilisez l'interrupteur d'une catégorie ou d'une filière
 - Un élément désactivé n'apparaît pas dans les listes déroulantes de sélection
 
-Supprimer une catégorie supprime ses filières. KANAP l'indique avant la confirmation.
+Supprimer une catégorie supprime ses filières. Kadratis l'indique avant la confirmation.
 
 ### Types de tâche
 
@@ -193,11 +193,11 @@ Les types de tâche sont la liste utilisée pour les tâches du portefeuille. Vo
 - Utilisez l'interrupteur
 - Un type de tâche désactivé n'apparaît pas dans les listes déroulantes de sélection
 
-Un type de tâche encore utilisé par des tâches ne peut pas être supprimé. KANAP l'indique avant la confirmation et compte les tâches qui l'utilisent. Désactivez-le.
+Un type de tâche encore utilisé par des tâches ne peut pas être supprimé. Kadratis l'indique avant la confirmation et compte les tâches qui l'utilisent. Désactivez-le.
 
 **Éléments système** :
 - Les sources, les catégories et les types de tâche marqués **Système** peuvent être modifiés ou désactivés. Ils ne peuvent pas être supprimés.
-- Une source, une catégorie ou une filière encore utilisée par des demandes ou des projets ne peut pas être supprimée. Il en va de même pour un type de tâche encore utilisé par des tâches. KANAP l'indique avant la confirmation et compte ce qui l'utilise. Désactivez-le.
+- Une source, une catégorie ou une filière encore utilisée par des demandes ou des projets ne peut pas être supprimée. Il en va de même pour un type de tâche encore utilisé par des tâches. Kadratis l'indique avant la confirmation et compte ce qui l'utilise. Désactivez-le.
 
 ### Bonnes pratiques
 

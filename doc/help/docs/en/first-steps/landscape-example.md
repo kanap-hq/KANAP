@@ -1,9 +1,9 @@
 ---
-title: "Your IT landscape in KANAP in ten minutes: explore with the example"
+title: "Your IT landscape in Kadratis in ten minutes: explore with the example"
 description: The five steps of the IT landscape path on the Fromage & Co example, from the application list to end of support and your own file.
 ---
 
-# Your IT landscape in KANAP in ten minutes
+# Your IT landscape in Kadratis in ten minutes
 
 **Explore with the example** · [Start with my own data](landscape-own-data.md)
 
@@ -49,7 +49,7 @@ These are the five steps of the **Your first five steps** tile on the home page,
 
 **What to do.** Choose a **Horizon**, then click a row to unfold the servers and the applications it touches. Open a technology from its row.
 
-**What you see.** What has reached or reaches its end of support within the horizon, with its **State**: **Out of support**, **Extended support** or **Ends soon**. On a technology, a version marked **Catalog** takes its dates from the KANAP catalog, kept up to date from the publishers' calendars. **IT landscape > Vulnerabilities** lists the published vulnerabilities (CVE) that affect the versions you declare, with the servers and applications concerned.
+**What you see.** What has reached or reaches its end of support within the horizon, with its **State**: **Out of support**, **Extended support** or **Ends soon**. On a technology, a version marked **Catalog** takes its dates from the Kadratis catalog, kept up to date from the publishers' calendars. **IT landscape > Vulnerabilities** lists the published vulnerabilities (CVE) that affect the versions you declare, with the servers and applications concerned.
 
 ## 5. Your data
 
@@ -59,16 +59,16 @@ These are the five steps of the **Your first five steps** tile on the home page,
 
 **What to do.** Click **Export**, choose **CSV** or **Excel (.xlsx)** and open the file. Then click **Import** and **Download an example**.
 
-**What you see.** The export titles its columns in your language and the import reads the same columns: use it as a template for your own applications. The example workbook holds a few applications, the other columns on an **Advanced** sheet and what each column takes on a **Notes** sheet. Then link each application to its technologies, on its **Operations** tab: KANAP brings their end of support dates and vulnerabilities. **Export** and **Import** are shown to the administrators of the list.
+**What you see.** The export titles its columns in your language and the import reads the same columns: use it as a template for your own applications. The example workbook holds a few applications, the other columns on an **Advanced** sheet and what each column takes on a **Notes** sheet. Then link each application to its technologies, on its **Operations** tab: Kadratis brings their end of support dates and vulnerabilities. **Export** and **Import** are shown to the administrators of the list.
 
-To start from a file you already keep, attach it to a message in Plaid with **Attach a file**. Plaid reads its column headers, the type of each column and the first ten rows, and can say what each column holds.
+To start from a file you already keep, attach it to a message in Kad with **Attach a file**. Kad reads its column headers, the type of each column and the first ten rows, and can say what each column holds.
 
 ## Next
 
-You have seen the essentials of KANAP for the IT landscape. The two other paths also take ten minutes:
+You have seen the essentials of Kadratis for the IT landscape. The two other paths also take ten minutes:
 
-- [Your IT budget in KANAP in ten minutes](budget-example.md)
-- [Your portfolio in KANAP in ten minutes](portfolio-example.md)
+- [Your IT budget in Kadratis in ten minutes](budget-example.md)
+- [Your portfolio in Kadratis in ten minutes](portfolio-example.md)
 
 When the five steps are done, the tile offers these paths. During the trial, it also offers **Book a discovery call**.
 

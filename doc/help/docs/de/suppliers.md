@@ -52,7 +52,7 @@ Klicken Sie auf eine Zeile, um die Seite des Lieferanten zu öffnen. Mit den Pfe
 
 Die Seite hat drei Reiter: **Übersicht**, **Kontakte** und **Verlauf** (die Änderungen am Lieferanten, siehe [Verlauf der Datensätze](record-history.md)).
 
-**Titel**: Der Name des Lieferanten. Klicken Sie darauf, um ihn zu bearbeiten; die Änderung wird gespeichert, wenn Sie das Feld verlassen oder Enter drücken, Escape verwirft sie. Der Name ist Pflicht und muss sich von den Namen aller anderen Lieferanten unterscheiden, unabhängig von Groß- und Kleinschreibung (`SAP` und `sap` sind derselbe Name): KANAP zeigt die Meldung unter dem Namen und behält den gespeicherten Namen.
+**Titel**: Der Name des Lieferanten. Klicken Sie darauf, um ihn zu bearbeiten; die Änderung wird gespeichert, wenn Sie das Feld verlassen oder Enter drücken, Escape verwirft sie. Der Name ist Pflicht und muss sich von den Namen aller anderen Lieferanten unterscheiden, unabhängig von Groß- und Kleinschreibung (`SAP` und `sap` sind derselbe Name): Kadratis zeigt die Meldung unter dem Namen und behält den gespeicherten Namen.
 
 **Referenz**: Die ERP-Lieferanten-ID steht, wenn der Lieferant eine hat, vor dem Namen. Klicken Sie darauf, um sie zu kopieren.
 
@@ -85,7 +85,7 @@ Der Reiter **Kontakte** listet die mit diesem Lieferanten verknüpften Kontakte 
 **So funktioniert es**:
 - Jeder Abschnitt listet seine Kontakte mit Namen. Klicken Sie auf einen Namen, um die Kontaktseite zu öffnen.
 - **Vorhandenen hinzufügen**: Suchen Sie einen Kontakt nach Namen und wählen Sie ihn aus. Die Verknüpfung wird sofort gespeichert.
-- **Neuer Kontakt**: Öffnet das Kontaktformular mit bereits ausgefülltem Lieferanten und Kontakttyp. KANAP bringt Sie nach dem Erstellen des Kontakts zu diesem Reiter zurück.
+- **Neuer Kontakt**: Öffnet das Kontaktformular mit bereits ausgefülltem Lieferanten und Kontakttyp. Kadratis bringt Sie nach dem Erstellen des Kontakts zu diesem Reiter zurück.
 - Die Papierkorb-Schaltfläche entfernt die Verknüpfung. Der Kontakt selbst bleibt in Ihren Kontakten. Eine Meldung bestätigt das, mit der Aktion **Rückgängig**, die den Kontakt wieder verknüpft.
 
 **Tipp**: Pflegen Sie mindestens einen Kontakt pro Lieferant, damit die Kommunikation mit ihm immer nur einen Klick entfernt ist.

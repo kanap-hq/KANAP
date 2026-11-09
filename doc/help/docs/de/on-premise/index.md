@@ -1,6 +1,6 @@
 # On-Premise-Bereitstellung
 
-KANAP lässt sich On-Premise im **Single-Tenant-Modus** betreiben. Sie stellen PostgreSQL, einen S3-kompatiblen Speicher und einen TLS-Reverse-Proxy bereit. Um den Rest kümmert sich KANAP: Die Migrationen laufen automatisch, Mandant und Admin-Benutzer werden beim ersten Start angelegt. Es gibt keine Begrenzung der Benutzerzahl.
+Kadratis lässt sich On-Premise im **Single-Tenant-Modus** betreiben. Sie stellen PostgreSQL, einen S3-kompatiblen Speicher und einen TLS-Reverse-Proxy bereit. Um den Rest kümmert sich Kadratis: Die Migrationen laufen automatisch, Mandant und Admin-Benutzer werden beim ersten Start angelegt. Es gibt keine Begrenzung der Benutzerzahl.
 
 ## Leitfäden
 
@@ -29,7 +29,7 @@ KANAP lässt sich On-Premise im **Single-Tenant-Modus** betreiben. Sie stellen P
 
 ## Kurz notiert
 
-- **Versionen.** KANAP veröffentlicht etwa einmal im Monat eine Version (`26.10.1` ist die erste). Sie installieren den Branch `stable`, der immer auf die neueste veröffentlichte Version zeigt, und aktualisieren, indem Sie ihn nach dem Lesen von `CHANGELOG.md` erneut pullen. Aktualisieren Sie mindestens monatlich. Siehe [Betrieb](operations.md#upgrade-verfahren).
+- **Versionen.** Kadratis veröffentlicht etwa einmal im Monat eine Version (`26.10.1` ist die erste). Sie installieren den Branch `stable`, der immer auf die neueste veröffentlichte Version zeigt, und aktualisieren, indem Sie ihn nach dem Lesen von `CHANGELOG.md` erneut pullen. Aktualisieren Sie mindestens monatlich. Siehe [Betrieb](operations.md#upgrade-verfahren).
 - **Plattform.** Das Beispiel verwendet Ubuntu 26.04 LTS (Ubuntu 24.04 funktioniert ebenfalls). Unterstützt wird jedes Betriebssystem mit Docker Engine 24+ und dem Docker-Compose-Plugin ab Version 2.20 (aktuelle Versionen sind 5.x).
 - **Speicher.** Das Beispiel betreibt RustFS auf dem Server. Jeder S3-kompatible Speicher funktioniert, und ein vorhandenes MinIO funktioniert weiterhin.
 - **Interne Netzwerke.** Ein öffentlicher DNS-Eintrag ist nicht nötig. Verwenden Sie einen Namen aus Ihrem Unternehmens-DNS (oder für einen Test einen Eintrag in der hosts-Datei) mit einem Zertifikat Ihrer internen Zertifizierungsstelle. Siehe [Name und Zertifikat](installation.md#name-und-zertifikat).

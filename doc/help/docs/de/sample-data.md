@@ -1,6 +1,6 @@
 # Beispieldaten
 
-Auf der Seite Beispieldaten lernen Sie KANAP mit einem fertigen Datensatz kennen. Sie füllt einen leeren Arbeitsbereich mit Fromage & Co, einem fiktiven Käsehersteller, sodass Sie sehen, wie Budgets, Anwendungen, Verträge und Projekte zusammenspielen, bevor Sie Ihre eigenen Daten erfassen. Wenn Sie genug erkundet haben, löscht eine einzige Aktion alles und versetzt den Arbeitsbereich in seinen Ausgangszustand zurück.
+Auf der Seite Beispieldaten lernen Sie Kadratis mit einem fertigen Datensatz kennen. Sie füllt einen leeren Arbeitsbereich mit Fromage & Co, einem fiktiven Käsehersteller, sodass Sie sehen, wie Budgets, Anwendungen, Verträge und Projekte zusammenspielen, bevor Sie Ihre eigenen Daten erfassen. Wenn Sie genug erkundet haben, löscht eine einzige Aktion alles und versetzt den Arbeitsbereich in seinen Ausgangszustand zurück.
 
 ## Wo Sie die Seite finden
 
@@ -25,7 +25,7 @@ Die Daten richten sich nach dem laufenden Jahr, sodass das Budget immer aktuell 
 
 Der Datensatz wird in der Sprache des Arbeitsbereichs geladen: Englisch, Französisch, Deutsch oder Spanisch (Englisch für jede andere Sprache). Titel, Beschreibungen, Labels der Aufgaben, Vorfälle und Dokumente sind übersetzt. Asset-Typen, die der Datensatz hinzufügt, sind in dieser Sprache benannt. Die Namen von Unternehmen, Personen, Lieferanten und Anwendungen bleiben unverändert, und einige lokale Namen der französischen, niederländischen und italienischen Unternehmen behalten ihre eigene Sprache. Nach dem Löschen erfolgt ein neues Laden in derselben Sprache.
 
-Die fiktiven Benutzer haben weder ein Passwort noch Zugriff. Sie sorgen dafür, dass Verantwortliche, Zuständige und Projektteams realistisch aussehen. KANAP sendet ihnen keine E-Mails, und das Löschen entfernt sie.
+Die fiktiven Benutzer haben weder ein Passwort noch Zugriff. Sie sorgen dafür, dass Verantwortliche, Zuständige und Projektteams realistisch aussehen. Kadratis sendet ihnen keine E-Mails, und das Löschen entfernt sie.
 
 ## Beispieldaten laden
 
@@ -44,7 +44,7 @@ Was ein neuer Arbeitsbereich selbst anlegt (sein erstes Unternehmen, der Standar
 2. Klicken Sie auf **Beispieldaten laden**.
 3. Lesen Sie die Zusammenfassung im Dialog und bestätigen Sie mit **Beispieldaten laden**.
 
-Die Seite zeigt den Ladevorgang Schritt für Schritt (zum Beispiel „Schritt 4 von 21: Kontenpläne“), und der Status wechselt am Ende zu **Geladen**. Die Statusleiste zeigt dann, wann die Daten geladen wurden und von wem. Alles, was Sie in KANAP sehen, wird mit den neuen Daten aktualisiert.
+Die Seite zeigt den Ladevorgang Schritt für Schritt (zum Beispiel „Schritt 4 von 21: Kontenpläne“), und der Status wechselt am Ende zu **Geladen**. Die Statusleiste zeigt dann, wann die Daten geladen wurden und von wem. Alles, was Sie in Kadratis sehen, wird mit den neuen Daten aktualisiert.
 
 **Wenn das Laden nicht möglich ist**, zeigt die Seite die Schaltfläche **Beispieldaten laden** nicht an. Sie nennt den Grund:
 
@@ -54,14 +54,14 @@ Die Seite zeigt den Ladevorgang Schritt für Schritt (zum Beispiel „Schritt 4 
 
 Das Banner auf der Startseite bleibt dann ausgeblendet. Das Löschen geladener Beispieldaten bleibt in einem eingefrorenen Arbeitsbereich möglich (siehe unten).
 
-**Wenn das Laden fehlschlägt**, versetzt KANAP den Arbeitsbereich selbstständig in seinen Ausgangszustand zurück. Der Status zeigt **Laden fehlgeschlagen** mit dem Datum, und die Seite nennt den Grund. Klicken Sie auf **Erneut versuchen**, um einen neuen Ladevorgang zu starten.
+**Wenn das Laden fehlschlägt**, versetzt Kadratis den Arbeitsbereich selbstständig in seinen Ausgangszustand zurück. Der Status zeigt **Laden fehlgeschlagen** mit dem Datum, und die Seite nennt den Grund. Klicken Sie auf **Erneut versuchen**, um einen neuen Ladevorgang zu starten.
 
 !!! warning "Warten Sie, bis das Laden abgeschlossen ist"
     Während eines Ladevorgangs wird alles, was im Arbeitsbereich erstellt wird, gelöscht, falls das Laden fehlschlägt. Beginnen Sie mit echter Arbeit erst, wenn der Status **Geladen** anzeigt.
 
 ## Das Banner auf der Startseite
 
-Solange der Arbeitsbereich leer ist und noch nie Beispieldaten geladen wurden, sehen Administratoren oben auf der Startseite eine Zeile: „Entdecken Sie KANAP mit Beispieldaten.“
+Solange der Arbeitsbereich leer ist und noch nie Beispieldaten geladen wurden, sehen Administratoren oben auf der Startseite eine Zeile: „Entdecken Sie Kadratis mit Beispieldaten.“
 
 - **Laden** öffnet denselben Dialog wie die Seite.
 - **Ausblenden** entfernt die Zeile dauerhaft, für alle Administratoren des Arbeitsbereichs. Die Seite unter **Administration** › **Beispieldaten** bleibt verfügbar.
@@ -105,7 +105,7 @@ Nach dem Löschen ist der Arbeitsbereich leer und die Seite bietet **Beispieldat
 3. Geben Sie den Namen des Arbeitsbereichs, wie er im Dialog steht, in das Feld **Name des Arbeitsbereichs** ein. Groß- und Kleinschreibung sowie Leerzeichen um den Namen spielen keine Rolle.
 4. Klicken Sie auf **Alles löschen**. Die Schaltfläche bleibt deaktiviert, bis der Name übereinstimmt.
 
-Das Löschen dauert einige Sekunden. Der Status zeigt **Wird gelöscht** und danach **Nicht geladen**. In diesen Sekunden lehnt KANAP Änderungen aller Benutzer des Arbeitsbereichs ab, und eine Fehlermeldung rät, es gleich noch einmal zu versuchen. Lesen funktioniert weiterhin.
+Das Löschen dauert einige Sekunden. Der Status zeigt **Wird gelöscht** und danach **Nicht geladen**. In diesen Sekunden lehnt Kadratis Änderungen aller Benutzer des Arbeitsbereichs ab, und eine Fehlermeldung rät, es gleich noch einmal zu versuchen. Lesen funktioniert weiterhin.
 
 Wenn das Löschen fehlschlägt, zeigt die Seite „Der Inhalt des Arbeitsbereichs konnte nicht gelöscht werden. Es wurde nichts geändert.“ Es geht nichts verloren, und Sie können es erneut versuchen.
 

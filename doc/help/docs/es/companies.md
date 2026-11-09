@@ -56,9 +56,9 @@ La lista muestra todas las empresas de su espacio de trabajo. Utilícela para re
 **Valores de las métricas**:
 
 - Una métrica que nunca se introdujo para el año muestra **—**. Un cero introducido muestra **0**
-- Los números siguen el idioma de KANAP: coma decimal en español, francés y alemán, punto decimal en inglés
+- Los números siguen el idioma de Kadratis: coma decimal en español, francés y alemán, punto decimal en inglés
 - La facturación de cada fila está en la moneda base de la empresa. La fila **Total** está en la moneda de reporte: cada facturación se convierte a los tipos del año. Cuando la columna presupuestaria por defecto del año está congelada, son los tipos que fijó. Si no, son los tipos actuales (consulte [Configuración de monedas](currencies.md))
-- Cuando una moneda no tiene tipo para el año, la facturación de las empresas en esa moneda queda fuera del total, y el total indica la moneda y el número de empresas excluidas. KANAP obtiene el tipo que falta en segundo plano. Un [tipo manual](currencies.md#tipos-manuales) lo corrige al momento
+- Cuando una moneda no tiene tipo para el año, la facturación de las empresas en esa moneda queda fuera del total, y el total indica la moneda y el número de empresas excluidas. Kadratis obtiene el tipo que falta en segundo plano. Un [tipo manual](currencies.md#tipos-manuales) lo corrige al momento
 
 **Acciones**:
 
@@ -135,7 +135,7 @@ La pestaña Detalles gestiona las **métricas anuales**. Use las pestañas de a�
 **Cómo funciona**:
 
 - Cada valor se guarda para el año seleccionado al salir del campo (o al pulsar Intro). Un valor no válido muestra un mensaje bajo el campo, por ejemplo «Introduzca un número entero, 0 o más.» El campo vuelve al valor guardado, y el mensaje se mantiene hasta que vuelva a escribir
-- Los números siguen el idioma de KANAP: escriba `12,5` en español, francés o alemán, y `12.5` en inglés
+- Los números siguen el idioma de Kadratis: escriba `12,5` en español, francés o alemán, y `12.5` en inglés
 - Cada año se guarda por separado: al cambiar de año se cargan los valores de ese año
 - Si las cifras de la empresa para el año están **congeladas**, los campos quedan bloqueados y un aviso indica que un administrador de presupuesto puede descongelarlas (**Gestión presupuestaria > Administración > Congelar datos maestros**)
 - Necesita `companies:member` para editar las métricas
@@ -179,7 +179,7 @@ Utilice el **Fin de validez** para controlar cuándo una empresa deja de estar a
 
 Un administrador de empresas (`companies:admin`) puede eliminar una empresa desde su página con **Eliminar**, o varias desde la lista con **Eliminar seleccionadas**.
 
-- KANAP comprueba primero. Cuando algo usa la empresa, el diálogo dice qué, por ejemplo «Esta empresa se usa en 2 departamentos y 14 usuarios. Desactívela en lugar de eliminarla.», y solo ofrece **Cerrar**. Desactive entonces la empresa (consulte [Estado y ciclo de vida](#estado-y-ciclo-de-vida))
+- Kadratis comprueba primero. Cuando algo usa la empresa, el diálogo dice qué, por ejemplo «Esta empresa se usa en 2 departamentos y 14 usuarios. Desactívela en lugar de eliminarla.», y solo ofrece **Cerrar**. Desactive entonces la empresa (consulte [Estado y ciclo de vida](#estado-y-ciclo-de-vida))
 - Si no, el diálogo pide confirmación: «Esta acción no se puede deshacer.» **Eliminar** elimina la empresa con sus métricas anuales y vuelve a la lista
 - Una empresa eliminada sale del mosaico **Vistos recientemente** de [Mi panel de control](my-dashboard.md#vistos-recientemente)
 

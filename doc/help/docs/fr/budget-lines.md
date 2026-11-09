@@ -87,7 +87,7 @@ Les lignes créées avant cette série unique avaient aussi un numéro `OPX-12` 
 - Un lien ou un favori vers une ancienne page OPEX ou CAPEX ouvre la ligne
 - La recherche rapide de la liste trouve une ligne par son ancien numéro
 - Le fichier budgétaire les lit dans `item_number`. Voir [Charger un budget depuis un tableur](budget-file.md)
-- Plaid trouve une ligne par l'un ou l'autre numéro. Voir [Plaid](ai-assistant.md#mentionner-des-enregistrements-avec)
+- Kad trouve une ligne par l'un ou l'autre numéro. Voir [Kad](ai-assistant.md#mentionner-des-enregistrements-avec)
 
 ---
 
@@ -220,7 +220,7 @@ Cliquez sur n'importe quelle ligne de la liste pour ouvrir l'espace de travail. 
 - Chaque modification s'enregistre automatiquement. L'indication **Enregistrement...** / **Enregistré** apparaît dans l'en-tête
 - Changer d'onglet, passer à la ligne précédente ou suivante, ou fermer l'espace de travail enregistre d'abord les modifications en attente. Si un enregistrement échoue, vous restez sur place et un message en donne la raison : aucune modification n'est perdue sans que vous le sachiez
 - **Ctrl+S** (**Cmd+S** sur Mac) enregistre immédiatement
-- Si un enregistrement ne peut pas passer tout de suite parce qu'un autre enregistrement est en cours sur la même donnée, KANAP le relance automatiquement
+- Si un enregistrement ne peut pas passer tout de suite parce qu'un autre enregistrement est en cours sur la même donnée, Kadratis le relance automatiquement
 - Si une opération budgétaire groupée est en cours (par exemple une copie ou une réinitialisation de colonne dans l'Administration budgétaire), les modifications sont mises en attente avec le message « Une autre opération sur le budget est en cours. Réessayez quand elle sera terminée. » Réessayez une fois l'opération terminée
 
 **Modifications simultanées** :
@@ -292,7 +292,7 @@ L'onglet Budget porte les montants de la ligne, année par année et colonne par
 
 - Utilisez les onglets d'année en haut pour basculer entre A-2, A-1, A (année en cours), A+1 et A+2
 - Chaque année a ses propres montants
-- Changer d'année enregistre d'abord vos modifications en attente. Si une colonne attend encore votre choix après la modification d'une autre personne, KANAP demande d'abord : **Changer d'année** abandonne vos valeurs dans cette colonne
+- Changer d'année enregistre d'abord vos modifications en attente. Si une colonne attend encore votre choix après la modification d'une autre personne, Kadratis demande d'abord : **Changer d'année** abandonne vos valeurs dans cette colonne
 
 **Colonnes budgétaires** :
 
@@ -502,7 +502,7 @@ Par exemple, un consultant à temps plein de février à octobre compte 1 ETP da
 
 - **Compté** : une colonne avec des lignes en personnes ou en jours
 - **Zéro** : une colonne dont toutes les lignes sont en pièces. Son ETP vaut 0
-- **Vide** : une colonne sans ligne, une ligne budgétaire sans version pour cette année, ou une année postérieure à la fin de validité de la ligne. Sa cellule ETP reste vide, car KANAP ne peut pas savoir pour combien de personnes elle paie
+- **Vide** : une colonne sans ligne, une ligne budgétaire sans version pour cette année, ou une année postérieure à la fin de validité de la ligne. Sa cellule ETP reste vide, car Kadratis ne peut pas savoir pour combien de personnes elle paie
 - L'ETP reste avec les lignes. Après une modification à la main, une répartition ou une copie, la colonne garde l'ETP de ses lignes. Une copie recalcule l'ETP à partir des lignes copiées, avec les calendriers de jours ouvrés de l'année de destination
 
 ---
@@ -545,8 +545,8 @@ L'onglet Ventilations répartit la dépense d'une année entre vos sociétés et
 
 **Chiffre d'affaires en plusieurs devises** :
 
-- Chaque société saisit son chiffre d'affaires en millions de sa devise de base. Avant la répartition, KANAP convertit chaque chiffre d'affaires dans la devise de reporting, aux taux de la version budgétaire de l'année : les taux figés au gel de sa colonne par défaut, sinon les taux courants de l'année. Voir [Paramètres de devises](currencies.md)
-- Quand une devise n'a pas de taux pour l'année, les sociétés dans cette devise sont écartées de la répartition : elles ne reçoivent aucune part, et les autres sociétés se partagent 100 %. Un avertissement au-dessus du tableau nomme chaque société écartée. KANAP récupère le taux manquant en arrière-plan, et la répartition se corrige d'elle-même dès que le taux est disponible. Un [taux manuel](currencies.md#taux-manuels) règle le problème tout de suite
+- Chaque société saisit son chiffre d'affaires en millions de sa devise de base. Avant la répartition, Kadratis convertit chaque chiffre d'affaires dans la devise de reporting, aux taux de la version budgétaire de l'année : les taux figés au gel de sa colonne par défaut, sinon les taux courants de l'année. Voir [Paramètres de devises](currencies.md)
+- Quand une devise n'a pas de taux pour l'année, les sociétés dans cette devise sont écartées de la répartition : elles ne reçoivent aucune part, et les autres sociétés se partagent 100 %. Un avertissement au-dessus du tableau nomme chaque société écartée. Kadratis récupère le taux manquant en arrière-plan, et la répartition se corrige d'elle-même dès que le taux est disponible. Un [taux manuel](currencies.md#taux-manuels) règle le problème tout de suite
 - Avec **Manuel par société** et l'inducteur Chiffre d'affaires, quand aucune des sociétés sélectionnées n'a de taux, la ventilation est refusée avec un message qui cite les devises et l'année. Saisissez le taux, ou choisissez un autre inducteur
 
 **Comment l'utiliser** :
@@ -612,7 +612,7 @@ La section est absente quand la ligne n'a pas de fournisseur ou qu'il n'y a rien
 
 ### Historique
 
-L'onglet Historique liste les modifications apportées à la ligne, la plus récente en haut. Chaque entrée indique la date et l'heure, l'auteur (une personne, **Système**, **Import** ou **Plaid pour** une personne) et chaque champ modifié avec sa valeur avant et après. Une modification de montant indique l'année, la colonne et les valeurs avant et après.
+L'onglet Historique liste les modifications apportées à la ligne, la plus récente en haut. Chaque entrée indique la date et l'heure, l'auteur (une personne, **Système**, **Import** ou **Kad pour** une personne) et chaque champ modifié avec sa valeur avant et après. Une modification de montant indique l'année, la colonne et les valeurs avant et après.
 
 Les modifications des éléments de la ligne y figurent aussi : montants, dimensions, ventilations, liens, pièces jointes, contacts, applications, technologies, actifs et tâches. Toute personne qui peut ouvrir la ligne peut lire son historique. Une fiche d'un module que vous ne pouvez pas lire apparaît seulement par son type, par exemple « un contrat ».
 

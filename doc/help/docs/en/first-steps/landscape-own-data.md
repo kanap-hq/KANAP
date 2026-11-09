@@ -1,13 +1,13 @@
 ---
-title: "Your IT landscape in KANAP in ten minutes: start with your own data"
+title: "Your IT landscape in Kadratis in ten minutes: start with your own data"
 description: The five steps of the IT landscape path on your own data, from your locations to your servers, then a colleague.
 ---
 
-# Your IT landscape in KANAP in ten minutes
+# Your IT landscape in Kadratis in ten minutes
 
 [Explore with the example](landscape-example.md) · **Start with my own data**
 
-In ten minutes, your locations, your applications, their technologies and your servers are in KANAP, your first end of support dates show, and a colleague can keep the map up to date. Starting with your own data erases the example: what you see at the end comes from you.
+In ten minutes, your locations, your applications, their technologies and your servers are in Kadratis, your first end of support dates show, and a colleague can keep the map up to date. Starting with your own data erases the example: what you see at the end comes from you.
 
 These are the five steps of the **Your first five steps** tile on the home page, for the path **The IT landscape map** with **Start with my own data**. Each step in the tile opens its screen with a short hint. Each step creates something and is marked done as soon as it exists in the workspace. To mark a step you skip as done, click the mark next to it. See [Trial: your path and first steps](../my-dashboard.md#trial-first-steps).
 
@@ -36,7 +36,7 @@ These are the five steps of the **Your first five steps** tile on the home page,
 
 **What to do.** Click **New technology** and pick a product in the **Catalog**, for example your database. Then open an application, **Operations** tab, and under **Technologies** click **Add** to link the technology at its version.
 
-**What you see.** Your workspace already holds Windows Server and Ubuntu. A technology taken from the catalog comes with its versions and their end of support dates, kept up to date by KANAP. The end of support then shows on the application, and **IT landscape > End of support** lists what reaches it.
+**What you see.** Your workspace already holds Windows Server and Ubuntu. A technology taken from the catalog comes with its versions and their end of support dates, kept up to date by Kadratis. The end of support then shows on the application, and **IT landscape > End of support** lists what reaches it.
 
 ## 4. Your servers
 
@@ -56,10 +56,10 @@ These are the five steps of the **Your first five steps** tile on the home page,
 
 ## Next
 
-Your IT landscape is in KANAP. The two other paths also take ten minutes, on your data:
+Your IT landscape is in Kadratis. The two other paths also take ten minutes, on your data:
 
-- [Your IT budget in KANAP in ten minutes](budget-own-data.md)
-- [Your portfolio in KANAP in ten minutes](portfolio-own-data.md)
+- [Your IT budget in Kadratis in ten minutes](budget-own-data.md)
+- [Your portfolio in Kadratis in ten minutes](portfolio-own-data.md)
 
 When the five steps are done, the tile offers these paths. During the trial, it also offers **Book a discovery call**.
 

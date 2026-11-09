@@ -1,6 +1,6 @@
 # Sample data
 
-Use the Sample data page to explore KANAP with a ready-made set of data. It fills an empty workspace with Fromage & Co, a fictional cheese maker, so you can see budgets, applications, contracts and projects working together before you enter your own. When you are done exploring, one action erases everything and puts the workspace back in its starting state.
+Use the Sample data page to explore Kadratis with a ready-made set of data. It fills an empty workspace with Fromage & Co, a fictional cheese maker, so you can see budgets, applications, contracts and projects working together before you enter your own. When you are done exploring, one action erases everything and puts the workspace back in its starting state.
 
 ## Where to find it
 
@@ -25,7 +25,7 @@ Dates follow the current year, so the budget always looks up to date. Loading ta
 
 The set loads in the workspace's language: English, French, German or Spanish (English for any other language). Titles, descriptions, task labels, incidents and documents are translated. Asset types added by the set are named in that language. The names of companies, people, suppliers and applications stay as they are, and a few local names of the French, Dutch and Italian companies keep their own language. After an erase, a new load comes in the same language.
 
-The fictional users have no password and no access. They exist so that owners, assignees and project teams look realistic. KANAP sends them no e-mail, and the erase step removes them.
+The fictional users have no password and no access. They exist so that owners, assignees and project teams look realistic. Kadratis sends them no e-mail, and the erase step removes them.
 
 ## Load the sample data
 
@@ -44,7 +44,7 @@ What a new workspace creates for you (its first company, the default chart of ac
 2. Click **Load sample data**.
 3. Read the summary in the dialog and confirm with **Load sample data**.
 
-The page follows the load step by step (for example "Step 4 of 21: charts of accounts") and the status changes to **Loaded** when it finishes. The status strip then shows when the data was loaded and by whom. Everything you see in KANAP refreshes with the new data.
+The page follows the load step by step (for example "Step 4 of 21: charts of accounts") and the status changes to **Loaded** when it finishes. The status strip then shows when the data was loaded and by whom. Everything you see in Kadratis refreshes with the new data.
 
 **If a load is not possible**, the page shows no **Load sample data** button. It says why:
 
@@ -54,14 +54,14 @@ The page follows the load step by step (for example "Step 4 of 21: charts of acc
 
 The home banner stays hidden in those cases. Erasing loaded sample data remains possible on a frozen workspace (see below).
 
-**If the load fails**, KANAP puts the workspace back in its starting state by itself. The status shows **Load failed** with the date, and the page gives the reason. Click **Try again** to start another load.
+**If the load fails**, Kadratis puts the workspace back in its starting state by itself. The status shows **Load failed** with the date, and the page gives the reason. Click **Try again** to start another load.
 
 !!! warning "Wait for the load to finish"
     While a load is running, anything created in the workspace is erased if the load fails. Hold off on real work until the status shows **Loaded**.
 
 ## The home banner
 
-While the workspace is empty and sample data has never been loaded, Administrators see one line at the top of the home page: "Discover KANAP with sample data."
+While the workspace is empty and sample data has never been loaded, Administrators see one line at the top of the home page: "Discover Kadratis with sample data."
 
 - **Load** opens the same dialog as the page.
 - **Hide** removes the line for good, for every Administrator of the workspace. The page under **Admin** › **Sample data** stays available.
@@ -105,7 +105,7 @@ Once erased, the workspace is empty and the page offers **Load sample data**.
 3. Type the name of the workspace, as shown in the dialog, in the **Workspace name** field. Capitals and spaces around the name do not matter.
 4. Click **Erase everything**. The button stays disabled until the name matches.
 
-Erasing takes a few seconds. The status shows **Erasing**, then **Not loaded**. During those seconds KANAP refuses changes from every user of the workspace, and an error says to try again in a moment. Reading keeps working.
+Erasing takes a few seconds. The status shows **Erasing**, then **Not loaded**. During those seconds Kadratis refuses changes from every user of the workspace, and an error says to try again in a moment. Reading keeps working.
 
 If the erase fails, the page shows "The content of the workspace could not be erased. Nothing was changed." Nothing is lost, and you can try again.
 

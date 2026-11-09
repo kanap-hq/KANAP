@@ -12,7 +12,7 @@ Navigate to **IT Landscape > Interfaces** to see your integration registry. Clic
 - **Source application** and **Target application**, on the **Flow** tab
 - **Data category**, in the properties panel: the type of data being transferred
 
-You can fill them in any order. Nothing is saved until all four are filled. As soon as they are, KANAP creates the interface with everything the draft holds and assigns its reference (`INT-4`). The page moves to the interface, and **Environments**, **Data mapping**, **Relations** and **History** open.
+You can fill them in any order. Nothing is saved until all four are filled. As soon as they are, Kadratis creates the interface with everything the draft holds and assigns its reference (`INT-4`). The page moves to the interface, and **Environments**, **Data mapping**, **Relations** and **History** open.
 
 **Tip**: Set the **Route type** early. It controls which legs are generated automatically and what shows up on the Flow tab and the Environments matrix.
 
@@ -20,7 +20,7 @@ You can fill them in any order. Nothing is saved until all four are filled. As s
 
 While the interface is being created, its header shows **Create** and **Cancel**. They stay until you leave the interface.
 
-- **Create** keeps the interface and takes you back to where you started. If something is still missing, a message names it, and the title or the first missing field gets the focus. If the draft is complete, KANAP creates the interface and takes you back at once
+- **Create** keeps the interface and takes you back to where you started. If something is still missing, a message names it, and the title or the first missing field gets the focus. If the draft is complete, Kadratis creates the interface and takes you back at once
 - **Cancel** deletes the interface. If you added anything after it was created, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete interfaces
 
 Leaving the interface another way (the menu, the back arrow) keeps it: it is complete.
@@ -35,7 +35,7 @@ The Interfaces grid shows your integration registry at a glance.
 
 **Default columns**:
 
-- **Reference**: The reference KANAP assigns (`INT-4`)
+- **Reference**: The reference Kadratis assigns (`INT-4`)
 - **Interface code**: Your own short code, when set
 - **Name**: Interface name
 - **Environments**: Coloured dots showing which environments already have bindings configured (e.g., PROD, QA, DEV)
@@ -82,7 +82,7 @@ The side panel stays visible across every tab. Click its **Properties** tab to c
 
 **Identification**:
 
-- **Reference**: Assigned by KANAP, read-only
+- **Reference**: Assigned by Kadratis, read-only
 - **Interface code**: Your own short code
 - **Business process**: Link to a business process from master data
 - **Lifecycle**
@@ -239,7 +239,7 @@ A dependency goes one way. If you add interface B upstream of interface A, B app
 
 ## Copying interfaces
 
-There are two ways to copy interfaces in KANAP.
+There are two ways to copy interfaces in Kadratis.
 
 ### Duplicate Interface (from the Interfaces grid)
 

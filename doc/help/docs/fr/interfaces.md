@@ -12,7 +12,7 @@ Rendez-vous dans **Cartographie SI > Interfaces** pour voir votre registre d'int
 - **Application source** et **Application cible**, dans l'onglet **Flux**
 - **Catégorie de données**, dans le panneau des propriétés : le type de données transférées
 
-Vous pouvez les remplir dans l'ordre de votre choix. Rien n'est enregistré tant que les quatre ne sont pas remplis. Dès qu'ils le sont, KANAP crée l'interface avec tout ce que contient le brouillon et lui attribue sa référence (`INT-4`). La page passe à l'interface, et **Environnements**, **Mappage des données**, **Relations** et **Historique** s'ouvrent.
+Vous pouvez les remplir dans l'ordre de votre choix. Rien n'est enregistré tant que les quatre ne sont pas remplis. Dès qu'ils le sont, Kadratis crée l'interface avec tout ce que contient le brouillon et lui attribue sa référence (`INT-4`). La page passe à l'interface, et **Environnements**, **Mappage des données**, **Relations** et **Historique** s'ouvrent.
 
 **Conseil** : Définissez tôt le **Type de route**. Il contrôle quels legs sont générés automatiquement et ce qui apparaît dans l'onglet Flux et la matrice Environnements.
 
@@ -20,7 +20,7 @@ Vous pouvez les remplir dans l'ordre de votre choix. Rien n'est enregistré tant
 
 Tant que l'interface est en cours de création, son en-tête affiche **Créer** et **Annuler**. Ils restent jusqu'à ce que vous quittiez l'interface.
 
-- **Créer** conserve l'interface et vous ramène à votre point de départ. S'il manque encore quelque chose, un message le nomme, et le titre ou le premier champ manquant prend le focus. Si le brouillon est complet, KANAP crée l'interface et vous ramène aussitôt
+- **Créer** conserve l'interface et vous ramène à votre point de départ. S'il manque encore quelque chose, un message le nomme, et le titre ou le premier champ manquant prend le focus. Si le brouillon est complet, Kadratis crée l'interface et vous ramène aussitôt
 - **Annuler** supprime l'interface. Si vous avez ajouté quelque chose après sa création, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des interfaces
 
 Si vous quittez l'interface autrement (le menu, la flèche de retour), elle est conservée : elle est complète.
@@ -35,7 +35,7 @@ La grille Interfaces affiche votre registre d'intégration en un coup d'œil.
 
 **Colonnes par défaut** :
 
-- **Référence** : La référence attribuée par KANAP (`INT-4`)
+- **Référence** : La référence attribuée par Kadratis (`INT-4`)
 - **Code d'interface** : Votre propre code court, s'il est renseigné
 - **Nom** : Nom de l'interface
 - **Environnements** : Points colorés montrant quels environnements ont déjà des liaisons configurées (ex. : PROD, QA, DEV)
@@ -82,7 +82,7 @@ Le panneau latéral reste visible sur chaque onglet. Cliquez sur son onglet **Pr
 
 **Identification** :
 
-- **Référence** : Attribuée par KANAP, en lecture seule
+- **Référence** : Attribuée par Kadratis, en lecture seule
 - **Code d'interface** : Votre propre code court
 - **Processus métier** : Lien vers un processus métier des données de référence
 - **Cycle de vie**
@@ -239,7 +239,7 @@ Une dépendance va dans un seul sens. Si vous ajoutez l'interface B en amont de 
 
 ## Copier des interfaces
 
-Il existe deux façons de copier des interfaces dans KANAP.
+Il existe deux façons de copier des interfaces dans Kadratis.
 
 ### Dupliquer l'interface (depuis la grille Interfaces)
 

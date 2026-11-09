@@ -1,13 +1,13 @@
 # Documentation Deployment Guide
 
-This guide explains how to deploy the KANAP user documentation to Cloudflare Pages.
+This guide explains how to deploy the Kadratis user documentation to Cloudflare Pages.
 
 ## Overview
 
 - **Source**: `doc/help/` folder in the main repository
 - **Build tool**: MkDocs with Material theme
 - **Hosting**: Cloudflare Pages
-- **URL**: https://doc.kanap.net
+- **URL**: https://doc.kadratis.com
 
 ## Cloudflare Pages Setup
 
@@ -43,7 +43,7 @@ For future i18n support, you may add:
 
 1. In your Pages project, go to **Custom domains**
 2. Click **Set up a custom domain**
-3. Enter `doc.kanap.net`
+3. Enter `doc.kadratis.com`
 4. Cloudflare will automatically configure DNS if the domain is on Cloudflare
 
 ### 4. Configure build triggers (optional)
@@ -111,7 +111,7 @@ mkdocs serve
 1. Make changes to documentation in `doc/help/docs/en/` (then the translations)
 2. Merge them on `main` through a pull request
 3. At the next `release.mjs publish`, the `stable` branch moves and Cloudflare Pages rebuilds (~60 seconds)
-4. Changes are live at https://doc.kanap.net
+4. Changes are live at https://doc.kadratis.com
 
 ### Manual (via Wrangler CLI)
 

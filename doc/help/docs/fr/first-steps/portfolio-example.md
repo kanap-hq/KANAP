@@ -1,13 +1,13 @@
 ---
-title: "Votre portefeuille dans KANAP en dix minutes : découvrir avec l'exemple"
+title: "Votre portefeuille dans Kadratis en dix minutes : découvrir avec l'exemple"
 description: Les cinq pas du parcours projets et demandes sur l'exemple Fromage & Co, d'une demande notée aux rapports du portefeuille et à votre propre fichier.
 ---
 
-# Votre portefeuille dans KANAP en dix minutes
+# Votre portefeuille dans Kadratis en dix minutes
 
 **Découvrir avec l'exemple** · [Commencer avec mes données](portfolio-own-data.md)
 
-Fromage & Co est un groupe fromager fictif dont l'exemple est chargé dans votre espace de travail. En dix minutes sur son portefeuille, vous lisez comment une demande est notée, la suivez jusqu'au projet, trouvez les tâches, lisez les rapports et voyez comment votre propre fichier entre dans KANAP.
+Fromage & Co est un groupe fromager fictif dont l'exemple est chargé dans votre espace de travail. En dix minutes sur son portefeuille, vous lisez comment une demande est notée, la suivez jusqu'au projet, trouvez les tâches, lisez les rapports et voyez comment votre propre fichier entre dans Kadratis.
 
 Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le parcours **Les projets et les demandes** avec **Découvrir avec l'exemple complet**. Chaque pas de la tuile ouvre son écran avec une courte indication, et l'ouvrir le marque comme fait. Voir [Essai : votre parcours et vos premiers pas](../my-dashboard.md#trial-first-steps).
 
@@ -19,7 +19,7 @@ Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le
 
 **Le geste.** Lisez la réponse à chaque critère et le score qui en découle.
 
-**Ce que vous lisez.** Une demande est un projet pas encore décidé. KANAP note toutes les demandes sur les mêmes critères, pour que l'arbitrage compare des choses comparables. Les critères et leurs poids se règlent une fois pour toutes dans **Portefeuille > Paramètres**, onglet **Critères d'évaluation**. Une fois au statut **Approuvé**, une demande devient un projet avec **Convertir en projet**.
+**Ce que vous lisez.** Une demande est un projet pas encore décidé. Kadratis note toutes les demandes sur les mêmes critères, pour que l'arbitrage compare des choses comparables. Les critères et leurs poids se règlent une fois pour toutes dans **Portefeuille > Paramètres**, onglet **Critères d'évaluation**. Une fois au statut **Approuvé**, une demande devient un projet avec **Convertir en projet**.
 
 ## 2. Le projet issu de la demande
 
@@ -61,14 +61,14 @@ Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le
 
 **Ce que vous lisez.** L'export titre ses colonnes dans votre langue et l'import lit les mêmes colonnes : servez-vous-en comme modèle pour vos propres projets. Le classeur d'exemple contient quelques projets, les autres colonnes sur une feuille **Avancé** et ce que prend chaque colonne sur une feuille **Notes**. Les demandes et les tâches ont leurs propres **Exporter** et **Importer**. Ces boutons s'affichent pour les administrateurs de la liste.
 
-Pour partir d'un fichier que vous tenez déjà, joignez-le à un message dans Plaid avec **Joindre un fichier**. Plaid lit les titres de ses colonnes, le type de chaque colonne et les dix premières lignes, et peut dire ce que contient chaque colonne.
+Pour partir d'un fichier que vous tenez déjà, joignez-le à un message dans Kad avec **Joindre un fichier**. Kad lit les titres de ses colonnes, le type de chaque colonne et les dix premières lignes, et peut dire ce que contient chaque colonne.
 
 ## Et ensuite
 
-Vous avez vu l'essentiel de KANAP pour les projets et les demandes. Les deux autres parcours prennent aussi dix minutes :
+Vous avez vu l'essentiel de Kadratis pour les projets et les demandes. Les deux autres parcours prennent aussi dix minutes :
 
-- [Votre budget IT dans KANAP en dix minutes](budget-example.md)
-- [Votre système d'information dans KANAP en dix minutes](landscape-example.md)
+- [Votre budget IT dans Kadratis en dix minutes](budget-example.md)
+- [Votre système d'information dans Kadratis en dix minutes](landscape-example.md)
 
 Une fois les cinq pas faits, la tuile propose ces parcours. Pendant l'essai, elle propose aussi **Planifier un appel découverte**.
 

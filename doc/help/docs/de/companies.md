@@ -56,9 +56,9 @@ Die Liste zeigt alle Unternehmen Ihres Arbeitsbereichs. Verwenden Sie sie, um wi
 **Werte der Kennzahlen**:
 
 - Eine Kennzahl, die für das Jahr nie erfasst wurde, zeigt **—**. Eine erfasste Null zeigt **0**
-- Zahlen folgen der Sprache von KANAP: Dezimalkomma auf Deutsch, Französisch und Spanisch, Dezimalpunkt auf Englisch
+- Zahlen folgen der Sprache von Kadratis: Dezimalkomma auf Deutsch, Französisch und Spanisch, Dezimalpunkt auf Englisch
 - Der Umsatz jeder Zeile ist in der Basiswährung des Unternehmens. Die Zeile **Gesamt** ist in der Berichtswährung: Jeder Umsatz wird zu den Kursen des Jahres umgerechnet. Ist die Standard-Budgetspalte des Jahres eingefroren, sind das die Kurse, die sie festgeschrieben hat. Sonst sind es die aktuellen Kurse (siehe [Währungseinstellungen](currencies.md))
-- Hat eine Währung für das Jahr keinen Kurs, bleibt der Umsatz der Unternehmen in dieser Währung aus der Summe heraus, und die Summe nennt die Währung und die Zahl der ausgelassenen Unternehmen. KANAP ruft den fehlenden Kurs im Hintergrund ab. Ein [manueller Kurs](currencies.md#manuelle-kurse) behebt es sofort
+- Hat eine Währung für das Jahr keinen Kurs, bleibt der Umsatz der Unternehmen in dieser Währung aus der Summe heraus, und die Summe nennt die Währung und die Zahl der ausgelassenen Unternehmen. Kadratis ruft den fehlenden Kurs im Hintergrund ab. Ein [manueller Kurs](currencies.md#manuelle-kurse) behebt es sofort
 
 **Aktionen**:
 
@@ -135,7 +135,7 @@ Der Details-Tab verwaltet die **Jahreskennzahlen**. Wechseln Sie mit den Jahres-
 **So funktioniert es**:
 
 - Jeder Wert wird für das ausgewählte Jahr gespeichert, wenn Sie das Feld verlassen (oder die Eingabetaste drücken). Ein ungültiger Wert zeigt unter dem Feld eine Meldung, zum Beispiel „Geben Sie eine ganze Zahl ein, 0 oder mehr." Das Feld zeigt wieder den gespeicherten Wert, und die Meldung bleibt, bis Sie erneut tippen
-- Zahlen folgen der Sprache von KANAP: Geben Sie auf Deutsch, Französisch oder Spanisch `12,5` ein, auf Englisch `12.5`
+- Zahlen folgen der Sprache von Kadratis: Geben Sie auf Deutsch, Französisch oder Spanisch `12,5` ein, auf Englisch `12.5`
 - Jedes Jahr wird für sich gespeichert: Beim Jahreswechsel werden die Werte dieses Jahres geladen
 - Sind die Unternehmenszahlen des Jahres **eingefroren**, sind die Felder gesperrt, und ein Hinweis besagt, dass ein Budgetadministrator sie wieder freigeben kann (**Budgetverwaltung > Administration > Stammdaten einfrieren**)
 - Für das Bearbeiten der Kennzahlen benötigen Sie `companies:member`
@@ -179,7 +179,7 @@ Verwenden Sie das **Ende der Gültigkeit**, um zu steuern, wann ein Unternehmen 
 
 Ein Unternehmensadministrator (`companies:admin`) kann ein Unternehmen auf seiner Seite mit **Löschen** löschen, oder mehrere in der Liste mit **Ausgewählte löschen**.
 
-- KANAP prüft zuerst. Wird das Unternehmen noch verwendet, sagt der Dialog wofür, zum Beispiel „Dieses Unternehmen wird noch verwendet: 2 Abteilungen und 14 Benutzer. Deaktivieren Sie es, statt es zu löschen.“, und bietet nur **Schließen** an. Deaktivieren Sie das Unternehmen dann (siehe [Status und Lebenszyklus](#status-und-lebenszyklus))
+- Kadratis prüft zuerst. Wird das Unternehmen noch verwendet, sagt der Dialog wofür, zum Beispiel „Dieses Unternehmen wird noch verwendet: 2 Abteilungen und 14 Benutzer. Deaktivieren Sie es, statt es zu löschen.“, und bietet nur **Schließen** an. Deaktivieren Sie das Unternehmen dann (siehe [Status und Lebenszyklus](#status-und-lebenszyklus))
 - Sonst fragt der Dialog nach einer Bestätigung: „Dies kann nicht rückgängig gemacht werden.“ **Löschen** löscht das Unternehmen mit seinen Jahreskennzahlen und kehrt zur Liste zurück
 - Ein gelöschtes Unternehmen verschwindet aus der Kachel **Kürzlich angesehen** von [Mein Dashboard](my-dashboard.md#kurzlich-angesehen)
 

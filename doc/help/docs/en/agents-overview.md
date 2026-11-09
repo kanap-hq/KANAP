@@ -26,14 +26,14 @@ A few ideas recur across every page in this section. Learn them once here.
 
 Two agent types work end to end today: the **Helpdesk** agent, which is what the rest of this section describes, and the **Infrastructure monitoring (SRE)** agent, which reads alerts from a connected monitoring tool and prepares diagnosis notes for review. Other types may appear in the agent-type list elsewhere, but they are not ready to run.
 
-Two other AI surfaces are easy to confuse with agents but are separate things: [Plaid](ai-assistant.md) is the interactive chat assistant you drive yourself, and [Plaid Settings](ai-settings.md) configures that assistant. The models themselves live on the [AI models](ai-models.md) page, where each agent's model (and the organization default it falls back to) is defined.
+Two other AI surfaces are easy to confuse with agents but are separate things: [Kad](ai-assistant.md) is the interactive chat assistant you drive yourself, and [Kad Settings](ai-settings.md) configures that assistant. The models themselves live on the [AI models](ai-models.md) page, where each agent's model (and the organization default it falls back to) is defined.
 
 ---
 
 ## The fleet dashboard
 
 !!! note "Agents waiting for a confirmation"
-    On the hosted service, an agent that has no model of its own runs on the KANAP included model once an administrator has confirmed its provider. Until then, a banner at the top of the page says *Agents that use the KANAP included model are paused until an administrator confirms it in Admin > Plaid.* Administrators get an **Open Plaid settings** button on it. Agents pinned to a model you added keep working. See [Confirming the KANAP included model](ai-settings.md#confirming-the-kanap-included-model).
+    On the hosted service, an agent that has no model of its own runs on the Kadratis included model once an administrator has confirmed its provider. Until then, a banner at the top of the page says *Agents that use the Kadratis included model are paused until an administrator confirms it in Admin > Kad.* Administrators get an **Open Kad settings** button on it. Agents pinned to a model you added keep working. See [Confirming the Kadratis included model](ai-settings.md#confirming-the-kanap-included-model).
 
 Five pooled numbers sit at the top. They describe the whole fleet, not any one agent:
 

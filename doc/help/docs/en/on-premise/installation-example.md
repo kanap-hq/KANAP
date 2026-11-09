@@ -27,7 +27,7 @@ You need:
 
 - A fresh Ubuntu 26.04 LTS server with 4 GB of RAM or more (8 GB recommended, since PostgreSQL runs on the same server), 10 GB of disk and outbound internet access.
 - A user with `sudo` rights (not `root`). Every command below runs as that user.
-- The name users type to open KANAP, for example `kanap.example.internal`. See [Name and certificate](installation.md#name-and-certificate). This example uses an internal name with a self-signed certificate. Step 8 shows the other two cases.
+- The name users type to open Kadratis, for example `kanap.example.internal`. See [Name and certificate](installation.md#name-and-certificate). This example uses an internal name with a self-signed certificate. Step 8 shows the other two cases.
 - The email address of the first administrator.
 - The name of your organization.
 
@@ -116,7 +116,7 @@ The status lists `OpenSSH`, `80/tcp`, `443/tcp`, and the two rules from `172.16.
 
 ---
 
-## 3. Get KANAP
+## 3. Get Kadratis
 
 Get the files first: the PostgreSQL sizing script of the next step comes with them. The `stable` branch always points to the latest published version.
 
@@ -162,7 +162,7 @@ The commands print `CREATE DATABASE`, `CREATE ROLE` and `GRANT`, then `CREATE EX
 
 ### Allow connections from Docker containers
 
-PostgreSQL must listen beyond `localhost` and accept the application role from the Docker networks. On a fresh server, Docker puts KANAP's network in `172.16.0.0/12` (usually `172.18.0.0/16`), so the line below allows it. Step 5 shows how to check this after the first start. The firewall of step 2 keeps the port closed to the rest of the network.
+PostgreSQL must listen beyond `localhost` and accept the application role from the Docker networks. On a fresh server, Docker puts Kadratis's network in `172.16.0.0/12` (usually `172.18.0.0/16`), so the line below allows it. Step 5 shows how to check this after the first start. The firewall of step 2 keeps the port closed to the rest of the network.
 
 ```bash
 . ~/kanap-install.env
@@ -172,7 +172,7 @@ sudo systemctl restart postgresql
 PGPASSWORD="${PG_PASSWORD}" psql -h 127.0.0.1 -U kanap -d kanap -c "SELECT 1;"
 ```
 
-The last command must print a table with `1`. To narrow the rule later, use the subnet of the KANAP containers: after the first start, `docker network inspect infra_default` shows it.
+The last command must print a table with `1`. To narrow the rule later, use the subnet of the Kadratis containers: after the first start, `docker network inspect infra_default` shows it.
 
 ### Size PostgreSQL for this server
 
@@ -200,9 +200,9 @@ See [Operations](operations.md#postgresql-settings) for the details.
 
 ## 5. Object storage (RustFS)
 
-KANAP stores attachments, logos and exports in S3-compatible storage. This example runs RustFS (Apache 2.0) on the same server. Any other S3-compatible store works: skip this step and set the `S3_*` variables of step 6 for your store (see [Configuration](configuration.md#required-storage)).
+Kadratis stores attachments, logos and exports in S3-compatible storage. This example runs RustFS (Apache 2.0) on the same server. Any other S3-compatible store works: skip this step and set the `S3_*` variables of step 6 for your store (see [Configuration](configuration.md#required-storage)).
 
-MinIO no longer publishes new downloads or images, so a new installation uses another store. An installation that already runs MinIO keeps working with KANAP.
+MinIO no longer publishes new downloads or images, so a new installation uses another store. An installation that already runs MinIO keeps working with Kadratis.
 
 The storage listens on the Docker bridge address `172.17.0.1` only, so it is not reachable from the network. The console is switched off.
 
@@ -254,9 +254,9 @@ for i in $(seq 1 30); do ss -ltn | grep -q '172.17.0.1:9000' && break; sleep 1; 
 ss -ltn | grep '172.17.0.1:9000'
 ```
 
-The last line must show `172.17.0.1:9000` listening. The `After=docker.service` drop-in makes the service start once Docker has created the bridge address. If Docker uses another bridge address (`ip -4 addr show docker0`), put that address in `RUSTFS_ADDRESS`. By default, Docker gives its first 15 networks the ranges `172.17.0.0/16` to `172.31.0.0/16`, all inside `172.16.0.0/12`. Further networks get `/20` blocks of `192.168.0.0/16`. On a fresh server KANAP's network is `172.18.0.0/16`. On a server that already has 13 or more Docker networks besides the default bridge, it can land in `192.168.x.x`. After the first start (step 7), `docker network inspect infra_default` shows KANAP's network. If it is outside `172.16.0.0/12`, add its range to the firewall rules of step 2 and to the `pg_hba.conf` line of step 4. If your `default-address-pools` setting differs, replace the range instead.
+The last line must show `172.17.0.1:9000` listening. The `After=docker.service` drop-in makes the service start once Docker has created the bridge address. If Docker uses another bridge address (`ip -4 addr show docker0`), put that address in `RUSTFS_ADDRESS`. By default, Docker gives its first 15 networks the ranges `172.17.0.0/16` to `172.31.0.0/16`, all inside `172.16.0.0/12`. Further networks get `/20` blocks of `192.168.0.0/16`. On a fresh server Kadratis's network is `172.18.0.0/16`. On a server that already has 13 or more Docker networks besides the default bridge, it can land in `192.168.x.x`. After the first start (step 7), `docker network inspect infra_default` shows Kadratis's network. If it is outside `172.16.0.0/12`, add its range to the firewall rules of step 2 and to the `pg_hba.conf` line of step 4. If your `default-address-pools` setting differs, replace the range instead.
 
-`RUSTFS_SSE_S3_MASTER_KEY` is the key that encrypts the files at rest. KANAP asks for encryption at rest on uploads. Without the key RustFS refuses the request and the API logs a `PutObject fallback used` warning. **Keep this key with your server configuration backup**: files encrypted with it cannot be read without it.
+`RUSTFS_SSE_S3_MASTER_KEY` is the key that encrypts the files at rest. Kadratis asks for encryption at rest on uploads. Without the key RustFS refuses the request and the API logs a `PutObject fallback used` warning. **Keep this key with your server configuration backup**: files encrypted with it cannot be read without it.
 
 **Create the bucket, a least-privilege policy and the application user.** The application user can read, write and delete objects in `kanap-files` and nothing else. Its access key is `kanap-app`; its secret key is the generated 64-character `S3_SECRET_KEY` (RustFS accepts 8 to 128 characters). No secret appears in the commands that `sudo` records in the system log: the `rc` tool reads the administrator keys from a root-only file, and the application user's secret reaches it through standard input.
 
@@ -300,7 +300,7 @@ To update RustFS later, install the newer `.deb` the same way. When `dpkg` asks 
 
 ---
 
-## 6. Configure KANAP
+## 6. Configure Kadratis
 
 Create the `.env` file. The template lists every setting with its explanation; this example replaces it with a working file for this setup. The file is readable by you only.
 
@@ -325,7 +325,7 @@ ADMIN_PASSWORD=ChangeThisAfterFirstLogin!
 # SECURITY
 JWT_SECRET=${JWT_SECRET}
 
-# RUN MODE: users reach KANAP over HTTPS
+# RUN MODE: users reach Kadratis over HTTPS
 APP_ENV=production
 
 # APPLICATION URL AND CORS: the exact address users open
@@ -348,13 +348,13 @@ S3_FORCE_PATH_STYLE=true
 
 # EMAIL (optional: choose one transport to enable invitations, password reset, notifications)
 # RESEND_API_KEY=re_xxxxx
-# RESEND_FROM_EMAIL=KANAP <noreply@company.com>
+# RESEND_FROM_EMAIL=Kadratis <noreply@company.com>
 # SMTP_HOST=smtp.company.com
 # SMTP_PORT=587
 # SMTP_SECURE=false
 # SMTP_USER=noreply@company.com
 # SMTP_PASSWORD=<smtp password>
-# SMTP_FROM=KANAP <noreply@company.com>
+# SMTP_FROM=Kadratis <noreply@company.com>
 EOF
 ```
 
@@ -371,10 +371,10 @@ The smoke test of step 9 reads it from `.env` without showing it. Step 10 shows 
 Notes on the file:
 
 - The administrator account is created at the first start from `ADMIN_EMAIL` and `ADMIN_PASSWORD`. Changing them later changes nothing while an active administrator exists.
-- `DEFAULT_TENANT_NAME` is your organization's name, from step 0. KANAP reads it at the first start only. An administrator changes it later in **Admin → Branding**. The workspace address stays as it is.
+- `DEFAULT_TENANT_NAME` is your organization's name, from step 0. Kadratis reads it at the first start only. An administrator changes it later in **Admin → Branding**. The workspace address stays as it is.
 - The `DATABASE_URL` password and the `JWT_SECRET` were generated in step 0. Do not reuse example values.
 - With `sslmode=disable` the connection to PostgreSQL stays on the server. For another PostgreSQL server, see [`sslmode`](configuration.md#required-database).
-- If you reach KANAP by IP address instead of a name, set `APP_BASE_URL` and `CORS_ORIGINS` to `https://<ip address>`.
+- If you reach Kadratis by IP address instead of a name, set `APP_BASE_URL` and `CORS_ORIGINS` to `https://<ip address>`.
 - For outbound email, remove the `#` of one block and fill in the values. If you use SMTP, make sure the server accepts mail from the `SMTP_FROM` address and that SPF, DKIM and DMARC are in place if messages leave your network.
 - For the AI features, add the four `AI_*` variables of [Configuration](configuration.md#optional-ai-features).
 
@@ -400,7 +400,7 @@ If `pull` cannot reach `ghcr.io`, open the outbound access of [Firewall rules](c
 [entrypoint] Initializing DB (attempt 1/30) ...
 [entrypoint] DB initialized. Running migrations...
 [entrypoint] Migrations complete (394 executed).
-[VERSION] KANAP 26.10.8
+[VERSION] Kadratis 26.10.8
 [ENV] run mode: production
 [SECRETS] token families: password-reset=derived-key provisioning=jwt-secret entra-state=derived-key (...)
 [SECRETS] Access tokens must carry purpose="access" (legacy untyped access tokens: refused)
@@ -420,7 +420,7 @@ If `pull` cannot reach `ghcr.io`, open the outbound access of [Firewall rules](c
 
 The number of migrations and the `[VERSION]` line depend on the version, and the pool figures on your PostgreSQL.
 
-The block leaves out the migration lines: on a new installation, a few hundred lines that start with `[Migration]` or `[migration:` follow `Running migrations...`. A few of them start with the number of their migration instead, for example `[1854170000000] ...` or `[migration 1854350000000] ...`. They are informational. On a new database some of them report changes to built-in reference data or name a tenant id that is not yours: KANAP keeps a system tenant for platform features. They need no action. `...` stands for the `[Nest]` prefix with the process id and the time, and for the source in brackets (for example `LOG [NestApplication]`). Some of these lines end with a duration such as `+0ms`. The last line of the filtered output is `[DB] pool budget ...`. Log output saved to a file can contain colour codes such as `[33m`.
+The block leaves out the migration lines: on a new installation, a few hundred lines that start with `[Migration]` or `[migration:` follow `Running migrations...`. A few of them start with the number of their migration instead, for example `[1854170000000] ...` or `[migration 1854350000000] ...`. They are informational. On a new database some of them report changes to built-in reference data or name a tenant id that is not yours: Kadratis keeps a system tenant for platform features. They need no action. `...` stands for the `[Nest]` prefix with the process id and the time, and for the source in brackets (for example `LOG [NestApplication]`). Some of these lines end with a duration such as `+0ms`. The last line of the filtered output is `[DB] pool budget ...`. Log output saved to a file can contain colour codes such as `[33m`.
 
 Until you configure email, the `EmailService` warning is expected and needs no action. The `[DATA-ACCESS]` line is expected too: step 10 explains it. A `[SECURITY]`, `[CONFIG]`, `[CORS]` or `[ENV] APP_ENV is not set` warning means a setting needs attention: [Configuration](configuration.md#what-the-api-log-shows-at-start) explains every line.
 
@@ -436,7 +436,7 @@ sudo apt-get install -y nginx
 
 ### The server resolves the name
 
-The checks in the next steps run on this server and call KANAP by its name, so the server must resolve it. With a DNS record this works already. Without one, this command adds the name to the server's hosts file (it does nothing when the name already resolves):
+The checks in the next steps run on this server and call Kadratis by its name, so the server must resolve it. With a DNS record this works already. Without one, this command adds the name to the server's hosts file (it does nothing when the name already resolves):
 
 ```bash
 . ~/kanap-install.env
@@ -470,7 +470,7 @@ printf 'KANAP_CERT=%s\nKANAP_KEY=%s\n' /etc/ssl/kanap/server.crt /etc/ssl/kanap/
 printf 'KANAP_CERT=%s\nKANAP_KEY=%s\n' /etc/ssl/kanap/fullchain.pem /etc/ssl/kanap/privkey.pem >> ~/kanap-install.env
 ```
 
-**Let's Encrypt (public name).** The name must resolve to this server from the internet and port 80 must be reachable. The default nginx page answers the challenge, so run this before you enable the KANAP site. The `certbot` package renews the certificate by itself; the deploy hook reloads nginx after each renewal.
+**Let's Encrypt (public name).** The name must resolve to this server from the internet and port 80 must be reachable. The default nginx page answers the challenge, so run this before you enable the Kadratis site. The `certbot` package renews the certificate by itself; the deploy hook reloads nginx after each renewal.
 
 ```bash
 . ~/kanap-install.env
@@ -484,7 +484,7 @@ sudo certbot renew --dry-run
 
 ### Site configuration
 
-Write the site file with placeholders for the name and the certificate, then fill them in. The file is for nginx 1.25.1 and later (Ubuntu 26.04 ships 1.28). It sends `/api/` directly to the API port (`127.0.0.1:8080`) so that KANAP sees the address of each user.
+Write the site file with placeholders for the name and the certificate, then fill them in. The file is for nginx 1.25.1 and later (Ubuntu 26.04 ships 1.28). It sends `/api/` directly to the API port (`127.0.0.1:8080`) so that Kadratis sees the address of each user.
 
 ```bash
 sudo tee /etc/nginx/sites-available/kanap >/dev/null <<'EOF'
@@ -632,7 +632,7 @@ docker compose -f infra/compose.onprem.yml logs api | grep 'PutObject fallback' 
 
 1. Open `https://<your name>` in a browser (accept the certificate warning if you use a self-signed certificate; the workstation must resolve the name).
 2. Sign in with `ADMIN_EMAIL` and the administrator password. To see the password, run `grep '^ADMIN_PASSWORD=' /opt/kanap/.env | cut -d= -f2-` on the server. It shows on screen, so run it when nobody else can see your screen.
-3. Change the password in your profile right after this first sign-in. KANAP reads the `.env` value at the first start only.
+3. Change the password in your profile right after this first sign-in. Kadratis reads the `.env` value at the first start only.
 4. Add your logo and colors in **Admin → Branding** (optional).
 5. Invite additional users (if email is configured).
 
@@ -656,13 +656,13 @@ Next, set up the [backups](operations.md#backup-and-restore).
 | PostgreSQL | systemd (`postgresql@<version>-main`) | `/etc/postgresql/<version>/main/conf.d/`, `pg_hba.conf` |
 | RustFS     | systemd        | `/etc/default/rustfs` (holds the encryption key), `/root/.config/rc/config.toml` (holds the storage administrator keys for the `rc` tool) |
 | Firewall   | ufw            | `sudo ufw status`                                     |
-| KANAP API  | Docker Compose | `/opt/kanap/.env` + `infra/compose.onprem.yml`        |
-| KANAP Web  | Docker Compose | `/opt/kanap/.env` + `infra/compose.onprem.yml`        |
+| Kadratis API  | Docker Compose | `/opt/kanap/.env` + `infra/compose.onprem.yml`        |
+| Kadratis Web  | Docker Compose | `/opt/kanap/.env` + `infra/compose.onprem.yml`        |
 | nginx      | systemd        | `/etc/nginx/sites-available/kanap`                    |
 
 ## Useful commands
 
-Run these commands one at a time. `logs -f` follows the log until you press Ctrl+C, and `down` stops KANAP.
+Run these commands one at a time. `logs -f` follows the log until you press Ctrl+C, and `down` stops Kadratis.
 
 ```bash
 cd /opt/kanap
@@ -670,13 +670,13 @@ cd /opt/kanap
 # View logs
 docker compose -f infra/compose.onprem.yml logs -f
 
-# Restart KANAP
+# Restart Kadratis
 docker compose -f infra/compose.onprem.yml restart
 
 # Apply a change of .env
 docker compose -f infra/compose.onprem.yml up -d api
 
-# Stop KANAP
+# Stop Kadratis
 docker compose -f infra/compose.onprem.yml down
 
 # Check all services (pg_lsclusters shows the cluster online)
@@ -692,4 +692,4 @@ curl -sSk -w '\n' "$(grep '^APP_BASE_URL=' .env | cut -d= -f2-)/api/config/publi
 
 Check PostgreSQL with `pg_lsclusters`. `systemctl status postgresql` stays `active` even when the cluster is down. The `version` field of the last answer is the version the API reports.
 
-To update KANAP, follow the [upgrade procedure](operations.md#upgrade-procedure): read the changelog, back up, then `git pull origin stable`, `pull` and `up -d`.
+To update Kadratis, follow the [upgrade procedure](operations.md#upgrade-procedure): read the changelog, back up, then `git pull origin stable`, `pull` and `up -d`.

@@ -1,6 +1,6 @@
 # Wissensdatenbank
 
-Die Wissensdatenbank ist KANAPs Dokumenten-Arbeitsbereich für Richtlinien, Verfahren, technische Notizen, Referenzmaterial und die Dokumentation, die mit der tatsächlichen Arbeit verbunden bleiben muss. Sie kombiniert freies Schreiben mit Governance-Funktionen wie Vorlagen, Verantwortlichkeit, Review, Versionshistorie und Verknüpfungen zu Anwendungen, Assets, Projekten, Anfragen und Aufgaben.
+Die Wissensdatenbank ist Kadratis' Dokumenten-Arbeitsbereich für Richtlinien, Verfahren, technische Notizen, Referenzmaterial und die Dokumentation, die mit der tatsächlichen Arbeit verbunden bleiben muss. Sie kombiniert freies Schreiben mit Governance-Funktionen wie Vorlagen, Verantwortlichkeit, Review, Versionshistorie und Verknüpfungen zu Anwendungen, Assets, Projekten, Anfragen und Aufgaben.
 
 Anders als ein Dateifreigabesystem ist die Wissensdatenbank nicht nur ein Ort zum Speichern von Dokumenten. Die wichtige Designentscheidung ist, dass jeder Artikel klassifiziert, geprüft, versioniert, exportiert und mit operativen Objekten auf der gesamten Plattform verknüpft werden kann. Das macht den Artikel leichter auffindbar und gibt ihm Kontext, wenn Personen ihn aus einem anderen Arbeitsbereich öffnen.
 
@@ -60,7 +60,7 @@ Wichtiges Verhalten:
 - In einer Einzelbibliotheks-Ansicht können Dokumente per Drag-and-Drop in Ordner gezogen werden, um sie schnell zu reorganisieren.
 - Ordner können verschachtelt werden, um eine Browsing-Struktur zu erstellen.
 - Das Löschen eines Ordners löscht nicht seine Dokumente. Dokumente werden stattdessen zurück nach **Nicht eingeordnet** verschoben.
-- Ein Ordner mit Unterordnern kann nicht gelöscht werden: KANAP sagt es, bevor Sie bestätigen. Verschieben oder löschen Sie zuerst seine Unterordner.
+- Ein Ordner mit Unterordnern kann nicht gelöscht werden: Kadratis sagt es, bevor Sie bestätigen. Verschieben oder löschen Sie zuerst seine Unterordner.
 
 Verwenden Sie Ordner für stabile Themenbereiche, nicht für temporäre Workflow-Status. Status und Workflow existieren bereits dafür.
 
@@ -173,7 +173,7 @@ Neue Artikel können auf zwei Arten beginnen:
 
 Wenn Sie aus einer Vorlage erstellen, wird der Vorlageninhalt in das neue Dokument kopiert. Ab diesem Zeitpunkt ist der neue Artikel unabhängig. Eine spätere Aktualisierung der Vorlage schreibt vorhandene Dokumente nicht neu.
 
-Ein neues Dokument öffnet sich mit seinem Titel zur Eingabe in der Kopfzeile. Drücken Sie die Eingabetaste, um das Dokument zu erstellen, oder die Tabulatortaste, um es zu erstellen und direkt mit dem Text zu beginnen. Es öffnet sich im Bearbeitungsmodus, mit Editor, **Importieren** und Seitenleiste. Klicken Sie auf **Erstellen**, um es zu behalten: Sie kehren dorthin zurück, wo Sie begonnen haben, oder zur Bibliothek. Klicken Sie stattdessen auf **Abbrechen**, um es zu löschen. KANAP fragt zuerst nach, wenn Sie mehr als den Titel eingegeben haben. Bei jedem Dokument im Bearbeitungsmodus klicken Sie auf den Titel in der Kopfzeile, um ihn zu ändern.
+Ein neues Dokument öffnet sich mit seinem Titel zur Eingabe in der Kopfzeile. Drücken Sie die Eingabetaste, um das Dokument zu erstellen, oder die Tabulatortaste, um es zu erstellen und direkt mit dem Text zu beginnen. Es öffnet sich im Bearbeitungsmodus, mit Editor, **Importieren** und Seitenleiste. Klicken Sie auf **Erstellen**, um es zu behalten: Sie kehren dorthin zurück, wo Sie begonnen haben, oder zur Bibliothek. Klicken Sie stattdessen auf **Abbrechen**, um es zu löschen. Kadratis fragt zuerst nach, wenn Sie mehr als den Titel eingegeben haben. Bei jedem Dokument im Bearbeitungsmodus klicken Sie auf den Titel in der Kopfzeile, um ihn zu ändern.
 
 Der Dokumenten-Arbeitsbereich hält das Schreiben in der Mitte und die Governance in der Seitenleiste.
 
@@ -245,7 +245,7 @@ Wissensartikel können exportiert werden als:
 - **ODT**
 
 Der Export ist verfügbar, wenn der Artikel Inhalt hat. Dies ist nützlich, wenn:
-- ein Dokument außerhalb von KANAP zirkulieren muss
+- ein Dokument außerhalb von Kadratis zirkulieren muss
 - ein Prüfer Word-Format-Markup bevorzugt
 - ein stabiler PDF-Snapshot zur Weitergabe oder zur Aufzeichnung benötigt wird
 
@@ -253,7 +253,7 @@ Der Export ersetzt nicht den Live-Artikel. Die Wissensdatenbank-Version bleibt d
 
 ## Dokumente aus dem Chat generieren
 
-Wenn der AI-Assistent in Ihrem KANAP aktiviert ist, können Sie ihn bitten, einen Wissensartikel für Sie aus dem Chat zu entwerfen. Der Assistent bereitet eine Vorschau vor, die Sie überprüfen, bevor etwas gespeichert wird. Die Bestätigung der Vorschau erstellt ein echtes Wissensdokument mit dem Inhalt, dem Typ, der Vorlagenherkunft und allen von Ihnen angegebenen Beziehungen, genau so, als hätten Sie es selbst geschrieben.
+Wenn der AI-Assistent in Ihrem Kadratis aktiviert ist, können Sie ihn bitten, einen Wissensartikel für Sie aus dem Chat zu entwerfen. Der Assistent bereitet eine Vorschau vor, die Sie überprüfen, bevor etwas gespeichert wird. Die Bestätigung der Vorschau erstellt ein echtes Wissensdokument mit dem Inhalt, dem Typ, der Vorlagenherkunft und allen von Ihnen angegebenen Beziehungen, genau so, als hätten Sie es selbst geschrieben.
 
 Generierte Dokumente folgen den gleichen Governance-Regeln wie handgeschriebene: Verantwortlichkeit, Status, Versionshistorie, Sperren und Review-Workflow gelten alle.
 
@@ -316,9 +316,9 @@ Wissensdokumente können direkt verknüpft werden mit:
 - Anfragen
 - Aufgaben
 
-Beziehungen sind nicht nur Tags. Sie steuern, wo das Dokument an anderer Stelle in KANAP erscheint und wie Benutzer es aus operativen Arbeitsbereichen entdecken.
+Beziehungen sind nicht nur Tags. Sie steuern, wo das Dokument an anderer Stelle in Kadratis erscheint und wie Benutzer es aus operativen Arbeitsbereichen entdecken.
 
-Jede Art von Beziehung erscheint nur für Personen, die ihr Modul lesen dürfen: Anwendungen erfordern die Anwendungen, Assets die Infrastruktur, Projekte die Projekte, Anträge die Anträge, Aufgaben die Aufgaben. Eine Art, die Sie nicht lesen dürfen, fehlt im Dokument, auch in Plaid, und das Speichern des Dokuments lässt ihre Verknüpfungen unverändert. Ein Business Contributor fügt nur die Projekte, Anträge, Anwendungen und Aufgaben hinzu, an denen er beteiligt ist.
+Jede Art von Beziehung erscheint nur für Personen, die ihr Modul lesen dürfen: Anwendungen erfordern die Anwendungen, Assets die Infrastruktur, Projekte die Projekte, Anträge die Anträge, Aufgaben die Aufgaben. Eine Art, die Sie nicht lesen dürfen, fehlt im Dokument, auch in Kad, und das Speichern des Dokuments lässt ihre Verknüpfungen unverändert. Ein Business Contributor fügt nur die Projekte, Anträge, Anwendungen und Aufgaben hinzu, an denen er beteiligt ist.
 
 Konsequenzen des Hinzufügens von Beziehungen:
 - das Dokument wird vom verknüpften Objekt aus leichter zu finden

@@ -1,8 +1,8 @@
 # Netbox-Synchronisierung
 
-[Netbox](https://netboxlabs.com/docs/netbox/) beschreibt Ihre physische und virtuelle Infrastruktur: Geräte, virtuelle Maschinen, Racks, Standorte, Adressen. KANAP liest dieses Inventar und hält seine eigenen Assets damit im Einklang.
+[Netbox](https://netboxlabs.com/docs/netbox/) beschreibt Ihre physische und virtuelle Infrastruktur: Geräte, virtuelle Maschinen, Racks, Standorte, Adressen. Kadratis liest dieses Inventar und hält seine eigenen Assets damit im Einklang.
 
-Die Aufteilung der Zuständigkeiten ist bewusst gewählt. Netbox bleibt die Referenz für die dort beschriebenen Geräte. Der Name, die Seriennummer, die Rack-Position oder die primäre Adresse kommen also immer von dort. KANAP führt die fachliche Ebene rund um jedes Asset: Umgebung, Anwendungen, Verträge und Kosten, Support, Termine, Beziehungen, Notizen. Sie tippen das Inventar nicht mehr ab und behalten alles, was Netbox nicht kennt.
+Die Aufteilung der Zuständigkeiten ist bewusst gewählt. Netbox bleibt die Referenz für die dort beschriebenen Geräte. Der Name, die Seriennummer, die Rack-Position oder die primäre Adresse kommen also immer von dort. Kadratis führt die fachliche Ebene rund um jedes Asset: Umgebung, Anwendungen, Verträge und Kosten, Support, Termine, Beziehungen, Notizen. Sie tippen das Inventar nicht mehr ab und behalten alles, was Netbox nicht kennt.
 
 ## Wo Sie es finden
 
@@ -17,21 +17,21 @@ Die Aufteilung der Zuständigkeiten ist bewusst gewählt. Netbox bleibt die Refe
 
 ## Bevor Sie beginnen
 
-**Eine Netbox-Instanz, die KANAP erreichen kann.** KANAP ruft Netbox vom Server aus auf, nicht aus Ihrem Browser. Die Adresse, die Sie eintragen, muss dort auflösbar sein und antworten, wo KANAP läuft. In der Cloud-Edition muss diese Adresse öffentlich sein: Eine private oder interne Adresse wird beim Speichern der Verbindung abgelehnt und ebenso vor jedem Aufruf. In der On-Premise-Edition ist eine Adresse in Ihrem eigenen Netz genau das, was erwartet wird.
+**Eine Netbox-Instanz, die Kadratis erreichen kann.** Kadratis ruft Netbox vom Server aus auf, nicht aus Ihrem Browser. Die Adresse, die Sie eintragen, muss dort auflösbar sein und antworten, wo Kadratis läuft. In der Cloud-Edition muss diese Adresse öffentlich sein: Eine private oder interne Adresse wird beim Speichern der Verbindung abgelehnt und ebenso vor jedem Aufruf. In der On-Premise-Edition ist eine Adresse in Ihrem eigenen Netz genau das, was erwartet wird.
 
-**Ein API-Token mit Leserechten.** Öffnen Sie in Netbox oben rechts das Benutzermenü, dann **API tokens**, und legen Sie eines an. Ein Token mit reinen Leserechten genügt: KANAP schreibt nie etwas nach Netbox zurück. Geben Sie dem Token eine Beschreibung, damit Sie es später wiedererkennen, und tauschen Sie es so regelmäßig aus wie jede andere Zugangsinformation eines Dienstes.
+**Ein API-Token mit Leserechten.** Öffnen Sie in Netbox oben rechts das Benutzermenü, dann **API tokens**, und legen Sie eines an. Ein Token mit reinen Leserechten genügt: Kadratis schreibt nie etwas nach Netbox zurück. Geben Sie dem Token eine Beschreibung, damit Sie es später wiedererkennen, und tauschen Sie es so regelmäßig aus wie jede andere Zugangsinformation eines Dienstes.
 
-**Eine Entscheidung zum Zertifikat.** Wenn Ihre Netbox-Instanz ein Zertifikat verwendet, dem KANAP nicht vertraut (typischerweise ein selbst signiertes oder internes Zertifikat), können Sie **Zertifikatsfehler ignorieren** aktivieren. Die Verbindung bleibt verschlüsselt, das Zertifikat wird aber nicht mehr geprüft. Nutzen Sie das nur für ein Zertifikat, das Sie kennen und dem Sie vertrauen, in einem Netz, das Sie kontrollieren. Installieren Sie bei einer öffentlichen Netbox-Instanz stattdessen ein vertrauenswürdiges Zertifikat.
+**Eine Entscheidung zum Zertifikat.** Wenn Ihre Netbox-Instanz ein Zertifikat verwendet, dem Kadratis nicht vertraut (typischerweise ein selbst signiertes oder internes Zertifikat), können Sie **Zertifikatsfehler ignorieren** aktivieren. Die Verbindung bleibt verschlüsselt, das Zertifikat wird aber nicht mehr geprüft. Nutzen Sie das nur für ein Zertifikat, das Sie kennen und dem Sie vertrauen, in einem Netz, das Sie kontrollieren. Installieren Sie bei einer öffentlichen Netbox-Instanz stattdessen ein vertrauenswürdiges Zertifikat.
 
 ---
 
-## KANAP mit Netbox verbinden
+## Kadratis mit Netbox verbinden
 
 Gehen Sie zu **Administration > Integrationen** und öffnen Sie die Karte **Netbox-Inventar**.
 
 | Feld | Was einzutragen ist |
 |-------|---------------|
-| **Netbox-Synchronisierung aktivieren** | Der Hauptschalter. Ist er aus, ruft KANAP Netbox nie auf, weder manuell noch nach Zeitplan. |
+| **Netbox-Synchronisierung aktivieren** | Der Hauptschalter. Ist er aus, ruft Kadratis Netbox nie auf, weder manuell noch nach Zeitplan. |
 | **Netbox-Adresse** | Die Adresse, mit der Sie Netbox im Browser öffnen, zum Beispiel `https://netbox.example.com`. |
 | **API-Token** | Das Token, das Sie in Netbox angelegt haben. Es wird verschlüsselt gespeichert und nie wieder angezeigt. Lassen Sie das Feld beim Speichern leer, um das bereits gespeicherte Token zu behalten. |
 | **Zeitlimit für Anfragen (Sekunden)** | Wie lange auf Netbox gewartet wird, bevor abgebrochen wird, zwischen 5 und 120. Für 30 Sekunden leer lassen. |
@@ -56,15 +56,15 @@ Bei den Rollen steht eine zusätzliche Zeile: **Virtuelle Maschinen**. Jede virt
 
 Jede Zeile zeigt, wie viele Geräte und virtuelle Maschinen sie umfasst, damit Sie sehen, worum es bei einer Auswahl geht. Wenn ein Netbox-Name eindeutig einem Ihrer Namen entspricht, ist die Zeile vorbelegt und mit **Vorschlag** gekennzeichnet. Ein Vorschlag ist nur ein Vorschlag: Nichts wird verwendet, bevor Sie **Zuordnungen speichern** drücken. Solange Zuordnungen noch nicht gespeichert sind, zeigt ein Hinweis oben im Reiter an, wie viele es sind, mit der Schaltfläche zum Speichern daneben. Wenn Sie **Jetzt synchronisieren** drücken, bevor eine Rolle oder ein Standort gespeichert ist, sagt die Vorschau das und führt Sie zu diesem Reiter zurück, statt jedes Objekt als übersprungen aufzulisten.
 
-Wird ein Netbox-Standort zugeordnet, werden seine Netbox-Locations als Unterstandorte des gewählten Standorts übernommen. Nur die Locations der ersten Ebene dieses Netbox-Standorts, und nur die, in denen tatsächlich ein importiertes Gerät steht. Ein Gerät, das tiefer steht, in „Gebäude A > Etage 1 > Raum 101“, wird „Gebäude A“ zugeordnet: KANAP erfasst, wo sich ein Gerät befindet, auf der Ebene eines Standorts und eines Gebäudes, nicht eines Raums. Dafür gibt es nichts zu konfigurieren.
+Wird ein Netbox-Standort zugeordnet, werden seine Netbox-Locations als Unterstandorte des gewählten Standorts übernommen. Nur die Locations der ersten Ebene dieses Netbox-Standorts, und nur die, in denen tatsächlich ein importiertes Gerät steht. Ein Gerät, das tiefer steht, in „Gebäude A > Etage 1 > Raum 101“, wird „Gebäude A“ zugeordnet: Kadratis erfasst, wo sich ein Gerät befindet, auf der Ebene eines Standorts und eines Gebäudes, nicht eines Raums. Dafür gibt es nichts zu konfigurieren.
 
 ### Betriebssysteme
 
 Die dritte Tabelle ordnet jeder Netbox-Plattform eine Technologie zu. Netbox sagt „Debian 12“, wo Ihre Technologien Debian mit der Version „12 (Bookworm)“ führen, und hier werden beide zusammengebracht. Jede Zeile zeigt, wie viele Objekte diese Plattform nutzen.
 
-Die Liste bietet Ihre Technologien der Familie **Betriebssystem** an, allein und mit jeder ihrer Versionen, danach die Betriebssysteme des Technologiekatalogs, die Sie noch nicht hinzugefügt haben. Gespeichert wird der Name der Technologie, mit ihrer Version, wenn Sie eine wählen. Beim nächsten Lauf erfasst KANAP diese Technologie und Version als Betriebssystem des Servers und fügt Ihren Technologien einen Katalogeintrag hinzu, wenn Sie einen gewählt haben.
+Die Liste bietet Ihre Technologien der Familie **Betriebssystem** an, allein und mit jeder ihrer Versionen, danach die Betriebssysteme des Technologiekatalogs, die Sie noch nicht hinzugefügt haben. Gespeichert wird der Name der Technologie, mit ihrer Version, wenn Sie eine wählen. Beim nächsten Lauf erfasst Kadratis diese Technologie und Version als Betriebssystem des Servers und fügt Ihren Technologien einen Katalogeintrag hinzu, wenn Sie einen gewählt haben.
 
-Die Zeilen sind vorbelegt, wenn KANAP die Antwort erkennt: derselbe Name oder die einzige Auswahl, deren Name mit dem Plattformnamen beginnt. „Debian 12“ schlägt „Debian 12 (Bookworm)“ vor. Wie bei den anderen Tabellen zählt ein Vorschlag erst, wenn Sie **Zuordnungen speichern** drücken.
+Die Zeilen sind vorbelegt, wenn Kadratis die Antwort erkennt: derselbe Name oder die einzige Auswahl, deren Name mit dem Plattformnamen beginnt. „Debian 12“ schlägt „Debian 12 (Bookworm)“ vor. Wie bei den anderen Tabellen zählt ein Vorschlag erst, wenn Sie **Zuordnungen speichern** drücken.
 
 Diese Tabelle ist kein Filter. Eine Plattform, die auf **Keine Zuordnung** bleibt, hält nie etwas vom Import ab. Das Gerät kommt herein, und sein Betriebssystem bleibt genau so, wie es ist. Ordnen Sie die Plattform später zu, und der nächste Lauf füllt das Feld.
 
@@ -92,26 +92,26 @@ Die Hosts werden nicht zugeordnet: Die Mitglieder eines Clusters verwalten Sie w
 
 ## Die erste Synchronisierung
 
-Drücken Sie **Jetzt synchronisieren**. KANAP liest Netbox und zeigt **Vor dem Anwenden prüfen** an, bevor irgendetwas geschrieben wird.
+Drücken Sie **Jetzt synchronisieren**. Kadratis liest Netbox und zeigt **Vor dem Anwenden prüfen** an, bevor irgendetwas geschrieben wird.
 
 Die Vorschau ist gruppiert:
 
 - **Unterstandorte**: die gemeinsamen Zeilen, die der Lauf anlegt, übernimmt oder umbenennt, jeweils einmal aufgeführt mit dem Standort, zu dem sie gehören, und der Anzahl der Geräte, die darin landen. Das Umbenennen einer Netbox-Location erscheint hier als eine Zeile, nicht als Bewegung jedes einzelnen Assets.
 - **Anzulegen**: Objekte ohne Gegenstück in Ihrem Arbeitsbereich. Sie werden angelegt.
 - **Zu aktualisieren**: Objekte, die einem vorhandenen Asset zugeordnet sind und davon abweichen. Noch ist nichts geändert, die Werte werden beim Anwenden geschrieben. Jedes listet die Felder auf, die sich ändern, Feld für Feld, als `vorher → nachher`.
-- **Zu entscheiden**: Objekte, über die KANAP nicht selbst entscheidet. Mit ihnen geschieht nichts, bis Sie sie klären, hier oder später auf der Seite.
+- **Zu entscheiden**: Objekte, über die Kadratis nicht selbst entscheidet. Mit ihnen geschieht nichts, bis Sie sie klären, hier oder später auf der Seite.
 - **Übersprungen**: Objekte außerhalb des Umfangs, gezählt nach Grund (Rolle nicht zugeordnet, Standort nicht zugeordnet, Kein Name in Netbox, Von Ihnen ignoriert). Die ersten 20 Objekte jedes Grundes werden genannt, dann die Zahl der übrigen.
 - **Fehlt in Netbox**: Assets, die ein früherer Lauf verknüpft hat und deren Netbox-Objekt verschwunden ist.
-- **Warnungen**: Werte, die Netbox meldet und die KANAP nicht übernehmen konnte, zum Beispiel ein Betriebssystem, das KANAP unter seinen Technologien nicht findet. Ein Objekt, an dem nichts zu ändern, aber etwas zu melden ist, erscheint ebenfalls hier.
+- **Warnungen**: Werte, die Netbox meldet und die Kadratis nicht übernehmen konnte, zum Beispiel ein Betriebssystem, das Kadratis unter seinen Technologien nicht findet. Ein Objekt, an dem nichts zu ändern, aber etwas zu melden ist, erscheint ebenfalls hier.
 
 Lesen Sie die Vorschau und drücken Sie dann **Anwenden**. Objekte, die bereits identisch sind, werden als unverändert gezählt und gar nicht angefasst. Ein großes Inventar wird in Stapeln von 500 geprüft. **Diesen Stapel anwenden** schreibt nur, was die Vorschau auflistet. Alles andere bleibt genau so, wie es ist. Die Seite zeigt danach, wie viele Objekte noch warten, und bietet **Nächsten Stapel prüfen** an, bis nichts mehr übrig ist. Ein Lauf, den Sie selbst starten, legt nie ein Objekt an oder ändert es, das Ihnen nicht gezeigt wurde. Objekte außerhalb des Umfangs stehen gesondert unter **Übersprungen**, sodass sie nie den Platz eines Objekts einnehmen, das Sie lesen müssen. Der Filter oben schränkt die Liste auf ein Objekt oder einen Asset-Namen ein.
 
 ### Die Vorschau vor dem Anwenden korrigieren
 
-KANAP kann ein Asset nur über seine Seriennummer, seinen Hostnamen oder seinen Namen erkennen. Ein Gerät, das Sie umbenannt haben und bei dem nichts davon übereinstimmt, erscheint unter **Anzulegen** und würde ein zweites Mal angelegt. Die Vorschau lässt Sie das vorher klären. Eine Zeile, für die KANAP etwas vorschlägt, hat eine Schaltfläche, **Stattdessen verknüpfen** unter **Anzulegen** und **Zu aktualisieren**, **Entscheiden** bei Objekten, die eine Entscheidung brauchen. Ein Objekt, das ein früherer Lauf bereits verknüpft hat, hat keine: Es ist geklärt, und die Zeile zeigt nur, was sich ändert. Ein erster Treffer nennt seine Grundlage („Erkannt an der Seriennummer“), so erkennen Sie einen falschen. Die Schaltfläche öffnet diese Auswahl:
+Kadratis kann ein Asset nur über seine Seriennummer, seinen Hostnamen oder seinen Namen erkennen. Ein Gerät, das Sie umbenannt haben und bei dem nichts davon übereinstimmt, erscheint unter **Anzulegen** und würde ein zweites Mal angelegt. Die Vorschau lässt Sie das vorher klären. Eine Zeile, für die Kadratis etwas vorschlägt, hat eine Schaltfläche, **Stattdessen verknüpfen** unter **Anzulegen** und **Zu aktualisieren**, **Entscheiden** bei Objekten, die eine Entscheidung brauchen. Ein Objekt, das ein früherer Lauf bereits verknüpft hat, hat keine: Es ist geklärt, und die Zeile zeigt nur, was sich ändert. Ein erster Treffer nennt seine Grundlage („Erkannt an der Seriennummer“), so erkennen Sie einen falschen. Die Schaltfläche öffnet diese Auswahl:
 
 - **Mit einem vorhandenen Asset verknüpfen**: Suchen Sie das Asset und wählen Sie es aus. Die Zeile wandert zu **Zu aktualisieren** und zeigt Feld für Feld, was Netbox an diesem Asset ändert. So lesen Sie weiterhin, bevor Sie anwenden.
-- **Neues Asset anlegen**: für ein Objekt unter **Zu entscheiden** oder für eines, das KANAP dem falschen Asset zugeordnet hat.
+- **Neues Asset anlegen**: für ein Objekt unter **Zu entscheiden** oder für eines, das Kadratis dem falschen Asset zugeordnet hat.
 - **Dieses Objekt nicht importieren**: Das Objekt bleibt bei dieser und den nächsten Synchronisierungen außen vor. Kein Asset wird verändert. Es wandert in der Vorschau zu **Von Ihnen geklärt** und nach dem Anwenden zu **Ignoriert** auf der Seite, wo Sie es später zurückholen können.
 
 Eine Zeile, über die Sie entschieden haben, sagt das und bietet **Rückgängig** an. Wenn mehrere Objekte unter **Zu entscheiden** genau ein vorgeschlagenes Asset haben, klärt **Die N Objekte mit nur einem Vorschlag verknüpfen** sie alle auf einmal. Sie wandern zu **Zu aktualisieren**, wo Sie vor dem Anwenden lesen, was sich ändert.
@@ -124,16 +124,16 @@ Das Anwenden läuft im Hintergrund. Die Seite verfolgt den Lauf und aktualisiert
 
 ## Wie Objekte vorhandenen Assets zugeordnet werden
 
-Ein erster Import in ein bereits gefülltes KANAP muss die vorhandenen Assets finden, statt sie zu verdoppeln. KANAP versucht vier Dinge, in dieser Reihenfolge, und hört bei dem ersten auf, das einen Treffer liefert:
+Ein erster Import in ein bereits gefülltes Kadratis muss die vorhandenen Assets finden, statt sie zu verdoppeln. Kadratis versucht vier Dinge, in dieser Reihenfolge, und hört bei dem ersten auf, das einen Treffer liefert:
 
 1. **Eine bestehende Verknüpfung**. Das Objekt wurde bei einem früheren Lauf bereits einem Asset zugeordnet.
 2. **Die Seriennummer**. Sie übersteht eine Umbenennung auf beiden Seiten.
 3. **Der Hostname**, ganz genommen. `par-esx-01.example.com` in Netbox ist das Asset, dessen Hostname genau so geschrieben ist. Es ist auch das Asset `par-esx-01`, wenn `example.com` eine Ihrer Domänen ist, denn diese Endung haben Sie selbst hinterlegt.
 4. **Der Asset-Name**, ohne Beachtung von Groß- und Kleinschreibung, auf dieselbe Weise gelesen.
 
-Findet ein Schritt genau ein Asset, ist das die Zuordnung. Findet er mehrere, hält KANAP dort an und legt das Objekt unter **Zu entscheiden** ab, mit den aufgeführten Kandidaten. Auf Verdacht wird nie zusammengeführt.
+Findet ein Schritt genau ein Asset, ist das die Zuordnung. Findet er mehrere, hält Kadratis dort an und legt das Objekt unter **Zu entscheiden** ab, mit den aufgeführten Kandidaten. Auf Verdacht wird nie zusammengeführt.
 
-**Zwei Hinweise sind Vorschläge, nie Zuordnungen.** Wenn keiner der vier Schritte das Objekt identifiziert, sucht KANAP nach einer Ähnlichkeit, statt sofort anzulegen.
+**Zwei Hinweise sind Vorschläge, nie Zuordnungen.** Wenn keiner der vier Schritte das Objekt identifiziert, sucht Kadratis nach einer Ähnlichkeit, statt sofort anzulegen.
 
 - **Ein Name, der gleich beginnt.** Ein Asset, dessen Name oder Hostname nur zum ersten Teil des Netbox-Namens passt, bis zum ersten Punkt, wird als Kandidat angeboten. In einem Inventar, das Geräte `dl3.robot-15ms.ie2000` nennt, ist dieser erste Teil ein Gebäude und keine Maschine, und ein einziges Asset namens `dl3` würde still die ganze Etage aufsaugen.
 - **Eine bereits getragene Adresse.** Ein Asset, das die primäre Adresse des Objekts bereits trägt, wird genauso angeboten. Adressen werden wiederverwendet, unter Cluster-Mitgliedern geteilt oder sind schlicht veraltet.
@@ -191,23 +191,23 @@ Assets, die vor dieser Regel importiert wurden und deren Hostname am ersten Punk
 | Decommissioning | Veraltet |
 | Alles andere | Bleibt unverändert, mit einer Warnung |
 
-**Offline, Failed und Paused bleiben sichtbar.** Der Lebenszyklus bleibt Aktiv, denn das Gerät ist formal weiter in Betrieb. KANAP merkt sich den Netbox-Status und zeigt ihn als Hinweis an: am Asset neben der Quelle („Netbox-Status: Ausgefallen“), in der Liste der verknüpften Objekte und unter den Warnungen in der Vorschau. Ändert sich in Netbox nur dieser Status, wird das Asset nicht neu geschrieben.
+**Offline, Failed und Paused bleiben sichtbar.** Der Lebenszyklus bleibt Aktiv, denn das Gerät ist formal weiter in Betrieb. Kadratis merkt sich den Netbox-Status und zeigt ihn als Hinweis an: am Asset neben der Quelle („Netbox-Status: Ausgefallen“), in der Liste der verknüpften Objekte und unter den Warnungen in der Vorschau. Ändert sich in Netbox nur dieser Status, wird das Asset nicht neu geschrieben.
 
 Eine Synchronisierung setzt ein Asset nie auf **Außer Betrieb**. Geräte außer Betrieb zu nehmen ist eine Entscheidung, die Sie treffen, aus der Liste **Fehlt in Netbox**.
 
 **Die Umgebung wird einmal gesetzt.** Neue Assets erhalten die auf der Integrationskarte gewählte Umgebung. Spätere Läufe fassen sie nie an, Sie können sie also korrigieren, und die Korrektur bleibt bestehen.
 
-**Werte, die KANAP nicht kennt, werden übersprungen, nie erfunden.** Ein Lebenszyklus-Status ohne Entsprechung, oder ein Betriebssystem ohne Zuordnung unter **Zuordnungen** und ohne Technologie dieses Namens in der Familie **Betriebssystem** oder im Katalog, bleibt unverändert und wird als Warnung gemeldet. Ordnen Sie die Plattform zu oder legen Sie die Technologie an, und starten Sie den Lauf erneut. Eine primäre IPv6-Adresse wird genauso ausgelassen, mit dem Hinweis „Die primäre Adresse ist eine IPv6-Adresse, die noch nicht importiert wird.“
+**Werte, die Kadratis nicht kennt, werden übersprungen, nie erfunden.** Ein Lebenszyklus-Status ohne Entsprechung, oder ein Betriebssystem ohne Zuordnung unter **Zuordnungen** und ohne Technologie dieses Namens in der Familie **Betriebssystem** oder im Katalog, bleibt unverändert und wird als Warnung gemeldet. Ordnen Sie die Plattform zu oder legen Sie die Technologie an, und starten Sie den Lauf erneut. Eine primäre IPv6-Adresse wird genauso ausgelassen, mit dem Hinweis „Die primäre Adresse ist eine IPv6-Adresse, die noch nicht importiert wird.“
 
 **Unterstandorte werden zwischen Geräten geteilt.** Ein Unterstandort ist eine Zeile an einem Standort, und jedes dort platzierte Asset verweist darauf. Wird die Netbox-Location umbenannt, wird diese eine Zeile umbenannt, sodass alle Geräte, die sie tragen, auf einmal folgen, auch die, die Sie selbst dort eingeordnet haben. Nichts verschiebt sich Asset für Asset.
 
-**Ein von Hand angelegter Unterstandort wird übernommen, nicht verdoppelt.** Hat eine Netbox-Location denselben Namen wie ein Unterstandort, den Sie an diesem Standort bereits verwenden, verknüpft KANAP die beiden: Ihre Zeile behält ihre Identität, übernimmt die Schreibweise aus Netbox und ist von da an mit **Netbox** gekennzeichnet. Ihre Assets bleiben, wo sie sind.
+**Ein von Hand angelegter Unterstandort wird übernommen, nicht verdoppelt.** Hat eine Netbox-Location denselben Namen wie ein Unterstandort, den Sie an diesem Standort bereits verwenden, verknüpft Kadratis die beiden: Ihre Zeile behält ihre Identität, übernimmt die Schreibweise aus Netbox und ist von da an mit **Netbox** gekennzeichnet. Ihre Assets bleiben, wo sie sind.
 
 **Nichts wird je gelöscht.** Eine aus Netbox entfernte Location lässt ihren Unterstandort bestehen, mit den Assets, die ihn tragen. Ein mit Netbox verknüpfter Unterstandort bleibt bearbeitbar: Benennen Sie ihn um oder löschen Sie ihn, und der nächste Lauf gleicht ihn wieder an, wobei er ihn neu anlegt, wenn ein Asset ihn noch braucht.
 
 **Ein Gerät ohne Location behält seinen Unterstandort.** Geschrieben wird nur eine Location, die Netbox tatsächlich meldet, dieselbe Regel wie bei jedem anderen verwalteten Feld. Virtuelle Maschinen erhalten nie einen: Eine virtuelle Maschine in Netbox trägt keine Location.
 
-**Zwei Locations mit demselben Namen an einem Standort.** Netbox erlaubt „Technikraum“ und „technikraum“ nebeneinander, KANAP nicht. Der zuerst importierte gewinnt, der andere wird als Warnung gemeldet. Dasselbe passiert, wenn zwei Netbox-Standorte demselben Standort zugeordnet sind und beide eine Location desselben Namens führen.
+**Zwei Locations mit demselben Namen an einem Standort.** Netbox erlaubt „Technikraum“ und „technikraum“ nebeneinander, Kadratis nicht. Der zuerst importierte gewinnt, der andere wird als Warnung gemeldet. Dasselbe passiert, wenn zwei Netbox-Standorte demselben Standort zugeordnet sind und beide eine Location desselben Namens führen.
 
 **Wenn Netbox seine Locations nicht zurückgibt**, wird der Lauf mit den Geräten fortgesetzt und jeder Unterstandort unverändert gelassen, mit einem Hinweis darauf in der Vorschau. Eine teilweise Zuordnung wäre schlimmer als keine.
 
@@ -215,7 +215,7 @@ Eine Synchronisierung setzt ein Asset nie auf **Außer Betrieb**. Geräte außer
 
 **Ein Lauf, der immer weiter scheitert, hört auf.** Wenn 10 Objekte nacheinander nicht gespeichert werden können, wird der Lauf abgebrochen und als fehlgeschlagen gemeldet, statt die Liste mit Fehlerzeilen zu füllen und am Ende Erfolg zu melden.
 
-**Ein unvollständiger Lesevorgang meldet nie etwas als fehlend.** Hält Netbox mehr Seiten bereit, als KANAP in einem Lauf liest, wird nichts als fehlend gemeldet, und neben dem Ergebnis steht ein Hinweis.
+**Ein unvollständiger Lesevorgang meldet nie etwas als fehlend.** Hält Netbox mehr Seiten bereit, als Kadratis in einem Lauf liest, wird nichts als fehlend gemeldet, und neben dem Ergebnis steht ein Hinweis.
 
 **Ein Serverneustart blockiert die Seite nicht.** **Jetzt synchronisieren** funktioniert sofort wieder. Ein Lauf, den der Neustart unterbrochen hat, wird als abgebrochen gemeldet.
 
@@ -223,7 +223,7 @@ Eine Synchronisierung setzt ein Asset nie auf **Außer Betrieb**. Geräte außer
 
 ## Automatische Synchronisierung
 
-Aktivieren Sie **Automatische Synchronisierung** auf der Integrationskarte, und KANAP führt denselben Lauf stündlich aus und wendet die Änderungen ohne Vorschau an. Der Schalter gilt pro Mandant, und nur Mandanten, die ihn aktiviert haben, werden angefahren. Der stündliche Lauf übernimmt nie den ersten Import: Er startet, sobald Sie selbst eine Synchronisierung angewendet haben und diese fehlerfrei beendet wurde. Bis dahin kann der Schalter eingeschaltet sein, ohne dass etwas läuft. Dasselbe gilt, solange eine Prüfung nicht abgeschlossen ist: Solange Objekte auf ihren Stapel warten, bleibt der stündliche Lauf ausgesetzt, denn er würde importieren, was niemand gelesen hat. Er läuft wieder, sobald eine von Ihnen angewendete Synchronisierung nichts mehr warten lässt.
+Aktivieren Sie **Automatische Synchronisierung** auf der Integrationskarte, und Kadratis führt denselben Lauf stündlich aus und wendet die Änderungen ohne Vorschau an. Der Schalter gilt pro Mandant, und nur Mandanten, die ihn aktiviert haben, werden angefahren. Der stündliche Lauf übernimmt nie den ersten Import: Er startet, sobald Sie selbst eine Synchronisierung angewendet haben und diese fehlerfrei beendet wurde. Bis dahin kann der Schalter eingeschaltet sein, ohne dass etwas läuft. Dasselbe gilt, solange eine Prüfung nicht abgeschlossen ist: Solange Objekte auf ihren Stapel warten, bleibt der stündliche Lauf ausgesetzt, denn er würde importieren, was niemand gelesen hat. Er läuft wieder, sobald eine von Ihnen angewendete Synchronisierung nichts mehr warten lässt.
 
 Objekte, die eine Entscheidung brauchen, werden nie automatisch aufgelöst. Sie sammeln sich unter **Zu entscheiden** und warten auf Sie.
 
@@ -246,7 +246,7 @@ Die Spalte **Typ** zeigt den Asset-Typ des verknüpften Assets, also „Physisch
 | **Zu entscheiden** | Mehrere Assets kommen für dieses Objekt infrage, zwei Objekte haben dasselbe Asset erreicht, ein Asset hat einen ähnlichen Namen, oder ein Asset trägt bereits die IP-Adresse des Objekts. | **Verknüpfen mit...** einem der Kandidaten, **Neues Asset anlegen** oder **Ignorieren**. |
 | **Fehlt in Netbox** | Das Objekt ist in Netbox nicht mehr vorhanden. Das Asset bleibt unberührt. | **Asset als „Außer Betrieb“ markieren**, **Ignorieren** oder es so belassen. |
 | **Fehler** | Das Objekt konnte nicht geschrieben werden, mit dem Grund in der Spalte Meldung. | Ursache beheben und erneut ausführen oder das Objekt **Ignorieren**. |
-| **Ignoriert** | Sie haben KANAP angewiesen, dieses Objekt in Ruhe zu lassen. Jeder Lauf überspringt es. | **Nicht mehr ignorieren** stellt es wieder in die Liste. Hält der Datensatz nichts zu entscheiden bereit, wird er stattdessen entfernt, und das Objekt wird bei der nächsten Synchronisierung erneut geprüft. |
+| **Ignoriert** | Sie haben Kadratis angewiesen, dieses Objekt in Ruhe zu lassen. Jeder Lauf überspringt es. | **Nicht mehr ignorieren** stellt es wieder in die Liste. Hält der Datensatz nichts zu entscheiden bereit, wird er stattdessen entfernt, und das Objekt wird bei der nächsten Synchronisierung erneut geprüft. |
 | **Verknüpft** | Objekt und Asset sind zugeordnet und aktuell. | Beide Seiten über die Zeile öffnen. |
 
 Jede Zeile verlinkt auf das Objekt in Netbox und auf das Asset, mit seiner `AST-`-Referenz.
@@ -255,7 +255,7 @@ Ein Verknüpfen oder Anlegen von dieser Seite aus übernimmt die Netbox-Werte so
 
 ### Fehlt in Netbox
 
-**KANAP löscht nie ein Asset.** Verschwindet ein Objekt aus Netbox, bleiben das Asset, seine Verknüpfungen und seine Historie genau so, wie sie sind, und das Objekt wird als fehlend gelistet, damit Sie entscheiden können. **Asset als „Außer Betrieb“ markieren** setzt den Lebenszyklus auf Außer Betrieb und lässt alles Übrige unverändert.
+**Kadratis löscht nie ein Asset.** Verschwindet ein Objekt aus Netbox, bleiben das Asset, seine Verknüpfungen und seine Historie genau so, wie sie sind, und das Objekt wird als fehlend gelistet, damit Sie entscheiden können. **Asset als „Außer Betrieb“ markieren** setzt den Lebenszyklus auf Außer Betrieb und lässt alles Übrige unverändert.
 
 Zwei Sicherungen greifen. Es wird nichts als fehlend gemeldet, wenn der Aufruf an Netbox fehlgeschlagen ist oder wenn Netbox ein leeres Inventar geliefert hat: Eine Störung ist keine Außerbetriebnahme. Und ein Asset, dessen Netbox-Objekt verschwunden ist, ist wieder frei, sodass dieselbe Maschine, in Netbox neu angelegt, wieder damit verknüpft wird, statt ein Duplikat zu erzeugen.
 
@@ -274,13 +274,13 @@ Die Kachel hält sich zurück, wenn es nichts zu tun gibt: eine Zeile, dass die 
 | Was Sie sehen | Was es meist bedeutet |
 |--------------|-----------------------|
 | Netbox hat das API-Token abgelehnt | Das Token wurde beim Einfügen abgeschnitten, ist abgelaufen oder ist auf eine andere Adresse beschränkt. Legen Sie in Netbox ein neues an und speichern Sie es erneut. |
-| Diese Adresse zeigt auf ein privates Netz | Die Cloud-Edition erreicht nur öffentliche Adressen. Veröffentlichen Sie Netbox unter einer Adresse, die KANAP erreichen kann, oder betreiben Sie KANAP on-premise daneben. |
-| Das Netbox-Zertifikat konnte nicht geprüft werden | Netbox zeigt ein Zertifikat, dem KANAP nicht vertraut. Installieren Sie ein vertrauenswürdiges Zertifikat oder aktivieren Sie **Zertifikatsfehler ignorieren**, wenn das Zertifikat eines Ihrer eigenen ist. |
-| Der Netbox-Server hat nicht rechtzeitig geantwortet | Netbox ist langsam, nicht erreichbar oder hinter einer Firewall, die den Aufruf verwirft. Prüfen Sie es vom KANAP-Server aus und erhöhen Sie dann das Zeitlimit für Anfragen, wenn die Instanz einfach groß ist. |
+| Diese Adresse zeigt auf ein privates Netz | Die Cloud-Edition erreicht nur öffentliche Adressen. Veröffentlichen Sie Netbox unter einer Adresse, die Kadratis erreichen kann, oder betreiben Sie Kadratis on-premise daneben. |
+| Das Netbox-Zertifikat konnte nicht geprüft werden | Netbox zeigt ein Zertifikat, dem Kadratis nicht vertraut. Installieren Sie ein vertrauenswürdiges Zertifikat oder aktivieren Sie **Zertifikatsfehler ignorieren**, wenn das Zertifikat eines Ihrer eigenen ist. |
+| Der Netbox-Server hat nicht rechtzeitig geantwortet | Netbox ist langsam, nicht erreichbar oder hinter einer Firewall, die den Aufruf verwirft. Prüfen Sie es vom Kadratis-Server aus und erhöhen Sie dann das Zeitlimit für Anfragen, wenn die Instanz einfach groß ist. |
 | Objekte erscheinen als übersprungen, Grund „Rolle nicht zugeordnet“ oder „Standort nicht zugeordnet“ | Erwartet für alles, was Sie auf **Nicht importieren** gelassen haben. War es nicht beabsichtigt, ordnen Sie die Rolle oder den Standort zu und führen Sie den Lauf erneut aus. |
 | Eine Warnung meldet, dass ein Betriebssystem nicht in Ihrem Katalog steht | Die Netbox-Plattform hat keine Zuordnung unter **Zuordnungen > Betriebssysteme**, und ihr Name entspricht keiner Technologie der Familie **Betriebssystem** und keinem Betriebssystem des Katalogs. Ordnen Sie sie im Tab Zuordnungen zu oder legen Sie die Technologie unter **IT-Landschaft > Technologien** an, und führen Sie den Lauf erneut aus. Bis dahin bleibt das Betriebssystem unverändert. |
 | „Netbox hat seine Plattformen nicht zurückgegeben“ | Das API-Token darf keine Plattformen lesen. Geben Sie ihm in Netbox die Berechtigung auf `dcim.platform`, oder lassen Sie es: Geräte werden weiterhin importiert, nur die Zuordnung der Betriebssysteme ist nicht möglich. |
-| Ein Asset trägt den vollständigen Netbox-Namen als Hostnamen | Der Name endet nicht auf eine DNS-Endung aus Ihrer Domänenliste, deshalb behält KANAP ihn unverändert. Für einen Namen, dessen Punkte zum Namen gehören, ist das genau das erwartete Ergebnis. Handelt es sich doch um eine Domäne, legen Sie sie unter **IT-Landschaft > Einstellungen** an und führen Sie den Lauf erneut aus. |
+| Ein Asset trägt den vollständigen Netbox-Namen als Hostnamen | Der Name endet nicht auf eine DNS-Endung aus Ihrer Domänenliste, deshalb behält Kadratis ihn unverändert. Für einen Namen, dessen Punkte zum Namen gehören, ist das genau das erwartete Ergebnis. Handelt es sich doch um eine Domäne, legen Sie sie unter **IT-Landschaft > Einstellungen** an und führen Sie den Lauf erneut aus. |
 | Der Lauf ist nach einer Handvoll Objekte fehlgeschlagen | Zehn Objekte nacheinander konnten nicht gespeichert werden, deshalb wurde der Lauf abgebrochen. Die Ursache ist meist bei allen dieselbe, die Details stehen im Serverprotokoll. |
 | „Netbox hat mehr Seiten geliefert als erwartet. Einige Objekte wurden nicht geprüft.“ | Das Inventar ist größer, als ein Lauf liest. Was gelesen wurde, wird angewendet, und nichts wird als fehlend markiert. Grenzen Sie den Umfang unter **Zuordnungen** ein, damit der Lauf das abdeckt, was für Sie zählt. |
 | Ein Unterstandort warnt, dass sein Name bereits verwendet wird | Zwei Netbox-Locations dieses Standorts teilen sich den Namen, oder zwei zugeordnete Netbox-Standorte zeigen auf denselben Standort und führen jeweils eine Location dieses Namens. Benennen Sie eine davon in Netbox um oder führen Sie sie dort zusammen. Die Geräte werden in jedem Fall importiert, ohne Unterstandort. |

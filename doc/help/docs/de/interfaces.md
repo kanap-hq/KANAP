@@ -12,7 +12,7 @@ Navigieren Sie zu **IT-Landschaft > Schnittstellen**, um Ihr Integrationsverzeic
 - **Quellanwendung** und **Zielanwendung**, im Reiter **Fluss**
 - **Datenkategorie**, im Seitenpanel: der Datentyp, der übertragen wird
 
-Sie können sie in beliebiger Reihenfolge ausfüllen. Nichts wird gespeichert, solange nicht alle vier ausgefüllt sind. Sobald sie es sind, erstellt KANAP die Schnittstelle mit allem, was der Entwurf enthält, und vergibt ihre Referenz (`INT-4`). Die Seite wechselt zur Schnittstelle, und **Umgebungen**, **Datenzuordnung**, **Beziehungen** und **Verlauf** öffnen sich.
+Sie können sie in beliebiger Reihenfolge ausfüllen. Nichts wird gespeichert, solange nicht alle vier ausgefüllt sind. Sobald sie es sind, erstellt Kadratis die Schnittstelle mit allem, was der Entwurf enthält, und vergibt ihre Referenz (`INT-4`). Die Seite wechselt zur Schnittstelle, und **Umgebungen**, **Datenzuordnung**, **Beziehungen** und **Verlauf** öffnen sich.
 
 **Tipp**: Legen Sie den **Routentyp** frühzeitig fest. Er steuert, welche Legs automatisch generiert werden und was im Reiter Fluss und in der Umgebungsmatrix angezeigt wird.
 
@@ -20,7 +20,7 @@ Sie können sie in beliebiger Reihenfolge ausfüllen. Nichts wird gespeichert, s
 
 Solange die Schnittstelle erstellt wird, zeigt ihre Kopfzeile **Erstellen** und **Abbrechen**. Beide bleiben, bis Sie die Schnittstelle verlassen.
 
-- **Erstellen** behält die Schnittstelle und bringt Sie dorthin zurück, wo Sie begonnen haben. Fehlt noch etwas, nennt eine Meldung es, und der Titel oder das erste fehlende Feld erhält den Fokus. Ist der Entwurf vollständig, erstellt KANAP die Schnittstelle und bringt Sie sofort zurück
+- **Erstellen** behält die Schnittstelle und bringt Sie dorthin zurück, wo Sie begonnen haben. Fehlt noch etwas, nennt eine Meldung es, und der Titel oder das erste fehlende Feld erhält den Fokus. Ist der Entwurf vollständig, erstellt Kadratis die Schnittstelle und bringt Sie sofort zurück
 - **Abbrechen** löscht die Schnittstelle. Wenn Sie nach ihrer Erstellung etwas hinzugefügt haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Schnittstellen abbrechen
 
 Verlassen Sie die Schnittstelle auf andere Weise (über das Menü oder den Zurück-Pfeil), bleibt sie erhalten: Sie ist vollständig.
@@ -35,7 +35,7 @@ Das Schnittstellenraster zeigt Ihr Integrationsverzeichnis auf einen Blick.
 
 **Standardspalten**:
 
-- **Referenz**: Die Referenz, die KANAP vergibt (`INT-4`)
+- **Referenz**: Die Referenz, die Kadratis vergibt (`INT-4`)
 - **Schnittstellencode**: Ihr eigener Kurzcode, sofern festgelegt
 - **Name**: Schnittstellenname
 - **Umgebungen**: Farbige Punkte, die zeigen, welche Umgebungen bereits Bindungen konfiguriert haben (z. B. PROD, QA, DEV)
@@ -82,7 +82,7 @@ Das Seitenpanel bleibt in jedem Reiter sichtbar. Klicken Sie auf seinen Reiter *
 
 **Identifikation**:
 
-- **Referenz**: Von KANAP vergeben, schreibgeschützt
+- **Referenz**: Von Kadratis vergeben, schreibgeschützt
 - **Schnittstellencode**: Ihr eigener Kurzcode
 - **Geschäftsprozess**: Verknüpfung mit einem Geschäftsprozess aus den Stammdaten
 - **Lebenszyklus**
@@ -239,7 +239,7 @@ Eine Abhängigkeit gilt in eine Richtung. Wenn Sie Schnittstelle B als vorgelage
 
 ## Schnittstellen kopieren
 
-Es gibt zwei Möglichkeiten, Schnittstellen in KANAP zu kopieren.
+Es gibt zwei Möglichkeiten, Schnittstellen in Kadratis zu kopieren.
 
 ### Schnittstelle duplizieren (aus dem Schnittstellenraster)
 

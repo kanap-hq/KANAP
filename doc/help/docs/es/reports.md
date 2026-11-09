@@ -193,7 +193,7 @@ Profundice en las asignaciones de contracargo de una empresa entre departamentos
 
 **Tarjeta resumen de la empresa**: Nombre de la empresa, importe total, moneda de reporte, plantilla, usuarios IT, coste por usuario, coste por usuario IT y costes IT vs facturación.
 
-**Facturación en los informes de contracargo**: cada empresa introduce su facturación en millones de su moneda base. Los dos informes de contracargo la convierten a la moneda de reporte, a los tipos de la versión presupuestaria del año, como los importes. La facturación, el ratio costes IT vs facturación y la facturación global de las tablas de KPI usan el valor convertido. Cuando una moneda no tiene tipo para el año, las empresas en esa moneda quedan fuera de los indicadores de facturación, y un aviso en la parte superior del informe nombra cada una de ellas. El ratio global costes IT vs facturación se calcula entonces solo sobre las empresas cuya facturación se ha convertido, tanto para los costes como para la facturación. KANAP obtiene el tipo que falta en segundo plano.
+**Facturación en los informes de contracargo**: cada empresa introduce su facturación en millones de su moneda base. Los dos informes de contracargo la convierten a la moneda de reporte, a los tipos de la versión presupuestaria del año, como los importes. La facturación, el ratio costes IT vs facturación y la facturación global de las tablas de KPI usan el valor convertido. Cuando una moneda no tiene tipo para el año, las empresas en esa moneda quedan fuera de los indicadores de facturación, y un aviso en la parte superior del informe nombra cada una de ellas. El ratio global costes IT vs facturación se calcula entonces solo sobre las empresas cuya facturación se ha convertido, tanto para los costes como para la facturación. Kadratis obtiene el tipo que falta en segundo plano.
 
 **Totales por departamento** (cuando está habilitado):
 
@@ -572,9 +572,9 @@ Una fila **Total** fijada da, para cada par, el total de días, el total del cos
 
 ## Preguntar al asistente
 
-[Plaid](ai-assistant.md) da las cifras de estos informes, con los mismos derechos: Cuentas de consolidación, Top aumento / disminución (10 líneas por defecto), Plantilla por mes (cada mes, la media y el pico), Coste por ETC, Contracargo global y Contracargo por empresa. También mide varias columnas o años en una misma respuesta, por ejemplo el presupuesto de cada proveedor a lo largo de tres años. En el contracargo, cubre OPEX y CAPEX cuando usted no nombra ninguno de los dos, y repite los avisos del informe. Pregunte, por ejemplo: "¿Qué líneas suben más del presupuesto 2026 a la revisión?" o "¿Cuánto se imputa a cada empresa en 2026, y cuánto paga cada una?"
+[Kad](ai-assistant.md) da las cifras de estos informes, con los mismos derechos: Cuentas de consolidación, Top aumento / disminución (10 líneas por defecto), Plantilla por mes (cada mes, la media y el pico), Coste por ETC, Contracargo global y Contracargo por empresa. También mide varias columnas o años en una misma respuesta, por ejemplo el presupuesto de cada proveedor a lo largo de tres años. En el contracargo, cubre OPEX y CAPEX cuando usted no nombra ninguno de los dos, y repite los avisos del informe. Pregunte, por ejemplo: "¿Qué líneas suben más del presupuesto 2026 a la revisión?" o "¿Cuánto se imputa a cada empresa en 2026, y cuánto paga cada una?"
 
-Plaid lee todas las líneas presupuestarias, incluidas las terminadas. Los informes presupuestarios leen las líneas aún activas el 1 de enero del año anterior al primer año mostrado, así que una línea terminada antes cuenta en la respuesta de Plaid y no en el informe.
+Kad lee todas las líneas presupuestarias, incluidas las terminadas. Los informes presupuestarios leen las líneas aún activas el 1 de enero del año anterior al primer año mostrado, así que una línea terminada antes cuenta en la respuesta de Kad y no en el informe.
 
 ## Características comunes
 
@@ -586,7 +586,7 @@ Todos los informes comparten estas capacidades a través de la barra de herramie
 - **Exportar gráfico como PNG** (icono de imagen): Descarga el gráfico como imagen PNG
 - **Imprimir / Guardar como PDF** (icono de impresión): Abre el diálogo de impresión del navegador. También puede añadir `?print=1` a cualquier URL de informe para activar la impresión automáticamente al cargar.
 
-KANAP construye el archivo de la tabla con las mismas cifras que la pantalla, con los filtros en pantalla:
+Kadratis construye el archivo de la tabla con las mismas cifras que la pantalla, con los filtros en pantalla:
 
 - **Valores**: los importes conservan sus céntimos, los ETC y los días sus decimales, las partes son porcentajes. La pantalla los redondea para leerlos; el archivo conserva los valores, de modo que una suma en Excel coincide con el informe.
 - **Orden**: las filas siguen el orden propio del informe. Un orden elegido con un clic en un encabezado de columna se queda en la pantalla.

@@ -64,9 +64,9 @@ Die Zeilen zu Anwendungen erfordern das Recht, Anwendungen zu lesen.
 
 ## Den Assistenten fragen
 
-[Plaid](ai-assistant.md) liest beide Ansichten, **Fristen** und **Fehlende Daten**, mit denselben Rechten wie der Bericht. Es nennt jedes Element mit seiner Referenz (`APP-4`, `AST-12`, `TEC-3`) und liest einen Zeitraum auf einmal: 6, 12, 24 oder 36 Monate. Plaid listet die Fristen 30 auf einmal und kann die folgenden Seiten lesen; seine Anzahlen und Summen decken jede Frist ab. Wenn Sie keine Anwendungen lesen dürfen, sagt Plaid, dass es die Zeilen der Anwendungen ausgelassen hat.
+[Kad](ai-assistant.md) liest beide Ansichten, **Fristen** und **Fehlende Daten**, mit denselben Rechten wie der Bericht. Es nennt jedes Element mit seiner Referenz (`APP-4`, `AST-12`, `TEC-3`) und liest einen Zeitraum auf einmal: 6, 12, 24 oder 36 Monate. Kad listet die Fristen 30 auf einmal und kann die folgenden Seiten lesen; seine Anzahlen und Summen decken jede Frist ab. Wenn Sie keine Anwendungen lesen dürfen, sagt Kad, dass es die Zeilen der Anwendungen ausgelassen hat.
 
-Plaid kann auch Versionen von Technologien hinzufügen und ihre Supportdaten korrigieren, mit Ihrer Genehmigung. Das Supportende einer Anwendung ist ein Feld der Anwendung: Plaid ändert es, wie es die Anwendung ändert, mit den Rechten der Seite [Anwendungen](applications.md).
+Kad kann auch Versionen von Technologien hinzufügen und ihre Supportdaten korrigieren, mit Ihrer Genehmigung. Das Supportende einer Anwendung ist ein Feld der Anwendung: Kad ändert es, wie es die Anwendung ändert, mit den Rechten der Seite [Anwendungen](applications.md).
 
 Fragen Sie zum Beispiel: „Welche Anwendungen erreichen in den nächsten sechs Monaten ihr Supportende?“, „Fristen zum Supportende der nächsten zwölf Monate nach Typ“, „Welche Datensätze muss ich für den Bericht zum Supportende vervollständigen?“, „Die Version 16 von PostgreSQL endet im Support am 31.12.2028“ oder „Lösche das Ende des erweiterten Supports der Version 14 von TEC-3“.
 
@@ -74,4 +74,4 @@ Fragen Sie zum Beispiel: „Welche Anwendungen erreichen in den nächsten sechs 
 
 - **Zuerst die fehlenden Daten klären**: Ein Server ohne seine Technologien oder eine Version ohne Datum erscheint nie in den Fristen.
 - **Für Budgets 24 Monate vorausschauen**: Eine Migration im nächsten Jahr braucht ihr Geld im Budget dieses Jahres.
-- **Den Katalog nutzen**: Aus dem Katalog hinzugefügte Technologien bringen ihre Supportende-Daten mit. Sie stammen von endoflife.date oder, für die von KANAP gepflegten Produkte, von den offiziellen Seiten des Herstellers (siehe [Versionen aus dem Katalog](technologies.md#versionen-aus-dem-katalog)).
+- **Den Katalog nutzen**: Aus dem Katalog hinzugefügte Technologien bringen ihre Supportende-Daten mit. Sie stammen von endoflife.date oder, für die von Kadratis gepflegten Produkte, von den offiziellen Seiten des Herstellers (siehe [Versionen aus dem Katalog](technologies.md#versionen-aus-dem-katalog)).

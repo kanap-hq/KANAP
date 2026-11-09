@@ -32,7 +32,7 @@ Utilisez le sélecteur de périmètre au-dessus de la grille pour contrôler le 
 - **Demandes de mon équipe** étend cette vue aux demandes impliquant des membres de votre équipe Portefeuille. Cette option est indisponible si vous n'êtes pas assigné à une équipe.
 - **Toutes les demandes** supprime le filtre d'implication et affiche le pipeline complet des demandes.
 
-La liste s'ouvre sur **Toutes les demandes** et mémorise votre choix de périmètre. Si vous ouvrez une demande depuis la liste et revenez plus tard, KANAP conserve le contexte de liste afin que vous n'ayez pas à reconstruire votre pile de filtres à chaque fois.
+La liste s'ouvre sur **Toutes les demandes** et mémorise votre choix de périmètre. Si vous ouvrez une demande depuis la liste et revenez plus tard, Kadratis conserve le contexte de liste afin que vous n'ayez pas à reconstruire votre pile de filtres à chaque fois.
 
 ### Colonnes par défaut
 
@@ -94,7 +94,7 @@ L'en-tête de l'espace de travail vous donne le contexte opérationnel sans quit
 
 1. Cliquez sur **Nouvelle demande**. La page de la demande s'ouvre sur **Synthèse** avec un titre vide dans l'en-tête. Le reste de la page est grisé.
 2. Saisissez le nom de la demande.
-3. Appuyez sur Entrée, ou cliquez hors du titre. KANAP crée la demande aussitôt, au statut **En attente de revue** et avec vous comme demandeur. Sa référence (`REQ-42`) apparaît et tous les onglets s'ouvrent.
+3. Appuyez sur Entrée, ou cliquez hors du titre. Kadratis crée la demande aussitôt, au statut **En attente de revue** et avec vous comme demandeur. Sa référence (`REQ-42`) apparaît et tous les onglets s'ouvrent.
 
 Complétez ensuite le tiroir Propriétés et l'**Objectif**. Le nom se modifie uniquement dans l'en-tête. Appuyez sur Échap dans le titre vide pour partir sans rien créer.
 
@@ -148,7 +148,7 @@ D'anciens favoris peuvent encore pointer vers `overview`, `team` ou `relations`.
 
 ## Synthèse
 
-**Synthèse** est le cockpit de la demande. Ce n'est pas un simple onglet de vue d'ensemble ; c'est là où KANAP compresse l'état de la demande en un instantané opérationnel.
+**Synthèse** est le cockpit de la demande. Ce n'est pas un simple onglet de vue d'ensemble ; c'est là où Kadratis compresse l'état de la demande en un instantané opérationnel.
 
 ### Objectif comme document managé
 
@@ -364,6 +364,6 @@ Utilisez l'export quand vous avez besoin de reporting de portefeuille ou d'enric
 ## Conseils
 
 - **Utilisez l'import DOCX pour le contenu existant** : Si vous avez déjà une déclaration d'objectif ou un registre des risques dans un document Word, utilisez le bouton **Importer** sur l'éditeur Objectif ou Risques et atténuations au lieu de copier-coller. L'import convertit le document en markdown et vous avertit si du contenu n'a pas pu être reporté.
-- **Les filtres de périmètre persistent** : La liste s'ouvre sur **Toutes les demandes**. KANAP mémorise votre dernier choix de périmètre, vous n'avez donc pas besoin de le re-sélectionner à chaque session.
+- **Les filtres de périmètre persistent** : La liste s'ouvre sur **Toutes les demandes**. Kadratis mémorise votre dernier choix de périmètre, vous n'avez donc pas besoin de le re-sélectionner à chaque session.
 - **Les demandes converties sont masquées par défaut** : Si vous cherchez une demande qui a déjà été convertie en projet, ajoutez **Convertie** au filtre Statut sur la liste.
 - **De la tâche à la demande** : Lorsqu'une tâche révèle une initiative plus grande, utilisez **Convertir en demande** depuis l'espace de travail de la tâche. La nouvelle demande hérite du titre de la tâche, de la description (comme Objectif), de la classification et des pièces jointes, et affiche la **Tâche source** dans son en-tête.

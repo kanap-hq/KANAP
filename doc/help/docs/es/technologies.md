@@ -4,7 +4,7 @@ Las tecnologías registran lo que el departamento de TI ejecuta o contrata para 
 
 ## Qué es una tecnología
 
-KANAP describe su panorama en tres bloques:
+Kadratis describe su panorama en tres bloques:
 
 | Bloque | Qué contiene | Ejemplos |
 |---|---|---|
@@ -31,9 +31,9 @@ Una tecnología abarca un producto en su conjunto. "SQL Server" representa todos
 
 Navegue a **Panorama IT > Tecnologías** y haga clic en **Nueva tecnología**.
 
-La ventana se abre en el **Catálogo**: una lista de productos habituales con una descripción breve, su editor, su familia y su tipo de alojamiento. Busque por nombre y haga clic en una entrada. KANAP crea al instante la tecnología con su editor, su familia, su tipo de alojamiento, sus identificadores de producto CPE, sus nombres CVE.org, sus versiones con sus fechas de fin de soporte y la descripción breve en su idioma, y la abre. Una entrada sigue ofreciéndose cuando una tecnología del mismo nombre se ha escrito a mano. Añadirla completa esa tecnología, y la entrada lo indica (Completa TEC-10). Una búsqueda que coincide con una entrada del catálogo ya adoptada la muestra bajo **Ya en sus tecnologías**, con la referencia de su tecnología, y un clic abre esa tecnología; mientras la búsqueda está vacía, esa sección permanece oculta.
+La ventana se abre en el **Catálogo**: una lista de productos habituales con una descripción breve, su editor, su familia y su tipo de alojamiento. Busque por nombre y haga clic en una entrada. Kadratis crea al instante la tecnología con su editor, su familia, su tipo de alojamiento, sus identificadores de producto CPE, sus nombres CVE.org, sus versiones con sus fechas de fin de soporte y la descripción breve en su idioma, y la abre. Una entrada sigue ofreciéndose cuando una tecnología del mismo nombre se ha escrito a mano. Añadirla completa esa tecnología, y la entrada lo indica (Completa TEC-10). Una búsqueda que coincide con una entrada del catálogo ya adoptada la muestra bajo **Ya en sus tecnologías**, con la referencia de su tecnología, y un clic abre esa tecnología; mientras la búsqueda está vacía, esa sección permanece oculta.
 
-Una tecnología adoptada desde el catálogo se mantiene al día: cuando el editor publica una nueva versión o cambia una fecha, KANAP añade la versión y mueve la fecha (consulte [Versiones del catálogo](#versiones-del-catalogo)).
+Una tecnología adoptada desde el catálogo se mantiene al día: cuando el editor publica una nueva versión o cambia una fecha, Kadratis añade la versión y mueve la fecha (consulte [Versiones del catálogo](#versiones-del-catalogo)).
 
 Para un producto que el catálogo no conoce, haga clic en **Introducir una tecnología que no está en el catálogo**. Complete:
 
@@ -64,11 +64,11 @@ El significado de las dos fechas de soporte depende del editor:
 
 Cualquier tecnología puede ser un sistema operativo: ponga VMware ESXi o FortiOS en la familia **Sistema operativo** y podrá ser el sistema operativo de un host o de un cortafuegos.
 
-Los sistemas operativos del catálogo tienen identificadores CPE de producto, y KANAP los cruza con las vulnerabilidades publicadas.
+Los sistemas operativos del catálogo tienen identificadores CPE de producto, y Kadratis los cruza con las vulnerabilidades publicadas.
 
-Las distribuciones Linux publican sus vulnerabilidades por paquete. KANAP sigue el soporte de cada versión y cruza las vulnerabilidades que el editor asigna a la versión. No sabe qué paquetes tiene instalados un servidor, ni en qué nivel. Para las distribuciones Linux del catálogo, la tabla de versiones lleva al seguimiento de seguridad del distribuidor, donde puede comprobar cada paquete. Consulte [Versiones del catálogo](#versiones-del-catalogo).
+Las distribuciones Linux publican sus vulnerabilidades por paquete. Kadratis sigue el soporte de cada versión y cruza las vulnerabilidades que el editor asigna a la versión. No sabe qué paquetes tiene instalados un servidor, ni en qué nivel. Para las distribuciones Linux del catálogo, la tabla de versiones lleva al seguimiento de seguridad del distribuidor, donde puede comprobar cada paquete. Consulte [Versiones del catálogo](#versiones-del-catalogo).
 
-Los sistemas operativos quedan excluidos de las alertas de vulnerabilidad por defecto. KANAP no conoce el nivel de parches de un servidor, así que un sistema operativo generaría un número muy grande de vulnerabilidades, la mayoría ya corregidas. Esto se aplica a una tecnología de la familia **Sistema operativo** y a un sistema operativo adoptado desde el catálogo, sea cual sea su familia. Una tecnología existente que usted adopta desde el catálogo como sistema operativo queda excluida también. Puede volver a incluirla: consulte [Alertas de vulnerabilidad](#alertas-de-vulnerabilidad).
+Los sistemas operativos quedan excluidos de las alertas de vulnerabilidad por defecto. Kadratis no conoce el nivel de parches de un servidor, así que un sistema operativo generaría un número muy grande de vulnerabilidades, la mayoría ya corregidas. Esto se aplica a una tecnología de la familia **Sistema operativo** y a un sistema operativo adoptado desde el catálogo, sea cual sea su familia. Una tecnología existente que usted adopta desde el catálogo como sistema operativo queda excluida también. Puede volver a incluirla: consulte [Alertas de vulnerabilidad](#alertas-de-vulnerabilidad).
 
 Las instalaciones actualizadas desde una versión anterior conservan sus datos: los sistemas operativos que usaban los servidores, y las entradas añadidas a la antigua lista de sistemas operativos de la configuración, se han convertido en tecnologías, con sus versiones y fechas.
 
@@ -157,7 +157,7 @@ El soporte sigue vigente el día de su fecha de fin. Con una sola fecha, esa fec
 
 Cuando se siguen las vulnerabilidades, la tabla de versiones elige las versiones que cuentan en las alertas de vulnerabilidad. Una versión en las alertas aparece por defecto en la página [Vulnerabilidades](vulnerabilities.md), en los correos y en los contadores. Una versión fuera de las alertas se sigue cotejando con las vulnerabilidades: la sección [Vulnerabilidades](#vulnerabilidades) de la tecnología la sigue mostrando, y la página muestra sus filas con su filtro **Alertas**.
 
-- **Incluir en las alertas de vulnerabilidad**: el interruptor de la línea de título **Versiones**, junto a **Añadir versión**. Es el ajuste de la tecnología. Pase el ratón por encima para un recordatorio: se aplica a las versiones sin ajuste propio, a las versiones añadidas más tarde, y a los servidores y aplicaciones que no indican ninguna versión. Cambiarlo sustituye los ajustes propios de las versiones; cuando algunas tienen uno, KANAP pregunta primero e indica cuántas. Aparece incluso cuando la tecnología no tiene ninguna versión.
+- **Incluir en las alertas de vulnerabilidad**: el interruptor de la línea de título **Versiones**, junto a **Añadir versión**. Es el ajuste de la tecnología. Pase el ratón por encima para un recordatorio: se aplica a las versiones sin ajuste propio, a las versiones añadidas más tarde, y a los servidores y aplicaciones que no indican ninguna versión. Cambiarlo sustituye los ajustes propios de las versiones; cuando algunas tienen uno, Kadratis pregunta primero e indica cuántas. Aparece incluso cuando la tecnología no tiene ninguna versión.
 - Columna **Alertas**: un interruptor por versión, para una excepción en una versión. Pase el ratón por el icono de información de su cabecera para saber qué hace. Un pequeño punto junto al interruptor marca una versión con ajuste propio. Vuelva a poner el interruptor en el valor de la tecnología y la versión sigue de nuevo a la tecnología.
 
 Las nuevas tecnologías están en las alertas, con dos excepciones:
@@ -169,11 +169,11 @@ Cambiar más tarde la familia o el tipo de alojamiento de una tecnología deja s
 
 #### Versiones del catálogo
 
-Una versión que procede del catálogo muestra **Catálogo** junto a su etiqueta, y una tecnología adoptada desde el catálogo muestra junto a **Versiones** un icono de información que indica que sus versiones y fechas se mantienen al día desde el catálogo. KANAP consulta el catálogo cada día en la nube. En una instalación local, cada versión de KANAP trae su catálogo al arrancar, salvo que su administrador [active la comprobación diaria](on-premise/configuration.md#optional-technology-catalog).
+Una versión que procede del catálogo muestra **Catálogo** junto a su etiqueta, y una tecnología adoptada desde el catálogo muestra junto a **Versiones** un icono de información que indica que sus versiones y fechas se mantienen al día desde el catálogo. Kadratis consulta el catálogo cada día en la nube. En una instalación local, cada versión de Kadratis trae su catálogo al arrancar, salvo que su administrador [active la comprobación diaria](on-premise/configuration.md#optional-technology-catalog).
 
-Las fechas proceden de dos fuentes. La mayoría de los productos las toman de endoflife.date. Para los productos que endoflife.date no cubre, como Cisco NX-OS, Juniper Junos o Dell PowerStore, KANAP toma las fechas de las páginas oficiales del editor. Cada versión de KANAP pone al día estas fechas.
+Las fechas proceden de dos fuentes. La mayoría de los productos las toman de endoflife.date. Para los productos que endoflife.date no cubre, como Cisco NX-OS, Juniper Junos o Dell PowerStore, Kadratis toma las fechas de las páginas oficiales del editor. Cada versión de Kadratis pone al día estas fechas.
 
-Una versión cuyas fechas tomó KANAP muestra su fuente bajo su etiqueta: «Fuente:», el editor y el día en que se verificaron las fechas. El nombre del editor lleva a la página de la que proceden las fechas. La línea permanece mientras las dos fechas de fin coincidan con el catálogo. Desaparece en cuanto usted cambia una de ellas. Cuando el editor no prevé ningún fin de soporte, como en IBM WebSphere 8.5 y 9.0, las dos columnas de fin de soporte indican «Ningún fin previsto por el editor».
+Una versión cuyas fechas tomó Kadratis muestra su fuente bajo su etiqueta: «Fuente:», el editor y el día en que se verificaron las fechas. El nombre del editor lleva a la página de la que proceden las fechas. La línea permanece mientras las dos fechas de fin coincidan con el catálogo. Desaparece en cuanto usted cambia una de ellas. Cuando el editor no prevé ningún fin de soporte, como en IBM WebSphere 8.5 y 9.0, las dos columnas de fin de soporte indican «Ningún fin previsto por el editor».
 
 Algunos productos no tienen fechas públicas: HPE Aruba Networking AOS-CX, Pure Storage Purity//FA, HPE Alletra 5000/6000 (NimbleOS), Rubrik CDM, Cohesity DataProtect y PRTG Network Monitor. El catálogo los trae sin versiones. Registre usted mismo sus versiones y sus fechas.
 
@@ -183,16 +183,16 @@ La comprobación añade las nuevas versiones, identificadores de producto CPE y 
 
 #### Identificadores de vulnerabilidad
 
-El grupo **Identificadores de vulnerabilidad**, bajo las versiones, reúne los identificadores de producto CPE y los nombres CVE.org. KANAP encuentra las vulnerabilidades de una tecnología a través de ellos.
+El grupo **Identificadores de vulnerabilidad**, bajo las versiones, reúne los identificadores de producto CPE y los nombres CVE.org. Kadratis encuentra las vulnerabilidades de una tecnología a través de ellos.
 
 - **Plegado**: cuando la tecnología tiene al menos un identificador, el grupo está plegado, con un resumen en su línea de título, por ejemplo `2 identificadores CPE · 3 nombres de CVE.org`. Haga clic en el título para abrirlo.
 - **Abierto**: cuando la tecnología no tiene ninguno, el grupo está abierto, con una advertencia: no se busca ninguna vulnerabilidad para esta tecnología. La sección **Versiones** también lo indica. Con el nivel Miembro en la infraestructura, **Añadir un identificador** junto a esa línea abre el grupo.
 
-El cotejo se hace a nivel de la tecnología. Cada versión de la tecnología se compara con las vulnerabilidades de sus identificadores, y una versión que usted añade se coteja de inmediato. Sin identificador, KANAP no busca ninguna vulnerabilidad para ninguna versión.
+El cotejo se hace a nivel de la tecnología. Cada versión de la tecnología se compara con las vulnerabilidades de sus identificadores, y una versión que usted añade se coteja de inmediato. Sin identificador, Kadratis no busca ninguna vulnerabilidad para ninguna versión.
 
-**Identificadores de producto CPE**: los nombres que las bases de datos de seguridad dan a este producto, con la forma `part:vendor:product` (por ejemplo `a:microsoft:sql_server`). KANAP los coteja con las vulnerabilidades publicadas. Un producto puede tener varios (vSphere abarca vCenter y ESXi). Dónde encontrar este valor: busque el producto en el [Diccionario CPE del NIST](https://nvd.nist.gov/products/cpe/search) y conserve su parte, su proveedor y su producto. Cópielos como los escribe la NVD, con la barra invertida delante de un signo: `a:veeam:veeam_backup_\&_replication`. La mayoría de las entradas del catálogo llegan con sus identificadores, incluidos los sistemas operativos.
+**Identificadores de producto CPE**: los nombres que las bases de datos de seguridad dan a este producto, con la forma `part:vendor:product` (por ejemplo `a:microsoft:sql_server`). Kadratis los coteja con las vulnerabilidades publicadas. Un producto puede tener varios (vSphere abarca vCenter y ESXi). Dónde encontrar este valor: busque el producto en el [Diccionario CPE del NIST](https://nvd.nist.gov/products/cpe/search) y conserve su parte, su proveedor y su producto. Cópielos como los escribe la NVD, con la barra invertida delante de un signo: `a:veeam:veeam_backup_\&_replication`. La mayoría de las entradas del catálogo llegan con sus identificadores, incluidos los sistemas operativos.
 
-**Nombres CVE.org**: los nombres de editor y de producto tal como el editor los escribe en sus propias fichas de vulnerabilidad, por ejemplo el editor `SAP_SE` y el producto `SAP HANA Database`. KANAP los coteja con la lista CVE.org, que también contiene vulnerabilidades que la NVD no ha analizado (consulte [Vulnerabilidades](vulnerabilities.md#como-las-encuentra-kanap)). Los nombres están bajo los identificadores de producto CPE y aparecen cuando KANAP lee la lista CVE.org. Cada nombre aparece por separado.
+**Nombres CVE.org**: los nombres de editor y de producto tal como el editor los escribe en sus propias fichas de vulnerabilidad, por ejemplo el editor `SAP_SE` y el producto `SAP HANA Database`. Kadratis los coteja con la lista CVE.org, que también contiene vulnerabilidades que la NVD no ha analizado (consulte [Vulnerabilidades](vulnerabilities.md#como-las-encuentra-kanap)). Los nombres están bajo los identificadores de producto CPE y aparecen cuando Kadratis lee la lista CVE.org. Cada nombre aparece por separado.
 
 - **Añadir un nombre**: escriba parte del nombre del producto en la búsqueda. La lista propone los nombres exactos que los editores escriben en sus fichas, cada uno con su número de vulnerabilidades y la fecha de la última. Elija uno, con una versión opcional. No se puede escribir un nombre que no esté en la lista.
 - **Sugerencias**: los nombres vistos en las vulnerabilidades de sus identificadores CPE. Cada uno muestra su número de vulnerabilidades y la parte de esas vulnerabilidades que lo llevan.
@@ -241,7 +241,7 @@ Las aplicaciones que usan la tecnología, una fila por aplicación, entorno, ser
 
 Una aplicación aparece de dos maneras:
 
-- **Alojada**: uno de sus despliegues se ejecuta en un servidor que lleva la tecnología. KANAP deduce la fila de los servidores; cambie el servidor o el despliegue para modificarla.
+- **Alojada**: uno de sus despliegues se ejecuta en un servidor que lleva la tecnología. Kadratis deduce la fila de los servidores; cambie el servidor o el despliegue para modificarla.
 - **Declarada**: la aplicación depende de la tecnología sin ejecutarse a su lado, por ejemplo una aplicación cuyos usuarios inician sesión con Entra ID. Cambie la versión en el sitio, o quite la declaración. Quitarla retira todas las versiones declaradas de esa aplicación.
 
 **Añadir** (`infrastructure:member`) abre una búsqueda en la que puede marcar varias aplicaciones y luego pide su versión: elija una, escriba una nueva o elija **Versión desconocida**. Todas se declaran con esa versión. Haga clic en la versión de una fila declarada para cambiarla. Las aplicaciones y los despliegues desactivados no cuentan.
@@ -275,17 +275,17 @@ Un resumen de las vulnerabilidades, una fila por versión instalada de la tecnol
 | Columna | Qué muestra |
 |---|---|
 | **Versión** | La versión. Una versión fuera de las alertas aparece atenuada e indica **Excluida de las alertas**. **Versión no registrada (potencialmente afectada)** agrupa los servidores y aplicaciones que no indican ninguna versión; esta fila solo aparece si los hay |
-| **Servidores** | Cuántos servidores en servicio tienen esta versión registrada en sí mismos. Los clústeres y los servidores que se ejecutan dentro de otro no se cuentan. Consulte [Lo que KANAP cuenta](vulnerabilities.md#what-kanap-counts) |
+| **Servidores** | Cuántos servidores en servicio tienen esta versión registrada en sí mismos. Los clústeres y los servidores que se ejecutan dentro de otro no se cuentan. Consulte [Lo que Kadratis cuenta](vulnerabilities.md#what-kanap-counts) |
 | **Crítica**, **Alta**, **Media**, **Baja**, **Sin evaluar** | Una columna por gravedad: las vulnerabilidades aún por revisar. Una vulnerabilidad de gravedad **Ninguna** cuenta con **Baja**. Un punto indica que no queda ninguna. Pase el cursor por un encabezado para un recordatorio |
 | **Total** | Las vulnerabilidades distintas de esta versión, en todos los estados |
 
 **Ver** abre la página [Vulnerabilidades](vulnerabilities.md) filtrada en la versión: en sus vulnerabilidades por revisar cuando las tiene, en todos los estados si no. **Ver todo en la página Vulnerabilidades**, debajo de la tabla, abre la página en toda la tecnología, en todos los estados.
 
-Las versiones que ningún servidor ni ninguna aplicación usa no tienen fila. Se nombran juntas debajo de la tabla, por ejemplo «No instaladas: 2016, 2017». KANAP solo busca vulnerabilidades de las versiones instaladas en un servidor o declaradas por una aplicación.
+Las versiones que ningún servidor ni ninguna aplicación usa no tienen fila. Se nombran juntas debajo de la tabla, por ejemplo «No instaladas: 2016, 2017». Kadratis solo busca vulnerabilidades de las versiones instaladas en un servidor o declaradas por una aplicación.
 
 Cuando la tecnología o algunas de sus versiones están fuera de las alertas, una línea al principio de la sección lo indica: **Excluida de las alertas**, **Excluida de las alertas, excepto 2 versiones** o **3 versiones excluidas de las alertas**. Con el nivel Miembro en la infraestructura, **Cambiar** junto a ella abre la tabla de versiones de la pestaña Resumen, donde están los interruptores. Consulte [Alertas de vulnerabilidad](#alertas-de-vulnerabilidad).
 
-KANAP vuelve a cotejar la tecnología en cuanto cambian sus identificadores, nombres CVE.org, versiones, servidores o aplicaciones. Tras un nuevo identificador de producto CPE, la sección indica «Búsqueda de vulnerabilidades en curso…» mientras KANAP lee ese producto en la NVD. Cuando esa lectura no se puede completar, la sección lo dice. **Actualizar** (`infrastructure:member`) lanza la comparación a mano.
+Kadratis vuelve a cotejar la tecnología en cuanto cambian sus identificadores, nombres CVE.org, versiones, servidores o aplicaciones. Tras un nuevo identificador de producto CPE, la sección indica «Búsqueda de vulnerabilidades en curso…» mientras Kadratis lee ese producto en la NVD. Cuando esa lectura no se puede completar, la sección lo dice. **Actualizar** (`infrastructure:member`) lanza la comparación a mano.
 
 ### Relaciones
 
@@ -379,9 +379,9 @@ Una ficha creada como aplicación puede ser en realidad una tecnología, por eje
 
 ## Preguntar al asistente
 
-[Plaid](ai-assistant.md) lee las tecnologías con los mismos derechos que esta página, incluidos los archivos adjuntos a una de ellas (nombre, tipo, tamaño y fecha en que se añadió). Pregunte, por ejemplo: «¿Quién es responsable de TEC-3?», «¿Qué enlaces web tiene PostgreSQL?», «¿Qué archivos tiene TEC-3?», «¿Están activas las alertas de vulnerabilidad en TEC-3?» o «¿Qué tecnologías están sin soporte?»
+[Kad](ai-assistant.md) lee las tecnologías con los mismos derechos que esta página, incluidos los archivos adjuntos a una de ellas (nombre, tipo, tamaño y fecha en que se añadió). Pregunte, por ejemplo: «¿Quién es responsable de TEC-3?», «¿Qué enlaces web tiene PostgreSQL?», «¿Qué archivos tiene TEC-3?», «¿Están activas las alertas de vulnerabilidad en TEC-3?» o «¿Qué tecnologías están sin soporte?»
 
-Con el nivel Miembro en la infraestructura, Plaid también escribe, y cada cambio llega como una vista previa que usted aprueba:
+Con el nivel Miembro en la infraestructura, Kad también escribe, y cada cambio llega como una vista previa que usted aprueba:
 
 - Adoptar una entrada del catálogo, completar una tecnología del mismo nombre introducida a mano o crear una tecnología que el catálogo no conoce.
 - Cambiar los campos de la tecnología.
@@ -390,9 +390,9 @@ Con el nivel Miembro en la infraestructura, Plaid también escribe, y cada cambi
 - Añadir, cambiar o quitar enlaces web.
 - Activar o desactivar las alertas de vulnerabilidad, para la tecnología o para una versión.
 
-Plaid nombra la familia, el ciclo de vida y los demás valores de lista en su idioma, y rechaza un valor que coincide con varios. Rechaza un nombre que llevan dos usuarios o dos contactos, y dos enlaces con la misma dirección. Pregunte, por ejemplo: «Adopta PostgreSQL del catálogo de KANAP», «Añade la versión 17 a TEC-3», «Añade a Camille Roux como responsable de negocio de PostgreSQL», «Añade el contacto Oracle Support al soporte de TEC-3», «Añade a PostgreSQL el enlace de las notas de versión https://www.postgresql.org/docs/release/» o «Excluye la versión 14 de TEC-3 de las alertas».
+Kad nombra la familia, el ciclo de vida y los demás valores de lista en su idioma, y rechaza un valor que coincide con varios. Rechaza un nombre que llevan dos usuarios o dos contactos, y dos enlaces con la misma dirección. Pregunte, por ejemplo: «Adopta PostgreSQL del catálogo de Kadratis», «Añade la versión 17 a TEC-3», «Añade a Camille Roux como responsable de negocio de PostgreSQL», «Añade el contacto Oracle Support al soporte de TEC-3», «Añade a PostgreSQL el enlace de las notas de versión https://www.postgresql.org/docs/release/» o «Excluye la versión 14 de TEC-3 de las alertas».
 
-Añadir un contacto de soporte también requiere el derecho de leer los contactos. Quitar uno no lo requiere. Plaid solo añade usuarios activos como responsables, y quita un responsable aunque su cuenta esté desactivada. Un contacto sin nombre no se puede añadir: dele primero un nombre en Contactos. Cuando Plaid completa una tecnología introducida a mano, solo cambia los campos que difieren, y se detiene si uno de ellos se modificó en la pantalla después de la vista previa.
+Añadir un contacto de soporte también requiere el derecho de leer los contactos. Quitar uno no lo requiere. Kad solo añade usuarios activos como responsables, y quita un responsable aunque su cuenta esté desactivada. Un contacto sin nombre no se puede añadir: dele primero un nombre en Contactos. Cuando Kad completa una tecnología introducida a mano, solo cambia los campos que difieren, y se detiene si uno de ellos se modificó en la pantalla después de la vista previa.
 
 La eliminación de una tecnología o de una versión, los archivos adjuntos, los identificadores CPE y los nombres CVE.org, y la comparación de las vulnerabilidades se quedan en esta página.
 
@@ -401,5 +401,5 @@ La eliminación de una tecnología o de una versión, los archivos adjuntos, los
 - **Parta del catálogo**: obtiene las versiones y sus fechas de fin de soporte sin escribirlas.
 - **Siga las versiones principales**: una línea por versión principal (2019, 2022) basta para seguir el soporte.
 - **Nombre a los responsables**: los responsables de TI son las personas a quienes llamar cuando una versión llega a su fin de soporte. También reciben el correo sobre las nuevas vulnerabilidades críticas.
-- **Rellene los identificadores de producto CPE y los nombres CVE.org**: sin ninguno de los dos, KANAP no puede cotejar la tecnología con las vulnerabilidades publicadas.
+- **Rellene los identificadores de producto CPE y los nombres CVE.org**: sin ninguno de los dos, Kadratis no puede cotejar la tecnología con las vulnerabilidades publicadas.
 - **Registre la versión en cada servidor**: una versión desconocida está potencialmente afectada por todas las vulnerabilidades del producto.

@@ -1,9 +1,9 @@
 ---
-title: "Su portafolio en KANAP en diez minutos: empezar con sus datos"
+title: "Su portafolio en Kadratis en diez minutos: empezar con sus datos"
 description: Los cinco pasos del recorrido proyectos y solicitudes con sus propios datos, de una primera solicitud a su proyecto, sus tareas y su presupuesto, y después su perfil de colaborador.
 ---
 
-# Su portafolio en KANAP en diez minutos
+# Su portafolio en Kadratis en diez minutos
 
 [Descubrir con el ejemplo](portfolio-example.md) · **Empezar con mis datos**
 
@@ -53,10 +53,10 @@ Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de in
 
 ## Y después
 
-Su portafolio está en KANAP. Los otros dos recorridos también llevan diez minutos, con sus datos:
+Su portafolio está en Kadratis. Los otros dos recorridos también llevan diez minutos, con sus datos:
 
-- [Su presupuesto de TI en KANAP en diez minutos](budget-own-data.md)
-- [Su panorama IT en KANAP en diez minutos](landscape-own-data.md)
+- [Su presupuesto de TI en Kadratis en diez minutos](budget-own-data.md)
+- [Su panorama IT en Kadratis en diez minutos](landscape-own-data.md)
 
 Cuando los cinco pasos están hechos, el mosaico ofrece estos recorridos. Durante la prueba, también ofrece **Programar una llamada de descubrimiento**.
 

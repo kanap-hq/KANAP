@@ -8,7 +8,7 @@ Rendez-vous dans **Cartographie SI > Actifs** pour voir votre inventaire d'actif
 
 1. Cliquez sur **Ajouter un actif**, puis sur **Ajouter un actif** ou **Ajouter un cluster**. La page de l'actif s'ouvre avec un titre vide dans l'en-tête. Le reste de la page est grisé.
 2. Saisissez le nom de l'actif, de 200 caractères au plus.
-3. Appuyez sur Entrée, ou cliquez hors du titre. KANAP crée l'actif aussitôt. Sa référence (`AST-12`) s'affiche et tous les onglets s'ouvrent.
+3. Appuyez sur Entrée, ou cliquez hors du titre. Kadratis crée l'actif aussitôt. Sa référence (`AST-12`) s'affiche et tous les onglets s'ouvrent.
 
 Le nouvel actif est une machine virtuelle de l'environnement Prod, au cycle de vie Actif. Si vos types d'actifs ne comptent pas de machine virtuelle, il prend le premier type de la liste. **Ajouter un cluster** le crée avec l'interrupteur **Cluster** activé. Chaque champ s'enregistre ensuite de lui-même : vous pouvez changer le type ou l'environnement tout de suite.
 
@@ -23,7 +23,7 @@ Le nouvel actif est une machine virtuelle de l'environnement Prod, au cycle de v
 
 Appuyez sur Échap dans le titre vide pour partir sans rien créer. Un nom refusé s'affiche sous le titre.
 
-**Noms uniques** : deux actifs ne peuvent pas avoir le même nom ni le même FQDN. La casse et les espaces en début ou en fin ne comptent pas. KANAP refuse le doublon et nomme l'actif qui porte déjà la valeur (`AST-12`). Les doublons enregistrés auparavant restent modifiables tant que vous ne changez pas cette valeur.
+**Noms uniques** : deux actifs ne peuvent pas avoir le même nom ni le même FQDN. La casse et les espaces en début ou en fin ne comptent pas. Kadratis refuse le doublon et nomme l'actif qui porte déjà la valeur (`AST-12`). Les doublons enregistrés auparavant restent modifiables tant que vous ne changez pas cette valeur.
 
 **Conseil** : Utilisez des conventions de nommage cohérentes incluant l'environnement et les informations de rôle (ex. : `prod-web-01`, `dev-db-master`). Lors de la création d'un nouvel actif, le nom d'hôte est automatiquement dérivé du nom que vous saisissez.
 
@@ -36,10 +36,10 @@ Appuyez sur Échap dans le titre vide pour partir sans rien créer. Un nom refus
 
 Tant que l'actif est en cours de création, son en-tête affiche **Créer** et **Annuler** à la place du bouton de fermeture. Ils restent jusqu'à ce que vous quittiez l'actif.
 
-- **Créer** vérifie que l'actif a un site. Sans site, un message nomme le site manquant et le champ **Site** du tiroir des propriétés prend le focus. L'actif reste ouvert. Avec un site, KANAP conserve l'actif et le ferme. Vous revenez à votre point de départ
+- **Créer** vérifie que l'actif a un site. Sans site, un message nomme le site manquant et le champ **Site** du tiroir des propriétés prend le focus. L'actif reste ouvert. Avec un site, Kadratis conserve l'actif et le ferme. Vous revenez à votre point de départ
 - **Annuler** supprime l'actif. Si vous avez saisi plus que le nom, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des actifs
 
-Si vous quittez l'actif autrement (la flèche de retour, le menu, un autre actif) alors qu'il n'a pas de site, KANAP vous demande quoi faire. **Le compléter** vous garde sur l'actif, sur le champ **Site**. **Le supprimer** supprime l'actif.
+Si vous quittez l'actif autrement (la flèche de retour, le menu, un autre actif) alors qu'il n'a pas de site, Kadratis vous demande quoi faire. **Le compléter** vous garde sur l'actif, sur le champ **Site**. **Le supprimer** supprime l'actif.
 
 ---
 
@@ -91,7 +91,7 @@ La plupart des colonnes prennent en charge des filtres par jeu de cases à coche
 | Zone d'administration | Inclut « (Vide) » pour les actifs sans zone |
 | Vulnérabilités à traiter | **Avec des vulnérabilités graves**, **Avec des vulnérabilités** ou **Sans**. Un actif retiré n'entre dans aucune de ces valeurs |
 
-Le tri sur **Vulnérabilités à traiter** classe les actifs par leurs vulnérabilités critiques ou élevées, puis par leur total. Les actifs retirés viennent en dernier. La colonne ne compte que les liens directs : une machine virtuelle ne compte pas les vulnérabilités de son hôte. Voir [Ce que KANAP compte](vulnerabilities.md#what-kanap-counts).
+Le tri sur **Vulnérabilités à traiter** classe les actifs par leurs vulnérabilités critiques ou élevées, puis par leur total. Les actifs retirés viennent en dernier. La colonne ne compte que les liens directs : une machine virtuelle ne compte pas les vulnérabilités de son hôte. Voir [Ce que Kadratis compte](vulnerabilities.md#what-kanap-counts).
 
 **La recherche rapide** porte sur le nom, la référence, le nom d'hôte, le FQDN, les adresses IP, le cluster, le site, le sous-site et le système d'exploitation.
 
@@ -124,9 +124,9 @@ Où affecter dépend du cluster :
 
 Un membre exécute ce qui est affecté à son cluster. Un actif que le cluster contient tourne dedans et n'hérite de rien.
 
-Quand vous affectez une application à un membre d'un cluster, KANAP demande **Affecter au cluster ?** : **Affecter au cluster** pose l'affectation sur le cluster pour tous ses membres, **Ce serveur seulement** la garde sur ce serveur. La question nomme les membres dont l'affectation propre de même environnement et de même rôle sera remplacée par celle du cluster. L'affectation du cluster garde alors la date **Depuis** la plus ancienne et leurs notes. Quand le membre héberge déjà l'application dans ce rôle par son cluster, rien n'est créé et un message le dit. Une affectation faite par l'assistant suit les mêmes règles, sans la question.
+Quand vous affectez une application à un membre d'un cluster, Kadratis demande **Affecter au cluster ?** : **Affecter au cluster** pose l'affectation sur le cluster pour tous ses membres, **Ce serveur seulement** la garde sur ce serveur. La question nomme les membres dont l'affectation propre de même environnement et de même rôle sera remplacée par celle du cluster. L'affectation du cluster garde alors la date **Depuis** la plus ancienne et leurs notes. Quand le membre héberge déjà l'application dans ce rôle par son cluster, rien n'est créé et un message le dit. Une affectation faite par l'assistant suit les mêmes règles, sans la question.
 
-Partout où KANAP lit où tourne une application, il compte les membres du cluster : les vulnérabilités et la fin de support de l'application, son type d'hébergement (un cluster sans site prend le type d'hébergement de ses membres), les zones d'administration, les applications d'un site ou d'un contrat sur un serveur, l'assistant et Connaissances. Dans l'impact d'un membre tombé, le cluster est dégradé et ses applications continuent de tourner. Voir [Dépendances](#dependencies).
+Partout où Kadratis lit où tourne une application, il compte les membres du cluster : les vulnérabilités et la fin de support de l'application, son type d'hébergement (un cluster sans site prend le type d'hébergement de ses membres), les zones d'administration, les applications d'un site ou d'un contrat sur un serveur, l'assistant et Connaissances. Dans l'impact d'un membre tombé, le cluster est dégradé et ses applications continuent de tourner. Voir [Dépendances](#dependencies).
 
 Les membres se gèrent en haut de l'onglet **Exploitation** du cluster. Voir [Exploitation](#operations). Les règles :
 
@@ -141,7 +141,7 @@ Les installations mises à jour depuis une version antérieure gardent leurs clu
 
 Un cluster de virtualisation contient ses machines virtuelles : ajoutez-les à la section **Contient** du cluster, dans son onglet **Dépendances**. Une machine du cluster peut tourner sur n'importe lequel de ses hôtes.
 
-Quand vous ajoutez une relation **Contient** depuis un hôte membre d'un cluster, KANAP demande **Placer dans le cluster ?**. **Placer dans le cluster** pose la relation sur le cluster. **Cet hôte seulement** la garde sur l'hôte. La même question vient quand vous ajoutez un tel hôte sous **Contenu dans**. Un hôte ou un cluster retiré ne pose pas de question.
+Quand vous ajoutez une relation **Contient** depuis un hôte membre d'un cluster, Kadratis demande **Placer dans le cluster ?**. **Placer dans le cluster** pose la relation sur le cluster. **Cet hôte seulement** la garde sur l'hôte. La même question vient quand vous ajoutez un tel hôte sous **Contenu dans**. Un hôte ou un cluster retiré ne pose pas de question.
 
 - Placer un actif dans le cluster remplace les liens que les hôtes membres avaient vers lui. Un message nomme les hôtes.
 - Un hôte ne peut pas contenir un actif que son cluster contient déjà. Le message nomme le cluster.
@@ -237,7 +237,7 @@ L'onglet Exploitation montre le cluster de l'actif et ce qui tourne sur lui : le
 | **Depuis** | Date à laquelle le serveur a été affecté |
 | **Notes** | Notes en texte libre |
 
-Cliquez sur **Ajouter une affectation** pour rattacher cet actif à un déploiement d'application. Choisissez l'application, puis son déploiement. Quand l'application n'a pas encore de déploiement dans un environnement, **+ Créer le déploiement …** le crée avec l'affectation. Choisissez ensuite le rôle et la date / les notes optionnelles. Sur un membre d'un cluster, KANAP demande d'abord s'il faut affecter le cluster ou ce serveur seulement. Voir [Applications sur un cluster](#applications-on-a-cluster). Le crayon en fin de ligne ouvre l'application : l'affectation se modifie dans son onglet **Déploiements**. L'icône corbeille retire l'affectation, après une confirmation. **Ajouter une affectation** est indisponible tant qu'aucun rôle serveur n'est configuré dans **Cartographie SI > Paramètres**. Ces commandes demandent `infrastructure:member` et `applications:member`. Sans les deux, le tableau est en lecture seule.
+Cliquez sur **Ajouter une affectation** pour rattacher cet actif à un déploiement d'application. Choisissez l'application, puis son déploiement. Quand l'application n'a pas encore de déploiement dans un environnement, **+ Créer le déploiement …** le crée avec l'affectation. Choisissez ensuite le rôle et la date / les notes optionnelles. Sur un membre d'un cluster, Kadratis demande d'abord s'il faut affecter le cluster ou ce serveur seulement. Voir [Applications sur un cluster](#applications-on-a-cluster). Le crayon en fin de ligne ouvre l'application : l'affectation se modifie dans son onglet **Déploiements**. L'icône corbeille retire l'affectation, après une confirmation. **Ajouter une affectation** est indisponible tant qu'aucun rôle serveur n'est configuré dans **Cartographie SI > Paramètres**. Ces commandes demandent `infrastructure:member` et `applications:member`. Sans les deux, le tableau est en lecture seule.
 
 Sur un membre, une application affectée à son cluster s'affiche « via » le nom du cluster, sans crayon ni corbeille : modifiez-la sur le cluster.
 
@@ -283,7 +283,7 @@ Quand les vulnérabilités sont suivies, la dernière section de l'onglet liste 
 
 Sur un **cluster**, **Sur ses membres** liste à part les technologies de ses membres, une ligne par technologie et version, avec dans la colonne **Actif** les membres qui la portent. Un cluster compte les vulnérabilités de ses membres en service avec les siennes : le nombre de la section, le badge de l'en-tête (son infobulle dit « membres compris ») et la colonne de la liste. Le **Voir** d'une ligne ouvre la page sur le membre qui la porte.
 
-Ce qui vient seulement de l'hôte dans lequel tournent l'actif ou ses membres, comme l'ESXi de l'hôte d'une machine virtuelle, est la plateforme sous-jacente. Il se range sous une ligne fermée **Plateforme sous-jacente (n)**, qui s'ouvre d'un clic. Il n'est compté ni dans la section, ni dans le badge, ni dans la colonne de la liste : une vulnérabilité compte sur l'actif où la technologie est renseignée. Son **Voir** ouvre la page sur cet hôte. Voir [Ce que KANAP compte](vulnerabilities.md#what-kanap-counts).
+Ce qui vient seulement de l'hôte dans lequel tournent l'actif ou ses membres, comme l'ESXi de l'hôte d'une machine virtuelle, est la plateforme sous-jacente. Il se range sous une ligne fermée **Plateforme sous-jacente (n)**, qui s'ouvre d'un clic. Il n'est compté ni dans la section, ni dans le badge, ni dans la colonne de la liste : une vulnérabilité compte sur l'actif où la technologie est renseignée. Son **Voir** ouvre la page sur cet hôte. Voir [Ce que Kadratis compte](vulnerabilities.md#what-kanap-counts).
 
 ---
 
@@ -503,7 +503,7 @@ Pour les champs configurés dans **Cartographie SI > Paramètres**, vous pouvez 
 
 Le système normalise automatiquement les valeurs lors de l'import, donc `Virtual Machine`, `virtual machine` et `vm` se résolvent tous vers le même type d'actif. Une valeur qui correspond à plusieurs entrées est refusée plutôt que devinée. L'export écrit les noms pour ces colonnes, dans la langue de l'écran, si bien qu'un fichier exporté peut être réimporté tel quel.
 
-**Système d'exploitation** : la colonne `operating_system` contient le nom de la technologie suivi de sa version, comme l'écrit l'export (`Windows Server 2019`, `Ubuntu 24.04 LTS`). À l'import, KANAP cherche la technologie parmi les vôtres, puis dans le catalogue, et enregistre la version. Une technologie ou une version introuvable est créée : vérifiez donc l'orthographe avant. La valeur devient le système d'exploitation du serveur.
+**Système d'exploitation** : la colonne `operating_system` contient le nom de la technologie suivi de sa version, comme l'écrit l'export (`Windows Server 2019`, `Ubuntu 24.04 LTS`). À l'import, Kadratis cherche la technologie parmi les vôtres, puis dans le catalogue, et enregistre la version. Une technologie ou une version introuvable est créée : vérifiez donc l'orthographe avant. La valeur devient le système d'exploitation du serveur.
 
 **Appartenance aux clusters** : la colonne `cluster` nomme les clusters de l'actif, séparés par des virgules (`ESX-PROD, SQL-CLUSTER`). La casse ne compte pas. L'export écrit les clusters dont l'actif est membre. À l'import :
 

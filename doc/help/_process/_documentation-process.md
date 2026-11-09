@@ -1,6 +1,6 @@
 # User Documentation Maintenance Process
 
-_This document describes how KANAP user documentation is created, updated, and published._
+_This document describes how Kadratis user documentation is created, updated, and published._
 
 ---
 
@@ -29,7 +29,7 @@ doc/help/docs/en/**/*.md
 mkdocs build
             |
             v
-https://doc.kanap.net
+https://doc.kadratis.com
 ```
 
 ---

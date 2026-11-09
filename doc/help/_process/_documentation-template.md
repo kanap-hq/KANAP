@@ -1,6 +1,6 @@
 # User Documentation Template
 
-_This template defines the structure and style for KANAP user documentation._
+_This template defines the structure and style for Kadratis user documentation._
 
 ---
 

@@ -1,13 +1,13 @@
 ---
-title: "Your IT budget in KANAP in ten minutes: start with your own data"
+title: "Your IT budget in Kadratis in ten minutes: start with your own data"
 description: The five steps of the IT budget path on your own data, from your company to your first report, then a colleague.
 ---
 
-# Your IT budget in KANAP in ten minutes
+# Your IT budget in Kadratis in ten minutes
 
 [Explore with the example](budget-example.md) · **Start with my own data**
 
-In ten minutes, your company, your budget lines and a contract are in KANAP, your first report runs on your figures, and a colleague can read them. Starting with your own data erases the example: what you see at the end comes from you.
+In ten minutes, your company, your budget lines and a contract are in Kadratis, your first report runs on your figures, and a colleague can read them. Starting with your own data erases the example: what you see at the end comes from you.
 
 These are the five steps of the **Your first five steps** tile on the home page, for the path **The IT budget** with **Start with my own data**. Each step in the tile opens its screen with a short hint. A step that creates something is marked done as soon as it exists in the workspace. For **Your company** and **Your first report**, click **Done** in the hint, or the mark next to the step. See [Trial: your path and first steps](../my-dashboard.md#trial-first-steps).
 
@@ -56,10 +56,10 @@ These are the five steps of the **Your first five steps** tile on the home page,
 
 ## Next
 
-Your IT budget is in KANAP. The two other paths also take ten minutes, on your data:
+Your IT budget is in Kadratis. The two other paths also take ten minutes, on your data:
 
-- [Your IT landscape in KANAP in ten minutes](landscape-own-data.md)
-- [Your portfolio in KANAP in ten minutes](portfolio-own-data.md)
+- [Your IT landscape in Kadratis in ten minutes](landscape-own-data.md)
+- [Your portfolio in Kadratis in ten minutes](portfolio-own-data.md)
 
 When the five steps are done, the tile offers these paths. During the trial, it also offers **Book a discovery call**.
 

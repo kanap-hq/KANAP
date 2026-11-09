@@ -1,6 +1,6 @@
 # Verträge
 
-Verträge dokumentieren Ihre Vereinbarungen mit Lieferanten: Softwarelizenzen, Wartungsverträge, SaaS-Abonnements und Serviceverträge. KANAP datiert jede Periode eines Vertrags, zeigt Ihnen, wann eine Entscheidung über die Verlängerung ansteht, vergleicht die Verpflichtung des Vertrags mit den verknüpften Budgetzeilen und listet die Klauseln, die seine Anwendungen erfordern.
+Verträge dokumentieren Ihre Vereinbarungen mit Lieferanten: Softwarelizenzen, Wartungsverträge, SaaS-Abonnements und Serviceverträge. Kadratis datiert jede Periode eines Vertrags, zeigt Ihnen, wann eine Entscheidung über die Verlängerung ansteht, vergleicht die Verpflichtung des Vertrags mit den verknüpften Budgetzeilen und listet die Klauseln, die seine Anwendungen erfordern.
 
 ## Erste Schritte
 
@@ -32,7 +32,7 @@ Sobald der Vertrag existiert, speichert sich jede Änderung selbst. Es gibt kein
 
 ## Perioden und Fristen
 
-KANAP berechnet die Daten eines Vertrags aus vier Feldern: **Beginn**, **Laufzeit (Monate)**, **Kündigungsfrist (Monate)** und **Stillschweigende Verlängerung**, dazu das **Ende der Gültigkeit**, wenn es gesetzt ist. Nichts wird gespeichert: Ändern Sie ein Feld, und alle Daten folgen.
+Kadratis berechnet die Daten eines Vertrags aus vier Feldern: **Beginn**, **Laufzeit (Monate)**, **Kündigungsfrist (Monate)** und **Stillschweigende Verlängerung**, dazu das **Ende der Gültigkeit**, wenn es gesetzt ist. Nichts wird gespeichert: Ändern Sie ein Feld, und alle Daten folgen.
 
 - **Perioden**: Ein Vertrag läuft in Perioden der gewählten Laufzeit, gezählt ab dem Beginndatum. Ein Vertrag, der am 1. Juli 2024 für 12 Monate beginnt, läuft jedes Jahr vom 1. Juli bis zum 30. Juni.
 - **Kündigungstermin**: das Ende einer Periode minus die Kündigungsfrist. Mit 6 Monaten Kündigungsfrist kann der obige Vertrag jedes Jahr bis zum 30. Dezember gekündigt werden.
@@ -122,7 +122,7 @@ Die unten angeheftete Zeile lautet **Gesamt (n Verträge)**. Sie summiert die Ja
 
 Die Kopfzeile zeigt den Vertragsnamen (zum Umbenennen anklicken), **Zurück** / **Weiter** mit der Position in der Liste und eine Leiste mit **Lieferant**, **Vertragsunternehmen**, **Verantwortlicher** und **Status**. Verantwortlicher und Status ändern Sie direkt dort. Lieferant und Unternehmen öffnen den Bereich **Eigenschaften**.
 
-Der Bereich **Eigenschaften** rechts enthält alle Felder des Vertrags: die Parteien, **Beginn**, **Laufzeit (Monate)**, **Kündigungsfrist (Monate)**, **Stillschweigende Verlängerung**, **Jahresbetrag**, **Währung**, **Abrechnung**, dann **Lebenszyklus** (**Status** und **Ende der Gültigkeit**), **Erstellt** und **Aktualisiert**. Öffnen oder schließen Sie ihn mit seiner Schaltfläche; KANAP merkt sich Ihre Wahl.
+Der Bereich **Eigenschaften** rechts enthält alle Felder des Vertrags: die Parteien, **Beginn**, **Laufzeit (Monate)**, **Kündigungsfrist (Monate)**, **Stillschweigende Verlängerung**, **Jahresbetrag**, **Währung**, **Abrechnung**, dann **Lebenszyklus** (**Status** und **Ende der Gültigkeit**), **Erstellt** und **Aktualisiert**. Öffnen oder schließen Sie ihn mit seiner Schaltfläche; Kadratis merkt sich Ihre Wahl.
 
 **Kostenstelle oder Gruppe** ist optional. Das Feld ordnet den Vertrag für den [Datenzugriff](data-access.md) einer Kostenstelle oder Gruppe zu: Die auf diesen Knoten oder auf eine Gruppe darüber begrenzten Personen sehen den Vertrag, ebenso wie die auf sein Unternehmen begrenzten.
 
@@ -256,7 +256,7 @@ Der Abschnitt fehlt, wenn es nichts vorzuschlagen gibt.
 
 - Die Verknüpfungen werden entfernt, die verknüpften Elemente bleiben erhalten: Budgetzeilen, Anwendungen, Assets (auch die, deren Supportvertrag er ist) und Kontakte verlieren ihre Verknüpfung mit dem Vertrag
 - Was zum Vertrag gehört, wird mit ihm gelöscht: seine Aufgaben (auch die Aufgabe zur Verlängerungsentscheidung), relevanten Websites und Anhänge
-- Ein Vertrag mit erfassten Konformitätsanforderungen (ein Status, auch **Nicht zutreffend**, oder eine Referenz) kann nicht gelöscht werden: KANAP nennt ihre Anzahl und schlägt vor, ihn stattdessen zu deaktivieren. In der Liste nennt die Bestätigung die erhaltenen Verträge mit ihrer Anzahl, bevor etwas gelöscht wird; die übrigen werden gelöscht
+- Ein Vertrag mit erfassten Konformitätsanforderungen (ein Status, auch **Nicht zutreffend**, oder eine Referenz) kann nicht gelöscht werden: Kadratis nennt ihre Anzahl und schlägt vor, ihn stattdessen zu deaktivieren. In der Liste nennt die Bestätigung die erhaltenen Verträge mit ihrer Anzahl, bevor etwas gelöscht wird; die übrigen werden gelöscht
 - Zuerst kommt immer eine Bestätigung. Sie zählt, was seine Verknüpfung verliert und was ebenfalls gelöscht wird, oder sagt, dass der Vertrag mit nichts verknüpft ist
 
 Um einen Vertrag nicht mehr zu nutzen und seinen Verlauf zu behalten, deaktivieren Sie ihn stattdessen.
@@ -265,7 +265,7 @@ Um einen Vertrag nicht mehr zu nutzen und seinen Verlauf zu behalten, deaktivier
 
 ## Verlängerungsentscheidungen
 
-KANAP bittet den Verantwortlichen, über jede Verlängerung zu entscheiden, bevor sie eintritt, und speichert die Entscheidung.
+Kadratis bittet den Verantwortlichen, über jede Verlängerung zu entscheiden, bevor sie eintritt, und speichert die Entscheidung.
 
 ### Entscheidungszeitraum
 
@@ -275,7 +275,7 @@ Der Zeitraum steuert den Stand **Zu entscheiden**, den Schnellfilter, den Entsch
 
 ### Die Entscheidungsaufgabe
 
-Jeden Tag um 07:30 UTC legt KANAP für jeden Vertrag, der auf eine Entscheidung wartet, eine Aufgabe an:
+Jeden Tag um 07:30 UTC legt Kadratis für jeden Vertrag, der auf eine Entscheidung wartet, eine Aufgabe an:
 
 - **Über die Verlängerung von** dem Vertrag **entscheiden**, fällig am Kündigungstermin, für einen Vertrag mit stillschweigender Verlängerung
 - **Entscheiden, ob** der Vertrag **verlängert wird oder ausläuft**, fällig an seinem Ende, für einen Vertrag ohne Verlängerung
@@ -290,7 +290,7 @@ Der Kasten zeigt den Kündigungstermin, die verbleibenden Tage, die Aufgabe und 
 
 - **Verlängern**: Die Verlängerung ist für diese Periode bestätigt. Die Aufgabe wird geschlossen, der Vertrag verlässt **Zu entscheiden** und kommt am Kündigungstermin der nächsten Periode wieder in den Zeitraum
 - **Neu verhandeln**: Der Kasten zeigt **Neuverhandlung läuft**, und die Aufgabe bleibt bis zur endgültigen Entscheidung offen. Der Vertrag bleibt **Zu entscheiden**
-- **Kündigen**: Der Kasten zeigt das zu bestätigende Enddatum. KANAP schlägt das früheste Ende vor, das die Kündigungsfrist zulässt („Kündigungsfrist von 6 Monaten: Das frühestmögliche Ende ist der 30. Juni 2027.“). Sie können einen anderen Tag wählen, ab heute und ab Vertragsbeginn. Ein Tag vor dem vorgeschlagenen zeigt eine orangefarbene Warnung: Der Lieferant muss zustimmen. Der Kasten listet die Folgen für diesen Tag: die Verpflichtung des Jahres und des folgenden, die Anwendungen, die diesen Vertrag verlieren, und die Assets, die ihren Supportvertrag verlieren, jeweils wenn Sie das zugehörige Modul lesen dürfen. **Kündigung bestätigen** beendet die stillschweigende Verlängerung, setzt das Ende der Gültigkeit auf diesen Tag und schließt die Aufgabe. Der Vertrag zeigt dann **Endet ohne Verlängerung**, und seine Verpflichtung endet an diesem Tag
+- **Kündigen**: Der Kasten zeigt das zu bestätigende Enddatum. Kadratis schlägt das früheste Ende vor, das die Kündigungsfrist zulässt („Kündigungsfrist von 6 Monaten: Das frühestmögliche Ende ist der 30. Juni 2027.“). Sie können einen anderen Tag wählen, ab heute und ab Vertragsbeginn. Ein Tag vor dem vorgeschlagenen zeigt eine orangefarbene Warnung: Der Lieferant muss zustimmen. Der Kasten listet die Folgen für diesen Tag: die Verpflichtung des Jahres und des folgenden, die Anwendungen, die diesen Vertrag verlieren, und die Assets, die ihren Supportvertrag verlieren, jeweils wenn Sie das zugehörige Modul lesen dürfen. **Kündigung bestätigen** beendet die stillschweigende Verlängerung, setzt das Ende der Gültigkeit auf diesen Tag und schließt die Aufgabe. Der Vertrag zeigt dann **Endet ohne Verlängerung**, und seine Verpflichtung endet an diesem Tag
 
 Bei einem Vertrag ohne Verlängerung zeigt der Kasten „Ende am 31. März 2027 · Entscheidung ausstehend“ und bietet zwei Aktionen:
 

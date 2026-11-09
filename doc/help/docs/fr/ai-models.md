@@ -1,6 +1,6 @@
 # Modèles IA
 
-Cette page est la liste des modèles IA que votre organisation est autorisée à utiliser. Vous ajoutez un modèle une fois (son fournisseur, son adresse, sa clé, ses prix) et il ne vous reste plus ensuite qu'à l'*assigner* : à l'[assistant de chat Plaid](ai-settings.md), à un [agent IA](agents-workspace.md) en particulier, ou comme modèle par défaut de l'organisation vers lequel tout le reste se rabat. C'est aussi d'ici que viennent les montants affichés sur la page [Utilisation & coûts](ai-usage.md) : les prix que vous saisissez ici sont ceux que KANAP applique à la consommation réelle de tokens.
+Cette page est la liste des modèles IA que votre organisation est autorisée à utiliser. Vous ajoutez un modèle une fois (son fournisseur, son adresse, sa clé, ses prix) et il ne vous reste plus ensuite qu'à l'*assigner* : à l'[assistant de chat Kad](ai-settings.md), à un [agent IA](agents-workspace.md) en particulier, ou comme modèle par défaut de l'organisation vers lequel tout le reste se rabat. C'est aussi d'ici que viennent les montants affichés sur la page [Utilisation & coûts](ai-usage.md) : les prix que vous saisissez ici sont ceux que Kadratis applique à la consommation réelle de tokens.
 
 ## Où la trouver
 
@@ -13,17 +13,17 @@ Cette page est la liste des modèles IA que votre organisation est autorisée à
 
 ## Comment un modèle est choisi
 
-Rien dans KANAP n'est figé sur un seul modèle. Chaque consommateur (Plaid et chaque agent) pointe soit vers un modèle précis, soit dit « utilise ce que l'organisation utilise ». La règle est courte :
+Rien dans Kadratis n'est figé sur un seul modèle. Chaque consommateur (Kad et chaque agent) pointe soit vers un modèle précis, soit dit « utilise ce que l'organisation utilise ». La règle est courte :
 
 1. **Le modèle assigné à ce consommateur**, s'il y en a un.
 2. Sinon, **le modèle par défaut de l'organisation** : celui marqué d'une étoile sur cette page.
-3. Sinon, **le modèle inclus KANAP**, une fois qu'un administrateur a confirmé son fournisseur et son lieu de traitement.
+3. Sinon, **le modèle inclus Kadratis**, une fois qu'un administrateur a confirmé son fournisseur et son lieu de traitement.
 
 Il y a donc exactement un modèle par défaut par organisation, et tout ce que vous ne touchez jamais le suit. Changez le modèle par défaut et tous les consommateurs non assignés changent avec lui. C'est tout l'intérêt d'en avoir un.
 
-La troisième étape n'existe que sur le service hébergé de KANAP. Sur une installation on-premise, il n'y a pas de modèle inclus : si rien n'est assigné et qu'aucun modèle par défaut n'est défini, la chaîne s'arrête simplement là. La page des paramètres Plaid signale alors qu'aucun modèle n'est configuré et le chat ne répond pas, tandis que les agents continuent de tourner mais sautent les étapes qui nécessitent un modèle : ils se replient sur leur comportement non-IA plutôt que d'échouer complètement. Enregistrer un modèle suffit à corriger cela : marquez-le d'une étoile comme modèle par défaut pour que tout le monde le reprenne d'un coup, ou assignez-le consommateur par consommateur.
+La troisième étape n'existe que sur le service hébergé de Kadratis. Sur une installation on-premise, il n'y a pas de modèle inclus : si rien n'est assigné et qu'aucun modèle par défaut n'est défini, la chaîne s'arrête simplement là. La page des paramètres Kad signale alors qu'aucun modèle n'est configuré et le chat ne répond pas, tandis que les agents continuent de tourner mais sautent les étapes qui nécessitent un modèle : ils se replient sur leur comportement non-IA plutôt que d'échouer complètement. Enregistrer un modèle suffit à corriger cela : marquez-le d'une étoile comme modèle par défaut pour que tout le monde le reprenne d'un coup, ou assignez-le consommateur par consommateur.
 
-Sur le service hébergé, la troisième étape a une condition. Plaid et les agents qui utiliseraient le modèle inclus attendent qu'un administrateur en confirme le fournisseur, et la page des paramètres Plaid ainsi que la page des agents l'indiquent. Un modèle que vous ajoutez n'a jamais besoin de confirmation. Voir [Confirmer le modèle inclus KANAP](ai-settings.md#confirmer-le-modele-inclus-kanap).
+Sur le service hébergé, la troisième étape a une condition. Kad et les agents qui utiliseraient le modèle inclus attendent qu'un administrateur en confirme le fournisseur, et la page des paramètres Kad ainsi que la page des agents l'indiquent. Un modèle que vous ajoutez n'a jamais besoin de confirmation. Voir [Confirmer le modèle inclus Kadratis](ai-settings.md#confirmer-le-modele-inclus-kanap).
 
 Vous ne pouvez pas rompre cette chaîne en faisant le ménage dans la liste : un modèle vers lequel quelque chose pointe encore ne peut de toute façon pas être archivé et, si une assignation venait malgré tout à pointer vers un modèle archivé, le consommateur se rabat sur le modèle par défaut au lieu d'échouer.
 
@@ -39,8 +39,8 @@ Le tableau présente tous les modèles enregistrés par votre organisation, les 
 - **Nom** : le nom que vous avez donné au modèle, accompagné de **Archivé** s'il a été retiré. La mention **Configuration incomplète** apparaît ici lorsqu'il manque un élément obligatoire, le plus souvent un modèle qui exige une clé API et n'en a pas. Corrigez-le : un modèle incomplet ne se rabat pas discrètement sur un autre, il ne fonctionne tout simplement pas.
 - **Modèle** : le fournisseur sur la première ligne, l'identifiant exact du modèle en dessous.
 - **Capacités** : **Images ✓** si le modèle sait lire les images, **Texte seul** sinon. Cela vient du commutateur **Comprend les images** de l'éditeur.
-- **Prix entrée / M tokens** et **Prix sortie / M tokens** : ce que vous payez par million de tokens, en euros. Un tiret (**—**) signifie qu'aucun prix n'est enregistré, ce que KANAP traite comme gratuit.
-- **Utilisation** : pour un modèle que vous avez ajouté, le nombre de messages qu'il a traités ce mois civil : les messages utilisateur Plaid des conversations qui ont utilisé ce fournisseur et ce modèle, plus un décompte par exécution d'agent qui a enregistré ce modèle. **0 message ce mois-ci** signifie qu'il n'y a pas encore de trafic, pas que le modèle n'est pas le défaut. Le modèle inclus KANAP conserve son propre affichage : le volume mensuel de messages inclus avec une barre de progression, pas ce décompte.
+- **Prix entrée / M tokens** et **Prix sortie / M tokens** : ce que vous payez par million de tokens, en euros. Un tiret (**—**) signifie qu'aucun prix n'est enregistré, ce que Kadratis traite comme gratuit.
+- **Utilisation** : pour un modèle que vous avez ajouté, le nombre de messages qu'il a traités ce mois civil : les messages utilisateur Kad des conversations qui ont utilisé ce fournisseur et ce modèle, plus un décompte par exécution d'agent qui a enregistré ce modèle. **0 message ce mois-ci** signifie qu'il n'y a pas encore de trafic, pas que le modèle n'est pas le défaut. Le modèle inclus Kadratis conserve son propre affichage : le volume mensuel de messages inclus avec une barre de progression, pas ce décompte.
 
 **Actions de ligne** (modèles actifs uniquement) :
 
@@ -49,16 +49,16 @@ Le tableau présente tous les modèles enregistrés par votre organisation, les 
 
 Les lignes archivées sont grisées et n'offrent qu'une seule action, **Restaurer**. Archiver n'est délibérément pas supprimer : l'utilisation passée reste attribuée au modèle sur la page [Utilisation & coûts](ai-usage.md), et un modèle restauré revient avec son fournisseur, sa clé, ses prix et ses capacités intacts, mais il n'est plus le modèle par défaut et n'est plus assigné à quoi que ce soit, de sorte que vous le réassignez délibérément. Un modèle archivé ne peut être ni modifié, ni désigné comme modèle par défaut, ni assigné tant que vous ne l'avez pas restauré.
 
-### Le modèle inclus KANAP
+### Le modèle inclus Kadratis
 
-Sur le service hébergé, la première ligne du tableau est toujours **Modèle inclus KANAP** (*Opéré par KANAP, inclus dans votre abonnement*). Elle se comporte différemment des modèles que vous ajoutez, et c'est voulu :
+Sur le service hébergé, la première ligne du tableau est toujours **Modèle inclus Kadratis** (*Opéré par KANAP, inclus dans votre abonnement*). Elle se comporte différemment des modèles que vous ajoutez, et c'est voulu :
 
 - Il coûte `0,00 €` dans les deux colonnes de prix. Il fait partie de votre abonnement, ce n'est pas quelque chose qui vous est facturé au token.
 - Il est **multimodal** (il lit les captures d'écran des tickets) et vous ne pouvez pas changer cela.
-- Dans la colonne **Utilisation**, il affiche vos **messages inclus ce mois-ci** avec une barre de progression, pour que vous voyiez ce qu'il reste du volume mensuel. Un message correspond à une question posée à Plaid ou à un ticket examiné par un agent : les deux puisent dans le même volume. Les requêtes des assistants externes connectés via MCP ne comptent pas. Cette barre est le quota du modèle inclus ; ce n'est pas le même chiffre que les décomptes de messages des modèles que vous ajoutez.
+- Dans la colonne **Utilisation**, il affiche vos **messages inclus ce mois-ci** avec une barre de progression, pour que vous voyiez ce qu'il reste du volume mensuel. Un message correspond à une question posée à Kad ou à un ticket examiné par un agent : les deux puisent dans le même volume. Les requêtes des assistants externes connectés via MCP ne comptent pas. Cette barre est le quota du modèle inclus ; ce n'est pas le même chiffre que les décomptes de messages des modèles que vous ajoutez.
 - Il affiche une étoile pleine dans la colonne **Par défaut** dès qu'aucun de vos propres modèles actifs n'est marqué d'une étoile : c'est le repli « rien n'est configuré » rendu visible. Cliquez sur son étoile vide pour effacer votre défaut actuel et y revenir. Vous ne pouvez toujours ni le modifier ni l'archiver.
 - Il n'a pas d'actions de modification ni d'archivage : celles-ci appartiennent aux modèles que vous ajoutez. Il est simplement toujours là.
-- Plaid et les agents ne l'utilisent qu'après la confirmation, par un administrateur, du fournisseur et du lieu de traitement des données, sur la page [Paramètres Plaid](ai-settings.md#confirmer-le-modele-inclus-kanap). Les modèles que vous ajoutez ne sont pas soumis à cette étape.
+- Kad et les agents ne l'utilisent qu'après la confirmation, par un administrateur, du fournisseur et du lieu de traitement des données, sur la page [Paramètres Kad](ai-settings.md#confirmer-le-modele-inclus-kanap). Les modèles que vous ajoutez ne sont pas soumis à cette étape.
 
 Sur une installation on-premise, cette ligne n'apparaît pas du tout.
 
@@ -68,10 +68,10 @@ Sur une installation on-premise, cette ligne n'apparaît pas du tout.
 
 **Nouveau modèle** ouvre l'éditeur ; le crayon de n'importe quelle ligne active le rouvre pour une entrée existante. Les champs :
 
-- **Nom** : la façon dont le modèle apparaît partout où vous l'assignez : dans le sélecteur de Plaid et dans la liste **Modèle IA** de chaque agent. Choisissez quelque chose que vous reconnaîtrez dans une liste déroulante dans six mois (*Claude production*, *Mistral local*), pas l'identifiant brut du modèle. Notez que le tableau **Coût par modèle** de la page [Utilisation & coûts](ai-usage.md) n'utilise *pas* ce nom : il liste l'identifiant réellement appelé, par exemple `anthropic:claude-sonnet-5`.
+- **Nom** : la façon dont le modèle apparaît partout où vous l'assignez : dans le sélecteur de Kad et dans la liste **Modèle IA** de chaque agent. Choisissez quelque chose que vous reconnaîtrez dans une liste déroulante dans six mois (*Claude production*, *Mistral local*), pas l'identifiant brut du modèle. Notez que le tableau **Coût par modèle** de la page [Utilisation & coûts](ai-usage.md) n'utilise *pas* ce nom : il liste l'identifiant réellement appelé, par exemple `anthropic:claude-sonnet-5`.
 - **Fournisseur** : qui sert le modèle. Ce choix détermine lesquels des champs suivants s'appliquent.
 - **Modèle** : l'identifiant exact du modèle, tel que le fournisseur l'écrit (par exemple `claude-sonnet-5`). Ce n'est pas un nom d'affichage ; une faute de frappe ici se traduit par un appel en échec, pas par une erreur de validation.
-- **Adresse du serveur** : uniquement pour les fournisseurs que vous hébergez ou que vous voulez pointer vers une adresse précise. Lorsque KANAP tourne dans Docker et que le modèle tourne sur la même machine hôte, adressez l'hôte plutôt que `localhost`.
+- **Adresse du serveur** : uniquement pour les fournisseurs que vous hébergez ou que vous voulez pointer vers une adresse précise. Lorsque Kadratis tourne dans Docker et que le modèle tourne sur la même machine hôte, adressez l'hôte plutôt que `localhost`.
 - **Clé API** : l'identifiant fourni par votre fournisseur. Elle est stockée chiffrée et n'est plus jamais affichée : lorsque vous rouvrez un modèle existant, le champ affiche un masque (`••••••••`) avec l'indication *Laissez vide pour conserver la clé actuelle*, vous n'y saisissez donc quelque chose que pour remplacer la clé. Si aucun secret de chiffrement n'est configuré sur l'instance, un avertissement en haut de la page explique que les clés ne peuvent pas être enregistrées du tout.
 
 **Capacités** :
@@ -80,14 +80,14 @@ Sur une installation on-premise, cette ligne n'apparaît pas du tout.
 
 **Coût d'entrée**, **Coût de sortie** et **Coût de lecture en cache** : prix par million de tokens, en euros. L'infobulle d'information à côté de chaque libellé indique où les trouver.
 
-- Recopiez les prix d'entrée et de sortie directement depuis la page tarifs de votre fournisseur. Ils sont généralement différents, et KANAP les applique séparément.
+- Recopiez les prix d'entrée et de sortie directement depuis la page tarifs de votre fournisseur. Ils sont généralement différents, et Kadratis les applique séparément.
 - **Coût de lecture en cache** est le prix d'un token que le fournisseur relit depuis son cache de prompts. Les pages tarifs l'appellent souvent *cached input*. Ce champ est facultatif. S'il reste vide, un token en cache coûte un dixième du prix d'entrée chez Anthropic et le plein prix d'entrée chez les autres fournisseurs (voir [Utilisation & coûts](ai-usage.md)).
 - **Laissez les prix vides ou à 0 pour un modèle local ou auto-hébergé.** Un modèle sans prix ne coûte rien, ce qui correspond à la réalité d'un modèle qui tourne sur votre propre matériel. Choisir un fournisseur Ollama met à 0 les prix encore vides pour cette raison, et garde ceux déjà saisis.
-- KANAP valorise chaque réponse de Plaid et chaque appel d'un agent au moment où il a lieu, puis conserve le coût. Modifier un prix change donc les coûts **à partir de maintenant** et laisse les chiffres passés inchangés.
+- Kadratis valorise chaque réponse de Kad et chaque appel d'un agent au moment où il a lieu, puis conserve le coût. Modifier un prix change donc les coûts **à partir de maintenant** et laisse les chiffres passés inchangés.
 
 **Délai d'attente** : combien de temps attendre ce modèle, en secondes, avant d'abandonner. L'explication se trouve dans l'infobulle d'information à côté du libellé : laissez le champ vide pour utiliser la limite standard. Les modèles locaux ont souvent besoin de plus de temps, d'où un réglage par modèle plutôt que par installation. Pour faire de ce modèle le modèle par défaut de l'organisation, marquez-le d'une étoile dans la colonne **Par défaut** de la liste après l'enregistrement. Ce choix n'est pas dans l'éditeur.
 
-**Effort de raisonnement** : combien le modèle réfléchit avant de répondre. Ce réglage compte pour les modèles qui raisonnent avant de répondre, ce que font la plupart des modèles récents. **Par défaut du fournisseur** n'envoie rien et laisse le fournisseur décider. **Faible**, **Moyen**, **Élevé**, **Très élevé** et **Maximal** demandent moins ou plus de réflexion : plus d'effort donne des réponses plus soignées, plus lentes et plus chères, car les fournisseurs facturent la réflexion comme des tokens de sortie. Le réglage s'applique à chaque appel fait avec ce modèle : les réponses de Plaid, les étapes des agents et le test de connexion.
+**Effort de raisonnement** : combien le modèle réfléchit avant de répondre. Ce réglage compte pour les modèles qui raisonnent avant de répondre, ce que font la plupart des modèles récents. **Par défaut du fournisseur** n'envoie rien et laisse le fournisseur décider. **Faible**, **Moyen**, **Élevé**, **Très élevé** et **Maximal** demandent moins ou plus de réflexion : plus d'effort donne des réponses plus soignées, plus lentes et plus chères, car les fournisseurs facturent la réflexion comme des tokens de sortie. Le réglage s'applique à chaque appel fait avec ce modèle : les réponses de Kad, les étapes des agents et le test de connexion.
 
 Les niveaux proposés dépendent du fournisseur et du modèle. Pour Anthropic, ils suivent le modèle : Claude Opus 4.5 accepte **Faible** à **Élevé**, Claude Opus 4.6 et Claude Sonnet 4.6 ajoutent **Maximal**, et les modèles plus récents acceptent les cinq. Le champ est grisé pour un modèle qui ne prend aucun effort, comme Claude Haiku 4.5. OpenAI reçoit le niveau sous son propre nom. Ollama et les autres serveurs compatibles le reçoivent tel quel et peuvent l'ignorer : lancez **Tester la connexion** pour voir si le modèle a raisonné. Un fournisseur qui refuse un niveau répond par son propre message d'erreur.
 
@@ -99,9 +99,9 @@ Les niveaux proposés dépendent du fournisseur et du modèle. Pour Anthropic, i
 
 ## Conseils
 
-- **Définissez un modèle par défaut avant d'assigner quoi que ce soit.** Avec un modèle marqué d'une étoile, chaque nouvel agent et Plaid lui-même fonctionnent immédiatement, et vous disposez d'un seul endroit où changer de modèle plus tard.
+- **Définissez un modèle par défaut avant d'assigner quoi que ce soit.** Avec un modèle marqué d'une étoile, chaque nouvel agent et Kad lui-même fonctionnent immédiatement, et vous disposez d'un seul endroit où changer de modèle plus tard.
 - **Nommez les modèles par rôle, pas par version.** *Modèle de tri* survit au passage d'une version de modèle à la suivante ; *Claude Sonnet 4.5* devient un mensonge le jour où vous le modifiez.
 - **Enregistrez deux fois le même fournisseur quand les usages diffèrent.** Un modèle texte seul bon marché pour le tri à gros volume et un modèle vision pour les tickets riches en captures d'écran est une configuration normale : c'est précisément pour cela que l'assignation se fait par agent.
 - **Saisissez les bons prix, ou laissez-les vides.** Ce ne sont pas des décorations : ils alimentent les montants de la page [Utilisation & coûts](ai-usage.md) et les plafonds **Coût par exécution** de chaque agent. Un modèle à 0 n'atteint jamais un plafond de coût : sur un modèle gratuit, les plafonds de tokens sont votre seule protection.
-- **Vérifiez le bouton d'archivage avant de retirer un modèle.** Il reste désactivé tant que Plaid ou un agent est *épinglé* à ce modèle (et non simplement rabattu dessus comme défaut). Déplacez d'abord ces épingles.
+- **Vérifiez le bouton d'archivage avant de retirer un modèle.** Il reste désactivé tant que Kad ou un agent est *épinglé* à ce modèle (et non simplement rabattu dessus comme défaut). Déplacez d'abord ces épingles.
 - **Testez après chaque rotation de clé.** Le test de connexion est gratuit et instantané ; découvrir une clé périmée à travers une exécution d'agent en échec ne l'est ni l'un, ni l'autre.

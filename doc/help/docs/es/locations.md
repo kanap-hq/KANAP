@@ -25,7 +25,7 @@ Mientras la ubicación se está creando, el encabezado muestra **Crear** y **Can
 La lista le ofrece una vista general con búsqueda de cada ubicación registrada.
 
 **Columnas predeterminadas**:
-- **Referencia**: La referencia que asigna KANAP (`LOC-4`). Haga clic en ella para abrir el espacio de trabajo.
+- **Referencia**: La referencia que asigna Kadratis (`LOC-4`). Haga clic en ella para abrir el espacio de trabajo.
 - **Nombre**: Nombre para mostrar
 - **Tipo de alojamiento**: Propio, colocación, nube pública, etc.
 - **Proveedor / Empresa**: Proveedor de nube para ubicaciones de tipo nube, o empresa operadora para ubicaciones propias

@@ -1,6 +1,6 @@
 # Applications connectées
 
-L'onglet **Applications connectées** liste les applications qui peuvent lire vos données KANAP en votre nom, comme Claude, Claude Desktop, Claude Code, ChatGPT ou Grok. C'est là que vous voyez ces accès et que vous les coupez.
+L'onglet **Applications connectées** liste les applications qui peuvent lire vos données Kadratis en votre nom, comme Claude, Claude Desktop, Claude Code, ChatGPT ou Grok. C'est là que vous voyez ces accès et que vous les coupez.
 
 ## Où la trouver
 
@@ -16,7 +16,7 @@ Chaque ligne affiche :
 - La date à laquelle vous l'avez connectée
 - La date et l'heure auxquelles elle a lu vos données pour la dernière fois
 
-Une application ne lit que ce que vous voyez dans KANAP, dans la limite de vos droits d'accès. Elle ne peut rien modifier.
+Une application ne lit que ce que vous voyez dans Kadratis, dans la limite de vos droits d'accès. Elle ne peut rien modifier.
 
 Pour couper un accès, cliquez sur **Déconnecter** et confirmez. L'application perd l'accès immédiatement. Pour l'utiliser à nouveau, reconnectez-la depuis l'application. La déconnexion efface aussi le choix **Se souvenir de cette application** fait lors de la connexion.
 
@@ -26,4 +26,4 @@ Quand vous n'avez aucune application connectée et aucune clé API, l'onglet aff
 
 Sous les connexions, l'onglet liste vos propres clés API MCP actives, avec leur libellé, leur préfixe, leur date de création, et la date et l'heure de leur dernière utilisation.
 
-Pour arrêter une clé, cliquez sur **Révoquer** et confirmez. Tous les clients qui utilisent la clé perdent l'accès immédiatement, et cette action est irréversible. Un administrateur crée les clés sur la page [Paramètres Plaid](ai-settings.md#cles-et-connexions-mcp).
+Pour arrêter une clé, cliquez sur **Révoquer** et confirmez. Tous les clients qui utilisent la clé perdent l'accès immédiatement, et cette action est irréversible. Un administrateur crée les clés sur la page [Paramètres Kad](ai-settings.md#cles-et-connexions-mcp).

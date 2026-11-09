@@ -1,6 +1,6 @@
 # Aufgaben
 
-Aufgaben helfen Ihnen, Aktionspunkte, Ergebnisse und Arbeitspakete über Ihre KANAP-Entitäten hinweg zu verfolgen. Sie werden für Verlängerungserinnerungen, Nachverfolgungen, Compliance-Prüfungen, Projektergebnisse und jede andere Arbeit verwendet, die nachverfolgt werden muss.
+Aufgaben helfen Ihnen, Aktionspunkte, Ergebnisse und Arbeitspakete über Ihre Kadratis-Entitäten hinweg zu verfolgen. Sie werden für Verlängerungserinnerungen, Nachverfolgungen, Compliance-Prüfungen, Projektergebnisse und jede andere Arbeit verwendet, die nachverfolgt werden muss.
 
 ## Erste Schritte
 
@@ -12,7 +12,7 @@ Wenn Sie auf **Neu** klicken, öffnet sich die Aufgabenseite mit einem leeren Ti
 
 1. **Geben Sie den Titel ein** (erforderlich), in der Kopfzeile.
 
-2. **Drücken Sie die Eingabetaste**, oder verlassen Sie das Feld. KANAP erstellt die Aufgabe sofort, mit diesen Standardwerten:
+2. **Drücken Sie die Eingabetaste**, oder verlassen Sie das Feld. Kadratis erstellt die Aufgabe sofort, mit diesen Standardwerten:
    - **Status**: **Offen**
    - **Priorität**: **Normal**
    - **Verantwortlicher** und **Antragsteller**: Sie
@@ -29,7 +29,7 @@ Wenn Sie auf **Neu** klicken, öffnet sich die Aufgabenseite mit einem leeren Ti
    - **Daten**: Start- und Fälligkeitsdaten festlegen
    - **Verantwortlicher**, **Status**, **Priorität**: Bei Bedarf ändern
 
-4. Klicken Sie auf **Erstellen**, um die Aufgabe zu behalten. Sie kehren dorthin zurück, wo Sie begonnen haben: Eine im Reiter **Aufgaben** eines Projekts begonnene Aufgabe kehrt zu diesem Reiter zurück. Klicken Sie stattdessen auf **Abbrechen**, um die Aufgabe zu löschen. KANAP fragt zuerst nach, wenn Sie mehr als den Titel eingegeben haben.
+4. Klicken Sie auf **Erstellen**, um die Aufgabe zu behalten. Sie kehren dorthin zurück, wo Sie begonnen haben: Eine im Reiter **Aufgaben** eines Projekts begonnene Aufgabe kehrt zu diesem Reiter zurück. Klicken Sie stattdessen auf **Abbrechen**, um die Aufgabe zu löschen. Kadratis fragt zuerst nach, wenn Sie mehr als den Titel eingegeben haben.
 
 **Escape** im leeren Titel wirkt wie **Abbrechen**. Wenn Sie die Aufgabe auf andere Weise verlassen, bleibt sie erhalten.
 
@@ -162,7 +162,7 @@ Der Tab **Übersicht** enthält den Inhalt der Aufgabe.
 Der Bereich ist einklappbar (klicken Sie auf die vertikale Registerkarte **Eigenschaften** am rechten Rand zum Öffnen oder Schließen; drücken Sie **P** als Tastenkürzel). Seine Breite und der Öffnungszustand werden lokal gespeichert. Der Bereich enthält vier Gruppen, getrennt durch Trennlinien:
 
 **Kontext**:
-  - **Verknüpft mit**: Eigenständig, Projekt, Budget (eine OPEX- oder CAPEX-Zeile), Vertrag oder Vorfall. Sie können den Typ ändern und ein neues Element auswählen; beim Speichern wendet KANAP alle damit verbundenen Nebeneffekte an (siehe [Aufgaben-Kontext ändern](#aufgaben-kontext-andern))
+  - **Verknüpft mit**: Eigenständig, Projekt, Budget (eine OPEX- oder CAPEX-Zeile), Vertrag oder Vorfall. Sie können den Typ ändern und ein neues Element auswählen; beim Speichern wendet Kadratis alle damit verbundenen Nebeneffekte an (siehe [Aufgaben-Kontext ändern](#aufgaben-kontext-andern))
   - **Phase** (nur Projektaufgaben): Standardmäßig **Projektebene**, es sei denn, Sie wählen eine Projektphase
   - **Aufgabentyp**: Aufgabe, Bug, Problem, Vorfall oder ein beliebiger benutzerdefinierter Typ, der von Ihrem Administrator konfiguriert wurde
   - **Labels**: Freie Stichwörter, zum Beispiel dringend oder Nachverfolgung. Geben Sie eines ein und drücken Sie die Eingabetaste. Sie erscheinen als Chips. Eine Person mit Leserecht sieht die Chips
@@ -189,7 +189,7 @@ Der Bereich ist einklappbar (klicken Sie auf die vertikale Registerkarte **Eigen
 
 ### Aufgaben-Kontext ändern
 
-Wenn Sie den Kontext einer Aufgabe ändern und speichern, wendet KANAP die Änderung in einem Vorgang an (Kontext plus alle anderen bearbeiteten Felder zusammen).
+Wenn Sie den Kontext einer Aufgabe ändern und speichern, wendet Kadratis die Änderung in einem Vorgang an (Kontext plus alle anderen bearbeiteten Felder zusammen).
 
 - **Projekt zu Eigenständig**: Phase wird gelöscht, Klassifizierung wird beibehalten
 - **Projekt zu OPEX/Vertrag/CAPEX**: Phase und Klassifizierung werden gelöscht
@@ -280,7 +280,7 @@ Anhänge sind für jeden sichtbar, der die Aufgabe anzeigen kann.
 
 ## Beschreibungs-Import und -Export
 
-Das Beschreibungsfeld unterstützt das Importieren und Exportieren von Dokumenten, sodass Sie mit Inhalten außerhalb von KANAP arbeiten können.
+Das Beschreibungsfeld unterstützt das Importieren und Exportieren von Dokumenten, sodass Sie mit Inhalten außerhalb von Kadratis arbeiten können.
 
 ### Ein Dokument importieren
 
@@ -358,7 +358,7 @@ Verknüpfungen sind bidirektional: Aus dem verknüpften Anwendungs- oder Asset-A
 
 **Tipp**: Reservieren Sie diese Verknüpfungen für Aufgaben, bei denen es operativ um die App oder das Asset geht, nicht für jede Aufgabe, die eine im Vorbeigehen erwähnt. Andernfalls wird die Beziehung zu Rauschen statt zu einem Signal.
 
-Sie sehen jeden verknüpften Datensatz nur, wenn Sie sein Modul lesen dürfen: Anwendungen erfordern die Anwendungen, Assets die Infrastruktur. Dasselbe gilt für den Datensatz, zu dem eine Aufgabe gehört: Ein Projekt erfordert die Projekte, eine Budgetzeile das Budget, ein Vertrag die Verträge, ein Vorfall die Vorfälle. Andernfalls fehlt das Feld im Eigenschaftenbereich, in der Liste und in Plaid, und die Aufgabe behält ihre Verknüpfung. Ein Business Contributor sieht außerdem das Projekt, seine Phase, den aus der Aufgabe erstellten Antrag und die Anwendungen nur, wenn er daran beteiligt ist: Eine einzige Anwendung außerhalb seiner Beteiligung blendet das Feld **Anwendungen** aus.
+Sie sehen jeden verknüpften Datensatz nur, wenn Sie sein Modul lesen dürfen: Anwendungen erfordern die Anwendungen, Assets die Infrastruktur. Dasselbe gilt für den Datensatz, zu dem eine Aufgabe gehört: Ein Projekt erfordert die Projekte, eine Budgetzeile das Budget, ein Vertrag die Verträge, ein Vorfall die Vorfälle. Andernfalls fehlt das Feld im Eigenschaftenbereich, in der Liste und in Kad, und die Aufgabe behält ihre Verknüpfung. Ein Business Contributor sieht außerdem das Projekt, seine Phase, den aus der Aufgabe erstellten Antrag und die Anwendungen nur, wenn er daran beteiligt ist: Eine einzige Anwendung außerhalb seiner Beteiligung blendet das Feld **Anwendungen** aus.
 
 ---
 
@@ -384,7 +384,7 @@ Verwenden Sie in der **Übersicht** eines Vertrags den Abschnitt **Aufgaben** f�
 - „Aktualisierte Bedingungen vom Lieferanten anfordern"
 - „Unterschriebenen Nachtrag einholen"
 
-Aufgaben zur Verlängerung müssen Sie nicht selbst anlegen: KANAP gibt dem Verantwortlichen des Vertrags eine Aufgabe, wenn eine Verlängerungsentscheidung ansteht. Siehe [Verträge](contracts.md#verlangerungsentscheidungen).
+Aufgaben zur Verlängerung müssen Sie nicht selbst anlegen: Kadratis gibt dem Verantwortlichen des Vertrags eine Aufgabe, wenn eine Verlängerungsentscheidung ansteht. Siehe [Verträge](contracts.md#verlangerungsentscheidungen).
 
 ### Aus CAPEX-Zeilen
 Im CAPEX-Arbeitsbereich verfolgen Aufgaben Projektmeilensteine:
@@ -682,7 +682,7 @@ Sie können eine Aufgabe zu einer Portfolio-Anfrage befördern, wenn die Arbeit 
    - **Ursprüngliche Aufgabe nach Konvertierung schließen**: Aktivieren Sie diese Option, wenn der Aufgaben-Status automatisch auf **Erledigt** gesetzt werden soll
 4. Klicken Sie auf **In Anfrage umwandeln**
 
-Nach der Konvertierung navigiert KANAP Sie zum neu erstellten Anfragen-Arbeitsbereich.
+Nach der Konvertierung navigiert Kadratis Sie zum neu erstellten Anfragen-Arbeitsbereich.
 
 ### Was übernommen wird
 

@@ -67,7 +67,7 @@ The Audit Log page keeps the history of data changes and of security events in y
 | **Password reset requested** / **Password reset completed** | Someone asks for a reset link, then sets a new password with it. When the email with the link could not be sent, the **Reason** says so |
 | **Sign-in with Microsoft** / **Failed sign-in with Microsoft** | A sign-in through Microsoft Entra ID succeeds or fails |
 
-**Exports** (table **Export**): every file KANAP produces from your data: list and report exports in CSV or Excel, documents and PDF reports. The row says what was exported and by whom. Its details give the format, the parameters of the export (filters, search, sort, year and so on) and, for a file of rows, the number of rows written. Exporting the audit log is recorded too.
+**Exports** (table **Export**): every file Kadratis produces from your data: list and report exports in CSV or Excel, documents and PDF reports. The row says what was exported and by whom. Its details give the format, the parameters of the export (filters, search, sort, year and so on) and, for a file of rows, the number of rows written. Exporting the audit log is recorded too.
 
 Sign-in, session and export rows also keep the **IP address** the request came from and the **browser** it used. Open the row to read them in the **IP address** and **Browser** rows of its table. Behind a reverse proxy, this is the person's own IP address, as long as the proxy passes it on (on-premise: see the [reverse proxy example](on-premise/installation.md#reverse-proxy-example-nginx)).
 
@@ -118,8 +118,8 @@ Sign-in and session events are deleted after **365 days**. Data changes, role ch
 Click **Export** at the top of the page, then choose **CSV** or **Excel (.xlsx)**, to download the log as a file. Your browser remembers the choice for the next export.
 
 - The file holds the entries that match the filters, the search and the sort currently shown on screen. Clear the filters to export the whole log.
-- A file holds at most **100,000 entries**, newest first by default. When the log is larger, KANAP tells you that the file stops there. Narrow the filters (a date range, for example) and export again to get the rest.
-- You can start only a few exports per minute. If you click again too soon, KANAP asks you to wait a minute.
+- A file holds at most **100,000 entries**, newest first by default. When the log is larger, Kadratis tells you that the file stops there. Narrow the filters (a date range, for example) and export again to get the rest.
+- You can start only a few exports per minute. If you click again too soon, Kadratis asks you to wait a minute.
 - The export is recorded in the log, like any other export.
 
 The CSV file always has the same format, whatever your language, so that a log collection tool can read it without setup:
@@ -150,7 +150,7 @@ If a user account is no longer resolvable in the current context, the User colum
 
 ## Users & Access
 
-Manage who can access KANAP and what they can do.
+Manage who can access Kadratis and what they can do.
 
 ### The Users Grid
 
@@ -175,7 +175,7 @@ Once someone's data access is limited, an **Access** column shows each person's 
 
 | Status | Meaning |
 |--------|---------|
-| **Enabled** | The account can sign in and use KANAP. |
+| **Enabled** | The account can sign in and use Kadratis. |
 | **Disabled** | The account is kept with all its history, but cannot sign in. |
 | **Invited** | An invitation was sent and the person has not signed in yet. |
 | **Pending access** | The person can sign in but has no role, so they cannot open anything. Assign a role to give them access. |
@@ -270,7 +270,7 @@ Clearing every role does not delete the account. The user falls back to the **Co
 ### Enabled and disabled users
 
 Your subscription includes **unlimited users**. The **Enabled** switch controls who can sign in:
-- **Enabled users**: Can log in and use KANAP
+- **Enabled users**: Can log in and use Kadratis
 - **Disabled users**: Keep their data but can no longer log in
 - Toggle the **Enabled** switch when editing a user to control access
 
@@ -281,9 +281,9 @@ Accounts with the account type **Microsoft Entra** are owned by your directory. 
 - **At every sign-in**, from the person's own Microsoft profile
 - **Every night**, by the daily directory sync, if a Microsoft Entra administrator has approved it. See [Authentication](#authentication).
 
-Both refresh the same fields: first name, last name, job title, business phone, mobile phone, and the department and company, matched by name against records that already exist in KANAP. Empty values in the directory never clear what is stored in KANAP.
+Both refresh the same fields: first name, last name, job title, business phone, mobile phone, and the department and company, matched by name against records that already exist in Kadratis. Empty values in the directory never clear what is stored in Kadratis.
 
-People who are also contributors get their **Manager** from the directory as well, with the nightly sync. KANAP matches the manager in Entra to their KANAP account and writes it on the contributor profile, where the field becomes read-only. A manager who has no KANAP account yet is picked up by a later sync. See [Contributors](portfolio-team-members.md).
+People who are also contributors get their **Manager** from the directory as well, with the nightly sync. Kadratis matches the manager in Entra to their Kadratis account and writes it on the contributor profile, where the field becomes read-only. A manager who has no Kadratis account yet is picked up by a later sync. See [Contributors](portfolio-team-members.md).
 
 When editing one of these users, the email, name, job title and phone fields are locked, with the note:
 
@@ -291,13 +291,13 @@ When editing one of these users, the email, name, job title and phone fields are
 
 You can still manage their roles, company, department and the Enabled switch.
 
-Microsoft Entra accounts never hold a KANAP password. They cannot be sent an invitation or a password reset.
+Microsoft Entra accounts never hold a Kadratis password. They cannot be sent an invitation or a password reset.
 
-If someone is removed from your directory, or their directory account is deactivated, the nightly sync disables their KANAP account. They are signed out immediately and their data is kept.
+If someone is removed from your directory, or their directory account is deactivated, the nightly sync disables their Kadratis account. They are signed out immediately and their data is kept.
 
 ### Just-in-time sign-in with Microsoft
 
-When single sign-on is connected, a person who signs in with Microsoft for the first time gets a KANAP account automatically. If an account with the same email address already exists, it is linked to their Microsoft identity instead, and an **Invited** account is enabled.
+When single sign-on is connected, a person who signs in with Microsoft for the first time gets a Kadratis account automatically. If an account with the same email address already exists, it is linked to their Microsoft identity instead, and an **Invited** account is enabled.
 
 A new account starts with the **Contact** system role and no permissions. The person sees a page saying:
 
@@ -309,14 +309,14 @@ Administrators receive an email when this happens. To give the person access, op
 
 ## Roles
 
-Define what each role can do across KANAP.
+Define what each role can do across Kadratis.
 
 ### How Roles Work
 
 Each role has permission levels for different resources:
 - **None**: No access to this resource
 - **Reader**: View only
-- **Contributor**: View and edit existing items, add comments and attachments, but cannot create new top-level items. The role editor offers this level on most resources (not on Knowledge, AI settings, Plaid chat or MCP access). Portfolio projects, incidents and AI agents use it today. On every other resource, changes need the Member level, so a Contributor there has Reader access.
+- **Contributor**: View and edit existing items, add comments and attachments, but cannot create new top-level items. The role editor offers this level on most resources (not on Knowledge, AI settings, Kad chat or MCP access). Portfolio projects, incidents and AI agents use it today. On every other resource, changes need the Member level, so a Contributor there has Reader access.
 - **Member**: View, create, and edit
 - **Admin**: Full access including delete
 
@@ -394,7 +394,7 @@ Roles are categorized by how they can be modified:
 
 ### Built-in Roles
 
-KANAP ships with pre-configured roles organized by functional area:
+Kadratis ships with pre-configured roles organized by functional area:
 
 **Budget**: Budget Administrator, Budget Member, Budget Reader
 **Portfolio**: Portfolio Administrator, Portfolio Member, Portfolio Reader, **Business Contributor**
@@ -427,12 +427,12 @@ The **Contact** role is a special system role for users who appear in dropdown l
 - Placeholder entries for organizational structure
 
 **Contact users:**
-- Cannot log in to KANAP
+- Cannot log in to Kadratis
 - Do not count in the enabled-user total
 - Do not receive email notifications (even if assigned to projects/tasks)
 - Can be selected in user dropdowns (e.g., as project sponsor)
 
-If someone with the Contact role needs to actively use KANAP, change their role to a regular role (e.g., Viewer, Member) and invite them.
+If someone with the Contact role needs to actively use Kadratis, change their role to a regular role (e.g., Viewer, Member) and invite them.
 
 One exception: a person auto-created on their first Microsoft sign-in also holds the Contact role. They can sign in, but they only reach the pending access page until you assign them a role. The grid shows them as **Pending access**.
 
@@ -449,7 +449,7 @@ The Roles page has a two-panel layout:
 - **Save Details**: Update the role name and description
 - **Save Permissions**: Apply permission changes
 
-An administrator of users with access to all data can also ask [Plaid](ai-assistant.md#tool-calls) about the roles, their user counts and their rights. Changes stay on this page.
+An administrator of users with access to all data can also ask [Kad](ai-assistant.md#tool-calls) about the roles, their user counts and their rights. Changes stay on this page.
 
 ### Creating a Custom Role
 
@@ -472,7 +472,7 @@ Manage your subscription, your invoicing information and your invoices.
 ### Subscription Overview
 
 The top of the page sums up your subscription in two lines:
-- The plan, the billing frequency and the amount, for example "Hosted KANAP · Annual · €2,490.00 / year". The subscription includes unlimited users, billed monthly or annually.
+- The plan, the billing frequency and the amount, for example "Hosted Kadratis · Annual · €2,490.00 / year". The subscription includes unlimited users, billed monthly or annually.
 - The status (Active, Trialing, Past due, Canceled, etc.), the renewal date and the payment method, for example "Active · renews 7 Oct 2027 · Visa •••• 4242".
 
 Without a running subscription (a trial, an expired trial or an ended subscription), only the status is shown. During a trial, it comes with the trial end date and the number of days remaining.
@@ -481,7 +481,7 @@ During a trial, a pill in the top bar also shows the days left, for example "Tri
 
 When a trial ends without a subscription, the workspace stays readable for 30 days. It is then deleted with all its data. Subscribing before that date keeps the workspace as it is.
 
-On the cloud service, the person who started the trial receives a few e-mails from KANAP during the trial, and a thank-you when the workspace subscribes. Each trial e-mail ends with a link that stops the next ones in one click. The thank-you is sent in any case.
+On the cloud service, the person who started the trial receives a few e-mails from Kadratis during the trial, and a thank-you when the workspace subscribes. Each trial e-mail ends with a link that stops the next ones in one click. The thank-you is sent in any case.
 
 When a switch to monthly billing is planned, a third line shows it, for example "Switches to monthly on 7 Oct 2027." Click **Keep annual** on that line to cancel the switch.
 
@@ -500,7 +500,7 @@ Tick **I accept the general terms of sale** before you pay. You also tick it eac
 
 You can pay in two ways:
 - **Pay by card**: for monthly or annual billing. Stripe's payment page opens. The card is charged each time an invoice is issued.
-- **Pay by bank transfer**: for annual billing only. KANAP issues the invoice and opens it. The invoice is payable within 30 days.
+- **Pay by bank transfer**: for annual billing only. Kadratis issues the invoice and opens it. The invoice is payable within 30 days.
 
 No VAT is charged. Each invoice states "TVA non applicable, art. 293 B du CGI".
 
@@ -517,7 +517,7 @@ Changing the plan of a running card subscription does not require complete invoi
 
 ### Invoicing Information
 
-These details appear on your invoices. KANAP copies them to your Stripe customer record when you subscribe and each time a field is saved.
+These details appear on your invoices. Kadratis copies them to your Stripe customer record when you subscribe and each time a field is saved.
 
 The section holds the company, email, recipient name, phone, address (line 1, line 2, postal code, city, state/province), country and VAT number.
 
@@ -534,9 +534,9 @@ Required fields are marked with an asterisk:
 
 You can leave the details incomplete and finish them later. While something is missing, a line under the fields lists it, for example "Required before subscribing: email, city." The details must be complete before you can subscribe.
 
-Earlier versions of KANAP had a separate customer information card. If you filled it in, its values appear in the matching empty invoicing fields, and they are saved as invoicing information the next time you change a field.
+Earlier versions of Kadratis had a separate customer information card. If you filled it in, its values appear in the matching empty invoicing fields, and they are saved as invoicing information the next time you change a field.
 
-For a country in the European Union, the VAT number is sent to Stripe and printed on your invoices. If Stripe does not accept it, KANAP shows "The VAT number was not accepted. Check it in the invoicing information." Correct the number and try again.
+For a country in the European Union, the VAT number is sent to Stripe and printed on your invoices. If Stripe does not accept it, Kadratis shows "The VAT number was not accepted. Check it in the invoicing information." Correct the number and try again.
 
 ### Invoice History
 
@@ -559,7 +559,7 @@ Configure single sign-on (SSO) for your organization. This page is only availabl
 
 ### Microsoft Entra ID
 
-Connect KANAP to your Microsoft Entra ID tenant for SSO:
+Connect Kadratis to your Microsoft Entra ID tenant for SSO:
 
 1. Click **Connect**
 2. Sign in with a Microsoft admin account
@@ -582,11 +582,11 @@ Connect KANAP to your Microsoft Entra ID tenant for SSO:
 
 ### Daily directory sync
 
-This block appears below the Entra card once single sign-on is connected. Every night at 03:00 server time, KANAP refreshes names, titles, phones, departments and companies from Microsoft Entra, refreshes the manager of the people who are contributors, and disables accounts that were removed or deactivated in the directory.
+This block appears below the Entra card once single sign-on is connected. Every night at 03:00 server time, Kadratis refreshes names, titles, phones, departments and companies from Microsoft Entra, refreshes the manager of the people who are contributors, and disables accounts that were removed or deactivated in the directory.
 
-Departments and companies are matched by name against records that already exist in KANAP. Nothing is created automatically. Empty values in the directory never clear what is already stored in KANAP.
+Departments and companies are matched by name against records that already exist in Kadratis. Nothing is created automatically. Empty values in the directory never clear what is already stored in Kadratis.
 
-The sync needs a one-time approval by a Microsoft Entra administrator. Until it is granted, the block shows **Not authorized yet. A Microsoft Entra administrator must grant KANAP permission to read directory users.**
+The sync needs a one-time approval by a Microsoft Entra administrator. Until it is granted, the block shows **Not authorized yet. A Microsoft Entra administrator must grant Kadratis permission to read directory users.**
 
 | State or action | What it means |
 |-----------------|---------------|
@@ -600,12 +600,12 @@ Setup steps for the Entra app registration are in [Microsoft Entra SSO](on-premi
 
 ### Sign-in limits
 
-KANAP limits repeated sign-in requests:
+Kadratis limits repeated sign-in requests:
 
 - **Password sign-in**: 60 requests per minute from the same IP address. After 5 failed attempts on one account from the same IP address within 15 minutes, that account cannot sign in from that address for 15 minutes. The same account can still sign in from another address, and other accounts from the same address. A successful sign-in resets the count.
 - **Microsoft sign-in**: 60 requests per minute from the same IP address.
 
-The limits per address are high because the staff of one organization often reach KANAP from the same outbound address. Once a limit per address is reached, the person waits a minute and tries again. Behind a reverse proxy, KANAP counts each person's own IP address, as long as the proxy passes it on.
+The limits per address are high because the staff of one organization often reach Kadratis from the same outbound address. Once a limit per address is reached, the person waits a minute and tries again. Behind a reverse proxy, Kadratis counts each person's own IP address, as long as the proxy passes it on.
 
 Sign-ins and failed sign-ins appear in the [Audit Log](#audit-log). When 5 failed attempts block an account from an address, one failed sign-in with the reason **Too many sign-in attempts** is recorded. Resetting the password with **Forgot password** lifts the block at once. The attempts refused during the 15 minutes that follow are not recorded, nor are requests stopped by a limit per address.
 
@@ -613,7 +613,7 @@ Sign-ins and failed sign-ins appear in the [Audit Log](#audit-log). When 5 faile
 
 ## Branding
 
-Use **Admin > Branding** to apply your company identity in KANAP.
+Use **Admin > Branding** to apply your company identity in Kadratis.
 
 - Route: `/admin/branding`
 - Permission: `users:admin`
@@ -659,7 +659,7 @@ Edit your personal information:
 - **Job Title**
 - **Business Phone** / **Mobile Phone**
 
-If your organization uses Microsoft Entra ID (SSO), some fields may be synced from Entra and cannot be edited in KANAP.
+If your organization uses Microsoft Entra ID (SSO), some fields may be synced from Entra and cannot be edited in Kadratis.
 
 When your account has neither a first nor a last name, a small window asks for them after you sign in. **Later** hides it in this browser. You can change both here at any time.
 
@@ -691,14 +691,14 @@ Use the **Preview email** button to send yourself a test email and verify the fo
 
 All changes are saved automatically as you toggle switches or change selections.
 
-### About KANAP
+### About Kadratis
 
-Open **About KANAP** from the user menu, below **Logout**. The menu entry also shows the version. The **About** tab of this page shows the same content:
+Open **About Kadratis** from the user menu, below **Logout**. The menu entry also shows the version. The **About** tab of this page shows the same content:
 
 - The version and the deployment (cloud or on-premise)
 - On the cloud service, during a trial, the days left, with a **Choose a plan** link for billing administrators
 - During a trial, the path chosen at the first opening, with **Change**, and **Show the first steps** when the first steps tile is hidden. See [My Dashboard](my-dashboard.md#trial-first-steps)
-- Links to the release notes of this version, the documentation, kanap.net and the source code (AGPL-3.0 license)
+- Links to the release notes of this version, the documentation, kadratis.com and the source code (AGPL-3.0 license)
 - On-premise, a link to the upgrade guide
 
 **Support** lists where to get help:

@@ -1,6 +1,6 @@
 # Données d'exemple
 
-Utilisez la page Données d'exemple pour découvrir KANAP avec un jeu de données prêt à l'emploi. Elle remplit un espace de travail vide avec Fromage & Co, une fromagerie fictive, afin de voir fonctionner ensemble les budgets, les applications, les contrats et les projets avant de saisir les vôtres. Quand vous avez fini d'explorer, une seule action efface tout et remet l'espace de travail dans son état initial.
+Utilisez la page Données d'exemple pour découvrir Kadratis avec un jeu de données prêt à l'emploi. Elle remplit un espace de travail vide avec Fromage & Co, une fromagerie fictive, afin de voir fonctionner ensemble les budgets, les applications, les contrats et les projets avant de saisir les vôtres. Quand vous avez fini d'explorer, une seule action efface tout et remet l'espace de travail dans son état initial.
 
 ## Où la trouver
 
@@ -25,7 +25,7 @@ Les dates suivent l'année en cours, si bien que le budget paraît toujours à j
 
 Le jeu se charge dans la langue de l'espace de travail : anglais, français, allemand ou espagnol (anglais pour toute autre langue). Les titres, les descriptions, les étiquettes des tâches, les incidents et les documents sont traduits. Les types d'actifs ajoutés par le jeu sont nommés dans cette langue. Les noms des sociétés, des personnes, des fournisseurs et des applications restent tels quels, et quelques noms locaux des sociétés française, néerlandaise et italienne gardent leur langue. Après un effacement, un nouveau chargement se fait dans la même langue.
 
-Les utilisateurs fictifs n'ont ni mot de passe ni accès. Ils servent à donner un aspect réaliste aux responsables, aux personnes assignées et aux équipes projet. KANAP ne leur envoie aucun e-mail, et l'effacement les supprime.
+Les utilisateurs fictifs n'ont ni mot de passe ni accès. Ils servent à donner un aspect réaliste aux responsables, aux personnes assignées et aux équipes projet. Kadratis ne leur envoie aucun e-mail, et l'effacement les supprime.
 
 ## Charger les données d'exemple
 
@@ -44,7 +44,7 @@ Ce qu'un nouvel espace de travail crée pour vous (sa première société, le pl
 2. Cliquez sur **Charger les données d'exemple**.
 3. Lisez le résumé dans la fenêtre et confirmez avec **Charger les données d'exemple**.
 
-La page suit le chargement étape par étape (par exemple « Étape 4 sur 21 : plans comptables ») et le statut passe à **Chargées** à la fin. La bande de statut indique alors quand les données ont été chargées et par qui. Tout ce que vous voyez dans KANAP se rafraîchit avec les nouvelles données.
+La page suit le chargement étape par étape (par exemple « Étape 4 sur 21 : plans comptables ») et le statut passe à **Chargées** à la fin. La bande de statut indique alors quand les données ont été chargées et par qui. Tout ce que vous voyez dans Kadratis se rafraîchit avec les nouvelles données.
 
 **Si un chargement n'est pas possible**, la page n'affiche pas le bouton **Charger les données d'exemple**. Elle en indique la raison :
 
@@ -54,14 +54,14 @@ La page suit le chargement étape par étape (par exemple « Étape 4 sur 21 : p
 
 Le bandeau de la page d'accueil reste alors masqué. L'effacement des données d'exemple chargées reste possible sur un espace de travail gelé (voir ci-dessous).
 
-**Si le chargement échoue**, KANAP remet lui-même l'espace de travail dans son état initial. Le statut affiche **Échec du chargement** avec la date, et la page en donne la raison. Cliquez sur **Réessayer** pour lancer un nouveau chargement.
+**Si le chargement échoue**, Kadratis remet lui-même l'espace de travail dans son état initial. Le statut affiche **Échec du chargement** avec la date, et la page en donne la raison. Cliquez sur **Réessayer** pour lancer un nouveau chargement.
 
 !!! warning "Attendez la fin du chargement"
     Pendant un chargement, tout ce qui est créé dans l'espace de travail est effacé si le chargement échoue. Attendez que le statut affiche **Chargées** avant de commencer un travail réel.
 
 ## Le bandeau de la page d'accueil
 
-Tant que l'espace de travail est vide et que les données d'exemple n'ont jamais été chargées, les administrateurs voient une ligne en haut de la page d'accueil : « Découvrez KANAP avec des données d'exemple. »
+Tant que l'espace de travail est vide et que les données d'exemple n'ont jamais été chargées, les administrateurs voient une ligne en haut de la page d'accueil : « Découvrez Kadratis avec des données d'exemple. »
 
 - **Charger** ouvre la même fenêtre que la page.
 - **Masquer** supprime la ligne définitivement, pour tous les administrateurs de l'espace de travail. La page sous **Administration** › **Données d'exemple** reste disponible.
@@ -105,7 +105,7 @@ Une fois effacé, l'espace de travail est vide et la page propose **Charger les 
 3. Saisissez le nom de l'espace de travail, tel qu'il apparaît dans la fenêtre, dans le champ **Nom de l'espace de travail**. Les majuscules et les espaces autour du nom n'ont pas d'importance.
 4. Cliquez sur **Tout effacer**. Le bouton reste désactivé tant que le nom ne correspond pas.
 
-L'effacement prend quelques secondes. Le statut affiche **Effacement**, puis **Non chargées**. Pendant ces secondes, KANAP refuse les modifications de tous les utilisateurs de l'espace de travail, et une erreur invite à réessayer dans un instant. La lecture continue de fonctionner.
+L'effacement prend quelques secondes. Le statut affiche **Effacement**, puis **Non chargées**. Pendant ces secondes, Kadratis refuse les modifications de tous les utilisateurs de l'espace de travail, et une erreur invite à réessayer dans un instant. La lecture continue de fonctionner.
 
 Si l'effacement échoue, la page affiche « Le contenu de l'espace de travail n'a pas pu être effacé. Rien n'a été modifié. » Rien n'est perdu, et vous pouvez réessayer.
 

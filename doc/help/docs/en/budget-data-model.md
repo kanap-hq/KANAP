@@ -1,8 +1,8 @@
 # Budget data model
 
-This page describes how KANAP organises budget data: the objects, how they relate, which fields identify a record, and which files carry each object in and out. It is written for finance controllers and budget administrators preparing a move from spreadsheets or another tool, and for the technical team connecting a BI tool to an on-premise installation.
+This page describes how Kadratis organises budget data: the objects, how they relate, which fields identify a record, and which files carry each object in and out. It is written for finance controllers and budget administrators preparing a move from spreadsheets or another tool, and for the technical team connecting a BI tool to an on-premise installation.
 
-The files described here are the contract to rely on. Their columns are documented in this manual and checked on import, and when a layout changes, an import refuses a file in the old layout and says why. The database tables behind them are internal: they change when KANAP evolves. Base a move from another tool, and any integration, on the files.
+The files described here are the contract to rely on. Their columns are documented in this manual and checked on import, and when a layout changes, an import refuses a file in the old layout and says why. The database tables behind them are internal: they change when Kadratis evolves. Base a move from another tool, and any integration, on the files.
 
 ## The objects at a glance
 
@@ -56,12 +56,12 @@ A line also links to projects, requests, applications, assets, contracts, contac
 
 ### OPEX and CAPEX lines
 
-A line lives across years: a three-year licence is one line with three budget years. KANAP gives each line a number when it is created, its reference `BL-12`, the same series for OPEX and CAPEX. The list, the workspace and the page address show it. Lines created before this series also had an `OPX-12` or `CPX-3` number: links, searches and the budget file still find a line by it. In a file without a `nature` column, a bare number keeps its earlier meaning (`CPX-3` when the list is filtered on CAPEX). See [References](budget-lines.md#references).
+A line lives across years: a three-year licence is one line with three budget years. Kadratis gives each line a number when it is created, its reference `BL-12`, the same series for OPEX and CAPEX. The list, the workspace and the page address show it. Lines created before this series also had an `OPX-12` or `CPX-3` number: links, searches and the budget file still find a line by it. In a file without a `nature` column, a bare number keeps its earlier meaning (`CPX-3` when the list is filtered on CAPEX). See [References](budget-lines.md#references).
 
 | Field | Column in the budget file | Required | Notes |
 |---|---|---|---|
 | Nature | `nature` | Yes | `opex` or `capex`. A file does not change the nature of an existing line (see [Changing the type of a line](#changing-the-type-of-a-line)). A file without this column is read as OPEX lines, or as CAPEX lines when the list is filtered on CAPEX |
-| Number | `item_number` | Set by KANAP | `BL-12`. Empty in the file creates a line |
+| Number | `item_number` | Set by Kadratis | `BL-12`. Empty in the file creates a line |
 | Title | `name` | Yes | The **Product name** column of the list |
 | Description | `description` | No | |
 | Paying company | `company_name` | Yes | Taken from the cost center when only the cost center is given, or the workspace's only company when it has one |
@@ -167,7 +167,7 @@ The budget file finds reference data by business identifiers. Load the reference
 | Working-day calendar | `code`, whatever the case | Code, name | Used by quantity and price lines |
 | User | `email` | Email | `owner_it_email`, `owner_business_email` |
 
-Points that matter when you map another tool to KANAP:
+Points that matter when you map another tool to Kadratis:
 
 - **Companies** carry their headcount, IT users and turnover per year. The turnover is in millions of the company's base currency. Allocations by headcount, IT users or turnover need the metrics of the year.
 - **Accounts** belong to a chart of accounts, and a company uses one chart. An account number is a whole number, unique within its chart. A budget line's account must exist in the chart of its paying company, and each account says whether it serves OPEX lines, CAPEX lines or both. See [Chart of Accounts](chart-of-accounts.md).
@@ -199,7 +199,7 @@ Every file below exports and imports from the page that manages the object. Impo
 
 The budget file reads and writes the amounts of any column and year, as yearly totals or months, with the line details in the same row. It is the way in for a budget prepared elsewhere and the way out for a spreadsheet or a BI tool. One file holds both kinds of line, its `nature` column saying which. **Budget management > Budget lines** exports the lines it shows, of both types, and imports a file that holds both, given the Admin level on Budget.
 
-### Moving a budget into KANAP
+### Moving a budget into Kadratis
 
 1. Map each object of your current tool to the tables above, and its identifiers to the **Matched by** column.
 2. Load the reference data in the order given in [Loading a whole budget](budget-file.md#loading-a-whole-budget).
@@ -207,19 +207,19 @@ The budget file reads and writes the amounts of any column and year, as yearly t
 4. Fill one row per line with its `nature`, leaving `item_number` empty, with one amount column per budget column and year (`budget_2027`), or per month (`budget_2027_03`).
 5. Import the file. The check reports the errors by line of the file, and nothing is written until you load.
 
-A consistent set of sample files, with one fictional company and its reference data, is in the [KANAP repository](https://github.com/kanap-hq/KANAP/tree/main/doc/samples).
+A consistent set of sample files, with one fictional company and its reference data, is in the [Kadratis repository](https://github.com/kanap-hq/KANAP/tree/main/doc/samples).
 
 ## Reading the data directly
 
-On an on-premise installation, the PostgreSQL database is yours: KANAP runs on the database you provide. You can read it, back it up and connect tools to it.
+On an on-premise installation, the PostgreSQL database is yours: Kadratis runs on the database you provide. You can read it, back it up and connect tools to it.
 
 Before you do, keep three facts in mind.
 
-**Row-level security filters every read.** KANAP connects with a dedicated application role that cannot bypass row-level security. It refuses to start with a superuser role or a role that bypasses it. Every table holding your data shows its rows only to a session that has set the workspace it reads. A session that has not set it gets empty results, with no error.
+**Row-level security filters every read.** Kadratis connects with a dedicated application role that cannot bypass row-level security. It refuses to start with a superuser role or a role that bypasses it. Every table holding your data shows its rows only to a session that has set the workspace it reads. A session that has not set it gets empty results, with no error.
 
 **The tables are internal.** Their names, columns and storage change between versions, through the migrations that run at each upgrade. Column names in the database are storage keys and differ from the names on screen and in the files. A query written against today's tables can return wrong or empty results after an upgrade.
 
-**Your objects can block an upgrade.** PostgreSQL refuses to change or drop a column that a view depends on. A view created on KANAP tables can make an upgrade fail. Keep your queries in the BI tool or in a separate reporting database.
+**Your objects can block an upgrade.** PostgreSQL refuses to change or drop a column that a view depends on. A view created on Kadratis tables can make an upgrade fail. Keep your queries in the BI tool or in a separate reporting database.
 
 For a BI tool, use the exports first. The budget file and the master data files carry business names and identifiers, documented in this manual.
 

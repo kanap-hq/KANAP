@@ -1,8 +1,8 @@
 # Datenmodell des Budgets
 
-Diese Seite beschreibt, wie KANAP Budgetdaten organisiert: die Objekte, ihre Beziehungen, die Felder, die einen Datensatz identifizieren, und die Dateien, mit denen jedes Objekt ein- und ausgeht. Sie richtet sich an Controller und Budgetadministratoren, die einen Umstieg von Tabellenkalkulationen oder einem anderen Werkzeug vorbereiten, und an das technische Team, das ein BI-Werkzeug an eine On-Premise-Installation anbindet.
+Diese Seite beschreibt, wie Kadratis Budgetdaten organisiert: die Objekte, ihre Beziehungen, die Felder, die einen Datensatz identifizieren, und die Dateien, mit denen jedes Objekt ein- und ausgeht. Sie richtet sich an Controller und Budgetadministratoren, die einen Umstieg von Tabellenkalkulationen oder einem anderen Werkzeug vorbereiten, und an das technische Team, das ein BI-Werkzeug an eine On-Premise-Installation anbindet.
 
-Die hier beschriebenen Dateien sind der Vertrag, auf den Sie sich stützen. Ihre Spalten sind in diesem Handbuch dokumentiert und werden beim Import geprüft. Ändert sich ein Aufbau, lehnt ein Import eine Datei im alten Aufbau ab und nennt den Grund. Die Datenbanktabellen dahinter sind intern: Sie ändern sich, wenn KANAP sich weiterentwickelt. Stützen Sie einen Umstieg von einem anderen Werkzeug und jede Integration auf die Dateien.
+Die hier beschriebenen Dateien sind der Vertrag, auf den Sie sich stützen. Ihre Spalten sind in diesem Handbuch dokumentiert und werden beim Import geprüft. Ändert sich ein Aufbau, lehnt ein Import eine Datei im alten Aufbau ab und nennt den Grund. Die Datenbanktabellen dahinter sind intern: Sie ändern sich, wenn Kadratis sich weiterentwickelt. Stützen Sie einen Umstieg von einem anderen Werkzeug und jede Integration auf die Dateien.
 
 ## Die Objekte im Überblick
 
@@ -56,12 +56,12 @@ Eine Budgetzeile ist außerdem mit Projekten, Anfragen, Anwendungen, Assets, Ver
 
 ### OPEX- und CAPEX-Zeilen
 
-Eine Budgetzeile lebt über mehrere Jahre: Eine Lizenz über drei Jahre ist eine Budgetzeile mit drei Budgetjahren. KANAP vergibt jeder Budgetzeile beim Anlegen eine Nummer, ihre Referenz `BL-12`, in derselben Reihe für OPEX und CAPEX. Die Liste, der Arbeitsbereich und die Seitenadresse zeigen sie. Budgetzeilen, die vor dieser Reihe angelegt wurden, hatten zusätzlich eine Nummer `OPX-12` oder `CPX-3`: Links, Suchen und die Budgetdatei finden eine Budgetzeile weiterhin darüber. In einer Datei ohne Spalte `nature` behält eine bloße Zahl ihre frühere Bedeutung (`CPX-3`, wenn die Liste auf CAPEX gefiltert ist). Siehe [Referenzen](budget-lines.md#referenzen).
+Eine Budgetzeile lebt über mehrere Jahre: Eine Lizenz über drei Jahre ist eine Budgetzeile mit drei Budgetjahren. Kadratis vergibt jeder Budgetzeile beim Anlegen eine Nummer, ihre Referenz `BL-12`, in derselben Reihe für OPEX und CAPEX. Die Liste, der Arbeitsbereich und die Seitenadresse zeigen sie. Budgetzeilen, die vor dieser Reihe angelegt wurden, hatten zusätzlich eine Nummer `OPX-12` oder `CPX-3`: Links, Suchen und die Budgetdatei finden eine Budgetzeile weiterhin darüber. In einer Datei ohne Spalte `nature` behält eine bloße Zahl ihre frühere Bedeutung (`CPX-3`, wenn die Liste auf CAPEX gefiltert ist). Siehe [Referenzen](budget-lines.md#referenzen).
 
 | Feld | Spalte der Budgetdatei | Erforderlich | Hinweise |
 |---|---|---|---|
 | Art | `nature` | Ja | `opex` oder `capex`. Eine Datei ändert die Art einer bestehenden Budgetzeile nicht (siehe [Den Typ einer Budgetzeile ändern](#den-typ-einer-budgetzeile-andern)). Eine Datei ohne diese Spalte wird als OPEX-Zeilen gelesen, oder als CAPEX-Zeilen, wenn die Liste auf CAPEX gefiltert ist |
-| Nummer | `item_number` | Von KANAP vergeben | `BL-12`. Leer in der Datei: legt eine Budgetzeile an |
+| Nummer | `item_number` | Von Kadratis vergeben | `BL-12`. Leer in der Datei: legt eine Budgetzeile an |
 | Titel | `name` | Ja | Die Spalte **Produktname** der Liste |
 | Beschreibung | `description` | Nein | |
 | Zahlendes Unternehmen | `company_name` | Ja | Wird von der Kostenstelle übernommen, wenn nur die Kostenstelle angegeben ist, oder ist das einzige Unternehmen des Arbeitsbereichs, wenn es nur eines gibt |
@@ -167,7 +167,7 @@ Die Budgetdatei findet Stammdaten über fachliche Kennungen. Laden Sie die Stamm
 | Arbeitstagekalender | `code`, unabhängig von der Groß- und Kleinschreibung | Code, Name | Von Zeilen unter Menge und Preis verwendet |
 | Benutzer | `email` | E-Mail-Adresse | `owner_it_email`, `owner_business_email` |
 
-Worauf es ankommt, wenn Sie ein anderes Werkzeug auf KANAP abbilden:
+Worauf es ankommt, wenn Sie ein anderes Werkzeug auf Kadratis abbilden:
 
 - **Unternehmen** tragen ihre Mitarbeiterzahl, ihre IT-Benutzer und ihren Umsatz pro Jahr. Der Umsatz wird in Millionen der Basiswährung des Unternehmens angegeben. Zuordnungen nach Mitarbeiterzahl, IT-Benutzern oder Umsatz brauchen die Kennzahlen des Jahres.
 - **Konten** gehören zu einem Kontenplan, und ein Unternehmen verwendet einen Kontenplan. Eine Kontonummer ist eine ganze Zahl, eindeutig innerhalb ihres Kontenplans. Das Konto einer Budgetzeile muss im Kontenplan ihres zahlenden Unternehmens existieren, und jedes Konto legt fest, ob es für OPEX-Zeilen, CAPEX-Zeilen oder beides dient. Siehe [Kontenpläne und Kontenverwaltung](chart-of-accounts.md).
@@ -199,7 +199,7 @@ Jede der folgenden Dateien wird auf der Seite exportiert und importiert, die das
 
 Die Budgetdatei liest und schreibt die Beträge jeder Spalte und jedes Jahres, als Jahressummen oder Monate, mit den Details der Budgetzeile in derselben Zeile. Sie ist der Weg hinein für ein anderswo erstelltes Budget und der Weg hinaus zu einer Tabellenkalkulation oder einem BI-Werkzeug. Eine Datei enthält beide Arten von Budgetzeilen, ihre Spalte `nature` gibt die Art an. **Budgetverwaltung > Budgetzeilen** exportiert die angezeigten Budgetzeilen beider Typen und importiert eine Datei mit beiden Arten, mit der Administratorstufe auf Budget.
 
-### Ein Budget nach KANAP übernehmen
+### Ein Budget nach Kadratis übernehmen
 
 1. Bilden Sie jedes Objekt Ihres bisherigen Werkzeugs auf die Tabellen oben ab, und seine Kennungen auf die Spalte **Zugeordnet über**.
 2. Laden Sie die Stammdaten in der Reihenfolge aus [Ein ganzes Budget laden](budget-file.md#ein-ganzes-budget-laden).
@@ -207,19 +207,19 @@ Die Budgetdatei liest und schreibt die Beträge jeder Spalte und jedes Jahres, a
 4. Füllen Sie eine Zeile pro Budgetzeile mit ihrer `nature`, mit leerer `item_number`, mit einer Betragsspalte pro Budgetspalte und Jahr (`budget_2027`) oder pro Monat (`budget_2027_03`).
 5. Importieren Sie die Datei. Die Prüfung meldet die Fehler nach Zeile der Datei, und nichts wird geschrieben, bevor Sie laden.
 
-Ein stimmiger Satz von Beispieldateien, mit einem fiktiven Unternehmen und seinen Stammdaten, liegt im [KANAP-Repository](https://github.com/kanap-hq/KANAP/tree/main/doc/samples).
+Ein stimmiger Satz von Beispieldateien, mit einem fiktiven Unternehmen und seinen Stammdaten, liegt im [Kadratis-Repository](https://github.com/kanap-hq/KANAP/tree/main/doc/samples).
 
 ## Die Daten direkt lesen
 
-Bei einer On-Premise-Installation gehört die PostgreSQL-Datenbank Ihnen: KANAP läuft auf der Datenbank, die Sie bereitstellen. Sie können sie lesen, sichern und Werkzeuge daran anbinden.
+Bei einer On-Premise-Installation gehört die PostgreSQL-Datenbank Ihnen: Kadratis läuft auf der Datenbank, die Sie bereitstellen. Sie können sie lesen, sichern und Werkzeuge daran anbinden.
 
 Bevor Sie das tun, beachten Sie drei Punkte.
 
-**Die Sicherheit auf Zeilenebene filtert jedes Lesen.** KANAP verbindet sich mit einer eigenen Anwendungsrolle, die die Sicherheit auf Zeilenebene nicht umgehen kann. Mit einer Superuser-Rolle oder einer Rolle, die sie umgeht, startet KANAP nicht. Jede Tabelle mit Ihren Daten zeigt ihre Zeilen nur einer Sitzung, die den gelesenen Arbeitsbereich angegeben hat. Eine Sitzung ohne diese Angabe erhält leere Ergebnisse, ohne Fehlermeldung.
+**Die Sicherheit auf Zeilenebene filtert jedes Lesen.** Kadratis verbindet sich mit einer eigenen Anwendungsrolle, die die Sicherheit auf Zeilenebene nicht umgehen kann. Mit einer Superuser-Rolle oder einer Rolle, die sie umgeht, startet Kadratis nicht. Jede Tabelle mit Ihren Daten zeigt ihre Zeilen nur einer Sitzung, die den gelesenen Arbeitsbereich angegeben hat. Eine Sitzung ohne diese Angabe erhält leere Ergebnisse, ohne Fehlermeldung.
 
 **Die Tabellen sind intern.** Ihre Namen, Spalten und Speicherung ändern sich von Version zu Version, durch die Migrationen, die bei jedem Update laufen. Die Spaltennamen in der Datenbank sind Speicherschlüssel und weichen von den Namen in der Oberfläche und in den Dateien ab. Eine Abfrage auf die heutigen Tabellen kann nach einem Update falsche oder leere Ergebnisse liefern.
 
-**Ihre Objekte können ein Update blockieren.** PostgreSQL verweigert das Ändern oder Löschen einer Spalte, von der eine View abhängt. Eine View auf KANAP-Tabellen kann ein Update scheitern lassen. Halten Sie Ihre Abfragen im BI-Werkzeug oder in einer separaten Reporting-Datenbank.
+**Ihre Objekte können ein Update blockieren.** PostgreSQL verweigert das Ändern oder Löschen einer Spalte, von der eine View abhängt. Eine View auf Kadratis-Tabellen kann ein Update scheitern lassen. Halten Sie Ihre Abfragen im BI-Werkzeug oder in einer separaten Reporting-Datenbank.
 
 Für ein BI-Werkzeug nutzen Sie zuerst die Exporte. Die Budgetdatei und die Stammdatendateien enthalten fachliche Namen und Kennungen, die in diesem Handbuch dokumentiert sind.
 

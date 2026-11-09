@@ -74,7 +74,7 @@ Cuando guarda una nueva moneda de reporte, primero se abre un diálogo de confir
 
 Los tres últimos puntos solo aparecen cuando se aplican. Haga clic en **Cambiar la moneda** para guardar, o en **Cancelar** para conservar los ajustes actuales.
 
-KANAP recupera entonces los tipos de la nueva moneda para cada año en uso: los años presupuestarios (congelados incluidos), los años con una facturación de empresa, los años que muestra la página de contratos, y el año natural en curso con el anterior y el siguiente. La página espera el resultado y lo muestra como en una [sincronización forzada](#forzar-sincronizacion-de-tipos-de-cambio).
+Kadratis recupera entonces los tipos de la nueva moneda para cada año en uso: los años presupuestarios (congelados incluidos), los años con una facturación de empresa, los años que muestra la página de contratos, y el año natural en curso con el anterior y el siguiente. La página espera el resultado y lo muestra como en una [sincronización forzada](#forzar-sincronizacion-de-tipos-de-cambio).
 
 ## Forzar sincronización de tipos de cambio
 
@@ -87,12 +87,12 @@ El botón **Forzar sincronización de tipos de cambio** recupera los tipos de in
   - Antes de presentar informes a la dirección
 
 **Qué ocurre**:
-  - El botón permanece ocupado mientras KANAP recupera los tipos, 20 segundos como máximo
+  - El botón permanece ocupado mientras Kadratis recupera los tipos, 20 segundos como máximo
   - Un mensaje encima de la tabla indica después el resultado: el número de tipos recuperados, por ejemplo **12 tipos recuperados.**, seguido de los pares que siguen sin tipo, por ejemplo **Siguen faltando: BRL 2026.**, o de **Cada moneda en uso tiene un tipo.**
   - Cuando la recuperación no aporta ningún tipo nuevo y cada moneda en uso ya tiene un tipo, el mensaje dice **Los tipos de cambio están al día.** Cuando aún faltan pares, dice **No se ha recuperado ningún tipo nuevo.** y los nombra.
   - Si las fuentes no respondieron, el mensaje lo indica, y los tipos ya guardados se mantienen
   - Si la recuperación tarda más, el mensaje indica **La sincronización continúa en segundo plano.** La tabla y el bloque de tipos faltantes se actualizan cuando termina
-  - Si ya hay una actualización en curso, KANAP le añade sus años, de modo que ninguna solicitud se pierde
+  - Si ya hay una actualización en curso, Kadratis le añade sus años, de modo que ninguna solicitud se pierde
 
 **Actualización automática**: El sistema también actualiza los tipos automáticamente cada 30 días cuando un usuario inicia sesión (A-1, A, A+1). Cuando una lista, un informe o la página de contratos necesita un tipo que la captura de su año no tiene (una moneda usada desde entonces, o un año sin captura), el sistema recupera ese año en segundo plano en cuanto se lee, y la siguiente visualización usa el nuevo tipo. La sincronización forzada sirve para obtener el resultado de inmediato.
 
@@ -141,13 +141,13 @@ Si su moneda de reporte es EUR:
 
 Encima de la tabla, un bloque enumera cada moneda y año en uso sin tipo, bajo un título como **Faltan 2 tipos de cambio**. Cada fila explica que ninguna fuente publica todavía ese tipo, por lo que los importes en esa moneda quedan excluidos de los totales hasta que lo tenga. Cuando no falta nada, el bloque indica **Cada moneda en uso tiene un tipo.**
 
-Un par se considera en uso cuando una línea presupuestaria, las cifras de una empresa o un contrato lo necesitan. Para un contrato, son los años que muestra la página de contratos (el año en curso, los dos siguientes y el anterior cuando el presupuesto tiene líneas para él) en los que el contrato está vigente. La página de contratos y este bloque señalan así los mismos años faltantes. Al abrir la página, KANAP también vuelve a consultar las fuentes para los años de la lista.
+Un par se considera en uso cuando una línea presupuestaria, las cifras de una empresa o un contrato lo necesitan. Para un contrato, son los años que muestra la página de contratos (el año en curso, los dos siguientes y el anterior cuando el presupuesto tiene líneas para él) en los que el contrato está vigente. La página de contratos y este bloque señalan así los mismos años faltantes. Al abrir la página, Kadratis también vuelve a consultar las fuentes para los años de la lista.
 
 ### Tipos manuales
 
 Cuando ninguna fuente publica un tipo, o cuando su equipo financiero usa sus propios tipos, puede introducir un tipo para una moneda y un año.
 
-  1. Haga clic en la celda de la moneda y el año en la tabla, o en **Introducir un tipo** junto a una fila del bloque de tipos faltantes. El enlace **Introducir un tipo** de un aviso en otra parte de KANAP también lleva aquí: abre el diálogo directamente cuando el aviso solo cita una moneda y un año, y si no resalta el bloque de tipos faltantes durante unos segundos.
+  1. Haga clic en la celda de la moneda y el año en la tabla, o en **Introducir un tipo** junto a una fila del bloque de tipos faltantes. El enlace **Introducir un tipo** de un aviso en otra parte de Kadratis también lleva aquí: abre el diálogo directamente cuando el aviso solo cita una moneda y un año, y si no resalta el bloque de tipos faltantes durante unos segundos.
   2. En el diálogo **Tipo de cambio manual**, escriba el tipo en su moneda de reporte para 1 unidad de la moneda elegida (por ejemplo **Tipo en EUR para 1 USD**), con el separador decimal de su idioma. Cuando el año anterior o el siguiente tiene un tipo automático, el campo lo muestra como referencia, por ejemplo **Tipo automático 2025: 0,9312**. Si no, sugiere el tipo medio del año publicado por su banco central o su tesorería.
   3. Haga clic en **Guardar**. La celda muestra entonces el tipo seguido de un asterisco (*).
 
@@ -212,18 +212,18 @@ Se usa el tipo del día de ExchangeRate-API (si no está disponible, el último 
 Se reutiliza el tipo del año en curso como estimación. Sirve de referencia para la planificación presupuestaria, pero conviene revisarlo a medida que se acercan esos años.
 
 ### Años congelados
-Congelar la columna presupuestaria por defecto de un año fija los tipos de ese año para el tipo de línea congelado (OPEX o CAPEX): KANAP actualiza los tipos del año y conserva ese conjunto para todos los importes del año, aunque lleguen tipos más recientes. Si la moneda de reporte cambia después, estos importes conservan los tipos congelados y luego se convierten a la nueva moneda de reporte al tipo de la anterior en ese mismo año. Sin ese tipo, quedan excluidos de los totales y se señalan como cualquier tipo faltante: la moneda de reporte anterior aparece entonces para ese año en el bloque de tipos faltantes, y un tipo manual lo completa. Descongelar la columna por defecto los libera. Consulte [Congelar la columna por defecto fija los tipos de cambio](budget-operations.md#congelar-la-columna-por-defecto-fija-los-tipos-de-cambio).
+Congelar la columna presupuestaria por defecto de un año fija los tipos de ese año para el tipo de línea congelado (OPEX o CAPEX): Kadratis actualiza los tipos del año y conserva ese conjunto para todos los importes del año, aunque lleguen tipos más recientes. Si la moneda de reporte cambia después, estos importes conservan los tipos congelados y luego se convierten a la nueva moneda de reporte al tipo de la anterior en ese mismo año. Sin ese tipo, quedan excluidos de los totales y se señalan como cualquier tipo faltante: la moneda de reporte anterior aparece entonces para ese año en el bloque de tipos faltantes, y un tipo manual lo completa. Descongelar la columna por defecto los libera. Consulte [Congelar la columna por defecto fija los tipos de cambio](budget-operations.md#congelar-la-columna-por-defecto-fija-los-tipos-de-cambio).
 
 **Tipo faltante**: Cuando un año no tiene tipo para una moneda en uso, los importes de las líneas presupuestarias en esa moneda quedan excluidos de todos los totales en la moneda de reporte de ese año. Esto afecta a la lista de líneas presupuestarias, a la sección Gestión presupuestaria de la página de inicio, a los informes presupuestarios y de contracargo, a los contratos y a las pestañas Relaciones de las aplicaciones y las tecnologías. La pantalla lo indica donde importa:
 
 - Un aviso de una línea indica lo que se excluye, por ejemplo «Se excluyen 3 líneas sin tipo de cambio: USD 2026.» Aparece bajo los totales de la lista de líneas presupuestarias, en los mosaicos de la vista general, en la parte superior de cada informe presupuestario y de contracargo, y bajo las cifras presupuestarias de contratos, aplicaciones y tecnologías. Los usuarios de la administración presupuestaria con nivel de administrador ven además **Introducir un tipo**, que abre esta página en el tipo faltante.
 - En la propia línea, el importe aparece en su propia moneda con una pequeña marca naranja. Pase el cursor sobre la marca para leer, por ejemplo, «Sin tipo de cambio de USD para 2026: excluido de los totales.»
 
-KANAP obtiene los tipos de ese año en segundo plano (como máximo una vez cada seis horas por año), de modo que la siguiente visualización usa el nuevo tipo en cuanto la fuente lo publica. Para detectar los tipos faltantes, consulte el bloque de tipos faltantes encima de la tabla de tipos de cambio y ejecute **Forzar sincronización de tipos de cambio** para obtenerlos de inmediato. Introducir un [tipo manual](#tipos-manuales) lo corrige al momento.
+Kadratis obtiene los tipos de ese año en segundo plano (como máximo una vez cada seis horas por año), de modo que la siguiente visualización usa el nuevo tipo en cuanto la fuente lo publica. Para detectar los tipos faltantes, consulte el bloque de tipos faltantes encima de la tabla de tipos de cambio y ejecute **Forzar sincronización de tipos de cambio** para obtenerlos de inmediato. Introducir un [tipo manual](#tipos-manuales) lo corrige al momento.
 
 ## Preguntar al asistente
 
-[Plaid](ai-assistant.md#tool-calls) lee las monedas y los tipos de esta página para cualquier persona con derecho de lectura sobre el presupuesto. Pregunte, por ejemplo: «¿Cuál es el tipo del USD para 2026?»
+[Kad](ai-assistant.md#tool-calls) lee las monedas y los tipos de esta página para cualquier persona con derecho de lectura sobre el presupuesto. Pregunte, por ejemplo: «¿Cuál es el tipo del USD para 2026?»
 
 ## Consejos
 

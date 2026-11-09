@@ -1,6 +1,6 @@
 ---
 title: "Portfolio Fast Track: From Request to Delivery"
-description: Get productive with KANAP's Portfolio module in minutes. A practical, step-by-step guide.
+description: Get productive with Kadratis's Portfolio module in minutes. A practical, step-by-step guide.
 ---
 
 # Portfolio Fast Track: From Request to Delivery
@@ -20,7 +20,7 @@ For full details, see the [Portfolio reference docs](../portfolio-requests.md).
 
 ![Portfolio Workflow Overview](images/workflow-overview.png)
 
-Every initiative in KANAP follows the same flow:
+Every initiative in Kadratis follows the same flow:
 
 | Stage | What Happens |
 |-------|-------------|
@@ -118,7 +118,7 @@ Use **Scoring** to rate the request against your tenant's configured portfolio c
 
 <!-- screenshot: Scoring tab with weighted criteria -->
 
-The exact criterion names and weights may vary by tenant, because they come from **Portfolio > Settings**. KANAP calculates the weighted priority automatically, and some tenants also use a mandatory-bypass rule for work that must jump to the top of the queue.
+The exact criterion names and weights may vary by tenant, because they come from **Portfolio > Settings**. Kadratis calculates the weighted priority automatically, and some tenants also use a mandatory-bypass rule for work that must jump to the top of the queue.
 
 ### The Analysis Recommendation
 
@@ -153,7 +153,7 @@ Once analysis and scoring are complete, it's decision time.
 4. Click **Convert to Project**
 
 !!! tip "Seamless handoff"
-    When you convert a request to a project, KANAP opens a conversion dialog where you can confirm the project name, planned dates, and initial effort. The request purpose is shown for reference, and linked request data carries forward into the project.
+    When you convert a request to a project, Kadratis opens a conversion dialog where you can confirm the project name, planned dates, and initial effort. The request purpose is shown for reference, and linked request data carries forward into the project.
 
 The request status changes to **Converted**, and a new project is created and linked back to the original request.
 
@@ -225,7 +225,7 @@ See [Projects reference](../portfolio-projects.md) for all project configuration
 
 ## Step 5: Track Execution
 
-Now the real work begins. As the project progresses, keep KANAP updated.
+Now the real work begins. As the project progresses, keep Kadratis updated.
 
 ### Update Progress
 
@@ -342,7 +342,7 @@ Contributor availability and project assignments combine to show you **who's ove
 
 ### Bottleneck Analysis
 
-When multiple projects compete for the same contributors or skills, KANAP highlights the bottleneck so you can make trade-offs before they become crises.
+When multiple projects compete for the same contributors or skills, Kadratis highlights the bottleneck so you can make trade-offs before they become crises.
 
 ### Executive Reporting
 
@@ -373,4 +373,4 @@ See [Reporting reference](../portfolio-reporting.md).
 ---
 
 !!! success "You're ready"
-    You now know the full lifecycle from request to delivery. Start with a request, score it properly, and let KANAP handle the rest. For detailed documentation on every feature, explore the [Portfolio Management](../portfolio-requests.md) section.
+    You now know the full lifecycle from request to delivery. Start with a request, score it properly, and let Kadratis handle the rest. For detailed documentation on every feature, explore the [Portfolio Management](../portfolio-requests.md) section.

@@ -184,7 +184,7 @@ Load or update the whole tree from a file.
 | `code` | Required. The code of the node. Rows are matched to existing nodes by code, regardless of case |
 | `kind` | Required. `group` or `cost_center` |
 | `name` | Required |
-| `parent_code` | The code of the parent group, from the same file or already in KANAP. Empty for the top level |
+| `parent_code` | The code of the parent group, from the same file or already in Kadratis. Empty for the top level |
 | `company_name` | Required for a `cost_center`, empty for a `group`. Matched by company name, regardless of case |
 | `owner_email` | The email of the budget holder, an active user. Empty for no budget holder |
 | `description` | Free text |
@@ -200,7 +200,7 @@ Load or update the whole tree from a file.
 
 **How the import works**:
 
-- **Rows in any order**: a child can come before its parent group. Parents are resolved against the whole file and the nodes already in KANAP.
+- **Rows in any order**: a child can come before its parent group. Parents are resolved against the whole file and the nodes already in Kadratis.
 - **The whole file is checked before anything is written**: each row, then the parents, then the rules of the tree (a cost center has a company, a group has none, only groups are parents, no loops, a cost center used by lines stays a cost center). A file with any error loads nothing: fix the rows and run the preflight again. Each error names its row by the line of the file as a text editor shows it, blank lines and cells that span several lines included.
 - **Matching by code**: a row whose code exists updates that node; any other row creates one. Each cell replaces the stored value, so an empty `owner_email` or `description` clears it.
 - **Unchanged rows**: a row identical to the stored node changes nothing. Exporting and importing the same file reports every row as unchanged.
@@ -233,7 +233,7 @@ Each role starts with the level it has on departments, except the built-in Budge
 
 ## Ask the assistant
 
-[Plaid](ai-assistant.md#tool-calls) reads the cost centers for anyone with read access to them: the tree, the budget holders and the lines that use each node. Ask, for example: "Which cost centers sit under Group IT?"
+[Kad](ai-assistant.md#tool-calls) reads the cost centers for anyone with read access to them: the tree, the budget holders and the lines that use each node. Ask, for example: "Which cost centers sit under Group IT?"
 
 ## Tips
 

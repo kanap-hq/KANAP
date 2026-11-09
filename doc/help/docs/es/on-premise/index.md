@@ -1,6 +1,6 @@
 # Despliegue on-premise
 
-KANAP puede desplegarse on-premise en **modo de un solo espacio de trabajo** (single-tenant). Usted aporta su propio PostgreSQL, un almacenamiento compatible con S3 y un proxy inverso con TLS. KANAP se encarga del resto: las migraciones se ejecutan automáticamente y el espacio de trabajo y el usuario administrador se crean en el primer arranque. No hay límite de usuarios.
+Kadratis puede desplegarse on-premise en **modo de un solo espacio de trabajo** (single-tenant). Usted aporta su propio PostgreSQL, un almacenamiento compatible con S3 y un proxy inverso con TLS. Kadratis se encarga del resto: las migraciones se ejecutan automáticamente y el espacio de trabajo y el usuario administrador se crean en el primer arranque. No hay límite de usuarios.
 
 ## Guías
 
@@ -29,7 +29,7 @@ KANAP puede desplegarse on-premise en **modo de un solo espacio de trabajo** (si
 
 ## Notas rápidas
 
-- **Versiones.** KANAP publica una versión aproximadamente una vez al mes (`26.10.1` es la primera). Usted instala la rama `stable`, que siempre apunta a la última versión publicada, y actualiza descargándola tras leer `CHANGELOG.md`. Actualice al menos una vez al mes. Consulte [Operaciones](operations.md#procedimiento-de-actualizacion).
+- **Versiones.** Kadratis publica una versión aproximadamente una vez al mes (`26.10.1` es la primera). Usted instala la rama `stable`, que siempre apunta a la última versión publicada, y actualiza descargándola tras leer `CHANGELOG.md`. Actualice al menos una vez al mes. Consulte [Operaciones](operations.md#procedimiento-de-actualizacion).
 - **Plataforma.** El ejemplo usa Ubuntu 26.04 LTS (Ubuntu 24.04 funciona). Se admite cualquier sistema operativo con Docker Engine 24+ y el plugin Docker Compose 2.20 o posterior (las versiones actuales son 5.x).
 - **Almacenamiento.** El ejemplo ejecuta RustFS en el servidor. Funciona cualquier almacenamiento compatible con S3, y un MinIO existente sigue funcionando.
 - **Redes internas.** No hace falta DNS público. Use un nombre del DNS de su empresa (o una entrada en el archivo hosts para una prueba) con un certificado de su autoridad interna. Consulte [Nombre y certificado](installation.md#nombre-y-certificado).

@@ -44,7 +44,7 @@ Para listas largas (más de 25 filas), la tabla virtualiza filas, mostrando unas
 
 ### Los nombres son la identidad de un valor
 
-Usted solo ve y escribe **nombres**. KANAP genera un código interno estable a partir del nombre cuando un valor se guarda por primera vez y lo conserva para siempre, de modo que renombrar un valor nunca rompe los registros que lo usan. El código es visible para los integradores en la API y puede usarse en archivos importados, pero la exportación escribe nombres y la importación acepta cualquiera de los dos.
+Usted solo ve y escribe **nombres**. Kadratis genera un código interno estable a partir del nombre cuando un valor se guarda por primera vez y lo conserva para siempre, de modo que renombrar un valor nunca rompe los registros que lo usan. El código es visible para los integradores en la API y puede usarse en archivos importados, pero la exportación escribe nombres y la importación acepta cualquiera de los dos.
 
 Como los nombres identifican los valores, dentro de una lista se aplican algunas reglas:
 
@@ -56,13 +56,13 @@ Una lista que incumple una de estas reglas no se guarda hasta que la corrija; la
 
 ### Eliminar un valor
 
-**Eliminar** borra un valor que nada utiliza. Cuando todavía hay registros que hacen referencia al valor, KANAP muestra cuántos (aplicaciones, activos, interfaces, conexiones, ubicaciones, incidentes, subredes…), con un enlace a la lista filtrada cuando una lista se puede filtrar por ese campo, y ofrece **Dejar de proponer** en su lugar: el valor sigue visible en los registros que ya lo usan y ya no se propone para los nuevos. Un valor en uso nunca se elimina, ni siquiera a través de la API.
+**Eliminar** borra un valor que nada utiliza. Cuando todavía hay registros que hacen referencia al valor, Kadratis muestra cuántos (aplicaciones, activos, interfaces, conexiones, ubicaciones, incidentes, subredes…), con un enlace a la lista filtrada cuando una lista se puede filtrar por ese campo, y ofrece **Dejar de proponer** en su lugar: el valor sigue visible en los registros que ya lo usan y ya no se propone para los nuevos. Un valor en uso nunca se elimina, ni siquiera a través de la API.
 
-Los valores integrados que KANAP gestiona por sí mismo (los cuatro estados del ciclo de vida, los dominios Workgroup y N/A) no se pueden editar ni eliminar. Las zonas de red y los tipos de activo predeterminados se pueden editar y retirar, pero no eliminar: el servidor los volvería a añadir.
+Los valores integrados que Kadratis gestiona por sí mismo (los cuatro estados del ciclo de vida, los dominios Workgroup y N/A) no se pueden editar ni eliminar. Las zonas de red y los tipos de activo predeterminados se pueden editar y retirar, pero no eliminar: el servidor los volvería a añadir.
 
 ### Traducir sus valores
 
-Los valores que escribe se muestran tal cual en todos los idiomas. Para mostrarlos en el idioma de cada usuario, use la acción **Traducir** en una fila: el cuadro de diálogo presenta el nombre base (y la descripción en los niveles de clasificación) y un campo por idioma. Un campo dejado vacío usa la traducción automática mientras el valor siga siendo un valor predeterminado de KANAP; de lo contrario, el texto base. Guardar las traducciones nunca cambia el texto base, y un nombre traducido se puede usar en los archivos CSV y en la API igual que el propio nombre, por lo que no debe duplicar otro valor de la lista.
+Los valores que escribe se muestran tal cual en todos los idiomas. Para mostrarlos en el idioma de cada usuario, use la acción **Traducir** en una fila: el cuadro de diálogo presenta el nombre base (y la descripción en los niveles de clasificación) y un campo por idioma. Un campo dejado vacío usa la traducción automática mientras el valor siga siendo un valor predeterminado de Kadratis; de lo contrario, el texto base. Guardar las traducciones nunca cambia el texto base, y un nombre traducido se puede usar en los archivos CSV y en la API igual que el propio nombre, por lo que no debe duplicar otro valor de la lista.
 
 Los editores siempre muestran y editan el texto base; cuando el nombre mostrado difiere en su idioma, la fila lo indica («Se muestra: …»).
 
@@ -102,13 +102,13 @@ La categoría determina qué campos aparecen al editar una Ubicación:
 
 ### Zonas de administración
 
-Las zonas de su modelo de administración. KANAP incluye los tres tiers del modelo de administración por tiers, una buena práctica reconocida:
+Las zonas de su modelo de administración. Kadratis incluye los tres tiers del modelo de administración por tiers, una buena práctica reconocida:
 
 - **Tier 0 (núcleo de confianza)**: directorios como Active Directory o Entra ID, PKI, herramientas de administración de identidades y los sistemas que los alojan.
 - **Tier 1 (servidores y aplicaciones)**: servidores de negocio, aplicaciones, bases de datos y middleware.
 - **Tier 2 (puestos de trabajo)**: puestos de trabajo y dispositivos de los usuarios.
 
-Cámbieles el nombre, añada los suyos o deje de proponerlos según su política de administración o su modelo de acceso privilegiado. Los tres tiers aparecen mientras la lista no se haya guardado nunca. Una vez guardada la lista, aunque esté vacía, KANAP ya no los añade: añádalos usted mismo si los necesita.
+Cámbieles el nombre, añada los suyos o deje de proponerlos según su política de administración o su modelo de acceso privilegiado. Los tres tiers aparecen mientras la lista no se haya guardado nunca. Una vez guardada la lista, aunque esté vacía, Kadratis ya no los añade: añádalos usted mismo si los necesita.
 
 El orden de la lista importa: la primera zona es la más sensible. Arrastre una fila por su asa para moverla. Una zona nueva se añade arriba: muévala después a su lugar. La página [Zonas de administración](administration-view.md) muestra las zonas en este orden y compara los activos con la primera zona que no está marcada con **Dejar de proponer**.
 

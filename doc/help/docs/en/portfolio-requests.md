@@ -32,7 +32,7 @@ Use the scope selector above the grid to control whose pipeline you are looking 
 - **My team's requests** expands that view to requests involving members of your Portfolio team. This option is unavailable if you are not assigned to a team.
 - **All requests** removes the involvement filter and shows the full request pipeline.
 
-The list opens on **All requests** and remembers your scope choice. If you open a request from the list and come back later, KANAP keeps the list context so you do not have to rebuild your filter stack every time.
+The list opens on **All requests** and remembers your scope choice. If you open a request from the list and come back later, Kadratis keeps the list context so you do not have to rebuild your filter stack every time.
 
 ### Default columns
 
@@ -94,7 +94,7 @@ The workspace header gives you operational context without leaving the page:
 
 1. Click **New request**. The request page opens on **Summary** with an empty title in the header. The rest of the page is dimmed.
 2. Type the name of the request.
-3. Press Enter, or click outside the title. KANAP creates the request at once, with status **Pending Review** and you as the requestor. Its reference (`REQ-42`) shows and all tabs open.
+3. Press Enter, or click outside the title. Kadratis creates the request at once, with status **Pending Review** and you as the requestor. Its reference (`REQ-42`) shows and all tabs open.
 
 Then fill in the Properties drawer and the **Purpose**. The name is edited in the header only. Press Escape on the empty title to leave without creating anything.
 
@@ -148,7 +148,7 @@ Older bookmarks may still point to `overview`, `team`, or `relations`. The curre
 
 ## Summary
 
-**Summary** is the request cockpit. It is not a simple overview tab; it is where KANAP compresses the state of the request into an operational snapshot.
+**Summary** is the request cockpit. It is not a simple overview tab; it is where Kadratis compresses the state of the request into an operational snapshot.
 
 ### Purpose as a managed document
 
@@ -364,6 +364,6 @@ Use export when you need portfolio reporting or offline enrichment. Use import w
 ## Tips
 
 - **Use DOCX import for existing content**: If you already have a purpose statement or risk register in a Word document, use the **Import** button on the Purpose or Risks & Mitigations editor instead of copying and pasting. The import converts the document to markdown and warns you if any content could not be carried over.
-- **Scope filters stick**: The list opens on **All requests**. KANAP remembers your last scope choice, so you do not need to re-select it every session.
+- **Scope filters stick**: The list opens on **All requests**. Kadratis remembers your last scope choice, so you do not need to re-select it every session.
 - **Converted requests are hidden by default**: If you are looking for a request that was already converted to a project, add **Converted** to the Status filter on the list.
 - **From task to request**: When a task reveals a larger initiative, use **Convert to Request** from the task workspace. The new request inherits the task's title, description (as Purpose), classification, and attachments, and shows the **Source Task** in its header.

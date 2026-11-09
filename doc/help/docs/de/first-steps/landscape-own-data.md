@@ -1,13 +1,13 @@
 ---
-title: "Ihre IT-Landschaft in KANAP in zehn Minuten: mit Ihren eigenen Daten beginnen"
+title: "Ihre IT-Landschaft in Kadratis in zehn Minuten: mit Ihren eigenen Daten beginnen"
 description: Die fünf Schritte des Pfads IT-Landkarte mit Ihren eigenen Daten, von Ihren Standorten bis zu Ihren Servern, dann eine Kollegin oder ein Kollege.
 ---
 
-# Ihre IT-Landschaft in KANAP in zehn Minuten
+# Ihre IT-Landschaft in Kadratis in zehn Minuten
 
 [Mit dem Beispiel entdecken](landscape-example.md) · **Mit meinen eigenen Daten beginnen**
 
-In zehn Minuten sind Ihre Standorte, Ihre Anwendungen, deren Technologien und Ihre Server in KANAP, Ihre ersten Supportende-Daten erscheinen, und eine Kollegin oder ein Kollege kann die Landkarte aktuell halten. Der Beginn mit Ihren eigenen Daten löscht das Beispiel: Was Sie am Ende sehen, stammt von Ihnen.
+In zehn Minuten sind Ihre Standorte, Ihre Anwendungen, deren Technologien und Ihre Server in Kadratis, Ihre ersten Supportende-Daten erscheinen, und eine Kollegin oder ein Kollege kann die Landkarte aktuell halten. Der Beginn mit Ihren eigenen Daten löscht das Beispiel: Was Sie am Ende sehen, stammt von Ihnen.
 
 Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der Startseite, für den Pfad **Die IT-Landkarte** mit **Mit meinen eigenen Daten beginnen**. Jeder Schritt der Kachel öffnet seinen Bildschirm mit einem kurzen Hinweis. Jeder Schritt legt etwas an und gilt als erledigt, sobald es im Arbeitsbereich existiert. Um einen übersprungenen Schritt als erledigt zu markieren, klicken Sie auf die Markierung daneben. Siehe [Testphase: Ihr Pfad und Ihre ersten Schritte](../my-dashboard.md#trial-first-steps).
 
@@ -36,7 +36,7 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 
 **Was Sie tun.** Klicken Sie auf **Neue Technologie** und wählen Sie ein Produkt im **Katalog**, zum Beispiel Ihre Datenbank. Öffnen Sie dann eine Anwendung, Reiter **Betrieb**, und klicken Sie unter **Technologien** auf **Hinzufügen**, um die Technologie mit ihrer Version zu verknüpfen.
 
-**Was Sie sehen.** Ihr Arbeitsbereich enthält bereits Windows Server und Ubuntu. Eine Technologie aus dem Katalog kommt mit ihren Versionen und deren Supportende-Daten, die KANAP aktuell hält. Das Supportende erscheint dann an der Anwendung, und **IT-Landschaft > Supportende** listet, was es erreicht.
+**Was Sie sehen.** Ihr Arbeitsbereich enthält bereits Windows Server und Ubuntu. Eine Technologie aus dem Katalog kommt mit ihren Versionen und deren Supportende-Daten, die Kadratis aktuell hält. Das Supportende erscheint dann an der Anwendung, und **IT-Landschaft > Supportende** listet, was es erreicht.
 
 ## 4. Ihre Server
 
@@ -56,10 +56,10 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 
 ## Wie es weitergeht
 
-Ihre IT-Landschaft ist in KANAP. Die beiden anderen Pfade dauern ebenfalls zehn Minuten, mit Ihren Daten:
+Ihre IT-Landschaft ist in Kadratis. Die beiden anderen Pfade dauern ebenfalls zehn Minuten, mit Ihren Daten:
 
-- [Ihr IT-Budget in KANAP in zehn Minuten](budget-own-data.md)
-- [Ihr Portfolio in KANAP in zehn Minuten](portfolio-own-data.md)
+- [Ihr IT-Budget in Kadratis in zehn Minuten](budget-own-data.md)
+- [Ihr Portfolio in Kadratis in zehn Minuten](portfolio-own-data.md)
 
 Sind die fünf Schritte erledigt, bietet die Kachel diese Pfade an. Während der Testphase bietet sie außerdem **Kennenlerngespräch vereinbaren** an.
 

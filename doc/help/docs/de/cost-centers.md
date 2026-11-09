@@ -184,7 +184,7 @@ Laden oder aktualisieren Sie den gesamten Baum aus einer Datei.
 | `code` | Pflicht. Der Code des Elements. Zeilen werden bestehenden Elementen über den Code zugeordnet, unabhängig von Groß- und Kleinschreibung |
 | `kind` | Pflicht. `group` oder `cost_center` |
 | `name` | Pflicht |
-| `parent_code` | Der Code der übergeordneten Gruppe, aus derselben Datei oder bereits in KANAP vorhanden. Leer für die oberste Ebene |
+| `parent_code` | Der Code der übergeordneten Gruppe, aus derselben Datei oder bereits in Kadratis vorhanden. Leer für die oberste Ebene |
 | `company_name` | Pflicht für ein `cost_center`, leer für eine `group`. Über den Unternehmensnamen zugeordnet, unabhängig von Groß- und Kleinschreibung |
 | `owner_email` | Die E-Mail-Adresse des Budgetverantwortlichen, eines aktiven Benutzers. Leer für keinen Budgetverantwortlichen |
 | `description` | Freitext |
@@ -200,7 +200,7 @@ Laden oder aktualisieren Sie den gesamten Baum aus einer Datei.
 
 **So funktioniert der Import**:
 
-- **Zeilen in beliebiger Reihenfolge**: Ein untergeordnetes Element kann vor seiner übergeordneten Gruppe stehen. Übergeordnete Elemente werden anhand der gesamten Datei und der bereits in KANAP vorhandenen Elemente aufgelöst.
+- **Zeilen in beliebiger Reihenfolge**: Ein untergeordnetes Element kann vor seiner übergeordneten Gruppe stehen. Übergeordnete Elemente werden anhand der gesamten Datei und der bereits in Kadratis vorhandenen Elemente aufgelöst.
 - **Die gesamte Datei wird geprüft, bevor etwas geschrieben wird**: jede Zeile, dann die übergeordneten Elemente, dann die Regeln des Baums (eine Kostenstelle hat ein Unternehmen, eine Gruppe keines, nur Gruppen sind übergeordnet, keine Schleifen, eine von Zeilen verwendete Kostenstelle bleibt eine Kostenstelle). Eine Datei mit einem Fehler lädt nichts: Korrigieren Sie die Zeilen und führen Sie die Vorabprüfung erneut aus. Jeder Fehler nennt seine Zeile mit der Zeilennummer der Datei, wie ein Texteditor sie anzeigt, einschließlich Leerzeilen und Zellen über mehrere Zeilen.
 - **Zuordnung über den Code**: Eine Zeile, deren Code existiert, aktualisiert dieses Element; jede andere Zeile erstellt eines. Jede Zelle ersetzt den gespeicherten Wert, sodass ein leeres `owner_email` oder `description` ihn löscht.
 - **Unveränderte Zeilen**: Eine Zeile, die dem gespeicherten Element entspricht, ändert nichts. Wenn Sie dieselbe Datei exportieren und importieren, werden alle Zeilen als unverändert gemeldet.
@@ -233,7 +233,7 @@ Jede Rolle beginnt mit der Stufe, die sie für Abteilungen hat, mit Ausnahme der
 
 ## Den Assistenten fragen
 
-[Plaid](ai-assistant.md#tool-calls) liest die Kostenstellen für alle, die sie lesen dürfen: den Baum, die Budgetverantwortlichen und die Zeilen, die jeden Knoten verwenden. Fragen Sie zum Beispiel: „Welche Kostenstellen liegen unter Group IT?“
+[Kad](ai-assistant.md#tool-calls) liest die Kostenstellen für alle, die sie lesen dürfen: den Baum, die Budgetverantwortlichen und die Zeilen, die jeden Knoten verwenden. Fragen Sie zum Beispiel: „Welche Kostenstellen liegen unter Group IT?“
 
 ## Tipps
 

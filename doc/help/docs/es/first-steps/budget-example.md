@@ -1,13 +1,13 @@
 ---
-title: "Su presupuesto de TI en KANAP en diez minutos: descubrir con el ejemplo"
+title: "Su presupuesto de TI en Kadratis en diez minutos: descubrir con el ejemplo"
 description: Los cinco pasos del recorrido presupuesto de TI con el ejemplo Fromage & Co, de la lista de líneas presupuestarias a su propio archivo.
 ---
 
-# Su presupuesto de TI en KANAP en diez minutos
+# Su presupuesto de TI en Kadratis en diez minutos
 
 **Descubrir con el ejemplo** · [Empezar con mis datos](budget-own-data.md)
 
-Fromage & Co es un grupo quesero ficticio cuyo ejemplo está cargado en su espacio de trabajo. En diez minutos sobre su presupuesto, usted lee las líneas presupuestarias, abre la mayor, ejecuta un informe, hace una pregunta a Plaid y ve cómo entra su propio archivo en KANAP.
+Fromage & Co es un grupo quesero ficticio cuyo ejemplo está cargado en su espacio de trabajo. En diez minutos sobre su presupuesto, usted lee las líneas presupuestarias, abre la mayor, ejecuta un informe, hace una pregunta a Kad y ve cómo entra su propio archivo en Kadratis.
 
 Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de inicio, para el recorrido **El presupuesto de TI** con **Descubrir con el ejemplo completo**. Cada paso del mosaico abre su pantalla con una indicación breve, y abrirlo lo marca como hecho. Consulte [Prueba: su recorrido y sus primeros pasos](../my-dashboard.md#trial-first-steps).
 
@@ -41,17 +41,17 @@ Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de in
 
 **Qué ve.** Las mayores líneas del año con su parte del total, en gráfico y en tabla. Cada informe se exporta en .pdf, .png o .xlsx.
 
-## 4. Una pregunta a Plaid
+## 4. Una pregunta a Kad
 
-**Plaid**, en la barra superior
+**Kad**, en la barra superior
 
-![Una pregunta a Plaid](images/budget-example-4.webp)
+![Una pregunta a Kad](images/budget-example-4.webp)
 
 **Qué hacer.** En **Para comenzar**, haga clic en **¿Cuáles son las principales oportunidades de ahorro en el OPEX de TI?** La segunda pregunta del recorrido, **¿Qué líneas presupuestarias no tienen responsable?**, viene a continuación.
 
-**Qué ve.** Una respuesta basada en las líneas presupuestarias del ejemplo. Plaid las lee con sus permisos. Compruebe una línea que cite en la lista del paso 1.
+**Qué ve.** Una respuesta basada en las líneas presupuestarias del ejemplo. Kad las lee con sus permisos. Compruebe una línea que cite en la lista del paso 1.
 
-Durante la prueba, Plaid empieza desactivado. Un administrador lo activa marcando la casilla que ocupa el lugar del campo de mensaje. Los demás leen que Plaid espera a un administrador. Consulte [Antes de aceptar el modelo incluido](../ai-assistant.md#included-model-acceptance).
+Durante la prueba, Kad empieza desactivado. Un administrador lo activa marcando la casilla que ocupa el lugar del campo de mensaje. Los demás leen que Kad espera a un administrador. Consulte [Antes de aceptar el modelo incluido](../ai-assistant.md#included-model-acceptance).
 
 ## 5. Sus datos
 
@@ -63,14 +63,14 @@ Durante la prueba, Plaid empieza desactivado. Un administrador lo activa marcand
 
 **Qué ve.** La exportación es el archivo de presupuesto: las mismas columnas que lee la importación. Úsela como plantilla para actualizar líneas en bloque o cargar otras nuevas. El libro de ejemplo contiene algunas líneas, las demás columnas en una hoja **Avanzado** y lo que admite cada columna en una hoja **Notas**. Una importación comprueba todo el archivo antes de cargar nada. **Exportar** e **Importar** se muestran a los administradores del presupuesto.
 
-Para partir de un archivo que ya mantiene, adjúntelo a un mensaje en Plaid con **Adjuntar un archivo**. Plaid lee los títulos de sus columnas, el tipo de cada columna y las diez primeras filas, y puede decir qué contiene cada columna.
+Para partir de un archivo que ya mantiene, adjúntelo a un mensaje en Kad con **Adjuntar un archivo**. Kad lee los títulos de sus columnas, el tipo de cada columna y las diez primeras filas, y puede decir qué contiene cada columna.
 
 ## Y después
 
-Ha visto lo esencial de KANAP para el presupuesto de TI. Los otros dos recorridos también llevan diez minutos:
+Ha visto lo esencial de Kadratis para el presupuesto de TI. Los otros dos recorridos también llevan diez minutos:
 
-- [Su panorama IT en KANAP en diez minutos](landscape-example.md)
-- [Su portafolio en KANAP en diez minutos](portfolio-example.md)
+- [Su panorama IT en Kadratis en diez minutos](landscape-example.md)
+- [Su portafolio en Kadratis en diez minutos](portfolio-example.md)
 
 Cuando los cinco pasos están hechos, el mosaico ofrece estos recorridos. Durante la prueba, también ofrece **Programar una llamada de descubrimiento**.
 

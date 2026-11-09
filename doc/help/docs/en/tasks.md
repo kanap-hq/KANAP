@@ -1,6 +1,6 @@
 # Tasks
 
-Tasks help you track action items, deliverables, and work packages across your KANAP entities. They are used for renewal reminders, follow-ups, compliance checks, project deliverables, and any other work that needs tracking.
+Tasks help you track action items, deliverables, and work packages across your Kadratis entities. They are used for renewal reminders, follow-ups, compliance checks, project deliverables, and any other work that needs tracking.
 
 ## Getting started
 
@@ -12,7 +12,7 @@ When you click **New**, the task page opens with an empty title in its header, s
 
 1. **Type the title** (required) in the header.
 
-2. **Press Enter**, or leave the field. KANAP creates the task at once, with these defaults:
+2. **Press Enter**, or leave the field. Kadratis creates the task at once, with these defaults:
    - **Status**: **Open**
    - **Priority**: **Normal**
    - **Assignee** and **Requestor**: you
@@ -29,7 +29,7 @@ When you click **New**, the task page opens with an empty title in its header, s
    - **Dates**: Set start and due dates
    - **Assignee**, **Status**, **Priority**: Change them if needed
 
-4. Click **Create** to keep the task. You return to where you started: a task started from a project's **Tasks** tab returns to that tab. Click **Cancel** to delete the task instead. KANAP asks first when you entered more than the title.
+4. Click **Create** to keep the task. You return to where you started: a task started from a project's **Tasks** tab returns to that tab. Click **Cancel** to delete the task instead. Kadratis asks first when you entered more than the title.
 
 Pressing **Escape** on the empty title works as **Cancel**. Leaving the task any other way keeps it.
 
@@ -162,7 +162,7 @@ The **Overview** tab holds the task content.
 The drawer is collapsible (click the vertical **Properties** tab on the right edge to open or close it; press **P** as a shortcut). Its width and open state are remembered locally. The drawer contains four groups, separated by dividers:
 
 **Context**:
-  - **Related to**: Standalone, Project, Budget (an OPEX or CAPEX line), Contract, or Incident. You can change the type and pick a new item; on save, KANAP applies any related side effects (see [Changing task context](#changing-task-context))
+  - **Related to**: Standalone, Project, Budget (an OPEX or CAPEX line), Contract, or Incident. You can change the type and pick a new item; on save, Kadratis applies any related side effects (see [Changing task context](#changing-task-context))
   - **Phase** (project tasks only): Defaults to **Project-level** unless you pick a project phase
   - **Task Type**: Task, Bug, Problem, Incident, or any custom type configured by your administrator
   - **Labels**: Free tags, for example urgent or follow-up. Type one and press Enter. The tags show as chips. A reader sees the chips
@@ -189,7 +189,7 @@ The drawer is collapsible (click the vertical **Properties** tab on the right ed
 
 ### Changing task context
 
-When you change a task's context and save, KANAP applies the change in one operation (context plus any other edited fields together).
+When you change a task's context and save, Kadratis applies the change in one operation (context plus any other edited fields together).
 
 - **Project to Standalone**: Phase is cleared, classification is kept
 - **Project to OPEX/Contract/CAPEX**: Phase and classification are cleared
@@ -280,7 +280,7 @@ Attachments are visible to anyone who can view the task.
 
 ## Description import and export
 
-The description field supports importing and exporting documents so you can work with content outside KANAP.
+The description field supports importing and exporting documents so you can work with content outside Kadratis.
 
 ### Importing a document
 
@@ -358,7 +358,7 @@ Links are bidirectional: from the linked Application or Asset workspace, the tas
 
 **Tip**: Reserve these links for tasks that are operationally about the app or asset, not every task that mentions one in passing. Otherwise the relation becomes noise instead of signal.
 
-You see each linked record only when you can read its module: applications need the applications, assets the infrastructure. The same holds for the record a task belongs to: a project needs the projects, a budget line the budget, a contract the contracts, an incident the incidents. Otherwise the field is absent from the drawer, the list and Plaid, and the task keeps its link. A Business Contributor also sees the project, its phase, the request made from the task and the applications only when they take part in them: one application outside their participation hides the **Applications** field.
+You see each linked record only when you can read its module: applications need the applications, assets the infrastructure. The same holds for the record a task belongs to: a project needs the projects, a budget line the budget, a contract the contracts, an incident the incidents. Otherwise the field is absent from the drawer, the list and Kad, and the task keeps its link. A Business Contributor also sees the project, its phase, the request made from the task and the applications only when they take part in them: one application outside their participation hides the **Applications** field.
 
 ---
 
@@ -384,7 +384,7 @@ In a contract's **Overview**, use the **Tasks** section for:
 - "Request updated terms from vendor"
 - "Collect the signed amendment"
 
-You do not need to create renewal tasks yourself: KANAP gives the contract's owner a task when a renewal decision is due. See [Contracts](contracts.md#renewal-decisions).
+You do not need to create renewal tasks yourself: Kadratis gives the contract's owner a task when a renewal decision is due. See [Contracts](contracts.md#renewal-decisions).
 
 ### From CAPEX lines
 In the CAPEX workspace, tasks track project milestones:
@@ -682,7 +682,7 @@ You can promote a task into a portfolio request when the work deserves formal ev
    - **Close the original task after conversion**: Check this option if you want the task status set to **Done** automatically
 4. Click **Convert to Request**
 
-After conversion, KANAP navigates you to the newly created request workspace.
+After conversion, Kadratis navigates you to the newly created request workspace.
 
 ### What gets carried over
 

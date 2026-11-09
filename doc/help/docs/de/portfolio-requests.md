@@ -32,7 +32,7 @@ Verwenden Sie die Bereichsauswahl über dem Raster, um zu steuern, wessen Pipeli
 - **Anfragen meines Teams** erweitert diese Ansicht auf Anfragen, die Mitglieder Ihres Portfolio-Teams einbeziehen. Diese Option ist nicht verfügbar, wenn Sie keinem Team zugewiesen sind.
 - **Alle Anfragen** entfernt den Beteiligungsfilter und zeigt die vollständige Anfragen-Pipeline an.
 
-Die Liste öffnet sich mit **Alle Anfragen** und speichert Ihre Bereichswahl. Wenn Sie eine Anfrage aus der Liste öffnen und später zurückkommen, behält KANAP den Listenkontext bei, sodass Sie nicht jedes Mal Ihren Filterstapel neu aufbauen müssen.
+Die Liste öffnet sich mit **Alle Anfragen** und speichert Ihre Bereichswahl. Wenn Sie eine Anfrage aus der Liste öffnen und später zurückkommen, behält Kadratis den Listenkontext bei, sodass Sie nicht jedes Mal Ihren Filterstapel neu aufbauen müssen.
 
 ### Standardspalten
 
@@ -94,7 +94,7 @@ Die Arbeitsbereichs-Kopfzeile gibt Ihnen operativen Kontext, ohne die Seite zu v
 
 1. Klicken Sie auf **Neue Anfrage**. Die Seite der Anfrage öffnet sich auf **Zusammenfassung** mit einem leeren Titel in der Kopfzeile. Der Rest der Seite ist abgeblendet.
 2. Geben Sie den Namen der Anfrage ein.
-3. Drücken Sie die Eingabetaste oder klicken Sie außerhalb des Titels. KANAP erstellt die Anfrage sofort, mit dem Status **Prüfung ausstehend** und Ihnen als Anforderer. Ihre Referenz (`REQ-42`) erscheint und alle Reiter öffnen sich.
+3. Drücken Sie die Eingabetaste oder klicken Sie außerhalb des Titels. Kadratis erstellt die Anfrage sofort, mit dem Status **Prüfung ausstehend** und Ihnen als Anforderer. Ihre Referenz (`REQ-42`) erscheint und alle Reiter öffnen sich.
 
 Füllen Sie dann den Eigenschaftenbereich und den **Zweck** aus. Der Name wird nur in der Kopfzeile bearbeitet. Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erstellen.
 
@@ -148,7 +148,7 @@ Dieselben Projekte erscheinen auch im Reiter **Beziehungen**, zusammen mit den A
 
 ## Zusammenfassung
 
-**Zusammenfassung** ist das Anfragen-Cockpit. Es ist kein einfacher Übersichtsreiter; es ist der Ort, an dem KANAP den Zustand der Anfrage in einen operativen Snapshot komprimiert.
+**Zusammenfassung** ist das Anfragen-Cockpit. Es ist kein einfacher Übersichtsreiter; es ist der Ort, an dem Kadratis den Zustand der Anfrage in einen operativen Snapshot komprimiert.
 
 ### Zweck als verwaltetes Dokument
 
@@ -364,6 +364,6 @@ Verwenden Sie den Export, wenn Sie Portfolio-Berichterstattung oder Offline-Anre
 ## Tipps
 
 - **Verwenden Sie DOCX-Import für vorhandenen Inhalt**: Wenn Sie bereits eine Zweck-Erklärung oder ein Risikoregister in einem Word-Dokument haben, verwenden Sie die Schaltfläche **Importieren** im Editor Zweck oder Risiken & Mitigationen, anstatt zu kopieren und einzufügen. Der Import konvertiert das Dokument in Markdown und warnt Sie, wenn Inhalte nicht übertragen werden konnten.
-- **Bereichsfilter bleiben**: Die Liste öffnet sich mit **Alle Anfragen**. KANAP merkt sich Ihre letzte Bereichswahl, sodass Sie sie nicht in jeder Sitzung neu auswählen müssen.
+- **Bereichsfilter bleiben**: Die Liste öffnet sich mit **Alle Anfragen**. Kadratis merkt sich Ihre letzte Bereichswahl, sodass Sie sie nicht in jeder Sitzung neu auswählen müssen.
 - **Konvertierte Anfragen sind standardmäßig ausgeblendet**: Wenn Sie nach einer Anfrage suchen, die bereits in ein Projekt konvertiert wurde, fügen Sie **Konvertiert** zum Status-Filter in der Liste hinzu.
 - **Von Aufgabe zu Anfrage**: Wenn eine Aufgabe eine größere Initiative offenbart, verwenden Sie **In Anfrage umwandeln** aus dem Aufgaben-Arbeitsbereich. Die neue Anfrage erbt den Titel, die Beschreibung (als Zweck), die Klassifizierung und die Anhänge der Aufgabe und zeigt die **Quell-Aufgabe** in ihrer Kopfzeile.

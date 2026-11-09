@@ -1,10 +1,10 @@
-# KANAP-Benutzerhandbuch
+# Kadratis™-Benutzerhandbuch
 
-Willkommen im KANAP-Benutzerhandbuch. Diese Dokumentation behandelt alle Funktionen, die den Nutzern der KANAP-Plattform zur Verfügung stehen.
+Willkommen im Kadratis-Benutzerhandbuch. Diese Dokumentation behandelt alle Funktionen, die den Nutzern der Kadratis-Plattform zur Verfügung stehen.
 
 ## Erste Schritte
 
-KANAP unterstützt IT- und Finanzteams bei der Verwaltung ihrer Technologielandschaft, Budgets und Abläufe. Nutzen Sie das Navigationsmenü, um die verschiedenen Module zu erkunden.
+Kadratis unterstützt IT- und Finanzteams bei der Verwaltung ihrer Technologielandschaft, Budgets und Abläufe. Nutzen Sie das Navigationsmenü, um die verschiedenen Module zu erkunden.
 
 Wenn Sie schnellstmöglich produktiv werden möchten, beginnen Sie mit den Fast-Track-Anleitungen, bevor Sie sich in die ausführlichen Referenzseiten vertiefen.
 
@@ -18,7 +18,7 @@ Zehn Minuten je Pfad, mit dem Beispiel Fromage & Co oder mit Ihren eigenen Daten
 
 ## Fast-Track-Anleitungen
 
-- [Erste Schritte: Ihre ersten 10 Minuten in KANAP](fast-track/getting-started.md): Onboarding am ersten Tag, Profileinrichtung, Dashboard und Kernkonzepte
+- [Erste Schritte: Ihre ersten 10 Minuten in Kadratis](fast-track/getting-started.md): Onboarding am ersten Tag, Profileinrichtung, Dashboard und Kernkonzepte
 - [Portfolio Fast Track: Von der Anfrage bis zur Lieferung](fast-track/index.md): Initiativen einreichen, analysieren, bewerten, umwandeln und liefern
 - [IT-Ops Fast Track: Von der Anwendung zum Server](fast-track/apps-and-assets.md): Eine Anwendung, ihre Umgebungen und Hosting-Assets dokumentieren
 - [Aufgabentypen Fast Track: Run, Build und Aufgaben](fast-track/task-types.md): Den Unterschied zwischen Incidents, Problems, Anfragen, Projekten, Bugs und Aufgaben verstehen
@@ -27,7 +27,7 @@ Zehn Minuten je Pfad, mit dem Beispiel Fromage & Co oder mit Ihren eigenen Daten
 
 ### Dashboard
 
-- [Dashboard](my-dashboard.md): Persönliche Übersicht mit konfigurierbaren Kacheln und dem Bereich Budgetverwaltung (klicken Sie auf das KANAP-Logo)
+- [Dashboard](my-dashboard.md): Persönliche Übersicht mit konfigurierbaren Kacheln und dem Bereich Budgetverwaltung (klicken Sie auf das Kadratis-Logo)
 
 ### Portfolio-Management
 
@@ -107,9 +107,9 @@ Zehn Minuten je Pfad, mit dem Beispiel Fromage & Co oder mit Ihren eigenen Daten
 
 - [Geschäftsprozesse](business-processes.md): Geschäftsprozesshierarchie dokumentieren
 
-### Plaid
+### Kad
 
-- [Plaid](ai-assistant.md): Stellen Sie Fragen in natürlicher Sprache zu Ihren KANAP-Daten
+- [Kad](ai-assistant.md): Stellen Sie Fragen in natürlicher Sprache zu Ihren Kadratis-Daten
 
 ### KI-Agenten
 
@@ -125,10 +125,10 @@ Zehn Minuten je Pfad, mit dem Beispiel Fromage & Co oder mit Ihren eigenen Daten
 - [Datenzugriff](data-access.md): Eine Person auf Budget und Verträge bestimmter Unternehmen oder Kostenstellen begrenzen
 - [Verlauf der Datensätze](record-history.md): Wer einen Datensatz wann und wie geändert hat, im Tab Verlauf
 - [Branding](branding.md): Ihr Mandanten-Logo und die Primärfarben für hell/dunkel anpassen
-- [Beispieldaten](sample-data.md): KANAP mit einem fiktiven Unternehmen erkunden, dann alles löschen und neu beginnen
+- [Beispieldaten](sample-data.md): Kadratis mit einem fiktiven Unternehmen erkunden, dann alles löschen und neu beginnen
 - [Audit-Protokoll](admin.md#audit-protokoll): Datenänderungen, Anmeldungen und Exporte mit Filtern, Detailansicht und Export als CSV oder Excel prüfen
 - [KI-Modelle](ai-models.md): Die von Ihrer Organisation genutzten KI-Modelle mit ihren Preisen registrieren und den Standard festlegen
-- [Plaid-Einstellungen](ai-settings.md): Das von Plaid genutzte Modell wählen, dazu Chat-Funktionen, Aufbewahrung und MCP-Schlüssel
+- [Kad-Einstellungen](ai-settings.md): Das von Kad genutzte Modell wählen, dazu Chat-Funktionen, Aufbewahrung und MCP-Schlüssel
 - [Nutzung & Kosten](ai-usage.md): KI-Nutzung und reale Kosten über Chat und Agenten hinweg, pro Agent und pro Modell
 - [Integrationen](integrations.md): GLPI für Ticketimport und für Agenten verbinden
 - [Geplante Aufgaben](scheduled-tasks.md): Wiederkehrende Hintergrundjobs prüfen und verwalten
@@ -139,4 +139,4 @@ Zehn Minuten je Pfad, mit dem Beispiel Fromage & Co oder mit Ihren eigenen Daten
 
 ---
 
-**Brauchen Sie Hilfe?** Wenden Sie sich an Ihren Systemadministrator oder besuchen Sie [kanap.net](https://kanap.net) für weitere Informationen.
+**Brauchen Sie Hilfe?** Wenden Sie sich an Ihren Systemadministrator oder besuchen Sie [kadratis.com](https://kadratis.com) für weitere Informationen.

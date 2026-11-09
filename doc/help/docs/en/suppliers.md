@@ -52,7 +52,7 @@ Click any row to open the supplier page. Use the arrows at the top, or the left 
 
 The page has three tabs: **Overview**, **Contacts** and **History** (the changes made to the supplier, see [Record history](record-history.md)).
 
-**Title**: The supplier's name. Click it to edit it; the change saves when you leave the field or press Enter, and Escape cancels it. A name is required and must differ from the name of every other supplier, whatever the case (`SAP` and `sap` are the same name): KANAP shows the message under the name and keeps the stored one.
+**Title**: The supplier's name. Click it to edit it; the change saves when you leave the field or press Enter, and Escape cancels it. A name is required and must differ from the name of every other supplier, whatever the case (`SAP` and `sap` are the same name): Kadratis shows the message under the name and keeps the stored one.
 
 **Reference**: The ERP supplier ID, when the supplier has one, shows before the name. Click it to copy it.
 
@@ -85,7 +85,7 @@ The **Contacts** tab lists the contacts linked to this supplier by contact type:
 **How it works**:
 - Each section lists its contacts by name. Click a name to open the contact page.
 - **Add existing**: Search for a contact by name and pick it. The link saves at once.
-- **New contact**: Opens the contact form with the supplier and the contact type already filled in. KANAP brings you back to this tab once the contact is created.
+- **New contact**: Opens the contact form with the supplier and the contact type already filled in. Kadratis brings you back to this tab once the contact is created.
 - The bin button removes the link. The contact itself stays in your contacts. A message confirms it, with an **Undo** action that links the contact again.
 
 **Tip**: Keep at least one contact per supplier so that vendor communication is always one click away.

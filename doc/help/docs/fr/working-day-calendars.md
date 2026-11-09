@@ -17,7 +17,7 @@ Naviguez vers **Données de référence > Calendriers de jours ouvrés** (dans l
 
 Le plus rapide est de commencer par un calendrier standard pour chaque pays où se trouvent vos sociétés :
 
-- **Lorsque vous créez une société** avec un pays, KANAP crée pour vous le calendrier standard de ce pays, sauf si l'espace de travail en a déjà un pour tout le pays
+- **Lorsque vous créez une société** avec un pays, Kadratis crée pour vous le calendrier standard de ce pays, sauf si l'espace de travail en a déjà un pour tout le pays
 - **Pour les sociétés que vous avez déjà**, la page de liste affiche une ligne au-dessus de la grille, par exemple « Pays de vos sociétés : France, Pays-Bas et Italie. Créez leurs calendriers standard. » Cliquez sur **Créer 3 calendriers** pour les créer en une fois
 
 Pour créer vous-même un calendrier, cliquez sur **Nouveau**.
@@ -120,7 +120,7 @@ La section **Jours ouvrés** affiche une année à la fois, avec les mêmes ongl
 - Sous le total d'une année modifiée, une ligne donne les valeurs standard, par exemple « Valeurs standard : 252 jours »
 - **Revenir aux valeurs standard** ramène aussitôt l'année aux jours fériés. Il n'y a pas de confirmation : les valeurs que vous avez saisies sont remplacées par les valeurs standard
 
-**D'où viennent les valeurs standard** : les règles des jours fériés proviennent de [`date-holidays`](https://github.com/commenthol/date-holidays), une bibliothèque open source intégrée à KANAP. Les règles sont livrées avec l'application, si bien que les calendriers standard fonctionnent sans aucun accès à Internet. Les données des jours fériés sont publiées sous la licence Creative Commons Attribution-ShareAlike 3.0 (CC BY-SA 3.0), et KANAP les utilise sans modification. Seuls les jours fériés officiels comptent : les jours de fermeture bancaire, les vacances scolaires et les fêtes non chômées n'entrent pas en compte. Un jour férié qui commence le soir (à 18 h ou plus tard), comme la veille de Noël dans le Territoire du Nord en Australie, ne retire pas la journée ; un jour férié qui commence plus tôt dans la journée retire la journée entière.
+**D'où viennent les valeurs standard** : les règles des jours fériés proviennent de [`date-holidays`](https://github.com/commenthol/date-holidays), une bibliothèque open source intégrée à Kadratis. Les règles sont livrées avec l'application, si bien que les calendriers standard fonctionnent sans aucun accès à Internet. Les données des jours fériés sont publiées sous la licence Creative Commons Attribution-ShareAlike 3.0 (CC BY-SA 3.0), et Kadratis les utilise sans modification. Seuls les jours fériés officiels comptent : les jours de fermeture bancaire, les vacances scolaires et les fêtes non chômées n'entrent pas en compte. Un jour férié qui commence le soir (à 18 h ou plus tard), comme la veille de Noël dans le Territoire du Nord en Australie, ne retire pas la journée ; un jour férié qui commence plus tôt dans la journée retire la journée entière.
 
 ### Jours ouvrés d'un calendrier personnalisé
 
@@ -248,7 +248,7 @@ Toute personne qui peut consulter les lignes budgétaires (Budget) peut choisir 
 
 ## Demander à l'assistant
 
-[Plaid](ai-assistant.md#tool-calls) lit les calendriers pour toute personne qui a le droit de les lire, et cite les jours ouvrés d'une année tels que KANAP les calcule. Demandez par exemple : « Combien de jours ouvrés en France en 2026 ? »
+[Kad](ai-assistant.md#tool-calls) lit les calendriers pour toute personne qui a le droit de les lire, et cite les jours ouvrés d'une année tels que Kadratis les calcule. Demandez par exemple : « Combien de jours ouvrés en France en 2026 ? »
 
 ## Astuces
 

@@ -1,8 +1,8 @@
 # Ein Budget aus einer Tabellenkalkulation laden
 
-Die meisten Teams erstellen ihr Budget in einer Tabellenkalkulation: eine Zeile pro Budgetzeile, eine Spalte pro Jahr oder pro Monat. KANAP führt dieselben Budgetzeilen in seiner Liste der Budgetzeilen, wo sie die Zuordnungen, Berichte und die Übersicht speisen.
+Die meisten Teams erstellen ihr Budget in einer Tabellenkalkulation: eine Zeile pro Budgetzeile, eine Spalte pro Jahr oder pro Monat. Kadratis führt dieselben Budgetzeilen in seiner Liste der Budgetzeilen, wo sie die Zuordnungen, Berichte und die Übersicht speisen.
 
-Die Budgetdatei verbindet beides. Exportieren Sie die Budgetzeilen, ändern Sie die Zellen, die Sie bearbeiten möchten, in Excel oder LibreOffice und importieren Sie die Datei anschließend. KANAP vergleicht jede Zelle mit dem gespeicherten Stand und schreibt nur, was sich geändert hat.
+Die Budgetdatei verbindet beides. Exportieren Sie die Budgetzeilen, ändern Sie die Zellen, die Sie bearbeiten möchten, in Excel oder LibreOffice und importieren Sie die Datei anschließend. Kadratis vergleicht jede Zelle mit dem gespeicherten Stand und schreibt nur, was sich geändert hat.
 
 Eine Datei enthält beide Arten von Budgetzeilen. Ihre Spalte `nature` gibt an, ob eine Zeile eine OPEX- oder eine CAPEX-Zeile ist, und jede Zeile wird nach den Regeln ihrer eigenen Art geprüft. Die Liste exportiert die Budgetzeilen, die sie zeigt, OPEX und CAPEX zusammen. Filtern Sie die Spalte **Typ**, um nur eine Art zu exportieren.
 
@@ -90,7 +90,7 @@ Das sind die Standardnamen. Ihre Organisation kann die fünf Spalten in [Budgets
 
 ### Die letzte Spalte
 
-`kanap_token` wird von KANAP geschrieben. Lassen Sie ihn unverändert. KANAP nutzt ihn, um Ihnen zu sagen, dass sich eine Budgetzeile nach Ihrem Export geändert hat. Lassen Sie ihn in einer Zeile, die Sie hinzufügen, leer.
+`kanap_token` wird von Kadratis geschrieben. Lassen Sie ihn unverändert. Kadratis nutzt ihn, um Ihnen zu sagen, dass sich eine Budgetzeile nach Ihrem Export geändert hat. Lassen Sie ihn in einer Zeile, die Sie hinzufügen, leer.
 
 ## Was eine Zelle bedeutet
 
@@ -111,7 +111,7 @@ Eine fehlende Spalte behält alle gespeicherten Werte dieser Spalte. Eine Datei,
 - Eine Budgetzeile behält ihre Art. Eine Zeile, die eine bestehende Budgetzeile mit der anderen `nature` nennt, wird abgelehnt, zum Beispiel „BL-125 is a CAPEX line, not an OPEX line. A file does not change the type of a line.“
 - Jede Zeile wird nach ihrer eigenen Art geprüft: die Dimensionen und Werte, die sie haben darf, ihr Konto, die eingefrorenen Spalten und die Warnung vor Duplikaten. Eine für CAPEX eingefrorene Spalte lehnt eine Änderung nur bei einer CAPEX-Zeile ab.
 - Es gibt keinen weiteren Schlüssel. Eine neue Zeile, die einer bestehenden Budgetzeile ihrer Art ähnelt oder einer anderen neuen Zeile derselben Art in der Datei, ist eine Warnung, die Sie ignorieren können.
-- Lieferanten werden über `supplier_erp_id` zugeordnet, wenn er gefüllt ist, sonst über `supplier_name`. Einen Lieferanten, den die Datei nennt und den KANAP nicht kennt, legt das Laden an, wenn **Fehlende Lieferanten anlegen** angehakt ist. Ohne diese Option listet die Prüfung die fehlenden Lieferanten auf und bittet Sie, sie unter **Stammdaten > Lieferanten** anzulegen.
+- Lieferanten werden über `supplier_erp_id` zugeordnet, wenn er gefüllt ist, sonst über `supplier_name`. Einen Lieferanten, den die Datei nennt und den Kadratis nicht kennt, legt das Laden an, wenn **Fehlende Lieferanten anlegen** angehakt ist. Ohne diese Option listet die Prüfung die fehlenden Lieferanten auf und bittet Sie, sie unter **Stammdaten > Lieferanten** anzulegen.
 - Ein nicht vorhandener Dimensionswert wird beim Laden angelegt und in der Prüfung aufgelistet. Konten, Kostenstellen, Unternehmen und Benutzer werden nie angelegt: Ein unbekanntes Element ist ein Zeilenfehler, der nennt, wo es hinzugefügt wird. Für eine Person mit begrenztem Datenzugriff nur bei einer Dimension mit offenen Werten: siehe [Begrenzter Datenzugriff](#limited-data-access).
 - Ein Wert oder `-` in einer Dimension, die nur für die andere Zeilenart gilt, ist ein Zeilenfehler in ihrer Zelle `analytics:<code>`, zum Beispiel „The Recurrence dimension is for CAPEX lines only. Leave it out.“ Der Export lässt eine solche Zelle leer: Ein ausgeblendeter Wert einer Zeile wird nicht exportiert, und ein Laden lässt ihn unverändert. Die Einstellung finden Sie unter [Analysedimensionen](analytics.md#opex-oder-capex-dimensionen).
 - Ein Wert, der nur für die andere Zeilenart verwendet wird, ist ein Zeilenfehler in seiner Zelle `analytics:<code>`, zum Beispiel „Internes Personal is for OPEX lines only. Pick a value for CAPEX lines.“ Eine Zeile behält den Wert, den sie bereits hat. Werte, die der Import anlegt, werden für OPEX und CAPEX verwendet. Die Einstellung finden Sie unter [Analysedimensionen](analytics.md#opex-oder-capex-werte).
@@ -163,17 +163,17 @@ Diese Zeilen erscheinen unter den **Fehlern** der Prüfung, wie jede andere abge
 
 Die Datei zu öffnen und zu speichern lässt sie ladbar, als CSV wie als `.xlsx`. Beide Programme behalten die Spalten, das Trennzeichen und die Werte.
 
-In einer Arbeitsmappe liest KANAP das erste Blatt. Hat die Arbeitsmappe weitere Blätter, nennt die Prüfung das gelesene Blatt. Ein Betrag oder ein Datum, das in einer Zelle als Wert steht, wird genau so gelesen, ohne Frage nach Dezimalzeichen oder Tagesreihenfolge. Eine alte Excel-Datei (`.xls`) wird abgelehnt: Speichern Sie sie als `.xlsx` oder CSV.
+In einer Arbeitsmappe liest Kadratis das erste Blatt. Hat die Arbeitsmappe weitere Blätter, nennt die Prüfung das gelesene Blatt. Ein Betrag oder ein Datum, das in einer Zelle als Wert steht, wird genau so gelesen, ohne Frage nach Dezimalzeichen oder Tagesreihenfolge. Eine alte Excel-Datei (`.xls`) wird abgelehnt: Speichern Sie sie als `.xlsx` oder CSV.
 
 Ein Datum oder ein Betrag als Text, den die Datei nicht selbst entscheiden kann, wird so gelesen, wie der Export ihn geschrieben hat, dann in der Sprache, in der die Oberfläche angezeigt wird. Jedes Datum mit einem Tag bis 12 ist mehrdeutig (`01/03/2027` ist auf Französisch der 1. März und auf Englisch der 3. Januar), und ein Betrag wie `12,280` ebenfalls. Die Prüfung sagt, wie sie gelesen wurden, und bietet eine Schaltfläche zum Wechseln der Lesart.
 
-Eine Spalte, die KANAP nicht kennt, wird mit einer Warnung ignoriert. Eine Spalte, die wie eine falsch geschriebene Betragsspalte aussieht, zum Beispiel `budjet_2027`, lehnt die ganze Datei ab. Auch eine Spalte `analytics:<code>`, die keine aktivierte Dimension benennt, lehnt die ganze Datei ab, mit „Unknown dimension 'x'.“
+Eine Spalte, die Kadratis nicht kennt, wird mit einer Warnung ignoriert. Eine Spalte, die wie eine falsch geschriebene Betragsspalte aussieht, zum Beispiel `budjet_2027`, lehnt die ganze Datei ab. Auch eine Spalte `analytics:<code>`, die keine aktivierte Dimension benennt, lehnt die ganze Datei ab, mit „Unknown dimension 'x'.“
 
 ## Dateien aus früheren Versionen
 
 Eine Datei in einem älteren Format wird als Ganzes abgelehnt: die Positionsdateien mit Spalten der Art `y_budget` und die Datei der Budgetzeilen mit den Spalten `measure` und `jan` … `dec`. Der Bildschirm zeigt diese Meldung:
 
-> Diese Datei stammt aus einer früheren Version von KANAP. Exportieren Sie eine neue Datei aus dieser Liste, übertragen Sie Ihre Änderungen hinein und importieren Sie sie erneut.
+> Diese Datei stammt aus einer früheren Version von Kadratis. Exportieren Sie eine neue Datei aus dieser Liste, übertragen Sie Ihre Änderungen hinein und importieren Sie sie erneut.
 
 Eine CAPEX-Datei, die exportiert wurde, bevor Anlagentyp, Investitionsart und Priorität zu Dimensionen wurden, erkennbar an ihren drei Spalten `ppe_type`, `investment_type` und `priority` zusammen, wird ebenfalls als Ganzes abgelehnt. Diese Werte stehen jetzt in Dimensionsspalten. Eine oder zwei dieser Spalten allein sind unbekannte Spalten und werden mit einer Warnung ignoriert. Der Bildschirm zeigt diese Meldung:
 
@@ -183,7 +183,7 @@ Exportieren Sie eine neue Datei und übertragen Sie Ihre Zeilen hinein.
 
 Eine OPEX- oder CAPEX-Datei, die exportiert wurde, bevor es die Spalte `nature` gab, wird angenommen. Ihre Zeilen werden als OPEX-Zeilen gelesen, oder als CAPEX-Zeilen, wenn der Filter **Typ** der Liste nur CAPEX behält, und ihre Nummern `OPX-12` und `CPX-3` bezeichnen weiterhin ihre Budgetzeilen: Importieren Sie eine frühere OPEX-Datei mit der Liste auf OPEX oder beiden Typen und eine frühere CAPEX-Datei mit der auf CAPEX gefilterten Liste. Ihre Zellen `kanap_token` bleiben gültig. Eine bloße Zahl behält in einer solchen Datei ihre frühere Bedeutung: Auf CAPEX gefiltert ist `3` die Budgetzeile `CPX-3`, sonst ist sie die Nummer der OPEX-Zeile.
 
-KANAP erkennt die Spalte `nature` an ihrem Namen, unabhängig von Groß- und Kleinschreibung. Hat eine frühere Datei eine eigene Spalte namens Nature, benennen Sie diese vor dem Import um: KANAP würde diese Spalte als Art jeder Budgetzeile lesen und ihre Werte ablehnen.
+Kadratis erkennt die Spalte `nature` an ihrem Namen, unabhängig von Groß- und Kleinschreibung. Hat eine frühere Datei eine eigene Spalte namens Nature, benennen Sie diese vor dem Import um: Kadratis würde diese Spalte als Art jeder Budgetzeile lesen und ihre Werte ablehnen.
 
 ## Ein ganzes Budget laden
 

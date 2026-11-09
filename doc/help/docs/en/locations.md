@@ -25,7 +25,7 @@ While the location is being created, the header shows **Create** and **Cancel** 
 The list gives you a searchable overview of every registered location.
 
 **Default columns**:
-- **Reference**: The reference KANAP assigns (`LOC-4`). Click it to open the workspace.
+- **Reference**: The reference Kadratis assigns (`LOC-4`). Click it to open the workspace.
 - **Name**: Display name
 - **Hosting Type**: On-prem, colocation, public cloud, etc.
 - **Provider / Company**: Cloud provider for cloud-type locations, or operating company for on-prem locations

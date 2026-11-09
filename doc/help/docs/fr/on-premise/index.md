@@ -1,6 +1,6 @@
 # Déploiement on-premise
 
-KANAP peut être déployé on-premise en **mode single-tenant**. Vous fournissez votre propre PostgreSQL, un stockage compatible S3 et un reverse proxy TLS. KANAP s'occupe du reste : les migrations s'exécutent automatiquement, le tenant et l'utilisateur administrateur sont créés au premier démarrage. Le nombre d'utilisateurs n'est pas limité.
+Kadratis peut être déployé on-premise en **mode single-tenant**. Vous fournissez votre propre PostgreSQL, un stockage compatible S3 et un reverse proxy TLS. Kadratis s'occupe du reste : les migrations s'exécutent automatiquement, le tenant et l'utilisateur administrateur sont créés au premier démarrage. Le nombre d'utilisateurs n'est pas limité.
 
 ## Guides
 
@@ -29,7 +29,7 @@ KANAP peut être déployé on-premise en **mode single-tenant**. Vous fournissez
 
 ## Notes rapides
 
-- **Versions.** KANAP publie une version environ une fois par mois (`26.10.1` est la première). Vous installez la branche `stable`, qui pointe toujours vers la dernière version publiée, et vous mettez à jour en la récupérant après avoir lu `CHANGELOG.md`. Mettez à jour au moins une fois par mois. Voir [Opérations](operations.md#procedure-de-mise-a-jour).
+- **Versions.** Kadratis publie une version environ une fois par mois (`26.10.1` est la première). Vous installez la branche `stable`, qui pointe toujours vers la dernière version publiée, et vous mettez à jour en la récupérant après avoir lu `CHANGELOG.md`. Mettez à jour au moins une fois par mois. Voir [Opérations](operations.md#procedure-de-mise-a-jour).
 - **Plateforme.** L'exemple utilise Ubuntu 26.04 LTS (Ubuntu 24.04 fonctionne). Tout système avec Docker Engine 24+ et le plugin Docker Compose 2.20 ou plus récent (les versions actuelles sont en 5.x) est pris en charge.
 - **Stockage.** L'exemple exécute RustFS sur le serveur. Tout stockage compatible S3 convient, et un MinIO existant continue de fonctionner.
 - **Réseaux internes.** Aucun DNS public n'est nécessaire. Utilisez un nom de votre DNS d'entreprise (ou une entrée du fichier hosts pour un test) avec un certificat de votre autorité interne. Voir [Nom et certificat](installation.md#nom-et-certificat).

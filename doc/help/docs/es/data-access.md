@@ -2,7 +2,7 @@
 
 Los roles indican lo que una persona puede hacer en cada módulo. El acceso a los datos indica en qué parte del presupuesto puede hacerlo. Con él, el responsable de TI de una filial gestiona el presupuesto de esa filial sin ver el de las demás, y un director lee las líneas de sus propios centros de coste.
 
-El acceso a los datos se aplica a las líneas presupuestarias (OPEX y CAPEX) y a los contratos, y a todo lo que los muestra: listas, totales, informes, búsqueda, Plaid, exportaciones. Los demás módulos funcionan como antes para todos.
+El acceso a los datos se aplica a las líneas presupuestarias (OPEX y CAPEX) y a los contratos, y a todo lo que los muestra: listas, totales, informes, búsqueda, Kad, exportaciones. Los demás módulos funcionan como antes para todos.
 
 Cada persona empieza con **Todos los datos**. Nada cambia mientras un administrador no limite a nadie.
 
@@ -176,7 +176,7 @@ Cada cambio del acceso de una persona queda registrado en el [Registro de audito
 
 ## Preguntar al asistente
 
-[Plaid](ai-assistant.md#tool-calls) lee esta página y la pestaña Acceso de las empresas para un administrador de usuarios con acceso a todos los datos. Pregunte, por ejemplo: «¿Quién está limitado a Alpha Spain?», «¿Qué personas limitadas no tienen ningún nodo?» o «¿Qué puede ver Marta Ruiz?» Los cambios en el acceso de una persona se quedan en las pantallas descritas aquí.
+[Kad](ai-assistant.md#tool-calls) lee esta página y la pestaña Acceso de las empresas para un administrador de usuarios con acceso a todos los datos. Pregunte, por ejemplo: «¿Quién está limitado a Alpha Spain?», «¿Qué personas limitadas no tienen ningún nodo?» o «¿Qué puede ver Marta Ruiz?» Los cambios en el acceso de una persona se quedan en las pantallas descritas aquí.
 
 ## Lo que ve una persona limitada { #what-a-limited-person-sees }
 
@@ -192,7 +192,7 @@ Para una persona limitada, el presupuesto y los contratos solo contienen lo que 
 - Un contrato oculto aparece como «Contrato fuera de su acceso», sin enlace.
 - Las listas de enlaces (las líneas de un contrato, una aplicación, un servidor, una tecnología, un proyecto o una solicitud) muestran los enlaces visibles y después un número como «y 3 líneas fuera de su acceso». Ni nombre, ni importe.
 - El contrato de una línea visible se abre en solo lectura. Sus adjuntos y enlaces documentales siguen cerrados, con un número como «2 adjuntos, reservados a las personas que ven este contrato».
-- La búsqueda, Plaid, MCP y las exportaciones no muestran ningún rastro de un elemento oculto.
+- La búsqueda, Kad, MCP y las exportaciones no muestran ningún rastro de un elemento oculto.
 
 Estos números aparecen para las personas que leen el presupuesto pero no esas líneas. Una persona sin el derecho de presupuesto no ve ninguna línea presupuestaria en los paneles de aplicaciones, servidores y proyectos, ni ningún número.
 
@@ -226,8 +226,8 @@ Los controles que acompañan a estas operaciones (las vistas previas de impacto,
 
 ## Cuando el acceso a los datos no está disponible
 
-Limitar el acceso a los datos requiere un paso único en el servidor de base de datos. Mientras no se haya hecho, **Limitado a** aparece en gris en la ventana del usuario, con «Limitar el acceso a los datos requiere un paso único en la base de datos, realizado por la persona que gestiona KANAP.» y un enlace a esta página. **Administración > Acceso a los datos** muestra el mismo mensaje, con lo que falta.
+Limitar el acceso a los datos requiere un paso único en el servidor de base de datos. Mientras no se haya hecho, **Limitado a** aparece en gris en la ventana del usuario, con «Limitar el acceso a los datos requiere un paso único en la base de datos, realizado por la persona que gestiona Kadratis.» y un enlace a esta página. **Administración > Acceso a los datos** muestra el mismo mensaje, con lo que falta.
 
 En instalaciones locales, el paso está en la guía de instalación: [Acceso a los datos por ámbito](on-premise/installation.md#optional-data-scoped-access).
 
-Si el paso se deshace más tarde, por ejemplo tras restaurar una base en otro servidor, las personas limitadas se rechazan con «El acceso a los datos no está disponible temporalmente. Contacte con la persona que administra KANAP.» Las personas con todos los datos siguen trabajando. Repetir el paso y reiniciar la API devuelve el acceso a las personas limitadas. Vea [Copia de seguridad y restauración](on-premise/operations.md#restauracion).
+Si el paso se deshace más tarde, por ejemplo tras restaurar una base en otro servidor, las personas limitadas se rechazan con «El acceso a los datos no está disponible temporalmente. Contacte con la persona que administra Kadratis.» Las personas con todos los datos siguen trabajando. Repetir el paso y reiniciar la API devuelve el acceso a las personas limitadas. Vea [Copia de seguridad y restauración](on-premise/operations.md#restauracion).

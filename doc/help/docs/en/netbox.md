@@ -1,8 +1,8 @@
 # Netbox synchronisation
 
-[Netbox](https://netboxlabs.com/docs/netbox/) describes your physical and virtual infrastructure: devices, virtual machines, racks, sites, addresses. KANAP reads that inventory and keeps its own assets in step with it.
+[Netbox](https://netboxlabs.com/docs/netbox/) describes your physical and virtual infrastructure: devices, virtual machines, racks, sites, addresses. Kadratis reads that inventory and keeps its own assets in step with it.
 
-The split of responsibility is deliberate. Netbox stays the reference for the equipment it describes, so the name, the serial number, the rack position or the primary address always come from there. KANAP keeps the business layer around each asset: environment, applications, contracts and costs, support, dates, relations, notes. You stop retyping the inventory, and you keep everything Netbox does not know about.
+The split of responsibility is deliberate. Netbox stays the reference for the equipment it describes, so the name, the serial number, the rack position or the primary address always come from there. Kadratis keeps the business layer around each asset: environment, applications, contracts and costs, support, dates, relations, notes. You stop retyping the inventory, and you keep everything Netbox does not know about.
 
 ## Where to find it
 
@@ -17,21 +17,21 @@ The split of responsibility is deliberate. Netbox stays the reference for the eq
 
 ## Before you start
 
-**A Netbox instance KANAP can reach.** KANAP calls Netbox from the server, not from your browser. The address you enter has to resolve and answer from wherever KANAP runs. In the cloud edition, that address must be a public one: a private or internal address is refused when you save the connection, and again before every call. In the on-premise edition, an address on your own network is exactly what is expected.
+**A Netbox instance Kadratis can reach.** Kadratis calls Netbox from the server, not from your browser. The address you enter has to resolve and answer from wherever Kadratis runs. In the cloud edition, that address must be a public one: a private or internal address is refused when you save the connection, and again before every call. In the on-premise edition, an address on your own network is exactly what is expected.
 
-**An API token with read access.** In Netbox, open the user menu at the top right, then **API tokens**, and create one. A read-only token is enough: KANAP never writes anything back to Netbox. Give the token a description so you can recognise it later, and rotate it the same way you would any other service credential.
+**An API token with read access.** In Netbox, open the user menu at the top right, then **API tokens**, and create one. A read-only token is enough: Kadratis never writes anything back to Netbox. Give the token a description so you can recognise it later, and rotate it the same way you would any other service credential.
 
-**A decision about the certificate.** If your Netbox uses a certificate KANAP does not trust, typically a self-signed or internal certificate, you can turn on **Ignore certificate errors**. The connection stays encrypted, but the certificate is no longer checked, so use it only for a certificate you know and trust on a network you control. On a public Netbox, install a trusted certificate instead.
+**A decision about the certificate.** If your Netbox uses a certificate Kadratis does not trust, typically a self-signed or internal certificate, you can turn on **Ignore certificate errors**. The connection stays encrypted, but the certificate is no longer checked, so use it only for a certificate you know and trust on a network you control. On a public Netbox, install a trusted certificate instead.
 
 ---
 
-## Connect KANAP to Netbox
+## Connect Kadratis to Netbox
 
 Go to **Administration > Integrations** and open the **Netbox inventory** card.
 
 | Field | What to enter |
 |-------|---------------|
-| **Enable Netbox synchronisation** | The master switch. When it is off, KANAP never calls Netbox, by hand or on a schedule. |
+| **Enable Netbox synchronisation** | The master switch. When it is off, Kadratis never calls Netbox, by hand or on a schedule. |
 | **Netbox address** | The address you use to open Netbox in a browser, for example `https://netbox.example.com`. |
 | **API token** | The token you created in Netbox. It is stored encrypted and never shown again. Leave the field empty when saving to keep the token already stored. |
 | **Request timeout (seconds)** | How long to wait for Netbox before giving up, between 5 and 120. Leave it empty to use 30. |
@@ -56,15 +56,15 @@ One extra row sits with the roles: **Virtual machines**. Every virtual machine N
 
 Each row shows how many devices and virtual machines it covers, so you can see what a choice is about to bring in. When a Netbox name clearly matches one of yours, the row is pre-filled and marked **Suggested**. A suggestion is only a proposal: nothing is used until you press **Save mappings**. While matches are waiting to be saved, a notice at the top of the tab says how many, with the save button next to it. If you press **Synchronise now** before any role or any site is saved, the preview says so and sends you back to this tab instead of listing every object as skipped.
 
-Mapping a site also brings its Netbox Locations across as sub-locations of the location you chose. Only the top-level Locations of that site, and only the ones an imported device actually sits in. An equipment parked deeper, in "Building A > Floor 1 > Room 101", is attached to "Building A": KANAP records where equipment is at the level of a site and a building, not a room. There is nothing to configure for this.
+Mapping a site also brings its Netbox Locations across as sub-locations of the location you chose. Only the top-level Locations of that site, and only the ones an imported device actually sits in. An equipment parked deeper, in "Building A > Floor 1 > Room 101", is attached to "Building A": Kadratis records where equipment is at the level of a site and a building, not a room. There is nothing to configure for this.
 
 ### Operating systems
 
 The third table matches each Netbox platform with a technology. Netbox says "Debian 12" where your technologies hold Debian with its version "12 (Bookworm)", and this is where the two are tied together. Every row shows how many objects run that platform.
 
-The list offers your technologies of the **Operating system** family, alone and with each of their versions, then the operating systems of the technology catalog you have not added yet. The value kept is the technology name, with its version when you pick one. At the next run, KANAP records that technology and version as the server's operating system, and adds a catalog entry to your technologies when you picked one.
+The list offers your technologies of the **Operating system** family, alone and with each of their versions, then the operating systems of the technology catalog you have not added yet. The value kept is the technology name, with its version when you pick one. At the next run, Kadratis records that technology and version as the server's operating system, and adds a catalog entry to your technologies when you picked one.
 
-Rows are pre-filled when KANAP can see the answer: the same name, or the single choice whose name starts with the platform name. "Debian 12" suggests "Debian 12 (Bookworm)". As with the other tables, a suggestion counts only once you press **Save mappings**.
+Rows are pre-filled when Kadratis can see the answer: the same name, or the single choice whose name starts with the platform name. "Debian 12" suggests "Debian 12 (Bookworm)". As with the other tables, a suggestion counts only once you press **Save mappings**.
 
 This table is not a filter. A platform left on **No match** never keeps anything out of the import. The equipment comes in and its operating system is left exactly as it is. Match the platform later and the next run fills the field.
 
@@ -92,26 +92,26 @@ The hosts are not attached: cluster members stay yours to manage from the cluste
 
 ## The first synchronisation
 
-Press **Synchronise now**. KANAP reads Netbox and shows **Review before applying** before writing anything.
+Press **Synchronise now**. Kadratis reads Netbox and shows **Review before applying** before writing anything.
 
 The preview is grouped:
 
 - **Sub-locations**: the shared rows the run creates, adopts or renames, listed once each with the location they belong to and how many equipment end up in them. Renaming a Location in Netbox shows up here as one line, not as every asset moving.
 - **To create**: objects with no counterpart in your workspace. They will be created.
 - **To update**: objects matched to an existing asset that differs. Nothing is changed yet, the values are written when you apply. Each one lists the fields that change, field by field, as `before → after`.
-- **Needs a decision**: objects KANAP will not decide on its own. Nothing happens to them until you settle them, here or later on the page.
+- **Needs a decision**: objects Kadratis will not decide on its own. Nothing happens to them until you settle them, here or later on the page.
 - **Skipped**: objects out of scope, counted by reason (role not mapped, site not mapped, no name in Netbox, ignored by you). The first 20 objects of each reason are named, then the count of the others.
 - **Missing from Netbox**: assets a previous run linked whose Netbox object is gone.
-- **Warnings**: values Netbox reports that KANAP could not take over, for example an operating system KANAP cannot find among its technologies. An object with nothing to change but something to report appears here too.
+- **Warnings**: values Netbox reports that Kadratis could not take over, for example an operating system Kadratis cannot find among its technologies. An object with nothing to change but something to report appears here too.
 
 Read it, then press **Apply**. Objects that are already identical are counted as unchanged and not touched at all. A large inventory is reviewed in batches of 500. **Apply this batch** writes only what the preview lists; everything else is left exactly as it is. The page then says how many objects still wait and offers **Review the next batch**, until nothing is left. Nothing you have not been shown is ever created or updated by a run you start yourself. Objects out of scope sit apart, under **Skipped**, so they never take the place of an object you need to read. The filter at the top narrows the list to an object or an asset name.
 
 ### Correct the preview before applying
 
-KANAP can only recognise an asset through its serial number, its host name or its name. Equipment you renamed, with none of these in common, shows up under **To create** and would be created a second time. The preview lets you settle that first. A row KANAP proposes something for has a button, **Link instead** under **To create** and **To update**, **Decide** on objects that need a decision. An object already linked by an earlier run has none: it is settled, and the row only shows what changes. A first match says what it rests on ("Recognised by its serial number"), so you can tell a wrong one. The button opens these choices:
+Kadratis can only recognise an asset through its serial number, its host name or its name. Equipment you renamed, with none of these in common, shows up under **To create** and would be created a second time. The preview lets you settle that first. A row Kadratis proposes something for has a button, **Link instead** under **To create** and **To update**, **Decide** on objects that need a decision. An object already linked by an earlier run has none: it is settled, and the row only shows what changes. A first match says what it rests on ("Recognised by its serial number"), so you can tell a wrong one. The button opens these choices:
 
 - **Link to an existing asset**: search for the asset and pick it. The row moves to **To update** and shows what Netbox will change on that asset, field by field, so you still read before you apply.
-- **Create a new asset**: for an object under **Needs a decision**, or one KANAP matched to the wrong asset.
+- **Create a new asset**: for an object under **Needs a decision**, or one Kadratis matched to the wrong asset.
 - **Do not import this object**: the object is left out of this synchronisation and the next ones. Nothing happens to any asset. It moves to **Settled by you** in the preview and, once applied, to **Ignored** on the page, where you can take it back later.
 
 A row you decided on says so and offers **Undo**. When several objects under **Needs a decision** have a single suggested asset, **Link the N objects that have a single suggestion** settles them all at once. They move to **To update**, where you read what changes before applying.
@@ -124,16 +124,16 @@ Applying runs in the background. The page follows it and refreshes on its own wh
 
 ## How objects are matched to existing assets
 
-A first import into a populated KANAP has to find the assets you already have instead of duplicating them. KANAP tries four things, in order, and stops at the first one that finds anything:
+A first import into a populated Kadratis has to find the assets you already have instead of duplicating them. Kadratis tries four things, in order, and stops at the first one that finds anything:
 
 1. **An existing link**. The object was already matched to an asset on a previous run.
 2. **The serial number**. This survives a rename on either side.
 3. **The host name**, taken whole. `par-esx-01.example.com` in Netbox is the asset whose host name is written that way. It is also the asset `par-esx-01` when `example.com` is one of your domains, because you declared that suffix yourself.
 4. **The asset name**, ignoring case, read the same way.
 
-If a step finds exactly one asset, that is the match. If it finds several, KANAP stops there and files the object under **To decide** with the candidates listed. It never merges on a guess.
+If a step finds exactly one asset, that is the match. If it finds several, Kadratis stops there and files the object under **To decide** with the candidates listed. It never merges on a guess.
 
-**Two signals are proposals, never matches.** When none of the four steps identifies the object, KANAP looks for a resemblance rather than creating straight away.
+**Two signals are proposals, never matches.** When none of the four steps identifies the object, Kadratis looks for a resemblance rather than creating straight away.
 
 - **A name that starts the same.** An asset whose name or host name matches only the first part of the Netbox name, up to the first dot, is offered as a candidate. In an inventory that names equipment `dl3.robot-15ms.ie2000`, that first part is a building and not a machine, and one asset named `dl3` would quietly absorb the whole floor.
 - **An address already held.** An asset that already carries the object's primary address is offered the same way. Addresses are reused, shared between cluster members, or simply out of date.
@@ -191,23 +191,23 @@ Assets imported before this rule, whose host name was cut at the first dot, are 
 | Decommissioning | Deprecated |
 | Anything else | Left unchanged, with a warning |
 
-**Offline, Failed and Paused stay visible.** The lifecycle remains Active, because the equipment is still in service on paper. KANAP keeps the Netbox status and shows it as a notice: on the asset, next to its source ("Netbox status: Failed"), in the **Linked** list, and under **Warnings** in the preview. Changing only this status in Netbox never rewrites the asset.
+**Offline, Failed and Paused stay visible.** The lifecycle remains Active, because the equipment is still in service on paper. Kadratis keeps the Netbox status and shows it as a notice: on the asset, next to its source ("Netbox status: Failed"), in the **Linked** list, and under **Warnings** in the preview. Changing only this status in Netbox never rewrites the asset.
 
 A synchronisation never sets an asset to **Retired**. Retiring equipment is a decision you take, from the **Missing from Netbox** list.
 
 **Environment is set once.** New assets get the environment chosen on the integration card. Later runs never touch it, so you can correct it and it stays corrected.
 
-**Values KANAP does not know are skipped, never invented.** A lifecycle status with no equivalent, or an operating system with no match in **Mappings** and no technology of that name in the **Operating system** family or the catalog, is left unchanged and reported as a warning. Match the platform, or add the technology, then run again. An IPv6 primary address is left out the same way, with the notice "The primary address is an IPv6 address, which is not imported yet."
+**Values Kadratis does not know are skipped, never invented.** A lifecycle status with no equivalent, or an operating system with no match in **Mappings** and no technology of that name in the **Operating system** family or the catalog, is left unchanged and reported as a warning. Match the platform, or add the technology, then run again. An IPv6 primary address is left out the same way, with the notice "The primary address is an IPv6 address, which is not imported yet."
 
 **Sub-locations are shared between equipment.** A sub-location is one row at a location, and every asset placed there points at it. Renaming the Location in Netbox renames that one row, so all the equipment carrying it follows at once, including equipment you filed there yourself. Nothing moves asset by asset.
 
-**A sub-location you created by hand is adopted, not duplicated.** When a Netbox Location has the same name as a sub-location you already use at that location, KANAP links the two: your row keeps its identity, takes the Netbox spelling, and is marked **Netbox** from then on. Your assets stay where they are.
+**A sub-location you created by hand is adopted, not duplicated.** When a Netbox Location has the same name as a sub-location you already use at that location, Kadratis links the two: your row keeps its identity, takes the Netbox spelling, and is marked **Netbox** from then on. Your assets stay where they are.
 
 **Nothing is ever deleted.** A Location removed from Netbox leaves its sub-location in place, with the assets that carry it. A sub-location linked to Netbox stays editable: rename it or delete it and the next run puts it back in line, creating it again if an asset still needs it.
 
 **A device with no Location keeps its sub-location.** Only a Location Netbox actually reports is written, the same rule as every other managed field. Virtual machines never receive one: a Netbox virtual machine carries no Location.
 
-**Two Locations with the same name at one site.** Netbox allows "Local technique" and "local technique" side by side, KANAP does not. The first one imported wins, and the other is reported as a warning. The same happens when two Netbox sites are mapped to the same location and both hold a Location of the same name.
+**Two Locations with the same name at one site.** Netbox allows "Local technique" and "local technique" side by side, Kadratis does not. The first one imported wins, and the other is reported as a warning. The same happens when two Netbox sites are mapped to the same location and both hold a Location of the same name.
 
 **If Netbox does not return its Locations**, the run carries on with the equipment and leaves every sub-location untouched, with a note in the preview saying so. A partial assignment would be worse than none.
 
@@ -215,7 +215,7 @@ A synchronisation never sets an asset to **Retired**. Retiring equipment is a de
 
 **A run that keeps failing stops.** After 10 objects in a row fail to save, the run stops and is reported as failed, instead of filling the list with error rows and then claiming success.
 
-**A partial read never marks anything missing.** If Netbox holds more pages than KANAP reads in one run, nothing is reported as missing and a notice sits next to the result.
+**A partial read never marks anything missing.** If Netbox holds more pages than Kadratis reads in one run, nothing is reported as missing and a notice sits next to the result.
 
 **A server restart does not block the page.** **Synchronise now** works again straight away; a run cut short by the restart is reported as stopped without finishing.
 
@@ -223,7 +223,7 @@ A synchronisation never sets an asset to **Retired**. Retiring equipment is a de
 
 ## Automatic synchronisation
 
-Turn **Automatic synchronisation** on in the integration card and KANAP runs the same job every hour, applying the changes without a preview. The switch is per tenant, and only tenants that turned it on are visited. The hourly job never does the first import: it starts once you have applied a synchronisation yourself and it finished without error. Until then the switch can be on and nothing runs. The same holds while a review is unfinished: as long as objects wait for their batch, the hourly job stays on hold, because it would import what nobody has read. It resumes once a synchronisation you apply leaves nothing waiting.
+Turn **Automatic synchronisation** on in the integration card and Kadratis runs the same job every hour, applying the changes without a preview. The switch is per tenant, and only tenants that turned it on are visited. The hourly job never does the first import: it starts once you have applied a synchronisation yourself and it finished without error. Until then the switch can be on and nothing runs. The same holds while a review is unfinished: as long as objects wait for their batch, the hourly job stays on hold, because it would import what nobody has read. It resumes once a synchronisation you apply leaves nothing waiting.
 
 Objects that need a decision are never resolved automatically. They pile up under **To decide** and wait for you.
 
@@ -246,7 +246,7 @@ The **Type** column reads the asset type of the linked asset, "Physical server" 
 | **To decide** | Several assets could be this object, two objects reached the same asset, an asset has a similar name, or an asset already holds the object's IP address. | **Link to...** one of the candidates, **Create new asset**, or **Ignore**. |
 | **Missing from Netbox** | The object is gone from Netbox. The asset is untouched. | **Mark asset as retired**, **Ignore**, or leave it. |
 | **Errors** | The object could not be written, with the reason in the message column. | Fix the cause and run again, or **Ignore** the object. |
-| **Ignored** | You told KANAP to leave this object alone. It is skipped by every run. | **Stop ignoring** puts it back in the list. When the record holds nothing to decide, it is removed instead and the object is judged afresh at the next synchronisation. |
+| **Ignored** | You told Kadratis to leave this object alone. It is skipped by every run. | **Stop ignoring** puts it back in the list. When the record holds nothing to decide, it is removed instead and the object is judged afresh at the next synchronisation. |
 | **Linked** | The object and the asset are matched and up to date. | Open either side from the row. |
 
 Each row links to the object in Netbox and to the asset, with its `AST-` reference.
@@ -255,7 +255,7 @@ Linking or creating from this page applies the Netbox values straight away. It r
 
 ### Missing from Netbox
 
-**KANAP never deletes an asset.** When an object disappears from Netbox, the asset, its links and its history stay exactly as they are, and the object is listed as missing so that you can decide. **Mark asset as retired** sets the lifecycle to Retired and keeps everything else.
+**Kadratis never deletes an asset.** When an object disappears from Netbox, the asset, its links and its history stay exactly as they are, and the object is listed as missing so that you can decide. **Mark asset as retired** sets the lifecycle to Retired and keeps everything else.
 
 Two safeguards apply. Nothing is reported as missing when the call to Netbox failed, or when Netbox returned an empty inventory: an outage is not a decommissioning. And an asset whose Netbox object disappeared is free again, so the same machine recreated in Netbox links back to it instead of creating a duplicate.
 
@@ -274,13 +274,13 @@ The tile stays out of the way when there is nothing to do: one line saying the s
 | What you see | What it usually means |
 |--------------|-----------------------|
 | Netbox rejected the API token | The token was truncated when pasted, has expired, or is restricted to another address. Create a fresh one in Netbox and save it again. |
-| This address points at a private network | The cloud edition only reaches public addresses. Either publish Netbox at an address KANAP can reach, or run KANAP on-premise next to it. |
-| The Netbox certificate could not be verified | Netbox presents a certificate KANAP does not trust. Install a trusted certificate, or turn on **Ignore certificate errors** if the certificate is one of yours. |
-| The Netbox server did not answer in time | Netbox is slow, unreachable, or behind a firewall that drops the call. Check from the KANAP server, then raise the request timeout if the instance is simply large. |
+| This address points at a private network | The cloud edition only reaches public addresses. Either publish Netbox at an address Kadratis can reach, or run Kadratis on-premise next to it. |
+| The Netbox certificate could not be verified | Netbox presents a certificate Kadratis does not trust. Install a trusted certificate, or turn on **Ignore certificate errors** if the certificate is one of yours. |
+| The Netbox server did not answer in time | Netbox is slow, unreachable, or behind a firewall that drops the call. Check from the Kadratis server, then raise the request timeout if the instance is simply large. |
 | Objects show as skipped, reason "Role not mapped" or "Site not mapped" | Expected for anything you left on **Do not import**. If it was not meant to be skipped, map the role or the site and run again. |
 | A warning says an operating system is not in your catalogue | The Netbox platform has no match in **Mappings > Operating systems**, and its name matches no technology of the **Operating system** family and no operating system of the catalog. Match it in the Mappings tab, or add the technology in **IT Landscape > Technologies**, then run again. The operating system is left unchanged until you do. |
 | "Netbox did not return its platforms" | The API token cannot read platforms. Give it permission on `dcim.platform` in Netbox, or leave it: the equipment still imports, and only the operating system matching is out of reach. |
-| An asset ends up with the whole Netbox name as its host name | The name does not end with a DNS suffix from your domain list, so KANAP keeps it as it is. That is the expected result for a name whose dots are part of the name. If it really is a domain, add it in **IT Landscape > Settings** and run again. |
+| An asset ends up with the whole Netbox name as its host name | The name does not end with a DNS suffix from your domain list, so Kadratis keeps it as it is. That is the expected result for a name whose dots are part of the name. If it really is a domain, add it in **IT Landscape > Settings** and run again. |
 | The run failed after a handful of objects | Ten objects in a row could not be saved, so the run stopped. The cause is usually the same for all of them, and the details are in the server log. |
 | "Netbox returned more pages than expected. Some objects were not looked at." | The inventory is larger than one run reads. What was read is applied, and nothing is marked missing. Narrow the scope in **Mappings** so the run covers what matters to you. |
 | A sub-location warns that its name is already used | Two Netbox Locations of that site share the name, or two mapped sites point at the same location and each holds a Location of that name. Rename one of them in Netbox, or merge them there. The equipment is imported either way, without a sub-location. |

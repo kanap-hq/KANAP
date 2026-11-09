@@ -95,7 +95,7 @@ Phasenvorlagen bieten:
 - Optionale Meilensteine, die mit jeder Phase verknüpft sind
 
 **Systemvorlagen**:
-- Von KANAP bereitgestellte vordefinierte Vorlagen
+- Von Kadratis bereitgestellte vordefinierte Vorlagen
 - Mit einem „System"-Chip gekennzeichnet
 - Können bearbeitet werden, bieten aber sinnvolle Standardwerte
 
@@ -178,7 +178,7 @@ Kategorie (z. B. „Digitale Transformation")
 - Verwenden Sie den Schalter einer Kategorie oder eines Streams
 - Ein ausgeschaltetes Element erscheint nicht in den Auswahl-Dropdowns
 
-Das Löschen einer Kategorie löscht ihre Streams. KANAP sagt es, bevor Sie bestätigen.
+Das Löschen einer Kategorie löscht ihre Streams. Kadratis sagt es, bevor Sie bestätigen.
 
 ### Aufgabentypen
 
@@ -193,11 +193,11 @@ Aufgabentypen sind die Liste, die für Portfolio-Aufgaben verwendet wird. Siehe 
 - Verwenden Sie den Schalter
 - Ein ausgeschalteter Aufgabentyp erscheint nicht in den Auswahl-Dropdowns
 
-Ein Aufgabentyp, den Aufgaben noch verwenden, kann nicht gelöscht werden. KANAP sagt es, bevor Sie bestätigen, und zählt die Aufgaben, die ihn verwenden. Schalten Sie ihn aus.
+Ein Aufgabentyp, den Aufgaben noch verwenden, kann nicht gelöscht werden. Kadratis sagt es, bevor Sie bestätigen, und zählt die Aufgaben, die ihn verwenden. Schalten Sie ihn aus.
 
 **Systemelemente**:
 - Eine Quelle, eine Kategorie oder ein Aufgabentyp mit der Markierung **System** kann bearbeitet oder ausgeschaltet werden. Löschen wird abgelehnt.
-- Quellen, Kategorien und Streams, die noch von Anfragen oder Projekten verwendet werden, können nicht gelöscht werden. Dasselbe gilt für einen Aufgabentyp, den Aufgaben noch verwenden. KANAP sagt es, bevor Sie bestätigen, und zählt die Verwendungen. Schalten Sie das Element aus.
+- Quellen, Kategorien und Streams, die noch von Anfragen oder Projekten verwendet werden, können nicht gelöscht werden. Dasselbe gilt für einen Aufgabentyp, den Aufgaben noch verwenden. Kadratis sagt es, bevor Sie bestätigen, und zählt die Verwendungen. Schalten Sie das Element aus.
 
 ### Best Practices
 

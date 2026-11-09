@@ -1,9 +1,9 @@
 ---
-title: "Ihr Portfolio in KANAP in zehn Minuten: mit Ihren eigenen Daten beginnen"
+title: "Ihr Portfolio in Kadratis in zehn Minuten: mit Ihren eigenen Daten beginnen"
 description: Die fünf Schritte des Pfads Projekte und Anfragen mit Ihren eigenen Daten, von einer ersten Anfrage zu ihrem Projekt, seinen Aufgaben und seinem Budget, dann Ihr Mitwirkendenprofil.
 ---
 
-# Ihr Portfolio in KANAP in zehn Minuten
+# Ihr Portfolio in Kadratis in zehn Minuten
 
 [Mit dem Beispiel entdecken](portfolio-example.md) · **Mit meinen eigenen Daten beginnen**
 
@@ -53,10 +53,10 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 
 ## Wie es weitergeht
 
-Ihr Portfolio ist in KANAP. Die beiden anderen Pfade dauern ebenfalls zehn Minuten, mit Ihren Daten:
+Ihr Portfolio ist in Kadratis. Die beiden anderen Pfade dauern ebenfalls zehn Minuten, mit Ihren Daten:
 
-- [Ihr IT-Budget in KANAP in zehn Minuten](budget-own-data.md)
-- [Ihre IT-Landschaft in KANAP in zehn Minuten](landscape-own-data.md)
+- [Ihr IT-Budget in Kadratis in zehn Minuten](budget-own-data.md)
+- [Ihre IT-Landschaft in Kadratis in zehn Minuten](landscape-own-data.md)
 
 Sind die fünf Schritte erledigt, bietet die Kachel diese Pfade an. Während der Testphase bietet sie außerdem **Kennenlerngespräch vereinbaren** an.
 

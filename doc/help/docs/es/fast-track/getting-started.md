@@ -1,11 +1,11 @@
 ---
-title: "Primeros pasos: Sus primeros 10 minutos en KANAP"
+title: "Primeros pasos: Sus primeros 10 minutos en Kadratis"
 description: Una guía rápida de incorporación para todos los usuarios. Panel de control, perfil, tareas, notificaciones y conceptos clave para sentirse cómodo rápidamente.
 ---
 
-# Primeros pasos: Sus primeros 10 minutos en KANAP
+# Primeros pasos: Sus primeros 10 minutos en Kadratis
 
-Bienvenido a KANAP. Esta guía le lleva por todo lo que necesita para sentirse productivo desde el primer día, independientemente de su rol. No se requiere conocimiento de administración, ni profundizaciones en módulos específicos. Solo lo esencial para sentirse cómodo.
+Bienvenido a Kadratis. Esta guía le lleva por todo lo que necesita para sentirse productivo desde el primer día, independientemente de su rol. No se requiere conocimiento de administración, ni profundizaciones en módulos específicos. Solo lo esencial para sentirse cómodo.
 
 !!! tip "Consejo"
     Todos los pasos clave en una sola página A4: imprímala, cuélguela, compártala con su equipo.
@@ -18,11 +18,11 @@ Para flujos de trabajo específicos por rol, consulte el [Portafolio: Inicio Rá
 
 ## El panorama general
 
-KANAP está organizado en torno a una estructura simple. La barra superior muestra las secciones a las que tiene acceso:
+Kadratis está organizado en torno a una estructura simple. La barra superior muestra las secciones a las que tiene acceso:
 
 | Área | Qué contiene |
 |------|-------------|
-| **Panel de control** | Su centro personal. Haga clic en el logotipo de KANAP o navegue a `/` |
+| **Panel de control** | Su centro personal. Haga clic en el logotipo de Kadratis o navegue a `/` |
 | **Portafolio** | Tareas, Solicitudes, Proyectos, Planificación, Informes, Colaboradores |
 | **Panorama IT** | Aplicaciones, Interfaces, Mapa de interfaces, Activos, Conexiones, Mapa de conexiones, Zonas de administración, Ubicaciones, Tecnologías, Incidentes, Fin de soporte, Vulnerabilidades, Configuración (listas y Netbox) |
 | **Base de conocimiento** | Documentos y plantillas con flujos de trabajo de revisión |
@@ -84,10 +84,10 @@ Actualice su información personal:
 - **Cargo**
 - **Teléfono de oficina** / **Teléfono móvil**
 
-Si su cuenta aún no tiene nombre, KANAP le pide su nombre y apellido tras iniciar sesión. **Más tarde** oculta la pregunta en este navegador.
+Si su cuenta aún no tiene nombre, Kadratis le pide su nombre y apellido tras iniciar sesión. **Más tarde** oculta la pregunta en este navegador.
 
 !!! info "Información"
-    Si su organización usa Microsoft Entra ID (SSO), algunos campos se sincronizan automáticamente y no pueden editarse en KANAP.
+    Si su organización usa Microsoft Entra ID (SSO), algunos campos se sincronizan automáticamente y no pueden editarse en Kadratis.
 
 ### Pestaña Notificaciones
 
@@ -132,7 +132,7 @@ También puede alternar el tema rápidamente desde la barra superior usando el i
 
 ## Paso 3: Comprenda los filtros de alcance
 
-Este es el concepto más importante para nuevos usuarios. Cada lista principal en KANAP (Tareas, Aplicaciones, Proyectos, Solicitudes) tiene un **filtro de alcance** en la parte superior:
+Este es el concepto más importante para nuevos usuarios. Cada lista principal en Kadratis (Tareas, Aplicaciones, Proyectos, Solicitudes) tiene un **filtro de alcance** en la parte superior:
 
 | Alcance | Qué muestra |
 |---------|-------------|
@@ -211,7 +211,7 @@ Para tareas de proyecto, el registro de tiempo es esencial: alimenta el generado
 
 ### Comparta una tarea
 
-¿Necesita incluir a alguien? Haga clic en **Compartir** en el encabezado de la tarea para enviar un enlace directo por correo a cualquier colega, incluso personas fuera de KANAP. Añada un mensaje personal si lo necesita.
+¿Necesita incluir a alguien? Haga clic en **Compartir** en el encabezado de la tarea para enviar un enlace directo por correo a cualquier colega, incluso personas fuera de Kadratis. Añada un mensaje personal si lo necesita.
 
 !!! info "Información"
     Compartir funciona en todas partes. Esto no es solo para tareas. Puede enviar enlaces a proyectos, solicitudes, contratos, aplicaciones: cualquier objeto del espacio de trabajo. Es la forma más rápida de dirigir a alguien al lugar correcto.
@@ -220,7 +220,7 @@ Para tareas de proyecto, el registro de tiempo es esencial: alimenta el generado
 
 ## Paso 5: Configure su perfil de colaborador
 
-Su perfil de Colaborador le dice a KANAP quién es usted en términos de planificación de proyectos. Es separado de su cuenta de usuario: se trata de **equipo, disponibilidad y competencias**.
+Su perfil de Colaborador le dice a Kadratis quién es usted en términos de planificación de proyectos. Es separado de su cuenta de usuario: se trata de **equipo, disponibilidad y competencias**.
 
 Navegue a **Portafolio > Colaboradores** y encuentre su nombre (o pida a su administrador que le añada).
 
@@ -289,7 +289,7 @@ El correo semanal y las notificaciones en tiempo real le mantienen informado sin
 
 | Quiero... | Ir a... |
 |-----------|---------|
-| Ver mi vista general | Panel de control (hacer clic en el logotipo de KANAP) |
+| Ver mi vista general | Panel de control (hacer clic en el logotipo de Kadratis) |
 | Crear una tarea rápidamente | Panel de control > botón Crear tarea |
 | Registrar tiempo rápidamente | Panel de control > botón Registrar tiempo |
 | Iniciar un nuevo documento | Panel de control > botón Nuevo documento |
@@ -299,7 +299,7 @@ El correo semanal y las notificaciones en tiempo real le mantienen informado sin
 | Configurar notificaciones | Avatar > Mi perfil > pestaña Notificaciones |
 | Configurar correo semanal | Avatar > Mi perfil > pestaña Notificaciones > Revisión semanal |
 | Cambiar tema (claro/oscuro) | Avatar > Mi perfil > pestaña Apariencia |
-| Ver la versión u obtener ayuda | Avatar > Acerca de KANAP |
+| Ver la versión u obtener ayuda | Avatar > Acerca de Kadratis |
 | Establecer mi disponibilidad | Portafolio > Colaboradores > su nombre |
 | Añadir mis competencias | Portafolio > Colaboradores > su nombre > pestaña Competencias |
 | Compartir un enlace a cualquier cosa | Abrir cualquier espacio de trabajo > Compartir |
@@ -308,4 +308,4 @@ El correo semanal y las notificaciones en tiempo real le mantienen informado sin
 ---
 
 !!! success "Está listo"
-    Ahora sabe cómo navegar KANAP, gestionar sus tareas, configurar su perfil y notificaciones, y configurar su perfil de colaborador. Comience con su panel de control cada mañana, mantenga sus tareas actualizadas y registre tiempo regularmente: el resto seguirá naturalmente.
+    Ahora sabe cómo navegar Kadratis, gestionar sus tareas, configurar su perfil y notificaciones, y configurar su perfil de colaborador. Comience con su panel de control cada mañana, mantenga sus tareas actualizadas y registre tiempo regularmente: el resto seguirá naturalmente.

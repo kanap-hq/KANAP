@@ -87,7 +87,7 @@ Lines created before the single series also had an `OPX-12` or `CPX-3` number. T
 - A link or bookmark to a former OPEX or CAPEX page opens the line
 - The quick search of the list finds a line by its former number
 - The budget file reads them in `item_number`. See [Load a budget from a spreadsheet](budget-file.md)
-- Plaid finds a line by either number. See [Plaid](ai-assistant.md#mentioning-records-with)
+- Kad finds a line by either number. See [Kad](ai-assistant.md#mentioning-records-with)
 
 ---
 
@@ -220,7 +220,7 @@ Click any row in the list to open the workspace. Its address names the line by i
 - Every change saves automatically. A **Saving...** / **Saved** hint shows in the header
 - Switching tabs, moving to the previous or next line, or closing the workspace saves pending edits first. If a save fails, you stay where you are and an error explains why, so no edit is lost silently
 - **Ctrl+S** (**Cmd+S** on Mac) saves immediately
-- If a save cannot go through right away because another save is in progress on the same data, KANAP retries it for you
+- If a save cannot go through right away because another save is in progress on the same data, Kadratis retries it for you
 - If a bulk budget operation is running (for example a column copy or reset in Budget Administration), edits here are paused with the message "Another budget operation is running. Try again when it has finished." Try again once it is done
 
 **Editing at the same time**:
@@ -292,7 +292,7 @@ The Budget tab holds the amounts of the line, year by year and column by column.
 
 - Use the year tabs at the top to switch between Y-2, Y-1, Y (current year), Y+1, and Y+2
 - Each year has its own amounts
-- Switching years saves your pending edits first. If a column still waits for your choice after someone else's change, KANAP asks first: **Change the year** drops your values in that column
+- Switching years saves your pending edits first. If a column still waits for your choice after someone else's change, Kadratis asks first: **Change the year** drops your values in that column
 
 **Budget columns**:
 
@@ -502,7 +502,7 @@ For example, a consultant full time from February to October counts 1 FTE in eac
 
 - **Counted**: a column with lines in people or days
 - **Zero**: a column whose lines are all in pieces. Its FTE is 0
-- **Blank**: a column without lines, a budget line without a version for that year, or a year after the line's end of validity. Its FTE cell stays empty, because KANAP cannot tell how many people it pays for
+- **Blank**: a column without lines, a budget line without a version for that year, or a year after the line's end of validity. Its FTE cell stays empty, because Kadratis cannot tell how many people it pays for
 - The FTE stays with the lines. After an edit by hand, a spread or a copy, the column keeps the FTE of its lines. A copy calculates the FTE again from the copied lines, with the working-day calendars of the destination year
 
 ---
@@ -545,8 +545,8 @@ The Allocations tab distributes the spend of a year across your companies and de
 
 **Turnover in several currencies**:
 
-- Each company enters its turnover in millions of its base currency. Before the split, KANAP converts every turnover to the reporting currency, at the rates of the budget version of the year: the rates fixed when its default column was frozen, otherwise the current rates of the year. See [Currency Settings](currencies.md)
-- When a currency has no rate for the year, the companies in that currency are left out of the split: they get no share, and the other companies share 100%. A warning above the table names each company left out. KANAP fetches the missing rate in the background, and the split corrects itself once the rate is available. A [manual rate](currencies.md#manual-rates) fixes it at once
+- Each company enters its turnover in millions of its base currency. Before the split, Kadratis converts every turnover to the reporting currency, at the rates of the budget version of the year: the rates fixed when its default column was frozen, otherwise the current rates of the year. See [Currency Settings](currencies.md)
+- When a currency has no rate for the year, the companies in that currency are left out of the split: they get no share, and the other companies share 100%. A warning above the table names each company left out. Kadratis fetches the missing rate in the background, and the split corrects itself once the rate is available. A [manual rate](currencies.md#manual-rates) fixes it at once
 - With **Manual by company** and the Turnover driver, when none of the selected companies has a rate, the allocation is refused with a message naming the currencies and the year. Enter the rate, or choose another driver
 
 **How to use it**:
@@ -612,7 +612,7 @@ The section is absent when the line has no supplier or there is nothing to sugge
 
 ### History
 
-The History tab lists the changes made to the line, the most recent at the top. Each entry shows the date and time, the author (a person, **System**, **Import**, or **Plaid for** a person), and each changed field with its value before and after. A change of amount names the year, the column and the values before and after.
+The History tab lists the changes made to the line, the most recent at the top. Each entry shows the date and time, the author (a person, **System**, **Import**, or **Kad for** a person), and each changed field with its value before and after. A change of amount names the year, the column and the values before and after.
 
 The changes to the parts of the line appear here too: amounts, dimensions, allocations, links, attachments, contacts, applications, technologies, assets and tasks. Anyone who can open the line can read its history. A record from a module you cannot read appears by its kind only, for example "a contract".
 

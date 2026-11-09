@@ -61,7 +61,7 @@ You fill in:
 
 ## Archiving a profile
 
-Archive is for retiring a profile you no longer want agents to use. Before it takes effect, KANAP warns you plainly:
+Archive is for retiring a profile you no longer want agents to use. Before it takes effect, Kadratis warns you plainly:
 
 > "{name}" will stop being available to agents. Any agent currently using it will run without shared context until you point it at another profile.
 

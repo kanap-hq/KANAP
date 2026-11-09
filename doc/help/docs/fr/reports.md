@@ -193,7 +193,7 @@ Vue détaillée des ventilations de refacturation d'une société avec départem
 
 **Carte récapitulative de la société** : Nom de la société, montant total, devise de reporting, effectif, utilisateurs IT, coût par utilisateur, coût par utilisateur IT et coûts IT vs chiffre d'affaires.
 
-**Chiffre d'affaires dans les rapports de refacturation** : chaque société saisit son chiffre d'affaires en millions de sa devise de base. Les deux rapports de refacturation le convertissent dans la devise de reporting, aux taux de la version budgétaire de l'année, comme les montants. Le chiffre d'affaires, le ratio coûts IT vs CA et le chiffre d'affaires global des tableaux de KPI utilisent la valeur convertie. Quand une devise n'a pas de taux pour l'année, les sociétés dans cette devise sont écartées des indicateurs de chiffre d'affaires, et un avertissement en haut du rapport nomme chacune d'elles. Le ratio global coûts IT vs CA est alors calculé sur les seules sociétés dont le chiffre d'affaires a été converti, pour les coûts comme pour le chiffre d'affaires. KANAP récupère le taux manquant en arrière-plan.
+**Chiffre d'affaires dans les rapports de refacturation** : chaque société saisit son chiffre d'affaires en millions de sa devise de base. Les deux rapports de refacturation le convertissent dans la devise de reporting, aux taux de la version budgétaire de l'année, comme les montants. Le chiffre d'affaires, le ratio coûts IT vs CA et le chiffre d'affaires global des tableaux de KPI utilisent la valeur convertie. Quand une devise n'a pas de taux pour l'année, les sociétés dans cette devise sont écartées des indicateurs de chiffre d'affaires, et un avertissement en haut du rapport nomme chacune d'elles. Le ratio global coûts IT vs CA est alors calculé sur les seules sociétés dont le chiffre d'affaires a été converti, pour les coûts comme pour le chiffre d'affaires. Kadratis récupère le taux manquant en arrière-plan.
 
 **Totaux par département** (lorsque activé) :
 
@@ -572,9 +572,9 @@ Une ligne **Total** épinglée donne, pour chaque paire, le total des jours, le 
 
 ## Demander à l'assistant
 
-[Plaid](ai-assistant.md) donne les chiffres de ces rapports, avec les mêmes droits : Comptes de consolidation, Top hausse / baisse (10 lignes par défaut), Effectifs par mois (chaque mois, la moyenne et le pic), Coût par ETP, Refacturation globale et Refacturation par société. Il mesure aussi plusieurs colonnes ou années dans une même réponse, par exemple le budget de chaque fournisseur sur trois ans. Pour la refacturation, il couvre OPEX et CAPEX quand vous ne nommez aucun des deux, et reprend les avertissements du rapport. Demandez par exemple : « Quelles lignes augmentent le plus du budget 2026 à la révision ? » ou « Combien est refacturé à chaque société en 2026, et combien chacune paie-t-elle ? »
+[Kad](ai-assistant.md) donne les chiffres de ces rapports, avec les mêmes droits : Comptes de consolidation, Top hausse / baisse (10 lignes par défaut), Effectifs par mois (chaque mois, la moyenne et le pic), Coût par ETP, Refacturation globale et Refacturation par société. Il mesure aussi plusieurs colonnes ou années dans une même réponse, par exemple le budget de chaque fournisseur sur trois ans. Pour la refacturation, il couvre OPEX et CAPEX quand vous ne nommez aucun des deux, et reprend les avertissements du rapport. Demandez par exemple : « Quelles lignes augmentent le plus du budget 2026 à la révision ? » ou « Combien est refacturé à chaque société en 2026, et combien chacune paie-t-elle ? »
 
-Plaid lit toutes les lignes budgétaires, y compris les lignes terminées. Les rapports budgétaires lisent les lignes encore actives au 1er janvier de l'année qui précède la première année affichée : une ligne terminée plus tôt compte donc dans la réponse de Plaid et pas dans le rapport.
+Kad lit toutes les lignes budgétaires, y compris les lignes terminées. Les rapports budgétaires lisent les lignes encore actives au 1er janvier de l'année qui précède la première année affichée : une ligne terminée plus tôt compte donc dans la réponse de Kad et pas dans le rapport.
 
 ## Fonctionnalités communes
 
@@ -586,7 +586,7 @@ Chaque rapport partage ces capacités via la barre d'outils partagée :
 - **Exporter le graphique en PNG** (icône image) : Télécharge le graphique en tant qu'image PNG
 - **Imprimer / Enregistrer en PDF** (icône imprimante) : Ouvre la boîte de dialogue d'impression du navigateur. Vous pouvez aussi ajouter `?print=1` à n'importe quelle URL de rapport pour déclencher l'impression automatiquement au chargement.
 
-KANAP construit le fichier du tableau à partir des mêmes chiffres que l'écran, avec les filtres à l'écran :
+Kadratis construit le fichier du tableau à partir des mêmes chiffres que l'écran, avec les filtres à l'écran :
 
 - **Valeurs** : les montants gardent leurs centimes, les ETP et les jours leurs décimales, les parts sont des pourcentages. L'écran les arrondit pour la lecture ; le fichier garde les valeurs, si bien qu'une somme dans Excel correspond au rapport.
 - **Ordre** : les lignes suivent l'ordre propre du rapport. Un tri cliqué dans un en-tête de colonne reste à l'écran.

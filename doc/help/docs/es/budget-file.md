@@ -1,8 +1,8 @@
 # Cargar un presupuesto desde una hoja de cálculo
 
-La mayoría de los equipos preparan su presupuesto en una hoja de cálculo: una fila por línea, una columna por año o por mes. KANAP conserva las mismas líneas en su lista de líneas presupuestarias, donde alimentan las asignaciones, los informes y la vista general.
+La mayoría de los equipos preparan su presupuesto en una hoja de cálculo: una fila por línea, una columna por año o por mes. Kadratis conserva las mismas líneas en su lista de líneas presupuestarias, donde alimentan las asignaciones, los informes y la vista general.
 
-El archivo de presupuesto une ambas partes. Exporte las líneas, cambie las celdas que le interesen en Excel o LibreOffice y vuelva a importar el archivo. KANAP compara cada celda con lo que contiene y solo escribe lo que ha cambiado.
+El archivo de presupuesto une ambas partes. Exporte las líneas, cambie las celdas que le interesen en Excel o LibreOffice y vuelva a importar el archivo. Kadratis compara cada celda con lo que contiene y solo escribe lo que ha cambiado.
 
 Un solo archivo contiene los dos tipos de línea. Su columna `nature` indica si una fila es una línea OPEX o CAPEX, y cada fila se comprueba con las reglas de su propio tipo. La lista exporta las líneas que muestra, OPEX y CAPEX juntas. Filtre la columna **Tipo** para exportar un solo tipo.
 
@@ -90,7 +90,7 @@ Estos son los nombres estándar. Su organización puede renombrar las cinco colu
 
 ### La última columna
 
-`kanap_token` lo escribe KANAP. Déjelo tal como está. KANAP lo usa para avisarle de que una línea ha cambiado después de su exportación. Déjelo vacío en una fila que añada.
+`kanap_token` lo escribe Kadratis. Déjelo tal como está. Kadratis lo usa para avisarle de que una línea ha cambiado después de su exportación. Déjelo vacío en una fila que añada.
 
 ## Qué significa una celda
 
@@ -111,7 +111,7 @@ Una columna ausente conserva todos los valores guardados de esa columna. Un arch
 - Una línea conserva su tipo. Una fila que nombra una línea existente con la otra `nature` se rechaza, por ejemplo "BL-125 is a CAPEX line, not an OPEX line. A file does not change the type of a line."
 - Cada fila se comprueba según su propio tipo: las dimensiones y los valores que puede tener, su cuenta, las columnas congeladas y la advertencia de duplicado. Una columna congelada para CAPEX rechaza un cambio solo en una línea CAPEX.
 - No hay otra clave. Una fila nueva que se parezca a una línea existente de su tipo, o a otra fila nueva del mismo tipo en el archivo, es una advertencia que puede ignorar.
-- Los proveedores se hacen coincidir por `supplier_erp_id` cuando está relleno, y si no por `supplier_name`. La carga crea un proveedor que el archivo nombra y que KANAP no tiene cuando **Crear los proveedores que faltan** está marcada. Sin esa opción, la verificación lista los que faltan y le pide crearlos en **Datos maestros > Proveedores**.
+- Los proveedores se hacen coincidir por `supplier_erp_id` cuando está relleno, y si no por `supplier_name`. La carga crea un proveedor que el archivo nombra y que Kadratis no tiene cuando **Crear los proveedores que faltan** está marcada. Sin esa opción, la verificación lista los que faltan y le pide crearlos en **Datos maestros > Proveedores**.
 - La carga crea un valor de dimensión que no existe y lo lista en la verificación. Las cuentas, los centros de coste, las empresas y los usuarios nunca se crean: un elemento desconocido es un error de fila que indica dónde añadirlo. Para una persona con el acceso a los datos limitado, solo en una dimensión con valores abiertos: vea [Acceso a los datos limitado](#limited-data-access).
 - Un valor, o `-`, en una dimensión que solo se usa para el otro tipo de línea es un error de fila en su celda `analytics:<code>`, por ejemplo "The Recurrence dimension is for CAPEX lines only. Leave it out." La exportación deja esa celda vacía: un valor oculto en una línea no se exporta, y una carga lo deja en su sitio. El ajuste está en [Dimensiones analíticas](analytics.md#dimensiones-opex-o-capex).
 - Un valor que se usa solo para el otro tipo de línea es un error de fila en su celda `analytics:<code>`, por ejemplo "Personal interno is for OPEX lines only. Pick a value for CAPEX lines." Una línea conserva el valor que ya tiene. Los valores que crea la carga se usan para OPEX y CAPEX. El ajuste está en [Dimensiones analíticas](analytics.md#valores-opex-o-capex).
@@ -163,17 +163,17 @@ Estas filas aparecen entre los **Errores** de la comprobación, como cualquier o
 
 Abrir el archivo y guardarlo lo deja cargable, en CSV o en `.xlsx`. Los dos programas conservan las columnas, el separador y los valores.
 
-En un libro, KANAP lee la primera hoja. Cuando el libro tiene otras hojas, la verificación indica qué hoja leyó. Un importe o una fecha introducidos como valor en una celda se leen tal cual, sin dudas sobre la marca decimal ni el orden de día y mes. Un archivo antiguo de Excel (`.xls`) se rechaza: guárdelo como `.xlsx` o CSV.
+En un libro, Kadratis lee la primera hoja. Cuando el libro tiene otras hojas, la verificación indica qué hoja leyó. Un importe o una fecha introducidos como valor en una celda se leen tal cual, sin dudas sobre la marca decimal ni el orden de día y mes. Un archivo antiguo de Excel (`.xls`) se rechaza: guárdelo como `.xlsx` o CSV.
 
 Una fecha o un importe escrito como texto, que el archivo no puede decidir por sí solo, se lee como lo escribió la exportación, y después en el idioma en que se muestra la pantalla. Toda fecha con un día igual o menor que 12 es ambigua (`01/03/2027` es el 1 de marzo en francés y el 3 de enero en inglés), y un importe escrito como `12,280` también lo es. La verificación indica cómo los ha leído y ofrece un botón para cambiar la lectura.
 
-Una columna que KANAP no conoce se ignora, con una advertencia. Una columna que parece una columna de importes mal escrita, como `budjet_2027`, rechaza el archivo entero. Una columna `analytics:<code>` que no nombra ninguna dimensión activada también rechaza el archivo entero, con "Unknown dimension 'x'."
+Una columna que Kadratis no conoce se ignora, con una advertencia. Una columna que parece una columna de importes mal escrita, como `budjet_2027`, rechaza el archivo entero. Una columna `analytics:<code>` que no nombra ninguna dimensión activada también rechaza el archivo entero, con "Unknown dimension 'x'."
 
 ## Archivos de versiones anteriores
 
 Un archivo con un formato anterior se rechaza por completo: los archivos de líneas con columnas del tipo `y_budget`, y el archivo de líneas presupuestarias con las columnas `measure` y `jan` … `dec`. La pantalla muestra este mensaje:
 
-> Este archivo procede de una versión anterior de KANAP. Exporte un archivo nuevo desde esta lista, copie en él sus cambios y vuelva a importarlo.
+> Este archivo procede de una versión anterior de Kadratis. Exporte un archivo nuevo desde esta lista, copie en él sus cambios y vuelva a importarlo.
 
 Un archivo CAPEX exportado antes de que el tipo de activo fijo, el tipo de inversión y la prioridad pasaran a ser dimensiones, reconocible por sus tres columnas `ppe_type`, `investment_type` y `priority` juntas, también se rechaza por completo. Estos valores van ahora en columnas de dimensión. Una o dos de estas columnas solas son columnas desconocidas, que se ignoran con una advertencia. La pantalla muestra este mensaje:
 
@@ -183,7 +183,7 @@ Exporte un archivo nuevo y copie en él sus filas.
 
 Se acepta un archivo OPEX o CAPEX exportado antes de que existiera la columna `nature`. Sus filas se leen como líneas OPEX, o como líneas CAPEX cuando el filtro **Tipo** de la lista conserva solo CAPEX, y sus números `OPX-12` y `CPX-3` siguen designando sus líneas: importe un archivo OPEX anterior con la lista en OPEX o en ambos tipos, y un archivo CAPEX anterior con la lista filtrada por CAPEX. Sus celdas `kanap_token` siguen siendo válidas. En un archivo así, un número solo conserva su significado anterior: con el filtro en CAPEX, `3` es `CPX-3`; si no, es el número de la línea OPEX.
 
-KANAP reconoce la columna `nature` por su nombre, sin distinguir mayúsculas y minúsculas. Si un archivo anterior tiene una columna propia llamada Nature, cámbiele el nombre antes de importarlo: KANAP leería esa columna como el tipo de cada línea y rechazaría sus valores.
+Kadratis reconoce la columna `nature` por su nombre, sin distinguir mayúsculas y minúsculas. Si un archivo anterior tiene una columna propia llamada Nature, cámbiele el nombre antes de importarlo: Kadratis leería esa columna como el tipo de cada línea y rechazaría sus valores.
 
 ## Cargar un presupuesto completo
 
