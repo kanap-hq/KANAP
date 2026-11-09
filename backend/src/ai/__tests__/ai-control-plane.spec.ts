@@ -2143,6 +2143,36 @@ async function testMockTicketingHelpdeskContextReads() {
   assert.equal(notFound.ok ? '' : notFound.errorCode, 'not_found');
 }
 
+async function testGlpiNotesRecogniseTheAgentUnderEitherName() {
+  const { manager } = createMemoryManager();
+  const context = createContext(manager);
+  const followup = (id: number, authorLabel: string) => ({
+    id,
+    content_html: 'Note',
+    author_id: 900 + id,
+    author_label: authorLabel,
+    editor_id: null,
+    date: '2026-06-09 08:12:00',
+    updated_date: '2026-06-09 08:12:00',
+    is_private: false,
+    image_targets: [],
+  });
+  const provider = new GlpiTicketingProvider(
+    {} as any,
+    {
+      initSession: async () => ({ baseUrl: 'https://glpi.example.test', sessionToken: 'session', appToken: null }),
+      killSession: async () => undefined,
+      // A GLPI account named after the product writes the agent's notes: the former name stays recognised.
+      getTicketFollowups: async () => [followup(1, 'KANAP agent'), followup(2, `${PRODUCT_NAME} agent`), followup(3, 'Alice')],
+      getTicketUsers: async () => [],
+    } as any,
+  );
+
+  const notes = await provider.listTicketNotes(context, { ticketId: '4' });
+  assert.equal(notes.ok, true);
+  assert.deepEqual(notes.ok ? notes.data.notes.map((note) => note.authorRole) : [], ['kanap_agent', 'kanap_agent', 'unknown']);
+}
+
 async function testGlpiTicketingHelpdeskContextReadsNormalizeSafeFieldsOnly() {
   const { manager } = createMemoryManager();
   const context = createContext(manager);
@@ -16671,6 +16701,7 @@ async function run() {
   await testGlpiTicketWebUrls();
   await testMockTicketingHelpdeskContextReads();
   await testGlpiTicketingHelpdeskContextReadsNormalizeSafeFieldsOnly();
+  await testGlpiNotesRecogniseTheAgentUnderEitherName();
   await testTicketingReadUatRequiresExplicitProviderKeyAndKeepsGlpiWrapper();
   await testTicketingTriageManualRequiresProviderKeyAndUsesNeutralOptions();
   await testListAgentDefinitionsOnVirginTenantStaysEmpty();

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { createHash } from 'crypto';
+import { PRODUCT_NAME } from '../../../config/product';
 import { AiSettingsService } from '../../ai-settings.service';
 import { GlpiService } from '../../glpi/glpi.service';
 import { GlpiAssignableGroup, GlpiCategory, GlpiConnectionOverrides, GlpiTechnician, GlpiTicket, GlpiTicketFollowup, GlpiTicketGroupAssociation, GlpiTicketUserAssociation } from '../../glpi/glpi.types';
@@ -572,7 +573,7 @@ function glpiNoteAuthorRole(
     return 'support';
   }
   const label = String(note.author_label ?? '').toLowerCase();
-  if (label.includes('kanap')) {
+  if (label.includes('kanap') || label.includes(PRODUCT_NAME.toLowerCase())) {
     return 'kanap_agent';
   }
   return 'unknown';

@@ -2,6 +2,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Features } from '../config/features';
+import { PRODUCT_NAME } from '../config/product';
 import { AI_SCREEN_LANGUAGES, type AiScreenLanguage } from './ai-unread-families';
 
 /**
@@ -259,9 +260,9 @@ function listMarkdownFiles(root: string, dir = ''): string[] {
     .sort();
 }
 
-/** The words of a filter: three letters or more, without the most common little words. */
+/** The words of a filter: three letters or more, without the most common little words and the product's names. */
 const STOP_WORDS = new Set([
-  'the', 'and', 'for', 'how', 'can', 'what', 'with', 'from', 'into', 'does', 'kanap',
+  'the', 'and', 'for', 'how', 'can', 'what', 'with', 'from', 'into', 'does', 'kanap', PRODUCT_NAME.toLowerCase(),
   'les', 'des', 'une', 'pour', 'dans', 'avec', 'comment', 'est', 'que', 'qui', 'sur', 'par', 'aux', 'faire',
   'der', 'die', 'das', 'und', 'wie', 'ein', 'eine', 'mit', 'fur', 'auf', 'den', 'dem',
   'los', 'las', 'del', 'como', 'una', 'con', 'por', 'para',

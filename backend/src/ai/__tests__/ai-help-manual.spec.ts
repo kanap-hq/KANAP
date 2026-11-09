@@ -1,6 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Features } from '../../config/features';
+import { PRODUCT_NAME } from '../../config/product';
 import {
   AiHelpManualService,
   HELP_SECTION_MAX_CHARS,
@@ -137,6 +138,13 @@ function testTheTableOfContents() {
   assert.ok(page.sections.includes('La fiche contrat › Relations'), 'with the subsection where they appear');
 }
 
+function testTheProductNamesAreNoSearchWords() {
+  // Every page names the product: a question that names it finds the pages of its other words.
+  const pages = (query: string) => manual.listTopics('en', query).pages.map((page) => page.page);
+  assert.deepEqual(pages(`contracts in ${PRODUCT_NAME}`), pages('contracts'));
+  assert.deepEqual(pages('contracts in KANAP'), pages('contracts'));
+}
+
 async function testOnPremisePagesInTheCloudOnly() {
   await withSingleTenant(false, () => {
     assert.ok(!manual.listTopics('en').pages.some((page) => page.page.startsWith('on-premise/')));
@@ -230,6 +238,7 @@ async function run() {
   testKnownSectionsInEnglishAndFrench();
   testTheCapAndTheSubsections();
   testTheTableOfContents();
+  testTheProductNamesAreNoSearchWords();
   await testOnPremisePagesInTheCloudOnly();
   testMkDocsSyntaxIsRemoved();
   await testTheToolsForEveryPlaidUser();
