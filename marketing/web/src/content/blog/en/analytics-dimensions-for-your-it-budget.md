@@ -13,7 +13,7 @@ To the question "who pays for this licence?", chargeback tools answer without he
 
 Analytics dimensions bring that second reading. Each dimension is one way of classifying lines, with its own values: what the money pays for, the part of IT it serves, why it is spent. A new workspace starts with four of them, all optional.
 
-## The mechanics in KANAP
+## The mechanics in Kadratis
 
 ### Dimensions and their values
 

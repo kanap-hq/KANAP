@@ -21,7 +21,7 @@ Wie auch immer der Zeitplan in Ihrem Land aussieht, eines wird sich nicht änder
 
 ## Eine Anwendung in vier Blöcken klassifizieren
 
-In KANAP folgt der Reiter **Compliance** jeder Anwendung der Reihenfolge einer Business-Impact-Analyse.
+In Kadratis folgt der Reiter **Compliance** jeder Anwendung der Reihenfolge einer Business-Impact-Analyse.
 
 ![Der Reiter Compliance von SAP S/4HANA: Kritikalität, Daten, Kontinuität und Wiederanlauf, mit dem Austausch mit einer Anwendung, die in einer späteren Welle geplant ist](/screenshots/blog/compliance-tab-2026-10.png)
 
@@ -29,11 +29,11 @@ In KANAP folgt der Reiter **Compliance** jeder Anwendung der Reihenfolge einer B
 
 **Daten.** Die Vertraulichkeitsstufe aus Ihren Datenklassen, ob personenbezogene Daten enthalten sind, die Datenresidenz, Land für Land.
 
-**Kontinuität und Wiederanlauf.** Die Wiederanlaufwelle sagt, in welcher Reihenfolge die Systeme zurückkommen, nicht wie schnell. Die RTO (Wiederanlaufzeit) und die RPO (akzeptabler Datenverlust) werden in Minuten, Stunden oder Tagen erfasst, zusammen mit dem Datum des letzten Wiederanlauftests. Erreicht die RTO die maximal tolerierbare Ausfallzeit der Geschäftsstufe, weist KANAP darauf hin.
+**Kontinuität und Wiederanlauf.** Die Wiederanlaufwelle sagt, in welcher Reihenfolge die Systeme zurückkommen, nicht wie schnell. Die RTO (Wiederanlaufzeit) und die RPO (akzeptabler Datenverlust) werden in Minuten, Stunden oder Tagen erfasst, zusammen mit dem Datum des letzten Wiederanlauftests. Erreicht die RTO die maximal tolerierbare Ausfallzeit der Geschäftsstufe, weist Kadratis darauf hin.
 
 **Prüfung.** Eine schriftliche Begründung erklärt die gewählten Stufen. Dann hält „Als geprüft markieren“ fest, wer die Klassifizierung geprüft hat, und wann.
 
-Was leer bleibt, steht auf „Nicht festgelegt“. KANAP wählt nie eine Standardstufe für Sie: Eine nicht klassifizierte Anwendung soll als solche sichtbar sein.
+Was leer bleibt, steht auf „Nicht festgelegt“. Kadratis wählt nie eine Standardstufe für Sie: Eine nicht klassifizierte Anwendung soll als solche sichtbar sein.
 
 ## Ihre Methode, nicht unsere
 
@@ -55,20 +55,20 @@ Die Prüfung ist kein jährlicher Stempel. Sobald sich nach der Prüfung eine Kr
 
 ## Was ein gepflegter Datensatz einer Tabelle voraushat
 
-Eine Tabelle für die Impact-Analyse klassifiziert Zeilen. In KANAP ist die klassifizierte Anwendung außerdem mit dem Rest der IT-Landschaft verknüpft, und genau dort beginnt sich die Klassifizierung auszuzahlen.
+Eine Tabelle für die Impact-Analyse klassifiziert Zeilen. In Kadratis ist die klassifizierte Anwendung außerdem mit dem Rest der IT-Landschaft verknüpft, und genau dort beginnt sich die Klassifizierung auszuzahlen.
 
-- **Abhängigkeiten beim Wiederanlauf.** Unter der Welle listet KANAP die Schnittstellen auf, die die Anwendung mit einer Anwendung verbinden, die in einer späteren Welle geplant ist. Im Bildschirmfoto oben kommt SAP S/4HANA in V1 zurück, tauscht aber Daten mit Salesforce aus, das in V2 geplant ist. Der Wiederanlaufplan sieht seine Reihenfolgeprobleme, bevor der Ernstfall eintritt.
+- **Abhängigkeiten beim Wiederanlauf.** Unter der Welle listet Kadratis die Schnittstellen auf, die die Anwendung mit einer Anwendung verbinden, die in einer späteren Welle geplant ist. Im Bildschirmfoto oben kommt SAP S/4HANA in V1 zurück, tauscht aber Daten mit Salesforce aus, das in V2 geplant ist. Der Wiederanlaufplan sieht seine Reihenfolgeprobleme, bevor der Ernstfall eintritt.
 - **Kritikalität der Datenflüsse.** Schnittstellen und Verbindungen erben die höchste Stufe der Anwendungen, die sie verbinden.
 - **Server.** Jeder Server zeigt sein Betriebssystem und die Daten des Supportendes.
 - **Lieferanten und Verträge.** Die Lieferkette ist bereits da: Jede Anwendung führt zu ihrem Hersteller, ihren Verträgen und deren Fristen.
 - **Dokumentation.** Wiederanlaufverfahren und Testberichte liegen in der Wissensdatenbank, mit der Anwendung verknüpft.
 - **Nachvollziehbarkeit.** Jede Änderung geht ins Audit-Protokoll.
 
-Und Plaid, der eingebaute KI-Agent, antwortet auf Basis derselben Daten: „Welche kritischen Anwendungen hatten seit einem Jahr keinen Wiederanlauftest?“, „Wo steht die Prüfung der Klassifizierung?“. Er kann auch Änderungen an der Klassifizierung vorbereiten, die Sie genehmigen. Die Prüfung selbst bleibt eine menschliche Handlung.
+Und Kad, der eingebaute KI-Agent, antwortet auf Basis derselben Daten: „Welche kritischen Anwendungen hatten seit einem Jahr keinen Wiederanlauftest?“, „Wo steht die Prüfung der Klassifizierung?“. Er kann auch Änderungen an der Klassifizierung vorbereiten, die Sie genehmigen. Die Prüfung selbst bleibt eine menschliche Handlung.
 
-## Was KANAP nicht tut
+## Was Kadratis nicht tut
 
-KANAP führt keine Risikoanalyse durch, ersetzt kein Informationssicherheits-Managementsystem und meldet keine Sicherheitsvorfälle an die Behörden. Es liefert das klassifizierte, verknüpfte und aktuelle Verzeichnis, auf dem diese Arbeiten aufbauen. Es ist das Rohmaterial der Risikoanalyse, nicht die Analyse selbst.
+Kadratis führt keine Risikoanalyse durch, ersetzt kein Informationssicherheits-Managementsystem und meldet keine Sicherheitsvorfälle an die Behörden. Es liefert das klassifizierte, verknüpfte und aktuelle Verzeichnis, auf dem diese Arbeiten aufbauen. Es ist das Rohmaterial der Risikoanalyse, nicht die Analyse selbst.
 
 ## Wo Sie anfangen
 

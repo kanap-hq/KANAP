@@ -15,17 +15,17 @@ series:
 
 Le budget de la DSI tient en deux enveloppes : le fonctionnement et l'investissement. Souvent, chacune vit dans son fichier, avec son calendrier et la personne qui la tient. Puis vient la revue avec le contrôle de gestion et ses questions : combien de fonctionnement, combien d'investissement, pour quoi faire, que coûte vraiment ce programme ?
 
-Chaque réponse demande alors une consolidation à la main. KANAP est l'endroit où la DSI prépare son budget, OPEX et CAPEX ensemble, simplement. Et parce que chaque ligne y est classée au fil de l'eau, la DSI arrive en revue avec des chiffres propres, cohérents et faciles à justifier.
+Chaque réponse demande alors une consolidation à la main. Kadratis est l'endroit où la DSI prépare son budget, OPEX et CAPEX ensemble, simplement. Et parce que chaque ligne y est classée au fil de l'eau, la DSI arrive en revue avec des chiffres propres, cohérents et faciles à justifier.
 
 ## OPEX ou CAPEX, la règle en clair
 
 L'**OPEX** fait fonctionner le système d'information pendant l'année : abonnements, maintenance, prestations récurrentes. Le **CAPEX** crée ou améliore un actif utilisé sur plusieurs années : serveurs, postes de travail, développement capitalisé. Ce qui se capitalise relève des règles comptables de l'entreprise, que la finance fixe avec la DSI.
 
-Une seconde question vient souvent se mêler à la première : run ou build ? Le run maintient les services existants, le build les crée ou les fait évoluer. Un projet de build porte souvent des deux natures : le développement capitalisé en CAPEX, la formation et la conduite du changement en OPEX. KANAP garde les deux réponses sur chaque ligne, dans deux champs distincts, mais permet leur consolidation.
+Une seconde question vient souvent se mêler à la première : run ou build ? Le run maintient les services existants, le build les crée ou les fait évoluer. Un projet de build porte souvent des deux natures : le développement capitalisé en CAPEX, la formation et la conduite du changement en OPEX. Kadratis garde les deux réponses sur chaque ligne, dans deux champs distincts, mais permet leur consolidation.
 
 ## Gérer le budget de la DSI dans une seule liste
 
-Dans KANAP, OPEX et CAPEX sont un simple champ de la ligne budgétaire. Les lignes des deux natures partagent les mêmes colonnes budgétaires (scénarii) par année, les mêmes ventilations entre sociétés et départements, les mêmes liens vers les applications, projets, contrats et fournisseurs. Le filtre de la colonne **Type** isole l'une ou l'autre en un clic.
+Dans Kadratis, OPEX et CAPEX sont un simple champ de la ligne budgétaire. Les lignes des deux natures partagent les mêmes colonnes budgétaires (scénarii) par année, les mêmes ventilations entre sociétés et départements, les mêmes liens vers les applications, projets, contrats et fournisseurs. Le filtre de la colonne **Type** isole l'une ou l'autre en un clic.
 
 ![La liste des lignes budgétaires de Fromage & Co : lignes OPEX et CAPEX ensemble, avec la colonne Type](/screenshots/blog/opex-capex-list-2026-10-17.png)
 
@@ -40,9 +40,9 @@ Le type OPEX ou CAPEX pilote certains champs de la fiche :
 
 Les dimensions analytiques classent les lignes pour le reporting, à côté de la structure comptable (le détail est dans [Axe analytique du budget IT : ce que coûte la cyber](/fr/blog/la-dimension-analytique-du-budget-it)). Chaque dimension répond à une question. Le bon jeu de dimensions dépend de chaque organisation ; voici un exemple tiré des bonnes pratiques, dont chacun peut s'inspirer.
 
-Pas besoin de partir de zéro ! Un nouvel espace KANAP démarre avec quatre dimensions recommandées et leurs valeurs (Nature de coût, Domaine IT, Motif et Priorité). Chacune se renomme, se complète et se règle ensuite comme vous l'entendez.
+Pas besoin de partir de zéro ! Un nouvel espace Kadratis démarre avec quatre dimensions recommandées et leurs valeurs (Nature de coût, Domaine IT, Motif et Priorité). Chacune se renomme, se complète et se règle ensuite comme vous l'entendez.
 
-**« À quoi sert cet investissement ? »** La dimension **Motif** : remplacement, capacité, productivité, sécurité, conformité, croissance. Réservée aux lignes CAPEX et rendue obligatoire, elle garantit que chaque nouvel investissement arrive classé, qu'il soit créé à l'écran, chargé par fichier, préparé par Plaid ou envoyé par l'API. Plus de relance pour compléter une colonne oubliée.
+**« À quoi sert cet investissement ? »** La dimension **Motif** : remplacement, capacité, productivité, sécurité, conformité, croissance. Réservée aux lignes CAPEX et rendue obligatoire, elle garantit que chaque nouvel investissement arrive classé, qu'il soit créé à l'écran, chargé par fichier, préparé par Kad ou envoyé par l'API. Plus de relance pour compléter une colonne oubliée.
 
 **« Qu'est-ce qui est incompressible ? »** La dimension **Priorité** : obligatoire, haute, moyenne, basse. C'est elle qui structure l'arbitrage en comité. Chez Fromage & Co, notre société d'exemple, les investissements obligatoires pèsent 1,13 M€ sur 2,34 M€ en 2026 : la migration S/4HANA, le renouvellement du data center et la segmentation réseau des usines.
 
@@ -68,7 +68,7 @@ Sur l'exemple, le remplacement représente 59 % de l'investissement 2026, la cro
 
 L'adresse de la page contient la nature et les filtres choisis. Le lien envoyé au contrôleur de gestion ouvre exactement la même vue ; l'export PDF présente le même contenu. Les rapports de refacturation proposent aussi l'OPEX, le CAPEX ou les deux ; le CAPEX y compte pour son montant de l'année.
 
-Enfin, toutes ces données peuvent alimenter des rapports sur mesure générés par votre outil d'IA favori, connecté directement à KANAP.
+Enfin, toutes ces données peuvent alimenter des rapports sur mesure générés par votre outil d'IA favori, connecté directement à Kadratis.
 
 ## Quand une dépense change de nature
 
@@ -81,15 +81,15 @@ Une prestation s'avère capitalisable, un investissement redevient du fonctionne
 
 La fenêtre propose un compte adapté à la nouvelle nature, et demande les dimensions obligatoires de cette nature quand il y en a. Le motif du changement va au journal d'audit. Un budget gelé reste intact : le changement est refusé tant qu'une colonne gelée porte des montants sur les années concernées.
 
-## Ce que KANAP ne fait pas
+## Ce que Kadratis ne fait pas
 
-KANAP ne calcule pas les amortissements et ne tient pas le registre des immobilisations : c'est le rôle de la comptabilité et de l'ERP. KANAP prépare et suit le budget de la DSI, OPEX et CAPEX, classé comme le contrôle de gestion le demande.
+Kadratis ne calcule pas les amortissements et ne tient pas le registre des immobilisations : c'est le rôle de la comptabilité et de l'ERP. Kadratis prépare et suit le budget de la DSI, OPEX et CAPEX, classé comme le contrôle de gestion le demande.
 
 ## Par où commencer
 
 1. **Partez des questions du contrôle de gestion** : celles qui reviennent à chaque revue budgétaire. Chacune deviendra une dimension, ou un filtre d'un rapport existant.
 2. **Ajustez les dimensions recommandées** : renommez ce qui doit l'être, ajoutez celles qui vous manquent (un Programme, par exemple), réservez au CAPEX ce qui ne concerne que l'investissement, et rendez obligatoires les dimensions indispensables.
-3. **Faites une passe sur les lignes existantes** pour renseigner les dimensions encore vides. Sous chaque dimension obligatoire, KANAP compte les lignes sans valeur et ouvre leur liste en un clic.
+3. **Faites une passe sur les lignes existantes** pour renseigner les dimensions encore vides. Sous chaque dimension obligatoire, Kadratis compte les lignes sans valeur et ouvre leur liste en un clic.
 4. **Vérifiez le résultat dans les rapports** avant la revue : ce qui reste en « Non affecté » montre ce qu'il faut encore classer.
 
-Pour voir tout cela sur un budget déjà classé, un essai gratuit de 14 jours de notre version hébergée donne accès aux données d'exemple du groupe fictif Fromage & Co, chargées en une minute. KANAP est entièrement open source : il s'installe aussi gratuitement sur vos propres serveurs.
+Pour voir tout cela sur un budget déjà classé, un essai gratuit de 14 jours de notre version hébergée donne accès aux données d'exemple du groupe fictif Fromage & Co, chargées en une minute. Kadratis est entièrement open source : il s'installe aussi gratuitement sur vos propres serveurs.

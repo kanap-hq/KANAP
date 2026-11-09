@@ -13,7 +13,7 @@ series:
   title: "Building the IT budget"
 ---
 
-The budget is built; it still has to be approved. KANAP makes the presentation easier with configurable reports that show the different facets of the budget in a visual, pragmatic way. Once the budget is approved, KANAP locks the columns involved so nothing moves afterwards.
+The budget is built; it still has to be approved. Kadratis makes the presentation easier with configurable reports that show the different facets of the budget in a visual, pragmatic way. Once the budget is approved, Kadratis locks the columns involved so nothing moves afterwards.
 
 ## Ready-made reports
 
@@ -63,7 +63,7 @@ Most reports open on All lines, with OPEX and CAPEX tabs, and "Budget comparison
 
 Every report exports: table as CSV, chart as PNG, full page as PDF. The deck comes together without screenshots, and you can even adjust a report live to answer ad-hoc questions.
 
-And for the question no report anticipated, Plaid, the built-in AI agent, queries the same data in plain language: "2027 budget total by supplier", "budgeted FTE by cost center". The answer names lines by their reference (`BL-12`, `BL-3`), which you find in the list right away.
+And for the question no report anticipated, Kad, the built-in AI agent, queries the same data in plain language: "2027 budget total by supplier", "budgeted FTE by cost center". The answer names lines by their reference (`BL-12`, `BL-3`), which you find in the list right away.
 
 ## The review phase
 

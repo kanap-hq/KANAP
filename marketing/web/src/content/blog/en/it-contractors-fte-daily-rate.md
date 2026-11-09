@@ -1,6 +1,6 @@
 ---
 title: "FTE and daily rates: external contractors in the IT budget"
-description: "Budget a service the way you buy it, in people, days and prices: KANAP derives the FTE, the cost per FTE and the daily rate, ready for the committee."
+description: "Budget a service the way you buy it, in people, days and prices: Kadratis derives the FTE, the cost per FTE and the daily rate, ready for the committee."
 date: 2026-10-17
 topic: cost
 author: Friedrich
@@ -15,7 +15,7 @@ series:
 
 During budget season, the question always comes up: how many contractors does IT pay for, at what cost, and what changes next year? Often, the answer lives in a spreadsheet, sometimes only in the signed contracts, or in a parallel tracker kept by procurement. And it never quite matches the budget.
 
-In KANAP, one entry is enough. You budget a service the way you buy it: people or days, a price, a period. KANAP derives the amount of each month, the FTE, the cost per FTE and the daily rate.
+In Kadratis, one entry is enough. You budget a service the way you buy it: people or days, a price, a period. Kadratis derives the amount of each month, the FTE, the cost per FTE and the daily rate.
 
 ## FTE, cost per FTE, daily rate
 
@@ -23,7 +23,7 @@ In KANAP, one entry is enough. You budget a service the way you buy it: people o
 - **Cost per FTE** is the average yearly cost of one full-time person.
 - **The average daily rate** is the cost of the services priced per day divided by the days bought.
 
-KANAP gives two readings of FTE. The **full-year average** feeds the reports and the comparisons from one year to the next. The **FTE over the period** says how many people work during the assignment: our consultant from February to October counts as 1.
+Kadratis gives two readings of FTE. The **full-year average** feeds the reports and the comparisons from one year to the next. The **FTE over the period** says how many people work during the assignment: our consultant from February to October counts as 1.
 
 This article is about external resources: staff augmentation, technical assistance, packages of days. That is where the IT budget is built in people and days, and where the committee's questions concentrate.
 
@@ -33,11 +33,11 @@ On the Budget tab of a budget line, each column (Budget, Expected landing, Revis
 
 **Full-time staff augmentation.** Two SAP developers at €480 per day, full time all year. Each month counts its working days: on a 218-day calendar, the line costs €209,280 and counts as 2 FTE.
 
-**Part time.** A project manager 5 days a month at €1,200 per day, from February to July: €6,000 a month. KANAP relates those 5 days to the working days of each month, a little over a quarter of full time during the assignment, and half that over the year.
+**Part time.** A project manager 5 days a month at €1,200 per day, from February to July: €6,000 a month. Kadratis relates those 5 days to the working days of each month, a little over a quarter of full time during the assignment, and half that over the year.
 
 **A package of days.** 30 days of expertise bought for the same period, at €1,200 per day: €36,000, spread over the months of the period and converted to FTE the same way.
 
-**Arrivals and departures.** Each line has its own period. At Fromage & Co, our sample company, the integration architect at €950 per day was planned for February in the budget. They arrive in April: you move the start date in the expected landing, and KANAP recomputes the amount and the FTE of the year, 0.92 in the budget and 0.75 in the landing.
+**Arrivals and departures.** Each line has its own period. At Fromage & Co, our sample company, the integration architect at €950 per day was planned for February in the budget. They arrive in April: you move the start date in the expected landing, and Kadratis recomputes the amount and the FTE of the year, 0.92 in the budget and 0.75 in the landing.
 
 The result shows as you type: the amount of each month, and the FTE under the lines. In the example below, the two developers, the project manager and the package of days come to €281,280 and 2.28 FTE, and the column card sums it up: "Quantity and price · 3 lines · 2.28 FTE". **Use for other columns too** carries the same lines over to the landing or the revision, which then only need adjusting.
 
@@ -87,13 +87,13 @@ Every figure can be justified. A group's name opens the list of its lines. A not
 
 ## What about internal teams?
 
-Today, KANAP tracks external FTE. A future version will bring in the time of internal resources separately, to read internal staff and contractors side by side.
+Today, Kadratis tracks external FTE. A future version will bring in the time of internal resources separately, to read internal staff and contractors side by side.
 
 Meanwhile, internal time can already be valued simply: one line per profile, with its daily rate, on the budget line of the project or service concerned. An average cost per profile is enough to steer, and avoids exposing individual pay to every reader of the budget.
 
-## What KANAP does not do
+## What Kadratis does not do
 
-KANAP is neither an HR information system nor a payroll tool, and it does not track time spent. KANAP's FTE are the ones the budget plans and pays for, line by line.
+Kadratis is neither an HR information system nor a payroll tool, and it does not track time spent. Kadratis' FTE are the ones the budget plans and pays for, line by line.
 
 ## Where to start
 
@@ -102,4 +102,4 @@ KANAP is neither an HR information system nor a payroll tool, and it does not tr
 3. **Carry the lines over to the landing** with Use for other columns too, then adjust arrival and departure dates during the year.
 4. **Read Staffing by month, then Cost per FTE**, and export the table to CSV for Excel, the page to PDF or just the charts to prepare your presentation.
 
-To see all of this on a budget already entered, a free 14-day trial of our hosted version gives access to the sample data of the fictional Fromage & Co group, loaded in a minute. KANAP is fully open source: it can also be installed for free on your own servers.
+To see all of this on a budget already entered, a free 14-day trial of our hosted version gives access to the sample data of the fictional Fromage & Co group, loaded in a minute. Kadratis is fully open source: it can also be installed for free on your own servers.

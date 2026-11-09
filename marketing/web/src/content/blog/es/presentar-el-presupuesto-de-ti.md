@@ -14,7 +14,7 @@ series:
   title: "Construir el presupuesto de TI"
 ---
 
-El presupuesto está construido, falta que lo aprueben. KANAP facilita la presentación con informes configurables que muestran las distintas facetas del presupuesto de forma visual y práctica. Una vez aprobado el presupuesto, KANAP bloquea las columnas afectadas para que nada se mueva después.
+El presupuesto está construido, falta que lo aprueben. Kadratis facilita la presentación con informes configurables que muestran las distintas facetas del presupuesto de forma visual y práctica. Una vez aprobado el presupuesto, Kadratis bloquea las columnas afectadas para que nada se mueva después.
 
 ## Informes listos para usar
 
@@ -64,7 +64,7 @@ La mayoría de los informes se abren en Todas las líneas, con las pestañas OPE
 
 Todos los informes se exportan: la tabla en CSV, el gráfico en PNG, la página completa en PDF. La presentación se arma sin capturas de pantalla, e incluso puede ajustar un informe en directo para responder a preguntas sobre la marcha.
 
-Y para la pregunta que ningún informe había previsto, Plaid, el agente IA integrado, consulta los mismos datos en lenguaje natural: «total del presupuesto 2027 por proveedor», «ETC presupuestados por centro de coste». La respuesta nombra las líneas por su referencia (`BL-12`, `BL-3`), que usted encuentra en la lista al instante.
+Y para la pregunta que ningún informe había previsto, Kad, el agente IA integrado, consulta los mismos datos en lenguaje natural: «total del presupuesto 2027 por proveedor», «ETC presupuestados por centro de coste». La respuesta nombra las líneas por su referencia (`BL-12`, `BL-3`), que usted encuentra en la lista al instante.
 
 ## La fase de revisión
 

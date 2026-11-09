@@ -21,7 +21,7 @@ Sea cual sea el calendario de su país, hay algo que no cambiará: antes de cual
 
 ## Clasificar una aplicación en cuatro bloques
 
-En KANAP, la pestaña **Conformidad** de cada aplicación sigue el orden de un análisis de impacto en el negocio.
+En Kadratis, la pestaña **Conformidad** de cada aplicación sigue el orden de un análisis de impacto en el negocio.
 
 ![La pestaña Conformidad de SAP S/4HANA: criticidad, datos, continuidad y recuperación, con el intercambio con una aplicación prevista en una ola posterior](/screenshots/blog/compliance-tab-2026-10.png)
 
@@ -29,11 +29,11 @@ En KANAP, la pestaña **Conformidad** de cada aplicación sigue el orden de un a
 
 **Datos.** El nivel de confidencialidad, a partir de sus clases de datos; si contiene datos personales; la residencia de los datos, país por país.
 
-**Continuidad y recuperación.** La ola de recuperación indica en qué orden vuelven los sistemas, no a qué velocidad. El RTO (objetivo de tiempo de recuperación) y el RPO (pérdida de datos aceptable) se introducen en minutos, horas o días, junto con la fecha de la última prueba de recuperación. Cuando el RTO alcanza el tiempo máximo de interrupción tolerable del nivel de negocio, KANAP lo señala.
+**Continuidad y recuperación.** La ola de recuperación indica en qué orden vuelven los sistemas, no a qué velocidad. El RTO (objetivo de tiempo de recuperación) y el RPO (pérdida de datos aceptable) se introducen en minutos, horas o días, junto con la fecha de la última prueba de recuperación. Cuando el RTO alcanza el tiempo máximo de interrupción tolerable del nivel de negocio, Kadratis lo señala.
 
 **Revisión.** Una justificación escrita explica los niveles elegidos. Después, «Marcar como revisado» registra quién revisó la clasificación y cuándo.
 
-Lo que se deja en blanco queda como «Sin definir». KANAP nunca elige un nivel por defecto en su lugar: una aplicación sin clasificar debe verse como tal.
+Lo que se deja en blanco queda como «Sin definir». Kadratis nunca elige un nivel por defecto en su lugar: una aplicación sin clasificar debe verse como tal.
 
 ## Su método, no el nuestro
 
@@ -55,20 +55,20 @@ La revisión no es un sello anual. En cuanto una criticidad, una ola, un objetiv
 
 ## Lo que un registro gobernado aporta frente a una hoja de cálculo
 
-Una hoja de cálculo de análisis de impacto clasifica filas. En KANAP, la aplicación clasificada está además vinculada al resto del panorama IT, y ahí es donde la clasificación empieza a dar frutos.
+Una hoja de cálculo de análisis de impacto clasifica filas. En Kadratis, la aplicación clasificada está además vinculada al resto del panorama IT, y ahí es donde la clasificación empieza a dar frutos.
 
-- **Dependencias de recuperación.** Bajo la ola, KANAP enumera las interfaces que vinculan la aplicación con una aplicación prevista en una ola posterior. En la captura de arriba, SAP S/4HANA vuelve en V1 pero intercambia datos con Salesforce, previsto en V2. El plan de recuperación ve sus problemas de orden antes del día en que se necesita.
+- **Dependencias de recuperación.** Bajo la ola, Kadratis enumera las interfaces que vinculan la aplicación con una aplicación prevista en una ola posterior. En la captura de arriba, SAP S/4HANA vuelve en V1 pero intercambia datos con Salesforce, previsto en V2. El plan de recuperación ve sus problemas de orden antes del día en que se necesita.
 - **Criticidad de los flujos.** Interfaces y conexiones heredan el nivel más alto de las aplicaciones que vinculan.
 - **Servidores.** Cada servidor muestra su sistema operativo y las fechas de fin de soporte.
 - **Proveedores y contratos.** La cadena de suministro ya está ahí: cada aplicación lleva a su fabricante, sus contratos y sus plazos.
 - **Documentación.** Los procedimientos de recuperación y los informes de prueba están en la base de conocimiento, vinculados a la aplicación.
 - **Trazabilidad.** Cada cambio va al registro de auditoría.
 
-Y Plaid, el agente IA integrado, responde sobre los mismos datos: «¿qué aplicaciones críticas llevan un año sin prueba de recuperación?», «¿en qué punto está la revisión de la clasificación?». También puede preparar cambios de clasificación, que usted aprueba. La revisión en sí sigue siendo una acción humana.
+Y Kad, el agente IA integrado, responde sobre los mismos datos: «¿qué aplicaciones críticas llevan un año sin prueba de recuperación?», «¿en qué punto está la revisión de la clasificación?». También puede preparar cambios de clasificación, que usted aprueba. La revisión en sí sigue siendo una acción humana.
 
-## Lo que KANAP no hace
+## Lo que Kadratis no hace
 
-KANAP no realiza el análisis de riesgos, no sustituye a un sistema de gestión de la seguridad de la información y no notifica incidentes a las autoridades. Aporta el inventario clasificado, vinculado y al día en el que se apoyan esos trabajos. Es la materia prima del análisis de riesgos, no el análisis en sí.
+Kadratis no realiza el análisis de riesgos, no sustituye a un sistema de gestión de la seguridad de la información y no notifica incidentes a las autoridades. Aporta el inventario clasificado, vinculado y al día en el que se apoyan esos trabajos. Es la materia prima del análisis de riesgos, no el análisis en sí.
 
 ## Por dónde empezar
 

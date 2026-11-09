@@ -16,9 +16,9 @@ series:
 
 Septiembre. Finanzas pide una primera versión del presupuesto 2027, y el Excel del año pasado sale del cajón: doscientas líneas, ocho pestañas, tres versiones que ya no coinciden. ¿Otra vez lo mismo?
 
-Esta serie recorre la preparación de un presupuesto OPEX completo en KANAP. Parte 1: hacer fiable el aterrizaje del año en curso. Parte 2: trasladar las cifras a 2027. Parte 3: presentar, defender, cerrar. El principio se mantiene de principio a fin: usted solo toca lo que cambia y KANAP se ocupa del resto, presentación incluida.
+Esta serie recorre la preparación de un presupuesto OPEX completo en Kadratis. Parte 1: hacer fiable el aterrizaje del año en curso. Parte 2: trasladar las cifras a 2027. Parte 3: presentar, defender, cerrar. El principio se mantiene de principio a fin: usted solo toca lo que cambia y Kadratis se ocupa del resto, presentación incluida.
 
-¿Sus líneas siguen en Excel? «Importar CSV» las carga de una vez y la revisión empieza el mismo día. KANAP comprueba el archivo completo antes de escribir nada y después escribe solo las celdas que cambiaron. El ir y venir con la hoja de cálculo sigue abierto durante toda la revisión.
+¿Sus líneas siguen en Excel? «Importar CSV» las carga de una vez y la revisión empieza el mismo día. Kadratis comprueba el archivo completo antes de escribir nada y después escribe solo las celdas que cambiaron. El ir y venir con la hoja de cálculo sigue abierto durante toda la revisión.
 
 ## El aterrizaje previsto, la columna que importa
 
@@ -54,7 +54,7 @@ Para contratistas, una cuota mensual fija o licencias por unidad, un importe anu
 
 ![Una línea de contratista construida con cantidad × precio: 2 personas a tiempo completo a 470 € al día durante 218 días laborables, 2 ETC en el año.](/screenshots/blog/budget-quantity-price-2026-10-13.png)
 
-Dos consultores a 650 € al día, a tiempo completo de marzo a diciembre: KANAP calcula cada mes a partir de los días laborables del calendario del país de la empresa pagadora, sin los festivos. Si la misión termina en octubre o la tarifa diaria se renegoció, cambie la fecha o el precio y el aterrizaje se recalcula. Se acabó rehacer la multiplicación a mano.
+Dos consultores a 650 € al día, a tiempo completo de marzo a diciembre: Kadratis calcula cada mes a partir de los días laborables del calendario del país de la empresa pagadora, sin los festivos. Si la misión termina en octubre o la tarifa diaria se renegoció, cambie la fecha o el precio y el aterrizaje se recalcula. Se acabó rehacer la multiplicación a mano.
 
 Los calendarios están en Datos maestros > Calendarios laborales. El calendario estándar de un país se crea junto con la empresa. Un calendario propio cubre una planta que cierra tres semanas en agosto.
 
@@ -70,7 +70,7 @@ Estos importes introducidos a mano están a salvo: la copia automática de la pa
 
 ## Consejo práctico: primero las monedas
 
-KANAP gestiona presupuestos en varias monedas, pero configúrelas antes. En Gestión presupuestaria → Administración → **Monedas**, defina la moneda de informes, las monedas por defecto de OPEX y CAPEX y la lista de monedas permitidas. Los tipos de cambio se sincronizan automáticamente por ejercicio fiscal y se congelan cuando usted congela la columna de presupuesto por defecto. Cada línea conserva su moneda. Los totales y los informes convierten a la moneda de informes.
+Kadratis gestiona presupuestos en varias monedas, pero configúrelas antes. En Gestión presupuestaria → Administración → **Monedas**, defina la moneda de informes, las monedas por defecto de OPEX y CAPEX y la lista de monedas permitidas. Los tipos de cambio se sincronizan automáticamente por ejercicio fiscal y se congelan cuando usted congela la columna de presupuesto por defecto. Cada línea conserva su moneda. Los totales y los informes convierten a la moneda de informes.
 
 ![Los ajustes de monedas: moneda de informes, monedas por defecto, monedas permitidas y los tipos de cambio de 2025 a 2027.](/screenshots/budget-currency-2026-10-13.png)
 

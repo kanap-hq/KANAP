@@ -1,6 +1,6 @@
 ---
-title: "IT contract management in KANAP"
-description: "Computed deadlines, recorded renewal decisions, commitments compared with the budget: IT contracts under control in KANAP."
+title: "IT contract management in Kadratis"
+description: "Computed deadlines, recorded renewal decisions, commitments compared with the budget: IT contracts under control in Kadratis."
 date: 2026-10-17
 topic: cost
 features: [budget, contracts]
@@ -16,15 +16,15 @@ series:
 
 Who has never let a contract slip past its cancellation deadline? The negotiation that follows is rarely pleasant. And indeed, it is not easy to keep track of dozens of contract deadlines, of contracts on tacit renewal or simply of subscriptions. These dates often live in signed PDFs, in a spreadsheet or with procurement.
 
-In KANAP, every date is computed from the contract. Every deadline reaches the right owner, with time to decide. And every contract compares easily with the budget, which makes anomalies easy to spot.
+In Kadratis, every date is computed from the contract. Every deadline reaches the right owner, with time to decide. And every contract compares easily with the budget, which makes anomalies easy to spot.
 
 ## Data entry: just a few fields
 
 A contract is created in a single form. Five fields are required: the supplier, the company that signed, the start date, the duration of a term and the currency. You then add the owner, the tacit renewal, the notice period, the yearly amount and the billing frequency.
 
-KANAP computes the rest: the successive terms, the cancellation deadline of each one and the state of the contract. Change the duration or the notice period, and every date follows.
+Kadratis computes the rest: the successive terms, the cancellation deadline of each one and the state of the contract. Change the duration or the notice period, and every date follows.
 
-At Fromage & Co, our sample company, SAP maintenance costs €350,000 a year. It runs from July 1 to June 30, with six months' notice and tacit renewal. KANAP works out that it can be cancelled until December 30, 2026. After that day, it renews until June 2028.
+At Fromage & Co, our sample company, SAP maintenance costs €350,000 a year. It runs from July 1 to June 30, with six months' notice and tacit renewal. Kadratis works out that it can be cancelled until December 30, 2026. After that day, it renews until June 2028.
 
 The contract overview says it in one sentence: "Cancellation possible until 30 Dec 2026 · in 74 days". A timeline shows the past terms, the current term and the next deadline. The following term stays dotted as long as it can still be avoided. A line of facts recalls how long the contract has been renewing.
 
@@ -52,25 +52,25 @@ The **To decide within 90 days** quick filter isolates the contracts that need a
 
 ## The decision: renew, renegotiate, terminate
 
-Beyond the list, KANAP asks the owner to decide and keeps a record of the decision.
+Beyond the list, Kadratis asks the owner to decide and keeps a record of the decision.
 
-So, 90 days before the cancellation deadline (a configurable window), KANAP creates a task for each contract awaiting a decision. It is assigned to the contract owner, due on the cancellation deadline. Hence the importance of an owner on every contract.
+So, 90 days before the cancellation deadline (a configurable window), Kadratis creates a task for each contract awaiting a decision. It is assigned to the contract owner, due on the cancellation deadline. Hence the importance of an owner on every contract.
 
 On the contract page, a box says what happens if nobody acts: "Without a decision, the contract renews for 12 months on 1 Jul 2027." The owner then chooses:
 
 - **Renew**: the renewal is confirmed for this term, and the task closes.
 - **Renegotiate**: the task stays open until the final decision, and the box reads "Renegotiation in progress".
-- **Terminate**: KANAP proposes the earliest end the notice allows. For SAP maintenance, that is June 30, 2027. An earlier date remains possible, with a warning: the supplier has to agree to it.
+- **Terminate**: Kadratis proposes the earliest end the notice allows. For SAP maintenance, that is June 30, 2027. An earlier date remains possible, with a warning: the supplier has to agree to it.
 
 Before a termination is confirmed, the box lists its consequences: the commitment of the year and the next, the applications that lose this contract, the assets that lose their support contract. In the SAP example, the 2027 commitment drops from €350,000 to €175,000, and the 2028 commitment falls to zero.
 
 ![The Terminate box of the SAP contract: the earliest end the notice allows and the consequences of the termination](/screenshots/blog/contracts-cancel-2026-10-17.png)
 
-Every decision is recorded: who, when, with what justification. "Renewal confirmed on 2 Oct 2026 by Sophie Laurent", for example. A decision taken too quickly can be undone as long as the deadline has not passed. After a termination, KANAP reminds you to send the letter before the deadline and to attach it to the contract.
+Every decision is recorded: who, when, with what justification. "Renewal confirmed on 2 Oct 2026 by Sophie Laurent", for example. A decision taken too quickly can be undone as long as the deadline has not passed. After a termination, Kadratis reminds you to send the letter before the deadline and to attach it to the contract.
 
 ## The contract against the budget
 
-The contract says what IT has committed to pay. The budget says what it has planned. KANAP compares the two, year by year.
+The contract says what IT has committed to pay. The budget says what it has planned. Kadratis compares the two, year by year.
 
 **Committed** is the contract's yearly amount spread over the months a term covers, prorated by days. The following years assume the renewal goes on until it is stopped. Nothing is committed after the contract ends.
 
@@ -88,9 +88,9 @@ The link works both ways. The contract's Budget tab shows its lines and their co
 
 A contract covers applications, and those applications point to clauses it must contain. Personal data calls for a GDPR data processing agreement and the data location. A critical application calls for a reversibility clause, an exit plan and an audit right. The contract's Compliance tab lists these points based on how the application has been classified. Each one is recorded as present, missing or not applicable, and the compliance register exports to CSV. We will come back to it in more detail in a coming article.
 
-## What KANAP does not do
+## What Kadratis does not do
 
-KANAP does not draft or sign contracts, and does not run the negotiation: that is the job of procurement and legal. The amount at signature applies to every term: an indexation or a price increase is budgeted on the linked lines. KANAP keeps the register, the deadlines, the decisions and the link with the budget.
+Kadratis does not draft or sign contracts, and does not run the negotiation: that is the job of procurement and legal. The amount at signature applies to every term: an indexation or a price increase is budgeted on the linked lines. Kadratis keeps the register, the deadlines, the decisions and the link with the budget.
 
 ## Where to start
 
@@ -99,4 +99,4 @@ KANAP does not draft or sign contracts, and does not run the negotiation: that i
 3. **Link the budget lines**, starting with the largest contracts. Then look at No budget line and Under-budgeted for the year you are preparing.
 4. **Start the week with To decide**: no deadline goes by without a decision.
 
-To see all of this on contracts already entered, a free 14-day trial of our hosted version gives access to the sample data of the fictional Fromage & Co group, loaded in a minute. KANAP is fully open source: it can also be installed for free on your own servers.
+To see all of this on contracts already entered, a free 14-day trial of our hosted version gives access to the sample data of the fictional Fromage & Co group, loaded in a minute. Kadratis is fully open source: it can also be installed for free on your own servers.

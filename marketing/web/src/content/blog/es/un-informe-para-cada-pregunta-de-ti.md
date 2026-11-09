@@ -1,6 +1,6 @@
 ---
 title: "Un informe para cada pregunta del departamento de TI"
-description: "El CIO, la jefa de proyecto, el responsable de equipo y el ingeniero tienen cada uno sus propias preguntas. Los informes de portafolio de KANAP las responden con un clic."
+description: "El CIO, la jefa de proyecto, el responsable de equipo y el ingeniero tienen cada uno sus propias preguntas. Los informes de portafolio de Kadratis las responden con un clic."
 date: 2026-09-23
 topic: portfolio
 author: Friedrich
@@ -13,7 +13,7 @@ Lunes, 9 de la mañana, la reunión semanal del departamento de TI. El CIO pasó
 
 Todos tienen una pregunta real. Cada uno la responde con sus propias herramientas, y la reunión pasa media hora conciliando cifras.
 
-Todas las respuestas ya existen en KANAP. Cada solicitud, proyecto y tarea deja allí un rastro: su creación, sus cambios de estado, su cierre, el tiempo registrado en ella. Los informes de portafolio leen ese historial y se lo muestran a cada persona desde el ángulo que le interesa.
+Todas las respuestas ya existen en Kadratis. Cada solicitud, proyecto y tarea deja allí un rastro: su creación, sus cambios de estado, su cierre, el tiempo registrado en ella. Los informes de portafolio leen ese historial y se lo muestran a cada persona desde el ángulo que le interesa.
 
 ![La página de informes de portafolio: la franja de los últimos 30 días, los elementos que requieren atención, la franja Por clasificar y las tarjetas de informes](/screenshots/blog/portfolio-hub.png)
 
@@ -72,4 +72,4 @@ Todos leen las mismas cifras, a partir de las mismas tareas. La reunión dura ve
 
 Los informes están en **Portafolio > Informes**. Requieren acceso de lectura a los informes de portafolio y funcionan en la nube y on-premise. Leen los datos que ya tiene: las tareas, proyectos, solicitudes y tiempos que sus equipos ya registran.
 
-El resto del portafolio se describe en la página [Portafolio](https://kanap.net/es/features/portfolio).
+El resto del portafolio se describe en la página [Portafolio](https://kadratis.com/es/features/portfolio).

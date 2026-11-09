@@ -1,6 +1,6 @@
 ---
 title: "Ein Bericht für jede Frage der IT-Abteilung"
-description: "Der CIO, die Projektleiterin, der Teamleiter und der Ingenieur haben jeweils eigene Fragen. Die Portfolio-Berichte von KANAP beantworten sie mit einem Klick."
+description: "Der CIO, die Projektleiterin, der Teamleiter und der Ingenieur haben jeweils eigene Fragen. Die Portfolio-Berichte von Kadratis beantworten sie mit einem Klick."
 date: 2026-09-23
 topic: portfolio
 author: Friedrich
@@ -13,7 +13,7 @@ Montag, 9 Uhr, die wöchentliche Besprechung der IT-Abteilung. Der CIO hat den S
 
 Jeder hat eine echte Frage. Jeder beantwortet sie mit seinen eigenen Werkzeugen, und die Besprechung verbringt eine halbe Stunde damit, Zahlen abzugleichen.
 
-Jede Antwort existiert bereits in KANAP. Jede Anfrage, jedes Projekt und jede Aufgabe hinterlässt dort eine Spur: die Anlage, die Statuswechsel, den Abschluss, die darauf erfasste Zeit. Die Portfolio-Berichte lesen diese Historie und zeigen sie jeder Person aus dem Blickwinkel, der sie interessiert.
+Jede Antwort existiert bereits in Kadratis. Jede Anfrage, jedes Projekt und jede Aufgabe hinterlässt dort eine Spur: die Anlage, die Statuswechsel, den Abschluss, die darauf erfasste Zeit. Die Portfolio-Berichte lesen diese Historie und zeigen sie jeder Person aus dem Blickwinkel, der sie interessiert.
 
 ![Die Seite der Portfolio-Berichte: der Streifen der letzten 30 Tage, die Elemente mit Handlungsbedarf, der Streifen Zu klassifizieren und die Berichtskarten](/screenshots/blog/portfolio-hub.png)
 
@@ -72,4 +72,4 @@ Alle lesen dieselben Zahlen, aus denselben Aufgaben. Die Besprechung dauert zwan
 
 Die Berichte liegen unter **Portfolio > Berichte**. Sie erfordern Lesezugriff auf die Portfolio-Berichte und funktionieren in der Cloud und On-Premise. Sie lesen die Daten, die Sie bereits haben: die Aufgaben, Projekte, Anfragen und Zeiten, die Ihre Teams ohnehin erfassen.
 
-Der Rest des Portfolios wird auf der Seite [Portfolio](https://kanap.net/de/features/portfolio) beschrieben.
+Der Rest des Portfolios wird auf der Seite [Portfolio](https://kadratis.com/de/features/portfolio) beschrieben.

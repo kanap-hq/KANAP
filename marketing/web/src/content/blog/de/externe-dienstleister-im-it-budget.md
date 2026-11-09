@@ -1,6 +1,6 @@
 ---
 title: "VZÄ und Tagessätze: externe Dienstleister im IT-Budget"
-description: "Budgetieren Sie eine Dienstleistung so, wie Sie sie einkaufen, in Personen, Tagen und Preisen: KANAP leitet daraus die VZÄ, die Kosten pro VZÄ und den Tagessatz ab, bereit für das Gremium."
+description: "Budgetieren Sie eine Dienstleistung so, wie Sie sie einkaufen, in Personen, Tagen und Preisen: Kadratis leitet daraus die VZÄ, die Kosten pro VZÄ und den Tagessatz ab, bereit für das Gremium."
 date: 2026-10-17
 topic: cost
 author: Friedrich
@@ -15,7 +15,7 @@ series:
 
 In der Budgetsaison kommt die Frage immer: Wie viele externe Dienstleister bezahlt die IT, zu welchen Kosten, und was ändert sich im nächsten Jahr? Oft steht die Antwort in einer Tabelle, manchmal nur in den unterschriebenen Verträgen oder in einer parallelen Liste des Einkaufs. Und sie passt nie ganz zum Budget.
 
-In KANAP genügt eine Eingabe. Sie budgetieren eine Dienstleistung so, wie Sie sie einkaufen: Personen oder Tage, ein Preis, ein Zeitraum. KANAP leitet daraus den Betrag jedes Monats, die VZÄ, die Kosten pro VZÄ und den Tagessatz ab.
+In Kadratis genügt eine Eingabe. Sie budgetieren eine Dienstleistung so, wie Sie sie einkaufen: Personen oder Tage, ein Preis, ein Zeitraum. Kadratis leitet daraus den Betrag jedes Monats, die VZÄ, die Kosten pro VZÄ und den Tagessatz ab.
 
 ## VZÄ, Kosten pro VZÄ, Tagessatz
 
@@ -23,7 +23,7 @@ In KANAP genügt eine Eingabe. Sie budgetieren eine Dienstleistung so, wie Sie s
 - **Kosten pro VZÄ** sind die durchschnittlichen Jahreskosten einer Vollzeitperson.
 - **Der durchschnittliche Tagessatz** sind die Kosten der nach Tagen bepreisten Leistungen geteilt durch die eingekauften Tage.
 
-KANAP bietet zwei Lesarten der VZÄ. Der **Jahresdurchschnitt** speist die Berichte und die Vergleiche von einem Jahr zum nächsten. Die **VZÄ im Zeitraum** sagen, wie viele Personen während des Einsatzes arbeiten: Unser Berater von Februar bis Oktober zählt als 1.
+Kadratis bietet zwei Lesarten der VZÄ. Der **Jahresdurchschnitt** speist die Berichte und die Vergleiche von einem Jahr zum nächsten. Die **VZÄ im Zeitraum** sagen, wie viele Personen während des Einsatzes arbeiten: Unser Berater von Februar bis Oktober zählt als 1.
 
 Dieser Artikel behandelt externe Ressourcen: Arbeitnehmerüberlassung, technische Unterstützung, Tagespakete. Dort wird das IT-Budget in Personen und Tagen aufgebaut, und dort bündeln sich die Fragen des Gremiums.
 
@@ -33,11 +33,11 @@ Im Reiter Budget einer Budgetzeile lässt sich jede Spalte (Budget, Erwarteter E
 
 **Personalverstärkung in Vollzeit.** Zwei SAP-Entwickler zu 480 € pro Tag, Vollzeit das ganze Jahr. Jeder Monat zählt seine Arbeitstage: Auf einem Kalender mit 218 Tagen kostet die Zeile 209.280 € und zählt als 2 VZÄ.
 
-**Teilzeit.** Ein Projektleiter 5 Tage pro Monat zu 1.200 € pro Tag, von Februar bis Juli: 6.000 € pro Monat. KANAP setzt diese 5 Tage ins Verhältnis zu den Arbeitstagen jedes Monats, etwas mehr als ein Viertel einer Vollzeitstelle während des Einsatzes und die Hälfte davon über das Jahr.
+**Teilzeit.** Ein Projektleiter 5 Tage pro Monat zu 1.200 € pro Tag, von Februar bis Juli: 6.000 € pro Monat. Kadratis setzt diese 5 Tage ins Verhältnis zu den Arbeitstagen jedes Monats, etwas mehr als ein Viertel einer Vollzeitstelle während des Einsatzes und die Hälfte davon über das Jahr.
 
 **Ein Tagespaket.** 30 Expertentage für denselben Zeitraum, zu 1.200 € pro Tag: 36.000 €, verteilt auf die Monate des Zeitraums und auf dieselbe Weise in VZÄ umgerechnet.
 
-**Zugänge und Abgänge.** Jede Zeile hat ihren eigenen Zeitraum. Bei Fromage & Co, unserem Beispielunternehmen, war der Integrationsarchitekt zu 950 € pro Tag im Budget für Februar geplant. Er kommt im April: Sie verschieben das Startdatum im erwarteten Endwert, und KANAP berechnet den Betrag und die VZÄ des Jahres neu, 0,92 im Budget und 0,75 im Endwert.
+**Zugänge und Abgänge.** Jede Zeile hat ihren eigenen Zeitraum. Bei Fromage & Co, unserem Beispielunternehmen, war der Integrationsarchitekt zu 950 € pro Tag im Budget für Februar geplant. Er kommt im April: Sie verschieben das Startdatum im erwarteten Endwert, und Kadratis berechnet den Betrag und die VZÄ des Jahres neu, 0,92 im Budget und 0,75 im Endwert.
 
 Das Ergebnis erscheint während der Eingabe: der Betrag jedes Monats und die VZÄ unter den Zeilen. Im Beispiel unten kommen die zwei Entwickler, der Projektleiter und das Tagespaket auf 281.280 € und 2,28 VZÄ, und die Karte der Spalte fasst zusammen: „Menge und Preis · 3 Zeilen · 2,28 VZÄ“. **Auch für andere Spalten verwenden** überträgt dieselben Zeilen auf den Endwert oder die Revision, die dann nur noch angepasst werden müssen.
 
@@ -87,13 +87,13 @@ Jede Zahl lässt sich begründen. Der Name einer Gruppe öffnet die Liste ihrer 
 
 ## Und die internen Teams?
 
-Heute verfolgt KANAP die externen VZÄ. Eine künftige Version wird die Zeit interner Ressourcen gesondert erfassen, damit Sie internes Personal und externe Dienstleister nebeneinander lesen können.
+Heute verfolgt Kadratis die externen VZÄ. Eine künftige Version wird die Zeit interner Ressourcen gesondert erfassen, damit Sie internes Personal und externe Dienstleister nebeneinander lesen können.
 
 Bis dahin lässt sich interne Zeit schon einfach bewerten: eine Zeile pro Profil, mit ihrem Tagessatz, auf der Budgetzeile des betroffenen Projekts oder Dienstes. Ein Durchschnittskostensatz pro Profil genügt zur Steuerung und vermeidet, dass einzelne Gehälter für jeden Leser des Budgets sichtbar werden.
 
-## Was KANAP nicht tut
+## Was Kadratis nicht tut
 
-KANAP ist weder ein Personalinformationssystem noch ein Lohnabrechnungswerkzeug, und es erfasst keine Arbeitszeiten. Die VZÄ in KANAP sind die, die das Budget Zeile für Zeile plant und bezahlt.
+Kadratis ist weder ein Personalinformationssystem noch ein Lohnabrechnungswerkzeug, und es erfasst keine Arbeitszeiten. Die VZÄ in Kadratis sind die, die das Budget Zeile für Zeile plant und bezahlt.
 
 ## Wo Sie anfangen
 
@@ -102,4 +102,4 @@ KANAP ist weder ein Personalinformationssystem noch ein Lohnabrechnungswerkzeug,
 3. **Übertragen Sie die Zeilen auf den Endwert** mit Auch für andere Spalten verwenden, und passen Sie im Lauf des Jahres die Zugangs- und Abgangsdaten an.
 4. **Lesen Sie Personal nach Monat, dann Kosten pro VZÄ**, und exportieren Sie die Tabelle als CSV für Excel, die Seite als PDF oder nur die Diagramme, um Ihre Präsentation vorzubereiten.
 
-Um all das an einem bereits erfassten Budget zu sehen, bietet eine kostenlose 14-tägige Testphase unserer gehosteten Version Zugang zu den Beispieldaten der fiktiven Gruppe Fromage & Co, in einer Minute geladen. KANAP ist vollständig Open Source: Sie können es auch kostenlos auf Ihren eigenen Servern installieren.
+Um all das an einem bereits erfassten Budget zu sehen, bietet eine kostenlose 14-tägige Testphase unserer gehosteten Version Zugang zu den Beispieldaten der fiktiven Gruppe Fromage & Co, in einer Minute geladen. Kadratis ist vollständig Open Source: Sie können es auch kostenlos auf Ihren eigenen Servern installieren.

@@ -1,6 +1,6 @@
 ---
 title: "ETC y tarifas diarias: los contratistas externos en el presupuesto de TI"
-description: "Presupueste un servicio como lo compra, en personas, días y precios: KANAP deduce los ETC, el coste por ETC y la tarifa diaria, listos para el comité."
+description: "Presupueste un servicio como lo compra, en personas, días y precios: Kadratis deduce los ETC, el coste por ETC y la tarifa diaria, listos para el comité."
 date: 2026-10-17
 topic: cost
 author: Friedrich
@@ -15,7 +15,7 @@ series:
 
 En temporada de presupuestos la pregunta siempre aparece: ¿cuántos contratistas paga TI, a qué coste y qué cambia el año que viene? A menudo la respuesta está en una hoja de cálculo, a veces solo en los contratos firmados o en un seguimiento paralelo que lleva compras. Y nunca cuadra del todo con el presupuesto.
 
-En KANAP basta con una sola entrada. Usted presupuesta un servicio como lo compra: personas o días, un precio, un periodo. KANAP deduce el importe de cada mes, los ETC, el coste por ETC y la tarifa diaria.
+En Kadratis basta con una sola entrada. Usted presupuesta un servicio como lo compra: personas o días, un precio, un periodo. Kadratis deduce el importe de cada mes, los ETC, el coste por ETC y la tarifa diaria.
 
 ## ETC, coste por ETC, tarifa diaria
 
@@ -23,7 +23,7 @@ En KANAP basta con una sola entrada. Usted presupuesta un servicio como lo compr
 - **El coste por ETC** es el coste anual medio de una persona a tiempo completo.
 - **La tarifa diaria media** es el coste de los servicios con precio por día dividido entre los días comprados.
 
-KANAP ofrece dos lecturas de los ETC. La **media anual** alimenta los informes y las comparaciones de un año a otro. Los **ETC en el periodo** indican cuántas personas trabajan durante la misión: nuestro consultor de febrero a octubre cuenta como 1.
+Kadratis ofrece dos lecturas de los ETC. La **media anual** alimenta los informes y las comparaciones de un año a otro. Los **ETC en el periodo** indican cuántas personas trabajan durante la misión: nuestro consultor de febrero a octubre cuenta como 1.
 
 Este artículo trata de los recursos externos: refuerzo de personal, asistencia técnica, bolsas de días. Es ahí donde el presupuesto de TI se construye en personas y días, y donde se concentran las preguntas del comité.
 
@@ -33,11 +33,11 @@ En la pestaña Presupuesto de una línea presupuestaria, cada columna (Presupues
 
 **Refuerzo a tiempo completo.** Dos desarrolladores SAP a 480 € al día, a tiempo completo todo el año. Cada mes cuenta sus días laborables: con un calendario de 218 días, la línea cuesta 209.280 € y cuenta como 2 ETC.
 
-**Tiempo parcial.** Un jefe de proyecto 5 días al mes a 1.200 € al día, de febrero a julio: 6.000 € al mes. KANAP relaciona esos 5 días con los días laborables de cada mes, algo más de un cuarto de jornada completa durante la misión, y la mitad de eso en el año.
+**Tiempo parcial.** Un jefe de proyecto 5 días al mes a 1.200 € al día, de febrero a julio: 6.000 € al mes. Kadratis relaciona esos 5 días con los días laborables de cada mes, algo más de un cuarto de jornada completa durante la misión, y la mitad de eso en el año.
 
 **Una bolsa de días.** 30 días de experto comprados para el mismo periodo, a 1.200 € al día: 36.000 €, repartidos entre los meses del periodo y convertidos en ETC de la misma forma.
 
-**Altas y bajas.** Cada línea tiene su propio periodo. En Fromage & Co, nuestra empresa de ejemplo, el arquitecto de integración a 950 € al día estaba previsto para febrero en el presupuesto. Llega en abril: usted mueve la fecha de inicio en el aterrizaje previsto y KANAP recalcula el importe y los ETC del año, 0,92 en el presupuesto y 0,75 en el aterrizaje.
+**Altas y bajas.** Cada línea tiene su propio periodo. En Fromage & Co, nuestra empresa de ejemplo, el arquitecto de integración a 950 € al día estaba previsto para febrero en el presupuesto. Llega en abril: usted mueve la fecha de inicio en el aterrizaje previsto y Kadratis recalcula el importe y los ETC del año, 0,92 en el presupuesto y 0,75 en el aterrizaje.
 
 El resultado aparece mientras escribe: el importe de cada mes y los ETC bajo las líneas. En el ejemplo de abajo, los dos desarrolladores, el jefe de proyecto y la bolsa de días suman 281.280 € y 2,28 ETC, y la tarjeta de la columna lo resume: «Cantidad y precio · 3 líneas · 2,28 ETC». **Usar también para otras columnas** lleva las mismas líneas al aterrizaje o a la revisión, que entonces solo hay que ajustar.
 
@@ -87,13 +87,13 @@ Cada cifra se puede justificar. El nombre de un grupo abre la lista de sus líne
 
 ## ¿Y los equipos internos?
 
-Hoy, KANAP sigue los ETC externos. Una versión futura incorporará por separado el tiempo de los recursos internos, para leer personal interno y contratistas uno al lado del otro.
+Hoy, Kadratis sigue los ETC externos. Una versión futura incorporará por separado el tiempo de los recursos internos, para leer personal interno y contratistas uno al lado del otro.
 
 Mientras tanto, el tiempo interno ya puede valorarse de forma sencilla: una línea por perfil, con su tarifa diaria, en la línea presupuestaria del proyecto o servicio afectado. Un coste medio por perfil basta para dirigir y evita exponer los salarios individuales a cualquier lector del presupuesto.
 
-## Lo que KANAP no hace
+## Lo que Kadratis no hace
 
-KANAP no es ni un sistema de información de recursos humanos ni una herramienta de nóminas, y no registra el tiempo dedicado. Los ETC de KANAP son los que el presupuesto planifica y paga, línea a línea.
+Kadratis no es ni un sistema de información de recursos humanos ni una herramienta de nóminas, y no registra el tiempo dedicado. Los ETC de Kadratis son los que el presupuesto planifica y paga, línea a línea.
 
 ## Por dónde empezar
 
@@ -102,4 +102,4 @@ KANAP no es ni un sistema de información de recursos humanos ni una herramienta
 3. **Lleve las líneas al aterrizaje** con Usar también para otras columnas, y ajuste las fechas de alta y baja a lo largo del año.
 4. **Lea Plantilla por mes y después Coste por ETC**, y exporte la tabla en CSV para Excel, la página en PDF o solo los gráficos para preparar su presentación.
 
-Para ver todo esto sobre un presupuesto ya introducido, una prueba gratuita de 14 días de nuestra versión alojada da acceso a los datos de ejemplo del grupo ficticio Fromage & Co, cargados en un minuto. KANAP es totalmente de código abierto: también puede instalarse gratis en sus propios servidores.
+Para ver todo esto sobre un presupuesto ya introducido, una prueba gratuita de 14 días de nuestra versión alojada da acceso a los datos de ejemplo del grupo ficticio Fromage & Co, cargados en un minuto. Kadratis es totalmente de código abierto: también puede instalarse gratis en sus propios servidores.

@@ -15,9 +15,9 @@ series:
 
 Septembre. La direction financière demande une première version du budget 2027, et le fichier Excel de l'an dernier ressort du placard : deux cents lignes, huit onglets, trois versions qui ne disent plus la même chose. C'est reparti pour un tour ?
 
-Cette série décrit la préparation d'un budget OPEX complet dans KANAP. Épisode 1 : fiabiliser l'atterrissage de l'année en cours. Épisode 2 : reporter les chiffres vers 2027. Épisode 3 : restituer, défendre, verrouiller. Le principe est le même du début à la fin : vous ne touchez qu'à ce qui change, KANAP s'occupe du reste, y compris de la présentation.
+Cette série décrit la préparation d'un budget OPEX complet dans Kadratis. Épisode 1 : fiabiliser l'atterrissage de l'année en cours. Épisode 2 : reporter les chiffres vers 2027. Épisode 3 : restituer, défendre, verrouiller. Le principe est le même du début à la fin : vous ne touchez qu'à ce qui change, Kadratis s'occupe du reste, y compris de la présentation.
 
-Vos lignes vivent encore dans Excel ? « Importer CSV » les charge en une fois, et la revue commence le jour même. KANAP vérifie le fichier avant de l'écrire, puis n'écrit que les cellules qui ont changé : l'aller-retour avec le tableur reste possible pendant toute la revue.
+Vos lignes vivent encore dans Excel ? « Importer CSV » les charge en une fois, et la revue commence le jour même. Kadratis vérifie le fichier avant de l'écrire, puis n'écrit que les cellules qui ont changé : l'aller-retour avec le tableur reste possible pendant toute la revue.
 
 ## L'atterrissage prévu, la colonne qui compte
 
@@ -53,7 +53,7 @@ Pour une régie, un forfait mensuel ou des licences à l'unité, un montant annu
 
 ![Une ligne de régie construite en quantité × prix : 2 personnes à temps plein à 470 € par jour sur 218 jours ouvrés, soit 2 ETP sur l'année.](/screenshots/blog/budget-quantity-price-2026-10-13.png)
 
-Deux consultants à 650 € par jour, à temps plein de mars à décembre : KANAP calcule chaque mois avec les jours ouvrés du calendrier du pays de la société payeuse, jours fériés déduits. Si la mission s'arrête fin octobre ou si le TJM a été renégocié, vous changez la date ou le prix, et l'atterrissage se recalcule. Plus besoin de refaire la multiplication à la main.
+Deux consultants à 650 € par jour, à temps plein de mars à décembre : Kadratis calcule chaque mois avec les jours ouvrés du calendrier du pays de la société payeuse, jours fériés déduits. Si la mission s'arrête fin octobre ou si le TJM a été renégocié, vous changez la date ou le prix, et l'atterrissage se recalcule. Plus besoin de refaire la multiplication à la main.
 
 Les calendriers se trouvent dans Données de référence > Calendriers de jours ouvrés. Le calendrier standard d'un pays se crée tout seul avec la société ; un calendrier personnalisé couvre une usine qui ferme trois semaines en août.
 
@@ -69,7 +69,7 @@ Ces montants saisis à la main ne risquent rien : la copie automatique de l'épi
 
 ## Astuce : les devises d'abord
 
-KANAP gère les budgets multi-devises, mais il faut y penser avant ! Dans Gestion budgétaire → Administration → **Devises**, définissez la devise de reporting, les devises par défaut OPEX et CAPEX et la liste des devises autorisées. Les taux de change se synchronisent automatiquement par exercice, et se figent quand vous gelez la colonne budgétaire par défaut. Chaque ligne garde sa devise ; totaux et rapports convertissent en devise de reporting.
+Kadratis gère les budgets multi-devises, mais il faut y penser avant ! Dans Gestion budgétaire → Administration → **Devises**, définissez la devise de reporting, les devises par défaut OPEX et CAPEX et la liste des devises autorisées. Les taux de change se synchronisent automatiquement par exercice, et se figent quand vous gelez la colonne budgétaire par défaut. Chaque ligne garde sa devise ; totaux et rapports convertissent en devise de reporting.
 
 ![Les paramètres de devise : devise de reporting, devises par défaut, devises autorisées et taux de change de 2025 à 2027.](/screenshots/budget-currency-2026-10-13.png)
 

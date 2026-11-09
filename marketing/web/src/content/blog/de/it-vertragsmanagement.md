@@ -1,6 +1,6 @@
 ---
-title: "IT-Vertragsmanagement in KANAP"
-description: "Berechnete Fristen, dokumentierte Verlängerungsentscheidungen, Verpflichtungen im Abgleich mit dem Budget: IT-Verträge unter Kontrolle in KANAP."
+title: "IT-Vertragsmanagement in Kadratis"
+description: "Berechnete Fristen, dokumentierte Verlängerungsentscheidungen, Verpflichtungen im Abgleich mit dem Budget: IT-Verträge unter Kontrolle in Kadratis."
 date: 2026-10-17
 topic: cost
 author: Friedrich
@@ -15,15 +15,15 @@ series:
 
 Wer hat noch nie die Kündigungsfrist eines Vertrags verpasst? Die anschließende Verhandlung ist selten angenehm. Und tatsächlich ist es nicht leicht, Dutzende Vertragsfristen, stillschweigend verlängerte Verträge oder schlicht Abonnements im Blick zu behalten. Diese Daten stehen oft in unterschriebenen PDFs, in einer Tabelle oder beim Einkauf.
 
-In KANAP wird jedes Datum aus dem Vertrag berechnet. Jede Frist erreicht den richtigen Verantwortlichen, mit Zeit zum Entscheiden. Und jeder Vertrag lässt sich leicht mit dem Budget abgleichen, was Unstimmigkeiten schnell sichtbar macht.
+In Kadratis wird jedes Datum aus dem Vertrag berechnet. Jede Frist erreicht den richtigen Verantwortlichen, mit Zeit zum Entscheiden. Und jeder Vertrag lässt sich leicht mit dem Budget abgleichen, was Unstimmigkeiten schnell sichtbar macht.
 
 ## Die Eingabe: nur wenige Felder
 
 Ein Vertrag wird in einem einzigen Formular angelegt. Fünf Felder sind Pflicht: der Lieferant, das unterzeichnende Unternehmen, das Startdatum, die Dauer einer Laufzeit und die Währung. Danach ergänzen Sie den Verantwortlichen, die stillschweigende Verlängerung, die Kündigungsfrist, den Jahresbetrag und die Abrechnungshäufigkeit.
 
-KANAP berechnet den Rest: die aufeinanderfolgenden Laufzeiten, die Kündigungsfrist jeder einzelnen und den Stand des Vertrags. Ändern Sie die Dauer oder die Kündigungsfrist, und alle Daten ziehen mit.
+Kadratis berechnet den Rest: die aufeinanderfolgenden Laufzeiten, die Kündigungsfrist jeder einzelnen und den Stand des Vertrags. Ändern Sie die Dauer oder die Kündigungsfrist, und alle Daten ziehen mit.
 
-Bei Fromage & Co, unserem Beispielunternehmen, kostet die SAP-Wartung 350.000 € pro Jahr. Sie läuft vom 1. Juli bis zum 30. Juni, mit sechs Monaten Kündigungsfrist und stillschweigender Verlängerung. KANAP errechnet, dass sie bis zum 30. Dezember 2026 gekündigt werden kann. Nach diesem Tag verlängert sie sich bis Juni 2028.
+Bei Fromage & Co, unserem Beispielunternehmen, kostet die SAP-Wartung 350.000 € pro Jahr. Sie läuft vom 1. Juli bis zum 30. Juni, mit sechs Monaten Kündigungsfrist und stillschweigender Verlängerung. Kadratis errechnet, dass sie bis zum 30. Dezember 2026 gekündigt werden kann. Nach diesem Tag verlängert sie sich bis Juni 2028.
 
 Die Vertragsübersicht sagt es in einem Satz: „Kündigung möglich bis 30. Dez. 2026 · in 74 Tagen“. Eine Zeitleiste zeigt die vergangenen Laufzeiten, die aktuelle Laufzeit und die nächste Frist. Die folgende Laufzeit bleibt gestrichelt, solange sie sich noch vermeiden lässt. Eine Zeile mit Fakten erinnert daran, seit wann sich der Vertrag verlängert.
 
@@ -51,25 +51,25 @@ Der Schnellfilter **Innerhalb von 90 Tagen zu entscheiden** trennt die Verträge
 
 ## Die Entscheidung: verlängern, neu verhandeln, kündigen
 
-Über die Liste hinaus fordert KANAP den Verantwortlichen zur Entscheidung auf und dokumentiert sie.
+Über die Liste hinaus fordert Kadratis den Verantwortlichen zur Entscheidung auf und dokumentiert sie.
 
-90 Tage vor der Kündigungsfrist (ein einstellbares Fenster) legt KANAP deshalb für jeden Vertrag, der auf eine Entscheidung wartet, eine Aufgabe an. Sie ist dem Verantwortlichen des Vertrags zugewiesen und zur Kündigungsfrist fällig. Daher die Bedeutung eines Verantwortlichen für jeden Vertrag.
+90 Tage vor der Kündigungsfrist (ein einstellbares Fenster) legt Kadratis deshalb für jeden Vertrag, der auf eine Entscheidung wartet, eine Aufgabe an. Sie ist dem Verantwortlichen des Vertrags zugewiesen und zur Kündigungsfrist fällig. Daher die Bedeutung eines Verantwortlichen für jeden Vertrag.
 
 Auf der Vertragsseite sagt ein Feld, was passiert, wenn niemand handelt: „Ohne Entscheidung verlängert sich der Vertrag am 1. Juli 2027 um 12 Monate.“ Der Verantwortliche wählt dann:
 
 - **Verlängern**: Die Verlängerung ist für diese Laufzeit bestätigt, und die Aufgabe wird geschlossen.
 - **Neu verhandeln**: Die Aufgabe bleibt bis zur endgültigen Entscheidung offen, und das Feld zeigt „Neuverhandlung läuft“.
-- **Kündigen**: KANAP schlägt das früheste Ende vor, das die Kündigungsfrist erlaubt. Bei der SAP-Wartung ist das der 30. Juni 2027. Ein früheres Datum bleibt möglich, mit einer Warnung: Der Lieferant muss zustimmen.
+- **Kündigen**: Kadratis schlägt das früheste Ende vor, das die Kündigungsfrist erlaubt. Bei der SAP-Wartung ist das der 30. Juni 2027. Ein früheres Datum bleibt möglich, mit einer Warnung: Der Lieferant muss zustimmen.
 
 Bevor eine Kündigung bestätigt wird, listet das Feld ihre Folgen auf: die Verpflichtung des laufenden und des nächsten Jahres, die Anwendungen, die diesen Vertrag verlieren, die Assets, die ihren Supportvertrag verlieren. Im SAP-Beispiel sinkt die Verpflichtung 2027 von 350.000 € auf 175.000 €, und die Verpflichtung 2028 fällt auf null.
 
 ![Das Feld Kündigen des SAP-Vertrags: das früheste Ende, das die Kündigungsfrist erlaubt, und die Folgen der Kündigung](/screenshots/blog/contracts-cancel-2026-10-17.png)
 
-Jede Entscheidung wird festgehalten: wer, wann, mit welcher Begründung. Zum Beispiel „Verlängerung am 2. Okt. 2026 von Sophie Laurent bestätigt“. Eine zu schnell getroffene Entscheidung lässt sich zurücknehmen, solange die Frist nicht verstrichen ist. Nach einer Kündigung erinnert KANAP Sie daran, das Schreiben vor der Frist zu versenden und dem Vertrag beizufügen.
+Jede Entscheidung wird festgehalten: wer, wann, mit welcher Begründung. Zum Beispiel „Verlängerung am 2. Okt. 2026 von Sophie Laurent bestätigt“. Eine zu schnell getroffene Entscheidung lässt sich zurücknehmen, solange die Frist nicht verstrichen ist. Nach einer Kündigung erinnert Kadratis Sie daran, das Schreiben vor der Frist zu versenden und dem Vertrag beizufügen.
 
 ## Der Vertrag im Abgleich mit dem Budget
 
-Der Vertrag sagt, was die IT zu zahlen zugesagt hat. Das Budget sagt, was sie geplant hat. KANAP vergleicht beides, Jahr für Jahr.
+Der Vertrag sagt, was die IT zu zahlen zugesagt hat. Das Budget sagt, was sie geplant hat. Kadratis vergleicht beides, Jahr für Jahr.
 
 **Verpflichtet** ist der Jahresbetrag des Vertrags, verteilt auf die Monate, die eine Laufzeit abdeckt, tagesgenau anteilig. Für die Folgejahre wird angenommen, dass sich der Vertrag verlängert, bis er beendet wird. Nach dem Ende des Vertrags ist nichts mehr verpflichtet.
 
@@ -87,9 +87,9 @@ Die Verknüpfung funktioniert in beide Richtungen. Der Reiter Budget des Vertrag
 
 Ein Vertrag deckt Anwendungen ab, und diese Anwendungen verweisen auf Klauseln, die er enthalten muss. Personenbezogene Daten verlangen eine Auftragsverarbeitungsvereinbarung nach DSGVO und den Speicherort der Daten. Eine kritische Anwendung verlangt eine Reversibilitätsklausel, einen Exit-Plan und ein Auditrecht. Der Reiter Konformität des Vertrags listet diese Punkte auf Basis der Klassifizierung der Anwendung auf. Jeder wird als vorhanden, fehlend oder nicht zutreffend erfasst, und das Konformitätsregister lässt sich als CSV exportieren. Wir kommen in einem der nächsten Artikel ausführlicher darauf zurück.
 
-## Was KANAP nicht tut
+## Was Kadratis nicht tut
 
-KANAP entwirft und unterzeichnet keine Verträge und führt keine Verhandlungen: Das ist Aufgabe von Einkauf und Rechtsabteilung. Der Betrag bei Unterzeichnung gilt für jede Laufzeit: Eine Indexierung oder Preiserhöhung wird auf den verknüpften Zeilen budgetiert. KANAP führt das Register, die Fristen, die Entscheidungen und die Verbindung zum Budget.
+Kadratis entwirft und unterzeichnet keine Verträge und führt keine Verhandlungen: Das ist Aufgabe von Einkauf und Rechtsabteilung. Der Betrag bei Unterzeichnung gilt für jede Laufzeit: Eine Indexierung oder Preiserhöhung wird auf den verknüpften Zeilen budgetiert. Kadratis führt das Register, die Fristen, die Entscheidungen und die Verbindung zum Budget.
 
 ## Wo Sie anfangen
 
@@ -98,4 +98,4 @@ KANAP entwirft und unterzeichnet keine Verträge und führt keine Verhandlungen:
 3. **Verknüpfen Sie die Budgetzeilen**, beginnend mit den größten Verträgen. Prüfen Sie dann Ohne Budgetzeile und Unterbudgetiert für das Jahr, das Sie vorbereiten.
 4. **Beginnen Sie die Woche mit Zu entscheiden**: So verstreicht keine Frist ohne Entscheidung.
 
-Um all das an bereits erfassten Verträgen zu sehen, bietet eine kostenlose 14-tägige Testphase unserer gehosteten Version Zugang zu den Beispieldaten der fiktiven Gruppe Fromage & Co, in einer Minute geladen. KANAP ist vollständig Open Source: Sie können es auch kostenlos auf Ihren eigenen Servern installieren.
+Um all das an bereits erfassten Verträgen zu sehen, bietet eine kostenlose 14-tägige Testphase unserer gehosteten Version Zugang zu den Beispieldaten der fiktiven Gruppe Fromage & Co, in einer Minute geladen. Kadratis ist vollständig Open Source: Sie können es auch kostenlos auf Ihren eigenen Servern installieren.

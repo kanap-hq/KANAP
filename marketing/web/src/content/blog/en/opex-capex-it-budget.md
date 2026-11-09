@@ -15,17 +15,17 @@ series:
 
 The IT budget comes in two envelopes: operating and capital spending. Often, each one lives in its own file, with its own calendar and the person who keeps it. Then comes the review with finance and its questions: how much is operating, how much is investment, what is it for, what does this program really cost?
 
-Each answer then takes a manual consolidation. KANAP is where IT prepares its budget, OPEX and CAPEX together, simply. And because every line is classified as it is entered, IT comes to the review with figures that are clean, consistent and easy to justify.
+Each answer then takes a manual consolidation. Kadratis is where IT prepares its budget, OPEX and CAPEX together, simply. And because every line is classified as it is entered, IT comes to the review with figures that are clean, consistent and easy to justify.
 
 ## OPEX or CAPEX, the rule in plain words
 
 **OPEX** keeps the information system running during the year: subscriptions, maintenance, recurring services. **CAPEX** creates or improves an asset used over several years: servers, workstations, capitalized development. What gets capitalized follows the company's accounting rules, which finance sets with IT.
 
-A second question often gets mixed with the first: run or build? Run keeps existing services going, build creates or changes them. A build project often carries both kinds of spending: capitalized development in CAPEX, training and change management in OPEX. KANAP keeps both answers on every line, in two separate fields, and still lets you consolidate them.
+A second question often gets mixed with the first: run or build? Run keeps existing services going, build creates or changes them. A build project often carries both kinds of spending: capitalized development in CAPEX, training and change management in OPEX. Kadratis keeps both answers on every line, in two separate fields, and still lets you consolidate them.
 
 ## One list, one workspace
 
-In KANAP, OPEX and CAPEX are a simple field of the budget line. Lines of both types share the same budget columns (scenarios) per year, the same allocations across companies and departments, the same links to applications, projects, contracts and suppliers. The filter of the **Type** column isolates one or the other in one click.
+In Kadratis, OPEX and CAPEX are a simple field of the budget line. Lines of both types share the same budget columns (scenarios) per year, the same allocations across companies and departments, the same links to applications, projects, contracts and suppliers. The filter of the **Type** column isolates one or the other in one click.
 
 ![The budget lines of Fromage & Co: OPEX and CAPEX lines together, with the Type column](/screenshots/blog/opex-capex-list-2026-10-17.png)
 
@@ -40,9 +40,9 @@ The OPEX or CAPEX type drives a few fields of the line:
 
 Analytics dimensions classify lines for reporting, next to the accounting structure (the details are in [Analytics dimensions: what security really costs IT](/blog/analytics-dimensions-for-your-it-budget)). Each dimension answers one question. The right set of dimensions depends on each organization; here is an example drawn from good practice, for anyone to adapt.
 
-No need to start from scratch! A new KANAP workspace starts with four recommended dimensions and their values (Cost pool, IT tower, Purpose and Priority). Each one can then be renamed, extended and set up as you see fit.
+No need to start from scratch! A new Kadratis workspace starts with four recommended dimensions and their values (Cost pool, IT tower, Purpose and Priority). Each one can then be renamed, extended and set up as you see fit.
 
-**"What is this investment for?"** The **Purpose** dimension: replacement, capacity, productivity, security, compliance, growth. Kept for CAPEX lines and made required, it ensures every new investment arrives classified, whether it is created on screen, loaded from a file, prepared by Plaid or sent through the API. No more chasing a forgotten column.
+**"What is this investment for?"** The **Purpose** dimension: replacement, capacity, productivity, security, compliance, growth. Kept for CAPEX lines and made required, it ensures every new investment arrives classified, whether it is created on screen, loaded from a file, prepared by Kad or sent through the API. No more chasing a forgotten column.
 
 **"What can't we cut?"** The **Priority** dimension: mandatory, high, medium, low. It is what structures the trade-offs in committee. At Fromage & Co, our sample company, mandatory investments weigh €1.13M out of €2.34M in 2026: the S/4HANA migration, the data center refresh and the plant network segmentation.
 
@@ -68,7 +68,7 @@ In the example, replacement accounts for 59% of the 2026 investment, growth for 
 
 The page address holds the type and the filters. The link sent to the financial controller opens exactly the same view; the PDF export shows the same content. The chargeback reports also offer OPEX, CAPEX or both; CAPEX counts there for its amount of the year.
 
-Finally, all this data can feed custom reports built by your favorite AI tool, connected directly to KANAP.
+Finally, all this data can feed custom reports built by your favorite AI tool, connected directly to Kadratis.
 
 ## When spending changes type
 
@@ -81,15 +81,15 @@ A service turns out to be capitalizable, an investment turns back into operating
 
 The window offers an account that suits the new type, and asks for that type's required dimensions when there are any. The reason for the change goes to the audit log. A frozen budget stays intact: the change is refused while a frozen column holds amounts on the years concerned.
 
-## What KANAP does not do
+## What Kadratis does not do
 
-KANAP does not compute depreciation and does not keep the fixed asset register: that is the job of accounting and the ERP. KANAP prepares and tracks the IT budget, OPEX and CAPEX, classified the way finance asks.
+Kadratis does not compute depreciation and does not keep the fixed asset register: that is the job of accounting and the ERP. Kadratis prepares and tracks the IT budget, OPEX and CAPEX, classified the way finance asks.
 
 ## Where to start
 
 1. **Start from finance's questions**: the ones that come back at every budget review. Each will become a dimension, or a filter of an existing report.
 2. **Adjust the recommended dimensions**: rename what needs it, add the ones you are missing (a Program, for example), keep for CAPEX what only concerns investment, and make the essential dimensions required.
-3. **Go over the existing lines** to fill in the dimensions still empty. Under each required dimension, KANAP counts the lines without a value and opens their list in one click.
+3. **Go over the existing lines** to fill in the dimensions still empty. Under each required dimension, Kadratis counts the lines without a value and opens their list in one click.
 4. **Check the result in the reports** before the review: what is still "Unassigned" shows what remains to classify.
 
-To see all of this on a budget already classified, a free 14-day trial of our hosted version gives access to the sample data of the fictional Fromage & Co group, loaded in a minute. KANAP is fully open source: it can also be installed for free on your own servers.
+To see all of this on a budget already classified, a free 14-day trial of our hosted version gives access to the sample data of the fictional Fromage & Co group, loaded in a minute. Kadratis is fully open source: it can also be installed for free on your own servers.

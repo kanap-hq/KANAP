@@ -30,7 +30,7 @@ Three uses come up again and again:
 
 ### The default rule
 
-By default, KANAP uses the headcount of the companies defined in the reference data: all costs are shared across all companies based on headcount.
+By default, Kadratis uses the headcount of the companies defined in the reference data: all costs are shared across all companies based on headcount.
 
 You can change this default rule in Administration, Default allocation method. The rule you set applies year by year to lines that have not been customised yet (you do not lose work already done).
 

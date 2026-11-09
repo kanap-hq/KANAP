@@ -14,7 +14,7 @@ series:
   title: "Das IT-Budget aufbauen"
 ---
 
-Das Budget steht, jetzt muss es genehmigt werden. KANAP erleichtert die Präsentation mit konfigurierbaren Berichten, die die verschiedenen Seiten des Budgets anschaulich und pragmatisch zeigen. Ist das Budget genehmigt, sperrt KANAP die betroffenen Spalten, damit sich danach nichts mehr bewegt.
+Das Budget steht, jetzt muss es genehmigt werden. Kadratis erleichtert die Präsentation mit konfigurierbaren Berichten, die die verschiedenen Seiten des Budgets anschaulich und pragmatisch zeigen. Ist das Budget genehmigt, sperrt Kadratis die betroffenen Spalten, damit sich danach nichts mehr bewegt.
 
 ## Fertige Berichte
 
@@ -64,7 +64,7 @@ Die meisten Berichte öffnen auf Alle Zeilen, mit den Reitern OPEX und CAPEX, un
 
 Jeder Bericht lässt sich exportieren: die Tabelle als CSV, das Diagramm als PNG, die ganze Seite als PDF. Die Präsentation entsteht ohne Bildschirmfotos, und Sie können einen Bericht sogar live anpassen, um spontane Fragen zu beantworten.
 
-Und für die Frage, die kein Bericht vorhergesehen hat, befragt Plaid, der eingebaute KI-Agent, dieselben Daten in natürlicher Sprache: „Budget 2027 gesamt nach Lieferant“, „budgetierte VZÄ nach Kostenstelle“. Die Antwort nennt die Zeilen mit ihrer Referenz (`BL-12`, `BL-3`), die Sie sofort in der Liste finden.
+Und für die Frage, die kein Bericht vorhergesehen hat, befragt Kad, der eingebaute KI-Agent, dieselben Daten in natürlicher Sprache: „Budget 2027 gesamt nach Lieferant“, „budgetierte VZÄ nach Kostenstelle“. Die Antwort nennt die Zeilen mit ihrer Referenz (`BL-12`, `BL-3`), die Sie sofort in der Liste finden.
 
 ## Die Überarbeitungsphase
 

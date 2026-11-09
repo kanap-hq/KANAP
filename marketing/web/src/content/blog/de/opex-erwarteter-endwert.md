@@ -16,9 +16,9 @@ series:
 
 September. Das Controlling verlangt eine erste Fassung des Budgets 2027, und die Excel-Datei vom letzten Jahr kommt aus der Schublade: zweihundert Zeilen, acht Reiter, drei Versionen, die nicht mehr übereinstimmen. Alles wieder von vorn?
 
-Diese Serie zeigt Schritt für Schritt, wie Sie in KANAP ein vollständiges OPEX-Budget vorbereiten. Teil 1: den Endwert des laufenden Jahres absichern. Teil 2: die Zahlen auf 2027 übertragen. Teil 3: präsentieren, verteidigen, festschreiben. Das Prinzip gilt von Anfang bis Ende: Sie ändern nur, was sich bewegt, KANAP erledigt den Rest, die Präsentation eingeschlossen.
+Diese Serie zeigt Schritt für Schritt, wie Sie in Kadratis ein vollständiges OPEX-Budget vorbereiten. Teil 1: den Endwert des laufenden Jahres absichern. Teil 2: die Zahlen auf 2027 übertragen. Teil 3: präsentieren, verteidigen, festschreiben. Das Prinzip gilt von Anfang bis Ende: Sie ändern nur, was sich bewegt, Kadratis erledigt den Rest, die Präsentation eingeschlossen.
 
-Ihre Zeilen liegen noch in Excel? „CSV importieren“ lädt sie in einem Durchgang, und die Durchsicht beginnt noch am selben Tag. KANAP prüft die ganze Datei, bevor es etwas schreibt, und schreibt dann nur die Zellen, die sich geändert haben. Der Austausch mit der Tabelle bleibt während der ganzen Durchsicht möglich.
+Ihre Zeilen liegen noch in Excel? „CSV importieren“ lädt sie in einem Durchgang, und die Durchsicht beginnt noch am selben Tag. Kadratis prüft die ganze Datei, bevor es etwas schreibt, und schreibt dann nur die Zellen, die sich geändert haben. Der Austausch mit der Tabelle bleibt während der ganzen Durchsicht möglich.
 
 ## Der erwartete Endwert, die Spalte, auf die es ankommt
 
@@ -54,7 +54,7 @@ Für externe Dienstleister, eine monatliche Pauschale oder Lizenzen pro Einheit 
 
 ![Eine Dienstleisterzeile aus Menge × Preis: 2 Personen in Vollzeit zu 470 € pro Tag über 218 Arbeitstage, 2 VZÄ über das Jahr.](/screenshots/blog/budget-quantity-price-2026-10-13.png)
 
-Zwei Berater zu 650 € pro Tag, Vollzeit von März bis Dezember: KANAP berechnet jeden Monat aus den Arbeitstagen im Kalender des Landes des zahlenden Unternehmens, ohne Feiertage. Endet der Einsatz im Oktober oder wurde der Tagessatz neu verhandelt, ändern Sie das Datum oder den Preis, und der Endwert wird neu berechnet. Kein Nachrechnen von Hand mehr.
+Zwei Berater zu 650 € pro Tag, Vollzeit von März bis Dezember: Kadratis berechnet jeden Monat aus den Arbeitstagen im Kalender des Landes des zahlenden Unternehmens, ohne Feiertage. Endet der Einsatz im Oktober oder wurde der Tagessatz neu verhandelt, ändern Sie das Datum oder den Preis, und der Endwert wird neu berechnet. Kein Nachrechnen von Hand mehr.
 
 Die Kalender liegen unter Stammdaten > Arbeitstagekalender. Der Standardkalender eines Landes wird mit dem Unternehmen angelegt. Ein eigener Kalender deckt ein Werk ab, das im August drei Wochen schließt.
 
@@ -70,7 +70,7 @@ Diese von Hand eingetragenen Beträge sind sicher: Die automatische Kopie aus Te
 
 ## Profi-Tipp: zuerst die Währungen
 
-KANAP verwaltet Budgets in mehreren Währungen, aber richten Sie diese vorher ein. Unter Budgetverwaltung → Administration → **Währungen** legen Sie die Berichtswährung, die Standardwährungen für OPEX und CAPEX und die Liste der zulässigen Währungen fest. Die Wechselkurse werden pro Geschäftsjahr automatisch abgeglichen und eingefroren, wenn Sie die Standard-Budgetspalte einfrieren. Jede Zeile behält ihre Währung. Summen und Berichte rechnen in die Berichtswährung um.
+Kadratis verwaltet Budgets in mehreren Währungen, aber richten Sie diese vorher ein. Unter Budgetverwaltung → Administration → **Währungen** legen Sie die Berichtswährung, die Standardwährungen für OPEX und CAPEX und die Liste der zulässigen Währungen fest. Die Wechselkurse werden pro Geschäftsjahr automatisch abgeglichen und eingefroren, wenn Sie die Standard-Budgetspalte einfrieren. Jede Zeile behält ihre Währung. Summen und Berichte rechnen in die Berichtswährung um.
 
 ![Die Währungseinstellungen: Berichtswährung, Standardwährungen, zulässige Währungen und die Wechselkurse für 2025 bis 2027.](/screenshots/budget-currency-2026-10-13.png)
 

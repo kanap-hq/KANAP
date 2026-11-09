@@ -21,7 +21,7 @@ Whatever your country's timetable, one thing will not change: before any risk an
 
 ## Classifying an application in four blocks
 
-In KANAP, each application's **Compliance** tab follows the order of a business impact analysis.
+In Kadratis, each application's **Compliance** tab follows the order of a business impact analysis.
 
 ![The Compliance tab of SAP S/4HANA: criticality, data, continuity and recovery, with the exchange with an application planned in a later wave](/screenshots/blog/compliance-tab-2026-10.png)
 
@@ -29,11 +29,11 @@ In KANAP, each application's **Compliance** tab follows the order of a business 
 
 **Data.** The confidentiality level, from your data classes; whether personal data is held; data residency, country by country.
 
-**Continuity and recovery.** The recovery wave says in which order systems come back, not how fast. The RTO (recovery time objective) and the RPO (acceptable data loss) are entered in minutes, hours or days, along with the date of the last recovery test. When the RTO reaches the maximum tolerable downtime of the business level, KANAP flags it.
+**Continuity and recovery.** The recovery wave says in which order systems come back, not how fast. The RTO (recovery time objective) and the RPO (acceptable data loss) are entered in minutes, hours or days, along with the date of the last recovery test. When the RTO reaches the maximum tolerable downtime of the business level, Kadratis flags it.
 
 **Review.** A written justification explains the levels chosen. Then "Mark as reviewed" records who reviewed the classification, and when.
 
-Anything left blank stays "Not set". KANAP never picks a default level for you: an unclassified application should be visible as such.
+Anything left blank stays "Not set". Kadratis never picks a default level for you: an unclassified application should be visible as such.
 
 ## Your method, not ours
 
@@ -55,20 +55,20 @@ The review is not a yearly stamp. As soon as a criticality, a wave, a recovery o
 
 ## What a governed record adds to a spreadsheet
 
-An impact analysis spreadsheet classifies rows. In KANAP, the classified application is also linked to the rest of the landscape, and that is where the classification starts paying off.
+An impact analysis spreadsheet classifies rows. In Kadratis, the classified application is also linked to the rest of the landscape, and that is where the classification starts paying off.
 
-- **Recovery dependencies.** Under the wave, KANAP lists the interfaces that link the application to an application planned in a later wave. In the screenshot above, SAP S/4HANA comes back in V1 but exchanges data with Salesforce, planned in V2. The recovery plan sees its ordering issues before the day it is needed.
+- **Recovery dependencies.** Under the wave, Kadratis lists the interfaces that link the application to an application planned in a later wave. In the screenshot above, SAP S/4HANA comes back in V1 but exchanges data with Salesforce, planned in V2. The recovery plan sees its ordering issues before the day it is needed.
 - **Criticality of flows.** Interfaces and connections inherit the highest level of the applications they link.
 - **Servers.** Each server shows its operating system and the end-of-support dates.
 - **Suppliers and contracts.** The supply chain is already there: each application leads to its vendor, its contracts and their deadlines.
 - **Documentation.** Recovery procedures and test reports live in the knowledge base, linked to the application.
 - **Traceability.** Every change goes to the audit log.
 
-And Plaid, the built-in AI agent, answers on the same data: "which critical applications have had no recovery test for a year?", "where does the classification review stand?". It can also prepare classification changes, which you approve. The review itself stays a human action.
+And Kad, the built-in AI agent, answers on the same data: "which critical applications have had no recovery test for a year?", "where does the classification review stand?". It can also prepare classification changes, which you approve. The review itself stays a human action.
 
-## What KANAP does not do
+## What Kadratis does not do
 
-KANAP does not run a risk analysis, does not replace an information security management system and does not report incidents to the authorities. It provides the classified, linked and current inventory those efforts rely on. It is the raw material of the risk analysis, not the analysis itself.
+Kadratis does not run a risk analysis, does not replace an information security management system and does not report incidents to the authorities. It provides the classified, linked and current inventory those efforts rely on. It is the raw material of the risk analysis, not the analysis itself.
 
 ## Where to start
 

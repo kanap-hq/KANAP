@@ -14,7 +14,7 @@ series:
   title: "Das IT-Budget aufbauen"
 ---
 
-Teil 1 war eine gezielte Durchsicht: Der Endwert 2026 bildet jetzt die wichtigsten Bewegungen ab, und die großen Änderungen für 2027 sind bereits erfasst. Übrig bleiben alle Zeilen, bei denen sich nichts geändert hat. Sie einzeln zu suchen und abzutippen ist die undankbarste Arbeit der Budgetsaison. In KANAP ist es ein Werkzeug und ein paar Klicks.
+Teil 1 war eine gezielte Durchsicht: Der Endwert 2026 bildet jetzt die wichtigsten Bewegungen ab, und die großen Änderungen für 2027 sind bereits erfasst. Übrig bleiben alle Zeilen, bei denen sich nichts geändert hat. Sie einzeln zu suchen und abzutippen ist die undankbarste Arbeit der Budgetsaison. In Kadratis ist es ein Werkzeug und ein paar Klicks.
 
 ## Die zwei Durchgänge
 

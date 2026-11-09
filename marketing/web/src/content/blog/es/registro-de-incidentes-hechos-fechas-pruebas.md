@@ -14,7 +14,7 @@ En marzo, la facturación se detiene durante tres horas. Una primera restauraci�
 
 En octubre, el auditor pide el expediente. ¿Cuándo empezó el incidente, cuándo se advirtió, quién se hizo cargo? Pero el ticket se cerró, los intercambios se perdieron en los buzones de correo y la persona que gestionó el incidente ha cambiado de puesto.
 
-Así responde KANAP a esta necesidad.
+Así responde Kadratis a esta necesidad.
 
 ## Lo que tiene cabida en el registro
 
@@ -26,7 +26,7 @@ El registro conserva los acontecimientos sobre los que volverán la dirección, 
 - los fallos graves de un proveedor o de un servicio de alojamiento;
 - todo lo que habrá que explicar más adelante, o comunicar a una autoridad.
 
-El ticket del día a día se queda en la herramienta de ticketing: el registro de incidentes de KANAP no sustituye a un centro de servicios. Su número se anota en la referencia externa del incidente, para encontrar el rastro operativo. Un buen registro tiene unas pocas entradas al mes, y una caída que generó cuarenta tickets es un solo incidente.
+El ticket del día a día se queda en la herramienta de ticketing: el registro de incidentes de Kadratis no sustituye a un centro de servicios. Su número se anota en la referencia externa del incidente, para encontrar el rastro operativo. Un buen registro tiene unas pocas entradas al mes, y una caída que generó cuarenta tickets es un solo incidente.
 
 Para empezar, bastan tres campos: un título, una gravedad y la hora de detección. El resto se completa sobre la marcha. Un registro llevado hasta ahora en una hoja de cálculo se importa con un archivo CSV.
 
@@ -36,7 +36,7 @@ Para empezar, bastan tres campos: un título, una gravedad y la hora de detecci�
 
 La pestaña Registro es la que convierte un formulario en un registro. Guarda todo lo que le sucede al incidente: las notas del equipo, cada cambio de estado y de gravedad, cada activo o aplicación vinculado o desvinculado, cada reapertura con su motivo. Nada de lo que contiene puede modificarse ni eliminarse, por nadie.
 
-Las notas llevan la hora de los hechos. Una nota introducida el martes puede fecharse el sábado a las 23:40 y se coloca en ese punto de la cronología. Al lado, KANAP conserva la hora real en que se introdujo, que nadie puede cambiar: el antedatado sigue siendo honesto.
+Las notas llevan la hora de los hechos. Una nota introducida el martes puede fecharse el sábado a las 23:40 y se coloca en ese punto de la cronología. Al lado, Kadratis conserva la hora real en que se introdujo, que nadie puede cambiar: el antedatado sigue siendo honesto.
 
 Dos fechas abren la cronología: el inicio del incidente y el momento en que se advirtió. La diferencia entre ambas suele ser la primera pregunta del auditor. Una vez resuelto el incidente, su duración aparece por sí sola.
 
@@ -48,7 +48,7 @@ La numeración sigue siendo continua. Un duplicado se cancela con un motivo, e I
 
 ![La pestaña Relaciones de un incidente: sus activos, sus aplicaciones, sus tecnologías y las tecnologías sugeridas.](/screenshots/incidents-relations-2026-10-26.png)
 
-Un incidente aislado en un registro tiene poco peso. En KANAP, se vincula al panorama IT: los servidores afectados, las aplicaciones de negocio con su criticidad, las tecnologías implicadas. KANAP sugiere las tecnologías de los servidores y las aplicaciones ya vinculados, con su origen, por ejemplo «tecnología del activo AST-12». Basta un clic para añadirlas.
+Un incidente aislado en un registro tiene poco peso. En Kadratis, se vincula al panorama IT: los servidores afectados, las aplicaciones de negocio con su criticidad, las tecnologías implicadas. Kadratis sugiere las tecnologías de los servidores y las aplicaciones ya vinculados, con su origen, por ejemplo «tecnología del activo AST-12». Basta un clic para añadirlas.
 
 El vínculo funciona en ambos sentidos. La ficha de un servidor, de una aplicación o de una tecnología enumera sus incidentes: quien abre un servidor ve su historial. Y una búsqueda por un nombre de host como PAR-ESX-01 encuentra todos los incidentes que lo afectaron.
 
@@ -73,9 +73,9 @@ Cuatro campos recogen la parte regulatoria del incidente:
 - **Notificado el**, la fecha de presentación.
 - **Partes informadas**: regulador, aseguradora, clientes afectados, seguridad del grupo.
 
-El artículo 33 del RGPD obliga a documentar toda violación de datos personales, se haya notificado o no. El registro es la constancia de ello, y un incidente que contiene esta información no puede eliminarse. Los plazos y los umbrales de notificación dependen de su jurisdicción y de su sector: KANAP registra los hechos y las fechas, no decide si hay que notificar.
+El artículo 33 del RGPD obliga a documentar toda violación de datos personales, se haya notificado o no. El registro es la constancia de ello, y un incidente que contiene esta información no puede eliminarse. Los plazos y los umbrales de notificación dependen de su jurisdicción y de su sector: Kadratis registra los hechos y las fechas, no decide si hay que notificar.
 
-Un incidente de seguridad sensible puede restringirse. Entonces solo lo ven los administradores del registro, el declarante y el responsable; para los demás, no existe ni en la lista, ni en la búsqueda, ni en las respuestas de Plaid, ni en la exportación.
+Un incidente de seguridad sensible puede restringirse. Entonces solo lo ven los administradores del registro, el declarante y el responsable; para los demás, no existe ni en la lista, ni en la búsqueda, ni en las respuestas de Kad, ni en la exportación.
 
 ## Lo que recibe el auditor
 
@@ -85,7 +85,7 @@ El registro se filtra por periodo, gravedad, categoría o indicador de conformid
 
 Para un incidente concreto, la exportación PDF reúne una ficha completa: propiedades, descripción, revisión del incidente, registro del incidente en orden cronológico con las versiones de la revisión, activos, aplicaciones y tareas vinculados, campos de conformidad y adjuntos.
 
-Plaid, el asistente integrado en KANAP, también responde: «¿Cuántos incidentes críticos este trimestre?», «Lista de los incidentes abiertos en PAR-ESX-01», «Resumen de INC-2». Lee el registro del incidente y la revisión, y por eso puede responder hasta la causa raíz.
+Kad, el asistente integrado en Kadratis, también responde: «¿Cuántos incidentes críticos este trimestre?», «Lista de los incidentes abiertos en PAR-ESX-01», «Resumen de INC-2». Lee el registro del incidente y la revisión, y por eso puede responder hasta la causa raíz.
 
 ## Por dónde empezar
 
@@ -94,4 +94,4 @@ Plaid, el asistente integrado en KANAP, también responde: «¿Cuántos incident
 3. **Registre pronto, complete sobre la marcha, cierre después de redactar la revisión.**
 4. **Revise el registro cada trimestre**: las categorías que se repiten y los servidores que aparecen más de una vez quizá alimenten la próxima solicitud de presupuesto o el próximo proyecto.
 
-Para verlo todo en acción, una prueba gratuita de 14 días de nuestra versión alojada da acceso a los datos de ejemplo del grupo ficticio Fromage & Co, registro de incidentes incluido, cargados en un minuto. KANAP es totalmente de código abierto: también puede instalarse gratis en sus propios servidores.
+Para verlo todo en acción, una prueba gratuita de 14 días de nuestra versión alojada da acceso a los datos de ejemplo del grupo ficticio Fromage & Co, registro de incidentes incluido, cargados en un minuto. Kadratis es totalmente de código abierto: también puede instalarse gratis en sus propios servidores.

@@ -21,7 +21,7 @@ Quelle que soit la date de la loi, une chose ne changera pas : avant toute analy
 
 ## Classer une application en quatre blocs
 
-Dans KANAP, l'onglet **Conformité** de chaque application suit l'ordre d'une analyse d'impact métier.
+Dans Kadratis, l'onglet **Conformité** de chaque application suit l'ordre d'une analyse d'impact métier.
 
 ![L'onglet Conformité de SAP S/4HANA : criticité, données, continuité et reprise, avec l'échange vers une application prévue dans une vague ultérieure](/screenshots/blog/compliance-tab-2026-10.png)
 
@@ -29,11 +29,11 @@ Dans KANAP, l'onglet **Conformité** de chaque application suit l'ordre d'une an
 
 **Données.** Le niveau de confidentialité, selon vos classes de données ; la présence de données personnelles ; la résidence des données, pays par pays.
 
-**Continuité et reprise.** La vague de reprise dit dans quel ordre on redémarre, pas en combien de temps. Le RTO (délai de reprise) et le RPO (perte de données acceptable) se saisissent en minutes, heures ou jours, avec la date du dernier test de reprise. Si le RTO atteint la durée maximale d'interruption tolérée par le niveau de criticité, KANAP le signale.
+**Continuité et reprise.** La vague de reprise dit dans quel ordre on redémarre, pas en combien de temps. Le RTO (délai de reprise) et le RPO (perte de données acceptable) se saisissent en minutes, heures ou jours, avec la date du dernier test de reprise. Si le RTO atteint la durée maximale d'interruption tolérée par le niveau de criticité, Kadratis le signale.
 
 **Revue.** Une justification écrite explique les niveaux retenus. Puis « Marquer comme revu » enregistre qui a revu la classification, et quand.
 
-Ce qui n'est pas renseigné reste « Non défini ». KANAP ne choisit jamais un niveau par défaut à votre place : une application non classée doit se voir.
+Ce qui n'est pas renseigné reste « Non défini ». Kadratis ne choisit jamais un niveau par défaut à votre place : une application non classée doit se voir.
 
 ## Votre méthode, pas la nôtre
 
@@ -55,20 +55,20 @@ La revue n'est pas un tampon annuel. Dès qu'une criticité, une vague, un objec
 
 ## Ce qu'un référentiel apporte de plus qu'un tableur
 
-Un tableur d'analyse d'impact classe des lignes. Dans KANAP, l'application classée est aussi reliée au reste du SI, et c'est là que la classification devient utile.
+Un tableur d'analyse d'impact classe des lignes. Dans Kadratis, l'application classée est aussi reliée au reste du SI, et c'est là que la classification devient utile.
 
-- **Les dépendances de reprise.** Sous la vague, KANAP liste les interfaces qui relient l'application à une application prévue dans une vague plus tardive. Sur la capture plus haut, SAP S/4HANA redémarre en V1, mais échange avec Salesforce, prévu en V2. Le plan de reprise voit ses incohérences avant le jour J.
+- **Les dépendances de reprise.** Sous la vague, Kadratis liste les interfaces qui relient l'application à une application prévue dans une vague plus tardive. Sur la capture plus haut, SAP S/4HANA redémarre en V1, mais échange avec Salesforce, prévu en V2. Le plan de reprise voit ses incohérences avant le jour J.
 - **La criticité des flux.** Les interfaces et les connexions héritent du niveau le plus élevé des applications qu'elles relient.
 - **Les serveurs.** Chaque serveur indique son système d'exploitation et ses dates de fin de support.
 - **Les fournisseurs et les contrats.** La chaîne d'approvisionnement est déjà là : chaque application mène à son éditeur, à ses contrats et à leurs échéances.
 - **La documentation.** Les procédures de reprise et les comptes rendus de test vivent dans la base de connaissances, reliés à l'application.
 - **La traçabilité.** Chaque modification est inscrite au journal d'audit.
 
-Et Plaid, l'agent IA intégré, répond sur ces mêmes données : « quelles applications critiques n'ont pas eu de test de reprise depuis un an ? », « où en est la revue des classifications ? ». Il peut aussi préparer des modifications de classification, que vous validez. La revue, elle, reste un geste humain.
+Et Kad, l'agent IA intégré, répond sur ces mêmes données : « quelles applications critiques n'ont pas eu de test de reprise depuis un an ? », « où en est la revue des classifications ? ». Il peut aussi préparer des modifications de classification, que vous validez. La revue, elle, reste un geste humain.
 
-## Ce que KANAP ne fait pas
+## Ce que Kadratis ne fait pas
 
-KANAP ne fait pas d'analyse de risques, ne remplace pas un système de management de la sécurité de l'information et ne déclare pas d'incident à l'ANSSI. Il fournit l'inventaire classé, relié et tenu à jour sur lequel ces démarches s'appuient. C'est la matière première de l'analyse de risques, pas l'analyse elle-même.
+Kadratis ne fait pas d'analyse de risques, ne remplace pas un système de management de la sécurité de l'information et ne déclare pas d'incident à l'ANSSI. Il fournit l'inventaire classé, relié et tenu à jour sur lequel ces démarches s'appuient. C'est la matière première de l'analyse de risques, pas l'analyse elle-même.
 
 ## Par où commencer
 

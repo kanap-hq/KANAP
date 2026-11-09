@@ -14,7 +14,7 @@ In March, invoicing stops for three hours. A first restore fails, the day ends l
 
 In October, the auditor asks for the file. When did the incident start, when was it noticed, who took charge of it? But the ticket has been closed, the exchanges are lost in mailboxes, and the person who handled the incident has moved to another role.
 
-Here is how KANAP meets the need.
+Here is how Kadratis meets the need.
 
 ## What belongs in the register
 
@@ -26,7 +26,7 @@ The register keeps the events that management, auditors or the insurer will come
 - serious failures of a supplier or a hosting provider;
 - anything you will have to explain later, or report to an authority.
 
-Everyday tickets stay in the ticketing tool: the KANAP incident register does not replace a service desk. The ticket number goes into the external reference of the incident, to find the operational trail. A good register has a few entries a month, and an outage that produced forty tickets is a single incident.
+Everyday tickets stay in the ticketing tool: the Kadratis incident register does not replace a service desk. The ticket number goes into the external reference of the incident, to find the operational trail. A good register has a few entries a month, and an outage that produced forty tickets is a single incident.
 
 To start, three fields are enough: a title, a severity and the detection time. The rest is filled in as you go. A register kept in a spreadsheet until now can be imported from a CSV file.
 
@@ -36,7 +36,7 @@ To start, three fields are enough: a title, a severity and the detection time. T
 
 The journal is what turns a form into a register. It keeps everything that happens to the incident: the team's notes, each status and severity change, each asset or application linked or unlinked, each reopening with its reason. Nothing it contains can be edited or deleted, by anyone.
 
-Notes carry the time of the events. A note entered on Tuesday can be dated Saturday at 11:40 pm and takes its place at that point in the timeline. Alongside, KANAP keeps the actual time it was entered, which nobody can change: backdating stays honest.
+Notes carry the time of the events. A note entered on Tuesday can be dated Saturday at 11:40 pm and takes its place at that point in the timeline. Alongside, Kadratis keeps the actual time it was entered, which nobody can change: backdating stays honest.
 
 Two dates open the timeline: when the incident started and when it was noticed. The gap between the two is often the auditor's first question. Once the incident is resolved, its duration appears on its own.
 
@@ -48,7 +48,7 @@ Numbering stays continuous. A duplicate is cancelled with a reason, and INC-13 n
 
 ![The Relations tab of an incident: its assets, its applications, its technologies and the suggested technologies.](/screenshots/incidents-relations-2026-10-26.png)
 
-An incident on its own in a register carries little weight. In KANAP, it is linked to the IT landscape: the servers hit, the business applications with their criticality, the technologies involved. KANAP suggests the technologies carried by the servers and applications already linked, with their origin, for example “technology of the asset AST-12”. One click adds them.
+An incident on its own in a register carries little weight. In Kadratis, it is linked to the IT landscape: the servers hit, the business applications with their criticality, the technologies involved. Kadratis suggests the technologies carried by the servers and applications already linked, with their origin, for example “technology of the asset AST-12”. One click adds them.
 
 The link works both ways. The record of a server, an application or a technology lists its incidents: whoever opens a server sees its history. And a search on a host name such as PAR-ESX-01 finds every incident that hit it.
 
@@ -73,9 +73,9 @@ Four fields carry the regulatory part of the incident:
 - **Notified on**, the filing date.
 - **Parties informed**: regulator, insurer, affected customers, group security.
 
-GDPR article 33 requires you to document every personal data breach, notified or not. The register is the record of it, and an incident that carries this information cannot be deleted. Notification deadlines and thresholds depend on your jurisdiction and your sector: KANAP records the facts and the dates, it does not decide whether to notify.
+GDPR article 33 requires you to document every personal data breach, notified or not. The register is the record of it, and an incident that carries this information cannot be deleted. Notification deadlines and thresholds depend on your jurisdiction and your sector: Kadratis records the facts and the dates, it does not decide whether to notify.
 
-A sensitive security incident can be restricted. Only register administrators, the reporter and the owner then see it; for everyone else, it does not exist in the list, in search, in Plaid's answers or in the export.
+A sensitive security incident can be restricted. Only register administrators, the reporter and the owner then see it; for everyone else, it does not exist in the list, in search, in Kad's answers or in the export.
 
 ## What the auditor receives
 
@@ -85,7 +85,7 @@ The register can be filtered by period, severity, category or compliance indicat
 
 For a specific incident, the PDF export assembles a complete record: properties, description, incident review, journal in chronological order with the review versions, linked assets, applications and tasks, compliance fields and attachments.
 
-Plaid, the assistant built into KANAP, also answers: “How many critical incidents this quarter?”, “List the open incidents on PAR-ESX-01”, “Summary of INC-2”. It reads the journal and the review, and can therefore answer down to the root cause.
+Kad, the assistant built into Kadratis, also answers: “How many critical incidents this quarter?”, “List the open incidents on PAR-ESX-01”, “Summary of INC-2”. It reads the journal and the review, and can therefore answer down to the root cause.
 
 ## Where to start
 
@@ -94,4 +94,4 @@ Plaid, the assistant built into KANAP, also answers: “How many critical incide
 3. **Log early, complete as you go, close once the review is written.**
 4. **Review the register every quarter**: the categories that recur and the servers that appear more than once may feed the next budget request or the next project.
 
-To see all of this in action, a free 14-day trial of our hosted version gives access to the sample data of the fictional Fromage & Co group, incident register included, loaded in a minute. KANAP is fully open source: it can also be installed for free on your own servers.
+To see all of this in action, a free 14-day trial of our hosted version gives access to the sample data of the fictional Fromage & Co group, incident register included, loaded in a minute. Kadratis is fully open source: it can also be installed for free on your own servers.
