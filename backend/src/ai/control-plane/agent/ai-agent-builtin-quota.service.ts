@@ -3,10 +3,10 @@ import { codedForbidden } from '../../../auth/module-right-required';
 import { AiExecutionContextWithManager } from '../../ai.types';
 import { AiModelResolutionError, AiModelResolverService } from '../../ai-model-resolver.service';
 import { AiBuiltinUsageService } from '../../platform/ai-builtin-usage.service';
-import { PRODUCT_NAME } from '../../../config/product';
+import { AGENT_NAME, PRODUCT_NAME } from '../../../config/product';
 
 export const AGENT_RUNS_AWAIT_BUILTIN_CONFIRMATION =
-  `Agent runs are paused until an administrator confirms the ${PRODUCT_NAME} included model in Admin > Plaid.`;
+  `Agent runs are paused until an administrator confirms the ${PRODUCT_NAME} included model in Admin > ${AGENT_NAME}.`;
 
 type BuiltinUse = 'builtin' | 'awaiting_confirmation' | 'other';
 

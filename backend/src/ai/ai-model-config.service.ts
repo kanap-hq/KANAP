@@ -10,6 +10,7 @@ import { AiAgentDefinition } from './control-plane/entities/ai-agent-definition.
 import { AiProviderRegistry } from './providers/ai-provider-registry.service';
 import { AI_REASONING_EFFORTS, AiReasoningEffort } from './providers/ai-provider.types';
 import { reasoningEffortSupport } from './providers/reasoning-effort.capability';
+import { AGENT_NAME } from '../config/product';
 
 export type AiModelConfigUsage = {
   chat: boolean;
@@ -189,7 +190,7 @@ export class AiModelConfigService {
     const usage = (await this.loadUsage(tenantId, [id], opts?.manager)).get(id) ?? { chat: false, agents: [] };
     if (usage.chat || usage.agents.length > 0) {
       const consumers = [
-        ...(usage.chat ? ['Plaid'] : []),
+        ...(usage.chat ? [AGENT_NAME] : []),
         ...usage.agents.map((agent) => agent.name),
       ];
       throw new ConflictException({

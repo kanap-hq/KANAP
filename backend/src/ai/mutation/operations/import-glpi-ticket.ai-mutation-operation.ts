@@ -41,6 +41,7 @@ import {
 } from '../ai-task-mutation-support.service';
 import { findImgSourceValues } from '../../../common/text-scan';
 import { AiWriteLanguage, previewSummaryText, quoted, taskDetailText, taskPriorityText, ticketImportCardText, ticketImportDetailText, writeActionText } from '../../ai-write-texts';
+import { AGENT_NAME } from '../../../config/product';
 
 const RELATION_TYPE_VALUES = ['standalone', 'project', 'budget_line'] as const;
 const PRIORITY_LEVEL_VALUES = ['blocker', 'high', 'normal', 'low', 'optional'] as const;
@@ -605,7 +606,7 @@ abstract class BaseImportTicketAiMutationOperation<TInput extends LegacyImportTi
     entity_type: 'tasks',
     fields: ['relation', 'title', 'description', 'assignee', 'priority_level', 'task_type', 'source', 'comments'],
     reversible: false,
-    prompt_hint: 'Compatibility only. For new ticket escalation previews, prefer `import_ticket` with `provider_key: "glpi"` and `ticket_id`. The task requestor is always the current Plaid user.',
+    prompt_hint: `Compatibility only. For new ticket escalation previews, prefer \`import_ticket\` with \`provider_key: "glpi"\` and \`ticket_id\`. The task requestor is always the current ${AGENT_NAME} user.`,
   };
 
   protected constructor(
@@ -1256,7 +1257,7 @@ export class ImportTicketAiMutationOperation extends BaseImportTicketAiMutationO
     entity_type: 'tasks',
     fields: ['relation', 'title', 'description', 'assignee', 'priority_level', 'task_type', 'source', 'comments'],
     reversible: false,
-    prompt_hint: 'For ticket escalation, use `import_ticket` with `provider_key` and `ticket_id`. The task requestor is always the current Plaid user.',
+    prompt_hint: `For ticket escalation, use \`import_ticket\` with \`provider_key\` and \`ticket_id\`. The task requestor is always the current ${AGENT_NAME} user.`,
   };
 
   constructor(

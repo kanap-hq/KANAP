@@ -37,6 +37,7 @@ import {
   previewErrorText,
   isFixedPreviewError,
 } from './ai-write-texts';
+import { AGENT_NAME } from '../config/product';
 
 const PREVIEW_TTL_MS = 10 * 60 * 1000;
 const MAX_CONVERSATION_PREVIEWS = 50;
@@ -47,7 +48,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const PLAN_PLACEHOLDER_RE = /\{\{\s*([A-Za-z0-9_-]+)\.(id|ref|title)\s*\}\}/g;
 /** A preview executed before the budget lines became one family: its card lists, its undo is refused. */
 const LEGACY_BUDGET_LINE_TYPES = new Set(['spend_items', 'capex_items']);
-const LEGACY_BUDGET_LINE_UNDO_REFUSAL = 'This change was made before a Plaid update and can no longer be undone here: use the screen.';
+const LEGACY_BUDGET_LINE_UNDO_REFUSAL = `This change was made before a ${AGENT_NAME} update and can no longer be undone here: use the screen.`;
 
 export type AiMutationPlanOperationInput = {
   operation_id?: string | null;
@@ -298,8 +299,8 @@ export class AiMutationPreviewService {
       },
       changes: {},
       summary: preview.status === 'executed'
-        ? `This ${action} preview was executed before a Plaid update.`
-        : `This ${action} preview was made before a Plaid update.`,
+        ? `This ${action} preview was executed before a ${AGENT_NAME} update.`
+        : `This ${action} preview was made before a ${AGENT_NAME} update.`,
     };
   }
 

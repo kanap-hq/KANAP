@@ -9,7 +9,7 @@ import type { LocalizedBudgetColumnAiContext } from '../budget-columns/budget-co
 import type { AnalyticsDimensionsPromptContext } from './ai-analytics-dimensions-context';
 import { isoDateTimeInTimeZone, knownTimeZone } from '../common/csv-sheet';
 import { AI_PERSON_WITHOUT_NAME } from './query/ai-support.query';
-import { PRODUCT_NAME, workspaceDisplayName } from '../config/product';
+import { AGENT_NAME, PRODUCT_NAME, workspaceDisplayName } from '../config/product';
 import { aiScreenName, unreadFamiliesSentence, type AiAdminFamiliesGap, type AiScreenLanguage, type AiUnreadFamiliesReach } from './ai-unread-families';
 
 type CurrentUserPromptContext = {
@@ -225,8 +225,8 @@ function writeRightsText(writeRights: SystemPromptParams['writeRights']): string
   const lines = ['Rights of this person, for refusals:'];
   if (writeRights) {
     lines.push(writeRights.plaidChanges
-      ? '- Their role lets them prepare changes with Plaid.'
-      : '- Their role lets them ask Plaid questions but not prepare changes with it (that needs the Plaid right at member level).');
+      ? `- Their role lets them prepare changes with ${AGENT_NAME}.`
+      : `- Their role lets them ask ${AGENT_NAME} questions but not prepare changes with it (that needs the ${AGENT_NAME} right at member level).`);
     lines.push(writeRights.modifiableModules.length
       ? `- Modules they may modify: ${writeRights.modifiableModules.join(', ')}.`
       : '- Their role lets them modify no module.');
@@ -235,9 +235,9 @@ function writeRightsText(writeRights: SystemPromptParams['writeRights']): string
     }
   }
   lines.push(
-    '- When a change is refused or cannot be made, say in plain words, in the user\'s language, which right is missing, for example "you need the right to modify projects" or "your role lets you ask Plaid questions but not prepare changes". '
+    `- When a change is refused or cannot be made, say in plain words, in the user's language, which right is missing, for example "you need the right to modify projects" or "your role lets you ask ${AGENT_NAME} questions but not prepare changes". `
     + 'Never say you are limited to read-only operations, and never quote a permission code such as budget:reader. '
-    + `When the right exists but no Plaid tool makes this change, say that Plaid cannot make it, name the ${PRODUCT_NAME} screen where the person can, and prepare no other change in its place.`,
+    + `When the right exists but no ${AGENT_NAME} tool makes this change, say that ${AGENT_NAME} cannot make it, name the ${PRODUCT_NAME} screen where the person can, and prepare no other change in its place.`,
   );
   return lines.join('\n');
 }
@@ -248,21 +248,21 @@ function writeRightsText(writeRights: SystemPromptParams['writeRights']): string
  */
 const accessWritesRule = (screenLanguage: AiScreenLanguage | null) =>
   `A person's data access (${aiScreenName(['admin', 'dataAccess'], screenLanguage)}), their roles and the rights of a role (${aiScreenName(['admin', 'roles'], screenLanguage)}), `
-  + `and creating or deactivating a person (${aiScreenName(['admin', 'users'], screenLanguage)}) are changed on those screens only: Plaid prepares none of them, whatever the person's rights.`;
+  + `and creating or deactivating a person (${aiScreenName(['admin', 'users'], screenLanguage)}) are changed on those screens only: ${AGENT_NAME} prepares none of them, whatever the person's rights.`;
 
 /**
  * The writes no Plaid tool makes (issue 125): a refusal in words, never a substitute preview the
  * person has to reject. The alternative is offered in words and prepared once accepted.
  */
 const unsupportedWritesRule = (screenLanguage: AiScreenLanguage | null) =>
-  'Writes Plaid cannot prepare, whatever the person\'s rights: deleting an application, an asset, a contract, a project, a request, an incident, a technology, or any record other than one task, one contact, one location, one document, one budget line, one connection or one interface (`delete_record` does those, one record at a time); deleting several records in one request, which Plaid prepares one at a time, never as one delete or one plan; '
+  `Writes ${AGENT_NAME} cannot prepare, whatever the person's rights: deleting an application, an asset, a contract, a project, a request, an incident, a technology, or any record other than one task, one contact, one location, one document, one budget line, one connection or one interface (\`delete_record\` does those, one record at a time); deleting several records in one request, which ${AGENT_NAME} prepares one at a time, never as one delete or one plan; `
   + 'deleting one of a technology\'s versions (its Overview tab has the version\'s delete); re-running the vulnerability matching: the technology\'s Vulnerabilities tab has Refresh. '
   + `${accessWritesRule(screenLanguage)} `
-  + 'A technology\'s attachments are added from its Relations tab, not by Plaid; its CPE products and CVE names belong to the vulnerability matching. '
-  + `For such a request, and for any change that no write-preview tool listed here makes, refuse in the user's language in one or two sentences: say what Plaid cannot do and name the ${PRODUCT_NAME} screen where the person can do it. `
+  + `A technology's attachments are added from its Relations tab, not by ${AGENT_NAME}; its CPE products and CVE names belong to the vulnerability matching. `
+  + `For such a request, and for any change that no write-preview tool listed here makes, refuse in the user's language in one or two sentences: say what ${AGENT_NAME} cannot do and name the ${PRODUCT_NAME} screen where the person can do it. `
   + 'For a request to delete several records, prepare the first one and say the others are deleted one at a time, or ask which one comes first. '
   + 'Prepare no preview in its place: no task recording the request, no status change, cancellation or deactivation standing in for a deletion. '
-  + 'You may offer the closest change Plaid can make, in words ("I can create a task to track it if you want"); prepare it only after the user says yes.';
+  + `You may offer the closest change ${AGENT_NAME} can make, in words ("I can create a task to track it if you want"); prepare it only after the user says yes.`;
 
 const LANGUAGE_NAMES: Record<AiScreenLanguage, string> = { en: 'English', fr: 'French', de: 'German', es: 'Spanish' };
 
@@ -357,7 +357,7 @@ export class AiSystemPromptService {
     addSection(
       'identity',
       'Assistant identity',
-      `You are Plaid, the integrated AI assistant of ${PRODUCT_NAME}, the IT governance platform, serving one workspace: the organisation named by \`tenantName\` in the context below.`,
+      `You are ${AGENT_NAME}, the integrated AI assistant of ${PRODUCT_NAME}, the IT governance platform, serving one workspace: the organisation named by \`tenantName\` in the context below.`,
     );
 
     const analyticsDimensions = params.analyticsDimensions?.length

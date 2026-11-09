@@ -15,6 +15,7 @@ import { AiExecutionContextWithManager } from '../../ai.types';
 import { buildAiMutationAudit } from '../ai-mutation-audit.util';
 import { AiTechnologyMutationSupportService, AiTechnologyTarget } from '../ai-technology-mutation-support.service';
 import { AiMutationOperation, AiMutationPreviewPresentation, AiPreparedMutationPreview } from '../ai-mutation-operation.types';
+import { AGENT_NAME } from '../../../config/product';
 
 const VERSION_ADD = z.object({
   label: z.string().trim().min(1).max(100)
@@ -93,8 +94,8 @@ function assertKnownKeys(value: Record<string, unknown>, allowed: readonly strin
 
 const VERSION_UNSUPPORTED_MESSAGES: Record<string, string> = {
   delete: 'Deleting a version is done in the technology screen, on the Overview tab, not here.',
-  cpe_version: 'Plaid does not write cpe_version or build_prefixes: the vulnerability matching owns them.',
-  build_prefixes: 'Plaid does not write cpe_version or build_prefixes: the vulnerability matching owns them.',
+  cpe_version: `${AGENT_NAME} does not write cpe_version or build_prefixes: the vulnerability matching owns them.`,
+  build_prefixes: `${AGENT_NAME} does not write cpe_version or build_prefixes: the vulnerability matching owns them.`,
   vulnerability_alerts: "A version's vulnerability alerts are set with set_technology_vulnerability_alerts, not here.",
 };
 

@@ -27,6 +27,7 @@ import {
   AiSurface,
   AiSurfaceCapabilityDto,
 } from './ai.types';
+import { AGENT_NAME } from '../config/product';
 
 const LEVEL_RANK: Record<PermissionLevel, number> = {
   reader: 1,
@@ -188,8 +189,8 @@ const LEVEL_PLAIN_VERBS: Record<PermissionLevel, string> = {
 export function missingRightMessage(resource: string, minimumLevel: PermissionLevel, screen?: string, subject?: string): string {
   if (resource === 'ai_chat') {
     return minimumLevel === 'reader'
-      ? 'Your role does not give access to Plaid. An administrator can add it to your role.'
-      : 'Your role lets you ask Plaid questions but not prepare changes with it: that needs the Plaid right at member level. An administrator can add it to your role.';
+      ? `Your role does not give access to ${AGENT_NAME}. An administrator can add it to your role.`
+      : `Your role lets you ask ${AGENT_NAME} questions but not prepare changes with it: that needs the ${AGENT_NAME} right at member level. An administrator can add it to your role.`;
   }
   const name = RIGHT_PLAIN_NAMES[resource] ?? READ_RIGHT_PLAIN_NAMES[resource];
   // The rights of the settings and the MCP surface keep their code: the administration screens read it.
@@ -226,8 +227,8 @@ export function isRightRefusalMessage(message: string | null | undefined): boole
   const text = String(message ?? '').trim();
   if (!text) return false;
   return text.startsWith('You need the right to ')
-    || text.startsWith('Your role does not give access to Plaid.')
-    || text.startsWith('Your role lets you ask Plaid questions but not prepare changes')
+    || text.startsWith(`Your role does not give access to ${AGENT_NAME}.`)
+    || text.startsWith(`Your role lets you ask ${AGENT_NAME} questions but not prepare changes`)
     || text.startsWith('Your role lets you contribute to ')
     || text.startsWith('Missing required permission ')
     || / in your access\.$/.test(text)
