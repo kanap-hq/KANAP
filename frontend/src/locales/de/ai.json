@@ -30,13 +30,13 @@
     "dropHint": "Datei zum Anhängen hier ablegen",
     "hintEnter": "Eingabe zum Senden",
     "hintShiftEnter": "Umschalt+Eingabe für neue Zeile",
-    "placeholder": "Fragen Sie Plaid…",
+    "placeholder": "Fragen Sie {{agent}}…",
     "removeAttachment": "Anhang entfernen",
     "send": "Senden",
     "stop": "Generierung stoppen"
   },
   "messageList": {
-    "assistantRole": "Plaid",
+    "assistantRole": "{{agent}}",
     "copied": "Kopiert",
     "copy": "Nachricht kopieren",
     "cancel": "Abbrechen",
@@ -441,13 +441,13 @@
     "empty": {
       "subtitle": "Stellen Sie eine Frage zu Ihren Aufgaben, Projekten, Assets oder Dokumenten.",
       "suggestionsTitle": "Versuchen Sie",
-      "title": "Plaid ist bereit"
+      "title": "{{agent}} ist bereit"
     },
     "messages": {
-      "disabled": "Plaid ist für diesen Arbeitsbereich ausgeschaltet.",
-      "tenantDisabledAdminLink": "Schalten Sie ihn unter Administration › Plaid ein",
+      "disabled": "{{agent}} ist für diesen Arbeitsbereich ausgeschaltet.",
+      "tenantDisabledAdminLink": "Schalten Sie ihn unter Administration › {{agent}} ein",
       "tenantDisabledAskAdmin": "Bitten Sie einen Administrator, ihn einzuschalten.",
-      "builtinNotAccepted": "Plaid wartet darauf, dass eine Administratorin oder ein Administrator es aktiviert."
+      "builtinNotAccepted": "{{agent}} wartet darauf, dass eine Administratorin oder ein Administrator es aktiviert."
     },
     "suggestions": {
       "applicationMention": "Fassen Sie eine Anwendung zusammen: Geben Sie @ ein, um eine auszuwählen.",
@@ -462,12 +462,12 @@
       "awaitingDecision": "Welche Anfragen warten auf eine Entscheidung?",
       "savings": "Wo liegen die größten Einsparpotenziale bei den IT-OPEX?"
     },
-    "title": "Plaid"
+    "title": "{{agent}}"
   },
   "consent": {
-    "accept": "Ich bin einverstanden, dass {{name}} ({{place}}) meine Fragen und die Daten, die sie betreffen, für die Antworten von Plaid verarbeitet. Sie werden nicht zum Training seiner Modelle verwendet.",
+    "accept": "Ich bin einverstanden, dass {{name}} ({{place}}) meine Fragen und die Daten, die sie betreffen, für die Antworten von {{agent}} verarbeitet. Sie werden nicht zum Training seiner Modelle verwendet.",
     "otherModel": "Anderes Modell oder Deaktivierung:",
-    "otherModelLink": "Administration › Plaid",
+    "otherModelLink": "Administration › {{agent}}",
     "loading": "Anbieter wird geladen"
   }
 }

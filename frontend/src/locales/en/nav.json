@@ -1,6 +1,6 @@
 {
   "workspaces": {
-    "ai": "Plaid",
+    "ai": "{{agent}}",
     "agents": "AI agents",
     "portfolio": "Portfolio",
     "itOperations": "IT landscape",
@@ -105,7 +105,7 @@
       "branding": "Branding",
       "sampleData": "Sample data",
       "integrations": "Integrations",
-      "ai": "Plaid",
+      "ai": "{{agent}}",
       "agentControl": "Agent control",
       "aiModels": "AI models",
       "aiUsage": "Usage & costs",

@@ -1,6 +1,6 @@
 {
   "workspaces": {
-    "ai": "Plaid",
+    "ai": "{{agent}}",
     "agents": "Agents IA",
     "portfolio": "Portefeuille",
     "itOperations": "Cartographie SI",
@@ -105,7 +105,7 @@
       "branding": "Personnalisation",
       "sampleData": "Données d'exemple",
       "integrations": "Intégrations",
-      "ai": "Plaid",
+      "ai": "{{agent}}",
       "agentControl": "Contrôle agents",
       "aiModels": "Modèles IA",
       "aiUsage": "Utilisation & coûts",

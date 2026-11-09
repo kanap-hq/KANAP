@@ -30,13 +30,13 @@
     "dropHint": "Drop a file to attach",
     "hintEnter": "Enter to send",
     "hintShiftEnter": "Shift+Enter for new line",
-    "placeholder": "Ask Plaid…",
+    "placeholder": "Ask {{agent}}…",
     "removeAttachment": "Remove attachment",
     "send": "Send",
     "stop": "Stop generating"
   },
   "messageList": {
-    "assistantRole": "Plaid",
+    "assistantRole": "{{agent}}",
     "copied": "Copied",
     "copy": "Copy message",
     "cancel": "Cancel",
@@ -441,13 +441,13 @@
     "empty": {
       "subtitle": "Ask anything about your tasks, projects, assets or documents.",
       "suggestionsTitle": "Try asking",
-      "title": "Plaid is ready"
+      "title": "{{agent}} is ready"
     },
     "messages": {
-      "disabled": "Plaid is turned off for this workspace.",
-      "tenantDisabledAdminLink": "Turn it on in Administration › Plaid",
+      "disabled": "{{agent}} is turned off for this workspace.",
+      "tenantDisabledAdminLink": "Turn it on in Administration › {{agent}}",
       "tenantDisabledAskAdmin": "Ask an administrator to turn it on.",
-      "builtinNotAccepted": "Plaid is waiting for an administrator to turn it on."
+      "builtinNotAccepted": "{{agent}} is waiting for an administrator to turn it on."
     },
     "suggestions": {
       "applicationMention": "Summarize an application: type @ to pick one",
@@ -462,12 +462,12 @@
       "awaitingDecision": "Which requests are waiting for a decision?",
       "savings": "What are the main savings opportunities in IT OPEX?"
     },
-    "title": "Plaid"
+    "title": "{{agent}}"
   },
   "consent": {
-    "accept": "I agree that {{name}} ({{place}}) processes my questions and the data they concern for Plaid's answers. They are not used to train its models.",
+    "accept": "I agree that {{name}} ({{place}}) processes my questions and the data they concern for {{agent}}'s answers. They are not used to train its models.",
     "otherModel": "Another model, or turn it off:",
-    "otherModelLink": "Admin › Plaid",
+    "otherModelLink": "Admin › {{agent}}",
     "loading": "Loading the provider"
   }
 }

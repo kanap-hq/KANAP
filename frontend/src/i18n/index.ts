@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { formatCount, frenchSpacing } from './formatters';
 import { mergeAbbreviationPeriods } from '../lib/dateFormat';
 import { bundledLocales, localeLoaders, type TranslationTree } from './localeSource';
-import { PRODUCT_NAME } from '../config/product';
+import { AGENT_NAME, PRODUCT_NAME } from '../config/product';
 
 export const LANGUAGE_OVERRIDE_STORAGE_KEY = 'kanap_language';
 export const NAMESPACES = [
@@ -245,8 +245,8 @@ function i18nOptions(lng: SupportedLocale, resources: Resource): InitOptions {
     ns: [...NAMESPACES],
     interpolation: {
       escapeValue: false,
-      // `{{product}}` names the product in any text (`config/product.ts`).
-      defaultVariables: { product: PRODUCT_NAME },
+      // `{{product}}` names the product and `{{agent}}` the AI agent in any text (`config/product.ts`).
+      defaultVariables: { product: PRODUCT_NAME, agent: AGENT_NAME },
     },
     // Nothing is saved: a key missing in the active language downloads its English namespace (and
     // `common`, the fallback namespace), and the components re-render on the store's `added` event.
