@@ -25,7 +25,7 @@ These are the five steps of the **Your first five steps** tile on the home page,
 
 **What to do.** Either import your budget file, or create a first line by hand.
 
-- **Import a file.** Click **Export** first: on an empty list, the file holds the header row alone, your template. **Import > Download an example** gives a workbook with a few sample lines and what each column takes. Fill in your lines, then **Import**.
+- **Import a file.** Click **Import**, then **Download an example**: a workbook with a few sample lines and what each column takes. Fill in your lines and import the file. On an empty list, **Export** gives the header row alone.
 - **Create a line.** Click **New line**, type its name in the title and press Enter. Fill in the **Properties** panel: paying company, account, currency. Enter the amounts in the **Budget** tab, then click **Create**. **Cancel** drops the line.
 
 **What you see.** An import checks the whole file and reports the lines to create, to update and those unchanged. A file with one error loads nothing. A line created by hand shows in the list with its amounts for the year.

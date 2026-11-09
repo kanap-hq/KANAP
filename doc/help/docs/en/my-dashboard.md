@@ -55,7 +55,7 @@ If you close the dialog, the choice waits in **About KANAP**. The line **Path: â
 
 ### Your first five steps
 
-Once a path is chosen, the **Your first five steps** tile comes first on the home page. It lists the five steps of the path and your progress, for example **2/5**. Each step opens its screen, where the page title is outlined with one sentence of guidance.
+Once a path is chosen, the **Your first five steps** tile comes first on the home page. It lists the five steps of the path and your progress, for example **2/5**. Each step opens its screen, where the page title is outlined with one sentence of guidance. The guidance stays on that screen and its records until you close it. Once the step is done, **Next step** opens the next step left to do (**Finish** after the last one).
 
 - With the example, opening a step marks it done.
 - With your own data, a step that creates something is marked done as soon as it exists. For the other steps, click **Done** in the guidance, or the mark next to the step in the tile. The mark also undoes a step, except one whose item exists.

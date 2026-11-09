@@ -25,7 +25,7 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 
 **Was Sie tun.** Importieren Sie Ihre Budgetdatei, oder legen Sie eine erste Zeile von Hand an.
 
-- **Eine Datei importieren.** Klicken Sie zuerst auf **Exportieren**: Bei einer leeren Liste enthält die Datei nur die Kopfzeile, Ihre Vorlage. **Importieren > Beispiel herunterladen** liefert eine Mappe mit einigen Beispielzeilen und dem, was jede Spalte aufnimmt. Tragen Sie Ihre Zeilen ein, dann **Importieren**.
+- **Eine Datei importieren.** Klicken Sie auf **Importieren**, dann auf **Beispiel herunterladen**: eine Mappe mit einigen Beispielzeilen und dem, was jede Spalte aufnimmt. Tragen Sie Ihre Zeilen ein und importieren Sie die Datei. Bei einer leeren Liste liefert **Exportieren** nur die Kopfzeile.
 - **Eine Zeile anlegen.** Klicken Sie auf **Neue Zeile**, geben Sie ihren Namen im Titel ein und drücken Sie die Eingabetaste. Füllen Sie das Panel **Eigenschaften** aus: zahlendes Unternehmen, Konto, Währung. Erfassen Sie die Beträge im Reiter **Budget** und klicken Sie dann auf **Erstellen**. **Abbrechen** verwirft die Zeile.
 
 **Was Sie sehen.** Ein Import prüft die ganze Datei und meldet die Zeilen, die angelegt, geändert oder unverändert bleiben. Eine Datei mit einem Fehler lädt nichts. Eine von Hand angelegte Zeile erscheint in der Liste mit ihren Beträgen für das Jahr.
