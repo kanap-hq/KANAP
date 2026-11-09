@@ -242,7 +242,7 @@ function WorkingDayCalendarsList() {
           <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="center" data-testid="working-day-calendars-empty">
             <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t('workingDayCalendars.emptyExplainer')}</Typography>
             {canCreate && (
-              <Button variant="contained" size="small" onClick={openNewCalendar}>
+              <Button variant="contained" size="small" sx={{ flexShrink: 0, whiteSpace: 'nowrap' }} onClick={openNewCalendar}>
                 {t('workingDayCalendars.newCalendar')}
               </Button>
             )}

@@ -222,7 +222,7 @@ function CostCentersList() {
           <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="center" data-testid="cost-centers-empty">
             <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t('costCenters.emptyExplainer')}</Typography>
             {canCreate && (
-              <Button variant="contained" size="small" onClick={openNewCostCenter}>
+              <Button variant="contained" size="small" sx={{ flexShrink: 0, whiteSpace: 'nowrap' }} onClick={openNewCostCenter}>
                 {t('costCenters.newCostCenter')}
               </Button>
             )}
