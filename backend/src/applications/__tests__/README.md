@@ -23,4 +23,4 @@ The HTTP permission smoke requires a separate API on `http://localhost:8086`, co
 DATABASE_URL=postgres://app:app@127.0.0.1:5432/kanap_classification_v1_test CLASSIFICATION_TEST_API_URL=http://localhost:8086 JWT_SECRET=classification-local-test-only-secret npm run test:application-classification:http
 ```
 
-Frontend duration, configured-choice, review and settings editor tests are in `frontend/src/pages/it/components/`. The recorded browser smoke covers choosing a business level, explicit review, named reviewer and navigation to the single Knowledge block. External live Plaid model generation is not covered; tool discovery, filters, preview/mutation contracts and guards are exercised deterministically.
+Frontend duration, configured-choice, review and settings editor tests are in `frontend/src/pages/it/components/`. The recorded browser smoke covers choosing a business level, explicit review, named reviewer and navigation to the single Knowledge block. External live Kad model generation is not covered; tool discovery, filters, preview/mutation contracts and guards are exercised deterministically.

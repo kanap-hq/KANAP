@@ -15,6 +15,7 @@ import {
   normalizeLiveTargetSelector,
 } from './ai-live-test-target.service';
 import { codedForbidden } from '../../../auth/module-right-required';
+import { PRODUCT_NAME } from '../../../config/product';
 
 export type LiveContractScenarioKey =
   | 'ticketing_read'
@@ -336,7 +337,7 @@ export class AiLiveContractHarnessService {
     const metadata = metadataRecord(target);
     const noteBody = typeof metadata.note_body === 'string' && metadata.note_body.trim().length > 0
       ? metadata.note_body.trim()
-      : `KANAP Phase 8 sandbox private note ${new Date().toISOString()}`;
+      : `${PRODUCT_NAME} Phase 8 sandbox private note ${new Date().toISOString()}`;
     const prepared = await this.dispatcher.execute(context, {
       capabilityName: TICKETING_INTERNAL_NOTE_PREPARE_CAPABILITY,
       input: {
