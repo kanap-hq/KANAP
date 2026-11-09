@@ -1,6 +1,6 @@
 # Publishing a blog article
 
-The blog lives at `kanap.net/blog` (`/fr/blog`, `/de/blog`, `/es/blog`). Articles are
+The blog lives at `kadratis.com/blog` (`/fr/blog`, `/de/blog`, `/es/blog`). Articles are
 Markdown files in this folder; the site is rebuilt and redeployed to publish. No CMS,
 no database, nothing to log into.
 
@@ -15,7 +15,7 @@ Copy the template and name the file after the URL you want:
 src/content/blog/_template.md   →   src/content/blog/en/my-article.md
 ```
 
-The filename is the slug: `en/my-article.md` becomes `kanap.net/blog/my-article`.
+The filename is the slug: `en/my-article.md` becomes `kadratis.com/blog/my-article`.
 Use lowercase words separated by hyphens, no dates in the slug (`four-weeks-calibrating-an-agent-on-glpi`, not `2026-09-post-1`).
 
 Fill in the frontmatter (the block between the `---` lines):
@@ -148,7 +148,7 @@ git commit -m "blog: <title>"
 On the server (`/opt/kanap`): `git pull`, then `docker compose build marketing` and
 `docker compose up -d marketing` (QA first, then prod; same steps as any marketing change).
 
-Then share the article. Its URL is `https://kanap.net/blog/<slug>` (`/fr/blog/<slug>`
+Then share the article. Its URL is `https://kadratis.com/blog/<slug>` (`/fr/blog/<slug>`
 for the French version). LinkedIn picks up the title, description and card automatically.
 
 ## Release articles

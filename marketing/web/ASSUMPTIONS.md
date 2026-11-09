@@ -24,7 +24,7 @@ Format: **Decision**, **Why**, **Alternative if you disagree**.
 **Why:** Matches the remote in CLAUDE.md.
 
 ### A-4. App / docs URLs
-**Decision:** `https://app.kanap.net` (sign-in target), `https://doc.kanap.net` (docs).
+**Decision:** `https://app.kanap.net` (sign-in target), `https://doc.kadratis.com` (docs).
 **Why:** Current production subdomains referenced in the existing site.
 
 ### A-5. Plaid (AI assistant) — EXTENDED 2026-06-26 (plan §11)
@@ -123,7 +123,7 @@ Built in phases: `/changelog`, `/security`, `/on-premise`. Confirmed in chat.
 **Decision:** Default `og-image.png` for all pages, with **per-page OG now supported** (2026-06-27): `BaseLayout` takes an optional `ogImage` prop, and `scripts/og.mjs` renders branded 1200×630 cards into `public/og/<name>.png` (puppeteer-core + system chromium, same setup as `shoot.mjs`). The first tailored card, `public/og/agents.png`, is wired on `/features/agents`. Add more pages to the `CARDS` map in `scripts/og.mjs` and pass `ogImage` from the page.
 
 ### A-23. Canonical domain
-**Decision:** `https://kanap.net` (matches old site's `site` config).
+**Decision:** `https://kadratis.com` (the product site; set in `astro.config.mjs`).
 
 ---
 
