@@ -3076,6 +3076,13 @@ async function testFailedCardFlagsTechnicalErrors() {
     assert.equal(isRightRefusalMessage(message), true, message);
   }
   assert.equal(isRightRefusalMessage('Library not found'), false);
+  // A refusal stored before the agent was renamed names it Plaid: it still shows as a refusal.
+  for (const message of [
+    'Your role does not give access to Plaid. An administrator can add it to your role.',
+    'Your role lets you ask Plaid questions but not prepare changes with it: that needs the Plaid right at member level. An administrator can add it to your role.',
+  ]) {
+    assert.equal(isRightRefusalMessage(message), true, message);
+  }
 
   const pending = createService({ previews: [createStatusPreview()] });
   const rejected = await pending.service.rejectPreview(pending.context, 'preview-1');
