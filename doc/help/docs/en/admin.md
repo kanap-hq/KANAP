@@ -472,7 +472,7 @@ Manage your subscription, your invoicing information and your invoices.
 ### Subscription Overview
 
 The top of the page sums up your subscription in two lines:
-- The plan, the billing frequency and the amount, for example "Hosted Kadratis · Annual · €2,490.00 / year". The subscription includes unlimited users, billed monthly or annually.
+- The plan, the billing frequency and the amount, for example "Kadratis Cloud · Annual · €2,490.00 / year". The subscription includes unlimited users, billed monthly or annually.
 - The status (Active, Trialing, Past due, Canceled, etc.), the renewal date and the payment method, for example "Active · renews 7 Oct 2027 · Visa •••• 4242".
 
 Without a running subscription (a trial, an expired trial or an ended subscription), only the status is shown. During a trial, it comes with the trial end date and the number of days remaining.

@@ -472,7 +472,7 @@ Gérez votre abonnement, vos informations de facturation et vos factures.
 ### Vue d'ensemble de l'abonnement
 
 Le haut de la page résume votre abonnement en deux lignes :
-- Le plan, la fréquence de facturation et le montant, par exemple « Hosted Kadratis · Annuel · 2 490,00 € / an ». L'abonnement inclut un nombre illimité d'utilisateurs, avec une facturation mensuelle ou annuelle.
+- Le plan, la fréquence de facturation et le montant, par exemple « Kadratis Cloud · Annuel · 2 490,00 € / an ». L'abonnement inclut un nombre illimité d'utilisateurs, avec une facturation mensuelle ou annuelle.
 - Le statut (Actif, En période d'essai, En retard, Annulé, etc.), la date de renouvellement et le moyen de paiement, par exemple « Actif · renouvellement le 7 oct. 2027 · Visa •••• 4242 ».
 
 Sans abonnement en cours (un essai, un essai expiré ou un abonnement terminé), seul le statut est affiché. Pendant un essai, il est accompagné de la date de fin d'essai et du nombre de jours restants.

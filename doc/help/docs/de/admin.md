@@ -472,7 +472,7 @@ Verwalten Sie Ihr Abonnement, Ihre Rechnungsinformationen und Ihre Rechnungen.
 ### Abonnement-Übersicht
 
 Oben auf der Seite wird Ihr Abonnement in zwei Zeilen zusammengefasst:
-- Der Tarif, die Abrechnungsfrequenz und der Betrag, zum Beispiel „Hosted Kadratis · Jährlich · 2.490,00 € / Jahr“. Das Abonnement umfasst unbegrenzte Nutzer, mit monatlicher oder jährlicher Abrechnung.
+- Der Tarif, die Abrechnungsfrequenz und der Betrag, zum Beispiel „Kadratis Cloud · Jährlich · 2.490,00 € / Jahr“. Das Abonnement umfasst unbegrenzte Nutzer, mit monatlicher oder jährlicher Abrechnung.
 - Der Status (Aktiv, Testphase, Überfällig, Gekündigt usw.), das Verlängerungsdatum und die Zahlungsmethode, zum Beispiel „Aktiv · Verlängerung am 7. Okt. 2027 · Visa •••• 4242“.
 
 Ohne laufendes Abonnement (eine Testphase, eine abgelaufene Testphase oder ein beendetes Abonnement) wird nur der Status angezeigt. Während einer Testphase stehen daneben das Ende der Testphase und die verbleibenden Tage.

@@ -78,7 +78,7 @@ The new row now shows the status **Not granted** with an orange warning. That is
 
 Who does what:
 
-- **Hosted Kadratis**: KANAP, which operates the service, owns the app registration and adds the permission. The customer's Entra administrator only grants consent.
+- **Kadratis Cloud**: KANAP, which operates the service, owns the app registration and adds the permission. The customer's Entra administrator only grants consent.
 - **On-premise**: the customer's own IT owns the app registration, so they add the permission and grant consent.
 
 ### If you do not want Graph calls at sign-in
@@ -98,7 +98,7 @@ Set the following in your on-prem `.env`:
 ENTRA_CLIENT_ID=<application-client-id>
 ENTRA_CLIENT_SECRET=<client-secret>
 ENTRA_AUTHORITY=https://login.microsoftonline.com/<tenant-id>
-ENTRA_REDIRECT_URI=https://kanap.company.com/api/auth/entra/callback
+ENTRA_REDIRECT_URI=https://kadratis.company.com/api/auth/entra/callback
 ```
 
 Notes:

@@ -472,7 +472,7 @@ Gestione su suscripción, su información de facturación y sus facturas.
 ### Resumen de la suscripción
 
 La parte superior de la página resume su suscripción en dos líneas:
-- El plan, la frecuencia de facturación y el importe, por ejemplo «Hosted Kadratis · Anual · 2490,00 € / año». La suscripción incluye usuarios ilimitados, con facturación mensual o anual.
+- El plan, la frecuencia de facturación y el importe, por ejemplo «Kadratis Cloud · Anual · 2490,00 € / año». La suscripción incluye usuarios ilimitados, con facturación mensual o anual.
 - El estado (Activo, En prueba, Pago vencido, Cancelado, etc.), la fecha de renovación y el método de pago, por ejemplo «Activo · se renueva el 7 oct 2027 · Visa •••• 4242».
 
 Sin una suscripción en curso (una prueba, una prueba expirada o una suscripción finalizada), solo se muestra el estado. Durante una prueba, lo acompañan la fecha de fin de la prueba y los días restantes.

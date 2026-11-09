@@ -159,7 +159,7 @@ Claude Desktop usa los mismos conectores que claude.ai: añada el conector en cu
 En una instalación autoalojada, un administrador puede compartir un enlace que abre el cuadro de diálogo **Add custom connector** con el nombre y la dirección ya rellenados. Sustituya el final por la dirección de su propio servidor, codificada para URL (`:` se convierte en `%3A`, `/` en `%2F`):
 
 ```text
-https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=Kadratis&connectorUrl=https%3A%2F%2Fkanap.example.com%2Fapi%2Fai%2Fmcp
+https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=Kadratis&connectorUrl=https%3A%2F%2Fkadratis.example.com%2Fapi%2Fai%2Fmcp
 ```
 
 #### Claude Team y Enterprise
@@ -171,7 +171,7 @@ Un Owner de la organización añade el conector personalizado una sola vez, con 
 Añada el servidor sin clave:
 
 ```bash
-claude mcp add --transport http kanap https://acme.kadratis.com/api/ai/mcp
+claude mcp add --transport http kadratis https://acme.kadratis.com/api/ai/mcp
 ```
 
 Después ejecute `claude mcp login kanap`, o simplemente use el servidor: Claude Code abre su navegador en la página de inicio de sesión de Kadratis y luego en la misma pantalla descrita arriba. El navegador vuelve a su propio ordenador, así que Kadratis no necesita ser accesible desde Internet: su ordenador llega a Kadratis por HTTPS, y Kadratis llega a `claude.ai` por HTTPS.
@@ -220,7 +220,7 @@ En Cursor, añada un servidor remoto (HTTP) en `mcp.json`:
 Claude Code también acepta una clave, por ejemplo en un equipo sin navegador, o cuando Kadratis no puede llegar a `claude.ai`:
 
 ```bash
-claude mcp add --transport http kanap https://acme.kadratis.com/api/ai/mcp --header "Authorization: Bearer kanap_mcp_..."
+claude mcp add --transport http kadratis https://acme.kadratis.com/api/ai/mcp --header "Authorization: Bearer kanap_mcp_..."
 ```
 
 ### Herramientas disponibles

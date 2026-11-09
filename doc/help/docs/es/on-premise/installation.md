@@ -31,7 +31,7 @@ Opcional:
 
 ## Nombre y certificado
 
-Los usuarios abren Kadratis en una dirección HTTPS, por ejemplo `https://kanap.company.com`. Esa dirección necesita un nombre que resuelva a su servidor y un certificado que corresponda a ese nombre. Tres casos cubren la mayoría de las redes:
+Los usuarios abren Kadratis en una dirección HTTPS, por ejemplo `https://kadratis.company.com`. Esa dirección necesita un nombre que resuelva a su servidor y un certificado que corresponda a ese nombre. Tres casos cubren la mayoría de las redes:
 
 | Caso | Nombre | Certificado |
 |------|------|-------------|
@@ -44,10 +44,10 @@ Muchas instalaciones no tienen DNS público. El nombre interno con un certificad
 **El servidor también debe resolver el nombre.** Los comandos de verificación de esta guía, y la prueba de humo, se ejecutan en el servidor y llaman a Kadratis por su nombre. Si todavía no existe ningún registro DNS, añada el nombre al archivo hosts del servidor:
 
 ```bash
-echo "127.0.0.1 kanap.company.com" | sudo tee -a /etc/hosts
+echo "127.0.0.1 kadratis.company.com" | sudo tee -a /etc/hosts
 ```
 
-Sustituya `kanap.company.com` por su nombre. Los clientes necesitan su propia entrada (o el registro DNS) que apunte a la dirección del servidor.
+Sustituya `kadratis.company.com` por su nombre. Los clientes necesitan su propia entrada (o el registro DNS) que apunte a la dirección del servidor.
 
 **Certificado autofirmado (solo para pruebas):**
 
@@ -57,14 +57,14 @@ sudo openssl req -x509 -nodes -days 365 \
   -newkey rsa:2048 \
   -keyout /etc/ssl/kanap/server.key \
   -out /etc/ssl/kanap/server.crt \
-  -subj "/CN=kanap.company.com" \
-  -addext "subjectAltName=DNS:kanap.company.com"
+  -subj "/CN=kadratis.company.com" \
+  -addext "subjectAltName=DNS:kadratis.company.com"
 sudo chmod 600 /etc/ssl/kanap/server.key
 ```
 
-Sustituya `kanap.company.com` por su nombre. Para un acceso por dirección IP, use `IP:192.0.2.10` en `subjectAltName` y ponga la IP en `-subj` y en `server_name`. Para usar su autoridad interna, pida un certificado para el mismo nombre y haga que `ssl_certificate` y `ssl_certificate_key` del archivo de nginx apunten a los archivos que le entregue (la cadena completa y la clave privada). Nada más cambia.
+Sustituya `kadratis.company.com` por su nombre. Para un acceso por dirección IP, use `IP:192.0.2.10` en `subjectAltName` y ponga la IP en `-subj` y en `server_name`. Para usar su autoridad interna, pida un certificado para el mismo nombre y haga que `ssl_certificate` y `ssl_certificate_key` del archivo de nginx apunten a los archivos que le entregue (la cadena completa y la clave privada). Nada más cambia.
 
-**Let's Encrypt:** `sudo apt-get install -y certbot`, después `sudo certbot certonly --webroot -w /var/www/html -d kanap.company.com`, con la página predeterminada de nginx respondiendo en el puerto 80. Los archivos del certificado son `/etc/letsencrypt/live/kanap.company.com/fullchain.pem` y `privkey.pem`. El [ejemplo de instalación](installation-example.md#8-nginx-y-tls) muestra la secuencia completa, renovación incluida.
+**Let's Encrypt:** `sudo apt-get install -y certbot`, después `sudo certbot certonly --webroot -w /var/www/html -d kadratis.company.com`, con la página predeterminada de nginx respondiendo en el puerto 80. Los archivos del certificado son `/etc/letsencrypt/live/kadratis.company.com/fullchain.pem` y `privkey.pem`. El [ejemplo de instalación](installation-example.md#8-nginx-y-tls) muestra la secuencia completa, renovación incluida.
 
 ## Inicio rápido
 
@@ -104,7 +104,7 @@ docker compose -f infra/compose.onprem.yml logs -f api
 # Tras el primer arranque, leer las líneas [ENV], [CONFIG], [CORS], [RATE-LIMIT] y [SECURITY] del registro de la API.
 
 # 7. Acceder a la aplicación
-# https://kanap.company.com
+# https://kadratis.company.com
 # Iniciar sesión con ADMIN_EMAIL / ADMIN_PASSWORD de .env
 ```
 
@@ -151,7 +151,7 @@ server {
     listen 443 ssl;
     listen [::]:443 ssl;
     http2 on;
-    server_name kanap.company.com;
+    server_name kadratis.company.com;
 
     ssl_certificate     /path/to/fullchain.pem;
     ssl_certificate_key /path/to/privkey.pem;
@@ -223,7 +223,7 @@ server {
 server {
     listen 80;
     listen [::]:80;
-    server_name kanap.company.com;
+    server_name kadratis.company.com;
 
     # Renovación del certificado con Let's Encrypt (webroot); inofensivo en otro caso
     location /.well-known/acme-challenge/ { root /var/www/html; }

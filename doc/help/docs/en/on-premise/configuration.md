@@ -45,8 +45,8 @@ To give Kadratis the look of your organization, set its name, logo and colors in
 | `ADMIN_EMAIL` | Email of the first administrator account | `admin@company.com` |
 | `ADMIN_PASSWORD` | Password of the first administrator account. Use a value of your own, 12 characters or more (see below) | `ChangeMe123!` |
 | `JWT_SECRET` | Signing key for sign-in tokens. Generate it with `openssl rand -hex 32` (32 characters or more) | 64 hex chars |
-| `APP_BASE_URL` | The exact address users open Kadratis at: scheme, host and port when it is not standard (used in every link Kadratis sends) | `https://kanap.company.com` |
-| `CORS_ORIGINS` | The exact address users open Kadratis at, comma-separated if there are several (browser origins allowed to call the API) | `https://kanap.company.com` |
+| `APP_BASE_URL` | The exact address users open Kadratis at: scheme, host and port when it is not standard (used in every link Kadratis sends) | `https://kadratis.company.com` |
+| `CORS_ORIGINS` | The exact address users open Kadratis at, comma-separated if there are several (browser origins allowed to call the API) | `https://kadratis.company.com` |
 
 **Choose the administrator password.** The example value in the table is a published one. Replace it with a value of your own, 12 characters or more, for example the output of `openssl rand -base64 18`. An example value or a shorter one makes the API print a `[SECURITY]` warning at each start until the account's password is changed. A `JWT_SECRET` shorter than 32 characters prints a `[SECURITY]` warning too.
 
@@ -56,7 +56,7 @@ To give Kadratis the look of your organization, set its name, logo and colors in
 - If no active administrator remains (all disabled, or none holds the Administrator role), the next start restores the `ADMIN_EMAIL` account as an enabled administrator. Its existing password stays as it is. If the account does not exist, it is created with `ADMIN_PASSWORD`.
 - If `ADMIN_EMAIL` or `ADMIN_PASSWORD` is empty, no account is created and the log says nothing about it.
 
-**Application address (`APP_BASE_URL`).** Password reset and invitation emails, notification emails, the Microsoft Entra sign-in redirect and the links in exports all start from `APP_BASE_URL`. Write the address exactly as users type it, with the port when it is not 443 for HTTPS or 80 for HTTP (for example `https://kanap.company.com:8443`). Kadratis does not read the `Host` or `X-Forwarded-Host` headers of a request to build these links, except on a local development machine (`APP_ENV=development`). Without `APP_BASE_URL`:
+**Application address (`APP_BASE_URL`).** Password reset and invitation emails, notification emails, the Microsoft Entra sign-in redirect and the links in exports all start from `APP_BASE_URL`. Write the address exactly as users type it, with the port when it is not 443 for HTTPS or 80 for HTTP (for example `https://kadratis.company.com:8443`). Kadratis does not read the `Host` or `X-Forwarded-Host` headers of a request to build these links, except on a local development machine (`APP_ENV=development`). Without `APP_BASE_URL`:
 
 - password reset, invitation and Microsoft Entra sign-in answer "application URL is not configured: set APP_BASE_URL";
 - the scheduled reminders are skipped, with one line in the API log.
@@ -65,7 +65,7 @@ To give Kadratis the look of your organization, set its name, logo and colors in
 
 ```bash
 # Same address as APP_BASE_URL
-CORS_ORIGINS=https://kanap.company.com
+CORS_ORIGINS=https://kadratis.company.com
 ```
 
 Kadratis also accepts, without any entry in `CORS_ORIGINS`:
@@ -440,7 +440,7 @@ An instance that only your internal network can reach cannot be connected from C
 To spare users the typing, share a link that opens Claude's **Add custom connector** dialog already filled in. Put your own server address at the end, URL-encoded (`:` becomes `%3A`, `/` becomes `%2F`):
 
 ```text
-https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=Kadratis&connectorUrl=https%3A%2F%2Fkanap.company.com%2Fapi%2Fai%2Fmcp
+https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=Kadratis&connectorUrl=https%3A%2F%2Fkadratis.company.com%2Fapi%2Fai%2Fmcp
 ```
 
 Each user opens it, confirms, then signs in to Kadratis as described in [Connecting an MCP client](../ai-settings.md#connecting-an-mcp-client).
@@ -576,10 +576,10 @@ JWT_SECRET=
 APP_ENV=production
 
 # APPLICATION URL (required - the exact address users open)
-APP_BASE_URL=https://kanap.company.com
+APP_BASE_URL=https://kadratis.company.com
 
 # ALLOWED BROWSER ORIGINS (required - the exact address users open)
-CORS_ORIGINS=https://kanap.company.com
+CORS_ORIGINS=https://kadratis.company.com
 
 # CLIENT ADDRESS (one reverse proxy in front of the API)
 RATE_LIMIT_TRUST_PROXY=true
@@ -613,7 +613,7 @@ S3_FORCE_PATH_STYLE=false
 # ENTRA_CLIENT_ID=
 # ENTRA_CLIENT_SECRET=
 # ENTRA_AUTHORITY=https://login.microsoftonline.com/<tenant-id>
-# ENTRA_REDIRECT_URI=https://kanap.company.com/api/auth/entra/callback
+# ENTRA_REDIRECT_URI=https://kadratis.company.com/api/auth/entra/callback
 
 # AI (optional - off by default)
 # AI_CHAT_ENABLED=false

@@ -77,7 +77,7 @@ Die neue Zeile zeigt jetzt den Status **Not granted** mit einer orangefarbenen W
 
 Wer was tut:
 
-- **Gehostetes Kadratis**: KANAP betreibt den Dienst, besitzt die App-Registrierung und fügt die Berechtigung hinzu. Der Entra-Administrator des Kunden erteilt nur die Zustimmung.
+- **Kadratis Cloud**: KANAP betreibt den Dienst, besitzt die App-Registrierung und fügt die Berechtigung hinzu. Der Entra-Administrator des Kunden erteilt nur die Zustimmung.
 - **On-Premise**: Die eigene IT des Kunden besitzt die App-Registrierung, fügt also die Berechtigung hinzu und erteilt die Zustimmung.
 
 ### Wenn Sie keine Graph-Aufrufe bei der Anmeldung möchten
@@ -97,7 +97,7 @@ Setzen Sie Folgendes in Ihrer On-Premise-`.env`:
 ENTRA_CLIENT_ID=<application-client-id>
 ENTRA_CLIENT_SECRET=<client-secret>
 ENTRA_AUTHORITY=https://login.microsoftonline.com/<tenant-id>
-ENTRA_REDIRECT_URI=https://kanap.company.com/api/auth/entra/callback
+ENTRA_REDIRECT_URI=https://kadratis.company.com/api/auth/entra/callback
 ```
 
 Hinweise:

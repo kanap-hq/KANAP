@@ -45,8 +45,8 @@ Para dar a Kadratis la imagen de su organización, defina su nombre, su logotipo
 | `ADMIN_EMAIL` | Correo de la primera cuenta de administrador | `admin@company.com` |
 | `ADMIN_PASSWORD` | Contraseña de la primera cuenta de administrador. Use un valor propio de 12 caracteres o más (ver más abajo) | `ChangeMe123!` |
 | `JWT_SECRET` | Clave de firma de los tokens de inicio de sesión. Genérela con `openssl rand -hex 32` (32 caracteres o más) | 64 caracteres hexadecimales |
-| `APP_BASE_URL` | La dirección exacta en la que los usuarios abren Kadratis: esquema, host y puerto cuando no es el estándar (se usa en todos los enlaces que envía Kadratis) | `https://kanap.company.com` |
-| `CORS_ORIGINS` | La dirección exacta en la que los usuarios abren Kadratis, separadas por comas si hay varias (orígenes de navegador autorizados a llamar a la API) | `https://kanap.company.com` |
+| `APP_BASE_URL` | La dirección exacta en la que los usuarios abren Kadratis: esquema, host y puerto cuando no es el estándar (se usa en todos los enlaces que envía Kadratis) | `https://kadratis.company.com` |
+| `CORS_ORIGINS` | La dirección exacta en la que los usuarios abren Kadratis, separadas por comas si hay varias (orígenes de navegador autorizados a llamar a la API) | `https://kadratis.company.com` |
 
 **Elija la contraseña del administrador.** El valor de ejemplo de la tabla es público. Sustitúyalo por un valor propio de 12 caracteres o más, por ejemplo la salida de `openssl rand -base64 18`. Un valor de ejemplo o uno más corto hace que la API muestre una advertencia `[SECURITY]` en cada arranque hasta que se cambie la contraseña de la cuenta. Un `JWT_SECRET` de menos de 32 caracteres también muestra una advertencia `[SECURITY]`.
 
@@ -56,7 +56,7 @@ Para dar a Kadratis la imagen de su organización, defina su nombre, su logotipo
 - Si no queda ningún administrador activo (todos desactivados, o ninguno tiene el rol Administrador), el siguiente arranque restablece la cuenta `ADMIN_EMAIL` como administrador habilitado. Su contraseña actual se mantiene. Si la cuenta no existe, se crea con `ADMIN_PASSWORD`.
 - Si `ADMIN_EMAIL` o `ADMIN_PASSWORD` está vacío, no se crea ninguna cuenta y el registro no dice nada al respecto.
 
-**Dirección de la aplicación (`APP_BASE_URL`).** Los correos de restablecimiento de contraseña y de invitación, los correos de notificación, la redirección del inicio de sesión con Microsoft Entra y los enlaces de las exportaciones parten todos de `APP_BASE_URL`. Escriba la dirección exactamente como la escriben los usuarios, con el puerto cuando no es 443 para HTTPS u 80 para HTTP (por ejemplo `https://kanap.company.com:8443`). Kadratis no lee las cabeceras `Host` ni `X-Forwarded-Host` de una solicitud para construir estos enlaces, salvo en una máquina de desarrollo local (`APP_ENV=development`). Sin `APP_BASE_URL`:
+**Dirección de la aplicación (`APP_BASE_URL`).** Los correos de restablecimiento de contraseña y de invitación, los correos de notificación, la redirección del inicio de sesión con Microsoft Entra y los enlaces de las exportaciones parten todos de `APP_BASE_URL`. Escriba la dirección exactamente como la escriben los usuarios, con el puerto cuando no es 443 para HTTPS u 80 para HTTP (por ejemplo `https://kadratis.company.com:8443`). Kadratis no lee las cabeceras `Host` ni `X-Forwarded-Host` de una solicitud para construir estos enlaces, salvo en una máquina de desarrollo local (`APP_ENV=development`). Sin `APP_BASE_URL`:
 
 - el restablecimiento de contraseña, la invitación y el inicio de sesión con Microsoft Entra responden "application URL is not configured: set APP_BASE_URL";
 - los recordatorios programados se omiten, con una línea en el registro de la API.
@@ -65,7 +65,7 @@ Para dar a Kadratis la imagen de su organización, defina su nombre, su logotipo
 
 ```bash
 # La misma dirección que APP_BASE_URL
-CORS_ORIGINS=https://kanap.company.com
+CORS_ORIGINS=https://kadratis.company.com
 ```
 
 Kadratis también acepta, sin ninguna entrada en `CORS_ORIGINS`:
@@ -440,7 +440,7 @@ Una instancia accesible solo desde su red interna no puede conectarse desde Clau
 Para ahorrar la escritura a los usuarios, comparta un enlace que abre el cuadro de diálogo **Add custom connector** de Claude ya rellenado. Ponga la dirección de su servidor al final, codificada para URL (`:` se convierte en `%3A`, `/` en `%2F`):
 
 ```text
-https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=Kadratis&connectorUrl=https%3A%2F%2Fkanap.company.com%2Fapi%2Fai%2Fmcp
+https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=Kadratis&connectorUrl=https%3A%2F%2Fkadratis.company.com%2Fapi%2Fai%2Fmcp
 ```
 
 Cada usuario lo abre, confirma y luego inicia sesión en Kadratis como se describe en [Conectar un cliente MCP](../ai-settings.md#connecting-an-mcp-client).
@@ -576,10 +576,10 @@ JWT_SECRET=
 APP_ENV=production
 
 # URL DE LA APLICACIÓN (obligatorio - la dirección exacta que abren los usuarios)
-APP_BASE_URL=https://kanap.company.com
+APP_BASE_URL=https://kadratis.company.com
 
 # ORÍGENES DE NAVEGADOR AUTORIZADOS (obligatorio - la dirección exacta que abren los usuarios)
-CORS_ORIGINS=https://kanap.company.com
+CORS_ORIGINS=https://kadratis.company.com
 
 # DIRECCIÓN DEL CLIENTE (un proxy inverso delante de la API)
 RATE_LIMIT_TRUST_PROXY=true
@@ -613,7 +613,7 @@ S3_FORCE_PATH_STYLE=false
 # ENTRA_CLIENT_ID=
 # ENTRA_CLIENT_SECRET=
 # ENTRA_AUTHORITY=https://login.microsoftonline.com/<tenant-id>
-# ENTRA_REDIRECT_URI=https://kanap.company.com/api/auth/entra/callback
+# ENTRA_REDIRECT_URI=https://kadratis.company.com/api/auth/entra/callback
 
 # IA (opcional - desactivada por defecto)
 # AI_CHAT_ENABLED=false

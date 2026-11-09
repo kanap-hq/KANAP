@@ -77,7 +77,7 @@ La nouvelle ligne affiche maintenant l'état **Not granted** avec un avertisseme
 
 Qui fait quoi :
 
-- **Kadratis hébergé** : KANAP, qui opère le service, possède l'enregistrement d'application et ajoute l'autorisation. L'administrateur Entra du client se contente d'accorder le consentement.
+- **Kadratis Cloud** : KANAP, qui opère le service, possède l'enregistrement d'application et ajoute l'autorisation. L'administrateur Entra du client se contente d'accorder le consentement.
 - **On-premise** : l'équipe IT du client possède l'enregistrement d'application : elle ajoute donc l'autorisation et accorde le consentement.
 
 ### Si vous ne voulez pas d'appels Graph à la connexion
@@ -97,7 +97,7 @@ Renseignez les valeurs suivantes dans votre `.env` on-premise :
 ENTRA_CLIENT_ID=<application-client-id>
 ENTRA_CLIENT_SECRET=<client-secret>
 ENTRA_AUTHORITY=https://login.microsoftonline.com/<tenant-id>
-ENTRA_REDIRECT_URI=https://kanap.company.com/api/auth/entra/callback
+ENTRA_REDIRECT_URI=https://kadratis.company.com/api/auth/entra/callback
 ```
 
 Remarques :

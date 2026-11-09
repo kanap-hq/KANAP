@@ -31,7 +31,7 @@ Optional:
 
 ## Name and certificate
 
-Users open Kadratis at one HTTPS address, for example `https://kanap.company.com`. That address needs a name that resolves to your server and a certificate that matches it. Three cases cover most networks:
+Users open Kadratis at one HTTPS address, for example `https://kadratis.company.com`. That address needs a name that resolves to your server and a certificate that matches it. Three cases cover most networks:
 
 | Case | Name | Certificate |
 |------|------|-------------|
@@ -44,10 +44,10 @@ Many installations have no public DNS. The internal name with an internal certif
 **The server must resolve the name too.** The verification commands in this guide, and the smoke test, run on the server and call Kadratis by its name. When no DNS record exists yet, add the name to the server's hosts file:
 
 ```bash
-echo "127.0.0.1 kanap.company.com" | sudo tee -a /etc/hosts
+echo "127.0.0.1 kadratis.company.com" | sudo tee -a /etc/hosts
 ```
 
-Replace `kanap.company.com` with your name. Clients need their own entry (or the DNS record) that points to the server's address.
+Replace `kadratis.company.com` with your name. Clients need their own entry (or the DNS record) that points to the server's address.
 
 **Self-signed certificate (test only):**
 
@@ -57,14 +57,14 @@ sudo openssl req -x509 -nodes -days 365 \
   -newkey rsa:2048 \
   -keyout /etc/ssl/kanap/server.key \
   -out /etc/ssl/kanap/server.crt \
-  -subj "/CN=kanap.company.com" \
-  -addext "subjectAltName=DNS:kanap.company.com"
+  -subj "/CN=kadratis.company.com" \
+  -addext "subjectAltName=DNS:kadratis.company.com"
 sudo chmod 600 /etc/ssl/kanap/server.key
 ```
 
-Replace `kanap.company.com` with your name. For an access by IP address use `IP:192.0.2.10` in `subjectAltName` and put the IP in the `-subj` and in `server_name`. To use your internal authority instead, ask for a certificate for the same name and point `ssl_certificate` and `ssl_certificate_key` in the nginx file to the files it gives you (the full chain and the private key). Nothing else changes.
+Replace `kadratis.company.com` with your name. For an access by IP address use `IP:192.0.2.10` in `subjectAltName` and put the IP in the `-subj` and in `server_name`. To use your internal authority instead, ask for a certificate for the same name and point `ssl_certificate` and `ssl_certificate_key` in the nginx file to the files it gives you (the full chain and the private key). Nothing else changes.
 
-**Let's Encrypt:** `sudo apt-get install -y certbot`, then `sudo certbot certonly --webroot -w /var/www/html -d kanap.company.com`, with the default nginx page answering on port 80. The certificate files are `/etc/letsencrypt/live/kanap.company.com/fullchain.pem` and `privkey.pem`. The [installation example](installation-example.md#8-nginx-and-tls) shows the full sequence, including the renewal.
+**Let's Encrypt:** `sudo apt-get install -y certbot`, then `sudo certbot certonly --webroot -w /var/www/html -d kadratis.company.com`, with the default nginx page answering on port 80. The certificate files are `/etc/letsencrypt/live/kadratis.company.com/fullchain.pem` and `privkey.pem`. The [installation example](installation-example.md#8-nginx-and-tls) shows the full sequence, including the renewal.
 
 ## Quick start
 
@@ -104,7 +104,7 @@ docker compose -f infra/compose.onprem.yml logs -f api
 # After the first start, read the [ENV], [CONFIG], [CORS], [RATE-LIMIT] and [SECURITY] lines of the API log.
 
 # 7. Access application
-# https://kanap.company.com
+# https://kadratis.company.com
 # Login with ADMIN_EMAIL / ADMIN_PASSWORD from .env
 ```
 
@@ -151,7 +151,7 @@ server {
     listen 443 ssl;
     listen [::]:443 ssl;
     http2 on;
-    server_name kanap.company.com;
+    server_name kadratis.company.com;
 
     ssl_certificate     /path/to/fullchain.pem;
     ssl_certificate_key /path/to/privkey.pem;
@@ -223,7 +223,7 @@ server {
 server {
     listen 80;
     listen [::]:80;
-    server_name kanap.company.com;
+    server_name kadratis.company.com;
 
     # Certificate renewal with Let's Encrypt (webroot); harmless otherwise
     location /.well-known/acme-challenge/ { root /var/www/html; }

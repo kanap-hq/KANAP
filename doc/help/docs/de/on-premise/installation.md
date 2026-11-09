@@ -31,7 +31,7 @@ Optional:
 
 ## Name und Zertifikat
 
-Benutzer öffnen Kadratis unter einer HTTPS-Adresse, zum Beispiel `https://kanap.company.com`. Diese Adresse braucht einen Namen, der auf Ihren Server auflöst, und ein Zertifikat, das dazu passt. Drei Fälle decken die meisten Netzwerke ab:
+Benutzer öffnen Kadratis unter einer HTTPS-Adresse, zum Beispiel `https://kadratis.company.com`. Diese Adresse braucht einen Namen, der auf Ihren Server auflöst, und ein Zertifikat, das dazu passt. Drei Fälle decken die meisten Netzwerke ab:
 
 | Fall | Name | Zertifikat |
 |------|------|-------------|
@@ -44,10 +44,10 @@ Viele Installationen haben kein öffentliches DNS. Ein interner Name mit einem i
 **Auch der Server muss den Namen auflösen.** Die Prüfbefehle in diesem Leitfaden und der Smoke-Test laufen auf dem Server und rufen Kadratis über seinen Namen auf. Solange kein DNS-Eintrag existiert, tragen Sie den Namen in die hosts-Datei des Servers ein:
 
 ```bash
-echo "127.0.0.1 kanap.company.com" | sudo tee -a /etc/hosts
+echo "127.0.0.1 kadratis.company.com" | sudo tee -a /etc/hosts
 ```
 
-Ersetzen Sie `kanap.company.com` durch Ihren Namen. Clients brauchen einen eigenen Eintrag (oder den DNS-Eintrag), der auf die Adresse des Servers zeigt.
+Ersetzen Sie `kadratis.company.com` durch Ihren Namen. Clients brauchen einen eigenen Eintrag (oder den DNS-Eintrag), der auf die Adresse des Servers zeigt.
 
 **Selbstsigniertes Zertifikat (nur für Tests):**
 
@@ -57,14 +57,14 @@ sudo openssl req -x509 -nodes -days 365 \
   -newkey rsa:2048 \
   -keyout /etc/ssl/kanap/server.key \
   -out /etc/ssl/kanap/server.crt \
-  -subj "/CN=kanap.company.com" \
-  -addext "subjectAltName=DNS:kanap.company.com"
+  -subj "/CN=kadratis.company.com" \
+  -addext "subjectAltName=DNS:kadratis.company.com"
 sudo chmod 600 /etc/ssl/kanap/server.key
 ```
 
-Ersetzen Sie `kanap.company.com` durch Ihren Namen. Für einen Zugriff per IP-Adresse verwenden Sie `IP:192.0.2.10` in `subjectAltName` und tragen die IP in `-subj` und in `server_name` ein. Um stattdessen Ihre interne Zertifizierungsstelle zu nutzen, beantragen Sie ein Zertifikat für denselben Namen und lassen `ssl_certificate` und `ssl_certificate_key` in der nginx-Datei auf die erhaltenen Dateien zeigen (die vollständige Kette und den privaten Schlüssel). Sonst ändert sich nichts.
+Ersetzen Sie `kadratis.company.com` durch Ihren Namen. Für einen Zugriff per IP-Adresse verwenden Sie `IP:192.0.2.10` in `subjectAltName` und tragen die IP in `-subj` und in `server_name` ein. Um stattdessen Ihre interne Zertifizierungsstelle zu nutzen, beantragen Sie ein Zertifikat für denselben Namen und lassen `ssl_certificate` und `ssl_certificate_key` in der nginx-Datei auf die erhaltenen Dateien zeigen (die vollständige Kette und den privaten Schlüssel). Sonst ändert sich nichts.
 
-**Let's Encrypt:** `sudo apt-get install -y certbot`, dann `sudo certbot certonly --webroot -w /var/www/html -d kanap.company.com`, während die nginx-Standardseite auf Port 80 antwortet. Die Zertifikatsdateien sind `/etc/letsencrypt/live/kanap.company.com/fullchain.pem` und `privkey.pem`. Das [Installationsbeispiel](installation-example.md#8-nginx-und-tls) zeigt den vollständigen Ablauf einschließlich der Erneuerung.
+**Let's Encrypt:** `sudo apt-get install -y certbot`, dann `sudo certbot certonly --webroot -w /var/www/html -d kadratis.company.com`, während die nginx-Standardseite auf Port 80 antwortet. Die Zertifikatsdateien sind `/etc/letsencrypt/live/kadratis.company.com/fullchain.pem` und `privkey.pem`. Das [Installationsbeispiel](installation-example.md#8-nginx-und-tls) zeigt den vollständigen Ablauf einschließlich der Erneuerung.
 
 ## Schnellstart
 
@@ -104,7 +104,7 @@ docker compose -f infra/compose.onprem.yml logs -f api
 # Lesen Sie nach dem ersten Start die Zeilen [ENV], [CONFIG], [CORS], [RATE-LIMIT] und [SECURITY] im API-Protokoll.
 
 # 7. Anwendung öffnen
-# https://kanap.company.com
+# https://kadratis.company.com
 # Mit ADMIN_EMAIL / ADMIN_PASSWORD aus .env anmelden
 ```
 
@@ -151,7 +151,7 @@ server {
     listen 443 ssl;
     listen [::]:443 ssl;
     http2 on;
-    server_name kanap.company.com;
+    server_name kadratis.company.com;
 
     ssl_certificate     /path/to/fullchain.pem;
     ssl_certificate_key /path/to/privkey.pem;
@@ -223,7 +223,7 @@ server {
 server {
     listen 80;
     listen [::]:80;
-    server_name kanap.company.com;
+    server_name kadratis.company.com;
 
     # Zertifikatserneuerung mit Let's Encrypt (Webroot); sonst unschädlich
     location /.well-known/acme-challenge/ { root /var/www/html; }

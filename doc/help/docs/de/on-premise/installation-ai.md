@@ -38,7 +38,7 @@ Background pages: https://doc.kadratis.com/on-premise/installation/ and
 https://doc.kadratis.com/on-premise/configuration/
 
 Parameters:
-- Address users open: https://kanap.example.com
+- Address users open: https://kadratis.example.com
 - Administrator email: admin@example.com
 - Organization name: Example Company
 - Certificate (keep one line):

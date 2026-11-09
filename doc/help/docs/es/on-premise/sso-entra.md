@@ -77,7 +77,7 @@ La nueva fila muestra ahora el estado **No concedido** con una advertencia naran
 
 Quién hace qué:
 
-- **Kadratis alojado**: KANAP, que opera el servicio, es propietario del registro de aplicación y añade el permiso. El administrador de Entra del cliente solo concede el consentimiento.
+- **Kadratis Cloud**: KANAP, que opera el servicio, es propietario del registro de aplicación y añade el permiso. El administrador de Entra del cliente solo concede el consentimiento.
 - **On-premise**: el propio departamento IT del cliente es propietario del registro de aplicación, así que añade el permiso y concede el consentimiento.
 
 ### Si no desea llamadas a Graph al iniciar sesión
@@ -97,7 +97,7 @@ Defina lo siguiente en el `.env` de su instalación on-premise:
 ENTRA_CLIENT_ID=<application-client-id>
 ENTRA_CLIENT_SECRET=<client-secret>
 ENTRA_AUTHORITY=https://login.microsoftonline.com/<tenant-id>
-ENTRA_REDIRECT_URI=https://kanap.company.com/api/auth/entra/callback
+ENTRA_REDIRECT_URI=https://kadratis.company.com/api/auth/entra/callback
 ```
 
 Notas:
