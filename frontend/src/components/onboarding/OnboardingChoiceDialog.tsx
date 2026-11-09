@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, Box, Button, CircularProgress, Dialog, IconButton, Typography } from '@mui/material';
+import { Alert, Box, Button, CircularProgress, Dialog, IconButton, Link, Typography } from '@mui/material';
 import type { Theme } from '@mui/material/styles';
 import CloseIcon from '@mui/icons-material/Close';
 import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
@@ -9,7 +9,9 @@ import ExploreOutlinedIcon from '@mui/icons-material/ExploreOutlined';
 import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined';
 import { useMutation } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
+import { ResetWorkspaceDialog } from '../../pages/admin/sample-data/SampleDataDialogs';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { KanapDialog } from '../design';
 import {
@@ -37,11 +39,21 @@ type Screen = 'angle' | 'mode';
 
 type Conflict = { count: number; choice: OnboardingChoice };
 
+/** A switch to the example that needs the workspace erased first: the name to type, and the choice. */
+type ResetOffer = { workspaceName: string; choice: OnboardingChoice };
+
 /** The 409 of a mode change that would erase objects created since the sample data was loaded. */
 function sampleDataModified(error: unknown): number | null {
   const response = (error as { response?: { status?: number; data?: { code?: string; created_since_load?: number } } })?.response;
   if (response?.status !== 409 || response.data?.code !== 'sample_data_modified') return null;
   return Number(response.data.created_since_load ?? 0);
+}
+
+/** The 409 of a switch to the example in a workspace that holds data, when it can be erased (trial). */
+function resetOffered(error: unknown): string | null {
+  const response = (error as { response?: { status?: number; data?: { code?: string; reset_available?: boolean; workspace_name?: string } } })?.response;
+  if (response?.status !== 409 || response.data?.code !== 'tenant_not_empty' || response.data.reset_available !== true) return null;
+  return String(response.data.workspace_name ?? '');
 }
 
 const optionSx = (selected: boolean) => (theme: Theme) => ({
@@ -89,7 +101,8 @@ function Option({ icon: Icon, label, note, selected, disabled, onClick }: {
  * then explore the sample data or start with your own data. One answer is one click; the choice
  * is sent once, at the end. "Start with my own data" is not offered to a user who is not an
  * administrator while the workspace holds sample data (the API refuses it). A change that would
- * also erase objects created since the sample data was loaded asks first.
+ * also erase objects created since the sample data was loaded asks first. During the trial, the
+ * example in a workspace that holds data asks to erase it first, the workspace name typed.
  */
 export default function OnboardingChoiceDialog({ open, state, onClose, onChosen }: {
   open: boolean;
@@ -104,22 +117,26 @@ export default function OnboardingChoiceDialog({ open, state, onClose, onChosen 
   const [screen, setScreen] = React.useState<Screen>(angleOpen ? 'angle' : 'mode');
   const [angle, setAngle] = React.useState<OnboardingAngle | null>(state.angle);
   const [conflict, setConflict] = React.useState<Conflict | null>(null);
+  const [resetOffer, setResetOffer] = React.useState<ResetOffer | null>(null);
 
   React.useEffect(() => {
     if (!open) return;
     setScreen(angleOpen ? 'angle' : 'mode');
     setAngle(state.angle);
     setConflict(null);
+    setResetOffer(null);
     // Each opening starts from the workspace's answers.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const choose = useMutation({
     mutationFn: onboardingApi.choose,
-    onSuccess: (next) => { setConflict(null); onChosen(next); },
+    onSuccess: (next) => { setConflict(null); setResetOffer(null); onChosen(next); },
     onError: (error, choice) => {
       const count = sampleDataModified(error);
       if (count !== null) setConflict({ count, choice });
+      const workspaceName = resetOffered(error);
+      if (workspaceName !== null) setResetOffer({ workspaceName, choice });
     },
   });
 
@@ -142,7 +159,7 @@ export default function OnboardingChoiceDialog({ open, state, onClose, onChosen 
   };
 
   const busy = choose.isPending;
-  const error = choose.error && sampleDataModified(choose.error) === null
+  const error = choose.error && sampleDataModified(choose.error) === null && resetOffered(choose.error) === null
     ? getApiErrorMessage(choose.error, t, t('common:onboarding.choice.failed'))
     : null;
 
@@ -151,7 +168,7 @@ export default function OnboardingChoiceDialog({ open, state, onClose, onChosen 
   return (
     <>
       <Dialog
-        open={open && !conflict}
+        open={open && !conflict && !resetOffer}
         onClose={busy ? undefined : onClose}
         fullWidth
         maxWidth={false}
@@ -243,6 +260,23 @@ export default function OnboardingChoiceDialog({ open, state, onClose, onChosen 
           {t('admin:sampleData.resetDialog.createdSinceLoad', { count: conflict?.count ?? 0 })}
         </Typography>
       </KanapDialog>
+
+      <ResetWorkspaceDialog
+        open={open && !!resetOffer}
+        workspaceName={resetOffer?.workspaceName ?? ''}
+        createdSinceLoad={null}
+        resetting={busy}
+        error={resetOffer && choose.error && resetOffered(choose.error) === null ? choose.error : null}
+        onClose={() => { setResetOffer(null); choose.reset(); }}
+        onConfirm={(typed) => { if (resetOffer) choose.mutate({ ...resetOffer.choice, confirm_reset: true, confirm_name: typed }); }}
+      >
+        <Typography variant="body2">
+          {t('common:onboarding.choice.loadsAfterReset')}{' '}
+          <Link component={RouterLink} to="/admin/sample-data" onClick={onClose} underline="hover">
+            {t('common:onboarding.choice.seeContent')}
+          </Link>
+        </Typography>
+      </ResetWorkspaceDialog>
     </>
   );
 }

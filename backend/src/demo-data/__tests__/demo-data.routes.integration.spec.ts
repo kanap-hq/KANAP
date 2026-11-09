@@ -335,6 +335,7 @@ async function testOverviewAndLoad() {
     assert.equal(first.body.load_refusal, null);
     assert.equal(first.body.blocking, null);
     assert.equal(first.body.created_since_load, null);
+    assert.equal(first.body.can_reset, false, 'nothing to erase');
     assert.equal(first.body.workspace_name, 'Load Org', 'the name to type, trimmed');
     assert.equal(first.body.loaded_by_name, null);
     assert.ok(!('run_id' in first.body));
@@ -360,6 +361,7 @@ async function testOverviewAndLoad() {
     assert.equal(loaded.body.can_load, false);
     assert.equal(loaded.body.blocking, null);
     assert.equal(loaded.body.created_since_load, 0);
+    assert.equal(loaded.body.can_reset, true);
 
     // Created after the load: a company and a document of the templates library count (the reset
     // erases them); users do not (the reset keeps the real ones, the sample data ones are its own).
@@ -513,6 +515,62 @@ async function testFrozenWorkspace() {
   }
 }
 
+// A workspace that holds its own data and no sample data: erased while the trial runs (the name
+// typed, the administrators e-mailed), refused once the trial is over, subscribed or expired.
+async function testResetOwnData() {
+  const svc = buildServices();
+  const served = await serve(svc);
+  let t: ActivatedTenant | undefined;
+  try {
+    t = await createActivatedTenant(svc, { tag: 'sdr-own', orgName: 'Own Data Org' });
+    const owner = client(served, t);
+    const suppliers = async () => Number((await inTenant(t!.tenantId, (m) => m.query(
+      `SELECT count(*)::int AS n FROM suppliers WHERE tenant_id = $1`, [t!.tenantId])))[0].n);
+    const addSupplier = () => inTenant(t!.tenantId, (m) => m.query(
+      `INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Real supplier')`, [t!.tenantId]));
+
+    const empty = await owner.reset({ confirm_name: 'Own Data Org' });
+    assert.equal(empty.status, 409, 'an empty workspace has nothing to erase');
+    assert.equal(empty.body.code, 'demo_status_conflict');
+
+    await addSupplier();
+    const full = await owner.get();
+    assert.equal(full.body.load_refusal, 'tenant_not_empty');
+    assert.equal(full.body.can_reset, true, 'erasable during the trial');
+    const mismatch = await owner.reset({ confirm_name: 'Other Org' });
+    assert.equal(mismatch.status, 400);
+    assert.equal(mismatch.body.code, 'confirmation_mismatch');
+    const started = await owner.reset({ confirm_name: 'own data org' });
+    assert.equal(started.status, 202, JSON.stringify(started.body));
+    assert.equal(started.body.status, 'resetting');
+    await waitFor('idle', () => demoOf(t!.tenantId), (state) => state.status === 'idle');
+    await waitForBackgroundWork(Date.now() + 10_000);
+    assert.equal(await suppliers(), 0, 'the workspace is erased');
+    assert.equal(served.emails.length, 1, 'the administrators are e-mailed');
+    const after = await owner.get();
+    assert.equal(after.body.can_load, true);
+    assert.equal(after.body.can_reset, false);
+
+    for (const [label, sql] of [
+      ['subscribed', `UPDATE subscriptions SET status = 'active' WHERE tenant_id = $1`],
+      ['trial expired', `UPDATE subscriptions SET status = 'trialing', trial_end = now() - interval '1 day' WHERE tenant_id = $1`],
+    ] as const) {
+      await inTenant(t.tenantId, (m) => m.query(sql, [t!.tenantId]));
+      if ((await suppliers()) === 0) await addSupplier();
+      const over = await owner.get();
+      assert.equal(over.body.can_reset, false, `${label}: no reset offered`);
+      const refused = await owner.reset({ confirm_name: 'Own Data Org' });
+      assert.equal(refused.status, 403, `${label}: ${JSON.stringify(refused.body)}`);
+      assert.equal(refused.body.code, 'reset_trial_only');
+      assert.equal(await suppliers(), 1, `${label}: nothing erased`);
+      assert.equal((await demoOf(t.tenantId)).status, 'idle');
+    }
+  } finally {
+    await served.close();
+    await cleanupTenants([t?.tenantId]);
+  }
+}
+
 // `dismiss` writes `metadata.demo.dismissed_at` and nothing else. The actions (load, reset,
 // dismiss) are limited per user and per route: the 11th in ten minutes gets 429, reading is not
 // limited, another administrator keeps a budget of their own.
@@ -637,6 +695,7 @@ runSpecs('demo-data.routes.integration.spec', [
   testOverviewAndLoad,
   testReset,
   testFrozenWorkspace,
+  testResetOwnData,
   testDismissAndRateLimit,
   testCreatedSinceTables,
   testResetEmailRecipients,

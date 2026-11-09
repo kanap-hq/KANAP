@@ -24,8 +24,13 @@ export type OnboardingState = {
 export type OnboardingChoice = {
   angle?: OnboardingAngle;
   mode?: OnboardingMode;
-  /** Erase the objects created since the sample data was loaded (after a 409 `sample_data_modified`). */
+  /**
+   * Erase the objects created since the sample data was loaded (after a 409 `sample_data_modified`),
+   * or the workspace that holds data before the example loads (after a 409 `tenant_not_empty`).
+   */
   confirm_reset?: boolean;
+  /** The workspace name typed to confirm the reset before the example loads. */
+  confirm_name?: string;
 };
 
 export const onboardingApi = {

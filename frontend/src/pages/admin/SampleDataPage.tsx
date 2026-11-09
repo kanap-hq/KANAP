@@ -96,8 +96,8 @@ function RefusalLine({ overview }: { overview: SampleDataOverview }) {
 
 /**
  * Administration › Sample data: load the Fromage & Co set into an empty workspace, follow the
- * load, and erase everything to go back to the starting state. Administrator role only, cloud
- * workspaces only.
+ * load, and erase everything to go back to the starting state (after a load, or during the trial
+ * in a workspace that holds data). Administrator role only, cloud workspaces only.
  */
 export default function SampleDataPage() {
   const { t } = useTranslation(['admin', 'errors']);
@@ -157,10 +157,19 @@ export default function SampleDataPage() {
           </Stack>
         );
       default:
-        return overview.can_load ? (
-          <Box>
-            <Button variant="contained" onClick={openLoad}>{t('sampleData.actions.load')}</Button>
-          </Box>
+        if (overview.can_load) {
+          return (
+            <Box>
+              <Button variant="contained" onClick={openLoad}>{t('sampleData.actions.load')}</Button>
+            </Box>
+          );
+        }
+        // During the trial, a workspace that holds data can be erased so the sample data loads.
+        return overview.can_reset ? (
+          <Stack spacing={1.5}>
+            {refusalLine}
+            {eraseButton}
+          </Stack>
         ) : refusalLine;
     }
   })();
@@ -174,7 +183,7 @@ export default function SampleDataPage() {
           <Alert severity="error">{getApiErrorMessage(query.error, t, t('sampleData.messages.statusFailed'))}</Alert>
         ) : null}
         {overview ? <SampleDataStrip overview={overview} /> : null}
-        {overview?.reset_failed_at && (overview.status === 'loaded' || overview.status === 'failed') ? (
+        {overview?.reset_failed_at && overview.status !== 'loading' && overview.status !== 'resetting' ? (
           <Alert severity="error">{t('sampleData.messages.resetFailed')}</Alert>
         ) : null}
         {body}

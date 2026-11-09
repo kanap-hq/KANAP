@@ -53,6 +53,9 @@ import { buildDemoData, DemoDataDouble, FakeChild, permissionGuardProviders } fr
 //   load still writes the first choice, while a switch back to `example` in a workspace that
 //   holds data answers 409 `tenant_not_empty`; `own_data` on an idle workspace resets nothing; on-premise
 //   neither acts; `example` then `own_data` resets;
+// - during the trial, that 409 offers the reset (`reset_available`, `workspace_name`); confirmed
+//   with the workspace name, the switch erases the workspace (the administrators e-mailed), then
+//   loads the sample data; once the trial is over the reset is refused (403 `reset_trial_only`);
 // - a load at activation still waiting for a free slot gives up once `own_data` is chosen, also
 //   when it read the state before the choice (the claim checks the banner).
 // @database-spec: opens the data-source and boots Nest, so run-ci-tests.js runs it on a database lane.
@@ -822,6 +825,66 @@ async function testExampleAfterFailedLoad() {
   }
 }
 
+// 17. Back to `example` in a workspace that holds data: the 409 offers the reset during the trial;
+//     confirmed with the workspace name, the workspace is erased, then the sample data loads.
+//     Once the trial is over, the 409 offers nothing and a confirmed reset is refused.
+async function testExampleSwitchResets() {
+  const svc = buildServices();
+  const served = await serve(svc);
+  let t: ActivatedTenant | undefined;
+  try {
+    t = await createActivatedTenant(svc, { tag: 'onb-exreset', orgName: 'Switch Org', signup: true, language: 'fr' });
+    const owner = client(served, t);
+    const suppliers = async () => Number((await inTenant(t!.tenantId, (q) => q.query(
+      `SELECT count(*)::int AS n FROM suppliers WHERE tenant_id = $1`, [t!.tenantId])))[0].n);
+    ok(await owner.choose({ angle: 'budget', mode: 'own_data' }), 'own data first');
+    await inTenant(t.tenantId, (q) => q.query(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Real supplier')`, [t!.tenantId]));
+
+    const offered = await owner.choose({ mode: 'example' });
+    assert.equal(offered.status, 409, JSON.stringify(offered.body));
+    assert.equal(offered.body.code, 'tenant_not_empty');
+    assert.equal(offered.body.reset_available, true, 'the trial runs');
+    assert.equal(offered.body.workspace_name, 'Switch Org');
+
+    const mismatch = await owner.choose({ mode: 'example', confirm_reset: true, confirm_name: 'Other' });
+    assert.equal(mismatch.status, 400, JSON.stringify(mismatch.body));
+    assert.equal(mismatch.body.code, 'confirmation_mismatch');
+    assert.deepEqual(await choiceRow(t.tenantId), { angle: 'budget', mode: 'own_data' }, 'nothing written');
+    assert.equal(await suppliers(), 1);
+
+    const answer = ok(await owner.choose({ mode: 'example', confirm_reset: true, confirm_name: ' switch org ' }), 'confirmed switch');
+    assert.equal(answer.mode, 'example');
+    assert.equal(answer.reset_in_progress, true, 'the answer says the workspace is being emptied');
+    await waitFor('loading', () => demoOf(t!.tenantId), (state) => state.status === 'loading');
+    assert.equal(await suppliers(), 0, 'the workspace was erased');
+    assert.equal(served.demo.children.length, 1, 'then the loader started');
+    assert.equal(served.demo.children[0].env.KANAP_DEMO_HOST, hostOf(t), 'from the request host');
+    assert.equal((await demoOf(t.tenantId)).language, 'fr', 'in the tenant language');
+    assert.equal(served.demo.emails.length, 1, 'the administrators are e-mailed');
+    assert.deepEqual(await choiceRow(t.tenantId), { angle: 'budget', mode: 'example' });
+    served.demo.children[0].child.finish(0);
+    await waitFor('loaded', () => demoOf(t!.tenantId), (state) => state.status === 'loaded');
+
+    // Trial over: own data again, then back to the example.
+    await inTenant(t.tenantId, (q) => q.query(`UPDATE subscriptions SET status = 'active' WHERE tenant_id = $1`, [t!.tenantId]));
+    ok(await owner.choose({ mode: 'own_data', confirm_reset: true }), 'own data after the load');
+    await waitIdle(t);
+    await inTenant(t.tenantId, (q) => q.query(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Real supplier')`, [t!.tenantId]));
+    const notOffered = await owner.choose({ mode: 'example' });
+    assert.equal(notOffered.status, 409);
+    assert.equal(notOffered.body.reset_available, false, 'no reset once the trial is over');
+    const refused = await owner.choose({ mode: 'example', confirm_reset: true, confirm_name: 'Switch Org' });
+    assert.equal(refused.status, 403, JSON.stringify(refused.body));
+    assert.equal(refused.body.code, 'reset_trial_only');
+    assert.equal(await suppliers(), 1, 'nothing erased');
+    assert.deepEqual(await choiceRow(t.tenantId), { angle: 'budget', mode: 'own_data' });
+    assert.equal(served.demo.children.length, 1, 'no other loader');
+  } finally {
+    await served.close();
+    await cleanupTenants([t?.tenantId]);
+  }
+}
+
 runSpecs('onboarding-own-data.integration.spec', [
   testOwnDataAfterLoad,
   testOwnDataDuringLoad,
@@ -839,6 +902,7 @@ runSpecs('onboarding-own-data.integration.spec', [
   testExampleThenOwnData,
   testMemberOwnDataLeavesProvision,
   testExampleAfterFailedLoad,
+  testExampleSwitchResets,
 ]).catch((error) => {
   console.error(error);
   process.exit(1);

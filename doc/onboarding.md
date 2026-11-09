@@ -47,7 +47,7 @@ answers `200` with the state after the operation, for the calling user.
 
 ```
 GET    /api/onboarding
-PUT    /api/onboarding/choice            body { angle?, mode?, confirm_reset? }
+PUT    /api/onboarding/choice            body { angle?, mode?, confirm_reset?, confirm_name? }
 POST   /api/onboarding/steps/:key/done
 DELETE /api/onboarding/steps/:key/done
 POST   /api/onboarding/dismiss
@@ -108,7 +108,8 @@ application list.
 - At least one of `angle` and `mode`: `400` `choice_required` otherwise. A value outside the
   lists, or `null`: `400` `invalid_angle` / `invalid_mode`. A field left out keeps its value.
 - `confirm_reset` (optional, boolean; any other value: `400` `invalid_confirm_reset`) lets
-  `own_data` erase objects created since the sample data load (see below).
+  `own_data` erase objects created since the sample data load, and a switch back to `example`
+  erase a workspace that holds data, with the workspace name in `confirm_name` (see below).
 - The first user who answers sets a field. Changing a field already set takes an administrator:
   `403` `administrator_required`, and nothing is written.
 - The same value as the current one writes nothing and logs nothing.
@@ -181,8 +182,16 @@ starts (`loadDemoData`, the tenant's seed language, the request's Host header as
 Administration page). A refused load (workspace not empty, subscription, too many loads at
 once) still writes the first choice, with one warning in the server log; `sample_data` shows the
 state. A switch back to `example` (a mode was chosen before) in a workspace that holds data is
-refused, `409` `tenant_not_empty`, and writes nothing: the dialog shows the refusal. Another
-user's choice is written and loads nothing.
+refused, `409` `tenant_not_empty`, and writes nothing. The 409 carries `reset_available` (the
+trial runs) and `workspace_name`. During the trial, the dialog then asks to erase the workspace,
+the workspace name typed (the confirmation of `/admin/sample-data/reset`); sent again with
+`confirm_reset: true` and `confirm_name`, the switch erases the workspace
+(`DemoDataService.resetThenLoad`: `400` `confirmation_mismatch`, the administrators e-mailed) and
+writes the choice; the answer says `reset_in_progress`, and the sample data load starts once the
+reset has committed (a failed reset loads nothing; a refused load leaves the workspace empty and
+`idle`, one warning in the server log). Once the trial is over (subscribed, expired), the dialog
+shows the refusal and a confirmed switch gets `403` `reset_trial_only`. Another user's choice is
+written and loads nothing.
 
 `POST /steps/:key/done`: `409` `no_choice` without an angle or a mode; `400` `unknown_step` when
 the key is not in the current path. A step already done is left as it is. `DELETE` removes the

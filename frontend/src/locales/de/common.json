@@ -1544,7 +1544,9 @@
       "justLooking": "Ich schaue mich um",
       "erasesExample": "Das Beispiel wird gelöscht.",
       "confirmTitle": "Beispiel löschen?",
-      "failed": "Ihre Antwort konnte nicht gespeichert werden."
+      "failed": "Ihre Antwort konnte nicht gespeichert werden.",
+      "loadsAfterReset": "Die Beispieldaten werden geladen, sobald der Arbeitsbereich leer ist.",
+      "seeContent": "Inhalt des Arbeitsbereichs ansehen"
     },
     "angles": {
       "budget": "Das IT-Budget",

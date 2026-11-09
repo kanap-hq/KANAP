@@ -48,11 +48,11 @@ La página sigue la carga paso a paso (por ejemplo, «Paso 4 de 21: planes de cu
 
 **Si la carga no es posible**, la página no muestra el botón **Cargar datos de ejemplo**. Indica el motivo:
 
-- el espacio de trabajo ya contiene datos. La página lista entonces cada tipo de objeto que impide la carga, con su número y un enlace a su lista, por ejemplo **Aplicaciones (4)**, **Proveedores (1)**. Quítelos para cargar los datos de ejemplo, o siga trabajando sin ellos.
+- el espacio de trabajo ya contiene datos. La página lista entonces cada tipo de objeto que impide la carga, con su número y un enlace a su lista, por ejemplo **Aplicaciones (4)**, **Proveedores (1)**. Quítelos para cargar los datos de ejemplo, o siga trabajando sin ellos. Durante el periodo de prueba, también puede borrar el espacio de trabajo (véase más abajo).
 - la suscripción está congelada
 - el periodo de prueba ha terminado
 
-El banner de la página de inicio permanece entonces oculto. El borrado sigue siendo posible en un espacio de trabajo congelado (véase más abajo).
+El banner de la página de inicio permanece entonces oculto. El borrado de los datos de ejemplo cargados sigue siendo posible en un espacio de trabajo congelado (véase más abajo).
 
 **Si la carga falla**, KANAP devuelve por sí mismo el espacio de trabajo a su estado inicial. El estado muestra **Error de carga** con la fecha, y la página indica el motivo. Haga clic en **Reintentar** para iniciar otra carga.
 
@@ -72,7 +72,12 @@ La línea desaparece en cuanto el espacio de trabajo contiene datos. No vuelve t
 
 ## Borrar todo y empezar de cero
 
-Una vez cargados los datos de ejemplo, la página ofrece **Borrar todo y empezar de cero**. También se ofrece tras una carga fallida que no pudo restablecer el estado inicial. Funciona cuando la suscripción está congelada o el periodo de prueba ha caducado.
+La página ofrece **Borrar todo y empezar de cero** en dos casos:
+
+- Hay datos de ejemplo cargados, o una carga falló y no pudo restablecer el estado inicial. Funciona con cualquier suscripción, incluso congelada o con el periodo de prueba caducado.
+- Durante el periodo de prueba, el espacio de trabajo contiene datos propios y ningún dato de ejemplo. Una vez terminado el periodo de prueba (suscripción contratada o prueba caducada), ese espacio de trabajo ya no se puede borrar: la página solo lista lo que impide la carga.
+
+Una vez borrado, el espacio de trabajo queda vacío y la página ofrece **Cargar datos de ejemplo**.
 
 **Esta acción no se puede deshacer.** Todo el contenido del espacio de trabajo se borra, tanto si procede del conjunto de ejemplo como de su propio trabajo, y el espacio de trabajo vuelve a su estado inicial.
 

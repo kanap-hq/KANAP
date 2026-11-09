@@ -90,6 +90,14 @@ export function evaluateSubscriptionAccess(
 }
 
 /**
+ * The trial runs: status trialing with a trial end still ahead. A workspace whose trial ended,
+ * subscribed or not, has none.
+ */
+export function isTrialRunning(subscription: Pick<Subscription, 'status' | 'trial_end'> | null, now: number): boolean {
+  return subscription?.status === SubscriptionStatus.TRIALING && !!subscription.trial_end && subscription.trial_end.getTime() > now;
+}
+
+/**
  * Single source of truth for "when is this workspace deleted for a trial that ended without a
  * subscription?": the trial end plus TRIAL_WORKSPACE_RETENTION_DAYS. Read by the daily deletion
  * task (TrialWorkspaceExpiryService), the subscription summary (`trial_deletion_at`) and the
