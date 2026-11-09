@@ -8,11 +8,11 @@
  * marketing site sends its own copy (`marketing/web/src/content/legal/terms-version.ts`): bump
  * both together (support-invoice.spec.ts checks they match).
  */
-export const GTC_VERSION = '2026-10-12';
+export const GTC_VERSION = '2026-11-09';
 
 export const GTC_URLS = {
-  fr: 'https://kanap.net/fr/sales',
-  en: 'https://kanap.net/sales',
+  fr: 'https://kadratis.com/fr/sales',
+  en: 'https://kadratis.com/sales',
 } as const;
 
 /** How the subscriber pays: card (Stripe Checkout) or bank transfer (Stripe invoice). */
