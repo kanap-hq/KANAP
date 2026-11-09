@@ -252,7 +252,7 @@ const content: LegalContent = {
 <p>11.1. These GTC are governed by French law. All disputes shall be subject to the exclusive jurisdiction of the French courts.</p>
 <p>11.2. In the event of a dispute, the parties agree to seek an amicable resolution before initiating any legal proceedings.</p>
 
-<p class="mk-legal__foot">For any questions, please contact <a href="mailto:support@kanap.net">support@kanap.net</a>.</p>
+<p class="mk-legal__foot">For any questions, please contact <a href="mailto:contact@kadratis.com">contact@kadratis.com</a>.</p>
 `,
   },
 

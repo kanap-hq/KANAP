@@ -252,7 +252,7 @@ const content: LegalContent = {
 <p>11.1. Les présentes CGV sont régies par le droit français. Tout litige relève de la compétence exclusive des tribunaux français.</p>
 <p>11.2. En cas de litige, les parties s'engagent à rechercher une solution amiable avant toute action en justice.</p>
 
-<p class="mk-legal__foot">Pour toute question, contactez <a href="mailto:support@kanap.net">support@kanap.net</a>.</p>
+<p class="mk-legal__foot">Pour toute question, contactez <a href="mailto:contact@kadratis.com">contact@kadratis.com</a>.</p>
 `,
   },
 
