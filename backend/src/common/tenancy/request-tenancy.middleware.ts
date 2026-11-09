@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import { BUSY_RETRY_AFTER_SECONDS } from '../filters/database-error.mapping';
 import { runWithRequestTenant } from './request-tenant-context';
+import { tenantBaseDomains, tenantSlugOnListedDomains } from '../tenant-base-domains';
 
 /**
  * The tenancy middleware main.ts mounts before every route: it reads the
@@ -71,8 +72,12 @@ export function routePath(req: Pick<Request, 'path'>): string {
   return path.slice(0, end) || '/';
 }
 
-/** The tenant subdomain of a host, or null for apex, www and unknown hosts. */
-export function tenantSlugFromHost(host: string): string | null {
+/**
+ * The tenant subdomain of a host, or null for apex, www and unknown hosts. `*.lvh.me` always;
+ * then the domains of `TENANT_BASE_DOMAINS` when it is set (common/tenant-base-domains.ts),
+ * otherwise the built-in kanap.net domains.
+ */
+export function tenantSlugFromHost(host: string, env: NodeJS.ProcessEnv = process.env): string | null {
   const h = host;
   if (!h) return null;
   // Dev: *.lvh.me
@@ -81,6 +86,8 @@ export function tenantSlugFromHost(host: string): string | null {
     if (sub === 'www' || sub === 'lvh') return null;
     return sub;
   }
+  const domains = tenantBaseDomains(env);
+  if (domains) return tenantSlugOnListedDomains(h, domains);
   // Dev (local via tunnel): *.dev.kanap.net (apex dev.kanap.net)
   if (h.endsWith('.dev.kanap.net')) {
     const sub = h.replace('.dev.kanap.net', '');

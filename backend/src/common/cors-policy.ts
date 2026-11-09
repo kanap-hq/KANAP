@@ -174,7 +174,7 @@ export function tenantSlugForRequest(req: any, env: NodeJS.ProcessEnv = process.
   if (!host) return null;
   const platformAdminHost = String(env.PLATFORM_ADMIN_HOST || '').trim().toLowerCase();
   if (platformAdminHost && host === platformAdminHost) return 'platform-admin';
-  return tenantSlugFromHost(host);
+  return tenantSlugFromHost(host, env);
 }
 
 function originOfReferer(referer: string): string | null {
