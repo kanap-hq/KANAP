@@ -1,6 +1,6 @@
-site_name: KANAP
-site_url: https://doc.kanap.net
-site_description: Documentation for KANAP, the open source IT governance platform - IT budget, application landscape, project portfolio, documentation and the Plaid AI agent
+site_name: Kadratis
+site_url: https://doc.kadratis.com
+site_description: Documentation for Kadratis, the open source IT governance platform - IT budget, application landscape, project portfolio, documentation and the Kad AI agent
 
 repo_url: https://github.com/kanap-hq/KANAP
 repo_name: kanap-hq/KANAP
@@ -43,15 +43,15 @@ theme:
   icon:
     repo: fontawesome/brands/github
 
-  # Custom logo (place in overrides/.icons/ or use default)
-  # logo: assets/logo.png
-  # favicon: assets/favicon.png
+  # Kadratis symbol for the coloured header, adaptive favicon
+  logo: assets/kadratis-symbole-inverse.svg
+  favicon: assets/favicon.svg
 
 extra:
   social:
     - icon: fontawesome/solid/globe
-      link: https://kanap.net
-      name: KANAP Website
+      link: https://kadratis.com
+      name: Kadratis Website
 
 extra_css:
   - stylesheets/extra.css
@@ -169,7 +169,7 @@ plugins:
             Operations: Opérations
             Microsoft Entra SSO: Microsoft Entra SSO
             "AI models": "Modèles IA"
-            "Plaid Settings": "Paramètres Plaid"
+            "Kad Settings": "Paramètres Kad"
             "Connected apps": "Applications connectées"
             "Usage & costs": "Utilisation & coûts"
             Integrations: Intégrations
@@ -262,7 +262,7 @@ plugins:
             Operations: Betrieb
             Microsoft Entra SSO: Microsoft Entra SSO
             "AI models": "KI-Modelle"
-            "Plaid Settings": "Plaid-Einstellungen"
+            "Kad Settings": "Kad-Einstellungen"
             "Connected apps": "Verbundene Apps"
             "Usage & costs": "Nutzung & Kosten"
             Integrations: Integrationen
@@ -355,7 +355,7 @@ plugins:
             Operations: Operaciones
             Microsoft Entra SSO: Microsoft Entra SSO
             "AI models": "Modelos IA"
-            "Plaid Settings": "Configuración de Plaid"
+            "Kad Settings": "Configuración de Kad"
             "Connected apps": "Aplicaciones conectadas"
             "Usage & costs": "Uso y costes"
             Integrations: Integraciones
@@ -447,8 +447,8 @@ nav:
       - Business Processes: business-processes.md
     - CSV and Excel files: csv-files.md
 
-  - Plaid:
-    - Plaid: ai-assistant.md
+  - Kad:
+    - Kad: ai-assistant.md
     - Connected apps: connected-apps.md
 
   - AI Agents:
@@ -465,7 +465,7 @@ nav:
     - Branding: branding.md
     - Sample data: sample-data.md
     - "AI models": ai-models.md
-    - Plaid Settings: ai-settings.md
+    - Kad Settings: ai-settings.md
     - "Usage & costs": ai-usage.md
     - Integrations: integrations.md
     - Scheduled Tasks: scheduled-tasks.md
