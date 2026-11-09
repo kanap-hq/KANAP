@@ -63,7 +63,7 @@ const content: SecurityContent = {
       'Feinkörnige Berechtigungen pro Modul, pro Rolle. Jedes Feature-Gate und jede Entity-Abfrage respektiert dieselbe RBAC-Matrix, auch Kad und MCP.',
     bullets: [
       'Stufen Leser, Mitwirkender, Mitglied und Admin pro Modul',
-      'Workspace-Admin-Rolle getrennt von Modul-Admins',
+      'Admin-Rolle für den Arbeitsbereich, getrennt von den Modul-Admins',
       'SSO über Microsoft Entra ID (OIDC) in Cloud und Self-Hosting',
       'Lokale Passwort-Authentifizierung mit Argon2 + optionale Passwort-Reset-Flows',
       'Anmeldeversuche werden pro IP-Adresse begrenzt: 60 Passwort-Anmeldeanfragen und 60 Microsoft-Anmeldeanfragen pro Minute. Nach 5 fehlgeschlagenen Passwortversuchen für ein Konto von einer IP-Adresse innerhalb von 15 Minuten wartet diese Adresse 15 Minuten, bevor sie dieses Konto erneut versuchen kann. Hinter einem Reverse Proxy zählen die Limits die IP-Adresse jedes Benutzers',
@@ -98,7 +98,7 @@ const content: SecurityContent = {
       'Antworten tragen die Quellen, die der Agent genutzt hat, sodass eine Entscheidung geprüft werden kann',
       'Jeden Agenten sofort pausieren, einzeln oder alle zusammen',
       'Ausgabenlimits pro Agent halten die Betriebskosten begrenzt',
-      'KI-Funktionen sind standardmäßig ausgeschaltet. In der Cloud erhält das integrierte Modell keine Daten, bevor der Workspace dessen Anbieter und Verarbeitungsort akzeptiert hat, die beide in der Anwendung genannt werden. Ein Administrator bestätigt sie, und ändert sich eines davon, wird erneut um Bestätigung gebeten. Sie können stattdessen Ihren eigenen Modellanbieter verwenden',
+      'KI-Funktionen sind standardmäßig ausgeschaltet. In der Cloud erhält das integrierte Modell keine Daten, bevor der Arbeitsbereich dessen Anbieter und Verarbeitungsort akzeptiert hat, die beide in der Anwendung genannt werden. Ein Administrator bestätigt sie, und ändert sich eines davon, wird erneut um Bestätigung gebeten. Sie können stattdessen Ihren eigenen Modellanbieter verwenden',
     ],
   },
   supplyChain: {

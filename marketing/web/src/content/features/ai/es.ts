@@ -80,7 +80,7 @@ const content: FeatureContent = {
   },
   cta: {
     title: 'La gobernanza de TI con IA empieza aquí.',
-    body: 'Kad está incluido en cada workspace de Kadratis, con un uso generoso en la nube alojada. Autoaloje gratis, o pruebe la nube alojada.',
+    body: 'Kad está incluido en cada espacio de trabajo de Kadratis, con un uso generoso en la nube alojada. Autoaloje gratis, o pruebe la nube alojada.',
     primary: 'Desplegar gratis',
     secondary: 'Probar nube alojada',
   },

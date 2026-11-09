@@ -34,7 +34,7 @@ const content: FeatureContent = {
         'Registro de decisiones del CAB con seguimiento formal de la aprobación',
         'Conversión en un clic de solicitud aprobada a proyecto',
       ],
-      shotAlt: 'Workspace de solicitud con línea de tiempo de actividad',
+      shotAlt: 'Ficha de una solicitud con línea de tiempo de actividad',
     },
     {
       title: 'Seguimiento del ciclo de vida del proyecto',
@@ -46,7 +46,7 @@ const content: FeatureContent = {
         'Seguimiento de esfuerzo: estimado frente a real, de TI y de negocio',
         'Seguimiento del origen: Estándar, Fast-track, Legacy',
       ],
-      shotAlt: 'Workspace de proyecto con fechas de baseline frente a reales',
+      shotAlt: 'Ficha de un proyecto con fechas de baseline frente a reales',
     },
     {
       title: 'Planificación automática de la hoja de ruta',

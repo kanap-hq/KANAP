@@ -63,7 +63,7 @@ const content: SecurityContent = {
       "Permissions fines par module, par rôle. Chaque feature gate et chaque requête d'entité respecte la même matrice RBAC, y compris Kad et MCP.",
     bullets: [
       'Niveaux lecteur, contributeur, membre et administrateur par module',
-      'Rôle admin workspace distinct des admins de module',
+      'Rôle d\'administrateur de l\'espace de travail, distinct des administrateurs de module',
       'SSO via Microsoft Entra ID (OIDC) en cloud et auto-hébergé',
       'Authentification locale par mot de passe avec Argon2 + flux optionnel de réinitialisation',
       "Les tentatives de connexion sont limitées par adresse IP : 60 demandes de connexion par mot de passe et 60 demandes de connexion Microsoft par minute. Après 5 échecs de mot de passe sur un compte depuis une adresse IP en 15 minutes, cette adresse attend 15 minutes avant de pouvoir réessayer ce compte. Derrière un reverse proxy, les limites comptent l'adresse IP de chaque utilisateur",
@@ -98,7 +98,7 @@ const content: SecurityContent = {
       "Les réponses portent les sources utilisées par l'agent, pour qu'une décision puisse être vérifiée",
       "Mettez n'importe quel agent en pause immédiatement, un par un ou tous à la fois",
       'Des plafonds de dépense par agent maintiennent le coût de fonctionnement borné',
-      "Les fonctions d'IA sont désactivées par défaut. Dans le cloud, le modèle intégré ne reçoit aucune donnée tant que le workspace n'a pas accepté son fournisseur et son lieu de traitement, tous deux indiqués dans l'application. Un administrateur les confirme, et une nouvelle confirmation est demandée si l'un des deux change. Vous pouvez utiliser votre propre fournisseur de modèle à la place",
+      "Les fonctions d'IA sont désactivées par défaut. Dans le cloud, le modèle intégré ne reçoit aucune donnée tant que l'espace de travail n'a pas accepté son fournisseur et son lieu de traitement, tous deux indiqués dans l'application. Un administrateur les confirme, et une nouvelle confirmation est demandée si l'un des deux change. Vous pouvez utiliser votre propre fournisseur de modèle à la place",
     ],
   },
   supplyChain: {

@@ -52,7 +52,6 @@ const content: OfferContent = {
           'Priority email support',
           'Installation and upgrade assistance',
           'Direct line to the team for production issues',
-          '60-min kickoff call with a KANAP expert',
           'Over 20% off consulting days',
           'Helps fund the open source project',
         ],
@@ -76,7 +75,7 @@ const content: OfferContent = {
     eyebrow: 'Cloud hosted · if you\'d rather we run it',
     title: 'Same platform, operated by us.',
     intro:
-      'Kadratis Cloud is the same open source platform, operated by us: hosting, updates, backups, priority support, and a 60-minute kickoff call. 14-day trial, no credit card.',
+      'Kadratis Cloud is the same open source platform, operated by us: hosting, updates, backups and priority support. 14-day trial, no credit card, with a 30-minute discovery call if you wish.',
     plans: [
       {
         name: 'Kadratis Cloud',
@@ -90,7 +89,6 @@ const content: OfferContent = {
           'We host, update, and back up Kadratis for you',
           'EU hosting for European teams',
           '1,500 Kad messages/mo included, or bring your own key, unlimited',
-          '60-min kickoff call with a KANAP expert',
           'Priority email support',
           'Over 20% off consulting days',
           'Helps fund the open source project',

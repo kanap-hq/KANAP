@@ -33,15 +33,15 @@ const content: FaqContent = {
       items: [
         {
           q: 'How does the free trial work?',
-          a: 'Kadratis Cloud starts with a 14-day free trial. No credit card required. Full access to all features, plus one free 60-minute activation session per company if booked during the trial.',
+          a: "Kadratis Cloud starts with a 14-day free trial, no credit card required, with every feature. You start with sample data or with an empty workspace; three guided paths walk you through the budget, the IT landscape map and projects, and Kad can help you import your data. You can also schedule a thirty-minute discovery call from your workspace.",
         },
         {
           q: 'What happens after my trial?',
-          a: 'After your 14-day trial you must choose a paid plan to continue. At the end of the trial, your workspace moves to limited, read-only access until you subscribe. You can ask us to delete it at any time.',
+          a: "At the end of the trial, your workspace becomes read-only: your data stays viewable and exportable for thirty days. Subscribing from the workspace's Billing page reactivates it, with everything you entered. Without a subscription, the workspace and all its data are permanently deleted thirty days after the trial ends.",
         },
         {
-          q: 'What is the free activation session?',
-          a: 'Each trial includes one free 60-minute activation session per company. After subscription we email you to book the call. The session is a video call focused on first-value milestones based on your main objectives.',
+          q: "What is the discovery call?",
+          a: "A thirty-minute video call, free and with no commitment, to schedule whenever you like from your trial workspace. We look at your situation, your goals and what Kadratis can bring to them.",
         },
         {
           q: 'What is the difference between cloud and self-hosted?',
@@ -58,7 +58,7 @@ const content: FaqContent = {
         },
         {
           q: 'How does priority support work?',
-          a: 'For paying subscribers, email us about operational issues. We aim to respond within 24h and fix your problem. It\'s best-effort, no SLA, but we\'re real humans who read and respond to every message.',
+          a: 'For paying subscribers, email support@kadratis.com about operational issues. We aim to respond within 24h and fix your problem. It\'s best-effort, no SLA, but we\'re real humans who read and respond to every message.',
         },
       ],
     },
@@ -75,7 +75,7 @@ const content: FaqContent = {
         },
         {
           q: 'Can I cancel my subscription?',
-          a: 'Of course. Cancel from your Billing Center at any time, your subscription stays active until the end of the current billing period, no questions asked.',
+          a: "Of course. Cancel at any time from your workspace's Billing page: your subscription stays active until the end of the current billing period, no questions asked.",
         },
       ],
     },
@@ -84,7 +84,7 @@ const content: FaqContent = {
       items: [
         {
           q: 'What\'s the difference between included Kad messages and Bring Your Own Key?',
-          a: 'Kadratis Cloud includes a generous number of Kad messages, powered by a mid-range model we\'ve carefully selected and tested with Kadratis. For even more capable responses, the Bring Your Own Key option lets you connect state-of-the-art models from OpenAI, Anthropic, or any compatible provider. BYOK also lets you choose the provider that processes your prompts, and removes any message limit.',
+          a: 'Kadratis Cloud includes 1,500 Kad messages a month, with a model we selected and tested with Kadratis. For even more capable responses, the Bring Your Own Key option lets you connect state-of-the-art models from OpenAI, Anthropic, or any compatible provider. BYOK also lets you choose the provider that processes your prompts, and removes any message limit.',
         },
         {
           q: 'How can I control Kad?',

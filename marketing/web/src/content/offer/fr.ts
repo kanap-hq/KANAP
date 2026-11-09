@@ -22,7 +22,7 @@ const content: OfferContent = {
       {
         name: 'Auto-hébergé',
         badge: 'Open source',
-        target: 'Utilisateurs illimités · workspaces illimités',
+        target: 'Utilisateurs illimités · espaces de travail illimités',
         price: '0 €',
         period: '',
         subPrice: 'Gratuit à vie',
@@ -42,7 +42,7 @@ const content: OfferContent = {
       {
         name: 'Support auto-hébergé',
         badge: 'On-prem avec support de production',
-        target: 'Utilisateurs illimités · workspaces illimités',
+        target: 'Utilisateurs illimités · espaces de travail illimités',
         price: '2 490 €',
         period: '/an',
         subPrice: 'Facturation annuelle',
@@ -51,7 +51,6 @@ const content: OfferContent = {
           'Support email prioritaire',
           'Assistance installation et mises à jour',
           'Ligne directe avec l\'équipe pour les incidents de production',
-          'Session de cadrage 60 min avec un expert KANAP',
           'Plus de 20 % de remise sur le conseil',
           'Soutient le projet open source',
         ],
@@ -74,12 +73,12 @@ const content: OfferContent = {
     eyebrow: 'Hébergement cloud · si vous préférez nous confier l\'exploitation',
     title: 'La même plateforme, opérée par nous.',
     intro:
-      'Kadratis Cloud, c\'est la même plateforme open source, opérée par nous : hébergement, mises à jour, sauvegardes, support prioritaire et session de cadrage de 60 min. Essai 14 jours, sans carte.',
+      'Kadratis Cloud, c\'est la même plateforme open source, opérée par nous : hébergement, mises à jour, sauvegardes et support prioritaire. Essai de 14 jours, sans carte, avec un appel découverte de 30 minutes si vous le souhaitez.',
     plans: [
       {
         name: 'Kadratis Cloud',
         badge: 'Entièrement managé',
-        target: 'Utilisateurs illimités · workspaces illimités',
+        target: 'Utilisateurs illimités · espaces de travail illimités',
         price: '249 €',
         period: '/mois',
         subPrice: 'ou 2 490 €/an (2 mois offerts)',
@@ -88,7 +87,6 @@ const content: OfferContent = {
           'Nous hébergeons, mettons à jour et sauvegardons Kadratis pour vous',
           'Hébergement UE pour les équipes européennes',
           '1 500 messages Kad/mois inclus, ou votre propre clé en illimité',
-          'Session de cadrage 60 min avec un expert KANAP',
           'Support email prioritaire',
           'Plus de 20 % de remise sur le conseil',
           'Soutient le projet open source',

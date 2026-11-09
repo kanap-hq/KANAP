@@ -50,10 +50,10 @@ const content: FeatureContent = {
     },
     {
       title: 'Documentación conectada',
-      body: 'Vincule documentos con aplicaciones, activos, proyectos, solicitudes y tareas. Acceda a documentos gestionados desde otros workspaces y distinga entre contenido vinculado y relacionado para una trazabilidad total. La base de conocimiento es también lo que citan sus agentes: la fuente en la que se apoya un agente y a la que apunta cuando responde.',
+      body: 'Vincule documentos con aplicaciones, activos, proyectos, solicitudes y tareas. Acceda a documentos gestionados desde otros espacios de trabajo y distinga entre contenido vinculado y relacionado para una trazabilidad total. La base de conocimiento es también lo que citan sus agentes: la fuente en la que se apoya un agente y a la que apunta cuando responde.',
       bullets: [
         'Relaciones con aplicaciones, activos, proyectos, solicitudes y tareas',
-        'Documentos gestionados accesibles desde otros workspaces',
+        'Documentos gestionados accesibles desde otros espacios de trabajo',
         'Distinción entre vinculado y relacionado',
         'Navegación bidireccional entre documentos y entidades',
         'Registro de auditoría completo de los cambios en las relaciones',

@@ -35,15 +35,15 @@ const content: FaqContent = {
       items: [
         {
           q: 'Comment fonctionne l\'essai gratuit ?',
-          a: 'Kadratis Cloud commence par un essai gratuit de 14 jours. Sans carte bancaire. Accès complet à toutes les fonctionnalités, plus une session d\'activation de 60 minutes offerte par entreprise si elle est réservée pendant l\'essai.',
+          a: "Kadratis Cloud commence par un essai gratuit de 14 jours, sans carte bancaire, avec toutes les fonctionnalités. Vous démarrez avec des données d'exemple ou avec un espace vide ; trois parcours guidés vous font découvrir le budget, la cartographie et les projets, et Kad peut vous aider à importer vos données. Vous pouvez aussi planifier depuis votre espace un appel découverte de trente minutes.",
         },
         {
           q: 'Que se passe-t-il à la fin de mon essai ?',
-          a: 'Après votre essai de 14 jours, vous devez choisir un plan payant pour continuer. À la fin de l\'essai, votre workspace passe en accès limité, en lecture seule, jusqu\'à ce que vous souscriviez un abonnement. Vous pouvez demander sa suppression à tout moment.',
+          a: "À la fin de l'essai, votre espace de travail passe en lecture seule : vos données restent consultables et exportables pendant trente jours. Un abonnement souscrit depuis la page Facturation de l'espace le réactive, avec tout ce que vous avez saisi. Sans abonnement, l'espace est supprimé définitivement, avec toutes ses données, trente jours après la fin de l'essai.",
         },
         {
-          q: 'Qu\'est-ce que la session d\'activation gratuite ?',
-          a: 'Chaque essai inclut une session d\'activation de 60 minutes offerte par entreprise. Après souscription, nous vous envoyons un email pour planifier l\'appel. La session est un appel vidéo centré sur les premiers jalons de valeur, en fonction de vos objectifs principaux.',
+          q: "Qu'est-ce que l'appel découverte ?",
+          a: "Un appel de trente minutes en visioconférence, gratuit et sans engagement, à planifier quand vous le voulez depuis votre espace d'essai. Nous regardons votre situation, vos objectifs et ce que Kadratis peut y apporter.",
         },
         {
           q: 'Quelle est la différence entre cloud et auto-hébergé ?',
@@ -60,7 +60,7 @@ const content: FaqContent = {
         },
         {
           q: 'Comment fonctionne le support prioritaire ?',
-          a: 'Pour les abonnés payants, écrivez-nous à propos de tout problème opérationnel. Nous visons une réponse sous 24h et la résolution de votre problème. C\'est en meilleur effort, sans SLA, mais nous sommes de vrais humains qui lisent et répondent à chaque message.',
+          a: 'Pour les abonnés payants, écrivez-nous à support@kadratis.com pour tout problème opérationnel. Nous visons une réponse sous 24h et la résolution de votre problème. C\'est en meilleur effort, sans SLA, mais nous sommes de vrais humains qui lisent et répondent à chaque message.',
         },
       ],
     },
@@ -77,7 +77,7 @@ const content: FaqContent = {
         },
         {
           q: 'Puis-je annuler mon abonnement ?',
-          a: 'Bien sûr. Annulez depuis votre Centre de facturation à tout moment, votre abonnement reste actif jusqu\'à la fin de la période de facturation en cours, sans questions.',
+          a: "Bien sûr. Annulez à tout moment depuis la page Facturation de votre espace : votre abonnement reste actif jusqu'à la fin de la période de facturation en cours, sans questions.",
         },
       ],
     },
@@ -86,11 +86,11 @@ const content: FaqContent = {
       items: [
         {
           q: 'Quelle est la différence entre les messages Kad inclus et Bring Your Own Key ?',
-          a: 'Kadratis Cloud inclut un nombre généreux de messages Kad, propulsés par un modèle intermédiaire que nous avons soigneusement sélectionné et testé avec Kadratis. Pour des réponses encore plus performantes, l\'option Bring Your Own Key vous permet de connecter les modèles de pointe d\'OpenAI, Anthropic ou de tout fournisseur compatible. BYOK vous laisse aussi choisir le fournisseur qui traite vos requêtes, et supprime toute limite de messages.',
+          a: 'Kadratis Cloud inclut 1 500 messages Kad par mois, avec un modèle que nous avons choisi et testé avec Kadratis. Pour des réponses encore plus performantes, l\'option Bring Your Own Key vous permet de connecter les modèles de pointe d\'OpenAI, Anthropic ou de tout fournisseur compatible. BYOK vous laisse aussi choisir le fournisseur qui traite vos requêtes, et supprime toute limite de messages.',
         },
         {
           q: 'Comment puis-je contrôler Kad ?',
-          a: 'Au niveau du workspace, un administrateur active ou désactive Kad, et la recherche web et MCP s\'activent ou se désactivent séparément. Au niveau utilisateur, les permissions par rôle décident qui peut utiliser Kad et quels modules il peut lire. Faire une modification demande le niveau membre sur Kad et sur le module, et chaque modification est présentée en aperçu que l\'utilisateur confirme. L\'accès MCP est en lecture seule. Le RBAC est toujours appliqué, Kad ne voit jamais plus que ce qui est permis à l\'utilisateur.',
+          a: 'Au niveau de l\'espace de travail, un administrateur active ou désactive Kad, et la recherche web et MCP s\'activent ou se désactivent séparément. Au niveau utilisateur, les permissions par rôle décident qui peut utiliser Kad et quels modules il peut lire. Faire une modification demande le niveau membre sur Kad et sur le module, et chaque modification est présentée en aperçu que l\'utilisateur confirme. L\'accès MCP est en lecture seule. Le RBAC est toujours appliqué, Kad ne voit jamais plus que ce qui est permis à l\'utilisateur.',
         },
         {
           q: 'Comment connecter Claude ou un autre assistant IA à Kadratis ?',

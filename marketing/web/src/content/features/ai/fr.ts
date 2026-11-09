@@ -80,7 +80,7 @@ const content: FeatureContent = {
   },
   cta: {
     title: "La gouvernance IT augmentée par l'IA commence ici.",
-    body: 'Kad est inclus dans chaque workspace Kadratis, avec un usage généreux sur le cloud hébergé. Auto-hébergement gratuit, ou cloud hébergé.',
+    body: 'Kad est inclus dans chaque espace de travail Kadratis, avec un usage généreux sur le cloud hébergé. Auto-hébergement gratuit, ou cloud hébergé.',
     primary: 'Déployer gratuitement',
     secondary: 'Essayer le cloud hébergé',
   },

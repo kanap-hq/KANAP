@@ -34,7 +34,7 @@ const content: FeatureContent = {
         'CAB-Entscheidung mit formaler Freigabeerfassung',
         'Ein-Klick-Umwandlung einer freigegebenen Anfrage in ein Projekt',
       ],
-      shotAlt: 'Anfrage-Workspace mit Aktivitäts-Timeline',
+      shotAlt: 'Anfrage mit ihrer Aktivitäts-Timeline',
     },
     {
       title: 'Projekt-Lifecycle-Tracking',
@@ -46,7 +46,7 @@ const content: FeatureContent = {
         'Aufwandserfassung: IT- und Fachbereichs-Aufwand geschätzt vs. tatsächlich',
         'Ursprung: Standard, Fast-Track, Legacy',
       ],
-      shotAlt: 'Projekt-Workspace mit Baseline- und Ist-Terminen',
+      shotAlt: 'Projekt mit Baseline- und Ist-Terminen',
     },
     {
       title: 'Automatische Roadmap-Planung',

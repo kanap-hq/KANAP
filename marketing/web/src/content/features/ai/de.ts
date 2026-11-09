@@ -80,7 +80,7 @@ const content: FeatureContent = {
   },
   cta: {
     title: 'KI-gestützte IT-Governance beginnt hier.',
-    body: 'Kad ist in jedem Kadratis-Workspace enthalten, mit großzügiger Nutzung in Kadratis Cloud. Kostenlos selbst hosten oder Kadratis Cloud testen.',
+    body: 'Kad ist in jedem Kadratis-Arbeitsbereich enthalten, mit großzügiger Nutzung in Kadratis Cloud. Kostenlos selbst hosten oder Kadratis Cloud testen.',
     primary: 'Kostenlos bereitstellen',
     secondary: 'Kadratis Cloud testen',
   },

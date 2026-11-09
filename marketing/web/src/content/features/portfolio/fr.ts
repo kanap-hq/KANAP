@@ -34,7 +34,7 @@ const content: FeatureContent = {
         'Décisions CAB enregistrées formellement',
         'Conversion en un clic d\'une demande approuvée en projet',
       ],
-      shotAlt: 'Workspace de demande avec chronologie d\'activité',
+      shotAlt: 'Fiche d\'une demande avec la chronologie de son activité',
     },
     {
       title: 'Suivi du cycle de vie projet',
@@ -46,7 +46,7 @@ const content: FeatureContent = {
         'Suivi d\'effort : estimé vs réel, IT et métier',
         'Origine : standard, fast-track, legacy',
       ],
-      shotAlt: 'Workspace projet avec baseline vs dates réelles',
+      shotAlt: 'Fiche d\'un projet avec ses dates de référence et ses dates réelles',
     },
     {
       title: 'Planification automatique de la feuille de route',

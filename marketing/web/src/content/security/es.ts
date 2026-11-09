@@ -62,7 +62,7 @@ const content: SecurityContent = {
       'Permisos granulares por módulo, por rol. Cada feature gate y cada consulta de entidad respeta la misma matriz RBAC, incluidos Kad y MCP.',
     bullets: [
       'Niveles lector, colaborador, miembro y administrador por módulo',
-      'Rol de administrador a nivel de workspace separado de los administradores de módulo',
+      'Rol de administrador a nivel del espacio de trabajo, separado de los administradores de módulo',
       'SSO vía Microsoft Entra ID (OIDC) tanto en nube como en autoalojado',
       'Autenticación local con contraseña usando Argon2 + flujos opcionales de restablecimiento de contraseña',
       'Los intentos de inicio de sesión se limitan por dirección IP: 60 solicitudes de inicio de sesión con contraseña y 60 solicitudes de inicio de sesión con Microsoft por minuto. Tras 5 intentos fallidos de contraseña en una cuenta desde una dirección IP en 15 minutos, esa dirección espera 15 minutos antes de volver a intentarlo con esa cuenta. Detrás de un proxy inverso, los límites cuentan la dirección IP de cada usuario',
@@ -97,7 +97,7 @@ const content: SecurityContent = {
       'Las respuestas llevan las fuentes que utilizó el agente, para que una decisión se pueda comprobar',
       'Pause cualquier agente de inmediato, uno a uno o todos a la vez',
       'Los límites de gasto por agente mantienen acotado el coste de operación',
-      'Las funciones de IA están desactivadas por defecto. En la nube, el modelo integrado no recibe ningún dato hasta que el workspace haya aceptado su proveedor y su lugar de tratamiento, ambos indicados en la aplicación. Un administrador los confirma, y se pide una nueva confirmación si cambia cualquiera de los dos. Puede usar su propio proveedor de modelos en su lugar',
+      'Las funciones de IA están desactivadas por defecto. En la nube, el modelo integrado no recibe ningún dato hasta que el espacio de trabajo haya aceptado su proveedor y su lugar de tratamiento, ambos indicados en la aplicación. Un administrador los confirma, y se pide una nueva confirmación si cambia cualquiera de los dos. Puede usar su propio proveedor de modelos en su lugar',
     ],
   },
   supplyChain: {

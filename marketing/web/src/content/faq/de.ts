@@ -35,15 +35,15 @@ const content: FaqContent = {
       items: [
         {
           q: 'Wie funktioniert die kostenlose Testversion?',
-          a: 'Kadratis Cloud beginnt mit einem 14-tägigen kostenlosen Test. Keine Kreditkarte erforderlich. Voller Zugriff auf alle Funktionen, plus eine kostenlose 60-minütige Aktivierungssitzung pro Unternehmen, wenn sie während der Testphase gebucht wird.',
+          a: "Kadratis Cloud beginnt mit einem kostenlosen 14-tägigen Test, ohne Kreditkarte und mit allen Funktionen. Sie starten mit Beispieldaten oder mit einem leeren Arbeitsbereich; drei geführte Pfade zeigen Ihnen Budget, IT-Landkarte und Projekte, und Kad kann Ihnen beim Import Ihrer Daten helfen. Aus Ihrem Arbeitsbereich können Sie außerdem ein Kennenlerngespräch von dreißig Minuten vereinbaren.",
         },
         {
           q: 'Was passiert nach meiner Testphase?',
-          a: 'Nach Ihrem 14-tägigen Test müssen Sie einen kostenpflichtigen Plan wählen, um fortzufahren. Am Ende des Tests wechselt Ihr Workspace in einen eingeschränkten Zugriff (nur Lesen), bis Sie ein Abonnement abschließen. Sie können jederzeit die Löschung Ihres Workspace verlangen.',
+          a: "Am Ende des Tests wechselt Ihr Arbeitsbereich in den Nur-Lese-Modus: Ihre Daten bleiben dreißig Tage lang einsehbar und exportierbar. Ein Abonnement auf der Seite Abrechnung des Arbeitsbereichs aktiviert ihn wieder, mit allem, was Sie erfasst haben. Ohne Abonnement wird der Arbeitsbereich mit allen Daten dreißig Tage nach Testende endgültig gelöscht.",
         },
         {
-          q: 'Was ist die kostenlose Aktivierungssitzung?',
-          a: 'Jeder Test enthält eine kostenlose 60-minütige Aktivierungssitzung pro Unternehmen. Nach der Buchung schreiben wir Ihnen per E-Mail, um den Call zu vereinbaren. Die Sitzung ist ein Videocall, der sich auf die ersten Werte-Meilensteine entlang Ihrer Hauptziele konzentriert.',
+          q: "Was ist das Kennenlerngespräch?",
+          a: "Ein Videogespräch von dreißig Minuten, kostenlos und unverbindlich, das Sie jederzeit aus Ihrem Test-Arbeitsbereich vereinbaren. Wir sehen uns Ihre Situation und Ihre Ziele an und was Kadratis dazu beitragen kann.",
         },
         {
           q: 'Was ist der Unterschied zwischen Cloud und Self-Hosting?',
@@ -60,7 +60,7 @@ const content: FaqContent = {
         },
         {
           q: 'Wie funktioniert der prioritäre Support?',
-          a: 'Für zahlende Abonnenten: Schreiben Sie uns eine E-Mail bei operativen Problemen. Wir streben eine Reaktion innerhalb von 24 Stunden an und lösen Ihr Problem. Best-Effort, kein SLA, aber echte Menschen, die jede Nachricht lesen und beantworten.',
+          a: 'Für zahlende Abonnenten: Schreiben Sie bei operativen Problemen an support@kadratis.com. Wir streben eine Reaktion innerhalb von 24 Stunden an und lösen Ihr Problem. Best-Effort, kein SLA, aber echte Menschen, die jede Nachricht lesen und beantworten.',
         },
       ],
     },
@@ -77,7 +77,7 @@ const content: FaqContent = {
         },
         {
           q: 'Kann ich mein Abonnement kündigen?',
-          a: 'Selbstverständlich. Kündigen Sie jederzeit im Billing Center, Ihr Abonnement bleibt bis zum Ende der aktuellen Abrechnungsperiode aktiv, keine Nachfragen.',
+          a: "Selbstverständlich. Kündigen Sie jederzeit auf der Seite Abrechnung Ihres Arbeitsbereichs: Ihr Abonnement bleibt bis zum Ende der aktuellen Abrechnungsperiode aktiv, keine Nachfragen.",
         },
       ],
     },
@@ -86,11 +86,11 @@ const content: FaqContent = {
       items: [
         {
           q: 'Was ist der Unterschied zwischen den inkludierten Kad-Nachrichten und Bring Your Own Key?',
-          a: 'Kadratis Cloud enthält eine großzügige Zahl an Kad-Nachrichten, betrieben mit einem Mid-Range-Modell, das wir sorgfältig ausgewählt und mit Kadratis getestet haben. Für noch leistungsfähigere Antworten können Sie über Bring Your Own Key State-of-the-Art-Modelle von OpenAI, Anthropic oder jedem kompatiblen Anbieter anbinden. BYOK lässt Sie zudem den Anbieter wählen, der Ihre Anfragen verarbeitet, und entfernt jede Nachrichten-Grenze.',
+          a: 'Kadratis Cloud enthält 1.500 Kad-Nachrichten pro Monat, mit einem Modell, das wir ausgewählt und mit Kadratis getestet haben. Für noch leistungsfähigere Antworten können Sie über Bring Your Own Key State-of-the-Art-Modelle von OpenAI, Anthropic oder jedem kompatiblen Anbieter anbinden. BYOK lässt Sie zudem den Anbieter wählen, der Ihre Anfragen verarbeitet, und entfernt jede Nachrichten-Grenze.',
         },
         {
           q: 'Wie kann ich Kad steuern?',
-          a: 'Auf Workspace-Ebene schaltet ein Administrator Kad ein oder aus, und Websuche und MCP lassen sich separat aktivieren oder deaktivieren. Auf Benutzerebene bestimmen rollenbasierte Berechtigungen, wer Kad nutzen darf und welche Module er lesen kann. Für eine Änderung ist die Stufe Mitglied bei Kad und beim Modul nötig, und jede Änderung wird als Vorschau gezeigt, die der Nutzer bestätigt. Der MCP-Zugriff ist schreibgeschützt. RBAC wird immer durchgesetzt, Kad sieht nie mehr, als der Nutzer sehen darf.',
+          a: 'Auf Ebene des Arbeitsbereichs schaltet ein Administrator Kad ein oder aus, und Websuche und MCP lassen sich separat aktivieren oder deaktivieren. Auf Benutzerebene bestimmen rollenbasierte Berechtigungen, wer Kad nutzen darf und welche Module er lesen kann. Für eine Änderung ist die Stufe Mitglied bei Kad und beim Modul nötig, und jede Änderung wird als Vorschau gezeigt, die der Nutzer bestätigt. Der MCP-Zugriff ist schreibgeschützt. RBAC wird immer durchgesetzt, Kad sieht nie mehr, als der Nutzer sehen darf.',
         },
         {
           q: 'Wie verbinde ich Claude oder einen anderen KI-Assistenten mit Kadratis?',

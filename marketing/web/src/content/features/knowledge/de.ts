@@ -50,10 +50,10 @@ const content: FeatureContent = {
     },
     {
       title: 'Vernetzte Dokumentation',
-      body: 'Verknüpfen Sie Dokumente mit Anwendungen, Assets, Projekten, Anfragen und Aufgaben. Greifen Sie auf verwaltete Dokumente aus anderen Workspaces zu und unterscheiden Sie zwischen verlinkten und verwandten Inhalten, für volle Nachvollziehbarkeit. Die Wissensdatenbank ist auch das, was Ihre Agenten zitieren: die Quelle, aus der ein Agent schöpft, und worauf er verweist, wenn er antwortet.',
+      body: 'Verknüpfen Sie Dokumente mit Anwendungen, Assets, Projekten, Anfragen und Aufgaben. Greifen Sie auf verwaltete Dokumente aus anderen Arbeitsbereichen zu und unterscheiden Sie zwischen verlinkten und verwandten Inhalten, für volle Nachvollziehbarkeit. Die Wissensdatenbank ist auch das, was Ihre Agenten zitieren: die Quelle, aus der ein Agent schöpft, und worauf er verweist, wenn er antwortet.',
       bullets: [
         'Relationen zu Anwendungen, Assets, Projekten, Anfragen, Aufgaben',
-        'Verwaltete Dokumente aus anderen Workspaces zugänglich',
+        'Verwaltete Dokumente aus anderen Arbeitsbereichen zugänglich',
         'Unterscheidung zwischen verlinkt und verwandt',
         'Bidirektionale Navigation zwischen Dokumenten und Entitäten',
         'Vollständiger Audit-Trail der Relationsänderungen',

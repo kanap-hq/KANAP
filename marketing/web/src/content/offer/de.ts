@@ -22,7 +22,7 @@ const content: OfferContent = {
       {
         name: 'Self-Hosted',
         badge: 'Open Source',
-        target: 'Unbegrenzte Nutzer · unbegrenzte Workspaces',
+        target: 'Unbegrenzte Nutzer · unbegrenzte Arbeitsbereiche',
         price: '0 €',
         period: '',
         subPrice: 'Für immer kostenlos',
@@ -42,7 +42,7 @@ const content: OfferContent = {
       {
         name: 'Self-Hosted Support',
         badge: 'On-Prem mit Produktionssupport',
-        target: 'Unbegrenzte Nutzer · unbegrenzte Workspaces',
+        target: 'Unbegrenzte Nutzer · unbegrenzte Arbeitsbereiche',
         price: '2.490 €',
         period: '/Jahr',
         subPrice: 'Jährliche Abrechnung',
@@ -51,7 +51,6 @@ const content: OfferContent = {
           'Prioritärer E-Mail-Support',
           'Unterstützung bei Installation und Upgrades',
           'Direkte Linie zum Team für Produktionsprobleme',
-          '60-min Kickoff-Call mit einem KANAP-Experten',
           'Über 20 % Rabatt auf Beratung',
           'Unterstützt das Open-Source-Projekt',
         ],
@@ -74,12 +73,12 @@ const content: OfferContent = {
     eyebrow: 'Cloud · wenn wir es für Sie betreiben sollen',
     title: 'Dieselbe Plattform, von uns betrieben.',
     intro:
-      'Kadratis Cloud ist dieselbe Open-Source-Plattform, von uns betrieben: Hosting, Updates, Backups, prioritärer Support und ein 60-minütiger Kickoff-Call. 14 Tage Test, keine Kreditkarte.',
+      'Kadratis Cloud ist dieselbe Open-Source-Plattform, von uns betrieben: Hosting, Updates, Backups und prioritärer Support. 14 Tage Test, keine Kreditkarte, auf Wunsch mit einem Kennenlerngespräch von 30 Minuten.',
     plans: [
       {
         name: 'Kadratis Cloud',
         badge: 'Fully managed',
-        target: 'Unbegrenzte Nutzer · unbegrenzte Workspaces',
+        target: 'Unbegrenzte Nutzer · unbegrenzte Arbeitsbereiche',
         price: '249 €',
         period: '/Mon',
         subPrice: 'oder 2.490 €/Jahr (2 Monate gratis)',
@@ -88,7 +87,6 @@ const content: OfferContent = {
           'Wir hosten, aktualisieren und sichern Kadratis für Sie',
           'EU-Hosting für europäische Teams',
           '1.500 Kad-Nachrichten/Mon enthalten oder eigener Schlüssel ohne Limit',
-          '60-min Kickoff-Call mit einem KANAP-Experten',
           'Prioritärer E-Mail-Support',
           'Über 20 % Rabatt auf Beratung',
           'Unterstützt das Open-Source-Projekt',

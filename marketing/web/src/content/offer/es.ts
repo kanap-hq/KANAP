@@ -23,7 +23,7 @@ const content: OfferContent = {
       {
         name: 'Autoalojado',
         badge: 'Open source',
-        target: 'Usuarios ilimitados · workspaces ilimitados',
+        target: 'Usuarios ilimitados · espacios de trabajo ilimitados',
         price: '0 €',
         period: '',
         subPrice: 'Gratis para siempre',
@@ -43,7 +43,7 @@ const content: OfferContent = {
       {
         name: 'Soporte autoalojado',
         badge: 'On-prem con soporte de producción',
-        target: 'Usuarios ilimitados · workspaces ilimitados',
+        target: 'Usuarios ilimitados · espacios de trabajo ilimitados',
         price: '2 490 €',
         period: '/año',
         subPrice: 'Facturación anual',
@@ -52,7 +52,6 @@ const content: OfferContent = {
           'Soporte por email prioritario',
           'Asistencia de instalación y actualización',
           'Línea directa con el equipo para problemas de producción',
-          'Sesión inicial de 60 min con un experto de KANAP',
           'Más del 20 % de descuento en consultoría',
           'Apoya el proyecto open source',
         ],
@@ -76,12 +75,12 @@ const content: OfferContent = {
     eyebrow: 'Nube alojada · si prefiere que lo operemos nosotros',
     title: 'La misma plataforma, operada por nosotros.',
     intro:
-      'Kadratis Cloud es la misma plataforma open source, operada por nosotros: alojamiento, actualizaciones, copias de seguridad, soporte prioritario y una sesión inicial de 60 minutos. Prueba de 14 días, sin tarjeta de crédito.',
+      'Kadratis Cloud es la misma plataforma open source, operada por nosotros: alojamiento, actualizaciones, copias de seguridad y soporte prioritario. Prueba de 14 días, sin tarjeta de crédito, con una llamada de descubrimiento de 30 minutos si lo desea.',
     plans: [
       {
         name: 'Kadratis Cloud',
         badge: 'Totalmente gestionado',
-        target: 'Usuarios ilimitados · workspaces ilimitados',
+        target: 'Usuarios ilimitados · espacios de trabajo ilimitados',
         price: '249 €',
         period: '/mes',
         subPrice: 'o 2 490 €/año (2 meses gratis)',
@@ -90,7 +89,6 @@ const content: OfferContent = {
           'Alojamos, actualizamos y respaldamos Kadratis por usted',
           'Alojamiento en la UE para equipos europeos',
           '1 500 mensajes Kad/mes incluidos, o su propia clave, sin límite',
-          'Sesión inicial de 60 min con un experto de KANAP',
           'Soporte por email prioritario',
           'Más del 20 % de descuento en consultoría',
           'Apoya el proyecto open source',
