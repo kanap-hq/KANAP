@@ -17,6 +17,26 @@ version brings, followed by three lists:
 To upgrade across several versions, read every entry between your version and the target: the
 actions add up. The release process is described in `doc/releasing.md`.
 
+## 26.11.3 (2026-11-09)
+
+First steps that follow your own data, a path changed at any time from the first-steps tile, the switch to the example during the trial, empty lists that offer their creation, and one Budget choice for a task.
+
+### Changes
+- First steps: with your own data, a step that creates something is marked done once that item exists in the workspace. A hint stays on its screen and on the records under it until it is closed. Once the step is done, **Next step** opens the following one (**Finish** after the last). The first-steps tile changes the path at any time, from its header; restarting a path is no longer offered. (#1495)
+- Trial workspaces: during the trial, an administrator can erase a workspace that holds data to switch to the complete example, from the path question or from *Administration › Sample data*. The workspace name must be typed to confirm, and the example then loads. After the trial, only loaded sample data can be erased. (#1498)
+- An empty list of sites, assets, connections, interfaces, companies, business processes, departments, contacts, cost centers, working-day calendars, analytics values or accounts shows a create button in the middle of the list, for people who can create. (#1494)
+- The supplier list of a contract or a budget line ends with **+ New supplier** before anything is typed, including when the workspace has no supplier yet. (#1496)
+- In a task's "Related to" field, budget lines are one "Budget" choice that finds OPEX and CAPEX lines alike. (#1497)
+- Website: the top bar links are centred and switch to the menu button on narrower screens. The Spanish top bar uses shorter labels. (#1493)
+
+### Fixes
+- First-steps hints no longer hide a record's tabs or Plaid's suggested questions. (#1495)
+
+### On-premise
+- Action required: none. `.env` is unchanged.
+- Migrations: none.
+- Recommended: none.
+
 ## 26.11.2 (2026-11-09)
 
 A fix version for 26.11.1: the sample data loads again, and an asset can again be created from its title in every workspace.
