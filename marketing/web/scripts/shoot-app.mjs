@@ -124,6 +124,69 @@ const hideDevBadge = (page) =>
     }
   });
 
+// Leave test rows of the dev tenant out of an AG Grid list (rows whose text matches `pattern`, tested on the
+// row's own text from its first cell). AG Grid places rows absolutely (translateY), so the rows below move up
+// by the height of each dropped row; the footer count "Total (n)" and the footer sums (cells that share a
+// col-id with a dropped row, numbers only) follow, so the list reads as the demo fixture would.
+const dropGridRows = (page, pattern) =>
+  page.evaluate((pattern) => {
+    const re = new RegExp(pattern);
+    const center = document.querySelector('main .ag-center-cols-container');
+    if (!center) return 0;
+    const dropped = [];
+    for (const row of center.querySelectorAll('.ag-row')) {
+      if (re.test(row.innerText.trim())) dropped.push(row);
+    }
+    if (!dropped.length) return 0;
+    const droppedIdx = new Set(dropped.map((r) => r.getAttribute('row-index')));
+    const height = parseFloat(dropped[0].style.height) || 38;
+    // First number of a cell text: sign, value, thousands separator and the exact substring it came from.
+    const num = (t) => {
+      const m = /(-|−)?(\d{1,3}(?:[   ,]\d{3})+|\d+)/.exec(t || '');
+      if (!m) return null;
+      return { value: (m[1] ? -1 : 1) * Number(m[2].replace(/\D/g, '')), sep: (/\d([   ,])\d{3}/.exec(m[2]) || ['', ''])[1], match: m[0] };
+    };
+    const footer = document.querySelector('main .ag-floating-bottom');
+    if (footer) {
+      for (const cell of footer.querySelectorAll('[col-id]')) {
+        const id = cell.getAttribute('col-id');
+        const leaf = [...cell.querySelectorAll('*')].find((n) => !n.children.length && n.textContent.trim()) || cell;
+        const text = leaf.textContent;
+        const count = /^(\s*Total \()(\d+)(.*)$/.exec(text);
+        if (count) { leaf.textContent = `${count[1]}${Number(count[2]) - dropped.length}${count[3]}`; continue; }
+        const sum = num(text);
+        if (!sum) continue;
+        let minus = 0;
+        for (const row of dropped) {
+          const src = row.querySelector(`[col-id="${id}"]`);
+          const v = src && num(src.textContent);
+          if (v) minus += v.value;
+        }
+        if (!minus) continue;
+        const next = sum.value - minus;
+        const digits = String(Math.abs(next)).replace(/\B(?=(\d{3})+(?!\d))/g, sum.sep);
+        leaf.textContent = text.replace(sum.match, `${next < 0 ? '−' : ''}${digits}`);
+      }
+    }
+    for (const holder of document.querySelectorAll('main .ag-center-cols-container, main .ag-pinned-left-cols-container, main .ag-pinned-right-cols-container')) {
+      for (const row of [...holder.querySelectorAll('.ag-row')]) {
+        const idx = Number(row.getAttribute('row-index'));
+        if (droppedIdx.has(row.getAttribute('row-index'))) { row.remove(); continue; }
+        const above = [...droppedIdx].filter((d) => Number(d) < idx).length;
+        const m = /translateY\(([\d.]+)px\)/.exec(row.style.transform || '');
+        if (m && above) row.style.transform = `translateY(${Number(m[1]) - above * height}px)`;
+        if (above) row.setAttribute('row-index', String(idx - above));
+      }
+    }
+    // The "n results" counter above the list follows.
+    const walker = document.createTreeWalker(document.querySelector('main'), NodeFilter.SHOW_TEXT);
+    for (let n; (n = walker.nextNode());) {
+      const m = /^(\s*)(\d+)( results?\s*)$/.exec(n.nodeValue);
+      if (m) n.nodeValue = `${m[1]}${Number(m[2]) - dropped.length}${m[3]}`;
+    }
+    return dropped.length;
+  }, pattern);
+
 // Hide the controls of the given analytics dimensions (label + field), in report
 // filters and in the Properties panel.
 const hideControls = (page, labels) =>
@@ -196,6 +259,33 @@ const askPlaid = async (page, question, done) => {
   await sleep(600);
 };
 
+// Kad feature page, read-only variant: open a conversation that already exists on the tenant (found by its
+// title in the conversation search; --conversation N picks the Nth one of the list, 0 = the most recent) instead
+// of asking again, so nothing is written. Same final view as askPlaid: list folded, the question at the top.
+const openConversation = async (page, title, done) => {
+  await page.waitForSelector('textarea', { timeout: 30000 });
+  const search = await page.waitForSelector('input[placeholder*="Search conversations"]', { timeout: 20000 });
+  const prefix = title.slice(0, 40);
+  await search.type(prefix, { delay: 15 });
+  await sleep(2500);
+  const hits = await page.$$(`xpath/.//*[starts-with(normalize-space(text()), "${prefix}")]`);
+  if (!hits.length) throw new Error(`no existing conversation "${prefix}": ask again with askPlaid`);
+  await hits[Math.min(Number(flag('conversation', 0)), hits.length - 1)].click();
+  await page.waitForFunction(() => document.querySelector('main')?.innerText.includes('You'), { timeout: 30000 });
+  if (done) await page.waitForFunction(done, { timeout: 60000 }).catch(() => console.warn('expected answer not seen'));
+  await sleep(2000);
+  const toggle = await page.$('main button:has(svg[data-testid="MenuIcon"])');
+  if (toggle && (await page.evaluate(() => /New conversation/.test(document.querySelector('main')?.innerText || '')))) {
+    await toggle.click();
+    await sleep(600);
+  }
+  await page.evaluate(() => {
+    const you = [...document.querySelectorAll('main *')].filter((n) => !n.children.length && n.textContent?.trim() === 'You')[0];
+    you?.scrollIntoView({ block: 'start' });
+  });
+  await sleep(800);
+};
+
 const openContract = async (page, name) => {
   await page.waitForFunction((n) => document.querySelector('main')?.innerText.includes(n), { timeout: 30000 }, name);
   const [cell] = await page.$$(`xpath/.//main//*[normalize-space(text())="${name}"]`);
@@ -216,6 +306,9 @@ const PAGES = {
     waitFor: 'main',
     async prepare(page) {
       await page.waitForFunction(() => document.querySelectorAll('main .ag-row, main table tbody tr').length > 3, { timeout: 30000 }).catch(() => {});
+      await sleep(1500);
+      // Test incidents of the shared dev tenant (INC-44, INC-52, filed under Infrastructure): not part of the Fromage fixture (INC-20 to INC-29).
+      await dropGridRows(page, '^INC-(44|52)\\n');
     },
   },
   'feature-incidents-review': {
@@ -249,7 +342,11 @@ const PAGES = {
     path: '/ai',
     waitFor: 'main',
     async prepare(page) {
-      await askPlaid(page, 'Which contracts must be decided in the next 90 days, and which applications do they cover? Answer in one message, with a table.', () => /SAP Maintenance/.test(document.querySelector('main')?.innerText || ''));
+      const question = 'Which contracts must be decided in the next 90 days, and which applications do they cover? Answer in one message, with a table.';
+      const done = () => /SAP Maintenance/.test(document.querySelector('main')?.innerText || '');
+      // Default: open an existing conversation (read-only). --ask-again writes a new one, as askPlaid always did.
+      if (has('ask-again')) await askPlaid(page, question, done);
+      else await openConversation(page, question, done);
     },
   },
   // Plaid feature page: a write prepared as a preview (nothing approved).
@@ -280,6 +377,16 @@ const PAGES = {
       await clickText(page, 'li[role="option"]', String(new Date().getFullYear()));
       await page.waitForFunction(() => /Committed \d{4}/.test(document.querySelector('main')?.innerText || ''), { timeout: 20000 }).catch(() => {});
       await sleep(1500);
+      // Test contract of the shared dev tenant ("KANAP", supplier KANAP): not part of the Fromage fixture.
+      await dropGridRows(page, '^KANAP\\n');
+      // The test contract has no budget line: it is counted by the "No budget line (n)" shortcut.
+      await page.evaluate(() => {
+        const walker = document.createTreeWalker(document.querySelector('main'), NodeFilter.SHOW_TEXT);
+        for (let n; (n = walker.nextNode());) {
+          const m = /^(No budget line \()(\d+)(\))$/.exec(n.nodeValue.trim());
+          if (m) n.nodeValue = `${m[1]}${Number(m[2]) - 1}${m[3]}`;
+        }
+      });
     },
   },
   // Contracts feature page: SAP Maintenance & Support, deadlines and the renewal decision. Read-only.
@@ -1391,11 +1498,155 @@ const PAGES = {
     waitFor: '.ag-row',
     prepare: (page) => sleep(1500),
   },
+  // Site pages Portfolio, IT landscape and Knowledge (retaken 2026-11-09 for the Kadratis rename; first shot in May 2026 at 1440 x 900,
+  // frame 1440 keeps the same window). Read-only.
+  'portfolio-capacity': {
+    frame: 1440,
+    path: '/portfolio/reports/capacity-heatmap',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForFunction(() => /Contributor capacity/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 });
+      await sleep(1500);
+    },
+  },
+  'portfolio-project-timeline': {
+    frame: 1440,
+    path: '/portfolio/projects/PRJ-3/timeline', // Fromage-as-a-Service
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForFunction(() => /Phases/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 });
+      await sleep(1500);
+    },
+  },
+  'portfolio-request-scoring': {
+    frame: 1440,
+    path: '/portfolio/requests/REQ-1/scoring', // AI Cheese Grading
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForFunction(() => /Evaluation criteria/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 });
+      await sleep(1500);
+    },
+  },
+  'portfolio-request-summary': {
+    frame: 1440,
+    path: '/portfolio/requests/REQ-1/summary',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForFunction(() => /Purpose/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 });
+      await sleep(2000);
+    },
+  },
+  'it-interface-technical': {
+    frame: 1440,
+    path: '/it/interfaces/INT-10/flow', // Talend -> Snowflake; the former Technical tab is the Flow tab (logical flow and leg template)
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForFunction(() => /Leg template/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 });
+      await sleep(1500);
+    },
+  },
+  'it-interface-map': {
+    frame: 1440,
+    path: '/it/interface-map',
+    waitFor: 'main',
+    async prepare(page) {
+      // The map is a force layout: wait for the nodes, switch middleware on, then let the simulation settle.
+      await page.waitForFunction(() => /1 interface/.test(document.querySelector('main')?.innerText || ''), { timeout: 40000 });
+      const [sw] = await page.$$('xpath/.//main//label[contains(normalize-space(.), "Show middleware")]//input[@type="checkbox"]');
+      if (sw && !(await sw.evaluate((n) => n.checked))) { await sw.click(); await sleep(1500); }
+      await sleep(Number(process.env.MAP_SETTLE_MS || 15000));
+      // The map opens at 100 %: zoom out to see the whole graph (button steps).
+      for (let i = 0; i < Number(process.env.MAP_ZOOM_OUT || 4); i++) {
+        await page.click('button[aria-label="Zoom out"]').catch(() => console.warn('zoom out button not found'));
+        await sleep(500);
+      }
+      await page.mouse.move(700, 700); // off the toolbar: no "Zoom out" tooltip in the shot
+      await sleep(2000);
+    },
+  },
+  // The dev tenant's lists carry test rows after the Fromage fixture: sorted by reference (ascending), the first rows are the fixture's own.
+  'it-applications': {
+    frame: 1440,
+    path: '/it/applications',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForSelector('.ag-center-cols-container .ag-row', { timeout: 60000 });
+      await page.click('.ag-header-cell[col-id="sequential_id"] .ag-header-cell-label').catch(() => console.warn('# header not found'));
+      await sleep(1500);
+    },
+  },
+  'it-assets': {
+    frame: 1440,
+    path: '/it/assets',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForSelector('.ag-center-cols-container .ag-row', { timeout: 60000 });
+      await page.click('.ag-header-cell[col-id="asset_reference"] .ag-header-cell-label').catch(() => console.warn('# header not found'));
+      await sleep(1500);
+    },
+  },
+  'knowledge-library': {
+    frame: 1440,
+    path: '/knowledge',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForFunction(() => [...document.querySelectorAll('main button')].some((b) => b.textContent?.trim() === 'Managed Docs'), { timeout: 30000 });
+      await clickText(page, 'main button', 'Managed Docs');
+      await page.waitForSelector('.ag-center-cols-container .ag-row', { timeout: 30000 });
+      await sleep(1500);
+      // The generated documents sit in the folders (Requests, Projects, Interfaces, Applications, Assets), not at the library root.
+      await clickText(page, 'main *', process.env.KNOWLEDGE_FOLDER || 'Applications');
+      await page.waitForFunction(() => /APP-\d+ - /.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 }).catch(() => console.warn('no application documents'));
+      await sleep(2000);
+    },
+  },
+  'knowledge-document': {
+    frame: 1440,
+    path: `/knowledge/${process.env.KNOWLEDGE_DOC || 'DOC-27'}`, // was DOC-42 (APP-48 AS/400 Order Management): that document is gone, DOC-42 is now a Service Desk document
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForFunction(() => /Published/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 });
+      // The side panel opens by default: fold it, as on the document view of the earlier shot.
+      const fold = await page.$('main button:has(svg[data-testid="ChevronRightIcon"]), button:has(svg[data-testid="ChevronRightIcon"])');
+      if (fold) await fold.click(); else console.warn('side panel fold button not found');
+      await sleep(1500);
+    },
+  },
+  'knowledge-editor': {
+    frame: 1440,
+    path: '/knowledge/DOC-42',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForFunction(() => /Legacy order processing/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 });
+      // Edit mode is local to the page until Save: nothing is saved, the browser closes after the shot.
+      await clickText(page, 'button', 'Edit');
+      await page.waitForSelector('[contenteditable="true"]', { timeout: 20000 });
+      await sleep(2000);
+    },
+  },
+  'knowledge-linked-entities': {
+    frame: 1440,
+    path: '/knowledge/DOC-27', // REQ-3 Cave Climate Digital Twin, Risks & Mitigations (was REQ-4 Automated Inventory Counting)
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForFunction(() => /Published/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 });
+      // The Properties panel is open by default: open the Relations section and scroll the panel down to it.
+      await page.waitForSelector('xpath/.//*[normalize-space(text())="Relations"]', { timeout: 30000 });
+      const [rel] = await page.$$('xpath/.//*[normalize-space(text())="Relations"]');
+      if (rel) { await rel.evaluate((n) => n.scrollIntoView({ block: 'center' })); await sleep(500); await rel.click(); await sleep(1000); }
+      await page.evaluate(() => {
+        for (const el of document.querySelectorAll('*')) {
+          if (el.scrollHeight > el.clientHeight + 20 && /auto|scroll/.test(getComputedStyle(el).overflowY) && el.innerText.includes('Contributors')) el.scrollTop = el.scrollHeight;
+        }
+      });
+      await sleep(1500);
+    },
+  },
 };
 PAGES['chargeback-company-2026-10-13'] = PAGES['chargeback-company'];
 
 // Flags that take a value, so their value is not read as a shot name.
-const VALUE_FLAGS = ['base', 'out', 'theme', 'width', 'height', 'scale', 'lang', 'staffing-item', 'hide', 'cols-off', 'frame', 'frames'];
+const VALUE_FLAGS = ['base', 'out', 'theme', 'width', 'height', 'scale', 'lang', 'staffing-item', 'hide', 'cols-off', 'frame', 'frames', 'conversation'];
 const positional = args.filter((a, i) => !a.startsWith('--') && !VALUE_FLAGS.includes(args[i - 1]?.slice(2)));
 // A positional starting with "/" is an ad-hoc path, saved as path-<slug>.png (for scouting).
 const adHoc = (p) => [`path-${p.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '')}`, { path: p, waitFor: 'main' }];
