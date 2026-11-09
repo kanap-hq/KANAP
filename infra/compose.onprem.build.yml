@@ -8,7 +8,7 @@
 
 services:
   api:
-    image: kanap-api:local
+    image: kadratis-api:local
     build:
       context: ../backend
       dockerfile: Dockerfile
@@ -19,7 +19,7 @@ services:
       target: runtime
 
   web:
-    image: kanap-web:local
+    image: kadratis-web:local
     build:
       context: ../frontend
       dockerfile: Dockerfile
@@ -27,7 +27,7 @@ services:
         VITE_API_URL: ${VITE_API_URL:-/api}
 
   tools:
-    image: kanap-api-tools:local
+    image: kadratis-api-tools:local
     build:
       context: ../backend
       dockerfile: Dockerfile

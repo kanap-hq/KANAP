@@ -2,11 +2,11 @@
 # Checks the base images of every Dockerfile and the images of the compose files in infra/:
 # each one is written name:tag@sha256:<digest>, and the digest is that of a multi-architecture
 # index (the manifest of a single architecture would not run on the others).
-# KANAP's own images (ghcr.io/kanap-hq/kanap-*) are tagged by version, and the release workflow
+# KANAP's own images (ghcr.io/kanap-hq/kadratis-*) are tagged by version, and the release workflow
 # publishes them: they are exempt from the digest, and only their form is checked (one of the
 # four names, tag ${KANAP_VERSION:-YY.M.N}, or the marketing form with KANAP_MARKETING_VERSION).
-# The names a build overlay gives to images built on the spot (kanap-api:local, kanap-web:local,
-# kanap-api-tools:local) are exempt too: nothing pulls them.
+# The names a build overlay gives to images built on the spot (kadratis-api:local, kadratis-web:local,
+# kadratis-api-tools:local) are exempt too: nothing pulls them.
 #
 #   check-image-pins.sh            the form, then each digest against its registry
 #   check-image-pins.sh --offline  the form only
@@ -33,7 +33,7 @@ while IFS= read -r file; do
 done < <(git ls-files 'infra/*.yml')
 
 version='[0-9]{2}\.[0-9]{1,2}\.[0-9]+'
-own_image='^ghcr\.io/kanap-hq/kanap-(api|api-tools|web|marketing):'
+own_image='^ghcr\.io/kanap-hq/kadratis-(api|api-tools|web|marketing):'
 own_tag='\$\{KANAP_VERSION:-'"$version"'\}'
 own_marketing_tag='\$\{KANAP_MARKETING_VERSION:-\$\{KANAP_VERSION:-'"$version"'\}\}'
 
@@ -41,15 +41,15 @@ status=0
 for entry in "${refs[@]}"; do
   file=${entry%% *}
   ref=${entry#* }
-  if [[ "$ref" =~ ^kanap-(api|api-tools|web):local$ ]]; then
+  if [[ "$ref" =~ ^kadratis-(api|api-tools|web):local$ ]]; then
     echo "ok (local) $file  $ref"
     continue
   fi
-  if [[ "$ref" == ghcr.io/kanap-hq/kanap-* ]]; then
-    if [[ "$ref" =~ ${own_image}${own_tag}$ ]] || [[ "$ref" =~ ^ghcr\.io/kanap-hq/kanap-marketing:${own_marketing_tag}$ ]]; then
+  if [[ "$ref" == ghcr.io/kanap-hq/kadratis-* ]]; then
+    if [[ "$ref" =~ ${own_image}${own_tag}$ ]] || [[ "$ref" =~ ^ghcr\.io/kanap-hq/kadratis-marketing:${own_marketing_tag}$ ]]; then
       echo "ok (own)   $file  $ref"
     else
-      echo "::error file=$file::$ref is not one of the forms of KANAP's own images: kanap-api, kanap-api-tools or kanap-web:\${KANAP_VERSION:-YY.M.N}, kanap-marketing:\${KANAP_VERSION:-YY.M.N} or \${KANAP_MARKETING_VERSION:-\${KANAP_VERSION:-YY.M.N}}"
+      echo "::error file=$file::$ref is not one of the forms of KANAP's own images: kadratis-api, kadratis-api-tools or kadratis-web:\${KANAP_VERSION:-YY.M.N}, kadratis-marketing:\${KANAP_VERSION:-YY.M.N} or \${KANAP_MARKETING_VERSION:-\${KANAP_VERSION:-YY.M.N}}"
       status=1
     fi
     continue

@@ -94,10 +94,10 @@ describe('generate.mjs options', () => {
     writeFileSync(fake, '#!/bin/sh\ncase "$*" in\n  *"--entrypoint apk"*) printf "zlib-1.3.1-r2\\nmusl-1.2.5-r10\\n" ;;\n  *"--entrypoint node"*) echo v24.0.0 ;;\n  *) exit 3 ;;\nesac\n');
     chmodSync(fake, 0o755);
     const out = path.join(work, 'with-image');
-    const run = generate(['--out', out, '--image', 'kanap-api:test'], { ...process.env, PATH: `${bin}${path.delimiter}${process.env.PATH}` });
+    const run = generate(['--out', out, '--image', 'kadratis-api:test'], { ...process.env, PATH: `${bin}${path.delimiter}${process.env.PATH}` });
     assert.equal(run.status, 0, run.output);
     const lines = readFileSync(path.join(out, 'api-image-packages.txt'), 'utf8').trim().split('\n');
-    assert.match(lines[0], /^# Alpine packages of the API image kanap-api:test \(apk info -v\): 2$/);
+    assert.match(lines[0], /^# Alpine packages of the API image kadratis-api:test \(apk info -v\): 2$/);
     assert.match(lines[1], /Node\.js v24\.0\.0/);
     assert.deepEqual(lines.slice(2), ['musl-1.2.5-r10', 'zlib-1.3.1-r2']);
   });

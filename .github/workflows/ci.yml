@@ -387,13 +387,13 @@ jobs:
           context: backend
           build-contexts: help-docs=doc/help/docs
           target: runtime
-          tags: kanap-api:ci
+          tags: kadratis-api:ci
           load: true
           cache-from: type=gha,scope=api-runtime
           cache-to: ${{ github.event_name != 'merge_group' && 'type=gha,mode=max,scope=api-runtime' || '' }}
       # The same checks run on the published image (release-images.yml).
       - name: Check the API image (converters, no sources or development tools)
-        run: bash .github/scripts/check-api-image.sh kanap-api:ci
+        run: bash .github/scripts/check-api-image.sh kadratis-api:ci
       - name: Build the API image (dev stage)
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:

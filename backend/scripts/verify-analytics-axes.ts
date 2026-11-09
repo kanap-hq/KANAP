@@ -35,8 +35,8 @@ import { DataSource, QueryRunner } from 'typeorm';
  * On a server, once the new image has migrated at boot. The server images run compiled
  * code only: TypeScript scripts run in the maintenance image, built from the same tree
  * (QA: .env.qa, prod: .env.prod), from /opt/kanap after `git pull`:
- *   docker build --target dev -t kanap-api-tools backend
- *   docker run --rm --env-file backend/.env.qa --network infra_default kanap-api-tools \
+ *   docker build --target dev -t kadratis-api-tools backend
+ *   docker run --rm --env-file backend/.env.qa --network infra_default kadratis-api-tools \
  *     npx ts-node scripts/verify-analytics-axes.ts
  * `infra_default` is the network of the API container (`docker network ls` lists it).
  * On-premise: the same commands with the installation's own env file and network.

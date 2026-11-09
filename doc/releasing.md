@@ -173,10 +173,14 @@ publishes under its own name). Nothing is pushed from a workstation.
 
 | Image | Built from |
 |---|---|
-| `kanap-api` | `backend/Dockerfile`, `runtime` stage |
-| `kanap-api-tools` | `backend/Dockerfile`, `dev` stage (sources and tools, for the database scripts) |
-| `kanap-web` | `frontend/Dockerfile`, `VITE_API_URL=/api` |
-| `kanap-marketing` | `marketing/Dockerfile`; the website, not part of an on-premise installation |
+| `kadratis-api` | `backend/Dockerfile`, `runtime` stage |
+| `kadratis-api-tools` | `backend/Dockerfile`, `dev` stage (sources and tools, for the database scripts) |
+| `kadratis-web` | `frontend/Dockerfile`, `VITE_API_URL=/api` |
+| `kadratis-marketing` | `marketing/Dockerfile`; the website, not part of an on-premise installation |
+
+The versions published before the product became Kadratis (up to 26.11.3) keep their `kanap-*`
+image names on the registry. Nothing republishes them and no script reads them: every script names
+the images of the version it works on, with the current names.
 
 - **On a tag `vYY.M.N`** (the push of step 5, or a manual run on the tag): checks the form of
   the tag, that `main` contains the tagged commit and that both `package.json` are at the
@@ -184,7 +188,7 @@ publishes under its own name). Nothing is pushed from a workstation.
   (`.github/scripts/image-tag-state.mjs`): an image whose `<version>` tag was pushed by an
   earlier run of the same commit (its index annotations `org.opencontainers.image.revision` and
   `org.opencontainers.image.version`) is reused with its digest, and a `<version>` tag from
-  another commit stops the run before anything is built. It builds `kanap-api`, runs the same
+  another commit stops the run before anything is built. It builds `kadratis-api`, runs the same
   checks as the `images` job of `ci.yml` (`.github/scripts/check-api-image.sh`), then pushes the
   missing images with the `<version>` tag only, for `linux/amd64`. Each image carries BuildKit
   provenance and an SBOM. A separate `attest` job, the only one with an OIDC token, adds a
@@ -198,7 +202,7 @@ publishes under its own name). Nothing is pushed from a workstation.
   the other: a promotion interrupted halfway leaves `stable` on two versions until it is
   finished by running `publish` again.
 - **Website from `main`** (`marketing_from_main`, a manual run on `main`): builds
-  `kanap-marketing` alone, tagged `main-<short sha>`, for a website deployment between two
+  `kadratis-marketing` alone, tagged `main-<short sha>`, for a website deployment between two
   versions. It touches no other image and no `stable` tag.
 
 A manual run on `main` takes exactly one of the two inputs; a manual run on a version tag takes
