@@ -17,11 +17,11 @@ const content: LegalContent = {
     header: {
       eyebrow: 'Rechtliches',
       title: 'Datenschutzerklärung',
-      lastUpdated: 'Zuletzt aktualisiert: 3. November 2026',
+      lastUpdated: 'Zuletzt aktualisiert: [date de la bascule]',
     },
     body: `
 <h2>Präambel</h2>
-<p>KANAP (nachfolgend „KANAP“), eine EURL (Einpersonengesellschaft mit beschränkter Haftung), eingetragen im Handels- und Gesellschaftsregister (RCS) Saverne unter der Nummer 939 098 190, mit Sitz in 2, rue du Finhay, 67210 Obernai, Frankreich, misst dem Schutz Ihrer personenbezogenen Daten größte Bedeutung bei. Diese Datenschutzerklärung (nachfolgend die „Erklärung“) informiert Sie klar und transparent über die Verarbeitung personenbezogener Daten, die KANAP im Rahmen der Nutzung der Online-Plattform für IT-Management „KANAP“ (nachfolgend „die Plattform“) durchführt.</p>
+<p>KANAP (nachfolgend „KANAP“), eine EURL (Einpersonengesellschaft mit beschränkter Haftung), eingetragen im Handels- und Gesellschaftsregister (RCS) Saverne unter der Nummer 939 098 190, mit Sitz in 2, rue du Finhay, 67210 Obernai, Frankreich, misst dem Schutz Ihrer personenbezogenen Daten größte Bedeutung bei. Diese Datenschutzerklärung (nachfolgend die „Erklärung“) informiert Sie klar und transparent über die Verarbeitung personenbezogener Daten, die KANAP im Rahmen der Nutzung der Online-Plattform für IT-Management „Kadratis“ (vormals „KANAP“, nachfolgend „die Plattform“) durchführt.</p>
 <p>KANAP verpflichtet sich, die Datenschutz-Grundverordnung (DSGVO) und das französische Gesetz Nr. 78-17 vom 6. Januar 1978 über Informatik, Dateien und Freiheiten in seiner geänderten Fassung einzuhalten.</p>
 
 <h2>1. Verantwortlicher</h2>
@@ -54,7 +54,7 @@ const content: LegalContent = {
 
 <h2>4. Rechtsgrundlage der Verarbeitung</h2>
 <ul>
-  <li><strong>Vertragserfüllung:</strong> Die Verarbeitung ist für die Erbringung des Dienstes KANAP erforderlich (Kontoverwaltung, Zugang zur Plattform usw.), einschließlich der Maßnahmen, die auf Ihre Anfrage vor einem Abonnement getroffen werden (Testphase, Kennenlerngespräch).</li>
+  <li><strong>Vertragserfüllung:</strong> Die Verarbeitung ist für die Erbringung des Dienstes Kadratis erforderlich (Kontoverwaltung, Zugang zur Plattform usw.), einschließlich der Maßnahmen, die auf Ihre Anfrage vor einem Abonnement getroffen werden (Testphase, Kennenlerngespräch).</li>
   <li><strong>Berechtigtes Interesse:</strong> Die Verarbeitungen zur Verbesserung des Dienstes, zur Sicherheit und zur Betrugsprävention beruhen auf dem berechtigten Interesse von KANAP, einen hochwertigen und sicheren Dienst zu entwickeln und bereitzustellen, ebenso die Nachrichten der Testphase, von denen Sie sich jederzeit abmelden können.</li>
   <li><strong>Rechtliche Verpflichtung:</strong> Die Verarbeitung kann zur Erfüllung rechtlicher Verpflichtungen erforderlich sein (Buchführung, Steuern, Bekämpfung der Geldwäsche usw.).</li>
   <li><strong>Einwilligung:</strong> Für bestimmte optionale Funktionen oder Mitteilungen kann die Verarbeitung auf der ausdrücklichen Einwilligung des Benutzers beruhen.</li>
@@ -76,7 +76,7 @@ const content: LegalContent = {
   <li><strong>Anthropic</strong> (Vereinigte Staaten) oder <strong>Mistral AI</strong> (Europäische Union), Anbieter des integrierten KI-Modells des Cloud-Dienstes, je nachdem, welchen KANAP ausgewählt hat und die Anwendung angibt: Die KI-Funktionen sind standardmäßig deaktiviert. Das integrierte Modell erhält keine Daten, solange der Arbeitsbereich seinen Anbieter und den Ort, an dem er die Daten verarbeitet, nicht akzeptiert hat; beide werden in der Anwendung angegeben. Ein Administrator des Arbeitsbereichs erteilt diese Bestätigung, die den Assistenten, die Agenten und die geplanten Verarbeitungen abdeckt. Ändert sich der Anbieter oder der Ort, wird eine neue Bestätigung eingeholt und diese Erklärung aktualisiert. KANAP wählt nur einen Anbieter und ein Angebot, deren Bedingungen das Training seiner Modelle mit den übermittelten Daten ausschließen. Administratoren können stattdessen ihren eigenen Modellanbieter verwenden.</li>
   <li><strong>Cal.com</strong> (Vereinigte Staaten): Terminvereinbarung für die Kennenlerngespräche.</li>
 </ul>
-<p>Kunden, die KANAP selbst hosten, wählen ihre eigenen Dienstleister, und KANAP verarbeitet ihre Daten nicht. Kunden des Cloud-Dienstes, die ihren eigenen KI-Modellanbieter anbinden, wählen diesen Anbieter, und KANAP sendet ihre Daten nicht an sein integriertes Modell.</p>
+<p>Kunden, die Kadratis selbst hosten, wählen ihre eigenen Dienstleister, und KANAP verarbeitet ihre Daten nicht. Kunden des Cloud-Dienstes, die ihren eigenen KI-Modellanbieter anbinden, wählen diesen Anbieter, und KANAP sendet ihre Daten nicht an sein integriertes Modell.</p>
 
 <h2>6. Speicherdauer der Daten</h2>
 <ul>
@@ -116,7 +116,7 @@ const content: LegalContent = {
 <p>Die Plattform wird in der Europäischen Union, in Deutschland, gehostet. Einige der in Abschnitt 5 genannten Dienstleister können personenbezogene Daten außerhalb der Europäischen Union verarbeiten, zum Beispiel Cloudflare für den Netzwerkverkehr. In diesem Fall stellt KANAP sicher, dass geeignete Garantien bestehen (der EU-US-Datenschutzrahmen oder Standardvertragsklauseln).</p>
 
 <h2>10. Cookies und Tracking-Technologien</h2>
-<p>Die Website von KANAP setzt keine Werbe- oder Analyse-Cookies und zeigt kein Cookie-Banner. Wir messen die Besucherzahlen mit Cloudflare Web Analytics, das ohne Cookies und ohne Speicherung auf Ihrem Gerät funktioniert. Die Kontakt- und Testformulare verwenden Cloudflare Turnstile, eine Sicherheitsprüfung, die Menschen von automatisierten Programmen unterscheidet. Die Website speichert Ihre Wahl zwischen hellem und dunklem Design in Ihrem Browser, nur wenn Sie eines auswählen.</p>
+<p>Die Websites kadratis.com und kanap.net setzen keine Werbe- oder Analyse-Cookies und zeigen kein Cookie-Banner. Wir messen die Besucherzahlen mit Cloudflare Web Analytics, das ohne Cookies und ohne Speicherung auf Ihrem Gerät funktioniert. Die Kontakt- und Testformulare verwenden Cloudflare Turnstile, eine Sicherheitsprüfung, die Menschen von automatisierten Programmen unterscheidet. Die Websites speichern Ihre Wahl zwischen hellem und dunklem Design in Ihrem Browser, nur wenn Sie eines auswählen.</p>
 <p>Die Anwendung verwendet nur die Cookies, die für die Anmeldung und die Aufrechterhaltung Ihrer Sitzung erforderlich sind. Sie speichert außerdem Oberflächeneinstellungen, etwa Ihr Design und die Anordnung der Tabellen, in Ihrem Browser. Sie können diese jederzeit in den Einstellungen Ihres Browsers löschen.</p>
 
 <h2>11. Änderungen der Erklärung</h2>

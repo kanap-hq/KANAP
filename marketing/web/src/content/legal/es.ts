@@ -17,11 +17,11 @@ const content: LegalContent = {
     header: {
       eyebrow: 'Legal',
       title: 'Política de privacidad',
-      lastUpdated: 'Última actualización: 3 de noviembre de 2026',
+      lastUpdated: 'Última actualización: [date de la bascule]',
     },
     body: `
 <h2>Preámbulo</h2>
-<p>KANAP (en adelante, «KANAP»), EURL (sociedad unipersonal de responsabilidad limitada) inscrita en el Registro Mercantil (RCS) de Saverne con el número 939 098 190, con domicilio social en 2, rue du Finhay, 67210 Obernai, Francia, concede la mayor importancia a la protección de tus datos personales. La presente política de privacidad (en adelante, la «Política») tiene por objeto informarte de forma clara y transparente sobre los tratamientos de datos personales que realiza KANAP en el marco del uso de la plataforma en línea de gestión informática «KANAP» (en adelante, «la Plataforma»).</p>
+<p>KANAP (en adelante, «KANAP»), EURL (sociedad unipersonal de responsabilidad limitada) inscrita en el Registro Mercantil (RCS) de Saverne con el número 939 098 190, con domicilio social en 2, rue du Finhay, 67210 Obernai, Francia, concede la mayor importancia a la protección de tus datos personales. La presente política de privacidad (en adelante, la «Política») tiene por objeto informarte de forma clara y transparente sobre los tratamientos de datos personales que realiza KANAP en el marco del uso de la plataforma en línea de gestión informática «Kadratis» (antes «KANAP»; en adelante, «la Plataforma»).</p>
 <p>KANAP se compromete a cumplir el Reglamento General de Protección de Datos (RGPD) y la ley francesa n.º 78-17 de 6 de enero de 1978 relativa a la informática, los ficheros y las libertades, en su versión modificada.</p>
 
 <h2>1. Responsable del tratamiento</h2>
@@ -54,7 +54,7 @@ const content: LegalContent = {
 
 <h2>4. Base jurídica del tratamiento</h2>
 <ul>
-  <li><strong>Ejecución del contrato:</strong> el tratamiento es necesario para prestar el servicio KANAP (gestión de las cuentas, acceso a la Plataforma, etc.), incluidas las medidas tomadas a petición tuya antes de suscribirte (prueba, llamada de descubrimiento).</li>
+  <li><strong>Ejecución del contrato:</strong> el tratamiento es necesario para prestar el servicio Kadratis (gestión de las cuentas, acceso a la Plataforma, etc.), incluidas las medidas tomadas a petición tuya antes de suscribirte (prueba, llamada de descubrimiento).</li>
   <li><strong>Interés legítimo:</strong> los tratamientos destinados a la mejora del servicio, la seguridad y la prevención del fraude se basan en el interés legítimo de KANAP en desarrollar y prestar un servicio de calidad y seguro, al igual que los mensajes de la prueba, de los que puedes darte de baja en cualquier momento.</li>
   <li><strong>Obligación legal:</strong> el tratamiento puede ser necesario para cumplir obligaciones legales (contables, fiscales, de lucha contra el blanqueo de capitales, etc.).</li>
   <li><strong>Consentimiento:</strong> para determinadas funcionalidades o comunicaciones opcionales, el tratamiento puede basarse en el consentimiento explícito del usuario.</li>
@@ -76,7 +76,7 @@ const content: LegalContent = {
   <li><strong>Anthropic</strong> (Estados Unidos) o <strong>Mistral AI</strong> (Unión Europea), proveedor del modelo de IA integrado del servicio en la nube, según el que KANAP haya elegido y la aplicación indique: las funcionalidades de IA están desactivadas por defecto. El modelo integrado no recibe ningún dato mientras el espacio de trabajo no haya aceptado su proveedor y el lugar donde trata los datos, ambos indicados en la aplicación. Un administrador del espacio de trabajo da esta confirmación, que cubre el asistente, los agentes y los tratamientos programados. Se pide una nueva confirmación si cambia el proveedor o el lugar, y esta política se actualiza. KANAP solo elige un proveedor y una oferta cuyas condiciones excluyen el entrenamiento de sus modelos con los datos enviados. Los administradores pueden usar su propio proveedor de modelos en su lugar.</li>
   <li><strong>Cal.com</strong> (Estados Unidos): reserva de citas para las llamadas de descubrimiento.</li>
 </ul>
-<p>Los clientes que alojan KANAP por su cuenta eligen sus propios proveedores, y KANAP no trata sus datos. Los clientes del servicio en la nube que conectan su propio proveedor de modelos de IA eligen ese proveedor, y KANAP no envía sus datos a su modelo integrado.</p>
+<p>Los clientes que alojan Kadratis por su cuenta eligen sus propios proveedores, y KANAP no trata sus datos. Los clientes del servicio en la nube que conectan su propio proveedor de modelos de IA eligen ese proveedor, y KANAP no envía sus datos a su modelo integrado.</p>
 
 <h2>6. Plazo de conservación de los datos</h2>
 <ul>
@@ -116,7 +116,7 @@ const content: LegalContent = {
 <p>La Plataforma está alojada en la Unión Europea, en Alemania. Algunos proveedores mencionados en la sección 5 pueden tratar datos personales fuera de la Unión Europea, por ejemplo Cloudflare para el tráfico de red. En ese caso, KANAP se asegura de que existan garantías adecuadas (el Marco de Privacidad de Datos UE-EE. UU. o cláusulas contractuales tipo).</p>
 
 <h2>10. Cookies y tecnologías de seguimiento</h2>
-<p>El sitio web de KANAP no instala ninguna cookie publicitaria ni de medición de audiencia y no muestra banner de cookies. Medimos la audiencia con Cloudflare Web Analytics, que funciona sin cookies y sin almacenar nada en tu dispositivo. Los formularios de contacto y de prueba usan Cloudflare Turnstile, una comprobación de seguridad que distingue a las personas de los programas automatizados. El sitio recuerda en tu navegador tu elección de tema claro u oscuro, solo si eliges uno.</p>
+<p>Los sitios web kadratis.com y kanap.net no instalan ninguna cookie publicitaria ni de medición de audiencia y no muestran banner de cookies. Medimos la audiencia con Cloudflare Web Analytics, que funciona sin cookies y sin almacenar nada en tu dispositivo. Los formularios de contacto y de prueba usan Cloudflare Turnstile, una comprobación de seguridad que distingue a las personas de los programas automatizados. Los sitios recuerdan en tu navegador tu elección de tema claro u oscuro, solo si eliges uno.</p>
 <p>La aplicación usa únicamente las cookies necesarias para iniciar sesión y mantenerla. También almacena en tu navegador preferencias de interfaz, como tu tema y la disposición de las tablas. Puedes eliminarlas en cualquier momento en la configuración de tu navegador.</p>
 
 <h2>11. Modificaciones de la política</h2>

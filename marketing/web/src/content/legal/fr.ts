@@ -14,11 +14,11 @@ const content: LegalContent = {
     header: {
       eyebrow: 'Mentions légales',
       title: 'Politique de confidentialité',
-      lastUpdated: 'Dernière mise à jour : 3 novembre 2026',
+      lastUpdated: 'Dernière mise à jour : [date de la bascule]',
     },
     body: `
 <h2>Préambule</h2>
-<p>KANAP (ci-après « KANAP »), EURL (entreprise unipersonnelle à responsabilité limitée) immatriculée au RCS de Saverne sous le numéro 939 098 190, dont le siège social est situé 2, rue du Finhay, 67210 Obernai, France, accorde la plus grande importance à la protection de vos données personnelles. La présente politique de confidentialité (ci-après la « Politique ») a pour objet de vous informer de manière claire et transparente sur les traitements de données personnelles mis en œuvre par KANAP dans le cadre de l'utilisation de la plateforme en ligne de gestion informatique « KANAP » (ci-après « la Plateforme »).</p>
+<p>KANAP (ci-après « KANAP »), EURL (entreprise unipersonnelle à responsabilité limitée) immatriculée au RCS de Saverne sous le numéro 939 098 190, dont le siège social est situé 2, rue du Finhay, 67210 Obernai, France, accorde la plus grande importance à la protection de vos données personnelles. La présente politique de confidentialité (ci-après la « Politique ») a pour objet de vous informer de manière claire et transparente sur les traitements de données personnelles mis en œuvre par KANAP dans le cadre de l'utilisation de la plateforme en ligne de gestion informatique « Kadratis » (anciennement « KANAP », ci-après « la Plateforme »).</p>
 <p>KANAP s'engage à respecter le Règlement général sur la protection des données (RGPD) et la loi n° 78-17 du 6 janvier 1978 relative à l'informatique, aux fichiers et aux libertés, dans sa version modifiée.</p>
 
 <h2>1. Responsable du traitement</h2>
@@ -51,7 +51,7 @@ const content: LegalContent = {
 
 <h2>4. Base légale du traitement</h2>
 <ul>
-  <li><strong>Exécution du contrat :</strong> le traitement est nécessaire à la fourniture du service KANAP (gestion des comptes, accès à la Plateforme, etc.), y compris les mesures prises à votre demande avant de souscrire (essai, appel découverte).</li>
+  <li><strong>Exécution du contrat :</strong> le traitement est nécessaire à la fourniture du service Kadratis (gestion des comptes, accès à la Plateforme, etc.), y compris les mesures prises à votre demande avant de souscrire (essai, appel découverte).</li>
   <li><strong>Intérêt légitime :</strong> les traitements destinés à l'amélioration du service, à la sécurité et à la prévention de la fraude reposent sur l'intérêt légitime de KANAP à développer et fournir un service de qualité et sécurisé, ainsi que les messages de l'essai, dont vous pouvez vous désinscrire à tout moment.</li>
   <li><strong>Obligation légale :</strong> le traitement peut être nécessaire au respect d'obligations légales (comptables, fiscales, de lutte contre le blanchiment, etc.).</li>
   <li><strong>Consentement :</strong> pour certaines fonctionnalités ou communications facultatives, le traitement peut reposer sur le consentement explicite de l'utilisateur.</li>
@@ -73,7 +73,7 @@ const content: LegalContent = {
   <li><strong>Anthropic</strong> (États-Unis) ou <strong>Mistral AI</strong> (Union européenne), fournisseur du modèle d'IA intégré du service cloud, selon celui que KANAP a retenu et que l'application indique : les fonctionnalités d'IA sont désactivées par défaut. Le modèle intégré ne reçoit aucune donnée tant que l'espace de travail n'a pas accepté son fournisseur et le lieu où il traite les données, tous deux indiqués dans l'application. Un administrateur de l'espace de travail donne cette confirmation, qui couvre l'assistant, les agents et les traitements planifiés ; une nouvelle confirmation est demandée si le fournisseur ou le lieu change, et cette politique est mise à jour. KANAP ne retient qu'un fournisseur et une offre dont les conditions excluent l'entraînement de ses modèles sur les données envoyées. Les administrateurs peuvent utiliser leur propre fournisseur de modèles à la place.</li>
   <li><strong>Cal.com</strong> (États-Unis) : prise de rendez-vous pour les appels découverte.</li>
 </ul>
-<p>Les clients qui hébergent eux-mêmes KANAP choisissent leurs propres prestataires, et KANAP ne traite pas leurs données. Les clients du service cloud qui connectent leur propre fournisseur de modèles d'IA choisissent ce fournisseur, et KANAP n'envoie pas leurs données à son modèle intégré.</p>
+<p>Les clients qui hébergent eux-mêmes Kadratis choisissent leurs propres prestataires, et KANAP ne traite pas leurs données. Les clients du service cloud qui connectent leur propre fournisseur de modèles d'IA choisissent ce fournisseur, et KANAP n'envoie pas leurs données à son modèle intégré.</p>
 
 <h2>6. Durée de conservation des données</h2>
 <ul>
@@ -113,7 +113,7 @@ const content: LegalContent = {
 <p>La Plateforme est hébergée dans l'Union européenne, en Allemagne. Certains prestataires mentionnés à la section 5 peuvent traiter des données personnelles hors de l'Union européenne, par exemple Cloudflare pour le trafic réseau. Dans ce cas, KANAP s'assure que des garanties appropriées sont en place (le cadre de protection des données UE-États-Unis ou des clauses contractuelles types).</p>
 
 <h2>10. Cookies et technologies de suivi</h2>
-<p>Le site web de KANAP ne dépose aucun cookie publicitaire ou de mesure d'audience et n'affiche pas de bandeau cookies. Nous mesurons l'audience avec Cloudflare Web Analytics, qui fonctionne sans cookie et sans rien stocker sur votre appareil. Les formulaires de contact et d'essai utilisent Cloudflare Turnstile, une vérification de sécurité qui distingue les personnes des programmes automatisés. Le site retient votre choix de thème clair ou sombre dans votre navigateur, uniquement si vous en choisissez un.</p>
+<p>Les sites kadratis.com et kanap.net ne déposent aucun cookie publicitaire ou de mesure d'audience et n'affichent pas de bandeau cookies. Nous mesurons l'audience avec Cloudflare Web Analytics, qui fonctionne sans cookie et sans rien stocker sur votre appareil. Les formulaires de contact et d'essai utilisent Cloudflare Turnstile, une vérification de sécurité qui distingue les personnes des programmes automatisés. Ils retiennent votre choix de thème clair ou sombre dans votre navigateur, uniquement si vous en choisissez un.</p>
 <p>L'application utilise uniquement les cookies nécessaires à la connexion et au maintien de votre session. Elle stocke aussi des préférences d'interface, comme votre thème et la disposition des tableaux, dans votre navigateur. Vous pouvez les supprimer à tout moment dans les paramètres de votre navigateur.</p>
 
 <h2>11. Modifications de la politique</h2>
@@ -126,16 +126,16 @@ const content: LegalContent = {
   terms: {
     meta: {
       title: "Conditions générales d'utilisation",
-      description: "Conditions d'utilisation de la plateforme en ligne de gestion informatique KANAP.",
+      description: "Conditions d'utilisation de la plateforme en ligne de gestion informatique Kadratis.",
     },
     header: {
       eyebrow: 'Mentions légales',
       title: "Conditions générales d'utilisation",
-      lastUpdated: 'Dernière mise à jour : 12 octobre 2026',
+      lastUpdated: 'Dernière mise à jour : [date de la bascule]',
     },
     body: `
 <h2>Préambule</h2>
-<p>Les présentes Conditions générales d'utilisation régissent l'accès et l'utilisation de la plateforme en ligne de gestion informatique « KANAP » (ci-après « la Plateforme » ou « le Service ») éditée par KANAP, EURL (entreprise unipersonnelle à responsabilité limitée) immatriculée au RCS de Saverne sous le numéro 939 098 190, dont le siège social est situé 2, rue du Finhay, 67210 Obernai, France. L'utilisation de la Plateforme vaut acceptation pleine et entière des présentes Conditions générales d'utilisation.</p>
+<p>Les présentes Conditions générales d'utilisation régissent l'accès et l'utilisation de la plateforme en ligne de gestion informatique « Kadratis » (anciennement « KANAP », ci-après « la Plateforme » ou « le Service ») éditée par KANAP, EURL (entreprise unipersonnelle à responsabilité limitée) immatriculée au RCS de Saverne sous le numéro 939 098 190, dont le siège social est situé 2, rue du Finhay, 67210 Obernai, France. L'utilisation de la Plateforme vaut acceptation pleine et entière des présentes Conditions générales d'utilisation.</p>
 
 <h2>Article 1. Accès à la plateforme et création de compte</h2>
 <p>1.1. L'accès à la Plateforme est réservé aux utilisateurs ayant souscrit un abonnement valide, conformément aux Conditions générales de vente (CGV) de KANAP.</p>
@@ -167,8 +167,8 @@ const content: LegalContent = {
 <p>5.5. En cas d'incident de sécurité affectant les données, KANAP informera les clients concernés dans un délai de 72 heures.</p>
 
 <h2>Article 6. Propriété intellectuelle</h2>
-<p>6.1. Le logiciel KANAP est publié par KANAP sous licence GNU Affero General Public License version 3 (AGPL-3.0). Les droits de l'utilisateur sur son code source sont ceux que lui confère cette licence.</p>
-<p>6.2. Le nom et le logo KANAP appartiennent à KANAP. L'utilisation de la Plateforme ne confère aucun droit sur ceux-ci.</p>
+<p>6.1. Le logiciel Kadratis est publié par KANAP sous licence GNU Affero General Public License version 3 (AGPL-3.0). Les droits de l'utilisateur sur son code source sont ceux que lui confère cette licence.</p>
+<p>6.2. Les noms Kadratis et KANAP et leurs logos appartiennent à KANAP. L'utilisation de la Plateforme ne confère aucun droit sur ceux-ci ; la <a href="https://github.com/kanap-hq/KANAP/blob/main/TRADEMARKS.md">politique d'usage de la marque Kadratis</a> précise ce qui est permis sans autorisation.</p>
 <p>6.3. Les contenus créés par l'utilisateur restent sa propriété, mais KANAP se réserve le droit d'utiliser des données agrégées et anonymisées à des fins d'amélioration du service.</p>
 
 <h2>Article 7. Suspension ou résiliation du compte</h2>
@@ -259,15 +259,15 @@ const content: LegalContent = {
   legal: {
     meta: {
       title: 'Mentions légales',
-      description: "Éditeur, hébergement et juridiction applicable pour le site kanap.net.",
+      description: "Éditeur, hébergement et juridiction applicable pour les sites kadratis.com et kanap.net.",
     },
     header: {
       eyebrow: 'Mentions légales',
       title: 'Mentions légales',
-      lastUpdated: 'Dernière mise à jour : 12 octobre 2026',
+      lastUpdated: 'Dernière mise à jour : [date de la bascule]',
     },
     body: `
-<h2>Éditeur du site</h2>
+<h2>Éditeur des sites</h2>
 <p><strong>KANAP</strong><br/>
 EURL au capital de 1 000 €<br/>
 RCS Saverne 939 098 190<br/>
@@ -275,18 +275,19 @@ SIRET : 939 098 190 00019<br/>
 N° de TVA intracommunautaire : FR04939098190 (TVA non applicable, art. 293 B du CGI)<br/>
 Siège social : 2, rue du Finhay, 67210 Obernai, France</p>
 <p>Directeur de la publication : Friedrich Eva</p>
+<p>Les sites kadratis.com et kanap.net sont édités par KANAP. Kadratis™ est une marque de KANAP, déposée à l'INPI.</p>
 
 <h2>Contact</h2>
 <p>E-mail : <a href="mailto:support@kanap.net">support@kanap.net</a></p>
 
 <h2>Hébergement</h2>
-<p>Le site kanap.net est hébergé par Hetzner Online GmbH, dont le siège social est situé :</p>
+<p>Les sites kadratis.com et kanap.net sont hébergés par Hetzner Online GmbH, dont le siège social est situé :</p>
 <p>Hetzner Online GmbH<br/>
 Industriestr. 25, 91710 Gunzenhausen, Allemagne</p>
-<p>Les serveurs sont situés à Nuremberg, en Allemagne. Le trafic vers le site passe par Cloudflare, qui fournit le réseau de diffusion de contenu et la protection TLS.</p>
+<p>Les serveurs sont situés à Nuremberg, en Allemagne. Le trafic vers les sites passe par Cloudflare, qui fournit le réseau de diffusion de contenu et la protection TLS.</p>
 
 <h2>Droit applicable et juridiction</h2>
-<p>Le présent site est régi par le droit français. En cas de litige relatif à l'utilisation du site kanap.net et à défaut d'accord amiable entre les parties concernées, les tribunaux français sont seuls compétents.</p>
+<p>Les présents sites sont régis par le droit français. En cas de litige relatif à l'utilisation des sites kadratis.com et kanap.net et à défaut d'accord amiable entre les parties concernées, les tribunaux français sont seuls compétents.</p>
 `,
   },
 };
