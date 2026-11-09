@@ -143,6 +143,25 @@ describe('CoaPage summary and consolidation health', () => {
     expect(screen.queryByText(/★|⊕/)).not.toBeInTheDocument();
   });
 
+  it('offers a new account in the middle of an empty chart, except to a reader', async () => {
+    const emptyButton = async () => {
+      await waitFor(() => expect(grid.props?.emptyState).toBeTruthy());
+      const view = render(<ThemeProvider theme={createAppTheme('light')}>{grid.props?.emptyState}</ThemeProvider>);
+      const empty = view.getByTestId('accounts-empty');
+      expect(empty).toHaveTextContent('No accounts yet.');
+      const button = empty.querySelector('button');
+      view.unmount();
+      return button?.textContent ?? null;
+    };
+    const first = renderPage();
+    expect(await emptyButton()).toBe('New account');
+    first.unmount();
+    grid.props = null;
+    state.level = 'reader';
+    renderPage();
+    expect(await emptyButton()).toBeNull();
+  });
+
   it('filters the grid on the accounts outside the consolidation chart, over every status, and resets', async () => {
     renderPage();
     const outside = await screen.findByRole('button', { name: '3 accounts point to a consolidation account missing from IFRS' });

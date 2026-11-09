@@ -217,7 +217,8 @@
         "keptDone_other": "{{count}} Assets bleiben erhalten",
         "keptReason_one": "Bleibt erhalten: {{usages}} nutzt es.",
         "keptReason_other": "Bleibt erhalten: {{usages}} nutzen es."
-      }
+      },
+      "empty": "Noch keine Assets."
     },
     "technologies": {
       "title": "Technologien",
@@ -339,7 +340,8 @@
         "title_other": "{{count}} ausgewählte Verbindungen löschen"
       },
       "serverCount_one": "{{count}} Server",
-      "serverCount_other": "{{count}} Server"
+      "serverCount_other": "{{count}} Server",
+      "empty": "Noch keine Verbindungen."
     },
     "endOfSupport": {
       "title": "Supportende",
@@ -776,11 +778,13 @@
         "bindings": "Bindungen"
       },
       "duplicated": "Schnittstelle dupliziert als „{{name}}“",
-      "thisInterface": "diese Schnittstelle"
+      "thisInterface": "diese Schnittstelle",
+      "empty": "Noch keine Schnittstellen."
     },
     "locations": {
       "title": "Standorte",
       "addLocation": "Standort hinzufügen",
+      "empty": "Noch keine Standorte.",
       "columns": {
         "reference": "Referenz",
         "name": "Name",

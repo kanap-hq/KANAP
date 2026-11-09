@@ -38,7 +38,7 @@ To create a calendar yourself, click **New**.
 
 ## Working with the list
 
-When the workspace has no calendar yet, one line under the title says so: "A calendar holds the working days of each month, for lines priced per day. Create one, or import a file."
+When the workspace has no calendar yet and none is suggested, the middle of the list says so, next to **New calendar**: "A calendar holds the working days of each month, for lines priced per day. Create one, or import a file."
 
 **Columns**:
 

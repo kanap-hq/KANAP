@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import PageHeader from '../components/PageHeader';
 import ServerDataGrid, { EnhancedColDef, StatusScope, type ListRequest } from '../components/ServerDataGrid';
-import { Box, Button, Stack } from '@mui/material';
+import { Box, Button, Stack, Typography } from '@mui/material';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import CsvExportDialog from '../components/csv/CsvExportDialog';
@@ -171,6 +171,7 @@ export default function BusinessProcessesPage() {
   );
 
   const canCreate = hasLevel('business_processes', 'manager');
+  const openNewBusinessProcess = () => navigate(`/master-data/business-processes/new/overview?${buildWorkspaceSearch().toString()}`);
   const canAdmin = hasLevel('business_processes', 'admin');
 
   const actions = (
@@ -178,10 +179,7 @@ export default function BusinessProcessesPage() {
       {canCreate && (
         <Button
           variant="action-primary"
-          onClick={() => {
-            const sp = buildWorkspaceSearch();
-            navigate(`/master-data/business-processes/new/overview?${sp.toString()}`);
-          }}
+          onClick={openNewBusinessProcess}
         >
           {t('shared.labels.new')}
         </Button>
@@ -215,6 +213,16 @@ export default function BusinessProcessesPage() {
     <>
       <PageHeader title={t("businessProcesses.title")} actions={actions} />
       <ServerDataGrid<BusinessProcessRow>
+        emptyState={(
+          <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="center" data-testid="business-processes-empty">
+            <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t('businessProcesses.empty')}</Typography>
+            {canCreate && (
+              <Button variant="contained" size="small" onClick={openNewBusinessProcess}>
+                {t('businessProcesses.newBusinessProcess')}
+              </Button>
+            )}
+          </Stack>
+        )}
         onListRequestChange={setListRequest}
         columns={columns}
         endpoint="/business-processes"

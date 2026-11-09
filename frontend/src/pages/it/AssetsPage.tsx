@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState, useCallback } from 'react';
-import { Box, Button, Link, Menu, MenuItem, Stack, useTheme } from '@mui/material';
+import { Box, Button, Link, Menu, MenuItem, Stack, useTheme, Typography } from '@mui/material';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import { useNavigate, useLocation } from 'react-router-dom';
 import PageHeader from '../../components/PageHeader';
@@ -529,9 +529,11 @@ export default function AssetsPage() {
     setExportOpen(true);
   }, [t]);
 
+  const canCreate = hasLevel('infrastructure', 'member');
+
   const actions = (
     <Stack direction="row" spacing={1}>
-      {hasLevel('infrastructure', 'member') && (
+      {canCreate && (
         <Button
           variant="action-primary"
           endIcon={<ArrowDropDownIcon />}
@@ -574,6 +576,16 @@ export default function AssetsPage() {
       {/* A filter on the Vulnerabilities column waits for the column: the grid drops a filter on a column it does not have. */}
       {!(vulnerabilityUrlFilter && featuresLoading) && (
       <ServerDataGrid<AssetRow>
+        emptyState={(
+          <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="center" data-testid="assets-empty">
+            <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t('pages.assets.empty')}</Typography>
+            {canCreate && (
+              <Button variant="contained" size="small" onClick={(event) => setAddMenu(event.currentTarget)}>
+                {t('pages.assets.addAsset')}
+              </Button>
+            )}
+          </Stack>
+        )}
         columns={columns}
         endpoint="/assets"
         showRowCount

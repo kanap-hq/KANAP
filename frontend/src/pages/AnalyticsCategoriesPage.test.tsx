@@ -128,6 +128,26 @@ describe('AnalyticsCategoriesPage', () => {
     expect(screen.queryByLabelText('analytics.enableToAddValues')).toBeNull();
   });
 
+  it('offers a new value in the middle of an empty dimension, except on a disabled one or to a reader', () => {
+    const emptyButton = () => {
+      const view = render(<ThemeProvider theme={createAppTheme('light')}>{grid.props?.emptyState}</ThemeProvider>);
+      const empty = view.getByTestId('analytics-values-empty');
+      expect(empty).toHaveTextContent('analytics.empty');
+      const button = empty.querySelector('button');
+      view.unmount();
+      return button?.textContent ?? null;
+    };
+    const first = renderPage('/master-data/analytics?axis=ax-nature');
+    expect(emptyButton()).toBe('analytics.newValue');
+    first.unmount();
+    const second = renderPage('/master-data/analytics?axis=ax-order');
+    expect(emptyButton()).toBeNull();
+    second.unmount();
+    levels.value = 'reader';
+    renderPage('/master-data/analytics?axis=ax-nature');
+    expect(emptyButton()).toBeNull();
+  });
+
   it('lists the default dimension values when the URL names none', () => {
     renderPage();
     expect(chips()[0]).toHaveAttribute('aria-pressed', 'true');

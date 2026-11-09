@@ -174,7 +174,8 @@
       "keptDone_one": "{{count}} Unternehmen behalten",
       "keptDone_other": "{{count}} Unternehmen behalten"
     },
-    "creationRecord": "Das Unternehmen"
+    "creationRecord": "Das Unternehmen",
+    "empty": "Noch keine Unternehmen."
   },
   "departments": {
     "title": "Abteilungen",
@@ -219,7 +220,8 @@
       "deleted_one": "{{count}} Abteilung gelöscht",
       "deleted_other": "{{count}} Abteilungen gelöscht"
     },
-    "creationRecord": "Die Abteilung"
+    "creationRecord": "Die Abteilung",
+    "empty": "Noch keine Abteilungen."
   },
   "costCenters": {
     "title": "Kostenstellen",
@@ -540,7 +542,8 @@
       "title_one": "Ausgewählten Kontakt löschen",
       "title_other": "{{count}} ausgewählte Kontakte löschen"
     },
-    "creationRecord": "Der Kontakt"
+    "creationRecord": "Der Kontakt",
+    "empty": "Noch keine Kontakte."
   },
   "coa": {
     "title": "Kontenpläne",
@@ -673,7 +676,8 @@
       "kept_other": "{{count}} Konten können nicht gelöscht werden und bleiben erhalten:",
       "deleted_one": "{{count}} Konto gelöscht",
       "deleted_other": "{{count}} Konten gelöscht"
-    }
+    },
+    "emptyAccounts": "Noch keine Konten."
   },
   "accounts": {
     "entity": "Konto",
@@ -921,7 +925,8 @@
     },
     "addValue": "„{{value}}“ hinzufügen",
     "valueCreationRecord": "Der Wert",
-    "dimensionCreationRecord": "Die Dimension"
+    "dimensionCreationRecord": "Die Dimension",
+    "empty": "Noch keine Werte."
   },
   "businessProcesses": {
     "title": "Geschäftsprozesse",
@@ -991,7 +996,8 @@
     },
     "creation": {
       "record": "Der Geschäftsprozess"
-    }
+    },
+    "empty": "Noch keine Geschäftsprozesse."
   },
   "admin": {
     "copy": {

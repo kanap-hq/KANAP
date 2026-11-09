@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef } from 'react';
-import { Button, Stack } from '@mui/material';
+import { Button, Stack, Typography } from '@mui/material';
 import { ICellRendererParams } from 'ag-grid-community';
 import { useNavigate } from 'react-router-dom';
 import PageHeader from '../../components/PageHeader';
@@ -168,10 +168,13 @@ export default function LocationsPage() {
     { headerName: t('pages.locations.columns.created'), field: 'created_at', width: 160, filter: 'agDateColumnFilter', valueFormatter: (p: any) => formatShortDateTime(p.value as string | null, locale), cellRenderer: ClickableCell },
   ];
 
+  const canCreate = hasLevel('locations', 'member');
+  const openNewLocation = () => navigate('/it/locations/new/overview');
+
   const actions = (
     <Stack direction="row" spacing={1}>
-      {hasLevel('locations', 'member') && (
-        <Button variant="action-primary" onClick={() => navigate('/it/locations/new/overview')}>
+      {canCreate && (
+        <Button variant="action-primary" onClick={openNewLocation}>
           {t('pages.locations.addLocation')}
         </Button>
       )}
@@ -193,6 +196,16 @@ export default function LocationsPage() {
         onQueryStateChange={(state) => {
           lastQueryRef.current = { sort: state.sort, q: state.q || '', filters: state.filterModel || {} };
         }}
+        emptyState={(
+          <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="center" data-testid="locations-empty">
+            <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t('pages.locations.empty')}</Typography>
+            {canCreate && (
+              <Button variant="contained" size="small" onClick={openNewLocation}>
+                {t('pages.locations.addLocation')}
+              </Button>
+            )}
+          </Stack>
+        )}
       />
     </>
   );

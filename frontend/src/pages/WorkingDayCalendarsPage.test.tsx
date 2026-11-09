@@ -101,27 +101,6 @@ describe('WorkingDayCalendarsPage', () => {
     api.post.mockClear();
   });
 
-  it('shows the one-line explainer when the tenant has no calendar', () => {
-    renderPage();
-    expect(screen.getByTestId('working-day-calendars-empty')).toHaveTextContent('workingDayCalendars.emptyExplainer');
-  });
-
-  it('hides the explainer once a calendar exists, while loading, and after a failed load', () => {
-    calendarsState.profiles = [{ id: 'p1', code: 'CAL', name: 'Staff', status: 'enabled', disabled_at: null, days_by_year: {} }];
-    const first = renderPage();
-    expect(screen.queryByTestId('working-day-calendars-empty')).toBeNull();
-    first.unmount();
-    calendarsState.profiles = [];
-    calendarsState.ready = false;
-    const second = renderPage();
-    expect(screen.queryByTestId('working-day-calendars-empty')).toBeNull();
-    second.unmount();
-    calendarsState.ready = true;
-    calendarsState.isError = true;
-    renderPage();
-    expect(screen.queryByTestId('working-day-calendars-empty')).toBeNull();
-  });
-
   it('lists code, name, country, years, status and last update, the years joined', () => {
     renderPage();
     expect(grid.props?.endpoint).toBe('/working-day-profiles');
@@ -170,8 +149,8 @@ describe('WorkingDayCalendarsPage', () => {
     const strip = await screen.findByTestId('working-day-calendars-suggestions');
     expect(api.get).toHaveBeenCalledWith('/working-day-profiles/suggestions', { params: { lang: 'en' } });
     expect(strip).toHaveTextContent('workingDayCalendars.suggestions.line count=3 countries=France, Netherlands, and Italy');
-    // The strip replaces the empty-state line.
-    expect(screen.queryByTestId('working-day-calendars-empty')).toBeNull();
+    // The strip replaces the empty state.
+    expect(grid.props?.emptyState).toBeUndefined();
     api.suggestions = [];
     fireEvent.click(screen.getByRole('button', { name: 'workingDayCalendars.suggestions.create count=3' }));
     await waitFor(() => expect(api.post).toHaveBeenCalledTimes(3));
