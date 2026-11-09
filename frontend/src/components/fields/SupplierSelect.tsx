@@ -254,6 +254,8 @@ const SupplierSelect = React.forwardRef<HTMLInputElement, SupplierSelectProps>(f
     create: {
       allowed: canCreate && !disabled,
       label: (typed) => t('master-data:suppliers.createOption', { name: typed }),
+      // An empty workspace has no supplier to list: the list still offers to create one.
+      emptyLabel: t('master-data:suppliers.newSupplierOption'),
       create: createSupplier,
     },
   });

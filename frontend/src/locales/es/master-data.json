@@ -411,6 +411,7 @@
     "noSuppliersFound": "No se encontraron proveedores",
     "noSupplierAskAdmin": "No se encontró ningún proveedor. Pida a un administrador de su espacio de trabajo que lo cree.",
     "createOption": "+ Crear el proveedor «{{name}}»",
+    "newSupplierOption": "+ Nuevo proveedor",
     "selectExisting": "Seleccionar el proveedor existente",
     "export": "Exportar proveedores",
     "import": "Importar proveedores",
