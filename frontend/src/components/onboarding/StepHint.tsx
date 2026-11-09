@@ -85,7 +85,8 @@ function useTarget(target: StepTarget | null): Target {
 /**
  * The hint of a step opened from the first steps: the target of its screen is outlined and one
  * sentence says what to look at. On the example, opening the step marks it done; with your own
- * data, "Done" does. Closing it drops the step from the address.
+ * data, the object the step creates does, or "Done" for a step that creates none. Closing it
+ * drops the step from the address.
  */
 export default function StepHint() {
   const { t, i18n } = useTranslation('common');
@@ -166,7 +167,7 @@ export default function StepHint() {
         >
           <Typography variant="body2">{hint}</Typography>
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 1.25 }}>
-            {discover || step.done_at ? (
+            {discover || step.done_at || step.automatic ? (
               <Button variant="action" onClick={close}>{t('onboarding.firstSteps.gotIt')}</Button>
             ) : (
               <>

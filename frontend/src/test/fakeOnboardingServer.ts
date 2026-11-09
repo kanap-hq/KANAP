@@ -10,6 +10,12 @@ export const FAKE_PATHS: Record<string, string[]> = {
   'portfolio/own_data': ['own_request', 'own_projects', 'own_tasks', 'own_project_budget', 'own_invite'],
 };
 
+/** The own-data steps done by their object (`backend/src/onboarding/onboarding-step-evidence.ts`). */
+export const FAKE_AUTOMATIC = new Set([
+  'own_budget_lines', 'own_contract', 'own_invite', 'own_sites', 'own_applications', 'own_technologies', 'own_assets',
+  'own_request', 'own_tasks', 'own_project_budget',
+]);
+
 type HttpError = Error & { response: { status: number; data: Record<string, unknown> } };
 
 function httpError(status: number, data: Record<string, unknown>): HttpError {
@@ -35,13 +41,25 @@ export function createFakeOnboardingServer(initial: {
     sampleData: initial.sampleData ?? { status: 'idle', step: null },
     createdSinceLoad: initial.createdSinceLoad ?? 0,
     done: new Map<string, string>(),
+    /** Own-data steps whose object exists: each read records them done, and they cannot be undone. */
+    objects: new Set<string>(),
     dismissedAt: null as string | null,
   };
   const calls: Array<{ method: string; url: string; body?: unknown }> = [];
 
+  const automatic = (key: string) => db.mode === 'own_data' && FAKE_AUTOMATIC.has(key);
+
   const state = (): OnboardingState => {
     const keys = db.angle && db.mode ? FAKE_PATHS[`${db.angle}/${db.mode}`] : [];
-    const steps = keys.map((key) => ({ key, done_at: db.done.get(`${db.angle}/${db.mode}/${key}`) ?? null }));
+    for (const key of keys) {
+      const doneKey = `${db.angle}/${db.mode}/${key}`;
+      if (automatic(key) && db.objects.has(key) && !db.done.has(doneKey)) db.done.set(doneKey, '2026-11-02T09:30:00.000Z');
+    }
+    const steps = keys.map((key) => ({
+      key,
+      done_at: db.done.get(`${db.angle}/${db.mode}/${key}`) ?? null,
+      automatic: automatic(key),
+    }));
     const next = steps.find((step) => !step.done_at)?.key ?? null;
     return {
       angle: db.angle,
@@ -95,7 +113,7 @@ export function createFakeOnboardingServer(initial: {
     if (/^\/onboarding\/steps\/[^/]+\/done$/.test(url)) {
       const key = checkStep(stepKey(url));
       if (method === 'post' && !db.done.has(key)) db.done.set(key, '2026-11-02T09:20:00.000Z');
-      if (method === 'delete') db.done.delete(key);
+      if (method === 'delete' && !(automatic(stepKey(url)) && db.objects.has(stepKey(url)))) db.done.delete(key);
       return { data: state() };
     }
     throw httpError(404, { code: 'not_found' });

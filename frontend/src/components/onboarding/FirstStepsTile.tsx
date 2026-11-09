@@ -160,7 +160,8 @@ function EndScreen({ state }: { state: OnboardingState }) {
   const { t } = useTranslation('common');
   const { choose } = useOnboardingActions();
   const { apply } = useOnboarding();
-  // The steps of a path are the user's own: undoing the five starts the path again.
+  // The steps of a path are the user's own: undoing the five starts the path again (with your own
+  // data, a step whose object exists stays done).
   const restart = useMutation({
     mutationFn: async () => {
       let next: OnboardingState = state;
@@ -209,10 +210,11 @@ export function firstStepsShown(state: OnboardingState | undefined): boolean {
  * The first home tile while the user follows a path: its five steps with their progress, each
  * opening its screen with a hint; the next one stands out. A step's mark toggles it. When the five
  * are done, the tile offers the two other paths. Hidden by its close button (About shows it again).
+ * Read again each time it shows: a step done by its object was done on another screen.
  */
 export default function FirstStepsTile() {
   const { t } = useTranslation('common');
-  const { state } = useOnboarding();
+  const { state } = useOnboarding({ refetchOnMount: 'always' });
   const { markDone, markUndone, dismiss } = useOnboardingActions();
   if (!state || !firstStepsShown(state)) return null;
 

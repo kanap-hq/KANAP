@@ -10,6 +10,7 @@ import { createAppTheme } from '../../config/ThemeContext';
 import { createFakeOnboardingServer } from '../../test/fakeOnboardingServer';
 import FirstStepsTile from './FirstStepsTile';
 import StepHint from './StepHint';
+import { ONBOARDING_QUERY_KEY } from './useOnboarding';
 
 const env = vi.hoisted(() => ({
   summary: (() => Promise.resolve({ data: { items: [] } })) as (config?: unknown, url?: string) => Promise<unknown>,
@@ -47,8 +48,11 @@ function Where() {
   return <div data-testid="where">{`${location.pathname}${location.search}`}</div>;
 }
 
-function renderAt(path: string | { pathname: string; search?: string; state?: unknown }, node: React.ReactNode) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+function renderAt(
+  path: string | { pathname: string; search?: string; state?: unknown },
+  node: React.ReactNode,
+  client = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+) {
   return render(
     <QueryClientProvider client={client}>
       <I18nextProvider i18n={i18n}>
@@ -145,6 +149,17 @@ describe('FirstStepsTile', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Mark as not done: Your project' }));
     await waitFor(() => expect(screen.getByText('0/5')).toBeInTheDocument());
     expect(done('own_projects')).toBeFalsy();
+  });
+
+  it('reads the steps again when it shows, so that a step done by its object on another screen is ticked', async () => {
+    env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'own_data' });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    // The state read before the contract was created, still fresh in the cache.
+    client.setQueryData(ONBOARDING_QUERY_KEY, env.server.state());
+    env.server.db.objects.add('own_contract');
+    renderAt('/', <FirstStepsTile />, client);
+    await waitFor(() => expect(screen.getByText('1/5')).toBeInTheDocument());
+    expect(done('own_contract')).toBeTruthy();
   });
 
   it('hides itself for this user', async () => {
@@ -272,15 +287,25 @@ describe('StepHint', () => {
     expect(hint).toHaveTextContent('Here is an application record. Explore the properties panel and the tabs');
   });
 
-  it('waits for "Done" with your own data, and gives the hint of the angle', async () => {
+  it('waits for "Done" with your own data on a step that creates nothing', async () => {
+    env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'own_data' });
+    renderAt('/master-data/companies?step=own_company', page);
+    const hint = await screen.findByRole('dialog', { name: 'Your company' });
+    expect(done('own_company')).toBeFalsy();
+    fireEvent.click(within(hint).getByRole('button', { name: 'Done' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(done('own_company')).toBeTruthy();
+  });
+
+  it('leaves a step that creates an object to that object, and gives the hint of the angle', async () => {
     env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'own_data' });
     renderAt('/admin/users?step=own_invite', page);
     const hint = await screen.findByRole('dialog', { name: 'A colleague' });
     expect(hint).toHaveTextContent('Use the Authentication menu to set up SSO');
-    expect(done('own_invite')).toBeFalsy();
-    fireEvent.click(within(hint).getByRole('button', { name: 'Done' }));
+    expect(within(hint).queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
+    fireEvent.click(within(hint).getByRole('button', { name: 'Got it' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    expect(done('own_invite')).toBeTruthy();
+    expect(done('own_invite')).toBeFalsy();
   });
 
   it('describes project availability on your own contributor profile, without a team', async () => {

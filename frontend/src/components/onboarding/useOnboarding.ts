@@ -34,9 +34,10 @@ export function useRunningTrial(): boolean {
 /**
  * The onboarding state of the workspace for the signed-in user. While the sample data loads or
  * the workspace is reset, it is read every 3 s; when that ends, every other cached query is reset
- * and the profile reloaded, so no page keeps showing the workspace as it was.
+ * and the profile reloaded, so no page keeps showing the workspace as it was. `refetchOnMount:
+ * 'always'` reads it again whenever the caller mounts, cache fresh or not.
  */
-export function useOnboarding() {
+export function useOnboarding(options: { refetchOnMount?: 'always' } = {}) {
   const available = useOnboardingAvailable();
   const queryClient = useQueryClient();
   const { refreshMe } = useAuth();
@@ -46,6 +47,7 @@ export function useOnboarding() {
     queryFn: onboardingApi.get,
     enabled: available,
     staleTime: 60_000,
+    refetchOnMount: options.refetchOnMount ?? true,
     // A server without the onboarding API (404) or a refusal is final.
     retry: (count, error) => ![403, 404].includes(statusOf(error) ?? 0) && count < 2,
     refetchInterval: (current: Query<OnboardingState>) => (sampleDataRunning(current.state.data) ? 3000 : false),
