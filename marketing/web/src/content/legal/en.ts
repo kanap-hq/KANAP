@@ -191,22 +191,22 @@ const content: LegalContent = {
   sales: {
     meta: {
       title: 'General terms and conditions of sale',
-      description: 'Terms governing the purchase of KANAP subscriptions.',
+      description: 'Terms governing the purchase of Kadratis subscriptions.',
     },
     header: {
       eyebrow: 'Legal',
       title: 'General terms and conditions of sale',
-      lastUpdated: 'Last updated: 12 October 2026',
+      lastUpdated: 'Last updated: [date de la bascule]',
     },
     body: `
 <h2>Article 1. Purpose</h2>
-<p>These General Terms and Conditions of Sale (GTC) govern the sale by KANAP (hereinafter "the Vendor"), an EURL (single-member limited liability company) with a share capital of €1,000, registered with the RCS Saverne under number 939 098 190, whose registered office is located at 2, rue du Finhay, 67210 Obernai, France, of subscriptions to the online IT management platform "KANAP".</p>
+<p>These General Terms and Conditions of Sale (GTC) govern the sale by KANAP (hereinafter "the Vendor"), an EURL (single-member limited liability company) with a share capital of €1,000, registered with the RCS Saverne under number 939 098 190, whose registered office is located at 2, rue du Finhay, 67210 Obernai, France, of subscriptions to the online IT management platform "Kadratis" (formerly "KANAP").</p>
 
 <h2>Article 2. Acceptance of the GTC</h2>
 <p>Acceptance of these GTC is mandatory before any subscription and implies full acceptance by the Customer of these conditions.</p>
 
 <h2>Article 3. Description of the service</h2>
-<p>KANAP is an online IT management platform designed for technology leaders and IT departments. The specific features are those described on the website at the time of subscription.</p>
+<p>Kadratis is an online IT management platform designed for technology leaders and IT departments. The specific features are those described on the website at the time of subscription.</p>
 
 <h2>Article 4. Subscription and pricing</h2>
 <p>4.1. Access to the Service is offered under the subscription offers described on the pricing page. Rates are indicated in euros (EUR). The Vendor benefits from the VAT exemption of Article 293 B of the French General Tax Code (franchise en base de TVA): no VAT is charged, and invoices state "TVA non applicable, art. 293 B du CGI". Should the Vendor's VAT status change, VAT will apply to invoices issued after the date of that change.</p>
@@ -240,9 +240,9 @@ const content: LegalContent = {
 <p>8.3. The Vendor's liability is limited to the amount of the subscription paid by the Customer over the preceding 12 months.</p>
 
 <h2>Article 9. Intellectual property</h2>
-<p>9.1. The KANAP software is published by the Vendor under the GNU Affero General Public License version 3 (AGPL-3.0). The Customer's rights over its source code are those granted by that licence.</p>
+<p>9.1. The Kadratis software is published by the Vendor under the GNU Affero General Public License version 3 (AGPL-3.0). The Customer's rights over its source code are those granted by that licence.</p>
 <p>9.2. The subscription grants the Customer the right to use the hosted Service for its duration. It transfers no intellectual property right.</p>
-<p>9.3. The KANAP name and logo belong to the Vendor. The subscription grants no right over them.</p>
+<p>9.3. The Kadratis and KANAP names and their logos belong to the Vendor. The subscription grants no right over them.</p>
 <p>9.4. The data entered by the Customer remains its property.</p>
 
 <h2>Article 10. Personal data</h2>
