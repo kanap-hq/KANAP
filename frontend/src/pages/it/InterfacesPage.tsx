@@ -80,6 +80,7 @@ export default function InterfacesPage() {
   const [duplicateError, setDuplicateError] = useState<string | null>(null);
   const notify = useNotify();
   const canCreate = hasLevel('applications', 'manager');
+  const openNewInterface = () => navigate('/it/interfaces/new/flow');
   const canAdmin = hasLevel('applications', 'admin');
 
   const isPlainLeftClick = useCallback((event: React.MouseEvent) => {
@@ -334,7 +335,7 @@ export default function InterfacesPage() {
   const actions = (
     <Stack direction="row" spacing={1}>
       {canCreate && (
-        <Button variant="action-primary" onClick={() => navigate('/it/interfaces/new/flow')}>
+        <Button variant="action-primary" onClick={openNewInterface}>
           {t('pages.interfaces.addInterface')}
         </Button>
       )}
@@ -379,6 +380,16 @@ export default function InterfacesPage() {
     <>
       <PageHeader title={t('pages.interfaces.title')} actions={actions} />
       <ServerDataGrid<InterfaceRow>
+        emptyState={(
+          <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="center" data-testid="interfaces-empty">
+            <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t('pages.interfaces.empty')}</Typography>
+            {canCreate && (
+              <Button variant="contained" size="small" onClick={openNewInterface}>
+                {t('pages.interfaces.addInterface')}
+              </Button>
+            )}
+          </Stack>
+        )}
         columns={columns}
         endpoint="/interfaces"
         showRowCount

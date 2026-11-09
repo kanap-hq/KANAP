@@ -60,7 +60,7 @@ Naviguez vers **Données de référence > Centres de coûts** (dans la section *
 
 ## Utiliser la liste
 
-Tant que l'espace de travail n'a aucun centre de coûts, une ligne sous le titre l'indique : « Les centres de coûts indiquent qui porte chaque ligne budgétaire. Créez-en un ou importez un fichier. »
+Tant que l'espace de travail n'a aucun centre de coûts, le milieu de la liste l'indique, à côté de **Nouveau centre de coûts** : « Les centres de coûts indiquent qui porte chaque ligne budgétaire. Créez-en un ou importez un fichier. »
 
 **Colonnes** :
 

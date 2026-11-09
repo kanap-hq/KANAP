@@ -38,7 +38,7 @@ Pour créer vous-même un calendrier, cliquez sur **Nouveau**.
 
 ## Utiliser la liste
 
-Tant que l'espace de travail n'a aucun calendrier, une ligne sous le titre l'indique : « Un calendrier indique les jours ouvrés de chaque mois, pour les lignes au prix par jour. Créez-en un ou importez un fichier. »
+Tant que l'espace de travail n'a aucun calendrier et qu'aucun n'est suggéré, le milieu de la liste l'indique, à côté de **Nouveau calendrier** : « Un calendrier indique les jours ouvrés de chaque mois, pour les lignes au prix par jour. Créez-en un ou importez un fichier. »
 
 **Colonnes** :
 

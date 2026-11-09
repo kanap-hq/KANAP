@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Stack } from '@mui/material';
+import { Button, Stack, Typography } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import PageHeader from '../components/PageHeader';
 import ServerDataGrid, { EnhancedColDef, StatusScope, type ListRequest } from '../components/ServerDataGrid';
@@ -155,6 +155,7 @@ export default function DepartmentsPage() {
   ], [getWorkspaceHref, locale, navigate, year, t]);
 
   const canCreate = hasLevel('departments','manager');
+  const openNewDepartment = () => navigate(`/master-data/departments/new/overview?${buildWorkspaceSearch().toString()}`);
   const canAdmin = hasLevel('departments','admin');
   const actions = (
     <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
@@ -170,10 +171,7 @@ export default function DepartmentsPage() {
       {canCreate && (
         <Button
           variant="action-primary"
-          onClick={() => {
-            const sp = buildWorkspaceSearch();
-            navigate(`/master-data/departments/new/overview?${sp.toString()}`);
-          }}
+          onClick={openNewDepartment}
         >
           {t('shared.labels.new')}
         </Button>
@@ -204,6 +202,16 @@ export default function DepartmentsPage() {
     <>
       <PageHeader title={t("departments.title")} actions={actions} />
       <ServerDataGrid<any>
+        emptyState={(
+          <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="center" data-testid="departments-empty">
+            <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t('departments.empty')}</Typography>
+            {canCreate && (
+              <Button variant="contained" size="small" onClick={openNewDepartment}>
+                {t('departments.newDepartment')}
+              </Button>
+            )}
+          </Stack>
+        )}
         onListRequestChange={setListRequest}
         columns={columns}
         endpoint="/departments"

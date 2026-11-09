@@ -4,7 +4,7 @@ import PageHeader from '../components/PageHeader';
 import ServerDataGrid, { EnhancedColDef, type ListRequest } from '../components/ServerDataGrid';
 import CheckboxSetFilter from '../components/CheckboxSetFilter';
 import CheckboxSetFloatingFilter from '../components/CheckboxSetFloatingFilter';
-import { Button, Stack } from '@mui/material';
+import { Button, Stack, Typography } from '@mui/material';
 import CsvExportDialog from '../components/csv/CsvExportDialog';
 import CsvImportDialog from '../components/csv/CsvImportDialog';
 import { useAuth } from '../auth/AuthContext';
@@ -148,16 +148,14 @@ export default function ContactsPage() {
   ], [locale, navigate, t]);
 
   const canCreate = hasLevel('contacts','manager');
+  const openNewContact = () => navigate(`/master-data/contacts/new/overview?${buildWorkspaceSearch().toString()}`);
   const canAdmin = hasLevel('contacts','admin');
   // Importing over or deleting shared contacts is reserved to people with access to all data (spec §2.7).
   const canChangeShared = canAdmin && !isDataAccessLimited(dataAccess);
   const actions = (
     <Stack direction="row" spacing={1}>
       {canCreate && (
-        <Button variant="action-primary" onClick={() => {
-          const sp = buildWorkspaceSearch();
-          navigate(`/master-data/contacts/new/overview?${sp.toString()}`);
-        }}>{t('shared.labels.new')}</Button>
+        <Button variant="action-primary" onClick={openNewContact}>{t('shared.labels.new')}</Button>
       )}
       {canChangeShared && <Button variant="action" onClick={() => setImportOpen(true)}><ImportLabel csv={t('shared.labels.importCsv')} /></Button>}
       {canAdmin && <Button variant="action" onClick={() => setExportOpen(true)}>{t('common:export.button')}</Button>}
@@ -185,6 +183,16 @@ export default function ContactsPage() {
     <>
       <PageHeader title={t("contacts.title")} actions={actions} />
       <ServerDataGrid<any>
+        emptyState={(
+          <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="center" data-testid="contacts-empty">
+            <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t('contacts.empty')}</Typography>
+            {canCreate && (
+              <Button variant="contained" size="small" onClick={openNewContact}>
+                {t('contacts.newContact')}
+              </Button>
+            )}
+          </Stack>
+        )}
         onListRequestChange={setListRequest}
         columns={columns}
         endpoint="/contacts"

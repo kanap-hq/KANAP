@@ -217,7 +217,8 @@
         "keptDone_other": "{{count}} activos conservados",
         "keptReason_one": "Se conserva: {{usages}} lo usa.",
         "keptReason_other": "Se conserva: {{usages}} lo usan."
-      }
+      },
+      "empty": "Todavía no hay activos."
     },
     "technologies": {
       "title": "Tecnologías",
@@ -339,7 +340,8 @@
         "title_other": "Eliminar las {{count}} conexiones seleccionadas"
       },
       "serverCount_one": "{{count}} servidor",
-      "serverCount_other": "{{count}} servidores"
+      "serverCount_other": "{{count}} servidores",
+      "empty": "Todavía no hay conexiones."
     },
     "endOfSupport": {
       "title": "Fin de soporte",
@@ -776,7 +778,8 @@
         "bindings": "Enlaces"
       },
       "duplicated": "Interfaz duplicada como «{{name}}»",
-      "thisInterface": "esta interfaz"
+      "thisInterface": "esta interfaz",
+      "empty": "Todavía no hay interfaces."
     },
     "locations": {
       "title": "Ubicaciones",

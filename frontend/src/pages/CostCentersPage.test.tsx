@@ -70,22 +70,6 @@ describe('CostCentersPage', () => {
     grid.props = null;
   });
 
-  it('shows the one-line explainer when the tenant has no cost center', () => {
-    renderPage();
-    expect(screen.getByTestId('cost-centers-empty')).toHaveTextContent('costCenters.emptyExplainer');
-  });
-
-  it('hides the explainer once the tenant has a node, and while the tree loads', () => {
-    treeState.nodes = [{ id: 'it', code: 'IT', name: 'IT department', kind: 'group', parent_id: null }];
-    const { unmount } = renderPage();
-    expect(screen.queryByTestId('cost-centers-empty')).toBeNull();
-    unmount();
-    treeState.nodes = [];
-    treeState.ready = false;
-    renderPage();
-    expect(screen.queryByTestId('cost-centers-empty')).toBeNull();
-  });
-
   it('lists the tree through the grid, sorted by path, with the status column hidden', () => {
     renderPage();
     expect(grid.props?.endpoint).toBe('/cost-centers');
@@ -115,11 +99,6 @@ describe('CostCentersPage', () => {
     expect(screen.queryByTestId('grid')).toBeNull();
   });
 
-  it('does not show the explainer when the tree failed to load', () => {
-    treeState.isError = true;
-    renderPage();
-    expect(screen.queryByTestId('cost-centers-empty')).toBeNull();
-  });
 });
 
 describe('CostCentersPage delete', () => {

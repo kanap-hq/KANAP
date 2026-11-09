@@ -1,6 +1,6 @@
 import useApplicationClassificationCatalog from '../../hooks/useApplicationClassificationCatalog';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { Box, Button, Stack } from '@mui/material';
+import { Box, Button, Stack, Typography } from '@mui/material';
 import { ICellRendererParams } from 'ag-grid-community';
 import { useNavigate } from 'react-router-dom';
 import PageHeader from '../../components/PageHeader';
@@ -341,10 +341,13 @@ export default function ConnectionsPage() {
     },
   ];
 
+  const canCreate = hasLevel('infrastructure', 'member');
+  const openNewConnection = () => navigate('/it/connections/new/overview');
+
   const actions = (
     <Stack direction="row" spacing={1}>
-      {hasLevel('infrastructure', 'member') && (
-        <Button variant="action-primary" onClick={() => navigate('/it/connections/new/overview')}>
+      {canCreate && (
+        <Button variant="action-primary" onClick={openNewConnection}>
           {t('pages.connections.addConnection')}
         </Button>
       )}
@@ -372,6 +375,16 @@ export default function ConnectionsPage() {
     <>
       <PageHeader title={t('pages.connections.title')} actions={actions} />
       <ServerDataGrid<ConnectionRow>
+        emptyState={(
+          <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="center" data-testid="connections-empty">
+            <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t('pages.connections.empty')}</Typography>
+            {canCreate && (
+              <Button variant="contained" size="small" onClick={openNewConnection}>
+                {t('pages.connections.addConnection')}
+              </Button>
+            )}
+          </Stack>
+        )}
         columns={columns}
         endpoint="/connections"
         showRowCount

@@ -174,7 +174,8 @@
       "keptDone_one": "{{count}} empresa conservada",
       "keptDone_other": "{{count}} empresas conservadas"
     },
-    "creationRecord": "La empresa"
+    "creationRecord": "La empresa",
+    "empty": "Todavía no hay empresas."
   },
   "departments": {
     "title": "Departamentos",
@@ -219,7 +220,8 @@
       "deleted_one": "{{count}} departamento eliminado",
       "deleted_other": "{{count}} departamentos eliminados"
     },
-    "creationRecord": "El departamento"
+    "creationRecord": "El departamento",
+    "empty": "Todavía no hay departamentos."
   },
   "costCenters": {
     "title": "Centros de coste",
@@ -540,7 +542,8 @@
       "title_one": "Eliminar el contacto seleccionado",
       "title_other": "Eliminar los {{count}} contactos seleccionados"
     },
-    "creationRecord": "El contacto"
+    "creationRecord": "El contacto",
+    "empty": "Todavía no hay contactos."
   },
   "coa": {
     "title": "Planes de cuentas",
@@ -673,7 +676,8 @@
       "kept_other": "{{count}} cuentas no se pueden eliminar y se conservan:",
       "deleted_one": "{{count}} cuenta eliminada",
       "deleted_other": "{{count}} cuentas eliminadas"
-    }
+    },
+    "emptyAccounts": "Todavía no hay cuentas."
   },
   "accounts": {
     "entity": "cuenta",
@@ -921,7 +925,8 @@
     },
     "addValue": "Añadir «{{value}}»",
     "valueCreationRecord": "El valor",
-    "dimensionCreationRecord": "La dimensión"
+    "dimensionCreationRecord": "La dimensión",
+    "empty": "Todavía no hay valores."
   },
   "businessProcesses": {
     "title": "Procesos de negocio",
@@ -991,7 +996,8 @@
     },
     "creation": {
       "record": "El proceso de negocio"
-    }
+    },
+    "empty": "Todavía no hay procesos de negocio."
   },
   "admin": {
     "copy": {

@@ -60,7 +60,7 @@ Navigate to **Master data > Cost centers** (in the **Organization** section) to 
 
 ## Working with the list
 
-When the workspace has no cost center yet, one line under the title says so: "Cost centers say who owns each budget line. Create one, or import a file."
+When the workspace has no cost center yet, the middle of the list says so, next to **New cost center**: "Cost centers say who owns each budget line. Create one, or import a file."
 
 **Columns**:
 

@@ -53,6 +53,7 @@ function WorkingDayCalendarsList() {
   const { hasLevel } = useAuth();
   const calendars = useWorkingDayProfiles();
   const canCreate = hasLevel('working_day_profiles', 'member');
+  const openNewCalendar = () => navigate(`${WORKING_DAY_CALENDARS_PATH}/new/overview?${buildWorkspaceSearch().toString()}`);
   const canAdmin = hasLevel('working_day_profiles', 'admin');
   const suggestions = useCalendarSuggestions({ enabled: canCreate });
   const [creatingSuggested, setCreatingSuggested] = useState(false);
@@ -187,7 +188,7 @@ function WorkingDayCalendarsList() {
       {canCreate && (
         <Button
           variant="action-primary"
-          onClick={() => navigate(`${WORKING_DAY_CALENDARS_PATH}/new/overview?${buildWorkspaceSearch().toString()}`)}
+          onClick={openNewCalendar}
         >
           {t('shared.labels.new')}
         </Button>
@@ -235,12 +236,18 @@ function WorkingDayCalendarsList() {
           {suggestedError}
         </Typography>
       )}
-      {!showSuggestions && calendars.ready && !calendars.isError && calendars.profiles.length === 0 && (
-        <Typography data-testid="working-day-calendars-empty" sx={{ fontSize: 13, color: 'kanap.text.tertiary', mt: -1, mb: 1.5 }}>
-          {t('workingDayCalendars.emptyExplainer')}
-        </Typography>
-      )}
       <ServerDataGrid<WorkingDayProfileListRow>
+        // The suggestions strip replaces the empty state.
+        emptyState={showSuggestions ? undefined : (
+          <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="center" data-testid="working-day-calendars-empty">
+            <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t('workingDayCalendars.emptyExplainer')}</Typography>
+            {canCreate && (
+              <Button variant="contained" size="small" onClick={openNewCalendar}>
+                {t('workingDayCalendars.newCalendar')}
+              </Button>
+            )}
+          </Stack>
+        )}
         onListRequestChange={setListRequest}
         columns={columns}
         endpoint={WORKING_DAY_PROFILES_ENDPOINT}

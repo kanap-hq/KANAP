@@ -66,6 +66,7 @@ function CostCentersList() {
   const lastQueryRef = useRef<{ sort: string; q: string; filters: any; statusScope?: StatusScope } | null>(null);
 
   const canCreate = hasLevel('cost_centers', 'member');
+  const openNewCostCenter = () => navigate(`/master-data/cost-centers/new/overview?${buildWorkspaceSearch().toString()}`);
   const canAdmin = hasLevel('cost_centers', 'admin');
 
   const refresh = useCallback(() => {
@@ -186,7 +187,7 @@ function CostCentersList() {
       {canCreate && (
         <Button
           variant="action-primary"
-          onClick={() => navigate(`/master-data/cost-centers/new/overview?${buildWorkspaceSearch().toString()}`)}
+          onClick={openNewCostCenter}
         >
           {t('shared.labels.new')}
         </Button>
@@ -216,12 +217,17 @@ function CostCentersList() {
   return (
     <>
       <PageHeader title={t('costCenters.title')} actions={actions} />
-      {tree.ready && !tree.isError && !tree.hasAny && (
-        <Typography data-testid="cost-centers-empty" sx={{ fontSize: 13, color: 'kanap.text.tertiary', mt: -1, mb: 1.5 }}>
-          {t('costCenters.emptyExplainer')}
-        </Typography>
-      )}
       <ServerDataGrid<CostCenterListRow>
+        emptyState={(
+          <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="center" data-testid="cost-centers-empty">
+            <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t('costCenters.emptyExplainer')}</Typography>
+            {canCreate && (
+              <Button variant="contained" size="small" onClick={openNewCostCenter}>
+                {t('costCenters.newCostCenter')}
+              </Button>
+            )}
+          </Stack>
+        )}
         onListRequestChange={setListRequest}
         columns={columns}
         endpoint={COST_CENTERS_ENDPOINT}

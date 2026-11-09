@@ -60,7 +60,7 @@ Navigieren Sie zu **Stammdaten > Kostenstellen** (im Abschnitt **Organisation**)
 
 ## Mit der Liste arbeiten
 
-Solange der Arbeitsbereich noch keine Kostenstelle hat, weist eine Zeile unter dem Titel darauf hin: „Kostenstellen zeigen, wer für jede Budgetzeile verantwortlich ist. Legen Sie eine an oder importieren Sie eine Datei.“
+Solange der Arbeitsbereich noch keine Kostenstelle hat, weist die Mitte der Liste darauf hin, neben **Neue Kostenstelle**: „Kostenstellen zeigen, wer für jede Budgetzeile verantwortlich ist. Legen Sie eine an oder importieren Sie eine Datei.“
 
 **Spalten**:
 

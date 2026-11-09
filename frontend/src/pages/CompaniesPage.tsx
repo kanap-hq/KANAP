@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Box, Button, Stack } from '@mui/material';
+import { Box, Button, Stack, Typography } from '@mui/material';
 import PageHeader from '../components/PageHeader';
 import ServerDataGrid, { EnhancedColDef, StatusScope, type ListRequest } from '../components/ServerDataGrid';
 import CsvExportDialog from '../components/csv/CsvExportDialog';
@@ -420,6 +420,7 @@ export default function CompaniesPage() {
   }, [refreshKey, t, year]);
 
   const canCreate = hasLevel('companies', 'manager');
+  const openNewCompany = () => navigate(`/master-data/companies/new/overview?${buildWorkspaceSearch().toString()}`);
   const canAdmin = hasLevel('companies', 'admin');
 
   const actions = (
@@ -436,10 +437,7 @@ export default function CompaniesPage() {
       {canCreate && (
         <Button
           variant="action-primary"
-          onClick={() => {
-            const sp = buildWorkspaceSearch();
-            navigate(`/master-data/companies/new/overview?${sp.toString()}`);
-          }}
+          onClick={openNewCompany}
         >
           {t('shared.labels.new')}
         </Button>
@@ -485,6 +483,16 @@ export default function CompaniesPage() {
     <>
       <PageHeader title={t('companies.title')} actions={actions} />
       <ServerDataGrid<CompanyRow>
+        emptyState={(
+          <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="center" data-testid="companies-empty">
+            <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t('companies.empty')}</Typography>
+            {canCreate && (
+              <Button variant="contained" size="small" onClick={openNewCompany}>
+                {t('companies.newCompany')}
+              </Button>
+            )}
+          </Stack>
+        )}
         onListRequestChange={setListRequest}
         columns={columns}
         endpoint="/companies"

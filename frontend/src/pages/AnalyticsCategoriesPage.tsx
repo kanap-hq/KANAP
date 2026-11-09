@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
-import { Alert, Box, Button, Tooltip } from '@mui/material';
+import { Alert, Box, Button, Tooltip, Stack, Typography } from '@mui/material';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../api';
@@ -207,11 +207,12 @@ function AnalyticsValuesList() {
 
   // A disabled dimension takes no new value; the button says why instead of opening a form on another one.
   const selectedDisabled = !!selectedAxis && !isAnalyticsActive(selectedAxis);
+  const openNewValue = () => navigate(`${ANALYTICS_LIST_PATH}/new/overview?${buildWorkspaceSearch().toString()}`);
   const newValueButton = (
     <Button
       variant="action-primary"
       disabled={!axes.ready || selectedDisabled}
-      onClick={() => navigate(`${ANALYTICS_LIST_PATH}/new/overview?${buildWorkspaceSearch().toString()}`)}
+      onClick={openNewValue}
     >
       {t('analytics.newValue')}
     </Button>
@@ -300,6 +301,16 @@ function AnalyticsValuesList() {
       )}
       {gridReady && (
         <ServerDataGrid<AnalyticsValue>
+          emptyState={(
+            <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="center" data-testid="analytics-values-empty">
+              <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t('analytics.empty')}</Typography>
+              {canCreate && axes.ready && !selectedDisabled && (
+                <Button variant="contained" size="small" onClick={openNewValue}>
+                  {t('analytics.newValue')}
+                </Button>
+              )}
+            </Stack>
+          )}
           onListRequestChange={setListRequest}
           columns={columns}
           endpoint={ANALYTICS_VALUES_ENDPOINT}
