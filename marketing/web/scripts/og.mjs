@@ -67,7 +67,7 @@ function blogCards(only) {
         eyebrow: date ? `Blog · ${date}` : 'Blog',
         title: fm.title ?? slug,
         sub: fm.description ?? '',
-        url: `kanap.net${locale === 'en' ? '' : '/' + locale}/blog/${slug}`,
+        url: `kadratis.com${locale === 'en' ? '' : '/' + locale}/blog/${slug}`,
       };
     }
   }
@@ -81,9 +81,10 @@ const MUTED = '#9CA3AF';
 const FAINT = '#6B7280';
 const TEAL = '#4DB8C9';
 
+// Full logo, light version: the card background is dark.
 const logoDataUri =
   'data:image/svg+xml;base64,' +
-  readFileSync(resolve(root, 'public/logo.svg')).toString('base64');
+  readFileSync(resolve(root, 'public/brand/kadratis-logo-inverse.svg')).toString('base64');
 
 /** One entry per OG card. Keep copy in sync with the page header. */
 const CARDS = {
@@ -91,7 +92,7 @@ const CARDS = {
     eyebrow: 'Autonomous agents for IT',
     title: 'AI agents that take work off your team.',
     sub: 'Open-source and self-hosted. One service-desk agent live in production, the runtime built to extend.',
-    url: 'kanap.net/features/agents',
+    url: 'kadratis.com/features/agents',
   },
 };
 
@@ -113,8 +114,7 @@ function cardHtml(c) {
       background:radial-gradient(closest-side, rgba(77,184,201,0.20), transparent); }
     .z { position:relative; z-index:1; }
     .brand { display:flex; align-items:center; gap:18px; }
-    .brand img { width:56px; height:56px; }
-    .brand .wm { font-size:30px; font-weight:500; letter-spacing:0.06em; }
+    .brand img { height:56px; width:auto; }
     .eyebrow { color:${TEAL}; font-size:22px; font-weight:500; letter-spacing:0.14em; text-transform:uppercase; }
     .title { font-size:66px; line-height:1.08; font-weight:500; letter-spacing:-0.02em; max-width:1000px; margin-top:16px; }
     .sub { color:${MUTED}; font-size:27px; line-height:1.5; max-width:940px; margin-top:26px; }
@@ -124,7 +124,7 @@ function cardHtml(c) {
   </style></head>
   <body><div class="card">
     <div class="glow"></div>
-    <div class="brand z"><img src="${logoDataUri}"/><span class="wm">KANAP</span></div>
+    <div class="brand z"><img src="${logoDataUri}" alt="Kadratis"/></div>
     <div class="z">
       <div class="eyebrow">${esc(c.eyebrow)}</div>
       <div class="title">${esc(c.title)}</div>
