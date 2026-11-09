@@ -4,7 +4,8 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseCsv } from '../../../scripts/lib/fixture-csv.mjs';
@@ -13,6 +14,7 @@ import {
   DEFAULT_CRITERIA,
   DEMAND_SCORES,
   criteriaForLanguage,
+  defaultCriteriaLabelsPath,
   demandScore,
   planDemandScores,
   sameCriteriaValues,
@@ -140,4 +142,14 @@ test('a missing demand is reported and the others are still scored', () => {
     'Smart Packaging Automation',
     'Automated Warehouse Inventory',
   ]);
+});
+
+test('the labels are found under dist when the backend has no src, as in the API image', (t) => {
+  const root = mkdtempSync(path.join(os.tmpdir(), 'demand-scores-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  assert.throws(() => defaultCriteriaLabelsPath(root), /Default criteria labels not found/);
+  const labels = path.join(root, 'dist', 'portfolio', 'default-criteria.labels.json');
+  mkdirSync(path.dirname(labels), { recursive: true });
+  writeFileSync(labels, '{}');
+  assert.equal(defaultCriteriaLabelsPath(root), labels);
 });

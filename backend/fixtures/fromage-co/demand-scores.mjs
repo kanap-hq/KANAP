@@ -4,15 +4,25 @@
 // ones seeded by PortfolioCriteriaService.seedDefaultCriteria, in the workspace
 // seed language (default-criteria.labels.json). A tenant that changed that set
 // is left unscored.
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const SEED_LANGUAGES = ['en', 'fr', 'de', 'es'];
-const SEED = JSON.parse(readFileSync(
-  path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../src/portfolio/default-criteria.labels.json'),
-  'utf8',
-));
+const BACKEND_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+
+/**
+ * Where the default criteria labels are under a backend directory: src/ in a
+ * checkout and on the dev stack, dist/ in the API image, which has no src/.
+ */
+export function defaultCriteriaLabelsPath(backendRoot = BACKEND_ROOT) {
+  const candidates = ['src', 'dist'].map((dir) => path.join(backendRoot, dir, 'portfolio', 'default-criteria.labels.json'));
+  const found = candidates.find((candidate) => existsSync(candidate));
+  if (!found) throw new Error(`Default criteria labels not found. Looked for:\n  ${candidates.join('\n  ')}`);
+  return found;
+}
+
+const SEED = JSON.parse(readFileSync(defaultCriteriaLabelsPath(), 'utf8'));
 
 /** The default criteria in one seed language, in seed order. English for any other language. */
 export function criteriaForLanguage(language) {
