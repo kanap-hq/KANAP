@@ -8,3 +8,6 @@ export const PRODUCT_NAME = 'KANAP';
 
 /** The company that publishes the product: publisher, legal mentions, support, copyright. */
 export const COMPANY_NAME = 'KANAP';
+
+/** The integrated AI agent: the chat, its menu and its settings. Written `{{agent}}` in the texts. */
+export const AGENT_NAME = 'Plaid';

@@ -154,8 +154,8 @@
     "newAgentSreDefaultName": "Infrastructure monitoring agent",
     "newAgentSreDescription": "Draft monitoring agent that reads alerts, correlates them with your data, and prepares diagnosis notes for review.",
     "cost": "Cost: today / 7 days",
-    "includedModelPaused": "Agents that use the {{product}} included model are paused until an administrator confirms it in Admin > Plaid.",
-    "includedModelOpenSettings": "Open Plaid settings"
+    "includedModelPaused": "Agents that use the {{product}} included model are paused until an administrator confirms it in Admin > {{agent}}.",
+    "includedModelOpenSettings": "Open {{agent}} settings"
   },
   "approvals": {
     "title": "Agent approvals",

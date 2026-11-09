@@ -10,7 +10,7 @@ import { BUILTIN_REASONING_EFFORT, BuiltinProviderIdentity, PlatformAiConfigServ
 import { AiProviderRegistry } from './providers/ai-provider-registry.service';
 import { AiReasoningEffort } from './providers/ai-provider.types';
 import { reasoningEffortToSend } from './providers/reasoning-effort.capability';
-import { PRODUCT_NAME } from '../config/product';
+import { AGENT_NAME, PRODUCT_NAME } from '../config/product';
 
 export type AiModelConsumer = { type: 'chat' } | { type: 'agent'; agentId: string };
 
@@ -58,7 +58,7 @@ export type ResolveModelOptions = {
 
 export type AiModelResolutionErrorCode = 'no_model_available' | 'builtin_not_configured' | 'builtin_not_accepted';
 
-export const BUILTIN_NOT_ACCEPTED_MESSAGE = `The ${PRODUCT_NAME} included model needs an administrator's confirmation in Admin > Plaid.`;
+export const BUILTIN_NOT_ACCEPTED_MESSAGE = `The ${PRODUCT_NAME} included model needs an administrator's confirmation in Admin > ${AGENT_NAME}.`;
 
 /** What a consumer would run on, without resolving secrets. */
 export type AiModelReadiness = {

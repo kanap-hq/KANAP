@@ -1,4 +1,4 @@
-import { COMPANY_NAME, PRODUCT_NAME } from '../../config/product';
+import { AGENT_NAME, COMPANY_NAME, PRODUCT_NAME } from '../../config/product';
 import type { EmailStrings } from './en';
 
 export const de: EmailStrings = {
@@ -273,7 +273,7 @@ export const de: EmailStrings = {
   workspace: {
     reset: {
       subject: 'Ihr Arbeitsbereich {{organisation}} wurde zurückgesetzt',
-      sentence: '{{actorName}} hat am {{date}} den gesamten Inhalt des Arbeitsbereichs {{workspaceName}} gelöscht. Die Konten und ihre Rollen, das Abonnement, die Einstellungen von Plaid und das Audit-Protokoll bleiben erhalten.',
+      sentence: `{{actorName}} hat am {{date}} den gesamten Inhalt des Arbeitsbereichs {{workspaceName}} gelöscht. Die Konten und ihre Rollen, das Abonnement, die Einstellungen von ${AGENT_NAME} und das Audit-Protokoll bleiben erhalten.`,
       cta: 'Arbeitsbereich öffnen',
     },
   },

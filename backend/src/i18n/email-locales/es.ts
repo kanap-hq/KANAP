@@ -1,4 +1,4 @@
-import { COMPANY_NAME, PRODUCT_NAME } from '../../config/product';
+import { AGENT_NAME, COMPANY_NAME, PRODUCT_NAME } from '../../config/product';
 import type { EmailStrings } from './en';
 
 export const es: EmailStrings = {
@@ -273,7 +273,7 @@ export const es: EmailStrings = {
   workspace: {
     reset: {
       subject: 'Su espacio {{organisation}} se ha restablecido',
-      sentence: '{{actorName}} borró todo el contenido del espacio {{workspaceName}} el {{date}}. Se conservan las cuentas y sus roles, la suscripción, los ajustes de Plaid y el registro de auditoría.',
+      sentence: `{{actorName}} borró todo el contenido del espacio {{workspaceName}} el {{date}}. Se conservan las cuentas y sus roles, la suscripción, los ajustes de ${AGENT_NAME} y el registro de auditoría.`,
       cta: 'Abrir el espacio',
     },
   },

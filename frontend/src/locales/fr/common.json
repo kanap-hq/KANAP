@@ -1186,7 +1186,7 @@
   "forbidden": {
     "title": "Accès refusé",
     "message": "Vous n'avez pas la permission de voir cette page. Si vous pensez qu'il s'agit d'une erreur, contactez un administrateur.",
-    "aiChatRight": "Pour utiliser Plaid, demandez à un administrateur d'ajouter l'autorisation Chat IA à votre rôle.",
+    "aiChatRight": "Pour utiliser {{agent}}, demandez à un administrateur d'ajouter l'autorisation Chat IA à votre rôle.",
     "cta": "Aller au tableau de bord"
   },
   "lifecycleField": {
@@ -1605,12 +1605,12 @@
           "hint": "Tous les rapports sont paramétrables en détail. Explorez les options de filtrage. Depuis les résultats, ouvrez directement les lignes budgétaires concernées. Exportez le rapport en .pdf, .png ou en .xlsx."
         },
         "budget_plaid": {
-          "title": "Une question à Plaid",
+          "title": "Une question à {{agent}}",
           "hint": "Demandez « Quelles sont les principales opportunités d'économies dans les OPEX IT ? »"
         },
         "budget_import": {
           "title": "Vos données",
-          "hint": "Testez la fonctionnalité d'export pour récupérer les données en csv ou xlsx. Vous pouvez utiliser ces fichiers comme modèles pour mettre à jour en masse ou importer de nouvelles données. Plaid peut aussi vous aider à convertir un fichier existant."
+          "hint": "Testez la fonctionnalité d'export pour récupérer les données en csv ou xlsx. Vous pouvez utiliser ces fichiers comme modèles pour mettre à jour en masse ou importer de nouvelles données. {{agent}} peut aussi vous aider à convertir un fichier existant."
         },
         "own_company": {
           "title": "Votre société",

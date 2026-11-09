@@ -31,7 +31,7 @@
       "labelPlaceholder": "z. B. Desktop MCP-Client"
     },
     "glpi": {
-      "description": "Konfigurieren Sie die GLPI-Zugangsdaten dieses Arbeitsbereichs, damit Plaid ausgewählte GLPI-Tickets nach Benutzerbestätigung als Aufgaben importieren kann.",
+      "description": "Konfigurieren Sie die GLPI-Zugangsdaten dieses Arbeitsbereichs, damit {{agent}} ausgewählte GLPI-Tickets nach Benutzerbestätigung als Aufgaben importieren kann.",
       "fields": {
         "appToken": "App-Token",
         "enabled": "GLPI-Ticketimport aktivieren",
@@ -50,7 +50,7 @@
       },
       "title": "GLPI-Integration",
       "tooltips": {
-        "plaidRequired": "Plaid muss aktiviert sein, damit Benutzer GLPI-Tickets aus dem Chat importieren können."
+        "plaidRequired": "{{agent}} muss aktiviert sein, damit Benutzer GLPI-Tickets aus dem Chat importieren können."
       },
       "tokenHint": {
         "appTokenExisting": "Leer lassen, um das gespeicherte App-Token für Speicher- und Testaktionen beizubehalten.",
@@ -113,7 +113,7 @@
         "totalTokens": "Tokens gesamt",
         "window": "Zeitfenster"
       },
-      "description": "Unterhaltungen, Token-Verbrauch und KI-Nachrichten dieser Organisation. Eine Nachricht ist eine Frage an Plaid oder ein von einem Agenten geprüftes Ticket: die Einheit, die das enthaltene Monatsvolumen zählt.",
+      "description": "Unterhaltungen, Token-Verbrauch und KI-Nachrichten dieser Organisation. Eine Nachricht ist eine Frage an {{agent}} oder ein von einem Agenten geprüftes Ticket: die Einheit, die das enthaltene Monatsvolumen zählt.",
       "metrics": {
         "activeConversations30d": "Aktive Gespräche (30T)",
         "activeConversations7d": "Aktive Gespräche (7T)",
@@ -152,7 +152,7 @@
       "title": "Anbieter",
       "validationErrorsTitle": "Aktuelle Validierungsfehler des Anbieters",
       "modelSelector": {
-        "label": "Von Plaid verwendetes Modell",
+        "label": "Von {{agent}} verwendetes Modell",
         "builtin": "Inklusives {{product}}-Modell",
         "tenantDefault": "Standardmodell ({{name}})",
         "noDefault": "Kein Modell konfiguriert",
@@ -205,7 +205,7 @@
       "never": "Nie",
       "none": "Keine"
     },
-    "title": "Plaid",
+    "title": "{{agent}}",
     "includedModel": {
       "status": "Inklusives {{product}}-Modell: {{name}} (Verarbeitungsort: {{place}})",
       "confirmed": "Bestätigt",
@@ -347,7 +347,7 @@
     },
     "exportResources": {
       "accounts": "Konten",
-      "aiImportFile": "Von Plaid für einen Import vorbereitete Datei",
+      "aiImportFile": "Von {{agent}} für einen Import vorbereitete Datei",
       "administrationView": "Administrationszonen",
       "analyticsCategories": "Analysedimensionen",
       "applications": "Anwendungen",
@@ -848,8 +848,8 @@
         "feasibilityReviewChanged": "Machbarkeitsprüfung geändert"
       },
       "actors": {
-        "assistant": "Plaid",
-        "assistantFor": "Plaid für {{name}}",
+        "assistant": "{{agent}}",
+        "assistantFor": "{{agent}} für {{name}}",
         "unknown": "Unbekannte Person"
       },
       "events": {
@@ -2591,14 +2591,14 @@
     "title": "KI-Modelle",
     "sectionTitle": "Modelle",
     "new": "Neues Modell",
-    "empty": "Noch kein KI-Modell konfiguriert. Fügen Sie Ihr erstes Modell hinzu, um Plaid und die Agenten zu betreiben.",
+    "empty": "Noch kein KI-Modell konfiguriert. Fügen Sie Ihr erstes Modell hinzu, um {{agent}} und die Agenten zu betreiben.",
     "secretNotWritable": "API-Schlüssel können nicht gespeichert werden: Auf dem Server ist kein Verschlüsselungsgeheimnis konfiguriert. Wenden Sie sich an Ihren Administrator.",
     "defaultChip": "Standard",
     "archivedChip": "Archiviert",
     "incomplete": "Konfiguration unvollständig",
     "visionYes": "Bilder ✓",
     "visionNo": "Nur Text",
-    "usedByChat": "Plaid",
+    "usedByChat": "{{agent}}",
     "usedByNone": "Nicht zugewiesen",
     "messagesThisMonth_one": "{{count}} Nachricht in diesem Monat",
     "messagesThisMonth_other": "{{count}} Nachrichten in diesem Monat",
@@ -2692,7 +2692,7 @@
       "title": "Kosten",
       "totalMonth": "Gesamt in diesem Monat",
       "agentsMonth": "Agenten in diesem Monat",
-      "chatMonth": "Plaid in diesem Monat",
+      "chatMonth": "{{agent}} in diesem Monat",
       "chatEstimatedNote": "Teilweise geschätzt zu den Tarifen des aktuell zugewiesenen Modells",
       "chatFreeNote": "Das zugewiesene Modell ist kostenfrei",
       "byAgent": "Kosten pro Agent",
@@ -2983,7 +2983,7 @@
       "steps": "Schritte",
       "sampleData": "Beispieldaten",
       "firstRecord": "Erster Datensatz",
-      "firstQuestion": "Erste Frage an Plaid",
+      "firstQuestion": "Erste Frage an {{agent}}",
       "firstImport": "Erster Import",
       "firstInvitation": "Erste Einladung",
       "backDay1": "Zurück nach 1 Tag",

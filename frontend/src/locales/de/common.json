@@ -1186,7 +1186,7 @@
   "forbidden": {
     "title": "Zugriff verweigert",
     "message": "Sie haben keine Berechtigung, diese Seite anzuzeigen. Wenn Sie glauben, dass dies ein Fehler ist, wenden Sie sich an einen Administrator.",
-    "aiChatRight": "Um Plaid zu nutzen, bitten Sie einen Administrator, Ihrer Rolle die Berechtigung KI-Chat hinzuzufügen.",
+    "aiChatRight": "Um {{agent}} zu nutzen, bitten Sie einen Administrator, Ihrer Rolle die Berechtigung KI-Chat hinzuzufügen.",
     "cta": "Zum Dashboard"
   },
   "lifecycleField": {
@@ -1605,12 +1605,12 @@
           "hint": "Alle Berichte lassen sich im Detail einstellen. Erkunden Sie die Filteroptionen. Öffnen Sie aus den Ergebnissen direkt die betroffenen Budgetzeilen. Exportieren Sie den Bericht als .pdf, .png oder .xlsx."
         },
         "budget_plaid": {
-          "title": "Eine Frage an Plaid",
+          "title": "Eine Frage an {{agent}}",
           "hint": "Fragen Sie „Wo liegen die größten Einsparpotenziale bei den IT-OPEX?“"
         },
         "budget_import": {
           "title": "Ihre Daten",
-          "hint": "Probieren Sie den Export aus, um die Daten als csv oder xlsx zu erhalten. Diese Dateien dienen als Vorlagen, um Daten in großer Zahl zu aktualisieren oder neue zu importieren. Plaid hilft Ihnen auch, eine vorhandene Datei umzuwandeln."
+          "hint": "Probieren Sie den Export aus, um die Daten als csv oder xlsx zu erhalten. Diese Dateien dienen als Vorlagen, um Daten in großer Zahl zu aktualisieren oder neue zu importieren. {{agent}} hilft Ihnen auch, eine vorhandene Datei umzuwandeln."
         },
         "own_company": {
           "title": "Ihr Unternehmen",

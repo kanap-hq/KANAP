@@ -1,4 +1,4 @@
-import { COMPANY_NAME, PRODUCT_NAME } from '../../config/product';
+import { AGENT_NAME, COMPANY_NAME, PRODUCT_NAME } from '../../config/product';
 import type { EmailStrings } from './en';
 
 // French typography (non-breaking spaces before « : ; ? ! » and inside the guillemets) is applied
@@ -275,7 +275,7 @@ export const fr: EmailStrings = {
   workspace: {
     reset: {
       subject: 'Votre espace {{organisation}} a été réinitialisé',
-      sentence: "{{actorName}} a effacé tout le contenu de l'espace {{workspaceName}} le {{date}}. Les comptes et leurs rôles, l'abonnement, les réglages de Plaid et le journal d'audit sont conservés.",
+      sentence: `{{actorName}} a effacé tout le contenu de l'espace {{workspaceName}} le {{date}}. Les comptes et leurs rôles, l'abonnement, les réglages de ${AGENT_NAME} et le journal d'audit sont conservés.`,
       cta: "Ouvrir l'espace",
     },
   },

@@ -14,6 +14,7 @@ import {
 import { TasksUnifiedService } from '../../../tasks/tasks-unified.service';
 import { buildAiMutationAudit } from '../ai-mutation-audit.util';
 import { AiWriteLanguage, previewSummaryText, quoted, taskDetailText, taskPriorityText, writeActionText } from '../../ai-write-texts';
+import { AGENT_NAME } from '../../../config/product';
 
 const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -194,7 +195,7 @@ const CreateTaskInputSchema = z.object({
 @Injectable()
 export class CreateTaskAiMutationOperation implements AiMutationOperation<CreateTaskInput> {
   readonly toolName = 'create_task' as const;
-  readonly description = 'Create a preview to create one task. Tasks can be standalone or linked to one project, budget line or incident. The requestor is always the current Plaid user. Requires explicit user approval before execution.';
+  readonly description = `Create a preview to create one task. Tasks can be standalone or linked to one project, budget line or incident. The requestor is always the current ${AGENT_NAME} user. Requires explicit user approval before execution.`;
   readonly inputSchema = CreateTaskInputSchema;
   readonly inputSummary = {
     title: 'Task title.',

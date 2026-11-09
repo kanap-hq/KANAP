@@ -31,7 +31,7 @@
       "labelPlaceholder": "e.g., desktop MCP client"
     },
     "glpi": {
-      "description": "Configure GLPI credentials for this workspace so Plaid can import selected GLPI tickets as tasks after user confirmation.",
+      "description": "Configure GLPI credentials for this workspace so {{agent}} can import selected GLPI tickets as tasks after user confirmation.",
       "fields": {
         "appToken": "App token",
         "enabled": "Enable GLPI ticket import",
@@ -50,7 +50,7 @@
       },
       "title": "GLPI integration",
       "tooltips": {
-        "plaidRequired": "Plaid must be enabled for users to import GLPI tickets from chat."
+        "plaidRequired": "{{agent}} must be enabled for users to import GLPI tickets from chat."
       },
       "tokenHint": {
         "appTokenExisting": "Leave blank to keep the stored app token for save and test actions.",
@@ -113,7 +113,7 @@
         "totalTokens": "Total tokens",
         "window": "Window"
       },
-      "description": "Conversations, token usage and AI messages for this organization. A message is one question sent to Plaid or one ticket reviewed by an agent. It is the unit the included monthly volume counts.",
+      "description": "Conversations, token usage and AI messages for this organization. A message is one question sent to {{agent}} or one ticket reviewed by an agent. It is the unit the included monthly volume counts.",
       "metrics": {
         "activeConversations30d": "Active conversations (30d)",
         "activeConversations7d": "Active conversations (7d)",
@@ -152,7 +152,7 @@
       "title": "Provider",
       "validationErrorsTitle": "Current provider validation errors",
       "modelSelector": {
-        "label": "Model used by Plaid",
+        "label": "Model used by {{agent}}",
         "builtin": "{{product}} included model",
         "tenantDefault": "Default model ({{name}})",
         "noDefault": "No model configured",
@@ -205,7 +205,7 @@
       "never": "Never",
       "none": "None"
     },
-    "title": "Plaid",
+    "title": "{{agent}}",
     "includedModel": {
       "status": "{{product}} included model: {{name}} (processing location: {{place}})",
       "confirmed": "Confirmed",
@@ -347,7 +347,7 @@
     },
     "exportResources": {
       "accounts": "Accounts",
-      "aiImportFile": "File prepared by Plaid for an import",
+      "aiImportFile": "File prepared by {{agent}} for an import",
       "administrationView": "Administration zones",
       "analyticsCategories": "Analytics dimensions",
       "applications": "Applications",
@@ -848,8 +848,8 @@
         "feasibilityReviewChanged": "Feasibility review changed"
       },
       "actors": {
-        "assistant": "Plaid",
-        "assistantFor": "Plaid for {{name}}",
+        "assistant": "{{agent}}",
+        "assistantFor": "{{agent}} for {{name}}",
         "unknown": "Unknown person"
       },
       "events": {
@@ -2591,14 +2591,14 @@
     "title": "AI models",
     "sectionTitle": "Models",
     "new": "New model",
-    "empty": "No AI model configured yet. Add your first model to power Plaid and the agents.",
+    "empty": "No AI model configured yet. Add your first model to power {{agent}} and the agents.",
     "secretNotWritable": "API keys cannot be stored: the server has no encryption secret configured. Contact your administrator.",
     "defaultChip": "Default",
     "archivedChip": "Archived",
     "incomplete": "Configuration incomplete",
     "visionYes": "Images ✓",
     "visionNo": "Text only",
-    "usedByChat": "Plaid",
+    "usedByChat": "{{agent}}",
     "usedByNone": "Not assigned",
     "messagesThisMonth_one": "{{count}} message this month",
     "messagesThisMonth_other": "{{count}} messages this month",
@@ -2692,7 +2692,7 @@
       "title": "Costs",
       "totalMonth": "Total this month",
       "agentsMonth": "Agents this month",
-      "chatMonth": "Plaid this month",
+      "chatMonth": "{{agent}} this month",
       "chatEstimatedNote": "Partly estimated at the currently assigned model’s rates",
       "chatFreeNote": "The assigned model has no cost",
       "byAgent": "Cost by agent",
@@ -2983,7 +2983,7 @@
       "steps": "Steps",
       "sampleData": "Sample data",
       "firstRecord": "First record",
-      "firstQuestion": "First question to Plaid",
+      "firstQuestion": "First question to {{agent}}",
       "firstImport": "First import",
       "firstInvitation": "First invitation",
       "backDay1": "Back after 1 day",

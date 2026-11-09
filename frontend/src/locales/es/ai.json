@@ -30,13 +30,13 @@
     "dropHint": "Suelte un archivo para adjuntarlo",
     "hintEnter": "Intro para enviar",
     "hintShiftEnter": "Mayús+Intro para nueva línea",
-    "placeholder": "Pregunta a Plaid…",
+    "placeholder": "Pregunta a {{agent}}…",
     "removeAttachment": "Quitar adjunto",
     "send": "Enviar",
     "stop": "Detener la generación"
   },
   "messageList": {
-    "assistantRole": "Plaid",
+    "assistantRole": "{{agent}}",
     "copied": "Copiado",
     "copy": "Copiar mensaje",
     "cancel": "Cancelar",
@@ -441,13 +441,13 @@
     "empty": {
       "subtitle": "Pregunta cualquier cosa sobre tus tareas, proyectos, activos o documentos.",
       "suggestionsTitle": "Para comenzar",
-      "title": "Plaid está listo"
+      "title": "{{agent}} está listo"
     },
     "messages": {
-      "disabled": "Plaid está desactivado para este espacio de trabajo.",
-      "tenantDisabledAdminLink": "Actívelo en Administración › Plaid",
+      "disabled": "{{agent}} está desactivado para este espacio de trabajo.",
+      "tenantDisabledAdminLink": "Actívelo en Administración › {{agent}}",
       "tenantDisabledAskAdmin": "Pida a un administrador que lo active.",
-      "builtinNotAccepted": "Plaid espera a que un administrador lo active."
+      "builtinNotAccepted": "{{agent}} espera a que un administrador lo active."
     },
     "suggestions": {
       "applicationMention": "Resuma una aplicación: escriba @ para elegir una.",
@@ -462,12 +462,12 @@
       "awaitingDecision": "¿Qué solicitudes esperan una decisión?",
       "savings": "¿Cuáles son las principales oportunidades de ahorro en el OPEX de TI?"
     },
-    "title": "Plaid"
+    "title": "{{agent}}"
   },
   "consent": {
-    "accept": "Acepto que {{name}} ({{place}}) trate mis preguntas y los datos a los que se refieren para las respuestas de Plaid. No se usan para entrenar sus modelos.",
+    "accept": "Acepto que {{name}} ({{place}}) trate mis preguntas y los datos a los que se refieren para las respuestas de {{agent}}. No se usan para entrenar sus modelos.",
     "otherModel": "Otro modelo o desactivación:",
-    "otherModelLink": "Administración › Plaid",
+    "otherModelLink": "Administración › {{agent}}",
     "loading": "Cargando el proveedor"
   }
 }
