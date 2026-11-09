@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Button, Link, Stack, Typography } from '@mui/material';
+import { Box, Button, Link, Stack, Typography, useTheme } from '@mui/material';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink } from 'react-router-dom';
@@ -24,7 +24,7 @@ import {
   SUPPORT_EMAIL,
   supportOfferUrl,
 } from './aboutLinks';
-import { PRODUCT_NAME } from '../../config/product';
+import { PRODUCT_NAME, productSymbolUrl } from '../../config/product';
 
 const TOKEN = '[[link]]';
 
@@ -54,6 +54,7 @@ export default function AboutContent({ onNavigate }: { onNavigate?: () => void }
   const { subscription, claims } = useAuth();
   const { tenantName, tenantSlug } = useTenant();
   const locale = useLocale();
+  const { mode } = useTheme().palette;
   const discoveryCall = useDiscoveryCall();
   const [copied, setCopied] = React.useState(false);
   const copiedTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -102,7 +103,7 @@ export default function AboutContent({ onNavigate }: { onNavigate?: () => void }
     <Stack spacing={2}>
       <Stack spacing={0.5}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, pb: 0.5 }}>
-          <Box component="img" src="/icon-192.png" alt={PRODUCT_NAME} sx={{ width: 40, height: 40, flexShrink: 0 }} />
+          <Box component="img" src={productSymbolUrl(mode)} alt={PRODUCT_NAME} sx={{ width: 40, height: 40, flexShrink: 0 }} />
           <Box>
             {versionKnown && <Typography variant="body2">{t('about.version', { version: config.version })}</Typography>}
             <Typography variant="body2">

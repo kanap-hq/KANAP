@@ -32,7 +32,11 @@ function testManifestNamesTheWorkspace() {
   assert.equal(body.name, 'Acme Industries');
   assert.equal(body.short_name, 'Acme Industries');
   assert.equal(body.start_url, '/');
-  assert.deepEqual(body.icons.map((icon: any) => icon.src), ['/icon-192.png', '/icon-512.png']);
+  assert.deepEqual(body.icons.map((icon: any) => [icon.src, icon.sizes, icon.purpose]), [
+    ['/icon-192.png', '192x192', 'any'],
+    ['/icon-512.png', '512x512', 'any'],
+    ['/icon-maskable-512.png', '512x512', 'maskable'],
+  ]);
 }
 
 function testManifestFallsBackToTheProduct() {

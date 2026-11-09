@@ -19,7 +19,9 @@ export function buildWebAppManifest(tenantName: string | null | undefined) {
     orientation: 'any',
     icons: [
       { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-      { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+      { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+      // Its own file: a maskable icon keeps the symbol inside the safe zone the launcher may crop to.
+      { src: '/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
     ],
   };
 }

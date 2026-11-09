@@ -1,6 +1,7 @@
 import React from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import AboutContent from './AboutContent';
 import { COMPANY_NAME, PRODUCT_NAME } from '../../config/product';
@@ -87,6 +88,20 @@ describe('AboutContent', () => {
     expect(screen.getByRole('link', { name: 'Documentation' })).toHaveAttribute('href', 'https://doc.kanap.net/');
     expect(screen.getByRole('link', { name: 'Source code under the AGPL-3.0 license' }))
       .toHaveAttribute('href', 'https://github.com/kanap-hq/KANAP');
+  });
+
+  it('shows the product symbol in colour on a light background, inverted on a dark one', () => {
+    renderContent();
+    expect(screen.getByRole('img', { name: PRODUCT_NAME })).toHaveAttribute('src', '/brand/kadratis-symbole-couleur.svg');
+    cleanup();
+    render(
+      <ThemeProvider theme={createTheme({ palette: { mode: 'dark' } })}>
+        <MemoryRouter>
+          <AboutContent />
+        </MemoryRouter>
+      </ThemeProvider>,
+    );
+    expect(screen.getByRole('img', { name: PRODUCT_NAME })).toHaveAttribute('src', '/brand/kadratis-symbole-inverse.svg');
   });
 
   it('falls back to the list of releases while the version is unknown, and shows no version line', () => {
