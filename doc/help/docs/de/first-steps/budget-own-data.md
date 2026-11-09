@@ -9,7 +9,7 @@ description: Die fünf Schritte des Pfads IT-Budget mit Ihren eigenen Daten, von
 
 In zehn Minuten sind Ihr Unternehmen, Ihre Budgetzeilen und ein Vertrag in KANAP, Ihr erster Bericht läuft auf Ihren Zahlen, und eine Kollegin oder ein Kollege kann sie lesen. Der Beginn mit Ihren eigenen Daten löscht das Beispiel: Was Sie am Ende sehen, stammt von Ihnen.
 
-Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der Startseite, für den Pfad **Das IT-Budget** mit **Mit meinen eigenen Daten beginnen**. Jeder Schritt der Kachel öffnet seinen Bildschirm mit einem kurzen Hinweis. Ist der Schritt getan, klicken Sie im Hinweis auf **Erledigt** oder auf die Markierung neben dem Schritt. Siehe [Testphase: Ihr Pfad und Ihre ersten Schritte](../my-dashboard.md#trial-first-steps).
+Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der Startseite, für den Pfad **Das IT-Budget** mit **Mit meinen eigenen Daten beginnen**. Jeder Schritt der Kachel öffnet seinen Bildschirm mit einem kurzen Hinweis. Ein Schritt, der etwas anlegt, gilt als erledigt, sobald es im Arbeitsbereich existiert. Für **Ihr Unternehmen** und **Ihr erster Bericht** klicken Sie im Hinweis auf **Erledigt** oder auf die Markierung neben dem Schritt. Siehe [Testphase: Ihr Pfad und Ihre ersten Schritte](../my-dashboard.md#trial-first-steps).
 
 ## 1. Ihr Unternehmen
 

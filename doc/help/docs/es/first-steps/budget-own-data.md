@@ -9,7 +9,7 @@ description: Los cinco pasos del recorrido presupuesto de TI con sus propios dat
 
 En diez minutos, su empresa, sus líneas presupuestarias y un contrato están en KANAP, su primer informe funciona con sus cifras, y un colega puede leerlas. Empezar con sus datos borra el ejemplo: lo que ve al final procede de usted.
 
-Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de inicio, para el recorrido **El presupuesto de TI** con **Empezar con mis datos**. Cada paso del mosaico abre su pantalla con una indicación breve. Una vez hecho el paso, haga clic en **Hecho** en la indicación, o en la marca junto al paso. Consulte [Prueba: su recorrido y sus primeros pasos](../my-dashboard.md#trial-first-steps).
+Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de inicio, para el recorrido **El presupuesto de TI** con **Empezar con mis datos**. Cada paso del mosaico abre su pantalla con una indicación breve. Un paso que crea algo queda marcado como hecho en cuanto ese elemento existe en el espacio de trabajo. Para **Su empresa** y **Su primer informe**, haga clic en **Hecho** en la indicación, o en la marca junto al paso. Consulte [Prueba: su recorrido y sus primeros pasos](../my-dashboard.md#trial-first-steps).
 
 ## 1. Su empresa
 

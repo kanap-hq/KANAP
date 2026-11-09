@@ -58,9 +58,9 @@ If you close the dialog, the choice waits in **About KANAP**. The line **Path: �
 Once a path is chosen, the **Your first five steps** tile comes first on the home page. It lists the five steps of the path and your progress, for example **2/5**. Each step opens its screen, where the page title is outlined with one sentence of guidance.
 
 - With the example, opening a step marks it done.
-- With your own data, click **Done** in the guidance, or the mark next to the step in the tile. The mark also undoes a step.
+- With your own data, a step that creates something is marked done as soon as it exists. For the other steps, click **Done** in the guidance, or the mark next to the step in the tile. The mark also undoes a step, except one whose item exists.
 
-When the five steps are done, the tile offers the two other paths. It also offers **Restart this path**, which undoes the five steps of this path. The close button (**×**) hides the tile. To show it again, use **Show the first steps** in **About KANAP**.
+When the five steps are done, the tile offers the two other paths. It also offers **Restart this path**, which undoes the steps of this path. With your own data, a step whose item exists stays done. The close button (**×**) hides the tile. To show it again, use **Show the first steps** in **About KANAP**.
 
 During the trial, the tile also offers **Book a discovery call**: a 30-minute video call about your situation and your questions, booked on the page that opens at a time that suits you. The same link follows the days left in your trial in **About KANAP**.
 

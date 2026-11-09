@@ -9,7 +9,7 @@ description: Les cinq pas du parcours cartographie du SI sur vos propres donnée
 
 En dix minutes, vos sites, vos applications, leurs technologies et vos serveurs sont dans KANAP, vos premières dates de fin de support s'affichent, et un collègue peut tenir la cartographie à jour. Commencer avec vos données efface l'exemple : ce que vous voyez à la fin vient de vous.
 
-Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le parcours **La cartographie du SI** avec **Commencer avec mes données**. Chaque pas de la tuile ouvre son écran avec une courte indication. Une fois le pas fait, cliquez sur **Fait** dans l'indication, ou sur la marque à côté du pas. Voir [Essai : votre parcours et vos premiers pas](../my-dashboard.md#trial-first-steps).
+Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le parcours **La cartographie du SI** avec **Commencer avec mes données**. Chaque pas de la tuile ouvre son écran avec une courte indication. Chaque pas crée quelque chose et est marqué comme fait dès que cet élément existe dans l'espace. Pour marquer comme fait un pas que vous sautez, cliquez sur la marque à côté. Voir [Essai : votre parcours et vos premiers pas](../my-dashboard.md#trial-first-steps).
 
 ## 1. Vos sites
 
