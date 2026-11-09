@@ -1581,6 +1581,8 @@
       "gotIt": "Verstanden",
       "nextStep": "Nächster Schritt",
       "finish": "Abschließen",
+      "pathMenu": "Pfadoptionen",
+      "changePath": "Pfad wechseln",
       "done": "Erledigt",
       "later": "Später",
       "end": {

@@ -1581,6 +1581,8 @@
       "gotIt": "Got it",
       "nextStep": "Next step",
       "finish": "Finish",
+      "pathMenu": "Path options",
+      "changePath": "Change path",
       "done": "Done",
       "later": "Later",
       "end": {

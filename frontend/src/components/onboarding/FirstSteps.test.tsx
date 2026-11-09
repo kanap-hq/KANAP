@@ -224,6 +224,41 @@ describe('FirstStepsTile', () => {
     expect(screen.getByRole('link', { name: 'The overview' })).toBeInTheDocument();
   });
 
+  it('starts the path again from its menu, a step done by its object staying done', async () => {
+    env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'own_data' });
+    env.server.db.done.set('budget/own_data/own_company', '2026-11-02T09:20:00.000Z');
+    env.server.db.objects.add('own_budget_lines');
+    renderAt('/', <FirstStepsTile />);
+    await screen.findByText('2/5');
+    fireEvent.click(screen.getByRole('button', { name: 'Path options' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Restart this path' }));
+    await waitFor(() => expect(screen.getByText('1/5')).toBeInTheDocument());
+    expect(done('own_company')).toBeNull();
+    expect(done('own_budget_lines')).toBeTruthy();
+    expect(screen.queryByRole('menuitem')).not.toBeInTheDocument();
+  });
+
+  it('changes the path from its menu', async () => {
+    env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'example' });
+    renderAt('/', <FirstStepsTile />);
+    await screen.findByText('0/5');
+    fireEvent.click(screen.getByRole('button', { name: 'Path options' }));
+    expect(screen.queryByRole('menuitem', { name: 'Restart this path' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Change path' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'The IT landscape map' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Explore with the complete example' }));
+    await waitFor(() => expect(env.server.db.angle).toBe('cartography'));
+    await waitFor(() => expect(screen.getAllByRole('link')[0]).toHaveTextContent('The application list'));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('has no menu for a member with nothing to start again', async () => {
+    env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'example', administrator: false });
+    renderAt('/', <FirstStepsTile />);
+    await screen.findByText('0/5');
+    expect(screen.queryByRole('button', { name: 'Path options' })).not.toBeInTheDocument();
+  });
+
   it('shows nothing without a path', async () => {
     env.server = createFakeOnboardingServer({ mode: 'example' });
     renderAt('/', <FirstStepsTile />);

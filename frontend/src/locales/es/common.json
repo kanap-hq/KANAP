@@ -1581,6 +1581,8 @@
       "gotIt": "Entendido",
       "nextStep": "Siguiente paso",
       "finish": "Terminar",
+      "pathMenu": "Opciones del recorrido",
+      "changePath": "Cambiar de recorrido",
       "done": "Hecho",
       "later": "Más tarde",
       "end": {
