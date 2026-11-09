@@ -8,7 +8,7 @@ Preferred channel:
 - GitHub: use this repository's private vulnerability reporting (Security Advisories).
 
 Alternative channel:
-- Email: `security@kanap.net`
+- Email: `security@kadratis.com`
 - Subject: `[SECURITY] <short summary>`
 
 Please do **not** open public GitHub issues for security vulnerabilities.
