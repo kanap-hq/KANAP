@@ -124,7 +124,7 @@ Rate limiting (default enabled):
     - The names are optional: a form without them works as before. The signup keeps them (`trial_signups.first_name`, `last_name`); a new signup for the same slug replaces them, or clears them when absent.
     - `slug` must match `/^[a-z0-9-]+$/`.
     - Slug normalization/reservation is centralized in `backend/src/tenants/tenant-slug-policy.ts`.
-    - Reserved slugs rejected as unavailable: `www`, `api`, `admin`, `billing`, `account`, `platform-admin`, `app`, `nextcloud`, `migration`, `example`.
+    - Reserved slugs rejected as unavailable: `www`, `api`, `admin`, `billing`, `account`, `platform-admin`, `app`, `nextcloud`, `migration`, `example`; in multi-tenant mode also `dev`, `qa`, `doc`, `send`, `tenants`, `mail`, `autodiscover`, `status`, `kanap` (a tenant that already holds one keeps it).
     - `country_iso` is a 2-letter ISO code (uppercase), used later for the initial company.
   - Behavior: saves a pending signup and emails an activation link. When email is not configured, returns `{ activation_url }` so QA/dev can activate manually.
   - The activation link starts with `MARKETING_BASE_URL`. Without it, outside development mode: `400` `marketing URL is not configured: set MARKETING_BASE_URL` for every request, before anything is saved or sent. In development mode, a request on a local development host stands in for it.
