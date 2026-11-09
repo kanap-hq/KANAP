@@ -1,6 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { isDevelopmentEnv } from './env';
 import { Features } from '../config/features';
+import { listedDomainOfHost, tenantBaseDomains } from './tenant-base-domains';
 
 /** The answer of a feature that needs an application link when no address is configured. */
 export const APP_URL_NOT_CONFIGURED_MESSAGE = 'application URL is not configured: set APP_BASE_URL';
@@ -46,14 +47,17 @@ function getRequestProto(req: any): 'http' | 'https' {
 
 /**
  * Hosts of the local development set-ups: lvh.me and its subdomains, localhost and
- * `*.localhost`, dev.kanap.net and its subdomains.
+ * `*.localhost`, and dev.kanap.net and its subdomains. When `TENANT_BASE_DOMAINS` is set, its
+ * domains take the place of dev.kanap.net, in development mode only: a development machine lists
+ * its own domains there (`dev.kanap.net,dev.example.com`), and no other mode widens this set.
  */
-export function isLocalDevelopmentHost(host: string): boolean {
+export function isLocalDevelopmentHost(host: string, env: NodeJS.ProcessEnv = process.env): boolean {
   const h = sanitizeHost(host);
   if (!h) return false;
-  return h === 'lvh.me' || h.endsWith('.lvh.me')
-    || h === 'localhost' || h.endsWith('.localhost')
-    || h === 'dev.kanap.net' || h.endsWith('.dev.kanap.net');
+  if (h === 'lvh.me' || h.endsWith('.lvh.me') || h === 'localhost' || h.endsWith('.localhost')) return true;
+  const domains = tenantBaseDomains(env);
+  if (domains) return isDevelopmentEnv(env) && listedDomainOfHost(h, domains) !== null;
+  return h === 'dev.kanap.net' || h.endsWith('.dev.kanap.net');
 }
 
 /**
@@ -76,7 +80,12 @@ export function developmentRequestOrigin(req: any): string | null {
 }
 
 /** A request host: reused when it already is this tenant's host, otherwise the domain rules. */
-function resolveTenantOriginFromHost(host: string, tenantSlug: string, proto: 'http' | 'https'): string | null {
+function resolveTenantOriginFromHost(
+  host: string,
+  tenantSlug: string,
+  proto: 'http' | 'https',
+  domains: readonly string[] | null,
+): string | null {
   const normalizedHost = sanitizeHost(host);
   if (!normalizedHost) return null;
 
@@ -84,11 +93,20 @@ function resolveTenantOriginFromHost(host: string, tenantSlug: string, proto: 'h
   if (normalizedHost.startsWith(`${tenantSlug.toLowerCase()}.`)) {
     return `${proto}://${normalizedHost}`;
   }
-  return tenantOriginFromDomain(normalizedHost, tenantSlug, proto);
+  return tenantOriginFromDomain(normalizedHost, tenantSlug, proto, domains);
 }
 
-/** The tenant's address on the domain of a host (lvh.me, dev/qa.kanap.net, kanap.net, `app.<domain>`). */
-function tenantOriginFromDomain(host: string, tenantSlug: string, proto: 'http' | 'https'): string | null {
+/**
+ * The tenant's address on the domain of a host: lvh.me, then the listed domains of
+ * `TENANT_BASE_DOMAINS` when it is set (`domains`), otherwise dev/qa.kanap.net, kanap.net and
+ * `app.<domain>`.
+ */
+function tenantOriginFromDomain(
+  host: string,
+  tenantSlug: string,
+  proto: 'http' | 'https',
+  domains: readonly string[] | null,
+): string | null {
   const normalizedHost = sanitizeHost(host);
   if (!normalizedHost) return null;
   const slug = tenantSlug.toLowerCase();
@@ -96,6 +114,13 @@ function tenantOriginFromDomain(host: string, tenantSlug: string, proto: 'http' 
   // Dev: lvh.me wildcard
   if (normalizedHost === 'lvh.me' || normalizedHost === 'www.lvh.me' || normalizedHost.endsWith('.lvh.me')) {
     return `${proto}://${slug}.lvh.me`;
+  }
+
+  // The listed domains replace the built-in ones: a link always leads to a host the tenancy
+  // middleware reads as this tenant.
+  if (domains) {
+    const domain = listedDomainOfHost(normalizedHost, domains);
+    return domain ? `${proto}://${slug}.${domain}` : null;
   }
 
   // Dev (local via tunnel): *.dev.kanap.net (apex dev.kanap.net)
@@ -148,9 +173,9 @@ function parseConfiguredUrl(raw: string | undefined): URL | null {
  * A configured address turned into the tenant's address, keeping its scheme and port. Only the
  * domain rules apply: `https://kanap.net` gives `https://kanap.kanap.net` for the tenant `kanap`.
  */
-function tenantOriginFromConfiguredUrl(url: URL, tenantSlug: string): string | null {
+function tenantOriginFromConfiguredUrl(url: URL, tenantSlug: string, domains: readonly string[] | null): string | null {
   const proto = url.protocol === 'https:' ? 'https' : 'http';
-  const derived = tenantOriginFromDomain(url.hostname, tenantSlug, proto);
+  const derived = tenantOriginFromDomain(url.hostname, tenantSlug, proto, domains);
   if (!derived) return null;
   return url.port ? `${derived}:${url.port}` : derived;
 }
@@ -163,9 +188,10 @@ const TENANT_SLUG_SHAPE = /^[a-z0-9][a-z0-9-]*$/;
  *
  * - single-tenant: `APP_BASE_URL`, then `PUBLIC_APP_URL`;
  * - multi-tenant, for a tenant: the first of `APP_BASE_URL`, `PUBLIC_APP_URL`, `APP_URL` whose
- *   host is on a known tenant domain (lvh.me, dev.kanap.net, qa.kanap.net, kanap.net, or a host
- *   starting with `app.`), turned into the tenant's address `<slug>.<domain>` (scheme and port
- *   kept); when none is, the first of them as configured;
+ *   host is on a known tenant domain (lvh.me, then the domains of `TENANT_BASE_DOMAINS` when it is
+ *   set, otherwise dev.kanap.net, qa.kanap.net, kanap.net, or a host starting with `app.`),
+ *   turned into the tenant's address `<slug>.<domain>` (scheme and port kept); when none is, the
+ *   first of them as configured;
  * - multi-tenant without a tenant: the first of `APP_BASE_URL`, `PUBLIC_APP_URL`, `APP_URL`.
  *
  * Returns the origin (no trailing slash), or null when nothing is configured.
@@ -184,8 +210,9 @@ export function resolveConfiguredAppBaseUrl(
 
   const slug = String(tenantSlug ?? '').trim().toLowerCase();
   if (slug && TENANT_SLUG_SHAPE.test(slug)) {
+    const domains = tenantBaseDomains(env, singleTenant);
     for (const url of configured) {
-      const derived = tenantOriginFromConfiguredUrl(url, slug);
+      const derived = tenantOriginFromConfiguredUrl(url, slug, domains);
       if (derived) return derived;
     }
   }
@@ -217,7 +244,7 @@ export function resolveTenantAppBaseUrl(req: any, tenantSlug: string) {
 
   const devHost = developmentRequestHost(req);
   if (devHost) {
-    const fromRequest = resolveTenantOriginFromHost(devHost, tenantSlug, getRequestProto(req));
+    const fromRequest = resolveTenantOriginFromHost(devHost, tenantSlug, getRequestProto(req), tenantBaseDomains());
     if (fromRequest) return fromRequest;
   }
 
