@@ -2,7 +2,7 @@ import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
 
 export default defineConfig({
-  site: 'https://kanap.net',
+  site: 'https://kadratis.com',
   trailingSlash: 'ignore',
   // Keep HTML-aware whitespace collapsing (one space kept between inline
   // elements). Astro 7 otherwise defaults to JSX rules ('jsx'), which drops

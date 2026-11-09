@@ -74,7 +74,7 @@ const siteDescription = t('site.description');
 const finalTitle = title ? `${title} · KANAP` : siteTitle;
 const finalDescription = description ?? siteDescription;
 const finalCanonical = canonical ?? Astro.url.href;
-const site = Astro.site ?? new URL('https://kanap.net');
+const site = Astro.site ?? new URL('https://kadratis.com');
 const ogImageUrl = new URL(ogImage ?? '/og-image.png', site).href;
 
 const alternates = alternateOverride
