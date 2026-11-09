@@ -80,7 +80,7 @@ const content: OfferContent = {
       {
         name: 'Kadratis Cloud',
         badge: 'Fully managed',
-        target: 'Unlimited users · unlimited workspaces',
+        target: 'Unlimited users',
         price: '€249',
         period: '/mo',
         subPrice: 'or €2,490/yr (2 months free)',

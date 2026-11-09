@@ -77,8 +77,8 @@ const content: OfferContent = {
     plans: [
       {
         name: 'Kadratis Cloud',
-        badge: 'Fully managed',
-        target: 'Unbegrenzte Nutzer · unbegrenzte Arbeitsbereiche',
+        badge: 'Vollständig verwaltet',
+        target: 'Unbegrenzte Nutzer',
         price: '249 €',
         period: '/Mon',
         subPrice: 'oder 2.490 €/Jahr (2 Monate gratis)',

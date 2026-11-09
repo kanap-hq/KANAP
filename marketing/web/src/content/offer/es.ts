@@ -80,7 +80,7 @@ const content: OfferContent = {
       {
         name: 'Kadratis Cloud',
         badge: 'Totalmente gestionado',
-        target: 'Usuarios ilimitados · espacios de trabajo ilimitados',
+        target: 'Usuarios ilimitados',
         price: '249 €',
         period: '/mes',
         subPrice: 'o 2 490 €/año (2 meses gratis)',
