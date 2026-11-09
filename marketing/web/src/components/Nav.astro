@@ -203,14 +203,19 @@ function isActive(href: string): boolean {
     border-bottom-color: var(--kanap-border-default);
   }
 
+  /* Brand and actions take equal side columns so the links sit in the
+     middle of the bar. */
   .mk-nav__inner {
-    display: flex;
+    --mk-nav-link-pad: clamp(6px, 0.8vw, 10px);
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    gap: 24px;
+    column-gap: clamp(16px, 2vw, 32px);
     height: 100%;
   }
 
   .mk-nav__brand {
+    justify-self: start;
     display: inline-flex;
     align-items: center;
     gap: 10px;
@@ -236,9 +241,7 @@ function isActive(href: string): boolean {
   .mk-nav__links {
     display: flex;
     align-items: center;
-    gap: 2px;
-    flex: 1;
-    margin-left: 12px;
+    gap: clamp(0px, 0.4vw, 4px);
   }
 
   .mk-nav__link {
@@ -247,7 +250,8 @@ function isActive(href: string): boolean {
     align-items: center;
     gap: 4px;
     height: 32px;
-    padding-inline: 10px;
+    padding-inline: var(--mk-nav-link-pad);
+    white-space: nowrap;
     color: var(--kanap-text-secondary);
     font-size: 14px;
     font-weight: 400;
@@ -269,8 +273,8 @@ function isActive(href: string): boolean {
   .mk-nav__link.is-active::after {
     content: '';
     position: absolute;
-    left: 10px;
-    right: 10px;
+    left: var(--mk-nav-link-pad);
+    right: var(--mk-nav-link-pad);
     bottom: -6px;
     height: 2px;
     background: var(--kanap-teal);
@@ -358,6 +362,8 @@ function isActive(href: string): boolean {
   }
 
   .mk-nav__actions {
+    justify-self: end;
+    white-space: nowrap;
     display: flex;
     align-items: center;
     gap: 6px;
@@ -431,15 +437,26 @@ function isActive(href: string): boolean {
     justify-content: center;
   }
 
-  @media (max-width: 960px) {
+  /* The menu button takes over before the links run out of room (the
+     Spanish labels are the longest). */
+  @media (max-width: 1200px) {
+    .mk-nav__inner {
+      grid-template-columns: 1fr auto;
+    }
+
     .mk-nav__links,
-    .mk-nav__signin,
-    .mk-nav__cta {
+    .mk-nav__signin {
       display: none;
     }
 
     .mk-nav__menu {
       display: inline-flex;
+    }
+  }
+
+  @media (max-width: 960px) {
+    .mk-nav__cta {
+      display: none;
     }
   }
 </style>
