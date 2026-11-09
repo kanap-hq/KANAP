@@ -20,7 +20,7 @@ const content: TrialContent = {
       countryLabel: 'Country',
       countryNoMatch: 'No matching country',
       slugLabel: 'Workspace address',
-      slugDomain: '.kadratis.com',
+      slugDomain: '.kanap.net',
       emailLabel: 'Administrator email',
       submitLabel: 'Send activation link',
       submitting: 'Sending…',
