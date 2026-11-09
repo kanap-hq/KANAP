@@ -212,6 +212,7 @@ import { confirmLeave } from '../../hooks/leaveGuard';
 import { fetchBudgetRelationsCount } from '../../utils/workspaceTabCounts';
 import { DEFAULT_BUDGET_COLUMNS } from '../../services/budgetColumns';
 import { resetListContextCache } from '../../lib/listContext';
+import { PRODUCT_NAME } from '../../config/product';
 
 const mocked = api as unknown as {
   get: ReturnType<typeof vi.fn>; post: ReturnType<typeof vi.fn>; patch: ReturnType<typeof vi.fn>; delete: ReturnType<typeof vi.fn>;
@@ -2085,7 +2086,7 @@ describe('native contract and Type', () => {
     expect(mocked.get).toHaveBeenCalledWith(`/budget-lines/${ref}`, expect.objectContaining({ signal: expect.any(AbortSignal) }));
     expect(screen.getByTestId('line-reference')).toHaveTextContent('BL-127');
     expect(screen.getByText('budget.title')).toBeInTheDocument();
-    expect(document.title).toBe('BL-127 · Investment | KANAP');
+    expect(document.title).toBe(`BL-127 · Investment | ${PRODUCT_NAME}`);
     expect(mocked.get.mock.calls.some(([url]) => url === `${BUDGET_NATURE_CONFIG[nature].itemsApi}/${ref}`)).toBe(false);
   });
 

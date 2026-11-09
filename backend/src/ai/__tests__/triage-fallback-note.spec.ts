@@ -35,7 +35,7 @@ const WEB_LINE = '- VPN guide (https://example.test/vpn)';
 
 function noteShell(sourceBlock: string, brief: string): string {
   return [
-    '[KANAP triage proposal]',
+    `[${PRODUCT_NAME} triage proposal]`,
     'Ticket #12 - VPN access',
     'Status: open',
     'Priority: medium',
@@ -48,7 +48,7 @@ function noteShell(sourceBlock: string, brief: string): string {
     'Technician brief:',
     brief,
     '',
-    'No external change has been made. This note was prepared by KANAP and requires human approval before posting.',
+    `No external change has been made. This note was prepared by ${PRODUCT_NAME} and requires human approval before posting.`,
   ].join('\n');
 }
 

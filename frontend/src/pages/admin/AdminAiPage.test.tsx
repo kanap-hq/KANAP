@@ -8,6 +8,7 @@ import AdminAiPage from './AdminAiPage';
 import { createAppTheme } from '../../config/ThemeContext';
 import api from '../../api';
 import { KanapDialogProvider } from '../../components/design';
+import { AGENT_NAME, PRODUCT_NAME } from '../../config/product';
 
 vi.mock('../../api', () => ({
   default: {
@@ -150,7 +151,7 @@ describe('AdminAiPage', () => {
     renderPage();
 
     await screen.findByRole('heading', { name: 'Provider' });
-    expect(await screen.findByText('Model used by Plaid')).toBeInTheDocument();
+    expect(await screen.findByText(`Model used by ${AGENT_NAME}`)).toBeInTheDocument();
     expect(await screen.findByText('Claude production')).toBeInTheDocument();
     expect(await screen.findByText('No MCP keys or connections.')).toBeInTheDocument();
     // The token/usage overview moved to the dedicated Usage & costs page.
@@ -164,7 +165,7 @@ describe('AdminAiPage', () => {
     const link = await screen.findByRole('link', { name: 'AI models page' });
     expect(link).toHaveAttribute('href', '/admin/ai-models');
 
-    const row = screen.getByText('Model used by Plaid').closest('.kanap-field-label')?.parentElement;
+    const row = screen.getByText(`Model used by ${AGENT_NAME}`).closest('.kanap-field-label')?.parentElement;
     expect(row).toBeTruthy();
     // Label, value, then the helper. The hint must not sit beside the select.
     expect(row!.children).toHaveLength(3);
@@ -538,13 +539,13 @@ describe('AdminAiPage included model', () => {
   it('asks for a confirmation and sends the key shown', async () => {
     settings = baseSettings({
       chat_ready: false,
-      provider_validation_errors: ["The KANAP included model needs an administrator's confirmation in Admin > Plaid."],
+      provider_validation_errors: [`The ${PRODUCT_NAME} included model needs an administrator's confirmation in Admin > ${AGENT_NAME}.`],
       builtin_provider: provider({}),
     });
     renderPage();
 
     const status = await screen.findByTestId('included-model-status');
-    expect(within(status).getByText('KANAP included model: Anthropic (processing location: United States)')).toBeInTheDocument();
+    expect(within(status).getByText(`${PRODUCT_NAME} included model: Anthropic (processing location: United States)`)).toBeInTheDocument();
     expect(within(status).getByText('Needs confirmation')).toBeInTheDocument();
     // The status line says it: no validation list and no "provider incomplete" chip on top.
     expect(screen.queryByText('Current provider validation errors')).not.toBeInTheDocument();
@@ -552,7 +553,7 @@ describe('AdminAiPage included model', () => {
 
     fireEvent.click(within(status).getByRole('button', { name: 'Confirm' }));
     const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText('Use the KANAP included model?')).toBeInTheDocument();
+    expect(within(dialog).getByText(`Use the ${PRODUCT_NAME} included model?`)).toBeInTheDocument();
     expect(within(dialog).getByText(/are sent to Anthropic\. Processing location: United States\./)).toBeInTheDocument();
     expect(within(dialog).getByRole('link', { name: 'AI models list' })).toHaveAttribute('href', '/admin/ai-models');
 
@@ -636,7 +637,7 @@ describe('AdminAiPage included model', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save settings' }));
 
     const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText('Use the KANAP included model?')).toBeInTheDocument();
+    expect(within(dialog).getByText(`Use the ${PRODUCT_NAME} included model?`)).toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm and turn on' }));
 
     await waitFor(() => expect(api.patch).toHaveBeenLastCalledWith('/ai/settings', {

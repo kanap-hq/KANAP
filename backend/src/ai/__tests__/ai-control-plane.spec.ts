@@ -118,6 +118,7 @@ import { TicketAttachmentReadResult } from '../control-plane/providers/provider.
 import { AiResolvedTenantSecret } from '../control-plane/providers/tenant-secret-resolver.service';
 import { AiExecutionContextWithManager } from '../ai.types';
 import { Features } from '../../config/features';
+import { AGENT_NAME, PRODUCT_NAME } from '../../config/product';
 
 // A control-plane refusal carries its translatable code (`errors:<code>` on the screen).
 const refusedWith = (code: string) => (error: unknown) =>
@@ -6420,8 +6421,8 @@ async function testKnowledgeInterpreterFallbackKeepsRequesterNeedAbovePlannerNoi
         },
         {
           ref: 'DOC-152',
-          title: 'Plaid — Assistant IA Intégré à KANAP : Description Complète',
-          summary: 'Description complète de Plaid, assistant IA intégré à la plateforme KANAP pour la gouvernance IT.',
+          title: `${AGENT_NAME} — Assistant IA Intégré à ${PRODUCT_NAME} : Description Complète`,
+          summary: `Description complète de ${AGENT_NAME}, assistant IA intégré à la plateforme ${PRODUCT_NAME} pour la gouvernance IT.`,
           snippet: 'Plateforme spécialisée dans la gouvernance informatique et la gestion des demandes.',
           status: 'draft',
           search_queries: [
@@ -11495,7 +11496,7 @@ async function seedExecutedGlpiFollowupActions(context: ReturnType<typeof create
     action_payload_json: {
       ticketId: '4',
       visibility: 'internal',
-      body: input.internalBody ?? '[KANAP triage proposal]\nPrior internal note.',
+      body: input.internalBody ?? `[${PRODUCT_NAME} triage proposal]\nPrior internal note.`,
       bodyFormat: 'plain_text',
     },
     input_hash: 'prior-internal-hash',
@@ -11515,7 +11516,7 @@ async function seedExecutedGlpiFollowupActions(context: ReturnType<typeof create
     action_payload_json: {
       ticketId: '4',
       visibility: 'public',
-      body: input.publicBody ?? 'Prior public KANAP reply.',
+      body: input.publicBody ?? `Prior public ${PRODUCT_NAME} reply.`,
       bodyFormat: 'plain_text',
     },
     input_hash: 'prior-public-hash',
@@ -12388,7 +12389,7 @@ async function testGlpiTriageAllowsFollowupsAfterRequesterAnswer() {
   const context = createContext(manager);
   await seedExecutedGlpiFollowupActions(context, {
     executedAt: new Date('2026-06-07T10:00:00.000Z'),
-    publicBody: 'Prior public KANAP reply.',
+    publicBody: `Prior public ${PRODUCT_NAME} reply.`,
   });
   const calls: Array<{ capabilityName: string; input: any }> = [];
   const service = createGlpiConversationGateTriageService({
@@ -12398,7 +12399,7 @@ async function testGlpiTriageAllowsFollowupsAfterRequesterAnswer() {
       {
         id: '101',
         visibility: 'public',
-        body: 'Prior public KANAP reply.',
+        body: `Prior public ${PRODUCT_NAME} reply.`,
         createdAt: '2026-06-07T10:00:00.000Z',
       },
       {
@@ -12433,7 +12434,7 @@ async function testGlpiTriageUsesProviderNoteTimeToBlockRepeatFollowups() {
     executedAt: new Date('2026-06-07T19:57:22.000Z'),
     internalNoteId: '201',
     publicNoteId: '202',
-    publicBody: 'Prior public KANAP reply.',
+    publicBody: `Prior public ${PRODUCT_NAME} reply.`,
   });
   const calls: Array<{ capabilityName: string; input: any }> = [];
   const service = createGlpiConversationGateTriageService({
@@ -12449,13 +12450,13 @@ async function testGlpiTriageUsesProviderNoteTimeToBlockRepeatFollowups() {
       {
         id: '201',
         visibility: 'internal',
-        body: '[KANAP triage proposal]\nPrior internal note.',
+        body: `[${PRODUCT_NAME} triage proposal]\nPrior internal note.`,
         createdAt: '2026-06-07T21:57:22.000Z',
       },
       {
         id: '202',
         visibility: 'public',
-        body: 'Prior public KANAP reply.',
+        body: `Prior public ${PRODUCT_NAME} reply.`,
         createdAt: '2026-06-07T21:58:22.000Z',
       },
     ],
@@ -13564,7 +13565,7 @@ async function testGlpiTriageFallbackFailsClosedWhenSynthesisFails() {
   assert.equal(capabilityNames.includes(TICKETING_PUBLIC_REPLY_PREPARE_CAPABILITY), false);
   assert.equal(capabilityNames.includes(TICKETING_STATUS_UPDATE_PREPARE_CAPABILITY), false);
   assert.equal(result.work_item.status, 'waiting_approval');
-  assert.match(internalNoteBody, /KANAP triage proposal/);
+  assert.match(internalNoteBody, new RegExp(`${PRODUCT_NAME} triage proposal`));
   const savedInternalAction = (await manager.getRepository(AiActionRequest).find()).find((action: AiActionRequest) => action.id === 'internal-action-47');
   assert.ok(savedInternalAction);
   assert.equal(savedInternalAction.metadata_json?.synthesis_usable, false);
@@ -16630,11 +16631,11 @@ function testRoutingDriftSnapshotIsKindScopedAndIgnoresTheAgentAccount() {
   };
   const afterSelfRegistration = {
     ...prepared,
-    assignedUsers: [{ kind: 'user', key: '99', label: 'KANAP Agent' }],
+    assignedUsers: [{ kind: 'user', key: '99', label: `${PRODUCT_NAME} Agent` }],
   };
   const afterHumanAssignedSomeoneElse = {
     ...prepared,
-    assignedUsers: [{ kind: 'user', key: '99', label: 'KANAP Agent' }, { kind: 'user', key: '21', label: 'Marie Dupont' }],
+    assignedUsers: [{ kind: 'user', key: '99', label: `${PRODUCT_NAME} Agent` }, { kind: 'user', key: '21', label: 'Marie Dupont' }],
   };
   const same = (left: unknown, right: unknown, kind: 'group' | 'user') =>
     JSON.stringify(routingDriftSnapshot(left, kind)) === JSON.stringify(routingDriftSnapshot(right, kind));

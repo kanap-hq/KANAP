@@ -18,7 +18,7 @@ function testSingleSellablePlan() {
   const keys = Object.keys(PLANS);
   assert.deepEqual(keys, ['max']);
   const plan = PLANS.max;
-  assert.equal(plan.displayName, 'Hosted KANAP');
+  assert.equal(plan.displayName, `${PRODUCT_NAME} Cloud`);
   assert.equal(plan.seatLimit, null);
   assert.equal(plan.invoiceEligible, true);
   assert.equal(plan.prices.monthly, 24900);
@@ -32,17 +32,16 @@ function testLegacyNameResolution() {
   assert.equal(resolvePlanKeyFromLegacyName('Trial'), null);
   assert.equal(resolvePlanKeyFromLegacyName('Starter'), null);
   assert.equal(resolvePlanKeyFromLegacyName(null), null);
-  assert.equal(toPlanDisplayName('max'), 'Hosted KANAP');
   // The current display name, built from the product name, resolves as the stored legacy one does.
-  assert.equal(toPlanDisplayName('max'), `Hosted ${PRODUCT_NAME}`);
-  assert.equal(resolvePlanKeyFromLegacyName(`Hosted ${PRODUCT_NAME}`), 'max');
-  assert.equal(resolvePlanKeyFromLegacyName(`  hosted ${PRODUCT_NAME.toLowerCase()} `), 'max');
+  assert.equal(toPlanDisplayName('max'), `${PRODUCT_NAME} Cloud`);
+  assert.equal(resolvePlanKeyFromLegacyName(`${PRODUCT_NAME} Cloud`), 'max');
+  assert.equal(resolvePlanKeyFromLegacyName(`  ${PRODUCT_NAME.toLowerCase()} cloud `), 'max');
 }
 
 function testStoredPlanNameShowsTheCurrentName() {
   // A subscription stored under the legacy name shows the current one: no data migration on a rename.
-  assert.equal(planNameForDisplay('Hosted KANAP'), `Hosted ${PRODUCT_NAME}`);
-  assert.equal(planNameForDisplay('max'), `Hosted ${PRODUCT_NAME}`);
+  assert.equal(planNameForDisplay('Hosted KANAP'), `${PRODUCT_NAME} Cloud`);
+  assert.equal(planNameForDisplay('max'), `${PRODUCT_NAME} Cloud`);
   // Names that are no sellable plan stay as stored.
   assert.equal(planNameForDisplay('Trial'), 'Trial');
   assert.equal(planNameForDisplay('On-Prem'), 'On-Prem');

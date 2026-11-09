@@ -12,6 +12,7 @@ import {
   type RecordHistoryChange,
   type RecordHistoryItem,
 } from './recordHistoryText';
+import { AGENT_NAME } from '../../config/product';
 
 const t = i18n.getFixedT('en', ['admin', 'ops', 'common']) as unknown as Translate;
 const context: HistoryTextContext = { t, locale: 'en' };
@@ -290,8 +291,8 @@ describe('history lines', () => {
     expect(historyActorText({ kind: 'user', name: null }, t)).toBe('Unknown person');
     expect(historyActorText({ kind: 'system', name: null }, t)).toBe('System');
     expect(historyActorText({ kind: 'import', name: 'Ava Reader' }, t)).toBe('Import');
-    expect(historyActorText({ kind: 'assistant', name: 'Ava Reader' }, t)).toBe('Plaid for Ava Reader');
-    expect(historyActorText({ kind: 'assistant', name: null }, t)).toBe('Plaid');
+    expect(historyActorText({ kind: 'assistant', name: 'Ava Reader' }, t)).toBe(`${AGENT_NAME} for Ava Reader`);
+    expect(historyActorText({ kind: 'assistant', name: null }, t)).toBe(AGENT_NAME);
   });
 });
 

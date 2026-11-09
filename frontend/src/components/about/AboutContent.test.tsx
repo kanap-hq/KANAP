@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import AboutContent from './AboutContent';
+import { COMPANY_NAME, PRODUCT_NAME } from '../../config/product';
 
 // The path line reads the onboarding API: covered by its own test.
 vi.mock('../onboarding/AboutOnboardingLine', () => ({ default: () => null }));
@@ -177,8 +178,8 @@ describe('AboutContent', () => {
     const href = mail.getAttribute('href') ?? '';
     expect(href.startsWith('mailto:support@kanap.net?')).toBe(true);
     const params = new URLSearchParams(href.slice(href.indexOf('?') + 1));
-    expect(params.get('subject')).toBe('KANAP support: Acme / acme');
-    expect(params.get('body')).toContain('KANAP version: 26.10.1');
+    expect(params.get('subject')).toBe(`${COMPANY_NAME} support: Acme / acme`);
+    expect(params.get('body')).toContain(`${PRODUCT_NAME} version: 26.10.1`);
     expect(params.get('body')).toContain('Workspace: Acme / acme');
     expect(params.get('body')).toContain('Deployment: cloud');
     expect(params.get('body')).toContain(`Browser: ${navigator.userAgent}`);
@@ -194,7 +195,7 @@ describe('AboutContent', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Copied' })).toBeInTheDocument());
     expect(writeText).toHaveBeenCalledTimes(1);
     const copied = writeText.mock.calls[0][0] as string;
-    expect(copied).toContain('KANAP version: 26.10.1');
+    expect(copied).toContain(`${PRODUCT_NAME} version: 26.10.1`);
     expect(copied).toContain('Workspace: Acme / acme');
     const mail = screen.getByRole('link', { name: 'support@kanap.net' }).getAttribute('href') ?? '';
     expect(new URLSearchParams(mail.slice(mail.indexOf('?') + 1)).get('body')).toContain(copied);

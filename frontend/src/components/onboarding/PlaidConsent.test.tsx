@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../i18n';
 import { createAppTheme } from '../../config/ThemeContext';
 import PlaidConsent from './PlaidConsent';
+import { AGENT_NAME } from '../../config/product';
 
 const env = vi.hoisted(() => ({
   settingsAvailable: true,
@@ -55,7 +56,7 @@ describe('PlaidConsent', () => {
     renderConsent();
     const box = await screen.findByRole('checkbox');
     expect(screen.getByText(/^I agree that Anthropic \(.+\) processes my questions/)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Admin › Plaid' })).toHaveAttribute('href', '/admin/ai');
+    expect(screen.getByRole('link', { name: `Admin › ${AGENT_NAME}` })).toHaveAttribute('href', '/admin/ai');
     fireEvent.click(box);
     await waitFor(() => expect(env.updateSettings).toHaveBeenCalledWith({ chat_enabled: true, accept_builtin_provider_key: 'k1' }));
   });
@@ -76,7 +77,7 @@ describe('PlaidConsent', () => {
   it('tells anyone else that Plaid waits for an administrator', () => {
     env.settingsAvailable = false;
     renderConsent();
-    expect(screen.getByText('Plaid is waiting for an administrator to turn it on.')).toBeInTheDocument();
+    expect(screen.getByText(`${AGENT_NAME} is waiting for an administrator to turn it on.`)).toBeInTheDocument();
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
     expect(env.getSettings).not.toHaveBeenCalled();
   });

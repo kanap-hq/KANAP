@@ -15,6 +15,7 @@ import { AiPolicyService } from '../ai-policy.service';
 import { AI_RECORD_HISTORY_TABLES, AiRecordHistoryService, type GetRecordHistoryInput } from '../ai-record-history.service';
 import { AiQueryExecutor } from '../query/ai-query.executor';
 import type { AiExecutionContextWithManager } from '../ai.types';
+import { PRODUCT_NAME } from '../../config/product';
 
 // get_record_history against a real database (Plaid L7, lot C): the entries of a record's History
 // tab, read by RecordHistoryService under the person's own transaction. The policy is the real one
@@ -170,7 +171,7 @@ async function testFamilyWithoutHistory(seeded: Seeded) {
     read(seeded.data.tenantId, seeded.reader, { entity_type: 'users', entity_id: randomUUID() }),
     (error: any) => {
       assert.equal(error.status, 400);
-      assert.match(error.message, /^This record has no history in KANAP: users have no History tab\./);
+      assert.match(error.message, new RegExp(`^This record has no history in ${PRODUCT_NAME}: users have no History tab\\.`));
       assert.match(error.message, /budget lines/);
       assert.match(error.message, /technologies/);
       // Cost centers, working-day calendars and analytics dimensions have their History tab (Plaid L9).
@@ -184,7 +185,7 @@ async function testFamilyWithoutHistory(seeded: Seeded) {
   for (const entityType of ['vulnerabilities', 'roles'] as const) {
     await assert.rejects(
       read(seeded.data.tenantId, seeded.reader, { entity_type: entityType, entity_id: randomUUID() }),
-      /no history in KANAP/,
+      new RegExp(`no history in ${PRODUCT_NAME}`),
       entityType,
     );
   }

@@ -4,13 +4,13 @@
  */
 
 /** The product: what a workspace runs on ("Powered by …", "Acme via …", the assistant's platform). */
-export const PRODUCT_NAME = 'KANAP';
+export const PRODUCT_NAME = 'Kadratis';
 
 /** The company that publishes the product: publisher, legal mentions, support, copyright. */
 export const COMPANY_NAME = 'KANAP';
 
 /** The integrated AI agent: the chat, its settings, its instructions to the model, the emails. */
-export const AGENT_NAME = 'Plaid';
+export const AGENT_NAME = 'Kad';
 
 /** The organisation name an on-premise workspace gets when `DEFAULT_TENANT_NAME` is not set. */
 export const DEFAULT_ORGANISATION_NAME = 'My Organization';

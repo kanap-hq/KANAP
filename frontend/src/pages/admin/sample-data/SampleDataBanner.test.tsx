@@ -9,6 +9,7 @@ import SampleDataBanner from './SampleDataBanner';
 import { SAMPLE_DATA_STEPS } from './useSampleData';
 import { createAppTheme } from '../../../config/ThemeContext';
 import { api as apiClient } from '../../../api/client';
+import { PRODUCT_NAME } from '../../../config/product';
 
 vi.mock('../../../api/client', () => ({
   api: { get: vi.fn(), post: vi.fn(), put: vi.fn(), patch: vi.fn(), delete: vi.fn() },
@@ -68,7 +69,7 @@ function renderBanner() {
   );
 }
 
-const TEXT = 'Discover KANAP with sample data.';
+const TEXT = `Discover ${PRODUCT_NAME} with sample data.`;
 
 describe('SampleDataBanner', () => {
   beforeEach(() => {

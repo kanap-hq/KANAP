@@ -7,6 +7,7 @@ import { aiSearchApi } from '../aiApi';
 import { createAppTheme } from '../../config/ThemeContext';
 // MentionPopover reaches i18n through aiApi. This file mocks aiApi, so load i18n itself.
 import '../../i18n';
+import { AGENT_NAME } from '../../config/product';
 
 vi.mock('../aiApi', () => ({
   aiSearchApi: { searchEntities: vi.fn() },
@@ -24,7 +25,7 @@ describe('ChatInput', () => {
     const onSend = vi.fn();
     renderWithTheme(<ChatInput onSend={onSend} />);
 
-    const input = screen.getByPlaceholderText(/Ask Plaid/);
+    const input = screen.getByPlaceholderText(new RegExp(`Ask ${AGENT_NAME}`));
     const sendButton = screen.getByRole('button');
 
     fireEvent.change(input, { target: { value: '  hello plaid  ' } });
@@ -39,7 +40,7 @@ describe('ChatInput', () => {
     const onSend = vi.fn();
     renderWithTheme(<ChatInput onSend={onSend} disabled />);
 
-    const input = screen.getByPlaceholderText(/Ask Plaid/);
+    const input = screen.getByPlaceholderText(new RegExp(`Ask ${AGENT_NAME}`));
     const sendButton = screen.getByRole('button');
 
     expect(sendButton).toBeDisabled();
@@ -62,6 +63,6 @@ describe('ChatInput', () => {
     await waitFor(() => expect(aiSearchApi.searchEntities).toHaveBeenCalledWith('', expect.objectContaining({
       entityTypes: ['applications'],
     })));
-    expect(screen.getByPlaceholderText(/Ask Plaid/)).toHaveValue('Résume une application @APP-');
+    expect(screen.getByPlaceholderText(new RegExp(`Ask ${AGENT_NAME}`))).toHaveValue('Résume une application @APP-');
   });
 });

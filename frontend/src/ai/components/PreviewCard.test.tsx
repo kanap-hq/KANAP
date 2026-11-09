@@ -10,6 +10,7 @@ import PreviewCard from './PreviewCard';
 import ArtifactPreviewChip from './ArtifactPreviewChip';
 import { getPreviewLabel } from '../utils/previewClassification';
 import { downloadServerExport } from '../../components/csv/serverExport';
+import { PRODUCT_NAME } from '../../config/product';
 
 vi.mock('../../components/csv/serverExport', () => ({ downloadServerExport: vi.fn(async () => undefined) }));
 
@@ -319,19 +320,19 @@ describe('PreviewCard in French', () => {
     renderCard(preview({
       tool_name: 'create_business_record',
       target: { entity_type: 'technologies', entity_id: null, ref: null, title: 'PostgreSQL' },
-      summary: 'Adoption de « PostgreSQL » depuis le catalogue KANAP.',
+      summary: `Adoption de « PostgreSQL » depuis le catalogue ${PRODUCT_NAME}.`,
       changes: {
         catalog_adoption: {
-          label: 'KANAP catalog',
+          label: `${PRODUCT_NAME} catalog`,
           from: null,
-          to: '**Adoptée du catalogue KANAP**\n- 12 versions, fin de support de 2017-01-01 à 2032-12-31',
+          to: `**Adoptée du catalogue ${PRODUCT_NAME}**\n- 12 versions, fin de support de 2017-01-01 à 2032-12-31`,
           format: 'markdown',
         },
         family: { label: 'Family', from: null, to: 'database', format: 'text' },
       },
     }));
-    expect(screen.getAllByText('Catalogue KANAP').length).toBeGreaterThan(0);
-    expect(screen.getByText(/Adoptée du catalogue KANAP/)).toBeInTheDocument();
+    expect(screen.getAllByText(`Catalogue ${PRODUCT_NAME}`).length).toBeGreaterThan(0);
+    expect(screen.getByText(new RegExp(`Adoptée du catalogue ${PRODUCT_NAME}`))).toBeInTheDocument();
     // The family code reads as the screen shows it, in French.
     expect(screen.getByText('Famille')).toBeInTheDocument();
     expect(screen.getByText('Base de données')).toBeInTheDocument();
