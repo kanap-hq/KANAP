@@ -200,7 +200,7 @@ const content: LegalContent = {
     },
     body: `
 <h2>Article 1. Purpose</h2>
-<p>These General Terms and Conditions of Sale (GTC) govern the sale by KANAP (hereinafter "the Vendor"), an EURL (single-member limited liability company) with a share capital of €1,000, registered with the RCS Saverne under number 939 098 190, whose registered office is located at 2, rue du Finhay, 67210 Obernai, France, of subscriptions to the online IT management platform "Kadratis" (formerly "KANAP").</p>
+<p>These General Terms and Conditions of Sale (GTC) govern the sale by KANAP (hereinafter "the Vendor"), an EURL (single-member limited liability company) with a share capital of €1,000, registered with the RCS Saverne under number 939 098 190, whose registered office is located at 2, rue du Finhay, 67210 Obernai, France, of subscriptions to the online IT management platform "Kadratis".</p>
 
 <h2>Article 2. Acceptance of the GTC</h2>
 <p>Acceptance of these GTC is mandatory before any subscription and implies full acceptance by the Customer of these conditions.</p>

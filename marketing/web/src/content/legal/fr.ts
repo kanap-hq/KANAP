@@ -200,7 +200,7 @@ const content: LegalContent = {
     },
     body: `
 <h2>Article 1. Objet</h2>
-<p>Les présentes Conditions générales de vente (CGV) régissent la vente par KANAP (ci-après « le Vendeur »), EURL (entreprise unipersonnelle à responsabilité limitée) au capital de 1 000 €, immatriculée au RCS de Saverne sous le numéro 939 098 190, dont le siège social est situé 2, rue du Finhay, 67210 Obernai, France, d'abonnements à la plateforme en ligne de gestion informatique « Kadratis » (anciennement « KANAP »).</p>
+<p>Les présentes Conditions générales de vente (CGV) régissent la vente par KANAP (ci-après « le Vendeur »), EURL (entreprise unipersonnelle à responsabilité limitée) au capital de 1 000 €, immatriculée au RCS de Saverne sous le numéro 939 098 190, dont le siège social est situé 2, rue du Finhay, 67210 Obernai, France, d'abonnements à la plateforme en ligne de gestion informatique « Kadratis ».</p>
 
 <h2>Article 2. Acceptation des CGV</h2>
 <p>L'acceptation des présentes CGV est obligatoire avant toute souscription et emporte l'adhésion pleine et entière du Client à ces conditions.</p>
