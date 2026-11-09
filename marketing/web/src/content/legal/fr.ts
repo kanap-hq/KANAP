@@ -18,7 +18,7 @@ const content: LegalContent = {
     },
     body: `
 <h2>Préambule</h2>
-<p>KANAP (ci-après « KANAP »), EURL (entreprise unipersonnelle à responsabilité limitée) immatriculée au RCS de Saverne sous le numéro 939 098 190, dont le siège social est situé 2, rue du Finhay, 67210 Obernai, France, accorde la plus grande importance à la protection de vos données personnelles. La présente politique de confidentialité (ci-après la « Politique ») a pour objet de vous informer de manière claire et transparente sur les traitements de données personnelles mis en œuvre par KANAP dans le cadre de l'utilisation de la plateforme en ligne de gestion informatique « Kadratis » (anciennement « KANAP », ci-après « la Plateforme »).</p>
+<p>KANAP (ci-après « KANAP »), EURL (entreprise unipersonnelle à responsabilité limitée) immatriculée au RCS de Saverne sous le numéro 939 098 190, dont le siège social est situé 2, rue du Finhay, 67210 Obernai, France, accorde la plus grande importance à la protection de vos données personnelles. La présente politique de confidentialité (ci-après la « Politique ») a pour objet de vous informer de manière claire et transparente sur les traitements de données personnelles mis en œuvre par KANAP dans le cadre de l'utilisation de la plateforme en ligne de gestion informatique « Kadratis » (ci-après « la Plateforme »).</p>
 <p>KANAP s'engage à respecter le Règlement général sur la protection des données (RGPD) et la loi n° 78-17 du 6 janvier 1978 relative à l'informatique, aux fichiers et aux libertés, dans sa version modifiée.</p>
 
 <h2>1. Responsable du traitement</h2>
@@ -113,7 +113,7 @@ const content: LegalContent = {
 <p>La Plateforme est hébergée dans l'Union européenne, en Allemagne. Certains prestataires mentionnés à la section 5 peuvent traiter des données personnelles hors de l'Union européenne, par exemple Cloudflare pour le trafic réseau. Dans ce cas, KANAP s'assure que des garanties appropriées sont en place (le cadre de protection des données UE-États-Unis ou des clauses contractuelles types).</p>
 
 <h2>10. Cookies et technologies de suivi</h2>
-<p>Les sites kadratis.com et kanap.net ne déposent aucun cookie publicitaire ou de mesure d'audience et n'affichent pas de bandeau cookies. Nous mesurons l'audience avec Cloudflare Web Analytics, qui fonctionne sans cookie et sans rien stocker sur votre appareil. Les formulaires de contact et d'essai utilisent Cloudflare Turnstile, une vérification de sécurité qui distingue les personnes des programmes automatisés. Ils retiennent votre choix de thème clair ou sombre dans votre navigateur, uniquement si vous en choisissez un.</p>
+<p>Le site kadratis.com ne dépose aucun cookie publicitaire ou de mesure d'audience et n'affiche pas de bandeau cookies. Nous mesurons l'audience avec Cloudflare Web Analytics, qui fonctionne sans cookie et sans rien stocker sur votre appareil. Les formulaires de contact et d'essai utilisent Cloudflare Turnstile, une vérification de sécurité qui distingue les personnes des programmes automatisés. Le site retient votre choix de thème clair ou sombre dans votre navigateur, uniquement si vous en choisissez un.</p>
 <p>L'application utilise uniquement les cookies nécessaires à la connexion et au maintien de votre session. Elle stocke aussi des préférences d'interface, comme votre thème et la disposition des tableaux, dans votre navigateur. Vous pouvez les supprimer à tout moment dans les paramètres de votre navigateur.</p>
 
 <h2>11. Modifications de la politique</h2>
@@ -135,7 +135,7 @@ const content: LegalContent = {
     },
     body: `
 <h2>Préambule</h2>
-<p>Les présentes Conditions générales d'utilisation régissent l'accès et l'utilisation de la plateforme en ligne de gestion informatique « Kadratis » (anciennement « KANAP », ci-après « la Plateforme » ou « le Service ») éditée par KANAP, EURL (entreprise unipersonnelle à responsabilité limitée) immatriculée au RCS de Saverne sous le numéro 939 098 190, dont le siège social est situé 2, rue du Finhay, 67210 Obernai, France. L'utilisation de la Plateforme vaut acceptation pleine et entière des présentes Conditions générales d'utilisation.</p>
+<p>Les présentes Conditions générales d'utilisation régissent l'accès et l'utilisation de la plateforme en ligne de gestion informatique « Kadratis » (ci-après « la Plateforme » ou « le Service ») éditée par KANAP, EURL (entreprise unipersonnelle à responsabilité limitée) immatriculée au RCS de Saverne sous le numéro 939 098 190, dont le siège social est situé 2, rue du Finhay, 67210 Obernai, France. L'utilisation de la Plateforme vaut acceptation pleine et entière des présentes Conditions générales d'utilisation.</p>
 
 <h2>Article 1. Accès à la plateforme et création de compte</h2>
 <p>1.1. L'accès à la Plateforme est réservé aux utilisateurs ayant souscrit un abonnement valide, conformément aux Conditions générales de vente (CGV) de KANAP.</p>
@@ -259,7 +259,7 @@ const content: LegalContent = {
   legal: {
     meta: {
       title: 'Mentions légales',
-      description: "Éditeur, hébergement et juridiction applicable pour les sites kadratis.com et kanap.net.",
+      description: "Éditeur, hébergement et juridiction applicable pour le site kadratis.com.",
     },
     header: {
       eyebrow: 'Mentions légales',
@@ -267,7 +267,7 @@ const content: LegalContent = {
       lastUpdated: 'Dernière mise à jour : [date de la bascule]',
     },
     body: `
-<h2>Éditeur des sites</h2>
+<h2>Éditeur du site</h2>
 <p><strong>KANAP</strong><br/>
 EURL au capital de 1 000 €<br/>
 RCS Saverne 939 098 190<br/>
@@ -275,19 +275,19 @@ SIRET : 939 098 190 00019<br/>
 N° de TVA intracommunautaire : FR04939098190 (TVA non applicable, art. 293 B du CGI)<br/>
 Siège social : 2, rue du Finhay, 67210 Obernai, France</p>
 <p>Directeur de la publication : Friedrich Eva</p>
-<p>Les sites kadratis.com et kanap.net sont édités par KANAP. Kadratis™ est une marque de KANAP, déposée à l'INPI.</p>
+<p>Kadratis™ est une marque de KANAP, déposée à l'INPI.</p>
 
 <h2>Contact</h2>
 <p>E-mail : <a href="mailto:support@kanap.net">support@kanap.net</a></p>
 
 <h2>Hébergement</h2>
-<p>Les sites kadratis.com et kanap.net sont hébergés par Hetzner Online GmbH, dont le siège social est situé :</p>
+<p>Le site kadratis.com est hébergé par Hetzner Online GmbH, dont le siège social est situé :</p>
 <p>Hetzner Online GmbH<br/>
 Industriestr. 25, 91710 Gunzenhausen, Allemagne</p>
-<p>Les serveurs sont situés à Nuremberg, en Allemagne. Le trafic vers les sites passe par Cloudflare, qui fournit le réseau de diffusion de contenu et la protection TLS.</p>
+<p>Les serveurs sont situés à Nuremberg, en Allemagne. Le trafic vers le site passe par Cloudflare, qui fournit le réseau de diffusion de contenu et la protection TLS.</p>
 
 <h2>Droit applicable et juridiction</h2>
-<p>Les présents sites sont régis par le droit français. En cas de litige relatif à l'utilisation des sites kadratis.com et kanap.net et à défaut d'accord amiable entre les parties concernées, les tribunaux français sont seuls compétents.</p>
+<p>Le présent site est régi par le droit français. En cas de litige relatif à l'utilisation du site kadratis.com et à défaut d'accord amiable entre les parties concernées, les tribunaux français sont seuls compétents.</p>
 `,
   },
 };

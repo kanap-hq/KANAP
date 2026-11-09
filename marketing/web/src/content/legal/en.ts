@@ -18,7 +18,7 @@ const content: LegalContent = {
     },
     body: `
 <h2>Preamble</h2>
-<p>KANAP (hereinafter "KANAP"), an EURL (single-member limited liability company) registered with the RCS Saverne under number 939 098 190, whose registered office is located at 2, rue du Finhay, 67210 Obernai, France, attaches the highest importance to the protection of your personal data. This privacy policy (hereinafter the "Policy") aims to inform you in a clear and transparent manner about the processing of personal data implemented by KANAP in connection with the use of the online IT management platform "Kadratis" (formerly "KANAP", hereinafter "the Platform").</p>
+<p>KANAP (hereinafter "KANAP"), an EURL (single-member limited liability company) registered with the RCS Saverne under number 939 098 190, whose registered office is located at 2, rue du Finhay, 67210 Obernai, France, attaches the highest importance to the protection of your personal data. This privacy policy (hereinafter the "Policy") aims to inform you in a clear and transparent manner about the processing of personal data implemented by KANAP in connection with the use of the online IT management platform "Kadratis" (hereinafter "the Platform").</p>
 <p>KANAP undertakes to comply with the General Data Protection Regulation (GDPR) and French Law No. 78-17 of January 6, 1978 relating to data processing, files, and freedoms, as amended.</p>
 
 <h2>1. Data controller</h2>
@@ -113,7 +113,7 @@ const content: LegalContent = {
 <p>The Platform is hosted in the European Union, in Germany. Some providers listed in section 5 may process personal data outside the European Union, for example Cloudflare for network traffic. In that case, KANAP ensures that appropriate safeguards are in place (the EU-US Data Privacy Framework or standard contractual clauses).</p>
 
 <h2>10. Cookies and tracking technologies</h2>
-<p>The kadratis.com and kanap.net websites set no advertising or analytics cookies and show no cookie banner. We measure audience with Cloudflare Web Analytics, which works without cookies and without storing anything on your device. The contact and trial forms use Cloudflare Turnstile, a security check that tells people from automated programs. They remember your light or dark theme choice in your browser, only when you pick one.</p>
+<p>The kadratis.com website sets no advertising or analytics cookies and shows no cookie banner. We measure audience with Cloudflare Web Analytics, which works without cookies and without storing anything on your device. The contact and trial forms use Cloudflare Turnstile, a security check that tells people from automated programs. The website remembers your light or dark theme choice in your browser, only when you pick one.</p>
 <p>The application uses only the cookies needed to sign in and keep your session. It also stores interface preferences, such as your theme and table layout, in your browser. You can remove them at any time in your browser settings.</p>
 
 <h2>11. Modifications to the policy</h2>
@@ -135,7 +135,7 @@ const content: LegalContent = {
     },
     body: `
 <h2>Preamble</h2>
-<p>These Terms of Use govern the access and use of the online IT management platform "Kadratis" (formerly "KANAP", hereinafter "the Platform" or "the Service") published by KANAP, an EURL (single-member limited liability company) registered with the RCS Saverne under number 939 098 190, whose registered office is located at 2, rue du Finhay, 67210 Obernai, France. Use of the Platform implies full acceptance of these Terms of Use.</p>
+<p>These Terms of Use govern the access and use of the online IT management platform "Kadratis" (hereinafter "the Platform" or "the Service") published by KANAP, an EURL (single-member limited liability company) registered with the RCS Saverne under number 939 098 190, whose registered office is located at 2, rue du Finhay, 67210 Obernai, France. Use of the Platform implies full acceptance of these Terms of Use.</p>
 
 <h2>Article 1. Access to the platform and account creation</h2>
 <p>1.1. Access to the Platform is reserved for users who have subscribed to a valid subscription, in accordance with the General Terms and Conditions of Sale (GTC) of KANAP.</p>
@@ -259,7 +259,7 @@ const content: LegalContent = {
   legal: {
     meta: {
       title: 'Legal notice',
-      description: 'Publisher, hosting, and legal jurisdiction information for kadratis.com and kanap.net.',
+      description: 'Publisher, hosting, and legal jurisdiction information for kadratis.com.',
     },
     header: {
       eyebrow: 'Legal',
@@ -267,7 +267,7 @@ const content: LegalContent = {
       lastUpdated: 'Last updated: [date de la bascule]',
     },
     body: `
-<h2>Website publisher</h2>
+<h2>Site publisher</h2>
 <p><strong>KANAP</strong><br/>
 EURL with a share capital of €1,000<br/>
 RCS Saverne 939 098 190<br/>
@@ -275,19 +275,19 @@ SIRET: 939 098 190 00019<br/>
 VAT number: FR04939098190 (VAT not applicable, art. 293 B of the French General Tax Code)<br/>
 Registered office: 2, rue du Finhay, 67210 Obernai, France</p>
 <p>Director of publication: Friedrich Eva</p>
-<p>The kadratis.com and kanap.net websites are published by KANAP. Kadratis™ is a trademark of KANAP, filed with the French trademark office (INPI).</p>
+<p>Kadratis™ is a trademark of KANAP, filed with the French trademark office (INPI).</p>
 
 <h2>Contact</h2>
 <p>Email: <a href="mailto:support@kanap.net">support@kanap.net</a></p>
 
 <h2>Hosting</h2>
-<p>The kadratis.com and kanap.net websites are hosted by Hetzner Online GmbH, whose registered office is located at:</p>
+<p>The website kadratis.com is hosted by Hetzner Online GmbH, whose registered office is located at:</p>
 <p>Hetzner Online GmbH<br/>
 Industriestr. 25, 91710 Gunzenhausen, Germany</p>
-<p>The servers are located in Nuremberg, Germany. Traffic to the websites passes through Cloudflare, which provides the content delivery network and TLS protection.</p>
+<p>The servers are located in Nuremberg, Germany. Traffic to the website passes through Cloudflare, which provides the content delivery network and TLS protection.</p>
 
 <h2>Applicable law and jurisdiction</h2>
-<p>These websites are governed by French law. In the event of a dispute relating to the use of the kadratis.com and kanap.net websites and in the absence of an amicable agreement between the parties concerned, the French courts shall have sole jurisdiction.</p>
+<p>This website is governed by French law. In the event of a dispute relating to the use of the kadratis.com website and in the absence of an amicable agreement between the parties concerned, the French courts shall have sole jurisdiction.</p>
 `,
   },
 };

@@ -21,7 +21,7 @@ const content: LegalContent = {
     },
     body: `
 <h2>Preámbulo</h2>
-<p>KANAP (en adelante, «KANAP»), EURL (sociedad unipersonal de responsabilidad limitada) inscrita en el Registro Mercantil (RCS) de Saverne con el número 939 098 190, con domicilio social en 2, rue du Finhay, 67210 Obernai, Francia, concede la mayor importancia a la protección de tus datos personales. La presente política de privacidad (en adelante, la «Política») tiene por objeto informarte de forma clara y transparente sobre los tratamientos de datos personales que realiza KANAP en el marco del uso de la plataforma en línea de gestión informática «Kadratis» (antes «KANAP»; en adelante, «la Plataforma»).</p>
+<p>KANAP (en adelante, «KANAP»), EURL (sociedad unipersonal de responsabilidad limitada) inscrita en el Registro Mercantil (RCS) de Saverne con el número 939 098 190, con domicilio social en 2, rue du Finhay, 67210 Obernai, Francia, concede la mayor importancia a la protección de tus datos personales. La presente política de privacidad (en adelante, la «Política») tiene por objeto informarte de forma clara y transparente sobre los tratamientos de datos personales que realiza KANAP en el marco del uso de la plataforma en línea de gestión informática «Kadratis» (en adelante, «la Plataforma»).</p>
 <p>KANAP se compromete a cumplir el Reglamento General de Protección de Datos (RGPD) y la ley francesa n.º 78-17 de 6 de enero de 1978 relativa a la informática, los ficheros y las libertades, en su versión modificada.</p>
 
 <h2>1. Responsable del tratamiento</h2>
@@ -116,7 +116,7 @@ const content: LegalContent = {
 <p>La Plataforma está alojada en la Unión Europea, en Alemania. Algunos proveedores mencionados en la sección 5 pueden tratar datos personales fuera de la Unión Europea, por ejemplo Cloudflare para el tráfico de red. En ese caso, KANAP se asegura de que existan garantías adecuadas (el Marco de Privacidad de Datos UE-EE. UU. o cláusulas contractuales tipo).</p>
 
 <h2>10. Cookies y tecnologías de seguimiento</h2>
-<p>Los sitios web kadratis.com y kanap.net no instalan ninguna cookie publicitaria ni de medición de audiencia y no muestran banner de cookies. Medimos la audiencia con Cloudflare Web Analytics, que funciona sin cookies y sin almacenar nada en tu dispositivo. Los formularios de contacto y de prueba usan Cloudflare Turnstile, una comprobación de seguridad que distingue a las personas de los programas automatizados. Los sitios recuerdan en tu navegador tu elección de tema claro u oscuro, solo si eliges uno.</p>
+<p>El sitio web kadratis.com no instala ninguna cookie publicitaria ni de medición de audiencia y no muestra banner de cookies. Medimos la audiencia con Cloudflare Web Analytics, que funciona sin cookies y sin almacenar nada en tu dispositivo. Los formularios de contacto y de prueba usan Cloudflare Turnstile, una comprobación de seguridad que distingue a las personas de los programas automatizados. El sitio recuerda en tu navegador tu elección de tema claro u oscuro, solo si eliges uno.</p>
 <p>La aplicación usa únicamente las cookies necesarias para iniciar sesión y mantenerla. También almacena en tu navegador preferencias de interfaz, como tu tema y la disposición de las tablas. Puedes eliminarlas en cualquier momento en la configuración de tu navegador.</p>
 
 <h2>11. Modificaciones de la política</h2>

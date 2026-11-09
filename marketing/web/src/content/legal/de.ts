@@ -21,7 +21,7 @@ const content: LegalContent = {
     },
     body: `
 <h2>Präambel</h2>
-<p>KANAP (nachfolgend „KANAP“), eine EURL (Einpersonengesellschaft mit beschränkter Haftung), eingetragen im Handels- und Gesellschaftsregister (RCS) Saverne unter der Nummer 939 098 190, mit Sitz in 2, rue du Finhay, 67210 Obernai, Frankreich, misst dem Schutz Ihrer personenbezogenen Daten größte Bedeutung bei. Diese Datenschutzerklärung (nachfolgend die „Erklärung“) informiert Sie klar und transparent über die Verarbeitung personenbezogener Daten, die KANAP im Rahmen der Nutzung der Online-Plattform für IT-Management „Kadratis“ (vormals „KANAP“, nachfolgend „die Plattform“) durchführt.</p>
+<p>KANAP (nachfolgend „KANAP“), eine EURL (Einpersonengesellschaft mit beschränkter Haftung), eingetragen im Handels- und Gesellschaftsregister (RCS) Saverne unter der Nummer 939 098 190, mit Sitz in 2, rue du Finhay, 67210 Obernai, Frankreich, misst dem Schutz Ihrer personenbezogenen Daten größte Bedeutung bei. Diese Datenschutzerklärung (nachfolgend die „Erklärung“) informiert Sie klar und transparent über die Verarbeitung personenbezogener Daten, die KANAP im Rahmen der Nutzung der Online-Plattform für IT-Management „Kadratis“ (nachfolgend „die Plattform“) durchführt.</p>
 <p>KANAP verpflichtet sich, die Datenschutz-Grundverordnung (DSGVO) und das französische Gesetz Nr. 78-17 vom 6. Januar 1978 über Informatik, Dateien und Freiheiten in seiner geänderten Fassung einzuhalten.</p>
 
 <h2>1. Verantwortlicher</h2>
@@ -116,7 +116,7 @@ const content: LegalContent = {
 <p>Die Plattform wird in der Europäischen Union, in Deutschland, gehostet. Einige der in Abschnitt 5 genannten Dienstleister können personenbezogene Daten außerhalb der Europäischen Union verarbeiten, zum Beispiel Cloudflare für den Netzwerkverkehr. In diesem Fall stellt KANAP sicher, dass geeignete Garantien bestehen (der EU-US-Datenschutzrahmen oder Standardvertragsklauseln).</p>
 
 <h2>10. Cookies und Tracking-Technologien</h2>
-<p>Die Websites kadratis.com und kanap.net setzen keine Werbe- oder Analyse-Cookies und zeigen kein Cookie-Banner. Wir messen die Besucherzahlen mit Cloudflare Web Analytics, das ohne Cookies und ohne Speicherung auf Ihrem Gerät funktioniert. Die Kontakt- und Testformulare verwenden Cloudflare Turnstile, eine Sicherheitsprüfung, die Menschen von automatisierten Programmen unterscheidet. Die Websites speichern Ihre Wahl zwischen hellem und dunklem Design in Ihrem Browser, nur wenn Sie eines auswählen.</p>
+<p>Die Website kadratis.com setzt keine Werbe- oder Analyse-Cookies und zeigt kein Cookie-Banner. Wir messen die Besucherzahlen mit Cloudflare Web Analytics, das ohne Cookies und ohne Speicherung auf Ihrem Gerät funktioniert. Die Kontakt- und Testformulare verwenden Cloudflare Turnstile, eine Sicherheitsprüfung, die Menschen von automatisierten Programmen unterscheidet. Die Website speichert Ihre Wahl zwischen hellem und dunklem Design in Ihrem Browser, nur wenn Sie eines auswählen.</p>
 <p>Die Anwendung verwendet nur die Cookies, die für die Anmeldung und die Aufrechterhaltung Ihrer Sitzung erforderlich sind. Sie speichert außerdem Oberflächeneinstellungen, etwa Ihr Design und die Anordnung der Tabellen, in Ihrem Browser. Sie können diese jederzeit in den Einstellungen Ihres Browsers löschen.</p>
 
 <h2>11. Änderungen der Erklärung</h2>
