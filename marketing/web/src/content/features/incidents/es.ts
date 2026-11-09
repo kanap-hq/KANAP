@@ -9,7 +9,7 @@ const content: FeatureContent = {
   header: {
     eyebrow: 'Incidentes',
     title: 'Guarde un registro detallado de sus incidentes graves.',
-    lead: 'KANAP guarda la memoria de los incidentes que importan: qué pasó, a qué afectó, por qué y qué cambió usted. Cada uno recibe un número, una revisión y un diario, y sigue vinculado a las aplicaciones y los servidores afectados.',
+    lead: 'Kadratis guarda la memoria de los incidentes que importan: qué pasó, a qué afectó, por qué y qué cambió usted. Cada uno recibe un número, una revisión y un diario, y sigue vinculado a las aplicaciones y los servidores afectados.',
   },
   sections: [
     {
@@ -65,7 +65,7 @@ const content: FeatureContent = {
     title: 'Y además',
     items: [
       { title: 'Importación y exportación CSV', body: 'Traiga sus incidentes pasados desde una hoja de cálculo, revisiones incluidas, y exporte todo el registro.' },
-      { title: 'Plaid y MCP', body: 'Pregúntele a Plaid cuántos incidentes graves se abrieron este año, o la ficha completa de uno, diario y revisión incluidos. Los incidentes confidenciales quedan fuera. Los mismos datos están abiertos a sus clientes de IA a través del servidor MCP de solo lectura.' },
+      { title: 'Kad y MCP', body: 'Pregúntele a Kad cuántos incidentes graves se abrieron este año, o la ficha completa de uno, diario y revisión incluidos. Los incidentes confidenciales quedan fuera. Los mismos datos están abiertos a sus clientes de IA a través del servidor MCP de solo lectura.' },
       { title: 'Notas antedatadas', body: 'Las notas del diario llevan la hora en que ocurrió el hecho. La hora en que se guardaron se conserva aparte y no puede modificarse.' },
       { title: 'Permisos', body: 'Los lectores consultan, los colaboradores crean y redactan, los administradores del registro reabren, cancelan, eliminan y levantan una restricción.' },
     ],
@@ -76,7 +76,7 @@ const content: FeatureContent = {
       { label: 'Panorama IT', href: '/features/it-landscape' },
       { label: 'Contratos', href: '/features/contracts' },
       { label: 'Documentación', href: '/features/knowledge' },
-      { label: 'Plaid, el agente de IA integrado', href: '/features/ai' },
+      { label: 'Kad, el agente de IA integrado', href: '/features/ai' },
       { label: 'Agente de helpdesk', href: '/features/agents' },
     ],
   },

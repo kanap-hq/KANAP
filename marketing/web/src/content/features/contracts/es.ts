@@ -9,7 +9,7 @@ const content: FeatureContent = {
   header: {
     eyebrow: 'Contratos',
     title: 'No vuelva a perder una fecha límite de rescisión.',
-    lead: 'Introduzca la fecha de inicio, la duración y el preaviso de un contrato: KANAP calcula cada periodo y el último día para rescindir. El responsable tiene una decisión que tomar antes de ese día. El contrato está vinculado a sus líneas presupuestarias, aplicaciones y activos.',
+    lead: 'Introduzca la fecha de inicio, la duración y el preaviso de un contrato: Kadratis calcula cada periodo y el último día para rescindir. El responsable tiene una decisión que tomar antes de ese día. El contrato está vinculado a sus líneas presupuestarias, aplicaciones y activos.',
   },
   sections: [
     {
@@ -38,7 +38,7 @@ const content: FeatureContent = {
     },
     {
       title: 'Una decisión antes del vencimiento',
-      body: 'Cuando se abre la ventana de decisión, KANAP crea una tarea para el responsable del contrato. En el contrato, tres respuestas: renovar, renegociar o rescindir. Antes de confirmar una rescisión, KANAP muestra lo que cambia: la fecha de fin que permite el preaviso, el compromiso de este año y del siguiente, las aplicaciones y los activos que pierden el contrato.',
+      body: 'Cuando se abre la ventana de decisión, Kadratis crea una tarea para el responsable del contrato. En el contrato, tres respuestas: renovar, renegociar o rescindir. Antes de confirmar una rescisión, Kadratis muestra lo que cambia: la fecha de fin que permite el preaviso, el compromiso de este año y del siguiente, las aplicaciones y los activos que pierden el contrato.',
       bullets: [
         'Ventana de decisión configurable por tenant, 90 días por defecto',
         'Una tarea para el responsable, con el correo de asignación habitual',
@@ -66,7 +66,7 @@ const content: FeatureContent = {
     items: [
       { title: 'Registro de conformidad', body: 'Cinco cláusulas que seguir (contrato de encargado del tratamiento RGPD, ubicación de los datos, reversibilidad, plan de salida, derecho de auditoría), según las aplicaciones que cubre el contrato. Una ayuda a la conformidad que se ampliará en las próximas versiones.' },
       { title: 'Relaciones y contactos', body: 'Aplicaciones, activos y tecnologías cubiertos por el contrato, contactos del proveedor con su función, enlaces y archivos adjuntos.' },
-      { title: 'Plaid y MCP', body: 'Pregúntele a Plaid qué contratos hay que decidir en los próximos 90 días. Los mismos datos están abiertos a sus propios clientes de IA a través del servidor MCP de solo lectura.' },
+      { title: 'Kad y MCP', body: 'Pregúntele a Kad qué contratos hay que decidir en los próximos 90 días. Los mismos datos están abiertos a sus propios clientes de IA a través del servidor MCP de solo lectura.' },
       { title: 'Permisos detallados', body: 'Los lectores consultan, los miembros crean y deciden, los administradores importan, exportan y eliminan. Los importes del presupuesto siguen los permisos del presupuesto.' },
     ],
   },
@@ -76,7 +76,7 @@ const content: FeatureContent = {
       { label: 'Presupuesto de TI', href: '/features/budget' },
       { label: 'Panorama IT', href: '/features/it-landscape' },
       { label: 'Incidentes', href: '/features/incidents' },
-      { label: 'Plaid, el agente de IA integrado', href: '/features/ai' },
+      { label: 'Kad, el agente de IA integrado', href: '/features/ai' },
       { label: 'Portafolio de proyectos', href: '/features/portfolio' },
     ],
   },

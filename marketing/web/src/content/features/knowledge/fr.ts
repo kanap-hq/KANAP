@@ -65,7 +65,7 @@ const content: FeatureContent = {
     title: 'Plus dans Connaissance',
     items: [
       { title: 'Historique des versions', body: 'Chaque sauvegarde crée une version. Parcourez et restaurez toute version antérieure.' },
-      { title: 'Export', body: 'Export PDF, DOCX et ODT. Partagez la documentation hors KANAP.' },
+      { title: 'Export', body: 'Export PDF, DOCX et ODT. Partagez la documentation hors Kadratis.' },
       { title: 'Gabarits', body: 'Démarreurs réutilisables groupés par type. Lancement rapide.' },
       { title: 'Import', body: 'Import depuis Word et PDF. Faites entrer votre documentation existante en un clic.' },
     ],
@@ -74,7 +74,7 @@ const content: FeatureContent = {
     label: 'Explorez la plateforme',
     links: [
       { label: 'Agents', href: '/features/agents' },
-      { label: 'Plaid, Assistant IA', href: '/features/ai' },
+      { label: 'Kad, Assistant IA', href: '/features/ai' },
       { label: 'Gestion du budget', href: '/features/budget' },
       { label: 'Cartographie IT', href: '/features/it-landscape' },
       { label: 'Gestion de portefeuille', href: '/features/portfolio' },

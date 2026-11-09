@@ -75,7 +75,7 @@ const content: FeatureContent = {
     label: 'Explore la plataforma',
     links: [
       { label: 'Agentes', href: '/features/agents' },
-      { label: 'Plaid, asistente de IA', href: '/features/ai' },
+      { label: 'Kad, asistente de IA', href: '/features/ai' },
       { label: 'Gestión de presupuesto', href: '/features/budget' },
       { label: 'Panorama IT', href: '/features/it-landscape' },
       { label: 'Conocimiento', href: '/features/knowledge' },

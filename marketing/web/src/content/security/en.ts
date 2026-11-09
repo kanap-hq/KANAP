@@ -4,7 +4,7 @@ const content: SecurityContent = {
   meta: {
     title: 'Security',
     description:
-      'How KANAP protects your data: row-level security, hashed passwords, encrypted secrets, RBAC, a security audit log, agent governance, SSO, a transparent build, and open source. Self-host or cloud.',
+      'How Kadratis protects your data: row-level security, hashed passwords, encrypted secrets, RBAC, a security audit log, agent governance, SSO, a transparent build, and open source. Self-host or cloud.',
   },
   header: {
     eyebrow: 'Security',
@@ -14,7 +14,7 @@ const content: SecurityContent = {
   overview: {
     title: 'Principles',
     intro:
-      'KANAP is designed for IT departments that handle sensitive data. We treat your data the way we want IT vendors to treat ours, transparent, isolated, and within reach when you need it.',
+      'Kadratis is designed for IT departments that handle sensitive data. We treat your data the way we want IT vendors to treat ours, transparent, isolated, and within reach when you need it.',
     pillars: [
       {
         title: 'Transparent by default',
@@ -33,7 +33,7 @@ const content: SecurityContent = {
   tenancy: {
     title: 'Tenant isolation',
     body:
-      'KANAP is multi-tenant at the database level. Every row in every shared table carries a `tenant_id`, and PostgreSQL Row-Level Security policies enforce the filter on every read and write. The policy is part of the database schema, so it applies to every query the application runs.',
+      'Kadratis is multi-tenant at the database level. Every row in every shared table carries a `tenant_id`, and PostgreSQL Row-Level Security policies enforce the filter on every read and write. The policy is part of the database schema, so it applies to every query the application runs.',
     bullets: [
       'PostgreSQL RLS policies on every table that holds tenant data, all forced',
       '`tenant_id` filtering enforced at the database level, not just in the app',
@@ -59,15 +59,15 @@ const content: SecurityContent = {
   access: {
     title: 'Access control',
     body:
-      'Fine-grained permissions per module, per role. Every feature gate and every entity query honours the same RBAC matrix, including Plaid and MCP.',
+      'Fine-grained permissions per module, per role. Every feature gate and every entity query honours the same RBAC matrix, including Kad and MCP.',
     bullets: [
       'Reader, contributor, member and admin levels per module',
       'Workspace-level admin role separate from module admins',
       'SSO via Microsoft Entra ID (OIDC) on both cloud and self-hosted',
       'Local password authentication with Argon2 + optional password reset flows',
       'Sign-in attempts are limited per IP address: 60 password sign-in requests and 60 Microsoft sign-in requests per minute. After 5 failed password attempts on one account from one IP address within 15 minutes, that address waits 15 minutes before it can try that account again. Behind a reverse proxy, the limits count each user\'s own IP address',
-      'Session tokens are accepted only in the one signing algorithm KANAP issues them with',
-      'Plaid and MCP enforce the same RBAC as the UI, no privilege escalation',
+      'Session tokens are accepted only in the one signing algorithm Kadratis issues them with',
+      'Kad and MCP enforce the same RBAC as the UI, no privilege escalation',
       'API tokens scoped to individual users, revocable at any time',
     ],
   },
@@ -83,7 +83,7 @@ const content: SecurityContent = {
       'Exports produced by the server recorded with who exported what',
       'Sign-in and session events kept for 365 days',
       'Administrators browse and filter the audit log in the app, and export it to CSV in one fixed format that log collection tools read as is (up to 100,000 entries per file)',
-      'Changes made through Plaid are logged in the same trail, with their source. Agents keep their own activity history, with the sources each agent used',
+      'Changes made through Kad are logged in the same trail, with their source. Agents keep their own activity history, with the sources each agent used',
     ],
   },
   agentGovernance: {
@@ -103,7 +103,7 @@ const content: SecurityContent = {
   supplyChain: {
     title: 'Software supply chain',
     body:
-      'KANAP is built from public source, and the build is checked on every change. You can verify what ships.',
+      'Kadratis is built from public source, and the build is checked on every change. You can verify what ships.',
     bullets: [
       'The API image that runs holds the compiled application and its production dependencies only, without sources or development tools',
       'Containers run with reduced privileges: the API runs as an unprivileged user, and containers drop the Linux capabilities they do not need and cannot gain new ones',
@@ -121,10 +121,10 @@ const content: SecurityContent = {
     bullets: [
       'Cloud hosting by Hetzner Online GmbH in Nuremberg, Germany (EU), with Cloudflare as CDN, TLS termination and protection in front',
       'Self-hosted: the full source is public, and you build and run it yourself with Docker Compose',
-      'Self-hosted: no mandatory outbound calls for core functions, so KANAP can run without internet access',
+      'Self-hosted: no mandatory outbound calls for core functions, so Kadratis can run without internet access',
       'Self-hosted: you choose where it runs and how it is backed up',
       'Self-hosted: AI features use only the model provider your administrator configures',
-      'Self-hosted: at start-up, KANAP warns when the signing secret is short or the first administrator password is still an example value or too short',
+      'Self-hosted: at start-up, Kadratis warns when the signing secret is short or the first administrator password is still an example value or too short',
       'Self-hosted: the health of the API and web containers shows in the docker ps output, and Docker logs are capped at about 50 MB per container',
     ],
   },
@@ -132,8 +132,8 @@ const content: SecurityContent = {
     title: 'Responsible disclosure',
     body:
       'If you find a security issue, we want to know. Report it privately, preferably through GitHub private vulnerability reporting, or by email. Give us a reasonable window to fix, and we\'ll credit you in the advisory unless you prefer to stay anonymous.',
-    emailLabel: 'security@kanap.net',
-    email: 'security@kanap.net',
+    emailLabel: 'security@kadratis.com',
+    email: 'security@kadratis.com',
   },
   cta: {
     title: 'Questions about security?',

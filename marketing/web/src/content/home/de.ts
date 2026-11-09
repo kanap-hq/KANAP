@@ -10,7 +10,7 @@ const content: HomeContent = {
   hero: {
     eyebrow: 'Open Source · von einem CIO für CIOs entwickelt',
     title: 'IT-Budget, Anwendungen und Projekte in einem einzigen Datenbestand.',
-    lead: 'Eine Anwendung trägt ihr Budget, ihre Dokumentation, ihre Projekte und ihre Compliance-Daten. Fragen Sie Plaid, den integrierten KI-Agenten, zu all diesen Daten. Open Source, kostenlos selbst zu hosten.',
+    lead: 'Eine Anwendung trägt ihr Budget, ihre Dokumentation, ihre Projekte und ihre Compliance-Daten. Fragen Sie Kad, den integrierten KI-Agenten, zu all diesen Daten. Open Source, kostenlos selbst zu hosten.',
     primaryCta: 'Mit Beispieldaten testen',
     secondaryCta: 'Kostenlos bereitstellen',
     trialNote: 'Test der gehosteten Version · Beispieldaten in einer Minute geladen · AGPL v3, vollständiger Quellcode auf GitHub.',
@@ -32,7 +32,7 @@ const content: HomeContent = {
       },
       {
         title: 'Personal und Kosten pro FTE',
-        body: 'Erfassen Sie FTE auf den betroffenen Zeilen: KANAP leitet daraus den monatlichen Personalbestand und die Kosten pro FTE ab, als Betrag oder als Tagessatz, direkt neben den Beträgen.',
+        body: 'Erfassen Sie FTE auf den betroffenen Zeilen: Kadratis leitet daraus den monatlichen Personalbestand und die Kosten pro FTE ab, als Betrag oder als Tagessatz, direkt neben den Beträgen.',
       },
     ],
     outro: 'Jede Zeile hängt an ihrer Anwendung, ihrem Vertrag oder ihrem Projekt: Vom Budget aus sehen Sie, was die IT betreibt und was es kostet.',
@@ -118,16 +118,16 @@ const content: HomeContent = {
       },
       {
         slug: '/features/ai',
-        title: 'Plaid, der integrierte KI-Agent',
+        title: 'Kad, der integrierte KI-Agent',
         blurb:
-          'Für jede Rolle. Stellen Sie eine Frage in natürlicher Sprache zum Budget, zur Landschaft oder zu den Projekten: Plaid antwortet aus dem gesamten Datenbestand und bereitet Änderungen vor, die Sie freigeben.',
+          'Für jede Rolle. Stellen Sie eine Frage in natürlicher Sprache zum Budget, zur Landschaft oder zu den Projekten: Kad antwortet aus dem gesamten Datenbestand und bereitet Änderungen vor, die Sie freigeben.',
         bullets: [
           'Fragen in natürlicher Sprache über alle Module',
           'Änderungen als Vorschau, angewendet nach Freigabe',
           'Schreibgeschützter MCP-Server für Ihre KI-Clients',
           'Nutzung in der gehosteten Version inklusive, oder eigener Schlüssel',
         ],
-        ctaLabel: 'Plaid entdecken',
+        ctaLabel: 'Kad entdecken',
       },
       {
         slug: '/features/agents',
@@ -149,7 +149,7 @@ const content: HomeContent = {
     eyebrow: 'Für Unternehmen gemacht',
     title: 'Ein System, unter Ihrer Kontrolle.',
     intro:
-      'Die Module teilen dieselben Daten, dieselben Berechtigungen und dasselbe Audit-Protokoll: Eine von Plaid vorbereitete Änderung wird wie jede andere protokolliert.',
+      'Die Module teilen dieselben Daten, dieselben Berechtigungen und dasselbe Audit-Protokoll: Eine von Kad vorbereitete Änderung wird wie jede andere protokolliert.',
     items: [
       {
         title: 'Umfassende Beziehungen',
@@ -169,7 +169,7 @@ const content: HomeContent = {
       },
       {
         title: 'Vollständiges Audit-Protokoll',
-        body: 'Jede Änderung protokolliert, auch die über Plaid, mit Vorher und Nachher. Aktionen des Agenten haben einen eigenen Verlauf.',
+        body: 'Jede Änderung protokolliert, auch die über Kad, mit Vorher und Nachher. Aktionen des Agenten haben einen eigenen Verlauf.',
       },
       {
         title: 'SSO mit Microsoft Entra ID',
@@ -181,12 +181,12 @@ const content: HomeContent = {
   vision: {
     eyebrow: 'KI auf einem vollständigen Datenbestand',
     title: 'KI, die hilft, weil alles an einem Ort ist.',
-    body: 'Ein KI-Assistent ist nur so gut wie die Daten, die er sieht. In KANAP sieht er Budget, Anwendungen, Verträge, Projekte und Dokumentation zugleich und kann daher beantworten: „Warum läuft die Hochrechnung bei der Infrastruktur aus dem Ruder?“ oder „Welche Anwendungen hängen von diesem Vertrag ab?“.\nEr bereitet die Änderungen vor, Sie geben sie frei. Nichts ändert sich ohne Sie, und alles wird protokolliert.',
+    body: 'Ein KI-Assistent ist nur so gut wie die Daten, die er sieht. In Kadratis sieht er Budget, Anwendungen, Verträge, Projekte und Dokumentation zugleich und kann daher beantworten: „Warum läuft die Hochrechnung bei der Infrastruktur aus dem Ruder?“ oder „Welche Anwendungen hängen von diesem Vertrag ab?“.\nEr bereitet die Änderungen vor, Sie geben sie frei. Nichts ändert sich ohne Sie, und alles wird protokolliert.',
   },
 
   cta: {
     title: 'Führen Sie Ihre IT auf einem System, das Ihnen gehört.',
-    body: 'Testen Sie die gehostete Version mit Beispieldaten oder stellen Sie KANAP kostenlos auf Ihren eigenen Servern bereit. Dasselbe Produkt, ohne eingeschränkte Funktionen.',
+    body: 'Testen Sie die gehostete Version mit Beispieldaten oder stellen Sie Kadratis kostenlos auf Ihren eigenen Servern bereit. Dasselbe Produkt, ohne eingeschränkte Funktionen.',
     primary: 'Mit Beispieldaten testen',
     secondary: 'Kostenlos bereitstellen',
   },

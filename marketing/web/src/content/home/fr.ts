@@ -10,7 +10,7 @@ const content: HomeContent = {
   hero: {
     eyebrow: 'Open source · conçue par un DSI, pour les DSI',
     title: 'Budget IT, applications et projets dans un référentiel unique.',
-    lead: "Une application porte son budget, sa documentation, ses projets et ses données de conformité. Interrogez Plaid, l'agent IA intégré, sur l'ensemble. Logiciel libre, gratuit en auto-hébergement.",
+    lead: "Une application porte son budget, sa documentation, ses projets et ses données de conformité. Interrogez Kad, l'agent IA intégré, sur l'ensemble. Logiciel libre, gratuit en auto-hébergement.",
     primaryCta: "Essayer avec des données d'exemple",
     secondaryCta: 'Déployer gratuitement',
     trialNote: 'Essai de la version hébergée · données d’exemple chargées en une minute · AGPL v3, code source complet sur GitHub.',
@@ -32,7 +32,7 @@ const content: HomeContent = {
       },
       {
         title: 'Effectifs et coût par ETP',
-        body: "Déclarez les ETP sur les lignes concernées : KANAP en tire les effectifs par mois et le coût par ETP, en montant comme en taux journalier, à côté des montants.",
+        body: "Déclarez les ETP sur les lignes concernées : Kadratis en tire les effectifs par mois et le coût par ETP, en montant comme en taux journalier, à côté des montants.",
       },
     ],
     outro: 'Chaque ligne est rattachée à son application, son contrat ou son projet : depuis le budget, on retrouve ce que la DSI fait tourner, et ce que chaque chose coûte.',
@@ -118,16 +118,16 @@ const content: HomeContent = {
       },
       {
         slug: '/features/ai',
-        title: "Plaid, l'agent IA intégré",
+        title: "Kad, l'agent IA intégré",
         blurb:
-          "Pour chaque rôle. Posez une question en langage naturel sur le budget, le SI ou les projets : Plaid répond à partir de tout le référentiel et prépare les modifications, que vous validez.",
+          "Pour chaque rôle. Posez une question en langage naturel sur le budget, le SI ou les projets : Kad répond à partir de tout le référentiel et prépare les modifications, que vous validez.",
         bullets: [
           'Questions en langage naturel sur tous les modules',
           'Modifications préparées en aperçu, appliquées après validation',
           'Serveur MCP en lecture seule pour vos clients IA',
           'Usage inclus dans la version hébergée, ou votre propre clé',
         ],
-        ctaLabel: 'Découvrir Plaid',
+        ctaLabel: 'Découvrir Kad',
       },
       {
         slug: '/features/agents',
@@ -149,7 +149,7 @@ const content: HomeContent = {
     eyebrow: "Pensé pour l'entreprise",
     title: 'Un seul système, sous votre contrôle.',
     intro:
-      "Les modules partagent les mêmes données, les mêmes droits et le même journal d'audit : une modification préparée par Plaid y est tracée comme les autres.",
+      "Les modules partagent les mêmes données, les mêmes droits et le même journal d'audit : une modification préparée par Kad y est tracée comme les autres.",
     items: [
       {
         title: 'Relations riches',
@@ -169,7 +169,7 @@ const content: HomeContent = {
       },
       {
         title: "Journal d'audit complet",
-        body: "Chaque changement tracé, y compris ceux faits via Plaid, avec l'avant et l'après. Les actions de l'agent ont leur propre historique.",
+        body: "Chaque changement tracé, y compris ceux faits via Kad, avec l'avant et l'après. Les actions de l'agent ont leur propre historique.",
       },
       {
         title: 'SSO via Microsoft Entra ID',
@@ -181,12 +181,12 @@ const content: HomeContent = {
   vision: {
     eyebrow: 'L’IA sur un référentiel complet',
     title: 'Une IA utile, parce que tout est au même endroit.',
-    body: "Un assistant IA ne vaut que par les données qu'il voit. Dans KANAP, il voit le budget, les applications, les contrats, les projets et la documentation à la fois : il peut donc répondre à « pourquoi l'atterrissage dérape sur l'infrastructure ? » ou « quelles applications dépendent de ce contrat ? ».\nIl prépare les modifications, vous les validez. Rien ne change sans vous, et tout est tracé.",
+    body: "Un assistant IA ne vaut que par les données qu'il voit. Dans Kadratis, il voit le budget, les applications, les contrats, les projets et la documentation à la fois : il peut donc répondre à « pourquoi l'atterrissage dérape sur l'infrastructure ? » ou « quelles applications dépendent de ce contrat ? ».\nIl prépare les modifications, vous les validez. Rien ne change sans vous, et tout est tracé.",
   },
 
   cta: {
     title: 'Pilotez votre DSI sur un système qui vous appartient.',
-    body: "Essayez la version hébergée avec des données d'exemple, ou déployez KANAP gratuitement chez vous. Le produit est le même, sans fonction bridée.",
+    body: "Essayez la version hébergée avec des données d'exemple, ou déployez Kadratis gratuitement chez vous. Le produit est le même, sans fonction bridée.",
     primary: "Essayer avec des données d'exemple",
     secondary: 'Déployer gratuitement',
   },

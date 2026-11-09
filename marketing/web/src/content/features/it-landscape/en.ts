@@ -62,7 +62,7 @@ const content: FeatureContent = {
     },
     {
       title: 'Vulnerabilities',
-      body: 'KANAP matches published vulnerabilities to your technologies, version by version, and shows the servers and business applications they affect. Exploited vulnerabilities come first.',
+      body: 'Kadratis matches published vulnerabilities to your technologies, version by version, and shows the servers and business applications they affect. Exploited vulnerabilities come first.',
       bullets: [
         'Two sources every 6 hours: the NVD and the vendors\' records on CVE.org',
         'Exploitation signals: the CISA and European Union catalogs, EPSS score',
@@ -98,7 +98,7 @@ const content: FeatureContent = {
     label: 'Explore the platform',
     links: [
       { label: 'Agents', href: '/features/agents' },
-      { label: 'Plaid, AI assistant', href: '/features/ai' },
+      { label: 'Kad, AI assistant', href: '/features/ai' },
       { label: 'Budget management', href: '/features/budget' },
       { label: 'Portfolio management', href: '/features/portfolio' },
       { label: 'Knowledge', href: '/features/knowledge' },

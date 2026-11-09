@@ -31,11 +31,11 @@ const content: ContactContent = {
     submitting: 'Enviando…',
     successTitle: 'Mensaje enviado.',
     successBody: 'Le responderemos en un día hábil.',
-    errorGeneric: 'Algo ha fallado. Inténtelo de nuevo o escriba directamente a support@kanap.net.',
+    errorGeneric: 'Algo ha fallado. Inténtelo de nuevo o escriba directamente a contact@kadratis.com.',
   },
   alternate: {
     label: '¿Prefiere el email directo?',
-    email: 'admin@kanap.net',
+    email: 'contact@kadratis.com',
   },
 };
 

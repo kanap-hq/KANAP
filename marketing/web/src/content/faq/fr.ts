@@ -4,28 +4,28 @@ const content: FaqContent = {
   meta: {
     title: 'FAQ',
     description:
-      "Questions fréquentes sur les tarifs, la licence, l'auto-hébergement, le cloud hébergé, Plaid, les agents, le support et la facturation KANAP.",
+      "Questions fréquentes sur les tarifs, la licence, l'auto-hébergement, le cloud hébergé, Kad, les agents, le support et la facturation Kadratis.",
   },
   header: {
     eyebrow: 'FAQ',
     title: 'Questions fréquentes.',
     lead:
-      'Tout ce que vous devez savoir sur KANAP, licence, tarifs, hébergement, Plaid et les agents. Si vous ne trouvez pas votre réponse, écrivez-nous.',
+      'Tout ce que vous devez savoir sur Kadratis, licence, tarifs, hébergement, Kad et les agents. Si vous ne trouvez pas votre réponse, écrivez-nous.',
   },
   groups: [
     {
       label: 'Licence et open source',
       items: [
         {
-          q: 'Sous quelle licence est KANAP ?',
-          a: 'KANAP est publié sous licence <a href="https://www.gnu.org/licenses/agpl-3.0.html" rel="noopener" target="_blank">AGPL v3</a>, une licence open source largement reconnue et approuvée par l\'OSI. Vous pouvez librement utiliser, modifier et distribuer le logiciel. La clause copyleft de l\'AGPL garantit que quiconque exécute une version modifiée en tant que service doit partager ses changements. Cela protège la communauté et maintient KANAP réellement ouvert.',
+          q: 'Sous quelle licence est Kadratis ?',
+          a: 'Kadratis est publié sous licence <a href="https://www.gnu.org/licenses/agpl-3.0.html" rel="noopener" target="_blank">AGPL v3</a>, une licence open source largement reconnue et approuvée par l\'OSI. Vous pouvez librement utiliser, modifier et distribuer le logiciel. La clause copyleft de l\'AGPL garantit que quiconque exécute une version modifiée en tant que service doit partager ses changements. Cela protège la communauté et maintient Kadratis réellement ouvert.',
         },
         {
-          q: 'Puis-je utiliser KANAP commercialement ?',
+          q: 'Puis-je utiliser Kadratis commercialement ?',
           a: 'Oui. Usage interne, commercial, SaaS externe, tout est permis. La clause copyleft n\'oblige à partager vos modifications que si vous exécutez une version modifiée comme service réseau. Un usage purement interne ne déclenche aucune obligation.',
         },
         {
-          q: 'Puis-je contribuer à KANAP ?',
+          q: 'Puis-je contribuer à Kadratis ?',
           a: 'Oui, avec plaisir. Tout le code source est sur <a href="https://github.com/kanap-hq/kanap" rel="noopener" target="_blank">GitHub</a>. Issues, pull requests et discussions sont les bienvenues. Consultez CONTRIBUTING.md pour les conventions.',
         },
       ],
@@ -35,7 +35,7 @@ const content: FaqContent = {
       items: [
         {
           q: 'Comment fonctionne l\'essai gratuit ?',
-          a: 'KANAP hébergé commence par un essai gratuit de 14 jours. Sans carte bancaire. Accès complet à toutes les fonctionnalités, plus une session d\'activation de 60 minutes offerte par entreprise si elle est réservée pendant l\'essai.',
+          a: 'Kadratis Cloud commence par un essai gratuit de 14 jours. Sans carte bancaire. Accès complet à toutes les fonctionnalités, plus une session d\'activation de 60 minutes offerte par entreprise si elle est réservée pendant l\'essai.',
         },
         {
           q: 'Que se passe-t-il à la fin de mon essai ?',
@@ -47,7 +47,7 @@ const content: FaqContent = {
         },
         {
           q: 'Quelle est la différence entre cloud et auto-hébergé ?',
-          a: 'L\'hébergement cloud signifie que nous opérons tout pour vous : hébergement, mises à jour, sauvegardes, infrastructure et support prioritaire. L\'auto-hébergement signifie que vous exécutez KANAP sur vos propres serveurs. Le produit complet est gratuit à auto-héberger ; vous pouvez acheter le Support auto-hébergé si vous voulez une aide prioritaire tout en gardant le contrôle de votre infrastructure.',
+          a: 'L\'hébergement cloud signifie que nous opérons tout pour vous : hébergement, mises à jour, sauvegardes, infrastructure et support prioritaire. L\'auto-hébergement signifie que vous exécutez Kadratis sur vos propres serveurs. Le produit complet est gratuit à auto-héberger ; vous pouvez acheter le Support auto-hébergé si vous voulez une aide prioritaire tout en gardant le contrôle de votre infrastructure.',
         },
       ],
     },
@@ -69,11 +69,11 @@ const content: FaqContent = {
       items: [
         {
           q: 'Puis-je payer par facture ?',
-          a: 'Le paiement par facture (virement bancaire) est disponible pour les abonnements annuels au-dessus de 1 000 € pour les clients EUR. Aujourd\'hui cela concerne le Support auto-hébergé et KANAP hébergé en annuel. Les factures sont à NET30.',
+          a: 'Le paiement par facture (virement bancaire) est disponible pour les abonnements annuels au-dessus de 1 000 € pour les clients EUR. Aujourd\'hui cela concerne le Support auto-hébergé et Kadratis Cloud en annuel. Les factures sont à NET30.',
         },
         {
           q: 'Puis-je passer de l\'auto-hébergement au cloud hébergé ?',
-          a: 'Oui. KANAP est le même produit dans les deux modes. Contactez-nous si vous voulez passer de l\'auto-hébergement au cloud hébergé, ou si vous avez besoin d\'un export pour opérer la plateforme vous-même.',
+          a: 'Oui. Kadratis est le même produit dans les deux modes. Contactez-nous si vous voulez passer de l\'auto-hébergement au cloud hébergé, ou si vous avez besoin d\'un export pour opérer la plateforme vous-même.',
         },
         {
           q: 'Puis-je annuler mon abonnement ?',
@@ -82,19 +82,19 @@ const content: FaqContent = {
       ],
     },
     {
-      label: 'Plaid (assistant IA)',
+      label: 'Kad (assistant IA)',
       items: [
         {
-          q: 'Quelle est la différence entre les messages Plaid inclus et Bring Your Own Key ?',
-          a: 'KANAP hébergé inclut un nombre généreux de messages Plaid, propulsés par un modèle intermédiaire que nous avons soigneusement sélectionné et testé avec KANAP. Pour des réponses encore plus performantes, l\'option Bring Your Own Key vous permet de connecter les modèles de pointe d\'OpenAI, Anthropic ou de tout fournisseur compatible. BYOK vous laisse aussi choisir le fournisseur qui traite vos requêtes, et supprime toute limite de messages.',
+          q: 'Quelle est la différence entre les messages Kad inclus et Bring Your Own Key ?',
+          a: 'Kadratis Cloud inclut un nombre généreux de messages Kad, propulsés par un modèle intermédiaire que nous avons soigneusement sélectionné et testé avec Kadratis. Pour des réponses encore plus performantes, l\'option Bring Your Own Key vous permet de connecter les modèles de pointe d\'OpenAI, Anthropic ou de tout fournisseur compatible. BYOK vous laisse aussi choisir le fournisseur qui traite vos requêtes, et supprime toute limite de messages.',
         },
         {
-          q: 'Comment puis-je contrôler Plaid ?',
-          a: 'Au niveau du workspace, un administrateur active ou désactive Plaid, et la recherche web et MCP s\'activent ou se désactivent séparément. Au niveau utilisateur, les permissions par rôle décident qui peut utiliser Plaid et quels modules il peut lire. Faire une modification demande le niveau membre sur Plaid et sur le module, et chaque modification est présentée en aperçu que l\'utilisateur confirme. L\'accès MCP est en lecture seule. Le RBAC est toujours appliqué, Plaid ne voit jamais plus que ce qui est permis à l\'utilisateur.',
+          q: 'Comment puis-je contrôler Kad ?',
+          a: 'Au niveau du workspace, un administrateur active ou désactive Kad, et la recherche web et MCP s\'activent ou se désactivent séparément. Au niveau utilisateur, les permissions par rôle décident qui peut utiliser Kad et quels modules il peut lire. Faire une modification demande le niveau membre sur Kad et sur le module, et chaque modification est présentée en aperçu que l\'utilisateur confirme. L\'accès MCP est en lecture seule. Le RBAC est toujours appliqué, Kad ne voit jamais plus que ce qui est permis à l\'utilisateur.',
         },
         {
-          q: 'Comment connecter Claude ou un autre assistant IA à KANAP ?',
-          a: 'Par le serveur MCP de KANAP, en lecture seule, de deux façons. Claude, Claude Desktop et Claude Code se connectent sans clé : collez votre adresse KANAP comme connecteur personnalisé, connectez-vous avec votre compte KANAP et cliquez sur Autoriser. Chaque personne lit alors avec ses propres droits. Les autres assistants, comme Cursor ou vos scripts, utilisent une clé API créée par un administrateur. Sur une installation auto-hébergée, la connexion sans clé depuis Claude et Claude Desktop demande que KANAP soit joignable depuis Internet en HTTPS. Claude Code et les clés API fonctionnent aussi sur un réseau interne.',
+          q: 'Comment connecter Claude ou un autre assistant IA à Kadratis ?',
+          a: 'Par le serveur MCP de Kadratis, en lecture seule, de deux façons. Claude, Claude Desktop et Claude Code se connectent sans clé : collez votre adresse Kadratis comme connecteur personnalisé, connectez-vous avec votre compte Kadratis et cliquez sur Autoriser. Chaque personne lit alors avec ses propres droits. Les autres assistants, comme Cursor ou vos scripts, utilisent une clé API créée par un administrateur. Sur une installation auto-hébergée, la connexion sans clé depuis Claude et Claude Desktop demande que Kadratis soit joignable depuis Internet en HTTPS. Claude Code et les clés API fonctionnent aussi sur un réseau interne.',
         },
       ],
     },
@@ -103,7 +103,7 @@ const content: FaqContent = {
       items: [
         {
           q: 'Les agents sont-ils autonomes ?',
-          a: "Oui, par conception. Un agent démarre supervisé : il propose des actions et vous les passez en revue. À mesure que KANAP mesure la fréquence à laquelle il voit juste, vous lui accordez plus d'autonomie, jusqu'à ce qu'il traite le travail courant seul et ne remonte que ce qui exige une personne. Vous décidez jusqu'où cela va.",
+          a: "Oui, par conception. Un agent démarre supervisé : il propose des actions et vous les passez en revue. À mesure que Kadratis mesure la fréquence à laquelle il voit juste, vous lui accordez plus d'autonomie, jusqu'à ce qu'il traite le travail courant seul et ne remonte que ce qui exige une personne. Vous décidez jusqu'où cela va.",
         },
         {
           q: "Comment contrôler ce qu'un agent peut faire ?",
@@ -123,11 +123,11 @@ const content: FaqContent = {
         },
         {
           q: 'Les agents sont-ils inclus dans la version open source gratuite ?',
-          a: "Oui. Les agents font partie du produit open source sous AGPL v3, sans verrou fonctionnel sur l'IA. Vous apportez votre propre clé LLM, comme avec Plaid. Auto-hébergez toute la plateforme gratuitement, agents compris.",
+          a: "Oui. Les agents font partie du produit open source sous AGPL v3, sans verrou fonctionnel sur l'IA. Vous apportez votre propre clé LLM, comme avec Kad. Auto-hébergez toute la plateforme gratuitement, agents compris.",
         },
         {
           q: "Combien coûte l'exécution des agents ?",
-          a: "Les agents utilisent un LLM, vous apportez donc votre propre clé et payez votre fournisseur pour ce qu'ils consomment. KANAP en lui-même est gratuit à auto-héberger. Vous gardez le coût prévisible avec un plafond de dépense par agent.",
+          a: "Les agents utilisent un LLM, vous apportez donc votre propre clé et payez votre fournisseur pour ce qu'ils consomment. Kadratis en lui-même est gratuit à auto-héberger. Vous gardez le coût prévisible avec un plafond de dépense par agent.",
         },
         {
           q: 'Les actions des agents restent-elles sur mes propres serveurs ?',

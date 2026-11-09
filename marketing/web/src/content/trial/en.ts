@@ -3,14 +3,14 @@ import type { TrialContent } from './types';
 const content: TrialContent = {
   start: {
     title: 'Start your free trial',
-    description: 'Create your KANAP workspace. Fourteen-day trial, all features, no credit card.',
+    description: 'Create your Kadratis workspace. Fourteen-day trial, all features, no credit card.',
     eyebrow: 'Free trial',
     heading: 'Start your free trial.',
     lead: 'Your workspace will be provisioned in two minutes. You will start with a sample data set you can erase, or with an empty workspace ready for your data.',
     benefits: [
       'All features for fourteen days, no credit card.',
-      'Three guided paths to discover KANAP: budget, IT landscape map, projects.',
-      'Plaid, the assistant, answers your questions about your data and can help you import it.',
+      'Three guided paths to discover Kadratis: budget, IT landscape map, projects.',
+      'Kad, the assistant, answers your questions about your data and can help you import it.',
       'A thirty-minute discovery call, to schedule from your workspace whenever you like.',
     ],
     form: {
@@ -20,7 +20,7 @@ const content: TrialContent = {
       countryLabel: 'Country',
       countryNoMatch: 'No matching country',
       slugLabel: 'Workspace address',
-      slugDomain: '.kanap.net',
+      slugDomain: '.kadratis.com',
       emailLabel: 'Administrator email',
       submitLabel: 'Send activation link',
       submitting: 'Sending…',
@@ -29,7 +29,7 @@ const content: TrialContent = {
       errorEmail: 'Enter a valid email address.',
       errorSlug: 'Only lowercase letters, numbers and hyphens.',
       captchaLabel: 'Security check',
-      privacyNote: 'Your email address is used to activate the KANAP workspace and to set up the first administrator. You will also receive up to 4 onboarding messages during the trial. You can unsubscribe from them at any time.',
+      privacyNote: 'Your email address is used to activate the Kadratis workspace and to set up the first administrator. You will also receive up to 4 onboarding messages during the trial. You can unsubscribe from them at any time.',
     },
     countryOptions: [
       { value: 'FR', label: 'France' },
@@ -58,7 +58,7 @@ const content: TrialContent = {
     lead: 'We\'ve sent an activation link to the address you provided. Click it to finish creating your workspace.',
     whatNext: 'What happens next',
     steps: [
-      'Open your inbox, subject line "Activate your KANAP workspace".',
+      'Open your inbox, subject line "Activate your Kadratis workspace".',
       'Click the link. We\'ll create your workspace in a few seconds.',
       'Set your admin password. Log in, invite your team, start.',
     ],

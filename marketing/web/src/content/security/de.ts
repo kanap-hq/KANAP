@@ -4,7 +4,7 @@ const content: SecurityContent = {
   meta: {
     title: 'Sicherheit',
     description:
-      'Wie KANAP Ihre Daten schützt: Row-Level Security, gehashte Passwörter, verschlüsselte Secrets, RBAC, ein Sicherheits-Audit-Log, Agenten-Governance, SSO, ein transparenter Build und Open Source. Self-Hosting oder Cloud.',
+      'Wie Kadratis Ihre Daten schützt: Row-Level Security, gehashte Passwörter, verschlüsselte Secrets, RBAC, ein Sicherheits-Audit-Log, Agenten-Governance, SSO, ein transparenter Build und Open Source. Self-Hosting oder Cloud.',
   },
   header: {
     eyebrow: 'Sicherheit',
@@ -15,7 +15,7 @@ const content: SecurityContent = {
   overview: {
     title: 'Prinzipien',
     intro:
-      'KANAP ist für IT-Abteilungen konzipiert, die mit sensiblen Daten arbeiten. Wir behandeln Ihre Daten so, wie wir es uns von unseren IT-Anbietern wünschen, transparent, isoliert und bei Bedarf greifbar.',
+      'Kadratis ist für IT-Abteilungen konzipiert, die mit sensiblen Daten arbeiten. Wir behandeln Ihre Daten so, wie wir es uns von unseren IT-Anbietern wünschen, transparent, isoliert und bei Bedarf greifbar.',
     pillars: [
       {
         title: 'Transparent by default',
@@ -34,7 +34,7 @@ const content: SecurityContent = {
   tenancy: {
     title: 'Tenant-Isolation',
     body:
-      'KANAP ist auf Datenbankebene multi-tenant. Jede Zeile in jeder geteilten Tabelle trägt eine `tenant_id`, und PostgreSQL Row-Level-Security-Policies erzwingen den Filter bei jedem Lese- und Schreibzugriff. Die Policy ist Teil des Datenbankschemas und gilt damit für jede Abfrage der Anwendung.',
+      'Kadratis ist auf Datenbankebene multi-tenant. Jede Zeile in jeder geteilten Tabelle trägt eine `tenant_id`, und PostgreSQL Row-Level-Security-Policies erzwingen den Filter bei jedem Lese- und Schreibzugriff. Die Policy ist Teil des Datenbankschemas und gilt damit für jede Abfrage der Anwendung.',
     bullets: [
       'PostgreSQL-RLS-Policies auf jeder Tabelle mit Tenant-Daten, alle erzwungen (FORCE)',
       '`tenant_id`-Filter auf Datenbankebene erzwungen, nicht nur in der App',
@@ -60,15 +60,15 @@ const content: SecurityContent = {
   access: {
     title: 'Zugriffskontrolle',
     body:
-      'Feinkörnige Berechtigungen pro Modul, pro Rolle. Jedes Feature-Gate und jede Entity-Abfrage respektiert dieselbe RBAC-Matrix, auch Plaid und MCP.',
+      'Feinkörnige Berechtigungen pro Modul, pro Rolle. Jedes Feature-Gate und jede Entity-Abfrage respektiert dieselbe RBAC-Matrix, auch Kad und MCP.',
     bullets: [
       'Stufen Leser, Mitwirkender, Mitglied und Admin pro Modul',
       'Workspace-Admin-Rolle getrennt von Modul-Admins',
       'SSO über Microsoft Entra ID (OIDC) in Cloud und Self-Hosting',
       'Lokale Passwort-Authentifizierung mit Argon2 + optionale Passwort-Reset-Flows',
       'Anmeldeversuche werden pro IP-Adresse begrenzt: 60 Passwort-Anmeldeanfragen und 60 Microsoft-Anmeldeanfragen pro Minute. Nach 5 fehlgeschlagenen Passwortversuchen für ein Konto von einer IP-Adresse innerhalb von 15 Minuten wartet diese Adresse 15 Minuten, bevor sie dieses Konto erneut versuchen kann. Hinter einem Reverse Proxy zählen die Limits die IP-Adresse jedes Benutzers',
-      'Sitzungstokens werden nur in dem einen Signaturverfahren akzeptiert, mit dem KANAP sie ausstellt',
-      'Plaid und MCP erzwingen dasselbe RBAC wie das UI, keine Privilegienerweiterung',
+      'Sitzungstokens werden nur in dem einen Signaturverfahren akzeptiert, mit dem Kadratis sie ausstellt',
+      'Kad und MCP erzwingen dasselbe RBAC wie das UI, keine Privilegienerweiterung',
       'API-Tokens pro Nutzer gebunden, jederzeit widerrufbar',
     ],
   },
@@ -84,7 +84,7 @@ const content: SecurityContent = {
       'Vom Server erzeugte Exporte protokolliert, mit Angabe, wer was exportiert hat',
       'Anmelde- und Sitzungsereignisse 365 Tage aufbewahrt',
       'Administratoren durchsuchen und filtern das Audit-Log in der App und exportieren es als CSV in einem festen Format, das Werkzeuge zur Protokollsammlung unverändert lesen (bis zu 100.000 Einträge pro Datei)',
-      'Änderungen über Plaid werden im selben Trail protokolliert, mit ihrer Herkunft. Agenten führen einen eigenen Aktivitätsverlauf, mit den Quellen, die jeder Agent genutzt hat',
+      'Änderungen über Kad werden im selben Trail protokolliert, mit ihrer Herkunft. Agenten führen einen eigenen Aktivitätsverlauf, mit den Quellen, die jeder Agent genutzt hat',
     ],
   },
   agentGovernance: {
@@ -104,7 +104,7 @@ const content: SecurityContent = {
   supplyChain: {
     title: 'Software-Lieferkette',
     body:
-      'KANAP wird aus dem öffentlichen Quellcode gebaut, und der Build wird bei jeder Änderung geprüft. Sie können nachprüfen, was ausgeliefert wird.',
+      'Kadratis wird aus dem öffentlichen Quellcode gebaut, und der Build wird bei jeder Änderung geprüft. Sie können nachprüfen, was ausgeliefert wird.',
     bullets: [
       'Das laufende API-Image enthält nur die kompilierte Anwendung und ihre Produktionsabhängigkeiten, ohne Quellcode und Entwicklungswerkzeuge',
       'Container laufen mit reduzierten Rechten: Die API läuft als unprivilegierter Benutzer, und Container geben die Linux-Capabilities ab, die sie nicht brauchen, und können keine neuen erlangen',
@@ -122,10 +122,10 @@ const content: SecurityContent = {
     bullets: [
       'Cloud-Hosting bei der Hetzner Online GmbH in Nürnberg, Deutschland (EU), mit Cloudflare davor für CDN, TLS-Terminierung und Schutz',
       'Self-Hosting: Der vollständige Quellcode ist öffentlich, und Sie bauen und betreiben ihn selbst mit Docker Compose',
-      'Self-Hosting: keine zwingenden ausgehenden Aufrufe für Kernfunktionen, KANAP kann also ohne Internetzugang laufen',
+      'Self-Hosting: keine zwingenden ausgehenden Aufrufe für Kernfunktionen, Kadratis kann also ohne Internetzugang laufen',
       'Self-Hosting: Sie entscheiden, wo es läuft und wie es gesichert wird',
       'Self-Hosting: KI-Funktionen nutzen nur den Modellanbieter, den Ihr Administrator konfiguriert',
-      'Self-Hosting: Beim Start warnt KANAP, wenn das Signatur-Secret kurz ist oder das Passwort des ersten Administrators noch ein Beispielwert oder zu kurz ist',
+      'Self-Hosting: Beim Start warnt Kadratis, wenn das Signatur-Secret kurz ist oder das Passwort des ersten Administrators noch ein Beispielwert oder zu kurz ist',
       'Self-Hosting: Der Zustand der API- und Web-Container erscheint in der Ausgabe von docker ps, und Docker-Logs sind auf etwa 50 MB pro Container begrenzt',
     ],
   },
@@ -133,8 +133,8 @@ const content: SecurityContent = {
     title: 'Responsible Disclosure',
     body:
       'Wenn Sie ein Sicherheitsproblem finden, wollen wir davon erfahren. Melden Sie es privat, am besten über das private Schwachstellen-Reporting von GitHub oder per E-Mail. Geben Sie uns ein angemessenes Zeitfenster zur Behebung, und wir nennen Sie im Advisory, es sei denn, Sie bleiben lieber anonym.',
-    emailLabel: 'security@kanap.net',
-    email: 'security@kanap.net',
+    emailLabel: 'security@kadratis.com',
+    email: 'security@kadratis.com',
   },
   cta: {
     title: 'Fragen zur Sicherheit?',

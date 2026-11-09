@@ -65,16 +65,16 @@ const content: FeatureContent = {
     title: 'Más en conocimiento',
     items: [
       { title: 'Historial de versiones', body: 'Cada guardado crea una versión. Explore el historial y vuelva a cualquier estado anterior.' },
-      { title: 'Exportación', body: 'Exporte a PDF, DOCX y ODT. Comparta documentación fuera de KANAP.' },
+      { title: 'Exportación', body: 'Exporte a PDF, DOCX y ODT. Comparta documentación fuera de Kadratis.' },
       { title: 'Plantillas', body: 'Plantillas reutilizables agrupadas por tipo. Arranque nuevos documentos rápidamente.' },
-      { title: 'Importación', body: 'Importe desde Word y PDF. Traiga su documentación existente a KANAP con un solo clic.' },
+      { title: 'Importación', body: 'Importe desde Word y PDF. Traiga su documentación existente a Kadratis con un solo clic.' },
     ],
   },
   crossLinks: {
     label: 'Explore la plataforma',
     links: [
       { label: 'Agentes', href: '/features/agents' },
-      { label: 'Plaid, asistente de IA', href: '/features/ai' },
+      { label: 'Kad, asistente de IA', href: '/features/ai' },
       { label: 'Gestión de presupuesto', href: '/features/budget' },
       { label: 'Panorama IT', href: '/features/it-landscape' },
       { label: 'Gestión de portafolio', href: '/features/portfolio' },

@@ -9,7 +9,7 @@ const content: FeatureContent = {
   header: {
     eyebrow: 'Verträge',
     title: 'Verpassen Sie nie wieder einen Kündigungstermin.',
-    lead: 'Erfassen Sie Beginndatum, Laufzeit und Kündigungsfrist eines Vertrags: KANAP berechnet jede Periode und den letzten Tag für die Kündigung. Der Verantwortliche bekommt vor diesem Tag eine Entscheidung vorgelegt. Der Vertrag ist mit seinen Budgetzeilen, Anwendungen und Assets verknüpft.',
+    lead: 'Erfassen Sie Beginndatum, Laufzeit und Kündigungsfrist eines Vertrags: Kadratis berechnet jede Periode und den letzten Tag für die Kündigung. Der Verantwortliche bekommt vor diesem Tag eine Entscheidung vorgelegt. Der Vertrag ist mit seinen Budgetzeilen, Anwendungen und Assets verknüpft.',
   },
   sections: [
     {
@@ -38,7 +38,7 @@ const content: FeatureContent = {
     },
     {
       title: 'Eine Entscheidung vor der Frist',
-      body: 'Wenn sich das Entscheidungsfenster öffnet, legt KANAP eine Aufgabe für den Vertragsverantwortlichen an. Am Vertrag gibt es drei Antworten: verlängern, neu verhandeln oder kündigen. Bevor Sie eine Kündigung bestätigen, zeigt KANAP, was sie ändert: das durch die Kündigungsfrist mögliche Enddatum, die Verpflichtung dieses und des nächsten Jahres, die Anwendungen und Assets, die den Vertrag verlieren.',
+      body: 'Wenn sich das Entscheidungsfenster öffnet, legt Kadratis eine Aufgabe für den Vertragsverantwortlichen an. Am Vertrag gibt es drei Antworten: verlängern, neu verhandeln oder kündigen. Bevor Sie eine Kündigung bestätigen, zeigt Kadratis, was sie ändert: das durch die Kündigungsfrist mögliche Enddatum, die Verpflichtung dieses und des nächsten Jahres, die Anwendungen und Assets, die den Vertrag verlieren.',
       bullets: [
         'Entscheidungsfenster pro Tenant einstellbar, standardmäßig 90 Tage',
         'Eine Aufgabe für den Verantwortlichen, mit der üblichen Zuweisungs-E-Mail',
@@ -66,7 +66,7 @@ const content: FeatureContent = {
     items: [
       { title: 'Konformitätsregister', body: 'Fünf Klauseln zum Nachverfolgen (Auftragsverarbeitungsvertrag nach DSGVO, Speicherort der Daten, Reversibilität, Exit-Plan, Auditrecht), je nach den Anwendungen, die der Vertrag abdeckt. Eine Compliance-Hilfe, die in den nächsten Versionen ausgebaut wird.' },
       { title: 'Verknüpfungen und Kontakte', body: 'Anwendungen, Assets und Technologien, die der Vertrag abdeckt, Kontakte des Lieferanten mit ihrer Rolle, Links und angehängte Dateien.' },
-      { title: 'Plaid und MCP', body: 'Fragen Sie Plaid, über welche Verträge in den nächsten 90 Tagen zu entscheiden ist. Dieselben Daten stehen Ihren eigenen KI-Clients über den schreibgeschützten MCP-Server offen.' },
+      { title: 'Kad und MCP', body: 'Fragen Sie Kad, über welche Verträge in den nächsten 90 Tagen zu entscheiden ist. Dieselben Daten stehen Ihren eigenen KI-Clients über den schreibgeschützten MCP-Server offen.' },
       { title: 'Feingranulare Rechte', body: 'Leser sehen, Mitglieder legen an und entscheiden, Administratoren importieren, exportieren und löschen. Die Budgetbeträge folgen den Budgetrechten.' },
     ],
   },
@@ -76,15 +76,15 @@ const content: FeatureContent = {
       { label: 'IT-Budget', href: '/features/budget' },
       { label: 'IT-Landschaft', href: '/features/it-landscape' },
       { label: 'Vorfälle', href: '/features/incidents' },
-      { label: 'Plaid, der integrierte KI-Agent', href: '/features/ai' },
+      { label: 'Kad, der integrierte KI-Agent', href: '/features/ai' },
       { label: 'Projektportfolio', href: '/features/portfolio' },
     ],
   },
   cta: {
     title: 'Bereit, Ihre Verträge aus der Tabellenkalkulation zu holen?',
-    body: 'Hosten Sie kostenlos selbst oder testen Sie Hosted Cloud. Alle Funktionen in jedem Plan.',
+    body: 'Hosten Sie kostenlos selbst oder testen Sie Kadratis Cloud. Alle Funktionen in jedem Plan.',
     primary: 'Kostenlos bereitstellen',
-    secondary: 'Hosted Cloud testen',
+    secondary: 'Kadratis Cloud testen',
   },
 };
 

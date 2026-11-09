@@ -4,7 +4,7 @@ const content: SecurityContent = {
   meta: {
     title: 'Sécurité',
     description:
-      "Comment KANAP protège vos données : row-level security, mots de passe hachés, secrets chiffrés, RBAC, journal d'audit de sécurité, gouvernance des agents, SSO, une chaîne de fabrication transparente et l'open source. Auto-hébergé ou cloud.",
+      "Comment Kadratis protège vos données : row-level security, mots de passe hachés, secrets chiffrés, RBAC, journal d'audit de sécurité, gouvernance des agents, SSO, une chaîne de fabrication transparente et l'open source. Auto-hébergé ou cloud.",
   },
   header: {
     eyebrow: 'Sécurité',
@@ -15,7 +15,7 @@ const content: SecurityContent = {
   overview: {
     title: 'Principes',
     intro:
-      "KANAP est conçu pour les DSI qui manipulent des données sensibles. Nous traitons vos données comme nous voulons que nos fournisseurs IT traitent les nôtres, transparentes, isolées, à portée de main quand il le faut.",
+      "Kadratis est conçu pour les DSI qui manipulent des données sensibles. Nous traitons vos données comme nous voulons que nos fournisseurs IT traitent les nôtres, transparentes, isolées, à portée de main quand il le faut.",
     pillars: [
       {
         title: 'Transparent par défaut',
@@ -34,7 +34,7 @@ const content: SecurityContent = {
   tenancy: {
     title: 'Isolation des tenants',
     body:
-      "KANAP est multi-tenant au niveau base de données. Chaque ligne de chaque table partagée porte un `tenant_id`, et les policies PostgreSQL Row-Level Security appliquent le filtre sur chaque lecture et écriture. La policy fait partie du schéma de la base de données : elle s'applique à chaque requête de l'application.",
+      "Kadratis est multi-tenant au niveau base de données. Chaque ligne de chaque table partagée porte un `tenant_id`, et les policies PostgreSQL Row-Level Security appliquent le filtre sur chaque lecture et écriture. La policy fait partie du schéma de la base de données : elle s'applique à chaque requête de l'application.",
     bullets: [
       'Policies PostgreSQL RLS sur chaque table qui contient des données de tenant, toutes forcées',
       "Filtrage `tenant_id` imposé au niveau base de données, pas juste dans l'app",
@@ -60,15 +60,15 @@ const content: SecurityContent = {
   access: {
     title: "Contrôle d'accès",
     body:
-      "Permissions fines par module, par rôle. Chaque feature gate et chaque requête d'entité respecte la même matrice RBAC, y compris Plaid et MCP.",
+      "Permissions fines par module, par rôle. Chaque feature gate et chaque requête d'entité respecte la même matrice RBAC, y compris Kad et MCP.",
     bullets: [
       'Niveaux lecteur, contributeur, membre et administrateur par module',
       'Rôle admin workspace distinct des admins de module',
       'SSO via Microsoft Entra ID (OIDC) en cloud et auto-hébergé',
       'Authentification locale par mot de passe avec Argon2 + flux optionnel de réinitialisation',
       "Les tentatives de connexion sont limitées par adresse IP : 60 demandes de connexion par mot de passe et 60 demandes de connexion Microsoft par minute. Après 5 échecs de mot de passe sur un compte depuis une adresse IP en 15 minutes, cette adresse attend 15 minutes avant de pouvoir réessayer ce compte. Derrière un reverse proxy, les limites comptent l'adresse IP de chaque utilisateur",
-      "Les jetons de session ne sont acceptés que dans l'unique algorithme de signature avec lequel KANAP les émet",
-      "Plaid et MCP appliquent le même RBAC que l'UI, pas d'escalade de privilèges",
+      "Les jetons de session ne sont acceptés que dans l'unique algorithme de signature avec lequel Kadratis les émet",
+      "Kad et MCP appliquent le même RBAC que l'UI, pas d'escalade de privilèges",
       'Tokens API limités aux utilisateurs individuels, révocables à tout moment',
     ],
   },
@@ -84,7 +84,7 @@ const content: SecurityContent = {
       'Exports produits par le serveur enregistrés avec qui a exporté quoi',
       'Événements de connexion et de session conservés 365 jours',
       "Les administrateurs consultent et filtrent le journal d'audit dans l'app, et l'exportent en CSV dans un format fixe que les outils de collecte de journaux lisent tel quel (jusqu'à 100 000 entrées par fichier)",
-      "Les modifications faites via Plaid sont enregistrées dans le même journal, avec leur origine. Les agents ont leur propre historique d'activité, avec les sources utilisées par chaque agent",
+      "Les modifications faites via Kad sont enregistrées dans le même journal, avec leur origine. Les agents ont leur propre historique d'activité, avec les sources utilisées par chaque agent",
     ],
   },
   agentGovernance: {
@@ -104,7 +104,7 @@ const content: SecurityContent = {
   supplyChain: {
     title: "Chaîne d'approvisionnement logicielle",
     body:
-      'KANAP est construit à partir du code source public, et sa construction est contrôlée à chaque modification. Vous pouvez vérifier ce qui est livré.',
+      'Kadratis est construit à partir du code source public, et sa construction est contrôlée à chaque modification. Vous pouvez vérifier ce qui est livré.',
     bullets: [
       "L'image de l'API qui s'exécute contient seulement l'application compilée et ses dépendances de production, sans sources ni outils de développement",
       "Les conteneurs tournent avec des privilèges réduits : l'API s'exécute sous un utilisateur sans privilège, et les conteneurs abandonnent les capacités Linux dont ils n'ont pas besoin sans pouvoir en acquérir de nouvelles",
@@ -122,10 +122,10 @@ const content: SecurityContent = {
     bullets: [
       "Hébergement cloud chez Hetzner Online GmbH à Nuremberg, en Allemagne (UE), avec Cloudflare en frontal pour le CDN, la terminaison TLS et la protection",
       "Auto-hébergement : le code source complet est public, et vous le construisez et l'exécutez vous-même avec Docker Compose",
-      "Auto-hébergement : aucun appel sortant obligatoire pour les fonctions de base, KANAP peut donc tourner sans accès internet",
+      "Auto-hébergement : aucun appel sortant obligatoire pour les fonctions de base, Kadratis peut donc tourner sans accès internet",
       "Auto-hébergement : vous choisissez où il tourne et comment il est sauvegardé",
       "Auto-hébergement : les fonctions d'IA n'utilisent que le fournisseur de modèle configuré par votre administrateur",
-      "Auto-hébergement : au démarrage, KANAP avertit quand le secret de signature est court ou que le mot de passe du premier administrateur est encore une valeur d'exemple ou trop court",
+      "Auto-hébergement : au démarrage, Kadratis avertit quand le secret de signature est court ou que le mot de passe du premier administrateur est encore une valeur d'exemple ou trop court",
       'Auto-hébergement : la santé des conteneurs API et web apparaît dans la sortie de docker ps, et les journaux Docker sont plafonnés à environ 50 Mo par conteneur',
     ],
   },
@@ -133,8 +133,8 @@ const content: SecurityContent = {
     title: 'Divulgation responsable',
     body:
       "Si vous trouvez un problème de sécurité, nous voulons le savoir. Signalez-le en privé, de préférence via le signalement privé de vulnérabilités de GitHub, ou par email. Laissez-nous un délai raisonnable pour corriger, et nous vous créditerons dans l'avis sauf si vous préférez rester anonyme.",
-    emailLabel: 'security@kanap.net',
-    email: 'security@kanap.net',
+    emailLabel: 'security@kadratis.com',
+    email: 'security@kadratis.com',
   },
   cta: {
     title: 'Des questions sur la sécurité ?',

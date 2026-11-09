@@ -4,7 +4,7 @@ const content: FeatureContent = {
   meta: {
     title: 'Portfolio-Management',
     description:
-      'Anfrage-Scoring, automatische Roadmap-Erstellung, kapazitätsbewusste Planung, Projekt-Lifecycle-Tracking. Open Source. Self-Hosting kostenlos oder Hosted Cloud.',
+      'Anfrage-Scoring, automatische Roadmap-Erstellung, kapazitätsbewusste Planung, Projekt-Lifecycle-Tracking. Open Source. Self-Hosting kostenlos oder Kadratis Cloud.',
   },
   header: {
     eyebrow: 'Portfolio-Management',
@@ -75,7 +75,7 @@ const content: FeatureContent = {
     label: 'Andere Module entdecken',
     links: [
       { label: 'Agenten', href: '/features/agents' },
-      { label: 'Plaid, KI-Assistent', href: '/features/ai' },
+      { label: 'Kad, KI-Assistent', href: '/features/ai' },
       { label: 'Budget-Management', href: '/features/budget' },
       { label: 'IT-Landschaft', href: '/features/it-landscape' },
       { label: 'Wissen', href: '/features/knowledge' },
@@ -83,9 +83,9 @@ const content: FeatureContent = {
   },
   cta: {
     title: 'Bereit, Ihren Projekt-Funnel in den Griff zu bekommen?',
-    body: 'Hosten Sie kostenlos selbst oder testen Sie Hosted Cloud. Alle Funktionen in jedem Plan.',
+    body: 'Hosten Sie kostenlos selbst oder testen Sie Kadratis Cloud. Alle Funktionen in jedem Plan.',
     primary: 'Kostenlos bereitstellen',
-    secondary: 'Hosted Cloud testen',
+    secondary: 'Kadratis Cloud testen',
   },
 };
 

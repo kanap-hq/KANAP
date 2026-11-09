@@ -2,14 +2,14 @@ import type { FeaturesHubContent } from '../features/types';
 
 const content: FeaturesHubContent = {
   meta: {
-    title: 'Wie IT-Teams KANAP wirklich nutzen',
+    title: 'Wie IT-Teams Kadratis wirklich nutzen',
     description:
       'Sechs Szenarien von den Menschen, die IT täglich am Laufen halten, vom CIO über den Support bis zur IT-Betriebsleitung. Sehen Sie, wie die Module sich kombinieren und wie Agenten jetzt die wiederkehrende Last übernehmen.',
   },
   header: {
     eyebrow: 'Nach Rolle',
-    title: 'Wie IT-Teams KANAP wirklich nutzen.',
-    lead: 'Sechs Szenarien von Menschen, die IT täglich am Laufen halten. Sie greifen auf einen zentralen Datenbestand zu, bearbeiten ihn über Plaid in Alltagssprache und übergeben die wiederkehrenden Teile jetzt einem Agenten. Sehen Sie, wie die Module sich kombinieren, nicht nur, was jedes für sich tut.',
+    title: 'Wie IT-Teams Kadratis wirklich nutzen.',
+    lead: 'Sechs Szenarien von Menschen, die IT täglich am Laufen halten. Sie greifen auf einen zentralen Datenbestand zu, bearbeiten ihn über Kad in Alltagssprache und übergeben die wiederkehrenden Teile jetzt einem Agenten. Sehen Sie, wie die Module sich kombinieren, nicht nur, was jedes für sich tut.',
   },
   modulesUsedLabel: 'Module kombiniert',
   personas: [
@@ -54,15 +54,15 @@ const content: FeaturesHubContent = {
       role: 'IT-Operations / Support',
       headline: 'Die Ursache in Sekunden finden, nicht in Stunden.',
       body:
-        'Die Auftragsverwaltung in der Produktion ist langsam. Sie fragen Plaid: „Welche Apps nutzen die order-management-API?" Fünf Sekunden später, eine Liste. „Welche davon wurden diese Woche aktualisiert?" Eine. „Wer ist verantwortlich?" E-Mail und Teams. Vom Symptom zur Verantwortlichkeit, ohne fünf Tools zu öffnen. Die First-Line-Tickets, die sich jede Woche wiederholen, gehen jetzt an einen Agenten, sodass Ihr Team nur das übernimmt, was einen Menschen braucht.',
+        'Die Auftragsverwaltung in der Produktion ist langsam. Sie fragen Kad: „Welche Apps nutzen die order-management-API?" Fünf Sekunden später, eine Liste. „Welche davon wurden diese Woche aktualisiert?" Eine. „Wer ist verantwortlich?" E-Mail und Teams. Vom Symptom zur Verantwortlichkeit, ohne fünf Tools zu öffnen. Die First-Line-Tickets, die sich jede Woche wiederholen, gehen jetzt an einen Agenten, sodass Ihr Team nur das übernimmt, was einen Menschen braucht.',
       outcome: 'Lösen Sie Vorfälle von einem Ort aus, während ein Agent die wiederkehrenden Tickets abarbeitet.',
       modules: [
         { slug: 'it-landscape', label: 'IT-Landschaft' },
         { slug: 'knowledge', label: 'Wissen' },
-        { slug: 'ai', label: 'Plaid' },
+        { slug: 'ai', label: 'Kad' },
         { slug: 'agents', label: 'Agenten' },
       ],
-      shotAlt: 'Plaid beantwortet eine Ursachenforschung mit strukturierten Ergebnissen',
+      shotAlt: 'Kad beantwortet eine Ursachenforschung mit strukturierten Ergebnissen',
     },
     {
       role: 'IT-Lead / Infrastruktur-Leitung',
@@ -94,9 +94,9 @@ const content: FeaturesHubContent = {
   cta: {
     title: 'Bereit, Ihre Rolle auf der Plattform zu sehen?',
     body:
-      'Starten Sie kostenlos mit Self-Hosting oder testen Sie die Hosted Cloud.\nAlle Funktionen in jedem Plan, Cloud wie Self-Hosting.',
+      'Starten Sie kostenlos mit Self-Hosting oder testen Sie Kadratis Cloud.\nAlle Funktionen in jedem Plan, Cloud wie Self-Hosting.',
     primary: 'Kostenlos bereitstellen',
-    secondary: 'Hosted Cloud testen',
+    secondary: 'Kadratis Cloud testen',
   },
 };
 

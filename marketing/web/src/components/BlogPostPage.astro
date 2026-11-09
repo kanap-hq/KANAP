@@ -32,7 +32,7 @@ const { item } = Astro.props;
 const { post } = item;
 const locale = getLocaleFromUrl(Astro.url);
 const t = useTranslations(locale);
-const site = (Astro.site ?? new URL('https://kanap.net')).href.replace(/\/$/, '');
+const site = (Astro.site ?? new URL('https://kadratis.com')).href.replace(/\/$/, '');
 
 const { Content } = await render(post);
 const translations = await getTranslations(item);
@@ -67,7 +67,7 @@ const articleLd = {
 };
 
 const breadcrumb = breadcrumbLd(site, [
-  { name: 'KANAP', url: localePath(locale, '/') },
+  { name: 'Kadratis', url: localePath(locale, '/') },
   { name: t('nav.blog'), url: localePath(locale, '/blog') },
   { name: post.data.title, url: item.href },
 ]);

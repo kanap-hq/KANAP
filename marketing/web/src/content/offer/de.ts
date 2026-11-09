@@ -4,7 +4,7 @@ const content: OfferContent = {
   meta: {
     title: 'Angebot',
     description:
-      'Kostenlos und Open Source. Selbsthosting ohne Limits, Support bei Bedarf oder Hosted KANAP. Alle Funktionen in jedem Plan, Agenten inklusive. AGPL v3.',
+      'Kostenlos und Open Source. Selbsthosting ohne Limits, Support bei Bedarf oder Kadratis Cloud. Alle Funktionen in jedem Plan, Agenten inklusive. AGPL v3.',
   },
 
   header: {
@@ -15,7 +15,7 @@ const content: OfferContent = {
 
   selfHosted: {
     eyebrow: 'Wählen Sie Ihren Weg',
-    title: 'Drei Wege, KANAP zu nutzen',
+    title: 'Drei Wege, Kadratis zu nutzen',
     intro:
       'Starten Sie mit der vollständigen, selbst gehosteten Open-Source-Plattform. Ergänzen Sie Support, wenn Sie möchten, sobald Sie in Produktion gehen, oder wählen Sie die gehostete Version, wenn Sie uns den Betrieb lieber anvertrauen.',
     plans: [
@@ -28,8 +28,8 @@ const content: OfferContent = {
         subPrice: 'Für immer kostenlos',
         features: [
           'Voller Funktionsumfang, keine Limits',
-          'Plaid und Agenten enthalten, kein KI-Feature-Gate',
-          'Ihr eigener LLM-Schlüssel für Plaid und Agenten',
+          'Kad und Agenten enthalten, kein KI-Feature-Gate',
+          'Ihr eigener LLM-Schlüssel für Kad und Agenten',
           'Ihre Daten bleiben auf Ihrer Infrastruktur',
           'Docker-Compose-Deployment in Minuten',
           'Open Source unter AGPL v3',
@@ -65,7 +65,7 @@ const content: OfferContent = {
   openSourceBanner: {
     title: 'Wirklich Open Source, AGPL v3',
     body:
-      'Der komplette Quellcode von KANAP liegt auf GitHub. Lesen, prüfen, erweitern, beitragen. Die AGPL v3 sorgt dafür, dass der Code offen bleibt, für alle. Keine proprietären Forks, kein Lock-in.',
+      'Der komplette Quellcode von Kadratis liegt auf GitHub. Lesen, prüfen, erweitern, beitragen. Die AGPL v3 sorgt dafür, dass der Code offen bleibt, für alle. Keine proprietären Forks, kein Lock-in.',
     linkLabel: 'Lizenz lesen',
     linkHref: 'https://www.gnu.org/licenses/agpl-3.0.html',
   },
@@ -74,10 +74,10 @@ const content: OfferContent = {
     eyebrow: 'Cloud · wenn wir es für Sie betreiben sollen',
     title: 'Dieselbe Plattform, von uns betrieben.',
     intro:
-      'Hosted KANAP ist dieselbe Open-Source-Plattform, von uns betrieben: Hosting, Updates, Backups, prioritärer Support und ein 60-minütiger Kickoff-Call. 14 Tage Test, keine Kreditkarte.',
+      'Kadratis Cloud ist dieselbe Open-Source-Plattform, von uns betrieben: Hosting, Updates, Backups, prioritärer Support und ein 60-minütiger Kickoff-Call. 14 Tage Test, keine Kreditkarte.',
     plans: [
       {
-        name: 'Hosted KANAP',
+        name: 'Kadratis Cloud',
         badge: 'Fully managed',
         target: 'Unbegrenzte Nutzer · unbegrenzte Workspaces',
         price: '249 €',
@@ -85,9 +85,9 @@ const content: OfferContent = {
         subPrice: 'oder 2.490 €/Jahr (2 Monate gratis)',
         features: [
           'Alles aus Self-Hosted',
-          'Wir hosten, aktualisieren und sichern KANAP für Sie',
+          'Wir hosten, aktualisieren und sichern Kadratis für Sie',
           'EU-Hosting für europäische Teams',
-          '1.500 Plaid-Nachrichten/Mon enthalten oder eigener Schlüssel ohne Limit',
+          '1.500 Kad-Nachrichten/Mon enthalten oder eigener Schlüssel ohne Limit',
           '60-min Kickoff-Call mit einem KANAP-Experten',
           'Prioritärer E-Mail-Support',
           'Über 20 % Rabatt auf Beratung',
@@ -106,7 +106,7 @@ const content: OfferContent = {
     items: [
       {
         title: 'Self-Hosted · kostenlos',
-        body: 'Sie haben IT-Kapazität und wollen volle Kontrolle. Installieren Sie KANAP in Ihrer Infrastruktur und nutzen Sie alle Funktionen. Community-Support.',
+        body: 'Sie haben IT-Kapazität und wollen volle Kontrolle. Installieren Sie Kadratis in Ihrer Infrastruktur und nutzen Sie alle Funktionen. Community-Support.',
       },
       {
         title: 'Self-Hosted · mit Support',
@@ -121,7 +121,7 @@ const content: OfferContent = {
 
   services: {
     title: 'Expertise und Beratung in Ihrem Tempo',
-    intro: 'KANAP ist für selbstständige Einführung gebaut. Wenn Sie schneller vorankommen möchten, enthalten bezahlte Angebote prioritären Support und einen reduzierten Beratungstarif.',
+    intro: 'Kadratis ist für selbstständige Einführung gebaut. Wenn Sie schneller vorankommen möchten, enthalten bezahlte Angebote prioritären Support und einen reduzierten Beratungstarif.',
     support: {
       title: 'Prioritärer Support',
       subtitle: 'In jedem kostenpflichtigen Plan enthalten',
@@ -136,7 +136,7 @@ const content: OfferContent = {
     consulting: {
       title: 'Beratung',
       subtitle: 'Kostenpflichtig · Abrechnung pro Tag',
-      body: 'Durchgeführt von einem erfahrenen CIO, der Ihre Herausforderungen aus eigener Praxis kennt. Optionale Hilfe, um mehr Wert aus KANAP zu ziehen: geplante Calls, tiefergehende Arbeit, Advisory, Funktionen nach Maß. Tarif: 1.150 € pro Tag, 900 € für Kunden mit Support- oder Hosting-Vertrag.',
+      body: 'Durchgeführt von einem erfahrenen CIO, der Ihre Herausforderungen aus eigener Praxis kennt. Optionale Hilfe, um mehr Wert aus Kadratis zu ziehen: geplante Calls, tiefergehende Arbeit, Advisory, Funktionen nach Maß. Tarif: 1.150 € pro Tag, 900 € für Kunden mit Support- oder Hosting-Vertrag.',
       items: [
         'Einrichtung, Konfiguration, Onboarding, Schulung',
         'Workflow-Design und Best Practices',
@@ -150,12 +150,12 @@ const content: OfferContent = {
   pilot: {
     title: 'Begleiteter Pilot',
     subtitle: '2.900 € Festpreis',
-    body: 'Ein Engagement, das Ihr Team auf KANAP startet: Wir richten die Plattform mit Ihnen ein, importieren Ihre Daten, schulen Ihr Team, und am Ende arbeitet Ihr erster Agent.',
+    body: 'Ein Engagement, das Ihr Team auf Kadratis startet: Wir richten die Plattform mit Ihnen ein, importieren Ihre Daten, schulen Ihr Team, und am Ende arbeitet Ihr erster Agent.',
     items: [
-      'Installation auf Ihren Servern oder Einrichtung in der Hosted Cloud',
+      'Installation auf Ihren Servern oder Einrichtung in Kadratis Cloud',
       'Wir helfen beim Import Ihrer ersten Schlüsseldaten',
       'Schulung und Onboarding Ihres Teams',
-      'Konfiguration von Plaid und Agenten',
+      'Konfiguration von Kad und Agenten',
       'Einrichtung der Integrationen (Entra ID, Claude oder ChatGPT, NetBox…)',
     ],
     ctaLabel: 'Kontaktieren Sie uns',
@@ -190,7 +190,7 @@ const content: OfferContent = {
     doneOpen: 'Sie können sie auch jetzt öffnen.',
     successLinkLabel: 'Rechnung öffnen',
     doneClose: 'Schließen',
-    errorGeneric: 'Die Rechnungsanfrage konnte nicht gesendet werden. Bitte erneut versuchen oder support@kanap.net kontaktieren.',
+    errorGeneric: 'Die Rechnungsanfrage konnte nicht gesendet werden. Bitte erneut versuchen oder contact@kadratis.com kontaktieren.',
     errorRequired: 'Bitte füllen Sie alle Pflichtfelder aus.',
     errorVatRequired: 'Geben Sie Ihre USt-IdNr. ein. Sie ist für Unternehmen in der Europäischen Union erforderlich.',
     errorVatInvalid: 'Diese USt-IdNr. entspricht nicht dem Format des gewählten Landes.',
@@ -200,16 +200,16 @@ const content: OfferContent = {
 
   faqTeaser: {
     title: 'Häufige Fragen',
-    body: 'Lizenz, Self-Hosting, Cloud, Plaid, Support und Abrechnung. Hier sind alle Antworten.',
+    body: 'Lizenz, Self-Hosting, Cloud, Kad, Support und Abrechnung. Hier sind alle Antworten.',
     ctaLabel: 'FAQ lesen',
   },
 
   cta: {
     title: 'Bereit loszulegen?',
     body:
-      'Stellen Sie KANAP kostenlos selbst bereit oder testen Sie die gehostete Version, wenn wir den Betrieb übernehmen sollen.',
+      'Stellen Sie Kadratis kostenlos selbst bereit oder testen Sie die gehostete Version, wenn wir den Betrieb übernehmen sollen.',
     primary: 'Kostenlos bereitstellen',
-    secondary: 'Hosted Cloud testen',
+    secondary: 'Kadratis Cloud testen',
   },
 };
 

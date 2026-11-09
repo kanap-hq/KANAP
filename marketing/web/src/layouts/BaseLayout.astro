@@ -71,10 +71,10 @@ const t = useTranslations(locale);
 
 const siteTitle = t('site.title');
 const siteDescription = t('site.description');
-const finalTitle = title ? `${title} · KANAP` : siteTitle;
+const finalTitle = title ? `${title} · Kadratis` : siteTitle;
 const finalDescription = description ?? siteDescription;
 const finalCanonical = canonical ?? Astro.url.href;
-const site = Astro.site ?? new URL('https://kanap.net');
+const site = Astro.site ?? new URL('https://kadratis.com');
 const ogImageUrl = new URL(ogImage ?? '/og-image.png', site).href;
 
 const alternates = alternateOverride
@@ -111,7 +111,7 @@ const xDefault = alternateOverride
     <link
       rel="alternate"
       type="application/rss+xml"
-      title="KANAP blog"
+      title="Kadratis blog"
       href={new URL(localePath(locale, '/blog/rss.xml'), site).href}
     />
 

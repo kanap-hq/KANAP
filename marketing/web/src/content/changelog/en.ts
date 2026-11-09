@@ -4,13 +4,13 @@ const content: ChangelogContent = {
   meta: {
     title: 'Changelog',
     description:
-      'Release notes for KANAP: what each version brings to the people who use it. The technical list of changes is on GitHub.',
+      'Release notes for Kadratis: what each version brings to the people who use it. The technical list of changes is on GitHub.',
   },
   header: {
     eyebrow: 'Changelog',
-    title: "What's new in KANAP.",
+    title: "What's new in Kadratis.",
     lead:
-      'KANAP publishes a version about once a month. The release notes below explain what each one brings to your team. Every version also has a GitHub release with the full list of changes.',
+      'Kadratis publishes a version about once a month. The release notes below explain what each one brings to your team. Every version also has a GitHub release with the full list of changes.',
   },
   empty: 'The first release notes are on their way.',
   github: {

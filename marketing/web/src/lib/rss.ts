@@ -17,7 +17,7 @@ function esc(s: string): string {
 }
 
 export async function blogFeed(locale: Locale, ctx: APIContext): Promise<Response> {
-  const site = (ctx.site ?? new URL('https://kanap.net')).href.replace(/\/$/, '');
+  const site = (ctx.site ?? new URL('https://kadratis.com')).href.replace(/\/$/, '');
   const t = useTranslations(locale);
   const posts = await getPostsWithFallback(locale);
   const self = `${site}${localePath(locale, '/blog/rss.xml')}`;
@@ -40,7 +40,7 @@ export async function blogFeed(locale: Locale, ctx: APIContext): Promise<Respons
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>KANAP · ${esc(t('nav.blog'))}</title>
+    <title>Kadratis · ${esc(t('nav.blog'))}</title>
     <link>${home}</link>
     <description>${esc(t('blog.metaDescription'))}</description>
     <language>${locale}</language>

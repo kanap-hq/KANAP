@@ -4,7 +4,7 @@ const content: OfferContent = {
   meta: {
     title: 'Oferta',
     description:
-      'Gratis y open source. Autoaloje sin límites, añada soporte cuando lo necesite o elija KANAP alojado. Todas las funcionalidades en cada plan, agentes incluidos. AGPL v3.',
+      'Gratis y open source. Autoaloje sin límites, añada soporte cuando lo necesite o elija Kadratis Cloud. Todas las funcionalidades en cada plan, agentes incluidos. AGPL v3.',
   },
 
   header: {
@@ -16,7 +16,7 @@ const content: OfferContent = {
   /* -------------------- Self-hosted (primary) -------------------- */
   selfHosted: {
     eyebrow: 'Elija su camino',
-    title: 'Tres formas de usar KANAP',
+    title: 'Tres formas de usar Kadratis',
     intro:
       'Empiece con la plataforma open source completa y autoalojada. Añada soporte si lo desea, cuando pase a producción, o elija la versión alojada si prefiere confiarnos la operación.',
     plans: [
@@ -29,8 +29,8 @@ const content: OfferContent = {
         subPrice: 'Gratis para siempre',
         features: [
           'Funcionalidad completa, sin límites',
-          'Plaid y agentes incluidos, sin feature gate de IA',
-          'Su propia clave LLM para Plaid y agentes',
+          'Kad y agentes incluidos, sin feature gate de IA',
+          'Su propia clave LLM para Kad y agentes',
           'Sus datos permanecen en su infraestructura',
           'Despliegue con Docker Compose en minutos',
           'Open source bajo AGPL v3',
@@ -66,7 +66,7 @@ const content: OfferContent = {
   openSourceBanner: {
     title: 'Realmente open source, AGPL v3',
     body:
-      'Todo el código fuente de KANAP está en GitHub. Léalo, audítelo, amplíelo, contribuya de vuelta. AGPL v3 garantiza que el código siga abierto, para todos. Sin forks propietarios, sin bloqueo.',
+      'Todo el código fuente de Kadratis está en GitHub. Léalo, audítelo, amplíelo, contribuya de vuelta. AGPL v3 garantiza que el código siga abierto, para todos. Sin forks propietarios, sin bloqueo.',
     linkLabel: 'Leer la licencia',
     linkHref: 'https://www.gnu.org/licenses/agpl-3.0.html',
   },
@@ -76,10 +76,10 @@ const content: OfferContent = {
     eyebrow: 'Nube alojada · si prefiere que lo operemos nosotros',
     title: 'La misma plataforma, operada por nosotros.',
     intro:
-      'KANAP alojado es la misma plataforma open source, operada por nosotros: alojamiento, actualizaciones, copias de seguridad, soporte prioritario y una sesión inicial de 60 minutos. Prueba de 14 días, sin tarjeta de crédito.',
+      'Kadratis Cloud es la misma plataforma open source, operada por nosotros: alojamiento, actualizaciones, copias de seguridad, soporte prioritario y una sesión inicial de 60 minutos. Prueba de 14 días, sin tarjeta de crédito.',
     plans: [
       {
-        name: 'KANAP alojado',
+        name: 'Kadratis Cloud',
         badge: 'Totalmente gestionado',
         target: 'Usuarios ilimitados · workspaces ilimitados',
         price: '249 €',
@@ -87,9 +87,9 @@ const content: OfferContent = {
         subPrice: 'o 2 490 €/año (2 meses gratis)',
         features: [
           'Todo lo de Autoalojado',
-          'Alojamos, actualizamos y respaldamos KANAP por usted',
+          'Alojamos, actualizamos y respaldamos Kadratis por usted',
           'Alojamiento en la UE para equipos europeos',
-          '1 500 mensajes Plaid/mes incluidos, o su propia clave, sin límite',
+          '1 500 mensajes Kad/mes incluidos, o su propia clave, sin límite',
           'Sesión inicial de 60 min con un experto de KANAP',
           'Soporte por email prioritario',
           'Más del 20 % de descuento en consultoría',
@@ -123,7 +123,7 @@ const content: OfferContent = {
 
   services: {
     title: 'Experiencia y asesoría a su ritmo',
-    intro: 'KANAP está diseñado para una adopción autoservicio. Si quiere ir más rápido, los planes de pago incluyen soporte prioritario y una tarifa de consultoría reducida.',
+    intro: 'Kadratis está diseñado para una adopción autoservicio. Si quiere ir más rápido, los planes de pago incluyen soporte prioritario y una tarifa de consultoría reducida.',
     support: {
       title: 'Soporte prioritario',
       subtitle: 'Incluido con cualquier plan de pago',
@@ -138,7 +138,7 @@ const content: OfferContent = {
     consulting: {
       title: 'Consultoría',
       subtitle: 'De pago · facturada por jornada',
-      body: 'A cargo de un CIO experimentado, que conoce sus retos desde dentro. Ayuda opcional para sacar más valor de KANAP: llamadas programadas, trabajo más profundo, asesoramiento, funcionalidades a medida. Tarifa: 1 150 € la jornada, 900 € para clientes con contrato de soporte o alojamiento.',
+      body: 'A cargo de un CIO experimentado, que conoce sus retos desde dentro. Ayuda opcional para sacar más valor de Kadratis: llamadas programadas, trabajo más profundo, asesoramiento, funcionalidades a medida. Tarifa: 1 150 € la jornada, 900 € para clientes con contrato de soporte o alojamiento.',
       items: [
         'Instalación, configuración, onboarding, formación',
         'Diseño de flujos de trabajo y buenas prácticas',
@@ -152,12 +152,12 @@ const content: OfferContent = {
   pilot: {
     title: 'Piloto guiado',
     subtitle: '2 900 € precio fijo',
-    body: 'Un compromiso que pone a su equipo en marcha con KANAP: la instalamos con usted, traemos sus datos, formamos a su gente y su primer agente queda trabajando.',
+    body: 'Un compromiso que pone a su equipo en marcha con Kadratis: lo instalamos con usted, traemos sus datos, formamos a su gente y su primer agente queda trabajando.',
     items: [
       'Instalación en sus servidores, o puesta en marcha alojada',
       'Le ayudamos a importar sus primeros datos clave',
       'Formación y onboarding de su equipo',
-      'Configuración de Plaid y de los agentes',
+      'Configuración de Kad y de los agentes',
       'Puesta en marcha de las integraciones (Entra ID, Claude o ChatGPT, NetBox…)',
     ],
     ctaLabel: 'Contáctenos',
@@ -192,7 +192,7 @@ const content: OfferContent = {
     doneOpen: 'También puede abrirla ahora.',
     successLinkLabel: 'Abrir factura',
     doneClose: 'Cerrar',
-    errorGeneric: 'No pudimos enviar su solicitud de factura. Inténtelo de nuevo o contacte con support@kanap.net.',
+    errorGeneric: 'No pudimos enviar su solicitud de factura. Inténtelo de nuevo o contacte con contact@kadratis.com.',
     errorRequired: 'Complete todos los campos obligatorios.',
     errorVatRequired: 'Introduzca su NIF-IVA. Es obligatorio para una empresa de la Unión Europea.',
     errorVatInvalid: 'Este NIF-IVA no corresponde al formato del país seleccionado.',
@@ -202,14 +202,14 @@ const content: OfferContent = {
 
   faqTeaser: {
     title: 'Preguntas frecuentes',
-    body: 'Licencia, autoalojamiento, nube, Plaid, soporte y facturación. Todo respondido.',
+    body: 'Licencia, autoalojamiento, nube, Kad, soporte y facturación. Todo respondido.',
     ctaLabel: 'Leer las FAQ',
   },
 
   cta: {
     title: '¿Listo para empezar?',
     body:
-      'Despliegue KANAP usted mismo gratis, o pruebe la versión alojada si quiere que la operemos nosotros.',
+      'Despliegue Kadratis usted mismo gratis, o pruebe la versión alojada si quiere que la operemos nosotros.',
     primary: 'Desplegar gratis',
     secondary: 'Probar nube alojada',
   },

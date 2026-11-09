@@ -31,11 +31,11 @@ const content: ContactContent = {
     submitting: 'Wird gesendet…',
     successTitle: 'Nachricht gesendet.',
     successBody: 'Wir melden uns innerhalb eines Werktags.',
-    errorGeneric: 'Etwas ist schiefgelaufen. Bitte erneut versuchen oder direkt an support@kanap.net schreiben.',
+    errorGeneric: 'Etwas ist schiefgelaufen. Bitte erneut versuchen oder direkt an contact@kadratis.com schreiben.',
   },
   alternate: {
     label: 'Lieber direkt per E-Mail?',
-    email: 'admin@kanap.net',
+    email: 'contact@kadratis.com',
   },
 };
 

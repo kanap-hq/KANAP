@@ -65,16 +65,16 @@ const content: FeatureContent = {
     title: 'Mehr in Wissen',
     items: [
       { title: 'Versionshistorie', body: 'Jeder Speichervorgang erzeugt eine Version. Historie durchstöbern und zu jedem früheren Stand zurückkehren.' },
-      { title: 'Export', body: 'Export nach PDF, DOCX und ODT. Dokumentation auch außerhalb von KANAP teilen.' },
+      { title: 'Export', body: 'Export nach PDF, DOCX und ODT. Dokumentation auch außerhalb von Kadratis teilen.' },
       { title: 'Vorlagen', body: 'Wiederverwendbare Dokumentvorlagen nach Typ gruppiert. Neue Dokumente schnell starten.' },
-      { title: 'Import', body: 'Import aus Word und PDF. Bestehende Dokumentation mit einem Klick in KANAP übernehmen.' },
+      { title: 'Import', body: 'Import aus Word und PDF. Bestehende Dokumentation mit einem Klick in Kadratis übernehmen.' },
     ],
   },
   crossLinks: {
     label: 'Andere Module entdecken',
     links: [
       { label: 'Agenten', href: '/features/agents' },
-      { label: 'Plaid, KI-Assistent', href: '/features/ai' },
+      { label: 'Kad, KI-Assistent', href: '/features/ai' },
       { label: 'Budget-Management', href: '/features/budget' },
       { label: 'IT-Landschaft', href: '/features/it-landscape' },
       { label: 'Portfolio-Management', href: '/features/portfolio' },
@@ -82,9 +82,9 @@ const content: FeatureContent = {
   },
   cta: {
     title: 'Bereit, Ihre IT-Dokumentation zu steuern?',
-    body: 'Hosten Sie kostenlos selbst oder testen Sie Hosted Cloud. Alle Funktionen in jedem Plan.',
+    body: 'Hosten Sie kostenlos selbst oder testen Sie Kadratis Cloud. Alle Funktionen in jedem Plan.',
     primary: 'Kostenlos bereitstellen',
-    secondary: 'Hosted Cloud testen',
+    secondary: 'Kadratis Cloud testen',
   },
 };
 

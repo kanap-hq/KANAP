@@ -2,14 +2,14 @@ import type { FeaturesHubContent } from '../features/types';
 
 const content: FeaturesHubContent = {
   meta: {
-    title: 'Cómo usan KANAP los equipos de TI de verdad',
+    title: 'Cómo usan Kadratis los equipos de TI de verdad',
     description:
       'Seis escenarios de las personas que operan TI cada día, desde el CIO hasta soporte y el responsable de operaciones de TI. Vea cómo se combinan los módulos y cómo los agentes asumen ahora la carga repetitiva.',
   },
   header: {
     eyebrow: 'Por rol',
-    title: 'Cómo usan KANAP los equipos de TI de verdad.',
-    lead: 'Seis escenarios de personas que operan TI cada día. Se apoyan en un único repositorio, lo trabajan con Plaid en lenguaje natural y ahora confían las partes repetitivas a un agente. Vea cómo se combinan los módulos, no solo lo que hace cada uno por separado.',
+    title: 'Cómo usan Kadratis los equipos de TI de verdad.',
+    lead: 'Seis escenarios de personas que operan TI cada día. Se apoyan en un único repositorio, lo trabajan con Kad en lenguaje natural y ahora confían las partes repetitivas a un agente. Vea cómo se combinan los módulos, no solo lo que hace cada uno por separado.',
   },
   modulesUsedLabel: 'Módulos combinados',
   personas: [
@@ -54,15 +54,15 @@ const content: FeaturesHubContent = {
       role: 'Operaciones de TI / soporte',
       headline: 'Encuentre la causa raíz en segundos, no en horas.',
       body:
-        'La gestión de pedidos en producción está lenta. Le pregunta a Plaid: «¿Qué aplicaciones consumen la API order-management?» Cinco segundos después, una lista. «¿Cuáles se han actualizado esta semana?» Una coincidencia. «¿Quién es el responsable?» Email y usuario de Teams. Del síntoma al responsable sin abrir cinco herramientas. Los tickets de primer nivel que se repiten cada semana van ahora a un agente, así su equipo solo se ocupa de lo que necesita a una persona.',
+        'La gestión de pedidos en producción está lenta. Le pregunta a Kad: «¿Qué aplicaciones consumen la API order-management?» Cinco segundos después, una lista. «¿Cuáles se han actualizado esta semana?» Una coincidencia. «¿Quién es el responsable?» Email y usuario de Teams. Del síntoma al responsable sin abrir cinco herramientas. Los tickets de primer nivel que se repiten cada semana van ahora a un agente, así su equipo solo se ocupa de lo que necesita a una persona.',
       outcome: 'Resuelva incidencias desde un solo lugar, mientras un agente despeja los tickets repetitivos.',
       modules: [
         { slug: 'it-landscape', label: 'Panorama IT' },
         { slug: 'knowledge', label: 'Conocimiento' },
-        { slug: 'ai', label: 'Plaid' },
+        { slug: 'ai', label: 'Kad' },
         { slug: 'agents', label: 'Agentes' },
       ],
-      shotAlt: 'Plaid respondiendo a una consulta de investigación de incidencia con resultados estructurados',
+      shotAlt: 'Kad respondiendo a una consulta de investigación de incidencia con resultados estructurados',
     },
     {
       role: 'Responsable de TI / responsable de infraestructura',

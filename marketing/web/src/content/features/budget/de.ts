@@ -50,7 +50,7 @@ const content: FeatureContent = {
     },
     {
       title: 'Ein Bericht für jede Frage',
-      body: 'Gesamt- und gesellschaftsbezogene Verrechnung, Trends, größte Steigerungen und Rückgänge, Vergleich von Budgetspalten, Analysedimensionen, Konsolidierungskonten, monatlicher Personalbestand und Kosten pro FTE. Jede Berichtszeile öffnet die passende gefilterte Liste, und Plaid beantwortet dieselben Fragen in natürlicher Sprache.',
+      body: 'Gesamt- und gesellschaftsbezogene Verrechnung, Trends, größte Steigerungen und Rückgänge, Vergleich von Budgetspalten, Analysedimensionen, Konsolidierungskonten, monatlicher Personalbestand und Kosten pro FTE. Jede Berichtszeile öffnet die passende gefilterte Liste, und Kad beantwortet dieselben Fragen in natürlicher Sprache.',
       bullets: [
         'Gesamt- und gesellschaftsbezogene Verrechnung',
         'Budgetvergleich über mehrere Jahre, für alle Zeilen, OPEX oder CAPEX',
@@ -67,7 +67,7 @@ const content: FeatureContent = {
     items: [
       { title: 'Mit Anwendungen und Projekten verknüpft', body: 'Jede Budgetzeile führt zu ihren Anwendungen, Projekten und Lieferanten. Der Datensatz einer Anwendung zeigt, was sie kostet.' },
       { title: 'Verträge und Fristen', body: 'Jahresbetrag, automatische Verlängerung, Kündigungsfrist und berechneter Kündigungstermin, mit den Budgetzeilen verknüpft.' },
-      { title: 'Hin und zurück mit der Tabellenkalkulation', body: 'Exportieren Sie die Zeilen, bearbeiten Sie sie in Excel oder LibreOffice und importieren Sie die Datei zurück: KANAP schreibt nur die geänderten Zellen.' },
+      { title: 'Hin und zurück mit der Tabellenkalkulation', body: 'Exportieren Sie die Zeilen, bearbeiten Sie sie in Excel oder LibreOffice und importieren Sie die Datei zurück: Kadratis schreibt nur die geänderten Zellen.' },
       { title: 'Beispieldaten', body: 'Ein Test füllt sich in einer Minute mit dem Budget von Fromage & Co, vier fiktiven Gesellschaften, damit Sie alles sehen, bevor Sie Ihr eigenes erfassen.' },
       { title: 'Personal und Kosten pro FTE', body: 'Eine Zeile für externe Kräfte in Personen oder Tagen gibt ihre FTE an. Die Berichte zeigen daraus den Personalbestand Monat für Monat und die Kosten pro FTE oder den Tagessatz, nach Lieferant oder Kostenstelle.' },
       { title: 'Eigene Analyseachsen', body: 'Legen Sie so viele Analysedimensionen an, wie Ihre Fragen verlangen (Bereich, Kostenart, Programm), jede mit eigenen Werten, für OPEX, CAPEX oder beides. Vier empfohlene Dimensionen sind sofort da: Kostenart, IT-Bereich, Zweck und Priorität. Die Budgetberichte lassen sich danach filtern, mehrere gruppieren nach Dimension.' },
@@ -79,13 +79,13 @@ const content: FeatureContent = {
       { label: 'IT-Landschaft', href: '/features/it-landscape' },
       { label: 'Projektportfolio', href: '/features/portfolio' },
       { label: 'Dokumentation', href: '/features/knowledge' },
-      { label: 'Plaid, der integrierte KI-Agent', href: '/features/ai' },
+      { label: 'Kad, der integrierte KI-Agent', href: '/features/ai' },
       { label: 'Helpdesk-Agent', href: '/features/agents' },
     ],
   },
   cta: {
-    title: 'Testen Sie KANAP mit einem vollständigen IT-Budget.',
-    body: 'Testen Sie die gehostete Version mit Beispieldaten oder stellen Sie KANAP kostenlos auf Ihren eigenen Servern bereit.',
+    title: 'Testen Sie Kadratis mit einem vollständigen IT-Budget.',
+    body: 'Testen Sie die gehostete Version mit Beispieldaten oder stellen Sie Kadratis kostenlos auf Ihren eigenen Servern bereit.',
     primary: 'Kostenlos bereitstellen',
     secondary: 'Mit Beispieldaten testen',
   },

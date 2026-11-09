@@ -2,14 +2,14 @@ import type { FeaturesHubContent } from '../features/types';
 
 const content: FeaturesHubContent = {
   meta: {
-    title: 'Comment les DSI utilisent vraiment KANAP',
+    title: 'Comment les DSI utilisent vraiment Kadratis',
     description:
       "Six scénarios vécus par celles et ceux qui font tourner l'IT au quotidien, du DSI au support jusqu'au responsable des opérations IT. Voyez comment les modules se combinent, et comment les agents prennent désormais en charge la charge répétitive.",
   },
   header: {
     eyebrow: 'Par rôle',
-    title: 'Comment les DSI utilisent vraiment KANAP.',
-    lead: "Six scénarios issus de ceux qui font tourner l'IT au quotidien. Ils s'appuient sur un seul référentiel, le travaillent via Plaid en langage naturel, et confient désormais les parties répétitives à un agent. Voyez comment les modules se combinent, au-delà de ce que chacun fait séparément.",
+    title: 'Comment les DSI utilisent vraiment Kadratis.',
+    lead: "Six scénarios issus de ceux qui font tourner l'IT au quotidien. Ils s'appuient sur un seul référentiel, le travaillent via Kad en langage naturel, et confient désormais les parties répétitives à un agent. Voyez comment les modules se combinent, au-delà de ce que chacun fait séparément.",
   },
   modulesUsedLabel: 'Modules combinés',
   personas: [
@@ -54,15 +54,15 @@ const content: FeaturesHubContent = {
       role: 'Opérations IT / support',
       headline: 'Trouvez la cause racine en secondes, pas en heures.',
       body:
-        "La gestion de commandes en production est lente. Vous demandez à Plaid : « Quelles applications consomment l'API order-management ? » Cinq secondes plus tard, une liste. « Lesquelles ont été mises à jour cette semaine ? » Une seule. « Qui en est responsable ? » Email et Teams. Du symptôme au responsable sans ouvrir cinq outils. Les tickets de premier niveau qui reviennent chaque semaine partent maintenant à un agent, pour que votre équipe ne prenne en charge que ce qui exige une personne.",
+        "La gestion de commandes en production est lente. Vous demandez à Kad : « Quelles applications consomment l'API order-management ? » Cinq secondes plus tard, une liste. « Lesquelles ont été mises à jour cette semaine ? » Une seule. « Qui en est responsable ? » Email et Teams. Du symptôme au responsable sans ouvrir cinq outils. Les tickets de premier niveau qui reviennent chaque semaine partent maintenant à un agent, pour que votre équipe ne prenne en charge que ce qui exige une personne.",
       outcome: "Résolvez les incidents depuis un seul endroit, pendant qu'un agent traite les tickets répétitifs.",
       modules: [
         { slug: 'it-landscape', label: 'Cartographie IT' },
         { slug: 'knowledge', label: 'Connaissance' },
-        { slug: 'ai', label: 'Plaid' },
+        { slug: 'ai', label: 'Kad' },
         { slug: 'agents', label: 'Agents' },
       ],
-      shotAlt: "Plaid répondant à une enquête d'incident avec des résultats structurés",
+      shotAlt: "Kad répondant à une enquête d'incident avec des résultats structurés",
     },
     {
       role: 'Lead IT / responsable infrastructure',

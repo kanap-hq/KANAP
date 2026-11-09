@@ -3,14 +3,14 @@ import type { TrialContent } from './types';
 const content: TrialContent = {
   start: {
     title: 'Commencer votre essai gratuit',
-    description: 'Créez votre espace de travail KANAP. Essai de quatorze jours, toutes les fonctions, sans carte bancaire.',
+    description: 'Créez votre espace de travail Kadratis. Essai de quatorze jours, toutes les fonctions, sans carte bancaire.',
     eyebrow: 'Essai gratuit',
     heading: 'Commencez votre essai gratuit.',
     lead: 'Votre espace de travail sera provisionné en deux minutes. Vous démarrerez avec un jeu de données d\'exemple effaçable ou avec un espace vide, prêt à accueillir vos données.',
     benefits: [
       'Toutes les fonctions pendant quatorze jours, sans carte bancaire.',
-      'Trois parcours guidés pour découvrir KANAP : budget, cartographie, projets.',
-      'Plaid, l\'assistant, répond à vos questions sur vos données et peut vous aider à importer vos données.',
+      'Trois parcours guidés pour découvrir Kadratis : budget, cartographie, projets.',
+      'Kad, l\'assistant, répond à vos questions sur vos données et peut vous aider à importer vos données.',
       'Un appel découverte de trente minutes, à planifier depuis votre espace quand vous le voulez.',
     ],
     form: {
@@ -20,7 +20,7 @@ const content: TrialContent = {
       countryLabel: 'Pays',
       countryNoMatch: 'Aucun pays correspondant',
       slugLabel: 'Adresse de l\'espace de travail',
-      slugDomain: '.kanap.net',
+      slugDomain: '.kadratis.com',
       emailLabel: 'E-mail de l\'administrateur',
       submitLabel: 'Envoyer le lien d\'activation',
       submitting: 'Envoi…',
@@ -29,7 +29,7 @@ const content: TrialContent = {
       errorEmail: 'Entrez une adresse email valide.',
       errorSlug: 'Uniquement lettres minuscules, chiffres et traits d\'union.',
       captchaLabel: 'Vérification de sécurité',
-      privacyNote: 'Votre adresse mail sert à activer l\'espace KANAP et définir le premier administrateur. Vous y recevrez également jusqu\'à 4 messages d\'accompagnement pendant l\'essai ; vous pouvez vous en désinscrire à tout moment.',
+      privacyNote: 'Votre adresse mail sert à activer l\'espace Kadratis et définir le premier administrateur. Vous y recevrez également jusqu\'à 4 messages d\'accompagnement pendant l\'essai ; vous pouvez vous en désinscrire à tout moment.',
     },
     countryOptions: [
       { value: 'FR', label: 'France' },
@@ -58,7 +58,7 @@ const content: TrialContent = {
     lead: 'Nous avons envoyé un lien d\'activation à l\'adresse fournie. Cliquez dessus pour finaliser la création de votre espace de travail.',
     whatNext: 'La suite',
     steps: [
-      'Ouvrez votre boîte mail, objet « Activez votre espace KANAP ».',
+      'Ouvrez votre boîte mail, objet « Activez votre espace Kadratis ».',
       'Cliquez sur le lien. Nous créons votre espace de travail en quelques secondes.',
       'Définissez votre mot de passe admin. Connectez-vous, invitez votre équipe, c\'est parti.',
     ],

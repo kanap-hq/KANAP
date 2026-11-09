@@ -9,7 +9,7 @@ const content: FeatureContent = {
   header: {
     eyebrow: 'Incidents',
     title: 'Keep a detailed record of your major incidents.',
-    lead: 'KANAP keeps the memory of the incidents that matter: what happened, what it hit, why, and what you changed. Each one gets a number, a review and a journal, and stays linked to the applications and servers it touched.',
+    lead: 'Kadratis keeps the memory of the incidents that matter: what happened, what it hit, why, and what you changed. Each one gets a number, a review and a journal, and stays linked to the applications and servers it touched.',
   },
   sections: [
     {
@@ -65,7 +65,7 @@ const content: FeatureContent = {
     title: 'And more',
     items: [
       { title: 'CSV import and export', body: 'Bring your past incidents in from a spreadsheet, reviews included, and export the whole register.' },
-      { title: 'Plaid and MCP', body: 'Ask Plaid how many major incidents were opened this year, or for the full record of one, journal and review included. Confidential incidents stay out. The same data is open to your AI clients through the read-only MCP server.' },
+      { title: 'Kad and MCP', body: 'Ask Kad how many major incidents were opened this year, or for the full record of one, journal and review included. Confidential incidents stay out. The same data is open to your AI clients through the read-only MCP server.' },
       { title: 'Antedated notes', body: 'Notes in the journal carry the time the event happened. The time they were saved is kept apart and cannot be changed.' },
       { title: 'Rights', body: 'Readers see, contributors create and write, register administrators reopen, cancel, delete and lift a restriction.' },
     ],
@@ -76,7 +76,7 @@ const content: FeatureContent = {
       { label: 'IT landscape', href: '/features/it-landscape' },
       { label: 'Contracts', href: '/features/contracts' },
       { label: 'Documentation', href: '/features/knowledge' },
-      { label: 'Plaid, the built-in AI agent', href: '/features/ai' },
+      { label: 'Kad, the built-in AI agent', href: '/features/ai' },
       { label: 'Helpdesk agent', href: '/features/agents' },
     ],
   },

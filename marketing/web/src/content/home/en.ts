@@ -10,7 +10,7 @@ const content: HomeContent = {
   hero: {
     eyebrow: 'Open source · built by a CIO, for CIOs',
     title: 'IT budget, applications and projects in one governed record.',
-    lead: 'An application carries its budget, its documentation, its projects and its compliance data. Ask Plaid, the built-in AI agent, about all of it. Open source, free to self-host.',
+    lead: 'An application carries its budget, its documentation, its projects and its compliance data. Ask Kad, the built-in AI agent, about all of it. Open source, free to self-host.',
     primaryCta: 'Try it with sample data',
     secondaryCta: 'Deploy for free',
     trialNote: 'Hosted trial · sample data loaded in a minute · AGPL v3, full source on GitHub.',
@@ -32,7 +32,7 @@ const content: HomeContent = {
       },
       {
         title: 'Staffing and cost per FTE',
-        body: 'Declare FTE on the lines that carry people: KANAP derives monthly staffing and cost per FTE, as an amount or a daily rate, next to the amounts.',
+        body: 'Declare FTE on the lines that carry people: Kadratis derives monthly staffing and cost per FTE, as an amount or a daily rate, next to the amounts.',
       },
     ],
     outro: 'Every line is attached to its application, contract or project: from the budget, you find what IT runs and what each piece costs.',
@@ -118,16 +118,16 @@ const content: HomeContent = {
       },
       {
         slug: '/features/ai',
-        title: 'Plaid, the built-in AI agent',
+        title: 'Kad, the built-in AI agent',
         blurb:
-          'For every role. Ask a question in plain language about the budget, the landscape or the projects: Plaid answers from the whole record and prepares changes, which you approve.',
+          'For every role. Ask a question in plain language about the budget, the landscape or the projects: Kad answers from the whole record and prepares changes, which you approve.',
         bullets: [
           'Natural-language questions across all modules',
           'Changes prepared as previews, applied after approval',
           'Read-only MCP server for your AI clients',
-          'Usage included on hosted KANAP, or bring your own key',
+          'Usage included on Kadratis Cloud, or bring your own key',
         ],
-        ctaLabel: 'Explore Plaid',
+        ctaLabel: 'Explore Kad',
       },
       {
         slug: '/features/agents',
@@ -149,7 +149,7 @@ const content: HomeContent = {
     eyebrow: 'Built for the enterprise',
     title: 'One system, under your control.',
     intro:
-      'The modules share the same data, the same permissions and the same audit log: a change prepared by Plaid is recorded like any other.',
+      'The modules share the same data, the same permissions and the same audit log: a change prepared by Kad is recorded like any other.',
     items: [
       {
         title: 'Rich relationships',
@@ -169,7 +169,7 @@ const content: HomeContent = {
       },
       {
         title: 'Complete audit trail',
-        body: 'Every change logged, including those made through Plaid, with before and after. Agent actions have their own activity history.',
+        body: 'Every change logged, including those made through Kad, with before and after. Agent actions have their own activity history.',
       },
       {
         title: 'SSO with Microsoft Entra ID',
@@ -181,12 +181,12 @@ const content: HomeContent = {
   vision: {
     eyebrow: 'AI on a complete record',
     title: 'AI that helps, because everything is in one place.',
-    body: "An AI assistant is only as good as the data it sees. In KANAP it sees the budget, applications, contracts, projects and documentation at once, so it can answer \"why is the landing drifting on infrastructure?\" or \"which applications depend on this contract?\".\nIt prepares the changes, you approve them. Nothing changes without you, and everything is logged.",
+    body: "An AI assistant is only as good as the data it sees. In Kadratis it sees the budget, applications, contracts, projects and documentation at once, so it can answer \"why is the landing drifting on infrastructure?\" or \"which applications depend on this contract?\".\nIt prepares the changes, you approve them. Nothing changes without you, and everything is logged.",
   },
 
   cta: {
     title: 'Run your IT on a system you own.',
-    body: 'Try hosted KANAP with sample data, or deploy it for free on your own servers. Same product, no feature paywall.',
+    body: 'Try Kadratis Cloud with sample data, or deploy Kadratis for free on your own servers. Same product, no feature paywall.',
     primary: 'Try it with sample data',
     secondary: 'Deploy for free',
   },

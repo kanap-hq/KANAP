@@ -36,7 +36,7 @@ const { topic } = Astro.props;
 
 const locale = getLocaleFromUrl(Astro.url);
 const t = useTranslations(locale);
-const site = (Astro.site ?? new URL('https://kanap.net')).href.replace(/\/$/, '');
+const site = (Astro.site ?? new URL('https://kadratis.com')).href.replace(/\/$/, '');
 
 const allPosts = await getPostsWithFallback(locale);
 const posts = topic ? allPosts.filter((item) => item.post.data.topic === topic) : allPosts;
@@ -62,7 +62,7 @@ const pageDescription = topic
   : t('blog.metaDescription');
 
 const crumbs = [
-  { name: 'KANAP', url: localePath(locale, '/') },
+  { name: 'Kadratis', url: localePath(locale, '/') },
   { name: t('nav.blog'), url: localePath(locale, '/blog') },
 ];
 if (topic) crumbs.push({ name: label, url: topicHref(topic) });
