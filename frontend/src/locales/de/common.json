@@ -1579,6 +1579,8 @@
       "markDone": "Als erledigt markieren",
       "markUndone": "Als nicht erledigt markieren",
       "gotIt": "Verstanden",
+      "nextStep": "Nächster Schritt",
+      "finish": "Abschließen",
       "done": "Erledigt",
       "later": "Später",
       "end": {
@@ -1615,7 +1617,7 @@
         },
         "own_budget_lines": {
           "title": "Ihre Budgetzeilen",
-          "hint": "Importieren Sie Ihre Budgetdatei (exportieren Sie zuerst, um die Vorlage zu erhalten) oder legen Sie Ihre erste Budgetzeile direkt an."
+          "hint": "Importieren Sie Ihre Budgetdatei (klicken Sie zuerst auf Importieren, um die Beispieldatei herunterzuladen) oder legen Sie Ihre erste Budgetzeile direkt an."
         },
         "own_contract": {
           "title": "Ein verknüpfter Vertrag",

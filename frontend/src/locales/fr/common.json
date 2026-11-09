@@ -1579,6 +1579,8 @@
       "markDone": "Marquer comme fait",
       "markUndone": "Marquer comme non fait",
       "gotIt": "Compris",
+      "nextStep": "Pas suivant",
+      "finish": "Terminer",
       "done": "Fait",
       "later": "Plus tard",
       "end": {
@@ -1615,7 +1617,7 @@
         },
         "own_budget_lines": {
           "title": "Vos lignes",
-          "hint": "Importez votre fichier budget (exportez d'abord pour récupérer le modèle) ou créez votre première ligne budgétaire directement."
+          "hint": "Importez votre fichier budget (cliquez d'abord sur Importer pour télécharger le fichier d'exemple) ou créez votre première ligne budgétaire directement."
         },
         "own_contract": {
           "title": "Un contrat lié",

@@ -1,9 +1,17 @@
 import React from 'react';
 import { Box, Button, Paper, Popper, Typography } from '@mui/material';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import { useQuery } from '@tanstack/react-query';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { readActiveStep, withinStepScreen, writeActiveStep, type ActiveStep } from './activeStep';
+import { onboardingApi } from './onboardingApi';
 import { STEP_PARAM, stepHintKey, stepScreen, stepTitleKey, type StepLocationState, type StepTarget } from './onboardingPaths';
-import { useOnboarding, useOnboardingActions } from './useOnboarding';
+import { ONBOARDING_QUERY_KEY, useOnboarding, useOnboardingActions } from './useOnboarding';
+import { useOpenStep } from './useOpenStep';
+
+/** While the hint waits for the object of its step, the state is read again this often. */
+export const STEP_OBJECT_POLL_MS = 5000;
 
 /** `data-page-title`: the title of `PageHeader` and `ReportLayout`. */
 const TITLE = ['main [data-page-title]', 'main .MuiTypography-h5', 'main h1, main h2, main h3, main h4, main h5'];
@@ -85,8 +93,9 @@ function useTarget(target: StepTarget | null): Target {
 /**
  * The hint of a step opened from the first steps: the target of its screen is outlined and one
  * sentence says what to look at. On the example, opening the step marks it done; with your own
- * data, the object the step creates does, or "Done" for a step that creates none. Closing it
- * drops the step from the address.
+ * data, the object the step creates does, or "Done" for a step that creates none. It stays on
+ * the step's screen and its records until it is closed (`activeStep.ts`); once the step is done,
+ * it opens the next step, or the home page at the end of the path.
  */
 export default function StepHint() {
   const { t, i18n } = useTranslation('common');
@@ -94,10 +103,27 @@ export default function StepHint() {
   const navigate = useNavigate();
   const { state } = useOnboarding();
   const { markDone } = useOnboardingActions();
+  const openStep = useOpenStep();
 
-  const key = new URLSearchParams(location.search).get(STEP_PARAM);
-  const step = key && state ? state.steps.find((candidate) => candidate.key === key) ?? null : null;
-  const screen = step && state ? stepScreen(step.key, state.angle) : null;
+  const paramKey = new URLSearchParams(location.search).get(STEP_PARAM);
+  const [active, setActive] = React.useState<ActiveStep | null>(readActiveStep);
+  // A step opened from the first steps becomes the open one.
+  React.useEffect(() => {
+    if (!paramKey) return;
+    setActive((current) => {
+      if (current?.key === paramKey) return current;
+      const next = { key: paramKey };
+      writeActiveStep(next);
+      return next;
+    });
+  }, [paramKey]);
+  const key = paramKey ?? active?.key ?? null;
+  const found = key && state ? state.steps.find((candidate) => candidate.key === key) ?? null : null;
+  const foundScreen = found && state ? stepScreen(found.key, state.angle) : null;
+  // Without its key in the address, the hint shows on its screen and the pages below it only.
+  const shown = !!foundScreen && (!!paramKey || withinStepScreen(location.pathname, foundScreen.to));
+  const step = shown ? found : null;
+  const screen = shown ? foundScreen : null;
   // A record opened from the list of a title step (its address goes below the list's): under the
   // record's title, the bubble would hide its tab row, so the hint points at the tabs.
   const onRecord = screen?.target === 'title' && location.pathname.startsWith(`${screen.to}/`);
@@ -109,6 +135,15 @@ export default function StepHint() {
   const anchor = React.useMemo(() => (rect ? { getBoundingClientRect: () => rect } : null), [rect]);
   const discover = state?.mode === 'example';
 
+  // The object of the step may be created in a dialog, with no change of address.
+  const waiting = !!step && step.automatic && !step.done_at;
+  useQuery({
+    queryKey: ONBOARDING_QUERY_KEY,
+    queryFn: onboardingApi.get,
+    enabled: waiting,
+    refetchInterval: waiting ? STEP_OBJECT_POLL_MS : false,
+  });
+
   const markedRef = React.useRef<string | null>(null);
   React.useEffect(() => {
     if (!step || !discover || step.done_at || markedRef.current === step.key) return;
@@ -117,11 +152,20 @@ export default function StepHint() {
   }, [discover, markDone, step]);
 
   const close = React.useCallback(() => {
+    writeActiveStep(null);
+    setActive(null);
+    if (!paramKey) return;
     const params = new URLSearchParams(location.search);
     params.delete(STEP_PARAM);
     const search = params.toString();
     navigate({ pathname: location.pathname, search: search ? `?${search}` : '' }, { replace: true });
-  }, [location.pathname, location.search, navigate]);
+  }, [location.pathname, location.search, navigate, paramKey]);
+
+  const finish = React.useCallback(() => {
+    writeActiveStep(null);
+    setActive(null);
+    navigate('/');
+  }, [navigate]);
 
   if (!step || !screen || !state) return null;
   // A record opened by its step is named in the hint, when the step has a sentence for it.
@@ -171,8 +215,22 @@ export default function StepHint() {
           })}
         >
           <Typography variant="body2">{hint}</Typography>
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 1.25 }}>
-            {discover || step.done_at || step.automatic ? (
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1, mt: 1.25 }}>
+            {step.done_at && !discover ? (
+              <CheckCircleIcon aria-hidden sx={{ fontSize: 18, color: 'success.main', mr: 'auto' }} />
+            ) : null}
+            {step.done_at ? (
+              <>
+                <Button variant="action" onClick={close}>{t('onboarding.firstSteps.gotIt')}</Button>
+                {state.next_step ? (
+                  <Button variant="action-primary" onClick={() => { void openStep(state.next_step!, state.angle); }}>
+                    {t('onboarding.firstSteps.nextStep')}
+                  </Button>
+                ) : (
+                  <Button variant="action-primary" onClick={finish}>{t('onboarding.firstSteps.finish')}</Button>
+                )}
+              </>
+            ) : discover || step.automatic ? (
               <Button variant="action" onClick={close}>{t('onboarding.firstSteps.gotIt')}</Button>
             ) : (
               <>
@@ -180,7 +238,7 @@ export default function StepHint() {
                 <Button
                   variant="action-primary"
                   disabled={markDone.isPending}
-                  onClick={() => markDone.mutate(step.key, { onSuccess: close })}
+                  onClick={() => markDone.mutate(step.key)}
                 >
                   {t('onboarding.firstSteps.done')}
                 </Button>

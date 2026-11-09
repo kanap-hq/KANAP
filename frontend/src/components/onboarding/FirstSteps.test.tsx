@@ -1,15 +1,16 @@
 import React from 'react';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { I18nextProvider } from 'react-i18next';
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../i18n';
 import { createAppTheme } from '../../config/ThemeContext';
 import { createFakeOnboardingServer } from '../../test/fakeOnboardingServer';
 import FirstStepsTile from './FirstStepsTile';
-import StepHint from './StepHint';
+import StepHint, { STEP_OBJECT_POLL_MS } from './StepHint';
+import { writeActiveStep } from './activeStep';
 import { ONBOARDING_QUERY_KEY } from './useOnboarding';
 
 const env = vi.hoisted(() => ({
@@ -46,6 +47,12 @@ vi.mock('../../config/FeaturesContext', () => ({
 function Where() {
   const location = useLocation();
   return <div data-testid="where">{`${location.pathname}${location.search}`}</div>;
+}
+
+/** A link of the page under test: opens `to` inside the app. */
+function Go({ to }: { to: string }) {
+  const navigate = useNavigate();
+  return <button type="button" onClick={() => navigate(to)}>{`go ${to}`}</button>;
 }
 
 function renderAt(
@@ -228,6 +235,7 @@ describe('FirstStepsTile', () => {
 describe('StepHint', () => {
   beforeEach(async () => {
     await i18n.changeLanguage('en');
+    writeActiveStep(null);
   });
 
   const page = (
@@ -318,14 +326,67 @@ describe('StepHint', () => {
     expect(hint).toHaveTextContent('Here is an application record. Explore the properties panel and the tabs');
   });
 
-  it('waits for "Done" with your own data on a step that creates nothing', async () => {
+  it('waits for "Done" with your own data on a step that creates nothing, then opens the next step', async () => {
     env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'own_data' });
     renderAt('/master-data/companies?step=own_company', page);
     const hint = await screen.findByRole('dialog', { name: 'Your company' });
     expect(done('own_company')).toBeFalsy();
     fireEvent.click(within(hint).getByRole('button', { name: 'Done' }));
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    fireEvent.click(await screen.findByRole('button', { name: 'Next step' }));
     expect(done('own_company')).toBeTruthy();
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/ops/budget?step=own_budget_lines'));
+    expect(await screen.findByRole('dialog', { name: 'Your budget lines' })).toHaveTextContent('click Import first to download the example file');
+  });
+
+  it('stays with its step on the records of its list and back, until it is closed', async () => {
+    env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'own_data' });
+    renderAt('/master-data/companies?step=own_company', (
+      <>
+        {page}
+        <Go to="/master-data/companies/C-1/overview" />
+        <Go to="/master-data/companies" />
+        <Go to="/ops/contracts" />
+      </>
+    ));
+    await screen.findByRole('dialog', { name: 'Your company' });
+    fireEvent.click(screen.getByRole('button', { name: 'go /master-data/companies/C-1/overview' }));
+    expect(await screen.findByRole('dialog', { name: 'Your company' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'go /ops/contracts' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'go /master-data/companies' }));
+    const hint = await screen.findByRole('dialog', { name: 'Your company' });
+    fireEvent.click(within(hint).getByRole('button', { name: 'Later' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'go /master-data/companies/C-1/overview' }));
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('turns to the next step once the object of its step exists', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'own_data' });
+      renderAt('/ops/contracts?step=own_contract', page);
+      await screen.findByRole('dialog', { name: 'A linked contract' });
+      expect(screen.queryByRole('button', { name: 'Next step' })).not.toBeInTheDocument();
+      env.server.db.objects.add('own_contract');
+      await act(async () => { vi.advanceTimersByTime(STEP_OBJECT_POLL_MS + 100); });
+      expect(await screen.findByRole('button', { name: 'Next step' })).toBeInTheDocument();
+      expect(done('own_contract')).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('ends the path on the home page', async () => {
+    env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'example' });
+    for (const key of ['budget_overview', 'budget_line', 'budget_report', 'budget_plaid']) {
+      env.server.db.done.set(`budget/example/${key}`, '2026-11-02T09:20:00.000Z');
+    }
+    renderAt('/ops/budget?step=budget_import', page);
+    fireEvent.click(await screen.findByRole('button', { name: 'Finish' }));
+    await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/'));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('leaves a step that creates an object to that object, and gives the hint of the angle', async () => {

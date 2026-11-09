@@ -4,17 +4,15 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import CloseIcon from '@mui/icons-material/Close';
-import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import DashboardTile from '../../pages/workspace/tiles/DashboardTile';
 import { onboardingApi, ONBOARDING_ANGLES, type OnboardingAngle, type OnboardingState } from './onboardingApi';
-import api from '../../api';
 import BookDiscoveryCallButton from '../BookDiscoveryCallButton';
-import { useBudgetColumns } from '../../hooks/useBudgetColumns';
-import { buildItemPath, formatItemRef } from '../../utils/item-ref';
-import { STEP_PARAM, stepHref, stepScreen, stepTitleKey, type StepLocationState, type StepScreen } from './onboardingPaths';
+import { stepHref, stepScreen, stepTitleKey } from './onboardingPaths';
 import { useOnboarding, useOnboardingActions } from './useOnboarding';
+import { useOpenStep } from './useOpenStep';
 
 const rowSx = {
   display: 'flex',
@@ -23,86 +21,14 @@ const rowSx = {
   minHeight: 32,
 } as const;
 
-type TopLine = { id: string; item_number: number | null; product_name: string | null };
-type Application = { id: string; name: string | null };
-type PortfolioItem = { id: string; item_number: number | null; name: string | null };
-
-const portfolioRef = (type: 'request' | 'project', item: PortfolioItem) =>
-  (item.item_number != null ? formatItemRef(type, item.item_number) : item.id);
-
-/** The first of a portfolio list by priority score, with optional list filters. */
-async function topScored(path: string, filters?: Record<string, unknown>): Promise<PortfolioItem | null> {
-  const res = await api.get<{ items: PortfolioItem[] }>(path, {
-    params: { limit: 1, sort: 'priority_score:DESC', ...(filters ? { filters: JSON.stringify(filters) } : {}) },
-  });
-  return res.data.items?.[0] ?? null;
-}
-type Opened = { path: string; record: string | null };
-
-/**
- * Opens the record of a step (the largest budget line of the year, the application the server
- * chooses to show: most critical, then the richest record), named in the hint. Without a record,
- * or when the list cannot be read, the step opens the list.
- */
-function useOpenRecord(stepKey: string, screen: StepScreen) {
-  const navigate = useNavigate();
-  const { defaultSort } = useBudgetColumns();
-  const kind = screen.opensRecord;
-  const projectTab = screen.tab ?? 'summary';
-  return React.useCallback(async () => {
-    const fallback = `${screen.to}?${STEP_PARAM}=${encodeURIComponent(stepKey)}`;
-    const find = async (): Promise<Opened | null> => {
-      if (kind === 'topBudgetLine') {
-        const year = new Date().getFullYear();
-        const res = await api.get<{ items: TopLine[] }>('/budget-lines/summary', {
-          params: { limit: 1, sort: defaultSort, years: [year - 1, year].join(',') },
-        });
-        const line = res.data.items?.[0];
-        if (!line) return null;
-        const ref = line.item_number != null ? formatItemRef('budget', line.item_number) : line.id;
-        return {
-          path: buildItemPath('budget', ref),
-          record: [line.item_number != null ? ref : null, line.product_name].filter(Boolean).join(' '),
-        };
-      }
-      if (kind === 'topScoredRequest') {
-        const request = await topScored('/portfolio/requests');
-        return request ? { path: `${buildItemPath('request', portfolioRef('request', request))}/scoring`, record: request.name } : null;
-      }
-      if (kind === 'projectFromRequest') {
-        // The project of the best-scored converted request, else the best-scored project.
-        const request = await topScored('/portfolio/requests', { status: { filterType: 'set', values: ['converted'] } });
-        if (request) {
-          const relations = await api.get<{ resulting_projects?: PortfolioItem[] }>(`/portfolio/requests/${request.id}/relations`);
-          const project = relations.data.resulting_projects?.[0];
-          if (project) return { path: `${buildItemPath('project', portfolioRef('project', project))}/${projectTab}`, record: project.name };
-        }
-        const project = await topScored('/portfolio/projects');
-        return project ? { path: `${buildItemPath('project', portfolioRef('project', project))}/${projectTab}`, record: project.name } : null;
-      }
-      const res = await api.get<{ item: Application | null }>('/onboarding/showcase-application');
-      const application = res.data.item;
-      return application ? { path: buildItemPath('application', application.id), record: application.name } : null;
-    };
-    try {
-      const opened = await find();
-      if (!opened) { navigate(fallback); return; }
-      const state: StepLocationState = { onboardingRecord: opened.record ?? undefined };
-      navigate(`${opened.path}?${STEP_PARAM}=${encodeURIComponent(stepKey)}`, { state });
-    } catch {
-      navigate(fallback);
-    }
-  }, [defaultSort, kind, navigate, projectTab, screen.to, stepKey]);
-}
-
-function RecordStepLink({ stepKey, screen, children, sx }: { stepKey: string; screen: StepScreen; children: React.ReactNode; sx: object }) {
-  const openRecord = useOpenRecord(stepKey, screen);
+function RecordStepLink({ stepKey, angle, children, sx }: { stepKey: string; angle: OnboardingAngle | null; children: React.ReactNode; sx: object }) {
+  const openStep = useOpenStep();
   return (
     <Link
       component="button"
       type="button"
       underline="hover"
-      onClick={() => { void openRecord(); }}
+      onClick={() => { void openStep(stepKey, angle); }}
       sx={{ ...sx, textAlign: 'left', font: 'inherit' }}
     >
       {children}
@@ -148,7 +74,7 @@ function StepRow({ stepKey, angle, done, next, busy, onToggle }: {
         </IconButton>
       </Tooltip>
       {screen?.opensRecord ? (
-        <RecordStepLink stepKey={stepKey} screen={screen} sx={linkSx}>{content}</RecordStepLink>
+        <RecordStepLink stepKey={stepKey} angle={angle} sx={linkSx}>{content}</RecordStepLink>
       ) : (
         <Link component={RouterLink} to={href ?? '#'} underline="hover" sx={linkSx}>{content}</Link>
       )}
