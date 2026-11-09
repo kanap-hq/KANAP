@@ -11,7 +11,7 @@ import { useFeatures } from '../config/FeaturesContext';
 import { getApiErrorMessage } from '../utils/apiErrorMessage';
 import { oauthReturnPath } from '../auth/loginRedirect';
 
-const marketingUrl = import.meta.env.VITE_MARKETING_URL ?? 'https://kanap.net';
+const marketingUrl = import.meta.env.VITE_MARKETING_URL ?? 'https://kadratis.com';
 // Signing in lands on the home page: no memory of the page the user was on. The one exception is
 // the consent page of an MCP connection (`?returnTo=/oauth/authorize?…`), see oauthReturnPath.
 

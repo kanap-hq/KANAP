@@ -58,7 +58,7 @@ export function applyTenancyAndPipeline(app: INestApplication, ds: DataSource): 
     singleTenant: Features.SINGLE_TENANT,
     defaultTenantSlug: (process.env.DEFAULT_TENANT_SLUG || 'default').trim(),
     platformAdminHost: process.env.PLATFORM_ADMIN_HOST || '',
-    marketingRedirectUrl: (process.env.MARKETING_BASE_URL || 'https://www.kanap.net').replace(/\/$/, ''),
+    marketingRedirectUrl: (process.env.MARKETING_BASE_URL || 'https://kadratis.com').replace(/\/$/, ''),
   }));
   // Pipes (ValidationPipe for class-validator DTOs, ZodValidationPipe for Zod DTOs), the tenant
   // transaction (TenantInitGuard opens it before the other guards, TenantInterceptor finishes it),

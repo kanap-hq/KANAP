@@ -2,10 +2,10 @@
  * Documentation URL mapping
  *
  * Maps application routes to their corresponding documentation pages.
- * Published at: https://doc.kanap.net/
+ * Published at: https://doc.kadratis.com/
  */
 
-const DOC_BASE_URL = 'https://doc.kanap.net';
+const DOC_BASE_URL = 'https://doc.kadratis.com';
 
 /** Release notes of each version, on the public repository. */
 export const RELEASES_URL = 'https://github.com/kanap-hq/KANAP/releases';

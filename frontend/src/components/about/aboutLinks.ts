@@ -1,15 +1,15 @@
 import { COMPANY_NAME, PRODUCT_NAME } from '../../config/product';
 import { RELEASES_URL } from '../../utils/docUrls';
 
-export const SITE_URL = 'https://kanap.net';
+export const SITE_URL = 'https://kadratis.com';
 export const REPOSITORY_URL = 'https://github.com/kanap-hq/KANAP';
 export const DISCUSSIONS_URL = `${REPOSITORY_URL}/discussions`;
 export const ISSUES_URL = `${REPOSITORY_URL}/issues`;
 // Names of places, the same in every language.
-export const SITE_LABEL = 'kanap.net';
+export const SITE_LABEL = 'kadratis.com';
 export const DISCUSSIONS_LABEL = 'GitHub Discussions';
 export const ISSUES_LABEL = 'GitHub Issues';
-export const SUPPORT_EMAIL = 'support@kanap.net';
+export const SUPPORT_EMAIL = 'support@kadratis.com';
 
 const VERSION_PATTERN = /^\d{2}\.\d{1,2}\.\d+$/;
 

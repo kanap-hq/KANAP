@@ -457,7 +457,7 @@ export class PublicController {
 
     const content = buildContactFormEmail({ name, email, company, message, language: body.language?.trim() || null });
     await this.emails.send({
-      to: 'support@kanap.net',
+      to: 'contact@kadratis.com',
       subject: content.subject,
       html: content.html,
       text: content.text,

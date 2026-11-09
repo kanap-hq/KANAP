@@ -15,8 +15,8 @@ export const TRIAL_ANGLES = ['budget', 'cartography', 'portfolio'] as const;
 export type TrialAngle = typeof TRIAL_ANGLES[number];
 export type TrialMode = 'example' | 'own_data';
 
-const DOC_BASE_URL = 'https://doc.kanap.net';
-const SUPPORT_EMAIL = 'support@kanap.net';
+const DOC_BASE_URL = 'https://doc.kadratis.com';
+const SUPPORT_EMAIL = 'support@kadratis.com';
 /**
  * A sign-up trial ends at the last instant of a UTC day (`trialEndFromSignup`), and its deletion
  * date follows it: dates are written as that UTC day, the day the app shows.

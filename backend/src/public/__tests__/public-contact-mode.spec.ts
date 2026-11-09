@@ -87,7 +87,7 @@ async function testMultiTenantSendsContact() {
     const { controller, calls } = buildController();
     const result = await controller.sendContact(CONTACT_BODY, REQUEST);
     assert.deepEqual(result, { ok: true });
-    assert.deepEqual(calls, ['captcha', 'email:support@kanap.net']);
+    assert.deepEqual(calls, ['captcha', 'email:contact@kadratis.com']);
   });
 }
 

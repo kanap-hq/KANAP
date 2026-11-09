@@ -77,7 +77,7 @@ describe('AboutTab', () => {
     expect(notes).toHaveAttribute('target', '_blank');
     expect(notes).toHaveAttribute('rel', 'noopener');
     const guide = screen.getByRole('link', { name: 'Upgrade guide' });
-    expect(guide).toHaveAttribute('href', 'https://doc.kanap.net/on-premise/operations/');
+    expect(guide).toHaveAttribute('href', 'https://doc.kadratis.com/on-premise/operations/');
     expect(guide).toHaveAttribute('target', '_blank');
   });
 
