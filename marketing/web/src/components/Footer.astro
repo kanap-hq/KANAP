@@ -4,6 +4,7 @@
  * Resource links point to external targets (docs, GitHub).
  */
 
+import BrandLogo from './BrandLogo.astro';
 import { getLocaleFromUrl, useTranslations, localePath } from '../i18n/ui';
 import { blogHasPosts } from '../lib/blog';
 
@@ -41,9 +42,8 @@ const legalLinks = [
 <footer class="mk-footer">
   <div class="mk-container mk-footer__grid">
     <div class="mk-footer__brand">
-      <a class="mk-footer__logo" href={localePath(locale, '/')} aria-label="KANAP">
-        <img src="/logo.svg" alt="" width="24" height="24" />
-        <span>KANAP</span>
+      <a class="mk-footer__logo" href={localePath(locale, '/')} aria-label="Kadratis">
+        <BrandLogo height={24} />
       </a>
       <p class="mk-footer__tagline">{t('footer.tagline')}</p>
     </div>
