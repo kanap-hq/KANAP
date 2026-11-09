@@ -17,6 +17,22 @@ version brings, followed by three lists:
 To upgrade across several versions, read every entry between your version and the target: the
 actions add up. The release process is described in `doc/releasing.md`.
 
+## 26.11.2 (2026-11-09)
+
+A fix version for 26.11.1: the sample data loads again, and an asset can again be created from its title in every workspace.
+
+### Changes
+- Website: on the free trial sign-up pages, the content lines up with the page title. (#1489)
+
+### Fixes
+- Loading the sample data works again on installations that run the published images, in the cloud service and on-premise. In 26.11.1 it failed at trial activation with the full example and from *Administration › Sample data*, and the workspace was put back to its initial state. (#1490)
+- Creating an asset by typing its name in the title works again in workspaces whose provider list has no on-premises provider, which includes every new workspace. (#1491)
+
+### On-premise
+- Action required: none. `.env` is unchanged.
+- Migrations: none.
+- Recommended: take this version before loading the sample data.
+
 ## 26.11.1 (2026-11-08)
 
 A guided start for trial workspaces (first opening, three paths of five first steps, trial e-mails, a discovery call), Plaid importing spreadsheets and answering from the user manual, every record created from its title with Create and Cancel, business processes with an ISO 9001 type and a parent process, sample data in the workspace language, and fewer help sentences on screen.
