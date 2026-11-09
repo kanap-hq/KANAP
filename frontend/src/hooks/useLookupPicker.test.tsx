@@ -353,8 +353,9 @@ describe('creating a supplier from the picker', () => {
     renderField();
     const input = screen.getByRole('combobox');
     openList(input);
-    await waitFor(() => expect(screen.getAllByRole('option')).toHaveLength(30));
-    // Nothing typed: the first page is not an offer to create.
+    // Nothing typed: the first page, then the option to create a supplier whose name is still to type.
+    await waitFor(() => expect(screen.getAllByRole('option')).toHaveLength(31));
+    expect(screen.getAllByRole('option')[30]).toHaveAccessibleName('master-data:suppliers.newSupplierOption');
     expect(screen.queryByRole('option', { name: /createOption/ })).toBeNull();
 
     const served = apiGet.getMockImplementation()! as (...args: any[]) => any;
@@ -394,6 +395,21 @@ describe('creating a supplier from the picker', () => {
     expect(await screen.findByText('master-data:suppliers.noSupplierAskAdmin')).toBeInTheDocument();
     expect(screen.queryByRole('option')).toBeNull();
     expect(screen.queryByRole('option', { name: /createOption/ })).toBeNull();
+  });
+
+  it('offers to create a supplier in an empty workspace, its name typed in the dialog', async () => {
+    apiGet.mockImplementation(async (_url: string, config?: { params?: Record<string, unknown> }) => (
+      ({ data: { items: [], has_more: false } })
+    ));
+    apiPost.mockResolvedValue({ data: { id: 'sup-first', name: 'Acme', erp_supplier_id: null, status: 'enabled' } });
+    const { onChange } = renderField();
+    openList(screen.getByRole('combobox'));
+    fireEvent.click(await screen.findByRole('option', { name: 'master-data:suppliers.newSupplierOption' }));
+    const name = await screen.findByRole('textbox', { name: 'master-data:suppliers.fields.name' });
+    expect(name).toHaveValue('');
+    fireEvent.change(name, { target: { value: 'Acme' } });
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith('sup-first'));
   });
 
   it('creates the supplier, selects its id once, and leaves the record behind untouched', async () => {

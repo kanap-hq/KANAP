@@ -220,6 +220,8 @@ export function useLookupHydration<T extends LookupOption>({ endpoint, ids, know
  * Offers to create the missing record from the typed text. Contacts, companies and cost centers
  * can pass the same option later. The option is the last row once the search for that text has
  * settled and no option's label matches it exactly (accents and case ignored), never while it loads.
+ * With `emptyLabel`, it is also the last row while nothing is typed (an empty list included), and
+ * creates a record whose name is still to type.
  * `create` returns the new record, or null when the person cancels; a cancelled create leaves the pick as it was.
  */
 export type LookupCreate<T extends LookupOption> = {
@@ -227,6 +229,8 @@ export type LookupCreate<T extends LookupOption> = {
   allowed: boolean;
   /** The option's label for the trimmed typed text. */
   label: (typed: string) => string;
+  /** The option's label while nothing is typed; without it, the option waits for typed text. */
+  emptyLabel?: string;
   /** Creates the record. Null means the person cancelled. */
   create: (typed: string) => Promise<T | null>;
 };
@@ -337,15 +341,16 @@ export function useLookupPicker<T extends LookupOption>({
   // this panel while Autocomplete is still rendering.
   const pendingText = search.pendingText;
   const typed = text.trim();
-  const offerCreate = !!create?.allowed && typed !== '' && search.settled && search.searchedText === typed;
-  const createLabel = offerCreate ? (createRef.current?.label(typed) ?? typed) : null;
+  const offerCreate = !!create?.allowed && (typed !== '' || !!create.emptyLabel)
+    && search.settled && search.searchedText === typed;
+  const createLabel = !offerCreate ? null : typed ? (createRef.current?.label(typed) ?? typed) : (create?.emptyLabel ?? null);
   const filterOptions = React.useCallback(
     (list: T[], state: { getOptionLabel: (option: T) => string }) => {
       const shown = list.filter((option) => lookupCreateText(option) === null && !unavailableSet.has(option.id) && (!searching || resultIds.has(option.id)));
       const narrowed = narrowToText(shown, pendingText, state.getOptionLabel);
       if (!offerCreate || createLabel === null) return narrowed;
       const needle = foldText(typed);
-      const exact = narrowed.some((option) => foldText((state.getOptionLabel(option) ?? '').trim()) === needle);
+      const exact = typed !== '' && narrowed.some((option) => foldText((state.getOptionLabel(option) ?? '').trim()) === needle);
       if (exact) return narrowed;
       return [...narrowed, { id: LOOKUP_CREATE_ID, lookupCreateText: typed, lookupCreateLabel: createLabel } as unknown as T];
     },

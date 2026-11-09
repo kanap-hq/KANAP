@@ -409,6 +409,7 @@
     "noSuppliersFound": "No suppliers found",
     "noSupplierAskAdmin": "No supplier found. Ask an administrator of your workspace to create it.",
     "createOption": "+ Create supplier \"{{name}}\"",
+    "newSupplierOption": "+ New supplier",
     "selectExisting": "Select the existing supplier",
     "export": "Export suppliers",
     "import": "Import suppliers",

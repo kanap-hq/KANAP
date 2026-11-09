@@ -409,6 +409,7 @@
     "noSuppliersFound": "Keine Lieferanten gefunden",
     "noSupplierAskAdmin": "Kein Lieferant gefunden. Bitten Sie einen Administrator Ihres Arbeitsbereichs, ihn zu erstellen.",
     "createOption": "+ Lieferant „{{name}}“ erstellen",
+    "newSupplierOption": "+ Neuer Lieferant",
     "selectExisting": "Vorhandenen Lieferanten auswählen",
     "export": "Lieferanten exportieren",
     "import": "Lieferanten importieren",
