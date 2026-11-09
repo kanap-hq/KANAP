@@ -609,7 +609,8 @@ function AssetWorkspaceRoute() {
 
   const [name, setName] = React.useState('');
   const [kind, setKind] = React.useState('');
-  const [provider, setProvider] = React.useState('on_prem');
+  // A new asset takes the provider of the workspace catalog that the page picks once its settings load.
+  const [provider, setProvider] = React.useState('');
   const [environment, setEnvironment] = React.useState('prod');
   const [hostname, setHostname] = React.useState('');
   const [ipAddresses, setIpAddresses] = React.useState<IpAddressEntry[]>([]);
@@ -1611,6 +1612,8 @@ function AssetWorkspaceRoute() {
   const titleCreation = useTitleCreation<AssetRecord>({
     isCreate,
     requiredMessage: t('messages.nameRequired'),
+    // A title committed before the settings load waits for the type and provider they give.
+    ready: !!kind && !!provider,
     post: async (assetName) => (await api.post<AssetRecord & { creation_token: string }>('/assets/creation', {
       name: assetName,
       kind,
