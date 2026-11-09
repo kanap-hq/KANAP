@@ -75,7 +75,7 @@
   "blog.home.all": "All articles",
   "blog.topic.all": "All",
   "blog.topic.nav": "Topics",
-  "blog.topic.metaDescription": "Kadratis articles about {topic}.",
+  "blog.topic.metaDescription": "Kadratis blog articles in the {topic} category.",
   "blog.topic.agents": "Agents in production",
   "blog.topic.self-hosting": "Self-hosting",
   "blog.topic.cost": "Cost & budget",
