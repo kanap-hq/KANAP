@@ -191,22 +191,22 @@ const content: LegalContent = {
   sales: {
     meta: {
       title: 'Conditions générales de vente',
-      description: 'Conditions applicables à la souscription des abonnements KANAP.',
+      description: 'Conditions applicables à la souscription des abonnements Kadratis.',
     },
     header: {
       eyebrow: 'Mentions légales',
       title: 'Conditions générales de vente',
-      lastUpdated: 'Dernière mise à jour : 12 octobre 2026',
+      lastUpdated: 'Dernière mise à jour : 11 novembre 2026',
     },
     body: `
 <h2>Article 1. Objet</h2>
-<p>Les présentes Conditions générales de vente (CGV) régissent la vente par KANAP (ci-après « le Vendeur »), EURL (entreprise unipersonnelle à responsabilité limitée) au capital de 1 000 €, immatriculée au RCS de Saverne sous le numéro 939 098 190, dont le siège social est situé 2, rue du Finhay, 67210 Obernai, France, d'abonnements à la plateforme en ligne de gestion informatique « KANAP ».</p>
+<p>Les présentes Conditions générales de vente (CGV) régissent la vente par KANAP (ci-après « le Vendeur »), EURL (entreprise unipersonnelle à responsabilité limitée) au capital de 1 000 €, immatriculée au RCS de Saverne sous le numéro 939 098 190, dont le siège social est situé 2, rue du Finhay, 67210 Obernai, France, d'abonnements à la plateforme en ligne de gestion informatique « Kadratis ».</p>
 
 <h2>Article 2. Acceptation des CGV</h2>
 <p>L'acceptation des présentes CGV est obligatoire avant toute souscription et emporte l'adhésion pleine et entière du Client à ces conditions.</p>
 
 <h2>Article 3. Description du service</h2>
-<p>KANAP est une plateforme en ligne de gestion informatique conçue pour les responsables technologiques et les directions des systèmes d'information. Les fonctionnalités sont celles décrites sur le site web au moment de la souscription.</p>
+<p>Kadratis est une plateforme en ligne de gestion informatique conçue pour les responsables technologiques et les directions des systèmes d'information. Les fonctionnalités sont celles décrites sur le site web au moment de la souscription.</p>
 
 <h2>Article 4. Abonnement et tarifs</h2>
 <p>4.1. L'accès au Service est proposé selon les offres d'abonnement décrites sur la page des tarifs. Les prix sont indiqués en euros (EUR). Le Vendeur bénéficie de la franchise en base de TVA prévue à l'article 293 B du Code général des impôts : aucune TVA n'est facturée, et les factures portent la mention « TVA non applicable, art. 293 B du CGI ». Si le régime de TVA du Vendeur change, la TVA s'appliquera aux factures émises après la date de ce changement.</p>
@@ -240,9 +240,9 @@ const content: LegalContent = {
 <p>8.3. La responsabilité du Vendeur est limitée au montant de l'abonnement payé par le Client au cours des 12 derniers mois.</p>
 
 <h2>Article 9. Propriété intellectuelle</h2>
-<p>9.1. Le logiciel KANAP est publié par le Vendeur sous licence GNU Affero General Public License version 3 (AGPL-3.0). Les droits du Client sur son code source sont ceux que lui confère cette licence.</p>
+<p>9.1. Le logiciel Kadratis est publié par le Vendeur sous licence GNU Affero General Public License version 3 (AGPL-3.0). Les droits du Client sur son code source sont ceux que lui confère cette licence.</p>
 <p>9.2. L'abonnement confère au Client le droit d'utiliser le Service hébergé pendant sa durée. Il ne transfère aucun droit de propriété intellectuelle.</p>
-<p>9.3. Le nom et le logo KANAP appartiennent au Vendeur. L'abonnement ne confère aucun droit sur ceux-ci.</p>
+<p>9.3. Les noms Kadratis et KANAP et leurs logos appartiennent au Vendeur. L'abonnement ne confère aucun droit sur ceux-ci.</p>
 <p>9.4. Les données saisies par le Client restent sa propriété.</p>
 
 <h2>Article 10. Données personnelles</h2>
@@ -252,7 +252,7 @@ const content: LegalContent = {
 <p>11.1. Les présentes CGV sont régies par le droit français. Tout litige relève de la compétence exclusive des tribunaux français.</p>
 <p>11.2. En cas de litige, les parties s'engagent à rechercher une solution amiable avant toute action en justice.</p>
 
-<p class="mk-legal__foot">Pour toute question, contactez <a href="mailto:support@kanap.net">support@kanap.net</a>.</p>
+<p class="mk-legal__foot">Pour toute question, contactez <a href="mailto:contact@kadratis.com">contact@kadratis.com</a>.</p>
 `,
   },
 

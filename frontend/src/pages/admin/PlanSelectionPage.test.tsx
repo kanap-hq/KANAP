@@ -61,7 +61,7 @@ const PLANS = [
       annual: { card: true, bank_transfer: true },
     },
     prices: { monthly: 24900, annual: 249000 },
-    terms: { version: '2026-10-12', urls: { fr: 'https://kanap.net/fr/sales', en: 'https://kanap.net/sales' } },
+    terms: { version: '2026-11-11', urls: { fr: 'https://kadratis.com/fr/sales', en: 'https://kadratis.com/sales' } },
   },
 ];
 
@@ -229,12 +229,12 @@ describe('PlanSelectionDialog', () => {
     expect(api.post).toHaveBeenCalledWith('/billing/checkout', expect.objectContaining({
       plan_key: 'max',
       interval: 'annual',
-      terms_version: '2026-10-12',
+      terms_version: '2026-11-11',
     }));
     expect(api.post).toHaveBeenCalledWith('/billing/request-invoice', {
       plan_key: 'max',
       subscription_type: 'annual',
-      terms_version: '2026-10-12',
+      terms_version: '2026-11-11',
     });
   });
 
@@ -242,14 +242,14 @@ describe('PlanSelectionDialog', () => {
     renderDialog();
     await planLoaded();
     const english = screen.getByRole('link', { name: 'general terms of sale' });
-    expect(english).toHaveAttribute('href', 'https://kanap.net/sales');
+    expect(english).toHaveAttribute('href', 'https://kadratis.com/sales');
     expect(english).toHaveAttribute('target', '_blank');
     cleanup();
 
     localeState.value = 'fr';
     renderDialog();
     await planLoaded();
-    expect(screen.getByRole('link', { name: 'general terms of sale' })).toHaveAttribute('href', 'https://kanap.net/fr/sales');
+    expect(screen.getByRole('link', { name: 'general terms of sale' })).toHaveAttribute('href', 'https://kadratis.com/fr/sales');
   });
 
   it('explains a refusal for terms not accepted', async () => {
@@ -307,7 +307,7 @@ describe('PlanSelectionDialog', () => {
     await vi.waitFor(() => expect(api.post).toHaveBeenCalledWith('/billing/change-plan', {
       plan_key: 'max',
       subscription_type: 'annual',
-      terms_version: '2026-10-12',
+      terms_version: '2026-11-11',
       success_url: `${window.location.origin}/admin/billing`,
       cancel_url: `${window.location.origin}/admin/billing`,
     }));
@@ -475,7 +475,7 @@ describe('PlanSelectionDialog', () => {
       expect(api.post).toHaveBeenCalledWith('/billing/change-plan', {
         plan_key: 'max',
         subscription_type: 'monthly',
-        terms_version: '2026-10-12',
+        terms_version: '2026-11-11',
         success_url: `${window.location.origin}/admin/billing`,
         cancel_url: `${window.location.origin}/admin/billing`,
       });
