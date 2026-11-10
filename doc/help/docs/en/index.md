@@ -1,10 +1,10 @@
-# KANAP User Manual
+# Kadratis™ User Manual
 
-Welcome to the KANAP user manual. This documentation covers all features available to users of the KANAP platform.
+Welcome to the Kadratis user manual. This documentation covers all features available to users of the Kadratis platform.
 
 ## Getting Started
 
-KANAP helps IT and finance teams manage their technology landscape, budgets, and operations. Use the navigation menu to explore the different modules.
+Kadratis helps IT and finance teams manage their technology landscape, budgets, and operations. Use the navigation menu to explore the different modules.
 
 If you want the shortest path to productivity, start with the Fast Track guides before diving into the full reference pages.
 
@@ -18,7 +18,7 @@ Ten minutes per path, with the Fromage & Co example or with your own data:
 
 ## Fast Track Guides
 
-- [Getting Started: Your First 10 Minutes in KANAP](fast-track/getting-started.md): First-day onboarding, profile setup, dashboard, and core concepts
+- [Getting Started: Your First 10 Minutes in Kadratis](fast-track/getting-started.md): First-day onboarding, profile setup, dashboard, and core concepts
 - [Portfolio Fast Track: From Request to Delivery](fast-track/index.md): Submit, analyze, score, convert, and deliver initiatives
 - [IT Ops Fast Track: From Application to Server](fast-track/apps-and-assets.md): Document an app, its environments, and hosting assets
 - [Task Types Fast Track: Run, Build & Tasks](fast-track/task-types.md): Understand the difference between incidents, problems, requests, projects, bugs, and tasks
@@ -27,7 +27,7 @@ Ten minutes per path, with the Fromage & Co example or with your own data:
 
 ### Dashboard
 
-- [Dashboard](my-dashboard.md): Personal overview with configurable tiles and the budget management section (click the KANAP logo)
+- [Dashboard](my-dashboard.md): Personal overview with configurable tiles and the budget management section (click the Kadratis logo)
 
 ### Portfolio Management
 
@@ -107,9 +107,9 @@ Ten minutes per path, with the Fromage & Co example or with your own data:
 
 - [Business Processes](business-processes.md): Document business process hierarchy
 
-### Plaid
+### Kad
 
-- [Plaid](ai-assistant.md): Ask questions in plain language across your KANAP data
+- [Kad](ai-assistant.md): Ask questions in plain language across your Kadratis data
 
 ### AI Agents
 
@@ -125,10 +125,10 @@ Ten minutes per path, with the Fromage & Co example or with your own data:
 - [Data access](data-access.md): Limit a person to the budget and contracts of some companies or cost centers
 - [Record history](record-history.md): Who changed a record, what and when, from its History tab
 - [Branding](branding.md): Customize your tenant logo and light/dark primary colors
-- [Sample data](sample-data.md): Explore KANAP with a fictional company, then erase it and start clean
+- [Sample data](sample-data.md): Explore Kadratis with a fictional company, then erase it and start clean
 - [Audit Log](admin.md#audit-log): Review data changes, sign-ins and exports with filters, detail view and CSV or Excel export
 - [AI models](ai-models.md): Register the AI models your organization uses, with their prices, and set the default
-- [Plaid Settings](ai-settings.md): Choose the model Plaid uses, plus chat features, retention, and MCP keys
+- [Kad Settings](ai-settings.md): Choose the model Kad uses, plus chat features, retention, and MCP keys
 - [Usage & costs](ai-usage.md): AI usage and real costs across chat and agents, by agent and by model
 - [Integrations](integrations.md): Connect GLPI for ticket import and for agents
 - [Scheduled Tasks](scheduled-tasks.md): Review and manage recurring background jobs
@@ -139,4 +139,4 @@ Ten minutes per path, with the Fromage & Co example or with your own data:
 
 ---
 
-**Need help?** Contact your system administrator or visit [kanap.net](https://kanap.net) for more information.
+**Need help?** Contact your system administrator or visit [kadratis.com](https://kadratis.com) for more information.

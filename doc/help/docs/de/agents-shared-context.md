@@ -61,7 +61,7 @@ Sie füllen aus:
 
 ## Ein Profil archivieren
 
-Das Archivieren dient dazu, ein Profil außer Dienst zu stellen, das Agenten nicht mehr verwenden sollen. Bevor es wirksam wird, warnt KANAP Sie unmissverständlich:
+Das Archivieren dient dazu, ein Profil außer Dienst zu stellen, das Agenten nicht mehr verwenden sollen. Bevor es wirksam wird, warnt Kadratis Sie unmissverständlich:
 
 > „{name}" steht den Agenten nicht mehr zur Verfügung. Jeder Agent, der es derzeit verwendet, läuft ohne gemeinsamen Kontext, bis Sie ihn auf ein anderes Profil verweisen.
 

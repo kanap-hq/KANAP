@@ -2,14 +2,14 @@
 
 Statt der [Schritt-für-Schritt-Anleitung](installation-example.md) selbst zu folgen, können Sie sie einem KI-Coding-Agenten übergeben. Der Agent liest die Anleitung und führt sie Schritt für Schritt auf Ihrem Server aus. Ein Prompt, ein Server, ein Ergebnis.
 
-Werkzeuge wie [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview) oder [OpenAI Codex](https://openai.com/index/codex/) können die KANAP-Dokumentation lesen, alle Abhängigkeiten installieren, alle Dienste konfigurieren und das Ergebnis prüfen, in der Regel in weniger als 20 Minuten.
+Werkzeuge wie [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview) oder [OpenAI Codex](https://openai.com/index/codex/) können die Kadratis-Dokumentation lesen, alle Abhängigkeiten installieren, alle Dienste konfigurieren und das Ergebnis prüfen, in der Regel in weniger als 20 Minuten.
 
 ## Voraussetzungen
 
 | Anforderung | Details |
 |-------------|---------|
-| **Server** | Ubuntu 26.04 LTS (24.04 LTS funktioniert), frisch bereitgestellt, mit mindestens 4 GB RAM (8 GB empfohlen, da PostgreSQL auf demselben Server läuft), einem Benutzer mit sudo-Rechten und ausgehendem Internetzugang während der Installation (Pakete, KANAP- und Docker-Images, GitHub und Let's Encrypt, falls Sie es verwenden) |
-| **Name** | Der Name, den Benutzer eingeben, um KANAP zu öffnen. Ein öffentlicher DNS-Eintrag ist nur für Let's Encrypt nötig. Verwenden Sie sonst einen Eintrag in Ihrem Unternehmens-DNS oder für einen Test einen Eintrag in der hosts-Datei (siehe [Name und Zertifikat](installation.md#name-und-zertifikat)). |
+| **Server** | Ubuntu 26.04 LTS (24.04 LTS funktioniert), frisch bereitgestellt, mit mindestens 4 GB RAM (8 GB empfohlen, da PostgreSQL auf demselben Server läuft), einem Benutzer mit sudo-Rechten und ausgehendem Internetzugang während der Installation (Pakete, Kadratis- und Docker-Images, GitHub und Let's Encrypt, falls Sie es verwenden) |
+| **Name** | Der Name, den Benutzer eingeben, um Kadratis zu öffnen. Ein öffentlicher DNS-Eintrag ist nur für Let's Encrypt nötig. Verwenden Sie sonst einen Eintrag in Ihrem Unternehmens-DNS oder für einen Test einen Eintrag in der hosts-Datei (siehe [Name und Zertifikat](installation.md#name-und-zertifikat)). |
 | **Zertifikat** | Einer von drei Fällen: ein öffentlicher Name mit Let's Encrypt, Zertifikatsdateien Ihrer internen Zertifizierungsstelle, die bereits auf dem Server liegen, oder ein selbstsigniertes Zertifikat für einen Test |
 | **KI-Agent** | Ein auf dem Server installierter KI-Coding-Agent (Claude Code, Codex oder ähnlich) |
 
@@ -29,16 +29,16 @@ Sie entfernen dies am Ende der Installation: siehe [Nach der Installation](#nach
 Öffnen Sie Ihren KI-Agenten auf dem Server und fügen Sie den folgenden Prompt ein. Ersetzen Sie die Werte der Liste **Parameters** durch Ihre eigenen und behalten Sie nur eine **Certificate**-Zeile.
 
 ```
-Install KANAP on this Ubuntu server by following the official installation
+Install Kadratis on this Ubuntu server by following the official installation
 example step by step, running its commands as written:
 
-  https://doc.kanap.net/on-premise/installation-example/
+  https://doc.kadratis.com/on-premise/installation-example/
 
-Background pages: https://doc.kanap.net/on-premise/installation/ and
-https://doc.kanap.net/on-premise/configuration/
+Background pages: https://doc.kadratis.com/on-premise/installation/ and
+https://doc.kadratis.com/on-premise/configuration/
 
 Parameters:
-- Address users open: https://kanap.example.com
+- Address users open: https://kadratis.example.com
 - Administrator email: admin@example.com
 - Organization name: Example Company
 - Certificate (keep one line):
@@ -78,7 +78,7 @@ Hängen Sie **einen** der folgenden Blöcke an den Prompt an, um ausgehende E-Ma
 ```
 Email transport: Resend
 - RESEND_API_KEY=re_xxxxx
-- RESEND_FROM_EMAIL=KANAP <noreply@example.com>
+- RESEND_FROM_EMAIL=Kadratis <noreply@example.com>
 ```
 
 **Option B: SMTP** (internes Relay oder Anbieter):
@@ -90,10 +90,10 @@ Email transport: SMTP
 - SMTP_SECURE=false
 - SMTP_USER=noreply@company.com
 - SMTP_PASSWORD=secret
-- SMTP_FROM=KANAP <noreply@company.com>
+- SMTP_FROM=Kadratis <noreply@company.com>
 ```
 
-Ersetzen Sie die Werte durch Ihre tatsächlichen Zugangsdaten. SMTP_USER und SMTP_PASSWORD gehören zusammen. Wenn Sie die E-Mail-Konfiguration auslassen, funktioniert KANAP trotzdem, aber Passwortzurücksetzung und Einladungen stehen erst zur Verfügung, wenn Sie E-Mail später konfigurieren (siehe [Konfiguration](configuration.md)).
+Ersetzen Sie die Werte durch Ihre tatsächlichen Zugangsdaten. SMTP_USER und SMTP_PASSWORD gehören zusammen. Wenn Sie die E-Mail-Konfiguration auslassen, funktioniert Kadratis trotzdem, aber Passwortzurücksetzung und Einladungen stehen erst zur Verfügung, wenn Sie E-Mail später konfigurieren (siehe [Konfiguration](configuration.md)).
 
 ## Was Sie erwartet
 
@@ -101,10 +101,10 @@ Der Agent liest die Anleitung und arbeitet sie dann ab:
 
 1. **Systempakete**: installiert Docker und Git.
 2. **Firewall**: erlaubt SSH, HTTP und HTTPS aus dem Netzwerk sowie PostgreSQL und den Speicher nur aus den Docker-Netzwerken.
-3. **KANAP-Dateien**: klont das Repository nach `/opt/kanap` und checkt `stable` aus.
+3. **Kadratis-Dateien**: klont das Repository nach `/opt/kanap` und checkt `stable` aus.
 4. **PostgreSQL**: installiert es, legt die Datenbank, die Anwendungsrolle und die erforderlichen Erweiterungen an und erlaubt Verbindungen aus den Docker-Netzwerken.
 5. **Objektspeicher**: installiert RustFS und legt den Bucket, einen eingeschränkten Anwendungsbenutzer und den Verschlüsselungsschlüssel an.
-6. **KANAP**: schreibt `.env` mit den erzeugten Geheimnissen, lädt die KANAP-Images herunter und startet die Container.
+6. **Kadratis**: schreibt `.env` mit den erzeugten Geheimnissen, lädt die Kadratis-Images herunter und startet die Container.
 7. **TLS und nginx**: beschafft oder erstellt das Zertifikat, konfiguriert den Reverse Proxy und stellt sicher, dass der Server den Namen auflöst.
 8. **Überprüfung**: prüft den Zustand der API und das Frontend und führt dann den Smoke-Test aus (Datenbank, Speicher, Anmeldung, Exporte).
 

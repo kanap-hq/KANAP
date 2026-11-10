@@ -1,8 +1,8 @@
 # Synchronisation Netbox
 
-[Netbox](https://netboxlabs.com/docs/netbox/) décrit votre infrastructure physique et virtuelle : équipements, machines virtuelles, baies, sites, adresses. KANAP lit cet inventaire et maintient ses actifs en phase avec lui.
+[Netbox](https://netboxlabs.com/docs/netbox/) décrit votre infrastructure physique et virtuelle : équipements, machines virtuelles, baies, sites, adresses. Kadratis lit cet inventaire et maintient ses actifs en phase avec lui.
 
-Le partage des rôles est volontaire. Netbox reste la référence pour les équipements qu'il décrit : le nom, le numéro de série, la position en baie ou l'adresse principale viennent toujours de là. KANAP conserve la couche métier autour de chaque actif : environnement, applications, contrats et coûts, support, dates, relations, notes. Vous arrêtez de ressaisir l'inventaire, et vous gardez tout ce que Netbox ne connaît pas.
+Le partage des rôles est volontaire. Netbox reste la référence pour les équipements qu'il décrit : le nom, le numéro de série, la position en baie ou l'adresse principale viennent toujours de là. Kadratis conserve la couche métier autour de chaque actif : environnement, applications, contrats et coûts, support, dates, relations, notes. Vous arrêtez de ressaisir l'inventaire, et vous gardez tout ce que Netbox ne connaît pas.
 
 ## Où le trouver
 
@@ -17,21 +17,21 @@ Le partage des rôles est volontaire. Netbox reste la référence pour les équi
 
 ## Avant de commencer
 
-**Une instance Netbox joignable par KANAP.** KANAP appelle Netbox depuis le serveur, pas depuis votre navigateur. L'adresse que vous saisissez doit être résolue et répondre depuis l'endroit où KANAP s'exécute. Dans l'édition cloud, cette adresse doit être publique : une adresse privée ou interne est refusée à l'enregistrement de la connexion, puis avant chaque appel. Dans l'édition on-premise, une adresse sur votre propre réseau est précisément ce qui est attendu.
+**Une instance Netbox joignable par Kadratis.** Kadratis appelle Netbox depuis le serveur, pas depuis votre navigateur. L'adresse que vous saisissez doit être résolue et répondre depuis l'endroit où Kadratis s'exécute. Dans l'édition cloud, cette adresse doit être publique : une adresse privée ou interne est refusée à l'enregistrement de la connexion, puis avant chaque appel. Dans l'édition on-premise, une adresse sur votre propre réseau est précisément ce qui est attendu.
 
-**Un jeton d'API en lecture.** Dans Netbox, ouvrez le menu utilisateur en haut à droite, puis **API tokens**, et créez-en un. Un jeton en lecture seule suffit : KANAP n'écrit jamais rien dans Netbox. Donnez-lui une description pour le reconnaître plus tard, et renouvelez-le comme n'importe quel autre secret de service.
+**Un jeton d'API en lecture.** Dans Netbox, ouvrez le menu utilisateur en haut à droite, puis **API tokens**, et créez-en un. Un jeton en lecture seule suffit : Kadratis n'écrit jamais rien dans Netbox. Donnez-lui une description pour le reconnaître plus tard, et renouvelez-le comme n'importe quel autre secret de service.
 
-**Une décision sur le certificat.** Si votre Netbox présente un certificat auquel KANAP ne fait pas confiance, typiquement un certificat auto-signé ou interne, vous pouvez activer **Ignorer les erreurs de certificat**. La connexion reste chiffrée, mais le certificat n'est plus vérifié : réservez cette option à un certificat que vous connaissez, sur un réseau que vous maîtrisez. Sur un Netbox exposé publiquement, installez plutôt un certificat reconnu.
+**Une décision sur le certificat.** Si votre Netbox présente un certificat auquel Kadratis ne fait pas confiance, typiquement un certificat auto-signé ou interne, vous pouvez activer **Ignorer les erreurs de certificat**. La connexion reste chiffrée, mais le certificat n'est plus vérifié : réservez cette option à un certificat que vous connaissez, sur un réseau que vous maîtrisez. Sur un Netbox exposé publiquement, installez plutôt un certificat reconnu.
 
 ---
 
-## Connecter KANAP à Netbox
+## Connecter Kadratis à Netbox
 
 Ouvrez **Administration > Intégrations**, puis la carte **Inventaire Netbox**.
 
 | Champ | Ce qu'il faut saisir |
 |-------|----------------------|
-| **Activer la synchronisation Netbox** | L'interrupteur principal. Désactivé, KANAP n'appelle jamais Netbox, ni à la main ni automatiquement. |
+| **Activer la synchronisation Netbox** | L'interrupteur principal. Désactivé, Kadratis n'appelle jamais Netbox, ni à la main ni automatiquement. |
 | **Adresse Netbox** | L'adresse que vous utilisez pour ouvrir Netbox dans un navigateur, par exemple `https://netbox.example.com`. |
 | **Jeton d'API** | Le jeton créé dans Netbox. Il est stocké chiffré et n'est jamais réaffiché. Laissez le champ vide à l'enregistrement pour conserver le jeton déjà en place. |
 | **Délai d'attente (secondes)** | Temps d'attente avant d'abandonner, entre 5 et 120. Laissez vide pour utiliser 30. |
@@ -56,15 +56,15 @@ Une ligne supplémentaire figure parmi les rôles : **Machines virtuelles**. Tou
 
 Chaque ligne indique combien d'équipements et de machines virtuelles elle représente, ce qui vous montre la portée réelle d'un choix. Quand un nom Netbox correspond clairement à l'un des vôtres, la ligne est préremplie et marquée **Suggéré**. Une suggestion n'est qu'une proposition : rien n'est pris en compte avant **Enregistrer les correspondances**. Tant que des correspondances attendent d'être enregistrées, un message en haut de l'onglet indique combien, avec le bouton d'enregistrement à côté. Si vous lancez **Synchroniser maintenant** avant qu'un rôle ou un site soit enregistré, l'aperçu le dit et vous ramène à cet onglet au lieu de lister tous les objets comme ignorés.
 
-Mettre un site en correspondance fait aussi passer ses emplacements Netbox en sous-sites du site que vous avez choisi. Seuls les emplacements de premier niveau de ce site, et seulement ceux dans lesquels se trouve réellement un équipement importé. Un équipement placé plus bas, dans « Bâtiment A > Étage 1 > Salle 101 », est rattaché à « Bâtiment A » : KANAP enregistre où se trouve un équipement au niveau d'un site et d'un bâtiment, pas d'une salle. Rien n'est à configurer pour cela.
+Mettre un site en correspondance fait aussi passer ses emplacements Netbox en sous-sites du site que vous avez choisi. Seuls les emplacements de premier niveau de ce site, et seulement ceux dans lesquels se trouve réellement un équipement importé. Un équipement placé plus bas, dans « Bâtiment A > Étage 1 > Salle 101 », est rattaché à « Bâtiment A » : Kadratis enregistre où se trouve un équipement au niveau d'un site et d'un bâtiment, pas d'une salle. Rien n'est à configurer pour cela.
 
 ### Systèmes d'exploitation
 
 Le troisième tableau met chaque plateforme Netbox en correspondance avec une technologie. Netbox dit « Debian 12 » là où vos technologies ont Debian avec sa version « 12 (Bookworm) » : c'est ici que les deux sont rapprochés. Chaque ligne indique combien d'objets utilisent cette plateforme.
 
-La liste propose vos technologies de la famille **Système d'exploitation**, seules et avec chacune de leurs versions, puis les systèmes d'exploitation du catalogue des technologies que vous n'avez pas encore ajoutés. La valeur retenue est le nom de la technologie, avec sa version quand vous en choisissez une. À l'exécution suivante, KANAP enregistre cette technologie et cette version comme système d'exploitation du serveur, et ajoute à vos technologies une entrée du catalogue quand vous en avez choisi une.
+La liste propose vos technologies de la famille **Système d'exploitation**, seules et avec chacune de leurs versions, puis les systèmes d'exploitation du catalogue des technologies que vous n'avez pas encore ajoutés. La valeur retenue est le nom de la technologie, avec sa version quand vous en choisissez une. À l'exécution suivante, Kadratis enregistre cette technologie et cette version comme système d'exploitation du serveur, et ajoute à vos technologies une entrée du catalogue quand vous en avez choisi une.
 
-Les lignes sont préremplies quand KANAP voit la réponse : le même nom, ou le seul choix dont le nom commence par le nom de la plateforme. « Debian 12 » suggère « Debian 12 (Bookworm) ». Comme pour les autres tableaux, une suggestion ne compte qu'une fois **Enregistrer les correspondances** cliqué.
+Les lignes sont préremplies quand Kadratis voit la réponse : le même nom, ou le seul choix dont le nom commence par le nom de la plateforme. « Debian 12 » suggère « Debian 12 (Bookworm) ». Comme pour les autres tableaux, une suggestion ne compte qu'une fois **Enregistrer les correspondances** cliqué.
 
 Ce tableau n'est pas un filtre. Une plateforme laissée sur **Aucune correspondance** n'écarte jamais rien de l'import. L'équipement entre et son système d'exploitation reste exactement tel qu'il est. Mettez la plateforme en correspondance plus tard et l'exécution suivante renseigne le champ.
 
@@ -92,26 +92,26 @@ Les hôtes ne sont pas rattachés : les membres d'un cluster restent à gérer p
 
 ## La première synchronisation
 
-Cliquez sur **Synchroniser maintenant**. KANAP lit Netbox et affiche **Vérifier avant d'appliquer** avant la moindre écriture.
+Cliquez sur **Synchroniser maintenant**. Kadratis lit Netbox et affiche **Vérifier avant d'appliquer** avant la moindre écriture.
 
 L'aperçu est regroupé ainsi :
 
 - **Sous-sites** : les lignes partagées que l'exécution crée, adopte ou renomme, listées une fois chacune avec le site auquel elles appartiennent et le nombre d'équipements qui s'y retrouvent. Renommer un emplacement Netbox apparaît ici comme une seule ligne, et non comme un déplacement de chaque actif.
 - **À créer** : les objets sans équivalent dans votre espace de travail. Ils seront créés.
 - **À mettre à jour** : les objets rapprochés d'un actif existant qui diffère. Rien n'est encore modifié, les valeurs sont écrites quand vous appliquez. Chacun liste les champs qui changent, champ par champ, sous la forme `avant → après`.
-- **À décider** : les objets que KANAP ne tranchera pas seul. Rien ne leur arrive tant que vous ne les traitez pas, ici ou plus tard sur la page.
+- **À décider** : les objets que Kadratis ne tranchera pas seul. Rien ne leur arrive tant que vous ne les traitez pas, ici ou plus tard sur la page.
 - **Ignorés** : les objets hors périmètre, comptés par raison (rôle sans correspondance, site sans correspondance, sans nom dans Netbox, ignoré par vous). Les 20 premiers objets de chaque raison sont nommés, puis le nombre des autres.
 - **Absents de Netbox** : les actifs liés lors d'une exécution précédente dont l'objet Netbox a disparu.
-- **Avertissements** : les valeurs signalées par Netbox que KANAP n'a pas pu reprendre, par exemple un système d'exploitation que KANAP ne trouve pas parmi ses technologies. Un objet sans changement mais avec quelque chose à signaler y figure également.
+- **Avertissements** : les valeurs signalées par Netbox que Kadratis n'a pas pu reprendre, par exemple un système d'exploitation que Kadratis ne trouve pas parmi ses technologies. Un objet sans changement mais avec quelque chose à signaler y figure également.
 
 Lisez l'aperçu, puis cliquez sur **Appliquer**. Les objets déjà identiques sont comptés comme sans changement et ne sont pas touchés. Un gros inventaire se vérifie par lots de 500. **Appliquer ce lot** n'écrit que ce que l'aperçu liste ; tout le reste est laissé exactement en l'état. La page indique ensuite combien d'objets attendent encore et propose **Vérifier le lot suivant**, jusqu'à ce qu'il ne reste rien. Une synchronisation que vous lancez vous-même ne crée et ne modifie jamais un objet qui ne vous a pas été montré. Les objets hors périmètre sont mis à part, sous **Ignorés** : ils ne prennent jamais la place d'un objet que vous devez lire. Le filtre en haut restreint la liste à un objet ou à un nom d'actif.
 
 ### Corriger l'aperçu avant d'appliquer
 
-KANAP ne peut reconnaître un actif que par son numéro de série, son nom d'hôte ou son nom. Un équipement que vous avez renommé, sans aucun de ces éléments en commun, apparaît dans **À créer** et serait créé une seconde fois. L'aperçu vous permet de régler cela avant. Une ligne pour laquelle KANAP propose quelque chose porte un bouton, **Lier à la place** dans **À créer** et **À mettre à jour**, **Décider** sur les objets qui demandent une décision. Un objet déjà lié par une exécution précédente n'en a pas : il est réglé, et la ligne montre seulement ce qui change. Un premier rapprochement indique sur quoi il repose (« Reconnu par son numéro de série »), ce qui vous permet de repérer une erreur. Le bouton ouvre ces choix :
+Kadratis ne peut reconnaître un actif que par son numéro de série, son nom d'hôte ou son nom. Un équipement que vous avez renommé, sans aucun de ces éléments en commun, apparaît dans **À créer** et serait créé une seconde fois. L'aperçu vous permet de régler cela avant. Une ligne pour laquelle Kadratis propose quelque chose porte un bouton, **Lier à la place** dans **À créer** et **À mettre à jour**, **Décider** sur les objets qui demandent une décision. Un objet déjà lié par une exécution précédente n'en a pas : il est réglé, et la ligne montre seulement ce qui change. Un premier rapprochement indique sur quoi il repose (« Reconnu par son numéro de série »), ce qui vous permet de repérer une erreur. Le bouton ouvre ces choix :
 
 - **Lier à un actif existant** : cherchez l'actif et sélectionnez-le. La ligne passe dans **À mettre à jour** et montre ce que Netbox va changer sur cet actif, champ par champ, pour que vous lisiez avant d'appliquer.
-- **Créer un nouvel actif** : pour un objet classé dans **À décider**, ou pour un objet que KANAP a rapproché du mauvais actif.
+- **Créer un nouvel actif** : pour un objet classé dans **À décider**, ou pour un objet que Kadratis a rapproché du mauvais actif.
 - **Ne pas importer cet objet** : l'objet est écarté de cette synchronisation et des suivantes. Aucun actif n'est touché. Il passe dans **Réglés par vous** dans l'aperçu et, une fois appliqué, dans **Ignorés** sur la page, où vous pourrez revenir dessus plus tard.
 
 Une ligne que vous avez tranchée l'indique et propose **Annuler ce choix**. Lorsque plusieurs objets classés dans **À décider** n'ont qu'un seul actif suggéré, **Lier les N objets qui n'ont qu'une seule suggestion** les règle tous d'un coup. Ils passent dans **À mettre à jour**, où vous lisez ce qui change avant d'appliquer.
@@ -124,16 +124,16 @@ L'application se déroule en arrière-plan. La page la suit et se rafraîchit d'
 
 ## Comment les objets sont rapprochés des actifs existants
 
-Un premier import dans un KANAP déjà rempli doit retrouver les actifs que vous avez, au lieu de les dupliquer. KANAP essaie quatre pistes, dans cet ordre, et s'arrête à la première qui donne un résultat :
+Un premier import dans un Kadratis déjà rempli doit retrouver les actifs que vous avez, au lieu de les dupliquer. Kadratis essaie quatre pistes, dans cet ordre, et s'arrête à la première qui donne un résultat :
 
 1. **Un lien existant**. L'objet avait déjà été rapproché d'un actif lors d'une exécution précédente.
 2. **Le numéro de série**. Il résiste à un renommage de part et d'autre.
 3. **Le nom d'hôte**, pris en entier. `par-esx-01.example.com` dans Netbox désigne l'actif dont le nom d'hôte est écrit ainsi. C'est aussi l'actif `par-esx-01` lorsque `example.com` fait partie de vos domaines, puisque vous avez déclaré ce suffixe vous-même.
 4. **Le nom de l'actif**, sans tenir compte de la casse, lu de la même manière.
 
-Si une piste trouve exactement un actif, c'est le bon. Si elle en trouve plusieurs, KANAP s'arrête là et classe l'objet dans **À décider**, avec la liste des candidats. Il ne fusionne jamais sur une supposition.
+Si une piste trouve exactement un actif, c'est le bon. Si elle en trouve plusieurs, Kadratis s'arrête là et classe l'objet dans **À décider**, avec la liste des candidats. Il ne fusionne jamais sur une supposition.
 
-**Deux indices sont des propositions, jamais des rapprochements.** Quand aucune des quatre pistes n'identifie l'objet, KANAP cherche une ressemblance plutôt que de créer aussitôt.
+**Deux indices sont des propositions, jamais des rapprochements.** Quand aucune des quatre pistes n'identifie l'objet, Kadratis cherche une ressemblance plutôt que de créer aussitôt.
 
 - **Un nom qui commence pareil.** Un actif dont le nom ou le nom d'hôte ne correspond qu'à la première partie du nom Netbox, jusqu'au premier point, est proposé comme candidat. Dans un inventaire qui nomme les équipements `dl3.robot-15ms.ie2000`, cette première partie est un bâtiment et non une machine : un seul actif nommé `dl3` absorberait tout l'étage sans bruit.
 - **Une adresse déjà portée.** Un actif qui porte déjà l'adresse principale de l'objet est proposé de la même façon. Les adresses sont réutilisées, partagées entre les membres d'un cluster, ou simplement périmées.
@@ -191,23 +191,23 @@ Les actifs importés avant cette règle, dont le nom d'hôte avait été coupé 
 | Decommissioning | Déprécié |
 | Tout autre statut | Inchangé, avec un avertissement |
 
-**Offline, Failed et Paused restent visibles.** Le cycle de vie reste Actif, car l'équipement est toujours en service sur le papier. KANAP conserve le statut Netbox et l'affiche comme un avis : sur l'actif, à côté de sa source (« Statut Netbox : En panne »), dans la liste **Liés**, et sous **Avertissements** dans l'aperçu. Un changement de ce seul statut dans Netbox ne réécrit jamais l'actif.
+**Offline, Failed et Paused restent visibles.** Le cycle de vie reste Actif, car l'équipement est toujours en service sur le papier. Kadratis conserve le statut Netbox et l'affiche comme un avis : sur l'actif, à côté de sa source (« Statut Netbox : En panne »), dans la liste **Liés**, et sous **Avertissements** dans l'aperçu. Un changement de ce seul statut dans Netbox ne réécrit jamais l'actif.
 
 Une synchronisation ne passe jamais un actif en **Retiré**. Retirer un équipement est une décision qui vous revient, depuis la liste **Absents de Netbox**.
 
 **L'environnement est posé une seule fois.** Les nouveaux actifs reçoivent l'environnement choisi sur la carte d'intégration. Les exécutions suivantes n'y touchent plus : vous pouvez le corriger, il reste corrigé.
 
-**Les valeurs inconnues de KANAP sont ignorées, jamais inventées.** Un statut de cycle de vie sans équivalent, ou un système d'exploitation sans correspondance dans **Correspondances** et sans technologie de ce nom dans la famille **Système d'exploitation** ni dans le catalogue, reste inchangé et fait l'objet d'un avertissement. Mettez la plateforme en correspondance, ou ajoutez la technologie, puis relancez. Une adresse principale en IPv6 est laissée de côté de la même manière, avec le message « L'adresse principale est une adresse IPv6, qui n'est pas encore importée. »
+**Les valeurs inconnues de Kadratis sont ignorées, jamais inventées.** Un statut de cycle de vie sans équivalent, ou un système d'exploitation sans correspondance dans **Correspondances** et sans technologie de ce nom dans la famille **Système d'exploitation** ni dans le catalogue, reste inchangé et fait l'objet d'un avertissement. Mettez la plateforme en correspondance, ou ajoutez la technologie, puis relancez. Une adresse principale en IPv6 est laissée de côté de la même manière, avec le message « L'adresse principale est une adresse IPv6, qui n'est pas encore importée. »
 
 **Les sous-sites sont partagés entre les équipements.** Un sous-site est une seule ligne sur un site, et chaque actif qui y est placé pointe vers elle. Renommer l'emplacement Netbox renomme cette ligne unique : tous les équipements qui la portent suivent d'un coup, y compris ceux que vous y avez classés vous-même. Rien ne bouge actif par actif.
 
-**Un sous-site créé à la main est adopté, pas dupliqué.** Quand un emplacement Netbox porte le même nom qu'un sous-site que vous utilisez déjà sur ce site, KANAP relie les deux : votre ligne garde son identité, prend l'orthographe de Netbox, et porte la mention **Netbox** à partir de là. Vos actifs restent où ils sont.
+**Un sous-site créé à la main est adopté, pas dupliqué.** Quand un emplacement Netbox porte le même nom qu'un sous-site que vous utilisez déjà sur ce site, Kadratis relie les deux : votre ligne garde son identité, prend l'orthographe de Netbox, et porte la mention **Netbox** à partir de là. Vos actifs restent où ils sont.
 
 **Rien n'est jamais supprimé.** Un emplacement retiré de Netbox laisse son sous-site en place, avec les actifs qui le portent. Un sous-site lié à Netbox reste modifiable : renommez-le ou supprimez-le, et l'exécution suivante le remet en ligne, en le recréant si un actif en a encore besoin.
 
 **Un équipement sans emplacement conserve son sous-site.** Seul un emplacement réellement présent dans Netbox est écrit, la même règle que pour tout autre champ géré. Les machines virtuelles n'en reçoivent jamais : une machine virtuelle Netbox ne porte aucun emplacement.
 
-**Deux emplacements de même nom sur un même site.** Netbox accepte « Local technique » et « local technique » côte à côte, KANAP non. Le premier importé l'emporte, et l'autre est signalé par un avertissement. Il en va de même quand deux sites Netbox sont mis en correspondance avec le même site et portent tous deux un emplacement de même nom.
+**Deux emplacements de même nom sur un même site.** Netbox accepte « Local technique » et « local technique » côte à côte, Kadratis non. Le premier importé l'emporte, et l'autre est signalé par un avertissement. Il en va de même quand deux sites Netbox sont mis en correspondance avec le même site et portent tous deux un emplacement de même nom.
 
 **Si Netbox ne renvoie pas ses emplacements**, l'exécution se poursuit avec les équipements et laisse tous les sous-sites intacts, avec une note en ce sens dans l'aperçu. Une affectation partielle serait pire que pas d'affectation du tout.
 
@@ -215,7 +215,7 @@ Une synchronisation ne passe jamais un actif en **Retiré**. Retirer un équipem
 
 **Une exécution qui échoue en série s'arrête.** Après 10 objets consécutifs impossibles à enregistrer, l'exécution s'arrête et est signalée en échec, plutôt que de remplir la liste d'erreurs puis d'annoncer une réussite.
 
-**Une lecture partielle ne déclare jamais d'absent.** Si Netbox contient plus de pages que KANAP n'en lit en une exécution, rien n'est signalé comme absent et un message accompagne le résultat.
+**Une lecture partielle ne déclare jamais d'absent.** Si Netbox contient plus de pages que Kadratis n'en lit en une exécution, rien n'est signalé comme absent et un message accompagne le résultat.
 
 **Un redémarrage du serveur ne bloque pas la page.** **Synchroniser maintenant** redevient disponible aussitôt ; une exécution interrompue par le redémarrage est signalée comme arrêtée avant la fin.
 
@@ -223,7 +223,7 @@ Une synchronisation ne passe jamais un actif en **Retiré**. Retirer un équipem
 
 ## Synchronisation automatique
 
-Activez **Synchronisation automatique** sur la carte d'intégration : KANAP exécute le même traitement toutes les heures et applique les changements sans aperçu. L'interrupteur est propre à chaque organisation, et seules celles qui l'ont activé sont traitées. Le traitement horaire ne fait jamais le premier import : il démarre une fois que vous avez appliqué vous-même une synchronisation et qu'elle s'est terminée sans erreur. D'ici là, l'interrupteur peut être activé sans que rien ne s'exécute. Il en va de même tant qu'une vérification n'est pas terminée : aussi longtemps que des objets attendent leur lot, le traitement horaire reste suspendu, car il importerait ce que personne n'a lu. Il reprend dès qu'une synchronisation que vous appliquez ne laisse plus rien en attente.
+Activez **Synchronisation automatique** sur la carte d'intégration : Kadratis exécute le même traitement toutes les heures et applique les changements sans aperçu. L'interrupteur est propre à chaque organisation, et seules celles qui l'ont activé sont traitées. Le traitement horaire ne fait jamais le premier import : il démarre une fois que vous avez appliqué vous-même une synchronisation et qu'elle s'est terminée sans erreur. D'ici là, l'interrupteur peut être activé sans que rien ne s'exécute. Il en va de même tant qu'une vérification n'est pas terminée : aussi longtemps que des objets attendent leur lot, le traitement horaire reste suspendu, car il importerait ce que personne n'a lu. Il reprend dès qu'une synchronisation que vous appliquez ne laisse plus rien en attente.
 
 Les objets qui demandent une décision ne sont jamais tranchés automatiquement. Ils s'accumulent dans **À décider** et vous attendent.
 
@@ -246,7 +246,7 @@ La colonne **Type** affiche le type d'actif de l'actif lié, « Serveur physique
 | **À décider** | Plusieurs actifs pourraient être cet objet, deux objets ont atteint le même actif, un actif porte un nom proche, ou un actif porte déjà l'adresse IP de l'objet. | **Lier à...** l'un des candidats, **Créer un actif**, ou **Ignorer**. |
 | **Absents de Netbox** | L'objet a disparu de Netbox. L'actif n'est pas touché. | **Passer l'actif en retiré**, **Ignorer**, ou ne rien faire. |
 | **Erreurs** | L'objet n'a pas pu être écrit, la raison figure dans la colonne Message. | Corrigez la cause et relancez, ou **Ignorer** l'objet. |
-| **Ignorés** | Vous avez demandé à KANAP de laisser cet objet de côté. Chaque exécution le saute. | **Ne plus ignorer** le remet dans la liste. Quand la fiche ne contient rien à décider, elle est supprimée et l'objet est réexaminé à la prochaine synchronisation. |
+| **Ignorés** | Vous avez demandé à Kadratis de laisser cet objet de côté. Chaque exécution le saute. | **Ne plus ignorer** le remet dans la liste. Quand la fiche ne contient rien à décider, elle est supprimée et l'objet est réexaminé à la prochaine synchronisation. |
 | **Liés** | L'objet et l'actif sont rapprochés et à jour. | Ouvrez l'un ou l'autre depuis la ligne. |
 
 Chaque ligne renvoie à l'objet dans Netbox et à l'actif, avec sa référence `AST-`.
@@ -255,7 +255,7 @@ Lier ou créer depuis cette page applique aussitôt les valeurs Netbox. Seul cet
 
 ### Absents de Netbox
 
-**KANAP ne supprime jamais un actif.** Quand un objet disparaît de Netbox, l'actif, ses liens et son historique restent exactement tels quels, et l'objet est listé comme absent pour que vous décidiez. **Passer l'actif en retiré** met le cycle de vie à Retiré et conserve tout le reste.
+**Kadratis ne supprime jamais un actif.** Quand un objet disparaît de Netbox, l'actif, ses liens et son historique restent exactement tels quels, et l'objet est listé comme absent pour que vous décidiez. **Passer l'actif en retiré** met le cycle de vie à Retiré et conserve tout le reste.
 
 Deux garde-fous s'appliquent. Rien n'est signalé comme absent si l'appel à Netbox a échoué, ou si Netbox a renvoyé un inventaire vide : une panne n'est pas une mise hors service. Et un actif dont l'objet Netbox a disparu redevient libre, si bien que la même machine recréée dans Netbox s'y rattache au lieu de créer un doublon.
 
@@ -274,13 +274,13 @@ La tuile reste discrète quand il n'y a rien à faire : une ligne indiquant que 
 | Ce que vous voyez | Ce que cela signifie en général |
 |-------------------|----------------------------------|
 | Netbox a refusé le jeton d'API | Le jeton a été tronqué au collage, a expiré, ou est restreint à une autre adresse. Créez-en un nouveau dans Netbox et enregistrez-le. |
-| Cette adresse pointe vers un réseau privé | L'édition cloud ne joint que des adresses publiques. Publiez Netbox à une adresse joignable par KANAP, ou installez KANAP on-premise à côté de lui. |
-| Le certificat Netbox n'a pas pu être vérifié | Netbox présente un certificat auquel KANAP ne fait pas confiance. Installez un certificat reconnu, ou activez **Ignorer les erreurs de certificat** s'il s'agit d'un de vos certificats. |
-| Le serveur Netbox n'a pas répondu à temps | Netbox est lent, injoignable, ou derrière un pare-feu qui bloque l'appel. Vérifiez depuis le serveur KANAP, puis augmentez le délai d'attente si l'instance est simplement volumineuse. |
+| Cette adresse pointe vers un réseau privé | L'édition cloud ne joint que des adresses publiques. Publiez Netbox à une adresse joignable par Kadratis, ou installez Kadratis on-premise à côté de lui. |
+| Le certificat Netbox n'a pas pu être vérifié | Netbox présente un certificat auquel Kadratis ne fait pas confiance. Installez un certificat reconnu, ou activez **Ignorer les erreurs de certificat** s'il s'agit d'un de vos certificats. |
+| Le serveur Netbox n'a pas répondu à temps | Netbox est lent, injoignable, ou derrière un pare-feu qui bloque l'appel. Vérifiez depuis le serveur Kadratis, puis augmentez le délai d'attente si l'instance est simplement volumineuse. |
 | Des objets apparaissent en « Rôle sans correspondance » ou « Site sans correspondance » | C'est attendu pour tout ce que vous avez laissé sur **Ne pas importer**. Si ce n'était pas voulu, mettez le rôle ou le site en correspondance et relancez. |
 | Un avertissement signale un système d'exploitation absent de votre catalogue | La plateforme Netbox n'a pas de correspondance dans **Correspondances > Systèmes d'exploitation**, et son nom ne correspond à aucune technologie de la famille **Système d'exploitation** ni à aucun système d'exploitation du catalogue. Mettez-la en correspondance dans l'onglet Correspondances, ou ajoutez la technologie dans **Cartographie SI > Technologies**, puis relancez. D'ici là, le système d'exploitation reste inchangé. |
 | « Netbox n'a pas renvoyé ses plateformes » | Le jeton d'API ne peut pas lire les plateformes. Accordez-lui la permission sur `dcim.platform` dans Netbox, ou laissez-le ainsi : les équipements s'importent toujours, seule la mise en correspondance des systèmes d'exploitation est hors de portée. |
-| Un actif se retrouve avec le nom Netbox complet comme nom d'hôte | Le nom ne se termine pas par un suffixe DNS de votre liste de domaines, KANAP le garde donc tel quel. C'est le résultat attendu pour un nom dont les points font partie du nom. S'il s'agit bien d'un domaine, ajoutez-le dans **Cartographie SI > Paramètres** et relancez. |
+| Un actif se retrouve avec le nom Netbox complet comme nom d'hôte | Le nom ne se termine pas par un suffixe DNS de votre liste de domaines, Kadratis le garde donc tel quel. C'est le résultat attendu pour un nom dont les points font partie du nom. S'il s'agit bien d'un domaine, ajoutez-le dans **Cartographie SI > Paramètres** et relancez. |
 | L'exécution a échoué après quelques objets | Dix objets consécutifs n'ont pas pu être enregistrés, l'exécution s'est donc arrêtée. La cause est en général la même pour tous, et les détails figurent dans le journal du serveur. |
 | « Netbox a renvoyé plus de pages que prévu. Certains objets n'ont pas été examinés. » | L'inventaire est plus grand que ce qu'une exécution lit. Ce qui a été lu est appliqué, et rien n'est marqué absent. Restreignez le périmètre dans **Correspondances** pour que l'exécution couvre ce qui compte pour vous. |
 | Un sous-site signale que son nom est déjà utilisé | Deux emplacements Netbox de ce site portent le même nom, ou deux sites mis en correspondance pointent vers le même site et portent chacun un emplacement de ce nom. Renommez l'un des deux dans Netbox, ou fusionnez-les là-bas. Les équipements sont importés dans tous les cas, sans sous-site. |

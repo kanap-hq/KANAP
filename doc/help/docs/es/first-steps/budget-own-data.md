@@ -1,13 +1,13 @@
 ---
-title: "Su presupuesto de TI en KANAP en diez minutos: empezar con sus datos"
+title: "Su presupuesto de TI en Kadratis en diez minutos: empezar con sus datos"
 description: Los cinco pasos del recorrido presupuesto de TI con sus propios datos, de su empresa a su primer informe, y después un colega.
 ---
 
-# Su presupuesto de TI en KANAP en diez minutos
+# Su presupuesto de TI en Kadratis en diez minutos
 
 [Descubrir con el ejemplo](budget-example.md) · **Empezar con mis datos**
 
-En diez minutos, su empresa, sus líneas presupuestarias y un contrato están en KANAP, su primer informe funciona con sus cifras, y un colega puede leerlas. Empezar con sus datos borra el ejemplo: lo que ve al final procede de usted.
+En diez minutos, su empresa, sus líneas presupuestarias y un contrato están en Kadratis, su primer informe funciona con sus cifras, y un colega puede leerlas. Empezar con sus datos borra el ejemplo: lo que ve al final procede de usted.
 
 Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de inicio, para el recorrido **El presupuesto de TI** con **Empezar con mis datos**. Cada paso del mosaico abre su pantalla con una indicación breve. Un paso que crea algo queda marcado como hecho en cuanto ese elemento existe en el espacio de trabajo. Para **Su empresa** y **Su primer informe**, haga clic en **Hecho** en la indicación, o en la marca junto al paso. Consulte [Prueba: su recorrido y sus primeros pasos](../my-dashboard.md#trial-first-steps).
 
@@ -56,10 +56,10 @@ Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de in
 
 ## Y después
 
-Su presupuesto de TI está en KANAP. Los otros dos recorridos también llevan diez minutos, con sus datos:
+Su presupuesto de TI está en Kadratis. Los otros dos recorridos también llevan diez minutos, con sus datos:
 
-- [Su panorama IT en KANAP en diez minutos](landscape-own-data.md)
-- [Su portafolio en KANAP en diez minutos](portfolio-own-data.md)
+- [Su panorama IT en Kadratis en diez minutos](landscape-own-data.md)
+- [Su portafolio en Kadratis en diez minutos](portfolio-own-data.md)
 
 Cuando los cinco pasos están hechos, el mosaico ofrece estos recorridos. Durante la prueba, también ofrece **Programar una llamada de descubrimiento**.
 

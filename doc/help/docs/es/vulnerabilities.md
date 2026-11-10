@@ -6,11 +6,11 @@ La página Vulnerabilidades lista las vulnerabilidades publicadas (CVE) que afec
 
 ## Disponibilidad
 
-Las vulnerabilidades se siguen por defecto en la nube. En una instalación local están desactivadas hasta que su administrador [las activa](on-premise/configuration.md#optional-vulnerabilities), y el servidor debe entonces alcanzar la NVD (la base de datos nacional de vulnerabilidades de Estados Unidos) y la lista CVE.org, o una réplica de cada una. El mismo interruptor lee también tres fuentes de explotación, o una réplica de cada una: el catálogo de la CISA, la base europea de vulnerabilidades de la ENISA y las puntuaciones EPSS del día. Mientras están desactivadas, KANAP no muestra nada de ello: ni página, ni columna en las listas de tecnologías, activos y aplicaciones, ni sección o insignia en una ficha, ni mosaico en el panel de control, ni ajuste de notificación, ni correo. Plaid tampoco responde sobre vulnerabilidades.
+Las vulnerabilidades se siguen por defecto en la nube. En una instalación local están desactivadas hasta que su administrador [las activa](on-premise/configuration.md#optional-vulnerabilities), y el servidor debe entonces alcanzar la NVD (la base de datos nacional de vulnerabilidades de Estados Unidos) y la lista CVE.org, o una réplica de cada una. El mismo interruptor lee también tres fuentes de explotación, o una réplica de cada una: el catálogo de la CISA, la base europea de vulnerabilidades de la ENISA y las puntuaciones EPSS del día. Mientras están desactivadas, Kadratis no muestra nada de ello: ni página, ni columna en las listas de tecnologías, activos y aplicaciones, ni sección o insignia en una ficha, ni mosaico en el panel de control, ni ajuste de notificación, ni correo. Kad tampoco responde sobre vulnerabilidades.
 
-## Cómo las encuentra KANAP
+## Cómo las encuentra Kadratis { #como-las-encuentra-kanap }
 
-KANAP lee dos fuentes cada 6 horas y las compara con sus tecnologías:
+Kadratis lee dos fuentes cada 6 horas y las compara con sus tecnologías:
 
 - **La NVD**: las vulnerabilidades analizadas por la base de datos nacional de vulnerabilidades de Estados Unidos. La NVD no analiza todas las vulnerabilidades. Muchas se quedan mucho tiempo sin identificador de producto, y algunas no lo reciben nunca.
 - **La lista CVE.org**: las fichas que los editores redactan ellos mismos para sus propios productos. Una vulnerabilidad que su editor ha publicado aparece aunque la NVD no la haya analizado.
@@ -22,17 +22,17 @@ Cada tecnología se compara así:
 - **Productos**: una tecnología se compara por sus identificadores de producto CPE y sus nombres CVE.org (consulte [Tecnologías](technologies.md#identificadores-de-vulnerabilidad)). Los identificadores CPE también sirven para las fichas CVE.org que los llevan, como las de Red Hat. Una tecnología sin ninguno de los dos no recibe ninguna vulnerabilidad. Los sistemas operativos del catálogo también tienen identificadores CPE. Red Hat Enterprise Linux recibe también las vulnerabilidades que Red Hat clasifica bajo sus flujos de aplicaciones (AppStream). Las tecnologías retiradas quedan fuera.
 - **Nombres CVE.org**: los nombres de editor y de producto tal como el editor los escribe en sus fichas, por ejemplo el editor `SAP_SE` y el producto `SAP HANA Database`. La comparación ignora mayúsculas, minúsculas y puntuación, y por lo demás exige el nombre exacto. Un nombre parecido no coincide, así que cada variante de un producto se declara por separado. Un nombre puede llevar una versión: entonces solo vale para las versiones de la tecnología cuya etiqueta empieza por esa versión, por ejemplo `2019` para `Windows Server 2019`. Cuando una etiqueta empieza por varias de ellas, solo cuenta la más larga: `2012 R2` lleva `2012` y `2012 R2`, y solo recibe el nombre de `2012 R2`.
 - **Versiones**: solo cuentan las versiones en uso: instaladas en un servidor en servicio, o usadas por una aplicación en servicio.
-- **Números de versión**: las versiones se comparan por sus números, parte por parte. `2016 SP3` cuenta como 2016 y `19c` como 19. Una versión de menos de tres números vale por toda su rama: `9.0` abarca todas las `9.0.x`. Una versión que KANAP no puede comparar, como una etiqueta sin número, cuenta como afectada.
-- **Versiones de las fichas del editor**: las mismas reglas se aplican a las versiones que lista una ficha CVE.org. Una versión que KANAP no puede comparar con las del editor cuenta como afectada, y la columna **Match** de la exportación indica «Version not comparable». Ocurre cuando su versión lleva el nombre de un año y el editor numera sus componentes, por ejemplo `2021` frente a `106`. Compruebe entonces en la ficha del editor si su versión está afectada.
-- **Sistemas operativos**: Red Hat Enterprise Linux, Debian, Oracle Linux, AlmaLinux, Rocky Linux, SUSE Linux Enterprise Server y CentOS se comparan por su versión principal, y Ubuntu por su año y mes, tal como los publica la NVD: `9.4` recibe las vulnerabilidades de `9`, y `22.04.3 LTS` las de `22.04`. IBM AIX, IBM i y Oracle Solaris se comparan por sus dos primeros números: `7.3.2` recibe las vulnerabilidades de `7.3`. Windows Server se compara solo por su año, porque KANAP no sabe qué actualizaciones tiene un servidor: una versión `2019` está afectada por todas las vulnerabilidades de Windows Server 2019, incluidas las que una actualización ya corrigió. 2012 y 2012 R2 se distinguen por su etiqueta, igual que 2008 y 2008 R2.
+- **Números de versión**: las versiones se comparan por sus números, parte por parte. `2016 SP3` cuenta como 2016 y `19c` como 19. Una versión de menos de tres números vale por toda su rama: `9.0` abarca todas las `9.0.x`. Una versión que Kadratis no puede comparar, como una etiqueta sin número, cuenta como afectada.
+- **Versiones de las fichas del editor**: las mismas reglas se aplican a las versiones que lista una ficha CVE.org. Una versión que Kadratis no puede comparar con las del editor cuenta como afectada, y la columna **Match** de la exportación indica «Version not comparable». Ocurre cuando su versión lleva el nombre de un año y el editor numera sus componentes, por ejemplo `2021` frente a `106`. Compruebe entonces en la ficha del editor si su versión está afectada.
+- **Sistemas operativos**: Red Hat Enterprise Linux, Debian, Oracle Linux, AlmaLinux, Rocky Linux, SUSE Linux Enterprise Server y CentOS se comparan por su versión principal, y Ubuntu por su año y mes, tal como los publica la NVD: `9.4` recibe las vulnerabilidades de `9`, y `22.04.3 LTS` las de `22.04`. IBM AIX, IBM i y Oracle Solaris se comparan por sus dos primeros números: `7.3.2` recibe las vulnerabilidades de `7.3`. Windows Server se compara solo por su año, porque Kadratis no sabe qué actualizaciones tiene un servidor: una versión `2019` está afectada por todas las vulnerabilidades de Windows Server 2019, incluidas las que una actualización ya corrigió. 2012 y 2012 R2 se distinguen por su etiqueta, igual que 2008 y 2008 R2.
 - **Versión desconocida**: un servidor o una aplicación que no indica ninguna versión está potencialmente afectado por todas las vulnerabilidades del producto. Su fila muestra **Sin registrar** en la columna **Versión**.
-- **Distribuciones Linux**: una distribución publica sus vulnerabilidades por paquete. KANAP ve las vulnerabilidades que el editor asigna a una versión de la distribución. No ve los paquetes instalados en un servidor, ni su nivel de actualización. Para saber si un servidor está expuesto, compruebe el paquete en el seguimiento de seguridad del distribuidor: la tecnología lleva a él, bajo su tabla de versiones (consulte [Tecnologías](technologies.md#versiones-del-catalogo)).
+- **Distribuciones Linux**: una distribución publica sus vulnerabilidades por paquete. Kadratis ve las vulnerabilidades que el editor asigna a una versión de la distribución. No ve los paquetes instalados en un servidor, ni su nivel de actualización. Para saber si un servidor está expuesto, compruebe el paquete en el seguimiento de seguridad del distribuidor: la tecnología lleva a él, bajo su tabla de versiones (consulte [Tecnologías](technologies.md#versiones-del-catalogo)).
 
-Algunas vulnerabilidades solo se aplican cuando dos productos funcionan juntos, por ejemplo Tomcat en Windows. KANAP las muestra para el producto vulnerable solo, de modo que una puede aparecer para una instalación a la que no afecta. Márquela como **No afectada**.
+Algunas vulnerabilidades solo se aplican cuando dos productos funcionan juntos, por ejemplo Tomcat en Windows. Kadratis las muestra para el producto vulnerable solo, de modo que una puede aparecer para una instalación a la que no afecta. Márquela como **No afectada**.
 
-Una fila existe en cuanto una de las dos fuentes la coteja. Cuando la NVD y el editor no dicen lo mismo, la fila se queda. La columna **Fuente** de la lista indica qué fuentes la cotejaron. Cuando la NVD aún no ha puntuado una vulnerabilidad, KANAP muestra la puntuación y la gravedad de la ficha del editor. Una vulnerabilidad que CVE.org o la NVD rechaza deja de cotejarse.
+Una fila existe en cuanto una de las dos fuentes la coteja. Cuando la NVD y el editor no dicen lo mismo, la fila se queda. La columna **Fuente** de la lista indica qué fuentes la cotejaron. Cuando la NVD aún no ha puntuado una vulnerabilidad, Kadratis muestra la puntuación y la gravedad de la ficha del editor. Una vulnerabilidad que CVE.org o la NVD rechaza deja de cotejarse.
 
-Los cambios cuentan de inmediato. Cuando añade una tecnología o un identificador de producto CPE, KANAP busca enseguida ese producto en la NVD; la sección **Vulnerabilidades** de la tecnología indica «Búsqueda de vulnerabilidades en curso…» hasta que termina la búsqueda. Cuando la búsqueda no se puede completar, la sección lo dice. Cuando cambia un nombre CVE.org, una versión, un servidor o una aplicación de una tecnología, KANAP vuelve a cotejar la tecnología en cuanto se guarda el cambio. **Actualizar**, en la sección **Vulnerabilidades** de la tecnología, hace lo mismo a mano.
+Los cambios cuentan de inmediato. Cuando añade una tecnología o un identificador de producto CPE, Kadratis busca enseguida ese producto en la NVD; la sección **Vulnerabilidades** de la tecnología indica «Búsqueda de vulnerabilidades en curso…» hasta que termina la búsqueda. Cuando la búsqueda no se puede completar, la sección lo dice. Cuando cambia un nombre CVE.org, una versión, un servidor o una aplicación de una tecnología, Kadratis vuelve a cotejar la tecnología en cuanto se guarda el cambio. **Actualizar**, en la sección **Vulnerabilidades** de la tecnología, hace lo mismo a mano.
 
 ## Alertas
 
@@ -40,7 +40,7 @@ Cada tecnología y cada versión está en las alertas de vulnerabilidad o fuera 
 
 Dos tipos de tecnologías están fuera de las alertas por defecto:
 
-- **Sistemas operativos**: KANAP no conoce el nivel de parches de un servidor, así que un sistema operativo generaría un número muy grande de vulnerabilidades. La lista CVE.org añade muchas más: los editores de sistemas operativos listan la versión entera como afectada.
+- **Sistemas operativos**: Kadratis no conoce el nivel de parches de un servidor, así que un sistema operativo generaría un número muy grande de vulnerabilidades. La lista CVE.org añade muchas más: los editores de sistemas operativos listan la versión entera como afectada.
 - **Servicios en la nube gestionados por un proveedor**: una tecnología alojada en cloud público o como SaaS, o una entrada del catálogo que el proveedor ejecuta. El proveedor corrige un servicio en línea, así que sus vulnerabilidades no le piden ninguna acción. Una tecnología en un cloud privado sigue en las alertas.
 
 Puede volver a incluirlas en la tecnología. Para seguir una sola versión de un sistema operativo, por ejemplo la de sus servidores más expuestos, active su interruptor en la columna **Alertas** de la tabla de versiones. Las demás versiones siguen fuera de las alertas.
@@ -53,15 +53,15 @@ Una versión fuera de las alertas se sigue cotejando con las vulnerabilidades. S
 - Los correos solo anuncian las filas en las alertas.
 - Las columnas **Vulnerabilidades por revisar** de las listas de tecnologías, activos y aplicaciones solo cuentan las filas en las alertas, igual que las fichas, las insignias y el mosaico del panel de control.
 
-## Lo que KANAP cuenta { #what-kanap-counts }
+## Lo que Kadratis cuenta { #what-kanap-counts }
 
-Una vulnerabilidad alcanza un servidor o una aplicación solo por vínculos directos, en todas partes: en esta página, en las listas, en las fichas, en el panel de control y en Plaid.
+Una vulnerabilidad alcanza un servidor o una aplicación solo por vínculos directos, en todas partes: en esta página, en las listas, en las fichas, en el panel de control y en Kad.
 
 - **Servidor**: la tecnología y la versión están registradas en el propio servidor. Un servidor retirado no se cuenta.
 - **Clúster**: lo registrado en el propio clúster, más lo registrado en sus miembros en servicio. Un clúster cuenta las vulnerabilidades de sus miembros, en su columna de la lista, su insignia y su ficha. Filtrar esta página por un clúster muestra también las filas de sus miembros.
 - **Aplicación**: la aplicación declara la tecnología y la versión, o uno de sus servidores de despliegue las tiene registradas en sí mismo. Una aplicación asignada a un clúster cuenta el clúster y sus miembros en servicio. Una tecnología a la vez declarada y alojada cuenta una vez. Una aplicación desactivada, o cuya fecha de desactivación ya pasó, no se cuenta.
 
-Los recuentos por servidor y por aplicación, en las listas, en las fichas, en el panel de control y en Plaid, siguen las mismas reglas:
+Los recuentos por servidor y por aplicación, en las listas, en las fichas, en el panel de control y en Kad, siguen las mismas reglas:
 
 - **Qué vulnerabilidades**: las que siguen **Por revisar** y cuya tecnología o versión está en las alertas. Cada vulnerabilidad cuenta una vez, aunque afecte a varias versiones.
 - **Gravedad**: la de la NVD, o la del editor (CVE.org) cuando la NVD aún no ha evaluado la vulnerabilidad. **Grave** significa crítica o alta.
@@ -75,7 +75,7 @@ El alcance a través de otro activo sigue visible, sin contarse: en el panel lat
 
 La lista usa la cuadrícula estándar: una fila por tecnología, versión y vulnerabilidad. Las vulnerabilidades explotadas activamente van primero, y después las más graves. Una vulnerabilidad que afecta a tres versiones de SQL Server da tres filas, cada una con su propio estado. Se abre en las filas **Por revisar** que están en las alertas: vacíe el filtro de la columna **Estado** para ver los demás estados.
 
-Una línea encima de la cuadrícula indica cuándo leyó KANAP cada fuente por última vez: **Datos leídos**, y después la NVD, los editores (CVE.org) y los catálogos de explotación (CISA KEV, EU KEV, EPSS y EUVD). La NVD, los editores, CISA KEV, EU KEV y EUVD muestran el día y la hora de la última lectura. EPSS muestra el día de sus puntuaciones. Una fuente desactivada no aparece. Una advertencia sigue en la misma línea cuando la última lectura de una fuente falló, o cuando una fuente lleva más de 3 días sin leerse. Los datos de esa fuente pueden estar entonces desactualizados.
+Una línea encima de la cuadrícula indica cuándo leyó Kadratis cada fuente por última vez: **Datos leídos**, y después la NVD, los editores (CVE.org) y los catálogos de explotación (CISA KEV, EU KEV, EPSS y EUVD). La NVD, los editores, CISA KEV, EU KEV y EUVD muestran el día y la hora de la última lectura. EPSS muestra el día de sus puntuaciones. Una fuente desactivada no aparece. Una advertencia sigue en la misma línea cuando la última lectura de una fuente falló, o cuando una fuente lleva más de 3 días sin leerse. Los datos de esa fuente pueden estar entonces desactualizados.
 
 **Alertas**, **Publicada** y **Solo explotadas** están encima de la cuadrícula. **Alertas** elige las filas según su ajuste de alertas: **Incluidas** (por defecto), **Excluidas** o **Todas**. En **Todas**, las filas fuera de las alertas aparecen atenuadas. Cuando ninguna fila está en las alertas y algunas están excluidas, la lista vacía propone **Mostrar las excluidas**. **Publicada** conserva las vulnerabilidades según su fecha de publicación: **Todas** (por defecto), **Menos de 7 días**, **Menos de 30 días**, **Menos de 90 días**, **Menos de un año** o **Más de un año**. El período se cuenta desde hoy, así que un enlace guardado o compartido sigue mostrando las más recientes. **Solo explotadas** conserva las vulnerabilidades incluidas como explotadas activamente. La dirección lleva `exploited=1`. **Restablecer filtros** devuelve la página a su estado de apertura: las filas **Por revisar**, las vulnerabilidades explotadas activamente primero, **Alertas** en **Incluidas**, **Publicada** en todas las fechas y **Solo explotadas** desactivado. La exportación y un cambio de estado en bloque siguen estos tres ajustes.
 
@@ -92,7 +92,7 @@ Una línea encima de la cuadrícula indica cuándo leyó KANAP cada fuente por �
 | **Tecnología** | La tecnología afectada |
 | **Versión** | La versión afectada. **Sin registrar** cuando un servidor o una aplicación usa la tecnología sin indicar su versión: la fila está entonces potencialmente afectada |
 | **Editor** | El editor de la tecnología. Oculta por defecto |
-| **Servidores** | Cuántos servidores en servicio tienen esta versión registrada en sí mismos, como los cuenta la [lista de tecnologías](technologies.md). Los clústeres y los servidores que se ejecutan dentro de otro no se cuentan. Consulte [Lo que KANAP cuenta](#what-kanap-counts) |
+| **Servidores** | Cuántos servidores en servicio tienen esta versión registrada en sí mismos, como los cuenta la [lista de tecnologías](technologies.md). Los clústeres y los servidores que se ejecutan dentro de otro no se cuentan. Consulte [Lo que Kadratis cuenta](#what-kanap-counts) |
 | **Aplicaciones** | Cuántas aplicaciones declaran esta versión o se ejecutan en un servidor que la tiene registrada |
 | **Fuente** | Las fuentes que cotejaron la fila: **NVD**, **Editor** (la ficha que el editor publicó en CVE.org), o ambas |
 | **Estado** | **Por revisar**, **Tratada** o **No afectada** |
@@ -105,7 +105,7 @@ Una línea encima de la cuadrícula indica cuándo leyó KANAP cada fuente por �
 
 **Enlaces**: la página lee sus filtros en su dirección, de modo que puede compartir una lista filtrada. `?technology=TEC-4` conserva una tecnología, `?version=none` las filas sin versión registrada, `?state=all` todos los estados, `?published=30d` las vulnerabilidades publicadas en los últimos 30 días (`7d`, `30d`, `90d`, `1y` u `older1y`, como el filtro **Publicada**), `?period=30` lo mismo mediante el filtro de la columna **Publicada**, `?alerts=excluded` o `?alerts=all` las filas fuera de las alertas, `?exploited=1` las vulnerabilidades explotadas activamente. El enlace de los correos usa `period`.
 
-**Activo y aplicación**: `?asset=AST-12` abre la página con el filtro de la columna **Servidores** puesto en un activo, y `?application=APP-4` con el filtro de la columna **Aplicaciones** puesto en una aplicación, por vínculos directos (consulte [Lo que KANAP cuenta](#what-kanap-counts)). Las listas de activos y aplicaciones y sus fichas abren la página así. Vacíe el filtro de la columna para ver las demás filas. Para filtrar por una aplicación, debe poder leerla.
+**Activo y aplicación**: `?asset=AST-12` abre la página con el filtro de la columna **Servidores** puesto en un activo, y `?application=APP-4` con el filtro de la columna **Aplicaciones** puesto en una aplicación, por vínculos directos (consulte [Lo que Kadratis cuenta](#what-kanap-counts)). Las listas de activos y aplicaciones y sus fichas abren la página así. Vacíe el filtro de la columna para ver las demás filas. Para filtrar por una aplicación, debe poder leerla.
 
 **En uso en el parque**: `?estate=1` conserva las vulnerabilidades de las tecnologías instaladas en un activo en servicio o declaradas por una aplicación en servicio. Los enlaces a CVE del mosaico **Vulnerabilidades del parque** del panel de control abren la página con este filtro. Una línea sobre la cuadrícula muestra **En uso en el parque · quitar**. **quitar** lo elimina.
 
@@ -130,7 +130,7 @@ Haga clic en una fila para abrir su vulnerabilidad en un panel lateral. Su encab
 
 - **Tecnologías y versiones**: cada versión afectada, con su **Estado** y una nota. Bajo cada versión, las insignias de las fuentes que la cotejaron. **Por qué esta fila** abre los criterios de cada fuente en lenguaje claro, por ejemplo «Identificador CPE a:apache:tomcat: versiones anteriores a 9.0.99» para la NVD, o «Apache Software Foundation · Apache Tomcat: versiones 9.0.0 a 9.0.98 afectadas» para el editor.
 - La descripción, cortada a tres líneas (**Ver más** muestra el resto), el vector CVSS y los enlaces de referencia (avisos del editor, parches).
-- **Fuentes**: el estado de la vulnerabilidad en la NVD (**analizada**, **pendiente de análisis**, **no analizada**, **rechazada** o **aún no vinculada a este producto**), con un enlace a su ficha de la NVD. Cuando KANAP ha leído la ficha del editor, una segunda línea indica quién la publicó y cuándo, su última actualización, y **Ver en CVE.org**.
+- **Fuentes**: el estado de la vulnerabilidad en la NVD (**analizada**, **pendiente de análisis**, **no analizada**, **rechazada** o **aún no vinculada a este producto**), con un enlace a su ficha de la NVD. Cuando Kadratis ha leído la ficha del editor, una segunda línea indica quién la publicó y cuándo, su última actualización, y **Ver en CVE.org**.
 - **Explotación**, cuando se conoce un catálogo, una puntuación EPSS o un identificador europeo. Consulte [Explotación](#exploitation).
 - **Servidores**: cada servidor que tiene una versión afectada registrada en sí mismo, con la tecnología y la versión. Los servidores alcanzados a través de otro activo, como una máquina virtual en un host o un clúster a través de sus miembros, quedan ocultos tras un botón, por ejemplo **Mostrar también los 4 servidores alcanzados a través de otro activo**. Aparecen bajo su propio título, **A través de otro activo**, con el activo por el que se alcanzan. No se cuentan.
 - **Aplicaciones**: cada aplicación que usa una versión afectada, listada una vez por versión con sus servidores (tres como máximo, y después «y 2 más»). Una aplicación que declara la tecnología, o que se ejecuta en un servidor que la tiene registrada, va primero. Las demás quedan tras el mismo tipo de botón y no se cuentan.
@@ -147,9 +147,9 @@ Establezca el estado de cada versión:
 | **Tratada** | La versión está parcheada, o hay una solución alternativa en marcha |
 | **No afectada** | La vulnerabilidad no se aplica a su instalación |
 
-La nota registra cómo, por ejemplo «parcheado el 12 de marzo, cambio CHG-123». Se guarda al salir del campo. El registro de auditoría conserva quién cambió un estado y cuándo. También puede pedir a [Plaid](#preguntar-al-asistente) que cambie un estado.
+La nota registra cómo, por ejemplo «parcheado el 12 de marzo, cambio CHG-123». Se guarda al salir del campo. El registro de auditoría conserva quién cambió un estado y cuándo. También puede pedir a [Kad](#preguntar-al-asistente) que cambie un estado.
 
-KANAP nunca cambia un estado que usted eligió. Cuando una versión deja de coincidir (la actualizó, la tecnología se retiró, una fuente cambió sus datos), una fila aún **Por revisar** desaparece. Una fila que usted revisó se queda, en gris, con su estado; vuelve tal cual si la versión coincide de nuevo.
+Kadratis nunca cambia un estado que usted eligió. Cuando una versión deja de coincidir (la actualizó, la tecnología se retiró, una fuente cambió sus datos), una fila aún **Por revisar** desaparece. Una fila que usted revisó se queda, en gris, con su estado; vuelve tal cual si la versión coincide de nuevo.
 
 ## Explotación { #exploitation }
 
@@ -185,19 +185,19 @@ Los destinatarios son los responsables de TI de la tecnología cuya cuenta está
 - **Listas de activos y aplicaciones**: la columna **Vulnerabilidades por revisar**. Consulte [Activos](assets.md#working-with-the-list) y [Aplicaciones](applications.md#working-with-the-list).
 - **Fichas de activo y aplicación**: la sección **Vulnerabilidades** y la insignia de vulnerabilidades graves en el encabezado. Consulte [Activos](assets.md#operations) y [Aplicaciones](applications.md#operations).
 - **Panel de control**: el mosaico **Vulnerabilidades del parque**. Consulte [Mi panel de control](my-dashboard.md#vulnerabilities).
-- **Plaid**: el asistente responde a preguntas sobre vulnerabilidades y cambia su estado. Consulte [Preguntar al asistente](#preguntar-al-asistente).
+- **Kad**: el asistente responde a preguntas sobre vulnerabilidades y cambia su estado. Consulte [Preguntar al asistente](#preguntar-al-asistente).
 
 ## Preguntar al asistente
 
-[Plaid](ai-assistant.md) lee las vulnerabilidades con los mismos derechos que esta página. Cuenta las filas y las CVE distintas, como la página, conserva las tecnologías en uso en el parque cuando usted lo pide, y dice cuándo leyó KANAP cada fuente por última vez. Pregunte, por ejemplo: «¿Cuántas vulnerabilidades críticas quedan por revisar en PostgreSQL, por versión?» o «¿Qué CVE explotadas alcanzan APP-4?»
+[Kad](ai-assistant.md) lee las vulnerabilidades con los mismos derechos que esta página. Cuenta las filas y las CVE distintas, como la página, conserva las tecnologías en uso en el parque cuando usted lo pide, y dice cuándo leyó Kadratis cada fuente por última vez. Pregunte, por ejemplo: «¿Cuántas vulnerabilidades críticas quedan por revisar en PostgreSQL, por versión?» o «¿Qué CVE explotadas alcanzan APP-4?»
 
-Con `infrastructure:member`, Plaid también cambia el estado de las filas, y cada cambio llega como una vista previa que usted aprueba:
+Con `infrastructure:member`, Kad también cambia el estado de las filas, y cada cambio llega como una vista previa que usted aprueba:
 
 - Nombre una CVE para cambiar todas sus filas, o añada una tecnología, o una tecnología y una versión.
 - O describa las filas con los filtros de la página, por ejemplo las filas críticas de una tecnología.
 - Dé una nota para escribirla en cada fila. Sin nota, cada fila conserva la suya.
 
-Un cambio abarca 5000 filas como máximo, como **Cambiar el estado**. La vista previa dice cuántas filas y CVE cambian, y cuántas están fuera de las alertas. Cuando filas que ya no coinciden vuelven a **Por revisar**, las cuenta: desaparecen en el siguiente cotejo. **Aceptada** no es un estado: Plaid propone **Tratada** con una nota como «riesgo aceptado», o **No afectada**, y espera su elección. Pida a Plaid que deshaga un cambio que hizo en la conversación. Lo rechaza cuando una fila cambió desde entonces.
+Un cambio abarca 5000 filas como máximo, como **Cambiar el estado**. La vista previa dice cuántas filas y CVE cambian, y cuántas están fuera de las alertas. Cuando filas que ya no coinciden vuelven a **Por revisar**, las cuenta: desaparecen en el siguiente cotejo. **Aceptada** no es un estado: Kad propone **Tratada** con una nota como «riesgo aceptado», o **No afectada**, y espera su elección. Pida a Kad que deshaga un cambio que hizo en la conversación. Lo rechaza cuando una fila cambió desde entonces.
 
 Pregunte, por ejemplo: «Marca CVE-2024-3094 como no afectada en TEC-3 versión 5.6, el paquete no está instalado» o «Pasa las filas críticas de PostgreSQL 14 a tratada con la nota "parcheado en marzo"».
 

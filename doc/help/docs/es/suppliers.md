@@ -52,7 +52,7 @@ Haga clic en una fila para abrir la página del proveedor. Use las flechas de la
 
 La página tiene tres pestañas: **Vista general**, **Contactos** e **Historial** (los cambios hechos en el proveedor, vea [Historial de los registros](record-history.md)).
 
-**Título**: el nombre del proveedor. Haga clic en él para editarlo; el cambio se guarda al salir del campo o al pulsar Intro, y Escape lo cancela. El nombre es obligatorio y debe ser distinto del de todos los demás proveedores, sin distinguir mayúsculas y minúsculas (`SAP` y `sap` son el mismo nombre): KANAP muestra el mensaje bajo el nombre y conserva el nombre guardado.
+**Título**: el nombre del proveedor. Haga clic en él para editarlo; el cambio se guarda al salir del campo o al pulsar Intro, y Escape lo cancela. El nombre es obligatorio y debe ser distinto del de todos los demás proveedores, sin distinguir mayúsculas y minúsculas (`SAP` y `sap` son el mismo nombre): Kadratis muestra el mensaje bajo el nombre y conserva el nombre guardado.
 
 **Referencia**: el ID de proveedor ERP, cuando el proveedor tiene uno, aparece antes del nombre. Haga clic en él para copiarlo.
 
@@ -85,7 +85,7 @@ La pestaña **Contactos** lista los contactos vinculados a este proveedor por ti
 **Cómo funciona**:
 - Cada sección lista sus contactos por nombre. Haga clic en un nombre para abrir la página del contacto.
 - **Añadir existente**: busque un contacto por su nombre y elíjalo. El vínculo se guarda al instante.
-- **Nuevo contacto**: abre el formulario de contacto con el proveedor y el tipo de contacto ya rellenados. KANAP le devuelve a esta pestaña una vez creado el contacto.
+- **Nuevo contacto**: abre el formulario de contacto con el proveedor y el tipo de contacto ya rellenados. Kadratis le devuelve a esta pestaña una vez creado el contacto.
 - El botón de papelera elimina el vínculo. El contacto sigue en sus contactos. Un mensaje lo confirma, con una acción **Deshacer** que vuelve a vincular el contacto.
 
 **Consejo**: mantenga al menos un contacto por proveedor para que la comunicación con él esté siempre a un clic.

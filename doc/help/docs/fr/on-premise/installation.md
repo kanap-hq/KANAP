@@ -9,7 +9,7 @@
 - Plugin Docker Compose 2.20 ou plus récent (les versions actuelles sont en 5.x)
 - Git
 - 4 Go de RAM au minimum, 8 Go recommandés quand PostgreSQL tourne sur le même serveur. Davantage de processus API demandent davantage de mémoire, voir [Configuration](configuration.md#facultatif-capacite-et-performance).
-- 10 Go de disque au minimum. KANAP lui-même occupe environ 1,5 Go (ses images), 2 Go avec l'image des outils de maintenance. La base de données et les fichiers stockés grossissent avec le temps.
+- 10 Go de disque au minimum. Kadratis lui-même occupe environ 1,5 Go (ses images), 2 Go avec l'image des outils de maintenance. La base de données et les fichiers stockés grossissent avec le temps.
 - Un accès HTTPS sortant vers `ghcr.io` à l'installation et à chaque mise à jour, pour télécharger les images (voir [Règles de pare-feu](configuration.md#outbound-installation-and-upgrades)).
 
 **Infrastructure fournie par le client :**
@@ -17,11 +17,11 @@
 | Composant | Exigence |
 |-----------|-------------|
 | PostgreSQL | Version 16+ avec les extensions `citext`, `pgcrypto`, `uuid-ossp`, et un rôle applicatif dédié pour `DATABASE_URL` |
-| Stockage S3 | Tout stockage compatible S3 avec un bucket : AWS S3, Cloudflare R2, Hetzner Object Storage, Garage, RustFS, un MinIO existant, et d'autres. KANAP a besoin de `PutObject`, `GetObject`, `HeadObject`, `DeleteObject`, `ListObjectsV2` et du `GET` présigné sur ce bucket. |
+| Stockage S3 | Tout stockage compatible S3 avec un bucket : AWS S3, Cloudflare R2, Hetzner Object Storage, Garage, RustFS, un MinIO existant, et d'autres. Kadratis a besoin de `PutObject`, `GetObject`, `HeadObject`, `DeleteObject`, `ListObjectsV2` et du `GET` présigné sur ce bucket. |
 | Reverse proxy | Terminaison TLS et routage (nginx, Traefik, Caddy, etc.) |
 | Nom et certificat | Un nom que les utilisateurs et le serveur résolvent, et un certificat pour ce nom (voir ci-dessous) |
 
-Un MinIO déjà en service continue de fonctionner avec KANAP : rien à changer. MinIO ne publie plus de nouveaux téléchargements ni de nouvelles images, c'est pourquoi l'[exemple d'installation](installation-example.md) utilise RustFS.
+Un MinIO déjà en service continue de fonctionner avec Kadratis : rien à changer. MinIO ne publie plus de nouveaux téléchargements ni de nouvelles images, c'est pourquoi l'[exemple d'installation](installation-example.md) utilise RustFS.
 
 Facultatif :
 
@@ -31,7 +31,7 @@ Facultatif :
 
 ## Nom et certificat
 
-Les utilisateurs ouvrent KANAP à une adresse HTTPS, par exemple `https://kanap.company.com`. Cette adresse a besoin d'un nom qui pointe vers votre serveur et d'un certificat qui lui correspond. Trois cas couvrent la plupart des réseaux :
+Les utilisateurs ouvrent Kadratis à une adresse HTTPS, par exemple `https://kadratis.company.com`. Cette adresse a besoin d'un nom qui pointe vers votre serveur et d'un certificat qui lui correspond. Trois cas couvrent la plupart des réseaux :
 
 | Cas | Nom | Certificat |
 |------|------|-------------|
@@ -41,13 +41,13 @@ Les utilisateurs ouvrent KANAP à une adresse HTTPS, par exemple `https://kanap.
 
 Beaucoup d'installations n'ont pas de DNS public. Un nom interne avec un certificat interne est une configuration normale et prise en charge. Le certificat du reverse proxy sert les navigateurs. L'API ouvre aussi ses propres connexions, vers SMTP, PostgreSQL ou S3 : si votre autorité a signé les certificats de ces serveurs, voir [Certificats d'une autorité interne](configuration.md#facultatif-certificats-dune-autorite-interne).
 
-**Le serveur doit lui aussi résoudre le nom.** Les commandes de vérification de ce guide, ainsi que le test de recette, s'exécutent sur le serveur et appellent KANAP par son nom. Tant qu'aucun enregistrement DNS n'existe, ajoutez le nom au fichier hosts du serveur :
+**Le serveur doit lui aussi résoudre le nom.** Les commandes de vérification de ce guide, ainsi que le test de recette, s'exécutent sur le serveur et appellent Kadratis par son nom. Tant qu'aucun enregistrement DNS n'existe, ajoutez le nom au fichier hosts du serveur :
 
 ```bash
-echo "127.0.0.1 kanap.company.com" | sudo tee -a /etc/hosts
+echo "127.0.0.1 kadratis.company.com" | sudo tee -a /etc/hosts
 ```
 
-Remplacez `kanap.company.com` par votre nom. Les postes clients ont besoin de leur propre entrée (ou de l'enregistrement DNS) qui pointe vers l'adresse du serveur.
+Remplacez `kadratis.company.com` par votre nom. Les postes clients ont besoin de leur propre entrée (ou de l'enregistrement DNS) qui pointe vers l'adresse du serveur.
 
 **Certificat auto-signé (tests uniquement) :**
 
@@ -57,19 +57,19 @@ sudo openssl req -x509 -nodes -days 365 \
   -newkey rsa:2048 \
   -keyout /etc/ssl/kanap/server.key \
   -out /etc/ssl/kanap/server.crt \
-  -subj "/CN=kanap.company.com" \
-  -addext "subjectAltName=DNS:kanap.company.com"
+  -subj "/CN=kadratis.company.com" \
+  -addext "subjectAltName=DNS:kadratis.company.com"
 sudo chmod 600 /etc/ssl/kanap/server.key
 ```
 
-Remplacez `kanap.company.com` par votre nom. Pour un accès par adresse IP, utilisez `IP:192.0.2.10` dans `subjectAltName` et mettez l'IP dans `-subj` et dans `server_name`. Pour utiliser votre autorité interne, demandez un certificat pour le même nom et faites pointer `ssl_certificate` et `ssl_certificate_key` du fichier nginx vers les fichiers qu'elle vous remet (la chaîne complète et la clé privée). Rien d'autre ne change.
+Remplacez `kadratis.company.com` par votre nom. Pour un accès par adresse IP, utilisez `IP:192.0.2.10` dans `subjectAltName` et mettez l'IP dans `-subj` et dans `server_name`. Pour utiliser votre autorité interne, demandez un certificat pour le même nom et faites pointer `ssl_certificate` et `ssl_certificate_key` du fichier nginx vers les fichiers qu'elle vous remet (la chaîne complète et la clé privée). Rien d'autre ne change.
 
-**Let's Encrypt :** `sudo apt-get install -y certbot`, puis `sudo certbot certonly --webroot -w /var/www/html -d kanap.company.com`, avec la page nginx par défaut qui répond sur le port 80. Les fichiers du certificat sont `/etc/letsencrypt/live/kanap.company.com/fullchain.pem` et `privkey.pem`. L'[exemple d'installation](installation-example.md#8-nginx-et-tls) montre la séquence complète, renouvellement compris.
+**Let's Encrypt :** `sudo apt-get install -y certbot`, puis `sudo certbot certonly --webroot -w /var/www/html -d kadratis.company.com`, avec la page nginx par défaut qui répond sur le port 80. Les fichiers du certificat sont `/etc/letsencrypt/live/kadratis.company.com/fullchain.pem` et `privkey.pem`. L'[exemple d'installation](installation-example.md#8-nginx-et-tls) montre la séquence complète, renouvellement compris.
 
 ## Démarrage rapide
 
 ```bash
-# 1. Récupérer KANAP. La branche "stable" pointe toujours vers la dernière version publiée.
+# 1. Récupérer Kadratis. La branche "stable" pointe toujours vers la dernière version publiée.
 sudo install -d -o "$USER" -g "$USER" /opt/kanap
 git clone https://github.com/kanap-hq/KANAP.git /opt/kanap
 cd /opt/kanap
@@ -81,7 +81,7 @@ chmod 600 .env
 nano .env  # Renseignez DATABASE_URL, les identifiants S3, ADMIN_EMAIL, ADMIN_PASSWORD, JWT_SECRET,
 #          DEFAULT_TENANT_NAME (le nom de votre organisation, lu au premier démarrage uniquement),
 #          APP_BASE_URL et CORS_ORIGINS (l'adresse exacte ouverte par les utilisateurs),
-#          APP_ENV=production (les utilisateurs accèdent à KANAP en HTTPS) et RATE_LIMIT_TRUST_PROXY=true
+#          APP_ENV=production (les utilisateurs accèdent à Kadratis en HTTPS) et RATE_LIMIT_TRUST_PROXY=true
 # Voir le guide de configuration pour toutes les variables
 
 # 3. Télécharger les images de cette version
@@ -104,23 +104,23 @@ docker compose -f infra/compose.onprem.yml logs -f api
 # Après le premier démarrage, lisez les lignes [ENV], [CONFIG], [CORS], [RATE-LIMIT] et [SECURITY] du journal de l'API.
 
 # 7. Accéder à l'application
-# https://kanap.company.com
+# https://kadratis.company.com
 # Connexion avec ADMIN_EMAIL / ADMIN_PASSWORD du fichier .env
 ```
 
 **Important :** terminez la configuration (étape 2) avant de démarrer les conteneurs. L'API lit `.env` au démarrage et crée le tenant et l'utilisateur administrateur au premier démarrage avec ces valeurs. Le fichier contient tous les secrets de l'installation : `chmod 600` le rend lisible par son seul propriétaire.
 
-**Versions.** KANAP publie une nouvelle version environ une fois par mois (`26.10.1` est la première). La branche `stable` pointe toujours vers la dernière version publiée. Chaque version est livrée avec ses images sur GitHub Container Registry (`ghcr.io/kanap-hq/kanap-api`, `kanap-web` et `kanap-api-tools`), construites à partir du tag de la version. Elles sont publiques : aucun compte n'est nécessaire. `infra/compose.onprem.yml` nomme les images de la version que vous avez extraite : `git checkout stable` ou `git checkout v26.10.9` décide donc de la version que `pull` télécharge. Les versions jusqu'à la 26.10.7 n'ont pas d'images publiées : elles se construisent sur le serveur, comme l'explique le guide de cette version. Voir [Opérations](operations.md#procedure-de-mise-a-jour) pour mettre à jour, fixer une version précise et revenir en arrière. La branche `main` contient chaque modification fusionnée avant sa publication dans une version. Il est possible de la suivre, ce qui n'est pas recommandé pour un serveur de production : il faut alors construire les images vous-même.
+**Versions.** Kadratis publie une nouvelle version environ une fois par mois (`26.10.1` est la première). La branche `stable` pointe toujours vers la dernière version publiée. Chaque version est livrée avec ses images sur GitHub Container Registry (`ghcr.io/kanap-hq/kadratis-api`, `kadratis-web` et `kadratis-api-tools`), construites à partir du tag de la version. Elles sont publiques : aucun compte n'est nécessaire. À partir de cette version, les images s'appellent `kadratis-*`. La mise à jour habituelle les télécharge : rien d'autre à faire. Les versions antérieures gardent leurs images `kanap-*`. `infra/compose.onprem.yml` nomme les images de la version que vous avez extraite : `git checkout stable` ou `git checkout v26.10.9` décide donc de la version que `pull` télécharge. Les versions jusqu'à la 26.10.7 n'ont pas d'images publiées : elles se construisent sur le serveur, comme l'explique le guide de cette version. Voir [Opérations](operations.md#procedure-de-mise-a-jour) pour mettre à jour, fixer une version précise et revenir en arrière. La branche `main` contient chaque modification fusionnée avant sa publication dans une version. Il est possible de la suivre, ce qui n'est pas recommandé pour un serveur de production : il faut alors construire les images vous-même.
 
-**Exigence sur le rôle de base de données :** `DATABASE_URL` doit utiliser un rôle applicatif PostgreSQL dédié. Ne le faites pas pointer vers `postgres` ou un autre rôle d'administration du cluster. KANAP refuse de démarrer plutôt que de fonctionner sans application effective du RLS.
+**Exigence sur le rôle de base de données :** `DATABASE_URL` doit utiliser un rôle applicatif PostgreSQL dédié. Ne le faites pas pointer vers `postgres` ou un autre rôle d'administration du cluster. Kadratis refuse de démarrer plutôt que de fonctionner sans application effective du RLS.
 
-**Adresse et origines :** renseignez `APP_BASE_URL` et `CORS_ORIGINS` avec l'adresse exacte ouverte par les utilisateurs, avec le port lorsqu'il n'est pas standard. Chaque lien envoyé par KANAP provient de `APP_BASE_URL`. Renseignez `APP_ENV=production` lorsque les utilisateurs accèdent à KANAP en HTTPS : l'API refuse alors de démarrer sans ces deux valeurs et marque toujours le cookie de session comme Secure. Voir [Configuration](configuration.md#requis-identifiants-administrateur).
+**Adresse et origines :** renseignez `APP_BASE_URL` et `CORS_ORIGINS` avec l'adresse exacte ouverte par les utilisateurs, avec le port lorsqu'il n'est pas standard. Chaque lien envoyé par Kadratis provient de `APP_BASE_URL`. Renseignez `APP_ENV=production` lorsque les utilisateurs accèdent à Kadratis en HTTPS : l'API refuse alors de démarrer sans ces deux valeurs et marque toujours le cookie de session comme Secure. Voir [Configuration](configuration.md#requis-identifiants-administrateur).
 
 **Choix de l'e-mail :** les déploiements on-premise peuvent utiliser **Resend** ou **SMTP** pour l'e-mail sortant. SMTP est utile lorsque le client dispose déjà d'un relais de messagerie interne ou d'un fournisseur géré comme Microsoft 365. Configurez l'une de ces options si vous voulez que la réinitialisation de mot de passe, les invitations et les notifications par e-mail fonctionnent dès le premier jour.
 
 ## Construire les images vous-même { #build-the-images-yourself }
 
-Les images publiées conviennent à la plupart des installations. Construisez-les sur le serveur pour une fourche, un correctif local, un serveur qui n'atteint pas `ghcr.io`, ou une API sur un autre hôte. Le fichier `infra/compose.onprem.build.yml`, ajouté par-dessus le fichier principal, les construit à partir du checkout et les nomme `kanap-api:local`, `kanap-web:local` et `kanap-api-tools:local` :
+Les images publiées conviennent à la plupart des installations. Construisez-les sur le serveur pour une fourche, un correctif local, un serveur qui n'atteint pas `ghcr.io`, ou une API sur un autre hôte. Le fichier `infra/compose.onprem.build.yml`, ajouté par-dessus le fichier principal, les construit à partir du checkout et les nomme `kadratis-api:local`, `kadratis-web:local` et `kadratis-api-tools:local` :
 
 ```bash
 docker compose -f infra/compose.onprem.yml -f infra/compose.onprem.build.yml build
@@ -134,10 +134,10 @@ Nommez les deux fichiers dans chaque `up` et `run` suivant : avec le fichier pri
 **Exigences pour le reverse proxy :**
 
 1. Terminer TLS sur le port 443
-2. Router `/api/*` directement vers le conteneur API (port 8080 sur `127.0.0.1`), sans le préfixe `/api`. N'envoyez pas `/api/` à travers le conteneur web (port 8081) : sa propre route `/api/` ne transmet pas `X-Forwarded-For`, et KANAP compterait et journaliserait alors chaque requête sous l'adresse du conteneur web.
+2. Router `/api/*` directement vers le conteneur API (port 8080 sur `127.0.0.1`), sans le préfixe `/api`. N'envoyez pas `/api/` à travers le conteneur web (port 8081) : sa propre route `/api/` ne transmet pas `X-Forwarded-For`, et Kadratis compterait et journaliserait alors chaque requête sous l'adresse du conteneur web.
 3. Router toutes les autres requêtes vers le conteneur web (port 8081 sur `127.0.0.1`)
-4. Renseigner `X-Forwarded-Proto: https` et conserver `Host`. KANAP construit chaque lien qu'il envoie à partir de `APP_BASE_URL`. L'exemple envoie aussi `X-Forwarded-Host`, avec la même valeur que `Host`. Lorsque le site utilise un port non standard, ajoutez l'adresse exacte avec son port à `CORS_ORIGINS`.
-5. Envoyer `X-Forwarded-For` avec l'adresse du client (l'exemple le fait) et renseigner `RATE_LIMIT_TRUST_PROXY=true`. KANAP utilise cette adresse pour ses limites de connexion. Le port de l'API doit rester lié à `127.0.0.1`, comme le fait `compose.onprem.yml`. Si rien n'est placé devant l'API, renseignez `RATE_LIMIT_TRUST_PROXY=false`.
+4. Renseigner `X-Forwarded-Proto: https` et conserver `Host`. Kadratis construit chaque lien qu'il envoie à partir de `APP_BASE_URL`. L'exemple envoie aussi `X-Forwarded-Host`, avec la même valeur que `Host`. Lorsque le site utilise un port non standard, ajoutez l'adresse exacte avec son port à `CORS_ORIGINS`.
+5. Envoyer `X-Forwarded-For` avec l'adresse du client (l'exemple le fait) et renseigner `RATE_LIMIT_TRUST_PROXY=true`. Kadratis utilise cette adresse pour ses limites de connexion. Le port de l'API doit rester lié à `127.0.0.1`, comme le fait `compose.onprem.yml`. Si rien n'est placé devant l'API, renseignez `RATE_LIMIT_TRUST_PROXY=false`.
 6. Accepter des corps de requête de 80 Mo (`client_max_body_size 80m`) : le chargement d'un fichier de budget envoie jusqu'à 72 Mo (le fichier, jusqu'à 48 Mo, et le résultat de sa vérification), et les pièces jointes vont jusqu'à 20 Mo.
 7. Router `/.well-known/oauth-*` vers l'API (port 8080), chemin conservé. Les assistants IA comme Claude le lisent pour se connecter via MCP sans clé. Les autres adresses `/.well-known/` restent sur le conteneur web. Voir [Connecter des assistants IA via MCP](configuration.md#connecting-ai-assistants-over-mcp).
 
@@ -151,7 +151,7 @@ server {
     listen 443 ssl;
     listen [::]:443 ssl;
     http2 on;
-    server_name kanap.company.com;
+    server_name kadratis.company.com;
 
     ssl_certificate     /path/to/fullchain.pem;
     ssl_certificate_key /path/to/privkey.pem;
@@ -223,7 +223,7 @@ server {
 server {
     listen 80;
     listen [::]:80;
-    server_name kanap.company.com;
+    server_name kadratis.company.com;
 
     # Renouvellement du certificat avec Let's Encrypt (webroot) ; sans effet sinon
     location /.well-known/acme-challenge/ { root /var/www/html; }
@@ -272,13 +272,13 @@ server {
 4. Ajoutez votre logo et vos couleurs dans **Administration → Personnalisation** (facultatif)
 5. Invitez d'autres utilisateurs (si l'e-mail est configuré)
 
-**À propos du compte administrateur.** KANAP le crée au premier démarrage à partir de `ADMIN_EMAIL` et `ADMIN_PASSWORD`, et uniquement à ce moment-là. Modifier ces deux lignes par la suite ne change rien tant qu'un administrateur actif existe : changez le mot de passe dans l'application. S'il ne reste aucun administrateur actif, le démarrage suivant rétablit le compte `ADMIN_EMAIL` comme administrateur activé et conserve son mot de passe existant. `ADMIN_PASSWORD` doit être une valeur qui vous est propre, de 12 caractères ou plus : `openssl rand -base64 18` en génère une. Une valeur d'exemple ou une valeur plus courte fait afficher à l'API un avertissement `[SECURITY]` à chaque démarrage, jusqu'à ce que le mot de passe du compte soit changé. Voir [Configuration](configuration.md#requis-identifiants-administrateur).
+**À propos du compte administrateur.** Kadratis le crée au premier démarrage à partir de `ADMIN_EMAIL` et `ADMIN_PASSWORD`, et uniquement à ce moment-là. Modifier ces deux lignes par la suite ne change rien tant qu'un administrateur actif existe : changez le mot de passe dans l'application. S'il ne reste aucun administrateur actif, le démarrage suivant rétablit le compte `ADMIN_EMAIL` comme administrateur activé et conserve son mot de passe existant. `ADMIN_PASSWORD` doit être une valeur qui vous est propre, de 12 caractères ou plus : `openssl rand -base64 18` en génère une. Une valeur d'exemple ou une valeur plus courte fait afficher à l'API un avertissement `[SECURITY]` à chaque démarrage, jusqu'à ce que le mot de passe du compte soit changé. Voir [Configuration](configuration.md#requis-identifiants-administrateur).
 
 ## Facultatif : accès aux données par périmètre { #optional-data-scoped-access }
 
 L'[accès aux données](../data-access.md) limite une personne à une partie du budget et des contrats, par société ou par centre de coûts. Sans cette étape, tout le monde travaille avec toutes les données, comme dans les versions précédentes, et **Limité à** reste grisé dans la fenêtre de l'utilisateur. Passez-la si personne ne doit être limité.
 
-L'étape crée un rôle PostgreSQL, `kanap_data_limited`, que KANAP prend pour les requêtes des personnes limitées. Elle se fait une fois par serveur PostgreSQL, par un superutilisateur ou un rôle doté de `CREATEROLE`. Elle donne au rôle applicatif le droit de prendre ce rôle sans hériter de ses droits. KANAP pose ensuite lui-même les droits et les règles d'accès de ce rôle dans sa base, à chaque démarrage et à chaque mise à jour.
+L'étape crée un rôle PostgreSQL, `kanap_data_limited`, que Kadratis prend pour les requêtes des personnes limitées. Elle se fait une fois par serveur PostgreSQL, par un superutilisateur ou un rôle doté de `CREATEROLE`. Elle donne au rôle applicatif le droit de prendre ce rôle sans hériter de ses droits. Kadratis pose ensuite lui-même les droits et les règles d'accès de ce rôle dans sa base, à chaque démarrage et à chaque mise à jour.
 
 **1. Lancez le script.** Il se trouve dans le dépôt. Passez le rôle applicatif de `DATABASE_URL` dans `app_role`. Avec l'[exemple d'installation](installation-example.md) (rôle et base `kanap`, PostgreSQL sur le serveur) :
 

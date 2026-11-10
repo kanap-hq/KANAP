@@ -40,7 +40,7 @@ Navigieren Sie zu **IT-Landschaft > Anwendungen**, um Ihre Liste zu sehen. So er
 
 1. Klicken Sie auf **Neue Anwendung**. Die Seite der Anwendung öffnet sich mit einem leeren Titel in der Kopfzeile. Der Rest der Seite ist abgeblendet.
 2. Geben Sie den Namen der Anwendung oder des Dienstes ein, höchstens 200 Zeichen. Siehe [Eindeutige Namen](#unique-names).
-3. Drücken Sie die Eingabetaste oder klicken Sie außerhalb des Titels. KANAP erstellt die Anwendung sofort. Ihre Referenz (`APP-12`) erscheint und alle Reiter öffnen sich.
+3. Drücken Sie die Eingabetaste oder klicken Sie außerhalb des Titels. Kadratis erstellt die Anwendung sofort. Ihre Referenz (`APP-12`) erscheint und alle Reiter öffnen sich.
 
 Die neue Anwendung ist **Aktiv**, in der Standardkategorie. Ändern Sie beides in der Kopfzeile und im Eigenschaftenbereich, dann füllen Sie den Rest aus:
 
@@ -92,7 +92,7 @@ Das Anwendungsraster bietet eine umfassende Ansicht Ihres Anwendungsportfolios.
 
 **Standardspalten**:
 - **Name**: Anwendungsname, darunter eine Zeile „Enthalten in: {Suite}" für eine Anwendung, die in einer Suite enthalten ist
-- **Zu prüfende Schwachstellen**: die noch zu prüfenden Schwachstellen der Technologien, die die Anwendung deklariert oder die ihre Bereitstellungsserver erfasst haben, dann in Orange die Zahl der kritischen oder hohen (`5 · 2`). Leer für eine deaktivierte Anwendung oder wenn keine mehr offen ist. Ein Klick öffnet die Seite [Schwachstellen](vulnerabilities.md), gefiltert auf die Anwendung. Vorhanden, wenn Schwachstellen verfolgt werden. Siehe [Was KANAP zählt](vulnerabilities.md#what-kanap-counts)
+- **Zu prüfende Schwachstellen**: die noch zu prüfenden Schwachstellen der Technologien, die die Anwendung deklariert oder die ihre Bereitstellungsserver erfasst haben, dann in Orange die Zahl der kritischen oder hohen (`5 · 2`). Leer für eine deaktivierte Anwendung oder wenn keine mehr offen ist. Ein Klick öffnet die Seite [Schwachstellen](vulnerabilities.md), gefiltert auf die Anwendung. Vorhanden, wenn Schwachstellen verfolgt werden. Siehe [Was Kadratis zählt](vulnerabilities.md#what-kanap-counts)
 - **Kategorie**: Der Hauptzweck der Anwendung
 - **Umgebungen**: Farbige Chips, die aktive Umgebungen zeigen (Prod, Pre-prod, QA, Test, Dev, Sandbox). Bewegen Sie den Mauszeiger darüber für Basis-URL und Lebenszyklus.
 - **Lebenszyklus**: Aktueller Status
@@ -228,7 +228,7 @@ Der Reiter Bereitstellungen dokumentiert, wo die Anwendung tatsächlich läuft: 
 | **Hosting** | Abgeleitet vom Standort des Assets |
 | **Seit** | Datum, an dem der Server dieser Bereitstellung zugewiesen wurde |
 
-Klicken Sie in der Bereitstellungs-Kopfzeile auf **Server hinzufügen**, um ein Asset anzuhängen. Die Auswahl listet die Cluster mit ihren Mitgliedern unter ihrem Namen. Die Zuordnung eines Clusters erreicht seine Mitglieder in Betrieb: Sie erscheinen unter der Zeile des Clusters, ohne Aktionen. Ändern Sie die Zuordnung am Cluster. Wenn Sie ein Mitglied eines Clusters wählen, fragt KANAP, ob dem Cluster oder nur diesem Server zugeordnet wird. Siehe [Anwendungen auf einem Cluster](assets.md#applications-on-a-cluster). Das Hinzufügen, Ändern oder Entfernen eines Servers erfordert `applications:member` und `infrastructure:member`.
+Klicken Sie in der Bereitstellungs-Kopfzeile auf **Server hinzufügen**, um ein Asset anzuhängen. Die Auswahl listet die Cluster mit ihren Mitgliedern unter ihrem Namen. Die Zuordnung eines Clusters erreicht seine Mitglieder in Betrieb: Sie erscheinen unter der Zeile des Clusters, ohne Aktionen. Ändern Sie die Zuordnung am Cluster. Wenn Sie ein Mitglied eines Clusters wählen, fragt Kadratis, ob dem Cluster oder nur diesem Server zugeordnet wird. Siehe [Anwendungen auf einem Cluster](assets.md#applications-on-a-cluster). Das Hinzufügen, Ändern oder Entfernen eines Servers erfordert `applications:member` und `infrastructure:member`.
 
 Ist die Anwendung jedem Mitglied in Betrieb eines Clusters direkt zugeordnet, nennt eine Zeile unter der Tabelle diese Mitglieder, mit einer Schaltfläche, die die Anwendung dem Cluster zuordnet (der Name des Clusters, dann **zuordnen**). Nach einer Bestätigung übernimmt der Cluster die Zuordnung, und die eigenen Zuordnungen der Mitglieder werden entfernt. Die Anwendung bleibt dann verfügbar, solange ein Mitglied läuft.
 
@@ -284,9 +284,9 @@ Um eine deklarierte Technologie hinzuzufügen, zu ändern oder zu entfernen und 
 | **Krit.**, **Hoch**, **Mittel**, **Niedrig**, **N. bew.** | Eine Spalte pro Schweregrad (Kritisch, Hoch, Mittel, Niedrig, Nicht bewertet, der volle Name im Tooltip der Überschrift): die noch zu prüfenden Schwachstellen. Eine mit **Keine** bewertete Schwachstelle zählt bei **Niedrig** |
 | **Gesamt** | Die verschiedenen noch zu prüfenden Schwachstellen dieser Zeile |
 
-**Ansehen** öffnet die Seite [Schwachstellen](vulnerabilities.md), gefiltert auf die Anwendung und die Technologie. Wenn nichts mehr zu prüfen ist, sagt der Abschnitt es in einer Zeile. Solange KANAP ein Produkt zum ersten Mal aus der NVD liest oder den Abgleich einer Technologie ausführt, die gerade auf dieser Anwendung oder auf einem ihrer Bereitstellungsserver erfasst wurde, zeigt der Abschnitt „Suche nach Schwachstellen läuft…“ und füllt sich von selbst. Wenn die Suche nicht abgeschlossen werden kann, sagt der Abschnitt das. Eine deaktivierte Anwendung hat keinen Abschnitt.
+**Ansehen** öffnet die Seite [Schwachstellen](vulnerabilities.md), gefiltert auf die Anwendung und die Technologie. Wenn nichts mehr zu prüfen ist, sagt der Abschnitt es in einer Zeile. Solange Kadratis ein Produkt zum ersten Mal aus der NVD liest oder den Abgleich einer Technologie ausführt, die gerade auf dieser Anwendung oder auf einem ihrer Bereitstellungsserver erfasst wurde, zeigt der Abschnitt „Suche nach Schwachstellen läuft…“ und füllt sich von selbst. Wenn die Suche nicht abgeschlossen werden kann, sagt der Abschnitt das. Eine deaktivierte Anwendung hat keinen Abschnitt.
 
-Der Abschnitt zählt nur direkte Verknüpfungen. Eine Technologie, die der Abschnitt **Technologien** über den Host einer virtuellen Maschine zeigt, zählt hier nicht: Sie zählt auf dem Host. Siehe [Was KANAP zählt](vulnerabilities.md#what-kanap-counts).
+Der Abschnitt zählt nur direkte Verknüpfungen. Eine Technologie, die der Abschnitt **Technologien** über den Host einer virtuellen Maschine zeigt, zählt hier nicht: Sie zählt auf dem Host. Siehe [Was Kadratis zählt](vulnerabilities.md#what-kanap-counts).
 
 Wer Anwendungen lesen darf, aber nicht die Infrastruktur, sieht diesen Abschnitt, das Badge in der Kopfzeile und die Spalte der Liste trotzdem, für die Anwendungen, die er lesen darf.
 
@@ -308,7 +308,7 @@ Der Reiter Compliance erfasst Datenschutz- und regulatorische Informationen.
 
 ### Klassifizierung und Kontinuität
 
-Der Bereich Compliance erfasst auch die Entscheidungen zu Kontinuität und Klassifizierung der Anwendung. Fehlende Werte werden als **Nicht festgelegt** angezeigt; KANAP ersetzt sie nicht durch eine Standardstufe.
+Der Bereich Compliance erfasst auch die Entscheidungen zu Kontinuität und Klassifizierung der Anwendung. Fehlende Werte werden als **Nicht festgelegt** angezeigt; Kadratis ersetzt sie nicht durch eine Standardstufe.
 
 Der Reiter ist in vier Blöcke gegliedert, in der Reihenfolge einer Business-Impact-Analyse.
 
@@ -323,8 +323,8 @@ Der Reiter ist in vier Blöcke gegliedert, in der Reihenfolge einer Business-Imp
 
 **Kontinuität und Wiederanlauf**:
 - Die **Wiederherstellungswelle** bezeichnet die Reihenfolge der Wiederherstellung, keine Dauer und keinen Schweregrad.
-- Das **RTO** ist das Ziel für die Wiederherstellungszeit. Das **RPO** ist der zulässige Datenverlust und darf null sein. Erreicht das RTO die maximal tolerierbare Ausfallzeit, die auf der gewählten Geschäftsstufe definiert ist, zeigt KANAP einen Hinweis, behält aber beide Werte.
-- Unter der Welle listet KANAP die Schnittstellen auf, die diese Anwendung mit einer Anwendung in einer **späteren** Welle verbinden („Austausch mit CRM, geplant in V3"), mit einem Link zu jeder Schnittstelle. Beide Anwendungen müssen laufen, damit der Fluss funktioniert; der Verantwortliche des Wiederherstellungsplans entscheidet. Außer Betrieb genommene Schnittstellen werden ignoriert, und Benutzer mit eingeschränktem Bereich als Fachbereichs-Mitwirkender sehen diese Liste nicht.
+- Das **RTO** ist das Ziel für die Wiederherstellungszeit. Das **RPO** ist der zulässige Datenverlust und darf null sein. Erreicht das RTO die maximal tolerierbare Ausfallzeit, die auf der gewählten Geschäftsstufe definiert ist, zeigt Kadratis einen Hinweis, behält aber beide Werte.
+- Unter der Welle listet Kadratis die Schnittstellen auf, die diese Anwendung mit einer Anwendung in einer **späteren** Welle verbinden („Austausch mit CRM, geplant in V3"), mit einem Link zu jeder Schnittstelle. Beide Anwendungen müssen laufen, damit der Fluss funktioniert; der Verantwortliche des Wiederherstellungsplans entscheidet. Außer Betrieb genommene Schnittstellen werden ignoriert, und Benutzer mit eingeschränktem Bereich als Fachbereichs-Mitwirkender sehen diese Liste nicht.
 - **Letzter Wiederherstellungstest** enthält das Datum des letzten Tests. Ein Link aus diesem Bereich verwendet die einzige **Wissensdatenbank** im Reiter Übersicht und erzeugt keinen doppelten Datensatz. Ältere URL-Links bleiben unter Beziehungen verfügbar.
 
 Zwei dezente Hinweise können erscheinen: Daten auf der höchsten Vertraulichkeitsstufe in Kombination mit der niedrigsten Cyber-Kritikalität sowie eine Anwendung auf der kritischsten Geschäftsstufe ohne Wiederherstellungstest in den letzten zwölf Monaten. Sie blockieren nie etwas.
@@ -397,7 +397,7 @@ Die Technologie behält Name, Hersteller, Beschreibung, Notizen, Support-Notizen
 
 ## Versionsverwaltung
 
-KANAP bietet **zwei Wege zur Verwaltung von Anwendungsversionen**, je nachdem, wie Ihre Organisation Upgrades handhabt:
+Kadratis bietet **zwei Wege zur Verwaltung von Anwendungsversionen**, je nachdem, wie Ihre Organisation Upgrades handhabt:
 
 | Ansatz | Am besten für | Was passiert |
 |----------|----------|--------------|
@@ -465,7 +465,7 @@ Während der Versionserstellung zeigt der Assistent alle Schnittstellen an, bei 
 
 ## Anwendungen kopieren
 
-Es gibt zwei Möglichkeiten, eine Anwendung in KANAP zu kopieren:
+Es gibt zwei Möglichkeiten, eine Anwendung in Kadratis zu kopieren:
 
 ### Element kopieren (aus dem Anwendungsraster)
 
@@ -726,9 +726,9 @@ Custom ERP;lob;;Moderate;Active;2018-03-20;false
 
 ## Den Assistenten fragen
 
-[Plaid](ai-assistant.md) liest die Version, das Datum der Inbetriebnahme, das Datum des Supportendes und das Datum der Außerbetriebnahme jeder Anwendung. Es filtert, sortiert und gruppiert die Anwendungen nach diesen Daten. Seine Liste behält die außer Betrieb genommenen Anwendungen, während der Bericht [Supportende](end-of-support.md) nur die Anwendungen in Betrieb behält.
+[Kad](ai-assistant.md) liest die Version, das Datum der Inbetriebnahme, das Datum des Supportendes und das Datum der Außerbetriebnahme jeder Anwendung. Es filtert, sortiert und gruppiert die Anwendungen nach diesen Daten. Seine Liste behält die außer Betrieb genommenen Anwendungen, während der Bericht [Supportende](end-of-support.md) nur die Anwendungen in Betrieb behält.
 
-Plaid deklariert auch eine Technologie für eine Anwendung oder entfernt sie, mit ihrer Version und, wenn Sie es verlangen, auf den Deployment-Servern der Anwendung. Dazu brauchen Sie das Recht, Anwendungen zu lesen, und die Stufe Mitglied für die Infrastruktur. Ein Business Contributor tut dies nur für die Anwendungen, an denen er beteiligt ist. Plaid verknüpft kein Betriebssystem: Erfassen Sie es auf der Seite des Servers. Jede Änderung kommt als Vorschau, die Sie genehmigen. Wenn Sie Plaid bitten, sie rückgängig zu machen, stellt es genau das wieder her, was es geändert hat. Eine dabei angelegte Version bleibt bei der Technologie.
+Kad deklariert auch eine Technologie für eine Anwendung oder entfernt sie, mit ihrer Version und, wenn Sie es verlangen, auf den Deployment-Servern der Anwendung. Dazu brauchen Sie das Recht, Anwendungen zu lesen, und die Stufe Mitglied für die Infrastruktur. Ein Business Contributor tut dies nur für die Anwendungen, an denen er beteiligt ist. Kad verknüpft kein Betriebssystem: Erfassen Sie es auf der Seite des Servers. Jede Änderung kommt als Vorschau, die Sie genehmigen. Wenn Sie Kad bitten, sie rückgängig zu machen, stellt es genau das wieder her, was es geändert hat. Eine dabei angelegte Version bleibt bei der Technologie.
 
 Fragen Sie zum Beispiel: „Füge CheeseTrack und seinen Servern PostgreSQL 16 hinzu“, „Entferne PostgreSQL 14 von CheeseTrack“, „Welche Anwendungen erreichen in den nächsten sechs Monaten ihr Supportende?“ oder „Welche Anwendungen deklarieren PostgreSQL 14?“
 

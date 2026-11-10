@@ -10,7 +10,7 @@ This guide walks you through documenting an application and its supporting infra
 !!! tip "Prefer a one-page summary? :material-file-pdf-box:"
     All the key steps on a single A4 page: print it, pin it, share it with your team.
 
-    [:material-download: Download the cheat sheet (PDF)](downloads/kanap-itops-fast-track.pdf){ .md-button .md-button--primary }
+    [:material-download: Download the cheat sheet (PDF)](downloads/kadratis-itops-fast-track.pdf){ .md-button .md-button--primary }
 
 For full details, see the [Applications](../applications.md) and [Assets](../assets.md) reference docs.
 
@@ -20,12 +20,12 @@ For full details, see the [Applications](../applications.md) and [Assets](../ass
 
 ![Application to Server Overview](images/app-to-server-overview.png)
 
-Everything in KANAP's IT Landscape module connects to paint a complete picture of your landscape:
+Everything in Kadratis's IT Landscape module connects to paint a complete picture of your landscape:
 
 | Object | What it represents |
 |--------|--------------------|
 | **Application** | A business app or IT service you need to document |
-| **Environment** | Where it runs: Prod, QA, Dev, etc. (called "Deployments" in KANAP) |
+| **Environment** | Where it runs: Prod, QA, Dev, etc. (called "Deployments" in Kadratis) |
 | **Server (Asset)** | The infrastructure that hosts it: VMs, physical servers, containers |
 
 The chain is simple: **Application → Environment → Server**. By the end of this guide, you'll have this chain fully documented.
@@ -96,7 +96,7 @@ The IT team members responsible for technical operations and support. Same mecha
 
 ### Audience (Optional)
 
-Under **Audience**, pick the **Company** and **Departments** that use this application. KANAP calculates the number of users from your master data, or you can switch the calculation to manual and type the number yourself.
+Under **Audience**, pick the **Company** and **Departments** that use this application. Kadratis calculates the number of users from your master data, or you can switch the calculation to manual and type the number yourself.
 
 !!! warning "Why owners matter"
     Ownership makes it easy to **reach the right people** when it matters: planned maintenance, service disruptions, upgrade decisions, license renewals. It also drives the **My apps** and **My team's apps** scope filters on the main list. Without owners, the app is only visible in the "All apps" view, which means nobody feels responsible for it, and nobody gets notified.

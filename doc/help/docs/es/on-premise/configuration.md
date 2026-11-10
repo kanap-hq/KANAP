@@ -28,15 +28,15 @@ Escriba `single-tenant` o `multi-tenant`. Deje la variable sin definir para mult
 | `DEFAULT_TENANT_NAME` | No       | `My Organization` | El nombre inicial del espacio de trabajo, que se muestra en el encabezado, la pestaña del navegador y los correos electrónicos ([dónde aparece](../branding.md#donde-aparece-el-nombre-del-espacio-de-trabajo)) |
 | `DEFAULT_TENANT_LANGUAGE` | No | `en` | El idioma de las dimensiones analíticas con las que empieza el espacio de trabajo: `en`, `fr`, `de` o `es` |
 
-En el primer arranque, KANAP crea un espacio de trabajo con estos valores. Los valores predeterminados sirven para la mayoría de los despliegues. Una instalación nueva recibe también el plan de cuentas IFRS predeterminado, definido como su plan predeterminado y de consolidación (actualizar una instalación existente no lo añade).
+En el primer arranque, Kadratis crea un espacio de trabajo con estos valores. Los valores predeterminados sirven para la mayoría de los despliegues. Una instalación nueva recibe también el plan de cuentas IFRS predeterminado, definido como su plan predeterminado y de consolidación (actualizar una instalación existente no lo añade).
 
 Defínalos antes del primer arranque:
 
-- Cambiar `DEFAULT_TENANT_SLUG` más tarde hace que KANAP cree un segundo espacio de trabajo vacío y sirva ese. El primer espacio de trabajo permanece en la base de datos, fuera de alcance.
+- Cambiar `DEFAULT_TENANT_SLUG` más tarde hace que Kadratis cree un segundo espacio de trabajo vacío y sirva ese. El primer espacio de trabajo permanece en la base de datos, fuera de alcance.
 - Cambiar `DEFAULT_TENANT_NAME` más tarde no tiene ningún efecto. Un administrador cambia el nombre del espacio de trabajo en **Administración → Personalización**. La dirección del espacio de trabajo sigue igual.
 - Cambiar `DEFAULT_TENANT_LANGUAGE` más tarde no tiene ningún efecto: las dimensiones conservan sus nombres. Puede cambiarles el nombre en **Datos maestros > Dimensiones analíticas**.
 
-Para dar a KANAP la imagen de su organización, defina su nombre, su logotipo y sus colores en **Administración → Personalización**.
+Para dar a Kadratis la imagen de su organización, defina su nombre, su logotipo y sus colores en **Administración → Personalización**.
 
 ## Obligatorio: credenciales de administrador
 
@@ -45,18 +45,18 @@ Para dar a KANAP la imagen de su organización, defina su nombre, su logotipo y 
 | `ADMIN_EMAIL` | Correo de la primera cuenta de administrador | `admin@company.com` |
 | `ADMIN_PASSWORD` | Contraseña de la primera cuenta de administrador. Use un valor propio de 12 caracteres o más (ver más abajo) | `ChangeMe123!` |
 | `JWT_SECRET` | Clave de firma de los tokens de inicio de sesión. Genérela con `openssl rand -hex 32` (32 caracteres o más) | 64 caracteres hexadecimales |
-| `APP_BASE_URL` | La dirección exacta en la que los usuarios abren KANAP: esquema, host y puerto cuando no es el estándar (se usa en todos los enlaces que envía KANAP) | `https://kanap.company.com` |
-| `CORS_ORIGINS` | La dirección exacta en la que los usuarios abren KANAP, separadas por comas si hay varias (orígenes de navegador autorizados a llamar a la API) | `https://kanap.company.com` |
+| `APP_BASE_URL` | La dirección exacta en la que los usuarios abren Kadratis: esquema, host y puerto cuando no es el estándar (se usa en todos los enlaces que envía Kadratis) | `https://kadratis.company.com` |
+| `CORS_ORIGINS` | La dirección exacta en la que los usuarios abren Kadratis, separadas por comas si hay varias (orígenes de navegador autorizados a llamar a la API) | `https://kadratis.company.com` |
 
 **Elija la contraseña del administrador.** El valor de ejemplo de la tabla es público. Sustitúyalo por un valor propio de 12 caracteres o más, por ejemplo la salida de `openssl rand -base64 18`. Un valor de ejemplo o uno más corto hace que la API muestre una advertencia `[SECURITY]` en cada arranque hasta que se cambie la contraseña de la cuenta. Un `JWT_SECRET` de menos de 32 caracteres también muestra una advertencia `[SECURITY]`.
 
-**La cuenta de administrador se crea una sola vez.** KANAP lee `ADMIN_EMAIL` y `ADMIN_PASSWORD` en el primer arranque y crea la cuenta. Después:
+**La cuenta de administrador se crea una sola vez.** Kadratis lee `ADMIN_EMAIL` y `ADMIN_PASSWORD` en el primer arranque y crea la cuenta. Después:
 
 - Cambiar cualquiera de las dos variables no cambia nada mientras exista un administrador activo. Cambie la contraseña en la aplicación (página del perfil, o **Contraseña olvidada** en la página de inicio de sesión).
 - Si no queda ningún administrador activo (todos desactivados, o ninguno tiene el rol Administrador), el siguiente arranque restablece la cuenta `ADMIN_EMAIL` como administrador habilitado. Su contraseña actual se mantiene. Si la cuenta no existe, se crea con `ADMIN_PASSWORD`.
 - Si `ADMIN_EMAIL` o `ADMIN_PASSWORD` está vacío, no se crea ninguna cuenta y el registro no dice nada al respecto.
 
-**Dirección de la aplicación (`APP_BASE_URL`).** Los correos de restablecimiento de contraseña y de invitación, los correos de notificación, la redirección del inicio de sesión con Microsoft Entra y los enlaces de las exportaciones parten todos de `APP_BASE_URL`. Escriba la dirección exactamente como la escriben los usuarios, con el puerto cuando no es 443 para HTTPS u 80 para HTTP (por ejemplo `https://kanap.company.com:8443`). KANAP no lee las cabeceras `Host` ni `X-Forwarded-Host` de una solicitud para construir estos enlaces, salvo en una máquina de desarrollo local (`APP_ENV=development`). Sin `APP_BASE_URL`:
+**Dirección de la aplicación (`APP_BASE_URL`).** Los correos de restablecimiento de contraseña y de invitación, los correos de notificación, la redirección del inicio de sesión con Microsoft Entra y los enlaces de las exportaciones parten todos de `APP_BASE_URL`. Escriba la dirección exactamente como la escriben los usuarios, con el puerto cuando no es 443 para HTTPS u 80 para HTTP (por ejemplo `https://kadratis.company.com:8443`). Kadratis no lee las cabeceras `Host` ni `X-Forwarded-Host` de una solicitud para construir estos enlaces, salvo en una máquina de desarrollo local (`APP_ENV=development`). Sin `APP_BASE_URL`:
 
 - el restablecimiento de contraseña, la invitación y el inicio de sesión con Microsoft Entra responden "application URL is not configured: set APP_BASE_URL";
 - los recordatorios programados se omiten, con una línea en el registro de la API.
@@ -65,13 +65,13 @@ Para dar a KANAP la imagen de su organización, defina su nombre, su logotipo y 
 
 ```bash
 # La misma dirección que APP_BASE_URL
-CORS_ORIGINS=https://kanap.company.com
+CORS_ORIGINS=https://kadratis.company.com
 ```
 
-KANAP también acepta, sin ninguna entrada en `CORS_ORIGINS`:
+Kadratis también acepta, sin ninguna entrada en `CORS_ORIGINS`:
 
 - la dirección de la aplicación (`APP_BASE_URL`);
-- la dirección de la propia solicitud: el host y el puerto de la dirección del navegador coinciden con la cabecera `Host` que llega a KANAP. Cuando su proxy inverso transmite `Host` sin el puerto, cuenta el mismo nombre de host en cualquier puerto, salvo con `APP_ENV=production`. En producción, añada a `CORS_ORIGINS` la dirección exacta con su puerto.
+- la dirección de la propia solicitud: el host y el puerto de la dirección del navegador coinciden con la cabecera `Host` que llega a Kadratis. Cuando su proxy inverso transmite `Host` sin el puerto, cuenta el mismo nombre de host en cualquier puerto, salvo con `APP_ENV=production`. En producción, añada a `CORS_ORIGINS` la dirección exacta con su puerto.
 
 Una solicitud desde cualquier otra dirección recibe una respuesta 403 y la API registra una línea `[CORS] Rejected origin` por dirección y por minuto. Las solicitudes de renovación de sesión y de cierre de sesión siguen la misma regla: una renovación o un cierre de sesión enviados desde una dirección no autorizada se rechazan con 403.
 
@@ -93,7 +93,7 @@ Si faltan a la vez `CORS_ORIGINS` y la dirección de la aplicación (`APP_BASE_U
 | Desarrollo | `development`, `dev`, `local`, `test` | Facilidades para un puesto de trabajo: los enlaces pueden seguir un host de desarrollo local, se permiten todos los orígenes cuando `CORS_ORIGINS` está vacío y se acepta `PLATFORM_ADMIN_EMAILS=*`. No lo use en un servidor. |
 | Sin especificar | cualquier otro valor, o sin `APP_ENV` | Las mismas reglas de enlaces y de orígenes que en producción. La falta de `APP_BASE_URL` o de `CORS_ORIGINS` produce una advertencia al arrancar y la API arranca igualmente. La cookie de sesión sigue a la solicitud: Secure cuando la solicitud llega por HTTPS. |
 
-Defina `APP_ENV=production` cuando los usuarios accedan a KANAP por HTTPS, que es la configuración documentada. Si `NODE_ENV` está definido y `APP_ENV` no, KANAP lee `NODE_ENV` en su lugar.
+Defina `APP_ENV=production` cuando los usuarios accedan a Kadratis por HTTPS, que es la configuración documentada. Si `NODE_ENV` está definido y `APP_ENV` no, Kadratis lee `NODE_ENV` en su lugar.
 
 **Comprobaciones al arrancar.** La API se niega a arrancar si `DEPLOYMENT_MODE` tiene un valor distinto de `single-tenant`, `multi-tenant` o sin definir, si `JWT_SECRET` o `DATABASE_URL` falta o está vacío y, con `APP_ENV=production`, si falta `APP_BASE_URL` o `CORS_ORIGINS`. Antes de cualquier migración, también comprueba el rol de PostgreSQL de `DATABASE_URL`. Un rol dedicado con `SUPERUSER` o `BYPASSRLS` se cambia primero a `NOSUPERUSER NOBYPASSRLS`. Un rol protegido como `postgres` con alguno de esos atributos detiene el arranque y no se ejecuta ninguna migración (consulte «Obligatorio: base de datos» más abajo).
 
@@ -108,7 +108,7 @@ docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^
 
 El filtro conserva las líneas siguientes y omite los detalles del framework. Sin él, `docker compose -f infra/compose.onprem.yml logs api` lo muestra todo.
 
-**Orden.** Las líneas que escribe el propio KANAP (`[entrypoint]`, `[VERSION]`, `[ENV]`, `[SECRETS]`, `[RATE-LIMIT]`, `[CORS]`, `[DB]`, `[on-prem]`, `[SECURITY]`, `[DATA-ACCESS]`, `[markdown]`) aparecen primero. Les siguen las líneas del framework (`Starting Nest application...`, correo, trabajos programados, `Nest application successfully started`). La línea `[DB] pool budget` aparece la última.
+**Orden.** Las líneas que escribe el propio Kadratis (`[entrypoint]`, `[VERSION]`, `[ENV]`, `[SECRETS]`, `[RATE-LIMIT]`, `[CORS]`, `[DB]`, `[on-prem]`, `[SECURITY]`, `[DATA-ACCESS]`, `[markdown]`) aparecen primero. Les siguen las líneas del framework (`Starting Nest application...`, correo, trabajos programados, `Nest application successfully started`). La línea `[DB] pool budget` aparece la última.
 
 **Un primer arranque sin problemas** del [ejemplo de instalación](installation-example.md#7-descargar-e-iniciar) muestra estas líneas, en este orden (la primera línea `[SECRETS]` está abreviada aquí):
 
@@ -116,7 +116,7 @@ El filtro conserva las líneas siguientes y omite los detalles del framework. Si
 [entrypoint] Initializing DB (attempt 1/30) ...
 [entrypoint] DB initialized. Running migrations...
 [entrypoint] Migrations complete (394 executed).
-[VERSION] KANAP 26.10.8
+[VERSION] Kadratis 26.10.8
 [ENV] run mode: production
 [SECRETS] token families: password-reset=derived-key provisioning=jwt-secret entra-state=derived-key (...)
 [SECRETS] Access tokens must carry purpose="access" (legacy untyped access tokens: refused)
@@ -134,7 +134,7 @@ El filtro conserva las líneas siguientes y omite los detalles del framework. Si
 [DB] pool budget: 1 process × 20 connections = 20 of 87 usable (...)
 ```
 
-El bloque omite las líneas de migración: en una instalación nueva, unos cientos de líneas que empiezan por `[Migration]` o `[migration:` siguen a `Running migrations...`. Algunas empiezan en cambio por el número de su migración, por ejemplo `[1854170000000] ...` o `[migration 1854350000000] ...`. Son informativas. En una base de datos nueva, algunas indican cambios en datos de referencia integrados o nombran un identificador de espacio de trabajo que no es el suyo: KANAP mantiene un espacio de trabajo del sistema para las funciones de la plataforma. No requieren ninguna acción. `...` representa el prefijo `[Nest]` con el identificador del proceso y la hora, y el origen entre corchetes (por ejemplo `LOG [NestApplication]`). Algunas de estas líneas terminan con una duración como `+0ms`. La última línea de la salida filtrada es `[DB] pool budget ...`. Un registro guardado en un archivo puede contener códigos de color como `[33m`.
+El bloque omite las líneas de migración: en una instalación nueva, unos cientos de líneas que empiezan por `[Migration]` o `[migration:` siguen a `Running migrations...`. Algunas empiezan en cambio por el número de su migración, por ejemplo `[1854170000000] ...` o `[migration 1854350000000] ...`. Son informativas. En una base de datos nueva, algunas indican cambios en datos de referencia integrados o nombran un identificador de espacio de trabajo que no es el suyo: Kadratis mantiene un espacio de trabajo del sistema para las funciones de la plataforma. No requieren ninguna acción. `...` representa el prefijo `[Nest]` con el identificador del proceso y la hora, y el origen entre corchetes (por ejemplo `LOG [NestApplication]`). Algunas de estas líneas terminan con una duración como `+0ms`. La última línea de la salida filtrada es `[DB] pool budget ...`. Un registro guardado en un archivo puede contener códigos de color como `[33m`.
 
 La línea `[DATA-ACCESS]` es normal cuando nadie está limitado a una parte de los datos. Tras el paso opcional del [acceso a los datos por ámbito](installation.md#optional-data-scoped-access), indica `data-scoped access available`. Una línea `data-scoped access unavailable, missing: ...` indica que el paso está incompleto: ejecútelo de nuevo y reinicie la API. Hasta entonces, las personas limitadas son rechazadas.
 
@@ -145,16 +145,16 @@ El número de migraciones cambia de una versión a otra. En los arranques siguie
 | Línea | Significado |
 |------|---------|
 | `[entrypoint] Migrations complete (N executed).` | La base de datos está al día. N es el número de migraciones ejecutadas en este arranque. |
-| `[VERSION] KANAP <version>` | Informativa. La versión que ejecuta la API, la misma que el campo `version` de `/api/config/public`. |
+| `[VERSION] Kadratis <version>` | Informativa. La versión que ejecuta la API, la misma que el campo `version` de `/api/config/public`. |
 | `[entrypoint] DB not ready (attempt N): ... Retrying in 2000ms...` | La API no puede llegar a la base de datos. Lo intenta 30 veces, con 2 segundos de intervalo, y después se detiene con `[entrypoint] DB not ready after 30 attempts: ...`. Compruebe `DATABASE_URL`, las reglas de PostgreSQL y `sslmode` (consulte [Obligatorio: base de datos](#obligatorio-base-de-datos)). |
-| `[entrypoint] DATABASE_URL resolves to ... PostgreSQL role ...`, y después `[entrypoint] No migration ran.` | El rol de la aplicación tiene `SUPERUSER` o `BYPASSRLS` y KANAP no pudo quitarlos. El arranque se detuvo antes de las migraciones. Siga el mensaje (consulte las reglas del rol en [Obligatorio: base de datos](#obligatorio-base-de-datos)). |
+| `[entrypoint] DATABASE_URL resolves to ... PostgreSQL role ...`, y después `[entrypoint] No migration ran.` | El rol de la aplicación tiene `SUPERUSER` o `BYPASSRLS` y Kadratis no pudo quitarlos. El arranque se detuvo antes de las migraciones. Siga el mensaje (consulte las reglas del rol en [Obligatorio: base de datos](#obligatorio-base-de-datos)). |
 | `[entrypoint] A migration failed, not retried: ...` | La línea siguiente, `[entrypoint] Failed statement: ...`, muestra la instrucción SQL que falló. Las migraciones pendientes se revirtieron: la base de datos está como antes de este arranque. Corrija la causa o despliegue la versión anterior. |
 | `[ENV] run mode: ...` | Se muestra siempre. Indica el modo en que se ejecuta la API: `development`, `production` o `unspecified`. |
-| `[ENV] APP_ENV is not set: production rules apply to links, browser origins and platform administration. Set APP_ENV=production (or development on a workstation).` | Se muestra en modo sin especificar (el mensaje indica el valor cuando `APP_ENV` tiene otro valor). Defina `APP_ENV=production` si los usuarios acceden a KANAP por HTTPS. |
+| `[ENV] APP_ENV is not set: production rules apply to links, browser origins and platform administration. Set APP_ENV=production (or development on a workstation).` | Se muestra en modo sin especificar (el mensaje indica el valor cuando `APP_ENV` tiene otro valor). Defina `APP_ENV=production` si los usuarios acceden a Kadratis por HTTPS. |
 | `[CONFIG] APP_BASE_URL is not set: ...` | Se rechazan los correos de restablecimiento de contraseña y de invitación, los enlaces de las notificaciones y las redirecciones de inicio de sesión. Defina `APP_BASE_URL`. |
 | `[CONFIG] APP_BASE_URL is not a valid http(s) address: ...` | El valor no es una dirección web. Escríbalo con `https://` o `http://`. |
 | `[SECRETS] token families: ...` y `[SECRETS] Access tokens must carry purpose="access" ...` | Informativas. Indican de dónde procede cada clave de firma (nunca su valor). No hay nada que hacer. |
-| `[RATE-LIMIT] Client address: ... (RATE_LIMIT_TRUST_PROXY=true)` | Informativa. Indica cómo obtiene KANAP la dirección del cliente. |
+| `[RATE-LIMIT] Client address: ... (RATE_LIMIT_TRUST_PROXY=true)` | Informativa. Indica cómo obtiene Kadratis la dirección del cliente. |
 | `[RATE-LIMIT] Client address: ... (RATE_LIMIT_TRUST_PROXY not set, single-tenant default; ...)` | Una advertencia. `RATE_LIMIT_TRUST_PROXY` no está definido. Defínalo (consulte [Opcional: avanzado](#opcional-avanzado)). |
 | `[CORS] Configured N origin pattern(s)` | Informativa. N es el número de entradas de `CORS_ORIGINS`. |
 | `[CORS] CORS_ORIGINS is not set: browsers are allowed only from APP_BASE_URL and from the address of each request. ...` | Defina `CORS_ORIGINS` con la dirección exacta que abren los usuarios. |
@@ -163,7 +163,7 @@ El número de migraciones cambia de una versión a otra. En los arranques siguie
 | `[DB] Connected as PostgreSQL role "kanap" with native RLS enforcement` | Informativa. La API usa el rol de aplicación. |
 | `[on-prem] Default chart of accounts created`, `[on-prem] Created tenant '...'`, `[on-prem] Created administrator account ...`, `[on-prem] Created default subscription (On-Prem)` | Solo en el primer arranque. |
 | `[on-prem] Administrator account ... left unchanged: the workspace has an active administrator` | Arranques siguientes. No hay nada que hacer. |
-| `[on-prem] Restored ... as an enabled administrator: the workspace had no active administrator (password unchanged)` | Una advertencia. No quedaba ningún administrador activo, así que KANAP restableció la cuenta `ADMIN_EMAIL`. |
+| `[on-prem] Restored ... as an enabled administrator: the workspace had no active administrator (password unchanged)` | Una advertencia. No quedaba ningún administrador activo, así que Kadratis restableció la cuenta `ADMIN_EMAIL`. |
 | `[SECURITY] JWT_SECRET is shorter than 32 characters. ...` | Defina un valor aleatorio más largo (`openssl rand -hex 32`) y vuelva a crear la API: todo el mundo vuelve a iniciar sesión y los enlaces de restablecimiento de contraseña pendientes dejan de funcionar. |
 | `[SECURITY] The account of ADMIN_EMAIL still has the password from ADMIN_PASSWORD, which is an example value from the documentation or shorter than 12 characters. ...` | Cambie la contraseña del administrador en la aplicación, o siga [Restablecimiento de contraseña](operations.md#restablecimiento-de-contrasena). La línea desaparece cuando se cambia la contraseña. |
 | `[markdown] Text processing workers ready` | Informativa. La API puede guardar textos con formato (descripciones, comentarios). Cuando la línea indica `the text processing workers could not start` en su lugar, la API rechaza guardar textos con formato y lo vuelve a intentar cada pocos segundos: las líneas anteriores indican el motivo. |
@@ -173,11 +173,11 @@ El número de migraciones cambia de una versión a otra. En los arranques siguie
 
 ## Actualizar una instalación anterior a la versión 26.10.1
 
-La primera versión oficial, 26.10.1, cambia la forma en que KANAP construye los enlaces y los orígenes de navegador que acepta. Antes de actualizar una instalación más antigua, revise su archivo `.env`:
+La primera versión oficial, 26.10.1, cambia la forma en que Kadratis construye los enlaces y los orígenes de navegador que acepta. Antes de actualizar una instalación más antigua, revise su archivo `.env`:
 
 1. Defina `APP_BASE_URL` con la dirección exacta que abren los usuarios (esquema, host y puerto cuando no es el estándar). Es la única fuente de los enlaces de los correos, las redirecciones de inicio de sesión y las exportaciones. Las cabeceras de la solicitud ya no los modifican. Sin ella, el restablecimiento de contraseña, la invitación y el inicio de sesión con Microsoft Entra dejan de funcionar, y los recordatorios programados se omiten.
 2. Ponga esa dirección exacta en `CORS_ORIGINS`, en lugar de cualquier patrón. Si su proxy no conserva la cabecera `Host`, o si la dirección usa un puerto no estándar, el origen exacto con su puerto es obligatorio.
-3. Defina `APP_ENV=production` solo si los usuarios acceden a KANAP por HTTPS. La cookie de sesión lleva entonces siempre el atributo Secure y la API se niega a arrancar sin `APP_BASE_URL` y `CORS_ORIGINS`.
+3. Defina `APP_ENV=production` solo si los usuarios acceden a Kadratis por HTTPS. La cookie de sesión lleva entonces siempre el atributo Secure y la API se niega a arrancar sin `APP_BASE_URL` y `CORS_ORIGINS`.
 4. Tras la actualización, lea las líneas `[ENV]`, `[CONFIG]` y `[CORS]` del registro de la API y corrija cada advertencia.
 5. Las solicitudes de renovación de sesión y de cierre de sesión desde una dirección no autorizada reciben ahora 403, y `PLATFORM_ADMIN_EMAILS=*` solo se acepta cuando `APP_ENV` tiene un valor de desarrollo.
 
@@ -221,7 +221,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 GRANT ALL ON SCHEMA public TO kanap;
 ```
 
-En cada arranque, antes de las migraciones, KANAP cambia el rol de aplicación a `NOSUPERUSER NOBYPASSRLS` cuando tiene, o recupera, alguno de esos atributos. Si `DATABASE_URL` apunta a un rol protegido de administración del clúster (`postgres`, un nombre que empieza por `pg_` o el rol que creó el clúster) con alguno de esos atributos, el arranque se detiene antes de las migraciones y debe pasar a un rol de aplicación dedicado. Si PostgreSQL rechaza el cambio, por ejemplo para un rol `BYPASSRLS` que no es superusuario, el arranque también se detiene antes de las migraciones. El registro indica entonces el comando `ALTER ROLE "<role>" NOSUPERUSER NOBYPASSRLS` que debe ejecutar como superusuario de PostgreSQL.
+En cada arranque, antes de las migraciones, Kadratis cambia el rol de aplicación a `NOSUPERUSER NOBYPASSRLS` cuando tiene, o recupera, alguno de esos atributos. Si `DATABASE_URL` apunta a un rol protegido de administración del clúster (`postgres`, un nombre que empieza por `pg_` o el rol que creó el clúster) con alguno de esos atributos, el arranque se detiene antes de las migraciones y debe pasar a un rol de aplicación dedicado. Si PostgreSQL rechaza el cambio, por ejemplo para un rol `BYPASSRLS` que no es superusuario, el arranque también se detiene antes de las migraciones. El registro indica entonces el comando `ALTER ROLE "<role>" NOSUPERUSER NOBYPASSRLS` que debe ejecutar como superusuario de PostgreSQL.
 
 **La contraseña en la URL.** La contraseña forma parte de la URL. Una contraseña que contiene `@ : / # ?` o `%` rompe la URL si no codifica esos caracteres con porcentajes. Genere la contraseña con `openssl rand -hex 24`: las letras y las cifras no necesitan codificación. Lo mismo se aplica a cualquier secreto que ponga en una URL.
 
@@ -229,7 +229,7 @@ En cada arranque, antes de las migraciones, KANAP cambia el rol de aplicación a
 
 | Valor | Úselo cuando |
 |-------|-------------|
-| `sslmode=disable` | PostgreSQL se ejecuta en el mismo servidor que KANAP (el ejemplo de instalación). El tráfico no sale del servidor. |
+| `sslmode=disable` | PostgreSQL se ejecuta en el mismo servidor que Kadratis (el ejemplo de instalación). El tráfico no sale del servidor. |
 | `sslmode=require` | PostgreSQL es un servidor aparte o un servicio gestionado cuyo certificado procede de una autoridad pública. La API verifica el certificado. |
 | `sslmode=no-verify` | La conexión está cifrada, pero la API no verifica el certificado. Úselo para un certificado privado o autofirmado. |
 
@@ -250,12 +250,12 @@ En cada arranque, antes de las migraciones, KANAP cambia el rol de aplicación a
 
 **Requisitos del bucket:**
 
-- Cree el bucket antes de arrancar KANAP (no se crea automáticamente). Un `S3_BUCKET` ausente se nombra en una advertencia `[CONFIG]` al arrancar. Un bucket que no existe en el almacenamiento se manifiesta en la primera subida o descarga.
-- KANAP llama a `PutObject`, `GetObject`, `HeadObject`, `DeleteObject` y `ListObjectsV2`, y construye enlaces `GET` prefirmados, todo en ese único bucket. Los permisos correspondientes son `s3:PutObject`, `s3:GetObject`, `s3:DeleteObject` y `s3:ListBucket`.
+- Cree el bucket antes de arrancar Kadratis (no se crea automáticamente). Un `S3_BUCKET` ausente se nombra en una advertencia `[CONFIG]` al arrancar. Un bucket que no existe en el almacenamiento se manifiesta en la primera subida o descarga.
+- Kadratis llama a `PutObject`, `GetObject`, `HeadObject`, `DeleteObject` y `ListObjectsV2`, y construye enlaces `GET` prefirmados, todo en ese único bucket. Los permisos correspondientes son `s3:PutObject`, `s3:GetObject`, `s3:DeleteObject` y `s3:ListBucket`.
 
-**Cifrado en reposo.** KANAP pide al almacenamiento que cifre cada subida (cifrado del lado del servidor `AES256`). Un almacenamiento que no lo admite hace que la API escriba la advertencia `PutObject fallback used: provider rejected explicit SSE header; upload retried without SSE request header` y guarde el archivo tal como se envió. RustFS acepta la solicitud cuando `RUSTFS_SSE_S3_MASTER_KEY` está definido, como hace el [ejemplo de instalación](installation-example.md#5-almacenamiento-de-objetos-rustfs). Guarde esa clave con la copia de seguridad de la configuración: los archivos cifrados con ella no pueden leerse sin ella.
+**Cifrado en reposo.** Kadratis pide al almacenamiento que cifre cada subida (cifrado del lado del servidor `AES256`). Un almacenamiento que no lo admite hace que la API escriba la advertencia `PutObject fallback used: provider rejected explicit SSE header; upload retried without SSE request header` y guarde el archivo tal como se envió. RustFS acepta la solicitud cuando `RUSTFS_SSE_S3_MASTER_KEY` está definido, como hace el [ejemplo de instalación](installation-example.md#5-almacenamiento-de-objetos-rustfs). Guarde esa clave con la copia de seguridad de la configuración: los archivos cifrados con ella no pueden leerse sin ella.
 
-KANAP usa el cliente S3 del AWS SDK v3; se admite cualquier proveedor con un comportamiento compatible con S3.
+Kadratis usa el cliente S3 del AWS SDK v3; se admite cualquier proveedor con un comportamiento compatible con S3.
 
 **Almacenamientos compatibles:**
 
@@ -264,16 +264,16 @@ KANAP usa el cliente S3 del AWS SDK v3; se admite cualquier proveedor con un com
 - Cloudflare R2 (`https://<account>.r2.cloudflarestorage.com`)
 - Hetzner Object Storage (`https://<region>.your-objectstorage.com`)
 - Garage (`S3_FORCE_PATH_STYLE=true`, región según su configuración)
-- Un MinIO existente (`S3_FORCE_PATH_STYLE=true`). MinIO ya no publica nuevas descargas ni imágenes, así que las instalaciones nuevas usan otro almacenamiento. Una instalación que ya funciona con MinIO sigue funcionando con KANAP: no hay nada que cambiar.
+- Un MinIO existente (`S3_FORCE_PATH_STYLE=true`). MinIO ya no publica nuevas descargas ni imágenes, así que las instalaciones nuevas usan otro almacenamiento. Una instalación que ya funciona con MinIO sigue funcionando con Kadratis: no hay nada que cambiar.
 
 ## Opcional: correo con Resend
 
 | Variable | Descripción | Ejemplo |
 |----------|-------------|---------|
 | `RESEND_API_KEY` | Clave API de Resend | `re_xxxxx` |
-| `RESEND_FROM_EMAIL` | Dirección del remitente. Defínala con una dirección que su cuenta de Resend pueda usar como remitente: sin ella, el correo sale de una dirección de KANAP. | `KANAP <noreply@company.com>` |
+| `RESEND_FROM_EMAIL` | Dirección del remitente. Defínala con una dirección que su cuenta de Resend pueda usar como remitente: sin ella, el correo sale de una dirección de Kadratis. | `Kadratis <noreply@company.com>` |
 
-Si no está configurado, KANAP puede enviar correo igualmente por SMTP en los despliegues single-tenant. Si no hay ni Resend ni SMTP configurados, las funciones de correo están desactivadas, incluidas las invitaciones de usuarios y el restablecimiento de contraseña. Consulte [Restablecimiento de contraseña](operations.md#restablecimiento-de-contrasena) para la alternativa.
+Si no está configurado, Kadratis puede enviar correo igualmente por SMTP en los despliegues single-tenant. Si no hay ni Resend ni SMTP configurados, las funciones de correo están desactivadas, incluidas las invitaciones de usuarios y el restablecimiento de contraseña. Consulte [Restablecimiento de contraseña](operations.md#restablecimiento-de-contrasena) para la alternativa.
 
 ## Opcional: correo con SMTP (solo single-tenant / on-premise)
 
@@ -285,17 +285,17 @@ SMTP solo se admite con `DEPLOYMENT_MODE=single-tenant`. Los despliegues multi-t
 | `SMTP_PORT`     | Puerto SMTP                          | `587`                         |
 | `SMTP_USER`     | Usuario SMTP                         | `kanap`                       |
 | `SMTP_PASSWORD` | Contraseña SMTP                      | `secret`                      |
-| `SMTP_FROM`     | Dirección del remitente              | `KANAP <noreply@company.com>` |
+| `SMTP_FROM`     | Dirección del remitente              | `Kadratis <noreply@company.com>` |
 | `SMTP_SECURE`   | `true` para TLS implícito (465), `false` para STARTTLS o conexión sin cifrar (587/25) | `false` |
 
 Notas:
 
 - `SMTP_HOST` y `SMTP_FROM` son obligatorios los dos. Con solo uno de ellos, SMTP permanece desactivado.
 - `SMTP_USER` y `SMTP_PASSWORD` van juntos: defina ambos, o deje ambos sin definir para los relays que confían en el host o la IP de origen. Definir solo uno impide que la API arranque.
-- Si `SMTP_SECURE` no está definido, KANAP usa `true` para el puerto `465` y `false` en los demás casos.
+- Si `SMTP_SECURE` no está definido, Kadratis usa `true` para el puerto `465` y `false` en los demás casos.
 - Si SMTP y Resend están configurados a la vez en modo single-tenant, SMTP tiene prioridad.
 - `SMTP_FROM` debe ser una dirección que su servidor SMTP pueda usar como remitente.
-- Un relay en el propio servidor de KANAP: defina `SMTP_HOST=host.docker.internal`, que es la forma en que el contenedor de la API llega al servidor. El relay debe escuchar en la dirección del puente Docker (`172.17.0.1` por defecto). Un relay instalado en el servidor también necesita una regla de cortafuegos que permita su puerto desde las redes Docker (ver el comando más abajo). Un relay que se ejecuta como contenedor Docker con un puerto publicado no la necesita.
+- Un relay en el propio servidor de Kadratis: defina `SMTP_HOST=host.docker.internal`, que es la forma en que el contenedor de la API llega al servidor. El relay debe escuchar en la dirección del puente Docker (`172.17.0.1` por defecto). Un relay instalado en el servidor también necesita una regla de cortafuegos que permita su puerto desde las redes Docker (ver el comando más abajo). Un relay que se ejecuta como contenedor Docker con un puerto publicado no la necesita.
 - La dirección `172.17.0.1` solo existe cuando Docker está en marcha. Un relay instalado en el servidor que escucha en ella debe arrancar después de Docker, como hace el almacenamiento en el [ejemplo de instalación](installation-example.md#5-almacenamiento-de-objetos-rustfs). Con systemd, cree el archivo `/etc/systemd/system/<relay service>.service.d/override.conf` (con el nombre del servicio del relay en lugar de `<relay service>`) con dos líneas, `[Unit]` y después `After=docker.service`, y ejecute `sudo systemctl daemon-reload`.
 - Un relay cuyo certificado TLS procede de la autoridad de su empresa necesita esa autoridad: consulte [Certificados de una autoridad interna](#opcional-certificados-de-una-autoridad-interna).
 - Si el correo sale de su red, configure SPF, DKIM y DMARC en el dominio del remitente con su administrador de correo o su proveedor.
@@ -308,7 +308,7 @@ Relay interno sin autenticación:
 SMTP_HOST=mail.company.local
 SMTP_PORT=25
 SMTP_SECURE=false
-SMTP_FROM=KANAP <noreply@company.com>
+SMTP_FROM=Kadratis <noreply@company.com>
 ```
 
 Relay o proveedor con autenticación:
@@ -319,7 +319,7 @@ SMTP_PORT=587
 SMTP_SECURE=false
 SMTP_USER=noreply@company.com
 SMTP_PASSWORD=secret
-SMTP_FROM=KANAP <noreply@company.com>
+SMTP_FROM=Kadratis <noreply@company.com>
 ```
 
 Envío SMTP de Microsoft 365:
@@ -330,12 +330,12 @@ SMTP_PORT=587
 SMTP_SECURE=false
 SMTP_USER=noreply@company.com
 SMTP_PASSWORD=secret
-SMTP_FROM=KANAP <noreply@company.com>
+SMTP_FROM=Kadratis <noreply@company.com>
 ```
 
 Use el perfil de Microsoft 365 solo si SMTP AUTH está permitido para el buzón y para el inquilino.
 
-**Un relay en el servidor de KANAP.** Permita que el contenedor de la API llegue a él. Indique el puerto de su relay en la primera línea:
+**Un relay en el servidor de Kadratis.** Permita que el contenedor de la API llegue a él. Indique el puerto de su relay en la primera línea:
 
 ```bash
 SMTP_PORT=25   # el SMTP_PORT de .env
@@ -384,28 +384,28 @@ Trata el registro de la aplicación, los permisos delegados y de aplicación, y 
 
 ## Opcional: funciones de IA
 
-Todas las funciones de IA están desactivadas por defecto en una instalación on-premise. Tres interruptores las activan, y un secreto permite a KANAP guardar las claves de su proveedor de IA.
+Todas las funciones de IA están desactivadas por defecto en una instalación on-premise. Tres interruptores las activan, y un secreto permite a Kadratis guardar las claves de su proveedor de IA.
 
 | Variable | Descripción | Valor predeterminado |
 |----------|-------------|---------|
-| `AI_CHAT_ENABLED` | Activa el [asistente de chat Plaid](../ai-assistant.md) para la instalación. | `false` |
+| `AI_CHAT_ENABLED` | Activa el [asistente de chat Kad](../ai-assistant.md) para la instalación. | `false` |
 | `AI_MCP_ENABLED` | Activa el servidor MCP: claves API y conexiones sin clave. Consulte [Conectar asistentes de IA mediante MCP](#connecting-ai-assistants-over-mcp). | `false` |
-| `AI_SETTINGS_ENABLED` | Abre **Administración → Inteligencia artificial** (modelos IA, configuración de Plaid) y los [agentes](../agents-overview.md) a los administradores. Sin ella, nadie puede configurar un proveedor. | `false` |
-| `AI_SETTINGS_ENCRYPTION_SECRET` | Secreto que cifra las claves de proveedor que introduce en KANAP. Genérelo con `openssl rand -hex 32`. | *sin definir* |
+| `AI_SETTINGS_ENABLED` | Abre **Administración → Inteligencia artificial** (modelos IA, configuración de Kad) y los [agentes](../agents-overview.md) a los administradores. Sin ella, nadie puede configurar un proveedor. | `false` |
+| `AI_SETTINGS_ENCRYPTION_SECRET` | Secreto que cifra las claves de proveedor que introduce en Kadratis. Genérelo con `openssl rand -hex 32`. | *sin definir* |
 
 Notas:
 
-- Sin `AI_SETTINGS_ENCRYPTION_SECRET`, KANAP se niega a guardar una clave de proveedor ("AI secret storage is not configured on this instance").
+- Sin `AI_SETTINGS_ENCRYPTION_SECRET`, Kadratis se niega a guardar una clave de proveedor ("AI secret storage is not configured on this instance").
 - Cambiar `AI_SETTINGS_ENCRYPTION_SECRET` más tarde hace ilegibles las claves guardadas. Guárdelo con `.env` y vuelva a introducir las claves si lo pierde.
-- Una instalación on-premise no incluye ningún modelo: usted añade su propio proveedor o servidor de modelos en **Administración → Inteligencia artificial → Modelos IA**. Consulte [Modelos IA](../ai-models.md) y [Configuración de Plaid](../ai-settings.md). Cada espacio de trabajo tiene también allí sus propios interruptores.
+- Una instalación on-premise no incluye ningún modelo: usted añade su propio proveedor o servidor de modelos en **Administración → Inteligencia artificial → Modelos IA**. Consulte [Modelos IA](../ai-models.md) y [Configuración de Kad](../ai-settings.md). Cada espacio de trabajo tiene también allí sus propios interruptores.
 - La API necesita acceso saliente al proveedor que elija (consulte [Reglas de cortafuegos](#reglas-de-cortafuegos)).
 
 ### Conectar asistentes de IA mediante MCP { #connecting-ai-assistants-over-mcp }
 
-Con `AI_MCP_ENABLED=true`, los asistentes de IA leen los datos de KANAP a través de su servidor MCP, en `https://<su-nombre>/api/ai/mcp`. Cada espacio de trabajo activa además MCP en **Administración → Inteligencia artificial → Plaid**. Los usuarios se conectan de una de dos formas, comparadas en [Conexión o clave API](../ai-settings.md#connection-or-api-key):
+Con `AI_MCP_ENABLED=true`, los asistentes de IA leen los datos de Kadratis a través de su servidor MCP, en `https://<su-nombre>/api/ai/mcp`. Cada espacio de trabajo activa además MCP en **Administración → Inteligencia artificial → Kad**. Los usuarios se conectan de una de dos formas, comparadas en [Conexión o clave API](../ai-settings.md#connection-or-api-key):
 
-- **Clave API**: un administrador crea una clave en KANAP y el usuario la pega en el cliente (Claude Code, Cursor, scripts). Solo necesita un cliente que llegue al servidor, por HTTPS o por HTTP simple dentro de su red.
-- **Conexión (OAuth)**: Claude, Claude Desktop, Claude Code, ChatGPT o Grok inicia sesión en KANAP con la cuenta del usuario, sin clave. Necesita la configuración que se describe a continuación.
+- **Clave API**: un administrador crea una clave en Kadratis y el usuario la pega en el cliente (Claude Code, Cursor, scripts). Solo necesita un cliente que llegue al servidor, por HTTPS o por HTTP simple dentro de su red.
+- **Conexión (OAuth)**: Claude, Claude Desktop, Claude Code, ChatGPT o Grok inicia sesión en Kadratis con la cuenta del usuario, sin clave. Necesita la configuración que se describe a continuación.
 
 **Proxy inverso.** La API sirve el descubrimiento de las conexiones bajo `/.well-known/oauth-`. El ejemplo de nginx de la [guía de instalación](installation.md#reverse-proxy-example-nginx) lo enruta hacia la API:
 
@@ -428,9 +428,9 @@ location ^~ /.well-known/oauth- {
 - **HTTPS** con un certificado en el que confíe el cliente. El intercambio de inicio de sesión lo necesita, también para Claude Code.
 - **HTTPS saliente desde el servidor hacia el host de la aplicación.** Cuando un usuario conecta una aplicación, la API lee la descripción pública de la aplicación en la dirección que indica la aplicación: `claude.ai` para Claude, Claude Desktop y Claude Code, `chatgpt.com` para ChatGPT, `grok.com` para Grok.
 
-**Para Claude, Claude Desktop, ChatGPT y Grok, además.** Estas aplicaciones llaman a KANAP desde los servidores de su proveedor:
+**Para Claude, Claude Desktop, ChatGPT y Grok, además.** Estas aplicaciones llaman a Kadratis desde los servidores de su proveedor:
 
-- La dirección de KANAP se resuelve en el DNS público a una dirección IPv4 (un registro `A`).
+- La dirección de Kadratis se resuelve en el DNS público a una dirección IPv4 (un registro `A`).
 - El servidor acepta HTTPS desde los servidores del proveedor. Para Claude, son las direcciones de Anthropic, `160.79.104.0/21`. Para ChatGPT y Grok, compruebe las direcciones actuales con OpenAI o xAI, o acepte HTTPS desde Internet.
 - La dirección que introducen los usuarios responde directamente, sin redirección a otro host: Claude descarta las credenciales en una redirección.
 - Ningún desafío de cortafuegos de aplicaciones web ni comprobación antibots en `/.well-known/oauth-*`, `/api/oauth/*` y `/api/ai/mcp`.
@@ -440,10 +440,10 @@ Una instancia accesible solo desde su red interna no puede conectarse desde Clau
 Para ahorrar la escritura a los usuarios, comparta un enlace que abre el cuadro de diálogo **Add custom connector** de Claude ya rellenado. Ponga la dirección de su servidor al final, codificada para URL (`:` se convierte en `%3A`, `/` en `%2F`):
 
 ```text
-https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=KANAP&connectorUrl=https%3A%2F%2Fkanap.company.com%2Fapi%2Fai%2Fmcp
+https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=Kadratis&connectorUrl=https%3A%2F%2Fkadratis.company.com%2Fapi%2Fai%2Fmcp
 ```
 
-Cada usuario lo abre, confirma y luego inicia sesión en KANAP como se describe en [Conectar un cliente MCP](../ai-settings.md#connecting-an-mcp-client).
+Cada usuario lo abre, confirma y luego inicia sesión en Kadratis como se describe en [Conectar un cliente MCP](../ai-settings.md#connecting-an-mcp-client).
 
 **Sin exposición a Internet**, dos formas siguen funcionando:
 
@@ -452,7 +452,7 @@ Cada usuario lo abre, confirma y luego inicia sesión en KANAP como se describe 
 
 ## Opcional: vulnerabilidades { #optional-vulnerabilities }
 
-La página [Vulnerabilidades](../vulnerabilities.md), sus notificaciones por correo, los recuentos de vulnerabilidades de las tecnologías, los activos y las aplicaciones, el mosaico **Vulnerabilidades del parque** del panel de control y las respuestas de Plaid sobre vulnerabilidades están desactivados por defecto en una instalación local. Una vez activados, KANAP lee dos fuentes cada 6 horas: las vulnerabilidades publicadas por la NVD (la base de datos nacional de vulnerabilidades de Estados Unidos), para los productos CPE que nombran sus tecnologías, y la lista CVE.org, donde los editores redactan las fichas de sus propios productos. El mismo interruptor lee las señales de explotación: el catálogo de la CISA de vulnerabilidades explotadas conocidas, la base europea de vulnerabilidades de la ENISA (catálogo europeo e identificadores EUVD) y las puntuaciones EPSS del día.
+La página [Vulnerabilidades](../vulnerabilities.md), sus notificaciones por correo, los recuentos de vulnerabilidades de las tecnologías, los activos y las aplicaciones, el mosaico **Vulnerabilidades del parque** del panel de control y las respuestas de Kad sobre vulnerabilidades están desactivados por defecto en una instalación local. Una vez activados, Kadratis lee dos fuentes cada 6 horas: las vulnerabilidades publicadas por la NVD (la base de datos nacional de vulnerabilidades de Estados Unidos), para los productos CPE que nombran sus tecnologías, y la lista CVE.org, donde los editores redactan las fichas de sus propios productos. El mismo interruptor lee las señales de explotación: el catálogo de la CISA de vulnerabilidades explotadas conocidas, la base europea de vulnerabilidades de la ENISA (catálogo europeo e identificadores EUVD) y las puntuaciones EPSS del día.
 
 | Variable | Descripción | Valor predeterminado |
 |----------|-------------|---------|
@@ -463,7 +463,7 @@ La página [Vulnerabilidades](../vulnerabilities.md), sus notificaciones por cor
 | `EPSS_FEED_URL` | Dirección de una réplica de las puntuaciones EPSS del día. EPSS se describe en [FIRST](https://www.first.org/epss). | `https://epss.empiricalsecurity.com/epss_scores-current.csv.gz` |
 | `EUVD_BASE_URL` | Dirección de una réplica de la base europea de vulnerabilidades de la ENISA (catálogo europeo y correspondencia EUVD). | `https://euvdservices.enisa.europa.eu` |
 | `CVE_LIST_FEED_ENABLED` | Desactiva solo la lista CVE.org (`false`), mientras las demás fuentes siguen. | El valor de `VULNERABILITY_FEED_ENABLED` |
-| `CVE_LIST_EXPORT_URL` | Una réplica de la lista CVE.org: una dirección http(s) o la ruta absoluta de un archivo montado en el contenedor `api`. Designa el zip de la exportación completa de cvelistV5: el archivo `*_all_CVEs_at_midnight.zip.zip` de las releases de GitHub, o el zip que contiene. KANAP vuelve a leer todo el archivo cada vez que cambia, sin los cambios diarios intermedios. | *sin definir* |
+| `CVE_LIST_EXPORT_URL` | Una réplica de la lista CVE.org: una dirección http(s) o la ruta absoluta de un archivo montado en el contenedor `api`. Designa el zip de la exportación completa de cvelistV5: el archivo `*_all_CVEs_at_midnight.zip.zip` de las releases de GitHub, o el zip que contiene. Kadratis vuelve a leer todo el archivo cada vez que cambia, sin los cambios diarios intermedios. | *sin definir* |
 | `CVE_LIST_RELEASES_URL` | Dirección de la API de releases de GitHub de la lista CVE.org. Cámbiela solo detrás de un proxy que la reescriba. | `https://api.github.com/repos/CVEProject/cvelistV5/releases` |
 | `CVE_LIST_DOWNLOAD_URL` | Dirección desde la que se descargan los archivos de las releases. Cámbiela solo detrás de un proxy que la reescriba. | `https://github.com/CVEProject/cvelistV5/releases/download` |
 
@@ -479,7 +479,7 @@ Notas:
 
 ## Opcional: catálogo de tecnologías { #optional-technology-catalog }
 
-Las tecnologías adoptadas desde el catálogo siguen sus nuevas versiones, sus fechas de fin de soporte y sus identificadores CPE (consulte [Versiones del catálogo](../technologies.md#versiones-del-catalogo)). Por defecto en una instalación local, cada versión de KANAP trae su propio catálogo: las tecnologías adoptadas reciben lo que añade en el primer arranque de esa versión. Active la comprobación diaria para seguir a los editores entre dos versiones de KANAP.
+Las tecnologías adoptadas desde el catálogo siguen sus nuevas versiones, sus fechas de fin de soporte y sus identificadores CPE (consulte [Versiones del catálogo](../technologies.md#versiones-del-catalogo)). Por defecto en una instalación local, cada versión de Kadratis trae su propio catálogo: las tecnologías adoptadas reciben lo que añade en el primer arranque de esa versión. Active la comprobación diaria para seguir a los editores entre dos versiones de Kadratis.
 
 | Variable | Descripción | Valor predeterminado |
 |----------|-------------|---------|
@@ -489,14 +489,14 @@ Las tecnologías adoptadas desde el catálogo siguen sus nuevas versiones, sus f
 Notas:
 
 - La API necesita acceso HTTPS saliente a `endoflife.date`, o a su réplica (consulte [Reglas de cortafuegos](#reglas-de-cortafuegos)).
-- La comprobación diaria solo lee endoflife.date. Los productos cuyas fechas KANAP toma de las páginas de los editores se actualizan con cada versión de KANAP.
+- La comprobación diaria solo lee endoflife.date. Los productos cuyas fechas Kadratis toma de las páginas de los editores se actualizan con cada versión de Kadratis.
 - Ambos modos pasan por la tarea programada **technology-catalog** (cada día y al arrancar). Mientras esa tarea esté desactivada en las tareas programadas, no se actualiza nada.
-- Un valor cambiado en KANAP, o una versión eliminada allí, nunca se sobrescribe ni se vuelve a crear.
+- Un valor cambiado en Kadratis, o una versión eliminada allí, nunca se sobrescribe ni se vuelve a crear.
 - Reinicie la API después de cambiar estos valores.
 
 ## Opcional: importaciones de Excel { #optional-excel-imports }
 
-Cada importación de datos lee un libro de Excel (`.xlsx`) además de un archivo CSV: las listas de datos maestros, los registros de TI y de portafolio, el archivo de presupuesto, los archivos de vínculos de las tecnologías, el acceso a los datos y el plan de cuentas. KANAP lee la primera hoja de un libro, en el servidor, con las mismas columnas y comprobaciones que un archivo CSV. Consulte [Archivos CSV y Excel](../csv-files.md).
+Cada importación de datos lee un libro de Excel (`.xlsx`) además de un archivo CSV: las listas de datos maestros, los registros de TI y de portafolio, el archivo de presupuesto, los archivos de vínculos de las tecnologías, el acceso a los datos y el plan de cuentas. Kadratis lee la primera hoja de un libro, en el servidor, con las mismas columnas y comprobaciones que un archivo CSV. Consulte [Archivos CSV y Excel](../csv-files.md).
 
 | Variable | Descripción | Valor por defecto |
 |----------|-------------|---------|
@@ -508,7 +508,7 @@ Con `IMPORT_XLSX=false`, los botones de importación muestran **Importar CSV**, 
 
 | Variable | Descripción | Valor predeterminado |
 |----------|-------------|---------|
-| `RATE_LIMIT_TRUST_PROXY` | Cómo obtiene KANAP la dirección del cliente para sus límites de inicio de sesión y de solicitudes. `true`: un proxy inverso está delante de la API y envía `X-Forwarded-For` (el nginx de esta guía). `false`: no hay nada delante, se usa la dirección de la conexión. `1` a `3`: ese número de proxies en cadena. | Sin definir en single-tenant equivale a un proxy de confianza, con una advertencia `[RATE-LIMIT]` en cada arranque. Defínalo explícitamente. |
+| `RATE_LIMIT_TRUST_PROXY` | Cómo obtiene Kadratis la dirección del cliente para sus límites de inicio de sesión y de solicitudes. `true`: un proxy inverso está delante de la API y envía `X-Forwarded-For` (el nginx de esta guía). `false`: no hay nada delante, se usa la dirección de la conexión. `1` a `3`: ese número de proxies en cadena. | Sin definir en single-tenant equivale a un proxy de confianza, con una advertencia `[RATE-LIMIT]` en cada arranque. Defínalo explícitamente. |
 | `RATE_LIMIT_ENABLED` | Activa o desactiva la limitación de solicitudes de la aplicación | `true` |
 | `JWT_ACCESS_TOKEN_TTL` | Duración del token de acceso: un número seguido de `s`, `m`, `h` o `d`. Cualquier otro formato conserva el valor predeterminado (15 minutos), y la API nombra el valor en una advertencia `[CONFIG]` al arrancar. | `15m` |
 | `JWT_REFRESH_TOKEN_TTL` | Duración del token de renovación, mismo formato. Cualquier otro formato conserva el valor predeterminado (4 horas), y la API nombra el valor en una advertencia `[CONFIG]` al arrancar. | `4h` |
@@ -547,13 +547,13 @@ Los valores predeterminados sirven para unas pocas decenas de usuarios. Para má
 
 Medido sobre 5000 líneas de presupuesto: con 10 usuarios, un proceso responde tan rápido como cuatro. Con 50 usuarios, abrir una línea tardó 237 ms (percentil 95) con un proceso, 142 ms con dos y 82 ms con cuatro, y un solo proceso mantenía ocupadas todas sus conexiones a la base de datos.
 
-Mantenga `API_WORKERS` igual o por debajo del número de núcleos de CPU que el servidor asigna a KANAP. Los cambios se aplican cuando el contenedor de la API se vuelve a crear (`docker compose -f infra/compose.onprem.yml up -d api`).
+Mantenga `API_WORKERS` igual o por debajo del número de núcleos de CPU que el servidor asigna a Kadratis. Los cambios se aplican cuando el contenedor de la API se vuelve a crear (`docker compose -f infra/compose.onprem.yml up -d api`).
 
 ## Ejemplo completo (.env)
 
 ```bash
 # =============================================================================
-# Configuración on-premise de KANAP
+# Configuración on-premise de Kadratis
 # =============================================================================
 
 # MODO DE DESPLIEGUE (obligatorio)
@@ -572,14 +572,14 @@ ADMIN_PASSWORD=ChangeThisPassword123!
 # SEGURIDAD (obligatorio)
 JWT_SECRET=
 
-# MODO DE EJECUCIÓN (production cuando los usuarios acceden a KANAP por HTTPS)
+# MODO DE EJECUCIÓN (production cuando los usuarios acceden a Kadratis por HTTPS)
 APP_ENV=production
 
 # URL DE LA APLICACIÓN (obligatorio - la dirección exacta que abren los usuarios)
-APP_BASE_URL=https://kanap.company.com
+APP_BASE_URL=https://kadratis.company.com
 
 # ORÍGENES DE NAVEGADOR AUTORIZADOS (obligatorio - la dirección exacta que abren los usuarios)
-CORS_ORIGINS=https://kanap.company.com
+CORS_ORIGINS=https://kadratis.company.com
 
 # DIRECCIÓN DEL CLIENTE (un proxy inverso delante de la API)
 RATE_LIMIT_TRUST_PROXY=true
@@ -599,7 +599,7 @@ S3_FORCE_PATH_STYLE=false
 
 # CORREO (opcional - Resend)
 # RESEND_API_KEY=re_xxxxx
-# RESEND_FROM_EMAIL=KANAP <noreply@company.com>
+# RESEND_FROM_EMAIL=Kadratis <noreply@company.com>
 
 # CORREO (opcional - SMTP, solo single-tenant)
 # SMTP_HOST=smtp.company.com
@@ -607,13 +607,13 @@ S3_FORCE_PATH_STYLE=false
 # SMTP_SECURE=false
 # SMTP_USER=
 # SMTP_PASSWORD=
-# SMTP_FROM=KANAP <noreply@company.com>
+# SMTP_FROM=Kadratis <noreply@company.com>
 
 # SSO (opcional - Microsoft Entra ID, las cuatro juntas)
 # ENTRA_CLIENT_ID=
 # ENTRA_CLIENT_SECRET=
 # ENTRA_AUTHORITY=https://login.microsoftonline.com/<tenant-id>
-# ENTRA_REDIRECT_URI=https://kanap.company.com/api/auth/entra/callback
+# ENTRA_REDIRECT_URI=https://kadratis.company.com/api/auth/entra/callback
 
 # IA (opcional - desactivada por defecto)
 # AI_CHAT_ENABLED=false
@@ -654,7 +654,7 @@ S3_FORCE_PATH_STYLE=false
 
 ## Reglas de cortafuegos
 
-Tras la instalación, KANAP puede funcionar completamente aislado de la red si las funciones de correo, SSO, IA, tipos de cambio, vulnerabilidades y catálogo de tecnologías están todas desactivadas.
+Tras la instalación, Kadratis puede funcionar completamente aislado de la red si las funciones de correo, SSO, IA, tipos de cambio, vulnerabilidades y catálogo de tecnologías están todas desactivadas.
 
 ### Entrante
 
@@ -674,8 +674,8 @@ Estos destinos son necesarios en la instalación, en cada actualización y en ca
 
 | Destino | Puerto | Uso |
 |-------------|------|---------|
-| `github.com`, `*.githubusercontent.com` | 443 | Clonar el código fuente de KANAP; descargar los archivos de las versiones de RustFS (el ejemplo de instalación) |
-| `ghcr.io`, `pkg-containers.githubusercontent.com` | 443 | Descargar las imágenes de KANAP (`docker compose pull`) |
+| `github.com`, `*.githubusercontent.com` | 443 | Clonar el código fuente de Kadratis; descargar los archivos de las versiones de RustFS (el ejemplo de instalación) |
+| `ghcr.io`, `pkg-containers.githubusercontent.com` | 443 | Descargar las imágenes de Kadratis (`docker compose pull`) |
 | `download.docker.com` | 443 | Repositorio APT de Docker |
 | `registry-1.docker.io`, `auth.docker.io` | 443 | Descargar la imagen de la prueba de humo (`node:24-alpine`) la primera vez que se ejecuta la prueba, y las imágenes base cuando compila las imágenes usted mismo. Cada descarga obtiene primero un token de `auth.docker.io` |
 | `production.cloudflare.docker.com`, `production.cloudfront.docker.com` | 443 | Descargar las capas de las imágenes: Docker Hub redirige cada descarga a estos hosts |
@@ -718,9 +718,9 @@ Estas conexiones no salen del servidor: loopback o las redes Docker.
 | nginx → contenedor web | 8081 | Vinculado a `127.0.0.1` |
 | Contenedor de la API → PostgreSQL | 5432 | Mediante `host.docker.internal`, que es la dirección del puente Docker del servidor (`172.17.0.1` por defecto). Permítalo solo desde las redes Docker (`172.16.0.0/12`). |
 | Contenedor de la API → almacenamiento de objetos | 9000 | Mismo camino. En el ejemplo de instalación, el almacenamiento escucha únicamente en `172.17.0.1`. |
-| Contenedor de la API → relay de correo en el servidor | Su `SMTP_PORT` | Solo cuando el relay se ejecuta en el servidor de KANAP. Mismo camino: el relay escucha en `172.17.0.1`, y la regla permite su puerto desde `172.16.0.0/12`. |
+| Contenedor de la API → relay de correo en el servidor | Su `SMTP_PORT` | Solo cuando el relay se ejecuta en el servidor de Kadratis. Mismo camino: el relay escucha en `172.17.0.1`, y la regla permite su puerto desde `172.16.0.0/12`. |
 
-Por defecto, Docker asigna a sus 15 primeras redes rangos dentro de `172.16.0.0/12` (`172.17.0.0/16` a `172.31.0.0/16`), y después bloques `/20` de `192.168.0.0/16`. En un servidor nuevo, los contenedores de KANAP usan `172.18.0.0/16`. Un servidor que ya tiene muchas redes Docker puede colocarlos en `192.168.x.x`, fuera de estas reglas. Tras el primer arranque, `docker network inspect infra_default` muestra su subred. Si está fuera de `172.16.0.0/12`, añádala a las reglas de cortafuegos y a la línea de `pg_hba.conf` de PostgreSQL. La misma subred permite también una regla más restrictiva.
+Por defecto, Docker asigna a sus 15 primeras redes rangos dentro de `172.16.0.0/12` (`172.17.0.0/16` a `172.31.0.0/16`), y después bloques `/20` de `192.168.0.0/16`. En un servidor nuevo, los contenedores de Kadratis usan `172.18.0.0/16`. Un servidor que ya tiene muchas redes Docker puede colocarlos en `192.168.x.x`, fuera de estas reglas. Tras el primer arranque, `docker network inspect infra_default` muestra su subred. Si está fuera de `172.16.0.0/12`, añádala a las reglas de cortafuegos y a la línea de `pg_hba.conf` de PostgreSQL. La misma subred permite también una regla más restrictiva.
 
 ## Trabajos en segundo plano
 

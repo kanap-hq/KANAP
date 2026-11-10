@@ -1,6 +1,6 @@
 # Procesos de negocio
 
-Los Procesos de negocio le permiten construir y mantener un catálogo centralizado de los procesos centrales de extremo a extremo de su organización, como Pedido a cobro, Compra a pago o Contratación a jubilación. Al mantener nombres de procesos, sus tipos, sus responsables y su jerarquía en un solo lugar, crea un punto de referencia único al que el resto de KANAP puede vincularse para propiedad, informes y auditorías.
+Los Procesos de negocio le permiten construir y mantener un catálogo centralizado de los procesos centrales de extremo a extremo de su organización, como Pedido a cobro, Compra a pago o Contratación a jubilación. Al mantener nombres de procesos, sus tipos, sus responsables y su jerarquía en un solo lugar, crea un punto de referencia único al que el resto de Kadratis puede vincularse para propiedad, informes y auditorías.
 
 ## Primeros pasos
 
@@ -56,7 +56,7 @@ La lista muestra todos los procesos de negocio de su espacio de trabajo.
 
 1. Haga clic en **Nuevo** en la lista. La página del proceso se abre con un título vacío en el encabezado. El resto de la página aparece atenuado.
 2. Escriba el nombre del proceso, idealmente con su código corto (p. ej., "Order-to-Cash (O2C)").
-3. Pulse Intro o haga clic fuera del título. KANAP crea el proceso de inmediato, activado, y se abren todas las pestañas.
+3. Pulse Intro o haga clic fuera del título. Kadratis crea el proceso de inmediato, activado, y se abren todas las pestañas.
 
 Pulse Escape en el título vacío para salir sin crear nada. Dos procesos no pueden tener el mismo nombre, sin distinguir mayúsculas de minúsculas: un nombre ya usado se rechaza, con un mensaje bajo el título.
 
@@ -138,7 +138,7 @@ Haga clic en **Importar** en la página de la lista, luego:
 **Reglas de coincidencia**:
 
 - Las filas se emparejan por **Nombre**, sin distinguir mayúsculas y minúsculas. Un nombre coincidente actualiza el proceso existente y conserva la grafía guardada (la verificación previa indica con qué proceso se asoció la fila); un nombre nuevo crea un proceso nuevo.
-- `parent_name` se empareja por nombre, sin distinguir mayúsculas y minúsculas: un proceso del mismo archivo o uno que ya existe en KANAP. Si existen ambos, prevalece el archivo. Las filas pueden ir en cualquier orden: los padres se crean antes que sus hijos.
+- `parent_name` se empareja por nombre, sin distinguir mayúsculas y minúsculas: un proceso del mismo archivo o uno que ya existe en Kadratis. Si existen ambos, prevalece el archivo. Las filas pueden ir en cualquier orden: los padres se crean antes que sus hijos.
 - Un nombre de padre desconocido, un proceso bajo sí mismo o un bucle se rechazan, con el número de fila.
 - El archivo no tiene columna de fin de validez. En una actualización, un `status` vacío, o igual al estado actual del proceso, conserva su fin de validez. Un estado distinto se aplica: `enabled` borra el fin de validez, y `disabled` termina el proceso hoy, salvo que su fin de validez ya haya pasado. Un proceso nuevo está habilitado salvo que la fila indique `disabled`.
 

@@ -17,7 +17,7 @@ Navigieren Sie zu **Stammdaten > Arbeitstagekalender** (im Abschnitt **Finanzen*
 
 Am schnellsten starten Sie mit einem Standardkalender für jedes Land, in dem Ihre Unternehmen ansässig sind:
 
-- **Wenn Sie ein Unternehmen** mit einem Land anlegen, legt KANAP den Standardkalender dieses Landes für Sie an, sofern der Arbeitsbereich noch keinen für das ganze Land hat
+- **Wenn Sie ein Unternehmen** mit einem Land anlegen, legt Kadratis den Standardkalender dieses Landes für Sie an, sofern der Arbeitsbereich noch keinen für das ganze Land hat
 - **Für Ihre bestehenden Unternehmen** zeigt die Listenseite eine Zeile über dem Raster, zum Beispiel „Länder Ihrer Unternehmen: Frankreich, Niederlande und Italien. Legen Sie ihre Standardkalender an.“ Klicken Sie auf **3 Kalender anlegen**, um sie in einem Schritt anzulegen
 
 Um selbst einen Kalender anzulegen, klicken Sie auf **Neu**.
@@ -120,7 +120,7 @@ Der Abschnitt **Arbeitstage** zeigt jeweils ein Jahr, mit denselben Jahres-Tabs 
 - Unter der Summe eines geänderten Jahres nennt eine Zeile die Standardwerte, zum Beispiel „Standardwerte: 252 Tage“
 - **Auf Standardwerte zurücksetzen** bringt das Jahr sofort auf die Feiertage zurück. Es gibt keine Bestätigung: Die eingegebenen Werte werden durch die Standardwerte ersetzt
 
-**Woher die Standardwerte stammen**: Die Feiertagsregeln stammen aus [`date-holidays`](https://github.com/commenthol/date-holidays), einer Open-Source-Bibliothek, die in KANAP enthalten ist. Die Regeln werden mit der Anwendung ausgeliefert, sodass Standardkalender ohne Internetzugang funktionieren. Die Feiertagsdaten stehen unter der Lizenz Creative Commons Attribution-ShareAlike 3.0 (CC BY-SA 3.0), und KANAP verwendet sie unverändert. Nur gesetzliche Feiertage zählen, Bankfeiertage, Schulferien und Gedenktage zählen nicht. Ein Feiertag, der am Abend beginnt (ab 18 Uhr), wie Heiligabend im australischen Northern Territory, entfernt den Tag nicht; beginnt er früher am Tag, entfernt er den ganzen Tag.
+**Woher die Standardwerte stammen**: Die Feiertagsregeln stammen aus [`date-holidays`](https://github.com/commenthol/date-holidays), einer Open-Source-Bibliothek, die in Kadratis enthalten ist. Die Regeln werden mit der Anwendung ausgeliefert, sodass Standardkalender ohne Internetzugang funktionieren. Die Feiertagsdaten stehen unter der Lizenz Creative Commons Attribution-ShareAlike 3.0 (CC BY-SA 3.0), und Kadratis verwendet sie unverändert. Nur gesetzliche Feiertage zählen, Bankfeiertage, Schulferien und Gedenktage zählen nicht. Ein Feiertag, der am Abend beginnt (ab 18 Uhr), wie Heiligabend im australischen Northern Territory, entfernt den Tag nicht; beginnt er früher am Tag, entfernt er den ganzen Tag.
 
 ### Arbeitstage eines individuellen Kalenders
 
@@ -248,7 +248,7 @@ Wer Budgetzeilen (Budget) lesen kann, kann im Budget-Tab einen Kalender wählen,
 
 ## Den Assistenten fragen
 
-[Plaid](ai-assistant.md#tool-calls) liest die Kalender für alle, die sie lesen dürfen, und zitiert die Arbeitstage eines Jahres so, wie KANAP sie berechnet. Fragen Sie zum Beispiel: „Wie viele Arbeitstage hat Frankreich 2026?“
+[Kad](ai-assistant.md#tool-calls) liest die Kalender für alle, die sie lesen dürfen, und zitiert die Arbeitstage eines Jahres so, wie Kadratis sie berechnet. Fragen Sie zum Beispiel: „Wie viele Arbeitstage hat Frankreich 2026?“
 
 ## Tipps
 

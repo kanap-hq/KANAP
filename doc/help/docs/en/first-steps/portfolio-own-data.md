@@ -1,9 +1,9 @@
 ---
-title: "Your portfolio in KANAP in ten minutes: start with your own data"
+title: "Your portfolio in Kadratis in ten minutes: start with your own data"
 description: The five steps of the projects and requests path on your own data, from a first request to its project, its tasks and its budget, then your contributor profile.
 ---
 
-# Your portfolio in KANAP in ten minutes
+# Your portfolio in Kadratis in ten minutes
 
 [Explore with the example](portfolio-example.md) · **Start with my own data**
 
@@ -53,10 +53,10 @@ These are the five steps of the **Your first five steps** tile on the home page,
 
 ## Next
 
-Your portfolio is in KANAP. The two other paths also take ten minutes, on your data:
+Your portfolio is in Kadratis. The two other paths also take ten minutes, on your data:
 
-- [Your IT budget in KANAP in ten minutes](budget-own-data.md)
-- [Your IT landscape in KANAP in ten minutes](landscape-own-data.md)
+- [Your IT budget in Kadratis in ten minutes](budget-own-data.md)
+- [Your IT landscape in Kadratis in ten minutes](landscape-own-data.md)
 
 When the five steps are done, the tile offers these paths. During the trial, it also offers **Book a discovery call**.
 

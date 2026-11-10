@@ -1,6 +1,6 @@
 # Tareas
 
-Las tareas le ayudan a realizar el seguimiento de elementos de acción, entregables y paquetes de trabajo en todas sus entidades de KANAP. Se utilizan para recordatorios de renovación, seguimientos, verificaciones de conformidad, entregables de proyectos y cualquier otro trabajo que necesite seguimiento.
+Las tareas le ayudan a realizar el seguimiento de elementos de acción, entregables y paquetes de trabajo en todas sus entidades de Kadratis. Se utilizan para recordatorios de renovación, seguimientos, verificaciones de conformidad, entregables de proyectos y cualquier otro trabajo que necesite seguimiento.
 
 ## Primeros pasos
 
@@ -12,7 +12,7 @@ Al hacer clic en **Nuevo**, la página de la tarea se abre con un título vacío
 
 1. **Escriba el título** (obligatorio) en el encabezado.
 
-2. **Pulse Intro**, o salga del campo. KANAP crea la tarea al instante, con estos valores predeterminados:
+2. **Pulse Intro**, o salga del campo. Kadratis crea la tarea al instante, con estos valores predeterminados:
    - **Estado**: **Abierto**
    - **Prioridad**: **Normal**
    - **Asignado** y **Solicitante**: usted
@@ -29,7 +29,7 @@ Al hacer clic en **Nuevo**, la página de la tarea se abre con un título vacío
    - **Fechas**: Establezca fechas de inicio y vencimiento
    - **Asignado**, **Estado**, **Prioridad**: Cámbielos si es necesario
 
-4. Haga clic en **Crear** para conservar la tarea. Vuelve al lugar donde empezó: una tarea empezada desde la pestaña **Tareas** de un proyecto vuelve a esa pestaña. Haga clic en **Cancelar** para eliminar la tarea en su lugar. KANAP pide confirmación primero cuando ha introducido más que el título.
+4. Haga clic en **Crear** para conservar la tarea. Vuelve al lugar donde empezó: una tarea empezada desde la pestaña **Tareas** de un proyecto vuelve a esa pestaña. Haga clic en **Cancelar** para eliminar la tarea en su lugar. Kadratis pide confirmación primero cuando ha introducido más que el título.
 
 Pulsar **Escape** en el título vacío equivale a **Cancelar**. Salir de la tarea de cualquier otra forma la conserva.
 
@@ -162,7 +162,7 @@ La pestaña **Vista general** contiene el contenido de la tarea.
 El panel es plegable (haga clic en la pestaña vertical **Propiedades** en el borde derecho para abrirlo o cerrarlo; pulse **P** como atajo). Su anchura y estado abierto se recuerdan localmente. El panel contiene cuatro grupos, separados por divisores:
 
 **Contexto**:
-  - **Relacionado con**: Independiente, Proyecto, Presupuesto (una línea OPEX o CAPEX), Contrato o Incidente. Puede cambiar el tipo y elegir un nuevo elemento; al guardar, KANAP aplica cualquier efecto secundario relacionado (consulte [Cambiar el contexto de la tarea](#cambiar-el-contexto-de-la-tarea))
+  - **Relacionado con**: Independiente, Proyecto, Presupuesto (una línea OPEX o CAPEX), Contrato o Incidente. Puede cambiar el tipo y elegir un nuevo elemento; al guardar, Kadratis aplica cualquier efecto secundario relacionado (consulte [Cambiar el contexto de la tarea](#cambiar-el-contexto-de-la-tarea))
   - **Fase** (solo tareas de proyecto): Por defecto es **Nivel de proyecto** a menos que elija una fase del proyecto
   - **Tipo de tarea**: Tarea, Bug, Problema, Incidente o cualquier tipo personalizado configurado por su administrador
   - **Etiquetas**: Etiquetas libres, por ejemplo urgente o seguimiento. Escriba una y pulse Intro. Se muestran como chips. Una persona con permiso de lectura ve los chips
@@ -189,7 +189,7 @@ El panel es plegable (haga clic en la pestaña vertical **Propiedades** en el bo
 
 ### Cambiar el contexto de la tarea
 
-Cuando cambia el contexto de una tarea y guarda, KANAP aplica el cambio en una sola operación (contexto más cualquier otro campo editado juntos).
+Cuando cambia el contexto de una tarea y guarda, Kadratis aplica el cambio en una sola operación (contexto más cualquier otro campo editado juntos).
 
 - **Proyecto a Independiente**: La fase se borra, la clasificación se conserva
 - **Proyecto a OPEX/Contrato/CAPEX**: La fase y la clasificación se borran
@@ -280,7 +280,7 @@ Los adjuntos son visibles para cualquier persona que pueda ver la tarea.
 
 ## Importación y exportación de descripción
 
-El campo de descripción admite importación y exportación de documentos para que pueda trabajar con contenido fuera de KANAP.
+El campo de descripción admite importación y exportación de documentos para que pueda trabajar con contenido fuera de Kadratis.
 
 ### Importar un documento
 
@@ -358,7 +358,7 @@ Los enlaces son bidireccionales: desde el espacio de trabajo de la Aplicación o
 
 **Consejo**: Reserve estos enlaces para tareas que tratan operativamente de la app o activo, no cada tarea que mencione una de pasada. De lo contrario, la relación se convierte en ruido en lugar de señal.
 
-Solo ve cada registro vinculado si puede leer su módulo: las aplicaciones requieren las aplicaciones, los activos la infraestructura. Lo mismo vale para el registro al que pertenece una tarea: un proyecto requiere los proyectos, una línea presupuestaria el presupuesto, un contrato los contratos, un incidente los incidentes. De lo contrario, el campo no aparece en el panel, en la lista ni en Plaid, y la tarea conserva su vínculo. Además, un Business Contributor solo ve el proyecto, su fase, la solicitud creada a partir de la tarea y las aplicaciones si participa en ellos: una sola aplicación fuera de su participación oculta el campo **Aplicaciones**.
+Solo ve cada registro vinculado si puede leer su módulo: las aplicaciones requieren las aplicaciones, los activos la infraestructura. Lo mismo vale para el registro al que pertenece una tarea: un proyecto requiere los proyectos, una línea presupuestaria el presupuesto, un contrato los contratos, un incidente los incidentes. De lo contrario, el campo no aparece en el panel, en la lista ni en Kad, y la tarea conserva su vínculo. Además, un Business Contributor solo ve el proyecto, su fase, la solicitud creada a partir de la tarea y las aplicaciones si participa en ellos: una sola aplicación fuera de su participación oculta el campo **Aplicaciones**.
 
 ---
 
@@ -384,7 +384,7 @@ En la **Vista general** de un contrato, use la sección **Tareas** para:
 - "Solicitar condiciones actualizadas al proveedor"
 - "Obtener la adenda firmada"
 
-No necesita crear usted mismo las tareas de renovación: KANAP da una tarea al responsable del contrato cuando hay una decisión de renovación pendiente. Vea [Contratos](contracts.md#decisiones-de-renovacion).
+No necesita crear usted mismo las tareas de renovación: Kadratis da una tarea al responsable del contrato cuando hay una decisión de renovación pendiente. Vea [Contratos](contracts.md#decisiones-de-renovacion).
 
 ### Desde líneas CAPEX
 En el espacio de trabajo CAPEX, las tareas rastrean hitos del proyecto:
@@ -682,7 +682,7 @@ Puede promover una tarea a una solicitud del portafolio cuando el trabajo merece
    - **Cerrar la tarea original después de la conversión**: Marque esta opción si desea que el estado de la tarea se establezca automáticamente a **Completado**
 4. Haga clic en **Convertir en solicitud**
 
-Después de la conversión, KANAP le lleva al espacio de trabajo de la solicitud recién creada.
+Después de la conversión, Kadratis le lleva al espacio de trabajo de la solicitud recién creada.
 
 ### Qué se traslada
 

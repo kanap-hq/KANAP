@@ -1,8 +1,8 @@
 # Sincronización con Netbox
 
-[Netbox](https://netboxlabs.com/docs/netbox/) describe su infraestructura física y virtual: equipos, máquinas virtuales, racks, sitios, direcciones. KANAP lee ese inventario y mantiene sus propios activos alineados con él.
+[Netbox](https://netboxlabs.com/docs/netbox/) describe su infraestructura física y virtual: equipos, máquinas virtuales, racks, sitios, direcciones. Kadratis lee ese inventario y mantiene sus propios activos alineados con él.
 
-El reparto de responsabilidades es deliberado. Netbox sigue siendo la referencia para los equipos que describe, así que el nombre, el número de serie, la posición en el rack o la dirección principal vienen siempre de ahí. KANAP conserva la capa de negocio alrededor de cada activo: entorno, aplicaciones, contratos y costes, soporte, fechas, relaciones, notas. Deja de reescribir el inventario y conserva todo lo que Netbox no conoce.
+El reparto de responsabilidades es deliberado. Netbox sigue siendo la referencia para los equipos que describe, así que el nombre, el número de serie, la posición en el rack o la dirección principal vienen siempre de ahí. Kadratis conserva la capa de negocio alrededor de cada activo: entorno, aplicaciones, contratos y costes, soporte, fechas, relaciones, notas. Deja de reescribir el inventario y conserva todo lo que Netbox no conoce.
 
 ## Dónde encontrarlo
 
@@ -17,21 +17,21 @@ El reparto de responsabilidades es deliberado. Netbox sigue siendo la referencia
 
 ## Antes de empezar
 
-**Una instancia de Netbox accesible para KANAP.** KANAP llama a Netbox desde el servidor, no desde su navegador. La dirección que introduzca tiene que resolverse y responder desde donde se ejecuta KANAP. En la edición en la nube, esa dirección debe ser pública: una dirección privada o interna se rechaza al guardar la conexión, y de nuevo antes de cada llamada. En la edición on-premise, una dirección de su propia red es exactamente lo que se espera.
+**Una instancia de Netbox accesible para Kadratis.** Kadratis llama a Netbox desde el servidor, no desde su navegador. La dirección que introduzca tiene que resolverse y responder desde donde se ejecuta Kadratis. En la edición en la nube, esa dirección debe ser pública: una dirección privada o interna se rechaza al guardar la conexión, y de nuevo antes de cada llamada. En la edición on-premise, una dirección de su propia red es exactamente lo que se espera.
 
-**Un token de API con acceso de lectura.** En Netbox, abra el menú de usuario arriba a la derecha, luego **API tokens**, y cree uno. Basta con un token de solo lectura: KANAP nunca escribe nada en Netbox. Póngale una descripción para reconocerlo más tarde, y rótelo como haría con cualquier otra credencial de servicio.
+**Un token de API con acceso de lectura.** En Netbox, abra el menú de usuario arriba a la derecha, luego **API tokens**, y cree uno. Basta con un token de solo lectura: Kadratis nunca escribe nada en Netbox. Póngale una descripción para reconocerlo más tarde, y rótelo como haría con cualquier otra credencial de servicio.
 
-**Una decisión sobre el certificado.** Si su Netbox usa un certificado en el que KANAP no confía, normalmente un certificado autofirmado o interno, puede activar **Ignorar los errores de certificado**. La conexión sigue cifrada, pero el certificado deja de comprobarse, así que úselo solo con un certificado que conozca y en el que confíe, en una red que controle. En un Netbox público, instale un certificado de confianza en su lugar.
+**Una decisión sobre el certificado.** Si su Netbox usa un certificado en el que Kadratis no confía, normalmente un certificado autofirmado o interno, puede activar **Ignorar los errores de certificado**. La conexión sigue cifrada, pero el certificado deja de comprobarse, así que úselo solo con un certificado que conozca y en el que confíe, en una red que controle. En un Netbox público, instale un certificado de confianza en su lugar.
 
 ---
 
-## Conectar KANAP con Netbox
+## Conectar Kadratis con Netbox
 
 Vaya a **Administración > Integraciones** y abra la tarjeta **Inventario de Netbox**.
 
 | Campo | Qué introducir |
 |-------|----------------|
-| **Activar la sincronización con Netbox** | El conmutador maestro. Cuando está desactivado, KANAP no llama nunca a Netbox, ni a mano ni de forma programada. |
+| **Activar la sincronización con Netbox** | El conmutador maestro. Cuando está desactivado, Kadratis no llama nunca a Netbox, ni a mano ni de forma programada. |
 | **Dirección de Netbox** | La dirección que usa para abrir Netbox en el navegador, por ejemplo `https://netbox.example.com`. |
 | **Token de API** | El token que creó en Netbox. Se guarda cifrado y no se vuelve a mostrar. Deje el campo vacío al guardar para conservar el token ya almacenado. |
 | **Tiempo de espera (segundos)** | Cuánto esperar a Netbox antes de abandonar, entre 5 y 120. Déjelo vacío para usar 30. |
@@ -56,15 +56,15 @@ Una fila adicional acompaña a los roles: **Máquinas virtuales**. Todas las má
 
 Cada fila muestra cuántos equipos y máquinas virtuales cubre, de modo que puede ver qué va a traer una elección. Cuando un nombre de Netbox coincide claramente con uno suyo, la fila viene rellenada y marcada como **Sugerido**. Una sugerencia es solo una propuesta: nada se usa hasta que pulse **Guardar correspondencias**. Mientras haya correspondencias sin guardar, un aviso en la parte superior de la pestaña indica cuántas son, con el botón de guardar al lado. Si pulsa **Sincronizar ahora** antes de que haya algún rol o algún sitio guardado, la vista previa lo indica y le devuelve a esta pestaña en lugar de enumerar todos los objetos como omitidos.
 
-Asignar un sitio de Netbox también trae sus ubicaciones de Netbox como sub-ubicaciones de la ubicación que haya elegido. Solo las ubicaciones de primer nivel de ese sitio, y solo aquellas en las que realmente se encuentra un equipo importado. Un equipo situado más abajo, en «Edificio A > Planta 1 > Sala 101», se asocia a «Edificio A»: KANAP registra dónde está un equipo al nivel de un sitio y un edificio, no de una sala. No hay nada que configurar para esto.
+Asignar un sitio de Netbox también trae sus ubicaciones de Netbox como sub-ubicaciones de la ubicación que haya elegido. Solo las ubicaciones de primer nivel de ese sitio, y solo aquellas en las que realmente se encuentra un equipo importado. Un equipo situado más abajo, en «Edificio A > Planta 1 > Sala 101», se asocia a «Edificio A»: Kadratis registra dónde está un equipo al nivel de un sitio y un edificio, no de una sala. No hay nada que configurar para esto.
 
 ### Sistemas operativos
 
 La tercera tabla asocia cada plataforma de Netbox con una tecnología. Netbox dice «Debian 12» donde sus tecnologías tienen Debian con su versión «12 (Bookworm)», y es aquí donde se unen los dos. Cada fila indica cuántos objetos usan esa plataforma.
 
-La lista ofrece sus tecnologías de la familia **Sistema operativo**, solas y con cada una de sus versiones, y después los sistemas operativos del catálogo de tecnologías que aún no ha añadido. El valor que se guarda es el nombre de la tecnología, con su versión cuando elige una. En la siguiente ejecución, KANAP registra esa tecnología y esa versión como sistema operativo del servidor, y añade a sus tecnologías una entrada del catálogo cuando ha elegido una.
+La lista ofrece sus tecnologías de la familia **Sistema operativo**, solas y con cada una de sus versiones, y después los sistemas operativos del catálogo de tecnologías que aún no ha añadido. El valor que se guarda es el nombre de la tecnología, con su versión cuando elige una. En la siguiente ejecución, Kadratis registra esa tecnología y esa versión como sistema operativo del servidor, y añade a sus tecnologías una entrada del catálogo cuando ha elegido una.
 
-Las filas vienen rellenadas cuando KANAP ve la respuesta: el mismo nombre, o la única opción cuyo nombre empieza por el nombre de la plataforma. «Debian 12» sugiere «Debian 12 (Bookworm)». Como en las otras tablas, una sugerencia solo cuenta cuando pulsa **Guardar correspondencias**.
+Las filas vienen rellenadas cuando Kadratis ve la respuesta: el mismo nombre, o la única opción cuyo nombre empieza por el nombre de la plataforma. «Debian 12» sugiere «Debian 12 (Bookworm)». Como en las otras tablas, una sugerencia solo cuenta cuando pulsa **Guardar correspondencias**.
 
 Esta tabla no es un filtro. Una plataforma que quede en **Sin correspondencia** nunca deja nada fuera de la importación. El equipo entra y su sistema operativo se queda tal como está. Asocie la plataforma más tarde y la siguiente ejecución rellena el campo.
 
@@ -92,26 +92,26 @@ Los hosts no se vinculan: los miembros de un clúster los sigue gestionando uste
 
 ## La primera sincronización
 
-Pulse **Sincronizar ahora**. KANAP lee Netbox y muestra **Revisar antes de aplicar** antes de escribir nada.
+Pulse **Sincronizar ahora**. Kadratis lee Netbox y muestra **Revisar antes de aplicar** antes de escribir nada.
 
 La vista previa está agrupada:
 
 - **Sub-ubicaciones**: las filas compartidas que la ejecución crea, adopta o renombra, enumeradas una vez cada una con la ubicación a la que pertenecen y cuántos equipos acaban en ellas. Renombrar una ubicación de Netbox aparece aquí como una sola línea, no como el movimiento de cada activo.
 - **Por crear**: objetos sin equivalente en su espacio de trabajo. Se van a crear.
 - **Por actualizar**: objetos asociados a un activo existente que difiere. Todavía no se ha modificado nada, los valores se escriben cuando usted aplica. Cada uno enumera los campos que cambian, campo por campo, como `antes → después`.
-- **Por decidir**: objetos sobre los que KANAP no decide por su cuenta. No les pasa nada hasta que los resuelva, aquí o más tarde en la página.
+- **Por decidir**: objetos sobre los que Kadratis no decide por su cuenta. No les pasa nada hasta que los resuelva, aquí o más tarde en la página.
 - **Omitidos**: objetos fuera de alcance, contados por motivo (rol sin correspondencia, sitio sin correspondencia, sin nombre en Netbox, ignorado por usted). Se nombran los 20 primeros objetos de cada motivo y después el número de los demás.
 - **Ausentes de Netbox**: activos que una ejecución anterior vinculó y cuyo objeto de Netbox ha desaparecido.
-- **Avisos**: valores que Netbox devuelve y que KANAP no ha podido retomar, por ejemplo un sistema operativo que KANAP no encuentra entre sus tecnologías. Un objeto que no tiene nada que cambiar pero sí algo que señalar aparece también aquí.
+- **Avisos**: valores que Netbox devuelve y que Kadratis no ha podido retomar, por ejemplo un sistema operativo que Kadratis no encuentra entre sus tecnologías. Un objeto que no tiene nada que cambiar pero sí algo que señalar aparece también aquí.
 
 Léala y pulse **Aplicar**. Los objetos que ya son idénticos se cuentan como sin cambios y no se tocan en absoluto. Un inventario grande se revisa en lotes de 500. **Aplicar este lote** solo escribe lo que la vista previa enumera; todo lo demás se deja exactamente como está. La página indica después cuántos objetos siguen en espera y ofrece **Revisar el lote siguiente**, hasta que no quede nada. Una sincronización que usted inicia nunca crea ni modifica un objeto que no se le haya mostrado. Los objetos fuera de alcance quedan aparte, en **Omitidos**, de modo que nunca ocupan el lugar de un objeto que usted debe leer. El filtro de la parte superior restringe la lista a un objeto o a un nombre de activo.
 
 ### Corregir la vista previa antes de aplicar
 
-KANAP solo puede reconocer un activo por su número de serie, su nombre de host o su nombre. Un equipo que usted ha renombrado, sin ninguno de estos datos en común, aparece en **Por crear** y se crearía por segunda vez. La vista previa le permite resolverlo antes. Una fila para la que KANAP propone algo tiene un botón, **Vincular en su lugar** en **Por crear** y **Por actualizar**, **Decidir** en los objetos que necesitan una decisión. Un objeto ya vinculado por una ejecución anterior no lo tiene: está resuelto, y la fila solo muestra lo que cambia. Una primera asociación indica en qué se basa («Reconocido por su número de serie»), para que pueda detectar un error. El botón abre estas opciones:
+Kadratis solo puede reconocer un activo por su número de serie, su nombre de host o su nombre. Un equipo que usted ha renombrado, sin ninguno de estos datos en común, aparece en **Por crear** y se crearía por segunda vez. La vista previa le permite resolverlo antes. Una fila para la que Kadratis propone algo tiene un botón, **Vincular en su lugar** en **Por crear** y **Por actualizar**, **Decidir** en los objetos que necesitan una decisión. Un objeto ya vinculado por una ejecución anterior no lo tiene: está resuelto, y la fila solo muestra lo que cambia. Una primera asociación indica en qué se basa («Reconocido por su número de serie»), para que pueda detectar un error. El botón abre estas opciones:
 
 - **Vincular a un activo existente**: busque el activo y selecciónelo. La fila pasa a **Por actualizar** y muestra lo que Netbox va a cambiar en ese activo, campo por campo, para que siga leyendo antes de aplicar.
-- **Crear un activo nuevo**: para un objeto clasificado en **Por decidir**, o para uno que KANAP ha asociado al activo equivocado.
+- **Crear un activo nuevo**: para un objeto clasificado en **Por decidir**, o para uno que Kadratis ha asociado al activo equivocado.
 - **No importar este objeto**: el objeto queda fuera de esta sincronización y de las siguientes. Ningún activo se modifica. Pasa a **Resueltos por usted** en la vista previa y, una vez aplicado, a **Ignorados** en la página, donde podrá recuperarlo más tarde.
 
 Una fila sobre la que ha decidido lo indica y ofrece **Deshacer**. Cuando varios objetos clasificados en **Por decidir** tienen un único activo sugerido, **Vincular los N objetos que solo tienen una sugerencia** los resuelve todos de una vez. Pasan a **Por actualizar**, donde lee lo que cambia antes de aplicar.
@@ -124,16 +124,16 @@ La aplicación se ejecuta en segundo plano. La página la sigue y se actualiza s
 
 ## Cómo se asocian los objetos a los activos existentes
 
-Una primera importación en un KANAP ya poblado tiene que encontrar los activos que usted ya tiene en lugar de duplicarlos. KANAP prueba cuatro cosas, en orden, y se detiene en la primera que encuentra algo:
+Una primera importación en un Kadratis ya poblado tiene que encontrar los activos que usted ya tiene en lugar de duplicarlos. Kadratis prueba cuatro cosas, en orden, y se detiene en la primera que encuentra algo:
 
 1. **Un vínculo existente**. El objeto ya se asoció a un activo en una ejecución anterior.
 2. **El número de serie**. Sobrevive a un cambio de nombre en cualquiera de los dos lados.
 3. **El nombre de host**, tomado entero. `par-esx-01.example.com` en Netbox es el activo cuyo nombre de host está escrito así. También es el activo `par-esx-01` cuando `example.com` es uno de sus dominios, porque ese sufijo lo declaró usted mismo.
 4. **El nombre del activo**, ignorando mayúsculas, leído de la misma manera.
 
-Si un paso encuentra exactamente un activo, esa es la asociación. Si encuentra varios, KANAP se detiene ahí y clasifica el objeto en **Por decidir** con los candidatos enumerados. Nunca fusiona por conjetura.
+Si un paso encuentra exactamente un activo, esa es la asociación. Si encuentra varios, Kadratis se detiene ahí y clasifica el objeto en **Por decidir** con los candidatos enumerados. Nunca fusiona por conjetura.
 
-**Dos señales son propuestas, nunca asociaciones.** Cuando ninguno de los cuatro pasos identifica el objeto, KANAP busca un parecido en lugar de crear sin más.
+**Dos señales son propuestas, nunca asociaciones.** Cuando ninguno de los cuatro pasos identifica el objeto, Kadratis busca un parecido en lugar de crear sin más.
 
 - **Un nombre que empieza igual.** Un activo cuyo nombre o nombre de host solo coincide con la primera parte del nombre de Netbox, hasta el primer punto, se ofrece como candidato. En un inventario que nombra los equipos `dl3.robot-15ms.ie2000`, esa primera parte es un edificio y no una máquina, y un único activo llamado `dl3` absorbería toda la planta sin hacer ruido.
 - **Una dirección ya asignada.** Un activo que ya lleva la dirección principal del objeto se ofrece del mismo modo. Las direcciones se reutilizan, se comparten entre los miembros de un clúster o simplemente están obsoletas.
@@ -191,23 +191,23 @@ Los activos importados antes de esta regla, cuyo nombre de host se cortaba en el
 | Decommissioning | Obsoleto |
 | Cualquier otro | Se deja sin cambios, con un aviso |
 
-**Offline, Failed y Paused siguen a la vista.** El ciclo de vida se mantiene en Activo, porque el equipo sigue en servicio sobre el papel. KANAP conserva el estado de Netbox y lo muestra como un aviso: en el activo, junto a su origen («Estado en Netbox: Averiado»), en la lista de objetos vinculados y entre las advertencias de la vista previa. Si en Netbox solo cambia este estado, el activo no se reescribe.
+**Offline, Failed y Paused siguen a la vista.** El ciclo de vida se mantiene en Activo, porque el equipo sigue en servicio sobre el papel. Kadratis conserva el estado de Netbox y lo muestra como un aviso: en el activo, junto a su origen («Estado en Netbox: Averiado»), en la lista de objetos vinculados y entre las advertencias de la vista previa. Si en Netbox solo cambia este estado, el activo no se reescribe.
 
 Una sincronización nunca pone un activo en **Retirado**. Retirar un equipo es una decisión que toma usted, desde la lista **Ausentes de Netbox**.
 
 **El entorno se establece una sola vez.** Los activos nuevos reciben el entorno elegido en la tarjeta de la integración. Las ejecuciones posteriores no lo tocan nunca, así que puede corregirlo y se queda corregido.
 
-**Los valores que KANAP no conoce se omiten, nunca se inventan.** Un estado de ciclo de vida sin equivalente, o un sistema operativo sin correspondencia en **Correspondencias** y sin tecnología de ese nombre en la familia **Sistema operativo** ni en el catálogo, se deja sin cambios y se señala como aviso. Asocie la plataforma, o añada la tecnología, y vuelva a ejecutar. Una dirección principal IPv6 se deja fuera igual, con el aviso «La dirección principal es una dirección IPv6, que todavía no se importa.».
+**Los valores que Kadratis no conoce se omiten, nunca se inventan.** Un estado de ciclo de vida sin equivalente, o un sistema operativo sin correspondencia en **Correspondencias** y sin tecnología de ese nombre en la familia **Sistema operativo** ni en el catálogo, se deja sin cambios y se señala como aviso. Asocie la plataforma, o añada la tecnología, y vuelva a ejecutar. Una dirección principal IPv6 se deja fuera igual, con el aviso «La dirección principal es una dirección IPv6, que todavía no se importa.».
 
 **Las sub-ubicaciones se comparten entre equipos.** Una sub-ubicación es una sola fila en una ubicación, y cada activo colocado ahí apunta a ella. Renombrar la ubicación de Netbox renombra esa única fila, así que todos los equipos que la llevan siguen a la vez, incluidos los que usted mismo haya clasificado ahí. Nada se mueve activo por activo.
 
-**Una sub-ubicación creada a mano se adopta, no se duplica.** Cuando una ubicación de Netbox tiene el mismo nombre que una sub-ubicación que ya usa en esa ubicación, KANAP vincula las dos: su fila conserva su identidad, adopta la grafía de Netbox y queda marcada como **Netbox** a partir de entonces. Sus activos se quedan donde están.
+**Una sub-ubicación creada a mano se adopta, no se duplica.** Cuando una ubicación de Netbox tiene el mismo nombre que una sub-ubicación que ya usa en esa ubicación, Kadratis vincula las dos: su fila conserva su identidad, adopta la grafía de Netbox y queda marcada como **Netbox** a partir de entonces. Sus activos se quedan donde están.
 
 **Nunca se elimina nada.** Una ubicación retirada de Netbox deja su sub-ubicación en su sitio, con los activos que la llevan. Una sub-ubicación vinculada a Netbox sigue siendo editable: renómbrela o elimínela y la siguiente ejecución la vuelve a alinear, creándola de nuevo si un activo todavía la necesita.
 
 **Un equipo sin ubicación conserva su sub-ubicación.** Solo se escribe una ubicación que Netbox comunique de verdad, la misma regla que para cualquier otro campo gestionado. Las máquinas virtuales no reciben ninguna: una máquina virtual de Netbox no lleva ubicación.
 
-**Dos ubicaciones con el mismo nombre en un mismo sitio.** Netbox permite «Sala técnica» y «sala técnica» una junto a otra, KANAP no. La primera que se importa gana, y la otra se señala como aviso. Lo mismo ocurre cuando dos sitios de Netbox están asignados a la misma ubicación y ambos contienen una ubicación con el mismo nombre.
+**Dos ubicaciones con el mismo nombre en un mismo sitio.** Netbox permite «Sala técnica» y «sala técnica» una junto a otra, Kadratis no. La primera que se importa gana, y la otra se señala como aviso. Lo mismo ocurre cuando dos sitios de Netbox están asignados a la misma ubicación y ambos contienen una ubicación con el mismo nombre.
 
 **Si Netbox no devuelve sus ubicaciones**, la ejecución continúa con los equipos y deja todas las sub-ubicaciones intactas, con una nota en la vista previa que lo indica. Una asignación parcial sería peor que ninguna.
 
@@ -215,7 +215,7 @@ Una sincronización nunca pone un activo en **Retirado**. Retirar un equipo es u
 
 **Una ejecución que falla sin parar se detiene.** Después de 10 objetos seguidos que no se han podido guardar, la ejecución se detiene y se declara fallida, en vez de llenar la lista de filas en error y luego anunciar que todo ha ido bien.
 
-**Una lectura parcial no marca nada como ausente.** Si Netbox contiene más páginas de las que KANAP lee en una ejecución, no se señala nada como ausente y un aviso acompaña al resultado.
+**Una lectura parcial no marca nada como ausente.** Si Netbox contiene más páginas de las que Kadratis lee en una ejecución, no se señala nada como ausente y un aviso acompaña al resultado.
 
 **Un reinicio del servidor no bloquea la página.** **Sincronizar ahora** vuelve a funcionar de inmediato; una ejecución interrumpida por el reinicio se declara detenida sin haber terminado.
 
@@ -223,7 +223,7 @@ Una sincronización nunca pone un activo en **Retirado**. Retirar un equipo es u
 
 ## Sincronización automática
 
-Active **Sincronización automática** en la tarjeta de la integración y KANAP ejecuta el mismo trabajo cada hora, aplicando los cambios sin vista previa. El conmutador es por espacio de trabajo, y solo se visitan los espacios de trabajo que lo han activado. El trabajo horario nunca hace la primera importación: empieza cuando usted ha aplicado una sincronización y esta ha terminado sin errores. Hasta entonces el conmutador puede estar activado sin que se ejecute nada. Lo mismo ocurre mientras una revisión no ha terminado: mientras haya objetos esperando su lote, el trabajo horario queda en pausa, porque importaría lo que nadie ha leído. Se reanuda en cuanto una sincronización que usted aplique no deje nada en espera.
+Active **Sincronización automática** en la tarjeta de la integración y Kadratis ejecuta el mismo trabajo cada hora, aplicando los cambios sin vista previa. El conmutador es por espacio de trabajo, y solo se visitan los espacios de trabajo que lo han activado. El trabajo horario nunca hace la primera importación: empieza cuando usted ha aplicado una sincronización y esta ha terminado sin errores. Hasta entonces el conmutador puede estar activado sin que se ejecute nada. Lo mismo ocurre mientras una revisión no ha terminado: mientras haya objetos esperando su lote, el trabajo horario queda en pausa, porque importaría lo que nadie ha leído. Se reanuda en cuanto una sincronización que usted aplique no deje nada en espera.
 
 Los objetos que necesitan una decisión no se resuelven nunca de forma automática. Se acumulan en **Por decidir** y le esperan.
 
@@ -246,7 +246,7 @@ La columna **Tipo** muestra el tipo de activo del activo vinculado, «Servidor f
 | **Por decidir** | Varios activos podrían ser este objeto, dos objetos han llegado al mismo activo, un activo tiene un nombre parecido, o un activo ya lleva la dirección IP del objeto. | **Vincular a...** uno de los candidatos, **Crear un activo**, o **Ignorar**. |
 | **Ausentes de Netbox** | El objeto ha desaparecido de Netbox. El activo queda intacto. | **Marcar el activo como retirado**, **Ignorar**, o dejarlo. |
 | **Errores** | El objeto no se ha podido escribir, con el motivo en la columna Mensaje. | Corrija la causa y vuelva a ejecutar, o **Ignorar** el objeto. |
-| **Ignorados** | Le ha dicho a KANAP que deje este objeto en paz. Se omite en cada ejecución. | **Dejar de ignorar** lo devuelve a la lista. Cuando el registro no contiene nada que decidir, lo retira en su lugar y el objeto se vuelve a evaluar en la siguiente sincronización. |
+| **Ignorados** | Le ha dicho a Kadratis que deje este objeto en paz. Se omite en cada ejecución. | **Dejar de ignorar** lo devuelve a la lista. Cuando el registro no contiene nada que decidir, lo retira en su lugar y el objeto se vuelve a evaluar en la siguiente sincronización. |
 | **Vinculados** | El objeto y el activo están asociados y al día. | Abra cualquiera de los dos lados desde la fila. |
 
 Cada fila enlaza con el objeto en Netbox y con el activo, con su referencia `AST-`.
@@ -255,7 +255,7 @@ Vincular o crear desde esta página aplica los valores de Netbox de inmediato. L
 
 ### Ausentes de Netbox
 
-**KANAP nunca elimina un activo.** Cuando un objeto desaparece de Netbox, el activo, sus vínculos y su historial se quedan exactamente como están, y el objeto se enumera como ausente para que usted decida. **Marcar el activo como retirado** pone el ciclo de vida en Retirado y conserva todo lo demás.
+**Kadratis nunca elimina un activo.** Cuando un objeto desaparece de Netbox, el activo, sus vínculos y su historial se quedan exactamente como están, y el objeto se enumera como ausente para que usted decida. **Marcar el activo como retirado** pone el ciclo de vida en Retirado y conserva todo lo demás.
 
 Se aplican dos salvaguardas. No se señala nada como ausente cuando la llamada a Netbox ha fallado, ni cuando Netbox ha devuelto un inventario vacío: una interrupción no es un desmantelamiento. Y un activo cuyo objeto de Netbox ha desaparecido vuelve a estar libre, así que la misma máquina recreada en Netbox se vincula de nuevo a él en lugar de crear un duplicado.
 
@@ -274,13 +274,13 @@ El widget no molesta cuando no hay nada que hacer: una línea que dice que la si
 | Lo que ve | Lo que suele significar |
 |-----------|-------------------------|
 | Netbox ha rechazado el token de API | El token se truncó al pegarlo, ha caducado, o está restringido a otra dirección. Cree uno nuevo en Netbox y vuelva a guardarlo. |
-| Esta dirección apunta a una red privada | La edición en la nube solo llega a direcciones públicas. Publique Netbox en una dirección que KANAP pueda alcanzar, o ejecute KANAP on-premise junto a él. |
-| No se ha podido comprobar el certificado de Netbox | Netbox presenta un certificado en el que KANAP no confía. Instale un certificado de confianza, o active **Ignorar los errores de certificado** si el certificado es suyo. |
-| El servidor de Netbox no ha respondido a tiempo | Netbox está lento, inaccesible, o detrás de un cortafuegos que descarta la llamada. Compruébelo desde el servidor de KANAP y luego suba el tiempo de espera si la instancia es simplemente grande. |
+| Esta dirección apunta a una red privada | La edición en la nube solo llega a direcciones públicas. Publique Netbox en una dirección que Kadratis pueda alcanzar, o ejecute Kadratis on-premise junto a él. |
+| No se ha podido comprobar el certificado de Netbox | Netbox presenta un certificado en el que Kadratis no confía. Instale un certificado de confianza, o active **Ignorar los errores de certificado** si el certificado es suyo. |
+| El servidor de Netbox no ha respondido a tiempo | Netbox está lento, inaccesible, o detrás de un cortafuegos que descarta la llamada. Compruébelo desde el servidor de Kadratis y luego suba el tiempo de espera si la instancia es simplemente grande. |
 | Los objetos aparecen como omitidos, con el motivo «Rol sin correspondencia» o «Sitio sin correspondencia» | Es lo esperado para todo lo que dejó en **No importar**. Si no debía omitirse, asigne el rol o el sitio y vuelva a ejecutar. |
 | Un aviso dice que un sistema operativo no está en su catálogo | La plataforma de Netbox no tiene correspondencia en **Correspondencias > Sistemas operativos**, y su nombre no coincide con ninguna tecnología de la familia **Sistema operativo** ni con ningún sistema operativo del catálogo. Asóciela en la pestaña Correspondencias, o añada la tecnología en **Panorama IT > Tecnologías**, y vuelva a ejecutar. El sistema operativo se deja sin cambios hasta entonces. |
 | «Netbox no ha devuelto sus plataformas» | El token de API no puede leer las plataformas. Déle permiso sobre `dcim.platform` en Netbox, o déjelo así: los equipos se siguen importando y solo queda fuera la correspondencia de sistemas operativos. |
-| Un activo acaba con el nombre completo de Netbox como nombre de host | El nombre no termina con un sufijo DNS de su lista de dominios, así que KANAP lo conserva tal cual. Es el resultado esperado para un nombre cuyos puntos forman parte del nombre. Si de verdad es un dominio, añádalo en **Panorama IT > Configuración** y vuelva a ejecutar. |
+| Un activo acaba con el nombre completo de Netbox como nombre de host | El nombre no termina con un sufijo DNS de su lista de dominios, así que Kadratis lo conserva tal cual. Es el resultado esperado para un nombre cuyos puntos forman parte del nombre. Si de verdad es un dominio, añádalo en **Panorama IT > Configuración** y vuelva a ejecutar. |
 | La ejecución ha fallado después de unos pocos objetos | Diez objetos seguidos no se han podido guardar, así que la ejecución se ha detenido. La causa suele ser la misma para todos, y los detalles están en el registro del servidor. |
 | «Netbox ha devuelto más páginas de las previstas. Algunos objetos no se han revisado.» | El inventario es más grande de lo que una ejecución lee. Lo leído se aplica, y no se marca nada como ausente. Reduzca el alcance en **Correspondencias** para que la ejecución cubra lo que le importa. |
 | Una sub-ubicación avisa de que su nombre ya está en uso | Dos ubicaciones de Netbox de ese sitio comparten el nombre, o dos sitios asignados apuntan a la misma ubicación y cada uno contiene una ubicación con ese nombre. Renombre una de ellas en Netbox, o fusiónelas allí. Los equipos se importan en cualquier caso, sin sub-ubicación. |

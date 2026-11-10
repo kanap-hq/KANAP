@@ -1,13 +1,13 @@
 ---
-title: "Votre budget IT dans KANAP en dix minutes : commencer avec vos données"
+title: "Votre budget IT dans Kadratis en dix minutes : commencer avec vos données"
 description: Les cinq pas du parcours budget IT sur vos propres données, de votre société à votre premier rapport, puis un collègue.
 ---
 
-# Votre budget IT dans KANAP en dix minutes
+# Votre budget IT dans Kadratis en dix minutes
 
 [Découvrir avec l'exemple](budget-example.md) · **Commencer avec mes données**
 
-En dix minutes, votre société, vos lignes budgétaires et un contrat sont dans KANAP, votre premier rapport tourne sur vos chiffres, et un collègue peut les lire. Commencer avec vos données efface l'exemple : ce que vous voyez à la fin vient de vous.
+En dix minutes, votre société, vos lignes budgétaires et un contrat sont dans Kadratis, votre premier rapport tourne sur vos chiffres, et un collègue peut les lire. Commencer avec vos données efface l'exemple : ce que vous voyez à la fin vient de vous.
 
 Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le parcours **Le budget IT** avec **Commencer avec mes données**. Chaque pas de la tuile ouvre son écran avec une courte indication. Un pas qui crée quelque chose est marqué comme fait dès que cet élément existe dans l'espace. Pour **Votre société** et **Votre premier rapport**, cliquez sur **Fait** dans l'indication, ou sur la marque à côté du pas. Voir [Essai : votre parcours et vos premiers pas](../my-dashboard.md#trial-first-steps).
 
@@ -56,10 +56,10 @@ Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le
 
 ## Et ensuite
 
-Votre budget IT est dans KANAP. Les deux autres parcours prennent aussi dix minutes, sur vos données :
+Votre budget IT est dans Kadratis. Les deux autres parcours prennent aussi dix minutes, sur vos données :
 
-- [Votre système d'information dans KANAP en dix minutes](landscape-own-data.md)
-- [Votre portefeuille dans KANAP en dix minutes](portfolio-own-data.md)
+- [Votre système d'information dans Kadratis en dix minutes](landscape-own-data.md)
+- [Votre portefeuille dans Kadratis en dix minutes](portfolio-own-data.md)
 
 Une fois les cinq pas faits, la tuile propose ces parcours. Pendant l'essai, elle propose aussi **Planifier un appel découverte**.
 

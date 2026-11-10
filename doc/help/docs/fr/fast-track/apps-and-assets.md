@@ -10,7 +10,7 @@ Ce guide vous accompagne dans la documentation d'une application et de son infra
 !!! tip "Conseil : Vous préférez un résumé sur une page ? :material-file-pdf-box:"
     Toutes les étapes clés sur une seule page A4 : imprimez-la, épinglez-la, partagez-la avec votre équipe.
 
-    [:material-download: Télécharger l'aide-mémoire (PDF)](downloads/kanap-itops-fast-track.pdf){ .md-button .md-button--primary }
+    [:material-download: Télécharger l'aide-mémoire (PDF)](downloads/kadratis-itops-fast-track.pdf){ .md-button .md-button--primary }
 
 Pour tous les détails, consultez la documentation de référence des [Applications](../applications.md) et [Actifs](../assets.md).
 
@@ -20,12 +20,12 @@ Pour tous les détails, consultez la documentation de référence des [Applicati
 
 ![Vue d'ensemble Application vers Serveur](images/app-to-server-overview.png)
 
-Tout dans le module Cartographie SI de KANAP se connecte pour dresser un tableau complet de votre paysage :
+Tout dans le module Cartographie SI de Kadratis se connecte pour dresser un tableau complet de votre paysage :
 
 | Objet | Ce qu'il représente |
 |-------|---------------------|
 | **Application** | Une app métier ou un service IT que vous devez documenter |
-| **Environnement** | Où elle fonctionne : Prod, QA, Dev, etc. (appelé « Déploiements » dans KANAP) |
+| **Environnement** | Où elle fonctionne : Prod, QA, Dev, etc. (appelé « Déploiements » dans Kadratis) |
 | **Serveur (Actif)** | L'infrastructure qui l'héberge : VMs, serveurs physiques, conteneurs |
 
 La chaîne est simple : **Application > Environnement > Serveur**. À la fin de ce guide, vous aurez cette chaîne entièrement documentée.
@@ -96,7 +96,7 @@ Les membres de l'équipe IT responsables de l'exploitation technique et du suppo
 
 ### Audience (optionnel)
 
-Sous **Audience**, choisissez la **Société** et les **Départements** qui utilisent cette application. KANAP calcule le nombre d'utilisateurs à partir de vos données de référence, ou vous pouvez passer le calcul en manuel et saisir le nombre vous-même.
+Sous **Audience**, choisissez la **Société** et les **Départements** qui utilisent cette application. Kadratis calcule le nombre d'utilisateurs à partir de vos données de référence, ou vous pouvez passer le calcul en manuel et saisir le nombre vous-même.
 
 !!! warning "Pourquoi les responsables comptent"
     La responsabilité permet de **joindre les bonnes personnes** quand c'est important : maintenance planifiée, interruptions de service, décisions de mise à niveau, renouvellements de licences. Elle alimente aussi les filtres de périmètre **Mes apps** et **Apps de mon équipe** de la liste principale. Sans responsables, l'app n'est visible que dans la vue « Toutes les apps », ce qui signifie que personne ne s'en sent responsable et que personne n'est notifié.

@@ -95,7 +95,7 @@ Las plantillas de fases proporcionan:
 - Hitos opcionales vinculados a cada fase
 
 **Plantillas del sistema**:
-- Plantillas predefinidas proporcionadas por KANAP
+- Plantillas predefinidas proporcionadas por Kadratis
 - Marcadas con una etiqueta "Sistema"
 - Se pueden editar pero proporcionan valores predeterminados razonables
 
@@ -178,7 +178,7 @@ Categoría (por ejemplo, «Transformación digital»)
 - Use el interruptor de una categoría o de una línea
 - Un elemento desactivado no aparece en los desplegables de selección
 
-Eliminar una categoría elimina sus líneas. KANAP lo indica antes de la confirmación.
+Eliminar una categoría elimina sus líneas. Kadratis lo indica antes de la confirmación.
 
 ### Tipos de tarea
 
@@ -193,11 +193,11 @@ Los tipos de tarea son la lista que se usa en las tareas del portafolio. Consult
 - Use el interruptor
 - Un tipo de tarea desactivado no aparece en los desplegables de selección
 
-Un tipo de tarea que las tareas todavía usan no se puede eliminar. KANAP lo indica antes de la confirmación y cuenta las tareas que lo usan. Desactívelo.
+Un tipo de tarea que las tareas todavía usan no se puede eliminar. Kadratis lo indica antes de la confirmación y cuenta las tareas que lo usan. Desactívelo.
 
 **Elementos del sistema**:
 - Los orígenes, las categorías y los tipos de tarea marcados como **Sistema** se pueden editar o desactivar. No se pueden eliminar.
-- Un origen, una categoría o una línea que todavía usan solicitudes o proyectos no se puede eliminar. Lo mismo vale para un tipo de tarea que las tareas todavía usan. KANAP lo indica antes de la confirmación y cuenta lo que lo usa. Desactívelo.
+- Un origen, una categoría o una línea que todavía usan solicitudes o proyectos no se puede eliminar. Lo mismo vale para un tipo de tarea que las tareas todavía usan. Kadratis lo indica antes de la confirmación y cuenta lo que lo usa. Desactívelo.
 
 ### Buenas prácticas
 

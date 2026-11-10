@@ -56,9 +56,9 @@ The list shows all companies for your workspace. Use it to review key informatio
 **Metric values**:
 
 - A metric that was never entered for the year shows **—**. A zero that was entered shows **0**
-- Numbers follow the language of KANAP: a decimal comma in French, German and Spanish, a decimal point in English
+- Numbers follow the language of Kadratis: a decimal comma in French, German and Spanish, a decimal point in English
 - The turnover of each row is in the company's base currency. The **Total** row is in the reporting currency: each turnover is converted at the rates of the year. When the default budget column of the year is frozen, those are the rates it fixed. Otherwise they are the current rates (see [Currency Settings](currencies.md))
-- When a currency has no rate for the year, the turnover of the companies in that currency is left out of the total, and the total names the currency and the number of companies left out. KANAP fetches the missing rate in the background. A [manual rate](currencies.md#manual-rates) fixes it at once
+- When a currency has no rate for the year, the turnover of the companies in that currency is left out of the total, and the total names the currency and the number of companies left out. Kadratis fetches the missing rate in the background. A [manual rate](currencies.md#manual-rates) fixes it at once
 
 **Actions**:
 
@@ -135,7 +135,7 @@ The Details tab manages **yearly metrics**. Use the year tabs at the top to swit
 **How it works**:
 
 - Each value is saved for the selected year when you leave the field (or press Enter). A value that is not valid shows a message under the field, for example "Enter a whole number, 0 or more." The field goes back to the stored value, and the message stays until you type again
-- Numbers follow the language of KANAP: type `12,5` in French, German or Spanish and `12.5` in English
+- Numbers follow the language of Kadratis: type `12,5` in French, German or Spanish and `12.5` in English
 - Each year is stored on its own: switching years loads that year's values
 - If the company figures for the year are **frozen**, the fields are locked and a notice says that a budget administrator can unfreeze them (**Budget management > Administration > Freeze master data**)
 - You need `companies:member` to edit metrics
@@ -179,7 +179,7 @@ Use the **End of validity** to control when a company stops being active.
 
 A company administrator (`companies:admin`) can delete a company from its page with **Delete**, or several from the list with **Delete Selected**.
 
-- KANAP checks first. When something uses the company, the dialog says what, for example "This company is used by 2 departments and 14 users. Disable it instead of deleting it.", and offers only **Close**. Disable the company instead (see [Status and lifecycle](#status-and-lifecycle))
+- Kadratis checks first. When something uses the company, the dialog says what, for example "This company is used by 2 departments and 14 users. Disable it instead of deleting it.", and offers only **Close**. Disable the company instead (see [Status and lifecycle](#status-and-lifecycle))
 - Otherwise the dialog asks for confirmation: "This cannot be undone." **Delete** deletes the company with its yearly metrics and returns to the list
 - A deleted company leaves the **Recently Viewed** tile of [My Dashboard](my-dashboard.md#recently-viewed)
 

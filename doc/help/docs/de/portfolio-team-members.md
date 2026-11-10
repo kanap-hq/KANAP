@@ -123,7 +123,7 @@ Jede Änderung wird automatisch gespeichert. Ein kurzer Hinweis „Speichern… 
 ### Eigenschaftenbereich
 
 **Position**
-Die Position der Person, dieselbe, die überall dort erscheint, wo sie in KANAP auftaucht: im Organigramm, in ihrem Benutzerdatensatz, in ihrem Profil. Es ist keine Bezeichnung nur für das Portfolio: Wer sie hier ändert, ändert sie überall. Tippen Sie sie ein und klicken Sie daneben, um zu speichern.
+Die Position der Person, dieselbe, die überall dort erscheint, wo sie in Kadratis auftaucht: im Organigramm, in ihrem Benutzerdatensatz, in ihrem Profil. Es ist keine Bezeichnung nur für das Portfolio: Wer sie hier ändert, ändert sie überall. Tippen Sie sie ein und klicken Sie daneben, um zu speichern.
 
 Ihre eigene können Sie immer setzen. Die einer anderen Person zu setzen erfordert die Stufe **Administrator** für Benutzer; ohne dieses Recht sehen Sie den Wert weiterhin, das Feld ist aber schreibgeschützt.
 
@@ -135,7 +135,7 @@ Weisen Sie diesen Mitwirkenden einem Team zu. Teams sind Organisationsgruppen, d
 **Vorgesetzter**
 Die Person, an die dieser Mitwirkende berichtet. Klicken Sie auf das Feld, suchen Sie nach dem Namen und wählen Sie eine beliebige Person Ihrer Organisation aus. Der Vorgesetzte muss selbst kein Mitwirkender sein. Mit **Löschen** entfernen Sie die Verknüpfung. Ein Mitwirkender kann nicht sein eigener Vorgesetzter sein, und Sie können niemanden auswählen, der bereits an ihn berichtet, weder direkt noch über eine Kette von Vorgesetzten.
 
-Stammt der Vorgesetzte aus Microsoft Entra, ist das Feld schreibgeschützt und zeigt darunter **Aus Microsoft Entra**. Ändern Sie ihn in Ihrem Verzeichnis, nicht hier; die nächtliche Synchronisierung überträgt die Änderung. Ein Vorgesetzter ohne KANAP-Konto wird übersprungen, bis er eines hat, und das Feld behält so lange seinen aktuellen Wert.
+Stammt der Vorgesetzte aus Microsoft Entra, ist das Feld schreibgeschützt und zeigt darunter **Aus Microsoft Entra**. Ändern Sie ihn in Ihrem Verzeichnis, nicht hier; die nächtliche Synchronisierung überträgt die Änderung. Ein Vorgesetzter ohne Kadratis-Konto wird übersprungen, bis er eines hat, und das Feld behält so lange seinen aktuellen Wert.
 
 Einmal gesetzt, erscheint der Name des Vorgesetzten auch in der Kopfzeile des Arbeitsbereichs; ein Klick öffnet dessen Mitwirkenden-Profil, sofern vorhanden. Dieses Feld ist nur beim Bearbeiten des Profils eines anderen Mitwirkenden sichtbar (nicht Ihres eigenen).
 

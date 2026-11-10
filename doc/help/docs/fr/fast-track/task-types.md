@@ -1,16 +1,16 @@
 ---
 title: "Fast Track Types de tâches : Run, Build & Tâches"
-description: Comprendre les différents types d'éléments de travail dans KANAP (incidents, problèmes, demandes, projets, bugs et tâches) et comment travailler avec les tâches au quotidien.
+description: Comprendre les différents types d'éléments de travail dans Kadratis (incidents, problèmes, demandes, projets, bugs et tâches) et comment travailler avec les tâches au quotidien.
 ---
 
 # Fast Track Types de tâches : Run, Build & Tâches
 
-Ce guide explique les différents types d'éléments de travail suivis dans KANAP et comment les distinguer. Il couvre le Run (faire tourner les systèmes), le Build (les améliorer) et la tâche transversale qui relie les deux. La seconde moitié est un aide-mémoire pratique pour travailler avec les tâches au quotidien.
+Ce guide explique les différents types d'éléments de travail suivis dans Kadratis et comment les distinguer. Il couvre le Run (faire tourner les systèmes), le Build (les améliorer) et la tâche transversale qui relie les deux. La seconde moitié est un aide-mémoire pratique pour travailler avec les tâches au quotidien.
 
 !!! tip "Conseil : Vous préférez un résumé sur une page ? :material-file-pdf-box:"
     Toutes les définitions clés sur une seule page A4 : imprimez-la, épinglez-la, partagez-la avec votre équipe.
 
-    [:material-download: Télécharger l'aide-mémoire (PDF)](downloads/kanap-task-types-fast-track.pdf){ .md-button .md-button--primary }
+    [:material-download: Télécharger l'aide-mémoire (PDF)](downloads/kadratis-task-types-fast-track.pdf){ .md-button .md-button--primary }
 
 ---
 
@@ -112,7 +112,7 @@ Un **défaut trouvé dans un système en cours de développement**.
 
 ## Transversal : La Tâche
 
-Les tâches sont l'**unité atomique de travail** dans KANAP. Elles traversent la frontière Run/Build.
+Les tâches sont l'**unité atomique de travail** dans Kadratis. Elles traversent la frontière Run/Build.
 
 ### Tâche
 
@@ -234,7 +234,7 @@ Toutes les fonctionnalités ne sont pas disponibles dans chaque contexte. Voici 
 
 ### Valeurs de classification par défaut
 
-Lorsque vous créez une **tâche autonome**, KANAP pré-remplit les champs de classification (Source, Catégorie, Flux, Société) depuis les paramètres par défaut de votre organisation, ce qui vous épargne quelques clics. Pour les **tâches projet**, les valeurs de classification par défaut proviennent du projet parent mais peuvent être modifiées indépendamment sur chaque tâche.
+Lorsque vous créez une **tâche autonome**, Kadratis pré-remplit les champs de classification (Source, Catégorie, Flux, Société) depuis les paramètres par défaut de votre organisation, ce qui vous épargne quelques clics. Pour les **tâches projet**, les valeurs de classification par défaut proviennent du projet parent mais peuvent être modifiées indépendamment sur chaque tâche.
 
 ---
 
@@ -258,7 +258,7 @@ La liste de ce guide est un point de départ. Adaptez-la à la façon dont votre
 - [Lignes budgétaires](../budget-lines.md) : gestion des lignes OPEX et CAPEX et de leurs tâches
 - [Contrats](../contracts.md) : gestion des contrats et de leurs tâches
 - [Projets du portefeuille](../portfolio-projects.md) : livraison de projet, phases, suivi de charge et tâches au niveau projet
-- [Premiers pas](getting-started.md) : si vous êtes nouveau dans KANAP
+- [Premiers pas](getting-started.md) : si vous êtes nouveau dans Kadratis
 
 !!! success "Vous êtes prêt"
-    Vous comprenez maintenant comment KANAP catégorise le travail et comment utiliser les tâches au quotidien. En cas de doute sur le bon type d'élément de travail, demandez-vous : **est-ce que ça maintient les choses en fonctionnement (Run), ou est-ce que ça les améliore (Build) ?** Puis choisissez le type correspondant. Pour tout le reste, il y a la Tâche.
+    Vous comprenez maintenant comment Kadratis catégorise le travail et comment utiliser les tâches au quotidien. En cas de doute sur le bon type d'élément de travail, demandez-vous : **est-ce que ça maintient les choses en fonctionnement (Run), ou est-ce que ça les améliore (Build) ?** Puis choisissez le type correspondant. Pour tout le reste, il y a la Tâche.

@@ -1,16 +1,16 @@
 ---
-title: "Getting Started: Your First 10 Minutes in KANAP"
+title: "Getting Started: Your First 10 Minutes in Kadratis"
 description: A quick onboarding guide for all users. Dashboard, profile, tasks, notifications, and key concepts to feel at home fast.
 ---
 
-# Getting Started: Your First 10 Minutes in KANAP
+# Getting Started: Your First 10 Minutes in Kadratis
 
-Welcome to KANAP. This guide walks you through everything you need to feel productive on day one, regardless of your role. No admin knowledge required, no module-specific deep dives. Just the essentials to get comfortable.
+Welcome to Kadratis. This guide walks you through everything you need to feel productive on day one, regardless of your role. No admin knowledge required, no module-specific deep dives. Just the essentials to get comfortable.
 
 !!! tip "Prefer a one-page summary? :material-file-pdf-box:"
     All the key steps on a single A4 page: print it, pin it, share it with your team.
 
-    [:material-download: Download the cheat sheet (PDF)](downloads/kanap-getting-started.pdf){ .md-button .md-button--primary }
+    [:material-download: Download the cheat sheet (PDF)](downloads/kadratis-getting-started.pdf){ .md-button .md-button--primary }
 
 For role-specific workflows, see the [Portfolio Fast Track](index.md) and [IT Ops Fast Track](apps-and-assets.md).
 
@@ -18,11 +18,11 @@ For role-specific workflows, see the [Portfolio Fast Track](index.md) and [IT Op
 
 ## The Big Picture
 
-KANAP is organized around a simple structure. The top bar shows the sections you have access to:
+Kadratis is organized around a simple structure. The top bar shows the sections you have access to:
 
 | Area | What it contains |
 |------|-----------------|
-| **Dashboard** | Your personal hub. Click the KANAP logo or navigate to `/` |
+| **Dashboard** | Your personal hub. Click the Kadratis logo or navigate to `/` |
 | **Portfolio** | Tasks, Requests, Projects, Planning, Reporting, Contributors |
 | **IT Landscape** | Applications, Interfaces, Interface Map, Assets, Connections, Connection Map, Administration zones, Locations, Technologies, Incidents, End of support, Vulnerabilities, Settings (lists and Netbox) |
 | **Knowledge** | Documents and templates with review workflows |
@@ -84,10 +84,10 @@ Update your personal information:
 - **Job Title**
 - **Business Phone** / **Mobile Phone**
 
-If your account has no name yet, KANAP asks for your first and last name after you sign in. **Later** hides the question in this browser.
+If your account has no name yet, Kadratis asks for your first and last name after you sign in. **Later** hides the question in this browser.
 
 !!! info "SSO users"
-    If your organization uses Microsoft Entra ID (SSO), some fields are synced automatically and can't be edited in KANAP.
+    If your organization uses Microsoft Entra ID (SSO), some fields are synced automatically and can't be edited in Kadratis.
 
 ### Notifications tab
 
@@ -132,7 +132,7 @@ You can also toggle the theme quickly from the top bar using the theme icon (sun
 
 ## Step 3: Understand Scope Filters
 
-This is the single most important concept for new users. Every major list in KANAP (Tasks, Apps, Projects, Requests) has a **scope filter** at the top:
+This is the single most important concept for new users. Every major list in Kadratis (Tasks, Apps, Projects, Requests) has a **scope filter** at the top:
 
 | Scope | What it shows |
 |-------|--------------|
@@ -211,7 +211,7 @@ For project tasks, time logging is essential: it feeds the roadmap generator and
 
 ### Share a task
 
-Need to loop someone in? Click **Share** in the task header to email a direct link to any colleague, even people outside KANAP. Add a personal message if needed.
+Need to loop someone in? Click **Share** in the task header to email a direct link to any colleague, even people outside Kadratis. Add a personal message if needed.
 
 !!! info "Share works everywhere"
     This isn't just for tasks. You can send links to projects, requests, contracts, apps: any workspace object. It's the fastest way to point someone to the right place.
@@ -220,7 +220,7 @@ Need to loop someone in? Click **Share** in the task header to email a direct li
 
 ## Step 5: Set Up Your Contributor Profile
 
-Your Contributor profile tells KANAP who you are in terms of project planning. It's separate from your user account. It's about **team, availability, and skills**.
+Your Contributor profile tells Kadratis who you are in terms of project planning. It's separate from your user account. It's about **team, availability, and skills**.
 
 Navigate to **Portfolio → Contributors** and find your name (or ask your admin to add you).
 
@@ -289,7 +289,7 @@ The weekly email and real-time notifications keep you in the loop without checki
 
 | I want to… | Go to… |
 |------------|--------|
-| See my overview | Dashboard (click KANAP logo) |
+| See my overview | Dashboard (click Kadratis logo) |
 | Create a task quickly | Dashboard → Create Task button |
 | Log time quickly | Dashboard → Log Time button |
 | Start a new document | Dashboard → New Document button |
@@ -299,7 +299,7 @@ The weekly email and real-time notifications keep you in the loop without checki
 | Set up notifications | Avatar → My Profile → Notifications tab |
 | Configure weekly email | Avatar → My Profile → Notifications tab → Weekly Review |
 | Change theme (light/dark) | Avatar → My Profile → Appearance tab |
-| See the version or get support | Avatar → About KANAP |
+| See the version or get support | Avatar → About Kadratis |
 | Set my availability | Portfolio → Contributors → your name |
 | Add my skills | Portfolio → Contributors → your name → Skills tab |
 | Share a link to anything | Open any workspace → Share |
@@ -308,4 +308,4 @@ The weekly email and real-time notifications keep you in the loop without checki
 ---
 
 !!! success "You're ready"
-    You now know how to navigate KANAP, manage your tasks, configure your profile and notifications, and set up your contributor profile. Start with your dashboard each morning, keep your tasks updated, and log time regularly. The rest will follow naturally.
+    You now know how to navigate Kadratis, manage your tasks, configure your profile and notifications, and set up your contributor profile. Start with your dashboard each morning, keep your tasks updated, and log time regularly. The rest will follow naturally.

@@ -193,7 +193,7 @@ Detailansicht der Leistungsverrechnungs-Zuordnungen eines einzelnen Unternehmens
 
 **Unternehmens-Zusammenfassungskarte**: Unternehmensname, Gesamtbetrag, Berichtswährung, Mitarbeiterzahl, IT-Benutzer, Kosten pro Benutzer, Kosten pro IT-Benutzer und IT-Kosten vs. Umsatz.
 
-**Umsatz in den Leistungsverrechnungsberichten**: Jedes Unternehmen erfasst seinen Umsatz in Millionen seiner Basiswährung. Beide Berichte rechnen ihn zu den Kursen der Budgetversion des Jahres in die Berichtswährung um, wie die Beträge. Der Umsatz, das Verhältnis IT-Kosten vs. Umsatz und der Gesamtumsatz der KPI-Tabellen verwenden den umgerechneten Wert. Hat eine Währung für das Jahr keinen Kurs, bleiben die Unternehmen in dieser Währung aus den Umsatzkennzahlen heraus, und eine Warnung oben im Bericht nennt jedes von ihnen. Das globale Verhältnis IT-Kosten vs. Umsatz wird dann nur über die Unternehmen berechnet, deren Umsatz umgerechnet wurde, bei den Kosten wie beim Umsatz. KANAP ruft den fehlenden Kurs im Hintergrund ab.
+**Umsatz in den Leistungsverrechnungsberichten**: Jedes Unternehmen erfasst seinen Umsatz in Millionen seiner Basiswährung. Beide Berichte rechnen ihn zu den Kursen der Budgetversion des Jahres in die Berichtswährung um, wie die Beträge. Der Umsatz, das Verhältnis IT-Kosten vs. Umsatz und der Gesamtumsatz der KPI-Tabellen verwenden den umgerechneten Wert. Hat eine Währung für das Jahr keinen Kurs, bleiben die Unternehmen in dieser Währung aus den Umsatzkennzahlen heraus, und eine Warnung oben im Bericht nennt jedes von ihnen. Das globale Verhältnis IT-Kosten vs. Umsatz wird dann nur über die Unternehmen berechnet, deren Umsatz umgerechnet wurde, bei den Kosten wie beim Umsatz. Kadratis ruft den fehlenden Kurs im Hintergrund ab.
 
 **Abteilungs-Summen** (wenn aktiviert):
 
@@ -572,9 +572,9 @@ Eine angeheftete Zeile **Gesamt** zeigt für jedes Paar die Tage gesamt, die Kos
 
 ## Den Assistenten fragen
 
-[Plaid](ai-assistant.md) liefert die Zahlen dieser Berichte, mit denselben Rechten: Konsolidierungskonten, Top Anstieg / Rückgang (standardmäßig 10 Zeilen), Personal nach Monat (jeder Monat, der Durchschnitt und die Spitze), Kosten pro VZÄ, Globale Leistungsverrechnung und Leistungsverrechnung pro Unternehmen. Es misst auch mehrere Spalten oder Jahre in einer Antwort, zum Beispiel das Budget jedes Lieferanten über drei Jahre. Bei der Leistungsverrechnung deckt es OPEX und CAPEX ab, wenn Sie keinen der beiden nennen, und wiederholt die Warnungen des Berichts. Fragen Sie zum Beispiel: „Welche Zeilen steigen vom Budget 2026 zur Revision am stärksten?“ oder „Wie viel wird jedem Unternehmen 2026 verrechnet, und wie viel zahlt jedes?“
+[Kad](ai-assistant.md) liefert die Zahlen dieser Berichte, mit denselben Rechten: Konsolidierungskonten, Top Anstieg / Rückgang (standardmäßig 10 Zeilen), Personal nach Monat (jeder Monat, der Durchschnitt und die Spitze), Kosten pro VZÄ, Globale Leistungsverrechnung und Leistungsverrechnung pro Unternehmen. Es misst auch mehrere Spalten oder Jahre in einer Antwort, zum Beispiel das Budget jedes Lieferanten über drei Jahre. Bei der Leistungsverrechnung deckt es OPEX und CAPEX ab, wenn Sie keinen der beiden nennen, und wiederholt die Warnungen des Berichts. Fragen Sie zum Beispiel: „Welche Zeilen steigen vom Budget 2026 zur Revision am stärksten?“ oder „Wie viel wird jedem Unternehmen 2026 verrechnet, und wie viel zahlt jedes?“
 
-Plaid liest alle Budgetzeilen, auch beendete. Die Budgetberichte lesen die Zeilen, die am 1. Januar des Jahres vor dem ersten angezeigten Jahr noch aktiv sind. Eine früher beendete Zeile zählt daher in der Antwort von Plaid und nicht im Bericht.
+Kad liest alle Budgetzeilen, auch beendete. Die Budgetberichte lesen die Zeilen, die am 1. Januar des Jahres vor dem ersten angezeigten Jahr noch aktiv sind. Eine früher beendete Zeile zählt daher in der Antwort von Kad und nicht im Bericht.
 
 ## Gemeinsame Funktionen
 
@@ -586,7 +586,7 @@ Jeder Bericht bietet diese Funktionen über die gemeinsame Symbolleiste:
 - **Diagramm als PNG exportieren** (Bild-Symbol): Lädt das Diagramm als PNG-Bild herunter
 - **Drucken / Als PDF speichern** (Druck-Symbol): Öffnet den Browser-Druckdialog. Sie können auch `?print=1` an jede Bericht-URL anhängen, um den Druck beim Laden automatisch auszulösen.
 
-KANAP erstellt die Tabellendatei aus denselben Zahlen wie die Oberfläche, mit den angezeigten Filtern:
+Kadratis erstellt die Tabellendatei aus denselben Zahlen wie die Oberfläche, mit den angezeigten Filtern:
 
 - **Werte**: Beträge behalten ihre Cents, VZÄ und Tage ihre Nachkommastellen, Anteile sind Prozentwerte. Die Oberfläche rundet sie zum Lesen; die Datei behält die Werte, sodass eine Summe in Excel dem Bericht entspricht.
 - **Reihenfolge**: Die Zeilen folgen der eigenen Reihenfolge des Berichts. Eine Sortierung per Klick auf einen Spaltenkopf bleibt auf dem Bildschirm.

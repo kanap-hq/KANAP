@@ -8,7 +8,7 @@ Navigate to **IT Landscape > Connections** to see your connection registry. To c
 
 1. Click **Add connection**. The connection page opens with an empty title in the header. The rest of the page is dimmed.
 2. Type a descriptive name.
-3. Press Enter, or click outside the title. KANAP creates the connection at once, server to server, without protocols or endpoints. Its reference (`CONN-12`) shows and all tabs open.
+3. Press Enter, or click outside the title. Kadratis creates the connection at once, server to server, without protocols or endpoints. Its reference (`CONN-12`) shows and all tabs open.
 
 Each field then saves on its own. A connection needs:
   - **Topology**: Server to server or Multi-server
@@ -23,7 +23,7 @@ Press Escape on the empty title to leave without creating anything.
 
 While the connection is being created, its header shows **Create** and **Cancel**. They stay until you leave the connection.
 
-- **Create** checks that the connection has at least one protocol and both endpoints, or two servers for a multi-server connection. A message names what is missing, and the first missing field gets the focus. When nothing is missing, KANAP keeps the connection and closes it. You go back to where you started
+- **Create** checks that the connection has at least one protocol and both endpoints, or two servers for a multi-server connection. A message names what is missing, and the first missing field gets the focus. When nothing is missing, Kadratis keeps the connection and closes it. You go back to where you started
 - **Cancel** deletes the connection. If you entered more than the name, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete connections
 
 Leaving the connection another way while something is missing asks what to do. **Complete it** keeps you on the connection, on the first missing field. **Delete it** deletes the connection.
@@ -85,7 +85,7 @@ A source, a destination, a server of a multi-server connection or the equipment 
 
 The pickers mark a cluster with an icon and list its members under its name.
 
-When you pick a server that belongs to a cluster, KANAP asks **Connect to the cluster?**. **Connect to the cluster** puts the cluster on the connection, for all its members. **This server only** keeps the server. KANAP does not ask when the other side is already that cluster or one of its members: the connection stays on the server.
+When you pick a server that belongs to a cluster, Kadratis asks **Connect to the cluster?**. **Connect to the cluster** puts the cluster on the connection, for all its members. **This server only** keeps the server. Kadratis does not ask when the other side is already that cluster or one of its members: the connection stays on the server.
 
 A multi-server list that holds a cluster and one of its members keeps the cluster only. A message names the members removed from the list. A list must keep at least two servers.
 

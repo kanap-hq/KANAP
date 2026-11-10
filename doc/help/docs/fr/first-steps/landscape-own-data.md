@@ -1,13 +1,13 @@
 ---
-title: "Votre système d'information dans KANAP en dix minutes : commencer avec vos données"
+title: "Votre système d'information dans Kadratis en dix minutes : commencer avec vos données"
 description: Les cinq pas du parcours cartographie du SI sur vos propres données, de vos sites à vos serveurs, puis un collègue.
 ---
 
-# Votre système d'information dans KANAP en dix minutes
+# Votre système d'information dans Kadratis en dix minutes
 
 [Découvrir avec l'exemple](landscape-example.md) · **Commencer avec mes données**
 
-En dix minutes, vos sites, vos applications, leurs technologies et vos serveurs sont dans KANAP, vos premières dates de fin de support s'affichent, et un collègue peut tenir la cartographie à jour. Commencer avec vos données efface l'exemple : ce que vous voyez à la fin vient de vous.
+En dix minutes, vos sites, vos applications, leurs technologies et vos serveurs sont dans Kadratis, vos premières dates de fin de support s'affichent, et un collègue peut tenir la cartographie à jour. Commencer avec vos données efface l'exemple : ce que vous voyez à la fin vient de vous.
 
 Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le parcours **La cartographie du SI** avec **Commencer avec mes données**. Chaque pas de la tuile ouvre son écran avec une courte indication. Chaque pas crée quelque chose et est marqué comme fait dès que cet élément existe dans l'espace. Pour marquer comme fait un pas que vous sautez, cliquez sur la marque à côté. Voir [Essai : votre parcours et vos premiers pas](../my-dashboard.md#trial-first-steps).
 
@@ -36,7 +36,7 @@ Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le
 
 **Le geste.** Cliquez sur **Nouvelle technologie** et choisissez un produit dans le **Catalogue**, par exemple votre base de données. Ouvrez ensuite une application, onglet **Exploitation**, et sous **Technologies** cliquez sur **Ajouter** pour lier la technologie à sa version.
 
-**Ce que vous lisez.** Votre espace de travail contient déjà Windows Server et Ubuntu. Une technologie prise dans le catalogue arrive avec ses versions et leurs dates de fin de support, que KANAP tient à jour. La fin de support s'affiche alors sur l'application, et **Cartographie SI > Fins de support** liste ce qui l'atteint.
+**Ce que vous lisez.** Votre espace de travail contient déjà Windows Server et Ubuntu. Une technologie prise dans le catalogue arrive avec ses versions et leurs dates de fin de support, que Kadratis tient à jour. La fin de support s'affiche alors sur l'application, et **Cartographie SI > Fins de support** liste ce qui l'atteint.
 
 ## 4. Vos serveurs
 
@@ -56,10 +56,10 @@ Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le
 
 ## Et ensuite
 
-Votre système d'information est dans KANAP. Les deux autres parcours prennent aussi dix minutes, sur vos données :
+Votre système d'information est dans Kadratis. Les deux autres parcours prennent aussi dix minutes, sur vos données :
 
-- [Votre budget IT dans KANAP en dix minutes](budget-own-data.md)
-- [Votre portefeuille dans KANAP en dix minutes](portfolio-own-data.md)
+- [Votre budget IT dans Kadratis en dix minutes](budget-own-data.md)
+- [Votre portefeuille dans Kadratis en dix minutes](portfolio-own-data.md)
 
 Une fois les cinq pas faits, la tuile propose ces parcours. Pendant l'essai, elle propose aussi **Planifier un appel découverte**.
 

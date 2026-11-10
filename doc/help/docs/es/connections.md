@@ -8,7 +8,7 @@ Navegue a **Panorama IT > Conexiones** para ver su registro de conexiones. Para 
 
 1. Haga clic en **Añadir conexión**. La página de la conexión se abre con un título vacío en el encabezado. El resto de la página aparece atenuado.
 2. Escriba un nombre descriptivo.
-3. Pulse Intro o haga clic fuera del título. KANAP crea la conexión de inmediato, de servidor a servidor, sin protocolos ni endpoints. Su referencia (`CONN-12`) aparece y se abren todas las pestañas.
+3. Pulse Intro o haga clic fuera del título. Kadratis crea la conexión de inmediato, de servidor a servidor, sin protocolos ni endpoints. Su referencia (`CONN-12`) aparece y se abren todas las pestañas.
 
 Después, cada campo se guarda por sí solo. Una conexión necesita:
   - **Topología**: Servidor a servidor o Multi-servidor
@@ -23,10 +23,10 @@ Pulse Escape en el título vacío para salir sin crear nada.
 
 Mientras la conexión se está creando, su encabezado muestra **Crear** y **Cancelar**. Permanecen hasta que salga de la conexión.
 
-- **Crear** comprueba que la conexión tenga al menos un protocolo y sus dos endpoints, o dos servidores en una conexión multi-servidor. Un mensaje indica lo que falta, y el primer campo que falta recibe el foco. Cuando no falta nada, KANAP conserva la conexión y la cierra. Vuelve al punto de partida
+- **Crear** comprueba que la conexión tenga al menos un protocolo y sus dos endpoints, o dos servidores en una conexión multi-servidor. Un mensaje indica lo que falta, y el primer campo que falta recibe el foco. Cuando no falta nada, Kadratis conserva la conexión y la cierra. Vuelve al punto de partida
 - **Cancelar** elimina la conexión. Si introdujo algo más que el nombre, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar conexiones
 
-Si sale de la conexión de otra forma mientras falta algo, KANAP le pregunta qué hacer. **Completarla** le deja en la conexión, en el primer campo que falta. **Eliminarla** elimina la conexión.
+Si sale de la conexión de otra forma mientras falta algo, Kadratis le pregunta qué hacer. **Completarla** le deja en la conexión, en el primer campo que falta. **Eliminarla** elimina la conexión.
 
 ---
 
@@ -85,7 +85,7 @@ Un origen, un destino, un servidor de una conexión multi-servidor o el equipo d
 
 Los selectores marcan un clúster con un icono y listan sus miembros bajo su nombre.
 
-Cuando elige un servidor que pertenece a un clúster, KANAP pregunta **¿Conectar con el clúster?**. **Conectar con el clúster** pone el clúster en la conexión, para todos sus miembros. **Solo este servidor** mantiene el servidor. KANAP no pregunta cuando el otro lado ya es ese clúster o uno de sus miembros: la conexión se queda en el servidor.
+Cuando elige un servidor que pertenece a un clúster, Kadratis pregunta **¿Conectar con el clúster?**. **Conectar con el clúster** pone el clúster en la conexión, para todos sus miembros. **Solo este servidor** mantiene el servidor. Kadratis no pregunta cuando el otro lado ya es ese clúster o uno de sus miembros: la conexión se queda en el servidor.
 
 Una lista multi-servidor que contiene un clúster y uno de sus miembros solo conserva el clúster. Un mensaje nombra los miembros quitados de la lista. Una lista debe conservar al menos dos servidores.
 

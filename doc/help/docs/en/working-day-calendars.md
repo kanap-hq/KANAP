@@ -17,7 +17,7 @@ Navigate to **Master data > Working-day calendars** (in the **Finance** section)
 
 The quickest start is a standard calendar for each country where your companies are:
 
-- **When you create a company** with a country, KANAP creates the standard calendar of that country for you, unless the workspace already has one for the whole country
+- **When you create a company** with a country, Kadratis creates the standard calendar of that country for you, unless the workspace already has one for the whole country
 - **For the companies you already have**, the list page shows one line above the grid, for example "Your companies are in France, Netherlands and Italy. Create their standard calendars." Click **Create 3 calendars** to create them in one go
 
 To create a calendar yourself, click **New**.
@@ -120,7 +120,7 @@ The **Working days** section shows one year at a time, with the same year tabs a
 - Under the total of an edited year, a line gives the standard values, for example "Standard values: 252 days"
 - **Reset to standard** brings the year back to the public holidays at once. There is no confirmation: the values you typed are replaced by the standard ones
 
-**Where the standard values come from**: the public holiday rules come from [`date-holidays`](https://github.com/commenthol/date-holidays), an open-source library bundled in KANAP. The rules ship with the application, so standard calendars work without any internet access. The holiday data is published under the Creative Commons Attribution-ShareAlike 3.0 licence (CC BY-SA 3.0), and KANAP uses it unchanged. Only public holidays count: bank holidays, school holidays and observances do not. A public holiday that starts in the evening (6 pm or later), such as Christmas Eve in the Northern Territory of Australia, does not remove the day; one that starts earlier in the day removes the whole day.
+**Where the standard values come from**: the public holiday rules come from [`date-holidays`](https://github.com/commenthol/date-holidays), an open-source library bundled in Kadratis. The rules ship with the application, so standard calendars work without any internet access. The holiday data is published under the Creative Commons Attribution-ShareAlike 3.0 licence (CC BY-SA 3.0), and Kadratis uses it unchanged. Only public holidays count: bank holidays, school holidays and observances do not. A public holiday that starts in the evening (6 pm or later), such as Christmas Eve in the Northern Territory of Australia, does not remove the day; one that starts earlier in the day removes the whole day.
 
 ### Working days of a custom calendar
 
@@ -248,7 +248,7 @@ Anyone who can read budget lines (Budget) can pick a calendar in the budget tab 
 
 ## Ask the assistant
 
-[Plaid](ai-assistant.md#tool-calls) reads the calendars for anyone with read access to them and quotes the working days of a year as KANAP computes them. Ask, for example: "How many working days are there in France in 2026?"
+[Kad](ai-assistant.md#tool-calls) reads the calendars for anyone with read access to them and quotes the working days of a year as Kadratis computes them. Ask, for example: "How many working days are there in France in 2026?"
 
 ## Tips
 

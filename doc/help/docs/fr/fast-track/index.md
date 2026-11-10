@@ -1,6 +1,6 @@
 ---
 title: "Fast Track Portefeuille : de la demande à la livraison"
-description: Devenez productif avec le module Portefeuille de KANAP en quelques minutes. Un guide pratique, étape par étape.
+description: Devenez productif avec le module Portefeuille de Kadratis en quelques minutes. Un guide pratique, étape par étape.
 ---
 
 # Fast Track Portefeuille : de la demande à la livraison
@@ -10,7 +10,7 @@ Ce guide vous accompagne tout au long du cycle de vie du portefeuille, de la sou
 !!! tip "Conseil : Vous préférez un résumé sur une page ? :material-file-pdf-box:"
     Toutes les étapes clés sur une seule page A4 : imprimez-la, épinglez-la, partagez-la avec votre équipe.
 
-    [:material-download: Télécharger l'aide-mémoire (PDF)](downloads/kanap-portfolio-fast-track.pdf){ .md-button .md-button--primary }
+    [:material-download: Télécharger l'aide-mémoire (PDF)](downloads/kadratis-portfolio-fast-track.pdf){ .md-button .md-button--primary }
 
 Pour tous les détails, consultez la [documentation de référence du Portefeuille](../portfolio-requests.md).
 
@@ -20,7 +20,7 @@ Pour tous les détails, consultez la [documentation de référence du Portefeuil
 
 ![Vue d'ensemble du workflow Portefeuille](images/workflow-overview.png)
 
-Chaque initiative dans KANAP suit le même flux :
+Chaque initiative dans Kadratis suit le même flux :
 
 | Étape | Ce qui se passe |
 |-------|----------------|
@@ -118,7 +118,7 @@ Utilisez l'**Évaluation** pour noter la demande par rapport aux critères de po
 
 <!-- screenshot: Onglet Évaluation avec critères pondérés -->
 
-Les noms exacts des critères et les pondérations peuvent varier selon le tenant, car ils proviennent de **Portefeuille > Paramètres**. KANAP calcule la priorité pondérée automatiquement, et certains tenants utilisent aussi une règle de contournement obligatoire pour le travail qui doit passer en tête de file.
+Les noms exacts des critères et les pondérations peuvent varier selon le tenant, car ils proviennent de **Portefeuille > Paramètres**. Kadratis calcule la priorité pondérée automatiquement, et certains tenants utilisent aussi une règle de contournement obligatoire pour le travail qui doit passer en tête de file.
 
 ### La recommandation d'analyse
 
@@ -153,7 +153,7 @@ Une fois l'analyse et l'évaluation terminées, c'est le moment de la décision.
 4. Cliquez sur **Convertir en projet**
 
 !!! tip "Conseil : Passage de relais fluide"
-    Lorsque vous convertissez une demande en projet, KANAP ouvre une boîte de dialogue de conversion où vous pouvez confirmer le nom du projet, les dates planifiées et la charge initiale. L'objet de la demande est affiché pour référence, et les données liées de la demande sont reportées dans le projet.
+    Lorsque vous convertissez une demande en projet, Kadratis ouvre une boîte de dialogue de conversion où vous pouvez confirmer le nom du projet, les dates planifiées et la charge initiale. L'objet de la demande est affiché pour référence, et les données liées de la demande sont reportées dans le projet.
 
 Le statut de la demande passe à **Convertie**, et un nouveau projet est créé et lié à la demande d'origine.
 
@@ -225,7 +225,7 @@ Voir la [référence Projets](../portfolio-projects.md) pour toutes les options 
 
 ## Étape 5 : Suivez l'exécution
 
-Maintenant le vrai travail commence. Au fur et à mesure que le projet avance, gardez KANAP à jour.
+Maintenant le vrai travail commence. Au fur et à mesure que le projet avance, gardez Kadratis à jour.
 
 ### Mettez à jour l'avancement
 
@@ -342,7 +342,7 @@ La disponibilité des contributeurs et les affectations de projets se combinent 
 
 ### Analyse des goulots d'étranglement
 
-Lorsque plusieurs projets se disputent les mêmes contributeurs ou compétences, KANAP met en évidence le goulot d'étranglement pour que vous puissiez faire des arbitrages avant qu'ils ne deviennent des crises.
+Lorsque plusieurs projets se disputent les mêmes contributeurs ou compétences, Kadratis met en évidence le goulot d'étranglement pour que vous puissiez faire des arbitrages avant qu'ils ne deviennent des crises.
 
 ### Reporting exécutif
 
@@ -373,4 +373,4 @@ Voir la [référence Rapports](../portfolio-reporting.md).
 ---
 
 !!! success "Vous êtes prêt"
-    Vous connaissez maintenant le cycle de vie complet de la demande à la livraison. Commencez par une demande, évaluez-la correctement, et laissez KANAP gérer le reste. Pour une documentation détaillée sur chaque fonctionnalité, explorez la section [Gestion de portefeuille](../portfolio-requests.md).
+    Vous connaissez maintenant le cycle de vie complet de la demande à la livraison. Commencez par une demande, évaluez-la correctement, et laissez Kadratis gérer le reste. Pour une documentation détaillée sur chaque fonctionnalité, explorez la section [Gestion de portefeuille](../portfolio-requests.md).

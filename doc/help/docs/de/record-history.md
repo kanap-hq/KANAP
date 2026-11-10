@@ -23,7 +23,7 @@ Der Aktivitäts-Stream eines Projekts, einer Anfrage oder einer Aufgabe zeigt nu
 Der Verlauf listet einen Eintrag pro Änderung, den neuesten oben. Jeder Eintrag zeigt:
 
 - Datum und Uhrzeit der Änderung;
-- ihren Urheber: eine Person, **System** für Änderungen, die KANAP selbst vornimmt, **Import** für Änderungen, die aus einer Datei geladen wurden, oder **Plaid für** eine Person, wenn der Assistent die Änderung in ihrem Auftrag vorgenommen hat;
+- ihren Urheber: eine Person, **System** für Änderungen, die Kadratis selbst vornimmt, **Import** für Änderungen, die aus einer Datei geladen wurden, oder **Kad für** eine Person, wenn der Assistent die Änderung in ihrem Auftrag vorgenommen hat;
 - für den Datensatz selbst das Ereignis: **Erstellt**, **Aktualisiert** oder **Gelöscht**; für seine Teile der Titel oder das Ereignis des Teils;
 - jedes geänderte Feld mit seinem Wert vorher und nachher (`vorher → nachher`).
 
@@ -58,7 +58,7 @@ Bei einem Vertrag, einem Projekt oder einer Anfrage sieht eine Person mit begren
 
 ## Den Assistenten fragen
 
-[Plaid](ai-assistant.md#tool-calls) liest den Verlauf eines Datensatzes mit denselben Rechten wie seine Seite. Fragen Sie zum Beispiel: „Wer hat die Beträge von BL-12 geändert?“ oder „Was hat sich an TEC-3 in diesem Jahr geändert?“ Plaid antwortet nur aus dem Tab Verlauf: Für einen Datensatz ohne diesen Tab sagt es, dass KANAP keinen Verlauf dafür führt.
+[Kad](ai-assistant.md#tool-calls) liest den Verlauf eines Datensatzes mit denselben Rechten wie seine Seite. Fragen Sie zum Beispiel: „Wer hat die Beträge von BL-12 geändert?“ oder „Was hat sich an TEC-3 in diesem Jahr geändert?“ Kad antwortet nur aus dem Tab Verlauf: Für einen Datensatz ohne diesen Tab sagt es, dass Kadratis keinen Verlauf dafür führt.
 
 ## Das vollständige Audit-Protokoll
 

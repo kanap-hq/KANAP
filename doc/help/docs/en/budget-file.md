@@ -1,8 +1,8 @@
 # Load a budget from a spreadsheet
 
-Most teams prepare their budget in a spreadsheet: one row per line, one column per year or per month. KANAP holds the same lines in its budget lines list, where they drive allocations, reports and the overview.
+Most teams prepare their budget in a spreadsheet: one row per line, one column per year or per month. Kadratis holds the same lines in its budget lines list, where they drive allocations, reports and the overview.
 
-The budget file is the bridge between the two. Export the lines, change the cells you care about in Excel or LibreOffice, import the file back. KANAP compares every cell with what it holds and writes only what changed.
+The budget file is the bridge between the two. Export the lines, change the cells you care about in Excel or LibreOffice, import the file back. Kadratis compares every cell with what it holds and writes only what changed.
 
 One file holds both kinds of line. Its `nature` column says whether a row is an OPEX or a CAPEX line, and every row is checked against the rules of its own kind. The list exports the lines it shows, OPEX and CAPEX together. Filter the **Type** column to export one kind only.
 
@@ -90,7 +90,7 @@ These are the standard names. Your organisation can rename the five columns in [
 
 ### The last column
 
-`kanap_token` is written by KANAP. Leave it as it is. KANAP uses it to tell you when a line changed after your export. Leave it empty on a line you add.
+`kanap_token` is written by Kadratis. Leave it as it is. Kadratis uses it to tell you when a line changed after your export. Leave it empty on a line you add.
 
 ## What a cell means
 
@@ -111,7 +111,7 @@ An absent column keeps every stored value of that column. A file holding only `i
 - A line keeps its kind. A row that names an existing line with the other `nature` is refused, for example "BL-125 is a CAPEX line, not an OPEX line. A file does not change the type of a line."
 - Each row is checked against its own kind: the dimensions and values it may hold, its account, the frozen columns and the duplicate warning. A column frozen for CAPEX refuses a change on a CAPEX line only.
 - There is no other key. A new row that looks like an existing line of its kind, or like another new row of the same kind in the file, is a warning you can ignore.
-- Suppliers are matched by `supplier_erp_id` when it is filled, otherwise by `supplier_name`. A supplier the file names and KANAP does not have is created by the load when **Create missing suppliers** is ticked. Without it, the check lists them and asks you to create them in **Master data > Suppliers**.
+- Suppliers are matched by `supplier_erp_id` when it is filled, otherwise by `supplier_name`. A supplier the file names and Kadratis does not have is created by the load when **Create missing suppliers** is ticked. Without it, the check lists them and asks you to create them in **Master data > Suppliers**.
 - A dimension value that does not exist is created by the load, and listed in the check. For a person with limited data access, only on a dimension with open values: see [Limited data access](#limited-data-access). Accounts, cost centers, companies and users are never created: an unknown one is a row error naming where to add it.
 - A value, or `-`, on a dimension used for the other kind of line only is a row error on its `analytics:<code>` cell, for example "The Recurrence dimension is for CAPEX lines only. Leave it out." The export leaves such a cell empty, so a value hidden on a line is not exported and a load leaves it in place. The setting is in [Analytics dimensions](analytics.md#opex-or-capex-dimensions).
 - A value used for the other kind of line only is a row error on its `analytics:<code>` cell, for example "Internal labor is for OPEX lines only. Pick a value for CAPEX lines." A line keeps the value it already holds. Values the load creates are used for OPEX and CAPEX. The setting is in [Analytics dimensions](analytics.md#opex-or-capex-values).
@@ -163,17 +163,17 @@ These rows appear among the **Errors** of the check, like any other refused row.
 
 Opening the file and saving it keeps it loadable, as CSV or as `.xlsx`. Both programs keep the columns, the separator and the values.
 
-In a workbook, KANAP reads the first sheet. When the workbook has other sheets, the check says which sheet it read. An amount or a date typed in a cell is read exactly as it is, with no question of decimal mark or day order. An old Excel file (`.xls`) is refused: save it as `.xlsx` or CSV.
+In a workbook, Kadratis reads the first sheet. When the workbook has other sheets, the check says which sheet it read. An amount or a date typed in a cell is read exactly as it is, with no question of decimal mark or day order. An old Excel file (`.xls`) is refused: save it as `.xlsx` or CSV.
 
 A date or an amount written as text, which the file cannot settle on its own, is read the way the export wrote it, then in the language the screen is shown in. Every date whose day is 12 or less is ambiguous (`01/03/2027` is March 1 in French and January 3 in English), and so is an amount written like `12,280`. The check says how it read them and offers a button to switch.
 
-A column KANAP does not know is ignored, with a warning. A column that looks like a misspelled amount column, such as `budjet_2027`, refuses the whole file. An `analytics:<code>` column that names no enabled dimension refuses the whole file too, with "Unknown dimension 'x'."
+A column Kadratis does not know is ignored, with a warning. A column that looks like a misspelled amount column, such as `budjet_2027`, refuses the whole file. An `analytics:<code>` column that names no enabled dimension refuses the whole file too, with "Unknown dimension 'x'."
 
 ## Files from earlier versions
 
 A file in an older layout is refused as a whole: the old OPEX and CAPEX files with `y_budget` style columns, and the budget rows file with `measure` and `jan` … `dec` columns. The screen shows this message:
 
-> This file comes from an earlier version of KANAP. Export a fresh file from this list, copy your changes into it, and import it again.
+> This file comes from an earlier version of Kadratis. Export a fresh file from this list, copy your changes into it, and import it again.
 
 A CAPEX file exported before the PP&E type, investment type and priority became dimensions, recognised by its three columns `ppe_type`, `investment_type` and `priority` together, is refused as a whole too. These values now travel in dimension columns. One or two of these columns alone are unknown columns, ignored with a warning. The screen shows this message:
 
@@ -183,7 +183,7 @@ Export a fresh file and copy your rows into it.
 
 An OPEX or CAPEX file exported before the `nature` column was added is accepted. Its rows are read as OPEX lines, or as CAPEX lines when the **Type** filter of the list keeps CAPEX only, and its `OPX-12` and `CPX-3` numbers still name their lines: import an earlier OPEX file with the list on OPEX or both types, and an earlier CAPEX file with the list filtered on CAPEX. Its `kanap_token` cells stay valid. A bare number keeps its earlier meaning in such a file: filtered on CAPEX, `3` is `CPX-3`; otherwise, it is the number of the OPEX line.
 
-KANAP recognises the `nature` column by its name, whatever the case. An earlier file with a column of your own named Nature must rename it before the import: KANAP would read that column as the kind of each line and refuse its values.
+Kadratis recognises the `nature` column by its name, whatever the case. An earlier file with a column of your own named Nature must rename it before the import: Kadratis would read that column as the kind of each line and refuse its values.
 
 ## Loading a whole budget
 

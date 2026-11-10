@@ -26,7 +26,7 @@ Navigate to **IT Landscape > Incidents** to see the register. To log an incident
 
 1. Click **New incident**. The incident page opens with an empty title in the header. The rest of the page is dimmed.
 2. Type a short factual summary, e.g. "Mail service unavailable at the Lyon office".
-3. Press Enter, or click outside the title. KANAP logs the incident at once. Its reference (`INC-14`) shows and all tabs open.
+3. Press Enter, or click outside the title. Kadratis logs the incident at once. Its reference (`INC-14`) shows and all tabs open.
 
 The new incident is **Open**, with severity **Minor**, detected now, and you as the reporter. Then fill in the rest like on any incident:
 
@@ -56,7 +56,7 @@ While the incident is being created, its header shows **Create** and **Cancel**.
 
 These permissions also cover the incident review and the PDF export, so someone who works on incidents does not need any Knowledge permission to write the review. See [Overview](#overview).
 
-A restricted incident is hidden from everyone except register administrators, the reporter and the owner. On a stock tenant that means Administrator and IT Landscape Administrator, plus whoever logged or owns that record. Readers and contributors who are not the reporter or owner do not see it in the list, in search, in chat or in an export. Opening it by reference returns the same “not found” as a missing number. Its linked tasks are hidden from them too: in the task list, in search, on the dashboard, in Plaid and among linked records. The incident review is covered by the same restriction, wherever it is reached from: Knowledge, search, the assistant, exports and the images pasted into it.
+A restricted incident is hidden from everyone except register administrators, the reporter and the owner. On a stock tenant that means Administrator and IT Landscape Administrator, plus whoever logged or owns that record. Readers and contributors who are not the reporter or owner do not see it in the list, in search, in chat or in an export. Opening it by reference returns the same “not found” as a missing number. Its linked tasks are hidden from them too: in the task list, in search, on the dashboard, in Kad and among linked records. The incident review is covered by the same restriction, wherever it is reached from: Knowledge, search, the assistant, exports and the images pasted into it.
 
 **Restrict to register administrators** is in the properties drawer, under Classification. A contributor can turn it on while they can still see the record; only an administrator can turn it off, including after the incident is closed. The change is written to the journal. The audit log shows the entries of a restricted incident, of its review and of its tasks only to people who can see the incident, and document relation chips leave its title out. Only the “recently viewed” list, kept in each person's browser, can still show the title to someone who opened the incident before it was restricted.
 
@@ -85,7 +85,7 @@ The list is the register itself: every incident, newest detection first.
 
 **Additional columns** (hidden by default, available via the column chooser): **Closed**, **Applications**, **Created**, **Personal data**, **Notification required** and **Notified on**. **Personal data** and **Notification required** offer a yes/no filter.
 
-**Filtering**: Category, Severity, Status and Owner offer checkbox filters whose options are computed from the incidents currently in view, so you only see values that exist in the result set. Date columns offer date filters, including a range: filter **Detected** between two dates to produce a quarterly or yearly extract. The search box matches the title, the description, the reference (`INC-14`), and the names and references of linked assets, applications and technologies, so a search for a hostname such as `PAR-ESX-01` lists the incidents on that asset. Words that only appear in the incident review are found by the global search and by the assistant rather than by this box. The global search, the `@` picker in Plaid and the MCP server also find an incident by the name and reference of a linked asset (`AST-N`, hostname or FQDN), application (`APP-N`) or technology (`TEC-N`). A match is the incident, under its title and reference (`INC-N`).
+**Filtering**: Category, Severity, Status and Owner offer checkbox filters whose options are computed from the incidents currently in view, so you only see values that exist in the result set. Date columns offer date filters, including a range: filter **Detected** between two dates to produce a quarterly or yearly extract. The search box matches the title, the description, the reference (`INC-14`), and the names and references of linked assets, applications and technologies, so a search for a hostname such as `PAR-ESX-01` lists the incidents on that asset. Words that only appear in the incident review are found by the global search and by the assistant rather than by this box. The global search, the `@` picker in Kad and the MCP server also find an incident by the name and reference of a linked asset (`AST-N`, hostname or FQDN), application (`APP-N`) or technology (`TEC-N`). A match is the incident, under its title and reference (`INC-N`).
 
 **Tip**: combine Severity = Critical, Major with a **Detected** range to build the shortlist most steering committees and audits ask for.
 
@@ -167,7 +167,7 @@ The review is itself a Knowledge document, with its own `DOC-N` reference, filed
 
 The journal is what makes this a register rather than a form. It lists everything that happened to the incident, most recent first, and **nothing in it can be edited or deleted**, by anyone, at any time.
 
-**Adding a note**: type it in the composer at the top and click **Add** (or press Ctrl+Enter). The date and time next to the button set the moment the note refers to. The time is typed on 24 hours (23:40). It defaults to now, and you can set it to the past: a note added on Tuesday can be recorded as having happened at 23:40 on Saturday, and it will sort into the timeline at that point. KANAP separately stores the moment the note was actually saved, and nobody can change it, so backdating stays honest. When a note refers to a time earlier than its saving, its row also shows when it was recorded, for example "recorded 27 Oct, 10:12". The PDF report gives both times in two columns.
+**Adding a note**: type it in the composer at the top and click **Add** (or press Ctrl+Enter). The date and time next to the button set the moment the note refers to. The time is typed on 24 hours (23:40). It defaults to now, and you can set it to the past: a note added on Tuesday can be recorded as having happened at 23:40 on Saturday, and it will sort into the timeline at that point. Kadratis separately stores the moment the note was actually saved, and nobody can change it, so backdating stays honest. When a note refers to a time earlier than its saving, its row also shows when it was recorded, for example "recorded 27 Oct, 10:12". The PDF report gives both times in two columns.
 
 **Automatic entries** appear alongside your notes:
 
@@ -250,7 +250,7 @@ Two switches in the drawer carry the regulatory part of the record:
 - **Personal data affected**: turn it on as soon as personal data was exposed, altered or lost. It is the flag your data protection officer filters on
 - **Authority notification required**: turn it on when the event has to be reported, for instance to a data protection authority, a national cyber agency or a sector regulator. **Notified on** then records when you filed, and **Parties informed** lists who was told: regulator, insurer, affected customers, group security
 
-Deadlines and thresholds depend on your jurisdiction and sector. KANAP records the facts and the dates; it does not decide whether you must notify.
+Deadlines and thresholds depend on your jurisdiction and sector. Kadratis records the facts and the dates; it does not decide whether you must notify.
 
 **What the register gives an auditor**:
 
@@ -263,7 +263,7 @@ Deadlines and thresholds depend on your jurisdiction and sector. KANAP records t
 - An export of the register in CSV or Excel (**Export** on the list), for auditors and for your own archive. The file starts with the INC reference. It follows the filters, the search and the sort of the list, and when a filter is active the dialog shows how many incidents go into the file. Restricted incidents are omitted unless you are allowed to see them; the file includes a **Restricted to register administrators** column that can be imported
 - A PDF report of a single incident (**Export PDF** in the workspace), for the auditor who wants one record rather than the whole register
 
-**Importing an existing register**: **Import** on the list takes a CSV file or an Excel workbook (`.xlsx`). Leave the reference column empty to create incidents (KANAP allocates the next INC numbers), or keep the INC-N reference to update the matching records. Each imported incident gets a journal entry saying it came from a file. Export first, or download the empty template, if you want the exact column layout. The template ignores the filters of the list.
+**Importing an existing register**: **Import** on the list takes a CSV file or an Excel workbook (`.xlsx`). Leave the reference column empty to create incidents (Kadratis allocates the next INC numbers), or keep the INC-N reference to update the matching records. Each imported incident gets a journal entry saying it came from a file. Export first, or download the empty template, if you want the exact column layout. The template ignores the filters of the list.
 
 The headers, the severity and the status are written in the language of the export. The import accepts headers and values in any of the four languages, and the technical codes too (`major`, `in_progress`).
 
@@ -271,7 +271,7 @@ A status can move forward from a file. Taking it back, or cancelling an incident
 
 The file carries the short **Description** in one column and the whole **Incident review** in another, as formatted text. That single review column replaces the former Impact, Root cause, Corrective actions and Lessons learned columns. Headings, lists and links survive the round trip; pasted images do not, because they live in the document. An empty review cell leaves the existing text untouched.
 
-Dates and times are written in the local time your browser uses, the way the export language writes dates: an incident detected at 10:38 in Paris reads `16/10/2026 10:38` in French. The header of each date and time column names that time zone after the column name, for example `detected_at (Europe/Paris)`, and the template names it too. The import reads each column in the time zone its header names, so an exported file loads back unchanged wherever it is imported. A header without a time zone, as in older or hand-made files, is read in UTC (Coordinated Universal Time). A time zone KANAP does not recognise stops the import. The import also accepts `2026-10-16T08:38:00Z`, which carries its own time zone.
+Dates and times are written in the local time your browser uses, the way the export language writes dates: an incident detected at 10:38 in Paris reads `16/10/2026 10:38` in French. The header of each date and time column names that time zone after the column name, for example `detected_at (Europe/Paris)`, and the template names it too. The import reads each column in the time zone its header names, so an exported file loads back unchanged wherever it is imported. A header without a time zone, as in older or hand-made files, is read in UTC (Coordinated Universal Time). A time zone Kadratis does not recognise stops the import. The import also accepts `2026-10-16T08:38:00Z`, which carries its own time zone.
 
 Importing is the one operation that still writes to a closed or cancelled incident, so a correction that arrives months later can be filed without reopening the record. It creates a new version of the review and a journal entry pointing at it, and it never rewrites the version the closure refers to. Nothing else is relaxed: the register permissions apply, and a restricted incident you are not allowed to see is refused.
 
@@ -279,7 +279,7 @@ Importing is the one operation that still writes to a closed or cancelled incide
 
 ## Export a PDF report for an auditor
 
-Open an incident and click **Export PDF** in the header actions. KANAP downloads a PDF of that record: `INC-12-incident-report.pdf`. The download uses your signed-in session; it is not a public link.
+Open an incident and click **Export PDF** in the header actions. Kadratis downloads a PDF of that record: `INC-12-incident-report.pdf`. The download uses your signed-in session; it is not a public link.
 
 The report follows the language of the interface (English, French, German or Spanish). It is assembled in this order:
 
@@ -299,7 +299,7 @@ Export is a read. It works on a closed or cancelled incident; the record stays l
 
 ## Categories
 
-Incident categories are yours to define, in **IT Landscape > Settings**, under **Incidents > Incident categories**. KANAP ships with infrastructure, security, application, data, supplier and other.
+Incident categories are yours to define, in **IT Landscape > Settings**, under **Incidents > Incident categories**. Kadratis ships with infrastructure, security, application, data, supplier and other.
 
 Keep the list short. Categories are what you will group a year of incidents by, and a list of thirty is a list nobody uses consistently. Rather than deleting a category that is already in use, mark it deprecated: it disappears from the selector for new incidents while the existing ones keep their history.
 
@@ -307,17 +307,17 @@ Keep the list short. Categories are what you will group a year of incidents by, 
 
 ## Ask the assistant
 
-Plaid reads and writes the register in chat, with the same permissions as the rest of the application. Every change comes as a preview that you approve.
+Kad reads and writes the register in chat, with the same permissions as the rest of the application. Every change comes as a preview that you approve.
 
-**Reading**: ask Plaid for a count ("How many critical incidents this quarter?"), a filtered list ("List of open incidents on PAR-ESX-01"), or a full record ("Summary of INC-2"). The full record includes the journal and the incident review, so a question can be answered from the root cause or the lessons learned. Times are given in your own time zone. When Plaid reads an incident, the linked records follow the same permissions as the PDF report. A restricted incident you cannot see stays out of the answers, the counts, the groups, the averages and the sources, review included.
+**Reading**: ask Kad for a count ("How many critical incidents this quarter?"), a filtered list ("List of open incidents on PAR-ESX-01"), or a full record ("Summary of INC-2"). The full record includes the journal and the incident review, so a question can be answered from the root cause or the lessons learned. Times are given in your own time zone. When Kad reads an incident, the linked records follow the same permissions as the PDF report. A restricted incident you cannot see stays out of the answers, the counts, the groups, the averages and the sources, review included.
 
-Plaid filters incidents by asset, application or technology, named by reference or exact name: `APP-1` does not bring the incidents of `APP-12`. Grouped by asset, application or technology, an incident counts in each of its linked records, so the groups can add up to more than the total. An incident with no link appears in no group. Plaid also groups incidents by month of detection or of resolution. Months follow UTC (Coordinated Universal Time): an incident detected at 00:30 on 1 November in Paris counts in October. Plaid reads the time to resolution, from detection to resolution in hours, for each incident or as an average, a minimum or a maximum. Cancelled and unresolved incidents are left out. Ask, for example: "Average time to resolution of major incidents per month this year".
+Kad filters incidents by asset, application or technology, named by reference or exact name: `APP-1` does not bring the incidents of `APP-12`. Grouped by asset, application or technology, an incident counts in each of its linked records, so the groups can add up to more than the total. An incident with no link appears in no group. Kad also groups incidents by month of detection or of resolution. Months follow UTC (Coordinated Universal Time): an incident detected at 00:30 on 1 November in Paris counts in October. Kad reads the time to resolution, from detection to resolution in hours, for each incident or as an average, a minimum or a maximum. Cancelled and unresolved incidents are left out. Ask, for example: "Average time to resolution of major incidents per month this year".
 
-**Writing** (Contributor level on Incidents): Plaid logs an incident, changes its fields and moves its status forward up to Closed. It logs an incident Open or In progress. An incident that is already resolved is logged open, then moved forward in a second preview, so the step shows in the journal. Plaid can turn on **Restrict to register administrators**. The preview warns you when that would hide the incident from you. Plaid also adds notes to the journal, with the time the note refers to if you give one, and links or unlinks assets, applications and technologies, named by reference or exact name, or by hostname or FQDN for an asset. With the Member level on Tasks, it creates a follow-up task on the incident. Ask, for example: "Log a major incident: mail unavailable at the Lyon office since 08:40, linked to PAR-MAIL-01".
+**Writing** (Contributor level on Incidents): Kad logs an incident, changes its fields and moves its status forward up to Closed. It logs an incident Open or In progress. An incident that is already resolved is logged open, then moved forward in a second preview, so the step shows in the journal. Kad can turn on **Restrict to register administrators**. The preview warns you when that would hide the incident from you. Kad also adds notes to the journal, with the time the note refers to if you give one, and links or unlinks assets, applications and technologies, named by reference or exact name, or by hostname or FQDN for an asset. With the Member level on Tasks, it creates a follow-up task on the incident. Ask, for example: "Log a major incident: mail unavailable at the Lyon office since 08:40, linked to PAR-MAIL-01".
 
 Closing freezes the record, and the closing preview says so. Only an administrator can reopen the incident.
 
-**Administrator actions** (Administrator level on Incidents): Plaid reopens a resolved, closed or cancelled incident, cancels an incident, and turns **Restrict to register administrators** on or off, on a closed or cancelled incident too. Reopening and cancelling need a reason, written into the journal, for example: "Reopen INC-14: the issue came back after the fix".
+**Administrator actions** (Administrator level on Incidents): Kad reopens a resolved, closed or cancelled incident, cancels an incident, and turns **Restrict to register administrators** on or off, on a closed or cancelled incident too. Reopening and cancelling need a reason, written into the journal, for example: "Reopen INC-14: the issue came back after the fix".
 
 Deleting an incident and adding attachments stay on the incident page (see [Deleting an incident](#deleting-an-incident)). Assistants connected over MCP read only.
 

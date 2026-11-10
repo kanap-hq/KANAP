@@ -25,7 +25,7 @@ Tant que le site est en cours de création, l'en-tête affiche **Créer** et **A
 La liste vous donne un aperçu consultable de chaque site enregistré.
 
 **Colonnes par défaut** :
-- **Référence** : La référence attribuée par KANAP (`LOC-4`). Cliquez dessus pour ouvrir l'espace de travail.
+- **Référence** : La référence attribuée par Kadratis (`LOC-4`). Cliquez dessus pour ouvrir l'espace de travail.
 - **Nom** : Nom d'affichage
 - **Type d'hébergement** : On-premise, colocation, cloud public, etc.
 - **Fournisseur / Société** : Fournisseur cloud pour les sites de type cloud, ou société exploitante pour les sites on-premise

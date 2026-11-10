@@ -1,6 +1,6 @@
 # Branding
 
-Verwenden Sie die Branding-Seite, um Ihre Unternehmensidentität in KANAP anzuwenden. Sie legen hier den Namen des Arbeitsbereichs, das Logo und die Primärfarben fest, und die Änderung ist für jeden Benutzer auf Ihrem Mandanten beim nächsten Neuladen der Seite sichtbar.
+Verwenden Sie die Branding-Seite, um Ihre Unternehmensidentität in Kadratis anzuwenden. Sie legen hier den Namen des Arbeitsbereichs, das Logo und die Primärfarben fest, und die Änderung ist für jeden Benutzer auf Ihrem Mandanten beim nächsten Neuladen der Seite sichtbar.
 
 ## Wo Sie es finden
 
@@ -13,7 +13,7 @@ Verwenden Sie die Branding-Seite, um Ihre Unternehmensidentität in KANAP anzuwe
 
 ## Was Sie anpassen können
 
-Die Seite hat drei Karten: **Name des Arbeitsbereichs**, **Logo** und **Primärfarben**. Logo und Farben sind optional. Ohne Logo zeigt die Kopfzeile den Namen des Arbeitsbereichs. Ohne eigene Farben verwendet KANAP die Standard-Themenfarben.
+Die Seite hat drei Karten: **Name des Arbeitsbereichs**, **Logo** und **Primärfarben**. Logo und Farben sind optional. Ohne Logo zeigt die Kopfzeile den Namen des Arbeitsbereichs. Ohne eigene Farben verwendet Kadratis die Standard-Themenfarben.
 
 - **Name des Arbeitsbereichs**
   - Kennzeichnet Ihren Arbeitsbereich in der Kopfzeile, im Browser-Tab, in E-Mails und in KI-Werkzeugen (siehe [Wo der Name des Arbeitsbereichs erscheint](#wo-der-name-des-arbeitsbereichs-erscheint))
@@ -39,11 +39,11 @@ Die Seite hat drei Karten: **Name des Arbeitsbereichs**, **Logo** und **Primärf
 
 - **Kopfzeile der App und Anmeldeseite**: Ohne Logo erscheint der Name.
 - **Browser-Tab**: Der Titel des Tabs ist der Name. Eine Projekt-, Anfrage-, Aufgaben- oder Budgetzeilenseite zeigt zuerst den Datensatz, zum Beispiel `PRJ-3 Neues ERP | Acme`.
-- **Installierte App**: Wenn jemand KANAP auf einem Telefon oder einem Computer installiert, trägt die App den Namen.
-- **E-Mails**: Ohne Logo zeigt die Kopfzeile den Namen. Die Betreffzeilen der E-Mails zum Zurücksetzen des Passworts, zur Einladung, zum wöchentlichen Rückblick und zum Zurücksetzen des Arbeitsbereichs tragen den Namen, zum Beispiel „Passwort für Acme zurücksetzen“. Die Schaltfläche des wöchentlichen Rückblicks lautet „Acme öffnen“. In der Cloud lautet der Absendername „Acme via KANAP“. On-Premise ist der Absender der in der Installation festgelegte (`SMTP_FROM`).
+- **Installierte App**: Wenn jemand Kadratis auf einem Telefon oder einem Computer installiert, trägt die App den Namen.
+- **E-Mails**: Ohne Logo zeigt die Kopfzeile den Namen. Die Betreffzeilen der E-Mails zum Zurücksetzen des Passworts, zur Einladung, zum wöchentlichen Rückblick und zum Zurücksetzen des Arbeitsbereichs tragen den Namen, zum Beispiel „Passwort für Acme zurücksetzen“. Die Schaltfläche des wöchentlichen Rückblicks lautet „Acme öffnen“. In der Cloud lautet der Absendername „Acme via Kadratis“. On-Premise ist der Absender der in der Installation festgelegte (`SMTP_FROM`).
 - **KI-Werkzeuge**: Wenn sich ein KI-Werkzeug (Claude, ChatGPT und andere) über den MCP-Server verbindet, zeigt die Autorisierungsseite den Namen, und das Werkzeug zeigt ihn als Servernamen.
 
-Ohne Namen oder mit dem On-Premise-Standardnamen „My Organization“ zeigen diese Stellen „KANAP“.
+Ohne Namen oder mit dem On-Premise-Standardnamen „My Organization“ zeigen diese Stellen „Kadratis“.
 
 ## Logo-Einrichtung
 
@@ -84,8 +84,8 @@ Sie können Farben für **Primär Light-Modus** und **Primär Dark-Modus** unabh
 
 - **Primär Light-Modus** wird im Light-Modus verwendet.
 - **Primär Dark-Modus** wird im Dark-Modus verwendet.
-- Wenn nur ein Modus eine Farbe hat, verwendet KANAP diese Farbe im anderen Modus als Fallback.
-- Wenn beide Felder leer sind, verwendet KANAP seine Standard-Themenfarben.
+- Wenn nur ein Modus eine Farbe hat, verwendet Kadratis diese Farbe im anderen Modus als Fallback.
+- Wenn beide Felder leer sind, verwendet Kadratis seine Standard-Themenfarben.
 
 ### Kontrastwarnung
 
@@ -108,4 +108,4 @@ Eine kleine Beschriftung unter den Aktionen zeigt den Zähler **Logo-Version** a
 - **In beiden Themes testen**: Wechseln Sie vor dem Speichern zwischen Light- und Dark-Theme. Die gleiche Markenfarbe funktioniert selten in beiden Modi.
 - **Transparenten Hintergrund bevorzugen**: Einfache Logos mit transparentem Hintergrund ergeben die sauberste Kopfzeilen-Darstellung, besonders im Dark-Modus.
 - **Verwenden Sie Zurücksetzen bewusst**: Es entfernt sowohl die Logos als auch alle benutzerdefinierten Farben in einem Schritt. Verwenden Sie es, wenn Sie neu beginnen, nicht als „Rückgängig" für eine einzelne Änderung. Dafür ist **Verwerfen**.
-- **Markenfarben sind für Akzente**: KANAP verwendet die Primärfarbe in App-Leisten, primären Schaltflächen und Links. Wählen Sie etwas, das in Schaltflächengröße sauber lesbar ist, nicht nur auf einer Marketing-Website.
+- **Markenfarben sind für Akzente**: Kadratis verwendet die Primärfarbe in App-Leisten, primären Schaltflächen und Links. Wählen Sie etwas, das in Schaltflächengröße sauber lesbar ist, nicht nur auf einer Marketing-Website.

@@ -1,6 +1,6 @@
 # Geschäftsprozesse
 
-Mit Geschäftsprozessen können Sie einen zentralen Katalog der End-to-End-Prozesse Ihrer Organisation erstellen und pflegen, beispielsweise Order-to-Cash, Procure-to-Pay oder Hire-to-Retire. Indem Sie Prozessnamen, Typen, Verantwortliche und ihre Hierarchie an einem Ort verwalten, schaffen Sie einen einheitlichen Referenzpunkt, auf den der Rest von KANAP für Zuständigkeiten, Berichte und Audits zugreifen kann.
+Mit Geschäftsprozessen können Sie einen zentralen Katalog der End-to-End-Prozesse Ihrer Organisation erstellen und pflegen, beispielsweise Order-to-Cash, Procure-to-Pay oder Hire-to-Retire. Indem Sie Prozessnamen, Typen, Verantwortliche und ihre Hierarchie an einem Ort verwalten, schaffen Sie einen einheitlichen Referenzpunkt, auf den der Rest von Kadratis für Zuständigkeiten, Berichte und Audits zugreifen kann.
 
 ## Erste Schritte
 
@@ -56,7 +56,7 @@ Die Liste zeigt alle Geschäftsprozesse Ihres Mandanten.
 
 1. Klicken Sie in der Liste auf **Neu**. Die Seite des Prozesses öffnet sich mit einem leeren Titel in der Kopfzeile. Der Rest der Seite ist abgeblendet.
 2. Geben Sie den Namen des Prozesses ein, am besten mit seinem Kurzcode (z. B. „Order-to-Cash (O2C)“).
-3. Drücken Sie die Eingabetaste oder klicken Sie außerhalb des Titels. KANAP erstellt den Prozess sofort, aktiviert, und alle Reiter öffnen sich.
+3. Drücken Sie die Eingabetaste oder klicken Sie außerhalb des Titels. Kadratis erstellt den Prozess sofort, aktiviert, und alle Reiter öffnen sich.
 
 Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erstellen. Zwei Prozesse können nicht denselben Namen tragen, unabhängig von Groß- und Kleinschreibung: Ein bereits verwendeter Name wird abgelehnt, mit einer Meldung unter dem Titel.
 
@@ -138,7 +138,7 @@ Klicken Sie auf der Listenseite auf **Importieren**, dann:
 **Zuordnungsregeln**:
 
 - Zeilen werden anhand des **Namens** zugeordnet, unabhängig von Groß- und Kleinschreibung. Ein übereinstimmender Name aktualisiert den bestehenden Prozess und behält die gespeicherte Schreibweise (die Vorabprüfung meldet, welchem Prozess die Zeile zugeordnet wurde); ein neuer Name erstellt einen neuen Prozess.
-- `parent_name` wird anhand des Namens zugeordnet, unabhängig von Groß- und Kleinschreibung: ein Prozess derselben Datei oder ein Prozess, der bereits in KANAP besteht. Gibt es beide, hat die Datei Vorrang. Die Zeilen können in beliebiger Reihenfolge stehen: Übergeordnete Prozesse werden vor ihren Teilprozessen erstellt.
+- `parent_name` wird anhand des Namens zugeordnet, unabhängig von Groß- und Kleinschreibung: ein Prozess derselben Datei oder ein Prozess, der bereits in Kadratis besteht. Gibt es beide, hat die Datei Vorrang. Die Zeilen können in beliebiger Reihenfolge stehen: Übergeordnete Prozesse werden vor ihren Teilprozessen erstellt.
 - Ein unbekannter übergeordneter Name, ein Prozess unter sich selbst oder eine Schleife werden mit der Zeilennummer abgelehnt.
 - Die Datei hat keine Spalte für das Gültigkeitsende. Bei einer Aktualisierung behält ein leerer `status` oder einer, der dem aktuellen Status des Prozesses entspricht, dessen Gültigkeitsende. Ein anderer Status wird angewendet: `enabled` löscht das Gültigkeitsende, und `disabled` beendet den Prozess heute, sofern sein Gültigkeitsende nicht bereits vergangen ist. Ein neuer Prozess ist aktiviert, sofern die Zeile nicht `disabled` angibt.
 

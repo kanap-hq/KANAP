@@ -61,7 +61,7 @@ Debe rellenar:
 
 ## Archivar un perfil
 
-Archivar sirve para retirar un perfil que ya no quiere que los agentes usen. Antes de que surta efecto, KANAP le advierte con claridad:
+Archivar sirve para retirar un perfil que ya no quiere que los agentes usen. Antes de que surta efecto, Kadratis le advierte con claridad:
 
 > «{name}» dejará de estar disponible para los agentes. Cualquier agente que lo esté usando funcionará sin contexto compartido hasta que lo apunte a otro perfil.
 

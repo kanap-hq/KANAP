@@ -40,7 +40,7 @@ Rendez-vous dans **Cartographie SI > Applications** pour voir votre liste. Pour 
 
 1. Cliquez sur **Nouvelle application**. La page de l'application s'ouvre avec un titre vide dans l'en-tête. Le reste de la page est grisé.
 2. Saisissez le nom de l'application ou du service, de 200 caractères au plus. Voir [Noms uniques](#unique-names).
-3. Appuyez sur Entrée, ou cliquez hors du titre. KANAP crée l'application aussitôt. Sa référence (`APP-12`) s'affiche et tous les onglets s'ouvrent.
+3. Appuyez sur Entrée, ou cliquez hors du titre. Kadratis crée l'application aussitôt. Sa référence (`APP-12`) s'affiche et tous les onglets s'ouvrent.
 
 La nouvelle application est **Active**, dans la catégorie par défaut. Modifiez-les dans l'en-tête et le tiroir des propriétés, puis complétez le reste :
 
@@ -92,7 +92,7 @@ La grille Applications offre une vue complète de votre portefeuille applicatif.
 
 **Colonnes par défaut** :
 - **Nom** : Nom de l'application, avec en dessous une ligne « Incluse dans : {suite} » pour une application incluse dans une suite
-- **Vulnérabilités à traiter** : les vulnérabilités encore à traiter sur les technologies que l'application déclare ou que ses serveurs de déploiement ont renseignées, puis, en orange, le nombre de critiques ou élevées (`5 · 2`). Vide pour une application désactivée ou quand il n'en reste aucune. Cliquez pour ouvrir la page [Vulnérabilités](vulnerabilities.md) filtrée sur l'application. Présente quand les vulnérabilités sont suivies. Voir [Ce que KANAP compte](vulnerabilities.md#what-kanap-counts)
+- **Vulnérabilités à traiter** : les vulnérabilités encore à traiter sur les technologies que l'application déclare ou que ses serveurs de déploiement ont renseignées, puis, en orange, le nombre de critiques ou élevées (`5 · 2`). Vide pour une application désactivée ou quand il n'en reste aucune. Cliquez pour ouvrir la page [Vulnérabilités](vulnerabilities.md) filtrée sur l'application. Présente quand les vulnérabilités sont suivies. Voir [Ce que Kadratis compte](vulnerabilities.md#what-kanap-counts)
 - **Catégorie** : L'objectif principal de l'application
 - **Environnements** : Pastilles colorées montrant les environnements actifs (Prod, Pré-prod, QA, Test, Dev, Sandbox). Survolez pour voir l'URL de base et le cycle de vie.
 - **Cycle de vie** : Statut actuel
@@ -228,7 +228,7 @@ L'onglet Déploiements documente où l'application s'exécute réellement : un b
 | **Hébergement** | Dérivé du site de l'actif |
 | **Depuis** | Date à laquelle le serveur a été affecté à ce déploiement |
 
-Cliquez sur **Ajouter un serveur** dans l'en-tête du déploiement pour rattacher un actif. Le sélecteur liste les clusters avec leurs membres sous leur nom. L'affectation d'un cluster s'étend à ses membres en service : ils s'affichent sous la ligne du cluster, sans actions. Modifiez l'affectation sur le cluster. Quand vous choisissez un membre d'un cluster, KANAP demande s'il faut affecter le cluster ou ce serveur seulement. Voir [Applications sur un cluster](assets.md#applications-on-a-cluster). Ajouter, modifier ou retirer un serveur demande `applications:member` et `infrastructure:member`.
+Cliquez sur **Ajouter un serveur** dans l'en-tête du déploiement pour rattacher un actif. Le sélecteur liste les clusters avec leurs membres sous leur nom. L'affectation d'un cluster s'étend à ses membres en service : ils s'affichent sous la ligne du cluster, sans actions. Modifiez l'affectation sur le cluster. Quand vous choisissez un membre d'un cluster, Kadratis demande s'il faut affecter le cluster ou ce serveur seulement. Voir [Applications sur un cluster](assets.md#applications-on-a-cluster). Ajouter, modifier ou retirer un serveur demande `applications:member` et `infrastructure:member`.
 
 Quand l'application est affectée directement à chaque membre en service d'un cluster, une ligne sous le tableau les nomme, avec un bouton pour affecter l'application au cluster (**Affecter à** et son nom). Après une confirmation, le cluster prend l'affectation et les affectations propres des membres sont retirées. L'application reste alors disponible tant qu'un membre tient.
 
@@ -286,7 +286,7 @@ Pour ajouter, modifier ou retirer une technologie déclarée, et pour la renseig
 
 **Voir** ouvre la page [Vulnérabilités](vulnerabilities.md) filtrée sur l'application et la technologie. Quand il ne reste rien à traiter, la section le dit en une ligne. Tant que la première lecture d'un produit dans la NVD, ou le rapprochement d'une technologie qui vient d'être renseignée sur cette application ou sur un de ses serveurs de déploiement, est en cours, la section affiche « Recherche des vulnérabilités en cours… » et se complète d'elle-même. Quand la recherche ne peut pas aboutir, la section le dit. Une application désactivée n'a pas de section.
 
-La section ne compte que les liens directs. Une technologie que la section **Technologies** montre par l'hôte d'une machine virtuelle ne compte pas ici : elle compte sur l'hôte. Voir [Ce que KANAP compte](vulnerabilities.md#what-kanap-counts).
+La section ne compte que les liens directs. Une technologie que la section **Technologies** montre par l'hôte d'une machine virtuelle ne compte pas ici : elle compte sur l'hôte. Voir [Ce que Kadratis compte](vulnerabilities.md#what-kanap-counts).
 
 Un utilisateur qui lit les applications sans lire l'infrastructure voit quand même cette section, le badge de l'en-tête et la colonne de la liste, pour les applications qu'il peut lire.
 
@@ -308,7 +308,7 @@ L'onglet Conformité capture les informations de protection des données et de r
 
 ### Classification et continuité
 
-La zone Conformité enregistre également les décisions de continuité et de classification de l'application. Les valeurs absentes apparaissent comme **Non défini** ; KANAP ne remplace pas une valeur manquante par un niveau par défaut.
+La zone Conformité enregistre également les décisions de continuité et de classification de l'application. Les valeurs absentes apparaissent comme **Non défini** ; Kadratis ne remplace pas une valeur manquante par un niveau par défaut.
 
 L'onglet est organisé en quatre blocs, dans l'ordre d'une analyse d'impact métier.
 
@@ -323,8 +323,8 @@ L'onglet est organisé en quatre blocs, dans l'ordre d'une analyse d'impact mét
 
 **Continuité et reprise** :
 - La **Vague de reprise** indique l'ordre de restauration et ne représente ni une durée ni une gravité.
-- Le **RTO** est l'objectif de délai de reprise. Le **RPO** est la perte de données acceptable et peut être égal à zéro. Si le RTO atteint la durée maximale tolérable d'interruption définie sur le niveau de criticité business choisi, KANAP affiche un avertissement mais conserve les deux valeurs.
-- Sous la vague, KANAP liste les interfaces qui relient cette application à une application prévue dans une vague **ultérieure** (« Échange avec CRM, prévue en V3 »), avec un lien vers chaque interface. Les deux applications doivent être opérationnelles pour que le flux fonctionne ; le responsable du plan de reprise décide. Les interfaces retirées sont ignorées, et les utilisateurs disposant d'un périmètre restreint de Contributeur métier ne voient pas cette liste.
+- Le **RTO** est l'objectif de délai de reprise. Le **RPO** est la perte de données acceptable et peut être égal à zéro. Si le RTO atteint la durée maximale tolérable d'interruption définie sur le niveau de criticité business choisi, Kadratis affiche un avertissement mais conserve les deux valeurs.
+- Sous la vague, Kadratis liste les interfaces qui relient cette application à une application prévue dans une vague **ultérieure** (« Échange avec CRM, prévue en V3 »), avec un lien vers chaque interface. Les deux applications doivent être opérationnelles pour que le flux fonctionne ; le responsable du plan de reprise décide. Les interfaces retirées sont ignorées, et les utilisateurs disposant d'un périmètre restreint de Contributeur métier ne voient pas cette liste.
 - Le **Dernier test de reprise** contient la date du test le plus récent. Un lien ouvert depuis cette zone utilise l'unique section **Base de connaissances** de la Vue d'ensemble et ne crée pas de doublon. Les anciennes URL restent accessibles dans Relations.
 
 Deux indications discrètes peuvent apparaître : des données au niveau de confidentialité le plus élevé combinées à la criticité cyber la plus faible, et une application au niveau business le plus critique sans test de reprise depuis douze mois. Elles ne bloquent jamais rien.
@@ -397,7 +397,7 @@ La technologie garde le nom, l'éditeur, la description, les notes, les notes de
 
 ## Gestion des versions
 
-KANAP propose **deux approches pour gérer les versions d'applications**, selon la manière dont votre organisation gère les mises à niveau :
+Kadratis propose **deux approches pour gérer les versions d'applications**, selon la manière dont votre organisation gère les mises à niveau :
 
 | Approche | Idéale pour | Ce qui se passe |
 |----------|-------------|-----------------|
@@ -465,7 +465,7 @@ Pendant la création de version, l'assistant affiche toutes les interfaces où c
 
 ## Copier des applications
 
-Il existe deux façons de copier une application dans KANAP :
+Il existe deux façons de copier une application dans Kadratis :
 
 ### Copier l'élément (depuis la grille Applications)
 
@@ -726,9 +726,9 @@ Custom ERP;lob;;Moderate;Active;2018-03-20;false
 
 ## Demander à l'assistant
 
-[Plaid](ai-assistant.md) lit la version, la date de mise en service, la date de fin de support et la date de retrait de chaque application. Il filtre, trie et regroupe les applications selon ces dates. Sa liste garde les applications retirées, alors que le rapport [Fins de support](end-of-support.md) ne garde que celles en service.
+[Kad](ai-assistant.md) lit la version, la date de mise en service, la date de fin de support et la date de retrait de chaque application. Il filtre, trie et regroupe les applications selon ces dates. Sa liste garde les applications retirées, alors que le rapport [Fins de support](end-of-support.md) ne garde que celles en service.
 
-Plaid déclare aussi une technologie sur une application, ou la retire, avec sa version et, si vous le demandez, sur les serveurs de déploiement de l'application. Il faut pour cela le droit de lire les applications et le niveau Membre sur l'infrastructure. Un Business Contributor ne le fait que sur les applications auxquelles il participe. Plaid ne lie pas un système d'exploitation : renseignez-le sur la page du serveur. Chaque modification arrive sous forme d'aperçu que vous approuvez. Quand vous demandez à Plaid de l'annuler, il remet exactement ce qu'il a changé. Une version créée au passage reste sur la technologie.
+Kad déclare aussi une technologie sur une application, ou la retire, avec sa version et, si vous le demandez, sur les serveurs de déploiement de l'application. Il faut pour cela le droit de lire les applications et le niveau Membre sur l'infrastructure. Un Business Contributor ne le fait que sur les applications auxquelles il participe. Kad ne lie pas un système d'exploitation : renseignez-le sur la page du serveur. Chaque modification arrive sous forme d'aperçu que vous approuvez. Quand vous demandez à Kad de l'annuler, il remet exactement ce qu'il a changé. Une version créée au passage reste sur la technologie.
 
 Demandez par exemple : « Ajoute PostgreSQL 16 à CheeseTrack et à ses serveurs », « Retire PostgreSQL 14 de CheeseTrack », « Quelles applications arrivent en fin de support dans les six mois ? » ou « Quelles applications déclarent PostgreSQL 14 ? »
 

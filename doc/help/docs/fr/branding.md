@@ -1,6 +1,6 @@
 # Personnalisation
 
-Utilisez la page Personnalisation pour appliquer l'identité de votre entreprise dans KANAP. Vous y définissez le nom de l'espace de travail, le logo et les couleurs principales, et le changement est visible pour chaque utilisateur de votre tenant lors du prochain rechargement de la page.
+Utilisez la page Personnalisation pour appliquer l'identité de votre entreprise dans Kadratis. Vous y définissez le nom de l'espace de travail, le logo et les couleurs principales, et le changement est visible pour chaque utilisateur de votre tenant lors du prochain rechargement de la page.
 
 ## Où la trouver
 
@@ -13,7 +13,7 @@ Les modifications s'appliquent uniquement à votre tenant courant.
 
 ## Ce que vous pouvez personnaliser
 
-La page comporte trois cartes : **Nom de l'espace de travail**, **Logo** et **Couleurs principales**. Le logo et les couleurs sont optionnels. Sans logo, l'en-tête affiche le nom de l'espace de travail. Sans couleurs personnalisées, KANAP utilise les couleurs de thème par défaut.
+La page comporte trois cartes : **Nom de l'espace de travail**, **Logo** et **Couleurs principales**. Le logo et les couleurs sont optionnels. Sans logo, l'en-tête affiche le nom de l'espace de travail. Sans couleurs personnalisées, Kadratis utilise les couleurs de thème par défaut.
 
 - **Nom de l'espace de travail**
   - Identifie votre espace de travail dans l'en-tête, l'onglet du navigateur, les e-mails et les outils d'IA (voir [Où le nom de l'espace de travail apparaît](#ou-le-nom-de-lespace-de-travail-apparait))
@@ -39,11 +39,11 @@ La page comporte trois cartes : **Nom de l'espace de travail**, **Logo** et **Co
 
 - **En-tête de l'application et page de connexion** : le nom s'affiche quand il n'y a pas de logo.
 - **Onglet du navigateur** : le titre de l'onglet est le nom. Une page de projet, de demande, de tâche ou de ligne budgétaire affiche d'abord l'enregistrement, par exemple `PRJ-3 Nouvel ERP | Acme`.
-- **Application installée** : quand quelqu'un installe KANAP sur un téléphone ou un ordinateur, l'application prend le nom.
-- **E-mails** : l'en-tête affiche le nom en l'absence de logo. Les objets des e-mails de réinitialisation du mot de passe, d'invitation, de revue hebdomadaire et de réinitialisation de l'espace de travail portent le nom, par exemple « Réinitialiser votre mot de passe sur Acme ». Le bouton de la revue hebdomadaire indique « Ouvrir Acme ». Dans le cloud, le nom de l'expéditeur est « Acme via KANAP ». Sur site, l'expéditeur est celui défini dans l'installation (`SMTP_FROM`).
+- **Application installée** : quand quelqu'un installe Kadratis sur un téléphone ou un ordinateur, l'application prend le nom.
+- **E-mails** : l'en-tête affiche le nom en l'absence de logo. Les objets des e-mails de réinitialisation du mot de passe, d'invitation, de revue hebdomadaire et de réinitialisation de l'espace de travail portent le nom, par exemple « Réinitialiser votre mot de passe sur Acme ». Le bouton de la revue hebdomadaire indique « Ouvrir Acme ». Dans le cloud, le nom de l'expéditeur est « Acme via Kadratis ». Sur site, l'expéditeur est celui défini dans l'installation (`SMTP_FROM`).
 - **Outils d'IA** : quand un outil d'IA (Claude, ChatGPT ou d'autres) se connecte par le serveur MCP, la page d'autorisation affiche le nom, et l'outil l'affiche comme nom du serveur.
 
-Sans nom défini, ou avec le nom par défaut sur site « My Organization », ces emplacements affichent « KANAP ».
+Sans nom défini, ou avec le nom par défaut sur site « My Organization », ces emplacements affichent « Kadratis ».
 
 ## Configuration du logo
 
@@ -84,8 +84,8 @@ Vous pouvez définir les couleurs pour **Couleur principale en mode clair** et *
 
 - **Couleur principale en mode clair** est utilisée en mode clair.
 - **Couleur principale en mode sombre** est utilisée en mode sombre.
-- Si un seul mode a une couleur, KANAP réutilise cette couleur dans l'autre mode comme repli.
-- Si les deux champs sont vides, KANAP utilise ses couleurs de thème par défaut.
+- Si un seul mode a une couleur, Kadratis réutilise cette couleur dans l'autre mode comme repli.
+- Si les deux champs sont vides, Kadratis utilise ses couleurs de thème par défaut.
 
 ### Avertissement de contraste
 
@@ -108,4 +108,4 @@ Une petite légende sous les actions affiche le compteur de **version du logo**,
 - **Testez dans les deux thèmes** : basculez entre les thèmes clair et sombre avant d'enregistrer : la même couleur de marque fonctionne rarement dans les deux modes.
 - **Préférez un fond transparent** : les logos simples avec des fonds transparents donnent le rendu d'en-tête le plus propre, en particulier en mode sombre.
 - **Utilisez Réinitialiser délibérément** : cela supprime à la fois les logos et toutes les couleurs personnalisées en une seule étape. Utilisez-le pour repartir à zéro, pas comme « annulation » d'un seul changement. C'est à cela que sert **Annuler**.
-- **Les couleurs de marque sont pour les accents** : KANAP utilise la couleur principale sur les barres d'application, les boutons principaux et les liens. Choisissez quelque chose qui se lit clairement à la taille d'un bouton, pas seulement sur un site marketing.
+- **Les couleurs de marque sont pour les accents** : Kadratis utilise la couleur principale sur les barres d'application, les boutons principaux et les liens. Choisissez quelque chose qui se lit clairement à la taille d'un bouton, pas seulement sur un site marketing.

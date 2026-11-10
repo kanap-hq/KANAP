@@ -123,7 +123,7 @@ Every change saves automatically. A short "Saving… / Saved" note appears next 
 ### Properties panel
 
 **Job title**
-The person's job title, the same one that appears wherever they show up in KANAP: the org chart, their user record, their profile. It is not a label local to the portfolio, so changing it here changes it everywhere. Type it and click away to save.
+The person's job title, the same one that appears wherever they show up in Kadratis: the org chart, their user record, their profile. It is not a label local to the portfolio, so changing it here changes it everywhere. Type it and click away to save.
 
 You can always set your own. Setting someone else's needs the **Administrator** level on users; without it you still see the value, but the field is read-only.
 
@@ -135,7 +135,7 @@ Assign this contributor to a team. Teams are organizational groups configured in
 **Manager**
 The person this contributor reports to. Click the field, search by name, and pick anyone in your organization. The manager does not have to be a contributor themselves. Use **Clear** to remove the link. A contributor cannot be their own manager, and you cannot pick someone who already reports to them, directly or through a chain of managers.
 
-When the manager comes from Microsoft Entra, the field is read-only and shows **From Microsoft Entra** underneath. Change it in your directory, not here, and the nightly sync brings the change over. A manager who has no KANAP account yet is skipped until they have one, and the field keeps its current value in the meantime.
+When the manager comes from Microsoft Entra, the field is read-only and shows **From Microsoft Entra** underneath. Change it in your directory, not here, and the nightly sync brings the change over. A manager who has no Kadratis account yet is skipped until they have one, and the field keeps its current value in the meantime.
 
 Once set, the manager's name also appears in the workspace header, and clicking it opens their contributor profile when they have one. This field is only visible when editing another contributor's profile (not your own).
 

@@ -1,6 +1,6 @@
 # Modelos IA
 
-Esta página es la lista de modelos IA que su organización puede utilizar. Añade un modelo una sola vez (su proveedor, su dirección, su clave, sus precios) y a partir de ahí solo tiene que *asignarlo*: al [asistente de chat Plaid](ai-settings.md), a cualquier [agente IA](agents-workspace.md) concreto o como modelo predeterminado de toda la organización, al que recurre todo lo demás. También es de donde salen las cifras de coste de la página [Uso y costes](ai-usage.md): los precios que introduce aquí son los que KANAP usa para valorar el consumo real de tokens.
+Esta página es la lista de modelos IA que su organización puede utilizar. Añade un modelo una sola vez (su proveedor, su dirección, su clave, sus precios) y a partir de ahí solo tiene que *asignarlo*: al [asistente de chat Kad](ai-settings.md), a cualquier [agente IA](agents-workspace.md) concreto o como modelo predeterminado de toda la organización, al que recurre todo lo demás. También es de donde salen las cifras de coste de la página [Uso y costes](ai-usage.md): los precios que introduce aquí son los que Kadratis usa para valorar el consumo real de tokens.
 
 ## Dónde encontrarlo
 
@@ -13,17 +13,17 @@ Esta página es la lista de modelos IA que su organización puede utilizar. Aña
 
 ## Cómo se elige un modelo
 
-Nada en KANAP está fijado a un único modelo. Cada consumidor (Plaid y cada agente) o bien apunta a un modelo concreto, o bien dice «usa el que use la organización». La regla es corta:
+Nada en Kadratis está fijado a un único modelo. Cada consumidor (Kad y cada agente) o bien apunta a un modelo concreto, o bien dice «usa el que use la organización». La regla es corta:
 
 1. **El modelo asignado a ese consumidor**, si lo hay.
 2. Si no, **el modelo predeterminado de la organización**: el que aparece marcado con una estrella en esta página.
-3. Si no, **el modelo incluido de KANAP**, una vez que un administrador ha confirmado su proveedor y su lugar de tratamiento.
+3. Si no, **el modelo incluido de Kadratis**, una vez que un administrador ha confirmado su proveedor y su lugar de tratamiento.
 
 Así que hay exactamente un modelo predeterminado por organización, y todo aquello que no toque lo sigue. Cambie el predeterminado y todos los consumidores sin asignación se mueven con él: para eso sirve tener uno.
 
-El tercer paso solo existe en el servicio alojado de KANAP. En una instalación local no hay modelo incluido, de modo que si no hay nada asignado ni ningún predeterminado definido, la cadena simplemente se agota: la página de configuración de Plaid indica que no hay ningún modelo configurado y el chat no responde, mientras que los agentes siguen funcionando pero se saltan los pasos que necesitan un modelo: recurren a su comportamiento sin IA en lugar de fallar por completo. Registrar un modelo lo soluciona: márquelo con la estrella como predeterminado para que todo lo adopte de una vez, o asígnelo consumidor por consumidor.
+El tercer paso solo existe en el servicio alojado de Kadratis. En una instalación local no hay modelo incluido, de modo que si no hay nada asignado ni ningún predeterminado definido, la cadena simplemente se agota: la página de configuración de Kad indica que no hay ningún modelo configurado y el chat no responde, mientras que los agentes siguen funcionando pero se saltan los pasos que necesitan un modelo: recurren a su comportamiento sin IA en lugar de fallar por completo. Registrar un modelo lo soluciona: márquelo con la estrella como predeterminado para que todo lo adopte de una vez, o asígnelo consumidor por consumidor.
 
-En el servicio alojado, el tercer paso tiene una condición. Plaid y los agentes que usarían el modelo incluido esperan a que un administrador confirme su proveedor, y la página de configuración de Plaid y la de agentes lo indican. Un modelo que usted añade nunca necesita confirmación. Consulte [Confirmar el modelo incluido de KANAP](ai-settings.md#confirmar-el-modelo-incluido-de-kanap).
+En el servicio alojado, el tercer paso tiene una condición. Kad y los agentes que usarían el modelo incluido esperan a que un administrador confirme su proveedor, y la página de configuración de Kad y la de agentes lo indican. Un modelo que usted añade nunca necesita confirmación. Consulte [Confirmar el modelo incluido de Kadratis](ai-settings.md#confirmar-el-modelo-incluido-de-kanap).
 
 No puede romper esta cadena por ordenar la lista: un modelo al que algo siga apuntando no se puede archivar, y si alguna asignación acabara apuntando a un modelo archivado, el consumidor recurre al predeterminado en lugar de fallar.
 
@@ -39,8 +39,8 @@ La tabla muestra todos los modelos que su organización ha registrado: primero l
 - **Nombre**: el nombre que dio al modelo, más **Archivado** si se ha retirado. Aquí aparece también la nota **Configuración incompleta** cuando falta algo obligatorio, casi siempre un modelo que necesita una clave API y no la tiene. Corríjalo: un modelo incompleto no recurre discretamente a otro, simplemente no funciona.
 - **Modelo**: el proveedor en la primera línea y el identificador exacto del modelo debajo.
 - **Capacidades**: **Imágenes ✓** si el modelo puede leer imágenes, **Solo texto** si no. Procede del conmutador **Comprende imágenes** del editor.
-- **Precio entrada / M tokens** y **Precio salida / M tokens**: lo que paga por millón de tokens, en euros. Un guion (**—**) significa que no hay ningún precio registrado, lo que KANAP trata como gratuito.
-- **Uso**: para un modelo que usted añadió, cuántos mensajes ha gestionado este mes natural: mensajes de usuario de Plaid en conversaciones que usaron este proveedor y este modelo, más un recuento por ejecución de agente que registró este modelo. **0 mensajes este mes** significa que aún no hay tráfico, no que el modelo no se use como predeterminado. El modelo incluido de KANAP mantiene su propia presentación: el volumen mensual de mensajes incluidos con una barra de progreso, no este recuento.
+- **Precio entrada / M tokens** y **Precio salida / M tokens**: lo que paga por millón de tokens, en euros. Un guion (**—**) significa que no hay ningún precio registrado, lo que Kadratis trata como gratuito.
+- **Uso**: para un modelo que usted añadió, cuántos mensajes ha gestionado este mes natural: mensajes de usuario de Kad en conversaciones que usaron este proveedor y este modelo, más un recuento por ejecución de agente que registró este modelo. **0 mensajes este mes** significa que aún no hay tráfico, no que el modelo no se use como predeterminado. El modelo incluido de Kadratis mantiene su propia presentación: el volumen mensual de mensajes incluidos con una barra de progreso, no este recuento.
 
 **Acciones de fila** (solo en los modelos activos):
 
@@ -49,16 +49,16 @@ La tabla muestra todos los modelos que su organización ha registrado: primero l
 
 Las filas archivadas se muestran atenuadas con una única acción **Restaurar**. Archivar no es borrar, y es deliberado: el uso pasado sigue atribuido al modelo en la página [Uso y costes](ai-usage.md), y un modelo restaurado vuelve con su proveedor, su clave, sus precios y sus capacidades intactos, pero ya no es el predeterminado ni está asignado a nada, de modo que usted lo reasigna de forma deliberada. Un modelo archivado no se puede editar, ni convertir en predeterminado, ni asignar hasta que lo restaure.
 
-### El modelo incluido de KANAP
+### El modelo incluido de Kadratis
 
-En el servicio alojado, la primera fila de la tabla es siempre **Modelo incluido de KANAP**, *Operado por KANAP, incluido en su suscripción*. Se comporta de forma distinta a los modelos que usted añade, y es a propósito:
+En el servicio alojado, la primera fila de la tabla es siempre **Modelo incluido de Kadratis**, *Operado por KANAP, incluido en su suscripción*. Se comporta de forma distinta a los modelos que usted añade, y es a propósito:
 
 - Cuesta `0,00 €` en las dos columnas de precio. Forma parte de su suscripción; no es algo que se le facture por token.
 - Es **multimodal** (lee las capturas de pantalla de los tickets) y eso no se puede cambiar.
-- En la columna **Uso** muestra sus **mensajes incluidos este mes** con una barra de progreso, para que vea cuánto queda del volumen mensual. Un mensaje es una pregunta hecha a Plaid o un ticket revisado por un agente: ambos consumen el mismo volumen. Las solicitudes de asistentes externos conectados por MCP no cuentan. Esa barra es la cuota del modelo incluido; no es la misma cifra que los recuentos de mensajes de los modelos que usted añade.
+- En la columna **Uso** muestra sus **mensajes incluidos este mes** con una barra de progreso, para que vea cuánto queda del volumen mensual. Un mensaje es una pregunta hecha a Kad o un ticket revisado por un agente: ambos consumen el mismo volumen. Las solicitudes de asistentes externos conectados por MCP no cuentan. Esa barra es la cuota del modelo incluido; no es la misma cifra que los recuentos de mensajes de los modelos que usted añade.
 - Muestra una estrella rellena en la columna **Predeterminado** siempre que no haya ningún modelo propio activo marcado con la estrella: es la alternativa de «nada configurado» hecha visible. Haga clic en su estrella vacía para borrar su predeterminado actual y volver a él. Sigue sin poder editarse ni archivarse.
 - No tiene acciones de edición ni de archivo: esas corresponden a los modelos que usted añade. Simplemente está siempre ahí.
-- Plaid y los agentes lo usan solo después de que un administrador confirme el proveedor y el lugar de tratamiento de los datos, en la página [Configuración de Plaid](ai-settings.md#confirmar-el-modelo-incluido-de-kanap). Los modelos que usted añade no están sujetos a ese paso.
+- Kad y los agentes lo usan solo después de que un administrador confirme el proveedor y el lugar de tratamiento de los datos, en la página [Configuración de Kad](ai-settings.md#confirmar-el-modelo-incluido-de-kanap). Los modelos que usted añade no están sujetos a ese paso.
 
 En una instalación local esta fila no aparece en absoluto.
 
@@ -68,10 +68,10 @@ En una instalación local esta fila no aparece en absoluto.
 
 **Nuevo modelo** abre el editor; el lápiz de cualquier fila activa lo reabre para una entrada existente. Los campos:
 
-- **Nombre**: cómo aparece el modelo allí donde lo asigna: en el selector de Plaid y en la lista **Modelo IA** de cada agente. Use algo que reconozca en un desplegable dentro de seis meses (*Claude producción*, *Mistral local*), no el identificador bruto del modelo. Tenga en cuenta que la tabla **Coste por modelo** de [Uso y costes](ai-usage.md) *no* usa este nombre: enumera el identificador al que se llamó realmente, como `anthropic:claude-sonnet-5`.
+- **Nombre**: cómo aparece el modelo allí donde lo asigna: en el selector de Kad y en la lista **Modelo IA** de cada agente. Use algo que reconozca en un desplegable dentro de seis meses (*Claude producción*, *Mistral local*), no el identificador bruto del modelo. Tenga en cuenta que la tabla **Coste por modelo** de [Uso y costes](ai-usage.md) *no* usa este nombre: enumera el identificador al que se llamó realmente, como `anthropic:claude-sonnet-5`.
 - **Proveedor**: quién sirve el modelo. La elección cambia cuáles de los campos siguientes se aplican.
 - **Modelo**: el identificador exacto del modelo, tal como lo escribe el proveedor (por ejemplo, `claude-sonnet-5`). No es un nombre para mostrar; una errata aquí se manifiesta como una llamada fallida, no como un error de validación.
-- **Dirección del servidor**: solo para los proveedores que usted aloja o que apuntan a un sitio concreto. Cuando KANAP se ejecuta en Docker y el modelo se ejecuta en la misma máquina anfitriona, dirija la petición al host en lugar de a `localhost`.
+- **Dirección del servidor**: solo para los proveedores que usted aloja o que apuntan a un sitio concreto. Cuando Kadratis se ejecuta en Docker y el modelo se ejecuta en la misma máquina anfitriona, dirija la petición al host en lugar de a `localhost`.
 - **Clave API**: la credencial de su proveedor. Se almacena cifrada y no se vuelve a mostrar: cuando reabre un modelo existente, el campo muestra una máscara (`••••••••`) con la indicación *Déjelo vacío para conservar la clave actual*, así que solo escribe en él para sustituir la clave. Si la instancia no tiene configurado ningún secreto de cifrado, una advertencia en la parte superior de la página explica que las claves no se pueden almacenar en absoluto.
 
 **Capacidades**:
@@ -80,14 +80,14 @@ En una instalación local esta fila no aparece en absoluto.
 
 **Coste de entrada**, **Coste de salida** y **Coste de lectura en caché**: precios por millón de tokens, en euros. El tooltip de información junto a cada etiqueta indica dónde encontrarlos.
 
-- Copie los precios de entrada y de salida directamente de la página de precios de su proveedor. Suelen ser distintos, y KANAP los valora por separado.
+- Copie los precios de entrada y de salida directamente de la página de precios de su proveedor. Suelen ser distintos, y Kadratis los valora por separado.
 - **Coste de lectura en caché** es el precio de un token que el proveedor vuelve a leer de su caché de prompts. Las páginas de precios suelen llamarlo *cached input*. Es opcional. Si queda vacío, un token en caché cuesta una décima parte del precio de entrada con Anthropic y el precio de entrada completo con los demás proveedores (consulte [Uso y costes](ai-usage.md)).
 - **Deje los precios vacíos o póngalos a 0 para un modelo local o autoalojado.** Un modelo sin precios no cuesta nada, que es la verdad para un modelo que se ejecuta en su propio hardware. Elegir un proveedor Ollama pone a 0 los precios aún vacíos por ese motivo, y conserva los ya introducidos.
-- KANAP valora cada respuesta de Plaid y cada llamada de un agente en el momento en que se produce, y luego conserva el coste. Editar un precio cambia los costes **a partir de ahora** y deja intactas las cifras pasadas.
+- Kadratis valora cada respuesta de Kad y cada llamada de un agente en el momento en que se produce, y luego conserva el coste. Editar un precio cambia los costes **a partir de ahora** y deja intactas las cifras pasadas.
 
 **Tiempo de espera**: cuántos segundos esperar a este modelo antes de desistir. La explicación está en el tooltip de información junto a la etiqueta: déjelo vacío para usar el límite estándar. Los modelos locales suelen necesitar más tiempo, y por eso el ajuste vive en cada modelo y no en la instalación. Para convertir este modelo en el predeterminado de la organización, márquelo con la estrella en la columna **Predeterminado** de la lista después de guardar: esa elección no está en el editor.
 
-**Esfuerzo de razonamiento**: cuánto piensa el modelo antes de responder. Importa en los modelos que razonan antes de contestar, como hacen la mayoría de los modelos recientes. **Predeterminado del proveedor** no envía nada y deja que el proveedor decida. **Bajo**, **Medio**, **Alto**, **Muy alto** y **Máximo** piden menos o más reflexión: más esfuerzo da respuestas más cuidadas, que tardan más y cuestan más, ya que los proveedores facturan la reflexión como tokens de salida. El ajuste se aplica a cada llamada hecha con este modelo: las respuestas de Plaid, los pasos de los agentes y la prueba de conexión.
+**Esfuerzo de razonamiento**: cuánto piensa el modelo antes de responder. Importa en los modelos que razonan antes de contestar, como hacen la mayoría de los modelos recientes. **Predeterminado del proveedor** no envía nada y deja que el proveedor decida. **Bajo**, **Medio**, **Alto**, **Muy alto** y **Máximo** piden menos o más reflexión: más esfuerzo da respuestas más cuidadas, que tardan más y cuestan más, ya que los proveedores facturan la reflexión como tokens de salida. El ajuste se aplica a cada llamada hecha con este modelo: las respuestas de Kad, los pasos de los agentes y la prueba de conexión.
 
 Los niveles ofrecidos dependen del proveedor y del modelo. En Anthropic siguen al modelo: Claude Opus 4.5 acepta de **Bajo** a **Alto**, Claude Opus 4.6 y Claude Sonnet 4.6 añaden **Máximo**, y los modelos posteriores aceptan los cinco. El campo aparece desactivado para un modelo que no admite esfuerzo, como Claude Haiku 4.5. OpenAI recibe el nivel con su propio nombre. Ollama y los demás servidores compatibles lo reciben tal cual y pueden ignorarlo: ejecute **Probar conexión** para ver si el modelo razonó. Un proveedor que rechaza un nivel responde con su propio mensaje de error.
 
@@ -99,9 +99,9 @@ Los niveles ofrecidos dependen del proveedor y del modelo. En Anthropic siguen a
 
 ## Consejos
 
-- **Defina un predeterminado antes de asignar nada.** Con un modelo marcado con la estrella, cada nuevo agente y el propio Plaid funcionan de inmediato, y usted tiene un único sitio donde cambiar de modelo más adelante.
+- **Defina un predeterminado antes de asignar nada.** Con un modelo marcado con la estrella, cada nuevo agente y el propio Kad funcionan de inmediato, y usted tiene un único sitio donde cambiar de modelo más adelante.
 - **Nombre los modelos por su función, no por su versión.** *Modelo de triaje* sobrevive a una actualización de una versión del modelo a la siguiente; *Claude Sonnet 4.5* se convierte en una mentira el día que lo edite.
 - **Registre el mismo proveedor dos veces cuando los trabajos difieran.** Un modelo barato de solo texto para el triaje de gran volumen y un modelo con visión para los tickets con muchas capturas es una configuración normal: por eso la asignación es por agente.
 - **Ponga bien los precios, o déjelos vacíos.** No son decorativos: alimentan las cifras de coste de [Uso y costes](ai-usage.md) y los topes de **Coste por ejecución** de cada agente. Un modelo con precio 0 nunca alcanza un tope de coste, así que en un modelo gratuito los topes de tokens son su única protección.
-- **Compruebe el botón de archivar antes de retirar un modelo.** Permanece deshabilitado mientras Plaid o un agente esté *fijado* a ese modelo (no solo recurriendo a él como predeterminado). Mueva primero esas fijaciones.
+- **Compruebe el botón de archivar antes de retirar un modelo.** Permanece deshabilitado mientras Kad o un agente esté *fijado* a ese modelo (no solo recurriendo a él como predeterminado). Mueva primero esas fijaciones.
 - **Pruebe después de cada rotación de clave.** La prueba de conexión es gratis e instantánea; descubrir una clave caducada a través de una ejecución fallida de un agente no lo es.

@@ -69,7 +69,7 @@ Click any row to open the contact page. Every change saves on its own: there is 
 - **Phone** / **Mobile**: A dial code and a number. Pick the dial code from the list or type it. When the contact has no country yet, the dial code sets it.
 - **Country**: Searchable list of countries.
 
-Text fields save when you leave them or press Enter, lists save as soon as you choose. A value KANAP cannot accept (an email that is not valid or that another contact already uses, a phone number that is not a dial code followed by a number of 7 to 15 digits in all) shows its message under the field and is not saved.
+Text fields save when you leave them or press Enter, lists save as soon as you choose. A value Kadratis cannot accept (an email that is not valid or that another contact already uses, a phone number that is not a dial code followed by a number of 7 to 15 digits in all) shows its message under the field and is not saved.
 
 **Notes**: Free-form notes (up to 2,000 characters), under the header. They save a moment after you stop typing, and when you leave the field.
 
@@ -93,7 +93,7 @@ While the contact is being created, the header shows **Create** and **Cancel** u
 
 ## Where contacts are used
 
-Contacts appear in several places throughout KANAP. The **Used by** section of the contact page lists them all.
+Contacts appear in several places throughout Kadratis. The **Used by** section of the contact page lists them all.
 
 ### Supplier contacts
 

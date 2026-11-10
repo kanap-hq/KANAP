@@ -1,6 +1,6 @@
 # Contracts
 
-Contracts document your vendor agreements: software licences, maintenance contracts, SaaS subscriptions and service agreements. KANAP dates each term of a contract, tells you when a renewal decision is due, compares what the contract commits with the budget lines linked to it, and lists the clauses its applications call for.
+Contracts document your vendor agreements: software licences, maintenance contracts, SaaS subscriptions and service agreements. Kadratis dates each term of a contract, tells you when a renewal decision is due, compares what the contract commits with the budget lines linked to it, and lists the clauses its applications call for.
 
 ## Getting started
 
@@ -32,7 +32,7 @@ Once the contract exists, every change saves itself. There is no **Save** button
 
 ## How terms and deadlines work
 
-KANAP computes the dates of a contract from four fields: **Start**, **Duration (months)**, **Notice (months)** and **Tacit renewal**, plus the **End of validity** when one is set. Nothing is stored: change a field and every date follows.
+Kadratis computes the dates of a contract from four fields: **Start**, **Duration (months)**, **Notice (months)** and **Tacit renewal**, plus the **End of validity** when one is set. Nothing is stored: change a field and every date follows.
 
 - **Terms**: a contract runs in terms of the chosen duration, counted from the start date. A contract that starts on 1 July 2024 for 12 months runs from 1 July to 30 June each year.
 - **Cancellation deadline**: the end of a term minus the notice. With 6 months notice, the contract above can be cancelled until 30 December each year.
@@ -122,7 +122,7 @@ The row pinned at the bottom reads **Total (n contracts)**. It sums the yearly a
 
 The header shows the contract name (click it to rename), **Previous** / **Next** with the position in the list, and a bar with **Supplier**, **Contracting company**, **Owner** and **Status**. The owner and the status change in place. Supplier and company open the **Properties** panel.
 
-The **Properties** panel on the right holds every field of the contract: the parties, **Start**, **Duration (months)**, **Notice (months)**, **Tacit renewal**, **Yearly amount**, **Currency**, **Billing**, then **Lifecycle** (**Status** and **End of validity**), **Created** and **Updated**. Open or close it with its button; KANAP remembers your choice.
+The **Properties** panel on the right holds every field of the contract: the parties, **Start**, **Duration (months)**, **Notice (months)**, **Tacit renewal**, **Yearly amount**, **Currency**, **Billing**, then **Lifecycle** (**Status** and **End of validity**), **Created** and **Updated**. Open or close it with its button; Kadratis remembers your choice.
 
 **Cost center or group** is optional. It places the contract under a cost center or a group for [data access](data-access.md): the people limited to that node, or to a group above it, see the contract as well as those limited to its company.
 
@@ -256,7 +256,7 @@ The section is absent when there is nothing to suggest.
 
 - The links go and the linked items stay: budget lines, applications, assets (also those whose support contract it is) and contacts lose their link to the contract
 - What belongs to the contract goes with it: its tasks (the renewal decision task included), relevant websites and attachments
-- A contract with recorded compliance requirements (a state, including **Not applicable**, or a reference) cannot be deleted: KANAP says how many are recorded and suggests disabling it instead. In the list, the confirmation names the contracts kept, with their count, before anything is deleted; the others are deleted
+- A contract with recorded compliance requirements (a state, including **Not applicable**, or a reference) cannot be deleted: Kadratis says how many are recorded and suggests disabling it instead. In the list, the confirmation names the contracts kept, with their count, before anything is deleted; the others are deleted
 - A confirmation always comes first. It counts what loses its link and what goes too, or says that the contract is linked to nothing
 
 To stop using a contract and keep its history, disable it instead.
@@ -265,7 +265,7 @@ To stop using a contract and keep its history, disable it instead.
 
 ## Renewal decisions
 
-KANAP asks the owner to decide each renewal before it happens, and records the decision.
+Kadratis asks the owner to decide each renewal before it happens, and records the decision.
 
 ### Decision window
 
@@ -275,7 +275,7 @@ The window drives the **To decide** state, the quick filter, the decision box, t
 
 ### The decision task
 
-Every day at 07:30 UTC, KANAP creates a task for each contract that awaits a decision:
+Every day at 07:30 UTC, Kadratis creates a task for each contract that awaits a decision:
 
 - **Decide on the renewal of** the contract, due on the cancellation deadline, for a contract that renews tacitly
 - **Decide whether to renew or let** the contract **end**, due on its end, for a contract without renewal
@@ -290,7 +290,7 @@ The box shows the deadline, the days left, the task and its assignee, and what h
 
 - **Renew**: the renewal is confirmed for this term. The task is closed, the contract leaves **To decide**, and it comes back into the window at the next term's deadline
 - **Renegotiate**: the box reads **Renegotiation in progress** and the task stays open until the final decision. The contract stays in **To decide**
-- **Terminate**: the box shows the end date to confirm. KANAP proposes the earliest end the notice allows ("6 months notice: the earliest possible end is 30 Jun 2027"). You can pick another day, from today and from the contract's start. A day before the proposed one shows an orange warning: the supplier has to agree to it. The box lists the consequences for that day: the commitment of the year and the next, the applications that lose this contract, and the assets that lose their support contract, each if you can read its module. **Confirm termination** turns the tacit renewal off, sets the end of validity to that day and closes the task. The contract then reads **Ends without renewal** and its commitment stops on that day
+- **Terminate**: the box shows the end date to confirm. Kadratis proposes the earliest end the notice allows ("6 months notice: the earliest possible end is 30 Jun 2027"). You can pick another day, from today and from the contract's start. A day before the proposed one shows an orange warning: the supplier has to agree to it. The box lists the consequences for that day: the commitment of the year and the next, the applications that lose this contract, and the assets that lose their support contract, each if you can read its module. **Confirm termination** turns the tacit renewal off, sets the end of validity to that day and closes the task. The contract then reads **Ends without renewal** and its commitment stops on that day
 
 For a contract without renewal, the box reads "Ends on 31 Mar 2027 · decision due" and offers two actions:
 

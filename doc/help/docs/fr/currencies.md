@@ -1,6 +1,6 @@
 # Paramètres de devises
 
-La page des paramètres de devises (**Gestion budgétaire > Administration > Devises**) règle la manière dont KANAP enregistre, affiche et convertit les devises. Elle fixe la devise de reporting de tout l'espace de travail, les devises proposées par défaut sur les nouvelles lignes et, si besoin, la liste des devises autorisées.
+La page des paramètres de devises (**Gestion budgétaire > Administration > Devises**) règle la manière dont Kadratis enregistre, affiche et convertit les devises. Elle fixe la devise de reporting de tout l'espace de travail, les devises proposées par défaut sur les nouvelles lignes et, si besoin, la liste des devises autorisées.
 
 Pour le fonctionnement détaillé des devises et des conversions, consultez le guide de gestion des devises.
 
@@ -53,7 +53,7 @@ Limiter les devises autorisées est utile quand :
 
 ## Enregistrer les modifications
 
-Cliquez sur **Enregistrer** pour appliquer vos modifications. KANAP :
+Cliquez sur **Enregistrer** pour appliquer vos modifications. Kadratis :
   1. Vérifie que chaque devise est un code ISO à 3 lettres
   2. Enregistre les paramètres de l'espace de travail
   3. Met à jour les taux de l'année en cours. Un changement de devise de reporting met à jour toutes les années utilisées (voir [Changer de devise de reporting](#changer-de-devise-de-reporting))
@@ -74,7 +74,7 @@ Quand vous enregistrez une nouvelle devise de reporting, une fenêtre de confirm
 
 Les trois derniers points n'apparaissent que s'ils s'appliquent. Cliquez sur **Changer la devise** pour enregistrer, ou sur **Annuler** pour garder les paramètres actuels.
 
-KANAP récupère ensuite les taux de la nouvelle devise pour toutes les années utilisées : les années budgétaires (années gelées comprises), les années où une société a un chiffre d'affaires, les années affichées sur la page des contrats, ainsi que l'année civile en cours, la précédente et la suivante. La page attend le résultat et l'affiche comme pour une [synchronisation forcée](#forcer-la-synchronisation-des-taux-de-change).
+Kadratis récupère ensuite les taux de la nouvelle devise pour toutes les années utilisées : les années budgétaires (années gelées comprises), les années où une société a un chiffre d'affaires, les années affichées sur la page des contrats, ainsi que l'année civile en cours, la précédente et la suivante. La page attend le résultat et l'affiche comme pour une [synchronisation forcée](#forcer-la-synchronisation-des-taux-de-change).
 
 ## Forcer la synchronisation des taux de change
 
@@ -87,14 +87,14 @@ Le bouton **Forcer la synchronisation des taux de change** récupère tout de su
   - avant de présenter des rapports à la direction
 
 **Ce qui se passe** :
-  - Le bouton reste occupé pendant que KANAP récupère les taux, 20 secondes au plus
+  - Le bouton reste occupé pendant que Kadratis récupère les taux, 20 secondes au plus
   - Un message au-dessus du tableau donne ensuite le résultat : le nombre de taux récupérés, par exemple **12 taux récupérés.**, suivi des paires toujours sans taux, par exemple **Toujours manquants : BRL 2026.**, ou de **Chaque devise utilisée a un taux.**
   - Lorsque la récupération n'apporte aucun taux nouveau et que chaque devise utilisée a déjà un taux, le message dit **Les taux de change sont à jour.** Lorsque des paires manquent encore, il dit **Aucun nouveau taux n'a été récupéré.** et les nomme.
   - Si les sources n'ont pas répondu, le message le signale, et les taux déjà enregistrés restent en place
   - Si la récupération dure plus longtemps, le message indique **La synchronisation continue en arrière-plan.** Le tableau et le bloc des taux manquants se mettent à jour quand elle se termine
-  - Si une mise à jour des taux est déjà en cours, KANAP lui ajoute vos années : aucune demande n'est perdue
+  - Si une mise à jour des taux est déjà en cours, Kadratis lui ajoute vos années : aucune demande n'est perdue
 
-**Mise à jour automatique** : KANAP met aussi à jour les taux tous les 30 jours, à la connexion d'un utilisateur (années A-1, A et A+1). Quand une liste, un rapport ou la page des contrats a besoin d'un taux que la capture de son année ne contient pas (une devise utilisée depuis, ou une année sans capture), KANAP récupère cette année en arrière-plan dès la lecture, et l'affichage suivant utilise le nouveau taux. La synchronisation forcée sert quand vous voulez le résultat tout de suite.
+**Mise à jour automatique** : Kadratis met aussi à jour les taux tous les 30 jours, à la connexion d'un utilisateur (années A-1, A et A+1). Quand une liste, un rapport ou la page des contrats a besoin d'un taux que la capture de son année ne contient pas (une devise utilisée depuis, ou une année sans capture), Kadratis récupère cette année en arrière-plan dès la lecture, et l'affichage suivant utilise le nouveau taux. La synchronisation forcée sert quand vous voulez le résultat tout de suite.
 
 **Devises récupérées** : celles des lignes budgétaires, des sociétés et des contrats, plus la devise de reporting, les devises par défaut et les devises autorisées.
 
@@ -140,19 +140,19 @@ Sous le formulaire, le tableau **Dernières captures de taux de change** affiche
 
 Au-dessus du tableau, un bloc liste chaque devise et chaque année utilisées qui n'ont pas de taux, sous un titre comme **2 taux de change manquants**. Chaque ligne précise qu'aucune source ne publie encore ce taux et que les montants dans cette devise sont exclus des totaux tant qu'il manque. Quand rien ne manque, le bloc affiche **Chaque devise utilisée a un taux.**
 
-Une paire devise et année est utilisée quand une ligne budgétaire, les chiffres d'une société ou un contrat en ont besoin. Pour un contrat, ce sont les années affichées sur la page des contrats (l'année en cours, les deux suivantes, et l'année précédente quand le budget a des lignes pour elle) pendant lesquelles le contrat court. La page des contrats et ce bloc signalent donc les mêmes années manquantes. À l'ouverture de la page, KANAP interroge aussi de nouveau les sources pour les années de la liste.
+Une paire devise et année est utilisée quand une ligne budgétaire, les chiffres d'une société ou un contrat en ont besoin. Pour un contrat, ce sont les années affichées sur la page des contrats (l'année en cours, les deux suivantes, et l'année précédente quand le budget a des lignes pour elle) pendant lesquelles le contrat court. La page des contrats et ce bloc signalent donc les mêmes années manquantes. À l'ouverture de la page, Kadratis interroge aussi de nouveau les sources pour les années de la liste.
 
 ### Taux manuels
 
 Quand aucune source ne publie un taux, ou quand votre direction financière applique ses propres taux, vous pouvez saisir un taux pour une devise et une année.
 
-  1. Cliquez sur la cellule de la devise et de l'année dans le tableau, ou sur **Saisir un taux** à côté d'une ligne du bloc des taux manquants. Le lien **Saisir un taux** d'un avertissement ailleurs dans KANAP mène aussi ici : il ouvre directement la fenêtre de saisie quand l'avertissement ne cite qu'une devise et une année, et sinon met en évidence le bloc des taux manquants quelques secondes.
+  1. Cliquez sur la cellule de la devise et de l'année dans le tableau, ou sur **Saisir un taux** à côté d'une ligne du bloc des taux manquants. Le lien **Saisir un taux** d'un avertissement ailleurs dans Kadratis mène aussi ici : il ouvre directement la fenêtre de saisie quand l'avertissement ne cite qu'une devise et une année, et sinon met en évidence le bloc des taux manquants quelques secondes.
   2. Dans la fenêtre **Taux de change manuel**, saisissez le taux dans votre devise de reporting pour 1 unité de la devise choisie (par exemple **Taux en EUR pour 1 USD**), avec le séparateur décimal de votre langue. Quand l'année précédente ou suivante a un taux automatique, le champ le rappelle comme repère, par exemple **Taux automatique 2025 : 0,9312**. Sinon, il suggère le taux moyen de l'année publié par votre banque centrale ou votre trésorerie.
   3. Cliquez sur **Enregistrer**. La cellule affiche alors le taux suivi d'un astérisque (*).
 
 La fenêtre contrôle la valeur avant l'enregistrement : le taux est obligatoire, doit être un nombre supérieur à 0, ne peut pas dépasser 1 000 000 000 et ne doit pas valoir 0 une fois arrondi à 6 décimales. Le message sous le champ indique la règle en cause.
 
-Un taux manuel remplace le taux automatique de cette année jusqu'à ce que vous le retiriez. Les mises à jour suivantes ne l'écrasent pas. Pour revenir au taux automatique, ouvrez la cellule et cliquez sur **Retirer le taux manuel** : KANAP récupère de nouveau le taux automatique.
+Un taux manuel remplace le taux automatique de cette année jusqu'à ce que vous le retiriez. Les mises à jour suivantes ne l'écrasent pas. Pour revenir au taux automatique, ouvrez la cellule et cliquez sur **Retirer le taux manuel** : Kadratis récupère de nouveau le taux automatique.
 
 Quand l'année a des versions budgétaires gelées, un taux manuel saisi ou retiré ne les atteint pas, et la page le signale, par exemple **Les 2 versions gelées de 2026 gardent le taux de leur gel.**
 
@@ -202,27 +202,27 @@ Quand vous changez les paramètres :
 Les montants sont enregistrés dans leur propre devise et convertis à l'affichage. Chaque année utilise les derniers taux enregistrés pour elle, quelle que soit la date de saisie des montants. Quand une synchronisation apporte de nouveaux taux pour une année, les montants de cette année sont désormais convertis avec eux, sauf si l'année est gelée (voir [Années gelées](#annees-gelees)).
 
 ### Années passées
-KANAP utilise les moyennes annuelles de la Banque mondiale. Elles ne changent plus une fois publiées. Tant que la Banque mondiale n'a pas publié une année, l'année publiée la plus proche la remplace, marquée comme estimation.
+Kadratis utilise les moyennes annuelles de la Banque mondiale. Elles ne changent plus une fois publiées. Tant que la Banque mondiale n'a pas publié une année, l'année publiée la plus proche la remplace, marquée comme estimation.
 
 ### Année en cours
-KANAP utilise le taux du jour d'ExchangeRate-API (à défaut, le dernier taux annuel, marqué comme estimation). Il se met à jour quand vous lancez **Forcer la synchronisation des taux de change** et lors de la mise à jour automatique tous les 30 jours.
+Kadratis utilise le taux du jour d'ExchangeRate-API (à défaut, le dernier taux annuel, marqué comme estimation). Il se met à jour quand vous lancez **Forcer la synchronisation des taux de change** et lors de la mise à jour automatique tous les 30 jours.
 
 ### Années futures
 Le taux de l'année en cours est repris comme estimation. Il sert de repère pour préparer le budget, à revoir à l'approche de ces années.
 
 ### Années gelées
-Geler la colonne budgétaire par défaut d'une année fige les taux de cette année pour le type gelé (OPEX ou CAPEX) : KANAP met à jour les taux de l'année, puis garde ce jeu de taux pour tous les montants de l'année, même quand des taux plus récents arrivent. Si la devise de reporting change ensuite, ces montants gardent les taux du gel, puis sont convertis dans la nouvelle devise de reporting au taux de l'ancienne pour la même année. Sans ce taux, ils sont exclus des totaux et signalés comme tout taux manquant : l'ancienne devise de reporting apparaît alors pour cette année dans le bloc des taux manquants, et un taux manuel la complète. Dégeler la colonne par défaut libère les taux. Voir [Geler la colonne par défaut fige les taux de change](budget-operations.md#geler-la-colonne-par-defaut-fige-les-taux-de-change).
+Geler la colonne budgétaire par défaut d'une année fige les taux de cette année pour le type gelé (OPEX ou CAPEX) : Kadratis met à jour les taux de l'année, puis garde ce jeu de taux pour tous les montants de l'année, même quand des taux plus récents arrivent. Si la devise de reporting change ensuite, ces montants gardent les taux du gel, puis sont convertis dans la nouvelle devise de reporting au taux de l'ancienne pour la même année. Sans ce taux, ils sont exclus des totaux et signalés comme tout taux manquant : l'ancienne devise de reporting apparaît alors pour cette année dans le bloc des taux manquants, et un taux manuel la complète. Dégeler la colonne par défaut libère les taux. Voir [Geler la colonne par défaut fige les taux de change](budget-operations.md#geler-la-colonne-par-defaut-fige-les-taux-de-change).
 
 **Taux manquant** : quand une année n'a pas de taux pour une devise utilisée, les montants des lignes budgétaires dans cette devise sont exclus de tous les totaux en devise de reporting de cette année. Cela vaut pour la liste des lignes budgétaires, la section Gestion budgétaire de la page d'accueil, les rapports budgétaires et de refacturation, les contrats et les onglets Relations des applications et des technologies. L'écran le signale là où c'est utile :
 
 - Un avertissement d'une ligne indique ce qui est exclu, par exemple « 3 lignes sans taux de change exclues : USD 2026. » Il s'affiche sous les totaux de la liste des lignes budgétaires, sur les tuiles de la vue d'ensemble, en haut de chaque rapport budgétaire et de refacturation, et sous les chiffres budgétaires des contrats, des applications et des technologies. Les utilisateurs de l'administration budgétaire au niveau administrateur voient aussi **Saisir un taux**, qui ouvre cette page sur le taux manquant.
 - Sur la ligne elle-même, le montant s'affiche dans sa propre devise avec une petite marque orange. Survolez la marque pour lire, par exemple, « Pas de taux de change USD pour 2026 : exclu des totaux. »
 
-KANAP récupère les taux de cette année en arrière-plan (au plus une fois toutes les six heures par année) : l'affichage suivant utilise le nouveau taux dès que la source le publie. Pour repérer les taux manquants, consultez le bloc des taux manquants au-dessus du tableau des taux, et lancez **Forcer la synchronisation des taux de change** pour les récupérer tout de suite. Saisir un [taux manuel](#taux-manuels) règle le problème immédiatement.
+Kadratis récupère les taux de cette année en arrière-plan (au plus une fois toutes les six heures par année) : l'affichage suivant utilise le nouveau taux dès que la source le publie. Pour repérer les taux manquants, consultez le bloc des taux manquants au-dessus du tableau des taux, et lancez **Forcer la synchronisation des taux de change** pour les récupérer tout de suite. Saisir un [taux manuel](#taux-manuels) règle le problème immédiatement.
 
 ## Demander à l'assistant
 
-[Plaid](ai-assistant.md#tool-calls) lit les devises et les taux de cette page pour toute personne qui a le droit de lecture sur le budget. Demandez par exemple : « Quel est le taux USD pour 2026 ? »
+[Kad](ai-assistant.md#tool-calls) lit les devises et les taux de cette page pour toute personne qui a le droit de lecture sur le budget. Demandez par exemple : « Quel est le taux USD pour 2026 ? »
 
 ## Conseils
 
@@ -294,7 +294,7 @@ R : Non. La devise de reporting vaut pour tout l'espace de travail : sociétés,
 R : Les sources (Banque mondiale ou ExchangeRate-API) ne publient peut-être pas cette devise. Vérifiez que le code ISO est correct et couramment publié. Au besoin, limitez les devises autorisées aux codes bien couverts, ou saisissez un [taux manuel](#taux-manuels).
 
 **Q : À quelle fréquence les taux se mettent-ils à jour automatiquement ?**
-R : Tous les 30 jours, à la connexion d'un utilisateur, KANAP met à jour les taux des années A-1, A et A+1. Une année à laquelle manque le taux d'une devise utilisée est aussi récupérée dès qu'une liste, un rapport ou la page des contrats en a besoin, et à l'ouverture de cette page. Vous pouvez aussi lancer une mise à jour à tout moment avec **Forcer la synchronisation des taux de change**.
+R : Tous les 30 jours, à la connexion d'un utilisateur, Kadratis met à jour les taux des années A-1, A et A+1. Une année à laquelle manque le taux d'une devise utilisée est aussi récupérée dès qu'une liste, un rapport ou la page des contrats en a besoin, et à l'ouverture de cette page. Vous pouvez aussi lancer une mise à jour à tout moment avec **Forcer la synchronisation des taux de change**.
 
 **Q : Les changements de taux modifient-ils mes données ?**
 R : Non. Les taux de change n'interviennent que dans la **conversion et l'affichage**. Chaque ligne OPEX et CAPEX garde sa devise et ses montants, qui ne bougent pas quand les taux changent. Seuls les montants convertis des rapports et des listes évoluent.

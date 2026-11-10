@@ -10,7 +10,7 @@ Dieser Leitfaden führt Sie durch die Dokumentation einer Anwendung und ihrer un
 !!! tip "Bevorzugen Sie eine einseitige Zusammenfassung? :material-file-pdf-box:"
     Alle wichtigen Schritte auf einer einzigen A4-Seite: ausdrucken, aufhängen, mit dem Team teilen.
 
-    [:material-download: Spickzettel herunterladen (PDF)](downloads/kanap-itops-fast-track.pdf){ .md-button .md-button--primary }
+    [:material-download: Spickzettel herunterladen (PDF)](downloads/kadratis-itops-fast-track.pdf){ .md-button .md-button--primary }
 
 Für vollständige Details siehe die Referenzdokumentation zu [Anwendungen](../applications.md) und [Assets](../assets.md).
 
@@ -20,12 +20,12 @@ Für vollständige Details siehe die Referenzdokumentation zu [Anwendungen](../a
 
 ![Übersicht Anwendung zu Server](images/app-to-server-overview.png)
 
-Alles in KANAPs IT-Landschaft-Modul ist verbunden, um ein vollständiges Bild Ihrer Landschaft zu zeichnen:
+Alles in Kadratis' IT-Landschaft-Modul ist verbunden, um ein vollständiges Bild Ihrer Landschaft zu zeichnen:
 
 | Objekt | Was es repräsentiert |
 |--------|---------------------|
 | **Anwendung** | Eine Geschäftsanwendung oder ein IT-Dienst, den Sie dokumentieren möchten |
-| **Umgebung** | Wo sie läuft: Prod, QA, Dev usw. (in KANAP „Bereitstellungen" genannt) |
+| **Umgebung** | Wo sie läuft: Prod, QA, Dev usw. (in Kadratis „Bereitstellungen" genannt) |
 | **Server (Asset)** | Die Infrastruktur, die sie hostet: VMs, physische Server, Container |
 
 Die Kette ist einfach: **Anwendung → Umgebung → Server**. Am Ende dieses Leitfadens haben Sie diese Kette vollständig dokumentiert.
@@ -96,7 +96,7 @@ Die Mitglieder des IT-Teams, die für den technischen Betrieb und den Support zu
 
 ### Zielgruppe (Optional)
 
-Wählen Sie unter **Zielgruppe** das **Unternehmen** und die **Abteilungen**, die diese Anwendung nutzen. KANAP berechnet die Anzahl der Benutzer aus Ihren Stammdaten, oder Sie stellen die Berechnung auf manuell um und geben die Zahl selbst ein.
+Wählen Sie unter **Zielgruppe** das **Unternehmen** und die **Abteilungen**, die diese Anwendung nutzen. Kadratis berechnet die Anzahl der Benutzer aus Ihren Stammdaten, oder Sie stellen die Berechnung auf manuell um und geben die Zahl selbst ein.
 
 !!! warning "Warum Verantwortliche wichtig sind"
     Verantwortlichkeit macht es einfach, **die richtigen Personen zu erreichen**, wenn es darauf ankommt: geplante Wartung, Serviceunterbrechungen, Upgrade-Entscheidungen, Lizenzverlängerungen. Sie steuert auch die Filter **Meine Apps** und **Apps meines Teams** in der Hauptliste. Ohne Verantwortliche ist die App nur in der Ansicht „Alle Apps" sichtbar. Das heißt, niemand fühlt sich zuständig und niemand wird benachrichtigt.

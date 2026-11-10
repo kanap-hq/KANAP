@@ -44,7 +44,7 @@ Bei langen Listen (mehr als 25 Zeilen) virtualisiert die Tabelle die Zeilen: Sie
 
 ### Namen sind die Identität eines Werts
 
-Sie sehen und tippen ausschließlich **Namen**. KANAP erzeugt beim ersten Speichern eines Werts einen stabilen internen Code aus dem Namen und behält ihn dauerhaft bei, sodass das Umbenennen eines Werts nie die Datensätze beschädigt, die ihn verwenden. Der Code ist für Integratoren in der API sichtbar und kann in importierten Dateien verwendet werden; der Export schreibt jedoch Namen, und der Import akzeptiert beides.
+Sie sehen und tippen ausschließlich **Namen**. Kadratis erzeugt beim ersten Speichern eines Werts einen stabilen internen Code aus dem Namen und behält ihn dauerhaft bei, sodass das Umbenennen eines Werts nie die Datensätze beschädigt, die ihn verwenden. Der Code ist für Integratoren in der API sichtbar und kann in importierten Dateien verwendet werden; der Export schreibt jedoch Namen, und der Import akzeptiert beides.
 
 Weil Namen die Werte identifizieren, gelten innerhalb einer Liste einige Regeln:
 
@@ -56,13 +56,13 @@ Eine Liste, die gegen eine dieser Regeln verstößt, wird erst gespeichert, wenn
 
 ### Einen Wert entfernen
 
-**Entfernen** löscht einen Wert, den nichts verwendet. Wenn noch Datensätze auf den Wert verweisen, zeigt KANAP an, wie viele (Anwendungen, Assets, Schnittstellen, Verbindungen, Standorte, Vorfälle, Subnetze…), mit einem Link zur gefilterten Liste, sofern sich eine Liste nach diesem Feld filtern lässt, und bietet stattdessen **Nicht mehr anbieten** an: Der Wert bleibt bei den Datensätzen sichtbar, die ihn bereits verwenden, und wird für neue nicht mehr vorgeschlagen. Ein verwendeter Wert wird nie entfernt, auch nicht über die API.
+**Entfernen** löscht einen Wert, den nichts verwendet. Wenn noch Datensätze auf den Wert verweisen, zeigt Kadratis an, wie viele (Anwendungen, Assets, Schnittstellen, Verbindungen, Standorte, Vorfälle, Subnetze…), mit einem Link zur gefilterten Liste, sofern sich eine Liste nach diesem Feld filtern lässt, und bietet stattdessen **Nicht mehr anbieten** an: Der Wert bleibt bei den Datensätzen sichtbar, die ihn bereits verwenden, und wird für neue nicht mehr vorgeschlagen. Ein verwendeter Wert wird nie entfernt, auch nicht über die API.
 
-Integrierte Werte, die KANAP selbst verwaltet (die vier Lebenszyklus-Status, die Domänen Workgroup und N/A), können weder bearbeitet noch entfernt werden. Standard-Netzwerkzonen und -Asset-Typen können bearbeitet und zurückgezogen, aber nicht entfernt werden: Der Server würde sie wieder hinzufügen.
+Integrierte Werte, die Kadratis selbst verwaltet (die vier Lebenszyklus-Status, die Domänen Workgroup und N/A), können weder bearbeitet noch entfernt werden. Standard-Netzwerkzonen und -Asset-Typen können bearbeitet und zurückgezogen, aber nicht entfernt werden: Der Server würde sie wieder hinzufügen.
 
 ### Ihre Werte übersetzen
 
-Die Werte, die Sie eingeben, werden in allen Sprachen unverändert angezeigt. Um sie in der Sprache des jeweiligen Benutzers anzuzeigen, verwenden Sie die Aktion **Übersetzen** in einer Zeile: Der Dialog zeigt den Basisnamen (und bei Klassifizierungsstufen die Beschreibung) sowie ein Feld pro Sprache. Ein leer gelassenes Feld verwendet die automatische Übersetzung, solange der Wert noch ein KANAP-Standardwert ist, andernfalls den Basistext. Das Speichern von Übersetzungen ändert den Basistext nie, und ein übersetzter Name kann in CSV-Dateien und in der API wie der Name selbst verwendet werden; deshalb darf er keinen anderen Wert der Liste duplizieren.
+Die Werte, die Sie eingeben, werden in allen Sprachen unverändert angezeigt. Um sie in der Sprache des jeweiligen Benutzers anzuzeigen, verwenden Sie die Aktion **Übersetzen** in einer Zeile: Der Dialog zeigt den Basisnamen (und bei Klassifizierungsstufen die Beschreibung) sowie ein Feld pro Sprache. Ein leer gelassenes Feld verwendet die automatische Übersetzung, solange der Wert noch ein Kadratis-Standardwert ist, andernfalls den Basistext. Das Speichern von Übersetzungen ändert den Basistext nie, und ein übersetzter Name kann in CSV-Dateien und in der API wie der Name selbst verwendet werden; deshalb darf er keinen anderen Wert der Liste duplizieren.
 
 Editoren zeigen und bearbeiten immer den Basistext; wenn der angezeigte Name in Ihrer Sprache abweicht, weist die Zeile darauf hin („Angezeigt: …“).
 
@@ -102,13 +102,13 @@ Die Kategorie bestimmt, welche Felder beim Bearbeiten eines Standorts erscheinen
 
 ### Administrationszonen
 
-Die Zonen Ihres Administrationsmodells. KANAP liefert die drei Tiers des Tier-Modells der Administration mit, einer anerkannten Praxis:
+Die Zonen Ihres Administrationsmodells. Kadratis liefert die drei Tiers des Tier-Modells der Administration mit, einer anerkannten Praxis:
 
 - **Tier 0 (Vertrauenskern)**: Verzeichnisdienste wie Active Directory oder Entra ID, PKI, Werkzeuge zur Identitätsverwaltung und die Systeme, auf denen sie laufen.
 - **Tier 1 (Server und Anwendungen)**: Geschäftsserver, Anwendungen, Datenbanken und Middleware.
 - **Tier 2 (Arbeitsplätze)**: Arbeitsplätze und Geräte der Benutzer.
 
-Benennen Sie sie um, ergänzen Sie eigene oder markieren Sie sie als **Nicht mehr anbieten**, passend zu Ihrer Administrationsrichtlinie oder Ihrem Modell für privilegierten Zugriff. Die drei Tiers erscheinen, solange die Liste nie gespeichert wurde. Sobald sie gespeichert wurde, auch leer, fügt KANAP sie nicht mehr hinzu: Legen Sie sie bei Bedarf selbst an.
+Benennen Sie sie um, ergänzen Sie eigene oder markieren Sie sie als **Nicht mehr anbieten**, passend zu Ihrer Administrationsrichtlinie oder Ihrem Modell für privilegierten Zugriff. Die drei Tiers erscheinen, solange die Liste nie gespeichert wurde. Sobald sie gespeichert wurde, auch leer, fügt Kadratis sie nicht mehr hinzu: Legen Sie sie bei Bedarf selbst an.
 
 Die Reihenfolge der Liste zählt: Die erste Zone ist die sensibelste. Ziehen Sie eine Zeile an ihrem Griff, um sie zu verschieben. Eine neue Zone wird oben eingefügt: Verschieben Sie sie danach an ihren Platz. Die Seite [Administrationszonen](administration-view.md) zeigt die Zonen in dieser Reihenfolge und prüft die Assets gegen die erste Zone, die nicht als **Nicht mehr anbieten** markiert ist.
 

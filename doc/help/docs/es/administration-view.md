@@ -54,7 +54,7 @@ La zona más sensible es la primera zona de la configuración que no está marca
 | **Host menos sensible** | Los activos que hay que elevar: un host que ejecuta un activo de una zona más sensible (un host tier 1 que ejecuta una máquina virtual tier 0, por ejemplo), o el miembro de un clúster de una zona más sensible (un host ESX tier 1 en un clúster tier 0, por ejemplo) |
 | **Aplicación alojada** | Los activos de la zona más sensible que alojan una aplicación en servicio. Revise si cada aplicación debe estar ahí |
 
-Para **Host menos sensible**, KANAP lee las relaciones **Contiene** de los activos y los miembros de los clústeres. Lo que ejecuta un activo debe estar en una zona al menos igual de sensible. Se ignora una zona marcada con **Dejar de proponer** o ausente de la configuración. Un activo sin zona interrumpe la comprobación de la cadena: KANAP no compara ni ese activo ni los activos vinculados a él, y **Sin zona asignada** lo lista.
+Para **Host menos sensible**, Kadratis lee las relaciones **Contiene** de los activos y los miembros de los clústeres. Lo que ejecuta un activo debe estar en una zona al menos igual de sensible. Se ignora una zona marcada con **Dejar de proponer** o ausente de la configuración. Un activo sin zona interrumpe la comprobación de la cadena: Kadratis no compara ni ese activo ni los activos vinculados a él, y **Sin zona asignada** lo lista.
 
 Sin ninguna zona en la configuración, solo se muestra **Sin zona asignada**, y la página le pide que añada una zona.
 
@@ -81,7 +81,7 @@ Con `infrastructure:member`, cada fila empieza con una casilla:
 
 Cambiar la búsqueda o los filtros borra la elección. **Asignar a una zona** abre un cuadro de diálogo en el que elige una zona, o **Sin zona** para quitarla. No se puede elegir una zona marcada con **Dejar de proponer**. Antes de que confirme, el cuadro de diálogo cuenta los activos cuya zona va a cambiar entre los activos elegidos. Una asignación abarca hasta 5.000 activos: por encima, acote los filtros.
 
-Si entran activos en el filtro entre el recuento y la confirmación, KANAP rechaza el cambio y vuelve a contar: compruebe el nuevo número y confirme. Cada activo modificado recibe una entrada en el registro de auditoría, como cuando lo edita.
+Si entran activos en el filtro entre el recuento y la confirmación, Kadratis rechaza el cambio y vuelve a contar: compruebe el nuevo número y confirme. Cada activo modificado recibe una entrada en el registro de auditoría, como cuando lo edita.
 
 ## Servicios de directorio y dominios
 
@@ -95,7 +95,7 @@ Si entran activos en el filtro entre el recuento y la confirmación, KANAP recha
 | **Sufijo DNS** | El sufijo de los nombres de sus equipos |
 | **Confianzas** | Los dominios con los que tiene una confianza, y la dirección de cada una |
 | **Cuentas**, **Equipos** | Los números registrados en la configuración. Un guion significa que no hay ninguno registrado |
-| **Controladores de dominio** | Cuántos servidores deduce KANAP como controladores del dominio, y después sus nombres. Haga clic en un nombre para abrir el activo |
+| **Controladores de dominio** | Cuántos servidores deduce Kadratis como controladores del dominio, y después sus nombres. Haga clic en un nombre para abrir el activo |
 
 **Confianzas** también lista, en gris, las confianzas declaradas en otro dominio hacia este, con la dirección vista desde este dominio: una confianza saliente de A hacia B se lee como entrante en B. Las direcciones significan:
 
@@ -103,7 +103,7 @@ Si entran activos en el filtro entre el recuento y la confirmación, KANAP recha
 - **Entrante**: el otro dominio confía en este.
 - **Bidireccional**: ambos.
 
-Los **Controladores de dominio** no se introducen a mano. KANAP toma los servidores del dominio (el campo **Dominio** de la pestaña Red del activo) que no están retirados y que:
+Los **Controladores de dominio** no se introducen a mano. Kadratis toma los servidores del dominio (el campo **Dominio** de la pestaña Red del activo) que no están retirados y que:
 
 - llevan una tecnología de la familia **Directorio e identidad** que no está retirada, como Active Directory, o
 - están asignados con el rol de servidor **Controlador de dominio** a una aplicación en servicio.

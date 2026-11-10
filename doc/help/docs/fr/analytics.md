@@ -28,7 +28,7 @@ La dimension par défaut a un rôle particulier :
 
 - Elle s'applique toujours aux lignes OPEX et CAPEX : son champ **Utilisé pour** est verrouillé. Voir [Dimensions OPEX ou CAPEX](#dimensions-opex-ou-capex).
 - Elle ne peut être ni désactivée ni supprimée. Son espace de travail n'a pas de bouton **Supprimer**, et une ligne sous **Cycle de vie** en donne la raison : « Cette dimension ne peut être ni désactivée ni supprimée : les anciens fichiers et les questions posées à l'IA l'utilisent. »
-- Les questions posées à Plaid sur la catégorie analytique l'utilisent. Voir [Dimensions analytiques dans Plaid](#dimensions-analytiques-dans-plaid). Dans un fichier budgétaire, chaque dimension a sa propre colonne, dimension par défaut incluse : voir [Charger un budget depuis un tableur](budget-file.md).
+- Les questions posées à Kad sur la catégorie analytique l'utilisent. Voir [Dimensions analytiques dans Kad](#dimensions-analytiques-dans-plaid). Dans un fichier budgétaire, chaque dimension a sa propre colonne, dimension par défaut incluse : voir [Charger un budget depuis un tableur](budget-file.md).
 - Elle reste la dimension par défaut quand vous la renommez, changez son code ou la déplacez dans l'ordre des dimensions.
 - Son libellé est réservé : aucune autre dimension ne peut s'appeler « Dimension analytique », dans aucune des langues de l'application.
 
@@ -162,14 +162,14 @@ Ouvrez-le avec **Modifier** (**Ouvrir** si vous pouvez seulement consulter) dans
 
 ### Ordonner les dimensions
 
-Les dimensions ont un ordre, que vous définissez. KANAP les présente dans cet ordre :
+Les dimensions ont un ordre, que vous définissez. Kadratis les présente dans cet ordre :
 
 - dans la barre de sélection de cette page
 - dans le panneau **Propriétés** des lignes OPEX et CAPEX
 - dans les colonnes de la liste des lignes budgétaires
 - dans les colonnes du fichier budgétaire
 - dans les filtres des rapports et le sélecteur de dimension du rapport
-- dans les dimensions que liste Plaid
+- dans les dimensions que liste Kad
 
 Une nouvelle dimension se place en dernier.
 
@@ -191,7 +191,7 @@ Le champ **Utilisé pour** indique à quelles lignes budgétaires la dimension s
 | **OPEX uniquement** | Seules les lignes OPEX peuvent avoir une valeur |
 | **CAPEX uniquement** | Seules les lignes CAPEX peuvent avoir une valeur |
 
-Les écrans OPEX affichent les dimensions utilisées pour les lignes OPEX, et les écrans CAPEX celles utilisées pour les lignes CAPEX. Cela concerne le panneau **Propriétés** de la ligne, les colonnes, les filtres et la recherche rapide des listes, les sélecteurs et les filtres de dimension des rapports (ils suivent le choix **OPEX** / **CAPEX** du rapport) et Plaid. Le fichier budgétaire a une colonne pour chaque dimension activée, et chaque ligne ne prend de valeurs que sur les dimensions de son type de ligne.
+Les écrans OPEX affichent les dimensions utilisées pour les lignes OPEX, et les écrans CAPEX celles utilisées pour les lignes CAPEX. Cela concerne le panneau **Propriétés** de la ligne, les colonnes, les filtres et la recherche rapide des listes, les sélecteurs et les filtres de dimension des rapports (ils suivent le choix **OPEX** / **CAPEX** du rapport) et Kad. Le fichier budgétaire a une colonne pour chaque dimension activée, et chaque ligne ne prend de valeurs que sur les dimensions de son type de ligne.
 
 Une ligne garde la valeur qu'elle a déjà sur une dimension qui ne s'applique plus à son type de ligne. La valeur est masquée partout et réapparaît si vous rouvrez la dimension à ce type de ligne. Lorsque votre choix masque des valeurs, une note s'affiche sous le champ, par exemple « 8 lignes CAPEX ont une valeur pour cette dimension. Elles la gardent, masquée tant que la dimension est réservée aux lignes OPEX. »
 
@@ -202,13 +202,13 @@ Une même valeur peut aussi être réservée à un seul type de ligne. Les deux 
 - Le réglage de la dimension décide si le champ existe pour un type de ligne. Quand le champ disparaît, les valeurs que portent les lignes sont masquées.
 - Le réglage de la valeur filtre les choix. Le champ reste, les lignes CAPEX ne proposent plus **Main-d'œuvre interne**, et une ligne CAPEX qui l'a déjà le garde, l'affiche et reste modifiable. Voir [Valeurs OPEX ou CAPEX](#valeurs-opex-ou-capex).
 
-Les deux réglages doivent concorder. Une dimension ne peut pas être réglée sur un seul type de ligne tant que certaines de ses valeurs sont réservées à l'autre type : KANAP refuse et nomme les valeurs (trois au plus, puis « and N more »), par exemple « 2 values of this dimension are for CAPEX lines only (Matériel, Logiciel). Set them to OPEX and CAPEX first. »
+Les deux réglages doivent concorder. Une dimension ne peut pas être réglée sur un seul type de ligne tant que certaines de ses valeurs sont réservées à l'autre type : Kadratis refuse et nomme les valeurs (trois au plus, puis « and N more »), par exemple « 2 values of this dimension are for CAPEX lines only (Matériel, Logiciel). Set them to OPEX and CAPEX first. »
 
 ### Dimensions obligatoires
 
-Activez **Obligatoire** lorsque chaque ligne budgétaire doit être classée sur une dimension. KANAP contrôle alors les lignes des types pour lesquels la dimension est utilisée :
+Activez **Obligatoire** lorsque chaque ligne budgétaire doit être classée sur une dimension. Kadratis contrôle alors les lignes des types pour lesquels la dimension est utilisée :
 
-- **Une nouvelle ligne doit avoir une valeur sur la dimension.** Un fichier budgétaire, Plaid et l'API ne créent pas de ligne sans valeur, avec le message « The Nature de coût dimension is required. Choose a value. » Sur l'écran des lignes budgétaires, une ligne existe dès son titre, et **Créer** signale la dimension comme manquante tant qu'elle n'a pas de valeur.
+- **Une nouvelle ligne doit avoir une valeur sur la dimension.** Un fichier budgétaire, Kad et l'API ne créent pas de ligne sans valeur, avec le message « The Nature de coût dimension is required. Choose a value. » Sur l'écran des lignes budgétaires, une ligne existe dès son titre, et **Créer** signale la dimension comme manquante tant qu'elle n'a pas de valeur.
 - **Une ligne qui porte une valeur ne peut pas la perdre.** Vous pouvez choisir une autre valeur. Le champ ne peut pas être vidé.
 - **Une ligne créée avant l'activation du réglage continue de fonctionner.** Si elle n'a pas de valeur sur la dimension, elle reste modifiable et vous pouvez y enregistrer d'autres modifications. Son champ est marqué comme obligatoire. Sur les écrans OPEX et CAPEX, quitter une telle ligne après l'avoir modifiée vous demande d'abord de choisir une valeur, avec **Rester** et **Quitter quand même**. L'ouvrir sans rien modifier ne demande jamais rien.
 
@@ -266,13 +266,13 @@ Les modifications s'enregistrent d'elles-mêmes, comme dans l'espace de travail 
 
 ### Ordonner les valeurs
 
-Les valeurs d'une dimension ont un ordre, que vous définissez. KANAP propose les valeurs dans cet ordre partout où vous les choisissez ou filtrez sur elles :
+Les valeurs d'une dimension ont un ordre, que vous définissez. Kadratis propose les valeurs dans cet ordre partout où vous les choisissez ou filtrez sur elles :
 
 - les champs de valeur des lignes OPEX et CAPEX (quand vous tapez dans un champ, les meilleures correspondances viennent en premier)
 - les filtres à cases à cocher de la dimension dans la liste des lignes budgétaires
 - les filtres de dimension des rapports et la liste **Exclure des valeurs** du rapport Dimensions analytiques
 - l'export des valeurs
-- les valeurs que liste Plaid
+- les valeurs que liste Kad
 
 Trier la liste des lignes budgétaires sur la colonne d'une dimension suit aussi cet ordre, puis le nom de la valeur. Les lignes sans valeur viennent en dernier dans l'ordre croissant. Les lignes des rapports gardent leur propre ordre, par montant.
 
@@ -296,7 +296,7 @@ Le champ **Utilisé pour** d'une valeur indique quelles lignes budgétaires peuv
 | **OPEX uniquement** | Seules les lignes OPEX peuvent utiliser la valeur |
 | **CAPEX uniquement** | Seules les lignes CAPEX peuvent utiliser la valeur |
 
-Le champ d'une ligne OPEX propose les valeurs pour OPEX et celles pour les deux. Le champ d'une ligne CAPEX fait de même pour CAPEX. Une ligne qui porte déjà une valeur de l'autre type la garde, l'affiche et reste modifiable, comme pour une valeur désactivée. Choisir une telle valeur pour une autre ligne, ou en changeant la valeur d'une ligne, est refusé : dans l'application, dans un fichier budgétaire, par l'API et dans Plaid.
+Le champ d'une ligne OPEX propose les valeurs pour OPEX et celles pour les deux. Le champ d'une ligne CAPEX fait de même pour CAPEX. Une ligne qui porte déjà une valeur de l'autre type la garde, l'affiche et reste modifiable, comme pour une valeur désactivée. Choisir une telle valeur pour une autre ligne, ou en changeant la valeur d'une ligne, est refusé : dans l'application, dans un fichier budgétaire, par l'API et dans Kad.
 
 - Lorsque la dimension est utilisée pour un seul type de ligne, le type qu'elle exclut n'est pas disponible dans le champ, avec une ligne comme « La dimension Domaine IT est réservée aux lignes OPEX. » **OPEX et CAPEX** et le type propre à la dimension restent sélectionnables. Une valeur ne peut pas être réservée au type de ligne que sa dimension exclut.
 - Lorsque des lignes de l'autre type portent la valeur, une ligne s'affiche sous le champ, par exemple « 4 lignes CAPEX ont cette valeur. Elles la gardent, mais les nouvelles lignes CAPEX ne peuvent pas la choisir. » Cliquez sur **Afficher ces lignes** pour les ouvrir dans la liste, dans un nouvel onglet. La ligne reste tant que le conflit existe.
@@ -314,13 +314,13 @@ Les dimensions et les valeurs ont chacune un statut (**Activé** ou **Désactiv�
 
 **Une valeur désactivée** :
 
-- Ne peut pas être choisie pour une ligne, dans l'application, dans un fichier importé ou via Plaid.
+- Ne peut pas être choisie pour une ligne, dans l'application, dans un fichier importé ou via Kad.
 - Reste sur les lignes qui l'ont déjà et continue de compter dans les rapports. Dans la liste du champ, elle est marquée **Désactivé**.
 
 **Une dimension désactivée** :
 
 - N'est pas contrôlée lorsqu'elle est **Obligatoire** : des lignes peuvent être créées sans valeur sur elle. Elle garde le réglage pour le jour où vous la réactivez.
-- Disparaît des formulaires des lignes, de la liste des lignes budgétaires, des filtres des rapports, du sélecteur de dimension du rapport, des exports OPEX et CAPEX et de Plaid. Seule la page Dimensions analytiques l'affiche, marquée **Désactivé**.
+- Disparaît des formulaires des lignes, de la liste des lignes budgétaires, des filtres des rapports, du sélecteur de dimension du rapport, des exports OPEX et CAPEX et de Kad. Seule la page Dimensions analytiques l'affiche, marquée **Désactivé**.
 - Conserve ses valeurs sur les lignes. Réactivez la dimension et elles s'affichent de nouveau.
 - Ne reçoit plus de nouvelles valeurs. **Nouvelle valeur** est désactivé tant que la dimension est sélectionnée, et les fichiers importés ne peuvent ni ajouter ni modifier ses valeurs.
 
@@ -359,17 +359,17 @@ Les sept rapports budgétaires peuvent aussi être restreints à une valeur d'un
 
 ---
 
-## Dimensions analytiques dans Plaid
+## Dimensions analytiques dans Kad { #dimensions-analytiques-dans-plaid }
 
-- Plaid peut filtrer et regrouper les lignes OPEX sur chaque dimension activée utilisée pour les lignes OPEX, et les lignes CAPEX sur chaque dimension activée utilisée pour les lignes CAPEX.
+- Kad peut filtrer et regrouper les lignes OPEX sur chaque dimension activée utilisée pour les lignes OPEX, et les lignes CAPEX sur chaque dimension activée utilisée pour les lignes CAPEX.
 - Une question sur la catégorie analytique utilise la dimension par défaut, quels que soient son nom ou son ordre.
-- La recherche de Plaid et les mentions `@` du chat trouvent une ligne budgétaire par le nom d'une valeur qu'elle porte sur une dimension affichée pour son type, avec ou sans accents.
-- Plaid peut définir, modifier ou effacer la valeur d'une ligne sur n'importe quelle dimension lorsqu'il crée ou met à jour une ligne budgétaire. Demandez par exemple : « Mets la Nature de coût de BL-12 sur Logiciel ». Plaid trouve la valeur par son nom dans cette dimension et affiche dans l'aperçu la dimension et la valeur, avant et après. Rien ne change tant que vous n'avez pas approuvé.
-- Plaid applique les mêmes règles que l'application : uniquement les dimensions activées utilisées pour le type de la ligne, uniquement les valeurs activées utilisées pour le type de la ligne, et une ligne conserve une valeur qu'elle porte déjà.
-- Quand Plaid crée une ligne, il lui faut une valeur sur chaque dimension obligatoire du type de la ligne. Dans un espace de travail créé avant les dimensions recommandées, une ligne CAPEX demande **PP&E type**, **Investment type** et **Priority**.
-- Plaid sait quelles dimensions sont obligatoires. Une nouvelle ligne doit avoir une valeur sur chacune d'elles, et Plaid ne peut pas effacer la valeur d'une dimension obligatoire. Plaid refuse une demande qui enfreint la règle et en donne la raison, par exemple « Nature de coût is required for spend item creation. »
-- Plaid peut aussi créer une valeur dans la dimension que vous nommez. Sans dimension, la valeur est créée dans la dimension par défaut.
-- Avec le droit de lecture sur l'analytique, Plaid lit aussi les réglages de chaque dimension, son nombre de valeurs et les lignes qui l'utilisent. Demandez par exemple : « Quelles dimensions sont obligatoires ? »
+- La recherche de Kad et les mentions `@` du chat trouvent une ligne budgétaire par le nom d'une valeur qu'elle porte sur une dimension affichée pour son type, avec ou sans accents.
+- Kad peut définir, modifier ou effacer la valeur d'une ligne sur n'importe quelle dimension lorsqu'il crée ou met à jour une ligne budgétaire. Demandez par exemple : « Mets la Nature de coût de BL-12 sur Logiciel ». Kad trouve la valeur par son nom dans cette dimension et affiche dans l'aperçu la dimension et la valeur, avant et après. Rien ne change tant que vous n'avez pas approuvé.
+- Kad applique les mêmes règles que l'application : uniquement les dimensions activées utilisées pour le type de la ligne, uniquement les valeurs activées utilisées pour le type de la ligne, et une ligne conserve une valeur qu'elle porte déjà.
+- Quand Kad crée une ligne, il lui faut une valeur sur chaque dimension obligatoire du type de la ligne. Dans un espace de travail créé avant les dimensions recommandées, une ligne CAPEX demande **PP&E type**, **Investment type** et **Priority**.
+- Kad sait quelles dimensions sont obligatoires. Une nouvelle ligne doit avoir une valeur sur chacune d'elles, et Kad ne peut pas effacer la valeur d'une dimension obligatoire. Kad refuse une demande qui enfreint la règle et en donne la raison, par exemple « Nature de coût is required for spend item creation. »
+- Kad peut aussi créer une valeur dans la dimension que vous nommez. Sans dimension, la valeur est créée dans la dimension par défaut.
+- Avec le droit de lecture sur l'analytique, Kad lit aussi les réglages de chaque dimension, son nombre de valeurs et les lignes qui l'utilisent. Demandez par exemple : « Quelles dimensions sont obligatoires ? »
 
 ---
 

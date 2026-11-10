@@ -1,6 +1,6 @@
 # Scheduled Tasks
 
-The Scheduled Tasks page lists every recurring background job KANAP runs on a cron schedule: cleanups, periodic syncs, summary emails, retention enforcement, and so on. From here you can pause a job, change when it runs, trigger it on demand, and inspect the history of every recent execution.
+The Scheduled Tasks page lists every recurring background job Kadratis runs on a cron schedule: cleanups, periodic syncs, summary emails, retention enforcement, and so on. From here you can pause a job, change when it runs, trigger it on demand, and inspect the history of every recent execution.
 
 ## Where to find it
 

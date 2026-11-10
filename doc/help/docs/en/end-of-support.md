@@ -64,9 +64,9 @@ The rows about applications need the right to read applications.
 
 ## Ask the assistant
 
-[Plaid](ai-assistant.md) reads both views, **Deadlines** and **Missing data**, with the same rights as the report. It names each item by its reference (`APP-4`, `AST-12`, `TEC-3`) and reads one horizon at a time: 6, 12, 24 or 36 months. Plaid lists the deadlines 30 at a time and can read the following pages; its counts and totals cover every deadline. When you cannot read applications, Plaid says that it left the application rows out.
+[Kad](ai-assistant.md) reads both views, **Deadlines** and **Missing data**, with the same rights as the report. It names each item by its reference (`APP-4`, `AST-12`, `TEC-3`) and reads one horizon at a time: 6, 12, 24 or 36 months. Kad lists the deadlines 30 at a time and can read the following pages; its counts and totals cover every deadline. When you cannot read applications, Kad says that it left the application rows out.
 
-Plaid can also add technology versions and correct their support dates, with your approval. The end of support of an application is a field of the application: Plaid changes it as it changes the application, with the rights of the [Applications](applications.md) page.
+Kad can also add technology versions and correct their support dates, with your approval. The end of support of an application is a field of the application: Kad changes it as it changes the application, with the rights of the [Applications](applications.md) page.
 
 Ask, for example: "Which applications reach their end of support in the next six months?", "End of support deadlines for the next twelve months, by type", "Which records should I complete for the End of support report?", "PostgreSQL 16 ends its support on 31/12/2028" or "Clear the end of extended support date of version 14 of TEC-3".
 
@@ -74,4 +74,4 @@ Ask, for example: "Which applications reach their end of support in the next six
 
 - **Clear the missing data first**: a server without its technologies, or a version without a date, never shows up in the deadlines.
 - **Look 24 months ahead for budgets**: a migration planned next year needs its money in this year's budget.
-- **Use the catalog**: technologies added from the catalog come with their end of support dates. They come from endoflife.date, or from the publisher's official pages for the products KANAP maintains (see [Versions from the catalog](technologies.md#versions-from-the-catalog)).
+- **Use the catalog**: technologies added from the catalog come with their end of support dates. They come from endoflife.date, or from the publisher's official pages for the products Kadratis maintains (see [Versions from the catalog](technologies.md#versions-from-the-catalog)).

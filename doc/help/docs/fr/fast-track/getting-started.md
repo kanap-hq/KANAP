@@ -1,16 +1,16 @@
 ---
-title: "Premiers pas : vos 10 premières minutes dans KANAP"
+title: "Premiers pas : vos 10 premières minutes dans Kadratis"
 description: Un guide d'intégration rapide pour tous les utilisateurs. Tableau de bord, profil, tâches, notifications et concepts clés pour être à l'aise rapidement.
 ---
 
-# Premiers pas : vos 10 premières minutes dans KANAP
+# Premiers pas : vos 10 premières minutes dans Kadratis
 
-Bienvenue dans KANAP. Ce guide vous accompagne dans tout ce dont vous avez besoin pour être productif dès le premier jour, quel que soit votre rôle. Aucune connaissance d'administration requise, aucune plongée spécifique dans un module. Juste l'essentiel pour vous sentir à l'aise.
+Bienvenue dans Kadratis. Ce guide vous accompagne dans tout ce dont vous avez besoin pour être productif dès le premier jour, quel que soit votre rôle. Aucune connaissance d'administration requise, aucune plongée spécifique dans un module. Juste l'essentiel pour vous sentir à l'aise.
 
 !!! tip "Conseil : Vous préférez un résumé sur une page ? :material-file-pdf-box:"
     Toutes les étapes clés sur une seule page A4 : imprimez-la, épinglez-la, partagez-la avec votre équipe.
 
-    [:material-download: Télécharger l'aide-mémoire (PDF)](downloads/kanap-getting-started.pdf){ .md-button .md-button--primary }
+    [:material-download: Télécharger l'aide-mémoire (PDF)](downloads/kadratis-getting-started.pdf){ .md-button .md-button--primary }
 
 Pour les flux de travail spécifiques à un rôle, consultez le [Fast Track Portefeuille](index.md) et le [Fast Track Cartographie SI](apps-and-assets.md).
 
@@ -18,11 +18,11 @@ Pour les flux de travail spécifiques à un rôle, consultez le [Fast Track Port
 
 ## La vue d'ensemble
 
-KANAP est organisé autour d'une structure simple. La barre supérieure affiche les sections auxquelles vous avez accès :
+Kadratis est organisé autour d'une structure simple. La barre supérieure affiche les sections auxquelles vous avez accès :
 
 | Zone | Ce qu'elle contient |
 |------|---------------------|
-| **Tableau de bord** | Votre hub personnel : cliquez sur le logo KANAP ou naviguez vers `/` |
+| **Tableau de bord** | Votre hub personnel : cliquez sur le logo Kadratis ou naviguez vers `/` |
 | **Portefeuille** | Tâches, Demandes, Projets, Planification, Rapports, Contributeurs |
 | **Cartographie SI** | Applications, Interfaces, Carte des interfaces, Actifs, Connexions, Carte des connexions, Zones d'administration, Sites, Technologies, Incidents, Fins de support, Vulnérabilités, Paramètres (listes et Netbox) |
 | **Base de connaissances** | Documents et modèles avec workflows de revue |
@@ -84,10 +84,10 @@ Mettez à jour vos informations personnelles :
 - **Intitulé de poste**
 - **Téléphone professionnel** / **Téléphone mobile**
 
-Si votre compte n'a pas encore de nom, KANAP vous demande votre prénom et votre nom après la connexion. **Plus tard** masque la question dans ce navigateur.
+Si votre compte n'a pas encore de nom, Kadratis vous demande votre prénom et votre nom après la connexion. **Plus tard** masque la question dans ce navigateur.
 
 !!! info "Information : Utilisateurs SSO"
-    Si votre organisation utilise Microsoft Entra ID (SSO), certains champs sont synchronisés automatiquement et ne peuvent pas être modifiés dans KANAP.
+    Si votre organisation utilise Microsoft Entra ID (SSO), certains champs sont synchronisés automatiquement et ne peuvent pas être modifiés dans Kadratis.
 
 ### Onglet Notifications
 
@@ -132,7 +132,7 @@ Vous pouvez aussi basculer le thème rapidement depuis la barre supérieure en u
 
 ## Étape 3 : Comprenez les filtres de périmètre
 
-C'est le concept le plus important pour les nouveaux utilisateurs. Chaque liste majeure dans KANAP (Tâches, Applications, Projets, Demandes) a un **filtre de périmètre** en haut :
+C'est le concept le plus important pour les nouveaux utilisateurs. Chaque liste majeure dans Kadratis (Tâches, Applications, Projets, Demandes) a un **filtre de périmètre** en haut :
 
 | Périmètre | Ce qu'il affiche |
 |-----------|-----------------|
@@ -211,7 +211,7 @@ Pour les tâches projet, la saisie de temps est essentielle : elle alimente le g
 
 ### Partagez une tâche
 
-Besoin d'impliquer quelqu'un ? Cliquez sur **Partager** dans l'en-tête de la tâche pour envoyer par e-mail un lien direct à n'importe quel collègue, même des personnes en dehors de KANAP. Ajoutez un message personnel si nécessaire.
+Besoin d'impliquer quelqu'un ? Cliquez sur **Partager** dans l'en-tête de la tâche pour envoyer par e-mail un lien direct à n'importe quel collègue, même des personnes en dehors de Kadratis. Ajoutez un message personnel si nécessaire.
 
 !!! info "Information : Partager fonctionne partout"
     Ce n'est pas réservé aux tâches. Vous pouvez envoyer des liens vers des projets, demandes, contrats, applications : tout objet d'espace de travail. C'est la manière la plus rapide d'orienter quelqu'un vers le bon endroit.
@@ -220,7 +220,7 @@ Besoin d'impliquer quelqu'un ? Cliquez sur **Partager** dans l'en-tête de la t�
 
 ## Étape 5 : Configurez votre profil contributeur
 
-Votre profil Contributeur indique à KANAP qui vous êtes en termes de planification de projet. Il est séparé de votre compte utilisateur : il concerne **l'équipe, la disponibilité et les compétences**.
+Votre profil Contributeur indique à Kadratis qui vous êtes en termes de planification de projet. Il est séparé de votre compte utilisateur : il concerne **l'équipe, la disponibilité et les compétences**.
 
 Rendez-vous dans **Portefeuille > Contributeurs** et trouvez votre nom (ou demandez à votre admin de vous ajouter).
 
@@ -289,7 +289,7 @@ L'e-mail hebdomadaire et les notifications en temps réel vous tiennent informé
 
 | Je veux... | Aller à... |
 |------------|-----------|
-| Voir ma vue d'ensemble | Tableau de bord (cliquez sur le logo KANAP) |
+| Voir ma vue d'ensemble | Tableau de bord (cliquez sur le logo Kadratis) |
 | Créer une tâche rapidement | Tableau de bord > bouton Créer une tâche |
 | Saisir du temps rapidement | Tableau de bord > bouton Saisir du temps |
 | Créer un nouveau document | Tableau de bord > bouton Nouveau document |
@@ -299,7 +299,7 @@ L'e-mail hebdomadaire et les notifications en temps réel vous tiennent informé
 | Configurer les notifications | Avatar > Mon profil > onglet Notifications |
 | Configurer l'e-mail hebdomadaire | Avatar > Mon profil > onglet Notifications > Revue hebdomadaire |
 | Changer de thème (clair/sombre) | Avatar > Mon profil > onglet Apparence |
-| Voir la version ou obtenir de l'aide | Avatar > À propos de KANAP |
+| Voir la version ou obtenir de l'aide | Avatar > À propos de Kadratis |
 | Définir ma disponibilité | Portefeuille > Contributeurs > votre nom |
 | Ajouter mes compétences | Portefeuille > Contributeurs > votre nom > onglet Compétences |
 | Partager un lien vers n'importe quoi | Ouvrez n'importe quel espace de travail > Partager |
@@ -308,4 +308,4 @@ L'e-mail hebdomadaire et les notifications en temps réel vous tiennent informé
 ---
 
 !!! success "Vous êtes prêt"
-    Vous savez maintenant comment naviguer dans KANAP, gérer vos tâches, configurer votre profil et vos notifications, et paramétrer votre profil contributeur. Commencez par votre tableau de bord chaque matin, gardez vos tâches à jour et saisissez du temps régulièrement : le reste suivra naturellement.
+    Vous savez maintenant comment naviguer dans Kadratis, gérer vos tâches, configurer votre profil et vos notifications, et paramétrer votre profil contributeur. Commencez par votre tableau de bord chaque matin, gardez vos tâches à jour et saisissez du temps régulièrement : le reste suivra naturellement.

@@ -1,10 +1,10 @@
 # Mi panel de control
 
-El Panel de control es su página de inicio personal en KANAP. Le ofrece una visión rápida de sus tareas, proyectos, aplicaciones y presupuesto. Usted elige sus mosaicos y su orden. Los mosaicos para los que no tiene permiso están ocultos.
+El Panel de control es su página de inicio personal en Kadratis. Le ofrece una visión rápida de sus tareas, proyectos, aplicaciones y presupuesto. Usted elige sus mosaicos y su orden. Los mosaicos para los que no tiene permiso están ocultos.
 
 ## Dónde encontrarlo
 
-- Haga clic en el logotipo de **KANAP** o navegue a `/`
+- Haga clic en el logotipo de **Kadratis** o navegue a `/`
 - Esta es la página predeterminada después de iniciar sesión para usuarios no administradores.
 - No se requieren permisos especiales para ver el propio panel, pero los mosaicos individuales dependen de sus derechos de acceso.
 
@@ -38,20 +38,20 @@ Después de guardar, el mosaico de resumen de tiempo del panel se actualiza auto
 
 ## Línea de datos de ejemplo
 
-En un espacio de trabajo en la nube vacío, que nunca ha tenido datos de ejemplo, los administradores ven una línea sobre los mosaicos: «Descubra KANAP con datos de ejemplo.» **Cargar** abre el cuadro de diálogo de datos de ejemplo y **Ocultar** elimina la línea de forma definitiva. La línea desaparece en cuanto el espacio de trabajo contiene datos y no vuelve tras un borrado. Véase [Datos de ejemplo](sample-data.md).
+En un espacio de trabajo en la nube vacío, que nunca ha tenido datos de ejemplo, los administradores ven una línea sobre los mosaicos: «Descubra Kadratis con datos de ejemplo.» **Cargar** abre el cuadro de diálogo de datos de ejemplo y **Ocultar** elimina la línea de forma definitiva. La línea desaparece en cuanto el espacio de trabajo contiene datos y no vuelve tras un borrado. Véase [Datos de ejemplo](sample-data.md).
 
 ## Prueba: su recorrido y sus primeros pasos { #trial-first-steps }
 
-En un espacio de trabajo en prueba, se abre un cuadro de diálogo la primera vez que abre KANAP. Hace una pregunta por pantalla:
+En un espacio de trabajo en prueba, se abre un cuadro de diálogo la primera vez que abre Kadratis. Hace una pregunta por pantalla:
 
-1. **¿Qué le trae a KANAP?** **El presupuesto de TI**, **El mapa del SI**, **Los proyectos y las solicitudes** o **Solo estoy mirando**.
+1. **¿Qué le trae a Kadratis?** **El presupuesto de TI**, **El mapa del SI**, **Los proyectos y las solicitudes** o **Solo estoy mirando**.
 2. **¿Cómo quiere empezar?** **Descubrir con el ejemplo completo** o **Empezar con mis datos**.
 
 Empezar con sus datos borra el ejemplo. Si se crearon elementos desde la carga del ejemplo, una confirmación indica su número antes de borrar nada. Solo un administrador puede elegir sus propios datos mientras el espacio de trabajo contiene el ejemplo. El ejemplo solo se carga en un espacio de trabajo vacío. Durante el periodo de prueba, un administrador que elige el ejemplo cuando el espacio de trabajo contiene datos debe borrarlo primero: la confirmación pide el nombre del espacio de trabajo y ofrece **Ver lo que contiene el espacio de trabajo**. El espacio de trabajo se borra y después se carga el ejemplo. Después del periodo de prueba, la elección se rechaza y su recorrido no cambia.
 
 Mientras se carga el ejemplo, o mientras se borra el espacio de trabajo, una línea de la página de inicio lo indica.
 
-Si cierra el cuadro de diálogo, la elección queda pendiente en **Acerca de KANAP**. La línea **Recorrido: … · Cambiar** muestra el recorrido elegido (**Elegir** mientras no se ha elegido nada). Cualquiera puede cambiarlo mientras falta una respuesta. Después, solo los administradores pueden hacerlo.
+Si cierra el cuadro de diálogo, la elección queda pendiente en **Acerca de Kadratis**. La línea **Recorrido: … · Cambiar** muestra el recorrido elegido (**Elegir** mientras no se ha elegido nada). Cualquiera puede cambiarlo mientras falta una respuesta. Después, solo los administradores pueden hacerlo.
 
 ### Sus cinco primeros pasos
 
@@ -60,13 +60,13 @@ Una vez elegido el recorrido, el mosaico **Sus cinco primeros pasos** aparece pr
 - Con el ejemplo, abrir un paso lo marca como hecho.
 - Con sus datos, un paso que crea algo queda marcado como hecho en cuanto ese elemento existe. Para los demás pasos, haga clic en **Hecho** en la explicación, o en la marca junto al paso en el mosaico. La marca también deshace un paso, salvo uno cuyo elemento existe.
 
-Cuando los cinco pasos están hechos, el mosaico ofrece los otros dos recorridos. En cualquier momento, **Cambiar de recorrido** en el encabezado del mosaico vuelve a abrir la pregunta del recorrido. Como con la línea de **Acerca de KANAP**, cualquiera puede usarlo mientras falta una respuesta, y después solo los administradores. El botón de cierre (**×**) oculta el mosaico. Para mostrarlo de nuevo, use **Mostrar los primeros pasos** en **Acerca de KANAP**.
+Cuando los cinco pasos están hechos, el mosaico ofrece los otros dos recorridos. En cualquier momento, **Cambiar de recorrido** en el encabezado del mosaico vuelve a abrir la pregunta del recorrido. Como con la línea de **Acerca de Kadratis**, cualquiera puede usarlo mientras falta una respuesta, y después solo los administradores. El botón de cierre (**×**) oculta el mosaico. Para mostrarlo de nuevo, use **Mostrar los primeros pasos** en **Acerca de Kadratis**.
 
-Durante la prueba, el mosaico también ofrece **Programar una llamada de descubrimiento**: una videollamada de 30 minutos sobre su situación y sus preguntas, reservada en la página que se abre en el momento que le convenga. El mismo enlace sigue a los días de prueba restantes en **Acerca de KANAP**.
+Durante la prueba, el mosaico también ofrece **Programar una llamada de descubrimiento**: una videollamada de 30 minutos sobre su situación y sus preguntas, reservada en la página que se abre en el momento que le convenga. El mismo enlace sigue a los días de prueba restantes en **Acerca de Kadratis**.
 
 | Recorrido | Con el ejemplo | Con sus datos |
 |---|---|---|
-| Presupuesto de TI | La vista general, Una línea presupuestaria, Un informe, Una pregunta a Plaid, Sus datos | Su empresa, Sus líneas, Un contrato vinculado, Su primer informe, Un colega |
+| Presupuesto de TI | La vista general, Una línea presupuestaria, Un informe, Una pregunta a Kad, Sus datos | Su empresa, Sus líneas, Un contrato vinculado, Su primer informe, Un colega |
 | Mapa del SI | La lista de aplicaciones, Una ficha de aplicación, Los servidores, Tecnologías, fin de soporte y vulnerabilidades, Sus datos | Sus ubicaciones, Sus aplicaciones, Sus tecnologías, Sus servidores, Un colega |
 | Proyectos y solicitudes | Una solicitud y su puntuación, El proyecto nacido de la solicitud, Las tareas, Los informes, Sus datos | Su primera solicitud, Su proyecto, Las primeras tareas, El presupuesto del proyecto, Su perfil de colaborador |
 
@@ -223,7 +223,7 @@ Los niveles son los definidos en la configuración del mapa de TI; un nivel que 
 
 ### Vulnerabilidades del parque { #vulnerabilities }
 
-Muestra las vulnerabilidades que requieren atención en su parque, bajo el subtítulo «CVE por revisar en las tecnologías en servicio». Los recuentos siguen [Lo que KANAP cuenta](vulnerabilities.md#what-kanap-counts): vulnerabilidades aún por revisar, en las alertas. Cada línea abre la lista correspondiente:
+Muestra las vulnerabilidades que requieren atención en su parque, bajo el subtítulo «CVE por revisar en las tecnologías en servicio». Los recuentos siguen [Lo que Kadratis cuenta](vulnerabilities.md#what-kanap-counts): vulnerabilidades aún por revisar, en las alertas. Cada línea abre la lista correspondiente:
 
 - **Aplicaciones de la criticidad más alta con una CVE crítica o alta**, por ejemplo «2 aplicaciones de criticidad Crítica con una CVE crítica o alta»: las aplicaciones en el nivel de criticidad de negocio más alto de su catálogo que alcanza una vulnerabilidad crítica o alta. Abre la lista de aplicaciones filtrada por ese nivel y por **Con vulnerabilidades graves**. Requiere `applications:reader` y cuenta las aplicaciones que usted puede leer.
 - **CVE críticas publicadas en los últimos 7 días** y **en los últimos 30 días**, en tecnologías en uso en el parque: instaladas en un activo en servicio o declaradas por una aplicación en servicio. Abre la página [Vulnerabilidades](vulnerabilities.md) en esas vulnerabilidades, con el filtro **En uso en el parque**.

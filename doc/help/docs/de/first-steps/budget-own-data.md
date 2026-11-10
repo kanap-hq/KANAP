@@ -1,13 +1,13 @@
 ---
-title: "Ihr IT-Budget in KANAP in zehn Minuten: mit Ihren eigenen Daten beginnen"
+title: "Ihr IT-Budget in Kadratis in zehn Minuten: mit Ihren eigenen Daten beginnen"
 description: Die fünf Schritte des Pfads IT-Budget mit Ihren eigenen Daten, von Ihrem Unternehmen bis zu Ihrem ersten Bericht, dann eine Kollegin oder ein Kollege.
 ---
 
-# Ihr IT-Budget in KANAP in zehn Minuten
+# Ihr IT-Budget in Kadratis in zehn Minuten
 
 [Mit dem Beispiel entdecken](budget-example.md) · **Mit meinen eigenen Daten beginnen**
 
-In zehn Minuten sind Ihr Unternehmen, Ihre Budgetzeilen und ein Vertrag in KANAP, Ihr erster Bericht läuft auf Ihren Zahlen, und eine Kollegin oder ein Kollege kann sie lesen. Der Beginn mit Ihren eigenen Daten löscht das Beispiel: Was Sie am Ende sehen, stammt von Ihnen.
+In zehn Minuten sind Ihr Unternehmen, Ihre Budgetzeilen und ein Vertrag in Kadratis, Ihr erster Bericht läuft auf Ihren Zahlen, und eine Kollegin oder ein Kollege kann sie lesen. Der Beginn mit Ihren eigenen Daten löscht das Beispiel: Was Sie am Ende sehen, stammt von Ihnen.
 
 Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der Startseite, für den Pfad **Das IT-Budget** mit **Mit meinen eigenen Daten beginnen**. Jeder Schritt der Kachel öffnet seinen Bildschirm mit einem kurzen Hinweis. Ein Schritt, der etwas anlegt, gilt als erledigt, sobald es im Arbeitsbereich existiert. Für **Ihr Unternehmen** und **Ihr erster Bericht** klicken Sie im Hinweis auf **Erledigt** oder auf die Markierung neben dem Schritt. Siehe [Testphase: Ihr Pfad und Ihre ersten Schritte](../my-dashboard.md#trial-first-steps).
 
@@ -56,10 +56,10 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 
 ## Wie es weitergeht
 
-Ihr IT-Budget ist in KANAP. Die beiden anderen Pfade dauern ebenfalls zehn Minuten, mit Ihren Daten:
+Ihr IT-Budget ist in Kadratis. Die beiden anderen Pfade dauern ebenfalls zehn Minuten, mit Ihren Daten:
 
-- [Ihre IT-Landschaft in KANAP in zehn Minuten](landscape-own-data.md)
-- [Ihr Portfolio in KANAP in zehn Minuten](portfolio-own-data.md)
+- [Ihre IT-Landschaft in Kadratis in zehn Minuten](landscape-own-data.md)
+- [Ihr Portfolio in Kadratis in zehn Minuten](portfolio-own-data.md)
 
 Sind die fünf Schritte erledigt, bietet die Kachel diese Pfade an. Während der Testphase bietet sie außerdem **Kennenlerngespräch vereinbaren** an.
 

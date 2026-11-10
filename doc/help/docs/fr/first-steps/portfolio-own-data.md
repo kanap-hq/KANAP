@@ -1,9 +1,9 @@
 ---
-title: "Votre portefeuille dans KANAP en dix minutes : commencer avec vos données"
+title: "Votre portefeuille dans Kadratis en dix minutes : commencer avec vos données"
 description: Les cinq pas du parcours projets et demandes sur vos propres données, d'une première demande à son projet, ses tâches et son budget, puis votre fiche contributeur.
 ---
 
-# Votre portefeuille dans KANAP en dix minutes
+# Votre portefeuille dans Kadratis en dix minutes
 
 [Découvrir avec l'exemple](portfolio-example.md) · **Commencer avec mes données**
 
@@ -53,10 +53,10 @@ Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le
 
 ## Et ensuite
 
-Votre portefeuille est dans KANAP. Les deux autres parcours prennent aussi dix minutes, sur vos données :
+Votre portefeuille est dans Kadratis. Les deux autres parcours prennent aussi dix minutes, sur vos données :
 
-- [Votre budget IT dans KANAP en dix minutes](budget-own-data.md)
-- [Votre système d'information dans KANAP en dix minutes](landscape-own-data.md)
+- [Votre budget IT dans Kadratis en dix minutes](budget-own-data.md)
+- [Votre système d'information dans Kadratis en dix minutes](landscape-own-data.md)
 
 Une fois les cinq pas faits, la tuile propose ces parcours. Pendant l'essai, elle propose aussi **Planifier un appel découverte**.
 

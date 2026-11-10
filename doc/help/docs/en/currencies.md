@@ -74,7 +74,7 @@ When you save a new reporting currency, a confirmation dialog opens first, for e
 
 The last three points show only when they apply. Click **Change the currency** to save, or **Cancel** to keep the current settings.
 
-KANAP then fetches the rates of the new currency for every year in use: the budget years (frozen ones included), the years with a company turnover, the years the contracts page shows, and the current calendar year with the year before and the year after. The page waits for the result and reports it as for a [forced sync](#force-fx-rates-sync).
+Kadratis then fetches the rates of the new currency for every year in use: the budget years (frozen ones included), the years with a company turnover, the years the contracts page shows, and the current calendar year with the year before and the year after. The page waits for the result and reports it as for a [forced sync](#force-fx-rates-sync).
 
 ## Force FX rates sync
 
@@ -87,12 +87,12 @@ The **Force FX rates sync** button fetches the rates at once for the previous, c
   - Before generating reports for stakeholders
 
 **What happens**:
-  - The button stays busy while KANAP fetches the rates, for up to 20 seconds
+  - The button stays busy while Kadratis fetches the rates, for up to 20 seconds
   - A message above the table then gives the result: the number of rates fetched, for example **12 rates fetched.**, followed by the pairs still without a rate, for example **Still missing: BRL 2026.**, or by **Every currency in use has a rate.**
   - When the fetch brings in no new rate and every currency in use already has one, the message says **Exchange rates are up to date.** When some pairs are still missing, it says **No new rate was fetched.** and names them.
   - When the sources did not answer, the message says so, and the rates already stored stay in place
   - When the fetch takes longer, the message reads **Synchronisation continues in the background.** The table and the missing rates block update once it ends
-  - When a refresh is already running, KANAP adds your years to it, so no request is lost
+  - When a refresh is already running, Kadratis adds your years to it, so no request is lost
 
 **Automatic refresh**: The system also refreshes rates automatically every 30 days when a user logs in (covers Y-1, Y, Y+1). When a list, a report or the contracts page needs a rate that the snapshot of its year does not have (a currency first used since, or a year without a snapshot), the system fetches that year in the background as soon as it is read, and the next display uses the new rate. Manual sync gives you control when you need immediate updates.
 
@@ -147,7 +147,7 @@ A pair counts as in use when a budget line, a company's figures or a contract ne
 
 When no source publishes a rate, or when your finance team uses its own rates, you can enter a rate for one currency and one year.
 
-  1. Click the cell of the currency and year in the table, or click **Enter a rate** next to a line of the missing rates block. The **Enter a rate** link of a warning elsewhere in KANAP also leads here: it opens the dialog directly when the warning names a single currency and year, and otherwise highlights the missing rates block for a few seconds.
+  1. Click the cell of the currency and year in the table, or click **Enter a rate** next to a line of the missing rates block. The **Enter a rate** link of a warning elsewhere in Kadratis also leads here: it opens the dialog directly when the warning names a single currency and year, and otherwise highlights the missing rates block for a few seconds.
   2. In the **Manual exchange rate** dialog, type the rate in your reporting currency for 1 unit of the selected currency (for example **Rate in EUR for 1 USD**), with the decimal mark of your language. When the year before or after has an automatic rate, the field shows it as a guide, for example **Automatic rate for 2025: 0.9312**. Otherwise it suggests the average rate of the year published by your central bank or your treasury.
   3. Click **Save**. The cell then shows the rate followed by an asterisk (*).
 
@@ -212,18 +212,18 @@ Live spot rate from ExchangeRate-API is used (falls back to the latest annual ra
 Reuse the current year's rate as a forward estimate. This provides budget planning guidance but should be reviewed as those years approach.
 
 ### Frozen years
-Freezing the default budget column of a year fixes that year's rates for the type you freeze (OPEX or CAPEX): KANAP refreshes the year's rates, then keeps that set for every amount of the year, even when newer rates arrive. If the reporting currency changes later, these amounts keep the frozen rates and then convert into the new reporting currency at that year's rate of the former one. Without that rate, they are left out of the totals and named like any missing rate: the former reporting currency then shows in the missing rates block for that year, and a manual rate fills it. Unfreezing the default column releases them. See [Freezing the default column fixes the exchange rates](budget-operations.md#freezing-the-default-column-fixes-the-exchange-rates).
+Freezing the default budget column of a year fixes that year's rates for the type you freeze (OPEX or CAPEX): Kadratis refreshes the year's rates, then keeps that set for every amount of the year, even when newer rates arrive. If the reporting currency changes later, these amounts keep the frozen rates and then convert into the new reporting currency at that year's rate of the former one. Without that rate, they are left out of the totals and named like any missing rate: the former reporting currency then shows in the missing rates block for that year, and a manual rate fills it. Unfreezing the default column releases them. See [Freezing the default column fixes the exchange rates](budget-operations.md#freezing-the-default-column-fixes-the-exchange-rates).
 
 **Missing rate**: When a year has no rate for a currency in use, the budget line amounts in that currency are left out of every total in the reporting currency for that year. This covers the budget lines list, the Budget management section of the home page, the budget and chargeback reports, the contracts and the Relations tabs of applications and technologies. The screen says so where it matters:
 
 - A one-line warning names what is left out, for example "Excluding 3 lines with no exchange rate: USD 2026." It shows under the totals of the budget lines list, on the overview tiles, at the top of each budget and chargeback report, and under the budget figures of contracts, applications and technologies. Budget administration users at admin level also see **Enter a rate**, which opens this page on the missing rate.
 - On the line itself, the amount shows in its own currency with a small orange mark. Hover the mark to read, for example, "No USD exchange rate for 2026: left out of totals."
 
-KANAP fetches the rates of that year in the background (at most once every six hours per year), so the next display uses the new rate once the source publishes it. To spot missing rates, check the missing rates block above the FX Rate Snapshots table, and run **Force FX rates sync** to fetch the rates at once. Entering a [manual rate](#manual-rates) fixes it immediately.
+Kadratis fetches the rates of that year in the background (at most once every six hours per year), so the next display uses the new rate once the source publishes it. To spot missing rates, check the missing rates block above the FX Rate Snapshots table, and run **Force FX rates sync** to fetch the rates at once. Entering a [manual rate](#manual-rates) fixes it immediately.
 
 ## Ask the assistant
 
-[Plaid](ai-assistant.md#tool-calls) reads the currencies and the rates of this page for anyone with read access to the budget. Ask, for example: "What is the USD rate for 2026?"
+[Kad](ai-assistant.md#tool-calls) reads the currencies and the rates of this page for anyone with read access to the budget. Ask, for example: "What is the USD rate for 2026?"
 
 ## Tips
 

@@ -1,16 +1,16 @@
 ---
 title: "Task Types Fast Track: Run, Build & Tasks"
-description: Understand the different work item types in KANAP (incidents, problems, requests, projects, bugs, and tasks) and how to work with tasks day-to-day.
+description: Understand the different work item types in Kadratis (incidents, problems, requests, projects, bugs, and tasks) and how to work with tasks day-to-day.
 ---
 
 # Task Types Fast Track: Run, Build & Tasks
 
-This guide explains the different types of work items tracked in KANAP and how to tell them apart. It covers the Run (keeping things running), the Build (making things better), and the transversal Task that bridges both. The second half is a practical cheat sheet for working with tasks every day.
+This guide explains the different types of work items tracked in Kadratis and how to tell them apart. It covers the Run (keeping things running), the Build (making things better), and the transversal Task that bridges both. The second half is a practical cheat sheet for working with tasks every day.
 
 !!! tip "Prefer a one-page summary? :material-file-pdf-box:"
     All the key definitions on a single A4 page: print it, pin it, share it with your team.
 
-    [:material-download: Download the cheat sheet (PDF)](downloads/kanap-task-types-fast-track.pdf){ .md-button .md-button--primary }
+    [:material-download: Download the cheat sheet (PDF)](downloads/kadratis-task-types-fast-track.pdf){ .md-button .md-button--primary }
 
 ---
 
@@ -112,7 +112,7 @@ A **defect found in a system under development**.
 
 ## Transversal: The Task
 
-Tasks are the **atomic unit of work** in KANAP. They cross the Run/Build boundary.
+Tasks are the **atomic unit of work** in Kadratis. They cross the Run/Build boundary.
 
 ### Task
 
@@ -234,7 +234,7 @@ Not every feature is available in every context. Here is what changes:
 
 ### Classification defaults
 
-When you create a **standalone task**, KANAP pre-fills classification fields (Source, Category, Stream, Company) from your organization's default settings, saving you a few clicks. For **project tasks**, classification defaults come from the parent project but can be changed independently on each task.
+When you create a **standalone task**, Kadratis pre-fills classification fields (Source, Category, Stream, Company) from your organization's default settings, saving you a few clicks. For **project tasks**, classification defaults come from the parent project but can be changed independently on each task.
 
 ---
 
@@ -258,7 +258,7 @@ The list in this guide is a starting point. Adapt it to how your IT department a
 - [Budget lines](../budget-lines.md): managing OPEX and CAPEX lines and their tasks
 - [Contracts](../contracts.md): managing contracts and their tasks
 - [Portfolio Projects](../portfolio-projects.md): project delivery, phases, effort tracking, and project-level tasks
-- [Getting Started](getting-started.md): if you're new to KANAP
+- [Getting Started](getting-started.md): if you're new to Kadratis
 
 !!! success "You're ready"
-    You now understand how KANAP categorizes work and how to use tasks day-to-day. When in doubt about the right work item type, ask yourself: **is it keeping things running (Run), or making things better (Build)?** Then pick the matching type. For everything else, there's a Task.
+    You now understand how Kadratis categorizes work and how to use tasks day-to-day. When in doubt about the right work item type, ask yourself: **is it keeping things running (Run), or making things better (Build)?** Then pick the matching type. For everything else, there's a Task.

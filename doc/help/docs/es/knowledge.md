@@ -1,6 +1,6 @@
 # Base de conocimiento
 
-La Base de conocimiento es el espacio de trabajo de documentos de KANAP para políticas, procedimientos, notas técnicas, material de referencia y la documentación que necesita mantenerse conectada al trabajo real. Combina la escritura de forma libre con funcionalidades de gobernanza como plantillas, propiedad, revisión, historial de versiones y relaciones con aplicaciones, activos, proyectos, solicitudes y tareas.
+La Base de conocimiento es el espacio de trabajo de documentos de Kadratis para políticas, procedimientos, notas técnicas, material de referencia y la documentación que necesita mantenerse conectada al trabajo real. Combina la escritura de forma libre con funcionalidades de gobernanza como plantillas, propiedad, revisión, historial de versiones y relaciones con aplicaciones, activos, proyectos, solicitudes y tareas.
 
 A diferencia de un recurso compartido de archivos, la Base de conocimiento no es solo un lugar para almacenar documentos. La decisión de diseño importante es que cada artículo puede clasificarse, revisarse, versionarse, exportarse y vincularse a objetos operativos en toda la plataforma. Eso facilita encontrar el artículo y le da contexto cuando alguien lo abre desde otro espacio de trabajo.
 
@@ -60,7 +60,7 @@ Comportamiento importante:
 - En una vista de biblioteca única, los documentos pueden arrastrarse a carpetas para una reorganización rápida.
 - Las carpetas pueden anidarse para crear una estructura de navegación.
 - Eliminar una carpeta no elimina sus documentos. En su lugar, los documentos vuelven a **Sin archivar**.
-- Una carpeta con subcarpetas no se puede eliminar: KANAP lo indica antes de pedirle confirmación. Mueva o elimine primero sus subcarpetas.
+- Una carpeta con subcarpetas no se puede eliminar: Kadratis lo indica antes de pedirle confirmación. Mueva o elimine primero sus subcarpetas.
 
 Use carpetas para áreas temáticas estables, no para estados de flujo de trabajo temporales. El estado y el flujo de trabajo ya existen para eso.
 
@@ -173,7 +173,7 @@ Los nuevos artículos pueden empezar de dos formas:
 
 Cuando crea desde una plantilla, el contenido de la plantilla se copia en el nuevo documento. A partir de ese momento, el nuevo artículo es independiente. Actualizar la plantilla más tarde no reescribe los documentos existentes.
 
-Un documento nuevo se abre con su título por escribir en el encabezado. Pulse Intro para crear el documento, o Tab para crearlo y empezar a escribir su texto. Se abre en modo de edición, con el editor, **Importar** y el panel lateral disponibles. Haga clic en **Crear** para conservarlo: vuelve al lugar donde empezó, o a la biblioteca. Haga clic en **Cancelar** para eliminarlo en su lugar. KANAP pide confirmación primero cuando ha introducido más que el título. En cualquier documento en modo de edición, haga clic en el título del encabezado para cambiarlo.
+Un documento nuevo se abre con su título por escribir en el encabezado. Pulse Intro para crear el documento, o Tab para crearlo y empezar a escribir su texto. Se abre en modo de edición, con el editor, **Importar** y el panel lateral disponibles. Haga clic en **Crear** para conservarlo: vuelve al lugar donde empezó, o a la biblioteca. Haga clic en **Cancelar** para eliminarlo en su lugar. Kadratis pide confirmación primero cuando ha introducido más que el título. En cualquier documento en modo de edición, haga clic en el título del encabezado para cambiarlo.
 
 El espacio de trabajo del documento mantiene la escritura en el centro y la gobernanza en la barra lateral.
 
@@ -245,7 +245,7 @@ Los artículos de la Base de conocimiento pueden exportarse como:
 - **ODT**
 
 La exportación está disponible cuando el artículo tiene contenido. Esto es útil cuando:
-- un documento necesita circular fuera de KANAP
+- un documento necesita circular fuera de Kadratis
 - un revisor prefiere marcado en formato Word
 - se necesita una instantánea PDF estable para compartir o conservar
 
@@ -253,7 +253,7 @@ La exportación no reemplaza el artículo en vivo. La versión de la Base de con
 
 ## Generar documentos desde el chat
 
-Si el Asistente IA está habilitado en su KANAP, puede pedirle que redacte un artículo de la Base de conocimiento por usted desde el chat. El asistente prepara una vista previa que usted revisa antes de que se guarde nada. Confirmar la vista previa crea un documento real de la Base de conocimiento con el contenido, el tipo, el linaje de plantilla y cualquier relación que haya especificado, exactamente como si lo hubiera escrito usted mismo.
+Si el Asistente IA está habilitado en su Kadratis, puede pedirle que redacte un artículo de la Base de conocimiento por usted desde el chat. El asistente prepara una vista previa que usted revisa antes de que se guarde nada. Confirmar la vista previa crea un documento real de la Base de conocimiento con el contenido, el tipo, el linaje de plantilla y cualquier relación que haya especificado, exactamente como si lo hubiera escrito usted mismo.
 
 Los documentos generados siguen las mismas reglas de gobernanza que los escritos a mano: propiedad, estado, historial de versiones, bloqueos y flujo de trabajo de revisión, todo se aplica.
 
@@ -316,9 +316,9 @@ Los documentos de la Base de conocimiento pueden relacionarse directamente con:
 - Solicitudes
 - Tareas
 
-Las relaciones no son solo etiquetas. Controlan dónde aparece el documento en otras partes de KANAP y cómo los usuarios lo descubren desde los espacios de trabajo operativos.
+Las relaciones no son solo etiquetas. Controlan dónde aparece el documento en otras partes de Kadratis y cómo los usuarios lo descubren desde los espacios de trabajo operativos.
 
-Cada tipo de relación solo se muestra a las personas que pueden leer su módulo: las aplicaciones requieren las aplicaciones, los activos la infraestructura, los proyectos los proyectos, las solicitudes las solicitudes, las tareas las tareas. Un tipo que usted no puede leer no aparece en el documento, tampoco en Plaid, y guardar el documento deja sus vínculos intactos. Un Business Contributor solo añade los proyectos, solicitudes, aplicaciones y tareas en los que participa.
+Cada tipo de relación solo se muestra a las personas que pueden leer su módulo: las aplicaciones requieren las aplicaciones, los activos la infraestructura, los proyectos los proyectos, las solicitudes las solicitudes, las tareas las tareas. Un tipo que usted no puede leer no aparece en el documento, tampoco en Kad, y guardar el documento deja sus vínculos intactos. Un Business Contributor solo añade los proyectos, solicitudes, aplicaciones y tareas en los que participa.
 
 Consecuencias de añadir relaciones:
 - el documento se vuelve más fácil de encontrar desde el objeto vinculado

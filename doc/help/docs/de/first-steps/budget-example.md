@@ -1,13 +1,13 @@
 ---
-title: "Ihr IT-Budget in KANAP in zehn Minuten: mit dem Beispiel entdecken"
+title: "Ihr IT-Budget in Kadratis in zehn Minuten: mit dem Beispiel entdecken"
 description: Die fünf Schritte des Pfads IT-Budget am Beispiel Fromage & Co, von der Liste der Budgetzeilen bis zu Ihrer eigenen Datei.
 ---
 
-# Ihr IT-Budget in KANAP in zehn Minuten
+# Ihr IT-Budget in Kadratis in zehn Minuten
 
 **Mit dem Beispiel entdecken** · [Mit meinen eigenen Daten beginnen](budget-own-data.md)
 
-Fromage & Co ist eine fiktive Käsereigruppe, deren Beispiel in Ihren Arbeitsbereich geladen ist. In zehn Minuten lesen Sie anhand ihres Budgets die Budgetzeilen, öffnen die größte, führen einen Bericht aus, stellen Plaid eine Frage und sehen, wie Ihre eigene Datei in KANAP kommt.
+Fromage & Co ist eine fiktive Käsereigruppe, deren Beispiel in Ihren Arbeitsbereich geladen ist. In zehn Minuten lesen Sie anhand ihres Budgets die Budgetzeilen, öffnen die größte, führen einen Bericht aus, stellen Kad eine Frage und sehen, wie Ihre eigene Datei in Kadratis kommt.
 
 Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der Startseite, für den Pfad **Das IT-Budget** mit **Mit dem vollständigen Beispiel entdecken**. Jeder Schritt der Kachel öffnet seinen Bildschirm mit einem kurzen Hinweis, und das Öffnen markiert ihn als erledigt. Siehe [Testphase: Ihr Pfad und Ihre ersten Schritte](../my-dashboard.md#trial-first-steps).
 
@@ -41,17 +41,17 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 
 **Was Sie sehen.** Die größten Zeilen des Jahres mit ihrem Anteil am Gesamtbetrag, als Diagramm und als Tabelle. Jeder Bericht lässt sich als .pdf, .png oder .xlsx exportieren.
 
-## 4. Eine Frage an Plaid
+## 4. Eine Frage an Kad
 
-**Plaid**, in der oberen Leiste
+**Kad**, in der oberen Leiste
 
-![Eine Frage an Plaid](images/budget-example-4.webp)
+![Eine Frage an Kad](images/budget-example-4.webp)
 
 **Was Sie tun.** Klicken Sie unter **Versuchen Sie** auf **Wo liegen die größten Einsparpotenziale bei den IT-OPEX?** Die zweite Frage des Pfads, **Welche Budgetzeilen haben keine verantwortliche Person?**, folgt darunter.
 
-**Was Sie sehen.** Eine Antwort auf Grundlage der Budgetzeilen des Beispiels. Plaid liest sie mit Ihren Zugriffsrechten. Prüfen Sie eine genannte Zeile in der Liste aus Schritt 1.
+**Was Sie sehen.** Eine Antwort auf Grundlage der Budgetzeilen des Beispiels. Kad liest sie mit Ihren Zugriffsrechten. Prüfen Sie eine genannte Zeile in der Liste aus Schritt 1.
 
-Während der Testphase ist Plaid zunächst ausgeschaltet. Eine Administratorin oder ein Administrator schaltet es ein, indem sie oder er das Kästchen anhakt, das an der Stelle des Nachrichtenfelds steht. Alle anderen lesen, dass Plaid auf eine Administratorin oder einen Administrator wartet. Siehe [Bevor das inklusive Modell akzeptiert ist](../ai-assistant.md#included-model-acceptance).
+Während der Testphase ist Kad zunächst ausgeschaltet. Eine Administratorin oder ein Administrator schaltet es ein, indem sie oder er das Kästchen anhakt, das an der Stelle des Nachrichtenfelds steht. Alle anderen lesen, dass Kad auf eine Administratorin oder einen Administrator wartet. Siehe [Bevor das inklusive Modell akzeptiert ist](../ai-assistant.md#included-model-acceptance).
 
 ## 5. Ihre Daten
 
@@ -63,14 +63,14 @@ Während der Testphase ist Plaid zunächst ausgeschaltet. Eine Administratorin o
 
 **Was Sie sehen.** Der Export ist die Budgetdatei: dieselben Spalten, die der Import liest. Nutzen Sie sie als Vorlage, um Zeilen in großer Zahl zu ändern oder neue zu laden. Die Beispielmappe enthält einige Zeilen, die übrigen Spalten auf einem Blatt **Erweitert** und auf einem Blatt **Hinweise**, was jede Spalte aufnimmt. Ein Import prüft die ganze Datei, bevor er etwas lädt. **Exportieren** und **Importieren** sehen die Administratoren des Budgets.
 
-Um von einer Datei auszugehen, die Sie schon führen, hängen Sie sie in Plaid mit **Datei anhängen** an eine Nachricht an. Plaid liest die Spaltenüberschriften, den Typ jeder Spalte und die ersten zehn Zeilen und kann sagen, was jede Spalte enthält.
+Um von einer Datei auszugehen, die Sie schon führen, hängen Sie sie in Kad mit **Datei anhängen** an eine Nachricht an. Kad liest die Spaltenüberschriften, den Typ jeder Spalte und die ersten zehn Zeilen und kann sagen, was jede Spalte enthält.
 
 ## Wie es weitergeht
 
-Sie haben das Wesentliche von KANAP für das IT-Budget gesehen. Die beiden anderen Pfade dauern ebenfalls zehn Minuten:
+Sie haben das Wesentliche von Kadratis für das IT-Budget gesehen. Die beiden anderen Pfade dauern ebenfalls zehn Minuten:
 
-- [Ihre IT-Landschaft in KANAP in zehn Minuten](landscape-example.md)
-- [Ihr Portfolio in KANAP in zehn Minuten](portfolio-example.md)
+- [Ihre IT-Landschaft in Kadratis in zehn Minuten](landscape-example.md)
+- [Ihr Portfolio in Kadratis in zehn Minuten](portfolio-example.md)
 
 Sind die fünf Schritte erledigt, bietet die Kachel diese Pfade an. Während der Testphase bietet sie außerdem **Kennenlerngespräch vereinbaren** an.
 

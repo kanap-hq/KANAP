@@ -23,7 +23,7 @@ El flujo de actividad de un proyecto, una solicitud o una tarea solo muestra los
 El historial lista una entrada por cambio, la más reciente arriba. Cada entrada muestra:
 
 - la fecha y la hora del cambio;
-- su autor: una persona, **Sistema** para los cambios que KANAP hace por sí mismo, **Importación** para los cambios cargados desde un archivo, o **Plaid para** una persona cuando el asistente hizo el cambio en su nombre;
+- su autor: una persona, **Sistema** para los cambios que Kadratis hace por sí mismo, **Importación** para los cambios cargados desde un archivo, o **Kad para** una persona cuando el asistente hizo el cambio en su nombre;
 - para el registro en sí, el evento: **Creado**, **Actualizado** o **Eliminado**; para sus partes, el título o el evento de la parte;
 - cada campo cambiado, con su valor antes y después (`antes → después`).
 
@@ -58,7 +58,7 @@ En un contrato, un proyecto o una solicitud, una persona con acceso a los datos 
 
 ## Preguntar al asistente
 
-[Plaid](ai-assistant.md#tool-calls) lee el historial de un registro con los mismos derechos que su página. Pregunte, por ejemplo: «¿Quién cambió los importes de BL-12?» o «¿Qué cambió en TEC-3 este año?» Plaid responde solo a partir de la pestaña Historial: para un registro que no la tiene, indica que KANAP no guarda historial de él.
+[Kad](ai-assistant.md#tool-calls) lee el historial de un registro con los mismos derechos que su página. Pregunte, por ejemplo: «¿Quién cambió los importes de BL-12?» o «¿Qué cambió en TEC-3 este año?» Kad responde solo a partir de la pestaña Historial: para un registro que no la tiene, indica que Kadratis no guarda historial de él.
 
 ## El registro de auditoría completo
 

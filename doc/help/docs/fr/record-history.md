@@ -23,7 +23,7 @@ Le fil d'activité d'un projet, d'une demande ou d'une tâche ne montre que les 
 L'historique liste une entrée par modification, la plus récente en haut. Chaque entrée indique :
 
 - la date et l'heure de la modification ;
-- son auteur : une personne, **Système** pour les modifications que KANAP fait lui-même, **Import** pour les modifications chargées depuis un fichier, ou **Plaid pour** une personne quand l'assistant a fait la modification en son nom ;
+- son auteur : une personne, **Système** pour les modifications que Kadratis fait lui-même, **Import** pour les modifications chargées depuis un fichier, ou **Kad pour** une personne quand l'assistant a fait la modification en son nom ;
 - pour la fiche elle-même, l'évènement : **Création**, **Modification** ou **Suppression** ; pour ses parties, le titre ou l'évènement de la partie ;
 - chaque champ modifié, avec sa valeur avant et après (`avant → après`).
 
@@ -58,7 +58,7 @@ Sur un contrat, un projet ou une demande, une personne à l'accès aux données 
 
 ## Demander à l'assistant
 
-[Plaid](ai-assistant.md#tool-calls) lit l'historique d'une fiche avec les mêmes droits que sa page. Demandez par exemple : « Qui a modifié les montants de BL-12 ? » ou « Qu'est-ce qui a changé sur TEC-3 cette année ? » Plaid répond à partir de l'onglet Historique seulement : pour une fiche qui n'en a pas, il dit que KANAP n'en garde pas l'historique.
+[Kad](ai-assistant.md#tool-calls) lit l'historique d'une fiche avec les mêmes droits que sa page. Demandez par exemple : « Qui a modifié les montants de BL-12 ? » ou « Qu'est-ce qui a changé sur TEC-3 cette année ? » Kad répond à partir de l'onglet Historique seulement : pour une fiche qui n'en a pas, il dit que Kadratis n'en garde pas l'historique.
 
 ## Le journal d'audit complet
 

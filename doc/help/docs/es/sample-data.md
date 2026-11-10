@@ -1,6 +1,6 @@
 # Datos de ejemplo
 
-Use la página Datos de ejemplo para descubrir KANAP con un conjunto de datos listo para usar. Llena un espacio de trabajo vacío con Fromage & Co, una quesería ficticia, para que vea cómo funcionan juntos los presupuestos, las aplicaciones, los contratos y los proyectos antes de introducir los suyos. Cuando termine de explorar, una sola acción lo borra todo y devuelve el espacio de trabajo a su estado inicial.
+Use la página Datos de ejemplo para descubrir Kadratis con un conjunto de datos listo para usar. Llena un espacio de trabajo vacío con Fromage & Co, una quesería ficticia, para que vea cómo funcionan juntos los presupuestos, las aplicaciones, los contratos y los proyectos antes de introducir los suyos. Cuando termine de explorar, una sola acción lo borra todo y devuelve el espacio de trabajo a su estado inicial.
 
 ## Dónde encontrarla
 
@@ -25,7 +25,7 @@ Las fechas siguen el año en curso, de modo que el presupuesto siempre parece ac
 
 El conjunto se carga en el idioma del espacio de trabajo: inglés, francés, alemán o español (inglés para cualquier otro idioma). Los títulos, las descripciones, las etiquetas de las tareas, los incidentes y los documentos están traducidos. Los tipos de activo que añade el conjunto se nombran en ese idioma. Los nombres de empresas, personas, proveedores y aplicaciones no cambian, y algunos nombres locales de las empresas francesa, neerlandesa e italiana conservan su propio idioma. Tras un borrado, una nueva carga se hace en el mismo idioma.
 
-Los usuarios ficticios no tienen contraseña ni acceso. Sirven para que los responsables, las personas asignadas y los equipos de proyecto resulten realistas. KANAP no les envía ningún correo, y el borrado los elimina.
+Los usuarios ficticios no tienen contraseña ni acceso. Sirven para que los responsables, las personas asignadas y los equipos de proyecto resulten realistas. Kadratis no les envía ningún correo, y el borrado los elimina.
 
 ## Cargar los datos de ejemplo
 
@@ -44,7 +44,7 @@ Lo que un espacio de trabajo nuevo crea por usted (su primera empresa, el plan d
 2. Haga clic en **Cargar datos de ejemplo**.
 3. Lea el resumen del cuadro de diálogo y confirme con **Cargar datos de ejemplo**.
 
-La página sigue la carga paso a paso (por ejemplo, «Paso 4 de 21: planes de cuentas») y el estado cambia a **Cargados** al terminar. La franja de estado muestra entonces cuándo se cargaron los datos y quién lo hizo. Todo lo que ve en KANAP se actualiza con los nuevos datos.
+La página sigue la carga paso a paso (por ejemplo, «Paso 4 de 21: planes de cuentas») y el estado cambia a **Cargados** al terminar. La franja de estado muestra entonces cuándo se cargaron los datos y quién lo hizo. Todo lo que ve en Kadratis se actualiza con los nuevos datos.
 
 **Si la carga no es posible**, la página no muestra el botón **Cargar datos de ejemplo**. Indica el motivo:
 
@@ -54,14 +54,14 @@ La página sigue la carga paso a paso (por ejemplo, «Paso 4 de 21: planes de cu
 
 El banner de la página de inicio permanece entonces oculto. El borrado de los datos de ejemplo cargados sigue siendo posible en un espacio de trabajo congelado (véase más abajo).
 
-**Si la carga falla**, KANAP devuelve por sí mismo el espacio de trabajo a su estado inicial. El estado muestra **Error de carga** con la fecha, y la página indica el motivo. Haga clic en **Reintentar** para iniciar otra carga.
+**Si la carga falla**, Kadratis devuelve por sí mismo el espacio de trabajo a su estado inicial. El estado muestra **Error de carga** con la fecha, y la página indica el motivo. Haga clic en **Reintentar** para iniciar otra carga.
 
 !!! warning "Espere a que termine la carga"
     Mientras se ejecuta una carga, todo lo que se cree en el espacio de trabajo se borra si la carga falla. Espere a que el estado muestre **Cargados** antes de empezar a trabajar de verdad.
 
 ## El banner de la página de inicio
 
-Mientras el espacio de trabajo está vacío y nunca se han cargado datos de ejemplo, los administradores ven una línea en la parte superior de la página de inicio: «Descubra KANAP con datos de ejemplo.»
+Mientras el espacio de trabajo está vacío y nunca se han cargado datos de ejemplo, los administradores ven una línea en la parte superior de la página de inicio: «Descubra Kadratis con datos de ejemplo.»
 
 - **Cargar** abre el mismo cuadro de diálogo que la página.
 - **Ocultar** elimina la línea de forma definitiva, para todos los administradores del espacio de trabajo. La página en **Administración** › **Datos de ejemplo** sigue disponible.
@@ -105,7 +105,7 @@ Una vez borrado, el espacio de trabajo queda vacío y la página ofrece **Cargar
 3. Escriba el nombre del espacio de trabajo, tal como aparece en el cuadro de diálogo, en el campo **Nombre del espacio de trabajo**. Las mayúsculas y los espacios alrededor del nombre no importan.
 4. Haga clic en **Borrar todo**. El botón permanece desactivado hasta que el nombre coincide.
 
-El borrado tarda unos segundos. El estado muestra **Borrando** y después **Sin cargar**. Durante esos segundos, KANAP rechaza los cambios de todos los usuarios del espacio de trabajo, y un error indica que se vuelva a intentar en un momento. La lectura sigue funcionando.
+El borrado tarda unos segundos. El estado muestra **Borrando** y después **Sin cargar**. Durante esos segundos, Kadratis rechaza los cambios de todos los usuarios del espacio de trabajo, y un error indica que se vuelva a intentar en un momento. La lectura sigue funcionando.
 
 Si el borrado falla, la página muestra «No se pudo borrar el contenido del espacio de trabajo. No se ha modificado nada.» No se pierde nada y puede volver a intentarlo.
 

@@ -17,7 +17,7 @@ Navegue a **Datos maestros > Calendarios laborales** (en la sección **Finanzas*
 
 La forma más rápida de empezar es un calendario estándar para cada país donde están sus empresas:
 
-- **Cuando crea una empresa** con un país, KANAP crea por usted el calendario estándar de ese país, salvo que el espacio de trabajo ya tenga uno para todo el país
+- **Cuando crea una empresa** con un país, Kadratis crea por usted el calendario estándar de ese país, salvo que el espacio de trabajo ya tenga uno para todo el país
 - **Para las empresas que ya tiene**, la página de la lista muestra una línea sobre la cuadrícula, por ejemplo «Sus empresas están en Francia, Países Bajos e Italia. Cree sus calendarios estándar.» Haga clic en **Crear 3 calendarios** para crearlos de una vez
 
 Para crear un calendario usted mismo, haga clic en **Nuevo**.
@@ -120,7 +120,7 @@ La sección **Días laborables** muestra un año cada vez, con las mismas pesta�
 - Bajo el total de un año modificado, una línea indica los valores estándar, por ejemplo "Valores estándar: 252 días"
 - **Volver a los valores estándar** devuelve de inmediato el año a los festivos. No hay confirmación: los valores que escribió se sustituyen por los estándar
 
-**De dónde vienen los valores estándar**: las reglas de los festivos proceden de [`date-holidays`](https://github.com/commenthol/date-holidays), una biblioteca de código abierto incluida en KANAP. Las reglas se distribuyen con la aplicación, de modo que los calendarios estándar funcionan sin acceso a internet. Los datos de festivos se publican bajo la licencia Creative Commons Reconocimiento-CompartirIgual 3.0 (CC BY-SA 3.0), y KANAP los usa sin modificarlos. Solo cuentan los festivos oficiales: los días bancarios, las vacaciones escolares y las celebraciones no cuentan. Un festivo que empieza por la tarde (a las 18:00 o más tarde), como la Nochebuena en el Territorio del Norte de Australia, no quita el día; uno que empieza antes en el día quita el día entero.
+**De dónde vienen los valores estándar**: las reglas de los festivos proceden de [`date-holidays`](https://github.com/commenthol/date-holidays), una biblioteca de código abierto incluida en Kadratis. Las reglas se distribuyen con la aplicación, de modo que los calendarios estándar funcionan sin acceso a internet. Los datos de festivos se publican bajo la licencia Creative Commons Reconocimiento-CompartirIgual 3.0 (CC BY-SA 3.0), y Kadratis los usa sin modificarlos. Solo cuentan los festivos oficiales: los días bancarios, las vacaciones escolares y las celebraciones no cuentan. Un festivo que empieza por la tarde (a las 18:00 o más tarde), como la Nochebuena en el Territorio del Norte de Australia, no quita el día; uno que empieza antes en el día quita el día entero.
 
 ### Días laborables de un calendario personalizado
 
@@ -248,7 +248,7 @@ Cualquier persona que pueda leer las líneas presupuestarias (Presupuesto) puede
 
 ## Preguntar al asistente
 
-[Plaid](ai-assistant.md#tool-calls) lee los calendarios para cualquier persona con derecho a leerlos y cita los días laborables de un año tal como KANAP los calcula. Pregunte, por ejemplo: «¿Cuántos días laborables tiene Francia en 2026?»
+[Kad](ai-assistant.md#tool-calls) lee los calendarios para cualquier persona con derecho a leerlos y cita los días laborables de un año tal como Kadratis los calcula. Pregunte, por ejemplo: «¿Cuántos días laborables tiene Francia en 2026?»
 
 ## Consejos
 

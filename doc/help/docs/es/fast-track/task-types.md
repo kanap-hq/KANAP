@@ -1,16 +1,16 @@
 ---
 title: "Guía rápida de tipos de trabajo: Run, Build y Tareas"
-description: Comprenda los diferentes tipos de elementos de trabajo en KANAP (incidentes, problemas, solicitudes, proyectos, bugs y tareas) y cómo trabajar con tareas en el día a día.
+description: Comprenda los diferentes tipos de elementos de trabajo en Kadratis (incidentes, problemas, solicitudes, proyectos, bugs y tareas) y cómo trabajar con tareas en el día a día.
 ---
 
 # Guía rápida de tipos de trabajo: Run, Build y Tareas
 
-Esta guía explica los diferentes tipos de elementos de trabajo registrados en KANAP y cómo diferenciarlos. Cubre el Run (mantener las cosas funcionando), el Build (mejorar las cosas) y la Tarea transversal que conecta ambos. La segunda mitad es una hoja de referencia práctica para trabajar con tareas cada día.
+Esta guía explica los diferentes tipos de elementos de trabajo registrados en Kadratis y cómo diferenciarlos. Cubre el Run (mantener las cosas funcionando), el Build (mejorar las cosas) y la Tarea transversal que conecta ambos. La segunda mitad es una hoja de referencia práctica para trabajar con tareas cada día.
 
 !!! tip "¿Prefiere un resumen en una página? :material-file-pdf-box:"
     Todas las definiciones clave en una sola página A4: imprímala, cuélguela, compártala con su equipo.
 
-    [:material-download: Descargar la hoja de referencia (PDF)](downloads/kanap-task-types-fast-track.pdf){ .md-button .md-button--primary }
+    [:material-download: Descargar la hoja de referencia (PDF)](downloads/kadratis-task-types-fast-track.pdf){ .md-button .md-button--primary }
 
 ---
 
@@ -112,7 +112,7 @@ Un **defecto encontrado en un sistema en desarrollo**.
 
 ## Transversal: la Tarea
 
-Las Tareas son la **unidad atómica de trabajo** en KANAP. Cruzan la frontera entre Run y Build.
+Las Tareas son la **unidad atómica de trabajo** en Kadratis. Cruzan la frontera entre Run y Build.
 
 ### Tarea
 
@@ -234,7 +234,7 @@ No todas las funcionalidades están disponibles en todos los contextos. Esto es 
 
 ### Valores predeterminados de clasificación
 
-Cuando crea una **tarea independiente**, KANAP prerellena los campos de clasificación (Origen, Categoría, Flujo, Empresa) desde la configuración predeterminada de su organización, ahorrándole unos clics. Para **tareas de proyecto**, los valores predeterminados de clasificación provienen del proyecto padre pero pueden cambiarse independientemente en cada tarea.
+Cuando crea una **tarea independiente**, Kadratis prerellena los campos de clasificación (Origen, Categoría, Flujo, Empresa) desde la configuración predeterminada de su organización, ahorrándole unos clics. Para **tareas de proyecto**, los valores predeterminados de clasificación provienen del proyecto padre pero pueden cambiarse independientemente en cada tarea.
 
 ---
 
@@ -258,7 +258,7 @@ La lista de esta guía es un punto de partida. Adáptela a cómo funciona realme
 - [Líneas presupuestarias](../budget-lines.md): gestionar las líneas OPEX y CAPEX y sus tareas
 - [Contratos](../contracts.md): gestionar contratos y sus tareas
 - [Proyectos del portafolio](../portfolio-projects.md): ejecución de proyectos, fases, seguimiento de esfuerzo y tareas a nivel de proyecto
-- [Primeros pasos](getting-started.md): si es nuevo en KANAP
+- [Primeros pasos](getting-started.md): si es nuevo en Kadratis
 
 !!! success "Está listo"
-    Ahora comprende cómo KANAP categoriza el trabajo y cómo usar tareas en el día a día. Cuando dude sobre el tipo de elemento de trabajo adecuado, pregúntese: **¿mantiene las cosas funcionando (Run) o mejora las cosas (Build)?** Luego elija el tipo correspondiente. Para todo lo demás, hay una Tarea.
+    Ahora comprende cómo Kadratis categoriza el trabajo y cómo usar tareas en el día a día. Cuando dude sobre el tipo de elemento de trabajo adecuado, pregúntese: **¿mantiene las cosas funcionando (Run) o mejora las cosas (Build)?** Luego elija el tipo correspondiente. Para todo lo demás, hay una Tarea.

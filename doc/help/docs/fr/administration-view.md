@@ -54,7 +54,7 @@ La zone la plus sensible est la première zone des paramètres qui n'est pas mar
 | **Hôte moins sensible** | Les actifs à remonter : un hôte qui fait tourner un actif d'une zone plus sensible (un hôte en tier 1 qui fait tourner une machine virtuelle en tier 0, par exemple), ou le membre d'un cluster d'une zone plus sensible (un hôte ESX en tier 1 dans un cluster en tier 0, par exemple) |
 | **Application hébergée** | Les actifs de la zone la plus sensible qui hébergent une application en service. Vérifiez que chaque application y a sa place |
 
-Pour **Hôte moins sensible**, KANAP lit les relations **Contient** des actifs et les membres des clusters. Ce qui fait tourner un actif doit être dans une zone au moins aussi sensible. Une zone marquée **Ne plus proposer** ou absente des paramètres est ignorée. Un actif sans zone interrompt la vérification de la chaîne : KANAP ne compare ni cet actif ni les actifs qui lui sont liés, et **Zone non renseignée** le liste.
+Pour **Hôte moins sensible**, Kadratis lit les relations **Contient** des actifs et les membres des clusters. Ce qui fait tourner un actif doit être dans une zone au moins aussi sensible. Une zone marquée **Ne plus proposer** ou absente des paramètres est ignorée. Un actif sans zone interrompt la vérification de la chaîne : Kadratis ne compare ni cet actif ni les actifs qui lui sont liés, et **Zone non renseignée** le liste.
 
 Sans aucune zone dans les paramètres, seul **Zone non renseignée** s'affiche, et la page vous invite à ajouter une zone.
 
@@ -81,7 +81,7 @@ Avec `infrastructure:member`, une case ouvre chaque ligne :
 
 Modifier la recherche ou les filtres efface le choix. **Affecter à une zone** ouvre une fenêtre où vous choisissez une zone, ou **Sans zone** pour l'effacer. Une zone marquée **Ne plus proposer** ne peut pas être choisie. Avant que vous confirmiez, la fenêtre compte les actifs dont la zone va changer parmi les actifs choisis. Une affectation couvre jusqu'à 5 000 actifs : au-delà, affinez les filtres.
 
-Si des actifs entrent dans le filtre entre le décompte et la confirmation, KANAP refuse la modification et compte à nouveau : vérifiez le nouveau nombre, puis confirmez. Chaque actif modifié reçoit une entrée dans le journal d'audit, comme lorsque vous le modifiez.
+Si des actifs entrent dans le filtre entre le décompte et la confirmation, Kadratis refuse la modification et compte à nouveau : vérifiez le nouveau nombre, puis confirmez. Chaque actif modifié reçoit une entrée dans le journal d'audit, comme lorsque vous le modifiez.
 
 ## Services d'annuaire et domaines
 
@@ -95,7 +95,7 @@ Si des actifs entrent dans le filtre entre le décompte et la confirmation, KANA
 | **Suffixe DNS** | Le suffixe des noms de ses machines |
 | **Approbations** | Les domaines avec lesquels il a une approbation, et le sens de chacune |
 | **Comptes**, **Ordinateurs** | Les nombres saisis dans les paramètres. Un tiret signifie qu'aucun n'est saisi |
-| **Contrôleurs de domaine** | Le nombre de serveurs que KANAP déduit comme contrôleurs du domaine, puis leurs noms. Cliquez sur un nom pour ouvrir l'actif |
+| **Contrôleurs de domaine** | Le nombre de serveurs que Kadratis déduit comme contrôleurs du domaine, puis leurs noms. Cliquez sur un nom pour ouvrir l'actif |
 
 **Approbations** liste aussi, en gris, les approbations déclarées sur un autre domaine envers celui-ci, avec le sens vu depuis ce domaine : une approbation sortante de A vers B se lit comme entrante sur B. Les sens signifient :
 
@@ -103,7 +103,7 @@ Si des actifs entrent dans le filtre entre le décompte et la confirmation, KANA
 - **Entrante** : l'autre domaine approuve celui-ci.
 - **Bidirectionnelle** : les deux.
 
-Les **Contrôleurs de domaine** ne se saisissent pas à la main. KANAP prend les serveurs du domaine (le champ **Domaine** de l'onglet Réseau de l'actif) qui ne sont pas retirés et qui :
+Les **Contrôleurs de domaine** ne se saisissent pas à la main. Kadratis prend les serveurs du domaine (le champ **Domaine** de l'onglet Réseau de l'actif) qui ne sont pas retirés et qui :
 
 - portent une technologie de la famille **Annuaire et identité** qui n'est pas retirée, comme Active Directory, ou
 - sont affectés avec le rôle de serveur **Contrôleur de domaine** à une application en service.

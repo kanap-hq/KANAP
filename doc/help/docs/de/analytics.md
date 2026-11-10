@@ -28,7 +28,7 @@ Die Standarddimension hat eine besondere Rolle:
 
 - Sie gilt immer für OPEX- und CAPEX-Zeilen: Ihr Feld **Verwendet für** ist gesperrt. Siehe [OPEX- oder CAPEX-Dimensionen](#opex-oder-capex-dimensionen).
 - Sie kann weder deaktiviert noch gelöscht werden. Ihr Arbeitsbereich hat keine Schaltfläche **Löschen**, und eine Zeile unter **Lebenszyklus** nennt den Grund: „Diese Dimension kann weder deaktiviert noch gelöscht werden: Ältere Dateien und Fragen an die KI verwenden sie.“
-- Fragen an Plaid zur Analysekategorie verwenden sie. Siehe [Analysedimensionen in Plaid](#analysedimensionen-in-plaid). In einer Budgetdatei hat jede Dimension ihre eigene Spalte, die Standarddimension eingeschlossen: Siehe [Ein Budget aus einer Tabellenkalkulation laden](budget-file.md).
+- Fragen an Kad zur Analysekategorie verwenden sie. Siehe [Analysedimensionen in Kad](#analysedimensionen-in-plaid). In einer Budgetdatei hat jede Dimension ihre eigene Spalte, die Standarddimension eingeschlossen: Siehe [Ein Budget aus einer Tabellenkalkulation laden](budget-file.md).
 - Sie bleibt die Standarddimension, wenn Sie sie umbenennen, ihren Code ändern oder sie in der Reihenfolge der Dimensionen verschieben.
 - Ihre Bezeichnung ist reserviert: Keine andere Dimension kann „Analysedimension“ heißen, und das gilt für jede Sprache der App.
 
@@ -162,14 +162,14 @@ Eine neue Dimension kommt in der Reihenfolge der Dimensionen an die letzte Stell
 
 ### Dimensionen ordnen
 
-Die Dimensionen haben eine Reihenfolge, die Sie festlegen. KANAP zeigt sie in dieser Reihenfolge:
+Die Dimensionen haben eine Reihenfolge, die Sie festlegen. Kadratis zeigt sie in dieser Reihenfolge:
 
 - in der Auswahlleiste dieser Seite
 - im Bereich **Eigenschaften** von OPEX- und CAPEX-Zeilen
 - in den Spalten der Liste der Budgetzeilen
 - in den Spalten der Budgetdatei
 - in den Berichtsfiltern und in der Dimensionsauswahl des Berichts
-- in den Dimensionen, die Plaid auflistet
+- in den Dimensionen, die Kad auflistet
 
 Eine neue Dimension kommt an die letzte Stelle.
 
@@ -191,7 +191,7 @@ Das Feld **Verwendet für** legt fest, für welche Budgetzeilen die Dimension gi
 | **Nur OPEX** | Nur OPEX-Zeilen können einen Wert haben |
 | **Nur CAPEX** | Nur CAPEX-Zeilen können einen Wert haben |
 
-OPEX-Ansichten zeigen die für OPEX-Zeilen verwendeten Dimensionen, CAPEX-Ansichten die für CAPEX-Zeilen verwendeten. Das betrifft den Bereich **Eigenschaften** der Budgetzeile, die Spalten, Filter und die Schnellsuche der Listen, die Dimensionsauswahl und die Dimensionsfilter der Berichte (sie folgen der Auswahl **OPEX** / **CAPEX** des Berichts) sowie Plaid. Die Budgetdatei hat eine Spalte für jede aktivierte Dimension, und jede Zeile nimmt nur in den Dimensionen ihrer Zeilenart Werte an.
+OPEX-Ansichten zeigen die für OPEX-Zeilen verwendeten Dimensionen, CAPEX-Ansichten die für CAPEX-Zeilen verwendeten. Das betrifft den Bereich **Eigenschaften** der Budgetzeile, die Spalten, Filter und die Schnellsuche der Listen, die Dimensionsauswahl und die Dimensionsfilter der Berichte (sie folgen der Auswahl **OPEX** / **CAPEX** des Berichts) sowie Kad. Die Budgetdatei hat eine Spalte für jede aktivierte Dimension, und jede Zeile nimmt nur in den Dimensionen ihrer Zeilenart Werte an.
 
 Eine Zeile behält den Wert, den sie bereits in einer Dimension hat, die für ihre Zeilenart nicht mehr gilt. Der Wert ist überall ausgeblendet und erscheint wieder, wenn Sie die Dimension erneut für diese Zeilenart öffnen. Blendet Ihre Einstellung Werte aus, erscheint unter dem Feld ein Hinweis, zum Beispiel „8 CAPEX-Zeilen haben einen Wert für diese Dimension. Sie behalten ihn, ausgeblendet, solange die Dimension nur für OPEX-Zeilen gilt.“
 
@@ -202,15 +202,15 @@ Auch ein einzelner Wert kann auf eine Zeilenart beschränkt werden. Die beiden E
 - Die Einstellung der Dimension legt fest, ob das Feld für eine Zeilenart existiert. Fällt das Feld weg, sind die Werte ausgeblendet, die die Zeilen haben.
 - Die Einstellung des Werts filtert die Auswahl. Das Feld bleibt, CAPEX-Zeilen bieten **Internes Personal** nicht mehr an, und eine CAPEX-Zeile, die ihn bereits hat, behält ihn, zeigt ihn an und bleibt bearbeitbar. Siehe [OPEX- oder CAPEX-Werte](#opex-oder-capex-werte).
 
-Die beiden Einstellungen müssen zusammenpassen. Eine Dimension kann nicht auf eine Zeilenart beschränkt werden, solange einige ihrer Werte nur für die andere gelten: KANAP lehnt dies ab und nennt die Werte (höchstens drei, dann „and N more“), zum Beispiel „2 values of this dimension are for CAPEX lines only (Hardware, Software). Set them to OPEX and CAPEX first.“
+Die beiden Einstellungen müssen zusammenpassen. Eine Dimension kann nicht auf eine Zeilenart beschränkt werden, solange einige ihrer Werte nur für die andere gelten: Kadratis lehnt dies ab und nennt die Werte (höchstens drei, dann „and N more“), zum Beispiel „2 values of this dimension are for CAPEX lines only (Hardware, Software). Set them to OPEX and CAPEX first.“
 
 ### Erforderliche Dimensionen
 
-Schalten Sie **Erforderlich** ein, wenn jede Budgetzeile in einer Dimension klassifiziert sein muss. KANAP prüft dann die Zeilen der Arten, für die die Dimension verwendet wird:
+Schalten Sie **Erforderlich** ein, wenn jede Budgetzeile in einer Dimension klassifiziert sein muss. Kadratis prüft dann die Zeilen der Arten, für die die Dimension verwendet wird:
 
-- **Eine neue Zeile braucht einen Wert in der Dimension.** Eine Budgetdatei, Plaid und die API legen keine Zeile ohne Wert an, mit der Meldung „The Kostenart dimension is required. Choose a value.“ Auf dem Bildschirm der Budgetzeilen besteht eine Zeile ab ihrem Titel, und **Erstellen** nennt die Dimension als fehlend, bis sie einen Wert hat.
+- **Eine neue Zeile braucht einen Wert in der Dimension.** Eine Budgetdatei, Kad und die API legen keine Zeile ohne Wert an, mit der Meldung „The Kostenart dimension is required. Choose a value.“ Auf dem Bildschirm der Budgetzeilen besteht eine Zeile ab ihrem Titel, und **Erstellen** nennt die Dimension als fehlend, bis sie einen Wert hat.
 - **Eine Zeile mit einem Wert kann ihn nicht verlieren.** Sie können einen anderen Wert wählen. Das Feld kann nicht geleert werden.
-- **Eine Zeile, die vor dem Einschalten angelegt wurde, funktioniert weiter.** Hat sie keinen Wert in der Dimension, bleibt sie bearbeitbar, und Sie können andere Änderungen an ihr speichern. Ihr Feld ist als erforderlich markiert. In den OPEX- und CAPEX-Bildschirmen fragt KANAP beim Verlassen einer solchen Zeile nach einer Änderung zuerst nach einem Wert, mit **Bleiben** und **Trotzdem verlassen**. Wird sie nur geöffnet, ohne etwas zu ändern, fragt KANAP nie.
+- **Eine Zeile, die vor dem Einschalten angelegt wurde, funktioniert weiter.** Hat sie keinen Wert in der Dimension, bleibt sie bearbeitbar, und Sie können andere Änderungen an ihr speichern. Ihr Feld ist als erforderlich markiert. In den OPEX- und CAPEX-Bildschirmen fragt Kadratis beim Verlassen einer solchen Zeile nach einer Änderung zuerst nach einem Wert, mit **Bleiben** und **Trotzdem verlassen**. Wird sie nur geöffnet, ohne etwas zu ändern, fragt Kadratis nie.
 
 Die Einstellung wird nur geprüft, solange die Dimension aktiviert ist. Eine deaktivierte Dimension behält ihre Einstellung, und eine Zeile unter dem Schalter sagt „Wird nicht geprüft, solange die Dimension deaktiviert ist.“ Eine Dimension, die nur für eine Zeilenart verwendet wird, wird nur bei dieser Art geprüft: Eine erforderliche Dimension mit **Nur OPEX** verlangt nichts von CAPEX-Zeilen.
 
@@ -266,13 +266,13 @@ Die Schaltfläche **Verlauf** in der Kopfzeile öffnet den Verlauf des Werts in 
 
 ### Werte ordnen
 
-Die Werte einer Dimension haben eine Reihenfolge, die Sie festlegen. KANAP bietet die Werte überall in dieser Reihenfolge an, wo Sie sie auswählen oder danach filtern:
+Die Werte einer Dimension haben eine Reihenfolge, die Sie festlegen. Kadratis bietet die Werte überall in dieser Reihenfolge an, wo Sie sie auswählen oder danach filtern:
 
 - die Wertefelder von OPEX- und CAPEX-Zeilen (wenn Sie in ein Feld tippen, stehen die besten Treffer zuerst)
 - die Kontrollkästchen-Filter der Dimension in der Liste der Budgetzeilen
 - die Dimensionsfilter der Berichte und die Liste **Werte ausschließen** des Berichts Analysedimensionen
 - der Export der Werte
-- die Werte, die Plaid auflistet
+- die Werte, die Kad auflistet
 
 Wenn Sie die Liste der Budgetzeilen nach der Spalte einer Dimension sortieren, folgt sie ebenfalls dieser Reihenfolge, dann dem Namen des Werts. Zeilen ohne Wert stehen bei aufsteigender Sortierung am Ende. Die Zeilen der Berichte behalten ihre eigene Reihenfolge, nach Betrag.
 
@@ -296,7 +296,7 @@ Das Feld **Verwendet für** eines Werts legt fest, welche Budgetzeilen ihn verwe
 | **Nur OPEX** | Nur OPEX-Zeilen können den Wert verwenden |
 | **Nur CAPEX** | Nur CAPEX-Zeilen können den Wert verwenden |
 
-Das Feld einer OPEX-Zeile bietet die Werte für OPEX und für beide an. Das Feld einer CAPEX-Zeile tut dasselbe für CAPEX. Eine Zeile, die bereits einen Wert der anderen Art hat, behält ihn, zeigt ihn an und bleibt bearbeitbar, wie bei einem deaktivierten Wert. Einen solchen Wert für eine andere Zeile oder beim Ändern des Werts einer Zeile zu wählen, wird abgelehnt: in der Anwendung, in einer Budgetdatei, über die API und in Plaid.
+Das Feld einer OPEX-Zeile bietet die Werte für OPEX und für beide an. Das Feld einer CAPEX-Zeile tut dasselbe für CAPEX. Eine Zeile, die bereits einen Wert der anderen Art hat, behält ihn, zeigt ihn an und bleibt bearbeitbar, wie bei einem deaktivierten Wert. Einen solchen Wert für eine andere Zeile oder beim Ändern des Werts einer Zeile zu wählen, wird abgelehnt: in der Anwendung, in einer Budgetdatei, über die API und in Kad.
 
 - Gilt die Dimension nur für eine Zeilenart, ist die Zeilenart, die sie ausschließt, im Feld nicht verfügbar, mit einer Zeile wie „Die Dimension IT-Bereich gilt nur für OPEX-Zeilen.“ **OPEX und CAPEX** und die eigene Zeilenart der Dimension bleiben wählbar. Ein Wert kann nicht auf die Zeilenart beschränkt werden, die seine Dimension ausschließt.
 - Haben Zeilen der anderen Art den Wert, erscheint unter dem Feld eine Zeile, zum Beispiel „4 CAPEX-Zeilen haben diesen Wert. Sie behalten ihn, aber neue CAPEX-Zeilen können ihn nicht auswählen.“ Klicken Sie auf **Diese Zeilen anzeigen**, um sie in der Liste in einem neuen Tab zu öffnen. Die Zeile bleibt, solange der Konflikt besteht.
@@ -314,13 +314,13 @@ Dimensionen und Werte haben jeweils einen Status (**Aktiviert** oder **Deaktivie
 
 **Ein deaktivierter Wert**:
 
-- Kann nicht für eine Zeile gewählt werden, weder in der App noch in einer importierten Datei noch über Plaid.
+- Kann nicht für eine Zeile gewählt werden, weder in der App noch in einer importierten Datei noch über Kad.
 - Bleibt auf den Zeilen, die ihn bereits haben, und zählt weiterhin in den Berichten. In der Liste des Felds ist er als **Deaktiviert** markiert.
 
 **Eine deaktivierte Dimension**:
 
 - Wird nicht geprüft, wenn sie **Erforderlich** ist: Zeilen können ohne Wert in ihr angelegt werden. Sie behält die Einstellung für den Fall, dass Sie sie wieder aktivieren.
-- Verschwindet aus den Zeilenformularen, der Liste der Budgetzeilen, den Berichtsfiltern, der Dimensionsauswahl des Berichts, den OPEX- und CAPEX-Exporten und aus Plaid. Nur die Seite Analysedimensionen zeigt sie, als **Deaktiviert** markiert.
+- Verschwindet aus den Zeilenformularen, der Liste der Budgetzeilen, den Berichtsfiltern, der Dimensionsauswahl des Berichts, den OPEX- und CAPEX-Exporten und aus Kad. Nur die Seite Analysedimensionen zeigt sie, als **Deaktiviert** markiert.
 - Behält ihre Werte auf den Zeilen. Aktivieren Sie die Dimension wieder, und die Werte erscheinen wieder.
 - Nimmt keine neuen Werte auf. **Neuer Wert** ist deaktiviert, solange die Dimension ausgewählt ist, und importierte Dateien können ihre Werte weder hinzufügen noch ändern.
 
@@ -359,17 +359,17 @@ Die sieben Budgetberichte lassen sich auch auf einen Wert einer Dimension eingre
 
 ---
 
-## Analysedimensionen in Plaid
+## Analysedimensionen in Kad { #analysedimensionen-in-plaid }
 
-- Plaid kann OPEX-Zeilen nach jeder aktivierten Dimension filtern und gruppieren, die für OPEX-Zeilen verwendet wird, und CAPEX-Zeilen nach jeder aktivierten Dimension, die für CAPEX-Zeilen verwendet wird.
+- Kad kann OPEX-Zeilen nach jeder aktivierten Dimension filtern und gruppieren, die für OPEX-Zeilen verwendet wird, und CAPEX-Zeilen nach jeder aktivierten Dimension, die für CAPEX-Zeilen verwendet wird.
 - Eine Frage zur Analysekategorie verwendet die Standarddimension, unabhängig von ihrem Namen und ihrer Reihenfolge.
-- Die Suche von Plaid und die `@`-Erwähnungen im Chat finden eine Budgetzeile über den Namen eines Werts, den sie auf einer für ihren Typ angezeigten Dimension hat, mit oder ohne Akzente.
-- Plaid kann den Wert einer Zeile in jeder Dimension setzen, ändern oder löschen, wenn es eine Budgetzeile anlegt oder aktualisiert. Fragen Sie zum Beispiel: „Setze die Kostenart von BL-12 auf Software.“ Plaid findet den Wert über seinen Namen in dieser Dimension und zeigt in der Vorschau die Dimension und den Wert, vorher und nachher. Nichts ändert sich, bevor Sie zustimmen.
-- Plaid befolgt dieselben Regeln wie die App: nur aktivierte Dimensionen, die für den Typ der Zeile verwendet werden, nur aktivierte Werte, die für den Typ der Zeile verwendet werden, und eine Zeile behält einen Wert, den sie bereits trägt.
-- Wenn Plaid eine Zeile anlegt, braucht sie einen Wert auf jeder erforderlichen Dimension des Zeilentyps. In einem Arbeitsbereich, der vor den empfohlenen Dimensionen angelegt wurde, braucht eine CAPEX-Zeile **PP&E type**, **Investment type** und **Priority**.
-- Plaid weiß, welche Dimensionen erforderlich sind. Eine neue Zeile braucht in jeder von ihnen einen Wert, und Plaid kann den Wert einer erforderlichen Dimension nicht löschen. Plaid lehnt eine Anfrage ab, die gegen die Regel verstößt, und nennt den Grund, zum Beispiel „Kostenart is required for spend item creation.“
-- Plaid kann auch einen Wert in der Dimension anlegen, die Sie nennen. Ohne Angabe einer Dimension kommt der Wert in die Standarddimension.
-- Mit Leserecht auf Analytik liest Plaid auch die Einstellungen jeder Dimension, die Zahl ihrer Werte und die Zeilen, die sie verwenden. Fragen Sie zum Beispiel: „Welche Dimensionen sind Pflicht?“
+- Die Suche von Kad und die `@`-Erwähnungen im Chat finden eine Budgetzeile über den Namen eines Werts, den sie auf einer für ihren Typ angezeigten Dimension hat, mit oder ohne Akzente.
+- Kad kann den Wert einer Zeile in jeder Dimension setzen, ändern oder löschen, wenn es eine Budgetzeile anlegt oder aktualisiert. Fragen Sie zum Beispiel: „Setze die Kostenart von BL-12 auf Software.“ Kad findet den Wert über seinen Namen in dieser Dimension und zeigt in der Vorschau die Dimension und den Wert, vorher und nachher. Nichts ändert sich, bevor Sie zustimmen.
+- Kad befolgt dieselben Regeln wie die App: nur aktivierte Dimensionen, die für den Typ der Zeile verwendet werden, nur aktivierte Werte, die für den Typ der Zeile verwendet werden, und eine Zeile behält einen Wert, den sie bereits trägt.
+- Wenn Kad eine Zeile anlegt, braucht sie einen Wert auf jeder erforderlichen Dimension des Zeilentyps. In einem Arbeitsbereich, der vor den empfohlenen Dimensionen angelegt wurde, braucht eine CAPEX-Zeile **PP&E type**, **Investment type** und **Priority**.
+- Kad weiß, welche Dimensionen erforderlich sind. Eine neue Zeile braucht in jeder von ihnen einen Wert, und Kad kann den Wert einer erforderlichen Dimension nicht löschen. Kad lehnt eine Anfrage ab, die gegen die Regel verstößt, und nennt den Grund, zum Beispiel „Kostenart is required for spend item creation.“
+- Kad kann auch einen Wert in der Dimension anlegen, die Sie nennen. Ohne Angabe einer Dimension kommt der Wert in die Standarddimension.
+- Mit Leserecht auf Analytik liest Kad auch die Einstellungen jeder Dimension, die Zahl ihrer Werte und die Zeilen, die sie verwenden. Fragen Sie zum Beispiel: „Welche Dimensionen sind Pflicht?“
 
 ---
 

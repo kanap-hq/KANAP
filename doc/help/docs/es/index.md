@@ -1,10 +1,10 @@
-# Manual de usuario de KANAP
+# Manual de usuario de Kadratis™
 
-Bienvenido al manual de usuario de KANAP. Esta documentación cubre todas las funcionalidades disponibles para los usuarios de la plataforma KANAP.
+Bienvenido al manual de usuario de Kadratis. Esta documentación cubre todas las funcionalidades disponibles para los usuarios de la plataforma Kadratis.
 
 ## Primeros pasos
 
-KANAP ayuda a los equipos de IT y finanzas a gestionar su panorama tecnológico, presupuestos y operaciones. Utilice el menú de navegación para explorar los diferentes módulos.
+Kadratis ayuda a los equipos de IT y finanzas a gestionar su panorama tecnológico, presupuestos y operaciones. Utilice el menú de navegación para explorar los diferentes módulos.
 
 Si desea el camino más corto hacia la productividad, comience con las guías de Inicio Rápido antes de consultar las páginas de referencia completas.
 
@@ -18,7 +18,7 @@ Diez minutos por recorrido, con el ejemplo Fromage & Co o con sus propios datos:
 
 ## Guías de Inicio Rápido
 
-- [Primeros pasos: Sus primeros 10 minutos en KANAP](fast-track/getting-started.md): Incorporación del primer día, configuración del perfil, panel de control y conceptos clave
+- [Primeros pasos: Sus primeros 10 minutos en Kadratis](fast-track/getting-started.md): Incorporación del primer día, configuración del perfil, panel de control y conceptos clave
 - [Portafolio: Inicio Rápido: De la solicitud a la entrega](fast-track/index.md): Enviar, analizar, evaluar, convertir y entregar iniciativas
 - [Panorama IT: Inicio Rápido: De la aplicación al servidor](fast-track/apps-and-assets.md): Documentar una aplicación, sus entornos y activos de alojamiento
 - [Tipos de tareas: Inicio Rápido: Run, Build y Tareas](fast-track/task-types.md): Comprender la diferencia entre incidentes, problemas, solicitudes, proyectos, bugs y tareas
@@ -27,7 +27,7 @@ Diez minutos por recorrido, con el ejemplo Fromage & Co o con sus propios datos:
 
 ### Panel de control
 
-- [Panel de control](my-dashboard.md): Vista general personal con mosaicos configurables y la sección Gestión presupuestaria (haga clic en el logotipo de KANAP)
+- [Panel de control](my-dashboard.md): Vista general personal con mosaicos configurables y la sección Gestión presupuestaria (haga clic en el logotipo de Kadratis)
 
 ### Gestión de portafolio
 
@@ -107,9 +107,9 @@ Diez minutos por recorrido, con el ejemplo Fromage & Co o con sus propios datos:
 
 - [Procesos de negocio](business-processes.md): Documentación de la jerarquía de procesos de negocio
 
-### Plaid
+### Kad
 
-- [Plaid](ai-assistant.md): Haga preguntas en lenguaje claro sobre todos sus datos de KANAP
+- [Kad](ai-assistant.md): Haga preguntas en lenguaje claro sobre todos sus datos de Kadratis
 
 ### Agentes IA
 
@@ -125,10 +125,10 @@ Diez minutos por recorrido, con el ejemplo Fromage & Co o con sus propios datos:
 - [Acceso a los datos](data-access.md): Limitar a una persona al presupuesto y a los contratos de ciertas empresas o centros de coste
 - [Historial de los registros](record-history.md): Quién cambió un registro, qué y cuándo, desde su pestaña Historial
 - [Personalización](branding.md): Personalización del logotipo del espacio de trabajo y colores primarios claro/oscuro
-- [Datos de ejemplo](sample-data.md): Descubra KANAP con una empresa ficticia, bórrela después y empiece de cero
+- [Datos de ejemplo](sample-data.md): Descubra Kadratis con una empresa ficticia, bórrela después y empiece de cero
 - [Registro de auditoría](admin.md#registro-de-auditoria): Revisión de los cambios de datos, los accesos y las exportaciones con filtros, vista detallada y exportación CSV o Excel
 - [Modelos IA](ai-models.md): Registro de los modelos IA que usa su organización, con sus precios, y definición del predeterminado
-- [Configuración de Plaid](ai-settings.md): Elección del modelo que usa Plaid, funcionalidades de chat, retención y claves MCP
+- [Configuración de Kad](ai-settings.md): Elección del modelo que usa Kad, funcionalidades de chat, retención y claves MCP
 - [Uso y costes](ai-usage.md): Uso de la IA y costes reales en chat y agentes, por agente y por modelo
 - [Integraciones](integrations.md): Conexión de GLPI para importar tickets y para los agentes
 - [Tareas programadas](scheduled-tasks.md): Revisión y gestión de trabajos recurrentes en segundo plano
@@ -139,4 +139,4 @@ Diez minutos por recorrido, con el ejemplo Fromage & Co o con sus propios datos:
 
 ---
 
-**¿Necesita ayuda?** Contacte con su administrador del sistema o visite [kanap.net](https://kanap.net) para más información.
+**¿Necesita ayuda?** Contacte con su administrador del sistema o visite [kadratis.com](https://kadratis.com) para más información.

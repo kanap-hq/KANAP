@@ -8,7 +8,7 @@ Navigate to **IT Landscape > Assets** to see your asset inventory. To create an 
 
 1. Click **Add asset**, then **Add asset** or **Add cluster**. The asset page opens with an empty title in the header. The rest of the page is dimmed.
 2. Type the name of the asset, up to 200 characters.
-3. Press Enter, or click outside the title. KANAP creates the asset at once. Its reference (`AST-12`) shows and all tabs open.
+3. Press Enter, or click outside the title. Kadratis creates the asset at once. Its reference (`AST-12`) shows and all tabs open.
 
 The new asset is a virtual machine in the Prod environment, with the lifecycle Active. When your asset types have no virtual machine, it takes the first type of the list. **Add cluster** creates it with the **Cluster** switch on. Each field then saves on its own, so you can change the type or the environment right away.
 
@@ -23,7 +23,7 @@ The new asset is a virtual machine in the Prod environment, with the lifecycle A
 
 Press Escape on the empty title to leave without creating anything. A refused name shows under the title.
 
-**Unique names**: two assets cannot share a name or an FQDN. Letter case and spaces at either end do not count. KANAP refuses the duplicate and names the asset that already has it (`AST-12`). Duplicates recorded earlier stay editable as long as you leave that value unchanged.
+**Unique names**: two assets cannot share a name or an FQDN. Letter case and spaces at either end do not count. Kadratis refuses the duplicate and names the asset that already has it (`AST-12`). Duplicates recorded earlier stay editable as long as you leave that value unchanged.
 
 **Tip**: Use consistent naming conventions that include environment and role information (e.g., `prod-web-01`, `dev-db-master`). When creating a new asset, the hostname is automatically derived from the name you type.
 
@@ -36,7 +36,7 @@ Press Escape on the empty title to leave without creating anything. A refused na
 
 While the asset is being created, its header shows **Create** and **Cancel** in place of the close button. They stay until you leave the asset.
 
-- **Create** checks that the asset has a location. Without one, a message names the missing location and the **Location** field of the properties drawer gets the focus. The asset stays open. With a location, KANAP keeps the asset and closes it. You go back to where you started
+- **Create** checks that the asset has a location. Without one, a message names the missing location and the **Location** field of the properties drawer gets the focus. The asset stays open. With a location, Kadratis keeps the asset and closes it. You go back to where you started
 - **Cancel** deletes the asset. If you entered more than the name, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete assets
 
 Leaving the asset another way (the back arrow, the menu, another asset) while it has no location asks what to do. **Complete it** keeps you on the asset, on the **Location** field. **Delete it** deletes the asset.
@@ -91,7 +91,7 @@ Most columns support checkbox set filters for quick multi-select filtering. Filt
 | Administration zone | Includes "(Blank)" for assets without a zone |
 | Vulnerabilities to review | **With severe vulnerabilities**, **With vulnerabilities** or **Without**. A retired asset is in none of them |
 
-Sorting on **Vulnerabilities to review** orders the assets by their critical or high vulnerabilities, then by their total. Retired assets come last. The column counts direct links only: a virtual machine does not count the vulnerabilities of its host. See [What KANAP counts](vulnerabilities.md#what-kanap-counts).
+Sorting on **Vulnerabilities to review** orders the assets by their critical or high vulnerabilities, then by their total. Retired assets come last. The column counts direct links only: a virtual machine does not count the vulnerabilities of its host. See [What Kadratis counts](vulnerabilities.md#what-kanap-counts).
 
 **Quick search** looks in the name, the reference, the host name, the FQDN, the IP addresses, the cluster, the location, the sub-location and the operating system.
 
@@ -124,9 +124,9 @@ Where to assign depends on the cluster:
 
 A member runs what is assigned to its cluster. An asset the cluster contains runs inside it and inherits nothing.
 
-When you assign an application to a member of a cluster, KANAP asks **Assign to the cluster?**: **Assign to the cluster** puts the assignment on the cluster for all its members, **This server only** keeps it on that server. The question names the members whose own assignment of the same environment and role the cluster's will replace. The cluster's assignment then keeps the earliest **Since** date and their notes. When the member already hosts the application in that role through its cluster, nothing is created and a message says so. An assignment made through the assistant follows the same rules, without the question.
+When you assign an application to a member of a cluster, Kadratis asks **Assign to the cluster?**: **Assign to the cluster** puts the assignment on the cluster for all its members, **This server only** keeps it on that server. The question names the members whose own assignment of the same environment and role the cluster's will replace. The cluster's assignment then keeps the earliest **Since** date and their notes. When the member already hosts the application in that role through its cluster, nothing is created and a message says so. An assignment made through the assistant follows the same rules, without the question.
 
-Wherever KANAP reads where an application runs, it counts the members of the cluster: the vulnerabilities and end of support of the application, its hosting type (a cluster without a location takes the hosting type of its members), the administration zones, the applications of a location or of a contract on a server, the assistant and Knowledge. In the impact of a fallen member, the cluster is degraded and its applications keep running. See [Dependencies](#dependencies).
+Wherever Kadratis reads where an application runs, it counts the members of the cluster: the vulnerabilities and end of support of the application, its hosting type (a cluster without a location takes the hosting type of its members), the administration zones, the applications of a location or of a contract on a server, the assistant and Knowledge. In the impact of a fallen member, the cluster is degraded and its applications keep running. See [Dependencies](#dependencies).
 
 Members are managed at the top of the **Operations** tab of the cluster. See [Operations](#operations). The rules:
 
@@ -141,7 +141,7 @@ Installations upgraded from an earlier version keep their clusters. Memberships 
 
 A virtualisation cluster contains its virtual machines: add them to the **Contains** section of the cluster, on its **Dependencies** tab. A machine in the cluster can run on any of its hosts.
 
-When you add a **Contains** relation from a host that belongs to a cluster, KANAP asks **Place in the cluster?**. **Place in the cluster** puts the relation on the cluster. **This host only** keeps it on the host. The same question comes when you add such a host under **Contained by**. A retired host or cluster raises no question.
+When you add a **Contains** relation from a host that belongs to a cluster, Kadratis asks **Place in the cluster?**. **Place in the cluster** puts the relation on the cluster. **This host only** keeps it on the host. The same question comes when you add such a host under **Contained by**. A retired host or cluster raises no question.
 
 - Placing an asset in the cluster replaces the links the member hosts held to it. A message names the hosts.
 - A host cannot contain an asset its cluster already contains. The message names the cluster.
@@ -237,7 +237,7 @@ The Operations tab shows the cluster of the asset and what runs on it: the appli
 | **Since** | Date the server was assigned |
 | **Notes** | Free-text notes |
 
-Click **Add assignment** to attach this asset to an application deployment. Pick the application, then its deployment. When the application has no deployment in an environment yet, **+ Create the … deployment** creates it along with the assignment. Then pick the role and optional date / notes. On a member of a cluster, KANAP first asks whether to assign the cluster or this server only. See [Applications on a cluster](#applications-on-a-cluster). The pencil at the end of a row opens the application: the assignment is edited in its **Deployments** tab. The bin icon removes the assignment, after a confirmation. **Add assignment** is unavailable while no server role is set up in **IT Landscape > Settings**. These commands need `infrastructure:member` and `applications:member`. Without both, the table is read-only.
+Click **Add assignment** to attach this asset to an application deployment. Pick the application, then its deployment. When the application has no deployment in an environment yet, **+ Create the … deployment** creates it along with the assignment. Then pick the role and optional date / notes. On a member of a cluster, Kadratis first asks whether to assign the cluster or this server only. See [Applications on a cluster](#applications-on-a-cluster). The pencil at the end of a row opens the application: the assignment is edited in its **Deployments** tab. The bin icon removes the assignment, after a confirmation. **Add assignment** is unavailable while no server role is set up in **IT Landscape > Settings**. These commands need `infrastructure:member` and `applications:member`. Without both, the table is read-only.
 
 On a member, an application assigned to its cluster shows "via" the cluster's name, without pencil or bin: change it on the cluster.
 
@@ -283,7 +283,7 @@ When vulnerabilities are followed, the last section of the tab lists the vulnera
 
 On a **cluster**, **On its members** lists apart the technologies of its members, one line per technology and version, with the members that carry it in the **Asset** column. A cluster counts the vulnerabilities of its members in service with its own: the count of the section, the header badge (its tooltip says "members included") and the column of the list. The **See** of a line opens the page on the member that carries it.
 
-What only comes from the host the asset or its members run in, such as the ESXi of the host of a virtual machine, is the underlying platform. It sits under a closed line **Underlying platform (n)**, which a click opens. It is not counted in the section, the badge or the list column: a vulnerability counts on the asset where the technology is recorded. Its **See** opens the page on that host. See [What KANAP counts](vulnerabilities.md#what-kanap-counts).
+What only comes from the host the asset or its members run in, such as the ESXi of the host of a virtual machine, is the underlying platform. It sits under a closed line **Underlying platform (n)**, which a click opens. It is not counted in the section, the badge or the list column: a vulnerability counts on the asset where the technology is recorded. Its **See** opens the page on that host. See [What Kadratis counts](vulnerabilities.md#what-kanap-counts).
 
 ---
 
@@ -503,7 +503,7 @@ For fields configured in **IT Landscape > Settings**, you can use either the int
 
 The system automatically normalizes values during import, so `Virtual Machine`, `virtual machine`, and `vm` all resolve to the same asset type. A value that matches several entries is refused rather than guessed. The export writes names for these columns, in the language of the screen, so an exported file can be imported back as is.
 
-**Operating system**: the `operating_system` column holds the technology name followed by its version, as the export writes it (`Windows Server 2019`, `Ubuntu 24.04 LTS`). On import, KANAP looks for the technology among yours, then in the catalog, and records the version. A technology or a version it does not find is created, so check the spelling first. The value becomes the server's operating system.
+**Operating system**: the `operating_system` column holds the technology name followed by its version, as the export writes it (`Windows Server 2019`, `Ubuntu 24.04 LTS`). On import, Kadratis looks for the technology among yours, then in the catalog, and records the version. A technology or a version it does not find is created, so check the spelling first. The value becomes the server's operating system.
 
 **Cluster Membership**: the `cluster` column names the clusters of the asset, separated by commas (`ESX-PROD, SQL-CLUSTER`). Case does not matter. The export writes the clusters the asset is a member of. On import:
 

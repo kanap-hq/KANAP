@@ -64,9 +64,9 @@ Les lignes qui concernent des applications demandent le droit de lire les applic
 
 ## Demander à l'assistant
 
-[Plaid](ai-assistant.md) lit les deux vues, **Échéances** et **Données manquantes**, avec les mêmes droits que le rapport. Il nomme chaque élément par sa référence (`APP-4`, `AST-12`, `TEC-3`) et lit un horizon à la fois : 6, 12, 24 ou 36 mois. Plaid liste les échéances 30 à la fois et peut lire les pages suivantes ; ses décomptes et ses totaux couvrent toutes les échéances. Quand vous ne pouvez pas lire les applications, Plaid dit qu'il a laissé de côté les lignes des applications.
+[Kad](ai-assistant.md) lit les deux vues, **Échéances** et **Données manquantes**, avec les mêmes droits que le rapport. Il nomme chaque élément par sa référence (`APP-4`, `AST-12`, `TEC-3`) et lit un horizon à la fois : 6, 12, 24 ou 36 mois. Kad liste les échéances 30 à la fois et peut lire les pages suivantes ; ses décomptes et ses totaux couvrent toutes les échéances. Quand vous ne pouvez pas lire les applications, Kad dit qu'il a laissé de côté les lignes des applications.
 
-Plaid peut aussi ajouter des versions de technologie et corriger leurs dates de support, avec votre approbation. La fin de support d'une application est un champ de l'application : Plaid la modifie comme il modifie l'application, avec les droits de la page [Applications](applications.md).
+Kad peut aussi ajouter des versions de technologie et corriger leurs dates de support, avec votre approbation. La fin de support d'une application est un champ de l'application : Kad la modifie comme il modifie l'application, avec les droits de la page [Applications](applications.md).
 
 Demandez par exemple : « Quelles applications arrivent en fin de support dans les six mois ? », « Échéances de fin de support des douze prochains mois par type », « Quelles fiches faut-il compléter pour le rapport de fin de support ? », « La version 16 de PostgreSQL finit son support le 31/12/2028 » ou « Efface la date de fin de support étendu de la version 14 de TEC-3 ».
 
@@ -74,4 +74,4 @@ Demandez par exemple : « Quelles applications arrivent en fin de support dans l
 
 - **Commencez par les données manquantes** : un serveur sans ses technologies, ou une version sans date, n'apparaît jamais dans les échéances.
 - **Regardez à 24 mois pour les budgets** : une migration prévue l'an prochain a besoin de son budget cette année.
-- **Utilisez le catalogue** : les technologies ajoutées depuis le catalogue arrivent avec leurs dates de fin de support. Elles viennent d'endoflife.date, ou des pages officielles de l'éditeur pour les produits que KANAP tient à jour (voir [Versions issues du catalogue](technologies.md#versions-issues-du-catalogue)).
+- **Utilisez le catalogue** : les technologies ajoutées depuis le catalogue arrivent avec leurs dates de fin de support. Elles viennent d'endoflife.date, ou des pages officielles de l'éditeur pour les produits que Kadratis tient à jour (voir [Versions issues du catalogue](technologies.md#versions-issues-du-catalogue)).

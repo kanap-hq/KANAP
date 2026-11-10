@@ -52,7 +52,7 @@ Cliquez sur une ligne pour ouvrir la fiche du fournisseur. Utilisez les flèches
 
 La fiche comporte trois onglets : **Vue d'ensemble**, **Contacts** et **Historique** (les modifications apportées au fournisseur, voir [Historique des fiches](record-history.md)).
 
-**Titre** : le nom du fournisseur. Cliquez dessus pour le modifier ; la modification s'enregistre quand vous quittez le champ ou appuyez sur Entrée, et Échap l'annule. Le nom est obligatoire et doit différer de celui de tous les autres fournisseurs, quelle que soit la casse (`SAP` et `sap` sont le même nom) : KANAP affiche le message sous le nom et garde le nom enregistré.
+**Titre** : le nom du fournisseur. Cliquez dessus pour le modifier ; la modification s'enregistre quand vous quittez le champ ou appuyez sur Entrée, et Échap l'annule. Le nom est obligatoire et doit différer de celui de tous les autres fournisseurs, quelle que soit la casse (`SAP` et `sap` sont le même nom) : Kadratis affiche le message sous le nom et garde le nom enregistré.
 
 **Référence** : l'ID fournisseur ERP, quand le fournisseur en a un, s'affiche avant le nom. Cliquez dessus pour le copier.
 
@@ -85,7 +85,7 @@ L'onglet **Contacts** liste les contacts liés à ce fournisseur par type de con
 **Fonctionnement** :
 - Chaque section liste ses contacts par nom. Cliquez sur un nom pour ouvrir la fiche du contact.
 - **Ajouter un existant** : recherchez un contact par son nom et choisissez-le. Le lien s'enregistre aussitôt.
-- **Nouveau contact** : ouvre le formulaire de contact avec le fournisseur et le type de contact déjà remplis. KANAP vous ramène à cet onglet une fois le contact créé.
+- **Nouveau contact** : ouvre le formulaire de contact avec le fournisseur et le type de contact déjà remplis. Kadratis vous ramène à cet onglet une fois le contact créé.
 - Le bouton corbeille retire le lien. Le contact lui-même reste dans vos contacts. Un message le confirme, avec une action **Annuler** qui rattache de nouveau le contact.
 
 **Conseil** : gardez au moins un contact par fournisseur pour que la communication avec lui soit toujours à portée de clic.

@@ -206,7 +206,7 @@ La section Tâches ne couvre que les tâches du portefeuille : les tâches auton
 La liste des projets créés comporte une colonne **Origine**.
 
 - Un projet issu de la conversion d'une demande affiche cette demande, par exemple `REQ-12 Cave climate digital twin`. Cliquez dessus pour ouvrir la demande.
-- Un projet créé sans demande affiche la façon dont il est entré dans le portefeuille, dans les mots employés partout ailleurs dans KANAP : **Fast-track**, **Historique** ou **Demande**.
+- Un projet créé sans demande affiche la façon dont il est entré dans le portefeuille, dans les mots employés partout ailleurs dans Kadratis : **Fast-track**, **Historique** ou **Demande**.
 
 ### Replier une section
 

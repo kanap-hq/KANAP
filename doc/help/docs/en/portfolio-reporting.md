@@ -206,7 +206,7 @@ The Tasks section covers portfolio tasks only: standalone tasks and tasks attach
 The Projects created list carries an **Origin** column.
 
 - A project converted from a request shows that request, for example `REQ-12 Cave climate digital twin`. Click it to open the request.
-- A project created without a request shows how it entered the portfolio, in the words used everywhere else in KANAP: **Fast-track**, **Legacy** or **Request**.
+- A project created without a request shows how it entered the portfolio, in the words used everywhere else in Kadratis: **Fast-track**, **Legacy** or **Request**.
 
 ### Folding a section
 

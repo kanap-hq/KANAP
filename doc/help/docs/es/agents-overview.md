@@ -26,14 +26,14 @@ Algunas ideas se repiten en todas las páginas de esta sección. Apréndalas una
 
 Hoy hay dos tipos de agente utilizables de principio a fin: el agente **Helpdesk**, que es del que trata el resto de esta sección, y el agente de **Supervisión de infraestructura (SRE)**, que lee las alertas de una herramienta de supervisión conectada y prepara notas de diagnóstico para su revisión. Otros tipos pueden aparecer en la lista de tipos de agente, pero no están listos para ejecutarse.
 
-Otras dos superficies de IA se confunden fácilmente con los agentes, pero son cosas distintas: [Plaid](ai-assistant.md) es el asistente de chat interactivo que maneja usted mismo, y [Configuración de Plaid](ai-settings.md) configura ese asistente. Los modelos en sí se gestionan en la página [Modelos IA](ai-models.md), donde se define el modelo de cada agente (y el predeterminado de la organización al que recurre).
+Otras dos superficies de IA se confunden fácilmente con los agentes, pero son cosas distintas: [Kad](ai-assistant.md) es el asistente de chat interactivo que maneja usted mismo, y [Configuración de Kad](ai-settings.md) configura ese asistente. Los modelos en sí se gestionan en la página [Modelos IA](ai-models.md), donde se define el modelo de cada agente (y el predeterminado de la organización al que recurre).
 
 ---
 
 ## El panel de la flota
 
 !!! note "Agentes a la espera de una confirmación"
-    En el servicio alojado, un agente sin modelo propio funciona con el modelo incluido de KANAP cuando un administrador ha confirmado su proveedor. Hasta entonces, un aviso en la parte superior de la página dice *Los agentes que usan el modelo incluido de KANAP están en pausa hasta que un administrador lo confirme en Administración > Plaid.* Los administradores encuentran en él un botón **Abrir la configuración de Plaid**. Los agentes fijados a un modelo que usted añadió siguen funcionando. Consulte [Confirmar el modelo incluido de KANAP](ai-settings.md#confirmar-el-modelo-incluido-de-kanap).
+    En el servicio alojado, un agente sin modelo propio funciona con el modelo incluido de Kadratis cuando un administrador ha confirmado su proveedor. Hasta entonces, un aviso en la parte superior de la página dice *Los agentes que usan el modelo incluido de Kadratis están en pausa hasta que un administrador lo confirme en Administración > Kad.* Los administradores encuentran en él un botón **Abrir la configuración de Kad**. Los agentes fijados a un modelo que usted añadió siguen funcionando. Consulte [Confirmar el modelo incluido de Kadratis](ai-settings.md#confirmar-el-modelo-incluido-de-kanap).
 
 En la parte superior hay cinco cifras agrupadas. Describen toda la flota, no un agente concreto:
 

@@ -1,6 +1,6 @@
 # Knowledge
 
-Knowledge is KANAP's document workspace for policies, procedures, technical notes, reference material, and the documentation that needs to stay connected to real work. It combines free-form writing with governance features such as templates, ownership, review, version history, and relations to applications, assets, projects, requests, and tasks.
+Knowledge is Kadratis's document workspace for policies, procedures, technical notes, reference material, and the documentation that needs to stay connected to real work. It combines free-form writing with governance features such as templates, ownership, review, version history, and relations to applications, assets, projects, requests, and tasks.
 
 Unlike a file share, Knowledge is not just a place to store documents. The important design choice is that every article can be classified, reviewed, versioned, exported, and linked to operational objects across the platform. That makes the article easier to find and gives it context when people open it from another workspace.
 
@@ -60,7 +60,7 @@ Important behavior:
 - In a single-library view, documents can be dragged into folders for quick reorganization.
 - Folders can be nested to create a browsing structure.
 - Deleting a folder does not delete its documents. Documents move back to **Unfiled** instead.
-- A folder with subfolders cannot be deleted: KANAP says so before asking you to confirm. Move or delete its subfolders first.
+- A folder with subfolders cannot be deleted: Kadratis says so before asking you to confirm. Move or delete its subfolders first.
 
 Use folders for stable subject areas, not for temporary workflow states. Status and workflow already exist for that.
 
@@ -173,7 +173,7 @@ New articles can start in two ways:
 
 When you create from a template, the template content is copied into the new document. From that point on, the new article is independent. Updating the template later does not rewrite existing documents.
 
-A new document opens with its title to type in the header. Press Enter to create the document, or Tab to create it and start typing its text. It opens in edit mode, with the editor, **Import**, and the sidebar available. Click **Create** to keep it: you return to where you started, or to the library. Click **Cancel** to delete it instead. KANAP asks first when you entered more than the title. On any document in edit mode, click the title in the header to change it.
+A new document opens with its title to type in the header. Press Enter to create the document, or Tab to create it and start typing its text. It opens in edit mode, with the editor, **Import**, and the sidebar available. Click **Create** to keep it: you return to where you started, or to the library. Click **Cancel** to delete it instead. Kadratis asks first when you entered more than the title. On any document in edit mode, click the title in the header to change it.
 
 The document workspace keeps writing in the center and governance in the sidebar.
 
@@ -245,7 +245,7 @@ Knowledge articles can be exported as:
 - **ODT**
 
 Export is available when the article has content. This is useful when:
-- a document needs to circulate outside KANAP
+- a document needs to circulate outside Kadratis
 - a reviewer prefers Word-format markup
 - a stable PDF snapshot is needed for sharing or recordkeeping
 
@@ -253,7 +253,7 @@ Export does not replace the live article. The Knowledge version remains the gove
 
 ## Generating documents from chat
 
-If the AI Assistant is enabled in your KANAP, you can ask it to draft a Knowledge article for you from chat. The assistant prepares a preview that you review before anything is saved. Confirming the preview creates a real Knowledge document with the content, type, template lineage, and any relations you specified, exactly as if you had written it yourself.
+If the AI Assistant is enabled in your Kadratis, you can ask it to draft a Knowledge article for you from chat. The assistant prepares a preview that you review before anything is saved. Confirming the preview creates a real Knowledge document with the content, type, template lineage, and any relations you specified, exactly as if you had written it yourself.
 
 Generated documents follow the same governance rules as hand-written ones: ownership, status, version history, locks, and review workflow all apply.
 
@@ -316,9 +316,9 @@ Knowledge documents can be related directly to:
 - Requests
 - Tasks
 
-Relations are not just tags. They control where the document appears elsewhere in KANAP and how users discover it from operational workspaces.
+Relations are not just tags. They control where the document appears elsewhere in Kadratis and how users discover it from operational workspaces.
 
-Each type of relation shows only to people who can read its module: applications need the applications, assets the infrastructure, projects the projects, requests the requests, tasks the tasks. A type you cannot read is absent from the document, in Plaid too, and saving the document leaves its links untouched. A Business Contributor adds only the projects, requests, applications and tasks they take part in.
+Each type of relation shows only to people who can read its module: applications need the applications, assets the infrastructure, projects the projects, requests the requests, tasks the tasks. A type you cannot read is absent from the document, in Kad too, and saving the document leaves its links untouched. A Business Contributor adds only the projects, requests, applications and tasks they take part in.
 
 Consequences of adding relations:
 - the document becomes easier to find from the linked object

@@ -23,7 +23,7 @@ The activity feed of a project, a request or a task shows comments and decisions
 The history lists one entry per change, the most recent at the top. Each entry shows:
 
 - the date and time of the change;
-- its author: a person, **System** for changes KANAP makes by itself, **Import** for changes loaded from a file, or **Plaid for** a person when the assistant made the change on their behalf;
+- its author: a person, **System** for changes Kadratis makes by itself, **Import** for changes loaded from a file, or **Kad for** a person when the assistant made the change on their behalf;
 - for the record itself, the event: **Created**, **Updated** or **Deleted**; for its parts, the title or the event of the part;
 - each changed field, with its value before and after (`before → after`).
 
@@ -58,7 +58,7 @@ On a contract, a project or a request, a person with limited data access sees th
 
 ## Ask the assistant
 
-[Plaid](ai-assistant.md#tool-calls) reads the history of a record with the same rights as its page. Ask, for example: "Who changed the amounts of BL-12?" or "What changed on TEC-3 this year?" Plaid answers from the History tab only: for a record without one, it says that KANAP keeps no history for it.
+[Kad](ai-assistant.md#tool-calls) reads the history of a record with the same rights as its page. Ask, for example: "Who changed the amounts of BL-12?" or "What changed on TEC-3 this year?" Kad answers from the History tab only: for a record without one, it says that Kadratis keeps no history for it.
 
 ## The full audit log
 

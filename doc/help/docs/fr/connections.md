@@ -8,7 +8,7 @@ Naviguez vers **Cartographie SI > Connexions** pour voir votre registre de conne
 
 1. Cliquez sur **Ajouter une connexion**. La page de la connexion s'ouvre avec un titre vide dans l'en-tête. Le reste de la page est grisé.
 2. Saisissez un nom descriptif.
-3. Appuyez sur Entrée, ou cliquez hors du titre. KANAP crée la connexion aussitôt, de serveur à serveur, sans protocole ni endpoints. Sa référence (`CONN-12`) s'affiche et tous les onglets s'ouvrent.
+3. Appuyez sur Entrée, ou cliquez hors du titre. Kadratis crée la connexion aussitôt, de serveur à serveur, sans protocole ni endpoints. Sa référence (`CONN-12`) s'affiche et tous les onglets s'ouvrent.
 
 Chaque champ s'enregistre ensuite de lui-même. Une connexion a besoin de :
   - **Topologie** : Serveur à serveur ou Multi-serveur
@@ -23,10 +23,10 @@ Appuyez sur Échap dans le titre vide pour partir sans rien créer.
 
 Tant que la connexion est en cours de création, son en-tête affiche **Créer** et **Annuler**. Ils restent jusqu'à ce que vous quittiez la connexion.
 
-- **Créer** vérifie que la connexion a au moins un protocole et ses deux endpoints, ou deux serveurs pour une connexion multi-serveur. Un message nomme ce qui manque, et le premier champ manquant prend le focus. Quand rien ne manque, KANAP conserve la connexion et la ferme. Vous revenez à votre point de départ
+- **Créer** vérifie que la connexion a au moins un protocole et ses deux endpoints, ou deux serveurs pour une connexion multi-serveur. Un message nomme ce qui manque, et le premier champ manquant prend le focus. Quand rien ne manque, Kadratis conserve la connexion et la ferme. Vous revenez à votre point de départ
 - **Annuler** supprime la connexion. Si vous avez saisi plus que le nom, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des connexions
 
-Si vous quittez la connexion autrement alors qu'il manque quelque chose, KANAP vous demande quoi faire. **La compléter** vous garde sur la connexion, sur le premier champ manquant. **La supprimer** supprime la connexion.
+Si vous quittez la connexion autrement alors qu'il manque quelque chose, Kadratis vous demande quoi faire. **La compléter** vous garde sur la connexion, sur le premier champ manquant. **La supprimer** supprime la connexion.
 
 ---
 
@@ -85,7 +85,7 @@ Une source, une destination, un serveur d'une connexion multi-serveur ou l'équi
 
 Les sélecteurs marquent un cluster d'une icône et listent ses membres sous son nom.
 
-Quand vous choisissez un serveur membre d'un cluster, KANAP demande **Raccorder au cluster ?**. **Raccorder au cluster** pose le cluster sur la connexion, pour tous ses membres. **Ce serveur seulement** garde le serveur. KANAP ne pose pas la question quand l'autre côté est déjà ce cluster ou un de ses membres : la connexion reste sur le serveur.
+Quand vous choisissez un serveur membre d'un cluster, Kadratis demande **Raccorder au cluster ?**. **Raccorder au cluster** pose le cluster sur la connexion, pour tous ses membres. **Ce serveur seulement** garde le serveur. Kadratis ne pose pas la question quand l'autre côté est déjà ce cluster ou un de ses membres : la connexion reste sur le serveur.
 
 Une liste multi-serveur qui contient un cluster et un de ses membres ne garde que le cluster. Un message nomme les membres retirés de la liste. Une liste doit garder au moins deux serveurs.
 

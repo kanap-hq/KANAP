@@ -6,11 +6,11 @@ Open it from **IT Landscape > Vulnerabilities**, in the **Operations** group. Yo
 
 ## Availability
 
-Vulnerabilities are followed by default in the cloud. On an on-premise installation they are off until your administrator [turns them on](on-premise/configuration.md#optional-vulnerabilities), and the server must then reach the NVD (the US National Vulnerability Database) and the CVE.org list, or a mirror of each. The same switch also reads three exploitation sources, or a mirror of each: the CISA catalog, ENISA's European vulnerability database and the daily EPSS scores. While they are off, KANAP shows none of it: no page, no column in the technologies, assets and applications lists, no section or badge on a record, no dashboard tile, no notification setting and no email. Plaid does not answer about vulnerabilities either.
+Vulnerabilities are followed by default in the cloud. On an on-premise installation they are off until your administrator [turns them on](on-premise/configuration.md#optional-vulnerabilities), and the server must then reach the NVD (the US National Vulnerability Database) and the CVE.org list, or a mirror of each. The same switch also reads three exploitation sources, or a mirror of each: the CISA catalog, ENISA's European vulnerability database and the daily EPSS scores. While they are off, Kadratis shows none of it: no page, no column in the technologies, assets and applications lists, no section or badge on a record, no dashboard tile, no notification setting and no email. Kad does not answer about vulnerabilities either.
 
-## How KANAP finds them
+## How Kadratis finds them { #how-kanap-finds-them }
 
-KANAP reads two sources every 6 hours and compares them with your technologies:
+Kadratis reads two sources every 6 hours and compares them with your technologies:
 
 - **The NVD**: the vulnerabilities analysed by the US National Vulnerability Database. The NVD does not analyse every vulnerability. Many stay without a product identifier for a long time, and some never get one.
 - **The CVE.org list**: the records that publishers write themselves for their own products. A vulnerability its publisher has published appears even when the NVD has not analysed it.
@@ -22,17 +22,17 @@ Each technology is compared as follows:
 - **Products**: a technology is compared through its CPE product identifiers and its CVE.org names (see [Technologies](technologies.md#vulnerability-identifiers)). The CPE identifiers also match the CVE.org records that carry them, as Red Hat's do. A technology with neither gets no vulnerability. The catalog's operating systems have CPE identifiers too. Red Hat Enterprise Linux also gets the vulnerabilities Red Hat files under its application streams (AppStream). Retired technologies are left out.
 - **CVE.org names**: the publisher and product names as the publisher writes them in its records, for example publisher `SAP_SE` and product `SAP HANA Database`. The comparison ignores case and punctuation, and otherwise needs the exact name. A close name does not match, so each variant of a product is declared on its own. A name can carry a version: it then applies only to the versions of the technology whose label starts with that version, for example `2019` for `Windows Server 2019`. When a label starts with several of them, only the longest counts: `2012 R2` carries `2012` and `2012 R2`, and gets the name of `2012 R2` only.
 - **Versions**: only the versions in use count: installed on a server in service, or used by an application in service.
-- **Version numbers**: versions compare on their numbers, part by part. `2016 SP3` counts as 2016 and `19c` as 19. A version with fewer than three numbers stands for its whole branch: `9.0` covers every `9.0.x`. A version KANAP cannot compare, such as a label without a number, counts as concerned.
-- **Versions in publisher records**: the same rules apply to the versions a CVE.org record lists. A version KANAP cannot compare with the publisher's counts as concerned, and the **Match** column of the export says "Version not comparable". This happens when your version is named by a year and the publisher numbers its components, for example `2021` against `106`. Check the publisher's record to decide whether your version is concerned.
-- **Operating systems**: Red Hat Enterprise Linux, Debian, Oracle Linux, AlmaLinux, Rocky Linux, SUSE Linux Enterprise Server and CentOS compare on their major version, and Ubuntu on its year and month, as the NVD publishes them: `9.4` gets the vulnerabilities of `9`, and `22.04.3 LTS` those of `22.04`. IBM AIX, IBM i and Oracle Solaris compare on their first two numbers: `7.3.2` gets the vulnerabilities of `7.3`. Windows Server compares on its year only, as KANAP does not know which updates a server has: a `2019` version is concerned by every vulnerability of Windows Server 2019, including those an update already fixed. 2012 and 2012 R2 are told apart by their label, as are 2008 and 2008 R2.
+- **Version numbers**: versions compare on their numbers, part by part. `2016 SP3` counts as 2016 and `19c` as 19. A version with fewer than three numbers stands for its whole branch: `9.0` covers every `9.0.x`. A version Kadratis cannot compare, such as a label without a number, counts as concerned.
+- **Versions in publisher records**: the same rules apply to the versions a CVE.org record lists. A version Kadratis cannot compare with the publisher's counts as concerned, and the **Match** column of the export says "Version not comparable". This happens when your version is named by a year and the publisher numbers its components, for example `2021` against `106`. Check the publisher's record to decide whether your version is concerned.
+- **Operating systems**: Red Hat Enterprise Linux, Debian, Oracle Linux, AlmaLinux, Rocky Linux, SUSE Linux Enterprise Server and CentOS compare on their major version, and Ubuntu on its year and month, as the NVD publishes them: `9.4` gets the vulnerabilities of `9`, and `22.04.3 LTS` those of `22.04`. IBM AIX, IBM i and Oracle Solaris compare on their first two numbers: `7.3.2` gets the vulnerabilities of `7.3`. Windows Server compares on its year only, as Kadratis does not know which updates a server has: a `2019` version is concerned by every vulnerability of Windows Server 2019, including those an update already fixed. 2012 and 2012 R2 are told apart by their label, as are 2008 and 2008 R2.
 - **Unknown version**: a server or an application that names no version is potentially concerned by every vulnerability of the product. Its row shows **Not recorded** in the **Version** column.
-- **Linux distributions**: a distribution publishes its vulnerabilities per package. KANAP sees the vulnerabilities that the publisher assigns to a version of the distribution. It does not see the packages installed on a server, or their level of updates. To know whether a server is exposed, check the package in the distributor's security tracker: the technology links to it, under its versions table (see [Technologies](technologies.md#versions-from-the-catalog)).
+- **Linux distributions**: a distribution publishes its vulnerabilities per package. Kadratis sees the vulnerabilities that the publisher assigns to a version of the distribution. It does not see the packages installed on a server, or their level of updates. To know whether a server is exposed, check the package in the distributor's security tracker: the technology links to it, under its versions table (see [Technologies](technologies.md#versions-from-the-catalog)).
 
-Some vulnerabilities only apply when two products run together, for example Tomcat on Windows. KANAP shows them for the vulnerable product alone, so one may appear for an installation it does not affect. Mark it **Not affected**.
+Some vulnerabilities only apply when two products run together, for example Tomcat on Windows. Kadratis shows them for the vulnerable product alone, so one may appear for an installation it does not affect. Mark it **Not affected**.
 
-A row exists as soon as one of the two sources matches it. When the NVD and the publisher disagree, the row stays. The **Source** column of the list says which sources matched it. When the NVD has not scored a vulnerability yet, KANAP shows the score and the severity of the publisher's record. A vulnerability that CVE.org or the NVD rejects no longer matches.
+A row exists as soon as one of the two sources matches it. When the NVD and the publisher disagree, the row stays. The **Source** column of the list says which sources matched it. When the NVD has not scored a vulnerability yet, Kadratis shows the score and the severity of the publisher's record. A vulnerability that CVE.org or the NVD rejects no longer matches.
 
-Changes count at once. When you add a technology or a CPE product identifier, KANAP searches the NVD for that product right away; the technology's **Vulnerabilities** section says "Searching for vulnerabilities…" until the search ends. When the search cannot be completed, the section says so. When a CVE.org name, a version, a server or an application of a technology changes, KANAP matches the technology again as soon as the change is saved. **Refresh**, in the technology's **Vulnerabilities** section, does the same by hand.
+Changes count at once. When you add a technology or a CPE product identifier, Kadratis searches the NVD for that product right away; the technology's **Vulnerabilities** section says "Searching for vulnerabilities…" until the search ends. When the search cannot be completed, the section says so. When a CVE.org name, a version, a server or an application of a technology changes, Kadratis matches the technology again as soon as the change is saved. **Refresh**, in the technology's **Vulnerabilities** section, does the same by hand.
 
 ## Alerts
 
@@ -40,7 +40,7 @@ Each technology and each version is in the vulnerability alerts or out of them. 
 
 Two kinds of technologies are out of the alerts by default:
 
-- **Operating systems**: KANAP does not know the patch level of a server, so an operating system would raise a very large number of vulnerabilities. The CVE.org list adds many more: the publishers of operating systems list the whole version as concerned.
+- **Operating systems**: Kadratis does not know the patch level of a server, so an operating system would raise a very large number of vulnerabilities. The CVE.org list adds many more: the publishers of operating systems list the whole version as concerned.
 - **Cloud services run by a provider**: a technology hosted in the public cloud or as SaaS, or a catalog entry the provider runs. The provider patches an online service, so its vulnerabilities call for no action on your side. A technology in a private cloud stays in the alerts.
 
 You can include them again on the technology. To follow a single version of an operating system, for example the one your most exposed servers run, turn on its switch in the **Alerts** column of the versions table. The other versions stay out of the alerts.
@@ -53,15 +53,15 @@ A version out of the alerts is still matched with the vulnerabilities. It stays 
 - The emails announce only the rows in the alerts.
 - The **Vulnerabilities to review** columns of the technologies, assets and applications lists count only the rows in the alerts, as do the records, the badges and the dashboard tile.
 
-## What KANAP counts { #what-kanap-counts }
+## What Kadratis counts { #what-kanap-counts }
 
-A vulnerability reaches a server or an application through direct links only, everywhere: on this page, in the lists, on the records, on the dashboard and in Plaid.
+A vulnerability reaches a server or an application through direct links only, everywhere: on this page, in the lists, on the records, on the dashboard and in Kad.
 
 - **Server**: the technology and the version are recorded on the server itself. A retired server is not counted.
 - **Cluster**: what is recorded on the cluster itself, plus what is recorded on its members in service. A cluster counts the vulnerabilities of its members, in its list column, its badge and its record. Filtering this page on a cluster shows the rows of its members too.
 - **Application**: the application declares the technology and the version, or one of its deployment servers has them recorded on itself. An application assigned to a cluster counts the cluster and its members in service. A technology both declared and hosted counts once. A disabled application, or one whose disable date has passed, is not counted.
 
-The counts per server and per application, in the lists, on the records, on the dashboard and in Plaid, follow the same rules:
+The counts per server and per application, in the lists, on the records, on the dashboard and in Kad, follow the same rules:
 
 - **Which vulnerabilities**: those still **To review** whose technology or version is in the alerts. Each vulnerability counts once, even when it concerns several versions.
 - **Severity**: the NVD's, or the publisher's (CVE.org) when the NVD has not scored the vulnerability yet. **Severe** means critical or high.
@@ -75,7 +75,7 @@ The reach through another asset stays visible, without being counted: in the sid
 
 The list uses the standard grid: one row per technology, version and vulnerability. Actively exploited vulnerabilities come first, then the most severe. A vulnerability that concerns three versions of SQL Server gives three rows, each with its own state. It opens on the rows **To review** that are in the alerts: clear the filter of the **State** column to see the other states.
 
-A line above the grid says when KANAP last read each source: **Data read**, then the NVD, the publishers (CVE.org) and the exploitation catalogues (CISA KEV, EU KEV, EPSS and EUVD). The NVD, the publishers, CISA KEV, EU KEV and EUVD show the day and time of the last read. EPSS shows the day of its scores. A source that is off is left out. A warning follows on the same line when the last read of a source failed, or when a source has not been read for more than 3 days. The data of that source may then be out of date.
+A line above the grid says when Kadratis last read each source: **Data read**, then the NVD, the publishers (CVE.org) and the exploitation catalogues (CISA KEV, EU KEV, EPSS and EUVD). The NVD, the publishers, CISA KEV, EU KEV and EUVD show the day and time of the last read. EPSS shows the day of its scores. A source that is off is left out. A warning follows on the same line when the last read of a source failed, or when a source has not been read for more than 3 days. The data of that source may then be out of date.
 
 **Alerts**, **Published** and **Exploited only** sit above the grid. **Alerts** chooses the rows by their alerts setting: **Included** (the default), **Excluded** or **All**. Under **All**, the rows out of the alerts are greyed. When no row is in the alerts and some are excluded, the empty list offers **Show the excluded ones**. **Published** keeps the vulnerabilities by their publication date: **All** (the default), **Less than 7 days**, **Less than 30 days**, **Less than 90 days**, **Less than a year** or **More than a year**. The period counts back from today, so a saved or shared link keeps showing the latest ones. **Exploited only** keeps the vulnerabilities listed as actively exploited. The address carries `exploited=1`. **Reset filters** brings the page back to how it opens: the rows **To review**, actively exploited vulnerabilities first, **Alerts** on **Included**, **Published** on every date and **Exploited only** off. The export and a change of state in bulk follow these three.
 
@@ -92,7 +92,7 @@ A line above the grid says when KANAP last read each source: **Data read**, then
 | **Technology** | The concerned technology |
 | **Version** | The concerned version. **Not recorded** when a server or an application uses the technology without naming its version: the row is then potentially concerned |
 | **Publisher** | The technology's publisher. Hidden by default |
-| **Servers** | How many servers in service have this version recorded on themselves, as the [technologies list](technologies.md) counts them. Clusters and the servers that run inside another one are not counted. See [What KANAP counts](#what-kanap-counts) |
+| **Servers** | How many servers in service have this version recorded on themselves, as the [technologies list](technologies.md) counts them. Clusters and the servers that run inside another one are not counted. See [What Kadratis counts](#what-kanap-counts) |
 | **Applications** | How many applications declare this version, or run on a server that has it recorded |
 | **Source** | The sources that matched the row: **NVD**, **Publisher** (the record the publisher released on CVE.org), or both |
 | **State** | **To review**, **Handled** or **Not affected** |
@@ -105,7 +105,7 @@ A line above the grid says when KANAP last read each source: **Data read**, then
 
 **Links**: the page reads its filters from its address, so you can share a filtered list. `?technology=TEC-4` keeps one technology, `?version=none` the rows without a recorded version, `?state=all` every state, `?published=30d` the vulnerabilities published within the last 30 days (`7d`, `30d`, `90d`, `1y` or `older1y`, as the **Published** filter), `?period=30` the same through the filter of the **Published** column, `?alerts=excluded` or `?alerts=all` the rows out of the alerts, `?exploited=1` the actively exploited vulnerabilities. The link of the emails uses `period`.
 
-**Asset and application**: `?asset=AST-12` opens the page with the filter of the **Servers** column set on one asset, and `?application=APP-4` with the filter of the **Applications** column set on one application, by direct links (see [What KANAP counts](#what-kanap-counts)). The lists of assets and applications and their records open the page this way. Clear the column filter to see the other rows. You need to be able to read the application to filter on it.
+**Asset and application**: `?asset=AST-12` opens the page with the filter of the **Servers** column set on one asset, and `?application=APP-4` with the filter of the **Applications** column set on one application, by direct links (see [What Kadratis counts](#what-kanap-counts)). The lists of assets and applications and their records open the page this way. Clear the column filter to see the other rows. You need to be able to read the application to filter on it.
 
 **In use in the estate**: `?estate=1` keeps the vulnerabilities of the technologies installed on an asset in service or declared by an application in service. The links of the dashboard's **Vulnerabilities in your estate** tile to CVEs open the page with it. A line above the grid shows **In use in the estate · remove**. **remove** clears it.
 
@@ -130,7 +130,7 @@ Click a row to open its vulnerability in a side panel. Its header stays in view 
 
 - **Technologies and versions**: each concerned version, with its **State** and a note. Under each version, the badges of the sources that matched it. **Why this row** opens the criteria of each source in plain words, for example "CPE identifier a:apache:tomcat: versions before 9.0.99" for the NVD, or "Apache Software Foundation · Apache Tomcat: versions 9.0.0 to 9.0.98 affected" for the publisher.
 - The description, cut at three lines (**See more** shows the rest), the CVSS vector and the reference links (publisher advisories, patches).
-- **Sources**: the state of the vulnerability at the NVD (**analyzed**, **awaiting analysis**, **not analyzed**, **rejected**, or **not linked to this product yet**), with a link to its NVD page. When KANAP has read the publisher's record, a second line gives who released it and when, its last update, and **See on CVE.org**.
+- **Sources**: the state of the vulnerability at the NVD (**analyzed**, **awaiting analysis**, **not analyzed**, **rejected**, or **not linked to this product yet**), with a link to its NVD page. When Kadratis has read the publisher's record, a second line gives who released it and when, its last update, and **See on CVE.org**.
 - **Exploitation**, when a catalog, an EPSS score or a European identifier is known. See [Exploitation](#exploitation).
 - **Servers**: each server that has a concerned version recorded on itself, with the technology and the version. The servers reached through another asset, such as a virtual machine on a host or a cluster through its members, are hidden behind a button, for example **Also show the 4 servers reached through another asset**. They show under their own heading, **Through another asset**, with the asset they are reached through. They are not counted.
 - **Applications**: each application that uses a concerned version, listed once per version with its servers (three at most, then "and 2 more"). An application that declares the technology, or runs on a server that has it recorded, comes first. The others sit behind the same kind of button and are not counted.
@@ -147,9 +147,9 @@ Set the state of each version:
 | **Handled** | The version is patched, or a workaround is in place |
 | **Not affected** | The vulnerability does not apply to your installation |
 
-The note records how, for example "patched on 12 March, change CHG-123". It saves when you leave the field. The audit log keeps who changed a state, and when. You can also ask [Plaid](#ask-the-assistant) to change a state.
+The note records how, for example "patched on 12 March, change CHG-123". It saves when you leave the field. The audit log keeps who changed a state, and when. You can also ask [Kad](#ask-the-assistant) to change a state.
 
-KANAP never changes a state you chose. When a version no longer matches (you upgraded it, the technology was retired, a source changed its data), a row still **To review** goes away. A row you reviewed stays, greyed out, with its state; it comes back as it was if the version matches again.
+Kadratis never changes a state you chose. When a version no longer matches (you upgraded it, the technology was retired, a source changed its data), a row still **To review** goes away. A row you reviewed stays, greyed out, with its state; it comes back as it was if the version matches again.
 
 ## Exploitation { #exploitation }
 
@@ -185,19 +185,19 @@ The recipients are the IT owners of the technology whose account is enabled and 
 - **Assets and applications lists**: the **Vulnerabilities to review** column. See [Assets](assets.md#working-with-the-list) and [Applications](applications.md#working-with-the-list).
 - **Asset and application records**: the **Vulnerabilities** section and the badge of severe vulnerabilities in the header. See [Assets](assets.md#operations) and [Applications](applications.md#operations).
 - **Dashboard**: the **Vulnerabilities in your estate** tile. See [My dashboard](my-dashboard.md#vulnerabilities).
-- **Plaid**: the assistant answers questions about vulnerabilities and changes their state. See [Ask the assistant](#ask-the-assistant).
+- **Kad**: the assistant answers questions about vulnerabilities and changes their state. See [Ask the assistant](#ask-the-assistant).
 
 ## Ask the assistant
 
-[Plaid](ai-assistant.md) reads the vulnerabilities with the same rights as this page. It counts rows and distinct CVE, as the page does, keeps the technologies in use in the estate when you ask, and says when KANAP last read each source. Ask, for example: "How many critical vulnerabilities are to review on PostgreSQL, by version?" or "Which exploited CVE reach APP-4?"
+[Kad](ai-assistant.md) reads the vulnerabilities with the same rights as this page. It counts rows and distinct CVE, as the page does, keeps the technologies in use in the estate when you ask, and says when Kadratis last read each source. Ask, for example: "How many critical vulnerabilities are to review on PostgreSQL, by version?" or "Which exploited CVE reach APP-4?"
 
-With `infrastructure:member`, Plaid also changes the state of rows, and every change comes as a preview that you approve:
+With `infrastructure:member`, Kad also changes the state of rows, and every change comes as a preview that you approve:
 
 - Name a CVE to change all its rows, or add a technology, or a technology and a version.
 - Or describe the rows with the filters of the page, for example the critical rows of one technology.
 - Give a note to write it on every row. Without a note, each row keeps its own.
 
-One change covers 5,000 rows at most, as **Change state**. The preview says how many rows and CVE change, and how many are out of the alerts. When rows that no longer match go back to **To review**, it counts them: they go away at the next matching. **Accepted** is not a state: Plaid offers **Handled** with a note such as "risk accepted", or **Not affected**, and waits for your choice. Ask Plaid to undo a change it made in the conversation. It refuses when a row changed since.
+One change covers 5,000 rows at most, as **Change state**. The preview says how many rows and CVE change, and how many are out of the alerts. When rows that no longer match go back to **To review**, it counts them: they go away at the next matching. **Accepted** is not a state: Kad offers **Handled** with a note such as "risk accepted", or **Not affected**, and waits for your choice. Ask Kad to undo a change it made in the conversation. It refuses when a row changed since.
 
 Ask, for example: "Mark CVE-2024-3094 as not affected on TEC-3 version 5.6, the package is not installed" or "Set the critical rows of PostgreSQL 14 to handled with the note 'patched in March'".
 

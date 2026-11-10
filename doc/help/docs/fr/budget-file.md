@@ -1,8 +1,8 @@
 # Charger un budget depuis un tableur
 
-La plupart des équipes préparent leur budget dans un tableur : une ligne par ligne budgétaire, une colonne par année ou par mois. KANAP conserve les mêmes lignes budgétaires dans sa liste des lignes budgétaires, où elles alimentent les ventilations, les rapports et la vue d'ensemble.
+La plupart des équipes préparent leur budget dans un tableur : une ligne par ligne budgétaire, une colonne par année ou par mois. Kadratis conserve les mêmes lignes budgétaires dans sa liste des lignes budgétaires, où elles alimentent les ventilations, les rapports et la vue d'ensemble.
 
-Le fichier budgétaire fait le lien entre les deux. Exportez les lignes budgétaires, modifiez les cellules qui vous intéressent dans Excel ou LibreOffice, puis importez le fichier. KANAP compare chaque cellule avec ce qu'il contient et n'écrit que ce qui a changé.
+Le fichier budgétaire fait le lien entre les deux. Exportez les lignes budgétaires, modifiez les cellules qui vous intéressent dans Excel ou LibreOffice, puis importez le fichier. Kadratis compare chaque cellule avec ce qu'il contient et n'écrit que ce qui a changé.
 
 Un seul fichier contient les deux types de ligne. Sa colonne `nature` indique si une ligne du fichier est une ligne OPEX ou CAPEX, et chaque ligne du fichier est vérifiée selon les règles de son propre type. La liste exporte les lignes budgétaires qu'elle affiche, OPEX et CAPEX ensemble. Filtrez la colonne **Type** pour n'exporter qu'un seul type.
 
@@ -90,7 +90,7 @@ Ce sont les noms standard. Votre organisation peut renommer les cinq colonnes da
 
 ### La dernière colonne
 
-`kanap_token` est écrit par KANAP. Laissez-le tel quel. KANAP s'en sert pour vous dire qu'une ligne budgétaire a changé après votre export. Laissez-le vide sur une ligne que vous ajoutez.
+`kanap_token` est écrit par Kadratis. Laissez-le tel quel. Kadratis s'en sert pour vous dire qu'une ligne budgétaire a changé après votre export. Laissez-le vide sur une ligne que vous ajoutez.
 
 ## Ce que signifie une cellule
 
@@ -111,7 +111,7 @@ Une colonne absente conserve toutes les valeurs enregistrées de cette colonne. 
 - Une ligne budgétaire garde son type. Une ligne du fichier qui désigne une ligne budgétaire existante avec l'autre `nature` est refusée, par exemple « BL-125 is a CAPEX line, not an OPEX line. A file does not change the type of a line. »
 - Chaque ligne est vérifiée selon son propre type : les dimensions et les valeurs qu'elle peut porter, son compte, les colonnes gelées et l'avertissement de doublon. Une colonne gelée pour CAPEX refuse une modification sur une ligne CAPEX uniquement.
 - Il n'y a pas d'autre clé. Une nouvelle ligne qui ressemble à une ligne budgétaire existante de son type, ou à une autre nouvelle ligne du même type dans le fichier, est un avertissement que vous pouvez ignorer.
-- Les fournisseurs sont mis en correspondance par `supplier_erp_id` lorsqu'il est rempli, sinon par `supplier_name`. Un fournisseur nommé par le fichier et absent de KANAP est créé par le chargement lorsque **Créer les fournisseurs manquants** est cochée. Sans cette option, la vérification les liste et vous demande de les créer dans **Données de référence > Fournisseurs**.
+- Les fournisseurs sont mis en correspondance par `supplier_erp_id` lorsqu'il est rempli, sinon par `supplier_name`. Un fournisseur nommé par le fichier et absent de Kadratis est créé par le chargement lorsque **Créer les fournisseurs manquants** est cochée. Sans cette option, la vérification les liste et vous demande de les créer dans **Données de référence > Fournisseurs**.
 - Une valeur de dimension inexistante est créée par le chargement, et listée dans la vérification. Les comptes, les centres de coûts, les sociétés et les utilisateurs ne sont jamais créés : un élément inconnu est une erreur de ligne qui indique où l'ajouter. Pour une personne dont l'accès aux données est limité, seulement sur une dimension à valeurs ouvertes : voir [Accès aux données limité](#limited-data-access).
 - Une valeur, ou `-`, sur une dimension réservée à l'autre type de ligne est une erreur de ligne sur sa cellule `analytics:<code>`, par exemple « The Recurrence dimension is for CAPEX lines only. Leave it out. » L'export laisse une telle cellule vide : une valeur masquée sur une ligne n'est donc pas exportée, et un chargement la laisse en place. Le réglage se trouve dans [Dimensions analytiques](analytics.md#dimensions-opex-ou-capex).
 - Une valeur utilisée pour l'autre type de ligne uniquement est une erreur de ligne sur sa cellule `analytics:<code>`, par exemple « Main-d'œuvre interne is for OPEX lines only. Pick a value for CAPEX lines. » Une ligne garde la valeur qu'elle porte déjà. Les valeurs que crée l'import sont utilisées pour OPEX et CAPEX. Le réglage se trouve dans [Dimensions analytiques](analytics.md#valeurs-opex-ou-capex).
@@ -163,17 +163,17 @@ Ces lignes apparaissent parmi les **Erreurs** de la vérification, comme toute a
 
 Ouvrir le fichier et l'enregistrer le laisse chargeable, en CSV comme en `.xlsx`. Les deux programmes conservent les colonnes, le séparateur et les valeurs.
 
-Dans un classeur, KANAP lit la première feuille. Quand le classeur a d'autres feuilles, la vérification indique la feuille lue. Un montant ou une date saisi dans une cellule est lu exactement tel quel, sans question de séparateur décimal ni d'ordre du jour et du mois. Un ancien fichier Excel (`.xls`) est refusé : enregistrez-le en `.xlsx` ou en CSV.
+Dans un classeur, Kadratis lit la première feuille. Quand le classeur a d'autres feuilles, la vérification indique la feuille lue. Un montant ou une date saisi dans une cellule est lu exactement tel quel, sans question de séparateur décimal ni d'ordre du jour et du mois. Un ancien fichier Excel (`.xls`) est refusé : enregistrez-le en `.xlsx` ou en CSV.
 
 Une date ou un montant écrit en texte, que le fichier ne peut pas trancher seul, est lu comme l'export l'a écrit, puis dans la langue d'affichage de l'écran. Toute date dont le jour est inférieur ou égal à 12 est ambiguë (`01/03/2027` est le 1er mars en français et le 3 janvier en anglais), et un montant écrit comme `12,280` l'est aussi. La vérification indique comment elle les a lus et propose un bouton pour changer la lecture.
 
-Une colonne que KANAP ne connaît pas est ignorée, avec un avertissement. Une colonne qui ressemble à une colonne de montants mal orthographiée, comme `budjet_2027`, refuse le fichier entier. Une colonne `analytics:<code>` qui ne désigne aucune dimension activée refuse elle aussi le fichier entier, avec « Unknown dimension 'x'. »
+Une colonne que Kadratis ne connaît pas est ignorée, avec un avertissement. Une colonne qui ressemble à une colonne de montants mal orthographiée, comme `budjet_2027`, refuse le fichier entier. Une colonne `analytics:<code>` qui ne désigne aucune dimension activée refuse elle aussi le fichier entier, avec « Unknown dimension 'x'. »
 
 ## Fichiers d'anciennes versions
 
 Un fichier dans un ancien format est refusé en entier : les fichiers de lignes budgétaires avec des colonnes de type `y_budget`, et le fichier des lignes budgétaires avec les colonnes `measure` et `jan` … `dec`. L'écran affiche ce message :
 
-> Ce fichier provient d'une version antérieure de KANAP. Exportez un nouveau fichier depuis cette liste, reportez-y vos modifications, puis importez-le de nouveau.
+> Ce fichier provient d'une version antérieure de Kadratis. Exportez un nouveau fichier depuis cette liste, reportez-y vos modifications, puis importez-le de nouveau.
 
 Un fichier CAPEX exporté avant que le type d'immobilisation, le type d'investissement et la priorité deviennent des dimensions, reconnu à ses trois colonnes `ppe_type`, `investment_type` et `priority` présentes ensemble, est lui aussi refusé en entier. Ces valeurs passent désormais par des colonnes de dimension. Une ou deux de ces colonnes seules sont des colonnes inconnues, ignorées avec un avertissement. L'écran affiche ce message :
 
@@ -183,7 +183,7 @@ Exportez un nouveau fichier et reportez-y vos lignes.
 
 Un fichier OPEX ou CAPEX exporté avant l'ajout de la colonne `nature` est accepté. Ses lignes sont lues comme des lignes OPEX, ou comme des lignes CAPEX quand le filtre **Type** de la liste ne garde que CAPEX, et ses numéros `OPX-12` et `CPX-3` désignent toujours leurs lignes budgétaires : importez un ancien fichier OPEX avec la liste sur OPEX ou sur les deux types, et un ancien fichier CAPEX avec la liste filtrée sur CAPEX. Ses cellules `kanap_token` restent valides. Dans un tel fichier, un nombre seul garde son sens antérieur : avec la liste filtrée sur CAPEX, `3` est `CPX-3` ; sinon, c'est le numéro de la ligne OPEX.
 
-KANAP reconnaît la colonne `nature` à son nom, quelle que soit la casse. Dans un ancien fichier qui contient une colonne à vous nommée Nature, renommez-la avant l'import : KANAP lirait cette colonne comme le type de chaque ligne budgétaire et refuserait ses valeurs.
+Kadratis reconnaît la colonne `nature` à son nom, quelle que soit la casse. Dans un ancien fichier qui contient une colonne à vous nommée Nature, renommez-la avant l'import : Kadratis lirait cette colonne comme le type de chaque ligne budgétaire et refuserait ses valeurs.
 
 ## Charger un budget complet
 

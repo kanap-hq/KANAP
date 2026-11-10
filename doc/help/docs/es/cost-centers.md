@@ -184,7 +184,7 @@ Cargue o actualice todo el árbol desde un archivo.
 | `code` | Obligatoria. El código del elemento. Las filas se emparejan con los elementos existentes por código, sin distinguir mayúsculas y minúsculas |
 | `kind` | Obligatoria. `group` o `cost_center` |
 | `name` | Obligatoria |
-| `parent_code` | El código del grupo superior, del mismo archivo o ya existente en KANAP. Vacía para el nivel superior |
+| `parent_code` | El código del grupo superior, del mismo archivo o ya existente en Kadratis. Vacía para el nivel superior |
 | `company_name` | Obligatoria para un `cost_center`, vacía para un `group`. Se empareja por nombre de empresa, sin distinguir mayúsculas y minúsculas |
 | `owner_email` | El correo electrónico del responsable del presupuesto, un usuario activo. Vacía para ningún responsable del presupuesto |
 | `description` | Texto libre |
@@ -200,7 +200,7 @@ Cargue o actualice todo el árbol desde un archivo.
 
 **Cómo funciona la importación**:
 
-- **Filas en cualquier orden**: un elemento hijo puede aparecer antes que su grupo superior. Los superiores se resuelven con todo el archivo y con los elementos ya existentes en KANAP.
+- **Filas en cualquier orden**: un elemento hijo puede aparecer antes que su grupo superior. Los superiores se resuelven con todo el archivo y con los elementos ya existentes en Kadratis.
 - **Todo el archivo se comprueba antes de escribir nada**: cada fila, después los superiores y después las reglas del árbol (un centro de coste tiene empresa, un grupo no, solo los grupos son superiores, sin bucles, un centro de coste usado por líneas sigue siendo centro de coste). Un archivo con cualquier error no carga nada: corrija las filas y vuelva a ejecutar la verificación previa. Cada error indica su fila con el número de línea del archivo tal como lo muestra un editor de texto, incluidas las líneas vacías y las celdas que ocupan varias líneas.
 - **Emparejamiento por código**: una fila cuyo código existe actualiza ese elemento; cualquier otra fila crea uno. Cada celda sustituye el valor almacenado, de modo que un `owner_email` o una `description` vacíos lo borran.
 - **Filas sin cambios**: una fila idéntica al elemento almacenado no cambia nada. Exportar e importar el mismo archivo indica todas las filas como sin cambios.
@@ -233,7 +233,7 @@ Cada rol empieza con el nivel que tiene en departamentos, salvo el rol integrado
 
 ## Preguntar al asistente
 
-[Plaid](ai-assistant.md#tool-calls) lee los centros de coste para cualquier persona con derecho a leerlos: el árbol, los responsables del presupuesto y las líneas que usan cada nodo. Pregunte, por ejemplo: «¿Qué centros de coste dependen de Group IT?»
+[Kad](ai-assistant.md#tool-calls) lee los centros de coste para cualquier persona con derecho a leerlos: el árbol, los responsables del presupuesto y las líneas que usan cada nodo. Pregunte, por ejemplo: «¿Qué centros de coste dependen de Group IT?»
 
 ## Consejos
 

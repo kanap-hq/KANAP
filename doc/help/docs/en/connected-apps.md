@@ -1,6 +1,6 @@
 # Connected apps
 
-The **Connected apps** tab lists the applications that can read your KANAP data on your behalf, such as Claude, Claude Desktop, Claude Code, ChatGPT or Grok. It is where you see these accesses and cut them.
+The **Connected apps** tab lists the applications that can read your Kadratis data on your behalf, such as Claude, Claude Desktop, Claude Code, ChatGPT or Grok. It is where you see these accesses and cut them.
 
 ## Where to find it
 
@@ -16,7 +16,7 @@ Each row shows:
 - The date you connected it
 - The date and time it last read your data
 
-An application reads only what you can see in KANAP, within your own access rights. It cannot change anything.
+An application reads only what you can see in Kadratis, within your own access rights. It cannot change anything.
 
 To cut an access, click **Disconnect** and confirm. The application loses access at once. To use it again, connect it again from the application. Disconnecting also forgets the **Remember this application** choice you made when you connected it.
 
@@ -26,4 +26,4 @@ When you have no connected application and no API key, the tab shows one line an
 
 Under the connections, the tab lists your own active MCP API keys, with their label, prefix, creation date, and the date and time of their last use.
 
-To stop a key, click **Revoke** and confirm. Every client that uses the key loses access at once, and this cannot be undone. An administrator creates keys on the [Plaid Settings](ai-settings.md#mcp-keys-and-connections) page.
+To stop a key, click **Revoke** and confirm. Every client that uses the key loses access at once, and this cannot be undone. An administrator creates keys on the [Kad Settings](ai-settings.md#mcp-keys-and-connections) page.

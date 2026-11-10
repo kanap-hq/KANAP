@@ -1,6 +1,6 @@
 # Base de connaissances
 
-La base de connaissances est l'espace de travail documentaire de KANAP pour les politiques, procédures, notes techniques, documents de référence et toute documentation qui doit rester connectée au travail réel. Elle combine la rédaction libre avec des fonctionnalités de gouvernance telles que les modèles, la responsabilité, la revue, l'historique des versions et les relations avec les applications, actifs, projets, demandes et tâches.
+La base de connaissances est l'espace de travail documentaire de Kadratis pour les politiques, procédures, notes techniques, documents de référence et toute documentation qui doit rester connectée au travail réel. Elle combine la rédaction libre avec des fonctionnalités de gouvernance telles que les modèles, la responsabilité, la revue, l'historique des versions et les relations avec les applications, actifs, projets, demandes et tâches.
 
 Contrairement à un partage de fichiers, la base de connaissances n'est pas seulement un endroit où stocker des documents. Le choix de conception important est que chaque article peut être classé, relu, versionné, exporté et lié à des objets opérationnels à travers la plateforme. Cela rend l'article plus facile à trouver et lui donne du contexte lorsque les gens l'ouvrent depuis un autre espace de travail.
 
@@ -60,7 +60,7 @@ Comportement important :
 - Dans une vue de bibliothèque unique, les documents peuvent être glissés-déposés dans des dossiers pour une réorganisation rapide.
 - Les dossiers peuvent être imbriqués pour créer une structure de navigation.
 - Supprimer un dossier ne supprime pas ses documents. Les documents reviennent à **Non classés** à la place.
-- Un dossier avec des sous-dossiers ne peut pas être supprimé : KANAP l'indique avant de vous demander de confirmer. Déplacez ou supprimez d'abord ses sous-dossiers.
+- Un dossier avec des sous-dossiers ne peut pas être supprimé : Kadratis l'indique avant de vous demander de confirmer. Déplacez ou supprimez d'abord ses sous-dossiers.
 
 Utilisez les dossiers pour des thématiques stables, pas pour des états de workflow temporaires. Le statut et le workflow existent déjà pour cela.
 
@@ -173,7 +173,7 @@ Les nouveaux articles peuvent démarrer de deux manières :
 
 Lorsque vous créez à partir d'un modèle, le contenu du modèle est copié dans le nouveau document. À partir de ce moment, le nouvel article est indépendant. Mettre à jour le modèle plus tard ne réécrit pas les documents existants.
 
-Un nouveau document s'ouvre avec son titre à saisir dans l'en-tête. Appuyez sur Entrée pour créer le document, ou sur Tab pour le créer et commencer à saisir son texte. Il s'ouvre en mode édition, avec l'éditeur, **Importer** et le panneau latéral disponibles. Cliquez sur **Créer** pour le garder : vous revenez là où vous avez commencé, ou à la bibliothèque. Cliquez sur **Annuler** pour le supprimer à la place. KANAP demande d'abord confirmation lorsque vous avez saisi plus que le titre. Sur tout document en mode édition, cliquez sur le titre dans l'en-tête pour le modifier.
+Un nouveau document s'ouvre avec son titre à saisir dans l'en-tête. Appuyez sur Entrée pour créer le document, ou sur Tab pour le créer et commencer à saisir son texte. Il s'ouvre en mode édition, avec l'éditeur, **Importer** et le panneau latéral disponibles. Cliquez sur **Créer** pour le garder : vous revenez là où vous avez commencé, ou à la bibliothèque. Cliquez sur **Annuler** pour le supprimer à la place. Kadratis demande d'abord confirmation lorsque vous avez saisi plus que le titre. Sur tout document en mode édition, cliquez sur le titre dans l'en-tête pour le modifier.
 
 L'espace de travail document garde l'écriture au centre et la gouvernance dans la barre latérale.
 
@@ -245,7 +245,7 @@ Les articles de la base de connaissances peuvent être exportés au format :
 - **ODT**
 
 L'export est disponible lorsque l'article a du contenu. C'est utile lorsque :
-- un document doit circuler en dehors de KANAP
+- un document doit circuler en dehors de Kadratis
 - un relecteur préfère le balisage au format Word
 - un instantané PDF stable est nécessaire pour le partage ou l'archivage
 
@@ -253,7 +253,7 @@ L'export ne remplace pas l'article en direct. La version dans la base de connais
 
 ## Générer des documents depuis le chat
 
-Si l'Assistant IA est activé dans votre KANAP, vous pouvez lui demander de rédiger un article de connaissances pour vous depuis le chat. L'assistant prépare un aperçu que vous examinez avant que quoi que ce soit ne soit enregistré. Confirmer l'aperçu crée un véritable document de connaissances avec le contenu, le type, la lignée de modèle et toutes les relations que vous avez spécifiées, exactement comme si vous l'aviez écrit vous-même.
+Si l'Assistant IA est activé dans votre Kadratis, vous pouvez lui demander de rédiger un article de connaissances pour vous depuis le chat. L'assistant prépare un aperçu que vous examinez avant que quoi que ce soit ne soit enregistré. Confirmer l'aperçu crée un véritable document de connaissances avec le contenu, le type, la lignée de modèle et toutes les relations que vous avez spécifiées, exactement comme si vous l'aviez écrit vous-même.
 
 Les documents générés suivent les mêmes règles de gouvernance que ceux écrits à la main : responsabilité, statut, historique des versions, verrous et workflow de revue s'appliquent tous.
 
@@ -316,9 +316,9 @@ Les documents de la base de connaissances peuvent être directement liés à :
 - Demandes
 - Tâches
 
-Les relations ne sont pas seulement des étiquettes. Elles contrôlent où le document apparaît ailleurs dans KANAP et comment les utilisateurs le découvrent depuis les espaces de travail opérationnels.
+Les relations ne sont pas seulement des étiquettes. Elles contrôlent où le document apparaît ailleurs dans Kadratis et comment les utilisateurs le découvrent depuis les espaces de travail opérationnels.
 
-Chaque type de relation n'apparaît qu'aux personnes qui peuvent lire son module : les applications demandent les applications, les actifs l'infrastructure, les projets les projets, les demandes les demandes, les tâches les tâches. Un type que vous ne pouvez pas lire est absent du document, dans Plaid aussi, et enregistrer le document laisse ses liens intacts. Un Business Contributor n'ajoute que les projets, demandes, applications et tâches auxquels il participe.
+Chaque type de relation n'apparaît qu'aux personnes qui peuvent lire son module : les applications demandent les applications, les actifs l'infrastructure, les projets les projets, les demandes les demandes, les tâches les tâches. Un type que vous ne pouvez pas lire est absent du document, dans Kad aussi, et enregistrer le document laisse ses liens intacts. Un Business Contributor n'ajoute que les projets, demandes, applications et tâches auxquels il participe.
 
 Conséquences de l'ajout de relations :
 - le document devient plus facile à trouver depuis l'objet lié

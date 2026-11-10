@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build KANAP fast-track cheat sheets as compact A4 PDFs."""
+"""Build Kadratis fast-track cheat sheets as compact A4 PDFs."""
 
 from weasyprint import HTML
 from pathlib import Path
@@ -101,7 +101,7 @@ tr:nth-child(even) td { background: #f5f7fa; }
 itops = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><style>{CSS}</style></head><body>
 
 <h1>🖥️ IT ops: from application to server</h1>
-<p class="sub">KANAP cheat sheet</p>
+<p class="sub">Kadratis cheat sheet</p>
 <div class="chain">Application → Deployment (environment) → Server (asset)</div>
 
 <div class="cols">
@@ -137,7 +137,7 @@ itops = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><style>{CSS}</style
 <ul>
 <li><b>Business owners</b>: stakeholders accountable for the application</li>
 <li><b>IT owners</b>: the technical team in charge of operations and support</li>
-<li><b>Audience</b>: the companies and departments that use the app. KANAP derives the user count from master data.</li>
+<li><b>Audience</b>: the companies and departments that use the app. Kadratis derives the user count from master data.</li>
 </ul>
 <div class="box box-warn">⚠️ <b>Owners = communication.</b> Planned maintenance, outages, upgrades, license renewals: you need to reach the right people fast. Owners also drive the "My apps" and "My team's apps" filters. No owner means nobody feels responsible.</div>
 </div>
@@ -225,14 +225,14 @@ itops = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><style>{CSS}</style
 
 </div>
 
-<div class="foot">KANAP &nbsp;|&nbsp; IT department management &nbsp;|&nbsp; <a href="https://kanap.net">kanap.net</a> &nbsp;|&nbsp; <a href="https://doc.kanap.net">doc.kanap.net</a></div>
+<div class="foot">Kadratis &nbsp;|&nbsp; IT department management &nbsp;|&nbsp; <a href="https://kadratis.com">kadratis.com</a> &nbsp;|&nbsp; <a href="https://doc.kadratis.com">doc.kadratis.com</a></div>
 </body></html>"""
 
 # ── PORTFOLIO ──
 portfolio = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><style>{CSS}</style></head><body>
 
 <h1>📋 Portfolio — From Request to Delivery</h1>
-<p class="sub">KANAP Cheat Sheet</p>
+<p class="sub">Kadratis Cheat Sheet</p>
 <div class="chain">Request → Analyze &amp; Score → Approve → Project → Deliver</div>
 
 <div class="cols">
@@ -263,7 +263,7 @@ portfolio = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><style>{CSS}</s
 <p>Technical Feasibility · Integration &amp; Compatibility · Infrastructure Needs · Security &amp; Compliance · Resource &amp; Skills · Delivery Constraints · Change Management.</p>
 
 <h3>Scoring</h3>
-<p>Weighted priority criteria are configured in <b>Portfolio → Settings</b>. KANAP calculates the score automatically, and some tenants use mandatory bypass for must-do work.</p>
+<p>Weighted priority criteria are configured in <b>Portfolio → Settings</b>. Kadratis calculates the score automatically, and some tenants use mandatory bypass for must-do work.</p>
 
 <p><b>Analysis Recommendation:</b> a short verdict that is published into <b>Activity</b> as the formal decision record.</p>
 
@@ -328,7 +328,7 @@ portfolio = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><style>{CSS}</s
 <h2>The Bigger Picture</h2>
 <p><b>Automatic Roadmap</b> — Effort estimates + contributor availability + historical time data = auto-scheduled project timeline. No more manual Gantt charts.</p>
 <p><b>Capacity Heatmaps</b> — See who's overloaded and who has bandwidth, across teams and time periods. Prevents the "5 projects at 100%" trap.</p>
-<p><b>Bottleneck Analysis</b> — When projects compete for the same people or skills, KANAP highlights it before it becomes a crisis.</p>
+<p><b>Bottleneck Analysis</b> — When projects compete for the same people or skills, Kadratis highlights it before it becomes a crisis.</p>
 <p><b>Executive Reporting</b> — Scores, status, progress, budget, and timeline roll up into portfolio-level dashboards. No PowerPoint needed.</p>
 </div>
 
@@ -351,14 +351,14 @@ portfolio = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><style>{CSS}</s
 
 </div>
 
-<div class="foot">KANAP — IT Department Management &nbsp;|&nbsp; <a href="https://kanap.net">kanap.net</a> &nbsp;|&nbsp; <a href="https://doc.kanap.net">doc.kanap.net</a></div>
+<div class="foot">Kadratis — IT Department Management &nbsp;|&nbsp; <a href="https://kadratis.com">kadratis.com</a> &nbsp;|&nbsp; <a href="https://doc.kadratis.com">doc.kadratis.com</a></div>
 </body></html>"""
 
 # ── GETTING STARTED ──
 getting_started = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><style>{CSS}</style></head><body>
 
 <h1>🏠 Getting Started — Your First 10 Minutes</h1>
-<p class="sub">KANAP Cheat Sheet</p>
+<p class="sub">Kadratis Cheat Sheet</p>
 <div class="chain">Dashboard → Profile → Scope Filters → Tasks → Contributor Profile</div>
 
 <div class="cols">
@@ -476,14 +476,14 @@ getting_started = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><style>{C
 
 </div>
 
-<div class="foot">KANAP — IT Department Management &nbsp;|&nbsp; <a href="https://kanap.net">kanap.net</a> &nbsp;|&nbsp; <a href="https://doc.kanap.net">doc.kanap.net</a></div>
+<div class="foot">Kadratis — IT Department Management &nbsp;|&nbsp; <a href="https://kadratis.com">kadratis.com</a> &nbsp;|&nbsp; <a href="https://doc.kadratis.com">doc.kadratis.com</a></div>
 </body></html>"""
 
 # ── TASK TYPES ──
 task_types = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><style>{CSS}</style></head><body>
 
 <h1>📋 Run, Build & Tasks — Work Item Types</h1>
-<p class="sub">KANAP Cheat Sheet</p>
+<p class="sub">Kadratis Cheat Sheet</p>
 <div class="chain">Run (Incident · Problem) &nbsp;|&nbsp; Build (Request · Project · Bug) &nbsp;|&nbsp; Transversal (Task)</div>
 
 <div class="cols">
@@ -555,7 +555,7 @@ Incidents prioritize <b>service restoration</b>. Bugs prioritize <b>root cause f
 
 <div class="nb">
 <h2>Transversal — The Task</h2>
-<p>Tasks are the <b>atomic unit of work</b> in KANAP. They cross the Run/Build boundary.</p>
+<p>Tasks are the <b>atomic unit of work</b> in Kadratis. They cross the Run/Build boundary.</p>
 
 <h3>Task</h3>
 <ul>
@@ -594,12 +594,12 @@ Incidents prioritize <b>service restoration</b>. Bugs prioritize <b>root cause f
 
 </div>
 
-<div class="foot">KANAP — IT Department Management &nbsp;|&nbsp; <a href="https://kanap.net">kanap.net</a> &nbsp;|&nbsp; <a href="https://doc.kanap.net">doc.kanap.net</a></div>
+<div class="foot">Kadratis — IT Department Management &nbsp;|&nbsp; <a href="https://kadratis.com">kadratis.com</a> &nbsp;|&nbsp; <a href="https://doc.kadratis.com">doc.kadratis.com</a></div>
 </body></html>"""
 
 # ── Generate ──
-for name, html in [("kanap-itops-fast-track", itops), ("kanap-portfolio-fast-track", portfolio), ("kanap-getting-started", getting_started), ("kanap-task-types-fast-track", task_types)]:
-    doc = HTML(string=html)
+for name, html in [("kadratis-itops-fast-track", itops), ("kadratis-portfolio-fast-track", portfolio), ("kadratis-getting-started", getting_started), ("kadratis-task-types-fast-track", task_types)]:
+    doc = HTML(string=html, base_url=str(Path(__file__).parent))
     rendered = doc.render()
     print(f"{name}: {len(rendered.pages)} page(s)")
     doc.write_pdf(OUT / f"{name}.pdf")

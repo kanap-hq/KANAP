@@ -1,6 +1,6 @@
 ---
 title: "Portfolio-Schnelleinstieg: Von der Anfrage zur Umsetzung"
-description: Werden Sie schnell produktiv mit KANAPs Portfolio-Modul. Ein praktischer Schritt-für-Schritt-Leitfaden.
+description: Werden Sie schnell produktiv mit Kadratis' Portfolio-Modul. Ein praktischer Schritt-für-Schritt-Leitfaden.
 ---
 
 # Portfolio-Schnelleinstieg: Von der Anfrage zur Umsetzung
@@ -10,7 +10,7 @@ Dieser Leitfaden führt Sie durch den Portfolio-Lebenszyklus: vom Einreichen Ihr
 !!! tip "Bevorzugen Sie eine einseitige Zusammenfassung? :material-file-pdf-box:"
     Alle wichtigen Schritte auf einer einzigen A4-Seite: ausdrucken, aufhängen, mit dem Team teilen.
 
-    [:material-download: Spickzettel herunterladen (PDF)](downloads/kanap-portfolio-fast-track.pdf){ .md-button .md-button--primary }
+    [:material-download: Spickzettel herunterladen (PDF)](downloads/kadratis-portfolio-fast-track.pdf){ .md-button .md-button--primary }
 
 Für vollständige Details siehe die [Portfolio-Referenzdokumentation](../portfolio-requests.md).
 
@@ -20,7 +20,7 @@ Für vollständige Details siehe die [Portfolio-Referenzdokumentation](../portfo
 
 ![Portfolio-Workflow-Übersicht](images/workflow-overview.png)
 
-Jede Initiative in KANAP folgt dem gleichen Ablauf:
+Jede Initiative in Kadratis folgt dem gleichen Ablauf:
 
 | Phase | Was passiert |
 |-------|-------------|
@@ -110,7 +110,7 @@ Jede Dimension wird von **Nicht bewertet** bis **Blocker** eingestuft. Die Zusam
 
 Verwenden Sie **Bewertung**, um die Anfrage gegen die konfigurierten Portfolio-Kriterien Ihres Mandanten zu bewerten.
 
-Die genauen Kriteriennamen und -gewichte können je nach Mandant variieren, da sie aus **Portfolio > Einstellungen** stammen. KANAP berechnet die gewichtete Priorität automatisch, und einige Mandanten verwenden auch eine Pflichtumgehungsregel für Arbeit, die an die Spitze der Warteschlange springen muss.
+Die genauen Kriteriennamen und -gewichte können je nach Mandant variieren, da sie aus **Portfolio > Einstellungen** stammen. Kadratis berechnet die gewichtete Priorität automatisch, und einige Mandanten verwenden auch eine Pflichtumgehungsregel für Arbeit, die an die Spitze der Warteschlange springen muss.
 
 ### Die Analyseempfehlung
 
@@ -141,7 +141,7 @@ Sobald Analyse und Bewertung abgeschlossen sind, ist Entscheidungszeit.
 4. Klicken Sie auf **In Projekt konvertieren**
 
 !!! tip "Nahtlose Übergabe"
-    Wenn Sie eine Anfrage in ein Projekt konvertieren, öffnet KANAP einen Konvertierungsdialog, in dem Sie den Projektnamen, geplante Daten und den initialen Aufwand bestätigen können. Der Anfragezweck wird als Referenz angezeigt, und verknüpfte Anfragedaten werden in das Projekt übernommen.
+    Wenn Sie eine Anfrage in ein Projekt konvertieren, öffnet Kadratis einen Konvertierungsdialog, in dem Sie den Projektnamen, geplante Daten und den initialen Aufwand bestätigen können. Der Anfragezweck wird als Referenz angezeigt, und verknüpfte Anfragedaten werden in das Projekt übernommen.
 
 Der Anfragestatus ändert sich zu **Konvertiert**, und ein neues Projekt wird erstellt und zurück mit der ursprünglichen Anfrage verknüpft.
 
@@ -207,7 +207,7 @@ Siehe [Projekte-Referenz](../portfolio-projects.md) für alle Projektkonfigurati
 
 ## Schritt 5: Umsetzung verfolgen
 
-Jetzt beginnt die eigentliche Arbeit. Während das Projekt voranschreitet, halten Sie KANAP aktuell.
+Jetzt beginnt die eigentliche Arbeit. Während das Projekt voranschreitet, halten Sie Kadratis aktuell.
 
 ### Fortschritt aktualisieren
 
@@ -314,7 +314,7 @@ Mitwirkenden-Verfügbarkeit und Projektzuweisungen kombinieren sich, um zu zeige
 
 ### Engpass-Analyse
 
-Wenn mehrere Projekte um die gleichen Mitwirkenden oder Fähigkeiten konkurrieren, hebt KANAP den Engpass hervor, sodass Sie Kompromisse eingehen können, bevor sie zu Krisen werden.
+Wenn mehrere Projekte um die gleichen Mitwirkenden oder Fähigkeiten konkurrieren, hebt Kadratis den Engpass hervor, sodass Sie Kompromisse eingehen können, bevor sie zu Krisen werden.
 
 ### Management-Reporting
 
@@ -345,4 +345,4 @@ Siehe [Berichte-Referenz](../portfolio-reporting.md).
 ---
 
 !!! success "Sie sind startklar"
-    Sie kennen jetzt den vollständigen Lebenszyklus von der Anfrage zur Umsetzung. Beginnen Sie mit einer Anfrage, bewerten Sie sie richtig, und lassen Sie KANAP den Rest erledigen. Für detaillierte Dokumentation zu jeder Funktion erkunden Sie den Bereich [Portfolio](../portfolio-requests.md).
+    Sie kennen jetzt den vollständigen Lebenszyklus von der Anfrage zur Umsetzung. Beginnen Sie mit einer Anfrage, bewerten Sie sie richtig, und lassen Sie Kadratis den Rest erledigen. Für detaillierte Dokumentation zu jeder Funktion erkunden Sie den Bereich [Portfolio](../portfolio-requests.md).

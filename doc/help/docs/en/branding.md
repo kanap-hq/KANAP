@@ -1,6 +1,6 @@
 # Branding
 
-Use the Branding page to apply your company identity across KANAP. You set the workspace name, the logo and the primary colors here, and the change is visible to every user on your tenant the next time they reload the page.
+Use the Branding page to apply your company identity across Kadratis. You set the workspace name, the logo and the primary colors here, and the change is visible to every user on your tenant the next time they reload the page.
 
 ## Where to find it
 
@@ -13,7 +13,7 @@ Changes apply to your current tenant only.
 
 ## What you can customize
 
-The page has three cards: **Workspace name**, **Logo** and **Primary colors**. The logo and the colors are optional. Without a logo, the header shows the workspace name. Without custom colors, KANAP uses its default theme colors.
+The page has three cards: **Workspace name**, **Logo** and **Primary colors**. The logo and the colors are optional. Without a logo, the header shows the workspace name. Without custom colors, Kadratis uses its default theme colors.
 
 - **Workspace name**
   - Identifies your workspace in the header, the browser tab, e-mails and AI tools (see [Where the workspace name appears](#where-the-workspace-name-appears))
@@ -39,11 +39,11 @@ The page has three cards: **Workspace name**, **Logo** and **Primary colors**. T
 
 - **App header and sign-in page**: the name shows when there is no logo.
 - **Browser tab**: the tab title is the name. A project, request, task or budget line page shows the record first, for example `PRJ-3 New ERP | Acme`.
-- **Installed app**: when someone installs KANAP on a phone or a desktop, the app takes the name.
-- **E-mails**: the header shows the name when there is no logo. The subjects of the password reset, invitation, weekly review and workspace reset e-mails carry the name, for example "Reset your password on Acme". The weekly review button reads "Open Acme". In the cloud, the sender name reads "Acme via KANAP". On-premise, the sender is the one set in the installation (`SMTP_FROM`).
+- **Installed app**: when someone installs Kadratis on a phone or a desktop, the app takes the name.
+- **E-mails**: the header shows the name when there is no logo. The subjects of the password reset, invitation, weekly review and workspace reset e-mails carry the name, for example "Reset your password on Acme". The weekly review button reads "Open Acme". In the cloud, the sender name reads "Acme via Kadratis". On-premise, the sender is the one set in the installation (`SMTP_FROM`).
 - **AI tools**: when an AI tool (Claude, ChatGPT and others) connects through the MCP server, the authorization page shows the name, and the tool shows it as the server name.
 
-With no name set, or with the on-premise default name "My Organization", these places show "KANAP".
+With no name set, or with the on-premise default name "My Organization", these places show "Kadratis".
 
 ## Logo setup
 
@@ -84,8 +84,8 @@ You can set colors for **Light mode primary** and **Dark mode primary** independ
 
 - **Light mode primary** is used in light mode.
 - **Dark mode primary** is used in dark mode.
-- If only one mode has a color, KANAP reuses that color in the other mode as a fallback.
-- If both fields are empty, KANAP uses its default theme colors.
+- If only one mode has a color, Kadratis reuses that color in the other mode as a fallback.
+- If both fields are empty, Kadratis uses its default theme colors.
 
 ### Contrast warning
 
@@ -108,4 +108,4 @@ A small caption below the actions shows the **logo version** counter, which incr
 - **Test in both themes**: switch between light and dark theme before saving. The same brand color rarely works in both modes.
 - **Prefer a transparent background**: simple logos with transparent backgrounds give the cleanest header rendering, especially in dark mode.
 - **Use Reset deliberately**: it removes both logos and all custom colors in one step. Use it when starting over, not as an "undo" for a single change. That is what **Discard** is for.
-- **Brand colors are for accents**: KANAP uses the primary color on app bars, primary buttons, and links. Pick something that reads cleanly at button size, not just on a marketing site.
+- **Brand colors are for accents**: Kadratis uses the primary color on app bars, primary buttons, and links. Pick something that reads cleanly at button size, not just on a marketing site.

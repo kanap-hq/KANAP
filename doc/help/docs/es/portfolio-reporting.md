@@ -206,7 +206,7 @@ La sección Tareas cubre solo las tareas del portafolio: las tareas independient
 La lista de proyectos creados incluye una columna **Procedencia**.
 
 - Un proyecto convertido a partir de una solicitud muestra esa solicitud, por ejemplo `REQ-12 Cave climate digital twin`. Haga clic para abrir la solicitud.
-- Un proyecto creado sin solicitud muestra cómo entró en el portafolio, con las palabras que KANAP utiliza en todas partes: **Fast-track**, **Histórico** o **Solicitud**.
+- Un proyecto creado sin solicitud muestra cómo entró en el portafolio, con las palabras que Kadratis utiliza en todas partes: **Fast-track**, **Histórico** o **Solicitud**.
 
 ### Plegar una sección
 

@@ -69,7 +69,7 @@ Klicken Sie auf eine Zeile, um die Seite des Kontakts zu öffnen. Jede Änderung
 - **Telefon** / **Mobil**: Eine Vorwahl und eine Nummer. Wählen Sie die Vorwahl aus der Liste oder tippen Sie sie ein. Hat der Kontakt noch kein Land, setzt die Vorwahl es.
 - **Land**: Durchsuchbare Länderliste.
 
-Textfelder werden gespeichert, wenn Sie sie verlassen oder Enter drücken, Listen sofort bei der Auswahl. Ein Wert, den KANAP nicht annehmen kann (eine ungültige oder bereits von einem anderen Kontakt verwendete E-Mail, eine Telefonnummer, die nicht aus einer Vorwahl und einer Nummer mit insgesamt 7 bis 15 Ziffern besteht), zeigt seine Meldung unter dem Feld und wird nicht gespeichert.
+Textfelder werden gespeichert, wenn Sie sie verlassen oder Enter drücken, Listen sofort bei der Auswahl. Ein Wert, den Kadratis nicht annehmen kann (eine ungültige oder bereits von einem anderen Kontakt verwendete E-Mail, eine Telefonnummer, die nicht aus einer Vorwahl und einer Nummer mit insgesamt 7 bis 15 Ziffern besteht), zeigt seine Meldung unter dem Feld und wird nicht gespeichert.
 
 **Notizen**: Freie Notizen (bis zu 2.000 Zeichen) unter der Kopfzeile. Sie werden kurz nach dem Ende der Eingabe gespeichert und wenn Sie das Feld verlassen.
 
@@ -93,7 +93,7 @@ Solange der Kontakt erstellt wird, zeigt die Kopfzeile **Erstellen** und **Abbre
 
 ## Wo Kontakte verwendet werden
 
-Kontakte erscheinen an mehreren Stellen in KANAP. Der Abschnitt **Verwendet in** der Kontaktseite listet sie alle auf.
+Kontakte erscheinen an mehreren Stellen in Kadratis. Der Abschnitt **Verwendet in** der Kontaktseite listet sie alle auf.
 
 ### Lieferantenkontakte
 

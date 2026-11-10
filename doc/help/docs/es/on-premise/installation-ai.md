@@ -2,14 +2,14 @@
 
 En lugar de seguir usted mismo el [recorrido paso a paso](installation-example.md), puede confiárselo a un agente de programación con IA. El agente lee el recorrido y lo ejecuta en su servidor, paso a paso. Un prompt, un servidor, un resultado.
 
-Herramientas como [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview) u [OpenAI Codex](https://openai.com/index/codex/) pueden leer la documentación de KANAP, instalar todas las dependencias, configurar todos los servicios y verificar el resultado, normalmente en menos de 20 minutos.
+Herramientas como [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview) u [OpenAI Codex](https://openai.com/index/codex/) pueden leer la documentación de Kadratis, instalar todas las dependencias, configurar todos los servicios y verificar el resultado, normalmente en menos de 20 minutos.
 
 ## Requisitos previos
 
 | Requisito | Detalles |
 |-------------|---------|
-| **Servidor** | Ubuntu 26.04 LTS (24.04 LTS funciona), recién instalado, con 4 GB de RAM o más (8 GB recomendados, ya que PostgreSQL se ejecuta en el mismo servidor), un usuario con acceso sudo y acceso saliente a internet durante la instalación (paquetes, imágenes de KANAP y Docker, GitHub, y Let's Encrypt si lo usa) |
-| **Nombre** | El nombre que escriben los usuarios para abrir KANAP. Solo hace falta un registro DNS público para Let's Encrypt. En otro caso, use un registro en el DNS de su empresa, o una entrada en el archivo hosts para una prueba (consulte [Nombre y certificado](installation.md#nombre-y-certificado)). |
+| **Servidor** | Ubuntu 26.04 LTS (24.04 LTS funciona), recién instalado, con 4 GB de RAM o más (8 GB recomendados, ya que PostgreSQL se ejecuta en el mismo servidor), un usuario con acceso sudo y acceso saliente a internet durante la instalación (paquetes, imágenes de Kadratis y Docker, GitHub, y Let's Encrypt si lo usa) |
+| **Nombre** | El nombre que escriben los usuarios para abrir Kadratis. Solo hace falta un registro DNS público para Let's Encrypt. En otro caso, use un registro en el DNS de su empresa, o una entrada en el archivo hosts para una prueba (consulte [Nombre y certificado](installation.md#nombre-y-certificado)). |
 | **Certificado** | Uno de tres casos: un nombre público con Let's Encrypt, archivos de certificado de su autoridad interna ya presentes en el servidor, o un certificado autofirmado para una prueba |
 | **Agente de IA** | Un agente de programación con IA instalado en el servidor (Claude Code, Codex o similar) |
 
@@ -29,16 +29,16 @@ Lo eliminará al final de la instalación: consulte [Después de la instalación
 Abra su agente de IA en el servidor y pegue el siguiente prompt. Sustituya los valores de la lista **Parameters** por los suyos y conserve una sola línea **Certificate**.
 
 ```
-Install KANAP on this Ubuntu server by following the official installation
+Install Kadratis on this Ubuntu server by following the official installation
 example step by step, running its commands as written:
 
-  https://doc.kanap.net/on-premise/installation-example/
+  https://doc.kadratis.com/on-premise/installation-example/
 
-Background pages: https://doc.kanap.net/on-premise/installation/ and
-https://doc.kanap.net/on-premise/configuration/
+Background pages: https://doc.kadratis.com/on-premise/installation/ and
+https://doc.kadratis.com/on-premise/configuration/
 
 Parameters:
-- Address users open: https://kanap.example.com
+- Address users open: https://kadratis.example.com
 - Administrator email: admin@example.com
 - Organization name: Example Company
 - Certificate (keep one line):
@@ -78,7 +78,7 @@ Añada **uno** de los bloques siguientes al prompt para activar el correo salien
 ```
 Email transport: Resend
 - RESEND_API_KEY=re_xxxxx
-- RESEND_FROM_EMAIL=KANAP <noreply@example.com>
+- RESEND_FROM_EMAIL=Kadratis <noreply@example.com>
 ```
 
 **Opción B: SMTP** (relay interno o proveedor):
@@ -90,10 +90,10 @@ Email transport: SMTP
 - SMTP_SECURE=false
 - SMTP_USER=noreply@company.com
 - SMTP_PASSWORD=secret
-- SMTP_FROM=KANAP <noreply@company.com>
+- SMTP_FROM=Kadratis <noreply@company.com>
 ```
 
-Sustituya los valores por sus credenciales reales. SMTP_USER y SMTP_PASSWORD van juntos. Si omite la configuración del correo, KANAP funciona igualmente, pero el restablecimiento de contraseña y las invitaciones no están disponibles hasta que configure el correo más adelante (consulte [Configuración](configuration.md)).
+Sustituya los valores por sus credenciales reales. SMTP_USER y SMTP_PASSWORD van juntos. Si omite la configuración del correo, Kadratis funciona igualmente, pero el restablecimiento de contraseña y las invitaciones no están disponibles hasta que configure el correo más adelante (consulte [Configuración](configuration.md)).
 
 ## Qué esperar
 
@@ -101,10 +101,10 @@ El agente lee el recorrido y después lo sigue:
 
 1. **Paquetes del sistema**: instala Docker y Git.
 2. **Cortafuegos**: permite SSH, HTTP y HTTPS desde la red, y PostgreSQL y el almacenamiento solo desde las redes Docker.
-3. **Archivos de KANAP**: clona el repositorio en `/opt/kanap` y cambia a `stable`.
+3. **Archivos de Kadratis**: clona el repositorio en `/opt/kanap` y cambia a `stable`.
 4. **PostgreSQL**: lo instala, crea la base de datos, el rol de aplicación y las extensiones necesarias, y permite la conexión de las redes Docker.
 5. **Almacenamiento de objetos**: instala RustFS, crea el bucket, un usuario de aplicación restringido y la clave de cifrado.
-6. **KANAP**: escribe `.env` con los secretos generados, descarga las imágenes de KANAP y arranca los contenedores.
+6. **Kadratis**: escribe `.env` con los secretos generados, descarga las imágenes de Kadratis y arranca los contenedores.
 7. **TLS y nginx**: obtiene o crea el certificado, configura el proxy inverso y se asegura de que el servidor resuelve el nombre.
 8. **Verificación**: comprueba el estado de la API y del frontend, y después ejecuta la prueba de humo (base de datos, almacenamiento, inicio de sesión, exportaciones).
 

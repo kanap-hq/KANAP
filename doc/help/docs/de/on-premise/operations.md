@@ -1,17 +1,17 @@
 # On-Premise-Betrieb
 
-Die Befehle auf dieser Seite laufen auf dem KANAP-Server, in `/opt/kanap`, sofern nicht anders angegeben. Mehrere davon verwenden zwei Shell-Variablen. Setzen Sie diese einmal in Ihrer Terminalsitzung, mit Ihren Werten:
+Die Befehle auf dieser Seite laufen auf dem Kadratis-Server, in `/opt/kanap`, sofern nicht anders angegeben. Mehrere davon verwenden zwei Shell-Variablen. Setzen Sie diese einmal in Ihrer Terminalsitzung, mit Ihren Werten:
 
 ```bash
-KANAP_HOST=kanap.example.internal    # der Name, den Benutzer eingeben, um KANAP zu öffnen, ohne https://
+KANAP_HOST=kanap.example.internal    # der Name, den Benutzer eingeben, um Kadratis zu öffnen, ohne https://
 ADMIN_EMAIL=admin@example.internal   # die E-Mail-Adresse eines Administratorkontos
 ```
 
-Die `curl`-Befehle auf dieser Seite verwenden `-k`. Sie prüfen, was KANAP antwortet, und akzeptieren daher auch ein Zertifikat, dem der Server nicht vertraut (selbstsigniert oder von einer internen Zertifizierungsstelle, die nicht auf dem Server installiert ist).
+Die `curl`-Befehle auf dieser Seite verwenden `-k`. Sie prüfen, was Kadratis antwortet, und akzeptieren daher auch ein Zertifikat, dem der Server nicht vertraut (selbstsigniert oder von einer internen Zertifizierungsstelle, die nicht auf dem Server installiert ist).
 
 ## Upgrade-Verfahren
 
-KANAP veröffentlicht etwa einmal im Monat eine neue Version. Der Branch `stable` zeigt immer auf die neueste veröffentlichte Version. Jede Version hat einen Eintrag in `CHANGELOG.md` im Wurzelverzeichnis des Repositorys. Ein Eintrag, der etwas von Ihnen verlangt (eine zu ändernde Einstellung, ein auszuführender Schritt), trägt "Action required" im Titel.
+Kadratis veröffentlicht etwa einmal im Monat eine neue Version. Der Branch `stable` zeigt immer auf die neueste veröffentlichte Version. Jede Version hat einen Eintrag in `CHANGELOG.md` im Wurzelverzeichnis des Repositorys. Ein Eintrag, der etwas von Ihnen verlangt (eine zu ändernde Einstellung, ein auszuführender Schritt), trägt "Action required" im Titel.
 
 **1. Lesen Sie das Changelog vor dem Pull.** Holen Sie den neuen Stand von `stable` und zeigen Sie nur die Einträge an, die Sie noch nicht haben. Lesen Sie die mit "Action required" markierten Einträge zuerst und tun Sie, was sie verlangen. Dieselben Einträge stehen auf der GitHub-Release-Seite des Repositorys.
 
@@ -35,9 +35,9 @@ docker compose -f infra/compose.onprem.yml up -d
 # seine laufenden Hintergrundjobs ab (bis zu 20 s) und stoppt dann. Die Migrationen laufen beim Start des neuen.
 ```
 
-`infra/compose.onprem.yml` nennt die Images der ausgecheckten Version. `pull` lädt sie von `ghcr.io` herunter, und `up -d` erstellt die Container darauf neu. Wenn Sie die Images selbst bauen (siehe [Die Images selbst bauen](installation.md#build-the-images-yourself)), führen Sie statt `pull` und `up -d` die Befehle `build` und `up -d` dieses Abschnitts aus.
+`infra/compose.onprem.yml` nennt die Images der ausgecheckten Version. `pull` lädt sie von `ghcr.io` herunter, und `up -d` erstellt die Container darauf neu. Wenn Sie die Images selbst bauen (siehe [Die Images selbst bauen](installation.md#build-the-images-yourself)), führen Sie statt `pull` und `up -d` die Befehle `build` und `up -d` dieses Abschnitts aus. Ab dieser Version heißen die Images `kadratis-*`. Das übliche Upgrade lädt sie herunter, sonst ist nichts zu tun. Frühere Versionen behalten ihre Images `kanap-*`.
 
-**Erstes Upgrade auf eine Version mit veröffentlichten Images.** Versionen bis 26.10.7 wurden auf dem Server gebaut. Für den Wechsel auf eine spätere Version genügt das obige Verfahren. Sobald die neue Version läuft und die Prüfungen aus Schritt 4 besteht, geben Sie den Build-Cache und die alten Images frei. Auf einem Server, der KANAP gebaut hat, belegen sie oft 20 GB oder mehr, je nachdem, wie viele Builds er ausgeführt hat. Ergänzen Sie `kanap-api-tools` in der zweiten Zeile, wenn Sie das Image der Wartungswerkzeuge gebaut hatten.
+**Erstes Upgrade auf eine Version mit veröffentlichten Images.** Versionen bis 26.10.7 wurden auf dem Server gebaut. Für den Wechsel auf eine spätere Version genügt das obige Verfahren. Sobald die neue Version läuft und die Prüfungen aus Schritt 4 besteht, geben Sie den Build-Cache und die alten Images frei. Auf einem Server, der Kadratis gebaut hat, belegen sie oft 20 GB oder mehr, je nachdem, wie viele Builds er ausgeführt hat. Ergänzen Sie `kanap-api-tools` in der zweiten Zeile, wenn Sie das Image der Wartungswerkzeuge gebaut hatten.
 
 ```bash
 docker builder prune -a
@@ -90,7 +90,7 @@ curl -sSk -w '\n' "https://${KANAP_HOST}/api/config/public"
 
 Der erste Befehl gibt die Version des Checkouts aus. Der zweite listet die Images der Container auf, mit ihrer Version in der Spalte `TAG`. Der dritte antwortet mit einem JSON-Dokument, dessen Feld `version` die Version ist, die die API meldet.
 
-Die veröffentlichten Images tragen einen signierten Nachweis ihres Builds: aus dem Tag der Version, durch den Workflow des KANAP-Repositorys selbst. Mit der GitHub-CLI prüft ihn `gh attestation verify oci://ghcr.io/kanap-hq/kanap-api:26.10.9 -R kanap-hq/KANAP`.
+Die veröffentlichten Images tragen einen signierten Nachweis ihres Builds: aus dem Tag der Version, durch den Workflow des Kadratis-Repositorys selbst. Mit der GitHub-CLI prüft ihn `gh attestation verify oci://ghcr.io/kanap-hq/kadratis-api:<version> -R kanap-hq/KANAP`.
 
 **4. Das Upgrade prüfen.**
 
@@ -122,7 +122,7 @@ Die letzte Zeile der Ausgabe lautet `0 failed`. Mit `KANAP_INSECURE_TLS=1` sind 
 
 **Zurücksetzen auf die vorherige Version.** Migrationen gehen nur vorwärts, daher spielt ein Zurücksetzen die vor dem Upgrade erstellte Sicherung unter der vorherigen Version wieder ein:
 
-1. Stoppen Sie KANAP: `cd /opt/kanap`, dann `docker compose -f infra/compose.onprem.yml down`. Ein Zurücksetzen beginnt oft in einem neuen Terminal, außerhalb von `/opt/kanap`.
+1. Stoppen Sie Kadratis: `cd /opt/kanap`, dann `docker compose -f infra/compose.onprem.yml down`. Ein Zurücksetzen beginnt oft in einem neuen Terminal, außerhalb von `/opt/kanap`.
 2. Checken Sie die vorherige Version aus und laden Sie ihre Images herunter. Das braucht den ausgehenden Zugriff eines Upgrades: Haben Sie ihn nach dem Upgrade geschlossen, öffnen Sie ihn zuerst (siehe [Firewall-Regeln](configuration.md#outbound-installation-and-upgrades)). Führen Sie `git checkout v<previous version>` aus (zum Beispiel `git checkout v26.10.9`), danach `docker compose -f infra/compose.onprem.yml pull`. Eine Version bis 26.10.7 hat keine veröffentlichten Images: Bauen Sie sie, wie es die Anleitung dieser Version beschreibt.
 3. Stellen Sie die Datenbank und die Dateien aus dem Verzeichnis `before-upgrade-...` dieses Upgrades wieder her: Wählen Sie die Sicherung und führen Sie dann die Schritte 1 bis 3 aus [Wiederherstellen](#wiederherstellen) im selben Terminal aus. Haben Sie `.env` für die neue Version geändert, vergleichen Sie die Datei mit der Kopie im Verzeichnis `config` der Sicherung. Dieser Befehl vergleicht die Namen der Einstellungen beider Dateien, ohne ihre Werte auszugeben:
 
@@ -131,16 +131,16 @@ Die letzte Zeile der Ausgabe lautet `0 failed`. Mit `KANAP_INSECURE_TLS=1` sind 
     ```
 
     Er listet nur die Namen auf, die sich unterscheiden. Um die Werte zu vergleichen, öffnen Sie beide Dateien.
-4. Starten Sie KANAP: `docker compose -f infra/compose.onprem.yml up -d --wait`.
+4. Starten Sie Kadratis: `docker compose -f infra/compose.onprem.yml up -d --wait`.
 5. Prüfen Sie es wie in Schritt 4 oben (**Das Upgrade prüfen**). Dessen Befehle verwenden `KANAP_HOST` und `ADMIN_EMAIL` vom Anfang dieser Seite: Setzen Sie diese in einem neuen Terminal zuerst. Die wiederhergestellte Datenbank enthält die Konten und Passwörter zum Zeitpunkt der Sicherung: Ein seitdem geändertes Passwort hat wieder seinen früheren Wert. Der Smoke-Test braucht daher das Passwort, das bei der Sicherung gültig war.
 
-Checken Sie die vorherige Version aus, bevor Sie KANAP starten: Ein Start mit der neueren Version würde ihre Migrationen erneut auf der wiederhergestellten Datenbank ausführen.
+Checken Sie die vorherige Version aus, bevor Sie Kadratis starten: Ein Start mit der neueren Version würde ihre Migrationen erneut auf der wiederhergestellten Datenbank ausführen.
 
 Bleiben Sie nach dem Zurücksetzen auf dem Tag der Version, zu der Sie zurückgekehrt sind. Das `git checkout stable` des Upgrade-Verfahrens (dessen Schritt 3) bringt den Checkout beim nächsten Upgrade zurück auf den Branch. Der Checkout (`git describe --tags`) und die laufende API (`/api/config/public`, siehe [Welche Version läuft](#upgrade-verfahren)) müssen dieselbe Version zeigen. Weichen sie ab, ändern die nächsten `pull` und `up -d` die laufende Version.
 
 ## Versionsunterstützung
 
-KANAP ist eine Lösung, die sich schnell weiterentwickelt. Versionen erscheinen etwa einmal im Monat, und wir empfehlen, mindestens monatlich zu aktualisieren.
+Kadratis ist eine Lösung, die sich schnell weiterentwickelt. Versionen erscheinen etwa einmal im Monat, und wir empfehlen, mindestens monatlich zu aktualisieren.
 Bei Kunden mit Supportvertrag kann vor der Bearbeitung einer Supportanfrage ein Upgrade auf die neueste Version verlangt werden.
 
 ## Sicherung und Wiederherstellung
@@ -161,7 +161,7 @@ sudo -u postgres pg_dump -Fc -f /var/backups/kanap/db-$(date +%F).dump kanap
 sudo -u postgres pg_restore --list /var/backups/kanap/db-$(date +%F).dump | head -5
 ```
 
-**Dateien.** Das Werkzeug `rc` aus dem Installationsbeispiel kopiert den Bucket in ein Verzeichnis. Es verwendet den Alias `kanapstore`, den die Installation in der Konfiguration von root angelegt hat. Die Kopie spiegelt den Bucket: In KANAP gelöschte Dateien verschwinden beim nächsten Lauf auch aus ihr. Die Kopie entsteht über die S3-Schnittstelle des Speichers und enthält die Dateien daher unverschlüsselt. Schützen Sie das Verzeichnis entsprechend.
+**Dateien.** Das Werkzeug `rc` aus dem Installationsbeispiel kopiert den Bucket in ein Verzeichnis. Es verwendet den Alias `kanapstore`, den die Installation in der Konfiguration von root angelegt hat. Die Kopie spiegelt den Bucket: In Kadratis gelöschte Dateien verschwinden beim nächsten Lauf auch aus ihr. Die Kopie entsteht über die S3-Schnittstelle des Speichers und enthält die Dateien daher unverschlüsselt. Schützen Sie das Verzeichnis entsprechend.
 
 ```bash
 sudo rc mirror --overwrite --remove kanapstore/kanap-files /var/backups/kanap/files
@@ -252,7 +252,7 @@ DUMP=/var/backups/kanap/db-2026-10-09.dump   # Ihr Datum
 FILES=/var/backups/kanap/files
 ```
 
-**1. Die Datenbank wiederherstellen.** Dieser Block stoppt KANAP, legt die Datenbank im Besitz der Anwendungsrolle neu an und spielt den Dump ein. Er führt nichts aus, solange die Dump-Datei nicht existiert und `pg_restore` sie nicht lesen kann:
+**1. Die Datenbank wiederherstellen.** Dieser Block stoppt Kadratis, legt die Datenbank im Besitz der Anwendungsrolle neu an und spielt den Dump ein. Er führt nichts aus, solange die Dump-Datei nicht existiert und `pg_restore` sie nicht lesen kann:
 
 ```bash
 cd /opt/kanap
@@ -290,18 +290,18 @@ sudo -u postgres psql -d kanap -Atc "SELECT count(*) FROM pg_tables WHERE schema
 sudo -u postgres psql -d kanap -Atc "SELECT count(*) FROM pg_class WHERE relrowsecurity AND relforcerowsecurity"
 ```
 
-**4. KANAP starten.**
+**4. Kadratis starten.**
 
 ```bash
 cd /opt/kanap
 docker compose -f infra/compose.onprem.yml up -d --wait
 ```
 
-Führen Sie dann den Smoke-Test aus [Das Upgrade prüfen](#upgrade-verfahren) aus und öffnen Sie KANAP in einem Browser. Konten und Passwörter entsprechen dem Stand der Sicherung: Melden Sie sich mit dem Passwort an, das damals gültig war.
+Führen Sie dann den Smoke-Test aus [Das Upgrade prüfen](#upgrade-verfahren) aus und öffnen Sie Kadratis in einem Browser. Konten und Passwörter entsprechen dem Stand der Sicherung: Melden Sie sich mit dem Passwort an, das damals gültig war.
 
 ## Image für Wartungswerkzeuge
 
-Das API-Image enthält nur die kompilierte Anwendung. Ein Wartungsbefehl, der TypeScript braucht, etwa `npm run typeorm`, läuft in einem zweiten Image derselben Version, `kanap-api-tools`. Der Dienst `tools` von `infra/compose.onprem.yml` verwendet es, mit derselben `.env`, demselben Zugang zu `host.docker.internal` und demselben Zertifikatsverzeichnis wie die API (siehe [Zertifikate einer internen Zertifizierungsstelle](configuration.md#optional-zertifikate-einer-internen-zertifizierungsstelle)). `up` startet ihn nie. Der erste `run` lädt das Image herunter. Dieses Beispiel listet die Migrationen auf und zeigt, ob sie angewendet sind:
+Das API-Image enthält nur die kompilierte Anwendung. Ein Wartungsbefehl, der TypeScript braucht, etwa `npm run typeorm`, läuft in einem zweiten Image derselben Version, `kadratis-api-tools`. Der Dienst `tools` von `infra/compose.onprem.yml` verwendet es, mit derselben `.env`, demselben Zugang zu `host.docker.internal` und demselben Zertifikatsverzeichnis wie die API (siehe [Zertifikate einer internen Zertifizierungsstelle](configuration.md#optional-zertifikate-einer-internen-zertifizierungsstelle)). `up` startet ihn nie. Der erste `run` lädt das Image herunter. Dieses Beispiel listet die Migrationen auf und zeigt, ob sie angewendet sind:
 
 ```bash
 cd /opt/kanap
@@ -319,7 +319,7 @@ cd /opt/kanap
 PGVER=18   # 16 unter Ubuntu 24.04
 # Die Bibliotheken, die PostgreSQL bereits vorlädt (oft keine): Das Skript behält sie bei.
 CURRENT=$(sudo -u postgres psql -XAtc 'SHOW shared_preload_libraries')
-# PostgreSQL auf demselben Server wie KANAP (--dedicated ergänzen, wenn es den Server für sich allein hat)
+# PostgreSQL auf demselben Server wie Kadratis (--dedicated ergänzen, wenn es den Server für sich allein hat)
 sh infra/postgres/kanap-pg-tune.sh --preload "$CURRENT" | sudo tee /etc/postgresql/${PGVER}/main/conf.d/kanap.conf >/dev/null
 sudo systemctl restart postgresql
 sudo -u postgres psql -d kanap -c 'CREATE EXTENSION IF NOT EXISTS pg_stat_statements'
@@ -332,14 +332,14 @@ Zwei Prüfungen vor dem Neustart, beide vom Skript erledigt, das die Zeile `shar
 - **Die Liste der vorgeladenen Bibliotheken.** `shared_preload_libraries` ist eine einzige Liste, und der Wert in `kanap.conf` ersetzt den in `postgresql.conf`. Ohne `--preload` stellen Sie den Wert von `SHOW shared_preload_libraries` selbst voran (zum Beispiel `'pg_cron,pg_stat_statements'`) und entfernen dann das `#`.
 - **Die Bibliothek selbst.** PostgreSQL startet nicht, wenn eine vorgeladene Bibliothek fehlt. Unter Debian und Ubuntu wird sie mit PostgreSQL ausgeliefert; unter RHEL und abgeleiteten Systemen installieren Sie das contrib-Paket (`postgresql16-contrib`). Prüfen Sie mit `ls "$(pg_config --pkglibdir)/pg_stat_statements.so"`.
 
-Der Neustart ist einmal nötig, für die Speichereinstellung und die Anweisungsstatistiken: Planen Sie ihn in einem Wartungsfenster ein, denn KANAP erreicht seine Datenbank nicht, während PostgreSQL neu startet. Anweisungen, die länger als 500 ms dauern, erscheinen danach im PostgreSQL-Protokoll, ohne ihre Parameter (`log_parameter_max_length = 0`: Sie können personenbezogene Daten enthalten). `pg_stat_statements` listet die aufwendigsten Anweisungen:
+Der Neustart ist einmal nötig, für die Speichereinstellung und die Anweisungsstatistiken: Planen Sie ihn in einem Wartungsfenster ein, denn Kadratis erreicht seine Datenbank nicht, während PostgreSQL neu startet. Anweisungen, die länger als 500 ms dauern, erscheinen danach im PostgreSQL-Protokoll, ohne ihre Parameter (`log_parameter_max_length = 0`: Sie können personenbezogene Daten enthalten). `pg_stat_statements` listet die aufwendigsten Anweisungen:
 
 ```sql
 SELECT calls, round(mean_exec_time) AS avg_ms, left(query, 80) AS query
 FROM pg_stat_statements ORDER BY total_exec_time DESC LIMIT 10;
 ```
 
-Die Migrationen von KANAP lassen außerdem den Autovacuum auf den beiden größten Tabellen (Budgetbeträge) früher starten. Das braucht keinen Neustart und keinen Arbeitsspeicher.
+Die Migrationen von Kadratis lassen außerdem den Autovacuum auf den beiden größten Tabellen (Budgetbeträge) früher starten. Das braucht keinen Neustart und keinen Arbeitsspeicher.
 
 ## Monitoring
 
@@ -437,7 +437,7 @@ Beginnen Sie mit dem API-Protokoll: `docker compose -f infra/compose.onprem.yml 
 | Warnung `[RATE-LIMIT] ... RATE_LIMIT_TRUST_PROXY not set` | `.env` | Setzen Sie `RATE_LIMIT_TRUST_PROXY=true` (nginx davor) oder `false` (nichts davor), dann `up -d api`. Siehe [Konfiguration](configuration.md#optional-erweitert) |
 | Alle teilen sich ein Anmeldelimit (`429` für viele Benutzer) | `RATE_LIMIT_TRUST_PROXY` und den Proxy | Mit einem Proxy davor setzen Sie `true` und lassen den Proxy `X-Forwarded-For` senden |
 | `[SECURITY]`-Warnung bei jedem Start | `ADMIN_PASSWORD`, `JWT_SECRET` | Ändern Sie das Passwort des Administrators in der Anwendung, oder siehe [Passwort zurücksetzen](#passwort-zurucksetzen). Verwenden Sie ein `JWT_SECRET` mit mindestens 32 Zeichen |
-| `[entrypoint] No migration ran.` nach einer Meldung zur PostgreSQL-Rolle | Die Zeile darüber, die Rolle in `DATABASE_URL` | Die Rolle ist eine Cluster-Admin-Rolle, oder sie hat `SUPERUSER` oder `BYPASSRLS`, und KANAP konnte sie nicht entfernen. Verwenden Sie eine eigene Anwendungsrolle, oder führen Sie als PostgreSQL-Superuser den `ALTER ROLE`-Befehl aus der Meldung aus, dann `up -d api`. Siehe [Konfiguration](configuration.md#erforderlich-datenbank) |
+| `[entrypoint] No migration ran.` nach einer Meldung zur PostgreSQL-Rolle | Die Zeile darüber, die Rolle in `DATABASE_URL` | Die Rolle ist eine Cluster-Admin-Rolle, oder sie hat `SUPERUSER` oder `BYPASSRLS`, und Kadratis konnte sie nicht entfernen. Verwenden Sie eine eigene Anwendungsrolle, oder führen Sie als PostgreSQL-Superuser den `ALTER ROLE`-Befehl aus der Meldung aus, dann `up -d api`. Siehe [Konfiguration](configuration.md#erforderlich-datenbank) |
 | `[entrypoint] A migration failed, not retried: ...` | Die Meldung, die Zeile `[entrypoint] Failed statement: ...` danach, die PostgreSQL-Version (16 oder höher) und ihre Erweiterungen | Die ausstehenden Migrationen wurden zurückgerollt: Die Datenbank ist wie vor diesem Start. Beheben Sie die Ursache und führen Sie `up -d api` erneut aus, oder stellen Sie die vorherige Version bereit |
 | 502 vom Reverse Proxy | `docker compose -f infra/compose.onprem.yml ps` | Stellen Sie sicher, dass der api-Container auf Port 8080 läuft |
 | 413 vom Reverse Proxy bei einem Upload | `client_max_body_size` | Setzen Sie `client_max_body_size 80m;` in der nginx-Datei |

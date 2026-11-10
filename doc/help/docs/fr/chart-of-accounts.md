@@ -139,7 +139,7 @@ La liste des comptes d'une ligne OPEX affiche les comptes pour OPEX et pour les 
 
 Lorsque vous choisissez une valeur qui entre en conflit avec des lignes qui utilisent déjà le compte, une note apparaît sous le champ, par exemple « 12 lignes CAPEX utilisent ce compte. Elles le gardent. Les nouvelles lignes CAPEX ne peuvent pas le choisir. » Cliquez sur **Afficher ces lignes** pour ouvrir ces lignes dans la liste, dans un nouvel onglet. La note reste tant que le conflit existe.
 
-Lors de l'ajout de ce réglage, KANAP l'a renseigné pour vous. Un compte utilisé uniquement par des lignes OPEX est devenu **OPEX uniquement**, et un compte utilisé uniquement par des lignes CAPEX est devenu **CAPEX uniquement**. Un compte utilisé par les deux reste **OPEX et CAPEX**. Un compte inutilisé suit son compte de consolidation : les comptes d'actifs du plan de consolidation IFRS sont pour CAPEX et les comptes de charges d'exploitation sont pour OPEX. Les administrateurs peuvent modifier chacun d'eux.
+Lors de l'ajout de ce réglage, Kadratis l'a renseigné pour vous. Un compte utilisé uniquement par des lignes OPEX est devenu **OPEX uniquement**, et un compte utilisé uniquement par des lignes CAPEX est devenu **CAPEX uniquement**. Un compte utilisé par les deux reste **OPEX et CAPEX**. Un compte inutilisé suit son compte de consolidation : les comptes d'actifs du plan de consolidation IFRS sont pour CAPEX et les comptes de charges d'exploitation sont pour OPEX. Les administrateurs peuvent modifier chacun d'eux.
 
 ### Compte de consolidation
 
@@ -200,7 +200,7 @@ Les modèles sont des ensembles de comptes standard gérés par les administrate
 
 ### Modèles disponibles
 
-KANAP est livré avec **20 modèles préconfigurés** couvrant 10 normes comptables. Chaque norme existe en deux versions :
+Kadratis est livré avec **20 modèles préconfigurés** couvrant 10 normes comptables. Chaque norme existe en deux versions :
 
 - **v1.0 (Simple)** : Un ensemble ciblé d'environ 20 comptes utiles pour l'IT : licences logicielles, hébergement cloud, cybersécurité, télécoms, conseil, coûts de personnel, formation, etc. Idéal pour les organisations qui veulent un point de départ léger.
 - **v2.0 (Détaillé)** : Tout le contenu de la v1.0, plus des sous-comptes plus fins (environ 30 comptes). Ajoute des distinctions comme Logiciel acheté ou développé en interne, Équipement réseau, Licences SaaS ou perpétuelles, Communications mobiles, Primes IT, Assurance IT, etc. Idéal pour les organisations qui ont besoin d'un suivi des coûts plus fin.
@@ -373,7 +373,7 @@ Ouvrez un compte et choisissez son **Compte de consolidation** dans l'espace de 
 3. Si le plan remplace un autre plan de consolidation, ou si certains comptes pointent vers des numéros qu'il ne contient pas, une confirmation s'ouvre. Elle indique quel plan il remplace et donne les nombres : combien de comptes conservent leur compte de consolidation, combien pointent vers un numéro absent du nouveau plan, et combien n'ont pas de compte de consolidation.
 4. Cliquez sur **Définir comme plan de consolidation** pour confirmer.
 
-**Ce qu'il advient des rattachements existants** : KANAP ne rattache jamais les comptes à votre place. Chaque compte conserve son numéro de consolidation.
+**Ce qu'il advient des rattachements existants** : Kadratis ne rattache jamais les comptes à votre place. Chaque compte conserve son numéro de consolidation.
 
   - Les comptes dont le numéro existe dans le nouveau plan le conservent et reprennent le nom et la description de ce plan.
   - Les comptes dont le numéro n'existe pas dans le nouveau plan conservent leur numéro et sont signalés : la ligne de suivi les compte, un point les marque dans la grille et l'espace de travail du compte vous invite à choisir un compte valide. Filtrez-les depuis la ligne de suivi et rattachez-les un par un, ou chargez un CSV.
@@ -508,7 +508,7 @@ account_number;account_name;native_name;description;consolidation_account_number
 
 ## Conseils
 
-  - **Commencez par les modèles** : KANAP est livré avec des modèles pour 9 pays plus IFRS. Chargez-en un au lieu de partir de zéro : vous obtenez directement les bons numéros de compte, les noms locaux et les correspondances de consolidation IFRS. Commencez avec la v1.0 (Simple) en cas de doute ; passez à la v2.0 (Détaillé) si vous avez besoin de plus de détail.
+  - **Commencez par les modèles** : Kadratis est livré avec des modèles pour 9 pays plus IFRS. Chargez-en un au lieu de partir de zéro : vous obtenez directement les bons numéros de compte, les noms locaux et les correspondances de consolidation IFRS. Commencez avec la v1.0 (Simple) en cas de doute ; passez à la v2.0 (Détaillé) si vous avez besoin de plus de détail.
   - **Un défaut par pays** : Faites d'un CoA le plan par défaut de chaque pays, pour que les nouvelles sociétés démarrent avec la bonne structure de comptes.
   - **Noms locaux pour la conformité** : Utilisez le champ **Nom local (langue locale)** si la réglementation locale exige les comptes dans la langue du pays. Activez la colonne **Nom local** dans la grille pour voir les deux noms d'un coup d'œil.
   - **Migrez progressivement** : Vous n'avez pas à tout convertir en une fois. Les sociétés sans CoA continuent de fonctionner avec les comptes historiques.
@@ -595,7 +595,7 @@ R : Oui, dans l'espace de travail du compte. Changer le numéro de compte met au
 R : Ouvrez **Gérer les plans** sur la page Plans comptables et consultez la colonne **Sociétés** de la ligne du CoA. Vous pouvez aussi filtrer la page Sociétés par CoA.
 
 **Q : Que faire si mon pays n'a pas de modèle ?**
-R : KANAP inclut des modèles pour 9 pays (FR, DE, GB, ES, IT, NL, BE, CH, US) plus IFRS comme norme globale. Si votre pays n'est pas couvert, créez un CoA de zéro et ajoutez les comptes manuellement ou par import CSV. Vous pouvez tout de même utiliser les numéros de comptes de consolidation IFRS (1000-2900) dans vos correspondances de consolidation pour rester compatible avec les modèles intégrés.
+R : Kadratis inclut des modèles pour 9 pays (FR, DE, GB, ES, IT, NL, BE, CH, US) plus IFRS comme norme globale. Si votre pays n'est pas couvert, créez un CoA de zéro et ajoutez les comptes manuellement ou par import CSV. Vous pouvez tout de même utiliser les numéros de comptes de consolidation IFRS (1000-2900) dans vos correspondances de consolidation pour rester compatible avec les modèles intégrés.
 
 **Q : Quelle est la différence entre les modèles v1.0 et v2.0 ?**
 R : La **v1.0 (Simple)** compte environ 20 comptes centrés sur l'IT qui couvrent les catégories de coûts essentielles. La **v2.0 (Détaillé)** ajoute une dizaine de sous-comptes plus fins pour un suivi plus précis (ex. : séparer les abonnements SaaS des licences perpétuelles, ou les salaires IT des primes). Les deux versions utilisent les mêmes correspondances de consolidation. Commencez par la v1.0 et passez à la v2.0 si vous avez besoin de plus de détail.

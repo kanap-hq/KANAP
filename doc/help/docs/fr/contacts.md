@@ -69,7 +69,7 @@ Cliquez sur une ligne pour ouvrir la fiche du contact. Chaque modification s'enr
 - **Téléphone** / **Mobile** : un indicatif et un numéro. Choisissez l'indicatif dans la liste ou saisissez-le. Quand le contact n'a pas encore de pays, l'indicatif le renseigne.
 - **Pays** : liste de pays avec recherche.
 
-Les champs de texte s'enregistrent quand vous les quittez ou appuyez sur Entrée, les listes dès que vous choisissez. Une valeur que KANAP ne peut pas accepter (un e-mail invalide ou déjà utilisé par un autre contact, un téléphone qui n'est pas un indicatif suivi d'un numéro de 7 à 15 chiffres au total) affiche son message sous le champ et n'est pas enregistrée.
+Les champs de texte s'enregistrent quand vous les quittez ou appuyez sur Entrée, les listes dès que vous choisissez. Une valeur que Kadratis ne peut pas accepter (un e-mail invalide ou déjà utilisé par un autre contact, un téléphone qui n'est pas un indicatif suivi d'un numéro de 7 à 15 chiffres au total) affiche son message sous le champ et n'est pas enregistrée.
 
 **Notes** : notes libres (jusqu'à 2 000 caractères), sous l'en-tête. Elles s'enregistrent un instant après la fin de la saisie, et quand vous quittez le champ.
 
@@ -93,7 +93,7 @@ Tant que le contact est en cours de création, l'en-tête affiche **Créer** et 
 
 ## Où les contacts sont utilisés
 
-Les contacts apparaissent à plusieurs endroits dans KANAP. La section **Lié à** de la fiche contact les liste tous.
+Les contacts apparaissent à plusieurs endroits dans Kadratis. La section **Lié à** de la fiche contact les liste tous.
 
 ### Contacts fournisseur
 

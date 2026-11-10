@@ -1,13 +1,13 @@
 ---
-title: "Ihr Portfolio in KANAP in zehn Minuten: mit dem Beispiel entdecken"
+title: "Ihr Portfolio in Kadratis in zehn Minuten: mit dem Beispiel entdecken"
 description: Die fünf Schritte des Pfads Projekte und Anfragen am Beispiel Fromage & Co, von einer bewerteten Anfrage bis zu den Portfolio-Berichten und Ihrer eigenen Datei.
 ---
 
-# Ihr Portfolio in KANAP in zehn Minuten
+# Ihr Portfolio in Kadratis in zehn Minuten
 
 **Mit dem Beispiel entdecken** · [Mit meinen eigenen Daten beginnen](portfolio-own-data.md)
 
-Fromage & Co ist eine fiktive Käsereigruppe, deren Beispiel in Ihren Arbeitsbereich geladen ist. In zehn Minuten lesen Sie anhand ihres Portfolios, wie eine Anfrage bewertet wird, verfolgen sie bis zum Projekt, finden die Aufgaben, lesen die Berichte und sehen, wie Ihre eigene Datei in KANAP kommt.
+Fromage & Co ist eine fiktive Käsereigruppe, deren Beispiel in Ihren Arbeitsbereich geladen ist. In zehn Minuten lesen Sie anhand ihres Portfolios, wie eine Anfrage bewertet wird, verfolgen sie bis zum Projekt, finden die Aufgaben, lesen die Berichte und sehen, wie Ihre eigene Datei in Kadratis kommt.
 
 Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der Startseite, für den Pfad **Projekte und Anfragen** mit **Mit dem vollständigen Beispiel entdecken**. Jeder Schritt der Kachel öffnet seinen Bildschirm mit einem kurzen Hinweis, und das Öffnen markiert ihn als erledigt. Siehe [Testphase: Ihr Pfad und Ihre ersten Schritte](../my-dashboard.md#trial-first-steps).
 
@@ -19,7 +19,7 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 
 **Was Sie tun.** Lesen Sie die Antwort zu jedem Kriterium und die Punktzahl, die sich daraus ergibt.
 
-**Was Sie sehen.** Eine Anfrage ist ein noch nicht entschiedenes Projekt. KANAP bewertet alle Anfragen nach denselben Kriterien, damit die Entscheidung Vergleichbares vergleicht. Die Kriterien und ihre Gewichte legen Sie einmal unter **Portfolio > Einstellungen**, Reiter **Bewertungskriterien**, fest. Im Status **Genehmigt** wird eine Anfrage mit **In Projekt konvertieren** zum Projekt.
+**Was Sie sehen.** Eine Anfrage ist ein noch nicht entschiedenes Projekt. Kadratis bewertet alle Anfragen nach denselben Kriterien, damit die Entscheidung Vergleichbares vergleicht. Die Kriterien und ihre Gewichte legen Sie einmal unter **Portfolio > Einstellungen**, Reiter **Bewertungskriterien**, fest. Im Status **Genehmigt** wird eine Anfrage mit **In Projekt konvertieren** zum Projekt.
 
 ## 2. Das aus der Anfrage entstandene Projekt
 
@@ -61,14 +61,14 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 
 **Was Sie sehen.** Der Export beschriftet seine Spalten in Ihrer Sprache, und der Import liest dieselben Spalten: Nutzen Sie ihn als Vorlage für Ihre eigenen Projekte. Die Beispielmappe enthält einige Projekte, die übrigen Spalten auf einem Blatt **Erweitert** und auf einem Blatt **Hinweise**, was jede Spalte aufnimmt. Anfragen und Aufgaben haben ihr eigenes **Exportieren** und **Importieren**. Diese Schaltflächen sehen die Administratoren der Liste.
 
-Um von einer Datei auszugehen, die Sie schon führen, hängen Sie sie in Plaid mit **Datei anhängen** an eine Nachricht an. Plaid liest die Spaltenüberschriften, den Typ jeder Spalte und die ersten zehn Zeilen und kann sagen, was jede Spalte enthält.
+Um von einer Datei auszugehen, die Sie schon führen, hängen Sie sie in Kad mit **Datei anhängen** an eine Nachricht an. Kad liest die Spaltenüberschriften, den Typ jeder Spalte und die ersten zehn Zeilen und kann sagen, was jede Spalte enthält.
 
 ## Wie es weitergeht
 
-Sie haben das Wesentliche von KANAP für Projekte und Anfragen gesehen. Die beiden anderen Pfade dauern ebenfalls zehn Minuten:
+Sie haben das Wesentliche von Kadratis für Projekte und Anfragen gesehen. Die beiden anderen Pfade dauern ebenfalls zehn Minuten:
 
-- [Ihr IT-Budget in KANAP in zehn Minuten](budget-example.md)
-- [Ihre IT-Landschaft in KANAP in zehn Minuten](landscape-example.md)
+- [Ihr IT-Budget in Kadratis in zehn Minuten](budget-example.md)
+- [Ihre IT-Landschaft in Kadratis in zehn Minuten](landscape-example.md)
 
 Sind die fünf Schritte erledigt, bietet die Kachel diese Pfade an. Während der Testphase bietet sie außerdem **Kennenlerngespräch vereinbaren** an.
 

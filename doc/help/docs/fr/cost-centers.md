@@ -184,7 +184,7 @@ Chargez ou mettez à jour l'arbre entier depuis un fichier.
 | `code` | Obligatoire. Le code de l'élément. Les lignes sont rapprochées des éléments existants par code, sans tenir compte de la casse |
 | `kind` | Obligatoire. `group` ou `cost_center` |
 | `name` | Obligatoire |
-| `parent_code` | Le code du groupe parent, présent dans le même fichier ou déjà dans KANAP. Vide pour le premier niveau |
+| `parent_code` | Le code du groupe parent, présent dans le même fichier ou déjà dans Kadratis. Vide pour le premier niveau |
 | `company_name` | Obligatoire pour un `cost_center`, vide pour un `group`. Rapproché par nom de société, sans tenir compte de la casse |
 | `owner_email` | L'e-mail du responsable budgétaire, un utilisateur actif. Vide pour aucun responsable budgétaire |
 | `description` | Texte libre |
@@ -200,7 +200,7 @@ Chargez ou mettez à jour l'arbre entier depuis un fichier.
 
 **Fonctionnement de l'import** :
 
-- **Lignes dans n'importe quel ordre** : un enfant peut précéder son groupe parent. Les parents sont résolus sur l'ensemble du fichier et sur les éléments déjà présents dans KANAP.
+- **Lignes dans n'importe quel ordre** : un enfant peut précéder son groupe parent. Les parents sont résolus sur l'ensemble du fichier et sur les éléments déjà présents dans Kadratis.
 - **Le fichier entier est vérifié avant toute écriture** : chaque ligne, puis les parents, puis les règles de l'arbre (un centre de coûts a une société, un groupe n'en a pas, seuls les groupes sont parents, pas de boucle, un centre de coûts utilisé par des lignes reste un centre de coûts). Un fichier comportant une erreur ne charge rien : corrigez les lignes et relancez la vérification préalable. Chaque erreur désigne sa ligne par le numéro de ligne du fichier tel qu'un éditeur de texte l'affiche, lignes vides et cellules sur plusieurs lignes comprises.
 - **Rapprochement par code** : une ligne dont le code existe met à jour cet élément ; toute autre ligne en crée un. Chaque cellule remplace la valeur enregistrée : un `owner_email` ou une `description` vide l'efface.
 - **Lignes inchangées** : une ligne identique à l'élément enregistré ne change rien. Exporter puis importer le même fichier signale toutes les lignes comme inchangées.
@@ -233,7 +233,7 @@ Chaque rôle reçoit le niveau qu'il a sur les départements, sauf le rôle int�
 
 ## Demander à l'assistant
 
-[Plaid](ai-assistant.md#tool-calls) lit les centres de coûts pour toute personne qui a le droit de les lire : l'arbre, les responsables budgétaires et les lignes qui utilisent chaque nœud. Demandez par exemple : « Quels centres de coûts dépendent de Group IT ? »
+[Kad](ai-assistant.md#tool-calls) lit les centres de coûts pour toute personne qui a le droit de les lire : l'arbre, les responsables budgétaires et les lignes qui utilisent chaque nœud. Demandez par exemple : « Quels centres de coûts dépendent de Group IT ? »
 
 ## Astuces
 

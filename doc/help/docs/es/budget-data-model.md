@@ -1,8 +1,8 @@
 # Modelo de datos del presupuesto
 
-Esta página describe cómo KANAP organiza los datos del presupuesto: los objetos, sus relaciones, los campos que identifican un registro y los archivos con los que cada objeto entra y sale. Está pensada para los controllers financieros y los administradores del presupuesto que preparan un paso desde hojas de cálculo u otra herramienta, y para el equipo técnico que conecta una herramienta de BI a una instalación on-premise.
+Esta página describe cómo Kadratis organiza los datos del presupuesto: los objetos, sus relaciones, los campos que identifican un registro y los archivos con los que cada objeto entra y sale. Está pensada para los controllers financieros y los administradores del presupuesto que preparan un paso desde hojas de cálculo u otra herramienta, y para el equipo técnico que conecta una herramienta de BI a una instalación on-premise.
 
-Los archivos descritos aquí son el contrato en el que apoyarse. Sus columnas están documentadas en este manual y se comprueban al importar, y cuando cambia una estructura, la importación rechaza un archivo con la estructura antigua e indica el motivo. Las tablas de la base de datos que hay detrás son internas: cambian cuando KANAP evoluciona. Apoye el paso desde otra herramienta, y cualquier integración, en los archivos.
+Los archivos descritos aquí son el contrato en el que apoyarse. Sus columnas están documentadas en este manual y se comprueban al importar, y cuando cambia una estructura, la importación rechaza un archivo con la estructura antigua e indica el motivo. Las tablas de la base de datos que hay detrás son internas: cambian cuando Kadratis evoluciona. Apoye el paso desde otra herramienta, y cualquier integración, en los archivos.
 
 ## Los objetos de un vistazo
 
@@ -56,12 +56,12 @@ Una línea también se vincula a proyectos, solicitudes, aplicaciones, activos, 
 
 ### Líneas OPEX y CAPEX
 
-Una línea vive varios años: una licencia de tres años es una línea con tres años presupuestarios. KANAP da un número a cada línea al crearla, su referencia `BL-12`, en la misma serie para OPEX y CAPEX. La lista, el espacio de trabajo y la dirección de la página la muestran. Las líneas creadas antes de esta serie también tenían un número `OPX-12` o `CPX-3`: los enlaces, las búsquedas y el archivo de presupuesto siguen encontrando una línea por él. En un archivo sin columna `nature`, un número solo conserva su significado anterior (`CPX-3` cuando la lista está filtrada por CAPEX). Consulte [Referencias](budget-lines.md#referencias).
+Una línea vive varios años: una licencia de tres años es una línea con tres años presupuestarios. Kadratis da un número a cada línea al crearla, su referencia `BL-12`, en la misma serie para OPEX y CAPEX. La lista, el espacio de trabajo y la dirección de la página la muestran. Las líneas creadas antes de esta serie también tenían un número `OPX-12` o `CPX-3`: los enlaces, las búsquedas y el archivo de presupuesto siguen encontrando una línea por él. En un archivo sin columna `nature`, un número solo conserva su significado anterior (`CPX-3` cuando la lista está filtrada por CAPEX). Consulte [Referencias](budget-lines.md#referencias).
 
 | Campo | Columna del archivo de presupuesto | Obligatorio | Notas |
 |---|---|---|---|
 | Naturaleza | `nature` | Sí | `opex` o `capex`. Un archivo no cambia la naturaleza de una línea existente (consulte [Cambiar el tipo de una línea](#cambiar-el-tipo-de-una-linea)). Un archivo sin esta columna se lee como líneas OPEX, o como líneas CAPEX cuando la lista está filtrada por CAPEX |
-| Número | `item_number` | Lo asigna KANAP | `BL-12`. Vacío en el archivo: crea una línea |
+| Número | `item_number` | Lo asigna Kadratis | `BL-12`. Vacío en el archivo: crea una línea |
 | Título | `name` | Sí | La columna **Nombre del producto** de la lista |
 | Descripción | `description` | No | |
 | Empresa pagadora | `company_name` | Sí | Se toma del centro de coste cuando solo se indica el centro de coste, o es la única empresa del espacio de trabajo cuando solo hay una |
@@ -167,7 +167,7 @@ El archivo de presupuesto encuentra los datos maestros por identificadores de ne
 | Calendario laboral | `code`, sin distinguir mayúsculas y minúsculas | Código, nombre | Lo usan las líneas de Cantidad y precio |
 | Usuario | `email` | Correo | `owner_it_email`, `owner_business_email` |
 
-Lo que importa cuando hace corresponder otra herramienta con KANAP:
+Lo que importa cuando hace corresponder otra herramienta con Kadratis:
 
 - **Las empresas** llevan su plantilla, sus usuarios IT y su facturación por año. La facturación se expresa en millones de la moneda base de la empresa. Las asignaciones por plantilla, usuarios IT o facturación necesitan los indicadores del año.
 - **Las cuentas** pertenecen a un plan de cuentas, y una empresa usa un plan. Un número de cuenta es un número entero, único dentro de su plan. La cuenta de una línea presupuestaria debe existir en el plan de su empresa pagadora, y cada cuenta indica si sirve para líneas OPEX, líneas CAPEX o ambas. Consulte [Planes de cuentas y gestión de cuentas](chart-of-accounts.md).
@@ -199,7 +199,7 @@ Cada archivo de la tabla se exporta y se importa desde la página que gestiona e
 
 El archivo de presupuesto lee y escribe los importes de cualquier columna y año, como totales anuales o por meses, con los detalles de la línea en la misma fila. Es la vía de entrada para un presupuesto preparado en otro sitio y la vía de salida hacia una hoja de cálculo o una herramienta de BI. Un solo archivo contiene los dos tipos de línea, y su columna `nature` indica cuál. **Gestión presupuestaria > Líneas presupuestarias** exporta las líneas que muestra, de ambos tipos, e importa un archivo que contenga ambos tipos, con el nivel Administrador en Presupuesto.
 
-### Llevar un presupuesto a KANAP
+### Llevar un presupuesto a Kadratis
 
 1. Haga corresponder cada objeto de su herramienta actual con las tablas anteriores, y sus identificadores con la columna **Coincidencia por**.
 2. Cargue los datos maestros en el orden indicado en [Cargar un presupuesto completo](budget-file.md#cargar-un-presupuesto-completo).
@@ -207,19 +207,19 @@ El archivo de presupuesto lee y escribe los importes de cualquier columna y año
 4. Rellene una fila por línea con su `nature`, con `item_number` vacío, con una columna de importe por columna presupuestaria y año (`budget_2027`), o por mes (`budget_2027_03`).
 5. Importe el archivo. La comprobación informa de los errores por línea del archivo, y no se escribe nada hasta que usted carga.
 
-Un conjunto coherente de archivos de ejemplo, con una empresa ficticia y sus datos maestros, está en el [repositorio de KANAP](https://github.com/kanap-hq/KANAP/tree/main/doc/samples).
+Un conjunto coherente de archivos de ejemplo, con una empresa ficticia y sus datos maestros, está en el [repositorio de Kadratis](https://github.com/kanap-hq/KANAP/tree/main/doc/samples).
 
 ## Leer los datos directamente
 
-En una instalación on-premise, la base de datos PostgreSQL es suya: KANAP funciona sobre la base que usted proporciona. Puede leerla, hacer copias de seguridad y conectarle herramientas.
+En una instalación on-premise, la base de datos PostgreSQL es suya: Kadratis funciona sobre la base que usted proporciona. Puede leerla, hacer copias de seguridad y conectarle herramientas.
 
 Antes de hacerlo, tenga en cuenta tres puntos.
 
-**La seguridad a nivel de fila filtra cada lectura.** KANAP se conecta con un rol de aplicación dedicado que no puede eludir la seguridad a nivel de fila. KANAP no arranca con un rol de superusuario ni con un rol que la eluda. Cada tabla que contiene sus datos solo muestra sus filas a una sesión que ha indicado el espacio de trabajo que lee. Una sesión que no lo ha indicado obtiene resultados vacíos, sin ningún error.
+**La seguridad a nivel de fila filtra cada lectura.** Kadratis se conecta con un rol de aplicación dedicado que no puede eludir la seguridad a nivel de fila. Kadratis no arranca con un rol de superusuario ni con un rol que la eluda. Cada tabla que contiene sus datos solo muestra sus filas a una sesión que ha indicado el espacio de trabajo que lee. Una sesión que no lo ha indicado obtiene resultados vacíos, sin ningún error.
 
 **Las tablas son internas.** Sus nombres, sus columnas y su almacenamiento cambian de una versión a otra, con las migraciones que se ejecutan en cada actualización. Los nombres de columna en la base son claves de almacenamiento y difieren de los nombres en pantalla y en los archivos. Una consulta escrita sobre las tablas de hoy puede devolver resultados erróneos o vacíos después de una actualización.
 
-**Sus objetos pueden bloquear una actualización.** PostgreSQL se niega a modificar o eliminar una columna de la que depende una vista. Una vista creada sobre tablas de KANAP puede hacer fallar una actualización. Mantenga sus consultas en la herramienta de BI o en una base de informes separada.
+**Sus objetos pueden bloquear una actualización.** PostgreSQL se niega a modificar o eliminar una columna de la que depende una vista. Una vista creada sobre tablas de Kadratis puede hacer fallar una actualización. Mantenga sus consultas en la herramienta de BI o en una base de informes separada.
 
 Para una herramienta de BI, use primero las exportaciones. El archivo de presupuesto y los archivos de datos maestros llevan nombres e identificadores de negocio, documentados en este manual.
 

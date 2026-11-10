@@ -12,7 +12,7 @@ Navegue a **Panorama IT > Interfaces** para ver su registro de integraciones. Ha
 - **Aplicación de origen** y **Aplicación de destino**, en la pestaña **Flujo**
 - **Categoría de datos**, en el panel de propiedades: el tipo de datos transferidos
 
-Puede rellenarlos en cualquier orden. No se guarda nada hasta que los cuatro estén rellenados. En cuanto lo están, KANAP crea la interfaz con todo lo que contiene el borrador y le asigna su referencia (`INT-4`). La página pasa a la interfaz, y **Entornos**, **Mapeo de datos**, **Relaciones** e **Historial** se abren.
+Puede rellenarlos en cualquier orden. No se guarda nada hasta que los cuatro estén rellenados. En cuanto lo están, Kadratis crea la interfaz con todo lo que contiene el borrador y le asigna su referencia (`INT-4`). La página pasa a la interfaz, y **Entornos**, **Mapeo de datos**, **Relaciones** e **Historial** se abren.
 
 **Consejo**: Defina pronto el **Tipo de ruta**. Controla qué tramos se generan automáticamente y qué aparece en la pestaña Flujo y en la matriz de Entornos.
 
@@ -20,7 +20,7 @@ Puede rellenarlos en cualquier orden. No se guarda nada hasta que los cuatro est
 
 Mientras la interfaz se está creando, su encabezado muestra **Crear** y **Cancelar**. Permanecen hasta que salga de la interfaz.
 
-- **Crear** conserva la interfaz y le devuelve al punto de partida. Si todavía falta algo, un mensaje lo indica, y el título o el primer campo que falta recibe el foco. Si el borrador está completo, KANAP crea la interfaz y le devuelve al instante
+- **Crear** conserva la interfaz y le devuelve al punto de partida. Si todavía falta algo, un mensaje lo indica, y el título o el primer campo que falta recibe el foco. Si el borrador está completo, Kadratis crea la interfaz y le devuelve al instante
 - **Cancelar** elimina la interfaz. Si añadió algo después de su creación, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar interfaces
 
 Si sale de la interfaz de otra forma (el menú, la flecha de retroceso), se conserva: está completa.
@@ -35,7 +35,7 @@ La cuadrícula de Interfaces muestra su registro de integraciones de un vistazo.
 
 **Columnas predeterminadas**:
 
-- **Referencia**: La referencia que asigna KANAP (`INT-4`)
+- **Referencia**: La referencia que asigna Kadratis (`INT-4`)
 - **Código de interfaz**: Su propio código corto, si lo ha definido
 - **Nombre**: Nombre de la interfaz
 - **Entornos**: Puntos de colores que muestran qué entornos ya tienen enlaces configurados (p. ej., PROD, QA, DEV)
@@ -82,7 +82,7 @@ El panel lateral permanece visible en cada pestaña. Haga clic en su pestaña **
 
 **Identificación**:
 
-- **Referencia**: Asignada por KANAP, de solo lectura
+- **Referencia**: Asignada por Kadratis, de solo lectura
 - **Código de interfaz**: Su propio código corto
 - **Proceso de negocio**: Vínculo a un proceso de negocio de los datos maestros
 - **Ciclo de vida**
@@ -239,7 +239,7 @@ Una dependencia va en un solo sentido. Si añade la interfaz B como anterior a l
 
 ## Copiar interfaces
 
-Hay dos formas de copiar interfaces en KANAP.
+Hay dos formas de copiar interfaces en Kadratis.
 
 ### Duplicar Interfaz (desde la cuadrícula de Interfaces)
 

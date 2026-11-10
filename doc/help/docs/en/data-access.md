@@ -2,7 +2,7 @@
 
 Roles say what a person can do in each module. Data access says on which part of the budget they can do it. With it, the IT manager of a subsidiary manages the budget of that subsidiary and does not see the others, and a director reads the lines of their own cost centers.
 
-Data access applies to budget lines (OPEX and CAPEX) and to contracts, and to everything that shows them: lists, totals, reports, search, Plaid, exports. The other modules work as before for everyone.
+Data access applies to budget lines (OPEX and CAPEX) and to contracts, and to everything that shows them: lists, totals, reports, search, Kad, exports. The other modules work as before for everyone.
 
 Every person starts with **All data**. Nothing changes until an administrator limits someone.
 
@@ -176,7 +176,7 @@ Every change of a person's access is recorded in the [Audit log](admin.md#audit-
 
 ## Ask the assistant
 
-[Plaid](ai-assistant.md#tool-calls) reads this page and the Access tab of companies for an administrator of users with access to all data. Ask, for example: "Who is limited to Alpha Spain?", "Which limited people have no node?" or "What can Marta Ruiz see?" Changes to a person's access stay on the screens described here.
+[Kad](ai-assistant.md#tool-calls) reads this page and the Access tab of companies for an administrator of users with access to all data. Ask, for example: "Who is limited to Alpha Spain?", "Which limited people have no node?" or "What can Marta Ruiz see?" Changes to a person's access stay on the screens described here.
 
 ## What a limited person sees
 
@@ -192,7 +192,7 @@ For a limited person, the budget and the contracts hold only what their access c
 - A hidden contract shows as "Contract outside your access", without a link.
 - Lists of links (the lines of a contract, an application, a server, a technology, a project or a request) show the visible links, then a count such as "and 3 lines outside your access". No name, no amount.
 - The contract of a visible line opens in read only. Its attachments and document links stay closed, with a count such as "2 attachments, for people who see this contract".
-- Search, Plaid, MCP and exports show no trace of a hidden item.
+- Search, Kad, MCP and exports show no trace of a hidden item.
 
 These counts appear to people who read the budget but not those lines. A person without the budget right sees no budget lines in the panels of applications, servers and projects, and no count.
 
@@ -226,8 +226,8 @@ The checks that come with these operations (the impact previews, the check befor
 
 ## When data access is unavailable
 
-Limiting data access needs a one-time step on the database server. Until it is done, **Limited to** is greyed out in the user window, with "Limiting data access needs a one-time step on the database, done by the person who runs KANAP." and a link to this page. **Admin > Data access** shows the same message, with what is missing.
+Limiting data access needs a one-time step on the database server. Until it is done, **Limited to** is greyed out in the user window, with "Limiting data access needs a one-time step on the database, done by the person who runs Kadratis." and a link to this page. **Admin > Data access** shows the same message, with what is missing.
 
 On-premise, the step is in the installation guide: [Data-scoped access](on-premise/installation.md#optional-data-scoped-access).
 
-If the step is undone later, for example after a database restore on another server, limited people are refused with "Data access is temporarily unavailable. Contact the person who runs KANAP." People with all data keep working. Running the step again and restarting the API brings limited people back. See [Backup and restore](on-premise/operations.md#restore).
+If the step is undone later, for example after a database restore on another server, limited people are refused with "Data access is temporarily unavailable. Contact the person who runs Kadratis." People with all data keep working. Running the step again and restarting the API brings limited people back. See [Backup and restore](on-premise/operations.md#restore).

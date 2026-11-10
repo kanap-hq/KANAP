@@ -95,7 +95,7 @@ Phase templates provide:
 - Optional milestones linked to each phase
 
 **System templates**:
-- Pre-defined templates provided by KANAP
+- Pre-defined templates provided by Kadratis
 - Marked with a "System" chip
 - Can be edited but provide sensible defaults
 
@@ -178,7 +178,7 @@ Category (for example, "Digital Transformation")
 - Use the switch on a category or a stream
 - An item that is switched off does not appear in selection dropdowns
 
-Deleting a category deletes its streams. KANAP says so before you confirm.
+Deleting a category deletes its streams. Kadratis says so before you confirm.
 
 ### Task types
 
@@ -193,11 +193,11 @@ Task types are the list used on portfolio tasks. See [Tasks](tasks.md). A new wo
 - Use the switch
 - A task type that is switched off does not appear in selection dropdowns
 
-A task type that tasks still use cannot be deleted. KANAP says so before you confirm, and counts the tasks that use it. Switch it off.
+A task type that tasks still use cannot be deleted. Kadratis says so before you confirm, and counts the tasks that use it. Switch it off.
 
 **System items**:
 - A source, a category or a task type marked **System** can be edited or switched off. It cannot be deleted.
-- A source, a category or a stream that requests or projects still use cannot be deleted. A task type that tasks still use cannot be deleted. KANAP says so before you confirm, and counts what uses it. Switch it off.
+- A source, a category or a stream that requests or projects still use cannot be deleted. A task type that tasks still use cannot be deleted. Kadratis says so before you confirm, and counts what uses it. Switch it off.
 
 ### Best practices
 

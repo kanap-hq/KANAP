@@ -139,7 +139,7 @@ The account picker of an OPEX line shows the accounts for OPEX and for both. The
 
 When you set a value that conflicts with lines already using the account, a note appears under the field, for example "12 CAPEX lines use this account. They keep it. New CAPEX lines cannot choose it." Click **Show these lines** to open those lines in the list, in a new tab. The note stays as long as the conflict exists.
 
-When KANAP added this setting, it filled it in for you. An account used only by OPEX lines became **OPEX only**, and an account used only by CAPEX lines became **CAPEX only**. An account used by both stays **OPEX and CAPEX**. An unused account follows its consolidation account: asset accounts of the IFRS consolidation chart are for CAPEX and operating expense accounts are for OPEX. Administrators can change any of them.
+When Kadratis added this setting, it filled it in for you. An account used only by OPEX lines became **OPEX only**, and an account used only by CAPEX lines became **CAPEX only**. An account used by both stays **OPEX and CAPEX**. An unused account follows its consolidation account: asset accounts of the IFRS consolidation chart are for CAPEX and operating expense accounts are for OPEX. Administrators can change any of them.
 
 ### Consolidation account
 
@@ -200,7 +200,7 @@ Templates are standard account sets managed by platform administrators. They can
 
 ### Available templates
 
-KANAP ships with **20 pre-configured templates** covering 10 accounting standards. Each standard comes in two versions:
+Kadratis ships with **20 pre-configured templates** covering 10 accounting standards. Each standard comes in two versions:
 
 - **v1.0 (Simple)**: A focused set of ~20 IT-relevant accounts: software licenses, cloud hosting, cybersecurity, telecom, consulting, staff costs, training, and more. Best for organizations that want a lean starting point.
 - **v2.0 (Detailed)**: Everything in v1.0 plus additional granular sub-accounts (~30 accounts). Adds breakdowns like Purchased vs. Internally Developed Software, Network Equipment, SaaS vs. Perpetual Licenses, Mobile Communications, IT Bonuses, IT Insurance, and more. Best for organizations that need finer cost tracking.
@@ -373,7 +373,7 @@ Open an account and choose its **Consolidation account** in the account workspac
 3. If the chart replaces another consolidation chart, or if some accounts point to numbers it does not hold, a confirmation opens. It says which chart it replaces and gives the counts: how many accounts keep their consolidation account, how many point to a number that does not exist in the new chart, and how many have no consolidation account.
 4. Click **Make consolidation chart** to confirm.
 
-**What happens to existing mappings**: KANAP never remaps accounts for you. Every account keeps its consolidation number.
+**What happens to existing mappings**: Kadratis never remaps accounts for you. Every account keeps its consolidation number.
 
   - Accounts whose number exists in the new chart keep it, and take that chart's name and description.
   - Accounts whose number does not exist in the new chart keep their number and are flagged: the health line counts them, a dot marks them in the grid and the account workspace asks you to choose a valid account. Filter on them from the health line and remap them one by one, or load a CSV.
@@ -508,7 +508,7 @@ account_number;account_name;native_name;description;consolidation_account_number
 
 ## Tips
 
-  - **Start with templates**: KANAP ships with templates for 9 countries plus IFRS. Load one instead of building from scratch: you get proper account numbers, native names, and IFRS consolidation mappings out of the box. Start with v1.0 (Simple) if unsure; upgrade to v2.0 (Detailed) if you need more granularity.
+  - **Start with templates**: Kadratis ships with templates for 9 countries plus IFRS. Load one instead of building from scratch: you get proper account numbers, native names, and IFRS consolidation mappings out of the box. Start with v1.0 (Simple) if unsure; upgrade to v2.0 (Detailed) if you need more granularity.
   - **One default per country**: Make one CoA the default for each country, so new companies start with the right account structure.
   - **Native names for compliance**: Use the **Native name (local language)** field if local regulations require accounts in the local language. Enable the **Native name** column in the grid to see both names at a glance.
   - **Migrate gradually**: You don't have to convert everything at once. Companies without CoAs continue to work with legacy accounts.
@@ -595,7 +595,7 @@ A: Yes, in the account's workspace. Changing the account number updates all refe
 A: Open **Manage charts** on the Charts of Accounts page and read the **Companies** column of the CoA's row. You can also filter the Companies page by CoA.
 
 **Q: What if my country doesn't have a template?**
-A: KANAP includes templates for 9 countries (FR, DE, GB, ES, IT, NL, BE, CH, US) plus IFRS as a global standard. If your country isn't covered, create a CoA from scratch and add accounts manually or via CSV import. You can still use the IFRS consolidation account numbers (1000-2900) in your consolidation mappings to stay compatible with the built-in templates.
+A: Kadratis includes templates for 9 countries (FR, DE, GB, ES, IT, NL, BE, CH, US) plus IFRS as a global standard. If your country isn't covered, create a CoA from scratch and add accounts manually or via CSV import. You can still use the IFRS consolidation account numbers (1000-2900) in your consolidation mappings to stay compatible with the built-in templates.
 
 **Q: What's the difference between v1.0 and v2.0 templates?**
 A: **v1.0 (Simple)** has ~20 IT-focused accounts covering essential cost categories. **v2.0 (Detailed)** adds ~10 more granular sub-accounts for finer tracking (e.g., splitting SaaS subscriptions from perpetual licenses, or IT salaries from bonuses). Both versions use the same consolidation mappings. Start with v1.0 and switch to v2.0 if you need more detail.

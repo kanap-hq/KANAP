@@ -1,6 +1,6 @@
 # Tareas programadas
 
-La página Tareas programadas lista cada trabajo recurrente en segundo plano que KANAP ejecuta en una programación cron: limpiezas, sincronizaciones periódicas, correos de resumen, aplicación de retención, etc. Desde aquí puede pausar un trabajo, cambiar cuándo se ejecuta, dispararlo bajo demanda e inspeccionar el historial de cada ejecución reciente.
+La página Tareas programadas lista cada trabajo recurrente en segundo plano que Kadratis ejecuta en una programación cron: limpiezas, sincronizaciones periódicas, correos de resumen, aplicación de retención, etc. Desde aquí puede pausar un trabajo, cambiar cuándo se ejecuta, dispararlo bajo demanda e inspeccionar el historial de cada ejecución reciente.
 
 ## Dónde encontrarlo
 

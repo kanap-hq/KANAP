@@ -67,7 +67,7 @@ Die Seite Audit-Protokoll bewahrt die Historie der Datenänderungen und der Sich
 | **Zurücksetzen des Passworts angefordert** / **Passwort zurückgesetzt** | jemand einen Link zum Zurücksetzen anfordert und danach mit diesem Link ein neues Passwort festlegt. Konnte die E-Mail mit dem Link nicht gesendet werden, nennt der **Grund** dies |
 | **Anmeldung mit Microsoft** / **Fehlgeschlagene Anmeldung mit Microsoft** | eine Anmeldung über Microsoft Entra ID gelingt oder fehlschlägt |
 
-**Exporte** (Tabelle **Export**): jede Datei, die KANAP aus Ihren Daten erzeugt: Listen- und Berichtsexporte als CSV oder Excel, Dokumente und PDF-Berichte. Die Zeile zeigt, was exportiert wurde und von wem. Ihre Details nennen das Format, die Parameter des Exports (Filter, Suche, Sortierung, Jahr usw.) und, bei einer Datei mit Zeilen, die Zahl der geschriebenen Zeilen. Auch der Export des Audit-Protokolls wird aufgezeichnet.
+**Exporte** (Tabelle **Export**): jede Datei, die Kadratis aus Ihren Daten erzeugt: Listen- und Berichtsexporte als CSV oder Excel, Dokumente und PDF-Berichte. Die Zeile zeigt, was exportiert wurde und von wem. Ihre Details nennen das Format, die Parameter des Exports (Filter, Suche, Sortierung, Jahr usw.) und, bei einer Datei mit Zeilen, die Zahl der geschriebenen Zeilen. Auch der Export des Audit-Protokolls wird aufgezeichnet.
 
 Anmelde-, Sitzungs- und Export-Zeilen halten außerdem die **IP-Adresse** fest, von der die Anfrage kam, sowie den verwendeten **Browser**. Öffnen Sie die Zeile, um beides in den Zeilen **IP-Adresse** und **Browser** ihrer Tabelle zu lesen. Hinter einem Reverse Proxy ist es die IP-Adresse der Person selbst, sofern der Proxy sie weitergibt (On-Premise: siehe das [Reverse-Proxy-Beispiel](on-premise/installation.md#reverse-proxy-example-nginx)).
 
@@ -118,8 +118,8 @@ Anmelde- und Sitzungsereignisse werden nach **365 Tagen** gelöscht. Datenänder
 Klicken Sie oben auf der Seite auf **Exportieren** und wählen Sie **CSV** oder **Excel (.xlsx)**, um das Protokoll als Datei herunterzuladen. Ihr Browser merkt sich die Wahl für den nächsten Export.
 
 - Die Datei enthält die Einträge, die zu den auf dem Bildschirm angezeigten Filtern, der Suche und der Sortierung passen. Entfernen Sie die Filter, um das gesamte Protokoll zu exportieren.
-- Eine Datei enthält höchstens **100.000 Einträge**, standardmäßig die neuesten zuerst. Ist das Protokoll größer, weist KANAP darauf hin, dass die Datei dort endet. Grenzen Sie die Filter ein (zum Beispiel auf einen Zeitraum) und exportieren Sie erneut, um den Rest zu erhalten.
-- Sie können nur wenige Exporte pro Minute starten. Klicken Sie zu früh erneut, bittet KANAP Sie, eine Minute zu warten.
+- Eine Datei enthält höchstens **100.000 Einträge**, standardmäßig die neuesten zuerst. Ist das Protokoll größer, weist Kadratis darauf hin, dass die Datei dort endet. Grenzen Sie die Filter ein (zum Beispiel auf einen Zeitraum) und exportieren Sie erneut, um den Rest zu erhalten.
+- Sie können nur wenige Exporte pro Minute starten. Klicken Sie zu früh erneut, bittet Kadratis Sie, eine Minute zu warten.
 - Der Export wird wie jeder andere Export im Protokoll aufgezeichnet.
 
 Die CSV-Datei hat unabhängig von Ihrer Sprache immer dasselbe Format, damit ein Werkzeug zur Protokollsammlung sie ohne Einrichtung lesen kann:
@@ -150,7 +150,7 @@ Wenn ein Benutzerkonto im aktuellen Kontext nicht mehr aufgelöst werden kann, z
 
 ## Benutzer & Zugriff
 
-Verwalten Sie, wer auf KANAP zugreifen kann und was die jeweiligen Personen tun können.
+Verwalten Sie, wer auf Kadratis zugreifen kann und was die jeweiligen Personen tun können.
 
 ### Das Benutzer-Grid
 
@@ -175,7 +175,7 @@ Sobald der Datenzugriff einer Person begrenzt ist, zeigt eine Spalte **Zugriff**
 
 | Status | Bedeutung |
 |--------|-----------|
-| **Aktiv** | Das Konto kann sich anmelden und KANAP nutzen. |
+| **Aktiv** | Das Konto kann sich anmelden und Kadratis nutzen. |
 | **Deaktiviert** | Das Konto bleibt mit seiner gesamten Historie erhalten, kann sich aber nicht anmelden. |
 | **Eingeladen** | Eine Einladung wurde gesendet, und die Person hat sich noch nicht angemeldet. |
 | **Zugriff ausstehend** | Die Person kann sich anmelden, hat aber keine Rolle und kann daher nichts öffnen. Weisen Sie eine Rolle zu, um Zugriff zu geben. |
@@ -270,7 +270,7 @@ Das Entfernen aller Rollen löscht das Konto nicht. Der Benutzer fällt auf die 
 ### Aktivierte und deaktivierte Benutzer
 
 Ihr Abonnement umfasst **unbegrenzte Nutzer**. Der Schalter **Aktiviert** legt fest, wer sich anmelden kann:
-- **Aktivierte Benutzer**: Können sich anmelden und KANAP nutzen
+- **Aktivierte Benutzer**: Können sich anmelden und Kadratis nutzen
 - **Deaktivierte Benutzer**: Behalten ihre Daten, können sich aber nicht mehr anmelden
 - Schalten Sie den **Aktiviert**-Schalter beim Bearbeiten eines Benutzers um, um den Zugriff zu steuern
 
@@ -281,9 +281,9 @@ Konten mit dem Kontotyp **Microsoft Entra** gehören Ihrem Verzeichnis. Ihr Prof
 - **Bei jeder Anmeldung**, aus dem eigenen Microsoft-Profil der Person
 - **Jede Nacht**, durch die tägliche Verzeichnissynchronisierung, sofern ein Microsoft Entra-Administrator sie genehmigt hat. Siehe [Authentifizierung](#authentifizierung).
 
-Beide aktualisieren dieselben Felder: Vorname, Nachname, Position, Geschäftstelefon, Mobiltelefon sowie Abteilung und Unternehmen, die nach Namen mit bereits in KANAP vorhandenen Datensätzen abgeglichen werden. Leere Werte im Verzeichnis löschen niemals das, was in KANAP gespeichert ist.
+Beide aktualisieren dieselben Felder: Vorname, Nachname, Position, Geschäftstelefon, Mobiltelefon sowie Abteilung und Unternehmen, die nach Namen mit bereits in Kadratis vorhandenen Datensätzen abgeglichen werden. Leere Werte im Verzeichnis löschen niemals das, was in Kadratis gespeichert ist.
 
-Personen, die zugleich Mitwirkende sind, erhalten mit der nächtlichen Synchronisierung auch ihren **Vorgesetzten** aus dem Verzeichnis. KANAP gleicht den in Entra hinterlegten Vorgesetzten mit dessen KANAP-Konto ab und trägt ihn im Profil des Mitwirkenden ein, wo das Feld schreibgeschützt wird. Ein Vorgesetzter ohne KANAP-Konto wird von einer späteren Synchronisierung nachgetragen. Siehe [Mitwirkende](portfolio-team-members.md).
+Personen, die zugleich Mitwirkende sind, erhalten mit der nächtlichen Synchronisierung auch ihren **Vorgesetzten** aus dem Verzeichnis. Kadratis gleicht den in Entra hinterlegten Vorgesetzten mit dessen Kadratis-Konto ab und trägt ihn im Profil des Mitwirkenden ein, wo das Feld schreibgeschützt wird. Ein Vorgesetzter ohne Kadratis-Konto wird von einer späteren Synchronisierung nachgetragen. Siehe [Mitwirkende](portfolio-team-members.md).
 
 Beim Bearbeiten eines solchen Benutzers sind die Felder E-Mail, Name, Position und Telefon gesperrt, mit dem Hinweis:
 
@@ -291,13 +291,13 @@ Beim Bearbeiten eines solchen Benutzers sind die Felder E-Mail, Name, Position u
 
 Rollen, Unternehmen, Abteilung und den Aktiviert-Schalter können Sie weiterhin verwalten.
 
-Microsoft Entra-Konten haben nie ein KANAP-Passwort. An sie kann weder eine Einladung noch eine Passwort-Zurücksetzung gesendet werden.
+Microsoft Entra-Konten haben nie ein Kadratis-Passwort. An sie kann weder eine Einladung noch eine Passwort-Zurücksetzung gesendet werden.
 
-Wenn jemand aus Ihrem Verzeichnis entfernt wird oder sein Verzeichniskonto deaktiviert wird, deaktiviert die nächtliche Synchronisierung sein KANAP-Konto. Die Person wird sofort abgemeldet und ihre Daten bleiben erhalten.
+Wenn jemand aus Ihrem Verzeichnis entfernt wird oder sein Verzeichniskonto deaktiviert wird, deaktiviert die nächtliche Synchronisierung sein Kadratis-Konto. Die Person wird sofort abgemeldet und ihre Daten bleiben erhalten.
 
 ### Just-in-time-Anmeldung mit Microsoft
 
-Wenn Single Sign-On verbunden ist, erhält eine Person, die sich zum ersten Mal mit Microsoft anmeldet, automatisch ein KANAP-Konto. Existiert bereits ein Konto mit derselben E-Mail-Adresse, wird stattdessen dieses mit ihrer Microsoft-Identität verknüpft, und ein Konto mit dem Status **Eingeladen** wird aktiviert.
+Wenn Single Sign-On verbunden ist, erhält eine Person, die sich zum ersten Mal mit Microsoft anmeldet, automatisch ein Kadratis-Konto. Existiert bereits ein Konto mit derselben E-Mail-Adresse, wird stattdessen dieses mit ihrer Microsoft-Identität verknüpft, und ein Konto mit dem Status **Eingeladen** wird aktiviert.
 
 Ein neues Konto startet mit der Systemrolle **Kontakt** und ohne Berechtigungen. Die Person sieht eine Seite mit dem Hinweis:
 
@@ -309,14 +309,14 @@ Administratoren erhalten in diesem Fall eine E-Mail. Um der Person Zugriff zu ge
 
 ## Rollen
 
-Definieren Sie, was jede Rolle in KANAP tun kann.
+Definieren Sie, was jede Rolle in Kadratis tun kann.
 
 ### Wie Rollen funktionieren
 
 Jede Rolle hat Berechtigungsstufen für verschiedene Ressourcen:
 - **Keine**: Kein Zugriff auf diese Ressource
 - **Leser**: Nur Ansicht
-- **Mitwirkender**: Ansicht und Bearbeitung bestehender Elemente, Kommentare und Anhänge hinzufügen, aber keine neuen übergeordneten Elemente erstellen. Der Rolleneditor bietet diese Stufe bei den meisten Ressourcen an (nicht bei Wissensdatenbank, KI-Einstellungen, Plaid-Chat und MCP-Zugriff). Portfolio-Projekte, Vorfälle und KI-Agenten nutzen sie heute. Bei allen anderen Ressourcen erfordern Änderungen die Stufe Mitglied, ein Mitwirkender hat dort also Leserechte.
+- **Mitwirkender**: Ansicht und Bearbeitung bestehender Elemente, Kommentare und Anhänge hinzufügen, aber keine neuen übergeordneten Elemente erstellen. Der Rolleneditor bietet diese Stufe bei den meisten Ressourcen an (nicht bei Wissensdatenbank, KI-Einstellungen, Kad-Chat und MCP-Zugriff). Portfolio-Projekte, Vorfälle und KI-Agenten nutzen sie heute. Bei allen anderen Ressourcen erfordern Änderungen die Stufe Mitglied, ein Mitwirkender hat dort also Leserechte.
 - **Mitglied**: Ansicht, Erstellen und Bearbeiten
 - **Administrator**: Vollzugriff einschließlich Löschen
 
@@ -394,7 +394,7 @@ Rollen werden nach ihrer Änderbarkeit kategorisiert:
 
 ### Integrierte Rollen
 
-KANAP wird mit vorkonfigurierten Rollen ausgeliefert, die nach Funktionsbereichen organisiert sind:
+Kadratis wird mit vorkonfigurierten Rollen ausgeliefert, die nach Funktionsbereichen organisiert sind:
 
 **Budget**: Budget-Administrator, Budget-Mitglied, Budget-Leser
 **Portfolio**: Portfolio-Administrator, Portfolio-Mitglied, Portfolio-Leser, **Fachbereichs-Mitwirkender**
@@ -427,12 +427,12 @@ Die Rolle **Kontakt** ist eine spezielle Systemrolle für Benutzer, die in Dropd
 - Platzhaltereinträge für die Organisationsstruktur
 
 **Kontakt-Benutzer:**
-- Können sich nicht bei KANAP anmelden
+- Können sich nicht bei Kadratis anmelden
 - Zählen nicht zur Gesamtzahl der aktivierten Benutzer
 - Erhalten keine E-Mail-Benachrichtigungen (auch wenn sie Projekten/Aufgaben zugewiesen sind)
 - Können in Benutzer-Dropdowns ausgewählt werden (z. B. als Projektsponsor)
 
-Wenn jemand mit der Kontakt-Rolle KANAP aktiv nutzen muss, ändern Sie die Rolle zu einer regulären Rolle (z. B. Leser, Mitglied) und laden Sie die Person ein.
+Wenn jemand mit der Kontakt-Rolle Kadratis aktiv nutzen muss, ändern Sie die Rolle zu einer regulären Rolle (z. B. Leser, Mitglied) und laden Sie die Person ein.
 
 Eine Ausnahme: Auch eine Person, die bei ihrer ersten Microsoft-Anmeldung automatisch angelegt wird, hat die Kontakt-Rolle. Sie kann sich anmelden, erreicht aber nur die Seite mit dem ausstehenden Zugriff, bis Sie ihr eine Rolle zuweisen. Im Grid erscheint sie als **Zugriff ausstehend**.
 
@@ -449,7 +449,7 @@ Die Rollenseite hat ein zweispaltiges Layout:
 - **Details speichern**: Rollenname und -beschreibung aktualisieren
 - **Berechtigungen speichern**: Berechtigungsänderungen anwenden
 
-Ein Benutzeradministrator mit Zugriff auf alle Daten kann [Plaid](ai-assistant.md#tool-calls) auch nach den Rollen, ihrer Benutzerzahl und ihren Rechten fragen. Änderungen bleiben auf dieser Seite.
+Ein Benutzeradministrator mit Zugriff auf alle Daten kann [Kad](ai-assistant.md#tool-calls) auch nach den Rollen, ihrer Benutzerzahl und ihren Rechten fragen. Änderungen bleiben auf dieser Seite.
 
 ### Benutzerdefinierte Rolle erstellen
 
@@ -472,7 +472,7 @@ Verwalten Sie Ihr Abonnement, Ihre Rechnungsinformationen und Ihre Rechnungen.
 ### Abonnement-Übersicht
 
 Oben auf der Seite wird Ihr Abonnement in zwei Zeilen zusammengefasst:
-- Der Tarif, die Abrechnungsfrequenz und der Betrag, zum Beispiel „Hosted KANAP · Jährlich · 2.490,00 € / Jahr“. Das Abonnement umfasst unbegrenzte Nutzer, mit monatlicher oder jährlicher Abrechnung.
+- Der Tarif, die Abrechnungsfrequenz und der Betrag, zum Beispiel „Kadratis Cloud · Jährlich · 2.490,00 € / Jahr“. Das Abonnement umfasst unbegrenzte Nutzer, mit monatlicher oder jährlicher Abrechnung.
 - Der Status (Aktiv, Testphase, Überfällig, Gekündigt usw.), das Verlängerungsdatum und die Zahlungsmethode, zum Beispiel „Aktiv · Verlängerung am 7. Okt. 2027 · Visa •••• 4242“.
 
 Ohne laufendes Abonnement (eine Testphase, eine abgelaufene Testphase oder ein beendetes Abonnement) wird nur der Status angezeigt. Während einer Testphase stehen daneben das Ende der Testphase und die verbleibenden Tage.
@@ -481,7 +481,7 @@ Während einer Testphase zeigt zusätzlich ein Etikett in der oberen Leiste die 
 
 Endet eine Testphase ohne Abonnement, bleibt der Arbeitsbereich 30 Tage lang lesbar. Danach wird er mit allen Daten gelöscht. Schließen Sie vor diesem Datum ein Abonnement ab, bleibt der Arbeitsbereich unverändert erhalten.
 
-Im Cloud-Dienst erhält die Person, die die Testphase gestartet hat, während der Testphase einige E-Mails von KANAP und ein Dankeschön, sobald der Arbeitsbereich ein Abonnement abschließt. Jede E-Mail der Testphase endet mit einem Link, der die folgenden mit einem Klick abbestellt. Das Dankeschön wird in jedem Fall gesendet.
+Im Cloud-Dienst erhält die Person, die die Testphase gestartet hat, während der Testphase einige E-Mails von Kadratis und ein Dankeschön, sobald der Arbeitsbereich ein Abonnement abschließt. Jede E-Mail der Testphase endet mit einem Link, der die folgenden mit einem Klick abbestellt. Das Dankeschön wird in jedem Fall gesendet.
 
 Ist ein Wechsel zur monatlichen Abrechnung geplant, zeigt ihn eine dritte Zeile an, zum Beispiel „Wechselt am 7. Okt. 2027 zu monatlich.“ Klicken Sie in dieser Zeile auf **Jährlich beibehalten**, um den Wechsel abzubrechen.
 
@@ -500,7 +500,7 @@ Aktivieren Sie vor der Zahlung **Ich akzeptiere die Allgemeinen Geschäftsbeding
 
 Sie können auf zwei Arten zahlen:
 - **Per Karte zahlen**: für monatliche oder jährliche Abrechnung. Die Stripe-Zahlungsseite öffnet sich. Die Karte wird bei jeder ausgestellten Rechnung belastet.
-- **Per Überweisung zahlen**: nur für jährliche Abrechnung. KANAP stellt die Rechnung aus und öffnet sie. Die Rechnung ist innerhalb von 30 Tagen zahlbar.
+- **Per Überweisung zahlen**: nur für jährliche Abrechnung. Kadratis stellt die Rechnung aus und öffnet sie. Die Rechnung ist innerhalb von 30 Tagen zahlbar.
 
 Es wird keine Mehrwertsteuer berechnet. Jede Rechnung trägt den Vermerk „TVA non applicable, art. 293 B du CGI“.
 
@@ -517,7 +517,7 @@ Der Planwechsel eines laufenden Kartenabonnements erfordert keine vollständigen
 
 ### Rechnungsinformationen
 
-Diese Angaben erscheinen auf Ihren Rechnungen. KANAP kopiert sie in Ihren Stripe-Kundendatensatz, wenn Sie ein Abonnement abschließen und jedes Mal, wenn ein Feld gespeichert wird.
+Diese Angaben erscheinen auf Ihren Rechnungen. Kadratis kopiert sie in Ihren Stripe-Kundendatensatz, wenn Sie ein Abonnement abschließen und jedes Mal, wenn ein Feld gespeichert wird.
 
 Der Bereich enthält Unternehmen, E-Mail, Empfängername, Telefon, Adresse (Zeile 1, Zeile 2, Postleitzahl, Stadt, Bundesland/Kanton), Land und USt-IdNr.
 
@@ -534,9 +534,9 @@ Pflichtfelder sind mit einem Sternchen markiert:
 
 Sie können unvollständige Angaben stehen lassen und später ergänzen. Solange etwas fehlt, listet eine Zeile unter den Feldern es auf, zum Beispiel „Vor dem Abschluss eines Abonnements erforderlich: E-Mail, Stadt.“ Vor dem Abschluss eines Abonnements müssen die Angaben vollständig sein.
 
-Frühere Versionen von KANAP hatten eine separate Karte mit Kundeninformationen. Wenn Sie diese ausgefüllt haben, erscheinen ihre Werte in den entsprechenden leeren Rechnungsfeldern und werden als Rechnungsinformationen gespeichert, sobald Sie das nächste Mal ein Feld ändern.
+Frühere Versionen von Kadratis hatten eine separate Karte mit Kundeninformationen. Wenn Sie diese ausgefüllt haben, erscheinen ihre Werte in den entsprechenden leeren Rechnungsfeldern und werden als Rechnungsinformationen gespeichert, sobald Sie das nächste Mal ein Feld ändern.
 
-Bei einem Land der Europäischen Union wird die USt-IdNr. an Stripe übermittelt und auf Ihren Rechnungen ausgewiesen. Wenn Stripe sie nicht akzeptiert, zeigt KANAP „Die USt-IdNr. wurde nicht akzeptiert. Prüfen Sie sie in den Rechnungsinformationen.“ Korrigieren Sie die Nummer und versuchen Sie es erneut.
+Bei einem Land der Europäischen Union wird die USt-IdNr. an Stripe übermittelt und auf Ihren Rechnungen ausgewiesen. Wenn Stripe sie nicht akzeptiert, zeigt Kadratis „Die USt-IdNr. wurde nicht akzeptiert. Prüfen Sie sie in den Rechnungsinformationen.“ Korrigieren Sie die Nummer und versuchen Sie es erneut.
 
 ### Rechnungshistorie
 
@@ -559,7 +559,7 @@ Konfigurieren Sie Single Sign-On (SSO) für Ihre Organisation. Diese Seite ist n
 
 ### Microsoft Entra ID
 
-Verbinden Sie KANAP mit Ihrem Microsoft Entra ID-Mandanten für SSO:
+Verbinden Sie Kadratis mit Ihrem Microsoft Entra ID-Mandanten für SSO:
 
 1. Klicken Sie auf **Verbinden**
 2. Melden Sie sich mit einem Microsoft-Administratorkonto an
@@ -582,11 +582,11 @@ Verbinden Sie KANAP mit Ihrem Microsoft Entra ID-Mandanten für SSO:
 
 ### Tägliche Verzeichnissynchronisierung
 
-Dieser Block erscheint unterhalb der Entra-Karte, sobald Single Sign-On verbunden ist. Jede Nacht um 03:00 Uhr Serverzeit aktualisiert KANAP Namen, Titel, Telefonnummern, Abteilungen und Unternehmen aus Microsoft Entra, aktualisiert den Vorgesetzten der Personen, die Mitwirkende sind, und deaktiviert Konten, die im Verzeichnis entfernt oder deaktiviert wurden.
+Dieser Block erscheint unterhalb der Entra-Karte, sobald Single Sign-On verbunden ist. Jede Nacht um 03:00 Uhr Serverzeit aktualisiert Kadratis Namen, Titel, Telefonnummern, Abteilungen und Unternehmen aus Microsoft Entra, aktualisiert den Vorgesetzten der Personen, die Mitwirkende sind, und deaktiviert Konten, die im Verzeichnis entfernt oder deaktiviert wurden.
 
-Abteilungen und Unternehmen werden nach Namen mit bereits in KANAP vorhandenen Datensätzen abgeglichen. Es wird nichts automatisch angelegt. Leere Werte im Verzeichnis löschen niemals das, was bereits in KANAP gespeichert ist.
+Abteilungen und Unternehmen werden nach Namen mit bereits in Kadratis vorhandenen Datensätzen abgeglichen. Es wird nichts automatisch angelegt. Leere Werte im Verzeichnis löschen niemals das, was bereits in Kadratis gespeichert ist.
 
-Die Synchronisierung erfordert eine einmalige Genehmigung durch einen Microsoft Entra-Administrator. Bis sie erteilt ist, zeigt der Block **Noch nicht autorisiert. Ein Microsoft Entra-Administrator muss KANAP die Berechtigung erteilen, Verzeichnisbenutzer zu lesen.**
+Die Synchronisierung erfordert eine einmalige Genehmigung durch einen Microsoft Entra-Administrator. Bis sie erteilt ist, zeigt der Block **Noch nicht autorisiert. Ein Microsoft Entra-Administrator muss Kadratis die Berechtigung erteilen, Verzeichnisbenutzer zu lesen.**
 
 | Zustand oder Aktion | Was er bedeutet |
 |---------------------|-----------------|
@@ -600,12 +600,12 @@ Die Einrichtungsschritte für die Entra-App-Registrierung finden Sie unter [Micr
 
 ### Anmeldelimits
 
-KANAP begrenzt wiederholte Anmeldeanfragen:
+Kadratis begrenzt wiederholte Anmeldeanfragen:
 
 - **Anmeldung mit Passwort**: 60 Anfragen pro Minute von derselben IP-Adresse. Nach 5 Fehlversuchen für ein Konto von derselben IP-Adresse innerhalb von 15 Minuten kann sich dieses Konto 15 Minuten lang nicht von dieser Adresse anmelden. Dasselbe Konto kann sich weiterhin von einer anderen Adresse anmelden, andere Konten auch von derselben Adresse. Eine erfolgreiche Anmeldung setzt den Zähler zurück.
 - **Anmeldung mit Microsoft**: 60 Anfragen pro Minute von derselben IP-Adresse.
 
-Die Limits pro Adresse sind hoch, weil die Beschäftigten einer Organisation KANAP oft über dieselbe ausgehende Adresse erreichen. Ist ein Limit pro Adresse erreicht, wartet die Person eine Minute und versucht es erneut. Hinter einem Reverse Proxy zählt KANAP die IP-Adresse jeder Person, sofern der Proxy sie weitergibt.
+Die Limits pro Adresse sind hoch, weil die Beschäftigten einer Organisation Kadratis oft über dieselbe ausgehende Adresse erreichen. Ist ein Limit pro Adresse erreicht, wartet die Person eine Minute und versucht es erneut. Hinter einem Reverse Proxy zählt Kadratis die IP-Adresse jeder Person, sofern der Proxy sie weitergibt.
 
 Anmeldungen und fehlgeschlagene Anmeldungen erscheinen im [Audit-Protokoll](#audit-protokoll). Wenn 5 Fehlversuche ein Konto von einer Adresse sperren, wird eine fehlgeschlagene Anmeldung mit dem Grund **Zu viele Anmeldeversuche** aufgezeichnet. Wer das Passwort über **Passwort vergessen** zurücksetzt, hebt die Sperre sofort auf. Versuche, die in den folgenden 15 Minuten abgelehnt werden, werden nicht aufgezeichnet, ebenso wenig Anfragen, die ein Limit pro Adresse stoppt.
 
@@ -613,7 +613,7 @@ Anmeldungen und fehlgeschlagene Anmeldungen erscheinen im [Audit-Protokoll](#aud
 
 ## Branding
 
-Verwenden Sie **Administration > Branding**, um Ihre Unternehmensidentität in KANAP anzuwenden.
+Verwenden Sie **Administration > Branding**, um Ihre Unternehmensidentität in Kadratis anzuwenden.
 
 - Route: `/admin/branding`
 - Berechtigung: `users:admin`
@@ -659,7 +659,7 @@ Bearbeiten Sie Ihre persönlichen Informationen:
 - **Berufsbezeichnung**
 - **Geschäftstelefon** / **Mobiltelefon**
 
-Wenn Ihre Organisation Microsoft Entra ID (SSO) verwendet, können einige Felder aus Entra synchronisiert sein und in KANAP nicht bearbeitet werden.
+Wenn Ihre Organisation Microsoft Entra ID (SSO) verwendet, können einige Felder aus Entra synchronisiert sein und in Kadratis nicht bearbeitet werden.
 
 Hat Ihr Konto weder Vor- noch Nachnamen, fragt ein kleines Fenster nach der Anmeldung danach. **Später** blendet es in diesem Browser aus. Sie können beide hier jederzeit ändern.
 
@@ -691,14 +691,14 @@ Verwenden Sie die Schaltfläche **E-Mail-Vorschau**, um sich eine Test-E-Mail zu
 
 Alle Änderungen werden automatisch gespeichert, sobald Sie Schalter umschalten oder Auswahlen ändern.
 
-### Über KANAP
+### Über Kadratis
 
-Öffnen Sie **Über KANAP** im Benutzermenü, unter **Abmelden**. Der Menüeintrag zeigt auch die Version. Der Tab **Über** dieser Seite zeigt denselben Inhalt:
+Öffnen Sie **Über Kadratis** im Benutzermenü, unter **Abmelden**. Der Menüeintrag zeigt auch die Version. Der Tab **Über** dieser Seite zeigt denselben Inhalt:
 
 - Die Version und die Bereitstellung (Cloud oder On-Premise)
 - In der Cloud, während einer Testphase, die verbleibenden Tage, mit einem Link **Tarif wählen** für Abrechnungsadministratoren
 - Während einer Testphase der beim ersten Öffnen gewählte Pfad, mit **Ändern**, und **Erste Schritte anzeigen**, wenn die Kachel der ersten Schritte ausgeblendet ist. Siehe [Mein Dashboard](my-dashboard.md#trial-first-steps)
-- Links zu den Versionshinweisen dieser Version, zur Dokumentation, zu kanap.net und zum Quellcode (Lizenz AGPL-3.0)
+- Links zu den Versionshinweisen dieser Version, zur Dokumentation, zu kadratis.com und zum Quellcode (Lizenz AGPL-3.0)
 - On-Premise ein Link zur Upgrade-Anleitung
 
 **Support** nennt die Wege zu Hilfe:

@@ -67,7 +67,7 @@ La page Journal d'audit conserve l'historique des modifications de données et d
 | **Réinitialisation du mot de passe demandée** / **Réinitialisation du mot de passe terminée** | Quelqu'un demande un lien de réinitialisation, puis définit un nouveau mot de passe avec ce lien. Si l'e-mail contenant le lien n'a pas pu être envoyé, le **motif** le signale |
 | **Connexion avec Microsoft** / **Échec de connexion avec Microsoft** | Une connexion via Microsoft Entra ID réussit ou échoue |
 
-**Exports** (table **Export**) : chaque fichier que KANAP produit à partir de vos données : exports de listes et de rapports en CSV ou Excel, documents et rapports PDF. La ligne indique ce qui a été exporté et par qui. Ses détails donnent le format, les paramètres de l'export (filtres, recherche, tri, année, etc.) et, pour un fichier de lignes, le nombre de lignes écrites. L'export du journal d'audit est lui aussi enregistré.
+**Exports** (table **Export**) : chaque fichier que Kadratis produit à partir de vos données : exports de listes et de rapports en CSV ou Excel, documents et rapports PDF. La ligne indique ce qui a été exporté et par qui. Ses détails donnent le format, les paramètres de l'export (filtres, recherche, tri, année, etc.) et, pour un fichier de lignes, le nombre de lignes écrites. L'export du journal d'audit est lui aussi enregistré.
 
 Les lignes de connexion, de session et d'export conservent aussi l'**adresse IP** d'où venait la demande et le **navigateur** utilisé. Ouvrez la ligne pour les lire dans les lignes **Adresse IP** et **Navigateur** de son tableau. Derrière un reverse proxy, c'est l'adresse IP de la personne elle-même, tant que le proxy la transmet (on-premise : voir l'[exemple de reverse proxy](on-premise/installation.md#reverse-proxy-example-nginx)).
 
@@ -118,8 +118,8 @@ Les événements de connexion et de session sont supprimés après **365 jours**
 Cliquez sur **Exporter** en haut de la page, puis choisissez **CSV** ou **Excel (.xlsx)**, pour télécharger le journal sous forme de fichier. Votre navigateur mémorise ce choix pour l'export suivant.
 
 - Le fichier contient les entrées qui correspondent aux filtres, à la recherche et au tri affichés à l'écran. Effacez les filtres pour exporter tout le journal.
-- Un fichier contient au plus **100 000 entrées**, les plus récentes d'abord par défaut. Quand le journal est plus grand, KANAP vous indique que le fichier s'arrête là. Affinez les filtres (une plage de dates, par exemple) et exportez à nouveau pour obtenir le reste.
-- Vous ne pouvez lancer que quelques exports par minute. Si vous cliquez de nouveau trop tôt, KANAP vous demande d'attendre une minute.
+- Un fichier contient au plus **100 000 entrées**, les plus récentes d'abord par défaut. Quand le journal est plus grand, Kadratis vous indique que le fichier s'arrête là. Affinez les filtres (une plage de dates, par exemple) et exportez à nouveau pour obtenir le reste.
+- Vous ne pouvez lancer que quelques exports par minute. Si vous cliquez de nouveau trop tôt, Kadratis vous demande d'attendre une minute.
 - L'export est enregistré dans le journal, comme tout autre export.
 
 Le fichier CSV a toujours le même format, quelle que soit votre langue, pour qu'un outil de collecte de journaux puisse le lire sans réglage :
@@ -150,7 +150,7 @@ Si un compte utilisateur n'est plus identifiable dans le contexte actuel, la col
 
 ## Utilisateurs et accès
 
-Gérez qui peut accéder à KANAP et ce qu'ils peuvent faire.
+Gérez qui peut accéder à Kadratis et ce qu'ils peuvent faire.
 
 ### La grille des utilisateurs
 
@@ -175,7 +175,7 @@ Dès que l'accès aux données d'une personne est limité, une colonne **Accès*
 
 | Statut | Signification |
 |--------|---------------|
-| **Activé** | Le compte peut se connecter et utiliser KANAP. |
+| **Activé** | Le compte peut se connecter et utiliser Kadratis. |
 | **Désactivé** | Le compte est conservé avec tout son historique, mais ne peut pas se connecter. |
 | **Invité** | Une invitation a été envoyée et la personne ne s'est pas encore connectée. |
 | **Accès en attente** | La personne peut se connecter mais n'a aucun rôle, elle ne peut donc rien ouvrir. Assignez-lui un rôle pour lui donner accès. |
@@ -270,7 +270,7 @@ Retirer tous les rôles ne supprime pas le compte. L'utilisateur revient au rôl
 ### Utilisateurs activés et désactivés
 
 Votre abonnement inclut un nombre **illimité d'utilisateurs**. Le commutateur **Activé** détermine qui peut se connecter :
-- **Utilisateurs activés** : Peuvent se connecter et utiliser KANAP
+- **Utilisateurs activés** : Peuvent se connecter et utiliser Kadratis
 - **Utilisateurs désactivés** : Conservent leurs données mais ne peuvent plus se connecter
 - Basculez le commutateur **Activé** lors de la modification d'un utilisateur pour contrôler l'accès
 
@@ -281,9 +281,9 @@ Les comptes dont le type de compte est **Microsoft Entra** appartiennent à votr
 - **À chaque connexion**, depuis le profil Microsoft de la personne
 - **Chaque nuit**, par la synchronisation quotidienne de l'annuaire, si un administrateur Microsoft Entra l'a approuvée. Voir [Authentification](#authentification).
 
-Les deux actualisent les mêmes champs : prénom, nom, poste, téléphone professionnel, téléphone mobile, ainsi que le département et la société, rapprochés par leur nom des enregistrements qui existent déjà dans KANAP. Les valeurs vides de l'annuaire n'effacent jamais ce qui est stocké dans KANAP.
+Les deux actualisent les mêmes champs : prénom, nom, poste, téléphone professionnel, téléphone mobile, ainsi que le département et la société, rapprochés par leur nom des enregistrements qui existent déjà dans Kadratis. Les valeurs vides de l'annuaire n'effacent jamais ce qui est stocké dans Kadratis.
 
-Les personnes qui sont aussi contributeurs reçoivent également leur **Responsable** depuis l'annuaire, avec la synchronisation nocturne. KANAP rapproche le responsable déclaré dans Entra de son compte KANAP et l'inscrit sur la fiche du contributeur, où le champ devient en lecture seule. Un responsable qui n'a pas encore de compte KANAP est repris par une synchronisation ultérieure. Voir [Contributeurs](portfolio-team-members.md).
+Les personnes qui sont aussi contributeurs reçoivent également leur **Responsable** depuis l'annuaire, avec la synchronisation nocturne. Kadratis rapproche le responsable déclaré dans Entra de son compte Kadratis et l'inscrit sur la fiche du contributeur, où le champ devient en lecture seule. Un responsable qui n'a pas encore de compte Kadratis est repris par une synchronisation ultérieure. Voir [Contributeurs](portfolio-team-members.md).
 
 Lors de la modification d'un de ces utilisateurs, les champs e-mail, nom, poste et téléphone sont verrouillés, avec la mention :
 
@@ -291,13 +291,13 @@ Lors de la modification d'un de ces utilisateurs, les champs e-mail, nom, poste 
 
 Vous pouvez toujours gérer ses rôles, sa société, son département et le commutateur Activé.
 
-Les comptes Microsoft Entra n'ont jamais de mot de passe KANAP. Ils ne peuvent recevoir ni invitation ni réinitialisation de mot de passe.
+Les comptes Microsoft Entra n'ont jamais de mot de passe Kadratis. Ils ne peuvent recevoir ni invitation ni réinitialisation de mot de passe.
 
-Si une personne est supprimée de votre annuaire, ou si son compte d'annuaire est désactivé, la synchronisation nocturne désactive son compte KANAP. Elle est déconnectée immédiatement et ses données sont conservées.
+Si une personne est supprimée de votre annuaire, ou si son compte d'annuaire est désactivé, la synchronisation nocturne désactive son compte Kadratis. Elle est déconnectée immédiatement et ses données sont conservées.
 
 ### Connexion à la volée avec Microsoft
 
-Lorsque le single sign-on est connecté, une personne qui se connecte avec Microsoft pour la première fois obtient automatiquement un compte KANAP. Si un compte avec la même adresse e-mail existe déjà, il est lié à son identité Microsoft à la place, et un compte **Invité** est activé.
+Lorsque le single sign-on est connecté, une personne qui se connecte avec Microsoft pour la première fois obtient automatiquement un compte Kadratis. Si un compte avec la même adresse e-mail existe déjà, il est lié à son identité Microsoft à la place, et un compte **Invité** est activé.
 
 Un nouveau compte démarre avec le rôle système **Contact** et aucune autorisation. La personne voit une page indiquant :
 
@@ -309,14 +309,14 @@ Les administrateurs reçoivent un e-mail lorsque cela se produit. Pour donner l'
 
 ## Rôles
 
-Définissez ce que chaque rôle peut faire dans KANAP.
+Définissez ce que chaque rôle peut faire dans Kadratis.
 
 ### Comment fonctionnent les rôles
 
 Chaque rôle a des niveaux d'autorisation pour différentes ressources :
 - **Aucun** : Pas d'accès à cette ressource
 - **Reader** : Consultation uniquement
-- **Contributeur** : Consultation et modification des éléments existants, ajout de commentaires et pièces jointes, mais pas de création de nouveaux éléments de premier niveau. L'éditeur de rôles propose ce niveau sur la plupart des ressources (pas sur Knowledge, les paramètres d'IA, le chat Plaid ni l'accès MCP). Les projets du portefeuille, les incidents et les agents IA l'utilisent aujourd'hui. Sur toutes les autres ressources, les modifications exigent le niveau Membre : un Contributeur y a donc un accès Lecteur.
+- **Contributeur** : Consultation et modification des éléments existants, ajout de commentaires et pièces jointes, mais pas de création de nouveaux éléments de premier niveau. L'éditeur de rôles propose ce niveau sur la plupart des ressources (pas sur Knowledge, les paramètres d'IA, le chat Kad ni l'accès MCP). Les projets du portefeuille, les incidents et les agents IA l'utilisent aujourd'hui. Sur toutes les autres ressources, les modifications exigent le niveau Membre : un Contributeur y a donc un accès Lecteur.
 - **Member** : Consultation, création et modification
 - **Admin** : Accès complet incluant la suppression
 
@@ -394,7 +394,7 @@ Les rôles sont catégorisés par la manière dont ils peuvent être modifiés :
 
 ### Rôles intégrés
 
-KANAP est livré avec des rôles pré-configurés organisés par domaine fonctionnel :
+Kadratis est livré avec des rôles pré-configurés organisés par domaine fonctionnel :
 
 **Budget** : Administrateur budget, Membre budget, Lecteur budget
 **Portefeuille** : Administrateur portefeuille, Membre portefeuille, Lecteur portefeuille, **Contributeur métier**
@@ -427,12 +427,12 @@ Le rôle **Contact** est un rôle système spécial pour les utilisateurs qui ap
 - Entrées de remplacement pour la structure organisationnelle
 
 **Les utilisateurs Contact :**
-- Ne peuvent pas se connecter à KANAP
+- Ne peuvent pas se connecter à Kadratis
 - Ne comptent pas dans le total des utilisateurs activés
 - Ne reçoivent pas de notifications par e-mail (même s'ils sont assignés à des projets/tâches)
 - Peuvent être sélectionnés dans les menus déroulants d'utilisateurs (ex. : comme sponsor de projet)
 
-Si une personne avec le rôle Contact a besoin d'utiliser activement KANAP, changez son rôle vers un rôle classique (ex. : Lecteur, Member) et invitez-la.
+Si une personne avec le rôle Contact a besoin d'utiliser activement Kadratis, changez son rôle vers un rôle classique (ex. : Lecteur, Member) et invitez-la.
 
 Une exception : une personne créée automatiquement lors de sa première connexion Microsoft porte aussi le rôle Contact. Elle peut se connecter, mais elle n'atteint que la page d'accès en attente tant que vous ne lui avez pas assigné de rôle. La grille l'affiche avec le statut **Accès en attente**.
 
@@ -449,7 +449,7 @@ La page Rôles a une disposition à deux panneaux :
 - **Enregistrer les détails** : Mettre à jour le nom et la description du rôle
 - **Enregistrer les autorisations** : Appliquer les modifications d'autorisations
 
-Un administrateur des utilisateurs qui a accès à toutes les données peut aussi interroger [Plaid](ai-assistant.md#tool-calls) sur les rôles, leur nombre d'utilisateurs et leurs droits. Les modifications restent sur cette page.
+Un administrateur des utilisateurs qui a accès à toutes les données peut aussi interroger [Kad](ai-assistant.md#tool-calls) sur les rôles, leur nombre d'utilisateurs et leurs droits. Les modifications restent sur cette page.
 
 ### Créer un rôle personnalisé
 
@@ -472,7 +472,7 @@ Gérez votre abonnement, vos informations de facturation et vos factures.
 ### Vue d'ensemble de l'abonnement
 
 Le haut de la page résume votre abonnement en deux lignes :
-- Le plan, la fréquence de facturation et le montant, par exemple « Hosted KANAP · Annuel · 2 490,00 € / an ». L'abonnement inclut un nombre illimité d'utilisateurs, avec une facturation mensuelle ou annuelle.
+- Le plan, la fréquence de facturation et le montant, par exemple « Kadratis Cloud · Annuel · 2 490,00 € / an ». L'abonnement inclut un nombre illimité d'utilisateurs, avec une facturation mensuelle ou annuelle.
 - Le statut (Actif, En période d'essai, En retard, Annulé, etc.), la date de renouvellement et le moyen de paiement, par exemple « Actif · renouvellement le 7 oct. 2027 · Visa •••• 4242 ».
 
 Sans abonnement en cours (un essai, un essai expiré ou un abonnement terminé), seul le statut est affiché. Pendant un essai, il est accompagné de la date de fin d'essai et du nombre de jours restants.
@@ -481,7 +481,7 @@ Pendant un essai, une pastille dans la barre du haut indique aussi les jours res
 
 Lorsqu'un essai se termine sans abonnement, l'espace de travail reste consultable pendant 30 jours. Il est ensuite supprimé avec toutes ses données. Un abonnement souscrit avant cette date conserve l'espace de travail tel quel.
 
-Sur le service cloud, la personne qui a démarré l'essai reçoit quelques e-mails de KANAP pendant l'essai, puis un remerciement quand l'espace de travail souscrit un abonnement. Chaque e-mail d'essai se termine par un lien qui arrête les suivants en un clic. Le remerciement est envoyé dans tous les cas.
+Sur le service cloud, la personne qui a démarré l'essai reçoit quelques e-mails de Kadratis pendant l'essai, puis un remerciement quand l'espace de travail souscrit un abonnement. Chaque e-mail d'essai se termine par un lien qui arrête les suivants en un clic. Le remerciement est envoyé dans tous les cas.
 
 Lorsqu'un passage à la facturation mensuelle est prévu, une troisième ligne l'indique, par exemple « Passe en mensuel le 7 oct. 2027. » Cliquez sur **Rester en annuel** sur cette ligne pour annuler ce passage.
 
@@ -500,7 +500,7 @@ Cochez **J'accepte les conditions générales de vente** avant de payer. Cette c
 
 Vous pouvez payer de deux façons :
 - **Payer par carte** : pour une facturation mensuelle ou annuelle. La page de paiement Stripe s'ouvre. La carte est débitée à chaque émission de facture.
-- **Payer par virement** : pour une facturation annuelle uniquement. KANAP émet la facture et l'ouvre. La facture est payable sous 30 jours.
+- **Payer par virement** : pour une facturation annuelle uniquement. Kadratis émet la facture et l'ouvre. La facture est payable sous 30 jours.
 
 Aucune TVA n'est facturée. Chaque facture porte la mention « TVA non applicable, art. 293 B du CGI ».
 
@@ -517,7 +517,7 @@ Le changement de plan d'un abonnement par carte en cours ne demande pas des info
 
 ### Informations de facturation
 
-Ces informations figurent sur vos factures. KANAP les copie dans votre fiche client Stripe lorsque vous souscrivez et à chaque enregistrement d'un champ.
+Ces informations figurent sur vos factures. Kadratis les copie dans votre fiche client Stripe lorsque vous souscrivez et à chaque enregistrement d'un champ.
 
 La section contient la société, l'e-mail, le nom du destinataire, le téléphone, l'adresse (ligne 1, ligne 2, code postal, ville, état/province), le pays et le numéro de TVA.
 
@@ -534,9 +534,9 @@ Les champs obligatoires sont marqués d'un astérisque :
 
 Vous pouvez laisser des informations incomplètes et les terminer plus tard. Tant que quelque chose manque, une ligne sous les champs le liste, par exemple « Requis avant de vous abonner : e-mail, ville. » Les informations doivent être complètes avant de souscrire.
 
-Les versions précédentes de KANAP avaient une carte distincte d'informations client. Si vous l'avez remplie, ses valeurs apparaissent dans les champs de facturation correspondants restés vides, et elles sont enregistrées comme informations de facturation la prochaine fois que vous modifiez un champ.
+Les versions précédentes de Kadratis avaient une carte distincte d'informations client. Si vous l'avez remplie, ses valeurs apparaissent dans les champs de facturation correspondants restés vides, et elles sont enregistrées comme informations de facturation la prochaine fois que vous modifiez un champ.
 
-Pour un pays de l'Union européenne, le numéro de TVA est transmis à Stripe et imprimé sur vos factures. Si Stripe ne l'accepte pas, KANAP affiche « Le numéro de TVA n'a pas été accepté. Vérifiez-le dans les informations de facturation. » Corrigez le numéro et réessayez.
+Pour un pays de l'Union européenne, le numéro de TVA est transmis à Stripe et imprimé sur vos factures. Si Stripe ne l'accepte pas, Kadratis affiche « Le numéro de TVA n'a pas été accepté. Vérifiez-le dans les informations de facturation. » Corrigez le numéro et réessayez.
 
 ### Historique des factures
 
@@ -559,7 +559,7 @@ Configurez le single sign-on (SSO) pour votre organisation. Cette page n'est dis
 
 ### Microsoft Entra ID
 
-Connectez KANAP à votre tenant Microsoft Entra ID pour le SSO :
+Connectez Kadratis à votre tenant Microsoft Entra ID pour le SSO :
 
 1. Cliquez sur **Connecter**
 2. Connectez-vous avec un compte administrateur Microsoft
@@ -582,11 +582,11 @@ Connectez KANAP à votre tenant Microsoft Entra ID pour le SSO :
 
 ### Synchronisation quotidienne de l'annuaire
 
-Ce bloc apparaît sous la carte Entra une fois le single sign-on connecté. Chaque nuit à 03h00 (heure du serveur), KANAP actualise les noms, postes, téléphones, départements et sociétés depuis Microsoft Entra, actualise le responsable des personnes qui sont contributeurs, et désactive les comptes supprimés ou désactivés dans l'annuaire.
+Ce bloc apparaît sous la carte Entra une fois le single sign-on connecté. Chaque nuit à 03h00 (heure du serveur), Kadratis actualise les noms, postes, téléphones, départements et sociétés depuis Microsoft Entra, actualise le responsable des personnes qui sont contributeurs, et désactive les comptes supprimés ou désactivés dans l'annuaire.
 
-Les départements et les sociétés sont rapprochés par leur nom des enregistrements qui existent déjà dans KANAP. Rien n'est créé automatiquement. Les valeurs vides de l'annuaire n'effacent jamais ce qui est déjà stocké dans KANAP.
+Les départements et les sociétés sont rapprochés par leur nom des enregistrements qui existent déjà dans Kadratis. Rien n'est créé automatiquement. Les valeurs vides de l'annuaire n'effacent jamais ce qui est déjà stocké dans Kadratis.
 
-La synchronisation nécessite une approbation unique par un administrateur Microsoft Entra. Tant qu'elle n'est pas accordée, le bloc affiche **Pas encore autorisé. Un administrateur Microsoft Entra doit autoriser KANAP à lire les utilisateurs de l'annuaire.**
+La synchronisation nécessite une approbation unique par un administrateur Microsoft Entra. Tant qu'elle n'est pas accordée, le bloc affiche **Pas encore autorisé. Un administrateur Microsoft Entra doit autoriser Kadratis à lire les utilisateurs de l'annuaire.**
 
 | État ou action | Signification |
 |----------------|---------------|
@@ -600,12 +600,12 @@ Les étapes de configuration de l'enregistrement d'application Entra sont décri
 
 ### Limites de connexion
 
-KANAP limite les demandes de connexion répétées :
+Kadratis limite les demandes de connexion répétées :
 
 - **Connexion par mot de passe** : 60 demandes par minute depuis la même adresse IP. Après 5 échecs sur un compte depuis la même adresse IP en 15 minutes, ce compte ne peut plus se connecter depuis cette adresse pendant 15 minutes. Le même compte peut toujours se connecter depuis une autre adresse, et les autres comptes depuis la même adresse. Une connexion réussie remet le compteur à zéro.
 - **Connexion Microsoft** : 60 demandes par minute depuis la même adresse IP.
 
-Les limites par adresse sont hautes parce que les collaborateurs d'une même organisation accèdent souvent à KANAP depuis la même adresse sortante. Une fois une limite par adresse atteinte, la personne patiente une minute et réessaie. Derrière un reverse proxy, KANAP compte l'adresse IP de chaque personne, tant que le proxy la transmet.
+Les limites par adresse sont hautes parce que les collaborateurs d'une même organisation accèdent souvent à Kadratis depuis la même adresse sortante. Une fois une limite par adresse atteinte, la personne patiente une minute et réessaie. Derrière un reverse proxy, Kadratis compte l'adresse IP de chaque personne, tant que le proxy la transmet.
 
 Les connexions et les échecs de connexion apparaissent dans le [Journal d'audit](#journal-daudit). Quand 5 échecs bloquent un compte depuis une adresse, un échec de connexion avec le motif **Trop de tentatives de connexion** est enregistré. Réinitialiser le mot de passe avec **Mot de passe oublié** lève le blocage aussitôt. Les tentatives refusées pendant les 15 minutes qui suivent ne sont pas enregistrées, pas plus que les demandes bloquées par une limite par adresse.
 
@@ -613,7 +613,7 @@ Les connexions et les échecs de connexion apparaissent dans le [Journal d'audit
 
 ## Personnalisation
 
-Utilisez **Administration > Personnalisation** pour appliquer l'identité de votre entreprise dans KANAP.
+Utilisez **Administration > Personnalisation** pour appliquer l'identité de votre entreprise dans Kadratis.
 
 - Route : `/admin/branding`
 - Autorisation : `users:admin`
@@ -659,7 +659,7 @@ Modifiez vos informations personnelles :
 - **Intitulé de poste**
 - **Tél. professionnel** / **Tél. mobile**
 
-Si votre organisation utilise Microsoft Entra ID (SSO), certains champs peuvent être synchronisés depuis Entra et ne peuvent pas être modifiés dans KANAP.
+Si votre organisation utilise Microsoft Entra ID (SSO), certains champs peuvent être synchronisés depuis Entra et ne peuvent pas être modifiés dans Kadratis.
 
 Si votre compte n'a ni prénom ni nom, une petite fenêtre vous les demande après la connexion. **Plus tard** la masque dans ce navigateur. Vous pouvez modifier les deux ici à tout moment.
 
@@ -691,14 +691,14 @@ Utilisez le bouton **Aperçu de l'e-mail** pour vous envoyer un e-mail de test e
 
 Toutes les modifications sont enregistrées automatiquement lorsque vous basculez les commutateurs ou changez les sélections.
 
-### À propos de KANAP
+### À propos de Kadratis
 
-Ouvrez **À propos de KANAP** depuis le menu utilisateur, sous **Déconnexion**. L'entrée du menu indique aussi la version. L'onglet **À propos** de cette page affiche le même contenu :
+Ouvrez **À propos de Kadratis** depuis le menu utilisateur, sous **Déconnexion**. L'entrée du menu indique aussi la version. L'onglet **À propos** de cette page affiche le même contenu :
 
 - La version et le déploiement (cloud ou sur site)
 - Sur le cloud, pendant un essai, les jours restants, avec un lien **Choisir une offre** pour les administrateurs de la facturation
 - Pendant un essai, le parcours choisi à la première ouverture, avec **Changer**, et **Afficher les premiers pas** quand la tuile des premiers pas est masquée. Voir [Mon tableau de bord](my-dashboard.md#trial-first-steps)
-- Des liens vers les notes de version de cette version, la documentation, kanap.net et le code source (licence AGPL-3.0)
+- Des liens vers les notes de version de cette version, la documentation, kadratis.com et le code source (licence AGPL-3.0)
 - Sur site, un lien vers le guide de mise à jour
 
 **Support** indique où obtenir de l'aide :

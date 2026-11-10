@@ -139,7 +139,7 @@ Die Kontoauswahl einer OPEX-Zeile zeigt die Konten für OPEX und für beides. Di
 
 Wenn ein gewählter Wert mit Zeilen in Konflikt steht, die das Konto bereits verwenden, erscheint unter dem Feld ein Hinweis, zum Beispiel „12 CAPEX-Zeilen verwenden dieses Konto. Sie behalten es. Neue CAPEX-Zeilen können es nicht auswählen.“ Klicken Sie auf **Diese Zeilen anzeigen**, um diese Zeilen in der Liste in einem neuen Tab zu öffnen. Der Hinweis bleibt, solange der Konflikt besteht.
 
-Beim Hinzufügen dieser Einstellung hat KANAP sie für Sie ausgefüllt. Ein Konto, das nur von OPEX-Zeilen verwendet wird, wurde zu **Nur OPEX**, und ein Konto, das nur von CAPEX-Zeilen verwendet wird, zu **Nur CAPEX**. Ein Konto, das von beiden verwendet wird, bleibt **OPEX und CAPEX**. Ein ungenutztes Konto folgt seinem Konsolidierungskonto: Vermögenskonten des IFRS-Konsolidierungskontenplans sind für CAPEX, Betriebsaufwandskonten für OPEX. Administratoren können jedes davon ändern.
+Beim Hinzufügen dieser Einstellung hat Kadratis sie für Sie ausgefüllt. Ein Konto, das nur von OPEX-Zeilen verwendet wird, wurde zu **Nur OPEX**, und ein Konto, das nur von CAPEX-Zeilen verwendet wird, zu **Nur CAPEX**. Ein Konto, das von beiden verwendet wird, bleibt **OPEX und CAPEX**. Ein ungenutztes Konto folgt seinem Konsolidierungskonto: Vermögenskonten des IFRS-Konsolidierungskontenplans sind für CAPEX, Betriebsaufwandskonten für OPEX. Administratoren können jedes davon ändern.
 
 ### Konsolidierungskonto
 
@@ -200,7 +200,7 @@ Vorlagen sind Standard-Kontensets, die von Plattform-Administratoren verwaltet w
 
 ### Verfügbare Vorlagen
 
-KANAP wird mit **20 vorkonfigurierten Vorlagen** ausgeliefert, die 10 Buchhaltungsstandards abdecken. Jeder Standard kommt in zwei Versionen:
+Kadratis wird mit **20 vorkonfigurierten Vorlagen** ausgeliefert, die 10 Buchhaltungsstandards abdecken. Jeder Standard kommt in zwei Versionen:
 
 - **v1.0 (Einfach)**: Ein fokussiertes Set von ~20 IT-relevanten Konten: Softwarelizenzen, Cloud-Hosting, Cybersicherheit, Telekommunikation, Beratung, Personalkosten, Schulung und mehr. Am besten für Organisationen, die einen schlanken Ausgangspunkt wünschen.
 - **v2.0 (Detailliert)**: Alles aus v1.0 plus zusätzliche granulare Unterkonten (~30 Konten). Fügt Aufschlüsselungen wie Gekaufte vs. Intern Entwickelte Software, Netzwerkausrüstung, SaaS vs. Dauerlizenzen, Mobilfunkkommunikation, IT-Boni, IT-Versicherung und mehr hinzu. Am besten für Organisationen, die eine feinere Kostenverfolgung benötigen.
@@ -373,7 +373,7 @@ Nur die Konsolidierungs-Kontonummer zählt, wenn der Konsolidierungskontenplan s
 3. Ersetzt der Kontenplan einen anderen Konsolidierungskontenplan, oder verweisen einige Konten auf Nummern, die er nicht enthält, öffnet sich eine Bestätigung. Sie nennt den ersetzten Kontenplan und gibt die Anzahlen an: wie viele Konten ihr Konsolidierungskonto behalten, wie viele auf eine Nummer verweisen, die im neuen Kontenplan fehlt, und wie viele kein Konsolidierungskonto haben.
 4. Klicken Sie auf **Als Konsolidierungskontenplan festlegen**, um zu bestätigen.
 
-**Was mit bestehenden Zuordnungen geschieht**: KANAP ordnet Konten nie automatisch neu zu. Jedes Konto behält seine Konsolidierungsnummer.
+**Was mit bestehenden Zuordnungen geschieht**: Kadratis ordnet Konten nie automatisch neu zu. Jedes Konto behält seine Konsolidierungsnummer.
 
   - Konten, deren Nummer im neuen Kontenplan existiert, behalten sie und übernehmen Name und Beschreibung dieses Kontenplans.
   - Konten, deren Nummer im neuen Kontenplan nicht existiert, behalten ihre Nummer und werden markiert: Die Konsolidierungszeile zählt sie, ein Punkt kennzeichnet sie im Grid, und der Konten-Arbeitsbereich fordert Sie auf, ein gültiges Konto zu wählen. Filtern Sie sie über die Konsolidierungszeile und ordnen Sie sie einzeln neu zu, oder laden Sie eine CSV.
@@ -508,7 +508,7 @@ account_number;account_name;native_name;description;consolidation_account_number
 
 ## Tipps
 
-  - **Mit Vorlagen beginnen**: KANAP wird mit Vorlagen für 9 Länder plus IFRS ausgeliefert. Laden Sie eine, anstatt von Grund auf zu bauen: Sie erhalten korrekte Kontonummern, lokale Namen und IFRS-Konsolidierungszuordnungen direkt. Beginnen Sie mit v1.0 (Einfach), wenn Sie unsicher sind; upgraden Sie auf v2.0 (Detailliert), wenn Sie mehr Granularität benötigen.
+  - **Mit Vorlagen beginnen**: Kadratis wird mit Vorlagen für 9 Länder plus IFRS ausgeliefert. Laden Sie eine, anstatt von Grund auf zu bauen: Sie erhalten korrekte Kontonummern, lokale Namen und IFRS-Konsolidierungszuordnungen direkt. Beginnen Sie mit v1.0 (Einfach), wenn Sie unsicher sind; upgraden Sie auf v2.0 (Detailliert), wenn Sie mehr Granularität benötigen.
   - **Ein Standard pro Land**: Machen Sie für jedes Land einen Kontenplan zum Standard, damit neue Unternehmen mit der richtigen Kontenstruktur starten.
   - **Lokale Namen für Compliance**: Verwenden Sie das Feld **Lokaler Name (Landessprache)**, wenn lokale Vorschriften Konten in der Landessprache erfordern. Aktivieren Sie die Spalte **Lokaler Name** im Grid, um beide Namen auf einen Blick zu sehen.
   - **Schrittweise migrieren**: Sie müssen nicht alles auf einmal umstellen. Unternehmen ohne Kontenpläne arbeiten weiterhin mit Legacy-Konten.
@@ -595,7 +595,7 @@ A: Ja, im Konten-Arbeitsbereich. Das Ändern der Kontonummer aktualisiert automa
 A: Öffnen Sie **Kontenpläne verwalten** auf der Kontenpläne-Seite und lesen Sie die Spalte **Gesellschaften** in der Zeile des Kontenplans. Sie können auch die Unternehmensseite nach Kontenplan filtern.
 
 **F: Was, wenn mein Land keine Vorlage hat?**
-A: KANAP enthält Vorlagen für 9 Länder (FR, DE, GB, ES, IT, NL, BE, CH, US) plus IFRS als globalen Standard. Wenn Ihr Land nicht abgedeckt ist, erstellen Sie einen Kontenplan von Grund auf und fügen Sie Konten manuell oder per CSV-Import hinzu. Sie können weiterhin die IFRS-Konsolidierungs-Kontonummern (1000-2900) in Ihren Konsolidierungszuordnungen verwenden, um mit den integrierten Vorlagen kompatibel zu bleiben.
+A: Kadratis enthält Vorlagen für 9 Länder (FR, DE, GB, ES, IT, NL, BE, CH, US) plus IFRS als globalen Standard. Wenn Ihr Land nicht abgedeckt ist, erstellen Sie einen Kontenplan von Grund auf und fügen Sie Konten manuell oder per CSV-Import hinzu. Sie können weiterhin die IFRS-Konsolidierungs-Kontonummern (1000-2900) in Ihren Konsolidierungszuordnungen verwenden, um mit den integrierten Vorlagen kompatibel zu bleiben.
 
 **F: Was ist der Unterschied zwischen v1.0 und v2.0 Vorlagen?**
 A: **v1.0 (Einfach)** hat ~20 IT-fokussierte Konten, die wesentliche Kostenkategorien abdecken. **v2.0 (Detailliert)** fügt ~10 weitere granulare Unterkonten für feinere Verfolgung hinzu (z. B. Trennung von SaaS-Abonnements und Dauerlizenzen oder IT-Gehältern und Boni). Beide Versionen verwenden die gleichen Konsolidierungszuordnungen. Beginnen Sie mit v1.0 und wechseln Sie zu v2.0, wenn Sie mehr Detail benötigen.

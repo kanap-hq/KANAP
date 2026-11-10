@@ -69,7 +69,7 @@ Haga clic en una fila para abrir la página del contacto. Cada cambio se guarda 
 - **Teléfono** / **Móvil**: un prefijo y un número. Elija el prefijo en la lista o escríbalo. Si el contacto aún no tiene país, el prefijo lo establece.
 - **País**: lista de países con búsqueda.
 
-Los campos de texto se guardan al salir de ellos o al pulsar Intro, las listas en cuanto elige. Un valor que KANAP no puede aceptar (un correo no válido o que ya usa otro contacto, un teléfono que no es un prefijo seguido de un número de 7 a 15 dígitos en total) muestra su mensaje bajo el campo y no se guarda.
+Los campos de texto se guardan al salir de ellos o al pulsar Intro, las listas en cuanto elige. Un valor que Kadratis no puede aceptar (un correo no válido o que ya usa otro contacto, un teléfono que no es un prefijo seguido de un número de 7 a 15 dígitos en total) muestra su mensaje bajo el campo y no se guarda.
 
 **Notas**: notas libres (hasta 2.000 caracteres), bajo el encabezado. Se guardan un momento después de dejar de escribir y al salir del campo.
 
@@ -93,7 +93,7 @@ Mientras el contacto se está creando, el encabezado muestra **Crear** y **Cance
 
 ## Dónde se usan los contactos
 
-Los contactos aparecen en varios lugares de KANAP. La sección **Usado en** de la página del contacto los lista todos.
+Los contactos aparecen en varios lugares de Kadratis. La sección **Usado en** de la página del contacto los lista todos.
 
 ### Contactos de proveedor
 

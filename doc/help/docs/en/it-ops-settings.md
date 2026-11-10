@@ -44,7 +44,7 @@ For long lists (more than 25 rows), the table virtualizes rows, showing about 20
 
 ### Names are the identity of a value
 
-You only ever see and type **names**. KANAP generates a stable internal code from the name when a value is first saved and keeps it forever, so renaming a value never breaks the records that use it. The code is visible to integrators in the API and can be used in imported files, but the export writes names and the import accepts either.
+You only ever see and type **names**. Kadratis generates a stable internal code from the name when a value is first saved and keeps it forever, so renaming a value never breaks the records that use it. The code is visible to integrators in the API and can be used in imported files, but the export writes names and the import accepts either.
 
 Because names identify values, a few rules apply within a list:
 
@@ -56,13 +56,13 @@ A list that breaks one of these rules is not saved until you fix it; the row sho
 
 ### Removing a value
 
-**Remove** deletes a value that nothing uses. When records still reference the value, KANAP shows how many (applications, assets, interfaces, connections, sites, incidents, subnets…), with a link to the filtered list where a list can be filtered on that field, and offers **No longer offered** instead: the value stays visible on the records that already use it and is no longer proposed for new ones. A value in use is never removed, even through the API.
+**Remove** deletes a value that nothing uses. When records still reference the value, Kadratis shows how many (applications, assets, interfaces, connections, sites, incidents, subnets…), with a link to the filtered list where a list can be filtered on that field, and offers **No longer offered** instead: the value stays visible on the records that already use it and is no longer proposed for new ones. A value in use is never removed, even through the API.
 
-Built-in values that KANAP manages itself (the four lifecycle statuses, the Workgroup and N/A domains) cannot be edited or removed. Default network zones and asset types can be edited and retired but not removed: the server would add them back.
+Built-in values that Kadratis manages itself (the four lifecycle statuses, the Workgroup and N/A domains) cannot be edited or removed. Default network zones and asset types can be edited and retired but not removed: the server would add them back.
 
 ### Translating your values
 
-The values you type are shown as is in every language. To show them in the language of each user, use the **Translate** action on a row: the dialog shows the base name (and description for classification levels) and one field per language. A field left empty uses the automatic translation when the value is still a KANAP default, otherwise the base text. Saving translations never changes the base text, and a translated name can be used in CSV files and the API like the name itself, which is why it must not duplicate another value of the list.
+The values you type are shown as is in every language. To show them in the language of each user, use the **Translate** action on a row: the dialog shows the base name (and description for classification levels) and one field per language. A field left empty uses the automatic translation when the value is still a Kadratis default, otherwise the base text. Saving translations never changes the base text, and a translated name can be used in CSV files and the API like the name itself, which is why it must not duplicate another value of the list.
 
 Editors always show and edit the base text; when the displayed name differs for your language, the row says so ("Shown: …").
 
@@ -102,13 +102,13 @@ The category determines which fields appear when editing a Location:
 
 ### Administration zones
 
-The zones of your administration model. KANAP ships the three tiers of the tiered administration model, a recognized practice:
+The zones of your administration model. Kadratis ships the three tiers of the tiered administration model, a recognized practice:
 
 - **Tier 0 (core of trust)**: directories such as Active Directory or Entra ID, PKI, identity administration tools, and the systems that host them.
 - **Tier 1 (servers and applications)**: business servers, applications, databases and middleware.
 - **Tier 2 (workstations)**: user workstations and devices.
 
-Rename them, add your own or retire them to match your administration policy or your privileged access model. The three tiers appear as long as the list has never been saved. Once it has been saved, even empty, KANAP no longer adds them: add them yourself if you need them.
+Rename them, add your own or retire them to match your administration policy or your privileged access model. The three tiers appear as long as the list has never been saved. Once it has been saved, even empty, Kadratis no longer adds them: add them yourself if you need them.
 
 The order of the list matters: the first zone is the most sensitive. Drag a row by its handle to move it. A new zone is added at the top, so move it to its place. The [Administration zones](administration-view.md) page shows the zones in this order and checks the assets against the first zone that is not marked **No longer offered**.
 

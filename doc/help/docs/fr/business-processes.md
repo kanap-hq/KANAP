@@ -1,6 +1,6 @@
 # Processus métier
 
-Les processus métier vous permettent de construire et maintenir un catalogue centralisé des processus de bout en bout de votre organisation, comme Order-to-Cash, Procure-to-Pay ou Hire-to-Retire. En centralisant les noms de processus, leurs types, leurs responsables et leur hiérarchie, vous créez un point de référence unique que le reste de KANAP peut exploiter pour la responsabilité, le reporting et les audits.
+Les processus métier vous permettent de construire et maintenir un catalogue centralisé des processus de bout en bout de votre organisation, comme Order-to-Cash, Procure-to-Pay ou Hire-to-Retire. En centralisant les noms de processus, leurs types, leurs responsables et leur hiérarchie, vous créez un point de référence unique que le reste de Kadratis peut exploiter pour la responsabilité, le reporting et les audits.
 
 ## Premiers pas
 
@@ -56,7 +56,7 @@ La liste affiche tous les processus métier de votre tenant.
 
 1. Cliquez sur **Nouveau** dans la liste. La page du processus s'ouvre avec un titre vide dans l'en-tête. Le reste de la page est grisé.
 2. Saisissez le nom du processus, idéalement avec son code court (par ex. « Order-to-Cash (O2C) »).
-3. Appuyez sur Entrée, ou cliquez hors du titre. KANAP crée le processus aussitôt, activé, et tous les onglets s'ouvrent.
+3. Appuyez sur Entrée, ou cliquez hors du titre. Kadratis crée le processus aussitôt, activé, et tous les onglets s'ouvrent.
 
 Appuyez sur Échap dans le titre vide pour partir sans rien créer. Deux processus ne peuvent pas porter le même nom, quelle que soit la casse : un nom déjà utilisé est refusé, avec un message sous le titre.
 
@@ -138,7 +138,7 @@ Cliquez sur **Importer** sur la page de la liste, puis :
 **Règles de correspondance** :
 
 - Les lignes sont mises en correspondance par **Nom**, quelle que soit la casse. Un nom correspondant met à jour le processus existant et garde le nom enregistré (la vérification préalable indique le processus rapproché) ; un nouveau nom crée un nouveau processus.
-- `parent_name` est mis en correspondance par nom, quelle que soit la casse : un processus du même fichier ou un processus déjà présent dans KANAP. Quand les deux existent, le fichier l'emporte. Les lignes peuvent venir dans n'importe quel ordre : les parents sont créés avant leurs enfants.
+- `parent_name` est mis en correspondance par nom, quelle que soit la casse : un processus du même fichier ou un processus déjà présent dans Kadratis. Quand les deux existent, le fichier l'emporte. Les lignes peuvent venir dans n'importe quel ordre : les parents sont créés avant leurs enfants.
 - Un nom de parent inconnu, un processus placé sous lui-même ou une boucle sont refusés, avec le numéro de la ligne.
 - Le fichier n'a pas de colonne de fin de validité. Lors d'une mise à jour, un `status` vide, ou égal au statut actuel du processus, garde sa fin de validité. Un statut différent s'applique : `enabled` efface la fin de validité, et `disabled` termine le processus aujourd'hui, sauf si sa fin de validité est déjà passée. Un nouveau processus est activé, sauf si la ligne indique `disabled`.
 

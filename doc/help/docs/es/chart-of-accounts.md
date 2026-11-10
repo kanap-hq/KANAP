@@ -139,7 +139,7 @@ El selector de cuentas de una línea OPEX muestra las cuentas para OPEX y para a
 
 Cuando elige un valor que entra en conflicto con líneas que ya usan la cuenta, aparece una nota bajo el campo, por ejemplo «12 líneas CAPEX usan esta cuenta. La conservan. Las nuevas líneas CAPEX no pueden elegirla.» Haga clic en **Mostrar estas líneas** para abrir esas líneas en la lista, en una pestaña nueva. La nota permanece mientras exista el conflicto.
 
-Al añadir este ajuste, KANAP lo rellenó por usted. Una cuenta usada solo por líneas OPEX pasó a **Solo OPEX**, y una cuenta usada solo por líneas CAPEX pasó a **Solo CAPEX**. Una cuenta usada por ambas sigue como **OPEX y CAPEX**. Una cuenta sin uso sigue a su cuenta de consolidación: las cuentas de activos del plan de consolidación IFRS son para CAPEX y las cuentas de gastos operativos son para OPEX. Los administradores pueden cambiar cualquiera de ellas.
+Al añadir este ajuste, Kadratis lo rellenó por usted. Una cuenta usada solo por líneas OPEX pasó a **Solo OPEX**, y una cuenta usada solo por líneas CAPEX pasó a **Solo CAPEX**. Una cuenta usada por ambas sigue como **OPEX y CAPEX**. Una cuenta sin uso sigue a su cuenta de consolidación: las cuentas de activos del plan de consolidación IFRS son para CAPEX y las cuentas de gastos operativos son para OPEX. Los administradores pueden cambiar cualquiera de ellas.
 
 ### Cuenta de consolidación
 
@@ -200,7 +200,7 @@ Las plantillas son conjuntos de cuentas estándar gestionados por los administra
 
 ### Plantillas disponibles
 
-KANAP incluye **20 plantillas preconfiguradas** que cubren 10 estándares contables. Cada estándar viene en dos versiones:
+Kadratis incluye **20 plantillas preconfiguradas** que cubren 10 estándares contables. Cada estándar viene en dos versiones:
 
 - **v1.0 (Simple)**: Un conjunto enfocado de ~20 cuentas relevantes para IT: licencias de software, alojamiento en la nube, ciberseguridad, telecomunicaciones, consultoría, costes de personal, formación y más. Ideal para organizaciones que quieren un punto de partida ligero.
 - **v2.0 (Detallado)**: Todo lo de v1.0 más subcuentas granulares adicionales (~30 cuentas). Añade desgloses como Software comprado vs. Desarrollado internamente, Equipos de red, SaaS vs. Licencias perpetuas, Comunicaciones móviles, Bonificaciones IT, Seguro IT y más. Ideal para organizaciones que necesitan un seguimiento de costes más fino.
@@ -373,7 +373,7 @@ Abra una cuenta y elija su **Cuenta de consolidación** en el espacio de trabajo
 3. Si el plan sustituye a otro plan de consolidación, o si algunas cuentas apuntan a números que no contiene, se abre una confirmación. Indica qué plan sustituye y da los recuentos: cuántas cuentas conservan su cuenta de consolidación, cuántas apuntan a un número que no existe en el plan nuevo y cuántas no tienen cuenta de consolidación.
 4. Haga clic en **Hacer plan de consolidación** para confirmar.
 
-**Qué ocurre con las asignaciones existentes**: KANAP nunca reasigna las cuentas por usted. Cada cuenta conserva su número de consolidación.
+**Qué ocurre con las asignaciones existentes**: Kadratis nunca reasigna las cuentas por usted. Cada cuenta conserva su número de consolidación.
 
   - Las cuentas cuyo número existe en el plan nuevo lo conservan y toman el nombre y la descripción de ese plan.
   - Las cuentas cuyo número no existe en el plan nuevo conservan su número y quedan marcadas: la línea de seguimiento las cuenta, un punto las señala en la cuadrícula y el espacio de trabajo de la cuenta le pide elegir una cuenta válida. Fíltrelas desde la línea de seguimiento y reasígnelas una a una, o cargue un CSV.
@@ -508,7 +508,7 @@ account_number;account_name;native_name;description;consolidation_account_number
 
 ## Consejos
 
-  - **Comience con plantillas**: KANAP incluye plantillas para 9 países más IFRS. Cargue una en lugar de construir desde cero: obtiene números de cuenta adecuados, nombres locales y mapeos de consolidación IFRS desde el principio. Comience con v1.0 (Simple) si no está seguro; actualice a v2.0 (Detallado) si necesita más granularidad.
+  - **Comience con plantillas**: Kadratis incluye plantillas para 9 países más IFRS. Cargue una en lugar de construir desde cero: obtiene números de cuenta adecuados, nombres locales y mapeos de consolidación IFRS desde el principio. Comience con v1.0 (Simple) si no está seguro; actualice a v2.0 (Detallado) si necesita más granularidad.
   - **Un predeterminado por país**: Haga de un CoA el plan predeterminado de cada país, para que las nuevas empresas empiecen con la estructura de cuentas correcta.
   - **Nombres locales para conformidad**: Utilice el campo **Nombre local (idioma local)** si la normativa local requiere cuentas en el idioma local. Habilite la columna **Nombre local** en la cuadrícula para ver ambos nombres de un vistazo.
   - **Migre gradualmente**: No tiene que convertir todo a la vez. Las empresas sin CoA continúan trabajando con cuentas legado.
@@ -595,7 +595,7 @@ R: Sí, en el espacio de trabajo de la cuenta. Cambiar el número de cuenta actu
 R: Abra **Gestionar planes** en la página de Planes de cuentas y consulte la columna **Empresas** de la fila del CoA. También puede filtrar la página de Empresas por CoA.
 
 **P: ¿Qué pasa si mi país no tiene plantilla?**
-R: KANAP incluye plantillas para 9 países (FR, DE, GB, ES, IT, NL, BE, CH, US) más IFRS como estándar global. Si su país no está cubierto, cree un CoA desde cero y añada cuentas manualmente o vía importación CSV. Aún puede usar los números de cuenta de consolidación IFRS (1000-2900) en sus mapeos de consolidación para mantenerse compatible con las plantillas integradas.
+R: Kadratis incluye plantillas para 9 países (FR, DE, GB, ES, IT, NL, BE, CH, US) más IFRS como estándar global. Si su país no está cubierto, cree un CoA desde cero y añada cuentas manualmente o vía importación CSV. Aún puede usar los números de cuenta de consolidación IFRS (1000-2900) en sus mapeos de consolidación para mantenerse compatible con las plantillas integradas.
 
 **P: ¿Cuál es la diferencia entre las plantillas v1.0 y v2.0?**
 R: **v1.0 (Simple)** tiene ~20 cuentas enfocadas en IT que cubren categorías esenciales de costes. **v2.0 (Detallado)** añade ~10 subcuentas más granulares para un seguimiento más fino (p. ej., separando suscripciones SaaS de licencias perpetuas, o salarios IT de bonificaciones). Ambas versiones usan los mismos mapeos de consolidación. Comience con v1.0 y cambie a v2.0 si necesita más detalle.

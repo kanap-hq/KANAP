@@ -193,7 +193,7 @@ Drill down into a single company's chargeback allocations across departments, bu
 
 **Company summary card**: Company name, total amount, reporting currency, headcount, IT users, cost per user, cost per IT user, and IT costs vs turnover.
 
-**Turnover in the chargeback reports**: each company enters its turnover in millions of its base currency. Both chargeback reports convert it to the reporting currency, at the rates of the year's budget version, like the amounts. The turnover, the IT costs vs turnover ratio and the global turnover of the KPI tables use the converted value. When a currency has no rate for the year, the companies in that currency are left out of the turnover figures, and a warning at the top of the report names each of them. The global IT costs vs turnover ratio is then computed on the companies whose turnover was converted, on both sides: their costs and their turnover. KANAP fetches the missing rate in the background.
+**Turnover in the chargeback reports**: each company enters its turnover in millions of its base currency. Both chargeback reports convert it to the reporting currency, at the rates of the year's budget version, like the amounts. The turnover, the IT costs vs turnover ratio and the global turnover of the KPI tables use the converted value. When a currency has no rate for the year, the companies in that currency are left out of the turnover figures, and a warning at the top of the report names each of them. The global IT costs vs turnover ratio is then computed on the companies whose turnover was converted, on both sides: their costs and their turnover. Kadratis fetches the missing rate in the background.
 
 **Department totals** (when enabled):
 
@@ -572,9 +572,9 @@ A pinned **Total** row gives, for each pair, the total days, the total day cost 
 
 ## Ask the assistant
 
-[Plaid](ai-assistant.md) gives the figures of these reports, with the same rights: Consolidation accounts, Top increase / decrease (10 lines by default), Staffing by month (each month, the average and the peak), Cost per FTE, Global chargeback and Company chargeback. It also measures several columns or years in one answer, for example the budget of each supplier over three years. On the chargeback, it covers OPEX and CAPEX when you name neither, and repeats the warnings of the report. Ask, for example: "Which lines rise the most from the 2026 budget to the revision?" or "How much is charged to each company in 2026, and how much does each one pay?"
+[Kad](ai-assistant.md) gives the figures of these reports, with the same rights: Consolidation accounts, Top increase / decrease (10 lines by default), Staffing by month (each month, the average and the peak), Cost per FTE, Global chargeback and Company chargeback. It also measures several columns or years in one answer, for example the budget of each supplier over three years. On the chargeback, it covers OPEX and CAPEX when you name neither, and repeats the warnings of the report. Ask, for example: "Which lines rise the most from the 2026 budget to the revision?" or "How much is charged to each company in 2026, and how much does each one pay?"
 
-Plaid reads every budget line, ended lines included. The budget reports read the lines still active on 1 January of the year before the first year shown, so a line that ended earlier counts in Plaid's answer and not in the report.
+Kad reads every budget line, ended lines included. The budget reports read the lines still active on 1 January of the year before the first year shown, so a line that ended earlier counts in Kad's answer and not in the report.
 
 ## Common features
 
@@ -586,7 +586,7 @@ Every report shares these capabilities through the shared toolbar:
 - **Export chart as PNG** (image icon): Downloads the chart as a PNG image
 - **Print / Save as PDF** (print icon): Opens the browser print dialog. You can also append `?print=1` to any report URL to trigger printing automatically on load.
 
-KANAP builds the table file from the same figures as the screen, with the filters on screen:
+Kadratis builds the table file from the same figures as the screen, with the filters on screen:
 
 - **Values**: amounts carry their cents, FTE and days their decimals, shares are percentages. The screen rounds them for reading; the file keeps the values, so a sum in Excel matches the report.
 - **Order**: the rows come in the report's own order. A sort you click in a column header stays on the screen.

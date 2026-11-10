@@ -20,7 +20,7 @@ Solange die Zeile erstellt wird, zeigt ihre Kopfzeile **Erstellen** und **Abbrec
 - **Erstellen** prüft die unten genannten Pflichtfelder. Fehlt eines, nennt eine Meldung die fehlenden Felder, sie werden im Bereich **Eigenschaften** markiert, und der Cursor springt in das erste. Andernfalls schließt sich die Zeile, und Sie kehren dorthin zurück, wo Sie begonnen haben: zum vorherigen Bildschirm, sonst zur Liste
 - **Abbrechen** löscht die Zeile und alles, was darin erfasst wurde, Beträge eingeschlossen. Wenn Sie mehr als den Titel eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Zeilen abbrechen. Eine Zeile mit Beträgen in einer eingefrorenen Spalte kann nicht abgebrochen werden
 
-Verlassen Sie die Zeile auf andere Weise, während ein Pflichtfeld fehlt, fragt KANAP, ob Sie sie vervollständigen oder löschen möchten. Eine Zeile, die ohne zahlendes Unternehmen verlassen wurde, zeigt eine Warnung mit den fehlenden Feldern und fragt bei jedem Verlassen erneut. Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erstellen.
+Verlassen Sie die Zeile auf andere Weise, während ein Pflichtfeld fehlt, fragt Kadratis, ob Sie sie vervollständigen oder löschen möchten. Eine Zeile, die ohne zahlendes Unternehmen verlassen wurde, zeigt eine Warnung mit den fehlenden Feldern und fragt bei jedem Verlassen erneut. Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erstellen.
 
 **Pflichtfelder**:
 
@@ -87,7 +87,7 @@ Zeilen, die vor der einzigen Reihe angelegt wurden, hatten zusätzlich eine Numm
 - Ein Link oder Lesezeichen zu einer früheren OPEX- oder CAPEX-Seite öffnet die Zeile
 - Die Schnellsuche der Liste findet eine Zeile über ihre frühere Nummer
 - Die Budgetdatei liest sie in `item_number`. Siehe [Ein Budget aus einer Tabellenkalkulation laden](budget-file.md)
-- Plaid findet eine Zeile über beide Nummern. Siehe [Plaid](ai-assistant.md#datensatze-mit-erwahnen)
+- Kad findet eine Zeile über beide Nummern. Siehe [Kad](ai-assistant.md#datensatze-mit-erwahnen)
 
 ---
 
@@ -220,7 +220,7 @@ Klicken Sie auf eine beliebige Zeile der Liste, um den Arbeitsbereich zu öffnen
 - Jede Änderung wird automatisch gespeichert. In der Kopfzeile erscheint der Hinweis **Wird gespeichert...** / **Gespeichert**
 - Beim Wechsel des Tabs, beim Wechsel zur vorherigen oder nächsten Zeile oder beim Schließen des Arbeitsbereichs werden ausstehende Änderungen zuerst gespeichert. Schlägt ein Speichervorgang fehl, bleiben Sie an Ort und Stelle und eine Meldung nennt den Grund, sodass keine Änderung unbemerkt verloren geht
 - **Strg+S** (**Cmd+S** auf dem Mac) speichert sofort
-- Kann eine Speicherung nicht sofort erfolgen, weil gerade eine andere Speicherung auf denselben Daten läuft, wiederholt KANAP sie automatisch für Sie
+- Kann eine Speicherung nicht sofort erfolgen, weil gerade eine andere Speicherung auf denselben Daten läuft, wiederholt Kadratis sie automatisch für Sie
 - Läuft ein Budgetvorgang für viele Zeilen (zum Beispiel eine Spaltenkopie oder ein Zurücksetzen in der Budgetadministration), werden Änderungen hier mit der Meldung „Ein anderer Budgetvorgang läuft gerade. Bitte versuchen Sie es erneut, wenn er abgeschlossen ist.“ zurückgestellt. Versuchen Sie es erneut, sobald er abgeschlossen ist
 
 **Gleichzeitiges Bearbeiten**:
@@ -277,7 +277,7 @@ Ersetzt die Zeile eine andere, oder wurde sie nach einer Typänderung ab einem s
 - Jedes Feld listet die aktivierten Werte seiner Dimension. Ein deaktivierter Wert bleibt auf den Zeilen, die ihn bereits haben, und kann für keine andere Zeile gewählt werden
 - Ein Wert, der nur für den anderen Typ verwendet wird, wird nicht angeboten, und seine Wahl wird abgelehnt. Eine Zeile, die ihn bereits hat, behält ihn und bleibt bearbeitbar. Siehe [OPEX- oder CAPEX-Werte](analytics.md#opex-oder-capex-werte)
 - Das Feld kann keinen Wert erstellen: Erstellen Sie ihn unter [Analysedimensionen](analytics.md), oder lassen Sie ihn von einem Import erstellen
-- Eine erforderliche Dimension ist mit einem Sternchen markiert. Eine Zeile, die erstellt wird, braucht einen Wert in ihr: **Erstellen** nennt sie als fehlend, bis Sie einen wählen. Bei einer Zeile mit einem Wert kann das Feld nicht geleert, nur geändert werden. Eine Zeile ohne Wert bleibt bearbeitbar. Wenn Sie eine solche Zeile ändern, fragt KANAP beim Verlassen zuerst: „Kostenart ist erforderlich. Wählen Sie einen Wert, bevor Sie die Seite verlassen.“ **Bleiben** setzt den Cursor in das fehlende Feld. **Trotzdem verlassen** verlässt die Zeile. Siehe [Erforderliche Dimensionen](analytics.md#erforderliche-dimensionen)
+- Eine erforderliche Dimension ist mit einem Sternchen markiert. Eine Zeile, die erstellt wird, braucht einen Wert in ihr: **Erstellen** nennt sie als fehlend, bis Sie einen wählen. Bei einer Zeile mit einem Wert kann das Feld nicht geleert, nur geändert werden. Eine Zeile ohne Wert bleibt bearbeitbar. Wenn Sie eine solche Zeile ändern, fragt Kadratis beim Verlassen zuerst: „Kostenart ist erforderlich. Wählen Sie einen Wert, bevor Sie die Seite verlassen.“ **Bleiben** setzt den Cursor in das fehlende Feld. **Trotzdem verlassen** verlässt die Zeile. Siehe [Erforderliche Dimensionen](analytics.md#erforderliche-dimensionen)
 - Können die Dimensionen nicht geladen werden, ersetzt eine Zeile diese Felder: „Die Dimensionen konnten nicht geladen werden.“
 
 **Tipp**: Ein Konto außerhalb des Kontenplans des zahlenden Unternehmens wird abgelehnt, wenn Sie es wählen. Eine bestehende Zeile, deren Konto außerhalb des Kontenplans ihres Unternehmens liegt, lässt sich weiterhin bearbeiten: Der Kontenplan wird nur geprüft, wenn sich das Unternehmen oder das Konto ändert, und wenn Sie bei einer Zeile, die erstellt wird, auf **Erstellen** klicken.
@@ -292,7 +292,7 @@ Der Budget-Tab enthält die Beträge der Zeile, Jahr für Jahr und Spalte für S
 
 - Verwenden Sie die Jahres-Tabs oben, um zwischen J-2, J-1, J (aktuelles Jahr), J+1 und J+2 zu wechseln
 - Jedes Jahr hat seine eigenen Beträge
-- Beim Wechsel des Jahres werden Ihre ausstehenden Änderungen zuerst gespeichert. Wartet eine Spalte nach der Änderung einer anderen Person noch auf Ihre Wahl, fragt KANAP zuerst: **Jahr wechseln** verwirft Ihre Werte in dieser Spalte
+- Beim Wechsel des Jahres werden Ihre ausstehenden Änderungen zuerst gespeichert. Wartet eine Spalte nach der Änderung einer anderen Person noch auf Ihre Wahl, fragt Kadratis zuerst: **Jahr wechseln** verwirft Ihre Werte in dieser Spalte
 
 **Budgetspalten**:
 
@@ -502,7 +502,7 @@ Zum Beispiel zählt ein Berater in Vollzeit von Februar bis Oktober in jedem die
 
 - **Gezählt**: eine Spalte mit Zeilen in Personen oder Tagen
 - **Null**: eine Spalte, deren Zeilen alle in Stück sind. Ihre VZÄ sind 0
-- **Leer**: eine Spalte ohne Zeilen, eine Budgetzeile ohne Version für dieses Jahr oder ein Jahr nach dem Ende der Gültigkeit der Budgetzeile. Ihre VZÄ-Zelle bleibt leer, weil KANAP nicht sagen kann, für wie viele Personen sie bezahlt
+- **Leer**: eine Spalte ohne Zeilen, eine Budgetzeile ohne Version für dieses Jahr oder ein Jahr nach dem Ende der Gültigkeit der Budgetzeile. Ihre VZÄ-Zelle bleibt leer, weil Kadratis nicht sagen kann, für wie viele Personen sie bezahlt
 - Die VZÄ bleiben bei den Zeilen. Nach einer Änderung von Hand, einer Verteilung oder einer Kopie behält die Spalte die VZÄ ihrer Zeilen. Eine Kopie berechnet die VZÄ aus den kopierten Zeilen neu, mit den Arbeitstagekalendern des Zieljahres
 
 ---
@@ -545,8 +545,8 @@ Der Tab Zuordnungen verteilt die Ausgabe eines Jahres auf Ihre Unternehmen und A
 
 **Umsatz in mehreren Währungen**:
 
-- Jedes Unternehmen erfasst seinen Umsatz in Millionen seiner Basiswährung. Vor der Aufteilung rechnet KANAP jeden Umsatz in die Berichtswährung um, zu den Kursen der Budgetversion des Jahres: den beim Einfrieren ihrer Standardspalte festgeschriebenen Kursen, sonst den aktuellen Kursen des Jahres. Siehe [Währungseinstellungen](currencies.md)
-- Hat eine Währung für das Jahr keinen Kurs, bleiben die Unternehmen in dieser Währung aus der Aufteilung heraus: Sie erhalten keinen Anteil, und die übrigen Unternehmen teilen sich 100 %. Eine Warnung über der Tabelle nennt jedes ausgelassene Unternehmen. KANAP ruft den fehlenden Kurs im Hintergrund ab, und die Aufteilung korrigiert sich von selbst, sobald der Kurs verfügbar ist. Ein [manueller Kurs](currencies.md#manuelle-kurse) behebt es sofort
+- Jedes Unternehmen erfasst seinen Umsatz in Millionen seiner Basiswährung. Vor der Aufteilung rechnet Kadratis jeden Umsatz in die Berichtswährung um, zu den Kursen der Budgetversion des Jahres: den beim Einfrieren ihrer Standardspalte festgeschriebenen Kursen, sonst den aktuellen Kursen des Jahres. Siehe [Währungseinstellungen](currencies.md)
+- Hat eine Währung für das Jahr keinen Kurs, bleiben die Unternehmen in dieser Währung aus der Aufteilung heraus: Sie erhalten keinen Anteil, und die übrigen Unternehmen teilen sich 100 %. Eine Warnung über der Tabelle nennt jedes ausgelassene Unternehmen. Kadratis ruft den fehlenden Kurs im Hintergrund ab, und die Aufteilung korrigiert sich von selbst, sobald der Kurs verfügbar ist. Ein [manueller Kurs](currencies.md#manuelle-kurse) behebt es sofort
 - Bei **Manuell nach Unternehmen** mit dem Treiber Umsatz wird die Zuordnung abgelehnt, wenn keines der ausgewählten Unternehmen einen Kurs hat. Die Meldung nennt die Währungen und das Jahr. Geben Sie den Kurs ein oder wählen Sie einen anderen Treiber
 
 **So verwenden Sie ihn**:
@@ -612,7 +612,7 @@ Der Abschnitt fehlt, wenn die Zeile keinen Lieferanten hat oder es nichts vorzus
 
 ### Verlauf
 
-Der Tab Verlauf listet die Änderungen an der Zeile, die neueste oben. Jeder Eintrag zeigt Datum und Uhrzeit, den Urheber (eine Person, **System**, **Import** oder **Plaid für** eine Person) und jedes geänderte Feld mit seinem Wert vorher und nachher. Eine Betragsänderung nennt das Jahr, die Spalte und die Werte vorher und nachher.
+Der Tab Verlauf listet die Änderungen an der Zeile, die neueste oben. Jeder Eintrag zeigt Datum und Uhrzeit, den Urheber (eine Person, **System**, **Import** oder **Kad für** eine Person) und jedes geänderte Feld mit seinem Wert vorher und nachher. Eine Betragsänderung nennt das Jahr, die Spalte und die Werte vorher und nachher.
 
 Auch die Änderungen an den Bestandteilen der Zeile erscheinen hier: Beträge, Dimensionen, Zuordnungen, Links, Anhänge, Kontakte, Anwendungen, Technologien, Assets und Aufgaben. Wer die Zeile öffnen kann, kann auch ihren Verlauf lesen. Ein Datensatz aus einem Modul, das Sie nicht lesen können, erscheint nur mit seiner Art, zum Beispiel „ein Vertrag“.
 

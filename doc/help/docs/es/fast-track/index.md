@@ -1,6 +1,6 @@
 ---
 title: "Portafolio - Inicio Rápido: De la solicitud a la entrega"
-description: Comience a ser productivo con el módulo de Portafolio de KANAP en minutos. Una guía práctica paso a paso.
+description: Comience a ser productivo con el módulo de Portafolio de Kadratis en minutos. Una guía práctica paso a paso.
 ---
 
 # Portafolio - Inicio Rápido: De la solicitud a la entrega
@@ -10,7 +10,7 @@ Esta guía le lleva por el ciclo de vida del portafolio, desde enviar su primera
 !!! tip "Consejo"
     Todos los pasos clave en una sola página A4: imprímala, cuélguela, compártala con su equipo.
 
-    [:material-download: Descargar la hoja de referencia (PDF)](downloads/kanap-portfolio-fast-track.pdf){ .md-button .md-button--primary }
+    [:material-download: Descargar la hoja de referencia (PDF)](downloads/kadratis-portfolio-fast-track.pdf){ .md-button .md-button--primary }
 
 Para los detalles completos, consulte la [documentación de referencia del portafolio](../portfolio-requests.md).
 
@@ -20,7 +20,7 @@ Para los detalles completos, consulte la [documentación de referencia del porta
 
 ![Vista general del flujo de trabajo del portafolio](images/workflow-overview.png)
 
-Cada iniciativa en KANAP sigue el mismo flujo:
+Cada iniciativa en Kadratis sigue el mismo flujo:
 
 | Etapa | Qué sucede |
 |-------|-----------|
@@ -110,7 +110,7 @@ Cada dimensión se califica desde **No evaluado** hasta **Bloqueante**. El Resum
 
 Use **Evaluación** para calificar la solicitud contra los criterios de portafolio configurados en su espacio de trabajo.
 
-Los nombres y pesos exactos de los criterios pueden variar por espacio de trabajo, porque provienen de **Portafolio > Configuración**. KANAP calcula la prioridad ponderada automáticamente, y algunos espacios de trabajo también usan una regla de omisión obligatoria para trabajo que debe saltar al inicio de la cola.
+Los nombres y pesos exactos de los criterios pueden variar por espacio de trabajo, porque provienen de **Portafolio > Configuración**. Kadratis calcula la prioridad ponderada automáticamente, y algunos espacios de trabajo también usan una regla de omisión obligatoria para trabajo que debe saltar al inicio de la cola.
 
 ### La recomendación de análisis
 
@@ -141,7 +141,7 @@ Una vez que el análisis y la evaluación están completos, es momento de decidi
 4. Haga clic en **Convertir en proyecto**
 
 !!! tip "Consejo"
-    Cuando convierte una solicitud en proyecto, KANAP abre un diálogo de conversión donde puede confirmar el nombre del proyecto, fechas planificadas y esfuerzo inicial. El propósito de la solicitud se muestra como referencia, y los datos vinculados de la solicitud se trasladan al proyecto.
+    Cuando convierte una solicitud en proyecto, Kadratis abre un diálogo de conversión donde puede confirmar el nombre del proyecto, fechas planificadas y esfuerzo inicial. El propósito de la solicitud se muestra como referencia, y los datos vinculados de la solicitud se trasladan al proyecto.
 
 El estado de la solicitud cambia a **Convertida**, y se crea un nuevo proyecto vinculado de vuelta a la solicitud original.
 
@@ -207,7 +207,7 @@ Consulte la [referencia de Proyectos](../portfolio-projects.md) para todas las o
 
 ## Paso 5: Rastree la ejecución
 
-Ahora comienza el trabajo real. A medida que el proyecto avanza, mantenga KANAP actualizado.
+Ahora comienza el trabajo real. A medida que el proyecto avanza, mantenga Kadratis actualizado.
 
 ### Actualice el progreso
 
@@ -314,7 +314,7 @@ La disponibilidad de colaboradores y las asignaciones de proyectos se combinan p
 
 ### Análisis de cuellos de botella
 
-Cuando múltiples proyectos compiten por los mismos colaboradores o competencias, KANAP resalta el cuello de botella para que pueda hacer concesiones antes de que se conviertan en crisis.
+Cuando múltiples proyectos compiten por los mismos colaboradores o competencias, Kadratis resalta el cuello de botella para que pueda hacer concesiones antes de que se conviertan en crisis.
 
 ### Informes ejecutivos
 
@@ -345,4 +345,4 @@ Consulte la [referencia de Informes](../portfolio-reporting.md).
 ---
 
 !!! success "Está listo"
-    Ahora conoce el ciclo de vida completo desde la solicitud hasta la entrega. Comience con una solicitud, evalúela correctamente y deje que KANAP se encargue del resto. Para documentación detallada sobre cada funcionalidad, explore la sección de [Gestión de portafolio](../portfolio-requests.md).
+    Ahora conoce el ciclo de vida completo desde la solicitud hasta la entrega. Comience con una solicitud, evalúela correctamente y deje que Kadratis se encargue del resto. Para documentación detallada sobre cada funcionalidad, explore la sección de [Gestión de portafolio](../portfolio-requests.md).
