@@ -174,12 +174,20 @@ async function testSlowTextsAreRefusedWhileTheMainThreadServes() {
   for (const [label, text] of Object.entries(texts)) {
     const startedAt = performance.now();
     const budgetSpent = timerMark(MARKDOWN_WORK_TIMEOUT_MS);
+    stopLines.length = 0;
     const { result, ticks } = await withMainThreadProbe(() => outcomeOf(() => normalizeMarkdownRichText(text)));
     const elapsedMs = performance.now() - startedAt;
     budgetSpent.clear();
     assert.equal(result, MARKDOWN_TOO_COMPLEX, label);
-    // Refused by the time budget, not before.
-    assert.ok(budgetSpent.fired(), `${label}: refused after ${elapsedMs.toFixed(0)} ms, before the time budget`);
+    // Refused once the worker was stopped: by the time budget, or by the worker's heap limit
+    // (deep quotes fill the heap in about 1.5 s on an idle machine, after the budget on a
+    // loaded one). Never before.
+    const stop = stopLines.join('\n');
+    const heapLimit = /reason=stopped: .*memory limit/.test(stop);
+    assert.ok(
+      heapLimit || budgetSpent.fired(),
+      `${label}: refused after ${elapsedMs.toFixed(0)} ms, before the time budget (${stop})`,
+    );
     assertMainThreadServed(ticks, label);
   }
   // Image openers parse in linear time: accepted.
@@ -410,11 +418,14 @@ async function testStoppedPool() {
 }
 
 const busyLines: string[] = [];
+/** Calls the pool stopped, as logged ("Text not processed: ... reason=..."). */
+const stopLines: string[] = [];
 
 async function run() {
   const warn = Logger.prototype.warn;
   Logger.prototype.warn = function captureBusy(this: Logger, message: unknown, ...rest: unknown[]) {
     if (String(message).includes('reason=busy')) busyLines.push(String(message));
+    else if (String(message).startsWith('Text not processed:')) stopLines.push(String(message));
     return (warn as (...args: unknown[]) => void).call(this, message, ...rest);
   } as typeof Logger.prototype.warn;
   assertLockfileParser();
