@@ -1,7 +1,7 @@
 ---
 title: "KANAP devient Kadratis"
 description: "KANAP s'appelle désormais Kadratis™. Le logiciel, sa licence open source et l'offre d'hébergement et de support ne changent pas."
-date: 2026-11-09
+date: 2026-11-11
 topic: release
 author: Friedrich
 authorRole: Fondateur, DSI
@@ -29,7 +29,7 @@ La [politique d'usage de la marque](https://github.com/kanap-hq/KANAP/blob/main/
 - à votre première visite sur la nouvelle adresse, vous vous reconnectez une fois. Votre navigateur ne propose pas toujours de lui-même le mot de passe enregistré pour l'ancienne adresse : il suffit de le saisir. Avec la connexion Microsoft, un clic suffit, comme avant ;
 - les mails de l'application portent le nouveau nom et partent toujours de la même adresse.
 
-**Si vous hébergez Kadratis**, la mise à jour se fait comme d'habitude, sans étape supplémentaire. À partir de la [version], les images s'appellent `kadratis-*` au lieu de `kanap-*` ; le fichier `compose.onprem.yml` de la version les nomme déjà, et la procédure de mise à jour les télécharge. Les variables `KANAP_*`, les rôles de la base et les jetons MCP gardent leur nom. Les versions précédentes restent publiées sous leurs anciens noms.
+**Si vous hébergez Kadratis**, la mise à jour se fait comme d'habitude, sans étape supplémentaire. À partir de la 26.11.4, les images s'appellent `kadratis-*` au lieu de `kanap-*` ; le fichier `compose.onprem.yml` de la version les nomme déjà, et la procédure de mise à jour les télécharge. Les variables `KANAP_*`, les rôles de la base et les jetons MCP gardent leur nom. Les versions précédentes restent publiées sous leurs anciens noms.
 
 **Le site et la documentation** passent sur [kadratis.com](https://kadratis.com) et [doc.kadratis.com](https://doc.kadratis.com). Les anciennes adresses redirigent page par page.
 

@@ -14,7 +14,7 @@ const content: LegalContent = {
     header: {
       eyebrow: 'Mentions légales',
       title: 'Politique de confidentialité',
-      lastUpdated: 'Dernière mise à jour : [date de la bascule]',
+      lastUpdated: 'Dernière mise à jour : 11 novembre 2026',
     },
     body: `
 <h2>Préambule</h2>
@@ -131,7 +131,7 @@ const content: LegalContent = {
     header: {
       eyebrow: 'Mentions légales',
       title: "Conditions générales d'utilisation",
-      lastUpdated: 'Dernière mise à jour : [date de la bascule]',
+      lastUpdated: 'Dernière mise à jour : 11 novembre 2026',
     },
     body: `
 <h2>Préambule</h2>
@@ -264,7 +264,7 @@ const content: LegalContent = {
     header: {
       eyebrow: 'Mentions légales',
       title: 'Mentions légales',
-      lastUpdated: 'Dernière mise à jour : [date de la bascule]',
+      lastUpdated: 'Dernière mise à jour : 11 novembre 2026',
     },
     body: `
 <h2>Éditeur du site</h2>

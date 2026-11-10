@@ -14,7 +14,7 @@ const content: LegalContent = {
     header: {
       eyebrow: 'Legal',
       title: 'Privacy policy',
-      lastUpdated: 'Last updated: [date de la bascule]',
+      lastUpdated: 'Last updated: 11 November 2026',
     },
     body: `
 <h2>Preamble</h2>
@@ -131,7 +131,7 @@ const content: LegalContent = {
     header: {
       eyebrow: 'Legal',
       title: 'Terms of use',
-      lastUpdated: 'Last updated: [date de la bascule]',
+      lastUpdated: 'Last updated: 11 November 2026',
     },
     body: `
 <h2>Preamble</h2>
@@ -264,7 +264,7 @@ const content: LegalContent = {
     header: {
       eyebrow: 'Legal',
       title: 'Legal notice',
-      lastUpdated: 'Last updated: [date de la bascule]',
+      lastUpdated: 'Last updated: 11 November 2026',
     },
     body: `
 <h2>Site publisher</h2>

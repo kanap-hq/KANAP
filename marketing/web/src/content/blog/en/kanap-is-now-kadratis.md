@@ -1,7 +1,7 @@
 ---
 title: "KANAP is now Kadratis"
 description: "KANAP is now called Kadratis™. The software, its open source license and the hosting and support offer do not change."
-date: 2026-11-09
+date: 2026-11-11
 topic: release
 author: Friedrich
 authorRole: Founder, CIO
@@ -29,7 +29,7 @@ The [trademark policy](https://github.com/kanap-hq/KANAP/blob/main/TRADEMARKS.md
 - on your first visit to the new address, you sign in once. Your browser does not always offer the password saved for the old address on its own: just type it in. With Microsoft sign-in, one click is enough, as before;
 - the application's emails carry the new name and still come from the same address.
 
-**If you host Kadratis yourself**, the update works as usual, with no extra step. From [version] on, the images are called `kadratis-*` instead of `kanap-*`; the version's `compose.onprem.yml` already names them, and the update procedure pulls them. The `KANAP_*` variables, the database roles and the MCP tokens keep their names. Earlier versions remain published under their old names.
+**If you host Kadratis yourself**, the update works as usual, with no extra step. From version 26.11.4 on, the images are called `kadratis-*` instead of `kanap-*`; the version's `compose.onprem.yml` already names them, and the update procedure pulls them. The `KANAP_*` variables, the database roles and the MCP tokens keep their names. Earlier versions remain published under their old names.
 
 **The website and the documentation** move to [kadratis.com](https://kadratis.com) and [doc.kadratis.com](https://doc.kadratis.com). The old addresses redirect page by page.
 

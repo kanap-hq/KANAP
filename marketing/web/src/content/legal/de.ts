@@ -17,7 +17,7 @@ const content: LegalContent = {
     header: {
       eyebrow: 'Rechtliches',
       title: 'Datenschutzerklärung',
-      lastUpdated: 'Zuletzt aktualisiert: [date de la bascule]',
+      lastUpdated: 'Zuletzt aktualisiert: 11. November 2026',
     },
     body: `
 <h2>Präambel</h2>
