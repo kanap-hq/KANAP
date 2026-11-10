@@ -79,7 +79,7 @@ else if (digest) process.stdout.write('HTTP/2 200\\r\\ndocker-content-digest: ' 
 else process.stdout.write('HTTP/2 404\\r\\n\\r\\n');
 `;
 
-const IMAGES = ['kanap-api', 'kanap-api-tools', 'kanap-web', 'kanap-marketing'];
+const IMAGES = ['kadratis-api', 'kadratis-api-tools', 'kadratis-web', 'kadratis-marketing'];
 const DIGESTS = Object.fromEntries(IMAGES.map((image, i) => [image, `sha256:${String(i + 1).repeat(64)}`]));
 const digestsTxt = (version) => IMAGES.map((image) => `${image} ${version} ghcr.io/kanap-hq/${image}@${DIGESTS[image]}`).join('\n');
 
@@ -100,10 +100,10 @@ const COMPOSE_FILES = ['infra/compose.onprem.yml', 'infra/compose.qa.yml', 'infr
 const composeText = (version, marketing = true) => [
   'services:',
   '  api:',
-  `    image: ghcr.io/kanap-hq/kanap-api:\${KANAP_VERSION:-${version}}`,
+  `    image: ghcr.io/kanap-hq/kadratis-api:\${KANAP_VERSION:-${version}}`,
   '  web:',
-  `    image: ghcr.io/kanap-hq/kanap-web:\${KANAP_VERSION:-${version}}`,
-  ...(marketing ? ['  marketing:', `    image: ghcr.io/kanap-hq/kanap-marketing:\${KANAP_MARKETING_VERSION:-\${KANAP_VERSION:-${version}}}`] : []),
+  `    image: ghcr.io/kanap-hq/kadratis-web:\${KANAP_VERSION:-${version}}`,
+  ...(marketing ? ['  marketing:', `    image: ghcr.io/kanap-hq/kadratis-marketing:\${KANAP_MARKETING_VERSION:-\${KANAP_VERSION:-${version}}}`] : []),
   '',
 ].join('\n');
 
@@ -217,12 +217,12 @@ describe('compose versions', () => {
     const before = `# KANAP_VERSION=26.10.7 in a comment stays\nports: ["8080:8080"]\n${composeText('26.10.7')}`;
     const after = setComposeVersion(before, '26.11.1', 'infra/compose.qa.yml');
     assert.equal(after, before.replaceAll('${KANAP_VERSION:-26.10.7}', '${KANAP_VERSION:-26.11.1}'));
-    assert.match(after, /kanap-marketing:\$\{KANAP_MARKETING_VERSION:-\$\{KANAP_VERSION:-26\.11\.1\}\}/);
+    assert.match(after, /kadratis-marketing:\$\{KANAP_MARKETING_VERSION:-\$\{KANAP_VERSION:-26\.11\.1\}\}/);
     assert.equal(setComposeVersion(after, '26.11.1'), after, 'a second run changes nothing');
   });
 
   it('fails on a file without any default, naming it', () => {
-    assert.throws(() => setComposeVersion('image: ghcr.io/kanap-hq/kanap-api:26.10.7\n', '26.11.1', 'infra/compose.prod.yml'),
+    assert.throws(() => setComposeVersion('image: ghcr.io/kanap-hq/kadratis-api:26.10.7\n', '26.11.1', 'infra/compose.prod.yml'),
       /infra\/compose\.prod\.yml has no \$\{KANAP_VERSION:-<version>\} default to set to 26\.11\.1/);
   });
 });
@@ -243,7 +243,7 @@ describe('publish', () => {
     assert.match(output, /Warning: merged since v26\.9\.1 and not cited in the entry: #2\n/);
     assert.match(output, new RegExp(`would wait for the run of release-images\\.yml on ${sha}: gh run list --repo kanap-hq/KANAP --workflow release-images\\.yml --branch v26\\.10\\.1 --json `));
     assert.match(output, /would run: gh run download "<run>" --repo kanap-hq\/KANAP --name image-digests /);
-    assert.match(output, /\| `kanap-marketing` \| `ghcr\.io\/kanap-hq\/kanap-marketing@sha256:<digest>` \|\n\nProvenance: `gh attestation verify oci:\/\/ghcr\.io\/kanap-hq\/kanap-api@sha256:<digest> -R kanap-hq\/KANAP --signer-workflow kanap-hq\/KANAP\/\.github\/workflows\/release-images\.yml --source-ref refs\/tags\/v26\.10\.1`/);
+    assert.match(output, /\| `kadratis-marketing` \| `ghcr\.io\/kanap-hq\/kadratis-marketing@sha256:<digest>` \|\n\nProvenance: `gh attestation verify oci:\/\/ghcr\.io\/kanap-hq\/kadratis-api@sha256:<digest> -R kanap-hq\/KANAP --signer-workflow kanap-hq\/KANAP\/\.github\/workflows\/release-images\.yml --source-ref refs\/tags\/v26\.10\.1`/);
     assert.match(output, /would run, unless every stable and 26\.10 tag is already on the version: gh workflow run release-images\.yml --repo kanap-hq\/KANAP --ref main -f promote=26\.10\.1\n/);
     // Order: tag, images, release, inventory, promotion, stable.
     const order = ['git push origin v26.10.1', 'would wait for the run', 'gh release create', 'gh release upload', 'gh workflow run', ':refs/heads/stable'].map((text) => output.indexOf(text));
@@ -263,11 +263,11 @@ describe('publish', () => {
     assert.equal(repo.remote('stable'), repo.shas.release);
     assert.match(repo.calls(), /^run list --repo kanap-hq\/KANAP --workflow release-images\.yml --branch v26\.10\.1 --json /m);
     assert.match(repo.calls(), /^run download 11 --repo kanap-hq\/KANAP --name image-digests --dir \S+$/m);
-    assert.match(repo.curls(), /^https:\/\/ghcr\.io\/v2\/kanap-hq\/kanap-web\/manifests\/26\.10\.1$/m);
+    assert.match(repo.curls(), /^https:\/\/ghcr\.io\/v2\/kanap-hq\/kadratis-web\/manifests\/26\.10\.1$/m);
     assert.match(repo.calls(), /^release create v26\.10\.1 --repo kanap-hq\/KANAP --title KANAP 26\.10\.1 · Action required --notes-file \S+$/m);
     const notes = repo.notes();
     assert.ok(notes.startsWith('First version.'), notes);
-    assert.ok(notes.endsWith(`| \`kanap-marketing\` | \`ghcr.io/kanap-hq/kanap-marketing@${DIGESTS['kanap-marketing']}\` |\n\nProvenance: \`gh attestation verify oci://ghcr.io/kanap-hq/kanap-api@${DIGESTS['kanap-api']} -R kanap-hq/KANAP --signer-workflow kanap-hq/KANAP/.github/workflows/release-images.yml --source-ref refs/tags/v26.10.1\`\n`), notes);
+    assert.ok(notes.endsWith(`| \`kadratis-marketing\` | \`ghcr.io/kanap-hq/kadratis-marketing@${DIGESTS['kadratis-marketing']}\` |\n\nProvenance: \`gh attestation verify oci://ghcr.io/kanap-hq/kadratis-api@${DIGESTS['kadratis-api']} -R kanap-hq/KANAP --signer-workflow kanap-hq/KANAP/.github/workflows/release-images.yml --source-ref refs/tags/v26.10.1\`\n`), notes);
     const upload = repo.calls().split('\n').find((line) => line.startsWith('release upload'));
     for (const file of ['sbom-backend.cdx.json', 'sbom-frontend.cdx.json', 'sbom-marketing-web.cdx.json', 'THIRD-PARTY-NOTICES.txt']) {
       assert.ok(upload.includes(`/${file}`), `${file} uploaded: ${upload}`);
@@ -312,10 +312,10 @@ describe('publish', () => {
 
   it('stops with the way to make a package public when an anonymous pull fails', () => {
     const repo = fixture();
-    repo.answer({ private: ['kanap-web', 'kanap-api-tools'] });
+    repo.answer({ private: ['kadratis-web', 'kadratis-api-tools'] });
     const { status, output } = repo.run('publish', '26.10.1', '--no-sbom');
     assert.equal(status, 2, output);
-    assert.match(output, /an anonymous pull of kanap-api-tools:26\.10\.1, kanap-web:26\.10\.1 fails: the package is not public\. For each one: organisation kanap-hq -> Packages -> <image> -> Package settings -> Change visibility -> Public\. Then rerun publish 26\.10\.1/);
+    assert.match(output, /an anonymous pull of kadratis-api-tools:26\.10\.1, kadratis-web:26\.10\.1 fails: the package is not public\. For each one: organisation kanap-hq -> Packages -> <image> -> Package settings -> Change visibility -> Public\. Then rerun publish 26\.10\.1/);
     assert.equal(repo.remote('stable'), '');
     assert.doesNotMatch(repo.calls(), /release create|workflow run/);
   });
@@ -325,7 +325,7 @@ describe('publish', () => {
     repo.answer({ digests: digestsTxt('26.10.1').split('\n').slice(0, 3).join('\n') });
     const { status, output } = repo.run('publish', '26.10.1', '--no-sbom');
     assert.equal(status, 1, output);
-    assert.match(output, /digests\.txt: no digest for kanap-marketing/);
+    assert.match(output, /digests\.txt: no digest for kadratis-marketing/);
     assert.doesNotMatch(repo.calls(), /release create/);
   });
 
@@ -614,21 +614,21 @@ describe('images', () => {
     const text = `\n${digestsTxt('26.11.1').split('\n').reverse().join('\n')}\n`;
     const entries = parseDigests(text, '26.11.1', owner);
     assert.deepEqual(entries.map((entry) => entry.image), IMAGES);
-    assert.deepEqual(entries[0], { image: 'kanap-api', ref: `ghcr.io/kanap-hq/kanap-api@${DIGESTS['kanap-api']}`, name: 'ghcr.io/kanap-hq/kanap-api', digest: DIGESTS['kanap-api'] });
+    assert.deepEqual(entries[0], { image: 'kadratis-api', ref: `ghcr.io/kanap-hq/kadratis-api@${DIGESTS['kadratis-api']}`, name: 'ghcr.io/kanap-hq/kadratis-api', digest: DIGESTS['kadratis-api'] });
   });
 
   it('refuses a digests.txt that does not describe the four images of the version', () => {
     const lines = digestsTxt('26.11.1').split('\n');
     const refused = (text, pattern) => assert.throws(() => parseDigests(text, '26.11.1', owner), pattern);
-    refused(lines.slice(1).join('\n'), /no digest for kanap-api$/);
-    refused([...lines, lines[0]].join('\n'), /kanap-api is listed twice/);
-    refused(digestsTxt('26.11.2'), /kanap-api is tagged 26\.11\.2, not 26\.11\.1/);
-    refused(lines.join('\n').replace('ghcr.io/kanap-hq/kanap-web@', 'ghcr.io/someone/kanap-web@'), /kanap-web points at ghcr\.io\/someone\/kanap-web@/);
-    refused(lines.join('\n').replace('ghcr.io/kanap-hq/kanap-web@', 'ghcr.io/kanap-hq/kanap-api@'), /kanap-web points at ghcr\.io\/kanap-hq\/kanap-api@/);
-    refused([...lines, `kanap-other 26.11.1 ghcr.io/kanap-hq/kanap-other@${DIGESTS['kanap-api']}`].join('\n'), /unknown image kanap-other/);
-    refused(lines.join('\n').replace(DIGESTS['kanap-web'], 'sha256:abc'), /unexpected line "kanap-web /);
-    refused(lines.join('\n').replace(`@${DIGESTS['kanap-web']}`, ':26.11.1'), /unexpected line "kanap-web /);
-    refused('', /no digest for kanap-api, kanap-api-tools, kanap-web, kanap-marketing/);
+    refused(lines.slice(1).join('\n'), /no digest for kadratis-api$/);
+    refused([...lines, lines[0]].join('\n'), /kadratis-api is listed twice/);
+    refused(digestsTxt('26.11.2'), /kadratis-api is tagged 26\.11\.2, not 26\.11\.1/);
+    refused(lines.join('\n').replace('ghcr.io/kanap-hq/kadratis-web@', 'ghcr.io/someone/kadratis-web@'), /kadratis-web points at ghcr\.io\/someone\/kadratis-web@/);
+    refused(lines.join('\n').replace('ghcr.io/kanap-hq/kadratis-web@', 'ghcr.io/kanap-hq/kadratis-api@'), /kadratis-web points at ghcr\.io\/kanap-hq\/kadratis-api@/);
+    refused([...lines, `kadratis-other 26.11.1 ghcr.io/kanap-hq/kadratis-other@${DIGESTS['kadratis-api']}`].join('\n'), /unknown image kadratis-other/);
+    refused(lines.join('\n').replace(DIGESTS['kadratis-web'], 'sha256:abc'), /unexpected line "kadratis-web /);
+    refused(lines.join('\n').replace(`@${DIGESTS['kadratis-web']}`, ':26.11.1'), /unexpected line "kadratis-web /);
+    refused('', /no digest for kadratis-api, kadratis-api-tools, kadratis-web, kadratis-marketing/);
   });
 
   it('writes the Images section from the digests', () => {
@@ -640,7 +640,7 @@ describe('images', () => {
       '|---|---|',
       ...IMAGES.map((image) => `| \`${image}\` | \`ghcr.io/kanap-hq/${image}@${DIGESTS[image]}\` |`),
       '',
-      `Provenance: \`gh attestation verify oci://ghcr.io/kanap-hq/kanap-api@${DIGESTS['kanap-api']} -R kanap-hq/KANAP`
+      `Provenance: \`gh attestation verify oci://ghcr.io/kanap-hq/kadratis-api@${DIGESTS['kadratis-api']} -R kanap-hq/KANAP`
         + ' --signer-workflow kanap-hq/KANAP/.github/workflows/release-images.yml --source-ref refs/tags/v26.11.1`',
     ].join('\n'));
     assert.equal(hasImagesSection(`Notes.\n\n${section}\n`), true);
@@ -654,11 +654,11 @@ describe('images', () => {
     const on = (digest) => ({ stable: digest, '26.11': digest });
     const all = Object.fromEntries(IMAGES.map((image) => [image, on(DIGESTS[image])]));
     assert.deepEqual(imagesToPromote(entries, all, tags), []);
-    assert.deepEqual(imagesToPromote(entries, { ...all, 'kanap-web': on(null) }, tags), ['kanap-web']);
-    assert.deepEqual(imagesToPromote(entries, { ...all, 'kanap-api': on(DIGESTS['kanap-web']) }, tags), ['kanap-api']);
+    assert.deepEqual(imagesToPromote(entries, { ...all, 'kadratis-web': on(null) }, tags), ['kadratis-web']);
+    assert.deepEqual(imagesToPromote(entries, { ...all, 'kadratis-api': on(DIGESTS['kadratis-web']) }, tags), ['kadratis-api']);
     // stable moved, YY.M not yet: an interrupted promotion is not taken for a finished one.
-    assert.deepEqual(imagesToPromote(entries, { ...all, 'kanap-web': { stable: DIGESTS['kanap-web'], '26.11': null } }, tags), ['kanap-web']);
-    assert.deepEqual(imagesToPromote(entries, { ...all, 'kanap-web': { stable: DIGESTS['kanap-web'] } }, tags), ['kanap-web']);
+    assert.deepEqual(imagesToPromote(entries, { ...all, 'kadratis-web': { stable: DIGESTS['kadratis-web'], '26.11': null } }, tags), ['kadratis-web']);
+    assert.deepEqual(imagesToPromote(entries, { ...all, 'kadratis-web': { stable: DIGESTS['kadratis-web'] } }, tags), ['kadratis-web']);
     assert.deepEqual(imagesToPromote(entries, {}, tags), IMAGES);
     assert.deepEqual(imagesToPromote(entries, null, tags), IMAGES);
   });

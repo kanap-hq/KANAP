@@ -15,11 +15,11 @@ const index = (annotations) => ({
 const published = (revision, version) => index({
   'org.opencontainers.image.revision': revision,
   'org.opencontainers.image.version': version,
-  'org.opencontainers.image.title': 'kanap-api',
+  'org.opencontainers.image.title': 'kadratis-api',
 });
 
 test('builds a tag that does not exist yet', () => {
-  for (const stderr of ['ERROR: ghcr.io/kanap-hq/kanap-api:26.11.1: not found', 'manifest unknown', 'name unknown: repository name not known']) {
+  for (const stderr of ['ERROR: ghcr.io/kanap-hq/kadratis-api:26.11.1: not found', 'manifest unknown', 'name unknown: repository name not known']) {
     assert.deepEqual(tagState({ status: 1, stdout: '', stderr }, SHA, '26.11.1').state, 'free', stderr);
   }
   const denied = tagState({ status: 1, stdout: '', stderr: 'unexpected status from HEAD request: 403 Forbidden' }, SHA, '26.11.1');

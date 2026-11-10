@@ -8,7 +8,7 @@
 # missing from the image when it loads fails here (26.11.1 read its criteria labels from src/).
 # Nothing is loaded and no database is reached.
 #
-#   check-api-image.sh <image>    for example kanap-api:ci
+#   check-api-image.sh <image>    for example kadratis-api:ci
 #
 # Called by the `images` job of ci.yml and the `publish` job of release-images.yml.
 set -euo pipefail

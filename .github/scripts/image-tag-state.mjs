@@ -8,7 +8,7 @@
 //
 //   node .github/scripts/image-tag-state.mjs <revision> <version> <key>=<name:tag>...
 //
-// for example `... "$GITHUB_SHA" 26.11.1 api=ghcr.io/kanap-hq/kanap-api:26.11.1`. Writes
+// for example `... "$GITHUB_SHA" 26.11.1 api=ghcr.io/kanap-hq/kadratis-api:26.11.1`. Writes
 // `<key>=free|same` and `<key>-digest=<sha256:...>` (empty when free) to $GITHUB_OUTPUT, checks
 // every reference, then exits 1 when one is `other` or cannot be checked.
 import { appendFileSync } from 'node:fs';

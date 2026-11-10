@@ -110,7 +110,7 @@ function buildTarget(relative: string, service: string): string | null {
 }
 for (const file of ['infra/compose.onprem.yml', 'infra/compose.qa.yml', 'infra/compose.prod.yml']) {
   const block = serviceBlock(file, 'api');
-  assert.ok(block.some((line) => /^\s+image:\s*ghcr\.io\/kanap-hq\/kanap-api:\$\{KANAP_VERSION:-/.test(line)), `${file} pulls the published API image`);
+  assert.ok(block.some((line) => /^\s+image:\s*ghcr\.io\/kanap-hq\/kadratis-api:\$\{KANAP_VERSION:-/.test(line)), `${file} pulls the published API image`);
   assert.ok(!block.some((line) => /^\s+build:/.test(line)), `${file} builds nothing`);
 }
 assert.equal(buildTarget('infra/compose.onprem.build.yml', 'api'), 'runtime', 'the build overlay builds the runtime stage');

@@ -19,7 +19,7 @@
  * Exécution dans l'image API, sans toucher à la pile en cours :
  *   cd backend && npm run build
  *   docker run --rm -v "$PWD/dist:/app/dist:ro" -v "$PWD/scripts:/app/scripts:ro" \
- *     -w /app kanap-api node scripts/document-export-security-e2e.js
+ *     -w /app kadratis-api node scripts/document-export-security-e2e.js
  */
 
 const fs = require('node:fs');

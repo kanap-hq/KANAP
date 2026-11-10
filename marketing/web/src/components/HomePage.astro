@@ -34,7 +34,7 @@ const t = useTranslations(locale);
 // "From the blog": up to three latest titles, one line each. Rendered only
 // when there is something to list.
 const latestPosts = (await getPostsWithFallback(locale)).slice(0, 3);
-const site = (Astro.site ?? new URL('https://kanap.net')).href.replace(/\/$/, '');
+const site = (Astro.site ?? new URL('https://kadratis.com')).href.replace(/\/$/, '');
 
 // Feature cards: prefix module slugs with locale.
 // The "Adopt at your pace" tile has no slug — it's a non-linking info card,

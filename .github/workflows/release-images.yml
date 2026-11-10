@@ -14,12 +14,12 @@ name: Release images
 #                           release-images.yml --ref v<version>).
 #   manual run on main      `promote` (input promote=<version>): points `stable` and `YY.M` at the
 #                           digests of <version>, for the latest version only. No build.
-#                           `marketing` (input marketing_from_main): builds kanap-marketing from
+#                           `marketing` (input marketing_from_main): builds kadratis-marketing from
 #                           main, tagged main-<short sha>, for a website deployment between two
 #                           versions. Exactly one of the two inputs per run.
 #
-# kanap-api is the runtime stage of backend/Dockerfile, kanap-api-tools its dev stage (sources
-# and development tools, for the database scripts), kanap-web the frontend, kanap-marketing the
+# kadratis-api is the runtime stage of backend/Dockerfile, kadratis-api-tools its dev stage (sources
+# and development tools, for the database scripts), kadratis-web the frontend, kadratis-marketing the
 # public website (not part of an on-premise installation). linux/amd64 only. Each pushed image
 # carries BuildKit provenance (mode=max) and an SBOM in its index, and a GitHub provenance
 # attestation pushed next to it. The builds read the BuildKit cache of main (written by the
@@ -182,78 +182,78 @@ jobs:
           REVISION: ${{ github.sha }}
         run: |
           node .github/scripts/image-tag-state.mjs "$REVISION" "$VERSION" \
-            "api=$PREFIX/kanap-api:$VERSION" "tools=$PREFIX/kanap-api-tools:$VERSION" \
-            "web=$PREFIX/kanap-web:$VERSION" "marketing=$PREFIX/kanap-marketing:$VERSION"
+            "api=$PREFIX/kadratis-api:$VERSION" "tools=$PREFIX/kadratis-api-tools:$VERSION" \
+            "web=$PREFIX/kadratis-web:$VERSION" "marketing=$PREFIX/kadratis-marketing:$VERSION"
 
       # Labels go into each image configuration, annotations into its manifest and its index
       # (GHCR shows the description of the index when there is one). The index annotations
       # revision and version are what the check above compares.
-      - name: Metadata of kanap-api
+      - name: Metadata of kadratis-api
         id: meta-api
         uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5.10.0
         env:
           DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
         with:
-          images: ${{ steps.names.outputs.prefix }}/kanap-api
+          images: ${{ steps.names.outputs.prefix }}/kadratis-api
           tags: type=raw,value=${{ steps.version.outputs.version }}
           labels: |
-            org.opencontainers.image.title=kanap-api
+            org.opencontainers.image.title=kadratis-api
             org.opencontainers.image.description=KANAP API server
             org.opencontainers.image.licenses=AGPL-3.0-only
           annotations: |
-            org.opencontainers.image.title=kanap-api
+            org.opencontainers.image.title=kadratis-api
             org.opencontainers.image.description=KANAP API server
             org.opencontainers.image.licenses=AGPL-3.0-only
-      - name: Metadata of kanap-api-tools
+      - name: Metadata of kadratis-api-tools
         id: meta-tools
         uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5.10.0
         env:
           DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
         with:
-          images: ${{ steps.names.outputs.prefix }}/kanap-api-tools
+          images: ${{ steps.names.outputs.prefix }}/kadratis-api-tools
           tags: type=raw,value=${{ steps.version.outputs.version }}
           labels: |
-            org.opencontainers.image.title=kanap-api-tools
+            org.opencontainers.image.title=kadratis-api-tools
             org.opencontainers.image.description=KANAP API with its sources and tools, for the database scripts
             org.opencontainers.image.licenses=AGPL-3.0-only
           annotations: |
-            org.opencontainers.image.title=kanap-api-tools
+            org.opencontainers.image.title=kadratis-api-tools
             org.opencontainers.image.description=KANAP API with its sources and tools, for the database scripts
             org.opencontainers.image.licenses=AGPL-3.0-only
-      - name: Metadata of kanap-web
+      - name: Metadata of kadratis-web
         id: meta-web
         uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5.10.0
         env:
           DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
         with:
-          images: ${{ steps.names.outputs.prefix }}/kanap-web
+          images: ${{ steps.names.outputs.prefix }}/kadratis-web
           tags: type=raw,value=${{ steps.version.outputs.version }}
           labels: |
-            org.opencontainers.image.title=kanap-web
+            org.opencontainers.image.title=kadratis-web
             org.opencontainers.image.description=KANAP web application
             org.opencontainers.image.licenses=AGPL-3.0-only
           annotations: |
-            org.opencontainers.image.title=kanap-web
+            org.opencontainers.image.title=kadratis-web
             org.opencontainers.image.description=KANAP web application
             org.opencontainers.image.licenses=AGPL-3.0-only
-      - name: Metadata of kanap-marketing
+      - name: Metadata of kadratis-marketing
         id: meta-marketing
         uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5.10.0
         env:
           DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
         with:
-          images: ${{ steps.names.outputs.prefix }}/kanap-marketing
+          images: ${{ steps.names.outputs.prefix }}/kadratis-marketing
           tags: type=raw,value=${{ steps.version.outputs.version }}
           labels: |
-            org.opencontainers.image.title=kanap-marketing
+            org.opencontainers.image.title=kadratis-marketing
             org.opencontainers.image.description=KANAP website, not part of an on-premise installation
             org.opencontainers.image.licenses=AGPL-3.0-only
           annotations: |
-            org.opencontainers.image.title=kanap-marketing
+            org.opencontainers.image.title=kadratis-marketing
             org.opencontainers.image.description=KANAP website, not part of an on-premise installation
             org.opencontainers.image.licenses=AGPL-3.0-only
 
-      # kanap-api: built and loaded first, checked like in ci.yml, then pushed. The push build
+      # kadratis-api: built and loaded first, checked like in ci.yml, then pushed. The push build
       # reuses the layers of the checked build from the builder's cache.
       - name: Build the API image (runtime stage) for the checks
         if: ${{ steps.state.outputs.api == 'free' }}
@@ -263,7 +263,7 @@ jobs:
           build-contexts: help-docs=doc/help/docs
           target: runtime
           platforms: linux/amd64
-          tags: kanap-api:release-check
+          tags: kadratis-api:release-check
           labels: ${{ steps.meta-api.outputs.labels }}
           load: true
           provenance: false
@@ -271,8 +271,8 @@ jobs:
           cache-from: type=gha,scope=api-runtime
       - name: Check the API image (converters, no sources or development tools)
         if: ${{ steps.state.outputs.api == 'free' }}
-        run: bash .github/scripts/check-api-image.sh kanap-api:release-check
-      - name: Push kanap-api
+        run: bash .github/scripts/check-api-image.sh kadratis-api:release-check
+      - name: Push kadratis-api
         id: push-api
         if: ${{ steps.state.outputs.api == 'free' }}
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
@@ -289,7 +289,7 @@ jobs:
           sbom: true
           cache-from: type=gha,scope=api-runtime
 
-      - name: Build and push kanap-api-tools (dev stage)
+      - name: Build and push kadratis-api-tools (dev stage)
         id: push-tools
         if: ${{ steps.state.outputs.tools == 'free' }}
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
@@ -308,7 +308,7 @@ jobs:
             type=gha,scope=api-runtime
             type=gha,scope=api-dev
 
-      - name: Build and push kanap-web
+      - name: Build and push kadratis-web
         id: push-web
         if: ${{ steps.state.outputs.web == 'free' }}
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
@@ -324,7 +324,7 @@ jobs:
           sbom: true
           cache-from: type=gha,scope=web
 
-      - name: Build and push kanap-marketing
+      - name: Build and push kadratis-marketing
         id: push-marketing
         if: ${{ steps.state.outputs.marketing == 'free' }}
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
@@ -361,7 +361,7 @@ jobs:
           } >>"$GITHUB_STEP_SUMMARY"
           status=0
           digests='{}'
-          for pair in "kanap-api $DIGEST_API" "kanap-api-tools $DIGEST_TOOLS" "kanap-web $DIGEST_WEB" "kanap-marketing $DIGEST_MARKETING"; do
+          for pair in "kadratis-api $DIGEST_API" "kadratis-api-tools $DIGEST_TOOLS" "kadratis-web $DIGEST_WEB" "kadratis-marketing $DIGEST_MARKETING"; do
             image=${pair%% *}
             pushed=${pair#* }
             published=$(docker buildx imagetools inspect "$PREFIX/$image:$VERSION" --format '{{json .Manifest}}' | jq -r .digest) || published=''
@@ -401,7 +401,7 @@ jobs:
       artifact-metadata: write
     strategy:
       matrix:
-        image: [ kanap-api, kanap-api-tools, kanap-web, kanap-marketing ]
+        image: [ kadratis-api, kadratis-api-tools, kadratis-web, kadratis-marketing ]
     steps:
       - name: Log in to the GitHub Container Registry
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
@@ -470,7 +470,7 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
           MINOR: ${{ steps.version.outputs.minor }}
         run: |
-          images="kanap-api kanap-api-tools kanap-web kanap-marketing"
+          images="kadratis-api kadratis-api-tools kadratis-web kadratis-marketing"
           digest_of() { docker buildx imagetools inspect "$1" --format '{{json .Manifest}}' | jq -r .digest; }
           declare -A digests
           for image in $images; do
@@ -499,7 +499,7 @@ jobs:
           done
 
   # The public website may be deployed from main between two versions (AGENTS.md, "Versions and
-  # releases"): builds kanap-marketing alone, tagged main-<short sha>. Touches no other image
+  # releases"): builds kadratis-marketing alone, tagged main-<short sha>. Touches no other image
   # and no stable tag. Like `publish`, it reuses a tag this commit already pushed.
   marketing:
     name: marketing from main
@@ -538,27 +538,27 @@ jobs:
       - name: Check whether the tag is already published
         id: state
         env:
-          REF: ${{ steps.names.outputs.prefix }}/kanap-marketing:${{ steps.names.outputs.tag }}
+          REF: ${{ steps.names.outputs.prefix }}/kadratis-marketing:${{ steps.names.outputs.tag }}
           TAG: ${{ steps.names.outputs.tag }}
           REVISION: ${{ github.sha }}
         run: node .github/scripts/image-tag-state.mjs "$REVISION" "$TAG" "marketing=$REF"
-      - name: Metadata of kanap-marketing
+      - name: Metadata of kadratis-marketing
         id: meta
         uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5.10.0
         env:
           DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
         with:
-          images: ${{ steps.names.outputs.prefix }}/kanap-marketing
+          images: ${{ steps.names.outputs.prefix }}/kadratis-marketing
           tags: type=raw,value=${{ steps.names.outputs.tag }}
           labels: |
-            org.opencontainers.image.title=kanap-marketing
+            org.opencontainers.image.title=kadratis-marketing
             org.opencontainers.image.description=KANAP website, not part of an on-premise installation
             org.opencontainers.image.licenses=AGPL-3.0-only
           annotations: |
-            org.opencontainers.image.title=kanap-marketing
+            org.opencontainers.image.title=kadratis-marketing
             org.opencontainers.image.description=KANAP website, not part of an on-premise installation
             org.opencontainers.image.licenses=AGPL-3.0-only
-      - name: Build and push kanap-marketing
+      - name: Build and push kadratis-marketing
         id: push
         if: ${{ steps.state.outputs.marketing == 'free' }}
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
@@ -579,13 +579,13 @@ jobs:
           DIGEST: ${{ steps.push.outputs.digest || steps.state.outputs.marketing-digest }}
         run: |
           {
-            echo "### kanap-marketing from main"
+            echo "### kadratis-marketing from main"
             echo
             echo "| Image | Tag | Digest |"
             echo "|---|---|---|"
-            echo "| \`kanap-marketing\` | \`$TAG\` | \`$DIGEST\` |"
+            echo "| \`kadratis-marketing\` | \`$TAG\` | \`$DIGEST\` |"
           } >>"$GITHUB_STEP_SUMMARY"
-          echo "$PREFIX/kanap-marketing:$TAG $PREFIX/kanap-marketing@$DIGEST"
+          echo "$PREFIX/kadratis-marketing:$TAG $PREFIX/kadratis-marketing@$DIGEST"
 
   attest-marketing:
     name: attest marketing
@@ -605,9 +605,9 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Attest kanap-marketing
+      - name: Attest kadratis-marketing
         uses: actions/attest-build-provenance@96278af6caaf10aea03fd8d33a09a777ca52d62f # v3.2.0
         with:
-          subject-name: ${{ needs.marketing.outputs.prefix }}/kanap-marketing
+          subject-name: ${{ needs.marketing.outputs.prefix }}/kadratis-marketing
           subject-digest: ${{ needs.marketing.outputs.digest }}
           push-to-registry: true

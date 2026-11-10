@@ -6,7 +6,7 @@ User-facing procedures live in `doc/help/docs/en/on-premise/operations.md`.
 ## Distribution Model
 
 - Each published version (from 26.10.8 on) has public images on GitHub Container Registry:
-  `ghcr.io/kanap-hq/kanap-api`, `kanap-web` and `kanap-api-tools`, built by CI from the version
+  `ghcr.io/kanap-hq/kadratis-api`, `kadratis-web` and `kadratis-api-tools`, built by CI from the version
   tag (`.github/workflows/release-images.yml`, see `doc/releasing.md`), `linux/amd64`, with a
   provenance attestation. No account is needed to pull them.
 - `infra/compose.onprem.yml` names the images of the checkout's version: installations run

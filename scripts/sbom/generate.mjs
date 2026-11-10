@@ -14,7 +14,7 @@
 // whose lockfile entry has none. Authors are read from installed packages when the folder has a
 // node_modules (run `npm ci` first to include them); without it the notices give name, version
 // and license. --image runs `docker run --rm` on an image built from backend/Dockerfile, for
-// example `docker build -t kanap-api:<version> --build-context help-docs=doc/help/docs backend`.
+// example `docker build -t kadratis-api:<version> --build-context help-docs=doc/help/docs backend`.
 // The generated files are never committed.
 //
 // At a release: check out the tag, run the script with an output folder outside the repository,

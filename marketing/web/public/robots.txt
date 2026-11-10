@@ -2,4 +2,4 @@ User-agent: *
 Disallow: /trial/
 Disallow: /*/trial/
 
-Sitemap: https://kanap.net/sitemap-index.xml
+Sitemap: https://kadratis.com/sitemap-index.xml

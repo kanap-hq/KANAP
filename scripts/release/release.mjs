@@ -68,7 +68,7 @@ const USAGE = [
 ].join('\n');
 
 // The images release-images.yml publishes for a version, in this order in digests.txt.
-const IMAGES = ['kanap-api', 'kanap-api-tools', 'kanap-web', 'kanap-marketing'];
+const IMAGES = ['kadratis-api', 'kadratis-api-tools', 'kadratis-web', 'kadratis-marketing'];
 const IMAGE_WORKFLOW = 'release-images.yml';
 const IMAGE_ARTIFACT = 'image-digests';
 // Same form as the first step of release-images.yml.

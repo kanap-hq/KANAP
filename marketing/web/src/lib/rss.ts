@@ -17,7 +17,7 @@ function esc(s: string): string {
 }
 
 export async function blogFeed(locale: Locale, ctx: APIContext): Promise<Response> {
-  const site = (ctx.site ?? new URL('https://kanap.net')).href.replace(/\/$/, '');
+  const site = (ctx.site ?? new URL('https://kadratis.com')).href.replace(/\/$/, '');
   const t = useTranslations(locale);
   const posts = await getPostsWithFallback(locale);
   const self = `${site}${localePath(locale, '/blog/rss.xml')}`;
