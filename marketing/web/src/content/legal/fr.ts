@@ -196,7 +196,7 @@ const content: LegalContent = {
     header: {
       eyebrow: 'Mentions légales',
       title: 'Conditions générales de vente',
-      lastUpdated: 'Dernière mise à jour : [date de la bascule]',
+      lastUpdated: 'Dernière mise à jour : 11 novembre 2026',
     },
     body: `
 <h2>Article 1. Objet</h2>

@@ -196,7 +196,7 @@ const content: LegalContent = {
     header: {
       eyebrow: 'Legal',
       title: 'General terms and conditions of sale',
-      lastUpdated: 'Last updated: [date de la bascule]',
+      lastUpdated: 'Last updated: 11 November 2026',
     },
     body: `
 <h2>Article 1. Purpose</h2>

@@ -61,7 +61,7 @@ const PLANS = [
       annual: { card: true, bank_transfer: true },
     },
     prices: { monthly: 24900, annual: 249000 },
-    terms: { version: '2026-11-09', urls: { fr: 'https://kadratis.com/fr/sales', en: 'https://kadratis.com/sales' } },
+    terms: { version: '2026-11-11', urls: { fr: 'https://kadratis.com/fr/sales', en: 'https://kadratis.com/sales' } },
   },
 ];
 
@@ -229,12 +229,12 @@ describe('PlanSelectionDialog', () => {
     expect(api.post).toHaveBeenCalledWith('/billing/checkout', expect.objectContaining({
       plan_key: 'max',
       interval: 'annual',
-      terms_version: '2026-11-09',
+      terms_version: '2026-11-11',
     }));
     expect(api.post).toHaveBeenCalledWith('/billing/request-invoice', {
       plan_key: 'max',
       subscription_type: 'annual',
-      terms_version: '2026-11-09',
+      terms_version: '2026-11-11',
     });
   });
 
@@ -307,7 +307,7 @@ describe('PlanSelectionDialog', () => {
     await vi.waitFor(() => expect(api.post).toHaveBeenCalledWith('/billing/change-plan', {
       plan_key: 'max',
       subscription_type: 'annual',
-      terms_version: '2026-11-09',
+      terms_version: '2026-11-11',
       success_url: `${window.location.origin}/admin/billing`,
       cancel_url: `${window.location.origin}/admin/billing`,
     }));
@@ -475,7 +475,7 @@ describe('PlanSelectionDialog', () => {
       expect(api.post).toHaveBeenCalledWith('/billing/change-plan', {
         plan_key: 'max',
         subscription_type: 'monthly',
-        terms_version: '2026-11-09',
+        terms_version: '2026-11-11',
         success_url: `${window.location.origin}/admin/billing`,
         cancel_url: `${window.location.origin}/admin/billing`,
       });

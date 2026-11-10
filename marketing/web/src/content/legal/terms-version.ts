@@ -4,4 +4,4 @@
  * `backend/src/billing/terms.ts` (the backend refuses any other version; a backend spec checks
  * they match): bump both whenever the `sales` text changes.
  */
-export const GTC_VERSION = '2026-11-09';
+export const GTC_VERSION = '2026-11-11';
