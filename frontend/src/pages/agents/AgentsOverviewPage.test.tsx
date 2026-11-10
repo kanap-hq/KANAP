@@ -8,6 +8,7 @@ import AgentsOverviewPage from './AgentsOverviewPage';
 import { createAppTheme } from '../../config/ThemeContext';
 import i18n from '../../i18n';
 import { formatEuro } from '../../i18n/formatters';
+import { AGENT_NAME, PRODUCT_NAME } from '../../config/product';
 
 // The agents overview tells everyone who sees agents that the ones running on the KANAP
 // included model are paused while no administrator has confirmed it, with a way to the
@@ -63,7 +64,7 @@ function renderPage() {
   );
 }
 
-const PAUSED = 'Agents that use the KANAP included model are paused until an administrator confirms it in Admin > Plaid.';
+const PAUSED = `Agents that use the ${PRODUCT_NAME} included model are paused until an administrator confirms it in Admin > ${AGENT_NAME}.`;
 
 // Testing Library collapses the no-break spaces Intl writes before EUR. Compare that form.
 function shown(value: string): string {
@@ -87,7 +88,7 @@ describe('AgentsOverviewPage included model banner', () => {
     capabilitiesState = { data: { builtin_confirmation_needed: true } };
     renderPage();
     expect(screen.getByText(PAUSED)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Open Plaid settings' })).toHaveAttribute('href', '/admin/ai');
+    expect(screen.getByRole('link', { name: `Open ${AGENT_NAME} settings` })).toHaveAttribute('href', '/admin/ai');
   });
 
   it('shows the banner without the link to those who cannot open the AI settings', () => {
@@ -95,7 +96,7 @@ describe('AgentsOverviewPage included model banner', () => {
     canOpenAiSettings = false;
     renderPage();
     expect(screen.getByText(PAUSED)).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Open Plaid settings' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: `Open ${AGENT_NAME} settings` })).not.toBeInTheDocument();
   });
 });
 

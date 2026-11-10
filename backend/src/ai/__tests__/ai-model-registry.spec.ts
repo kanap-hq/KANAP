@@ -9,6 +9,7 @@ import { AiSettings } from '../ai-settings.entity';
 import { AiAgentDefinition } from '../control-plane/entities/ai-agent-definition.entity';
 import { AiModelConfigs1853400000000 } from '../../migrations/1853400000000-ai-model-configs';
 import { Features } from '../../config/features';
+import { AGENT_NAME } from '../../config/product';
 
 // ---------------------------------------------------------------------------
 // Shared in-memory state + mock TypeORM plumbing
@@ -588,7 +589,7 @@ async function testArchiveBlockedWhileAssigned() {
       const response = typeof error.getResponse === 'function' ? error.getResponse() : error.response;
       assert.equal(error.constructor.name, 'ConflictException');
       assert.match(String(response.message), /still assigned and cannot be archived/);
-      assert.deepEqual(response.used_by, ['Plaid', 'SRE agent']);
+      assert.deepEqual(response.used_by, [AGENT_NAME, 'SRE agent']);
       return true;
     },
   );

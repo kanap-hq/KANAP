@@ -45,7 +45,7 @@ export const TRIAL_MAIL_FOUNDER_ADDRESS = 'fried@kanap.net';
 export const TRIAL_MAIL_FOUNDER = `"Friedrich (${COMPANY_NAME})" <${TRIAL_MAIL_FOUNDER_ADDRESS}>`;
 /** Workspaces whose trial started longer ago are no longer looked at (trial, then 30 days, then margin). */
 const TRIAL_MAIL_HORIZON_DAYS = 90;
-const DEFAULT_MARKETING_URL = 'https://www.kanap.net';
+const DEFAULT_MARKETING_URL = 'https://kadratis.com';
 
 const CALL_PLACEMENT: Partial<Record<TrialMailMilestone, DiscoveryCallPlacement>> = { j0: 'mail_j0', j5: 'mail_j5' };
 

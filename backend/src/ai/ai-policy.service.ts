@@ -219,6 +219,12 @@ export type AiWriteAccessRequirement = {
 };
 
 /**
+ * The agent's names in the refusals a preview stored: the current one, and the one of the versions
+ * before the agent was renamed, so that a refusal stored before a rename still shows as a refusal.
+ */
+const REFUSAL_AGENT_NAMES: readonly string[] = [AGENT_NAME, 'Plaid'];
+
+/**
  * Whether a message is a refusal of a right or of a data access, as `missingRightMessage` and the
  * data-access checks write it ("This line is read only in your access."): a preview card shows such a
  * refusal as it is, and any other failure as a translated sentence with the message as its detail.
@@ -227,8 +233,8 @@ export function isRightRefusalMessage(message: string | null | undefined): boole
   const text = String(message ?? '').trim();
   if (!text) return false;
   return text.startsWith('You need the right to ')
-    || text.startsWith(`Your role does not give access to ${AGENT_NAME}.`)
-    || text.startsWith(`Your role lets you ask ${AGENT_NAME} questions but not prepare changes`)
+    || REFUSAL_AGENT_NAMES.some((name) => text.startsWith(`Your role does not give access to ${name}.`))
+    || REFUSAL_AGENT_NAMES.some((name) => text.startsWith(`Your role lets you ask ${name} questions but not prepare changes`))
     || text.startsWith('Your role lets you contribute to ')
     || text.startsWith('Missing required permission ')
     || / in your access\.$/.test(text)

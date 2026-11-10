@@ -11,6 +11,7 @@ import { createFakeOnboardingServer } from '../../test/fakeOnboardingServer';
 import FirstOpenDialog from './FirstOpenDialog';
 import OnboardingStatusLine from './OnboardingStatusLine';
 import AboutOnboardingLine from './AboutOnboardingLine';
+import { PRODUCT_NAME } from '../../config/product';
 
 const env = vi.hoisted(() => ({
   server: null as unknown as ReturnType<typeof import('../../test/fakeOnboardingServer').createFakeOnboardingServer>,
@@ -83,7 +84,7 @@ describe('FirstOpenDialog', () => {
   it('asks the angle, then the mode, and sends both at the end', async () => {
     renderWith(<FirstOpenDialog />);
     const dialog = await screen.findByRole('dialog');
-    expect(dialog).toHaveTextContent('What brings you to KANAP?');
+    expect(dialog).toHaveTextContent(`What brings you to ${PRODUCT_NAME}?`);
     expect(within(dialog).getAllByRole('button').map((b) => b.textContent)).toEqual(
       expect.arrayContaining(['The IT budget', 'The IT landscape map', 'Projects and requests', 'Just looking']),
     );
@@ -99,7 +100,7 @@ describe('FirstOpenDialog', () => {
     renderWith(<FirstOpenDialog />);
     fireEvent.click(await screen.findByRole('button', { name: 'Just looking' }));
     fireEvent.click(screen.getByRole('button', { name: 'Back' }));
-    expect(screen.getByRole('dialog')).toHaveTextContent('What brings you to KANAP?');
+    expect(screen.getByRole('dialog')).toHaveTextContent(`What brings you to ${PRODUCT_NAME}?`);
     fireEvent.click(screen.getByRole('button', { name: 'Just looking' }));
     fireEvent.click(screen.getByRole('button', { name: 'Start with my own data' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());

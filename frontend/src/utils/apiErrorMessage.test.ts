@@ -2,6 +2,7 @@ import '../i18n';
 import i18n from 'i18next';
 import { describe, expect, it } from 'vitest';
 import { getApiErrorMessage, getDocumentSaveErrorMessage, isDataAccessRefusal } from './apiErrorMessage';
+import { AGENT_NAME, PRODUCT_NAME } from '../config/product';
 
 const t = i18n.getFixedT('en');
 
@@ -42,9 +43,9 @@ describe('getApiErrorMessage', () => {
     expect(getApiErrorMessage(refusal(''), t, 'fallback')).toBe('This item is outside your access.');
     expect(isDataAccessRefusal(refusal('x'))).toBe(true);
     expect(isDataAccessRefusal({ response: { status: 403, data: { code: 'NO_ACCESS' } } })).toBe(false);
-    const unavailable = { response: { status: 503, data: { code: 'DATA_ACCESS_UNAVAILABLE', message: 'Data access is temporarily unavailable. Contact the person who runs KANAP.' } } };
+    const unavailable = { response: { status: 503, data: { code: 'DATA_ACCESS_UNAVAILABLE', message: `Data access is temporarily unavailable. Contact the person who runs ${PRODUCT_NAME}.` } } };
     expect(getApiErrorMessage(unavailable, fr, 'fallback'))
-      .toBe("L'accès aux données est momentanément indisponible. Contactez la personne qui exploite KANAP.");
+      .toBe(`L'accès aux données est momentanément indisponible. Contactez la personne qui exploite ${PRODUCT_NAME}.`);
   });
 
   it('translates a repeated data access query in French, with its parameter', () => {
@@ -234,15 +235,15 @@ describe('getApiErrorMessage', () => {
       response: { status: 403, data: { statusCode: 403, error: 'Forbidden', code, message: 'English sentence of the server.', ...(params ? { params } : {}) } },
     });
     const cases: Array<[string, Record<string, unknown> | undefined, Record<string, string>]> = [
-      ['AI_USER_NOT_ALLOWED', undefined, { en: 'Your account cannot use Plaid. Ask an administrator of your workspace.' }],
-      ['AI_PLATFORM_HOST', undefined, { en: 'Plaid is available inside a workspace only. Open a workspace to use it.' }],
-      ['AI_TENANT_INACTIVE', undefined, { en: 'Plaid is not available while this workspace is inactive.' }],
-      ['AI_CHAT_DISABLED', undefined, { en: 'Plaid is turned off for this workspace. An administrator can turn it on in Admin > Plaid.', fr: "Plaid est désactivé pour cet espace de travail. Un administrateur peut l'activer dans Administration › Plaid." }],
-      ['AI_NOT_CONFIGURED', undefined, { en: 'Plaid is not fully set up for this workspace. An administrator can finish the setup in Admin > Plaid.' }],
-      ['AI_MCP_DISABLED', undefined, { en: 'MCP access is turned off for this workspace. An administrator can turn it on in Admin > Plaid.' }],
-      ['AI_MCP_NOT_CONFIGURED', undefined, { en: 'MCP access is not fully set up for this workspace. An administrator can finish the setup in Admin > Plaid.' }],
-      ['AI_MCP_WRITE_UNAVAILABLE', undefined, { en: 'MCP access is read only. Make changes on the screens or with Plaid.' }],
-      ['AI_INCLUDED_MODEL_NOT_ACCEPTED', undefined, { en: "The included model needs an administrator's confirmation in Admin > Plaid before it can be used." }],
+      ['AI_USER_NOT_ALLOWED', undefined, { en: `Your account cannot use ${AGENT_NAME}. Ask an administrator of your workspace.` }],
+      ['AI_PLATFORM_HOST', undefined, { en: `${AGENT_NAME} is available inside a workspace only. Open a workspace to use it.` }],
+      ['AI_TENANT_INACTIVE', undefined, { en: `${AGENT_NAME} is not available while this workspace is inactive.` }],
+      ['AI_CHAT_DISABLED', undefined, { en: `${AGENT_NAME} is turned off for this workspace. An administrator can turn it on in Admin > ${AGENT_NAME}.`, fr: `${AGENT_NAME} est désactivé pour cet espace de travail. Un administrateur peut l'activer dans Administration › ${AGENT_NAME}.` }],
+      ['AI_NOT_CONFIGURED', undefined, { en: `${AGENT_NAME} is not fully set up for this workspace. An administrator can finish the setup in Admin > ${AGENT_NAME}.` }],
+      ['AI_MCP_DISABLED', undefined, { en: `MCP access is turned off for this workspace. An administrator can turn it on in Admin > ${AGENT_NAME}.` }],
+      ['AI_MCP_NOT_CONFIGURED', undefined, { en: `MCP access is not fully set up for this workspace. An administrator can finish the setup in Admin > ${AGENT_NAME}.` }],
+      ['AI_MCP_WRITE_UNAVAILABLE', undefined, { en: `MCP access is read only. Make changes on the screens or with ${AGENT_NAME}.` }],
+      ['AI_INCLUDED_MODEL_NOT_ACCEPTED', undefined, { en: `The included model needs an administrator's confirmation in Admin > ${AGENT_NAME} before it can be used.` }],
       ['AI_INCLUDED_QUOTA_USED', undefined, { en: 'The included messages of this month are used up. They are available again next month.' }],
       ['AI_API_KEY_NOT_FOUND', undefined, { en: 'This key does not exist, or you cannot manage it.' }],
       ['AI_CONVERSATION_NOT_YOURS', undefined, { en: 'This conversation belongs to someone else.' }],

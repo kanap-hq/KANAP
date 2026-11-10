@@ -5,6 +5,7 @@ import { Tenant, TenantStatus } from '../../tenants/tenant.entity';
 import { UserRole } from '../../users/user-role.entity';
 import { Subscription, SubscriptionStatus } from '../../billing/subscription.entity';
 import { DATA_ACCESS_RESERVED_MESSAGE } from '../../data-access/reserved-operations';
+import { AGENT_NAME } from '../../config/product';
 
 type TestSettings = {
   tenant_id: string;
@@ -688,7 +689,7 @@ async function testCapabilitiesRejectPlatformHost() {
 async function testMissingRightIsSaidInPlainWords() {
   assert.equal(missingRightMessage('portfolio_projects', 'member'), 'You need the right to modify projects, which your role does not give. An administrator can add it to your role.');
   assert.equal(missingRightMessage('budget', 'reader'), 'You need the right to read budget lines, which your role does not give. An administrator can add it to your role.');
-  assert.match(missingRightMessage('ai_chat', 'member'), /^Your role lets you ask Plaid questions but not prepare changes with it/);
+  assert.match(missingRightMessage('ai_chat', 'member'), new RegExp(`^Your role lets you ask ${AGENT_NAME} questions but not prepare changes with it`));
   // Master data (Plaid L9): the right of each page, named in words with its screen.
   assert.equal(
     missingRightMessage('working_day_profiles', 'reader', 'Master data › Working-day calendars'),

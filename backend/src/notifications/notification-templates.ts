@@ -1368,7 +1368,7 @@ function internalRows(rows: Array<{ label: string; value: string; mono?: boolean
   };
 }
 
-// Template: Contact Form (internal to support@kanap.net)
+// Template: Contact Form (internal to contact@kadratis.com)
 export function buildContactFormEmail(params: {
   name: string;
   email: string;

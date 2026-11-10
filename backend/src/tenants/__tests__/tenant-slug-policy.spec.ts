@@ -8,7 +8,7 @@ import { TenantsService } from '../tenants.service';
 // subdomains (dev, qa, mail, status...) are reserved in multi-tenant mode only, and a tenant
 // that already holds one of them keeps it.
 
-const CLOUD_SUBDOMAINS = ['dev', 'qa', 'doc', 'send', 'tenants', 'mail', 'autodiscover', 'status', 'kanap'];
+const CLOUD_SUBDOMAINS = ['dev', 'qa', 'doc', 'send', 'tenants', 'mail', 'autodiscover', 'status', 'kanap', 'kadratis', 'cadratis'];
 const ALWAYS_RESERVED = ['www', 'api', 'admin', 'billing', 'account', 'platform-admin', 'app', 'nextcloud', 'migration', 'example'];
 
 function testReservedNames() {
@@ -23,7 +23,7 @@ function testReservedNames() {
   for (const slug of CLOUD_SUBDOMAINS) {
     assert.equal(isReservedTenantSlug(slug, true), false, `single-tenant: ${slug}`);
   }
-  for (const slug of ['acme', 'fromage', 'dev-team', 'qa1', 'kanap-co', 'statusboard']) {
+  for (const slug of ['acme', 'fromage', 'dev-team', 'qa1', 'kanap-co', 'kadratis-co', 'statusboard']) {
     assert.equal(isReservedTenantSlug(slug, false), false, `free: ${slug}`);
   }
   assert.deepEqual([...listReservedTenantSlugs(true)], ALWAYS_RESERVED);
@@ -58,7 +58,7 @@ async function testNewTenantIsRefused() {
   const { service } = fakeService({ id: 't-1', slug: 'acme', name: 'Acme' });
   const refuseReads = async () => { throw new Error('the reserved check comes before any read'); };
   const manager: any = { getRepository: () => ({ findOne: refuseReads, create: refuseReads, save: refuseReads }) };
-  for (const slug of ['kanap', 'qa', 'autodiscover']) {
+  for (const slug of ['kanap', 'kadratis', 'qa', 'autodiscover']) {
     await assert.rejects(() => service.createTenant({ slug, name: 'New' }, { manager }), BadRequestException, slug);
   }
 }

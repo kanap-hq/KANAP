@@ -6,6 +6,7 @@ import ChatInput from '../components/ChatInput';
 import ChatMessageList from '../components/ChatMessageList';
 import type { PendingAttachment } from '../useChat';
 import { createAppTheme } from '../../config/ThemeContext';
+import { AGENT_NAME } from '../../config/product';
 
 vi.mock('../aiApi', () => ({
   aiSearchApi: { searchEntities: vi.fn() },
@@ -69,7 +70,7 @@ describe.each(['light', 'dark'] as const)('spreadsheets attached to Plaid in %s 
     };
     renderInput(mode, { pendingAttachments: [pending], onSend });
     const send = screen.getByRole('button', { name: 'Send' });
-    const field = screen.getByPlaceholderText(/Ask Plaid/);
+    const field = screen.getByPlaceholderText(new RegExp(`Ask ${AGENT_NAME}`));
 
     expect(send).toBeDisabled();
     fireEvent.click(send);

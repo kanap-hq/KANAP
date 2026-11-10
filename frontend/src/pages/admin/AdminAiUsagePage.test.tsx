@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminAiUsagePage from './AdminAiUsagePage';
 import { aiAdminApi } from '../../ai/aiApi';
+import { AGENT_NAME } from '../../config/product';
 
 vi.mock('../../ai/aiApi', () => ({
   aiAdminApi: { getOverview: vi.fn() },
@@ -68,7 +69,7 @@ describe('AdminAiUsagePage chat cost note', () => {
   it('shows no note when every chat cost was recorded', async () => {
     (aiAdminApi.getOverview as any).mockResolvedValue(overview({ chat_eur: 2.5, chat_priced: true, chat_estimated: false }));
     renderPage();
-    expect(await screen.findByText('Plaid this month')).toBeTruthy();
+    expect(await screen.findByText(`${AGENT_NAME} this month`)).toBeTruthy();
     expect(screen.queryByText(ESTIMATED_NOTE)).toBeNull();
     expect(screen.queryByText(FREE_NOTE)).toBeNull();
   });

@@ -142,7 +142,7 @@ function testVariants() {
     // Every path link reads as words: the chosen guide by the title of its page.
     const guide = getEmailStrings(locale).trialMails.j0.guideTitles.cartography;
     assert.ok(mails.j0Angle.html.includes(`>${escapeForHtml(guide)}</a>`), `${locale}: guide link by its words`);
-    assert.ok(!/>https?:\/\/doc\.kanap\.net/.test(mails.j0Angle.html) && !/>doc\.kanap\.net/.test(mails.j0Angle.html), `${locale}: no address as link text`);
+    assert.ok(!/>https?:\/\/doc\.kadratis\.com/.test(mails.j0Angle.html) && !/>doc\.kadratis\.com/.test(mails.j0Angle.html), `${locale}: no address as link text`);
     assert.ok(mails.j0Angle.text.includes('/first-steps/budget-own-data/') && mails.j0Angle.text.includes('/first-steps/portfolio-own-data/'));
     assert.ok(mails.j0None.text.includes('/first-steps/budget-example/') && mails.j0None.text.includes('/first-steps/landscape-example/'));
     for (const name of ['j5', 'j5NoCall'] as const) {
@@ -160,7 +160,7 @@ function testVariants() {
     assert.ok(!mails.j5NoCall.text.includes(CALL.url) && !mails.j5NoCall.html.includes(CALL.url));
     assert.ok(mails.j12.text.includes(`${APP}/admin/billing`) && mails.j12.text.includes('/on-premise/installation/'));
     assert.ok(mails.ended.text.includes('2026'), `${locale}: the deletion date`);
-    assert.ok(mails.thanks.text.includes('support@kanap.net'));
+    assert.ok(mails.thanks.text.includes('support@kadratis.com'));
   }
   const fr = allMails('fr');
   assert.ok(fr.j12.text.includes('249 €') && fr.j12.text.includes('2 490 €'), 'French prices');
@@ -173,7 +173,7 @@ function testVariants() {
     trialEnd: new Date('2026-11-21T23:59:59.999Z'), marketingUrl: 'https://www.kanap.test', unsubscribeUrl: UNSUBSCRIBE,
   });
   assert.ok(lastInstant.text.includes('21 novembre 2026') && !lastInstant.text.includes('22 novembre'), 'the UTC day of the end');
-  assert.ok(fr.j0Angle.text.includes('/fr/first-steps/') && allMails('en').j0Angle.text.includes('doc.kanap.net/first-steps/'));
+  assert.ok(fr.j0Angle.text.includes('/fr/first-steps/') && allMails('en').j0Angle.text.includes('doc.kadratis.com/first-steps/'));
 }
 
 function testFrenchTypography() {

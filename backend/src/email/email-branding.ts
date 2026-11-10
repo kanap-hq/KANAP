@@ -27,9 +27,9 @@ function getDefaultLogo(): Buffer {
   didSearchDefaultLogo = true;
 
   const candidates = [
-    path.join(__dirname, 'assets', 'kanap-logo.png'),
-    path.join(process.cwd(), 'dist', 'email', 'assets', 'kanap-logo.png'),
-    path.join(process.cwd(), 'src', 'email', 'assets', 'kanap-logo.png'),
+    path.join(__dirname, 'assets', 'kadratis-logo.png'),
+    path.join(process.cwd(), 'dist', 'email', 'assets', 'kadratis-logo.png'),
+    path.join(process.cwd(), 'src', 'email', 'assets', 'kadratis-logo.png'),
   ];
 
   for (const candidate of candidates) {

@@ -1,8 +1,10 @@
 import React from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import AboutContent from './AboutContent';
+import { COMPANY_NAME, PRODUCT_NAME } from '../../config/product';
 
 // The path line reads the onboarding API: covered by its own test.
 vi.mock('../onboarding/AboutOnboardingLine', () => ({ default: () => null }));
@@ -82,10 +84,24 @@ describe('AboutContent', () => {
     expect(notes).toHaveAttribute('href', 'https://github.com/kanap-hq/KANAP/releases/tag/v26.10.1');
     expect(notes).toHaveAttribute('target', '_blank');
     expect(notes).toHaveAttribute('rel', 'noopener');
-    expect(screen.getByRole('link', { name: 'kanap.net' })).toHaveAttribute('href', 'https://kanap.net');
-    expect(screen.getByRole('link', { name: 'Documentation' })).toHaveAttribute('href', 'https://doc.kanap.net/');
+    expect(screen.getByRole('link', { name: 'kadratis.com' })).toHaveAttribute('href', 'https://kadratis.com');
+    expect(screen.getByRole('link', { name: 'Documentation' })).toHaveAttribute('href', 'https://doc.kadratis.com/');
     expect(screen.getByRole('link', { name: 'Source code under the AGPL-3.0 license' }))
       .toHaveAttribute('href', 'https://github.com/kanap-hq/KANAP');
+  });
+
+  it('shows the product symbol in colour on a light background, inverted on a dark one', () => {
+    renderContent();
+    expect(screen.getByRole('img', { name: PRODUCT_NAME })).toHaveAttribute('src', '/brand/kadratis-symbole-couleur.svg');
+    cleanup();
+    render(
+      <ThemeProvider theme={createTheme({ palette: { mode: 'dark' } })}>
+        <MemoryRouter>
+          <AboutContent />
+        </MemoryRouter>
+      </ThemeProvider>,
+    );
+    expect(screen.getByRole('img', { name: PRODUCT_NAME })).toHaveAttribute('src', '/brand/kadratis-symbole-inverse.svg');
   });
 
   it('falls back to the list of releases while the version is unknown, and shows no version line', () => {
@@ -102,10 +118,10 @@ describe('AboutContent', () => {
     renderContent();
 
     expect(screen.getByText('Deployment: on-premise')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Upgrade guide' })).toHaveAttribute('href', 'https://doc.kanap.net/fr/on-premise/operations/');
-    expect(screen.getByRole('link', { name: 'Documentation' })).toHaveAttribute('href', 'https://doc.kanap.net/fr/');
+    expect(screen.getByRole('link', { name: 'Upgrade guide' })).toHaveAttribute('href', 'https://doc.kadratis.com/fr/on-premise/operations/');
+    expect(screen.getByRole('link', { name: 'Documentation' })).toHaveAttribute('href', 'https://doc.kadratis.com/fr/');
     expect(screen.getByText(/If you have a support contract, write to/)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'the support offer' })).toHaveAttribute('href', 'https://kanap.net/fr/offer');
+    expect(screen.getByRole('link', { name: 'the support offer' })).toHaveAttribute('href', 'https://kadratis.com/fr/offer');
     expect(screen.getByRole('link', { name: 'GitHub Discussions' })).toHaveAttribute('href', 'https://github.com/kanap-hq/KANAP/discussions');
     expect(screen.getByRole('link', { name: 'GitHub Issues' })).toHaveAttribute('href', 'https://github.com/kanap-hq/KANAP/issues');
   });
@@ -113,7 +129,7 @@ describe('AboutContent', () => {
   it('on-premise, the offer link is the English page for English', () => {
     state.deploymentMode = 'single-tenant';
     renderContent();
-    expect(screen.getByRole('link', { name: 'the support offer' })).toHaveAttribute('href', 'https://kanap.net/offer');
+    expect(screen.getByRole('link', { name: 'the support offer' })).toHaveAttribute('href', 'https://kadratis.com/offer');
   });
 
   it('in the cloud, points to e-mail support only, with no upgrade guide, offer or GitHub links', () => {
@@ -173,12 +189,12 @@ describe('AboutContent', () => {
   it('prefills the support e-mail with the version and the workspace', () => {
     renderContent();
 
-    const mail = screen.getByRole('link', { name: 'support@kanap.net' });
+    const mail = screen.getByRole('link', { name: 'support@kadratis.com' });
     const href = mail.getAttribute('href') ?? '';
-    expect(href.startsWith('mailto:support@kanap.net?')).toBe(true);
+    expect(href.startsWith('mailto:support@kadratis.com?')).toBe(true);
     const params = new URLSearchParams(href.slice(href.indexOf('?') + 1));
-    expect(params.get('subject')).toBe('KANAP support: Acme / acme');
-    expect(params.get('body')).toContain('KANAP version: 26.10.1');
+    expect(params.get('subject')).toBe(`${COMPANY_NAME} support: Acme / acme`);
+    expect(params.get('body')).toContain(`${PRODUCT_NAME} version: 26.10.1`);
     expect(params.get('body')).toContain('Workspace: Acme / acme');
     expect(params.get('body')).toContain('Deployment: cloud');
     expect(params.get('body')).toContain(`Browser: ${navigator.userAgent}`);
@@ -194,9 +210,9 @@ describe('AboutContent', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Copied' })).toBeInTheDocument());
     expect(writeText).toHaveBeenCalledTimes(1);
     const copied = writeText.mock.calls[0][0] as string;
-    expect(copied).toContain('KANAP version: 26.10.1');
+    expect(copied).toContain(`${PRODUCT_NAME} version: 26.10.1`);
     expect(copied).toContain('Workspace: Acme / acme');
-    const mail = screen.getByRole('link', { name: 'support@kanap.net' }).getAttribute('href') ?? '';
+    const mail = screen.getByRole('link', { name: 'support@kadratis.com' }).getAttribute('href') ?? '';
     expect(new URLSearchParams(mail.slice(mail.indexOf('?') + 1)).get('body')).toContain(copied);
   });
 

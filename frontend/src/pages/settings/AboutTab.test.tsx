@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import AboutTab from './AboutTab';
 import SettingsPage from './SettingsPage';
+import { PRODUCT_NAME } from '../../config/product';
 
 // The path line reads the onboarding API: covered by its own test.
 vi.mock('../../components/onboarding/AboutOnboardingLine', () => ({ default: () => null }));
@@ -68,7 +69,7 @@ describe('AboutTab', () => {
     state.deploymentMode = 'single-tenant';
     renderTab();
 
-    expect(screen.getByText('About KANAP')).toBeInTheDocument();
+    expect(screen.getByText(`About ${PRODUCT_NAME}`)).toBeInTheDocument();
     expect(screen.getByText('Version 26.10.1')).toBeInTheDocument();
     expect(screen.getByText('Deployment: on-premise')).toBeInTheDocument();
     const notes = screen.getByRole('link', { name: 'Release notes' });
@@ -76,7 +77,7 @@ describe('AboutTab', () => {
     expect(notes).toHaveAttribute('target', '_blank');
     expect(notes).toHaveAttribute('rel', 'noopener');
     const guide = screen.getByRole('link', { name: 'Upgrade guide' });
-    expect(guide).toHaveAttribute('href', 'https://doc.kanap.net/on-premise/operations/');
+    expect(guide).toHaveAttribute('href', 'https://doc.kadratis.com/on-premise/operations/');
     expect(guide).toHaveAttribute('target', '_blank');
   });
 
@@ -93,7 +94,7 @@ describe('AboutTab', () => {
     state.version = 'unknown';
     renderTab();
 
-    expect(screen.getByText('About KANAP')).toBeInTheDocument();
+    expect(screen.getByText(`About ${PRODUCT_NAME}`)).toBeInTheDocument();
     expect(screen.getByText('Deployment: cloud')).toBeInTheDocument();
     expect(screen.queryByText(/Version/)).not.toBeInTheDocument();
   });
@@ -113,7 +114,7 @@ describe('SettingsPage: About tab', () => {
     expect(tabs).toHaveLength(4);
     expect(tabs[3]).toHaveTextContent('About');
     expect(tabs[3]).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByText('About KANAP')).toBeInTheDocument();
+    expect(screen.getByText(`About ${PRODUCT_NAME}`)).toBeInTheDocument();
   });
 });
 
@@ -154,6 +155,6 @@ describe('SettingsPage: Connected apps tab', () => {
     state.aiMcp = true;
     renderSettings('/settings/about');
     expect(screen.getAllByRole('tab')).toHaveLength(4);
-    expect(screen.getByText('About KANAP')).toBeInTheDocument();
+    expect(screen.getByText(`About ${PRODUCT_NAME}`)).toBeInTheDocument();
   });
 });

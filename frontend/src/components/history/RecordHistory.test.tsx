@@ -9,6 +9,7 @@ import { createAppTheme } from '../../config/ThemeContext';
 import api from '../../api';
 import RecordHistory from './RecordHistory';
 import type { RecordHistoryItem, RecordHistoryPage } from './recordHistoryText';
+import { AGENT_NAME } from '../../config/product';
 
 vi.mock('../../api', () => ({ default: { get: vi.fn() } }));
 
@@ -123,7 +124,7 @@ describe('RecordHistory', () => {
     } as never);
 
     const { container } = renderHistory();
-    await screen.findByText('Plaid for Ava Reader');
+    await screen.findByText(`${AGENT_NAME} for Ava Reader`);
 
     expect(mocked.get).toHaveBeenCalledWith(
       `/records/spend_items/${ID}/history`,

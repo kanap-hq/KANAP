@@ -5,6 +5,7 @@ import { NestFactory } from '@nestjs/core';
 import { DataSource, QueryRunner } from 'typeorm';
 import { ensureDefaultAnalyticsAxis } from '../../analytics/analytics-axes.util';
 import { ensureCapexDimensions } from '../../analytics/capex-dimensions.seed';
+import { AGENT_NAME } from '../../config/product';
 
 process.env.AI_CHAT_ENABLED = 'true';
 process.env.AI_SETTINGS_ENABLED = 'true';
@@ -1915,7 +1916,7 @@ async function testLegacyBudgetLinePreviewUndoRefused(harness: Harness) {
     assert.ok(relationCard, 'the old relation preview still lists');
     assert.equal(relationCard.target.entity_type, 'applications', 'its card keeps the stored family');
     assert.deepEqual(relationCard.changes, {}, 'no field labels for an old relation');
-    assert.match(String(relationCard.summary), /before a Plaid update/, 'the card says it predates the change');
+    assert.match(String(relationCard.summary), new RegExp(`before a ${AGENT_NAME} update`), 'the card says it predates the change');
     assert.ok(listed.some((preview: any) => preview.preview_id === unknown.id), 'a preview that cannot present still lists');
     assert.deepEqual(listed.find((preview: any) => preview.preview_id === unknown.id).changes, {}, 'its card is neutral');
 
@@ -1928,7 +1929,7 @@ async function testLegacyBudgetLinePreviewUndoRefused(harness: Harness) {
       }
       assert.ok(refusal, `the undo of the ${what} preview is refused`);
       assert.equal(refusal.getStatus?.(), 400, `the undo of the ${what} preview is a clean 4xx, not a 500`);
-      assert.match(String(refusal.message), /before a Plaid update and can no longer be undone here: use the screen\./);
+      assert.match(String(refusal.message), new RegExp(`before a ${AGENT_NAME} update and can no longer be undone here: use the screen\\.`));
     }
   });
 }

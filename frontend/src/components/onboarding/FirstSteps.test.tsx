@@ -12,6 +12,7 @@ import FirstStepsTile from './FirstStepsTile';
 import StepHint, { STEP_OBJECT_POLL_MS } from './StepHint';
 import { writeActiveStep } from './activeStep';
 import { ONBOARDING_QUERY_KEY } from './useOnboarding';
+import { AGENT_NAME } from '../../config/product';
 
 const env = vi.hoisted(() => ({
   summary: (() => Promise.resolve({ data: { items: [] } })) as (config?: unknown, url?: string) => Promise<unknown>,
@@ -89,7 +90,7 @@ describe('FirstStepsTile', () => {
     expect(await screen.findByText('Your first five steps')).toBeInTheDocument();
     expect(screen.getByText('1/5')).toBeInTheDocument();
     const links = screen.getAllByRole('link');
-    expect(links.map((link) => link.textContent)).toEqual(['The overview', 'A report', 'A question for Plaid', 'Your data']);
+    expect(links.map((link) => link.textContent)).toEqual(['The overview', 'A report', `A question for ${AGENT_NAME}`, 'Your data']);
     expect(links[0]).toHaveAttribute('href', '/ops/budget?step=budget_overview');
     expect(links[2]).toHaveAttribute('href', '/ai?step=budget_plaid');
     expect(screen.getByRole('button', { name: 'A budget line' })).toBeInTheDocument();
@@ -447,7 +448,7 @@ describe('StepHint', () => {
     }
     try {
       renderAt('/ai?step=budget_plaid', <Plaid />);
-      const hint = await screen.findByRole('dialog', { name: 'A question for Plaid' });
+      const hint = await screen.findByRole('dialog', { name: `A question for ${AGENT_NAME}` });
       // Below the acceptance box: above it, the bubble would hide the suggested questions.
       await waitFor(() => expect(hint.closest('[data-popper-placement]')).toHaveAttribute('data-popper-placement', 'bottom-start'));
 
@@ -455,7 +456,7 @@ describe('StepHint', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Accept' }));
       await waitFor(() => expect(screen.getByTestId('step-hint-outline').style.top).toBe('196px'));
       expect(screen.getByTestId('step-hint-outline').style.left).toBe('294px');
-      expect(screen.getByRole('dialog', { name: 'A question for Plaid' })).toBeInTheDocument();
+      expect(screen.getByRole('dialog', { name: `A question for ${AGENT_NAME}` })).toBeInTheDocument();
 
       fireEvent.click(screen.getByRole('button', { name: 'Leave' }));
       await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());

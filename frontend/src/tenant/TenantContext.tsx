@@ -5,7 +5,7 @@ import api from '../api';
 import { PRODUCT_NAME } from '../config/product';
 import { setWorkspaceTitle } from './workspaceTitle';
 
-const DEFAULT_MARKETING_URL = 'https://www.kanap.net';
+const DEFAULT_MARKETING_URL = 'https://kadratis.com';
 const DEFAULT_API_BASE = '/api';
 const HEX_COLOR_RE = /^#[0-9A-Fa-f]{6}$/;
 

@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { useThemeMode } from '../config/ThemeContext';
 import { useTenant } from '../tenant/TenantContext';
 import { headerLogoUrl } from '../tenant/headerLogo';
-import { PRODUCT_NAME } from '../config/product';
+import { PRODUCT_NAME, productSymbolUrl } from '../config/product';
 
 interface AuthFrameProps {
   children: ReactNode;
@@ -58,7 +58,7 @@ export default function AuthFrame({ children }: AuthFrameProps) {
               <>
                 <Box
                   component="img"
-                  src="/icon-192.png"
+                  src={productSymbolUrl(resolvedMode)}
                   alt={PRODUCT_NAME}
                   sx={{ width: 32, height: 32, flexShrink: 0 }}
                 />

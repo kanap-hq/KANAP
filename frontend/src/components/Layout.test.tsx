@@ -752,13 +752,13 @@ describe('Layout IT menu', () => {
     try {
       const { unmount } = renderIt('/it/settings?tab=netbox&state=linked');
       fireEvent.click(screen.getByRole('button', { name: 'nav:topBar.openDocs' }));
-      expect(open).toHaveBeenCalledWith('https://doc.kanap.net/netbox/', '_blank', 'noopener,noreferrer');
+      expect(open).toHaveBeenCalledWith('https://doc.kadratis.com/netbox/', '_blank', 'noopener,noreferrer');
       unmount();
       open.mockClear();
 
       renderIt('/it/settings?state=linked');
       fireEvent.click(screen.getByRole('button', { name: 'nav:topBar.openDocs' }));
-      expect(open).toHaveBeenCalledWith('https://doc.kanap.net/it-ops-settings/', '_blank', 'noopener,noreferrer');
+      expect(open).toHaveBeenCalledWith('https://doc.kadratis.com/it-ops-settings/', '_blank', 'noopener,noreferrer');
     } finally {
       open.mockRestore();
     }

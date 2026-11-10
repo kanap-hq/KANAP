@@ -3,6 +3,7 @@ import * as assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { NestFactory } from '@nestjs/core';
 import { DataSource, QueryRunner } from 'typeorm';
+import { AGENT_NAME, PRODUCT_NAME } from '../../config/product';
 
 // Plaid L5 lot 3: the links of a technology with its applications and its servers, written
 // through `update_technology_links`, under a preview the person approves, at the screen's level.
@@ -1136,8 +1137,8 @@ async function testTechnologyAdoption(harness: Harness) {
       entity_type: 'technologies',
       fields: { name: 'PostgreSQL', lifecycle: 'Active' },
     });
-    assert.equal(preview.summary, 'Adopt technology "PostgreSQL" from the KANAP catalog.');
-    assert.match(preview.changes.catalog_adoption.to, /^\*\*Adopted from the KANAP catalog\*\*/);
+    assert.equal(preview.summary, `Adopt technology "PostgreSQL" from the ${PRODUCT_NAME} catalog.`);
+    assert.match(preview.changes.catalog_adoption.to, new RegExp(`^\\*\\*Adopted from the ${PRODUCT_NAME} catalog\\*\\*`));
     assert.match(preview.changes.catalog_adoption.to, /versions, end of support from \d{4}-\d{2}-\d{2} to \d{4}-\d{2}-\d{2}/);
     assert.equal(preview.changes.family.to, 'database', 'the family is a code, localised by the frontend');
     assert.equal(preview.changes.lifecycle.to, 'active', 'the lifecycle given beside the adoption is listed apart');
@@ -1152,14 +1153,14 @@ async function testTechnologyAdoption(harness: Harness) {
     const fr = harness.app.get(AiMutationOperationRegistry).getOperation('create_business_record').presentPreview(storedPreview, 'fr');
     assert.equal(
       fr.changes.catalog_adoption.to,
-      `**Adoptée du catalogue KANAP**\n- ${catalogProduct.versions.length} versions, fin de support de ${supportDates[0]} à ${supportDates[supportDates.length - 1]}`,
+      `**Adoptée du catalogue ${PRODUCT_NAME}**\n- ${catalogProduct.versions.length} versions, fin de support de ${supportDates[0]} à ${supportDates[supportDates.length - 1]}`,
     );
     assert.equal(fr.changes.family.to, 'database', 'the family stays a code on the French card');
-    assert.equal(fr.summary, 'Adoption de « PostgreSQL » depuis le catalogue KANAP.');
+    assert.equal(fr.summary, `Adoption de « PostgreSQL » depuis le catalogue ${PRODUCT_NAME}.`);
     const es = harness.app.get(AiMutationOperationRegistry).getOperation('create_business_record').presentPreview(storedPreview, 'es');
-    assert.equal(es.summary, 'Adopción de «PostgreSQL» del catálogo KANAP.');
+    assert.equal(es.summary, `Adopción de «PostgreSQL» del catálogo ${PRODUCT_NAME}.`);
     const de = harness.app.get(AiMutationOperationRegistry).getOperation('create_business_record').presentPreview(storedPreview, 'de');
-    assert.equal(de.summary, '„PostgreSQL“ aus dem KANAP-Katalog übernehmen.');
+    assert.equal(de.summary, `„PostgreSQL“ aus dem ${PRODUCT_NAME}-Katalog übernehmen.`);
     const executed = await approvePreview(harness, ctx, preview);
     assert.match(executed.target.ref, /^TEC-\d+$/);
     const [technology] = await runner.query(
@@ -1194,7 +1195,7 @@ async function testTechnologyAdoption(harness: Harness) {
       technology: 'PostgreSQL',
       update: [{ version: '16', standard_support_end: '2028-12-31' }],
     });
-    assert.match(versionsPreview.changes.technology_versions.to, /16: end of support .* \(from the KANAP catalog\)/);
+    assert.match(versionsPreview.changes.technology_versions.to, new RegExp(`16: end of support .* \\(from the ${PRODUCT_NAME} catalog\\)`));
   });
 }
 
@@ -1207,7 +1208,7 @@ async function testTechnologyCatalogAmbiguousAndFreeOnRequest(harness: Harness) 
         entity_type: 'technologies',
         fields: { name: 'Postgres', lifecycle: 'Active' },
       }),
-      /^No exact KANAP catalog entry for "Postgres"\. Closest entries: .*PostgreSQL.* Choose one of them, or ask for a free entry with from_catalog: false\.$/,
+      new RegExp(`^No exact ${PRODUCT_NAME} catalog entry for "Postgres"\\. Closest entries: .*PostgreSQL.* Choose one of them, or ask for a free entry with from_catalog: false\\.$`),
     );
     const preview = await executeToolPreview(harness, ctx, 'create_business_record', {
       entity_type: 'technologies',
@@ -2253,14 +2254,14 @@ async function testTechnologyAdoptionDriftAndCompletion(harness: Harness) {
     assert.equal(preview.target.title, 'TEC-1 - PostgreSQL');
     assert.equal(preview.changes.lifecycle, undefined, 'a field equal to the current value leaves the card');
     assert.deepEqual(preview.changes.notes, { label: 'Notes', from: null, to: 'From Plaid', format: 'text' });
-    assert.match(preview.changes.catalog_adoption.to, /^\*\*Completes TEC-1 with the KANAP catalog\*\*/);
+    assert.match(preview.changes.catalog_adoption.to, new RegExp(`^\\*\\*Completes TEC-1 with the ${PRODUCT_NAME} catalog\\*\\*`));
     assert.match(preview.changes.catalog_adoption.to, /Catalog key: postgresql/);
     assert.match(preview.changes.catalog_adoption.to, /\d+ missing versions/);
     assert.match(preview.changes.catalog_adoption.to, /Description added \(the record has none\)/);
     const { AiMutationOperationRegistry } = require('../mutation/ai-mutation-operation.registry');
     const [storedPreview] = await runner.query(`SELECT * FROM ai_mutation_previews WHERE id = $1`, [preview.preview_id]);
     const fr = harness.app.get(AiMutationOperationRegistry).getOperation('create_business_record').presentPreview(storedPreview, 'fr');
-    assert.match(fr.changes.catalog_adoption.to, /^\*\*Complète TEC-1 avec le catalogue KANAP\*\*/);
+    assert.match(fr.changes.catalog_adoption.to, new RegExp(`^\\*\\*Complète TEC-1 avec le catalogue ${PRODUCT_NAME}\\*\\*`));
     assert.match(fr.changes.catalog_adoption.to, /- Clé de catalogue : postgresql/);
     assert.match(fr.changes.catalog_adoption.to, /Description ajoutée \(la fiche n'en a pas\)/);
     await approvePreview(harness, ctx, preview);
@@ -2435,7 +2436,7 @@ async function testTechnologyWritePlanRefusals(harness: Harness) {
     assert.equal(messages.get('versions-empty'), 'Nothing to change: add a version or change one.');
     assert.equal(messages.get('versions-unknown'), 'Unknown field "surprise" for update_technology_versions. Allowed: technology, add, update.');
     assert.equal(messages.get('versions-delete'), 'Deleting a version is done in the technology screen, on the Overview tab, not here.');
-    assert.equal(messages.get('versions-cpe'), 'Plaid does not write cpe_version or build_prefixes: the vulnerability matching owns them.');
+    assert.equal(messages.get('versions-cpe'), `${AGENT_NAME} does not write cpe_version or build_prefixes: the vulnerability matching owns them.`);
     assert.equal(messages.get('versions-alert'), "A version's vulnerability alerts are set with set_technology_vulnerability_alerts, not here.");
     assert.equal(messages.get('people-empty'), 'Nothing to change: add or remove an owner or a support contact.');
     assert.equal(messages.get('people-unknown'), 'Unknown field "surprise" for update_technology_people. Allowed: technology, owners, support_contacts.');

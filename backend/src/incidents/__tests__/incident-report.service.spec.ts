@@ -12,6 +12,7 @@ import {
   reportPdfFilename,
   type IncidentReportRecord,
 } from '../services/incident-report.service';
+import { PRODUCT_NAME } from '../../config/product';
 
 const UUID = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
 const REVIEW_DOC_ID = 'bbbbbbbb-cccc-dddd-eeee-ffffffffffff';
@@ -374,7 +375,7 @@ function testFrenchChangeLabels() {
   const markdown = buildMarkdown(fixture(), 'fr', labelsFor('fr'));
   assert.match(markdown, /Statut: En cours → Résolu/);
   assert.ok(markdown.includes('Généré le '));
-  assert.ok(markdown.includes(' par KANAP'));
+  assert.ok(markdown.includes(` par ${PRODUCT_NAME}`));
   assert.ok(markdown.includes('T-28 · Restore mail flow · Ouvert'));
 }
 

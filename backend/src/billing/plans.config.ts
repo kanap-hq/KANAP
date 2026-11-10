@@ -58,7 +58,7 @@ export interface PlanDef {
 }
 
 export const PLANS: Record<PlanKey, PlanDef> = {
-  max: { key: 'max', displayName: `Hosted ${PRODUCT_NAME}`, seatLimit: null, invoiceEligible: true, prices: { monthly: 24900, annual: 249000 } },
+  max: { key: 'max', displayName: `${PRODUCT_NAME} Cloud`, seatLimit: null, invoiceEligible: true, prices: { monthly: 24900, annual: 249000 } },
 };
 
 /** Map new env-var price IDs back to a PlanKey. */

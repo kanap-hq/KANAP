@@ -2,6 +2,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Features } from '../config/features';
+import { PRODUCT_NAME } from '../config/product';
 import { AI_SCREEN_LANGUAGES, type AiScreenLanguage } from './ai-unread-families';
 
 /**
@@ -9,10 +10,10 @@ import { AI_SCREEN_LANGUAGES, type AiScreenLanguage } from './ai-unread-families
  * `list_help_topics` and `read_help_section`. The manual is public and static: the pages are read
  * once, at start, from the copy the API image carries (`/app/help-docs`, see backend/Dockerfile),
  * or from the repository's `doc/help/docs` when the API runs from a checkout (ts-node, the specs).
- * The pages the image carries are those of the running version, unlike doc.kanap.net.
+ * The pages the image carries are those of the running version, unlike doc.kadratis.com.
  */
 
-export const HELP_MANUAL_BASE_URL = 'https://doc.kanap.net';
+export const HELP_MANUAL_BASE_URL = 'https://doc.kadratis.com';
 
 /** The text one read returns at most; `truncated` says when the section holds more. */
 export const HELP_SECTION_MAX_CHARS = 12_000;
@@ -24,7 +25,7 @@ export const HELP_TOPICS_FILTERED_MAX_PAGES = 10;
 const ON_PREMISE_PREFIX = 'on-premise/';
 
 export type HelpManualSection = {
-  /** The anchor of the heading on doc.kanap.net (`commitment-and-coverage`). */
+  /** The anchor of the heading on doc.kadratis.com (`commitment-and-coverage`). */
   id: string;
   title: string;
   level: number;
@@ -173,7 +174,7 @@ export function parseHelpPage(language: AiScreenLanguage, pagePath: string, mark
 /**
  * The text of a page or section for a reader outside MkDocs: images, HTML wrappers, comments and
  * attribute lists removed, admonitions and tabs as a title line with their body unindented, and
- * the links to other pages of the manual written as their doc.kanap.net address.
+ * the links to other pages of the manual written as their doc.kadratis.com address.
  */
 export function cleanHelpMarkdown(language: AiScreenLanguage, pagePath: string, lines: string[]): string {
   const out: string[] = [];
@@ -222,7 +223,7 @@ function indentOf(line: string): number {
   return line.length - line.trimStart().length;
 }
 
-/** A link of a manual page, resolved to its doc.kanap.net address; other addresses stay. */
+/** A link of a manual page, resolved to its doc.kadratis.com address; other addresses stay. */
 function helpLinkTarget(language: AiScreenLanguage, pagePath: string, target: string): string {
   if (/^[a-z][a-z0-9+.-]*:/i.test(target)) return target;
   const [file, anchor] = target.split('#', 2);
@@ -259,9 +260,9 @@ function listMarkdownFiles(root: string, dir = ''): string[] {
     .sort();
 }
 
-/** The words of a filter: three letters or more, without the most common little words. */
+/** The words of a filter: three letters or more, without the most common little words and the product's names. */
 const STOP_WORDS = new Set([
-  'the', 'and', 'for', 'how', 'can', 'what', 'with', 'from', 'into', 'does', 'kanap',
+  'the', 'and', 'for', 'how', 'can', 'what', 'with', 'from', 'into', 'does', 'kanap', PRODUCT_NAME.toLowerCase(),
   'les', 'des', 'une', 'pour', 'dans', 'avec', 'comment', 'est', 'que', 'qui', 'sur', 'par', 'aux', 'faire',
   'der', 'die', 'das', 'und', 'wie', 'ein', 'eine', 'mit', 'fur', 'auf', 'den', 'dem',
   'los', 'las', 'del', 'como', 'una', 'con', 'por', 'para',
@@ -319,7 +320,7 @@ export class AiHelpManualService {
   }
 
   private findPage(language: AiScreenLanguage, pagePath: string): { language: AiScreenLanguage; page: HelpManualPage } {
-    // A path, a file name or a doc.kanap.net address: `contracts`, `contracts.md`, `https://doc.kanap.net/fr/contracts/#relations`.
+    // A path, a file name or a doc.kadratis.com address: `contracts`, `contracts.md`, `https://doc.kadratis.com/fr/contracts/#relations`.
     const wanted = pagePath.trim().split('#')[0].replace(/^https?:\/\/[^/]+/i, '')
       .replace(/^\/+|\/+$/g, '').replace(/\.md$/, '').replace(/^(?:en|fr|de|es)(?:\/|$)/, '') || 'index';
     for (const candidate of language === 'en' ? ['en' as const] : [language, 'en' as const]) {

@@ -671,7 +671,7 @@ export class AiToolRegistry {
         {
           name: 'list_help_topics',
           category: 'discovery',
-          description: 'Lists the pages of the ' + PRODUCT_NAME + ' user manual, the manual of this version, with their path, title, doc.kanap.net address and sections. Without words, every page with its main sections; with words, the pages that hold them, best first, with the sections and subsections where they appear (`Parent › Child`). read_help_section reads a page or a section. The manual describes the screens, menus, buttons and steps of ' + PRODUCT_NAME + ' as they are in this version.',
+          description: 'Lists the pages of the ' + PRODUCT_NAME + ' user manual, the manual of this version, with their path, title, doc.kadratis.com address and sections. Without words, every page with its main sections; with words, the pages that hold them, best first, with the sections and subsections where they appear (`Parent › Child`). read_help_section reads a page or a section. The manual describes the screens, menus, buttons and steps of ' + PRODUCT_NAME + ' as they are in this version.',
           inputSchema: ListHelpTopicsInputSchema,
           inputSummary: fieldDescriptions(ListHelpTopicsInputSchema),
           surfaces: ['chat', 'mcp'],
@@ -684,7 +684,7 @@ export class AiToolRegistry {
         {
           name: 'read_help_section',
           category: 'inspection',
-          description: `Returns one page of the ${PRODUCT_NAME} user manual, or one of its sections, as Markdown text with its doc.kanap.net address (\`url\`, with the section's anchor) to give the person as the link. \`subsections\` names the sections inside it. The text holds at most ${HELP_SECTION_MAX_CHARS.toLocaleString('en-US')} characters: when \`truncated\` is true, read one of its sections. Links in the text point to doc.kanap.net.`,
+          description: `Returns one page of the ${PRODUCT_NAME} user manual, or one of its sections, as Markdown text with its doc.kadratis.com address (\`url\`, with the section's anchor) to give the person as the link. \`subsections\` names the sections inside it. The text holds at most ${HELP_SECTION_MAX_CHARS.toLocaleString('en-US')} characters: when \`truncated\` is true, read one of its sections. Links in the text point to doc.kadratis.com.`,
           inputSchema: ReadHelpSectionInputSchema,
           inputSummary: fieldDescriptions(ReadHelpSectionInputSchema),
           surfaces: ['chat', 'mcp'],

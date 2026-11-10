@@ -24,6 +24,7 @@ import { getEmailStrings } from '../../../i18n/email-i18n';
 import type { SendEmailOptions } from '../../email.types';
 import { TrialMailsController } from '../trial-mails.controller';
 import { TRIAL_MAIL_FOUNDER, TrialMailsService } from '../trial-mails.service';
+import { PRODUCT_NAME } from '../../../config/product';
 
 // The trial e-mails (`doc/trial-mails.md`) on the spec database, with a recording e-mail service:
 // - J0 after the choice of a path, once, and not again from a new process (a restart);
@@ -115,7 +116,7 @@ async function testWelcomeOnceAfterTheChoice() {
       await choose(t!.tenantId, 'budget', 'example');
       await trialMails.onSubscriptionChanged(t!.tenantId, new Date(start.getTime() + 120_000));
       const [mail] = email.to(t!.ownerEmail);
-      assert.equal(mail?.subject, 'Welcome to your KANAP workspace');
+      assert.equal(mail?.subject, `Welcome to your ${PRODUCT_NAME} workspace`);
       assert.ok(mail.html.includes('Hello Camille,') && mail.text!.includes('/first-steps/budget-example/'));
       assert.equal(mail.replyTo, TRIAL_MAIL_FOUNDER);
       assert.equal(mail.from, undefined, 'J0 leaves from the application address');
@@ -152,7 +153,7 @@ async function testWelcomeAnHourAfterTheFirstSignIn() {
       assert.equal(email.to(t!.ownerEmail).length, 0, 'not before the hour');
       await trialMails.onSubscriptionChanged(t!.tenantId, new Date(signIn.getTime() + 61 * 60_000));
       const [mail] = email.to(t!.ownerEmail);
-      assert.equal(mail?.subject, 'Bienvenue dans votre espace KANAP', 'the language of the workspace');
+      assert.equal(mail?.subject, `Bienvenue dans votre espace ${PRODUCT_NAME}`, 'the language of the workspace');
       assert.ok(mail.text!.includes('trois parcours de dix minutes vous attendent') && mail.text!.includes('/fr/first-steps/portfolio-example/'));
       assert.ok(mail.text!.startsWith('Bonjour,'), 'no first name: no name in the greeting');
     });
@@ -196,7 +197,7 @@ async function testFollowUpEndingAndNotice() {
 
       await trialMails.onSubscriptionChanged(t!.tenantId, new Date(end.getTime() + 60_000));
       const notice = email.to(t!.ownerEmail)[2];
-      assert.equal(notice?.subject, 'Votre essai KANAP est arrivé à son terme');
+      assert.equal(notice?.subject, `Votre essai ${PRODUCT_NAME} est arrivé à son terme`);
       const deletion = new Intl.DateTimeFormat('fr', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
         .format(new Date(end.getTime() + 30 * DAY));
       assert.ok(notice.text!.includes(`supprimé définitivement le ${deletion}`), 'the deletion date');

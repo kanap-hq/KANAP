@@ -40,7 +40,7 @@ Certain tenants are designated as **system tenants** via the `is_system_tenant` 
 System tenants have special protections:
 - Cannot be deleted, frozen, or have their status/slug modified.
 - Hidden from the tenant list in the admin UI by default.
-- Tenant slug reservation is centralized in `backend/src/tenants/tenant-slug-policy.ts` and enforced at signup plus tenant creation/update. Current reserved slugs: `www`, `api`, `admin`, `billing`, `account`, `platform-admin`, `app`, `nextcloud`, `migration`, `example`; in multi-tenant mode also `dev`, `qa`, `doc`, `send`, `tenants`, `mail`, `autodiscover`, `status`, `kanap` (a tenant that already holds one keeps it).
+- Tenant slug reservation is centralized in `backend/src/tenants/tenant-slug-policy.ts` and enforced at signup plus tenant creation/update. Current reserved slugs: `www`, `api`, `admin`, `billing`, `account`, `platform-admin`, `app`, `nextcloud`, `migration`, `example`; in multi-tenant mode also `dev`, `qa`, `doc`, `send`, `tenants`, `mail`, `autodiscover`, `status`, `kanap`, `kadratis`, `cadratis` (a tenant that already holds one keeps it).
 
 This design ensures platform operations work under the same RLS rules as regular tenants while maintaining clear separation.
 

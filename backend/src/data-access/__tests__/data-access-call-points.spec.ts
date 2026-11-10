@@ -40,6 +40,7 @@ import {
   seedRole,
   seedTree,
 } from './data-access-test-helpers';
+import { PRODUCT_NAME } from '../../config/product';
 
 /**
  * Data-scoped access, lot 1 run B (planning/data-scoped-access/spec.md §6.3, §10.5): every call
@@ -250,7 +251,7 @@ async function testRefusals(app: INestApplication) {
   const broken = await call(app, 'GET', 'who', { 'x-da-user': seed.limited, 'x-da-break': '1' });
   assert.equal(broken.status, 503, `access unavailable: ${broken.text}`);
   assert.equal(broken.body.code, 'DATA_ACCESS_UNAVAILABLE');
-  assert.equal(broken.body.message, 'Data access is temporarily unavailable. Contact the person who runs KANAP.');
+  assert.equal(broken.body.message, `Data access is temporarily unavailable. Contact the person who runs ${PRODUCT_NAME}.`);
   assert.ok(!/KDA01|data access unavailable/.test(broken.text), `no database text in the answer: ${broken.text}`);
   const expected = await dataSource.query(`SELECT count(*)::int AS n FROM data_access_expected_policies()`);
   assert.equal(expected[0].n, expectedBefore, 'the rollback restored data_access_expected_policies()');

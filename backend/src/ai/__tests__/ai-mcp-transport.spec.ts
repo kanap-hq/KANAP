@@ -8,6 +8,7 @@ import { parseMcpApiKeyPolicy } from '../control-plane/mcp/ai-mcp-access-policy'
 import { AiMcpCallRecord } from '../control-plane/mcp/ai-mcp-audit.service';
 import { AiMcpExposureService } from '../control-plane/mcp/ai-mcp-exposure.service';
 import { AiMcpRateLimiter } from '../control-plane/mcp/ai-mcp-rate-limiter.service';
+import { PRODUCT_NAME } from '../../config/product';
 
 // Drives the real MCP SDK server and Streamable HTTP transport behind POST /ai/mcp.
 // The capabilities expose plain JSON Schemas: tools/list and tools/call must accept them as they are.
@@ -65,7 +66,7 @@ function createController(
       }),
       assertPostAccess: async () => undefined,
       listToolJsonSchemas: async () => [
-        { name: 'search_all', description: 'Search KANAP.', parameters: toolSchema },
+        { name: 'search_all', description: `Search ${PRODUCT_NAME}.`, parameters: toolSchema },
       ],
       assertCanExecute: async () => ({}),
       explainRefusal: (apiKey: any, name: string) => realExposure.explainRefusal(apiKey, name),
@@ -148,7 +149,7 @@ async function testInitializeAdvertisesTools(url: string) {
   assert.notEqual(reply.result.serverInfo.version, '1.0.0');
   const instructions: string = reply.result.instructions;
   // The client knows which workspace it reads before its first call.
-  assert.match(instructions, /^This connection reads the KANAP workspace "Fromage & Co" \(fromage\)/);
+  assert.match(instructions, new RegExp(`^This connection reads the ${PRODUCT_NAME} workspace "Fromage & Co" \\(fromage\\)`));
   assert.match(instructions, /only reads/);
   assert.match(instructions, /rights of the person/);
   assert.match(instructions, /start with search_all/);
@@ -222,7 +223,7 @@ async function testToolsListReturnsJsonSchemas(url: string) {
     {
       name: 'search_all',
       title: 'Search all',
-      description: 'Search KANAP.',
+      description: `Search ${PRODUCT_NAME}.`,
       inputSchema: toolSchema,
       annotations: { title: 'Search all', readOnlyHint: true },
     },

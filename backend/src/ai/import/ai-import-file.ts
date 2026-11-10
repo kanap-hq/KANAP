@@ -1,12 +1,16 @@
 import type { CsvLanguage } from '../../common/csv-sheet';
+import { AGENT_NAME } from '../../config/product';
 import { writeXlsx, XlsxCell } from '../../common/xlsx/write';
 import type { AiImportFileCell, AiImportFileContent } from './ai-import-mapping';
 
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 const DECIMAL = /^-?\d+(\.\d+)?$/;
 
-/** The name of the file the import reads, as the import's own reports and logs name an upload. */
-export const AI_IMPORT_FILE_NAME = 'plaid-import.xlsx';
+/**
+ * The name of the file the import reads, as the import's own reports and logs name an upload. Only
+ * written: nothing reads it back, so it follows the agent's name.
+ */
+export const AI_IMPORT_FILE_NAME = `${AGENT_NAME.toLowerCase()}-import.xlsx`;
 
 /**
  * A cell as the template holds it: a day as a date cell and a number as a number cell, so that no

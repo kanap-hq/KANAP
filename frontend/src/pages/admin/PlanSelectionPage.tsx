@@ -294,7 +294,7 @@ export default function PlanSelectionDialog({
     enabled: open,
   });
 
-  // The catalogue sells one plan (Hosted KANAP); the dialog offers the first one listed.
+  // The catalogue sells one plan (Kadratis Cloud); the dialog offers the first one listed.
   const plan = plansQuery.data?.[0] ?? null;
   // The French terms are binding; every other language reads the English translation.
   const termsUrl = plan?.terms ? (locale === 'fr' ? plan.terms.urls.fr : plan.terms.urls.en) : null;

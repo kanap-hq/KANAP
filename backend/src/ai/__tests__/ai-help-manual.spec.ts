@@ -1,6 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Features } from '../../config/features';
+import { PRODUCT_NAME } from '../../config/product';
 import {
   AiHelpManualService,
   HELP_SECTION_MAX_CHARS,
@@ -84,7 +85,7 @@ function testKnownSectionsInEnglishAndFrench() {
   const coverage = manual.readSection('en', 'contracts', 'Commitment and coverage');
   assert.equal(coverage.page_title, 'Contracts');
   assert.equal(coverage.section, 'Commitment and coverage');
-  assert.equal(coverage.url, 'https://doc.kanap.net/contracts/#commitment-and-coverage');
+  assert.equal(coverage.url, 'https://doc.kadratis.com/contracts/#commitment-and-coverage');
   assert.match(coverage.text, /^#### Commitment and coverage\n/);
   assert.match(coverage.text, /Committed by the contract/);
   assert.doesNotMatch(coverage.text, /^### Compliance/m, 'the section stops at the next heading of its level or above');
@@ -92,17 +93,17 @@ function testKnownSectionsInEnglishAndFrench() {
 
   const french = manual.readSection('fr', 'contracts', 'Engagement et couverture');
   assert.equal(french.language, 'fr');
-  assert.equal(french.url, 'https://doc.kanap.net/fr/contracts/#engagement-et-couverture');
+  assert.equal(french.url, 'https://doc.kadratis.com/fr/contracts/#engagement-et-couverture');
   assert.match(french.text, /^#### Engagement et couverture\n/);
 
   // A section by its anchor, its parent path, or its title in any case; the page by its address.
-  assert.equal(manual.readSection('fr', 'contracts', 'conformite').url, 'https://doc.kanap.net/fr/contracts/#conformite');
-  assert.equal(manual.readSection('fr', 'contracts', 'La fiche contrat › Relations').url, 'https://doc.kanap.net/fr/contracts/#relations');
-  assert.equal(manual.readSection('fr', 'https://doc.kanap.net/fr/contracts/#budget', 'BUDGET').section, 'Budget');
+  assert.equal(manual.readSection('fr', 'contracts', 'conformite').url, 'https://doc.kadratis.com/fr/contracts/#conformite');
+  assert.equal(manual.readSection('fr', 'contracts', 'La fiche contrat › Relations').url, 'https://doc.kadratis.com/fr/contracts/#relations');
+  assert.equal(manual.readSection('fr', 'https://doc.kadratis.com/fr/contracts/#budget', 'BUDGET').section, 'Budget');
 
-  // The links to other pages are doc.kanap.net addresses in the page's language.
+  // The links to other pages are doc.kadratis.com addresses in the page's language.
   const relations = manual.readSection('fr', 'contracts', 'Relations');
-  assert.match(relations.text, /\]\(https:\/\/doc\.kanap\.net\/fr\/contracts\/#budget\)/);
+  assert.match(relations.text, /\]\(https:\/\/doc\.kadratis\.com\/fr\/contracts\/#budget\)/);
   assert.doesNotMatch(relations.text, /\]\((?!https?:)[^)]*\.md/, 'no relative .md link is left');
 
   assert.throws(() => manual.readSection('en', 'contracts', 'No such section'), (error: unknown) =>
@@ -117,15 +118,15 @@ function testTheCapAndTheSubsections() {
   assert.ok(page.text.length <= HELP_SECTION_MAX_CHARS, 'the text is capped');
   assert.ok(page.chars > HELP_SECTION_MAX_CHARS, '`chars` gives the length of the whole page');
   assert.ok(page.subsections.includes('Getting started'), 'a capped page names its sections');
-  assert.equal(page.url, 'https://doc.kanap.net/budget-lines/');
-  assert.equal(manual.readSection('en', 'index').url, 'https://doc.kanap.net/');
+  assert.equal(page.url, 'https://doc.kadratis.com/budget-lines/');
+  assert.equal(manual.readSection('en', 'index').url, 'https://doc.kadratis.com/');
 }
 
 function testTheTableOfContents() {
   const full = withSingleTenantSync(false, () => manual.listTopics('en'));
   assert.equal(full.complete, true);
   const contracts = full.pages.find((page) => page.page === 'contracts')!;
-  assert.equal(contracts.url, 'https://doc.kanap.net/contracts/');
+  assert.equal(contracts.url, 'https://doc.kadratis.com/contracts/');
   assert.ok(contracts.sections.includes('Renewal decisions'));
   assert.ok(!contracts.sections.includes('Decision window'), 'without words, the main sections only');
   assert.ok(JSON.stringify(full).length < 30_000, 'the full table stays compact');
@@ -137,6 +138,13 @@ function testTheTableOfContents() {
   assert.ok(page.sections.includes('La fiche contrat › Relations'), 'with the subsection where they appear');
 }
 
+function testTheProductNamesAreNoSearchWords() {
+  // Every page names the product: a question that names it finds the pages of its other words.
+  const pages = (query: string) => manual.listTopics('en', query).pages.map((page) => page.page);
+  assert.deepEqual(pages(`contracts in ${PRODUCT_NAME}`), pages('contracts'));
+  assert.deepEqual(pages('contracts in KANAP'), pages('contracts'));
+}
+
 async function testOnPremisePagesInTheCloudOnly() {
   await withSingleTenant(false, () => {
     assert.ok(!manual.listTopics('en').pages.some((page) => page.page.startsWith('on-premise/')));
@@ -145,8 +153,8 @@ async function testOnPremisePagesInTheCloudOnly() {
   });
   await withSingleTenant(true, () => {
     assert.ok(manual.listTopics('en').pages.some((page) => page.page === 'on-premise/installation'));
-    assert.equal(manual.readSection('de', 'on-premise/installation').url, 'https://doc.kanap.net/de/on-premise/installation/');
-    assert.equal(manual.readSection('en', 'on-premise/index').url, 'https://doc.kanap.net/on-premise/');
+    assert.equal(manual.readSection('de', 'on-premise/installation').url, 'https://doc.kadratis.com/de/on-premise/installation/');
+    assert.equal(manual.readSection('en', 'on-premise/index').url, 'https://doc.kadratis.com/on-premise/');
   });
 }
 
@@ -178,14 +186,14 @@ function testMkDocsSyntaxIsRemoved() {
   ].join('\n');
   const page = parseHelpPage('fr', 'fast-track/index', markdown);
   assert.equal(page.title, 'Sample');
-  assert.equal(page.url, 'https://doc.kanap.net/fr/fast-track/');
+  assert.equal(page.url, 'https://doc.kadratis.com/fr/fast-track/');
   assert.deepEqual(page.sections.map((section) => section.id), ['renewals', 'heading-bold', 'overview', 'overview_1']);
   assert.doesNotMatch(page.sections[1].title, /</, 'a tag split by another is removed too');
   const text = cleanHelpMarkdown('fr', page.path, page.lines);
   assert.doesNotMatch(text, /!\[|png|<div|\{ #/);
   assert.match(text, /\*\*Prefer one page\*\*\nKeep it short\./);
-  assert.match(text, /\[Budget\]\(https:\/\/doc\.kanap\.net\/fr\/fast-track\/budget-lines\/#import\)/);
-  assert.match(text, /\[above\]\(https:\/\/doc\.kanap\.net\/fr\/fast-track\/#overview\)/);
+  assert.match(text, /\[Budget\]\(https:\/\/doc\.kadratis\.com\/fr\/fast-track\/budget-lines\/#import\)/);
+  assert.match(text, /\[above\]\(https:\/\/doc\.kadratis\.com\/fr\/fast-track\/#overview\)/);
   assert.match(text, /After the tip\. Wrapped/);
   assert.match(text, /Nested comment and tag\./, 'a comment or tag split by another is removed too');
   assert.match(text, /```\n!!! not an admonition in code\n```/);
@@ -208,9 +216,9 @@ async function testTheToolsForEveryPlaidUser() {
   // The person's interface language by default, the one asked for otherwise, English without either.
   const french = await tools.execute(context('chat', 'fr') as any, 'read_help_section', { page: 'contracts', section: 'Relations' }) as any;
   assert.equal(french.language, 'fr');
-  assert.equal(french.url, 'https://doc.kanap.net/fr/contracts/#relations');
+  assert.equal(french.url, 'https://doc.kadratis.com/fr/contracts/#relations');
   const english = await tools.execute(context('chat', 'fr') as any, 'read_help_section', { page: 'contracts', section: 'Relations', language: 'en' }) as any;
-  assert.equal(english.url, 'https://doc.kanap.net/contracts/#relations');
+  assert.equal(english.url, 'https://doc.kadratis.com/contracts/#relations');
   const fallback = await tools.execute(context('mcp', null) as any, 'list_help_topics', { query: 'contract' }) as any;
   assert.equal(fallback.language, 'en');
   assert.ok(fallback.pages.some((page: any) => page.page === 'contracts'));
@@ -230,6 +238,7 @@ async function run() {
   testKnownSectionsInEnglishAndFrench();
   testTheCapAndTheSubsections();
   testTheTableOfContents();
+  testTheProductNamesAreNoSearchWords();
   await testOnPremisePagesInTheCloudOnly();
   testMkDocsSyntaxIsRemoved();
   await testTheToolsForEveryPlaidUser();
