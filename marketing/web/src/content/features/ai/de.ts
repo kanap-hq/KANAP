@@ -43,7 +43,7 @@ const content: FeatureContent = {
         'Jeder Benutzer sieht seine verbundenen Apps und trennt sie mit einem Klick',
         'API-Schlüssel bleiben für Skripte und andere MCP-Clients verfügbar',
       ],
-      shotAlt: 'Claude antwortet aus den Kadratis-Daten: externe FTE und durchschnittlicher Tagessatz je Lieferant, als Diagramme',
+      shotAlt: 'Claude erstellt aus den Kadratis-Daten eine PowerPoint-Folie: Budget 2026 für externe FTE und durchschnittliche Kosten pro Tag, je Lieferant',
     },
     {
       title: 'Volle Kontrolle & Compliance',

@@ -57,7 +57,7 @@ export const FEATURE_SCREENSHOTS = {
   ai: [
     '/screenshots/feature-plaid-query-2026-11-09.png',
     '/screenshots/feature-plaid-preview-2026-11-09.png',
-    '/screenshots/feature-plaid-claude-2026-10-26.png',
+    '/screenshots/feature-plaid-claude-2026-11-10.png',
     '/screenshots/feature-plaid-admin-2026-11-09b.png',
   ],
 } as const;

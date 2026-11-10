@@ -43,7 +43,7 @@ const content: FeatureContent = {
         "Chaque utilisateur voit ses applications connectées et les déconnecte en un clic",
         'Les clés API restent disponibles pour les scripts et les autres clients MCP',
       ],
-      shotAlt: 'Claude répond à partir des données de Kadratis : FTE externes et TJM moyen par fournisseur, en graphiques',
+      shotAlt: 'Claude construit une diapositive PowerPoint à partir des données de Kadratis : budget 2026 des FTE externes et coût moyen par jour, par fournisseur',
     },
     {
       title: 'Contrôle et conformité totaux',

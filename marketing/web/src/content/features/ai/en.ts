@@ -43,7 +43,7 @@ const content: FeatureContent = {
         'Every user sees their connected apps and disconnects them in one click',
         'API keys remain available for scripts and other MCP clients',
       ],
-      shotAlt: 'Claude answers from Kadratis data: external FTEs and average day rate by supplier, as charts',
+      shotAlt: 'Claude builds a PowerPoint slide from Kadratis data: the 2026 budget for external FTEs and the average cost per day, by supplier',
     },
     {
       title: 'Full control & compliance',

@@ -43,7 +43,7 @@ const content: FeatureContent = {
         'Cada usuario ve sus aplicaciones conectadas y las desconecta con un clic',
         'Las claves API siguen disponibles para scripts y otros clientes MCP',
       ],
-      shotAlt: 'Claude responde a partir de los datos de Kadratis: FTE externos y tarifa diaria media por proveedor, en gráficos',
+      shotAlt: 'Claude crea una diapositiva de PowerPoint a partir de los datos de Kadratis: presupuesto 2026 de FTE externos y coste medio por día, por proveedor',
     },
     {
       title: 'Control y cumplimiento totales',
