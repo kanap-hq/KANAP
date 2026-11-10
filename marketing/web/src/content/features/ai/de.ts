@@ -2,52 +2,52 @@ import type { FeatureContent } from '../types';
 
 const content: FeatureContent = {
   meta: {
-    title: 'Plaid, KI-Assistent für IT-Governance',
+    title: 'Kad, KI-Assistent für IT-Governance',
     description:
-      'Fragen Sie Plaid zu Ihren IT-Daten. Dokumente erstellen, Aufgaben aktualisieren, KANAP mit einem Klick zu Claude hinzufügen. Nutzung in Hosted Cloud enthalten. Open Source.',
+      'Fragen Sie Kad zu Ihren IT-Daten. Dokumente erstellen, Aufgaben aktualisieren, Kadratis mit einem Klick zu Claude hinzufügen. Nutzung in Kadratis Cloud enthalten. Open Source.',
   },
   header: {
-    eyebrow: 'Plaid · KI-Assistent',
-    title: 'Fragen Sie KANAP alles über Ihre IT.',
-    lead: 'Plaid antwortet über Ihr Budget, Ihre Anwendungen, Projekte und Dokumentation hinweg und nimmt Änderungen vor, wenn Sie darum bitten. Jeder Schreibvorgang wird Ihnen gezeigt, bevor er ausgeführt wird. Nutzen Sie es in KANAP, oder fügen Sie KANAP mit seiner Adresse und einem Klick zu Claude hinzu.',
+    eyebrow: 'Kad · KI-Assistent',
+    title: 'Fragen Sie Kadratis alles über Ihre IT.',
+    lead: 'Kad antwortet über Ihr Budget, Ihre Anwendungen, Projekte und Dokumentation hinweg und nimmt Änderungen vor, wenn Sie darum bitten. Jeder Schreibvorgang wird Ihnen gezeigt, bevor er ausgeführt wird. Nutzen Sie ihn in Kadratis, oder fügen Sie Kadratis mit seiner Adresse und einem Klick zu Claude hinzu.',
   },
   sections: [
     {
       title: 'Alles suchen & abfragen',
-      body: 'Fragen Sie Plaid zu Ihren Anwendungen, Servern, Verträgen, Budgetposten, Projekten, Aufgaben oder Dokumenten. Sofortige Antworten mit strukturierten Daten, statt vager Zusammenfassungen.',
+      body: 'Fragen Sie Kad zu Ihren Anwendungen, Servern, Verträgen, Budgetposten, Projekten, Aufgaben oder Dokumenten. Sofortige Antworten mit strukturierten Daten, statt vager Zusammenfassungen.',
       bullets: [
         'Modulübergreifende Suche über alle Bereiche',
         'Strukturierte Abfragen mit Filtern und Sortierung',
         'Aggregationen und Statistiken',
         'Volltextsuche in der Wissensdatenbank',
       ],
-      shotAlt: 'Plaid antwortet mit einer Tabelle: die Verträge, über die in 90 Tagen zu entscheiden ist, und die Anwendungen, die sie abdecken',
+      shotAlt: 'Kad antwortet mit einer Tabelle: die Verträge, über die in 90 Tagen zu entscheiden ist, und die Anwendungen, die sie abdecken',
     },
     {
       title: 'Aktionen mit Vorschau',
-      body: 'Plaid liest nicht nur, er schreibt auch. Er kann Inhalte für Sie erstellen und aktualisieren, und jede Schreiboperation wird vor der Anwendung in der Vorschau gezeigt.',
+      body: 'Kad liest nicht nur, er schreibt auch. Er kann Inhalte für Sie erstellen und aktualisieren, und jede Schreiboperation wird vor der Anwendung in der Vorschau gezeigt.',
       bullets: [
         'Dokumente mit Markdown erstellen und bearbeiten',
         'Projekt-Briefings und Zusammenfassungen verfassen',
         'Aufgaben aktualisieren: Status, Zuweisungen, Kommentare',
         'Änderungen vor der Anwendung in der Vorschau sehen',
       ],
-      shotAlt: 'Plaid bereitet zwei Änderungen an einer Aufgabe als Vorschau vor, mit Genehmigen und Ablehnen',
+      shotAlt: 'Kad bereitet zwei Änderungen an einer Aufgabe als Vorschau vor, mit Genehmigen und Ablehnen',
     },
     {
-      title: 'KANAP mit einem Klick zu Claude hinzufügen',
-      body: 'Fügen Sie Ihre KANAP-Adresse in Claude als benutzerdefinierten Konnektor ein, melden Sie sich an, klicken Sie auf Zulassen. Claude antwortet dann aus Ihrem Budget, Ihren Anwendungen, Projekten und Dokumenten. Es gibt keinen Schlüssel zu erstellen oder zu kopieren. Das funktioniert in Claude, Claude Desktop und Claude Code.',
+      title: 'Kadratis mit einem Klick zu Claude hinzufügen',
+      body: 'Fügen Sie Ihre Kadratis-Adresse in Claude als benutzerdefinierten Konnektor ein, melden Sie sich an, klicken Sie auf Zulassen. Claude antwortet dann aus Ihrem Budget, Ihren Anwendungen, Projekten und Dokumenten. Es gibt keinen Schlüssel zu erstellen oder zu kopieren. Das funktioniert in Claude, Claude Desktop und Claude Code.',
       bullets: [
-        'Jede Person meldet sich mit ihrem eigenen KANAP-Konto an',
+        'Jede Person meldet sich mit ihrem eigenen Kadratis-Konto an',
         'Schreibgeschützt, im Rahmen der Rechte dieser Person',
         'Jeder Benutzer sieht seine verbundenen Apps und trennt sie mit einem Klick',
         'API-Schlüssel bleiben für Skripte und andere MCP-Clients verfügbar',
       ],
-      shotAlt: 'Claude antwortet aus den KANAP-Daten: externe FTE und durchschnittlicher Tagessatz je Lieferant, als Diagramme',
+      shotAlt: 'Claude erstellt aus den Kadratis-Daten eine PowerPoint-Folie: Budget 2026 für externe FTE und durchschnittliche Kosten pro Tag, je Lieferant',
     },
     {
       title: 'Volle Kontrolle & Compliance',
-      body: 'Plaid respektiert die Regeln Ihrer Organisation. Jede Aktion unterliegt den Berechtigungen des Nutzers. Administratoren haben vollständige Kontrolle darüber, was Plaid darf und was nicht.',
+      body: 'Kad respektiert die Regeln Ihrer Organisation. Jede Aktion unterliegt den Berechtigungen des Nutzers. Administratoren haben vollständige Kontrolle darüber, was Kad darf und was nicht.',
       bullets: [
         'Vollständige Einhaltung der Nutzerrechte bei jeder Abfrage',
         'MCP-Verbindungen und -Schlüssel folgen den Rechten jedes Benutzers und lassen sich jederzeit trennen',
@@ -55,15 +55,15 @@ const content: FeatureContent = {
         'Vorschau und Bestätigung für alle Schreiboperationen',
         'Nur-Lese-Zugriff über Rollen für vorsichtige Rollouts',
       ],
-      shotAlt: 'Plaid-Einstellungen: Chat und MCP aktiv, enthaltenes Modell und Verarbeitungsort bestätigt, Nutzung des Monats',
+      shotAlt: 'Kad-Einstellungen: Chat und MCP aktiv, enthaltenes Modell und Verarbeitungsort bestätigt, Nutzung des Monats',
     },
   ],
   more: {
-    title: 'Was Sie Plaid fragen können',
+    title: 'Was Sie Kad fragen können',
     items: [
-      { title: '„Wie steht es um Projekt Atlas?"', body: 'Plaid zieht das Projekt, seine Aufgaben, den Zeitplan, das Team und liefert ein prägnantes Status-Briefing mit Blockern und bevorstehenden Meilensteinen.' },
+      { title: '„Wie steht es um Projekt Atlas?"', body: 'Kad zieht das Projekt, seine Aufgaben, den Zeitplan, das Team und liefert ein prägnantes Status-Briefing mit Blockern und bevorstehenden Meilensteinen.' },
       { title: '„Liste Anwendungen auf AWS ohne Owner"', body: 'Strukturierte Abfrage über Ihre IT-Landschaft. Gefilterte, sortierte Ergebnisse aus Live-Daten.' },
-      { title: '„Entwirf eine Security-Policy für Fernzugriff"', body: 'Plaid erstellt ein neues Dokument in Ihrer Wissensdatenbank, mit korrekten Metadaten und Markdown-Inhalt.' },
+      { title: '„Entwirf eine Security-Policy für Fernzugriff"', body: 'Kad erstellt ein neues Dokument in Ihrer Wissensdatenbank, mit korrekten Metadaten und Markdown-Inhalt.' },
       { title: '„Welche Verträge laufen in 90 Tagen aus?"', body: 'Sofortige Antwort mit Lieferantennamen, Beträgen und Verlängerungsdaten. Kein Navigieren durch Dashboards nötig.' },
     ],
   },
@@ -80,9 +80,9 @@ const content: FeatureContent = {
   },
   cta: {
     title: 'KI-gestützte IT-Governance beginnt hier.',
-    body: 'Plaid ist in jedem KANAP-Workspace enthalten, mit großzügiger Nutzung in Hosted Cloud. Kostenlos selbst hosten oder Hosted Cloud testen.',
+    body: 'Kad ist in jedem Kadratis-Arbeitsbereich enthalten, mit großzügiger Nutzung in Kadratis Cloud. Kostenlos selbst hosten oder Kadratis Cloud testen.',
     primary: 'Kostenlos bereitstellen',
-    secondary: 'Hosted Cloud testen',
+    secondary: 'Kadratis Cloud testen',
   },
 };
 

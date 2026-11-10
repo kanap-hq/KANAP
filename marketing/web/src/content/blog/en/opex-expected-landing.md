@@ -15,9 +15,9 @@ series:
 
 September. Finance asks for a first version of the 2027 budget, and last year's Excel file comes out of the drawer: two hundred lines, eight tabs, three versions that no longer agree. Here we go again?
 
-This series walks through the preparation of a complete OPEX budget in KANAP. Part 1: make the current year's landing reliable. Part 2: roll the numbers forward to 2027. Part 3: present, defend, lock. The principle holds from start to finish: you only touch what changes, KANAP handles the rest, presentation included.
+This series walks through the preparation of a complete OPEX budget in Kadratis. Part 1: make the current year's landing reliable. Part 2: roll the numbers forward to 2027. Part 3: present, defend, lock. The principle holds from start to finish: you only touch what changes, Kadratis handles the rest, presentation included.
 
-Your lines still live in Excel? "Import CSV" loads them in one go, and the review starts the same day. KANAP checks the whole file before writing anything, then writes only the cells that changed: the round trip with the spreadsheet stays open for the whole review.
+Your lines still live in Excel? "Import CSV" loads them in one go, and the review starts the same day. Kadratis checks the whole file before writing anything, then writes only the cells that changed: the round trip with the spreadsheet stays open for the whole review.
 
 ## Expected landing, the column that matters
 
@@ -53,7 +53,7 @@ For contractors, a monthly flat fee or per-unit licences, an annual amount says 
 
 ![A contractor line built from quantity × price: 2 people full time at €470 a day over 218 working days, 2 FTE over the year.](/screenshots/blog/budget-quantity-price-2026-10-13.png)
 
-Two consultants at €650 a day, full time from March to December: KANAP computes each month from the working days in the calendar of the paying company's country, public holidays excluded. If the assignment ends in October or the daily rate was renegotiated, change the date or the price and the landing recalculates. No more redoing the multiplication by hand.
+Two consultants at €650 a day, full time from March to December: Kadratis computes each month from the working days in the calendar of the paying company's country, public holidays excluded. If the assignment ends in October or the daily rate was renegotiated, change the date or the price and the landing recalculates. No more redoing the multiplication by hand.
 
 Calendars live in Master data > Working-day calendars. A country's standard calendar is created along with the company; a custom calendar covers a plant that closes three weeks in August.
 
@@ -69,7 +69,7 @@ These hand-entered amounts are safe: part 2's automatic copy only fills empty ce
 
 ## Pro tip: currencies first
 
-KANAP handles multi-currency budgets, but set them up beforehand. In Budget management → Administration → **Currencies**, define the reporting currency, the default OPEX and CAPEX currencies and the list of allowed currencies. FX rates sync automatically per fiscal year, and they freeze when you freeze the default budget column. Each line keeps its currency; totals and reports convert to the reporting currency.
+Kadratis handles multi-currency budgets, but set them up beforehand. In Budget management → Administration → **Currencies**, define the reporting currency, the default OPEX and CAPEX currencies and the list of allowed currencies. FX rates sync automatically per fiscal year, and they freeze when you freeze the default budget column. Each line keeps its currency; totals and reports convert to the reporting currency.
 
 ![Currency settings: reporting currency, default currencies, allowed currencies and the FX rates for 2025 to 2027.](/screenshots/budget-currency-2026-10-13.png)
 

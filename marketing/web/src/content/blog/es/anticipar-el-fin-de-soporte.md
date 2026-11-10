@@ -1,6 +1,6 @@
 ---
 title: "Anticipar el fin de soporte"
-description: "Windows Server 2012, SQL Server 2016, Ubuntu 20.04: la fecha de fin de soporte se conoce, lo que depende de ella rara vez. El informe de fin de soporte de KANAP nombra los servidores y las aplicaciones afectados, con tiempo para presupuestar la migración."
+description: "Windows Server 2012, SQL Server 2016, Ubuntu 20.04: la fecha de fin de soporte se conoce, lo que depende de ella rara vez. El informe de fin de soporte de Kadratis nombra los servidores y las aplicaciones afectados, con tiempo para presupuestar la migración."
 date: 2026-11-07
 topic: mapping
 features: [it-landscape]
@@ -14,7 +14,7 @@ Octubre de 2023: Windows Server 2012 sale de su soporte extendido. Muchos CIO se
 
 Lo mismo vale para cada versión de un sistema operativo, una base de datos, un hipervisor o un equipo. Saber que una versión llega al fin de soporte no basta. Hay que saber qué sostiene, quién responde de ella, y saberlo con tiempo para que la migración entre en el presupuesto del año.
 
-Así lo resuelve KANAP: una vista de todos los vencimientos, lo que afecta cada uno y la lista de datos que completar para que la respuesta sea correcta.
+Así lo resuelve Kadratis: una vista de todos los vencimientos, lo que afecta cada uno y la lista de datos que completar para que la respuesta sea correcta.
 
 ## Una vista, cuatro tipos de vencimientos
 
@@ -29,7 +29,7 @@ El informe se abre desde **Panorama IT > Fin de soporte**. Su vista Vencimientos
 
 Se elige el horizonte: 6, 12, 24 o 36 meses. Cada fila lleva un estado: sin soporte, soporte extendido, termina pronto. Lo que está retirado o ya nada utiliza no aparece.
 
-Las fechas tienen dos fuentes. Las de las tecnologías y los sistemas operativos vienen del catálogo, alimentado por endoflife.date y por las páginas de los fabricantes que KANAP consulta: nadie las introduce, y se actualizan cuando un fabricante las cambia. Las de las aplicaciones y el hardware vienen de sus fichas: la fecha de fin de soporte introducida en la aplicación, el fin de vida o el fin del contrato de soporte introducidos en el activo. El artículo [Tecnologías: el vínculo entre servidores y aplicaciones](/es/blog/tecnologias-el-vinculo-entre-servidores-y-aplicaciones) explica cómo se mantiene este catálogo.
+Las fechas tienen dos fuentes. Las de las tecnologías y los sistemas operativos vienen del catálogo, alimentado por endoflife.date y por las páginas de los fabricantes que Kadratis consulta: nadie las introduce, y se actualizan cuando un fabricante las cambia. Las de las aplicaciones y el hardware vienen de sus fichas: la fecha de fin de soporte introducida en la aplicación, el fin de vida o el fin del contrato de soporte introducidos en el activo. El artículo [Tecnologías: el vínculo entre servidores y aplicaciones](/es/blog/tecnologias-el-vinculo-entre-servidores-y-aplicaciones) explica cómo se mantiene este catálogo.
 
 ## Lo que afecta cada vencimiento
 
@@ -37,11 +37,11 @@ Las fechas tienen dos fuentes. Las de las tecnologías y los sistemas operativos
 
 Cada fila muestra dos contadores, servidores y aplicaciones. Un clic la despliega: aparecen los nombres, y cada uno abre su ficha.
 
-Para encontrarlos, KANAP sigue los vínculos de la cartografía:
+Para encontrarlos, Kadratis sigue los vínculos de la cartografía:
 
 - **Una versión de tecnología** afecta a los servidores en los que está instalada, y a las aplicaciones que la declaran o se ejecutan en esos servidores, máquinas virtuales incluidas.
 - **Un servidor físico** al final de su vida afecta a las máquinas que aloja y a las aplicaciones desplegadas en todos ellos.
-- **Un clúster** cuenta sus miembros: SQL Server instalado en el clúster afecta a cada uno de sus nodos. El artículo [Los clústeres en la cartografía de KANAP](/es/blog/los-clusteres-en-la-cartografia-de-kanap) detalla estas reglas.
+- **Un clúster** cuenta sus miembros: SQL Server instalado en el clúster afecta a cada uno de sus nodos. El artículo [Los clústeres en la cartografía de Kadratis](/es/blog/los-clusteres-en-la-cartografia-de-kanap) detalla estas reglas.
 
 La respuesta no se queda, por tanto, en «Ubuntu 20.04 está sin soporte». Nombra los servidores y las aplicaciones que dependen de él, y cada ficha de aplicación indica su responsable y su criticidad. La conversación sobre la migración empieza con las personas adecuadas.
 
@@ -58,13 +58,13 @@ Un informe solo es tan correcto como sus datos. Un servidor sin sus tecnologías
 
 Cada fila abre la ficha que hay que completar. Es la parte más útil para empezar: muestra dónde la cartografía aún tiene huecos.
 
-KANAP no escanea sus servidores. Sabe lo que usted ha declarado en ellos, a mano, con un archivo CSV o mediante Netbox.
+Kadratis no escanea sus servidores. Sabe lo que usted ha declarado en ellos, a mano, con un archivo CSV o mediante Netbox.
 
 ## Del informe al presupuesto
 
 Una migración prevista para el año que viene necesita su presupuesto este año. Pase la vista a 24 meses al preparar el presupuesto: lo que termina en ese horizonte es lo que hay que cuantificar ahora.
 
-La exportación a CSV o Excel da la lista que adjuntar a la decisión presupuestaria. Plaid, el asistente integrado en KANAP, también responde directamente: «¿Qué aplicaciones llegan al fin de soporte en los próximos seis meses?»
+La exportación a CSV o Excel da la lista que adjuntar a la decisión presupuestaria. Kad, el asistente integrado en Kadratis, también responde directamente: «¿Qué aplicaciones llegan al fin de soporte en los próximos seis meses?»
 
 Una vez decidida la migración, ocupa su lugar en la misma herramienta: una línea de [presupuesto](/es/features/budget) o un proyecto, vinculados a la tecnología, al servidor o a las aplicaciones afectadas. Este vínculo se crea a mano; después permite leer en la ficha de la tecnología lo que cuesta su migración.
 
@@ -74,4 +74,4 @@ Una vez decidida la migración, ocupa su lugar en la misma herramienta: una lín
 2. **Pase la vista Vencimientos a 24 meses.**
 3. **Despliegue las tres primeras filas** y nombre un responsable para cada migración.
 
-Para ver el informe con datos realistas, una prueba gratuita de 14 días de nuestra versión alojada da acceso a los datos de ejemplo del grupo ficticio Fromage & Co, cargados en un minuto. KANAP es totalmente de código abierto: también puede instalarse gratis en sus propios servidores.
+Para ver el informe con datos realistas, una prueba gratuita de 14 días de nuestra versión alojada da acceso a los datos de ejemplo del grupo ficticio Fromage & Co, cargados en un minuto. Kadratis es totalmente de código abierto: también puede instalarse gratis en sus propios servidores.

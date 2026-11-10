@@ -1,6 +1,6 @@
 ---
 title: "Gestionar las monedas en el presupuesto de TI"
-description: "Cada uno introduce los importes en su moneda, KANAP los consolida en la del grupo: tipos de cambio automáticos, alineables con sus tipos presupuestarios, y totales siempre correctos."
+description: "Cada uno introduce los importes en su moneda, Kadratis los consolida en la del grupo: tipos de cambio automáticos, alineables con sus tipos presupuestarios, y totales siempre correctos."
 date: 2026-10-20
 topic: cost
 author: Friedrich
@@ -17,7 +17,7 @@ Una filial estadounidense paga sus licencias en dólares. La sede firma una susc
 
 En una hoja de cálculo, eso significa una hoja de tipos en un rincón del libro, fórmulas de conversión copiadas línea tras línea y una pregunta que vuelve en cada presentación: ¿qué tipo hemos usado?
 
-En KANAP, cada uno introduce el presupuesto en la moneda de su factura. Todo se consolida, de forma automática y limpia, en la moneda de referencia del grupo. Los tipos de cambio se gestionan solos y se alinean con los del control de gestión cuando usted lo desee.
+En Kadratis, cada uno introduce el presupuesto en la moneda de su factura. Todo se consolida, de forma automática y limpia, en la moneda de referencia del grupo. Los tipos de cambio se gestionan solos y se alinean con los del control de gestión cuando usted lo desee.
 
 ## Todos los ajustes en una página
 
@@ -47,7 +47,7 @@ Los importes se guardan tal como se introdujeron. Las exportaciones CSV conserva
 
 ## Todo se consolida en la moneda del grupo
 
-KANAP convierte al mostrar, cada año al tipo de ese año. Nadie tiene que escribir fórmulas ni mantener una columna de «contravalor».
+Kadratis convierte al mostrar, cada año al tipo de ese año. Nadie tiene que escribir fórmulas ni mantener una columna de «contravalor».
 
 - **La lista de líneas presupuestarias**: la columna Moneda conserva la moneda de cada línea, los importes y la fila de totales se muestran en la moneda de reporte, y los totales se recalculan con cada filtro.
 - **La vista general y los diez informes presupuestarios** se muestran en la moneda de reporte.
@@ -58,7 +58,7 @@ Y si el grupo cambia algún día de moneda de consolidación, basta con cambiar 
 
 ## Tipos actualizados automáticamente
 
-Por defecto, no tiene nada que hacer. KANAP obtiene un tipo por moneda y por año para todas las monedas en uso, y los actualiza cada 30 días.
+Por defecto, no tiene nada que hacer. Kadratis obtiene un tipo por moneda y por año para todas las monedas en uso, y los actualiza cada 30 días.
 
 - **Años pasados**: las medias anuales del Banco Mundial. Hasta su publicación, el año publicado más cercano, marcado como estimación.
 - **Año en curso**: el tipo del día.
@@ -80,9 +80,9 @@ Muchos grupos fijan sus propios tipos para el ejercicio: los tipos presupuestari
 
 A veces falta un tipo: una moneda poco habitual, o un año pasado que las fuentes aún no han publicado. Una hoja de cálculo suele contar entonces el importe a 1, y 100 000 dólares se convierten en 100 000 euros sin que nadie lo vea.
 
-KANAP nunca hace eso. El importe se excluye de los totales del año, y la pantalla lo dice: «Se excluyen 3 líneas sin tipo de cambio: USD 2026», bajo los totales de la lista, en la vista general, en la parte superior de los informes, en los contratos. En la propia línea, el importe se muestra entonces en su propia moneda, con una marca naranja.
+Kadratis nunca hace eso. El importe se excluye de los totales del año, y la pantalla lo dice: «Se excluyen 3 líneas sin tipo de cambio: USD 2026», bajo los totales de la lista, en la vista general, en la parte superior de los informes, en los contratos. En la propia línea, el importe se muestra entonces en su propia moneda, con una marca naranja.
 
-KANAP busca el tipo en segundo plano, y la siguiente visualización lo usa en cuanto una fuente lo publica. Si ninguna lo publica o su instalación no tiene acceso a Internet, la página Monedas lista los tipos que faltan, y un tipo manual resuelve la cuestión al instante.
+Kadratis busca el tipo en segundo plano, y la siguiente visualización lo usa en cuanto una fuente lo publica. Si ninguna lo publica o su instalación no tiene acceso a Internet, la página Monedas lista los tipos que faltan, y un tipo manual resuelve la cuestión al instante.
 
 ![La lista de líneas presupuestarias con una línea sin tipo de cambio: el aviso bajo los totales y la marca naranja en la línea](/screenshots/blog/currency-missing-rate-2026-10-20.png)
 
@@ -93,4 +93,4 @@ KANAP busca el tipo en segundo plano, y la siguiente visualización lo usa en cu
 3. **Si su control de gestión tiene tipos presupuestarios**, introdúzcalos para el año que está preparando.
 4. **Congele la columna de presupuesto** una vez aprobado el presupuesto: sus tipos quedan congelados con ella.
 
-Para ver todo esto sobre un presupuesto ya introducido, una prueba gratuita de 14 días de nuestra versión alojada da acceso a los datos de ejemplo del grupo ficticio Fromage & Co, cargados en un minuto. KANAP es totalmente de código abierto: también puede instalarse gratis en sus propios servidores.
+Para ver todo esto sobre un presupuesto ya introducido, una prueba gratuita de 14 días de nuestra versión alojada da acceso a los datos de ejemplo del grupo ficticio Fromage & Co, cargados en un minuto. Kadratis es totalmente de código abierto: también puede instalarse gratis en sus propios servidores.

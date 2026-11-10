@@ -62,7 +62,7 @@ const content: FeatureContent = {
     },
     {
       title: 'Vulnérabilités',
-      body: 'KANAP rapproche les vulnérabilités publiées de vos technologies, version par version, et montre les serveurs et les applications métier qu\'elles touchent. Les failles exploitées passent en tête.',
+      body: 'Kadratis rapproche les vulnérabilités publiées de vos technologies, version par version, et montre les serveurs et les applications métier qu\'elles touchent. Les failles exploitées passent en tête.',
       bullets: [
         'Deux sources toutes les 6 heures : la NVD et les fiches des éditeurs sur CVE.org',
         'Signaux d\'exploitation : catalogues de la CISA et de l\'Union européenne, score EPSS',
@@ -98,7 +98,7 @@ const content: FeatureContent = {
     label: 'Explorez la plateforme',
     links: [
       { label: 'Agents', href: '/features/agents' },
-      { label: 'Plaid, Assistant IA', href: '/features/ai' },
+      { label: 'Kad, Assistant IA', href: '/features/ai' },
       { label: 'Gestion du budget', href: '/features/budget' },
       { label: 'Gestion de portefeuille', href: '/features/portfolio' },
       { label: 'Connaissance', href: '/features/knowledge' },

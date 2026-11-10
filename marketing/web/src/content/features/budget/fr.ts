@@ -50,7 +50,7 @@ const content: FeatureContent = {
     },
     {
       title: 'Des rapports pour chaque question',
-      body: "Refacturation globale et par société, tendances, plus fortes hausses et baisses, comparaison de colonnes, dimensions analytiques, comptes de consolidation, effectifs par mois et coût par ETP. Chaque ligne d'un rapport ouvre la liste filtrée correspondante, et Plaid répond aux mêmes questions en langage naturel.",
+      body: "Refacturation globale et par société, tendances, plus fortes hausses et baisses, comparaison de colonnes, dimensions analytiques, comptes de consolidation, effectifs par mois et coût par ETP. Chaque ligne d'un rapport ouvre la liste filtrée correspondante, et Kad répond aux mêmes questions en langage naturel.",
       bullets: [
         'Refacturation globale et par société',
         'Comparaison budgétaire sur plusieurs années, pour toutes les lignes, l’OPEX ou le CAPEX',
@@ -67,7 +67,7 @@ const content: FeatureContent = {
     items: [
       { title: 'Relié aux applications et aux projets', body: "Chaque ligne budgétaire mène à ses applications, ses projets et ses fournisseurs. La fiche d'une application montre ce qu'elle coûte." },
       { title: 'Contrats et échéances', body: 'Montant annuel, reconduction tacite, préavis et date limite de résiliation calculée, liés aux lignes de budget.' },
-      { title: 'Aller-retour avec le tableur', body: "Exportez les lignes, modifiez-les dans Excel ou LibreOffice, réimportez : KANAP n'écrit que les cellules qui ont changé." },
+      { title: 'Aller-retour avec le tableur', body: "Exportez les lignes, modifiez-les dans Excel ou LibreOffice, réimportez : Kadratis n'écrit que les cellules qui ont changé." },
       { title: 'Données d’exemple', body: 'Un essai se remplit en une minute avec le budget de Fromage & Co, quatre sociétés fictives, pour tout voir avant de saisir le vôtre.' },
       { title: 'Effectifs et coût par ETP', body: 'Une ligne de régie en personnes ou en jours déclare ses ETP. Les rapports en tirent les effectifs mois par mois et le coût par ETP, ou le TJM, par fournisseur ou par centre de coûts.' },
       { title: 'Vos propres axes d’analyse', body: 'Créez autant de dimensions analytiques que vos questions en demandent (domaine, nature de coût, programme), chacune avec ses valeurs, pour l’OPEX, le CAPEX ou les deux. Quatre dimensions recommandées sont prêtes : nature de coût, domaine IT, motif et priorité. Les rapports budgétaires se filtrent dessus, et plusieurs regroupent par dimension.' },
@@ -79,13 +79,13 @@ const content: FeatureContent = {
       { label: 'Cartographie IT', href: '/features/it-landscape' },
       { label: 'Portefeuille de projets', href: '/features/portfolio' },
       { label: 'Documentation', href: '/features/knowledge' },
-      { label: "Plaid, l'agent IA intégré", href: '/features/ai' },
+      { label: "Kad, l'agent IA intégré", href: '/features/ai' },
       { label: 'Agent helpdesk', href: '/features/agents' },
     ],
   },
   cta: {
-    title: 'Essayez KANAP sur un budget IT complet.',
-    body: "Essayez la version hébergée avec des données d'exemple, ou déployez KANAP gratuitement chez vous.",
+    title: 'Essayez Kadratis sur un budget IT complet.',
+    body: "Essayez la version hébergée avec des données d'exemple, ou déployez Kadratis gratuitement chez vous.",
     primary: 'Déployer gratuitement',
     secondary: "Essayer avec des données d'exemple",
   },

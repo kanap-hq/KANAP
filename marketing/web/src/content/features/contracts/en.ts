@@ -9,7 +9,7 @@ const content: FeatureContent = {
   header: {
     eyebrow: 'Contracts',
     title: 'Never miss a cancellation deadline again.',
-    lead: 'Enter the start date, the duration and the notice period of a contract: KANAP works out every term and the last day to cancel. The owner gets a decision to make before that day. The contract is linked to its budget lines, applications and assets.',
+    lead: 'Enter the start date, the duration and the notice period of a contract: Kadratis works out every term and the last day to cancel. The owner gets a decision to make before that day. The contract is linked to its budget lines, applications and assets.',
   },
   sections: [
     {
@@ -38,7 +38,7 @@ const content: FeatureContent = {
     },
     {
       title: 'A decision before the deadline',
-      body: 'When the decision window opens, KANAP creates a task for the contract owner. On the contract, three answers: renew, renegotiate or terminate. Before you confirm a termination, KANAP shows what it changes: the end date allowed by the notice period, the commitment of this year and the next, the applications and assets that lose the contract.',
+      body: 'When the decision window opens, Kadratis creates a task for the contract owner. On the contract, three answers: renew, renegotiate or terminate. Before you confirm a termination, Kadratis shows what it changes: the end date allowed by the notice period, the commitment of this year and the next, the applications and assets that lose the contract.',
       bullets: [
         'Decision window set per tenant, 90 days by default',
         'A task for the owner, with the usual assignment email',
@@ -66,7 +66,7 @@ const content: FeatureContent = {
     items: [
       { title: 'Compliance register', body: 'Five clauses to track (GDPR data processing agreement, data location, reversibility, exit plan, audit right), depending on the applications the contract covers. A compliance aid that will grow in the coming versions.' },
       { title: 'Relations and contacts', body: 'Applications, assets and technologies covered by the contract, supplier contacts with their role, links and attached files.' },
-      { title: 'Plaid and MCP', body: 'Ask Plaid which contracts must be decided in the next 90 days. The same data is open to your own AI clients through the read-only MCP server.' },
+      { title: 'Kad and MCP', body: 'Ask Kad which contracts must be decided in the next 90 days. The same data is open to your own AI clients through the read-only MCP server.' },
       { title: 'Fine-grained rights', body: 'Readers see, members create and decide, administrators import, export and delete. The budget figures follow the budget rights.' },
     ],
   },
@@ -76,7 +76,7 @@ const content: FeatureContent = {
       { label: 'IT budget', href: '/features/budget' },
       { label: 'IT landscape', href: '/features/it-landscape' },
       { label: 'Incidents', href: '/features/incidents' },
-      { label: 'Plaid, the built-in AI agent', href: '/features/ai' },
+      { label: 'Kad, the built-in AI agent', href: '/features/ai' },
       { label: 'Project portfolio', href: '/features/portfolio' },
     ],
   },

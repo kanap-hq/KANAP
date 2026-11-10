@@ -1,6 +1,6 @@
 ---
-title: "La gestión de contratos de TI en KANAP"
-description: "Plazos calculados, decisiones de renovación registradas, compromisos comparados con el presupuesto: los contratos de TI bajo control en KANAP."
+title: "La gestión de contratos de TI en Kadratis"
+description: "Plazos calculados, decisiones de renovación registradas, compromisos comparados con el presupuesto: los contratos de TI bajo control en Kadratis."
 date: 2026-10-17
 topic: cost
 author: Friedrich
@@ -15,15 +15,15 @@ series:
 
 ¿A quién no se le ha pasado alguna vez el plazo de rescisión de un contrato? La negociación que sigue rara vez es agradable. Y es que no resulta fácil seguir decenas de plazos contractuales, contratos con renovación tácita o simplemente suscripciones. Esas fechas suelen estar en PDF firmados, en una hoja de cálculo o en manos de compras.
 
-En KANAP, cada fecha se calcula a partir del contrato. Cada plazo llega al responsable adecuado, con tiempo para decidir. Y cada contrato se compara fácilmente con el presupuesto, lo que permite detectar las anomalías.
+En Kadratis, cada fecha se calcula a partir del contrato. Cada plazo llega al responsable adecuado, con tiempo para decidir. Y cada contrato se compara fácilmente con el presupuesto, lo que permite detectar las anomalías.
 
 ## La introducción de datos: unos pocos campos
 
 Un contrato se crea en un único formulario. Cinco campos son obligatorios: el proveedor, la empresa firmante, la fecha de inicio, la duración de un periodo y la moneda. Después se añaden el responsable, la renovación tácita, el preaviso, el importe anual y la frecuencia de facturación.
 
-KANAP calcula el resto: los periodos sucesivos, el plazo de rescisión de cada uno y la situación del contrato. Cambie la duración o el preaviso, y todas las fechas se ajustan.
+Kadratis calcula el resto: los periodos sucesivos, el plazo de rescisión de cada uno y la situación del contrato. Cambie la duración o el preaviso, y todas las fechas se ajustan.
 
-En Fromage & Co, nuestra empresa de ejemplo, el mantenimiento de SAP cuesta 350.000 € al año. Va del 1 de julio al 30 de junio, con seis meses de preaviso y renovación tácita. KANAP calcula que puede rescindirse hasta el 30 de diciembre de 2026. Después de ese día, se renueva hasta junio de 2028.
+En Fromage & Co, nuestra empresa de ejemplo, el mantenimiento de SAP cuesta 350.000 € al año. Va del 1 de julio al 30 de junio, con seis meses de preaviso y renovación tácita. Kadratis calcula que puede rescindirse hasta el 30 de diciembre de 2026. Después de ese día, se renueva hasta junio de 2028.
 
 La vista general del contrato lo dice en una frase: «Rescisión posible hasta el 30 dic 2026 · en 74 días». Una línea de tiempo muestra los periodos pasados, el periodo en curso y el próximo plazo. El periodo siguiente aparece en línea discontinua mientras todavía pueda evitarse. Una línea de datos recuerda desde cuándo se renueva el contrato.
 
@@ -51,25 +51,25 @@ El filtro rápido **Por decidir en 90 días** aísla los contratos que necesitan
 
 ## La decisión: renovar, renegociar, rescindir
 
-Más allá de la lista, KANAP pide al responsable que decida y deja constancia de la decisión.
+Más allá de la lista, Kadratis pide al responsable que decida y deja constancia de la decisión.
 
-Así, 90 días antes del plazo de rescisión (una ventana configurable), KANAP crea una tarea para cada contrato pendiente de decisión. Se asigna al responsable del contrato, con vencimiento en el plazo de rescisión. De ahí la importancia de que cada contrato tenga un responsable.
+Así, 90 días antes del plazo de rescisión (una ventana configurable), Kadratis crea una tarea para cada contrato pendiente de decisión. Se asigna al responsable del contrato, con vencimiento en el plazo de rescisión. De ahí la importancia de que cada contrato tenga un responsable.
 
 En la página del contrato, un recuadro indica lo que pasa si nadie actúa: «Sin decisión, el contrato se renovará por 12 meses el 1 jul 2027». El responsable elige entonces:
 
 - **Renovar**: la renovación queda confirmada para este periodo y la tarea se cierra.
 - **Renegociar**: la tarea sigue abierta hasta la decisión final y el recuadro indica «Renegociación en curso».
-- **Rescindir**: KANAP propone el fin más temprano que permite el preaviso. Para el mantenimiento de SAP, es el 30 de junio de 2027. Una fecha anterior sigue siendo posible, con una advertencia: el proveedor tiene que aceptarla.
+- **Rescindir**: Kadratis propone el fin más temprano que permite el preaviso. Para el mantenimiento de SAP, es el 30 de junio de 2027. Una fecha anterior sigue siendo posible, con una advertencia: el proveedor tiene que aceptarla.
 
 Antes de confirmar una rescisión, el recuadro enumera sus consecuencias: el compromiso del año y del siguiente, las aplicaciones que pierden este contrato, los activos que pierden su contrato de soporte. En el ejemplo de SAP, el compromiso de 2027 baja de 350.000 € a 175.000 € y el de 2028 cae a cero.
 
 ![El recuadro Rescindir del contrato de SAP: el fin más temprano que permite el preaviso y las consecuencias de la rescisión](/screenshots/blog/contracts-cancel-2026-10-17.png)
 
-Cada decisión queda registrada: quién, cuándo y con qué justificación. Por ejemplo, «Renovación confirmada el 2 oct 2026 por Sophie Laurent». Una decisión tomada con demasiada prisa puede anularse mientras el plazo no haya pasado. Tras una rescisión, KANAP le recuerda que envíe la carta antes del plazo y que la adjunte al contrato.
+Cada decisión queda registrada: quién, cuándo y con qué justificación. Por ejemplo, «Renovación confirmada el 2 oct 2026 por Sophie Laurent». Una decisión tomada con demasiada prisa puede anularse mientras el plazo no haya pasado. Tras una rescisión, Kadratis le recuerda que envíe la carta antes del plazo y que la adjunte al contrato.
 
 ## El contrato frente al presupuesto
 
-El contrato dice lo que TI se ha comprometido a pagar. El presupuesto dice lo que ha previsto. KANAP compara ambos, año a año.
+El contrato dice lo que TI se ha comprometido a pagar. El presupuesto dice lo que ha previsto. Kadratis compara ambos, año a año.
 
 **Comprometido** es el importe anual del contrato repartido entre los meses que cubre un periodo, prorrateado por días. Para los años siguientes se supone que la renovación continúa hasta que se detenga. No hay nada comprometido después del fin del contrato.
 
@@ -87,9 +87,9 @@ El vínculo funciona en ambos sentidos. La pestaña Presupuesto del contrato mue
 
 Un contrato cubre aplicaciones, y esas aplicaciones señalan cláusulas que debe contener. Los datos personales exigen un acuerdo de encargo del tratamiento conforme al RGPD y la ubicación de los datos. Una aplicación crítica exige una cláusula de reversibilidad, un plan de salida y un derecho de auditoría. La pestaña Conformidad del contrato enumera estos puntos según cómo se haya clasificado la aplicación. Cada uno se registra como presente, ausente o no aplicable, y el registro de conformidad se exporta en CSV. Volveremos sobre ello con más detalle en un próximo artículo.
 
-## Lo que KANAP no hace
+## Lo que Kadratis no hace
 
-KANAP no redacta ni firma contratos y no lleva la negociación: eso es tarea de compras y del departamento jurídico. El importe a la firma se aplica a cada periodo: una indexación o una subida de precio se presupuesta en las líneas vinculadas. KANAP lleva el registro, los plazos, las decisiones y el vínculo con el presupuesto.
+Kadratis no redacta ni firma contratos y no lleva la negociación: eso es tarea de compras y del departamento jurídico. El importe a la firma se aplica a cada periodo: una indexación o una subida de precio se presupuesta en las líneas vinculadas. Kadratis lleva el registro, los plazos, las decisiones y el vínculo con el presupuesto.
 
 ## Por dónde empezar
 
@@ -98,4 +98,4 @@ KANAP no redacta ni firma contratos y no lleva la negociación: eso es tarea de 
 3. **Vincule las líneas presupuestarias**, empezando por los contratos más grandes. Después revise Sin línea presupuestaria e Infrapresupuestados para el año que está preparando.
 4. **Empiece la semana con Por decidir**: ningún plazo pasa sin decisión.
 
-Para ver todo esto sobre contratos ya introducidos, una prueba gratuita de 14 días de nuestra versión alojada da acceso a los datos de ejemplo del grupo ficticio Fromage & Co, cargados en un minuto. KANAP es totalmente de código abierto: también puede instalarse gratis en sus propios servidores.
+Para ver todo esto sobre contratos ya introducidos, una prueba gratuita de 14 días de nuestra versión alojada da acceso a los datos de ejemplo del grupo ficticio Fromage & Co, cargados en un minuto. Kadratis es totalmente de código abierto: también puede instalarse gratis en sus propios servidores.

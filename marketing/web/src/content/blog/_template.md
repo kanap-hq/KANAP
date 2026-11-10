@@ -1,6 +1,6 @@
 ---
 # Copy this file to  en/<slug>.md  (and  fr/<slug>.md  for the French version).
-# The filename is the URL:  en/my-article.md  →  kanap.net/blog/my-article
+# The filename is the URL:  en/my-article.md  →  kadratis.com/blog/my-article
 # Files starting with "_" are ignored, so this template is never published.
 #
 # Full instructions: web/BLOG.md
@@ -28,7 +28,7 @@ The first paragraph is not repeated from `description`, so write it fresh.
 
 ## A section heading
 
-Body text. Plain Markdown: **emphasis**, [links](https://kanap.net/features/agents),
+Body text. Plain Markdown: **emphasis**, [links](https://kadratis.com/features/agents),
 `inline code`, lists.
 
 - One point per line

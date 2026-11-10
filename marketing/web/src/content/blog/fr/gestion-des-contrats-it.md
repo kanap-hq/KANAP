@@ -1,6 +1,6 @@
 ---
-title: "Gestion des contrats IT dans KANAP"
-description: "Échéances calculées, décisions de renouvellement tracées, engagement comparé au budget : les contrats de la DSI sous contrôle dans KANAP."
+title: "Gestion des contrats IT dans Kadratis"
+description: "Échéances calculées, décisions de renouvellement tracées, engagement comparé au budget : les contrats de la DSI sous contrôle dans Kadratis."
 date: 2026-10-17
 topic: cost
 author: Friedrich
@@ -15,15 +15,15 @@ series:
 
 Qui n'a pas laissé glisser un contrat au-delà de sa date de résiliation ? La négociation qui s'ensuit est rarement agréable. Et en effet, il n'est pas simple de suivre des dizaines d'échéances contractuelles, de contrats en tacite reconduction ou simplement de souscriptions. Ces dates vivent souvent dans des PDF signés, dans un tableur ou du côté des achats.
 
-Dans KANAP, chaque date se calcule à partir du contrat. Chaque échéance arrive au bon responsable, avec le temps de décider. Et chaque contrat se compare aisément au budget, ce qui permet de détecter facilement les anomalies.
+Dans Kadratis, chaque date se calcule à partir du contrat. Chaque échéance arrive au bon responsable, avec le temps de décider. Et chaque contrat se compare aisément au budget, ce qui permet de détecter facilement les anomalies.
 
 ## La saisie : quelques champs uniquement
 
 Un contrat se crée en un seul formulaire. Cinq champs sont obligatoires : le fournisseur, la société qui a signé, la date de début, la durée d'un terme et la devise. On ajoute ensuite le responsable, la reconduction tacite, le préavis, le montant annuel et la fréquence de facturation.
 
-KANAP calcule le reste : les termes successifs, la date limite de résiliation de chacun et l'état du contrat. On change la durée ou le préavis, et toutes les dates suivent.
+Kadratis calcule le reste : les termes successifs, la date limite de résiliation de chacun et l'état du contrat. On change la durée ou le préavis, et toutes les dates suivent.
 
-Chez Fromage & Co, notre société d'exemple, la maintenance SAP coûte 350 000 € par an. Elle court du 1er juillet au 30 juin, avec six mois de préavis et reconduction tacite. KANAP en déduit qu'on peut la résilier jusqu'au 30 décembre 2026. Passé ce jour, elle repart jusqu'en juin 2028.
+Chez Fromage & Co, notre société d'exemple, la maintenance SAP coûte 350 000 € par an. Elle court du 1er juillet au 30 juin, avec six mois de préavis et reconduction tacite. Kadratis en déduit qu'on peut la résilier jusqu'au 30 décembre 2026. Passé ce jour, elle repart jusqu'en juin 2028.
 
 La vue d'ensemble de la fiche le dit en une phrase : « Résiliation possible jusqu'au 30 déc. 2026 · dans 74 jours ». Une frise montre les termes passés, le terme en cours et la prochaine date limite. Le terme suivant reste en pointillé tant qu'on peut encore l'éviter. Une ligne de faits rappelle depuis quand le contrat est reconduit.
 
@@ -51,25 +51,25 @@ Le filtre rapide **À décider sous 90 jours** isole les contrats qui demandent 
 
 ## La décision : renouveler, renégocier, résilier
 
-Au-delà de la liste, KANAP demande au responsable de trancher et garde la trace de sa décision.
+Au-delà de la liste, Kadratis demande au responsable de trancher et garde la trace de sa décision.
 
-Ainsi, 90 jours avant la date limite de résiliation (un délai réglable), KANAP crée une tâche pour chaque contrat qui attend une décision. Elle est assignée au responsable du contrat, avec une échéance à la date limite de résiliation. Il est donc important d'avoir un responsable sur chaque contrat.
+Ainsi, 90 jours avant la date limite de résiliation (un délai réglable), Kadratis crée une tâche pour chaque contrat qui attend une décision. Elle est assignée au responsable du contrat, avec une échéance à la date limite de résiliation. Il est donc important d'avoir un responsable sur chaque contrat.
 
 Sur la fiche, un encart dit ce qui se passe si personne ne bouge : « Sans décision, le contrat sera reconduit pour 12 mois le 1er juil. 2027. » Le responsable choisit alors :
 
 - **Renouveler** : le renouvellement est confirmé pour ce terme, la tâche se ferme.
 - **Renégocier** : la tâche reste ouverte jusqu'à la décision finale, et l'encart affiche « Renégociation en cours ».
-- **Résilier** : KANAP propose la première fin permise par le préavis. Pour la maintenance SAP, c'est le 30 juin 2027. Une date plus proche reste possible, avec un avertissement : le fournisseur doit l'accepter.
+- **Résilier** : Kadratis propose la première fin permise par le préavis. Pour la maintenance SAP, c'est le 30 juin 2027. Une date plus proche reste possible, avec un avertissement : le fournisseur doit l'accepter.
 
 Avant de confirmer une résiliation, l'encart liste ses conséquences : l'engagement de l'année et de la suivante, les applications qui perdent ce contrat, les actifs qui perdent leur contrat de support. Sur l'exemple SAP, l'engagement 2027 passe de 350 000 € à 175 000 €, et celui de 2028 tombe à zéro.
 
 ![L'encart Résilier du contrat SAP : la première fin permise par le préavis et les conséquences de la résiliation](/screenshots/blog/contracts-cancel-2026-10-17.png)
 
-Chaque décision est tracée : qui, quand, avec quelle justification. « Renouvellement confirmé le 2 oct. 2026 par Sophie Laurent », par exemple. Une décision prise trop vite s'annule tant que la date limite n'est pas passée. Après une résiliation, KANAP rappelle d'envoyer la lettre avant la date limite et de la joindre au contrat.
+Chaque décision est tracée : qui, quand, avec quelle justification. « Renouvellement confirmé le 2 oct. 2026 par Sophie Laurent », par exemple. Une décision prise trop vite s'annule tant que la date limite n'est pas passée. Après une résiliation, Kadratis rappelle d'envoyer la lettre avant la date limite et de la joindre au contrat.
 
 ## Le contrat face au budget
 
-Le contrat dit ce que la DSI s'est engagée à payer. Le budget dit ce qu'elle a prévu. KANAP compare les deux, année par année.
+Le contrat dit ce que la DSI s'est engagée à payer. Le budget dit ce qu'elle a prévu. Kadratis compare les deux, année par année.
 
 **Engagé** est le montant annuel du contrat réparti sur les mois couverts par un terme, au prorata des jours. Les années suivantes supposent que la reconduction continue tant qu'on ne l'arrête pas. Rien n'est engagé après la fin du contrat.
 
@@ -87,9 +87,9 @@ Le lien vaut dans les deux sens. L'onglet Budget du contrat montre ses lignes et
 
 Un contrat couvre des applications, et ces applications pointent vers des clauses qu'il doit contenir. Des données personnelles demandent un accord de sous-traitance RGPD et la localisation des données. Une application critique demande une clause de réversibilité, un plan de sortie et un droit d'audit. L'onglet Conformité du contrat liste ces points en fonction de ce qui a été catégorisé dans l'application. On note chacune présente, absente ou sans objet, et le registre de conformité s'exporte en CSV. Nous y reviendrons de façon plus détaillée dans un prochain article.
 
-## Ce que KANAP ne fait pas
+## Ce que Kadratis ne fait pas
 
-KANAP ne rédige ni ne signe les contrats, et ne mène pas la négociation : c'est le rôle des achats et du juridique. Le montant à la signature vaut pour chaque terme : une indexation ou une hausse de prix se budgète sur les lignes liées. KANAP tient le registre, les échéances, les décisions et le lien avec le budget.
+Kadratis ne rédige ni ne signe les contrats, et ne mène pas la négociation : c'est le rôle des achats et du juridique. Le montant à la signature vaut pour chaque terme : une indexation ou une hausse de prix se budgète sur les lignes liées. Kadratis tient le registre, les échéances, les décisions et le lien avec le budget.
 
 ## Par où commencer
 
@@ -98,4 +98,4 @@ KANAP ne rédige ni ne signe les contrats, et ne mène pas la négociation : c'e
 3. **Liez les lignes budgétaires**, en commençant par les plus gros contrats. Regardez ensuite Sans ligne budgétaire et Sous-budgétés sur l'année que vous préparez.
 4. **Commencez la semaine par À décider** : aucune échéance ne passe sans décision.
 
-Pour voir tout cela sur des contrats déjà saisis, un essai gratuit de 14 jours de notre version hébergée donne accès aux données d'exemple du groupe fictif Fromage & Co, chargées en une minute. KANAP est entièrement open source : il s'installe aussi gratuitement sur vos propres serveurs.
+Pour voir tout cela sur des contrats déjà saisis, un essai gratuit de 14 jours de notre version hébergée donne accès aux données d'exemple du groupe fictif Fromage & Co, chargées en une minute. Kadratis est entièrement open source : il s'installe aussi gratuitement sur vos propres serveurs.

@@ -30,7 +30,7 @@ Drei Anwendungen kehren immer wieder:
 
 ### Die Standardregel
 
-Standardmäßig verwendet KANAP die Mitarbeiterzahl der in den Stammdaten angelegten Unternehmen: Alle Kosten werden nach Mitarbeiterzahl auf alle Unternehmen verteilt.
+Standardmäßig verwendet Kadratis die Mitarbeiterzahl der in den Stammdaten angelegten Unternehmen: Alle Kosten werden nach Mitarbeiterzahl auf alle Unternehmen verteilt.
 
 Sie können diese Standardregel unter Administration, Standard-Zuordnungsmethode ändern. Die festgelegte Regel gilt Jahr für Jahr für die Zeilen, die noch nicht angepasst wurden (bereits geleistete Arbeit geht nicht verloren).
 

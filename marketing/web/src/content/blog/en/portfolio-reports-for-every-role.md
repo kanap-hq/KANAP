@@ -1,6 +1,6 @@
 ---
 title: A report for every question in the IT department
-description: "The CIO, the project manager, the team lead and the engineer each have their own questions. KANAP's portfolio reports answer them in one click."
+description: "The CIO, the project manager, the team lead and the engineer each have their own questions. Kadratis' portfolio reports answer them in one click."
 date: 2026-09-23
 topic: portfolio
 author: Friedrich
@@ -13,7 +13,7 @@ Monday, 9 a.m., the IT department's weekly meeting. The CIO spent Sunday evening
 
 Everyone has a real question. Everyone answers it with their own tools, and the meeting spends half an hour reconciling numbers.
 
-Every answer already exists in KANAP. Each request, project and task leaves a trace there: its creation, its status changes, its closing, the time logged on it. The portfolio reports read that history and show it to each person from the angle they care about.
+Every answer already exists in Kadratis. Each request, project and task leaves a trace there: its creation, its status changes, its closing, the time logged on it. The portfolio reports read that history and show it to each person from the angle they care about.
 
 ![The portfolio reporting page: the last 30 days strip, the items that need attention, the To classify strip and the report cards](/screenshots/blog/portfolio-hub.png)
 
@@ -72,4 +72,4 @@ Everyone reads the same figures, from the same tasks. The meeting lasts twenty m
 
 The reports live under **Portfolio > Reporting**. They need read access to the portfolio reports, and work in the cloud and on-premise. They read the data you already have: the tasks, projects, requests and time your teams already record.
 
-The rest of the portfolio is described on the [Portfolio](https://kanap.net/features/portfolio) page.
+The rest of the portfolio is described on the [Portfolio](https://kadratis.com/features/portfolio) page.

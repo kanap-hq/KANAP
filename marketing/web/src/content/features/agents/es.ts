@@ -4,20 +4,20 @@ const content: AgentsContent = {
   meta: {
     title: 'Agentes de IA autónomos para TI',
     description:
-      'Los agentes de KANAP asumen tareas repetitivas de TI, razonan sobre sus propios datos de TI y actúan con una autonomía que usted controla y puede auditar. Hoy hay un conector de mesa de servicio activo, y el runtime está pensado para ampliarse. Open source, autoalojado.',
+      'Los agentes de Kadratis asumen tareas repetitivas de TI, razonan sobre sus propios datos de TI y actúan con una autonomía que usted controla y puede auditar. Hoy hay un conector de mesa de servicio activo, y el runtime está pensado para ampliarse. Open source, autoalojado.',
   },
   header: {
     eyebrow: 'Agentes autónomos para TI',
     title: 'Agentes de IA que liberan de trabajo a su equipo.',
-    lead: 'Un agente de KANAP toma una tarea, la lee contra sus datos de TI y propone una acción o la lleva a cabo, según cuánta autonomía le haya concedido. Se ocupa de la carga repetitiva para que su gente se ocupe de los problemas difíciles.',
+    lead: 'Un agente de Kadratis toma una tarea, la lee contra sus datos de TI y propone una acción o la lleva a cabo, según cuánta autonomía le haya concedido. Se ocupa de la carga repetitiva para que su gente se ocupe de los problemas difíciles.',
   },
   sections: [
     {
       title: 'Los agentes empiezan supervisados y se vuelven más autónomos.',
-      body: 'Cada agente empieza bajo supervisión. Propone acciones, usted las revisa y KANAP registra con qué frecuencia acierta. A medida que ese historial se mantiene, usted le concede más autonomía, hasta que gestiona el trabajo rutinario por sí solo y solo le trae los casos que necesitan a una persona.',
+      body: 'Cada agente empieza bajo supervisión. Propone acciones, usted las revisa y Kadratis registra con qué frecuencia acierta. A medida que ese historial se mantiene, usted le concede más autonomía, hasta que gestiona el trabajo rutinario por sí solo y solo le trae los casos que necesitan a una persona.',
       bullets: [
         'Empieza proponiendo acciones para su revisión',
-        'KANAP mide con qué frecuencia acierta',
+        'Kadratis mide con qué frecuencia acierta',
         'Usted concede más autonomía a medida que el historial se mantiene',
         'Acaba gestionando el trabajo rutinario por sí solo',
       ],
@@ -58,7 +58,7 @@ const content: AgentsContent = {
     },
     {
       title: 'Suyo para ejecutar y modificar.',
-      body: 'Los agentes forman parte del producto open source. Ejecútelos dentro de su propio despliegue, donde sus tickets y documentos permanecen, salvo el texto enviado al proveedor de LLM que usted elija, y cambie cómo funcionan porque dispone del código fuente completo. Use su propia clave LLM, igual que con Plaid.',
+      body: 'Los agentes forman parte del producto open source. Ejecútelos dentro de su propio despliegue, donde sus tickets y documentos permanecen, salvo el texto enviado al proveedor de LLM que usted elija, y cambie cómo funcionan porque dispone del código fuente completo. Use su propia clave LLM, igual que con Kad.',
       bullets: [
         'Incluidos en el producto open source',
         'Se ejecuta dentro de su propio despliegue',
@@ -103,12 +103,12 @@ const content: AgentsContent = {
       { label: 'Conocimiento', href: '/features/knowledge' },
       { label: 'Autoalojado', href: '/on-premise' },
       { label: 'Seguridad', href: '/security' },
-      { label: 'Plaid, asistente de IA', href: '/features/ai' },
+      { label: 'Kad, asistente de IA', href: '/features/ai' },
     ],
   },
   cta: {
     title: 'Ponga un agente al frente del trabajo repetitivo.',
-    body: 'Los agentes están en el producto gratuito y autoalojado, con su propia clave LLM. Despliegue KANAP usted mismo, o hable con nosotros sobre alojamiento y conectores.',
+    body: 'Los agentes están en el producto gratuito y autoalojado, con su propia clave LLM. Despliegue Kadratis usted mismo, o hable con nosotros sobre alojamiento y conectores.',
     primary: 'Desplegar gratis',
     secondary: 'Hablar con nosotros',
   },

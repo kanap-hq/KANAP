@@ -78,7 +78,7 @@
   line-height: 1.5;
 }
 
-/* Suffix pattern: input + static suffix (e.g. .kanap.net) */
+/* Suffix pattern: input + static suffix (e.g. .kadratis.com) */
 .mk-tf__suffix {
   display: flex;
   align-items: stretch;

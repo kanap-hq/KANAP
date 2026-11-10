@@ -8,10 +8,9 @@ interface Props {
 const { mainSrc, mapSrc, budgetSrc } = Astro.props;
 ---
 
-<figure class="mk-home-visual" aria-label="KANAP product overview with AI, architecture and budget screenshots">
+<figure class="mk-home-visual" aria-label="Kadratis product overview with AI, architecture and budget screenshots">
   <div class="mk-home-visual__brand">
-    <img src="/logo.png" alt="" class="mk-home-visual__logo" loading="eager" decoding="async" />
-    <span class="mk-home-visual__wordmark">KANAP</span>
+    <img src="/brand/kadratis-logo-couleur.svg" alt="Kadratis" class="mk-home-visual__logo" width="603" height="145" loading="eager" decoding="async" />
   </div>
 
   <div class="mk-home-visual__signal" aria-hidden="true">
@@ -29,7 +28,7 @@ const { mainSrc, mapSrc, budgetSrc } = Astro.props;
   </div>
 
   <div class="mk-home-visual__screen mk-home-visual__screen--main">
-    <img src={mainSrc} alt="Plaid AI assistant answering a cross-module IT governance question" decoding="async" />
+    <img src={mainSrc} alt="Kad AI assistant answering a cross-module IT governance question" decoding="async" />
   </div>
 
   <div class="mk-home-visual__screen mk-home-visual__screen--map" aria-hidden="true">
@@ -103,18 +102,9 @@ const { mainSrc, mapSrc, budgetSrc } = Astro.props;
   }
 
   .mk-home-visual__logo {
-    width: clamp(24px, 3.4vw, 34px);
-    height: clamp(24px, 3.4vw, 34px);
-    border-radius: 50%;
-    box-shadow: 0 5px 12px rgba(21, 65, 89, 0.14);
-  }
-
-  .mk-home-visual__wordmark {
-    color: var(--mk-home-brand-navy);
-    font-size: clamp(15px, 1.95vw, 21px);
-    font-weight: 500;
-    line-height: 1;
-    letter-spacing: 0;
+    display: block;
+    width: auto;
+    height: clamp(20px, 2.9vw, 30px);
   }
 
   .mk-home-visual__signal {

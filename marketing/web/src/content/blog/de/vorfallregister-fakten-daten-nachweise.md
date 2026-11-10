@@ -14,7 +14,7 @@ Im März steht die Rechnungsstellung drei Stunden lang still. Eine erste Wiederh
 
 Im Oktober verlangt der Auditor die Unterlagen. Wann hat der Vorfall begonnen, wann wurde er bemerkt, wer hat ihn übernommen? Doch das Ticket ist geschlossen, der Austausch ist in den Postfächern verloren, und die Person, die den Vorfall bearbeitet hat, hat die Stelle gewechselt.
 
-So deckt KANAP diesen Bedarf.
+So deckt Kadratis diesen Bedarf.
 
 ## Was ins Register gehört
 
@@ -26,7 +26,7 @@ Das Register bewahrt die Ereignisse, auf die Geschäftsleitung, Auditoren oder V
 - schwerwiegende Ausfälle eines Lieferanten oder eines Hosting-Anbieters;
 - alles, was später erklärt oder einer Behörde gemeldet werden muss.
 
-Das alltägliche Ticket bleibt im Ticketsystem: Das Vorfallsregister von KANAP ersetzt keinen Service Desk. Die Ticketnummer wird in die externe Referenz des Vorfalls übernommen, damit sich die operative Spur wiederfinden lässt. Ein gutes Register zählt einige Einträge pro Monat, und ein Ausfall, der vierzig Tickets erzeugt hat, ist ein einziger Vorfall.
+Das alltägliche Ticket bleibt im Ticketsystem: Das Vorfallsregister von Kadratis ersetzt keinen Service Desk. Die Ticketnummer wird in die externe Referenz des Vorfalls übernommen, damit sich die operative Spur wiederfinden lässt. Ein gutes Register zählt einige Einträge pro Monat, und ein Ausfall, der vierzig Tickets erzeugt hat, ist ein einziger Vorfall.
 
 Für den Anfang genügen drei Felder: ein Titel, ein Schweregrad und der Zeitpunkt der Erkennung. Der Rest wird nach und nach ergänzt. Ein bisher in einer Tabelle geführtes Register lässt sich per CSV-Datei importieren.
 
@@ -36,7 +36,7 @@ Für den Anfang genügen drei Felder: ein Titel, ein Schweregrad und der Zeitpun
 
 Erst der Verlauf macht aus einem Formular ein Register. Er hält alles fest, was mit dem Vorfall geschieht: die Notizen des Teams, jede Änderung von Status und Schweregrad, jedes verknüpfte oder gelöste Asset und jede verknüpfte oder gelöste Anwendung, jede Wiederöffnung mit ihrer Begründung. Nichts davon lässt sich bearbeiten oder löschen, von niemandem.
 
-Die Notizen tragen den Zeitpunkt der Ereignisse. Eine am Dienstag erfasste Notiz kann auf Samstag, 23:40 Uhr datiert werden und reiht sich an dieser Stelle in die Chronologie ein. Daneben bewahrt KANAP den tatsächlichen Zeitpunkt der Erfassung, den niemand ändern kann: Die Rückdatierung bleibt ehrlich.
+Die Notizen tragen den Zeitpunkt der Ereignisse. Eine am Dienstag erfasste Notiz kann auf Samstag, 23:40 Uhr datiert werden und reiht sich an dieser Stelle in die Chronologie ein. Daneben bewahrt Kadratis den tatsächlichen Zeitpunkt der Erfassung, den niemand ändern kann: Die Rückdatierung bleibt ehrlich.
 
 Zwei Daten eröffnen die Chronologie: der Beginn des Vorfalls und der Moment, in dem er bemerkt wurde. Der Abstand zwischen beiden ist oft die erste Frage des Auditors. Sobald der Vorfall behoben ist, wird seine Dauer von selbst angezeigt.
 
@@ -48,7 +48,7 @@ Die Nummerierung bleibt lückenlos. Ein Duplikat wird mit einer Begründung abge
 
 ![Der Reiter Beziehungen eines Vorfalls: seine Assets, seine Anwendungen, seine Technologien und die vorgeschlagenen Technologien.](/screenshots/incidents-relations-2026-10-26.png)
 
-Ein isolierter Vorfall in einem Register hat wenig Gewicht. In KANAP wird er mit der IT-Landschaft verknüpft: den betroffenen Servern, den Fachanwendungen mit ihrer Kritikalität, den beteiligten Technologien. KANAP schlägt die Technologien der bereits verknüpften Server und Anwendungen vor, mit ihrer Herkunft, zum Beispiel „Technologie des Assets AST-12“. Ein Klick genügt, um sie hinzuzufügen.
+Ein isolierter Vorfall in einem Register hat wenig Gewicht. In Kadratis wird er mit der IT-Landschaft verknüpft: den betroffenen Servern, den Fachanwendungen mit ihrer Kritikalität, den beteiligten Technologien. Kadratis schlägt die Technologien der bereits verknüpften Server und Anwendungen vor, mit ihrer Herkunft, zum Beispiel „Technologie des Assets AST-12“. Ein Klick genügt, um sie hinzuzufügen.
 
 Die Verknüpfung gilt in beide Richtungen. Der Datensatz eines Servers, einer Anwendung oder einer Technologie listet ihre Vorfälle auf: Wer einen Server öffnet, sieht seine Historie. Und eine Suche nach einem Hostnamen wie PAR-ESX-01 findet alle Vorfälle, die ihn getroffen haben.
 
@@ -73,9 +73,9 @@ Vier Felder tragen den regulatorischen Teil des Vorfalls:
 - **Gemeldet am**, das Datum der Meldung.
 - **Informierte Parteien**: Aufsichtsbehörde, Versicherer, betroffene Kunden, Konzernsicherheit.
 
-Artikel 33 der DSGVO verlangt, jede Verletzung des Schutzes personenbezogener Daten zu dokumentieren, ob gemeldet oder nicht. Das Register ist der Nachweis dafür, und ein Vorfall mit diesen Angaben lässt sich nicht löschen. Meldefristen und Meldeschwellen hängen von Ihrer Rechtsordnung und Ihrer Branche ab: KANAP hält die Fakten und die Daten fest, es entscheidet nicht, ob gemeldet werden muss.
+Artikel 33 der DSGVO verlangt, jede Verletzung des Schutzes personenbezogener Daten zu dokumentieren, ob gemeldet oder nicht. Das Register ist der Nachweis dafür, und ein Vorfall mit diesen Angaben lässt sich nicht löschen. Meldefristen und Meldeschwellen hängen von Ihrer Rechtsordnung und Ihrer Branche ab: Kadratis hält die Fakten und die Daten fest, es entscheidet nicht, ob gemeldet werden muss.
 
-Ein sensibler Sicherheitsvorfall kann eingeschränkt werden. Dann sehen ihn nur die Registeradministratoren, der Meldende und der Verantwortliche; für alle anderen existiert er weder in der Liste noch in der Suche, weder in den Antworten von Plaid noch im Export.
+Ein sensibler Sicherheitsvorfall kann eingeschränkt werden. Dann sehen ihn nur die Registeradministratoren, der Meldende und der Verantwortliche; für alle anderen existiert er weder in der Liste noch in der Suche, weder in den Antworten von Kad noch im Export.
 
 ## Was der Auditor erhält
 
@@ -85,7 +85,7 @@ Das Register lässt sich nach Zeitraum, Schweregrad, Kategorie oder Compliance-K
 
 Für einen bestimmten Vorfall stellt der PDF-Export einen vollständigen Bericht zusammen: Eigenschaften, Beschreibung, Vorfallanalyse, Verlauf in chronologischer Reihenfolge mit den Versionen der Analyse, verknüpfte Assets, Anwendungen und Aufgaben, Compliance-Felder und Anhänge.
 
-Auch Plaid, der in KANAP integrierte Assistent, antwortet: „Wie viele kritische Vorfälle in diesem Quartal?“, „Liste der offenen Vorfälle auf PAR-ESX-01“, „Zusammenfassung von INC-2“. Er liest den Verlauf und die Analyse und kann daher bis hin zur Grundursache antworten.
+Auch Kad, der in Kadratis integrierte Assistent, antwortet: „Wie viele kritische Vorfälle in diesem Quartal?“, „Liste der offenen Vorfälle auf PAR-ESX-01“, „Zusammenfassung von INC-2“. Er liest den Verlauf und die Analyse und kann daher bis hin zur Grundursache antworten.
 
 ## Wo Sie anfangen
 
@@ -94,4 +94,4 @@ Auch Plaid, der in KANAP integrierte Assistent, antwortet: „Wie viele kritisch
 3. **Erfassen Sie früh, ergänzen Sie nach und nach, schließen Sie nach dem Verfassen der Analyse.**
 4. **Prüfen Sie das Register jedes Quartal**: Wiederkehrende Kategorien und Server, die mehr als einmal auftauchen, liefern vielleicht den Stoff für den nächsten Budgetantrag oder das nächste Projekt.
 
-Um all das live zu erleben, bietet eine kostenlose 14-tägige Testphase unserer gehosteten Version Zugang zu den Beispieldaten der fiktiven Gruppe Fromage & Co, Vorfallsregister inklusive, in einer Minute geladen. KANAP ist vollständig Open Source: Sie können es auch kostenlos auf Ihren eigenen Servern installieren.
+Um all das live zu erleben, bietet eine kostenlose 14-tägige Testphase unserer gehosteten Version Zugang zu den Beispieldaten der fiktiven Gruppe Fromage & Co, Vorfallsregister inklusive, in einer Minute geladen. Kadratis ist vollständig Open Source: Sie können es auch kostenlos auf Ihren eigenen Servern installieren.

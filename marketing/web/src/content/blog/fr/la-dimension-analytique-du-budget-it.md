@@ -13,7 +13,7 @@ translationKey: analytics-dimensions-for-your-it-budget
 
 La dimension analytique apporte cette seconde lecture. Chaque dimension est une façon de classer les lignes, avec ses propres valeurs : ce que paie l'argent, la partie de l'IT servie, la raison de la dépense. Un nouvel espace en compte quatre dès le départ, toutes facultatives.
 
-## La mécanique dans KANAP
+## La mécanique dans Kadratis
 
 ### Les dimensions et leurs valeurs
 

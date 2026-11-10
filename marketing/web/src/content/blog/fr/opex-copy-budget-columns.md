@@ -13,7 +13,7 @@ series:
   title: "Construire le budget de la DSI"
 ---
 
-L'épisode 1 a consisté en une revue ciblée : l'atterrissage 2026 a intégré les principaux mouvements et les changements majeurs de 2027 sont déjà enregistrés. Restent toutes les lignes où rien n'a changé. Les identifier et les recopier une à une est le travail le plus ingrat de la saison budgétaire. Dans KANAP, c'est un outil et quelques clics.
+L'épisode 1 a consisté en une revue ciblée : l'atterrissage 2026 a intégré les principaux mouvements et les changements majeurs de 2027 sont déjà enregistrés. Restent toutes les lignes où rien n'a changé. Les identifier et les recopier une à une est le travail le plus ingrat de la saison budgétaire. Dans Kadratis, c'est un outil et quelques clics.
 
 ## Les deux passes
 

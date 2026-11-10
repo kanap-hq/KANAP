@@ -1,0 +1,52 @@
+---
+/**
+ * Full product logo (symbol and name), in the light or the dark version
+ * following the site theme: the explicit choice (`data-theme`) first, the
+ * system preference otherwise, as in tokens.css.
+ */
+interface Props {
+  height: number;
+}
+
+const { height } = Astro.props;
+// The logo files are 603 x 145.
+const width = Math.round((height * 603) / 145);
+---
+
+<span class="mk-brand-logo">
+  <img class="mk-brand-logo__light" src="/brand/kadratis-logo-couleur.svg" alt="" width={width} height={height} />
+  <img class="mk-brand-logo__dark" src="/brand/kadratis-logo-inverse.svg" alt="" width={width} height={height} />
+</span>
+
+<style is:global>
+  .mk-brand-logo {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .mk-brand-logo img {
+    display: block;
+  }
+
+  .mk-brand-logo__dark {
+    display: none !important;
+  }
+
+  :root[data-theme="dark"] .mk-brand-logo__light {
+    display: none !important;
+  }
+
+  :root[data-theme="dark"] .mk-brand-logo__dark {
+    display: block !important;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) .mk-brand-logo__light {
+      display: none !important;
+    }
+
+    :root:not([data-theme]) .mk-brand-logo__dark {
+      display: block !important;
+    }
+  }
+</style>

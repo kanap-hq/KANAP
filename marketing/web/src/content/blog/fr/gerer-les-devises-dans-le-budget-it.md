@@ -1,6 +1,6 @@
 ---
 title: "Gérer les devises dans le budget IT"
-description: "Chacun saisit dans sa devise, KANAP consolide dans celle du groupe : des taux automatiques, alignables sur vos taux budgétaires, et des totaux toujours justes."
+description: "Chacun saisit dans sa devise, Kadratis consolide dans celle du groupe : des taux automatiques, alignables sur vos taux budgétaires, et des totaux toujours justes."
 date: 2026-10-20
 topic: cost
 author: Friedrich
@@ -17,7 +17,7 @@ Une filiale américaine paie ses licences en dollars. Le siège signe un abonnem
 
 Dans un tableur, cela veut dire une feuille de taux dans un coin du classeur, des formules de conversion recopiées ligne après ligne, et une question qui revient à chaque présentation : quel taux a-t-on utilisé ?
 
-Dans KANAP, chacun saisit le budget dans la devise de sa facture. Tout se consolide, automatiquement et proprement, dans la devise de référence du groupe. Les taux se gèrent tout seuls et s'alignent sur ceux du contrôle de gestion quand vous le souhaitez.
+Dans Kadratis, chacun saisit le budget dans la devise de sa facture. Tout se consolide, automatiquement et proprement, dans la devise de référence du groupe. Les taux se gèrent tout seuls et s'alignent sur ceux du contrôle de gestion quand vous le souhaitez.
 
 ## Tous les réglages sur une page
 
@@ -47,7 +47,7 @@ Les montants sont enregistrés tels qu'ils ont été saisis. Les exports CSV gar
 
 ## Tout se consolide dans la devise du groupe
 
-KANAP convertit à l'affichage, chaque année au taux de cette année. Personne n'a de formule à écrire ni de colonne « contre-valeur » à tenir.
+Kadratis convertit à l'affichage, chaque année au taux de cette année. Personne n'a de formule à écrire ni de colonne « contre-valeur » à tenir.
 
 - **La liste des lignes budgétaires** : la colonne Devise garde la devise de chaque ligne, les montants et la ligne de totaux s'affichent en devise de reporting, et les totaux se recalculent sur chaque filtre.
 - **La vue d'ensemble et les dix rapports budgétaires** s'affichent dans la devise de reporting.
@@ -58,7 +58,7 @@ Et si le groupe change un jour de devise de consolidation, il suffit de changer 
 
 ## Des taux rafraîchis automatiquement
 
-Par défaut, vous n'avez rien à faire. KANAP récupère un taux par devise et par année pour toutes les devises utilisées, et les met à jour tous les 30 jours.
+Par défaut, vous n'avez rien à faire. Kadratis récupère un taux par devise et par année pour toutes les devises utilisées, et les met à jour tous les 30 jours.
 
 - **Années passées** : les moyennes annuelles de la Banque mondiale. En attendant leur publication, l'année publiée la plus proche, marquée comme estimation.
 - **Année en cours** : le taux du jour.
@@ -80,9 +80,9 @@ Beaucoup de groupes fixent leurs propres taux pour l'exercice : les taux budgét
 
 Il arrive qu'un taux manque : une devise peu courante, ou une année passée que les sources n'ont pas encore publiée. Un tableur compte alors souvent le montant pour 1, et 100 000 dollars deviennent 100 000 euros sans que personne ne le voie.
 
-KANAP ne fait jamais cela. Le montant est exclu des totaux de l'année, et l'écran le dit : « 3 lignes sans taux de change exclues : USD 2026 », sous les totaux de la liste, sur la vue d'ensemble, en haut des rapports, dans les contrats. Sur la ligne, le montant s'affiche alors dans sa propre devise, avec une marque orange.
+Kadratis ne fait jamais cela. Le montant est exclu des totaux de l'année, et l'écran le dit : « 3 lignes sans taux de change exclues : USD 2026 », sous les totaux de la liste, sur la vue d'ensemble, en haut des rapports, dans les contrats. Sur la ligne, le montant s'affiche alors dans sa propre devise, avec une marque orange.
 
-KANAP va chercher le taux en arrière-plan, et l'affichage suivant l'utilise dès qu'une source le publie. Si aucune ne le publie ou que votre installation n'a pas accès à Internet, la page Devises liste les taux manquants, et un taux manuel règle la question tout de suite.
+Kadratis va chercher le taux en arrière-plan, et l'affichage suivant l'utilise dès qu'une source le publie. Si aucune ne le publie ou que votre installation n'a pas accès à Internet, la page Devises liste les taux manquants, et un taux manuel règle la question tout de suite.
 
 ![La liste des lignes budgétaires avec une ligne sans taux de change : l'avertissement sous les totaux et la marque orange sur la ligne](/screenshots/blog/currency-missing-rate-2026-10-20.png)
 
@@ -93,4 +93,4 @@ KANAP va chercher le taux en arrière-plan, et l'affichage suivant l'utilise dè
 3. **Si votre contrôle de gestion a des taux budgétaires**, saisissez-les pour l'année que vous préparez.
 4. **Gelez la colonne budget** une fois le budget approuvé : ses taux sont figés avec elle.
 
-Pour voir tout cela sur un budget déjà saisi, un essai gratuit de 14 jours de notre version hébergée donne accès aux données d'exemple du groupe fictif Fromage & Co, chargées en une minute. KANAP est entièrement open source : il s'installe aussi gratuitement sur vos propres serveurs.
+Pour voir tout cela sur un budget déjà saisi, un essai gratuit de 14 jours de notre version hébergée donne accès aux données d'exemple du groupe fictif Fromage & Co, chargées en une minute. Kadratis est entièrement open source : il s'installe aussi gratuitement sur vos propres serveurs.

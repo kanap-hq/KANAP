@@ -30,7 +30,7 @@ Trois usages reviennent :
 
 ### La règle par défaut
 
-Par défaut, KANAP utilise l'effectif des sociétés définies dans les données de référence : tous les coûts seront répartis entre toutes les sociétés en fonction de l'effectif.
+Par défaut, Kadratis utilise l'effectif des sociétés définies dans les données de référence : tous les coûts seront répartis entre toutes les sociétés en fonction de l'effectif.
 
 Vous pouvez modifier cette règle par défaut dans Administration, Méthode de ventilation par défaut. La règle définie s'appliquera année par année sur les lignes qui n'auront pas encore été personnalisées (vous ne perdez pas le travail déjà effectué).
 

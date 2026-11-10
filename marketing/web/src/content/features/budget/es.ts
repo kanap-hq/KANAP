@@ -50,7 +50,7 @@ const content: FeatureContent = {
     },
     {
       title: 'Un informe para cada pregunta',
-      body: 'Repercusión global y por sociedad, tendencias, mayores subidas y bajadas, comparación de columnas, dimensiones analíticas, cuentas de consolidación, plantilla mensual y coste por FTE. Cada fila de un informe abre la lista filtrada correspondiente, y Plaid responde a las mismas preguntas en lenguaje natural.',
+      body: 'Repercusión global y por sociedad, tendencias, mayores subidas y bajadas, comparación de columnas, dimensiones analíticas, cuentas de consolidación, plantilla mensual y coste por FTE. Cada fila de un informe abre la lista filtrada correspondiente, y Kad responde a las mismas preguntas en lenguaje natural.',
       bullets: [
         'Repercusión global y por sociedad',
         'Comparación presupuestaria entre años, para todas las líneas, OPEX o CAPEX',
@@ -67,7 +67,7 @@ const content: FeatureContent = {
     items: [
       { title: 'Vinculado a aplicaciones y proyectos', body: 'Cada línea presupuestaria lleva a sus aplicaciones, proyectos y proveedores. La ficha de una aplicación muestra lo que cuesta.' },
       { title: 'Contratos y plazos', body: 'Importe anual, renovación automática, preaviso y fecha límite de rescisión calculada, vinculados a las líneas de presupuesto.' },
-      { title: 'Ida y vuelta con la hoja de cálculo', body: 'Exporte las líneas, edítelas en Excel o LibreOffice y vuelva a importar el archivo: KANAP solo escribe las celdas que han cambiado.' },
+      { title: 'Ida y vuelta con la hoja de cálculo', body: 'Exporte las líneas, edítelas en Excel o LibreOffice y vuelva a importar el archivo: Kadratis solo escribe las celdas que han cambiado.' },
       { title: 'Datos de ejemplo', body: 'Una prueba se llena en un minuto con el presupuesto de Fromage & Co, cuatro sociedades ficticias, para verlo todo antes de introducir el suyo.' },
       { title: 'Plantilla y coste por FTE', body: 'Una línea de personal externo en personas o días declara sus FTE. Los informes muestran la plantilla mes a mes y el coste por FTE, o la tarifa diaria, por proveedor o por centro de coste.' },
       { title: 'Sus propios ejes de análisis', body: 'Cree tantas dimensiones analíticas como pidan sus preguntas (dominio, naturaleza de coste, programa), cada una con sus valores, para OPEX, CAPEX o ambos. Cuatro dimensiones recomendadas vienen listas: tipo de coste, dominio TI, motivo y prioridad. Los informes de presupuesto se filtran por ellas, y varios agrupan por dimensión.' },
@@ -79,13 +79,13 @@ const content: FeatureContent = {
       { label: 'Panorama IT', href: '/features/it-landscape' },
       { label: 'Portafolio de proyectos', href: '/features/portfolio' },
       { label: 'Documentación', href: '/features/knowledge' },
-      { label: 'Plaid, el agente de IA integrado', href: '/features/ai' },
+      { label: 'Kad, el agente de IA integrado', href: '/features/ai' },
       { label: 'Agente de helpdesk', href: '/features/agents' },
     ],
   },
   cta: {
-    title: 'Pruebe KANAP con un presupuesto de TI completo.',
-    body: 'Pruebe la versión alojada con datos de ejemplo, o despliegue KANAP gratis en sus propios servidores.',
+    title: 'Pruebe Kadratis con un presupuesto de TI completo.',
+    body: 'Pruebe la versión alojada con datos de ejemplo, o despliegue Kadratis gratis en sus propios servidores.',
     primary: 'Desplegar gratis',
     secondary: 'Probar con datos de ejemplo',
   },

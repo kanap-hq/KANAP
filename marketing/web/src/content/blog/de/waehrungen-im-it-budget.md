@@ -1,6 +1,6 @@
 ---
 title: "Währungen im IT-Budget verwalten"
-description: "Jeder erfasst in seiner Währung, KANAP konsolidiert in der Währung der Gruppe: automatische Wechselkurse, auf Ihre Budgetkurse abstimmbar, und Summen, die stimmen."
+description: "Jeder erfasst in seiner Währung, Kadratis konsolidiert in der Währung der Gruppe: automatische Wechselkurse, auf Ihre Budgetkurse abstimmbar, und Summen, die stimmen."
 date: 2026-10-20
 topic: cost
 author: Friedrich
@@ -17,7 +17,7 @@ Eine US-Tochter bezahlt ihre Lizenzen in Dollar. Die Zentrale schließt ein SaaS
 
 In einer Tabellenkalkulation heißt das: ein Kursblatt in einer Ecke der Arbeitsmappe, Umrechnungsformeln, Zeile für Zeile kopiert, und eine Frage, die bei jeder Präsentation wiederkommt: Mit welchem Kurs haben wir gerechnet?
 
-In KANAP erfasst jeder das Budget in der Währung seiner Rechnung. Alles wird automatisch und sauber in der Referenzwährung der Gruppe konsolidiert. Die Kurse pflegen sich von selbst und lassen sich auf die Kurse des Controllings abstimmen, wann immer Sie möchten.
+In Kadratis erfasst jeder das Budget in der Währung seiner Rechnung. Alles wird automatisch und sauber in der Referenzwährung der Gruppe konsolidiert. Die Kurse pflegen sich von selbst und lassen sich auf die Kurse des Controllings abstimmen, wann immer Sie möchten.
 
 ## Alle Einstellungen auf einer Seite
 
@@ -47,7 +47,7 @@ Die Beträge werden so gespeichert, wie sie erfasst wurden. CSV-Exporte behalten
 
 ## Alles wird in der Währung der Gruppe konsolidiert
 
-KANAP rechnet bei der Anzeige um, jedes Jahr zum Kurs dieses Jahres. Niemand muss eine Formel schreiben oder eine Spalte „Gegenwert“ pflegen.
+Kadratis rechnet bei der Anzeige um, jedes Jahr zum Kurs dieses Jahres. Niemand muss eine Formel schreiben oder eine Spalte „Gegenwert“ pflegen.
 
 - **Die Liste der Budgetzeilen**: Die Spalte Währung behält die Währung jeder Zeile, Beträge und Summenzeile werden in der Berichtswährung angezeigt, und die Summen rechnen bei jedem Filter neu.
 - **Die Übersicht und die zehn Budgetberichte** werden in der Berichtswährung angezeigt.
@@ -58,7 +58,7 @@ Und falls die Gruppe eines Tages ihre Konsolidierungswährung wechselt, genügt 
 
 ## Automatisch aktualisierte Kurse
 
-Standardmäßig müssen Sie nichts tun. KANAP holt für jede verwendete Währung einen Kurs pro Jahr und aktualisiert die Kurse alle 30 Tage.
+Standardmäßig müssen Sie nichts tun. Kadratis holt für jede verwendete Währung einen Kurs pro Jahr und aktualisiert die Kurse alle 30 Tage.
 
 - **Vergangene Jahre**: die Jahresdurchschnitte der Weltbank. Bis zu ihrer Veröffentlichung das nächstgelegene veröffentlichte Jahr, als Schätzung gekennzeichnet.
 - **Laufendes Jahr**: der Tageskurs.
@@ -80,9 +80,9 @@ Viele Gruppen legen eigene Kurse für das Geschäftsjahr fest: die Budgetkurse d
 
 Manchmal fehlt ein Kurs: eine seltene Währung oder ein vergangenes Jahr, das die Quellen noch nicht veröffentlicht haben. Eine Tabellenkalkulation rechnet den Betrag dann oft mit 1, und aus 100.000 Dollar werden 100.000 Euro, ohne dass es jemand merkt.
 
-KANAP tut das nie. Der Betrag wird aus den Summen des Jahres ausgeschlossen, und der Bildschirm sagt es: „3 Zeilen ohne Wechselkurs ausgeschlossen: USD 2026“, unter den Summen der Liste, in der Übersicht, oben in den Berichten, bei den Verträgen. In der Zeile selbst erscheint der Betrag dann in seiner eigenen Währung, mit einer orangen Markierung.
+Kadratis tut das nie. Der Betrag wird aus den Summen des Jahres ausgeschlossen, und der Bildschirm sagt es: „3 Zeilen ohne Wechselkurs ausgeschlossen: USD 2026“, unter den Summen der Liste, in der Übersicht, oben in den Berichten, bei den Verträgen. In der Zeile selbst erscheint der Betrag dann in seiner eigenen Währung, mit einer orangen Markierung.
 
-KANAP holt den Kurs im Hintergrund, und die nächste Anzeige verwendet ihn, sobald eine Quelle ihn veröffentlicht. Veröffentlicht ihn keine oder hat Ihre Installation keinen Internetzugang, listet die Seite Währungen die fehlenden Kurse auf, und ein manueller Kurs löst die Frage sofort.
+Kadratis holt den Kurs im Hintergrund, und die nächste Anzeige verwendet ihn, sobald eine Quelle ihn veröffentlicht. Veröffentlicht ihn keine oder hat Ihre Installation keinen Internetzugang, listet die Seite Währungen die fehlenden Kurse auf, und ein manueller Kurs löst die Frage sofort.
 
 ![Die Liste der Budgetzeilen mit einer Zeile ohne Wechselkurs: der Hinweis unter den Summen und die orange Markierung in der Zeile](/screenshots/blog/currency-missing-rate-2026-10-20.png)
 
@@ -93,4 +93,4 @@ KANAP holt den Kurs im Hintergrund, und die nächste Anzeige verwendet ihn, soba
 3. **Wenn Ihr Controlling Budgetkurse hat**, erfassen Sie sie für das Jahr, das Sie vorbereiten.
 4. **Frieren Sie die Budgetspalte ein**, sobald das Budget genehmigt ist: Ihre Kurse werden mit ihr eingefroren.
 
-Um all das an einem bereits erfassten Budget zu sehen, bietet eine kostenlose 14-tägige Testphase unserer gehosteten Version Zugang zu den Beispieldaten der fiktiven Gruppe Fromage & Co, in einer Minute geladen. KANAP ist vollständig Open Source: Sie können es auch kostenlos auf Ihren eigenen Servern installieren.
+Um all das an einem bereits erfassten Budget zu sehen, bietet eine kostenlose 14-tägige Testphase unserer gehosteten Version Zugang zu den Beispieldaten der fiktiven Gruppe Fromage & Co, in einer Minute geladen. Kadratis ist vollständig Open Source: Sie können es auch kostenlos auf Ihren eigenen Servern installieren.

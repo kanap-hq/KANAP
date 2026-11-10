@@ -13,7 +13,7 @@ series:
   title: "Construire le budget de la DSI"
 ---
 
-Le budget est construit ; reste à le faire approuver. KANAP facilite la présentation du budget avec plusieurs rapports paramétrables qui permettent de présenter les différentes facettes du budget de façon visuelle et pragmatique. Lorsque le budget est approuvé, KANAP permet de verrouiller les colonnes concernées pour éviter toute modification ultérieure.
+Le budget est construit ; reste à le faire approuver. Kadratis facilite la présentation du budget avec plusieurs rapports paramétrables qui permettent de présenter les différentes facettes du budget de façon visuelle et pragmatique. Lorsque le budget est approuvé, Kadratis permet de verrouiller les colonnes concernées pour éviter toute modification ultérieure.
 
 ## Des rapports prêts à l'emploi
 
@@ -63,7 +63,7 @@ La plupart des rapports s'ouvrent sur toutes les lignes, avec des onglets OPEX e
 
 Chaque rapport s'exporte : tableau en CSV, graphique en PNG, page complète en PDF. Le support de présentation se monte sans capture d'écran, et vous pouvez même adapter les rapports en live pour répondre à des questions ad hoc.
 
-Et pour la question qu'aucun rapport n'avait prévue, Plaid, l'agent IA intégré, interroge les mêmes données en langage naturel : « total du budget 2027 par fournisseur », « ETP budgétés par centre de coûts ». La réponse nomme les lignes par leur référence (`BL-12`, `BL-3`), que vous retrouvez aussitôt dans la liste.
+Et pour la question qu'aucun rapport n'avait prévue, Kad, l'agent IA intégré, interroge les mêmes données en langage naturel : « total du budget 2027 par fournisseur », « ETP budgétés par centre de coûts ». La réponse nomme les lignes par leur référence (`BL-12`, `BL-3`), que vous retrouvez aussitôt dans la liste.
 
 ## La phase de revue
 

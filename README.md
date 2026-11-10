@@ -1,14 +1,14 @@
-# KANAP
+# Kadratis
 
-[![Website](https://img.shields.io/badge/website-kanap.net-blue)](https://kanap.net)
-[![Documentation](https://img.shields.io/badge/docs-doc.kanap.net-green)](https://doc.kanap.net)
+[![Website](https://img.shields.io/badge/website-kadratis.com-blue)](https://kadratis.com)
+[![Documentation](https://img.shields.io/badge/docs-doc.kadratis.com-green)](https://doc.kadratis.com)
 [![License: AGPL v3](https://img.shields.io/badge/license-AGPL--v3-blue.svg)](LICENSE)
 
 **The open source IT governance platform.**
 
-KANAP gives IT departments one governed record for their IT budget (OPEX and
+Kadratis™ gives IT departments one governed record for their IT budget (OPEX and
 CAPEX), applications and interfaces, infrastructure, project portfolio, tasks,
-and documentation. Its built-in AI agent, **Plaid**, works on that same record
+and documentation. Its built-in AI agent, **Kad**, works on that same record
 in natural language, within the platform's permissions and audit trail.
 
 Built for IT departments of mid-sized companies and multi-entity groups:
@@ -16,11 +16,11 @@ multi-company, multi-currency, chargeback.
 
 Self-host it for free, or let us run it for you.
 
-[Website](https://kanap.net) | [Documentation](https://doc.kanap.net) | [Self-hosting guide](https://doc.kanap.net/on-premise/) | [Plaid architecture](doc/plaid-architecture.md) | [Source docs](doc/)
+[Website](https://kadratis.com) | [Documentation](https://doc.kadratis.com) | [Self-hosting guide](https://doc.kadratis.com/on-premise/) | [Kad architecture](doc/plaid-architecture.md) | [Source docs](doc/)
 
 ---
 
-## Why KANAP?
+## Why Kadratis?
 
 IT departments often run on disconnected fragments:
 
@@ -32,36 +32,36 @@ IT departments often run on disconnected fragments:
 
 Nothing connects. When the CFO asks "what are we spending on that system?", or the CEO asks "what happens if we delay this project?", the answer takes days to assemble.
 
-KANAP replaces that patchwork with a single open source system of record where
+Kadratis replaces that patchwork with a single open source system of record where
 costs link to applications, applications link to infrastructure, projects link
-to budgets and tasks, and knowledge links to the entities it describes. Plaid
+to budgets and tasks, and knowledge links to the entities it describes. Kad
 uses that same governed record as its working context, so AI answers and actions
 are grounded in the permissions, data model, and audit trail of the platform.
 
 Think of it as the operating system of the IT department: the coordination layer for planning, documenting, budgeting, deciding, and executing.
 
-![KANAP Dashboard](doc/assets/dashboard.png)
+![Kadratis Dashboard](doc/assets/dashboard.png)
 
-## Plaid: the agent layer
+## Kad: the agent layer
 
-Plaid is the native AI agent inside KANAP. It works through typed tools,
+Kad is the native AI agent inside Kadratis. It works through typed tools,
 tenant-scoped execution, RBAC, RLS, mutation previews, approvals, and audit
 records.
 
-Today, Plaid can:
+Today, Kad can:
 
-- read, search, filter, aggregate, and inspect governed KANAP data across the IT
+- read, search, filter, aggregate, and inspect governed Kadratis data across the IT
   system of record
-- create or update supported KANAP records through explicit write previews that
+- create or update supported Kadratis records through explicit write previews that
   the user approves before execution
 - create and update documents, tasks, master data, business records,
   relationships, and financial planning data through the same approval path
-- import a GLPI ticket into a KANAP task after user confirmation
-- expose read-only MCP tools so external AI clients can query governed KANAP
-  data: Claude, Claude Desktop and Claude Code sign in with the user's KANAP
+- import a GLPI ticket into a Kadratis task after user confirmation
+- expose read-only MCP tools so external AI clients can query governed Kadratis
+  data: Claude, Claude Desktop and Claude Code sign in with the user's Kadratis
   account (OAuth), other clients use an API key
 
-Alongside Plaid, the **helpdesk agent** watches your connected service desk
+Alongside Kad, the **helpdesk agent** watches your connected service desk
 (GLPI today), reads each ticket against your applications and documentation,
 and proposes a reply to the requester, an internal note or a ticket update.
 Every action type starts under approval; you switch it to automatic once its
@@ -73,9 +73,9 @@ contracts exist for monitoring, ticketing, virtualization, directory, and
 automation systems; production external adapters beyond the current GLPI import
 path are the next step.
 
-![Plaid prepares a change as a preview and applies it only after approval](marketing/web/public/screenshots/ai-preview.png)
+![Kad prepares a change as a preview and applies it only after approval](marketing/web/public/screenshots/ai-preview.png)
 
-*Plaid prepares a change as a preview. Nothing is applied until the user approves it.*
+*Kad prepares a change as a preview. Nothing is applied until the user approves it.*
 
 For the technical architecture, see [doc/plaid-architecture.md](doc/plaid-architecture.md).
 
@@ -91,11 +91,11 @@ For the technical architecture, see [doc/plaid-architecture.md](doc/plaid-archit
 
 **Unified tasks**: One task system spanning budget items, contracts, CAPEX items, applications, assets, requests, and projects.
 
-**Plaid AI agent**: Ask questions, create documents, manage tasks, update governed records, and explore IT data through natural-language chat. KANAP also exposes a read-only MCP server so external AI tools can query governed IT data directly; read-write MCP is on the roadmap and needs a dedicated approval protocol.
+**Kad AI agent**: Ask questions, create documents, manage tasks, update governed records, and explore IT data through natural-language chat. Kadratis also exposes a read-only MCP server so external AI tools can query governed IT data directly; read-write MCP is on the roadmap and needs a dedicated approval protocol.
 
 ## Open source first
 
-KANAP is licensed under [AGPL v3](LICENSE).
+Kadratis is licensed under [AGPL v3](LICENSE).
 
 - Full product, not a teaser edition
 - Free to self-host
@@ -106,12 +106,12 @@ KANAP is licensed under [AGPL v3](LICENSE).
 
 ## Self-hosting
 
-KANAP runs on Linux with Docker and supports on-premise single-tenant deployments.
+Kadratis runs on Linux with Docker and supports on-premise single-tenant deployments.
 
 Two install paths are documented:
 
-- **[AI-assisted installation](https://doc.kanap.net/on-premise/installation-ai/)**: let a coding agent guide setup interactively on a clean server.
-- **[Manual installation](https://doc.kanap.net/on-premise/installation-example/)**: follow the full step-by-step process yourself.
+- **[AI-assisted installation](https://doc.kadratis.com/on-premise/installation-ai/)**: let a coding agent guide setup interactively on a clean server.
+- **[Manual installation](https://doc.kadratis.com/on-premise/installation-example/)**: follow the full step-by-step process yourself.
 
 Typical requirements:
 
@@ -120,16 +120,16 @@ Typical requirements:
 - S3-compatible object storage
 - TLS reverse proxy
 
-## Hosted KANAP and support
+## Kadratis Cloud and support
 
 Self-hosting is free.
 
 Paid options are for teams that want operational help:
 
-- **Self-hosted support**: priority support for teams running KANAP themselves.
-- **Hosted KANAP**: the same open source platform operated by KANAP, with hosting, updates, backups, support, and activation help.
+- **Self-hosted support**: priority support for teams running Kadratis themselves.
+- **Kadratis Cloud**: the same open source platform operated by KANAP, with hosting, updates, backups, support, and activation help.
 
-See [kanap.net](https://kanap.net/offer) for current pricing.
+See [kadratis.com](https://kadratis.com/offer) for current pricing.
 
 ## Tech stack
 
@@ -165,10 +165,12 @@ If you find a security issue, please follow [SECURITY.md](SECURITY.md).
 
 ## License
 
-[AGPL v3](LICENSE). You are free to use, modify, and distribute KANAP. The AGPL copyleft clause ensures that anyone running a modified version as a network service must share their changes, keeping the project genuinely open.
+[AGPL v3](LICENSE). You are free to use, modify, and distribute Kadratis. The AGPL copyleft clause ensures that anyone running a modified version as a network service must share their changes, keeping the project genuinely open.
 
-The public holiday rules behind the standard working-day calendars come from the [date-holidays](https://github.com/commenthol/date-holidays) package: its code is under the ISC license and its holiday data under [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/), with the attributions listed in the package's LICENSE file. KANAP ships that data unchanged and works offline with it.
+The public holiday rules behind the standard working-day calendars come from the [date-holidays](https://github.com/commenthol/date-holidays) package: its code is under the ISC license and its holiday data under [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/), with the attributions listed in the package's LICENSE file. Kadratis ships that data unchanged and works offline with it.
 
-The licenses of KANAP's production dependencies are checked on every merge. Each published version carries a component inventory (CycloneDX) and a third-party notices file; see [doc/sbom.md](doc/sbom.md).
+The licenses of Kadratis' production dependencies are checked on every merge. Each published version carries a component inventory (CycloneDX) and a third-party notices file; see [doc/sbom.md](doc/sbom.md).
 
 Copyright 2025-2026, KANAP EURL.
+
+Kadratis™ is a trademark of KANAP, filed with the French trademark office (INPI). See [TRADEMARKS.md](TRADEMARKS.md) for what you may do with the name and logo without asking.

@@ -14,7 +14,7 @@ series:
   title: "Construir el presupuesto de TI"
 ---
 
-La parte 1 fue una revisión selectiva: el aterrizaje 2026 refleja ya los principales movimientos y los grandes cambios de 2027 están registrados. Quedan todas las líneas en las que nada cambió. Buscarlas y volver a teclearlas una a una es el trabajo más ingrato de la temporada presupuestaria. En KANAP, es una herramienta y unos pocos clics.
+La parte 1 fue una revisión selectiva: el aterrizaje 2026 refleja ya los principales movimientos y los grandes cambios de 2027 están registrados. Quedan todas las líneas en las que nada cambió. Buscarlas y volver a teclearlas una a una es el trabajo más ingrato de la temporada presupuestaria. En Kadratis, es una herramienta y unos pocos clics.
 
 ## Las dos pasadas
 

@@ -7,6 +7,7 @@
  * and a <details> fallback on mobile).
  */
 
+import BrandLogo from './BrandLogo.astro';
 import {
   getLocaleFromUrl,
   useTranslations,
@@ -70,9 +71,8 @@ function isActive(href: string): boolean {
 
 <header class="mk-nav" data-mk-nav>
   <div class="mk-nav__inner mk-container">
-    <a class="mk-nav__brand" href={localePath(locale, '/')} aria-label="KANAP">
-      <img src="/logo.svg" alt="" width="28" height="28" />
-      <span class="mk-nav__brand-name">KANAP</span>
+    <a class="mk-nav__brand" href={localePath(locale, '/')} aria-label="Kadratis">
+      <BrandLogo height={36} />
     </a>
 
     <nav class="mk-nav__links" aria-label="Primary">
@@ -227,15 +227,6 @@ function isActive(href: string): boolean {
 
   .mk-nav__brand:hover {
     color: var(--kanap-text-primary);
-  }
-
-  .mk-nav__brand img {
-    width: 28px;
-    height: 28px;
-  }
-
-  .mk-nav__brand-name {
-    letter-spacing: 0.02em;
   }
 
   .mk-nav__links {

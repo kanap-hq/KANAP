@@ -1,6 +1,6 @@
 ---
 title: "Managing currencies in the IT budget"
-description: "Everyone enters amounts in their own currency, KANAP consolidates them in the group's: automatic exchange rates, aligned with your budget rates if you wish, and totals you can trust."
+description: "Everyone enters amounts in their own currency, Kadratis consolidates them in the group's: automatic exchange rates, aligned with your budget rates if you wish, and totals you can trust."
 date: 2026-10-20
 topic: cost
 author: Friedrich
@@ -17,7 +17,7 @@ A US subsidiary pays for its licences in dollars. Headquarters signs a SaaS subs
 
 In a spreadsheet, that means a rates sheet in a corner of the workbook, conversion formulas copied line after line, and a question that comes back at every presentation: which rate did we use?
 
-In KANAP, everyone enters the budget in the currency of their invoice. Everything is consolidated, automatically and cleanly, in the group's reference currency. Exchange rates take care of themselves, and follow your financial controllers' rates whenever you want.
+In Kadratis, everyone enters the budget in the currency of their invoice. Everything is consolidated, automatically and cleanly, in the group's reference currency. Exchange rates take care of themselves, and follow your financial controllers' rates whenever you want.
 
 ## All the settings on one page
 
@@ -47,7 +47,7 @@ Amounts are stored as they were entered. CSV exports keep each line's currency: 
 
 ## Everything is consolidated in the group's currency
 
-KANAP converts on display, each year at that year's rate. Nobody has a formula to write or a "countervalue" column to maintain.
+Kadratis converts on display, each year at that year's rate. Nobody has a formula to write or a "countervalue" column to maintain.
 
 - **The budget lines list**: the Currency column keeps each line's currency, amounts and the totals row are shown in the reporting currency, and totals recalculate on every filter.
 - **The overview and the ten budget reports** are shown in the reporting currency.
@@ -58,7 +58,7 @@ And if the group ever changes its consolidation currency, changing the reporting
 
 ## Rates refreshed automatically
 
-By default, there is nothing to do. KANAP fetches one rate per currency and per year for every currency in use, and refreshes them every 30 days.
+By default, there is nothing to do. Kadratis fetches one rate per currency and per year for every currency in use, and refreshes them every 30 days.
 
 - **Past years**: the World Bank's annual averages. Until they are published, the closest published year, marked as an estimate.
 - **Current year**: today's rate.
@@ -80,9 +80,9 @@ Many groups set their own rates for the fiscal year: the budget rates of financi
 
 Sometimes a rate is missing: an uncommon currency, or a past year the sources have not published yet. A spreadsheet then often counts the amount at 1, and 100,000 dollars become 100,000 euros without anyone noticing.
 
-KANAP never does that. The amount is left out of that year's totals, and the screen says so: "Excluding 3 lines with no exchange rate: USD 2026", under the list totals, on the overview, at the top of the reports, in contracts. On the line itself, the amount is then shown in its own currency, with an orange mark.
+Kadratis never does that. The amount is left out of that year's totals, and the screen says so: "Excluding 3 lines with no exchange rate: USD 2026", under the list totals, on the overview, at the top of the reports, in contracts. On the line itself, the amount is then shown in its own currency, with an orange mark.
 
-KANAP fetches the rate in the background, and the next display uses it as soon as a source publishes it. If none does, or if your installation has no internet access, the Currencies page lists the missing rates, and a manual rate settles the matter at once.
+Kadratis fetches the rate in the background, and the next display uses it as soon as a source publishes it. If none does, or if your installation has no internet access, the Currencies page lists the missing rates, and a manual rate settles the matter at once.
 
 ![The budget lines list with a line that has no exchange rate: the warning under the totals and the orange mark on the line](/screenshots/blog/currency-missing-rate-2026-10-20.png)
 
@@ -93,4 +93,4 @@ KANAP fetches the rate in the background, and the next display uses it as soon a
 3. **If your financial controllers have budget rates**, enter them for the year you are preparing.
 4. **Freeze the budget column** once the budget is approved: its rates are frozen with it.
 
-To see all of this on a budget already entered, a free 14-day trial of our hosted version gives access to the sample data of the fictional Fromage & Co group, loaded in a minute. KANAP is fully open source: it can also be installed for free on your own servers.
+To see all of this on a budget already entered, a free 14-day trial of our hosted version gives access to the sample data of the fictional Fromage & Co group, loaded in a minute. Kadratis is fully open source: it can also be installed for free on your own servers.

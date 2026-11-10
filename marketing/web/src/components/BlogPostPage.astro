@@ -67,7 +67,7 @@ const articleLd = {
 };
 
 const breadcrumb = breadcrumbLd(site, [
-  { name: 'KANAP', url: localePath(locale, '/') },
+  { name: 'Kadratis', url: localePath(locale, '/') },
   { name: t('nav.blog'), url: localePath(locale, '/blog') },
   { name: post.data.title, url: item.href },
 ]);
@@ -123,10 +123,7 @@ const breadcrumb = breadcrumbLd(site, [
             <span>
               {t('blog.alsoIn')}{' '}
               {otherLanguages.map((l, i) => (
-                <>
-                  {i > 0 && ', '}
-                  <a href={translations[l]!.href} hreflang={l} lang={l}>{LOCALE_LABELS[l]}</a>
-                </>
+                <>{i > 0 && ', '}<a href={translations[l]!.href} hreflang={l} lang={l}>{LOCALE_LABELS[l]}</a></>
               ))}
             </span>
           </>

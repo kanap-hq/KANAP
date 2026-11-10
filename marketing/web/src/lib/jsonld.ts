@@ -18,15 +18,15 @@ export function softwareApplicationLd(site: string) {
   return {
     '@context': 'https://schema.org',
     '@type': 'SoftwareApplication',
-    name: 'KANAP',
+    name: 'Kadratis',
     applicationCategory: 'BusinessApplication',
     operatingSystem: 'Web, Linux (self-hosted)',
     url: site,
     description:
-      'Open source IT governance platform: IT budget (OPEX and CAPEX, landing, chargeback, cost per FTE), application landscape, project portfolio and documentation in one record, with Plaid, a built-in AI agent. AGPL v3 licensed. Self-host free, or choose hosted KANAP.',
+      'Open source IT governance platform: IT budget (OPEX and CAPEX, landing, chargeback, cost per FTE), application landscape, project portfolio and documentation in one record, with Kad, a built-in AI agent. AGPL v3 licensed. Self-host free, or choose Kadratis Cloud.',
     offers: [
       { '@type': 'Offer', name: 'Self-hosted', price: '0', priceCurrency: 'EUR' },
-      { '@type': 'Offer', name: 'Hosted KANAP', price: '249', priceCurrency: 'EUR' },
+      { '@type': 'Offer', name: 'Kadratis Cloud', price: '249', priceCurrency: 'EUR' },
       { '@type': 'Offer', name: 'Self-Hosted Support', price: '2490', priceCurrency: 'EUR' },
     ],
     publisher: { '@type': 'Organization', name: 'KANAP', url: site },

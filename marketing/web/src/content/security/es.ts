@@ -4,7 +4,7 @@ const content: SecurityContent = {
   meta: {
     title: 'Seguridad',
     description:
-      'Cómo KANAP protege sus datos: row-level security, contraseñas con hash, secretos cifrados, RBAC, un registro de auditoría de seguridad, gobernanza de agentes, SSO, una cadena de compilación transparente y open source. Autoalojado o en nube.',
+      'Cómo Kadratis protege sus datos: row-level security, contraseñas con hash, secretos cifrados, RBAC, un registro de auditoría de seguridad, gobernanza de agentes, SSO, una cadena de compilación transparente y open source. Autoalojado o en nube.',
   },
   header: {
     eyebrow: 'Seguridad',
@@ -14,7 +14,7 @@ const content: SecurityContent = {
   overview: {
     title: 'Principios',
     intro:
-      'KANAP está diseñado para departamentos de TI que manejan datos sensibles. Tratamos sus datos como queremos que los proveedores de TI traten los nuestros: transparentes, aislados y a su alcance cuando los necesita.',
+      'Kadratis está diseñado para departamentos de TI que manejan datos sensibles. Tratamos sus datos como queremos que los proveedores de TI traten los nuestros: transparentes, aislados y a su alcance cuando los necesita.',
     pillars: [
       {
         title: 'Transparente por defecto',
@@ -33,7 +33,7 @@ const content: SecurityContent = {
   tenancy: {
     title: 'Aislamiento de tenants',
     body:
-      'KANAP es multi-tenant a nivel de base de datos. Cada fila de cada tabla compartida lleva un `tenant_id`, y las políticas de Row-Level Security de PostgreSQL imponen el filtro en cada lectura y escritura. La política es parte del esquema de la base de datos, así que se aplica a cada consulta de la aplicación.',
+      'Kadratis es multi-tenant a nivel de base de datos. Cada fila de cada tabla compartida lleva un `tenant_id`, y las políticas de Row-Level Security de PostgreSQL imponen el filtro en cada lectura y escritura. La política es parte del esquema de la base de datos, así que se aplica a cada consulta de la aplicación.',
     bullets: [
       'Políticas RLS de PostgreSQL en cada tabla que contiene datos de tenant, todas forzadas',
       'Filtrado por `tenant_id` aplicado a nivel de base de datos, no solo en la app',
@@ -59,15 +59,15 @@ const content: SecurityContent = {
   access: {
     title: 'Control de acceso',
     body:
-      'Permisos granulares por módulo, por rol. Cada feature gate y cada consulta de entidad respeta la misma matriz RBAC, incluidos Plaid y MCP.',
+      'Permisos granulares por módulo, por rol. Cada feature gate y cada consulta de entidad respeta la misma matriz RBAC, incluidos Kad y MCP.',
     bullets: [
       'Niveles lector, colaborador, miembro y administrador por módulo',
-      'Rol de administrador a nivel de workspace separado de los administradores de módulo',
+      'Rol de administrador a nivel del espacio de trabajo, separado de los administradores de módulo',
       'SSO vía Microsoft Entra ID (OIDC) tanto en nube como en autoalojado',
       'Autenticación local con contraseña usando Argon2 + flujos opcionales de restablecimiento de contraseña',
       'Los intentos de inicio de sesión se limitan por dirección IP: 60 solicitudes de inicio de sesión con contraseña y 60 solicitudes de inicio de sesión con Microsoft por minuto. Tras 5 intentos fallidos de contraseña en una cuenta desde una dirección IP en 15 minutos, esa dirección espera 15 minutos antes de volver a intentarlo con esa cuenta. Detrás de un proxy inverso, los límites cuentan la dirección IP de cada usuario',
-      'Los tokens de sesión solo se aceptan con el único algoritmo de firma con el que KANAP los emite',
-      'Plaid y MCP aplican el mismo RBAC que la interfaz, sin escalada de privilegios',
+      'Los tokens de sesión solo se aceptan con el único algoritmo de firma con el que Kadratis los emite',
+      'Kad y MCP aplican el mismo RBAC que la interfaz, sin escalada de privilegios',
       'Tokens API ligados a usuarios individuales, revocables en cualquier momento',
     ],
   },
@@ -83,7 +83,7 @@ const content: SecurityContent = {
       'Exportaciones generadas por el servidor registradas con quién exportó qué',
       'Eventos de acceso y de sesión conservados 365 días',
       'Los administradores consultan y filtran el registro de auditoría en la app, y lo exportan a CSV en un formato fijo que las herramientas de recopilación de registros leen tal cual (hasta 100 000 entradas por archivo)',
-      'Los cambios hechos con Plaid se registran en el mismo registro, con su origen. Los agentes llevan su propio historial de actividad, con las fuentes que utilizó cada agente',
+      'Los cambios hechos con Kad se registran en el mismo registro, con su origen. Los agentes llevan su propio historial de actividad, con las fuentes que utilizó cada agente',
     ],
   },
   agentGovernance: {
@@ -97,13 +97,13 @@ const content: SecurityContent = {
       'Las respuestas llevan las fuentes que utilizó el agente, para que una decisión se pueda comprobar',
       'Pause cualquier agente de inmediato, uno a uno o todos a la vez',
       'Los límites de gasto por agente mantienen acotado el coste de operación',
-      'Las funciones de IA están desactivadas por defecto. En la nube, el modelo integrado no recibe ningún dato hasta que el workspace haya aceptado su proveedor y su lugar de tratamiento, ambos indicados en la aplicación. Un administrador los confirma, y se pide una nueva confirmación si cambia cualquiera de los dos. Puede usar su propio proveedor de modelos en su lugar',
+      'Las funciones de IA están desactivadas por defecto. En la nube, el modelo integrado no recibe ningún dato hasta que el espacio de trabajo haya aceptado su proveedor y su lugar de tratamiento, ambos indicados en la aplicación. Un administrador los confirma, y se pide una nueva confirmación si cambia cualquiera de los dos. Puede usar su propio proveedor de modelos en su lugar',
     ],
   },
   supplyChain: {
     title: 'Cadena de suministro de software',
     body:
-      'KANAP se compila a partir del código fuente público, y la compilación se comprueba en cada cambio. Puede verificar lo que se entrega.',
+      'Kadratis se compila a partir del código fuente público, y la compilación se comprueba en cada cambio. Puede verificar lo que se entrega.',
     bullets: [
       'La imagen de la API que se ejecuta contiene solo la aplicación compilada y sus dependencias de producción, sin código fuente ni herramientas de desarrollo',
       'Los contenedores se ejecutan con privilegios reducidos: la API corre como usuario sin privilegios, y los contenedores renuncian a las capacidades de Linux que no necesitan y no pueden obtener otras nuevas',
@@ -121,10 +121,10 @@ const content: SecurityContent = {
     bullets: [
       'Alojamiento en la nube en Hetzner Online GmbH, en Núremberg, Alemania (UE), con Cloudflare por delante para CDN, terminación de TLS y protección',
       'Autoalojado: el código fuente completo es público, y usted lo construye y lo ejecuta con Docker Compose',
-      'Autoalojado: ninguna llamada saliente obligatoria para las funciones básicas, así que KANAP puede funcionar sin acceso a internet',
+      'Autoalojado: ninguna llamada saliente obligatoria para las funciones básicas, así que Kadratis puede funcionar sin acceso a internet',
       'Autoalojado: usted decide dónde se ejecuta y cómo se respalda',
       'Autoalojado: las funciones de IA usan solo el proveedor de modelos que configura su administrador',
-      'Autoalojado: al arrancar, KANAP avisa cuando el secreto de firma es corto o la contraseña del primer administrador sigue siendo un valor de ejemplo o es demasiado corta',
+      'Autoalojado: al arrancar, Kadratis avisa cuando el secreto de firma es corto o la contraseña del primer administrador sigue siendo un valor de ejemplo o es demasiado corta',
       'Autoalojado: la salud de los contenedores API y web aparece en la salida de docker ps, y los registros de Docker se limitan a unos 50 MB por contenedor',
     ],
   },
@@ -132,8 +132,8 @@ const content: SecurityContent = {
     title: 'Divulgación responsable',
     body:
       'Si encuentra un problema de seguridad, queremos saberlo. Infórmenos en privado, de preferencia mediante el reporte privado de vulnerabilidades de GitHub, o por correo. Denos un plazo razonable para corregirlo y le daremos crédito en el aviso, salvo que prefiera permanecer anónimo.',
-    emailLabel: 'security@kanap.net',
-    email: 'security@kanap.net',
+    emailLabel: 'security@kadratis.com',
+    email: 'security@kadratis.com',
   },
   cta: {
     title: '¿Preguntas sobre seguridad?',

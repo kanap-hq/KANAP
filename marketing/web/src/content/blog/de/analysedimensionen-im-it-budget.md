@@ -13,7 +13,7 @@ Auf die Frage „Wer zahlt diese Lizenz?“ antworten Werkzeuge zur Leistungsver
 
 Analysedimensionen liefern diese zweite Lesart. Jede Dimension ist eine Art, Zeilen zu klassifizieren, mit eigenen Werten: wofür das Geld ausgegeben wird, welchem Teil der IT es dient, warum es ausgegeben wird. Ein neuer Arbeitsbereich startet mit vier davon, alle optional.
 
-## Die Mechanik in KANAP
+## Die Mechanik in Kadratis
 
 ### Dimensionen und ihre Werte
 

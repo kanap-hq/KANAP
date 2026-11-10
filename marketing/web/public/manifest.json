@@ -1,0 +1,29 @@
+{
+  "name": "Kadratis",
+  "short_name": "Kadratis",
+  "description": "Plateforme open source de gouvernance IT",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#134E5A",
+  "theme_color": "#134E5A",
+  "icons": [
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

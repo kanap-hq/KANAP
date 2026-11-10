@@ -30,7 +30,7 @@ Tres usos se repiten una y otra vez:
 
 ### La regla por defecto
 
-Por defecto, KANAP usa la plantilla de las empresas definidas en los datos maestros: todos los costes se reparten entre todas las empresas según su plantilla.
+Por defecto, Kadratis usa la plantilla de las empresas definidas en los datos maestros: todos los costes se reparten entre todas las empresas según su plantilla.
 
 Puede cambiar esta regla por defecto en Administración, Método de asignación por defecto. La regla que fije se aplica año a año a las líneas que todavía no se han personalizado (no pierde el trabajo ya hecho).
 

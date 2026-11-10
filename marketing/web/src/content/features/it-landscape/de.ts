@@ -62,7 +62,7 @@ const content: FeatureContent = {
     },
     {
       title: 'Schwachstellen',
-      body: 'KANAP gleicht veröffentlichte Schwachstellen mit Ihren Technologien ab, Version für Version, und zeigt die betroffenen Server und Fachanwendungen. Ausgenutzte Schwachstellen stehen oben.',
+      body: 'Kadratis gleicht veröffentlichte Schwachstellen mit Ihren Technologien ab, Version für Version, und zeigt die betroffenen Server und Fachanwendungen. Ausgenutzte Schwachstellen stehen oben.',
       bullets: [
         'Zwei Quellen alle 6 Stunden: die NVD und die Herstellereinträge auf CVE.org',
         'Ausnutzungssignale: Kataloge von CISA und Europäischer Union, EPSS-Wert',
@@ -98,7 +98,7 @@ const content: FeatureContent = {
     label: 'Andere Module entdecken',
     links: [
       { label: 'Agenten', href: '/features/agents' },
-      { label: 'Plaid, KI-Assistent', href: '/features/ai' },
+      { label: 'Kad, KI-Assistent', href: '/features/ai' },
       { label: 'Budget-Management', href: '/features/budget' },
       { label: 'Portfolio-Management', href: '/features/portfolio' },
       { label: 'Wissen', href: '/features/knowledge' },
@@ -106,9 +106,9 @@ const content: FeatureContent = {
   },
   cta: {
     title: 'Bereit, Ihr Informationssystem zu dokumentieren?',
-    body: 'Hosten Sie kostenlos selbst oder testen Sie Hosted Cloud. Alle Funktionen in jedem Plan.',
+    body: 'Hosten Sie kostenlos selbst oder testen Sie Kadratis Cloud. Alle Funktionen in jedem Plan.',
     primary: 'Kostenlos bereitstellen',
-    secondary: 'Hosted Cloud testen',
+    secondary: 'Kadratis Cloud testen',
   },
 };
 

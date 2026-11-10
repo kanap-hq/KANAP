@@ -50,7 +50,7 @@ const content: FeatureContent = {
     },
     {
       title: 'A report for every question',
-      body: 'Global and per-company chargeback, trends, top increases and decreases, comparison of budget columns, analytics dimensions, consolidation accounts, monthly staffing and cost per FTE. Every report row opens the matching filtered list, and Plaid answers the same questions in plain language.',
+      body: 'Global and per-company chargeback, trends, top increases and decreases, comparison of budget columns, analytics dimensions, consolidation accounts, monthly staffing and cost per FTE. Every report row opens the matching filtered list, and Kad answers the same questions in plain language.',
       bullets: [
         'Global and per-company chargeback',
         'Budget comparison across years, for all lines, OPEX or CAPEX',
@@ -67,7 +67,7 @@ const content: FeatureContent = {
     items: [
       { title: 'Linked to applications and projects', body: 'Every budget line leads to its applications, projects and suppliers. An application record shows what it costs.' },
       { title: 'Contracts and deadlines', body: 'Yearly amount, auto-renewal, notice period and a computed cancellation deadline, linked to the budget lines.' },
-      { title: 'Round trip with your spreadsheet', body: 'Export the lines, edit them in Excel or LibreOffice, import the file back: KANAP writes only the cells that changed.' },
+      { title: 'Round trip with your spreadsheet', body: 'Export the lines, edit them in Excel or LibreOffice, import the file back: Kadratis writes only the cells that changed.' },
       { title: 'Sample data', body: 'A trial fills up in a minute with the budget of Fromage & Co, four fictional companies, so you can see everything before entering yours.' },
       { title: 'Headcount and cost per FTE', body: 'A contractor line in people or days declares its FTE. Reports turn it into month-by-month headcount and cost per FTE, or the daily rate, by supplier or by cost center.' },
       { title: 'Your own analysis axes', body: 'Create as many analytics dimensions as your questions need (domain, cost nature, programme), each with its own values, for OPEX, CAPEX or both. Four recommended dimensions come ready: cost pool, IT tower, purpose and priority. Budget reports filter on them, and several group by dimension.' },
@@ -79,13 +79,13 @@ const content: FeatureContent = {
       { label: 'IT landscape', href: '/features/it-landscape' },
       { label: 'Project portfolio', href: '/features/portfolio' },
       { label: 'Documentation', href: '/features/knowledge' },
-      { label: 'Plaid, the built-in AI agent', href: '/features/ai' },
+      { label: 'Kad, the built-in AI agent', href: '/features/ai' },
       { label: 'Helpdesk agent', href: '/features/agents' },
     ],
   },
   cta: {
-    title: 'Try KANAP on a complete IT budget.',
-    body: 'Try hosted KANAP with sample data, or deploy it for free on your own servers.',
+    title: 'Try Kadratis on a complete IT budget.',
+    body: 'Try Kadratis Cloud with sample data, or deploy Kadratis for free on your own servers.',
     primary: 'Deploy for free',
     secondary: 'Try it with sample data',
   },

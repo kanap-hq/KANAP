@@ -13,7 +13,7 @@ A la pregunta «¿quién paga esta licencia?», las herramientas de contracargo 
 
 Las dimensiones analíticas aportan esa segunda lectura. Cada dimensión es una forma de clasificar las líneas, con sus propios valores: lo que paga el dinero, la parte de TI a la que sirve, por qué se gasta. Un nuevo espacio de trabajo empieza con cuatro, todas opcionales.
 
-## La mecánica en KANAP
+## La mecánica en Kadratis
 
 ### Las dimensiones y sus valores
 

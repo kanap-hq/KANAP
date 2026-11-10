@@ -50,10 +50,10 @@ const content: FeatureContent = {
     },
     {
       title: 'Vernetzte Dokumentation',
-      body: 'Verknüpfen Sie Dokumente mit Anwendungen, Assets, Projekten, Anfragen und Aufgaben. Greifen Sie auf verwaltete Dokumente aus anderen Workspaces zu und unterscheiden Sie zwischen verlinkten und verwandten Inhalten, für volle Nachvollziehbarkeit. Die Wissensdatenbank ist auch das, was Ihre Agenten zitieren: die Quelle, aus der ein Agent schöpft, und worauf er verweist, wenn er antwortet.',
+      body: 'Verknüpfen Sie Dokumente mit Anwendungen, Assets, Projekten, Anfragen und Aufgaben. Greifen Sie auf verwaltete Dokumente aus anderen Arbeitsbereichen zu und unterscheiden Sie zwischen verlinkten und verwandten Inhalten, für volle Nachvollziehbarkeit. Die Wissensdatenbank ist auch das, was Ihre Agenten zitieren: die Quelle, aus der ein Agent schöpft, und worauf er verweist, wenn er antwortet.',
       bullets: [
         'Relationen zu Anwendungen, Assets, Projekten, Anfragen, Aufgaben',
-        'Verwaltete Dokumente aus anderen Workspaces zugänglich',
+        'Verwaltete Dokumente aus anderen Arbeitsbereichen zugänglich',
         'Unterscheidung zwischen verlinkt und verwandt',
         'Bidirektionale Navigation zwischen Dokumenten und Entitäten',
         'Vollständiger Audit-Trail der Relationsänderungen',
@@ -65,16 +65,16 @@ const content: FeatureContent = {
     title: 'Mehr in Wissen',
     items: [
       { title: 'Versionshistorie', body: 'Jeder Speichervorgang erzeugt eine Version. Historie durchstöbern und zu jedem früheren Stand zurückkehren.' },
-      { title: 'Export', body: 'Export nach PDF, DOCX und ODT. Dokumentation auch außerhalb von KANAP teilen.' },
+      { title: 'Export', body: 'Export nach PDF, DOCX und ODT. Dokumentation auch außerhalb von Kadratis teilen.' },
       { title: 'Vorlagen', body: 'Wiederverwendbare Dokumentvorlagen nach Typ gruppiert. Neue Dokumente schnell starten.' },
-      { title: 'Import', body: 'Import aus Word und PDF. Bestehende Dokumentation mit einem Klick in KANAP übernehmen.' },
+      { title: 'Import', body: 'Import aus Word und PDF. Bestehende Dokumentation mit einem Klick in Kadratis übernehmen.' },
     ],
   },
   crossLinks: {
     label: 'Andere Module entdecken',
     links: [
       { label: 'Agenten', href: '/features/agents' },
-      { label: 'Plaid, KI-Assistent', href: '/features/ai' },
+      { label: 'Kad, KI-Assistent', href: '/features/ai' },
       { label: 'Budget-Management', href: '/features/budget' },
       { label: 'IT-Landschaft', href: '/features/it-landscape' },
       { label: 'Portfolio-Management', href: '/features/portfolio' },
@@ -82,9 +82,9 @@ const content: FeatureContent = {
   },
   cta: {
     title: 'Bereit, Ihre IT-Dokumentation zu steuern?',
-    body: 'Hosten Sie kostenlos selbst oder testen Sie Hosted Cloud. Alle Funktionen in jedem Plan.',
+    body: 'Hosten Sie kostenlos selbst oder testen Sie Kadratis Cloud. Alle Funktionen in jedem Plan.',
     primary: 'Kostenlos bereitstellen',
-    secondary: 'Hosted Cloud testen',
+    secondary: 'Kadratis Cloud testen',
   },
 };
 

@@ -4,20 +4,20 @@ const content: AgentsContent = {
   meta: {
     title: 'Autonome KI-Agenten für die IT',
     description:
-      'KANAP-Agenten übernehmen wiederkehrende IT-Aufgaben, schließen anhand Ihrer eigenen IT-Daten und handeln unter einer Autonomie, die Sie kontrollieren und prüfen können. Ein Service-Desk-Konnektor ist heute live, die Runtime ist auf Erweiterung ausgelegt. Open Source, selbstgehostet.',
+      'Kadratis-Agenten übernehmen wiederkehrende IT-Aufgaben, schließen anhand Ihrer eigenen IT-Daten und handeln unter einer Autonomie, die Sie kontrollieren und prüfen können. Ein Service-Desk-Konnektor ist heute live, die Runtime ist auf Erweiterung ausgelegt. Open Source, selbstgehostet.',
   },
   header: {
     eyebrow: 'Autonome Agenten für die IT',
     title: 'KI-Agenten, die Ihr Team entlasten.',
-    lead: 'Ein KANAP-Agent übernimmt eine Aufgabe, liest sie gegen Ihre IT-Daten und schlägt entweder eine Aktion vor oder führt sie aus, je nachdem, wie viel Autonomie Sie ihm gegeben haben. Er bearbeitet die wiederkehrende Last, damit Ihre Leute die schwierigen Probleme bearbeiten.',
+    lead: 'Ein Kadratis-Agent übernimmt eine Aufgabe, liest sie gegen Ihre IT-Daten und schlägt entweder eine Aktion vor oder führt sie aus, je nachdem, wie viel Autonomie Sie ihm gegeben haben. Er bearbeitet die wiederkehrende Last, damit Ihre Leute die schwierigen Probleme bearbeiten.',
   },
   sections: [
     {
       title: 'Agenten starten beaufsichtigt und werden autonomer.',
-      body: 'Jeder Agent beginnt unter Aufsicht. Er schlägt Aktionen vor, Sie prüfen sie, und KANAP verfolgt, wie oft er richtig liegt. Solange diese Bilanz hält, gewähren Sie ihm mehr Autonomie, bis er Routinearbeit selbstständig erledigt und Ihnen nur die Fälle bringt, die einen Menschen brauchen.',
+      body: 'Jeder Agent beginnt unter Aufsicht. Er schlägt Aktionen vor, Sie prüfen sie, und Kadratis verfolgt, wie oft er richtig liegt. Solange diese Bilanz hält, gewähren Sie ihm mehr Autonomie, bis er Routinearbeit selbstständig erledigt und Ihnen nur die Fälle bringt, die einen Menschen brauchen.',
       bullets: [
         'Beginnt damit, Aktionen zur Prüfung vorzuschlagen',
-        'KANAP misst, wie oft er richtig liegt',
+        'Kadratis misst, wie oft er richtig liegt',
         'Sie gewähren mehr Autonomie, solange die Bilanz hält',
         'Übernimmt mit der Zeit die Routinearbeit selbstständig',
       ],
@@ -58,7 +58,7 @@ const content: AgentsContent = {
     },
     {
       title: 'Ihres zum Betreiben und Anpassen.',
-      body: 'Agenten sind Teil des Open-Source-Produkts. Betreiben Sie sie in Ihrer eigenen Installation, wo Ihre Tickets und Dokumente bleiben, abgesehen vom Text, der an den von Ihnen gewählten LLM-Anbieter geht, und verändern Sie ihre Arbeitsweise, weil Sie den vollständigen Quellcode haben. Ihr eigener LLM-Schlüssel, genau wie bei Plaid.',
+      body: 'Agenten sind Teil des Open-Source-Produkts. Betreiben Sie sie in Ihrer eigenen Installation, wo Ihre Tickets und Dokumente bleiben, abgesehen vom Text, der an den von Ihnen gewählten LLM-Anbieter geht, und verändern Sie ihre Arbeitsweise, weil Sie den vollständigen Quellcode haben. Ihr eigener LLM-Schlüssel, genau wie bei Kad.',
       bullets: [
         'Im Open-Source-Produkt enthalten',
         'Läuft in Ihrer eigenen Installation',
@@ -103,12 +103,12 @@ const content: AgentsContent = {
       { label: 'Wissen', href: '/features/knowledge' },
       { label: 'Self-Hosting', href: '/on-premise' },
       { label: 'Sicherheit', href: '/security' },
-      { label: 'Plaid, KI-Assistent', href: '/features/ai' },
+      { label: 'Kad, KI-Assistent', href: '/features/ai' },
     ],
   },
   cta: {
     title: 'Setzen Sie einen Agenten auf die wiederkehrende Arbeit an.',
-    body: 'Agenten sind im kostenlosen, selbstgehosteten Produkt enthalten, mit Ihrem eigenen LLM-Schlüssel. Stellen Sie KANAP selbst bereit oder sprechen Sie mit uns über Hosting und Konnektoren.',
+    body: 'Agenten sind im kostenlosen, selbstgehosteten Produkt enthalten, mit Ihrem eigenen LLM-Schlüssel. Stellen Sie Kadratis selbst bereit oder sprechen Sie mit uns über Hosting und Konnektoren.',
     primary: 'Kostenlos bereitstellen',
     secondary: 'Sprechen Sie mit uns',
   },

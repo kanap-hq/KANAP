@@ -4,20 +4,20 @@ const content: AgentsContent = {
   meta: {
     title: 'Autonomous AI agents for IT',
     description:
-      'KANAP agents pick up repetitive IT tasks, reason over your own IT data, and act under autonomy you control and can audit. One service-desk connector live today, the runtime built to extend. Open source, self-hosted.',
+      'Kadratis agents pick up repetitive IT tasks, reason over your own IT data, and act under autonomy you control and can audit. One service-desk connector live today, the runtime built to extend. Open source, self-hosted.',
   },
   header: {
     eyebrow: 'Autonomous agents for IT',
     title: 'AI agents that take work off your team.',
-    lead: 'A KANAP agent picks up a task, reads it against your IT data, and either proposes an action or carries it out, depending on how much autonomy you have given it. It works the repetitive load so your people work the hard problems.',
+    lead: 'A Kadratis agent picks up a task, reads it against your IT data, and either proposes an action or carries it out, depending on how much autonomy you have given it. It works the repetitive load so your people work the hard problems.',
   },
   sections: [
     {
       title: 'Agents start supervised and grow more autonomous.',
-      body: 'Every agent begins under supervision. It proposes actions, you review them, and KANAP tracks how often it gets things right. As that record holds, you grant it more autonomy, until it handles routine work on its own and only brings you the cases that need a person.',
+      body: 'Every agent begins under supervision. It proposes actions, you review them, and Kadratis tracks how often it gets things right. As that record holds, you grant it more autonomy, until it handles routine work on its own and only brings you the cases that need a person.',
       bullets: [
         'Begins by proposing actions for your review',
-        'KANAP measures how often it gets things right',
+        'Kadratis measures how often it gets things right',
         'You grant more autonomy as the track record holds',
         'Settles into handling routine work on its own',
       ],
@@ -58,7 +58,7 @@ const content: AgentsContent = {
     },
     {
       title: 'Yours to run and to change.',
-      body: 'Agents are part of the open-source product. Run them inside your own deployment, where your tickets and documents stay, except the text sent to the LLM provider you choose, and change how they work because you have the full source. Bring your own LLM key, the same as Plaid.',
+      body: 'Agents are part of the open-source product. Run them inside your own deployment, where your tickets and documents stay, except the text sent to the LLM provider you choose, and change how they work because you have the full source. Bring your own LLM key, the same as Kad.',
       bullets: [
         'Included in the open-source product',
         'Runs inside your own deployment',
@@ -103,12 +103,12 @@ const content: AgentsContent = {
       { label: 'Knowledge', href: '/features/knowledge' },
       { label: 'Self-host', href: '/on-premise' },
       { label: 'Security', href: '/security' },
-      { label: 'Plaid, AI assistant', href: '/features/ai' },
+      { label: 'Kad, AI assistant', href: '/features/ai' },
     ],
   },
   cta: {
     title: 'Put an agent on the repetitive work.',
-    body: 'Agents are in the free, self-hosted product, with your own LLM key. Deploy KANAP yourself, or talk to us about hosting and connectors.',
+    body: 'Agents are in the free, self-hosted product, with your own LLM key. Deploy Kadratis yourself, or talk to us about hosting and connectors.',
     primary: 'Deploy free',
     secondary: 'Talk to us',
   },

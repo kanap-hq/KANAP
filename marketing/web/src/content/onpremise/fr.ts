@@ -2,26 +2,26 @@ import type { OnPremContent } from './types';
 
 const content: OnPremContent = {
   meta: {
-    title: 'Auto-héberger KANAP, l\'approche prioritaire',
+    title: 'Auto-héberger Kadratis, l\'approche prioritaire',
     description:
-      'Exécutez KANAP sur votre infrastructure, sous AGPL v3. Plateforme complète incluant les agents IA, utilisateurs illimités, et vous décidez où vont vos données. Déploiement en quelques minutes avec Docker Compose.',
+      'Exécutez Kadratis sur votre infrastructure, sous AGPL v3. Plateforme complète incluant les agents IA, utilisateurs illimités, et vous décidez où vont vos données. Déploiement en quelques minutes avec Docker Compose.',
   },
 
   header: {
     eyebrow: 'Auto-hébergement · approche prioritaire',
-    title: 'Hébergez KANAP vous-même.\nMaîtrisez chaque couche.',
+    title: 'Hébergez Kadratis vous-même.\nMaîtrisez chaque couche.',
     lead: 'Open source sous AGPL v3. Déployez sur votre infrastructure, gardez vos données, mettez à jour à votre rythme. La plateforme complète, utilisateurs illimités, toutes les fonctionnalités, selon vos conditions.',
     primaryCta: 'Déployer depuis GitHub',
     primaryHref: 'https://github.com/kanap-hq/kanap',
     secondaryCta: 'Lire la doc d\'installation',
-    secondaryHref: 'https://doc.kanap.net/on-premise/',
+    secondaryHref: 'https://doc.kadratis.com/on-premise/',
   },
 
   why: {
     eyebrow: 'Pourquoi s\'auto-héberger',
     title: 'Contrôle, conformité, aucune contrepartie.',
     intro:
-      'S\'auto-héberger KANAP n\'est pas un palier dégradé. C\'est la plateforme complète, avec toutes les fonctionnalités, gratuitement. Voici les raisons pour lesquelles les équipes la choisissent en premier.',
+      'S\'auto-héberger Kadratis n\'est pas un palier dégradé. C\'est la plateforme complète, avec toutes les fonctionnalités, gratuitement. Voici les raisons pour lesquelles les équipes la choisissent en premier.',
     pillars: [
       {
         title: 'Vos données restent à la maison',
@@ -37,7 +37,7 @@ const content: OnPremContent = {
       },
       {
         title: 'Votre cadence',
-        body: 'KANAP publie une version environ une fois par mois. Lisez ses notes de version, testez la mise à jour et appliquez-la dans votre fenêtre de changement. Figez une version précise si besoin. Aucune mise à jour forcée, aucune coupure surprise.',
+        body: 'Kadratis publie une version environ une fois par mois. Lisez ses notes de version, testez la mise à jour et appliquez-la dans votre fenêtre de changement. Figez une version précise si besoin. Aucune mise à jour forcée, aucune coupure surprise.',
       },
     ],
   },
@@ -45,7 +45,7 @@ const content: OnPremContent = {
   license: {
     title: 'AGPL v3 : l\'ouverture sans compromis',
     body:
-      'KANAP est publiée sous licence GNU Affero General Public License v3. Toutes les libertés open source classiques : l\'utiliser, la lire, la modifier, la distribuer. Le copyleft garantit que quiconque exécute une version modifiée en tant que service doit partager ses changements, c\'est ainsi que le projet reste réellement ouvert.',
+      'Kadratis est publié sous licence GNU Affero General Public License v3. Toutes les libertés open source classiques : l\'utiliser, le lire, le modifier, le distribuer. Le copyleft garantit que quiconque exécute une version modifiée en tant que service doit partager ses changements, c\'est ainsi que le projet reste réellement ouvert.',
     bullets: [
       'Usage commercial, interne ou externe, aucune redevance, aucun décompte de sièges',
       'Lecture et audit du code complet, rien de caché',
@@ -73,7 +73,7 @@ const content: OnPremContent = {
       },
       {
         title: 'Coller l\'invite d\'installation',
-        body: "Ouvrez votre agent et collez le modèle d'invite depuis notre documentation, renseignez votre nom de domaine, votre email admin et (en option) votre transport email (Resend ou SMTP). L'agent lit les pages d'installation référencées, installe Docker, PostgreSQL 16 avec les extensions requises, MinIO, nginx et certbot, clone KANAP dans /opt/kanap sur la branche stable (toujours la dernière version publiée), génère des identifiants robustes, construit les images et démarre les conteneurs. Il configure aussi TLS et son renouvellement automatique. L'agent demande votre confirmation avant chaque commande.",
+        body: "Ouvrez votre agent et collez le modèle d'invite depuis notre documentation, renseignez votre nom de domaine, votre email admin et (en option) votre transport email (Resend ou SMTP). L'agent lit les pages d'installation référencées, installe Docker, PostgreSQL 16 avec les extensions requises, MinIO, nginx et certbot, clone Kadratis dans /opt/kanap sur la branche stable (toujours la dernière version publiée), génère des identifiants robustes, construit les images et démarre les conteneurs. Il configure aussi TLS et son renouvellement automatique. L'agent demande votre confirmation avant chaque commande.",
       },
       {
         title: 'Se connecter et durcir',
@@ -81,13 +81,13 @@ const content: OnPremContent = {
       },
     ],
     docsCtaLabel: 'Guide d\'installation assistée par IA',
-    docsHref: 'https://doc.kanap.net/on-premise/installation-ai/',
+    docsHref: 'https://doc.kadratis.com/on-premise/installation-ai/',
     manualOption: {
       label: 'Vous préférez tout maîtriser ?',
       title: 'Installation manuelle : votre stack, à votre main.',
-      body: 'Apportez votre PostgreSQL, votre stockage compatible S3 et votre reverse proxy. Hébergez-la sur n\'importe quel Linux compatible Docker. Intégrez KANAP dans l\'architecture que vous opérez déjà, avec la configuration qui correspond à votre environnement. Même plateforme, même code, chaque décision entre vos mains.',
+      body: 'Apportez votre PostgreSQL, votre stockage compatible S3 et votre reverse proxy. Hébergez-la sur n\'importe quel Linux compatible Docker. Intégrez Kadratis dans l\'architecture que vous opérez déjà, avec la configuration qui correspond à votre environnement. Même plateforme, même code, chaque décision entre vos mains.',
       ctaLabel: 'Guide d\'installation manuelle',
-      ctaHref: 'https://doc.kanap.net/on-premise/installation/',
+      ctaHref: 'https://doc.kadratis.com/on-premise/installation/',
     },
   },
 
@@ -101,13 +101,13 @@ const content: OnPremContent = {
       { label: 'Stockage', value: '20 Go pour la plateforme + la croissance de vos données, plus un stockage objet compatible S3' },
       { label: 'Base de données', value: 'PostgreSQL 16+ avec citext, pgcrypto et uuid-ossp (à fournir)' },
       { label: 'Réseau', value: 'Terminateur HTTPS de votre choix, nginx, Traefik, LB cloud' },
-      { label: 'Sortant (optionnel)', value: 'API de taux de change (World Bank, exchangerate-api.com) · fournisseur LLM pour Plaid et les agents · Microsoft Entra pour le SSO · Resend ou votre relais SMTP pour l\'email · fournisseur de recherche web, si activé' },
+      { label: 'Sortant (optionnel)', value: 'API de taux de change (World Bank, exchangerate-api.com) · fournisseur LLM pour Kad et les agents · Microsoft Entra pour le SSO · Resend ou votre relais SMTP pour l\'email · fournisseur de recherche web, si activé' },
     ],
   },
 
   operations: {
-    title: 'Opérer KANAP',
-    intro: 'Conçue pour s\'opérer comme n\'importe quel service interne.',
+    title: 'Opérer Kadratis',
+    intro: 'Conçu pour s\'opérer comme n\'importe quel service interne.',
     items: [
       {
         title: 'Mises à jour à votre rythme',
@@ -130,8 +130,8 @@ const content: OnPremContent = {
         body: "Le SSO entreprise fait partie de la plateforme. Ajoutez l'enregistrement d'application Entra à la configuration, puis connectez-le depuis la console admin.",
       },
       {
-        title: 'Plaid et agents, à votre façon',
-        body: "Apportez votre propre clé LLM pour Plaid comme pour vos agents, OpenAI, Anthropic, Ollama, ou tout endpoint compatible OpenAI. Le moteur des agents et leurs actions s'exécutent au sein de votre propre déploiement. Le seul contenu qui en sort est ce que vous envoyez au fournisseur que vous avez choisi, plus de courtes requêtes de recherche web si vous activez la recherche web.",
+        title: 'Kad et agents, à votre façon',
+        body: "Apportez votre propre clé LLM pour Kad comme pour vos agents, OpenAI, Anthropic, Ollama, ou tout endpoint compatible OpenAI. Le moteur des agents et leurs actions s'exécutent au sein de votre propre déploiement. Le seul contenu qui en sort est ce que vous envoyez au fournisseur que vous avez choisi, plus de courtes requêtes de recherche web si vous activez la recherche web.",
       },
     ],
   },

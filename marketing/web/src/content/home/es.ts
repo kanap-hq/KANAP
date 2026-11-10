@@ -10,7 +10,7 @@ const content: HomeContent = {
   hero: {
     eyebrow: 'Open source · diseñada por un CIO, para los CIO',
     title: 'Presupuesto de TI, aplicaciones y proyectos en un único repositorio.',
-    lead: 'Una aplicación reúne su presupuesto, su documentación, sus proyectos y sus datos de cumplimiento. Pregunte a Plaid, el agente de IA integrado, sobre todo ello. Software libre, gratis en autoalojamiento.',
+    lead: 'Una aplicación reúne su presupuesto, su documentación, sus proyectos y sus datos de cumplimiento. Pregunte a Kad, el agente de IA integrado, sobre todo ello. Software libre, gratis en autoalojamiento.',
     primaryCta: 'Probar con datos de ejemplo',
     secondaryCta: 'Desplegar gratis',
     trialNote: 'Prueba de la versión alojada · datos de ejemplo cargados en un minuto · AGPL v3, código fuente completo en GitHub.',
@@ -32,7 +32,7 @@ const content: HomeContent = {
       },
       {
         title: 'Plantilla y coste por FTE',
-        body: 'Declare los FTE en las líneas que los llevan: KANAP deduce la plantilla mensual y el coste por FTE, en importe o en tarifa diaria, junto a los importes.',
+        body: 'Declare los FTE en las líneas que los llevan: Kadratis deduce la plantilla mensual y el coste por FTE, en importe o en tarifa diaria, junto a los importes.',
       },
     ],
     outro: 'Cada línea está vinculada a su aplicación, su contrato o su proyecto: desde el presupuesto se ve lo que TI hace funcionar y lo que cuesta cada cosa.',
@@ -118,16 +118,16 @@ const content: HomeContent = {
       },
       {
         slug: '/features/ai',
-        title: 'Plaid, el agente de IA integrado',
+        title: 'Kad, el agente de IA integrado',
         blurb:
-          'Para cada rol. Haga una pregunta en lenguaje natural sobre el presupuesto, los sistemas o los proyectos: Plaid responde a partir de todo el repositorio y prepara los cambios, que usted valida.',
+          'Para cada rol. Haga una pregunta en lenguaje natural sobre el presupuesto, los sistemas o los proyectos: Kad responde a partir de todo el repositorio y prepara los cambios, que usted valida.',
         bullets: [
           'Preguntas en lenguaje natural sobre todos los módulos',
           'Cambios preparados como vista previa, aplicados tras validación',
           'Servidor MCP de solo lectura para sus clientes de IA',
           'Uso incluido en la versión alojada, o su propia clave',
         ],
-        ctaLabel: 'Descubrir Plaid',
+        ctaLabel: 'Descubrir Kad',
       },
       {
         slug: '/features/agents',
@@ -149,7 +149,7 @@ const content: HomeContent = {
     eyebrow: 'Pensada para la empresa',
     title: 'Un solo sistema, bajo su control.',
     intro:
-      'Los módulos comparten los mismos datos, los mismos permisos y el mismo registro de auditoría: un cambio preparado por Plaid queda registrado como cualquier otro.',
+      'Los módulos comparten los mismos datos, los mismos permisos y el mismo registro de auditoría: un cambio preparado por Kad queda registrado como cualquier otro.',
     items: [
       {
         title: 'Relaciones completas',
@@ -169,7 +169,7 @@ const content: HomeContent = {
       },
       {
         title: 'Registro de auditoría completo',
-        body: 'Cada cambio registrado, incluidos los hechos con Plaid, con el antes y el después. Las acciones del agente tienen su propio historial.',
+        body: 'Cada cambio registrado, incluidos los hechos con Kad, con el antes y el después. Las acciones del agente tienen su propio historial.',
       },
       {
         title: 'SSO con Microsoft Entra ID',
@@ -181,12 +181,12 @@ const content: HomeContent = {
   vision: {
     eyebrow: 'IA sobre un repositorio completo',
     title: 'Una IA útil, porque todo está en el mismo sitio.',
-    body: 'Un asistente de IA solo vale lo que valen los datos que ve. En KANAP ve a la vez el presupuesto, las aplicaciones, los contratos, los proyectos y la documentación, así que puede responder a «¿por qué se desvía el cierre previsto en infraestructura?» o «¿qué aplicaciones dependen de este contrato?».\nPrepara los cambios, usted los valida. Nada cambia sin usted, y todo queda registrado.',
+    body: 'Un asistente de IA solo vale lo que valen los datos que ve. En Kadratis ve a la vez el presupuesto, las aplicaciones, los contratos, los proyectos y la documentación, así que puede responder a «¿por qué se desvía el cierre previsto en infraestructura?» o «¿qué aplicaciones dependen de este contrato?».\nPrepara los cambios, usted los valida. Nada cambia sin usted, y todo queda registrado.',
   },
 
   cta: {
     title: 'Gestione su departamento de TI en un sistema que le pertenece.',
-    body: 'Pruebe la versión alojada con datos de ejemplo, o despliegue KANAP gratis en sus propios servidores. El mismo producto, sin funciones recortadas.',
+    body: 'Pruebe la versión alojada con datos de ejemplo, o despliegue Kadratis gratis en sus propios servidores. El mismo producto, sin funciones recortadas.',
     primary: 'Probar con datos de ejemplo',
     secondary: 'Desplegar gratis',
   },

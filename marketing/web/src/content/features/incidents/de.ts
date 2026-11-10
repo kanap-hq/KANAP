@@ -9,7 +9,7 @@ const content: FeatureContent = {
   header: {
     eyebrow: 'Vorfälle',
     title: 'Dokumentieren Sie Ihre schweren Vorfälle im Detail.',
-    lead: 'KANAP bewahrt das Gedächtnis der Vorfälle, die zählen: was passiert ist, was betroffen war, warum, und was Sie geändert haben. Jeder bekommt eine Nummer, eine Analyse und einen Verlauf und bleibt mit den betroffenen Anwendungen und Servern verknüpft.',
+    lead: 'Kadratis bewahrt das Gedächtnis der Vorfälle, die zählen: was passiert ist, was betroffen war, warum, und was Sie geändert haben. Jeder bekommt eine Nummer, eine Analyse und einen Verlauf und bleibt mit den betroffenen Anwendungen und Servern verknüpft.',
   },
   sections: [
     {
@@ -65,7 +65,7 @@ const content: FeatureContent = {
     title: 'Und außerdem',
     items: [
       { title: 'CSV-Import und -Export', body: 'Übernehmen Sie Ihre vergangenen Vorfälle aus einer Tabelle, Analysen inklusive, und exportieren Sie das ganze Register.' },
-      { title: 'Plaid und MCP', body: 'Fragen Sie Plaid, wie viele schwere Vorfälle dieses Jahr eröffnet wurden, oder nach dem vollständigen Datensatz eines Vorfalls, Verlauf und Analyse inklusive. Vertrauliche Vorfälle bleiben außen vor. Dieselben Daten stehen Ihren KI-Clients über den schreibgeschützten MCP-Server offen.' },
+      { title: 'Kad und MCP', body: 'Fragen Sie Kad, wie viele schwere Vorfälle dieses Jahr eröffnet wurden, oder nach dem vollständigen Datensatz eines Vorfalls, Verlauf und Analyse inklusive. Vertrauliche Vorfälle bleiben außen vor. Dieselben Daten stehen Ihren KI-Clients über den schreibgeschützten MCP-Server offen.' },
       { title: 'Rückdatierte Notizen', body: 'Notizen im Verlauf tragen den Zeitpunkt des Ereignisses. Der Zeitpunkt des Speicherns wird getrennt aufbewahrt und lässt sich nicht ändern.' },
       { title: 'Rechte', body: 'Leser sehen, Mitwirkende legen an und schreiben, Registeradministratoren öffnen wieder, brechen ab, löschen und heben eine Einschränkung auf.' },
     ],
@@ -76,15 +76,15 @@ const content: FeatureContent = {
       { label: 'IT-Landschaft', href: '/features/it-landscape' },
       { label: 'Verträge', href: '/features/contracts' },
       { label: 'Dokumentation', href: '/features/knowledge' },
-      { label: 'Plaid, der integrierte KI-Agent', href: '/features/ai' },
+      { label: 'Kad, der integrierte KI-Agent', href: '/features/ai' },
       { label: 'Helpdesk-Agent', href: '/features/agents' },
     ],
   },
   cta: {
     title: 'Bereit für ein umfassendes, prüfbares Vorfallsregister?',
-    body: 'Hosten Sie kostenlos selbst oder testen Sie Hosted Cloud. Alle Funktionen in jedem Plan.',
+    body: 'Hosten Sie kostenlos selbst oder testen Sie Kadratis Cloud. Alle Funktionen in jedem Plan.',
     primary: 'Kostenlos bereitstellen',
-    secondary: 'Hosted Cloud testen',
+    secondary: 'Kadratis Cloud testen',
   },
 };
 

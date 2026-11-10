@@ -95,7 +95,7 @@ export interface Persona {
   role: string;
   /** The H2 — concrete pain or task framed in the role's voice. */
   headline: string;
-  /** 3–5 sentence narrative of how the persona uses KANAP. */
+  /** 3–5 sentence narrative of how the persona uses Kadratis. */
   body: string;
   /** One-line punchline rendered with a teal accent (the "win"). */
   outcome: string;

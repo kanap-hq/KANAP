@@ -4,7 +4,7 @@ const content: OfferContent = {
   meta: {
     title: 'Offer',
     description:
-      'Free and open source. Self-host without limits, add support when you need it, or choose hosted KANAP. Every feature on every plan, agents included. AGPL v3.',
+      'Free and open source. Self-host without limits, add support when you need it, or choose Kadratis Cloud. Every feature on every plan, agents included. AGPL v3.',
   },
 
   header: {
@@ -16,7 +16,7 @@ const content: OfferContent = {
   /* -------------------- Self-hosted (primary) -------------------- */
   selfHosted: {
     eyebrow: 'Choose your path',
-    title: 'Three ways to use KANAP',
+    title: 'Three ways to use Kadratis',
     intro:
       'Start with the complete, self-hosted open source platform. Add support if you want it, when you go to production, or choose the hosted version if you would rather we run the operations.',
     plans: [
@@ -29,8 +29,8 @@ const content: OfferContent = {
         subPrice: 'Free forever',
         features: [
           'Full feature set, no caps',
-          'Plaid and agents included, no AI feature gate',
-          'Bring your own LLM key for Plaid and agents',
+          'Kad and agents included, no AI feature gate',
+          'Bring your own LLM key for Kad and agents',
           'Your data stays on your infrastructure',
           'Deploy with Docker Compose in minutes',
           'Open source under AGPL v3',
@@ -52,7 +52,6 @@ const content: OfferContent = {
           'Priority email support',
           'Installation and upgrade assistance',
           'Direct line to the team for production issues',
-          '60-min kickoff call with a KANAP expert',
           'Over 20% off consulting days',
           'Helps fund the open source project',
         ],
@@ -66,7 +65,7 @@ const content: OfferContent = {
   openSourceBanner: {
     title: 'Truly open source, AGPL v3',
     body:
-      'KANAP\'s full source code is on GitHub. Read it, audit it, extend it, contribute back. AGPL v3 ensures the code stays open, for everyone. No proprietary forks, no lock-in.',
+      'The full Kadratis source code is on GitHub. Read it, audit it, extend it, contribute back. AGPL v3 ensures the code stays open, for everyone. No proprietary forks, no lock-in.',
     linkLabel: 'Read the license',
     linkHref: 'https://www.gnu.org/licenses/agpl-3.0.html',
   },
@@ -76,21 +75,20 @@ const content: OfferContent = {
     eyebrow: 'Cloud hosted · if you\'d rather we run it',
     title: 'Same platform, operated by us.',
     intro:
-      'Hosted KANAP is the same open source platform, operated by us: hosting, updates, backups, priority support, and a 60-minute kickoff call. 14-day trial, no credit card.',
+      'Kadratis Cloud is the same open source platform, operated by us: hosting, updates, backups and priority support. 14-day trial, no credit card, with a 30-minute discovery call if you wish.',
     plans: [
       {
-        name: 'Hosted KANAP',
+        name: 'Kadratis Cloud',
         badge: 'Fully managed',
-        target: 'Unlimited users · unlimited workspaces',
+        target: 'Unlimited users',
         price: '€249',
         period: '/mo',
         subPrice: 'or €2,490/yr (2 months free)',
         features: [
           'Everything in Self-hosted',
-          'We host, update, and back up KANAP for you',
+          'We host, update, and back up Kadratis for you',
           'EU hosting for European teams',
-          '1,500 Plaid messages/mo included, or bring your own key, unlimited',
-          '60-min kickoff call with a KANAP expert',
+          '1,500 Kad messages/mo included, or bring your own key, unlimited',
           'Priority email support',
           'Over 20% off consulting days',
           'Helps fund the open source project',
@@ -123,7 +121,7 @@ const content: OfferContent = {
 
   services: {
     title: 'Expertise and advice at your own pace',
-    intro: 'KANAP is built for self-service adoption. If you want to go faster, paid plans include priority support and a reduced consulting rate.',
+    intro: 'Kadratis is built for self-service adoption. If you want to go faster, paid plans include priority support and a reduced consulting rate.',
     support: {
       title: 'Priority support',
       subtitle: 'Included with any paid plan',
@@ -138,7 +136,7 @@ const content: OfferContent = {
     consulting: {
       title: 'Consulting',
       subtitle: 'Paid · billed by the day',
-      body: 'Delivered by an experienced CIO who knows your challenges first-hand. Optional help to get more value from KANAP: scheduled calls, deeper work, advisory, features built for you. Rate: €1,150 a day, €900 for customers with a support or hosting plan.',
+      body: 'Delivered by an experienced CIO who knows your challenges first-hand. Optional help to get more value from Kadratis: scheduled calls, deeper work, advisory, features built for you. Rate: €1,150 a day, €900 for customers with a support or hosting plan.',
       items: [
         'Setup, configuration, onboarding, training',
         'Workflow design and best practices',
@@ -152,12 +150,12 @@ const content: OfferContent = {
   pilot: {
     title: 'Guided pilot',
     subtitle: '€2,900 fixed',
-    body: 'One engagement that launches your team on KANAP: we set it up with you, bring your data in, train your people, and leave your first agent at work.',
+    body: 'One engagement that launches your team on Kadratis: we set it up with you, bring your data in, train your people, and leave your first agent at work.',
     items: [
       'Installation on your servers, or hosted setup',
       'We help you import your first key data',
       'Team training and onboarding',
-      'Plaid and agents configured',
+      'Kad and agents configured',
       'Integrations set up (Entra ID, Claude or ChatGPT, NetBox…)',
     ],
     ctaLabel: 'Contact us',
@@ -192,7 +190,7 @@ const content: OfferContent = {
     doneOpen: 'You can also open it now.',
     successLinkLabel: 'Open invoice',
     doneClose: 'Close',
-    errorGeneric: 'We could not submit your invoice request. Please try again or contact support@kanap.net.',
+    errorGeneric: 'We could not submit your invoice request. Please try again or contact contact@kadratis.com.',
     errorRequired: 'Please fill in all required fields.',
     errorVatRequired: 'Enter your VAT number. It is required for a company in the European Union.',
     errorVatInvalid: 'This VAT number does not match the format of the selected country.',
@@ -202,14 +200,14 @@ const content: OfferContent = {
 
   faqTeaser: {
     title: 'Common questions',
-    body: 'Licensing, self-hosting, cloud, Plaid, support and billing. All answered.',
+    body: 'Licensing, self-hosting, cloud, Kad, support and billing. All answered.',
     ctaLabel: 'Read the FAQ',
   },
 
   cta: {
     title: 'Ready to get started?',
     body:
-      'Deploy KANAP yourself for free, or try the hosted version if you want us to operate it.',
+      'Deploy Kadratis yourself for free, or try the hosted version if you want us to operate it.',
     primary: 'Deploy free',
     secondary: 'Try hosted cloud',
   },

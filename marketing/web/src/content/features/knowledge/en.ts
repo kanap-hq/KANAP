@@ -65,16 +65,16 @@ const content: FeatureContent = {
     title: 'More in knowledge',
     items: [
       { title: 'Version history', body: 'Every save creates a version. Browse history and revert to any prior state.' },
-      { title: 'Export', body: 'Export to PDF, DOCX and ODT. Share documentation outside KANAP.' },
+      { title: 'Export', body: 'Export to PDF, DOCX and ODT. Share documentation outside Kadratis.' },
       { title: 'Templates', body: 'Reusable document starters grouped by type. Kickstart new docs quickly.' },
-      { title: 'Import', body: 'Import from Word and PDF. Bring existing documentation into KANAP in one click.' },
+      { title: 'Import', body: 'Import from Word and PDF. Bring existing documentation into Kadratis in one click.' },
     ],
   },
   crossLinks: {
     label: 'Explore the platform',
     links: [
       { label: 'Agents', href: '/features/agents' },
-      { label: 'Plaid, AI assistant', href: '/features/ai' },
+      { label: 'Kad, AI assistant', href: '/features/ai' },
       { label: 'Budget management', href: '/features/budget' },
       { label: 'IT landscape', href: '/features/it-landscape' },
       { label: 'Portfolio management', href: '/features/portfolio' },

@@ -1,6 +1,6 @@
 ---
 title: Un rapport pour chaque question de la DSI
-description: "Le DSI, le chef de projet, le responsable d'équipe et l'ingénieur se posent chacun leurs questions. Les rapports du portefeuille de KANAP y répondent en un clic."
+description: "Le DSI, le chef de projet, le responsable d'équipe et l'ingénieur se posent chacun leurs questions. Les rapports du portefeuille de Kadratis y répondent en un clic."
 date: 2026-09-23
 topic: portfolio
 author: Friedrich
@@ -13,7 +13,7 @@ Lundi, 9 h, point hebdomadaire de la DSI. Le DSI a passé son dimanche soir à c
 
 Chacun a une vraie question. Chacun y répond avec ses propres outils, et la réunion passe une demi-heure à réconcilier des chiffres.
 
-Toutes les réponses existent pourtant déjà dans KANAP. Chaque demande, chaque projet et chaque tâche y laisse une trace : sa création, ses changements de statut, sa clôture, le temps saisi dessus. Les rapports du portefeuille lisent cet historique et le présentent à chacun sous l'angle qui l'intéresse.
+Toutes les réponses existent pourtant déjà dans Kadratis. Chaque demande, chaque projet et chaque tâche y laisse une trace : sa création, ses changements de statut, sa clôture, le temps saisi dessus. Les rapports du portefeuille lisent cet historique et le présentent à chacun sous l'angle qui l'intéresse.
 
 ![La page des rapports du portefeuille : le bandeau des 30 derniers jours, les éléments à traiter, le bandeau À classer et les cartes des rapports](/screenshots/blog/portfolio-hub.png)
 
@@ -72,4 +72,4 @@ Tout le monde lit les mêmes chiffres, issus des mêmes tâches. La réunion dur
 
 Les rapports se trouvent dans **Portefeuille > Rapports**. Ils demandent le droit de lecture sur les rapports du portefeuille, et fonctionnent en cloud comme en on-premise. Ils lisent les données existantes : les tâches, les projets, les demandes et le temps saisi que vos équipes renseignent déjà.
 
-Le reste du portefeuille est décrit sur la page [Portefeuille](https://kanap.net/fr/features/portfolio).
+Le reste du portefeuille est décrit sur la page [Portefeuille](https://kadratis.com/fr/features/portfolio).

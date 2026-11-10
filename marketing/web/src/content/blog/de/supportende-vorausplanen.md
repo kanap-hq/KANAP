@@ -1,6 +1,6 @@
 ---
 title: "Supportende vorausplanen"
-description: "Windows Server 2012, SQL Server 2016, Ubuntu 20.04: Das Supportende ist bekannt, was davon abhängt, selten. Der Supportende-Bericht von KANAP nennt die betroffenen Server und Anwendungen, früh genug, um die Migration einzuplanen."
+description: "Windows Server 2012, SQL Server 2016, Ubuntu 20.04: Das Supportende ist bekannt, was davon abhängt, selten. Der Supportende-Bericht von Kadratis nennt die betroffenen Server und Anwendungen, früh genug, um die Migration einzuplanen."
 date: 2026-11-07
 topic: mapping
 features: [it-landscape]
@@ -14,7 +14,7 @@ Oktober 2023: Windows Server 2012 fällt aus dem erweiterten Support. Viele CIOs
 
 Das gilt für jede Version eines Betriebssystems, einer Datenbank, eines Hypervisors oder einer Hardware. Zu wissen, dass eine Version ihr Supportende erreicht, genügt nicht. Man muss wissen, was sie trägt und wer dafür verantwortlich ist, und das früh genug, damit die Migration ins Budget des Jahres passt.
 
-So geht KANAP damit um: eine Ansicht aller Fristen, was jede davon betrifft, und die Liste der Daten, die zu ergänzen sind, damit die Antwort stimmt.
+So geht Kadratis damit um: eine Ansicht aller Fristen, was jede davon betrifft, und die Liste der Daten, die zu ergänzen sind, damit die Antwort stimmt.
 
 ## Eine Ansicht, vier Arten von Fristen
 
@@ -29,7 +29,7 @@ Der Bericht öffnet sich über **IT-Landschaft > Supportende**. Seine Ansicht Fr
 
 Sie wählen den Zeitraum: 6, 12, 24 oder 36 Monate. Jede Zeile hat einen Status: ohne Support, erweiterter Support, endet bald. Was ausgemustert ist oder von nichts mehr genutzt wird, erscheint nicht.
 
-Die Daten haben zwei Quellen. Die der Technologien und Betriebssysteme stammen aus dem Katalog, gespeist von endoflife.date und von den Herstellerseiten, die KANAP auswertet: Niemand erfasst sie, und sie ziehen nach, wenn ein Hersteller sie verschiebt. Die der Anwendungen und der Hardware stammen aus Ihren Datensätzen: das Supportende, das in der Anwendung erfasst ist, das Lebensende oder das Ende des Supportvertrags, das im Asset erfasst ist. Der Artikel [Technologien: die Verbindung zwischen Servern und Anwendungen](/de/blog/technologien-die-verbindung-zwischen-servern-und-anwendungen) erklärt, wie dieser Katalog gepflegt wird.
+Die Daten haben zwei Quellen. Die der Technologien und Betriebssysteme stammen aus dem Katalog, gespeist von endoflife.date und von den Herstellerseiten, die Kadratis auswertet: Niemand erfasst sie, und sie ziehen nach, wenn ein Hersteller sie verschiebt. Die der Anwendungen und der Hardware stammen aus Ihren Datensätzen: das Supportende, das in der Anwendung erfasst ist, das Lebensende oder das Ende des Supportvertrags, das im Asset erfasst ist. Der Artikel [Technologien: die Verbindung zwischen Servern und Anwendungen](/de/blog/technologien-die-verbindung-zwischen-servern-und-anwendungen) erklärt, wie dieser Katalog gepflegt wird.
 
 ## Was jede Frist betrifft
 
@@ -37,11 +37,11 @@ Die Daten haben zwei Quellen. Die der Technologien und Betriebssysteme stammen a
 
 Jede Zeile zeigt zwei Zähler, Server und Anwendungen. Ein Klick klappt sie auf: Die Namen erscheinen, und jeder öffnet seinen Datensatz.
 
-KANAP folgt dafür den Verknüpfungen der IT-Landschaft:
+Kadratis folgt dafür den Verknüpfungen der IT-Landschaft:
 
 - **Eine Technologieversion** betrifft die Server, auf denen sie installiert ist, und die Anwendungen, die sie deklarieren oder auf diesen Servern laufen, virtuelle Maschinen eingeschlossen.
 - **Ein physischer Server** am Lebensende betrifft die Maschinen, die er hostet, und die Anwendungen, die auf all diesen bereitgestellt sind.
-- **Ein Cluster** zählt seine Mitglieder: Ein auf dem Cluster installierter SQL Server betrifft jeden seiner Knoten. Der Artikel [Server-Cluster in der KANAP-Kartografie](/de/blog/server-cluster-in-der-kanap-kartografie) beschreibt diese Regeln.
+- **Ein Cluster** zählt seine Mitglieder: Ein auf dem Cluster installierter SQL Server betrifft jeden seiner Knoten. Der Artikel [Server-Cluster in der Kadratis-Kartografie](/de/blog/server-cluster-in-der-kanap-kartografie) beschreibt diese Regeln.
 
 Die Antwort endet also nicht bei „Ubuntu 20.04 ist ohne Support“. Sie nennt die Server und Anwendungen, die davon abhängen, und jeder Anwendungsdatensatz nennt den Verantwortlichen und die Kritikalität. Die Diskussion über die Migration beginnt mit den richtigen Leuten.
 
@@ -58,13 +58,13 @@ Ein Bericht ist nur so richtig wie seine Daten. Ein Server ohne seine Technologi
 
 Jede Zeile öffnet den zu ergänzenden Datensatz. Für den Einstieg ist das der nützlichste Teil: Er zeigt, wo die Kartografie noch Lücken hat.
 
-KANAP scannt Ihre Server nicht. Es kennt, was Sie dort deklariert haben, von Hand, per CSV-Datei oder über Netbox.
+Kadratis scannt Ihre Server nicht. Es kennt, was Sie dort deklariert haben, von Hand, per CSV-Datei oder über Netbox.
 
 ## Vom Bericht zum Budget
 
 Eine Migration für das nächste Jahr braucht ihr Budget in diesem Jahr. Stellen Sie die Ansicht bei der Budgetplanung auf 24 Monate: Was in diesem Zeitraum endet, muss jetzt beziffert werden.
 
-Der Export als CSV oder Excel liefert die Liste für die Budgetentscheidung. Plaid, der in KANAP integrierte Assistent, antwortet auch direkt: „Welche Anwendungen erreichen in den nächsten sechs Monaten ihr Supportende?“
+Der Export als CSV oder Excel liefert die Liste für die Budgetentscheidung. Kad, der in Kadratis integrierte Assistent, antwortet auch direkt: „Welche Anwendungen erreichen in den nächsten sechs Monaten ihr Supportende?“
 
 Ist die Migration beschlossen, findet sie im selben Werkzeug ihren Platz: eine [Budgetzeile](/de/features/budget) oder ein Projekt, verknüpft mit der Technologie, dem Server oder den betroffenen Anwendungen. Diese Verknüpfung wird von Hand angelegt; danach lässt sich im Datensatz der Technologie ablesen, was ihre Migration kostet.
 
@@ -74,4 +74,4 @@ Ist die Migration beschlossen, findet sie im selben Werkzeug ihren Platz: eine [
 2. **Stellen Sie die Ansicht Fristen auf 24 Monate.**
 3. **Klappen Sie die ersten drei Zeilen auf** und benennen Sie für jede Migration einen Verantwortlichen.
 
-Um den Bericht mit realistischen Daten zu sehen, bietet eine kostenlose 14-tägige Testphase unserer gehosteten Version Zugang zu den Beispieldaten der fiktiven Gruppe Fromage & Co, in einer Minute geladen. KANAP ist vollständig Open Source: Sie können es auch kostenlos auf Ihren eigenen Servern installieren.
+Um den Bericht mit realistischen Daten zu sehen, bietet eine kostenlose 14-tägige Testphase unserer gehosteten Version Zugang zu den Beispieldaten der fiktiven Gruppe Fromage & Co, in einer Minute geladen. Kadratis ist vollständig Open Source: Sie können es auch kostenlos auf Ihren eigenen Servern installieren.

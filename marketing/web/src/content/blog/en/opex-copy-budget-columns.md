@@ -13,7 +13,7 @@ series:
   title: "Building the IT budget"
 ---
 
-Part 1 was a targeted review: the 2026 landing now reflects the main movements, and 2027's major changes are already recorded. What remains is every line where nothing changed. Finding and retyping them one by one is the most thankless job of budget season. In KANAP, it is one tool and a few clicks.
+Part 1 was a targeted review: the 2026 landing now reflects the main movements, and 2027's major changes are already recorded. What remains is every line where nothing changed. Finding and retyping them one by one is the most thankless job of budget season. In Kadratis, it is one tool and a few clicks.
 
 ## The two passes
 

@@ -3,14 +3,14 @@ import type { TrialContent } from './types';
 const content: TrialContent = {
   start: {
     title: 'Kostenlose Testversion starten',
-    description: 'Erstellen Sie Ihren KANAP-Arbeitsbereich. Vierzehn Tage Testversion, alle Funktionen, keine Kreditkarte.',
+    description: 'Erstellen Sie Ihren Kadratis-Arbeitsbereich. Vierzehn Tage Testversion, alle Funktionen, keine Kreditkarte.',
     eyebrow: 'Kostenlose Testversion',
     heading: 'Starten Sie Ihre kostenlose Testversion.',
     lead: 'Ihr Arbeitsbereich wird in zwei Minuten eingerichtet. Sie starten mit einem löschbaren Beispieldatensatz oder mit einem leeren Arbeitsbereich, bereit für Ihre Daten.',
     benefits: [
       'Alle Funktionen vierzehn Tage lang, ohne Kreditkarte.',
-      'Drei geführte Pfade, um KANAP zu entdecken: Budget, IT-Landkarte, Projekte.',
-      'Plaid, der Assistent, beantwortet Ihre Fragen zu Ihren Daten und kann Ihnen beim Import helfen.',
+      'Drei geführte Pfade, um Kadratis zu entdecken: Budget, IT-Landkarte, Projekte.',
+      'Kad, der Assistent, beantwortet Ihre Fragen zu Ihren Daten und kann Ihnen beim Import helfen.',
       'Ein Kennenlerngespräch von dreißig Minuten, das Sie jederzeit aus Ihrem Arbeitsbereich vereinbaren.',
     ],
     form: {
@@ -29,7 +29,7 @@ const content: TrialContent = {
       errorEmail: 'Geben Sie eine gültige E-Mail-Adresse ein.',
       errorSlug: 'Nur Kleinbuchstaben, Ziffern und Bindestriche.',
       captchaLabel: 'Sicherheitsprüfung',
-      privacyNote: 'Ihre E-Mail-Adresse dient dazu, den KANAP-Arbeitsbereich zu aktivieren und den ersten Administrator festzulegen. Während der Testphase erhalten Sie außerdem bis zu 4 begleitende Nachrichten. Sie können sich jederzeit davon abmelden.',
+      privacyNote: 'Ihre E-Mail-Adresse dient dazu, den Kadratis-Arbeitsbereich zu aktivieren und den ersten Administrator festzulegen. Während der Testphase erhalten Sie außerdem bis zu 4 begleitende Nachrichten. Sie können sich jederzeit davon abmelden.',
     },
     countryOptions: [
       { value: 'DE', label: 'Deutschland' },
@@ -58,7 +58,7 @@ const content: TrialContent = {
     lead: 'Wir haben einen Aktivierungslink an die angegebene Adresse geschickt. Klicken Sie ihn an, um die Erstellung des Arbeitsbereichs abzuschließen.',
     whatNext: 'Wie es weitergeht',
     steps: [
-      'Posteingang öffnen, Betreff „Aktivieren Sie Ihren KANAP-Arbeitsbereich".',
+      'Posteingang öffnen, Betreff „Aktivieren Sie Ihren Kadratis-Arbeitsbereich".',
       'Auf den Link klicken. Wir erstellen Ihren Arbeitsbereich in Sekunden.',
       'Admin-Passwort setzen. Einloggen, Team einladen, loslegen.',
     ],

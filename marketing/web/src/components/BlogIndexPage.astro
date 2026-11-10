@@ -62,7 +62,7 @@ const pageDescription = topic
   : t('blog.metaDescription');
 
 const crumbs = [
-  { name: 'KANAP', url: localePath(locale, '/') },
+  { name: 'Kadratis', url: localePath(locale, '/') },
   { name: t('nav.blog'), url: localePath(locale, '/blog') },
 ];
 if (topic) crumbs.push({ name: label, url: topicHref(topic) });
@@ -98,7 +98,7 @@ if (topic) {
     lead={topic ? pageDescription : t('blog.lead')}
   />
 
-  <Section tone="default">
+  <Section tone="default" class="mk-blog-section">
     <div class="mk-blog">
       {allPosts.length > 0 && (
         <nav aria-label={t('blog.topic.nav')}>
@@ -181,7 +181,7 @@ if (topic) {
       <div class="mk-blog__subscribe">
         <span>{t('blog.subscribe')}</span>
         <a href={localePath(locale, '/blog/rss.xml')}>{t('blog.rss')}</a>
-        <a href="https://www.linkedin.com/company/kanap-it" rel="noopener" target="_blank">{t('blog.linkedin')}</a>
+        <a href="https://www.linkedin.com/company/kadratis" rel="noopener" target="_blank">{t('blog.linkedin')}</a>
         <a href="https://github.com/kanap-hq/kanap/releases" rel="noopener" target="_blank">{t('blog.github')}</a>
       </div>
     </div>
@@ -189,6 +189,12 @@ if (topic) {
 </BaseLayout>
 
 <style>
+  /* The page header already closes with its own padding: a full section
+     padding on top would leave the topic chips far below the lead. */
+  :global(.mk-s.mk-blog-section) {
+    padding-top: clamp(8px, 1.5vw, 20px);
+  }
+
   .mk-blog {
     display: flex;
     flex-direction: column;
@@ -203,7 +209,7 @@ if (topic) {
     gap: 8px;
     width: 100%;
     max-width: 100%;
-    margin: 0 0 20px;
+    margin: 0 0 clamp(28px, 3vw, 44px);
     padding: 0;
     list-style: none;
   }

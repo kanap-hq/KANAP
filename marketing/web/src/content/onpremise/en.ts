@@ -2,26 +2,26 @@ import type { OnPremContent } from './types';
 
 const content: OnPremContent = {
   meta: {
-    title: 'Self-host KANAP, the first-class citizen',
+    title: 'Self-host Kadratis, the first-class citizen',
     description:
-      'Run KANAP on your own infrastructure, under AGPL v3. Full platform including AI agents, unlimited users, and you decide where your data goes. Deploy in minutes with Docker Compose.',
+      'Run Kadratis on your own infrastructure, under AGPL v3. Full platform including AI agents, unlimited users, and you decide where your data goes. Deploy in minutes with Docker Compose.',
   },
 
   header: {
     eyebrow: 'Self-hosting · first-class citizen',
-    title: 'Run KANAP yourself.\nOwn every layer.',
+    title: 'Run Kadratis yourself.\nOwn every layer.',
     lead: 'Open source under AGPL v3. Deploy to your infrastructure, own your data, update on your cadence. The full platform, unlimited users, every feature, on your terms.',
     primaryCta: 'Deploy from GitHub',
     primaryHref: 'https://github.com/kanap-hq/kanap',
     secondaryCta: 'Read install docs',
-    secondaryHref: 'https://doc.kanap.net/on-premise/',
+    secondaryHref: 'https://doc.kadratis.com/on-premise/',
   },
 
   why: {
     eyebrow: 'Why self-host',
     title: 'Control, compliance, and no strings attached.',
     intro:
-      'Self-hosting KANAP is not a stripped-down tier. It\'s the full platform, with the full feature set, free of charge. These are the reasons teams pick it first.',
+      'Self-hosting Kadratis is not a stripped-down tier. It\'s the full platform, with the full feature set, free of charge. These are the reasons teams pick it first.',
     pillars: [
       {
         title: 'Your data stays put',
@@ -37,7 +37,7 @@ const content: OnPremContent = {
       },
       {
         title: 'Your cadence',
-        body: 'KANAP publishes a version about once a month. Read its release notes, test the upgrade and apply it in your change window. Pin a precise version if you need to. No forced updates, no surprise downtime.',
+        body: 'Kadratis publishes a version about once a month. Read its release notes, test the upgrade and apply it in your change window. Pin a precise version if you need to. No forced updates, no surprise downtime.',
       },
     ],
   },
@@ -45,7 +45,7 @@ const content: OnPremContent = {
   license: {
     title: 'AGPL v3: openness without compromise',
     body:
-      'KANAP is released under the GNU Affero General Public License v3. You get every classic open source freedom: use it, read it, modify it, distribute it. The copyleft provision means anyone who runs a modified version as a service must share their changes, which is how the project stays genuinely open.',
+      'Kadratis is released under the GNU Affero General Public License v3. You get every classic open source freedom: use it, read it, modify it, distribute it. The copyleft provision means anyone who runs a modified version as a service must share their changes, which is how the project stays genuinely open.',
     bullets: [
       'Use it commercially, internally, or externally, no royalty, no seat count',
       'Read and audit the full source, nothing hidden',
@@ -73,7 +73,7 @@ const content: OnPremContent = {
       },
       {
         title: 'Paste the install prompt',
-        body: 'Open your agent and paste the prompt template from our docs, then fill in your hostname, admin email and (optionally) your email transport (Resend or SMTP). The agent reads the linked install pages, installs Docker, PostgreSQL 16 with the required extensions, MinIO, nginx and certbot, clones KANAP into /opt/kanap on the stable branch (always the latest published version), generates strong credentials, builds the images and starts the containers. It also wires up TLS and auto-renewal. The agent asks for confirmation before running each command.',
+        body: 'Open your agent and paste the prompt template from our docs, then fill in your hostname, admin email and (optionally) your email transport (Resend or SMTP). The agent reads the linked install pages, installs Docker, PostgreSQL 16 with the required extensions, MinIO, nginx and certbot, clones Kadratis into /opt/kanap on the stable branch (always the latest published version), generates strong credentials, builds the images and starts the containers. It also wires up TLS and auto-renewal. The agent asks for confirmation before running each command.',
       },
       {
         title: 'Sign in and harden',
@@ -81,13 +81,13 @@ const content: OnPremContent = {
       },
     ],
     docsCtaLabel: 'AI-assisted install guide',
-    docsHref: 'https://doc.kanap.net/on-premise/installation-ai/',
+    docsHref: 'https://doc.kadratis.com/on-premise/installation-ai/',
     manualOption: {
       label: 'Prefer full control?',
       title: 'Manual install: your stack, your way.',
-      body: 'Bring your own PostgreSQL, S3-compatible storage and reverse proxy. Run on any Docker-capable Linux. Slot KANAP into the architecture you already operate, with the configuration that fits your environment. Same platform, same code, every decision in your hands.',
+      body: 'Bring your own PostgreSQL, S3-compatible storage and reverse proxy. Run on any Docker-capable Linux. Slot Kadratis into the architecture you already operate, with the configuration that fits your environment. Same platform, same code, every decision in your hands.',
       ctaLabel: 'Manual install guide',
-      ctaHref: 'https://doc.kanap.net/on-premise/installation/',
+      ctaHref: 'https://doc.kadratis.com/on-premise/installation/',
     },
   },
 
@@ -101,12 +101,12 @@ const content: OnPremContent = {
       { label: 'Storage', value: '20 GB for the platform + whatever your data grows to, plus S3-compatible object storage' },
       { label: 'Database', value: 'PostgreSQL 16+ with citext, pgcrypto and uuid-ossp (you provide it)' },
       { label: 'Network', value: 'HTTPS terminator (your choice, nginx, Traefik, cloud LB)' },
-      { label: 'Outbound (optional)', value: 'FX rate APIs (World Bank, exchangerate-api.com) · LLM provider for Plaid and agents · Microsoft Entra for SSO · Resend or your SMTP relay for email · Web search provider, if enabled' },
+      { label: 'Outbound (optional)', value: 'FX rate APIs (World Bank, exchangerate-api.com) · LLM provider for Kad and agents · Microsoft Entra for SSO · Resend or your SMTP relay for email · Web search provider, if enabled' },
     ],
   },
 
   operations: {
-    title: 'Operating KANAP',
+    title: 'Operating Kadratis',
     intro: 'Built to run like any other internal service.',
     items: [
       {
@@ -130,8 +130,8 @@ const content: OnPremContent = {
         body: 'Enterprise SSO is part of the core platform. Add your Entra app registration to the configuration, then connect it from the admin console.',
       },
       {
-        title: 'Plaid and agents, your way',
-        body: 'Bring your own LLM key for both Plaid and your agents, OpenAI, Anthropic, Ollama, or any OpenAI-compatible endpoint. The agent runtime and its actions run inside your own deployment. The only content that leaves is what you send to the provider you chose, plus short web search queries if you turn web search on.',
+        title: 'Kad and agents, your way',
+        body: 'Bring your own LLM key for both Kad and your agents, OpenAI, Anthropic, Ollama, or any OpenAI-compatible endpoint. The agent runtime and its actions run inside your own deployment. The only content that leaves is what you send to the provider you chose, plus short web search queries if you turn web search on.',
       },
     ],
   },
