@@ -365,6 +365,8 @@ export default function ProjectsPage() {
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
         getValues: getProjectFilterValues('status', { labelMap: statusLabelMap, order: STATUS_ORDER }),
+        // A status the server omits (no project has it) is still selected by the default filter.
+        labelFormatter: (value: string | null) => (value == null ? t('shared.blankValue') : (statusLabelMap[value] ?? value)),
         searchable: false,
         treatAllAsUnfiltered: false,
       },
@@ -378,6 +380,7 @@ export default function ProjectsPage() {
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
         getValues: getProjectFilterValues('origin', { labelMap: originLabelMap, order: ['standard', 'fast_track', 'legacy'] }),
+        labelFormatter: (value: string | null) => (value == null ? t('shared.blankValue') : (originLabelMap[value] ?? value)),
         searchable: false,
       },
       valueFormatter: (params: any) => originLabelMap[params.value] || params.value,

@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -46,6 +46,7 @@ vi.mock('../../components/csv', () => ({
   CsvImportDialogV2: () => null,
 }));
 
+import CheckboxSetFilter from '../../components/CheckboxSetFilter';
 import ProjectsPage from './ProjectsPage';
 import RequestsPage from './RequestsPage';
 
@@ -78,10 +79,63 @@ function recordLinkFilters(filterModel: Record<string, unknown>) {
   return filters ? JSON.parse(filters) : null;
 }
 
+/**
+ * Opens the column filter with one value the server returns and some that stay selected anyway.
+ * The missing ones must show the column's label, which the page builds from its label map.
+ */
+async function openFilterMissingValues(
+  filterParams: Record<string, any>,
+  field: string,
+  present: string,
+  absent: string[],
+) {
+  const labelFormatter = filterParams.labelFormatter as (value: string | null) => string;
+  const filterRef = React.createRef<any>();
+  const model = { [field]: { filterType: 'set' as const, values: [present, ...absent] } };
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={client}>
+      <CheckboxSetFilter
+        ref={filterRef}
+        {...({
+          api: { getFilterModel: () => model, setFilterModel: vi.fn() },
+          column: { getColId: () => field },
+          colDef: { field },
+          context: { getQueryState: () => ({}) },
+          ...filterParams,
+          getValues: async () => [{ value: present, label: labelFormatter(present) }],
+        } as any)}
+      />
+    </QueryClientProvider>,
+  );
+  act(() => { filterRef.current.afterGuiAttached(); });
+  expect(await screen.findByRole('checkbox', { name: labelFormatter(present) })).toBeInTheDocument();
+  for (const code of absent) {
+    expect(screen.getByRole('checkbox', { name: labelFormatter(code) })).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: code })).not.toBeInTheDocument();
+  }
+}
+
 describe.each([
-  { name: 'projects', page: <ProjectsPage />, endpoint: '/portfolio/projects/filter-values', hidden: 'done' },
-  { name: 'requests', page: <RequestsPage />, endpoint: '/portfolio/requests/filter-values', hidden: 'converted' },
-])('$name list and its statuses', ({ page, endpoint, hidden }) => {
+  {
+    name: 'projects',
+    page: <ProjectsPage />,
+    endpoint: '/portfolio/projects/filter-values',
+    hidden: 'done',
+    present: 'planned',
+    absent: ['in_testing', 'on_hold', 'cancelled'],
+    labelPrefix: 'statuses.project',
+  },
+  {
+    name: 'requests',
+    page: <RequestsPage />,
+    endpoint: '/portfolio/requests/filter-values',
+    hidden: 'converted',
+    present: 'candidate',
+    absent: ['on_hold'],
+    labelPrefix: 'statuses.request',
+  },
+])('$name list and its statuses', ({ page, endpoint, hidden, present, absent, labelPrefix }) => {
   it('opens with the default status filter, and asks the server for every status', () => {
     renderPage(page);
     const status = grid.props?.defaultFilterModel?.status;
@@ -108,6 +162,16 @@ describe.each([
     expect(recordLinkFilters({ status })).toEqual({ status });
   });
 
+  it('shows the label of a selected status the server does not return', async () => {
+    renderPage(page);
+    const column = (grid.props?.columns as Array<Record<string, any>>).find((c) => c.field === 'status')!;
+    const labelFormatter = column.filterParams.labelFormatter as (value: string | null) => string;
+    for (const code of absent) {
+      expect(labelFormatter(code)).toBe(`${labelPrefix}.${code}`);
+    }
+    await openFilterMissingValues(column.filterParams, 'status', present, absent);
+  });
+
   it('exports the rows of the list with every status when the filter is cleared', () => {
     renderPage(page);
     const { onListRequestChange, extraParams } = grid.props as Record<string, any>;
@@ -116,4 +180,12 @@ describe.each([
     expect(exportDialog.params).toMatchObject({ status: 'all', rows: 'list' });
     expect(exportDialog.params).not.toHaveProperty('include');
   });
+});
+
+it('shows the label of a selected project origin the server does not return', async () => {
+  renderPage(<ProjectsPage />);
+  const column = (grid.props?.columns as Array<Record<string, any>>).find((c) => c.field === 'origin')!;
+  const labelFormatter = column.filterParams.labelFormatter as (value: string | null) => string;
+  expect(labelFormatter('legacy')).toBe('origin.legacy');
+  await openFilterMissingValues(column.filterParams, 'origin', 'standard', ['fast_track', 'legacy']);
 });
