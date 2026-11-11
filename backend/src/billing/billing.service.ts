@@ -94,6 +94,11 @@ export type PlanChange = {
   setup_url?: string;
 };
 
+/** The outcome of `POST /billing/pay-invoice` (see `BillingService.payOpenInvoice`). */
+export type InvoicePayment = {
+  status: 'paid' | 'payment_failed' | 'requires_action' | 'card_unchanged' | 'nothing_to_pay';
+};
+
 /** A change of interval a Stripe subscription schedule applies at `effective_at` (ISO date). */
 export type ScheduledChange = {
   interval: IntervalKey;
@@ -759,6 +764,73 @@ export class BillingService {
     if (recurring?.interval === 'year') return 'annual';
     if (recurring?.interval === 'month') return 'monthly';
     return null;
+  }
+
+  /**
+   * `POST /billing/pay-invoice`, called on the return from the customer portal: the open invoice of
+   * a card subscription is charged at once on the subscription's card (its default payment method,
+   * else the customer's), without waiting for Stripe's next retry. Only when that card is not the
+   * one last refused (no card was changed: no second refusal), and once: the call takes the
+   * tenant's lock shared with the webhook (held until the request commits, so a second call then
+   * finds the invoice paid), and Stripe's idempotency key names the invoice and the card. Returns
+   * the summary read again from Stripe, plus `payment.status`: `paid`, `payment_failed`,
+   * `requires_action` (the bank asks for authentication: the invoice page takes it),
+   * `card_unchanged`, or `nothing_to_pay` (no open invoice, or a subscription paid by transfer).
+   */
+  async payOpenInvoice(opts: { tenantId: string; userId?: string | null; manager?: EntityManager }) {
+    const mg = opts.manager ?? this.subs.manager;
+    const payment = await this.chargeOpenInvoice(opts.tenantId, opts.userId ?? null, mg);
+    const summary = await this.getSubscriptionSummary({ manager: mg, forceStripeRefresh: true });
+    return { ...summary, payment };
+  }
+
+  private async chargeOpenInvoice(tenantId: string, userId: string | null, manager: EntityManager): Promise<InvoicePayment> {
+    const client = this.getStripeClientOrThrow();
+    await manager.query(`SELECT pg_advisory_xact_lock(hashtext($1)::bigint)`, [`stripe-webhook:${tenantId}`]);
+    const sub = await this.ensureSubscription(manager);
+    const stripeSub = await this.retrieveLiveSubscription(sub);
+    const invoiceId = this.stripeObjectId(stripeSub?.latest_invoice);
+    if (!stripeSub || stripeSub.collection_method !== 'charge_automatically' || !invoiceId) {
+      return { status: 'nothing_to_pay' };
+    }
+    const invoice: any = await client.invoices.retrieve(invoiceId, {
+      expand: [invoicePaymentIntentsExpand(this.stripeConfig.getApiVersion?.())],
+    });
+    if (invoice?.status !== 'open') return { status: 'nothing_to_pay' };
+
+    const customerId = this.stripeObjectId(stripeSub.customer);
+    const card = this.stripeObjectId(stripeSub.default_payment_method)
+      ?? (customerId
+        ? this.stripeObjectId(((await client.customers.retrieve(customerId)) as any)?.invoice_settings?.default_payment_method)
+        : null);
+    if (!card || card === invoicePaymentFailure(invoice)?.paymentMethodId) return { status: 'card_unchanged' };
+
+    let status: InvoicePayment['status'];
+    try {
+      const paid: any = await client.invoices.pay(invoiceId, {}, { idempotencyKey: `invoice-pay-${invoiceId}-${card}` });
+      status = paid?.status === 'paid' ? 'paid' : 'payment_failed';
+    } catch (error: any) {
+      if (error?.code === 'invoice_payment_intent_requires_action') {
+        status = 'requires_action';
+      } else if (error?.type === 'StripeCardError' || error?.rawType === 'card_error') {
+        status = 'payment_failed';
+      } else {
+        throw error;
+      }
+    }
+    await this.audit.log(
+      {
+        table: 'subscriptions',
+        recordId: sub.id,
+        action: 'update',
+        before: { latest_invoice_id: invoiceId, latest_invoice_status: 'open' },
+        after: { latest_invoice_id: invoiceId, latest_invoice_status: status === 'paid' ? 'paid' : 'open', payment: status },
+        userId,
+        sourceRef: invoiceId,
+      },
+      { manager },
+    );
+    return { status };
   }
 
   /**
