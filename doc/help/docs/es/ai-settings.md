@@ -262,7 +262,7 @@ La tarjeta **Registro MCP** enumera cada llamada a herramientas hecha por los cl
 
 Filtre la lista por **Persona**, **Clave o conexión**, **Resultado** y **Periodo** (últimas 24 horas, últimos 7 días, últimos 30 días o todo el periodo). Muestra 25 llamadas por página. Use **Anterior** y **Siguiente** para pasar de una página a otra.
 
-Haga clic en una línea para ver los argumentos que envió la llamada, acortados, y para un rechazo o un fallo su causa completa. Los valores secretos aparecen como *Oculto*.
+Haga clic en una línea para ver los argumentos que envió la llamada, acortados. Para un rechazo o un fallo, la línea muestra su motivo; su causa completa se muestra a la persona que hizo la llamada y a un Administrator. Los valores secretos aparecen como *Oculto*.
 
 El registro también guarda las llamadas hechas con una clave revocada o caducada. Nunca guarda una clave ni un token.
 
