@@ -386,15 +386,17 @@ describe('MarkdownEditor: a long text of structure marks', () => {
     ['underscores that close nothing', repeated('a_ ')],
     ['strikethrough marks that close nothing', repeated('a~~ ')],
     ['highlight marks that close nothing', repeated('a== ')],
-  ])('opens 200 KB of %s in less than two seconds and reports no change', async (_name, text) => {
+  // These texts took 9 s or more before the display form gave their marks as text, and open in
+  // well under a second now: the limit leaves room for a loaded machine.
+  ])('opens 200 KB of %s in less than five seconds and reports no change', async (_name, text) => {
     const start = performance.now();
     const editor = await mountEditor(text);
     const elapsed = performance.now() - start;
 
     expect(editor.showsRichText()).toBe(true);
     expect(editor.onChange).not.toHaveBeenCalled();
-    expect(elapsed).toBeLessThan(2000);
+    expect(elapsed).toBeLessThan(5000);
 
     editor.unmount();
-  });
+  }, 20_000);
 });
