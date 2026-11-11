@@ -121,7 +121,8 @@ export class EntraController {
   @Throttle({ default: RATE_LIMITS.ssoSignIn })
   async callback(@Req() req: any, @Res() res: Response) {
     // Admin-consent round trip (application permissions for the directory
-    // sync) reuses this redirect URI; it carries no auth code.
+    // sync) reuses this redirect URI; it carries no auth code, and a state
+    // signed for consent after the `consent:` prefix.
     const consentState = typeof req.query?.state === 'string' && req.query.state.startsWith('consent:')
       ? (req.query.state as string)
       : null;
@@ -335,9 +336,14 @@ export class EntraController {
     res.redirect(`${base}/login?ssoError=${encodeURIComponent(code)}`);
   }
 
+  /**
+   * Return from the Microsoft admin-consent screen. Nothing is read or written unless the state
+   * was signed by this application for consent and is within its lifetime; the workspace is the
+   * one the state names.
+   */
   private async handleConsentCallback(state: string, req: any, res: Response) {
-    const tenantId = state.slice('consent:'.length);
-    const tenant = tenantId ? await this.tenants.findById(tenantId) : null;
+    const { tenantId } = this.entra.verifyConsentState(state.slice('consent:'.length));
+    const tenant = await this.tenants.findById(tenantId);
     if (!tenant) {
       throw new BadRequestException('Tenant not found');
     }

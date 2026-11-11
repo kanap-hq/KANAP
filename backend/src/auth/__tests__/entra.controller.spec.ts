@@ -1,4 +1,6 @@
 import * as assert from 'node:assert/strict';
+import { BadRequestException } from '@nestjs/common';
+import { EntraAuthService } from '../entra-auth.service';
 import { mergeScalarFields, resolveDirectoryNames } from '../entra-directory-sync.util';
 import { waitForBackgroundWork } from '../../common/background-work';
 import { EntraController, ssoFailureReason } from '../entra.controller';
@@ -548,6 +550,120 @@ async function testFailedSsoRoundTripsAreRecordedInATrustedTenant() {
   assert.equal(ssoFailureReason(new Error('ENTRA_EMAIL_UNVERIFIED')), 'email_unverified');
 }
 
+const WORKSPACE_A = { id: '11111111-1111-4111-8111-111111111111', slug: 'alpha', sso_provider: 'entra', entra_tenant_id: 'aaaaaaaa-0000-4000-8000-00000000000a' };
+const WORKSPACE_B = { id: '22222222-2222-4222-8222-222222222222', slug: 'beta', sso_provider: 'entra', entra_tenant_id: 'bbbbbbbb-0000-4000-8000-00000000000b' };
+
+/**
+ * The controller on the real state signing, with everything a consent return may touch recorded:
+ * workspace lookups, audit entries (with the workspace of their transaction), directory syncs,
+ * dropped application tokens and redirects.
+ */
+function consentHarness(workspaces: Array<Record<string, any>> = [WORKSPACE_A, WORKSPACE_B]) {
+  const entra = new EntraAuthService({
+    get: (key: string) => ({
+      ENTRA_CLIENT_ID: 'client-id-1',
+      ENTRA_CLIENT_SECRET: 'client-secret-1',
+      ENTRA_REDIRECT_URI: 'https://app.example.test/api/auth/entra/callback',
+      ENTRA_AUTHORITY: 'https://login.microsoftonline.com/organizations',
+    } as Record<string, string>)[key],
+  } as any);
+  (entra as any).loadMetadata = async () => ({
+    authorization_endpoint: 'https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize',
+    token_endpoint: 'https://login.microsoftonline.com/organizations/oauth2/v2.0/token',
+  });
+  (entra as any).logger = { warn: () => undefined, error: () => undefined };
+  const droppedTokens: string[] = [];
+  entra.invalidateAppToken = (directory: string) => { droppedTokens.push(directory); };
+
+  const { dataSource, state } = createMockDataSource({});
+  const lookups: string[] = [];
+  const auditEntries: Array<{ workspace: unknown; entry: any }> = [];
+  const syncs: string[] = [];
+  const redirects: string[] = [];
+  const controller = new EntraController(
+    entra,
+    { findById: async (id: string) => { lookups.push(id); return workspaces.find((w) => w.id === id) ?? null; } } as any,
+    {} as any,
+    {} as any,
+    dataSource as any,
+    {
+      log: async (entry: any) => {
+        const scoped = state.tenantQueries.filter((q) => q.params?.length);
+        auditEntries.push({ workspace: scoped.at(-1)?.params?.[0], entry });
+      },
+    } as any,
+    {} as any,
+    { syncTenant: async (id: string) => { syncs.push(id); return { status: 'ok' }; } } as any,
+    securityEvents as any,
+  );
+  (controller as any).logger = { warn: () => undefined };
+
+  /** The state of the consent address the settings page of `workspace` receives. */
+  const consentState = (workspace: Record<string, any>) =>
+    new URL(entra.buildAdminConsentUrl(workspace.entra_tenant_id, workspace.id) as string).searchParams.get('state') as string;
+  const back = (query: Record<string, unknown>) =>
+    controller.callback({ ...browser, query }, { cookie: () => undefined, redirect: (to: string) => { redirects.push(to); } } as any);
+  return { entra, controller, state, lookups, auditEntries, syncs, droppedTokens, redirects, consentState, back };
+}
+
+/**
+ * The consent return acts only on a state this application signed for that use, within its
+ * lifetime. Any other state is refused before anything is read or written.
+ */
+async function testConsentReturnNeedsAStateSignedForConsent() {
+  const providerText = 'text sent back by the provider';
+  const refused = async (label: string, state: (h: ReturnType<typeof consentHarness>) => Promise<string> | string, at?: () => number) => {
+    const h = consentHarness();
+    const value = await state(h);
+    const realNow = Date.now;
+    if (at) Date.now = at;
+    authEvents.length = 0;
+    try {
+      for (const extra of [
+        { admin_consent: 'true', tenant: WORKSPACE_A.entra_tenant_id },
+        { admin_consent: 'true' },
+        { admin_consent: 'false', error: 'access_denied', error_description: providerText },
+      ]) {
+        await assert.rejects(
+          () => h.back({ state: value, ...extra }),
+          (error: unknown) => error instanceof BadRequestException && !String((error as Error).message).includes(providerText),
+          `${label}: refused`,
+        );
+      }
+    } finally {
+      Date.now = realNow;
+    }
+    assert.deepEqual(h.auditEntries, [], `${label}: no audit entry`);
+    assert.equal(h.state.started, 0, `${label}: no transaction`);
+    assert.deepEqual(h.syncs, [], `${label}: no directory sync`);
+    assert.deepEqual(h.droppedTokens, [], `${label}: no application token dropped`);
+    assert.deepEqual(h.lookups, [], `${label}: no workspace read`);
+    assert.deepEqual(h.redirects, [], `${label}: no redirect`);
+    assert.deepEqual(await recordedEvents(), [], `${label}: no sign-in event`);
+  };
+
+  await refused('a workspace id without a signature', () => `consent:${WORKSPACE_A.id}`);
+  await refused('an empty state', () => 'consent:');
+  await refused('a state signed with another key', (h) => {
+    const [header, payload] = h.consentState(WORKSPACE_A).slice('consent:'.length).split('.');
+    return `consent:${header}.${payload}.${Buffer.from('another signature').toString('base64url')}`;
+  });
+  await refused('a state past its lifetime', (h) => h.consentState(WORKSPACE_A), () => new Date().getTime() + 24 * 3600 * 1000);
+  await refused('a sign-in state', async (h) => {
+    const { state } = await h.entra.buildAuthorizationUrl({ mode: 'login', tenantId: WORKSPACE_A.id });
+    return `consent:${state}`;
+  });
+  await refused('a setup state', async (h) => {
+    const { state } = await h.entra.buildAuthorizationUrl({ mode: 'setup', tenantId: WORKSPACE_A.id });
+    return `consent:${state}`;
+  });
+
+  // And the other way round: a consent state does not complete a sign-in.
+  const h = consentHarness();
+  const consentToken = h.consentState(WORKSPACE_A).slice('consent:'.length);
+  await assert.rejects(() => h.entra.handleCallback({ code: 'code-1', state: consentToken }), /Invalid Entra state/);
+}
+
 /** Runs `fn` with the given environment values, then restores them. */
 async function withEnv(values: Record<string, string | undefined>, fn: () => Promise<void>) {
   const previous = new Map<string, string | undefined>();
@@ -576,6 +692,7 @@ async function run() {
   await testStartLoginDoesNotSetNonceCookie();
   await testRefusedSsoSessionsAreRecorded();
   await withEnv({ APP_ENV: 'development', NODE_ENV: undefined }, testFailedSsoRoundTripsAreRecordedInATrustedTenant);
+  await withEnv({ ENTRA_STATE_SECRET: 'entra-controller-spec-state-secret' }, testConsentReturnNeedsAStateSignedForConsent);
 }
 
 void run();

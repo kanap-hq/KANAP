@@ -2,7 +2,7 @@ import * as assert from 'node:assert/strict';
 import * as jwt from 'jsonwebtoken';
 import { BadRequestException } from '@nestjs/common';
 import { EntraAuthService } from '../entra-auth.service';
-import { ENTRA_LOGIN_HANDOFF_TYPE, ENTRA_STATE_PURPOSE } from '../access-token.util';
+import { ENTRA_LOGIN_HANDOFF_TYPE, ENTRA_STATE_PURPOSE, FOREIGN_TOKEN_MARKERS } from '../access-token.util';
 
 function createService() {
   return new EntraAuthService({
@@ -133,10 +133,71 @@ async function testLoginHandoffKeepsItsOwnMarkerAndKey() {
   });
 }
 
+/**
+ * The admin-consent address carries a state signed with the state key, typed for that use, short
+ * lived and naming the workspace. Sign-in and consent states do not stand in for each other.
+ */
+async function testConsentStateIsSignedForItsOwnUse() {
+  process.env.JWT_SECRET = 'entra-auth-spec-jwt-secret';
+  const stateSecret = 'test-entra-state-secret';
+  await withStateSecret(stateSecret, async () => {
+    const service = createService();
+    (service as any).logger = { warn: () => undefined, error: () => undefined };
+    (service as any).loadMetadata = async () => ({
+      authorization_endpoint: 'https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize',
+      token_endpoint: 'https://login.microsoftonline.com/organizations/oauth2/v2.0/token',
+    });
+    const verifyConsentState = (token: string) => (service as any).verifyConsentState(token) as { tenantId: string };
+    const verifyState = (token: string) => (service as any).verifyState(token);
+    const refused = (error: unknown) => error instanceof BadRequestException && error.message === 'Invalid Entra state';
+
+    const url = new URL(service.buildAdminConsentUrl('directory-1', 'tenant-1') as string);
+    // Same consent address and return address as before: only the state changes.
+    assert.equal(`${url.origin}${url.pathname}`, 'https://login.microsoftonline.com/directory-1/v2.0/adminconsent');
+    assert.equal(url.searchParams.get('redirect_uri'), 'https://dev.kanap.net/api/auth/entra/callback');
+    assert.equal(url.searchParams.get('client_id'), 'client-id-1');
+
+    const state = url.searchParams.get('state') as string;
+    assert.ok(state.startsWith('consent:'));
+    const token = state.slice('consent:'.length);
+    const payload = jwt.verify(token, stateSecret) as Record<string, any>;
+    assert.equal(payload.tenantId, 'tenant-1');
+    assert.equal(typeof payload.purpose, 'string');
+    assert.notEqual(payload.purpose, ENTRA_STATE_PURPOSE, 'a use of its own');
+    assert.ok(FOREIGN_TOKEN_MARKERS.includes(payload.purpose), 'never an access token');
+    assert.ok(payload.exp - payload.iat > 0 && payload.exp - payload.iat <= 3600, 'short lived');
+    assert.throws(() => jwt.verify(token, process.env.JWT_SECRET as string), /invalid signature/);
+
+    assert.equal(verifyConsentState(token).tenantId, 'tenant-1');
+
+    // A consent state is not a sign-in state, and a sign-in or setup state is not a consent state.
+    assert.throws(() => verifyState(token), refused);
+    await assert.rejects(() => service.handleCallback({ code: 'code-1', state: token }), refused);
+    for (const mode of ['login', 'setup'] as const) {
+      const signIn = await service.buildAuthorizationUrl({ mode, tenantId: 'tenant-1' });
+      assert.throws(() => verifyConsentState(signIn.state), refused, mode);
+    }
+    assert.throws(() => verifyConsentState(service.signLoginHandoff({ tenantId: 'tenant-1', userId: 'user-1' })), refused);
+
+    // Not signed, signed with another key, without the marker, without a workspace, expired.
+    const { purpose } = payload;
+    assert.throws(() => verifyConsentState('tenant-1'), refused);
+    assert.throws(() => verifyConsentState(''), refused);
+    assert.throws(() => verifyConsentState(jwt.sign({ purpose, tenantId: 'tenant-1' }, 'another-key', { expiresIn: '5m' })), refused);
+    assert.throws(() => verifyConsentState(jwt.sign({ tenantId: 'tenant-1' }, stateSecret, { expiresIn: '5m' })), refused);
+    assert.throws(() => verifyConsentState(jwt.sign({ purpose }, stateSecret, { expiresIn: '5m' })), refused);
+    assert.throws(() => verifyConsentState(jwt.sign({ purpose, tenantId: 'tenant-1' }, stateSecret, { expiresIn: -60 })), refused);
+    // A state without an expiry is not short lived.
+    assert.throws(() => verifyConsentState(jwt.sign({ purpose, tenantId: 'tenant-1' }, stateSecret)), refused);
+    assert.equal(verifyConsentState(jwt.sign({ purpose, tenantId: 'tenant-1' }, stateSecret, { expiresIn: '5m' })).tenantId, 'tenant-1');
+  });
+}
+
 async function run() {
   await testBuildAuthorizationUrlEmbedsNonceInSignedState();
   await testVerifyStateRequiresTheStatePurposeMarker();
   await testLoginHandoffKeepsItsOwnMarkerAndKey();
+  await testConsentStateIsSignedForItsOwnUse();
 }
 
 void run();

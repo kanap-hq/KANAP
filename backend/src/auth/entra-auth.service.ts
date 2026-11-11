@@ -5,7 +5,7 @@ import { randomBytes, createPublicKey, KeyObject } from 'crypto';
 import * as https from 'https';
 import { DirectoryProfile } from './entra-directory-sync.util';
 import { URL, URLSearchParams } from 'url';
-import { ENTRA_LOGIN_HANDOFF_TYPE, ENTRA_STATE_PURPOSE } from './access-token.util';
+import { ENTRA_CONSENT_STATE_PURPOSE, ENTRA_LOGIN_HANDOFF_TYPE, ENTRA_STATE_PURPOSE } from './access-token.util';
 import { getEntraStateSecret } from './token-secret.util';
 import { ENTRA_ID_TOKEN_ALGORITHMS, ISSUED_TOKEN_ALGORITHM, ISSUED_TOKEN_ALGORITHMS } from './jwt-algorithms';
 
@@ -18,6 +18,17 @@ type EntraState = {
   redirectTo?: string;
   nonce: string;
 };
+
+type EntraConsentState = {
+  purpose: typeof ENTRA_CONSENT_STATE_PURPOSE;
+  tenantId: string;
+};
+
+/**
+ * Lifetime of a consent state. The consent address is part of the settings page, so the state is
+ * signed when the page loads and used when the administrator comes back from Microsoft.
+ */
+const CONSENT_STATE_LIFETIME = '1h';
 
 type EntraLoginHandoff = {
   type: typeof ENTRA_LOGIN_HANDOFF_TYPE;
@@ -272,6 +283,33 @@ export class EntraAuthService {
       return decoded;
     } catch (err: any) {
       this.logger.warn(`Invalid Entra state: ${err?.message || String(err)}`);
+      throw new BadRequestException('Invalid Entra state');
+    }
+  }
+
+  /**
+   * The workspace named by the state of an admin-consent return. The state must be signed with the
+   * state key, typed for consent, within its lifetime: a sign-in or setup state is refused here, as
+   * a consent state is by `verifyState`.
+   */
+  verifyConsentState(token: string): { tenantId: string } {
+    try {
+      const decoded = jwt.verify(token, this.stateSecret, { algorithms: [...ISSUED_TOKEN_ALGORITHMS] }) as
+        | (Partial<EntraConsentState> & { exp?: number })
+        | string;
+      if (
+        !decoded
+        || typeof decoded !== 'object'
+        || decoded.purpose !== ENTRA_CONSENT_STATE_PURPOSE
+        || typeof decoded.tenantId !== 'string'
+        || !decoded.tenantId
+        || typeof decoded.exp !== 'number'
+      ) {
+        throw new Error('invalid payload');
+      }
+      return { tenantId: decoded.tenantId };
+    } catch (err: any) {
+      this.logger.warn(`Invalid Entra consent state: ${err?.message || String(err)}`);
       throw new BadRequestException('Invalid Entra state');
     }
   }
@@ -571,8 +609,8 @@ export class EntraAuthService {
 
   /**
    * Microsoft admin-consent URL for the tenant. Lands back on the regular SSO
-   * callback with `state=consent:<kanapTenantId>` so no extra redirect URI
-   * needs registering.
+   * callback with `state=consent:<signed state naming the tenant>` so no extra
+   * redirect URI needs registering.
    */
   buildAdminConsentUrl(entraTenantId: string, kanapTenantId: string): string | null {
     const clientId = this.getClientId();
@@ -581,7 +619,11 @@ export class EntraAuthService {
     const params = new URLSearchParams({
       client_id: clientId,
       redirect_uri: redirectUri,
-      state: `consent:${kanapTenantId}`,
+      state: `consent:${jwt.sign(
+        { purpose: ENTRA_CONSENT_STATE_PURPOSE, tenantId: kanapTenantId } satisfies EntraConsentState,
+        this.stateSecret,
+        { algorithm: ISSUED_TOKEN_ALGORITHM, expiresIn: CONSENT_STATE_LIFETIME },
+      )}`,
       scope: 'https://graph.microsoft.com/.default',
     });
     return `https://login.microsoftonline.com/${encodeURIComponent(entraTenantId)}/v2.0/adminconsent?${params.toString()}`;
