@@ -1163,8 +1163,8 @@ export class PortfolioRequestsService {
     const name = String(body.name || '').trim();
     if (!name) throw new BadRequestException('name is required');
     const markdownBudget = markdownWorkBudget();
-    const purposeContent = await this.normalizeNullable(body.purpose, markdownBudget);
-    const risksContent = await this.normalizeNullable(body.risks, markdownBudget);
+    const purposeContent = await this.normalizeNullable(body.purpose, 'purpose', markdownBudget);
+    const risksContent = await this.normalizeNullable(body.risks, 'risks', markdownBudget);
 
     const entity = repo.create({
       tenant_id: tenantId,
@@ -1181,8 +1181,8 @@ export class PortfolioRequestsService {
       // Note: Effort estimation is now derived from Time estimation criteria values
 
       // Analysis
-      current_situation: await this.normalizeNullable(body.current_situation, markdownBudget),
-      expected_benefits: await this.normalizeNullable(body.expected_benefits, markdownBudget),
+      current_situation: await this.normalizeNullable(body.current_situation, 'current_situation', markdownBudget),
+      expected_benefits: await this.normalizeNullable(body.expected_benefits, 'expected_benefits', markdownBudget),
       feasibility_review: this.normalizeFeasibilityReview(body.feasibility_review),
 
       // Team leads/sponsors
@@ -1442,10 +1442,10 @@ export class PortfolioRequestsService {
       ? (await loadSlotBodies(mg, existing.tenant_id, 'requests', [existing.id], ['purpose', 'risks_mitigations'])).get(existing.id)
       : undefined;
     const nextPurpose = has('purpose')
-      ? await this.normalizeNullable(body.purpose, markdownBudget, storedBodies?.get('purpose'))
+      ? await this.normalizeNullable(body.purpose, 'purpose', markdownBudget, storedBodies?.get('purpose'))
       : undefined;
     const nextRisks = has('risks')
-      ? await this.normalizeNullable(body.risks, markdownBudget, storedBodies?.get('risks_mitigations'))
+      ? await this.normalizeNullable(body.risks, 'risks', markdownBudget, storedBodies?.get('risks_mitigations'))
       : undefined;
 
     // Overview fields
@@ -1486,10 +1486,10 @@ export class PortfolioRequestsService {
 
     // Analysis
     if (has('current_situation')) {
-      existing.current_situation = await this.normalizeNullable(body.current_situation, markdownBudget, existing.current_situation);
+      existing.current_situation = await this.normalizeNullable(body.current_situation, 'current_situation', markdownBudget, existing.current_situation);
     }
     if (has('expected_benefits')) {
-      existing.expected_benefits = await this.normalizeNullable(body.expected_benefits, markdownBudget, existing.expected_benefits);
+      existing.expected_benefits = await this.normalizeNullable(body.expected_benefits, 'expected_benefits', markdownBudget, existing.expected_benefits);
     }
     if (has('feasibility_review')) {
       existing.feasibility_review = this.normalizeFeasibilityReview(body.feasibility_review);
@@ -2852,11 +2852,17 @@ export class PortfolioRequestsService {
   }
 
   /**
+   * @param fieldName the field, as a refusal names it
    * @param budget time budget shared by the rich-text fields of one write (Markdown workers)
    * @param storedValue the text the field holds now, on an update: a write that repeats it is kept as it is
    */
-  private async normalizeNullable(value: unknown, budget?: MarkdownWorkBudget, storedValue?: string | null): Promise<string | null> {
-    return await normalizeMarkdownRichText(value, { budget, storedValue });
+  private async normalizeNullable(
+    value: unknown,
+    fieldName: 'purpose' | 'risks' | 'current_situation' | 'expected_benefits',
+    budget?: MarkdownWorkBudget,
+    storedValue?: string | null,
+  ): Promise<string | null> {
+    return await normalizeMarkdownRichText(value, { fieldName, budget, storedValue });
   }
 
   private normalizeOriginTaskUrl(

@@ -65,7 +65,7 @@ describe('MarkdownEditor: a stored text with HTML elements', () => {
   });
 
   it('shows a note with attributes without them', async () => {
-    const editor = await mountEditor(`:::note{style="position:fixed" onclick="globalThis.${HANDLER_FLAG} = true"}\ntexte\n:::`);
+    const editor = await mountEditor(`:::note{style="color: red" onclick="globalThis.${HANDLER_FLAG} = true"}\ntexte\n:::`);
 
     expect(unexpectedMarkup()).toEqual([]);
     expect(editor.content().textContent).toContain('texte');

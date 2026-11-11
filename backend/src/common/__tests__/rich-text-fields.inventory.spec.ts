@@ -271,6 +271,7 @@ async function testEveryFieldRefusesOtherTagsThroughItsRoutes() {
       await check({
         field: 'portfolio_requests.current_situation, expected_benefits, purpose, risks',
         route: `POST /portfolio/requests (${name})`,
+        named: name,
         write: (text) => api('POST', '/portfolio/requests', { name: `Rich text request ${++requestCount}`, [name]: text }),
       });
     }
@@ -284,6 +285,7 @@ async function testEveryFieldRefusesOtherTagsThroughItsRoutes() {
       await check({
         field: 'portfolio_requests.current_situation, expected_benefits, purpose, risks',
         route: `PATCH /portfolio/requests/:id (${name})`,
+        named: name,
         write: (text) => api('PATCH', `/portfolio/requests/${request.id}`, { [name]: text, name: `Rich text request, edited ${++requestCount}` }),
         ...storage,
       });

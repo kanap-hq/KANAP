@@ -41,19 +41,19 @@ export const HTML_ELEMENT_TEXTS: Array<{ name: string; text: string; shown: stri
     shown: '<form action="https://exemple.test/f">',
   },
   {
-    name: 'a page redirection',
-    text: '<meta http-equiv="refresh" content="0;url=https://exemple.test/m" />',
-    shown: '<meta http-equiv="refresh"',
+    name: 'a metadata tag',
+    text: '<meta name="note" content="x" />',
+    shown: '<meta name="note"',
   },
   {
-    name: 'a layer with a style',
-    text: '<div style="position:fixed;top:0;left:0">calque</div>',
-    shown: '<div style="position:fixed;top:0;left:0">',
+    name: 'a styled block',
+    text: '<div style="color: red">bloc</div>',
+    shown: '<div style="color: red">',
   },
   {
     name: 'a styled span',
-    text: 'avant <span style="position:fixed;top:0">milieu</span> après',
-    shown: '<span style="position:fixed;top:0">',
+    text: 'avant <span style="color: red">milieu</span> après',
+    shown: '<span style="color: red">',
   },
   {
     name: 'a frame',
@@ -61,7 +61,13 @@ export const HTML_ELEMENT_TEXTS: Array<{ name: string; text: string; shown: stri
     shown: '<iframe src="https://exemple.test/c"',
   },
   {
-    name: 'an element with a handler',
+    name: 'a block with a handler',
+    text: `avant <section onclick="globalThis.${HANDLER_FLAG} = true">bloc</section> après`,
+    shown: '<section onclick=',
+  },
+  {
+    // An open disclosure calls its handler as soon as it is built.
+    name: 'an open disclosure with a handler',
     text: `avant <details open ontoggle="globalThis.${HANDLER_FLAG} = true">détail</details> après`,
     shown: '<details open ontoggle=',
   },
@@ -77,7 +83,7 @@ export const HTML_ELEMENT_TEXTS: Array<{ name: string; text: string; shown: stri
   },
   {
     name: 'an underline tag with attributes',
-    text: `<u onclick="globalThis.${HANDLER_FLAG} = true" style="position:fixed">souligné</u>`,
+    text: `<u onclick="globalThis.${HANDLER_FLAG} = true" style="color: red">souligné</u>`,
     shown: '<u onclick=',
   },
   {
@@ -101,14 +107,14 @@ export const HTML_ELEMENT_TEXTS: Array<{ name: string; text: string; shown: stri
     shown: '<form action="https://exemple.test/f">',
   },
   {
-    name: 'a page redirection in a table cell',
-    text: '| a |\n| - |\n| <meta http-equiv="refresh" content="0;url=https://exemple.test/m" /> |',
-    shown: '<meta http-equiv="refresh"',
+    name: 'a metadata tag in a table cell',
+    text: '| a |\n| - |\n| <meta name="note" content="x" /> |',
+    shown: '<meta name="note"',
   },
   {
-    name: 'an element with a handler in a table header cell',
-    text: `| <details open ontoggle="globalThis.${HANDLER_FLAG} = true">détail</details> |\n| - |\n| b |`,
-    shown: '<details open ontoggle=',
+    name: 'a block with a handler in a table header cell',
+    text: `| <section onclick="globalThis.${HANDLER_FLAG} = true">bloc</section> |\n| - |\n| b |`,
+    shown: '<section onclick=',
   },
   {
     name: 'a form in an indented block',
@@ -136,19 +142,19 @@ export const HTML_ELEMENT_TEXTS: Array<{ name: string; text: string; shown: stri
     shown: '<form action="https://exemple.test/f">',
   },
   {
-    name: 'an element with a handler in a note',
+    name: 'an open disclosure with a handler in a note',
     text: `:::note\n<details open ontoggle="globalThis.${HANDLER_FLAG} = true">détail</details>\n:::`,
     shown: '<details open ontoggle=',
   },
   {
     name: 'a styled span in bold text',
-    text: '**gras <span style="position:fixed">milieu</span> gras**',
-    shown: '<span style="position:fixed">',
+    text: '**gras <span style="color: red">milieu</span> gras**',
+    shown: '<span style="color: red">',
   },
   {
-    name: 'a layer around paragraphs',
-    text: '<div style="position:fixed">\n\n**gras** dedans\n\n</div>',
-    shown: '<div style="position:fixed">',
+    name: 'a styled block around paragraphs',
+    text: '<div style="color: red">\n\n**gras** dedans\n\n</div>',
+    shown: '<div style="color: red">',
   },
 ];
 
@@ -166,7 +172,7 @@ const DETAILS_SINGLE_QUOTED = `<details open ontoggle='${HANDLER}'>détail</deta
 export const READER_GAP_TEXTS: Array<{ name: string; text: string; builds?: 'a' | 'u' }> = [
   { name: 'an underline tag whose attribute holds a backtick', text: `<u $a="\`"> ${FORM} \` fin</u>` },
   { name: 'a line break whose attribute holds a backtick', text: `<br $a="\`"/> ${FORM} \` fin` },
-  { name: 'a layer whose attribute holds a backtick', text: `<div $a="\`" style="position:fixed"> ${DETAILS} \` fin</div>` },
+  { name: 'a styled block whose attribute holds a backtick', text: `<div $a="\`" style="color: red"> ${DETAILS} \` fin</div>` },
   { name: 'an image whose attribute holds a backtick', text: `<img $a="\`" src="/api/x.png" onerror="${HANDLER}" /> \` fin` },
   { name: 'an underline tag with a space before its end', text: '<u >souligné</u >' },
   { name: 'a self-closed underline tag', text: 'a <u/> b' },
@@ -175,8 +181,8 @@ export const READER_GAP_TEXTS: Array<{ name: string; text: string; builds?: 'a' 
   { name: 'an image with an unquoted attribute', text: `<img src=/api/x.png onerror=${HANDLER} />` },
   { name: 'a tag on several lines', text: '<form\n  action="https://exemple.test/f"\n>\n<input name="p" />\n</form>' },
   { name: 'a tag on several lines in a sentence', text: `avant <details\nopen\nontoggle="${HANDLER}">détail</details> après` },
-  { name: 'an attribute value on two lines', text: '<div title="a\nb" style="position:fixed">calque</div>' },
-  { name: 'an attribute value with a blank line', text: '<div title="a\n\nb" style="position:fixed">calque</div>' },
+  { name: 'an attribute value on two lines', text: '<div title="a\nb" style="color: red">bloc</div>' },
+  { name: 'an attribute value with a blank line', text: '<div title="a\n\nb" style="color: red">bloc</div>' },
   { name: 'a comment around a tag', text: `<!-- ${FORM} -->` },
   { name: 'a comment in a sentence', text: `avant <!-- note --> après ${FORM}` },
   { name: 'a comment left open', text: `<!-- \n\n${FORM}` },
@@ -212,9 +218,9 @@ export const READER_GAP_TEXTS: Array<{ name: string; text: string; builds?: 'a' 
   { name: 'attributes between braces', text: '<u {...{onclick:1}}>x</u> <img src={"/api/x.png"} onerror={1} />' },
   { name: 'a text between braces', text: `{${HANDLER}}` },
   { name: 'an import line', text: `import x from "y"\n\n${FORM}` },
-  { name: 'a tag in an inline directive', text: `:abbr[${DETAILS}]{title="x" style="position:fixed"}` },
+  { name: 'a tag in an inline directive', text: `:abbr[${DETAILS}]{title="x" style="color: red"}` },
   { name: 'a tag in a one-line directive', text: `::video[${FORM}]{src="https://exemple.test/c" onload="${HANDLER}"}` },
-  { name: 'a note with attributes around a tag', text: `:::note{style="position:fixed" onclick="${HANDLER}"}\n${FORM}\n:::` },
+  { name: 'a note with attributes around a tag', text: `:::note{style="color: red" onclick="${HANDLER}"}\n${FORM}\n:::` },
   { name: 'a tag in an underlined heading', text: `Titre ${FORM}\n=====` },
   { name: 'a tag in a table in a quote in a list', text: `* a\n  > | a |\n  > | - |\n  > | ${DETAILS} |` },
   { name: 'a tag in a front matter', text: `---\ntitle: ${FORM}\n---\n\ntexte` },
