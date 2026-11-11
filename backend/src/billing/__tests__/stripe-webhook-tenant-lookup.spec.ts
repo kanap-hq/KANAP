@@ -437,13 +437,14 @@ function invoiceEvent(type: string, invoice: Record<string, unknown>) {
 
 /**
  * Stripe does not send events in order. The latest invoice of the row never goes back to an
- * earlier state of the same invoice (`paid` then `finalized`), nor to an older invoice; a new
- * invoice brings its own number, none for a draft.
+ * earlier state of the same invoice (`paid` then `finalized`), nor to another invoice than the
+ * latest one of the subscription read from Stripe (an older one arriving late, or one created in
+ * the same second); a new invoice brings its own number, none for a draft.
  */
 const SUB_1_PARENT = { type: 'subscription_details', subscription_details: { subscription: 'sub_1', metadata: {} } };
 
 async function testInvoiceStatusNeverGoesBack() {
-  const { svc, row } = createSyncService({ stripe_subscription_id: 'sub_1' }, cloverSubscription());
+  const { svc, row } = createSyncService({ stripe_subscription_id: 'sub_1' }, cloverSubscription({ latest_invoice: 'in_1' }));
   const invoice = { id: 'in_1', customer: 'cus_1', number: 'KAN-0046', total: 24900, currency: 'eur', created: 1_792_000_000, parent: SUB_1_PARENT };
   await svc.processEvent(invoiceEvent('invoice.paid', { ...invoice, status: 'paid' }));
   await svc.processEvent(invoiceEvent('invoice.finalized', { ...invoice, status: 'open' }));
@@ -457,6 +458,32 @@ async function testInvoiceStatusNeverGoesBack() {
   assert.equal(row.latest_invoice_number, 'KAN-0046');
 }
 
+async function testInvoicesOfTheSameSecondFollowTheSubscription() {
+  // A plan change: the proration invoice and the new period's one, created in the same second.
+  const created = 1_792_000_000;
+  const stored = {
+    stripe_subscription_id: 'sub_1',
+    latest_invoice_id: 'in_new',
+    latest_invoice_status: 'paid',
+    latest_invoice_number: 'KAN-0047',
+    latest_invoice_created: new Date(created * 1000),
+  };
+  const { svc, row } = createSyncService({ ...stored }, cloverSubscription({ latest_invoice: 'in_new' }));
+  await svc.processEvent(invoiceEvent('invoice.paid', {
+    id: 'in_other', customer: 'cus_1', number: 'KAN-0046', status: 'paid', total: 100, currency: 'eur', created, parent: SUB_1_PARENT,
+  }));
+  assert.equal(row.latest_invoice_id, 'in_new', 'an invoice that is not the latest one of the subscription is not written');
+  assert.equal(row.latest_invoice_number, 'KAN-0047');
+
+  // The subscription's latest invoice is written, even when created in the same second.
+  const next = createSyncService({ ...stored }, cloverSubscription({ latest_invoice: { id: 'in_next' } }));
+  await next.svc.processEvent(invoiceEvent('invoice.finalized', {
+    id: 'in_next', customer: 'cus_1', number: 'KAN-0048', status: 'open', total: 24900, currency: 'eur', created, parent: SUB_1_PARENT,
+  }));
+  assert.equal(next.row.latest_invoice_id, 'in_next');
+  assert.equal(next.row.latest_invoice_number, 'KAN-0048');
+}
+
 async function testDraftInvoiceHasNoNumber() {
   const { svc, row } = createSyncService(
     {
@@ -468,7 +495,7 @@ async function testDraftInvoiceHasNoNumber() {
       latest_invoice_pdf: 'https://invoice.stripe.test/in_1.pdf',
       latest_invoice_created: new Date(1_789_000_000 * 1000),
     },
-    cloverSubscription(),
+    cloverSubscription({ latest_invoice: 'in_2' }),
   );
   await svc.processEvent(invoiceEvent('invoice.created', {
     id: 'in_2', customer: 'cus_1', status: 'draft', number: null, hosted_invoice_url: null, invoice_pdf: null,
@@ -623,6 +650,7 @@ async function run() {
   await testSyncWritesThePaymentModeAndTerm();
   await testEventHandlingIsSerializedPerTenant();
   await testInvoiceStatusNeverGoesBack();
+  await testInvoicesOfTheSameSecondFollowTheSubscription();
   await testDraftInvoiceHasNoNumber();
   await testEventOfAnotherSubscriptionIsIgnored();
   await testInvoiceWithoutTenantIsSetToA4();

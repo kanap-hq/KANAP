@@ -409,9 +409,9 @@ export class StripeWebhookService implements OnModuleInit {
         }
       }
 
-      if (invoiceData && this.isEarlierInvoiceState(sub, invoiceData)) {
+      if (invoiceData && this.isEarlierInvoiceState(sub, invoiceData, subscriptionData)) {
         // Stripe does not send events in order: the latest invoice stays as already written.
-        this.logger.log(`Stripe event ${event?.id ?? 'unknown'} carries an earlier invoice state than the stored one: invoice fields kept`);
+        this.logger.log(`Stripe event ${event?.id ?? 'unknown'} carries an earlier state of the stored invoice, or another invoice than the subscription's latest: invoice fields kept`);
       } else if (invoiceData) {
         const invoice = invoiceData;
         sub.latest_invoice_id = invoice.id ?? sub.latest_invoice_id ?? null;
@@ -477,18 +477,21 @@ export class StripeWebhookService implements OnModuleInit {
   }
 
   /**
-   * True when an invoice event is older than the stored latest invoice: an earlier status of the
-   * same invoice (`open` after `paid`), or another invoice created before it.
+   * True when an invoice event must not replace the stored latest invoice: an earlier status of
+   * the same invoice (`open` after `paid`), or another invoice that is not the latest one of the
+   * subscription read from Stripe (an older one arriving late; the invoices of a plan change are
+   * created in the same second, so their dates do not order them).
    */
-  private isEarlierInvoiceState(sub: Subscription, invoice: any): boolean {
+  private isEarlierInvoiceState(sub: Subscription, invoice: any, subscriptionData: any): boolean {
     if (!sub.latest_invoice_id || !invoice?.id) return false;
     if (invoice.id === sub.latest_invoice_id) {
       const stored = INVOICE_STATUS_RANK[sub.latest_invoice_status ?? ''];
       const incoming = INVOICE_STATUS_RANK[invoice.status ?? ''];
       return stored != null && incoming != null && incoming < stored;
     }
-    const created = this.toDate(invoice.created);
-    return !!created && !!sub.latest_invoice_created && created.getTime() < sub.latest_invoice_created.getTime();
+    const latest = subscriptionData?.latest_invoice;
+    const latestId = typeof latest === 'string' ? latest : latest?.id ?? null;
+    return invoice.id !== latestId;
   }
 
   private async updateTenantStripeCustomer(tenantId: string, customerId: string): Promise<void> {

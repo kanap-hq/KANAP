@@ -301,7 +301,7 @@ Cloud only (404 on-premise). The links of the trial e-mails, public, with the wo
 - Webhook `checkout.session.completed` in setup mode (the card setup page) makes the saved card the customer's default payment method.
 - Webhook sync of the tenant's subscription row:
   - Each sync writes `payment_mode` from the collection method (`send_invoice` = bank transfer) and `days_until_due` as Stripe sends it (`null` for a card subscription); the refresh does the same.
-  - An `invoice.*` event older than the stored latest invoice (an earlier status of the same invoice, such as `finalized` after `paid`, or an invoice created before it) leaves the invoice fields as they are. The number and links are the latest invoice's own: none for a draft.
+  - An `invoice.*` event that is not the latest invoice state leaves the invoice fields as they are: an earlier status of the stored invoice (such as `finalized` after `paid`), or another invoice than the subscription's `latest_invoice` as read from Stripe (an older one arriving late; the invoices of a plan change share the same creation second). The number and links are the latest invoice's own: none for a draft.
   - An event of a subscription the row does not carry changes the row only when the row has no subscription yet, when the row's subscription has ended and the event's still runs, or on `checkout.session.completed` in subscription mode (the subscription the tenant has just bought). Any other such event is logged and ignored.
 
 ## Companies
