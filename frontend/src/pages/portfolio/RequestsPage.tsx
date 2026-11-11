@@ -340,6 +340,8 @@ export default function RequestsPage() {
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
         getValues: getRequestFilterValues('status', { labelMap: statusLabelMap, order: STATUS_ORDER }),
+        // A status the server omits (no request has it) is still selected by the default filter.
+        labelFormatter: (value: string | null) => (value == null ? t('shared.blankValue') : (statusLabelMap[value] ?? value)),
         searchable: false,
         treatAllAsUnfiltered: false,
       },
