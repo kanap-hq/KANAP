@@ -14,6 +14,11 @@ const EMAIL_RE = EMAIL_ADDRESSES;
 const IPV4_RE = /\b(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)\b/g;
 const BEARER_RE = /\bBearer\s+[A-Za-z0-9._~+/=-]{12,}\b/gi;
 const SECRET_ASSIGNMENT_RE = /\b(password|token|secret|api[-_]?key)\s*[:=]\s*[^ \n\r\t]+/gi;
+// A JWT: three base64url segments, the first one a JSON header (`eyJ…`).
+const JWT_RE = /\beyJ[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]*/g;
+// The value of an Authorization header, whatever its scheme (`Authorization: Basic …`,
+// `"Authorization":"Bearer …"`).
+const AUTHORIZATION_VALUE_RE = /\b((?:proxy-)?authorization)(["']?\s*[:=]\s*["']?)(?:[A-Za-z][A-Za-z0-9-]*\s+)?[^\s"',;]+/gi;
 
 export type AiEvidenceSeed = {
   runId?: string | null;
@@ -60,6 +65,8 @@ export function hashStableJson(value: unknown): string {
 
 function redactString(value: string): string {
   return value
+    .replace(AUTHORIZATION_VALUE_RE, '$1$2[REDACTED]')
+    .replace(JWT_RE, '[REDACTED]')
     .replace(BEARER_RE, 'Bearer [REDACTED]')
     .replace(SECRET_ASSIGNMENT_RE, '$1=[REDACTED]')
     .replace(EMAIL_RE, '[REDACTED_EMAIL]')
@@ -89,9 +96,18 @@ function redactValue(value: unknown, redactFields: Set<string>, path = ''): unkn
   }));
 }
 
-/** The redaction every evidence summary gets (secret fields, bearer tokens, emails, IP addresses). */
-export function redactSensitiveValue(value: unknown): unknown {
-  return redactValue(value, new Set());
+/**
+ * The redaction every kept evidence row gets: secret fields, the fields named in `redactFields`,
+ * JWTs, bearer tokens, Authorization header values, secret assignments, emails, IP addresses.
+ * The evidence writer, the dispatcher's summaries and the external MCP bridge share it.
+ */
+export function redactSensitiveValue(value: unknown, redactFields: readonly string[] = []): unknown {
+  return redactValue(value, new Set(redactFields));
+}
+
+/** The same redaction for one text. */
+export function redactSensitiveText(value: string): string {
+  return redactString(value);
 }
 
 function truncateText(value: string, max = MAX_SUMMARY_CHARS): string {
@@ -163,7 +179,7 @@ export class AiEvidenceService {
       trust_level: seed.trustLevel ?? 'system',
       redaction_status: 'redacted',
       content_hash: this.hash(redactedPayload),
-      summary: truncateText(seed.summary ?? summarizePayload(redactedPayload)),
+      summary: truncateText(redactString(seed.summary ?? summarizePayload(redactedPayload))),
       payload_json: payloadJson,
       retention_class: seed.retentionClass ?? 'standard',
       collected_at: seed.collectedAt ?? new Date(),
