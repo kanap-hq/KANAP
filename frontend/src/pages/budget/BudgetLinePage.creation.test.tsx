@@ -10,6 +10,7 @@ import NavigationTracker, { resetNavigationTracker } from '../../components/navi
 import { resetCreationStore } from '../../components/workspace/creation/creationStore';
 import { resetSharedPatchBuffers } from '../../hooks/patchBuffer';
 import api from '../../api';
+import { formatShortDate } from '../../lib/dateFormat';
 import BudgetLineRoute from './BudgetLineRoute';
 
 // Creation at the title (lot 1c): the title creates the line with its defaults, every tab opens,
@@ -72,11 +73,21 @@ vi.mock('../../components/fields/UserSelect', () => ({ default: () => null }));
 const mocked = vi.mocked(api);
 const TITLE = 'common:buttons.editTitle';
 const ITEM_ID = '11111111-2222-3333-4444-555555555555';
-const TODAY = new Date().toISOString().slice(0, 10);
+const YEAR_START = `${new Date().getFullYear()}-01-01`;
 const created = {
   id: ITEM_ID, item_number: 12, reference: 'BL-12', nature: 'opex', product_name: 'Monitoring', currency: 'CHF',
-  effective_start: TODAY, paying_company_id: null, account_id: null, editable: true, creation_token: 'token-1',
+  effective_start: YEAR_START, paying_company_id: null, account_id: null, editable: true, creation_token: 'token-1',
 };
+
+/** The effective start the dimmed draft shows, before the title creates the line. */
+function draftEffectiveStart(): string {
+  for (const preview of screen.getAllByTestId('creation-preview')) {
+    const label = [...preview.querySelectorAll('.kanap-field-label')].find((el) => el.textContent?.startsWith('opex.fields.effectiveStart'));
+    const input = label?.parentElement?.querySelector('input');
+    if (input instanceof HTMLInputElement) return input.value;
+  }
+  throw new Error('draft effective start missing');
+}
 
 function Location() {
   const location = useLocation();
@@ -185,12 +196,24 @@ describe('Budget line creation at the title', () => {
       expect(preview).toHaveAttribute('inert');
       expect(within(preview).queryAllByRole('textbox')).toHaveLength(0);
     }
+    // The draft starts on 1 January of the year the page shows (this year, no `?year=`).
+    expect(draftEffectiveStart()).toBe(formatShortDate(YEAR_START, 'en', { year: 'always' }));
     // Nothing read or written for a line that does not exist yet.
     await new Promise((resolve) => setTimeout(resolve, 0));
     const urls = mocked.get.mock.calls.map(([url]) => String(url));
     expect(urls.filter((url) => /undefined|null|\/\/|\/budget-lines\/new\b/.test(url))).toEqual([]);
     expect(mocked.post).not.toHaveBeenCalled();
     expect(mocked.patch).not.toHaveBeenCalled();
+  });
+
+  it('starts the line on 1 January of the year in the address', async () => {
+    renderPage(['/ops/budget/new/overview?nature=opex&year=2027']);
+    await screen.findByRole('textbox', { name: TITLE });
+    expect(draftEffectiveStart()).toBe(formatShortDate('2027-01-01', 'en', { year: 'always' }));
+    await commitTitle();
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/budget-lines/creation', {
+      nature: 'opex', product_name: 'Monitoring', currency: 'CHF', effective_start: '2027-01-01',
+    }));
   });
 
   it('shows the error under the empty title on Create, nothing created', async () => {
@@ -206,7 +229,7 @@ describe('Budget line creation at the title', () => {
     await createMonitoring();
     expect(mocked.post).toHaveBeenCalledTimes(1);
     expect(mocked.post).toHaveBeenCalledWith('/budget-lines/creation', {
-      nature: 'opex', product_name: 'Monitoring', currency: 'CHF', effective_start: TODAY,
+      nature: 'opex', product_name: 'Monitoring', currency: 'CHF', effective_start: YEAR_START,
     });
     for (const tab of screen.getAllByRole('tab')) expect(tab).not.toBeDisabled();
     expect(screen.queryByTestId('creation-preview')).toBeNull();
