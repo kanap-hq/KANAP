@@ -1596,6 +1596,7 @@ export class BillingService {
 
     const latestInvoice = await this.retrieveLatestInvoice(stripeSub);
     if (latestInvoice) {
+      const anotherInvoice = !!latestInvoice.id && latestInvoice.id !== sub.latest_invoice_id;
       sub.latest_invoice_id = latestInvoice.id ?? sub.latest_invoice_id ?? null;
       sub.latest_invoice_status = latestInvoice.status ?? sub.latest_invoice_status ?? null;
       // The invoice's own number and links: a draft has none yet.
@@ -1605,9 +1606,10 @@ export class BillingService {
       if (typeof latestInvoice.total === 'number') sub.latest_invoice_amount = latestInvoice.total;
       if (latestInvoice.currency) sub.latest_invoice_currency = String(latestInvoice.currency).toUpperCase();
       if (latestInvoice.created) sub.latest_invoice_created = this.toDate(latestInvoice.created);
-      // The reason of a refused payment (on the invoice's PaymentIntent) stays until the invoice is paid.
+      // The reason of a refused payment (on the invoice's PaymentIntent) stays until the invoice is
+      // paid; another invoice starts without one.
       const failure = latestInvoice.status === 'paid' ? null : await this.readInvoicePaymentFailure(latestInvoice);
-      if (latestInvoice.status === 'paid' || failure) {
+      if (latestInvoice.status === 'paid' || failure || anotherInvoice) {
         sub.last_payment_error_code = failure?.code ?? null;
         sub.last_payment_error_message = failure?.message ?? null;
       }

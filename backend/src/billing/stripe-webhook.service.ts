@@ -489,13 +489,15 @@ export class StripeWebhookService implements OnModuleInit {
 
   /** The row's latest invoice fields become those of `invoice`. */
   private writeLatestInvoice(sub: Subscription, invoice: any): void {
+    // The reason of a refused payment belongs to its invoice: another invoice starts without one.
+    if (invoice.id && invoice.id !== sub.latest_invoice_id) this.writePaymentFailure(sub, null);
     sub.latest_invoice_id = invoice.id ?? sub.latest_invoice_id ?? null;
     sub.latest_invoice_status = invoice.status ?? sub.latest_invoice_status ?? null;
     // The invoice's own number and links: a draft has none yet.
     sub.latest_invoice_number = invoice.number ?? null;
     sub.latest_invoice_url = invoice.hosted_invoice_url ?? null;
     sub.latest_invoice_pdf = invoice.invoice_pdf ?? null;
-    // The reason of a refused payment stays until the invoice is paid.
+    // The reason of a refused payment stays until the invoice is paid, or replaced (above).
     if (invoice.status === 'paid') this.writePaymentFailure(sub, null);
     if (typeof invoice.total === 'number') {
       sub.latest_invoice_amount = invoice.total;

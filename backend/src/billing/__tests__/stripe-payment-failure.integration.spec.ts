@@ -4,6 +4,8 @@ import { randomUUID } from 'node:crypto';
 import dataSource from '../../data-source';
 import { withTenant } from '../../common/tenant-runner';
 import { StripeWebhookService } from '../stripe-webhook.service';
+import { BillingService } from '../billing.service';
+import { CollectionMethod, Subscription, SubscriptionStatus } from '../subscription.entity';
 
 // A refused payment: the tenant's row keeps the code and the message of the refusal, read where
 // Stripe carries them since basil (the PaymentIntent of the invoice, and the
@@ -62,7 +64,7 @@ async function storedError(tenantId: string): Promise<{ code: string | null; mes
  * each invoice as `invoices.retrieve` returns it with its payments expanded; `retrieves` records
  * the expansions asked for.
  */
-function stripeAccount(seed: Seed, invoiceId: string, invoices: Record<string, any>) {
+function stripeAccount(seed: Seed, invoiceId: string | (() => string), invoices: Record<string, any>) {
   const retrieves: Array<{ id: string; expand: string[] }> = [];
   const client = {
     subscriptions: {
@@ -73,7 +75,7 @@ function stripeAccount(seed: Seed, invoiceId: string, invoices: Record<string, a
         status: 'past_due',
         collection_method: 'charge_automatically',
         currency: 'eur',
-        latest_invoice: invoiceId,
+        latest_invoice: typeof invoiceId === 'function' ? invoiceId() : invoiceId,
         default_payment_method: 'pm_old',
         items: { data: [{ quantity: 1, price: { id: 'price_spec', currency: 'eur', unit_amount: 24900, recurring: { interval: 'month' } } }] },
       }),
@@ -208,12 +210,72 @@ async function testRefusalOfAnotherPaymentIsIgnored() {
   }
 }
 
+/**
+ * The row follows another invoice: the refused one is voided and a new invoice, not tried yet,
+ * becomes the latest. The reason of the voided invoice's refusal goes with it.
+ */
+async function testReasonGoesWithTheInvoiceItBelongsTo() {
+  const seed = await seedTenant('next');
+  try {
+    const refused = `in_spec_${seed.tenantId.slice(0, 8)}_a`;
+    const next = `in_spec_${seed.tenantId.slice(0, 8)}_b`;
+    let latest = refused;
+    const { svc } = stripeAccount(seed, () => latest, {
+      [refused]: invoiceWithPayment(refused, 'open', 'pi_refused'),
+      [next]: { object: 'invoice', id: next, status: 'open', number: 'KAN-0048', payments: { data: [] } },
+    });
+    await svc.processEvent(invoiceEvent(seed, 'invoice.payment_failed', { id: refused, status: 'open', number: 'KAN-0047' }));
+    assert.equal((await storedError(seed.tenantId)).code, 'insufficient_funds');
+    await svc.processEvent(invoiceEvent(seed, 'invoice.voided', { id: refused, status: 'void', number: 'KAN-0047' }));
+    latest = next;
+    await svc.processEvent(invoiceEvent(seed, 'invoice.finalized', { id: next, status: 'open', number: 'KAN-0048' }));
+    assert.deepEqual(await storedError(seed.tenantId), { code: null, message: null, status: 'open' }, 'the new invoice has no refusal yet');
+  } finally {
+    await removeTenant(seed.tenantId);
+  }
+}
+
+/** The same on a refresh from Stripe (the billing page forces one): another latest invoice, no reason. */
+async function testRefreshClearsTheReasonOfAnotherInvoice() {
+  const row = {
+    tenant_id: 'tenant-1',
+    status: SubscriptionStatus.PAST_DUE,
+    collection_method: CollectionMethod.CHARGE_AUTOMATICALLY,
+    stripe_subscription_id: 'sub_1',
+    latest_invoice_id: 'in_refused',
+    latest_invoice_status: 'open',
+    last_payment_error_code: 'insufficient_funds',
+    last_payment_error_message: DECLINED.message,
+  } as Subscription;
+  const client = {
+    subscriptions: {
+      retrieve: async () => ({
+        id: 'sub_1',
+        status: 'past_due',
+        collection_method: 'charge_automatically',
+        latest_invoice: { object: 'invoice', id: 'in_next', status: 'open', number: 'KAN-0048', payments: { data: [] } },
+        items: { data: [{ quantity: 1 }] },
+      }),
+    },
+    invoices: { retrieve: async (id: string) => ({ object: 'invoice', id, status: 'open', payments: { data: [] } }) },
+  };
+  const service = new BillingService({} as any, {} as any, {} as any, { getClient: () => client } as any, {} as any, {} as any, {} as any);
+  (service as any).logger = { warn: () => undefined, log: () => undefined, debug: () => undefined, error: () => undefined };
+  const manager = { getRepository: () => ({ save: async (data: Subscription) => data }) };
+  const sub: Subscription = await (service as any).refreshSubscriptionFromStripe(row, manager);
+  assert.equal(sub.latest_invoice_id, 'in_next');
+  assert.equal(sub.last_payment_error_code, null);
+  assert.equal(sub.last_payment_error_message, null);
+}
+
 async function main() {
   await dataSource.initialize();
   try {
     await testRefusalIsKeptUntilTheInvoiceIsPaid();
     await testInvoiceFailureReadsItsPaymentIntent();
     await testRefusalOfAnotherPaymentIsIgnored();
+    await testReasonGoesWithTheInvoiceItBelongsTo();
+    await testRefreshClearsTheReasonOfAnotherInvoice();
     // eslint-disable-next-line no-console
     console.log('stripe-payment-failure.integration.spec: all assertions passed');
   } finally {
