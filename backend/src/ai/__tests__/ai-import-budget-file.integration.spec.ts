@@ -164,6 +164,7 @@ async function testOneCardOneApproval(h: Harness, runner: QueryRunner, s: Seed) 
   const template = await h.mapping.describeTemplate(admin, 'budget_lines', 'fr');
   const company = template.columns.find((column: any) => column.column === 'company_name');
   assert.equal(company.required, false, 'the company is not asked for');
+  assert.match(company.takes, /only company/, 'the model is told a blank company is the workspace\'s only one');
 
   const card = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: attachWorkbook(h), entity_type: 'budget_lines', columns: MAPPING });
   const check = card.import_mapping.validation;

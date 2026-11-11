@@ -245,7 +245,8 @@ export const AI_IMPORT_TARGETS: Record<AiImportKey, AiImportTarget> = {
       const specs: Record<string, AiImportColumnSpec> = {
         nature: { column: 'nature', kind: 'codes', codes: ['opex', 'capex'], required: true, labels: BUDGET_NATURE_LABELS },
         name: text('name', undefined, true),
-        company_name: reference('company_name', 'a company by name'),
+        // A new line without a company is paid by its cost center's company, else the workspace's only one (preflight).
+        company_name: reference('company_name', 'a company by name; when blank, the company of the cost center, else the workspace\'s only company'),
         supplier_name: reference('supplier_name', 'a supplier by name'),
         supplier_erp_id: text('supplier_erp_id', 'the supplier\'s id in the ERP'),
         account_number: reference('account_number', 'the number of an account of the chart of accounts', true),
