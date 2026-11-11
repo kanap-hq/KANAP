@@ -18,6 +18,7 @@ import { TrialMailsService } from '../email/trial-mails/trial-mails.service';
 import { AuditService } from '../audit/audit.service';
 import {
   PLANS,
+  isLiveSubscriptionStatus,
   resolvePlanKeyFromPriceId,
   resolvePlanKeyFromLegacyName,
   toPlanDisplayName,
@@ -307,12 +308,22 @@ export class StripeWebhookService implements OnModuleInit {
     const subscriptionData = await this.resolveSubscriptionData(event, subscriptionId);
     const invoiceData = event?.type?.startsWith('invoice.') ? event?.data?.object ?? null : null;
 
+    let ignored = false;
     await withTenant(this.dataSource, tenantId, async (manager) => {
       const repo = manager.getRepository(Subscription);
       let sub = await repo.findOne({ where: { stripe_subscription_id: subscriptionId } });
 
       if (!sub) {
-        sub = await repo.findOne({ where: {} });
+        const current = await repo.findOne({ where: {} });
+        if (current && !this.mayFollowSubscription(current, subscriptionData, event)) {
+          // The tenant follows another subscription of this customer: one it has left.
+          this.logger.warn(
+            `Stripe event ${event?.id ?? 'unknown'} of subscription ${subscriptionId} ignored: tenant ${tenantId} follows ${current.stripe_subscription_id}`,
+          );
+          ignored = true;
+          return;
+        }
+        sub = current;
       }
       const before = sub ? { ...sub } : null;
 
@@ -438,9 +449,21 @@ export class StripeWebhookService implements OnModuleInit {
       );
     });
 
-    if (identifiers.customerId) {
+    if (!ignored && identifiers.customerId) {
       await this.updateTenantStripeCustomer(tenantId, identifiers.customerId);
     }
+  }
+
+  /**
+   * Whether the tenant's row may take another Stripe subscription: when it has none yet (the
+   * first subscription), when its own has ended and the event's still runs (a new subscription
+   * after a cancellation), or on the completion of a checkout the tenant paid (the subscription
+   * it has just bought). Any other event of a subscription the tenant has left never does.
+   */
+  private mayFollowSubscription(row: Subscription, subscriptionData: any, event: StripeEvent): boolean {
+    if (!row.stripe_subscription_id) return true;
+    if (event?.type === 'checkout.session.completed' && event?.data?.object?.mode === 'subscription') return true;
+    return !isLiveSubscriptionStatus(row.status) && isLiveSubscriptionStatus(subscriptionData?.status);
   }
 
   /**

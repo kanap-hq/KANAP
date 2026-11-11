@@ -202,7 +202,9 @@ function createSyncService(
   const customerUpdates: unknown[][] = [];
   const manager = {
     getRepository: () => ({
-      findOne: async () => row,
+      // The tenant's one row; a search by subscription id finds it only when it carries that id.
+      findOne: async ({ where }: { where: Record<string, unknown> }) =>
+        (where?.stripe_subscription_id && where.stripe_subscription_id !== row.stripe_subscription_id ? null : row),
       create: (data: Record<string, unknown>) => ({ ...data }),
       save: async (data: Record<string, unknown>) => data,
     }),
@@ -428,6 +430,65 @@ async function testDraftInvoiceHasNoNumber() {
   assert.equal(row.latest_invoice_pdf, null);
 }
 
+/**
+ * A tenant follows one Stripe subscription. An event of another subscription of the same customer
+ * (one the tenant has left) is logged and ignored; it takes the row only when the row has no
+ * subscription yet, or when the row's subscription has ended and the event's still runs (a new
+ * subscription after a cancellation).
+ */
+async function testEventOfAnotherSubscriptionIsIgnored() {
+  const live = {
+    stripe_subscription_id: 'sub_B',
+    status: SubscriptionStatus.ACTIVE,
+    subscription_type: 'annual',
+    payment_mode: 'bank_transfer',
+    latest_invoice_id: 'in_B',
+    latest_invoice_number: 'KAN-0043',
+  };
+  const { svc, row } = createSyncService({ ...live }, cloverSubscription({ id: 'sub_A', status: 'past_due' }));
+  await svc.processEvent(invoiceEvent('invoice.payment_failed', {
+    id: 'in_A', customer: 'cus_1', number: 'KAN-0042', total: 24900, currency: 'eur',
+    parent: { type: 'subscription_details', subscription_details: { subscription: 'sub_A', metadata: {} } },
+  }));
+  await svc.processEvent({
+    id: 'evt_old_sub',
+    type: 'customer.subscription.updated',
+    data: { object: cloverSubscription({ id: 'sub_A', status: 'past_due' }) },
+  });
+  assert.deepEqual(
+    Object.fromEntries(Object.keys(live).map((key) => [key, row[key]])),
+    live,
+    'the row still follows sub_B',
+  );
+
+  // First subscription: the row takes it.
+  const first = createSyncService({ stripe_subscription_id: null, status: SubscriptionStatus.TRIALING });
+  await first.svc.processEvent({ id: 'evt_first', type: 'customer.subscription.updated', data: { object: cloverSubscription({ id: 'sub_new' }) } });
+  assert.equal(first.row.stripe_subscription_id, 'sub_new');
+  assert.equal(first.row.status, SubscriptionStatus.ACTIVE);
+
+  // A new subscription after a cancellation takes the row; another ended one does not.
+  const renewed = createSyncService({ stripe_subscription_id: 'sub_old', status: SubscriptionStatus.CANCELED });
+  await renewed.svc.processEvent({ id: 'evt_late', type: 'customer.subscription.deleted', data: { object: cloverSubscription({ id: 'sub_older', status: 'canceled' }) } });
+  assert.equal(renewed.row.stripe_subscription_id, 'sub_old');
+  await renewed.svc.processEvent({ id: 'evt_renew', type: 'customer.subscription.created', data: { object: cloverSubscription({ id: 'sub_new' }) } });
+  assert.equal(renewed.row.stripe_subscription_id, 'sub_new');
+  assert.equal(renewed.row.status, SubscriptionStatus.ACTIVE);
+
+  // A checkout the tenant paid: the row follows the subscription it has just bought.
+  const bought = createSyncService(
+    { stripe_subscription_id: 'sub_A', status: SubscriptionStatus.PAST_DUE },
+    cloverSubscription({ id: 'sub_new' }),
+  );
+  await bought.svc.processEvent({
+    id: 'evt_checkout',
+    type: 'checkout.session.completed',
+    data: { object: { object: 'checkout.session', id: 'cs_1', mode: 'subscription', customer: 'cus_1', subscription: 'sub_new' } },
+  });
+  assert.equal(bought.row.stripe_subscription_id, 'sub_new');
+  assert.equal(bought.row.status, SubscriptionStatus.ACTIVE);
+}
+
 async function testInvoiceWithoutTenantIsSetToA4() {
   const { svc, invoiceUpdates } = createSyncService({}, null, { tenantKnown: false });
   await svc.processEvent(invoiceEvent('invoice.finalized', { id: 'in_support', customer: 'cus_unknown' }));
@@ -501,6 +562,7 @@ async function run() {
   await testSyncWritesThePaymentModeAndTerm();
   await testInvoiceStatusNeverGoesBack();
   await testDraftInvoiceHasNoNumber();
+  await testEventOfAnotherSubscriptionIsIgnored();
   await testInvoiceWithoutTenantIsSetToA4();
   await testInvoiceAlreadyA4AndOtherEventsAreLeftAlone();
   await testStripeErrorOnA4DoesNotStopTheEvent();
