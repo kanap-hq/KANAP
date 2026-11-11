@@ -12,7 +12,7 @@ import {
   type AiAgentControlActivityDetail,
   type AiAgentControlActivityType,
 } from '../../ai/aiApi';
-import { EmptyState, formatDateTime, humanize, Section, StatusText, TargetLabel } from '../../components/agents/agentControlPrimitives';
+import { EmptyState, formatDateTime, humanize, knownCapabilityLabel, Section, StatusText, TargetLabel } from '../../components/agents/agentControlPrimitives';
 import RunTraceDialog from '../../components/agents/RunTraceDialog';
 import { useLocale } from '../../i18n/useLocale';
 
@@ -167,6 +167,19 @@ function ActivityDetail({ detail }: { detail: AiAgentControlActivityDetail }) {
   );
 }
 
+// The chip names the kind of action: a ticket action class by its label, a capability key (Kad's
+// approved changes) by the label the screens know, any other key as a generic action. The key
+// itself stays in the API.
+function useActionClassLabel() {
+  const { t } = useTranslation(['agents']);
+  return React.useCallback((actionClass: string): string => {
+    if (!actionClass.includes('.')) {
+      return t(`settings.actionClasses.${actionClass}`, { defaultValue: humanize(actionClass) });
+    }
+    return knownCapabilityLabel(actionClass) ?? t('activity.otherAction');
+  }, [t]);
+}
+
 const COMPACT_ACTIVITY_LIMIT = 10;
 
 export default function AgentsActivityPage({ agentKey, compact = false }: { agentKey?: string; compact?: boolean }) {
@@ -183,6 +196,7 @@ export default function AgentsActivityPage({ agentKey, compact = false }: { agen
     [searchParams],
   );
   const checkSummary = useCheckSummary();
+  const actionClassLabel = useActionClassLabel();
 
   const toggleType = React.useCallback((type: AiAgentControlActivityType) => {
     const next = selectedTypes.includes(type)
@@ -340,10 +354,10 @@ export default function AgentsActivityPage({ agentKey, compact = false }: { agen
                         <Box sx={{ minWidth: 0 }}>
                           <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap alignItems="center">
                             <Chip size="small" label={t(`activity.types.${entry.type}`)} />
-                            {entry.actionClass && <Chip size="small" variant="outlined" label={t(`settings.actionClasses.${entry.actionClass}`, { defaultValue: humanize(entry.actionClass) })} />}
+                            {entry.actionClass && <Chip size="small" variant="outlined" label={actionClassLabel(entry.actionClass)} />}
                             {entry.status && <StatusText status={entry.status} />}
                             {entry.agentKey && <Chip size="small" variant="outlined" label={agentNameByKey.get(entry.agentKey) ?? entry.agentKey} />}
-                            {entry.targetRef && <TargetLabel targetType={entry.targetType} targetRef={entry.targetRef} size="dense" />}
+                            {entry.targetRef && <TargetLabel targetType={entry.targetType} targetRef={entry.targetRef} displayRef={entry.targetDisplay} size="dense" />}
                           </Stack>
                           <Typography variant="body2" sx={{ mt: 0.75 }}>
                             {activityTitle(entry)}

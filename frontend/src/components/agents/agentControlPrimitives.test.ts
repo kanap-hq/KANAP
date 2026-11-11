@@ -3,6 +3,7 @@ import {
   actionUpdateSummary,
   buildTicketGroups,
   capabilityLabelFromName,
+  knownCapabilityLabel,
   executableActions,
   executableTerminalActions,
   ticketingProviderKeyForDefinition,
@@ -275,6 +276,13 @@ describe('capabilityLabelFromName', () => {
     expect(capabilityLabelFromName('ticketing.ticket.internal_note.add_approved')).toBe('Internal note');
     expect(capabilityLabelFromName('ticketing.ticket.status_update.prepare')).toBe('Status');
     expect(capabilityLabelFromName('ticketing.ticket.participant_update.prepare')).toBe('Observers');
+  });
+
+  it('labels the approved changes of Kad, and leaves other keys to the fallback', () => {
+    expect(capabilityLabelFromName('kanap.mutation_preview.execute_approved')).toBe('Approved change');
+    expect(knownCapabilityLabel('kanap.mutation_preview.execute_approved')).toBe('Approved change');
+    expect(knownCapabilityLabel('vendor.thing.do_it')).toBeNull();
+    expect(knownCapabilityLabel(null)).toBeNull();
   });
 
   it('does not label read-only context lookups as write actions', () => {

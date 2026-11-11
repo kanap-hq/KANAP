@@ -1185,6 +1185,8 @@ export type AiAgentControlActivityEntry = {
   agentKey: string | null;
   targetType: string | null;
   targetRef: string | null;
+  // The business reference (T-15) or name of an object recorded by id; null when there is none to show.
+  targetDisplay?: string | null;
   titleKey: string;
   status: string | null;
   actorUserId: string | null;

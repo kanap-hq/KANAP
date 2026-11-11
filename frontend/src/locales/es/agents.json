@@ -102,7 +102,30 @@
   "targetTypes": {
     "ticket": "Ticket",
     "alert": "Alerta",
-    "sensor": "Comprobación supervisada"
+    "sensor": "Comprobación supervisada",
+    "tasks": "Tarea",
+    "projects": "Proyecto",
+    "requests": "Solicitud",
+    "applications": "Aplicación",
+    "assets": "Activo",
+    "technologies": "Tecnología",
+    "incidents": "Incidente",
+    "documents": "Documento",
+    "budget_lines": "Línea presupuestaria",
+    "contracts": "Contrato",
+    "companies": "Empresa",
+    "contacts": "Contacto",
+    "suppliers": "Proveedor",
+    "departments": "Departamento",
+    "locations": "Ubicación",
+    "connections": "Conexión",
+    "interfaces": "Interfaz",
+    "business_processes": "Proceso de negocio",
+    "users": "Usuario",
+    "accounts": "Cuenta",
+    "analytics_categories": "Categoría analítica",
+    "chart_of_accounts": "Plan de cuentas",
+    "vulnerabilities": "Vulnerabilidad"
   },
   "targetLink": {
     "open": "Abrir en su herramienta de tickets"
@@ -320,7 +343,8 @@
     "runStarted": "Iniciado {{value}}",
     "runCompleted": "finalizado {{value}}",
     "runDuration": "duración {{value}}",
-    "noTypesSelected": "Elige al menos un tipo de actividad para ver el historial."
+    "noTypesSelected": "Elige al menos un tipo de actividad para ver el historial.",
+    "otherAction": "Otra acción"
   },
   "workspace": {
     "back": "Volver a agentes",
@@ -863,6 +887,7 @@
       "urgency": "Urgencia",
       "impact": "Impacto",
       "service": "Servicio"
-    }
+    },
+    "approvedChange": "Cambio aprobado"
   }
 }
