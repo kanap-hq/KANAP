@@ -223,7 +223,11 @@ async function testSuppliersNeedTheirRight(h: Harness, runner: QueryRunner, s: S
   assert.equal(check.ok, false, JSON.stringify(check.issues));
   assert.equal(check.new_suppliers, 0);
   assert.ok(check.issues.some((issue: any) => issue.level === 'error' && issue.column === 'supplier_name'), JSON.stringify(check.issues));
-  assert.equal((await h.previews.executePreview(budget, card.preview_id)).status, 'failed');
+  const failed = await h.previews.executePreview(budget, card.preview_id);
+  assert.equal(failed.status, 'failed');
+  // In the person's language, as a check that found errors: never a refusal.
+  assert.match(failed.error_message, /^La vérification de ce fichier a trouvé des erreurs : rien n'a été importé\./);
+  assert.doesNotMatch(failed.error_message, /refus/i);
   assert.equal(await count(runner, s, 'suppliers'), suppliersBefore);
   assert.equal(await count(runner, s, 'spend_items'), linesBefore);
   console.log('  without the right to create suppliers: refused, nothing written: OK');

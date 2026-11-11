@@ -8,7 +8,7 @@ import {
   AiWriteLanguage,
   importCountsText,
   personWriteLanguage,
-  PREVIEW_IMPORT_REFUSED_MESSAGE,
+  PREVIEW_IMPORT_CHECK_FAILED_MESSAGE,
   previewSummaryText,
   writeActionText,
 } from '../../ai-write-texts';
@@ -197,7 +197,7 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
     preview: AiMutationPreview,
   ): Promise<void> {
     const mapping = (preview.current_values?.import_mapping ?? null) as AiImportMappingPreviewDto | null;
-    if (!mapping?.validation?.ok) throw new Error(PREVIEW_IMPORT_REFUSED_MESSAGE);
+    if (!mapping?.validation?.ok) throw new Error(PREVIEW_IMPORT_CHECK_FAILED_MESSAGE);
     const input = preview.mutation_input as unknown as PrepareImportMappingInput;
     const language = await personWriteLanguage(context.manager, context.tenantId, context.userId);
     const result = await this.mapping.runImport(
@@ -205,7 +205,7 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
       input,
       language,
     );
-    if (!result.ok) throw new Error(PREVIEW_IMPORT_REFUSED_MESSAGE);
+    if (!result.ok) throw new Error(PREVIEW_IMPORT_CHECK_FAILED_MESSAGE);
 
     preview.current_values = { ...preview.current_values, import_mapping: { ...mapping, result } };
     await writeAuditLog(context.manager, {

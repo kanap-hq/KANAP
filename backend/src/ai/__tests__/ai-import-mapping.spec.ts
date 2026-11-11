@@ -766,11 +766,11 @@ async function testARefusedFileIsNotImported() {
   assert.equal(dto.import_mapping!.validation!.ok, false);
   const failed = await refused.previews.executePreview(refused.context, dto.preview_id);
   assert.equal(failed.status, 'failed');
-  assert.match(failed.error_message ?? '', /The import refused this file, so nothing was imported/);
+  assert.match(failed.error_message ?? '', /The check of this file found errors, so nothing was imported/);
   assert.deepEqual(refused.runs.map((run) => run.dryRun), [true], 'no load is tried');
   assert.equal(refused.manager.audits.length, 0);
 
-  // The check passed, but the import refuses the file at approval (the data changed meanwhile).
+  // The check passed, but the check of the load finds errors at approval (the data changed meanwhile).
   const changed = createImport({ [FILE]: { csv: CLEAN_CSV, filename: 'apps.csv' } }, { applications: 'admin' }, {
     locale: 'de', answer: (run) => (run.dryRun ? {} : refusal),
   });
@@ -779,7 +779,7 @@ async function testARefusedFileIsNotImported() {
   });
   const late = await changed.previews.executePreview(changed.context, card.preview_id);
   assert.equal(late.status, 'failed');
-  assert.equal(late.error_message, 'Der Import hat diese Datei abgelehnt, daher wurde nichts importiert. Korrigieren Sie die Zuordnung oder die Datei und bereiten Sie den Import erneut vor.');
+  assert.equal(late.error_message, 'Die Prüfung dieser Datei hat Fehler gefunden, daher wurde nichts importiert. Korrigieren Sie die Zuordnung oder die Datei und bereiten Sie den Import erneut vor.');
   assert.equal(late.import_mapping!.result ?? null, null, 'no result on a refused import');
   assert.equal(changed.manager.audits.length, 0);
   console.log('  a refused file is not imported: OK');
