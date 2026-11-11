@@ -88,6 +88,26 @@ const ERROR_MARKERS = {
 };
 const FAILED_RUNS = ['chatFailed', 'mcpFailed'] as const;
 
+// A write a run prepared, and its approval. Both keep the fingerprint of the arguments, and a
+// failed one keeps the message of its failure, on the action and in its metadata. The `chat` run
+// holds a person's, the `agent` run an agent's with the reply it drafted.
+const ACTION_RUNS = ['chat', 'agent'] as const;
+type ActionRun = typeof ACTION_RUNS[number];
+const ACTIONS: Record<ActionRun, { id: string; approvalId: string; target: string; hash: string; approvalHash: string; error: string; retry: string }> = {
+  chat: {
+    id: randomUUID(), approvalId: randomUUID(), target: `PRJ-${TAG}`,
+    hash: randomBytes(32).toString('hex'), approvalHash: randomBytes(32).toString('hex'),
+    error: `Library LIB-${TAG}-missing not found`, retry: `Library LIB-${TAG}-retry not found`,
+  },
+  agent: {
+    id: randomUUID(), approvalId: randomUUID(), target: `T-${TAG}`,
+    hash: randomBytes(32).toString('hex'), approvalHash: randomBytes(32).toString('hex'),
+    error: `Ticket T-${TAG}-locked is locked`, retry: `Ticket T-${TAG}-retry is locked`,
+  },
+};
+const AGENT_DRAFT = `Reply ${TAG} draft`;
+const actionMarkers = (run: ActionRun) => [ACTIONS[run].error, ACTIONS[run].retry, ACTIONS[run].hash, ACTIONS[run].approvalHash];
+
 async function seed(): Promise<Seed> {
   const tenantId = randomUUID();
   const ids = () => ({ role: randomUUID(), user: randomUUID() });
@@ -172,6 +192,41 @@ async function seed(): Promise<Seed> {
     });
     await run('agent', { channel: 'internal', trigger: 'internal', surface: 'internal' }, 'ticketing.ticket.get', { ticket_id: '42' }, {
       metadata: { agent_definition_id: randomUUID() },
+    });
+    // A failed write of each origin, approved before it ran.
+    const action = async (
+      key: ActionRun,
+      row: { capability: string; userId: string | null; targetType: string; summary: Record<string, unknown>; payload: Record<string, unknown> | null; metadata: Record<string, unknown>; source: string },
+    ) => {
+      const kept = ACTIONS[key];
+      await runner.query(
+        `INSERT INTO ai_action_requests (id, tenant_id, run_id, user_id, capability_name, capability_version, effect, status, target_type, target_ref, input_hash, input_summary, action_payload_json, error_message, metadata_json, approved_at)
+         VALUES ($1, $2, $3, $4, $5, '1.0.0', 'write', 'failed', $6, $7, $8, $9::jsonb, $10::jsonb, $11, $12::jsonb, now())`,
+        [kept.id, tenantId, runs[key], row.userId, row.capability, row.targetType, kept.target, kept.hash, JSON.stringify(row.summary), JSON.stringify(row.payload), kept.error, JSON.stringify({ ...row.metadata, last_execution_error: kept.retry, attention_acknowledged: { at: '2026-11-11T09:00:00.000Z' } })],
+      );
+      await runner.query(
+        `INSERT INTO ai_approvals (id, tenant_id, action_request_id, capability_name, capability_version, source, status, actor_user_id, input_hash, decision_json, expires_at, decided_at)
+         VALUES ($1, $2, $3, $4, '1.0.0', $5, 'approved', $6, $7, $8::jsonb, now() + interval '1 hour', now())`,
+        [kept.approvalId, tenantId, kept.id, row.capability, row.source, row.userId ?? agentReader.user, kept.approvalHash, JSON.stringify({ input_hash: kept.approvalHash })],
+      );
+    };
+    await action('chat', {
+      capability: 'kanap.mutation_preview.execute_approved',
+      userId: author.user,
+      targetType: 'projects',
+      summary: { tool_name: 'update_business_record', target_entity_type: 'projects', target_entity_id: null },
+      payload: null,
+      metadata: {},
+      source: 'human_chat',
+    });
+    await action('agent', {
+      capability: 'ticketing.ticket.public_reply.create',
+      userId: null,
+      targetType: 'ticket',
+      summary: { target_ref: ACTIONS.agent.target },
+      payload: { reply_body: AGENT_DRAFT },
+      metadata: { agent_definition_id: randomUUID() },
+      source: 'human_ui',
     });
     // A conversation whose first tool reported a failure in its output and whose second one threw.
     const failedInput = { entity_type: 'budget_lines', query: 'missing' };
@@ -291,6 +346,43 @@ async function resultsSeen(s: Seed, userId: string) {
 }
 
 const JOURNAL = 'GET ai/admin/mcp-audit';
+// Every path that returns an action or its approval, by the run that prepared it.
+const ACTION_READS: Array<{ name: string; read: (ctx: Ctx, seed: Seed) => Promise<Record<ActionRun, unknown>> }> = [
+  {
+    name: 'GET ai/admin/control-plane/actions',
+    read: async (ctx, s) => {
+      const { items } = await control.listActionRequests(ctx as any, { status: 'all', limit: 100 });
+      return { chat: items.filter((item: any) => item.run_id === s.runs.chat), agent: items.filter((item: any) => item.run_id === s.runs.agent) };
+    },
+  },
+  {
+    name: 'GET ai/admin/control-plane/runs/:id',
+    read: async (ctx, s) => {
+      const of = async (runId: string) => {
+        const detail: any = await control.getRunDetail(ctx as any, runId);
+        return { action_requests: detail.action_requests, approvals: detail.approvals };
+      };
+      return { chat: await of(s.runs.chat), agent: await of(s.runs.agent) };
+    },
+  },
+  {
+    name: 'GET ai/admin/control-plane/activity',
+    read: async (ctx, s) => {
+      const { items } = await control.listActivity(ctx as any, { limit: 100 });
+      return { chat: items.filter((item: any) => item.runId === s.runs.chat), agent: items.filter((item: any) => item.runId === s.runs.agent) };
+    },
+  },
+];
+
+async function actionsSeen(s: Seed, userId: string): Promise<Record<string, Record<ActionRun, string>>> {
+  const seen: Record<string, Record<ActionRun, string>> = {};
+  for (const path of ACTION_READS) {
+    const answer = await as(s, userId, (ctx) => path.read(ctx, s));
+    seen[path.name] = { chat: JSON.stringify(answer.chat), agent: JSON.stringify(answer.agent) };
+  }
+  return seen;
+}
+
 const journalReads = (path: string, run: keyof Runs) => path !== JOURNAL || (MCP_RUNS as readonly string[]).includes(run);
 // The routes of the agents screens: the journal belongs to the administration.
 const AGENT_SCREEN_READS = RESULT_READS.filter((entry) => entry.name !== JOURNAL);
@@ -451,6 +543,59 @@ async function testTheFingerprintOfTheArgumentsIsReadLikeTheResult(s: Seed) {
   assert.ok((await fingerprints(s.people.agentReader, 'agent')).length >= 3);
 }
 
+async function testAnActionOfAnotherPersonsRunShowsItsLineWithoutTheMessageOrTheFingerprint(s: Seed) {
+  for (const reader of [s.people.agentReader, s.people.settingsAdmin]) {
+    const seen = await actionsSeen(s, reader);
+    for (const path of ACTION_READS) {
+      const text = seen[path.name].chat;
+      for (const kept of actionMarkers('chat')) {
+        assert.equal(text.includes(kept), false, `${path.name} gave ${kept.slice(0, 40)} of another person's action: ${text.slice(0, 400)}`);
+      }
+      // The line stays: the action, its tool, its target, how it ended.
+      assert.ok(text.includes(ACTIONS.chat.id), `${path.name} lost the line of the action`);
+      assert.ok(text.includes('kanap.mutation_preview.execute_approved'), `${path.name} lost the tool of the action`);
+      assert.ok(text.includes(ACTIONS.chat.target), `${path.name} lost the target of the action`);
+      assert.ok(text.includes('failed'), `${path.name} lost the status of the action`);
+      // An agent's action stays readable in full.
+      assert.ok(seen[path.name].agent.includes(ACTIONS.agent.error), `${path.name} lost the message of the agent's action`);
+      assert.ok(seen[path.name].agent.includes(AGENT_DRAFT), `${path.name} lost the draft of the agent's action`);
+    }
+    for (const kept of actionMarkers('agent')) {
+      assert.ok(seen['GET ai/admin/control-plane/runs/:id'].agent.includes(kept), `the detail lost ${kept.slice(0, 40)} of the agent's action`);
+    }
+    const detail: any = await as(s, reader, (ctx) => control.getRunDetail(ctx as any, s.runs.chat));
+    const [action] = detail.action_requests;
+    assert.equal(action.user_id, s.people.author);
+    assert.equal(action.status, 'failed');
+    assert.equal(action.target_type, 'projects');
+    assert.deepEqual(action.input_summary, { tool_name: 'update_business_record', target_entity_type: 'projects', target_entity_id: null });
+    assert.ok(action.approved_at && action.created_at);
+    for (const field of ['error_message', 'input_hash', 'idempotency_key', 'action_payload_json']) {
+      assert.equal(action[field], null, `the action gave its ${field}`);
+    }
+    // Of its metadata, the line keeps that somebody acknowledged the failure.
+    assert.deepEqual(action.metadata_json, { attention_acknowledged: { at: '2026-11-11T09:00:00.000Z' } });
+    const [approval] = detail.approvals;
+    assert.equal(approval.action_request_id, ACTIONS.chat.id);
+    assert.equal(approval.status, 'approved');
+    assert.equal(approval.actor_user_id, s.people.author);
+    assert.ok(approval.decided_at);
+    assert.equal(approval.input_hash, null);
+    assert.equal(approval.decision_json, null);
+  }
+  // The person whose run prepared the action and an Administrator read all of it.
+  for (const reader of [s.people.author, s.people.administrator]) {
+    const seen = await actionsSeen(s, reader);
+    for (const kept of actionMarkers('chat')) {
+      assert.ok(seen['GET ai/admin/control-plane/runs/:id'].chat.includes(kept), `the detail lost ${kept.slice(0, 40)} for its reader`);
+    }
+    for (const path of ACTION_READS) {
+      assert.ok(seen[path.name].chat.includes(ACTIONS.chat.error), `${path.name} lost the message of the action for its reader`);
+    }
+    assert.ok(seen['GET ai/admin/control-plane/actions'].chat.includes(ACTIONS.chat.hash));
+  }
+}
+
 async function testAnAgentRunStaysReadableInFull(s: Seed) {
   const seen = await resultsSeen(s, s.people.agentReader);
   for (const path of RESULT_READS.filter((entry) => entry.name !== 'GET ai/admin/mcp-audit')) {
@@ -481,11 +626,12 @@ async function testAnAdministratorReadsEveryResult(s: Seed) {
   await assertReadsEveryResult(s, s.people.administrator, 'the Administrator');
 }
 
-// The non-test sources that name what a run keeps of a call: its result, its input and the
-// message of its failure. Each one either withholds it by the run's origin, only writes it, reads
-// it for the agent's own work, or names another record that has columns of the same names (a
-// write preview, an action request, an approval, a tool definition, a provider's answer). An
-// entry that ends with `/` stands for every source below it.
+// The non-test sources that name what a run, an action or an approval keeps of a call: its
+// result, its input and the message of its failure. Each one either returns it to a reader and
+// withholds it by the run's origin, only writes it, reads it for the agent's own work (or derives
+// a flag or a count from it, without returning it), or names another record that has columns of
+// the same names (a write preview, a tool definition, a provider's answer). An entry that ends
+// with `/` stands for every source below it.
 type KeptColumnUse = 'withheld by run origin' | 'writes' | 'agent work' | 'another record';
 const KEPT_COLUMNS = /\b(payload_json|output_summary|input_summary|input_hash|error_message)\b/;
 const KEPT_COLUMN_FILES: Record<string, KeptColumnUse> = {
@@ -493,7 +639,8 @@ const KEPT_COLUMN_FILES: Record<string, KeptColumnUse> = {
   'ai/control-plane/mcp/ai-mcp-audit.service.ts': 'withheld by run origin',
   'ai/control-plane/dispatcher/ai-capability-dispatcher.service.ts': 'writes',
   'ai/control-plane/evidence/ai-evidence.service.ts': 'writes',
-  'ai/control-plane/agent-control/ai-agent-control.service.ts': 'writes',
+  'ai/control-plane/agent-control/ai-agent-control.service.ts': 'withheld by run origin',
+  'ai/control-plane/agent-control/agent-control-constants.util.ts': 'withheld by run origin',
   'ai/control-plane/automation/ai-automation-job-catalog.service.ts': 'agent work',
   'ai/ai.types.ts': 'another record',
   'ai/ai-tool.registry.ts': 'another record',
@@ -501,13 +648,12 @@ const KEPT_COLUMN_FILES: Record<string, KeptColumnUse> = {
   'ai/ai-mutation-preview.service.ts': 'another record',
   'ai/mutation/': 'another record',
   'ai/glpi/glpi.service.ts': 'another record',
-  'ai/control-plane/action-request/ai-action-request.service.ts': 'another record',
-  'ai/control-plane/approval/ai-approval.service.ts': 'another record',
-  'ai/control-plane/capability/ai-capability.registry.ts': 'another record',
-  'ai/control-plane/agent/ai-agent-work-queue.service.ts': 'another record',
-  'ai/control-plane/agent/ai-agent-approval-lifecycle-sweeper.service.ts': 'another record',
-  'ai/control-plane/agent-control/agent-control-constants.util.ts': 'another record',
-  'ai/control-plane/agent-control/ai-agent-attention.util.ts': 'another record',
+  'ai/control-plane/action-request/ai-action-request.service.ts': 'writes',
+  'ai/control-plane/approval/ai-approval.service.ts': 'writes',
+  'ai/control-plane/capability/ai-capability.registry.ts': 'writes',
+  'ai/control-plane/agent/ai-agent-approval-lifecycle-sweeper.service.ts': 'writes',
+  'ai/control-plane/agent/ai-agent-work-queue.service.ts': 'agent work',
+  'ai/control-plane/agent-control/ai-agent-attention.util.ts': 'agent work',
 };
 
 function testEverySourceThatNamesAKeptColumnIsClassified() {
@@ -542,6 +688,7 @@ async function main() {
     ['the agents screens name the arguments of another person\'s MCP call, without their values', testTheAgentsScreensNameTheArgumentsOfAnotherPersonsMcpCall],
     ['a failed run of another person shows how it ended, without the message', testAFailedRunOfAnotherPersonShowsHowItEndedWithoutTheMessage],
     ['the fingerprint of the arguments is read like the result', testTheFingerprintOfTheArgumentsIsReadLikeTheResult],
+    ['an action of another person\'s run shows its line without the message or the fingerprint', testAnActionOfAnotherPersonsRunShowsItsLineWithoutTheMessageOrTheFingerprint],
     ['an agent run stays readable in full', testAnAgentRunStaysReadableInFull],
     ['the author reads their own results', testTheAuthorReadsTheirOwnResults],
     ['an Administrator reads every result', testAnAdministratorReadsEveryResult],

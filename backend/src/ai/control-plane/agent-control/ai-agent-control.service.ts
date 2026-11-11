@@ -93,7 +93,7 @@ import { AiReadonlyDiagnosticWorkflowService } from '../diagnostics/ai-readonly-
 import { AiTenantExecutionService } from '../../execution/ai-tenant-execution.service';
 import { AiActionRequest } from '../entities/ai-action-request.entity';
 import { hashStableJson } from '../evidence/ai-evidence.service';
-import { RunResultAccess, runResultAccess } from '../evidence/run-result-visibility';
+import { RunResultAccess, originWithoutRun, runResultAccess } from '../evidence/run-result-visibility';
 import { AiAgentAuditEvent } from '../entities/ai-agent-audit-event.entity';
 import { AiModelConfig } from '../../ai-model-config.entity';
 import { AiAgentLlmClient } from './ai-agent-llm-client';
@@ -795,6 +795,34 @@ export class AiAgentControlService {
   private runResultAccess(context: AiExecutionContextWithManager): RunResultAccess {
     return runResultAccess(context.userId, async () =>
       (this.policy ? this.policy.readsEveryRunResult(context, context.manager) : false));
+  }
+
+  /**
+   * For the actions of one answer: whether the reader reads what each one carries of its call (the
+   * arguments, their fingerprint, the message of a failure). An action follows the run that
+   * prepared it, read for all the actions at once; an action without a run is its person's.
+   */
+  private async actionResultAccess(
+    context: AiExecutionContextWithManager,
+    actions: AiActionRequest[],
+    access: RunResultAccess = this.runResultAccess(context),
+  ): Promise<(actionRequestId: string | null | undefined) => boolean> {
+    const runIds = Array.from(new Set(
+      actions.map((action) => action.run_id).filter((id): id is string => typeof id === 'string' && id.length > 0),
+    ));
+    const runs = runIds.length > 0
+      ? await context.manager.getRepository(AiRun).find({
+        where: { tenant_id: context.tenantId, id: In(runIds) },
+        select: { id: true, invocation_channel: true, trigger_kind: true, user_id: true },
+      })
+      : [];
+    const originByRun = new Map(runs.map((run) => [run.id, run]));
+    const readable = new Map<string, boolean>();
+    for (const action of actions) {
+      const origin = (action.run_id ? originByRun.get(action.run_id) : null) ?? originWithoutRun(action.user_id);
+      readable.set(action.id, await access(origin));
+    }
+    return (actionRequestId) => (actionRequestId ? readable.get(actionRequestId) === true : false);
   }
 
   private async actionPlannerProfileForProvider(
@@ -1629,7 +1657,9 @@ export class AiAgentControlService {
 
     const readiness = await this.executionReadinessForActions(context, mergedActionRequests);
     const agentLinks = await this.agentLinksForActions(context, mergedActionRequests);
-    const resultsReadable = await this.runResultAccess(context)(run);
+    const access = this.runResultAccess(context);
+    const resultsReadable = await access(run);
+    const actionReadable = await this.actionResultAccess(context, mergedActionRequests, access);
     return {
       run: serializeRun(run, resultsReadable),
       run_steps: runSteps.map((step) => serializeRunStep(step, resultsReadable)),
@@ -1639,8 +1669,8 @@ export class AiAgentControlService {
       recommendations: recommendations.map(serializeRecommendation),
       decisions: decisions.map(serializeDecision),
       evaluations: evaluations.map(serializeEvaluation),
-      action_requests: mergedActionRequests.map((action) => serializeActionRequest(action, readiness.get(action.id), agentLinks.get(action.id))),
-      approvals: approvals.map(serializeApproval),
+      action_requests: mergedActionRequests.map((action) => serializeActionRequest(action, actionReadable(action.id), readiness.get(action.id), agentLinks.get(action.id))),
+      approvals: approvals.map((approval) => serializeApproval(approval, actionReadable(approval.action_request_id))),
     };
   }
 
@@ -1684,7 +1714,8 @@ export class AiAgentControlService {
       : items;
     const readiness = await this.executionReadinessForActions(context, visibleItems);
     const agentLinks = await this.agentLinksForActions(context, visibleItems);
-    return { items: visibleItems.map((action) => serializeActionRequest(action, readiness.get(action.id), agentLinks.get(action.id))) };
+    const readable = await this.actionResultAccess(context, visibleItems);
+    return { items: visibleItems.map((action) => serializeActionRequest(action, readable(action.id), readiness.get(action.id), agentLinks.get(action.id))) };
   }
 
   private async uniqueAgentKey(
@@ -3028,6 +3059,16 @@ export class AiAgentControlService {
       }
     }
 
+    // So far every entry is an action or a decision on one. The message of a failure and the
+    // detail of the proposal quote the call: they follow the run that prepared the action.
+    const actionReadable = await this.actionResultAccess(context, Array.from(actionById.values()));
+    for (const entry of entries) {
+      if (!actionReadable(entry.actionRequestId)) {
+        entry.errorMessage = null;
+        entry.detail = null;
+      }
+    }
+
     // Derived from the classifier's own list so a newly audit-derived type
     // (e.g. the acknowledgements now filed under "decision") can never be
     // selected by the filter yet skipped by this gate.
@@ -3448,6 +3489,7 @@ export class AiAgentControlService {
     ].map((action) => [action.id, action])).values());
     const readiness = await this.executionReadinessForActions(context, actionRequests);
     const agentLinks = await this.agentLinksForActions(context, actionRequests);
+    const actionReadable = await this.actionResultAccess(context, actionRequests);
     const ticketRefsByProvider = new Map<string, Set<string>>();
     const collectTicketRef = (
       providerKind: string | null | undefined,
@@ -3498,7 +3540,7 @@ export class AiAgentControlService {
       })),
       work_items: overview.workItems.map(serializeAgentWorkItem),
       target_states: overview.targetStates.map(serializeAgentTargetState),
-      action_requests: actionRequests.map((action) => serializeActionRequest(action, readiness.get(action.id), agentLinks.get(action.id))),
+      action_requests: actionRequests.map((action) => serializeActionRequest(action, actionReadable(action.id), readiness.get(action.id), agentLinks.get(action.id))),
       target_links: targetLinks,
       monitoring_diagnoses: overview.monitoringDiagnoses,
       counts: overview.counts,
@@ -7323,11 +7365,12 @@ export class AiAgentControlService {
     const responseAction = freshAction ?? approved.action;
     await this.agentQueue?.resolveWaitingApprovalForActionRequest(context, responseAction.id);
     const readiness = await this.executionReadinessForActions(context, [responseAction]);
+    const readable = (await this.actionResultAccess(context, [responseAction]))(responseAction.id);
 
     return {
-      action: serializeActionRequest(responseAction, readiness.get(responseAction.id)),
-      approval: serializeApproval(approved.approval),
-      execution,
+      action: serializeActionRequest(responseAction, readable, readiness.get(responseAction.id)),
+      approval: serializeApproval(approved.approval, readable),
+      execution: readable ? execution : null,
       detail: detailRunId ? await this.getRunDetail(context, detailRunId) : null,
     };
   }
@@ -7485,14 +7528,16 @@ export class AiAgentControlService {
   }> {
     await this.agentQueue?.resolveWaitingApprovalForActionRequest(context, action.id);
     const readiness = await this.executionReadinessForActions(context, [action]);
+    const readable = (await this.actionResultAccess(context, [action]))(action.id);
     const ok = action.status === 'executed';
     return {
       action_request_id: action.id,
       ok,
       status: action.status,
-      reason: ok ? null : this.bulkApproveReason(action, execution, failure),
-      action: serializeActionRequest(action, readiness.get(action.id)),
-      execution,
+      // The reason of a failure and the output of the execution quote the call.
+      reason: ok || !readable ? null : this.bulkApproveReason(action, execution, failure),
+      action: serializeActionRequest(action, readable, readiness.get(action.id)),
+      execution: readable ? execution : null,
     };
   }
 
@@ -7509,13 +7554,14 @@ export class AiAgentControlService {
   }> {
     await this.agentQueue?.resolveWaitingApprovalForActionRequest(context, action.id);
     const readiness = await this.executionReadinessForActions(context, [action]);
+    const readable = (await this.actionResultAccess(context, [action]))(action.id);
     const ok = action.status === 'executed';
     return {
       action_request_id: action.id,
       ok,
       status: action.status,
-      reason: ok ? null : actionExecutionSkipReason(action),
-      action: serializeActionRequest(action, readiness.get(action.id)),
+      reason: ok ? null : actionExecutionSkipReason(action, readable),
+      action: serializeActionRequest(action, readable, readiness.get(action.id)),
       execution: null,
     };
   }
@@ -7757,6 +7803,7 @@ export class AiAgentControlService {
       execution: unknown;
     }> = [];
     const approvals: Array<ReturnType<typeof serializeApproval>> = [];
+    const readable = await this.actionResultAccess(context, ordered);
 
     for (const action of ordered) {
       let execution: unknown = null;
@@ -7771,7 +7818,7 @@ export class AiAgentControlService {
             reason: approvalDecisionReason(input.reason, 'Approved from Agent Control Center bulk approval.'),
             actorLabel: null,
           });
-          approvals.push(serializeApproval(approved.approval));
+          approvals.push(serializeApproval(approved.approval, readable(action.id)));
           approvedAction = approved.action;
         }
 
@@ -7813,9 +7860,9 @@ export class AiAgentControlService {
         action_request_id: responseAction.id,
         ok,
         status: responseAction.status,
-        reason: ok ? null : this.bulkApproveReason(responseAction, execution, failure),
-        action: serializeActionRequest(responseAction, readiness.get(responseAction.id)),
-        execution,
+        reason: ok || !readable(action.id) ? null : this.bulkApproveReason(responseAction, execution, failure),
+        action: serializeActionRequest(responseAction, readable(action.id), readiness.get(responseAction.id)),
+        execution: readable(action.id) ? execution : null,
       });
     }
 
@@ -7858,10 +7905,11 @@ export class AiAgentControlService {
     const responseAction = freshAction ?? rejected.action;
     await this.agentQueue?.resolveWaitingApprovalForActionRequest(context, responseAction.id);
     const readiness = await this.executionReadinessForActions(context, [responseAction]);
+    const readable = (await this.actionResultAccess(context, [responseAction]))(responseAction.id);
 
     return {
-      action: serializeActionRequest(responseAction, readiness.get(responseAction.id)),
-      approval: serializeApproval(rejected.approval),
+      action: serializeActionRequest(responseAction, readable, readiness.get(responseAction.id)),
+      approval: serializeApproval(rejected.approval, readable),
       detail: detailRunId ? await this.getRunDetail(context, detailRunId) : null,
     };
   }
@@ -8029,10 +8077,11 @@ export class AiAgentControlService {
     const responseAction = freshAction ?? dismissed.action;
     await this.agentQueue?.resolveWaitingApprovalForActionRequest(context, responseAction.id);
     const readiness = await this.executionReadinessForActions(context, [responseAction]);
+    const readable = (await this.actionResultAccess(context, [responseAction]))(responseAction.id);
 
     return {
-      action: serializeActionRequest(responseAction, readiness.get(responseAction.id)),
-      approval: serializeApproval(dismissed.approval),
+      action: serializeActionRequest(responseAction, readable, readiness.get(responseAction.id)),
+      approval: serializeApproval(dismissed.approval, readable),
       detail: detailRunId ? await this.getRunDetail(context, detailRunId) : null,
     };
   }

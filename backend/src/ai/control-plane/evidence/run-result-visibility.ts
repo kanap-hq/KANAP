@@ -28,6 +28,14 @@ export function isPersonRun(run: Pick<RunOrigin, 'invocation_channel' | 'trigger
   return !(AUTOMATION_CHANNELS.has(run.invocation_channel) && AUTOMATION_TRIGGERS.has(run.trigger_kind));
 }
 
+/**
+ * The origin of what no run accounts for (an action whose run is unknown): its person's, as
+ * nothing says an agent made it.
+ */
+export function originWithoutRun(userId: string | null | undefined): RunOrigin {
+  return { invocation_channel: '', trigger_kind: '', user_id: userId ?? null };
+}
+
 /** Whether the reader of the current request reads what the tools of this run returned. */
 export type RunResultAccess = (run: RunOrigin) => Promise<boolean>;
 
@@ -80,4 +88,29 @@ export function metadataWithoutErrorMessage<T extends Record<string, unknown> | 
     delete kept.provider_error;
   }
   return kept as T;
+}
+
+/**
+ * What the line of an action keeps of its metadata for a reader who does not read its result:
+ * that somebody acknowledged it. The rest carries the arguments or what a failure said of them.
+ */
+export function actionMetadataWithoutValues(metadata: unknown): Record<string, unknown> | null {
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) return null;
+  const acknowledged = (metadata as Record<string, unknown>).attention_acknowledged;
+  return acknowledged === undefined ? null : { attention_acknowledged: acknowledged };
+}
+
+const ACTION_LINE_KEYS = ['tool_name', 'preview_id', 'target_entity_type', 'target_entity_id', 'target_ref'] as const;
+
+/**
+ * What the line of an action keeps of its input for a reader who does not read its result: the
+ * tool and the target it names.
+ */
+export function actionInputWithoutValues(inputSummary: unknown): Record<string, unknown> | null {
+  if (!inputSummary || typeof inputSummary !== 'object' || Array.isArray(inputSummary)) return null;
+  const kept: Record<string, unknown> = {};
+  for (const key of ACTION_LINE_KEYS) {
+    if (key in inputSummary) kept[key] = (inputSummary as Record<string, unknown>)[key];
+  }
+  return Object.keys(kept).length > 0 ? kept : null;
 }

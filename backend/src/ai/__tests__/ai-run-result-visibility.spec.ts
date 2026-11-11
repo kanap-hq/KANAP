@@ -1,9 +1,12 @@
 import * as assert from 'node:assert/strict';
 import { AiEvidenceService } from '../control-plane/evidence/ai-evidence.service';
 import {
+  actionInputWithoutValues,
+  actionMetadataWithoutValues,
   inputWithoutValues,
   isPersonRun,
   metadataWithoutErrorMessage,
+  originWithoutRun,
   runResultAccess,
 } from '../control-plane/evidence/run-result-visibility';
 
@@ -98,11 +101,38 @@ function testTheFailureAToolReportedWithoutItsMessage() {
   assert.equal(metadataWithoutErrorMessage(null), null);
 }
 
+async function testAnActionWithoutARun() {
+  // Nothing says an agent made it: it is read by its person and by who reads every result.
+  const origin = originWithoutRun(AUTHOR);
+  assert.equal(isPersonRun(origin), true);
+  assert.equal(await runResultAccess(AUTHOR, async () => false)(origin), true);
+  assert.equal(await runResultAccess(OTHER, async () => false)(origin), false);
+  assert.equal(await runResultAccess(OTHER, async () => true)(origin), true);
+  assert.equal(await runResultAccess(OTHER, async () => false)(originWithoutRun(null)), false);
+  // The line of an action keeps its tool and its target.
+  assert.deepEqual(
+    actionInputWithoutValues({ preview_id: 'p1', tool_name: 'create_task', target_entity_type: 'tasks', target_entity_id: null, title: 'Renewal 2027' }),
+    { tool_name: 'create_task', preview_id: 'p1', target_entity_type: 'tasks', target_entity_id: null },
+  );
+  assert.equal(actionInputWithoutValues({ title: 'Renewal 2027' }), null);
+  assert.equal(actionInputWithoutValues(null), null);
+  assert.equal(actionInputWithoutValues(['Renewal 2027']), null);
+  // And, of its metadata, that somebody acknowledged it.
+  const acknowledged = { at: '2026-11-11T09:00:00.000Z', by: OTHER };
+  assert.deepEqual(
+    actionMetadataWithoutValues({ attention_acknowledged: acknowledged, last_execution_error: 'No contract matching "Renewal 2027"' }),
+    { attention_acknowledged: acknowledged },
+  );
+  assert.equal(actionMetadataWithoutValues({ last_execution_error: 'No contract matching "Renewal 2027"' }), null);
+  assert.equal(actionMetadataWithoutValues(null), null);
+}
+
 async function main() {
   testOriginOfARun();
   testTheInputOfACallWithoutItsValues();
   testTheFailureAToolReportedWithoutItsMessage();
   await testWhoReadsAResult();
+  await testAnActionWithoutARun();
   console.log('ai-run-result-visibility.spec: all passed');
 }
 
