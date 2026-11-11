@@ -237,6 +237,11 @@ describe('the display form of a long text', () => {
     ['an e-mail address followed by dotted names', `<a@b${'.c'.repeat(size / 2)}`],
     ['openings of an image attribute', '<img a="'.repeat(size / 8)],
     ['backtick runs of growing lengths', Array.from({ length: 630 }, (_, index) => `${'`'.repeat(index + 1)}a`).join(' ')],
+    ['closing brackets', ']'.repeat(size)],
+    ['opening brackets, then closing brackets', `${'['.repeat(size / 2)}${']'.repeat(size / 2)}`],
+    ['emphasis marks that close nothing', 'a* '.repeat(Math.floor(size / 3))],
+    ['quote marks', '>'.repeat(size)],
+    ['list marks', '+ - '.repeat(size / 4)],
   ];
 
   it.each(LONG_TEXTS)('is ready in less than 200 ms for 200 KB of %s', (_name, text) => {
@@ -252,6 +257,50 @@ describe('the display form of a long text', () => {
     expect(toEditorDisplayMarkdown('<'.repeat(1000))).toBe('\\<'.repeat(1000));
     expect(toEditorDisplayMarkdown('<u>'.repeat(1000))).toBe('\\<u>'.repeat(1000));
     expect(toEditorDisplayMarkdown(`<a@${'.'.repeat(1000)}`)).toBe(`\\<a@${'.'.repeat(1000)}`);
-    expect(toEditorDisplayMarkdown('](<'.repeat(1000))).toBe('](\\<'.repeat(1000));
+    expect(toEditorDisplayMarkdown('](<'.repeat(1000))).toBe('\\](\\<'.repeat(1000));
+  });
+});
+
+describe('the display form of structure marks', () => {
+  it('escapes a closing bracket that closes no opening bracket of its paragraph', () => {
+    expect(toEditorDisplayMarkdown('tableau] ici')).toBe('tableau\\] ici');
+    expect(toEditorDisplayMarkdown('a [b] c] d')).toBe('a [b] c\\] d');
+    expect(toEditorDisplayMarkdown('ouvert [ici\n\nfermé] là')).toBe('ouvert [ici\n\nfermé\\] là');
+    expect(toEditorDisplayMarkdown('déjà \\] écrit ainsi')).toBe('déjà \\] écrit ainsi');
+  });
+
+  it('escapes the brackets opened inside more than 32 others', () => {
+    expect(toEditorDisplayMarkdown(`${'['.repeat(34)}a${']'.repeat(34)}`))
+      .toBe(`${'['.repeat(32)}\\[\\[a${']'.repeat(32)}\\]\\]`);
+  });
+
+  it('escapes the mark that opens a quote or a list inside more than 32 others on its line', () => {
+    expect(toEditorDisplayMarkdown(`${'>'.repeat(34)} a`)).toBe(`${'>'.repeat(32)}\\>> a`);
+    expect(toEditorDisplayMarkdown(`${'> '.repeat(33)}a\n> b`)).toBe(`${'> '.repeat(32)}\\> a\n> b`);
+    expect(toEditorDisplayMarkdown(`${'+ - '.repeat(17)}a`)).toBe(`${'+ - '.repeat(16)}\\+ - a`);
+    expect(toEditorDisplayMarkdown(`${'1. '.repeat(33)}a`)).toBe(`${'1. '.repeat(32)}1\\. a`);
+  });
+
+  it('escapes the emphasis marks that close nothing once thousands of them did', () => {
+    const display = toEditorDisplayMarkdown('a* b_ c~~ d== '.repeat(10000));
+
+    expect(display.startsWith('a* b_ c~~ d== '.repeat(500))).toBe(true);
+    expect(display.endsWith('a\\* b\\_ c\\~\\~ d\\=\\= '.repeat(5000))).toBe(true);
+  });
+
+  it.each([
+    ['a link', '[texte](https://example.com/a) et [autre][ref]\n\n[ref]: https://example.com/b'],
+    ['a link on two lines', '[texte\nsuite](https://example.com/a)'],
+    ['an image in a link', '[![logo](/api/l.png "titre")](https://example.com/a)'],
+    ['a check list', '* [x] fait\n* [ ] à faire'],
+    ['a note with a title and a footnote', ':::note[Titre]\ntexte[^1]\n:::\n\n[^1]: Note'],
+    ['brackets in a table and in code', '| a[0] | `b]` |\n| - | - |\n| [x] | 2 |\n\n```\n]]]\n```'],
+    ['emphasis marks', '**gras** *italique* _italique_ ~~barré~~ ==surligné== snake_case_name a=b 2 * 3'],
+    ['a line of 40 spaced dashes', '- '.repeat(40).trim()],
+    ['quotes and lists inside one another', '> > > - 1. * a\n> > > - 1. * b'],
+    ['3000 paragraphs with emphasis', '**gras** et *italique*, fin_ de mot*\n\n'.repeat(3000)],
+    ['a list of 6000 lines with emphasis', '- **Serveur** : _description_ ~~ancienne~~ ==nouvelle==\n'.repeat(6000)],
+  ])('leaves %s as it is', (_name, text) => {
+    expect(toEditorDisplayMarkdown(text)).toBe(text);
   });
 });

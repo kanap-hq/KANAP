@@ -290,6 +290,7 @@ describe('MarkdownEditor: ordinary Markdown', () => {
     { name: 'a check list', text: '* [x] fait\n* [ ] à faire' },
     { name: 'a link', text: '[texte](https://exemple.test/a)' },
     { name: 'an escaped less-than sign', text: 'si x \\<y alors' },
+    { name: 'a closing bracket without an opening bracket', text: 'tableau] ici' },
     { name: 'a brace', text: 'accolade { seule' },
   ];
 
@@ -326,6 +327,39 @@ describe('MarkdownEditor: ordinary Markdown', () => {
     const editor = await mountEditor('<u>souligné</u> et <section>texte</section>', { disabled: true });
 
     expect(editor.onChange).not.toHaveBeenCalled();
+
+    editor.unmount();
+  });
+});
+
+describe('MarkdownEditor: a long text of structure marks', () => {
+  const size = 200 * 1024;
+  const repeated = (unit: string) => unit.repeat(Math.floor(size / unit.length));
+
+  it.each([
+    ['closing brackets', repeated(']')],
+    ['openings of a link destination', repeated('](<')],
+    ['opening brackets', repeated('[')],
+    ['opening brackets, then closing brackets', `${'['.repeat(size / 2)}${']'.repeat(size / 2)}`],
+    ['opening parentheses', repeated('(')],
+    ['asterisks', repeated('*')],
+    ['underscores', repeated('_')],
+    ['backticks', repeated('`')],
+    ['tildes', repeated('~')],
+    ['quote marks', repeated('>')],
+    ['list marks', repeated('+ - ')],
+    ['asterisks that close nothing', repeated('a* ')],
+    ['underscores that close nothing', repeated('a_ ')],
+    ['strikethrough marks that close nothing', repeated('a~~ ')],
+    ['highlight marks that close nothing', repeated('a== ')],
+  ])('opens 200 KB of %s in less than two seconds and reports no change', async (_name, text) => {
+    const start = performance.now();
+    const editor = await mountEditor(text);
+    const elapsed = performance.now() - start;
+
+    expect(editor.showsRichText()).toBe(true);
+    expect(editor.onChange).not.toHaveBeenCalled();
+    expect(elapsed).toBeLessThan(2000);
 
     editor.unmount();
   });

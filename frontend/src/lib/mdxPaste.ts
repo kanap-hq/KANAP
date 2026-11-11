@@ -8,6 +8,20 @@ const AUTOLINK_CANDIDATE_REGEX = /<([^\s<>]+)>/y;
 // A link destination between angle brackets, with its optional title, up to the closing parenthesis.
 const ANGLE_BRACKET_DESTINATION_REGEX = /<[^<>\n]*>(?:[ \t]+(?:"[^"\n]*"|'[^'\n]*'))?[ \t]*\)/y;
 
+// The editor's reader looks back, from each mark that closes, for the mark that opens it, and
+// builds a quote or a list inside the one before it. The display form keeps that work in
+// proportion to the length of the text: beyond these limits a mark is given as text, which is how
+// the reader would read it anyway, after a long search.
+/** Brackets open at once in a paragraph, and marks of a quote or a list at the start of a line. */
+const MAX_OPEN_BRACKETS = 32;
+const MAX_LINE_CONTAINERS = 32;
+/** Characters the reader may walk back, in a whole text, from emphasis marks to what opens them. */
+const EMPHASIS_SEARCH_BUDGET = 50_000_000;
+// The mark of a list item at the start of a line, and a thematic break written with its marks.
+const LIST_MARKER_REGEX = /(?:[-*+]|\d{1,9}[.)])(?=[ \t\n]|$)/y;
+const THEMATIC_BREAK_REGEX = /(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,})(?=\n|$)/y;
+const LETTER_OR_DIGIT_REGEX = /[\p{L}\p{N}]/u;
+
 function isEscaped(text: string, index: number): boolean {
   let backslashCount = 0;
   for (let current = index - 1; current >= 0 && text[current] === '\\'; current -= 1) {
@@ -152,6 +166,35 @@ function isBlankLineAhead(text: string, lineEndIndex: number): boolean {
   return text[index] === '\n';
 }
 
+/**
+ * The marks of a quote and of a list at the start of the line that begins at `lineStart`: `end`
+ * is where they end, and `beyond` the mark that comes after `MAX_LINE_CONTAINERS` others (for a
+ * numbered item, its dot or parenthesis), or -1.
+ */
+function readLineContainers(text: string, lineStart: number): { end: number; beyond: number } {
+  let index = lineStart;
+  for (let count = 0; ; count += 1) {
+    while (text[index] === ' ' || text[index] === '\t') index += 1;
+    let length = 1;
+    if (text[index] !== '>') {
+      THEMATIC_BREAK_REGEX.lastIndex = index;
+      if (THEMATIC_BREAK_REGEX.test(text)) break;
+      LIST_MARKER_REGEX.lastIndex = index;
+      const marker = LIST_MARKER_REGEX.exec(text);
+      if (!marker) break;
+      length = marker[0].length;
+    }
+    if (count === MAX_LINE_CONTAINERS) return { end: index, beyond: index + length - 1 };
+    index += length;
+  }
+  return { end: index, beyond: -1 };
+}
+
+/** True for an emphasis mark: `*`, `_`, `~` (strikethrough) and `=` (highlight). */
+function isEmphasisMark(char: string): boolean {
+  return char === '*' || char === '_' || char === '~' || char === '=';
+}
+
 export function hasPotentiallyUnsafeMdxPaste(text: string): boolean {
   return /<\S/.test(String(text || ''));
 }
@@ -160,6 +203,10 @@ export function hasPotentiallyUnsafeMdxPaste(text: string): boolean {
  * Escapes every less-than sign the editor would read as the start of a tag, outside code, and
  * writes an automatic link as a Markdown link. With `keepRichTextElements`, the tags of
  * `RICH_TEXT_HTML_ELEMENTS` are left for the editor to read as elements.
+ *
+ * It also escapes the marks that open or close nothing and would cost the reader a long search:
+ * a closing bracket without its opening bracket, a bracket, a quote or a list inside more than 32
+ * others, and emphasis marks that close nothing once the text holds thousands of them. One pass.
  */
 export function sanitizeMarkdownForMdxPaste(
   markdown: string,
@@ -187,11 +234,77 @@ export function sanitizeMarkdownForMdxPaste(
     openTags.length = 0;
   };
 
+  // The paragraph being read (a text up to a blank line): where it starts, how many of its
+  // brackets are open, and the marks of a quote or a list at the start of the line being read.
+  let paragraphStart = 0;
+  let openBrackets = 0;
+  let containers = readLineContainers(sanitizedBase, 0);
+  // The emphasis: what the reader's searches have cost so far, and for each mark the last run
+  // that only opens (after a space, before a letter or a digit), which a run of the same length
+  // closes at once.
+  let emphasisSearch = 0;
+  let emphasisOpening: Record<string, { index: number; length: number } | undefined> = {};
+
   for (let index = 0; index < sanitizedBase.length; index += 1) {
     const current = sanitizedBase[index];
-    if (current === '\n' && openTags.length > 0 && isBlankLineAhead(sanitizedBase, index)) {
-      escapeOpenTags();
+    if (current === '\n') {
+      if (isBlankLineAhead(sanitizedBase, index)) {
+        escapeOpenTags();
+        paragraphStart = index + 1;
+        openBrackets = 0;
+        emphasisOpening = {};
+      }
+      containers = readLineContainers(sanitizedBase, index + 1);
+      continue;
     }
+    if (index === containers.beyond) {
+      rewrite(index, 1, `\\${current}`);
+      continue;
+    }
+
+    if (current === '[' || current === ']') {
+      // A link reads its own emphasis: a run that opens before a bracket closes nothing after it.
+      emphasisOpening = {};
+      if (isEscaped(sanitizedBase, index)) continue;
+      if (current === '[' ? openBrackets < MAX_OPEN_BRACKETS : openBrackets > 0) {
+        openBrackets += current === '[' ? 1 : -1;
+      } else {
+        rewrite(index, 1, `\\${current}`);
+      }
+      continue;
+    }
+
+    if (isEmphasisMark(current)) {
+      if (index < containers.end || isEscaped(sanitizedBase, index)) continue;
+      let end = index + 1;
+      while (sanitizedBase[end] === current) end += 1;
+      const length = end - index;
+      const before = sanitizedBase[index - 1];
+      const after = sanitizedBase[end];
+      const lettersAround = before !== undefined && LETTER_OR_DIGIT_REGEX.test(before)
+        && after !== undefined && LETTER_OR_DIGIT_REGEX.test(after);
+      // No emphasis mark: a highlight is two signs, a strikethrough one or two, and an underscore
+      // inside a word is a letter of it.
+      const isMark = current === '=' ? length === 2 : current === '~' ? length <= 2 : !(current === '_' && lettersAround);
+      if (isMark && (before === undefined || /\s/.test(before))) {
+        // After a space, a run opens at most.
+        emphasisOpening[current] = after !== undefined && LETTER_OR_DIGIT_REGEX.test(after) ? { index, length } : undefined;
+      } else if (isMark) {
+        // The reader looks for what this run closes: back to the run that only opens, when it
+        // has the same length, or to the start of the paragraph.
+        const opening = emphasisOpening[current];
+        const search = index - (opening?.length === length ? opening.index : paragraphStart);
+        emphasisOpening[current] = undefined;
+        if (emphasisSearch + search > EMPHASIS_SEARCH_BUDGET) {
+          rewrite(index, length, `\\${current}`.repeat(length));
+        } else {
+          emphasisSearch += search;
+        }
+      }
+      index = end - 1;
+      continue;
+    }
+
     if (current !== '<' || shouldSkipAngleBracketSanitization(sanitizedBase, index)) continue;
 
     AUTOLINK_CANDIDATE_REGEX.lastIndex = index;
