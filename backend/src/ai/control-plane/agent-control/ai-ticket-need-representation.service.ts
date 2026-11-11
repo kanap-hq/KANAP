@@ -21,6 +21,7 @@ import {
 } from './ai-ticket-need-representation.types';
 import { isRecord } from '../../../common/object-guards';
 import { estimateJsonTokens } from './json-token-estimate';
+import { publicTicketItems } from './public-reply-sources';
 import { HTML_TAGS } from '../../../common/text-scan';
 
 export type TicketNeedRepresentationBuildResult = {
@@ -552,6 +553,8 @@ function deterministicNeed(input: {
   timeline: KnowledgePlannerTimelineEntry[];
   imageEvidence?: TicketImageEvidence[];
 }): TicketNeedRepresentation {
+  // The need feeds the reply to the requester: it reads the public items of the ticket.
+  input = { ...input, timeline: publicTicketItems(input.timeline) };
   const need = emptyNeed();
   const textParts = [
     { source: sourceForTextPart('title'), body: input.ticket.title },
@@ -609,6 +612,8 @@ export class AiTicketNeedRepresentationService {
     timeline: KnowledgePlannerTimelineEntry[];
     imageEvidence?: TicketImageEvidence[];
   }): Record<string, unknown> {
+    // The need feeds the reply to the requester: it reads the public items of the ticket.
+    const timeline = publicTicketItems(input.timeline);
     return {
       task: 'Extract the requester need from a helpdesk ticket as structured JSON.',
       rules: [
@@ -638,7 +643,7 @@ export class AiTicketNeedRepresentationService {
         status: input.ticket.status ?? null,
         priority: input.ticket.priority ?? null,
       },
-      recent_public_requester_notes: input.timeline
+      recent_public_requester_notes: timeline
         .filter((entry) => entry.actor === 'requester_candidate' && entry.visibility === 'public')
         .slice(-8)
         .map((entry) => ({
@@ -646,7 +651,7 @@ export class AiTicketNeedRepresentationService {
           created_at: entry.createdAt,
           body: compact(entry.body, 900),
         })),
-      previous_agent_answer: compact([...input.timeline].reverse().find((entry) => entry.actor === 'kanap_agent' && entry.body.trim())?.body, 900),
+      previous_agent_answer: compact([...timeline].reverse().find((entry) => entry.actor === 'kanap_agent' && entry.body.trim())?.body, 900),
       screenshot_evidence: (input.imageEvidence ?? []).map((evidence) => ({
         attachment_ref: evidence.attachment_ref,
         source: evidence.source,

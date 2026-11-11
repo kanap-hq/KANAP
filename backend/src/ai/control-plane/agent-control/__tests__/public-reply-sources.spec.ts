@@ -6,8 +6,15 @@ import {
   buildTicketTimeline,
   renderSynthesizedTriageNote,
 } from '../agent-control-timeline-synthesis.util';
-import { knowledgeDocumentFromOutput, knowledgeItemsFromOutput } from '../agent-control-knowledge.util';
-import type { TicketNoteLike } from '../ai-agent-control.service';
+import {
+  buildFallbackKnowledgeSearchPlan,
+  buildWebSearchQueryCandidates,
+  knowledgeDocumentFromOutput,
+  knowledgeItemsFromOutput,
+} from '../agent-control-knowledge.util';
+import type { TicketNoteLike, TicketTimelineEntry } from '../ai-agent-control.service';
+import { AiTicketNeedRepresentationService } from '../ai-ticket-need-representation.service';
+import { AiKnowledgeSearchPlannerService } from '../ai-knowledge-search-planner.service';
 import { readAgentKnowledgeSources } from '../agent-control-definition.util';
 import { citableKnowledgeDocuments } from '../public-reply-sources';
 import { AiCapabilityRegistry } from '../../capability/ai-capability.registry';
@@ -250,6 +257,67 @@ async function testAnAgentWithoutLibrariesCitesNoDocument() {
   assert.equal(open.items.length, 1);
 }
 
+const AGENT_NOTE_MARKER = 'marker-delta-6604';
+
+// A whole timeline, internal items included, as a caller could hand it over.
+function wholeTimeline(): TicketTimelineEntry[] {
+  const entry = (id: string, visibility: 'public' | 'internal', actor: TicketTimelineEntry['actor'], body: string): TicketTimelineEntry => ({
+    id,
+    kind: 'followup',
+    visibility,
+    actor,
+    actorSource: actor === 'kanap_agent' ? 'kanap_marker' : 'provider_requester_user',
+    actorId: null,
+    body,
+    createdAt: `2026-11-01T0${id}:00:00.000Z`,
+    updatedAt: null,
+    updateFingerprint: null,
+  });
+  return [
+    entry('1', 'public', 'requester_candidate', 'The printer spooler stopped on floor two.'),
+    entry('2', 'public', 'kanap_agent', 'Please restart the printer spooler service.'),
+    entry('3', 'internal', 'kanap_agent', `Triage note ${AGENT_NOTE_MARKER} for the technician.`),
+    entry('4', 'internal', 'requester_candidate', `Private message ${INTERNAL_MARKER} spooler.`),
+  ];
+}
+
+function assertNoInternalMarker(value: unknown, label: string) {
+  const text = JSON.stringify(value);
+  assert.ok(!text.includes(INTERNAL_MARKER), `${label} reads an internal note`);
+  assert.ok(!text.includes(AGENT_NOTE_MARKER), `${label} reads the agent's internal note`);
+}
+
+async function testTheNeedAndTheSearchesReadThePublicItemsOfTheTicket() {
+  const timeline = wholeTimeline();
+  const need = new AiTicketNeedRepresentationService({} as any);
+  const needPayload = need.buildPromptPayload({ ticket, timeline });
+  assertNoInternalMarker(needPayload, 'need payload');
+  assert.ok(JSON.stringify(needPayload).includes('Please restart the printer spooler service.'));
+  assertNoInternalMarker(need.buildDeterministicNeedRepresentation({ ticket, timeline }), 'deterministic need');
+
+  const payloads: unknown[] = [];
+  const planner = new AiKnowledgeSearchPlannerService({
+    callStructuredJsonModel: async (_context: unknown, options: { userPayload: unknown }) => {
+      payloads.push(options.userPayload);
+      return null;
+    },
+  } as any);
+  const plan = await planner.planKnowledgeSearch({} as any, { ticket, timeline });
+  assertNoInternalMarker(plan, 'search plan');
+  assertNoInternalMarker(payloads[0], 'search plan payload');
+  const interpretation = await planner.interpretKnowledgeResults({} as any, {
+    plan,
+    ticket,
+    timeline,
+    candidates: [{ ref: 'DOC-1', title: 'Spooler', summary: null, snippet: null, status: 'published', search_queries: ['spooler'] }],
+  });
+  assertNoInternalMarker(interpretation, 'search interpretation');
+  assertNoInternalMarker(payloads[1], 'search interpretation payload');
+
+  assertNoInternalMarker(buildFallbackKnowledgeSearchPlan(ticket, timeline, []), 'fallback search plan');
+  assertNoInternalMarker(buildWebSearchQueryCandidates(ticket, timeline, []), 'web queries');
+}
+
 async function run() {
   const tests: Array<() => unknown> = [
     testAPublicReplyReadsThePublicItemsOfTheTicket,
@@ -260,6 +328,7 @@ async function run() {
     testKnowledgeItemsKeepTheirLibrary,
     testAPublicReplyCitesTheLibrariesTheAgentMayCite,
     testAnAgentWithoutLibrariesCitesNoDocument,
+    testTheNeedAndTheSearchesReadThePublicItemsOfTheTicket,
   ];
   let failures = 0;
   for (const test of tests) {
