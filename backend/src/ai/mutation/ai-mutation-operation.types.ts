@@ -53,6 +53,12 @@ export interface AiMutationOperation<TInput = unknown> {
   /** Whether `replacement` replaces the person's `pending` preview of this tool in the conversation: the pending one then expires. */
   replacesPendingPreview?(pending: AiMutationPreview, replacement: AiMutationPreview): boolean;
 
+  /**
+   * Whether a pending preview can be approved as it stands (an import whose check refused the file
+   * cannot). "Approve all" leaves out the ones that cannot; approved on its own, one fails.
+   */
+  isApprovable?(preview: AiMutationPreview): boolean;
+
   /** The card of a preview: its summary in the person's language (English when not given). */
   presentPreview(preview: AiMutationPreview, language?: AiWriteLanguage): AiMutationPreviewPresentation;
 

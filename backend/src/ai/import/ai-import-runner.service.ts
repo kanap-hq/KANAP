@@ -55,10 +55,11 @@ type BudgetFileAnswer = {
   snapshot?: unknown;
   fileErrors?: string[];
   headerErrors?: string[];
-  errors?: Array<{ line: number; column: string | null; message: string }>;
+  errors?: Array<{ line: number; column: string | null; message: string; code?: string }>;
   errorCount?: number;
   missing?: Array<{ type: string; count: number }>;
   deletedCount?: number;
+  creates?: { supplierCount?: number };
   supplierMessage?: string | null;
   changes?: { created: number; updated: number; unchanged: number };
   warnings?: Record<string, unknown>;
@@ -185,7 +186,8 @@ export class AiImportRunnerService {
   /**
    * The budget file: its preflight is the check. The load takes the snapshot of a preflight run just
    * before it, as the dialog sends the one it showed: the lines the file names are the ones checked.
-   * Missing suppliers are not created: the check names them.
+   * The suppliers the file names that do not exist are created, as the dialog's "Create missing
+   * suppliers" does, for a person who may create suppliers: the card lists them before the approval.
    */
   private async runBudgetFile({ file, dryRun, language, context }: ImportCall): Promise<BudgetFileAnswer> {
     const manager = context.manager as EntityManager;
@@ -196,7 +198,7 @@ export class AiImportRunnerService {
       language,
       dateOrder: undefined,
       decimalMark: 'dot',
-      createSuppliers: false,
+      createSuppliers: true,
       canCreateSuppliers: canCreateSuppliers(access),
     };
     const preflight = await this.budgetFile.preflight('opex', file.buffer, caller, options);
@@ -281,7 +283,8 @@ export function budgetBilan(answer: BudgetFileAnswer, dryRun: boolean, lines: re
   const issues: AiImportRunDto['issues'] = [];
   const fileErrors = (answer.fileErrors?.length ?? 0) + (answer.headerErrors?.length ?? 0);
   if (fileErrors > 0) issues.push({ level: 'error', code: null, column: null, count: fileErrors });
-  for (const error of answer.errors ?? []) tally(issues, 'error', null, error.column ?? null);
+  // The code of each error, as the card translates it: the model reads it with its column.
+  for (const error of answer.errors ?? []) tally(issues, 'error', error.code ?? null, error.column ?? null);
   for (const missing of answer.missing ?? []) {
     issues.push({ level: 'error', code: `missing_${missing.type}`, column: null, count: missing.count });
   }
@@ -305,6 +308,7 @@ export function budgetBilan(answer: BudgetFileAnswer, dryRun: boolean, lines: re
     error_count: errorCount,
     warning_count: warningCount,
     issues,
+    new_suppliers: answer.creates?.supplierCount ?? 0,
     report: { kind: 'budget_file', file: isCheck ? relined(shown, lines) as Record<string, unknown> : null },
   };
 }

@@ -1381,6 +1381,12 @@ export class AiMutationPreviewService {
         continue;
       }
 
+      // "Approve all" leaves out a card that cannot be approved as it stands (an import whose check
+      // refused the file): it is neither run nor failed, and stays pending with its errors.
+      if (ids.length > 1 && operation.isApprovable?.(preview) === false) {
+        continue;
+      }
+
       if (preview.expires_at.getTime() < Date.now()) {
         preview.status = 'expired';
         preview.error_message = PREVIEW_EXPIRED_MESSAGE;

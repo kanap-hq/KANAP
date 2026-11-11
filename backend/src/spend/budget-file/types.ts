@@ -314,6 +314,8 @@ export interface BudgetFileReport {
   creates: {
     dimensionValues: Array<{ dimension: string; names: string[] }>;
     suppliers: Array<{ name: string; erpId: string | null }>;
+    /** How many suppliers the load creates: `suppliers` lists the first ones. */
+    supplierCount: number;
     /**
      * For a limited person only: unknown values of a closed-list dimension, refused (each row has
      * its error); `dimensionValues` lists the ones the load will create.

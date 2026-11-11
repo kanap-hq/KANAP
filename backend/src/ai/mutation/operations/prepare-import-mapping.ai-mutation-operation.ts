@@ -8,7 +8,7 @@ import {
   AiWriteLanguage,
   importCountsText,
   personWriteLanguage,
-  PREVIEW_IMPORT_REFUSED_MESSAGE,
+  PREVIEW_IMPORT_CHECK_FAILED_MESSAGE,
   previewSummaryText,
   writeActionText,
 } from '../../ai-write-texts';
@@ -91,6 +91,9 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
       + 'and name the file columns you leave out. When the card shows values not read, ask the user what they stand for and call again with `values`. '
       + 'References to other records (a company, a supplier, a server, a person) are copied as written: the import checks them when it runs, '
       + 'and neither you nor the card has checked them. '
+      + 'A budget file creates the suppliers it names that do not exist yet, as the import dialog does, when the user may create '
+      + 'suppliers: the check counts them in `new_suppliers` and the card lists them, so say they will be created on approval. '
+      + 'Without that right the check refuses them: the suppliers are created in their list first. '
       + 'A new card for the same file closes the pending one at once: it can no longer be approved, so do not warn the person about it. '
       + 'The card also shows the import\'s check of the file. When it finds errors, the card cannot be approved: say what the errors are about '
       + '(their columns and codes, never the cells), help the user correct the mapping or the file, and call again. '
@@ -136,6 +139,12 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
   /** A new mapping of the same file replaces the pending one: the person has one card to approve. */
   replacesPendingPreview(pending: AiMutationPreview, replacement: AiMutationPreview): boolean {
     return pending.mutation_input?.attachment_id === replacement.mutation_input?.attachment_id;
+  }
+
+  /** A card whose check refused the file cannot be approved: the card shows its errors, and "Approve all" leaves it out. */
+  isApprovable(preview: AiMutationPreview): boolean {
+    const mapping = (preview.current_values?.import_mapping ?? null) as AiImportMappingPreviewDto | null;
+    return mapping?.validation?.ok !== false;
   }
 
   presentPreview(preview: AiMutationPreview, language: AiWriteLanguage = 'en'): AiMutationPreviewPresentation {
@@ -188,7 +197,7 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
     preview: AiMutationPreview,
   ): Promise<void> {
     const mapping = (preview.current_values?.import_mapping ?? null) as AiImportMappingPreviewDto | null;
-    if (!mapping?.validation?.ok) throw new Error(PREVIEW_IMPORT_REFUSED_MESSAGE);
+    if (!mapping?.validation?.ok) throw new Error(PREVIEW_IMPORT_CHECK_FAILED_MESSAGE);
     const input = preview.mutation_input as unknown as PrepareImportMappingInput;
     const language = await personWriteLanguage(context.manager, context.tenantId, context.userId);
     const result = await this.mapping.runImport(
@@ -196,7 +205,7 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
       input,
       language,
     );
-    if (!result.ok) throw new Error(PREVIEW_IMPORT_REFUSED_MESSAGE);
+    if (!result.ok) throw new Error(PREVIEW_IMPORT_CHECK_FAILED_MESSAGE);
 
     preview.current_values = { ...preview.current_values, import_mapping: { ...mapping, result } };
     await writeAuditLog(context.manager, {
