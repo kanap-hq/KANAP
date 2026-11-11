@@ -16,34 +16,16 @@ export function publicTicketItems<T extends { visibility?: unknown }>(items: rea
 /**
  * Decisions read every item of the ticket. When a decision asks for a text to the requester,
  * the call that writes it receives one value of this closed list and no free text of the
- * decision (reasoning, reason, draft). Each value has a fixed writing instruction in the code
- * of that call; a value outside the list writes nothing.
+ * decision (reasoning, reason, draft).
  */
-export const ADMINISTRATIVE_REPLY_INTENTS = [
-  'close_reply',
-  'acknowledgement',
-  'request_information',
-  'awaiting_requester',
-  'escalation_notice',
-  'resolution_confirmation',
-] as const;
+export const ADMINISTRATIVE_REPLY_INTENTS = ['close_reply', 'acknowledgement', 'other'] as const;
 export type AdministrativeReplyIntent = typeof ADMINISTRATIVE_REPLY_INTENTS[number];
 
-/** When the decision may choose each value. Read by the call that decides, never by the one that writes. */
-export const ADMINISTRATIVE_REPLY_INTENT_USES: Record<AdministrativeReplyIntent, string> = {
-  close_reply: 'the ticket is closed after a period without activity; pair it with a terminal status_update',
-  acknowledgement: 'confirm that the request was received and that the support team is looking into it',
-  request_information: 'ask the requester for a detail the support team needs to handle the request',
-  awaiting_requester: 'the ticket waits for an action of the requester; pair it with a status_update to the pending status',
-  escalation_notice: 'the ticket is passed to the team that handles it; pair it with an assignment_update',
-  resolution_confirmation: 'ask the requester to confirm that the issue is resolved',
-};
-
-/** A value of the closed list, or null for anything else. */
-export function administrativeReplyIntent(value: unknown): AdministrativeReplyIntent | null {
+/** A value outside the closed list becomes `other`. */
+export function administrativeReplyIntent(value: unknown): AdministrativeReplyIntent {
   return (ADMINISTRATIVE_REPLY_INTENTS as readonly unknown[]).includes(value)
     ? value as AdministrativeReplyIntent
-    : null;
+    : 'other';
 }
 
 /**

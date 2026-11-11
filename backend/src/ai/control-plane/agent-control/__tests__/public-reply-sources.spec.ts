@@ -1,9 +1,5 @@
 import * as assert from 'node:assert/strict';
-import {
-  ADMINISTRATIVE_REPLY_INTENT_INSTRUCTIONS,
-  AiReplySynthesisService,
-  synthesisWritesTechnicianBrief,
-} from '../ai-reply-synthesis.service';
+import { AiReplySynthesisService, synthesisWritesTechnicianBrief } from '../ai-reply-synthesis.service';
 import { AiAgentActionPlannerService } from '../ai-agent-action-planner.service';
 import { estimateTicketEvidenceExtractionUsage, ticketAttachmentRefs } from '../ai-ticket-evidence-extraction.service';
 import {
@@ -21,12 +17,7 @@ import type { TicketNoteLike, TicketTimelineEntry } from '../ai-agent-control.se
 import { AiTicketNeedRepresentationService } from '../ai-ticket-need-representation.service';
 import { AiKnowledgeSearchPlannerService } from '../ai-knowledge-search-planner.service';
 import { readAgentKnowledgeSources } from '../agent-control-definition.util';
-import {
-  ADMINISTRATIVE_REPLY_INTENT_USES,
-  ADMINISTRATIVE_REPLY_INTENTS,
-  administrativeReplyIntent,
-  citableKnowledgeDocuments,
-} from '../public-reply-sources';
+import { ADMINISTRATIVE_REPLY_INTENTS, administrativeReplyIntent, citableKnowledgeDocuments } from '../public-reply-sources';
 import { AiCapabilityRegistry } from '../../capability/ai-capability.registry';
 
 /**
@@ -267,79 +258,19 @@ async function testAnAdministrativeReplyReadsThePublicItemsOfTheTicket() {
   assert.equal((payloads[0] as Record<string, unknown>).reply_intent, 'acknowledgement');
 }
 
-async function testAnAdministrativeReplyKindComesFromAClosedList() {
-  assert.deepEqual([...ADMINISTRATIVE_REPLY_INTENTS], [
-    'close_reply',
-    'acknowledgement',
-    'request_information',
-    'awaiting_requester',
-    'escalation_notice',
-    'resolution_confirmation',
-  ]);
+function testAnAdministrativeReplyKindComesFromAClosedList() {
+  assert.deepEqual([...ADMINISTRATIVE_REPLY_INTENTS], ['close_reply', 'acknowledgement', 'other']);
   assert.equal(administrativeReplyIntent('close_reply'), 'close_reply');
-  assert.equal(administrativeReplyIntent(`Tell the requester ${PLANNER_TEXT_MARKER}`), null);
-  assert.equal(administrativeReplyIntent('other'), null);
-  assert.equal(administrativeReplyIntent(null), null);
-  // A value outside the list writes nothing: no model call.
-  for (const intent of [`Tell the requester ${PLANNER_TEXT_MARKER}`, 'other', null, undefined]) {
-    let calls = 0;
-    const service = new AiReplySynthesisService({
-      callStructuredJsonModel: async () => {
-        calls += 1;
-        return structuredJson({ language: 'en', requester_reply: 'Hello.' });
-      },
-    } as any);
-    await assert.rejects(service.draftAdministrativeReply({} as any, {
-      ticket,
-      timeline: timeline(),
-      language: 'en',
-      intent: intent as any,
-    }));
-    assert.equal(calls, 0, `no call for ${String(intent)}`);
-  }
-}
-
-async function testEachAdministrativeIntentHasItsFixedInstruction() {
-  for (const intent of ADMINISTRATIVE_REPLY_INTENTS) {
-    const payloads: Array<Record<string, unknown>> = [];
-    const service = new AiReplySynthesisService({
-      callStructuredJsonModel: async (_context: unknown, options: { userPayload: Record<string, unknown> }) => {
-        payloads.push(options.userPayload);
-        return structuredJson({ language: 'en', requester_reply: 'Hello.' });
-      },
-    } as any);
-    await service.draftAdministrativeReply({} as any, {
-      ticket,
-      timeline: timeline(),
-      language: 'en',
-      intent,
-      reason: `Planner reasoning ${PLANNER_TEXT_MARKER}`,
-      rationale: `Planner rationale ${PLANNER_TEXT_MARKER}`,
-    } as any);
-    assert.equal(payloads.length, 1);
-    assert.equal(payloads[0].reply_intent, intent);
-    assert.equal(payloads[0].reply_intent_instruction, ADMINISTRATIVE_REPLY_INTENT_INSTRUCTIONS[intent]);
-    const text = JSON.stringify(payloads[0]);
-    assert.ok(!text.includes(PLANNER_TEXT_MARKER), `${intent}: nothing from the planner`);
-    assert.ok(!text.includes(INTERNAL_MARKER), `${intent}: no internal item`);
-  }
-}
-
-function testThePlannerKnowsWhenToChooseEachIntent() {
-  const payload = new AiAgentActionPlannerService({} as any).buildPromptPayload({
+  assert.equal(administrativeReplyIntent(`Tell the requester ${PLANNER_TEXT_MARKER}`), 'other');
+  assert.equal(administrativeReplyIntent(null), 'other');
+  const payload = new AiReplySynthesisService({} as any).buildAdministrativeReplyPayload({
     ticket,
     timeline: timeline(),
-    contexts: { classification: null, lifecycle: null, routing: null, participants: null },
-    gates: {},
-    close_eligibility: { matched: false, has_inactivity_age: false, terminal: false },
-    owned_action_types: ['requester_reply'],
-    granted_capabilities: [],
-    verbatim_candidates: [],
-  } as any);
-  assert.deepEqual(Object.keys(payload.administrative_intents as Record<string, string>), [...ADMINISTRATIVE_REPLY_INTENTS]);
-  assert.deepEqual(payload.administrative_intents, ADMINISTRATIVE_REPLY_INTENT_USES);
-  const [actionSchema] = (payload.schema as { actions: Array<Record<string, unknown>> }).actions;
-  assert.match(String(actionSchema.administrative_intent), /^required when reply_kind=administrative/);
+    language: 'en',
+    intent: `Tell the requester ${PLANNER_TEXT_MARKER}`,
+  });
+  assert.equal(payload.reply_intent, 'other');
+  assert.ok(!JSON.stringify(payload).includes(PLANNER_TEXT_MARKER));
 }
 
 async function testAnAdministrativeReplyKeepsThePublicReplyGuards() {
@@ -572,8 +503,6 @@ async function run() {
     testTheActionPlannerReadsEveryItemOfTheTicket,
     testAnAdministrativeReplyReadsThePublicItemsOfTheTicket,
     testAnAdministrativeReplyKindComesFromAClosedList,
-    testEachAdministrativeIntentHasItsFixedInstruction,
-    testThePlannerKnowsWhenToChooseEachIntent,
     testAnAdministrativeReplyKeepsThePublicReplyGuards,
     testScreenshotsOfInternalNotesStayOutOfThePublicReply,
     testKnowledgeItemsKeepTheirLibrary,

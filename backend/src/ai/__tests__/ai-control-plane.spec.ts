@@ -14560,30 +14560,6 @@ async function testTriageRunTotalCountsEveryModelCall() {
   assert.equal(usage.estimated_tokens, stageUsageTotal(result.run), 'the run total is the sum of its stages');
 }
 
-async function testTriageWritesNoAdministrativeReplyWithoutAnIntentOfTheList() {
-  for (const intent of ['other', `Texte ${TRIAGE_PLANNER_MARKER}`, undefined]) {
-    const result = await runTriageWithSimulatedModel({
-      notes: triageNotes(true),
-      plan: {
-        actions: [
-          { action_type: 'internal_note', reason: 'Documenter.' },
-          {
-            action_type: 'requester_reply',
-            reply_kind: 'administrative',
-            ...(intent === undefined ? {} : { administrative_intent: intent }),
-            reason: 'Répondre.',
-          },
-        ],
-        rationale: 'Plan.',
-        confidence: 0.8,
-      },
-    });
-    assert.deepEqual(result.calls.map((call) => call.taskName), ['action_planner'], `no writing call for ${String(intent)}`);
-    assert.equal(result.publicReply, null);
-    assert.ok(result.internalNote, 'the rest of the plan stands');
-  }
-}
-
 async function testAnAgentWithoutLibrariesSearchesNoKnowledge() {
   const closed = await runTriageWithSimulatedModel({
     notes: triageNotes(true),
@@ -17301,7 +17277,6 @@ async function run() {
   await testTriageTechnicianBriefReadsEveryItemAndTheReplyThePublicItems();
   await testTriageWithoutInternalNoteKeepsOneReplyCall();
   await testTriageRunTotalCountsEveryModelCall();
-  await testTriageWritesNoAdministrativeReplyWithoutAnIntentOfTheList();
   await testAnAgentWithoutLibrariesSearchesNoKnowledge();
   testSynthesisPromptPrefersInternalKnowledgeSources();
   testSynthesisPromptCarriesValidationStatus();
