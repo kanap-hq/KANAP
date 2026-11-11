@@ -31,10 +31,24 @@ export const ENDED_STATUSES = ['canceled', 'incomplete_expired'] as const;
 
 /**
  * A Stripe subscription that still runs, paid or not (past due, unpaid, incomplete included):
- * a plan change or a bank transfer request changes it, never doubles it.
+ * no checkout or bank transfer request doubles it with a new subscription.
  */
 export function isLiveSubscriptionStatus(status: string | null | undefined): boolean {
   return !!status && !(ENDED_STATUSES as readonly string[]).includes(status);
+}
+
+/**
+ * A subscription in good standing: active, or trialing before its trial end (the summary's
+ * `is_subscription_healthy`). Only such a subscription is changed by a plan change or a bank
+ * transfer request; one that still runs unpaid is paid first.
+ */
+export function isHealthySubscription(
+  status: string | null | undefined,
+  trialEnd: Date | null | undefined,
+  now: number = Date.now(),
+): boolean {
+  if (!status || !(HEALTHY_STATUSES as readonly string[]).includes(status)) return false;
+  return status !== 'trialing' || (trialEnd != null && trialEnd.getTime() > now);
 }
 export const BANK_TRANSFER_MIN_AMOUNT_EUR_CENTS = 100000;
 /**

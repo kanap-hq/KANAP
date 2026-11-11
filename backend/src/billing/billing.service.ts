@@ -17,13 +17,13 @@ import { GTC_URLS, GTC_VERSION, type TermsPaymentPath } from './terms';
 import { computeTrialDeletionAt } from './subscription-freeze.util';
 import {
   PLANS,
-  HEALTHY_STATUSES,
   FREEZE_GRACE_DAYS,
   BANK_TRANSFER_MIN_AMOUNT_EUR_CENTS,
   CLOUD_SUBSCRIPTION_QUANTITY,
   INVOICE_PAYMENT_TERM_DAYS,
   getPriceId,
   isBankTransferEligible,
+  isHealthySubscription,
   isLiveSubscriptionStatus,
   resolvePlanKeyFromPriceId,
   planNameForDisplay,
@@ -194,9 +194,7 @@ export class BillingService {
 
     const now = Date.now();
     const statusStr = sub.status ?? '';
-    const isHealthy =
-      (HEALTHY_STATUSES as readonly string[]).includes(statusStr) &&
-      (statusStr !== 'trialing' || (sub.trial_end != null && sub.trial_end.getTime() > now));
+    const isHealthy = isHealthySubscription(sub.status, sub.trial_end, now);
 
     let trialDaysRemaining: number | null = null;
     if (statusStr === 'trialing' && sub.trial_end) {
@@ -485,6 +483,7 @@ export class BillingService {
 
     const subscriptionId = sub.stripe_subscription_id;
     const stripeSub = await client.subscriptions.retrieve(subscriptionId);
+    this.assertSubscriptionCanChange(stripeSub);
     const existingItem = stripeSub.items?.data?.[0];
     if (!existingItem?.id) {
       throw new BadRequestException('Unable to resolve existing subscription item');
@@ -875,6 +874,20 @@ export class BillingService {
     return stripeSub && isLiveSubscriptionStatus(stripeSub.status) ? stripeSub : null;
   }
 
+  /**
+   * Only a Stripe subscription in good standing (active, or trialing before its end) is changed.
+   * One that still runs unpaid (past due, unpaid, incomplete, paused) is refused with
+   * SUBSCRIPTION_PAYMENT_PENDING, an ended one with NO_ACTIVE_SUBSCRIPTION: nothing changes in Stripe.
+   */
+  private assertSubscriptionCanChange(stripeSub: any): void {
+    if (!isLiveSubscriptionStatus(stripeSub?.status)) {
+      throw new BadRequestException('NO_ACTIVE_SUBSCRIPTION');
+    }
+    if (!isHealthySubscription(stripeSub.status, this.toDate(stripeSub.trial_end))) {
+      throw new BadRequestException('SUBSCRIPTION_PAYMENT_PENDING');
+    }
+  }
+
   /** The id of a Stripe reference, expanded or not. */
   private stripeObjectId(source: any): string | null {
     if (typeof source === 'string') return source || null;
@@ -907,14 +920,17 @@ export class BillingService {
     const mg = manager ?? this.subs.manager;
     const sub = await this.ensureSubscription(mg);
     const before = this.subscriptionAuditSnapshot(sub);
+    // A subscription that still runs (as Stripe has it now) is never doubled: changed when in
+    // good standing, refused while unpaid, before any change in Stripe.
+    const stripeSub = await this.retrieveLiveSubscription(sub);
+    if (stripeSub) this.assertSubscriptionCanChange(stripeSub);
     const customerId = await this.ensureStripeCustomerForTenant(tenant, { manager: mg, invoiceProfile: invoiceContact });
     const euBankTransferCountry = this.resolveEuBankTransferCountry(invoiceContact.address.country);
     let stripeSubResult: any | null = null;
     let previousLatestInvoiceId: string | null = null;
 
-    if (sub.stripe_subscription_id && isLiveSubscriptionStatus(sub.status)) {
-      // A subscription that still runs, paid or not, is changed (like changePlan), never doubled.
-      const stripeSub = await client.subscriptions.retrieve(sub.stripe_subscription_id);
+    if (stripeSub && sub.stripe_subscription_id) {
+      // Changed like changePlan.
       const existingItemId = stripeSub.items?.data?.[0]?.id;
       if (!existingItemId) {
         throw new BadRequestException('Unable to resolve existing subscription item');

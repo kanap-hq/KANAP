@@ -938,21 +938,39 @@ async function testScheduledSwitchIsAuditedAndReturned() {
 }
 
 /*
- * A Stripe subscription that still runs (past due, unpaid, incomplete) is changed, never doubled:
- * only an ended one (canceled, incomplete expired) is replaced by a new subscription.
+ * A Stripe subscription that still runs is never doubled: one in good standing (active, trialing)
+ * is changed; one that runs unpaid (past due, unpaid, incomplete, paused) is refused with
+ * SUBSCRIPTION_PAYMENT_PENDING before any change in Stripe, the status read from Stripe deciding.
+ * Only an ended one (canceled, incomplete expired) is replaced by a new subscription.
  */
+const UNPAID_STATUSES = ['past_due', 'unpaid', 'incomplete', 'paused'];
+const TRIAL_END = Math.floor(Date.now() / 1000) + 7 * 86400;
+
 async function testTransferChangesALiveSubscriptionInsteadOfDoublingIt() {
-  for (const status of ['past_due', 'unpaid', 'incomplete']) {
+  for (const status of ['active', 'trialing']) {
     const { service, manager, calls } = createService({
       tenant: createTenant(COMPLETE_FR_INVOICE),
       subscription: { ...runningOn('monthly'), status } as Partial<Subscription>,
       priceIds: PRICE_IDS,
-      stripeSubscription: stripeSubscription(MONTHLY_PRICE, { status }),
+      stripeSubscription: stripeSubscription(MONTHLY_PRICE, { status, trial_end: status === 'trialing' ? TRIAL_END : null }),
       onSubscriptionUpdate: (_params, state) => ({ ...state, latest_invoice: null }),
     });
     await service.requestInvoice('tenant-1', 'max', 'annual', 'user-1', manager as any, GTC_VERSION);
     assert.equal(calls.filter((call) => call.method === 'subscriptions.create').length, 0, `no second subscription while ${status}`);
     assert.deepEqual(calls.filter((call) => call.method === 'subscriptions.update').map((call) => call.args[0]), ['sub_1'], status);
+  }
+
+  for (const status of UNPAID_STATUSES) {
+    const { service, manager, calls } = createService({
+      tenant: createTenant(COMPLETE_FR_INVOICE),
+      // The stored status may be late: Stripe's decides.
+      subscription: { ...runningOn('monthly'), status: 'active' } as Partial<Subscription>,
+      priceIds: PRICE_IDS,
+      stripeSubscription: stripeSubscription(MONTHLY_PRICE, { status }),
+      onSubscriptionUpdate: (_params, state) => ({ ...state, latest_invoice: null }),
+    });
+    await expectBadRequest(service.requestInvoice('tenant-1', 'max', 'annual', 'user-1', manager as any, GTC_VERSION), PAYMENT_PENDING);
+    assert.deepEqual(calls.map((call) => call.method), ['subscriptions.retrieve'], `nothing changes in Stripe while ${status}`);
   }
 
   for (const status of ['canceled', 'incomplete_expired']) {
@@ -970,16 +988,46 @@ async function testTransferChangesALiveSubscriptionInsteadOfDoublingIt() {
 }
 
 async function testPlanChangeAppliesToALiveSubscription() {
+  // The stored status may be late: a subscription Stripe has as active again is changed.
   const { service, manager, calls } = createService({
     tenant: createTenant(COMPLETE_FR_INVOICE),
     subscription: { ...runningOn('monthly'), status: 'past_due' } as Partial<Subscription>,
     priceIds: PRICE_IDS,
-    stripeSubscription: stripeSubscription(MONTHLY_PRICE, { status: 'past_due' }),
+    stripeSubscription: stripeSubscription(MONTHLY_PRICE, { status: 'active' }),
     onSubscriptionUpdate: (_params, state) => ({ ...state, latest_invoice: null }),
   });
   await service.changePlan('tenant-1', 'max', 'annual', 'user-1', manager as any, GTC_VERSION);
   assert.deepEqual(calls.filter((call) => call.method === 'subscriptions.update').map((call) => call.args), [['sub_1', IMMEDIATE_CHANGE]]);
   assert.equal(calls.filter((call) => call.method === 'subscriptions.create').length, 0);
+
+  // Unpaid in Stripe: refused before any change, the planned switch and "Keep annual" included.
+  for (const status of UNPAID_STATUSES) {
+    for (const [interval, current] of [['annual', MONTHLY_PRICE], ['monthly', ANNUAL_PRICE], ['annual', ANNUAL_PRICE]] as const) {
+      const unpaid = createService({
+        tenant: createTenant(COMPLETE_FR_INVOICE),
+        subscription: { ...runningOn('monthly'), status: 'active' } as Partial<Subscription>,
+        priceIds: PRICE_IDS,
+        stripeSubscription: stripeSubscription(current, { status, schedule: 'sub_sched_1' }),
+        onSubscriptionUpdate: (_params, state) => ({ ...state, latest_invoice: null }),
+        schedule: PLANNED_SWITCH,
+      });
+      await expectBadRequest(unpaid.service.changePlan('tenant-1', 'max', interval, 'user-1', unpaid.manager as any, GTC_VERSION), PAYMENT_PENDING);
+      assert.deepEqual(unpaid.calls.map((call) => call.method), ['subscriptions.retrieve'], `nothing changes in Stripe while ${status}`);
+    }
+  }
+
+  // Ended in Stripe while the stored status still says it runs.
+  const endedInStripe = createService({
+    tenant: createTenant(COMPLETE_FR_INVOICE),
+    subscription: { ...runningOn('monthly'), status: 'past_due' } as Partial<Subscription>,
+    priceIds: PRICE_IDS,
+    stripeSubscription: stripeSubscription(MONTHLY_PRICE, { status: 'canceled' }),
+  });
+  await expectBadRequest(
+    endedInStripe.service.changePlan('tenant-1', 'max', 'annual', 'user-1', endedInStripe.manager as any, GTC_VERSION),
+    { message: 'NO_ACTIVE_SUBSCRIPTION', error: 'Bad Request', statusCode: 400 },
+  );
+  assert.deepEqual(endedInStripe.calls.map((call) => call.method), ['subscriptions.retrieve']);
 
   const ended = createService({
     tenant: createTenant(COMPLETE_FR_INVOICE),
