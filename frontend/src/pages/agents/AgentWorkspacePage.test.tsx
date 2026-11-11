@@ -324,6 +324,25 @@ describe('AgentWorkspacePage internal notes', { timeout: 20000 }, () => {
     expect(screen.getByText(IGNORED_STATE)).toBeInTheDocument();
   });
 
+  it('keeps ignored when another setting of the page is saved', async () => {
+    shownDefinition = {
+      ...withInternalNotes('ignored'),
+      provider_bindings_json: { ticketing: { provider_kind: 'ticketing', provider_key: 'glpi' } },
+    };
+    renderPage('/agents/payroll?tab=settings');
+    expect(await screen.findByLabelText('Ignored', {}, { timeout: 5000 })).toBeChecked();
+    let row: HTMLElement | null = screen.getByText('Tickets per check');
+    while (row && !row.querySelector('input')) row = row.parentElement;
+    fireEvent.change(row!.querySelector('input')!, { target: { value: '7' } });
+    await waitFor(() => {
+      expect(harness.updateAgent).toHaveBeenCalled();
+    }, { timeout: 3000 });
+    // The operating settings send the whole scope policy, the stored internal notes setting included.
+    const [, payload] = harness.updateAgent.mock.lastCall!;
+    expect(payload.scope_policy_json.knowledge_sources.internal_notes).toBe('ignored');
+    expect(payload).not.toHaveProperty('knowledge_sources');
+  });
+
   it('is not shown for a monitoring agent', async () => {
     shownDefinition = withInternalNotes(undefined, 'sre');
     renderPage('/agents/payroll?tab=settings');
