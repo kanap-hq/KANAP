@@ -1,5 +1,5 @@
 import * as assert from 'node:assert/strict';
-import { AiReplySynthesisService } from '../ai-reply-synthesis.service';
+import { AiReplySynthesisService, synthesisWritesTechnicianBrief } from '../ai-reply-synthesis.service';
 import { AiAgentActionPlannerService } from '../ai-agent-action-planner.service';
 import { estimateTicketEvidenceExtractionUsage, ticketAttachmentRefs } from '../ai-ticket-evidence-extraction.service';
 import {
@@ -103,6 +103,85 @@ function testAPublicReplyReadsThePublicItemsOfTheTicket() {
   assert.ok(text.includes('I restarted the printer this morning.'));
   assert.ok(!text.includes(INTERNAL_MARKER));
   assert.ok(!text.includes(UNMARKED_MARKER));
+  // The technician brief reads the internal items: another call writes it.
+  assert.equal('technician_brief' in (payload.schema as Record<string, unknown>), false);
+}
+
+const BRIEF_MARKER = 'marker-india-1184';
+
+function replyResult(overrides: Record<string, unknown> = {}) {
+  return {
+    language: 'en',
+    usable: true,
+    needs_human_review: false,
+    requester_reply: 'Restart the print spooler.',
+    technician_brief: `Brief from the reply call ${BRIEF_MARKER}.`,
+    used_sources: [{ kind: 'knowledge', ref: 'DOC-1', url: null, title: 'Printer guide' }],
+    rejected_sources: [],
+    confidence: 0.8,
+    ...overrides,
+  };
+}
+
+const printerGuide = [{ ref: 'DOC-1', title: 'Printer guide', content_markdown: 'Restart the print spooler.' }];
+
+async function testATicketWithInternalItemsGetsItsBriefFromAnotherCall() {
+  const service = new AiReplySynthesisService({
+    callStructuredJsonModel: async () => structuredJson(replyResult()),
+  } as any);
+  const reply = await service.synthesizeTicketReply({} as any, {
+    ticket,
+    timeline: timeline(),
+    language: 'en',
+    knowledgeDocs: printerGuide,
+    webResults: [],
+  });
+  assert.equal(reply.requester_reply, 'Restart the print spooler.');
+  assert.equal(reply.technician_brief, '');
+  assert.equal(synthesisWritesTechnicianBrief(timeline()), false);
+}
+
+async function testATicketWithoutInternalItemsKeepsOneCall() {
+  const publicOnly = timeline().filter((entry) => entry.visibility === 'public');
+  assert.equal(synthesisWritesTechnicianBrief(publicOnly), true);
+  const service = new AiReplySynthesisService({
+    callStructuredJsonModel: async () => structuredJson(replyResult()),
+  } as any);
+  const payload = service.buildPromptPayload({ ticket, timeline: publicOnly, language: 'en', knowledgeDocs: printerGuide, webResults: [] });
+  assert.equal(payload.task, 'Compose a grounded helpdesk requester reply and technician brief.');
+  assert.ok('technician_brief' in (payload.schema as Record<string, unknown>));
+  const reply = await service.synthesizeTicketReply({} as any, {
+    ticket,
+    timeline: publicOnly,
+    language: 'en',
+    knowledgeDocs: printerGuide,
+    webResults: [],
+  });
+  assert.equal(reply.technician_brief, `Brief from the reply call ${BRIEF_MARKER}.`);
+}
+
+async function testTheTechnicianBriefReadsEveryItemOfTheTicket() {
+  const calls: Array<{ taskName: string; payload: unknown }> = [];
+  const service = new AiReplySynthesisService({
+    callStructuredJsonModel: async (_context: unknown, options: { taskName: string; userPayload: unknown }) => {
+      calls.push({ taskName: options.taskName, payload: options.userPayload });
+      return structuredJson({ technician_brief: 'The requester restarted the printer; see the internal follow-up.' });
+    },
+  } as any);
+  const brief = await service.composeTechnicianBrief({} as any, {
+    ticket,
+    timeline: timeline(),
+    language: 'en',
+    knowledgeDocs: printerGuide,
+    webResults: [],
+    reply: replyResult({ technician_brief: '' }) as any,
+  });
+  assert.equal(brief.technician_brief, 'The requester restarted the printer; see the internal follow-up.');
+  assert.deepEqual(calls.map((call) => call.taskName), ['technician_brief']);
+  const text = JSON.stringify(calls[0].payload);
+  assert.ok(text.includes(INTERNAL_MARKER));
+  assert.ok(text.includes(UNMARKED_MARKER));
+  assert.ok(text.includes('Restart the print spooler.'));
 }
 
 function testAMessageNotMarkedPublicIsInternal() {
@@ -416,6 +495,9 @@ function testRequesterSignalsComeFromThePublicItemsOfTheTicket() {
 async function run() {
   const tests: Array<() => unknown> = [
     testAPublicReplyReadsThePublicItemsOfTheTicket,
+    testATicketWithInternalItemsGetsItsBriefFromAnotherCall,
+    testATicketWithoutInternalItemsKeepsOneCall,
+    testTheTechnicianBriefReadsEveryItemOfTheTicket,
     testAMessageNotMarkedPublicIsInternal,
     testAnInternalNoteReadsEveryItemOfTheTicket,
     testTheActionPlannerReadsEveryItemOfTheTicket,

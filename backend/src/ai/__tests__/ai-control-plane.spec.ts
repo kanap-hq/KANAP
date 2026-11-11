@@ -14467,6 +14467,55 @@ async function testTriagePlannerDecidesOnEveryItemAndAPublicCallWritesTheAdminis
   assert.ok(result.internalNote?.includes(TRIAGE_PLANNER_MARKER), 'the internal note keeps the planner reasoning');
 }
 
+const TRIAGE_SOURCED_PLAN = {
+  actions: [
+    { action_type: 'internal_note', reason: `Documenter ${TRIAGE_PLANNER_MARKER}.` },
+    { action_type: 'requester_reply', reply_kind: 'sourced_answer', reason: `Répondre ${TRIAGE_PLANNER_MARKER}.` },
+  ],
+  rationale: `Raisonnement ${TRIAGE_PLANNER_MARKER}.`,
+  confidence: 0.8,
+};
+
+const TRIAGE_SOURCED_REPLY = {
+  language: 'fr',
+  usable: true,
+  needs_human_review: false,
+  requester_reply: 'Relancez le service de licence depuis le portail.',
+  technician_brief: 'Résumé écrit avec la réponse.',
+  used_sources: [{ kind: 'knowledge', ref: 'DOC-64', url: null, title: 'Démarrage de l\'application' }],
+  rejected_sources: [],
+  confidence: 0.8,
+};
+
+async function testTriageTechnicianBriefReadsEveryItemAndTheReplyThePublicItems() {
+  const result = await runTriageWithSimulatedModel({ notes: triageNotes(true), plan: TRIAGE_SOURCED_PLAN, reply: TRIAGE_SOURCED_REPLY });
+  assert.deepEqual(result.calls.map((call) => call.taskName), ['action_planner', 'reply_synthesis', 'technician_brief']);
+  assert.ok(payloadOf(result.calls, 'action_planner').includes(TRIAGE_INTERNAL_MARKER), 'the planner reads the internal note');
+  const replyPayload = payloadOf(result.calls, 'reply_synthesis');
+  assert.ok(!replyPayload.includes(TRIAGE_INTERNAL_MARKER), 'the reply reads no internal note');
+  assert.ok(!replyPayload.includes(TRIAGE_PLANNER_MARKER), 'the reply reads no planner text');
+  assert.ok(!replyPayload.includes('"technician_brief"'), 'the reply call writes no technician brief');
+  const briefPayload = payloadOf(result.calls, 'technician_brief');
+  assert.ok(briefPayload.includes(TRIAGE_INTERNAL_MARKER), 'the technician brief reads the internal note');
+  assert.ok(briefPayload.includes('Relancez le service de licence depuis le portail.'));
+  assert.ok(result.internalNote?.includes(TRIAGE_BRIEF_MARKER), 'the internal note carries the technician brief');
+  assert.ok(!result.internalNote?.includes('Résumé écrit avec la réponse.'));
+  assert.ok(result.publicReply?.includes('Relancez le service de licence depuis le portail.'));
+  for (const marker of [TRIAGE_INTERNAL_MARKER, TRIAGE_PLANNER_MARKER, TRIAGE_BRIEF_MARKER]) {
+    assert.ok(!result.publicReply?.includes(marker), `the public reply holds no ${marker}`);
+  }
+}
+
+async function testTriageWithoutInternalNoteKeepsOneReplyCall() {
+  const result = await runTriageWithSimulatedModel({ notes: triageNotes(false), plan: TRIAGE_SOURCED_PLAN, reply: TRIAGE_SOURCED_REPLY });
+  assert.deepEqual(result.calls.map((call) => call.taskName), ['action_planner', 'reply_synthesis']);
+  const replyCall = result.calls.find((call) => call.taskName === 'reply_synthesis')!;
+  assert.equal((replyCall.payload as Record<string, unknown>).task, 'Compose a grounded helpdesk requester reply and technician brief.');
+  assert.ok(JSON.stringify(replyCall.payload).includes('"technician_brief"'));
+  assert.ok(result.internalNote?.includes('Résumé écrit avec la réponse.'), 'the brief written with the reply is kept');
+  assert.ok(result.publicReply?.includes('Relancez le service de licence depuis le portail.'));
+}
+
 // Fix B (regression #33): the synthesis prompt must genuinely prefer relevant internal KANAP
 // knowledge over web sources (not only on conflict), and must not equate a low search rank with
 // off-topic — a relevant internal doc (e.g. a recipe) can have ts_rank 0.
@@ -17114,6 +17163,8 @@ async function run() {
   await testGlpiTriageSynthesisRejectsOffTopicKnowledgeAndUsesWeb();
   await testGlpiTriageAdministrativeReplyNoteCarriesPlannerRationale();
   await testTriagePlannerDecidesOnEveryItemAndAPublicCallWritesTheAdministrativeReply();
+  await testTriageTechnicianBriefReadsEveryItemAndTheReplyThePublicItems();
+  await testTriageWithoutInternalNoteKeepsOneReplyCall();
   testSynthesisPromptPrefersInternalKnowledgeSources();
   testSynthesisPromptCarriesValidationStatus();
   testSynthesisPayloadIncludesScreenshotEvidence();

@@ -167,6 +167,8 @@ import {
   AiReplySynthesisService,
   estimateReplySynthesisUsage,
   RUNTIME_SAFETY_FLOOR_ADMINISTRATIVE_REPLY,
+  RUNTIME_SAFETY_FLOOR_TECHNICIAN_BRIEF,
+  synthesisWritesTechnicianBrief,
   ReplySynthesisEntitySource,
   ReplySynthesisRejectedSource,
   ReplySynthesisResult,
@@ -757,10 +759,12 @@ export type RunUsageStageKey =
   | 'evidence_extraction'
   | 'knowledge_interpretation'
   | 'action_planner'
-  | 'administrative_reply';
+  | 'administrative_reply'
+  | 'technician_brief';
 
 export const RUN_STEP_STAGES = {
   synthesis: { kind: 'synthesis', capabilityName: 'answer_synthesis' },
+  technicianBrief: { kind: 'synthesis', capabilityName: 'technician_brief_synthesis' },
   administrativeReply: { kind: 'synthesis', capabilityName: 'administrative_reply_synthesis' },
   diagnosticBrief: { kind: 'synthesis', capabilityName: 'diagnostic_brief_synthesis' },
   needRepresentation: { kind: 'need_representation', capabilityName: 'ticket_need_representation' },
@@ -6372,6 +6376,87 @@ export class AiAgentControlService {
         effectiveInternalNoteAction.action.reason,
       ])
       : null;
+    // The technician brief reads every item of the ticket. The reply call writes it when every
+    // item is public; otherwise a call of its own writes it, only when an internal note carries it.
+    const synthesizedNoteResult = replySynthesisResult;
+    if (
+      synthesizedNoteResult
+      && !isPlannerEscalation
+      && (fallbackPrepareInternalNote || !!effectiveInternalNoteAction)
+      && !synthesisWritesTechnicianBrief(ticketTimeline)
+      && this.replySynthesis
+    ) {
+      const briefInput = {
+        ticket,
+        timeline: ticketTimeline,
+        language: synthesizedNoteResult.language || synthesisLanguage,
+        knowledgeDocs: enrichedKnowledgeItems.slice(0, MAX_KNOWLEDGE_DOCUMENTS_FOR_REPLY),
+        webResults: webSearchResults,
+        imageEvidence: ticketImageExtraction.evidence,
+        interpretation: serializeKnowledgeInterpretation(knowledgeInterpretation),
+        citableLibraryIds: knowledgeSources.knowledgeLibraryIds,
+        profile: promptRuntime.synthesisGuidance,
+        reply: synthesizedNoteResult,
+      };
+      const projection = estimateReplySynthesisUsage({
+        systemPrompt: compileSystemPrompt(RUNTIME_SAFETY_FLOOR_TECHNICIAN_BRIEF, promptRuntime.synthesisGuidance),
+        userPayload: this.replySynthesis.buildTechnicianBriefPayload(briefInput),
+      }, llmPrices, this.replySynthesis.maxOutputTokens());
+      const inputSummary = {
+        language: briefInput.language,
+        projected_tokens: projection.estimatedTokens,
+        projected_cost_eur: projection.estimatedCostEur,
+      };
+      const briefStepIndex = stepIndex++;
+      const baseUsageEstimate = currentRunLlmUsage();
+      const guardrails = this.agentQueue && agentDefinition ? this.agentQueue.runGuardrails(agentDefinition) : null;
+      if (
+        guardrails
+        && (
+          baseUsageEstimate.estimatedTokens + projection.estimatedTokens > guardrails.maxEstimatedTokens
+          || baseUsageEstimate.estimatedCostEur + projection.estimatedCostEur > guardrails.maxEstimatedCostEur
+        )
+      ) {
+        await this.recordStageRunStep(context, RUN_STEP_STAGES.technicianBrief, {
+          runId: ticketResult.run_id,
+          stepIndex: briefStepIndex,
+          status: 'skipped',
+          inputSummary,
+          outputSummary: { fallback_reason: 'technician_brief_projected_over_per_run_cap', cap: guardrails },
+        });
+      } else {
+        try {
+          const brief = await this.replySynthesis.composeTechnicianBrief(context, briefInput);
+          await this.recordStageUsage(context, 'technician_brief', ticketResult.run_id, brief);
+          chargeRunLlmUsage(brief);
+          await this.recordStageRunStep(context, RUN_STEP_STAGES.technicianBrief, {
+            runId: ticketResult.run_id,
+            stepIndex: briefStepIndex,
+            status: 'completed',
+            inputSummary: { ...inputSummary, model: brief.model },
+            outputSummary: {
+              brief_length: brief.technician_brief.length,
+              tokens: brief.estimated_tokens,
+              cost_eur: brief.estimated_cost_eur,
+              latency_ms: brief.latency_ms,
+            },
+          });
+          replySynthesisResult = { ...synthesizedNoteResult, technician_brief: brief.technician_brief };
+        } catch (error) {
+          const reason = error instanceof Error
+            ? `technician_brief_error:${error.message.slice(0, 180)}`
+            : 'technician_brief_error';
+          await this.recordStageRunStep(context, RUN_STEP_STAGES.technicianBrief, {
+            runId: ticketResult.run_id,
+            stepIndex: briefStepIndex,
+            status: 'failed',
+            inputSummary,
+            outputSummary: { fallback_reason: reason },
+            errorMessage: reason,
+          });
+        }
+      }
+    }
     const noteBody = isPlannerEscalation
       ? buildTriageNote(ticket, knowledgeItems, ticketTimeline, webSearchResults, { kind: 'escalation', reason: escalationReason })
       : (replySynthesisResult

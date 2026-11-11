@@ -13,6 +13,7 @@ import { AiAgentControlService, RUN_STEP_STAGES } from '../ai-agent-control.serv
 
 const RUN_STEP_STAGE_EXPECTATIONS = {
   synthesis: { kind: 'synthesis', capabilityName: 'answer_synthesis' },
+  technicianBrief: { kind: 'synthesis', capabilityName: 'technician_brief_synthesis' },
   administrativeReply: { kind: 'synthesis', capabilityName: 'administrative_reply_synthesis' },
   diagnosticBrief: { kind: 'synthesis', capabilityName: 'diagnostic_brief_synthesis' },
   needRepresentation: { kind: 'need_representation', capabilityName: 'ticket_need_representation' },
@@ -120,6 +121,7 @@ const STAGE_KEYS = [
   'evidence_extraction',
   'action_planner',
   'administrative_reply',
+  'technician_brief',
 ];
 
 async function testUsageMirrorWritesEveryStageKey() {
