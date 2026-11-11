@@ -133,6 +133,28 @@ function parseNumericGlpiValue(value: unknown): number | null {
   return null;
 }
 
+/**
+ * Whether a follow-up is private. Only an explicit "not private" (0, false) makes it public: a
+ * missing or unrecognised value keeps it internal.
+ */
+function parseGlpiPrivateFlag(value: unknown): boolean {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  if (typeof value === 'number') {
+    return value !== 0;
+  }
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    return !(normalized === '0' || normalized === 'false' || normalized === 'no');
+  }
+  if (typeof value === 'object' && value) {
+    const record = value as Record<string, unknown>;
+    return parseGlpiPrivateFlag(record.id ?? record.value ?? record.name ?? null);
+  }
+  return true;
+}
+
 function parseBooleanGlpiValue(value: unknown): boolean {
   if (typeof value === 'boolean') {
     return value;
@@ -1574,7 +1596,7 @@ export class GlpiService {
       editor_id: editorId,
       date: normalizeGlpiDate(record.date ?? record.date_creation ?? record.date_mod),
       updated_date: normalizeGlpiDate(record.date_mod ?? record.date ?? record.date_creation),
-      is_private: parseBooleanGlpiValue(record.is_private),
+      is_private: parseGlpiPrivateFlag(record.is_private),
       image_targets: extractImageTargets(contentHtml),
     };
   }
