@@ -207,6 +207,7 @@ export function helpdeskAgentDefaults(input: { ticketingProviderKey: string }): 
         knowledge: { enabled: true, all_libraries: false, library_ids: [] },
         web: { enabled: false },
         precedence: 'knowledge_first',
+        internal_notes: 'used',
       },
       // The helper only returns null for a null input; this literal is never null.
     }) ?? {},

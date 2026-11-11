@@ -12,7 +12,7 @@ import { AiAgentLlmClient, agentCallCostEur } from './ai-agent-llm-client';
 import type { TicketImageEvidence } from './ai-ticket-need-representation.types';
 import { estimateJsonTokens } from './json-token-estimate';
 import { HTML_TAGS, SPACES_BEFORE_LINE_BREAKS, hasHtmlTag } from '../../../common/text-scan';
-import { citableKnowledgeDocuments, publicTicketItems } from './public-reply-sources';
+import { citableKnowledgeDocuments } from './agent-ticket-sources';
 
 export type ReplySynthesisTicket = {
   id: string;
@@ -254,9 +254,7 @@ export class AiReplySynthesisService {
     // The agent's library list; null = every library the agent may read.
     citableLibraryIds?: readonly string[] | null;
   }): Record<string, unknown> {
-    // The reply goes to the requester: it reads the public items of the ticket and the
-    // documents of the libraries the agent may cite.
-    const timeline = publicTicketItems(input.timeline);
+    // The reply cites the documents of the libraries the agent may cite.
     const knowledgeDocs = citableKnowledgeDocuments(input.knowledgeDocs, input.citableLibraryIds);
     return {
       task: 'Compose a grounded helpdesk requester reply and technician brief.',
@@ -288,7 +286,7 @@ export class AiReplySynthesisService {
         status: input.ticket.status ?? null,
         priority: input.ticket.priority ?? null,
       },
-      recent_timeline: timeline.slice(-8).map((entry) => ({
+      recent_timeline: input.timeline.slice(-8).map((entry) => ({
         actor: entry.actor,
         visibility: entry.visibility,
         created_at: entry.createdAt,

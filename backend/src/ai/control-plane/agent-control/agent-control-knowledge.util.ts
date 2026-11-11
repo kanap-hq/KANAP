@@ -1,7 +1,6 @@
 import { decodeHtmlEntities, HTML_TEXT_ENTITIES } from '../../../common/html-entities';
 import { isRecord } from '../../../common/object-guards';
 import { clampText, trimmedString } from './agent-control-util';
-import { publicTicketItems } from './public-reply-sources';
 import type { ActionPlannerPromptInput } from './ai-agent-action-planner.service';
 import type {
   KnowledgePlannerCandidate,
@@ -244,9 +243,8 @@ export function stripKnowledgeAccents(value: string): string {
   return value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
 }
 
-// The searches feed the reply to the requester: the latest public message of the requester.
 export function latestRequesterBody(timeline: TicketTimelineEntry[]): string | null {
-  const entry = [...publicTicketItems(timeline)].reverse().find((candidate) => candidate.actor === 'requester_candidate' && candidate.body.trim());
+  const entry = [...timeline].reverse().find((candidate) => candidate.actor === 'requester_candidate' && candidate.body.trim());
   return entry?.body ?? null;
 }
 

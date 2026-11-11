@@ -171,7 +171,7 @@ import {
   ReplySynthesisResult,
   ReplySynthesisSource,
 } from './ai-reply-synthesis.service';
-import { publicTicketItems } from './public-reply-sources';
+import { conversationGateTheAgentReads, ticketItemsTheAgentReads } from './agent-ticket-sources';
 import {
   AiSharedContextProfileService,
   SharedContextProfileInput,
@@ -181,7 +181,6 @@ import {
   AiTicketEvidenceExtractionService,
   estimateTicketEvidenceExtractionUsage,
   TicketEvidenceExtractionResult,
-  ticketAttachmentRefs,
 } from './ai-ticket-evidence-extraction.service';
 import {
   AiTicketNeedRepresentationService,
@@ -297,6 +296,7 @@ import {
   changedConfigDiff,
   autonomyThresholds,
   normalizeKnowledgeSources,
+  internalNotesSettingToWrite,
   newAgentScopePolicy,
   readAgentKnowledgeSources,
   proposalHash,
@@ -2230,21 +2230,35 @@ export class AiAgentControlService {
     }
     if (Object.prototype.hasOwnProperty.call(input, 'scope_policy_json')) {
       // The libraries the agent may cite change only when the input gives them: a scope policy
-      // without knowledge_sources keeps the stored ones.
+      // without knowledge_sources keeps the stored ones. So does the internal notes setting.
       const nextScopePolicy = normalizedPolicyObject(input.scope_policy_json, 'Scope policy');
       const storedKnowledgeSources = isRecord(definition.scope_policy_json) ? definition.scope_policy_json.knowledge_sources : undefined;
+      const nextKnowledgeSources = nextScopePolicy?.knowledge_sources;
       definition.scope_policy_json = normalizeScopePolicyForAgentType(
         definition.agent_type,
         storedKnowledgeSources !== undefined && !(nextScopePolicy && Object.prototype.hasOwnProperty.call(nextScopePolicy, 'knowledge_sources'))
           ? { ...(nextScopePolicy ?? {}), knowledge_sources: storedKnowledgeSources }
-          : nextScopePolicy,
+          : isRecord(nextKnowledgeSources)
+            ? {
+              ...nextScopePolicy,
+              knowledge_sources: {
+                ...nextKnowledgeSources,
+                internal_notes: internalNotesSettingToWrite(nextKnowledgeSources, storedKnowledgeSources),
+              },
+            }
+            : nextScopePolicy,
       );
     }
     if (Object.prototype.hasOwnProperty.call(input, 'knowledge_sources')) {
       // Patch only the knowledge_sources sub-block, preserving the rest of scope_policy_json.
+      // Knowledge sources without the internal notes setting keep the stored one.
+      const storedScopePolicy = isRecord(definition.scope_policy_json) ? definition.scope_policy_json : {};
       definition.scope_policy_json = normalizeScopePolicyForAgentType(definition.agent_type, {
-        ...(isRecord(definition.scope_policy_json) ? definition.scope_policy_json : {}),
-        knowledge_sources: normalizeKnowledgeSources(input.knowledge_sources),
+        ...storedScopePolicy,
+        knowledge_sources: normalizeKnowledgeSources({
+          ...(isRecord(input.knowledge_sources) ? input.knowledge_sources : {}),
+          internal_notes: internalNotesSettingToWrite(input.knowledge_sources, storedScopePolicy.knowledge_sources),
+        }),
       });
     }
     if (Object.prototype.hasOwnProperty.call(input, 'queue_policy_json')) {
@@ -5206,14 +5220,18 @@ export class AiAgentControlService {
     );
     const ticketTimeline = buildTicketTimeline(ticket, ticketNotesData.notes, kanapPublicBodies);
     const conversationGate = evaluateConversationGate(priorTargetActions, ticketTimeline, ticketNotesData.notes);
-    // The stages below feed the reply to the requester (need, searches, source choice, reply):
-    // they read the public items of the ticket. The internal note reads the whole timeline.
-    const publicTimeline = publicTicketItems(ticketTimeline);
+    // What the agent reads of the ticket, by its internal notes setting: every item, or the
+    // public items only. Every stage below that calls a model, the searches and the internal
+    // note proposed to the technician take these items; the conversation gate above and the
+    // run record read the whole thread.
+    const internalNotesSetting = readAgentKnowledgeSources(agentDefinition).internalNotes;
+    const agentTimeline = ticketItemsTheAgentReads(ticketTimeline, internalNotesSetting);
+    const agentNotes = ticketItemsTheAgentReads(ticketNotesData.notes, internalNotesSetting);
     const ticketForKnowledge = {
       ...ticket,
       description: [
         ticket.description,
-        ...publicTimeline
+        ...agentTimeline
           .filter((entry) => entry.actor === 'requester_candidate')
           .slice(-4)
           .map((entry) => entry.body),
@@ -5223,8 +5241,10 @@ export class AiAgentControlService {
     const preKnowledgeGuardrails = this.agentQueue && agentDefinition ? this.agentQueue.runGuardrails(agentDefinition) : null;
     const plannerSystemPrompt = compileSystemPrompt(RUNTIME_SAFETY_FLOOR_PLANNER, promptRuntime.plannerGuidance);
     let ticketImageExtraction: TicketEvidenceExtractionResult = {
-      // Kept when the extraction does not run: the same list the extraction reads.
-      attachmentRefs: ticketAttachmentRefs({ ticket, notes: ticketNotesData.notes }),
+      attachmentRefs: [
+        ...(ticket.attachments ?? []),
+        ...agentNotes.flatMap((note) => note.attachments ?? []),
+      ],
       evidence: [],
       warnings: [],
       skippedReason: null,
@@ -5238,7 +5258,7 @@ export class AiAgentControlService {
       const evidenceProjection = estimateTicketEvidenceExtractionUsage({
         systemPrompt: plannerSystemPrompt,
         ticket,
-        notes: ticketNotesData.notes,
+        notes: agentNotes,
         maxImages: this.ticketEvidenceExtractor.maxImageCount(),
       }, llmPrices, this.ticketEvidenceExtractor.maxOutputTokens());
       const evidenceInputSummary = {
@@ -5279,7 +5299,7 @@ export class AiAgentControlService {
         try {
           ticketImageExtraction = await this.ticketEvidenceExtractor.extractImageEvidence(context, {
             ticket,
-            notes: ticketNotesData.notes,
+            notes: agentNotes,
             profile: promptRuntime.plannerGuidance,
             readAttachment: async (ref) => {
               const result = await this.dispatcher.execute<AdapterResultLike<TicketAttachmentReadResult>>(context, {
@@ -5352,7 +5372,7 @@ export class AiAgentControlService {
     }
 
     let knowledgeNeedRepresentation: TicketNeedRepresentationBuildResult | null = null;
-    const fallbackPreferenceTerms = extractKnowledgePreferenceTerms(publicTimeline).positiveTerms;
+    const fallbackPreferenceTerms = extractKnowledgePreferenceTerms(agentTimeline).positiveTerms;
     const shortFallbackKnowledgeQueries = uniqueKnowledgeCandidates([
       ...fallbackPreferenceTerms,
       fallbackPreferenceTerms.slice(0, 4).join(' '),
@@ -5370,7 +5390,7 @@ export class AiAgentControlService {
     if (this.ticketNeedBuilder) {
       const needInput = {
         ticket,
-        timeline: publicTimeline,
+        timeline: agentTimeline,
         imageEvidence: ticketImageExtraction.evidence,
         profile: promptRuntime.plannerGuidance,
       };
@@ -5471,7 +5491,7 @@ export class AiAgentControlService {
       // Knowledge search is disabled for this agent — gather no KANAP knowledge so the
       // triage relies on the LLM (and web, when enabled). The plan/interpretation are kept
       // as valid empty structures for the downstream audit metadata.
-      knowledgeSearchPlan = buildFallbackKnowledgeSearchPlan(ticket, publicTimeline, []);
+      knowledgeSearchPlan = buildFallbackKnowledgeSearchPlan(ticket, agentTimeline, []);
       knowledgeQueryCandidates = [];
       knowledgeInterpretation = buildFallbackKnowledgeInterpretation(knowledgeSearchPlan, []);
     } else {
@@ -5501,10 +5521,10 @@ export class AiAgentControlService {
         : this.knowledgePlanner
         ? await this.knowledgePlanner.planKnowledgeSearch(context, {
           ticket,
-          timeline: publicTimeline,
+          timeline: agentTimeline,
           profile: promptRuntime.plannerGuidance,
         })
-        : buildFallbackKnowledgeSearchPlan(ticket, publicTimeline, deterministicKnowledgeQueries);
+        : buildFallbackKnowledgeSearchPlan(ticket, agentTimeline, deterministicKnowledgeQueries);
       knowledgeSearchPlan = {
         ...plannedKnowledgeSearch,
         queries: this.ticketNeedBuilder
@@ -5552,7 +5572,7 @@ export class AiAgentControlService {
         ? await this.knowledgePlanner.interpretKnowledgeResults(context, {
           plan: knowledgeSearchPlan,
           ticket,
-          timeline: publicTimeline,
+          timeline: agentTimeline,
           candidates: plannerCandidatesFromKnowledge(mergedKnowledgeCandidates),
           profile: promptRuntime.interpreterGuidance,
         })
@@ -5656,7 +5676,7 @@ export class AiAgentControlService {
     let webSearchQuery: string | null = null;
     let webSearchError: string | null = null;
     const webQueryCandidates = knowledgeSources.webEnabled && Features.AI_WEB_SEARCH_READY
-      ? buildWebSearchQueryCandidates(ticketForKnowledge, publicTimeline, knowledgeQueryCandidates)
+      ? buildWebSearchQueryCandidates(ticketForKnowledge, agentTimeline, knowledgeQueryCandidates)
       : [];
     if (knowledgeSources.webEnabled && Features.AI_WEB_SEARCH_READY) {
       const webQuery = webQueryCandidates[0] ?? trimmedString(ticket.title) ?? '';
@@ -5731,7 +5751,7 @@ export class AiAgentControlService {
       }
       const synthesisPayload = this.replySynthesis.buildPromptPayload({
         ticket,
-        timeline: ticketTimeline,
+        timeline: agentTimeline,
         language: synthesisLanguage,
         knowledgeDocs: enrichedKnowledgeItems.slice(0, MAX_KNOWLEDGE_DOCUMENTS_FOR_REPLY),
         webResults: webSearchResults,
@@ -5775,7 +5795,7 @@ export class AiAgentControlService {
         try {
           replySynthesisResult = await this.replySynthesis.synthesizeTicketReply(context, {
             ticket,
-            timeline: ticketTimeline,
+            timeline: agentTimeline,
             language: synthesisLanguage,
             knowledgeDocs: enrichedKnowledgeItems.slice(0, MAX_KNOWLEDGE_DOCUMENTS_FOR_REPLY),
             webResults: webSearchResults,
@@ -5898,14 +5918,14 @@ export class AiAgentControlService {
     );
     const actionPlannerInput = {
       ticket,
-      timeline: ticketTimeline,
+      timeline: agentTimeline,
       contexts: {
         classification: classificationContext,
         lifecycle: lifecycleContext,
         routing: routingContext,
         participants: participantContext,
       },
-      gates: conversationGate as unknown as Record<string, unknown>,
+      gates: conversationGateTheAgentReads(conversationGate, internalNotesSetting),
       close_eligibility: {
         matched: closeEligible,
         has_inactivity_age: targetingEligibility.hasInactivityAge,
@@ -6300,12 +6320,12 @@ export class AiAgentControlService {
       ])
       : null;
     const noteBody = isPlannerEscalation
-      ? buildTriageNote(ticket, knowledgeItems, ticketTimeline, webSearchResults, { kind: 'escalation', reason: escalationReason })
+      ? buildTriageNote(ticket, knowledgeItems, agentTimeline, webSearchResults, { kind: 'escalation', reason: escalationReason })
       : (replySynthesisResult
-        ? renderSynthesizedTriageNote(ticket, ticketTimeline, replySynthesisResult)
+        ? renderSynthesizedTriageNote(ticket, agentTimeline, replySynthesisResult)
         : (isPlannerAdministrativeReply
-          ? buildTriageNote(ticket, knowledgeItems, ticketTimeline, webSearchResults, { kind: 'administrative_reply', reason: administrativeReason })
-          : buildTriageNote(ticket, knowledgeItems, ticketTimeline, webSearchResults, null)));
+          ? buildTriageNote(ticket, knowledgeItems, agentTimeline, webSearchResults, { kind: 'administrative_reply', reason: administrativeReason })
+          : buildTriageNote(ticket, knowledgeItems, agentTimeline, webSearchResults, null)));
 
     const plannerClassificationUpdate = effectivePlannerActions.find((entry) => entry.action.action_type === PLANNER_CLASSIFICATION_ACTION_TYPE) ?? null;
     const classificationUpdateInput = plannerClassificationUpdate?.action.proposed
@@ -6655,7 +6675,7 @@ export class AiAgentControlService {
     }
     const requesterReplyBody = replySynthesisResult
       ? renderSynthesizedRequesterReply(ticket, replySynthesisResult)
-      : buildRequesterReply(ticket, enrichedKnowledgeItems, ticketTimeline, webSearchResults);
+      : buildRequesterReply(ticket, enrichedKnowledgeItems, agentTimeline, webSearchResults);
     const plannerRequesterReplyBody = plannerRequesterReply
       ? plannerRequesterReply.replyBody ?? requesterReplyBody
       : null;

@@ -7,7 +7,7 @@ import { AiAgentDefinition } from '../entities/ai-agent-definition.entity';
 import { MAX_INTERNAL_NOTE_CHARS, MAX_PUBLIC_REPLY_CHARS } from '../providers/ticket-safety';
 import { ticketLooksFrench } from './agent-control-knowledge.util';
 import { clampText } from './agent-control-util';
-import { isPublicTicketItem, publicTicketItems } from './public-reply-sources';
+import { isPublicTicketItem } from './agent-ticket-sources';
 import type { ConversationActionGate, KnowledgeSearchItem, TicketLike, TicketNoteLike, TicketTimelineEntry, WebSearchResultItem } from './ai-agent-control.service';
 import { ReplySynthesisRejectedSource, ReplySynthesisResult, ReplySynthesisSource } from './ai-reply-synthesis.service';
 import {
@@ -265,8 +265,7 @@ export function evaluateConversationGate(
   const lastPublic = latestExecutedAction(actions, TICKETING_PUBLIC_REPLY_ADD_APPROVED_CAPABILITY, notes);
   const latestNote = latestTicketNote(notes);
   const preparedAt = new Date().toISOString();
-  // The gate opens on what the requester wrote in public: the reply reads only those items.
-  const requesterSignals = publicTicketItems(timeline)
+  const requesterSignals = timeline
     .filter((entry) => entry.actor === 'requester_candidate')
     .map((entry) => ({ entry, time: parseTime(entry.createdAt) }))
     .filter((signal): signal is { entry: TicketTimelineEntry; time: number } => signal.time != null)
@@ -449,7 +448,7 @@ export function renderProviderBody(lines: Array<string | null>, maxChars: number
 }
 
 export function latestRequesterExcerpt(timeline: TicketTimelineEntry[]): string | null {
-  const entry = [...publicTicketItems(timeline)].reverse().find((candidate) => candidate.actor === 'requester_candidate');
+  const entry = [...timeline].reverse().find((candidate) => candidate.actor === 'requester_candidate');
   return entry ? clampText(entry.body, 260) : null;
 }
 

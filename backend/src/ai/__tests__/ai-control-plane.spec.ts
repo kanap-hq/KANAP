@@ -14246,6 +14246,8 @@ async function testGlpiTriageAdministrativeReplyNoteCarriesPlannerRationale() {
 // model calls and the prepared texts are returned.
 const TRIAGE_INTERNAL_MARKER = 'marker-echo-5150';
 const TRIAGE_PLANNER_MARKER = 'marker-foxtrot-7321';
+const TRIAGE_UNMARKED_MARKER = 'marker-hotel-3390';
+const TRIAGE_SCREENSHOT_MARKER = 'marker-india-6127';
 
 function triageNotes(withInternalNote: boolean) {
   return [
@@ -14268,11 +14270,42 @@ function triageNotes(withInternalNote: boolean) {
   ];
 }
 
+// Every kind of ticket item: a public message with a screenshot, an internal note with a
+// screenshot, and a follow-up the ticketing system does not mark (internal).
+function triageNotesOfEveryKind() {
+  const screenshot = (id: string, noteId: string, filename: string) => ({
+    id,
+    kind: 'image',
+    source: 'ticket_note',
+    sourceNoteId: noteId,
+    target: `/front/document.send.php?docid=${id}`,
+    filename,
+    mimeType: 'image/png',
+  });
+  const [publicNote, internalNote] = triageNotes(true);
+  return [
+    { ...publicNote, attachments: [screenshot('7701', '1', 'ecran.png')] },
+    { ...internalNote, attachments: [screenshot('7702', '2', `capture-${TRIAGE_SCREENSHOT_MARKER}.png`)] },
+    {
+      id: '3',
+      authorRole: 'unknown',
+      body: `Suivi sans marque ${TRIAGE_UNMARKED_MARKER}.`,
+      createdAt: '2026-06-02T10:00:00.000Z',
+    },
+  ];
+}
+
 async function runTriageWithSimulatedModel(input: {
   notes: Array<Record<string, unknown>>;
   plan: Record<string, unknown>;
   reply?: Record<string, unknown>;
   knowledge?: Record<string, unknown>;
+  // The agent's internal notes setting; absent when undefined.
+  internalNotes?: unknown;
+  // Every model stage of the triage: screenshots, need (or, without it, the search planner),
+  // interpreter.
+  everyStage?: boolean;
+  withoutNeed?: boolean;
 }) {
   const { manager } = createMemoryManager();
   const context = createContext(manager);
@@ -14286,16 +14319,19 @@ async function runTriageWithSimulatedModel(input: {
       knowledge: input.knowledge ?? { enabled: true, all_libraries: true, library_ids: [] },
       web: { enabled: true },
       precedence: 'knowledge_first',
+      ...(input.internalNotes === undefined ? {} : { internal_notes: input.internalNotes }),
     },
   };
   await manager.getRepository(AiAgentDefinition).save(definitionBundle.definition);
   const capabilityCalls: string[] = [];
+  const capabilityInputs: Array<{ capabilityName: string; input: unknown }> = [];
   const prepared: { publicReply: string | null; internalNote: string | null } = { publicReply: null, internalNote: null };
   let toolIndex = 0;
   const runId = 'run-two-calls';
   const dispatcher = {
     execute: async (_context: unknown, request: any) => {
       capabilityCalls.push(request.capabilityName);
+      capabilityInputs.push({ capabilityName: request.capabilityName, input: request.input });
       toolIndex += 1;
       const toolExecutionId = `two-calls-tool-${toolIndex}`;
       const ok = (data: unknown) => ({ run_id: runId, step_id: `step-${toolIndex}`, tool_execution_id: toolExecutionId, output: { ok: true, data, evidence: [] } });
@@ -14352,6 +14388,18 @@ async function runTriageWithSimulatedModel(input: {
             tool_execution_id: toolExecutionId,
             output: { items: [], total: null, returned: 0, truncated: false, complete: true },
           };
+        case TICKETING_TICKET_ATTACHMENT_READ_CAPABILITY: {
+          const note = input.notes.find((candidate) => candidate.id === request.input.source_note_id);
+          const attachment = ((note?.attachments ?? []) as Array<Record<string, unknown>>)
+            .find((candidate) => candidate.target === request.input.target);
+          return ok({
+            attachment,
+            filename: attachment?.filename ?? null,
+            mimeType: 'image/png',
+            sizeBytes: 120,
+            base64Data: Buffer.from(`image ${String(attachment?.filename)}`).toString('base64'),
+          });
+        }
         case TICKETING_INTERNAL_NOTE_PREPARE_CAPABILITY:
           prepared.internalNote = request.input.note_body;
           await savePreparedTicketingAction(context, {
@@ -14381,16 +14429,19 @@ async function runTriageWithSimulatedModel(input: {
       }
     },
   };
-  const calls: Array<{ taskName: string; payload: unknown }> = [];
+  const calls: Array<{ taskName: string; payload: unknown; images: unknown }> = [];
   const llmClient = {
+    resolveRuntime: async () => VISION_TEST_RUNTIME,
     callStructuredJsonModel: async (_context: unknown, request: any) => {
-      calls.push({ taskName: request.taskName, payload: request.userPayload });
+      calls.push({ taskName: request.taskName, payload: request.userPayload, images: request.images ?? null });
       switch (request.taskName) {
         case 'action_planner':
           return structuredJsonSuccess(input.plan);
         case 'reply_synthesis':
           return structuredJsonSuccess(input.reply ?? {});
         default:
+          // The other stages fall back to their deterministic result.
+          if (input.everyStage) return null;
           throw new Error(`Unexpected model call ${request.taskName}`);
       }
     },
@@ -14402,11 +14453,13 @@ async function runTriageWithSimulatedModel(input: {
     {} as any,
     { getApplicability: async () => ({ available: true }) } as any,
     queue,
-    undefined,
+    input.everyStage ? new AiKnowledgeSearchPlannerService(llmClient as any) : undefined,
     new AiReplySynthesisService(llmClient as any),
     undefined,
     undefined,
     new AiAgentActionPlannerService(llmClient as any),
+    input.everyStage && !input.withoutNeed ? new AiTicketNeedRepresentationService(llmClient as any) : undefined,
+    input.everyStage ? new AiTicketEvidenceExtractionService(llmClient as any) : undefined,
   ) as any;
   service.getRunDetail = async () => ({ action_requests: [] });
   try {
@@ -14418,7 +14471,7 @@ async function runTriageWithSimulatedModel(input: {
   } finally {
     (Features as any).AI_WEB_SEARCH_READY = previousWebReady;
   }
-  return { calls, ...prepared, capabilityCalls };
+  return { calls, ...prepared, capabilityCalls, capabilityInputs };
 }
 
 function payloadOf(calls: Array<{ taskName: string; payload: unknown }>, taskName: string): string {
@@ -14457,6 +14510,110 @@ async function testAnAgentWithoutLibrariesSearchesNoKnowledge() {
   assert.equal(closed.capabilityCalls.includes('search_knowledge'), false);
   const open = await runTriageWithSimulatedModel({ notes: triageNotes(true), plan: TRIAGE_SOURCED_PLAN, reply: TRIAGE_SOURCED_REPLY });
   assert.equal(open.capabilityCalls.includes('search_knowledge'), true);
+}
+
+const TRIAGE_ADMINISTRATIVE_PLAN = {
+  actions: [
+    { action_type: 'internal_note', reason: 'Documenter.' },
+    {
+      action_type: 'requester_reply',
+      reply_kind: 'administrative',
+      administrative_intent: 'acknowledgement',
+      reason: 'Accuser réception.',
+      body: 'Bonjour, votre demande a bien été reçue.',
+    },
+  ],
+  rationale: 'Plan.',
+  confidence: 0.8,
+};
+
+function triageCallTexts(result: { calls: Array<{ payload: unknown; images: unknown }>; capabilityInputs: Array<{ capabilityName: string; input: unknown }> }) {
+  return [
+    ...result.calls.map((call) => JSON.stringify(call.payload) + JSON.stringify(call.images)),
+    ...result.capabilityInputs
+      .filter((call) => call.capabilityName !== TICKETING_INTERNAL_NOTE_PREPARE_CAPABILITY && call.capabilityName !== TICKETING_PUBLIC_REPLY_PREPARE_CAPABILITY)
+      .map((call) => JSON.stringify(call.input)),
+  ];
+}
+
+// With internal notes used (the setting, or no setting), every model call reads every item of
+// the ticket, as the triage did before the setting.
+async function testTriageWithInternalNotesUsedReadsEveryItem() {
+  for (const internalNotes of [undefined, 'used']) {
+    const sourced = await runTriageWithSimulatedModel({ notes: triageNotes(true), plan: TRIAGE_SOURCED_PLAN, reply: TRIAGE_SOURCED_REPLY, internalNotes });
+    assert.deepEqual(sourced.calls.map((call) => call.taskName), ['action_planner', 'reply_synthesis'], `calls for ${String(internalNotes)}`);
+    assert.ok(payloadOf(sourced.calls, 'action_planner').includes(TRIAGE_INTERNAL_MARKER), 'the planner reads the internal note');
+    assert.ok(payloadOf(sourced.calls, 'reply_synthesis').includes(TRIAGE_INTERNAL_MARKER), 'the reply reads the internal note');
+    assert.ok(sourced.publicReply?.includes('Relancez le service de licence depuis le portail.'));
+    assert.ok(sourced.internalNote?.includes('Résumé écrit avec la réponse.'), 'the brief written with the reply');
+
+    const administrative = await runTriageWithSimulatedModel({ notes: triageNotes(true), plan: TRIAGE_ADMINISTRATIVE_PLAN, internalNotes });
+    assert.deepEqual(administrative.calls.map((call) => call.taskName), ['action_planner'], 'the planner writes its administrative reply');
+    assert.equal(administrative.publicReply, 'Bonjour, votre demande a bien été reçue.');
+
+    for (const withoutNeed of [false, true]) {
+      const everyStage = await runTriageWithSimulatedModel({
+        notes: triageNotesOfEveryKind(),
+        plan: TRIAGE_SOURCED_PLAN,
+        reply: TRIAGE_SOURCED_REPLY,
+        internalNotes,
+        everyStage: true,
+        withoutNeed,
+      });
+      const needStage = withoutNeed ? 'knowledge_search_plan' : 'ticket_need_representation';
+      assert.deepEqual(everyStage.calls.map((call) => call.taskName), [
+        'ticket_image_evidence_extraction',
+        'ticket_image_evidence_extraction',
+        needStage,
+        'knowledge_result_interpretation',
+        'action_planner',
+        'reply_synthesis',
+      ]);
+      // The need and the interpreter read the requester's messages and the agent's previous
+      // answer only; the search planner, the action planner and the reply read every item.
+      for (const taskName of [...(withoutNeed ? ['knowledge_search_plan'] : []), 'action_planner', 'reply_synthesis']) {
+        assert.ok(payloadOf(everyStage.calls, taskName).includes(TRIAGE_INTERNAL_MARKER), `${taskName} reads the internal note`);
+      }
+      assert.ok(JSON.stringify(everyStage.calls.map((call) => call.payload)).includes(TRIAGE_SCREENSHOT_MARKER), 'the screenshot of the internal note is read');
+    }
+  }
+}
+
+// With internal notes ignored, no model call reads an internal item of the ticket, its text or
+// its screenshots; a follow-up the ticketing system does not mark public is internal. The agent
+// still prepares its reply to the requester.
+async function testTriageWithInternalNotesIgnoredReadsThePublicItems() {
+  for (const withoutNeed of [false, true]) {
+    const result = await runTriageWithSimulatedModel({
+      notes: triageNotesOfEveryKind(),
+      plan: TRIAGE_SOURCED_PLAN,
+      reply: TRIAGE_SOURCED_REPLY,
+      internalNotes: 'ignored',
+      everyStage: true,
+      withoutNeed,
+    });
+    assert.deepEqual(result.calls.map((call) => call.taskName), [
+      'ticket_image_evidence_extraction',
+      withoutNeed ? 'knowledge_search_plan' : 'ticket_need_representation',
+      'knowledge_result_interpretation',
+      'action_planner',
+      'reply_synthesis',
+    ]);
+    assert.ok(result.capabilityCalls.includes('search_knowledge'));
+    assert.ok(result.capabilityCalls.includes('web_search'));
+    const texts = triageCallTexts(result);
+    for (const marker of [TRIAGE_INTERNAL_MARKER, TRIAGE_UNMARKED_MARKER, TRIAGE_SCREENSHOT_MARKER]) {
+      for (const text of texts) assert.ok(!text.includes(marker), `a model call or a search reads ${marker}: ${text.slice(Math.max(0, text.indexOf(marker) - 300), text.indexOf(marker) + 60)}`);
+      assert.ok(!result.internalNote?.includes(marker), `the internal note proposal carries ${marker}`);
+    }
+    assert.ok(payloadOf(result.calls, 'reply_synthesis').includes('ne démarre toujours pas'), 'the reply reads the public message');
+    assert.ok(result.publicReply?.includes('Relancez le service de licence depuis le portail.'));
+  }
+
+  const administrative = await runTriageWithSimulatedModel({ notes: triageNotesOfEveryKind(), plan: TRIAGE_ADMINISTRATIVE_PLAN, internalNotes: 'ignored' });
+  assert.deepEqual(administrative.calls.map((call) => call.taskName), ['action_planner']);
+  assert.ok(!payloadOf(administrative.calls, 'action_planner').includes(TRIAGE_INTERNAL_MARKER));
+  assert.equal(administrative.publicReply, 'Bonjour, votre demande a bien été reçue.');
 }
 
 // Fix B (regression #33): the synthesis prompt must genuinely prefer relevant internal KANAP
@@ -16360,6 +16517,54 @@ async function testHelpdeskPollOnAgentlessTenantIsDisabled() {
   assert.equal(result.status, 'disabled');
 }
 
+// The internal notes setting: written "used" on a new agent, kept by an update that does not
+// give it, and only "used" or "ignored".
+async function testTheInternalNotesSettingIsKeptUnlessAnUpdateGivesIt() {
+  const { manager } = createMemoryManager();
+  const context = createContext(manager);
+  const queue = new AiAgentWorkQueueService();
+  const service = new AiAgentControlService({} as any, {} as any, {} as any, {} as any, {} as any, queue);
+  const created = await service.createAgentDefinition(context, { name: 'Desk reading notes' });
+  const id = created.agent_definition.id;
+  const reload = async () => (await manager.getRepository(AiAgentDefinition).findOne({ where: { id, tenant_id: context.tenantId } }))!;
+  const stored = async () => ((await reload()).scope_policy_json as any).knowledge_sources.internal_notes;
+  assert.equal(await stored(), 'used', 'a new agent is written with the setting');
+
+  await service.updateAgentDefinition(context, id, {
+    knowledge_sources: { knowledge: { enabled: true, all_libraries: false, library_ids: [] }, internal_notes: 'ignored' },
+  });
+  assert.equal(await stored(), 'ignored');
+  // Knowledge sources without the setting keep it.
+  await service.updateAgentDefinition(context, id, {
+    knowledge_sources: { knowledge: { enabled: true, all_libraries: true, library_ids: [] } },
+  });
+  assert.equal(await stored(), 'ignored');
+  assert.equal(readAgentKnowledgeSources(await reload()).knowledgeLibraryIds, null);
+  // So does a scope policy, with or without knowledge sources.
+  await service.updateAgentDefinition(context, id, { scope_policy_json: { mode: 'manual_safe_target' } });
+  assert.equal(await stored(), 'ignored');
+  await service.updateAgentDefinition(context, id, {
+    scope_policy_json: { mode: 'manual_safe_target', knowledge_sources: { knowledge: { enabled: true, all_libraries: true, library_ids: [] } } },
+  });
+  assert.equal(await stored(), 'ignored');
+  await service.updateAgentDefinition(context, id, {
+    scope_policy_json: { mode: 'manual_safe_target', knowledge_sources: { knowledge: { enabled: true }, internal_notes: 'used' } },
+  });
+  assert.equal(await stored(), 'used');
+
+  // An unknown value is refused, whatever the path.
+  await assert.rejects(() => service.updateAgentDefinition(context, id, { knowledge_sources: { internal_notes: 'public' } }), BadRequestException);
+  await assert.rejects(
+    () => service.updateAgentDefinition(context, id, { scope_policy_json: { knowledge_sources: { internal_notes: 'sometimes' } } }),
+    BadRequestException,
+  );
+  await assert.rejects(
+    () => service.createAgentDefinition(context, { name: 'Desk unknown', scope_policy_json: { knowledge_sources: { internal_notes: 1 } } }),
+    BadRequestException,
+  );
+  assert.equal(await stored(), 'used');
+}
+
 async function testAnAgentUpdateKeepsItsLibrariesUnlessItGivesThem() {
   const { manager } = createMemoryManager();
   const context = createContext(manager);
@@ -17010,6 +17215,7 @@ async function run() {
   await testHelpdeskPollOnAgentlessTenantIsDisabled();
   await testCreateHelpdeskAgentFromCodeDefaultsBindsProviderAndCapabilities();
   await testAnAgentUpdateKeepsItsLibrariesUnlessItGivesThem();
+  await testTheInternalNotesSettingIsKeptUnlessAnUpdateGivesIt();
   await testCreateSreAgentFromCodeDefaultsUsesA1AndCapabilities();
   await testManualTicketingTriageRequiresAgentDefinitionId();
   await testMockTicketingInternalNoteWriteScenarios();
@@ -17151,6 +17357,8 @@ async function run() {
   await testGlpiTriageSynthesisRejectsOffTopicKnowledgeAndUsesWeb();
   await testGlpiTriageAdministrativeReplyNoteCarriesPlannerRationale();
   await testAnAgentWithoutLibrariesSearchesNoKnowledge();
+  await testTriageWithInternalNotesUsedReadsEveryItem();
+  await testTriageWithInternalNotesIgnoredReadsThePublicItems();
   testSynthesisPromptPrefersInternalKnowledgeSources();
   testSynthesisPromptCarriesValidationStatus();
   testSynthesisPayloadIncludesScreenshotEvidence();

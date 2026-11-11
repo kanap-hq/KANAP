@@ -10,7 +10,6 @@ import {
 import { AiAgentLlmClient, agentCallCostEur } from './ai-agent-llm-client';
 import { TicketNeedRepresentation } from './ai-ticket-need-representation.types';
 import { estimateJsonTokens } from './json-token-estimate';
-import { publicTicketItems } from './public-reply-sources';
 import { HTML_TAGS } from '../../../common/text-scan';
 
 export type KnowledgePlannerTicket = {
@@ -363,8 +362,6 @@ export class AiKnowledgeSearchPlannerService {
       profile?: CompiledGuidance | null;
     },
   ): Promise<KnowledgeSearchPlan> {
-    // The searches feed the reply to the requester: they read the public items of the ticket.
-    input = { ...input, timeline: publicTicketItems(input.timeline) };
     const fallback = this.buildDeterministicPlan(input);
     if (process.env.AI_AGENT_KNOWLEDGE_LLM_PLANNER === '0') {
       return fallback;
@@ -464,7 +461,6 @@ export class AiKnowledgeSearchPlannerService {
       profile?: CompiledGuidance | null;
     },
   ): Promise<KnowledgeResultInterpretation> {
-    input = { ...input, timeline: publicTicketItems(input.timeline) };
     const fallback = this.buildDeterministicInterpretation(input);
     if (input.candidates.length === 0 || process.env.AI_AGENT_KNOWLEDGE_LLM_PLANNER === '0') {
       return fallback;

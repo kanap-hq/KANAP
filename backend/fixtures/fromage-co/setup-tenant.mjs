@@ -2196,6 +2196,7 @@ async function ensureDemoAgent(serviceDeskLibrary) {
         knowledge: { enabled: true, all_libraries: false, library_ids: serviceDeskLibrary?.id ? [serviceDeskLibrary.id] : [] },
         web: { enabled: false },
         precedence: 'knowledge_first',
+        internal_notes: 'used',
       },
     },
     trigger_policy_json: {

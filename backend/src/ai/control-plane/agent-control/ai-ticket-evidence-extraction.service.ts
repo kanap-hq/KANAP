@@ -12,7 +12,6 @@ import { AgentLlmRuntime, AiAgentLlmClient, agentCallCostEur, aggregateAgentUsag
 import { TicketImageEvidence } from './ai-ticket-need-representation.types';
 import { isRecord } from '../../../common/object-guards';
 import { estimateJsonTokens } from './json-token-estimate';
-import { publicTicketItems } from './public-reply-sources';
 import { HTML_TAGS } from '../../../common/text-scan';
 
 export type TicketEvidenceExtractionResult = {
@@ -144,17 +143,15 @@ function attachmentKey(ref: TicketAttachmentRef): string {
   ].join(':');
 }
 
-/** The screenshots a public reply may read: those of the ticket and of its public messages. */
-export function ticketAttachmentRefs(input: {
+function collectAttachmentRefs(input: {
   ticket: { attachments?: TicketAttachmentRef[] | null };
-  notes: Array<{ visibility?: unknown; attachments?: TicketAttachmentRef[] | null }>;
+  notes: Array<{ attachments?: TicketAttachmentRef[] | null }>;
 }): TicketAttachmentRef[] {
   const seen = new Set<string>();
   const refs: TicketAttachmentRef[] = [];
   for (const ref of [
     ...(input.ticket.attachments ?? []),
-    // Screenshots feed the reply to the requester: only those of public messages.
-    ...publicTicketItems(input.notes).flatMap((note) => note.attachments ?? []),
+    ...input.notes.flatMap((note) => note.attachments ?? []),
   ]) {
     if (!ref?.target) continue;
     const key = attachmentKey(ref);
@@ -224,7 +221,7 @@ function visionPromptPayload(input: {
 export function estimateTicketEvidenceExtractionUsage(input: {
   systemPrompt: string;
   ticket: { id: string; attachments?: TicketAttachmentRef[] | null };
-  notes: Array<{ id: string; visibility?: unknown; attachments?: TicketAttachmentRef[] | null }>;
+  notes: Array<{ id: string; attachments?: TicketAttachmentRef[] | null }>;
   maxImages: number;
 }, prices: LlmTokenPrices | null, maxOutputTokens = MAX_VISION_EXTRACTION_OUTPUT_TOKENS): {
   estimatedTokens: number;
@@ -232,7 +229,7 @@ export function estimateTicketEvidenceExtractionUsage(input: {
   attachmentCount: number;
   imageCallCount: number;
 } {
-  const attachmentRefs = ticketAttachmentRefs(input);
+  const attachmentRefs = collectAttachmentRefs(input);
   const selectedRefs = attachmentRefs
     .filter((ref) => ref.kind === 'image' || !ref.mimeType || SUPPORTED_IMAGE_MIME_TYPES.has(normalizeMimeType(ref.mimeType)))
     .slice(0, input.maxImages);
@@ -279,12 +276,12 @@ export class AiTicketEvidenceExtractionService {
     context: AiExecutionContextWithManager,
     input: {
       ticket: { id: string; attachments?: TicketAttachmentRef[] | null };
-      notes: Array<{ id: string; visibility?: unknown; attachments?: TicketAttachmentRef[] | null }>;
+      notes: Array<{ id: string; attachments?: TicketAttachmentRef[] | null }>;
       readAttachment: (ref: TicketAttachmentRef) => Promise<TicketAttachmentReadResult | null>;
       profile?: CompiledGuidance | null;
     },
   ): Promise<TicketEvidenceExtractionResult> {
-    const attachmentRefs = ticketAttachmentRefs(input);
+    const attachmentRefs = collectAttachmentRefs(input);
     if (attachmentRefs.length === 0) {
       return {
         attachmentRefs,
