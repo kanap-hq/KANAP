@@ -652,7 +652,12 @@
     "knowledgeSources": "Sources de connaissances et web",
     "knowledgeEnabled": "Rechercher dans la base de connaissances",
     "knowledgeHint": "Désactivé, l'agent répond à partir des connaissances du modèle (et du web, si activé).",
-    "allLibraries": "Rechercher dans toutes les bibliothèques disponibles",
+    "libraryScope": {
+      "none": "Aucune bibliothèque",
+      "some": "Bibliothèques choisies",
+      "all": "Toutes les bibliothèques",
+      "noneHint": "L'agent ne cite aucun document dans ses réponses."
+    },
     "specificLibraries": "Bibliothèques",
     "librariesPlaceholder": "Sélectionner des bibliothèques",
     "librariesHint": "L'agent ne recherche que dans ces bibliothèques, parmi celles auxquelles il a accès. Les noms des bibliothèques se trouvent dans la section Connaissances.",

@@ -652,7 +652,12 @@
     "knowledgeSources": "Fuentes de conocimiento y web",
     "knowledgeEnabled": "Buscar en la base de conocimiento",
     "knowledgeHint": "Si está desactivado, el agente responde con el conocimiento del modelo (y de la web, si está habilitada).",
-    "allLibraries": "Buscar en todas las bibliotecas disponibles",
+    "libraryScope": {
+      "none": "Ninguna biblioteca",
+      "some": "Bibliotecas elegidas",
+      "all": "Todas las bibliotecas",
+      "noneHint": "El agente no cita ningún documento en sus respuestas."
+    },
     "specificLibraries": "Bibliotecas",
     "librariesPlaceholder": "Seleccionar bibliotecas",
     "librariesHint": "El agente solo busca en estas bibliotecas, dentro de las que puede acceder. Los nombres de las bibliotecas están en la sección de Conocimiento.",

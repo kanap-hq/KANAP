@@ -652,7 +652,12 @@
     "knowledgeSources": "Wissens- und Webquellen",
     "knowledgeEnabled": "Wissensdatenbank durchsuchen",
     "knowledgeHint": "Wenn aus, antwortet der Agent aus dem Wissen des Modells (und aus dem Web, falls aktiviert).",
-    "allLibraries": "Alle verfügbaren Bibliotheken durchsuchen",
+    "libraryScope": {
+      "none": "Keine Bibliothek",
+      "some": "Ausgewählte Bibliotheken",
+      "all": "Alle Bibliotheken",
+      "noneHint": "Der Agent zitiert keine Dokumente in seinen Antworten."
+    },
     "specificLibraries": "Bibliotheken",
     "librariesPlaceholder": "Bibliotheken auswählen",
     "librariesHint": "Der Agent durchsucht nur diese Bibliotheken, im Rahmen seiner Zugriffsrechte. Bibliotheksnamen finden Sie im Wissensbereich.",
