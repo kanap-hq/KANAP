@@ -1708,6 +1708,7 @@
       "unpaid": "Unpaid"
     },
     "subscription": {
+      "keepSubscription": "Don't cancel",
       "scheduledChange": {
         "annual": "Switches to annual on {{date}}.",
         "keepAnnual": "Keep annual",

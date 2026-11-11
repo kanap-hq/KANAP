@@ -309,6 +309,39 @@ async function testSubscriptionEventWithoutPeriodKeepsTheStoredDates() {
 }
 
 /**
+ * A live subscription whose cancellation is set ends on a known date. Since basil the customer
+ * portal sets `cancel_at` (with `cancel_at_period_end` false); the older flag ends it with the
+ * current period. Taking the cancellation back clears the date.
+ */
+const CANCEL_AT = PERIOD_END - 3 * 86400;
+
+async function testCancellationSetsTheEndDate() {
+  const portal = createSyncService({ stripe_subscription_id: 'sub_1' });
+  await portal.svc.processEvent({
+    id: 'evt_cancel_at',
+    type: 'customer.subscription.updated',
+    data: { object: cloverSubscription({ cancel_at: CANCEL_AT, cancel_at_period_end: false }) },
+  });
+  assert.equal(portal.row.canceled_at_effective?.getTime(), CANCEL_AT * 1000, 'cancel_at is the end date');
+
+  const flag = createSyncService({ stripe_subscription_id: 'sub_1' });
+  await flag.svc.processEvent({
+    id: 'evt_period_end',
+    type: 'customer.subscription.updated',
+    data: { object: cloverSubscription({ cancel_at: null, cancel_at_period_end: true }) },
+  });
+  assert.equal(flag.row.canceled_at_effective?.getTime(), PERIOD_END * 1000, 'cancel_at_period_end ends with the period');
+
+  const back = createSyncService({ stripe_subscription_id: 'sub_1', canceled_at_effective: new Date(CANCEL_AT * 1000) });
+  await back.svc.processEvent({
+    id: 'evt_kept',
+    type: 'customer.subscription.updated',
+    data: { object: cloverSubscription({ cancel_at: null, cancel_at_period_end: false }) },
+  });
+  assert.equal(back.row.canceled_at_effective, null, 'a cancellation taken back clears the end date');
+}
+
+/**
  * Invoice PDFs are A4. `invoice.created` and `invoice.finalized` set the format on every
  * invoice of the account, before and apart from the tenant lookup (an Enterprise Support
  * invoice has no tenant), and a Stripe error there does not stop the event.
@@ -388,6 +421,7 @@ async function run() {
   await testCloverInvoiceResolvesItsSubscription();
   await testCloverSubscriptionUpdatedWritesThePeriods();
   await testSubscriptionEventWithoutPeriodKeepsTheStoredDates();
+  await testCancellationSetsTheEndDate();
   await testInvoiceWithoutTenantIsSetToA4();
   await testInvoiceAlreadyA4AndOtherEventsAreLeftAlone();
   await testStripeErrorOnA4DoesNotStopTheEvent();

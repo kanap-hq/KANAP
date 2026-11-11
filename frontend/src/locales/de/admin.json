@@ -1708,6 +1708,7 @@
       "unpaid": "Unbezahlt"
     },
     "subscription": {
+      "keepSubscription": "Nicht kündigen",
       "scheduledChange": {
         "annual": "Wechselt am {{date}} zu jährlich.",
         "keepAnnual": "Jährlich beibehalten",

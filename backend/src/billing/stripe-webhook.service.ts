@@ -3,7 +3,7 @@ import { DataSource, IsNull } from 'typeorm';
 import { StripeClientService, StripeConfigService, ensureInvoiceA4 } from './stripe';
 import { Subscription, SubscriptionStatus, SubscriptionType, PaymentMode, CollectionMethod } from './subscription.entity';
 import { computePriceAmount, normaliseStripePrice } from './price.util';
-import { invoiceSubscriptionId, subscriptionPeriod, subscriptionQuantity } from './stripe/stripe-shapes.util';
+import { cancellationEffectiveAt, invoiceSubscriptionId, subscriptionPeriod, subscriptionQuantity } from './stripe/stripe-shapes.util';
 import { Tenant } from '../tenants/tenant.entity';
 import { withTenant } from '../common/tenant-runner';
 import { getEnvMode, isDevelopmentEnv } from '../common/env';
@@ -334,11 +334,7 @@ export class StripeWebhookService implements OnModuleInit {
         sub.trial_end = this.toDate(subscriptionData?.trial_end);
         sub.cancel_at = this.toDate(subscriptionData?.cancel_at);
         sub.canceled_at = this.toDate(subscriptionData?.canceled_at);
-        if (!subscriptionData?.cancel_at_period_end) {
-          sub.canceled_at_effective = null;
-        } else if (period.end != null) {
-          sub.canceled_at_effective = this.toDate(period.end);
-        }
+        sub.canceled_at_effective = cancellationEffectiveAt(subscriptionData, sub.canceled_at_effective ?? null);
         sub.currency = typeof subscriptionData?.currency === 'string' ? subscriptionData.currency?.toUpperCase() : sub.currency ?? null;
         sub.amount = this.resolveAmount(subscriptionData);
         if (!sub.currency) {

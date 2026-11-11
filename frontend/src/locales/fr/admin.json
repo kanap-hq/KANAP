@@ -1708,6 +1708,7 @@
       "unpaid": "Impayé"
     },
     "subscription": {
+      "keepSubscription": "Ne pas résilier",
       "scheduledChange": {
         "annual": "Passe en annuel le {{date}}.",
         "keepAnnual": "Rester en annuel",

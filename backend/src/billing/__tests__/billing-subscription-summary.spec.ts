@@ -268,7 +268,30 @@ async function testMissingPeriodKeepsTheStoredDates() {
   assert.equal(summary.current_period_end, STORED_END.toISOString());
   assert.equal(summary.next_payment_at, STORED_END.toISOString());
   assert.equal(summary.canceled_at_effective, STORED_END.toISOString());
-  assert.equal(summary.renewal_at, STORED_END.toISOString());
+  // The subscription ends on that date: it does not renew.
+  assert.equal(summary.renewal_at, null);
+}
+
+/**
+ * A live subscription whose cancellation is set (the portal's `cancel_at` since basil, or the
+ * older `cancel_at_period_end`) exposes its end date and no renewal date.
+ */
+async function testCancellationEndsInsteadOfRenewing() {
+  const cancelAt = PERIOD_END - 3 * 86400;
+  const cases: Array<[Record<string, unknown>, number]> = [
+    [{ cancel_at: cancelAt, cancel_at_period_end: false }, cancelAt],
+    [{ cancel_at: null, cancel_at_period_end: true }, PERIOD_END],
+  ];
+  for (const [cancellation, end] of cases) {
+    const { service, manager } = createService(
+      storedSubscription(),
+      3,
+      stripeSubscription(cancellation, { current_period_start: PERIOD_START, current_period_end: PERIOD_END }),
+    );
+    const summary = await service.getSubscriptionSummary({ manager: manager as any, forceStripeRefresh: true });
+    assert.equal(summary.canceled_at_effective, new Date(end * 1000).toISOString(), JSON.stringify(cancellation));
+    assert.equal(summary.renewal_at, null, JSON.stringify(cancellation));
+  }
 }
 
 async function testLegacyTopLevelPeriodStillWorks() {
@@ -296,6 +319,7 @@ async function run() {
   await testCloverCancelAtPeriodEndUsesTheItemPeriod();
   await testMissingPeriodKeepsTheStoredDates();
   await testLegacyTopLevelPeriodStillWorks();
+  await testCancellationEndsInsteadOfRenewing();
 }
 
 void run();

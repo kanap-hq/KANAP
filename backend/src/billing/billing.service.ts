@@ -6,7 +6,7 @@ import { PaymentMode, Subscription, SubscriptionType, SubscriptionStatus, Collec
 import { User } from '../users/user.entity';
 import { Tenant } from '../tenants/tenant.entity';
 import { StripeClientService, StripeConfigService, ensureInvoiceA4 } from './stripe';
-import { subscriptionPeriod } from './stripe/stripe-shapes.util';
+import { cancellationEffectiveAt, subscriptionPeriod } from './stripe/stripe-shapes.util';
 import { computePriceAmount, computeStripePriceAmount, normaliseStripePrice, type NormalisedPrice } from './price.util';
 import { euVatTaxIdValue, missingInvoiceFields, normaliseVatNumber, stripeAddress, toIsoCountry } from './billing-profile.util';
 import { customerSiren, invoiceCustomFields, invoiceLocale } from './invoice-mentions';
@@ -216,9 +216,12 @@ export class BillingService {
       freezeEffectiveAt = new Date(freezeMs).toISOString();
     }
     const trialDeletionAt = computeTrialDeletionAt(sub, !Features.SINGLE_TENANT && this.stripeConfig.isConfigured());
-    const renewalAt = sub.current_period_end
-      ? sub.current_period_end.toISOString()
-      : (sub.next_payment_at ? sub.next_payment_at.toISOString() : paymentDueAt);
+    // A subscription whose cancellation is set ends on `canceled_at_effective`: it does not renew.
+    const renewalAt = sub.canceled_at_effective
+      ? null
+      : sub.current_period_end
+        ? sub.current_period_end.toISOString()
+        : (sub.next_payment_at ? sub.next_payment_at.toISOString() : paymentDueAt);
 
     return {
       // The current name of the plan: a subscription keeps the name of the version that stored it.
@@ -1395,11 +1398,7 @@ export class BillingService {
     sub.trial_end = this.toDate(stripeSub?.trial_end);
     sub.cancel_at = this.toDate(stripeSub?.cancel_at);
     sub.canceled_at = this.toDate(stripeSub?.canceled_at);
-    if (!stripeSub?.cancel_at_period_end) {
-      sub.canceled_at_effective = null;
-    } else if (period.end != null) {
-      sub.canceled_at_effective = this.toDate(period.end);
-    }
+    sub.canceled_at_effective = cancellationEffectiveAt(stripeSub, sub.canceled_at_effective ?? null);
     sub.currency = typeof stripeSub?.currency === 'string' ? stripeSub.currency.toUpperCase() : sub.currency;
     if (!sub.currency) {
       const priceCurrency = stripeSub?.items?.data?.[0]?.price?.currency;
