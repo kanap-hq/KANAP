@@ -6,7 +6,7 @@ import { PaymentMode, Subscription, SubscriptionType, SubscriptionStatus, Collec
 import { User } from '../users/user.entity';
 import { Tenant } from '../tenants/tenant.entity';
 import { StripeClientService, StripeConfigService, ensureInvoiceA4 } from './stripe';
-import { cancellationEffectiveAt, subscriptionPeriod } from './stripe/stripe-shapes.util';
+import { cancellationEffectiveAt, subscriptionDaysUntilDue, subscriptionPeriod } from './stripe/stripe-shapes.util';
 import { computePriceAmount, computeStripePriceAmount, normaliseStripePrice, type NormalisedPrice } from './price.util';
 import { euVatTaxIdValue, missingInvoiceFields, normaliseVatNumber, stripeAddress, toIsoCountry } from './billing-profile.util';
 import { customerSiren, invoiceCustomFields, invoiceLocale } from './invoice-mentions';
@@ -1409,7 +1409,7 @@ export class BillingService {
     sub.amount = this.computeStripeAmount(stripeSub);
     sub.stripe_product_id = stripeSub?.items?.data?.[0]?.price?.product ?? sub.stripe_product_id;
     sub.stripe_price_id = stripeSub?.items?.data?.[0]?.price?.id ?? sub.stripe_price_id;
-    sub.days_until_due = typeof stripeSub?.days_until_due === 'number' ? stripeSub.days_until_due : sub.days_until_due;
+    sub.days_until_due = subscriptionDaysUntilDue(stripeSub, sub.days_until_due ?? null);
     sub.stripe_customer_id = typeof stripeSub?.customer === 'string' ? stripeSub.customer : sub.stripe_customer_id;
 
     const paymentMethodInfo = await this.describeStripePaymentMethod(stripeSub?.default_payment_method);

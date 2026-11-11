@@ -307,6 +307,18 @@ async function testLegacyTopLevelPeriodStillWorks() {
   assert.equal(summary.next_payment_at, new Date(PERIOD_END * 1000).toISOString());
 }
 
+/** The refresh writes the payment term as Stripe sends it: null for a card subscription. */
+async function testRefreshClearsThePaymentTermOfACardSubscription() {
+  const { service, manager } = createService(
+    storedSubscription({ payment_mode: PaymentMode.BANK_TRANSFER, days_until_due: 30 }),
+    3,
+    stripeSubscription({ days_until_due: null }, { current_period_start: PERIOD_START, current_period_end: PERIOD_END }),
+  );
+  const summary = await service.getSubscriptionSummary({ manager: manager as any, forceStripeRefresh: true });
+  assert.equal(summary.payment_mode, PaymentMode.CARD);
+  assert.equal(summary.days_until_due, null);
+}
+
 async function run() {
   await testEstimateIsOneSubscription();
   await testTrialHasNoEstimate();
@@ -320,6 +332,7 @@ async function run() {
   await testMissingPeriodKeepsTheStoredDates();
   await testLegacyTopLevelPeriodStillWorks();
   await testCancellationEndsInsteadOfRenewing();
+  await testRefreshClearsThePaymentTermOfACardSubscription();
 }
 
 void run();

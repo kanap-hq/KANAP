@@ -53,6 +53,17 @@ export function cancellationEffectiveAt(sub: any, stored: Date | null): Date | n
 }
 
 /**
+ * The payment term of an invoice (`days_until_due`) as Stripe sends it: null for a card
+ * subscription. A payload without the field keeps `stored`.
+ */
+export function subscriptionDaysUntilDue(sub: any, stored: number | null): number | null {
+  const value = sub?.days_until_due;
+  if (typeof value === 'number') return value;
+  if (value === null) return null;
+  return stored;
+}
+
+/**
  * The subscription an invoice bills: `invoice.subscription` before basil, then
  * `invoice.parent.subscription_details.subscription`, else the first line's
  * subscription item details.

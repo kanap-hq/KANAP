@@ -3,7 +3,13 @@ import { DataSource, IsNull } from 'typeorm';
 import { StripeClientService, StripeConfigService, ensureInvoiceA4 } from './stripe';
 import { Subscription, SubscriptionStatus, SubscriptionType, PaymentMode, CollectionMethod } from './subscription.entity';
 import { computePriceAmount, normaliseStripePrice } from './price.util';
-import { cancellationEffectiveAt, invoiceSubscriptionId, subscriptionPeriod, subscriptionQuantity } from './stripe/stripe-shapes.util';
+import {
+  cancellationEffectiveAt,
+  invoiceSubscriptionId,
+  subscriptionDaysUntilDue,
+  subscriptionPeriod,
+  subscriptionQuantity,
+} from './stripe/stripe-shapes.util';
 import { Tenant } from '../tenants/tenant.entity';
 import { withTenant } from '../common/tenant-runner';
 import { getEnvMode, isDevelopmentEnv } from '../common/env';
@@ -323,7 +329,10 @@ export class StripeWebhookService implements OnModuleInit {
       sub.stripe_subscription_id = subscriptionId;
       if (subscriptionData) {
         sub.status = this.resolveStatus(subscriptionData?.status) ?? sub.status ?? null;
-        sub.collection_method = this.resolveCollectionMethod(subscriptionData?.collection_method) ?? sub.collection_method ?? null;
+        const collectionMethod = this.resolveCollectionMethod(subscriptionData?.collection_method);
+        sub.collection_method = collectionMethod ?? sub.collection_method ?? null;
+        // How the subscription is paid follows its collection method on every sync.
+        if (collectionMethod) sub.payment_mode = this.resolvePaymentMode(subscriptionData);
         // A period Stripe does not send (moved to the items since basil) keeps the stored dates.
         const period = subscriptionPeriod(subscriptionData);
         if (period.start != null) sub.current_period_start = this.toDate(period.start);
@@ -345,7 +354,7 @@ export class StripeWebhookService implements OnModuleInit {
         }
         sub.stripe_product_id = subscriptionData?.items?.data?.[0]?.price?.product ?? sub.stripe_product_id ?? null;
         sub.stripe_price_id = subscriptionData?.items?.data?.[0]?.price?.id ?? sub.stripe_price_id ?? null;
-        sub.days_until_due = typeof subscriptionData?.days_until_due === 'number' ? subscriptionData.days_until_due : sub.days_until_due ?? null;
+        sub.days_until_due = subscriptionDaysUntilDue(subscriptionData, sub.days_until_due ?? null);
 
         // Plan resolution: metadata → price ID → legacy name fallback
         const resolvedPlanKey = this.resolvePlanKey(subscriptionData, sub.plan_name);

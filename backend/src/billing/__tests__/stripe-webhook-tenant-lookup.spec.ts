@@ -342,6 +342,36 @@ async function testCancellationSetsTheEndDate() {
 }
 
 /**
+ * Each sync writes how the subscription is paid from its collection method, and the payment
+ * term as Stripe sends it: null for a card subscription.
+ */
+async function testSyncWritesThePaymentModeAndTerm() {
+  const toCard = createSyncService({
+    stripe_subscription_id: 'sub_1',
+    payment_mode: 'bank_transfer',
+    collection_method: 'send_invoice',
+    days_until_due: 30,
+  });
+  await toCard.svc.processEvent({
+    id: 'evt_to_card',
+    type: 'customer.subscription.updated',
+    data: { object: cloverSubscription({ collection_method: 'charge_automatically', days_until_due: null }) },
+  });
+  assert.equal(toCard.row.collection_method, 'charge_automatically');
+  assert.equal(toCard.row.payment_mode, 'card');
+  assert.equal(toCard.row.days_until_due, null);
+
+  const toTransfer = createSyncService({ stripe_subscription_id: 'sub_1', payment_mode: 'card', collection_method: 'charge_automatically' });
+  await toTransfer.svc.processEvent({
+    id: 'evt_to_transfer',
+    type: 'customer.subscription.updated',
+    data: { object: cloverSubscription({ collection_method: 'send_invoice', days_until_due: 30 }) },
+  });
+  assert.equal(toTransfer.row.payment_mode, 'bank_transfer');
+  assert.equal(toTransfer.row.days_until_due, 30);
+}
+
+/**
  * Invoice PDFs are A4. `invoice.created` and `invoice.finalized` set the format on every
  * invoice of the account, before and apart from the tenant lookup (an Enterprise Support
  * invoice has no tenant), and a Stripe error there does not stop the event.
@@ -422,6 +452,7 @@ async function run() {
   await testCloverSubscriptionUpdatedWritesThePeriods();
   await testSubscriptionEventWithoutPeriodKeepsTheStoredDates();
   await testCancellationSetsTheEndDate();
+  await testSyncWritesThePaymentModeAndTerm();
   await testInvoiceWithoutTenantIsSetToA4();
   await testInvoiceAlreadyA4AndOtherEventsAreLeftAlone();
   await testStripeErrorOnA4DoesNotStopTheEvent();
