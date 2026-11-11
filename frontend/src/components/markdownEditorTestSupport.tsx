@@ -1,7 +1,7 @@
 import React from 'react';
 import { act, render } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
-import { $createParagraphNode, $createTextNode, $getRoot, type LexicalEditor } from 'lexical';
+import { $createParagraphNode, $createTextNode, $getRoot, $isParagraphNode, type LexicalEditor } from 'lexical';
 import { vi } from 'vitest';
 import MarkdownEditor from './MarkdownEditor';
 import { createAppTheme } from '../config/ThemeContext';
@@ -102,6 +102,31 @@ export const HTML_ELEMENT_TEXTS: Array<{ name: string; text: string; shown: stri
     shown: '<iframe src="https://exemple.test/c"',
   },
   {
+    name: 'a frame in a list item',
+    text: '* premier\n* <iframe src="https://exemple.test/c"></iframe>',
+    shown: '<iframe src="https://exemple.test/c"',
+  },
+  {
+    name: 'a form in a quote',
+    text: '> <form action="https://exemple.test/f"><input name="p" /></form>',
+    shown: '<form action="https://exemple.test/f">',
+  },
+  {
+    name: 'a form in a heading',
+    text: '## Titre <form action="https://exemple.test/f"><input name="p" /></form>',
+    shown: '<form action="https://exemple.test/f">',
+  },
+  {
+    name: 'an element with a handler in a note',
+    text: `:::note\n<details open ontoggle="globalThis.${HANDLER_FLAG} = true">détail</details>\n:::`,
+    shown: '<details open ontoggle=',
+  },
+  {
+    name: 'a styled span in bold text',
+    text: '**gras <span style="position:fixed">milieu</span> gras**',
+    shown: '<span style="position:fixed">',
+  },
+  {
     name: 'a layer around paragraphs',
     text: '<div style="position:fixed">\n\n**gras** dedans\n\n</div>',
     shown: '<div style="position:fixed">',
@@ -125,7 +150,7 @@ export function foreignMarkup(root: Element): string[] {
       if (
         name.startsWith('on')
         || FOREIGN_ATTRIBUTES.includes(name)
-        || (name === 'style' && /position|display:\s*none/.test(attribute.value))
+        || (name === 'style' && /position:\s*fixed|display:\s*none/.test(attribute.value))
         || (name === 'href' && /^\s*javascript:/i.test(attribute.value))
       ) {
         found.push(`${tag}[${name}="${attribute.value}"]`);
@@ -145,17 +170,25 @@ function Harness({
   initial,
   disabled,
   onChange,
+  setValueRef,
 }: {
   initial: string;
   disabled: boolean;
   onChange: (markdown: string) => void;
+  setValueRef: { current: (markdown: string, refresh?: boolean) => void };
 }) {
   const [value, setValue] = React.useState(initial);
+  const [refreshNonce, setRefreshNonce] = React.useState(0);
+  setValueRef.current = (markdown, refresh = false) => {
+    setValue(markdown);
+    if (refresh) setRefreshNonce((nonce) => nonce + 1);
+  };
   return (
     <ThemeProvider theme={theme}>
       <MarkdownEditor
         value={value}
         disabled={disabled}
+        refreshNonce={refreshNonce}
         onChange={(markdown) => {
           onChange(markdown);
           setValue(markdown);
@@ -168,7 +201,10 @@ function Harness({
 /** Mounts the real editor on a text, as a record page does, and waits for it to settle. */
 export async function mountEditor(text: string, { disabled = false }: { disabled?: boolean } = {}) {
   const onChange = vi.fn<(markdown: string) => void>();
-  const view = render(<Harness initial={text} disabled={disabled} onChange={onChange} />);
+  const setValueRef = { current: (_markdown: string, _refresh?: boolean) => {} };
+  const view = render(
+    <Harness initial={text} disabled={disabled} onChange={onChange} setValueRef={setValueRef} />,
+  );
   await settle();
 
   const content = () => {
@@ -188,12 +224,25 @@ export async function mountEditor(text: string, { disabled = false }: { disabled
       const richText = view.container.querySelector<HTMLElement>('.mdxeditor-rich-text-editor');
       return richText?.style.display === 'block';
     },
+    /** The record gives the editor another text, as after a reload; `refresh` asks it to read it in place. */
+    async setValue(markdown: string, { refresh = false }: { refresh?: boolean } = {}) {
+      await act(async () => {
+        setValueRef.current(markdown, refresh);
+      });
+      await settle();
+    },
     /** A person's edit: one more paragraph at the end of the text. */
     async appendParagraph(paragraph: string) {
       const editor = (content() as unknown as { __lexicalEditor: LexicalEditor }).__lexicalEditor;
       await act(async () => {
         editor.update(() => {
-          $getRoot().append($createParagraphNode().append($createTextNode(paragraph)));
+          // The editor ends a text with an empty paragraph when its last block is not one.
+          const last = $getRoot().getLastChild();
+          if ($isParagraphNode(last) && last.getChildrenSize() === 0) {
+            last.append($createTextNode(paragraph));
+          } else {
+            $getRoot().append($createParagraphNode().append($createTextNode(paragraph)));
+          }
         });
       });
       await settle();

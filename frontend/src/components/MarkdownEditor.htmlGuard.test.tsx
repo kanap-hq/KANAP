@@ -7,6 +7,13 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t }),
 }));
 
+// The editor is given each text as it is stored, without its display form: the reading of HTML
+// elements alone decides what the page holds.
+vi.mock('../lib/mdxPaste', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../lib/mdxPaste')>()),
+  toEditorDisplayMarkdown: (markdown: string) => markdown,
+}));
+
 afterEach(() => {
   delete (globalThis as Record<string, unknown>)[HANDLER_FLAG];
 });
