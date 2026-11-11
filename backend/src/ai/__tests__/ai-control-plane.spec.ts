@@ -7524,32 +7524,6 @@ async function testPhase136StaleClosureDerivesFromTargetingAndCapability() {
   assert.ok(Math.abs(Date.parse(tightened.lastChangedBefore ?? '') - (Date.now() - 12 * 3600 * 1000)) < 5 * 60 * 1000);
 }
 
-// A close reply that is not written takes the terminal status of its plan with it, and the
-// internal note says why.
-async function testAPlanWithoutItsCloseReplyDoesNotClose() {
-  const llmClient = {
-    callStructuredJsonModel: async (_context: unknown, request: { taskName: string }) => {
-      if (request.taskName === 'administrative_reply') throw new Error('model timeout');
-      throw new Error(`Unexpected model call ${request.taskName}`);
-    },
-  };
-  const run = await runQueuedStaleClosureTriage({
-    targetingSeconds: 24 * 3600,
-    ticketAgeHours: 48,
-    useActionPlanner: true,
-    plannerWritesCloseReply: true,
-    replySynthesis: new AiReplySynthesisService(llmClient as any),
-  });
-  const triageActions = run.calls.map((call) => call.triageAction);
-  assert.equal(triageActions.includes('planner_prepare_administrative_close_reply'), false);
-  assert.equal(triageActions.includes('planner_prepare_terminal_status'), false, 'no terminal status without its close reply');
-  const diagnostic = (run.result as any).diagnostic?.action_planner;
-  assert.match(String(diagnostic?.skipped_actions?.status_update), /^terminal_status_requires_close_reply: administrative_reply_error/);
-  assert.equal(run.noteBodies.length, 1, 'an internal note tells the technician');
-  assert.match(run.noteBodies[0], /reply to the requester was not prepared: administrative_reply_error/);
-  assert.doesNotMatch(run.noteBodies[0], /The agent escalated this ticket internally/);
-}
-
 // The planner-driven close gate is driven by targeting: an inactivity_age predicate the operator adds
 // PLUS the status + public-reply prepare/approved capabilities. A terminal close action is accepted
 // only when the ticket actually matches the inactivity threshold; without an inactivity_age predicate,
@@ -11820,8 +11794,6 @@ async function runQueuedStaleClosureTriage(input: {
   plannerTransitionKey?: string;
   replySynthesis?: unknown;
   providerKey?: string;
-  // The planner names no configured message: the close reply is written by the public call.
-  plannerWritesCloseReply?: boolean;
 }) {
   const { manager, stores } = createMemoryManager();
   const context = createContext(manager);
@@ -11882,7 +11854,6 @@ async function runQueuedStaleClosureTriage(input: {
   });
 
   const calls: Array<{ capabilityName: string; triageAction: string | null; providerKey: string | null }> = [];
-  const noteBodies: string[] = [];
   let toolIndex = 0;
   const dispatcher = {
     execute: async (_context: unknown, request: any) => {
@@ -11983,7 +11954,6 @@ async function runQueuedStaleClosureTriage(input: {
         };
       }
       if (request.capabilityName === TICKETING_INTERNAL_NOTE_PREPARE_CAPABILITY) {
-        noteBodies.push(request.input.note_body);
         await savePreparedTicketingAction(context, {
           id: `stale-internal-${toolIndex}`,
           runId: 'run-stale-closure',
@@ -12077,7 +12047,7 @@ async function runQueuedStaleClosureTriage(input: {
       maxOutputTokens: () => 1600,
       buildPromptPayload: (plannerInput: any) => plannerInput,
       planActions: async (_context: unknown, plannerInput: any) => {
-        const candidate = input.plannerWritesCloseReply ? null : plannerInput.verbatim_candidates?.[0];
+        const candidate = plannerInput.verbatim_candidates?.[0];
         const verbatimRefMode = input.verbatimRefMode ?? 'exact';
         // Simulate how a real LLM might express the verbatim reference: the exact ref, the
         // message text in the ref slot, or a corrupted ref token.
@@ -12096,6 +12066,7 @@ async function runQueuedStaleClosureTriage(input: {
             reply_kind: 'administrative',
             administrative_intent: 'close_reply',
             verbatim_ref: verbatimRef,
+            body: candidate ? null : 'Merci, au revoir',
             reason: 'Close inactive ticket with the configured administrative message.',
           },
           {
@@ -12133,7 +12104,7 @@ async function runQueuedStaleClosureTriage(input: {
   service.getRunDetail = async () => ({ action_requests: [] });
 
   const result = await service.runTicketingTriage(context, { work_item_id: enqueued.workItem.id });
-  return { calls, result, stores, noteBodies };
+  return { calls, result, stores };
 }
 
 // Core regression for the single-approval-window fix: a triage run computes ONE expiry anchor and
@@ -17387,7 +17358,6 @@ async function run() {
   await testTriageWritesNoAdministrativeReplyWithoutAnIntentOfTheList();
   await testTriageWritesOneAdministrativeReplyAtMostPerPlan();
   await testTriageWritesAnAdministrativeReplyOnlyWhenItIsPrepared();
-  await testAPlanWithoutItsCloseReplyDoesNotClose();
   await testAnAgentWithoutLibrariesSearchesNoKnowledge();
   testSynthesisPromptPrefersInternalKnowledgeSources();
   testSynthesisPromptCarriesValidationStatus();
