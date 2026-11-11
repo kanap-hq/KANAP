@@ -148,6 +148,12 @@ async function seed(runner: QueryRunner, tag: string) {
   };
 }
 
+async function assetReference(runner: QueryRunner, assetId: string): Promise<string> {
+  const [row]: Array<{ asset_reference: string }> = await runner.query(`SELECT asset_reference FROM assets WHERE id = $1`, [assetId]);
+  assert.match(row.asset_reference, /^AST-\d+$/);
+  return row.asset_reference;
+}
+
 function service() {
   const itOps = {
     getSettings: async () => ({
@@ -212,6 +218,7 @@ async function testDeadlines() {
     // The server it is installed on, not the VM that server contains (decision of 2026-10-24); the
     // applications still come through the graph.
     assert.deepEqual(sql16.servers.map((s) => s.id).sort(), [g.assets.s1]);
+    assert.equal(sql16.servers[0].reference, await assetReference(runner, g.assets.s1));
     assert.equal(sql16.server_count, 1);
     assert.deepEqual(sql16.applications!.map((a) => a.id).sort(), [g.apps.dbApp, g.apps.erp].sort());
     assert.equal(sql16.application_count, 2);
@@ -241,9 +248,12 @@ async function testDeadlines() {
     const hardware = byKey.get(`hardware:end_of_life:${g.assets.s4}`)!;
     // What it carries; the piece of hardware is not one of its own servers (K2-7).
     assert.deepEqual(hardware.servers.map((s) => s.id), [g.assets.vmOnHw]);
+    assert.equal(hardware.servers[0].reference, await assetReference(runner, g.assets.vmOnHw));
     assert.equal(hardware.server_count, 1);
     assert.deepEqual(hardware.applications!.map((a) => a.id), [g.apps.hwVmApp]);
     assert.equal(hardware.item_name, `SRV-HW eos-deadlines`);
+    assert.equal(hardware.item_reference, await assetReference(runner, g.assets.s4));
+    assert.equal(byKey.get(`hardware:support_contract:${g.assets.s4}`)!.item_reference, hardware.item_reference);
 
     // Sorted by date: the oldest end first.
     const dates = report.items.map((r) => r.date);
@@ -334,6 +344,10 @@ async function testGaps() {
     assert.equal(link.subject_type, 'technology');
     assert.equal(link.subject_reference, 'TEC-1');
     assert.equal(link.related_type, 'asset');
+    const orphan = items.find((r) => r.gap === 'vm_without_host')!;
+    assert.equal(orphan.subject_reference, await assetReference(runner, g.assets.vmOrphan));
+    const dbEmpty = items.find((r) => r.gap === 'database_server_without_dbms')!;
+    assert.equal(dbEmpty.subject_reference, await assetReference(runner, g.assets.dbEmpty));
     // Sorted by the order of the gaps.
     assert.equal(items[0].gap, 'application_without_server');
     assert.equal(items[items.length - 1].gap, 'version_without_end_date');
