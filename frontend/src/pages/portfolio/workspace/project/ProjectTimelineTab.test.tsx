@@ -93,4 +93,12 @@ describe('ProjectTimelineTab task creation', () => {
     await openPhaseMenu();
     expect(screen.getByText('New task')).toBeInTheDocument();
   });
+
+  it('says there are no milestones yet, in one line and without an alert', async () => {
+    auth.tasksMember = false;
+    renderTimeline();
+
+    expect(await screen.findByText('No milestones yet.')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
 });

@@ -286,3 +286,21 @@ describe('ContributorsPage contract type filter', () => {
     expect(screen.queryByText('Ada Lovelace')).toBeNull();
   });
 });
+
+describe('ContributorsPage empty list', () => {
+  it('says there are no contributors yet, in one line and without an alert', async () => {
+    vi.mocked(api.get).mockImplementation(async (url: string) => {
+      if (url === '/portfolio/team-members') return { data: { items: [] } } as any;
+      if (url === '/portfolio/teams') return { data: [] } as any;
+      if (url === '/portfolio/employment-types') return { data: [] } as any;
+      if (url === '/portfolio/team-members/time-stats') return { data: { stats: {} } } as any;
+      return { data: {} } as any;
+    });
+
+    renderAt('/portfolio/contributors');
+
+    expect(await screen.findByText('No contributors yet.')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByRole('button', { name: /Add contributor/ })).toBeInTheDocument();
+  });
+});
