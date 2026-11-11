@@ -783,7 +783,7 @@
           "combineTwo": "{{first}} y {{second}}",
           "comment": "Comentario",
           "logHours": "Registrar {{hours}} h",
-          "setStatus": "Establecer {{status}}",
+          "setStatus": "Pasar a «{{status}}»",
           "submit": "Enviar",
           "submitting": "Enviando…"
         },

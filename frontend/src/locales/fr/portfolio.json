@@ -783,7 +783,7 @@
           "combineTwo": "{{first}} et {{second}}",
           "comment": "Commentaire",
           "logHours": "Saisir {{hours}} h",
-          "setStatus": "Définir {{status}}",
+          "setStatus": "Passer à « {{status}} »",
           "submit": "Soumettre",
           "submitting": "Envoi en cours…"
         },
