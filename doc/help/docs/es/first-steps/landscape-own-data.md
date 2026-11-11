@@ -44,7 +44,7 @@ Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de in
 
 **Qué hacer.** Haga clic en **Añadir activo**, o **importe** un archivo para muchos activos. Elija el tipo de activo y la ubicación, y luego **Crear**. Para vincular un activo con una aplicación, abra la aplicación, pestaña **Despliegues**: **Añadir despliegue** para el entorno, y luego **Añadir servidor**.
 
-**Qué ve.** El bloque de despliegue de la aplicación lista sus servidores, y el activo lista la aplicación en **Aplicaciones alojadas**, en su pestaña **Operaciones**. El fin de soporte y las vulnerabilidades de sus tecnologías llegan ahora hasta el activo.
+**Qué ve.** El bloque de despliegue de la aplicación lista sus servidores, y el activo lista la aplicación en **Aplicaciones alojadas**, en su pestaña **Operaciones**. El fin de soporte de sus tecnologías llega ahora hasta el activo. Las vulnerabilidades de un sistema operativo no están en las alertas al principio, porque Kadratis no conoce el nivel de parches de un servidor. Para verlas, abra **Panorama IT > Vulnerabilidades** y elija **Excluidas** en el filtro **Alertas**, o **Mostrar las excluidas** cuando la lista esté vacía.
 
 ## 5. Un colega
 
