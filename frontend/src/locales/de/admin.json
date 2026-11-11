@@ -1730,7 +1730,24 @@
         "trialEnded": "Testphase beendet am {{date}}"
       }
     },
-    "title": "Abrechnung"
+    "title": "Abrechnung",
+    "unpaid": {
+      "limited": "Der Zugang ist eingeschränkt.",
+      "limitedOn": "Der Zugang wird am {{date}} eingeschränkt.",
+      "limitedSince": "Zugang eingeschränkt seit dem {{date}}.",
+      "overdue": "Eine Rechnung ist überfällig.",
+      "reasons": {
+        "authentication_required": "die Bank verlangt eine Authentifizierung",
+        "expired_card": "Karte abgelaufen",
+        "incorrect_cvc": "falscher Sicherheitscode",
+        "insufficient_funds": "unzureichende Deckung",
+        "other": "Karte abgelehnt",
+        "processing_error": "Verarbeitungsfehler bei der Bank"
+      },
+      "refused": "Zahlung am {{date}} abgelehnt.",
+      "refusedReason": "Zahlung am {{date}} abgelehnt: {{reason}}.",
+      "transferOverdue": "Rechnung {{number}} über {{amount}} war am {{date}} fällig."
+    }
   },
   "branding": {
     "actions": {

@@ -1,6 +1,6 @@
 import React from 'react';
 import PageHeader from '../../components/PageHeader';
-import { Alert, Autocomplete, Box, Button, CircularProgress, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Autocomplete, Box, Button, CircularProgress, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import type { ChipProps } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { getDotColor } from '../../utils/statusColors';
@@ -193,7 +193,8 @@ function subscriptionLines(subscription: BillingSubscription | null | undefined,
   const endsAt = live && !isTrialing ? subscription?.canceled_at_effective ?? null : null;
   if (endsAt) {
     details.push(t('billing.subscription.values.ends', { date: date(endsAt) }));
-  } else if (live && subscription && !isTrialing) {
+  } else if (live && subscription && !isTrialing && !isPaymentPending(subscription)) {
+    // An unpaid subscription shows its debt instead (unpaidLines): Stripe has opened the next period anyway.
     const renewal = subscription.renewal_at
       ?? subscription.current_period_end
       ?? subscription.next_payment_at
@@ -203,6 +204,61 @@ function subscriptionLines(subscription: BillingSubscription | null | undefined,
   }
   if (live && subscription) details.push(paymentMethodLabel(subscription, t));
   return { plan, details, cancelled: !!endsAt };
+}
+
+/** Stripe's refusal codes the screen names; any other reads as a declined card. */
+const PAYMENT_ERROR_REASONS = ['insufficient_funds', 'expired_card', 'incorrect_cvc', 'authentication_required', 'processing_error'];
+const UNPAID_INVOICE_STATUSES = ['open', 'uncollectible'];
+const UNPAID_SUBSCRIPTION_STATUSES = ['past_due', 'unpaid', 'canceled'];
+
+/** A subscription that still runs without being paid: its plan cannot change until the invoice is paid. */
+function isPaymentPending(
+  subscription: Pick<BillingSubscription, 'stripe_subscription_id' | 'status' | 'is_subscription_healthy'> | null | undefined,
+): boolean {
+  return isLiveSubscription(subscription) && subscription?.status !== 'trialing' && subscription?.is_subscription_healthy === false;
+}
+
+/**
+ * The unpaid latest invoice of a subscription past due, unpaid or ended on it: "Payment refused on
+ * 10 Nov 2026: insufficient funds." for a card, "Invoice KAN-0041 of €249.00 was due on 3 Nov 2026."
+ * for a bank transfer, and when access becomes (or became) limited. Null when nothing is owed.
+ */
+function unpaidLines(subscription: BillingSubscription | null | undefined, t: Translate, locale: string) {
+  if (!subscription?.stripe_subscription_id) return null;
+  if (!UNPAID_SUBSCRIPTION_STATUSES.includes(subscription.status ?? '')) return null;
+  if (!UNPAID_INVOICE_STATUSES.includes(subscription.latest_invoice_status ?? '')) return null;
+  const date = (value: string) => formatShortDate(value, locale, { year: 'always' });
+  const transfer = subscription.collection_method
+    ? subscription.collection_method === 'send_invoice'
+    : subscription.payment_mode === 'bank_transfer';
+  const amount = formatMoney(locale, subscription.latest_invoice_amount ?? null, subscription.latest_invoice_currency ?? null);
+
+  let invoice = t('billing.unpaid.overdue');
+  if (transfer) {
+    if (subscription.latest_invoice_number && amount && subscription.payment_due_at) {
+      invoice = t('billing.unpaid.transferOverdue', {
+        number: subscription.latest_invoice_number,
+        amount,
+        date: date(subscription.payment_due_at),
+      });
+    }
+  } else if (subscription.latest_invoice_created) {
+    const code = subscription.last_payment_error_code;
+    const refusedOn = date(subscription.latest_invoice_created);
+    invoice = code
+      ? t('billing.unpaid.refusedReason', {
+        date: refusedOn,
+        reason: t(`billing.unpaid.reasons.${PAYMENT_ERROR_REASONS.includes(code) ? code : 'other'}`),
+      })
+      : t('billing.unpaid.refused', { date: refusedOn });
+  }
+
+  const frozen = subscription.access_allowed === false;
+  const freezeAt = subscription.freeze_effective_at ?? null;
+  let access: string | null = null;
+  if (frozen) access = freezeAt ? t('billing.unpaid.limitedSince', { date: date(freezeAt) }) : t('billing.unpaid.limited');
+  else if (freezeAt) access = t('billing.unpaid.limitedOn', { date: date(freezeAt) });
+  return { invoice, access, frozen };
 }
 
 type BillingInterval = 'monthly' | 'annual';
@@ -247,6 +303,7 @@ const summarySx = {
   borderColor: 'kanap.border.soft',
 } as const;
 const inlineStatusSx = { display: 'inline-flex', alignItems: 'center', gap: 0.75 } as const;
+const unpaidLineSx = { ...inlineStatusSx, fontSize: 13, lineHeight: 1.4, color: 'kanap.text.primary' } as const;
 const invoiceNumberSx = {
   fontFamily: "'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace",
   fontSize: 12,
@@ -481,6 +538,9 @@ export default function BillingCenter() {
   const { plan: planLine, details: detailParts, cancelled } = subscriptionLines(subscriptionSummary, t, locale);
   const switchLine = scheduledChangeLine(subscriptionSummary, t, locale);
   const isHealthy = subscription?.is_subscription_healthy;
+  const unpaid = unpaidLines(subscriptionSummary, t, locale);
+  // The plan changes once the invoice is paid (the server refuses it before).
+  const paymentPending = isPaymentPending(subscriptionSummary);
   const planActionLabel = hasSubscription ? t('billing.actions.changePlan') : t('billing.actions.choosePlan');
   const invoices = profileQuery.data?.invoices ?? [];
   const invoiceMissingFields = profileQuery.data?.invoice_missing_fields ?? [];
@@ -638,14 +698,15 @@ export default function BillingCenter() {
     }, { replace: true });
   }, [cardSaved, canManage, setSearchParams]);
 
-  // Auto-open plan dialog when subscription is unhealthy
+  // Auto-open plan dialog when subscription is unhealthy, unless it still runs unpaid: paying is the way out.
+  const signInPaymentPending = isPaymentPending(subscription);
   const isHealthyRef = React.useRef(isHealthy);
   React.useEffect(() => {
-    if (isHealthy === false && canManage && isHealthyRef.current === undefined) {
+    if (isHealthy === false && !signInPaymentPending && canManage && isHealthyRef.current === undefined) {
       setPlanDialogOpen(true);
     }
     isHealthyRef.current = isHealthy;
-  }, [isHealthy, canManage]);
+  }, [isHealthy, signInPaymentPending, canManage]);
 
   const saveStatus = savesInFlight > 0
     ? t('common:status.saving', { defaultValue: 'Saving…' })
@@ -711,6 +772,18 @@ export default function BillingCenter() {
                   </Box>
                 )}
               </Box>
+              {unpaid && (
+                <Box sx={unpaidLineSx}>
+                  <StatusDot color={getDotColor(unpaid.frozen ? 'error' : 'warning', mode)} />
+                  <span>{unpaid.invoice}</span>
+                </Box>
+              )}
+              {unpaid?.access && (
+                <Box sx={unpaidLineSx}>
+                  <StatusDot color={getDotColor(unpaid.frozen ? 'error' : 'warning', mode)} />
+                  <span>{unpaid.access}</span>
+                </Box>
+              )}
               {switchLine && (
                 <Typography component="div" sx={{ fontSize: 13, lineHeight: 1.4, color: 'kanap.text.secondary' }}>
                   {switchLine.text}
@@ -726,14 +799,24 @@ export default function BillingCenter() {
               )}
             </Box>
             <Stack direction="row" spacing={1} alignItems="center" sx={{ flexShrink: 0 }}>
-              <Button
-                variant={isHealthy === false ? 'contained' : 'action'}
-                size="small"
-                onClick={() => setPlanDialogOpen(true)}
-                disabled={!canManage}
-              >
-                {planActionLabel}
-              </Button>
+              {paymentPending ? (
+                <Tooltip title={t('planSelection.errors.subscriptionPaymentPending')}>
+                  <span>
+                    <Button variant="action" size="small" disabled>
+                      {planActionLabel}
+                    </Button>
+                  </span>
+                </Tooltip>
+              ) : (
+                <Button
+                  variant={isHealthy === false ? 'contained' : 'action'}
+                  size="small"
+                  onClick={() => setPlanDialogOpen(true)}
+                  disabled={!canManage}
+                >
+                  {planActionLabel}
+                </Button>
+              )}
               {hasSubscription && (
                 <Button variant="action" size="small" onClick={openPortal} disabled={!canManage || opening}>
                   {opening ? <CircularProgress size={14} sx={{ color: 'inherit' }} /> : t('billing.actions.managePayment')}

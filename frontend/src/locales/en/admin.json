@@ -1730,7 +1730,24 @@
         "trialEnded": "trial ended {{date}}"
       }
     },
-    "title": "Billing"
+    "title": "Billing",
+    "unpaid": {
+      "limited": "Access is limited.",
+      "limitedOn": "Access will be limited on {{date}}.",
+      "limitedSince": "Access limited since {{date}}.",
+      "overdue": "An invoice is overdue.",
+      "reasons": {
+        "authentication_required": "the bank asks for authentication",
+        "expired_card": "card expired",
+        "incorrect_cvc": "incorrect security code",
+        "insufficient_funds": "insufficient funds",
+        "other": "card declined",
+        "processing_error": "processing error at the bank"
+      },
+      "refused": "Payment refused on {{date}}.",
+      "refusedReason": "Payment refused on {{date}}: {{reason}}.",
+      "transferOverdue": "Invoice {{number}} of {{amount}} was due on {{date}}."
+    }
   },
   "branding": {
     "actions": {

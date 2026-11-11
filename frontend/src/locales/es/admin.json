@@ -1730,7 +1730,24 @@
         "trialEnded": "prueba finalizada el {{date}}"
       }
     },
-    "title": "Facturación"
+    "title": "Facturación",
+    "unpaid": {
+      "limited": "El acceso está limitado.",
+      "limitedOn": "El acceso se limitará el {{date}}.",
+      "limitedSince": "Acceso limitado desde el {{date}}.",
+      "overdue": "Hay una factura vencida.",
+      "reasons": {
+        "authentication_required": "el banco solicita una autenticación",
+        "expired_card": "tarjeta caducada",
+        "incorrect_cvc": "código de seguridad incorrecto",
+        "insufficient_funds": "fondos insuficientes",
+        "other": "tarjeta rechazada",
+        "processing_error": "error de procesamiento en el banco"
+      },
+      "refused": "Pago rechazado el {{date}}.",
+      "refusedReason": "Pago rechazado el {{date}}: {{reason}}.",
+      "transferOverdue": "Factura {{number}} de {{amount}} vencida el {{date}}."
+    }
   },
   "branding": {
     "actions": {

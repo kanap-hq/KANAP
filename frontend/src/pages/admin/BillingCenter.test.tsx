@@ -275,6 +275,94 @@ describe('BillingCenter subscription summary', () => {
   });
 });
 
+describe('BillingCenter unpaid invoice', () => {
+  const PENDING_PAYMENT = 'Pay the pending invoice first, then change your plan.';
+  const CARD_REFUSED = {
+    plan_name: 'Hosted KANAP',
+    status: 'past_due',
+    stripe_subscription_id: 'sub_1',
+    subscription_type: 'monthly',
+    collection_method: 'charge_automatically',
+    payment_mode: 'card',
+    default_payment_method_id: 'pm_1',
+    default_payment_method_brand: 'visa',
+    default_payment_method_last4: '0341',
+    amount: 24900,
+    currency: 'EUR',
+    renewal_at: '2099-12-10T00:00:00.000Z',
+    latest_invoice_status: 'open',
+    latest_invoice_number: 'KAN-0041',
+    latest_invoice_amount: 24900,
+    latest_invoice_currency: 'eur',
+    latest_invoice_created: '2099-11-10T00:00:00.000Z',
+    latest_invoice_url: 'https://invoice.stripe.test/kan-0041',
+    last_payment_error_code: 'insufficient_funds',
+    last_payment_error_message: 'Your card has insufficient funds.',
+    is_subscription_healthy: false,
+    access_allowed: true,
+    freeze_effective_at: '2099-11-24T00:00:00.000Z',
+  };
+  const TRANSFER_OVERDUE = {
+    ...CARD_REFUSED,
+    subscription_type: 'annual',
+    collection_method: 'send_invoice',
+    payment_mode: 'bank_transfer',
+    default_payment_method_id: null,
+    default_payment_method_brand: null,
+    default_payment_method_last4: null,
+    amount: 249000,
+    latest_invoice_amount: 249000,
+    latest_invoice_created: '2099-10-04T00:00:00.000Z',
+    payment_due_at: '2099-11-03T00:00:00.000Z',
+    last_payment_error_code: null,
+    last_payment_error_message: null,
+    freeze_effective_at: '2099-11-17T00:00:00.000Z',
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('shows a refused card payment with its reason and the date access becomes limited', async () => {
+    renderPage(CARD_REFUSED);
+    expect(await screen.findByText('Payment refused on 10 Nov 2099: insufficient funds.')).toBeInTheDocument();
+    expect(screen.getByText('Access will be limited on 24 Nov 2099.')).toBeInTheDocument();
+    // Stripe's English message is not shown: the reason is translated from its code.
+    expect(screen.queryByText(/Your card has insufficient funds/)).not.toBeInTheDocument();
+    // The plan cannot change while the invoice is unpaid, and the plan dialog does not open by itself.
+    expect(screen.getByRole('button', { name: 'Change plan' })).toBeDisabled();
+    expect(screen.getByLabelText(PENDING_PAYMENT)).toBeInTheDocument();
+    expect(screen.queryByText('Choose a plan')).not.toBeInTheDocument();
+  });
+
+  it('names an unknown refusal reason in plain words', async () => {
+    renderPage({ ...CARD_REFUSED, last_payment_error_code: 'do_not_honor' });
+    expect(await screen.findByText('Payment refused on 10 Nov 2099: card declined.')).toBeInTheDocument();
+  });
+
+  it('shows an overdue bank transfer invoice with its number, amount and due date', async () => {
+    renderPage(TRANSFER_OVERDUE);
+    expect(await screen.findByText('Invoice KAN-0041 of €2,490.00 was due on 3 Nov 2099.')).toBeInTheDocument();
+    expect(screen.getByText('Access will be limited on 17 Nov 2099.')).toBeInTheDocument();
+    expect(screen.queryByText(/Payment refused/)).not.toBeInTheDocument();
+  });
+
+  it('shows since when access is limited once the workspace is frozen', async () => {
+    renderPage({ ...CARD_REFUSED, access_allowed: false, freeze_effective_at: '2026-11-01T00:00:00.000Z' });
+    expect(await screen.findByText('Access limited since 1 Nov 2026.')).toBeInTheDocument();
+    expect(screen.getByText('Payment refused on 10 Nov 2099: insufficient funds.')).toBeInTheDocument();
+    expect(screen.queryByText(/will be limited/)).not.toBeInTheDocument();
+  });
+
+  it('shows nothing of the kind once the invoice is paid', async () => {
+    renderPage({ ...CARD_REFUSED, status: 'active', latest_invoice_status: 'paid', is_subscription_healthy: true, freeze_effective_at: null });
+    expect(await screen.findByText('Active')).toBeInTheDocument();
+    expect(screen.queryByText(/Payment refused/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Access/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Change plan' })).toBeEnabled();
+  });
+});
+
 describe('BillingCenter planned switch', () => {
   const ANNUAL_WITH_SWITCH = {
     plan_name: 'Hosted KANAP',

@@ -1730,7 +1730,24 @@
         "trialEnded": "essai terminé le {{date}}"
       }
     },
-    "title": "Facturation"
+    "title": "Facturation",
+    "unpaid": {
+      "limited": "L'accès est limité.",
+      "limitedOn": "L'accès sera limité le {{date}}.",
+      "limitedSince": "Accès limité depuis le {{date}}.",
+      "overdue": "Une facture est échue.",
+      "reasons": {
+        "authentication_required": "la banque demande une authentification",
+        "expired_card": "carte expirée",
+        "incorrect_cvc": "code de sécurité incorrect",
+        "insufficient_funds": "provision insuffisante",
+        "other": "carte refusée",
+        "processing_error": "erreur de traitement à la banque"
+      },
+      "refused": "Paiement refusé le {{date}}.",
+      "refusedReason": "Paiement refusé le {{date}} : {{reason}}.",
+      "transferOverdue": "Facture {{number}} de {{amount}} échue le {{date}}."
+    }
   },
   "branding": {
     "actions": {
