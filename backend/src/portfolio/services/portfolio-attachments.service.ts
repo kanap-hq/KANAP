@@ -99,9 +99,10 @@ export class PortfolioAttachmentsService extends PortfolioProjectsBaseService {
   }
 
   /**
-   * Delete an attachment.
+   * Delete an attachment of `projectId`. An attachment of another project reads as missing.
    */
   async deleteAttachment(
+    projectId: string,
     attachmentId: string,
     userId: string | null,
     opts?: ServiceOpts,
@@ -109,7 +110,7 @@ export class PortfolioAttachmentsService extends PortfolioProjectsBaseService {
     const mg = this.getManager(opts);
     const repo = mg.getRepository(PortfolioProjectAttachment);
 
-    const attachment = await repo.findOne({ where: { id: attachmentId } });
+    const attachment = await repo.findOne({ where: { id: attachmentId, project_id: projectId } });
     if (!attachment) throw new NotFoundException('Attachment not found');
 
     try {
