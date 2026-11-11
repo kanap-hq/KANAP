@@ -1119,8 +1119,8 @@ export class PortfolioProjectsController {
     @Param('attachmentId') attachmentId: string,
     @Tenant() ctx: TenantRequest,
   ) {
-    await this.resolveForAccess(idOrRef, ctx, 'contributor');
-    return this.svc.deleteAttachment(attachmentId, ctx.userId || null, {
+    const { id } = await this.resolveForAccess(idOrRef, ctx, 'contributor');
+    return this.svc.deleteAttachment(id, attachmentId, ctx.userId || null, {
       manager: ctx.manager,
     });
   }

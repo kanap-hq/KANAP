@@ -2677,7 +2677,9 @@ export class PortfolioRequestsService {
     return saved;
   }
 
+  /** Deletes an attachment of `requestId`. An attachment of another request reads as missing. */
   async deleteAttachment(
+    requestId: string,
     attachmentId: string,
     userId: string | null,
     opts?: { manager?: EntityManager },
@@ -2685,7 +2687,7 @@ export class PortfolioRequestsService {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(PortfolioRequestAttachment);
 
-    const attachment = await repo.findOne({ where: { id: attachmentId } });
+    const attachment = await repo.findOne({ where: { id: attachmentId, request_id: requestId } });
     if (!attachment) throw new NotFoundException('Attachment not found');
 
     const isReferencedElsewhere = await isStoragePathReferencedInAnyTable(
