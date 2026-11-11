@@ -780,8 +780,9 @@ export default function BillingCenter() {
           prev ? { ...prev, subscription: summary } : prev
         ));
         void queryClient.invalidateQueries({ queryKey: ['billing-profile'] });
-        // The banner and the redirect follow the paid invoice.
-        if (payment?.status === 'paid') void refreshMe?.();
+        // The banner and the redirect follow the subscription, whatever the answer (another tab
+        // may have paid the invoice).
+        void refreshMe?.();
         setPayNotice(paymentNotice(payment?.status, summary, t));
       } catch (e: any) {
         setPayNotice({ tone: 'error', text: getApiErrorMessage(e, t, t('billing.messages.payFailed')) });

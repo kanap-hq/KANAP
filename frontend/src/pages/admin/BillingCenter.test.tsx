@@ -46,6 +46,7 @@ vi.mock('../../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 const authState = vi.hoisted(() => ({
   subscription: null as any,
   claims: { isBillingAdmin: true },
+  refreshMe: vi.fn(async () => undefined),
 }));
 vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => authState,
@@ -438,6 +439,20 @@ describe('BillingCenter unpaid invoice', () => {
     await waitFor(() => expect(screen.queryByText(/Payment refused on/)).not.toBeInTheDocument());
     expect((api.post as any).mock.calls.filter(([url]: [string]) => url === '/billing/pay-invoice')).toHaveLength(1);
     expect(sessionStore.has(PAY_ON_RETURN_MARK)).toBe(false);
+  });
+
+  it('reads the subscription again for the banner when another tab paid the invoice', async () => {
+    authState.refreshMe.mockClear();
+    await returnFromPortal({
+      ...CARD_REFUSED,
+      status: 'active',
+      latest_invoice_status: 'paid',
+      last_payment_error_code: null,
+      is_subscription_healthy: true,
+      freeze_effective_at: null,
+      payment: { status: 'nothing_to_pay' },
+    });
+    await waitFor(() => expect(authState.refreshMe).toHaveBeenCalled());
   });
 
   it('pays nothing when the return address is opened without the portal (history, link)', async () => {
