@@ -6,6 +6,7 @@ import type { TFunction } from 'i18next';
 import api from '../../../api';
 import { useKanapDialogs } from '../../design';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
+import { ONBOARDING_QUERY_KEY } from '../../onboarding/useOnboarding';
 import {
   cancelCreationClear,
   clearCreation,
@@ -175,6 +176,8 @@ export default function useRecordCreation({
         predicate: (query) => queryKeyPrefixes.some((prefix) => String(query.queryKey[0]).startsWith(prefix)),
         refetchType: 'none',
       });
+      // A first step done by this record is undone with it: its hint and the tile read it again.
+      void queryClient.invalidateQueries({ queryKey: ONBOARDING_QUERY_KEY });
       return true;
     } catch (err) {
       // The creation is over (expired token): the action goes, the record is deleted as any other.

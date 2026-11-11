@@ -44,8 +44,8 @@ import { OnboardingService } from '../onboarding.service';
 // - another workspace sees nothing; eight first choices at once give one event each; two last
 //   steps at once give one `completed`; a deleted user's rows go with them;
 // - with your own data, a step that creates an object is done by itself once the object exists
-//   (`automatic` in its event), stays done while it exists, and waits while sample data is not
-//   `idle`.
+//   (`automatic` in its event), stays done while it exists, is undone once it is gone (a mark by
+//   hand stays), and waits while sample data is not `idle`.
 // @database-spec: opens the data-source and boots Nest, so run-ci-tests.js runs it on a database lane.
 
 type Served = { app: INestApplication; port: number; close: () => Promise<void> };
@@ -749,6 +749,54 @@ async function testAutomaticSteps() {
   }
 }
 
+// 15. A step done by its object is undone once the object is gone (a creation cancelled, a record
+// deleted); a step marked done by hand stays, object or not.
+async function testAutomaticStepFollowsItsObject() {
+  const svc = buildServices();
+  const served = await serve();
+  let t: ActivatedTenant | undefined;
+  try {
+    t = await createActivatedTenant(svc, { tag: 'onb-gone', orgName: 'Onboarding Gone' });
+    const tenantId = t.tenantId;
+    const asOwner = client(served, t);
+    const sitesDone = (state: any) => !!state.steps.find((s: any) => s.key === 'own_sites')?.done_at;
+    const addSite = async () => {
+      const [row] = await inTenant(tenantId, (m) => m.query(
+        `INSERT INTO locations (tenant_id, name, hosting_type) VALUES ($1, 'Server room', 'on_premise') RETURNING id`, [tenantId]));
+      return row.id as string;
+    };
+    const removeSite = (id: string) => inTenant(tenantId, (m) => m.query(
+      `DELETE FROM locations WHERE tenant_id = $1 AND id = $2`, [tenantId, id]));
+    const siteEvents = async () => (await events(tenantId, 'onboarding.step_done'))
+      .filter((e) => e.after.step_key === 'own_sites')
+      .map((e) => e.after.automatic ?? false);
+
+    assert.equal(sitesDone(ok(await asOwner.choose({ angle: 'cartography', mode: 'own_data' }), 'own data')), false);
+    const first = await addSite();
+    assert.equal(sitesDone(ok(await asOwner.get(), 'GET with a site')), true, 'done by its object');
+    await removeSite(first);
+    let state = ok(await asOwner.get(), 'GET once the site is gone');
+    assert.equal(sitesDone(state), false, 'undone with its object');
+    assert.equal(state.next_step, 'own_sites');
+
+    // A new site does it again, with a new event.
+    const second = await addSite();
+    assert.equal(sitesDone(ok(await asOwner.get(), 'GET with a new site')), true, 'done again');
+    await removeSite(second);
+    assert.equal(sitesDone(ok(await asOwner.get(), 'GET once it is gone too')), false);
+
+    // Marked done by hand: it stays without an object, and after an object came and went.
+    assert.equal(sitesDone(ok(await asOwner.done('own_sites'), 'done by hand')), true);
+    assert.equal(sitesDone(ok(await asOwner.get(), 'GET without a site')), true, 'a mark by hand stays');
+    await removeSite(await addSite());
+    assert.equal(sitesDone(ok(await asOwner.get(), 'GET after a site came and went')), true, 'still done');
+    assert.deepEqual(await siteEvents(), [true, true, false], 'one event per mark, nothing for an undo');
+  } finally {
+    await served.close();
+    await cleanupTenants([t?.tenantId]);
+  }
+}
+
 runSpecs('onboarding.routes.integration.spec', [
   testFreshWorkspace,
   testChoice,
@@ -763,6 +811,7 @@ runSpecs('onboarding.routes.integration.spec', [
   testAdditionalAdministrator,
   testUserDeleted,
   testAutomaticSteps,
+  testAutomaticStepFollowsItsObject,
 ]).catch((error) => {
   console.error(error);
   process.exit(1);
