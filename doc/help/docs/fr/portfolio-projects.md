@@ -102,7 +102,7 @@ L'espace de travail du projet a deux couches :
 
 Ouvrez ou fermez le tiroir Propriétés à l'aide de l'onglet vertical sur le bord droit.
 
-Pour les projets existants, le tiroir Propriétés se comporte comme un panneau de propriétés en direct : les modifications y sont enregistrées immédiatement. Le contenu de l'onglet principal suit le flux habituel **Enregistrer** / **Réinitialiser** lorsque cet onglet contient des modifications en brouillon. Si vous changez d'onglet ou passez au projet précédent ou suivant avec des modifications non enregistrées dans l'espace de travail, Kadratis demande s'il faut enregistrer d'abord.
+Pour les projets existants, le tiroir Propriétés se comporte comme un panneau Propriétés en direct : les modifications y sont enregistrées immédiatement. Le contenu de l'onglet principal suit le flux habituel **Enregistrer** / **Réinitialiser** lorsque cet onglet contient des modifications en brouillon. Si vous changez d'onglet ou passez au projet précédent ou suivant avec des modifications non enregistrées dans l'espace de travail, Kadratis demande s'il faut enregistrer d'abord.
 
 ## En-tête et métadonnées
 

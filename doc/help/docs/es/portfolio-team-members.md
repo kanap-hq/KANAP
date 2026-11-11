@@ -116,11 +116,11 @@ El organigrama dibuja la línea jerárquica de sus colaboradores, construida a p
 
 Haga clic en una fila de colaborador para abrir su espacio de trabajo. El encabezado muestra la referencia del colaborador (`CTR-1`, `CTR-2`…, haga clic para copiarla), su nombre, su equipo, su disponibilidad y el número de competencias. La dirección de la página también usa esta referencia. Use las flechas junto al enlace de retorno (o las teclas de flecha izquierda y derecha) para pasar al colaborador anterior o siguiente en el orden de la lista. Pulse **Esc** para volver a la lista.
 
-El espacio de trabajo tiene tres pestañas, **General**, **Competencias** y **Tiempo registrado**, además de un panel **Propiedades** a la derecha que reúne el puesto, el equipo, la disponibilidad y los valores predeterminados de clasificación. Abra o cierre el panel con la pestaña situada en su borde, o pulse **P**.
+El espacio de trabajo tiene tres pestañas, **General**, **Competencias** y **Tiempo registrado**, además de un panel de propiedades a la derecha que reúne el puesto, el equipo, la disponibilidad y los valores predeterminados de clasificación. Abra o cierre el panel con la pestaña situada en su borde, o pulse **P**.
 
 Cada cambio se guarda automáticamente. Una breve nota «Guardando… / Guardado» aparece junto a los metadatos del encabezado mientras se escribe un cambio.
 
-### Panel Propiedades
+### Panel de propiedades
 
 **Puesto**
 El puesto de la persona, el mismo que aparece en todos los lugares donde figura en Kadratis: el organigrama, su ficha de usuario, su perfil. No es una etiqueta propia de la cartera: cambiarlo aquí lo cambia en todas partes. Escríbalo y haga clic fuera para guardar.
@@ -155,7 +155,7 @@ Establezca los valores de clasificación que se rellenan automáticamente en nue
 
 Cuando un colaborador crea una nueva tarea, solicitud o proyecto, estos valores predeterminados se usan para rellenar automáticamente los campos de clasificación. Cambiar la **Categoría** borra el **Flujo** si el flujo actual no pertenece a la categoría recién seleccionada.
 
-**Consejo**: También puede acceder a sus propios predeterminados desde **Configuración > Perfil**, que abre su perfil de colaborador con el panel Propiedades visible.
+**Consejo**: También puede acceder a sus propios predeterminados desde **Configuración > Perfil**, que abre su perfil de colaborador con el panel de propiedades visible.
 
 ### General
 

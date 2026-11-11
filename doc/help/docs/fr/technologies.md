@@ -107,7 +107,7 @@ Quand les vulnérabilités sont suivies, la colonne **Éditeur** ouvre aussi la 
 
 ## La fiche technologie
 
-La fiche comporte un en-tête, un panneau de propriétés à droite et sept onglets : **Aperçu**, **Serveurs**, **Applications**, **Exploitation**, **Conformité**, **Relations** et **Historique** (les modifications apportées à la technologie, voir [Historique des fiches](record-history.md)). Les onglets **Serveurs**, **Applications** et **Relations** affichent leur nombre en pastille.
+La fiche comporte un en-tête, un panneau Propriétés à droite et sept onglets : **Aperçu**, **Serveurs**, **Applications**, **Exploitation**, **Conformité**, **Relations** et **Historique** (les modifications apportées à la technologie, voir [Historique des fiches](record-history.md)). Les onglets **Serveurs**, **Applications** et **Relations** affichent leur nombre en pastille.
 
 ### En-tête
 
@@ -117,7 +117,7 @@ La fiche comporte un en-tête, un panneau de propriétés à droite et sept ongl
 - **Famille**.
 - **Supprimer**, une icône corbeille (`infrastructure:admin`) : la confirmation nomme ce qui part avec la technologie.
 
-### Panneau de propriétés
+### Panneau Propriétés
 
 - **Éditeur**, **Famille** et **Type d'hébergement**.
 - **Zone d'administration** : affichée pour les seules technologies de la famille **Annuaire et identité**. Elle place un service d'annuaire dans une zone de votre modèle d'administration, par exemple le tier 0 pour Entra ID, qui ne tourne sur aucun de vos serveurs. Les zones viennent de **Cartographie SI > Paramètres**, et la page [Zones d'administration](administration-view.md) liste les services d'annuaire avec leur zone. Les autres technologies ne prennent pas de zone : placez plutôt les serveurs qui les portent. Une zone posée auparavant sur une technologie d'une autre famille reste affichée, en lecture seule, avec une mention indiquant que la valeur n'est plus utilisée.

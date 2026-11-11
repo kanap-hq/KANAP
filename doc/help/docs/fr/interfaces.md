@@ -10,7 +10,7 @@ Rendez-vous dans **Cartographie SI > Interfaces** pour voir votre registre d'int
 
 - Le titre : un nom descriptif pour l'intégration
 - **Application source** et **Application cible**, dans l'onglet **Flux**
-- **Catégorie de données**, dans le panneau des propriétés : le type de données transférées
+- **Catégorie de données**, dans le panneau Propriétés : le type de données transférées
 
 Vous pouvez les remplir dans l'ordre de votre choix. Rien n'est enregistré tant que les quatre ne sont pas remplis. Dès qu'ils le sont, Kadratis crée l'interface avec tout ce que contient le brouillon et lui attribue sa référence (`INT-4`). La page passe à l'interface, et **Environnements**, **Mappage des données**, **Relations** et **Historique** s'ouvrent.
 
