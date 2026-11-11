@@ -41,7 +41,7 @@ Kadratis folgt dafür den Verknüpfungen der IT-Landschaft:
 
 - **Eine Technologieversion** betrifft die Server, auf denen sie installiert ist, und die Anwendungen, die sie deklarieren oder auf diesen Servern laufen, virtuelle Maschinen eingeschlossen.
 - **Ein physischer Server** am Lebensende betrifft die Maschinen, die er hostet, und die Anwendungen, die auf all diesen bereitgestellt sind.
-- **Ein Cluster** zählt seine Mitglieder: Ein auf dem Cluster installierter SQL Server betrifft jeden seiner Knoten. Der Artikel [Server-Cluster in der Kadratis-Kartografie](/de/blog/server-cluster-in-der-kanap-kartografie) beschreibt diese Regeln.
+- **Ein Cluster** zählt seine Mitglieder: Ein auf dem Cluster installierter SQL Server betrifft jeden seiner Knoten. Der Artikel [Server-Cluster in der Kadratis-Kartografie](/de/blog/server-cluster-in-der-kadratis-kartografie) beschreibt diese Regeln.
 
 Die Antwort endet also nicht bei „Ubuntu 20.04 ist ohne Support“. Sie nennt die Server und Anwendungen, die davon abhängen, und jeder Anwendungsdatensatz nennt den Verantwortlichen und die Kritikalität. Die Diskussion über die Migration beginnt mit den richtigen Leuten.
 
