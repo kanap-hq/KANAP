@@ -277,6 +277,33 @@ function testThirdPartyTextKeepsItsTagsAsText() {
   );
 }
 
+/** A link definition and a note hold no tag outside the list, in their label, title or text. */
+function testDefinitionsAreChecked() {
+  const refused: Array<[string, string, string]> = [
+    ['a tag in the title of a link definition', '[page][ref]\n\n[ref]: https://example.com "A <form action=/search> title"', '<form action=/search>'],
+    ['a tag in a title between parentheses', '[ref]: https://example.com (A <div class="note"> title)', '<div class="note">'],
+    ['a tag in the title of a definition in a quote', '> [ref]: /page "<details open>"', '<details open>'],
+    ['a tag after an address between angle brackets', '[ref]: <https://example.com/a b> "<form action=/search>"', '<form action=/search>'],
+    ['a tag in a note', 'Text[^1]\n\n[^1]: <form action="/search">', '<form action="/search">'],
+    ['a listed tag with an attribute in a title', '[ref]: /page "<u class=x>"', '<u class=x>'],
+  ];
+  for (const [name, text, example] of refused) {
+    const refusal = refusalOf(text);
+    assert.equal(refusal?.code, MARKDOWN_HTML_NOT_ALLOWED, `${name} is refused`);
+    assert.equal(refusal?.example, example, name);
+  }
+
+  assertAccepted('a link definition with a title', '[page][ref]\n\n[ref]: https://example.com "A title, a < b"');
+  assertAccepted('an address between angle brackets', '[page][ref]\n\n[ref]: <https://example.com/a b> "Title"');
+  assertAccepted('a listed tag in a title', '[page][ref]\n\n[ref]: /page "An <u>underlined</u> title"');
+  assertAccepted('an escaped less-than sign in a title', '[page][ref]\n\n[ref]: /page "A \\<form> title"');
+
+  // In a text read from another system, the tag stays, as text.
+  const kept = String(normalizeMarkdownRichText('[page][ref]\n\n[ref]: /page "A <form action=/search> title"', { thirdPartyText: true }));
+  assert.equal(kept, '[page][ref]\n\n[ref]: /page "A \\<form action=/search> title"');
+  assert.equal(refusalOf(kept), null);
+}
+
 /**
  * A link or an image opens an `http`, `https` or `mailto` address, or an address without a
  * scheme (a path, a query, an anchor). Any other address is refused on a write, with the code
@@ -438,6 +465,7 @@ function run() {
   testTheRefusalNamesTheFieldAndTheTag();
   testStoredContentKeepsWhatItHolds();
   testThirdPartyTextKeepsItsTagsAsText();
+  testDefinitionsAreChecked();
   testLinksAndImagesOpenWebMailOrRelativeAddresses();
   testThirdPartyTextKeepsItsOtherAddressesAsText();
   testTimeIsBoundedOnLongTexts();

@@ -262,9 +262,23 @@ function firstListedTagInProse(raw: string): string | null {
 }
 
 /**
+ * The text of a link definition where a tag may sit: its label and its title, without what a
+ * backslash makes text. Its address between angle brackets is no tag. A definition whose label
+ * starts with "^" is a note for the readers that know notes: its whole text counts.
+ */
+function definitionText(token: MarkdownToken): string {
+  const raw = String(token.raw ?? '');
+  const text = String(token.tag ?? '').startsWith('^')
+    ? raw
+    : raw.replace(/^(\s*\[(?:\\.|[^\]\\])*\]:\s*)<[^<>\n]*>/, '$1');
+  return text.replace(/\\[!-/:-@[-`{-~]/g, '');
+}
+
+/**
  * What a parsed text holds that a write refuses, one entry per token, each once: a tag outside
- * `RICH_TEXT_ALLOWED_HTML`, and a link, an image or a link definition whose address is neither
- * a web or mail address nor a relative one (`isAllowedLinkAddress`), as it is written.
+ * `RICH_TEXT_ALLOWED_HTML`, in the text of a link definition too, and a link, an image or a
+ * link definition whose address is neither a web or mail address nor a relative one
+ * (`isAllowedLinkAddress`), as it is written.
  */
 function collectRefusedHtml(tokens: MarkdownToken[]): string[] {
   const refused: string[] = [];
@@ -283,6 +297,7 @@ function collectRefusedHtml(tokens: MarkdownToken[]): string[] {
       // its own refusal (`tokensContainDataImage`).
       const checked = /^[[!<]/.test(written) && !(current.type === 'image' && isDataImageUri(address));
       if (checked && !isAllowedLinkAddress(address)) tag = written;
+      else if (current.type === 'def') tag = firstRefusedHtmlTag(definitionText(current));
     }
     if (!tag || seen.has(tag)) return;
     seen.add(tag);
