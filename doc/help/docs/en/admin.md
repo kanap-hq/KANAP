@@ -485,14 +485,26 @@ On the cloud service, the person who started the trial receives a few e-mails fr
 
 When a switch to monthly billing is planned, a third line shows it, for example "Switches to monthly on 7 Oct 2027." Click **Keep annual** on that line to cancel the switch.
 
-Once the subscription is cancelled in the Stripe customer portal, the second line shows its end date in place of the renewal date, for example "Active · ends 7 Oct 2027". Click **Don't cancel** on that line to open the portal and take the cancellation back. Requires billing admin.
+Once the subscription is cancelled in the Stripe customer portal, the second line shows its end date in place of the renewal date, for example "Active · ends 7 Oct 2027". Click **Don't cancel** on that line to open the portal and take the cancellation back. Requires billing admin. While the cancellation is set, **Change plan** is greyed: take the cancellation back first.
 
 ### Actions
 
 - **Choose plan** / **Change plan**: Open the plan dialog to subscribe or switch between monthly and annual billing. Requires billing admin.
 - **Manage payment**: Open the Stripe customer portal to update the payment method, cancel, or make other changes. Only available once you have subscribed.
 
-If your subscription is unhealthy (expired trial, past due, etc.), the plan selection dialog opens automatically when you visit the Billing page.
+Without a running subscription (expired trial, ended subscription), the plan selection dialog opens automatically when you visit the Billing page.
+
+### Unpaid invoice
+
+When the latest invoice is not paid, a line under the status says so:
+- Card: "Payment refused on 10 Nov 2026: insufficient funds."
+- Bank transfer: "Invoice KAN-0041 of €2,490.00 was due on 3 Nov 2026."
+
+A second line gives the date access becomes limited, at the latest 14 days after the invoice (14 days after its due date for a bank transfer), or since when it is limited. Until that date the workspace stays usable, and a banner at the top of every page shows the amount due and the date. Once access is limited, billing administrators are taken to this page.
+
+To pay, click **Update card and pay**: the Stripe customer portal opens to update the card, and on your return the invoice is charged on the new card at once. For a bank transfer, **Pay invoice** opens the invoice with the bank details. Requires billing admin.
+
+**Change plan** stays greyed until the invoice is paid.
 
 ### Subscribing
 

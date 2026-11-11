@@ -485,14 +485,26 @@ Sur le service cloud, la personne qui a démarré l'essai reçoit quelques e-mai
 
 Lorsqu'un passage à la facturation mensuelle est prévu, une troisième ligne l'indique, par exemple « Passe en mensuel le 7 oct. 2027. » Cliquez sur **Rester en annuel** sur cette ligne pour annuler ce passage.
 
-Une fois l'abonnement résilié dans le portail client Stripe, la deuxième ligne affiche sa date de fin à la place de la date de renouvellement, par exemple « Actif · se termine le 7 oct. 2027 ». Cliquez sur **Ne pas résilier** sur cette ligne pour ouvrir le portail et revenir sur la résiliation. Nécessite l'admin facturation.
+Une fois l'abonnement résilié dans le portail client Stripe, la deuxième ligne affiche sa date de fin à la place de la date de renouvellement, par exemple « Actif · se termine le 7 oct. 2027 ». Cliquez sur **Ne pas résilier** sur cette ligne pour ouvrir le portail et revenir sur la résiliation. Nécessite l'admin facturation. Tant que la résiliation est en place, **Changer de plan** est grisé : revenez d'abord sur la résiliation.
 
 ### Actions
 
 - **Choisir un plan** / **Changer de plan** : Ouvrir la boîte de dialogue du plan pour souscrire ou basculer entre facturation mensuelle et annuelle. Nécessite l'admin facturation.
 - **Gérer le paiement** : Ouvrir le portail client Stripe pour mettre à jour le moyen de paiement, annuler ou effectuer d'autres modifications. Disponible uniquement une fois l'abonnement souscrit.
 
-Si votre abonnement n'est pas en règle (essai expiré, paiement en retard, etc.), la boîte de dialogue de sélection du plan s'ouvre automatiquement lorsque vous visitez la page Facturation.
+Sans abonnement en cours (essai expiré, abonnement terminé), la boîte de dialogue de sélection du plan s'ouvre automatiquement lorsque vous visitez la page Facturation.
+
+### Facture impayée
+
+Quand la dernière facture n'est pas payée, une ligne sous le statut l'indique :
+- Carte : « Paiement refusé le 10 nov. 2026 : provision insuffisante. »
+- Virement : « Facture KAN-0041 de 2 490,00 € échue le 3 nov. 2026. »
+
+Une deuxième ligne donne la date à laquelle l'accès sera limité, au plus tard 14 jours après la facture (14 jours après son échéance pour un virement), ou depuis quand il l'est. Jusqu'à cette date, l'espace de travail reste utilisable, et un bandeau en haut de chaque page indique la somme due et la date. Une fois l'accès limité, les administrateurs de facturation sont conduits sur cette page.
+
+Pour payer, cliquez sur **Mettre à jour la carte et payer** : le portail client Stripe s'ouvre pour mettre à jour la carte et, à votre retour, la facture est prélevée aussitôt sur la nouvelle carte. Pour un virement, **Payer la facture** ouvre la facture avec les coordonnées bancaires. Nécessite l'admin facturation.
+
+**Changer de plan** reste grisé jusqu'au paiement de la facture.
 
 ### Souscrire
 

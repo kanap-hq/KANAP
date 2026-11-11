@@ -485,14 +485,26 @@ En el servicio en la nube, la persona que inició la prueba recibe algunos corre
 
 Cuando está previsto un paso a la facturación mensual, una tercera línea lo indica, por ejemplo «Pasa a mensual el 7 oct 2027.» Haga clic en **Mantener anual** en esa línea para cancelar el cambio.
 
-Una vez cancelada la suscripción en el portal de cliente de Stripe, la segunda línea muestra su fecha de fin en lugar de la fecha de renovación, por ejemplo «Activo · finaliza el 7 oct 2027». Haga clic en **No cancelar** en esa línea para abrir el portal y anular la cancelación. Requiere administrador de facturación.
+Una vez cancelada la suscripción en el portal de cliente de Stripe, la segunda línea muestra su fecha de fin en lugar de la fecha de renovación, por ejemplo «Activo · finaliza el 7 oct 2027». Haga clic en **No cancelar** en esa línea para abrir el portal y anular la cancelación. Requiere administrador de facturación. Mientras la cancelación esté programada, **Cambiar plan** aparece atenuado: anule primero la cancelación.
 
 ### Acciones
 
 - **Elegir plan** / **Cambiar plan**: Abrir el cuadro de diálogo del plan para suscribirse o alternar entre facturación mensual y anual. Requiere administrador de facturación.
 - **Gestionar el pago**: Abrir el portal de cliente de Stripe para actualizar el método de pago, cancelar u otros cambios. Solo disponible una vez suscrito.
 
-Si su suscripción no está en buen estado (prueba expirada, pago vencido, etc.), el cuadro de selección de plan se abre automáticamente al visitar la página de Facturación.
+Sin una suscripción en curso (prueba expirada, suscripción finalizada), el cuadro de selección de plan se abre automáticamente al visitar la página de Facturación.
+
+### Factura impagada
+
+Cuando la última factura no está pagada, una línea bajo el estado lo indica:
+- Tarjeta: «Pago rechazado el 10 nov 2026: fondos insuficientes.»
+- Transferencia bancaria: «Factura KAN-0041 de 2490,00 € vencida el 3 nov 2026.»
+
+Una segunda línea indica la fecha en que se limitará el acceso, como muy tarde 14 días después de la factura (14 días después de su vencimiento para una transferencia), o desde cuándo está limitado. Hasta esa fecha el espacio de trabajo sigue siendo utilizable, y un banner en la parte superior de cada página muestra el importe adeudado y la fecha. Una vez limitado el acceso, los administradores de facturación son dirigidos a esta página.
+
+Para pagar, haga clic en **Actualizar la tarjeta y pagar**: se abre el portal de cliente de Stripe para actualizar la tarjeta y, a su regreso, la factura se cobra de inmediato en la nueva tarjeta. Para una transferencia, **Pagar la factura** abre la factura con los datos bancarios. Requiere administrador de facturación.
+
+**Cambiar plan** permanece atenuado hasta que se pague la factura.
 
 ### Suscribirse
 

@@ -485,14 +485,26 @@ Im Cloud-Dienst erhält die Person, die die Testphase gestartet hat, während de
 
 Ist ein Wechsel zur monatlichen Abrechnung geplant, zeigt ihn eine dritte Zeile an, zum Beispiel „Wechselt am 7. Okt. 2027 zu monatlich.“ Klicken Sie in dieser Zeile auf **Jährlich beibehalten**, um den Wechsel abzubrechen.
 
-Sobald das Abonnement im Stripe-Kundenportal gekündigt ist, zeigt die zweite Zeile statt des Verlängerungsdatums sein Enddatum an, zum Beispiel „Aktiv · endet am 7. Okt. 2027“. Klicken Sie in dieser Zeile auf **Nicht kündigen**, um das Portal zu öffnen und die Kündigung zurückzunehmen. Erfordert Abrechnungsadministrator.
+Sobald das Abonnement im Stripe-Kundenportal gekündigt ist, zeigt die zweite Zeile statt des Verlängerungsdatums sein Enddatum an, zum Beispiel „Aktiv · endet am 7. Okt. 2027“. Klicken Sie in dieser Zeile auf **Nicht kündigen**, um das Portal zu öffnen und die Kündigung zurückzunehmen. Erfordert Abrechnungsadministrator. Solange die Kündigung besteht, ist **Plan ändern** ausgegraut: Nehmen Sie zuerst die Kündigung zurück.
 
 ### Aktionen
 
 - **Plan wählen** / **Plan ändern**: Öffnet den Tarifdialog zum Abonnieren oder zum Wechsel zwischen monatlicher und jährlicher Abrechnung. Erfordert Abrechnungsadministrator.
 - **Zahlung verwalten**: Öffnet das Stripe-Kundenportal zum Aktualisieren der Zahlungsmethode, Kündigen oder für andere Änderungen. Nur verfügbar, nachdem Sie ein Abonnement abgeschlossen haben.
 
-Wenn Ihr Abonnement nicht in Ordnung ist (abgelaufene Testversion, überfällig usw.), öffnet sich der Tarifauswahldialog automatisch, wenn Sie die Abrechnungsseite besuchen.
+Ohne laufendes Abonnement (abgelaufene Testphase, beendetes Abonnement) öffnet sich der Tarifauswahldialog automatisch, wenn Sie die Abrechnungsseite besuchen.
+
+### Unbezahlte Rechnung
+
+Ist die letzte Rechnung nicht bezahlt, zeigt eine Zeile unter dem Status dies an:
+- Karte: „Zahlung am 10. Nov. 2026 abgelehnt: unzureichende Deckung.“
+- Banküberweisung: „Rechnung KAN-0041 über 2.490,00 € war am 3. Nov. 2026 fällig.“
+
+Eine zweite Zeile nennt das Datum, ab dem der Zugang eingeschränkt wird, spätestens 14 Tage nach der Rechnung (14 Tage nach ihrem Fälligkeitsdatum bei Banküberweisung), oder seit wann er eingeschränkt ist. Bis zu diesem Datum bleibt der Arbeitsbereich nutzbar, und ein Banner oben auf jeder Seite zeigt den fälligen Betrag und das Datum. Sobald der Zugang eingeschränkt ist, werden Abrechnungsadministratoren auf diese Seite geleitet.
+
+Klicken Sie zum Bezahlen auf **Karte aktualisieren und bezahlen**: Das Stripe-Kundenportal öffnet sich, um die Karte zu aktualisieren, und bei Ihrer Rückkehr wird die Rechnung sofort von der neuen Karte abgebucht. Bei Banküberweisung öffnet **Rechnung bezahlen** die Rechnung mit den Bankdaten. Erfordert Abrechnungsadministrator.
+
+**Plan ändern** bleibt ausgegraut, bis die Rechnung bezahlt ist.
 
 ### Abonnement abschließen
 
