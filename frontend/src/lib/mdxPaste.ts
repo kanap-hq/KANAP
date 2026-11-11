@@ -133,12 +133,15 @@ function shouldSkipAngleBracketSanitization(text: string, index: number): boolea
   return ANGLE_BRACKET_DESTINATION_REGEX.test(text);
 }
 
-/** The Markdown link of an automatic link, from the text between its angle brackets, or null. */
+/**
+ * The Markdown link of an automatic link, from the text between its angle brackets: a web
+ * address, a mail address with or without its scheme. Null for anything else, which is text.
+ */
 function autolinkAsMarkdownLink(target: string): string | null {
-  if (/^[a-z][a-z0-9+.-]*:\/\/./i.test(target)) return `[${target}](${target})`;
-  // An e-mail address: a name, an at sign, then a domain with a dot inside it.
+  if (/^(?:https?:\/\/|mailto:)./i.test(target)) return `[${target}](${target})`;
+  // An e-mail address: a name without a scheme, an at sign, then a domain with a dot inside it.
   const at = target.indexOf('@');
-  if (at < 1) return null;
+  if (at < 1 || target.lastIndexOf(':', at) !== -1) return null;
   const dot = target.indexOf('.', at + 2);
   return dot !== -1 && dot < target.length - 1 ? `[${target}](mailto:${target})` : null;
 }

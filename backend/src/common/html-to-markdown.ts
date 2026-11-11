@@ -103,6 +103,19 @@ function isAllowedImageAttribute(name: string, value: string): boolean {
   return true;
 }
 
+/**
+ * Whether a link or an image may have this address: an `http`, `https` or `mailto` address, or
+ * an address without a scheme (a path, a query, an anchor). An address whose first segment
+ * holds a colon, or a character reference that may stand for one, has a scheme.
+ */
+function isAllowedLinkAddress(value: string): boolean {
+  const address = String(value || '').trim().replace(/\\([!-/:-@[-`{-~])/g, '$1');
+  if (/^(?:https?|mailto):/i.test(address)) return true;
+  // Up to the first "/" or "?", without its anchor (a "#" after "&" starts a character reference).
+  const firstSegment = (/^[^/?]*/.exec(address)?.[0] ?? '').replace(/(?<!&)#.*$/s, '');
+  return !/:|&(?:#x?[0-9a-f]+|[a-z][a-z0-9]*);/i.test(firstSegment);
+}
+
 function isDataImageUri(value: string): boolean {
   return DATA_IMAGE_URI_REGEX.test(String(value || '').trim());
 }
@@ -248,7 +261,11 @@ function firstListedTagInProse(raw: string): string | null {
   return end === -1 ? raw.slice(start) : raw.slice(start, end + 1);
 }
 
-/** The tags of a parsed text outside `RICH_TEXT_ALLOWED_HTML`, one per token, each once. */
+/**
+ * What a parsed text holds that a write refuses, one entry per token, each once: a tag outside
+ * `RICH_TEXT_ALLOWED_HTML`, and a link, an image or a link definition whose address is neither
+ * a web or mail address nor a relative one (`isAllowedLinkAddress`), as it is written.
+ */
 function collectRefusedHtml(tokens: MarkdownToken[]): string[] {
   const refused: string[] = [];
   const seen = new Set<string>();
@@ -259,6 +276,13 @@ function collectRefusedHtml(tokens: MarkdownToken[]): string[] {
       tag = firstRefusedHtmlTag(String(current.raw ?? current.text ?? ''));
     } else if (current.type === 'text' && !Array.isArray(current.tokens)) {
       tag = firstListedTagInProse(String(current.raw ?? ''));
+    } else if (current.type === 'link' || current.type === 'image' || current.type === 'def') {
+      const address = String(current.href ?? '');
+      const written = String(current.raw ?? address).trim();
+      // An address written in a sentence, without brackets, is text. An inline base64 image has
+      // its own refusal (`tokensContainDataImage`).
+      const checked = /^[[!<]/.test(written) && !(current.type === 'image' && isDataImageUri(address));
+      if (checked && !isAllowedLinkAddress(address)) tag = written;
     }
     if (!tag || seen.has(tag)) return;
     seen.add(tag);
@@ -402,11 +426,32 @@ function escapeTagsOutsideCode(text: string): string {
 export function escapeRefusedHtml(content: string): string {
   const text = String(content || '');
   if (findRefusedHtml(text).length === 0) return text;
-  const escaped = escapeTagsOutsideCode(text);
-  if (findRefusedHtml(escaped).length === 0) return escaped;
-  return text.replace(/(\\*)<(?=[A-Za-z/!?])/g, (match, backslashes: string) => (
-    backslashes.length % 2 === 1 ? match : `${backslashes}\\<`
+  const escapeEvery = (marks: RegExp) => text.replace(marks, (match, backslashes: string, mark: string) => (
+    backslashes.length % 2 === 1 ? match : `${backslashes}\\${mark}`
   ));
+  for (const candidate of [escapeTagsOutsideCode(text), escapeEvery(/(\\*)(<)(?=[A-Za-z/!?])/g)]) {
+    const escaped = escapeOtherAddresses(candidate);
+    if (findRefusedHtml(escaped).length === 0) return escaped;
+  }
+  return escapeEvery(/(\\*)(<(?=[A-Za-z/!?])|\[)/g);
+}
+
+/**
+ * The same text with every link, image and link definition the rule refuses for its address
+ * written as text: its opening bracket takes a backslash. A link by reference follows its
+ * definition, so the text is read again until nothing is left, three times at most.
+ */
+function escapeOtherAddresses(text: string): string {
+  let escaped = text;
+  for (let round = 0; round < 3; round += 1) {
+    // As written: `[text](address)`, `![text](address)`, `[label]: address`, `<address>`.
+    const refused = findRefusedHtml(escaped).filter((written) => /^!?\[|^<[^\s<>]*[:@][^\s<>]*>$/.test(written));
+    if (refused.length === 0) break;
+    for (const written of refused) {
+      escaped = escaped.split(written).join(written.replace(/[[<]/, '\\$&'));
+    }
+  }
+  return escaped;
 }
 
 function tokensContainDataImage(tokens: MarkdownToken[]): boolean {

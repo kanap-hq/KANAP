@@ -1,7 +1,17 @@
 import React from 'react';
 import { act, render } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
-import { $createParagraphNode, $createTextNode, $getRoot, $isParagraphNode, type LexicalEditor } from 'lexical';
+import {
+  $createParagraphNode,
+  $createTextNode,
+  $getRoot,
+  $isElementNode,
+  $isParagraphNode,
+  $isTextNode,
+  SKIP_SCROLL_INTO_VIEW_TAG,
+  type LexicalEditor,
+  type LexicalNode,
+} from 'lexical';
 import { vi } from 'vitest';
 import MarkdownEditor from './MarkdownEditor';
 import { createAppTheme } from '../config/ThemeContext';
@@ -322,6 +332,33 @@ export async function mountEditor(text: string, { disabled = false }: { disabled
           }
         });
       });
+      await settle();
+    },
+    /** A person's click in the first link of the text: the editor shows the preview of the link. */
+    async placeCaretInLink() {
+      const editor = (content() as unknown as { __lexicalEditor: LexicalEditor }).__lexicalEditor;
+      const firstLink = (node: LexicalNode): LexicalNode | null => {
+        if (node.getType() === 'link') return node;
+        if (!$isElementNode(node)) return null;
+        for (const child of node.getChildren()) {
+          const link = firstLink(child);
+          if (link) return link;
+        }
+        return null;
+      };
+      await act(async () => {
+        content().focus();
+      });
+      await act(async () => {
+        editor.update(() => {
+          const link = firstLink($getRoot());
+          const text = $isElementNode(link) ? link.getFirstChild() : null;
+          if (!$isTextNode(text)) throw new Error('The text holds no link');
+          text.select(1, 1);
+          // jsdom gives a selection no rectangle to scroll to.
+        }, { tag: SKIP_SCROLL_INTO_VIEW_TAG });
+      });
+      await settle();
       await settle();
     },
     unmount: view.unmount,

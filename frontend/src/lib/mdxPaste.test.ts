@@ -39,6 +39,16 @@ describe('mdxPaste', () => {
     expectMarkdownToParse(markdown);
   });
 
+  it('converts an automatic link with a web or mail scheme only', () => {
+    expect(sanitizeMarkdownForMdxPaste('<HTTP://example.com/a> <mailto:user@example.com>'))
+      .toBe('[HTTP://example.com/a](HTTP://example.com/a) [mailto:user@example.com](mailto:user@example.com)');
+
+    const markdown = sanitizeMarkdownForMdxPaste('<ftp://example.com/a> <tel:+33123456789> <x-app:user@example.com>');
+
+    expect(markdown).toBe('\\<ftp://example.com/a> \\<tel:+33123456789> \\<x-app:user@example.com>');
+    expectMarkdownToParse(markdown);
+  });
+
   it('leaves fenced and inline code untouched', () => {
     const markdown = sanitizeMarkdownForMdxPaste([
       'Inline: `<tag>` and `172.30.2.1 <-> 10.18.199.11`',

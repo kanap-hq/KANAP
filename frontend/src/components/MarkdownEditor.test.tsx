@@ -70,6 +70,17 @@ describe('MarkdownEditor: a stored text with HTML elements', () => {
     editor.unmount();
   });
 
+  it('shows an automatic link with another scheme as text', async () => {
+    const editor = await mountEditor('voir <ftp://exemple.test/a> ici');
+
+    expect(editor.showsRichText()).toBe(true);
+    expect(editor.content().querySelector('a')).toBeNull();
+    expect(editor.content().textContent).toBe('voir <ftp://exemple.test/a> ici');
+    expect(editor.onChange).not.toHaveBeenCalled();
+
+    editor.unmount();
+  });
+
   it('reads an automatic link as a link', async () => {
     const editor = await mountEditor('voir <https://exemple.test/a>');
 
@@ -143,6 +154,42 @@ describe('MarkdownEditor: a stored text with HTML elements', () => {
     expect(foreignMarkup(editor.content())).toEqual([]);
     expect(editor.content().textContent).toBe('avant <section>texte</section> souligné après');
     expect(editor.onChange).not.toHaveBeenCalled();
+
+    editor.unmount();
+  });
+});
+
+describe('MarkdownEditor: the preview of a link', () => {
+  const anchorsOutsideTheText = (content: HTMLElement) =>
+    Array.from(document.body.querySelectorAll('a')).filter((anchor) => !content.contains(anchor));
+
+  it.each([
+    ['a web address', 'https://exemple.test/a'],
+    ['a mail address', 'mailto:equipe@exemple.test'],
+    ['a path of the application', '/portfolio/tasks/T-1/overview'],
+    ['an anchor', '#suite'],
+  ])('opens %s', async (_name, address) => {
+    const editor = await mountEditor(`voir [le lien](${address}) ici`);
+
+    await editor.placeCaretInLink();
+
+    expect(anchorsOutsideTheText(editor.content()).map((anchor) => anchor.getAttribute('href'))).toEqual([address]);
+
+    editor.unmount();
+  });
+
+  it.each([
+    ['a file transfer address', 'ftp://exemple.test/a'],
+    ['a phone number', 'tel:+33123456789'],
+    ['a script scheme', 'javascript:void%200'],
+    ['a relative address', 'page.md'],
+  ])('shows %s as text, without a link', async (_name, address) => {
+    const editor = await mountEditor(`voir [le lien](${address}) ici`);
+
+    await editor.placeCaretInLink();
+
+    expect(document.body.textContent).toContain(address);
+    expect(anchorsOutsideTheText(editor.content())).toEqual([]);
 
     editor.unmount();
   });

@@ -264,6 +264,91 @@ function testThirdPartyTextKeepsItsTagsAsText() {
   );
 }
 
+/**
+ * A link or an image opens an `http`, `https` or `mailto` address, or an address without a
+ * scheme (a path, a query, an anchor). Any other address is refused on a write, with the code
+ * of a refused tag.
+ */
+function testLinksAndImagesOpenWebMailOrRelativeAddresses() {
+  const accepted: Array<[string, string]> = [
+    ['a web link', '[page](https://example.com/a?b=1#c)'],
+    ['a web link without encryption', '[page](http://example.com)'],
+    ['a web link in capitals', '[page](HTTPS://EXAMPLE.COM/A)'],
+    ['a mail link', '[write](mailto:support@example.com)'],
+    ['an automatic web link', 'See <https://example.com/a>.'],
+    ['an automatic mail link', 'Write to <support@example.com>.'],
+    ['a web address in a sentence', 'See https://example.com/a or www.example.com for more.'],
+    ['a path of the application', '[task](/portfolio/tasks/T-1/overview)'],
+    ['an anchor', '[section](#deployment)'],
+    ['a relative file', '[page](page.md)'],
+    ['a relative path', '[page](./guides/page.md#part) and [up](../index.md)'],
+    ['a relative path with an ampersand', '[page](R&D/page.md)'],
+    ['a query', '[tab](?tab=history)'],
+    ['a path with a colon after its first segment', '[time](/logs/12:30)'],
+    ['an image of the application', '![Diagram](/api/files/1 "Title")'],
+    ['a web image', '![Diagram](https://example.com/a.png)'],
+    ['a link by reference', '[page][ref]\n\n[ref]: https://example.com/a "Title"'],
+    ['a colon in a sentence', 'Ratio 3:4, see note: [none].'],
+    ['another address written in a sentence', 'Upload to ftp://example.com/in then call tel:+33123456789.'],
+  ];
+  for (const [name, text] of accepted) assertAccepted(name, text);
+
+  const refused: Array<[string, string, string]> = [
+    ['a file transfer link', 'Read [the file](ftp://example.com/a).', '[the file](ftp://example.com/a)'],
+    ['a phone link', '[call](tel:+33123456789)', '[call](tel:+33123456789)'],
+    ['a local file link', '[hosts](file:///etc/hosts)', '[hosts](file:///etc/hosts)'],
+    ['a link of another application', '[open](x-app:open?id=1)', '[open](x-app:open?id=1)'],
+    ['a scheme in capitals', '[page](FTP://EXAMPLE.COM)', '[page](FTP://EXAMPLE.COM)'],
+    ['an address between angle brackets', '[page](<ftp://example.com/a b>)', '[page](<ftp://example.com/a b>)'],
+    ['an escaped colon', '[page](ftp\\://example.com)', '[page](ftp\\://example.com)'],
+    ['a colon written as a character reference', '[page](ftp&#58;//example.com)', '[page](ftp&#58;//example.com)'],
+    ['a colon written as a named reference', '[page](ftp&colon;//example.com)', '[page](ftp&colon;//example.com)'],
+    ['an automatic link', 'See <ftp://example.com/a>.', '<ftp://example.com/a>'],
+    ['an image', '![Diagram](ftp://example.com/a.png)', '![Diagram](ftp://example.com/a.png)'],
+    ['an image that is no inline image', '![Diagram](data:text/plain,abc)', '![Diagram](data:text/plain,abc)'],
+    ['a link by reference', '[page][ref]\n\n[ref]: ftp://example.com/a', '[page][ref]'],
+    ['a link definition alone', 'Text.\n\n[ref]: ftp://example.com/a', '[ref]: ftp://example.com/a'],
+    ['a link in a table cell', table('[the file](ftp://example.com/a)'), '[the file](ftp://example.com/a)'],
+    ['a link in a list in a quote', '> - [the file](ftp://example.com/a)', '[the file](ftp://example.com/a)'],
+  ];
+  for (const [name, text, example] of refused) {
+    const refusal = refusalOf(text, 'notes');
+    assert.equal(refusal?.code, MARKDOWN_HTML_NOT_ALLOWED, `${name} is refused`);
+    assert.equal(refusal?.field, 'notes', name);
+    assert.equal(refusal?.example, example, name);
+  }
+
+  // Code shows an address, it opens none.
+  assertAccepted('an address in code', 'Use `[a](ftp://example.com)` or:\n\n```\n[a](ftp://example.com)\n```');
+  // A stored text keeps what it holds.
+  const stored = 'Read [the file](ftp://example.com/a).';
+  assert.equal(normalizeMarkdownRichText(stored, { storedContent: true }), stored);
+  // An inline image keeps its own refusal.
+  assert.throws(() => normalizeMarkdownRichText('![x](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA)'), /inline base64 images/);
+}
+
+/** In a text read from another system, a link or an image with another address stays, as text. */
+function testThirdPartyTextKeepsItsOtherAddressesAsText() {
+  const kept = (text: string) => String(normalizeMarkdownRichText(text, { fieldName: 'description', thirdPartyText: true }));
+  const cases: Array<[string, string, string]> = [
+    [
+      'a link among others',
+      'Read [the file](ftp://example.com/a) and [the page](https://example.com/b), then <b>stop</b>.',
+      'Read \\[the file](ftp://example.com/a) and [the page](https://example.com/b), then \\<b>stop\\</b>.',
+    ],
+    ['an automatic link', 'See <ftp://example.com/a> or <https://example.com/a>.', 'See \\<ftp://example.com/a> or <https://example.com/a>.'],
+    ['an image', 'Before ![Diagram](ftp://example.com/a.png) after.', 'Before !\\[Diagram](ftp://example.com/a.png) after.'],
+    ['a link by reference', '[page][ref] and [other][web]\n\n[ref]: ftp://example.com/a\n[web]: https://example.com', '\\[page][ref] and [other][web]\n\n\\[ref]: ftp://example.com/a\n[web]: https://example.com'],
+    ['a link in a cell', table('[the file](ftp://example.com/a)'), table('\\[the file](ftp://example.com/a)').trim()],
+  ];
+  for (const [name, text, expected] of cases) {
+    const stored = kept(text);
+    assert.equal(stored, expected, name);
+    assert.equal(refusalOf(stored), null, `${name}: the stored text passes the rule`);
+    assert.equal(kept(stored), stored, `${name}: read again, the text stays the same`);
+  }
+}
+
 function testTimeIsBoundedOnLongTexts() {
   const cases: Array<[string, string]> = [
     ['opening characters', '<a'.repeat(100_000)],
@@ -340,6 +425,8 @@ function run() {
   testTheRefusalNamesTheFieldAndTheTag();
   testStoredContentKeepsWhatItHolds();
   testThirdPartyTextKeepsItsTagsAsText();
+  testLinksAndImagesOpenWebMailOrRelativeAddresses();
+  testThirdPartyTextKeepsItsOtherAddressesAsText();
   testTimeIsBoundedOnLongTexts();
   testSampleDataIsAccepted();
   console.log('rich-text-html-rule.spec: ok');
