@@ -391,6 +391,38 @@ describe('AdminAiPage', () => {
     journalPage = EMPTY_JOURNAL;
   });
 
+  it('opens a failed journal line on its arguments alone when its message is not given to the reader', async () => {
+    journalPage = {
+      items: [
+        {
+          tool_execution_id: 'te-1', user_id: 'u1', user_name: 'Ana Silva', ai_api_key_id: 'k1', key_label: 'Laptop',
+          key_kind: 'api_key', oauth_client_name: null, oauth_redirect_host: null, capability_name: 'get_entity_detail',
+          result: 'failed', reason: 'not_found', error_message: null, output_summary: null, duration_ms: 12,
+          tool_created_at: '2026-10-27T09:40:00.000Z', input_summary: { arguments: { query: 'Sage' } },
+        },
+      ],
+      limit: 25,
+      offset: 0,
+      has_more: false,
+      facets: {
+        people: [{ id: 'u1', name: 'Ana Silva' }],
+        keys: [{ id: 'k1', label: 'Laptop', credential_kind: 'api_key', oauth_client_name: null, oauth_redirect_host: null, user_id: 'u1', revoked: false }],
+      },
+    };
+    renderPage();
+
+    // The line keeps how the call ended: the result and the coded reason.
+    const [row] = await screen.findAllByTestId('mcp-journal-row');
+    expect(row).toHaveTextContent('Failed · Record not found');
+    fireEvent.click(row);
+    const details = await screen.findByTestId('mcp-journal-details');
+    expect(within(details).getByText('query')).toBeInTheDocument();
+    expect(within(details).getByText('Sage')).toBeInTheDocument();
+    expect(within(details).queryByText('Cause')).not.toBeInTheDocument();
+    expect(details).not.toHaveTextContent(/null|undefined/);
+    journalPage = EMPTY_JOURNAL;
+  });
+
   it('shows the server address and a Claude Code command for a new key', async () => {
     const endpoint = `${window.location.origin}/api/ai/mcp`;
     (api.post as any).mockResolvedValueOnce({ data: { key: 'kanap_mcp_secret', record: { id: 'key-1' } } });
