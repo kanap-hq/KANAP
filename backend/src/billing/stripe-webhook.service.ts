@@ -26,6 +26,9 @@ import {
 
 type StripeEvent = any;
 
+/** Where a Stripe invoice status stands in the invoice's life: an invoice never goes back. */
+const INVOICE_STATUS_RANK: Record<string, number> = { draft: 0, open: 1, uncollectible: 2, paid: 3, void: 3 };
+
 @Injectable()
 export class StripeWebhookService implements OnModuleInit {
   private readonly logger = new Logger(StripeWebhookService.name);
@@ -385,13 +388,17 @@ export class StripeWebhookService implements OnModuleInit {
         }
       }
 
-      if (invoiceData) {
+      if (invoiceData && this.isEarlierInvoiceState(sub, invoiceData)) {
+        // Stripe does not send events in order: the latest invoice stays as already written.
+        this.logger.log(`Stripe event ${event?.id ?? 'unknown'} carries an earlier invoice state than the stored one: invoice fields kept`);
+      } else if (invoiceData) {
         const invoice = invoiceData;
         sub.latest_invoice_id = invoice.id ?? sub.latest_invoice_id ?? null;
         sub.latest_invoice_status = invoice.status ?? sub.latest_invoice_status ?? null;
-        sub.latest_invoice_number = invoice.number ?? sub.latest_invoice_number ?? null;
-        sub.latest_invoice_url = invoice.hosted_invoice_url ?? sub.latest_invoice_url ?? null;
-        sub.latest_invoice_pdf = invoice.invoice_pdf ?? sub.latest_invoice_pdf ?? null;
+        // The invoice's own number and links: a draft has none yet.
+        sub.latest_invoice_number = invoice.number ?? null;
+        sub.latest_invoice_url = invoice.hosted_invoice_url ?? null;
+        sub.latest_invoice_pdf = invoice.invoice_pdf ?? null;
         sub.last_payment_error_code = invoice.last_payment_error?.code ?? null;
         sub.last_payment_error_message = invoice.last_payment_error?.message ?? null;
         if (typeof invoice.total === 'number') {
@@ -434,6 +441,21 @@ export class StripeWebhookService implements OnModuleInit {
     if (identifiers.customerId) {
       await this.updateTenantStripeCustomer(tenantId, identifiers.customerId);
     }
+  }
+
+  /**
+   * True when an invoice event is older than the stored latest invoice: an earlier status of the
+   * same invoice (`open` after `paid`), or another invoice created before it.
+   */
+  private isEarlierInvoiceState(sub: Subscription, invoice: any): boolean {
+    if (!sub.latest_invoice_id || !invoice?.id) return false;
+    if (invoice.id === sub.latest_invoice_id) {
+      const stored = INVOICE_STATUS_RANK[sub.latest_invoice_status ?? ''];
+      const incoming = INVOICE_STATUS_RANK[invoice.status ?? ''];
+      return stored != null && incoming != null && incoming < stored;
+    }
+    const created = this.toDate(invoice.created);
+    return !!created && !!sub.latest_invoice_created && created.getTime() < sub.latest_invoice_created.getTime();
   }
 
   private async updateTenantStripeCustomer(tenantId: string, customerId: string): Promise<void> {

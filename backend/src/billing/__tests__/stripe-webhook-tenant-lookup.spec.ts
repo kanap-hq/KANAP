@@ -382,6 +382,52 @@ function invoiceEvent(type: string, invoice: Record<string, unknown>) {
   return { id: 'evt_inv', type, data: { object: { object: 'invoice', status: 'open', ...invoice } } };
 }
 
+/**
+ * Stripe does not send events in order. The latest invoice of the row never goes back to an
+ * earlier state of the same invoice (`paid` then `finalized`), nor to an older invoice; a new
+ * invoice brings its own number, none for a draft.
+ */
+const SUB_1_PARENT = { type: 'subscription_details', subscription_details: { subscription: 'sub_1', metadata: {} } };
+
+async function testInvoiceStatusNeverGoesBack() {
+  const { svc, row } = createSyncService({ stripe_subscription_id: 'sub_1' }, cloverSubscription());
+  const invoice = { id: 'in_1', customer: 'cus_1', number: 'KAN-0046', total: 24900, currency: 'eur', created: 1_792_000_000, parent: SUB_1_PARENT };
+  await svc.processEvent(invoiceEvent('invoice.paid', { ...invoice, status: 'paid' }));
+  await svc.processEvent(invoiceEvent('invoice.finalized', { ...invoice, status: 'open' }));
+  assert.equal(row.latest_invoice_id, 'in_1');
+  assert.equal(row.latest_invoice_status, 'paid', 'a late finalized event does not reopen a paid invoice');
+  assert.equal(row.latest_invoice_number, 'KAN-0046');
+
+  // An event of an older invoice arriving late leaves the latest one in place.
+  await svc.processEvent(invoiceEvent('invoice.paid', { ...invoice, id: 'in_0', number: 'KAN-0045', created: 1_789_000_000, status: 'paid' }));
+  assert.equal(row.latest_invoice_id, 'in_1');
+  assert.equal(row.latest_invoice_number, 'KAN-0046');
+}
+
+async function testDraftInvoiceHasNoNumber() {
+  const { svc, row } = createSyncService(
+    {
+      stripe_subscription_id: 'sub_1',
+      latest_invoice_id: 'in_1',
+      latest_invoice_status: 'paid',
+      latest_invoice_number: 'KAN-0045',
+      latest_invoice_url: 'https://invoice.stripe.test/in_1',
+      latest_invoice_pdf: 'https://invoice.stripe.test/in_1.pdf',
+      latest_invoice_created: new Date(1_789_000_000 * 1000),
+    },
+    cloverSubscription(),
+  );
+  await svc.processEvent(invoiceEvent('invoice.created', {
+    id: 'in_2', customer: 'cus_1', status: 'draft', number: null, hosted_invoice_url: null, invoice_pdf: null,
+    total: 24900, currency: 'eur', created: 1_792_000_000, parent: SUB_1_PARENT,
+  }));
+  assert.equal(row.latest_invoice_id, 'in_2');
+  assert.equal(row.latest_invoice_status, 'draft');
+  assert.equal(row.latest_invoice_number, null, 'a draft does not keep the number of the previous invoice');
+  assert.equal(row.latest_invoice_url, null);
+  assert.equal(row.latest_invoice_pdf, null);
+}
+
 async function testInvoiceWithoutTenantIsSetToA4() {
   const { svc, invoiceUpdates } = createSyncService({}, null, { tenantKnown: false });
   await svc.processEvent(invoiceEvent('invoice.finalized', { id: 'in_support', customer: 'cus_unknown' }));
@@ -453,6 +499,8 @@ async function run() {
   await testSubscriptionEventWithoutPeriodKeepsTheStoredDates();
   await testCancellationSetsTheEndDate();
   await testSyncWritesThePaymentModeAndTerm();
+  await testInvoiceStatusNeverGoesBack();
+  await testDraftInvoiceHasNoNumber();
   await testInvoiceWithoutTenantIsSetToA4();
   await testInvoiceAlreadyA4AndOtherEventsAreLeftAlone();
   await testStripeErrorOnA4DoesNotStopTheEvent();

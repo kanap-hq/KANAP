@@ -319,6 +319,22 @@ async function testRefreshClearsThePaymentTermOfACardSubscription() {
   assert.equal(summary.days_until_due, null);
 }
 
+/** The refresh takes the latest invoice's own number: a draft has none yet. */
+async function testRefreshGivesADraftNoNumber() {
+  const { service, manager } = createService(
+    storedSubscription({ latest_invoice_id: 'in_1', latest_invoice_number: 'KAN-0045', latest_invoice_status: 'paid' }),
+    3,
+    stripeSubscription(
+      { latest_invoice: { id: 'in_2', status: 'draft', number: null, hosted_invoice_url: null, invoice_pdf: null, total: 24900, currency: 'eur' } },
+      { current_period_start: PERIOD_START, current_period_end: PERIOD_END },
+    ),
+  );
+  const summary = await service.getSubscriptionSummary({ manager: manager as any, forceStripeRefresh: true });
+  assert.equal(summary.latest_invoice_id, 'in_2');
+  assert.equal(summary.latest_invoice_status, 'draft');
+  assert.equal(summary.latest_invoice_number, null);
+}
+
 async function run() {
   await testEstimateIsOneSubscription();
   await testTrialHasNoEstimate();
@@ -333,6 +349,7 @@ async function run() {
   await testLegacyTopLevelPeriodStillWorks();
   await testCancellationEndsInsteadOfRenewing();
   await testRefreshClearsThePaymentTermOfACardSubscription();
+  await testRefreshGivesADraftNoNumber();
 }
 
 void run();

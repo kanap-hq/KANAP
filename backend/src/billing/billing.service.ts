@@ -1423,9 +1423,10 @@ export class BillingService {
     if (latestInvoice) {
       sub.latest_invoice_id = latestInvoice.id ?? sub.latest_invoice_id ?? null;
       sub.latest_invoice_status = latestInvoice.status ?? sub.latest_invoice_status ?? null;
-      sub.latest_invoice_number = latestInvoice.number ?? sub.latest_invoice_number ?? null;
-      sub.latest_invoice_url = latestInvoice.hosted_invoice_url ?? sub.latest_invoice_url ?? null;
-      sub.latest_invoice_pdf = latestInvoice.invoice_pdf ?? sub.latest_invoice_pdf ?? null;
+      // The invoice's own number and links: a draft has none yet.
+      sub.latest_invoice_number = latestInvoice.number ?? null;
+      sub.latest_invoice_url = latestInvoice.hosted_invoice_url ?? null;
+      sub.latest_invoice_pdf = latestInvoice.invoice_pdf ?? null;
       if (typeof latestInvoice.total === 'number') sub.latest_invoice_amount = latestInvoice.total;
       if (latestInvoice.currency) sub.latest_invoice_currency = String(latestInvoice.currency).toUpperCase();
       if (latestInvoice.created) sub.latest_invoice_created = this.toDate(latestInvoice.created);
