@@ -14,6 +14,7 @@ import { AiAgentLlmClient, agentCallCostEur } from './ai-agent-llm-client';
 import type { TicketImageEvidence } from './ai-ticket-need-representation.types';
 import { isRecord } from '../../../common/object-guards';
 import { estimateJsonTokens } from './json-token-estimate';
+import { publicTicketItems } from './public-reply-sources';
 import { HTML_TAGS } from '../../../common/text-scan';
 
 export type PlannerActionType = string;
@@ -370,7 +371,9 @@ export class AiAgentActionPlannerService {
         priority: input.ticket.priority ?? null,
         updated_at: input.ticket.updatedAt ?? input.ticket.updated_at ?? null,
       },
-      recent_timeline: input.timeline.slice(-8).map((entry) => ({
+      // The planner may draft an administrative reply to the requester: it reads the public
+      // items of the ticket.
+      recent_timeline: publicTicketItems(input.timeline).slice(-8).map((entry) => ({
         actor: entry.actor,
         visibility: entry.visibility,
         created_at: entry.createdAt,

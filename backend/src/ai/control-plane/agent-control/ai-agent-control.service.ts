@@ -171,6 +171,7 @@ import {
   ReplySynthesisResult,
   ReplySynthesisSource,
 } from './ai-reply-synthesis.service';
+import { publicTicketItems } from './public-reply-sources';
 import {
   AiSharedContextProfileService,
   SharedContextProfileInput,
@@ -658,6 +659,7 @@ export type KnowledgeSearchItem = {
   // (LLM-fallback path), handed to synthesis as a candidate to judge. Set when presenting items
   // for the reply; absent for raw search/merge candidates. See applyKnowledgeInterpretation (#3).
   validation_status?: 'selected' | 'unvalidated' | null;
+  library_id?: string | null;
 };
 
 export type KnowledgeSearchAttempt = {
@@ -5192,11 +5194,14 @@ export class AiAgentControlService {
     );
     const ticketTimeline = buildTicketTimeline(ticket, ticketNotesData.notes, kanapPublicBodies);
     const conversationGate = evaluateConversationGate(priorTargetActions, ticketTimeline, ticketNotesData.notes);
+    // The stages below feed the reply to the requester (need, searches, source choice, reply):
+    // they read the public items of the ticket. The internal note reads the whole timeline.
+    const publicTimeline = publicTicketItems(ticketTimeline);
     const ticketForKnowledge = {
       ...ticket,
       description: [
         ticket.description,
-        ...ticketTimeline
+        ...publicTimeline
           .filter((entry) => entry.actor === 'requester_candidate')
           .slice(-4)
           .map((entry) => entry.body),
@@ -5337,7 +5342,7 @@ export class AiAgentControlService {
     }
 
     let knowledgeNeedRepresentation: TicketNeedRepresentationBuildResult | null = null;
-    const fallbackPreferenceTerms = extractKnowledgePreferenceTerms(ticketTimeline).positiveTerms;
+    const fallbackPreferenceTerms = extractKnowledgePreferenceTerms(publicTimeline).positiveTerms;
     const shortFallbackKnowledgeQueries = uniqueKnowledgeCandidates([
       ...fallbackPreferenceTerms,
       fallbackPreferenceTerms.slice(0, 4).join(' '),
@@ -5355,7 +5360,7 @@ export class AiAgentControlService {
     if (this.ticketNeedBuilder) {
       const needInput = {
         ticket,
-        timeline: ticketTimeline,
+        timeline: publicTimeline,
         imageEvidence: ticketImageExtraction.evidence,
         profile: promptRuntime.plannerGuidance,
       };
@@ -5455,7 +5460,7 @@ export class AiAgentControlService {
       // Knowledge search is disabled for this agent — gather no KANAP knowledge so the
       // triage relies on the LLM (and web, when enabled). The plan/interpretation are kept
       // as valid empty structures for the downstream audit metadata.
-      knowledgeSearchPlan = buildFallbackKnowledgeSearchPlan(ticket, ticketTimeline, []);
+      knowledgeSearchPlan = buildFallbackKnowledgeSearchPlan(ticket, publicTimeline, []);
       knowledgeQueryCandidates = [];
       knowledgeInterpretation = buildFallbackKnowledgeInterpretation(knowledgeSearchPlan, []);
     } else {
@@ -5485,10 +5490,10 @@ export class AiAgentControlService {
         : this.knowledgePlanner
         ? await this.knowledgePlanner.planKnowledgeSearch(context, {
           ticket,
-          timeline: ticketTimeline,
+          timeline: publicTimeline,
           profile: promptRuntime.plannerGuidance,
         })
-        : buildFallbackKnowledgeSearchPlan(ticket, ticketTimeline, deterministicKnowledgeQueries);
+        : buildFallbackKnowledgeSearchPlan(ticket, publicTimeline, deterministicKnowledgeQueries);
       knowledgeSearchPlan = {
         ...plannedKnowledgeSearch,
         queries: this.ticketNeedBuilder
@@ -5536,7 +5541,7 @@ export class AiAgentControlService {
         ? await this.knowledgePlanner.interpretKnowledgeResults(context, {
           plan: knowledgeSearchPlan,
           ticket,
-          timeline: ticketTimeline,
+          timeline: publicTimeline,
           candidates: plannerCandidatesFromKnowledge(mergedKnowledgeCandidates),
           profile: promptRuntime.interpreterGuidance,
         })
@@ -5640,7 +5645,7 @@ export class AiAgentControlService {
     let webSearchQuery: string | null = null;
     let webSearchError: string | null = null;
     const webQueryCandidates = knowledgeSources.webEnabled && Features.AI_WEB_SEARCH_READY
-      ? buildWebSearchQueryCandidates(ticketForKnowledge, ticketTimeline, knowledgeQueryCandidates)
+      ? buildWebSearchQueryCandidates(ticketForKnowledge, publicTimeline, knowledgeQueryCandidates)
       : [];
     if (knowledgeSources.webEnabled && Features.AI_WEB_SEARCH_READY) {
       const webQuery = webQueryCandidates[0] ?? trimmedString(ticket.title) ?? '';
@@ -5722,6 +5727,7 @@ export class AiAgentControlService {
         imageEvidence: ticketImageExtraction.evidence,
         interpretation: serializeKnowledgeInterpretation(knowledgeInterpretation),
         profile: promptRuntime.synthesisGuidance,
+        citableLibraryIds: knowledgeSources.knowledgeLibraryIds,
       });
       synthesisProjection = estimateReplySynthesisUsage({
         systemPrompt: compileSystemPrompt(RUNTIME_SAFETY_FLOOR_SYNTHESIS, promptRuntime.synthesisGuidance),
@@ -5765,6 +5771,7 @@ export class AiAgentControlService {
             imageEvidence: ticketImageExtraction.evidence,
             interpretation: serializeKnowledgeInterpretation(knowledgeInterpretation),
             profile: promptRuntime.synthesisGuidance,
+            citableLibraryIds: knowledgeSources.knowledgeLibraryIds,
           });
           if (replySynthesisResult.fallback_reason) {
             synthesisFallbackReason = replySynthesisResult.fallback_reason;
