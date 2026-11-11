@@ -1,5 +1,6 @@
 import * as assert from 'node:assert/strict';
-import { isPersonRun, runResultAccess } from '../control-plane/evidence/run-result-visibility';
+import { AiEvidenceService } from '../control-plane/evidence/ai-evidence.service';
+import { inputWithoutValues, isPersonRun, runResultAccess } from '../control-plane/evidence/run-result-visibility';
 
 // Which runs belong to a person, and who reads what their tools returned.
 
@@ -53,8 +54,31 @@ async function testWhoReadsAResult() {
   assert.equal(asked, 1);
 }
 
+function testTheInputOfACallWithoutItsValues() {
+  const summaries = new AiEvidenceService(null as any);
+  // The summary the dispatcher keeps of a tool's input names its arguments.
+  const input = { entity_type: 'contracts', query: 'Renewal 2027' };
+  const kept = summaries.summarize(input);
+  assert.equal(kept.summary, 'Object keys: entity_type, query');
+  assert.equal(inputWithoutValues(kept)?.summary, 'Object keys: entity_type, query');
+  // An MCP call keeps the values next to it.
+  const withValues = inputWithoutValues({ ...kept, arguments: input });
+  assert.equal(withValues?.summary, 'Object keys: entity_type, query');
+  assert.equal(JSON.stringify(withValues).includes('Renewal 2027'), false);
+  // A summary that quotes its input, and an input kept as values alone, leave nothing.
+  for (const quoted of [summaries.summarize('Renewal 2027'), summaries.summarize(['Renewal 2027'])]) {
+    assert.equal(JSON.stringify(inputWithoutValues(quoted) ?? null).includes('Renewal 2027'), false);
+    assert.equal(inputWithoutValues(quoted)?.summary, undefined);
+  }
+  assert.equal(inputWithoutValues({ arguments: input }), null);
+  assert.equal(inputWithoutValues(null), null);
+  assert.equal(inputWithoutValues('Renewal 2027'), null);
+  assert.equal(inputWithoutValues([input]), null);
+}
+
 async function main() {
   testOriginOfARun();
+  testTheInputOfACallWithoutItsValues();
   await testWhoReadsAResult();
   console.log('ai-run-result-visibility.spec: all passed');
 }

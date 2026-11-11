@@ -15,6 +15,7 @@ import { AiRecommendation } from '../entities/ai-recommendation.entity';
 import { AiRunStep } from '../entities/ai-run-step.entity';
 import { AiRun } from '../entities/ai-run.entity';
 import { AiToolExecution } from '../entities/ai-tool-execution.entity';
+import { inputWithoutValues } from '../evidence/run-result-visibility';
 import { cleanAgentPriority, metadataObject, stringFromMetadata, toIso } from './agent-control-util';
 import { auditActivityType } from './ai-agent-activity-timeline';
 
@@ -27,7 +28,7 @@ import { auditActivityType } from './ai-agent-activity-timeline';
  *
  * A run, its steps, its tool executions and its evidence carry what the tools returned. Their
  * serialisers take `resultsReadable` (evidence/run-result-visibility.ts): without it the line
- * stays and the result is left out.
+ * stays and the result is left out, with the values of the arguments the call was made with.
  */
 
 export function serializeRun(run: AiRun, resultsReadable: boolean) {
@@ -41,7 +42,7 @@ export function serializeRun(run: AiRun, resultsReadable: boolean) {
     invocation_channel: run.invocation_channel,
     trigger_kind: run.trigger_kind,
     status: run.status,
-    input_summary: run.input_summary,
+    input_summary: resultsReadable ? run.input_summary : inputWithoutValues(run.input_summary),
     output_summary: resultsReadable ? run.output_summary : null,
     usage_json: run.usage_json,
     cost_json: run.cost_json,
@@ -67,7 +68,7 @@ export function serializeToolExecution(tool: AiToolExecution, resultsReadable: b
     effect: tool.effect,
     status: tool.status,
     input_hash: tool.input_hash,
-    input_summary: tool.input_summary,
+    input_summary: resultsReadable ? tool.input_summary : inputWithoutValues(tool.input_summary),
     output_summary: resultsReadable ? tool.output_summary : null,
     error_message: tool.error_message,
     duration_ms: tool.duration_ms,
@@ -89,7 +90,7 @@ export function serializeRunStep(step: AiRunStep, resultsReadable: boolean) {
     status: step.status,
     capability_name: step.capability_name,
     capability_version: step.capability_version,
-    input_summary: step.input_summary,
+    input_summary: resultsReadable ? step.input_summary : inputWithoutValues(step.input_summary),
     output_summary: resultsReadable ? step.output_summary : null,
     error_message: step.error_message,
     started_at: toIso(step.started_at),

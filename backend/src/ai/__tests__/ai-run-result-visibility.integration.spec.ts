@@ -53,7 +53,7 @@ const control = new AiAgentControlService(
 const journal = new AiMcpAuditService(policy());
 
 type People = { author: string; agentReader: string; settingsAdmin: string; administrator: string };
-type Runs = { chat: string; mcp: string; approval: string; agent: string };
+type Runs = { chat: string; mcp: string; approval: string; agent: string; mcpFailed: string };
 type Seed = { tenantId: string; people: People; runs: Runs };
 
 // What each tool returned. A value of a person's run must reach nobody but its readers.
@@ -63,8 +63,14 @@ const RESULTS = {
   approval: [{ reference: `PRJ-${TAG}-approval`, status: 'executed' }],
   agent: [{ reference: `T-${TAG}-agent`, title: 'Printer offline' }],
 };
+type ResultRun = keyof typeof RESULTS;
 const PERSON_RUNS = ['chat', 'mcp', 'approval'] as const;
-const marker = (run: keyof typeof RESULTS) => String(RESULTS[run][0].reference);
+const marker = (run: ResultRun) => String(RESULTS[run][0].reference);
+
+// The values a person gave to an MCP tool. The journal of the administration shows them; the
+// agents screens show the names of the arguments.
+const ARGUMENT_VALUES = { mcp: `Renewal ${TAG} mcp`, mcpFailed: `Renewal ${TAG} failed` };
+const MCP_RUNS = ['mcp', 'mcpFailed'] as const;
 
 async function seed(): Promise<Seed> {
   const tenantId = randomUUID();
@@ -73,7 +79,7 @@ async function seed(): Promise<Seed> {
   const agentReader = ids();
   const settingsAdmin = ids();
   const administrator = ids();
-  const runs: Runs = { chat: randomUUID(), mcp: randomUUID(), approval: randomUUID(), agent: randomUUID() };
+  const runs: Runs = { chat: randomUUID(), mcp: randomUUID(), approval: randomUUID(), agent: randomUUID(), mcpFailed: '' };
   const runner = dataSource.createQueryRunner();
   await runner.connect();
   try {
@@ -108,7 +114,7 @@ async function seed(): Promise<Seed> {
     await person(administrator, 'Administrator', 'administrator', []);
 
     const run = async (
-      key: keyof Runs,
+      key: ResultRun,
       origin: { channel: string; trigger: string; surface: string },
       capability: string,
       input: Record<string, unknown>,
@@ -141,8 +147,9 @@ async function seed(): Promise<Seed> {
       );
     };
     await run('chat', { channel: 'chat', trigger: 'human_user', surface: 'chat' }, 'query_entities', { entity_type: 'budget_lines' });
-    await run('mcp', { channel: 'mcp', trigger: 'mcp_client', surface: 'mcp' }, 'get_entity_detail', { entity_type: 'contracts', id: 'CTR-1' }, {
-      inputSummary: { ...summaries.summarize({ entity_type: 'contracts', id: 'CTR-1' }), arguments: { entity_type: 'contracts', id: 'CTR-1' } },
+    const mcpInput = { entity_type: 'contracts', id: 'CTR-1', query: ARGUMENT_VALUES.mcp };
+    await run('mcp', { channel: 'mcp', trigger: 'mcp_client', surface: 'mcp' }, 'get_entity_detail', mcpInput, {
+      inputSummary: { ...summaries.summarize(mcpInput), arguments: mcpInput },
     });
     await run('approval', { channel: 'internal', trigger: 'human_user', surface: 'internal' }, 'execute_approved_preview', { preview_ids: [randomUUID()] }, {
       metadata: { transport: 'chat_approval_marker' },
@@ -150,6 +157,22 @@ async function seed(): Promise<Seed> {
     await run('agent', { channel: 'internal', trigger: 'internal', surface: 'internal' }, 'ticketing.ticket.get', { ticket_id: '42' }, {
       metadata: { agent_definition_id: randomUUID() },
     });
+    // A call that failed before the dispatch kept anything, as the MCP route records it.
+    await journal.recordCall({ tenantId, manager: runner.manager }, {
+      toolName: 'get_entity_detail',
+      arguments: { entity_type: 'contracts', query: ARGUMENT_VALUES.mcpFailed },
+      reason: 'not_found',
+      message: 'Contract not found.',
+      effect: 'read',
+      capabilityVersion: '1.0.0',
+      durationMs: 7,
+      userId: author.user,
+    });
+    const recorded = await runner.query(
+      `SELECT id::text AS id FROM ai_runs WHERE tenant_id = $1 AND invocation_channel = 'mcp' AND status = 'failed'`,
+      [tenantId],
+    );
+    runs.mcpFailed = String(recorded[0].id);
     await runner.commitTransaction();
   } catch (error) {
     await runner.rollbackTransaction();
@@ -192,7 +215,13 @@ const RESULT_READS: Array<{ name: string; read: (ctx: Ctx, seed: Seed) => Promis
 ];
 
 function pick(s: Seed, of: (runId: string) => unknown): Record<keyof Runs, unknown> {
-  return { chat: of(s.runs.chat), mcp: of(s.runs.mcp), approval: of(s.runs.approval), agent: of(s.runs.agent) };
+  return {
+    chat: of(s.runs.chat),
+    mcp: of(s.runs.mcp),
+    approval: of(s.runs.approval),
+    agent: of(s.runs.agent),
+    mcpFailed: of(s.runs.mcpFailed),
+  };
 }
 
 function as<T>(s: Seed, userId: string, fn: (ctx: Ctx) => Promise<T>, before?: (manager: EntityManager) => Promise<void>): Promise<T> {
@@ -209,13 +238,16 @@ async function resultsSeen(s: Seed, userId: string, before?: (manager: EntityMan
     const answer = await as(s, userId, (ctx) => path.read(ctx, s), before);
     seen[path.name] = Object.fromEntries((Object.keys(answer) as Array<keyof Runs>).map((key) => {
       const text = JSON.stringify(answer[key]);
-      return [key, { text, hasResult: text.includes(marker(key)) }];
+      return [key, { text, hasResult: key in RESULTS && text.includes(marker(key as ResultRun)) }];
     })) as Record<keyof Runs, { text: string; hasResult: boolean }>;
   }
   return seen;
 }
 
-const journalReads = (path: string, run: keyof Runs) => path !== 'GET ai/admin/mcp-audit' || run === 'mcp';
+const JOURNAL = 'GET ai/admin/mcp-audit';
+const journalReads = (path: string, run: keyof Runs) => path !== JOURNAL || (MCP_RUNS as readonly string[]).includes(run);
+// The routes of the agents screens: the journal belongs to the administration.
+const AGENT_SCREEN_READS = RESULT_READS.filter((entry) => entry.name !== JOURNAL);
 
 async function testOtherPeoplesRunsShowTheirLineWithoutTheResult(s: Seed) {
   for (const reader of [s.people.agentReader, s.people.settingsAdmin]) {
@@ -251,6 +283,47 @@ async function testOtherPeoplesRunsShowTheirLineWithoutTheResult(s: Seed) {
     assert.equal(line.capability_name, 'get_entity_detail');
     assert.equal(line.user_id, s.people.author);
     assert.equal(line.output_summary, null);
+  }
+}
+
+async function testTheAgentsScreensNameTheArgumentsOfAnotherPersonsMcpCall(s: Seed) {
+  for (const reader of [s.people.agentReader, s.people.settingsAdmin]) {
+    const seen = await resultsSeen(s, reader);
+    for (const path of AGENT_SCREEN_READS) {
+      for (const run of MCP_RUNS) {
+        const { text } = seen[path.name][run];
+        assert.equal(text.includes(ARGUMENT_VALUES[run]), false, `${path.name} gave an argument value of the ${run} call: ${text.slice(0, 400)}`);
+        assert.ok(text.includes(s.runs[run]), `${path.name} lost the line of the ${run} call`);
+        assert.ok(text.includes(s.people.author), `${path.name} lost the author of the ${run} call`);
+      }
+    }
+    // The tool and the names of its arguments stay.
+    const detail: any = await as(s, reader, (ctx) => control.getRunDetail(ctx as any, s.runs.mcp));
+    for (const line of [detail.tool_executions[0], detail.run_steps[0]]) {
+      assert.equal(line.capability_name, 'get_entity_detail');
+      assert.equal(line.input_summary.summary, 'Object keys: entity_type, id, query');
+      assert.equal('arguments' in line.input_summary, false);
+    }
+    const failed: any = await as(s, reader, (ctx) => control.getRunDetail(ctx as any, s.runs.mcpFailed));
+    assert.equal(failed.tool_executions[0].capability_name, 'get_entity_detail');
+    assert.equal(failed.tool_executions[0].status, 'failed');
+    assert.equal(failed.tool_executions[0].input_summary, null);
+    assert.equal(failed.run.input_summary, null);
+  }
+  // The journal of the administration keeps the values: it is where a call is read with its arguments.
+  const page = await as(s, s.people.settingsAdmin, (ctx) => journal.list(ctx as any, { limit: 100 }));
+  for (const run of MCP_RUNS) {
+    const line: any = page.items.find((item) => item.run_id === s.runs[run])!;
+    assert.equal(line.input_summary.arguments.query, ARGUMENT_VALUES[run]);
+  }
+  // The person who made the call and an Administrator read the values on the agents screens too.
+  for (const reader of [s.people.author, s.people.administrator]) {
+    const seen = await resultsSeen(s, reader);
+    for (const path of AGENT_SCREEN_READS) {
+      for (const run of MCP_RUNS) {
+        assert.ok(seen[path.name][run].text.includes(ARGUMENT_VALUES[run]), `${path.name} lost an argument value of the ${run} call for its reader`);
+      }
+    }
   }
 }
 
@@ -335,6 +408,7 @@ async function main() {
   await dataSource.initialize();
   const tests: Array<[string, (s: Seed) => Promise<void> | void]> = [
     ['other people\'s runs show their line without the result', testOtherPeoplesRunsShowTheirLineWithoutTheResult],
+    ['the agents screens name the arguments of another person\'s MCP call, without their values', testTheAgentsScreensNameTheArgumentsOfAnotherPersonsMcpCall],
     ['an agent run stays readable in full', testAnAgentRunStaysReadableInFull],
     ['the author reads their own results', testTheAuthorReadsTheirOwnResults],
     ['an Administrator with all data reads every result', testAnAdministratorWithAllDataReadsEveryResult],
