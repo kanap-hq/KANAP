@@ -1,4 +1,4 @@
-import { AGENT_NAME, COMPANY_NAME, PRODUCT_NAME } from '../../config/product';
+import { AGENT_NAME, PRODUCT_NAME } from '../../config/product';
 import type { EmailStrings } from './en';
 
 export const de: EmailStrings = {
@@ -300,7 +300,7 @@ export const de: EmailStrings = {
     j0: {
       subject: `Willkommen in Ihrem ${PRODUCT_NAME}-Arbeitsbereich`,
       ready: 'Ihr Arbeitsbereich {{workspace}} ist bereit.',
-      founder: `Ich bin Friedrich, der Gründer von ${COMPANY_NAME}. Als IT-Leiter von Beruf habe ich dieses Werkzeug aus meinen eigenen Schwierigkeiten heraus gebaut: überall verstreute Excel-Dateien und ein anderes Werkzeug für jede Facette des Informationssystems. ${PRODUCT_NAME} vereint all das in einem einzigen Arbeitsbereich.`,
+      founder: `Ich bin Friedrich, der Gründer von ${PRODUCT_NAME}. Als IT-Leiter von Beruf habe ich dieses Werkzeug aus meinen eigenen Schwierigkeiten heraus gebaut: überall verstreute Excel-Dateien und ein anderes Werkzeug für jede Facette des Informationssystems. ${PRODUCT_NAME} vereint all das in einem einzigen Arbeitsbereich.`,
       angle: 'In erster Linie führt Sie {{angle}} zu uns. Um selbstständig zu testen, folgen Sie der Anleitung „Ihre ersten fünf Schritte“ auf Ihrer Startseite. Jeder Schritt wird auf der Seite {{guide}} ausführlich erklärt. Ich lade Sie auch ein, die beiden anderen Pfade auszuprobieren: {{other1}}, {{other2}}.',
       guideTitles: {
         budget: `„Ihr IT-Budget in ${PRODUCT_NAME} in zehn Minuten“`,

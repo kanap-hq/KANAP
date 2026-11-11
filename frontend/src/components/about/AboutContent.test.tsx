@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import AboutContent from './AboutContent';
-import { COMPANY_NAME, PRODUCT_NAME } from '../../config/product';
+import { PRODUCT_NAME } from '../../config/product';
 
 // The path line reads the onboarding API: covered by its own test.
 vi.mock('../onboarding/AboutOnboardingLine', () => ({ default: () => null }));
@@ -193,7 +193,7 @@ describe('AboutContent', () => {
     const href = mail.getAttribute('href') ?? '';
     expect(href.startsWith('mailto:support@kadratis.com?')).toBe(true);
     const params = new URLSearchParams(href.slice(href.indexOf('?') + 1));
-    expect(params.get('subject')).toBe(`${COMPANY_NAME} support: Acme / acme`);
+    expect(params.get('subject')).toBe(`${PRODUCT_NAME} support: Acme / acme`);
     expect(params.get('body')).toContain(`${PRODUCT_NAME} version: 26.10.1`);
     expect(params.get('body')).toContain('Workspace: Acme / acme');
     expect(params.get('body')).toContain('Deployment: cloud');

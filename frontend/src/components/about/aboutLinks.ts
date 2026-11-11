@@ -1,4 +1,4 @@
-import { COMPANY_NAME, PRODUCT_NAME } from '../../config/product';
+import { PRODUCT_NAME } from '../../config/product';
 import { RELEASES_URL } from '../../utils/docUrls';
 
 export const SITE_URL = 'https://kadratis.com';
@@ -41,7 +41,7 @@ export function buildSupportInfo(info: SupportInfo): string {
 }
 
 export function buildSupportMailto(info: SupportInfo): string {
-  const subject = info.workspace ? `${COMPANY_NAME} support: ${info.workspace}` : `${COMPANY_NAME} support`;
+  const subject = info.workspace ? `${PRODUCT_NAME} support: ${info.workspace}` : `${PRODUCT_NAME} support`;
   const body = `\n\n---\n${buildSupportInfo(info)}`;
   return `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }

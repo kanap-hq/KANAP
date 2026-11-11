@@ -63,7 +63,7 @@ function testOrganisationNameRule() {
 }
 
 function testCloudSender() {
-  assert.equal(workspaceEmailSender('Acme'), `"Acme via ${PRODUCT_NAME}" <no-reply@kanap.net>`);
+  assert.equal(workspaceEmailSender('Acme'), `"Acme via ${PRODUCT_NAME}" <no-reply@kadratis.com>`);
   assert.equal(workspaceEmailSender(null), undefined, 'no organisation name: the default sender');
   assert.equal(workspaceEmailSender('  '), undefined);
   withEnv('RESEND_FROM_EMAIL', 'Operations <ops@mail.example.test>', () => {
@@ -76,7 +76,7 @@ function testCloudSender() {
   const forged = workspaceEmailSender('Evil"\r\nBcc: victim@example.test <x@y>');
   assert.ok(forged);
   assert.doesNotMatch(forged!, /[\r\n]/);
-  assert.equal(forged, `"Evil\\" Bcc: victim@example.test <x@y> via ${PRODUCT_NAME}" <no-reply@kanap.net>`);
+  assert.equal(forged, `"Evil\\" Bcc: victim@example.test <x@y> via ${PRODUCT_NAME}" <no-reply@kadratis.com>`);
   // On-premise the installer's SMTP_FROM stays as it is.
   withEnv('DEPLOYMENT_MODE', 'single-tenant', () => {
     assert.equal(workspaceEmailSender('Acme'), undefined);
@@ -100,7 +100,7 @@ async function testPasswordResetNamesTheOrganisation() {
   assert.equal(delivered.length, 1);
   const [mail] = delivered;
   assert.equal(mail.subject, 'Reset your password on Acme');
-  assert.equal(mail.from, `"Acme via ${PRODUCT_NAME}" <no-reply@kanap.net>`);
+  assert.equal(mail.from, `"Acme via ${PRODUCT_NAME}" <no-reply@kadratis.com>`);
   // No tenant logo: the header names the organisation, and the product logo is not attached.
   assert.match(mail.html, /<span[^>]*>Acme<\/span>/);
   assert.equal(mail.attachments?.length ?? 0, 0);
