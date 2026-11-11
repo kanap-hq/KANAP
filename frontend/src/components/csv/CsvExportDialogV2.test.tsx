@@ -44,6 +44,8 @@ describe('CsvExportDialogV2', () => {
   it('writes the file in the screen language, and says so', async () => {
     render(<CsvExportDialogV2 open onClose={() => undefined} endpoint="/assets" />);
     expect(await screen.findByText('csv.exportDescriptionFlexible')).toBeInTheDocument();
+    expect(screen.getAllByText('csv.exportPreset').length).toBeGreaterThan(0);
+    expect(screen.getByText('csv.fieldsSelected')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'csv.exportData' }));
     await waitFor(() => expect(get).toHaveBeenCalledWith('/assets/export', expect.objectContaining({
       params: expect.objectContaining({ scope: 'data', language: 'fr' }),
