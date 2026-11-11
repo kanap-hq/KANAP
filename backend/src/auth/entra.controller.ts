@@ -34,6 +34,11 @@ export function ssoFailureReason(error: unknown): AuthEventReason {
   return 'sso_failed';
 }
 
+/** A query value as text, cut to `max` characters; null when it is not a single string. */
+function boundedQueryText(value: unknown, max: number): string | null {
+  return typeof value === 'string' ? value.slice(0, max) : null;
+}
+
 @Controller('auth/entra')
 export class EntraController {
   constructor(
@@ -339,7 +344,8 @@ export class EntraController {
   /**
    * Return from the Microsoft admin-consent screen. Nothing is read or written unless the state
    * was signed by this application for consent and is within its lifetime; the workspace is the
-   * one the state names.
+   * one the state names. The consent counts as granted only when the directory that answered is
+   * the one the workspace is connected to.
    */
   private async handleConsentCallback(state: string, req: any, res: Response) {
     const { tenantId } = this.entra.verifyConsentState(state.slice('consent:'.length));
@@ -347,13 +353,13 @@ export class EntraController {
     if (!tenant) {
       throw new BadRequestException('Tenant not found');
     }
-    const consentedDirectory = typeof req.query?.tenant === 'string' ? req.query.tenant : null;
+    const consentedDirectory = boundedQueryText(req.query?.tenant, 100);
     const granted =
       String(req.query?.admin_consent ?? '').toLowerCase() === 'true'
-      && (!consentedDirectory || consentedDirectory === tenant.entra_tenant_id);
-    const error = typeof req.query?.error_description === 'string'
-      ? req.query.error_description
-      : typeof req.query?.error === 'string' ? req.query.error : null;
+      && !!tenant.entra_tenant_id
+      && consentedDirectory === tenant.entra_tenant_id;
+    // The provider's text, kept for the administrators who read the audit log.
+    const error = boundedQueryText(req.query?.error_description, 300) ?? boundedQueryText(req.query?.error, 300);
 
     await withTenant(this.dataSource, tenant.id, (manager) =>
       this.audit.log(

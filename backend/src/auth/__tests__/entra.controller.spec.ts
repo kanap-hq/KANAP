@@ -664,6 +664,62 @@ async function testConsentReturnNeedsAStateSignedForConsent() {
   await assert.rejects(() => h.entra.handleCallback({ code: 'code-1', state: consentToken }), /Invalid Entra state/);
 }
 
+/**
+ * With a valid state, the entry is written in the workspace the state names, and the consent is
+ * granted only when the directory that answered is the one the workspace is connected to.
+ */
+async function testConsentIsGrantedOnlyForTheWorkspaceDirectory() {
+  const granted = consentHarness();
+  // Microsoft answers `admin_consent=True`.
+  await granted.back({ state: granted.consentState(WORKSPACE_A), admin_consent: 'True', tenant: WORKSPACE_A.entra_tenant_id });
+  assert.equal(granted.auditEntries.length, 1);
+  assert.equal(granted.auditEntries[0].workspace, WORKSPACE_A.id, 'written in the workspace of the state');
+  assert.equal(granted.auditEntries[0].entry.recordId, WORKSPACE_A.id);
+  assert.equal(granted.auditEntries[0].entry.sourceRef, 'entra-admin-consent');
+  assert.deepEqual(granted.auditEntries[0].entry.after, {
+    directory_sync_consent: true,
+    error: null,
+    consented_directory: WORKSPACE_A.entra_tenant_id,
+  });
+  assert.deepEqual(granted.lookups, [WORKSPACE_A.id], 'no other workspace is read');
+  assert.deepEqual(granted.syncs, [WORKSPACE_A.id]);
+  assert.deepEqual(granted.droppedTokens, [WORKSPACE_A.entra_tenant_id]);
+  assert.deepEqual(granted.redirects, ['http://alpha.lvh.me/admin/auth?consent=success']);
+
+  const notGranted: Array<[string, Record<string, unknown>, Array<Record<string, any>>?]> = [
+    ['no directory in the answer', { admin_consent: 'true' }],
+    ['another directory', { admin_consent: 'true', tenant: WORKSPACE_B.entra_tenant_id }],
+    ['a directory given twice', { admin_consent: 'true', tenant: [WORKSPACE_A.entra_tenant_id, WORKSPACE_A.entra_tenant_id] }],
+    ['consent refused', { admin_consent: 'false', tenant: WORKSPACE_A.entra_tenant_id }],
+    ['a workspace without a directory', { admin_consent: 'true', tenant: 'null' }, [{ ...WORKSPACE_A, sso_provider: 'none', entra_tenant_id: null }]],
+    ['a workspace without a directory, no directory in the answer', { admin_consent: 'true' }, [{ ...WORKSPACE_A, sso_provider: 'none', entra_tenant_id: null }]],
+  ];
+  for (const [label, query, workspaces] of notGranted) {
+    const h = consentHarness(workspaces);
+    await h.back({ state: h.consentState(WORKSPACE_A), ...query });
+    assert.equal(h.auditEntries.length, 1, `${label}: one entry`);
+    assert.equal(h.auditEntries[0].workspace, WORKSPACE_A.id, `${label}: in the workspace of the state`);
+    assert.equal(h.auditEntries[0].entry.after.directory_sync_consent, false, `${label}: not granted`);
+    assert.deepEqual(h.syncs, [], `${label}: no directory sync`);
+    assert.deepEqual(h.droppedTokens, [], `${label}: no application token dropped`);
+    assert.deepEqual(h.redirects, ['http://alpha.lvh.me/admin/auth?consent=error'], label);
+  }
+
+  // The provider's text is kept for a valid state, cut to a bounded length.
+  const long = consentHarness();
+  await long.back({
+    state: long.consentState(WORKSPACE_A),
+    admin_consent: 'false',
+    error: 'access_denied',
+    error_description: 'd'.repeat(5000),
+    tenant: 't'.repeat(5000),
+  });
+  const after = long.auditEntries[0].entry.after;
+  assert.equal(after.directory_sync_consent, false);
+  assert.ok(after.error.length <= 300 && after.error.startsWith('ddd'), 'the error text is bounded');
+  assert.ok(after.consented_directory.length <= 100, 'the directory text is bounded');
+}
+
 /** Runs `fn` with the given environment values, then restores them. */
 async function withEnv(values: Record<string, string | undefined>, fn: () => Promise<void>) {
   const previous = new Map<string, string | undefined>();
@@ -693,6 +749,10 @@ async function run() {
   await testRefusedSsoSessionsAreRecorded();
   await withEnv({ APP_ENV: 'development', NODE_ENV: undefined }, testFailedSsoRoundTripsAreRecordedInATrustedTenant);
   await withEnv({ ENTRA_STATE_SECRET: 'entra-controller-spec-state-secret' }, testConsentReturnNeedsAStateSignedForConsent);
+  await withEnv(
+    { APP_ENV: 'development', NODE_ENV: undefined, ENTRA_STATE_SECRET: 'entra-controller-spec-state-secret' },
+    testConsentIsGrantedOnlyForTheWorkspaceDirectory,
+  );
 }
 
 void run();
