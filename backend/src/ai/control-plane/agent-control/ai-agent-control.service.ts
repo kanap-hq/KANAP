@@ -174,7 +174,7 @@ import {
   ReplySynthesisResult,
   ReplySynthesisSource,
 } from './ai-reply-synthesis.service';
-import { administrativeReplyIntent, publicTicketItems } from './public-reply-sources';
+import { AdministrativeReplyIntent, administrativeReplyIntent, publicTicketItems } from './public-reply-sources';
 import {
   AiSharedContextProfileService,
   SharedContextProfileInput,
@@ -5966,7 +5966,7 @@ export class AiAgentControlService {
     // The planner decides on every item of the ticket. An administrative reply it asks for is
     // written by a call that reads the public items of the ticket and the intent (closed list),
     // never the planner's own text.
-    const draftAdministrativeReply = async (intent: unknown): Promise<{ body: string | null; reason: string | null }> => {
+    const draftAdministrativeReply = async (intent: AdministrativeReplyIntent): Promise<{ body: string | null; reason: string | null }> => {
       if (!this.replySynthesis) {
         return { body: null, reason: 'administrative_reply_service_unavailable' };
       }
@@ -5983,7 +5983,7 @@ export class AiAgentControlService {
       }, llmPrices, this.replySynthesis.maxOutputTokens());
       const inputSummary = {
         language: synthesisLanguage,
-        intent: administrativeReplyIntent(intent),
+        intent,
         projected_tokens: projection.estimatedTokens,
         projected_cost_eur: projection.estimatedCostEur,
       };
@@ -6121,13 +6121,19 @@ export class AiAgentControlService {
               }
               replyBody = candidate.text.replace(/\r\n/g, '\n').trim();
             } else {
+              // A written reply needs a value of the closed list of intents: without one, nothing is written.
+              const intent = administrativeReplyIntent(action.administrative_intent);
+              if (!intent) {
+                markPlannerSkipped(actionType, 'administrative_reply_intent_missing');
+                continue;
+              }
               // Only the first administrative reply of a plan is prepared: no call for another.
               if (plannerAuthorizedActions.some((entry) => entry.action.action_type === 'requester_reply'
                 && entry.action.reply_kind === 'administrative')) {
                 markPlannerSkipped(actionType, 'one_administrative_reply_per_plan');
                 continue;
               }
-              const draft = await draftAdministrativeReply(action.administrative_intent);
+              const draft = await draftAdministrativeReply(intent);
               draftFallbackReason = draft.reason;
               // A written text equal to a configured exact message keeps the configured text.
               const draftAsCandidate = draft.body
