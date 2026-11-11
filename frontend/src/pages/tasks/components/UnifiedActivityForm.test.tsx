@@ -38,8 +38,8 @@ const CASES = [
     option: 'En cours',
     alone: `Passer à ${quotedFr('En cours')}`,
     withComment: `Commentaire et passer à ${quotedFr('En cours')}`,
-    withHours: `Passer à ${quotedFr('En cours')} et saisir 2 h`,
-    withBoth: `Commentaire, passer à ${quotedFr('En cours')} et saisir 2 h`,
+    withHours: `Passer à ${quotedFr('En cours')} et saisir 2${NBSP}h`,
+    withBoth: `Commentaire, passer à ${quotedFr('En cours')} et saisir 2${NBSP}h`,
   },
   {
     lng: 'en',
@@ -54,16 +54,16 @@ const CASES = [
     option: 'In Bearbeitung',
     alone: 'Auf «In Bearbeitung» setzen',
     withComment: 'Kommentar & auf «In Bearbeitung» setzen',
-    withHours: 'Auf «In Bearbeitung» setzen & 2 Std. erfassen',
-    withBoth: 'Kommentar, auf «In Bearbeitung» setzen & 2 Std. erfassen',
+    withHours: 'Auf «In Bearbeitung» setzen & 2\u00a0Std. erfassen',
+    withBoth: 'Kommentar, auf «In Bearbeitung» setzen & 2\u00a0Std. erfassen',
   },
   {
     lng: 'es',
     option: 'En curso',
     alone: 'Pasar a «En curso»',
     withComment: 'Comentario y pasar a «En curso»',
-    withHours: 'Pasar a «En curso» y registrar 2 h',
-    withBoth: 'Comentario, pasar a «En curso» y registrar 2 h',
+    withHours: 'Pasar a «En curso» y registrar 2\u00a0h',
+    withBoth: 'Comentario, pasar a «En curso» y registrar 2\u00a0h',
   },
 ] as const;
 

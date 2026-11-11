@@ -13,6 +13,8 @@ import { MONO_FONT_FAMILY } from '../../../config/ThemeContext';
 import { StatusDot } from '../../../components/design';
 import { inlineControlSx } from '../../../theme/formSx';
 import { useTheme } from '@mui/material/styles';
+import { useLocale } from '../../../i18n/useLocale';
+import { formatFigure } from '../../portfolio/figures';
 
 const MarkdownEditor = React.lazy(() => import('../../../components/MarkdownEditor'));
 
@@ -54,6 +56,7 @@ export default function UnifiedActivityForm({
   onImageUrlImport,
 }: UnifiedActivityFormProps) {
   const { t, i18n } = useTranslation(['portfolio', 'common', 'errors']);
+  const locale = useLocale();
   const queryClient = useQueryClient();
   const [comment, setComment] = React.useState('');
   const [status, setStatus] = React.useState<string>('');
@@ -103,7 +106,7 @@ export default function UnifiedActivityForm({
         status: getTaskStatusLabel(t, status),
       }));
     }
-    if (hasTime) actions.push(t('portfolio:workspace.task.activity.actions.logHours', { hours: timeHours }));
+    if (hasTime) actions.push(t('portfolio:workspace.task.activity.actions.logHours', { hours: formatFigure(timeHours, locale, 1) }));
     const parts = actions.map((action, index) => (index === 0 ? action : continueSentence(action, language)));
     if (parts.length === 1) return parts[0];
     if (parts.length === 2) {
@@ -117,7 +120,7 @@ export default function UnifiedActivityForm({
       second: parts[1],
       third: parts[2],
     });
-  }, [hasAnyAction, hasComment, hasStatusChange, hasTime, i18n.language, i18n.resolvedLanguage, status, t, timeHours]);
+  }, [hasAnyAction, hasComment, hasStatusChange, hasTime, i18n.language, i18n.resolvedLanguage, locale, status, t, timeHours]);
 
   // Build success label based on what was submitted
   const getSuccessLabel = React.useCallback(() => {
@@ -323,7 +326,7 @@ export default function UnifiedActivityForm({
                 component="span"
                 sx={{ fontFamily: MONO_FONT_FAMILY, ...taskDetailTypography.composerCtrl, minWidth: 24, flexShrink: 0 }}
               >
-                {timeHours}h
+                {t('portfolio:workspace.task.workLog.duration.hoursOnly', { hours: formatFigure(timeHours, locale, 1) })}
               </Typography>
             </Box>
           )}

@@ -12,6 +12,8 @@ import PageHeader from '../../components/PageHeader';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
+import { useLocale } from '../../i18n/useLocale';
+import { formatFigure } from './figures';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
 import {
@@ -108,6 +110,7 @@ export default function ContributorsPage() {
   const navigate = useNavigate();
   const { hasLevel } = useAuth();
   const { t } = useTranslation(['portfolio', 'common', 'errors']);
+  const locale = useLocale();
   const canEdit = hasLevel('portfolio_settings', 'member');
 
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -414,11 +417,11 @@ export default function ContributorsPage() {
                       {t('contributors.cards.skillCount', { count: contributor.skills?.length || 0 })}
                     </Box>
                     <Box component="span" sx={(theme) => ({ ...statSx, color: theme.palette.kanap.text.secondary, minWidth: 64, textAlign: 'right' })}>
-                      {t('contributors.cards.daysPerMonth', { count: Number(contributor.project_availability ?? 5) })}
+                      {t('contributors.cards.daysPerMonth', { count: formatFigure(Number(contributor.project_availability ?? 5), locale, 1) })}
                     </Box>
                     <Box component="span" sx={(theme) => ({ ...statSx, color: theme.palette.kanap.text.tertiary, minWidth: 90, textAlign: 'right' })}>
                       {timeStatsData?.[contributor.id]
-                        ? t('contributors.cards.avgDaysPerMonth', { count: timeStatsData[contributor.id].avgProjectDays })
+                        ? t('contributors.cards.avgDaysPerMonth', { count: formatFigure(timeStatsData[contributor.id].avgProjectDays, locale, 1) })
                         : ''}
                     </Box>
                   </Box>

@@ -207,11 +207,11 @@
         "timeLogged": "Erfasste Zeit"
       },
       "values": {
-        "averageMonthlyProjectEffort": "Durchschnittlicher monatlicher Projektaufwand (letzte 6 Monate): {{value}} T/Mon.",
+        "averageMonthlyProjectEffort": "Durchschnittlicher monatlicher Projektaufwand (letzte 6 Monate): {{value}}\u00a0T/Mon.",
         "unassigned": "Nicht zugeordnet",
         "skillCount_one": "{{count}} Kompetenz",
         "skillCount_other": "{{count}} Kompetenzen",
-        "daysPerMonthShort": "{{count}} T/Monat",
+        "daysPerMonthShort": "{{count}}\u00a0T/Monat",
         "noManager": "Kein Vorgesetzter",
         "fromEntra": "Aus Microsoft Entra"
       },
@@ -418,10 +418,10 @@
         },
         "values": {
           "executionProgress": "Fortschritt: {{progress}} %",
-          "hoursValue": "{{hours}} Std.",
-          "mdHigher": "{{count}} PT höher",
-          "mdLower": "{{count}} PT niedriger",
-          "mdValue": "{{value}} PT",
+          "hoursValue": "{{hours}}\u00a0Std.",
+          "mdHigher": "{{count}}\u00a0PT höher",
+          "mdLower": "{{count}}\u00a0PT niedriger",
+          "mdValue": "{{value}}\u00a0PT",
           "onTrack": "Im Plan",
           "projectOverhead": "Projekt-Gemeinkosten",
           "shareOfTotal": "{{percent}} % des Gesamten ({{hours}} Std.)",
@@ -430,7 +430,7 @@
           "totalLogged": "Gesamt erfasst",
           "workloadConsumption": "Aufwandsverbrauch: {{actual}} / {{planned}} PT",
           "mdUnit": "PT",
-          "actualOfEstimated": "{{actual}} / {{estimated}} PT",
+          "actualOfEstimated": "{{actual}} / {{estimated}}\u00a0PT",
           "actualSplit": "(Projekt {{project}} · Aufgabe {{task}})"
         },
         "overview": {
@@ -782,7 +782,7 @@
           "combineThree": "{{first}}, {{second}} & {{third}}",
           "combineTwo": "{{first}} & {{second}}",
           "comment": "Kommentar",
-          "logHours": "{{hours}} Std. erfassen",
+          "logHours": "{{hours}}\u00a0Std. erfassen",
           "setStatus": "Auf «{{status}}» setzen",
           "submit": "Absenden",
           "submitting": "Wird gesendet…"
@@ -875,7 +875,7 @@
         }
       },
       "workLog": {
-        "total": "Gesamt: {{time}} ({{md}} PT)",
+        "total": "Gesamt: {{time}} ({{md}}\u00a0PT)",
         "actions": {
           "delete": "Löschen",
           "edit": "Bearbeiten"
@@ -889,9 +889,9 @@
           "time": "Zeit"
         },
         "duration": {
-          "daysHours": "{{days}} T {{hours}} Std.",
-          "daysOnly": "{{days}} T",
-          "hoursOnly": "{{hours}} Std."
+          "daysHours": "{{days}}\u00a0T {{hours}}\u00a0Std.",
+          "daysOnly": "{{days}}\u00a0T",
+          "hoursOnly": "{{hours}}\u00a0Std."
         },
         "messages": {
           "deleteFailed": "Zeiteintrag konnte nicht gelöscht werden",
@@ -1993,8 +1993,8 @@
     "cards": {
       "skillCount_one": "{{count}} Kompetenz",
       "skillCount_other": "{{count}} Kompetenzen",
-      "daysPerMonth": "{{count}} T/Mon.",
-      "avgDaysPerMonth": "Durchschn.: {{count}} T/Mon."
+      "daysPerMonth": "{{count}}\u00a0T/Mon.",
+      "avgDaysPerMonth": "Durchschn.: {{count}}\u00a0T/Mon."
     },
     "dialog": {
       "title": "Mitwirkenden hinzufügen",
@@ -2243,7 +2243,7 @@
       "helper": {
         "dayLength": "8 Stunden/Tag",
         "hoursRange": "0–7 Stunden",
-        "total": "Gesamt: {{hours}} Std. ({{md}} PT)"
+        "total": "Gesamt: {{hours}}\u00a0Std. ({{md}}\u00a0PT)"
       },
       "messages": {
         "saveFailed": "Zeiteintrag konnte nicht gespeichert werden"

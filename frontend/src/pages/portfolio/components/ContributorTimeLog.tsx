@@ -19,6 +19,7 @@ import api from '../../../api';
 import { useAuth } from '../../../auth/AuthContext';
 import { useLocale } from '../../../i18n/useLocale';
 import { formatShortDate } from '../../../lib/dateFormat';
+import { formatLocaleFigure } from '../figures';
 import LogTimeDialog, { TimeEntryData } from './LogTimeDialog';
 import TaskLogTimeDialog, { TaskTimeEntryData } from '../../tasks/components/TaskLogTimeDialog';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
@@ -47,16 +48,6 @@ interface ContributorTimeLogProps {
   contributorId: string;
 }
 
-const formatHours = (value: number) => {
-  if (!Number.isFinite(value) || value <= 0) return '0h';
-  if (!Number.isInteger(value)) return `${value.toFixed(1)}h`;
-  const days = Math.floor(value / 8);
-  const remainder = value % 8;
-  if (days > 0 && remainder > 0) return `${days}d ${remainder}h`;
-  if (days > 0) return `${days}d`;
-  return `${value}h`;
-};
-
 export default function ContributorTimeLog({ contributorId }: ContributorTimeLogProps) {
   const { t } = useTranslation(['portfolio', 'common', 'errors']);
   const dialogs = useKanapDialogs();
@@ -70,6 +61,19 @@ export default function ContributorTimeLog({ contributorId }: ContributorTimeLog
   const isProjectTaskAdmin = hasLevel('portfolio_projects', 'admin');
   const isProjectEntryAdmin = hasLevel('portfolio_projects', 'admin');
   const canSeeActions = canManageStandaloneTaskEntries || canManageProjectEntries;
+
+  const formatHours = (value: number) => {
+    const hoursOnly = (hours: string | number) => t('portfolio:workspace.task.workLog.duration.hoursOnly', { hours });
+    if (!Number.isFinite(value) || value <= 0) return hoursOnly(0);
+    if (!Number.isInteger(value)) return hoursOnly(formatLocaleFigure(value, locale, 1));
+    const days = Math.floor(value / 8);
+    const remainder = value % 8;
+    if (days > 0 && remainder > 0) {
+      return t('portfolio:workspace.task.workLog.duration.daysHours', { days, hours: remainder });
+    }
+    if (days > 0) return t('portfolio:workspace.task.workLog.duration.daysOnly', { days });
+    return hoursOnly(value);
+  };
 
   const [error, setError] = React.useState<string | null>(null);
   const [editingTaskEntry, setEditingTaskEntry] = React.useState<ContributorTimeEntry | null>(null);

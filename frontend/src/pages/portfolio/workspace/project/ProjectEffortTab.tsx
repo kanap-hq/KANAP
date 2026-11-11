@@ -16,6 +16,7 @@ import api from '../../../../api';
 import { getApiErrorMessage } from '../../../../utils/apiErrorMessage';
 import { useLocale } from '../../../../i18n/useLocale';
 import { formatShortDate } from '../../../../lib/dateFormat';
+import { formatFigure, formatLocaleFigure } from '../../figures';
 import EffortAllocationDialog, { type EligibleUser } from '../../components/EffortAllocationDialog';
 import { type AllocationUser, type EffortAllocationData } from '../../components/EffortAllocationTable';
 import LogTimeDialog, { type TimeEntryData } from '../../components/LogTimeDialog';
@@ -45,16 +46,12 @@ function getEffortVariance(estimated: number | null, baseline: number | null): n
   return estimated - baseline;
 }
 
-function formatEffortVariance(t: TFunction, diff: number | null) {
+function formatEffortVariance(t: TFunction, diff: number | null, locale: string) {
   if (diff == null) return null;
   if (diff === 0) return t('workspace.project.effort.values.onTrack');
-  if (diff > 0) return t('workspace.project.effort.values.mdHigher', { count: diff });
-  return t('workspace.project.effort.values.mdLower', { count: Math.abs(diff) });
-}
-
-function formatMd(value: number): string {
-  const rounded = Math.round(value * 10) / 10;
-  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+  const count = formatFigure(Math.abs(diff), locale, 1);
+  if (diff > 0) return t('workspace.project.effort.values.mdHigher', { count });
+  return t('workspace.project.effort.values.mdLower', { count });
 }
 
 const overviewSliderSx: SxProps<Theme> = (theme) => ({
@@ -317,6 +314,7 @@ type AllocationBlockProps = {
   estimatedEffortValue: string;
   label: string;
   onCommitEstimatedEffort: (value: string) => void;
+  locale: string;
   onEdit: () => void;
   onReset: () => void;
   t: TFunction;
@@ -328,6 +326,7 @@ function AllocationBlock({
   estimatedEffort,
   estimatedEffortValue,
   label,
+  locale,
   onCommitEstimatedEffort,
   onEdit,
   onReset,
@@ -469,8 +468,8 @@ function AllocationBlock({
                       </Box>
                     )}
                   </td>
-                  <td className="r">{allocation.allocation_pct}%</td>
-                  <td className="r">{formatMd(mdValue)}</td>
+                  <td className="r">{formatFigure(allocation.allocation_pct, locale, 1)}%</td>
+                  <td className="r">{formatFigure(mdValue, locale, 1)}</td>
                 </tr>
               );
             })
@@ -637,10 +636,10 @@ export default function ProjectEffortTab({
                   <Box className="kanap-ov-meter-fill" style={{ width: `${actualEffortPct}%` }} />
                 </Box>
                 <Box component="span" className="kanap-ov-val">
-                  {t('workspace.project.effort.values.actualOfEstimated', { actual: formatMd(totalActual), estimated: formatMd(totalEstimated) })}
+                  {t('workspace.project.effort.values.actualOfEstimated', { actual: formatFigure(totalActual, locale, 1), estimated: formatFigure(totalEstimated, locale, 1) })}
                 </Box>
                 <Box component="span" className="kanap-ov-sub">
-                  {t('workspace.project.effort.values.actualSplit', { project: formatMd(projectTimeMd), task: formatMd(taskTimeMd) })}
+                  {t('workspace.project.effort.values.actualSplit', { project: formatFigure(projectTimeMd, locale, 1), task: formatFigure(taskTimeMd, locale, 1) })}
                 </Box>
               </Box>
               <Box component="span" className="kanap-ov-source">{t('workspace.project.effort.overview.fromTimeLog')}</Box>
@@ -658,6 +657,7 @@ export default function ProjectEffortTab({
                 estimatedEffort={estIt}
                 estimatedEffortValue={estItInputValue}
                 label={t('dialogs.effortAllocation.effortTypes.it')}
+                locale={locale}
                 onEdit={() => setItAllocationDialogOpen(true)}
                 onCommitEstimatedEffort={(value) => {
                   if (value === '') {
@@ -686,6 +686,7 @@ export default function ProjectEffortTab({
                 estimatedEffort={estBusiness}
                 estimatedEffortValue={estBusinessInputValue}
                 label={t('dialogs.effortAllocation.effortTypes.business')}
+                locale={locale}
                 onEdit={() => setBusinessAllocationDialogOpen(true)}
                 onCommitEstimatedEffort={(value) => {
                   if (value === '') {
@@ -779,7 +780,7 @@ export default function ProjectEffortTab({
                               ? t('dialogs.logTime.categories.it')
                               : t('dialogs.logTime.categories.business')}
                           </td>
-                          <td className="r">{Number(entry.hours || 0).toFixed(2)}h</td>
+                          <td className="r">{t('workspace.project.effort.values.hoursValue', { hours: formatLocaleFigure(Number(entry.hours) || 0, locale, 2) })}</td>
                           <td className="kanap-text-tertiary">{entry.notes || '-'}</td>
                           <td>
                             {canEditEntry && (
@@ -857,8 +858,8 @@ export default function ProjectEffortTab({
                         <Box component="span" className="kanap-bl-label">{t('workspace.project.effort.baseline.estimated')}</Box>
                       </Tooltip>
                     </td>
-                    <td>{t('workspace.project.effort.values.mdValue', { value: formatMd(estIt) })}</td>
-                    <td>{t('workspace.project.effort.values.mdValue', { value: formatMd(estBusiness) })}</td>
+                    <td>{t('workspace.project.effort.values.mdValue', { value: formatFigure(estIt, locale, 1) })}</td>
+                    <td>{t('workspace.project.effort.values.mdValue', { value: formatFigure(estBusiness, locale, 1) })}</td>
                   </tr>
                   <tr>
                     <td>
@@ -866,8 +867,8 @@ export default function ProjectEffortTab({
                         <Box component="span" className="kanap-bl-label">{t('workspace.project.effort.baseline.baseline')}</Box>
                       </Tooltip>
                     </td>
-                    <td>{form?.baseline_effort_it != null ? t('workspace.project.effort.values.mdValue', { value: formatMd(Number(form.baseline_effort_it)) }) : '-'}</td>
-                    <td>{form?.baseline_effort_business != null ? t('workspace.project.effort.values.mdValue', { value: formatMd(Number(form.baseline_effort_business)) }) : '-'}</td>
+                    <td>{form?.baseline_effort_it != null ? t('workspace.project.effort.values.mdValue', { value: formatFigure(Number(form.baseline_effort_it), locale, 1) }) : '-'}</td>
+                    <td>{form?.baseline_effort_business != null ? t('workspace.project.effort.values.mdValue', { value: formatFigure(Number(form.baseline_effort_business), locale, 1) }) : '-'}</td>
                   </tr>
                   <tr>
                     <td>
@@ -878,14 +879,14 @@ export default function ProjectEffortTab({
                     <td>
                       {baselineItVariance != null ? (
                         <Box component="span" className={baselineItVariance > 0 ? 'kanap-bl-late' : 'kanap-bl-ok'}>
-                          {formatEffortVariance(t, baselineItVariance)}
+                          {formatEffortVariance(t, baselineItVariance, locale)}
                         </Box>
                       ) : '-'}
                     </td>
                     <td>
                       {baselineBusinessVariance != null ? (
                         <Box component="span" className={baselineBusinessVariance > 0 ? 'kanap-bl-late' : 'kanap-bl-ok'}>
-                          {formatEffortVariance(t, baselineBusinessVariance)}
+                          {formatEffortVariance(t, baselineBusinessVariance, locale)}
                         </Box>
                       ) : '-'}
                     </td>
