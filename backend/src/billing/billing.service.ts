@@ -515,8 +515,25 @@ export class BillingService {
 
     // GTC art. 6.3: annual to monthly takes effect at the end of the annual period, never refunded.
     if (currentPrice?.recurring?.interval === 'year' && interval === 'monthly') {
-      const effectiveAt = await this.scheduleSwitchAtPeriodEnd(stripeSub, targetPriceId);
-      const summary = await this.getSubscriptionSummary({ manager: mg });
+      const previousChange = await this.resolveScheduledChange(stripeSub);
+      const { effectiveAt, scheduleId } = await this.scheduleSwitchAtPeriodEnd(stripeSub, targetPriceId);
+      await this.audit.log(
+        {
+          table: 'subscriptions',
+          recordId: sub.id,
+          action: 'update',
+          before: { stripe_subscription_id: sub.stripe_subscription_id, scheduled_change: previousChange },
+          after: {
+            stripe_subscription_id: sub.stripe_subscription_id,
+            scheduled_change: { interval: 'monthly', effective_at: effectiveAt } satisfies ScheduledChange,
+          },
+          userId: userId ?? null,
+          sourceRef: scheduleId,
+        },
+        { manager: mg },
+      );
+      // Refreshed from Stripe: the answer carries the planned switch.
+      const summary = await this.getSubscriptionSummary({ manager: mg, forceStripeRefresh: true });
       const change: PlanChange = { status: 'scheduled', effective_at: effectiveAt };
       return { ...summary, change };
     }
@@ -576,9 +593,13 @@ export class BillingService {
    * GTC art. 6.3, annual to monthly: the price changes at the end of the current annual period.
    * A subscription schedule keeps the current phase until its end, then bills the monthly price
    * by card; at the end of that phase it releases the subscription, which renews monthly. An
-   * existing schedule (a switch already planned) is updated. Returns when the switch applies.
+   * existing schedule (a switch already planned) is updated. Returns when the switch applies and
+   * the schedule's id.
    */
-  private async scheduleSwitchAtPeriodEnd(stripeSub: any, targetPriceId: string): Promise<string> {
+  private async scheduleSwitchAtPeriodEnd(
+    stripeSub: any,
+    targetPriceId: string,
+  ): Promise<{ effectiveAt: string; scheduleId: string }> {
     const client = this.getStripeClientOrThrow();
     if (stripeSub?.collection_method === 'send_invoice') {
       // A bank transfer subscription: Stripe refuses a card phase while the subscription keeps
@@ -619,7 +640,7 @@ export class BillingService {
         },
       ],
     });
-    return new Date(current.end_date * 1000).toISOString();
+    return { effectiveAt: new Date(current.end_date * 1000).toISOString(), scheduleId: schedule.id };
   }
 
   /** An immediate change replaces a switch planned for the period end. */

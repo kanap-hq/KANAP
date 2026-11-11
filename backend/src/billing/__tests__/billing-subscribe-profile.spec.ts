@@ -78,6 +78,8 @@ function createService(opts: {
   /** What Stripe does on `subscriptions.update`: may change `state`, returns the answer. */
   onSubscriptionUpdate?: (params: Record<string, any>, state: Record<string, any>) => unknown;
   schedule?: Record<string, any>;
+  /** What Stripe does to the schedule on `subscriptionSchedules.update`. */
+  onScheduleUpdate?: (params: Record<string, any>, schedule: Record<string, any>) => void;
   /** The customer's saved cards (`customers.listPaymentMethods`). */
   cards?: Array<Record<string, unknown>>;
   /** What `invoices.retrieve` returns (nothing by default). */
@@ -120,7 +122,10 @@ function createService(opts: {
     subscriptionSchedules: {
       create: record('subscriptionSchedules.create', () => schedule),
       retrieve: record('subscriptionSchedules.retrieve', () => schedule),
-      update: record('subscriptionSchedules.update', (id: string) => ({ id })),
+      update: record('subscriptionSchedules.update', (id: string, params: Record<string, any>) => {
+        if (schedule && opts.onScheduleUpdate) opts.onScheduleUpdate(params, schedule);
+        return { id };
+      }),
       release: record('subscriptionSchedules.release', (id: string) => {
         // Released: the subscription no longer has a schedule.
         if (stripeState) stripeState.schedule = null;
@@ -894,6 +899,41 @@ async function testSelectingAnnualWhileASwitchIsPlannedKeepsIt() {
   assert.equal(audits.filter((a) => a.entry.table === 'subscriptions' && a.entry.sourceRef === 'sub_sched_1').length, 1);
 }
 
+/** Planning annual to monthly is audited on the subscription, and the answer carries the planned switch. */
+async function testScheduledSwitchIsAuditedAndReturned() {
+  const schedule = {
+    id: 'sub_sched_1',
+    status: 'active',
+    current_phase: { start_date: PERIOD.start, end_date: PERIOD.end },
+    phases: [{ start_date: PERIOD.start, end_date: PERIOD.end, items: [{ price: 'price_annual', quantity: 1 }] }],
+  };
+  const { service, manager, audits } = createService({
+    tenant: createTenant(COMPLETE_FR_INVOICE),
+    subscription: runningOn('annual'),
+    priceIds: PRICE_IDS,
+    stripeSubscription: stripeSubscription(ANNUAL_PRICE, { schedule: 'sub_sched_1' }),
+    schedule,
+    onScheduleUpdate: (params, current) => {
+      current.phases = [params.phases[0], { start_date: PERIOD.end, end_date: SWITCH_END, items: params.phases[1].items }];
+    },
+  });
+  const result: any = await service.changePlan('tenant-1', 'max', 'monthly', 'user-1', manager as any, GTC_VERSION);
+
+  assert.deepEqual(result.change, { status: 'scheduled', effective_at: SWITCH_TO_MONTHLY.effective_at });
+  assert.deepEqual(result.scheduled_change, SWITCH_TO_MONTHLY, 'the answer carries the planned switch');
+  const entries = audits.filter((a) => a.entry.table === 'subscriptions');
+  assert.deepEqual(entries.map((a) => a.entry), [{
+    table: 'subscriptions',
+    recordId: 'local-sub',
+    action: 'update',
+    before: { stripe_subscription_id: 'sub_1', scheduled_change: null },
+    after: { stripe_subscription_id: 'sub_1', scheduled_change: SWITCH_TO_MONTHLY },
+    userId: 'user-1',
+    sourceRef: 'sub_sched_1',
+  }]);
+  assert.equal(entries[0].opts?.manager, manager);
+}
+
 const BANK_TRANSFER_SCHEDULE = {
   id: 'sub_sched_1',
   current_phase: { start_date: PERIOD.start, end_date: PERIOD.end },
@@ -989,6 +1029,7 @@ async function run() {
   await testKeepAnnualReleasesTheScheduleAndAudits();
   await testKeepAnnualGivesBankTransferBack();
   await testSelectingAnnualWhileASwitchIsPlannedKeepsIt();
+  await testScheduledSwitchIsAuditedAndReturned();
   await testTransferToCardWithoutACardRequiresOne();
   await testTransferToCardWithASavedCardMakesItTheDefault();
 }
