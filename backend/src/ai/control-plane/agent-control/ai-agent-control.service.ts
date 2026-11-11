@@ -300,6 +300,7 @@ import {
   changedConfigDiff,
   autonomyThresholds,
   normalizeKnowledgeSources,
+  newAgentScopePolicy,
   readAgentKnowledgeSources,
   proposalHash,
 } from './agent-control-definition.util';
@@ -2135,7 +2136,7 @@ export class AiAgentControlService {
     const forbiddenCapabilities = input.forbidden_capabilities_json !== undefined
       ? (() => { throw codedForbidden('AGENT_FORBIDDEN_CAPABILITIES_LOCKED', 'Forbidden capabilities are immutable from this endpoint.'); })()
       : [...defaults.forbidden_capabilities_json];
-    const scopePolicy = normalizedPolicyObject(input.scope_policy_json, 'Scope policy') ?? defaults.scope_policy_json;
+    const scopePolicy = newAgentScopePolicy(normalizedPolicyObject(input.scope_policy_json, 'Scope policy') ?? defaults.scope_policy_json);
     const normalizedScopePolicy = normalizeScopePolicyForAgentType(agentType, scopePolicy);
     const now = new Date();
     const definition = await repo.save(repo.create({

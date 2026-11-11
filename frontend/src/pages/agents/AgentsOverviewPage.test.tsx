@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -29,7 +29,7 @@ vi.mock('../../auth/AuthContext', () => ({
 }));
 
 vi.mock('../../components/PageHeader', () => ({
-  default: ({ title }: { title: string }) => <div>{title}</div>,
+  default: ({ title, actions }: { title: string; actions?: React.ReactNode }) => <div>{title}{actions}</div>,
 }));
 
 const idleMutation = { isPending: false, mutate: vi.fn(), mutateAsync: vi.fn() };
@@ -127,5 +127,42 @@ describe('AgentsOverviewPage cost and empty fleet', () => {
     expect(screen.getByText('No agents are available for this workspace.')).toBeInTheDocument();
     expect(screen.getByText(shown(`${formatEuro(1.5, 'en')} / ${formatEuro(1234.5, 'en')}`))).toBeInTheDocument();
     expect(screen.queryByText(/tenant/i)).not.toBeInTheDocument();
+  });
+});
+
+describe('AgentsOverviewPage new agent', () => {
+  beforeEach(async () => {
+    capabilitiesState = { data: { builtin_confirmation_needed: false } };
+    canOpenAiSettings = true;
+    fleetCost = undefined;
+    idleMutation.mutateAsync.mockReset();
+    idleMutation.mutateAsync.mockResolvedValue({ agent_definition: { agent_key: 'new-agent' } });
+    await i18n.changeLanguage('en');
+  });
+
+  async function createAgent(type: 'Helpdesk' | 'Infrastructure monitoring (SRE)') {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'New agent' }));
+    const dialog = screen.getByRole('dialog');
+    if (type !== 'Helpdesk') {
+      fireEvent.mouseDown(within(dialog).getAllByRole('combobox')[0]);
+      fireEvent.click(screen.getByRole('option', { name: type }));
+    }
+    fireEvent.change(within(dialog).getAllByRole('textbox')[0], { target: { value: 'Night watch' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Create' }));
+    await waitFor(() => expect(idleMutation.mutateAsync).toHaveBeenCalledTimes(1));
+    return idleMutation.mutateAsync.mock.calls[0][0];
+  }
+
+  it('creates a monitoring agent that cites no library', async () => {
+    const body = await createAgent('Infrastructure monitoring (SRE)');
+    expect(body.agent_type).toBe('sre');
+    expect(body.scope_policy_json.knowledge_sources.knowledge).toEqual({ enabled: true, all_libraries: false, library_ids: [] });
+  });
+
+  it('creates a helpdesk agent without opening every library', async () => {
+    const body = await createAgent('Helpdesk');
+    expect(body.agent_type).toBe('helpdesk');
+    expect(body.scope_policy_json.knowledge_sources?.knowledge?.all_libraries).not.toBe(true);
   });
 });

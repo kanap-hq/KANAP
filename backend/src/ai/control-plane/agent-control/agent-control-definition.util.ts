@@ -41,7 +41,8 @@ export function readKanapDataBlock(sources: Record<string, unknown>): {
 
 // Per-agent retrieval-source policy, read from scope_policy_json.knowledge_sources.
 // Defaults preserve current behaviour: knowledge ON over all accessible libraries, web OFF,
-// KANAP data OFF (see readKanapDataBlock).
+// KANAP data OFF (see readKanapDataBlock). A new agent is written with no library
+// (newAgentScopePolicy), so the "all libraries" default only applies to agents saved before.
 export function readAgentKnowledgeSources(definition: AiAgentDefinition | null): {
   knowledgeEnabled: boolean;
   knowledgeLibraryIds: string[] | null; // null = all accessible libraries; [] = none
@@ -87,6 +88,21 @@ export function normalizeKnowledgeSources(value: unknown): Record<string, unknow
     web: { enabled: web.enabled === true },
     kanap_data: { enabled: kanapData.enabled, domains: kanapData.domains },
     precedence: 'knowledge_first',
+  };
+}
+
+// A new agent cites no library until an administrator opens one, some or all: a missing
+// knowledge setting, or one that does not say "all libraries", starts with none. Only the
+// create path calls this; an agent saved before keeps what readAgentKnowledgeSources reads.
+export function newAgentScopePolicy(scopePolicy: Record<string, unknown>): Record<string, unknown> {
+  const sources = isRecord(scopePolicy.knowledge_sources) ? scopePolicy.knowledge_sources : {};
+  const knowledge = isRecord(sources.knowledge) ? sources.knowledge : {};
+  return {
+    ...scopePolicy,
+    knowledge_sources: normalizeKnowledgeSources({
+      ...sources,
+      knowledge: { ...knowledge, all_libraries: knowledge.all_libraries === true },
+    }),
   };
 }
 

@@ -2129,6 +2129,7 @@ async function ensureServiceDeskDocs() {
     });
     ok(`Published '${doc.title}'`);
   }
+  return library;
 }
 
 // ── Demo AI agent (mock ticketing provider) ──────────────────────────────────
@@ -2136,7 +2137,7 @@ async function ensureServiceDeskDocs() {
 const AGENT_NAME = t('Fromage Service Desk Agent');
 const SHARED_CONTEXT_NAME = t('Fromage & Co Company Context');
 
-async function ensureDemoAgent() {
+async function ensureDemoAgent(serviceDeskLibrary) {
   info('Ensuring demo AI agent');
   const cp = '/ai/admin/control-plane';
 
@@ -2189,6 +2190,13 @@ async function ensureDemoAgent() {
       },
       all_matching: { enabled: false },
       freeform_live_object_ids: false,
+      // A new agent cites no library until one is opened: the demo agent answers from
+      // the Service Desk Docs library.
+      knowledge_sources: {
+        knowledge: { enabled: true, all_libraries: false, library_ids: serviceDeskLibrary?.id ? [serviceDeskLibrary.id] : [] },
+        web: { enabled: false },
+        precedence: 'knowledge_first',
+      },
     },
     trigger_policy_json: {
       manual_safe_target: { enabled: true },
@@ -2906,8 +2914,8 @@ async function main() {
   await runImports(language);
   if (!options.skipRelations) await runRelations();
   step('knowledge');
-  await ensureServiceDeskDocs();
-  if (!options.skipAgents) await ensureDemoAgent();
+  const serviceDeskLibrary = await ensureServiceDeskDocs();
+  if (!options.skipAgents) await ensureDemoAgent(serviceDeskLibrary);
 
   const users = readCsv('10-users.csv');
   const others = `${users[0]?.email} (and ${users.length - 1} others)`;
