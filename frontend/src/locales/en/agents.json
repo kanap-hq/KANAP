@@ -102,7 +102,30 @@
   "targetTypes": {
     "ticket": "Ticket",
     "alert": "Alert",
-    "sensor": "Monitored check"
+    "sensor": "Monitored check",
+    "tasks": "Task",
+    "projects": "Project",
+    "requests": "Request",
+    "applications": "Application",
+    "assets": "Asset",
+    "technologies": "Technology",
+    "incidents": "Incident",
+    "documents": "Document",
+    "budget_lines": "Budget line",
+    "contracts": "Contract",
+    "companies": "Company",
+    "contacts": "Contact",
+    "suppliers": "Supplier",
+    "departments": "Department",
+    "locations": "Location",
+    "connections": "Connection",
+    "interfaces": "Interface",
+    "business_processes": "Business process",
+    "users": "User",
+    "accounts": "Account",
+    "analytics_categories": "Analytics category",
+    "chart_of_accounts": "Chart of accounts",
+    "vulnerabilities": "Vulnerability"
   },
   "targetLink": {
     "open": "Open in your ticketing tool"
@@ -320,7 +343,8 @@
     "runStarted": "Started {{value}}",
     "runCompleted": "finished {{value}}",
     "runDuration": "took {{value}}",
-    "noTypesSelected": "Pick at least one activity type to see the timeline."
+    "noTypesSelected": "Pick at least one activity type to see the timeline.",
+    "otherAction": "Other action"
   },
   "workspace": {
     "back": "Back to agents",
@@ -863,6 +887,7 @@
       "urgency": "Urgency",
       "impact": "Impact",
       "service": "Service"
-    }
+    },
+    "approvedChange": "Approved change"
   }
 }

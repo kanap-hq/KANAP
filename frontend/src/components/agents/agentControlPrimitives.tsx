@@ -124,8 +124,12 @@ export function statusLabel(status: string | null | undefined): string {
 
 export function targetTypeLabel(targetType: string | null | undefined): string {
   if (!targetType) return agentText('common.notSet', 'Not set');
-  return agentText(`targetTypes.${targetType}`, humanize(targetType));
+  // A budget line is recorded under its table name.
+  const family = targetType === 'spend_items' || targetType === 'capex_items' ? 'budget_lines' : targetType;
+  return agentText(`targetTypes.${family}`, humanize(family));
 }
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function targetRefLabel(targetRef: string | null | undefined): string {
   const trimmed = typeof targetRef === 'string' ? targetRef.trim() : '';
@@ -139,15 +143,21 @@ export function targetLabelText(targetType: string | null | undefined, targetRef
 export function TargetLabel({
   targetType,
   targetRef,
+  displayRef = null,
   size = 'normal',
   href = null,
 }: {
   targetType: string | null | undefined;
   targetRef: string | null | undefined;
+  // The business reference or name of an object recorded by id (T-15, PRJ-3). Shown as is.
+  displayRef?: string | null;
   size?: 'normal' | 'dense';
   href?: string | null;
 }) {
-  const ref = targetRefLabel(targetRef);
+  // An object recorded by id shows its reference; one the server could not name shows its type only.
+  const ref = displayRef
+    ? displayRef
+    : UUID_PATTERN.test(String(targetRef ?? '').trim()) ? null : targetRefLabel(targetRef);
   const refSx = (theme: Theme) => ({
     color: theme.palette.kanap.text.secondary,
     fontFamily: "'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace",
@@ -169,7 +179,7 @@ export function TargetLabel({
       >
         {targetTypeLabel(targetType)}
       </Typography>
-      {href ? (
+      {href && ref ? (
         <Tooltip title={agentText('targetLink.open', 'Open in your ticketing tool')}>
           <MuiLink
             href={href}
@@ -190,11 +200,11 @@ export function TargetLabel({
             <OpenInNewIcon sx={{ fontSize: size === 'dense' ? 11 : 12 }} />
           </MuiLink>
         </Tooltip>
-      ) : (
+      ) : ref ? (
         <Typography component="span" sx={refSx}>
           {ref}
         </Typography>
-      )}
+      ) : null}
     </Stack>
   );
 }
@@ -316,8 +326,13 @@ export function actionIsTerminalStatus(action: AiAgentControlActionRequest): boo
   return target === 'closed' || target === 'solved';
 }
 
-export function capabilityLabelFromName(name: string | null | undefined): string {
-  if (!name) return agentText('common.notSet', 'Not set');
+// Kad's approved changes (`backend/src/ai/control-plane/capability/capability-contract.ts`).
+const EXECUTE_APPROVED_PREVIEW_CAPABILITY = 'kanap.mutation_preview.execute_approved';
+
+/** The plain-language label of a capability the screens know, or null for any other key. */
+export function knownCapabilityLabel(name: string | null | undefined): string | null {
+  if (!name) return null;
+  if (name === EXECUTE_APPROVED_PREVIEW_CAPABILITY) return agentText('actions.approvedChange', 'Approved change');
   // Dispatch on the exact action-class segment (`ticketing.ticket.<class>.<verb>`):
   // substring matching mislabeled read-only `*_context.get` lookups as write actions.
   const segments = name.split('.').filter(Boolean);
@@ -329,11 +344,16 @@ export function capabilityLabelFromName(name: string | null | undefined): string
     case 'status_update': return agentText('actions.status', 'Status');
     case 'assignment_update': return agentText('actions.assignment', 'Assignment');
     case 'participant_update': return agentText('actions.participants', 'Observers');
-    default: {
-      const fallback = humanize(segments.slice(-2).join(' '));
-      return fallback.charAt(0).toUpperCase() + fallback.slice(1);
-    }
+    default: return null;
   }
+}
+
+export function capabilityLabelFromName(name: string | null | undefined): string {
+  if (!name) return agentText('common.notSet', 'Not set');
+  const known = knownCapabilityLabel(name);
+  if (known) return known;
+  const fallback = humanize(name.split('.').filter(Boolean).slice(-2).join(' '));
+  return fallback.charAt(0).toUpperCase() + fallback.slice(1);
 }
 
 export function actionLabel(action: AiAgentControlActionRequest): string {

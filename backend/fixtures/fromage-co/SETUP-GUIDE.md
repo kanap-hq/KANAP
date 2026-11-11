@@ -321,6 +321,7 @@ load is a failure. The token is never printed.
 
 | Environment | Base URL | Notes |
 |---|---|---|
+| Local | `http://fromage.lvh.me` | Local stack. The default of `--base-url` |
 | Dev | `https://fromage.dev.kanap.net` | Local stack behind the Cloudflare tunnel |
 | QA | `https://fromage.qa.kanap.net` | |
 | Prod | `https://demo.kanap.net` | Prospect demos: slug `demo`, private `--demo-password`, marked internal |

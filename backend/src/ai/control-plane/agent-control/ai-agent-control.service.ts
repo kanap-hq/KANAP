@@ -27,6 +27,7 @@ import {
   decodeActivityCursor,
   mergeActivityPage,
 } from './ai-agent-activity-timeline';
+import { activityTargetKey, resolveActivityTargetDisplays } from './ai-agent-activity-targets';
 import { normalizeQueuePolicyRetention } from '../agent/ai-agent-activity-retention';
 import {
   checkIntervalMinutesForDefinition,
@@ -3132,11 +3133,16 @@ export class AiAgentControlService {
       })
       : [];
     const definitionKeyById = new Map(definitions.map((definition) => [definition.id, definition.agent_key]));
+    // The object of an approved change is recorded by id; the screen shows its reference.
+    const targetDisplays = await resolveActivityTargetDisplays(context.manager, context.tenantId, page.items);
 
     return {
       items: page.items.map((entry) => ({
         ...entry,
         agentKey: entry.agentDefinitionId ? definitionKeyById.get(entry.agentDefinitionId) ?? null : null,
+        targetDisplay: entry.targetType && entry.targetRef
+          ? targetDisplays.get(activityTargetKey(entry.targetType, entry.targetRef.toLowerCase())) ?? null
+          : null,
       })),
       total: countTotals ? total : null,
       limit,

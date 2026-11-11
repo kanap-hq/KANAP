@@ -29,7 +29,6 @@ import {
   AiSearchEntityType,
 } from './ai.types';
 import { incidentRelatedLabelSql, incidentRelatedTitleSql, incidentVisibilitySql, resolveIncidentViewer, taskIncidentVisibilitySql } from '../incidents/incident-visibility';
-import { budgetLineReference } from '../spend/budget-nature';
 import { contractTermFields } from '../contracts/contract-terms';
 import { readDecisionWindowDays } from '../contracts/contract-settings.service';
 import { readRenewalDecisions, renewalDecisionOf } from '../contracts/contract-renewal.service';
@@ -43,7 +42,7 @@ import { TechnologyLinksService } from '../technologies/technology-links.service
 import { assetInServiceSql, type ReachedApplication, TechnologyReachService } from '../technologies/technology-reach.service';
 import { INCIDENT_REVIEW_SLOT } from '../knowledge/integrated-document.constants';
 import { AiPolicyService } from './ai-policy.service';
-import { entityNotFound, resolveAiEntityReference } from './ai-entity-reference.util';
+import { buildRef, entityNotFound, resolveAiEntityReference } from './ai-entity-reference.util';
 import {
   participantConditionForAiEntity,
   ParticipationScopedAiEntityType,
@@ -255,18 +254,6 @@ function toMetadataScalar(value: unknown): string | number | boolean | null {
     return toIso(value);
   }
   return String(value);
-}
-
-function buildRef(type: AiSearchEntityType | AiContextEntityType, itemNumber?: number | null): string | null {
-  if (!itemNumber) return null;
-  if (type === 'projects') return `PRJ-${itemNumber}`;
-  if (type === 'requests') return `REQ-${itemNumber}`;
-  if (type === 'tasks') return `T-${itemNumber}`;
-  if (type === 'documents') return `DOC-${itemNumber}`;
-  if (type === 'incidents') return `INC-${itemNumber}`;
-  if (type === 'technologies') return `TEC-${itemNumber}`;
-  if (type === 'budget_lines') return budgetLineReference(itemNumber);
-  return null;
 }
 
 function toSummary(

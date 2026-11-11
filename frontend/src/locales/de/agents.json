@@ -102,7 +102,30 @@
   "targetTypes": {
     "ticket": "Ticket",
     "alert": "Alarm",
-    "sensor": "Überwachter Check"
+    "sensor": "Überwachter Check",
+    "tasks": "Aufgabe",
+    "projects": "Projekt",
+    "requests": "Anfrage",
+    "applications": "Anwendung",
+    "assets": "Asset",
+    "technologies": "Technologie",
+    "incidents": "Vorfall",
+    "documents": "Dokument",
+    "budget_lines": "Budgetzeile",
+    "contracts": "Vertrag",
+    "companies": "Unternehmen",
+    "contacts": "Kontakt",
+    "suppliers": "Lieferant",
+    "departments": "Abteilung",
+    "locations": "Standort",
+    "connections": "Verbindung",
+    "interfaces": "Schnittstelle",
+    "business_processes": "Geschäftsprozess",
+    "users": "Benutzer",
+    "accounts": "Konto",
+    "analytics_categories": "Analytische Kategorie",
+    "chart_of_accounts": "Kontenplan",
+    "vulnerabilities": "Schwachstelle"
   },
   "targetLink": {
     "open": "In Ihrem Ticketsystem öffnen"
@@ -320,7 +343,8 @@
     "runStarted": "Gestartet {{value}}",
     "runCompleted": "beendet {{value}}",
     "runDuration": "Dauer {{value}}",
-    "noTypesSelected": "Wählen Sie mindestens eine Aktivitätsart, um den Verlauf zu sehen."
+    "noTypesSelected": "Wählen Sie mindestens eine Aktivitätsart, um den Verlauf zu sehen.",
+    "otherAction": "Andere Aktion"
   },
   "workspace": {
     "back": "Zurück zu Agenten",
@@ -863,6 +887,7 @@
       "urgency": "Dringlichkeit",
       "impact": "Auswirkung",
       "service": "Service"
-    }
+    },
+    "approvedChange": "Genehmigte Änderung"
   }
 }
