@@ -258,6 +258,21 @@ async function testStateNamesTheWorkspaceBySealedReference() {
       assert.equal(service.peekState(token)?.tenantId, undefined);
     }
     assert.equal(service.peekState('not-a-token'), null);
+
+    // A reference copied into a state the application did not sign, or signed for another use:
+    // neither workspace nor mode.
+    const b64 = (value: unknown) => Buffer.from(JSON.stringify(value)).toString('base64url');
+    for (const mode of ['login', 'setup']) {
+      const copied = { purpose: ENTRA_STATE_PURPOSE, mode, nonce: 'nonce-1', tenant: reference };
+      assert.equal(service.peekState(jwt.sign(copied, 'another-key', { expiresIn: '10m' })), null);
+      assert.equal(service.peekState(`${b64({ alg: 'none', typ: 'JWT' })}.${b64(copied)}.`), null);
+      assert.equal(service.peekState(`${b64({ alg: 'HS256', typ: 'JWT' })}.${b64(copied)}.${b64('x')}`), null);
+      assert.equal(service.peekState(jwt.sign({ ...copied, purpose: 'access' }, stateSecret, { expiresIn: '10m' })), null);
+      assert.equal(service.peekState(jwt.sign({ mode, nonce: 'nonce-1', tenant: reference }, stateSecret, { expiresIn: '10m' })), null);
+    }
+    // A state the application signed still names its workspace and mode once past its lifetime.
+    const past = jwt.sign({ purpose: ENTRA_STATE_PURPOSE, mode: 'setup', nonce: 'nonce-1', tenant: reference }, stateSecret, { expiresIn: -60 });
+    assert.deepEqual(service.peekState(past), { mode: 'setup', tenantId: workspace });
   });
 }
 

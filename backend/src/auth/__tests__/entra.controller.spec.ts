@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import * as jwt from 'jsonwebtoken';
 import { BadRequestException } from '@nestjs/common';
 import { EntraAuthService } from '../entra-auth.service';
+import { ENTRA_STATE_PURPOSE } from '../access-token.util';
 import { mergeScalarFields, resolveDirectoryNames } from '../entra-directory-sync.util';
 import { waitForBackgroundWork } from '../../common/background-work';
 import { EntraController, ssoFailureReason } from '../entra.controller';
@@ -602,8 +603,8 @@ function consentHarness(workspaces: Array<Record<string, any>> = [WORKSPACE_A, W
   /** The state of the consent address the settings page of `workspace` receives. */
   const consentState = (workspace: Record<string, any>) =>
     new URL(entra.buildAdminConsentUrl(workspace.entra_tenant_id, workspace.id) as string).searchParams.get('state') as string;
-  const back = (query: Record<string, unknown>) =>
-    controller.callback({ ...browser, query }, { cookie: () => undefined, redirect: (to: string) => { redirects.push(to); } } as any);
+  const back = (query: Record<string, unknown>, request: Record<string, unknown> = {}) =>
+    controller.callback({ ...browser, ...request, query }, { cookie: () => undefined, redirect: (to: string) => { redirects.push(to); } } as any);
   return { entra, controller, state, lookups, auditEntries, syncs, droppedTokens, redirects, consentState, back };
 }
 
@@ -722,8 +723,8 @@ async function testConsentIsGrantedOnlyForTheWorkspaceDirectory() {
 }
 
 /**
- * A failed return lands on a workspace's sign-in page only for a state of this application. A
- * state built elsewhere reads no workspace and gets the plain error.
+ * A failed return lands on a workspace's page only for a state this application signed. A state
+ * signed elsewhere reads no workspace and no mode, whatever it carries, and gets the plain error.
  */
 async function testFailedReturnReadsAWorkspaceOnlyFromAnApplicationState() {
   const h = consentHarness();
@@ -746,6 +747,25 @@ async function testFailedReturnReadsAWorkspaceOnlyFromAnApplicationState() {
   assert.deepEqual(h.lookups, [WORKSPACE_A.id]);
   assert.deepEqual(h.redirects, ['http://alpha.lvh.me/login?ssoError=SSO_FAILED']);
   assert.deepEqual(h.auditEntries, []);
+
+  // The reference of a sign-in redirect, copied into a state the application did not sign: it
+  // picks no workspace and no mode, and the failed sign-in is recorded for the host's workspace.
+  const copied = consentHarness();
+  const issued = await copied.entra.buildAuthorizationUrl({ mode: 'login', tenantId: WORKSPACE_A.id });
+  const reference = (jwt.decode(issued.state) as { tenant: string }).tenant;
+  authEvents.length = 0;
+  for (const mode of ['setup', 'login']) {
+    const elsewhere = jwt.sign({ purpose: ENTRA_STATE_PURPOSE, mode, nonce: 'nonce-1', tenant: reference }, 'another-key', { expiresIn: '10m' });
+    await assert.rejects(
+      () => copied.back({ code: 'code-1', state: elsewhere }, { tenant: { id: WORKSPACE_B.id } }),
+      /Invalid Entra state/,
+      `${mode}: the plain error`,
+    );
+  }
+  assert.deepEqual(copied.redirects, [], 'no redirect');
+  assert.ok(!copied.lookups.includes(WORKSPACE_A.id), 'the workspace of the reference is not read');
+  const failure = { tenantId: WORKSPACE_B.id, event: { action: 'sso_login_failed', reason: 'invalid_state' } };
+  assert.deepEqual(await recordedEvents(), [failure, failure]);
 }
 
 /** Runs `fn` with the given environment values, then restores them. */

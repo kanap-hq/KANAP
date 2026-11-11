@@ -616,21 +616,23 @@ export class EntraAuthService {
   }
 
   /**
-   * Decode of the state parameter without its signature or expiry — used only
-   * to pick a sensible error redirect target after a failed callback. Never
-   * trust it for auth. The workspace is given only for a reference this
-   * application sealed: a state built elsewhere names none.
+   * The mode and workspace of a state past its checks — used only to pick a
+   * sensible error redirect target after a failed callback, and to tell a
+   * setup round trip from a sign-in. Never trust it for auth: the lifetime is
+   * not checked. The state must be signed by this application as an SSO state
+   * and carry a reference it sealed; any other state gives neither.
    */
-  peekState(stateRaw: unknown): { mode?: string; tenantId?: string } | null {
+  peekState(stateRaw: unknown): { mode: string; tenantId: string } | null {
     if (typeof stateRaw !== 'string' || !stateRaw) return null;
     try {
-      const decoded = jwt.decode(stateRaw);
-      if (!decoded || typeof decoded !== 'object') return null;
-      const { mode, tenant } = decoded as { mode?: unknown; tenant?: unknown };
-      return {
-        mode: typeof mode === 'string' ? mode : undefined,
-        tenantId: this.openTenantReference(tenant) ?? undefined,
-      };
+      const decoded = jwt.verify(stateRaw, this.stateSecret, {
+        algorithms: [...ISSUED_TOKEN_ALGORITHMS],
+        ignoreExpiration: true,
+      }) as Partial<SignedEntraState> | string;
+      if (!decoded || typeof decoded !== 'object' || decoded.purpose !== ENTRA_STATE_PURPOSE) return null;
+      const tenantId = this.openTenantReference(decoded.tenant);
+      if (!tenantId || typeof decoded.mode !== 'string') return null;
+      return { mode: decoded.mode, tenantId };
     } catch {
       return null;
     }
