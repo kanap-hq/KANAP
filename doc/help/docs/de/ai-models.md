@@ -51,7 +51,7 @@ Archivierte Zeilen erscheinen ausgegraut mit einer einzigen Aktion **Wiederherst
 
 ### Das Inklusive Kadratis-Modell
 
-Im gehosteten Dienst ist die erste Zeile der Tabelle immer **Inklusives Kadratis-Modell**: *Von KANAP betrieben, in Ihrem Abonnement enthalten*. Es verhält sich mit Absicht anders als die Modelle, die Sie selbst anlegen:
+Im gehosteten Dienst ist die erste Zeile der Tabelle immer **Inklusives Kadratis-Modell**: *Von Kadratis betrieben, in Ihrem Abonnement enthalten*. Es verhält sich mit Absicht anders als die Modelle, die Sie selbst anlegen:
 
 - Es kostet in beiden Preisspalten `0,00 €`. Es ist Teil Ihres Abonnements und wird Ihnen nicht pro Token berechnet.
 - Es ist **multimodal** (es liest Ticket-Screenshots) und daran können Sie nichts ändern.

@@ -2621,8 +2621,8 @@
     },
     "builtin": {
       "name": "{{product}} included model",
-      "caption": "Operated by KANAP, included in your subscription",
-      "model": "Managed by KANAP",
+      "caption": "Operated by {{product}}, included in your subscription",
+      "model": "Managed by {{product}}",
       "quota": "{{used}} / {{limit}} included messages this month",
       "fallback": "Used when no other model is assigned"
     },

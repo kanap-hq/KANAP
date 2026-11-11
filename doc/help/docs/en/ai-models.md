@@ -51,7 +51,7 @@ Archived rows are shown greyed out with a single **Restore** action. Archiving i
 
 ### The Kadratis included model
 
-On the hosted service, the first row of the table is always **Kadratis included model** (*Operated by KANAP, included in your subscription*). It behaves differently from the models you add, on purpose:
+On the hosted service, the first row of the table is always **Kadratis included model** (*Operated by Kadratis, included in your subscription*). It behaves differently from the models you add, on purpose:
 
 - It costs `0.00 €` in both price columns. It is part of your subscription, not something you are billed per token for.
 - It is **multimodal** (it reads ticket screenshots), and you cannot change that.

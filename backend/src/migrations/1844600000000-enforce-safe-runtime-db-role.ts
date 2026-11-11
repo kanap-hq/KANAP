@@ -59,7 +59,7 @@ export class EnforceSafeRuntimeDbRole1844600000000 implements MigrationInterface
     if (isProtectedRole(current.currentUser)) {
       throw new Error(
         `Unsafe DATABASE_URL role "${current.currentUser}" with ${currentFlags}. `
-        + 'KANAP refuses to run migrations as protected cluster-admin PostgreSQL roles. '
+        + 'Kadratis refuses to run migrations as protected cluster-admin PostgreSQL roles. '
         + 'Create a dedicated application role without SUPERUSER/BYPASSRLS and point DATABASE_URL to it.',
       );
     }

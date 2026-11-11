@@ -2,7 +2,7 @@ import { parseDeploymentMode } from '../common/deployment-mode';
 import { parseBoolean } from '../common/env';
 import { PRODUCT_NAME } from '../config/product';
 
-const DEFAULT_RESEND_FROM = `${PRODUCT_NAME} <no-reply@kanap.net>`;
+const DEFAULT_RESEND_FROM = `${PRODUCT_NAME} <no-reply@kadratis.com>`;
 
 function readTrimmedEnv(name: string): string | null {
   const value = process.env[name];

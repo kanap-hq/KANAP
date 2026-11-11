@@ -51,7 +51,7 @@ Les lignes archivées sont grisées et n'offrent qu'une seule action, **Restaure
 
 ### Le modèle inclus Kadratis
 
-Sur le service hébergé, la première ligne du tableau est toujours **Modèle inclus Kadratis** (*Opéré par KANAP, inclus dans votre abonnement*). Elle se comporte différemment des modèles que vous ajoutez, et c'est voulu :
+Sur le service hébergé, la première ligne du tableau est toujours **Modèle inclus Kadratis** (*Opéré par Kadratis, inclus dans votre abonnement*). Elle se comporte différemment des modèles que vous ajoutez, et c'est voulu :
 
 - Il coûte `0,00 €` dans les deux colonnes de prix. Il fait partie de votre abonnement, ce n'est pas quelque chose qui vous est facturé au token.
 - Il est **multimodal** (il lit les captures d'écran des tickets) et vous ne pouvez pas changer cela.

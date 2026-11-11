@@ -1,4 +1,4 @@
-import { AGENT_NAME, COMPANY_NAME, PRODUCT_NAME } from '../../config/product';
+import { AGENT_NAME, PRODUCT_NAME } from '../../config/product';
 
 // The e-mail texts. In the notification sentences, `{{itemName}}`, `{{document}}`, `{{userName}}`
 // and the other names are filled in bold in the HTML and between quotes in the text version
@@ -309,7 +309,7 @@ export const en = {
     j0: {
       subject: `Welcome to your ${PRODUCT_NAME} workspace`,
       ready: 'Your workspace {{workspace}} is ready.',
-      founder: `I'm Friedrich, the founder of ${COMPANY_NAME}. A CIO by trade, I built this tool out of my own struggles: Excel files scattered all over the place and a different tool for every facet of the information system. ${PRODUCT_NAME} brings all of this together in a single workspace.`,
+      founder: `I'm Friedrich, the founder of ${PRODUCT_NAME}. A CIO by trade, I built this tool out of my own struggles: Excel files scattered all over the place and a different tool for every facet of the information system. ${PRODUCT_NAME} brings all of this together in a single workspace.`,
       angle: 'What brings you here first is {{angle}}. To explore on your own, follow the “Your first five steps” guide on your home page. Each step is detailed in {{guide}}. I also invite you to try the other two paths: {{other1}}, {{other2}}.',
       // The titles of the first-steps pages, quoted: in the text version the address follows the quote.
       guideTitles: {

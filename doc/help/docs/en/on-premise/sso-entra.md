@@ -78,7 +78,7 @@ The new row now shows the status **Not granted** with an orange warning. That is
 
 Who does what:
 
-- **Kadratis Cloud**: KANAP, which operates the service, owns the app registration and adds the permission. The customer's Entra administrator only grants consent.
+- **Kadratis Cloud**: Kadratis operates the service, owns the app registration and adds the permission. The customer's Entra administrator only grants consent.
 - **On-premise**: the customer's own IT owns the app registration, so they add the permission and grant consent.
 
 ### If you do not want Graph calls at sign-in

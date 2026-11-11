@@ -6,7 +6,7 @@ Step-by-step procedure for migrating a single tenant from the multi-tenant cloud
 ## Prerequisites
 
 - SSH access to the cloud production server
-- A working on-prem KANAP installation (docker compose up, migrations applied,
+- A working on-prem Kadratis installation (docker compose up, migrations applied,
   default tenant provisioned)
 - The `mc` (MinIO Client) CLI installed on the on-prem server
 - `psql` available on the cloud server
@@ -46,7 +46,7 @@ LOCAL_EXPORT_DIR="/tmp/export-${TENANT_SLUG}"
 
 ## Phase 1 — Pre-flight checks
 
-Before starting, verify that both environments are on the same KANAP version.
+Before starting, verify that both environments are on the same Kadratis version.
 The import script enforces this, but catching a mismatch early avoids wasted work.
 
 ### 1a. Check cloud schema version
@@ -284,7 +284,7 @@ sudo rm -rf /tmp/export-import
 ## Phase 5 — Configure and restart the application
 
 After import, the `.env` file must be updated before the application starts.
-On each start, when `ADMIN_EMAIL` and `ADMIN_PASSWORD` are both set, KANAP
+On each start, when `ADMIN_EMAIL` and `ADMIN_PASSWORD` are both set, Kadratis
 creates the `ADMIN_EMAIL` account only when the workspace has no active
 administrator. If that account already exists, the start restores it as an
 enabled administrator and keeps its password. `ADMIN_PASSWORD` is stored only

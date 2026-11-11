@@ -109,7 +109,7 @@ BEGIN
     RAISE EXCEPTION 'data-access-role: app_role is the application role (the one of DATABASE_URL), not the limited role';
   END IF;
   IF (SELECT rolsuper FROM pg_roles WHERE rolname = v_app) THEN
-    RAISE WARNING 'data-access-role: "%" is a superuser; KANAP removes that at its first migration, and a superuser cannot use limited access', v_app;
+    RAISE WARNING 'data-access-role: "%" is a superuser; Kadratis removes that at its first migration, and a superuser cannot use limited access', v_app;
   END IF;
 END
 $check$;

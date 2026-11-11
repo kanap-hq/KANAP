@@ -2621,8 +2621,8 @@
     },
     "builtin": {
       "name": "Inklusives {{product}}-Modell",
-      "caption": "Von KANAP betrieben, in Ihrem Abonnement enthalten",
-      "model": "Von KANAP verwaltet",
+      "caption": "Von {{product}} betrieben, in Ihrem Abonnement enthalten",
+      "model": "Von {{product}} verwaltet",
       "quota": "{{used}} / {{limit}} inklusive Nachrichten in diesem Monat",
       "fallback": "Wird verwendet, wenn kein anderes Modell zugewiesen ist"
     },

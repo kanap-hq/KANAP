@@ -77,7 +77,7 @@ La nouvelle ligne affiche maintenant l'état **Not granted** avec un avertisseme
 
 Qui fait quoi :
 
-- **Kadratis Cloud** : KANAP, qui opère le service, possède l'enregistrement d'application et ajoute l'autorisation. L'administrateur Entra du client se contente d'accorder le consentement.
+- **Kadratis Cloud** : Kadratis opère le service, possède l'enregistrement d'application et ajoute l'autorisation. L'administrateur Entra du client se contente d'accorder le consentement.
 - **On-premise** : l'équipe IT du client possède l'enregistrement d'application : elle ajoute donc l'autorisation et accorde le consentement.
 
 ### Si vous ne voulez pas d'appels Graph à la connexion

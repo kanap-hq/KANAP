@@ -127,7 +127,7 @@ Self-hosting is free.
 Paid options are for teams that want operational help:
 
 - **Self-hosted support**: priority support for teams running Kadratis themselves.
-- **Kadratis Cloud**: the same open source platform operated by KANAP, with hosting, updates, backups, support, and activation help.
+- **Kadratis Cloud**: the same open source platform operated by Kadratis, with hosting, updates, backups, support, and activation help.
 
 See [kadratis.com](https://kadratis.com/offer) for current pricing.
 
@@ -171,6 +171,6 @@ The public holiday rules behind the standard working-day calendars come from the
 
 The licenses of Kadratis' production dependencies are checked on every merge. Each published version carries a component inventory (CycloneDX) and a third-party notices file; see [doc/sbom.md](doc/sbom.md).
 
-Copyright 2025-2026, KANAP EURL.
+Copyright 2025-2026, KANAP SARL.
 
 Kadratis™ is a trademark of KANAP, filed with the French trademark office (INPI). See [TRADEMARKS.md](TRADEMARKS.md) for what you may do with the name and logo without asking.

@@ -1,4 +1,4 @@
-import { AGENT_NAME, COMPANY_NAME, PRODUCT_NAME } from '../../config/product';
+import { AGENT_NAME, PRODUCT_NAME } from '../../config/product';
 import type { EmailStrings } from './en';
 
 // French typography (non-breaking spaces before « : ; ? ! » and inside the guillemets) is applied
@@ -302,7 +302,7 @@ export const fr: EmailStrings = {
     j0: {
       subject: `Bienvenue dans votre espace ${PRODUCT_NAME}`,
       ready: 'Votre espace {{workspace}} est prêt.',
-      founder: `Je suis Friedrich, le fondateur de ${COMPANY_NAME}. DSI de métier, j'ai construit cet outil à partir de mes propres difficultés : des fichiers Excel éparpillés un peu partout et un outil différent pour chaque facette du système d'information. ${PRODUCT_NAME} réunit tout cela dans un seul espace de travail.`,
+      founder: `Je suis Friedrich, le fondateur de ${PRODUCT_NAME}. DSI de métier, j'ai construit cet outil à partir de mes propres difficultés : des fichiers Excel éparpillés un peu partout et un outil différent pour chaque facette du système d'information. ${PRODUCT_NAME} réunit tout cela dans un seul espace de travail.`,
       angle: "C'est {{angle}} qui vous amène en premier lieu. Pour tester en autonomie, suivez le guide « Vos cinq premiers pas » de votre page d'accueil. Chaque pas est détaillé dans {{guide}}. Je vous invite également à essayer les deux autres parcours : {{other1}}, {{other2}}.",
       guideTitles: {
         budget: `« Votre budget IT dans ${PRODUCT_NAME} en dix minutes »`,
