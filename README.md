@@ -171,6 +171,6 @@ The public holiday rules behind the standard working-day calendars come from the
 
 The licenses of Kadratis' production dependencies are checked on every merge. Each published version carries a component inventory (CycloneDX) and a third-party notices file; see [doc/sbom.md](doc/sbom.md).
 
-Copyright 2025-2026, KANAP EURL.
+Copyright 2025-2026, KANAP SARL.
 
 Kadratis™ is a trademark of KANAP, filed with the French trademark office (INPI). See [TRADEMARKS.md](TRADEMARKS.md) for what you may do with the name and logo without asking.
