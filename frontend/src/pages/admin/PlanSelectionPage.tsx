@@ -117,7 +117,21 @@ function annualFreeMonths(prices: PlanPrice): number | null {
   return rounded >= 1 && Math.abs(free - rounded) < 1e-9 ? rounded : null;
 }
 
-function parseApiError(error: any, t: TFunction): string {
+/**
+ * "Your subscription ends on 4 Oct 2027: undo the cancellation before changing plan." The plan of a
+ * subscription whose cancellation is set does not change (`SUBSCRIPTION_ENDING`).
+ */
+export function subscriptionEndingMessage(
+  endsAt: string | null | undefined,
+  t: (key: string, options?: Record<string, unknown>) => string,
+  locale: string,
+): string {
+  return endsAt
+    ? t('planSelection.errors.subscriptionEnding', { date: formatShortDate(endsAt, locale, { year: 'always' }) })
+    : t('planSelection.errors.subscriptionEndingNoDate');
+}
+
+function parseApiError(error: any, t: TFunction, locale: string): string {
   const message = error?.response?.data?.message;
   if (Array.isArray(message)) {
     return getApiErrorMessage(error, t, t('planSelection.messages.requestFailed'));
@@ -130,6 +144,9 @@ function parseApiError(error: any, t: TFunction): string {
   }
   if (message === 'SUBSCRIPTION_PAYMENT_PENDING') {
     return t('planSelection.errors.subscriptionPaymentPending');
+  }
+  if (message === 'SUBSCRIPTION_ENDING') {
+    return subscriptionEndingMessage(error?.response?.data?.ends_at, t, locale);
   }
   if (message === 'BILLING_PROFILE_INCOMPLETE') {
     const missing = error?.response?.data?.missing;
@@ -370,7 +387,7 @@ export default function PlanSelectionDialog({
         setActionError(t('planSelection.messages.checkoutUrlUnavailable'));
       }
     } catch (e: any) {
-      setActionError(parseApiError(e, t));
+      setActionError(parseApiError(e, t, locale));
     } finally {
       setActionLoading(null);
     }
@@ -388,7 +405,7 @@ export default function PlanSelectionDialog({
       onSuccess?.();
       setActionInfo(keptMessage(billingCycle, t));
     } catch (e: any) {
-      setActionError(parseApiError(e, t));
+      setActionError(parseApiError(e, t, locale));
     } finally {
       setActionLoading(null);
     }
@@ -414,7 +431,7 @@ export default function PlanSelectionDialog({
       setInvoiceUrl(url);
       setActionInfo(transferMessage(invoice, url, t, locale));
     } catch (e: any) {
-      setActionError(parseApiError(e, t));
+      setActionError(parseApiError(e, t, locale));
     } finally {
       setActionLoading(null);
     }

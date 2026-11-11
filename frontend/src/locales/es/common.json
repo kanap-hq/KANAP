@@ -1181,7 +1181,10 @@
     "subscriptionNeedsAttention": "Su suscripción requiere atención.",
     "goToBilling": "Ir a facturación",
     "accountAccessLimited": "El acceso a la cuenta está limitado. Contacte a su administrador de facturación.",
-    "choosePlanToContinueAction": "Elegir un plan para continuar"
+    "choosePlanToContinueAction": "Elegir un plan para continuar",
+    "paymentOverdueAmount": "Pago de {{amount}} vencido. El acceso se limitará el {{date}}.",
+    "paymentOverdue": "Hay un pago vencido. El acceso se limitará el {{date}}.",
+    "contactBillingAdmin": "Contacte a su administrador de facturación."
   },
   "forbidden": {
     "title": "Acceso denegado",

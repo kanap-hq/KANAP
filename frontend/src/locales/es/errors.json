@@ -506,5 +506,6 @@
     "incidents": "incidentes"
   },
   "AI_IMPORT_CLEARS_COLUMNS_one": "{{count}} fila actualiza un registro existente, y esta importación sustituye todos sus valores: el archivo no tiene columna para {{columns}}, cuyos valores se borrarían. Asigne esas columnas o deje solo los registros nuevos en el archivo.",
-  "AI_IMPORT_CLEARS_COLUMNS_other": "{{count}} filas actualizan registros existentes, y esta importación sustituye todos sus valores: el archivo no tiene columna para {{columns}}, cuyos valores se borrarían. Asigne esas columnas o deje solo los registros nuevos en el archivo."
+  "AI_IMPORT_CLEARS_COLUMNS_other": "{{count}} filas actualizan registros existentes, y esta importación sustituye todos sus valores: el archivo no tiene columna para {{columns}}, cuyos valores se borrarían. Asigne esas columnas o deje solo los registros nuevos en el archivo.",
+  "INVOICE_PAYMENT_IN_PROGRESS": "Ya hay un pago en curso."
 }

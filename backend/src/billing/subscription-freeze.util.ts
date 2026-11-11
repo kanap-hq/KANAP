@@ -1,32 +1,54 @@
 import { CollectionMethod, Subscription, SubscriptionStatus } from './subscription.entity';
-import { FREEZE_GRACE_DAYS, TRIAL_PLAN_NAME, TRIAL_WORKSPACE_RETENTION_DAYS } from './plans.config';
+import { FREEZE_GRACE_DAYS, INVOICE_PAYMENT_TERM_DAYS, TRIAL_PLAN_NAME, TRIAL_WORKSPACE_RETENTION_DAYS } from './plans.config';
 
 const GRACE_MS = FREEZE_GRACE_DAYS * 86400000;
 const TRIAL_RETENTION_MS = TRIAL_WORKSPACE_RETENTION_DAYS * 86400000;
 
 /**
- * When a PAST_DUE subscription's grace period expires and it becomes "frozen".
- * Invoice-based billing counts from the invoice due date; automatic charging
- * counts from the period end. Returns null when we can't determine a date
- * (treated as immediately frozen by the callers).
+ * When the grace of an unpaid invoice ends: FREEZE_GRACE_DAYS after the invoice for a card, after
+ * its due date (invoice date plus the payment term, INVOICE_PAYMENT_TERM_DAYS when none is
+ * stored) for a bank transfer. The invoice date is the
+ * later of the latest invoice's and the start of the current period (the renewal that issued
+ * it): the same date when the row is current, and the unpaid renewal's when the row still holds
+ * the previous, paid invoice. Stripe opens the next period even unpaid, so its end says nothing
+ * of the debt. Null without either date (treated as frozen by evaluateSubscriptionAccess).
  */
 export function computeFreezeEffectiveAt(subscription: Subscription): number | null {
-  if (subscription.collection_method === CollectionMethod.SEND_INVOICE) {
-    if (subscription.latest_invoice_created && subscription.days_until_due != null) {
-      return subscription.latest_invoice_created.getTime()
-        + subscription.days_until_due * 86400000
-        + GRACE_MS;
-    }
-    if (subscription.current_period_end) {
-      return subscription.current_period_end.getTime() + GRACE_MS;
-    }
-    return null;
-  }
+  const dates = [subscription.latest_invoice_created, subscription.current_period_start]
+    .map((date) => (date ? new Date(date).getTime() : NaN))
+    .filter((time) => Number.isFinite(time));
+  if (!dates.length) return null;
+  const invoicedAt = Math.max(...dates);
+  const termDays = subscription.collection_method === CollectionMethod.SEND_INVOICE ? subscription.days_until_due ?? INVOICE_PAYMENT_TERM_DAYS : 0;
+  return invoicedAt + termDays * 86400000 + GRACE_MS;
+}
 
-  if (subscription.current_period_end) {
-    return subscription.current_period_end.getTime() + GRACE_MS;
+/**
+ * The freeze date of the subscription summary (`freeze_effective_at`), from the one freeze rule:
+ * a subscription freezes at status unpaid or canceled, or at the end of the grace of its unpaid
+ * invoice (computeFreezeEffectiveAt), whichever comes first. Past due: the end of the grace, ahead
+ * or passed. Canceled: its end, or the end of the grace of an invoice left open when earlier.
+ * Unpaid: the end of the grace once passed (when Stripe set the status is not stored), else null.
+ * Null for any other subscription.
+ */
+export function computeFreezeDate(subscription: Subscription, now: number): number | null {
+  switch (subscription.status) {
+    case SubscriptionStatus.PAST_DUE:
+      return computeFreezeEffectiveAt(subscription);
+    case SubscriptionStatus.UNPAID: {
+      const graceEnd = computeFreezeEffectiveAt(subscription);
+      return graceEnd != null && graceEnd <= now ? graceEnd : null;
+    }
+    case SubscriptionStatus.CANCELED: {
+      const endedAt = (subscription.canceled_at_effective ?? subscription.canceled_at)?.getTime() ?? null;
+      const invoiceLeftOpen = subscription.latest_invoice_status === 'open' || subscription.latest_invoice_status === 'uncollectible';
+      const graceEnd = invoiceLeftOpen ? computeFreezeEffectiveAt(subscription) : null;
+      const dates = [endedAt, graceEnd].filter((date): date is number => date != null);
+      return dates.length ? Math.min(...dates) : null;
+    }
+    default:
+      return null;
   }
-  return null;
 }
 
 export type SubscriptionAccessDecision = {

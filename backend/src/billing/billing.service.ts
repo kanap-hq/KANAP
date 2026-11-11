@@ -1,12 +1,20 @@
 import { createHash } from 'node:crypto';
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, EntityManager, DataSource } from 'typeorm';
 import { PaymentMode, Subscription, SubscriptionType, SubscriptionStatus, CollectionMethod } from './subscription.entity';
 import { User } from '../users/user.entity';
 import { Tenant } from '../tenants/tenant.entity';
 import { StripeClientService, StripeConfigService, ensureInvoiceA4 } from './stripe';
-import { cancellationEffectiveAt, subscriptionDaysUntilDue, subscriptionPeriod } from './stripe/stripe-shapes.util';
+import {
+  cancellationEffectiveAt,
+  invoicePaymentFailure,
+  invoicePaymentIntentsExpand,
+  invoicePaymentProcessing,
+  subscriptionDaysUntilDue,
+  subscriptionPeriod,
+  type PaymentFailure,
+} from './stripe/stripe-shapes.util';
 import { computePriceAmount, computeStripePriceAmount, normaliseStripePrice, type NormalisedPrice } from './price.util';
 import { euVatTaxIdValue, missingInvoiceFields, normaliseVatNumber, stripeAddress, toIsoCountry } from './billing-profile.util';
 import { customerSiren, invoiceCustomFields, invoiceLocale } from './invoice-mentions';
@@ -14,10 +22,9 @@ import { withTenant } from '../common/tenant-runner';
 import { Features } from '../config/features';
 import { AuditService } from '../audit/audit.service';
 import { GTC_URLS, GTC_VERSION, type TermsPaymentPath } from './terms';
-import { computeTrialDeletionAt } from './subscription-freeze.util';
+import { computeFreezeDate, computeTrialDeletionAt, evaluateSubscriptionAccess } from './subscription-freeze.util';
 import {
   PLANS,
-  FREEZE_GRACE_DAYS,
   BANK_TRANSFER_MIN_AMOUNT_EUR_CENTS,
   CLOUD_SUBSCRIPTION_QUANTITY,
   INVOICE_PAYMENT_TERM_DAYS,
@@ -86,6 +93,11 @@ export type PlanChange = {
   invoice?: PlanChangeInvoice;
   effective_at?: string;
   setup_url?: string;
+};
+
+/** The outcome of `POST /billing/pay-invoice` (see `BillingService.payOpenInvoice`). */
+export type InvoicePayment = {
+  status: 'paid' | 'payment_failed' | 'processing' | 'requires_action' | 'card_unchanged' | 'nothing_to_pay';
 };
 
 /** A change of interval a Stripe subscription schedule applies at `effective_at` (ISO date). */
@@ -195,6 +207,9 @@ export class BillingService {
     const now = Date.now();
     const statusStr = sub.status ?? '';
     const isHealthy = isHealthySubscription(sub.status, sub.trial_end, now);
+    // The access rule the API applies (PermissionGuard): a past due workspace stays usable
+    // during its grace. Without billing (on-premise), always usable.
+    const accessAllowed = evaluateSubscriptionAccess(sub, now, this.stripeConfig.isConfigured()).allowed;
 
     let trialDaysRemaining: number | null = null;
     if (statusStr === 'trialing' && sub.trial_end) {
@@ -209,11 +224,9 @@ export class BillingService {
       paymentDueAt = new Date(dueMs).toISOString();
     }
 
-    let freezeEffectiveAt: string | null = null;
-    if (paymentDueAt) {
-      const freezeMs = new Date(paymentDueAt).getTime() + FREEZE_GRACE_DAYS * 86400000;
-      freezeEffectiveAt = new Date(freezeMs).toISOString();
-    }
+    // The one freeze rule (doc/architecture.md), as the access check applies it.
+    const freezeDate = computeFreezeDate(sub, now);
+    const freezeEffectiveAt = freezeDate != null ? new Date(freezeDate).toISOString() : null;
     const trialDeletionAt = computeTrialDeletionAt(sub, !Features.SINGLE_TENANT && this.stripeConfig.isConfigured());
     // A subscription whose cancellation is set ends on `canceled_at_effective`: it does not renew.
     const renewalAt = sub.canceled_at_effective
@@ -265,6 +278,7 @@ export class BillingService {
       stripe_customer_id: sub.stripe_customer_id,
       canceled_at_effective: sub.canceled_at_effective ? sub.canceled_at_effective.toISOString() : null,
       is_subscription_healthy: isHealthy,
+      access_allowed: accessAllowed,
       trial_days_remaining: trialDaysRemaining,
       payment_due_at: paymentDueAt,
       freeze_effective_at: freezeEffectiveAt,
@@ -754,6 +768,107 @@ export class BillingService {
   }
 
   /**
+   * `POST /billing/pay-invoice`, called on the return from the customer portal: the open invoice of
+   * a card subscription is charged at once on the subscription's card (its default payment method,
+   * else the customer's; named to Stripe as the card to charge), without waiting for Stripe's next
+   * retry. Only when that card is not the
+   * one last refused (no card was changed: no second refusal), and once: the call takes the
+   * tenant's lock shared with the webhook (held until the request commits, so a second call then
+   * finds the invoice paid; one still waiting for it beyond the request's lock wait is refused
+   * with 409 INVOICE_PAYMENT_IN_PROGRESS), and Stripe's idempotency key names the invoice and the card. Returns
+   * the summary read again from Stripe, plus `payment.status`: `paid` (also when Stripe's retry
+   * paid it meanwhile), `payment_failed`, `processing` (accepted, not settled yet),
+   * `requires_action` (the bank asks for authentication: the invoice page takes it),
+   * `card_unchanged`, or `nothing_to_pay` (no open invoice, or a subscription paid by transfer).
+   */
+  async payOpenInvoice(opts: { tenantId: string; userId?: string | null; manager?: EntityManager }) {
+    const mg = opts.manager ?? this.subs.manager;
+    const payment = await this.chargeOpenInvoice(opts.tenantId, opts.userId ?? null, mg);
+    const summary = await this.getSubscriptionSummary({ manager: mg, forceStripeRefresh: true });
+    return { ...summary, payment };
+  }
+
+  private async chargeOpenInvoice(tenantId: string, userId: string | null, manager: EntityManager): Promise<InvoicePayment> {
+    const client = this.getStripeClientOrThrow();
+    try {
+      await manager.query(`SELECT pg_advisory_xact_lock(hashtext($1)::bigint)`, [`stripe-webhook:${tenantId}`]);
+    } catch (error: any) {
+      // Another payment of the tenant (a second tab) holds the lock beyond the request's lock wait.
+      if ((error?.code ?? error?.driverError?.code) === '55P03') {
+        throw new ConflictException({ code: 'INVOICE_PAYMENT_IN_PROGRESS', message: 'A payment is already in progress.' });
+      }
+      throw error;
+    }
+    const sub = await this.ensureSubscription(manager);
+    const stripeSub = await this.retrieveLiveSubscription(sub);
+    const invoiceId = this.stripeObjectId(stripeSub?.latest_invoice);
+    if (!stripeSub || stripeSub.collection_method !== 'charge_automatically' || !invoiceId) {
+      return { status: 'nothing_to_pay' };
+    }
+    const invoice: any = await client.invoices.retrieve(invoiceId, {
+      expand: [invoicePaymentIntentsExpand(this.stripeConfig.getApiVersion?.())],
+    });
+    if (invoice?.status !== 'open') return { status: 'nothing_to_pay' };
+
+    const card = this.stripeObjectId(await this.chargedPaymentMethod(stripeSub));
+    if (!card || card === invoicePaymentFailure(invoice)?.paymentMethodId) return { status: 'card_unchanged' };
+
+    let status: InvoicePayment['status'];
+    try {
+      const paid: any = await client.invoices.pay(invoiceId, { payment_method: card }, { idempotencyKey: `invoice-pay-${invoiceId}-${card}` });
+      status = paid?.status === 'paid' ? 'paid' : await this.unsettledInvoicePayment(invoiceId);
+    } catch (error: any) {
+      if (error?.code === 'invoice_payment_intent_requires_action') {
+        status = 'requires_action';
+      } else if (error?.type === 'StripeCardError' || error?.rawType === 'card_error') {
+        status = 'payment_failed';
+      } else if ((error?.type === 'StripeInvalidRequestError' || error?.rawType === 'invalid_request_error')
+        && (await client.invoices.retrieve(invoiceId))?.status === 'paid') {
+        // Refused because Stripe's own retry paid the invoice meanwhile.
+        status = 'paid';
+      } else {
+        throw error;
+      }
+    }
+    await this.audit.log(
+      {
+        table: 'subscriptions',
+        recordId: sub.id,
+        action: 'update',
+        before: { latest_invoice_id: invoiceId, latest_invoice_status: 'open' },
+        after: { latest_invoice_id: invoiceId, latest_invoice_status: status === 'paid' ? 'paid' : 'open', payment: status },
+        userId,
+        sourceRef: invoiceId,
+      },
+      { manager },
+    );
+    return { status };
+  }
+
+  /**
+   * The payment method Stripe charges for this subscription: its own, else, for a card
+   * subscription, the customer's default (where the customer portal puts a new card). A
+   * subscription paid by bank transfer takes no customer card.
+   */
+  private async chargedPaymentMethod(stripeSub: any): Promise<any> {
+    if (stripeSub?.default_payment_method) return stripeSub.default_payment_method;
+    const customerId = this.stripeObjectId(stripeSub?.customer);
+    if (stripeSub?.collection_method !== 'charge_automatically' || !customerId) return null;
+    const customer: any = await this.getStripeClientOrThrow().customers.retrieve(customerId, {
+      expand: ['invoice_settings.default_payment_method'],
+    });
+    return customer?.invoice_settings?.default_payment_method ?? null;
+  }
+
+  /** An invoice `invoices.pay` left unpaid without an error: `processing` while its payment is not settled yet, else refused. */
+  private async unsettledInvoicePayment(invoiceId: string): Promise<InvoicePayment['status']> {
+    const invoice: any = await this.getStripeClientOrThrow().invoices.retrieve(invoiceId, {
+      expand: [invoicePaymentIntentsExpand(this.stripeConfig.getApiVersion?.())],
+    });
+    return invoicePaymentProcessing(invoice) ? 'processing' : 'payment_failed';
+  }
+
+  /**
    * Whether a card invoice of this customer can be charged: the subscription's or the customer's
    * default payment method is a card, or the customer has a saved card, which then becomes the
    * customer's default (a card saved on the setup page before its webhook arrived).
@@ -879,7 +994,10 @@ export class BillingService {
   /**
    * Only a Stripe subscription in good standing (active, or trialing before its end) is changed.
    * One that still runs unpaid (past due, unpaid, incomplete, paused) is refused with
-   * SUBSCRIPTION_PAYMENT_PENDING, an ended one with NO_ACTIVE_SUBSCRIPTION: nothing changes in Stripe.
+   * SUBSCRIPTION_PAYMENT_PENDING, an ended one with NO_ACTIVE_SUBSCRIPTION. One whose cancellation
+   * is set is refused with SUBSCRIPTION_ENDING and its end date (`ends_at`): a change would clear
+   * the cancellation or cap the new period at it, so the cancellation is undone first. Nothing
+   * changes in Stripe.
    */
   private assertSubscriptionCanChange(stripeSub: any): void {
     if (!isLiveSubscriptionStatus(stripeSub?.status)) {
@@ -887,6 +1005,10 @@ export class BillingService {
     }
     if (!isHealthySubscription(stripeSub.status, this.toDate(stripeSub.trial_end))) {
       throw new BadRequestException('SUBSCRIPTION_PAYMENT_PENDING');
+    }
+    if (stripeSub.cancel_at || stripeSub.cancel_at_period_end) {
+      const endsAt = cancellationEffectiveAt(stripeSub, null);
+      throw new BadRequestException({ message: 'SUBSCRIPTION_ENDING', ends_at: endsAt ? endsAt.toISOString() : null });
     }
   }
 
@@ -1476,7 +1598,7 @@ export class BillingService {
     sub.days_until_due = subscriptionDaysUntilDue(stripeSub, sub.days_until_due ?? null);
     sub.stripe_customer_id = typeof stripeSub?.customer === 'string' ? stripeSub.customer : sub.stripe_customer_id;
 
-    const paymentMethodInfo = await this.describeStripePaymentMethod(stripeSub?.default_payment_method);
+    const paymentMethodInfo = await this.describeStripePaymentMethod(await this.chargedPaymentMethod(stripeSub));
     if (paymentMethodInfo) {
       sub.default_payment_method_id = paymentMethodInfo.id;
       sub.default_payment_method_brand = paymentMethodInfo.brand;
@@ -1485,6 +1607,7 @@ export class BillingService {
 
     const latestInvoice = await this.retrieveLatestInvoice(stripeSub);
     if (latestInvoice) {
+      const anotherInvoice = !!latestInvoice.id && !!sub.latest_invoice_id && latestInvoice.id !== sub.latest_invoice_id;
       sub.latest_invoice_id = latestInvoice.id ?? sub.latest_invoice_id ?? null;
       sub.latest_invoice_status = latestInvoice.status ?? sub.latest_invoice_status ?? null;
       // The invoice's own number and links: a draft has none yet.
@@ -1494,8 +1617,13 @@ export class BillingService {
       if (typeof latestInvoice.total === 'number') sub.latest_invoice_amount = latestInvoice.total;
       if (latestInvoice.currency) sub.latest_invoice_currency = String(latestInvoice.currency).toUpperCase();
       if (latestInvoice.created) sub.latest_invoice_created = this.toDate(latestInvoice.created);
-      sub.last_payment_error_code = latestInvoice.last_payment_error?.code ?? null;
-      sub.last_payment_error_message = latestInvoice.last_payment_error?.message ?? null;
+      // The reason of a refused payment (on the invoice's PaymentIntent) stays until the invoice is
+      // paid; another invoice starts without one.
+      const failure = latestInvoice.status === 'paid' ? null : await this.readInvoicePaymentFailure(latestInvoice);
+      if (latestInvoice.status === 'paid' || failure || anotherInvoice) {
+        sub.last_payment_error_code = failure?.code ?? null;
+        sub.last_payment_error_message = failure?.message ?? null;
+      }
     }
 
     sub.last_synced_at = new Date();
@@ -1723,13 +1851,36 @@ export class BillingService {
     }
   }
 
+  /**
+   * The refusal on an open or uncollectible invoice's PaymentIntents: from the invoice when they
+   * are expanded, else read again from Stripe with them. Null for any other invoice, or when
+   * Stripe cannot be read.
+   */
+  private async readInvoicePaymentFailure(invoice: any): Promise<PaymentFailure | null> {
+    if (invoice?.status !== 'open' && invoice?.status !== 'uncollectible') return null;
+    const inPayload = invoicePaymentFailure(invoice);
+    if (inPayload || !invoice.id) return inPayload;
+    try {
+      const retrieved = await this.getStripeClientOrThrow().invoices.retrieve(invoice.id, {
+        expand: [invoicePaymentIntentsExpand(this.stripeConfig.getApiVersion?.())],
+      });
+      return invoicePaymentFailure(retrieved);
+    } catch (error) {
+      this.logger.warn(`Unable to read the payments of invoice ${invoice.id}: ${(error as Error).message}`);
+      return null;
+    }
+  }
+
   private async retrieveLatestInvoice(stripeSub: any): Promise<any | null> {
     const client = this.stripeClient.getClient();
     if (!client) return null;
     const latest = stripeSub?.latest_invoice;
     try {
       if (typeof latest === 'string') {
-        return await client.invoices.retrieve(latest);
+        // With its PaymentIntents: the reason of a refused payment is there.
+        return await client.invoices.retrieve(latest, {
+          expand: [invoicePaymentIntentsExpand(this.stripeConfig.getApiVersion?.())],
+        });
       }
       if (latest) return latest;
     } catch (error) {

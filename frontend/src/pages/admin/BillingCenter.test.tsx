@@ -46,10 +46,24 @@ vi.mock('../../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 const authState = vi.hoisted(() => ({
   subscription: null as any,
   claims: { isBillingAdmin: true },
+  refreshMe: vi.fn(async () => undefined),
 }));
 vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => authState,
 }));
+
+// jsdom here has no usable session storage: a store per test.
+const sessionStore = new Map<string, string>();
+Object.defineProperty(window, 'sessionStorage', {
+  configurable: true,
+  value: {
+    getItem: (key: string) => sessionStore.get(key) ?? null,
+    setItem: (key: string, value: string) => { sessionStore.set(key, String(value)); },
+    removeItem: (key: string) => { sessionStore.delete(key); },
+    clear: () => sessionStore.clear(),
+  },
+});
+const PAY_ON_RETURN_MARK = 'billing-pay-on-return';
 
 const EMPTY_CONTACT = {
   name: null,
@@ -73,13 +87,15 @@ function renderPage(
   subscription: Record<string, unknown>,
   profile: { invoice?: Record<string, unknown>; invoice_missing_fields?: string[]; invoices?: unknown[] } = {},
   path = '/admin/billing',
+  /** The subscription the profile carries when read, when it changes during the test. */
+  currentSubscription: () => Record<string, unknown> = () => subscription,
 ) {
   authState.subscription = subscription;
   (api.get as any).mockImplementation(async (url: string) => {
     if (url === '/billing/profile') {
       return {
         data: {
-          subscription,
+          subscription: currentSubscription(),
           customer: EMPTY_CONTACT,
           invoice: profile.invoice ?? EMPTY_CONTACT,
           invoice_missing_fields: profile.invoice_missing_fields ?? [],
@@ -263,6 +279,13 @@ describe('BillingCenter subscription summary', () => {
     await waitFor(() => expect(api.post).toHaveBeenCalledWith('/billing/portal', expect.anything()));
   });
 
+  it('greys the plan change while the cancellation is set, saying to undo it first', async () => {
+    renderPage(CANCELLED);
+    expect(await screen.findByText('· ends 4 Oct 2099')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Change plan' })).toBeDisabled();
+    expect(screen.getByLabelText('Your subscription ends on 4 Oct 2099: undo the cancellation before changing plan.')).toBeInTheDocument();
+  });
+
   it('shows the end date without the action to a user who cannot manage billing', async () => {
     authState.claims = { isBillingAdmin: false };
     try {
@@ -272,6 +295,214 @@ describe('BillingCenter subscription summary', () => {
     } finally {
       authState.claims = { isBillingAdmin: true };
     }
+  });
+});
+
+describe('BillingCenter unpaid invoice', () => {
+  const PENDING_PAYMENT = 'Pay the pending invoice first, then change your plan.';
+  const CARD_REFUSED = {
+    plan_name: 'Hosted KANAP',
+    status: 'past_due',
+    stripe_subscription_id: 'sub_1',
+    subscription_type: 'monthly',
+    collection_method: 'charge_automatically',
+    payment_mode: 'card',
+    default_payment_method_id: 'pm_1',
+    default_payment_method_brand: 'visa',
+    default_payment_method_last4: '0341',
+    amount: 24900,
+    currency: 'EUR',
+    renewal_at: '2099-12-10T00:00:00.000Z',
+    latest_invoice_status: 'open',
+    latest_invoice_number: 'KAN-0041',
+    latest_invoice_amount: 24900,
+    latest_invoice_currency: 'eur',
+    latest_invoice_created: '2099-11-10T00:00:00.000Z',
+    latest_invoice_url: 'https://invoice.stripe.test/kan-0041',
+    last_payment_error_code: 'insufficient_funds',
+    last_payment_error_message: 'Your card has insufficient funds.',
+    is_subscription_healthy: false,
+    access_allowed: true,
+    freeze_effective_at: '2099-11-24T00:00:00.000Z',
+  };
+  const TRANSFER_OVERDUE = {
+    ...CARD_REFUSED,
+    subscription_type: 'annual',
+    collection_method: 'send_invoice',
+    payment_mode: 'bank_transfer',
+    default_payment_method_id: null,
+    default_payment_method_brand: null,
+    default_payment_method_last4: null,
+    amount: 249000,
+    latest_invoice_amount: 249000,
+    latest_invoice_created: '2099-10-04T00:00:00.000Z',
+    payment_due_at: '2099-11-03T00:00:00.000Z',
+    last_payment_error_code: null,
+    last_payment_error_message: null,
+    freeze_effective_at: '2099-11-17T00:00:00.000Z',
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    sessionStore.clear();
+  });
+
+  it('shows a refused card payment with its reason and the date access becomes limited', async () => {
+    renderPage(CARD_REFUSED);
+    expect(await screen.findByText('Payment refused on 10 Nov 2099: insufficient funds.')).toBeInTheDocument();
+    expect(screen.getByText('Access will be limited on 24 Nov 2099.')).toBeInTheDocument();
+    // Stripe's English message is not shown: the reason is translated from its code.
+    expect(screen.queryByText(/Your card has insufficient funds/)).not.toBeInTheDocument();
+    // The plan cannot change while the invoice is unpaid, and the plan dialog does not open by itself.
+    expect(screen.getByRole('button', { name: 'Change plan' })).toBeDisabled();
+    expect(screen.getByLabelText(PENDING_PAYMENT)).toBeInTheDocument();
+    expect(screen.queryByText('Choose a plan')).not.toBeInTheDocument();
+  });
+
+  it('names an unknown refusal reason in plain words', async () => {
+    renderPage({ ...CARD_REFUSED, last_payment_error_code: 'do_not_honor' });
+    expect(await screen.findByText('Payment refused on 10 Nov 2099: card declined.')).toBeInTheDocument();
+  });
+
+  it('shows an overdue bank transfer invoice with its number, amount and due date', async () => {
+    renderPage(TRANSFER_OVERDUE);
+    expect(await screen.findByText('Invoice KAN-0041 of €2,490.00 was due on 3 Nov 2099.')).toBeInTheDocument();
+    expect(screen.getByText('Access will be limited on 17 Nov 2099.')).toBeInTheDocument();
+    expect(screen.queryByText(/Payment refused/)).not.toBeInTheDocument();
+  });
+
+  it('shows since when access is limited once the workspace is frozen', async () => {
+    renderPage({ ...CARD_REFUSED, access_allowed: false, freeze_effective_at: '2026-11-01T00:00:00.000Z' });
+    expect(await screen.findByText('Access limited since 1 Nov 2026.')).toBeInTheDocument();
+    expect(screen.getByText('Payment refused on 10 Nov 2099: insufficient funds.')).toBeInTheDocument();
+    expect(screen.queryByText(/will be limited/)).not.toBeInTheDocument();
+  });
+
+  it('sends a card subscription to the portal to update the card, marked to pay on the return', async () => {
+    (api.post as any).mockResolvedValue({ data: {} });
+    renderPage(CARD_REFUSED);
+    fireEvent.click(await screen.findByRole('button', { name: 'Update card and pay' }));
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith('/billing/portal', {
+      returnUrl: expect.stringMatching(/\/admin\/billing\?pay_invoice=1$/),
+    }));
+  });
+
+  it('marks this browser session when it opens the portal to pay', async () => {
+    (api.post as any).mockResolvedValue({ data: { url: '#portal' } });
+    renderPage(CARD_REFUSED);
+    fireEvent.click(await screen.findByRole('button', { name: 'Update card and pay' }));
+    await waitFor(() => expect(sessionStore.get(PAY_ON_RETURN_MARK)).toBe('1'));
+  });
+
+  it('opens the invoice page of a bank transfer subscription', async () => {
+    renderPage(TRANSFER_OVERDUE);
+    const link = await screen.findByRole('link', { name: 'Pay invoice' });
+    expect(link).toHaveAttribute('href', 'https://invoice.stripe.test/kan-0041');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(screen.queryByRole('button', { name: 'Update card and pay' })).not.toBeInTheDocument();
+  });
+
+  it('opens the invoice page of an invoice Stripe no longer retries', async () => {
+    renderPage({ ...CARD_REFUSED, latest_invoice_status: 'uncollectible' });
+    const link = await screen.findByRole('link', { name: 'Pay invoice' });
+    expect(link).toHaveAttribute('href', 'https://invoice.stripe.test/kan-0041');
+    expect(screen.queryByRole('button', { name: 'Update card and pay' })).not.toBeInTheDocument();
+  });
+
+  /** The page opened on the return from the portal, with the answer of `POST /billing/pay-invoice`. */
+  async function returnFromPortal(answer: Record<string, unknown>) {
+    const { payment: _payment, ...after } = answer;
+    let paid = false;
+    (api.post as any).mockImplementation(async (url: string) => {
+      if (url !== '/billing/pay-invoice') return { data: {} };
+      paid = true;
+      return { data: answer };
+    });
+    // This browser session opened the portal to pay.
+    sessionStore.set(PAY_ON_RETURN_MARK, '1');
+    // Read again after the payment, the profile carries the summary the payment answered.
+    renderPage(CARD_REFUSED, {}, '/admin/billing?pay_invoice=1', () => (paid ? after : CARD_REFUSED));
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith('/billing/pay-invoice'));
+  }
+
+  it('pays the open invoice once on the return from the portal', async () => {
+    await returnFromPortal({
+      ...CARD_REFUSED,
+      status: 'active',
+      latest_invoice_status: 'paid',
+      last_payment_error_code: null,
+      is_subscription_healthy: true,
+      freeze_effective_at: null,
+      payment: { status: 'paid' },
+    });
+    expect(await screen.findByText('Invoice paid.')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText(/Payment refused on/)).not.toBeInTheDocument());
+    expect((api.post as any).mock.calls.filter(([url]: [string]) => url === '/billing/pay-invoice')).toHaveLength(1);
+    expect(sessionStore.has(PAY_ON_RETURN_MARK)).toBe(false);
+  });
+
+  it('reads the subscription again for the banner when another tab paid the invoice', async () => {
+    authState.refreshMe.mockClear();
+    await returnFromPortal({
+      ...CARD_REFUSED,
+      status: 'active',
+      latest_invoice_status: 'paid',
+      last_payment_error_code: null,
+      is_subscription_healthy: true,
+      freeze_effective_at: null,
+      payment: { status: 'nothing_to_pay' },
+    });
+    await waitFor(() => expect(authState.refreshMe).toHaveBeenCalled());
+  });
+
+  it('pays nothing when the return address is opened without the portal (history, link)', async () => {
+    renderPage(CARD_REFUSED, {}, '/admin/billing?pay_invoice=1');
+    expect(await screen.findByText('Payment refused on 10 Nov 2099: insufficient funds.')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Update card and pay' })).toBeEnabled();
+    expect(api.post).not.toHaveBeenCalled();
+  });
+
+  it('says the new card was refused, with its reason', async () => {
+    await returnFromPortal({ ...CARD_REFUSED, last_payment_error_code: 'expired_card', payment: { status: 'payment_failed' } });
+    expect(await screen.findByText('Payment refused: card expired.')).toBeInTheDocument();
+  });
+
+  it('says to update the card first when it has not changed', async () => {
+    await returnFromPortal({ ...CARD_REFUSED, payment: { status: 'card_unchanged' } });
+    expect(await screen.findByText('The card has not changed. Update it, then pay.')).toBeInTheDocument();
+    // The invoice page takes a payment with the same card.
+    expect(screen.getByRole('link', { name: 'Open invoice' })).toHaveAttribute('href', 'https://invoice.stripe.test/kan-0041');
+  });
+
+  it('says a payment accepted but not settled yet is being processed', async () => {
+    await returnFromPortal({ ...CARD_REFUSED, payment: { status: 'processing' } });
+    expect(await screen.findByText('Payment is being processed.')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Payment is being processed.');
+  });
+
+  it('opens the invoice page when the bank asks to confirm the payment', async () => {
+    await returnFromPortal({ ...CARD_REFUSED, payment: { status: 'requires_action' } });
+    expect(await screen.findByText('Your bank asks you to confirm the payment.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open invoice' })).toHaveAttribute('href', 'https://invoice.stripe.test/kan-0041');
+  });
+
+  it('pays nothing on the return for a user who cannot manage billing', async () => {
+    authState.claims = { isBillingAdmin: false };
+    try {
+      renderPage(CARD_REFUSED, {}, '/admin/billing?pay_invoice=1');
+      expect(await screen.findByRole('button', { name: 'Update card and pay' })).toBeDisabled();
+      expect(api.post).not.toHaveBeenCalled();
+    } finally {
+      authState.claims = { isBillingAdmin: true };
+    }
+  });
+
+  it('shows nothing of the kind once the invoice is paid', async () => {
+    renderPage({ ...CARD_REFUSED, status: 'active', latest_invoice_status: 'paid', is_subscription_healthy: true, freeze_effective_at: null });
+    expect(await screen.findByText('Active')).toBeInTheDocument();
+    expect(screen.queryByText(/Payment refused/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Access/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Change plan' })).toBeEnabled();
   });
 });
 

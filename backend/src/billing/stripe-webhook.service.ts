@@ -5,8 +5,13 @@ import { Subscription, SubscriptionStatus, SubscriptionType, PaymentMode, Collec
 import { computePriceAmount, normaliseStripePrice } from './price.util';
 import {
   cancellationEffectiveAt,
+  invoiceHasPaymentIntent,
+  invoicePaymentFailure,
+  invoicePaymentIntentsExpand,
   invoiceSubscriptionId,
+  paymentIntentFailure,
   subscriptionDaysUntilDue,
+  type PaymentFailure,
   subscriptionPeriod,
   subscriptionQuantity,
 } from './stripe/stripe-shapes.util';
@@ -295,6 +300,9 @@ export class StripeWebhookService implements OnModuleInit {
     event: StripeEvent,
     identifiers: { customerId?: string; subscriptionId?: string },
   ): Promise<void> {
+    if (event?.type === 'payment_intent.payment_failed') {
+      await this.applyPaymentIntentFailure(tenantId, event?.data?.object, event?.id);
+    }
     if (!identifiers.subscriptionId) {
       if (identifiers.customerId) {
         await this.updateTenantStripeCustomer(tenantId, identifiers.customerId);
@@ -310,6 +318,10 @@ export class StripeWebhookService implements OnModuleInit {
     // Read before the transaction: it holds the tenant's lock and makes no Stripe call.
     const paymentMethodInfo = subscriptionData
       ? await this.describePaymentMethod(subscriptionData?.default_payment_method)
+      : null;
+    // The reason of a refusal is on the invoice's PaymentIntent, never on the invoice.
+    const paymentFailure = event?.type === 'invoice.payment_failed' && invoiceData?.id
+      ? await this.readInvoicePaymentFailure(invoiceData)
       : null;
 
     let ignored = false;
@@ -416,6 +428,7 @@ export class StripeWebhookService implements OnModuleInit {
         this.logger.log(`Stripe event ${event?.id ?? 'unknown'} carries an earlier state of the stored invoice, or another invoice than the subscription's latest: invoice fields kept`);
       } else if (invoiceData) {
         this.writeLatestInvoice(sub, invoiceData);
+        if (paymentFailure) this.writePaymentFailure(sub, paymentFailure);
       } else if (followsAnotherSubscription && subscriptionData?.latest_invoice && typeof subscriptionData.latest_invoice === 'object') {
         // The events of the new subscription that came first were ignored: its latest invoice
         // (expanded on a completed checkout) replaces the one of the subscription left.
@@ -476,14 +489,16 @@ export class StripeWebhookService implements OnModuleInit {
 
   /** The row's latest invoice fields become those of `invoice`. */
   private writeLatestInvoice(sub: Subscription, invoice: any): void {
+    // The reason of a refused payment belongs to its invoice: another invoice starts without one.
+    if (invoice.id && sub.latest_invoice_id && invoice.id !== sub.latest_invoice_id) this.writePaymentFailure(sub, null);
     sub.latest_invoice_id = invoice.id ?? sub.latest_invoice_id ?? null;
     sub.latest_invoice_status = invoice.status ?? sub.latest_invoice_status ?? null;
     // The invoice's own number and links: a draft has none yet.
     sub.latest_invoice_number = invoice.number ?? null;
     sub.latest_invoice_url = invoice.hosted_invoice_url ?? null;
     sub.latest_invoice_pdf = invoice.invoice_pdf ?? null;
-    sub.last_payment_error_code = invoice.last_payment_error?.code ?? null;
-    sub.last_payment_error_message = invoice.last_payment_error?.message ?? null;
+    // The reason of a refused payment stays until the invoice is paid, or replaced (above).
+    if (invoice.status === 'paid') this.writePaymentFailure(sub, null);
     if (typeof invoice.total === 'number') {
       sub.latest_invoice_amount = invoice.total;
     }
@@ -502,6 +517,79 @@ export class StripeWebhookService implements OnModuleInit {
     if (!sub.next_payment_at) {
       sub.next_payment_at = this.toDate(invoice.next_payment_attempt);
     }
+  }
+
+  /** The row's refusal reason: `failure`, or none. */
+  private writePaymentFailure(sub: Subscription, failure: PaymentFailure | null): void {
+    sub.last_payment_error_code = failure?.code ?? null;
+    sub.last_payment_error_message = failure?.message ?? null;
+  }
+
+  /** The refusal on an invoice's PaymentIntents, read from Stripe when the payload does not expand them. Never throws. */
+  private async readInvoicePaymentFailure(invoice: any): Promise<PaymentFailure | null> {
+    const inPayload = invoicePaymentFailure(invoice);
+    if (inPayload) return inPayload;
+    const retrieved = await this.retrieveInvoiceWithPaymentIntents(invoice.id);
+    return retrieved ? invoicePaymentFailure(retrieved) : null;
+  }
+
+  private async retrieveInvoiceWithPaymentIntents(invoiceId: string): Promise<any | null> {
+    const client = this.stripeClient.getClient();
+    if (!client) return null;
+    try {
+      return await client.invoices.retrieve(invoiceId, {
+        expand: [invoicePaymentIntentsExpand(this.config.getApiVersion?.())],
+      });
+    } catch (error) {
+      this.logger.warn(`Unable to read the payments of invoice ${invoiceId}: ${(error as Error).message}`);
+      return null;
+    }
+  }
+
+  /**
+   * `payment_intent.payment_failed`: the reason of the refusal goes on the tenant's row when the
+   * intent pays the row's latest invoice and that invoice is not paid. Since basil an intent names
+   * no invoice: the invoice's payments, read from Stripe before the transaction, say it.
+   */
+  private async applyPaymentIntentFailure(tenantId: string, paymentIntent: any, eventId?: string): Promise<void> {
+    const failure = paymentIntentFailure(paymentIntent);
+    const paymentIntentId = typeof paymentIntent?.id === 'string' ? paymentIntent.id : null;
+    if (!failure || !paymentIntentId) return;
+    const stored = await withTenant(this.dataSource, tenantId, (manager) =>
+      manager.getRepository(Subscription).findOne({ where: {} }),
+    );
+    const invoiceId = stored?.latest_invoice_id ?? null;
+    if (!invoiceId) return;
+    const namedInvoice = typeof paymentIntent.invoice === 'string' ? paymentIntent.invoice : paymentIntent.invoice?.id ?? null;
+    const paysTheInvoice = namedInvoice
+      ? namedInvoice === invoiceId
+      : invoiceHasPaymentIntent(await this.retrieveInvoiceWithPaymentIntents(invoiceId), paymentIntentId);
+    if (!paysTheInvoice) {
+      this.logger.log(`Stripe event ${eventId ?? 'unknown'}: payment ${paymentIntentId} does not pay the latest invoice of tenant ${tenantId}`);
+      return;
+    }
+    await withTenant(this.dataSource, tenantId, async (manager) => {
+      await manager.query(`SELECT pg_advisory_xact_lock(hashtext($1)::bigint)`, [`stripe-webhook:${tenantId}`]);
+      const repo = manager.getRepository(Subscription);
+      const sub = await repo.findOne({ where: {} });
+      if (!sub || sub.latest_invoice_id !== invoiceId || sub.latest_invoice_status === 'paid') return;
+      const before = { ...sub };
+      this.writePaymentFailure(sub, failure);
+      const saved = await repo.save(sub);
+      await this.audit.log(
+        {
+          table: 'subscriptions',
+          recordId: saved.id,
+          action: 'update',
+          before,
+          after: { ...saved },
+          userId: null,
+          source: 'webhook',
+          sourceRef: eventId ? String(eventId) : null,
+        },
+        { manager },
+      );
+    });
   }
 
   private async updateTenantStripeCustomer(tenantId: string, customerId: string): Promise<void> {

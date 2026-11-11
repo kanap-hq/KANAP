@@ -506,5 +506,6 @@
     "incidents": "Vorfälle"
   },
   "AI_IMPORT_CLEARS_COLUMNS_one": "{{count}} Zeile aktualisiert einen bestehenden Datensatz, und dieser Import ersetzt alle seine Werte: Die Datei hat keine Spalte für {{columns}}, deren Werte gelöscht würden. Ordnen Sie diese Spalten zu oder behalten Sie nur neue Datensätze in der Datei.",
-  "AI_IMPORT_CLEARS_COLUMNS_other": "{{count}} Zeilen aktualisieren bestehende Datensätze, und dieser Import ersetzt alle ihre Werte: Die Datei hat keine Spalte für {{columns}}, deren Werte gelöscht würden. Ordnen Sie diese Spalten zu oder behalten Sie nur neue Datensätze in der Datei."
+  "AI_IMPORT_CLEARS_COLUMNS_other": "{{count}} Zeilen aktualisieren bestehende Datensätze, und dieser Import ersetzt alle ihre Werte: Die Datei hat keine Spalte für {{columns}}, deren Werte gelöscht würden. Ordnen Sie diese Spalten zu oder behalten Sie nur neue Datensätze in der Datei.",
+  "INVOICE_PAYMENT_IN_PROGRESS": "Eine Zahlung ist bereits in Bearbeitung."
 }

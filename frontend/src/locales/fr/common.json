@@ -1181,7 +1181,10 @@
     "subscriptionNeedsAttention": "Votre abonnement nécessite une intervention.",
     "goToBilling": "Accéder à la facturation",
     "accountAccessLimited": "L'accès au compte est limité. Contactez votre administrateur de facturation.",
-    "choosePlanToContinueAction": "Choisir un plan pour continuer"
+    "choosePlanToContinueAction": "Choisir un plan pour continuer",
+    "paymentOverdueAmount": "Paiement de {{amount}} en retard. L'accès sera limité le {{date}}.",
+    "paymentOverdue": "Un paiement est en retard. L'accès sera limité le {{date}}.",
+    "contactBillingAdmin": "Contactez votre administrateur de facturation."
   },
   "forbidden": {
     "title": "Accès refusé",

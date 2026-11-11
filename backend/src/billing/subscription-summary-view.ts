@@ -5,10 +5,18 @@ export type SubscriptionSummary = Awaited<ReturnType<BillingService['getSubscrip
 
 /**
  * The part of the subscription summary every signed-in user reads: the trial and freeze banners
- * and the redirect to billing (frontend `SubscriptionBanner`, `ProtectedRoute`). Amounts, payment
- * method, invoices and Stripe ids stay with the users who hold a billing permission.
+ * and the redirect to billing (frontend `SubscriptionBanner`, `ProtectedRoute`), which follow
+ * `access_allowed` and `freeze_effective_at`. Amounts, payment method, invoices and Stripe ids stay
+ * with the users who hold a billing permission.
  */
-const SUBSCRIPTION_STATUS_FIELDS = ['status', 'trial_end', 'trial_days_remaining', 'is_subscription_healthy'] as const;
+const SUBSCRIPTION_STATUS_FIELDS = [
+  'status',
+  'trial_end',
+  'trial_days_remaining',
+  'is_subscription_healthy',
+  'access_allowed',
+  'freeze_effective_at',
+] as const;
 
 export type SubscriptionStatusView = Pick<SubscriptionSummary, (typeof SUBSCRIPTION_STATUS_FIELDS)[number]>;
 
@@ -18,6 +26,8 @@ export function subscriptionStatusView(summary: SubscriptionSummary): Subscripti
     trial_end: summary.trial_end,
     trial_days_remaining: summary.trial_days_remaining,
     is_subscription_healthy: summary.is_subscription_healthy,
+    access_allowed: summary.access_allowed,
+    freeze_effective_at: summary.freeze_effective_at,
   };
 }
 
