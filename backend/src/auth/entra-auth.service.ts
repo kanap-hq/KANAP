@@ -1,11 +1,11 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as jwt from 'jsonwebtoken';
-import { randomBytes, createPublicKey, KeyObject } from 'crypto';
+import { createCipheriv, createDecipheriv, createHmac, createPublicKey, KeyObject, randomBytes } from 'crypto';
 import * as https from 'https';
 import { DirectoryProfile } from './entra-directory-sync.util';
 import { URL, URLSearchParams } from 'url';
-import { ENTRA_LOGIN_HANDOFF_TYPE, ENTRA_STATE_PURPOSE } from './access-token.util';
+import { ENTRA_CONSENT_STATE_PURPOSE, ENTRA_LOGIN_HANDOFF_TYPE, ENTRA_STATE_PURPOSE } from './access-token.util';
 import { getEntraStateSecret } from './token-secret.util';
 import { ENTRA_ID_TOKEN_ALGORITHMS, ISSUED_TOKEN_ALGORITHM, ISSUED_TOKEN_ALGORITHMS } from './jwt-algorithms';
 
@@ -18,6 +18,30 @@ type EntraState = {
   redirectTo?: string;
   nonce: string;
 };
+
+/**
+ * The state as it travels: a sign-in state is handed out before anyone signs in, so it names the
+ * workspace by a sealed reference only this application reads, never by its id.
+ */
+type SignedEntraState = Omit<EntraState, 'tenantId'> & { tenant: string };
+
+/** Label of the key that seals the workspace reference, derived from the state key. */
+const TENANT_REFERENCE_KEY_LABEL = `${ENTRA_STATE_PURPOSE}:tenant-reference`;
+const SEAL_IV_BYTES = 12;
+const SEAL_TAG_BYTES = 16;
+
+type EntraConsentState = {
+  purpose: typeof ENTRA_CONSENT_STATE_PURPOSE;
+  tenantId: string;
+  /** The administrator the consent address was built for, when there is one. */
+  userId?: string;
+};
+
+/**
+ * Lifetime of a consent state. The consent address is part of the settings page, so the state is
+ * signed when the page loads and used when the administrator comes back from Microsoft.
+ */
+const CONSENT_STATE_LIFETIME = '1h';
 
 type EntraLoginHandoff = {
   type: typeof ENTRA_LOGIN_HANDOFF_TYPE;
@@ -63,6 +87,7 @@ export class GraphAccessError extends Error {
 export class EntraAuthService {
   private readonly logger = new Logger(EntraAuthService.name);
   private readonly stateSecret: string;
+  private readonly tenantReferenceKey: Buffer;
 
   private metadataPromise: Promise<OpenIdConfiguration> | null = null;
   private jwksPromise: Promise<JwksResponse> | null = null;
@@ -71,6 +96,7 @@ export class EntraAuthService {
     // Dedicated `ENTRA_STATE_SECRET` when configured, otherwise the derived
     // `kanap:v1:entra-state` key. Never the shared access-token secret.
     this.stateSecret = getEntraStateSecret();
+    this.tenantReferenceKey = createHmac('sha256', this.stateSecret).update(TENANT_REFERENCE_KEY_LABEL).digest();
   }
 
   private getClientId(): string {
@@ -252,9 +278,35 @@ export class EntraAuthService {
     }
   }
 
+  /** The workspace id as a sealed reference (AES-256-GCM, a fresh nonce each time). */
+  private sealTenantId(tenantId: string): string {
+    const iv = randomBytes(SEAL_IV_BYTES);
+    const cipher = createCipheriv('aes-256-gcm', this.tenantReferenceKey, iv, { authTagLength: SEAL_TAG_BYTES });
+    const sealed = Buffer.concat([cipher.update(tenantId, 'utf8'), cipher.final()]);
+    return Buffer.concat([iv, cipher.getAuthTag(), sealed]).toString('base64url');
+  }
+
+  /** The workspace id of a reference this application sealed; null for anything else. */
+  private openTenantReference(reference: unknown): string | null {
+    if (typeof reference !== 'string') return null;
+    try {
+      const raw = Buffer.from(reference, 'base64url');
+      if (raw.length <= SEAL_IV_BYTES + SEAL_TAG_BYTES) return null;
+      const decipher = createDecipheriv('aes-256-gcm', this.tenantReferenceKey, raw.subarray(0, SEAL_IV_BYTES), {
+        authTagLength: SEAL_TAG_BYTES,
+      });
+      decipher.setAuthTag(raw.subarray(SEAL_IV_BYTES, SEAL_IV_BYTES + SEAL_TAG_BYTES));
+      return Buffer.concat([decipher.update(raw.subarray(SEAL_IV_BYTES + SEAL_TAG_BYTES)), decipher.final()]).toString('utf8');
+    } catch {
+      return null;
+    }
+  }
+
   private signState(payload: EntraState): string {
     try {
-      return jwt.sign(payload, this.stateSecret, { algorithm: ISSUED_TOKEN_ALGORITHM, expiresIn: '10m' });
+      const { tenantId, ...rest } = payload;
+      const signed: SignedEntraState = { ...rest, tenant: this.sealTenantId(tenantId) };
+      return jwt.sign(signed, this.stateSecret, { algorithm: ISSUED_TOKEN_ALGORITHM, expiresIn: '10m' });
     } catch (err: any) {
       this.logger.error(`Failed to sign Entra state: ${err?.message || String(err)}`);
       throw new BadRequestException('Unable to start Entra authentication');
@@ -263,15 +315,51 @@ export class EntraAuthService {
 
   private verifyState(token: string): EntraState {
     try {
-      const decoded = jwt.verify(token, this.stateSecret, { algorithms: [...ISSUED_TOKEN_ALGORITHMS] }) as EntraState;
+      const decoded = jwt.verify(token, this.stateSecret, { algorithms: [...ISSUED_TOKEN_ALGORITHMS] }) as SignedEntraState;
       // Explicit typing (RFC 8725 §3.12): an SSO state must be an SSO state, not merely a token
       // this application can verify.
-      if (!decoded || decoded.purpose !== ENTRA_STATE_PURPOSE || !decoded.mode || !decoded.tenantId || !decoded.nonce) {
+      const tenantId = decoded ? this.openTenantReference(decoded.tenant) : null;
+      if (!decoded || decoded.purpose !== ENTRA_STATE_PURPOSE || !decoded.mode || !tenantId || !decoded.nonce) {
         throw new Error('invalid payload');
       }
-      return decoded;
+      const { tenant: _reference, ...rest } = decoded;
+      return { ...rest, tenantId };
     } catch (err: any) {
       this.logger.warn(`Invalid Entra state: ${err?.message || String(err)}`);
+      throw new BadRequestException('Invalid Entra state');
+    }
+  }
+
+  /**
+   * The workspace named by the state of an admin-consent return, and the administrator the
+   * consent address was built for, when it names one. The state must be signed with the
+   * state key and typed for consent: a sign-in or setup state is refused here, as a consent state
+   * is by `verifyState`. The lifetime is read here, not by `jwt.verify`, so that a state this
+   * application signed is still recognised once `expired`: the caller acts only on one that is not.
+   */
+  verifyConsentState(token: string): { tenantId: string; userId: string | null; expired: boolean } {
+    try {
+      const decoded = jwt.verify(token, this.stateSecret, {
+        algorithms: [...ISSUED_TOKEN_ALGORITHMS],
+        ignoreExpiration: true,
+      }) as (Partial<EntraConsentState> & { exp?: number }) | string;
+      if (
+        !decoded
+        || typeof decoded !== 'object'
+        || decoded.purpose !== ENTRA_CONSENT_STATE_PURPOSE
+        || typeof decoded.tenantId !== 'string'
+        || !decoded.tenantId
+        || typeof decoded.exp !== 'number'
+      ) {
+        throw new Error('invalid payload');
+      }
+      return {
+        tenantId: decoded.tenantId,
+        userId: typeof decoded.userId === 'string' && decoded.userId ? decoded.userId : null,
+        expired: Math.floor(Date.now() / 1000) >= decoded.exp,
+      };
+    } catch (err: any) {
+      this.logger.warn(`Invalid Entra consent state: ${err?.message || String(err)}`);
       throw new BadRequestException('Invalid Entra state');
     }
   }
@@ -537,14 +625,23 @@ export class EntraAuthService {
   }
 
   /**
-   * Unverified decode of the state parameter — used only to pick a sensible
-   * error redirect target after a failed callback. Never trust it for auth.
+   * The mode and workspace of a state past its checks — used only to pick a
+   * sensible error redirect target after a failed callback, and to tell a
+   * setup round trip from a sign-in. Never trust it for auth: the lifetime is
+   * not checked. The state must be signed by this application as an SSO state
+   * and carry a reference it sealed; any other state gives neither.
    */
-  peekState(stateRaw: unknown): { mode?: string; tenantId?: string } | null {
+  peekState(stateRaw: unknown): { mode: string; tenantId: string } | null {
     if (typeof stateRaw !== 'string' || !stateRaw) return null;
     try {
-      const decoded = jwt.decode(stateRaw);
-      return decoded && typeof decoded === 'object' ? (decoded as { mode?: string; tenantId?: string }) : null;
+      const decoded = jwt.verify(stateRaw, this.stateSecret, {
+        algorithms: [...ISSUED_TOKEN_ALGORITHMS],
+        ignoreExpiration: true,
+      }) as Partial<SignedEntraState> | string;
+      if (!decoded || typeof decoded !== 'object' || decoded.purpose !== ENTRA_STATE_PURPOSE) return null;
+      const tenantId = this.openTenantReference(decoded.tenant);
+      if (!tenantId || typeof decoded.mode !== 'string') return null;
+      return { mode: decoded.mode, tenantId };
     } catch {
       return null;
     }
@@ -571,17 +668,27 @@ export class EntraAuthService {
 
   /**
    * Microsoft admin-consent URL for the tenant. Lands back on the regular SSO
-   * callback with `state=consent:<kanapTenantId>` so no extra redirect URI
-   * needs registering.
+   * callback with `state=consent:<signed state naming the tenant>` so no extra
+   * redirect URI needs registering. The state also names `userId`, the
+   * administrator the address is built for, who becomes the author of the
+   * audit entry written at the return.
    */
-  buildAdminConsentUrl(entraTenantId: string, kanapTenantId: string): string | null {
+  buildAdminConsentUrl(entraTenantId: string, kanapTenantId: string, userId?: string | null): string | null {
     const clientId = this.getClientId();
     const redirectUri = this.getRedirectUri();
     if (!clientId || !redirectUri) return null;
     const params = new URLSearchParams({
       client_id: clientId,
       redirect_uri: redirectUri,
-      state: `consent:${kanapTenantId}`,
+      state: `consent:${jwt.sign(
+        {
+          purpose: ENTRA_CONSENT_STATE_PURPOSE,
+          tenantId: kanapTenantId,
+          ...(typeof userId === 'string' && userId ? { userId } : {}),
+        } satisfies EntraConsentState,
+        this.stateSecret,
+        { algorithm: ISSUED_TOKEN_ALGORITHM, expiresIn: CONSENT_STATE_LIFETIME },
+      )}`,
       scope: 'https://graph.microsoft.com/.default',
     });
     return `https://login.microsoftonline.com/${encodeURIComponent(entraTenantId)}/v2.0/adminconsent?${params.toString()}`;
