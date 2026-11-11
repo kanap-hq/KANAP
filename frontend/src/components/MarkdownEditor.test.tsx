@@ -3,7 +3,7 @@ import {
   editorHtmlNode,
   editorParagraphNode,
   editorTextNode,
-  foreignMarkup,
+  unexpectedMarkup,
   HANDLER_FLAG,
   HTML_ELEMENT_TEXTS,
   mountEditor,
@@ -44,7 +44,7 @@ describe('MarkdownEditor: a stored text with HTML elements', () => {
           const editor = await mountEditor(text, { disabled });
 
           expect(editor.showsRichText()).toBe(true);
-          expect(foreignMarkup(editor.content())).toEqual([]);
+          expect(unexpectedMarkup()).toEqual([]);
           expect(editor.content().textContent).toContain(shown);
           expect((globalThis as Record<string, unknown>)[HANDLER_FLAG]).toBeUndefined();
           expect(editor.onChange).not.toHaveBeenCalled();
@@ -58,7 +58,7 @@ describe('MarkdownEditor: a stored text with HTML elements', () => {
   it('gives a Markdown link with a script scheme no address', async () => {
     const editor = await mountEditor('[lien](javascript:void%200)');
 
-    expect(foreignMarkup(editor.content())).toEqual(['<a>']);
+    expect(unexpectedMarkup({ built: ['a'] })).toEqual([]);
     expect(editor.content().querySelector('a')?.getAttribute('href')).toBe('about:blank');
 
     editor.unmount();
@@ -67,7 +67,7 @@ describe('MarkdownEditor: a stored text with HTML elements', () => {
   it('shows a note with attributes without them', async () => {
     const editor = await mountEditor(`:::note{style="position:fixed" onclick="globalThis.${HANDLER_FLAG} = true"}\ntexte\n:::`);
 
-    expect(foreignMarkup(editor.content())).toEqual([]);
+    expect(unexpectedMarkup()).toEqual([]);
     expect(editor.content().textContent).toContain('texte');
 
     editor.unmount();
@@ -154,7 +154,7 @@ describe('MarkdownEditor: a stored text with HTML elements', () => {
     await editor.setValue('avant <section>texte</section> <u>souligné</u> après', { refresh: true });
 
     expect(editor.showsRichText()).toBe(true);
-    expect(foreignMarkup(editor.content())).toEqual([]);
+    expect(unexpectedMarkup()).toEqual([]);
     expect(editor.content().textContent).toBe('avant <section>texte</section> souligné après');
     expect(editor.onChange).not.toHaveBeenCalled();
 
@@ -180,7 +180,7 @@ describe("MarkdownEditor: a paste in the editor's own clipboard format", () => {
     ]);
 
     expect(editor.content().querySelector('section, form, span[style], u')).toBeNull();
-    expect(foreignMarkup(editor.content())).toEqual([]);
+    expect(unexpectedMarkup()).toEqual([]);
     const shown = editor.content().textContent ?? '';
     for (const tag of ['<section onclick=', '</section>', '<form action="https://exemple.test/f" />', '<span style="color: red">milieu</span>', '<u class="x">souligné</u>']) {
       expect(shown).toContain(tag);
@@ -231,6 +231,7 @@ describe('MarkdownEditor: the preview of a link', () => {
 
     await editor.placeCaretInLink();
 
+    expect(unexpectedMarkup({ built: ['a'] })).toEqual([]);
     expect(anchorsOutsideTheText(editor.content()).map((anchor) => anchor.getAttribute('href'))).toEqual([address]);
 
     editor.unmount();
@@ -246,6 +247,7 @@ describe('MarkdownEditor: the preview of a link', () => {
 
     await editor.placeCaretInLink();
 
+    expect(unexpectedMarkup({ built: ['a'] })).toEqual([]);
     expect(document.body.textContent).toContain(address);
     expect(anchorsOutsideTheText(editor.content())).toEqual([]);
 
@@ -258,7 +260,7 @@ describe('MarkdownEditor: a stored text that readers of Markdown cut differently
     it(`builds no element out of ${name} and reports no change`, async () => {
       const editor = await mountEditor(text);
 
-      expect(foreignMarkup(editor.content(), builds === 'a' ? builds : undefined)).toEqual([]);
+      expect(unexpectedMarkup({ built: builds === 'a' ? [builds] : [] })).toEqual([]);
       expect((globalThis as Record<string, unknown>)[HANDLER_FLAG]).toBeUndefined();
       expect(editor.onChange).not.toHaveBeenCalled();
 
@@ -296,7 +298,7 @@ describe('MarkdownEditor: ordinary Markdown', () => {
       const editor = await mountEditor(text);
 
       expect(editor.showsRichText()).toBe(true);
-      expect(foreignMarkup(editor.content())).toEqual(name === 'a link' ? ['<a>'] : []);
+      expect(unexpectedMarkup({ built: name === 'a link' ? ['a'] : [] })).toEqual([]);
       expect(editor.onChange).not.toHaveBeenCalled();
 
       await editor.appendParagraph('ajout');

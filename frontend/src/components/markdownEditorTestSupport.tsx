@@ -14,6 +14,8 @@ import {
 } from 'lexical';
 import { vi } from 'vitest';
 import MarkdownEditor from './MarkdownEditor';
+import { isRichTextImageAttribute } from '../lib/richTextHtmlElements';
+import { richTextLinkAddress } from '../lib/richTextLinkAddress';
 import { createAppTheme } from '../config/ThemeContext';
 
 const theme = createAppTheme('light');
@@ -224,31 +226,63 @@ export const READER_GAP_TEXTS: Array<{ name: string; text: string; builds?: 'a' 
   { name: 'a stack trace in an indented block', text: 'Erreur :\n\n    at com.exemple.Service.<init>(Service.java:12)\n    at java.util.Map.<clinit>(Map.java:3)\n' },
 ];
 
-const FOREIGN_ELEMENTS = [
-  'form', 'input', 'textarea', 'select', 'meta', 'iframe', 'details', 'summary', 'style', 'script',
-  'object', 'embed', 'link', 'base', 'a', 'u',
-];
-const FOREIGN_ATTRIBUTES = ['action', 'formaction', 'http-equiv', 'srcdoc'];
+/** The elements the editor, its toolbar and its dialogs build by themselves, in the page and in its head. */
+const EXPECTED_ELEMENTS = new Set([
+  'body', 'div', 'span', 'p', 'br', 'hr', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'ul', 'ol', 'li',
+  'strong', 'em', 'code', 'mark', 'sub', 'sup', 'img',
+  'table', 'colgroup', 'col', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td',
+  'button', 'svg', 'path',
+]);
+const EXPECTED_HEAD_ELEMENTS = new Set(['head', 'style']);
+/** The attributes these elements carry, in lower case, with every `aria-` and `data-` attribute. */
+const EXPECTED_ATTRIBUTES = new Set([
+  'class', 'style', 'dir', 'role', 'tabindex', 'title', 'type', 'value', 'disabled',
+  'contenteditable', 'spellcheck', 'translate', 'autocapitalize', 'autocorrect', 'writingsuggestions',
+  'href', 'target', 'rel', 'src', 'alt', 'width', 'height', 'colspan', 'rowspan',
+  'xmlns', 'viewbox', 'focusable', 'd', 'fill', 'fill-rule', 'clip-rule',
+]);
+/** The style properties the editor sets on its own elements, with every custom property. */
+const EXPECTED_STYLE_PROPERTIES = new Set([
+  'display', 'position', 'top', 'right', 'bottom', 'left', 'transform', 'z-index', 'visibility', 'pointer-events',
+  'height', 'min-height', 'margin', 'outline', 'white-space', 'word-break', 'tab-size', 'user-select',
+  'animation-duration',
+]);
+
+function unexpectedAttribute(tag: string, name: string, value: string): boolean {
+  if (name.startsWith('aria-') || name.startsWith('data-')) return false;
+  if (!EXPECTED_ATTRIBUTES.has(name)) return true;
+  // A link opens an address of a rich text; the editor's own links also keep a phone or message
+  // address, and get `about:blank` for any other scheme.
+  if (name === 'href') {
+    return tag !== 'a' || (richTextLinkAddress(value) === null && !/^(?:about:blank$|tel:|sms:)/i.test(value));
+  }
+  if (name === 'src') return !isRichTextImageAttribute('src', value);
+  if (name === 'target') return value !== '_blank';
+  if (name !== 'style') return false;
+  return value.split(';').some((declaration) => {
+    const [property, ...rest] = declaration.split(':');
+    const propertyName = property.trim().toLowerCase();
+    if (!propertyName || propertyName.startsWith('--')) return false;
+    return !EXPECTED_STYLE_PROPERTIES.has(propertyName) || (propertyName === 'position' && /fixed/i.test(rest.join(':')));
+  });
+}
 
 /**
- * Elements and attributes under `root` that only the text given to the editor can have produced.
- * `built` names an element the editor builds by itself for this text; its attributes still count.
+ * What the whole document holds that the editor does not build by itself: an element or an
+ * attribute outside the expected lists, a link or an image with an address a rich text does not
+ * open, a style the editor does not set. The dialogs and the tooltips of the editor are in the
+ * document too. `built` names the elements the text given to the editor builds: a link for a
+ * Markdown link, an underline for an underline tag around paragraphs.
  */
-export function foreignMarkup(root: Element, built?: string): string[] {
+export function unexpectedMarkup({ built = [] }: { built?: Array<'a' | 'u'> } = {}): string[] {
   const found: string[] = [];
-  root.querySelectorAll('*').forEach((element) => {
+  document.documentElement.querySelectorAll('*').forEach((element) => {
     const tag = element.tagName.toLowerCase();
-    if (FOREIGN_ELEMENTS.includes(tag) && tag !== built) found.push(`<${tag}>`);
+    const expected = element.closest('head') ? EXPECTED_HEAD_ELEMENTS.has(tag) : EXPECTED_ELEMENTS.has(tag) || (built as string[]).includes(tag);
+    if (!expected) found.push(`<${tag}>`);
     for (const attribute of Array.from(element.attributes)) {
       const name = attribute.name.toLowerCase();
-      if (
-        name.startsWith('on')
-        || FOREIGN_ATTRIBUTES.includes(name)
-        || (name === 'style' && /position:\s*fixed|display:\s*none/.test(attribute.value))
-        || (name === 'href' && /^\s*javascript:/i.test(attribute.value))
-      ) {
-        found.push(`${tag}[${name}="${attribute.value}"]`);
-      }
+      if (unexpectedAttribute(tag, name, attribute.value)) found.push(`${tag}[${name}="${attribute.value}"]`);
     }
   });
   return found;

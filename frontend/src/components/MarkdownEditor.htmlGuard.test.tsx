@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  foreignMarkup,
+  unexpectedMarkup,
   HANDLER_FLAG,
   HTML_ELEMENT_TEXTS,
   mountEditor,
@@ -31,7 +31,7 @@ describe('MarkdownEditor: an HTML element outside the accepted list is text', ()
         it(`shows ${name} as text`, async () => {
           const editor = await mountEditor(text, { disabled });
 
-          expect(foreignMarkup(editor.content())).toEqual([]);
+          expect(unexpectedMarkup()).toEqual([]);
           expect(editor.content().textContent).toContain(shown);
           expect((globalThis as Record<string, unknown>)[HANDLER_FLAG]).toBeUndefined();
 
@@ -47,7 +47,7 @@ describe('MarkdownEditor: a text that readers of Markdown cut differently builds
     it(`reads ${name}`, async () => {
       const editor = await mountEditor(text);
 
-      expect(foreignMarkup(editor.content(), builds)).toEqual([]);
+      expect(unexpectedMarkup({ built: builds ? [builds] : [] })).toEqual([]);
       expect((globalThis as Record<string, unknown>)[HANDLER_FLAG]).toBeUndefined();
 
       editor.unmount();
