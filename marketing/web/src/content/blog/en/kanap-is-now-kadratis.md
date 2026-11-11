@@ -27,7 +27,7 @@ The [trademark policy](https://github.com/kanap-hq/KANAP/blob/main/TRADEMARKS.md
 
 - your workspace now answers at `<your-workspace>.kadratis.com`. The old `kanap.net` address keeps working, as do links already sent and MCP connections;
 - on your first visit to the new address, you sign in once. Your browser does not always offer the password saved for the old address on its own: just type it in. With Microsoft sign-in, one click is enough, as before;
-- the application's emails carry the new name and still come from the same address.
+- the application's emails carry the new name and now come from `no-reply@kadratis.com`.
 
 **If you host Kadratis yourself**, the update works as usual, with no extra step. From version 26.11.4 on, the images are called `kadratis-*` instead of `kanap-*`; the version's `compose.onprem.yml` already names them, and the update procedure pulls them. The `KANAP_*` variables, the database roles and the MCP tokens keep their names. Earlier versions remain published under their old names.
 

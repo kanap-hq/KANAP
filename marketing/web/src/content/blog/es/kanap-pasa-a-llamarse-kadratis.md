@@ -27,7 +27,7 @@ La [política de uso de la marca](https://github.com/kanap-hq/KANAP/blob/main/TR
 
 - su espacio responde ahora en `<su-espacio>.kadratis.com`. La antigua dirección en `kanap.net` sigue funcionando, al igual que los enlaces ya enviados y las conexiones MCP;
 - en su primera visita a la nueva dirección, vuelve a iniciar sesión una vez. Su navegador no siempre ofrece por sí solo la contraseña guardada para la antigua dirección: basta con escribirla. Con el inicio de sesión de Microsoft, basta un clic, como antes;
-- los correos de la aplicación llevan el nuevo nombre y siguen saliendo de la misma dirección.
+- los correos de la aplicación llevan el nuevo nombre y ahora salen de `no-reply@kadratis.com`.
 
 **Si aloja Kadratis usted mismo**, la actualización se hace como siempre, sin pasos adicionales. A partir de la 26.11.4, las imágenes se llaman `kadratis-*` en lugar de `kanap-*`; el archivo `compose.onprem.yml` de la versión ya las nombra, y el procedimiento de actualización las descarga. Las variables `KANAP_*`, los roles de la base de datos y los tokens MCP conservan su nombre. Las versiones anteriores siguen publicadas con sus nombres antiguos.
 
