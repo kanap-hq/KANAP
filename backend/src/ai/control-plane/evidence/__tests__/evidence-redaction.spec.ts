@@ -157,11 +157,36 @@ function testTheEvidenceAndTheJournalShareOneRule() {
   }
 }
 
+function testAnAuthorizationValueIsHiddenWhenItIsACredential() {
+  for (const sentence of [
+    'Authorization: pending manager approval',
+    'Authorization: refused by the finance team, see the ticket.',
+    'authorization = granted on 12 March',
+    'Proxy-Authorization: not required on this network',
+  ]) {
+    assert.equal(redactSensitiveText(sentence), sentence);
+  }
+  for (const header of [
+    `Authorization: Bearer ${OPAQUE}`,
+    `Authorization: Basic ${OPAQUE}`,
+    `authorization: digest ${OPAQUE}`,
+    `Authorization: Token ${OPAQUE}`,
+    `Authorization: NTLM ${OPAQUE}`,
+    `Authorization: ${OPAQUE}`,
+    JSON.stringify({ headers: `{"Authorization":"Negotiate ${OPAQUE}"}` }),
+  ]) {
+    const redacted = redactSensitiveText(header);
+    assertNoCredential(redacted, 'authorization');
+    assert.ok(/authorization/i.test(redacted));
+  }
+}
+
 async function run() {
   const tests: Array<() => unknown> = [
     testTheEvidenceWriterHidesTokens,
     testTheRedactionTimeGrowsLinearlyWithTheText,
     testTheEvidenceAndTheJournalShareOneRule,
+    testAnAuthorizationValueIsHiddenWhenItIsACredential,
     testTheEvidenceSummaryHidesTokens,
     testTheExternalMcpBridgeHidesTokens,
   ];

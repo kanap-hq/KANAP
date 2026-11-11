@@ -15,7 +15,7 @@ const EMAIL_RE = EMAIL_ADDRESSES;
 const IPV4_RE = /\b(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)\b/g;
 const BEARER_RE = /\bBearer\s+[A-Za-z0-9._~+/=-]{12,}\b/gi;
 // `password=…`, `access_token=…`, `"refresh_token": "…"`, `client_secret=…`, in a text or an address.
-const SECRET_ASSIGNMENT_RE = /(passw(?:or)?d|passphrase|token|secret|api[-_]?key)(["']?\s*[:=]\s*["']?)[^\s"'&]+/gi;
+const SECRET_ASSIGNMENT_RE = /(passw(?:or)?d|passphrase|token|secret|api[-_]?key)(\\?["']?\s*[:=]\s*\\?["']?)[^\s"'&]+/gi;
 // Keys with a known format: KANAP keys and refresh tokens, provider keys (`sk-…`, `ghp_…`, `xoxb-…`
 // and the like).
 const KNOWN_KEY_RE = new RegExp([
@@ -28,7 +28,7 @@ const KNOWN_KEY_RE = new RegExp([
     + String.raw`|(?:AKIA|ASIA)[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{35})`,
 ].join('|'), 'g');
 // A `Cookie:` or `Set-Cookie:` header value (`name=value; …`).
-const COOKIE_VALUE_RE = /\b((?:set-)?cookie)(["']?\s*:\s*["']?)[^\s=;,"']+=[^\r\n"']*/gi;
+const COOKIE_VALUE_RE = /\b((?:set-)?cookie)(\\?["']?\s*:\s*\\?["']?)[^\s=;,"']+=[^\r\n"']*/gi;
 // The password of an address (`https://user:password@host`).
 const URL_PASSWORD_RE = /(?<![A-Za-z0-9+.-])([A-Za-z][A-Za-z0-9+.-]*:\/\/[^\s:@/]+:)[^\s@/]+@/g;
 // A JWT: three base64url segments, the first one a JSON header (`eyJ…`), also right after `_` or an
@@ -40,9 +40,9 @@ const JWT_RE = new RegExp(
     + String.raw`[A-Za-z0-9_-]*(?:\r?\n[A-Za-z0-9_-]{20,}(?!\S))*`,
   'g',
 );
-// The value of an Authorization header, whatever its scheme (`Authorization: Basic …`,
-// `"Authorization":"Bearer …"`).
-const AUTHORIZATION_VALUE_RE = /\b((?:proxy-)?authorization)(["']?\s*[:=]\s*["']?)(?:[A-Za-z][A-Za-z0-9-]*\s+)?[^\s"',;]+/gi;
+// The value of an Authorization header: after a known scheme (`Authorization: Basic …`,
+// `"Authorization":"Bearer …"`), or a long value without spaces. Ordinary words stay.
+const AUTHORIZATION_VALUE_RE = /\b((?:proxy-)?authorization)(\\?["']?\s*[:=]\s*\\?["']?)(?:(?:bearer|basic|digest|token|negotiate|ntlm)\s+[^\s"',;]+|[^\s"',;]{16,})/gi;
 
 export type AiEvidenceSeed = {
   runId?: string | null;
