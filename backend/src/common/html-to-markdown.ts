@@ -490,7 +490,9 @@ function escapeOtherAddresses(text: string): string {
     const refused = findRefusedHtml(escaped).filter((written) => /^!?\[|^<[^\s<>]*[:@][^\s<>]*>$/.test(written));
     if (refused.length === 0) break;
     for (const written of refused) {
-      escaped = escaped.split(written).join(written.replace(/[[<]/, '\\$&'));
+      // The opening bracket is the first character, or the second after the `!` of an image.
+      const opening = written.startsWith('!') ? 1 : 0;
+      escaped = escaped.split(written).join(`${written.slice(0, opening)}\\${written.slice(opening)}`);
     }
   }
   return escaped;
