@@ -288,7 +288,8 @@ export type AiAgentControlEvidence = {
   source_object_id: string | null;
   trust_level: string;
   redaction_status: string;
-  summary: string;
+  /** Null, like `payload_json`, when the reader may see the line of the call but not what it returned. */
+  summary: string | null;
   payload_json: Record<string, unknown> | unknown[] | null;
   collected_at: string | null;
   created_at: string | null;
