@@ -97,6 +97,24 @@ function testCardGraceStartsAtTheUnpaidInvoice() {
 }
 
 /**
+ * A stale invoice date: the row still holds the previous, paid invoice (the subscription could
+ * not be read again while the new invoice's events came) and is past due. The grace starts at
+ * the start of the period the unpaid renewal opened, the later of the two dates.
+ */
+function testStaleInvoiceDateUsesThePeriodStart() {
+  const periodStart = new Date('2026-11-10T09:00:00.000Z');
+  for (const previousInvoice of ['2026-10-10T09:00:00.000Z', '2025-11-10T09:00:00.000Z']) {
+    const stale = sub({
+      status: SubscriptionStatus.PAST_DUE,
+      latest_invoice_created: new Date(previousInvoice),
+      current_period_start: periodStart,
+    });
+    assert.equal(computeFreezeEffectiveAt(stale), new Date('2026-11-24T09:00:00.000Z').getTime(), `previous invoice of ${previousInvoice}`);
+    assert.equal(evaluateSubscriptionAccess(stale, new Date('2026-11-11T09:00:00.000Z').getTime(), true).allowed, true);
+  }
+}
+
+/**
  * The freeze date of the summary: ahead or passed while past due; for an ended subscription its
  * end, or the end of the grace of an invoice left unpaid when earlier; for unpaid, the end of the
  * grace once passed; none for a subscription in good standing.
@@ -219,6 +237,7 @@ async function run() {
   testUnknownStatusFrozen();
   testComputeFreezeInvoiceBased();
   testCardGraceStartsAtTheUnpaidInvoice();
+  testStaleInvoiceDateUsesThePeriodStart();
   testFreezeDateOfTheSummary();
   await testPastDueCloverSubscriptionKeepsItsGrace();
   testTrialDeletionDate();
