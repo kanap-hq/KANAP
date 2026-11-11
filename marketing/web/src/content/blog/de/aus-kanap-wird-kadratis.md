@@ -27,7 +27,7 @@ Die [Richtlinie zur Markennutzung](https://github.com/kanap-hq/KANAP/blob/main/T
 
 - Ihr Arbeitsbereich ist jetzt unter `<ihr-arbeitsbereich>.kadratis.com` erreichbar. Die alte Adresse unter `kanap.net` funktioniert weiter, ebenso bereits versendete Links und MCP-Verbindungen;
 - beim ersten Besuch der neuen Adresse melden Sie sich einmal neu an. Ihr Browser bietet das für die alte Adresse gespeicherte Passwort nicht immer von selbst an: Geben Sie es einfach ein. Mit der Microsoft-Anmeldung genügt wie bisher ein Klick;
-- die E-Mails der Anwendung tragen den neuen Namen und kommen weiterhin von derselben Adresse.
+- die E-Mails der Anwendung tragen den neuen Namen und kommen jetzt von `no-reply@kadratis.com`.
 
 **Wenn Sie Kadratis selbst hosten**, läuft das Update wie gewohnt, ohne zusätzlichen Schritt. Ab Version 26.11.4 heißen die Images `kadratis-*` statt `kanap-*`; die Datei `compose.onprem.yml` der Version nennt sie bereits, und das Update-Verfahren lädt sie herunter. Die Variablen `KANAP_*`, die Datenbankrollen und die MCP-Token behalten ihren Namen. Frühere Versionen bleiben unter ihren alten Namen veröffentlicht.
 
