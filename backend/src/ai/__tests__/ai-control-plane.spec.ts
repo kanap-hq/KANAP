@@ -14306,6 +14306,8 @@ async function runTriageWithSimulatedModel(input: {
   // interpreter.
   everyStage?: boolean;
   withoutNeed?: boolean;
+  // The ticket description; the default one when undefined.
+  description?: string;
 }) {
   const { manager } = createMemoryManager();
   const context = createContext(manager);
@@ -14342,7 +14344,7 @@ async function runTriageWithSimulatedModel(input: {
             title: 'Mon app ne se lance pas',
             status: 'processing_assigned',
             priority: 'medium',
-            description: 'Je clique ici et il ne se passe rien. Je dois faire quoi ?',
+            description: input.description ?? 'Je clique ici et il ne se passe rien. Je dois faire quoi ?',
           });
         case TICKETING_TICKET_NOTES_LIST_CAPABILITY:
           return ok({ notes: input.notes });
@@ -14614,6 +14616,33 @@ async function testTriageWithInternalNotesIgnoredReadsThePublicItems() {
   assert.deepEqual(administrative.calls.map((call) => call.taskName), ['action_planner']);
   assert.ok(!payloadOf(administrative.calls, 'action_planner').includes(TRIAGE_INTERNAL_MARKER));
   assert.equal(administrative.publicReply, 'Bonjour, votre demande a bien été reçue.');
+}
+
+// With internal notes ignored, a ticket whose only follow-ups are internal, one of them written
+// by the requester, gives no model call any of them, whatever its description. The agent still
+// prepares its reply to the requester.
+async function testTriageWithInternalNotesIgnoredSkipsTheRequesterInternalFollowUp() {
+  const onlyInternal = [
+    { id: '2', visibility: 'internal', authorRole: 'support', body: `Note ${TRIAGE_INTERNAL_MARKER}.`, createdAt: '2026-06-02T09:00:00.000Z' },
+    { id: '5', visibility: 'internal', authorRole: 'requester', body: `Suivi privé du demandeur ${TRIAGE_UNMARKED_MARKER}.`, createdAt: '2026-06-02T11:00:00.000Z' },
+  ];
+  for (const description of ['', 'Aide ?']) {
+    const result = await runTriageWithSimulatedModel({
+      notes: onlyInternal,
+      plan: TRIAGE_SOURCED_PLAN,
+      reply: TRIAGE_SOURCED_REPLY,
+      internalNotes: 'ignored',
+      everyStage: true,
+      description,
+    });
+    assert.ok(result.calls.some((call) => call.taskName === 'reply_synthesis'), `the reply is composed (description ${JSON.stringify(description)})`);
+    for (const marker of [TRIAGE_INTERNAL_MARKER, TRIAGE_UNMARKED_MARKER]) {
+      for (const text of triageCallTexts(result)) {
+        assert.ok(!text.includes(marker), `a model call or a search reads ${marker} (description ${JSON.stringify(description)})`);
+      }
+    }
+    assert.ok(result.publicReply?.includes('Relancez le service de licence depuis le portail.'), `the reply is prepared (description ${JSON.stringify(description)})`);
+  }
 }
 
 // Fix B (regression #33): the synthesis prompt must genuinely prefer relevant internal KANAP
@@ -17387,6 +17416,7 @@ async function run() {
   await testAnAgentWithoutLibrariesSearchesNoKnowledge();
   await testTriageWithInternalNotesUsedReadsEveryItem();
   await testTriageWithInternalNotesIgnoredReadsThePublicItems();
+  await testTriageWithInternalNotesIgnoredSkipsTheRequesterInternalFollowUp();
   testSynthesisPromptPrefersInternalKnowledgeSources();
   testSynthesisPromptCarriesValidationStatus();
   testSynthesisPayloadIncludesScreenshotEvidence();
