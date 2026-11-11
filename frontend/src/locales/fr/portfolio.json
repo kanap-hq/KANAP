@@ -207,11 +207,11 @@
         "timeLogged": "Temps enregistré"
       },
       "values": {
-        "averageMonthlyProjectEffort": "Charge projet mensuelle moyenne (6 derniers mois) : {{value}} j/mois",
+        "averageMonthlyProjectEffort": "Charge projet mensuelle moyenne (6 derniers mois) : {{value}}\u00a0j/mois",
         "unassigned": "Non affecté",
         "skillCount_one": "{{count}} compétence",
         "skillCount_other": "{{count}} compétences",
-        "daysPerMonthShort": "{{count}} j/mois",
+        "daysPerMonthShort": "{{count}}\u00a0j/mois",
         "noManager": "Sans responsable",
         "fromEntra": "Depuis Microsoft Entra"
       },
@@ -418,10 +418,10 @@
         },
         "values": {
           "executionProgress": "Progression : {{progress}} %",
-          "hoursValue": "{{hours}} h",
-          "mdHigher": "{{count}} JH de plus",
-          "mdLower": "{{count}} JH de moins",
-          "mdValue": "{{value}} JH",
+          "hoursValue": "{{hours}}\u00a0h",
+          "mdHigher": "{{count}}\u00a0JH de plus",
+          "mdLower": "{{count}}\u00a0JH de moins",
+          "mdValue": "{{value}}\u00a0JH",
           "onTrack": "Dans les temps",
           "projectOverhead": "Frais généraux du projet",
           "shareOfTotal": "{{percent}} % du total ({{hours}} h)",
@@ -430,7 +430,7 @@
           "totalLogged": "Total enregistré",
           "workloadConsumption": "Consommation de charge : {{actual}} / {{planned}} JH",
           "mdUnit": "JH",
-          "actualOfEstimated": "{{actual}} / {{estimated}} JH",
+          "actualOfEstimated": "{{actual}} / {{estimated}}\u00a0JH",
           "actualSplit": "(Projet {{project}} · Tâche {{task}})"
         },
         "overview": {
@@ -782,7 +782,7 @@
           "combineThree": "{{first}}, {{second}} et {{third}}",
           "combineTwo": "{{first}} et {{second}}",
           "comment": "Commentaire",
-          "logHours": "Saisir {{hours}} h",
+          "logHours": "Saisir {{hours}}\u00a0h",
           "setStatus": "Définir {{status}}",
           "submit": "Soumettre",
           "submitting": "Envoi en cours…"
@@ -875,7 +875,7 @@
         }
       },
       "workLog": {
-        "total": "Total : {{time}} ({{md}} JH)",
+        "total": "Total : {{time}} ({{md}}\u00a0JH)",
         "actions": {
           "delete": "Supprimer",
           "edit": "Modifier"
@@ -889,9 +889,9 @@
           "time": "Temps"
         },
         "duration": {
-          "daysHours": "{{days}} j {{hours}} h",
-          "daysOnly": "{{days}} j",
-          "hoursOnly": "{{hours}} h"
+          "daysHours": "{{days}}\u00a0j {{hours}}\u00a0h",
+          "daysOnly": "{{days}}\u00a0j",
+          "hoursOnly": "{{hours}}\u00a0h"
         },
         "messages": {
           "deleteFailed": "Échec de la suppression de l'entrée de temps",
@@ -1993,8 +1993,8 @@
     "cards": {
       "skillCount_one": "{{count}} compétence",
       "skillCount_other": "{{count}} compétences",
-      "daysPerMonth": "{{count}} j/mois",
-      "avgDaysPerMonth": "Moy. : {{count}} j/mois"
+      "daysPerMonth": "{{count}}\u00a0j/mois",
+      "avgDaysPerMonth": "Moy. : {{count}}\u00a0j/mois"
     },
     "dialog": {
       "title": "Ajouter un contributeur",
@@ -2243,7 +2243,7 @@
       "helper": {
         "dayLength": "8 heures/jour",
         "hoursRange": "0-7 heures",
-        "total": "Total : {{hours}} h ({{md}} JH)"
+        "total": "Total : {{hours}}\u00a0h ({{md}}\u00a0JH)"
       },
       "messages": {
         "saveFailed": "Échec de l'enregistrement de l'entrée de temps"

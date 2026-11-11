@@ -1,7 +1,13 @@
 import * as assert from 'node:assert/strict';
+import * as jwt from 'jsonwebtoken';
+import { BadRequestException } from '@nestjs/common';
+import { EntraAuthService } from '../entra-auth.service';
+import { ENTRA_STATE_PURPOSE } from '../access-token.util';
 import { mergeScalarFields, resolveDirectoryNames } from '../entra-directory-sync.util';
 import { waitForBackgroundWork } from '../../common/background-work';
 import { EntraController, ssoFailureReason } from '../entra.controller';
+import { AdminAuthController } from '../admin-auth.controller';
+import { Features } from '../../config/features';
 
 function createMockDataSource(repo: any) {
   const state = {
@@ -548,6 +554,296 @@ async function testFailedSsoRoundTripsAreRecordedInATrustedTenant() {
   assert.equal(ssoFailureReason(new Error('ENTRA_EMAIL_UNVERIFIED')), 'email_unverified');
 }
 
+const WORKSPACE_A = { id: '11111111-1111-4111-8111-111111111111', slug: 'alpha', sso_provider: 'entra', entra_tenant_id: 'aaaaaaaa-0000-4000-8000-00000000000a' };
+const WORKSPACE_B = { id: '22222222-2222-4222-8222-222222222222', slug: 'beta', sso_provider: 'entra', entra_tenant_id: 'bbbbbbbb-0000-4000-8000-00000000000b' };
+
+/**
+ * The controller on the real state signing, with everything a consent return may touch recorded:
+ * workspace lookups, audit entries (with the workspace of their transaction), directory syncs,
+ * dropped application tokens and redirects.
+ */
+function consentHarness(workspaces: Array<Record<string, any>> = [WORKSPACE_A, WORKSPACE_B]) {
+  const entra = new EntraAuthService({
+    get: (key: string) => ({
+      ENTRA_CLIENT_ID: 'client-id-1',
+      ENTRA_CLIENT_SECRET: 'client-secret-1',
+      ENTRA_REDIRECT_URI: 'https://app.example.test/api/auth/entra/callback',
+      ENTRA_AUTHORITY: 'https://login.microsoftonline.com/organizations',
+    } as Record<string, string>)[key],
+  } as any);
+  (entra as any).loadMetadata = async () => ({
+    authorization_endpoint: 'https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize',
+    token_endpoint: 'https://login.microsoftonline.com/organizations/oauth2/v2.0/token',
+  });
+  (entra as any).logger = { warn: () => undefined, error: () => undefined };
+  const droppedTokens: string[] = [];
+  entra.invalidateAppToken = (directory: string) => { droppedTokens.push(directory); };
+
+  const { dataSource, state } = createMockDataSource({});
+  const lookups: string[] = [];
+  const auditEntries: Array<{ workspace: unknown; entry: any }> = [];
+  const syncs: string[] = [];
+  const redirects: string[] = [];
+  const controller = new EntraController(
+    entra,
+    { findById: async (id: string) => { lookups.push(id); return workspaces.find((w) => w.id === id) ?? null; } } as any,
+    {} as any,
+    {} as any,
+    dataSource as any,
+    {
+      log: async (entry: any) => {
+        const scoped = state.tenantQueries.filter((q) => q.params?.length);
+        auditEntries.push({ workspace: scoped.at(-1)?.params?.[0], entry });
+      },
+    } as any,
+    {} as any,
+    { syncTenant: async (id: string) => { syncs.push(id); return { status: 'ok' }; } } as any,
+    securityEvents as any,
+  );
+  (controller as any).logger = { warn: () => undefined };
+
+  /** The state of the consent address the settings page of `workspace` receives. */
+  const consentState = (workspace: Record<string, any>, userId?: string) =>
+    new URL(entra.buildAdminConsentUrl(workspace.entra_tenant_id, workspace.id, userId) as string).searchParams.get('state') as string;
+  const back = (query: Record<string, unknown>, request: Record<string, unknown> = {}) =>
+    controller.callback({ ...browser, ...request, query }, { cookie: () => undefined, redirect: (to: string) => { redirects.push(to); } } as any);
+  return { entra, controller, state, lookups, auditEntries, syncs, droppedTokens, redirects, consentState, back };
+}
+
+/**
+ * The consent return acts only on a state this application signed for that use, within its
+ * lifetime. Any other state is refused before anything is read or written.
+ */
+async function testConsentReturnNeedsAStateSignedForConsent() {
+  const providerText = 'text sent back by the provider';
+  const refused = async (label: string, state: (h: ReturnType<typeof consentHarness>) => Promise<string> | string, at?: () => number) => {
+    const h = consentHarness();
+    const value = await state(h);
+    const realNow = Date.now;
+    if (at) Date.now = at;
+    authEvents.length = 0;
+    try {
+      for (const extra of [
+        { admin_consent: 'true', tenant: WORKSPACE_A.entra_tenant_id },
+        { admin_consent: 'true' },
+        { admin_consent: 'false', error: 'access_denied', error_description: providerText },
+      ]) {
+        await assert.rejects(
+          () => h.back({ state: value, ...extra }),
+          (error: unknown) => error instanceof BadRequestException && (error as Error).message === 'Invalid Entra state',
+          `${label}: refused`,
+        );
+      }
+    } finally {
+      Date.now = realNow;
+    }
+    assert.deepEqual(h.auditEntries, [], `${label}: no audit entry`);
+    assert.equal(h.state.started, 0, `${label}: no transaction`);
+    assert.deepEqual(h.syncs, [], `${label}: no directory sync`);
+    assert.deepEqual(h.droppedTokens, [], `${label}: no application token dropped`);
+    assert.deepEqual(h.lookups, [], `${label}: no workspace read`);
+    assert.deepEqual(h.redirects, [], `${label}: no redirect`);
+    assert.deepEqual(await recordedEvents(), [], `${label}: no sign-in event`);
+  };
+
+  await refused('a workspace id without a signature', () => `consent:${WORKSPACE_A.id}`);
+  await refused('an empty state', () => 'consent:');
+  await refused('a state signed with another key', (h) => {
+    const [header, payload] = h.consentState(WORKSPACE_A).slice('consent:'.length).split('.');
+    return `consent:${header}.${payload}.${Buffer.from('another signature').toString('base64url')}`;
+  });
+  // Past their lifetime too, when the application did not sign them for consent.
+  const later = () => new Date().getTime() + 24 * 3600 * 1000;
+  await refused('an expired state signed with another key', (h) => {
+    const [header, payload] = h.consentState(WORKSPACE_A).slice('consent:'.length).split('.');
+    return `consent:${header}.${payload}.${Buffer.from('another signature').toString('base64url')}`;
+  }, later);
+  await refused('an expired sign-in state', async (h) => {
+    const { state } = await h.entra.buildAuthorizationUrl({ mode: 'login', tenantId: WORKSPACE_A.id });
+    return `consent:${state}`;
+  }, later);
+  await refused('a sign-in state', async (h) => {
+    const { state } = await h.entra.buildAuthorizationUrl({ mode: 'login', tenantId: WORKSPACE_A.id });
+    return `consent:${state}`;
+  });
+  await refused('a setup state', async (h) => {
+    const { state } = await h.entra.buildAuthorizationUrl({ mode: 'setup', tenantId: WORKSPACE_A.id });
+    return `consent:${state}`;
+  });
+
+  // And the other way round: a consent state does not complete a sign-in.
+  const h = consentHarness();
+  const consentToken = h.consentState(WORKSPACE_A).slice('consent:'.length);
+  await assert.rejects(() => h.entra.handleCallback({ code: 'code-1', state: consentToken }), /Invalid Entra state/);
+}
+
+/**
+ * A consent state the application signed, used past its lifetime: nothing is written or started,
+ * and the administrator lands back on the settings of the workspace the state names.
+ */
+async function testExpiredConsentStateReturnsToTheSettingsWithoutWriting() {
+  for (const answer of [
+    { admin_consent: 'True', tenant: WORKSPACE_A.entra_tenant_id },
+    { admin_consent: 'false', error: 'access_denied', error_description: 'text sent back by the provider' },
+  ]) {
+    const h = consentHarness();
+    const state = h.consentState(WORKSPACE_A);
+    const realNow = Date.now;
+    Date.now = () => new Date().getTime() + 24 * 3600 * 1000;
+    authEvents.length = 0;
+    try {
+      // The return arrives on the common address, here on another workspace's host.
+      await h.back({ state, ...answer }, { tenant: { id: WORKSPACE_B.id } });
+    } finally {
+      Date.now = realNow;
+    }
+    assert.deepEqual(h.redirects, ['http://alpha.lvh.me/admin/auth'], 'back to the settings of the signed workspace, with no outcome');
+    assert.deepEqual(h.auditEntries, [], 'no audit entry');
+    assert.equal(h.state.started, 0, 'no transaction');
+    assert.deepEqual(h.syncs, [], 'no directory sync');
+    assert.deepEqual(h.droppedTokens, [], 'no application token dropped');
+    assert.deepEqual(h.lookups, [WORKSPACE_A.id], 'only the signed workspace is read');
+    assert.deepEqual(await recordedEvents(), [], 'no sign-in event');
+  }
+}
+
+/**
+ * With a valid state, the entry is written in the workspace the state names, and the consent is
+ * granted only when the directory that answered is the one the workspace is connected to.
+ */
+async function testConsentIsGrantedOnlyForTheWorkspaceDirectory() {
+  const granted = consentHarness();
+  // Microsoft answers `admin_consent=True`.
+  await granted.back({ state: granted.consentState(WORKSPACE_A), admin_consent: 'True', tenant: WORKSPACE_A.entra_tenant_id });
+  assert.equal(granted.auditEntries.length, 1);
+  assert.equal(granted.auditEntries[0].workspace, WORKSPACE_A.id, 'written in the workspace of the state');
+  assert.equal(granted.auditEntries[0].entry.recordId, WORKSPACE_A.id);
+  assert.equal(granted.auditEntries[0].entry.sourceRef, 'entra-admin-consent');
+  assert.deepEqual(granted.auditEntries[0].entry.after, {
+    directory_sync_consent: true,
+    error: null,
+    consented_directory: WORKSPACE_A.entra_tenant_id,
+  });
+  assert.deepEqual(granted.lookups, [WORKSPACE_A.id], 'no other workspace is read');
+  assert.deepEqual(granted.syncs, [WORKSPACE_A.id]);
+  assert.deepEqual(granted.droppedTokens, [WORKSPACE_A.entra_tenant_id]);
+  assert.deepEqual(granted.redirects, ['http://alpha.lvh.me/admin/auth?consent=success']);
+  assert.equal(granted.auditEntries[0].entry.userId, null, 'a consent address built for nobody has no author');
+
+  const notGranted: Array<[string, Record<string, unknown>, Array<Record<string, any>>?]> = [
+    ['no directory in the answer', { admin_consent: 'true' }],
+    ['another directory', { admin_consent: 'true', tenant: WORKSPACE_B.entra_tenant_id }],
+    ['a directory given twice', { admin_consent: 'true', tenant: [WORKSPACE_A.entra_tenant_id, WORKSPACE_A.entra_tenant_id] }],
+    ['consent refused', { admin_consent: 'false', tenant: WORKSPACE_A.entra_tenant_id }],
+    ['a workspace without a directory', { admin_consent: 'true', tenant: 'null' }, [{ ...WORKSPACE_A, sso_provider: 'none', entra_tenant_id: null }]],
+    ['a workspace without a directory, no directory in the answer', { admin_consent: 'true' }, [{ ...WORKSPACE_A, sso_provider: 'none', entra_tenant_id: null }]],
+  ];
+  for (const [label, query, workspaces] of notGranted) {
+    const h = consentHarness(workspaces);
+    await h.back({ state: h.consentState(WORKSPACE_A), ...query });
+    assert.equal(h.auditEntries.length, 1, `${label}: one entry`);
+    assert.equal(h.auditEntries[0].workspace, WORKSPACE_A.id, `${label}: in the workspace of the state`);
+    assert.equal(h.auditEntries[0].entry.after.directory_sync_consent, false, `${label}: not granted`);
+    assert.deepEqual(h.syncs, [], `${label}: no directory sync`);
+    assert.deepEqual(h.droppedTokens, [], `${label}: no application token dropped`);
+    assert.deepEqual(h.redirects, ['http://alpha.lvh.me/admin/auth?consent=error'], label);
+  }
+
+  // The provider's text is kept for a valid state, cut to a bounded length.
+  const long = consentHarness();
+  await long.back({
+    state: long.consentState(WORKSPACE_A),
+    admin_consent: 'false',
+    error: 'access_denied',
+    error_description: 'd'.repeat(5000),
+    tenant: 't'.repeat(5000),
+  });
+  const after = long.auditEntries[0].entry.after;
+  assert.equal(after.directory_sync_consent, false);
+  assert.ok(after.error.length <= 300 && after.error.startsWith('ddd'), 'the error text is bounded');
+  assert.ok(after.consented_directory.length <= 100, 'the directory text is bounded');
+}
+
+/**
+ * A failed return lands on a workspace's page only for a state this application signed. A state
+ * signed elsewhere reads no workspace and no mode, whatever it carries, and gets the plain error.
+ */
+async function testFailedReturnReadsAWorkspaceOnlyFromAnApplicationState() {
+  const h = consentHarness();
+  for (const naming of [{ tenantId: WORKSPACE_A.id }, { tenant: WORKSPACE_A.id }]) {
+    const elsewhere = jwt.sign({ purpose: 'elsewhere', mode: 'login', nonce: 'nonce-1', ...naming }, 'another-key');
+    await assert.rejects(() => h.back({ code: 'code-1', state: elsewhere }), /Invalid Entra state/);
+  }
+  assert.deepEqual(h.lookups, [], 'no workspace read');
+  assert.deepEqual(h.redirects, [], 'no redirect');
+
+  // A state of the application past its lifetime: the sign-in page of its workspace, with a short code.
+  const { state } = await h.entra.buildAuthorizationUrl({ mode: 'login', tenantId: WORKSPACE_A.id });
+  const realNow = Date.now;
+  Date.now = () => new Date().getTime() + 3600 * 1000;
+  try {
+    await h.back({ code: 'code-1', state });
+  } finally {
+    Date.now = realNow;
+  }
+  assert.deepEqual(h.lookups, [WORKSPACE_A.id]);
+  assert.deepEqual(h.redirects, ['http://alpha.lvh.me/login?ssoError=SSO_FAILED']);
+  assert.deepEqual(h.auditEntries, []);
+
+  // The reference of a sign-in redirect, copied into a state the application did not sign: it
+  // picks no workspace and no mode, and the failed sign-in is recorded for the host's workspace.
+  const copied = consentHarness();
+  const issued = await copied.entra.buildAuthorizationUrl({ mode: 'login', tenantId: WORKSPACE_A.id });
+  const reference = (jwt.decode(issued.state) as { tenant: string }).tenant;
+  authEvents.length = 0;
+  for (const mode of ['setup', 'login']) {
+    const elsewhere = jwt.sign({ purpose: ENTRA_STATE_PURPOSE, mode, nonce: 'nonce-1', tenant: reference }, 'another-key', { expiresIn: '10m' });
+    await assert.rejects(
+      () => copied.back({ code: 'code-1', state: elsewhere }, { tenant: { id: WORKSPACE_B.id } }),
+      /Invalid Entra state/,
+      `${mode}: the plain error`,
+    );
+  }
+  assert.deepEqual(copied.redirects, [], 'no redirect');
+  assert.ok(!copied.lookups.includes(WORKSPACE_A.id), 'the workspace of the reference is not read');
+  const failure = { tenantId: WORKSPACE_B.id, event: { action: 'sso_login_failed', reason: 'invalid_state' } };
+  assert.deepEqual(await recordedEvents(), [failure, failure]);
+}
+
+/**
+ * The audit entry of a consent return is written in the name of the administrator who opened the
+ * consent from the settings, granted or not.
+ */
+async function testConsentEntryNamesTheAdministratorWhoOpenedIt() {
+  const flags = Features as { ENTRA_SSO: boolean };
+  const previous = flags.ENTRA_SSO;
+  flags.ENTRA_SSO = true;
+  try {
+    for (const answer of [
+      { admin_consent: 'True', tenant: WORKSPACE_A.entra_tenant_id },
+      { admin_consent: 'false', error: 'access_denied' },
+    ]) {
+      const h = consentHarness();
+      const settings = new AdminAuthController(
+        { findById: async () => WORKSPACE_A } as any,
+        {} as any,
+        h.entra,
+        {} as any,
+      );
+      const { directory_sync: sync } = await settings.getSettings({ tenant: { id: WORKSPACE_A.id }, user: { sub: 'user-admin-1' } });
+      const state = new URL(sync?.consent_url as string).searchParams.get('state') as string;
+      await h.back({ state, ...answer });
+      assert.equal(h.auditEntries.length, 1);
+      assert.equal(h.auditEntries[0].workspace, WORKSPACE_A.id);
+      assert.equal(h.auditEntries[0].entry.userId, 'user-admin-1');
+      assert.equal(h.auditEntries[0].entry.source, 'system');
+      assert.equal(h.auditEntries[0].entry.sourceRef, 'entra-admin-consent');
+    }
+  } finally {
+    flags.ENTRA_SSO = previous;
+  }
+}
+
 /** Runs `fn` with the given environment values, then restores them. */
 async function withEnv(values: Record<string, string | undefined>, fn: () => Promise<void>) {
   const previous = new Map<string, string | undefined>();
@@ -576,6 +872,23 @@ async function run() {
   await testStartLoginDoesNotSetNonceCookie();
   await testRefusedSsoSessionsAreRecorded();
   await withEnv({ APP_ENV: 'development', NODE_ENV: undefined }, testFailedSsoRoundTripsAreRecordedInATrustedTenant);
+  await withEnv({ ENTRA_STATE_SECRET: 'entra-controller-spec-state-secret' }, testConsentReturnNeedsAStateSignedForConsent);
+  await withEnv(
+    { APP_ENV: 'development', NODE_ENV: undefined, ENTRA_STATE_SECRET: 'entra-controller-spec-state-secret' },
+    testExpiredConsentStateReturnsToTheSettingsWithoutWriting,
+  );
+  await withEnv(
+    { APP_ENV: 'development', NODE_ENV: undefined, ENTRA_STATE_SECRET: 'entra-controller-spec-state-secret' },
+    testConsentIsGrantedOnlyForTheWorkspaceDirectory,
+  );
+  await withEnv(
+    { APP_ENV: 'development', NODE_ENV: undefined, ENTRA_STATE_SECRET: 'entra-controller-spec-state-secret' },
+    testConsentEntryNamesTheAdministratorWhoOpenedIt,
+  );
+  await withEnv(
+    { APP_ENV: 'development', NODE_ENV: undefined, ENTRA_STATE_SECRET: 'entra-controller-spec-state-secret' },
+    testFailedReturnReadsAWorkspaceOnlyFromAnApplicationState,
+  );
 }
 
 void run();

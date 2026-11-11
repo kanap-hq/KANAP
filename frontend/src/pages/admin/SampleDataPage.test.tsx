@@ -167,6 +167,7 @@ describe('SampleDataPage', () => {
       load_refusal: 'tenant_not_empty',
       blocking: [
         { table: 'applications', count: 4 },
+        { table: 'app_instances', count: 3 },
         { table: 'documents', count: 1 },
         { table: 'suppliers', count: 1 },
         { table: 'not_a_known_table', count: 2 },
@@ -177,6 +178,8 @@ describe('SampleDataPage', () => {
     expect(await screen.findByText(/These stand in the way/)).toBeInTheDocument();
     const applications = screen.getByRole('link', { name: 'Applications (4)' });
     expect(applications).toHaveAttribute('href', '/it/applications');
+    const deployments = screen.getByRole('link', { name: 'Deployments (3)' });
+    expect(deployments).toHaveAttribute('href', '/it/applications');
     const documents = screen.getByRole('link', { name: 'Documents (1)' });
     expect(documents).toHaveAttribute('href', '/knowledge?allLibraries=1');
     const suppliers = screen.getByRole('link', { name: 'Suppliers (1)' });

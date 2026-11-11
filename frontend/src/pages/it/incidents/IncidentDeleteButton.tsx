@@ -9,6 +9,8 @@ import { deleteFailureReason, type DeleteFailure } from '../../../utils/deleteRe
 import { fetchIncidentDeleteImpact, incidentDeleteImpactText } from './incidentDelete';
 import DeleteIconButton from '../../../components/workspace/DeleteIconButton';
 
+type IncidentQuery = { queryKey: readonly unknown[]; state: { data: unknown } };
+
 type Props = {
   incidentId: string;
   incidentName: string;
@@ -18,6 +20,13 @@ type Props = {
   onDeleted: () => void;
   onError: (message: string) => void;
 };
+
+/** The open incident. Its query key is the address (`INC-n` or the uuid), and the cached row carries the uuid. */
+function isThisIncident(query: IncidentQuery, incidentId: string): boolean {
+  if (String(query.queryKey[0]) !== 'incident') return false;
+  if (query.queryKey[1] === incidentId) return true;
+  return (query.state.data as { id?: string } | undefined)?.id === incidentId;
+}
 
 /**
  * Delete action of the incident page (incident administrators). It always asks first, with what
@@ -56,9 +65,20 @@ export default function IncidentDeleteButton({ incidentId, incidentName, disable
       }
       await beforeDelete();
       await api.delete(`/incidents/${incidentId}`);
+      // The page leaves first. This incident is dropped (its address may be INC-n, not the uuid)
+      // so the open page does not read it again, then the lists read again.
       onDeleted();
+      queryClient.removeQueries({ queryKey: ['incident', incidentId], exact: true });
+      queryClient.removeQueries({
+        queryKey: ['incident'],
+        predicate: (query) => isThisIncident(query, incidentId),
+      });
       void queryClient.invalidateQueries({
-        predicate: (query) => ['incidents', 'incidents-ids', 'incident'].includes(String(query.queryKey[0])),
+        predicate: (query) => {
+          const root = String(query.queryKey[0]);
+          if (root !== 'incidents' && root !== 'incidents-ids' && root !== 'incident') return false;
+          return !isThisIncident(query, incidentId);
+        },
       });
     } catch (err) {
       setBusy(false);

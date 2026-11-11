@@ -1,4 +1,4 @@
-import { TOKEN_SECRET_LABEL } from './token-secret.util';
+import { TOKEN_SECRET_LABEL, TOKEN_SECRET_LABEL_PREFIX } from './token-secret.util';
 
 /**
  * Access-token purpose marker, and the optional window (`JWT_LEGACY_ACCESS_TOKEN_DEADLINE`) that
@@ -24,6 +24,11 @@ export const ACCESS_TOKEN_PURPOSE = 'access';
 export const PASSWORD_RESET_PURPOSE = TOKEN_SECRET_LABEL['password-reset'];
 export const PROVISIONING_PURPOSE = 'provision';
 export const ENTRA_STATE_PURPOSE = TOKEN_SECRET_LABEL['entra-state'];
+/**
+ * The state of the directory admin-consent round trip. It is signed with the SSO state key and
+ * told apart from a sign-in or setup state by this marker: neither stands in for the other.
+ */
+export const ENTRA_CONSENT_STATE_PURPOSE = `${TOKEN_SECRET_LABEL_PREFIX}entra-consent-state`;
 export const ENTRA_LOGIN_HANDOFF_TYPE = 'entra_login_handoff';
 /** MCP OAuth (ai/oauth): the authorization code and the access token of an MCP client. */
 export const MCP_OAUTH_CODE_PURPOSE = TOKEN_SECRET_LABEL['mcp-oauth-code'];
@@ -38,6 +43,7 @@ export const FOREIGN_TOKEN_MARKERS: readonly string[] = [
   PASSWORD_RESET_PURPOSE,
   PROVISIONING_PURPOSE,
   ENTRA_STATE_PURPOSE,
+  ENTRA_CONSENT_STATE_PURPOSE,
   ENTRA_LOGIN_HANDOFF_TYPE,
   MCP_OAUTH_CODE_PURPOSE,
   MCP_ACCESS_PURPOSE,

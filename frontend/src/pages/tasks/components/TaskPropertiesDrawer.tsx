@@ -20,6 +20,8 @@ import TaskLabelsField from './TaskLabelsField';
 import TaskLogTimeDialog from './TaskLogTimeDialog';
 import { taskDetailTokens, taskDetailTypography } from '../theme/taskDetailTokens';
 import { useLocalizedTaskTypes, useTaskTypeLabel } from '../../../hooks/useLocalizedTaskTypes';
+import { useLocale } from '../../../i18n/useLocale';
+import { formatFigure } from '../../portfolio/figures';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                             */
@@ -98,12 +100,12 @@ function selectPlaceholder(text: string) {
 /*  Helpers                                                           */
 /* ------------------------------------------------------------------ */
 
-function formatHours(t: any, hours: number) {
+function formatHours(t: (key: string, options?: Record<string, unknown>) => string, hours: number, locale: string) {
   const days = Math.floor(hours / 8);
   const remaining = Math.round(hours % 8);
   if (days > 0 && remaining > 0) return t('workspace.task.workLog.duration.daysHours', { days, hours: remaining });
   if (days > 0) return t('workspace.task.workLog.duration.daysOnly', { days });
-  return t('workspace.task.workLog.duration.hoursOnly', { hours });
+  return t('workspace.task.workLog.duration.hoursOnly', { hours: formatFigure(hours, locale, 1) });
 }
 
 function formatLinkedNames(items?: Array<{ id: string; name?: string | null; sequential_id?: string | null; asset_reference?: string | null; hostname?: string | null }>): string {
@@ -130,6 +132,7 @@ export default function TaskPropertiesDrawer({
   projectWorkspaceLink = null,
 }: TaskPropertiesDrawerProps) {
   const { t } = useTranslation('portfolio');
+  const locale = useLocale();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { hasLevel } = useAuth();
@@ -355,7 +358,7 @@ export default function TaskPropertiesDrawer({
         {!isCreate && supportsTimeLogging && (
           <PropertyRow label={t('workspace.task.sidebar.fields.timeSpent')}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-              <Typography sx={{ fontSize: 13 }}>{formatHours(t, totalTimeHours)}</Typography>
+              <Typography sx={{ fontSize: 13 }}>{formatHours(t, totalTimeHours, locale)}</Typography>
               {!readOnly && canLogTime && (
                 <Box
                   component="button"

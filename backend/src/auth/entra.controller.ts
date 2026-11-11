@@ -34,6 +34,11 @@ export function ssoFailureReason(error: unknown): AuthEventReason {
   return 'sso_failed';
 }
 
+/** A query value as text, cut to `max` characters; null when it is not a single string. */
+function boundedQueryText(value: unknown, max: number): string | null {
+  return typeof value === 'string' ? value.slice(0, max) : null;
+}
+
 @Controller('auth/entra')
 export class EntraController {
   constructor(
@@ -121,7 +126,8 @@ export class EntraController {
   @Throttle({ default: RATE_LIMITS.ssoSignIn })
   async callback(@Req() req: any, @Res() res: Response) {
     // Admin-consent round trip (application permissions for the directory
-    // sync) reuses this redirect URI; it carries no auth code.
+    // sync) reuses this redirect URI; it carries no auth code, and a state
+    // signed for consent after the `consent:` prefix.
     const consentState = typeof req.query?.state === 'string' && req.query.state.startsWith('consent:')
       ? (req.query.state as string)
       : null;
@@ -335,19 +341,32 @@ export class EntraController {
     res.redirect(`${base}/login?ssoError=${encodeURIComponent(code)}`);
   }
 
+  /**
+   * Return from the Microsoft admin-consent screen. Nothing is read or written unless the state
+   * was signed by this application for consent; the workspace is the one the state names. Past
+   * its lifetime, such a state writes and starts nothing: the administrator lands back on the
+   * settings, where the consent can be opened again. The consent counts as granted only when the
+   * directory that answered is the one the workspace is connected to.
+   */
   private async handleConsentCallback(state: string, req: any, res: Response) {
-    const tenantId = state.slice('consent:'.length);
-    const tenant = tenantId ? await this.tenants.findById(tenantId) : null;
+    const consent = this.entra.verifyConsentState(state.slice('consent:'.length));
+    const tenant = await this.tenants.findById(consent.tenantId);
     if (!tenant) {
       throw new BadRequestException('Tenant not found');
     }
-    const consentedDirectory = typeof req.query?.tenant === 'string' ? req.query.tenant : null;
+    const settingsUrl = `${resolveTenantAppBaseUrl(req, tenant.slug).replace(/\/$/, '')}/admin/auth`;
+    if (consent.expired) {
+      // No outcome to report: Microsoft may have recorded the consent, the settings offer it again.
+      res.redirect(settingsUrl);
+      return;
+    }
+    const consentedDirectory = boundedQueryText(req.query?.tenant, 100);
     const granted =
       String(req.query?.admin_consent ?? '').toLowerCase() === 'true'
-      && (!consentedDirectory || consentedDirectory === tenant.entra_tenant_id);
-    const error = typeof req.query?.error_description === 'string'
-      ? req.query.error_description
-      : typeof req.query?.error === 'string' ? req.query.error : null;
+      && !!tenant.entra_tenant_id
+      && consentedDirectory === tenant.entra_tenant_id;
+    // The provider's text, kept for the administrators who read the audit log.
+    const error = boundedQueryText(req.query?.error_description, 300) ?? boundedQueryText(req.query?.error, 300);
 
     await withTenant(this.dataSource, tenant.id, (manager) =>
       this.audit.log(
@@ -357,7 +376,8 @@ export class EntraController {
           action: 'update',
           before: null,
           after: { directory_sync_consent: granted, error, consented_directory: consentedDirectory },
-          userId: null,
+          // The administrator who opened the consent from the settings.
+          userId: consent.userId,
           source: 'system',
           sourceRef: 'entra-admin-consent',
         },
@@ -374,9 +394,7 @@ export class EntraController {
       );
     }
 
-    const baseUrl = resolveTenantAppBaseUrl(req, tenant.slug);
-    const normalized = baseUrl.replace(/\/$/, '');
-    res.redirect(`${normalized}/admin/auth?consent=${granted ? 'success' : 'error'}`);
+    res.redirect(`${settingsUrl}?consent=${granted ? 'success' : 'error'}`);
   }
 
   private async handleSetupCallback(

@@ -7,6 +7,7 @@ import ChartCard from '../../components/reports/ChartCard';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
 import { useLocale } from '../../i18n/useLocale';
+import { formatFigure } from './figures';
 import useAutosave, { autosaveErrorMessage } from '../../hooks/useAutosave';
 import { sendPatchBuffer, usePatchBuffer } from '../../hooks/patchBuffer';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
@@ -598,7 +599,7 @@ export default function ContributorWorkspacePage() {
         </>
       )}
       <PortfolioMetadataItem label={t('portfolio:workspace.contributor.metadata.availability')} mono>
-        {t('portfolio:workspace.contributor.values.daysPerMonthShort', { count: view.project_availability })}
+        {t('portfolio:workspace.contributor.values.daysPerMonthShort', { count: formatFigure(view.project_availability, locale, 1) })}
       </PortfolioMetadataItem>
       <PortfolioMetadataItem>
         {t('portfolio:workspace.contributor.values.skillCount', { count: skills.length })}
@@ -691,7 +692,7 @@ export default function ContributorWorkspacePage() {
                 </Box>
                 <Box sx={(theme) => ({ fontSize: 13, color: theme.palette.kanap.text.primary, mb: '12px' })}>
                   {t('portfolio:workspace.contributor.values.averageMonthlyProjectEffort', {
-                    value: timeStats?.averageProjectDays ?? 0,
+                    value: formatFigure(timeStats?.averageProjectDays ?? 0, locale, 1),
                   })}
                 </Box>
                 {timeStats && (timeStats.monthly.length ? (
@@ -712,7 +713,12 @@ export default function ContributorWorkspacePage() {
                       ],
                       axes: [
                         { type: 'category', position: 'bottom' },
-                        { type: 'number', position: 'left', title: { text: t('portfolio:workspace.contributor.chart.manDays') } },
+                        {
+                          type: 'number',
+                          position: 'left',
+                          title: { text: t('portfolio:workspace.contributor.chart.manDays') },
+                          label: { formatter: (point: { value: number }) => formatFigure(point.value, locale, 1) },
+                        },
                       ],
                       legend: { enabled: true, position: 'bottom' },
                     }}

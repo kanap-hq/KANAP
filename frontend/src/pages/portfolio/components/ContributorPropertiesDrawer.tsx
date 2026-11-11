@@ -7,6 +7,8 @@ import CompanySelect from '../../../components/fields/CompanySelect';
 import UserSelect from '../../../components/fields/UserSelect';
 import { formatUserOption } from '../../../components/fields/userLookup';
 import { MONO_FONT_FAMILY } from '../../../config/ThemeContext';
+import { useLocale } from '../../../i18n/useLocale';
+import { formatFigure } from '../figures';
 import { drawerFieldValueSx, drawerMenuItemSx, drawerSelectSx } from '../../../theme/formSx';
 
 export type ContributorDrawerTeam = { id: string; name: string; is_active: boolean };
@@ -123,6 +125,7 @@ export default function ContributorPropertiesDrawer({
   onManagerPicked,
 }: Props) {
   const { t } = useTranslation(['portfolio', 'common']);
+  const locale = useLocale();
   // Local slider position while dragging; the save fires once on release.
   const [draftAvailability, setDraftAvailability] = React.useState<number | null>(null);
   const availability = draftAvailability ?? values.project_availability;
@@ -278,7 +281,7 @@ export default function ContributorPropertiesDrawer({
                 textAlign: 'right',
               })}
             >
-              {t('portfolio:workspace.contributor.values.daysPerMonthShort', { count: availability })}
+              {t('portfolio:workspace.contributor.values.daysPerMonthShort', { count: formatFigure(availability, locale, 1) })}
             </Box>
           </Box>
         </PropertyRow>

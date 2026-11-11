@@ -82,10 +82,12 @@ function renderEffortTab({
   canManage = true,
   form = baseForm,
   onUpdate = vi.fn<(patch: any) => void>(),
+  taskTimeSummary = { it_hours: 0, business_hours: 0, total_hours: 0 },
 }: {
   canManage?: boolean;
   form?: any;
   onUpdate?: ReturnType<typeof vi.fn<(patch: any) => void>>;
+  taskTimeSummary?: { it_hours: number; business_hours: number; total_hours: number };
 } = {}) {
   const result = render(
     <ThemeProvider theme={theme}>
@@ -104,7 +106,7 @@ function renderEffortTab({
         profileId="user-1"
         projectId="project-1"
         taskTimeEntries={[]}
-        taskTimeSummary={{ it_hours: 0, business_hours: 0, total_hours: 0 }}
+        taskTimeSummary={taskTimeSummary}
       />
     </ThemeProvider>,
   );
@@ -209,6 +211,29 @@ describe('ProjectEffortTab', () => {
 
     expect(screen.getByLabelText('IT estimated effort in MD')).toHaveValue(123);
     expect(onUpdate).not.toHaveBeenCalled();
+  });
+
+  it('writes effort and logged hours with a decimal point in English', () => {
+    renderEffortTab({
+      form: {
+        ...baseForm,
+        actual_effort_it: 0.3,
+        time_entries: [{
+          id: 'entry-1',
+          hours: 2,
+          category: 'it',
+          logged_at: '2026-03-01T10:00:00.000Z',
+          user_first_name: 'Ada',
+          user_last_name: 'Lovelace',
+          notes: null,
+        }],
+      },
+      taskTimeSummary: { it_hours: 2.4, business_hours: 0, total_hours: 2.4 },
+    });
+
+    expect(screen.getByText('0.3 / 20 MD')).toBeInTheDocument();
+    expect(screen.getByText('(Project 0.3 · Task 0.3)')).toBeInTheDocument();
+    expect(screen.getByText('2.00h')).toBeInTheDocument();
   });
 
   it('disables the estimate input and progress slider when the user cannot manage', () => {

@@ -9,6 +9,8 @@ import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { KanapDialog, PropertyRow } from '../../../components/design';
 import { drawerFieldValueSx, textTabsSx, textTabSx } from '../../../theme/formSx';
 import { MONO_FONT_FAMILY } from '../../../config/ThemeContext';
+import { useLocale } from '../../../i18n/useLocale';
+import { formatFigure, formatLocaleFigure } from '../../portfolio/figures';
 
 type TimeEntryCategory = 'it' | 'business';
 
@@ -46,6 +48,7 @@ export default function TaskLogTimeDialog({
 }: TaskLogTimeDialogProps) {
   const { profile, hasLevel } = useAuth();
   const { t } = useTranslation(['portfolio', 'common', 'errors']);
+  const locale = useLocale();
   const isEdit = !!editEntry;
   const canAssignUser = projectId
     ? hasLevel('portfolio_projects', 'admin')
@@ -219,7 +222,7 @@ export default function TaskLogTimeDialog({
           label={t('portfolio:dialogs.logTime.fields.duration')}
           helperText={t('portfolio:dialogs.logTime.helper.total', {
             hours: totalHours,
-            md: (totalHours / 8).toFixed(2),
+            md: formatLocaleFigure(totalHours / 8, locale, 2),
           })}
         >
           <Stack spacing={1.25}>
@@ -256,7 +259,7 @@ export default function TaskLogTimeDialog({
                   fontVariantNumeric: 'tabular-nums',
                 }}
               >
-                {hoursNum}h
+                {t('portfolio:workspace.task.workLog.duration.hoursOnly', { hours: formatFigure(hoursNum, locale, 1) })}
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
