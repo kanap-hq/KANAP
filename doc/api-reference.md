@@ -1744,7 +1744,7 @@ Response: `{ success: true }` (202-style fire-and-forget; email failures are sil
     - Cancelled projects are excluded.
     - Returned projects include items with planned dates, plus recently completed items still inside lookback (`planned_end` or `actual_end` >= `viewStart`).
     - Frontend visual windowing/scroll positioning is managed client-side.
-- POST `/portfolio/projects/planning/roadmap/apply` — apply generated roadmap dates to selected projects **[Requires: portfolio_projects:contributor]**
+- POST `/portfolio/projects/planning/roadmap/apply` — apply generated roadmap dates to selected projects **[Requires: portfolio_projects:contributor]**. Each project is checked as `PATCH /portfolio/projects/:id` checks it: a Business Contributor changes the projects they take part in. A project outside their participation answers 404 and no date of the list is written.
   - Body: `{ projects: Array<{ projectId: uuid, plannedStart: YYYY-MM-DD, plannedEnd: YYYY-MM-DD }> }`
   - Validation:
     - `projects` must contain at least one item

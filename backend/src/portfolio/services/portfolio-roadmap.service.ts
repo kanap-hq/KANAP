@@ -1,9 +1,11 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
+import type { ParticipationAccessScope } from '../../auth/business-contributor-scope';
 import { PortfolioProject, ProjectSchedulingMode, ProjectStatus } from '../portfolio-project.entity';
 import { TeamMemberConfigService } from '../team-member-config.service';
 import { PortfolioProjectsCrudService } from './portfolio-projects-crud.service';
+import { idsInScope } from '../portfolio-linked-reads';
 import {
   RoadmapApplyDto,
   RoadmapImpactSummary,
@@ -409,7 +411,7 @@ export class PortfolioRoadmapService {
     tenantId: string,
     input: RoadmapApplyDto | unknown,
     userId: string | null,
-    svcOpts?: ServiceOpts,
+    svcOpts?: ServiceOpts & { accessScope?: ParticipationAccessScope },
   ): Promise<{ updated: number }> {
     const mg = svcOpts?.manager ?? this.projectRepo.manager;
     let parsed: RoadmapApplyDto;
@@ -421,6 +423,15 @@ export class PortfolioRoadmapService {
         code: 'ROADMAP_APPLY_FAILED',
         details: [{ projectId: 'request', error: this.extractErrorMessage(error) }],
       });
+    }
+
+    // Every project is checked against the person's scope before the first write, in one query: a
+    // project outside it answers as on its page (404) and no date of the list changes.
+    if (svcOpts?.accessScope) {
+      const inScope = await idsInScope(mg, 'projects', parsed.projects.map((project) => project.projectId), svcOpts.accessScope);
+      if (parsed.projects.some((project) => !inScope.has(project.projectId.toLowerCase()))) {
+        throw new NotFoundException('Project not found');
+      }
     }
 
     let currentProjectId: string | null = null;
