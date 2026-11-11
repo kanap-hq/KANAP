@@ -139,11 +139,12 @@ function stripeAccount(seed: Seed, opts: {
   return { service, pays, audits };
 }
 
-/** One call, as the request runs it: in a transaction of the tenant. */
-function payInvoice(service: BillingService, seed: Seed) {
-  return withTenant(dataSource, seed.tenantId, (manager) =>
-    (service as any).payOpenInvoice({ tenantId: seed.tenantId, userId: null, manager }),
-  ) as Promise<any>;
+/** One call, as the request runs it: in a transaction of the tenant (with the request's lock wait, when given). */
+function payInvoice(service: BillingService, seed: Seed, lockTimeout?: string) {
+  return withTenant(dataSource, seed.tenantId, async (manager) => {
+    if (lockTimeout) await manager.query(`SELECT set_config('lock_timeout', $1, true)`, [lockTimeout]);
+    return (service as any).payOpenInvoice({ tenantId: seed.tenantId, userId: null, manager });
+  }) as Promise<any>;
 }
 
 async function testNewCardPaysTheInvoiceAtOnce() {
@@ -244,6 +245,29 @@ async function testTwoCallsTogetherPayOnce() {
   }
 }
 
+/**
+ * A second call (another tab) while the first one still waits on Stripe beyond the request's lock
+ * wait: a clean refusal with its code, nothing charged twice.
+ */
+async function testSecondCallDuringALongPaymentIsRefused() {
+  const seed = await seedTenant('busy');
+  try {
+    const { service, pays } = stripeAccount(seed, { pay: 'paid', payDelay: 1500 });
+    const first = payInvoice(service, seed);
+    await delay(300);
+    const second = await payInvoice(service, seed, '200ms').then(
+      () => { throw new Error('the second call should be refused'); },
+      (error: any) => error,
+    );
+    assert.equal(second?.getStatus?.(), 409);
+    assert.equal(second?.getResponse?.()?.code, 'INVOICE_PAYMENT_IN_PROGRESS');
+    assert.equal((await first).payment.status, 'paid');
+    assert.equal(pays.length, 1);
+  } finally {
+    await removeTenant(seed.tenantId);
+  }
+}
+
 async function main() {
   await dataSource.initialize();
   try {
@@ -254,6 +278,7 @@ async function main() {
     await testPaidMeanwhileAndProcessingAreNotRefusals();
     await testBankTransferIsNotCharged();
     await testTwoCallsTogetherPayOnce();
+    await testSecondCallDuringALongPaymentIsRefused();
     // eslint-disable-next-line no-console
     console.log('billing-pay-invoice.integration.spec: all assertions passed');
   } finally {

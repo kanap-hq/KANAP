@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, EntityManager, DataSource } from 'typeorm';
 import { PaymentMode, Subscription, SubscriptionType, SubscriptionStatus, CollectionMethod } from './subscription.entity';
@@ -774,7 +774,8 @@ export class BillingService {
    * retry. Only when that card is not the
    * one last refused (no card was changed: no second refusal), and once: the call takes the
    * tenant's lock shared with the webhook (held until the request commits, so a second call then
-   * finds the invoice paid), and Stripe's idempotency key names the invoice and the card. Returns
+   * finds the invoice paid; one still waiting for it beyond the request's lock wait is refused
+   * with 409 INVOICE_PAYMENT_IN_PROGRESS), and Stripe's idempotency key names the invoice and the card. Returns
    * the summary read again from Stripe, plus `payment.status`: `paid` (also when Stripe's retry
    * paid it meanwhile), `payment_failed`, `processing` (accepted, not settled yet),
    * `requires_action` (the bank asks for authentication: the invoice page takes it),
@@ -789,7 +790,15 @@ export class BillingService {
 
   private async chargeOpenInvoice(tenantId: string, userId: string | null, manager: EntityManager): Promise<InvoicePayment> {
     const client = this.getStripeClientOrThrow();
-    await manager.query(`SELECT pg_advisory_xact_lock(hashtext($1)::bigint)`, [`stripe-webhook:${tenantId}`]);
+    try {
+      await manager.query(`SELECT pg_advisory_xact_lock(hashtext($1)::bigint)`, [`stripe-webhook:${tenantId}`]);
+    } catch (error: any) {
+      // Another payment of the tenant (a second tab) holds the lock beyond the request's lock wait.
+      if ((error?.code ?? error?.driverError?.code) === '55P03') {
+        throw new ConflictException({ code: 'INVOICE_PAYMENT_IN_PROGRESS', message: 'A payment is already in progress.' });
+      }
+      throw error;
+    }
     const sub = await this.ensureSubscription(manager);
     const stripeSub = await this.retrieveLiveSubscription(sub);
     const invoiceId = this.stripeObjectId(stripeSub?.latest_invoice);
