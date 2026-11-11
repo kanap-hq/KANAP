@@ -260,7 +260,9 @@ function unpaidLines(subscription: BillingSubscription | null | undefined, t: Tr
   else if (freezeAt) access = t('billing.unpaid.limitedOn', { date: date(freezeAt) });
   // Only a subscription that still runs is paid here; an ended one takes a new plan.
   const payable = isLiveSubscription(subscription);
-  return { invoice, access, frozen, payable, transfer, invoiceUrl: subscription.latest_invoice_url ?? null };
+  // A transfer, or an invoice Stripe no longer retries (uncollectible), is paid on its own page.
+  const onInvoicePage = transfer || subscription.latest_invoice_status === 'uncollectible';
+  return { invoice, access, frozen, payable, onInvoicePage, invoiceUrl: subscription.latest_invoice_url ?? null };
 }
 
 /** The outcome of `POST /billing/pay-invoice`, called on the return from the portal. */
@@ -873,12 +875,12 @@ export default function BillingCenter() {
               )}
             </Box>
             <Stack direction="row" spacing={1} alignItems="center" sx={{ flexShrink: 0 }}>
-              {unpaid?.payable && !unpaid.transfer && (
+              {unpaid?.payable && !unpaid.onInvoicePage && (
                 <Button variant="contained" size="small" onClick={() => openPortal(true)} disabled={!canManage || opening}>
                   {t('billing.actions.updateCardAndPay')}
                 </Button>
               )}
-              {unpaid?.payable && unpaid.transfer && unpaid.invoiceUrl && (
+              {unpaid?.payable && unpaid.onInvoicePage && unpaid.invoiceUrl && (
                 <Button
                   variant="contained"
                   size="small"

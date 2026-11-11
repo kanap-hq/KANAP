@@ -380,6 +380,13 @@ describe('BillingCenter unpaid invoice', () => {
     expect(screen.queryByRole('button', { name: 'Update card and pay' })).not.toBeInTheDocument();
   });
 
+  it('opens the invoice page of an invoice Stripe no longer retries', async () => {
+    renderPage({ ...CARD_REFUSED, latest_invoice_status: 'uncollectible' });
+    const link = await screen.findByRole('link', { name: 'Pay invoice' });
+    expect(link).toHaveAttribute('href', 'https://invoice.stripe.test/kan-0041');
+    expect(screen.queryByRole('button', { name: 'Update card and pay' })).not.toBeInTheDocument();
+  });
+
   /** The page opened on the return from the portal, with the answer of `POST /billing/pay-invoice`. */
   async function returnFromPortal(answer: Record<string, unknown>) {
     const { payment: _payment, ...after } = answer;
