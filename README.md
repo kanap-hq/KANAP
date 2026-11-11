@@ -127,7 +127,7 @@ Self-hosting is free.
 Paid options are for teams that want operational help:
 
 - **Self-hosted support**: priority support for teams running Kadratis themselves.
-- **Kadratis Cloud**: the same open source platform operated by KANAP, with hosting, updates, backups, support, and activation help.
+- **Kadratis Cloud**: the same open source platform operated by Kadratis, with hosting, updates, backups, support, and activation help.
 
 See [kadratis.com](https://kadratis.com/offer) for current pricing.
 

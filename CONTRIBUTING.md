@@ -1,6 +1,6 @@
-# Contributing to KANAP
+# Contributing to Kadratis
 
-Thank you for your interest in contributing to KANAP!
+Thank you for your interest in contributing to Kadratis!
 
 ## How to Contribute
 
@@ -28,7 +28,7 @@ If you find a bug or have a feature request, please open an issue on GitHub. Inc
 
 ## License Agreement for Contributions
 
-KANAP is licensed under the [GNU Affero General Public License v3 (AGPL v3)](LICENSE).
+Kadratis is licensed under the [GNU Affero General Public License v3 (AGPL v3)](LICENSE).
 
 By submitting a pull request or other contribution to this project, you agree that:
 

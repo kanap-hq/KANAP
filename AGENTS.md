@@ -1,4 +1,4 @@
-# KANAP agent guide
+# Kadratis agent guide
 
 Shared instructions for every coding agent working on this repository (Claude Code, Codex, Grok,
 DeepSeek and others). This file is public: it holds no credentials, hosts or customer data.
@@ -295,7 +295,7 @@ Every query must be scoped by `tenant_id`. This is critical for tenant isolation
 
 ## Cloud and on-premise modes
 
-KANAP runs as `multi-tenant` (cloud SaaS) and `single-tenant` (on-premise) from one branch, with
+Kadratis runs as `multi-tenant` (cloud SaaS) and `single-tenant` (on-premise) from one branch, with
 runtime feature flags. Any change touching billing, email, SSO, platform admin, tenant resolution
 or subscriptions must work in both modes.
 
@@ -401,7 +401,7 @@ files under `.agents/skills/`, never a copy.
 | `translate` | fr/de/es locale JSON |
 | `translate-docs` | fr/de/es user manual pages |
 | `user-manual-maintainer` | Keep `doc/help` in line with the product |
-| `technology-catalog-curation` | Refresh the KANAP-maintained technology catalog before a release |
+| `technology-catalog-curation` | Refresh the Kadratis-maintained technology catalog before a release |
 
 ## Security
 
