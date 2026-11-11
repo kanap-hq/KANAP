@@ -24,6 +24,7 @@ import {
   INVOICE_PAYMENT_TERM_DAYS,
   getPriceId,
   isBankTransferEligible,
+  isLiveSubscriptionStatus,
   resolvePlanKeyFromPriceId,
   planNameForDisplay,
   resolvePlanKeyFromLegacyName,
@@ -466,7 +467,8 @@ export class BillingService {
     const sub = await this.ensureSubscription(mg);
     const before = this.subscriptionAuditSnapshot(sub);
 
-    if (!sub.stripe_subscription_id || !sub.status || !(HEALTHY_STATUSES as readonly string[]).includes(sub.status)) {
+    // Any subscription that still runs, paid or not; an ended one is replaced through a new subscription.
+    if (!sub.stripe_subscription_id || !isLiveSubscriptionStatus(sub.status)) {
       throw new BadRequestException('NO_ACTIVE_SUBSCRIPTION');
     }
 
@@ -887,8 +889,8 @@ export class BillingService {
     let stripeSubResult: any | null = null;
     let previousLatestInvoiceId: string | null = null;
 
-    if (sub.stripe_subscription_id && sub.status && (HEALTHY_STATUSES as readonly string[]).includes(sub.status)) {
-      // Update existing subscription (like changePlan)
+    if (sub.stripe_subscription_id && isLiveSubscriptionStatus(sub.status)) {
+      // A subscription that still runs, paid or not, is changed (like changePlan), never doubled.
       const stripeSub = await client.subscriptions.retrieve(sub.stripe_subscription_id);
       const existingItemId = stripeSub.items?.data?.[0]?.id;
       if (!existingItemId) {
@@ -915,7 +917,7 @@ export class BillingService {
         expand: ['latest_invoice'],
       });
     } else {
-      // Create a new Stripe subscription with send_invoice
+      // No subscription yet, or an ended one: a new Stripe subscription with send_invoice.
       const invoicePaymentMethodTypes = await this.resolveInvoicePaymentMethodTypes(customerId);
       const invoicePaymentSettings = this.buildSendInvoicePaymentSettings(invoicePaymentMethodTypes, euBankTransferCountry);
       stripeSubResult = await client.subscriptions.create({

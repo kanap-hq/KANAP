@@ -934,6 +934,63 @@ async function testScheduledSwitchIsAuditedAndReturned() {
   assert.equal(entries[0].opts?.manager, manager);
 }
 
+/*
+ * A Stripe subscription that still runs (past due, unpaid, incomplete) is changed, never doubled:
+ * only an ended one (canceled, incomplete expired) is replaced by a new subscription.
+ */
+async function testTransferChangesALiveSubscriptionInsteadOfDoublingIt() {
+  for (const status of ['past_due', 'unpaid', 'incomplete']) {
+    const { service, manager, calls } = createService({
+      tenant: createTenant(COMPLETE_FR_INVOICE),
+      subscription: { ...runningOn('monthly'), status } as Partial<Subscription>,
+      priceIds: PRICE_IDS,
+      stripeSubscription: stripeSubscription(MONTHLY_PRICE, { status }),
+      onSubscriptionUpdate: (_params, state) => ({ ...state, latest_invoice: null }),
+    });
+    await service.requestInvoice('tenant-1', 'max', 'annual', 'user-1', manager as any, GTC_VERSION);
+    assert.equal(calls.filter((call) => call.method === 'subscriptions.create').length, 0, `no second subscription while ${status}`);
+    assert.deepEqual(calls.filter((call) => call.method === 'subscriptions.update').map((call) => call.args[0]), ['sub_1'], status);
+  }
+
+  for (const status of ['canceled', 'incomplete_expired']) {
+    const { service, manager, calls, subscription } = createService({
+      tenant: createTenant(COMPLETE_FR_INVOICE),
+      subscription: { ...runningOn('monthly'), stripe_subscription_id: 'sub_old', status } as Partial<Subscription>,
+      priceIds: PRICE_IDS,
+      stripeSubscription: stripeSubscription(MONTHLY_PRICE, { id: 'sub_old', status }),
+    });
+    await service.requestInvoice('tenant-1', 'max', 'annual', 'user-1', manager as any, GTC_VERSION);
+    assert.equal(calls.filter((call) => call.method === 'subscriptions.create').length, 1, `an ended subscription (${status}) is replaced`);
+    assert.equal(calls.filter((call) => call.method === 'subscriptions.update').length, 0, status);
+    assert.equal(subscription.stripe_subscription_id, 'sub_1');
+  }
+}
+
+async function testPlanChangeAppliesToALiveSubscription() {
+  const { service, manager, calls } = createService({
+    tenant: createTenant(COMPLETE_FR_INVOICE),
+    subscription: { ...runningOn('monthly'), status: 'past_due' } as Partial<Subscription>,
+    priceIds: PRICE_IDS,
+    stripeSubscription: stripeSubscription(MONTHLY_PRICE, { status: 'past_due' }),
+    onSubscriptionUpdate: (_params, state) => ({ ...state, latest_invoice: null }),
+  });
+  await service.changePlan('tenant-1', 'max', 'annual', 'user-1', manager as any, GTC_VERSION);
+  assert.deepEqual(calls.filter((call) => call.method === 'subscriptions.update').map((call) => call.args), [['sub_1', IMMEDIATE_CHANGE]]);
+  assert.equal(calls.filter((call) => call.method === 'subscriptions.create').length, 0);
+
+  const ended = createService({
+    tenant: createTenant(COMPLETE_FR_INVOICE),
+    subscription: { ...runningOn('monthly'), status: 'canceled' } as Partial<Subscription>,
+    priceIds: PRICE_IDS,
+    stripeSubscription: stripeSubscription(MONTHLY_PRICE, { status: 'canceled' }),
+  });
+  await expectBadRequest(
+    ended.service.changePlan('tenant-1', 'max', 'annual', 'user-1', ended.manager as any, GTC_VERSION),
+    { message: 'NO_ACTIVE_SUBSCRIPTION', error: 'Bad Request', statusCode: 400 },
+  );
+  assert.equal(ended.calls.filter((call) => call.method.startsWith('subscriptions.')).length, 0);
+}
+
 const BANK_TRANSFER_SCHEDULE = {
   id: 'sub_sched_1',
   current_phase: { start_date: PERIOD.start, end_date: PERIOD.end },
@@ -1030,6 +1087,8 @@ async function run() {
   await testKeepAnnualGivesBankTransferBack();
   await testSelectingAnnualWhileASwitchIsPlannedKeepsIt();
   await testScheduledSwitchIsAuditedAndReturned();
+  await testTransferChangesALiveSubscriptionInsteadOfDoublingIt();
+  await testPlanChangeAppliesToALiveSubscription();
   await testTransferToCardWithoutACardRequiresOne();
   await testTransferToCardWithASavedCardMakesItTheDefault();
 }
