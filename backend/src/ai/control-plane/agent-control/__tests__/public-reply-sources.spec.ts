@@ -4,6 +4,7 @@ import { AiAgentActionPlannerService } from '../ai-agent-action-planner.service'
 import { estimateTicketEvidenceExtractionUsage } from '../ai-ticket-evidence-extraction.service';
 import {
   buildTicketTimeline,
+  evaluateConversationGate,
   renderSynthesizedTriageNote,
 } from '../agent-control-timeline-synthesis.util';
 import {
@@ -318,6 +319,22 @@ async function testTheNeedAndTheSearchesReadThePublicItemsOfTheTicket() {
   assertNoInternalMarker(buildWebSearchQueryCandidates(ticket, timeline, []), 'web queries');
 }
 
+function testRequesterSignalsComeFromThePublicItemsOfTheTicket() {
+  const requesterNotes: TicketNoteLike[] = [
+    ...notes(),
+    {
+      id: '4',
+      visibility: 'internal',
+      authorRole: 'requester',
+      body: `Private message ${INTERNAL_MARKER}.`,
+      createdAt: '2026-11-01T11:00:00.000Z',
+    },
+  ];
+  const gate = evaluateConversationGate([], buildTicketTimeline(ticket, requesterNotes, new Set()), requesterNotes);
+  assert.equal(gate.latest_requester_message_id, 'followup:1');
+  assert.equal(gate.latest_requester_message_at, '2026-11-01T08:00:00.000Z');
+}
+
 async function run() {
   const tests: Array<() => unknown> = [
     testAPublicReplyReadsThePublicItemsOfTheTicket,
@@ -329,6 +346,7 @@ async function run() {
     testAPublicReplyCitesTheLibrariesTheAgentMayCite,
     testAnAgentWithoutLibrariesCitesNoDocument,
     testTheNeedAndTheSearchesReadThePublicItemsOfTheTicket,
+    testRequesterSignalsComeFromThePublicItemsOfTheTicket,
   ];
   let failures = 0;
   for (const test of tests) {

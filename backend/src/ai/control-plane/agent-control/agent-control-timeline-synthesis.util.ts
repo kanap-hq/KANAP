@@ -289,7 +289,8 @@ export function evaluateConversationGate(
   const lastPublic = latestExecutedAction(actions, TICKETING_PUBLIC_REPLY_ADD_APPROVED_CAPABILITY, notes);
   const latestNote = latestTicketNote(notes);
   const preparedAt = new Date().toISOString();
-  const requesterSignals = timeline
+  // The gate opens on what the requester wrote in public: the reply reads only those items.
+  const requesterSignals = publicTicketItems(timeline)
     .filter((entry) => entry.actor === 'requester_candidate')
     .map((entry) => ({ entry, time: parseTime(entry.createdAt) }))
     .filter((signal): signal is { entry: TicketTimelineEntry; time: number } => signal.time != null)
