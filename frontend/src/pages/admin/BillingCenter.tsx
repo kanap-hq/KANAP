@@ -288,7 +288,8 @@ function paymentNotice(
     case 'requires_action':
       return { tone: 'error', text: t('billing.payment.requiresAction'), invoiceUrl: subscription?.latest_invoice_url ?? null };
     case 'card_unchanged':
-      return { tone: 'error', text: t('billing.payment.cardUnchanged') };
+      // The invoice page also takes a payment with the same card.
+      return { tone: 'error', text: t('billing.payment.cardUnchanged'), invoiceUrl: subscription?.latest_invoice_url ?? null };
     default:
       return null;
   }

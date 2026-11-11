@@ -424,6 +424,8 @@ describe('BillingCenter unpaid invoice', () => {
   it('says to update the card first when it has not changed', async () => {
     await returnFromPortal({ ...CARD_REFUSED, payment: { status: 'card_unchanged' } });
     expect(await screen.findByText('The card has not changed. Update it, then pay.')).toBeInTheDocument();
+    // The invoice page takes a payment with the same card.
+    expect(screen.getByRole('link', { name: 'Open invoice' })).toHaveAttribute('href', 'https://invoice.stripe.test/kan-0041');
   });
 
   it('says a payment accepted but not settled yet is being processed', async () => {
