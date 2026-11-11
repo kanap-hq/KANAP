@@ -21,11 +21,11 @@ const content: LegalContent = {
     },
     body: `
 <h2>Präambel</h2>
-<p>KANAP (nachfolgend „KANAP“), eine EURL (Einpersonengesellschaft mit beschränkter Haftung), eingetragen im Handels- und Gesellschaftsregister (RCS) Saverne unter der Nummer 939 098 190, mit Sitz in 2, rue du Finhay, 67210 Obernai, Frankreich, misst dem Schutz Ihrer personenbezogenen Daten größte Bedeutung bei. Diese Datenschutzerklärung (nachfolgend die „Erklärung“) informiert Sie klar und transparent über die Verarbeitung personenbezogener Daten, die KANAP im Rahmen der Nutzung der Online-Plattform für IT-Management „Kadratis“ (nachfolgend „die Plattform“) durchführt.</p>
+<p>KANAP (nachfolgend „KANAP“), eine SARL (Gesellschaft mit beschränkter Haftung), eingetragen im Handels- und Gesellschaftsregister (RCS) Saverne unter der Nummer 939 098 190, mit Sitz in 2, rue du Finhay, 67210 Obernai, Frankreich, misst dem Schutz Ihrer personenbezogenen Daten größte Bedeutung bei. Diese Datenschutzerklärung (nachfolgend die „Erklärung“) informiert Sie klar und transparent über die Verarbeitung personenbezogener Daten, die KANAP im Rahmen der Nutzung der Online-Plattform für IT-Management „Kadratis“ (nachfolgend „die Plattform“) durchführt.</p>
 <p>KANAP verpflichtet sich, die Datenschutz-Grundverordnung (DSGVO) und das französische Gesetz Nr. 78-17 vom 6. Januar 1978 über Informatik, Dateien und Freiheiten in seiner geänderten Fassung einzuhalten.</p>
 
 <h2>1. Verantwortlicher</h2>
-<p>Verantwortlicher für die über die Plattform erhobenen personenbezogenen Daten ist KANAP, eine EURL (Einpersonengesellschaft mit beschränkter Haftung), eingetragen im Handels- und Gesellschaftsregister (RCS) Saverne unter der Nummer 939 098 190, mit Sitz in 2, rue du Finhay, 67210 Obernai, Frankreich.</p>
+<p>Verantwortlicher für die über die Plattform erhobenen personenbezogenen Daten ist KANAP, eine SARL (Gesellschaft mit beschränkter Haftung), eingetragen im Handels- und Gesellschaftsregister (RCS) Saverne unter der Nummer 939 098 190, mit Sitz in 2, rue du Finhay, 67210 Obernai, Frankreich.</p>
 <p>Für die Daten, die Kunden in die Plattform eingeben (Budgetdaten, Finanzinformationen, Daten der Benutzer in den Kundenbereichen), handelt die Kundenorganisation als Verantwortlicher und KANAP als Auftragsverarbeiter.</p>
 
 <h2>2. Erhobene personenbezogene Daten</h2>

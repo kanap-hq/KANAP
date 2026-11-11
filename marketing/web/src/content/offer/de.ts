@@ -112,7 +112,7 @@ const content: OfferContent = {
       },
       {
         title: 'Cloud-Hosting',
-        body: 'Sie wollen den schnellsten Weg zum Ergebnis, ohne Infrastruktur zu betreiben. Dasselbe Produkt, von KANAP betrieben.',
+        body: 'Sie wollen den schnellsten Weg zum Ergebnis, ohne Infrastruktur zu betreiben. Dasselbe Produkt, von Kadratis betrieben.',
       },
     ],
   },

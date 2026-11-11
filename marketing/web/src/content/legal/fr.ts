@@ -18,11 +18,11 @@ const content: LegalContent = {
     },
     body: `
 <h2>Préambule</h2>
-<p>KANAP (ci-après « KANAP »), EURL (entreprise unipersonnelle à responsabilité limitée) immatriculée au RCS de Saverne sous le numéro 939 098 190, dont le siège social est situé 2, rue du Finhay, 67210 Obernai, France, accorde la plus grande importance à la protection de vos données personnelles. La présente politique de confidentialité (ci-après la « Politique ») a pour objet de vous informer de manière claire et transparente sur les traitements de données personnelles mis en œuvre par KANAP dans le cadre de l'utilisation de la plateforme en ligne de gestion informatique « Kadratis » (ci-après « la Plateforme »).</p>
+<p>KANAP (ci-après « KANAP »), SARL (société à responsabilité limitée) immatriculée au RCS de Saverne sous le numéro 939 098 190, dont le siège social est situé 2, rue du Finhay, 67210 Obernai, France, accorde la plus grande importance à la protection de vos données personnelles. La présente politique de confidentialité (ci-après la « Politique ») a pour objet de vous informer de manière claire et transparente sur les traitements de données personnelles mis en œuvre par KANAP dans le cadre de l'utilisation de la plateforme en ligne de gestion informatique « Kadratis » (ci-après « la Plateforme »).</p>
 <p>KANAP s'engage à respecter le Règlement général sur la protection des données (RGPD) et la loi n° 78-17 du 6 janvier 1978 relative à l'informatique, aux fichiers et aux libertés, dans sa version modifiée.</p>
 
 <h2>1. Responsable du traitement</h2>
-<p>Le responsable du traitement des données personnelles collectées via la Plateforme est KANAP, EURL (entreprise unipersonnelle à responsabilité limitée) immatriculée au RCS de Saverne sous le numéro 939 098 190, dont le siège social est situé 2, rue du Finhay, 67210 Obernai, France.</p>
+<p>Le responsable du traitement des données personnelles collectées via la Plateforme est KANAP, SARL (société à responsabilité limitée) immatriculée au RCS de Saverne sous le numéro 939 098 190, dont le siège social est situé 2, rue du Finhay, 67210 Obernai, France.</p>
 <p>Pour les données saisies par les clients dans la Plateforme (données budgétaires, informations financières, données des utilisateurs au sein des espaces clients), l'organisation cliente agit en qualité de responsable du traitement et KANAP en qualité de sous-traitant.</p>
 
 <h2>2. Données personnelles collectées</h2>
@@ -135,7 +135,7 @@ const content: LegalContent = {
     },
     body: `
 <h2>Préambule</h2>
-<p>Les présentes Conditions générales d'utilisation régissent l'accès et l'utilisation de la plateforme en ligne de gestion informatique « Kadratis » (ci-après « la Plateforme » ou « le Service ») éditée par KANAP, EURL (entreprise unipersonnelle à responsabilité limitée) immatriculée au RCS de Saverne sous le numéro 939 098 190, dont le siège social est situé 2, rue du Finhay, 67210 Obernai, France. L'utilisation de la Plateforme vaut acceptation pleine et entière des présentes Conditions générales d'utilisation.</p>
+<p>Les présentes Conditions générales d'utilisation régissent l'accès et l'utilisation de la plateforme en ligne de gestion informatique « Kadratis » (ci-après « la Plateforme » ou « le Service ») éditée par KANAP, SARL (société à responsabilité limitée) immatriculée au RCS de Saverne sous le numéro 939 098 190, dont le siège social est situé 2, rue du Finhay, 67210 Obernai, France. L'utilisation de la Plateforme vaut acceptation pleine et entière des présentes Conditions générales d'utilisation.</p>
 
 <h2>Article 1. Accès à la plateforme et création de compte</h2>
 <p>1.1. L'accès à la Plateforme est réservé aux utilisateurs ayant souscrit un abonnement valide, conformément aux Conditions générales de vente (CGV) de KANAP.</p>
@@ -200,7 +200,7 @@ const content: LegalContent = {
     },
     body: `
 <h2>Article 1. Objet</h2>
-<p>Les présentes Conditions générales de vente (CGV) régissent la vente par KANAP (ci-après « le Vendeur »), EURL (entreprise unipersonnelle à responsabilité limitée) au capital de 1 000 €, immatriculée au RCS de Saverne sous le numéro 939 098 190, dont le siège social est situé 2, rue du Finhay, 67210 Obernai, France, d'abonnements à la plateforme en ligne de gestion informatique « Kadratis ».</p>
+<p>Les présentes Conditions générales de vente (CGV) régissent la vente par KANAP (ci-après « le Vendeur »), SARL (société à responsabilité limitée) au capital de 1 000 €, immatriculée au RCS de Saverne sous le numéro 939 098 190, dont le siège social est situé 2, rue du Finhay, 67210 Obernai, France, d'abonnements à la plateforme en ligne de gestion informatique « Kadratis ».</p>
 
 <h2>Article 2. Acceptation des CGV</h2>
 <p>L'acceptation des présentes CGV est obligatoire avant toute souscription et emporte l'adhésion pleine et entière du Client à ces conditions.</p>
@@ -269,7 +269,7 @@ const content: LegalContent = {
     body: `
 <h2>Éditeur du site</h2>
 <p><strong>KANAP</strong><br/>
-EURL au capital de 1 000 €<br/>
+SARL au capital de 1 000 €<br/>
 RCS Saverne 939 098 190<br/>
 SIRET : 939 098 190 00019<br/>
 N° de TVA intracommunautaire : FR04939098190 (TVA non applicable, art. 293 B du CGI)<br/>

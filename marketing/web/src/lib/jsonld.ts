@@ -7,7 +7,8 @@ export function organizationLd(site: string) {
   return {
     '@context': 'https://schema.org',
     '@type': 'Organization',
-    name: 'KANAP',
+    name: 'Kadratis',
+    legalName: 'KANAP SARL',
     url: site,
     logo: new URL('/logo.svg', site).href,
     sameAs: ['https://github.com/kanap-hq/kanap'],
@@ -29,7 +30,7 @@ export function softwareApplicationLd(site: string) {
       { '@type': 'Offer', name: 'Kadratis Cloud', price: '249', priceCurrency: 'EUR' },
       { '@type': 'Offer', name: 'Self-Hosted Support', price: '2490', priceCurrency: 'EUR' },
     ],
-    publisher: { '@type': 'Organization', name: 'KANAP', url: site },
+    publisher: { '@type': 'Organization', name: 'Kadratis', legalName: 'KANAP SARL', url: site },
   };
 }
 
@@ -61,6 +62,6 @@ export function personLd(
     image: new URL(person.image, site).href,
     url: new URL('/about', site).href,
     sameAs: person.sameAs,
-    worksFor: { '@type': 'Organization', name: 'KANAP', url: site },
+    worksFor: { '@type': 'Organization', name: 'Kadratis', legalName: 'KANAP SARL', url: site },
   };
 }

@@ -60,7 +60,7 @@ const articleLd = {
   dateModified: (post.data.updated ?? post.data.date).toISOString(),
   inLanguage: item.locale,
   author: { '@type': 'Person', name: post.data.author },
-  publisher: { '@type': 'Organization', name: 'KANAP', url: site, logo: `${site}/logo.svg` },
+  publisher: { '@type': 'Organization', name: 'Kadratis', legalName: 'KANAP SARL', url: site, logo: `${site}/logo.svg` },
   image: new URL(ogImage, site).href,
   mainEntityOfPage: canonical,
   url: canonical,

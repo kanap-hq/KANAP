@@ -1,6 +1,6 @@
 # Kadratis trademark policy
 
-Kadratis is open source software published by KANAP EURL under the GNU Affero General Public License, version 3. The license covers the code. It does not cover the name Kadratis or the Kadratis logo: section 7(e) of the AGPL lets a licensor decline to grant trademark rights, and we do.
+Kadratis is open source software published by KANAP SARL under the GNU Affero General Public License, version 3. The license covers the code. It does not cover the name Kadratis or the Kadratis logo: section 7(e) of the AGPL lets a licensor decline to grant trademark rights, and we do.
 
 This policy says how you may use the name and the logo. We want everyone to be able to talk about Kadratis, build on it, distribute it and earn a living from it. We also want an IT department to know, when it installs or buys "Kadratis", that it gets the software we publish and the security fixes we ship.
 

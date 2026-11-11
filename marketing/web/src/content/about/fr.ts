@@ -15,8 +15,8 @@ const content: AboutContent = {
   founder: {
     name: 'Friedrich Eva',
     role: 'fondateur',
-    jobTitle: 'DSI de transition, fondateur de KANAP',
-    photoAlt: 'Friedrich Eva, fondateur de KANAP',
+    jobTitle: 'DSI de transition, fondateur de Kadratis',
+    photoAlt: 'Friedrich Eva, fondateur de Kadratis',
     paragraphs: [
       "Je suis DSI de transition. Mon métier : reprendre ou reconstruire une DSI, la placer au cœur d'un programme ERP, intégrer le système d'information d'une société rachetée, ou simplement assurer une transition productive et efficace. J'ai passé plus de vingt ans dans l'informatique, dont huit comme DSI de deux ETI internationales, dans la distribution puis dans l'industrie. Je suis certifié CISSP et ISO 27001 Lead Implementer, et je travaille en français, en anglais et en allemand.",
     ],
@@ -40,13 +40,13 @@ const content: AboutContent = {
       title: 'Pourquoi open source',
       paragraphs: [
         "Un outil de gouvernance contient ce qu'une DSI a de plus sensible : ses coûts, ses contrats, ses fournisseurs, les fragilités de son système d'information. Vous devez pouvoir le lire, l'héberger chez vous et ne jamais en être prisonnier.",
-        "Kadratis est donc publié sous licence AGPL v3 : le code est public, vous pouvez l'installer sur vos propres serveurs, le modifier, et vos données restent les vôtres. Si vous confiez le run à KANAP, l'application est hébergée en Allemagne sur des serveurs dédiés, vos données sont exportables en CSV et il reste toujours possible de revenir sur vos propres serveurs.",
+        "Kadratis est donc publié sous licence AGPL v3 : le code est public, vous pouvez l'installer sur vos propres serveurs, le modifier, et vos données restent les vôtres. Si vous confiez le run à Kadratis, l'application est hébergée en Allemagne sur des serveurs dédiés, vos données sont exportables en CSV et il reste toujours possible de revenir sur vos propres serveurs.",
       ],
     },
     {
       title: 'Un projet indépendant',
       paragraphs: [
-        "Kadratis est édité par la société KANAP, une EURL installée à Obernai, en Alsace. Le projet est développé en fonds propres, en parallèle de mon activité de DSI. Il reste ainsi entièrement indépendant.",
+        "Kadratis est édité par la société KANAP, une SARL installée à Obernai, en Alsace. Le projet est développé en fonds propres, en parallèle de mon activité de DSI. Il reste ainsi entièrement indépendant.",
         "Open source, le logiciel est entièrement gratuit. Les services payants sont optionnels et visent à vous faire gagner du temps, sécuriser l'utilisation ou adapter l'application : support, hébergement, accompagnement et développement spécifique. Cet accompagnement, je vous l'apporte avec mon regard de DSI. <a href=\"/fr/offer\">Voir l'offre</a>",
         "Dans tous les cas, l'<a href=\"https://doc.kadratis.com/fr/\">aide en ligne</a> complète, en quatre langues, vous guide, des premiers pas jusqu'à l'expertise.",
       ],
