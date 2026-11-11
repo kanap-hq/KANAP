@@ -141,6 +141,16 @@ describe('isKanapImageSource', () => {
   });
 });
 
+describe('MarkdownContent elements of a rich text', () => {
+  it('renders the underline, subscript and superscript the editor writes', () => {
+    const { container } = renderMarkdown('<u>souligné</u> H<sub>2</sub>O x<sup>2</sup>');
+
+    expect(container.querySelector('u')?.textContent).toBe('souligné');
+    expect(container.querySelector('sub')?.textContent).toBe('2');
+    expect(container.querySelector('sup')?.textContent).toBe('2');
+  });
+});
+
 describe('MarkdownContent links', () => {
   it('opens a phone number', () => {
     renderMarkdown('[appeler](tel:+33123456789)');

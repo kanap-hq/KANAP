@@ -17,6 +17,7 @@ import nginx from 'highlight.js/lib/languages/nginx';
 import powershell from 'highlight.js/lib/languages/powershell';
 import properties from 'highlight.js/lib/languages/properties';
 import { normalizeMarkdownForRichTextEditor } from '../lib/markdownEditorNormalization';
+import { RICH_TEXT_HTML_ELEMENTS } from '../lib/richTextHtmlElements';
 import { RICH_TEXT_LINK_SCHEMES, richTextLinkAddress } from '../lib/richTextLinkAddress';
 
 interface MarkdownContentProps {
@@ -34,6 +35,8 @@ interface MarkdownContentProps {
 
 const sanitizeSchema = {
   ...defaultSchema,
+  // The elements a rich text accepts without attribute (underline is not in the default list).
+  tagNames: [...new Set([...(defaultSchema.tagNames || []), ...RICH_TEXT_HTML_ELEMENTS.paired, RICH_TEXT_HTML_ELEMENTS.lineBreak])],
   protocols: {
     ...defaultSchema.protocols,
     href: [...RICH_TEXT_LINK_SCHEMES],
