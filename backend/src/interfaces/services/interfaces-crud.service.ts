@@ -27,7 +27,7 @@ import {
   InterfacesBaseService,
   ServiceOpts,
 } from './interfaces-base.service';
-import { assertMarkdownSize } from '../../common/markdown-limits';
+import { markdownWorkBudget, normalizeMarkdownRichText } from '../../common/markdown-worker';
 import { checkIds, RecordInUseException, refusalDetails, refusalsFrom, type DeleteRefusal } from '../../common/record-in-use';
 import type { BulkDeleteResult } from '../../common/delete.types';
 
@@ -55,15 +55,17 @@ function specificationSourceText(value: unknown): string | null {
 }
 
 /**
- * Each specification source text set by a write gets the Markdown size limit
- * (400 `MARKDOWN_TOO_LARGE`); a text left as stored is kept as it is.
+ * Each specification source text set by a write is checked as a rich-text write
+ * (400 `MARKDOWN_TOO_LARGE`, `MARKDOWN_HTML_NOT_ALLOWED`, `MARKDOWN_LINK_NOT_ALLOWED`): the specification
+ * document is built from these texts. A text left as stored is kept as it is.
  */
-function assertSpecificationSourceSizes(next: Partial<InterfaceEntity>, before: InterfaceEntity | null): void {
+async function assertSpecificationSourceTexts(next: Partial<InterfaceEntity>, before: InterfaceEntity | null): Promise<void> {
+  const budget = markdownWorkBudget();
   for (const field of SPECIFICATION_SOURCE_FIELDS) {
     const text = specificationSourceText(next[field]);
     if (text == null) continue;
     if (before && text === specificationSourceText(before[field])) continue;
-    assertMarkdownSize(text, field);
+    await normalizeMarkdownRichText(text, { fieldName: field, budget });
   }
 }
 
@@ -247,7 +249,7 @@ export class InterfacesCrudService extends InterfacesBaseService {
     const repo = this.getRepo(opts?.manager);
     if (!body || typeof body !== 'object') throw new BadRequestException('Body is required');
     if (!tenantId) throw new BadRequestException('Tenant context is required');
-    assertSpecificationSourceSizes(body, null);
+    await assertSpecificationSourceTexts(body, null);
 
     const name = this.normalizeRequiredText(body.name, 'name');
     const interfaceId = this.normalizeNullable(body.interface_id);
@@ -407,7 +409,7 @@ export class InterfacesCrudService extends InterfacesBaseService {
     if (has('security_controls_summary')) {
       existing.security_controls_summary = this.normalizeNullable(body.security_controls_summary);
     }
-    assertSpecificationSourceSizes(existing, before);
+    await assertSpecificationSourceTexts(existing, before);
 
     if (Array.isArray(body.middleware_application_ids)) {
       await this.syncMiddlewareApplications(existing, body.middleware_application_ids, opts?.manager);

@@ -767,9 +767,10 @@ abstract class BaseImportTicketAiMutationOperation<TInput extends LegacyImportTi
     const budget = markdownWorkBudget();
     const normalizedContentHtml = textOrNull(await resolveHtmlContentSource(contentSource, { fieldName: 'description', budget }));
     const sourceUri = ticketSourceUri(ticket);
+    // The ticket text comes from another system: a tag it holds is kept as text.
     const description = await normalizeMarkdownRichText(
       await buildDescription(ticket, normalizedContentHtml, sourceUri, this.sourceLabels(providerKey), budget),
-      { fieldName: 'description', budget },
+      { fieldName: 'description', budget, thirdPartyText: true },
     );
     const taskType = await this.resolveMappedTaskType(context, ticket.type);
     const imageTargets = attachmentTargets(ticket.attachments, 'ticket_description');

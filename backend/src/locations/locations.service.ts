@@ -21,6 +21,7 @@ import { displayName } from '../common/display-name';
 import { sortedFindQuery } from '../common/list-sort';
 import { assertWebLinkUrl } from '../common/web-link-url';
 import { duplicateNameException } from '../common/duplicate-name';
+import { normalizeMarkdownRichText } from '../common/markdown-worker';
 import { englishList, RecordInUseException } from '../common/record-in-use';
 import {
   readLocationRelationCounts,
@@ -394,7 +395,10 @@ export class LocationsService {
     }
     const provider = category === 'cloud' ? await this.resolveProvider(body.provider, tenant, { manager: mg, settings }) : null;
     const region = category === 'cloud' ? this.normalizeNullable(body.region) : null;
-    const additionalInfo = this.normalizeNullable(body.additional_info);
+    // The additional information is rich text.
+    const additionalInfo = await normalizeMarkdownRichText(this.normalizeNullable(body.additional_info), {
+      fieldName: 'additional_info',
+    });
     const entity = repo.create({
       name,
       hosting_type: hostingType,
@@ -491,7 +495,11 @@ export class LocationsService {
     }
 
     if (has('additional_info')) {
-      existing.additional_info = this.normalizeNullable(body.additional_info);
+      // Rich text: a changed text is checked as a write, the stored one is kept as it is.
+      existing.additional_info = await normalizeMarkdownRichText(this.normalizeNullable(body.additional_info), {
+        fieldName: 'additional_info',
+        storedValue: existing.additional_info,
+      });
     }
 
     if (has('country_iso')) {

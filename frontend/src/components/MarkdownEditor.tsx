@@ -51,7 +51,7 @@ import {
 import '@mdxeditor/editor/style.css';
 import { $createHeadingNode, $createQuoteNode } from '@lexical/rich-text';
 import { $createParagraphNode, $getSelection, type LexicalEditor } from 'lexical';
-import { hasPotentiallyUnsafeMdxPaste, sanitizeMarkdownForMdxPaste } from '../lib/mdxPaste';
+import { hasPotentiallyUnsafeMdxPaste, sanitizeMarkdownForMdxPaste, toEditorDisplayMarkdown } from '../lib/mdxPaste';
 import { normalizeMarkdownForRichTextEditor } from '../lib/markdownEditorNormalization';
 import { getMarkdownEditorToolbarConfig, type MarkdownEditorHeadingLevel } from './markdownEditorToolbarConfig';
 import {
@@ -60,6 +60,7 @@ import {
   looksLikeMarkdown,
   shouldHandleRichClipboardImport,
 } from '../lib/richClipboardMarkdown';
+import { htmlAsTextPlugin, watchLinkAddresses } from './markdownEditorHtmlGuard';
 import MarkdownLinkDialog from './MarkdownLinkDialog';
 import { markdownEditorTranslation } from './markdownEditorTranslation';
 
@@ -374,6 +375,12 @@ const MarkdownEditor = React.memo(function MarkdownEditor({
   const lexicalEditorRef = React.useRef<LexicalEditor | null>(null);
   const internalChangeRef = React.useRef(false);
   const currentMarkdownRef = React.useRef(normalizeMarkdownForRichTextEditor(value || ''));
+  // The editor reads a stored text in its display form (`toEditorDisplayMarkdown`), which only
+  // the editor sees: `onChange` reports a text once a person has changed it.
+  const editorMarkdownRef = React.useRef('');
+  // Set when the editor could not read the display form of the current text: it is then given
+  // the plain form, where the accepted tags are text too.
+  const plainDisplayRef = React.useRef(false);
   const onChangeRef = React.useRef<MarkdownEditorProps['onChange']>(onChange);
   const onModEnterRef = React.useRef<MarkdownEditorProps['onModEnter']>(onModEnter);
   const onModSaveRef = React.useRef<MarkdownEditorProps['onModSave']>(onModSave);
@@ -485,8 +492,28 @@ const MarkdownEditor = React.memo(function MarkdownEditor({
     [],
   );
 
+  const readForEditor = React.useCallback((markdown: string) => {
+    const display = toEditorDisplayMarkdown(markdown, { plain: plainDisplayRef.current });
+    editorMarkdownRef.current = display;
+    return display;
+  }, []);
+  // The editor reads its `markdown` prop when it mounts only: once per editor instance.
+  const initialEditorMarkdown = React.useMemo(
+    () => readForEditor(currentMarkdownRef.current),
+    [mdxEditorKey, readForEditor], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+
   const handleError = React.useCallback(
     ({ source }: { error: string; source: string }) => {
+      if (source.trim() === editorMarkdownRef.current.trim()) {
+        // The editor could not read the text it was given: nothing was typed, so nothing is
+        // reported. It is given the plain form once.
+        if (!plainDisplayRef.current) {
+          plainDisplayRef.current = true;
+          setEditorInstanceKey((prev) => prev + 1);
+        }
+        return;
+      }
       if (disabled) return;
       const normalized = normalizeMarkdownForRichTextEditor(source);
       if (normalized === currentMarkdownRef.current) return;
@@ -531,6 +558,7 @@ const MarkdownEditor = React.memo(function MarkdownEditor({
       const shouldRemount = incoming !== currentMarkdownRef.current;
       currentMarkdownRef.current = incoming;
       if (shouldRemount) {
+        plainDisplayRef.current = false;
         setEditorInstanceKey((prev) => prev + 1);
       }
       internalChangeRef.current = true;
@@ -539,6 +567,7 @@ const MarkdownEditor = React.memo(function MarkdownEditor({
     }
     if (incoming === currentMarkdownRef.current) return;
     currentMarkdownRef.current = incoming;
+    plainDisplayRef.current = false;
     // Remount on true external resets so rich image nodes render immediately.
     setEditorInstanceKey((prev) => prev + 1);
   }, [disabled, value]);
@@ -547,13 +576,16 @@ const MarkdownEditor = React.memo(function MarkdownEditor({
     if (refreshNonce === undefined || refreshNonce < 1) return;
     const incoming = normalizeMarkdownForRichTextEditor(value || '');
     currentMarkdownRef.current = incoming;
-    mdxRef.current?.setMarkdown(incoming);
-  }, [refreshNonce, value]);
+    plainDisplayRef.current = false;
+    mdxRef.current?.setMarkdown(readForEditor(incoming));
+  }, [readForEditor, refreshNonce, value]);
 
   React.useEffect(() => {
     if (!mdxRef.current || disabled || focusNonce === undefined || focusNonce < 1) return;
     mdxRef.current.focus();
   }, [focusNonce, disabled]);
+
+  React.useEffect(() => (containerRef.current ? watchLinkAddresses(containerRef.current) : undefined), []);
 
   React.useEffect(() => {
     const container = containerRef.current;
@@ -639,6 +671,7 @@ const MarkdownEditor = React.memo(function MarkdownEditor({
     const toolbarConfig = getMarkdownEditorToolbarConfig(fullToolbar);
     const basePlugins = [
       captureRootEditorPlugin({ editorRef: lexicalEditorRef }),
+      htmlAsTextPlugin(),
       headingsPlugin({ allowedHeadingLevels: toolbarConfig.allowedHeadingLevels }),
       listsPlugin(),
       quotePlugin(),
@@ -971,7 +1004,7 @@ const MarkdownEditor = React.memo(function MarkdownEditor({
         <MDXEditor
           key={mdxEditorKey}
           ref={mdxRef}
-          markdown={currentMarkdownRef.current}
+          markdown={initialEditorMarkdown}
           readOnly={disabled}
           placeholder={placeholder ?? t('markdownEditor.placeholder')}
           className={mdxRootClassName}

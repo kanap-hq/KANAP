@@ -1282,7 +1282,7 @@ export class IntegratedDocumentsService {
     }
     return await normalizeMarkdownRichText(content, {
       fieldName: 'content_markdown',
-      enforceSizeLimit: false,
+      storedContent: true,
     }) || '';
   }
 
@@ -1469,7 +1469,7 @@ export class IntegratedDocumentsService {
   ): Promise<string> {
     const normalizedExplicit = await normalizeMarkdownRichText(explicitContent, {
       fieldName: 'content_markdown',
-      enforceSizeLimit: !opts?.storedContent,
+      storedContent: opts?.storedContent,
     }) || '';
     if (normalizedExplicit) {
       return normalizedExplicit;
@@ -1480,7 +1480,7 @@ export class IntegratedDocumentsService {
     // The template is a stored document: it keeps whatever size it has.
     return await normalizeMarkdownRichText(templateContent, {
       fieldName: 'content_markdown',
-      enforceSizeLimit: false,
+      storedContent: true,
     }) || '';
   }
 
@@ -1750,7 +1750,7 @@ export class IntegratedDocumentsService {
       return {
         content_markdown: await normalizeMarkdownRichText(content, {
           fieldName: 'content_markdown',
-          enforceSizeLimit: false,
+          storedContent: true,
         }) || '',
         legacyMappings: [],
         dataImageAttachmentIds: [],
@@ -1844,7 +1844,7 @@ export class IntegratedDocumentsService {
         this.applyInlineImageReplacements(content, replacements),
         {
           fieldName: 'content_markdown',
-          enforceSizeLimit: false,
+          storedContent: true,
         },
       ) || '',
       legacyMappings,
@@ -2022,7 +2022,7 @@ export class IntegratedDocumentsService {
 
     const normalizedExpectedContent = await normalizeMarkdownRichText(rewritten.content_markdown, {
       fieldName: 'content_markdown',
-      enforceSizeLimit: false,
+      storedContent: true,
     }) || '';
     if (normalizedExpectedContent !== normalizedDocumentContent) {
       throw new Error(`Managed document content mismatch for ${sourceEntityType}:${slotKey}:${sourceEntityId}`);
@@ -2490,7 +2490,10 @@ export class IntegratedDocumentsService {
     await this.knowledge.assertDocumentUnlockedForUser(documentId, normalizedUserId, manager);
 
     const existing = await this.getDocumentOrThrow(documentId, manager);
-    const nextContent = await normalizeMarkdownRichText(content, { fieldName: 'content_markdown' }) || '';
+    const nextContent = await normalizeMarkdownRichText(content, {
+      fieldName: 'content_markdown',
+      storedValue: existing.content_markdown,
+    }) || '';
     if (existing.content_markdown === nextContent) {
       return { document_id: documentId, changed: false, version_number: null, revision: null };
     }
@@ -2559,7 +2562,10 @@ export class IntegratedDocumentsService {
     }
 
     const existingDocument = await this.getDocumentOrThrow(existingBinding.document_id, manager);
-    const nextContent = await normalizeMarkdownRichText(content, { fieldName: 'content_markdown' }) || '';
+    const nextContent = await normalizeMarkdownRichText(content, {
+      fieldName: 'content_markdown',
+      storedValue: existingDocument.content_markdown,
+    }) || '';
     if (existingDocument.content_markdown === nextContent) {
       return {
         documentId: existingBinding.document_id,
@@ -3295,7 +3301,7 @@ export class IntegratedDocumentsService {
     );
     const normalizedDocumentContent = await normalizeMarkdownRichText(document.content_markdown, {
       fieldName: 'content_markdown',
-      enforceSizeLimit: false,
+      storedContent: true,
     }) || '';
     await this.assertRecoveredInlineImagesMatchDocument(
       sourceEntityType,
@@ -3469,7 +3475,7 @@ export class IntegratedDocumentsService {
     const preparedLegacyContent = await prepareRecoveredContent(legacyContent);
     const normalizedDocumentContent = await normalizeMarkdownRichText(document.content_markdown, {
       fieldName: 'content_markdown',
-      enforceSizeLimit: false,
+      storedContent: true,
     }) || '';
     await this.assertRecoveredInlineImagesMatchDocument(
       sourceEntityType,
@@ -3731,7 +3737,10 @@ export class IntegratedDocumentsService {
     const existing = await this.getDocumentOrThrow(documentId, manager);
     const nextContent = body?.content_markdown === undefined
       ? existing.content_markdown
-      : (await normalizeMarkdownRichText(body?.content_markdown, { fieldName: 'content_markdown' }) || '');
+      : (await normalizeMarkdownRichText(body?.content_markdown, {
+        fieldName: 'content_markdown',
+        storedValue: existing.content_markdown,
+      }) || '');
 
     const sourceContext = await this.buildSourceAccessContext(
       sourceEntityType, sourceEntityId, slotKey, normalizedUserId, manager,

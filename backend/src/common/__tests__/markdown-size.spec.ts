@@ -4,7 +4,7 @@ import * as path from 'node:path';
 import { BadRequestException } from '@nestjs/common';
 import { backendPath } from './backend-root';
 import { markdownToSearchText } from '../markdown-search-text';
-import { containsInlineDataImage, findRawHtmlSnippets } from '../html-to-markdown';
+import { containsInlineDataImage, findRefusedHtml } from '../html-to-markdown';
 import {
   MARKDOWN_MAX_BYTES,
   MARKDOWN_TOO_LARGE,
@@ -100,6 +100,15 @@ function testSearchTextMatchesReferenceOnRealDocuments() {
   }
 }
 
+function testRealDocumentsAreAcceptedAsRichText() {
+  // Tables, code blocks that show HTML, long pages: the documents hold no HTML tag of their own.
+  const documents = realDocuments();
+  assert.ok(documents.some(({ text }) => text.length > 40_000), 'a long document is read');
+  for (const { name, text } of documents) {
+    assert.deepEqual(findRefusedHtml(text), [], name);
+  }
+}
+
 function testSearchTextMatchesReferenceOnGeneratedText() {
   const random = seededRandom(20261014);
   const pieces = ['```', '```txt\n', '`', '![', '[', ']', '](', '(', ')', '<', '>', '</', '!', 'a', ' ', '\n', '*', '-', '#', '|'];
@@ -163,7 +172,7 @@ function testLargerTextIsRefused() {
   assert.equal(refused?.code, MARKDOWN_TOO_LARGE);
   assert.equal(sizeError(() => assertMarkdownSize(text))?.code, MARKDOWN_TOO_LARGE);
   // Contents already stored are processed whatever their size.
-  assert.equal(normalizeMarkdownRichText(text, { enforceSizeLimit: false }), text.trim());
+  assert.equal(normalizeMarkdownRichText(text, { storedContent: true }), text.trim());
 }
 
 function testSizeCountsUtf8Bytes() {
@@ -198,7 +207,7 @@ function testDataImageTextOutsideAnImageCountsInFull() {
   const withImage = `Introduction avec un [lien](https://example.com).\n\n${IMAGE_5MB}\n\nFin.`;
   const ms = elapsedMs(() => {
     assert.equal(containsInlineDataImage(withImage), true);
-    assert.deepEqual(findRawHtmlSnippets(withImage), []);
+    assert.deepEqual(findRefusedHtml(withImage), []);
     assert.match(String((sizeError(() => normalizeMarkdownRichText(withImage)) as any)?.message), /inline base64 images/);
   });
   assert.ok(ms < 1000, `checks with a 5 MB inline image: ${ms.toFixed(0)} ms`);
@@ -206,6 +215,7 @@ function testDataImageTextOutsideAnImageCountsInFull() {
 
 function run() {
   testSearchTextMatchesReferenceOnRealDocuments();
+  testRealDocumentsAreAcceptedAsRichText();
   testSearchTextMatchesReferenceOnGeneratedText();
   testInlineImageTextCheckMatchesReference();
   testSearchTextTimeIsBoundedAtTheLimit();

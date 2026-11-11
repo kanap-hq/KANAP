@@ -51,6 +51,8 @@
   "SHARE_RATE_LIMITED": "Vous avez envoyé le maximum de 30 liens au cours de la dernière heure. Réessayez plus tard.",
   "MARKDOWN_TOO_LARGE": "Ce texte est trop long : la limite est de 200 Ko de texte (les images ne comptent pas).",
   "MARKDOWN_TOO_LARGE_DOCUMENT": "Ce document dépasse les 200 Ko de texte qu'un enregistrement accepte (les images ne comptent pas). Raccourcissez-le pour enregistrer vos modifications. La dernière version enregistrée est conservée.",
+  "MARKDOWN_HTML_NOT_ALLOWED": "Ce texte contient une balise HTML. Retirez-la ou placez-la dans un bloc de code.",
+  "MARKDOWN_LINK_NOT_ALLOWED": "Ce lien n'est pas accepté. Utilisez une adresse web, une adresse e-mail, un numéro de téléphone ou une page de l'application.",
   "MARKDOWN_TOO_COMPLEX": "Ce texte est trop complexe à analyser. Mettez les journaux ou le code collés dans un bloc de code, ou refermez les caractères de mise en forme (* et _).",
   "MARKDOWN_BUSY": "Le serveur est occupé par d'autres textes. Réessayez dans un instant.",
   "MARKDOWN_UNAVAILABLE": "Les textes mis en forme ne peuvent pas être enregistrés pour le moment. Réessayez dans quelques minutes.",
