@@ -6344,6 +6344,9 @@ export class AiAgentControlService {
     // Only the first requester reply of the plan is prepared. An administrative reply is written
     // once, and only when it is that reply; the others are never written.
     let administrativeReplyDropReason: string | null = null;
+    // Decisions this plan keeps but could not prepare because the reply was not written: a pending
+    // proposal of the same decision stays for review.
+    const unpreparedPlannerActionKeys = new Set<string>();
     const preparedRequesterReply = effectivePlannerActions.find((entry) => entry.action.action_type === 'requester_reply') ?? null;
     effectivePlannerActions = effectivePlannerActions.filter((entry) =>
       !entry.administrativeDraftPending || entry === preparedRequesterReply);
@@ -6362,6 +6365,7 @@ export class AiAgentControlService {
         preparedRequesterReply.administrativeDraftPending = false;
       } else {
         administrativeReplyDropReason = draft.reason ?? 'administrative_reply_body_missing';
+        unpreparedPlannerActionKeys.add(preparedRequesterReply.plannerActionKey);
         plannerSkippedActions.requester_reply = administrativeReplyDropReason;
         plannerDowngradedActions.requester_reply = administrativeReplyDropReason;
         effectivePlannerActions = effectivePlannerActions.filter((entry) => entry !== preparedRequesterReply);
@@ -6383,6 +6387,7 @@ export class AiAgentControlService {
             ? `pending_requires_usable_requester_reply: ${administrativeReplyDropReason}`
             : null;
         if (!statusDropReason) return true;
+        if (administrativeReplyDropReason) unpreparedPlannerActionKeys.add(entry.plannerActionKey);
         plannerDowngradedActions.status_update = statusDropReason;
         plannerSkippedActions.status_update = statusDropReason;
         return false;
@@ -6569,7 +6574,10 @@ export class AiAgentControlService {
       targetRef: ticket.id,
     };
     const proposalAgentDefinitionId = stringFromMetadata(metadataObject(baseMetadata).agent_definition_id);
-    const effectivePlannerActionKeys = new Set(effectivePlannerActions.map((entry) => entry.plannerActionKey));
+    const effectivePlannerActionKeys = new Set([
+      ...effectivePlannerActions.map((entry) => entry.plannerActionKey),
+      ...unpreparedPlannerActionKeys,
+    ]);
     await this.withdrawSupersededPlannerProposals(context, {
       ...proposalScope,
       agentDefinitionId: stringFromMetadata(metadataObject(baseMetadata).agent_definition_id),

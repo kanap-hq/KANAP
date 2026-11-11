@@ -14327,6 +14327,11 @@ async function runTriageWithSimulatedModel(input: {
     ? (await manager.getRepository(AiAgentDefinition).find({ where: { tenant_id: context.tenantId } }))[0] ?? null
     : null;
   const definitionBundle = existingDefinition ? { definition: existingDefinition } : await seedTestHelpdeskDefinition(context);
+  // A later run on the same ticket: the earlier work item is done.
+  for (const item of input.manager ? await manager.getRepository(AiAgentWorkItem).find({ where: { tenant_id: context.tenantId } }) : []) {
+    item.status = 'completed';
+    await manager.getRepository(AiAgentWorkItem).save(item);
+  }
   definitionBundle.definition.scope_policy_json = {
     ...(definitionBundle.definition.scope_policy_json ?? {}),
     knowledge_sources: {
@@ -14660,6 +14665,46 @@ async function testTriageWritesAnAdministrativeReplyOnlyWhenItIsPrepared() {
   const fallback = await runTriageWithSimulatedModel({ notes: triageNotes(true), plan, reply: TRIAGE_UNUSABLE_REPLY });
   assert.deepEqual(fallback.calls.map((call) => call.taskName).filter((name) => name === 'administrative_reply'), ['administrative_reply']);
   assert.equal(fallback.publicReply, 'Bonjour, votre demande a bien été reçue.');
+}
+
+async function testAFailedDraftKeepsThePendingReplyOfTheSameDecision() {
+  const plan = {
+    actions: [
+      { action_type: 'internal_note', reason: 'Documenter.' },
+      administrativeReplyAction('acknowledgement'),
+    ],
+    rationale: 'Plan.',
+    confidence: 0.8,
+  };
+  const first = await runTriageWithSimulatedModel({ notes: triageNotes(true), plan });
+  assert.equal(first.publicReply, 'Bonjour, votre demande a bien été reçue.');
+  const second = await runTriageWithSimulatedModel({
+    notes: triageNotes(true),
+    plan,
+    manager: first.manager,
+    runId: 'run-two-calls-again',
+    administrativeReply: () => {
+      throw new Error('model timeout');
+    },
+  });
+  assert.equal(second.publicReply, null);
+  const pending = await first.manager.getRepository(AiActionRequest).findOne({
+    where: { id: 'run-two-calls-public-action', tenant_id: first.context.tenantId },
+  });
+  assert.equal(pending?.status, 'pending', 'the pending reply of the same decision stays');
+  // A new plan that drops the reply withdraws it.
+  const third = await runTriageWithSimulatedModel({
+    notes: triageNotes(true),
+    plan: { actions: [{ action_type: 'internal_note', reason: 'Documenter.' }], rationale: 'Plan.', confidence: 0.8 },
+    manager: first.manager,
+    runId: 'run-two-calls-third',
+  });
+  assert.equal(third.publicReply, null);
+  const withdrawn = await first.manager.getRepository(AiActionRequest).findOne({
+    where: { id: 'run-two-calls-public-action', tenant_id: first.context.tenantId },
+  });
+  assert.equal(withdrawn?.status, 'expired');
+  assert.equal((withdrawn?.metadata_json as Record<string, unknown>)?.withdrawn_reason, 'superseded_by_new_plan');
 }
 
 async function testTriageWithoutInternalNoteKeepsOneReplyCall() {
@@ -17338,6 +17383,7 @@ async function run() {
   await testTriageWritesOneAdministrativeReplyAtMostPerPlan();
   await testTriageWritesAnAdministrativeReplyOnlyWhenItIsPrepared();
   await testAPlanWithoutItsCloseReplyDoesNotClose();
+  await testAFailedDraftKeepsThePendingReplyOfTheSameDecision();
   testSynthesisPromptPrefersInternalKnowledgeSources();
   testSynthesisPromptCarriesValidationStatus();
   testSynthesisPayloadIncludesScreenshotEvidence();
