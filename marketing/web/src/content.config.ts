@@ -54,7 +54,7 @@ const blog = defineCollection({
         title: z.string().min(1),
       })
       .optional(),
-    author: z.string().default('KANAP'),
+    author: z.string().default('Kadratis'),
     /** Short role line shown after the author name, e.g. "Founder, CIO". */
     authorRole: z.string().optional(),
     /**

@@ -41,7 +41,7 @@ Para encontrarlos, Kadratis sigue los vínculos de la cartografía:
 
 - **Una versión de tecnología** afecta a los servidores en los que está instalada, y a las aplicaciones que la declaran o se ejecutan en esos servidores, máquinas virtuales incluidas.
 - **Un servidor físico** al final de su vida afecta a las máquinas que aloja y a las aplicaciones desplegadas en todos ellos.
-- **Un clúster** cuenta sus miembros: SQL Server instalado en el clúster afecta a cada uno de sus nodos. El artículo [Los clústeres en la cartografía de Kadratis](/es/blog/los-clusteres-en-la-cartografia-de-kanap) detalla estas reglas.
+- **Un clúster** cuenta sus miembros: SQL Server instalado en el clúster afecta a cada uno de sus nodos. El artículo [Los clústeres en la cartografía de Kadratis](/es/blog/los-clusteres-en-la-cartografia-de-kadratis) detalla estas reglas.
 
 La respuesta no se queda, por tanto, en «Ubuntu 20.04 está sin soporte». Nombra los servidores y las aplicaciones que dependen de él, y cada ficha de aplicación indica su responsable y su criticidad. La conversación sobre la migración empieza con las personas adecuadas.
 

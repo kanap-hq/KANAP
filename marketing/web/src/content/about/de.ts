@@ -15,8 +15,8 @@ const content: AboutContent = {
   founder: {
     name: 'Friedrich Eva',
     role: 'Gründer',
-    jobTitle: 'Interim-CIO, Gründer von KANAP',
-    photoAlt: 'Friedrich Eva, Gründer von KANAP',
+    jobTitle: 'Interim-CIO, Gründer von Kadratis',
+    photoAlt: 'Friedrich Eva, Gründer von Kadratis',
     paragraphs: [
       'Ich bin Interim-CIO. Mein Beruf: eine IT-Abteilung übernehmen oder neu aufbauen, sie ins Zentrum eines ERP-Programms stellen, die IT eines übernommenen Unternehmens integrieren oder einfach einen produktiven und wirksamen Übergang sicherstellen. Ich arbeite seit mehr als zwanzig Jahren in der IT, davon acht als CIO zweier international tätiger mittelständischer Unternehmen, zuerst im Handel, dann in der Industrie. Ich bin CISSP- und ISO-27001-Lead-Implementer-zertifiziert und arbeite auf Französisch, Englisch und Deutsch.',
     ],
@@ -40,13 +40,13 @@ const content: AboutContent = {
       title: 'Warum Open Source',
       paragraphs: [
         'Ein Governance-Werkzeug enthält das Sensibelste einer IT-Abteilung: ihre Kosten, ihre Verträge, ihre Lieferanten, die Schwachstellen ihrer Informationssysteme. Sie müssen es lesen, selbst betreiben und dürfen nie darin gefangen sein.',
-        'Deshalb steht Kadratis unter der Lizenz AGPL v3: Der Code ist öffentlich, Sie können ihn auf Ihren eigenen Servern installieren und anpassen, und Ihre Daten bleiben Ihre Daten. Wenn Sie den Betrieb KANAP anvertrauen, läuft die Anwendung in Deutschland auf dedizierten Servern, Ihre Daten lassen sich als CSV exportieren, und der Wechsel zurück auf Ihre eigenen Server bleibt jederzeit möglich.',
+        'Deshalb steht Kadratis unter der Lizenz AGPL v3: Der Code ist öffentlich, Sie können ihn auf Ihren eigenen Servern installieren und anpassen, und Ihre Daten bleiben Ihre Daten. Wenn Sie den Betrieb Kadratis anvertrauen, läuft die Anwendung in Deutschland auf dedizierten Servern, Ihre Daten lassen sich als CSV exportieren, und der Wechsel zurück auf Ihre eigenen Server bleibt jederzeit möglich.',
       ],
     },
     {
       title: 'Ein unabhängiges Projekt',
       paragraphs: [
-        'Kadratis wird von der Gesellschaft KANAP herausgegeben, einer französischen Einpersonengesellschaft (EURL) mit Sitz in Obernai im Elsass. Das Projekt wird aus eigenen Mitteln entwickelt, parallel zu meiner Tätigkeit als CIO. So bleibt es vollständig unabhängig.',
+        'Kadratis wird von der Gesellschaft KANAP herausgegeben, einer französischen Gesellschaft mit beschränkter Haftung (SARL) mit Sitz in Obernai im Elsass. Das Projekt wird aus eigenen Mitteln entwickelt, parallel zu meiner Tätigkeit als CIO. So bleibt es vollständig unabhängig.',
         'Als Open-Source-Software ist Kadratis vollständig kostenlos. Die kostenpflichtigen Leistungen sind optional und sollen Ihnen Zeit sparen, den Einsatz absichern oder die Anwendung anpassen: Support, Hosting, Begleitung und individuelle Entwicklung. Diese Begleitung biete ich Ihnen selbst, mit dem Blick eines CIO. <a href="/de/offer">Zum Angebot</a>',
         'In jedem Fall führt Sie die vollständige <a href="https://doc.kadratis.com/de/">Online-Hilfe</a> in vier Sprachen von den ersten Schritten bis zur Expertise.',
       ],

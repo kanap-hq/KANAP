@@ -41,7 +41,7 @@ Kadratis suit les liens de la cartographie pour les trouver :
 
 - **Une version de technologie** touche les serveurs où elle est installée, et les applications qui la déclarent ou tournent sur ces serveurs, machines virtuelles comprises.
 - **Un équipement physique** en fin de vie touche les serveurs qu'il porte, ce qu'ils contiennent, et les applications déployées sur l'ensemble.
-- **Un cluster** compte ses membres : SQL Server installé sur le cluster touche chacun de ses nœuds. L'article [Les clusters dans la cartographie Kadratis](/fr/blog/les-clusters-dans-la-cartographie-kanap) détaille ces règles.
+- **Un cluster** compte ses membres : SQL Server installé sur le cluster touche chacun de ses nœuds. L'article [Les clusters dans la cartographie Kadratis](/fr/blog/les-clusters-dans-la-cartographie-kadratis) détaille ces règles.
 
 La réponse ne s'arrête donc pas à « Ubuntu 20.04 est hors support ». Elle nomme les serveurs et les applications qui en dépendent, et chaque fiche d'application donne son responsable et sa criticité. La discussion sur la migration commence avec les bonnes personnes.
 

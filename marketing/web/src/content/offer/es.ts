@@ -114,7 +114,7 @@ const content: OfferContent = {
       },
       {
         title: 'Nube alojada',
-        body: 'Quiere el camino más rápido al valor sin operar infraestructura. El mismo producto, operado por KANAP.',
+        body: 'Quiere el camino más rápido al valor sin operar infraestructura. El mismo producto, operado por Kadratis.',
       },
     ],
   },

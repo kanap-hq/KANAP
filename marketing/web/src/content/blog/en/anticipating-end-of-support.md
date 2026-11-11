@@ -41,7 +41,7 @@ Kadratis follows the links of the IT landscape to find them:
 
 - **A technology version** touches the servers it is installed on, and the applications that declare it or run on those servers, virtual machines included.
 - **A physical server** at end of life touches the machines it hosts and the applications deployed on all of them.
-- **A cluster** counts its members: SQL Server installed on the cluster touches each of its nodes. The article [Server clusters in Kadratis mapping](/blog/server-clusters-in-kanap-mapping) details these rules.
+- **A cluster** counts its members: SQL Server installed on the cluster touches each of its nodes. The article [Server clusters in Kadratis mapping](/blog/server-clusters-in-kadratis-mapping) details these rules.
 
 So the answer does not stop at "Ubuntu 20.04 is out of support". It names the servers and applications that depend on it, and each application record gives its owner and its criticality. The migration discussion starts with the right people.
 

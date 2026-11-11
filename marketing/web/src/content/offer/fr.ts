@@ -112,7 +112,7 @@ const content: OfferContent = {
       },
       {
         title: 'Hébergement cloud',
-        body: 'Vous voulez le chemin le plus court vers la valeur sans opérer l\'infrastructure. Même produit, opéré par KANAP.',
+        body: 'Vous voulez le chemin le plus court vers la valeur sans opérer l\'infrastructure. Même produit, opéré par Kadratis.',
       },
     ],
   },

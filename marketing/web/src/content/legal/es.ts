@@ -21,11 +21,11 @@ const content: LegalContent = {
     },
     body: `
 <h2>Preámbulo</h2>
-<p>KANAP (en adelante, «KANAP»), EURL (sociedad unipersonal de responsabilidad limitada) inscrita en el Registro Mercantil (RCS) de Saverne con el número 939 098 190, con domicilio social en 2, rue du Finhay, 67210 Obernai, Francia, concede la mayor importancia a la protección de tus datos personales. La presente política de privacidad (en adelante, la «Política») tiene por objeto informarte de forma clara y transparente sobre los tratamientos de datos personales que realiza KANAP en el marco del uso de la plataforma en línea de gestión informática «Kadratis» (en adelante, «la Plataforma»).</p>
+<p>KANAP (en adelante, «KANAP»), SARL (sociedad de responsabilidad limitada) inscrita en el Registro Mercantil (RCS) de Saverne con el número 939 098 190, con domicilio social en 2, rue du Finhay, 67210 Obernai, Francia, concede la mayor importancia a la protección de tus datos personales. La presente política de privacidad (en adelante, la «Política») tiene por objeto informarte de forma clara y transparente sobre los tratamientos de datos personales que realiza KANAP en el marco del uso de la plataforma en línea de gestión informática «Kadratis» (en adelante, «la Plataforma»).</p>
 <p>KANAP se compromete a cumplir el Reglamento General de Protección de Datos (RGPD) y la ley francesa n.º 78-17 de 6 de enero de 1978 relativa a la informática, los ficheros y las libertades, en su versión modificada.</p>
 
 <h2>1. Responsable del tratamiento</h2>
-<p>El responsable del tratamiento de los datos personales recogidos a través de la Plataforma es KANAP, EURL (sociedad unipersonal de responsabilidad limitada) inscrita en el Registro Mercantil (RCS) de Saverne con el número 939 098 190, con domicilio social en 2, rue du Finhay, 67210 Obernai, Francia.</p>
+<p>El responsable del tratamiento de los datos personales recogidos a través de la Plataforma es KANAP, SARL (sociedad de responsabilidad limitada) inscrita en el Registro Mercantil (RCS) de Saverne con el número 939 098 190, con domicilio social en 2, rue du Finhay, 67210 Obernai, Francia.</p>
 <p>Para los datos que los clientes introducen en la Plataforma (datos presupuestarios, información financiera, datos de los usuarios dentro de los espacios de los clientes), la organización cliente actúa como responsable del tratamiento y KANAP como encargado del tratamiento.</p>
 
 <h2>2. Datos personales recogidos</h2>

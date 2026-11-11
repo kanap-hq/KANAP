@@ -114,7 +114,7 @@ const content: OfferContent = {
       },
       {
         title: 'Cloud hosted',
-        body: 'You want the fastest path to value without running infrastructure. Same product, operated by KANAP.',
+        body: 'You want the fastest path to value without running infrastructure. Same product, operated by Kadratis.',
       },
     ],
   },
