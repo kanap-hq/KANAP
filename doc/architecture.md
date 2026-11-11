@@ -47,19 +47,20 @@ Goals, constraints, assumptions, and relevant background for architectural choic
 
 ## Ingress & Routing (prod intent)
 - Cloudflare:
-  - DNS and TLS termination for `kanap.net`, `qa.kanap.net`, `dev.kanap.net`, and their subdomains.
+  - DNS and TLS termination for `kadratis.com` and `kanap.net`, their `qa.` and `dev.` names, and their subdomains.
   - Proxies HTTPS traffic to the origin Nginx instance (QA/prod servers) or to the Cloudflare Tunnel endpoint (local dev).
-- Origin Nginx vhosts (`infra/nginx/host/prod.conf`, `qa.conf`, `cloudflare-real-ip.conf`):
-  - `kanap.net` and `www.kanap.net` -> `marketing` (127.0.0.1:8082)
+- Origin Nginx vhosts (`infra/nginx/host/prod.conf`, `qa.conf`, `default.conf`, `cloudflare-real-ip.conf`), the same blocks for each domain, with a Cloudflare origin certificate per domain:
+  - `kadratis.com`, `kanap.net` and their `www.` names -> `marketing` (127.0.0.1:8082)
   - `location /api/` on every vhost -> `api` (127.0.0.1:8080) with the `/api/` prefix stripped (avoids CORS for signup)
-  - `*.kanap.net` -> `web` (127.0.0.1:8081), one subdomain per tenant. `platform-admin.kanap.net` is served by this wildcard block; the backend distinguishes it by `PLATFORM_ADMIN_HOST`.
+  - `*.kadratis.com`, `*.kanap.net` -> `web` (127.0.0.1:8081), one subdomain per tenant. The platform console (`platform-admin.`) is served by the wildcard blocks; the backend distinguishes it by `PLATFORM_ADMIN_HOST`.
+  - Every block sets HSTS and hides the nginx version. `default.conf` is the default server on ports 80 and 443: a name no block declares gets no answer (handshake refused, or connection closed with 444).
 
 ## Environments
 - Dev (local):
   - Fully containerized: `db`, `api`, `web`, and `marketing` via `infra/docker-compose.yml`. The `dev-proxy` compose profile adds an Nginx that mirrors QA/prod routing (`infra/nginx/dev/nginx.conf`).
   - Cloudflare Tunnel terminates HTTPS for `dev.kanap.net` and `*.dev.kanap.net` and forwards to that proxy on `localhost:80`. The tunnel is host-side, not committed.
   - `lvh.me` and `*.lvh.me` remain available as an HTTP-only fallback without Cloudflare.
-- QA (`qa.kanap.net`) and Prod (`kanap.net`):
+- QA (`qa.kadratis.com`, `qa.kanap.net`) and Prod (`kadratis.com`, `kanap.net`):
   - DNS and TLS managed by Cloudflare (proxied records for the root and wildcard).
   - Host-installed Nginx (ports 80/443) and host-installed Postgres; the API reaches Postgres through `host.docker.internal`.
   - Containers for `api`, `web`, and `marketing` only, bound to loopback; host Nginx proxies to them.
