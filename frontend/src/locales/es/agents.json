@@ -661,6 +661,15 @@
     "specificLibraries": "Bibliotecas",
     "librariesPlaceholder": "Seleccionar bibliotecas",
     "librariesHint": "El agente solo busca en estas bibliotecas, dentro de las que puede acceder. Los nombres de las bibliotecas están en la sección de Conocimiento.",
+    "internalNotes": "Notas internas del ticket",
+    "internalNotesChoice": {
+      "used": "Usadas",
+      "ignored": "Ignoradas"
+    },
+    "internalNotesState": {
+      "used": "El agente las usa para decidir y para responder.",
+      "ignored": "El agente solo lee los mensajes públicos del ticket."
+    },
     "webEnabled": "Buscar en la web",
     "webHint": "Si está activado, el agente también puede buscar en la web pública. La base de conocimiento siempre tiene prioridad y los resultados web se citan en las respuestas.",
     "webUnavailableHint": "La búsqueda web aún no está disponible en esta plataforma. Contacte con su administrador para habilitarla.",

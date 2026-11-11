@@ -661,6 +661,15 @@
     "specificLibraries": "Libraries",
     "librariesPlaceholder": "Select libraries",
     "librariesHint": "The agent searches only these libraries, within what it can access. Library names are in the Knowledge section.",
+    "internalNotes": "Internal notes of the ticket",
+    "internalNotesChoice": {
+      "used": "Used",
+      "ignored": "Ignored"
+    },
+    "internalNotesState": {
+      "used": "The agent uses them to decide and to reply.",
+      "ignored": "The agent reads only the public messages of the ticket."
+    },
     "webEnabled": "Search the web",
     "webHint": "When on, the agent may also search the public web. The knowledge base always takes precedence, and web results are cited in replies.",
     "webUnavailableHint": "Web search isn't available on this platform yet. Contact your administrator to enable it.",

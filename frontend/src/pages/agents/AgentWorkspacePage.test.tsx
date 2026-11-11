@@ -237,6 +237,7 @@ describe('AgentWorkspacePage knowledge libraries', { timeout: 20000 }, () => {
         knowledge_sources: {
           knowledge: { enabled: true, all_libraries: false, library_ids: [LIBRARY_ID] },
           web: { enabled: false },
+          internal_notes: 'used',
         },
       });
     }, { timeout: 3000 });
@@ -249,8 +250,84 @@ describe('AgentWorkspacePage knowledge libraries', { timeout: 20000 }, () => {
         knowledge_sources: {
           knowledge: { enabled: true, all_libraries: true, library_ids: [] },
           web: { enabled: false },
+          internal_notes: 'used',
         },
       });
     }, { timeout: 3000 });
+  });
+});
+
+// A ticket agent uses the internal notes of a ticket, or ignores them. An agent saved without
+// the setting uses them.
+describe('AgentWorkspacePage internal notes', { timeout: 20000 }, () => {
+  const USED_STATE = 'The agent uses them to decide and to reply.';
+  const IGNORED_STATE = 'The agent reads only the public messages of the ticket.';
+
+  function withInternalNotes(internalNotes: string | undefined, agentType = 'helpdesk'): AiAgentControlAgentDefinition {
+    return {
+      ...definition,
+      agent_type: agentType,
+      scope_policy_json: {
+        knowledge_sources: {
+          knowledge: { enabled: true, all_libraries: true, library_ids: [] },
+          web: { enabled: false },
+          ...(internalNotes === undefined ? {} : { internal_notes: internalNotes }),
+        },
+      },
+    };
+  }
+
+  beforeEach(async () => {
+    harness.canAdmin = true;
+    harness.updateAgent.mockReset();
+    harness.updateAgent.mockImplementation(async () => ({ agent_definition: shownDefinition, diff: {} }));
+    harness.listKnowledgeLibraries.mockReset();
+    harness.listKnowledgeLibraries.mockResolvedValue([]);
+    await i18n.changeLanguage('en');
+  });
+
+  it('shows an agent saved without the setting as using them', async () => {
+    shownDefinition = withInternalNotes(undefined);
+    renderPage('/agents/payroll?tab=settings');
+    expect(await screen.findByLabelText('Used', {}, { timeout: 5000 })).toBeChecked();
+    expect(screen.getByLabelText('Ignored')).not.toBeChecked();
+    expect(screen.getByText('Internal notes of the ticket')).toBeInTheDocument();
+    expect(screen.getByText(USED_STATE)).toBeInTheDocument();
+  });
+
+  it('saves ignored, then used', async () => {
+    shownDefinition = withInternalNotes('used');
+    renderPage('/agents/payroll?tab=settings');
+    fireEvent.click(await screen.findByLabelText('Ignored', {}, { timeout: 5000 }));
+    await waitFor(() => {
+      expect(harness.updateAgent).toHaveBeenLastCalledWith('agent-1', {
+        knowledge_sources: {
+          knowledge: { enabled: true, all_libraries: true, library_ids: [] },
+          web: { enabled: false },
+          internal_notes: 'ignored',
+        },
+      });
+    }, { timeout: 3000 });
+    expect(screen.getByText(IGNORED_STATE)).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText('Used'));
+    await waitFor(() => {
+      expect(harness.updateAgent).toHaveBeenLastCalledWith('agent-1', {
+        knowledge_sources: expect.objectContaining({ internal_notes: 'used' }),
+      });
+    }, { timeout: 3000 });
+  });
+
+  it('shows the stored choice', async () => {
+    shownDefinition = withInternalNotes('ignored');
+    renderPage('/agents/payroll?tab=settings');
+    expect(await screen.findByLabelText('Ignored', {}, { timeout: 5000 })).toBeChecked();
+    expect(screen.getByText(IGNORED_STATE)).toBeInTheDocument();
+  });
+
+  it('is not shown for a monitoring agent', async () => {
+    shownDefinition = withInternalNotes(undefined, 'sre');
+    renderPage('/agents/payroll?tab=settings');
+    expect(await screen.findByLabelText('All libraries', {}, { timeout: 5000 })).toBeChecked();
+    expect(screen.queryByText('Internal notes of the ticket')).not.toBeInTheDocument();
   });
 });

@@ -1459,10 +1459,12 @@ function sharedContextProfileLines(profile: AiSharedContextProfile | null | unde
 
 // The libraries an agent may cite: none, the chosen ones, or all it can access.
 type LibraryScope = 'none' | 'some' | 'all';
+// Whether a ticket agent reads the internal notes of a ticket.
+type InternalNotesSetting = 'used' | 'ignored';
 
 function knowledgeFormFromDefinition(definition: AiAgentControlAgentDefinition): {
   enabled: boolean; libraryScope: LibraryScope; libraryIds: string[]; webEnabled: boolean;
-  kanapData: AiAgentKanapDataSources | null;
+  kanapData: AiAgentKanapDataSources | null; internalNotes: InternalNotesSetting;
 } {
   const scope = definition.scope_policy_json && typeof definition.scope_policy_json === 'object'
     ? definition.scope_policy_json as Record<string, unknown> : {};
@@ -1496,6 +1498,8 @@ function knowledgeFormFromDefinition(definition: AiAgentControlAgentDefinition):
         },
       }
       : null,
+    // Same reading as the backend: an agent saved without the setting uses them.
+    internalNotes: ks.internal_notes === 'ignored' ? 'ignored' : 'used',
   };
 }
 
@@ -1517,6 +1521,7 @@ function knowledgeSourcesPayloadFromForm(current: ReturnType<typeof knowledgeFor
     // absent block). Send exactly what was read (plus any user edits); an
     // absent block is never fabricated here.
     ...(current.kanapData ? { kanap_data: current.kanapData } : {}),
+    internal_notes: current.internalNotes,
   };
 }
 
@@ -2457,6 +2462,27 @@ function SettingsTab({ definition, autosaveRegistry, saveQueue }: {
                 </SettingsField>
               )}
             </>
+          )}
+          {isHelpdesk && (
+            <SettingsField label={t('settings.internalNotes')} hint={t(`settings.internalNotesState.${knowledgeForm.internalNotes}`)}>
+              <RadioGroup
+                row
+                aria-label={t('settings.internalNotes')}
+                value={knowledgeForm.internalNotes}
+                onChange={(_event, value) => updateKnowledge({ internalNotes: value as InternalNotesSetting })}
+                sx={{ columnGap: 2 }}
+              >
+                {(['used', 'ignored'] as const).map((setting) => (
+                  <FormControlLabel
+                    key={setting}
+                    value={setting}
+                    sx={featureSwitchRowSx}
+                    control={<Radio size="small" />}
+                    label={t(`settings.internalNotesChoice.${setting}`)}
+                  />
+                ))}
+              </RadioGroup>
+            </SettingsField>
           )}
           <FormControlLabel
             sx={featureSwitchRowSx}
