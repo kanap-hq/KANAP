@@ -1,9 +1,10 @@
 import { matchRichTextHtmlTag } from './richTextHtmlElements';
 
-const FENCED_CODE_BLOCK_REGEX = /^(`{3,}|~{3,})([^\n]*)\n([\s\S]*?)\n\1\s*$/gm;
+// The line that opens a fenced block: the fence may sit in a list item or a quote, at any indent.
+const FENCE_OPENING_REGEX = /^(?:[ \t>]|(?:[-*+]|\d{1,9}[.)])[ \t])*(`{3,}|~{3,})(.*)$/;
+const FENCE_CLOSING_REGEX = /^[ \t>]*(`{3,}|~{3,})[ \t]*$/;
 const URI_AUTOLINK_REGEX = /^<([a-zA-Z][a-zA-Z0-9+.-]*:\/\/[^\s>]+)>/;
 const EMAIL_AUTOLINK_REGEX = /^<([^\s>@]+@[^\s>]+\.[^\s>]+)>/;
-const BLANK_LINE_REGEX = /\n[ \t]*\n/;
 // A link destination between angle brackets, with its optional title, up to the closing parenthesis.
 const ANGLE_BRACKET_DESTINATION_REGEX = /^<[^<>\n]*>(?:[ \t]+(?:"[^"\n]*"|'[^'\n]*'))?[ \t]*\)/;
 
@@ -13,6 +14,55 @@ function isEscaped(text: string, index: number): boolean {
     backslashCount += 1;
   }
   return backslashCount % 2 === 1;
+}
+
+/**
+ * Takes the fenced blocks out of the text, line by line: a block runs from its opening fence to a
+ * line that holds only a fence of the same character, at least as long, or to the end of the text.
+ */
+function stashFencedCodeBlocks(text: string): { text: string; blocks: string[] } {
+  const blocks: string[] = [];
+  const lines: string[] = [];
+  let open: { mark: string; length: number; lines: string[] } | null = null;
+  const closeBlock = (block: string[]) => {
+    lines.push(`\x00CB${blocks.length}\x00`);
+    blocks.push(block.join('\n'));
+  };
+
+  for (const line of text.split('\n')) {
+    if (open) {
+      open.lines.push(line);
+      const closing = line.match(FENCE_CLOSING_REGEX)?.[1];
+      if (closing && closing[0] === open.mark && closing.length >= open.length) {
+        closeBlock(open.lines);
+        open = null;
+      }
+      continue;
+    }
+    const opening = line.match(FENCE_OPENING_REGEX);
+    // A fence of backticks has no backtick after it on its line.
+    if (opening && !(opening[1][0] === '`' && opening[2].includes('`'))) {
+      open = { mark: opening[1][0], length: opening[1].length, lines: [line] };
+    } else {
+      lines.push(line);
+    }
+  }
+  if (open) closeBlock(open.lines);
+
+  return { text: lines.join('\n'), blocks };
+}
+
+/** The index of the run of exactly `length` backticks that closes a code span, in its paragraph, or -1. */
+function findClosingBacktickRun(text: string, from: number, length: number): number {
+  for (let index = from; index < text.length; index += 1) {
+    if (text[index] === '\n' && isBlankLineAhead(text, index)) return -1;
+    if (text[index] !== '`') continue;
+    let end = index;
+    while (text[end] === '`') end += 1;
+    if (end - index === length) return index;
+    index = end - 1;
+  }
+  return -1;
 }
 
 function stashInlineCodeSpans(text: string): { text: string; spans: string[] } {
@@ -26,24 +76,24 @@ function stashInlineCodeSpans(text: string): { text: string; spans: string[] } {
       continue;
     }
 
-    let fenceEnd = index;
-    while (text[fenceEnd] === '`') {
-      fenceEnd += 1;
+    let runEnd = index;
+    while (text[runEnd] === '`') {
+      runEnd += 1;
     }
-    const fence = text.slice(index, fenceEnd);
-    const closingIndex = text.indexOf(fence, fenceEnd);
+    const length = runEnd - index;
+    const closingIndex = findClosingBacktickRun(text, runEnd, length);
 
-    // A code span ends with its paragraph: a lone backtick does not reach one of a later paragraph.
-    if (closingIndex < 0 || BLANK_LINE_REGEX.test(text.slice(fenceEnd, closingIndex))) {
-      result += text[index];
-      index += 1;
+    // A run of backticks that nothing closes in its paragraph is text.
+    if (closingIndex < 0) {
+      result += text.slice(index, runEnd);
+      index = runEnd;
       continue;
     }
 
     const token = `\x00IC${spans.length}\x00`;
-    spans.push(text.slice(index, closingIndex + fence.length));
+    spans.push(text.slice(index, closingIndex + length));
     result += token;
-    index = closingIndex + fence.length;
+    index = closingIndex + length;
   }
 
   return { text: result, spans };
@@ -83,12 +133,7 @@ export function sanitizeMarkdownForMdxPaste(
   markdown: string,
   { keepRichTextElements = false }: { keepRichTextElements?: boolean } = {},
 ): string {
-  const fencedCodeBlocks: string[] = [];
-  const withoutFences = String(markdown || '').replace(FENCED_CODE_BLOCK_REGEX, (match) => {
-    const token = `\x00CB${fencedCodeBlocks.length}\x00`;
-    fencedCodeBlocks.push(match);
-    return token;
-  });
+  const { text: withoutFences, blocks: fencedCodeBlocks } = stashFencedCodeBlocks(String(markdown || ''));
   const { text: sanitizedBase, spans: inlineCodeSpans } = stashInlineCodeSpans(withoutFences);
 
   let result = '';

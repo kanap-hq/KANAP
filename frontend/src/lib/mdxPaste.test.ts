@@ -76,6 +76,39 @@ describe('mdxPaste', () => {
     expectMarkdownToParse(markdown);
   });
 
+  it('leaves a fenced block untouched wherever it sits', () => {
+    const blocks = [
+      '1. Lancer :\n\n   ```bash\n   cat <<EOF > out.txt\n\n   <config a="1">\n   EOF\n   ```\n\n2. Suite',
+      '* Lancer :\n  ```xml\n  <config a="1">\n\n  </config>\n  ```\n* Suite',
+      '- ```xml\n  <config a="1">\n\n  </config>\n  ```',
+      '> ```html\n> <div>x</div>\n>\n> <p>y</p>\n> ```',
+      'Texte\n\n  ```html\n  <div>x</div>\n\n  <p>y</p>\n  ```\n\nSuite',
+      '~~~html\n<div>x</div>\n\n<p>y</p>\n~~~',
+      '````md\n```html\n<div>x</div>\n```\n\n<p>y</p>\n````',
+      '```html\n<div>x</div>\n\n<p>y</p>\n`````',
+    ];
+    for (const block of blocks) {
+      expect(toEditorDisplayMarkdown(block)).toBe(block);
+      expect(toEditorDisplayMarkdown(`${block}\n\naprès <section>`)).toBe(`${block}\n\naprès \\<section>`);
+    }
+  });
+
+  it('reads a fence left open as code to the end of the text', () => {
+    const markdown = 'avant <section>\n\n```html\n<div>x</div>\n\n<p>y</p>';
+
+    expect(toEditorDisplayMarkdown(markdown)).toBe('avant \\<section>\n\n```html\n<div>x</div>\n\n<p>y</p>');
+  });
+
+  it('reads no fence in a line of backticks followed by more backticks', () => {
+    expect(toEditorDisplayMarkdown('```a``` <section>\n\n<div>')).toBe('```a``` \\<section>\n\n\\<div>');
+  });
+
+  it('closes an inline code span with a run of as many backticks', () => {
+    expect(toEditorDisplayMarkdown('``a ` <b>`` <i>')).toBe('``a ` <b>`` \\<i>');
+    expect(toEditorDisplayMarkdown('`` a ` <b> ` <i>')).toBe('`` a ` <b> ` \\<i>');
+    expect(toEditorDisplayMarkdown('` a `` <b> ` <i> ``')).toBe('` a `` <b> ` \\<i> ``');
+  });
+
   it('ends an inline code span at the end of its paragraph', () => {
     const markdown = sanitizeMarkdownForMdxPaste('un accent ` seul\n\n<section>texte</section>\n\nun autre ` plus loin');
 

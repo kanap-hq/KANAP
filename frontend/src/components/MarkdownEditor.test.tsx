@@ -168,7 +168,13 @@ describe('MarkdownEditor: ordinary Markdown', () => {
     { name: 'a table', text: '| a | b |\n| - | - |\n| 1 | 2 |' },
     { name: 'a line break in a table cell', text: '| a          |\n| ---------- |\n| l1<br />l2 |' },
     { name: 'a code block that shows HTML', text: '```html\n<form action="x"></form>\n```' },
+    {
+      name: 'a code block of a list item, with a blank line',
+      text: '1. Lancer :\n   ```bash\n   cat <<EOF > out.txt\n\n   <config a="1">\n   EOF\n   ```\n2. Suite',
+    },
+    { name: 'a code block in a quote', text: '> ```html\n> <div>x</div>\n>\n> <p>y</p>\n> ```' },
     { name: 'inline code that shows a tag', text: 'du `<b>` en ligne' },
+    { name: 'inline code between two backticks', text: 'le type ``Map<String, `X`>`` ici' },
     { name: 'an image', text: '![schéma](/api/x.png "titre")' },
     { name: 'a sized image', text: '<img height="40" width="60" alt="schéma" src="/api/x.png" />' },
     { name: 'a check list', text: '* [x] fait\n* [ ] à faire' },
