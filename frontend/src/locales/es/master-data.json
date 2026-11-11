@@ -415,7 +415,7 @@
     "selectExisting": "Seleccionar el proveedor existente",
     "export": "Exportar proveedores",
     "import": "Importar proveedores",
-    "importHint": "Valores aceptados para status: enabled o disabled. disabled_at contiene el fin de validez o queda vacío. Las columnas de contacto llevan el correo electrónico de un contacto que ya existe en Contactos.",
+    "importHint": "Valores aceptados para Estado: enabled o disabled. Desactivado el contiene el fin de validez o queda vacío. Las columnas de contacto llevan el correo electrónico de un contacto que ya existe en Contactos.",
     "fields": {
       "name": "Nombre",
       "erpSupplierId": "ID de proveedor ERP",
