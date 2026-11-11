@@ -181,6 +181,7 @@ import {
   AiTicketEvidenceExtractionService,
   estimateTicketEvidenceExtractionUsage,
   TicketEvidenceExtractionResult,
+  ticketAttachmentRefs,
 } from './ai-ticket-evidence-extraction.service';
 import {
   AiTicketNeedRepresentationService,
@@ -335,7 +336,6 @@ import {
 
 import {
   actionRequestIdsFromCapabilityOutput,
-  ticketNotesFromOutput,
   parseTime,
   isoFromTime,
   actionPayloadBody,
@@ -5211,10 +5211,8 @@ export class AiAgentControlService {
     const preKnowledgeGuardrails = this.agentQueue && agentDefinition ? this.agentQueue.runGuardrails(agentDefinition) : null;
     const plannerSystemPrompt = compileSystemPrompt(RUNTIME_SAFETY_FLOOR_PLANNER, promptRuntime.plannerGuidance);
     let ticketImageExtraction: TicketEvidenceExtractionResult = {
-      attachmentRefs: [
-        ...(ticket.attachments ?? []),
-        ...ticketNotesData.notes.flatMap((note) => note.attachments ?? []),
-      ],
+      // Kept when the extraction does not run: the same list the extraction reads.
+      attachmentRefs: ticketAttachmentRefs({ ticket, notes: ticketNotesData.notes }),
       evidence: [],
       warnings: [],
       skippedReason: null,

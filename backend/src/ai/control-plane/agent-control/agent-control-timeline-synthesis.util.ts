@@ -6,7 +6,7 @@ import { AiActionRequest } from '../entities/ai-action-request.entity';
 import { AiAgentDefinition } from '../entities/ai-agent-definition.entity';
 import { MAX_INTERNAL_NOTE_CHARS, MAX_PUBLIC_REPLY_CHARS } from '../providers/ticket-safety';
 import { ticketLooksFrench } from './agent-control-knowledge.util';
-import { adapterData, clampText } from './agent-control-util';
+import { clampText } from './agent-control-util';
 import { isPublicTicketItem, publicTicketItems } from './public-reply-sources';
 import type { ConversationActionGate, KnowledgeSearchItem, TicketLike, TicketNoteLike, TicketTimelineEntry, WebSearchResultItem } from './ai-agent-control.service';
 import { ReplySynthesisRejectedSource, ReplySynthesisResult, ReplySynthesisSource } from './ai-reply-synthesis.service';
@@ -50,30 +50,6 @@ export function actionRequestIdsFromCapabilityOutput(value: unknown): string[] {
     ids.add(nested.id.trim());
   }
   return Array.from(ids);
-}
-
-export function ticketNotesFromOutput(value: unknown): TicketNoteLike[] {
-  const data = adapterData<{ notes?: unknown[] }>(value);
-  const notes = Array.isArray(data?.notes) ? data.notes : [];
-  return notes
-    .filter(isRecord)
-    .map((note): TicketNoteLike => {
-      const visibility: TicketNoteLike['visibility'] = isPublicTicketItem(note) ? 'public' : 'internal';
-      return {
-        id: typeof note.id === 'string' ? note.id : String(note.id ?? ''),
-        visibility,
-        authorId: typeof note.authorId === 'string' ? note.authorId : null,
-        author: typeof note.author === 'string' ? note.author : null,
-        authorRole: note.authorRole === 'requester' || note.authorRole === 'support' || note.authorRole === 'kanap_agent'
-          ? note.authorRole
-          : 'unknown',
-        body: typeof note.body === 'string' ? note.body : '',
-        createdAt: typeof note.createdAt === 'string' ? note.createdAt : '',
-        updatedAt: typeof note.updatedAt === 'string' ? note.updatedAt : null,
-        updateFingerprint: typeof note.updateFingerprint === 'string' ? note.updateFingerprint : null,
-      };
-    })
-    .filter((note) => note.id.length > 0);
 }
 
 export function parseTime(value: string | Date | null | undefined): number | null {

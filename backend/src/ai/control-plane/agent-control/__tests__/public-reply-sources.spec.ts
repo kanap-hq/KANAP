@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { AiReplySynthesisService } from '../ai-reply-synthesis.service';
 import { AiAgentActionPlannerService } from '../ai-agent-action-planner.service';
-import { estimateTicketEvidenceExtractionUsage } from '../ai-ticket-evidence-extraction.service';
+import { estimateTicketEvidenceExtractionUsage, ticketAttachmentRefs } from '../ai-ticket-evidence-extraction.service';
 import {
   buildTicketTimeline,
   evaluateConversationGate,
@@ -169,6 +169,16 @@ function testScreenshotsOfInternalNotesStayOutOfThePublicReply() {
     maxImages: 5,
   }, null);
   assert.equal(usage.attachmentCount, 1);
+  // The list the triage keeps when the extraction does not run holds the same screenshots.
+  const refs = ticketAttachmentRefs({
+    ticket: { attachments: [{ ...image('5', ''), source: 'ticket_description' as const, sourceNoteId: null }] },
+    notes: [
+      { ...publicNote, attachments: [image('10', '1')] },
+      { ...internalNote, attachments: [image('20', '2')] },
+      { ...unmarkedNote, attachments: [image('30', '3')] },
+    ],
+  });
+  assert.deepEqual(refs.map((ref) => ref.id), ['5', '10']);
 }
 
 function testKnowledgeItemsKeepTheirLibrary() {

@@ -144,7 +144,8 @@ function attachmentKey(ref: TicketAttachmentRef): string {
   ].join(':');
 }
 
-function collectAttachmentRefs(input: {
+/** The screenshots a public reply may read: those of the ticket and of its public messages. */
+export function ticketAttachmentRefs(input: {
   ticket: { attachments?: TicketAttachmentRef[] | null };
   notes: Array<{ visibility?: unknown; attachments?: TicketAttachmentRef[] | null }>;
 }): TicketAttachmentRef[] {
@@ -231,7 +232,7 @@ export function estimateTicketEvidenceExtractionUsage(input: {
   attachmentCount: number;
   imageCallCount: number;
 } {
-  const attachmentRefs = collectAttachmentRefs(input);
+  const attachmentRefs = ticketAttachmentRefs(input);
   const selectedRefs = attachmentRefs
     .filter((ref) => ref.kind === 'image' || !ref.mimeType || SUPPORTED_IMAGE_MIME_TYPES.has(normalizeMimeType(ref.mimeType)))
     .slice(0, input.maxImages);
@@ -283,7 +284,7 @@ export class AiTicketEvidenceExtractionService {
       profile?: CompiledGuidance | null;
     },
   ): Promise<TicketEvidenceExtractionResult> {
-    const attachmentRefs = collectAttachmentRefs(input);
+    const attachmentRefs = ticketAttachmentRefs(input);
     if (attachmentRefs.length === 0) {
       return {
         attachmentRefs,
