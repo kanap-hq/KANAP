@@ -690,3 +690,28 @@ describe('getDocumentSaveErrorMessage', () => {
     expect(getDocumentSaveErrorMessage({}, t, 'fallback')).toBe('fallback');
   });
 });
+
+describe('a rich text refused for an HTML tag', () => {
+  const refused = {
+    response: {
+      status: 400,
+      data: { code: 'MARKDOWN_HTML_NOT_ALLOWED', message: 'description holds an HTML tag', field: 'description' },
+    },
+  };
+
+  it('says what to do with the tag, in each language', () => {
+    expect(getApiErrorMessage(refused, t, 'fallback'))
+      .toBe('This text contains an HTML tag. Remove it or put it in a code block.');
+    expect(getApiErrorMessage(refused, i18n.getFixedT('fr'), 'fallback'))
+      .toBe('Ce texte contient une balise HTML. Retirez-la ou placez-la dans un bloc de code.');
+    expect(getApiErrorMessage(refused, i18n.getFixedT('de'), 'fallback'))
+      .toBe('Dieser Text enthält ein HTML-Tag. Entfernen Sie es oder setzen Sie es in einen Codeblock.');
+    expect(getApiErrorMessage(refused, i18n.getFixedT('es'), 'fallback'))
+      .toBe('Este texto contiene una etiqueta HTML. Elimínela o colóquela en un bloque de código.');
+  });
+
+  it('says the same for a document', () => {
+    expect(getDocumentSaveErrorMessage(refused, t, 'fallback'))
+      .toBe('This text contains an HTML tag. Remove it or put it in a code block.');
+  });
+});

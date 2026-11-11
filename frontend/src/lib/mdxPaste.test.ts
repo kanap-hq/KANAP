@@ -2,7 +2,7 @@ import { fromMarkdown } from 'mdast-util-from-markdown';
 import { mdxJsxFromMarkdown } from 'mdast-util-mdx-jsx';
 import { describe, expect, it } from 'vitest';
 import { mdxJsx } from 'micromark-extension-mdx-jsx';
-import { hasPotentiallyUnsafeMdxPaste, sanitizeMarkdownForMdxPaste } from './mdxPaste';
+import { hasPotentiallyUnsafeMdxPaste, sanitizeMarkdownForMdxPaste, toEditorDisplayMarkdown } from './mdxPaste';
 
 function expectMarkdownToParse(markdown: string) {
   expect(() => fromMarkdown(markdown, {
@@ -60,5 +60,107 @@ describe('mdxPaste', () => {
 
     expect(markdown).toBe('[docs](<https://example.com/a path>)');
     expectMarkdownToParse(markdown);
+  });
+
+  it('escapes a less-than sign right after an opening parenthesis', () => {
+    const markdown = sanitizeMarkdownForMdxPaste('f(<y) et (voir <https://example.com/a>)');
+
+    expect(markdown).toBe('f(\\<y) et (voir [https://example.com/a](https://example.com/a))');
+    expectMarkdownToParse(markdown);
+  });
+
+  it('escapes a tag that only looks like a link destination', () => {
+    const markdown = sanitizeMarkdownForMdxPaste('[docs](<section>texte</section>) et [docs](<https://example.com/a b> "titre")');
+
+    expect(markdown).toBe('[docs](\\<section>texte\\</section>) et [docs](<https://example.com/a b> "titre")');
+    expectMarkdownToParse(markdown);
+  });
+
+  it('ends an inline code span at the end of its paragraph', () => {
+    const markdown = sanitizeMarkdownForMdxPaste('un accent ` seul\n\n<section>texte</section>\n\nun autre ` plus loin');
+
+    expect(markdown).toBe('un accent ` seul\n\n\\<section>texte\\</section>\n\nun autre ` plus loin');
+    expectMarkdownToParse(markdown);
+  });
+
+  it('escapes the accepted rich text elements too, unless asked to keep them', () => {
+    expect(sanitizeMarkdownForMdxPaste('<u>a</u> H<sub>2</sub>O<br>x<sup>2</sup>'))
+      .toBe('\\<u>a\\</u> H\\<sub>2\\</sub>O\\<br>x\\<sup>2\\</sup>');
+  });
+});
+
+describe('mdxPaste, accepted rich text elements kept', () => {
+  const keep = (markdown: string) => sanitizeMarkdownForMdxPaste(markdown, { keepRichTextElements: true });
+
+  it('keeps underline, subscript and superscript tags without attribute', () => {
+    const markdown = keep('<u>a</u> H<sub>2</sub>O x<sup>2</sup>');
+
+    expect(markdown).toBe('<u>a</u> H<sub>2</sub>O x<sup>2</sup>');
+    expectMarkdownToParse(markdown);
+  });
+
+  it('writes every form of the line break as a closed tag', () => {
+    const markdown = keep('a<br>b<br/>c<br />d');
+
+    expect(markdown).toBe('a<br />b<br />c<br />d');
+    expectMarkdownToParse(markdown);
+  });
+
+  it('keeps an image with its accepted attributes, as a closed tag', () => {
+    expect(keep('<img height="40" width="60" alt="a" src="/api/x.png" />'))
+      .toBe('<img height="40" width="60" alt="a" src="/api/x.png" />');
+    const markdown = keep("<img src='https://example.com/x.png' title=\"t\">");
+
+    expect(markdown).toBe("<img src='https://example.com/x.png' title=\"t\" />");
+    expectMarkdownToParse(markdown);
+  });
+
+  it.each([
+    ['an attribute on an accepted tag', '<u class="x">a</u>', '\\<u class="x">a\\</u>'],
+    ['an attribute on a line break', 'a<br class="x">b', 'a\\<br class="x">b'],
+    ['an accepted tag in capitals', '<U>a</U>', '\\<U>a\\</U>'],
+    ['an accepted tag closed on itself', '<u/>a', '\\<u/>a'],
+    ['a closing line break', 'a</br>b', 'a\\</br>b'],
+    ['an image with another attribute', '<img src="/x.png" class="x">', '\\<img src="/x.png" class="x">'],
+    ['an image without a source', '<img alt="a">', '\\<img alt="a">'],
+    ['an image with a source that is no address', '<img src="x:y">', '\\<img src="x:y">'],
+    ['an image with a size that is no number', '<img src="/x.png" width="100%">', '\\<img src="/x.png" width="100%">'],
+    ['an image with an attribute without quotes', '<img src=/x.png>', '\\<img src=/x.png>'],
+    ['another element', '<section>a</section>', '\\<section>a\\</section>'],
+    ['an accepted tag that is never closed', 'H<sub>2</sub>O <u>a<br>b', 'H<sub>2</sub>O \\<u>a<br />b'],
+    ['an accepted tag closed in another paragraph', '<u>a\n\nb</u>', '\\<u>a\n\nb\\</u>'],
+    ['a closing tag without its opening tag', 'a</u> b', 'a\\</u> b'],
+    ['accepted tags closed in the wrong order', '<u>a<sub>b</u>c</sub>', '\\<u>a<sub>b\\</u>c</sub>'],
+  ])('escapes %s', (_name, given, expected) => {
+    const markdown = keep(given);
+
+    expect(markdown).toBe(expected);
+    expectMarkdownToParse(markdown);
+  });
+});
+
+describe('toEditorDisplayMarkdown', () => {
+  it('keeps the accepted elements and escapes every other less-than sign', () => {
+    const markdown = toEditorDisplayMarkdown(
+      'si x <y alors <u>oui</u><br>voir <https://example.com/a> <!-- note -->',
+    );
+
+    expect(markdown).toBe(
+      'si x \\<y alors <u>oui</u><br />voir [https://example.com/a](https://example.com/a) \\<!-- note -->',
+    );
+    expectMarkdownToParse(markdown);
+  });
+
+  it('escapes the accepted elements too in its plain form', () => {
+    const markdown = toEditorDisplayMarkdown('**<u>gras**</u><br>', { plain: true });
+
+    expect(markdown).toBe('**\\<u>gras**\\</u>\\<br>');
+    expectMarkdownToParse(markdown);
+  });
+
+  it('leaves a text whose only tags are in code as it is', () => {
+    const markdown = '# Titre\n\n| a | b |\n| - | - |\n| 1 | 2 |\n\n* [x] fait\n\n```html\n<form action="x"></form>\n```\n\n`<b>`';
+
+    expect(toEditorDisplayMarkdown(markdown)).toBe(markdown);
   });
 });
