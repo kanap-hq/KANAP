@@ -17,6 +17,27 @@ version brings, followed by three lists:
 To upgrade across several versions, read every entry between your version and the target: the
 actions add up. The release process is described in `doc/releasing.md`.
 
+## 26.11.4 (2026-11-11)
+
+The product is renamed Kadratis and its assistant Kad. The publishing company remains KANAP.
+
+### Changes
+- The product is named Kadratis and its assistant Kad in the application, the emails, the assistant, the user manual and the public site, with a new logo and new icons. The user manual is updated in English, French, German and Spanish, with new screenshots in the first-steps guides. The publishing company remains KANAP. (#1500, #1503, #1504, #1506)
+- The public site is at `https://kadratis.com` and the user manual at `https://doc.kadratis.com`, with the same page addresses. Support is at `support@kadratis.com` and vulnerability reports go to `security@kadratis.com`. The `kanap.net` addresses keep working. (#1502, #1503, #1504, #1505)
+- The fast-track cheat sheets are named `kadratis-*.pdf`. Their former addresses redirect to them. (#1504)
+- Workspace addresses, API keys, MCP connections, roles, settings and environment variables are unchanged. A workspace at `<name>.kanap.net` stays at that address. Nothing to do. (#1501, #1503)
+- Cloud service: the optional setting `TENANT_BASE_DOMAINS` lists the domains workspaces are served under, so that a workspace can answer under several domains. Empty, the usual domains apply. New workspaces can no longer take the addresses `dev`, `qa`, `doc`, `send`, `tenants`, `mail`, `autodiscover`, `status`, `kanap`, `kadratis` and `cadratis`. Existing workspaces keep theirs. (#1501, #1503)
+- General terms of sale: they name Kadratis as the product and are dated 11 November 2026. KANAP EURL remains the seller. Current subscriptions continue unchanged. The new version is accepted at the next subscription, change of plan or invoice request. (#1505)
+- The repository carries a trademark policy for the Kadratis name and logo, `TRADEMARKS.md`. (#1505)
+
+### Fixes
+
+### On-premise
+- Action required: none. `.env` is unchanged.
+- The published images are now named `kadratis-api`, `kadratis-web` and `kadratis-api-tools`. The compose file of this version names them, so the usual update pulls them. Earlier versions stay under `kanap-*`. (#1502)
+- Migrations: none.
+- Recommended: none.
+
 ## 26.11.3 (2026-11-09)
 
 First steps that follow your own data, a path changed at any time from the first-steps tile, the switch to the example during the trial, empty lists that offer their creation, and one Budget choice for a task.
