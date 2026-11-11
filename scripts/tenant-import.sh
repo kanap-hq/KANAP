@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# tenant-import.sh — Import a tenant export into a fresh on-prem KANAP instance.
+# tenant-import.sh — Import a tenant export into a fresh on-prem Kadratis instance.
 #
 # MUST be run as the postgres superuser (bypasses RLS).
 # The app role (kanap) is NOSUPERUSER NOBYPASSRLS and cannot COPY into
@@ -151,7 +151,7 @@ if [[ "$EXPORT_MIGRATION" != "$DEST_MIGRATION" ]]; then
   echo "  Export:      $EXPORT_MIGRATION"
   echo "  Destination: $DEST_MIGRATION"
   echo ""
-  echo "Both source and destination must be on the same KANAP version."
+  echo "Both source and destination must be on the same Kadratis version."
   echo "Update the on-prem instance to match, then re-run this script."
   exit 1
 fi
@@ -231,7 +231,7 @@ if [[ -n "$DEST_TENANT_ID" && ! "$DEST_TENANT_ID" =~ $UUID_PATTERN ]]; then
 fi
 
 echo ""
-echo "IMPORTANT: The KANAP application must be stopped before importing."
+echo "IMPORTANT: The Kadratis application must be stopped before importing."
 echo "  docker compose -f infra/compose.onprem.yml down"
 echo ""
 read -r -p "Is the application stopped? [y/N] " confirm

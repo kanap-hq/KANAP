@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# tenant-export.sh — Export a single tenant's data from a KANAP database.
+# tenant-export.sh — Export a single tenant's data from a Kadratis database.
 #
 # Usage:
 #   ./scripts/tenant-export.sh <database_url> <tenant_slug> <output_dir> [--include-audit] [--exclude-ai]

@@ -1,4 +1,4 @@
-# KANAP on-premise: the API and the web server run the published images of one version, the
+# Kadratis on-premise: the API and the web server run the published images of one version, the
 # version of this checkout. To run another one (an update, a rollback), check out its tag
 # (git checkout v26.10.9), then pull: this file and the images stay in step. Compose does not read
 # ../.env for the ${...} of this file, so KANAP_VERSION there would change nothing. Between two
