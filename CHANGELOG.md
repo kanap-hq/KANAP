@@ -17,6 +17,20 @@ version brings, followed by three lists:
 To upgrade across several versions, read every entry between your version and the target: the
 actions add up. The release process is described in `doc/releasing.md`.
 
+## 26.11.6 (2026-11-11)
+
+The platform console answers on each domain of an environment served under several domains. This fix concerns the cloud service.
+
+### Changes
+
+### Fixes
+- An environment served under two domains had the platform console on one domain only. Under the other domain, the console's address opened the system workspace as an ordinary workspace. The setting `PLATFORM_ADMIN_HOST` now accepts several hosts, comma-separated, one per domain. With one host, nothing changes. (#1513)
+
+### On-premise
+- Action required: none. `.env` is unchanged.
+- Migrations: none.
+- Recommended: none.
+
 ## 26.11.5 (2026-11-11)
 
 The texts that still named KANAP now name Kadratis: e-mails, the included AI model, the support message, the user manual and the public site. The company is named KANAP SARL where the law requires it.
