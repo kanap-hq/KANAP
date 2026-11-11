@@ -1631,7 +1631,9 @@
     "actions": {
       "changePlan": "Cambiar plan",
       "choosePlan": "Elegir plan",
-      "managePayment": "Gestionar el pago"
+      "managePayment": "Gestionar el pago",
+      "payInvoice": "Pagar la factura",
+      "updateCardAndPay": "Actualizar la tarjeta y pagar"
     },
     "fields": {
       "addressLine1": "Dirección línea 1",
@@ -1678,6 +1680,7 @@
     "messages": {
       "keepFailed": "No se pudo cancelar el cambio previsto.",
       "loadFailed": "No se pudieron cargar los detalles de facturación.",
+      "payFailed": "No se pudo pagar la factura.",
       "portalFailed": "No se pudo abrir el portal de facturación.",
       "portalUnavailable": "El portal de facturación no está disponible.",
       "saveFailed": "No se pudieron guardar los detalles de facturación."
@@ -1747,6 +1750,13 @@
       "refused": "Pago rechazado el {{date}}.",
       "refusedReason": "Pago rechazado el {{date}}: {{reason}}.",
       "transferOverdue": "Factura {{number}} de {{amount}} vencida el {{date}}."
+    },
+    "payment": {
+      "cardUnchanged": "La tarjeta no ha cambiado. Actualícela y después pague.",
+      "failed": "Pago rechazado: {{reason}}.",
+      "openInvoice": "Abrir la factura",
+      "paid": "Factura pagada.",
+      "requiresAction": "Su banco solicita confirmar el pago."
     }
   },
   "branding": {

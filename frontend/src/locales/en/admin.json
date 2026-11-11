@@ -1631,7 +1631,9 @@
     "actions": {
       "changePlan": "Change plan",
       "choosePlan": "Choose plan",
-      "managePayment": "Manage payment"
+      "managePayment": "Manage payment",
+      "payInvoice": "Pay invoice",
+      "updateCardAndPay": "Update card and pay"
     },
     "fields": {
       "addressLine1": "Address line 1",
@@ -1678,6 +1680,7 @@
     "messages": {
       "keepFailed": "Failed to cancel the planned switch.",
       "loadFailed": "Failed to load billing details.",
+      "payFailed": "Failed to pay the invoice.",
       "portalFailed": "Failed to open the billing portal.",
       "portalUnavailable": "Billing portal is unavailable.",
       "saveFailed": "Failed to save billing details."
@@ -1747,6 +1750,13 @@
       "refused": "Payment refused on {{date}}.",
       "refusedReason": "Payment refused on {{date}}: {{reason}}.",
       "transferOverdue": "Invoice {{number}} of {{amount}} was due on {{date}}."
+    },
+    "payment": {
+      "cardUnchanged": "The card has not changed. Update it, then pay.",
+      "failed": "Payment refused: {{reason}}.",
+      "openInvoice": "Open invoice",
+      "paid": "Invoice paid.",
+      "requiresAction": "Your bank asks you to confirm the payment."
     }
   },
   "branding": {

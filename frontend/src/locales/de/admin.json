@@ -1631,7 +1631,9 @@
     "actions": {
       "changePlan": "Plan ändern",
       "choosePlan": "Plan wählen",
-      "managePayment": "Zahlung verwalten"
+      "managePayment": "Zahlung verwalten",
+      "payInvoice": "Rechnung bezahlen",
+      "updateCardAndPay": "Karte aktualisieren und bezahlen"
     },
     "fields": {
       "addressLine1": "Adresszeile 1",
@@ -1678,6 +1680,7 @@
     "messages": {
       "keepFailed": "Der geplante Wechsel konnte nicht storniert werden.",
       "loadFailed": "Abrechnungsdetails konnten nicht geladen werden.",
+      "payFailed": "Die Rechnung konnte nicht bezahlt werden.",
       "portalFailed": "Das Abrechnungsportal konnte nicht geöffnet werden.",
       "portalUnavailable": "Das Abrechnungsportal ist nicht verfügbar.",
       "saveFailed": "Abrechnungsdetails konnten nicht gespeichert werden."
@@ -1747,6 +1750,13 @@
       "refused": "Zahlung am {{date}} abgelehnt.",
       "refusedReason": "Zahlung am {{date}} abgelehnt: {{reason}}.",
       "transferOverdue": "Rechnung {{number}} über {{amount}} war am {{date}} fällig."
+    },
+    "payment": {
+      "cardUnchanged": "Die Karte wurde nicht geändert. Aktualisieren Sie sie und bezahlen Sie dann.",
+      "failed": "Zahlung abgelehnt: {{reason}}.",
+      "openInvoice": "Rechnung öffnen",
+      "paid": "Rechnung bezahlt.",
+      "requiresAction": "Ihre Bank verlangt eine Bestätigung der Zahlung."
     }
   },
   "branding": {

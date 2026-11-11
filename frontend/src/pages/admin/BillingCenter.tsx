@@ -258,7 +258,36 @@ function unpaidLines(subscription: BillingSubscription | null | undefined, t: Tr
   let access: string | null = null;
   if (frozen) access = freezeAt ? t('billing.unpaid.limitedSince', { date: date(freezeAt) }) : t('billing.unpaid.limited');
   else if (freezeAt) access = t('billing.unpaid.limitedOn', { date: date(freezeAt) });
-  return { invoice, access, frozen };
+  // Only a subscription that still runs is paid here; an ended one takes a new plan.
+  const payable = isLiveSubscription(subscription);
+  return { invoice, access, frozen, payable, transfer, invoiceUrl: subscription.latest_invoice_url ?? null };
+}
+
+/** The outcome of `POST /billing/pay-invoice`, called on the return from the portal. */
+type InvoicePaymentStatus = 'paid' | 'payment_failed' | 'requires_action' | 'card_unchanged' | 'nothing_to_pay';
+type PaymentNotice = { tone: 'success' | 'error'; text: string; invoiceUrl?: string | null };
+
+/** The line the page shows after paying the open invoice, or null when there was nothing to pay. */
+function paymentNotice(
+  status: InvoicePaymentStatus | undefined,
+  subscription: BillingSubscription | null | undefined,
+  t: Translate,
+): PaymentNotice | null {
+  switch (status) {
+    case 'paid':
+      return { tone: 'success', text: t('billing.payment.paid') };
+    case 'payment_failed': {
+      const code = subscription?.last_payment_error_code ?? '';
+      const reason = t(`billing.unpaid.reasons.${PAYMENT_ERROR_REASONS.includes(code) ? code : 'other'}`);
+      return { tone: 'error', text: t('billing.payment.failed', { reason }) };
+    }
+    case 'requires_action':
+      return { tone: 'error', text: t('billing.payment.requiresAction'), invoiceUrl: subscription?.latest_invoice_url ?? null };
+    case 'card_unchanged':
+      return { tone: 'error', text: t('billing.payment.cardUnchanged') };
+    default:
+      return null;
+  }
 }
 
 type BillingInterval = 'monthly' | 'annual';
@@ -499,7 +528,7 @@ function InvoicesTable({ invoices, locale, t }: { invoices: BillingInvoice[]; lo
 }
 
 export default function BillingCenter() {
-  const { subscription, claims } = useAuth();
+  const { subscription, claims, refreshMe } = useAuth();
   const { t } = useTranslation(['admin', 'common']);
   const locale = useLocale();
   const { mode } = useTheme().palette;
@@ -511,6 +540,8 @@ export default function BillingCenter() {
   const [justSaved, setJustSaved] = React.useState(false);
   const [keeping, setKeeping] = React.useState(false);
   const [keepError, setKeepError] = React.useState<string | null>(null);
+  const [payNotice, setPayNotice] = React.useState<PaymentNotice | null>(null);
+  const payingRef = React.useRef(false);
   // Back from the card setup page: the plan dialog reopens on the interval to confirm.
   const [confirmInterval, setConfirmInterval] = React.useState<BillingInterval | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -652,11 +683,13 @@ export default function BillingCenter() {
     target?.focus({ preventScroll: true });
   };
 
-  const openPortal = async () => {
+  /** The Stripe customer portal; `payOnReturn` comes back with `pay_invoice=1` to pay the open invoice. */
+  const openPortal = async (payOnReturn = false) => {
     setPortalError(null);
     setOpening(true);
     try {
-      const res = await api.post('/billing/portal', { returnUrl: window.location.origin + '/admin/billing' });
+      const returnUrl = window.location.origin + '/admin/billing' + (payOnReturn ? '?pay_invoice=1' : '');
+      const res = await api.post('/billing/portal', { returnUrl });
       const url = res.data?.url;
       if (url) window.location.href = url;
       else setPortalError(t('billing.messages.portalUnavailable'));
@@ -682,6 +715,41 @@ export default function BillingCenter() {
       setKeeping(false);
     }
   };
+
+  // The portal returns with `pay_invoice=1` once the card is updated: the open invoice is charged
+  // on it now. Once per return (the server also takes the payment only once).
+  const payOnReturn = searchParams.get('pay_invoice') === '1';
+  React.useEffect(() => {
+    if (!payOnReturn) return;
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete('pay_invoice');
+      return next;
+    }, { replace: true });
+    if (!canManage || payingRef.current) return;
+    payingRef.current = true;
+    void (async () => {
+      setPayNotice(null);
+      try {
+        const res = await api.post<BillingSubscription & { payment?: { status?: InvoicePaymentStatus } }>('/billing/pay-invoice');
+        const { payment, ...summary } = res.data ?? {};
+        // A read still running started before the payment: drop it, show the answer, then read
+        // again for the invoice list.
+        await queryClient.cancelQueries({ queryKey: ['billing-profile'] });
+        queryClient.setQueryData<BillingProfileResponse | undefined>(['billing-profile'], (prev) => (
+          prev ? { ...prev, subscription: summary } : prev
+        ));
+        void queryClient.invalidateQueries({ queryKey: ['billing-profile'] });
+        // The banner and the redirect follow the paid invoice.
+        if (payment?.status === 'paid') void refreshMe?.();
+        setPayNotice(paymentNotice(payment?.status, summary, t));
+      } catch (e: any) {
+        setPayNotice({ tone: 'error', text: getApiErrorMessage(e, t, t('billing.messages.payFailed')) });
+      } finally {
+        payingRef.current = false;
+      }
+    })();
+  }, [payOnReturn, canManage, setSearchParams, queryClient, refreshMe, t]);
 
   // The card setup page returns with `card_saved=<interval>`: confirm the switch in the plan dialog.
   const cardSaved = searchParams.get('card_saved');
@@ -767,7 +835,7 @@ export default function BillingCenter() {
                 ))}
                 {cancelled && canManage && (
                   // The cancellation is taken back in the Stripe customer portal.
-                  <Box component="button" type="button" onClick={openPortal} disabled={opening} sx={keepActionSx}>
+                  <Box component="button" type="button" onClick={() => openPortal()} disabled={opening} sx={keepActionSx}>
                     {t('billing.subscription.keepSubscription')}
                   </Box>
                 )}
@@ -799,6 +867,23 @@ export default function BillingCenter() {
               )}
             </Box>
             <Stack direction="row" spacing={1} alignItems="center" sx={{ flexShrink: 0 }}>
+              {unpaid?.payable && !unpaid.transfer && (
+                <Button variant="contained" size="small" onClick={() => openPortal(true)} disabled={!canManage || opening}>
+                  {t('billing.actions.updateCardAndPay')}
+                </Button>
+              )}
+              {unpaid?.payable && unpaid.transfer && unpaid.invoiceUrl && (
+                <Button
+                  variant="contained"
+                  size="small"
+                  component="a"
+                  href={unpaid.invoiceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {t('billing.actions.payInvoice')}
+                </Button>
+              )}
               {paymentPending ? (
                 <Tooltip title={t('planSelection.errors.subscriptionPaymentPending')}>
                   <span>
@@ -818,12 +903,23 @@ export default function BillingCenter() {
                 </Button>
               )}
               {hasSubscription && (
-                <Button variant="action" size="small" onClick={openPortal} disabled={!canManage || opening}>
+                <Button variant="action" size="small" onClick={() => openPortal()} disabled={!canManage || opening}>
                   {opening ? <CircularProgress size={14} sx={{ color: 'inherit' }} /> : t('billing.actions.managePayment')}
                 </Button>
               )}
             </Stack>
           </Box>
+          {payNotice && (
+            <Box role={payNotice.tone === 'error' ? 'alert' : 'status'} sx={{ ...unpaidLineSx, mt: 1 }}>
+              <StatusDot color={getDotColor(payNotice.tone, mode)} />
+              <span>{payNotice.text}</span>
+              {payNotice.invoiceUrl && (
+                <Box component="a" href={payNotice.invoiceUrl} target="_blank" rel="noopener noreferrer" sx={{ ...tealLinkSx, fontSize: 13 }}>
+                  {t('billing.payment.openInvoice')}
+                </Box>
+              )}
+            </Box>
+          )}
           {!canManage && (
             <Typography sx={{ display: 'block', mt: 1, fontSize: 12, color: 'kanap.text.tertiary' }}>
               {t('shared.billingAdminRequired')}

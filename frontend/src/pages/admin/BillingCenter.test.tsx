@@ -73,13 +73,15 @@ function renderPage(
   subscription: Record<string, unknown>,
   profile: { invoice?: Record<string, unknown>; invoice_missing_fields?: string[]; invoices?: unknown[] } = {},
   path = '/admin/billing',
+  /** The subscription the profile carries when read, when it changes during the test. */
+  currentSubscription: () => Record<string, unknown> = () => subscription,
 ) {
   authState.subscription = subscription;
   (api.get as any).mockImplementation(async (url: string) => {
     if (url === '/billing/profile') {
       return {
         data: {
-          subscription,
+          subscription: currentSubscription(),
           customer: EMPTY_CONTACT,
           invoice: profile.invoice ?? EMPTY_CONTACT,
           invoice_missing_fields: profile.invoice_missing_fields ?? [],
@@ -352,6 +354,79 @@ describe('BillingCenter unpaid invoice', () => {
     expect(await screen.findByText('Access limited since 1 Nov 2026.')).toBeInTheDocument();
     expect(screen.getByText('Payment refused on 10 Nov 2099: insufficient funds.')).toBeInTheDocument();
     expect(screen.queryByText(/will be limited/)).not.toBeInTheDocument();
+  });
+
+  it('sends a card subscription to the portal to update the card, marked to pay on the return', async () => {
+    (api.post as any).mockResolvedValue({ data: {} });
+    renderPage(CARD_REFUSED);
+    fireEvent.click(await screen.findByRole('button', { name: 'Update card and pay' }));
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith('/billing/portal', {
+      returnUrl: expect.stringMatching(/\/admin\/billing\?pay_invoice=1$/),
+    }));
+  });
+
+  it('opens the invoice page of a bank transfer subscription', async () => {
+    renderPage(TRANSFER_OVERDUE);
+    const link = await screen.findByRole('link', { name: 'Pay invoice' });
+    expect(link).toHaveAttribute('href', 'https://invoice.stripe.test/kan-0041');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(screen.queryByRole('button', { name: 'Update card and pay' })).not.toBeInTheDocument();
+  });
+
+  /** The page opened on the return from the portal, with the answer of `POST /billing/pay-invoice`. */
+  async function returnFromPortal(answer: Record<string, unknown>) {
+    const { payment: _payment, ...after } = answer;
+    let paid = false;
+    (api.post as any).mockImplementation(async (url: string) => {
+      if (url !== '/billing/pay-invoice') return { data: {} };
+      paid = true;
+      return { data: answer };
+    });
+    // Read again after the payment, the profile carries the summary the payment answered.
+    renderPage(CARD_REFUSED, {}, '/admin/billing?pay_invoice=1', () => (paid ? after : CARD_REFUSED));
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith('/billing/pay-invoice'));
+  }
+
+  it('pays the open invoice once on the return from the portal', async () => {
+    await returnFromPortal({
+      ...CARD_REFUSED,
+      status: 'active',
+      latest_invoice_status: 'paid',
+      last_payment_error_code: null,
+      is_subscription_healthy: true,
+      freeze_effective_at: null,
+      payment: { status: 'paid' },
+    });
+    expect(await screen.findByText('Invoice paid.')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText(/Payment refused on/)).not.toBeInTheDocument());
+    expect((api.post as any).mock.calls.filter(([url]: [string]) => url === '/billing/pay-invoice')).toHaveLength(1);
+  });
+
+  it('says the new card was refused, with its reason', async () => {
+    await returnFromPortal({ ...CARD_REFUSED, last_payment_error_code: 'expired_card', payment: { status: 'payment_failed' } });
+    expect(await screen.findByText('Payment refused: card expired.')).toBeInTheDocument();
+  });
+
+  it('says to update the card first when it has not changed', async () => {
+    await returnFromPortal({ ...CARD_REFUSED, payment: { status: 'card_unchanged' } });
+    expect(await screen.findByText('The card has not changed. Update it, then pay.')).toBeInTheDocument();
+  });
+
+  it('opens the invoice page when the bank asks to confirm the payment', async () => {
+    await returnFromPortal({ ...CARD_REFUSED, payment: { status: 'requires_action' } });
+    expect(await screen.findByText('Your bank asks you to confirm the payment.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open invoice' })).toHaveAttribute('href', 'https://invoice.stripe.test/kan-0041');
+  });
+
+  it('pays nothing on the return for a user who cannot manage billing', async () => {
+    authState.claims = { isBillingAdmin: false };
+    try {
+      renderPage(CARD_REFUSED, {}, '/admin/billing?pay_invoice=1');
+      expect(await screen.findByRole('button', { name: 'Update card and pay' })).toBeDisabled();
+      expect(api.post).not.toHaveBeenCalled();
+    } finally {
+      authState.claims = { isBillingAdmin: true };
+    }
   });
 
   it('shows nothing of the kind once the invoice is paid', async () => {
