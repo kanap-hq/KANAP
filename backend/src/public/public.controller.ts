@@ -17,7 +17,8 @@ import { AuthService } from '../auth/auth.service';
 import { RateLimitGuard } from '../common/rate-limit.guard';
 import { RATE_LIMITS } from '../common/rate-limit';
 import { clientAddress } from '../common/client-address';
-import { enrollTrialMails, TRIAL_MAIL_FOUNDER } from '../email/trial-mails/trial-mails.service';
+import { enrollTrialMails } from '../email/trial-mails/trial-mails.service';
+import { trialMailFounder } from '../email/trial-mails/trial-mail-founder';
 import { withTenant } from '../common/tenant-runner';
 import { TurnstileService } from './turnstile.service';
 import { Subscription, SubscriptionStatus } from '../billing/subscription.entity';
@@ -428,7 +429,7 @@ export class PublicController {
         text: activation.text,
         attachments: activation.attachments,
         // A reply reaches Friedrich, as for the trial e-mails that follow.
-        replyTo: TRIAL_MAIL_FOUNDER,
+        replyTo: trialMailFounder(),
       });
     } catch (error: any) {
       if (error?.code === 'FEATURE_DISABLED') {

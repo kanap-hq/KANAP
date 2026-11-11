@@ -1,7 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { DataSource, EntityManager } from 'typeorm';
 import { Features } from '../../config/features';
-import { PRODUCT_NAME } from '../../config/product';
 import { withTenant } from '../../common/tenant-runner';
 import { NeverRejects } from '../../common/never-rejects';
 import { APP_URL_NOT_CONFIGURED_MESSAGE, resolveConfiguredAppBaseUrl } from '../../common/url';
@@ -38,11 +37,9 @@ import {
   type TrialCallLink,
   type TrialMode,
 } from './trial-mail-templates';
+import { trialMailFounder } from './trial-mail-founder';
 import { parseTrialMailLinkToken, sameLinkToken, trialMailLinkToken, trialMailLinkUrl } from './trial-mail-links';
 
-/** Friedrich, who signs the trial e-mails, sends J+5 and gets the replies of the others. */
-export const TRIAL_MAIL_FOUNDER_ADDRESS = 'fried@kanap.net';
-export const TRIAL_MAIL_FOUNDER = `"Friedrich (${PRODUCT_NAME})" <${TRIAL_MAIL_FOUNDER_ADDRESS}>`;
 /** Workspaces whose trial started longer ago are no longer looked at (trial, then 30 days, then margin). */
 const TRIAL_MAIL_HORIZON_DAYS = 90;
 const DEFAULT_MARKETING_URL = 'https://kadratis.com';
@@ -348,7 +345,7 @@ export class TrialMailsService implements OnModuleInit {
       text: content.text,
       attachments: content.attachments,
       // J+5 is Friedrich's own note; the others leave from the application and come back to him.
-      ...(facts.milestone === 'j5' ? { from: TRIAL_MAIL_FOUNDER } : { replyTo: TRIAL_MAIL_FOUNDER }),
+      ...(facts.milestone === 'j5' ? { from: trialMailFounder() } : { replyTo: trialMailFounder() }),
       ...(trialSequence
         ? { headers: { 'List-Unsubscribe': `<${unsubscribeUrl}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' } }
         : {}),
