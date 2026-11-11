@@ -18,6 +18,13 @@ import { createAppTheme } from '../config/ThemeContext';
 
 const theme = createAppTheme('light');
 
+// jsdom has no clipboard event and no drag event; the editor names both classes when it reads a paste.
+for (const name of ['ClipboardEvent', 'DragEvent']) {
+  if (!(name in globalThis)) {
+    Object.defineProperty(globalThis, name, { value: { [name]: class extends Event {} }[name], configurable: true, writable: true });
+  }
+}
+
 /** Name of the global a handler attribute of the texts below sets when it runs. */
 export const HANDLER_FLAG = 'richTextHandlerRan';
 
@@ -361,6 +368,54 @@ export async function mountEditor(text: string, { disabled = false }: { disabled
       await settle();
       await settle();
     },
+    /** A paste of nodes in the editor's own clipboard format, at the end of the text. */
+    async pasteEditorNodes(nodes: unknown[]) {
+      const editor = (content() as unknown as { __lexicalEditor: LexicalEditor }).__lexicalEditor;
+      const format = 'application/x-lexical-editor';
+      const payload = JSON.stringify({ namespace: editor._config.namespace, nodes });
+      await act(async () => {
+        editor.update(() => {
+          $getRoot().selectEnd();
+        }, { tag: SKIP_SCROLL_INTO_VIEW_TAG });
+      });
+      const event = new ClipboardEvent('paste', { bubbles: true, cancelable: true });
+      Object.defineProperty(event, 'clipboardData', {
+        value: { getData: (type: string) => (type === format ? payload : ''), types: [format], files: [] },
+      });
+      await act(async () => {
+        content().dispatchEvent(event);
+      });
+      await settle();
+    },
     unmount: view.unmount,
   };
+}
+
+/** An HTML element as the editor's own clipboard format writes it. */
+export function editorHtmlNode(
+  tag: string,
+  attributes: Array<[name: string, value: string]>,
+  { inline = false, children = [] as unknown[] } = {},
+) {
+  return {
+    type: 'generic-html',
+    tag,
+    mdxType: inline ? 'mdxJsxTextElement' : 'mdxJsxFlowElement',
+    attributes: attributes.map(([name, value]) => ({ type: 'mdxJsxAttribute', name, value })),
+    children,
+    direction: null,
+    format: '',
+    indent: 0,
+    version: 1,
+  };
+}
+
+/** A text as the editor's own clipboard format writes it; `format` is the editor's own number for its formats. */
+export function editorTextNode(text: string, format = 0) {
+  return { type: 'text', text, format, detail: 0, mode: 'normal', style: '', version: 1 };
+}
+
+/** A paragraph as the editor's own clipboard format writes it. */
+export function editorParagraphNode(children: unknown[]) {
+  return { type: 'paragraph', children, direction: null, format: '', indent: 0, textFormat: 0, textStyle: '', version: 1 };
 }

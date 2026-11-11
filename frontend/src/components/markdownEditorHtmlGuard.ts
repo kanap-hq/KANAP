@@ -1,5 +1,20 @@
-import { addImportVisitor$, DEFAULT_FORMAT, realmPlugin, type MdastImportVisitor } from '@mdxeditor/editor';
-import { $createParagraphNode, $createTextNode, type ElementNode } from 'lexical';
+import {
+  addImportVisitor$,
+  createActiveEditorSubscription$,
+  createRootEditorSubscription$,
+  DEFAULT_FORMAT,
+  GenericHTMLNode,
+  realmPlugin,
+  type MdastImportVisitor,
+} from '@mdxeditor/editor';
+import {
+  $createParagraphNode,
+  $createTextNode,
+  $isRootOrShadowRoot,
+  type ElementNode,
+  type LexicalEditor,
+  type LexicalNode,
+} from 'lexical';
 import type {
   MdxJsxAttribute,
   MdxJsxExpressionAttribute,
@@ -17,21 +32,27 @@ function isHtmlElementNode(node: { type: string }): node is HtmlElementNode {
   return node.type === 'mdxJsxTextElement' || node.type === 'mdxJsxFlowElement';
 }
 
-/** True for the elements of `RICH_TEXT_HTML_ELEMENTS`, in the only form the list accepts. */
-export function isRichTextHtmlElement(node: HtmlElementNode): boolean {
-  const name = node.name ?? '';
-  if (isRichTextBareElementName(name)) return node.attributes.length === 0;
-  if (name !== 'img' || node.children.length > 0) return false;
+type HtmlAttribute = MdxJsxAttribute | MdxJsxExpressionAttribute;
+
+/** True for an element of `RICH_TEXT_HTML_ELEMENTS`, in the only form the list accepts. */
+function isAcceptedElement(name: string, attributes: HtmlAttribute[], hasChildren: boolean): boolean {
+  if (isRichTextBareElementName(name)) return attributes.length === 0;
+  if (name !== 'img' || hasChildren) return false;
   let hasSource = false;
-  for (const attribute of node.attributes) {
-    if (attribute.type !== 'mdxJsxAttribute' || typeof attribute.value !== 'string') return false;
+  for (const attribute of attributes) {
+    if (attribute?.type !== 'mdxJsxAttribute' || typeof attribute.value !== 'string') return false;
     if (!isRichTextImageAttribute(attribute.name, attribute.value)) return false;
     if (attribute.name === 'src') hasSource = true;
   }
   return hasSource;
 }
 
-function attributeText(attribute: MdxJsxAttribute | MdxJsxExpressionAttribute): string {
+/** True for the elements of `RICH_TEXT_HTML_ELEMENTS`, in the only form the list accepts. */
+export function isRichTextHtmlElement(node: HtmlElementNode): boolean {
+  return isAcceptedElement(node.name ?? '', node.attributes, node.children.length > 0);
+}
+
+function attributeText(attribute: HtmlAttribute): string {
   if (attribute.type !== 'mdxJsxAttribute') return ` {${attribute.value}}`;
   const { name, value } = attribute;
   if (value === null || value === undefined) return ` ${name}`;
@@ -39,8 +60,8 @@ function attributeText(attribute: MdxJsxAttribute | MdxJsxExpressionAttribute): 
   return value.includes('"') ? ` ${name}='${value}'` : ` ${name}="${value}"`;
 }
 
-function openingTagText(node: HtmlElementNode, selfClosing: boolean): string {
-  return `<${node.name ?? ''}${node.attributes.map(attributeText).join('')}${selfClosing ? ' />' : '>'}`;
+function openingTagText(name: string, attributes: HtmlAttribute[], selfClosing: boolean): string {
+  return `<${name}${attributes.map(attributeText).join('')}${selfClosing ? ' />' : '>'}`;
 }
 
 /**
@@ -65,7 +86,7 @@ const htmlAsTextVisitor: MdastImportVisitor<HtmlElementNode> = {
     };
 
     const empty = mdastNode.children.length === 0;
-    appendText(openingTagText(mdastNode, empty));
+    appendText(openingTagText(mdastNode.name ?? '', mdastNode.attributes, empty));
     if (empty) return;
     // The content keeps the formatting of the text around the element.
     actions.addFormatting(DEFAULT_FORMAT);
@@ -74,8 +95,44 @@ const htmlAsTextVisitor: MdastImportVisitor<HtmlElementNode> = {
   },
 };
 
+/**
+ * The same rule on the editor's own node of an HTML element, however the node came to be (the
+ * editor's clipboard format carries such nodes as they are, past the reading of a text): an element
+ * outside `RICH_TEXT_HTML_ELEMENTS` is replaced by its opening tag as text, its content, its
+ * closing tag as text. It runs before the editor builds the page, so the element never exists.
+ */
+function $showHtmlElementAsText(node: GenericHTMLNode): void {
+  const name = String(node.getTag() ?? '');
+  const given: unknown = node.getAttributes();
+  const attributes = (Array.isArray(given) ? given : []).filter(
+    (attribute): attribute is HtmlAttribute => typeof attribute === 'object' && attribute !== null,
+  );
+  const children = node.getChildren();
+  if (Array.isArray(given) && attributes.length === given.length && isAcceptedElement(name, attributes, children.length > 0)) {
+    return;
+  }
+
+  const inline = node.isInline() && !$isRootOrShadowRoot(node.getParent());
+  // In a line, a piece stays as it is; among blocks, a piece that is not a block gets a paragraph.
+  const place = (piece: LexicalNode) => {
+    node.insertBefore(inline || !piece.isInline() ? piece : $createParagraphNode().append(piece));
+  };
+  place($createTextNode(openingTagText(name, attributes, children.length === 0)));
+  if (children.length > 0) {
+    children.forEach(place);
+    place($createTextNode(`</${name}>`));
+  }
+  node.remove();
+}
+
+const registerHtmlAsTextTransform = (editor: LexicalEditor) =>
+  editor.registerNodeTransform(GenericHTMLNode, $showHtmlElementAsText);
+
 export const htmlAsTextPlugin = realmPlugin({
   init(realm) {
     realm.pub(addImportVisitor$, htmlAsTextVisitor);
+    // The editor of the text, and each editor inside it (a table cell, a note) once a person is in it.
+    realm.pub(createRootEditorSubscription$, registerHtmlAsTextTransform);
+    realm.pub(createActiveEditorSubscription$, registerHtmlAsTextTransform);
   },
 });

@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  editorHtmlNode,
+  editorParagraphNode,
+  editorTextNode,
   foreignMarkup,
   HANDLER_FLAG,
   HTML_ELEMENT_TEXTS,
@@ -154,6 +157,61 @@ describe('MarkdownEditor: a stored text with HTML elements', () => {
     expect(foreignMarkup(editor.content())).toEqual([]);
     expect(editor.content().textContent).toBe('avant <section>texte</section> souligné après');
     expect(editor.onChange).not.toHaveBeenCalled();
+
+    editor.unmount();
+  });
+});
+
+describe("MarkdownEditor: a paste in the editor's own clipboard format", () => {
+  it('shows an element outside the accepted list as text', async () => {
+    const editor = await mountEditor('texte simple');
+
+    await editor.pasteEditorNodes([
+      editorHtmlNode('section', [['onclick', `globalThis.${HANDLER_FLAG} = true`]], {
+        children: [editorParagraphNode([editorTextNode('bloc')])],
+      }),
+      editorHtmlNode('form', [['action', 'https://exemple.test/f']]),
+      editorParagraphNode([
+        editorTextNode('avant '),
+        editorHtmlNode('span', [['style', 'color: red']], { inline: true, children: [editorTextNode('milieu')] }),
+        editorTextNode(' après'),
+      ]),
+      editorHtmlNode('u', [['class', 'x']], { inline: true, children: [editorTextNode('souligné')] }),
+    ]);
+
+    expect(editor.content().querySelector('section, form, span[style], u')).toBeNull();
+    expect(foreignMarkup(editor.content())).toEqual([]);
+    const shown = editor.content().textContent ?? '';
+    for (const tag of ['<section onclick=', '</section>', '<form action="https://exemple.test/f" />', '<span style="color: red">milieu</span>', '<u class="x">souligné</u>']) {
+      expect(shown).toContain(tag);
+    }
+    expect((globalThis as Record<string, unknown>)[HANDLER_FLAG]).toBeUndefined();
+    expect(editor.lastChange()).toContain('\\<section onclick');
+    expect(editor.lastChange()).not.toMatch(/(^|[^\\])<(section|form|span|u)\b/);
+
+    editor.unmount();
+  });
+
+  it('keeps underline, subscript and superscript', async () => {
+    const editor = await mountEditor('texte simple');
+    const UNDERLINE = 8;
+    const SUBSCRIPT = 32;
+    const SUPERSCRIPT = 64;
+
+    await editor.pasteEditorNodes([
+      editorParagraphNode([
+        editorTextNode(' '),
+        editorTextNode('souligné', UNDERLINE),
+        editorTextNode(' H'),
+        editorTextNode('2', SUBSCRIPT),
+        editorTextNode('O x'),
+        editorTextNode('2', SUPERSCRIPT),
+      ]),
+    ]);
+
+    expect(editor.content().querySelector('sub')?.textContent).toBe('2');
+    expect(editor.content().querySelector('sup')?.textContent).toBe('2');
+    expect(editor.lastChange()).toBe('texte simple <u>souligné</u> H<sub>2</sub>O x<sup>2</sup>');
 
     editor.unmount();
   });
