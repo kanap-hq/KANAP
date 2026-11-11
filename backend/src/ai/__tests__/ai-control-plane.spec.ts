@@ -14320,6 +14320,7 @@ async function runTriageWithSimulatedModel(input: {
   runId?: string;
   administrativeReply?: () => unknown;
   technicianBrief?: () => unknown;
+  knowledge?: Record<string, unknown>;
 }) {
   const manager = input.manager ?? createMemoryManager().manager;
   const context = createContext(manager);
@@ -14338,12 +14339,13 @@ async function runTriageWithSimulatedModel(input: {
   definitionBundle.definition.scope_policy_json = {
     ...(definitionBundle.definition.scope_policy_json ?? {}),
     knowledge_sources: {
-      knowledge: { enabled: true, all_libraries: true, library_ids: [] },
+      knowledge: input.knowledge ?? { enabled: true, all_libraries: true, library_ids: [] },
       web: { enabled: true },
       precedence: 'knowledge_first',
     },
   };
   await manager.getRepository(AiAgentDefinition).save(definitionBundle.definition);
+  const capabilityCalls: string[] = [];
   const prepared: { publicReply: string | null; internalNote: string | null } = { publicReply: null, internalNote: null };
   let toolIndex = 0;
   const runId = input.runId ?? 'run-two-calls';
@@ -14369,6 +14371,7 @@ async function runTriageWithSimulatedModel(input: {
   }));
   const dispatcher = {
     execute: async (_context: unknown, request: any) => {
+      capabilityCalls.push(request.capabilityName);
       toolIndex += 1;
       const toolExecutionId = `two-calls-tool-${toolIndex}`;
       const ok = (data: unknown) => ({ run_id: runId, step_id: `step-${toolIndex}`, tool_execution_id: toolExecutionId, output: { ok: true, data, evidence: [] } });
@@ -14502,7 +14505,7 @@ async function runTriageWithSimulatedModel(input: {
     (Features as any).AI_WEB_SEARCH_READY = previousWebReady;
   }
   const run = await manager.getRepository(AiRun).findOne({ where: { id: runId, tenant_id: context.tenantId } });
-  return { calls, ...prepared, manager, context, run };
+  return { calls, ...prepared, manager, context, run, capabilityCalls };
 }
 
 function payloadOf(calls: Array<{ taskName: string; payload: unknown }>, taskName: string): string {
@@ -14721,6 +14724,18 @@ async function testTheInternalNoteSaysWhyItHasNoBrief() {
     },
   });
   assert.match(result.internalNote ?? '', /No synthesis brief was produced \(reason: technician_brief_error\)\./);
+}
+
+async function testAnAgentWithoutLibrariesSearchesNoKnowledge() {
+  const closed = await runTriageWithSimulatedModel({
+    notes: triageNotes(true),
+    plan: TRIAGE_SOURCED_PLAN,
+    reply: TRIAGE_SOURCED_REPLY,
+    knowledge: { enabled: true, all_libraries: false, library_ids: [] },
+  });
+  assert.equal(closed.capabilityCalls.includes('search_knowledge'), false);
+  const open = await runTriageWithSimulatedModel({ notes: triageNotes(true), plan: TRIAGE_SOURCED_PLAN, reply: TRIAGE_SOURCED_REPLY });
+  assert.equal(open.capabilityCalls.includes('search_knowledge'), true);
 }
 
 async function testTriageWithoutInternalNoteKeepsOneReplyCall() {
@@ -17434,6 +17449,7 @@ async function run() {
   await testAPlanWithoutItsCloseReplyDoesNotClose();
   await testAFailedDraftKeepsThePendingReplyOfTheSameDecision();
   await testTheInternalNoteSaysWhyItHasNoBrief();
+  await testAnAgentWithoutLibrariesSearchesNoKnowledge();
   testSynthesisPromptPrefersInternalKnowledgeSources();
   testSynthesisPromptCarriesValidationStatus();
   testSynthesisPayloadIncludesScreenshotEvidence();

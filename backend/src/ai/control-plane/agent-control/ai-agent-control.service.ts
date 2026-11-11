@@ -4383,8 +4383,10 @@ export class AiAgentControlService {
       // get_document for top hits), but best-effort: for a monitoring
       // diagnosis every enrichment source is optional and the deterministic
       // alert evidence must survive any retrieval failure.
-      const knowledgeQueryCandidates = knowledgeSources.knowledgeEnabled ? retrievalQueryCandidates : [];
-      let knowledgeStatus: string = knowledgeSources.knowledgeEnabled ? 'executed' : 'disabled_by_agent';
+      // An agent with no library to cite searches none.
+      const knowledgeSearchable = knowledgeSources.knowledgeEnabled && knowledgeSources.knowledgeLibraryIds?.length !== 0;
+      const knowledgeQueryCandidates = knowledgeSearchable ? retrievalQueryCandidates : [];
+      let knowledgeStatus: string = knowledgeSearchable ? 'executed' : 'disabled_by_agent';
       const knowledgeAttempts: Array<{ query: string; items: KnowledgeSearchItem[] }> = [];
       for (const [candidateIndex, knowledgeQuery] of knowledgeQueryCandidates.entries()) {
         try {
@@ -5471,7 +5473,8 @@ export class AiAgentControlService {
     let selectedKnowledgeItems: KnowledgeSearchItem[] = [];
     let unvalidatedKnowledgeItems: KnowledgeSearchItem[] = [];
     let knowledgeLowRelevance: Array<{ ref: string | null; title: string | null; score: number | null; lexical_overlap: number; reason: string }> = [];
-    if (!knowledgeSources.knowledgeEnabled) {
+    // An agent with no library to cite searches none.
+    if (!knowledgeSources.knowledgeEnabled || knowledgeSources.knowledgeLibraryIds?.length === 0) {
       // Knowledge search is disabled for this agent — gather no KANAP knowledge so the
       // triage relies on the LLM (and web, when enabled). The plan/interpretation are kept
       // as valid empty structures for the downstream audit metadata.
