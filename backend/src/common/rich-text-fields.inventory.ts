@@ -68,14 +68,18 @@ export const RICH_TEXT_FIELDS: RichTextField[] = [
   {
     // `purpose` and `risks` are stored in the bound documents of the request.
     field: 'portfolio_requests.current_situation, expected_benefits, purpose, risks',
-    checkedIn: [{ file: 'portfolio/portfolio-requests.service.ts', routes: ['api', 'csv', 'assistant'] }],
+    checkedIn: [
+      { file: 'portfolio/portfolio-requests.service.ts', routes: ['api', 'assistant'] },
+      { file: 'portfolio/portfolio-request-csv.config.ts', routes: ['csv'] },
+    ],
   },
   {
     // Stored in the bound document of the project.
     field: 'portfolio_projects.purpose',
     checkedIn: [
-      { file: 'portfolio/services/portfolio-projects-base.service.ts', routes: ['api', 'csv', 'assistant'] },
-      { file: 'portfolio/services/portfolio-projects-crud.service.ts', routes: ['api', 'csv', 'assistant'] },
+      { file: 'portfolio/services/portfolio-projects-base.service.ts', routes: ['api', 'assistant'] },
+      { file: 'portfolio/services/portfolio-projects-crud.service.ts', routes: ['api', 'assistant'] },
+      { file: 'portfolio/portfolio-project-csv.config.ts', routes: ['csv'] },
     ],
   },
   {

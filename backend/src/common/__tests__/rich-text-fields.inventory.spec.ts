@@ -100,6 +100,7 @@ async function testEveryFieldRefusesOtherTagsThroughItsRoutes() {
 
   let tenant: ActivatedTenant | undefined;
   const failures: string[] = [];
+  /** `<field> by <api|csv>` for every probe that ran. */
   const probed = new Set<string>();
   try {
     tenant = await createActivatedTenant(svc, { tag: 'richtext', orgName: 'Rich text fields' });
@@ -156,12 +157,16 @@ async function testEveryFieldRefusesOtherTagsThroughItsRoutes() {
     type Probe = {
       field: string;
       route: string;
+      /** `csv` for an import of a file; the page's API otherwise. */
+      kind?: 'api' | 'csv';
+      /** The name the refusal gives the field, when the spec knows it. */
+      named?: string;
       write: (text: string) => Promise<Reply>;
       store?: (text: string) => Promise<unknown>;
       stored?: () => Promise<string | null | undefined>;
     };
     const check = async (probe: Probe) => {
-      probed.add(probe.field);
+      probed.add(`${probe.field} by ${probe.kind ?? 'api'}`);
       const at = `${probe.field} by ${probe.route}`;
       try {
         const accepted = await probe.write(ACCEPTED);
@@ -170,7 +175,11 @@ async function testEveryFieldRefusesOtherTagsThroughItsRoutes() {
           const refused = await probe.write(text);
           if (refused.status !== 400 || refused.json?.code !== MARKDOWN_HTML_NOT_ALLOWED) {
             failures.push(`${at}: a tag ${where} is refused, got ${show(refused)}`);
-          } else if (typeof refused.json?.field !== 'string' || refused.json?.example !== TAG.slice(0, TAG.indexOf('>') + 1)) {
+          } else if (
+            typeof refused.json?.field !== 'string'
+            || (probe.named !== undefined && refused.json.field !== probe.named)
+            || refused.json?.example !== TAG.slice(0, TAG.indexOf('>') + 1)
+          ) {
             failures.push(`${at}: the refusal names the field and the tag, got ${show(refused)}`);
           }
         }
@@ -233,6 +242,7 @@ async function testEveryFieldRefusesOtherTagsThroughItsRoutes() {
     await check({
       field: 'tasks.description',
       route: 'POST /tasks/import (CSV)',
+      kind: 'csv',
       write: async (text) => csvReply(
         await upload('/tasks/import?dryRun=true&mode=enrich&operation=upsert', `id;title;description\n${task.id};Rich text task, imported;${csvCell(text)}\n`),
         'description',
@@ -275,6 +285,20 @@ async function testEveryFieldRefusesOtherTagsThroughItsRoutes() {
         field: 'portfolio_requests.current_situation, expected_benefits, purpose, risks',
         route: `PATCH /portfolio/requests/:id (${name})`,
         write: (text) => api('PATCH', `/portfolio/requests/${request.id}`, { [name]: text, name: `Rich text request, edited ${++requestCount}` }),
+        ...storage,
+      });
+      await check({
+        field: 'portfolio_requests.current_situation, expected_benefits, purpose, risks',
+        route: `POST /portfolio/requests/import (CSV, ${name})`,
+        kind: 'csv',
+        named: name,
+        write: async (text) => csvReply(
+          await upload(
+            '/portfolio/requests/import?dryRun=true&mode=enrich&operation=upsert',
+            `id;name;${name}\n${request.id};Rich text request, imported ${++requestCount};${csvCell(text)}\n`,
+          ),
+          name,
+        ),
         ...storage,
       });
     }
@@ -322,6 +346,19 @@ async function testEveryFieldRefusesOtherTagsThroughItsRoutes() {
       write: (text) => api('PATCH', `/portfolio/projects/${project.id}`, { purpose: text, name: `Rich text project, edited ${++projectCount}` }),
       ...boundDocument('projects', 'purpose', () => project.id),
     });
+    await check({
+      field: 'portfolio_projects.purpose',
+      route: 'POST /portfolio/projects/import (CSV)',
+      kind: 'csv',
+      write: async (text) => csvReply(
+        await upload(
+          '/portfolio/projects/import?dryRun=true&mode=enrich&operation=upsert',
+          `id;name;purpose\n${project.id};Rich text project, imported ${++projectCount};${csvCell(text)}\n`,
+        ),
+        'purpose',
+      ),
+      ...boundDocument('projects', 'purpose', () => project.id),
+    });
     const projectComment = ok('a project comment', await api('POST', `/portfolio/projects/${project.id}/comments`, { content: 'Plain.' }));
     await check({
       field: 'portfolio_activities.content',
@@ -333,6 +370,24 @@ async function testEveryFieldRefusesOtherTagsThroughItsRoutes() {
       route: 'PATCH /portfolio/projects/:id/comments/:activityId',
       write: (text) => api('PATCH', `/portfolio/projects/${project.id}/comments/${projectComment.id}`, { content: text }),
       ...column('portfolio_activities', 'content', () => projectComment.id),
+    });
+
+    // --- Incidents (the review, a bound document) -----------------------------
+    const incident = ok('an incident', await api('POST', '/incidents', { title: 'Rich text incident', severity: 'minor' }));
+    let incidentCount = 0;
+    await check({
+      field: 'documents:integrated',
+      route: 'POST /incidents/import (CSV)',
+      kind: 'csv',
+      named: 'review',
+      write: async (text) => csvReply(
+        await upload(
+          '/incidents/import?dryRun=true&mode=enrich&operation=upsert',
+          `ref;title;severity;review\nINC-${incident.item_number};Rich text incident, imported ${++incidentCount};minor;${csvCell(text)}\n`,
+        ),
+        'review',
+      ),
+      ...boundDocument('incidents', 'review', () => incident.id),
     });
 
     // --- Knowledge documents and their comments -----------------------------
@@ -391,6 +446,7 @@ async function testEveryFieldRefusesOtherTagsThroughItsRoutes() {
     await check({
       field: 'applications.description',
       route: 'POST /applications/import (CSV)',
+      kind: 'csv',
       write: async (text) => csvReply(
         await upload('/applications/import?dryRun=true&mode=enrich&operation=upsert', `id;name;description\n${application.id};Rich text application;${csvCell(text)}\n`),
         'description',
@@ -433,6 +489,7 @@ async function testEveryFieldRefusesOtherTagsThroughItsRoutes() {
     await check({
       field: 'contracts.notes',
       route: 'POST /contracts/import (CSV)',
+      kind: 'csv',
       write: async (text) => csvReply(
         await upload('/contracts/import?dryRun=true', [
           'name;company_name;supplier_name;start_date;duration_months;auto_renewal;notice_period_months;yearly_amount_at_signature;currency;billing_frequency;status;owner_email;notes',
@@ -482,6 +539,7 @@ async function testEveryFieldRefusesOtherTagsThroughItsRoutes() {
     await check({
       field: 'assets.notes',
       route: 'POST /assets/import (CSV)',
+      kind: 'csv',
       write: async (text) => csvReply(
         await upload(
           '/assets/import?dryRun=true&mode=enrich&operation=upsert',
@@ -507,10 +565,21 @@ async function testEveryFieldRefusesOtherTagsThroughItsRoutes() {
   }
 
   assert.deepEqual(failures, [], `every rich-text field follows the rule through its routes:\n  ${failures.join('\n  ')}`);
+  // Every route the inventory declares for a field, among those this spec can drive, is played.
+  const declared = RICH_TEXT_FIELDS
+    .filter((field) => !(field.field in NOT_DRIVEN))
+    .flatMap((field) => [...new Set(field.checkedIn.flatMap((entry) => entry.routes))]
+      .filter((route) => route === 'api' || route === 'csv')
+      .map((route) => `${field.field} by ${route}`));
   assert.deepEqual(
-    RICH_TEXT_FIELDS.map((field) => field.field).filter((field) => !probed.has(field) && !(field in NOT_DRIVEN)),
+    declared.filter((route) => !probed.has(route)),
     [],
-    'a field of the inventory is written by no route of this spec',
+    'a route the inventory declares for a field is played by no probe of this spec',
+  );
+  assert.deepEqual(
+    [...probed].filter((route) => !declared.includes(route)),
+    [],
+    'a probe of this spec plays a route the inventory does not declare',
   );
 }
 

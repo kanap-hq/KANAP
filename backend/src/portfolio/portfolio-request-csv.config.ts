@@ -3,8 +3,12 @@ import {
   CsvFieldType,
   CsvImportContext,
 } from '../common/csv';
+import { richTextCell } from '../common/csv/rich-text-cell';
 import { allocateItemNumbers } from '../common/item-number.service';
-import { sameAsStoredWithDocuments } from '../knowledge/integrated-document-bodies';
+import { keepStoredSlotBodies, sameAsStoredWithDocuments } from '../knowledge/integrated-document-bodies';
+
+/** The texts of a request that live in bound documents, with the slot of each. */
+const DOCUMENT_SLOTS = { purpose: 'purpose', risks: 'risks_mitigations' } as const;
 
 // Status label to code mapping
 const statusLookup = new Map<string, string>([
@@ -90,6 +94,8 @@ export const portfolioRequestCsvConfig: CsvEntityConfig = {
       defaultExport: true,
       label: 'Purpose',
       group: 'Overview',
+      // Rich text: same rules as in the editor of the request.
+      importTransformFn: richTextCell('purpose'),
     },
     {
       csvColumn: 'status',
@@ -240,6 +246,8 @@ export const portfolioRequestCsvConfig: CsvEntityConfig = {
       defaultExport: false,
       label: 'Risks',
       group: 'Analysis',
+      // Rich text: same rules as in the editor of the request.
+      importTransformFn: richTextCell('risks'),
     },
     {
       csvColumn: 'current_situation',
@@ -249,6 +257,8 @@ export const portfolioRequestCsvConfig: CsvEntityConfig = {
       defaultExport: false,
       label: 'Current Situation',
       group: 'Analysis',
+      // Rich text: same rules as in the editor of the request.
+      importTransformFn: richTextCell('current_situation'),
     },
     {
       csvColumn: 'expected_benefits',
@@ -258,6 +268,8 @@ export const portfolioRequestCsvConfig: CsvEntityConfig = {
       defaultExport: false,
       label: 'Expected Benefits',
       group: 'Analysis',
+      // Rich text: same rules as in the editor of the request.
+      importTransformFn: richTextCell('expected_benefits'),
     },
 
     // === SCORING TAB ===
@@ -333,8 +345,11 @@ export const portfolioRequestCsvConfig: CsvEntityConfig = {
     },
   ],
 
+  /** A purpose or risks cell that repeats its document is kept as stored, whatever tags it holds. */
+  afterValidate: (rows, context) => keepStoredSlotBodies(rows, context, 'requests', DOCUMENT_SLOTS),
+
   /** The purpose and the risks live in bound documents (the CSV service writes them there), the rest in columns. */
-  sameAsStored: (rows, context) => sameAsStoredWithDocuments(rows, context, 'requests', { purpose: 'purpose', risks: 'risks_mitigations' }, normalizeCodes),
+  sameAsStored: (rows, context) => sameAsStoredWithDocuments(rows, context, 'requests', DOCUMENT_SLOTS, normalizeCodes),
 
   /**
    * Hook to normalize status values before commit.
