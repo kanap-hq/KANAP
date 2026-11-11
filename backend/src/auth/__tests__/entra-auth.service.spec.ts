@@ -191,7 +191,14 @@ async function testConsentStateIsSignedForItsOwnUse() {
     assert.throws(() => verifyConsentState(jwt.sign({ purpose, tenantId: 'tenant-1' }, 'another-key', { expiresIn: '5m' })), refused);
     assert.throws(() => verifyConsentState(jwt.sign({ tenantId: 'tenant-1' }, stateSecret, { expiresIn: '5m' })), refused);
     assert.throws(() => verifyConsentState(jwt.sign({ purpose }, stateSecret, { expiresIn: '5m' })), refused);
-    assert.throws(() => verifyConsentState(jwt.sign({ purpose, tenantId: 'tenant-1' }, stateSecret, { expiresIn: -60 })), refused);
+    // Past its lifetime, a state the application signed for consent still names its workspace, and says so.
+    const past = verifyConsentState(jwt.sign({ purpose, tenantId: 'tenant-1' }, stateSecret, { expiresIn: -60 })) as Record<string, unknown>;
+    assert.equal(past.tenantId, 'tenant-1');
+    assert.equal(past.expired, true);
+    assert.equal((verifyConsentState(token) as Record<string, unknown>).expired, false);
+    // Not so for an expired state signed with another key or for another use.
+    assert.throws(() => verifyConsentState(jwt.sign({ purpose, tenantId: 'tenant-1' }, 'another-key', { expiresIn: -60 })), refused);
+    assert.throws(() => verifyConsentState(jwt.sign({ purpose: ENTRA_STATE_PURPOSE, tenantId: 'tenant-1' }, stateSecret, { expiresIn: -60 })), refused);
     // A state without an expiry is not short lived.
     assert.throws(() => verifyConsentState(jwt.sign({ purpose, tenantId: 'tenant-1' }, stateSecret)), refused);
     assert.equal(verifyConsentState(jwt.sign({ purpose, tenantId: 'tenant-1' }, stateSecret, { expiresIn: '5m' })).tenantId, 'tenant-1');

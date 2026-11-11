@@ -330,14 +330,16 @@ export class EntraAuthService {
 
   /**
    * The workspace named by the state of an admin-consent return. The state must be signed with the
-   * state key, typed for consent, within its lifetime: a sign-in or setup state is refused here, as
-   * a consent state is by `verifyState`.
+   * state key and typed for consent: a sign-in or setup state is refused here, as a consent state
+   * is by `verifyState`. The lifetime is read here, not by `jwt.verify`, so that a state this
+   * application signed is still recognised once `expired`: the caller acts only on one that is not.
    */
-  verifyConsentState(token: string): { tenantId: string } {
+  verifyConsentState(token: string): { tenantId: string; expired: boolean } {
     try {
-      const decoded = jwt.verify(token, this.stateSecret, { algorithms: [...ISSUED_TOKEN_ALGORITHMS] }) as
-        | (Partial<EntraConsentState> & { exp?: number })
-        | string;
+      const decoded = jwt.verify(token, this.stateSecret, {
+        algorithms: [...ISSUED_TOKEN_ALGORITHMS],
+        ignoreExpiration: true,
+      }) as (Partial<EntraConsentState> & { exp?: number }) | string;
       if (
         !decoded
         || typeof decoded !== 'object'
@@ -348,7 +350,7 @@ export class EntraAuthService {
       ) {
         throw new Error('invalid payload');
       }
-      return { tenantId: decoded.tenantId };
+      return { tenantId: decoded.tenantId, expired: Math.floor(Date.now() / 1000) >= decoded.exp };
     } catch (err: any) {
       this.logger.warn(`Invalid Entra consent state: ${err?.message || String(err)}`);
       throw new BadRequestException('Invalid Entra state');

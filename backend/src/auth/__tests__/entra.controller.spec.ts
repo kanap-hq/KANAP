@@ -650,7 +650,16 @@ async function testConsentReturnNeedsAStateSignedForConsent() {
     const [header, payload] = h.consentState(WORKSPACE_A).slice('consent:'.length).split('.');
     return `consent:${header}.${payload}.${Buffer.from('another signature').toString('base64url')}`;
   });
-  await refused('a state past its lifetime', (h) => h.consentState(WORKSPACE_A), () => new Date().getTime() + 24 * 3600 * 1000);
+  // Past their lifetime too, when the application did not sign them for consent.
+  const later = () => new Date().getTime() + 24 * 3600 * 1000;
+  await refused('an expired state signed with another key', (h) => {
+    const [header, payload] = h.consentState(WORKSPACE_A).slice('consent:'.length).split('.');
+    return `consent:${header}.${payload}.${Buffer.from('another signature').toString('base64url')}`;
+  }, later);
+  await refused('an expired sign-in state', async (h) => {
+    const { state } = await h.entra.buildAuthorizationUrl({ mode: 'login', tenantId: WORKSPACE_A.id });
+    return `consent:${state}`;
+  }, later);
   await refused('a sign-in state', async (h) => {
     const { state } = await h.entra.buildAuthorizationUrl({ mode: 'login', tenantId: WORKSPACE_A.id });
     return `consent:${state}`;
@@ -664,6 +673,36 @@ async function testConsentReturnNeedsAStateSignedForConsent() {
   const h = consentHarness();
   const consentToken = h.consentState(WORKSPACE_A).slice('consent:'.length);
   await assert.rejects(() => h.entra.handleCallback({ code: 'code-1', state: consentToken }), /Invalid Entra state/);
+}
+
+/**
+ * A consent state the application signed, used past its lifetime: nothing is written or started,
+ * and the administrator lands back on the settings of the workspace the state names.
+ */
+async function testExpiredConsentStateReturnsToTheSettingsWithoutWriting() {
+  for (const answer of [
+    { admin_consent: 'True', tenant: WORKSPACE_A.entra_tenant_id },
+    { admin_consent: 'false', error: 'access_denied', error_description: 'text sent back by the provider' },
+  ]) {
+    const h = consentHarness();
+    const state = h.consentState(WORKSPACE_A);
+    const realNow = Date.now;
+    Date.now = () => new Date().getTime() + 24 * 3600 * 1000;
+    authEvents.length = 0;
+    try {
+      // The return arrives on the common address, here on another workspace's host.
+      await h.back({ state, ...answer }, { tenant: { id: WORKSPACE_B.id } });
+    } finally {
+      Date.now = realNow;
+    }
+    assert.deepEqual(h.redirects, ['http://alpha.lvh.me/admin/auth?consent=error'], 'back to the settings of the signed workspace');
+    assert.deepEqual(h.auditEntries, [], 'no audit entry');
+    assert.equal(h.state.started, 0, 'no transaction');
+    assert.deepEqual(h.syncs, [], 'no directory sync');
+    assert.deepEqual(h.droppedTokens, [], 'no application token dropped');
+    assert.deepEqual(h.lookups, [WORKSPACE_A.id], 'only the signed workspace is read');
+    assert.deepEqual(await recordedEvents(), [], 'no sign-in event');
+  }
 }
 
 /**
@@ -797,6 +836,10 @@ async function run() {
   await testRefusedSsoSessionsAreRecorded();
   await withEnv({ APP_ENV: 'development', NODE_ENV: undefined }, testFailedSsoRoundTripsAreRecordedInATrustedTenant);
   await withEnv({ ENTRA_STATE_SECRET: 'entra-controller-spec-state-secret' }, testConsentReturnNeedsAStateSignedForConsent);
+  await withEnv(
+    { APP_ENV: 'development', NODE_ENV: undefined, ENTRA_STATE_SECRET: 'entra-controller-spec-state-secret' },
+    testExpiredConsentStateReturnsToTheSettingsWithoutWriting,
+  );
   await withEnv(
     { APP_ENV: 'development', NODE_ENV: undefined, ENTRA_STATE_SECRET: 'entra-controller-spec-state-secret' },
     testConsentIsGrantedOnlyForTheWorkspaceDirectory,

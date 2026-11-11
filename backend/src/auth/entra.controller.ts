@@ -343,15 +343,21 @@ export class EntraController {
 
   /**
    * Return from the Microsoft admin-consent screen. Nothing is read or written unless the state
-   * was signed by this application for consent and is within its lifetime; the workspace is the
-   * one the state names. The consent counts as granted only when the directory that answered is
-   * the one the workspace is connected to.
+   * was signed by this application for consent; the workspace is the one the state names. Past
+   * its lifetime, such a state writes and starts nothing: the administrator lands back on the
+   * settings, where the consent can be opened again. The consent counts as granted only when the
+   * directory that answered is the one the workspace is connected to.
    */
   private async handleConsentCallback(state: string, req: any, res: Response) {
-    const { tenantId } = this.entra.verifyConsentState(state.slice('consent:'.length));
-    const tenant = await this.tenants.findById(tenantId);
+    const consent = this.entra.verifyConsentState(state.slice('consent:'.length));
+    const tenant = await this.tenants.findById(consent.tenantId);
     if (!tenant) {
       throw new BadRequestException('Tenant not found');
+    }
+    const settingsUrl = `${resolveTenantAppBaseUrl(req, tenant.slug).replace(/\/$/, '')}/admin/auth`;
+    if (consent.expired) {
+      res.redirect(`${settingsUrl}?consent=error`);
+      return;
     }
     const consentedDirectory = boundedQueryText(req.query?.tenant, 100);
     const granted =
@@ -386,9 +392,7 @@ export class EntraController {
       );
     }
 
-    const baseUrl = resolveTenantAppBaseUrl(req, tenant.slug);
-    const normalized = baseUrl.replace(/\/$/, '');
-    res.redirect(`${normalized}/admin/auth?consent=${granted ? 'success' : 'error'}`);
+    res.redirect(`${settingsUrl}?consent=${granted ? 'success' : 'error'}`);
   }
 
   private async handleSetupCallback(
