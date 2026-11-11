@@ -385,6 +385,12 @@ export class BillingService {
     const tenant = await this.requireTenant(opts.tenantId);
     const invoiceProfile = this.requireCompleteInvoiceProfile(tenant);
     const manager = opts.manager ?? null;
+    // A checkout starts a second subscription: refused, before any change in Stripe, while the
+    // tenant's own still runs (its plan is changed instead; an unpaid one is paid first).
+    const row = await (manager ?? this.subs.manager).getRepository(Subscription).findOne({ where: {} });
+    if (row && (await this.retrieveLiveSubscription(row))) {
+      throw new BadRequestException('SUBSCRIPTION_PAYMENT_PENDING');
+    }
     const customerId = await this.ensureStripeCustomerForTenant(tenant, { manager, invoiceProfile });
 
     const successUrl = opts.successUrl ?? this.stripeConfig.getCheckoutSuccessUrl();
@@ -850,6 +856,23 @@ export class BillingService {
       currency: invoice.currency ? String(invoice.currency).toUpperCase() : null,
       hosted_invoice_url: invoice.hosted_invoice_url ?? null,
     };
+  }
+
+  /**
+   * The tenant's Stripe subscription as Stripe has it now, when it still runs (any status but
+   * canceled and incomplete expired). Null without one, when it has ended, or when this Stripe
+   * account no longer has it; any other Stripe error is thrown.
+   */
+  private async retrieveLiveSubscription(sub: Subscription): Promise<any | null> {
+    if (!sub.stripe_subscription_id) return null;
+    let stripeSub: any;
+    try {
+      stripeSub = await this.getStripeClientOrThrow().subscriptions.retrieve(sub.stripe_subscription_id);
+    } catch (error: any) {
+      if (error?.statusCode === 404 || error?.code === 'resource_missing') return null;
+      throw error;
+    }
+    return stripeSub && isLiveSubscriptionStatus(stripeSub.status) ? stripeSub : null;
   }
 
   /** The id of a Stripe reference, expanded or not. */

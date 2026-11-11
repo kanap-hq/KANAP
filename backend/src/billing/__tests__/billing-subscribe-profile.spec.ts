@@ -84,6 +84,8 @@ function createService(opts: {
   cards?: Array<Record<string, unknown>>;
   /** What `invoices.retrieve` returns (nothing by default). */
   retrievedInvoice?: Record<string, unknown>;
+  /** What `subscriptions.retrieve` throws (a subscription Stripe no longer has). */
+  subscriptionRetrieveError?: unknown;
 }) {
   const calls: Call[] = [];
   const record = (method: string, impl: (...args: any[]) => unknown) => async (...args: unknown[]) => {
@@ -113,6 +115,7 @@ function createService(opts: {
     subscriptions: {
       create: record('subscriptions.create', () => ({ id: 'sub_1', latest_invoice: null })),
       retrieve: record('subscriptions.retrieve', () => {
+        if (opts.subscriptionRetrieveError) throw opts.subscriptionRetrieveError;
         if (stripeState) return JSON.parse(JSON.stringify(stripeState));
         return opts.subscription ? { id: 'sub_1', status: 'active', items: { data: [{ id: 'si_1' }] } } : null;
       }),
@@ -991,6 +994,58 @@ async function testPlanChangeAppliesToALiveSubscription() {
   assert.equal(ended.calls.filter((call) => call.method.startsWith('subscriptions.')).length, 0);
 }
 
+const CHECKOUT = { tenantId: 'tenant-1', planKey: 'max' as const, interval: 'monthly' as const, termsVersion: GTC_VERSION };
+const PAYMENT_PENDING = { message: 'SUBSCRIPTION_PAYMENT_PENDING', error: 'Bad Request', statusCode: 400 };
+
+/*
+ * A checkout starts a new Stripe subscription. While the tenant's subscription still runs in
+ * Stripe (paid or not), it is refused before any change in Stripe; the status read from Stripe
+ * decides, the stored one may be late. A subscription that has ended, or that Stripe no longer
+ * has, lets a new checkout through.
+ */
+async function testCheckoutIsRefusedWhileTheSubscriptionRuns() {
+  for (const status of ['active', 'trialing', 'past_due', 'unpaid', 'incomplete', 'paused']) {
+    const { service, manager, calls } = createService({
+      tenant: createTenant(COMPLETE_FR_INVOICE),
+      subscription: { ...runningOn('monthly'), status: 'canceled' } as Partial<Subscription>,
+      priceIds: PRICE_IDS,
+      stripeSubscription: stripeSubscription(MONTHLY_PRICE, { status }),
+    });
+    await expectBadRequest(service.createCheckoutSession({ ...CHECKOUT, manager: manager as any }), PAYMENT_PENDING);
+    assert.deepEqual(calls.map((call) => call.method), ['subscriptions.retrieve'], `only the subscription is read while ${status}`);
+  }
+
+  for (const status of ['canceled', 'incomplete_expired']) {
+    const { service, manager, calls } = createService({
+      tenant: createTenant(COMPLETE_FR_INVOICE),
+      subscription: { ...runningOn('monthly'), status: 'past_due' } as Partial<Subscription>,
+      priceIds: PRICE_IDS,
+      stripeSubscription: stripeSubscription(MONTHLY_PRICE, { status }),
+    });
+    const session = await service.createCheckoutSession({ ...CHECKOUT, manager: manager as any });
+    assert.equal(session.id, 'cs_1', `an ended subscription (${status}) lets a new checkout through`);
+  }
+
+  const missing = createService({
+    tenant: createTenant(COMPLETE_FR_INVOICE),
+    subscription: { ...runningOn('monthly'), status: 'past_due' } as Partial<Subscription>,
+    priceIds: PRICE_IDS,
+    subscriptionRetrieveError: Object.assign(new Error('No such subscription'), { statusCode: 404, code: 'resource_missing' }),
+  });
+  const session = await missing.service.createCheckoutSession({ ...CHECKOUT, manager: missing.manager as any });
+  assert.equal(session.id, 'cs_1', 'a subscription Stripe no longer has lets a new checkout through');
+
+  // Any other Stripe error stops the checkout: nothing is created.
+  const down = createService({
+    tenant: createTenant(COMPLETE_FR_INVOICE),
+    subscription: { ...runningOn('monthly'), status: 'past_due' } as Partial<Subscription>,
+    priceIds: PRICE_IDS,
+    subscriptionRetrieveError: new Error('Stripe is down'),
+  });
+  await assert.rejects(down.service.createCheckoutSession({ ...CHECKOUT, manager: down.manager as any }), /Stripe is down/);
+  assert.equal(down.calls.filter((call) => call.method === 'checkout.sessions.create').length, 0);
+}
+
 const BANK_TRANSFER_SCHEDULE = {
   id: 'sub_sched_1',
   current_phase: { start_date: PERIOD.start, end_date: PERIOD.end },
@@ -1089,6 +1144,7 @@ async function run() {
   await testScheduledSwitchIsAuditedAndReturned();
   await testTransferChangesALiveSubscriptionInsteadOfDoublingIt();
   await testPlanChangeAppliesToALiveSubscription();
+  await testCheckoutIsRefusedWhileTheSubscriptionRuns();
   await testTransferToCardWithoutACardRequiresOne();
   await testTransferToCardWithASavedCardMakesItTheDefault();
 }
