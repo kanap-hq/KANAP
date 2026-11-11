@@ -6,7 +6,7 @@ import type {
   MdxJsxFlowElement,
   MdxJsxTextElement,
 } from 'mdast-util-mdx-jsx';
-import { RICH_TEXT_HTML_ELEMENTS, isRichTextImageAttribute } from '../lib/richTextHtmlElements';
+import { isRichTextBareElementName, isRichTextImageAttribute } from '../lib/richTextHtmlElements';
 
 type HtmlElementNode = MdxJsxFlowElement | MdxJsxTextElement;
 
@@ -20,9 +20,7 @@ function isHtmlElementNode(node: { type: string }): node is HtmlElementNode {
 /** True for the elements of `RICH_TEXT_HTML_ELEMENTS`, in the only form the list accepts. */
 export function isRichTextHtmlElement(node: HtmlElementNode): boolean {
   const name = node.name ?? '';
-  if ((RICH_TEXT_HTML_ELEMENTS.bare as readonly string[]).includes(name)) {
-    return node.attributes.length === 0;
-  }
+  if (isRichTextBareElementName(name)) return node.attributes.length === 0;
   if (name !== 'img' || node.children.length > 0) return false;
   let hasSource = false;
   for (const attribute of node.attributes) {

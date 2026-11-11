@@ -1,4 +1,4 @@
-import { RICH_TEXT_HTML_ELEMENTS, isRichTextImageAttribute } from './richTextHtmlElements';
+import { matchRichTextHtmlTag } from './richTextHtmlElements';
 
 const FENCED_CODE_BLOCK_REGEX = /^(`{3,}|~{3,})([^\n]*)\n([\s\S]*?)\n\1\s*$/gm;
 const URI_AUTOLINK_REGEX = /^<([a-zA-Z][a-zA-Z0-9+.-]*:\/\/[^\s>]+)>/;
@@ -6,11 +6,6 @@ const EMAIL_AUTOLINK_REGEX = /^<([^\s>@]+@[^\s>]+\.[^\s>]+)>/;
 const BLANK_LINE_REGEX = /\n[ \t]*\n/;
 // A link destination between angle brackets, with its optional title, up to the closing parenthesis.
 const ANGLE_BRACKET_DESTINATION_REGEX = /^<[^<>\n]*>(?:[ \t]+(?:"[^"\n]*"|'[^'\n]*'))?[ \t]*\)/;
-// An opening, closing or self-closed tag of an element accepted without attribute.
-const BARE_ELEMENT_TAG_REGEX = new RegExp(`^<(/?)(${RICH_TEXT_HTML_ELEMENTS.bare.join('|')})[ \\t]*(/?)>`);
-// An image tag on one line whose attributes all have a quoted value.
-const IMAGE_TAG_REGEX = /^<img((?:[ \t]+[A-Za-z][\w:.-]*=(?:"[^"\n]*"|'[^'\n]*'))+)[ \t]*\/?>/;
-const IMAGE_ATTRIBUTE_REGEX = /([A-Za-z][\w:.-]*)=(?:"([^"\n]*)"|'([^'\n]*)')/g;
 
 function isEscaped(text: string, index: number): boolean {
   let backslashCount = 0;
@@ -67,31 +62,6 @@ function shouldSkipAngleBracketSanitization(text: string, index: number): boolea
 
   // The destination of a link or an image written between angle brackets: `[text](<address>)`.
   return text.slice(Math.max(0, index - 2), index) === '](' && ANGLE_BRACKET_DESTINATION_REGEX.test(text.slice(index));
-}
-
-/**
- * The tag at the start of `text` when it is one of `RICH_TEXT_HTML_ELEMENTS` in its accepted form,
- * written the way the editor reads it (a line break and an image are closed tags).
- */
-function matchRichTextElementTag(
-  text: string,
-): { length: number; tag: string; name: string; closing: boolean } | null {
-  const bare = text.match(BARE_ELEMENT_TAG_REGEX);
-  if (bare) {
-    const [whole, slash, name, selfClosed] = bare;
-    const closing = slash !== '';
-    if (name === 'br') return closing ? null : { length: whole.length, tag: '<br />', name, closing };
-    return selfClosed ? null : { length: whole.length, tag: `<${slash}${name}>`, name, closing };
-  }
-
-  const image = text.match(IMAGE_TAG_REGEX);
-  if (!image) return null;
-  let hasSource = false;
-  for (const [, name, doubleQuoted, singleQuoted] of image[1].matchAll(IMAGE_ATTRIBUTE_REGEX)) {
-    if (!isRichTextImageAttribute(name, doubleQuoted ?? singleQuoted ?? '')) return null;
-    if (name === 'src') hasSource = true;
-  }
-  return hasSource ? { length: image[0].length, tag: `<img${image[1]} />`, name: 'img', closing: false } : null;
 }
 
 function isBlankLineAhead(text: string, lineEndIndex: number): boolean {
@@ -161,7 +131,7 @@ export function sanitizeMarkdownForMdxPaste(
       continue;
     }
 
-    const element = keepRichTextElements ? matchRichTextElementTag(remaining) : null;
+    const element = keepRichTextElements ? matchRichTextHtmlTag(remaining) : null;
     const closesOpenTag = element?.closing && openTags[openTags.length - 1]?.name === element.name;
     if (element && (!element.closing || closesOpenTag)) {
       if (closesOpenTag) {

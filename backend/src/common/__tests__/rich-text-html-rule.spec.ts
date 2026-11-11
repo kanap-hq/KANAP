@@ -4,7 +4,7 @@ import * as path from 'node:path';
 import { BadRequestException } from '@nestjs/common';
 import { parse } from 'csv-parse/sync';
 import { backendPath } from './backend-root';
-import { RICH_TEXT_ALLOWED_HTML } from '../html-to-markdown';
+import { isAllowedMarkdownHtmlSnippet, RICH_TEXT_ALLOWED_HTML } from '../html-to-markdown';
 import { MARKDOWN_HTML_NOT_ALLOWED } from '../markdown-limits';
 import { normalizeMarkdownRichText } from '../markdown-rich-text';
 
@@ -83,11 +83,52 @@ function testAcceptedElementsTakeNoAttribute() {
   assertRefused('an accepted name in upper case', 'An <U>underlined</U> word.');
 }
 
-function testTheAcceptedListIsAccepted() {
-  assert.deepEqual(RICH_TEXT_ALLOWED_HTML.paired, ['u', 'sub', 'sup']);
-  assert.equal(RICH_TEXT_ALLOWED_HTML.lineBreak, 'br');
-  assert.deepEqual(RICH_TEXT_ALLOWED_HTML.imageAttributes, ['src', 'alt', 'title', 'width', 'height']);
+/**
+ * The list and the forms below are a copy of what the editor reads as an element and as text
+ * (`frontend/src/lib/richTextHtmlElements.test.ts` holds the same copy). A change of the list
+ * or of a form is made on both sides, in the code and in both tests.
+ */
+const ACCEPTED_LIST = {
+  paired: ['u', 'sub', 'sup'],
+  lineBreak: 'br',
+  imageAttributes: ['src', 'alt', 'title', 'width', 'height'],
+};
 
+const ACCEPTED_FORMS = [
+  '<u>', '</u>', '<sub>', '</sub>', '<sup>', '</sup>',
+  '<br>', '<br/>', '<br />',
+  '<img src="/api/files/1" />',
+  '<img src="https://example.com/a.png">',
+  '<img src="//example.com/a.png"/>',
+  `<img height="40" width="60" alt="a > b" title='a "name"' src="/api/files/1" />`,
+];
+
+const REFUSED_FORMS = [
+  '<u >', '<u/>', '<u />', '</u >', '<U>', '</SUB>', '<u class="x">', '<sup id="a">',
+  '<br  />', '<br\t/>', '</br>', '<BR>', '<br class="x">', '<br class="x" />',
+  '<img>', '<img />', '<img alt="a" />',
+  '<IMG src="/api/files/1" />', '<img SRC="/api/files/1" />',
+  '<img src=/api/files/1 />', '<img src = "/api/files/1" />', '<img src="/api/files/1"alt="a" />',
+  '<img src="/api/files/1"\nalt="a" />', '<img src="/api/files/1" alt="a\nb" />',
+  '<img src="/api/files/1" onerror="go()" />', '<img src="/api/files/1" style="position: fixed" />',
+  '<img src="/api/files/1" data-x="1" />', '<img src="/api/files/1" alt />',
+  '<img src="javascript:go()" />', '<img src="data:image/png;base64,AAAA" />', '<img src="a.png" />',
+  '<img src="/api/files/1" width="60px" />', '<img src="/api/files/1" height="123456" />',
+  '<img src="/api/files/1" width="" />',
+];
+
+function testTheListAndItsFormsAreThoseOfTheEditor() {
+  assert.deepEqual(RICH_TEXT_ALLOWED_HTML, ACCEPTED_LIST);
+  for (const form of ACCEPTED_FORMS) {
+    assert.equal(isAllowedMarkdownHtmlSnippet(form), true, `${form} is an accepted form`);
+    assertAccepted(`${form} in a sentence`, `Before ${form} after.`);
+  }
+  for (const form of REFUSED_FORMS) {
+    assert.equal(isAllowedMarkdownHtmlSnippet(form), false, `${form} is not an accepted form`);
+  }
+}
+
+function testTheAcceptedListIsAccepted() {
   assertAccepted('underline, subscript, superscript', 'An <u>underlined</u> word, H<sub>2</sub>O and x<sup>2</sup>.');
   assertAccepted('a paragraph that is one underlined text', '<u>Underlined</u>');
   assertAccepted('<br>', 'Line one<br>line two');
@@ -208,6 +249,7 @@ function testSampleDataIsAccepted() {
 function run() {
   testElementsOutsideTheListAreRefusedEverywhere();
   testAcceptedElementsTakeNoAttribute();
+  testTheListAndItsFormsAreThoseOfTheEditor();
   testTheAcceptedListIsAccepted();
   testMarkdownAndCodeAreAccepted();
   testTheRefusalNamesTheFieldAndTheTag();

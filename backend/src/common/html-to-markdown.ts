@@ -13,13 +13,16 @@ const MARKDOWN_AUTOLINK_REGEX_FALLBACK = /^<https?:\/\/[^>\s]+>$/i;
 
 /**
  * The only HTML tags a rich-text field accepts on a write. Everything else in the
- * text is Markdown. These are the forms the editor writes:
+ * text is Markdown. These are the forms the editor writes, in lower case:
  * - `paired`: an opening and a closing tag, without any attribute (`<u>`, `</u>`);
  * - `lineBreak`: `<br>`, `<br/>` or `<br />`, without any attribute;
- * - `imageAttributes`: an `<img>` tag with these attributes only, quoted, and a
- *   source that is an address of the application or an `http(s)` address.
- * The editor keeps the same list and shows any other tag as text: its own
- * constant (the Markdown editor under `frontend/src/components/`) follows this one.
+ * - `imageAttributes`: an `<img>` tag on one line with these attributes only, each
+ *   with a quoted value, and a source that is a path of the application or an
+ *   `http(s)` address; a width and a height are whole numbers.
+ * The editor holds the same list, `RICH_TEXT_HTML_ELEMENTS` in
+ * `frontend/src/lib/richTextHtmlElements.ts`, and shows any other tag as text. A
+ * change of one list is made in the other: the test of each side keeps a copy of
+ * the list and of the accepted and refused forms.
  */
 export const RICH_TEXT_ALLOWED_HTML = {
   paired: ['u', 'sub', 'sup'],
@@ -29,8 +32,9 @@ export const RICH_TEXT_ALLOWED_HTML = {
 
 const PAIRED_TAG_REGEX = new RegExp(`^</?(?:${RICH_TEXT_ALLOWED_HTML.paired.join('|')})>$`);
 const LINE_BREAK_TAG_REGEX = new RegExp(`^<${RICH_TEXT_ALLOWED_HTML.lineBreak}(?: ?/)?>$`);
-const IMG_TAG_ONLY_REGEX = /^<img\b[\s\S]*\/?>$/i;
-const IMG_ATTR_REGEX = /([A-Za-z_:][\w:.-]*)\s*=\s*("([^"]*)"|'([^']*)')/g;
+// An image tag on one line whose attributes all have a quoted value.
+const IMAGE_TAG_REGEX = /^<img((?:[ \t]+[a-z]+=(?:"[^"\n]*"|'[^'\n]*'))+)[ \t]*\/?>$/;
+const IMAGE_ATTRIBUTE_REGEX = /([a-z]+)=(?:"([^"\n]*)"|'([^'\n]*)')/g;
 const ALLOWED_IMG_ATTRS = new Set<string>(RICH_TEXT_ALLOWED_HTML.imageAttributes);
 const DATA_IMAGE_URI_REGEX = /^data:image\/[a-z0-9.+-]+;base64,[a-z0-9+/=\s]+$/i;
 const HTML_ENTITY_MAP: Record<string, string> = {
@@ -85,14 +89,18 @@ function decodeHtmlEntities(text: string): string {
   });
 }
 
+/** An image is served by a web address or by a path of the application. */
 function isAllowedImageSrc(value: string): boolean {
   const src = String(value || '').trim();
-  if (!src) return false;
-  if (/^javascript:/i.test(src)) return false;
-  if (/^https?:\/\//i.test(src)) return true;
-  if (/^\/\//.test(src)) return true;
-  if (src.startsWith('/')) return true;
-  return false;
+  return /^https?:\/\//i.test(src) || src.startsWith('/');
+}
+
+/** Whether `<img>` may carry this attribute with this value. */
+function isAllowedImageAttribute(name: string, value: string): boolean {
+  if (!ALLOWED_IMG_ATTRS.has(name)) return false;
+  if (name === 'src') return isAllowedImageSrc(value);
+  if (name === 'width' || name === 'height') return /^\d{1,5}$/.test(value);
+  return true;
 }
 
 function isDataImageUri(value: string): boolean {
@@ -111,38 +119,20 @@ function hasDataImageInHtmlSnippet(snippet: string): boolean {
   return false;
 }
 
-/** Whether `value` is one tag of `RICH_TEXT_ALLOWED_HTML`. */
+/** Whether `value` is one tag of `RICH_TEXT_ALLOWED_HTML`, in its accepted form. */
 export function isAllowedMarkdownHtmlSnippet(value: string): boolean {
   const snippet = normalizeSnippet(value);
   if (!snippet) return false;
   if (PAIRED_TAG_REGEX.test(snippet) || LINE_BREAK_TAG_REGEX.test(snippet)) return true;
-  if (!IMG_TAG_ONLY_REGEX.test(snippet)) return false;
+  const image = IMAGE_TAG_REGEX.exec(snippet);
+  if (!image) return false;
 
-  const attrsChunk = snippet
-    .replace(/^<img\b/i, '')
-    .replace(/\/?>$/i, '');
-  const attrs: Record<string, string> = {};
-  const attrRegex = new RegExp(IMG_ATTR_REGEX.source, 'g');
-  let match: RegExpExecArray | null;
-  while ((match = attrRegex.exec(attrsChunk)) !== null) {
-    const name = String(match[1] || '').toLowerCase();
-    const valuePart = match[3] ?? match[4] ?? '';
-    if (!ALLOWED_IMG_ATTRS.has(name)) return false;
-    attrs[name] = String(valuePart);
+  let hasSource = false;
+  for (const [, name, doubleQuoted, singleQuoted] of image[1].matchAll(IMAGE_ATTRIBUTE_REGEX)) {
+    if (!isAllowedImageAttribute(name, doubleQuoted ?? singleQuoted ?? '')) return false;
+    if (name === 'src') hasSource = true;
   }
-
-  attrRegex.lastIndex = 0;
-  const leftovers = attrsChunk
-    .replace(attrRegex, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-  if (leftovers.length > 0) return false;
-
-  if (!isAllowedImageSrc(attrs.src || '')) return false;
-  if (Object.prototype.hasOwnProperty.call(attrs, 'width') && !/^\d{1,5}$/.test(attrs.width)) return false;
-  if (Object.prototype.hasOwnProperty.call(attrs, 'height') && !/^\d{1,5}$/.test(attrs.height)) return false;
-
-  return true;
+  return hasSource;
 }
 
 function parseTokens(content: string): MarkdownToken[] | null {
