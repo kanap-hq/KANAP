@@ -1,5 +1,5 @@
 import * as assert from 'node:assert/strict';
-import { AiEvidenceService, redactSensitiveText } from '../ai-evidence.service';
+import { AiEvidenceService, redactSensitiveText, redactSensitiveValue } from '../ai-evidence.service';
 import { mcpArgumentPreview } from '../../mcp/ai-mcp-audit.service';
 import { AiExternalMcpBridgeService } from '../../mcp/ai-external-mcp-bridge.service';
 import { AiExternalMcpMockTransport } from '../../mcp/ai-external-mcp-mock-transport.service';
@@ -114,10 +114,54 @@ function testTheRedactionTimeGrowsLinearlyWithTheText() {
   assert.ok(!JSON.stringify(mcpArgumentPreview({ query: `see ${JWT}` })).includes(JWT));
 }
 
+// Sample values, assembled at run time.
+const OPAQUE = ['Zq81Lm0P', 'w4Rt7Yx2', 'Nc5Vb9Kd'].join('');
+const [JWT_HEADER, JWT_PAYLOAD, JWT_SIGNATURE] = JWT.split('.');
+
+function credentialSamples(): string[] {
+  return [
+    `https://idp.example.org/callback?code=1&access_token=${OPAQUE}&state=2`,
+    `refresh_token: ${OPAQUE}`,
+    JSON.stringify({ refresh_token: OPAQUE }),
+    `POST client_secret=${OPAQUE}&grant_type=client_credentials`,
+    `key ${'s'}k-proj-${OPAQUE}`,
+    `key ${'gh'}p_${OPAQUE}${OPAQUE.slice(0, 12)}`,
+    `key ${'xo'}xb-1234567890-${OPAQUE}`,
+    `key ${'kanap_'}mcp_${OPAQUE}`,
+    `Cookie: sid=${OPAQUE}; theme=dark`,
+    `Set-Cookie: sid=${OPAQUE}; Path=/; HttpOnly`,
+    `https://alice:${OPAQUE}@git.example.org/repo.git`,
+    `id_${JWT}`,
+    `next=%2Fhome%3Fid_token%3D${JWT}`,
+    `${JWT_HEADER}.${JWT_PAYLOAD.slice(0, 10)}\n${JWT_PAYLOAD.slice(10)}.${JWT_SIGNATURE}`,
+    `${JWT_HEADER}.\n${JWT_PAYLOAD}.\n${JWT_SIGNATURE}`,
+  ];
+}
+
+function assertNoCredential(text: string, label: string) {
+  assert.ok(!text.includes(OPAQUE), `${label} still holds a value: ${text}`);
+  assert.ok(!text.includes(JWT_SIGNATURE), `${label} still holds a signature: ${text}`);
+}
+
+function testTheEvidenceAndTheJournalShareOneRule() {
+  for (const sample of credentialSamples()) {
+    assertNoCredential(redactSensitiveText(sample), 'evidence');
+    assertNoCredential(JSON.stringify(mcpArgumentPreview({ q: sample })), 'journal');
+  }
+  const fields = { private_key: OPAQUE, credentials: OPAQUE, passwd: OPAQUE, access_key: OPAQUE, api_key: OPAQUE, auth: OPAQUE, jwt: OPAQUE };
+  assertNoCredential(JSON.stringify(redactSensitiveValue(fields)), 'evidence fields');
+  assertNoCredential(JSON.stringify(mcpArgumentPreview(fields)), 'journal fields');
+  // Ordinary text stays as written.
+  for (const plain of [PLAIN, 'Cookie: please clear it and retry.', 'The token expired yesterday.', 'Desk-reference id_card']) {
+    assert.equal(redactSensitiveText(plain), plain);
+  }
+}
+
 async function run() {
   const tests: Array<() => unknown> = [
     testTheEvidenceWriterHidesTokens,
     testTheRedactionTimeGrowsLinearlyWithTheText,
+    testTheEvidenceAndTheJournalShareOneRule,
     testTheEvidenceSummaryHidesTokens,
     testTheExternalMcpBridgeHidesTokens,
   ];

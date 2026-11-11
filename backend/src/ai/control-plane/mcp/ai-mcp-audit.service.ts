@@ -136,7 +136,7 @@ const CREDENTIAL_PATTERNS = [
 const SENSITIVE_ARGUMENT_NAME = /(passw|pwd|passphrase|credential|private[-_]?key|access[-_]?key|bearer|jwt|^auth$)/i;
 
 function hideCredentials(value: string): string {
-  return CREDENTIAL_PATTERNS.reduce((text, pattern) => text.replace(pattern, '[REDACTED]'), value);
+  return String(redactSensitiveValue(value));
 }
 
 function truncate(value: string, max: number): string {
