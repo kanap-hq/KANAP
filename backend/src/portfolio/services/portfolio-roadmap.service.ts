@@ -411,9 +411,10 @@ export class PortfolioRoadmapService {
     tenantId: string,
     input: RoadmapApplyDto | unknown,
     userId: string | null,
-    svcOpts?: ServiceOpts & { accessScope?: ParticipationAccessScope },
+    // The caller always states the person's participation scope (undefined when nothing restricts them).
+    svcOpts: ServiceOpts & { accessScope: ParticipationAccessScope | undefined },
   ): Promise<{ updated: number }> {
-    const mg = svcOpts?.manager ?? this.projectRepo.manager;
+    const mg = svcOpts.manager ?? this.projectRepo.manager;
     let parsed: RoadmapApplyDto;
     try {
       parsed = parseRoadmapApply(input);
@@ -427,7 +428,7 @@ export class PortfolioRoadmapService {
 
     // Every project is checked against the person's scope before the first write, in one query: a
     // project outside it answers as on its page (404) and no date of the list changes.
-    if (svcOpts?.accessScope) {
+    if (svcOpts.accessScope) {
       const inScope = await idsInScope(mg, 'projects', parsed.projects.map((project) => project.projectId), svcOpts.accessScope);
       if (parsed.projects.some((project) => !inScope.has(project.projectId.toLowerCase()))) {
         throw new NotFoundException('Project not found');
