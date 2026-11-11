@@ -114,6 +114,16 @@ function testStaleInvoiceDateUsesThePeriodStart() {
   }
 }
 
+/** A bank transfer whose payment term is not stored: the module's payment term (30 days). */
+function testTransferWithoutPaymentTermUsesTheModuleTerm() {
+  const at = computeFreezeEffectiveAt(sub({
+    collection_method: CollectionMethod.SEND_INVOICE,
+    latest_invoice_created: new Date(NOW),
+    days_until_due: null,
+  }));
+  assert.equal(at, NOW + 30 * DAY_MS + 14 * DAY_MS);
+}
+
 /**
  * The freeze date of the summary: ahead or passed while past due; for an ended subscription its
  * end, or the end of the grace of an invoice left unpaid when earlier; for unpaid, the end of the
@@ -238,6 +248,7 @@ async function run() {
   testComputeFreezeInvoiceBased();
   testCardGraceStartsAtTheUnpaidInvoice();
   testStaleInvoiceDateUsesThePeriodStart();
+  testTransferWithoutPaymentTermUsesTheModuleTerm();
   testFreezeDateOfTheSummary();
   await testPastDueCloverSubscriptionKeepsItsGrace();
   testTrialDeletionDate();

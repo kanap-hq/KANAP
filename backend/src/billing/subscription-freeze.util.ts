@@ -1,12 +1,13 @@
 import { CollectionMethod, Subscription, SubscriptionStatus } from './subscription.entity';
-import { FREEZE_GRACE_DAYS, TRIAL_PLAN_NAME, TRIAL_WORKSPACE_RETENTION_DAYS } from './plans.config';
+import { FREEZE_GRACE_DAYS, INVOICE_PAYMENT_TERM_DAYS, TRIAL_PLAN_NAME, TRIAL_WORKSPACE_RETENTION_DAYS } from './plans.config';
 
 const GRACE_MS = FREEZE_GRACE_DAYS * 86400000;
 const TRIAL_RETENTION_MS = TRIAL_WORKSPACE_RETENTION_DAYS * 86400000;
 
 /**
  * When the grace of an unpaid invoice ends: FREEZE_GRACE_DAYS after the invoice for a card, after
- * its due date (invoice date plus the payment term) for a bank transfer. The invoice date is the
+ * its due date (invoice date plus the payment term, INVOICE_PAYMENT_TERM_DAYS when none is
+ * stored) for a bank transfer. The invoice date is the
  * later of the latest invoice's and the start of the current period (the renewal that issued
  * it): the same date when the row is current, and the unpaid renewal's when the row still holds
  * the previous, paid invoice. Stripe opens the next period even unpaid, so its end says nothing
@@ -18,7 +19,7 @@ export function computeFreezeEffectiveAt(subscription: Subscription): number | n
     .filter((time) => Number.isFinite(time));
   if (!dates.length) return null;
   const invoicedAt = Math.max(...dates);
-  const termDays = subscription.collection_method === CollectionMethod.SEND_INVOICE ? subscription.days_until_due ?? 0 : 0;
+  const termDays = subscription.collection_method === CollectionMethod.SEND_INVOICE ? subscription.days_until_due ?? INVOICE_PAYMENT_TERM_DAYS : 0;
   return invoicedAt + termDays * 86400000 + GRACE_MS;
 }
 
