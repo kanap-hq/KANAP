@@ -325,6 +325,28 @@ async function testEachAdministrativeIntentHasItsFixedInstruction() {
   }
 }
 
+async function testTheShortTextsReserveTheOutputOfTheirNeighbours() {
+  const options: Array<{ taskName: string; maxTokens: number; maxTokensEnvName: string }> = [];
+  const service = new AiReplySynthesisService({
+    callStructuredJsonModel: async (_context: unknown, request: { taskName: string; maxTokens: number; maxTokensEnvName: string }) => {
+      options.push(request);
+      return structuredJson({ technician_brief: 'Brief.', language: 'en', requester_reply: 'Hello.' });
+    },
+  } as any);
+  await service.composeTechnicianBrief({} as any, {
+    ticket, timeline: timeline(), language: 'en', knowledgeDocs: [], webResults: [], reply: replyResult() as any,
+  });
+  await service.draftAdministrativeReply({} as any, { ticket, timeline: timeline(), language: 'en', intent: 'acknowledgement' });
+  // Same reserve as the knowledge planner and interpreter, which write outputs of the same size.
+  assert.deepEqual(options.map((option) => [option.taskName, option.maxTokens, option.maxTokensEnvName]), [
+    ['technician_brief', 4000, 'AI_AGENT_TECHNICIAN_BRIEF_MAX_TOKENS'],
+    ['administrative_reply', 4000, 'AI_AGENT_ADMINISTRATIVE_REPLY_MAX_TOKENS'],
+  ]);
+  assert.equal(service.technicianBriefMaxOutputTokens(), 4000);
+  assert.equal(service.administrativeReplyMaxOutputTokens(), 4000);
+  assert.equal(service.maxOutputTokens(), 8000);
+}
+
 function testThePlannerKnowsWhenToChooseEachIntent() {
   const payload = new AiAgentActionPlannerService({} as any).buildPromptPayload({
     ticket,
@@ -574,6 +596,7 @@ async function run() {
     testAnAdministrativeReplyKindComesFromAClosedList,
     testEachAdministrativeIntentHasItsFixedInstruction,
     testThePlannerKnowsWhenToChooseEachIntent,
+    testTheShortTextsReserveTheOutputOfTheirNeighbours,
     testAnAdministrativeReplyKeepsThePublicReplyGuards,
     testScreenshotsOfInternalNotesStayOutOfThePublicReply,
     testKnowledgeItemsKeepTheirLibrary,

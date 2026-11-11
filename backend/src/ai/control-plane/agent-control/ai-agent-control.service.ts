@@ -5982,7 +5982,7 @@ export class AiAgentControlService {
       const projection = estimateReplySynthesisUsage({
         systemPrompt: compileSystemPrompt(RUNTIME_SAFETY_FLOOR_ADMINISTRATIVE_REPLY, promptRuntime.synthesisGuidance),
         userPayload: this.replySynthesis.buildAdministrativeReplyPayload(draftInput),
-      }, llmPrices, this.replySynthesis.maxOutputTokens());
+      }, llmPrices, this.replySynthesis.administrativeReplyMaxOutputTokens());
       const inputSummary = {
         language: synthesisLanguage,
         intent,
@@ -6470,7 +6470,7 @@ export class AiAgentControlService {
       const projection = estimateReplySynthesisUsage({
         systemPrompt: compileSystemPrompt(RUNTIME_SAFETY_FLOOR_TECHNICIAN_BRIEF, promptRuntime.synthesisGuidance),
         userPayload: this.replySynthesis.buildTechnicianBriefPayload(briefInput),
-      }, llmPrices, this.replySynthesis.maxOutputTokens());
+      }, llmPrices, this.replySynthesis.technicianBriefMaxOutputTokens());
       const inputSummary = {
         language: briefInput.language,
         projected_tokens: projection.estimatedTokens,
