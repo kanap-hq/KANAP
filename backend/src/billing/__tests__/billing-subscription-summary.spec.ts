@@ -377,7 +377,29 @@ async function testRefreshReadsTheRefusalOnThePaymentIntent() {
   assert.equal(paidSummary.last_payment_error_message, null);
 }
 
+/** The summary's freeze date is the one the access check applies (computeFreezeEffectiveAt), not a second rule. */
+async function testFreezeDateFollowsTheUnpaidInvoice() {
+  const invoicedAt = new Date(Date.now() - 2 * 86400000);
+  const pastDue = createService(
+    storedSubscription({
+      status: SubscriptionStatus.PAST_DUE,
+      collection_method: 'charge_automatically' as any,
+      latest_invoice_created: invoicedAt,
+      current_period_start: invoicedAt,
+      current_period_end: new Date(invoicedAt.getTime() + 30 * 86400000),
+      stripe_subscription_id: null,
+    }),
+    3,
+  );
+  const summary = await pastDue.service.getSubscriptionSummary({ manager: pastDue.manager as any });
+  assert.equal(summary.freeze_effective_at, new Date(invoicedAt.getTime() + 14 * 86400000).toISOString());
+
+  const active = createService(storedSubscription({ status: SubscriptionStatus.ACTIVE, latest_invoice_created: invoicedAt, stripe_subscription_id: null }), 3);
+  assert.equal((await active.service.getSubscriptionSummary({ manager: active.manager as any })).freeze_effective_at, null);
+}
+
 async function run() {
+  await testFreezeDateFollowsTheUnpaidInvoice();
   await testRefreshReadsTheRefusalOnThePaymentIntent();
   await testEstimateIsOneSubscription();
   await testTrialHasNoEstimate();

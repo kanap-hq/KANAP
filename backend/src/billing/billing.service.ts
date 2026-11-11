@@ -21,10 +21,9 @@ import { withTenant } from '../common/tenant-runner';
 import { Features } from '../config/features';
 import { AuditService } from '../audit/audit.service';
 import { GTC_URLS, GTC_VERSION, type TermsPaymentPath } from './terms';
-import { computeTrialDeletionAt } from './subscription-freeze.util';
+import { computeFreezeDate, computeTrialDeletionAt } from './subscription-freeze.util';
 import {
   PLANS,
-  FREEZE_GRACE_DAYS,
   BANK_TRANSFER_MIN_AMOUNT_EUR_CENTS,
   CLOUD_SUBSCRIPTION_QUANTITY,
   INVOICE_PAYMENT_TERM_DAYS,
@@ -216,11 +215,9 @@ export class BillingService {
       paymentDueAt = new Date(dueMs).toISOString();
     }
 
-    let freezeEffectiveAt: string | null = null;
-    if (paymentDueAt) {
-      const freezeMs = new Date(paymentDueAt).getTime() + FREEZE_GRACE_DAYS * 86400000;
-      freezeEffectiveAt = new Date(freezeMs).toISOString();
-    }
+    // The one freeze rule (doc/architecture.md), as the access check applies it.
+    const freezeDate = computeFreezeDate(sub, now);
+    const freezeEffectiveAt = freezeDate != null ? new Date(freezeDate).toISOString() : null;
     const trialDeletionAt = computeTrialDeletionAt(sub, !Features.SINGLE_TENANT && this.stripeConfig.isConfigured());
     // A subscription whose cancellation is set ends on `canceled_at_effective`: it does not renew.
     const renewalAt = sub.canceled_at_effective
