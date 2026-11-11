@@ -1551,7 +1551,7 @@
     "angles": {
       "budget": "Das IT-Budget",
       "cartography": "Die IT-Landkarte",
-      "portfolio": "Projekte und Anfragen"
+      "portfolio": "Das Portfolio"
     },
     "modes": {
       "example": "Mit dem vollständigen Beispiel entdecken",
@@ -1562,7 +1562,7 @@
       "angles": {
         "budget": "IT-Budget",
         "cartography": "IT-Landkarte",
-        "portfolio": "Projektportfolio",
+        "portfolio": "Portfolio",
         "none": "Ich schaue mich um"
       },
       "modes": {
@@ -1651,7 +1651,7 @@
         },
         "own_sites": {
           "title": "Ihre Standorte",
-          "hint": "Legen Sie Ihre Standorte an: Serverräume, Rechenzentren oder Clouds. Jeder Server gehört zu einem davon."
+          "hint": "Legen Sie Ihre Standorte an: Serverräume, Rechenzentren oder Clouds. Jedes Asset gehört zu einem davon."
         },
         "own_applications": {
           "title": "Ihre Anwendungen",
@@ -1662,8 +1662,8 @@
           "hint": "Aktivieren Sie Technologien und verknüpfen Sie sie mit Ihren Anwendungen. Um den Rest kümmert sich {{product}}."
         },
         "own_assets": {
-          "title": "Ihre Server",
-          "hint": "Importieren oder erstellen Sie Ihre Server und verknüpfen Sie sie mit Anwendungen."
+          "title": "Ihre Assets",
+          "hint": "Importieren oder erstellen Sie Ihre Assets und verknüpfen Sie sie mit Anwendungen."
         },
         "portfolio_request": {
           "title": "Eine Anfrage und ihre Bewertung",
@@ -1690,8 +1690,8 @@
           "hint": "Alle Anwendungen des Beispiels mit Geschäftskritikalität und Lebenszyklus. Das ist das Inventar: filtern, sortieren, suchen."
         },
         "map_assets": {
-          "title": "Die Server",
-          "hint": "Jeder Server zeigt, wo die Anwendungen laufen: Umgebung, Standort, installierte Technologien. Öffnen Sie einen Datensatz, um mehr zu erfahren."
+          "title": "Die Assets",
+          "hint": "Jedes Asset zeigt, wo die Anwendungen laufen: Umgebung, Standort, installierte Technologien. Öffnen Sie einen Datensatz, um mehr zu erfahren."
         },
         "portfolio_project": {
           "title": "Das aus der Anfrage entstandene Projekt",

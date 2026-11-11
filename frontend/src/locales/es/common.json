@@ -1551,7 +1551,7 @@
     "angles": {
       "budget": "El presupuesto de TI",
       "cartography": "El mapa del SI",
-      "portfolio": "Los proyectos y las solicitudes"
+      "portfolio": "El portafolio"
     },
     "modes": {
       "example": "Descubrir con el ejemplo completo",
@@ -1562,7 +1562,7 @@
       "angles": {
         "budget": "Presupuesto de TI",
         "cartography": "Mapa del SI",
-        "portfolio": "Cartera de proyectos",
+        "portfolio": "Portafolio",
         "none": "Solo estoy mirando"
       },
       "modes": {
@@ -1651,7 +1651,7 @@
         },
         "own_sites": {
           "title": "Sus ubicaciones",
-          "hint": "Cree sus ubicaciones: salas de servidores, centros de datos o nubes. Cada servidor pertenece a una."
+          "hint": "Cree sus ubicaciones: salas de servidores, centros de datos o nubes. Cada activo pertenece a una."
         },
         "own_applications": {
           "title": "Sus aplicaciones",
@@ -1662,8 +1662,8 @@
           "hint": "Active tecnologías y vincúlelas a sus aplicaciones. {{product}} se encarga del resto."
         },
         "own_assets": {
-          "title": "Sus servidores",
-          "hint": "Importe o cree sus servidores y vincúlelos a las aplicaciones."
+          "title": "Sus activos",
+          "hint": "Importe o cree sus activos y vincúlelos a las aplicaciones."
         },
         "portfolio_request": {
           "title": "Una solicitud y su puntuación",
@@ -1690,8 +1690,8 @@
           "hint": "Todas las aplicaciones del ejemplo, con su criticidad de negocio y su ciclo de vida. Es el inventario: filtre, ordene, busque."
         },
         "map_assets": {
-          "title": "Los servidores",
-          "hint": "Cada servidor indica dónde se ejecutan las aplicaciones: entorno, ubicación, tecnologías instaladas. Abra una ficha para saber más."
+          "title": "Los activos",
+          "hint": "Cada activo indica dónde se ejecutan las aplicaciones: entorno, ubicación, tecnologías instaladas. Abra una ficha para saber más."
         },
         "portfolio_project": {
           "title": "El proyecto nacido de la solicitud",
