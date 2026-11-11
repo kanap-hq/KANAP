@@ -170,6 +170,7 @@ Where the agent gets its facts:
 
 - **Search the knowledge base**: when on, the agent draws on your [Knowledge libraries](knowledge.md) and cites them in replies. With it off, the agent answers from the model's own knowledge (and the web, if that's on).
 - **Libraries**: the libraries the agent may search and cite. A new agent starts with **No library**: it cites no document in its replies until you open some. Pick **Chosen libraries** and select them, or **All libraries** for every library the agent is allowed to access. Library names come from the Knowledge section.
+- **Internal notes of the ticket** (desk agents only): with **Used**, the agent reads the internal notes along with the public messages to decide and to reply, without quoting them to the requester. With **Ignored**, it reads only the public messages of the ticket. A new agent uses them.
 - **Search the web**: lets the agent also consult the public web; the knowledge base always takes precedence and web results are cited. This switch is only available if web search is enabled for the whole platform. When it isn't, the switch is disabled and a note points you to your administrator (see [Kad Settings](ai-settings.md)).
 
 Monitoring agents get **Search your inventory** here instead, which lets the agent look up your own IT inventory (**Applications**, **Assets**, **Interfaces**, **Connections**, **Locations**) to add business context to a diagnosis.
