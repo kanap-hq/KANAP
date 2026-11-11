@@ -16157,6 +16157,15 @@ async function testCreateHelpdeskAgentFromCodeDefaultsBindsProviderAndCapabiliti
   assert.equal(typeof bindings?.ticketing?.provider_key, 'string');
   assert.ok(String(bindings.ticketing.provider_key).length > 0);
   assert.equal(created.agent_definition.max_autonomy_level, 'A3');
+  // A new agent cites no library until an administrator opens one.
+  const closedKnowledge = { enabled: true, all_libraries: false, library_ids: [] };
+  assert.deepEqual((created.agent_definition.scope_policy_json as any)?.knowledge_sources?.knowledge, closedKnowledge);
+  // Same when the screen sends its own scope without a knowledge setting.
+  const fromScreen = await service.createAgentDefinition(context, {
+    name: 'Desk from the screen',
+    scope_policy_json: { mode: 'manual_safe_target', provider_kind: 'ticketing', target_kind: 'ticket' },
+  });
+  assert.deepEqual((fromScreen.agent_definition.scope_policy_json as any)?.knowledge_sources?.knowledge, closedKnowledge);
 }
 
 async function testCreateSreAgentFromCodeDefaultsUsesA1AndCapabilities() {
@@ -16185,6 +16194,9 @@ async function testCreateSreAgentFromCodeDefaultsUsesA1AndCapabilities() {
   assert.ok(names.includes('monitoring.alert.get'));
   const bindings = created.agent_definition.provider_bindings_json as Record<string, any>;
   assert.equal(bindings?.monitoring?.provider_key, 'prtg');
+  const sources = (created.agent_definition.scope_policy_json as any)?.knowledge_sources;
+  assert.deepEqual(sources?.knowledge, { enabled: true, all_libraries: false, library_ids: [] });
+  assert.equal(sources?.kanap_data?.enabled, true);
 }
 
 async function testManualTicketingTriageRequiresAgentDefinitionId() {
