@@ -265,6 +265,13 @@ describe('BillingCenter subscription summary', () => {
     await waitFor(() => expect(api.post).toHaveBeenCalledWith('/billing/portal', expect.anything()));
   });
 
+  it('greys the plan change while the cancellation is set, saying to undo it first', async () => {
+    renderPage(CANCELLED);
+    expect(await screen.findByText('· ends 4 Oct 2099')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Change plan' })).toBeDisabled();
+    expect(screen.getByLabelText('Your subscription ends on 4 Oct 2099: undo the cancellation before changing plan.')).toBeInTheDocument();
+  });
+
   it('shows the end date without the action to a user who cannot manage billing', async () => {
     authState.claims = { isBillingAdmin: false };
     try {

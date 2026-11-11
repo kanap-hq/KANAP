@@ -20,7 +20,7 @@ import {
   getBillingProfile,
   updateBillingProfile,
 } from '../../services/billing';
-import PlanSelectionDialog from './PlanSelectionPage';
+import PlanSelectionDialog, { subscriptionEndingMessage } from './PlanSelectionPage';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { isEuCountry } from '../../utils/billingProfile';
 import { filterCountryOptions, useCountryOptions } from '../../i18n/countries';
@@ -572,6 +572,10 @@ export default function BillingCenter() {
   const unpaid = unpaidLines(subscriptionSummary, t, locale);
   // The plan changes once the invoice is paid (the server refuses it before).
   const paymentPending = isPaymentPending(subscriptionSummary);
+  // Nor while its cancellation is set: it is undone first ("Don't cancel").
+  const planChangeBlocked = paymentPending
+    ? t('planSelection.errors.subscriptionPaymentPending')
+    : cancelled ? subscriptionEndingMessage(subscriptionSummary?.canceled_at_effective, t, locale) : null;
   const planActionLabel = hasSubscription ? t('billing.actions.changePlan') : t('billing.actions.choosePlan');
   const invoices = profileQuery.data?.invoices ?? [];
   const invoiceMissingFields = profileQuery.data?.invoice_missing_fields ?? [];
@@ -884,8 +888,8 @@ export default function BillingCenter() {
                   {t('billing.actions.payInvoice')}
                 </Button>
               )}
-              {paymentPending ? (
-                <Tooltip title={t('planSelection.errors.subscriptionPaymentPending')}>
+              {planChangeBlocked ? (
+                <Tooltip title={planChangeBlocked}>
                   <span>
                     <Button variant="action" size="small" disabled>
                       {planActionLabel}
