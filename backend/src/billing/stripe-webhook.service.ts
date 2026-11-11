@@ -307,9 +307,16 @@ export class StripeWebhookService implements OnModuleInit {
 
     const subscriptionData = await this.resolveSubscriptionData(event, subscriptionId);
     const invoiceData = event?.type?.startsWith('invoice.') ? event?.data?.object ?? null : null;
+    // Read before the transaction: it holds the tenant's lock and makes no Stripe call.
+    const paymentMethodInfo = subscriptionData
+      ? await this.describePaymentMethod(subscriptionData?.default_payment_method)
+      : null;
 
     let ignored = false;
     await withTenant(this.dataSource, tenantId, async (manager) => {
+      // The events of a tenant are handled one after the other (Stripe sends those of one
+      // invoice together): each one reads the row as the previous one left it.
+      await manager.query(`SELECT pg_advisory_xact_lock(hashtext($1)::bigint)`, [`stripe-webhook:${tenantId}`]);
       const repo = manager.getRepository(Subscription);
       let sub = await repo.findOne({ where: { stripe_subscription_id: subscriptionId } });
 
@@ -395,7 +402,6 @@ export class StripeWebhookService implements OnModuleInit {
           sub.subscription_type = SubscriptionType.MONTHLY;
         }
 
-        const paymentMethodInfo = await this.describePaymentMethod(subscriptionData?.default_payment_method);
         if (paymentMethodInfo) {
           sub.default_payment_method_id = paymentMethodInfo.id;
           sub.default_payment_method_brand = paymentMethodInfo.brand;

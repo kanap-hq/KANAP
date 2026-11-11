@@ -200,7 +200,15 @@ function createSyncService(
   const retrieved: string[] = [];
   const invoiceUpdates: unknown[][] = [];
   const customerUpdates: unknown[][] = [];
+  /** Transactions open when each payment method was read from Stripe. */
+  const paymentMethodReads: number[] = [];
+  let openTransactions = 0;
+  const queries: string[] = [];
   const manager = {
+    query: async (sql: string) => {
+      queries.push(sql);
+      return [];
+    },
     getRepository: () => ({
       // The tenant's one row; a search by subscription id finds it only when it carries that id.
       findOne: async ({ where }: { where: Record<string, unknown> }) =>
@@ -210,16 +218,28 @@ function createSyncService(
     }),
   };
   const dataSource = {
-    createQueryRunner: () => ({
-      isTransactionActive: false,
-      connect: async () => undefined,
-      startTransaction: async () => undefined,
-      commitTransaction: async () => undefined,
-      rollbackTransaction: async () => undefined,
-      release: async () => undefined,
-      query: async () => [],
-      manager,
-    }),
+    createQueryRunner: () => {
+      const runner = {
+        isTransactionActive: false,
+        connect: async () => undefined,
+        startTransaction: async () => {
+          runner.isTransactionActive = true;
+          openTransactions += 1;
+        },
+        commitTransaction: async () => {
+          runner.isTransactionActive = false;
+          openTransactions -= 1;
+        },
+        rollbackTransaction: async () => {
+          runner.isTransactionActive = false;
+          openTransactions -= 1;
+        },
+        release: async () => undefined,
+        query: async () => [],
+        manager,
+      };
+      return runner;
+    },
     getRepository: () => ({
       findOne: async () => (opts.tenantKnown === false ? null : { id: TENANT_A, stripe_customer_id: 'cus_1' }),
       update: async () => undefined,
@@ -242,6 +262,12 @@ function createSyncService(
     setupIntents: {
       retrieve: async (id: string) => ({ id, ...(opts.setupIntent ?? {}) }),
     },
+    paymentMethods: {
+      retrieve: async (id: string) => {
+        paymentMethodReads.push(openTransactions);
+        return { id, type: 'card', card: { brand: 'visa', last4: '4242' } };
+      },
+    },
     customers: {
       update: async (...args: unknown[]) => {
         customerUpdates.push(args);
@@ -262,7 +288,26 @@ function createSyncService(
     debug: () => undefined,
     error: (message: string) => logs.error.push(message),
   };
-  return { svc, row, retrieved, invoiceUpdates, customerUpdates, logs };
+  return { svc, row, retrieved, invoiceUpdates, customerUpdates, logs, paymentMethodReads, queries };
+}
+
+/**
+ * The events of a tenant are handled one after the other: a transaction lock per tenant comes
+ * first (`stripe-webhook-serialization.integration.spec.ts` runs two events together), and the
+ * payment method is read from Stripe before the transaction, which holds no Stripe call.
+ */
+async function testEventHandlingIsSerializedPerTenant() {
+  const { svc, row, paymentMethodReads, queries } = createSyncService({ stripe_subscription_id: 'sub_1' });
+  await svc.processEvent({
+    id: 'evt_pm',
+    type: 'customer.subscription.updated',
+    data: { object: cloverSubscription({ default_payment_method: 'pm_1' }) },
+  });
+  assert.equal(row.default_payment_method_id, 'pm_1');
+  assert.equal(row.default_payment_method_brand, 'VISA');
+  assert.equal(row.default_payment_method_last4, '4242');
+  assert.deepEqual(paymentMethodReads, [0], 'the payment method is read outside the transaction');
+  assert.ok(/pg_advisory_xact_lock/.test(queries[0] ?? ''), `the transaction starts with the tenant's lock: ${queries[0]}`);
 }
 
 async function testCloverInvoiceResolvesItsSubscription() {
@@ -576,6 +621,7 @@ async function run() {
   await testSubscriptionEventWithoutPeriodKeepsTheStoredDates();
   await testCancellationSetsTheEndDate();
   await testSyncWritesThePaymentModeAndTerm();
+  await testEventHandlingIsSerializedPerTenant();
   await testInvoiceStatusNeverGoesBack();
   await testDraftInvoiceHasNoNumber();
   await testEventOfAnotherSubscriptionIsIgnored();
