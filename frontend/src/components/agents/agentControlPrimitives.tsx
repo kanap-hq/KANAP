@@ -565,9 +565,11 @@ export function attentionAcknowledgedAt(metadataJson: unknown): string | null {
   return stringValue(acknowledged?.at);
 }
 
+// A failed action needs attention by its status alone: its message is not given to every reader.
 export function actionNeedsAttention(action: AiAgentControlActionRequest): boolean {
   if (attentionAcknowledgedAt(action.metadata_json)) return false;
-  return !!actionAttentionMessage(action) && ['approved', 'expired', 'failed', 'dead_letter'].includes(action.status);
+  if (['failed', 'dead_letter'].includes(action.status)) return true;
+  return !!actionAttentionMessage(action) && ['approved', 'expired'].includes(action.status);
 }
 
 export function workItemNeedsAttention(workItem: AiAgentControlWorkItem): boolean {
