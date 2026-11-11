@@ -1596,7 +1596,7 @@ export class BillingService {
 
     const latestInvoice = await this.retrieveLatestInvoice(stripeSub);
     if (latestInvoice) {
-      const anotherInvoice = !!latestInvoice.id && latestInvoice.id !== sub.latest_invoice_id;
+      const anotherInvoice = !!latestInvoice.id && !!sub.latest_invoice_id && latestInvoice.id !== sub.latest_invoice_id;
       sub.latest_invoice_id = latestInvoice.id ?? sub.latest_invoice_id ?? null;
       sub.latest_invoice_status = latestInvoice.status ?? sub.latest_invoice_status ?? null;
       // The invoice's own number and links: a draft has none yet.
