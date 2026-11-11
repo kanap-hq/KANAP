@@ -6299,6 +6299,12 @@ export class AiAgentControlService {
     if (plannerNeedsSourcedSynthesis || fallbackPreparePublicReply) {
       await runReplySynthesis();
     }
+    const runUsageEstimate = await this.recordAndEnforceHelpdeskRunCap(context, {
+      definition: agentDefinition,
+      runId: ticketResult.run_id,
+      stage: 'before_proposal_preparation',
+      usage: currentRunLlmUsage(),
+    });
     const synthesisMetadata = buildSynthesisMetadata();
     // Fail closed (#47): in the legacy fallback (action planner unavailable), only prepare the
     // EXTERNAL requester reply and the pending transition when synthesis actually produced a
@@ -6464,13 +6470,6 @@ export class AiAgentControlService {
         }
       }
     }
-    // The run total counts every model call of the triage, the technician brief included.
-    const runUsageEstimate = await this.recordAndEnforceHelpdeskRunCap(context, {
-      definition: agentDefinition,
-      runId: ticketResult.run_id,
-      stage: 'before_proposal_preparation',
-      usage: currentRunLlmUsage(),
-    });
     const noteBody = isPlannerEscalation
       ? buildTriageNote(ticket, knowledgeItems, ticketTimeline, webSearchResults, { kind: 'escalation', reason: escalationReason })
       : (replySynthesisResult

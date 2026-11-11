@@ -11611,7 +11611,6 @@ function savePreparedTicketingAction(context: ReturnType<typeof createContext>, 
   // way the real capability registry would, so expiry-convergence assertions remain faithful.
   expiresAt?: Date;
   metadata?: Record<string, unknown> | null;
-  targetRef?: string;
 }) {
   const repo = context.manager.getRepository(AiActionRequest);
   const now = new Date();
@@ -11629,10 +11628,10 @@ function savePreparedTicketingAction(context: ReturnType<typeof createContext>, 
     status: 'pending',
     target_type: 'ticket',
     target_id: null,
-    target_ref: input.targetRef ?? '4',
+    target_ref: '4',
     idempotency_key: `${input.id}-key`,
     action_payload_json: {
-      ticketId: input.targetRef ?? '4',
+      ticketId: '4',
       visibility: input.visibility,
       body: input.body,
       bodyFormat: 'plain_text',
@@ -14285,22 +14284,15 @@ async function runTriageWithSimulatedModel(input: {
   notes: Array<Record<string, unknown>>;
   plan: Record<string, unknown>;
   reply?: Record<string, unknown>;
-  // Shared between two runs on the same ticket.
-  manager?: ReturnType<typeof createMemoryManager>['manager'];
-  runId?: string;
-  administrativeReply?: () => unknown;
   technicianBrief?: () => unknown;
   knowledge?: Record<string, unknown>;
 }) {
-  const manager = input.manager ?? createMemoryManager().manager;
+  const { manager } = createMemoryManager();
   const context = createContext(manager);
   const previousWebReady = Features.AI_WEB_SEARCH_READY;
   (Features as any).AI_WEB_SEARCH_READY = true;
   const queue = new AiAgentWorkQueueService();
-  const existingDefinition = input.manager
-    ? (await manager.getRepository(AiAgentDefinition).find({ where: { tenant_id: context.tenantId } }))[0] ?? null
-    : null;
-  const definitionBundle = existingDefinition ? { definition: existingDefinition } : await seedTestHelpdeskDefinition(context);
+  const definitionBundle = await seedTestHelpdeskDefinition(context);
   definitionBundle.definition.scope_policy_json = {
     ...(definitionBundle.definition.scope_policy_json ?? {}),
     knowledge_sources: {
@@ -14313,27 +14305,7 @@ async function runTriageWithSimulatedModel(input: {
   const capabilityCalls: string[] = [];
   const prepared: { publicReply: string | null; internalNote: string | null } = { publicReply: null, internalNote: null };
   let toolIndex = 0;
-  const runId = input.runId ?? 'run-two-calls';
-  await manager.getRepository(AiRun).save(manager.getRepository(AiRun).create({
-    id: runId,
-    tenant_id: context.tenantId,
-    user_id: null,
-    conversation_id: null,
-    request_id: null,
-    ai_api_key_id: null,
-    invocation_channel: 'internal',
-    trigger_kind: 'internal',
-    status: 'running',
-    input_summary: null,
-    output_summary: null,
-    usage_json: null,
-    cost_json: null,
-    metadata_json: null,
-    started_at: new Date(),
-    completed_at: null,
-    created_at: new Date(),
-    updated_at: new Date(),
-  }));
+  const runId = 'run-two-calls';
   const dispatcher = {
     execute: async (_context: unknown, request: any) => {
       capabilityCalls.push(request.capabilityName);
@@ -14396,31 +14368,27 @@ async function runTriageWithSimulatedModel(input: {
         case TICKETING_INTERNAL_NOTE_PREPARE_CAPABILITY:
           prepared.internalNote = request.input.note_body;
           await savePreparedTicketingAction(context, {
-            id: `${runId}-internal-action`,
+            id: 'two-calls-internal-action',
             runId,
             toolExecutionId,
             capabilityName: TICKETING_INTERNAL_NOTE_ADD_APPROVED_CAPABILITY,
             body: request.input.note_body,
             visibility: 'internal',
             providerKey: 'glpi',
-            metadata: request.execution?.metadata ?? null,
-            targetRef: '64',
           });
-          return ok({ action_request_id: `${runId}-internal-action` });
+          return ok({ action_request_id: 'two-calls-internal-action' });
         case TICKETING_PUBLIC_REPLY_PREPARE_CAPABILITY:
           prepared.publicReply = request.input.reply_body;
           await savePreparedTicketingAction(context, {
-            id: `${runId}-public-action`,
+            id: 'two-calls-public-action',
             runId,
             toolExecutionId,
             capabilityName: TICKETING_PUBLIC_REPLY_ADD_APPROVED_CAPABILITY,
             body: request.input.reply_body,
             visibility: 'public',
             providerKey: 'glpi',
-            metadata: request.execution?.metadata ?? null,
-            targetRef: '64',
           });
-          return ok({ action_request_id: `${runId}-public-action` });
+          return ok({ action_request_id: 'two-calls-public-action' });
         default:
           throw new Error(`Unexpected capability ${request.capabilityName}`);
       }
@@ -14438,7 +14406,6 @@ async function runTriageWithSimulatedModel(input: {
         case 'technician_brief':
           return structuredJsonSuccess({ technician_brief: `Synthèse technicien ${TRIAGE_BRIEF_MARKER}.` });
         case 'administrative_reply':
-          if (input.administrativeReply) return input.administrativeReply();
           return structuredJsonSuccess({ language: 'fr', requester_reply: 'Bonjour, votre demande a bien été reçue.' });
         default:
           throw new Error(`Unexpected model call ${request.taskName}`);
@@ -14468,8 +14435,7 @@ async function runTriageWithSimulatedModel(input: {
   } finally {
     (Features as any).AI_WEB_SEARCH_READY = previousWebReady;
   }
-  const run = await manager.getRepository(AiRun).findOne({ where: { id: runId, tenant_id: context.tenantId } });
-  return { calls, ...prepared, manager, context, run, capabilityCalls };
+  return { calls, ...prepared, capabilityCalls };
 }
 
 function payloadOf(calls: Array<{ taskName: string; payload: unknown }>, taskName: string): string {
@@ -14543,21 +14509,6 @@ async function testTriageTechnicianBriefReadsEveryItemAndTheReplyThePublicItems(
   for (const marker of [TRIAGE_INTERNAL_MARKER, TRIAGE_PLANNER_MARKER, TRIAGE_BRIEF_MARKER]) {
     assert.ok(!result.publicReply?.includes(marker), `the public reply holds no ${marker}`);
   }
-}
-
-function stageUsageTotal(run: AiRun | null): number {
-  const usage = (run?.usage_json ?? {}) as Record<string, unknown>;
-  return Object.values(usage)
-    .filter((value): value is Record<string, unknown> => !!value && typeof value === 'object')
-    .reduce((sum, stage) => sum + Number(stage.estimated_tokens ?? 0), 0);
-}
-
-async function testTriageRunTotalCountsEveryModelCall() {
-  const result = await runTriageWithSimulatedModel({ notes: triageNotes(true), plan: TRIAGE_SOURCED_PLAN, reply: TRIAGE_SOURCED_REPLY });
-  assert.deepEqual(result.calls.map((call) => call.taskName), ['action_planner', 'reply_synthesis', 'technician_brief']);
-  const usage = (result.run?.usage_json ?? {}) as Record<string, any>;
-  assert.ok(usage.technician_brief?.estimated_tokens > 0, 'the technician brief has its stage usage');
-  assert.equal(usage.estimated_tokens, stageUsageTotal(result.run), 'the run total is the sum of its stages');
 }
 
 async function testAnAgentWithoutLibrariesSearchesNoKnowledge() {
@@ -17276,7 +17227,6 @@ async function run() {
   await testTriagePlannerDecidesOnEveryItemAndAPublicCallWritesTheAdministrativeReply();
   await testTriageTechnicianBriefReadsEveryItemAndTheReplyThePublicItems();
   await testTriageWithoutInternalNoteKeepsOneReplyCall();
-  await testTriageRunTotalCountsEveryModelCall();
   await testAnAgentWithoutLibrariesSearchesNoKnowledge();
   testSynthesisPromptPrefersInternalKnowledgeSources();
   testSynthesisPromptCarriesValidationStatus();
