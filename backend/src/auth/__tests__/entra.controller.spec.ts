@@ -628,7 +628,7 @@ async function testConsentReturnNeedsAStateSignedForConsent() {
       ]) {
         await assert.rejects(
           () => h.back({ state: value, ...extra }),
-          (error: unknown) => error instanceof BadRequestException && !String((error as Error).message).includes(providerText),
+          (error: unknown) => error instanceof BadRequestException && (error as Error).message === 'Invalid Entra state',
           `${label}: refused`,
         );
       }
