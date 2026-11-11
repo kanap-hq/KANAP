@@ -186,7 +186,7 @@ La comprobación añade las nuevas versiones, identificadores de producto CPE y 
 El grupo **Identificadores de vulnerabilidad**, bajo las versiones, reúne los identificadores de producto CPE y los nombres CVE.org. Kadratis encuentra las vulnerabilidades de una tecnología a través de ellos.
 
 - **Plegado**: cuando la tecnología tiene al menos un identificador, el grupo está plegado, con un resumen en su línea de título, por ejemplo `2 identificadores CPE · 3 nombres de CVE.org`. Haga clic en el título para abrirlo.
-- **Abierto**: cuando la tecnología no tiene ninguno, el grupo está abierto, con una advertencia: no se busca ninguna vulnerabilidad para esta tecnología. La sección **Versiones** también lo indica. Con el nivel Miembro en la infraestructura, **Añadir un identificador** junto a esa línea abre el grupo.
+- **Abierto**: cuando la tecnología no tiene ninguno, el grupo está abierto, con una advertencia: no se busca ninguna vulnerabilidad para esta tecnología.
 
 El cotejo se hace a nivel de la tecnología. Cada versión de la tecnología se compara con las vulnerabilidades de sus identificadores, y una versión que usted añade se coteja de inmediato. Sin identificador, Kadratis no busca ninguna vulnerabilidad para ninguna versión.
 
