@@ -6,9 +6,6 @@
 /** The product: what a workspace runs on ("Powered by …", "Acme via …", the assistant's platform). */
 export const PRODUCT_NAME = 'Kadratis';
 
-/** The company that publishes the product: publisher, legal mentions, support, copyright. */
-export const COMPANY_NAME = 'KANAP';
-
 /** The integrated AI agent: the chat, its settings, its instructions to the model, the emails. */
 export const AGENT_NAME = 'Kad';
 
