@@ -20,9 +20,9 @@ import { AiTenantExecutionService } from '../execution/ai-tenant-execution.servi
 // The agents screens and the MCP journal list every run of the workspace. A run started by an
 // agent is read in full by the roles of those screens. A run started by a person (a conversation
 // with the assistant, a call through their MCP key or connection) shows its line to the same
-// roles (who, when, which tool) and its result to that person and to an Administrator whose
-// access to data is not limited. The rows are written here the way the dispatcher writes them, so
-// a result kept before this rule existed is read under the same rule.
+// roles (who, when, which tool) and its result to its author, or to an Administrator, who reads
+// all data. The rows are written here the way the dispatcher writes them, so a result kept before
+// this rule existed is read under the same rule.
 
 const TAG = randomBytes(4).toString('hex');
 const executor = new AiTenantExecutionService(dataSource);
@@ -273,18 +273,15 @@ function pick(s: Seed, of: (runId: string) => unknown): Record<keyof Runs, unkno
   };
 }
 
-function as<T>(s: Seed, userId: string, fn: (ctx: Ctx) => Promise<T>, before?: (manager: EntityManager) => Promise<void>): Promise<T> {
-  return executor.run(s.tenantId, async (manager) => {
-    if (before) await before(manager);
-    return fn({ tenantId: s.tenantId, userId, manager });
-  });
+function as<T>(s: Seed, userId: string, fn: (ctx: Ctx) => Promise<T>): Promise<T> {
+  return executor.run(s.tenantId, (manager) => fn({ tenantId: s.tenantId, userId, manager }));
 }
 
 /** For each read and each run: whether the answer carries the run's result. */
-async function resultsSeen(s: Seed, userId: string, before?: (manager: EntityManager) => Promise<void>) {
+async function resultsSeen(s: Seed, userId: string) {
   const seen: Record<string, Record<keyof Runs, { text: string; hasResult: boolean }>> = {};
   for (const path of RESULT_READS) {
-    const answer = await as(s, userId, (ctx) => path.read(ctx, s), before);
+    const answer = await as(s, userId, (ctx) => path.read(ctx, s));
     seen[path.name] = Object.fromEntries((Object.keys(answer) as Array<keyof Runs>).map((key) => {
       const text = JSON.stringify(answer[key]);
       return [key, { text, hasResult: key in RESULTS && text.includes(marker(key as ResultRun)) }];
@@ -480,22 +477,8 @@ async function testTheAuthorReadsTheirOwnResults(s: Seed) {
   await assertReadsEveryResult(s, s.people.author, 'the author');
 }
 
-async function testAnAdministratorWithAllDataReadsEveryResult(s: Seed) {
+async function testAnAdministratorReadsEveryResult(s: Seed) {
   await assertReadsEveryResult(s, s.people.administrator, 'the Administrator');
-}
-
-async function testAnAdministratorWithLimitedDataAccessReadsNoOtherResult(s: Seed) {
-  // The access the request's transaction runs under is the one that counts.
-  const limited = async (manager: EntityManager) => {
-    await manager.query(`SELECT set_config('app.da_mode', 'limited', true)`);
-  };
-  const seen = await resultsSeen(s, s.people.administrator, limited);
-  for (const path of RESULT_READS) {
-    for (const run of PERSON_RUNS) {
-      if (!journalReads(path.name, run)) continue;
-      assert.equal(seen[path.name][run].hasResult, false, `${path.name} gave the result of the ${run} run under a limited access`);
-    }
-  }
 }
 
 // The non-test sources that name a kept result. Each one either withholds it by the run's origin,
@@ -540,8 +523,7 @@ async function main() {
     ['the fingerprint of the arguments is read like the result', testTheFingerprintOfTheArgumentsIsReadLikeTheResult],
     ['an agent run stays readable in full', testAnAgentRunStaysReadableInFull],
     ['the author reads their own results', testTheAuthorReadsTheirOwnResults],
-    ['an Administrator with all data reads every result', testAnAdministratorWithAllDataReadsEveryResult],
-    ['an Administrator under a limited data access reads no other result', testAnAdministratorWithLimitedDataAccessReadsNoOtherResult],
+    ['an Administrator reads every result', testAnAdministratorReadsEveryResult],
     ['every source that names a kept result is classified', testEverySourceThatNamesAKeptResultIsClassified],
   ];
   let failed = 0;

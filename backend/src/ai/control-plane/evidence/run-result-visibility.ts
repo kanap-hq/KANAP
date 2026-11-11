@@ -7,8 +7,8 @@ import type { AiRun } from '../entities/ai-run.entity';
  * diagnosis, a test from the agents screens) is read in full by the roles of those screens. A
  * person's run comes from a conversation with the assistant or from a call through their MCP key
  * or connection: the screens that list runs show its line (who, when, which tool, on what) to the
- * same roles, and what the tool returned only to that person and to an Administrator whose access
- * to data is not limited.
+ * same roles, and what the tool returned only to its author, or to an Administrator, who reads
+ * all data.
  *
  * The rule is read from the run's origin, which the dispatcher has written on every run since the
  * first one: results kept earlier follow it too.

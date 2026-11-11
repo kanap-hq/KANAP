@@ -727,8 +727,9 @@ export class AiPolicyService {
 
   /**
    * Whether the person reads what a tool returned to another person, in a conversation or through
-   * MCP (control-plane/evidence/run-result-visibility.ts): an Administrator whose access to data
-   * is not limited. `manager` is the request's connection, under the tenant.
+   * MCP (control-plane/evidence/run-result-visibility.ts): an Administrator, who reads all data
+   * (the access of an Administrator is never limited, `data_access_apply`). `manager` is the
+   * request's connection, under the tenant.
    */
   async readsEveryRunResult(
     context: Pick<AiPolicyAccessContext, 'userId'>,
@@ -736,8 +737,7 @@ export class AiPolicyService {
   ): Promise<boolean> {
     if (!context.userId) return false;
     const state = await this.getEffectivePermissionStateOrNull(context.userId, manager);
-    if (!state?.isAdmin) return false;
-    return await dataAccessModeOf({ manager, userId: context.userId }) !== 'limited';
+    return state?.isAdmin === true;
   }
 
   async assertAgentRead(

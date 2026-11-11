@@ -21,8 +21,8 @@ import { runResultAccess } from '../evidence/run-result-visibility';
  *
  * A line says who called which tool, when, with which arguments and how it ended (the result and
  * the coded reason). What the tool returned and the message of a failure, which quotes what was
- * found, are read by the person who made the call and by an Administrator whose access to data
- * is not limited (evidence/run-result-visibility.ts).
+ * found, are read by the person who made the call, or by an Administrator, who reads all data
+ * (evidence/run-result-visibility.ts).
  */
 
 /** Why a call was refused: the client could not run this tool, or not with these arguments. */
