@@ -113,6 +113,12 @@ export default function IncidentPropertiesDrawer({
             value={values.category || ''}
             onChange={(event) => onChange({ category: event.target.value || null })}
             variant="standard"
+            SelectProps={{
+              displayEmpty: true,
+              SelectDisplayProps: {
+                'aria-label': t('workspace.incident.drawer.category'),
+              } as React.HTMLAttributes<HTMLDivElement>,
+            }}
             sx={drawerSelectSx}
             disabled={disabled}
           >
@@ -132,6 +138,9 @@ export default function IncidentPropertiesDrawer({
             variant="standard"
             SelectProps={{
               displayEmpty: true,
+              SelectDisplayProps: {
+                'aria-label': t('workspace.incident.drawer.severity'),
+              } as React.HTMLAttributes<HTMLDivElement>,
               renderValue: (selected) => (selected
                 ? (
                   <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
@@ -159,6 +168,9 @@ export default function IncidentPropertiesDrawer({
             onChange={(event) => onChange({ status: event.target.value as IncidentStatus })}
             variant="standard"
             SelectProps={{
+              SelectDisplayProps: {
+                'aria-label': t('workspace.incident.drawer.status'),
+              } as React.HTMLAttributes<HTMLDivElement>,
               renderValue: (selected) => (
                 <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
                   <StatusDot color={getDotColor(INCIDENT_STATUS_COLORS[String(selected)], theme.palette.mode)} />
