@@ -356,7 +356,8 @@ export class EntraController {
     }
     const settingsUrl = `${resolveTenantAppBaseUrl(req, tenant.slug).replace(/\/$/, '')}/admin/auth`;
     if (consent.expired) {
-      res.redirect(`${settingsUrl}?consent=error`);
+      // No outcome to report: Microsoft may have recorded the consent, the settings offer it again.
+      res.redirect(settingsUrl);
       return;
     }
     const consentedDirectory = boundedQueryText(req.query?.tenant, 100);

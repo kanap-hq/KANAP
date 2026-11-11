@@ -697,7 +697,7 @@ async function testExpiredConsentStateReturnsToTheSettingsWithoutWriting() {
     } finally {
       Date.now = realNow;
     }
-    assert.deepEqual(h.redirects, ['http://alpha.lvh.me/admin/auth?consent=error'], 'back to the settings of the signed workspace');
+    assert.deepEqual(h.redirects, ['http://alpha.lvh.me/admin/auth'], 'back to the settings of the signed workspace, with no outcome');
     assert.deepEqual(h.auditEntries, [], 'no audit entry');
     assert.equal(h.state.started, 0, 'no transaction');
     assert.deepEqual(h.syncs, [], 'no directory sync');
