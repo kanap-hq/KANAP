@@ -14170,17 +14170,6 @@ async function testGlpiTriageAdministrativeReplyNoteCarriesPlannerRationale() {
     synthesizeTicketReply: async () => {
       throw new Error('Synthesis must not run for a planner-authored administrative reply.');
     },
-    buildAdministrativeReplyPayload: () => ({ prompt: 'unused' }),
-    draftAdministrativeReply: async () => ({
-      language: 'fr',
-      requester_reply: 'Bonjour, votre demande concernant l\'application a bien été reçue. Nous analysons le problème et revenons vers vous rapidement.',
-      fallback_reason: null,
-      model: 'test:administrative-reply',
-      usage: { input_tokens: 10, output_tokens: 6 },
-      estimated_tokens: 16,
-      estimated_cost_eur: 0.00003,
-      latency_ms: 1,
-    }),
   };
   const actionPlanner = {
     maxOutputTokens: () => 1600,
@@ -14195,8 +14184,8 @@ async function testGlpiTriageAdministrativeReplyNoteCarriesPlannerRationale() {
         {
           action_type: 'requester_reply',
           reply_kind: 'administrative',
-          administrative_intent: 'acknowledgement',
           reason: 'Accuser réception; aucune source fiable ne couvre le problème de lancement.',
+          body: 'Bonjour, votre demande concernant l\'application a bien été reçue. Nous analysons le problème et revenons vers vous rapidement.',
         },
       ],
       rationale: 'Réponse administrative en attendant un diagnostic technicien.',
@@ -14253,11 +14242,10 @@ async function testGlpiTriageAdministrativeReplyNoteCarriesPlannerRationale() {
   }
 }
 
-// Decisions and technician texts read every item of the ticket; a text for the requester is
-// written by a call that reads the public items of the ticket and no free text of those calls.
+// A triage run against a simulated model: the ticket, its notes and the plan are given, the
+// model calls and the prepared texts are returned.
 const TRIAGE_INTERNAL_MARKER = 'marker-echo-5150';
 const TRIAGE_PLANNER_MARKER = 'marker-foxtrot-7321';
-const TRIAGE_BRIEF_MARKER = 'marker-golf-8846';
 
 function triageNotes(withInternalNote: boolean) {
   return [
@@ -14402,10 +14390,6 @@ async function runTriageWithSimulatedModel(input: {
           return structuredJsonSuccess(input.plan);
         case 'reply_synthesis':
           return structuredJsonSuccess(input.reply ?? {});
-        case 'technician_brief':
-          return structuredJsonSuccess({ technician_brief: `Synthèse technicien ${TRIAGE_BRIEF_MARKER}.` });
-        case 'administrative_reply':
-          return structuredJsonSuccess({ language: 'fr', requester_reply: 'Bonjour, votre demande a bien été reçue.' });
         default:
           throw new Error(`Unexpected model call ${request.taskName}`);
       }
@@ -14441,34 +14425,6 @@ function payloadOf(calls: Array<{ taskName: string; payload: unknown }>, taskNam
   const call = calls.find((candidate) => candidate.taskName === taskName);
   assert.ok(call, `${taskName} is called`);
   return JSON.stringify(call.payload);
-}
-
-async function testTriagePlannerDecidesOnEveryItemAndAPublicCallWritesTheAdministrativeReply() {
-  const result = await runTriageWithSimulatedModel({
-    notes: triageNotes(true),
-    plan: {
-      actions: [
-        { action_type: 'internal_note', reason: `Documenter ${TRIAGE_PLANNER_MARKER}.` },
-        {
-          action_type: 'requester_reply',
-          reply_kind: 'administrative',
-          administrative_intent: 'acknowledgement',
-          reason: `Accuser réception ${TRIAGE_PLANNER_MARKER}.`,
-          body: `Texte du planificateur ${TRIAGE_PLANNER_MARKER}.`,
-        },
-      ],
-      rationale: `Raisonnement ${TRIAGE_PLANNER_MARKER}.`,
-      confidence: 0.8,
-    },
-  });
-  assert.deepEqual(result.calls.map((call) => call.taskName), ['action_planner', 'administrative_reply']);
-  assert.ok(payloadOf(result.calls, 'action_planner').includes(TRIAGE_INTERNAL_MARKER), 'the planner reads the internal note');
-  const administrativePayload = payloadOf(result.calls, 'administrative_reply');
-  assert.ok(!administrativePayload.includes(TRIAGE_INTERNAL_MARKER), 'the administrative reply reads no internal note');
-  assert.ok(!administrativePayload.includes(TRIAGE_PLANNER_MARKER), 'the administrative reply reads no planner text');
-  assert.ok(administrativePayload.includes('acknowledgement'));
-  assert.equal(result.publicReply, 'Bonjour, votre demande a bien été reçue.');
-  assert.ok(result.internalNote?.includes(TRIAGE_PLANNER_MARKER), 'the internal note keeps the planner reasoning');
 }
 
 const TRIAGE_SOURCED_PLAN = {
@@ -17194,7 +17150,6 @@ async function run() {
   await testGlpiTriageUnvalidatedCandidatesReachPlannerAndSynthesis();
   await testGlpiTriageSynthesisRejectsOffTopicKnowledgeAndUsesWeb();
   await testGlpiTriageAdministrativeReplyNoteCarriesPlannerRationale();
-  await testTriagePlannerDecidesOnEveryItemAndAPublicCallWritesTheAdministrativeReply();
   await testAnAgentWithoutLibrariesSearchesNoKnowledge();
   testSynthesisPromptPrefersInternalKnowledgeSources();
   testSynthesisPromptCarriesValidationStatus();

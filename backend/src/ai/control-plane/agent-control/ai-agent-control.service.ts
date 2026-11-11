@@ -166,13 +166,12 @@ import {
 import {
   AiReplySynthesisService,
   estimateReplySynthesisUsage,
-  RUNTIME_SAFETY_FLOOR_ADMINISTRATIVE_REPLY,
   ReplySynthesisEntitySource,
   ReplySynthesisRejectedSource,
   ReplySynthesisResult,
   ReplySynthesisSource,
 } from './ai-reply-synthesis.service';
-import { administrativeReplyIntent, publicTicketItems } from './public-reply-sources';
+import { publicTicketItems } from './public-reply-sources';
 import {
   AiSharedContextProfileService,
   SharedContextProfileInput,
@@ -757,12 +756,10 @@ export type RunUsageStageKey =
   | 'need_representation'
   | 'evidence_extraction'
   | 'knowledge_interpretation'
-  | 'action_planner'
-  | 'administrative_reply';
+  | 'action_planner';
 
 export const RUN_STEP_STAGES = {
   synthesis: { kind: 'synthesis', capabilityName: 'answer_synthesis' },
-  administrativeReply: { kind: 'synthesis', capabilityName: 'administrative_reply_synthesis' },
   diagnosticBrief: { kind: 'synthesis', capabilityName: 'diagnostic_brief_synthesis' },
   needRepresentation: { kind: 'need_representation', capabilityName: 'ticket_need_representation' },
   evidenceExtraction: { kind: 'evidence_extraction', capabilityName: 'ticket_image_evidence_extraction' },
@@ -5971,83 +5968,6 @@ export class AiAgentControlService {
         plannerSkippedActions[actionType] = reason;
       }
     };
-    // The planner decides on every item of the ticket. An administrative reply it asks for is
-    // written by a call that reads the public items of the ticket and the intent (closed list),
-    // never the planner's own text.
-    const draftAdministrativeReply = async (intent: unknown): Promise<{ body: string | null; reason: string | null }> => {
-      if (!this.replySynthesis) {
-        return { body: null, reason: 'administrative_reply_service_unavailable' };
-      }
-      const draftInput = {
-        ticket,
-        timeline: ticketTimeline,
-        language: synthesisLanguage,
-        intent,
-        profile: promptRuntime.synthesisGuidance,
-      };
-      const projection = estimateReplySynthesisUsage({
-        systemPrompt: compileSystemPrompt(RUNTIME_SAFETY_FLOOR_ADMINISTRATIVE_REPLY, promptRuntime.synthesisGuidance),
-        userPayload: this.replySynthesis.buildAdministrativeReplyPayload(draftInput),
-      }, llmPrices, this.replySynthesis.maxOutputTokens());
-      const inputSummary = {
-        language: synthesisLanguage,
-        intent: administrativeReplyIntent(intent),
-        projected_tokens: projection.estimatedTokens,
-        projected_cost_eur: projection.estimatedCostEur,
-      };
-      const draftStepIndex = stepIndex++;
-      const baseUsageEstimate = currentRunLlmUsage();
-      const guardrails = this.agentQueue && agentDefinition ? this.agentQueue.runGuardrails(agentDefinition) : null;
-      if (
-        guardrails
-        && (
-          baseUsageEstimate.estimatedTokens + projection.estimatedTokens > guardrails.maxEstimatedTokens
-          || baseUsageEstimate.estimatedCostEur + projection.estimatedCostEur > guardrails.maxEstimatedCostEur
-        )
-      ) {
-        const reason = 'administrative_reply_projected_over_per_run_cap';
-        await this.recordStageRunStep(context, RUN_STEP_STAGES.administrativeReply, {
-          runId: ticketResult.run_id,
-          stepIndex: draftStepIndex,
-          status: 'skipped',
-          inputSummary,
-          outputSummary: { fallback_reason: reason, cap: guardrails },
-        });
-        return { body: null, reason };
-      }
-      try {
-        const draft = await this.replySynthesis.draftAdministrativeReply(context, draftInput);
-        await this.recordStageUsage(context, 'administrative_reply', ticketResult.run_id, draft);
-        chargeRunLlmUsage(draft);
-        await this.recordStageRunStep(context, RUN_STEP_STAGES.administrativeReply, {
-          runId: ticketResult.run_id,
-          stepIndex: draftStepIndex,
-          status: 'completed',
-          inputSummary: { ...inputSummary, model: draft.model },
-          outputSummary: {
-            reply_length: draft.requester_reply.length,
-            tokens: draft.estimated_tokens,
-            cost_eur: draft.estimated_cost_eur,
-            latency_ms: draft.latency_ms,
-            fallback_reason: draft.fallback_reason,
-          },
-        });
-        return { body: draft.requester_reply || null, reason: draft.fallback_reason };
-      } catch (error) {
-        const reason = error instanceof Error
-          ? `administrative_reply_error:${error.message.slice(0, 180)}`
-          : 'administrative_reply_error';
-        await this.recordStageRunStep(context, RUN_STEP_STAGES.administrativeReply, {
-          runId: ticketResult.run_id,
-          stepIndex: draftStepIndex,
-          status: 'failed',
-          inputSummary,
-          outputSummary: { fallback_reason: reason },
-          errorMessage: reason,
-        });
-        return { body: null, reason };
-      }
-    };
     if (actionPlannerResult) {
       const seenPlannerActions = new Set<string>();
       for (const action of actionPlannerResult.actions) {
@@ -6120,7 +6040,6 @@ export class AiAgentControlService {
               markPlannerSkipped(actionType, conversationGate.public_reply_reason);
               continue;
             }
-            let draftFallbackReason: string | null = null;
             if (action.verbatim_ref) {
               const candidate = resolveVerbatimCandidate(verbatimCandidates, action.verbatim_ref);
               if (!candidate) {
@@ -6129,24 +6048,18 @@ export class AiAgentControlService {
               }
               replyBody = candidate.text.replace(/\r\n/g, '\n').trim();
             } else {
-              // Only the first administrative reply of a plan is prepared: no call for another.
-              if (plannerAuthorizedActions.some((entry) => entry.action.action_type === 'requester_reply'
-                && entry.action.reply_kind === 'administrative')) {
-                markPlannerSkipped(actionType, 'one_administrative_reply_per_plan');
-                continue;
-              }
-              const draft = await draftAdministrativeReply(action.administrative_intent);
-              draftFallbackReason = draft.reason;
-              // A written text equal to a configured exact message keeps the configured text.
-              const draftAsCandidate = draft.body
-                ? resolveVerbatimCandidate(verbatimCandidates, draft.body)
+              // No ref, but the model may have written the configured exact message
+              // straight into body: snap to the trusted candidate so the verbatim
+              // guarantee still holds. Otherwise treat body as a free administrative draft.
+              const bodyAsCandidate = action.body
+                ? resolveVerbatimCandidate(verbatimCandidates, action.body)
                 : null;
-              replyBody = draftAsCandidate
-                ? draftAsCandidate.text.replace(/\r\n/g, '\n').trim()
-                : sanitizeForProvider(draft.body, MAX_SYNTHESIZED_REQUESTER_BODY_CHARS);
+              replyBody = bodyAsCandidate
+                ? bodyAsCandidate.text.replace(/\r\n/g, '\n').trim()
+                : sanitizeForProvider(action.body, MAX_SYNTHESIZED_REQUESTER_BODY_CHARS);
             }
             if (!replyBody) {
-              markPlannerSkipped(actionType, draftFallbackReason ?? 'administrative_reply_body_missing');
+              markPlannerSkipped(actionType, 'administrative_reply_body_missing');
               continue;
             }
           }
@@ -6261,6 +6174,7 @@ export class AiAgentControlService {
       operation: action.operation ?? null,
       proposed: action.proposed ?? null,
       verbatim_ref: action.verbatim_ref ?? null,
+      body_present: typeof action.body === 'string' && action.body.trim().length > 0,
       reason: action.reason,
     }));
     const actionPlannerMetadata = {
