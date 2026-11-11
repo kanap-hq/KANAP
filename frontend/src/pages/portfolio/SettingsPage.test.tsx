@@ -5,6 +5,10 @@ import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 import { KanapDialogProvider } from '../../components/design';
+import dePortfolio from '../../locales/de/portfolio.json';
+import enPortfolio from '../../locales/en/portfolio.json';
+import esPortfolio from '../../locales/es/portfolio.json';
+import frPortfolio from '../../locales/fr/portfolio.json';
 import SettingsPage from './SettingsPage';
 
 const api = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), delete: vi.fn(), patch: vi.fn() }));
@@ -106,5 +110,73 @@ describe('portfolio SettingsPage deletes', () => {
     expect(dialog).not.toHaveTextContent('systemDialogs.confirmTitle');
     fireEvent.click(within(dialog).getByRole('button', { name: 'common:buttons.delete' }));
     await waitFor(() => expect(api.delete).toHaveBeenCalledWith(`${base}/${id(n)}`));
+  });
+});
+
+const EMPTY_LINES: Array<[string, Record<string, string>]> = [
+  ['settings.skills.empty', {
+    en: 'No skills yet.',
+    fr: 'Aucune compétence pour le moment.',
+    de: 'Noch keine Kompetenzen.',
+    es: 'Aún no hay competencias.',
+  }],
+  ['settings.teams.empty', {
+    en: 'No teams yet.',
+    fr: 'Aucune équipe pour le moment.',
+    de: 'Noch keine Teams.',
+    es: 'Aún no hay equipos.',
+  }],
+  ['workspace.project.effort.states.noTimeLogged', {
+    en: 'No time logged yet.',
+    fr: 'Aucun temps enregistré pour le moment.',
+    de: 'Noch keine Zeit erfasst.',
+    es: 'Aún no se ha registrado tiempo.',
+  }],
+  ['workspace.project.timeline.states.noMilestones', {
+    en: 'No milestones yet.',
+    fr: 'Aucun jalon pour le moment.',
+    de: 'Noch keine Meilensteine.',
+    es: 'Aún no hay hitos.',
+  }],
+  ['contributors.states.empty', {
+    en: 'No contributors yet.',
+    fr: 'Aucun contributeur pour le moment.',
+    de: 'Noch keine Mitwirkenden.',
+    es: 'Aún no hay colaboradores.',
+  }],
+];
+
+const portfolios = { en: enPortfolio, fr: frPortfolio, de: dePortfolio, es: esPortfolio };
+
+function readLocale(root: unknown, path: string): unknown {
+  return path.split('.').reduce<any>((node, part) => (node == null ? undefined : node[part]), root);
+}
+
+describe('portfolio SettingsPage empty skills and teams', () => {
+  beforeEach(() => {
+    for (const fn of Object.values(api)) fn.mockReset();
+    api.get.mockImplementation(async (url: string) => ({
+      data: url === '/portfolio/teams' ? [] : DATA[url],
+    }));
+  });
+
+  it('shows one tertiary line and no info alert', async () => {
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('tab', { name: 'settings.tabs.skills' }));
+    expect(await screen.findByText('settings.skills.empty')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'settings.tabs.teams' }));
+    expect(await screen.findByText('settings.teams.empty')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('keeps the five empty states to one short line in each language', () => {
+    for (const [path, expected] of EMPTY_LINES) {
+      for (const [lang, sentence] of Object.entries(expected)) {
+        expect(readLocale(portfolios[lang as keyof typeof portfolios], path), `${lang} ${path}`).toBe(sentence);
+      }
+    }
   });
 });

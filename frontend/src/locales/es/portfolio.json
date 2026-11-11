@@ -414,7 +414,7 @@
           "capturedAtInProgress": "capturada al pasar a En curso"
         },
         "states": {
-          "noTimeLogged": "Aún no se ha registrado tiempo. Haga clic en «Registrar tiempo» para añadir entradas."
+          "noTimeLogged": "Aún no se ha registrado tiempo."
         },
         "values": {
           "executionProgress": "Progreso: {{progress}} %",
@@ -529,7 +529,7 @@
           "projectDates": "Fechas del proyecto"
         },
         "states": {
-          "noMilestones": "No hay hitos definidos. Añada hitos manualmente o active los hitos de fase arriba.",
+          "noMilestones": "Aún no hay hitos.",
           "noPlannedPhases": "No hay fases con fechas planificadas",
           "noPlannedPhasesHelp": "Establezca fechas de inicio y fin planificadas en las fases para verlas en el diagrama de Gantt.",
           "noPlannedProjects": "No hay proyectos con fechas planificadas",
@@ -1984,7 +1984,7 @@
       }
     },
     "states": {
-      "empty": "Aún no hay colaboradores configurados. Añada colaboradores para definir sus competencias y disponibilidad.",
+      "empty": "Aún no hay colaboradores.",
       "noneMatchFilter": "Ningún colaborador coincide con los filtros actuales."
     },
     "teams": {
@@ -2560,7 +2560,7 @@
       "confirmDelete": "Sus evaluaciones existentes también se eliminan. Esta acción no se puede deshacer."
     },
     "skills": {
-      "empty": "Aún no hay competencias configuradas. Use «Cargar valores predeterminados» para cargar competencias estándar, o añada competencias manualmente.",
+      "empty": "Aún no hay competencias.",
       "dialog": {
         "editTitle": "Editar competencia",
         "createTitle": "Crear competencia",
@@ -2645,7 +2645,7 @@
       }
     },
     "teams": {
-      "empty": "Aún no hay equipos configurados. Use «Cargar valores predeterminados» para cargar equipos estándar, o añada equipos manualmente.",
+      "empty": "Aún no hay equipos.",
       "memberCount_one": "{{count}} miembro",
       "memberCount_other": "{{count}} miembros",
       "dialog": {

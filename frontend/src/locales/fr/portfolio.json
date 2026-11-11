@@ -414,7 +414,7 @@
           "capturedAtInProgress": "capturée au passage En cours"
         },
         "states": {
-          "noTimeLogged": "Aucun temps enregistré. Cliquez sur « Saisir du temps » pour ajouter des entrées."
+          "noTimeLogged": "Aucun temps enregistré pour le moment."
         },
         "values": {
           "executionProgress": "Progression : {{progress}} %",
@@ -529,7 +529,7 @@
           "projectDates": "Dates du projet"
         },
         "states": {
-          "noMilestones": "Aucun jalon défini. Ajoutez des jalons manuellement ou activez les jalons de phase ci-dessus.",
+          "noMilestones": "Aucun jalon pour le moment.",
           "noPlannedPhases": "Aucune phase avec des dates planifiées",
           "noPlannedPhasesHelp": "Définissez les dates de début et de fin prévues sur les phases pour les voir sur le diagramme de Gantt.",
           "noPlannedProjects": "Aucun projet avec des dates planifiées",
@@ -1984,7 +1984,7 @@
       }
     },
     "states": {
-      "empty": "Aucun contributeur configuré pour le moment. Ajoutez des contributeurs pour définir leurs compétences et leur disponibilité.",
+      "empty": "Aucun contributeur pour le moment.",
       "noneMatchFilter": "Aucun contributeur ne correspond aux filtres en cours."
     },
     "teams": {
@@ -2560,7 +2560,7 @@
       "confirmDelete": "Ses évaluations existantes sont supprimées aussi. Cette action est irréversible."
     },
     "skills": {
-      "empty": "Aucune compétence configurée pour le moment. Utilisez « Initialiser les valeurs par défaut » pour charger les compétences standard, ou ajoutez des compétences manuellement.",
+      "empty": "Aucune compétence pour le moment.",
       "dialog": {
         "editTitle": "Modifier la compétence",
         "createTitle": "Créer une compétence",
@@ -2645,7 +2645,7 @@
       }
     },
     "teams": {
-      "empty": "Aucune équipe configurée pour le moment. Utilisez « Initialiser les valeurs par défaut » pour charger les équipes standard, ou ajoutez des équipes manuellement.",
+      "empty": "Aucune équipe pour le moment.",
       "memberCount_one": "{{count}} membre",
       "memberCount_other": "{{count}} membres",
       "dialog": {

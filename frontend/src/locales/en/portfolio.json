@@ -414,7 +414,7 @@
           "capturedAtInProgress": "captured at In progress"
         },
         "states": {
-          "noTimeLogged": "No time logged yet. Click \"Log time\" to add entries."
+          "noTimeLogged": "No time logged yet."
         },
         "values": {
           "executionProgress": "Progress: {{progress}}%",
@@ -529,7 +529,7 @@
           "projectDates": "Project dates"
         },
         "states": {
-          "noMilestones": "No milestones defined. Add milestones manually or enable phase milestones above.",
+          "noMilestones": "No milestones yet.",
           "noPlannedPhases": "No phases with planned dates",
           "noPlannedPhasesHelp": "Set planned start and end dates on phases to see them on the Gantt chart.",
           "noPlannedProjects": "No projects with planned dates",
@@ -1984,7 +1984,7 @@
       }
     },
     "states": {
-      "empty": "No contributors configured yet. Add contributors to define their skills and availability.",
+      "empty": "No contributors yet.",
       "noneMatchFilter": "No contributor matches the current filters."
     },
     "teams": {
@@ -2560,7 +2560,7 @@
       "confirmDelete": "Its existing evaluations are removed too. This cannot be undone."
     },
     "skills": {
-      "empty": "No skills configured yet. Use Seed defaults to populate with standard skills, or add skills manually.",
+      "empty": "No skills yet.",
       "dialog": {
         "editTitle": "Edit skill",
         "createTitle": "Create skill",
@@ -2645,7 +2645,7 @@
       }
     },
     "teams": {
-      "empty": "No teams configured yet. Use Seed defaults to populate with standard teams, or add teams manually.",
+      "empty": "No teams yet.",
       "memberCount_one": "{{count}} member",
       "memberCount_other": "{{count}} members",
       "dialog": {
