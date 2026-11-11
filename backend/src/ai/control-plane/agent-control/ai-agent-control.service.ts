@@ -5956,6 +5956,8 @@ export class AiAgentControlService {
       plannerActionKey: string;
       replyBody: string | null;
       terminal: boolean;
+      // An administrative reply still to be written by the public call.
+      administrativeDraftPending?: boolean;
     }> = [];
     const plannerSkippedActions: Record<string, string> = {};
     const markPlannerSkipped = (actionType: PlannerActionType, reason: string) => {
@@ -6082,6 +6084,7 @@ export class AiAgentControlService {
         let authorizedAction = action;
         let replyBody: string | null = null;
         let terminal = false;
+        let administrativeDraftPending = false;
         if (actionType === 'internal_note') {
           if (!conversationGate.can_prepare_internal_note) {
             markPlannerSkipped(actionType, conversationGate.internal_note_reason);
@@ -6112,7 +6115,6 @@ export class AiAgentControlService {
               markPlannerSkipped(actionType, conversationGate.public_reply_reason);
               continue;
             }
-            let draftFallbackReason: string | null = null;
             if (action.verbatim_ref) {
               const candidate = resolveVerbatimCandidate(verbatimCandidates, action.verbatim_ref);
               if (!candidate) {
@@ -6120,32 +6122,24 @@ export class AiAgentControlService {
                 continue;
               }
               replyBody = candidate.text.replace(/\r\n/g, '\n').trim();
+              if (!replyBody) {
+                markPlannerSkipped(actionType, 'administrative_reply_body_missing');
+                continue;
+              }
             } else {
               // A written reply needs a value of the closed list of intents: without one, nothing is written.
-              const intent = administrativeReplyIntent(action.administrative_intent);
-              if (!intent) {
+              if (!administrativeReplyIntent(action.administrative_intent)) {
                 markPlannerSkipped(actionType, 'administrative_reply_intent_missing');
                 continue;
               }
-              // Only the first administrative reply of a plan is prepared: no call for another.
+              // One administrative reply per plan. It is written later, and only when it is the
+              // reply the plan prepares.
               if (plannerAuthorizedActions.some((entry) => entry.action.action_type === 'requester_reply'
                 && entry.action.reply_kind === 'administrative')) {
                 markPlannerSkipped(actionType, 'one_administrative_reply_per_plan');
                 continue;
               }
-              const draft = await draftAdministrativeReply(intent);
-              draftFallbackReason = draft.reason;
-              // A written text equal to a configured exact message keeps the configured text.
-              const draftAsCandidate = draft.body
-                ? resolveVerbatimCandidate(verbatimCandidates, draft.body)
-                : null;
-              replyBody = draftAsCandidate
-                ? draftAsCandidate.text.replace(/\r\n/g, '\n').trim()
-                : sanitizeForProvider(draft.body, MAX_SYNTHESIZED_REQUESTER_BODY_CHARS);
-            }
-            if (!replyBody) {
-              markPlannerSkipped(actionType, draftFallbackReason ?? 'administrative_reply_body_missing');
-              continue;
+              administrativeDraftPending = true;
             }
           }
         } else if (actionType === 'status_update') {
@@ -6222,6 +6216,7 @@ export class AiAgentControlService {
           plannerActionKey: plannerActionKey(authorizedAction, actionPlannerGuidanceHash),
           replyBody,
           terminal,
+          administrativeDraftPending,
         });
       }
     }
@@ -6344,6 +6339,30 @@ export class AiAgentControlService {
           replyBody: null,
           terminal: false,
         });
+      }
+    }
+    // Only the first requester reply of the plan is prepared. An administrative reply is written
+    // once, and only when it is that reply; the others are never written.
+    const preparedRequesterReply = effectivePlannerActions.find((entry) => entry.action.action_type === 'requester_reply') ?? null;
+    effectivePlannerActions = effectivePlannerActions.filter((entry) =>
+      !entry.administrativeDraftPending || entry === preparedRequesterReply);
+    if (preparedRequesterReply?.administrativeDraftPending) {
+      const intent = administrativeReplyIntent(preparedRequesterReply.action.administrative_intent);
+      const draft: { body: string | null; reason: string | null } = intent
+        ? await draftAdministrativeReply(intent)
+        : { body: null, reason: 'administrative_reply_intent_missing' };
+      // A written text equal to a configured exact message keeps the configured text.
+      const draftAsCandidate = draft.body ? resolveVerbatimCandidate(verbatimCandidates, draft.body) : null;
+      const draftedBody: string | null = draftAsCandidate
+        ? draftAsCandidate.text.replace(/\r\n/g, '\n').trim()
+        : sanitizeForProvider(draft.body, MAX_SYNTHESIZED_REQUESTER_BODY_CHARS);
+      if (draftedBody) {
+        preparedRequesterReply.replyBody = draftedBody;
+        preparedRequesterReply.administrativeDraftPending = false;
+      } else {
+        const dropReason = draft.reason ?? 'administrative_reply_body_missing';
+        plannerSkippedActions.requester_reply = dropReason;
+        effectivePlannerActions = effectivePlannerActions.filter((entry) => entry !== preparedRequesterReply);
       }
     }
     // Internal-note body: a usable synthesis renders the full triage note; otherwise, if the
@@ -7039,7 +7058,7 @@ export class AiAgentControlService {
     // One prepare per proposed kind. Each carries its own hashes and suppression check, and
     // expires only the pending proposals of the SAME kind: a fresh group proposal must not
     // withdraw a technician proposal that is still waiting for review.
-    const assignmentUpdateProposals: Array<Awaited<ReturnType<typeof this.dispatcher.execute>>> = [];
+    const assignmentUpdateProposals: Array<Awaited<ReturnType<AiCapabilityDispatcherService['execute']>>> = [];
     for (const entry of plannerAssignmentUpdates) {
       const proposalHashValue = plannerProposalHashFor({ ...entry, replyBody: null });
       const contextHashValue = plannerProposalContextHash(entry);
@@ -7098,7 +7117,7 @@ export class AiAgentControlService {
     // not withdraw a technician observer that is still waiting for review.
     const plannerParticipantUpdates = effectivePlannerActions.filter((entry) => entry.action.action_type === PLANNER_PARTICIPANT_ACTION_TYPE
       && (entry.action.participants?.length ?? 0) > 0);
-    const participantUpdateProposals: Array<Awaited<ReturnType<typeof this.dispatcher.execute>>> = [];
+    const participantUpdateProposals: Array<Awaited<ReturnType<AiCapabilityDispatcherService['execute']>>> = [];
     for (const entry of plannerParticipantUpdates) {
       const proposalHashValue = plannerProposalHashFor({ ...entry, replyBody: null });
       const contextHashValue = plannerProposalContextHash(entry);

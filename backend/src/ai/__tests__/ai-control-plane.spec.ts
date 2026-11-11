@@ -14579,6 +14579,60 @@ async function testTriageWritesNoAdministrativeReplyWithoutAnIntentOfTheList() {
   }
 }
 
+const TRIAGE_UNUSABLE_REPLY = {
+  language: 'fr',
+  usable: false,
+  needs_human_review: true,
+  requester_reply: '',
+  used_sources: [],
+  rejected_sources: [],
+  confidence: 0.2,
+};
+
+function administrativeReplyAction(intent: string) {
+  return { action_type: 'requester_reply', reply_kind: 'administrative', administrative_intent: intent, reason: 'Répondre.' };
+}
+
+async function testTriageWritesOneAdministrativeReplyAtMostPerPlan() {
+  const result = await runTriageWithSimulatedModel({
+    notes: triageNotes(true),
+    plan: {
+      actions: [
+        { action_type: 'internal_note', reason: 'Documenter.' },
+        administrativeReplyAction('acknowledgement'),
+        administrativeReplyAction('request_information'),
+      ],
+      rationale: 'Plan.',
+      confidence: 0.8,
+    },
+    administrativeReply: () => {
+      throw new Error('model timeout');
+    },
+  });
+  assert.deepEqual(result.calls.map((call) => call.taskName), ['action_planner', 'administrative_reply']);
+  assert.equal(result.publicReply, null);
+}
+
+async function testTriageWritesAnAdministrativeReplyOnlyWhenItIsPrepared() {
+  const plan = {
+    actions: [
+      { action_type: 'internal_note', reason: 'Documenter.' },
+      { action_type: 'requester_reply', reply_kind: 'sourced_answer', reason: 'Répondre.' },
+      administrativeReplyAction('acknowledgement'),
+    ],
+    rationale: 'Plan.',
+    confidence: 0.8,
+  };
+  // The sourced answer is the reply the plan prepares: the administrative one is not written.
+  const sourced = await runTriageWithSimulatedModel({ notes: triageNotes(true), plan, reply: TRIAGE_SOURCED_REPLY });
+  assert.deepEqual(sourced.calls.map((call) => call.taskName), ['action_planner', 'reply_synthesis', 'technician_brief']);
+  assert.ok(sourced.publicReply?.includes('Relancez le service de licence depuis le portail.'));
+  // Without a usable sourced answer, the administrative reply is the one prepared: it is written once.
+  const fallback = await runTriageWithSimulatedModel({ notes: triageNotes(true), plan, reply: TRIAGE_UNUSABLE_REPLY });
+  assert.deepEqual(fallback.calls.map((call) => call.taskName).filter((name) => name === 'administrative_reply'), ['administrative_reply']);
+  assert.equal(fallback.publicReply, 'Bonjour, votre demande a bien été reçue.');
+}
+
 async function testTriageWithoutInternalNoteKeepsOneReplyCall() {
   const result = await runTriageWithSimulatedModel({ notes: triageNotes(false), plan: TRIAGE_SOURCED_PLAN, reply: TRIAGE_SOURCED_REPLY });
   assert.deepEqual(result.calls.map((call) => call.taskName), ['action_planner', 'reply_synthesis']);
@@ -17252,6 +17306,8 @@ async function run() {
   await testTriageWithoutInternalNoteKeepsOneReplyCall();
   await testTriageRunTotalCountsEveryModelCall();
   await testTriageWritesNoAdministrativeReplyWithoutAnIntentOfTheList();
+  await testTriageWritesOneAdministrativeReplyAtMostPerPlan();
+  await testTriageWritesAnAdministrativeReplyOnlyWhenItIsPrepared();
   testSynthesisPromptPrefersInternalKnowledgeSources();
   testSynthesisPromptCarriesValidationStatus();
   testSynthesisPayloadIncludesScreenshotEvidence();
