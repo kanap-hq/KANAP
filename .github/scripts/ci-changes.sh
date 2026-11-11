@@ -15,6 +15,7 @@
 #     role names);
 #   - frontend/: frontend, builds, and backend full for the modules the backend specs import
 #     (auditLogLabels, recordHistoryTables, contractTerms, reportAggregates, rolePermissionGroups),
+#     the list of HTML tags of a rich text (richTextHtmlElements, read by rich-text-html-rule.spec),
 #     the locale files those specs read (including errors.json) and the Dockerfiles (container-images
 #     spec);
 #   - infra/, any Dockerfile: backend full (container-images, admin-password-policy and
@@ -65,7 +66,7 @@ while IFS= read -r f; do
       frontend/src/pages/reports/reportAggregates.* | frontend/src/pages/reports/reportTables.* | frontend/Dockerfile* | \
       frontend/src/pages/operations/copyBudgetRows.* | frontend/src/pages/admin/master-data/masterDataCopyRows.* | frontend/src/pages/admin/rolePermissionGroups.* | \
       frontend/src/pages/portfolio/contributorsOrdering.* | frontend/src/pages/portfolio/skillsMatrix.* | \
-      frontend/src/pages/portfolio/roadmapOccupation.* | \
+      frontend/src/pages/portfolio/roadmapOccupation.* | frontend/src/lib/richTextHtmlElements.* | \
       frontend/src/locales/*/portfolio.json | frontend/src/locales/*/it.json | frontend/src/locales/*/ops.json | \
       frontend/src/locales/*/admin.json | frontend/src/locales/*/master-data.json | frontend/src/locales/*/nav.json | \
       frontend/src/locales/*/errors.json)

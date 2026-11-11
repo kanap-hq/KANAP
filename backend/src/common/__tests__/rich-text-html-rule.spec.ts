@@ -131,6 +131,21 @@ function testTheListAndItsFormsAreThoseOfTheEditor() {
 }
 
 /**
+ * The list of the editor, read in its own file: `RICH_TEXT_HTML_ELEMENTS` of
+ * `frontend/src/lib/richTextHtmlElements.ts` is the list of the server. This spec reads a file
+ * outside `backend/`, so `ci-changes.sh` runs the backend suite when that file changes.
+ */
+function testTheEditorHoldsTheSameList() {
+  const file = path.join(backendPath(), '..', 'frontend', 'src', 'lib', 'richTextHtmlElements.ts');
+  const literal = /export const RICH_TEXT_HTML_ELEMENTS = (\{[\s\S]*?\}) as const;/.exec(fs.readFileSync(file, 'utf8'))?.[1];
+  assert.ok(literal, 'the editor declares RICH_TEXT_HTML_ELEMENTS as one object');
+  const editorList = JSON.parse(
+    literal.replace(/'/g, '"').replace(/([A-Za-z]+):/g, '"$1":').replace(/,(\s*[}\]])/g, '$1'),
+  );
+  assert.deepEqual(editorList, RICH_TEXT_ALLOWED_HTML, 'the editor and the server hold the same list of HTML tags');
+}
+
+/**
  * A tag of the list written in another form is refused in prose too, where the parser reads
  * no tag: a reader of the same text that takes more forms of attributes would read one.
  */
@@ -482,6 +497,7 @@ function run() {
   testElementsOutsideTheListAreRefusedEverywhere();
   testAcceptedElementsTakeNoAttribute();
   testTheListAndItsFormsAreThoseOfTheEditor();
+  testTheEditorHoldsTheSameList();
   testAnAcceptedNameInAnotherFormIsRefusedInProse();
   testTheAcceptedListIsAccepted();
   testMarkdownAndCodeAreAccepted();

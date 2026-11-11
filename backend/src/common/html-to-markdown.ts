@@ -21,8 +21,9 @@ const MARKDOWN_AUTOLINK_REGEX_FALLBACK = /^<https?:\/\/[^>\s]+>$/i;
  *   `http(s)` address; a width and a height are whole numbers.
  * The editor holds the same list, `RICH_TEXT_HTML_ELEMENTS` in
  * `frontend/src/lib/richTextHtmlElements.ts`, and shows any other tag as text. A
- * change of one list is made in the other: the test of each side keeps a copy of
- * the list and of the accepted and refused forms.
+ * change of one list is made in the other: `rich-text-html-rule.spec.ts` reads the
+ * editor's file and compares the two lists, and the test of each side keeps a copy
+ * of the accepted and refused forms.
  */
 export const RICH_TEXT_ALLOWED_HTML = {
   paired: ['u', 'sub', 'sup'],

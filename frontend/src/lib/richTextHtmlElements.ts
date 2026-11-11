@@ -8,8 +8,9 @@
  *   height are whole numbers.
  * The server holds the same list, `RICH_TEXT_ALLOWED_HTML` in
  * `backend/src/common/html-to-markdown.ts`, and refuses a text with any other tag. A change of one
- * list is made in the other: the test of each side keeps a copy of the list and of the accepted
- * and refused forms.
+ * list is made in the other: a spec of the server (`rich-text-html-rule.spec.ts`) reads this file
+ * and compares the two lists, and the test of each side keeps a copy of the accepted and refused
+ * forms. That spec reads the object below as written: keep it one plain object of names.
  */
 export const RICH_TEXT_HTML_ELEMENTS = {
   paired: ['u', 'sub', 'sup'],
