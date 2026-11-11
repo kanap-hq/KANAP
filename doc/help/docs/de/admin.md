@@ -500,9 +500,9 @@ Ist die letzte Rechnung nicht bezahlt, zeigt eine Zeile unter dem Status dies an
 - Karte: „Zahlung am 10. Nov. 2026 abgelehnt: unzureichende Deckung.“
 - Banküberweisung: „Rechnung KAN-0041 über 2.490,00 € war am 3. Nov. 2026 fällig.“
 
-Eine zweite Zeile nennt das Datum, ab dem der Zugang eingeschränkt wird, spätestens 14 Tage nach der Rechnung (14 Tage nach ihrem Fälligkeitsdatum bei Banküberweisung), oder seit wann er eingeschränkt ist. Bis zu diesem Datum bleibt der Arbeitsbereich nutzbar, und ein Banner oben auf jeder Seite zeigt den fälligen Betrag und das Datum. Sobald der Zugang eingeschränkt ist, werden Abrechnungsadministratoren auf diese Seite geleitet.
+Eine zweite Zeile nennt das Datum, ab dem der Zugang eingeschränkt wird, spätestens 14 Tage nach der Rechnung (14 Tage nach ihrem Fälligkeitsdatum bei Banküberweisung), oder seit wann er eingeschränkt ist. Bis zu diesem Datum bleibt der Arbeitsbereich nutzbar, und ein Banner oben auf jeder Seite zeigt das Datum; Abrechnungsadministratoren sehen dort auch den fälligen Betrag. Sobald der Zugang eingeschränkt ist, werden Abrechnungsadministratoren auf diese Seite geleitet.
 
-Klicken Sie zum Bezahlen auf **Karte aktualisieren und bezahlen**: Das Stripe-Kundenportal öffnet sich, um die Karte zu aktualisieren, und bei Ihrer Rückkehr wird die Rechnung sofort von der neuen Karte abgebucht. Bei Banküberweisung öffnet **Rechnung bezahlen** die Rechnung mit den Bankdaten. Erfordert Abrechnungsadministrator.
+Klicken Sie zum Bezahlen auf **Karte aktualisieren und bezahlen**: Das Stripe-Kundenportal öffnet sich, um die Karte zu aktualisieren, und bei Ihrer Rückkehr wird die Rechnung sofort von der neuen Karte abgebucht. Wurde die Karte nicht geändert, bezahlen Sie die Rechnung über **Rechnung öffnen** mit derselben Karte auf der Rechnungsseite. Bei Banküberweisung öffnet **Rechnung bezahlen** die Rechnung mit den Bankdaten; bei einer Rechnung, die Stripe nicht mehr erneut einzieht, öffnet es die Rechnungsseite zur Zahlung per Karte. Erfordert Abrechnungsadministrator.
 
 **Plan ändern** bleibt ausgegraut, bis die Rechnung bezahlt ist.
 

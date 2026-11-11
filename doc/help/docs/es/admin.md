@@ -500,9 +500,9 @@ Cuando la última factura no está pagada, una línea bajo el estado lo indica:
 - Tarjeta: «Pago rechazado el 10 nov 2026: fondos insuficientes.»
 - Transferencia bancaria: «Factura KAN-0041 de 2490,00 € vencida el 3 nov 2026.»
 
-Una segunda línea indica la fecha en que se limitará el acceso, como muy tarde 14 días después de la factura (14 días después de su vencimiento para una transferencia), o desde cuándo está limitado. Hasta esa fecha el espacio de trabajo sigue siendo utilizable, y un banner en la parte superior de cada página muestra el importe adeudado y la fecha. Una vez limitado el acceso, los administradores de facturación son dirigidos a esta página.
+Una segunda línea indica la fecha en que se limitará el acceso, como muy tarde 14 días después de la factura (14 días después de su vencimiento para una transferencia), o desde cuándo está limitado. Hasta esa fecha el espacio de trabajo sigue siendo utilizable, y un banner en la parte superior de cada página muestra la fecha; los administradores de facturación ven también el importe adeudado. Una vez limitado el acceso, los administradores de facturación son dirigidos a esta página.
 
-Para pagar, haga clic en **Actualizar la tarjeta y pagar**: se abre el portal de cliente de Stripe para actualizar la tarjeta y, a su regreso, la factura se cobra de inmediato en la nueva tarjeta. Para una transferencia, **Pagar la factura** abre la factura con los datos bancarios. Requiere administrador de facturación.
+Para pagar, haga clic en **Actualizar la tarjeta y pagar**: se abre el portal de cliente de Stripe para actualizar la tarjeta y, a su regreso, la factura se cobra de inmediato en la nueva tarjeta. Si la tarjeta no ha cambiado, **Abrir la factura** permite pagarla con la misma tarjeta en la página de la factura. Para una transferencia, **Pagar la factura** abre la factura con los datos bancarios; para una factura que Stripe ya no reintenta cobrar, abre la página de la factura para pagar con tarjeta. Requiere administrador de facturación.
 
 **Cambiar plan** permanece atenuado hasta que se pague la factura.
 

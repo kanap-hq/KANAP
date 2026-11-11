@@ -500,9 +500,9 @@ When the latest invoice is not paid, a line under the status says so:
 - Card: "Payment refused on 10 Nov 2026: insufficient funds."
 - Bank transfer: "Invoice KAN-0041 of €2,490.00 was due on 3 Nov 2026."
 
-A second line gives the date access becomes limited, at the latest 14 days after the invoice (14 days after its due date for a bank transfer), or since when it is limited. Until that date the workspace stays usable, and a banner at the top of every page shows the amount due and the date. Once access is limited, billing administrators are taken to this page.
+A second line gives the date access becomes limited, at the latest 14 days after the invoice (14 days after its due date for a bank transfer), or since when it is limited. Until that date the workspace stays usable, and a banner at the top of every page shows the date; billing administrators also see the amount due. Once access is limited, billing administrators are taken to this page.
 
-To pay, click **Update card and pay**: the Stripe customer portal opens to update the card, and on your return the invoice is charged on the new card at once. For a bank transfer, **Pay invoice** opens the invoice with the bank details. Requires billing admin.
+To pay, click **Update card and pay**: the Stripe customer portal opens to update the card, and on your return the invoice is charged on the new card at once. If the card has not changed, **Open invoice** pays it with the same card on the invoice page. For a bank transfer, **Pay invoice** opens the invoice with the bank details; for an invoice Stripe has stopped retrying, it opens the invoice page to pay by card. Requires billing admin.
 
 **Change plan** stays greyed until the invoice is paid.
 

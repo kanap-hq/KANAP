@@ -500,9 +500,9 @@ Quand la dernière facture n'est pas payée, une ligne sous le statut l'indique 
 - Carte : « Paiement refusé le 10 nov. 2026 : provision insuffisante. »
 - Virement : « Facture KAN-0041 de 2 490,00 € échue le 3 nov. 2026. »
 
-Une deuxième ligne donne la date à laquelle l'accès sera limité, au plus tard 14 jours après la facture (14 jours après son échéance pour un virement), ou depuis quand il l'est. Jusqu'à cette date, l'espace de travail reste utilisable, et un bandeau en haut de chaque page indique la somme due et la date. Une fois l'accès limité, les administrateurs de facturation sont conduits sur cette page.
+Une deuxième ligne donne la date à laquelle l'accès sera limité, au plus tard 14 jours après la facture (14 jours après son échéance pour un virement), ou depuis quand il l'est. Jusqu'à cette date, l'espace de travail reste utilisable, et un bandeau en haut de chaque page indique la date ; les administrateurs de la facturation y voient aussi la somme due. Une fois l'accès limité, les administrateurs de facturation sont conduits sur cette page.
 
-Pour payer, cliquez sur **Mettre à jour la carte et payer** : le portail client Stripe s'ouvre pour mettre à jour la carte et, à votre retour, la facture est prélevée aussitôt sur la nouvelle carte. Pour un virement, **Payer la facture** ouvre la facture avec les coordonnées bancaires. Nécessite l'admin facturation.
+Pour payer, cliquez sur **Mettre à jour la carte et payer** : le portail client Stripe s'ouvre pour mettre à jour la carte et, à votre retour, la facture est prélevée aussitôt sur la nouvelle carte. Si la carte n'a pas changé, **Ouvrir la facture** permet de la payer avec la même carte sur la page de la facture. Pour un virement, **Payer la facture** ouvre la facture avec les coordonnées bancaires ; pour une facture que Stripe ne présente plus au paiement, ce bouton ouvre la page de la facture pour payer par carte. Nécessite l'admin facturation.
 
 **Changer de plan** reste grisé jusqu'au paiement de la facture.
 
