@@ -14327,13 +14327,13 @@ async function runTriageWithSimulatedModel(input: {
   const capabilityInputs: Array<{ capabilityName: string; input: unknown }> = [];
   const prepared: { publicReply: string | null; internalNote: string | null } = { publicReply: null, internalNote: null };
   let toolIndex = 0;
-  const runId = 'run-two-calls';
+  const runId = 'run-internal-notes-setting';
   const dispatcher = {
     execute: async (_context: unknown, request: any) => {
       capabilityCalls.push(request.capabilityName);
       capabilityInputs.push({ capabilityName: request.capabilityName, input: request.input });
       toolIndex += 1;
-      const toolExecutionId = `two-calls-tool-${toolIndex}`;
+      const toolExecutionId = `internal-notes-setting-tool-${toolIndex}`;
       const ok = (data: unknown) => ({ run_id: runId, step_id: `step-${toolIndex}`, tool_execution_id: toolExecutionId, output: { ok: true, data, evidence: [] } });
       switch (request.capabilityName) {
         case 'ticketing.ticket.get':
@@ -14403,7 +14403,7 @@ async function runTriageWithSimulatedModel(input: {
         case TICKETING_INTERNAL_NOTE_PREPARE_CAPABILITY:
           prepared.internalNote = request.input.note_body;
           await savePreparedTicketingAction(context, {
-            id: 'two-calls-internal-action',
+            id: 'internal-notes-setting-internal-action',
             runId,
             toolExecutionId,
             capabilityName: TICKETING_INTERNAL_NOTE_ADD_APPROVED_CAPABILITY,
@@ -14411,11 +14411,11 @@ async function runTriageWithSimulatedModel(input: {
             visibility: 'internal',
             providerKey: 'glpi',
           });
-          return ok({ action_request_id: 'two-calls-internal-action' });
+          return ok({ action_request_id: 'internal-notes-setting-internal-action' });
         case TICKETING_PUBLIC_REPLY_PREPARE_CAPABILITY:
           prepared.publicReply = request.input.reply_body;
           await savePreparedTicketingAction(context, {
-            id: 'two-calls-public-action',
+            id: 'internal-notes-setting-public-action',
             runId,
             toolExecutionId,
             capabilityName: TICKETING_PUBLIC_REPLY_ADD_APPROVED_CAPABILITY,
@@ -14423,7 +14423,7 @@ async function runTriageWithSimulatedModel(input: {
             visibility: 'public',
             providerKey: 'glpi',
           });
-          return ok({ action_request_id: 'two-calls-public-action' });
+          return ok({ action_request_id: 'internal-notes-setting-public-action' });
         default:
           throw new Error(`Unexpected capability ${request.capabilityName}`);
       }
