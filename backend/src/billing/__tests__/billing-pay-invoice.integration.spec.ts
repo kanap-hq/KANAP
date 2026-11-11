@@ -16,7 +16,9 @@ const delay = (milliseconds: number) => new Promise((resolve) => setTimeout(reso
 
 type Seed = { tenantId: string; customerId: string; subscriptionId: string; invoiceId: string };
 
-async function seedTenant(tag: string): Promise<Seed> {
+/** The stored card is the one refused (`pm_old`, VISA 0341), unless `storedCard: null`. */
+async function seedTenant(tag: string, opts: { storedCard?: null } = {}): Promise<Seed> {
+  const stored = opts.storedCard === null ? [null, null, null] : ['pm_old', 'VISA', '0341'];
   const tenantId = randomUUID();
   const short = tenantId.slice(0, 8);
   const seed = { tenantId, customerId: `cus_spec_${short}`, subscriptionId: `sub_spec_${short}`, invoiceId: `in_spec_${short}` };
@@ -28,9 +30,10 @@ async function seedTenant(tag: string): Promise<Seed> {
   await withTenant(dataSource, tenantId, (manager) =>
     manager.query(
       `INSERT INTO subscriptions (tenant_id, status, stripe_subscription_id, stripe_customer_id, plan_name, seat_limit, active_seats,
-                                  collection_method, latest_invoice_id, latest_invoice_status, latest_invoice_created)
-       VALUES ($1, 'past_due', $2, $3, 'Kadratis Cloud', NULL, 1, 'charge_automatically', $4, 'open', now() - interval '20 days')`,
-      [tenantId, seed.subscriptionId, seed.customerId, seed.invoiceId],
+                                  collection_method, latest_invoice_id, latest_invoice_status, latest_invoice_created,
+                                  default_payment_method_id, default_payment_method_brand, default_payment_method_last4)
+       VALUES ($1, 'past_due', $2, $3, 'Kadratis Cloud', NULL, 1, 'charge_automatically', $4, 'open', now() - interval '20 days', $5, $6, $7)`,
+      [tenantId, seed.subscriptionId, seed.customerId, seed.invoiceId, ...stored],
     ),
   ).catch(async (error) => {
     await dataSource.query(`DELETE FROM tenants WHERE id = $1`, [tenantId]);
@@ -43,6 +46,11 @@ async function removeTenant(tenantId: string) {
   await withTenant(dataSource, tenantId, (manager) => manager.query(`DELETE FROM subscriptions WHERE tenant_id = $1`, [tenantId]));
   await dataSource.query(`DELETE FROM tenants WHERE id = $1`, [tenantId]);
 }
+
+const CARDS: Record<string, { brand: string; last4: string }> = {
+  pm_old: { brand: 'visa', last4: '0341' },
+  pm_portal: { brand: 'mastercard', last4: '4444' },
+};
 
 const DECLINED = { code: 'card_declined', decline_code: 'insufficient_funds', message: 'Your card has insufficient funds.', payment_method: { id: 'pm_old' } };
 
@@ -81,7 +89,7 @@ function stripeAccount(seed: Seed, opts: {
     customers: {
       retrieve: async () => ({ id: seed.customerId, invoice_settings: { default_payment_method: opts.customerCard ?? null } }),
     },
-    paymentMethods: { retrieve: async (id: string) => ({ id, type: 'card', card: { brand: 'visa', last4: '4242' } }) },
+    paymentMethods: { retrieve: async (id: string) => ({ id, type: 'card', card: CARDS[id] ?? { brand: 'visa', last4: '4242' } }) },
     prices: { retrieve: async () => null },
     invoices: {
       retrieve: async (id: string) => ({
@@ -174,6 +182,48 @@ async function testCustomerCardWhenTheSubscriptionHasNone() {
     assert.equal((await payInvoice(service, seed)).payment.status, 'paid');
     assert.equal(pays[0].options?.idempotencyKey, `invoice-pay-${seed.invoiceId}-pm_portal`);
     assert.deepEqual(pays[0].params, { payment_method: 'pm_portal' });
+  } finally {
+    await removeTenant(seed.tenantId);
+  }
+}
+
+/** The card shown and stored is the one Stripe charges: the subscription's, else the customer's default. */
+async function testStoredCardFollowsTheCustomerDefault() {
+  const seed = await seedTenant('customer-card');
+  try {
+    const { service } = stripeAccount(seed, { subscriptionCard: null, customerCard: 'pm_portal', pay: 'paid' });
+    const result = await payInvoice(service, seed);
+    assert.equal(result.payment.status, 'paid');
+    assert.deepEqual(
+      [result.default_payment_method_id, result.default_payment_method_brand, result.default_payment_method_last4],
+      ['pm_portal', 'MASTERCARD', '4444'],
+      'the answer carries the card charged',
+    );
+    const [row] = await withTenant(dataSource, seed.tenantId, (manager) =>
+      manager.query(
+        `SELECT default_payment_method_id, default_payment_method_brand, default_payment_method_last4 FROM subscriptions WHERE tenant_id = $1`,
+        [seed.tenantId],
+      ),
+    );
+    assert.deepEqual(
+      [row.default_payment_method_id, row.default_payment_method_brand, row.default_payment_method_last4],
+      ['pm_portal', 'MASTERCARD', '4444'],
+      'the stored card is the card charged',
+    );
+  } finally {
+    await removeTenant(seed.tenantId);
+  }
+}
+
+/** A subscription paid by bank transfer does not take the customer's card as its own. */
+async function testBankTransferShowsNoCustomerCard() {
+  const seed = await seedTenant('transfer-card', { storedCard: null });
+  try {
+    const { service } = stripeAccount(seed, { collectionMethod: 'send_invoice', subscriptionCard: null, customerCard: 'pm_portal' });
+    const result = await payInvoice(service, seed);
+    assert.equal(result.payment.status, 'nothing_to_pay');
+    assert.equal(result.default_payment_method_id, null);
+    assert.equal(result.default_payment_method_last4, null);
   } finally {
     await removeTenant(seed.tenantId);
   }
@@ -273,6 +323,8 @@ async function main() {
   try {
     await testNewCardPaysTheInvoiceAtOnce();
     await testCustomerCardWhenTheSubscriptionHasNone();
+    await testStoredCardFollowsTheCustomerDefault();
+    await testBankTransferShowsNoCustomerCard();
     await testRefusedCardIsNotChargedAgain();
     await testRefusalAndAuthenticationAreAnswered();
     await testPaidMeanwhileAndProcessingAreNotRefusals();

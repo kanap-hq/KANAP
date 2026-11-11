@@ -810,11 +810,7 @@ export class BillingService {
     });
     if (invoice?.status !== 'open') return { status: 'nothing_to_pay' };
 
-    const customerId = this.stripeObjectId(stripeSub.customer);
-    const card = this.stripeObjectId(stripeSub.default_payment_method)
-      ?? (customerId
-        ? this.stripeObjectId(((await client.customers.retrieve(customerId)) as any)?.invoice_settings?.default_payment_method)
-        : null);
+    const card = this.stripeObjectId(await this.chargedPaymentMethod(stripeSub));
     if (!card || card === invoicePaymentFailure(invoice)?.paymentMethodId) return { status: 'card_unchanged' };
 
     let status: InvoicePayment['status'];
@@ -847,6 +843,21 @@ export class BillingService {
       { manager },
     );
     return { status };
+  }
+
+  /**
+   * The payment method Stripe charges for this subscription: its own, else, for a card
+   * subscription, the customer's default (where the customer portal puts a new card). A
+   * subscription paid by bank transfer takes no customer card.
+   */
+  private async chargedPaymentMethod(stripeSub: any): Promise<any> {
+    if (stripeSub?.default_payment_method) return stripeSub.default_payment_method;
+    const customerId = this.stripeObjectId(stripeSub?.customer);
+    if (stripeSub?.collection_method !== 'charge_automatically' || !customerId) return null;
+    const customer: any = await this.getStripeClientOrThrow().customers.retrieve(customerId, {
+      expand: ['invoice_settings.default_payment_method'],
+    });
+    return customer?.invoice_settings?.default_payment_method ?? null;
   }
 
   /** An invoice `invoices.pay` left unpaid without an error: `processing` while its payment is not settled yet, else refused. */
@@ -1587,7 +1598,7 @@ export class BillingService {
     sub.days_until_due = subscriptionDaysUntilDue(stripeSub, sub.days_until_due ?? null);
     sub.stripe_customer_id = typeof stripeSub?.customer === 'string' ? stripeSub.customer : sub.stripe_customer_id;
 
-    const paymentMethodInfo = await this.describeStripePaymentMethod(stripeSub?.default_payment_method);
+    const paymentMethodInfo = await this.describeStripePaymentMethod(await this.chargedPaymentMethod(stripeSub));
     if (paymentMethodInfo) {
       sub.default_payment_method_id = paymentMethodInfo.id;
       sub.default_payment_method_brand = paymentMethodInfo.brand;
