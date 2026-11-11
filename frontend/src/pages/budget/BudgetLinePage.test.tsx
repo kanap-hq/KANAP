@@ -316,14 +316,14 @@ function renderAt(path: string, previous?: string) {
 describe.each(['opex', 'capex'] as const)('BudgetLinePage %s', (lineNature) => {
   beforeEach(() => { nature = lineNature; });
 describe('BudgetLinePage create', () => {
-  const today = new Date().toISOString().slice(0, 10);
+  const yearStart = `${new Date().getFullYear()}-01-01`;
   beforeEach(() => {
     mocked.get.mockReset();
     mocked.post.mockReset();
     mocked.patch.mockReset();
     mocked.get.mockResolvedValue({ data: {} });
     mocked.post.mockImplementation(async (url: string) => (url === '/budget-lines/creation'
-      ? { data: { id: ITEM_ID, item_number: 12, reference: 'BL-12', nature, product_name: 'Monitoring', currency: 'EUR', effective_start: today, creation_token: 'token-1' } }
+      ? { data: { id: ITEM_ID, item_number: 12, reference: 'BL-12', nature, product_name: 'Monitoring', currency: 'EUR', effective_start: yearStart, creation_token: 'token-1' } }
       : { data: {} }));
     placement.centreOnly = false;
     placement.start = { ready: true, companyId: null, needsChoice: false };
@@ -338,7 +338,7 @@ describe('BudgetLinePage create', () => {
     fireEvent.click(screen.getByRole('button', { name: 'set title' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
     expect(mocked.post).toHaveBeenCalledWith('/budget-lines/creation', {
-      nature: lineNature, product_name: 'Monitoring', currency: 'EUR', effective_start: today,
+      nature: lineNature, product_name: 'Monitoring', currency: 'EUR', effective_start: yearStart,
     });
     expect(await screen.findByTestId('capex-page')).toHaveAttribute('data-path', '/ops/budget/BL-12/overview');
     await expectDashboardInvalidated(queryClient);
