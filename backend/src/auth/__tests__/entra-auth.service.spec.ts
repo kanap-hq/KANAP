@@ -64,7 +64,10 @@ async function testBuildAuthorizationUrlEmbedsNonceInSignedState() {
 
     const state = jwt.verify(stateRaw, 'test-entra-state-secret') as any;
     assert.equal(state.mode, 'login');
-    assert.equal(state.tenantId, 'tenant-1');
+    // The readable part of the state names no workspace: only the service reads the reference.
+    assert.equal(state.tenantId, undefined);
+    assert.ok(!Buffer.from(stateRaw.split('.')[1], 'base64url').toString('utf8').includes('tenant-1'));
+    assert.equal((service as any).verifyState(stateRaw).tenantId, 'tenant-1');
     assert.equal(state.redirectTo, '/admin/auth');
     assert.equal(state.nonce, urlNonce);
     // Explicit typing of the SSO state family (RFC 8725 §3.12).
@@ -84,8 +87,10 @@ async function testVerifyStateRequiresTheStatePurposeMarker() {
     const service = createService();
     const verifyState = (token: string) => (service as any).verifyState(token) as { purpose: string; tenantId: string };
 
+    const tenant = (service as any).sealTenantId('tenant-1') as string;
+
     const signed = jwt.sign(
-      { purpose: ENTRA_STATE_PURPOSE, mode: 'login', tenantId: 'tenant-1', nonce: 'nonce-1' },
+      { purpose: ENTRA_STATE_PURPOSE, mode: 'login', tenant, nonce: 'nonce-1' },
       'test-entra-state-secret',
       { algorithm: 'HS256' },
     );
@@ -93,7 +98,7 @@ async function testVerifyStateRequiresTheStatePurposeMarker() {
 
     // Same key, same claims, no marker: a token that merely verifies is not a state.
     const untyped = jwt.sign(
-      { mode: 'login', tenantId: 'tenant-1', nonce: 'nonce-1' },
+      { mode: 'login', tenant, nonce: 'nonce-1' },
       'test-entra-state-secret',
       { algorithm: 'HS256' },
     );
@@ -101,7 +106,7 @@ async function testVerifyStateRequiresTheStatePurposeMarker() {
 
     // Another family's marker on the state key.
     const foreign = jwt.sign(
-      { purpose: 'access', mode: 'login', tenantId: 'tenant-1', nonce: 'nonce-1' },
+      { purpose: 'access', mode: 'login', tenant, nonce: 'nonce-1' },
       'test-entra-state-secret',
       { algorithm: 'HS256' },
     );
@@ -193,11 +198,75 @@ async function testConsentStateIsSignedForItsOwnUse() {
   });
 }
 
+/**
+ * A sign-in state is handed out before anyone signs in: it names the workspace by a reference
+ * only this application reads. A state built elsewhere names no workspace.
+ */
+async function testStateNamesTheWorkspaceBySealedReference() {
+  process.env.JWT_SECRET = 'entra-auth-spec-jwt-secret';
+  const stateSecret = 'test-entra-state-secret';
+  const metadata = async () => ({
+    authorization_endpoint: 'https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize',
+    token_endpoint: 'https://login.microsoftonline.com/organizations/oauth2/v2.0/token',
+  });
+  const readable = (token: string) => Buffer.from(token.split('.')[1], 'base64url').toString('utf8');
+  const workspace = '11111111-1111-4111-8111-111111111111';
+
+  let otherKeyState = '';
+  await withStateSecret('another-entra-state-secret', async () => {
+    const other = createService();
+    (other as any).loadMetadata = metadata;
+    otherKeyState = (await other.buildAuthorizationUrl({ mode: 'login', tenantId: workspace })).state;
+  });
+
+  await withStateSecret(stateSecret, async () => {
+    const service = createService();
+    (service as any).logger = { warn: () => undefined, error: () => undefined };
+    (service as any).loadMetadata = metadata;
+    const verifyState = (token: string) => (service as any).verifyState(token) as { tenantId: string; mode: string };
+
+    for (const mode of ['login', 'setup'] as const) {
+      const first = (await service.buildAuthorizationUrl({ mode, tenantId: workspace })).state;
+      const second = (await service.buildAuthorizationUrl({ mode, tenantId: workspace })).state;
+      for (const state of [first, second]) {
+        assert.ok(!readable(state).includes(workspace), `${mode}: the workspace id is not readable`);
+        assert.equal((jwt.decode(state) as any).tenantId, undefined);
+        assert.equal(verifyState(state).tenantId, workspace);
+        assert.deepEqual(service.peekState(state), { mode, tenantId: workspace });
+      }
+      assert.notEqual((jwt.decode(first) as any).tenant, (jwt.decode(second) as any).tenant, 'a fresh reference each time');
+    }
+
+    // Signed by the application's key, but naming the workspace by its id: not a state.
+    const byId = { purpose: ENTRA_STATE_PURPOSE, mode: 'login', nonce: 'nonce-1' };
+    for (const naming of [{ tenantId: workspace }, { tenant: workspace }, { tenantId: workspace, tenant: workspace }]) {
+      const token = jwt.sign({ ...byId, ...naming }, stateSecret, { algorithm: 'HS256', expiresIn: '10m' });
+      assert.throws(() => verifyState(token), (error: unknown) => error instanceof BadRequestException);
+      assert.equal(service.peekState(token)?.tenantId, undefined);
+    }
+
+    // A state built elsewhere, a reference sealed with another key, an altered reference: no workspace.
+    assert.equal(service.peekState(jwt.sign({ mode: 'login', tenantId: workspace }, 'another-key'))?.tenantId, undefined);
+    assert.equal(service.peekState(otherKeyState)?.tenantId, undefined);
+    assert.throws(() => verifyState(otherKeyState), (error: unknown) => error instanceof BadRequestException);
+    const reference = (jwt.decode((await service.buildAuthorizationUrl({ mode: 'login', tenantId: workspace })).state) as any).tenant as string;
+    const altered = Buffer.from(reference, 'base64url');
+    altered[altered.length - 1] ^= 1;
+    for (const tenant of [altered.toString('base64url'), reference.slice(0, 20), '', 42, null]) {
+      const token = jwt.sign({ ...byId, tenant }, stateSecret, { algorithm: 'HS256', expiresIn: '10m' });
+      assert.throws(() => verifyState(token), (error: unknown) => error instanceof BadRequestException);
+      assert.equal(service.peekState(token)?.tenantId, undefined);
+    }
+    assert.equal(service.peekState('not-a-token'), null);
+  });
+}
+
 async function run() {
   await testBuildAuthorizationUrlEmbedsNonceInSignedState();
   await testVerifyStateRequiresTheStatePurposeMarker();
   await testLoginHandoffKeepsItsOwnMarkerAndKey();
   await testConsentStateIsSignedForItsOwnUse();
+  await testStateNamesTheWorkspaceBySealedReference();
 }
 
 void run();

@@ -161,14 +161,17 @@ function testSsoStateIsHs256Only() {
   const verifyState = (token: string) => (service as any).verifyState(token) as { tenantId: string };
   const state = { purpose: ENTRA_STATE_PURPOSE, mode: 'login', tenantId: TENANT_ID, nonce: 'nonce-1' };
 
-  for (const algorithm of OTHER_HMAC_ALGORITHMS) {
-    const token = jwt.sign(state, getEntraStateSecret(), { algorithm, expiresIn: '10m' });
-    assert.throws(() => verifyState(token), isBadRequest, `${algorithm} SSO state on the right key`);
-  }
-
   const issued = (service as any).signState(state) as string;
   assert.equal(algorithmOf(issued), 'HS256');
   assert.equal(verifyState(issued).tenantId, TENANT_ID);
+
+  // The same payload as an issued state, signed with another algorithm on the right key.
+  const { iat: _iat, exp: _exp, ...issuedPayload } = jwt.decode(issued) as Record<string, unknown>;
+  for (const algorithm of OTHER_HMAC_ALGORITHMS) {
+    const token = jwt.sign(issuedPayload, getEntraStateSecret(), { algorithm, expiresIn: '10m' });
+    assert.throws(() => verifyState(token), isBadRequest, `${algorithm} SSO state on the right key`);
+  }
+  assert.equal(verifyState(jwt.sign(issuedPayload, getEntraStateSecret(), { algorithm: 'HS256', expiresIn: '10m' })).tenantId, TENANT_ID);
 }
 
 function testSsoLoginHandoffIsHs256Only() {

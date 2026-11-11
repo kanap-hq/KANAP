@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as jwt from 'jsonwebtoken';
-import { randomBytes, createPublicKey, KeyObject } from 'crypto';
+import { createCipheriv, createDecipheriv, createHmac, createPublicKey, KeyObject, randomBytes } from 'crypto';
 import * as https from 'https';
 import { DirectoryProfile } from './entra-directory-sync.util';
 import { URL, URLSearchParams } from 'url';
@@ -18,6 +18,17 @@ type EntraState = {
   redirectTo?: string;
   nonce: string;
 };
+
+/**
+ * The state as it travels: a sign-in state is handed out before anyone signs in, so it names the
+ * workspace by a sealed reference only this application reads, never by its id.
+ */
+type SignedEntraState = Omit<EntraState, 'tenantId'> & { tenant: string };
+
+/** Label of the key that seals the workspace reference, derived from the state key. */
+const TENANT_REFERENCE_KEY_LABEL = `${ENTRA_STATE_PURPOSE}:tenant-reference`;
+const SEAL_IV_BYTES = 12;
+const SEAL_TAG_BYTES = 16;
 
 type EntraConsentState = {
   purpose: typeof ENTRA_CONSENT_STATE_PURPOSE;
@@ -74,6 +85,7 @@ export class GraphAccessError extends Error {
 export class EntraAuthService {
   private readonly logger = new Logger(EntraAuthService.name);
   private readonly stateSecret: string;
+  private readonly tenantReferenceKey: Buffer;
 
   private metadataPromise: Promise<OpenIdConfiguration> | null = null;
   private jwksPromise: Promise<JwksResponse> | null = null;
@@ -82,6 +94,7 @@ export class EntraAuthService {
     // Dedicated `ENTRA_STATE_SECRET` when configured, otherwise the derived
     // `kanap:v1:entra-state` key. Never the shared access-token secret.
     this.stateSecret = getEntraStateSecret();
+    this.tenantReferenceKey = createHmac('sha256', this.stateSecret).update(TENANT_REFERENCE_KEY_LABEL).digest();
   }
 
   private getClientId(): string {
@@ -263,9 +276,35 @@ export class EntraAuthService {
     }
   }
 
+  /** The workspace id as a sealed reference (AES-256-GCM, a fresh nonce each time). */
+  private sealTenantId(tenantId: string): string {
+    const iv = randomBytes(SEAL_IV_BYTES);
+    const cipher = createCipheriv('aes-256-gcm', this.tenantReferenceKey, iv, { authTagLength: SEAL_TAG_BYTES });
+    const sealed = Buffer.concat([cipher.update(tenantId, 'utf8'), cipher.final()]);
+    return Buffer.concat([iv, cipher.getAuthTag(), sealed]).toString('base64url');
+  }
+
+  /** The workspace id of a reference this application sealed; null for anything else. */
+  private openTenantReference(reference: unknown): string | null {
+    if (typeof reference !== 'string') return null;
+    try {
+      const raw = Buffer.from(reference, 'base64url');
+      if (raw.length <= SEAL_IV_BYTES + SEAL_TAG_BYTES) return null;
+      const decipher = createDecipheriv('aes-256-gcm', this.tenantReferenceKey, raw.subarray(0, SEAL_IV_BYTES), {
+        authTagLength: SEAL_TAG_BYTES,
+      });
+      decipher.setAuthTag(raw.subarray(SEAL_IV_BYTES, SEAL_IV_BYTES + SEAL_TAG_BYTES));
+      return Buffer.concat([decipher.update(raw.subarray(SEAL_IV_BYTES + SEAL_TAG_BYTES)), decipher.final()]).toString('utf8');
+    } catch {
+      return null;
+    }
+  }
+
   private signState(payload: EntraState): string {
     try {
-      return jwt.sign(payload, this.stateSecret, { algorithm: ISSUED_TOKEN_ALGORITHM, expiresIn: '10m' });
+      const { tenantId, ...rest } = payload;
+      const signed: SignedEntraState = { ...rest, tenant: this.sealTenantId(tenantId) };
+      return jwt.sign(signed, this.stateSecret, { algorithm: ISSUED_TOKEN_ALGORITHM, expiresIn: '10m' });
     } catch (err: any) {
       this.logger.error(`Failed to sign Entra state: ${err?.message || String(err)}`);
       throw new BadRequestException('Unable to start Entra authentication');
@@ -274,13 +313,15 @@ export class EntraAuthService {
 
   private verifyState(token: string): EntraState {
     try {
-      const decoded = jwt.verify(token, this.stateSecret, { algorithms: [...ISSUED_TOKEN_ALGORITHMS] }) as EntraState;
+      const decoded = jwt.verify(token, this.stateSecret, { algorithms: [...ISSUED_TOKEN_ALGORITHMS] }) as SignedEntraState;
       // Explicit typing (RFC 8725 §3.12): an SSO state must be an SSO state, not merely a token
       // this application can verify.
-      if (!decoded || decoded.purpose !== ENTRA_STATE_PURPOSE || !decoded.mode || !decoded.tenantId || !decoded.nonce) {
+      const tenantId = decoded ? this.openTenantReference(decoded.tenant) : null;
+      if (!decoded || decoded.purpose !== ENTRA_STATE_PURPOSE || !decoded.mode || !tenantId || !decoded.nonce) {
         throw new Error('invalid payload');
       }
-      return decoded;
+      const { tenant: _reference, ...rest } = decoded;
+      return { ...rest, tenantId };
     } catch (err: any) {
       this.logger.warn(`Invalid Entra state: ${err?.message || String(err)}`);
       throw new BadRequestException('Invalid Entra state');
@@ -575,14 +616,21 @@ export class EntraAuthService {
   }
 
   /**
-   * Unverified decode of the state parameter — used only to pick a sensible
-   * error redirect target after a failed callback. Never trust it for auth.
+   * Decode of the state parameter without its signature or expiry — used only
+   * to pick a sensible error redirect target after a failed callback. Never
+   * trust it for auth. The workspace is given only for a reference this
+   * application sealed: a state built elsewhere names none.
    */
   peekState(stateRaw: unknown): { mode?: string; tenantId?: string } | null {
     if (typeof stateRaw !== 'string' || !stateRaw) return null;
     try {
       const decoded = jwt.decode(stateRaw);
-      return decoded && typeof decoded === 'object' ? (decoded as { mode?: string; tenantId?: string }) : null;
+      if (!decoded || typeof decoded !== 'object') return null;
+      const { mode, tenant } = decoded as { mode?: unknown; tenant?: unknown };
+      return {
+        mode: typeof mode === 'string' ? mode : undefined,
+        tenantId: this.openTenantReference(tenant) ?? undefined,
+      };
     } catch {
       return null;
     }

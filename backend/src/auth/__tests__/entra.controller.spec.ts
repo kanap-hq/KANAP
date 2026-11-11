@@ -1,4 +1,5 @@
 import * as assert from 'node:assert/strict';
+import * as jwt from 'jsonwebtoken';
 import { BadRequestException } from '@nestjs/common';
 import { EntraAuthService } from '../entra-auth.service';
 import { mergeScalarFields, resolveDirectoryNames } from '../entra-directory-sync.util';
@@ -720,6 +721,33 @@ async function testConsentIsGrantedOnlyForTheWorkspaceDirectory() {
   assert.ok(after.consented_directory.length <= 100, 'the directory text is bounded');
 }
 
+/**
+ * A failed return lands on a workspace's sign-in page only for a state of this application. A
+ * state built elsewhere reads no workspace and gets the plain error.
+ */
+async function testFailedReturnReadsAWorkspaceOnlyFromAnApplicationState() {
+  const h = consentHarness();
+  for (const naming of [{ tenantId: WORKSPACE_A.id }, { tenant: WORKSPACE_A.id }]) {
+    const elsewhere = jwt.sign({ purpose: 'elsewhere', mode: 'login', nonce: 'nonce-1', ...naming }, 'another-key');
+    await assert.rejects(() => h.back({ code: 'code-1', state: elsewhere }), /Invalid Entra state/);
+  }
+  assert.deepEqual(h.lookups, [], 'no workspace read');
+  assert.deepEqual(h.redirects, [], 'no redirect');
+
+  // A state of the application past its lifetime: the sign-in page of its workspace, with a short code.
+  const { state } = await h.entra.buildAuthorizationUrl({ mode: 'login', tenantId: WORKSPACE_A.id });
+  const realNow = Date.now;
+  Date.now = () => new Date().getTime() + 3600 * 1000;
+  try {
+    await h.back({ code: 'code-1', state });
+  } finally {
+    Date.now = realNow;
+  }
+  assert.deepEqual(h.lookups, [WORKSPACE_A.id]);
+  assert.deepEqual(h.redirects, ['http://alpha.lvh.me/login?ssoError=SSO_FAILED']);
+  assert.deepEqual(h.auditEntries, []);
+}
+
 /** Runs `fn` with the given environment values, then restores them. */
 async function withEnv(values: Record<string, string | undefined>, fn: () => Promise<void>) {
   const previous = new Map<string, string | undefined>();
@@ -752,6 +780,10 @@ async function run() {
   await withEnv(
     { APP_ENV: 'development', NODE_ENV: undefined, ENTRA_STATE_SECRET: 'entra-controller-spec-state-secret' },
     testConsentIsGrantedOnlyForTheWorkspaceDirectory,
+  );
+  await withEnv(
+    { APP_ENV: 'development', NODE_ENV: undefined, ENTRA_STATE_SECRET: 'entra-controller-spec-state-secret' },
+    testFailedReturnReadsAWorkspaceOnlyFromAnApplicationState,
   );
 }
 
