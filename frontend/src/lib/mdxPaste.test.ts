@@ -191,9 +191,45 @@ describe('toEditorDisplayMarkdown', () => {
     expectMarkdownToParse(markdown);
   });
 
+  it('escapes a less-than sign that ends the text or its line and leaves one before a space', () => {
+    expect(toEditorDisplayMarkdown('a <')).toBe('a \\<');
+    expect(toEditorDisplayMarkdown('a < b <\nc <\u00a05')).toBe('a < b \\<\nc \\<\u00a05');
+  });
+
   it('leaves a text whose only tags are in code as it is', () => {
     const markdown = '# Titre\n\n| a | b |\n| - | - |\n| 1 | 2 |\n\n* [x] fait\n\n```html\n<form action="x"></form>\n```\n\n`<b>`';
 
     expect(toEditorDisplayMarkdown(markdown)).toBe(markdown);
+  });
+});
+
+describe('the display form of a long text', () => {
+  const size = 200 * 1024;
+  const LONG_TEXTS: Array<[string, string]> = [
+    ['less-than signs', '<'.repeat(size)],
+    ['the start of an e-mail address followed by dots', `<a@${'.'.repeat(size)}`],
+    ['openings of a tag', '<a'.repeat(size / 2)],
+    ['openings of a link destination', '](<'.repeat(Math.floor(size / 3))],
+    ['underline tags that are never closed', '<u>'.repeat(Math.floor(size / 3))],
+    ['openings of an automatic link', '<x://'.repeat(Math.floor(size / 5))],
+    ['an e-mail address followed by dotted names', `<a@b${'.c'.repeat(size / 2)}`],
+    ['openings of an image attribute', '<img a="'.repeat(size / 8)],
+    ['backtick runs of growing lengths', Array.from({ length: 630 }, (_, index) => `${'`'.repeat(index + 1)}a`).join(' ')],
+  ];
+
+  it.each(LONG_TEXTS)('is ready in less than 200 ms for 200 KB of %s', (_name, text) => {
+    const start = performance.now();
+    const display = toEditorDisplayMarkdown(text);
+    const elapsed = performance.now() - start;
+
+    expect(display.length).toBeGreaterThanOrEqual(text.length);
+    expect(elapsed).toBeLessThan(200);
+  });
+
+  it('escapes each less-than sign and each tag left open of a long text', () => {
+    expect(toEditorDisplayMarkdown('<'.repeat(1000))).toBe('\\<'.repeat(1000));
+    expect(toEditorDisplayMarkdown('<u>'.repeat(1000))).toBe('\\<u>'.repeat(1000));
+    expect(toEditorDisplayMarkdown(`<a@${'.'.repeat(1000)}`)).toBe(`\\<a@${'.'.repeat(1000)}`);
+    expect(toEditorDisplayMarkdown('](<'.repeat(1000))).toBe('](\\<'.repeat(1000));
   });
 });

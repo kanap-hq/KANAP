@@ -17,10 +17,11 @@ export const RICH_TEXT_HTML_ELEMENTS = {
   imageAttributes: ['src', 'alt', 'title', 'width', 'height'],
 } as const;
 
-const PAIRED_TAG_REGEX = new RegExp(`^<(/?)(${RICH_TEXT_HTML_ELEMENTS.paired.join('|')})>`);
-const LINE_BREAK_TAG_REGEX = new RegExp(`^<${RICH_TEXT_HTML_ELEMENTS.lineBreak}(?: ?/)?>`);
+// Sticky expressions: each one reads the tag at a given place of a text, without copying the text.
+const PAIRED_TAG_REGEX = new RegExp(`<(/?)(${RICH_TEXT_HTML_ELEMENTS.paired.join('|')})>`, 'y');
+const LINE_BREAK_TAG_REGEX = new RegExp(`<${RICH_TEXT_HTML_ELEMENTS.lineBreak}(?: ?/)?>`, 'y');
 // An image tag on one line whose attributes all have a quoted value.
-const IMAGE_TAG_REGEX = /^<img((?:[ \t]+[a-z]+=(?:"[^"\n]*"|'[^'\n]*'))+)[ \t]*\/?>/;
+const IMAGE_TAG_REGEX = /<img((?:[ \t]+[a-z]+=(?:"[^"\n]*"|'[^'\n]*'))+)[ \t]*\/?>/y;
 const IMAGE_ATTRIBUTE_REGEX = /([a-z]+)=(?:"([^"\n]*)"|'([^'\n]*)')/g;
 
 /** True for the name of an element accepted without any attribute. */
@@ -43,25 +44,31 @@ export function isRichTextImageAttribute(name: string, value: string): boolean {
   return true;
 }
 
+function matchAt(regex: RegExp, text: string, index: number): RegExpExecArray | null {
+  regex.lastIndex = index;
+  return regex.exec(text);
+}
+
 /**
- * The tag at the start of `text` when it is one of `RICH_TEXT_HTML_ELEMENTS` in its accepted form,
+ * The tag at `index` of `text` when it is one of `RICH_TEXT_HTML_ELEMENTS` in its accepted form,
  * with the way the editor reads it (a line break and an image are closed tags).
  */
 export function matchRichTextHtmlTag(
   text: string,
+  index = 0,
 ): { length: number; tag: string; name: string; closing: boolean } | null {
-  const paired = text.match(PAIRED_TAG_REGEX);
+  const paired = matchAt(PAIRED_TAG_REGEX, text, index);
   if (paired) {
     const [whole, slash, name] = paired;
     return { length: whole.length, tag: whole, name, closing: slash !== '' };
   }
 
-  const lineBreak = text.match(LINE_BREAK_TAG_REGEX);
+  const lineBreak = matchAt(LINE_BREAK_TAG_REGEX, text, index);
   if (lineBreak) {
     return { length: lineBreak[0].length, tag: '<br />', name: RICH_TEXT_HTML_ELEMENTS.lineBreak, closing: false };
   }
 
-  const image = text.match(IMAGE_TAG_REGEX);
+  const image = matchAt(IMAGE_TAG_REGEX, text, index);
   if (!image) return null;
   let hasSource = false;
   for (const [, name, doubleQuoted, singleQuoted] of image[1].matchAll(IMAGE_ATTRIBUTE_REGEX)) {

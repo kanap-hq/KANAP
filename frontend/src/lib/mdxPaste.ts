@@ -3,10 +3,10 @@ import { matchRichTextHtmlTag } from './richTextHtmlElements';
 // The line that opens a fenced block: the fence may sit in a list item or a quote, at any indent.
 const FENCE_OPENING_REGEX = /^(?:[ \t>]|(?:[-*+]|\d{1,9}[.)])[ \t])*(`{3,}|~{3,})(.*)$/;
 const FENCE_CLOSING_REGEX = /^[ \t>]*(`{3,}|~{3,})[ \t]*$/;
-const URI_AUTOLINK_REGEX = /^<([a-zA-Z][a-zA-Z0-9+.-]*:\/\/[^\s>]+)>/;
-const EMAIL_AUTOLINK_REGEX = /^<([^\s>@]+@[^\s>]+\.[^\s>]+)>/;
+// What may be an automatic link: no space and no angle bracket between its angle brackets.
+const AUTOLINK_CANDIDATE_REGEX = /<([^\s<>]+)>/y;
 // A link destination between angle brackets, with its optional title, up to the closing parenthesis.
-const ANGLE_BRACKET_DESTINATION_REGEX = /^<[^<>\n]*>(?:[ \t]+(?:"[^"\n]*"|'[^'\n]*'))?[ \t]*\)/;
+const ANGLE_BRACKET_DESTINATION_REGEX = /<[^<>\n]*>(?:[ \t]+(?:"[^"\n]*"|'[^'\n]*'))?[ \t]*\)/y;
 
 function isEscaped(text: string, index: number): boolean {
   let backslashCount = 0;
@@ -52,21 +52,38 @@ function stashFencedCodeBlocks(text: string): { text: string; blocks: string[] }
   return { text: lines.join('\n'), blocks };
 }
 
-/** The index of the run of exactly `length` backticks that closes a code span, in its paragraph, or -1. */
-function findClosingBacktickRun(text: string, from: number, length: number): number {
-  for (let index = from; index < text.length; index += 1) {
-    if (text[index] === '\n' && isBlankLineAhead(text, index)) return -1;
-    if (text[index] !== '`') continue;
-    let end = index;
-    while (text[end] === '`') end += 1;
-    if (end - index === length) return index;
-    index = end - 1;
-  }
-  return -1;
+/**
+ * Finds the run of exactly `length` backticks that closes a code span, in its paragraph: its index,
+ * or -1. A search that finds nothing reads its paragraph to the end once: it keeps the last run of
+ * each length it met, and the next searches of the same paragraph answer from that.
+ */
+function createClosingBacktickRunFinder(text: string): (from: number, length: number) => number {
+  let paragraphEnd = -1;
+  let lastRunByLength = new Map<number, number>();
+
+  return (from, length) => {
+    if (from < paragraphEnd && (lastRunByLength.get(length) ?? -1) < from) return -1;
+
+    const met = new Map<number, number>();
+    let index = from;
+    for (; index < text.length; index += 1) {
+      if (text[index] === '\n' && isBlankLineAhead(text, index)) break;
+      if (text[index] !== '`') continue;
+      let end = index;
+      while (text[end] === '`') end += 1;
+      if (end - index === length) return index;
+      met.set(end - index, index);
+      index = end - 1;
+    }
+    paragraphEnd = index;
+    lastRunByLength = met;
+    return -1;
+  };
 }
 
 function stashInlineCodeSpans(text: string): { text: string; spans: string[] } {
   const spans: string[] = [];
+  const findClosingBacktickRun = createClosingBacktickRunFinder(text);
   let result = '';
 
   for (let index = 0; index < text.length;) {
@@ -81,7 +98,7 @@ function stashInlineCodeSpans(text: string): { text: string; spans: string[] } {
       runEnd += 1;
     }
     const length = runEnd - index;
-    const closingIndex = findClosingBacktickRun(text, runEnd, length);
+    const closingIndex = findClosingBacktickRun(runEnd, length);
 
     // A run of backticks that nothing closes in its paragraph is text.
     if (closingIndex < 0) {
@@ -111,7 +128,19 @@ function shouldSkipAngleBracketSanitization(text: string, index: number): boolea
   }
 
   // The destination of a link or an image written between angle brackets: `[text](<address>)`.
-  return text.slice(Math.max(0, index - 2), index) === '](' && ANGLE_BRACKET_DESTINATION_REGEX.test(text.slice(index));
+  if (text[index - 1] !== '(' || text[index - 2] !== ']') return false;
+  ANGLE_BRACKET_DESTINATION_REGEX.lastIndex = index;
+  return ANGLE_BRACKET_DESTINATION_REGEX.test(text);
+}
+
+/** The Markdown link of an automatic link, from the text between its angle brackets, or null. */
+function autolinkAsMarkdownLink(target: string): string | null {
+  if (/^[a-z][a-z0-9+.-]*:\/\/./i.test(target)) return `[${target}](${target})`;
+  // An e-mail address: a name, an at sign, then a domain with a dot inside it.
+  const at = target.indexOf('@');
+  if (at < 1) return null;
+  const dot = target.indexOf('.', at + 2);
+  return dot !== -1 && dot < target.length - 1 ? `[${target}](mailto:${target})` : null;
 }
 
 function isBlankLineAhead(text: string, lineEndIndex: number): boolean {
@@ -136,70 +165,62 @@ export function sanitizeMarkdownForMdxPaste(
   const { text: withoutFences, blocks: fencedCodeBlocks } = stashFencedCodeBlocks(String(markdown || ''));
   const { text: sanitizedBase, spans: inlineCodeSpans } = stashInlineCodeSpans(withoutFences);
 
-  let result = '';
-  // Kept opening tags that wait for their closing tag, with their place in `result`. The editor
+  // The result, in pieces: the text between two rewritten places is copied as it is.
+  const pieces: string[] = [];
+  let copiedTo = 0;
+  const rewrite = (index: number, length: number, piece: string) => {
+    if (index > copiedTo) pieces.push(sanitizedBase.slice(copiedTo, index));
+    pieces.push(piece);
+    copiedTo = index + length;
+  };
+  // Kept opening tags that wait for their closing tag, with their piece of the result. The editor
   // reads a tag as an element only when it is closed in its own paragraph, in order: a tag that
   // is not stays text.
-  const openTags: Array<{ name: string; at: number }> = [];
+  const openTags: Array<{ name: string; piece: number }> = [];
   const escapeOpenTags = () => {
-    while (openTags.length > 0) {
-      const { at } = openTags.pop()!;
-      result = `${result.slice(0, at)}\\${result.slice(at)}`;
-    }
+    for (const { piece } of openTags) pieces[piece] = `\\${pieces[piece]}`;
+    openTags.length = 0;
   };
 
-  for (let index = 0; index < sanitizedBase.length;) {
+  for (let index = 0; index < sanitizedBase.length; index += 1) {
     const current = sanitizedBase[index];
     if (current === '\n' && openTags.length > 0 && isBlankLineAhead(sanitizedBase, index)) {
       escapeOpenTags();
     }
-    if (current !== '<' || shouldSkipAngleBracketSanitization(sanitizedBase, index)) {
-      result += current;
-      index += 1;
+    if (current !== '<' || shouldSkipAngleBracketSanitization(sanitizedBase, index)) continue;
+
+    AUTOLINK_CANDIDATE_REGEX.lastIndex = index;
+    const autolink = AUTOLINK_CANDIDATE_REGEX.exec(sanitizedBase);
+    const link = autolink ? autolinkAsMarkdownLink(autolink[1]) : null;
+    if (autolink && link) {
+      rewrite(index, autolink[0].length, link);
+      index += autolink[0].length - 1;
       continue;
     }
 
-    const remaining = sanitizedBase.slice(index);
-    const uriMatch = remaining.match(URI_AUTOLINK_REGEX);
-    if (uriMatch) {
-      const target = uriMatch[1];
-      result += `[${target}](${target})`;
-      index += uriMatch[0].length;
-      continue;
-    }
-
-    const emailMatch = remaining.match(EMAIL_AUTOLINK_REGEX);
-    if (emailMatch) {
-      const email = emailMatch[1];
-      result += `[${email}](mailto:${email})`;
-      index += emailMatch[0].length;
-      continue;
-    }
-
-    const element = keepRichTextElements ? matchRichTextHtmlTag(remaining) : null;
+    const element = keepRichTextElements ? matchRichTextHtmlTag(sanitizedBase, index) : null;
     const closesOpenTag = element?.closing && openTags[openTags.length - 1]?.name === element.name;
     if (element && (!element.closing || closesOpenTag)) {
+      rewrite(index, element.length, element.tag);
       if (closesOpenTag) {
         openTags.pop();
       } else if (element.name !== 'br' && element.name !== 'img') {
-        openTags.push({ name: element.name, at: result.length });
+        openTags.push({ name: element.name, piece: pieces.length - 1 });
       }
-      result += element.tag;
-      index += element.length;
+      index += element.length - 1;
       continue;
     }
 
-    if (sanitizedBase[index + 1] && !/\s/.test(sanitizedBase[index + 1])) {
-      result += '\\<';
-      index += 1;
-      continue;
+    // The editor reads a less-than sign as text only before a space or a tab of its line.
+    const next = sanitizedBase[index + 1];
+    if (next !== ' ' && next !== '\t') {
+      rewrite(index, 1, '\\<');
     }
-
-    result += current;
-    index += 1;
   }
 
   escapeOpenTags();
+  pieces.push(sanitizedBase.slice(copiedTo));
+  const result = pieces.join('');
 
   return restorePlaceholders(restorePlaceholders(result, inlineCodeSpans, 'IC'), fencedCodeBlocks, 'CB');
 }
