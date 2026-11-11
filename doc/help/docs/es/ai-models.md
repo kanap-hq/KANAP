@@ -51,7 +51,7 @@ Las filas archivadas se muestran atenuadas con una única acción **Restaurar**.
 
 ### El modelo incluido de Kadratis
 
-En el servicio alojado, la primera fila de la tabla es siempre **Modelo incluido de Kadratis**, *Operado por KANAP, incluido en su suscripción*. Se comporta de forma distinta a los modelos que usted añade, y es a propósito:
+En el servicio alojado, la primera fila de la tabla es siempre **Modelo incluido de Kadratis**, *Operado por Kadratis, incluido en su suscripción*. Se comporta de forma distinta a los modelos que usted añade, y es a propósito:
 
 - Cuesta `0,00 €` en las dos columnas de precio. Forma parte de su suscripción; no es algo que se le facture por token.
 - Es **multimodal** (lee las capturas de pantalla de los tickets) y eso no se puede cambiar.
