@@ -1,5 +1,6 @@
 import * as assert from 'node:assert/strict';
-import { AiEvidenceService } from '../ai-evidence.service';
+import { AiEvidenceService, redactSensitiveText } from '../ai-evidence.service';
+import { mcpArgumentPreview } from '../../mcp/ai-mcp-audit.service';
 import { AiExternalMcpBridgeService } from '../../mcp/ai-external-mcp-bridge.service';
 import { AiExternalMcpMockTransport } from '../../mcp/ai-external-mcp-mock-transport.service';
 
@@ -95,9 +96,28 @@ function testTheExternalMcpBridgeHidesTokens() {
   assert.equal(malformed.evidence[0].redactedPayload.output.plain, PLAIN);
 }
 
+function timed<T>(work: () => T): { value: T; ms: number } {
+  const started = process.hrtime.bigint();
+  const value = work();
+  return { value, ms: Number(process.hrtime.bigint() - started) / 1e6 };
+}
+
+function testTheRedactionTimeGrowsLinearlyWithTheText() {
+  // 300 KB of text close to a JWT, then a real one.
+  const text = `${'eyJ-'.repeat(75_000)} ${JWT}`;
+  const evidence = timed(() => redactSensitiveText(text));
+  assert.ok(evidence.ms < 500, `evidence redaction took ${evidence.ms.toFixed(0)} ms`);
+  assertNoToken(evidence.value, 'evidence text');
+  const journal = timed(() => mcpArgumentPreview({ query: text }));
+  assert.ok(journal.ms < 500, `journal preview took ${journal.ms.toFixed(0)} ms`);
+  assertNoToken(journal.value, 'journal preview');
+  assert.ok(!JSON.stringify(mcpArgumentPreview({ query: `see ${JWT}` })).includes(JWT));
+}
+
 async function run() {
   const tests: Array<() => unknown> = [
     testTheEvidenceWriterHidesTokens,
+    testTheRedactionTimeGrowsLinearlyWithTheText,
     testTheEvidenceSummaryHidesTokens,
     testTheExternalMcpBridgeHidesTokens,
   ];

@@ -129,7 +129,7 @@ const MAX_ARGUMENTS_JSON_CHARS = 2_000;
 // token or authorization code), wherever it appears in a value.
 const CREDENTIAL_PATTERNS = [
   /kanap_mcp[a-z]*_[A-Za-z0-9_-]+/g,
-  /\beyJ[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]+/g,
+  /(?<![A-Za-z0-9_-])eyJ[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]+/g,
 ];
 // Argument names whose values the journal drops, on top of the evidence rule (api key, token,
 // secret, password, authorization, cookie, session).
