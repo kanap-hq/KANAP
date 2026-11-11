@@ -19,7 +19,7 @@ import {
 import { applyHttpMiddleware, applyTenancyAndPipeline } from '../../http-app';
 import { FxRateService } from '../../currency/fx-rate.service';
 import { backendPath } from './backend-root';
-import { MARKDOWN_HTML_NOT_ALLOWED } from '../markdown-limits';
+import { isRichTextContentRefusal, MARKDOWN_HTML_NOT_ALLOWED, MARKDOWN_LINK_NOT_ALLOWED } from '../markdown-limits';
 import { RICH_TEXT_CHECK_HELPERS, RICH_TEXT_FIELDS } from '../rich-text-fields.inventory';
 
 // The rich-text fields (rich-text-fields.inventory.ts), written through the whole application
@@ -27,8 +27,10 @@ import { RICH_TEXT_CHECK_HELPERS, RICH_TEXT_FIELDS } from '../rich-text-fields.i
 // route the spec can drive (the page's API, the CSV import):
 // - a text with an HTML tag outside the accepted list is refused, the tag on its own line and
 //   the tag in a table cell (400 `MARKDOWN_HTML_NOT_ALLOWED`, or the coded error of its CSV row);
+// - a text with a link whose address is none a rich text opens is refused under its own code
+//   (`MARKDOWN_LINK_NOT_ALLOWED`);
 // - a text of plain Markdown with the accepted tags is stored;
-// - an update that repeats a stored text holding such a tag (a text saved before the rule)
+// - an update that repeats a stored text holding such a tag or such a link (a text saved before the rule)
 //   is accepted, and the text stays as it is.
 // The assistant writes through the same services (`routes: ['assistant']` in the inventory).
 // A field of `NOT_DRIVEN` is covered by the first test only.
@@ -44,6 +46,9 @@ const OUTSIDE_A_TABLE = `Introduction.\n\n${TAG}\n\nEnd.`;
 const IN_A_CELL = `Introduction.\n\n| Step | Detail |\n|---|---|\n| One | ${TAG} |`;
 const ACCEPTED = 'A **plain** text with an <u>underlined</u> word.\n\n| Step | Detail |\n|---|---|\n| One | Two<br>lines |';
 const STORED_BEFORE = `Earlier text.\n\n| Step | Detail |\n|---|---|\n| One | <details open>More</details> |\n\n${TAG}`;
+// A link whose address is none a rich text opens, and a text saved with it before the rule.
+const OTHER_ADDRESS = '[the file](ftp://example.com/a)';
+const STORED_BEFORE_WITH_ADDRESS = `Earlier text, see ${OTHER_ADDRESS}.`;
 
 /** Fields this spec does not write over HTTP, with the reason: the first test covers the file that checks them. */
 const NOT_DRIVEN: Record<string, string> = {
@@ -183,13 +188,19 @@ async function testEveryFieldRefusesOtherTagsThroughItsRoutes() {
             failures.push(`${at}: the refusal names the field and the tag, got ${show(refused)}`);
           }
         }
+        const link = await probe.write(`Read ${OTHER_ADDRESS}.`);
+        if (link.status !== 400 || link.json?.code !== MARKDOWN_LINK_NOT_ALLOWED || link.json?.example !== OTHER_ADDRESS) {
+          failures.push(`${at}: a link with another address is refused under its own code, got ${show(link)}`);
+        }
         if (!probe.store || !probe.stored) return;
-        await probe.store(STORED_BEFORE);
-        const repeated = await probe.write(STORED_BEFORE);
-        if (repeated.status < 200 || repeated.status >= 300) {
-          failures.push(`${at}: an update that repeats the stored text is accepted, got ${show(repeated)}`);
-        } else if ((await probe.stored()) !== STORED_BEFORE) {
-          failures.push(`${at}: the stored text stays as it is, got ${JSON.stringify(await probe.stored())}`);
+        for (const before of [STORED_BEFORE_WITH_ADDRESS, STORED_BEFORE]) {
+          await probe.store(before);
+          const repeated = await probe.write(before);
+          if (repeated.status < 200 || repeated.status >= 300) {
+            failures.push(`${at}: an update that repeats the stored text is accepted, got ${show(repeated)}`);
+          } else if ((await probe.stored()) !== before) {
+            failures.push(`${at}: the stored text stays as it is, got ${JSON.stringify(await probe.stored())}`);
+          }
         }
         const changed = await probe.write(`${STORED_BEFORE}\n\nOne more line.`);
         if (changed.status !== 400 || changed.json?.code !== MARKDOWN_HTML_NOT_ALLOWED) {
@@ -218,7 +229,7 @@ async function testEveryFieldRefusesOtherTagsThroughItsRoutes() {
       if (reply.status < 200 || reply.status >= 300 || !reply.json) return reply;
       const errors: Array<{ code?: string; column?: string; message?: string }> = reply.json.errors ?? [];
       if (errors.length === 0) return reply;
-      const refusal = errors.find((error) => error.code === MARKDOWN_HTML_NOT_ALLOWED && error.column === columnName);
+      const refusal = errors.find((error) => isRichTextContentRefusal(error.code) && error.column === columnName);
       const example = /Example: (.*)$/.exec(refusal?.message ?? '')?.[1];
       return refusal
         ? { status: 400, body: reply.body, json: { code: refusal.code, field: columnName, example } }

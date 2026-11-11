@@ -1,6 +1,6 @@
 import type { CsvImportContext, CsvImportRow } from '../common/csv/csv-field.types';
 import { sameStoredValues } from '../common/csv-sheet/unchanged';
-import { MARKDOWN_HTML_NOT_ALLOWED } from '../common/markdown-limits';
+import { isRichTextContentRefusal } from '../common/markdown-limits';
 import { normalizeMarkdownRichText } from '../common/markdown-worker';
 import { IntegratedDocumentSlotKey } from './integrated-document.constants';
 
@@ -85,8 +85,8 @@ export async function sameAsStoredWithDocuments(
 }
 
 /**
- * For a CSV import whose texts live in bound documents: a cell refused for an HTML tag that
- * repeats the text of its document is no error. A text saved before that rule stays as it is,
+ * For a CSV import whose texts live in bound documents: a cell refused for an HTML tag or for
+ * the address of a link, that repeats the text of its document, is no error. A text saved before that rule stays as it is,
  * and its row stays importable (as `CsvImportService` does for a text stored in a column).
  * `slots` gives the slot of each column, named as its entity property.
  */
@@ -97,7 +97,7 @@ export async function keepStoredSlotBodies(
   slots: Record<string, IntegratedDocumentSlotKey>,
 ): Promise<void> {
   const refusedSlot = (error: { code?: string; column?: string }) =>
-    (error.code === MARKDOWN_HTML_NOT_ALLOWED && error.column ? slots[error.column] : undefined);
+    (isRichTextContentRefusal(error.code) && error.column ? slots[error.column] : undefined);
   const refused = rows.filter((row) => row.existingEntity && row.errors.some((error) => refusedSlot(error)));
   if (refused.length === 0) return;
 

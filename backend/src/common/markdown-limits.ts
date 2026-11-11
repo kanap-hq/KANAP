@@ -21,6 +21,14 @@ export const MARKDOWN_TOO_LARGE = 'MARKDOWN_TOO_LARGE';
 /** A rich-text write that holds an HTML tag outside the accepted list (html-to-markdown.ts). */
 export const MARKDOWN_HTML_NOT_ALLOWED = 'MARKDOWN_HTML_NOT_ALLOWED';
 
+/** A rich-text write that holds a link or an image whose address is none a rich text opens (html-to-markdown.ts). */
+export const MARKDOWN_LINK_NOT_ALLOWED = 'MARKDOWN_LINK_NOT_ALLOWED';
+
+/** True for the code of a write refused for what its text holds: a tag, or the address of a link. */
+export function isRichTextContentRefusal(code: unknown): boolean {
+  return code === MARKDOWN_HTML_NOT_ALLOWED || code === MARKDOWN_LINK_NOT_ALLOWED;
+}
+
 const DATA_IMAGE_PAYLOAD_REGEX = /(data:image\/[a-z0-9.+-]+;base64,)[a-z0-9+/=]+/gi;
 
 /**
@@ -121,6 +129,17 @@ export function markdownHtmlNotAllowedError(fieldName: string, tag: string): Bad
     code: MARKDOWN_HTML_NOT_ALLOWED,
     message: `${fieldName} must be Markdown. HTML tags are not allowed outside fenced code blocks or inline code: `
       + `remove the tag or wrap it in backticks. Example: ${example}`,
+    field: fieldName,
+    example,
+  });
+}
+
+export function markdownLinkNotAllowedError(fieldName: string, link: string): BadRequestException {
+  const example = String(link || '').replace(/\s+/g, ' ').trim().slice(0, 120);
+  return new BadRequestException({
+    code: MARKDOWN_LINK_NOT_ALLOWED,
+    message: `${fieldName} holds a link or an image whose address is not accepted. Use a web address (http, https), `
+      + `a mail address (mailto), a path of the application or an anchor, or write the address as text. Example: ${example}`,
     field: fieldName,
     example,
   });

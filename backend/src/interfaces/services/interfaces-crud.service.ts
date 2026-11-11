@@ -56,7 +56,7 @@ function specificationSourceText(value: unknown): string | null {
 
 /**
  * Each specification source text set by a write is checked as a rich-text write
- * (400 `MARKDOWN_TOO_LARGE`, `MARKDOWN_HTML_NOT_ALLOWED`): the specification
+ * (400 `MARKDOWN_TOO_LARGE`, `MARKDOWN_HTML_NOT_ALLOWED`, `MARKDOWN_LINK_NOT_ALLOWED`): the specification
  * document is built from these texts. A text left as stored is kept as it is.
  */
 async function assertSpecificationSourceTexts(next: Partial<InterfaceEntity>, before: InterfaceEntity | null): Promise<void> {

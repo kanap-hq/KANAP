@@ -715,3 +715,28 @@ describe('a rich text refused for an HTML tag', () => {
       .toBe('This text contains an HTML tag. Remove it or put it in a code block.');
   });
 });
+
+describe('a rich text refused for the address of a link', () => {
+  const refused = {
+    response: {
+      status: 400,
+      data: { code: 'MARKDOWN_LINK_NOT_ALLOWED', message: 'description holds a link', field: 'description', example: '[a](ftp://example.com)' },
+    },
+  };
+
+  it('says which addresses a link opens, in each language', () => {
+    expect(getApiErrorMessage(refused, t, 'fallback'))
+      .toBe('This link is not accepted. Use a web address, an email address or a page of the application.');
+    expect(getApiErrorMessage(refused, i18n.getFixedT('fr'), 'fallback'))
+      .toBe("Ce lien n'est pas accepté. Utilisez une adresse web, une adresse e-mail ou une page de l'application.");
+    expect(getApiErrorMessage(refused, i18n.getFixedT('de'), 'fallback'))
+      .toBe('Dieser Link wird nicht akzeptiert. Verwenden Sie eine Webadresse, eine E-Mail-Adresse oder eine Seite der Anwendung.');
+    expect(getApiErrorMessage(refused, i18n.getFixedT('es'), 'fallback'))
+      .toBe('Este enlace no se acepta. Utilice una dirección web, una dirección de correo electrónico o una página de la aplicación.');
+  });
+
+  it('says the same for a document', () => {
+    expect(getDocumentSaveErrorMessage(refused, t, 'fallback'))
+      .toBe('This link is not accepted. Use a web address, an email address or a page of the application.');
+  });
+});

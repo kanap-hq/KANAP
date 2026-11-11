@@ -798,7 +798,8 @@ function repeatsStoredValue(text: string, opts?: NormalizeOptions): boolean {
 /**
  * The Markdown content of a rich-text field, trimmed, or null when blank. A write
  * is refused when it holds an HTML tag outside the accepted list
- * (`MARKDOWN_HTML_NOT_ALLOWED`), an inline base64 image, more than the size limit
+ * (`MARKDOWN_HTML_NOT_ALLOWED`), a link or an image whose address is not accepted
+ * (`MARKDOWN_LINK_NOT_ALLOWED`), an inline base64 image, more than the size limit
  * (400), or a content the workers cannot process (`MARKDOWN_TOO_COMPLEX`, ...).
  */
 export async function normalizeMarkdownRichText(value: unknown, opts?: NormalizeOptions): Promise<string | null> {

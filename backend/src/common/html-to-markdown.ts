@@ -276,37 +276,46 @@ function definitionText(token: MarkdownToken): string {
   return text.replace(/\\[!-/:-@[-`{-~]/g, '');
 }
 
+/** What a write refuses in a text, as it is written; `address` is set for a link, an image or a link definition refused for its address. */
+type RefusedContent = { written: string; address: boolean };
+
 /**
  * What a parsed text holds that a write refuses, one entry per token, each once: a tag outside
  * `RICH_TEXT_ALLOWED_HTML`, in the text of a link definition too, and a link, an image or a
  * link definition whose address is neither a web or mail address nor a relative one
  * (`isAllowedLinkAddress`), as it is written.
  */
-function collectRefusedHtml(tokens: MarkdownToken[]): string[] {
-  const refused: string[] = [];
+function collectRefusedContent(tokens: MarkdownToken[]): RefusedContent[] {
+  const refused: RefusedContent[] = [];
   const seen = new Set<string>();
 
   walkMarkedToken(tokens, (current) => {
     let tag: string | null = null;
+    let address = false;
     if (current.type === 'html') {
       tag = firstRefusedHtmlTag(String(current.raw ?? current.text ?? ''));
     } else if (current.type === 'text' && !Array.isArray(current.tokens)) {
       tag = firstListedTagInProse(String(current.raw ?? ''));
     } else if (current.type === 'link' || current.type === 'image' || current.type === 'def') {
-      const address = String(current.href ?? '');
-      const written = String(current.raw ?? address).trim();
+      const href = String(current.href ?? '');
+      const written = String(current.raw ?? href).trim();
       // An address written in a sentence, without brackets, is text. An inline base64 image has
       // its own refusal (`tokensContainDataImage`).
-      const checked = /^[[!<]/.test(written) && !(current.type === 'image' && isDataImageUri(address));
-      if (checked && !isAllowedLinkAddress(address)) tag = written;
+      const checked = /^[[!<]/.test(written) && !(current.type === 'image' && isDataImageUri(href));
+      address = checked && !isAllowedLinkAddress(href);
+      if (address) tag = written;
       else if (current.type === 'def') tag = firstRefusedHtmlTag(definitionText(current));
     }
     if (!tag || seen.has(tag)) return;
     seen.add(tag);
-    refused.push(tag);
+    refused.push({ written: tag, address });
   });
 
   return refused;
+}
+
+function collectRefusedHtml(tokens: MarkdownToken[]): string[] {
+  return collectRefusedContent(tokens).map((content) => content.written);
 }
 
 /**
@@ -503,16 +512,27 @@ export function containsInlineDataImage(content: string): boolean {
   return tokens ? tokensContainDataImage(tokens) : containsInlineDataImageText(text);
 }
 
-/** Refused HTML tags and inline base64 images of a Markdown content, from a single parse. */
-export function inspectMarkdownContent(content: string): { refusedHtml: string[]; hasInlineDataImage: boolean } {
+/**
+ * What a write refuses in a Markdown content and its inline base64 images, from a single parse:
+ * `refusedHtml` holds everything refused, in the order of the text, and `refusedAddresses` those
+ * of its entries that are a link or an image refused for its address.
+ */
+export function inspectMarkdownContent(
+  content: string,
+): { refusedHtml: string[]; refusedAddresses: string[]; hasInlineDataImage: boolean } {
   const text = String(content || '').trim();
-  if (!text) return { refusedHtml: [], hasInlineDataImage: false };
+  if (!text) return { refusedHtml: [], refusedAddresses: [], hasInlineDataImage: false };
 
   const tokens = parseTokens(text);
   if (tokens) {
-    return { refusedHtml: collectRefusedHtml(tokens), hasInlineDataImage: tokensContainDataImage(tokens) };
+    const refused = collectRefusedContent(tokens);
+    return {
+      refusedHtml: refused.map((entry) => entry.written),
+      refusedAddresses: refused.filter((entry) => entry.address).map((entry) => entry.written),
+      hasInlineDataImage: tokensContainDataImage(tokens),
+    };
   }
-  return { refusedHtml: findRefusedHtmlInText(text), hasInlineDataImage: containsInlineDataImageText(text) };
+  return { refusedHtml: findRefusedHtmlInText(text), refusedAddresses: [], hasInlineDataImage: containsInlineDataImageText(text) };
 }
 
 export function isHtmlContent(content: string): boolean {

@@ -5,7 +5,7 @@ import { BadRequestException } from '@nestjs/common';
 import { parse } from 'csv-parse/sync';
 import { backendPath } from './backend-root';
 import { isAllowedMarkdownHtmlSnippet, RICH_TEXT_ALLOWED_HTML } from '../html-to-markdown';
-import { MARKDOWN_HTML_NOT_ALLOWED } from '../markdown-limits';
+import { MARKDOWN_HTML_NOT_ALLOWED, MARKDOWN_LINK_NOT_ALLOWED } from '../markdown-limits';
 import { normalizeMarkdownRichText } from '../markdown-rich-text';
 
 /**
@@ -321,8 +321,8 @@ function testDefinitionsAreChecked() {
 
 /**
  * A link or an image opens an `http`, `https` or `mailto` address, or an address without a
- * scheme (a path, a query, an anchor). Any other address is refused on a write, with the code
- * of a refused tag.
+ * scheme (a path, a query, an anchor). Any other address is refused on a write, with a code of
+ * its own and a message that names the addresses a link opens.
  */
 function testLinksAndImagesOpenWebMailOrRelativeAddresses() {
   const accepted: Array<[string, string]> = [
@@ -368,10 +368,19 @@ function testLinksAndImagesOpenWebMailOrRelativeAddresses() {
   ];
   for (const [name, text, example] of refused) {
     const refusal = refusalOf(text, 'notes');
-    assert.equal(refusal?.code, MARKDOWN_HTML_NOT_ALLOWED, `${name} is refused`);
+    assert.equal(refusal?.code, MARKDOWN_LINK_NOT_ALLOWED, `${name} is refused`);
+    assert.deepEqual(Object.keys(refusal ?? {}).sort(), ['code', 'example', 'field', 'message'], name);
     assert.equal(refusal?.field, 'notes', name);
     assert.equal(refusal?.example, example, name);
+    assert.match(String(refusal?.message), /^notes holds a link or an image whose address is not accepted\. Use a web address/, name);
   }
+
+  // The first thing a text holds that a write refuses gives the refusal its code.
+  assert.equal(refusalOf('Read [the file](ftp://example.com/a), then <b>stop</b>.')?.code, MARKDOWN_LINK_NOT_ALLOWED);
+  assert.equal(refusalOf('<b>Read</b> [the file](ftp://example.com/a).')?.code, MARKDOWN_HTML_NOT_ALLOWED);
+  // The link is the example, cut short.
+  const long = refusalOf(`[the file](ftp://example.com/${'a'.repeat(400)})`);
+  assert.equal(long?.example?.length, 120);
 
   // Code shows an address, it opens none.
   assertAccepted('an address in code', 'Use `[a](ftp://example.com)` or:\n\n```\n[a](ftp://example.com)\n```');

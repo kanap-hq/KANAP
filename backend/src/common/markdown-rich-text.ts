@@ -1,6 +1,12 @@
 import { BadRequestException } from '@nestjs/common';
 import { escapeRefusedHtml, inspectMarkdownContent } from './html-to-markdown';
-import { assertMarkdownSize, MARKDOWN_MAX_BYTES, markdownHtmlNotAllowedError, markdownTooLargeError } from './markdown-limits';
+import {
+  assertMarkdownSize,
+  MARKDOWN_MAX_BYTES,
+  markdownHtmlNotAllowedError,
+  markdownLinkNotAllowedError,
+  markdownTooLargeError,
+} from './markdown-limits';
 
 /**
  * Checks of a Markdown content with the Markdown parser. Runs in the Markdown
@@ -38,13 +44,17 @@ export function normalizeMarkdownRichText(
     assertMarkdownSize(text, field);
   }
 
-  let { refusedHtml, hasInlineDataImage } = inspectMarkdownContent(text);
+  let { refusedHtml, refusedAddresses, hasInlineDataImage } = inspectMarkdownContent(text);
   if (isWrite && refusedHtml.length > 0 && opts?.thirdPartyText === true) {
     text = escapeRefusedHtml(text);
-    ({ refusedHtml, hasInlineDataImage } = inspectMarkdownContent(text));
+    ({ refusedHtml, refusedAddresses, hasInlineDataImage } = inspectMarkdownContent(text));
   }
   if (isWrite && refusedHtml.length > 0) {
-    throw markdownHtmlNotAllowedError(field, refusedHtml[0]);
+    // The first thing the text holds that a write refuses: a tag, or a link for its address.
+    const first = refusedHtml[0];
+    throw refusedAddresses.includes(first)
+      ? markdownLinkNotAllowedError(field, first)
+      : markdownHtmlNotAllowedError(field, first);
   }
 
   if (hasInlineDataImage) {
