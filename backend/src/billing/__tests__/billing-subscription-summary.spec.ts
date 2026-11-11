@@ -335,7 +335,50 @@ async function testRefreshGivesADraftNoNumber() {
   assert.equal(summary.latest_invoice_number, null);
 }
 
+/**
+ * The refresh reads the reason of a refused payment on the latest invoice's PaymentIntent (never
+ * on the invoice), keeps it while the invoice stays open, and clears it once the invoice is paid.
+ */
+async function testRefreshReadsTheRefusalOnThePaymentIntent() {
+  const declined = { code: 'card_declined', decline_code: 'insufficient_funds', message: 'Your card has insufficient funds.' };
+  const openInvoice = {
+    id: 'in_1',
+    status: 'open',
+    number: 'KAN-0047',
+    total: 24900,
+    currency: 'eur',
+    payments: { data: [{ created: 1, payment: { type: 'payment_intent', payment_intent: { id: 'pi_1', last_payment_error: declined } } }] },
+  };
+  const refused = createService(
+    storedSubscription(),
+    3,
+    stripeSubscription({ status: 'past_due', latest_invoice: openInvoice }, { current_period_start: PERIOD_START, current_period_end: PERIOD_END }),
+  );
+  const summary = await refused.service.getSubscriptionSummary({ manager: refused.manager as any, forceStripeRefresh: true });
+  assert.equal(summary.last_payment_error_code, 'insufficient_funds');
+  assert.equal(summary.last_payment_error_message, declined.message);
+
+  // Open, its PaymentIntent without a refusal (a transfer awaited): the stored reason stays.
+  const kept = createService(
+    storedSubscription({ last_payment_error_code: 'expired_card', last_payment_error_message: 'Your card has expired.' }),
+    3,
+    stripeSubscription({ status: 'past_due', latest_invoice: { ...openInvoice, payments: { data: [] } } }, { current_period_start: PERIOD_START, current_period_end: PERIOD_END }),
+  );
+  const keptSummary = await kept.service.getSubscriptionSummary({ manager: kept.manager as any, forceStripeRefresh: true });
+  assert.equal(keptSummary.last_payment_error_code, 'expired_card');
+
+  const paid = createService(
+    storedSubscription({ last_payment_error_code: 'insufficient_funds', last_payment_error_message: declined.message }),
+    3,
+    stripeSubscription({ latest_invoice: { ...openInvoice, status: 'paid' } }, { current_period_start: PERIOD_START, current_period_end: PERIOD_END }),
+  );
+  const paidSummary = await paid.service.getSubscriptionSummary({ manager: paid.manager as any, forceStripeRefresh: true });
+  assert.equal(paidSummary.last_payment_error_code, null);
+  assert.equal(paidSummary.last_payment_error_message, null);
+}
+
 async function run() {
+  await testRefreshReadsTheRefusalOnThePaymentIntent();
   await testEstimateIsOneSubscription();
   await testTrialHasNoEstimate();
   await testTrialDeletionDate();

@@ -1,7 +1,8 @@
 /**
  * Readers for Stripe fields that moved between API versions. The client and the webhook
  * endpoint may run different versions (2023-10-16 or 2025-03-31.basil and later), so
- * each reader accepts both shapes.
+ * each reader accepts both shapes. A refused payment is on the invoice's PaymentIntent in
+ * both: never on the invoice itself.
  */
 
 type StripeTimestamp = number;
@@ -72,6 +73,53 @@ export function invoiceSubscriptionId(inv: any): string | null {
   return idOf(inv?.subscription)
     ?? idOf(inv?.parent?.subscription_details?.subscription)
     ?? idOf(inv?.lines?.data?.[0]?.parent?.subscription_item_details?.subscription);
+}
+
+/** The refusal of a payment: the code, the message, and the payment method that was refused. */
+export type PaymentFailure = { code: string | null; message: string | null; paymentMethodId: string | null };
+
+/**
+ * The refusal a PaymentIntent carries (`last_payment_error`), else null. The code is the bank's
+ * `decline_code` when there is one (`insufficient_funds`), else the error `code` (`expired_card`).
+ */
+export function paymentIntentFailure(paymentIntent: any): PaymentFailure | null {
+  const error = paymentIntent?.last_payment_error;
+  if (!error || typeof error !== 'object') return null;
+  const code = error.decline_code || error.code || null;
+  const message = error.message || null;
+  if (!code && !message) return null;
+  return { code, message, paymentMethodId: idOf(error.payment_method) };
+}
+
+/**
+ * What to expand on `invoices.retrieve` to read the invoice's PaymentIntents: its payments since
+ * basil (2025-03-31), its `payment_intent` before. An unknown version is taken as a recent one.
+ */
+export function invoicePaymentIntentsExpand(apiVersion: string | null | undefined): string {
+  return apiVersion && apiVersion < '2025-03-31' ? 'payment_intent' : 'payments.data.payment.payment_intent';
+}
+
+/** The PaymentIntents of an invoice, expanded or not, the latest payment first. */
+function invoicePaymentIntents(invoice: any): any[] {
+  const payments: any[] = Array.isArray(invoice?.payments?.data) ? [...invoice.payments.data] : [];
+  payments.sort((a, b) => (timestamp(b?.created) ?? 0) - (timestamp(a?.created) ?? 0));
+  const intents = payments.map((payment) => payment?.payment?.payment_intent).filter(Boolean);
+  if (invoice?.payment_intent) intents.push(invoice.payment_intent);
+  return intents;
+}
+
+/** Whether `paymentIntentId` is one of the invoice's PaymentIntents. */
+export function invoiceHasPaymentIntent(invoice: any, paymentIntentId: string): boolean {
+  return invoicePaymentIntents(invoice).some((intent) => idOf(intent) === paymentIntentId);
+}
+
+/** The latest refusal on the invoice's PaymentIntents (they must be expanded), else null. */
+export function invoicePaymentFailure(invoice: any): PaymentFailure | null {
+  for (const intent of invoicePaymentIntents(invoice)) {
+    const failure = typeof intent === 'object' ? paymentIntentFailure(intent) : null;
+    if (failure) return failure;
+  }
+  return null;
 }
 
 /** The subscription quantity: top level, else the first item's. */

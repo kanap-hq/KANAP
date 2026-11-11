@@ -6,7 +6,14 @@ import { PaymentMode, Subscription, SubscriptionType, SubscriptionStatus, Collec
 import { User } from '../users/user.entity';
 import { Tenant } from '../tenants/tenant.entity';
 import { StripeClientService, StripeConfigService, ensureInvoiceA4 } from './stripe';
-import { cancellationEffectiveAt, subscriptionDaysUntilDue, subscriptionPeriod } from './stripe/stripe-shapes.util';
+import {
+  cancellationEffectiveAt,
+  invoicePaymentFailure,
+  invoicePaymentIntentsExpand,
+  subscriptionDaysUntilDue,
+  subscriptionPeriod,
+  type PaymentFailure,
+} from './stripe/stripe-shapes.util';
 import { computePriceAmount, computeStripePriceAmount, normaliseStripePrice, type NormalisedPrice } from './price.util';
 import { euVatTaxIdValue, missingInvoiceFields, normaliseVatNumber, stripeAddress, toIsoCountry } from './billing-profile.util';
 import { customerSiren, invoiceCustomFields, invoiceLocale } from './invoice-mentions';
@@ -1494,8 +1501,12 @@ export class BillingService {
       if (typeof latestInvoice.total === 'number') sub.latest_invoice_amount = latestInvoice.total;
       if (latestInvoice.currency) sub.latest_invoice_currency = String(latestInvoice.currency).toUpperCase();
       if (latestInvoice.created) sub.latest_invoice_created = this.toDate(latestInvoice.created);
-      sub.last_payment_error_code = latestInvoice.last_payment_error?.code ?? null;
-      sub.last_payment_error_message = latestInvoice.last_payment_error?.message ?? null;
+      // The reason of a refused payment (on the invoice's PaymentIntent) stays until the invoice is paid.
+      const failure = latestInvoice.status === 'paid' ? null : await this.readInvoicePaymentFailure(latestInvoice);
+      if (latestInvoice.status === 'paid' || failure) {
+        sub.last_payment_error_code = failure?.code ?? null;
+        sub.last_payment_error_message = failure?.message ?? null;
+      }
     }
 
     sub.last_synced_at = new Date();
@@ -1723,13 +1734,36 @@ export class BillingService {
     }
   }
 
+  /**
+   * The refusal on an open or uncollectible invoice's PaymentIntents: from the invoice when they
+   * are expanded, else read again from Stripe with them. Null for any other invoice, or when
+   * Stripe cannot be read.
+   */
+  private async readInvoicePaymentFailure(invoice: any): Promise<PaymentFailure | null> {
+    if (invoice?.status !== 'open' && invoice?.status !== 'uncollectible') return null;
+    const inPayload = invoicePaymentFailure(invoice);
+    if (inPayload || !invoice.id) return inPayload;
+    try {
+      const retrieved = await this.getStripeClientOrThrow().invoices.retrieve(invoice.id, {
+        expand: [invoicePaymentIntentsExpand(this.stripeConfig.getApiVersion?.())],
+      });
+      return invoicePaymentFailure(retrieved);
+    } catch (error) {
+      this.logger.warn(`Unable to read the payments of invoice ${invoice.id}: ${(error as Error).message}`);
+      return null;
+    }
+  }
+
   private async retrieveLatestInvoice(stripeSub: any): Promise<any | null> {
     const client = this.stripeClient.getClient();
     if (!client) return null;
     const latest = stripeSub?.latest_invoice;
     try {
       if (typeof latest === 'string') {
-        return await client.invoices.retrieve(latest);
+        // With its PaymentIntents: the reason of a refused payment is there.
+        return await client.invoices.retrieve(latest, {
+          expand: [invoicePaymentIntentsExpand(this.stripeConfig.getApiVersion?.())],
+        });
       }
       if (latest) return latest;
     } catch (error) {
