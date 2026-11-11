@@ -1,6 +1,6 @@
 # Changelog
 
-Every published version of KANAP, newest first. Versions are numbered `YY.M.N` (year, month,
+Every published version of Kadratis, newest first. Versions are numbered `YY.M.N` (year, month,
 number in the month: `26.10.1`, then `26.10.2`, then `26.11.1`), and each one has a Git tag of
 the same name with a `v` in front (`v26.10.1`). The `stable` branch points to the latest
 published version. The same entries are on the GitHub releases page.
@@ -17,6 +17,26 @@ version brings, followed by three lists:
 To upgrade across several versions, read every entry between your version and the target: the
 actions add up. The release process is described in `doc/releasing.md`.
 
+## 26.11.5 (2026-11-11)
+
+The texts that still named KANAP now name Kadratis: e-mails, the included AI model, the support message, the user manual and the public site. The company is named KANAP SARL where the law requires it.
+
+### Changes
+
+### Fixes
+- E-mails name Kadratis. The welcome e-mail of a trial introduced its author as the founder of KANAP, and the personal note sent on day five was signed "Friedrich (KANAP)". On the cloud service, e-mails are sent from `no-reply@kadratis.com`. (#1509)
+- The included AI model reads "Operated by Kadratis, included in your subscription" and "Managed by Kadratis". The support message opened from the About dialog has "Kadratis support" as its subject. (#1509)
+- The user manual is updated to match, in English, French, German and Spanish. (#1509)
+- The public site names Kadratis where readers see the name: the About page, the offer page and the structured data. (#1511)
+- The company is named KANAP SARL in the license notices and on the site's legal pages. (#1509, #1511)
+
+### On-premise
+- Action required: none. `.env` is unchanged.
+- The configuration example (`infra/.env.onprem.example`) and the operator scripts name Kadratis. File names and variables are unchanged. (#1509)
+- An installation that sends e-mails through Resend sets `RESEND_FROM_EMAIL` to an address of its own domain, as the configuration guide says and as with earlier versions. Without it, e-mails would go from `no-reply@kadratis.com`, an address only the cloud service may use. (#1509)
+- Migrations: none.
+- Recommended: the vulnerability feeds (NVD, CVE.org, CISA) are read with the user agent `Kadratis/<version>` instead of `KANAP/<version>`. An outbound filter that matches the former user agent needs the new value. (#1509)
+
 ## 26.11.4 (2026-11-11)
 
 The product is renamed Kadratis and its assistant Kad. The publishing company remains KANAP.
@@ -27,7 +47,7 @@ The product is renamed Kadratis and its assistant Kad. The publishing company re
 - The fast-track cheat sheets are named `kadratis-*.pdf`. Their former addresses redirect to them. (#1504)
 - Workspace addresses, API keys, MCP connections, roles, settings and environment variables are unchanged. A workspace at `<name>.kanap.net` stays at that address. Nothing to do. (#1501, #1503)
 - Cloud service: the optional setting `TENANT_BASE_DOMAINS` lists the domains workspaces are served under, so that a workspace can answer under several domains. Empty, the usual domains apply. New workspaces can no longer take the addresses `dev`, `qa`, `doc`, `send`, `tenants`, `mail`, `autodiscover`, `status`, `kanap`, `kadratis` and `cadratis`. Existing workspaces keep theirs. (#1501, #1503)
-- General terms of sale: they name Kadratis as the product and are dated 11 November 2026. KANAP EURL remains the seller. Current subscriptions continue unchanged. The new version is accepted at the next subscription, change of plan or invoice request. (#1505)
+- General terms of sale: they name Kadratis as the product and are dated 11 November 2026. KANAP SARL remains the seller. Current subscriptions continue unchanged. The new version is accepted at the next subscription, change of plan or invoice request. (#1505)
 - The repository carries a trademark policy for the Kadratis name and logo, `TRADEMARKS.md`. (#1505)
 
 ### Fixes
