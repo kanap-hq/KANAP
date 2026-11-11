@@ -26,6 +26,30 @@ export const FREEZE_GRACE_DAYS = 14;
 /** Days a workspace whose trial ended without a subscription is kept before it is deleted. */
 export const TRIAL_WORKSPACE_RETENTION_DAYS = 30;
 export const HEALTHY_STATUSES = ['active', 'trialing'] as const;
+/** Stripe statuses of a subscription that has ended: only then does a new subscription replace it. */
+export const ENDED_STATUSES = ['canceled', 'incomplete_expired'] as const;
+
+/**
+ * A Stripe subscription that still runs, paid or not (past due, unpaid, incomplete included):
+ * no checkout or bank transfer request doubles it with a new subscription.
+ */
+export function isLiveSubscriptionStatus(status: string | null | undefined): boolean {
+  return !!status && !(ENDED_STATUSES as readonly string[]).includes(status);
+}
+
+/**
+ * A subscription in good standing: active, or trialing before its trial end (the summary's
+ * `is_subscription_healthy`). Only such a subscription is changed by a plan change or a bank
+ * transfer request; one that still runs unpaid is paid first.
+ */
+export function isHealthySubscription(
+  status: string | null | undefined,
+  trialEnd: Date | null | undefined,
+  now: number = Date.now(),
+): boolean {
+  if (!status || !(HEALTHY_STATUSES as readonly string[]).includes(status)) return false;
+  return status !== 'trialing' || (trialEnd != null && trialEnd.getTime() > now);
+}
 export const BANK_TRANSFER_MIN_AMOUNT_EUR_CENTS = 100000;
 /**
  * Days a customer has to pay an invoice by bank transfer (Stripe `days_until_due`). Must match

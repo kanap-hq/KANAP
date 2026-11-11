@@ -200,24 +200,46 @@ function createSyncService(
   const retrieved: string[] = [];
   const invoiceUpdates: unknown[][] = [];
   const customerUpdates: unknown[][] = [];
+  /** Transactions open when each payment method was read from Stripe. */
+  const paymentMethodReads: number[] = [];
+  let openTransactions = 0;
+  const queries: string[] = [];
   const manager = {
+    query: async (sql: string) => {
+      queries.push(sql);
+      return [];
+    },
     getRepository: () => ({
-      findOne: async () => row,
+      // The tenant's one row; a search by subscription id finds it only when it carries that id.
+      findOne: async ({ where }: { where: Record<string, unknown> }) =>
+        (where?.stripe_subscription_id && where.stripe_subscription_id !== row.stripe_subscription_id ? null : row),
       create: (data: Record<string, unknown>) => ({ ...data }),
       save: async (data: Record<string, unknown>) => data,
     }),
   };
   const dataSource = {
-    createQueryRunner: () => ({
-      isTransactionActive: false,
-      connect: async () => undefined,
-      startTransaction: async () => undefined,
-      commitTransaction: async () => undefined,
-      rollbackTransaction: async () => undefined,
-      release: async () => undefined,
-      query: async () => [],
-      manager,
-    }),
+    createQueryRunner: () => {
+      const runner = {
+        isTransactionActive: false,
+        connect: async () => undefined,
+        startTransaction: async () => {
+          runner.isTransactionActive = true;
+          openTransactions += 1;
+        },
+        commitTransaction: async () => {
+          runner.isTransactionActive = false;
+          openTransactions -= 1;
+        },
+        rollbackTransaction: async () => {
+          runner.isTransactionActive = false;
+          openTransactions -= 1;
+        },
+        release: async () => undefined,
+        query: async () => [],
+        manager,
+      };
+      return runner;
+    },
     getRepository: () => ({
       findOne: async () => (opts.tenantKnown === false ? null : { id: TENANT_A, stripe_customer_id: 'cus_1' }),
       update: async () => undefined,
@@ -225,8 +247,13 @@ function createSyncService(
   };
   const client = {
     subscriptions: {
-      retrieve: async (id: string) => {
+      retrieve: async (id: string, options?: { expand?: string[] }) => {
         retrieved.push(id);
+        // Stripe expands the latest invoice only on request.
+        const latest = (stripeSubscription as any)?.latest_invoice;
+        if (latest && typeof latest === 'object' && !options?.expand?.includes('latest_invoice')) {
+          return { ...(stripeSubscription as any), latest_invoice: latest.id };
+        }
         return stripeSubscription;
       },
     },
@@ -239,6 +266,12 @@ function createSyncService(
     },
     setupIntents: {
       retrieve: async (id: string) => ({ id, ...(opts.setupIntent ?? {}) }),
+    },
+    paymentMethods: {
+      retrieve: async (id: string) => {
+        paymentMethodReads.push(openTransactions);
+        return { id, type: 'card', card: { brand: 'visa', last4: '4242' } };
+      },
     },
     customers: {
       update: async (...args: unknown[]) => {
@@ -253,8 +286,33 @@ function createSyncService(
     dataSource as any,
     { log: async () => undefined } as any,
   );
-  (svc as any).logger = { warn: () => undefined, log: () => undefined, debug: () => undefined, error: () => undefined };
-  return { svc, row, retrieved, invoiceUpdates, customerUpdates };
+  const logs = { warn: [] as string[], error: [] as string[] };
+  (svc as any).logger = {
+    warn: (message: string) => logs.warn.push(message),
+    log: () => undefined,
+    debug: () => undefined,
+    error: (message: string) => logs.error.push(message),
+  };
+  return { svc, row, retrieved, invoiceUpdates, customerUpdates, logs, paymentMethodReads, queries };
+}
+
+/**
+ * The events of a tenant are handled one after the other: a transaction lock per tenant comes
+ * first (`stripe-webhook-serialization.integration.spec.ts` runs two events together), and the
+ * payment method is read from Stripe before the transaction, which holds no Stripe call.
+ */
+async function testEventHandlingIsSerializedPerTenant() {
+  const { svc, row, paymentMethodReads, queries } = createSyncService({ stripe_subscription_id: 'sub_1' });
+  await svc.processEvent({
+    id: 'evt_pm',
+    type: 'customer.subscription.updated',
+    data: { object: cloverSubscription({ default_payment_method: 'pm_1' }) },
+  });
+  assert.equal(row.default_payment_method_id, 'pm_1');
+  assert.equal(row.default_payment_method_brand, 'VISA');
+  assert.equal(row.default_payment_method_last4, '4242');
+  assert.deepEqual(paymentMethodReads, [0], 'the payment method is read outside the transaction');
+  assert.ok(/pg_advisory_xact_lock/.test(queries[0] ?? ''), `the transaction starts with the tenant's lock: ${queries[0]}`);
 }
 
 async function testCloverInvoiceResolvesItsSubscription() {
@@ -309,6 +367,69 @@ async function testSubscriptionEventWithoutPeriodKeepsTheStoredDates() {
 }
 
 /**
+ * A live subscription whose cancellation is set ends on a known date. Since basil the customer
+ * portal sets `cancel_at` (with `cancel_at_period_end` false); the older flag ends it with the
+ * current period. Taking the cancellation back clears the date.
+ */
+const CANCEL_AT = PERIOD_END - 3 * 86400;
+
+async function testCancellationSetsTheEndDate() {
+  const portal = createSyncService({ stripe_subscription_id: 'sub_1' });
+  await portal.svc.processEvent({
+    id: 'evt_cancel_at',
+    type: 'customer.subscription.updated',
+    data: { object: cloverSubscription({ cancel_at: CANCEL_AT, cancel_at_period_end: false }) },
+  });
+  assert.equal(portal.row.canceled_at_effective?.getTime(), CANCEL_AT * 1000, 'cancel_at is the end date');
+
+  const flag = createSyncService({ stripe_subscription_id: 'sub_1' });
+  await flag.svc.processEvent({
+    id: 'evt_period_end',
+    type: 'customer.subscription.updated',
+    data: { object: cloverSubscription({ cancel_at: null, cancel_at_period_end: true }) },
+  });
+  assert.equal(flag.row.canceled_at_effective?.getTime(), PERIOD_END * 1000, 'cancel_at_period_end ends with the period');
+
+  const back = createSyncService({ stripe_subscription_id: 'sub_1', canceled_at_effective: new Date(CANCEL_AT * 1000) });
+  await back.svc.processEvent({
+    id: 'evt_kept',
+    type: 'customer.subscription.updated',
+    data: { object: cloverSubscription({ cancel_at: null, cancel_at_period_end: false }) },
+  });
+  assert.equal(back.row.canceled_at_effective, null, 'a cancellation taken back clears the end date');
+}
+
+/**
+ * Each sync writes how the subscription is paid from its collection method, and the payment
+ * term as Stripe sends it: null for a card subscription.
+ */
+async function testSyncWritesThePaymentModeAndTerm() {
+  const toCard = createSyncService({
+    stripe_subscription_id: 'sub_1',
+    payment_mode: 'bank_transfer',
+    collection_method: 'send_invoice',
+    days_until_due: 30,
+  });
+  await toCard.svc.processEvent({
+    id: 'evt_to_card',
+    type: 'customer.subscription.updated',
+    data: { object: cloverSubscription({ collection_method: 'charge_automatically', days_until_due: null }) },
+  });
+  assert.equal(toCard.row.collection_method, 'charge_automatically');
+  assert.equal(toCard.row.payment_mode, 'card');
+  assert.equal(toCard.row.days_until_due, null);
+
+  const toTransfer = createSyncService({ stripe_subscription_id: 'sub_1', payment_mode: 'card', collection_method: 'charge_automatically' });
+  await toTransfer.svc.processEvent({
+    id: 'evt_to_transfer',
+    type: 'customer.subscription.updated',
+    data: { object: cloverSubscription({ collection_method: 'send_invoice', days_until_due: 30 }) },
+  });
+  assert.equal(toTransfer.row.payment_mode, 'bank_transfer');
+  assert.equal(toTransfer.row.days_until_due, 30);
+}
+
+/**
  * Invoice PDFs are A4. `invoice.created` and `invoice.finalized` set the format on every
  * invoice of the account, before and apart from the tenant lookup (an Enterprise Support
  * invoice has no tenant), and a Stripe error there does not stop the event.
@@ -317,6 +438,192 @@ const A4 = { rendering: { pdf: { page_size: 'a4' } } };
 
 function invoiceEvent(type: string, invoice: Record<string, unknown>) {
   return { id: 'evt_inv', type, data: { object: { object: 'invoice', status: 'open', ...invoice } } };
+}
+
+/**
+ * Stripe does not send events in order. The latest invoice of the row never goes back to an
+ * earlier state of the same invoice (`paid` then `finalized`), nor to another invoice than the
+ * latest one of the subscription read from Stripe (an older one arriving late, or one created in
+ * the same second); a new invoice brings its own number, none for a draft.
+ */
+const SUB_1_PARENT = { type: 'subscription_details', subscription_details: { subscription: 'sub_1', metadata: {} } };
+
+async function testInvoiceStatusNeverGoesBack() {
+  const { svc, row } = createSyncService({ stripe_subscription_id: 'sub_1' }, cloverSubscription({ latest_invoice: 'in_1' }));
+  const invoice = { id: 'in_1', customer: 'cus_1', number: 'KAN-0046', total: 24900, currency: 'eur', created: 1_792_000_000, parent: SUB_1_PARENT };
+  await svc.processEvent(invoiceEvent('invoice.paid', { ...invoice, status: 'paid' }));
+  await svc.processEvent(invoiceEvent('invoice.finalized', { ...invoice, status: 'open' }));
+  assert.equal(row.latest_invoice_id, 'in_1');
+  assert.equal(row.latest_invoice_status, 'paid', 'a late finalized event does not reopen a paid invoice');
+  assert.equal(row.latest_invoice_number, 'KAN-0046');
+
+  // An event of an older invoice arriving late leaves the latest one in place.
+  await svc.processEvent(invoiceEvent('invoice.paid', { ...invoice, id: 'in_0', number: 'KAN-0045', created: 1_789_000_000, status: 'paid' }));
+  assert.equal(row.latest_invoice_id, 'in_1');
+  assert.equal(row.latest_invoice_number, 'KAN-0046');
+}
+
+async function testInvoicesOfTheSameSecondFollowTheSubscription() {
+  // A plan change: the proration invoice and the new period's one, created in the same second.
+  const created = 1_792_000_000;
+  const stored = {
+    stripe_subscription_id: 'sub_1',
+    latest_invoice_id: 'in_new',
+    latest_invoice_status: 'paid',
+    latest_invoice_number: 'KAN-0047',
+    latest_invoice_created: new Date(created * 1000),
+  };
+  const { svc, row } = createSyncService({ ...stored }, cloverSubscription({ latest_invoice: 'in_new' }));
+  await svc.processEvent(invoiceEvent('invoice.paid', {
+    id: 'in_other', customer: 'cus_1', number: 'KAN-0046', status: 'paid', total: 100, currency: 'eur', created, parent: SUB_1_PARENT,
+  }));
+  assert.equal(row.latest_invoice_id, 'in_new', 'an invoice that is not the latest one of the subscription is not written');
+  assert.equal(row.latest_invoice_number, 'KAN-0047');
+
+  // The subscription's latest invoice is written, even when created in the same second.
+  const next = createSyncService({ ...stored }, cloverSubscription({ latest_invoice: { id: 'in_next' } }));
+  await next.svc.processEvent(invoiceEvent('invoice.finalized', {
+    id: 'in_next', customer: 'cus_1', number: 'KAN-0048', status: 'open', total: 24900, currency: 'eur', created, parent: SUB_1_PARENT,
+  }));
+  assert.equal(next.row.latest_invoice_id, 'in_next');
+  assert.equal(next.row.latest_invoice_number, 'KAN-0048');
+}
+
+async function testDraftInvoiceHasNoNumber() {
+  const { svc, row } = createSyncService(
+    {
+      stripe_subscription_id: 'sub_1',
+      latest_invoice_id: 'in_1',
+      latest_invoice_status: 'paid',
+      latest_invoice_number: 'KAN-0045',
+      latest_invoice_url: 'https://invoice.stripe.test/in_1',
+      latest_invoice_pdf: 'https://invoice.stripe.test/in_1.pdf',
+      latest_invoice_created: new Date(1_789_000_000 * 1000),
+    },
+    cloverSubscription({ latest_invoice: 'in_2' }),
+  );
+  await svc.processEvent(invoiceEvent('invoice.created', {
+    id: 'in_2', customer: 'cus_1', status: 'draft', number: null, hosted_invoice_url: null, invoice_pdf: null,
+    total: 24900, currency: 'eur', created: 1_792_000_000, parent: SUB_1_PARENT,
+  }));
+  assert.equal(row.latest_invoice_id, 'in_2');
+  assert.equal(row.latest_invoice_status, 'draft');
+  assert.equal(row.latest_invoice_number, null, 'a draft does not keep the number of the previous invoice');
+  assert.equal(row.latest_invoice_url, null);
+  assert.equal(row.latest_invoice_pdf, null);
+}
+
+/**
+ * A tenant follows one Stripe subscription. An event of another subscription of the same customer
+ * (one the tenant has left) is logged and ignored; it takes the row only when the row has no
+ * subscription yet, or when the row's subscription has ended and the event's still runs (a new
+ * subscription after a cancellation). An ignored subscription that still runs is logged as an
+ * error, with the tenant and both subscriptions, for support to see.
+ */
+async function testEventOfAnotherSubscriptionIsIgnored() {
+  const live = {
+    stripe_subscription_id: 'sub_B',
+    status: SubscriptionStatus.ACTIVE,
+    subscription_type: 'annual',
+    payment_mode: 'bank_transfer',
+    latest_invoice_id: 'in_B',
+    latest_invoice_number: 'KAN-0043',
+  };
+  const { svc, row, logs } = createSyncService({ ...live }, cloverSubscription({ id: 'sub_A', status: 'past_due' }));
+  await svc.processEvent(invoiceEvent('invoice.payment_failed', {
+    id: 'in_A', customer: 'cus_1', number: 'KAN-0042', total: 24900, currency: 'eur',
+    parent: { type: 'subscription_details', subscription_details: { subscription: 'sub_A', metadata: {} } },
+  }));
+  await svc.processEvent({
+    id: 'evt_old_sub',
+    type: 'customer.subscription.updated',
+    data: { object: cloverSubscription({ id: 'sub_A', status: 'past_due' }) },
+  });
+  assert.deepEqual(
+    Object.fromEntries(Object.keys(live).map((key) => [key, row[key]])),
+    live,
+    'the row still follows sub_B',
+  );
+  assert.equal(logs.error.length, 2, 'each ignored event of a running subscription is an error');
+  for (const message of logs.error) {
+    for (const part of [TENANT_A, 'sub_B', 'sub_A']) assert.ok(message.includes(part), `${part} in: ${message}`);
+  }
+  assert.equal(logs.warn.length, 0);
+
+  // First subscription: the row takes it.
+  const first = createSyncService({ stripe_subscription_id: null, status: SubscriptionStatus.TRIALING });
+  await first.svc.processEvent({ id: 'evt_first', type: 'customer.subscription.updated', data: { object: cloverSubscription({ id: 'sub_new' }) } });
+  assert.equal(first.row.stripe_subscription_id, 'sub_new');
+  assert.equal(first.row.status, SubscriptionStatus.ACTIVE);
+
+  // A new subscription after a cancellation takes the row; another ended one does not.
+  const renewed = createSyncService({ stripe_subscription_id: 'sub_old', status: SubscriptionStatus.CANCELED });
+  await renewed.svc.processEvent({ id: 'evt_late', type: 'customer.subscription.deleted', data: { object: cloverSubscription({ id: 'sub_older', status: 'canceled' }) } });
+  assert.equal(renewed.row.stripe_subscription_id, 'sub_old');
+  // An ended subscription ignored: a warning only.
+  assert.equal(renewed.logs.error.length, 0);
+  assert.equal(renewed.logs.warn.length, 1);
+  await renewed.svc.processEvent({ id: 'evt_renew', type: 'customer.subscription.created', data: { object: cloverSubscription({ id: 'sub_new' }) } });
+  assert.equal(renewed.row.stripe_subscription_id, 'sub_new');
+  assert.equal(renewed.row.status, SubscriptionStatus.ACTIVE);
+
+  // A checkout is now refused while the subscription runs, but a session opened before stays
+  // payable for 24 hours: once paid, the row follows the subscription the tenant has just bought.
+  const checkoutOpenedBeforeTheRefusal = createSyncService(
+    { stripe_subscription_id: 'sub_A', status: SubscriptionStatus.PAST_DUE },
+    cloverSubscription({ id: 'sub_new' }),
+  );
+  await checkoutOpenedBeforeTheRefusal.svc.processEvent({
+    id: 'evt_checkout',
+    type: 'checkout.session.completed',
+    data: { object: { object: 'checkout.session', id: 'cs_1', mode: 'subscription', customer: 'cus_1', subscription: 'sub_new' } },
+  });
+  assert.equal(checkoutOpenedBeforeTheRefusal.row.stripe_subscription_id, 'sub_new');
+  assert.equal(checkoutOpenedBeforeTheRefusal.row.status, SubscriptionStatus.ACTIVE);
+}
+
+/**
+ * The `invoice.paid` of a checkout's new subscription may arrive before the checkout completes,
+ * and is then ignored (the row still follows the subscription it leaves). Once the row follows
+ * the new subscription, its latest invoice fields are those of that subscription's latest invoice.
+ */
+async function testCheckoutBringsTheLatestInvoiceOfTheNewSubscription() {
+  const { svc, row } = createSyncService(
+    {
+      stripe_subscription_id: 'sub_A',
+      status: SubscriptionStatus.PAST_DUE,
+      latest_invoice_id: 'in_A',
+      latest_invoice_status: 'open',
+      latest_invoice_number: 'KAN-0042',
+      latest_invoice_url: 'https://invoice.stripe.test/in_A',
+    },
+    cloverSubscription({
+      id: 'sub_new',
+      latest_invoice: {
+        id: 'in_new', status: 'paid', number: 'KAN-0050', total: 24900, currency: 'eur', created: 1_792_000_000,
+        hosted_invoice_url: 'https://invoice.stripe.test/in_new', invoice_pdf: 'https://invoice.stripe.test/in_new.pdf',
+      },
+    }),
+  );
+  await svc.processEvent({
+    id: 'evt_checkout_invoice',
+    type: 'checkout.session.completed',
+    data: { object: { object: 'checkout.session', id: 'cs_1', mode: 'subscription', customer: 'cus_1', subscription: 'sub_new' } },
+  });
+  assert.equal(row.stripe_subscription_id, 'sub_new');
+  assert.equal(row.latest_invoice_id, 'in_new');
+  assert.equal(row.latest_invoice_status, 'paid');
+  assert.equal(row.latest_invoice_number, 'KAN-0050');
+  assert.equal(row.latest_invoice_url, 'https://invoice.stripe.test/in_new');
+  assert.equal(row.latest_invoice_pdf, 'https://invoice.stripe.test/in_new.pdf');
+
+  // A subscription event of the subscription already followed leaves the invoice fields alone.
+  const same = createSyncService(
+    { stripe_subscription_id: 'sub_1', latest_invoice_id: 'in_1', latest_invoice_status: 'paid' },
+    cloverSubscription({ latest_invoice: { id: 'in_2', status: 'draft' } }),
+  );
+  await same.svc.processEvent({ id: 'evt_same', type: 'customer.subscription.updated', data: { object: cloverSubscription({ latest_invoice: { id: 'in_2', status: 'draft' } }) } });
+  assert.equal(same.row.latest_invoice_id, 'in_1');
 }
 
 async function testInvoiceWithoutTenantIsSetToA4() {
@@ -388,6 +695,14 @@ async function run() {
   await testCloverInvoiceResolvesItsSubscription();
   await testCloverSubscriptionUpdatedWritesThePeriods();
   await testSubscriptionEventWithoutPeriodKeepsTheStoredDates();
+  await testCancellationSetsTheEndDate();
+  await testSyncWritesThePaymentModeAndTerm();
+  await testEventHandlingIsSerializedPerTenant();
+  await testInvoiceStatusNeverGoesBack();
+  await testInvoicesOfTheSameSecondFollowTheSubscription();
+  await testDraftInvoiceHasNoNumber();
+  await testEventOfAnotherSubscriptionIsIgnored();
+  await testCheckoutBringsTheLatestInvoiceOfTheNewSubscription();
   await testInvoiceWithoutTenantIsSetToA4();
   await testInvoiceAlreadyA4AndOtherEventsAreLeftAlone();
   await testStripeErrorOnA4DoesNotStopTheEvent();

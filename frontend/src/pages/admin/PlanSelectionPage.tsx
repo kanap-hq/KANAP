@@ -128,6 +128,9 @@ function parseApiError(error: any, t: TFunction): string {
   if (message === 'NO_ACTIVE_SUBSCRIPTION') {
     return t('planSelection.errors.noActiveSubscription');
   }
+  if (message === 'SUBSCRIPTION_PAYMENT_PENDING') {
+    return t('planSelection.errors.subscriptionPaymentPending');
+  }
   if (message === 'BILLING_PROFILE_INCOMPLETE') {
     const missing = error?.response?.data?.missing;
     return invoiceProfileIncompleteMessage(Array.isArray(missing) ? missing : [], t);

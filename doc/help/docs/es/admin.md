@@ -485,6 +485,8 @@ En el servicio en la nube, la persona que inició la prueba recibe algunos corre
 
 Cuando está previsto un paso a la facturación mensual, una tercera línea lo indica, por ejemplo «Pasa a mensual el 7 oct 2027.» Haga clic en **Mantener anual** en esa línea para cancelar el cambio.
 
+Una vez cancelada la suscripción en el portal de cliente de Stripe, la segunda línea muestra su fecha de fin en lugar de la fecha de renovación, por ejemplo «Activo · finaliza el 7 oct 2027». Haga clic en **No cancelar** en esa línea para abrir el portal y anular la cancelación. Requiere administrador de facturación.
+
 ### Acciones
 
 - **Elegir plan** / **Cambiar plan**: Abrir el cuadro de diálogo del plan para suscribirse o alternar entre facturación mensual y anual. Requiere administrador de facturación.

@@ -235,6 +235,44 @@ describe('BillingCenter subscription summary', () => {
     expect(screen.getByRole('button', { name: 'Change plan' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Manage payment' })).toBeInTheDocument();
   });
+
+  const CANCELLED = {
+    plan_name: 'Hosted KANAP',
+    status: 'active',
+    stripe_subscription_id: 'sub_1',
+    subscription_type: 'annual',
+    collection_method: 'charge_automatically',
+    payment_mode: 'card',
+    amount: 249000,
+    currency: 'EUR',
+    renewal_at: null,
+    current_period_end: '2099-10-07T00:00:00.000Z',
+    next_payment_at: '2099-10-07T00:00:00.000Z',
+    payment_due_at: '2099-10-07T00:00:00.000Z',
+    cancel_at: '2099-10-04T00:00:00.000Z',
+    canceled_at_effective: '2099-10-04T00:00:00.000Z',
+    is_subscription_healthy: true,
+  };
+
+  it('shows the end date of a cancelled subscription and opens the portal to take it back', async () => {
+    (api.post as any).mockResolvedValue({ data: {} });
+    renderPage(CANCELLED);
+    expect(await screen.findByText('· ends 4 Oct 2099')).toBeInTheDocument();
+    expect(screen.queryByText(/renews/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: "Don't cancel" }));
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith('/billing/portal', expect.anything()));
+  });
+
+  it('shows the end date without the action to a user who cannot manage billing', async () => {
+    authState.claims = { isBillingAdmin: false };
+    try {
+      renderPage(CANCELLED);
+      expect(await screen.findByText('· ends 4 Oct 2099')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: "Don't cancel" })).not.toBeInTheDocument();
+    } finally {
+      authState.claims = { isBillingAdmin: true };
+    }
+  });
 });
 
 describe('BillingCenter planned switch', () => {

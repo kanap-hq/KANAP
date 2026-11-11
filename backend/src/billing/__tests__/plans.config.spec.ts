@@ -7,6 +7,8 @@ import {
   INVOICE_PAYMENT_TERM_DAYS,
   PLANS,
   isBankTransferEligible,
+  isHealthySubscription,
+  isLiveSubscriptionStatus,
   planNameForDisplay,
   resolvePlanKeyFromLegacyName,
   resolvePlanKeyFromPriceId,
@@ -92,8 +94,29 @@ function testInvoicePaymentTerm() {
   assert.deepEqual(offenders, []);
 }
 
+/** A live subscription is never doubled; only one in good standing is changed. */
+function testLiveAndHealthySubscriptions() {
+  const now = Date.UTC(2026, 10, 11);
+  const later = new Date(now + 86400000);
+  const earlier = new Date(now - 86400000);
+  for (const status of ['active', 'trialing', 'past_due', 'unpaid', 'incomplete', 'paused']) {
+    assert.equal(isLiveSubscriptionStatus(status), true, status);
+  }
+  for (const status of ['canceled', 'incomplete_expired', null, undefined, '']) {
+    assert.equal(isLiveSubscriptionStatus(status), false, String(status));
+  }
+  assert.equal(isHealthySubscription('active', null, now), true);
+  assert.equal(isHealthySubscription('trialing', later, now), true);
+  assert.equal(isHealthySubscription('trialing', earlier, now), false);
+  assert.equal(isHealthySubscription('trialing', null, now), false);
+  for (const status of ['past_due', 'unpaid', 'incomplete', 'paused', 'canceled', 'incomplete_expired', null]) {
+    assert.equal(isHealthySubscription(status, later, now), false, String(status));
+  }
+}
+
 function run() {
   testSingleSellablePlan();
+  testLiveAndHealthySubscriptions();
   testStoredPlanNameShowsTheCurrentName();
   testLegacyNameResolution();
   testPriceIdResolution();
