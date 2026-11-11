@@ -49,7 +49,7 @@ export class AdminAuthController {
             synced: directorySync?.synced ?? null,
             disabled: directorySync?.disabled ?? null,
             removed: directorySync?.removed ?? null,
-            consent_url: this.entra.buildAdminConsentUrl(tenant.entra_tenant_id as string, tenant.id),
+            consent_url: this.entra.buildAdminConsentUrl(tenant.entra_tenant_id as string, tenant.id, req?.user?.sub),
           }
         : null,
     };

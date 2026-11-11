@@ -375,7 +375,8 @@ export class EntraController {
           action: 'update',
           before: null,
           after: { directory_sync_consent: granted, error, consented_directory: consentedDirectory },
-          userId: null,
+          // The administrator who opened the consent from the settings.
+          userId: consent.userId,
           source: 'system',
           sourceRef: 'entra-admin-consent',
         },

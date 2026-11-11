@@ -174,6 +174,16 @@ async function testConsentStateIsSignedForItsOwnUse() {
     assert.throws(() => jwt.verify(token, process.env.JWT_SECRET as string), /invalid signature/);
 
     assert.equal(verifyConsentState(token).tenantId, 'tenant-1');
+    // The state names the administrator the address is built for, when there is one.
+    assert.equal(payload.userId, undefined);
+    assert.equal((verifyConsentState(token) as Record<string, unknown>).userId, null);
+    for (const none of [null, undefined, '']) {
+      const anonymous = new URL(service.buildAdminConsentUrl('directory-1', 'tenant-1', none) as string).searchParams.get('state') as string;
+      assert.equal((verifyConsentState(anonymous.slice('consent:'.length)) as Record<string, unknown>).userId, null);
+    }
+    const opened = new URL(service.buildAdminConsentUrl('directory-1', 'tenant-1', 'user-1') as string).searchParams.get('state') as string;
+    assert.equal((jwt.verify(opened.slice('consent:'.length), stateSecret) as Record<string, any>).userId, 'user-1');
+    assert.deepEqual(verifyConsentState(opened.slice('consent:'.length)), { tenantId: 'tenant-1', userId: 'user-1', expired: false });
 
     // A consent state is not a sign-in state, and a sign-in or setup state is not a consent state.
     assert.throws(() => verifyState(token), refused);

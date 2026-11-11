@@ -33,6 +33,8 @@ const SEAL_TAG_BYTES = 16;
 type EntraConsentState = {
   purpose: typeof ENTRA_CONSENT_STATE_PURPOSE;
   tenantId: string;
+  /** The administrator the consent address was built for, when there is one. */
+  userId?: string;
 };
 
 /**
@@ -329,12 +331,13 @@ export class EntraAuthService {
   }
 
   /**
-   * The workspace named by the state of an admin-consent return. The state must be signed with the
+   * The workspace named by the state of an admin-consent return, and the administrator the
+   * consent address was built for, when it names one. The state must be signed with the
    * state key and typed for consent: a sign-in or setup state is refused here, as a consent state
    * is by `verifyState`. The lifetime is read here, not by `jwt.verify`, so that a state this
    * application signed is still recognised once `expired`: the caller acts only on one that is not.
    */
-  verifyConsentState(token: string): { tenantId: string; expired: boolean } {
+  verifyConsentState(token: string): { tenantId: string; userId: string | null; expired: boolean } {
     try {
       const decoded = jwt.verify(token, this.stateSecret, {
         algorithms: [...ISSUED_TOKEN_ALGORITHMS],
@@ -350,7 +353,11 @@ export class EntraAuthService {
       ) {
         throw new Error('invalid payload');
       }
-      return { tenantId: decoded.tenantId, expired: Math.floor(Date.now() / 1000) >= decoded.exp };
+      return {
+        tenantId: decoded.tenantId,
+        userId: typeof decoded.userId === 'string' && decoded.userId ? decoded.userId : null,
+        expired: Math.floor(Date.now() / 1000) >= decoded.exp,
+      };
     } catch (err: any) {
       this.logger.warn(`Invalid Entra consent state: ${err?.message || String(err)}`);
       throw new BadRequestException('Invalid Entra state');
@@ -662,9 +669,11 @@ export class EntraAuthService {
   /**
    * Microsoft admin-consent URL for the tenant. Lands back on the regular SSO
    * callback with `state=consent:<signed state naming the tenant>` so no extra
-   * redirect URI needs registering.
+   * redirect URI needs registering. The state also names `userId`, the
+   * administrator the address is built for, who becomes the author of the
+   * audit entry written at the return.
    */
-  buildAdminConsentUrl(entraTenantId: string, kanapTenantId: string): string | null {
+  buildAdminConsentUrl(entraTenantId: string, kanapTenantId: string, userId?: string | null): string | null {
     const clientId = this.getClientId();
     const redirectUri = this.getRedirectUri();
     if (!clientId || !redirectUri) return null;
@@ -672,7 +681,11 @@ export class EntraAuthService {
       client_id: clientId,
       redirect_uri: redirectUri,
       state: `consent:${jwt.sign(
-        { purpose: ENTRA_CONSENT_STATE_PURPOSE, tenantId: kanapTenantId } satisfies EntraConsentState,
+        {
+          purpose: ENTRA_CONSENT_STATE_PURPOSE,
+          tenantId: kanapTenantId,
+          ...(typeof userId === 'string' && userId ? { userId } : {}),
+        } satisfies EntraConsentState,
         this.stateSecret,
         { algorithm: ISSUED_TOKEN_ALGORITHM, expiresIn: CONSENT_STATE_LIFETIME },
       )}`,

@@ -6,6 +6,8 @@ import { ENTRA_STATE_PURPOSE } from '../access-token.util';
 import { mergeScalarFields, resolveDirectoryNames } from '../entra-directory-sync.util';
 import { waitForBackgroundWork } from '../../common/background-work';
 import { EntraController, ssoFailureReason } from '../entra.controller';
+import { AdminAuthController } from '../admin-auth.controller';
+import { Features } from '../../config/features';
 
 function createMockDataSource(repo: any) {
   const state = {
@@ -601,8 +603,8 @@ function consentHarness(workspaces: Array<Record<string, any>> = [WORKSPACE_A, W
   (controller as any).logger = { warn: () => undefined };
 
   /** The state of the consent address the settings page of `workspace` receives. */
-  const consentState = (workspace: Record<string, any>) =>
-    new URL(entra.buildAdminConsentUrl(workspace.entra_tenant_id, workspace.id) as string).searchParams.get('state') as string;
+  const consentState = (workspace: Record<string, any>, userId?: string) =>
+    new URL(entra.buildAdminConsentUrl(workspace.entra_tenant_id, workspace.id, userId) as string).searchParams.get('state') as string;
   const back = (query: Record<string, unknown>, request: Record<string, unknown> = {}) =>
     controller.callback({ ...browser, ...request, query }, { cookie: () => undefined, redirect: (to: string) => { redirects.push(to); } } as any);
   return { entra, controller, state, lookups, auditEntries, syncs, droppedTokens, redirects, consentState, back };
@@ -726,6 +728,7 @@ async function testConsentIsGrantedOnlyForTheWorkspaceDirectory() {
   assert.deepEqual(granted.syncs, [WORKSPACE_A.id]);
   assert.deepEqual(granted.droppedTokens, [WORKSPACE_A.entra_tenant_id]);
   assert.deepEqual(granted.redirects, ['http://alpha.lvh.me/admin/auth?consent=success']);
+  assert.equal(granted.auditEntries[0].entry.userId, null, 'a consent address built for nobody has no author');
 
   const notGranted: Array<[string, Record<string, unknown>, Array<Record<string, any>>?]> = [
     ['no directory in the answer', { admin_consent: 'true' }],
@@ -807,6 +810,40 @@ async function testFailedReturnReadsAWorkspaceOnlyFromAnApplicationState() {
   assert.deepEqual(await recordedEvents(), [failure, failure]);
 }
 
+/**
+ * The audit entry of a consent return is written in the name of the administrator who opened the
+ * consent from the settings, granted or not.
+ */
+async function testConsentEntryNamesTheAdministratorWhoOpenedIt() {
+  const flags = Features as { ENTRA_SSO: boolean };
+  const previous = flags.ENTRA_SSO;
+  flags.ENTRA_SSO = true;
+  try {
+    for (const answer of [
+      { admin_consent: 'True', tenant: WORKSPACE_A.entra_tenant_id },
+      { admin_consent: 'false', error: 'access_denied' },
+    ]) {
+      const h = consentHarness();
+      const settings = new AdminAuthController(
+        { findById: async () => WORKSPACE_A } as any,
+        {} as any,
+        h.entra,
+        {} as any,
+      );
+      const { directory_sync: sync } = await settings.getSettings({ tenant: { id: WORKSPACE_A.id }, user: { sub: 'user-admin-1' } });
+      const state = new URL(sync?.consent_url as string).searchParams.get('state') as string;
+      await h.back({ state, ...answer });
+      assert.equal(h.auditEntries.length, 1);
+      assert.equal(h.auditEntries[0].workspace, WORKSPACE_A.id);
+      assert.equal(h.auditEntries[0].entry.userId, 'user-admin-1');
+      assert.equal(h.auditEntries[0].entry.source, 'system');
+      assert.equal(h.auditEntries[0].entry.sourceRef, 'entra-admin-consent');
+    }
+  } finally {
+    flags.ENTRA_SSO = previous;
+  }
+}
+
 /** Runs `fn` with the given environment values, then restores them. */
 async function withEnv(values: Record<string, string | undefined>, fn: () => Promise<void>) {
   const previous = new Map<string, string | undefined>();
@@ -843,6 +880,10 @@ async function run() {
   await withEnv(
     { APP_ENV: 'development', NODE_ENV: undefined, ENTRA_STATE_SECRET: 'entra-controller-spec-state-secret' },
     testConsentIsGrantedOnlyForTheWorkspaceDirectory,
+  );
+  await withEnv(
+    { APP_ENV: 'development', NODE_ENV: undefined, ENTRA_STATE_SECRET: 'entra-controller-spec-state-secret' },
+    testConsentEntryNamesTheAdministratorWhoOpenedIt,
   );
   await withEnv(
     { APP_ENV: 'development', NODE_ENV: undefined, ENTRA_STATE_SECRET: 'entra-controller-spec-state-secret' },
