@@ -255,8 +255,14 @@ function createSyncService(
     dataSource as any,
     { log: async () => undefined } as any,
   );
-  (svc as any).logger = { warn: () => undefined, log: () => undefined, debug: () => undefined, error: () => undefined };
-  return { svc, row, retrieved, invoiceUpdates, customerUpdates };
+  const logs = { warn: [] as string[], error: [] as string[] };
+  (svc as any).logger = {
+    warn: (message: string) => logs.warn.push(message),
+    log: () => undefined,
+    debug: () => undefined,
+    error: (message: string) => logs.error.push(message),
+  };
+  return { svc, row, retrieved, invoiceUpdates, customerUpdates, logs };
 }
 
 async function testCloverInvoiceResolvesItsSubscription() {
@@ -434,7 +440,8 @@ async function testDraftInvoiceHasNoNumber() {
  * A tenant follows one Stripe subscription. An event of another subscription of the same customer
  * (one the tenant has left) is logged and ignored; it takes the row only when the row has no
  * subscription yet, or when the row's subscription has ended and the event's still runs (a new
- * subscription after a cancellation).
+ * subscription after a cancellation). An ignored subscription that still runs is logged as an
+ * error, with the tenant and both subscriptions, for support to see.
  */
 async function testEventOfAnotherSubscriptionIsIgnored() {
   const live = {
@@ -445,7 +452,7 @@ async function testEventOfAnotherSubscriptionIsIgnored() {
     latest_invoice_id: 'in_B',
     latest_invoice_number: 'KAN-0043',
   };
-  const { svc, row } = createSyncService({ ...live }, cloverSubscription({ id: 'sub_A', status: 'past_due' }));
+  const { svc, row, logs } = createSyncService({ ...live }, cloverSubscription({ id: 'sub_A', status: 'past_due' }));
   await svc.processEvent(invoiceEvent('invoice.payment_failed', {
     id: 'in_A', customer: 'cus_1', number: 'KAN-0042', total: 24900, currency: 'eur',
     parent: { type: 'subscription_details', subscription_details: { subscription: 'sub_A', metadata: {} } },
@@ -460,6 +467,11 @@ async function testEventOfAnotherSubscriptionIsIgnored() {
     live,
     'the row still follows sub_B',
   );
+  assert.equal(logs.error.length, 2, 'each ignored event of a running subscription is an error');
+  for (const message of logs.error) {
+    for (const part of [TENANT_A, 'sub_B', 'sub_A']) assert.ok(message.includes(part), `${part} in: ${message}`);
+  }
+  assert.equal(logs.warn.length, 0);
 
   // First subscription: the row takes it.
   const first = createSyncService({ stripe_subscription_id: null, status: SubscriptionStatus.TRIALING });
@@ -471,22 +483,26 @@ async function testEventOfAnotherSubscriptionIsIgnored() {
   const renewed = createSyncService({ stripe_subscription_id: 'sub_old', status: SubscriptionStatus.CANCELED });
   await renewed.svc.processEvent({ id: 'evt_late', type: 'customer.subscription.deleted', data: { object: cloverSubscription({ id: 'sub_older', status: 'canceled' }) } });
   assert.equal(renewed.row.stripe_subscription_id, 'sub_old');
+  // An ended subscription ignored: a warning only.
+  assert.equal(renewed.logs.error.length, 0);
+  assert.equal(renewed.logs.warn.length, 1);
   await renewed.svc.processEvent({ id: 'evt_renew', type: 'customer.subscription.created', data: { object: cloverSubscription({ id: 'sub_new' }) } });
   assert.equal(renewed.row.stripe_subscription_id, 'sub_new');
   assert.equal(renewed.row.status, SubscriptionStatus.ACTIVE);
 
-  // A checkout the tenant paid: the row follows the subscription it has just bought.
-  const bought = createSyncService(
+  // A checkout is now refused while the subscription runs, but a session opened before stays
+  // payable for 24 hours: once paid, the row follows the subscription the tenant has just bought.
+  const checkoutOpenedBeforeTheRefusal = createSyncService(
     { stripe_subscription_id: 'sub_A', status: SubscriptionStatus.PAST_DUE },
     cloverSubscription({ id: 'sub_new' }),
   );
-  await bought.svc.processEvent({
+  await checkoutOpenedBeforeTheRefusal.svc.processEvent({
     id: 'evt_checkout',
     type: 'checkout.session.completed',
     data: { object: { object: 'checkout.session', id: 'cs_1', mode: 'subscription', customer: 'cus_1', subscription: 'sub_new' } },
   });
-  assert.equal(bought.row.stripe_subscription_id, 'sub_new');
-  assert.equal(bought.row.status, SubscriptionStatus.ACTIVE);
+  assert.equal(checkoutOpenedBeforeTheRefusal.row.stripe_subscription_id, 'sub_new');
+  assert.equal(checkoutOpenedBeforeTheRefusal.row.status, SubscriptionStatus.ACTIVE);
 }
 
 async function testInvoiceWithoutTenantIsSetToA4() {

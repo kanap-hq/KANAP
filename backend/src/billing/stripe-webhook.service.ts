@@ -316,10 +316,14 @@ export class StripeWebhookService implements OnModuleInit {
       if (!sub) {
         const current = await repo.findOne({ where: {} });
         if (current && !this.mayFollowSubscription(current, subscriptionData, event)) {
-          // The tenant follows another subscription of this customer: one it has left.
-          this.logger.warn(
-            `Stripe event ${event?.id ?? 'unknown'} of subscription ${subscriptionId} ignored: tenant ${tenantId} follows ${current.stripe_subscription_id}`,
-          );
+          // The tenant follows another subscription of this customer: one it has left. When the
+          // ignored one still runs, the customer may be billed twice: support has to see it.
+          const message = `Stripe event ${event?.id ?? 'unknown'} of subscription ${subscriptionId} ignored: tenant ${tenantId} follows ${current.stripe_subscription_id}`;
+          if (isLiveSubscriptionStatus(subscriptionData?.status)) {
+            this.logger.error(`${message}; subscription ${subscriptionId} still runs (${subscriptionData.status})`);
+          } else {
+            this.logger.warn(message);
+          }
           ignored = true;
           return;
         }
