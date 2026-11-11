@@ -78,7 +78,7 @@ describe('CHANGELOG.md entries', () => {
   it('extracts an entry marked Action required', () => {
     const entry = extractEntry(CHANGELOG, '26.11.1');
     assert.equal(entry.heading, '## 26.11.1 (2026-11-03) · Action required');
-    assert.equal(entry.title, 'KANAP 26.11.1 · Action required');
+    assert.equal(entry.title, 'Kadratis 26.11.1 · Action required');
     assert.equal(entry.actionRequired, true);
     assert.match(entry.body, /^Settings page for the application address\.\n/);
     assert.match(entry.body, /- Action required: set `APP_BASE_URL`\.$/);
@@ -87,7 +87,7 @@ describe('CHANGELOG.md entries', () => {
 
   it('extracts an entry without Action required, and the last entry of the file', () => {
     const entry = extractEntry(CHANGELOG, '26.10.2');
-    assert.equal(entry.title, 'KANAP 26.10.2');
+    assert.equal(entry.title, 'Kadratis 26.10.2');
     assert.equal(entry.actionRequired, false);
     assert.equal(entry.body, 'A fix.\n\n### Fixes\n- Exports keep their dates (#490)');
     assert.equal(extractEntry(CHANGELOG, '26.10.1').body, 'First version.');

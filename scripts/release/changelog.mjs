@@ -1,4 +1,4 @@
-// Pure functions of the release tooling (scripts/release/release.mjs): KANAP version numbers,
+// Pure functions of the release tooling (scripts/release/release.mjs): Kadratis version numbers,
 // CHANGELOG.md entries and the "Release notes" section of a pull request description.
 // No I/O and no dependency.
 //
@@ -71,7 +71,7 @@ export function extractEntry(changelogText, version) {
   const actionRequired = ACTION_REQUIRED.test(heading);
   return {
     heading,
-    title: `KANAP ${version}${actionRequired ? ' · Action required' : ''}`,
+    title: `Kadratis ${version}${actionRequired ? ' · Action required' : ''}`,
     body: lines.slice(start + 1, end).join('\n').trim(),
     actionRequired,
   };

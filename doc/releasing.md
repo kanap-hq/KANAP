@@ -1,6 +1,6 @@
-# Releasing KANAP
+# Releasing Kadratis
 
-KANAP publishes versions on the maintainer's decision. A version is a tested commit of `main`
+Kadratis publishes versions on the maintainer's decision. A version is a tested commit of `main`
 with a number, a Git tag, a `CHANGELOG.md` entry and a GitHub release. Two commands of
 `scripts/release/release.mjs` do the work: `prepare` opens the release pull request, `publish`
 tags and publishes it once it has merged.
@@ -130,7 +130,7 @@ node scripts/release/release.mjs publish 26.10.2 [--dry-run] [--no-sbom] [--no-i
    manual run on the tag (it appears within two minutes, and the wait stops after 45 minutes),
    downloads its `digests.txt`, and checks that an anonymous client can pull each image at
    `26.10.2` and finds the digest the run published.
-7. Creates the GitHub release: the entry's heading gives the title (`KANAP 26.10.2`, plus
+7. Creates the GitHub release: the entry's heading gives the title (`Kadratis 26.10.2`, plus
    `· Action required` when the heading has it), the rest of the entry gives the notes. The
    notes end with an `### Images` section: each image with its `ghcr.io/...@sha256:...`
    reference, and the `gh attestation verify` command that checks its provenance. That
