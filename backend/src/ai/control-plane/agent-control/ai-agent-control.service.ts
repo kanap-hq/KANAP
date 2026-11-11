@@ -3133,7 +3133,7 @@ export class AiAgentControlService {
       })
       : [];
     const definitionKeyById = new Map(definitions.map((definition) => [definition.id, definition.agent_key]));
-    // The object of an approved change is recorded by id; the screen shows its reference or name.
+    // The object of an approved change is recorded by id; the screen shows its reference.
     const targetDisplays = await resolveActivityTargetDisplays(context.manager, context.tenantId, page.items);
 
     return {

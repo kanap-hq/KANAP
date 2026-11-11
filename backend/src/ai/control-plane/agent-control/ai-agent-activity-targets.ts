@@ -5,7 +5,8 @@ import { buildRef, isUuid } from '../../ai-entity-reference.util';
 /**
  * What the Activity screen shows for the object an entry acts on. Kad's approved changes record the
  * object by its id (target_type `tasks`, target_ref the uuid); the screen shows its business
- * reference (T-15, PRJ-3, APP-4...) or, for a family without one, its name. The record keeps the id.
+ * reference (T-15, PRJ-3, APP-4...). A family without one shows its type alone: a name is read
+ * under the rights of its module, which this screen does not check. The record keeps the id.
  * Ticket and alert targets already carry the number the person knows and are left alone.
  */
 
@@ -14,7 +15,6 @@ type ActivityTarget = { targetType: string | null; targetRef: string | null };
 type IndexRow = {
   entity_type: string;
   entity_id: string;
-  label: string | null;
   ref_number: number | null;
   extra_json: Record<string, unknown> | null;
 };
@@ -34,13 +34,13 @@ function displayOf(row: IndexRow): string | null {
   if (!family) return null;
   const itemRef = family === 'applications' || family === 'assets' ? row.extra_json?.item_ref : null;
   const reference = typeof itemRef === 'string' && itemRef.trim() ? itemRef.trim() : buildRef(family, row.ref_number);
-  return reference ?? (row.label?.trim() || null);
+  return reference ?? null;
 }
 
 /**
  * The display text of the targets that name an indexed record by id, in one query for the whole
- * page: key `activityTargetKey(type, id)`, value the reference or the name. A record that no longer
- * exists, or that the index does not hold, has no entry.
+ * page: key `activityTargetKey(type, id)`, value the reference. A record without a reference, one
+ * that no longer exists, or one the index does not hold, has no entry.
  */
 export async function resolveActivityTargetDisplays(
   manager: Pick<EntityManager, 'query'>,
@@ -58,7 +58,7 @@ export async function resolveActivityTargetDisplays(
   const entityTypes = [...new Set([...wanted.values()].flatMap(({ family }) => indexEntityTypes(family)))];
   const ids = [...new Set([...wanted.values()].map(({ id }) => id))];
   const rows: IndexRow[] = await manager.query(
-    `SELECT entity_type, entity_id, label, ref_number, extra_json
+    `SELECT entity_type, entity_id, ref_number, extra_json
        FROM search_index
       WHERE tenant_id = $1
         AND entity_type = ANY($2::text[])

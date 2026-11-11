@@ -6,7 +6,7 @@ import { activityTargetKey, resolveActivityTargetDisplays } from '../ai-agent-ac
 
 /**
  * What the Activity screen shows for the object an entry acts on: its business reference (T-15,
- * PRJ-3...), its name when the family has no reference, never its uuid. Real PostgreSQL, migrations
+ * PRJ-3...), its type alone when the family has no reference, never its uuid. Real PostgreSQL, migrations
  * applied; the lookup reads the search index with the tenant predicate, in one query for the page.
  */
 
@@ -106,7 +106,7 @@ async function run() {
 
     assert.equal(displays.get(activityTargetKey('tasks', taskId)), 'T-15', 'a task shows its reference');
     assert.equal(displays.get(activityTargetKey('projects', projectId)), 'PRJ-3', 'a project shows its reference');
-    assert.equal(displays.get(activityTargetKey('companies', companyId)), 'Formaggio Supremo SRL', 'a family without a reference shows the name');
+    assert.equal(displays.get(activityTargetKey('companies', companyId)), undefined, 'a family without a reference has no display: its type alone is shown');
     const line = displays.get(activityTargetKey('budget_lines', opexId));
     assert.ok(line && /\b7$/.test(line), `a budget line shows its reference (${line})`);
     assert.equal(displays.has(activityTargetKey('tasks', goneTaskId)), false, 'a deleted object shows no uuid');
