@@ -233,9 +233,9 @@ describe('publish', () => {
     const { status, output } = repo.run('publish', '26.10.1', '--dry-run');
     assert.equal(status, 0, output);
     const sha = repo.shas.release;
-    assert.match(output, new RegExp(`would run: \\(cd \\S+ && git tag -a v26\\.10\\.1 -m "KANAP 26\\.10\\.1" ${sha}\\)`));
+    assert.match(output, new RegExp(`would run: \\(cd \\S+ && git tag -a v26\\.10\\.1 -m "Kadratis 26\\.10\\.1" ${sha}\\)`));
     assert.match(output, /would run: \(cd \S+ && git push origin v26\.10\.1\)/);
-    assert.match(output, /would run: gh release create v26\.10\.1 --repo kanap-hq\/KANAP --title "KANAP 26\.10\.1 · Action required" --notes-file /);
+    assert.match(output, /would run: gh release create v26\.10\.1 --repo kanap-hq\/KANAP --title "Kadratis 26\.10\.1 · Action required" --notes-file /);
     assert.match(output, /would run: \(cd \S+ && git worktree add --detach \S+ v26\.10\.1\)/);
     assert.match(output, /would run: \(cd \S+ && node scripts\/sbom\/generate\.mjs --out \S+\)/);
     assert.match(output, /would run: gh release upload v26\.10\.1 \S+ --clobber --repo kanap-hq\/KANAP/);
@@ -264,7 +264,7 @@ describe('publish', () => {
     assert.match(repo.calls(), /^run list --repo kanap-hq\/KANAP --workflow release-images\.yml --branch v26\.10\.1 --json /m);
     assert.match(repo.calls(), /^run download 11 --repo kanap-hq\/KANAP --name image-digests --dir \S+$/m);
     assert.match(repo.curls(), /^https:\/\/ghcr\.io\/v2\/kanap-hq\/kadratis-web\/manifests\/26\.10\.1$/m);
-    assert.match(repo.calls(), /^release create v26\.10\.1 --repo kanap-hq\/KANAP --title KANAP 26\.10\.1 · Action required --notes-file \S+$/m);
+    assert.match(repo.calls(), /^release create v26\.10\.1 --repo kanap-hq\/KANAP --title Kadratis 26\.10\.1 · Action required --notes-file \S+$/m);
     const notes = repo.notes();
     assert.ok(notes.startsWith('First version.'), notes);
     assert.ok(notes.endsWith(`| \`kadratis-marketing\` | \`ghcr.io/kanap-hq/kadratis-marketing@${DIGESTS['kadratis-marketing']}\` |\n\nProvenance: \`gh attestation verify oci://ghcr.io/kanap-hq/kadratis-api@${DIGESTS['kadratis-api']} -R kanap-hq/KANAP --signer-workflow kanap-hq/KANAP/.github/workflows/release-images.yml --source-ref refs/tags/v26.10.1\`\n`), notes);

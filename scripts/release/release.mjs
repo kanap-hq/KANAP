@@ -1,4 +1,4 @@
-// Cuts and publishes a KANAP version (see doc/releasing.md). No dependency: it runs git, npm
+// Cuts and publishes a Kadratis version (see doc/releasing.md). No dependency: it runs git, npm
 // and gh, and works from any directory of the repository.
 //
 //   node scripts/release/release.mjs prepare <version> [--since <ref>] [--commit] [--dry-run]
@@ -893,7 +893,7 @@ function publish(root, options) {
     if (local.status === 0 && local.stdout.trim() !== sha) {
       throw new InputError(`the local tag ${tag} points at ${local.stdout.trim()}, not at ${sha}: delete it (git tag -d ${tag}) and rerun`);
     }
-    if (local.status !== 0) write('git', ['tag', '-a', tag, '-m', `KANAP ${version}`, sha], { cwd: root });
+    if (local.status !== 0) write('git', ['tag', '-a', tag, '-m', `Kadratis ${version}`, sha], { cwd: root });
     write('git', ['push', 'origin', tag], { cwd: root });
   }
 
