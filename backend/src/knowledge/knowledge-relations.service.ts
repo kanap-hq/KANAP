@@ -60,7 +60,7 @@ export class KnowledgeRelationsService {
   ) {
     const { manager, documentId } = await this.resolveMutableDocumentId(idOrRef, opts);
     await this.knowledge.assertRelationWriteAllowed(documentId, { [entity]: Array.isArray(ids) ? ids : [] }, manager, opts?.userId || null);
-    return this.knowledge.replaceDocumentRelationsByEntity(documentId, entity, ids, manager);
+    return this.knowledge.replaceDocumentRelationsByEntity(documentId, entity, ids, manager, { userId: opts?.userId || null });
   }
 
   async bulkReplaceRelationSets(
@@ -94,6 +94,7 @@ export class KnowledgeRelationsService {
           key,
           Array.isArray(body?.[key]) ? body?.[key] || [] : [],
           tx,
+          { userId: opts?.userId || null },
         );
       }
       return { ok: true, updated: updates };
