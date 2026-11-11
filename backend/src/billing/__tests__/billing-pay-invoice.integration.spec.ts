@@ -136,6 +136,7 @@ async function testNewCardPaysTheInvoiceAtOnce() {
     assert.equal(result.payment.status, 'paid');
     assert.deepEqual(pays.map((call) => call.id), [seed.invoiceId]);
     assert.equal(pays[0].options?.idempotencyKey, `invoice-pay-${seed.invoiceId}-pm_new`);
+    assert.deepEqual(pays[0].params, { payment_method: 'pm_new' }, 'the checked card is the one charged');
     // The summary is read again from Stripe: paid, usable, no reason left.
     assert.equal(result.latest_invoice_status, 'paid');
     assert.equal(result.status, 'active');
@@ -153,6 +154,7 @@ async function testCustomerCardWhenTheSubscriptionHasNone() {
     const { service, pays } = stripeAccount(seed, { subscriptionCard: null, customerCard: 'pm_portal', pay: 'paid' });
     assert.equal((await payInvoice(service, seed)).payment.status, 'paid');
     assert.equal(pays[0].options?.idempotencyKey, `invoice-pay-${seed.invoiceId}-pm_portal`);
+    assert.deepEqual(pays[0].params, { payment_method: 'pm_portal' });
   } finally {
     await removeTenant(seed.tenantId);
   }

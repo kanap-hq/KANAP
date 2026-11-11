@@ -769,7 +769,8 @@ export class BillingService {
   /**
    * `POST /billing/pay-invoice`, called on the return from the customer portal: the open invoice of
    * a card subscription is charged at once on the subscription's card (its default payment method,
-   * else the customer's), without waiting for Stripe's next retry. Only when that card is not the
+   * else the customer's; named to Stripe as the card to charge), without waiting for Stripe's next
+   * retry. Only when that card is not the
    * one last refused (no card was changed: no second refusal), and once: the call takes the
    * tenant's lock shared with the webhook (held until the request commits, so a second call then
    * finds the invoice paid), and Stripe's idempotency key names the invoice and the card. Returns
@@ -807,7 +808,7 @@ export class BillingService {
 
     let status: InvoicePayment['status'];
     try {
-      const paid: any = await client.invoices.pay(invoiceId, {}, { idempotencyKey: `invoice-pay-${invoiceId}-${card}` });
+      const paid: any = await client.invoices.pay(invoiceId, { payment_method: card }, { idempotencyKey: `invoice-pay-${invoiceId}-${card}` });
       status = paid?.status === 'paid' ? 'paid' : 'payment_failed';
     } catch (error: any) {
       if (error?.code === 'invoice_payment_intent_requires_action') {
