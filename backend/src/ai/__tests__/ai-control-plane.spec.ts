@@ -88,6 +88,7 @@ import { AiExternalMcpToolSnapshot } from '../control-plane/entities/ai-external
 import { AiObservation } from '../control-plane/entities/ai-observation.entity';
 import { AiRecommendation } from '../control-plane/entities/ai-recommendation.entity';
 import { AiRun } from '../control-plane/entities/ai-run.entity';
+import { readAgentKnowledgeSources } from '../control-plane/agent-control/agent-control-definition.util';
 import { AiRunStep } from '../control-plane/entities/ai-run-step.entity';
 import { AiToolExecution } from '../control-plane/entities/ai-tool-execution.entity';
 import { AiEvidenceService, hashStableJson } from '../control-plane/evidence/ai-evidence.service';
@@ -16633,6 +16634,38 @@ async function testHelpdeskPollOnAgentlessTenantIsDisabled() {
   assert.equal(result.status, 'disabled');
 }
 
+async function testAnAgentUpdateKeepsItsLibrariesUnlessItGivesThem() {
+  const { manager } = createMemoryManager();
+  const context = createContext(manager);
+  const queue = new AiAgentWorkQueueService();
+  const service = new AiAgentControlService({} as any, {} as any, {} as any, {} as any, {} as any, queue);
+  const created = await service.createAgentDefinition(context, { name: 'Desk kept closed' });
+  const id = created.agent_definition.id;
+  const reload = async () => (await manager.getRepository(AiAgentDefinition).findOne({ where: { id, tenant_id: context.tenantId } }))!;
+  assert.deepEqual(readAgentKnowledgeSources(await reload()).knowledgeLibraryIds, []);
+  // A scope policy without knowledge_sources keeps the stored ones.
+  await service.updateAgentDefinition(context, id, {
+    scope_policy_json: { mode: 'manual_safe_target', provider_kind: 'ticketing', target_kind: 'ticket' },
+  });
+  let saved = await reload();
+  assert.equal((saved.scope_policy_json as any).mode, 'manual_safe_target');
+  assert.deepEqual(readAgentKnowledgeSources(saved).knowledgeLibraryIds, [], 'still no library');
+  // A scope policy that gives them applies them.
+  await service.updateAgentDefinition(context, id, {
+    scope_policy_json: {
+      mode: 'manual_safe_target',
+      knowledge_sources: { knowledge: { enabled: true, all_libraries: true, library_ids: [] } },
+    },
+  });
+  saved = await reload();
+  assert.equal(readAgentKnowledgeSources(saved).knowledgeLibraryIds, null);
+  // So does the knowledge_sources field.
+  await service.updateAgentDefinition(context, id, {
+    knowledge_sources: { knowledge: { enabled: true, all_libraries: false, library_ids: [] } },
+  });
+  assert.deepEqual(readAgentKnowledgeSources(await reload()).knowledgeLibraryIds, []);
+}
+
 async function testCreateHelpdeskAgentFromCodeDefaultsBindsProviderAndCapabilities() {
   const { manager } = createMemoryManager();
   const context = createContext(manager);
@@ -17250,6 +17283,7 @@ async function run() {
   await testListAgentDefinitionsOnVirginTenantStaysEmpty();
   await testHelpdeskPollOnAgentlessTenantIsDisabled();
   await testCreateHelpdeskAgentFromCodeDefaultsBindsProviderAndCapabilities();
+  await testAnAgentUpdateKeepsItsLibrariesUnlessItGivesThem();
   await testCreateSreAgentFromCodeDefaultsUsesA1AndCapabilities();
   await testManualTicketingTriageRequiresAgentDefinitionId();
   await testMockTicketingInternalNoteWriteScenarios();

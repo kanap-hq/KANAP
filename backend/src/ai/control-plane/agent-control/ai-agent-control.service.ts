@@ -2236,7 +2236,16 @@ export class AiAgentControlService {
       );
     }
     if (Object.prototype.hasOwnProperty.call(input, 'scope_policy_json')) {
-      definition.scope_policy_json = normalizeScopePolicyForAgentType(definition.agent_type, normalizedPolicyObject(input.scope_policy_json, 'Scope policy'));
+      // The libraries the agent may cite change only when the input gives them: a scope policy
+      // without knowledge_sources keeps the stored ones.
+      const nextScopePolicy = normalizedPolicyObject(input.scope_policy_json, 'Scope policy');
+      const storedKnowledgeSources = isRecord(definition.scope_policy_json) ? definition.scope_policy_json.knowledge_sources : undefined;
+      definition.scope_policy_json = normalizeScopePolicyForAgentType(
+        definition.agent_type,
+        storedKnowledgeSources !== undefined && !(nextScopePolicy && Object.prototype.hasOwnProperty.call(nextScopePolicy, 'knowledge_sources'))
+          ? { ...(nextScopePolicy ?? {}), knowledge_sources: storedKnowledgeSources }
+          : nextScopePolicy,
+      );
     }
     if (Object.prototype.hasOwnProperty.call(input, 'knowledge_sources')) {
       // Patch only the knowledge_sources sub-block, preserving the rest of scope_policy_json.
