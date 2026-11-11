@@ -88,7 +88,7 @@ Jede Zeile ist eine Technologie. Klicken Sie auf eine Zeile, um sie zu öffnen.
 | **Hersteller** | Wer sie herausgibt |
 | **Server** | Assets in Betrieb, auf denen sie installiert ist. Cluster werden nicht gezählt, ebenso wenig die virtuellen Maschinen eines Hosts, der sie trägt. Das Badge **Server** des Datensatzes und der Bericht [Supportende](end-of-support.md) zeigen dieselbe Zahl |
 | **Anwendungen** | Anwendungen, die sie deklarieren oder auf einem Server gehostet werden, der sie trägt |
-| **Nächstes Supportende** | Das früheste kommende Ende des Standardsupports unter den Versionen im Einsatz. Orange, wenn es in die nächsten 12 Monate fällt |
+| **Nächstes Supportende** | Das nächste kommende Supportende unter den Versionen im Einsatz: das Standardende oder, wenn die Standardenden verstrichen sind, das erweiterte Ende. Fahren Sie über das Datum, um zu sehen, welches es ist. Orange, wenn es in die nächsten 12 Monate fällt |
 | **Zu prüfende Schwachstellen** | Die bekannten Schwachstellen, die auf den Versionen im Einsatz in den Warnungen noch zu prüfen sind. Orange mit der Anzahl der kritischen oder hohen (`3 · 1 kritisch oder hoch`). Ein Klick öffnet die Seite [Schwachstellen](vulnerabilities.md) für diese Technologie. Vorhanden, wenn Schwachstellen verfolgt werden |
 
 **Weitere Spalten** (über die Spaltenauswahl): **Lebenszyklus**, **Versionen im Einsatz**, **IT-Verantwortlicher**.

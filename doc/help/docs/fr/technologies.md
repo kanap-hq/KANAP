@@ -88,7 +88,7 @@ Chaque ligne est une technologie. Cliquez sur une ligne pour l'ouvrir.
 | **Éditeur** | Qui l'édite |
 | **Serveurs** | Les actifs en service sur lesquels elle est installée. Les clusters ne sont pas comptés, ni les machines virtuelles d'un hôte qui la porte. La pastille **Serveurs** de la fiche et le rapport [Fins de support](end-of-support.md) donnent le même nombre |
 | **Applications** | Les applications qui la déclarent ou sont hébergées sur un serveur qui la porte |
-| **Prochaine fin de support** | La plus proche fin de support standard à venir parmi les versions en service. En orange quand elle tombe dans les 12 prochains mois |
+| **Prochaine fin de support** | La plus proche fin de support à venir parmi les versions en service : la fin standard, ou la fin étendue quand les fins standard sont passées. Survolez la date pour savoir laquelle. En orange quand elle tombe dans les 12 prochains mois |
 | **Vulnérabilités à traiter** | Les vulnérabilités connues encore à traiter sur les versions en service qui sont dans les alertes. En orange avec le nombre de critiques ou élevées (`3 · 1 critiques ou élevées`). Cliquez pour ouvrir la page [Vulnérabilités](vulnerabilities.md) sur cette technologie. Présente quand les vulnérabilités sont suivies |
 
 **Colonnes supplémentaires** (par le sélecteur de colonnes) : **Cycle de vie**, **Versions en service**, **Responsable IT**.

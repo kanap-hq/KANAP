@@ -88,7 +88,7 @@ Cada fila es una tecnología. Haga clic en una fila para abrirla.
 | **Editor** | Quién la edita |
 | **Servidores** | Los activos en servicio en los que está instalada. Los clústeres no se cuentan, ni las máquinas virtuales de un host que la lleva. La insignia **Servidores** de la ficha y el informe [Fin de soporte](end-of-support.md) dan el mismo número |
 | **Aplicaciones** | Las aplicaciones que la declaran o se alojan en un servidor que la lleva |
-| **Próximo fin de soporte** | El fin de soporte estándar más cercano por venir entre las versiones en uso. En naranja cuando cae dentro de los próximos 12 meses |
+| **Próximo fin de soporte** | El fin de soporte más cercano por venir entre las versiones en uso: el estándar, o el extendido cuando los fines estándar han pasado. Pase el cursor sobre la fecha para ver cuál es. En naranja cuando cae dentro de los próximos 12 meses |
 | **Vulnerabilidades por revisar** | Las vulnerabilidades conocidas que quedan por revisar en las versiones en uso que están en las alertas. En naranja con el número de críticas o altas (`3 · 1 críticas o altas`). Haga clic para abrir la página [Vulnerabilidades](vulnerabilities.md) sobre esta tecnología. Presente cuando se siguen las vulnerabilidades |
 
 **Columnas adicionales** (con el selector de columnas): **Ciclo de vida**, **Versiones en uso**, **Responsable de TI**.

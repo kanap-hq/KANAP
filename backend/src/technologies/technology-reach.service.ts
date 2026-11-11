@@ -215,8 +215,13 @@ export type TechnologyCounts = {
   servers: number;
   applications: number;
   versions_in_use: number;
-  /** The earliest standard end of support still to come among the versions in use, YYYY-MM-DD. */
+  /**
+   * The earliest end of support still to come among the versions in use, YYYY-MM-DD: a standard
+   * end, or an extended end once the standard ones have passed (`next_support_end_kind` says which).
+   */
   next_support_end: string | null;
+  /** Which end `next_support_end` is; standard when both come on the same day. Null without a date. */
+  next_support_end_kind: 'standard' | 'extended' | null;
   /** Versions in use whose standard support has ended. */
   ended_versions: number;
 };
@@ -456,8 +461,9 @@ export class TechnologyReachService {
 
   /**
    * The counters of the technology list for a page of ids, in one statement: servers (`serversOfTechnologiesSql`),
-   * applications (hosted or declared), versions in use (on an asset or declared), the next
-   * standard end of support among them and how many have ended.
+   * applications (hosted or declared), versions in use (on an asset or declared), the next end of
+   * support among them (standard or extended, the nearest still to come) and how many have passed
+   * their standard end.
    */
   async countsOfTechnologies(mg: EntityManager, tenantId: string, technologyIds: string[]): Promise<Map<string, TechnologyCounts>> {
     const out = new Map<string, TechnologyCounts>();
@@ -493,7 +499,8 @@ export class TechnologyReachService {
        versions AS (
          SELECT u.technology_id,
                 count(*)::int AS versions_in_use,
-                min(v.standard_support_end) FILTER (WHERE v.standard_support_end >= CURRENT_DATE) AS next_end,
+                min(v.standard_support_end) FILTER (WHERE v.standard_support_end >= CURRENT_DATE) AS next_standard_end,
+                min(v.extended_support_end) FILTER (WHERE v.extended_support_end >= CURRENT_DATE) AS next_extended_end,
                 count(*) FILTER (WHERE v.standard_support_end < CURRENT_DATE)::int AS ended
            FROM used u
            JOIN technology_versions v ON v.tenant_id = $1 AND v.technology_id = u.technology_id AND v.id = u.technology_version_id
@@ -503,7 +510,9 @@ export class TechnologyReachService {
               COALESCE(s.servers, 0) AS servers,
               COALESCE(a.applications, 0) AS applications,
               COALESCE(v.versions_in_use, 0) AS versions_in_use,
-              ${DAY('v.next_end')} AS next_support_end,
+              ${DAY('LEAST(v.next_standard_end, v.next_extended_end)')} AS next_support_end,
+              (CASE WHEN v.next_standard_end IS NOT NULL AND (v.next_extended_end IS NULL OR v.next_standard_end <= v.next_extended_end) THEN 'standard'
+                    WHEN v.next_extended_end IS NOT NULL THEN 'extended' END) AS next_support_end_kind,
               COALESCE(v.ended, 0) AS ended_versions
          FROM technologies t
          LEFT JOIN servers s ON s.technology_id = t.id
@@ -519,6 +528,7 @@ export class TechnologyReachService {
         applications: Number(row.applications) || 0,
         versions_in_use: Number(row.versions_in_use) || 0,
         next_support_end: row.next_support_end ?? null,
+        next_support_end_kind: row.next_support_end_kind ?? null,
         ended_versions: Number(row.ended_versions) || 0,
       });
     }
