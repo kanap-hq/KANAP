@@ -37,6 +37,25 @@ function tokenPayload() {
   };
 }
 
+async function testTheEvidenceWriterHidesTokensInTheSourceAddress() {
+  const saved: Array<Record<string, unknown>> = [];
+  const repo = { create: (row: Record<string, unknown>) => row, save: async (row: Record<string, unknown>) => { saved.push(row); return row; } };
+  const service = new AiEvidenceService({} as any);
+  const address = 'https://10.0.0.5/device.htm?id=42';
+  for (const sourceUri of [`${address}&apitoken=${OPAQUE}`, `${address}&passhash=${OPAQUE}`, `https://user:${OPAQUE}@10.0.0.5/device.htm`, address]) {
+    await service.recordEvidence({ tenantId: 'tenant', manager: { getRepository: () => repo } } as any, {
+      sourceProvider: 'test',
+      sourceObjectType: 'test_output',
+      sourceUri,
+      payload: null,
+    });
+  }
+  for (const row of saved) assertNoCredential(String(row.source_uri), 'source address');
+  // The address stays usable.
+  assert.equal(saved[3].source_uri, address);
+  assert.ok(String(saved[0].source_uri).startsWith(`${address}&apitoken=`));
+}
+
 async function testTheEvidenceWriterHidesTokens() {
   const saved: Array<Record<string, unknown>> = [];
   const repo = {
@@ -184,6 +203,7 @@ function testAnAuthorizationValueIsHiddenWhenItIsACredential() {
 async function run() {
   const tests: Array<() => unknown> = [
     testTheEvidenceWriterHidesTokens,
+    testTheEvidenceWriterHidesTokensInTheSourceAddress,
     testTheRedactionTimeGrowsLinearlyWithTheText,
     testTheEvidenceAndTheJournalShareOneRule,
     testAnAuthorizationValueIsHiddenWhenItIsACredential,

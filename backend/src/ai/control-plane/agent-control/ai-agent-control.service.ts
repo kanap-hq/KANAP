@@ -91,7 +91,7 @@ import { AiCapabilityDispatcherService } from '../dispatcher/ai-capability-dispa
 import { AiReadonlyDiagnosticWorkflowService } from '../diagnostics/ai-readonly-diagnostic-workflow.service';
 import { AiTenantExecutionService } from '../../execution/ai-tenant-execution.service';
 import { AiActionRequest } from '../entities/ai-action-request.entity';
-import { hashStableJson } from '../evidence/ai-evidence.service';
+import { hashStableJson, redactSensitiveText } from '../evidence/ai-evidence.service';
 import { AiAgentAuditEvent } from '../entities/ai-agent-audit-event.entity';
 import { AiModelConfig } from '../../ai-model-config.entity';
 import { AiAgentLlmClient } from './ai-agent-llm-client';
@@ -953,7 +953,7 @@ export class AiAgentControlService {
       capability_version: stage.capabilityVersion ?? '1.0.0',
       input_summary: input.inputSummary,
       output_summary: input.outputSummary,
-      error_message: input.errorMessage ?? null,
+      error_message: input.errorMessage == null ? null : redactSensitiveText(input.errorMessage),
       started_at: now,
       completed_at: now,
       created_at: now,

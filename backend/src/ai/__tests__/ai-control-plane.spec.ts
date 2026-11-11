@@ -1199,6 +1199,44 @@ async function testDispatcherCreatesDurableRecordsForSuccessfulCall() {
   assert.equal((stores.get(AiToolExecution.name) ?? [])[0].status, 'completed');
 }
 
+// Sample credential, assembled at run time.
+const SAMPLE_ERROR_CREDENTIAL = ['Zq81Lm0P', 'w4Rt7Yx2', 'Nc5Vb9Kd'].join('');
+
+async function testAFailedCallKeepsItsErrorMessageRedacted() {
+  const { dispatcher, context, stores } = createDispatcher({
+    handler: async () => {
+      throw new Error(`Upstream refused Authorization: Bearer ${SAMPLE_ERROR_CREDENTIAL} for the query.`);
+    },
+  });
+  await assert.rejects(() => dispatcher.execute(context, {
+    capabilityName: 'search_all',
+    input: { query: 'kanap' },
+  }));
+  const kept = JSON.stringify({
+    tool: (stores.get(AiToolExecution.name) ?? [])[0].error_message,
+    step: (stores.get(AiRunStep.name) ?? [])[0].error_message,
+    run: (stores.get(AiRun.name) ?? [])[0].output_summary,
+  });
+  assert.ok(kept.includes('Upstream refused Authorization'));
+  assert.ok(!kept.includes(SAMPLE_ERROR_CREDENTIAL));
+}
+
+async function testAStageStepKeepsItsErrorMessageRedacted() {
+  const { stores, manager } = createMemoryManager();
+  const service = Object.create(AiAgentControlService.prototype) as any;
+  await service.recordStageRunStep(createContext(manager), { kind: 'test_stage', capabilityName: 'test.stage' }, {
+    runId: 'run-1',
+    stepIndex: 1,
+    status: 'failed',
+    inputSummary: {},
+    outputSummary: {},
+    errorMessage: `Provider said access_token=${SAMPLE_ERROR_CREDENTIAL} is invalid.`,
+  });
+  const message = String((stores.get(AiRunStep.name) ?? [])[0].error_message);
+  assert.ok(message.startsWith('Provider said access_token='));
+  assert.ok(!message.includes(SAMPLE_ERROR_CREDENTIAL));
+}
+
 async function testDispatcherValidatesProviderInputBeforeHandler() {
   let called = false;
   const { dispatcher, context, stores } = createDispatcher({
@@ -16683,6 +16721,8 @@ async function run() {
   await testDispatcherPreviewKeepsTheUserEmailWhileModelOutputStaysRedacted();
   await testDispatcherCreatesDurableRecordsForSuccessfulCall();
   await testDispatcherValidatesProviderInputBeforeHandler();
+  await testAFailedCallKeepsItsErrorMessageRedacted();
+  await testAStageStepKeepsItsErrorMessageRedacted();
   await testDispatcherRecordsDeniedSurface();
   await testRegistryResolvesKnowledgeAsInternalCapabilities();
   await testRegistryResolvesKnowledgeAsToolOnChatAndMcpSurfaces();

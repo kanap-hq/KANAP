@@ -10,12 +10,12 @@ import { EMAIL_ADDRESSES } from '../../../common/text-scan';
 const MAX_SUMMARY_CHARS = 2000;
 const MAX_PAYLOAD_JSON_CHARS = 24000;
 // Field names whose value is hidden, wherever they appear in a value.
-const SECRET_KEY_RE = /(api[-_]?key|access[-_]?key|private[-_]?key|token|secret|passw|pwd|passphrase|credential|authorization|bearer|jwt|cookie|session|^auth$)/i;
+const SECRET_KEY_RE = /(api[-_]?key|access[-_]?key|private[-_]?key|token|secret|passw|pwd|passphrase|passhash|credential|authorization|bearer|jwt|cookie|session|^auth$)/i;
 const EMAIL_RE = EMAIL_ADDRESSES;
 const IPV4_RE = /\b(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)\b/g;
 const BEARER_RE = /\bBearer\s+[A-Za-z0-9._~+/=-]{12,}\b/gi;
 // `password=…`, `access_token=…`, `"refresh_token": "…"`, `client_secret=…`, in a text or an address.
-const SECRET_ASSIGNMENT_RE = /(passw(?:or)?d|passphrase|token|secret|api[-_]?key)(\\?["']?\s*[:=]\s*\\?["']?)[^\s"'&]+/gi;
+const SECRET_ASSIGNMENT_RE = /(passw(?:or)?d|passphrase|passhash|token|secret|api[-_]?key)(\\?["']?\s*[:=]\s*\\?["']?)[^\s"'&]+/gi;
 // Keys with a known format: KANAP keys and refresh tokens, provider keys (`sk-…`, `ghp_…`, `xoxb-…`
 // and the like).
 const KNOWN_KEY_RE = new RegExp([
@@ -87,7 +87,8 @@ export function hashStableJson(value: unknown): string {
   return createHash('sha256').update(stableStringify(value)).digest('hex');
 }
 
-function redactString(value: string): string {
+// Credentials only: an address keeps its host, IP address included, and stays usable.
+function redactCredentials(value: string): string {
   return value
     .replace(AUTHORIZATION_VALUE_RE, '$1$2[REDACTED]')
     .replace(COOKIE_VALUE_RE, '$1$2[REDACTED]')
@@ -95,7 +96,11 @@ function redactString(value: string): string {
     .replace(JWT_RE, '[REDACTED]')
     .replace(KNOWN_KEY_RE, '[REDACTED]')
     .replace(BEARER_RE, 'Bearer [REDACTED]')
-    .replace(SECRET_ASSIGNMENT_RE, '$1$2[REDACTED]')
+    .replace(SECRET_ASSIGNMENT_RE, '$1$2[REDACTED]');
+}
+
+function redactString(value: string): string {
+  return redactCredentials(value)
     .replace(EMAIL_RE, '[REDACTED_EMAIL]')
     .replace(IPV4_RE, '[REDACTED_IP]');
 }
@@ -203,7 +208,7 @@ export class AiEvidenceService {
       source_provider: seed.sourceProvider,
       source_object_type: seed.sourceObjectType,
       source_object_id: seed.sourceObjectId ?? null,
-      source_uri: seed.sourceUri ?? null,
+      source_uri: seed.sourceUri == null ? null : redactCredentials(seed.sourceUri),
       trust_level: seed.trustLevel ?? 'system',
       redaction_status: 'redacted',
       content_hash: this.hash(redactedPayload),
