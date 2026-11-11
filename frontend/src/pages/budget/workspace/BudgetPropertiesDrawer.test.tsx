@@ -284,6 +284,27 @@ describe('BudgetPropertiesDrawer end of validity', () => {
   });
 });
 
+describe('BudgetPropertiesDrawer created and updated', () => {
+  // The default year mode drops the current year ("9 Nov"). Both dates keep it, as on a contract.
+  it('shows the year on both dates, including a date of the current year', () => {
+    const year = new Date().getFullYear();
+    const createdAt = `${year}-11-09T08:00:00.000Z`;
+    const updatedAt = `${year}-03-04T18:30:00.000Z`;
+    renderDrawer({ mode: 'edit', createdAt, updatedAt });
+
+    const valueOf = (label: string) => {
+      const row = screen.getByText(label).closest('.kanap-field-label')?.parentElement;
+      expect(row).toBeTruthy();
+      return row?.textContent ?? '';
+    };
+
+    expect(valueOf('opex.fields.created')).toContain(`${year}`);
+    expect(valueOf('opex.fields.updated')).toContain(`${year}`);
+    expect(valueOf('opex.fields.created')).toContain(`9 Nov ${year}`);
+    expect(valueOf('opex.fields.updated')).toContain(`4 Mar ${year}`);
+  });
+});
+
 describe('BudgetPropertiesDrawer cost center and run or build', () => {
   it.each(['create', 'edit'] as const)('shows both rows in %s mode, the cost center picking cost centers only', (mode) => {
     renderDrawer({ mode, costCenterId: 'cc-1', payingCompanyId: 'company-1' });

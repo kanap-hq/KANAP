@@ -97,11 +97,13 @@ export function IncidentWorkspacePage() {
   const canEdit = hasLevel('incidents', 'contributor');
   const isAdmin = hasLevel('incidents', 'admin');
 
+  // Set once this incident is deleted: the page leaves without loading it again.
+  const [deletedRouteId, setDeletedRouteId] = React.useState<string | null>(null);
   const queryKey = React.useMemo(() => ['incident', routeId] as const, [routeId]);
   const { data, isPlaceholderData, error: loadError } = useQuery({
     queryKey,
     queryFn: () => incidentsApi.get(routeId),
-    enabled: !isCreate && canView,
+    enabled: !isCreate && canView && deletedRouteId !== routeId,
     placeholderData: (previous) => previous,
   });
   const stale = isPlaceholderData;
@@ -659,7 +661,10 @@ export function IncidentWorkspacePage() {
           incidentName={`${formatItemRef('incident', data.item_number)} ${data.title}`}
           disabled={stale}
           beforeDelete={() => flushAll()}
-          onDeleted={leaveRegister}
+          onDeleted={() => {
+            setDeletedRouteId(routeId);
+            leaveRegister();
+          }}
           onError={setError}
         />
       )}
