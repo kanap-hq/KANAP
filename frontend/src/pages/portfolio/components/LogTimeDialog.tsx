@@ -21,6 +21,8 @@ import { useAuth } from '../../../auth/AuthContext';
 import DateEUField from '../../../components/fields/DateEUField';
 import UserSelect from '../../../components/fields/UserSelect';
 import { localTodayYmd } from '../../../lib/datetime';
+import { useLocale } from '../../../i18n/useLocale';
+import { formatLocaleFigure } from '../figures';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 
 type TimeEntryCategory = 'it' | 'business';
@@ -57,6 +59,7 @@ export default function LogTimeDialog({
 }: LogTimeDialogProps) {
   const { profile } = useAuth();
   const { t } = useTranslation(['portfolio', 'common', 'errors']);
+  const locale = useLocale();
   const isEdit = !!editEntry;
 
   const [category, setCategory] = React.useState<TimeEntryCategory>('it');
@@ -224,7 +227,7 @@ export default function LogTimeDialog({
           <Typography variant="body2" color="text.secondary">
             {t('portfolio:dialogs.logTime.helper.total', {
               hours: totalHours,
-              md: (totalHours / 8).toFixed(1),
+              md: formatLocaleFigure(totalHours / 8, locale, 1),
             })}
           </Typography>
 

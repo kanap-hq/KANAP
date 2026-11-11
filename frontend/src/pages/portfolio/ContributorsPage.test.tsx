@@ -43,6 +43,8 @@ const translate = (key: string, opts?: Record<string, unknown>) => {
 const translation = { t: translate, i18n: { language: 'en', resolvedLanguage: 'en' } };
 
 vi.mock('react-i18next', () => ({
+  // ContributorsPage reads the locale through i18n, which registers this plugin.
+  initReactI18next: { type: '3rdParty', init: () => undefined },
   useTranslation: () => translation,
 }));
 
