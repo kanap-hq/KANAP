@@ -507,6 +507,44 @@ describe('Layout section tabs on a narrow window', () => {
   });
 });
 
+describe('Layout section tabs underline', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it('follows the active tab when the row changes width, as when the logo loads', () => {
+    const watches: Array<{ callback: ResizeObserverCallback; targets: Element[]; live: boolean }> = [];
+    class FakeResizeObserver {
+      private watch: { callback: ResizeObserverCallback; targets: Element[]; live: boolean };
+      constructor(callback: ResizeObserverCallback) { this.watch = { callback, targets: [], live: true }; watches.push(this.watch); }
+      observe(target: Element) { this.watch.targets.push(target); }
+      unobserve() {}
+      disconnect() { this.watch.live = false; }
+    }
+    vi.stubGlobal('ResizeObserver', FakeResizeObserver);
+    renderShell();
+    const nav = screen.getByRole('tablist', { name: 'nav:topBar.sectionNav' });
+    const root = nav.closest('.MuiTabs-root') as HTMLElement;
+    const active = within(nav).getByRole('tab', { selected: true });
+    const indicator = root.querySelector('.MuiTabs-indicator') as HTMLElement;
+
+    // The logo loads: the row narrows and its centred tabs move, without changing size.
+    const rect = (left: number, width: number) => ({ left, width, right: left + width, top: 0, bottom: 48, height: 48, x: left, y: 0, toJSON: () => ({}) }) as DOMRect;
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      if (this === active) return rect(420, 124);
+      if (this.classList.contains('MuiTabs-scroller')) return rect(100, 1000);
+      return rect(0, 0);
+    });
+    const rowWatches = watches.filter((w) => w.live && w.targets.includes(root));
+    expect(rowWatches).toHaveLength(1);
+    act(() => rowWatches[0].callback([], {} as ResizeObserver));
+
+    expect(indicator.style.left).toBe('320px');
+    expect(indicator.style.width).toBe('124px');
+  });
+});
+
 describe('Layout section tabs scroll arrows', () => {
   // MUI shows each arrow while the first (or last) tab is out of view, watched by an IntersectionObserver.
   type Watch = { targets: Element[]; live: boolean };
