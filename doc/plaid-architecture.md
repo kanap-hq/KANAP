@@ -1239,17 +1239,52 @@ web results and triage proceeds on knowledge and the model.
 
 ### Helpdesk triage pipeline
 
-Each ticket goes through four LLM stages in `runHelpdeskTicketingTriage`
+Each ticket goes through these LLM stages in `runHelpdeskTicketingTriage`
 (`ai-agent-control.service.ts`): need representation, knowledge search
-(planner and interpreter), action planner, and reply synthesis. An optional
-vision step describes requester screenshots first. All stages call
-`AiAgentLlmClient.callJsonModel`. The run produces proposals, not writes.
+(planner and interpreter), action planner, then the calls that write the
+texts. An optional vision step describes requester screenshots first. All
+stages call `AiAgentLlmClient.callJsonModel`. The run produces proposals, not
+writes. An agent with no library to cite runs no knowledge search.
 
-- **Synthesis** composes the requester reply and a technician brief with
-  `used_sources` and `rejected_sources`. Greeting, footer and signature are
-  deterministic and localized. Citation validation drops references the model
-  invented. The fallback lists titles only and never dumps document bodies.
-  Administrative replies are authored by the action planner and skip synthesis.
+Decisions and texts for the requester come from separate calls
+(`public-reply-sources.ts`). The action planner and the texts for a technician
+(technician brief, internal note) read every item of the ticket, internal notes
+included. A text for the requester is written by a call that reads the public
+items of the ticket and the documents of the libraries the agent may cite, and
+nothing the calls on the whole ticket wrote, except one value of a closed list.
+
+- **Action planner** decides escalation, assignment, classification, status
+  and which reply the requester gets. It writes no text for the requester: a
+  sourced answer goes to synthesis, an administrative reply names a configured
+  exact message (`verbatim_ref`) or one intent of the closed list below.
+- **Synthesis** composes the sourced requester reply with `used_sources` and
+  `rejected_sources`. Greeting, footer and signature are deterministic and
+  localized. Citation validation drops references the model invented. The
+  fallback lists titles only and never dumps document bodies.
+- **Technician brief.** When every item of the ticket is public, the synthesis
+  call writes it with the reply. When the ticket holds internal items, a call of
+  its own (`technician_brief`) writes it from every item and the proposed
+  reply, and only when an internal note carries it. When it is not written
+  (error, run cap), the internal note gives the reason code.
+- **Administrative reply** (`administrative_reply`) is written by a public call
+  from the public items of the ticket and the fixed instruction of its intent:
+  `close_reply` (closed after inactivity, with a terminal status),
+  `acknowledgement` (request received), `request_information` (ask the
+  requester for a detail), `awaiting_requester` (waits for the requester, with
+  the pending status), `escalation_notice` (passed to a team, with an
+  assignment) and `resolution_confirmation` (ask the requester to confirm the
+  resolution). A value outside the list, or none, writes nothing: the reply is
+  skipped with its reason and the rest of the plan stands. A plan prepares one
+  requester reply, its first one, and writes an administrative reply at most
+  once, only when it is that reply. When the reply is not written, the plan
+  drops the pending status, and the terminal status of a close reply, and the
+  internal note says why; a pending proposal of the same decision stays.
+- **Model calls per ticket.** Planner, then: one synthesis call for a sourced
+  answer on a ticket with only public items; synthesis plus technician brief
+  when the ticket holds internal items and an internal note is prepared; one
+  administrative reply call for a written administrative reply; none for a
+  configured exact message or an internal escalation. Every call counts in the
+  run total that the costs and the daily cap read.
 - **Persona and prompt compiler** (`ai-agent-prompt-compiler.service.ts`) uses
   three trust tiers: an immutable per-task floor, configured guidance as
   bounded marked JSON, then the untrusted ticket payload. `sliceFor` decides
