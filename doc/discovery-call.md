@@ -45,6 +45,8 @@ Each click posts `POST /api/discovery-call/clicks { placement }` (signed-in user
 
 Every change writes `trial.discovery_call_updated` (before and after: date, state, source, note) or `trial.discovery_call_removed`, with `table_name = 'trial'` and the tenant as `record_id`.
 
+Retention (privacy policy, section 6: at most sixty days after the call): the daily task `trial-workspace-expiry` (`doc/architecture.md`) erases the note and the date of the call of a subscribed workspace (subscription linked to Stripe) `DISCOVERY_CALL_RETENTION_DAYS` (60) days after the call, through `eraseExpiredDiscoveryCall`. The state, the source and the booking uid stay; the erasure writes no audit entry. A workspace that never subscribed is deleted with its call thirty days after its trial ends.
+
 ## Cal.com webhook
 
 `POST /api/discovery-call/calcom`, public, on any host of the API (the same as the Stripe webhook). Cal.com signs the raw body with the secret: `x-cal-signature-256` is its HMAC-SHA256 in hex. Answers: 404 without a secret, 401 on a bad or missing signature, 200 otherwise, including for an event the webhook ignores (Cal.com does not retry it).

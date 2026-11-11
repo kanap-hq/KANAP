@@ -367,6 +367,66 @@ async function testRecheckLocksTheRow() {
   }
 }
 
+async function seedDiscoveryCall(tenantId: string, scheduledAt: Date, note: string) {
+  await inTenant(tenantId, (manager) => manager.query(
+    `INSERT INTO trial_discovery_calls (tenant_id, scheduled_at, status, source, note, external_id)
+     VALUES ($1, $2, 'booked', 'calcom', $3, 'cal_uid_spec')`,
+    [tenantId, scheduledAt, note],
+  ));
+}
+
+async function discoveryCallOf(tenantId: string) {
+  const [row] = await inTenant(tenantId, (manager) => manager.query(
+    `SELECT scheduled_at, status, source, note, external_id FROM trial_discovery_calls WHERE tenant_id = $1`,
+    [tenantId],
+  ));
+  return row;
+}
+
+// Spec 7: the note and the date of the discovery call of a subscribed workspace are erased sixty
+// days after the call (privacy policy, section 6); nothing else changes, a second run does nothing.
+async function testDiscoveryCallRetention() {
+  const svc = buildServices();
+  const clock = new Date('2026-09-01T04:15:00.000Z');
+  const before = (days: number) => new Date(clock.getTime() - days * DAY_MS);
+  const subscribed = [{ status: 'active', stripeSubscriptionId: 'sub_spec_call', planName: 'Hosted KANAP' }];
+  const ids: Record<string, string> = {};
+  try {
+    ids.day59 = await seedTenant({ tag: 'call59', subscriptions: subscribed });
+    ids.day60 = await seedTenant({ tag: 'call60', subscriptions: subscribed });
+    // Not subscribed (a trial extended by hand): left to the deletion of the workspace.
+    ids.trial = await seedTenant({ tag: 'calltrial', subscriptions: [{ status: 'trialing', trialEnd: new Date(clock.getTime() + 5 * DAY_MS) }] });
+    await seedDiscoveryCall(ids.day59, before(59), 'Note 59');
+    await seedDiscoveryCall(ids.day60, before(60), 'Note 60');
+    await seedDiscoveryCall(ids.trial, before(90), 'Note trial');
+    const scope = Object.values(ids);
+
+    const first = await expiryService(svc).run({ now: clock, tenantIds: scope });
+    assert.deepEqual([first.errors, first.deleted, first.discoveryCallsErased], [[], [], 1]);
+
+    const kept59 = await discoveryCallOf(ids.day59);
+    assert.equal(kept59.note, 'Note 59', 'a call 59 days old keeps its note');
+    assert.equal(new Date(kept59.scheduled_at).getTime(), before(59).getTime());
+    assert.deepEqual(
+      await discoveryCallOf(ids.day60),
+      { scheduled_at: null, status: 'booked', source: 'calcom', note: null, external_id: 'cal_uid_spec' },
+      'a call 60 days old loses its note and its date, nothing else',
+    );
+    const trial = await discoveryCallOf(ids.trial);
+    assert.equal(trial.note, 'Note trial', 'a workspace without a subscription is left as it is');
+    assert.equal(new Date(trial.scheduled_at).getTime(), before(90).getTime());
+    for (const id of scope) assert.equal((await tenantRow(id)).status, TenantStatus.ACTIVE);
+
+    const again = await expiryService(svc).run({ now: clock, tenantIds: scope });
+    assert.deepEqual([again.errors, again.discoveryCallsErased], [[], 0]);
+    assert.equal((await discoveryCallOf(ids.day59)).note, 'Note 59');
+    assert.equal((await discoveryCallOf(ids.day60)).note, null);
+    assert.equal((await discoveryCallOf(ids.trial)).note, 'Note trial');
+  } finally {
+    await cleanupTenants(Object.values(ids));
+  }
+}
+
 void runSpecs('trial-workspace-expiry.integration.spec', [
   testSelection,
   testCapPerRun,
@@ -374,4 +434,5 @@ void runSpecs('trial-workspace-expiry.integration.spec', [
   testSubscribedMeanwhile,
   testStripeUnreachable,
   testRecheckLocksTheRow,
+  testDiscoveryCallRetention,
 ]);
