@@ -295,6 +295,31 @@ function paymentNotice(
   }
 }
 
+/**
+ * Set in this browser session when the page sends the person to the portal to pay: only that
+ * return pays the open invoice, never the address reopened from the history or received by a link.
+ */
+const PAY_ON_RETURN_MARK = 'billing-pay-on-return';
+
+function markPayOnReturn() {
+  try {
+    window.sessionStorage.setItem(PAY_ON_RETURN_MARK, '1');
+  } catch {
+    // No session storage: the return pays nothing, the button stays.
+  }
+}
+
+/** Whether this session sent the person to the portal to pay; the mark is used once. */
+function takePayOnReturnMark(): boolean {
+  try {
+    const marked = window.sessionStorage.getItem(PAY_ON_RETURN_MARK) === '1';
+    window.sessionStorage.removeItem(PAY_ON_RETURN_MARK);
+    return marked;
+  } catch {
+    return false;
+  }
+}
+
 type BillingInterval = 'monthly' | 'annual';
 
 /** "Switches to monthly on 14 Oct 2027." for a live subscription with a planned switch, else null. */
@@ -700,8 +725,12 @@ export default function BillingCenter() {
       const returnUrl = window.location.origin + '/admin/billing' + (payOnReturn ? '?pay_invoice=1' : '');
       const res = await api.post('/billing/portal', { returnUrl });
       const url = res.data?.url;
-      if (url) window.location.href = url;
-      else setPortalError(t('billing.messages.portalUnavailable'));
+      if (url) {
+        if (payOnReturn) markPayOnReturn();
+        window.location.href = url;
+      } else {
+        setPortalError(t('billing.messages.portalUnavailable'));
+      }
     } catch (e: any) {
       setPortalError(getApiErrorMessage(e, t, t('billing.messages.portalFailed')));
     } finally {
@@ -726,7 +755,8 @@ export default function BillingCenter() {
   };
 
   // The portal returns with `pay_invoice=1` once the card is updated: the open invoice is charged
-  // on it now. Once per return (the server also takes the payment only once).
+  // on it now. Once per return (the server also takes the payment only once), and only when this
+  // browser session opened the portal to pay: the address alone pays nothing.
   const payOnReturn = searchParams.get('pay_invoice') === '1';
   React.useEffect(() => {
     if (!payOnReturn) return;
@@ -736,6 +766,7 @@ export default function BillingCenter() {
       return next;
     }, { replace: true });
     if (!canManage || payingRef.current) return;
+    if (!takePayOnReturnMark()) return;
     payingRef.current = true;
     void (async () => {
       setPayNotice(null);

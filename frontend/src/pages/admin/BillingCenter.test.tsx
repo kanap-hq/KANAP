@@ -51,6 +51,19 @@ vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => authState,
 }));
 
+// jsdom here has no usable session storage: a store per test.
+const sessionStore = new Map<string, string>();
+Object.defineProperty(window, 'sessionStorage', {
+  configurable: true,
+  value: {
+    getItem: (key: string) => sessionStore.get(key) ?? null,
+    setItem: (key: string, value: string) => { sessionStore.set(key, String(value)); },
+    removeItem: (key: string) => { sessionStore.delete(key); },
+    clear: () => sessionStore.clear(),
+  },
+});
+const PAY_ON_RETURN_MARK = 'billing-pay-on-return';
+
 const EMPTY_CONTACT = {
   name: null,
   company: null,
@@ -330,6 +343,7 @@ describe('BillingCenter unpaid invoice', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    sessionStore.clear();
   });
 
   it('shows a refused card payment with its reason and the date access becomes limited', async () => {
@@ -372,6 +386,13 @@ describe('BillingCenter unpaid invoice', () => {
     }));
   });
 
+  it('marks this browser session when it opens the portal to pay', async () => {
+    (api.post as any).mockResolvedValue({ data: { url: '#portal' } });
+    renderPage(CARD_REFUSED);
+    fireEvent.click(await screen.findByRole('button', { name: 'Update card and pay' }));
+    await waitFor(() => expect(sessionStore.get(PAY_ON_RETURN_MARK)).toBe('1'));
+  });
+
   it('opens the invoice page of a bank transfer subscription', async () => {
     renderPage(TRANSFER_OVERDUE);
     const link = await screen.findByRole('link', { name: 'Pay invoice' });
@@ -396,6 +417,8 @@ describe('BillingCenter unpaid invoice', () => {
       paid = true;
       return { data: answer };
     });
+    // This browser session opened the portal to pay.
+    sessionStore.set(PAY_ON_RETURN_MARK, '1');
     // Read again after the payment, the profile carries the summary the payment answered.
     renderPage(CARD_REFUSED, {}, '/admin/billing?pay_invoice=1', () => (paid ? after : CARD_REFUSED));
     await waitFor(() => expect(api.post).toHaveBeenCalledWith('/billing/pay-invoice'));
@@ -414,6 +437,14 @@ describe('BillingCenter unpaid invoice', () => {
     expect(await screen.findByText('Invoice paid.')).toBeInTheDocument();
     await waitFor(() => expect(screen.queryByText(/Payment refused on/)).not.toBeInTheDocument());
     expect((api.post as any).mock.calls.filter(([url]: [string]) => url === '/billing/pay-invoice')).toHaveLength(1);
+    expect(sessionStore.has(PAY_ON_RETURN_MARK)).toBe(false);
+  });
+
+  it('pays nothing when the return address is opened without the portal (history, link)', async () => {
+    renderPage(CARD_REFUSED, {}, '/admin/billing?pay_invoice=1');
+    expect(await screen.findByText('Payment refused on 10 Nov 2099: insufficient funds.')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Update card and pay' })).toBeEnabled();
+    expect(api.post).not.toHaveBeenCalled();
   });
 
   it('says the new card was refused, with its reason', async () => {
