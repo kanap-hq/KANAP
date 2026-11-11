@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { Box, Button, Link as MLink, Menu, MenuItem, Stack, Typography } from '@mui/material';
+import { Box, Button, Link as MLink, Menu, MenuItem, Stack, Tooltip, Typography } from '@mui/material';
 import { ICellRendererParams } from 'ag-grid-community';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -38,6 +38,8 @@ export type TechnologyRow = {
   applications: number;
   it_owner_names?: string[];
   next_support_end: string | null;
+  /** Which end `next_support_end` is. */
+  next_support_end_kind?: 'standard' | 'extended' | null;
   /** CVE still to review, and those critical or high (null while the vulnerability feed is off). */
   vulnerabilities_to_review?: number | null;
   vulnerabilities_severe?: number | null;
@@ -144,7 +146,8 @@ export default function TechnologiesPage() {
       if (!value) return null;
       // The next end of support of the versions in use: coloured when it calls for attention.
       const state = supportStateOf(value, null);
-      return (
+      const kind = params.data?.next_support_end_kind;
+      const date = (
         <Box
           component="span"
           data-testid="support-end"
@@ -154,9 +157,11 @@ export default function TechnologiesPage() {
           {formatSupportDate(value, locale)}
         </Box>
       );
+      // The tooltip says which end the date is: the standard one, or the extended one once the standard ends have passed.
+      return kind ? <Tooltip title={t(kind === 'extended' ? 'workspace.technology.versions.extendedEnd' : 'workspace.technology.versions.standardEnd')}>{date}</Tooltip> : date;
     };
     return Cell;
-  }, [locale]);
+  }, [locale, t]);
 
   const familyValues = useCallback(async () => (byField.technologyFamily || [])
     .map((option) => ({ value: option.code, label: option.label }))
