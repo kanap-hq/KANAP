@@ -83,7 +83,7 @@ Haga clic en cualquier fila de la lista para abrir el espacio de trabajo de la e
 
 - **Encabezado**: el nombre de la empresa. Haga clic en él para cambiar el nombre de la empresa. Las flechas con «N de M» permiten moverse entre empresas en el orden y con los filtros de la lista, sin volver a ella. El enlace de retorno, **Empresas**, vuelve a la lista con su contexto de búsqueda intacto
 - **Estado**, bajo el nombre: **Activado** o **Desactivado**. Haga clic para cambiarlo. Elegir **Desactivado** desactiva la empresa de inmediato: el fin de validez pasa a ser la hora actual
-- **Panel Propiedades** a la derecha: **País**, **Moneda base**, **Plan de cuentas** y **Ciclo de vida**. Use el botón situado junto al panel para plegarlo o volver a abrirlo
+- **Panel de propiedades** a la derecha: **País**, **Moneda base**, **Plan de cuentas** y **Ciclo de vida**. Use el botón situado junto al panel para plegarlo o volver a abrirlo
 
 - **Eliminar**, un icono de papelera arriba a la derecha: visible para los administradores de empresas (`companies:admin`). Consulte [Eliminar una empresa](#eliminar-una-empresa)
 
@@ -91,7 +91,7 @@ Haga clic en cualquier fila de la lista para abrir el espacio de trabajo de la e
 
 ---
 
-### Panel Propiedades
+### Panel de propiedades
 
 - **País** (obligatorio): código de país ISO, búsqueda por nombre o código. Al cambiar el país, el **Plan de cuentas** también pasa al predeterminado del nuevo país, pero solo si el plan actual pertenece a otro país. Un plan de cuentas global se mantiene
 - **Moneda base** (obligatorio): código de moneda ISO, búsqueda por nombre o código
@@ -102,7 +102,7 @@ Haga clic en cualquier fila de la lista para abrir el espacio de trabajo de la e
 
 ### Visión general
 
-La pestaña Visión general contiene la dirección, los datos de registro y las notas. El nombre, el país, la moneda, el plan de cuentas y el ciclo de vida están en el encabezado y en el panel **Propiedades**.
+La pestaña Visión general contiene la dirección, los datos de registro y las notas. El nombre, el país, la moneda, el plan de cuentas y el ciclo de vida están en el encabezado y en el panel de propiedades.
 
 **Qué puede editar**:
 
@@ -147,7 +147,7 @@ Cada empresa puede vincularse a un **Plan de cuentas** (CoA), que define el conj
 **Cómo funciona**:
 
 - Cuando crea una empresa, se asigna automáticamente al CoA predeterminado para su país (si existe). Si no existe un predeterminado para el país, se utiliza el plan que tiene el rol **Predeterminado para otros países**.
-- Puede cambiar la asignación de CoA en el panel **Propiedades** usando el selector de **Plan de cuentas**. El selector muestra los CoA que coinciden con el país de la empresa más cualquier CoA de alcance global.
+- Puede cambiar la asignación de CoA en el panel de propiedades usando el selector de **Plan de cuentas**. El selector muestra los CoA que coinciden con el país de la empresa más cualquier CoA de alcance global.
 - Cuando cambia el país de la empresa, el CoA lo sigue si el actual pertenece a otro país: pasa al predeterminado del nuevo país. Un CoA global se mantiene.
 - En una empresa existente, el CoA no se puede vaciar. Solo puede sustituirlo por otro.
 - El CoA que seleccione determina qué cuentas aparecen en el desplegable de cuentas al crear o editar líneas de gasto para esta empresa.

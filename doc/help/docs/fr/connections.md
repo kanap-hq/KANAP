@@ -95,7 +95,7 @@ L'onglet [Réseau](assets.md#network) de chaque membre liste les connexions de s
 
 ## L'espace de travail Connexions
 
-Cliquez sur une ligne pour ouvrir l'espace de travail. Il a trois onglets : **Vue d'ensemble**, **Chemin** et **Historique** (les modifications apportées à la connexion, voir [Historique des fiches](record-history.md)). Le panneau des propriétés, à droite, porte **Cycle de vie**, **Topologie**, **Mode de risque**, **Criticité**, **Classification des données**, **Contient des PII** et **Créé le**. Les modifications s'enregistrent automatiquement.
+Cliquez sur une ligne pour ouvrir l'espace de travail. Il a trois onglets : **Vue d'ensemble**, **Chemin** et **Historique** (les modifications apportées à la connexion, voir [Historique des fiches](record-history.md)). Le panneau Propriétés, à droite, porte **Cycle de vie**, **Topologie**, **Mode de risque**, **Criticité**, **Classification des données**, **Contient des PII** et **Créé le**. Les modifications s'enregistrent automatiquement.
 
 **Supprimer**, une icône de corbeille dans l'en-tête, supprime la connexion après confirmation (`infrastructure:member`). La confirmation compte les sauts supprimés avec elle et les liaisons d'interfaces dont elle est détachée. Les interfaces elles-mêmes restent.
 
@@ -122,7 +122,7 @@ Chaque saut a :
 
 ### Risque
 
-**Mode de risque**, dans le panneau des propriétés :
+**Mode de risque**, dans le panneau Propriétés :
 
   - **Manuel** : Vous fixez directement la criticité, la classification des données et les PII
   - **Dérivé** : Les valeurs viennent des liaisons d'interfaces liées. Les champs sont en lecture seule et montrent les valeurs les plus élevées parmi les interfaces liées

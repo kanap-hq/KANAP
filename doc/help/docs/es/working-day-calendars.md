@@ -93,7 +93,7 @@ Haga clic en cualquier fila de la lista para abrir el espacio de trabajo. El bot
 
 - **Encabezado**: el código como referencia, con un botón para copiarlo, y el nombre. Haga clic en el nombre para cambiarlo. **Ant.** / **Sig.** recorren la lista en su orden y con sus filtros actuales, y el botón de cierre vuelve a la lista
 - **Zona principal**: una línea como "Usado por 3 líneas OPEX y 1 línea CAPEX." cuando hay líneas de presupuesto que usan el calendario, la **Descripción** y después la sección **Días laborables**
-- **Panel Propiedades** a la derecha: **Código**, **Origen** (solo calendarios estándar, por ejemplo "Francia (Département Moselle)", de solo lectura) y **Ciclo de vida**
+- **Panel de propiedades** a la derecha: **Código**, **Origen** (solo calendarios estándar, por ejemplo "Francia (Département Moselle)", de solo lectura) y **Ciclo de vida**
 
 **Guardado automático**: Cada cambio se guarda por sí solo. No hay botón Guardar. Los campos de texto y los meses se guardan al salir de ellos (pulse Intro en **Código** o en un mes para guardar de inmediato); el ciclo de vida se guarda en cuanto lo cambia. Cuando se rechaza un cambio, el motivo aparece bajo el campo que lo causó, por ejemplo un código duplicado bajo **Código**.
 

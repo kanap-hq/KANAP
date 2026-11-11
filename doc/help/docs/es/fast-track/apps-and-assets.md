@@ -84,7 +84,7 @@ Los cambios de un despliegue se guardan en cuanto confirma el cuadro de diálogo
 
 ## Paso 3: Asignar responsables
 
-Los responsables están en el panel **Propiedades**, a la derecha del espacio de trabajo de la aplicación.
+Los responsables están en el panel de propiedades, a la derecha del espacio de trabajo de la aplicación.
 
 ### Responsables de negocio
 
@@ -182,7 +182,7 @@ Complete los campos principales:
 | **Entorno** | A qué entorno sirve | `Prod` |
 | **Descripción** | Cualquier contexto adicional |  |
 
-El panel **Propiedades** a la derecha contiene el resto: el conmutador **Clúster**, **Zona de administración**, **Sub-ubicación**, **Ciclo de vida**, **Fecha de puesta en marcha** y **Fecha de fin de vida**. Una vez seleccionada una ubicación, varios **campos de solo lectura** se derivan automáticamente:
+El panel de propiedades a la derecha contiene el resto: el conmutador **Clúster**, **Zona de administración**, **Sub-ubicación**, **Ciclo de vida**, **Fecha de puesta en marcha** y **Fecha de fin de vida**. Una vez seleccionada una ubicación, varios **campos de solo lectura** se derivan automáticamente:
 
 - **Tipo de alojamiento** (on-premises, nube, colocation, etc.)
 - **Proveedor cloud / Empresa operadora** (p. ej., AWS, Azure o la empresa que opera la instalación)
@@ -210,7 +210,7 @@ Haga clic en **Crear** para desbloquear el espacio de trabajo completo. La pesta
 
 Vaya a la pestaña **Operaciones** para añadir las **Tecnologías** que lleva el servidor, con sus versiones. Añada Windows Server, Ubuntu u otra tecnología de la familia **Sistema operativo**: pasa a ser el sistema operativo del servidor.
 
-Si este activo es un clúster, active el conmutador **Clúster** en el panel **Propiedades** y luego añada sus servidores miembros con **Añadir miembros** en la parte superior de la pestaña **Operaciones**. Una aplicación que se ejecuta en cada miembro se asigna al clúster: consulte [Aplicaciones en un clúster](../assets.md#applications-on-a-cluster).
+Si este activo es un clúster, active el conmutador **Clúster** en el panel de propiedades y luego añada sus servidores miembros con **Añadir miembros** en la parte superior de la pestaña **Operaciones**. Una aplicación que se ejecuta en cada miembro se asigna al clúster: consulte [Aplicaciones en un clúster](../assets.md#applications-on-a-cluster).
 
 ---
 
@@ -293,7 +293,7 @@ Luego utilice el [Mapa de interfaces](../interface-map.md) para visualizar el fl
 |-----------|---------|
 | Crear una aplicación | Panorama IT > Aplicaciones > Nueva aplicación |
 | Añadir entornos | Abrir app > pestaña Despliegues > Agregar despliegue |
-| Asignar responsables | Abrir app > panel Propiedades |
+| Asignar responsables | Abrir app > panel de propiedades |
 | Configurar métodos de acceso | Abrir app > pestaña Operaciones |
 | Vincular presupuestos/contratos | Abrir app > pestaña Relaciones |
 | Adjuntar documentos de conocimiento | Abrir app > pestaña Vista general > Base de conocimiento |

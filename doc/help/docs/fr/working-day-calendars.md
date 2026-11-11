@@ -72,7 +72,7 @@ Cliquez sur n'importe quelle cellule pour ouvrir l'espace de travail.
 
 ## Créer un calendrier
 
-Cliquez sur **Nouveau**. La page du nouveau calendrier s'ouvre, son panneau des propriétés ouvert. Ensuite :
+Cliquez sur **Nouveau**. La page du nouveau calendrier s'ouvre, son panneau Propriétés ouvert. Ensuite :
 
 1. **Pays** (facultatif) : tapez pour rechercher, par nom ou par code à deux lettres. Avec un pays, le calendrier est standard
 2. **Région** : affichée lorsque le pays a des régions, par exemple les Länder allemands ou les départements français qui ont leurs propres jours fériés. Gardez **Tout le pays**, ou choisissez une région

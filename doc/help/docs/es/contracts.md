@@ -120,9 +120,9 @@ La fila fijada abajo dice **Total (n contratos)**. Suma los importes anuales de 
 
 ### Encabezado y propiedades
 
-El encabezado muestra el nombre del contrato (haga clic para cambiarlo), **Anterior** / **Siguiente** con la posición en la lista, y una barra con **Proveedor**, **Empresa contratante**, **Responsable** y **Estado**. El responsable y el estado se cambian ahí mismo. El proveedor y la empresa abren el panel **Propiedades**.
+El encabezado muestra el nombre del contrato (haga clic para cambiarlo), **Anterior** / **Siguiente** con la posición en la lista, y una barra con **Proveedor**, **Empresa contratante**, **Responsable** y **Estado**. El responsable y el estado se cambian ahí mismo. El proveedor y la empresa abren el panel de propiedades.
 
-El panel **Propiedades**, a la derecha, contiene todos los campos del contrato: las partes, **Inicio**, **Duración (meses)**, **Preaviso (meses)**, **Renovación tácita**, **Importe anual**, **Moneda**, **Facturación**, luego **Ciclo de vida** (**Estado** y **Fin de validez**), **Creado** y **Actualizado**. Ábralo o ciérrelo con su botón; Kadratis recuerda su elección.
+El panel de propiedades, a la derecha, contiene todos los campos del contrato: las partes, **Inicio**, **Duración (meses)**, **Preaviso (meses)**, **Renovación tácita**, **Importe anual**, **Moneda**, **Facturación**, luego **Ciclo de vida** (**Estado** y **Fin de validez**), **Creado** y **Actualizado**. Ábralo o ciérrelo con su botón; Kadratis recuerda su elección.
 
 **Centro de coste o grupo** es opcional. Sitúa el contrato bajo un centro de coste o un grupo para el [acceso a los datos](data-access.md): las personas limitadas a ese nodo, o a un grupo superior, ven el contrato, igual que las limitadas a su empresa.
 
@@ -305,7 +305,7 @@ Necesita `contracts:member` para decidir. Los lectores ven el recuadro sin sus a
 
 ### Desactivar o reactivar la renovación tácita
 
-**Renovación tácita**, en el panel **Propiedades**, sigue las mismas reglas.
+**Renovación tácita**, en el panel de propiedades, sigue las mismas reglas.
 
 **No** en un contrato ya renovado, o en uno que espera una decisión de renovación, abre **Desactivar la renovación tácita**. La ventana propone una fecha de fin como una rescisión (primer fin que permite el preaviso, cualquier día a partir de hoy, aviso naranja antes del día propuesto, consecuencias para el día elegido) y dice «El contrato terminará el 30 jun. 2027, salvo renovación.». En un contrato ya renovado, añade que sus periodos anteriores se conservan. **Desactivar la renovación** fija ese fin de validez y el campo indica **No**. **Cancelar** no cambia nada.
 

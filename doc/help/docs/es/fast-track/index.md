@@ -43,7 +43,7 @@ Vaya a **Portafolio > Solicitudes** y haga clic en **Nueva solicitud**.
 
 Escriba en el encabezado un título claro y conciso para la iniciativa y pulse Intro. Su solicitud entra en el flujo con estado **Pendiente de revisión**, y se abren todas sus pestañas.
 
-Complete después los detalles mínimos en la barra lateral de propiedades:
+Complete después los detalles mínimos en el panel de propiedades:
 
 | Campo | Qué introducir |
 |-------|---------------|
@@ -340,7 +340,7 @@ Consulte la [referencia de Informes](../portfolio-reporting.md).
 | Ver informes | Portafolio > Informes |
 | Configurar pesos de evaluación | Portafolio > Configuración > Criterios de evaluación |
 | Configurar colaboradores | Portafolio > Colaboradores |
-| Establecer valores predeterminados de clasificación | Portafolio > Colaboradores > abrir perfil > panel Propiedades |
+| Establecer valores predeterminados de clasificación | Portafolio > Colaboradores > abrir perfil > panel de propiedades |
 
 ---
 
