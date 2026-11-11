@@ -15,7 +15,7 @@ import { AiRecommendation } from '../entities/ai-recommendation.entity';
 import { AiRunStep } from '../entities/ai-run-step.entity';
 import { AiRun } from '../entities/ai-run.entity';
 import { AiToolExecution } from '../entities/ai-tool-execution.entity';
-import { inputWithoutValues } from '../evidence/run-result-visibility';
+import { inputWithoutValues, metadataWithoutErrorMessage } from '../evidence/run-result-visibility';
 import { cleanAgentPriority, metadataObject, stringFromMetadata, toIso } from './agent-control-util';
 import { auditActivityType } from './ai-agent-activity-timeline';
 
@@ -28,7 +28,9 @@ import { auditActivityType } from './ai-agent-activity-timeline';
  *
  * A run, its steps, its tool executions and its evidence carry what the tools returned. Their
  * serialisers take `resultsReadable` (evidence/run-result-visibility.ts): without it the line
- * stays and the result is left out, with the values of the arguments the call was made with.
+ * stays (the tool, the names of its arguments, its status and the code of a failure) and the
+ * result is left out, with the values of the arguments and the message of a failure, which quote
+ * the same data.
  */
 
 export function serializeRun(run: AiRun, resultsReadable: boolean) {
@@ -70,11 +72,11 @@ export function serializeToolExecution(tool: AiToolExecution, resultsReadable: b
     input_hash: tool.input_hash,
     input_summary: resultsReadable ? tool.input_summary : inputWithoutValues(tool.input_summary),
     output_summary: resultsReadable ? tool.output_summary : null,
-    error_message: tool.error_message,
+    error_message: resultsReadable ? tool.error_message : null,
     duration_ms: tool.duration_ms,
     usage_json: tool.usage_json,
     cost_json: tool.cost_json,
-    metadata_json: tool.metadata_json,
+    metadata_json: resultsReadable ? tool.metadata_json : metadataWithoutErrorMessage(tool.metadata_json),
     started_at: toIso(tool.started_at),
     completed_at: toIso(tool.completed_at),
     created_at: toIso(tool.created_at),
@@ -92,7 +94,7 @@ export function serializeRunStep(step: AiRunStep, resultsReadable: boolean) {
     capability_version: step.capability_version,
     input_summary: resultsReadable ? step.input_summary : inputWithoutValues(step.input_summary),
     output_summary: resultsReadable ? step.output_summary : null,
-    error_message: step.error_message,
+    error_message: resultsReadable ? step.error_message : null,
     started_at: toIso(step.started_at),
     completed_at: toIso(step.completed_at),
     created_at: toIso(step.created_at),

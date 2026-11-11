@@ -19,8 +19,9 @@ import { runResultAccess } from '../evidence/run-result-visibility';
  * request made with a known key that is revoked or expired, or whose owner may no longer use it.
  * Argument values are kept redacted and truncated; a key or a token never enters the journal.
  *
- * A line says who called which tool, when, with which arguments and how it ended. What the tool
- * returned is read by the person who made the call and by an Administrator whose access to data
+ * A line says who called which tool, when, with which arguments and how it ended (the result and
+ * the coded reason). What the tool returned and the message of a failure, which quotes what was
+ * found, are read by the person who made the call and by an Administrator whose access to data
  * is not limited (evidence/run-result-visibility.ts).
  */
 
@@ -97,7 +98,10 @@ export type AiMcpAuditItem = {
   status: string;
   result: McpAuditResult;
   reason: string | null;
-  /** What the client read when the call was refused or failed, keys and tokens hidden. */
+  /**
+   * What the client read when the call was refused or failed, keys and tokens hidden. Null, like
+   * `output_summary`, for a reader who does not read what the call returned.
+   */
   error_message: string | null;
   effect: string;
   duration_ms: number | null;
@@ -346,16 +350,17 @@ export class AiMcpAuditService {
     );
 
     const page = rows.slice(0, normalized.limit);
-    const readable = runResultAccess(context.userId, async () =>
+    const readsResult = runResultAccess(context.userId, async () =>
       (this.policy ? this.policy.readsEveryRunResult(context, context.manager) : false));
     const resultsReadable = new Map<string, boolean>();
     for (const row of page) {
-      resultsReadable.set(String(row.tool_execution_id), await readable({
+      resultsReadable.set(String(row.tool_execution_id), await readsResult({
         invocation_channel: String(row.invocation_channel),
         trigger_kind: String(row.trigger_kind),
         user_id: row.user_id ? String(row.user_id) : null,
       }));
     }
+    const readable = (row: any) => resultsReadable.get(String(row.tool_execution_id)) === true;
     return {
       items: page.map((row: any) => ({
         run_id: String(row.run_id),
@@ -373,7 +378,7 @@ export class AiMcpAuditService {
         status: String(row.status),
         result: resultOf(String(row.status)),
         reason: row.reason ? String(row.reason) : null,
-        error_message: row.error_message
+        error_message: readable(row) && row.error_message
           ? truncate(hideCredentials(String(row.error_message)), MAX_MESSAGE_CHARS)
           : null,
         effect: String(row.effect),
@@ -382,7 +387,7 @@ export class AiMcpAuditService {
         tool_created_at: new Date(row.tool_created_at).toISOString(),
         completed_at: row.completed_at ? new Date(row.completed_at).toISOString() : null,
         input_summary: row.input_summary ?? null,
-        output_summary: resultsReadable.get(String(row.tool_execution_id)) ? row.output_summary ?? null : null,
+        output_summary: readable(row) ? row.output_summary ?? null : null,
         evidence_ids: Array.isArray(row.evidence_ids) ? row.evidence_ids.map(String) : [],
       })),
       limit: normalized.limit,

@@ -53,7 +53,7 @@ const control = new AiAgentControlService(
 const journal = new AiMcpAuditService(policy());
 
 type People = { author: string; agentReader: string; settingsAdmin: string; administrator: string };
-type Runs = { chat: string; mcp: string; approval: string; agent: string; mcpFailed: string };
+type Runs = { chat: string; mcp: string; approval: string; agent: string; mcpFailed: string; chatFailed: string };
 type Seed = { tenantId: string; people: People; runs: Runs };
 
 // What each tool returned. A value of a person's run must reach nobody but its readers.
@@ -72,6 +72,22 @@ const marker = (run: ResultRun) => String(RESULTS[run][0].reference);
 const ARGUMENT_VALUES = { mcp: `Renewal ${TAG} mcp`, mcpFailed: `Renewal ${TAG} failed` };
 const MCP_RUNS = ['mcp', 'mcpFailed'] as const;
 
+// What a failed call says. The message of a failure quotes what the person asked for and what the
+// tool found: it is read like a result. `thrown` is the failure of the call, `reported` the one a
+// tool reports in its own output.
+const ERRORS = {
+  chatFailed: {
+    thrown: `No budget line found matching "BL-${TAG}-missing". Also found: BL-${TAG}-near`,
+    reported: `The supplier SUP-${TAG}-reported was not found`,
+  },
+  mcpFailed: { thrown: `No contract found matching "CTR-${TAG}-missing"` },
+};
+const ERROR_MARKERS = {
+  chatFailed: [`BL-${TAG}-missing`, `BL-${TAG}-near`, `SUP-${TAG}-reported`],
+  mcpFailed: [`CTR-${TAG}-missing`],
+};
+const FAILED_RUNS = ['chatFailed', 'mcpFailed'] as const;
+
 async function seed(): Promise<Seed> {
   const tenantId = randomUUID();
   const ids = () => ({ role: randomUUID(), user: randomUUID() });
@@ -79,7 +95,7 @@ async function seed(): Promise<Seed> {
   const agentReader = ids();
   const settingsAdmin = ids();
   const administrator = ids();
-  const runs: Runs = { chat: randomUUID(), mcp: randomUUID(), approval: randomUUID(), agent: randomUUID(), mcpFailed: '' };
+  const runs: Runs = { chat: randomUUID(), mcp: randomUUID(), approval: randomUUID(), agent: randomUUID(), mcpFailed: '', chatFailed: randomUUID() };
   const runner = dataSource.createQueryRunner();
   await runner.connect();
   try {
@@ -157,12 +173,44 @@ async function seed(): Promise<Seed> {
     await run('agent', { channel: 'internal', trigger: 'internal', surface: 'internal' }, 'ticketing.ticket.get', { ticket_id: '42' }, {
       metadata: { agent_definition_id: randomUUID() },
     });
+    // A conversation whose first tool reported a failure in its output and whose second one threw.
+    const failedInput = { entity_type: 'budget_lines', query: 'missing' };
+    const failedInputSummary = JSON.stringify(summaries.summarize(failedInput));
+    await runner.query(
+      `INSERT INTO ai_runs (id, tenant_id, user_id, invocation_channel, trigger_kind, status, input_summary, output_summary, completed_at)
+       VALUES ($1, $2, $3, 'chat', 'human_user', 'failed', $4::jsonb, $5::jsonb, now())`,
+      [runs.chatFailed, tenantId, author.user, failedInputSummary, JSON.stringify({ error: ERRORS.chatFailed.thrown })],
+    );
+    const failedCalls: Array<{ status: string; message: string; metadata: Record<string, unknown> }> = [
+      {
+        status: 'provider_error',
+        message: ERRORS.chatFailed.reported,
+        metadata: {
+          evidence_ids: [],
+          provider_error: { error_code: 'not_found', message: ERRORS.chatFailed.reported, retryable: false, provider_request_id: null },
+        },
+      },
+      { status: 'failed', message: ERRORS.chatFailed.thrown, metadata: {} },
+    ];
+    for (const [index, call] of failedCalls.entries()) {
+      const stepId = randomUUID();
+      await runner.query(
+        `INSERT INTO ai_run_steps (id, tenant_id, run_id, step_index, kind, status, capability_name, capability_version, input_summary, error_message, completed_at)
+         VALUES ($1, $2, $3, $4, 'tool', $5, 'query_entities', '1.0.0', $6::jsonb, $7, now())`,
+        [stepId, tenantId, runs.chatFailed, index + 1, call.status, failedInputSummary, call.message],
+      );
+      await runner.query(
+        `INSERT INTO ai_tool_executions (tenant_id, run_id, step_id, capability_name, capability_version, surface, effect, status, input_hash, input_summary, error_message, metadata_json, duration_ms, completed_at)
+         VALUES ($1, $2, $3, 'query_entities', '1.0.0', 'chat', 'read', $4, $5, $6::jsonb, $7, $8::jsonb, 9, now())`,
+        [tenantId, runs.chatFailed, stepId, call.status, summaries.hash(failedInput), failedInputSummary, call.message, JSON.stringify(call.metadata)],
+      );
+    }
     // A call that failed before the dispatch kept anything, as the MCP route records it.
     await journal.recordCall({ tenantId, manager: runner.manager }, {
       toolName: 'get_entity_detail',
       arguments: { entity_type: 'contracts', query: ARGUMENT_VALUES.mcpFailed },
       reason: 'not_found',
-      message: 'Contract not found.',
+      message: ERRORS.mcpFailed.thrown,
       effect: 'read',
       capabilityVersion: '1.0.0',
       durationMs: 7,
@@ -221,6 +269,7 @@ function pick(s: Seed, of: (runId: string) => unknown): Record<keyof Runs, unkno
     approval: of(s.runs.approval),
     agent: of(s.runs.agent),
     mcpFailed: of(s.runs.mcpFailed),
+    chatFailed: of(s.runs.chatFailed),
   };
 }
 
@@ -327,6 +376,55 @@ async function testTheAgentsScreensNameTheArgumentsOfAnotherPersonsMcpCall(s: Se
   }
 }
 
+async function testAFailedRunOfAnotherPersonShowsHowItEndedWithoutTheMessage(s: Seed) {
+  for (const reader of [s.people.agentReader, s.people.settingsAdmin]) {
+    const seen = await resultsSeen(s, reader);
+    for (const path of RESULT_READS) {
+      for (const run of FAILED_RUNS) {
+        if (!journalReads(path.name, run)) continue;
+        const { text } = seen[path.name][run];
+        for (const quoted of ERROR_MARKERS[run]) {
+          assert.equal(text.includes(quoted), false, `${path.name} gave the message of the ${run} run: ${text.slice(0, 400)}`);
+        }
+        assert.ok(text.includes(s.runs[run]), `${path.name} lost the line of the ${run} run`);
+        assert.ok(text.includes(s.people.author), `${path.name} lost the author of the ${run} run`);
+      }
+    }
+    // The status and the coded reason stay.
+    const detail: any = await as(s, reader, (ctx) => control.getRunDetail(ctx as any, s.runs.chatFailed));
+    assert.equal(detail.run.status, 'failed');
+    assert.deepEqual(detail.run_steps.map((step: any) => step.status).sort(), ['failed', 'provider_error']);
+    assert.deepEqual(detail.tool_executions.map((tool: any) => tool.status).sort(), ['failed', 'provider_error']);
+    for (const line of [...detail.run_steps, ...detail.tool_executions]) {
+      assert.equal(line.capability_name, 'query_entities');
+      assert.equal(line.error_message, null);
+    }
+    const reported = detail.tool_executions.find((tool: any) => tool.status === 'provider_error');
+    assert.deepEqual(reported.metadata_json.provider_error, { error_code: 'not_found', retryable: false, provider_request_id: null });
+    const page = await as(s, reader, (ctx) => journal.list(ctx as any, { limit: 100 }));
+    const line = page.items.find((item) => item.run_id === s.runs.mcpFailed)!;
+    assert.equal(line.capability_name, 'get_entity_detail');
+    assert.equal(line.result, 'failed');
+    assert.equal(line.reason, 'not_found');
+    assert.equal(line.error_message, null);
+  }
+  // The person whose run it is and an Administrator read the messages.
+  for (const reader of [s.people.author, s.people.administrator]) {
+    const seen = await resultsSeen(s, reader);
+    for (const run of FAILED_RUNS) {
+      for (const quoted of ERROR_MARKERS[run]) {
+        assert.ok(seen['GET ai/admin/control-plane/runs/:id'][run].text.includes(quoted), `the detail of the ${run} run lost ${quoted} for its reader`);
+      }
+    }
+    // The list carries the failure of the run, the journal the one of the call.
+    assert.ok(seen['GET ai/admin/control-plane/runs'].chatFailed.text.includes(ERROR_MARKERS.chatFailed[0]));
+    assert.ok(seen[JOURNAL].mcpFailed.text.includes(ERROR_MARKERS.mcpFailed[0]));
+    const detail: any = await as(s, reader, (ctx) => control.getRunDetail(ctx as any, s.runs.chatFailed));
+    const reported = detail.tool_executions.find((tool: any) => tool.status === 'provider_error');
+    assert.equal(reported.metadata_json.provider_error.message, ERRORS.chatFailed.reported);
+  }
+}
+
 async function testAnAgentRunStaysReadableInFull(s: Seed) {
   const seen = await resultsSeen(s, s.people.agentReader);
   for (const path of RESULT_READS.filter((entry) => entry.name !== 'GET ai/admin/mcp-audit')) {
@@ -409,6 +507,7 @@ async function main() {
   const tests: Array<[string, (s: Seed) => Promise<void> | void]> = [
     ['other people\'s runs show their line without the result', testOtherPeoplesRunsShowTheirLineWithoutTheResult],
     ['the agents screens name the arguments of another person\'s MCP call, without their values', testTheAgentsScreensNameTheArgumentsOfAnotherPersonsMcpCall],
+    ['a failed run of another person shows how it ended, without the message', testAFailedRunOfAnotherPersonShowsHowItEndedWithoutTheMessage],
     ['an agent run stays readable in full', testAnAgentRunStaysReadableInFull],
     ['the author reads their own results', testTheAuthorReadsTheirOwnResults],
     ['an Administrator with all data reads every result', testAnAdministratorWithAllDataReadsEveryResult],

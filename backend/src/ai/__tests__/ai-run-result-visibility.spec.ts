@@ -1,6 +1,11 @@
 import * as assert from 'node:assert/strict';
 import { AiEvidenceService } from '../control-plane/evidence/ai-evidence.service';
-import { inputWithoutValues, isPersonRun, runResultAccess } from '../control-plane/evidence/run-result-visibility';
+import {
+  inputWithoutValues,
+  isPersonRun,
+  metadataWithoutErrorMessage,
+  runResultAccess,
+} from '../control-plane/evidence/run-result-visibility';
 
 // Which runs belong to a person, and who reads what their tools returned.
 
@@ -76,9 +81,28 @@ function testTheInputOfACallWithoutItsValues() {
   assert.equal(inputWithoutValues([input]), null);
 }
 
+function testTheFailureAToolReportedWithoutItsMessage() {
+  const metadata = {
+    evidence_ids: ['e1'],
+    provider_error: { error_code: 'not_found', message: 'No contract matching "Renewal 2027"', retryable: false },
+  };
+  assert.deepEqual(metadataWithoutErrorMessage(metadata), {
+    evidence_ids: ['e1'],
+    provider_error: { error_code: 'not_found', retryable: false },
+  });
+  // The row is left as it was kept.
+  assert.equal(metadata.provider_error.message, 'No contract matching "Renewal 2027"');
+  // A failure kept as a bare text is a message.
+  assert.deepEqual(metadataWithoutErrorMessage({ evidence_ids: [], provider_error: 'No contract matching "Renewal 2027"' }), { evidence_ids: [] });
+  const plain = { evidence_ids: ['e1'] };
+  assert.equal(metadataWithoutErrorMessage(plain), plain);
+  assert.equal(metadataWithoutErrorMessage(null), null);
+}
+
 async function main() {
   testOriginOfARun();
   testTheInputOfACallWithoutItsValues();
+  testTheFailureAToolReportedWithoutItsMessage();
   await testWhoReadsAResult();
   console.log('ai-run-result-visibility.spec: all passed');
 }

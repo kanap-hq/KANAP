@@ -65,3 +65,21 @@ export function inputWithoutValues(inputSummary: unknown): Record<string, unknow
   if (typeof summary === 'string' && ARGUMENT_NAMES.test(summary)) kept.summary = summary;
   return Object.keys(kept).length > 0 ? kept : null;
 }
+
+/**
+ * The metadata of a tool call for a reader who does not read its result. The message of a failure
+ * quotes what was asked and what was found: the failure a tool reported keeps its code only.
+ */
+export function metadataWithoutErrorMessage<T extends Record<string, unknown> | null | undefined>(metadata: T): T {
+  if (!metadata || !('provider_error' in metadata)) return metadata;
+  const kept: Record<string, unknown> = { ...metadata };
+  const reported = kept.provider_error;
+  if (reported && typeof reported === 'object' && !Array.isArray(reported)) {
+    const coded: Record<string, unknown> = { ...reported };
+    delete coded.message;
+    kept.provider_error = coded;
+  } else {
+    delete kept.provider_error;
+  }
+  return kept as T;
+}
