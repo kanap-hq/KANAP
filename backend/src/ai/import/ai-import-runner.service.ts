@@ -55,7 +55,7 @@ type BudgetFileAnswer = {
   snapshot?: unknown;
   fileErrors?: string[];
   headerErrors?: string[];
-  errors?: Array<{ line: number; column: string | null; message: string }>;
+  errors?: Array<{ line: number; column: string | null; message: string; code?: string }>;
   errorCount?: number;
   missing?: Array<{ type: string; count: number }>;
   deletedCount?: number;
@@ -283,7 +283,8 @@ export function budgetBilan(answer: BudgetFileAnswer, dryRun: boolean, lines: re
   const issues: AiImportRunDto['issues'] = [];
   const fileErrors = (answer.fileErrors?.length ?? 0) + (answer.headerErrors?.length ?? 0);
   if (fileErrors > 0) issues.push({ level: 'error', code: null, column: null, count: fileErrors });
-  for (const error of answer.errors ?? []) tally(issues, 'error', null, error.column ?? null);
+  // The code of each error, as the card translates it: the model reads it with its column.
+  for (const error of answer.errors ?? []) tally(issues, 'error', error.code ?? null, error.column ?? null);
   for (const missing of answer.missing ?? []) {
     issues.push({ level: 'error', code: `missing_${missing.type}`, column: null, count: missing.count });
   }

@@ -1,5 +1,11 @@
 import { keepStoredEndOfValidity, matchCode } from '../../common/csv-sheet';
-import { normalizeAnalyticsName } from '../../analytics/analytics-context';
+import {
+  ANALYTICS_NAME_CHARACTERS_MESSAGE,
+  ANALYTICS_NAME_MAX,
+  ANALYTICS_NAME_REQUIRED_MESSAGE,
+  ANALYTICS_NAME_TOO_LONG_MESSAGE,
+  normalizeAnalyticsName,
+} from '../../analytics/analytics-context';
 import { notApplicableDimensionMessage, requiredDimensionMessage } from '../item-analytics.util';
 import { AmountMeasure, MEASURE_FREEZE_COLUMN } from '../amounts-write.util';
 import { formatCentsFixed } from '../../common/amount';
@@ -1024,7 +1030,8 @@ function resolveAnalytics(
       changes.push(column);
       draft.analytics.push({ code, categoryId: null, createName: name });
     } catch (err) {
-      fail(column, analyticsMessage(err));
+      const refusal = analyticsMessage(err, dimension.axisName || code, cell.text);
+      fail(column, refusal.message, refusal.code, refusal.params);
     }
   }
   // Required dimensions of the row's nature, the ones whose column the file leaves out included.
@@ -1283,10 +1290,25 @@ function miss(bag: Bag, type: string, example: string): void {
   bag.missing.set(type, set);
 }
 
-function analyticsMessage(err: unknown): string {
+/**
+ * A new dimension value the analytics rules refuse: the English sentence, and the code and values the
+ * dialog and Kad's card translate. `name` is the dimension's name, `value` the cell.
+ */
+function analyticsMessage(err: unknown, name: string, value: string): BudgetFileSentence {
   const response = (err as { getResponse?: () => unknown }).getResponse?.();
-  if (response && typeof response === 'object' && 'message' in response) return String((response as { message: unknown }).message);
-  return (err as Error).message || 'The dimension value is not valid.';
+  const message = response && typeof response === 'object' && 'message' in response
+    ? String((response as { message: unknown }).message)
+    : (err as Error).message || 'The dimension value is not valid.';
+  switch (message) {
+    case ANALYTICS_NAME_REQUIRED_MESSAGE:
+      return { message, code: 'CSV_VALUE_REQUIRED' };
+    case ANALYTICS_NAME_TOO_LONG_MESSAGE:
+      return { message, code: 'BUDGET_FILE_DIMENSION_VALUE_TOO_LONG', params: { name, max: ANALYTICS_NAME_MAX } };
+    case ANALYTICS_NAME_CHARACTERS_MESSAGE:
+      return { message, code: 'BUDGET_FILE_DIMENSION_VALUE_CHARACTERS', params: { name } };
+    default:
+      return { message, code: 'BUDGET_FILE_DIMENSION_VALUE_INVALID', params: { name, value } };
+  }
 }
 
 export function changedSinceText(ref: string, by: string | null, at: string | null): string {
