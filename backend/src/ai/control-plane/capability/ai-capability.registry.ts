@@ -2368,13 +2368,25 @@ export class AiCapabilityRegistry {
       throw new BadRequestException(legacyFlattenError(parsed.error));
     }
     await policy.assertKnowledgeReadAccess(context, context.manager);
+    if (parsed.data.library_ids && parsed.data.library_ids.length === 0) {
+      // A library list with no library: nothing to search.
+      return {
+        items: [],
+        total: 0,
+        offset: parsed.data.offset,
+        limit: parsed.data.limit,
+        returned: 0,
+        truncated: false,
+        complete: true,
+      };
+    }
     const result = await knowledge.search(
       {
         q: parsed.data.query,
         offset: parsed.data.offset,
         limit: parsed.data.limit,
         matchMode: 'any',
-        ...(parsed.data.library_ids && parsed.data.library_ids.length > 0 ? { library_ids: parsed.data.library_ids } : {}),
+        ...(parsed.data.library_ids ? { library_ids: parsed.data.library_ids } : {}),
       },
       { manager: context.manager, userId: context.userId },
     );

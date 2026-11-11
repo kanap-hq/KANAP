@@ -44,7 +44,7 @@ export function readKanapDataBlock(sources: Record<string, unknown>): {
 // KANAP data OFF (see readKanapDataBlock).
 export function readAgentKnowledgeSources(definition: AiAgentDefinition | null): {
   knowledgeEnabled: boolean;
-  knowledgeLibraryIds: string[] | null; // null = all accessible libraries
+  knowledgeLibraryIds: string[] | null; // null = all accessible libraries; [] = none
   webEnabled: boolean;
   kanapData: { enabled: boolean; domains: Record<KanapEntityFamily, boolean> };
 } {
@@ -58,7 +58,8 @@ export function readAgentKnowledgeSources(definition: AiAgentDefinition | null):
     : [];
   return {
     knowledgeEnabled: knowledge.enabled !== false,
-    knowledgeLibraryIds: allLibraries || libraryIds.length === 0 ? null : libraryIds,
+    // Without "all libraries", only the chosen libraries: none when none is chosen.
+    knowledgeLibraryIds: allLibraries ? null : libraryIds,
     webEnabled: web.enabled === true,
     kanapData: readKanapDataBlock(sources),
   };

@@ -8,6 +8,9 @@ import {
 } from '../agent-control-timeline-synthesis.util';
 import { knowledgeDocumentFromOutput, knowledgeItemsFromOutput } from '../agent-control-knowledge.util';
 import type { TicketNoteLike } from '../ai-agent-control.service';
+import { readAgentKnowledgeSources } from '../agent-control-definition.util';
+import { citableKnowledgeDocuments } from '../public-reply-sources';
+import { AiCapabilityRegistry } from '../../capability/ai-capability.registry';
 
 /**
  * A public reply reads the public items of the ticket and the documents of the libraries the
@@ -217,6 +220,36 @@ async function testAPublicReplyCitesTheLibrariesTheAgentMayCite() {
   assert.deepEqual(open.used_sources.map((source) => source.ref), ['DOC-1', 'DOC-2', 'DOC-3']);
 }
 
+async function testAnAgentWithoutLibrariesCitesNoDocument() {
+  const agent = (knowledge: Record<string, unknown>) => ({
+    scope_policy_json: { knowledge_sources: { knowledge: { enabled: true, ...knowledge } } },
+  }) as any;
+  const none = readAgentKnowledgeSources(agent({ all_libraries: false, library_ids: [] })).knowledgeLibraryIds;
+  assert.deepEqual(none, []);
+  const documents = [{ ref: 'DOC-1', library_id: CITABLE_LIBRARY }, { ref: 'DOC-2', library_id: null }];
+  assert.deepEqual(citableKnowledgeDocuments(documents, none), []);
+  assert.deepEqual(readAgentKnowledgeSources(agent({ all_libraries: false, library_ids: [CITABLE_LIBRARY] })).knowledgeLibraryIds, [CITABLE_LIBRARY]);
+  assert.equal(readAgentKnowledgeSources(agent({ all_libraries: true, library_ids: [] })).knowledgeLibraryIds, null);
+  assert.equal(readAgentKnowledgeSources(null).knowledgeLibraryIds, null);
+
+  // The search reads the same setting: an empty library list finds nothing.
+  let searched = false;
+  const registry = Object.create(AiCapabilityRegistry.prototype) as any;
+  registry.policy = { assertKnowledgeReadAccess: async () => undefined };
+  registry.knowledge = {
+    search: async () => {
+      searched = true;
+      return { items: [{ id: 'd1', item_number: 1, title: 'Doc', library_id: CITABLE_LIBRARY }], total: 1 };
+    },
+  };
+  const empty = await registry.searchKnowledgeInternal({ manager: {}, userId: 'user' }, { query: 'printer', library_ids: [] });
+  assert.equal(searched, false);
+  assert.deepEqual(empty.items, []);
+  const open = await registry.searchKnowledgeInternal({ manager: {}, userId: 'user' }, { query: 'printer' });
+  assert.equal(searched, true);
+  assert.equal(open.items.length, 1);
+}
+
 async function run() {
   const tests: Array<() => unknown> = [
     testAPublicReplyReadsThePublicItemsOfTheTicket,
@@ -226,6 +259,7 @@ async function run() {
     testScreenshotsOfInternalNotesStayOutOfThePublicReply,
     testKnowledgeItemsKeepTheirLibrary,
     testAPublicReplyCitesTheLibrariesTheAgentMayCite,
+    testAnAgentWithoutLibrariesCitesNoDocument,
   ];
   let failures = 0;
   for (const test of tests) {
