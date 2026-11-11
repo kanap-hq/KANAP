@@ -269,7 +269,7 @@ export async function convertedRequestPurpose(
 ): Promise<string | null> {
   return hasPurposeOverride
     ? await normalizeMarkdownRichText(purposeOverride)
-    : await normalizeMarkdownRichText(taskDescription, { fieldName: 'purpose', enforceSizeLimit: false });
+    : await normalizeMarkdownRichText(taskDescription, { fieldName: 'purpose', storedContent: true });
 }
 
 /**

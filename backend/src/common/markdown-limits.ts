@@ -1,7 +1,8 @@
 import { BadRequestException } from '@nestjs/common';
 
 /**
- * Size limit of a Markdown content, checked on the main thread of the API.
+ * Size limit of a Markdown content, checked on the main thread of the API, and
+ * the refusals of a rich-text write.
  *
  * Each function here scans the text once, without the Markdown parser: the
  * parser and the other text conversions run in the Markdown workers
@@ -16,6 +17,9 @@ import { BadRequestException } from '@nestjs/common';
 export const MARKDOWN_MAX_BYTES = 200 * 1024;
 
 export const MARKDOWN_TOO_LARGE = 'MARKDOWN_TOO_LARGE';
+
+/** A rich-text write that holds an HTML tag outside the accepted list (html-to-markdown.ts). */
+export const MARKDOWN_HTML_NOT_ALLOWED = 'MARKDOWN_HTML_NOT_ALLOWED';
 
 const DATA_IMAGE_PAYLOAD_REGEX = /(data:image\/[a-z0-9.+-]+;base64,)[a-z0-9+/=]+/gi;
 
@@ -108,6 +112,17 @@ export function markdownTooLargeError(fieldName: string, size: number): BadReque
     message: `${fieldName} is too long: ${Math.ceil(size / 1024)} KB of text, the limit is ${MARKDOWN_MAX_BYTES / 1024} KB.`,
     field: fieldName,
     max_bytes: MARKDOWN_MAX_BYTES,
+  });
+}
+
+export function markdownHtmlNotAllowedError(fieldName: string, tag: string): BadRequestException {
+  const example = String(tag || '').replace(/\s+/g, ' ').trim().slice(0, 120);
+  return new BadRequestException({
+    code: MARKDOWN_HTML_NOT_ALLOWED,
+    message: `${fieldName} must be Markdown. HTML tags are not allowed outside fenced code blocks or inline code: `
+      + `remove the tag or wrap it in backticks. Example: ${example}`,
+    field: fieldName,
+    example,
   });
 }
 

@@ -22,8 +22,8 @@ import { renderCommentForEmail } from '../notifications/comment-email-renderer';
  */
 
 export const MARKDOWN_WORKER_OPERATIONS = {
-  normalize: (text: string, opts: { fieldName: string; enforceSizeLimit: boolean }) => normalizeMarkdownRichText(text, opts),
-  normalizeWithSearchText: (text: string, opts: { fieldName: string; enforceSizeLimit: boolean }) => {
+  normalize: (text: string, opts: { fieldName: string; storedContent: boolean }) => normalizeMarkdownRichText(text, opts),
+  normalizeWithSearchText: (text: string, opts: { fieldName: string; storedContent: boolean }) => {
     const content = normalizeMarkdownRichText(text, opts);
     return { content, searchText: markdownToSearchText(content || '') };
   },
@@ -110,7 +110,7 @@ const WARMUP_HTML = '<p>Some <strong>bold</strong> text, a <a href="https://exam
 
 function warmUp(): void {
   for (let round = 0; round < 3; round += 1) {
-    runMarkdownWorkerOperation({ op: 'normalize', args: [WARMUP_MARKDOWN, { fieldName: 'content', enforceSizeLimit: true }] });
+    runMarkdownWorkerOperation({ op: 'normalize', args: [WARMUP_MARKDOWN, { fieldName: 'content', storedContent: false }] });
     runMarkdownWorkerOperation({ op: 'searchText', args: [WARMUP_MARKDOWN] });
     runMarkdownWorkerOperation({ op: 'emailHtml', args: [WARMUP_MARKDOWN] });
     runMarkdownWorkerOperation({ op: 'htmlToMarkdown', args: [WARMUP_HTML] });

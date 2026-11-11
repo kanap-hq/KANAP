@@ -1,0 +1,220 @@
+import * as assert from 'node:assert/strict';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { BadRequestException } from '@nestjs/common';
+import { parse } from 'csv-parse/sync';
+import { backendPath } from './backend-root';
+import { RICH_TEXT_ALLOWED_HTML } from '../html-to-markdown';
+import { MARKDOWN_HTML_NOT_ALLOWED } from '../markdown-limits';
+import { normalizeMarkdownRichText } from '../markdown-rich-text';
+
+/**
+ * The rule of a rich-text write: the text is Markdown, and the only HTML tags it
+ * holds are those of `RICH_TEXT_ALLOWED_HTML`, wherever they sit in the text.
+ * Text shown as code (a fenced block, an inline code span) holds no tag.
+ */
+
+type Refusal = { code?: string; field?: string; example?: string; message?: string };
+
+function refusalOf(text: string, fieldName = 'description'): Refusal | null {
+  try {
+    normalizeMarkdownRichText(text, { fieldName });
+    return null;
+  } catch (error) {
+    if (!(error instanceof BadRequestException)) throw error;
+    return error.getResponse() as Refusal;
+  }
+}
+
+function assertRefused(name: string, text: string): void {
+  const refusal = refusalOf(text);
+  assert.equal(refusal?.code, MARKDOWN_HTML_NOT_ALLOWED, `${name} is refused`);
+}
+
+function assertAccepted(name: string, text: string): void {
+  const refusal = refusalOf(text);
+  assert.equal(refusal, null, `${name} is accepted (${refusal?.message})`);
+  assert.equal(normalizeMarkdownRichText(text), text.trim(), `${name} is stored as written`);
+}
+
+const table = (cell: string) => `| Step | Detail |\n|---|---|\n| One | ${cell} |\n`;
+const headerTable = (cell: string) => `| Step | ${cell} |\n|---|---|\n| One | Two |\n`;
+
+function testElementsOutsideTheListAreRefusedEverywhere() {
+  const elements = [
+    '<form action="/search"><input name="q"></form>',
+    '<div class="note">Note</div>',
+    '<span style="color: red">red</span>',
+    '<a href="https://example.com">link</a>',
+    '<details open><summary>More</summary>Text</details>',
+    '<iframe src="https://example.com"></iframe>',
+    '<meta charset="utf-8">',
+    '<style>p { color: red }</style>',
+    '<b>bold</b>',
+    '<!-- a comment -->',
+  ];
+  for (const element of elements) {
+    assertRefused(`${element} on its own line`, `Introduction.\n\n${element}\n\nEnd.`);
+    assertRefused(`${element} inside a sentence`, `A sentence with ${element} in it.`);
+    assertRefused(`${element} in a table cell`, table(element));
+    assertRefused(`${element} in a header cell`, headerTable(element));
+    assertRefused(`${element} in a table inside a list`, `- item\n\n  ${table(element).replace(/\n(?=.)/g, '\n  ')}`);
+    assertRefused(`${element} in a table inside a quote`, table(element).replace(/^/gm, '> '));
+    assertRefused(`${element} in an indented block`, `Introduction.\n\n    ${element}\n\nEnd.`);
+    assertRefused(`${element} in an indented block of a list item`, `- item\n\n      ${element}\n`);
+    assertRefused(`${element} in a doubly indented block`, `Introduction.\n\n        ${element}\n\nEnd.`);
+  }
+  assertRefused('a closing tag alone', 'Text</form> after.');
+  assertRefused('a tag left open', 'Introduction.\n\n<form action="/search"\n');
+  assertRefused('a block opened by an accepted tag', '<u>\n<form action="/search">\n</u>\n');
+}
+
+function testAcceptedElementsTakeNoAttribute() {
+  assertRefused('<u> with an attribute', 'An <u onclick="go()">underlined</u> word.');
+  assertRefused('<u> with a class', 'An <u class="x">underlined</u> word.');
+  assertRefused('<sub> with an attribute', 'H<sub id="two">2</sub>O');
+  assertRefused('<sup> with an attribute', 'x<sup style="color: red">2</sup>');
+  assertRefused('<br> with an attribute', 'Line one<br class="x">line two');
+  assertRefused('<br> with an attribute in a cell', table('Line one<br class="x">line two'));
+  assertRefused('<img> with an attribute outside its list', '<img src="/api/files/1" onerror="go()" />');
+  assertRefused('<img> with a style', '<img src="/api/files/1" style="position: fixed" />');
+  assertRefused('<img> with a script source', '<img src="javascript:go()" />');
+  assertRefused('<img> without a source', '<img alt="nothing" />');
+  assertRefused('an accepted name in upper case', 'An <U>underlined</U> word.');
+}
+
+function testTheAcceptedListIsAccepted() {
+  assert.deepEqual(RICH_TEXT_ALLOWED_HTML.paired, ['u', 'sub', 'sup']);
+  assert.equal(RICH_TEXT_ALLOWED_HTML.lineBreak, 'br');
+  assert.deepEqual(RICH_TEXT_ALLOWED_HTML.imageAttributes, ['src', 'alt', 'title', 'width', 'height']);
+
+  assertAccepted('underline, subscript, superscript', 'An <u>underlined</u> word, H<sub>2</sub>O and x<sup>2</sup>.');
+  assertAccepted('a paragraph that is one underlined text', '<u>Underlined</u>');
+  assertAccepted('<br>', 'Line one<br>line two');
+  assertAccepted('<br />', 'Line one<br />line two');
+  assertAccepted('<br/>', 'Line one<br/>line two');
+  assertAccepted('<br> alone on a line', 'Line one\n\n<br>\n\nLine two');
+  assertAccepted('<br> in a cell', table('Line one<br>line two<br />line three'));
+  assertAccepted('formats in a cell', table('<u>a</u> H<sub>2</sub>O x<sup>2</sup>'));
+  assertAccepted('a resized image', '<img height="40" width="60" alt="Diagram" src="/api/knowledge/attachments/fromage/1/inline" />');
+  assertAccepted('a resized image in a cell', table('<img width="60" alt="a > b" title="Diagram" src="https://example.com/a.png" />'));
+  assertAccepted('formats in an indented block', 'Introduction.\n\n    An <u>underlined</u> word<br>and a line.\n');
+}
+
+function testMarkdownAndCodeAreAccepted() {
+  assertAccepted('a fenced block that shows HTML', 'Example:\n\n```html\n<form action="/search"><input name="q"></form>\n```\n');
+  assertAccepted('a tilde fence that shows HTML', 'Example:\n\n~~~\n<div class="note">Note</div>\n~~~\n');
+  assertAccepted('a fenced block in a list', '- item\n\n  ```html\n  <details open>x</details>\n  ```\n');
+  assertAccepted('inline code', 'Use the `<form>` element, or `<meta charset="utf-8">`.');
+  assertAccepted('inline code in a cell', table('`<form action="/search">`'));
+  assertAccepted('an automatic link', 'See <https://example.com/page?a=1&b=2> for details.');
+  assertAccepted('an automatic e-mail link', 'Write to <support@example.com>.');
+  assertAccepted('an escaped tag', 'The text \\<form action\\="/search"> is shown as written.');
+  assertAccepted('a comparison', 'Keep it if a<b, or if x <y then stop. Above 3 > 2.');
+  assertAccepted('a comparison in a cell', table('a<b'));
+  assertAccepted('an arrow', 'Before -> after <- back, 1 < 2 > 0, <3, <-, <=, <>.');
+  assertAccepted('an indented block of code', 'Run:\n\n    npm install\n    if (a < b && c > d) return;\n');
+  assertAccepted('an indented comparison', 'Rule:\n\n    a<b\n    x <y\n');
+  assertAccepted('usual Markdown', [
+    '# Title', '', 'A **bold**, *italic*, ~~struck~~ and ==marked== text with a [link](https://example.com).', '',
+    '- [x] done', '- [ ] to do', '', '> A quote', '', table('Value'), '', '![Diagram](/api/files/1 "Title")', '',
+    '1. One', '2. Two', '', '---', '',
+  ].join('\n'));
+}
+
+function testTheRefusalNamesTheFieldAndTheTag() {
+  const refusal = refusalOf(`Text.\n\n${table('<form   action="/search">')}`, 'notes');
+  assert.deepEqual(Object.keys(refusal ?? {}).sort(), ['code', 'example', 'field', 'message']);
+  assert.equal(refusal?.code, MARKDOWN_HTML_NOT_ALLOWED);
+  assert.equal(refusal?.field, 'notes');
+  assert.equal(refusal?.example, '<form action="/search">');
+  assert.match(String(refusal?.message), /^notes must be Markdown\. /);
+
+  // The first refused tag is the example, cut short.
+  const long = refusalOf(`An <u>underlined</u> word, then <div data-note="${'x'.repeat(400)}">`);
+  assert.equal(long?.example?.length, 120);
+  assert.ok(long?.example?.startsWith('<div data-note="xxx'));
+}
+
+function testStoredContentKeepsWhatItHolds() {
+  const stored = `Introduction.\n\n${table('<details open>More</details>')}\n<div>Old</div>\n`;
+  assert.equal(refusalOf(stored)?.code, MARKDOWN_HTML_NOT_ALLOWED);
+  assert.equal(normalizeMarkdownRichText(stored, { fieldName: 'description', storedContent: true }), stored.trim());
+  // An inline image is refused in a stored content as in a write, in a cell as elsewhere.
+  const image = table('![x](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA)');
+  assert.throws(() => normalizeMarkdownRichText(image, { storedContent: true }), /inline base64 images/);
+  assert.throws(() => normalizeMarkdownRichText(image), /inline base64 images/);
+}
+
+function testTimeIsBoundedOnLongTexts() {
+  const cases: Array<[string, string]> = [
+    ['opening characters', '<a'.repeat(100_000)],
+    ['open quotes', '<u>\n' + '<a "'.repeat(50_000)],
+    ['accepted tags', '<u>x</u><br>'.repeat(15_000)],
+    ['indented blocks', 'Text\n\n' + '        a<b\n'.repeat(15_000)],
+  ];
+  for (const [name, text] of cases) {
+    const start = process.hrtime.bigint();
+    refusalOf(text);
+    const ms = Number(process.hrtime.bigint() - start) / 1e6;
+    assert.ok(ms < 1500, `${name}: ${ms.toFixed(0)} ms`);
+  }
+}
+
+/** Every text of the sample data: CSV cells, documents, translated values. */
+function sampleDataTexts(): Array<{ name: string; text: string }> {
+  const root = backendPath('fixtures', 'fromage-co');
+  const texts: Array<{ name: string; text: string }> = [];
+  const visit = (dir: string) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const file = path.join(dir, entry.name);
+      const name = path.relative(root, file);
+      if (entry.isDirectory()) {
+        if (entry.name !== '__tests__' && entry.name !== 'node_modules') visit(file);
+      } else if (entry.name.endsWith('.md')) {
+        texts.push({ name, text: fs.readFileSync(file, 'utf8') });
+      } else if (entry.name.endsWith('.csv')) {
+        const rows = parse(fs.readFileSync(file, 'utf8'), {
+          delimiter: [';', ','], relax_column_count: true, relax_quotes: true, skip_empty_lines: true, bom: true,
+        }) as string[][];
+        rows.forEach((row, line) => row.forEach((cell, column) => {
+          if (cell.trim()) texts.push({ name: `${name}:${line + 1}:${column + 1}`, text: cell });
+        }));
+      } else if (entry.name.endsWith('.json')) {
+        const collect = (value: unknown, at: string) => {
+          if (typeof value === 'string') texts.push({ name: `${name}:${at}`, text: value });
+          else if (value && typeof value === 'object') {
+            for (const [key, nested] of Object.entries(value)) collect(nested, `${at}.${key}`);
+          }
+        };
+        collect(JSON.parse(fs.readFileSync(file, 'utf8')), '');
+      }
+    }
+  };
+  visit(root);
+  return texts;
+}
+
+function testSampleDataIsAccepted() {
+  const texts = sampleDataTexts();
+  assert.ok(texts.length > 2000, `the sample data is found (${texts.length} texts)`);
+  assert.ok(texts.some(({ text }) => text.includes('\n|')), 'the sample data holds a table');
+  assert.ok(texts.some(({ text }) => text.includes('```')), 'the sample data holds a code block');
+  for (const { name, text } of texts) {
+    assert.equal(refusalOf(text), null, `${name} is accepted`);
+  }
+}
+
+function run() {
+  testElementsOutsideTheListAreRefusedEverywhere();
+  testAcceptedElementsTakeNoAttribute();
+  testTheAcceptedListIsAccepted();
+  testMarkdownAndCodeAreAccepted();
+  testTheRefusalNamesTheFieldAndTheTag();
+  testStoredContentKeepsWhatItHolds();
+  testTimeIsBoundedOnLongTexts();
+  testSampleDataIsAccepted();
+  console.log('rich-text-html-rule.spec: ok');
+}
+
+run();

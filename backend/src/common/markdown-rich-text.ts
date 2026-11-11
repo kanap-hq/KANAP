@@ -1,6 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
-import { inspectMarkdownContent, isAllowedMarkdownHtmlSnippet } from './html-to-markdown';
-import { assertMarkdownSize, MARKDOWN_MAX_BYTES, markdownTooLargeError } from './markdown-limits';
+import { inspectMarkdownContent } from './html-to-markdown';
+import { assertMarkdownSize, MARKDOWN_MAX_BYTES, markdownHtmlNotAllowedError, markdownTooLargeError } from './markdown-limits';
 
 /**
  * Checks of a Markdown content with the Markdown parser. Runs in the Markdown
@@ -11,10 +11,11 @@ import { assertMarkdownSize, MARKDOWN_MAX_BYTES, markdownTooLargeError } from '.
 type NormalizeMarkdownRichTextOptions = {
   fieldName?: string;
   /**
-   * False for server-side processing of contents already stored (copies,
-   * backfills, repairs, verification), which keep whatever size they had.
+   * True for server-side processing of contents already stored (copies,
+   * backfills, repairs, verification): they keep whatever size and HTML tags
+   * they had. Only a write is held to the size limit and to the accepted tags.
    */
-  enforceSizeLimit?: boolean;
+  storedContent?: boolean;
 };
 
 export function normalizeMarkdownRichText(
@@ -26,22 +27,14 @@ export function normalizeMarkdownRichText(
   if (!text) return null;
   const field = opts?.fieldName || 'content';
 
-  const enforceSizeLimit = opts?.enforceSizeLimit !== false;
-  if (enforceSizeLimit) {
+  const isWrite = opts?.storedContent !== true;
+  if (isWrite) {
     assertMarkdownSize(text, field);
   }
 
-  const { rawHtmlSnippets, hasInlineDataImage } = inspectMarkdownContent(text);
-  const disallowedHtml = rawHtmlSnippets.filter((snippet) => !isAllowedMarkdownHtmlSnippet(snippet));
-  if (disallowedHtml.length > 0) {
-    const example = disallowedHtml[0]
-      .replace(/\s+/g, ' ')
-      .trim()
-      .slice(0, 120);
-    throw new BadRequestException(
-      `${field} must be Markdown. Raw HTML is not allowed outside code blocks or inline code. ` +
-      `Wrap HTML examples in backticks. Example: ${example}`,
-    );
+  const { refusedHtml, hasInlineDataImage } = inspectMarkdownContent(text);
+  if (isWrite && refusedHtml.length > 0) {
+    throw markdownHtmlNotAllowedError(field, refusedHtml[0]);
   }
 
   if (hasInlineDataImage) {
@@ -51,7 +44,7 @@ export function normalizeMarkdownRichText(
   }
 
   // Image payloads only leave the count when the parser sees an inline image (refused just above).
-  if (enforceSizeLimit) {
+  if (isWrite) {
     const size = Buffer.byteLength(text, 'utf8');
     if (size > MARKDOWN_MAX_BYTES) throw markdownTooLargeError(field, size);
   }

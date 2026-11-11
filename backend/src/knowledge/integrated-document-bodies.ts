@@ -40,7 +40,7 @@ export async function sameSlotBody(stored: string | undefined, value: unknown, f
   try {
     const next = (await normalizeMarkdownRichText(value, { fieldName })) || '';
     if (next === stored) return true;
-    return next === ((await normalizeMarkdownRichText(stored, { fieldName, enforceSizeLimit: false })) || '');
+    return next === ((await normalizeMarkdownRichText(stored, { fieldName, storedContent: true })) || '');
   } catch {
     // Too large or too complex: the write refuses it, so it is not "unchanged".
     return false;

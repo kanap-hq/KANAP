@@ -10,9 +10,28 @@ import { containsInlineDataImageText, withoutDataImagePayloads } from './markdow
 
 const HTML_TAG_REGEX_FALLBACK = /<\/?(p|h[1-6]|ul|ol|li|blockquote|pre|code|strong|em|a|img|table|thead|tbody|tr|td|th|div|span|br|hr|mark|u)\b[^>]*>/i;
 const MARKDOWN_AUTOLINK_REGEX_FALLBACK = /^<https?:\/\/[^>\s]+>$/i;
+
+/**
+ * The only HTML tags a rich-text field accepts on a write. Everything else in the
+ * text is Markdown. These are the forms the editor writes:
+ * - `paired`: an opening and a closing tag, without any attribute (`<u>`, `</u>`);
+ * - `lineBreak`: `<br>`, `<br/>` or `<br />`, without any attribute;
+ * - `imageAttributes`: an `<img>` tag with these attributes only, quoted, and a
+ *   source that is an address of the application or an `http(s)` address.
+ * The editor keeps the same list and shows any other tag as text: its own
+ * constant (the Markdown editor under `frontend/src/components/`) follows this one.
+ */
+export const RICH_TEXT_ALLOWED_HTML = {
+  paired: ['u', 'sub', 'sup'],
+  lineBreak: 'br',
+  imageAttributes: ['src', 'alt', 'title', 'width', 'height'],
+} as const;
+
+const PAIRED_TAG_REGEX = new RegExp(`^</?(?:${RICH_TEXT_ALLOWED_HTML.paired.join('|')})>$`);
+const LINE_BREAK_TAG_REGEX = new RegExp(`^<${RICH_TEXT_ALLOWED_HTML.lineBreak}(?: ?/)?>$`);
 const IMG_TAG_ONLY_REGEX = /^<img\b[\s\S]*\/?>$/i;
 const IMG_ATTR_REGEX = /([A-Za-z_:][\w:.-]*)\s*=\s*("([^"]*)"|'([^']*)')/g;
-const ALLOWED_IMG_ATTRS = new Set(['src', 'alt', 'title', 'width', 'height']);
+const ALLOWED_IMG_ATTRS = new Set<string>(RICH_TEXT_ALLOWED_HTML.imageAttributes);
 const DATA_IMAGE_URI_REGEX = /^data:image\/[a-z0-9.+-]+;base64,[a-z0-9+/=\s]+$/i;
 const HTML_ENTITY_MAP: Record<string, string> = {
   amp: '&',
@@ -92,9 +111,11 @@ function hasDataImageInHtmlSnippet(snippet: string): boolean {
   return false;
 }
 
+/** Whether `value` is one tag of `RICH_TEXT_ALLOWED_HTML`. */
 export function isAllowedMarkdownHtmlSnippet(value: string): boolean {
   const snippet = normalizeSnippet(value);
   if (!snippet) return false;
+  if (PAIRED_TAG_REGEX.test(snippet) || LINE_BREAK_TAG_REGEX.test(snippet)) return true;
   if (!IMG_TAG_ONLY_REGEX.test(snippet)) return false;
 
   const attrsChunk = snippet
@@ -151,46 +172,87 @@ function isLegacyHtmlFromTokens(tokens: MarkdownToken[]): boolean {
   return true;
 }
 
+/**
+ * Visits every token of a parsed text: the tokens of a list, of a quote, of a table
+ * and of its cells (a cell is an object without a type), down to the inline ones.
+ *
+ * Text shown as code holds no tag: a fenced block and an inline code span are not
+ * entered. An indented block is read as prose: readers of the same text that do not
+ * know indented code would read its tags.
+ */
 function walkMarkedToken(value: unknown, visit: (token: MarkdownToken) => void): void {
   if (!value || typeof value !== 'object') return;
-  const token = value as MarkdownToken;
-  if (typeof token.type !== 'string') return;
-
-  visit(token);
-
-  // HTML inside fenced/indented code or inline code is valid and must not be flagged.
-  if (token.type === 'code' || token.type === 'codespan') {
+  if (Array.isArray(value)) {
+    for (const child of value) walkMarkedToken(child, visit);
     return;
   }
 
+  const token = value as MarkdownToken;
+  if (typeof token.type === 'string') {
+    visit(token);
+    if (token.type === 'codespan') return;
+    if (token.type === 'code') {
+      if (token.codeBlockStyle !== 'indented') return;
+      const prose = String(token.text ?? '');
+      // A block the parser cannot read again is checked as a whole, like the text of a tag.
+      walkMarkedToken(parseTokens(prose) ?? [{ type: 'html', raw: prose }], visit);
+      return;
+    }
+  }
+
   for (const nested of Object.values(token)) {
-    if (Array.isArray(nested)) {
-      for (const child of nested) {
-        walkMarkedToken(child, visit);
-      }
-      continue;
-    }
-    if (nested && typeof nested === 'object') {
-      walkMarkedToken(nested, visit);
-    }
+    walkMarkedToken(nested, visit);
   }
 }
 
-function collectRawHtmlSnippets(tokens: MarkdownToken[]): string[] {
-  const snippets: string[] = [];
+/**
+ * The first tag outside `RICH_TEXT_ALLOWED_HTML` in the text of an HTML token, or
+ * null. A tag starts at a "<" followed by a letter, "/", "!" or "?" and ends at the
+ * next ">" outside quotes; one left open is refused. One pass over the text.
+ */
+function firstRefusedHtmlTag(raw: string): string | null {
+  let index = 0;
+  while (index < raw.length) {
+    const start = raw.indexOf('<', index);
+    if (start === -1) return null;
+    if (!/[A-Za-z/!?]/.test(raw.charAt(start + 1))) {
+      index = start + 1;
+      continue;
+    }
+    let end = start + 1;
+    let quote = '';
+    for (; end < raw.length; end += 1) {
+      const char = raw[end];
+      if (quote) {
+        if (char === quote) quote = '';
+      } else if (char === '"' || char === '\'') {
+        quote = char;
+      } else if (char === '>') {
+        break;
+      }
+    }
+    if (end >= raw.length) return raw.slice(start);
+    const tag = raw.slice(start, end + 1);
+    if (!isAllowedMarkdownHtmlSnippet(tag)) return tag;
+    index = end + 1;
+  }
+  return null;
+}
+
+/** The tags of a parsed text outside `RICH_TEXT_ALLOWED_HTML`, one per HTML token, each once. */
+function collectRefusedHtml(tokens: MarkdownToken[]): string[] {
+  const refused: string[] = [];
   const seen = new Set<string>();
 
-  for (const token of tokens) {
-    walkMarkedToken(token, (current) => {
-      if (current.type !== 'html') return;
-      const snippet = normalizeSnippet(current.raw ?? current.text ?? '');
-      if (!snippet || seen.has(snippet)) return;
-      seen.add(snippet);
-      snippets.push(snippet);
-    });
-  }
+  walkMarkedToken(tokens, (current) => {
+    if (current.type !== 'html') return;
+    const tag = firstRefusedHtmlTag(String(current.raw ?? current.text ?? ''));
+    if (!tag || seen.has(tag)) return;
+    seen.add(tag);
+    refused.push(tag);
+  });
 
-  return snippets;
+  return refused;
 }
 
 /**
@@ -204,42 +266,39 @@ function hasHtmlTagText(text: string): boolean {
   return HTML_TAG_REGEX_FALLBACK.test(text.slice(0, lastClose + 1));
 }
 
-function findRawHtmlSnippetsInText(text: string): string[] {
-  if (MARKDOWN_AUTOLINK_REGEX_FALLBACK.test(text)) return [];
-  if (!hasHtmlTagText(text)) return [];
-  const fallbackSnippet = normalizeSnippet(text);
-  return fallbackSnippet ? [fallbackSnippet] : [];
+/** For a text the parser could not read: every tag of the text counts, code included. */
+function findRefusedHtmlInText(text: string): string[] {
+  const tag = firstRefusedHtmlTag(text);
+  return tag ? [tag] : [];
 }
 
-export function findRawHtmlSnippets(content: string): string[] {
+/** The HTML tags of a Markdown content that a rich-text write refuses (see `RICH_TEXT_ALLOWED_HTML`). */
+export function findRefusedHtml(content: string): string[] {
   const text = String(content || '').trim();
   if (!text) return [];
 
   const tokens = parseTokens(text);
-  return tokens ? collectRawHtmlSnippets(tokens) : findRawHtmlSnippetsInText(text);
+  return tokens ? collectRefusedHtml(tokens) : findRefusedHtmlInText(text);
 }
 
 function tokensContainDataImage(tokens: MarkdownToken[]): boolean {
   let found = false;
-  for (const token of tokens) {
-    walkMarkedToken(token, (current) => {
-      if (found) return;
-      if (current.type === 'image') {
-        const href = String((current as any).href ?? '').trim();
-        if (isDataImageUri(href)) {
-          found = true;
-        }
-        return;
+  walkMarkedToken(tokens, (current) => {
+    if (found) return;
+    if (current.type === 'image') {
+      const href = String((current as any).href ?? '').trim();
+      if (isDataImageUri(href)) {
+        found = true;
       }
-      if (current.type === 'html') {
-        const snippet = normalizeSnippet(current.raw ?? current.text ?? '');
-        if (hasDataImageInHtmlSnippet(snippet)) {
-          found = true;
-        }
+      return;
+    }
+    if (current.type === 'html') {
+      const snippet = normalizeSnippet(current.raw ?? current.text ?? '');
+      if (hasDataImageInHtmlSnippet(snippet)) {
+        found = true;
       }
-    });
-    if (found) break;
-  }
+    }
+  });
   return found;
 }
 
@@ -251,16 +310,16 @@ export function containsInlineDataImage(content: string): boolean {
   return tokens ? tokensContainDataImage(tokens) : containsInlineDataImageText(text);
 }
 
-/** Raw HTML snippets and inline base64 images of a Markdown content, from a single parse. */
-export function inspectMarkdownContent(content: string): { rawHtmlSnippets: string[]; hasInlineDataImage: boolean } {
+/** Refused HTML tags and inline base64 images of a Markdown content, from a single parse. */
+export function inspectMarkdownContent(content: string): { refusedHtml: string[]; hasInlineDataImage: boolean } {
   const text = String(content || '').trim();
-  if (!text) return { rawHtmlSnippets: [], hasInlineDataImage: false };
+  if (!text) return { refusedHtml: [], hasInlineDataImage: false };
 
   const tokens = parseTokens(text);
   if (tokens) {
-    return { rawHtmlSnippets: collectRawHtmlSnippets(tokens), hasInlineDataImage: tokensContainDataImage(tokens) };
+    return { refusedHtml: collectRefusedHtml(tokens), hasInlineDataImage: tokensContainDataImage(tokens) };
   }
-  return { rawHtmlSnippets: findRawHtmlSnippetsInText(text), hasInlineDataImage: containsInlineDataImageText(text) };
+  return { refusedHtml: findRefusedHtmlInText(text), hasInlineDataImage: containsInlineDataImageText(text) };
 }
 
 export function isHtmlContent(content: string): boolean {

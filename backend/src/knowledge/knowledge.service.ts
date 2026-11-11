@@ -4362,7 +4362,7 @@ export class KnowledgeService {
     const summary = body?.summary == null ? null : String(body.summary).trim() || null;
     const normalizedContent = await normalizeMarkdownWithSearchText(body?.content_markdown, {
       fieldName: 'content_markdown',
-      enforceSizeLimit: !opts?.storedContent,
+      storedContent: opts?.storedContent,
     });
     const contentMarkdown = normalizedContent.content || '';
     const status = this.normalizeStatus(body?.status, 'published');
@@ -4431,7 +4431,7 @@ export class KnowledgeService {
       if (patch && patch.content_markdown !== undefined) {
         const next = await normalizeMarkdownWithSearchText(patch.content_markdown, {
           fieldName: 'content_markdown',
-          enforceSizeLimit: !opts?.storedContent,
+          storedContent: opts?.storedContent,
         });
         const nextContent = next.content || '';
         if (nextContent !== saved.content_markdown) {
