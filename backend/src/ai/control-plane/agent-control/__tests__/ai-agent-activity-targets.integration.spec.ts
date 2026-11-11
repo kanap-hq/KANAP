@@ -96,6 +96,8 @@ async function run() {
       { targetType: 'projects', targetRef: projectId },
       { targetType: 'companies', targetRef: companyId },
       { targetType: 'budget_lines', targetRef: opexId },
+      // An approved change records a budget line under its table.
+      { targetType: 'spend_items', targetRef: opexId },
       // Deleted object, another tenant's object, a ticket number, no target at all: nothing to show.
       { targetType: 'tasks', targetRef: goneTaskId },
       { targetType: 'tasks', targetRef: foreignTaskId },
@@ -109,6 +111,7 @@ async function run() {
     assert.equal(displays.get(activityTargetKey('companies', companyId)), undefined, 'a family without a reference has no display: its type alone is shown');
     const line = displays.get(activityTargetKey('budget_lines', opexId));
     assert.ok(line && /\b7$/.test(line), `a budget line shows its reference (${line})`);
+    assert.equal(displays.get(activityTargetKey('spend_items', opexId)), line, 'a budget line recorded under its table shows the same reference');
     assert.equal(displays.has(activityTargetKey('tasks', goneTaskId)), false, 'a deleted object shows no uuid');
     assert.equal(displays.has(activityTargetKey('tasks', foreignTaskId)), false, 'another tenant is never read');
     assert.equal(displays.has(activityTargetKey('ticket', '4711')), false, 'a ticket number stays as it is');

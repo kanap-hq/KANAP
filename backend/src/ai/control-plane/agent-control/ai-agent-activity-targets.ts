@@ -47,10 +47,17 @@ export async function resolveActivityTargetDisplays(
   tenantId: string,
   targets: ActivityTarget[],
 ): Promise<Map<string, string>> {
-  const wanted = new Map<string, { family: string; id: string }>();
+  // Keyed by family and id; the value keeps the keys of the entries as recorded. A budget line is
+  // recorded under its table (`spend_items`) and read as the family `budget_lines`.
+  const wanted = new Map<string, { family: string; id: string; keys: Set<string> }>();
   for (const { targetType, targetRef } of targets) {
-    if (!targetType || !targetRef || !SEARCHED_FAMILIES.has(targetType) || !isUuid(targetRef)) continue;
-    wanted.set(activityTargetKey(targetType, targetRef.toLowerCase()), { family: targetType, id: targetRef.toLowerCase() });
+    if (!targetType || !targetRef || !isUuid(targetRef)) continue;
+    const family = aiSearchEntityTypeOfIndexRow(targetType) ?? targetType;
+    if (!SEARCHED_FAMILIES.has(family)) continue;
+    const id = targetRef.toLowerCase();
+    const entry = wanted.get(activityTargetKey(family, id)) ?? { family, id, keys: new Set<string>() };
+    entry.keys.add(activityTargetKey(targetType, id));
+    wanted.set(activityTargetKey(family, id), entry);
   }
   const displays = new Map<string, string>();
   if (wanted.size === 0) return displays;
@@ -69,8 +76,9 @@ export async function resolveActivityTargetDisplays(
     const family = aiSearchEntityTypeOfIndexRow(row.entity_type);
     const display = displayOf(row);
     if (!family || !display) continue;
-    const key = activityTargetKey(family, String(row.entity_id).toLowerCase());
-    if (wanted.has(key)) displays.set(key, display);
+    for (const key of wanted.get(activityTargetKey(family, String(row.entity_id).toLowerCase()))?.keys ?? []) {
+      displays.set(key, display);
+    }
   }
   return displays;
 }

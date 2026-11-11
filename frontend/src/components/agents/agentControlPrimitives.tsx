@@ -124,7 +124,9 @@ export function statusLabel(status: string | null | undefined): string {
 
 export function targetTypeLabel(targetType: string | null | undefined): string {
   if (!targetType) return agentText('common.notSet', 'Not set');
-  return agentText(`targetTypes.${targetType}`, humanize(targetType));
+  // A budget line is recorded under its table name.
+  const family = targetType === 'spend_items' || targetType === 'capex_items' ? 'budget_lines' : targetType;
+  return agentText(`targetTypes.${family}`, humanize(family));
 }
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
