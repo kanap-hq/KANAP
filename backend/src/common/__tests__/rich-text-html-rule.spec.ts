@@ -125,7 +125,32 @@ function testTheListAndItsFormsAreThoseOfTheEditor() {
   }
   for (const form of REFUSED_FORMS) {
     assert.equal(isAllowedMarkdownHtmlSnippet(form), false, `${form} is not an accepted form`);
+    assertRefused(`${form} in a sentence`, `Before ${form} after.`);
+    assertRefused(`${form} in a cell`, table(`Before ${form} after.`));
   }
+}
+
+/**
+ * A tag of the list written in another form is refused in prose too, where the parser reads
+ * no tag: a reader of the same text that takes more forms of attributes would read one.
+ */
+function testAnAcceptedNameInAnotherFormIsRefusedInProse() {
+  const code = '`"> <form action="/search"></form> `';
+  assertRefused('<u> with an attribute the parser does not read', `<u $a="${code} end</u>`);
+  assertRefused('<br> with an attribute the parser does not read', `<br $a="${code} end`);
+  assertRefused('<img> with an attribute the parser does not read', `<img $a="${code} src="/api/files/1" />`);
+  assertRefused('the same in a cell', table(`<sub $a="${code} end</sub>`));
+  assertRefused('the same in an indented block', `Introduction.\n\n    <sup $a="${code} end</sup>\n`);
+  assertRefused('the same in a link text', `[<u $a="${code}](https://example.com)`);
+  assertRefused('<u> opened and left there', 'An <u underlined word.');
+  assertRefused('<u> with a spread', 'An <u {...props}>underlined</u> word.');
+  assertRefused('<br at the end of a line', 'Line one <br\nline two');
+  assertRefused('<u at the end of the text', 'An underlined word <u');
+
+  assertAccepted('the same text escaped', 'An \\<u $a="x"> word.');
+  assertAccepted('the same text as code', 'Write `<u $a="x">` as it is.');
+  assertAccepted('a longer name', 'Values: a<ub, x <sub1, y<supper and z<brx.');
+  assertAccepted('a name followed by punctuation', 'If t<u, then x<sub. End (a<sup).');
 }
 
 function testTheAcceptedListIsAccepted() {
@@ -250,6 +275,7 @@ function run() {
   testElementsOutsideTheListAreRefusedEverywhere();
   testAcceptedElementsTakeNoAttribute();
   testTheListAndItsFormsAreThoseOfTheEditor();
+  testAnAcceptedNameInAnotherFormIsRefusedInProse();
   testTheAcceptedListIsAccepted();
   testMarkdownAndCodeAreAccepted();
   testTheRefusalNamesTheFieldAndTheTag();

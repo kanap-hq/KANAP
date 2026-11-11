@@ -133,18 +133,95 @@ export const HTML_ELEMENT_TEXTS: Array<{ name: string; text: string; shown: stri
   },
 ];
 
+const FORM = '<form action="https://exemple.test/f"><input name="p" /></form>';
+const HANDLER = `globalThis.${HANDLER_FLAG} = true`;
+const DETAILS = `<details open ontoggle="${HANDLER}">détail</details>`;
+const DETAILS_SINGLE_QUOTED = `<details open ontoggle='${HANDLER}'>détail</details>`;
+
+/**
+ * Texts that readers of Markdown do not cut the same way: what is code, a comment or plain text
+ * for one is a tag for another. Whatever the editor reads in them, it builds no element out of
+ * them. `builds` names the element the editor builds by itself: a link for a Markdown link, an
+ * underline for an underline tag without attribute.
+ */
+export const READER_GAP_TEXTS: Array<{ name: string; text: string; builds?: 'a' | 'u' }> = [
+  { name: 'an underline tag whose attribute holds a backtick', text: `<u $a="\`"> ${FORM} \` fin</u>` },
+  { name: 'a line break whose attribute holds a backtick', text: `<br $a="\`"/> ${FORM} \` fin` },
+  { name: 'a layer whose attribute holds a backtick', text: `<div $a="\`" style="position:fixed"> ${DETAILS} \` fin</div>` },
+  { name: 'an image whose attribute holds a backtick', text: `<img $a="\`" src="/api/x.png" onerror="${HANDLER}" /> \` fin` },
+  { name: 'an underline tag with a space before its end', text: '<u >souligné</u >' },
+  { name: 'a self-closed underline tag', text: 'a <u/> b' },
+  { name: 'a closing line break', text: 'a</br>b' },
+  { name: 'an upper-case image', text: '<IMG SRC="/api/x.png" ONERROR="1" />' },
+  { name: 'an image with an unquoted attribute', text: `<img src=/api/x.png onerror=${HANDLER} />` },
+  { name: 'a tag on several lines', text: '<form\n  action="https://exemple.test/f"\n>\n<input name="p" />\n</form>' },
+  { name: 'a tag on several lines in a sentence', text: `avant <details\nopen\nontoggle="${HANDLER}">détail</details> après` },
+  { name: 'an attribute value on two lines', text: '<div title="a\nb" style="position:fixed">calque</div>' },
+  { name: 'an attribute value with a blank line', text: '<div title="a\n\nb" style="position:fixed">calque</div>' },
+  { name: 'a comment around a tag', text: `<!-- ${FORM} -->` },
+  { name: 'a comment in a sentence', text: `avant <!-- note --> après ${FORM}` },
+  { name: 'a comment left open', text: `<!-- \n\n${FORM}` },
+  { name: 'a comment closed at once', text: `<!--> ${FORM} -->` },
+  { name: 'a character data section', text: `<![CDATA[${FORM}]]>` },
+  { name: 'a character data section in a sentence', text: `avant <![CDATA[ ${DETAILS} ]]> après` },
+  { name: 'a processing instruction', text: `<?php echo 1 ?>${FORM}` },
+  { name: 'a processing instruction left open', text: `<?x \n\n${DETAILS}` },
+  { name: 'a document type declaration', text: `<!DOCTYPE html>\n${FORM}` },
+  { name: 'a character reference in a tag name', text: '<fo&#114;m action="https://exemple.test/f"></fo&#114;m>' },
+  { name: 'a tag written with character references', text: '&lt;form action="https://exemple.test/f"&gt;&lt;/form&gt; &#60;iframe src="https://exemple.test/c"&#62;' },
+  { name: 'a tag in a link title', text: `[lien](https://exemple.test/a "${DETAILS_SINGLE_QUOTED}")`, builds: 'a' },
+  { name: 'a tag in an image title and description', text: `![<iframe src=x>](/api/x.png "<form action='https://exemple.test/f'>")` },
+  { name: 'a tag in a link address', text: `[lien](<https://exemple.test/a>${FORM})`, builds: 'a' },
+  { name: 'a tag in a link text', text: `[${DETAILS}](https://exemple.test/a)`, builds: 'a' },
+  { name: 'a code span with several backticks', text: `\`\` \` ${FORM} \` \`\`` },
+  { name: 'two backticks left open before a code span', text: `\`\` a \` ${FORM} \` b` },
+  { name: 'a code span closed by a longer run of backticks', text: `\` a \`\` ${DETAILS} \` b \`\`` },
+  { name: 'a code span over several lines', text: `\`a\n${FORM}\nb\`` },
+  { name: 'a fenced block left open', text: `\`\`\`html\n${FORM}\n\nsuite ${DETAILS}` },
+  { name: 'a tilde fence left open', text: `~~~\n${FORM}` },
+  { name: 'a fence of a list item closed outside it', text: `* a\n\n  \`\`\`\n  ${FORM}\n\n\`\`\`\n${DETAILS}\n\`\`\`` },
+  { name: 'a fence closed by a shorter run', text: `\`\`\`\`\n${FORM}\n\`\`\`\n${DETAILS}\n\`\`\`\`` },
+  { name: 'a fence whose language is a tag', text: `\`\`\`<details open ontoggle="${HANDLER}">\ncode\n\`\`\`` },
+  { name: 'a tag in a footnote', text: `Texte[^1]\n\n[^1]: ${FORM}` },
+  { name: 'a tag in the title of a link definition', text: `[ref]: https://exemple.test/a "${DETAILS_SINGLE_QUOTED}"\n\n[lien][ref]`, builds: 'a' },
+  { name: 'a tag in the label of a link definition', text: `[<iframe src=x>]: https://exemple.test/a\n\n${FORM}` },
+  { name: 'a tag after a backslash', text: `\\${FORM}` },
+  { name: 'a tag after two backslashes', text: `\\\\${FORM}` },
+  { name: 'a tag cut by emphasis', text: '<for*m action="https://exemple.test/f"*>' },
+  { name: 'a tag without a name', text: `<>${DETAILS}</>` },
+  { name: 'tags with a dotted and a prefixed name', text: '<a.b c="1">x</a.b> <svg:a href="javascript:void 0">y</svg:a>' },
+  { name: 'attributes between braces', text: '<u {...{onclick:1}}>x</u> <img src={"/api/x.png"} onerror={1} />' },
+  { name: 'a text between braces', text: `{${HANDLER}}` },
+  { name: 'an import line', text: `import x from "y"\n\n${FORM}` },
+  { name: 'a tag in an inline directive', text: `:abbr[${DETAILS}]{title="x" style="position:fixed"}` },
+  { name: 'a tag in a one-line directive', text: `::video[${FORM}]{src="https://exemple.test/c" onload="${HANDLER}"}` },
+  { name: 'a note with attributes around a tag', text: `:::note{style="position:fixed" onclick="${HANDLER}"}\n${FORM}\n:::` },
+  { name: 'a tag in an underlined heading', text: `Titre ${FORM}\n=====` },
+  { name: 'a tag in a table in a quote in a list', text: `* a\n  > | a |\n  > | - |\n  > | ${DETAILS} |` },
+  { name: 'a tag in a front matter', text: `---\ntitle: ${FORM}\n---\n\ntexte` },
+  { name: 'accepted tags around other tags', text: `<u>${FORM}</u> <sub>${DETAILS}</sub>` },
+  { name: 'an underline tag around paragraphs', text: `<u>\n\n${FORM}\n\n</u>`, builds: 'u' },
+  { name: 'a line break with a content', text: `a <br>${DETAILS}</br> b` },
+  { name: 'a tag name followed by a slash', text: '<form/action="https://exemple.test/f">x</form>' },
+  { name: 'a null character in a tag name', text: '<fo\u0000rm action="https://exemple.test/f">' },
+  { name: 'a stack trace in an indented block', text: 'Erreur :\n\n    at com.exemple.Service.<init>(Service.java:12)\n    at java.util.Map.<clinit>(Map.java:3)\n' },
+];
+
 const FOREIGN_ELEMENTS = [
   'form', 'input', 'textarea', 'select', 'meta', 'iframe', 'details', 'summary', 'style', 'script',
   'object', 'embed', 'link', 'base', 'a', 'u',
 ];
 const FOREIGN_ATTRIBUTES = ['action', 'formaction', 'http-equiv', 'srcdoc'];
 
-/** Elements and attributes under `root` that only the text given to the editor can have produced. */
-export function foreignMarkup(root: Element): string[] {
+/**
+ * Elements and attributes under `root` that only the text given to the editor can have produced.
+ * `built` names an element the editor builds by itself for this text; its attributes still count.
+ */
+export function foreignMarkup(root: Element, built?: string): string[] {
   const found: string[] = [];
   root.querySelectorAll('*').forEach((element) => {
     const tag = element.tagName.toLowerCase();
-    if (FOREIGN_ELEMENTS.includes(tag)) found.push(`<${tag}>`);
+    if (FOREIGN_ELEMENTS.includes(tag) && tag !== built) found.push(`<${tag}>`);
     for (const attribute of Array.from(element.attributes)) {
       const name = attribute.name.toLowerCase();
       if (

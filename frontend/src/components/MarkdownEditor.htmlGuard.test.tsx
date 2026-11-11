@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { foreignMarkup, HANDLER_FLAG, HTML_ELEMENT_TEXTS, mountEditor } from './markdownEditorTestSupport';
+import {
+  foreignMarkup,
+  HANDLER_FLAG,
+  HTML_ELEMENT_TEXTS,
+  mountEditor,
+  READER_GAP_TEXTS,
+} from './markdownEditorTestSupport';
 
 const { t } = vi.hoisted(() => ({ t: (key: string) => key }));
 
@@ -32,6 +38,19 @@ describe('MarkdownEditor: an HTML element outside the accepted list is text', ()
           editor.unmount();
         });
       }
+    });
+  }
+});
+
+describe('MarkdownEditor: a text that readers of Markdown cut differently builds no element', () => {
+  for (const { name, text, builds } of READER_GAP_TEXTS) {
+    it(`reads ${name}`, async () => {
+      const editor = await mountEditor(text);
+
+      expect(foreignMarkup(editor.content(), builds)).toEqual([]);
+      expect((globalThis as Record<string, unknown>)[HANDLER_FLAG]).toBeUndefined();
+
+      editor.unmount();
     });
   }
 });

@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { foreignMarkup, HANDLER_FLAG, HTML_ELEMENT_TEXTS, mountEditor } from './markdownEditorTestSupport';
+import {
+  foreignMarkup,
+  HANDLER_FLAG,
+  HTML_ELEMENT_TEXTS,
+  mountEditor,
+  READER_GAP_TEXTS,
+} from './markdownEditorTestSupport';
 
 const { t } = vi.hoisted(() => ({ t: (key: string) => key }));
 
@@ -137,6 +143,20 @@ describe('MarkdownEditor: a stored text with HTML elements', () => {
 
     editor.unmount();
   });
+});
+
+describe('MarkdownEditor: a stored text that readers of Markdown cut differently', () => {
+  for (const { name, text, builds } of READER_GAP_TEXTS) {
+    it(`builds no element out of ${name} and reports no change`, async () => {
+      const editor = await mountEditor(text);
+
+      expect(foreignMarkup(editor.content(), builds === 'a' ? builds : undefined)).toEqual([]);
+      expect((globalThis as Record<string, unknown>)[HANDLER_FLAG]).toBeUndefined();
+      expect(editor.onChange).not.toHaveBeenCalled();
+
+      editor.unmount();
+    });
+  }
 });
 
 describe('MarkdownEditor: ordinary Markdown', () => {

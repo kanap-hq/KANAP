@@ -229,14 +229,37 @@ function firstRefusedHtmlTag(raw: string): string | null {
   return null;
 }
 
-/** The tags of a parsed text outside `RICH_TEXT_ALLOWED_HTML`, one per HTML token, each once. */
+// The start of a tag of the list in a text the parser read as prose: the name, then a
+// space, "/", "{", ">" or the end of the text.
+const LISTED_TAG_START_REGEX = new RegExp(
+  `</?(?:${[...RICH_TEXT_ALLOWED_HTML.paired, RICH_TEXT_ALLOWED_HTML.lineBreak, 'img'].join('|')})(?=[\\s/{>]|$)`,
+);
+
+/**
+ * The start of a tag of the list left in prose, up to its ">" when it has one, or null.
+ * The parser reads a tag of the list in its accepted form as an HTML token: one it left in
+ * prose is written in another form (`<u $name="…">`), which a reader of the same text that
+ * takes more forms of attributes would read as a tag.
+ */
+function firstListedTagInProse(raw: string): string | null {
+  const start = raw.search(LISTED_TAG_START_REGEX);
+  if (start === -1) return null;
+  const end = raw.indexOf('>', start);
+  return end === -1 ? raw.slice(start) : raw.slice(start, end + 1);
+}
+
+/** The tags of a parsed text outside `RICH_TEXT_ALLOWED_HTML`, one per token, each once. */
 function collectRefusedHtml(tokens: MarkdownToken[]): string[] {
   const refused: string[] = [];
   const seen = new Set<string>();
 
   walkMarkedToken(tokens, (current) => {
-    if (current.type !== 'html') return;
-    const tag = firstRefusedHtmlTag(String(current.raw ?? current.text ?? ''));
+    let tag: string | null = null;
+    if (current.type === 'html') {
+      tag = firstRefusedHtmlTag(String(current.raw ?? current.text ?? ''));
+    } else if (current.type === 'text' && !Array.isArray(current.tokens)) {
+      tag = firstListedTagInProse(String(current.raw ?? ''));
+    }
     if (!tag || seen.has(tag)) return;
     seen.add(tag);
     refused.push(tag);
