@@ -14,6 +14,7 @@ import {
 import { resolveConfiguredAppBaseUrl } from './url';
 import { codedForbidden } from '../auth/module-right-required';
 import { tenantSlugFromHost } from './tenancy/request-tenancy.middleware';
+import { platformAdminHosts } from './platform-admin-hosts';
 import { Features } from '../config/features';
 
 /**
@@ -172,8 +173,7 @@ export function tenantSlugForRequest(req: any, env: NodeJS.ProcessEnv = process.
   if (typeof resolved === 'string' && resolved.trim()) return resolved.trim().toLowerCase();
   const host = headerValue(req?.headers?.host).split(':')[0]?.trim().toLowerCase() ?? '';
   if (!host) return null;
-  const platformAdminHost = String(env.PLATFORM_ADMIN_HOST || '').trim().toLowerCase();
-  if (platformAdminHost && host === platformAdminHost) return 'platform-admin';
+  if (platformAdminHosts(env).includes(host)) return 'platform-admin';
   return tenantSlugFromHost(host, env);
 }
 

@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from 'express';
 import { BUSY_RETRY_AFTER_SECONDS } from '../filters/database-error.mapping';
 import { runWithRequestTenant } from './request-tenant-context';
 import { tenantBaseDomains, tenantSlugOnListedDomains } from '../tenant-base-domains';
+import { parsePlatformAdminHosts } from '../platform-admin-hosts';
 
 /**
  * The tenancy middleware main.ts mounts before every route: it reads the
@@ -131,7 +132,7 @@ export function answerTenantLookupFailed(req: Request, res: Response, error: unk
 }
 
 export function createRequestTenancyMiddleware(options: RequestTenancyOptions) {
-  const platformAdminHost = options.platformAdminHost.toLowerCase();
+  const platformAdminHosts = new Set(parsePlatformAdminHosts(options.platformAdminHost));
   return async (req: Request, res: Response, next: NextFunction) => {
     if (LIVENESS_PATHS.has(routePath(req))) {
       (req as any).tenant = null;
@@ -154,7 +155,7 @@ export function createRequestTenancyMiddleware(options: RequestTenancyOptions) {
         const rawHost = req.headers.host || '';
         const host = rawHost.split(':')[0]?.toLowerCase() ?? '';
 
-        if (platformAdminHost && host === platformAdminHost) {
+        if (platformAdminHosts.has(host)) {
           rows = await options.query(TENANT_BY_SLUG, ['platform-admin']);
           if (!rows?.[0]) {
             res.status(503).json({ error: 'PLATFORM_ADMIN_TENANT_MISSING' });

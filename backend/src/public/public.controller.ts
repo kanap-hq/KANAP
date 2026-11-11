@@ -45,6 +45,7 @@ import {
 import { resolveEmailLocale } from '../i18n/email-i18n';
 import { resolveSeedLanguage } from '../analytics/recommended-dimensions.seed';
 import { developmentRequestOrigin, resolveConfiguredAppBaseUrl, resolveTenantAppBaseUrl } from '../common/url';
+import { platformAdminHosts } from '../common/platform-admin-hosts';
 import { DemoDataService } from '../demo-data/demo-data.service';
 import { organisationName } from '../config/product';
 import { buildWebAppManifest } from './web-app-manifest';
@@ -76,7 +77,7 @@ export const PERSON_NAME = /^[\p{L}\p{M}][\p{L}\p{M}'â€™-]*\.?(?: [\p{L}\p{M}'â€
  */
 /** The trials page of the platform administration, for the new trial e-mail; null when unknown. */
 function platformTrialsUrl(): string | null {
-  const host = (process.env.PLATFORM_ADMIN_HOST || '').trim();
+  const host = platformAdminHosts()[0] ?? '';
   const base = host ? `https://${host}` : resolveConfiguredAppBaseUrl('platform-admin');
   return base ? `${base.replace(/\/$/, '')}/admin/trials` : null;
 }
