@@ -29,8 +29,8 @@ import { auditActivityType } from './ai-agent-activity-timeline';
  * A run, its steps, its tool executions and its evidence carry what the tools returned. Their
  * serialisers take `resultsReadable` (evidence/run-result-visibility.ts): without it the line
  * stays (the tool, the names of its arguments, its status and the code of a failure) and the
- * result is left out, with the values of the arguments and the message of a failure, which quote
- * the same data.
+ * result is left out, with the values of the arguments and their fingerprint, and the message of
+ * a failure, which quotes the same data.
  */
 
 export function serializeRun(run: AiRun, resultsReadable: boolean) {
@@ -69,7 +69,7 @@ export function serializeToolExecution(tool: AiToolExecution, resultsReadable: b
     surface: tool.surface,
     effect: tool.effect,
     status: tool.status,
-    input_hash: tool.input_hash,
+    input_hash: resultsReadable ? tool.input_hash : null,
     input_summary: resultsReadable ? tool.input_summary : inputWithoutValues(tool.input_summary),
     output_summary: resultsReadable ? tool.output_summary : null,
     error_message: resultsReadable ? tool.error_message : null,

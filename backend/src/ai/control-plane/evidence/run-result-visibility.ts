@@ -54,16 +54,14 @@ const ARGUMENT_NAMES = /^Object keys: /;
 
 /**
  * What the line of a call keeps of its input for a reader who does not read its result: the names
- * of the arguments. Their values stay with the result: the `arguments` an MCP call keeps, and a
- * summary that quotes a text or a list.
+ * of the arguments. Their values stay with the result: the `arguments` an MCP call keeps, a
+ * summary that quotes a text or a list, and the fingerprint of the input, which confirms a guess
+ * on simple arguments.
  */
-export function inputWithoutValues(inputSummary: unknown): Record<string, unknown> | null {
+export function inputWithoutValues(inputSummary: unknown): { summary: string } | null {
   if (!inputSummary || typeof inputSummary !== 'object' || Array.isArray(inputSummary)) return null;
-  const { hash, summary } = inputSummary as Record<string, unknown>;
-  const kept: Record<string, unknown> = {};
-  if (typeof hash === 'string') kept.hash = hash;
-  if (typeof summary === 'string' && ARGUMENT_NAMES.test(summary)) kept.summary = summary;
-  return Object.keys(kept).length > 0 ? kept : null;
+  const { summary } = inputSummary as Record<string, unknown>;
+  return typeof summary === 'string' && ARGUMENT_NAMES.test(summary) ? { summary } : null;
 }
 
 /**

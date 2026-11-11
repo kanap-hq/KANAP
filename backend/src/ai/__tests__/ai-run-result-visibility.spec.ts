@@ -65,15 +65,14 @@ function testTheInputOfACallWithoutItsValues() {
   const input = { entity_type: 'contracts', query: 'Renewal 2027' };
   const kept = summaries.summarize(input);
   assert.equal(kept.summary, 'Object keys: entity_type, query');
-  assert.equal(inputWithoutValues(kept)?.summary, 'Object keys: entity_type, query');
+  assert.equal(typeof kept.hash, 'string');
+  assert.deepEqual(inputWithoutValues(kept), { summary: 'Object keys: entity_type, query' });
   // An MCP call keeps the values next to it.
   const withValues = inputWithoutValues({ ...kept, arguments: input });
-  assert.equal(withValues?.summary, 'Object keys: entity_type, query');
-  assert.equal(JSON.stringify(withValues).includes('Renewal 2027'), false);
+  assert.deepEqual(withValues, { summary: 'Object keys: entity_type, query' });
   // A summary that quotes its input, and an input kept as values alone, leave nothing.
   for (const quoted of [summaries.summarize('Renewal 2027'), summaries.summarize(['Renewal 2027'])]) {
-    assert.equal(JSON.stringify(inputWithoutValues(quoted) ?? null).includes('Renewal 2027'), false);
-    assert.equal(inputWithoutValues(quoted)?.summary, undefined);
+    assert.equal(inputWithoutValues(quoted), null);
   }
   assert.equal(inputWithoutValues({ arguments: input }), null);
   assert.equal(inputWithoutValues(null), null);

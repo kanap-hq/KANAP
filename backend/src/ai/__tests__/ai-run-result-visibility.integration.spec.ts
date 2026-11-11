@@ -350,8 +350,7 @@ async function testTheAgentsScreensNameTheArgumentsOfAnotherPersonsMcpCall(s: Se
     const detail: any = await as(s, reader, (ctx) => control.getRunDetail(ctx as any, s.runs.mcp));
     for (const line of [detail.tool_executions[0], detail.run_steps[0]]) {
       assert.equal(line.capability_name, 'get_entity_detail');
-      assert.equal(line.input_summary.summary, 'Object keys: entity_type, id, query');
-      assert.equal('arguments' in line.input_summary, false);
+      assert.deepEqual(line.input_summary, { summary: 'Object keys: entity_type, id, query' });
     }
     const failed: any = await as(s, reader, (ctx) => control.getRunDetail(ctx as any, s.runs.mcpFailed));
     assert.equal(failed.tool_executions[0].capability_name, 'get_entity_detail');
@@ -423,6 +422,36 @@ async function testAFailedRunOfAnotherPersonShowsHowItEndedWithoutTheMessage(s: 
     const reported = detail.tool_executions.find((tool: any) => tool.status === 'provider_error');
     assert.equal(reported.metadata_json.provider_error.message, ERRORS.chatFailed.reported);
   }
+}
+
+async function testTheFingerprintOfTheArgumentsIsReadLikeTheResult(s: Seed) {
+  // A fingerprint confirms a guess on simple arguments. The ones the person reads on their own runs:
+  const fingerprints = async (userId: string, run: keyof Runs): Promise<string[]> => {
+    const detail: any = await as(s, userId, (ctx) => control.getRunDetail(ctx as any, s.runs[run]));
+    return [
+      detail.run.input_summary?.hash,
+      ...detail.run_steps.map((step: any) => step.input_summary?.hash),
+      ...detail.tool_executions.flatMap((tool: any) => [tool.input_hash, tool.input_summary?.hash]),
+    ].filter((value) => typeof value === 'string' && value.length > 0);
+  };
+  for (const run of [...PERSON_RUNS, 'chatFailed'] as const) {
+    const own = await fingerprints(s.people.author, run);
+    assert.ok(own.length >= 3, `the ${run} run keeps the fingerprint of its arguments`);
+    assert.deepEqual(await fingerprints(s.people.administrator, run), own);
+    for (const reader of [s.people.agentReader, s.people.settingsAdmin]) {
+      assert.deepEqual(await fingerprints(reader, run), []);
+      const seen = await resultsSeen(s, reader);
+      for (const path of AGENT_SCREEN_READS) {
+        for (const fingerprint of own) {
+          assert.equal(seen[path.name][run].text.includes(fingerprint), false, `${path.name} gave a fingerprint of the arguments of the ${run} run`);
+        }
+      }
+      const detail: any = await as(s, reader, (ctx) => control.getRunDetail(ctx as any, s.runs[run]));
+      for (const tool of detail.tool_executions) assert.equal(tool.input_hash, null);
+    }
+  }
+  // An agent's run keeps them for the roles of the agents screens.
+  assert.ok((await fingerprints(s.people.agentReader, 'agent')).length >= 3);
 }
 
 async function testAnAgentRunStaysReadableInFull(s: Seed) {
@@ -508,6 +537,7 @@ async function main() {
     ['other people\'s runs show their line without the result', testOtherPeoplesRunsShowTheirLineWithoutTheResult],
     ['the agents screens name the arguments of another person\'s MCP call, without their values', testTheAgentsScreensNameTheArgumentsOfAnotherPersonsMcpCall],
     ['a failed run of another person shows how it ended, without the message', testAFailedRunOfAnotherPersonShowsHowItEndedWithoutTheMessage],
+    ['the fingerprint of the arguments is read like the result', testTheFingerprintOfTheArgumentsIsReadLikeTheResult],
     ['an agent run stays readable in full', testAnAgentRunStaysReadableInFull],
     ['the author reads their own results', testTheAuthorReadsTheirOwnResults],
     ['an Administrator with all data reads every result', testAnAdministratorWithAllDataReadsEveryResult],
