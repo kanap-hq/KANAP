@@ -59,7 +59,7 @@ import { datasetTranslator, isTranslatedFile, resolveDatasetLanguage } from './t
 const ROOT_DIR = path.dirname(fileURLToPath(import.meta.url));
 
 const DEFAULTS = {
-  baseUrl: 'https://fromage.dev.kanap.net',
+  baseUrl: 'http://fromage.lvh.me',
   org: 'Fromage & Co',
   countryIso: 'FR',
   year: DATASET_YEAR,
