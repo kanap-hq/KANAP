@@ -21,7 +21,7 @@ import { withTenant } from '../common/tenant-runner';
 import { Features } from '../config/features';
 import { AuditService } from '../audit/audit.service';
 import { GTC_URLS, GTC_VERSION, type TermsPaymentPath } from './terms';
-import { computeFreezeDate, computeTrialDeletionAt } from './subscription-freeze.util';
+import { computeFreezeDate, computeTrialDeletionAt, evaluateSubscriptionAccess } from './subscription-freeze.util';
 import {
   PLANS,
   BANK_TRANSFER_MIN_AMOUNT_EUR_CENTS,
@@ -201,6 +201,9 @@ export class BillingService {
     const now = Date.now();
     const statusStr = sub.status ?? '';
     const isHealthy = isHealthySubscription(sub.status, sub.trial_end, now);
+    // The access rule the API applies (PermissionGuard): a past due workspace stays usable
+    // during its grace. Without billing (on-premise), always usable.
+    const accessAllowed = evaluateSubscriptionAccess(sub, now, this.stripeConfig.isConfigured()).allowed;
 
     let trialDaysRemaining: number | null = null;
     if (statusStr === 'trialing' && sub.trial_end) {
@@ -269,6 +272,7 @@ export class BillingService {
       stripe_customer_id: sub.stripe_customer_id,
       canceled_at_effective: sub.canceled_at_effective ? sub.canceled_at_effective.toISOString() : null,
       is_subscription_healthy: isHealthy,
+      access_allowed: accessAllowed,
       trial_days_remaining: trialDaysRemaining,
       payment_due_at: paymentDueAt,
       freeze_effective_at: freezeEffectiveAt,

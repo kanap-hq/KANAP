@@ -398,7 +398,38 @@ async function testFreezeDateFollowsTheUnpaidInvoice() {
   assert.equal((await active.service.getSubscriptionSummary({ manager: active.manager as any })).freeze_effective_at, null);
 }
 
+/**
+ * `access_allowed` is the access rule the API applies (evaluateSubscriptionAccess): a past due
+ * subscription stays usable during its grace, and is frozen after it. On-premise (billing not
+ * configured), always usable.
+ */
+async function testAccessFollowsTheAccessRule() {
+  const unpaidSince = (days: number, configured = true) => {
+    const invoicedAt = new Date(Date.now() - days * 86400000);
+    const built = createService(
+      storedSubscription({ status: SubscriptionStatus.PAST_DUE, latest_invoice_created: invoicedAt, stripe_subscription_id: null }),
+      3,
+    );
+    if (!configured) (built.service as any).stripeConfig = { isConfigured: () => false, getPriceId: () => null };
+    return built;
+  };
+  const inGrace = unpaidSince(2);
+  const graceSummary = await inGrace.service.getSubscriptionSummary({ manager: inGrace.manager as any });
+  assert.equal(graceSummary.access_allowed, true, 'usable during the grace');
+  assert.equal(graceSummary.is_subscription_healthy, false);
+
+  const frozen = unpaidSince(20);
+  assert.equal((await frozen.service.getSubscriptionSummary({ manager: frozen.manager as any })).access_allowed, false, 'frozen after it');
+
+  const onPremise = unpaidSince(20, false);
+  assert.equal((await onPremise.service.getSubscriptionSummary({ manager: onPremise.manager as any })).access_allowed, true, 'no billing, no freeze');
+
+  const active = createService(storedSubscription({ status: SubscriptionStatus.ACTIVE, stripe_subscription_id: null }), 3);
+  assert.equal((await active.service.getSubscriptionSummary({ manager: active.manager as any })).access_allowed, true);
+}
+
 async function run() {
+  await testAccessFollowsTheAccessRule();
   await testFreezeDateFollowsTheUnpaidInvoice();
   await testRefreshReadsTheRefusalOnThePaymentIntent();
   await testEstimateIsOneSubscription();
