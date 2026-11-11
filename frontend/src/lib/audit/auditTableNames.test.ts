@@ -4,6 +4,10 @@ import en from '../../locales/en/admin.json';
 import fr from '../../locales/fr/admin.json';
 import de from '../../locales/de/admin.json';
 import es from '../../locales/es/admin.json';
+import enIt from '../../locales/en/it.json';
+import frIt from '../../locales/fr/it.json';
+import deIt from '../../locales/de/it.json';
+import esIt from '../../locales/es/it.json';
 import AUDIT_TABLES from './__fixtures__/audit-tables.json';
 import { auditTableFilterLabel } from './auditLogLabels';
 
@@ -64,6 +68,24 @@ describe('audit log table names', () => {
         // A label, not the stored name.
         expect(label, `${language} auditLogs.tableNames.${name}`).not.toBe(name);
       }
+    }
+  });
+
+  it('names deployments the way the application screen does', () => {
+    // The application record calls these rows Deployments. The assets of a deployment keep the
+    // same word (the screen has no label of its own for that table).
+    const admin = { en, fr, de, es };
+    const screens = { en: enIt, fr: frIt, de: deIt, es: esIt };
+    const assets = {
+      en: 'Deployment assets',
+      fr: 'Actifs des déploiements',
+      de: 'Assets der Bereitstellungen',
+      es: 'Activos de despliegues',
+    };
+    for (const language of ['en', 'fr', 'de', 'es'] as const) {
+      const screen = screens[language].workspace.application.tabs.deployments;
+      expect(admin[language].auditLogs.tableNames.app_instances, language).toBe(screen);
+      expect(admin[language].auditLogs.tableNames.app_asset_assignments, language).toBe(assets[language]);
     }
   });
 
