@@ -6343,6 +6343,7 @@ export class AiAgentControlService {
     }
     // Only the first requester reply of the plan is prepared. An administrative reply is written
     // once, and only when it is that reply; the others are never written.
+    let administrativeReplyDropReason: string | null = null;
     const preparedRequesterReply = effectivePlannerActions.find((entry) => entry.action.action_type === 'requester_reply') ?? null;
     effectivePlannerActions = effectivePlannerActions.filter((entry) =>
       !entry.administrativeDraftPending || entry === preparedRequesterReply);
@@ -6360,10 +6361,53 @@ export class AiAgentControlService {
         preparedRequesterReply.replyBody = draftedBody;
         preparedRequesterReply.administrativeDraftPending = false;
       } else {
-        const dropReason = draft.reason ?? 'administrative_reply_body_missing';
-        plannerSkippedActions.requester_reply = dropReason;
+        administrativeReplyDropReason = draft.reason ?? 'administrative_reply_body_missing';
+        plannerSkippedActions.requester_reply = administrativeReplyDropReason;
+        plannerDowngradedActions.requester_reply = administrativeReplyDropReason;
         effectivePlannerActions = effectivePlannerActions.filter((entry) => entry !== preparedRequesterReply);
       }
+    }
+    // A plan whose close reply is not prepared does not close the ticket. A reply that could not
+    // be written does not leave the ticket waiting on the requester either.
+    const plannedCloseReply = (actionPlannerResult?.actions ?? []).some((action) => action.action_type === 'requester_reply'
+      && action.reply_kind === 'administrative' && administrativeReplyIntent(action.administrative_intent) === 'close_reply');
+    const closeReplyPrepared = effectivePlannerActions.find((entry) => entry.action.action_type === 'requester_reply')
+      ?.action.administrative_intent === 'close_reply';
+    if ((plannedCloseReply && !closeReplyPrepared) || administrativeReplyDropReason) {
+      const notPreparedReason = plannerSkippedActions.requester_reply ?? 'close_reply_not_prepared';
+      effectivePlannerActions = effectivePlannerActions.filter((entry) => {
+        if (entry.action.action_type !== 'status_update') return true;
+        const statusDropReason = entry.terminal && plannedCloseReply && !closeReplyPrepared
+          ? `terminal_status_requires_close_reply: ${notPreparedReason}`
+          : administrativeReplyDropReason && normalizePlannerStatusTransitionKey(entry.action.transition_key) === 'pending'
+            ? `pending_requires_usable_requester_reply: ${administrativeReplyDropReason}`
+            : null;
+        if (!statusDropReason) return true;
+        plannerDowngradedActions.status_update = statusDropReason;
+        plannerSkippedActions.status_update = statusDropReason;
+        return false;
+      });
+    }
+    // The internal note says why the reply to the requester was not prepared.
+    const administrativeReplyDropNote = administrativeReplyDropReason
+      ? `The reply to the requester was not prepared: ${administrativeReplyDropReason.split(':')[0]}.`
+      : null;
+    if (
+      administrativeReplyDropNote
+      && preparedRequesterReply
+      && !effectivePlannerActions.some((entry) => entry.action.action_type === 'internal_note')
+      && !!agentDefinition
+      && conversationGate.can_prepare_internal_note
+      && definitionAllowsCapability(agentDefinition, TICKETING_INTERNAL_NOTE_PREPARE_CAPABILITY)
+      && definitionAllowsCapability(agentDefinition, TICKETING_INTERNAL_NOTE_ADD_APPROVED_CAPABILITY)
+    ) {
+      delete plannerSkippedActions.internal_note;
+      effectivePlannerActions.push({
+        action: { action_type: 'internal_note', reason: administrativeReplyDropNote },
+        plannerActionKey: `downgrade:${preparedRequesterReply.plannerActionKey}:internal_note`,
+        replyBody: null,
+        terminal: false,
+      });
     }
     // Internal-note body: a usable synthesis renders the full triage note; otherwise, if the
     // planner deliberately handled the ticket itself — an internal escalation (no requester reply
@@ -6387,7 +6431,7 @@ export class AiAgentControlService {
         .filter((reason, index, all) => all.indexOf(reason) === index)
         .join(' — ') || null;
     const escalationReason = isPlannerEscalation && actionPlannerResult
-      ? plannerReasonProse([actionPlannerResult.rationale, effectiveInternalNoteAction.action.reason])
+      ? plannerReasonProse([administrativeReplyDropNote, actionPlannerResult.rationale, effectiveInternalNoteAction.action.reason])
       : null;
     const administrativeReason = isPlannerAdministrativeReply && actionPlannerResult
       ? plannerReasonProse([
