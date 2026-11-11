@@ -337,6 +337,8 @@ export class StripeWebhookService implements OnModuleInit {
         sub = current;
       }
       const before = sub ? { ...sub } : null;
+      // The row starts following this subscription (the first one, a checkout, a renewal).
+      const followsAnotherSubscription = before?.stripe_subscription_id !== subscriptionId;
 
       if (!sub) {
         const initPlanKey = this.resolvePlanKey(subscriptionData, null);
@@ -413,33 +415,11 @@ export class StripeWebhookService implements OnModuleInit {
         // Stripe does not send events in order: the latest invoice stays as already written.
         this.logger.log(`Stripe event ${event?.id ?? 'unknown'} carries an earlier state of the stored invoice, or another invoice than the subscription's latest: invoice fields kept`);
       } else if (invoiceData) {
-        const invoice = invoiceData;
-        sub.latest_invoice_id = invoice.id ?? sub.latest_invoice_id ?? null;
-        sub.latest_invoice_status = invoice.status ?? sub.latest_invoice_status ?? null;
-        // The invoice's own number and links: a draft has none yet.
-        sub.latest_invoice_number = invoice.number ?? null;
-        sub.latest_invoice_url = invoice.hosted_invoice_url ?? null;
-        sub.latest_invoice_pdf = invoice.invoice_pdf ?? null;
-        sub.last_payment_error_code = invoice.last_payment_error?.code ?? null;
-        sub.last_payment_error_message = invoice.last_payment_error?.message ?? null;
-        if (typeof invoice.total === 'number') {
-          sub.latest_invoice_amount = invoice.total;
-        }
-        if (invoice.currency) {
-          sub.latest_invoice_currency = invoice.currency.toUpperCase();
-        }
-        if (invoice.created) {
-          sub.latest_invoice_created = this.toDate(invoice.created);
-        }
-        if (!sub.currency && invoice.currency) {
-          sub.currency = invoice.currency.toUpperCase();
-        }
-        if (!sub.amount && typeof invoice.total === 'number') {
-          sub.amount = invoice.total;
-        }
-        if (!sub.next_payment_at) {
-          sub.next_payment_at = this.toDate(invoice.next_payment_attempt);
-        }
+        this.writeLatestInvoice(sub, invoiceData);
+      } else if (followsAnotherSubscription && subscriptionData?.latest_invoice && typeof subscriptionData.latest_invoice === 'object') {
+        // The events of the new subscription that came first were ignored: its latest invoice
+        // (expanded on a completed checkout) replaces the one of the subscription left.
+        this.writeLatestInvoice(sub, subscriptionData.latest_invoice);
       }
 
       sub.last_synced_at = new Date();
@@ -492,6 +472,36 @@ export class StripeWebhookService implements OnModuleInit {
     const latest = subscriptionData?.latest_invoice;
     const latestId = typeof latest === 'string' ? latest : latest?.id ?? null;
     return invoice.id !== latestId;
+  }
+
+  /** The row's latest invoice fields become those of `invoice`. */
+  private writeLatestInvoice(sub: Subscription, invoice: any): void {
+    sub.latest_invoice_id = invoice.id ?? sub.latest_invoice_id ?? null;
+    sub.latest_invoice_status = invoice.status ?? sub.latest_invoice_status ?? null;
+    // The invoice's own number and links: a draft has none yet.
+    sub.latest_invoice_number = invoice.number ?? null;
+    sub.latest_invoice_url = invoice.hosted_invoice_url ?? null;
+    sub.latest_invoice_pdf = invoice.invoice_pdf ?? null;
+    sub.last_payment_error_code = invoice.last_payment_error?.code ?? null;
+    sub.last_payment_error_message = invoice.last_payment_error?.message ?? null;
+    if (typeof invoice.total === 'number') {
+      sub.latest_invoice_amount = invoice.total;
+    }
+    if (invoice.currency) {
+      sub.latest_invoice_currency = invoice.currency.toUpperCase();
+    }
+    if (invoice.created) {
+      sub.latest_invoice_created = this.toDate(invoice.created);
+    }
+    if (!sub.currency && invoice.currency) {
+      sub.currency = invoice.currency.toUpperCase();
+    }
+    if (!sub.amount && typeof invoice.total === 'number') {
+      sub.amount = invoice.total;
+    }
+    if (!sub.next_payment_at) {
+      sub.next_payment_at = this.toDate(invoice.next_payment_attempt);
+    }
   }
 
   private async updateTenantStripeCustomer(tenantId: string, customerId: string): Promise<void> {
@@ -617,8 +627,9 @@ export class StripeWebhookService implements OnModuleInit {
         try {
           const client = this.stripeClient.getClient();
           if (client) {
+            // With its latest invoice: the row may take this subscription now.
             return await client.subscriptions.retrieve(subscription, {
-              expand: ['items.data.price.tiers'],
+              expand: ['items.data.price.tiers', 'latest_invoice'],
             });
           }
         } catch (error) {

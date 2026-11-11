@@ -247,8 +247,13 @@ function createSyncService(
   };
   const client = {
     subscriptions: {
-      retrieve: async (id: string) => {
+      retrieve: async (id: string, options?: { expand?: string[] }) => {
         retrieved.push(id);
+        // Stripe expands the latest invoice only on request.
+        const latest = (stripeSubscription as any)?.latest_invoice;
+        if (latest && typeof latest === 'object' && !options?.expand?.includes('latest_invoice')) {
+          return { ...(stripeSubscription as any), latest_invoice: latest.id };
+        }
         return stripeSubscription;
       },
     },
@@ -577,6 +582,50 @@ async function testEventOfAnotherSubscriptionIsIgnored() {
   assert.equal(checkoutOpenedBeforeTheRefusal.row.status, SubscriptionStatus.ACTIVE);
 }
 
+/**
+ * The `invoice.paid` of a checkout's new subscription may arrive before the checkout completes,
+ * and is then ignored (the row still follows the subscription it leaves). Once the row follows
+ * the new subscription, its latest invoice fields are those of that subscription's latest invoice.
+ */
+async function testCheckoutBringsTheLatestInvoiceOfTheNewSubscription() {
+  const { svc, row } = createSyncService(
+    {
+      stripe_subscription_id: 'sub_A',
+      status: SubscriptionStatus.PAST_DUE,
+      latest_invoice_id: 'in_A',
+      latest_invoice_status: 'open',
+      latest_invoice_number: 'KAN-0042',
+      latest_invoice_url: 'https://invoice.stripe.test/in_A',
+    },
+    cloverSubscription({
+      id: 'sub_new',
+      latest_invoice: {
+        id: 'in_new', status: 'paid', number: 'KAN-0050', total: 24900, currency: 'eur', created: 1_792_000_000,
+        hosted_invoice_url: 'https://invoice.stripe.test/in_new', invoice_pdf: 'https://invoice.stripe.test/in_new.pdf',
+      },
+    }),
+  );
+  await svc.processEvent({
+    id: 'evt_checkout_invoice',
+    type: 'checkout.session.completed',
+    data: { object: { object: 'checkout.session', id: 'cs_1', mode: 'subscription', customer: 'cus_1', subscription: 'sub_new' } },
+  });
+  assert.equal(row.stripe_subscription_id, 'sub_new');
+  assert.equal(row.latest_invoice_id, 'in_new');
+  assert.equal(row.latest_invoice_status, 'paid');
+  assert.equal(row.latest_invoice_number, 'KAN-0050');
+  assert.equal(row.latest_invoice_url, 'https://invoice.stripe.test/in_new');
+  assert.equal(row.latest_invoice_pdf, 'https://invoice.stripe.test/in_new.pdf');
+
+  // A subscription event of the subscription already followed leaves the invoice fields alone.
+  const same = createSyncService(
+    { stripe_subscription_id: 'sub_1', latest_invoice_id: 'in_1', latest_invoice_status: 'paid' },
+    cloverSubscription({ latest_invoice: { id: 'in_2', status: 'draft' } }),
+  );
+  await same.svc.processEvent({ id: 'evt_same', type: 'customer.subscription.updated', data: { object: cloverSubscription({ latest_invoice: { id: 'in_2', status: 'draft' } }) } });
+  assert.equal(same.row.latest_invoice_id, 'in_1');
+}
+
 async function testInvoiceWithoutTenantIsSetToA4() {
   const { svc, invoiceUpdates } = createSyncService({}, null, { tenantKnown: false });
   await svc.processEvent(invoiceEvent('invoice.finalized', { id: 'in_support', customer: 'cus_unknown' }));
@@ -653,6 +702,7 @@ async function run() {
   await testInvoicesOfTheSameSecondFollowTheSubscription();
   await testDraftInvoiceHasNoNumber();
   await testEventOfAnotherSubscriptionIsIgnored();
+  await testCheckoutBringsTheLatestInvoiceOfTheNewSubscription();
   await testInvoiceWithoutTenantIsSetToA4();
   await testInvoiceAlreadyA4AndOtherEventsAreLeftAlone();
   await testStripeErrorOnA4DoesNotStopTheEvent();
