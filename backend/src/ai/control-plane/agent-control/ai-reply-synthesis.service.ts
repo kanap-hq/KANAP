@@ -161,11 +161,6 @@ const MAX_SOURCE_CONTENT_CHARS = 3800;
 // Raised well above the old 1800 so verbose / reasoning models do not truncate the
 // JSON (finish_reason=length). Override per deployment via AI_AGENT_SYNTHESIS_MAX_TOKENS.
 const MAX_SYNTHESIS_OUTPUT_TOKENS = 8000;
-// The technician brief and an administrative reply are short texts: they reserve what the
-// knowledge planner and interpreter reserve for outputs of the same size. Override per
-// deployment via AI_AGENT_TECHNICIAN_BRIEF_MAX_TOKENS and AI_AGENT_ADMINISTRATIVE_REPLY_MAX_TOKENS.
-const MAX_TECHNICIAN_BRIEF_OUTPUT_TOKENS = 4000;
-const MAX_ADMINISTRATIVE_REPLY_OUTPUT_TOKENS = 4000;
 
 // Source fields are tolerant on purpose: the backend re-maps each source to a real known
 // document by (kind, ref, url), so the model's title/reason are non-authoritative. A single
@@ -319,14 +314,6 @@ export class AiReplySynthesisService {
 
   maxOutputTokens(): number {
     return MAX_SYNTHESIS_OUTPUT_TOKENS;
-  }
-
-  technicianBriefMaxOutputTokens(): number {
-    return MAX_TECHNICIAN_BRIEF_OUTPUT_TOKENS;
-  }
-
-  administrativeReplyMaxOutputTokens(): number {
-    return MAX_ADMINISTRATIVE_REPLY_OUTPUT_TOKENS;
   }
 
   buildPromptPayload(input: {
@@ -624,8 +611,8 @@ export class AiReplySynthesisService {
       taskName: 'technician_brief',
       systemPrompt: compileSystemPrompt(RUNTIME_SAFETY_FLOOR_TECHNICIAN_BRIEF, input.profile),
       userPayload: payload,
-      maxTokens: MAX_TECHNICIAN_BRIEF_OUTPUT_TOKENS,
-      maxTokensEnvName: 'AI_AGENT_TECHNICIAN_BRIEF_MAX_TOKENS',
+      maxTokens: MAX_SYNTHESIS_OUTPUT_TOKENS,
+      maxTokensEnvName: 'AI_AGENT_SYNTHESIS_MAX_TOKENS',
       timeoutEnvName: 'AI_AGENT_REPLY_SYNTHESIS_TIMEOUT_MS',
       defaultTimeoutMs: DEFAULT_LLM_TIMEOUT_MS,
       schema: TechnicianBriefSchema,
@@ -707,8 +694,8 @@ export class AiReplySynthesisService {
       taskName: 'administrative_reply',
       systemPrompt: compileSystemPrompt(RUNTIME_SAFETY_FLOOR_ADMINISTRATIVE_REPLY, input.profile),
       userPayload: payload,
-      maxTokens: MAX_ADMINISTRATIVE_REPLY_OUTPUT_TOKENS,
-      maxTokensEnvName: 'AI_AGENT_ADMINISTRATIVE_REPLY_MAX_TOKENS',
+      maxTokens: MAX_SYNTHESIS_OUTPUT_TOKENS,
+      maxTokensEnvName: 'AI_AGENT_SYNTHESIS_MAX_TOKENS',
       timeoutEnvName: 'AI_AGENT_REPLY_SYNTHESIS_TIMEOUT_MS',
       defaultTimeoutMs: DEFAULT_LLM_TIMEOUT_MS,
       schema: AdministrativeReplySchema,

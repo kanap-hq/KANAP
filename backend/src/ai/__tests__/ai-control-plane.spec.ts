@@ -14201,7 +14201,6 @@ async function testGlpiTriageAdministrativeReplyNoteCarriesPlannerRationale() {
       throw new Error('Synthesis must not run for a planner-authored administrative reply.');
     },
     buildAdministrativeReplyPayload: () => ({ prompt: 'unused' }),
-    administrativeReplyMaxOutputTokens: () => 400,
     draftAdministrativeReply: async () => ({
       language: 'fr',
       requester_reply: 'Bonjour, votre demande concernant l\'application a bien été reçue. Nous analysons le problème et revenons vers vous rapidement.',
