@@ -383,8 +383,9 @@ async function discoveryCallOf(tenantId: string) {
   return row;
 }
 
-// Spec 7: the note and the date of the discovery call of a subscribed workspace are erased sixty
-// days after the call (privacy policy, section 6); nothing else changes, a second run does nothing.
+// Spec 7: the note and the date of a discovery call are erased sixty days after the call, in any
+// live workspace, subscribed or not, billing configured or not (privacy policy, section 6); the
+// rest of the row stays, a call to come or younger is untouched, a second run does nothing.
 async function testDiscoveryCallRetention() {
   const svc = buildServices();
   const clock = new Date('2026-09-01T04:15:00.000Z');
@@ -394,34 +395,38 @@ async function testDiscoveryCallRetention() {
   try {
     ids.day59 = await seedTenant({ tag: 'call59', subscriptions: subscribed });
     ids.day60 = await seedTenant({ tag: 'call60', subscriptions: subscribed });
-    // Not subscribed (a trial extended by hand): left to the deletion of the workspace.
+    ids.upcoming = await seedTenant({ tag: 'callnext', subscriptions: subscribed });
+    // Not subscribed: a trial extended by hand, an internal workspace.
     ids.trial = await seedTenant({ tag: 'calltrial', subscriptions: [{ status: 'trialing', trialEnd: new Date(clock.getTime() + 5 * DAY_MS) }] });
+    ids.internal = await seedTenant({ tag: 'callint', subscriptions: [{ status: 'active', planName: 'Internal' }] });
     await seedDiscoveryCall(ids.day59, before(59), 'Note 59');
     await seedDiscoveryCall(ids.day60, before(60), 'Note 60');
+    await seedDiscoveryCall(ids.upcoming, before(-3), 'Note upcoming');
     await seedDiscoveryCall(ids.trial, before(90), 'Note trial');
+    await seedDiscoveryCall(ids.internal, before(61), 'Note internal');
     const scope = Object.values(ids);
+    const erased = { scheduled_at: null, status: 'booked', source: 'calcom', note: null, external_id: 'cal_uid_spec' };
 
-    const first = await expiryService(svc).run({ now: clock, tenantIds: scope });
-    assert.deepEqual([first.errors, first.deleted, first.discoveryCallsErased], [[], [], 1]);
+    // Billing not configured: the trials are not enforced, the erasure still runs.
+    const first = await expiryService(svc, { billingConfigured: false }).run({ now: clock, tenantIds: scope });
+    assert.deepEqual([first.errors, first.deleted, first.discoveryCallsErased], [[], [], 3]);
 
     const kept59 = await discoveryCallOf(ids.day59);
     assert.equal(kept59.note, 'Note 59', 'a call 59 days old keeps its note');
     assert.equal(new Date(kept59.scheduled_at).getTime(), before(59).getTime());
-    assert.deepEqual(
-      await discoveryCallOf(ids.day60),
-      { scheduled_at: null, status: 'booked', source: 'calcom', note: null, external_id: 'cal_uid_spec' },
-      'a call 60 days old loses its note and its date, nothing else',
-    );
-    const trial = await discoveryCallOf(ids.trial);
-    assert.equal(trial.note, 'Note trial', 'a workspace without a subscription is left as it is');
-    assert.equal(new Date(trial.scheduled_at).getTime(), before(90).getTime());
+    const upcoming = await discoveryCallOf(ids.upcoming);
+    assert.equal(upcoming.note, 'Note upcoming', 'a call to come keeps its note');
+    assert.equal(new Date(upcoming.scheduled_at).getTime(), before(-3).getTime());
+    assert.deepEqual(await discoveryCallOf(ids.day60), erased, 'a call 60 days old loses its note and its date, nothing else');
+    assert.deepEqual(await discoveryCallOf(ids.trial), erased, 'without a subscription too');
+    assert.deepEqual(await discoveryCallOf(ids.internal), erased, 'in an internal workspace too');
     for (const id of scope) assert.equal((await tenantRow(id)).status, TenantStatus.ACTIVE);
 
     const again = await expiryService(svc).run({ now: clock, tenantIds: scope });
-    assert.deepEqual([again.errors, again.discoveryCallsErased], [[], 0]);
+    assert.deepEqual([again.errors, again.deleted, again.discoveryCallsErased], [[], [], 0]);
     assert.equal((await discoveryCallOf(ids.day59)).note, 'Note 59');
-    assert.equal((await discoveryCallOf(ids.day60)).note, null);
-    assert.equal((await discoveryCallOf(ids.trial)).note, 'Note trial');
+    assert.equal((await discoveryCallOf(ids.upcoming)).note, 'Note upcoming');
+    assert.deepEqual(await discoveryCallOf(ids.day60), erased);
   } finally {
     await cleanupTenants(Object.values(ids));
   }

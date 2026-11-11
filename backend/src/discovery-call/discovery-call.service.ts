@@ -70,12 +70,10 @@ export const DISCOVERY_CALL_RETENTION_DAYS = 60;
 
 /**
  * Erases the note and the date of the tenant's call once `DISCOVERY_CALL_RETENTION_DAYS` days
- * have passed since the call, when the workspace has subscribed (its subscription is linked to
- * Stripe, the `converted` state of the trial funnel). A workspace that never subscribed is
- * deleted with its call thirty days after its trial ends (`TrialWorkspaceExpiryService`). The
- * state, the source and the booking uid stay; no audit entry, which would copy the note again.
- * Runs on a manager whose transaction carries the tenant. Returns the number of rows changed: 0
- * on a second run.
+ * have passed since the call, whatever the workspace's subscription. A call to come or younger is
+ * untouched. The state, the source and the booking uid stay; no audit entry, which would copy the
+ * note again. Runs on a manager whose transaction carries the tenant. Returns the number of rows
+ * changed: 0 on a second run.
  */
 export async function eraseExpiredDiscoveryCall(manager: EntityManager, tenantId: string, now: Date): Promise<number> {
   const rows: Array<{ n: number }> = await manager.query(
@@ -84,10 +82,6 @@ export async function eraseExpiredDiscoveryCall(manager: EntityManager, tenantId
           SET note = NULL, scheduled_at = NULL, updated_at = now()
         WHERE tenant_id = $1
           AND scheduled_at <= $2::timestamptz - make_interval(days => $3::int)
-          AND EXISTS (
-            SELECT 1 FROM subscriptions s
-             WHERE s.tenant_id = $1 AND coalesce(s.stripe_subscription_id, '') <> ''
-          )
        RETURNING 1
      )
      SELECT count(*)::int AS n FROM changed`,

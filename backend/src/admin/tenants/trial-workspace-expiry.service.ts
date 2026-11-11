@@ -51,8 +51,8 @@ type CandidateRow = { id: string; slug: string; status: TenantStatus; stripe_cus
  * taken up again by the next run: deleted when still due or already purged, set back to active
  * otherwise.
  *
- * Each run first erases the note and the date of the discovery call of the subscribed workspaces
- * DISCOVERY_CALL_RETENTION_DAYS days after the call, billing configured or not: one short
+ * Each run first erases the note and the date of the discovery calls
+ * DISCOVERY_CALL_RETENTION_DAYS days after the call, subscription or not, billing configured or not: one short
  * transaction per live tenant, under its row-level security.
  */
 @Injectable()
@@ -72,7 +72,7 @@ export class TrialWorkspaceExpiryService implements OnModuleInit {
     this.scheduledTasks.register({
       name: TRIAL_WORKSPACE_EXPIRY_TASK_NAME,
       description: `Deletes the workspaces whose trial ended more than ${TRIAL_WORKSPACE_RETENTION_DAYS} days ago without a subscription; `
-        + `erases the discovery call note and date of subscribed workspaces ${DISCOVERY_CALL_RETENTION_DAYS} days after the call`,
+        + `erases the discovery call note and date ${DISCOVERY_CALL_RETENTION_DAYS} days after the call`,
       defaultCron: '15 4 * * *',
       handler: () => this.run(),
     });
