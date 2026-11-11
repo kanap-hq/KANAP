@@ -185,8 +185,8 @@ async function testOneCardOneApproval(h: Harness, runner: QueryRunner, s: Seed) 
   assert.match(done.summary, /« Budget IT 2026\.xlsx » dans la liste Lignes budgétaires/);
   assert.equal(done.import_mapping.result.inserted, 8);
 
-  const suppliers = await runner.query(`SELECT name FROM suppliers WHERE tenant_id = $1 ORDER BY name`, [s.tenantId]);
-  assert.deepEqual(suppliers.map((row: any) => row.name), SUPPLIERS);
+  const suppliers = await runner.query(`SELECT name FROM suppliers WHERE tenant_id = $1`, [s.tenantId]);
+  assert.deepEqual(suppliers.map((row: any) => row.name).sort(), SUPPLIERS);
   const lines = await runner.query(
     `SELECT i.nature, i.product_name, s.name AS supplier, c.name AS company, a.account_number::text AS account
        FROM spend_items i
