@@ -67,4 +67,4 @@ export const TRANSLATED_DOCS = [
 ];
 
 /** The runner, whose `t('…')` texts are translated too. */
-export const RUNNER_FILES = ['setup-tenant.mjs', 'demand-scores.mjs'];
+export const RUNNER_FILES = ['setup-tenant.mjs', 'demand-scores.mjs', 'sample-story.mjs'];

@@ -507,10 +507,10 @@ const PAGES = {
       await page.waitForFunction(() => /Drafted a proposal|Proposal created|Action executed/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 }).catch(() => console.warn('no activity'));
       await sleep(1500);
       // Kad's own write previews (the feature-plaid-preview shots) land in this timeline under a raw action key, and the
-      // fixture's mock triage leaves a "[… mock triage]" entry: neither is the agent's own run. Drops each such row
+      // fixture's sample triage leaves a "[… triage]" entry: neither is the agent's own run. Drops each such row
       // (the timeline entry that holds the marker and a Trace link).
       await page.evaluate(() => {
-        const leaves = [...document.querySelectorAll('main *')].filter((n) => !n.children.length && /kanap\.mutation|mutation preview|mock triage\]/.test(n.textContent || ''));
+        const leaves = [...document.querySelectorAll('main *')].filter((n) => !n.children.length && /kanap\.mutation|mutation preview|\[[^\]]*triage\]/.test(n.textContent || ''));
         for (const leaf of leaves) {
           let row = leaf;
           while (row.parentElement && !(row.parentElement.children.length > 3 && /Trace/.test(row.innerText))) row = row.parentElement;
