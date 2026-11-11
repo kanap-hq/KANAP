@@ -1984,6 +1984,7 @@
     "errors": {
       "noActiveSubscription": "Kein aktives Abonnement gefunden.",
       "planNotBankTransferEligible": "Dieser Plan ist nicht für Banküberweisung geeignet.",
+      "subscriptionPaymentPending": "Begleichen Sie zuerst die offene Rechnung und ändern Sie dann Ihren Plan.",
       "termsNotAccepted": "Die Annahme der Allgemeinen Geschäftsbedingungen konnte nicht bestätigt werden. Laden Sie die Seite neu und akzeptieren Sie sie erneut.",
       "vatNumberInvalid": "Die USt-IdNr. wurde nicht akzeptiert. Prüfen Sie sie in den Rechnungsinformationen."
     },
