@@ -1187,7 +1187,46 @@ async function testTransferToCardWithASavedCardMakesItTheDefault() {
   assert.equal(calls.filter((call) => call.method === 'subscriptionSchedules.update').length, 1);
 }
 
+/*
+ * A subscription whose cancellation is set (the portal's `cancel_at` since basil, or
+ * `cancel_at_period_end`) ends on its date: a plan change or a bank transfer request is refused
+ * with SUBSCRIPTION_ENDING and that date, before any change in Stripe (Stripe would otherwise
+ * clear the cancellation or cap the new period at it). The cancellation is undone first.
+ */
+async function testEndingSubscriptionIsNotChanged() {
+  const cancelAt = PERIOD.end - 3 * 86400;
+  const ending: Array<[string, Record<string, unknown>, Record<string, unknown>, number]> = [
+    ['portal cancellation', MONTHLY_PRICE, { cancel_at: cancelAt, cancel_at_period_end: false }, cancelAt],
+    ['end of period', ANNUAL_PRICE, { cancel_at: null, cancel_at_period_end: true, items: { data: [{ id: 'si_1', price: ANNUAL_PRICE, quantity: 1, current_period_start: PERIOD.start, current_period_end: PERIOD.end }] } }, PERIOD.end],
+  ];
+  for (const [label, price, cancellation, endsAt] of ending) {
+    const expected = { message: 'SUBSCRIPTION_ENDING', ends_at: new Date(endsAt * 1000).toISOString() };
+    for (const interval of ['monthly', 'annual'] as const) {
+      const plan = createService({
+        tenant: createTenant(COMPLETE_FR_INVOICE),
+        subscription: runningOn(price === ANNUAL_PRICE ? 'annual' : 'monthly'),
+        priceIds: PRICE_IDS,
+        stripeSubscription: stripeSubscription(price, cancellation),
+        onSubscriptionUpdate: (_params, state) => ({ ...state, latest_invoice: null }),
+        schedule: PLANNED_SWITCH,
+      });
+      await expectBadRequest(plan.service.changePlan('tenant-1', 'max', interval, 'user-1', plan.manager as any, GTC_VERSION), expected);
+      assert.deepEqual(plan.calls.map((call) => call.method), ['subscriptions.retrieve'], `${label}, ${interval}: nothing changes in Stripe`);
+    }
+    const transfer = createService({
+      tenant: createTenant(COMPLETE_FR_INVOICE),
+      subscription: runningOn('monthly'),
+      priceIds: PRICE_IDS,
+      stripeSubscription: stripeSubscription(price, cancellation),
+      onSubscriptionUpdate: (_params, state) => ({ ...state, latest_invoice: null }),
+    });
+    await expectBadRequest(transfer.service.requestInvoice('tenant-1', 'max', 'annual', 'user-1', transfer.manager as any, GTC_VERSION), expected);
+    assert.deepEqual(transfer.calls.map((call) => call.method), ['subscriptions.retrieve'], `${label}, transfer: nothing changes in Stripe`);
+  }
+}
+
 async function run() {
+  await testEndingSubscriptionIsNotChanged();
   await testRequestInvoiceRefusesIncompleteProfile();
   await testCheckoutRefusesIncompleteProfile();
   await testCheckoutRefusesEuProfileWithoutVat();

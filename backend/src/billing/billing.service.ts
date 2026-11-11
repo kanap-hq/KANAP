@@ -887,7 +887,10 @@ export class BillingService {
   /**
    * Only a Stripe subscription in good standing (active, or trialing before its end) is changed.
    * One that still runs unpaid (past due, unpaid, incomplete, paused) is refused with
-   * SUBSCRIPTION_PAYMENT_PENDING, an ended one with NO_ACTIVE_SUBSCRIPTION: nothing changes in Stripe.
+   * SUBSCRIPTION_PAYMENT_PENDING, an ended one with NO_ACTIVE_SUBSCRIPTION. One whose cancellation
+   * is set is refused with SUBSCRIPTION_ENDING and its end date (`ends_at`): a change would clear
+   * the cancellation or cap the new period at it, so the cancellation is undone first. Nothing
+   * changes in Stripe.
    */
   private assertSubscriptionCanChange(stripeSub: any): void {
     if (!isLiveSubscriptionStatus(stripeSub?.status)) {
@@ -895,6 +898,10 @@ export class BillingService {
     }
     if (!isHealthySubscription(stripeSub.status, this.toDate(stripeSub.trial_end))) {
       throw new BadRequestException('SUBSCRIPTION_PAYMENT_PENDING');
+    }
+    if (stripeSub.cancel_at || stripeSub.cancel_at_period_end) {
+      const endsAt = cancellationEffectiveAt(stripeSub, null);
+      throw new BadRequestException({ message: 'SUBSCRIPTION_ENDING', ends_at: endsAt ? endsAt.toISOString() : null });
     }
   }
 
