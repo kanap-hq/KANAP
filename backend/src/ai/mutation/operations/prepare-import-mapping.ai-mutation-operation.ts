@@ -141,6 +141,12 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
     return pending.mutation_input?.attachment_id === replacement.mutation_input?.attachment_id;
   }
 
+  /** A card whose check refused the file cannot be approved: the card shows its errors, and "Approve all" leaves it out. */
+  isApprovable(preview: AiMutationPreview): boolean {
+    const mapping = (preview.current_values?.import_mapping ?? null) as AiImportMappingPreviewDto | null;
+    return mapping?.validation?.ok !== false;
+  }
+
   presentPreview(preview: AiMutationPreview, language: AiWriteLanguage = 'en'): AiMutationPreviewPresentation {
     const mutation = preview.mutation_input ?? {};
     const key = stringOf(mutation.entity_type);

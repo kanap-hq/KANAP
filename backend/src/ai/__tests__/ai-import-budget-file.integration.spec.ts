@@ -12,6 +12,7 @@ import { DataSource, QueryRunner } from 'typeorm';
 //   eight lines and the six suppliers.
 // - The suppliers are created only for a person who may create suppliers (the dialog's rule): for a
 //   budget administrator without that right, the check refuses the file and names them.
+// - "Approve all" leaves out an import card whose check refused the file.
 // The model is not called: the tools of the registry are, as the conversation calls them. The AI
 // surface checks and the attachment storage are not under test: stubbed.
 
@@ -228,6 +229,29 @@ async function testSuppliersNeedTheirRight(h: Harness, runner: QueryRunner, s: S
   console.log('  without the right to create suppliers: refused, nothing written: OK');
 }
 
+// "Approve all" with an import card whose check refused the file (it went stale once Kad prepared a
+// better one): the card is left out, neither run again nor failed. It stays as the person sees it,
+// pending, with its errors, and cannot be approved.
+async function testApproveAllLeavesOutARefusedCard(h: Harness, runner: QueryRunner, s: Seed) {
+  const admin = ctx(runner, s, 'admin');
+  const unknownAccount = MAPPING.map((column) => (column.column === 'account_number'
+    ? { ...column, values: { ...column.values, 'Matériel': '9999' } }
+    : column));
+  const stale = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: attachWorkbook(h), entity_type: 'budget_lines', columns: unknownAccount });
+  assert.equal(stale.import_mapping.validation.ok, false);
+  const card = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: attachWorkbook(h), entity_type: 'budget_lines', columns: MAPPING });
+  assert.equal(card.import_mapping.validation.ok, true);
+
+  const { results } = await h.previews.executePreviewsWithFollowUps(admin, [stale.preview_id, card.preview_id]);
+  assert.deepEqual(results.map((preview: any) => [preview.preview_id, preview.status]), [[card.preview_id, 'executed']]);
+  const kept = (await h.previews.listConversationPreviews(admin, s.conversations.admin))
+    .find((preview: any) => preview.preview_id === stale.preview_id);
+  assert.equal(kept.status, 'pending');
+  assert.equal(kept.error_message, null);
+  assert.equal(await count(runner, s, 'spend_items'), 8, 'the lines of the approved card only');
+  console.log('  approve all: the card whose check refused the file is left out: OK');
+}
+
 async function inTenant(harness: Harness, test: (h: Harness, runner: QueryRunner, s: Seed) => Promise<void>) {
   const runner = harness.dataSource.createQueryRunner();
   await runner.connect();
@@ -245,6 +269,7 @@ async function run() {
   try {
     await inTenant(harness, testOneCardOneApproval);
     await inTenant(harness, testSuppliersNeedTheirRight);
+    await inTenant(harness, testApproveAllLeavesOutARefusedCard);
   } finally {
     await harness.app.close();
   }
