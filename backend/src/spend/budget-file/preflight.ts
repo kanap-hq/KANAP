@@ -1378,6 +1378,7 @@ function finish(input: PreflightInput, errors: Bag['errors'], bag: Bag, supplier
       suppliers: input.createSuppliers && input.canCreateSuppliers
         ? [...bag.suppliers.values()].slice(0, PREFLIGHT_LIST_LIMIT)
         : [],
+      supplierCount: input.createSuppliers && input.canCreateSuppliers ? bag.suppliers.size : 0,
       ...(input.access ? { refusedDimensionValues: namesByDimension(bag.refusedDimensions) } : {}),
     },
     supplierMessage: supplierNote,

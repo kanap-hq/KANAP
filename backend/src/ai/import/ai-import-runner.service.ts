@@ -59,6 +59,7 @@ type BudgetFileAnswer = {
   errorCount?: number;
   missing?: Array<{ type: string; count: number }>;
   deletedCount?: number;
+  creates?: { supplierCount?: number };
   supplierMessage?: string | null;
   changes?: { created: number; updated: number; unchanged: number };
   warnings?: Record<string, unknown>;
@@ -185,7 +186,8 @@ export class AiImportRunnerService {
   /**
    * The budget file: its preflight is the check. The load takes the snapshot of a preflight run just
    * before it, as the dialog sends the one it showed: the lines the file names are the ones checked.
-   * Missing suppliers are not created: the check names them.
+   * The suppliers the file names that do not exist are created, as the dialog's "Create missing
+   * suppliers" does, for a person who may create suppliers: the card lists them before the approval.
    */
   private async runBudgetFile({ file, dryRun, language, context }: ImportCall): Promise<BudgetFileAnswer> {
     const manager = context.manager as EntityManager;
@@ -196,7 +198,7 @@ export class AiImportRunnerService {
       language,
       dateOrder: undefined,
       decimalMark: 'dot',
-      createSuppliers: false,
+      createSuppliers: true,
       canCreateSuppliers: canCreateSuppliers(access),
     };
     const preflight = await this.budgetFile.preflight('opex', file.buffer, caller, options);
@@ -305,6 +307,7 @@ export function budgetBilan(answer: BudgetFileAnswer, dryRun: boolean, lines: re
     error_count: errorCount,
     warning_count: warningCount,
     issues,
+    new_suppliers: answer.creates?.supplierCount ?? 0,
     report: { kind: 'budget_file', file: isCheck ? relined(shown, lines) as Record<string, unknown> : null },
   };
 }

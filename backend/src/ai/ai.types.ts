@@ -542,6 +542,8 @@ export type AiImportRunDto = {
   warning_count: number;
   /** How many messages of each code and column the report holds. */
   issues: Array<{ level: 'error' | 'warning'; code: string | null; column: string | null; count: number }>;
+  /** The budget file: the suppliers its load creates, which the card lists (the person may create suppliers). */
+  new_suppliers?: number;
   report:
     /** The messages of a row import, the first ones, as its dialog lists them. */
     | { kind: 'rows'; errors: AiImportReportMessage[]; warnings: AiImportReportMessage[] }
