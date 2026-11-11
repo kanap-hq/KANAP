@@ -9,7 +9,7 @@ import ExploreOutlinedIcon from '@mui/icons-material/ExploreOutlined';
 import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined';
 import { useMutation } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import { ResetWorkspaceDialog } from '../../pages/admin/sample-data/SampleDataDialogs';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
@@ -103,6 +103,8 @@ function Option({ icon: Icon, label, note, selected, disabled, onClick }: {
  * administrator while the workspace holds sample data (the API refuses it). A change that would
  * also erase objects created since the sample data was loaded asks first. During the trial, the
  * example in a workspace that holds data asks to erase it first, the workspace name typed.
+ * A choice that starts an erasure sends the person to the home page: the screen they are on may
+ * show an object that no longer exists. A choice that erases nothing leaves them where they are.
  */
 export default function OnboardingChoiceDialog({ open, state, onClose, onChosen }: {
   open: boolean;
@@ -112,6 +114,7 @@ export default function OnboardingChoiceDialog({ open, state, onClose, onChosen 
 }) {
   const { t } = useTranslation(['common', 'admin', 'errors']);
   const { claims } = useAuth();
+  const navigate = useNavigate();
   const isAdministrator = claims?.isGlobalAdmin === true;
   const angleOpen = state.angle === null || isAdministrator;
   const [screen, setScreen] = React.useState<Screen>(angleOpen ? 'angle' : 'mode');
@@ -131,7 +134,13 @@ export default function OnboardingChoiceDialog({ open, state, onClose, onChosen 
 
   const choose = useMutation({
     mutationFn: onboardingApi.choose,
-    onSuccess: (next) => { setConflict(null); setResetOffer(null); onChosen(next); },
+    onSuccess: (next) => {
+      setConflict(null);
+      setResetOffer(null);
+      // The choice started an erasure: the record on screen may be one of the objects it removes.
+      if (next.reset_in_progress && !state.reset_in_progress) navigate('/');
+      onChosen(next);
+    },
     onError: (error, choice) => {
       const count = sampleDataModified(error);
       if (count !== null) setConflict({ count, choice });
