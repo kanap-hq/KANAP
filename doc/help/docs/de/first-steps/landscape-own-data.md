@@ -44,7 +44,7 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 
 **Was Sie tun.** Klicken Sie auf **Asset hinzufügen**, oder **importieren** Sie eine Datei für viele Server. Wählen Sie den Asset-Typ und den Standort, dann **Erstellen**. Um einen Server mit einer Anwendung zu verknüpfen, öffnen Sie die Anwendung, Reiter **Bereitstellungen**: **Bereitstellung hinzufügen** für die Umgebung, dann **Server hinzufügen**.
 
-**Was Sie sehen.** Der Bereitstellungsblock der Anwendung listet ihre Server, und der Server listet die Anwendung unter **Gehostete Anwendungen** in seinem Reiter **Betrieb**. Das Supportende seiner Technologien reicht nun bis zum Server. Die Schwachstellen eines Betriebssystems stehen zunächst außerhalb der Warnungen, weil Kadratis den Patchstand eines Servers nicht kennt: **IT-Landschaft > Schwachstellen** zeigt sie unter **Warnungen**, **Ausgeschlossen**, oder mit **Ausgeschlossene anzeigen**, wenn die Liste leer ist.
+**Was Sie sehen.** Der Bereitstellungsblock der Anwendung listet ihre Server, und der Server listet die Anwendung unter **Gehostete Anwendungen** in seinem Reiter **Betrieb**. Supportende und Schwachstellen seiner Technologien reichen nun bis zum Server.
 
 ## 5. Eine Kollegin, ein Kollege
 

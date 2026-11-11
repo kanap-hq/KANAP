@@ -44,7 +44,7 @@ These are the five steps of the **Your first five steps** tile on the home page,
 
 **What to do.** Click **Add asset**, or **Import** a file for many servers. Choose the asset type and the location, then **Create**. To link a server to an application, open the application, **Deployments** tab: **Add deployment** for the environment, then **Add server**.
 
-**What you see.** The application's deployment block lists its servers, and the server lists the application under **Hosted applications** in its **Operations** tab. The end of support of its technologies now reaches the server. The vulnerabilities of an operating system start out of the alerts, because Kadratis does not know a server's patch level: **IT landscape > Vulnerabilities** shows them under **Alerts**, **Excluded**, or with **Show the excluded ones** when the list is empty.
+**What you see.** The application's deployment block lists its servers, and the server lists the application under **Hosted applications** in its **Operations** tab. The end of support and the vulnerabilities of its technologies now reach the server.
 
 ## 5. A colleague
 
