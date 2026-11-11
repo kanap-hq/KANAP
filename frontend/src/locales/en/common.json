@@ -1181,7 +1181,10 @@
     "subscriptionNeedsAttention": "Your subscription needs attention.",
     "goToBilling": "Go to billing",
     "accountAccessLimited": "Account access is limited. Contact your billing admin.",
-    "choosePlanToContinueAction": "Choose a plan to continue"
+    "choosePlanToContinueAction": "Choose a plan to continue",
+    "paymentOverdueAmount": "Payment of {{amount}} overdue. Access will be limited on {{date}}.",
+    "paymentOverdue": "A payment is overdue. Access will be limited on {{date}}.",
+    "contactBillingAdmin": "Contact your billing admin."
   },
   "forbidden": {
     "title": "Access denied",

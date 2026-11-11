@@ -70,6 +70,8 @@ export type BillingSubscription = {
   canceled_at_effective?: string | null;
   stripe_customer_id?: string | null;
   is_subscription_healthy?: boolean;
+  /** The API's access rule: false once frozen or after an ended trial, true during the grace of an unpaid invoice. */
+  access_allowed?: boolean;
   trial_days_remaining?: number | null;
   payment_due_at?: string | null;
   freeze_effective_at?: string | null;

@@ -4,6 +4,18 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { useFeatures } from '../config/FeaturesContext';
+import { useLocale } from '../i18n/useLocale';
+import { formatShortDate } from '../lib/dateFormat';
+
+/** "€249.00" from an amount in cents, or null without one. */
+function formatAmount(locale: string, cents?: number | null, currency?: string | null): string | null {
+  if (cents == null || !currency) return null;
+  try {
+    return new Intl.NumberFormat(locale, { style: 'currency', currency: currency.toUpperCase() }).format(cents / 100);
+  } catch {
+    return `${cents / 100} ${currency.toUpperCase()}`;
+  }
+}
 
 // Rendered by Layout between the app bar spacer and the page scroller, so it stays put
 // while the page scrolls and does not push a full-height workspace past the viewport.
@@ -12,6 +24,7 @@ const bannerSx = { mx: 2, mt: 2, flexShrink: 0 } as const;
 
 export default function SubscriptionBanner() {
   const { t } = useTranslation('common');
+  const locale = useLocale();
   const { subscription, claims } = useAuth();
   const navigate = useNavigate();
   const { config, isLoading: featuresLoading } = useFeatures();
@@ -71,6 +84,35 @@ export default function SubscriptionBanner() {
     return (
       <Alert severity="warning" sx={bannerSx}>
         {t('subscription.trialExpiredContactAdmin')}
+      </Alert>
+    );
+  }
+
+  // Unpaid invoice during its grace: the workspace stays usable until the freeze date.
+  if (subscription.access_allowed !== false) {
+    const freezeAt = subscription.freeze_effective_at;
+    const date = freezeAt ? formatShortDate(freezeAt, locale, { year: 'always' }) : null;
+    const amount = formatAmount(locale, subscription.latest_invoice_amount, subscription.latest_invoice_currency);
+    let message = t('subscription.subscriptionNeedsAttention');
+    if (date) {
+      message = isBillingAdmin && amount
+        ? t('subscription.paymentOverdueAmount', { amount, date })
+        : t('subscription.paymentOverdue', { date });
+    }
+    return (
+      <Alert
+        severity="warning"
+        sx={bannerSx}
+        action={
+          isBillingAdmin ? (
+            <Button color="inherit" size="small" onClick={() => navigate('/admin/billing')}>
+              {t('subscription.goToBilling')}
+            </Button>
+          ) : undefined
+        }
+      >
+        {message}
+        {!isBillingAdmin && ` ${t('subscription.contactBillingAdmin')}`}
       </Alert>
     );
   }

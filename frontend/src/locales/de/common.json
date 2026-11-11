@@ -1181,7 +1181,10 @@
     "subscriptionNeedsAttention": "Ihr Abonnement erfordert Ihre Aufmerksamkeit.",
     "goToBilling": "Zur Abrechnung",
     "accountAccessLimited": "Der Kontozugang ist eingeschränkt. Kontaktieren Sie Ihren Abrechnungsadministrator.",
-    "choosePlanToContinueAction": "Plan auswählen, um fortzufahren"
+    "choosePlanToContinueAction": "Plan auswählen, um fortzufahren",
+    "paymentOverdueAmount": "Zahlung von {{amount}} überfällig. Der Zugang wird am {{date}} eingeschränkt.",
+    "paymentOverdue": "Eine Zahlung ist überfällig. Der Zugang wird am {{date}} eingeschränkt.",
+    "contactBillingAdmin": "Kontaktieren Sie Ihren Abrechnungsadministrator."
   },
   "forbidden": {
     "title": "Zugriff verweigert",
